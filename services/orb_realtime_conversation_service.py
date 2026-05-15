@@ -212,6 +212,17 @@ class OrbRealtimeConversationService:
         if not state:
             return {}
         if event_type in {"speech_started", "recording_on"}:
+            if state.phase == "speaking" and state.partial_assistant_transcript:
+                state.interrupted_response = state.partial_assistant_transcript
+                state.partial_assistant_transcript = ""
+                state.events.append(
+                    {
+                        "type": "conversational_overlap_smoothed",
+                        "created_at": _now(),
+                        "preserved_interrupted_response": True,
+                        "repair_style": "stop_speaking_and_follow_user",
+                    }
+                )
             state.phase = "listening"
             state.last_phase_changed_at = _now()
             state.last_user_speech_at = _now()
@@ -295,6 +306,30 @@ class OrbRealtimeConversationService:
         state.events.append({"type": "partial_user_transcript", "characters": len(text), "created_at": _now()})
         self._persist(state)
         return state.snapshot()
+
+    def reconcile_user_transcript(self, *, session_id: str, final_text: str) -> dict[str, Any]:
+        state = self.get(session_id)
+        if not state:
+            return {"text": final_text, "reconciled": False}
+        partial = state.partial_user_transcript.strip()
+        final = final_text.strip()
+        reconciled = final
+        if partial and final and not final.lower().startswith(partial.lower()) and partial.lower() not in final.lower():
+            reconciled = f"{partial} {final}".strip()
+        elif partial and not final:
+            reconciled = partial
+        state.temporary_conversational_memory["last_reconciled_user_text"] = reconciled
+        state.events.append(
+            {
+                "type": "transcript_reconciled",
+                "created_at": _now(),
+                "partial_characters": len(partial),
+                "final_characters": len(final),
+                "changed": reconciled != final,
+            }
+        )
+        self._persist(state)
+        return {"text": reconciled, "reconciled": True, "changed": reconciled != final, "partial": partial}
 
     def assistant_response_started(self, *, session_id: str) -> dict[str, Any]:
         state = self.get(session_id)
@@ -381,6 +416,7 @@ class OrbRealtimeConversationService:
                 "resume_without_cross_child_lookup": True,
                 "interrupted_response_available": bool(state.interrupted_response),
                 "continuity_message": "Reconnecting without changing the active child context.",
+                "user_copy": "Voice paused. I can continue in text while audio reconnects.",
             },
         })
         self._persist(state)
