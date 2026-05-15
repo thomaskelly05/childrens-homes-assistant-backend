@@ -15,9 +15,10 @@ export function MobileNav() {
   const items = [
     { label: 'Home', href: '/home', icon: Home },
     { label: 'Child', href: childId ? `/young-people/${encodeURIComponent(childId)}/journey` : '/home', icon: UserRound },
-    { label: 'Continue', href: childScopedHref('/chronology'), icon: FileText },
+    { label: 'Story', href: childId ? `/young-people/${encodeURIComponent(childId)}/daily-note/new` : '/home', icon: ClipboardPlus },
+    { label: 'Events', href: childScopedHref('/chronology'), icon: FileText },
     { label: 'Orb', href: '/assistant', icon: MessageSquarePlus },
-    { label: 'Notifs', href: '/notifications', icon: Bell }
+    { label: 'Alerts', href: '/notifications', icon: Bell }
   ]
   const quickActions = childId
     ? contextualChildQuickActions({ workflow: 'mobile' }).map((action) => ({
@@ -27,7 +28,7 @@ export function MobileNav() {
       }))
     : [
         { label: 'Choose child', href: '/home', icon: ClipboardPlus },
-        { label: 'Continue', href: '/home', icon: ClipboardPlus },
+        { label: 'Quick record', href: '/home', icon: ClipboardPlus },
         { label: 'Assistant', href: '/assistant', icon: MessageSquarePlus }
       ]
 

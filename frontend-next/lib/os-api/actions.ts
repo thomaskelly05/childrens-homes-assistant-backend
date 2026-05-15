@@ -1,4 +1,3 @@
-import { demoCareActions } from '@/lib/evidence/demo-data'
 import type { CareAction, CareActionStatus, ActionPriority } from '@/lib/evidence/types'
 
 import { osGet, osPost } from './client'
@@ -40,14 +39,13 @@ export async function getOsActions(params: { status?: string; sourceType?: strin
   if (params.status) query.set('status', params.status)
   if (params.sourceType) query.set('source_type', params.sourceType)
   if (params.sourceId) query.set('source_id', params.sourceId)
-  const result = await osGet<Record<string, any>[]>(`/os/actions${query.toString() ? `?${query}` : ''}`, demoCareActions)
+  const result = await osGet<Record<string, any>[]>(`/os/actions${query.toString() ? `?${query}` : ''}`, [])
   return { ...result, data: result.data.map(mapOsAction) }
 }
 
 export async function getOsAction(id: string): Promise<OsApiResult<CareAction | undefined>> {
-  const fallback = demoCareActions.find((action) => action.id === id)
-  const result = await osGet<Record<string, any> | undefined>(`/os/actions/${encodeURIComponent(id)}`, fallback as any)
-  return { ...result, data: result.data ? mapOsAction(result.data) : fallback }
+  const result = await osGet<Record<string, any> | undefined>(`/os/actions/${encodeURIComponent(id)}`, undefined)
+  return { ...result, data: result.data ? mapOsAction(result.data) : undefined }
 }
 
 export async function transitionOsAction(id: string, transition: string, payload: Partial<OsTransitionPayload> = {}) {

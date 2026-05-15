@@ -1,4 +1,3 @@
-import { generateReport } from '@/lib/regulatory-reporting/generators'
 import type { GeneratedReport, ReportTemplateId } from '@/lib/regulatory-reporting/types'
 
 import { osGet, osPost } from './client'
@@ -24,24 +23,6 @@ export type OsReport = {
   version: number
 }
 
-const fallbackReports: OsReport[] = [
-  {
-    id: 'report-reg44-preview',
-    title: 'Reg 44 draft preview',
-    type: 'reg44',
-    status: 'draft',
-    homeId: 'home-oak',
-    dateRangeStart: '2026-05-01',
-    dateRangeEnd: '2026-05-13',
-    generatedBy: 'staff-ella',
-    citations: [],
-    evidenceLinks: [],
-    reviewComments: [],
-    exportHistory: [],
-    version: 1
-  }
-]
-
 export function mapOsReport(row: Record<string, any>): OsReport {
   return {
     id: String(row.id || row.original_id || ''),
@@ -65,23 +46,21 @@ export function mapOsReport(row: Record<string, any>): OsReport {
 }
 
 export async function getOsReports(): Promise<OsApiResult<OsReport[]>> {
-  const result = await osGet<Record<string, any>[]>('/os/reports', fallbackReports)
-  const rows = Array.isArray(result.data) ? result.data : fallbackReports
+  const result = await osGet<Record<string, any>[]>('/os/reports', [])
+  const rows = Array.isArray(result.data) ? result.data : []
   return {
     ...result,
-    source: Array.isArray(result.data) ? result.source : 'fallback',
-    error: Array.isArray(result.data) ? result.error : 'Reports endpoint returned an unexpected shape; showing safe demo drafts.',
+    source: Array.isArray(result.data) ? result.source : 'unavailable',
+    error: Array.isArray(result.data) ? result.error : 'No records found yet.',
     data: rows.map(mapOsReport)
   }
 }
 
 export async function getOsReport(id: string): Promise<OsApiResult<OsReport | undefined>> {
-  const fallback = fallbackReports.find((report) => report.id === id)
-  const result = await osGet<Record<string, any> | undefined>(`/os/reports/${encodeURIComponent(id)}`, fallback as any)
-  return { ...result, data: result.data ? mapOsReport(result.data) : fallback }
+  const result = await osGet<Record<string, any> | undefined>(`/os/reports/${encodeURIComponent(id)}`, undefined)
+  return { ...result, data: result.data ? mapOsReport(result.data) : undefined }
 }
 
 export async function generateOsReport(templateId: ReportTemplateId, homeId: string, youngPersonId?: string): Promise<OsApiResult<GeneratedReport | Record<string, unknown>>> {
-  const fallback = generateReport({ templateId, homeId, youngPersonId })
-  return osPost('/os/reports/generate', { report_type: templateId, home_id: homeId, young_person_id: youngPersonId }, fallback)
+  return osPost('/os/reports/generate', { report_type: templateId, home_id: homeId, young_person_id: youngPersonId }, {})
 }

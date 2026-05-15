@@ -4,8 +4,14 @@ import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, 
 import { usePathname } from 'next/navigation'
 
 import { useAuth } from '@/contexts/auth-context'
+import { authFetchResponse } from '@/lib/auth/api'
 import { userHasPermission } from '@/lib/auth/permissions'
-import { getYoungPersonById } from '@/lib/indicare/selectors'
+import {
+  clearChildWorkspaceReady,
+  markChildWorkspaceReady,
+  resolveChildWorkspaceHydration,
+  type ChildWorkspaceReadyState
+} from '@/lib/context/child-workspace-hydration'
 
 export type ActiveChildRecord = {
   id: string
@@ -27,6 +33,10 @@ type ActiveChildContextValue = {
   recentChildren: ActiveChildRecord[]
   lockVersion: number
   isLocked: boolean
+  hasHydratedStorage: boolean
+  preloadStatus: 'idle' | 'loading' | 'ready' | 'failed'
+  preloadSummary: Record<string, unknown> | null
+  readyState: ChildWorkspaceReadyState
   breadcrumbs: ActiveChildBreadcrumb[]
   selectChild: (child: Pick<ActiveChildRecord, 'id' | 'displayName' | 'preferredName' | 'homeId'>, source?: ActiveChildRecord['source']) => void
   clearActiveChild: () => void
@@ -75,12 +85,9 @@ export function childIdFromRoute(pathname: string, searchParams?: { get: (key: s
 }
 
 function childRecordFromId(id: string, source: ActiveChildRecord['source']): ActiveChildRecord {
-  const person = getYoungPersonById(id)
   return {
     id,
-    displayName: person ? `${person.firstName} ${person.lastName}` : `Young person ${id}`,
-    preferredName: person?.preferredName,
-    homeId: (person as { homeId?: string | number | null } | undefined)?.homeId,
+    displayName: `Young person ${id}`,
     source,
     selectedAt: new Date().toISOString()
   }
@@ -165,11 +172,14 @@ function scopedHref(href: string, child: ActiveChildRecord | null) {
 
 export function ActiveChildProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname() || '/home'
-  const { status, user } = useAuth()
+  const { status, user, csrfReady } = useAuth()
   const canReadRecords = userHasPermission(user, 'records:read')
   const [activeChild, setActiveChild] = useState<ActiveChildRecord | null>(null)
   const [recentChildren, setRecentChildren] = useState<ActiveChildRecord[]>([])
   const [lockVersion, setLockVersion] = useState(0)
+  const [hasHydratedStorage, setHasHydratedStorage] = useState(false)
+  const [preloadStatus, setPreloadStatus] = useState<'idle' | 'loading' | 'ready' | 'failed'>('idle')
+  const [preloadSummary, setPreloadSummary] = useState<Record<string, unknown> | null>(null)
 
   const commitChild = useCallback((next: ActiveChildRecord | null, source: ActiveChildRecord['source'] = 'manual') => {
     setActiveChild((current) => {
@@ -179,7 +189,10 @@ export function ActiveChildProvider({ children }: { children: ReactNode }) {
         const updatedRecent = normalised ? nextRecent(normalised, currentRecent) : currentRecent
         setLockVersion((version) => {
           const updatedVersion = version + 1
-          if (previousId && previousId !== normalised?.id) removeChildScopedStorage(previousId)
+          if (previousId && previousId !== normalised?.id) {
+            removeChildScopedStorage(previousId)
+            clearChildWorkspaceReady(previousId)
+          }
           writeStorage(normalised, updatedRecent, updatedVersion)
           if (typeof window !== 'undefined') {
             window.dispatchEvent(new CustomEvent('indicare:active-child-changed', {
@@ -207,6 +220,7 @@ export function ActiveChildProvider({ children }: { children: ReactNode }) {
     setActiveChild(hydrated)
     setRecentChildren(recent)
     setLockVersion(Number.isFinite(version) ? version : 0)
+    setHasHydratedStorage(true)
   }, [])
 
   useEffect(() => {
@@ -221,19 +235,66 @@ export function ActiveChildProvider({ children }: { children: ReactNode }) {
       setActiveChild(null)
       setRecentChildren([])
       setLockVersion(0)
+      setPreloadStatus('idle')
+      setPreloadSummary(null)
+      clearChildWorkspaceReady()
     }
   }, [status])
+
+  useEffect(() => {
+    if (status !== 'authenticated' || !csrfReady || !canReadRecords || !activeChild?.id) {
+      setPreloadStatus(activeChild ? 'loading' : 'idle')
+      setPreloadSummary(null)
+      return
+    }
+    const controller = new AbortController()
+    setPreloadStatus('loading')
+    setPreloadSummary(null)
+    void authFetchResponse(`/api/child-workspace/context?childId=${encodeURIComponent(activeChild.id)}`, {
+      signal: controller.signal
+    }).then(async (response) => {
+      if (!response.ok) throw new Error('Child workspace could not be verified.')
+      const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>
+      setPreloadSummary(payload)
+      setPreloadStatus('ready')
+      markChildWorkspaceReady(activeChild.id, lockVersion)
+    }).catch((error) => {
+      if (controller.signal.aborted) return
+      setPreloadSummary(null)
+      setPreloadStatus('failed')
+      clearChildWorkspaceReady(activeChild.id)
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Child workspace preload failed', error)
+      }
+    })
+    return () => controller.abort()
+  }, [activeChild, canReadRecords, csrfReady, lockVersion, status])
+
+  const readyState = useMemo(() => resolveChildWorkspaceHydration({
+    authStatus: status,
+    csrfReady,
+    hasHydratedStorage,
+    canReadRecords,
+    activeChild,
+    pathname,
+    preloadStatus,
+    searchParams: typeof window === 'undefined' ? null : new URLSearchParams(window.location.search)
+  }), [activeChild, canReadRecords, csrfReady, hasHydratedStorage, pathname, preloadStatus, status])
 
   const value = useMemo<ActiveChildContextValue>(() => ({
     activeChild,
     recentChildren,
     lockVersion,
     isLocked: Boolean(activeChild),
+    hasHydratedStorage,
+    preloadStatus,
+    preloadSummary,
+    readyState,
     breadcrumbs: buildBreadcrumbs(pathname, activeChild),
     selectChild: (child, source = 'manual') => commitChild({ ...child, source, selectedAt: new Date().toISOString() }, source),
     clearActiveChild: () => commitChild(null),
     childScopedHref: (href) => scopedHref(href, activeChild)
-  }), [activeChild, commitChild, lockVersion, pathname, recentChildren])
+  }), [activeChild, commitChild, hasHydratedStorage, lockVersion, pathname, preloadStatus, preloadSummary, readyState, recentChildren])
 
   return <ActiveChildContext.Provider value={value}>{children}</ActiveChildContext.Provider>
 }

@@ -1,13 +1,3 @@
-import { getChronologyForYoungPerson } from '@/lib/chronology/selectors'
-import { getEvidenceItems } from '@/lib/evidence/selectors'
-import { indicareData } from '@/lib/indicare/demo-data'
-import {
-  fullName,
-  getPlacementForYoungPerson,
-  getStaffById,
-  getYoungPersonById,
-  sortByDateDesc
-} from '@/lib/indicare/selectors'
 import type { RiskLevel, YoungPerson } from '@/lib/indicare/types'
 import { osGet } from '@/lib/os-api/client'
 
@@ -63,7 +53,7 @@ export type JourneyEvidence = {
 }
 
 export type ChildJourneyData = {
-  source: 'live' | 'fallback'
+  source: 'live' | 'unavailable'
   error?: string
   child?: (YoungPerson & { displayName?: string; placementStatus?: string })
   dailyNotes: JourneyDailyNote[]
@@ -88,59 +78,6 @@ function initials(name: string) {
 
 function riskFromValue(value: unknown): RiskLevel {
   return value === 'low' || value === 'medium' || value === 'high' || value === 'critical' ? value : 'medium'
-}
-
-function activeRiskCount(id: string) {
-  return indicareData.riskAssessments.filter((risk) => risk.youngPersonId === id && risk.status !== 'closed').length
-}
-
-function actionCount(id: string) {
-  const dailyActions = indicareData.dailyLogs
-    .filter((log) => log.youngPersonId === id)
-    .reduce((count, log) => count + (log.followUpActions?.length || 0), 0)
-  const incidentActions = indicareData.incidents
-    .filter((incident) => incident.youngPersonId === id && incident.status !== 'closed')
-    .reduce((count, incident) => count + (incident.followUpActions?.length || 0), 0)
-  return dailyActions + incidentActions
-}
-
-function moodForChild(id: string) {
-  const latest = sortByDateDesc(
-    indicareData.dailyLogs.filter((log) => log.youngPersonId === id),
-    (log) => log.createdAt
-  )[0]
-  return latest?.mood || 'Not recorded today'
-}
-
-function lastNoteForChild(id: string) {
-  const latest = sortByDateDesc(
-    indicareData.dailyLogs.filter((log) => log.youngPersonId === id),
-    (log) => log.createdAt
-  )[0]
-  return latest?.presentation || 'No daily note has been recorded yet.'
-}
-
-function demoSelectorCards(): ChildSelectorCard[] {
-  return indicareData.youngPeople.map((child) => {
-    const keyWorker = getStaffById(child.allocatedKeyWorkerId)
-    const placement = getPlacementForYoungPerson(child.id)
-    return {
-      id: child.id,
-      displayName: `${child.firstName} ${child.lastName}`,
-      preferredName: child.preferredName,
-      avatarLabel: initials(`${child.firstName} ${child.lastName}`),
-      age: child.age,
-      status: child.status,
-      placementStatus: placement?.status || child.status,
-      riskLevel: child.riskLevel,
-      keyWorkerName: keyWorker ? fullName(keyWorker) : 'Key worker not assigned',
-      currentMood: moodForChild(child.id),
-      activeRisksCount: activeRiskCount(child.id),
-      actionsDue: actionCount(child.id),
-      importantAlert: child.safeguardingStatus === 'active' ? 'Safeguarding' : child.riskLevel === 'critical' ? 'Critical risk' : undefined,
-      lastRecordedNote: lastNoteForChild(child.id)
-    }
-  })
 }
 
 function coerceLiveCards(payload: unknown): ChildSelectorCard[] {
@@ -175,78 +112,15 @@ function coerceLiveCards(payload: unknown): ChildSelectorCard[] {
   })
 }
 
-function demoDailyNotes(id: string): JourneyDailyNote[] {
-  return sortByDateDesc(
-    indicareData.dailyLogs.filter((log) => log.youngPersonId === id),
-    (log) => log.createdAt
-  ).map((log) => ({
-    id: log.id,
-    title: `${log.shift} daily note`,
-    summary: log.presentation,
-    noteDate: log.date,
-    workflowStatus: log.followUpActions.length ? 'follow-up' : 'recorded',
-    href: `/young-people/${encodeURIComponent(id)}/chronology?source=${encodeURIComponent(log.id)}`
-  }))
-}
-
-function demoTimeline(id: string): JourneyTimelineItem[] {
-  return getChronologyForYoungPerson(id).map((event) => ({
-    id: event.id,
-    title: event.title,
-    summary: event.summary,
-    category: event.category,
-    severity: event.severity,
-    occurredAt: new Date(event.dateTime).toLocaleString('en-GB'),
-    href: `/young-people/${encodeURIComponent(id)}/chronology?source=${encodeURIComponent(event.id)}`
-  }))
-}
-
-function demoActions(id: string): JourneyAction[] {
-  const dailyActions = indicareData.dailyLogs
-    .filter((log) => log.youngPersonId === id)
-    .flatMap((log, index) => (log.followUpActions || []).map((action, actionIndex) => ({
-      id: `daily-${log.id}-${actionIndex}`,
-      title: action,
-      description: `From ${log.shift.toLowerCase()} daily note.`,
-      status: index === 0 ? 'open' : 'in_progress',
-      href: `/daily-logs/${log.id}`
-    })))
-
-  const incidentActions = indicareData.incidents
-    .filter((incident) => incident.youngPersonId === id && incident.status !== 'closed')
-    .flatMap((incident) => (incident.followUpActions || []).map((action, actionIndex) => ({
-      id: `incident-${incident.id}-${actionIndex}`,
-      title: action,
-      description: `Linked to ${incident.type}.`,
-      status: incident.severity === 'critical' ? 'overdue' : 'open',
-      href: `/incidents/${incident.id}`
-    })))
-
-  return [...incidentActions, ...dailyActions]
-}
-
-function demoEvidence(id: string): JourneyEvidence[] {
-  const childEventEvidenceIds = new Set(getChronologyForYoungPerson(id).flatMap((event) => event.evidenceIds))
-  return getEvidenceItems()
-    .filter((item) => childEventEvidenceIds.has(item.id))
-    .map((item) => ({
-      id: item.id,
-      title: item.title,
-      description: item.description,
-      linkedRegulation: item.linkedRegulation
-    }))
-}
-
-function demoJourneyData(id: string): ChildJourneyData {
-  const child = getYoungPersonById(id)
-  const placement = child ? getPlacementForYoungPerson(child.id) : undefined
+function emptyJourneyData(id: string, source: ChildJourneyData['source'] = 'unavailable', error?: string): ChildJourneyData {
   const base = {
-    source: 'fallback',
-    child: child ? { ...child, displayName: `${child.firstName} ${child.lastName}`, placementStatus: placement?.status } : undefined,
-    dailyNotes: demoDailyNotes(id),
-    timeline: demoTimeline(id),
-    actions: demoActions(id),
-    evidence: demoEvidence(id)
+    source,
+    child: undefined,
+    dailyNotes: [],
+    timeline: [],
+    actions: [],
+    evidence: [],
+    error
   } satisfies Omit<ChildJourneyData, 'story'>
   return { ...base, story: buildJourneyStory(base) }
 }
@@ -316,22 +190,20 @@ export function todayLong() {
 }
 
 export async function getChildSelectorCards() {
-  const fallback = demoSelectorCards()
+  const fallback: ChildSelectorCard[] = []
   const result = await osGet<unknown>('/young-people', fallback)
   if (result.source === 'live') {
     const cards = coerceLiveCards(result.data)
-    if (cards.length) {
-      return { cards, source: 'live' as const, error: result.error }
-    }
+    return { cards, source: 'live' as const, error: result.error }
   }
-  return { cards: fallback, source: 'fallback' as const, error: result.error }
+  return { cards: [], source: 'unavailable' as const, error: result.error }
 }
 
 export async function getChildJourneyData(id: string): Promise<ChildJourneyData> {
-  const fallback = demoJourneyData(id)
+  const fallback = emptyJourneyData(id)
   const result = await osGet<unknown>(`/young-people/${encodeURIComponent(id)}/journey`, fallback)
   if (result.source === 'live') {
     return coerceLiveJourney(id, result.data, fallback)
   }
-  return { ...fallback, error: result.error, story: buildJourneyStory(fallback) }
+  return emptyJourneyData(id, 'unavailable', result.error)
 }

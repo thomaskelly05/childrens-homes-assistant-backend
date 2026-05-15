@@ -1,4 +1,3 @@
-import { demoEvidenceItems } from '@/lib/evidence/demo-data'
 import type { EvidenceItem, EvidenceQuality, EvidenceType } from '@/lib/evidence/types'
 
 import { osGet, osPost } from './client'
@@ -46,14 +45,13 @@ export function mapOsEvidence(row: Record<string, any>): EvidenceItem {
 }
 
 export async function getOsEvidence(): Promise<OsApiResult<EvidenceItem[]>> {
-  const result = await osGet<Record<string, any>[]>('/os/evidence', demoEvidenceItems)
+  const result = await osGet<Record<string, any>[]>('/os/evidence', [])
   return { ...result, data: result.data.map(mapOsEvidence) }
 }
 
 export async function getOsEvidenceItem(id: string): Promise<OsApiResult<EvidenceItem | undefined>> {
-  const fallback = demoEvidenceItems.find((item) => item.id === id)
-  const result = await osGet<Record<string, any> | undefined>(`/os/evidence/${encodeURIComponent(id)}`, fallback as any)
-  return { ...result, data: result.data ? mapOsEvidence(result.data) : fallback }
+  const result = await osGet<Record<string, any> | undefined>(`/os/evidence/${encodeURIComponent(id)}`, undefined)
+  return { ...result, data: result.data ? mapOsEvidence(result.data) : undefined }
 }
 
 export async function attachOsEvidence(payload: Record<string, unknown>) {
