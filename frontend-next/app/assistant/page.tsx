@@ -68,7 +68,7 @@ export default function AssistantPage() {
         ...current,
         {
           role: 'assistant',
-          content: `${message}\n\nThis standalone surface has not used OS records, child files, home records or staff records.`
+          content: 'I could not reach the live assistant endpoint for this message. This standalone surface has not used OS records, child files, home records or staff records.'
         }
       ])
     } finally {
