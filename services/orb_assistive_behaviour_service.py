@@ -4,11 +4,12 @@ from typing import Any
 
 
 ASSISTIVE_PROMPTS = {
-    "overdue_protocol_review": "Jamie's missing protocol review is overdue.",
+    "overdue_protocol_review": "Jamie's return interview is still outstanding.",
     "unresolved_handover_actions": "There are two unresolved actions from handover.",
     "missing_debrief": "The debrief has not been recorded yet.",
     "prepare_handover": "Would you like me to prepare tonight's handover?",
-    "weak_child_voice": "This note may benefit from child voice.",
+    "weak_child_voice": "There's limited child voice in this section.",
+    "open_follow_up": "There's still one follow-up open.",
 }
 
 
@@ -25,6 +26,8 @@ class OrbAssistiveBehaviourService:
                         "tone": "gentle_non_punitive",
                         "dismissible": True,
                         "evidence_linked": True,
+                        "intrusion_level": "soft",
+                        "notification_style": "ambient_nudge",
                         "manager_configurable": True,
                     }
                 )

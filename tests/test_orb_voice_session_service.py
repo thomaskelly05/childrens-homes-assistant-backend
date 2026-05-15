@@ -1,7 +1,7 @@
 import pytest
 from fastapi import HTTPException
 
-from schemas.orb import OrbContext, OrbSessionEventRequest, OrbSessionStartRequest
+from schemas.orb import OrbContext, OrbPreferences, OrbSessionEventRequest, OrbSessionStartRequest
 from services.assistant_context_service import build_shared_assistant_context
 from services.assistant_retrieval_service import AssistantRetrievalService
 from services.orb_voice_session_service import OrbVoiceSessionService
@@ -275,6 +275,8 @@ async def test_runtime_metadata_exposes_latency_prosody_and_presence_preferences
     assert runtime["prosody"]["volume_hint"] == "low"
     assert runtime["conversation_timing"]["acknowledgement_ms"] <= 500
     assert runtime["presence_scope"] == "standalone:user:7"
+    assert runtime["failure_recovery"]["raw_errors"] is False
+    assert runtime["ambient_presence"]["reduced_motion_safe"] is True
 
 
 @pytest.mark.asyncio
@@ -293,6 +295,43 @@ async def test_voice_session_uses_calm_british_defaults_and_text_fallback(monkey
     assert start.voice_profile.product_name == "ORB powered by IndiCare"
     assert start.realtime["fallback_text_mode"] is True
     assert start.realtime_state["runtime"]["voice_orchestration"]["voice_profile"] == "british_female_calm"
+
+
+@pytest.mark.asyncio
+async def test_runtime_metadata_adapts_environment_safety_and_companionship(monkeypatch):
+    monkeypatch.setattr("services.orb_voice_session_service.record_audit_event", lambda **kwargs: None)
+    service = OrbVoiceSessionService(assistant_response_service=FakeAssistantResponseService())
+    user = {"id": 7, "role": "support_worker", "home_id": 1, "allowed_home_ids": [1]}
+
+    start = await service.start_session(
+        request=OrbSessionStartRequest(
+            context=OrbContext(workspace="handover", home_id=1, selected_young_person_id=10, operational_memory={"open_follow_up": True}),
+            preferences=OrbPreferences(captions_enabled=True),
+            provider="mock_voice",
+            workspace_context={
+                "care_mode": "child_nearby",
+                "ambient_signals": {"failed_attempts": 2, "sensory_overload": True},
+                "operational_signals": {"weak_child_voice": True, "prepare_handover": True},
+            },
+        ),
+        current_user=user,
+    )
+
+    runtime = start.realtime_state["runtime"]
+    prompts = runtime["operational_companionship"]["prompts"]
+
+    assert runtime["environment_mode"] == "child_present"
+    assert runtime["presence_scope"].endswith("child:10")
+    assert runtime["emotional_state"]["clinical_inference"] is False
+    assert runtime["emotional_state"]["recommended_caption_density"] == "simplified"
+    assert runtime["emotional_safety"]["diagnosis_made"] is False
+    assert runtime["emotional_safety"]["ui_adjustments"]["interface_complexity"] == "reduced"
+    assert runtime["prosody"]["pace"] == "slower"
+    assert runtime["voice_orchestration"]["emotional_speech_profile"] == "emotional_safety"
+    assert runtime["care_environment"]["captions"] == "privacy_sensitive"
+    assert runtime["ambient_presence"]["visual_intensity"] == "soft"
+    assert runtime["operational_companionship"]["nagging"] is False
+    assert {prompt["id"] for prompt in prompts} == {"prepare_handover", "weak_child_voice", "open_follow_up"}
 
 
 @pytest.mark.asyncio

@@ -4,12 +4,15 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Captions, Keyboard, Mic, MicOff, Send, Settings, ShieldCheck, Square, UserRound, Volume2, VolumeX } from 'lucide-react'
 
+import { OrbFailureState } from '@/components/orb-core/orb-failure-state'
 import { OrbRenderer } from '@/components/orb-core/orb-renderer'
 import type { OrbRenderState } from '@/components/orb-core/orb-sphere'
 import { orbAccessibilityClassNames } from '@/lib/orb/accessibility/apply-accessibility'
 import { loadOrbAccessibilityPreferences } from '@/lib/orb/accessibility/preferences'
 import { useAuth } from '@/contexts/auth-context'
 import { orbProductCopy } from '@/lib/orb/content/copy'
+import { OrbSoundEngine } from '@/lib/orb/audio'
+import { orbSoundHookForTransition } from '@/lib/orb/audio/orb_audio_runtime_service'
 import { OrbRuntimeController, type OrbRuntimeSnapshot } from '@/lib/orb/state'
 import { defaultOrbPreferences, type OrbContext, type OrbState } from '@/lib/orb/types'
 
@@ -51,13 +54,23 @@ function renderStateFor(state: OrbState, reducedMotion: boolean): OrbRenderState
 
 function statusLine(snapshot: OrbRuntimeSnapshot) {
   if (snapshot.error) return snapshot.error
-  if (snapshot.state === 'listening') return 'I am listening.'
-  if (snapshot.state === 'thinking') return 'Of course - give me a second.'
+  if (snapshot.state === 'listening') return 'I’m listening.'
+  if (snapshot.state === 'thinking') return 'One second.'
   if (snapshot.state === 'speaking') return "I'll keep this brief."
-  if (snapshot.state === 'reconnecting') return "Connection paused. I'm reconnecting."
+  if (snapshot.state === 'reconnecting') return "Voice paused. I'm reconnecting."
   if (snapshot.state === 'permission_denied') return 'Microphone access looks disabled.'
   if (snapshot.state === 'muted' || snapshot.state === 'private') return 'Private mode is on.'
   return 'Tap the ORB and talk.'
+}
+
+function failureCodeFor(snapshot: OrbRuntimeSnapshot) {
+  if (!snapshot.error) return null
+  if (snapshot.state === 'permission_denied' || /microphone/i.test(snapshot.error)) return 'microphone_denied'
+  if (snapshot.state === 'offline') return 'internet_offline'
+  if (snapshot.state === 'reconnecting') return 'websocket_failure'
+  if (snapshot.state === 'expired') return 'permission_expired'
+  if (snapshot.state === 'unavailable' || snapshot.state === 'error') return 'realtime_provider_unavailable'
+  return null
 }
 
 export function OrbStandaloneExperience({ voiceFirst = true }: { voiceFirst?: boolean }) {
@@ -83,10 +96,25 @@ export function OrbStandaloneExperience({ voiceFirst = true }: { voiceFirst?: bo
   const [input, setInput] = useState('')
   const [muted, setMuted] = useState(false)
   const inputRef = useRef<HTMLInputElement | null>(null)
+  const soundEngineRef = useRef<OrbSoundEngine | null>(null)
+  const previousOrbStateRef = useRef<OrbState>(controller.getSnapshot().state)
   const orbReady = status === 'authenticated' && Boolean(user) && csrfReady
 
   useEffect(() => controller.subscribe(setSnapshot), [controller])
   useEffect(() => controller.attachBrowserLifecycle(), [controller])
+  useEffect(() => {
+    const preferences = {
+      soundEnabled: !hydratedAccessibility.reducedMotion,
+      childPresent: false,
+      emotionalRegulationMode: hydratedAccessibility.emotionalRegulationMode,
+      hearingAccessibility: hydratedAccessibility.hearingAccessibility
+    }
+    if (!soundEngineRef.current) {
+      soundEngineRef.current = new OrbSoundEngine(preferences)
+    } else {
+      soundEngineRef.current.updatePreferences(preferences)
+    }
+  }, [hydratedAccessibility.emotionalRegulationMode, hydratedAccessibility.hearingAccessibility, hydratedAccessibility.reducedMotion])
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -111,6 +139,16 @@ export function OrbStandaloneExperience({ voiceFirst = true }: { voiceFirst?: bo
   const renderState = renderStateFor(snapshot.state, hydratedAccessibility.reducedMotion)
   const showCaptions = captions || hydratedAccessibility.hearingAccessibility || Boolean(snapshot.partialTranscript) || snapshot.state === 'speaking' || snapshot.state === 'listening'
   const activeSession = Boolean(snapshot.sessionId) || snapshot.loading || snapshot.state !== 'idle'
+  const failureCode = failureCodeFor(snapshot)
+
+  useEffect(() => {
+    const previous = previousOrbStateRef.current
+    if (previous === snapshot.state) return
+    const engine = soundEngineRef.current
+    const hook = orbSoundHookForTransition(previous, snapshot.state)
+    if (engine && hook) engine.play(hook)
+    previousOrbStateRef.current = snapshot.state
+  }, [snapshot.state])
 
   async function sendText(text = input) {
     const message = text.trim()
@@ -132,8 +170,9 @@ export function OrbStandaloneExperience({ voiceFirst = true }: { voiceFirst?: bo
   }
 
   return (
-    <div className={`relative mx-auto flex min-h-[calc(100vh-7rem)] w-full flex-col items-center justify-center gap-6 px-2 text-center ${accessibilityClassName}`} data-orb-state={renderState}>
+    <div className={`relative mx-auto flex min-h-[calc(100vh-7rem)] w-full flex-col items-center justify-center gap-6 px-2 text-center ${accessibilityClassName}`} data-orb-state={renderState} data-orb-mobile={snapshot.mobile.isMobile ? 'true' : 'false'}>
       <div className="orb-screen-edge-pulse" data-orb-state={renderState} aria-hidden />
+      <div className="orb-atmospheric-diffusion" data-orb-state={renderState} aria-hidden />
       <div className="absolute right-0 top-0 z-20 flex flex-wrap justify-end gap-2">
         <Link href="/assistant/profile" className="orb-quiet-action rounded-full px-4 py-3 text-sm font-black text-white">
           <UserRound className="mr-2 inline h-4 w-4" aria-hidden />
@@ -174,6 +213,8 @@ export function OrbStandaloneExperience({ voiceFirst = true }: { voiceFirst?: bo
           <h1 className="orb-title-glow mt-2 text-3xl font-black tracking-[-0.07em] md:text-5xl">{statusLine(snapshot)}</h1>
           <p className="mt-3 text-sm leading-7 text-slate-300">{orbProductCopy.standaloneSubprompt} Standalone mode cannot retrieve children, homes, chronology or provider records.</p>
         </div>
+
+        {failureCode ? <OrbFailureState code={failureCode} /> : null}
 
         <div className="flex flex-wrap justify-center gap-2">
           <button type="button" onClick={() => void controller.activate(standaloneContext, user?.role)} disabled={!orbReady} className="orb-primary-action rounded-full px-5 py-3 text-sm font-black disabled:opacity-50">

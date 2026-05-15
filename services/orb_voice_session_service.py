@@ -33,6 +33,8 @@ from services.operational_intelligence_service import build_orb_operational_inte
 from services.orb_general_assistant_service import orb_general_assistant_service
 from services.orb_identity_service import orb_identity_service
 from services.orb_intent_router import route_orb_intent
+from services.orb_assistive_behaviour_service import orb_assistive_behaviour_service
+from services.orb_care_environment_mode_service import orb_care_environment_mode_service
 from services.orb_interaction_preference_service import orb_interaction_preference_service
 from services.orb_latency_strategy_service import orb_latency_strategy_service
 from services.orb_memory_service import orb_memory_service
@@ -42,6 +44,9 @@ from services.orb_presence_memory_service import orb_presence_memory_service
 from services.orb_product_mode_service import orb_product_mode_service
 from services.orb_productivity_service import orb_productivity_service
 from services.orb_conversation_policy import orb_conversation_policy
+from services.orb_emotional_safety_service import orb_emotional_safety_service
+from services.orb_emotional_state_service import orb_emotional_state_service
+from services.orb_environment_context_service import MODE_ALIASES, orb_environment_context_service
 from services.orb_prosody_service import orb_prosody_service
 from services.orb_observability_service import orb_observability_service
 from services.orb_realtime_conversation_service import orb_realtime_conversation_service
@@ -523,26 +528,59 @@ class OrbVoiceSessionService:
         return context
 
     def _presence_preferences(self, preferences: OrbPreferences) -> dict[str, Any]:
+        reduced_motion = bool(getattr(preferences, "reduced_motion", False))
+        emotional_regulation = bool(getattr(preferences, "emotional_regulation_mode", False))
         return {
             "preferred_response_length": preferences.response_detail,
             "caption_preference": "on" if preferences.captions_enabled else "off",
             "voice_caption_mode": "caption_supported" if preferences.captions_enabled else "voice_first",
             "pacing_preference": preferences.speaking_speed,
             "interaction_style": preferences.voice_style,
+            "tone_preference": "calm_british",
+            "verbosity_preference": "brief" if preferences.concise_answers else preferences.response_detail,
+            "sensory_profile": "reduced_stimulation" if reduced_motion or emotional_regulation else "ambient",
+            "interruption_style": preferences.interruption_sensitivity,
+            "concise_mode": preferences.concise_answers,
+            "reflective_mode": preferences.response_detail == "balanced",
+            "emotional_safety_preferred": emotional_regulation,
+            "acknowledgement_preference": "soft",
+            "mute_transition_preference": "soft_fade",
             "prefers_brief_answers": preferences.concise_answers,
-            "reduced_motion": bool(getattr(preferences, "reduced_motion", False)),
+            "reduced_motion": reduced_motion,
             "high_contrast": bool(getattr(preferences, "high_contrast", False)),
         }
 
     def _environment_mode_for(self, context: OrbContext, decision: OrbModeDecision | None = None, workspace_context: dict[str, Any] | None = None) -> str:
-        explicit = (workspace_context or {}).get("environment_mode") or context.model_dump().get("environment_mode")
+        context_data = context.model_dump()
+        explicit = (workspace_context or {}).get("environment_mode") or context_data.get("environment_mode")
         if explicit:
-            return str(explicit)
+            return MODE_ALIASES.get(str(explicit), str(explicit))
+        care_mode = (workspace_context or {}).get("care_mode") or context_data.get("care_mode")
+        if care_mode:
+            return str(orb_care_environment_mode_service.resolve(str(care_mode))["environment_mode"])
         if decision and "safeguarding_sensitive" in decision.safety_flags:
             return "safeguarding"
-        if context.workspace in {"night_shift", "quiet_hours", "child_present"}:
-            return str(context.workspace)
+        if context.workspace in {"night_shift", "quiet_hours", "child_present", "handover", "inspection_prep", "inspection", "document_writing", "reflective_writing", "mobile_quick_support"}:
+            return MODE_ALIASES.get(str(context.workspace), str(context.workspace))
         return "general"
+
+    def _ambient_signals(self, *, context: OrbContext, workspace_context: dict[str, Any] | None = None) -> dict[str, Any]:
+        context_data = context.model_dump()
+        assistant_context = context_data.get("assistant_context") if isinstance(context_data.get("assistant_context"), dict) else {}
+        return {
+            **(context_data.get("operational_memory") if isinstance(context_data.get("operational_memory"), dict) else {}),
+            **(assistant_context.get("ambient_signals") if isinstance(assistant_context.get("ambient_signals"), dict) else {}),
+            **((workspace_context or {}).get("ambient_signals") if isinstance((workspace_context or {}).get("ambient_signals"), dict) else {}),
+            **((workspace_context or {}).get("emotional_signals") if isinstance((workspace_context or {}).get("emotional_signals"), dict) else {}),
+        }
+
+    def _operational_companionship_signals(self, *, context: OrbContext, workspace_context: dict[str, Any] | None = None) -> dict[str, Any]:
+        context_data = context.model_dump()
+        operational_memory = context_data.get("operational_memory") if isinstance(context_data.get("operational_memory"), dict) else {}
+        return {
+            **operational_memory,
+            **((workspace_context or {}).get("operational_signals") if isinstance((workspace_context or {}).get("operational_signals"), dict) else {}),
+        }
 
     def _runtime_metadata(
         self,
@@ -565,6 +603,20 @@ class OrbVoiceSessionService:
         )
         network_quality = str((workspace_context or {}).get("network_quality") or context.model_dump().get("network_quality") or "normal")
         environment_mode = self._environment_mode_for(context, decision, workspace_context)
+        environment_settings = orb_environment_context_service.settings_for(environment_mode)
+        ambient_signals = self._ambient_signals(context=context, workspace_context=workspace_context)
+        recent_failures = int((workspace_context or {}).get("recent_failures") or ambient_signals.get("recent_failures") or 0)
+        emotional_state = orb_emotional_state_service.assess(signals=ambient_signals, recent_failures=recent_failures, workflow=environment_mode)
+        emotional_safety = orb_emotional_safety_service.evaluate(signals={**ambient_signals, "safeguarding": environment_mode == "safeguarding", "crisis_escalation": environment_mode == "crisis_escalation"})
+        emotional_safety_active = bool(emotional_safety["active"] or emotional_state["overload_detected"] or getattr(preferences, "emotional_regulation_mode", False))
+        reflective = interaction_preferences.get("reflective_mode") is True or environment_mode == "reflective_writing"
+        voice_profile = orb_voice_orchestration_service.profile_for_environment(
+            environment_mode=environment_mode,
+            emotional_safety=emotional_safety_active,
+            reflective=reflective,
+        )
+        care_environment = orb_care_environment_mode_service.resolve(str((workspace_context or {}).get("care_mode") or environment_mode))
+        companionship_prompts = orb_assistive_behaviour_service.suggest(signals=self._operational_companionship_signals(context=context, workspace_context=workspace_context))
         return {
             "product_mode": product_mode,
             "interaction_preferences": interaction_preferences,
@@ -576,14 +628,38 @@ class OrbVoiceSessionService:
             ),
             "prosody": orb_prosody_service.shape(
                 environment_mode=environment_mode,
-                emotional_safety=bool(getattr(preferences, "emotional_regulation_mode", False)),
+                emotional_safety=emotional_safety_active,
             ),
             "voice_orchestration": orb_voice_orchestration_service.plan(
-                profile="british_female_calm",
+                profile=voice_profile,
                 realtime_configured=provider_configured,
-                context=context.model_dump(),
+                context={**context.model_dump(), "child_present": environment_mode == "child_present"},
             ),
             "conversation_timing": orb_conversation_policy.event_metadata(preferences=preferences),
+            "environment_settings": environment_settings,
+            "care_environment": care_environment,
+            "emotional_state": emotional_state,
+            "emotional_safety": emotional_safety,
+            "ambient_presence": {
+                "background_reacts_to_state": True,
+                "motion": environment_settings["motion"],
+                "visual_intensity": emotional_safety["ui_adjustments"]["visual_intensity"] if emotional_safety_active else environment_settings["visual_intensity"],
+                "caption_behaviour": emotional_state["recommended_caption_density"],
+                "audio_language": "restrained_soft_ui",
+                "reduced_motion_safe": True,
+                "battery_aware": True,
+            },
+            "operational_companionship": {
+                "style": "soft_dismissible_evidence_linked",
+                "nagging": False,
+                "prompts": companionship_prompts[:3],
+            },
+            "failure_recovery": {
+                "raw_errors": False,
+                "voice_fallback_copy": "Voice paused. I can continue in text while audio reconnects.",
+                "microphone_denied_copy": "Microphone access appears off.",
+                "timeout_recovery_copy": "I’ll pause there. You can carry on from the same context.",
+            },
             "environment_mode": environment_mode,
         }
 

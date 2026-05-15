@@ -2,11 +2,14 @@ from schemas.orb_identity import OrbProductMode
 from services.orb_assistive_behaviour_service import orb_assistive_behaviour_service
 from services.orb_care_environment_mode_service import orb_care_environment_mode_service
 from services.orb_emotional_safety_service import orb_emotional_safety_service
+from services.orb_emotional_state_service import orb_emotional_state_service
+from services.orb_environment_context_service import orb_environment_context_service
 from services.orb_failure_state_service import orb_failure_state_service
 from services.orb_identity_service import orb_identity_service
 from services.orb_interaction_preference_service import orb_interaction_preference_service
 from services.orb_presence_memory_service import orb_presence_memory_service
 from services.orb_product_mode_service import orb_product_mode_service
+from services.orb_prosody_service import orb_prosody_service
 from services.orb_role_contract_service import orb_role_contract_service
 from services.orb_voice_orchestration_service import orb_voice_orchestration_service
 
@@ -67,6 +70,29 @@ def test_presence_memory_scopes_embedded_child_and_standalone_separately():
     assert "active_child_id" not in standalone.preferences
 
 
+def test_presence_memory_keeps_relationship_preferences_without_clinical_conclusions():
+    memory = orb_presence_memory_service.remember(
+        product_mode="os_embedded",
+        user_id=2,
+        home_id=10,
+        active_child_id=101,
+        preferences={
+            "caption_preference": "on",
+            "verbosity_preference": "brief",
+            "sensory_profile": "reduced_stimulation",
+            "interruption_style": "gentle_repair",
+            "reflective_mode": True,
+            "clinical_conclusion": "overloaded diagnosis",
+        },
+    )
+    recalled = orb_presence_memory_service.recall(product_mode="os_embedded", user_id=2, home_id=10, active_child_id=101)
+
+    assert recalled == memory.preferences
+    assert recalled["caption_preference"] == "on"
+    assert recalled["interruption_style"] == "gentle_repair"
+    assert "clinical_conclusion" not in recalled
+
+
 def test_voice_emotional_environment_and_failure_layers_are_safe():
     voice = orb_voice_orchestration_service.plan(profile="safeguarding_cautious", realtime_configured=True)
     emotional = orb_emotional_safety_service.evaluate(text="I am stuck, help me again")
@@ -75,18 +101,39 @@ def test_voice_emotional_environment_and_failure_layers_are_safe():
 
     assert voice["provider_route"] == "openai_realtime_ephemeral"
     assert voice["browser_api_key_exposure"] is False
+    assert voice["acknowledgement_timing_ms"] <= 500
     assert emotional["diagnosis_made"] is False
     assert emotional["ui_adjustments"]["response_length"] == "short"
+    assert emotional["ui_adjustments"]["interface_complexity"] == "reduced"
     assert care_mode["captions"] == "privacy_sensitive"
     assert "OpenAI" not in failure["message"]
 
 
+def test_environmental_mode_switching_adjusts_presence_without_diagnosing():
+    night = orb_environment_context_service.settings_for("night")
+    inspection = orb_environment_context_service.settings_for("inspection_preparation")
+    overload = orb_emotional_state_service.assess(signals={"sensory_overload": True}, workflow="emotional_overload")
+    prosody = orb_prosody_service.shape(environment_mode="night_shift", emotional_safety=False)
+    profile = orb_voice_orchestration_service.profile_for_environment(environment_mode="emotional_overload", emotional_safety=True)
+
+    assert night["mode"] == "night_shift"
+    assert night["visual_intensity"] == "low"
+    assert inspection["retrieval_priority"] == "chronology_and_gaps"
+    assert overload["clinical_inference"] is False
+    assert overload["recommended_caption_density"] == "simplified"
+    assert prosody["volume_hint"] == "low"
+    assert profile == "emotional_safety"
+
+
 def test_accessibility_preferences_and_assistive_behaviour_are_gentle():
     prefs = orb_interaction_preference_service.normalise({"reduced_motion": True, "prefers_step_by_step": True})
-    suggestions = orb_assistive_behaviour_service.suggest(signals={"weak_child_voice": True})
+    suggestions = orb_assistive_behaviour_service.suggest(signals={"weak_child_voice": True, "open_follow_up": True})
 
     assert prefs["voice_caption_mode"] == "caption_supported"
+    assert prefs["sensory_profile"] == "reduced_stimulation"
     assert "step-by-step" in orb_interaction_preference_service.response_instruction(prefs)
     assert suggestions[0]["dismissible"] is True
     assert suggestions[0]["tone"] == "gentle_non_punitive"
+    assert suggestions[0]["intrusion_level"] == "soft"
+    assert len(suggestions) == 2
 

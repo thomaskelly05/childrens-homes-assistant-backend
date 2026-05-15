@@ -8,6 +8,9 @@ export function OrbAmbientFrame({ state, compact = false }: { state: OrbRenderSt
       <span className="orb-ambient-edge orb-ambient-edge--bottom" />
       <span className="orb-ambient-edge orb-ambient-edge--left" />
       <span className="orb-ambient-haze" />
+      <span className="orb-ambient-diffusion orb-ambient-diffusion--near" />
+      <span className="orb-ambient-diffusion orb-ambient-diffusion--far" />
+      <span className="orb-ambient-side-pulse" />
     </div>
   )
 }
