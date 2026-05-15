@@ -51,6 +51,13 @@ export function OrbButton({
   const latestAssistant = [...transcript].reverse().find((entry) => entry.role === 'assistant')
   const latestUser = [...transcript].reverse().find((entry) => entry.role === 'user')
   const orbStatus = snapshot.error ? 'Orb needs a moment' : orbStateLabel(snapshot.state)
+  const ambientState = snapshot.state === 'safeguarding_sensitive' || snapshot.state === 'inspection'
+    ? 'safeguarding_cautious'
+    : snapshot.state === 'recording' || snapshot.state === 'dictation' || snapshot.state === 'passive_listening'
+      ? 'listening'
+      : snapshot.state === 'muted'
+        ? 'private_mode'
+        : snapshot.state
   const childLock = (context.child_context_lock || {}) as { active?: boolean; child_name?: string; retrieval_scope?: string }
   const childName = typeof childLock.child_name === 'string' ? childLock.child_name : undefined
 
@@ -68,22 +75,23 @@ export function OrbButton({
   return (
     <div className={placement === 'floating' ? 'fixed bottom-[calc(env(safe-area-inset-bottom)+9.5rem)] right-3 z-50 md:bottom-7 md:right-7' : 'relative inline-flex'}>
       {orbReady && active ? (
-        <div className={`${immersiveOpen ? 'fixed inset-0 z-[70] flex items-center justify-center bg-black/90 px-4 backdrop-blur-xl' : 'fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+6rem)] z-[70] md:left-auto md:right-7 md:w-[440px]'} text-white`}>
-          <section className={`${immersiveOpen ? 'w-full max-w-xl' : 'rounded-[34px] border border-white/10 bg-slate-950/92 p-5 shadow-2xl shadow-cyan-950/30 backdrop-blur-xl'} flex flex-col items-center text-center`}>
+        <div className={`${immersiveOpen ? 'orb-standalone-atmosphere fixed inset-0 z-[70] flex items-center justify-center px-4' : 'fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+6rem)] z-[70] md:left-auto md:right-7 md:w-[440px]'} text-white`} data-orb-state={ambientState}>
+          <div className="orb-screen-edge-pulse" data-orb-state={ambientState} aria-hidden />
+          <section className={`${immersiveOpen ? 'w-full max-w-xl' : 'orb-embedded-panel p-5'} flex flex-col items-center text-center`} data-orb-state={ambientState}>
             <OrbVisual state={snapshot.state} />
-            <p className="mt-8 text-[11px] font-black uppercase tracking-[0.28em] text-cyan-200">IndiCare OS Orb</p>
-            <h2 className={`${immersiveOpen ? 'text-4xl' : 'text-2xl'} mt-3 font-black tracking-[-0.07em]`}>{orbStatus}</h2>
+            <p className="orb-kicker mt-8 text-[11px] font-black uppercase tracking-[0.28em]">IndiCare OS Orb</p>
+            <h2 className={`orb-title-glow ${immersiveOpen ? 'text-4xl' : 'text-2xl'} mt-3 font-black tracking-[-0.07em]`}>{orbStatus}</h2>
             <p className="mt-3 max-w-md text-sm leading-6 text-slate-300">
               {childLock.active && childName
                 ? `Voice-first operational support. I am locked to ${childName}'s journey and will not search other children.`
                 : 'Voice-first operational support. Select a child before asking for child records.'}
             </p>
-            <div className="mt-5 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-xs font-black uppercase tracking-[0.16em] text-cyan-100">
+            <div className="orb-presence-pill mt-5 px-4 py-2 text-xs font-black uppercase tracking-[0.16em]">
               {childLock.active && childName ? `Active child: ${childName}` : 'No active child context'}
             </div>
 
             {snapshot.error ? (
-              <p className="mt-5 rounded-full border border-amber-300/30 bg-amber-300/10 px-4 py-2 text-sm text-amber-100">
+              <p className="mt-5 rounded-full border border-amber-300/30 bg-amber-300/10 px-4 py-2 text-sm text-amber-100 shadow-[0_0_24px_rgba(251,191,36,0.14)]">
                 {snapshot.error}
               </p>
             ) : null}
@@ -95,7 +103,7 @@ export function OrbButton({
             ) : null}
 
             {captions ? (
-              <div className="mt-6 max-h-40 w-full overflow-auto rounded-3xl border border-white/10 bg-white/10 p-4 text-left text-sm leading-7 text-slate-100" aria-live="polite">
+              <div className="orb-caption-surface mt-6 max-h-40 w-full overflow-auto p-4 text-left text-sm leading-7 text-slate-100" aria-live="polite">
                 {snapshot.partialTranscript ? <p>{snapshot.partialTranscript}</p> : latestAssistant ? <p>{latestAssistant.content}</p> : latestUser ? <p>{latestUser.content}</p> : <p>Captions will appear when Orb hears or speaks.</p>}
               </div>
             ) : null}
@@ -113,18 +121,18 @@ export function OrbButton({
                   id="orb-accessible-text"
                   value={typedText}
                   onChange={(event) => setTypedText(event.target.value)}
-                  className="min-w-0 flex-1 rounded-full border border-white/15 bg-white/10 px-4 py-3 text-sm font-semibold text-white outline-none placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-300"
+                  className="orb-input min-w-0 flex-1 px-4 py-3 text-sm font-semibold text-white outline-none placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-300"
                   placeholder="Type to Orb..."
                   aria-label={childName ? `Type to Orb about ${childName}` : 'Type to Orb'}
                 />
-                <button type="submit" disabled={!typedText.trim() || snapshot.loading} className="rounded-full bg-cyan-300 px-4 text-slate-950 disabled:opacity-50" aria-label="Send typed message to Orb">
+                <button type="submit" disabled={!typedText.trim() || snapshot.loading} className="orb-primary-action rounded-full px-4 disabled:opacity-50" aria-label="Send typed message to Orb">
                   <Send className="h-4 w-4" aria-hidden />
                 </button>
               </form>
             ) : null}
 
             <div className="mt-8 flex flex-wrap justify-center gap-3">
-              <button type="button" onClick={() => setImmersiveOpen((value) => !value)} className="rounded-full bg-white/10 px-4 py-3 text-sm font-black text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-cyan-300">
+              <button type="button" onClick={() => setImmersiveOpen((value) => !value)} className="orb-quiet-action rounded-full px-4 py-3 text-sm font-black text-white focus:outline-none focus:ring-2 focus:ring-cyan-300">
                 {immersiveOpen ? <X className="mr-2 inline h-4 w-4" aria-hidden /> : <Maximize2 className="mr-2 inline h-4 w-4" aria-hidden />}
                 {immersiveOpen ? 'Ambient' : 'Immersive'}
               </button>
@@ -134,18 +142,18 @@ export function OrbButton({
                   controller.updatePreferences({ ...snapshot.preferences, captions_enabled: next })
                   return next
                 })
-              }} className="rounded-full bg-white/10 px-4 py-3 text-sm font-black text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-cyan-300">
+              }} className="orb-quiet-action rounded-full px-4 py-3 text-sm font-black text-white focus:outline-none focus:ring-2 focus:ring-cyan-300">
                 <Captions className="mr-2 inline h-4 w-4" aria-hidden />
                 {captions ? 'Hide captions' : 'Captions'}
               </button>
-              <button type="button" onClick={() => setFallbackOpen((value) => !value)} className="rounded-full bg-white/10 px-4 py-3 text-sm font-black text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-cyan-300">
+              <button type="button" onClick={() => setFallbackOpen((value) => !value)} className="orb-quiet-action rounded-full px-4 py-3 text-sm font-black text-white focus:outline-none focus:ring-2 focus:ring-cyan-300">
                 <Keyboard className="mr-2 inline h-4 w-4" aria-hidden />
                 Type to Orb
               </button>
               <button type="button" onClick={() => {
                 setImmersiveOpen(false)
                 void controller.end()
-              }} className="rounded-full bg-white px-4 py-3 text-sm font-black text-slate-950 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-300">
+              }} className="orb-primary-action rounded-full px-4 py-3 text-sm font-black focus:outline-none focus:ring-2 focus:ring-cyan-300">
                 <Square className="mr-2 inline h-4 w-4" aria-hidden />
                 Close
               </button>
@@ -160,9 +168,10 @@ export function OrbButton({
           if (orbReady) void controller.activate(context, effectiveRole)
         }}
         data-testid={placement === 'floating' ? 'orb-button' : 'orb-button-inline'}
-        className={`group relative inline-flex items-center justify-center rounded-full border border-white/70 bg-black/85 p-1 shadow-[0_0_42px_rgba(34,211,238,0.36)] backdrop-blur transition hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-cyan-400 ${
+        className={`orb-embedded-dock group relative inline-flex items-center justify-center rounded-full p-1 transition hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-cyan-400 ${
           placement === 'inline' ? '' : 'min-h-16 min-w-16'
         }`}
+        data-orb-state={ambientState}
         aria-label={orbReady ? (snapshot.state === 'speaking' || snapshot.loading ? 'Pause Orb and start listening' : 'Tap Orb and talk') : authMessage}
         aria-pressed={snapshot.state === 'listening'}
         disabled={!orbReady}

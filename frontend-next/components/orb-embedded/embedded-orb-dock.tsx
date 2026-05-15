@@ -14,15 +14,17 @@ export function EmbeddedOrbDock({ childName }: { childName?: string }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed bottom-7 right-7 z-50 rounded-full border border-white/50 bg-slate-950/90 p-2 shadow-[0_0_54px_rgba(34,211,238,0.38)] backdrop-blur"
+        className="orb-embedded-dock fixed bottom-7 right-7 z-50 rounded-full p-2"
+        data-orb-state={childName ? 'idle' : 'private_mode'}
         aria-label="Open ORB operational companion"
       >
         <OrbSphere state={childName ? 'idle' : 'private_mode'} size="small" />
       </button>
       {open ? <EmbeddedOrbPanel childName={childName} onClose={() => setOpen(false)} onImmersive={() => setImmersive(true)} /> : null}
       {immersive ? (
-        <div className="fixed inset-0 z-[90] bg-slate-950 p-4 text-white">
-          <button type="button" onClick={() => setImmersive(false)} className="absolute right-6 top-6 rounded-full bg-white px-4 py-3 text-sm font-black text-slate-950">Close</button>
+        <div className="orb-standalone-atmosphere fixed inset-0 z-[90] p-4 text-white">
+          <div className="orb-screen-edge-pulse" data-orb-state="idle" aria-hidden />
+          <button type="button" onClick={() => setImmersive(false)} className="orb-primary-action absolute right-6 top-6 rounded-full px-4 py-3 text-sm font-black">Close</button>
           <div className="flex min-h-full items-center justify-center">
             <EmbeddedOrbPanel childName={childName} onClose={() => setImmersive(false)} />
           </div>

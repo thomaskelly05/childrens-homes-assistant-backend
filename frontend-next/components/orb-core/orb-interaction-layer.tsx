@@ -34,9 +34,9 @@ export function OrbInteractionLayer({
         <form className="flex w-full max-w-xl gap-2" onSubmit={(event) => { event.preventDefault(); sendTyped() }}>
           <label className="min-w-0 flex-1">
             <span className="sr-only">Type to ORB</span>
-            <input value={input} onChange={(event) => setInput(event.target.value)} className="min-h-12 w-full rounded-full border border-white/15 bg-white/10 px-5 text-sm font-semibold text-white outline-none placeholder:text-slate-400" placeholder="Type to ORB..." />
+            <input value={input} onChange={(event) => setInput(event.target.value)} className="orb-input min-h-12 w-full px-5 text-sm font-semibold text-white outline-none placeholder:text-slate-400" placeholder="Type to ORB..." />
           </label>
-          <button type="submit" disabled={!input.trim() || !onSendText} className="rounded-full bg-cyan-200 px-5 text-sm font-black text-slate-950 disabled:opacity-50">Send</button>
+          <button type="submit" disabled={!input.trim() || !onSendText} className="orb-primary-action rounded-full px-5 text-sm font-black disabled:opacity-50">Send</button>
         </form>
       ) : null}
       <OrbControlRing onListen={onListen} onInterrupt={onInterrupt} onCaptions={() => setCaptions((value) => !value)} onType={() => setTyped((value) => !value)} />

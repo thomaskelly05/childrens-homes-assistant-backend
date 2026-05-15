@@ -250,7 +250,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   if (isChildRecordingWorkspace || isRecordWorkspace) {
     return (
-      <div className="min-h-screen bg-[#eef4fb] text-slate-900">
+      <div className="orb-os-shell min-h-screen bg-[#eef4fb] text-slate-900">
         {children}
         <OrbButton context={orbContext} role={user.role} />
       </div>
@@ -269,7 +269,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   ]
 
   return (
-    <div className="min-h-screen bg-[#f3f6fb] text-slate-900">
+    <div className="orb-os-shell min-h-screen bg-[#f3f6fb] text-slate-900">
       <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-[#f8fafc]/95 px-3 py-3 backdrop-blur-xl md:px-6">
         <div className="flex items-center gap-3">
           <Link href="/home" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-sm font-black text-white shadow-lg shadow-slate-950/20" aria-label="Home">
