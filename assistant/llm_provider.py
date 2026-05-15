@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
@@ -7,6 +8,8 @@ from dataclasses import dataclass, field
 from typing import Any, AsyncIterator, Protocol
 
 from openai import AsyncOpenAI
+
+from services.ai_gateway_service import AIGatewayRequest, ai_gateway_service
 
 logger = logging.getLogger("indicare.llm_provider")
 
@@ -243,7 +246,7 @@ class OpenAIProvider:
                 pass
 
         logger.info(
-            "LLM stream start provider=%s model=%s temperature=%s max_tokens=%s messages=%s",
+            "LLM stream start provider=%s model=%s temperature=%s max_tokens=%s messages=%s governance=streaming_pending_gateway",
             self._provider_name,
             model,
             temperature,
@@ -279,41 +282,36 @@ class OpenAIProvider:
     ) -> dict[str, Any]:
         model = _safe_string(request.model) or "gpt-4o-mini"
         max_tokens = min(max(_normalise_max_tokens(request.max_tokens), 512), 4096)
-
-        messages = [
-            {
-                "role": "system",
-                "content": _build_structured_output_instruction(),
-            },
-            {
-                "role": "user",
-                "content": (
-                    "Create the JSON metadata wrapper for this final answer.\n\n"
-                    "Do not rewrite the answer. Do not add new facts. "
-                    "Do not invent sources or evidence.\n\n"
-                    f"Final answer:\n{final_answer_text}"
-                ),
-            },
-        ]
+        provider_id = request.metadata.get("provider_id") if isinstance(request.metadata, dict) else None
+        home_id = request.metadata.get("home_id") if isinstance(request.metadata, dict) else None
+        user_id = request.metadata.get("user_id") if isinstance(request.metadata, dict) else None
 
         try:
-            response = await self._client.chat.completions.create(
-                model=model,
-                messages=messages,
-                temperature=0,
-                max_tokens=max_tokens,
-                stream=False,
+            gateway_response = await asyncio.to_thread(
+                ai_gateway_service.draft_text,
+                AIGatewayRequest(
+                    feature="metadata",
+                    system_prompt=_build_structured_output_instruction(),
+                    prompt=(
+                        "Create the JSON metadata wrapper for this final answer.\n\n"
+                        "Do not rewrite the answer. Do not add new facts. "
+                        "Do not invent sources or evidence.\n\n"
+                        f"Final answer:\n{final_answer_text}"
+                    ),
+                    model=model,
+                    provider_id=provider_id if isinstance(provider_id, int) else None,
+                    home_id=home_id if isinstance(home_id, int) else None,
+                    user_id=user_id if isinstance(user_id, int) else None,
+                    max_output_tokens=max_tokens,
+                    metadata={
+                        "route": "assistant.llm_provider.structured_meta",
+                        "draft_only": True,
+                        "source_message_count": len(original_messages),
+                    },
+                ),
             )
 
-            if not response.choices:
-                return _normalise_structured_payload(
-                    None,
-                    fallback_text=final_answer_text,
-                )
-
-            raw_content = getattr(response.choices[0].message, "content", None)
-            text = _safe_string(raw_content)
-            parsed = _safe_json_loads(text)
+            parsed = _safe_json_loads(gateway_response.text)
 
             if parsed is None:
                 logger.warning("Structured metadata response was not valid JSON")
