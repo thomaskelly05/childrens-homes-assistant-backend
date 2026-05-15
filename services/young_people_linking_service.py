@@ -5,6 +5,8 @@ from typing import Any
 
 from psycopg2.extras import Json
 
+from services.plan_flow_service import plan_flow_service
+
 
 class YoungPeopleLinkingService:
     """
@@ -48,6 +50,7 @@ class YoungPeopleLinkingService:
             "support_plan_links_created": 0,
             "monthly_review_links_created": 0,
             "standard_links_created": 0,
+            "post_save_intelligence": None,
             "notes": [],
             "errors": [],
         }
@@ -229,7 +232,57 @@ class YoungPeopleLinkingService:
             conn.rollback()
             result["errors"].append(f"Quality standards linking failed: {exc}")
 
+        result["post_save_intelligence"] = YoungPeopleLinkingService._post_save_intelligence(
+            conn=conn,
+            young_person_id=young_person_id,
+            source_table=source_table,
+            source_id=source_id,
+            title=safe_title,
+            summary=safe_summary,
+            narrative=safe_narrative,
+            metadata=metadata,
+        )
+
         return result
+
+    @staticmethod
+    def _post_save_intelligence(
+        conn,
+        *,
+        young_person_id: int,
+        source_table: str,
+        source_id: int,
+        title: str,
+        summary: str,
+        narrative: str,
+        metadata: dict[str, Any],
+    ) -> dict[str, Any]:
+        home_id = YoungPeopleLinkingService._resolve_home_id(conn, young_person_id)
+        record = {
+            "id": source_id,
+            "source_table": source_table,
+            "record_type": source_table,
+            "young_person_id": young_person_id,
+            "home_id": home_id,
+            "title": title,
+            "summary": summary,
+            "narrative": narrative,
+            "metadata": metadata,
+        }
+        try:
+            return plan_flow_service.after_record_saved(
+                record=record,
+                visible_records=[],
+                young_person_id=young_person_id,
+                home_id=home_id,
+            )
+        except Exception as exc:
+            return {
+                "draft_suggestions_only": True,
+                "auto_finalised": False,
+                "warning": "review recommended: post-save intelligence could not be prepared.",
+                "error": str(exc),
+            }
 
     @staticmethod
     def _normalise_metadata(metadata: dict[str, Any] | None) -> dict[str, Any]:

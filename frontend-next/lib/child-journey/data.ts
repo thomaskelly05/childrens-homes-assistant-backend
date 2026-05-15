@@ -185,7 +185,7 @@ function demoDailyNotes(id: string): JourneyDailyNote[] {
     summary: log.presentation,
     noteDate: log.date,
     workflowStatus: log.followUpActions.length ? 'follow-up' : 'recorded',
-    href: `/daily-logs/${log.id}`
+    href: `/young-people/${encodeURIComponent(id)}/chronology?source=${encodeURIComponent(log.id)}`
   }))
 }
 
@@ -197,7 +197,7 @@ function demoTimeline(id: string): JourneyTimelineItem[] {
     category: event.category,
     severity: event.severity,
     occurredAt: new Date(event.dateTime).toLocaleString('en-GB'),
-    href: `/chronology/${event.id}`
+    href: `/young-people/${encodeURIComponent(id)}/chronology?source=${encodeURIComponent(event.id)}`
   }))
 }
 

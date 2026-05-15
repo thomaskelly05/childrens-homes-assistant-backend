@@ -154,11 +154,12 @@ function scopedHref(href: string, child: ActiveChildRecord | null) {
   const id = encodeURIComponent(child.id)
   if (href === '/chronology') return `/young-people/${id}/chronology`
   if (href === '/safeguarding') return `/young-people/${id}/chronology?filter=safeguarding`
-  if (href === '/actions') return `/young-people/${id}/journey?focus=actions`
-  if (href === '/reports') return `/young-people/${id}/journey?focus=reports`
-  if (href === '/documents' || href === '/evidence') return `/young-people/${id}/journey?focus=evidence`
+  if (href === '/actions') return `/actions?young_person_id=${id}`
+  if (href === '/reports') return `/reports?young_person_id=${id}`
+  if (href === '/documents') return `/documents?young_person_id=${id}`
+  if (href === '/evidence') return `/evidence?young_person_id=${id}`
   if (href === '/keywork') return `/young-people/${id}/keywork/new`
-  if (href === '/risk-assessments') return `/young-people/${id}/journey?focus=risk`
+  if (href === '/risk-assessments') return `/risk-assessments?young_person_id=${id}`
   return href
 }
 

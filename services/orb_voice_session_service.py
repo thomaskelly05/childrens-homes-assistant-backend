@@ -296,15 +296,15 @@ def _operational_recovery_answer(
             unresolved = [{"reason": "Visible scoped records contain follow-up or review wording."}]
     if unresolved:
         latest = f"{latest.rstrip('.')}; there is still follow-up or review language that should carry into the next shift."
-    parts = [f"{child_name} had this recorded most recently: {latest}"]
+    parts = [f"Records indicate {child_name} had this recorded most recently: {latest}"]
     if unresolved:
-        parts.append("Keep that follow-up visible in handover.")
+        parts.append("For the next shift, keep that follow-up visible in handover and check who owns it.")
     safeguarding = any("safeguarding" in item.get("themes", []) for item in unresolved)
     if safeguarding:
-        parts.append("Safeguarding wording is present, so keep facts separate from interpretation and check manager oversight.")
+        parts.append("Possible safeguarding wording is present, so keep facts separate from interpretation and check manager oversight.")
     progress = continuity.get("positive_progress") or []
     if progress:
-        parts.append("There is also visible progress to build on.")
+        parts.append("Evidence found for positive progress; build on it calmly with familiar support.")
     child_voice = continuity.get("child_voice_continuity") or []
     if child_voice:
         parts.append("The child's own words or wishes are visible in the scoped record.")

@@ -35,12 +35,16 @@ export default function AssistantPage() {
     const value = text.trim()
     if (!value) return
     setInput('')
+    const asksForOsRecords = /\b(child|young person|handover|chronology|document|risk|incident|daily note|home record|Jamie)\b/i.test(value)
+    const reply = asksForOsRecords
+      ? 'This standalone assistant cannot access OS records, child documents, chronology, risk intelligence or home data. Paste the content you want help with, and I can draft from that only.'
+      : 'I can help shape this into clearer care language. I’ll keep it grounded in what you paste here and flag anything that needs manager review.'
     setMessages((current) => [
       ...current,
       { role: 'user', content: value },
       {
         role: 'assistant',
-        content: 'I can help shape this into clearer care language. I’ll keep it grounded in what you paste here and flag anything that needs manager review.'
+        content: reply
       }
     ])
   }

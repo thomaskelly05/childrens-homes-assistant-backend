@@ -43,7 +43,7 @@ export default async function ChildJourneyPage({
   searchParams
 }: {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ saved?: string; status?: string; recordId?: string; limitation?: string }>
+  searchParams: Promise<{ saved?: string; status?: string; recordId?: string; limitation?: string; focus?: string }>
 }) {
   const { id } = await params
   const query = await searchParams
@@ -61,6 +61,7 @@ export default async function ChildJourneyPage({
   const savedIndicator = query.saved ? saveStateFromStatus(query.status || 'saved') : null
   const narrativeContinuity = buildNarrativeContinuity(data)
   const quickActions = contextualChildQuickActions({ workflow: 'journey', unresolvedActions: actionsDueToday.length })
+  const focus = query.focus || ''
 
   const plans = [
     ['Care plan', `/documents?young_person_id=${encodeURIComponent(id)}&type=care_plan`],
@@ -74,10 +75,29 @@ export default async function ChildJourneyPage({
   ]
 
   const evidenceLinks = [
-    ['LAC review evidence', `/reports/lac-review/${encodeURIComponent(id)}`],
-    ['Reg 45 evidence', `/reports/reg45/${encodeURIComponent(id)}`],
+    ['LAC review evidence', `/reports?young_person_id=${encodeURIComponent(id)}&type=lac_review`],
+    ['Reg 45 evidence', `/reports?young_person_id=${encodeURIComponent(id)}&type=reg45`],
     ['Safeguarding chronology', `/young-people/${encodeURIComponent(id)}/chronology?filter=safeguarding`],
     ['Reports linked to this child', `/reports?young_person_id=${encodeURIComponent(id)}`]
+  ]
+
+  const workspaceLinks = [
+    ['Daily note', `/young-people/${encodeURIComponent(id)}/daily-note/new`, 'Record today, child voice, positives and follow-up.'],
+    ['Incident', `/young-people/${encodeURIComponent(id)}/incidents/new`, 'Capture facts, staff response, outcome and review.'],
+    ['Safeguarding concern', `/young-people/${encodeURIComponent(id)}/safeguarding/new`, 'Record concern and safety actions without conclusions.'],
+    ['Missing episode', `/young-people/${encodeURIComponent(id)}/missing/new`, 'Record missing actions, return and risk review.'],
+    ['Chronology', `/young-people/${encodeURIComponent(id)}/chronology`, 'Review source-linked events for this child only.'],
+    ['Actions', `/actions?young_person_id=${encodeURIComponent(id)}`, 'Open unresolved follow-up in the action workflow.'],
+    ['Evidence', `/evidence?young_person_id=${encodeURIComponent(id)}`, 'Review linked evidence and gaps.'],
+    ['Documents', `/documents?young_person_id=${encodeURIComponent(id)}`, 'Open child-scoped documents and versions.'],
+    ['Plans', `/documents?young_person_id=${encodeURIComponent(id)}&scope=plans`, 'Open care, placement, education and health plan documents.'],
+    ['Risk assessments', `/risk-assessments?young_person_id=${encodeURIComponent(id)}`, 'Review child risk assessments.'],
+    ['Locality risk', `/young-people/${encodeURIComponent(id)}/locality`, 'Review local places and possible indicators.'],
+    ['Missing risk', `/young-people/${encodeURIComponent(id)}/missing-risk`, 'Review missing patterns and return interview gaps.'],
+    ['Exploitation risk', `/young-people/${encodeURIComponent(id)}/exploitation-risk`, 'Review possible indicators and protective factors.'],
+    ['Reports', `/reports?young_person_id=${encodeURIComponent(id)}`, 'Build report evidence from linked records.'],
+    ['Handover', `/handover/current?young_person_id=${encodeURIComponent(id)}`, 'Prepare next-shift guidance for this child.'],
+    ['Orb', `/assistant?youngPersonId=${encodeURIComponent(id)}`, 'Ask Orb for draft suggestions only.']
   ]
 
   return (
@@ -138,6 +158,21 @@ export default async function ChildJourneyPage({
 
       <NarrativeContinuityPanel childName={childName} continuity={narrativeContinuity} />
 
+      <Card>
+        <SectionHeader eyebrow="Connected OS hub" title={`${childName}'s linked workspaces`} description="Every route opens with this child in scope, or shows a controlled limitation in the target workspace." />
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {workspaceLinks.map(([label, href, description]) => (
+            <Link key={label} href={href} data-testid={`journey-hub-${String(label).toLowerCase().replaceAll(' ', '-')}`} className="group rounded-[22px] border border-slate-100 bg-slate-50 p-4 transition hover:border-blue-100 hover:bg-blue-50">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm font-black text-slate-950">{label}</span>
+                <ArrowRight className="h-4 w-4 text-slate-400 transition group-hover:translate-x-1 group-hover:text-blue-700" aria-hidden />
+              </div>
+              <p className="mt-2 text-xs leading-5 text-slate-500">{description}</p>
+            </Link>
+          ))}
+        </div>
+      </Card>
+
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
         <div className="space-y-6">
           <Card>
@@ -194,7 +229,7 @@ export default async function ChildJourneyPage({
             <SectionHeader eyebrow="3. Needs attention" title="Next actions" description="One action list, no duplicate review/complete buttons." />
             <div className="space-y-3">
               {actionsDueToday.length ? actionsDueToday.map((action) => (
-                <Link key={action.id} href={`/actions/${encodeURIComponent(action.id)}`} className="block rounded-[22px] border border-slate-100 bg-slate-50 p-4 transition hover:bg-blue-50">
+                <Link key={action.id} href={action.href || `/actions?young_person_id=${encodeURIComponent(id)}`} className="block rounded-[22px] border border-slate-100 bg-slate-50 p-4 transition hover:bg-blue-50">
                   <StatusBadge value={action.status} />
                   <p className="mt-2 text-sm font-black text-slate-950">{action.title}</p>
                   <p className="mt-1 text-xs leading-5 text-slate-500">{action.description || 'Open action for review or completion.'}</p>
@@ -248,10 +283,10 @@ export default async function ChildJourneyPage({
         </Card>
 
         <div className="space-y-6">
-          <details className="rounded-[28px] border border-white/80 bg-white p-5 shadow-[0_16px_46px_rgba(15,23,42,0.06)]">
+          <details open={['plans', 'evidence', 'reports', 'risk'].includes(focus)} className="rounded-[28px] border border-white/80 bg-white p-5 shadow-[0_16px_46px_rgba(15,23,42,0.06)]">
             <summary className="cursor-pointer text-sm font-black text-slate-950">Plans, evidence and reports</summary>
             <div className="mt-4 grid gap-2">
-              {plans.slice(0, 5).map(([label, href]) => (
+              {plans.map(([label, href]) => (
                 <Link key={label} href={href} className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm font-black text-slate-700 transition hover:bg-blue-50 hover:text-blue-800">
                   {label}
                 </Link>
@@ -262,7 +297,7 @@ export default async function ChildJourneyPage({
           <Card>
             <SectionHeader eyebrow="Current actions" title="Action cards" description="Review or complete from the live actions workspace." />
             <div className="mb-4">
-              <ActionLink href="/management" tone="light" testId="manager-review-link">Open manager QA path</ActionLink>
+              <ActionLink href={`/management?young_person_id=${encodeURIComponent(id)}&focus=reviews`} tone="light" testId="manager-review-link">Open manager QA path</ActionLink>
             </div>
             <div className="space-y-3">
               {data.actions.slice(0, 5).map((action) => (
@@ -271,7 +306,7 @@ export default async function ChildJourneyPage({
                   <h3 className="mt-2 text-sm font-black text-slate-950">{action.title}</h3>
                   <p className="mt-1 text-xs leading-5 text-slate-500">{action.description}</p>
                   <div className="mt-3 flex flex-wrap gap-2">
-                    <Link href={`/actions/${encodeURIComponent(action.id)}`} data-testid="safeguarding-follow-up-action" className="rounded-full bg-slate-950 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.12em] text-white">Open action</Link>
+                    <Link href={action.href || `/actions?young_person_id=${encodeURIComponent(id)}`} data-testid="safeguarding-follow-up-action" className="rounded-full bg-slate-950 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.12em] text-white">Open action</Link>
                   </div>
                 </div>
               ))}
@@ -331,7 +366,7 @@ export default async function ChildJourneyPage({
             <p className="mt-2 text-sm leading-6 text-slate-600">Daily notes can suggest actions, safeguarding flags, plan links and report relevance before saving.</p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <ActionLink href="/handover/current" tone="light" testId="handover-link">Open handover</ActionLink>
+            <ActionLink href={`/handover/current?young_person_id=${encodeURIComponent(id)}`} tone="light" testId="handover-link">Open handover</ActionLink>
             <ActionLink href={`/reports?young_person_id=${encodeURIComponent(id)}`} tone="light" testId="reports-link">Open reports</ActionLink>
             <ActionLink href={`/young-people/${encodeURIComponent(id)}/daily-note/new`} tone="blue" testId="add-daily-note-footer-button">
             <CalendarDays className="mr-2 h-4 w-4" aria-hidden />
