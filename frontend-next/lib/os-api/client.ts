@@ -25,6 +25,7 @@ function developerDetail(error: unknown) {
 
 function emptyData<T>(example: T): T {
   if (Array.isArray(example)) return [] as T
+  if (example === null) return null as T
   if (example && typeof example === 'object') return example
   return undefined as T
 }
