@@ -1,3 +1,4 @@
+import { OrbAmbientFrame } from './orb-ambient-frame'
 import { OrbCaptionLayer } from './orb-caption-layer'
 import { OrbPresenceIndicator } from './orb-presence-indicator'
 import { OrbSphere, type OrbRenderState } from './orb-sphere'
@@ -21,10 +22,11 @@ export function OrbRenderer({
   const size = immersive ? 'xlarge' : compact ? 'medium' : 'large'
   const chrome = immersive
     ? 'min-h-[620px] bg-transparent p-4 shadow-none'
-    : `rounded-[40px] border border-white/10 bg-[radial-gradient(circle_at_50%_20%,rgba(34,211,238,0.18),transparent_35%),linear-gradient(180deg,#070917,#111326)] p-8 shadow-2xl shadow-cyan-950/30 ${compact ? 'min-h-80' : 'min-h-[560px]'}`
+    : `orb-renderer-panel rounded-[40px] p-8 ${compact ? 'min-h-80' : 'min-h-[560px]'}`
 
   return (
-    <div className={`relative flex flex-col items-center justify-center gap-6 text-white ${chrome}`}>
+    <div className={`orb-renderer relative flex flex-col items-center justify-center gap-6 text-white ${chrome}`} data-orb-state={state}>
+      <OrbAmbientFrame state={state} compact={compact} />
       <OrbPresenceIndicator label={presenceLabel} />
       <OrbSphere state={state} size={size} />
       <OrbStateLayer state={state} />

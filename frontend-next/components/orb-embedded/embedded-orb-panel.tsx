@@ -16,23 +16,26 @@ export function EmbeddedOrbPanel({
   onClose?: () => void
   onImmersive?: () => void
 }) {
+  const state = childName ? 'idle' : 'permission_denied'
+
   return (
-    <section className="fixed inset-x-3 bottom-24 z-[75] rounded-[34px] border border-white/10 bg-slate-950 p-4 text-white shadow-2xl shadow-slate-950/40 md:left-auto md:right-7 md:w-[440px]">
+    <section className="orb-embedded-panel fixed inset-x-3 bottom-24 z-[75] p-4 text-white md:left-auto md:right-7 md:w-[440px]" data-orb-state={state}>
+      <div className="orb-screen-edge-pulse" data-orb-state={state} aria-hidden />
       <div className="flex items-center justify-between gap-3">
         <EmbeddedOrbContextStrip childName={childName} />
         <div className="flex gap-2">
           <EmbeddedOrbImmersiveToggle onClick={onImmersive} />
-          <button type="button" onClick={onClose} className="rounded-full bg-white/10 p-3" aria-label="Close ORB">
+          <button type="button" onClick={onClose} className="orb-quiet-action rounded-full p-3" aria-label="Close ORB">
             <X className="h-4 w-4" aria-hidden />
           </button>
         </div>
       </div>
       <div className="mt-4">
-        <OrbRenderer state={childName ? 'idle' : 'permission_denied'} compact captionsEnabled caption={childName ? "I'm here if you need a hand." : 'Select a child before asking for records.'} />
+        <OrbRenderer state={state} compact captionsEnabled caption={childName ? "I'm here if you need a hand." : 'Select a child before asking for records.'} />
       </div>
       <div className="mt-4 grid gap-2">
         {embeddedOrbPrompts.slice(0, 5).map((prompt) => (
-          <button key={prompt} type="button" className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-left text-sm font-bold text-slate-100">
+          <button key={prompt} type="button" className="orb-prompt-card rounded-2xl px-4 py-3 text-left text-sm font-bold text-slate-100">
             {prompt}
           </button>
         ))}

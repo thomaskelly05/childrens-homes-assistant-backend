@@ -19,6 +19,7 @@ export function orbAccessibilityClassNames(preferences: Partial<OrbAccessibility
 export function applyOrbAccessibilityToDocument(preferences: Partial<OrbAccessibilityPreferences>) {
   if (typeof document === 'undefined') return
   const root = document.documentElement
+  root.dataset.orbNeurodiverse = preferences.neurodiverseMode ? 'true' : 'false'
   root.dataset.orbReducedMotion = preferences.reducedMotion ? 'true' : 'false'
   root.dataset.orbHighContrast = preferences.highContrast ? 'true' : 'false'
   root.dataset.orbDyslexia = preferences.dyslexiaMode ? 'true' : 'false'
