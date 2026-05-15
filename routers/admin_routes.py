@@ -204,7 +204,7 @@ def handle_integrity_error(exc: Exception, fallback_detail: str = "Database inte
     raise HTTPException(status_code=400, detail=fallback_detail)
 
 
-@router.get("/users")
+@router.get("/users/legacy")
 def list_users(
     q: str | None = Query(default=None),
     role: str | None = Query(default=None),
@@ -267,7 +267,7 @@ def list_users(
     return {"ok": True, "users": rows}
 
 
-@router.post("/users")
+@router.post("/users/legacy")
 def create_user(
     payload: CreateUserRequest,
     admin=Depends(get_current_admin),

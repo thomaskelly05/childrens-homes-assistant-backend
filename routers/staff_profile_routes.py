@@ -7,7 +7,6 @@ from services.staff_profile_service import StaffProfileService
 router = APIRouter(prefix="/staff", tags=["staff-profile"])
 
 
-@router.get("/me")
 def my_profile(current_user: dict = Depends(get_current_user)):
     service = StaffProfileService()
     return {"ok": True, "data": service.get_my_profile(current_user=current_user)}

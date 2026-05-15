@@ -135,6 +135,7 @@ def _tags_for(row: dict[str, Any], source: dict[str, Any]) -> list[str]:
 
 def _normalise_row(row: dict[str, Any], source: dict[str, Any]) -> dict[str, Any]:
     source_type = source["source_type"]
+    source_table = str(row.get("source_table") or source["table"])
     source_id = str(row.get("source_id") or row.get("id") or "")
     young_person_ids = [str(row["young_person_id"])] if row.get("young_person_id") is not None else []
     staff_id = row.get("staff_id") or row.get("author_id") or row.get("created_by") or row.get("owner_id")
@@ -166,6 +167,8 @@ def _normalise_row(row: dict[str, Any], source: dict[str, Any]) -> dict[str, Any
         "id": event_id,
         "source_type": source_type,
         "source_id": source_id,
+        "source_table": source_table,
+        "canonical_source_key": f"{source_table}:{source_id}" if source_id else None,
         "date_time": date_time,
         "title": title,
         "summary": summary,
@@ -235,6 +238,8 @@ def _query_source(
     ]
 
     for col in ["young_person_id", "home_id", "provider_id", "staff_id", "author_id", "created_by", "owner_id", "created_at"]:
+        select_parts.append(f"{quote_ident(col)} AS {col}" if col in cols else f"NULL AS {col}")
+    for col in ["source_table", "source_id"]:
         select_parts.append(f"{quote_ident(col)} AS {col}" if col in cols else f"NULL AS {col}")
 
     where, params = build_scope_where(
@@ -308,6 +313,8 @@ def list_chronology(
                 )
             )
 
+        items = _dedupe_chronology_items(items)
+
         if filters.get("category"):
             category = str(filters["category"]).lower()
             items = [item for item in items if category in str(item.get("category") or "").lower()]
@@ -336,6 +343,24 @@ def list_chronology(
         }
     finally:
         release_db_connection(conn)
+
+
+def _dedupe_chronology_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    by_source: dict[str, dict[str, Any]] = {}
+    for item in items:
+        key = str(item.get("canonical_source_key") or "")
+        if not key:
+            by_source[f"event:{item.get('id')}"] = item
+            continue
+        existing = by_source.get(key)
+        if not existing:
+            by_source[key] = item
+            continue
+        existing_is_projection = existing.get("source_type") in {"chronology", "os_chronology"}
+        item_is_projection = item.get("source_type") in {"chronology", "os_chronology"}
+        if existing_is_projection and not item_is_projection:
+            by_source[key] = item
+    return list(by_source.values())
 
 
 def get_chronology_event(*, event_id: str, current_user: dict[str, Any]) -> dict[str, Any] | None:

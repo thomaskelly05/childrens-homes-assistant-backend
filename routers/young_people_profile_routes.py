@@ -592,7 +592,6 @@ def get_education_profile_route(young_person_id: int, current_user=Depends(get_c
     return _get_section_response(young_person_id, current_user, "education_profile", "education_profile")
 
 
-@router.put("/{young_person_id}/education-profile")
 def upsert_education_profile_route(
     young_person_id: int,
     payload: EducationProfilePayload,
@@ -606,7 +605,6 @@ def get_health_profile_route(young_person_id: int, current_user=Depends(get_curr
     return _get_section_response(young_person_id, current_user, "health_profile", "health_profile")
 
 
-@router.put("/{young_person_id}/health-profile")
 def upsert_health_profile_route(
     young_person_id: int,
     payload: HealthProfilePayload,

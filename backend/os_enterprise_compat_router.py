@@ -46,7 +46,6 @@ async def evidence():
     return {'ok': True, 'evidence': [], 'items': [], 'source': 'compat-router'}
 
 
-@router.get('/api/documents')
 async def documents():
     return {'ok': True, 'documents': [], 'items': [], 'source': 'compat-router'}
 
@@ -71,12 +70,10 @@ async def mar():
     return {'ok': True, 'mar': [], 'medications': [], 'items': [], 'source': 'compat-router'}
 
 
-@router.get('/api/staff')
 async def staff():
     return {'ok': True, 'staff': [], 'items': [], 'source': 'compat-router'}
 
 
-@router.get('/api/rota')
 async def rota():
     return {'ok': True, 'rota': [], 'shifts': [], 'items': [], 'source': 'compat-router'}
 
