@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
+from schemas.orb_identity import OrbIdentityMetadata
 
 
 OrbBrain = Literal[
@@ -159,6 +160,7 @@ class OrbSessionStartRequest(BaseModel):
     provider: str | None = None
     conversation_id: str | None = None
     workspace_context: dict[str, Any] = Field(default_factory=dict)
+    identity_metadata: OrbIdentityMetadata | None = None
 
 
 class OrbModeDecision(BaseModel):
@@ -247,6 +249,7 @@ class OrbSessionStartResponse(BaseModel):
     wake_word: dict[str, Any] = Field(default_factory=dict)
     operational_event_subscriptions: dict[str, Any] = Field(default_factory=dict)
     transcript_storage_policy: dict[str, Any] = Field(default_factory=dict)
+    identity_metadata: OrbIdentityMetadata | None = None
 
 
 class OrbSessionEventRequest(BaseModel):
@@ -282,6 +285,7 @@ class OrbSessionEventResponse(BaseModel):
     realtime_state: dict[str, Any] = Field(default_factory=dict)
     memory_snapshot: dict[str, Any] = Field(default_factory=dict)
     provider_event: dict[str, Any] = Field(default_factory=dict)
+    identity_metadata: OrbIdentityMetadata | None = None
 
 
 class OrbInterruptResponse(BaseModel):

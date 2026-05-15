@@ -1,0 +1,11 @@
+import { Maximize2 } from 'lucide-react'
+
+export function EmbeddedOrbImmersiveToggle({ onClick }: { onClick?: () => void }) {
+  return (
+    <button type="button" onClick={onClick} className="inline-flex min-h-11 items-center gap-2 rounded-full bg-white/10 px-4 text-sm font-black text-white">
+      <Maximize2 className="h-4 w-4" aria-hidden />
+      Immersive
+    </button>
+  )
+}
+

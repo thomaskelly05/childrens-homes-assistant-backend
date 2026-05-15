@@ -139,3 +139,13 @@ textarea:focus-visible {
     animation-iteration-count: 1 !important;
   }
 }
+
+[data-orb-high-contrast='true'] body,
+.orb-high-contrast {
+  color-scheme: dark;
+  --foreground: #ffffff;
+}
+
+.orb-simple-layout * {
+  box-shadow: none !important;
+}

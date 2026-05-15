@@ -31,6 +31,7 @@ from services.assistant_response_service import AssistantResponseService
 from services.audit_event_service import record_audit_event
 from services.operational_intelligence_service import build_orb_operational_intelligence_snapshot
 from services.orb_general_assistant_service import orb_general_assistant_service
+from services.orb_identity_service import orb_identity_service
 from services.orb_intent_router import route_orb_intent
 from services.orb_memory_service import orb_memory_service
 from services.orb_operational_events_service import orb_operational_events_service
@@ -592,6 +593,14 @@ class OrbVoiceSessionService:
         self._cleanup_user_sessions(_user_id(current_user))
         session_id = _id("orb_session")
         decision = route_orb_intent(message=None, current_user=current_user, selected_mode=request.selected_mode, context=request.context)
+        identity_metadata = request.identity_metadata or orb_identity_service.build_metadata(
+            product_mode="os_embedded",
+            orb_surface="docked",
+            accessibility_profile={"captions_enabled": request.preferences.captions_enabled},
+            environment_mode="general",
+            current_user=current_user,
+            active_child_id=request.context.selected_young_person_id,
+        )
         provider = self._provider(request.provider)
         provider_session = await provider.start_session(request=request, decision=decision, current_user=current_user)
         state: OrbState = "private" if request.preferences.private_mode else request.current_state
@@ -645,6 +654,7 @@ class OrbVoiceSessionService:
                 "provider_configured": provider.configured(),
                 "raw_audio_stored": False,
                 "memory_scope": memory_snapshot.get("scope"),
+                "identity_metadata": identity_metadata.model_dump(),
                 "realtime_state": realtime_state,
                 "expires_at": session.expires_at,
                 "transcript_policy": transcript_storage_policy(
@@ -697,6 +707,7 @@ class OrbVoiceSessionService:
                 request.preferences.do_not_store_transcript,
                 request.preferences.transcript_retention_days,
             ),
+            identity_metadata=identity_metadata,
         )
 
     async def handle_event(
@@ -1089,6 +1100,14 @@ class OrbVoiceSessionService:
             realtime_state=current_realtime_state,
             memory_snapshot=memory_snapshot or orb_memory_service.snapshot(session.id),
             provider_event=provider_event or {},
+            identity_metadata=orb_identity_service.build_metadata(
+                product_mode="os_embedded",
+                orb_surface="expanded",
+                accessibility_profile={"captions_enabled": session.preferences.captions_enabled},
+                environment_mode="safeguarding" if "safeguarding_sensitive" in decision.safety_flags else "general",
+                current_user=session.current_user,
+                active_child_id=session.context.selected_young_person_id,
+            ),
         )
 
 
