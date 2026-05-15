@@ -103,6 +103,9 @@ class OperationalStateEngine:
     def _infer(self, *, event_type: str | None, record: dict[str, Any], current_state: str | None) -> tuple[str, list[str]]:
         text = " ".join(str(record.get(key) or "") for key in ("record_type", "type", "title", "summary", "description", "status", "category", "outcome")).lower()
         raw = " ".join(filter(None, [str(event_type or ""), str(current_state or ""), text]))
+        event_key = str(event_type or "").lower()
+        if "missing_episode" in event_key or event_key == "missing":
+            return "missing_episode", ["missing_episode_event"]
         checks = [
             ("return_from_missing", ("return home interview", "returned from missing", "returned safely")),
             ("missing_episode", ("missing", "abscond", "unauthorised absence")),

@@ -287,7 +287,7 @@ class RegulatoryOntologyService:
     def _oversight_triggers(self, node_id: str) -> list[str]:
         triggers = ["evidence weak or stale", "review overdue", "follow-up outstanding"]
         if any(term in node_id for term in ("protection", "safeguarding", "missing", "reg_40")):
-            triggers.extend(["significant event", "repeat missing episode", "notification may be required"])
+            triggers.extend(["manager oversight required where protection evidence is significant", "significant event", "repeat missing episode", "notification may be required"])
         return triggers
 
     def _related_standards(self, regulation_id: str) -> list[str]:
