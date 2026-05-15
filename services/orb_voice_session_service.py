@@ -33,11 +33,16 @@ from services.operational_intelligence_service import build_orb_operational_inte
 from services.orb_general_assistant_service import orb_general_assistant_service
 from services.orb_identity_service import orb_identity_service
 from services.orb_intent_router import route_orb_intent
+from services.orb_interaction_preference_service import orb_interaction_preference_service
+from services.orb_latency_strategy_service import orb_latency_strategy_service
 from services.orb_memory_service import orb_memory_service
 from services.orb_operational_events_service import orb_operational_events_service
 from services.orb_persona_policy import persona_instruction, spoken_acknowledgement, transcript_storage_policy
+from services.orb_presence_memory_service import orb_presence_memory_service
+from services.orb_product_mode_service import orb_product_mode_service
 from services.orb_productivity_service import orb_productivity_service
 from services.orb_conversation_policy import orb_conversation_policy
+from services.orb_prosody_service import orb_prosody_service
 from services.orb_observability_service import orb_observability_service
 from services.orb_realtime_conversation_service import orb_realtime_conversation_service
 from services.orb_realtime_provider_service import (
@@ -506,6 +511,76 @@ class OrbVoiceSessionService:
         openai = self.providers["openai_realtime"]
         return openai if openai.configured() else self.providers["mock_voice"]
 
+    def _product_mode_for(self, context: OrbContext, workspace_context: dict[str, Any] | None = None) -> str:
+        data = context.model_dump()
+        explicit = (workspace_context or {}).get("product_mode") or data.get("product_mode")
+        return orb_product_mode_service.normalise(explicit, context.route).value
+
+    def _context_for_product_mode(self, context: OrbContext, product_mode: str) -> OrbContext:
+        if product_mode == "standalone":
+            return OrbContext(**orb_product_mode_service.sanitize_for_standalone(context))
+        return context
+
+    def _presence_preferences(self, preferences: OrbPreferences) -> dict[str, Any]:
+        return {
+            "preferred_response_length": preferences.response_detail,
+            "caption_preference": "on" if preferences.captions_enabled else "off",
+            "voice_caption_mode": "caption_supported" if preferences.captions_enabled else "voice_first",
+            "pacing_preference": preferences.speaking_speed,
+            "interaction_style": preferences.voice_style,
+            "prefers_brief_answers": preferences.concise_answers,
+            "reduced_motion": bool(getattr(preferences, "reduced_motion", False)),
+            "high_contrast": bool(getattr(preferences, "high_contrast", False)),
+        }
+
+    def _environment_mode_for(self, context: OrbContext, decision: OrbModeDecision | None = None, workspace_context: dict[str, Any] | None = None) -> str:
+        explicit = (workspace_context or {}).get("environment_mode") or context.model_dump().get("environment_mode")
+        if explicit:
+            return str(explicit)
+        if decision and "safeguarding_sensitive" in decision.safety_flags:
+            return "safeguarding"
+        if context.workspace in {"night_shift", "quiet_hours", "child_present"}:
+            return str(context.workspace)
+        return "general"
+
+    def _runtime_metadata(
+        self,
+        *,
+        product_mode: str,
+        provider_configured: bool,
+        preferences: OrbPreferences,
+        context: OrbContext,
+        current_user: dict[str, Any],
+        decision: OrbModeDecision | None = None,
+        workspace_context: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        interaction_preferences = orb_interaction_preference_service.normalise(self._presence_preferences(preferences))
+        presence_memory = orb_presence_memory_service.remember(
+            product_mode=product_mode,
+            user_id=_user_id(current_user),
+            home_id=context.home_id,
+            active_child_id=context.selected_young_person_id,
+            preferences=interaction_preferences,
+        )
+        network_quality = str((workspace_context or {}).get("network_quality") or context.model_dump().get("network_quality") or "normal")
+        environment_mode = self._environment_mode_for(context, decision, workspace_context)
+        return {
+            "product_mode": product_mode,
+            "interaction_preferences": interaction_preferences,
+            "presence_memory": presence_memory.preferences,
+            "presence_scope": presence_memory.scope_key,
+            "latency_strategy": orb_latency_strategy_service.route(
+                realtime_configured=provider_configured,
+                network_quality=network_quality,
+            ),
+            "prosody": orb_prosody_service.shape(
+                environment_mode=environment_mode,
+                emotional_safety=bool(getattr(preferences, "emotional_regulation_mode", False)),
+            ),
+            "conversation_timing": orb_conversation_policy.event_metadata(preferences=preferences),
+            "environment_mode": environment_mode,
+        }
+
     def _cleanup_expired_sessions(self) -> None:
         expired: list[str] = []
         now = datetime.now(timezone.utc)
@@ -589,20 +664,34 @@ class OrbVoiceSessionService:
 
     async def start_session(self, *, request: OrbSessionStartRequest, current_user: dict[str, Any]) -> OrbSessionStartResponse:
         self._cleanup_expired_sessions()
+        product_mode = self._product_mode_for(request.context, request.workspace_context)
+        context = self._context_for_product_mode(request.context, product_mode)
+        if context is not request.context:
+            request = request.model_copy(update={"context": context})
         self._assert_context_scope(request.context, current_user)
         self._cleanup_user_sessions(_user_id(current_user))
         session_id = _id("orb_session")
         decision = route_orb_intent(message=None, current_user=current_user, selected_mode=request.selected_mode, context=request.context)
         identity_metadata = request.identity_metadata or orb_identity_service.build_metadata(
-            product_mode="os_embedded",
-            orb_surface="docked",
+            product_mode=product_mode,
+            orb_surface="standalone" if product_mode == "standalone" else "docked",
             accessibility_profile={"captions_enabled": request.preferences.captions_enabled},
-            environment_mode="general",
+            environment_mode=self._environment_mode_for(request.context, decision, request.workspace_context),
             current_user=current_user,
             active_child_id=request.context.selected_young_person_id,
         )
         provider = self._provider(request.provider)
         provider_session = await provider.start_session(request=request, decision=decision, current_user=current_user)
+        provider_configured = provider.configured()
+        runtime_metadata = self._runtime_metadata(
+            product_mode=product_mode,
+            provider_configured=provider.name == "openai_realtime" and provider_configured,
+            preferences=request.preferences,
+            context=request.context,
+            current_user=current_user,
+            decision=decision,
+            workspace_context=request.workspace_context,
+        )
         state: OrbState = "private" if request.preferences.private_mode else request.current_state
         session = OrbSessionRecord(
             id=session_id,
@@ -655,6 +744,7 @@ class OrbVoiceSessionService:
                 "raw_audio_stored": False,
                 "memory_scope": memory_snapshot.get("scope"),
                 "identity_metadata": identity_metadata.model_dump(),
+                "runtime_metadata": runtime_metadata,
                 "realtime_state": realtime_state,
                 "expires_at": session.expires_at,
                 "transcript_policy": transcript_storage_policy(
@@ -673,7 +763,7 @@ class OrbVoiceSessionService:
         return OrbSessionStartResponse(
             session_id=session_id,
             provider=provider.name,
-            provider_configured=provider.configured(),
+            provider_configured=provider_configured,
             state=state,
             expires_at=session.expires_at,
             voice_profile=request.voice_profile,
@@ -681,25 +771,26 @@ class OrbVoiceSessionService:
             mode_decision=decision,
             provider_session=provider_session,
             realtime={
-                "transport": "webrtc" if provider.name == "openai_realtime" and provider.configured() else "mock_text_voice",
+                "transport": "webrtc" if provider.name == "openai_realtime" and provider_configured else "mock_text_voice",
                 "supports_interruptions": True,
-                "supports_spoken_barge_in": provider.name == "openai_realtime" and provider.configured(),
+                "supports_spoken_barge_in": provider.name == "openai_realtime" and provider_configured,
                 "supports_click_to_interrupt": True,
-                "fallback_text_mode": not (provider.name == "openai_realtime" and provider.configured()),
-                "supports_microphone_input": provider.name == "openai_realtime" and provider.configured(),
-                "supports_microphone_streaming": provider.name == "openai_realtime" and provider.configured(),
-                "supports_audio_playback": provider.name == "openai_realtime" and provider.configured(),
+                "fallback_text_mode": not (provider.name == "openai_realtime" and provider_configured),
+                "supports_microphone_input": provider.name == "openai_realtime" and provider_configured,
+                "supports_microphone_streaming": provider.name == "openai_realtime" and provider_configured,
+                "supports_audio_playback": provider.name == "openai_realtime" and provider_configured,
                 "supports_partial_transcript": True,
                 "supports_silence_detection": True,
-                "server_vad": provider.name == "openai_realtime" and provider.configured(),
+                "server_vad": provider.name == "openai_realtime" and provider_configured,
                 "reconnect_supported": True,
-                "token_refresh_required": provider.name == "openai_realtime" and provider.configured(),
+                "token_refresh_required": provider.name == "openai_realtime" and provider_configured,
                 "session_ttl_seconds": _session_ttl_seconds(),
-                "status": "available" if provider.name == "openai_realtime" and provider.configured() else "Realtime audio is not connected yet. Typed Orb remains available.",
+                "status": "available" if provider.name == "openai_realtime" and provider_configured else "Realtime audio is not connected yet. Typed Orb remains available.",
                 "architecture": "Browser WebRTC streams microphone to the provider; backend owns routed turns, memory, audit, tool previews and safe care retrieval.",
                 "wake_phrase_foundation": "Hey Orb/Hey IndiCare optional foundation; passive wake-word detection is disabled by default.",
+                "runtime": runtime_metadata,
             },
-            realtime_state=realtime_state,
+            realtime_state={**realtime_state, "runtime": runtime_metadata},
             memory_snapshot=orb_memory_service.snapshot(session_id),
             wake_word=wake_word,
             operational_event_subscriptions=operational_event_subscriptions,
@@ -720,6 +811,8 @@ class OrbVoiceSessionService:
     ) -> OrbSessionEventResponse:
         session = self.get_session_for_user(session_id, current_user)
         context = event.context or session.context
+        product_mode = self._product_mode_for(context, event.metadata)
+        context = self._context_for_product_mode(context, product_mode)
         self._assert_context_scope(context, current_user)
         selected_mode = event.selected_mode or session.selected_mode
         message = event.text or ""
@@ -1082,6 +1175,16 @@ class OrbVoiceSessionService:
         if current_realtime_state is None:
             realtime_session = orb_realtime_conversation_service.get(session.id)
             current_realtime_state = realtime_session.snapshot() if realtime_session else {}
+        product_mode = self._product_mode_for(session.context, {})
+        provider = self._provider(session.provider_name)
+        runtime_metadata = self._runtime_metadata(
+            product_mode=product_mode,
+            provider_configured=provider.name == "openai_realtime" and provider.configured(),
+            preferences=session.preferences,
+            context=session.context,
+            current_user=session.current_user,
+            decision=decision,
+        )
         return OrbSessionEventResponse(
             session_id=session.id,
             state=session.state,
@@ -1097,14 +1200,14 @@ class OrbVoiceSessionService:
             tools_used=tools_used or [],
             tool_orchestration=tool_orchestration or {},
             operational_insights=operational_insights or {},
-            realtime_state=current_realtime_state,
+            realtime_state={**current_realtime_state, "runtime": runtime_metadata},
             memory_snapshot=memory_snapshot or orb_memory_service.snapshot(session.id),
             provider_event=provider_event or {},
             identity_metadata=orb_identity_service.build_metadata(
-                product_mode="os_embedded",
-                orb_surface="expanded",
+                product_mode=product_mode,
+                orb_surface="standalone" if product_mode == "standalone" else "expanded",
                 accessibility_profile={"captions_enabled": session.preferences.captions_enabled},
-                environment_mode="safeguarding" if "safeguarding_sensitive" in decision.safety_flags else "general",
+                environment_mode=self._environment_mode_for(session.context, decision),
                 current_user=session.current_user,
                 active_child_id=session.context.selected_young_person_id,
             ),

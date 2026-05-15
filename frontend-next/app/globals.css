@@ -146,6 +146,45 @@ textarea:focus-visible {
   --foreground: #ffffff;
 }
 
+[data-orb-high-contrast='true'] body {
+  background: #030712;
+}
+
+[data-orb-reduced-motion='true'] *,
+[data-orb-reduced-motion='true'] *::before,
+[data-orb-reduced-motion='true'] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  scroll-behavior: auto !important;
+  transition-duration: 0.001ms !important;
+}
+
+[data-orb-dyslexia='true'] body {
+  letter-spacing: 0.012em;
+  word-spacing: 0.08em;
+}
+
+[data-orb-low-vision='true'] body {
+  font-size: 112.5%;
+}
+
+[data-orb-motor='true'] button,
+[data-orb-motor='true'] a,
+[data-orb-motor='true'] input {
+  min-height: 48px;
+}
+
+[data-orb-focus-mode='true'] header,
+[data-orb-simple-layout='true'] header {
+  box-shadow: none !important;
+}
+
+[data-orb-emotional-regulation='true'] body {
+  background:
+    radial-gradient(circle at top, rgba(34, 211, 238, 0.08), transparent 34%),
+    linear-gradient(180deg, #06111f 0%, #08111c 100%);
+}
+
 .orb-simple-layout * {
   box-shadow: none !important;
 }

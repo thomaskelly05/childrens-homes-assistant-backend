@@ -225,6 +225,59 @@ async def test_realtime_partial_and_silence_state(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_standalone_session_sanitizes_os_context_and_avoids_record_retrieval(monkeypatch):
+    monkeypatch.setattr("services.orb_voice_session_service.record_audit_event", lambda **kwargs: None)
+    fake = CapturingAssistantResponseService(answer="This should not be called.")
+    service = OrbVoiceSessionService(assistant_response_service=fake)
+    user = {"id": 7, "role": "support_worker", "home_id": 1, "allowed_home_ids": [1]}
+    start = await service.start_session(
+        request=OrbSessionStartRequest(
+            context=OrbContext(route="/assistant", workspace="standalone_orb", home_id=1, selected_young_person_id=10, current_child={"name": "Jamie"}),
+            provider="mock_voice",
+            workspace_context={"product_mode": "standalone"},
+        ),
+        current_user=user,
+    )
+
+    response = await service.handle_event(
+        session_id=start.session_id,
+        event=OrbSessionEventRequest(type="user_text", text="Summarise Jamie's chronology", context=OrbContext(route="/assistant", workspace="standalone_orb", selected_young_person_id=10)),
+        conn=object(),
+        current_user=user,
+    )
+
+    assert start.identity_metadata.access_scope == "standalone_no_os_access"
+    assert response.identity_metadata.retrieval_policy == "static_and_user_supplied_only"
+    assert response.mode_decision.care_scope_required is False
+    assert response.mode_decision.brain == "general_assistant_brain"
+    assert service.get_session(start.session_id).context.selected_young_person_id is None
+    assert fake.contexts == []
+
+
+@pytest.mark.asyncio
+async def test_runtime_metadata_exposes_latency_prosody_and_presence_preferences(monkeypatch):
+    monkeypatch.setattr("services.orb_voice_session_service.record_audit_event", lambda **kwargs: None)
+    service = OrbVoiceSessionService(assistant_response_service=FakeAssistantResponseService())
+    user = {"id": 7, "role": "support_worker", "home_id": 1, "allowed_home_ids": [1]}
+
+    start = await service.start_session(
+        request=OrbSessionStartRequest(
+            context=OrbContext(route="/assistant/voice", workspace="standalone_orb"),
+            provider="mock_voice",
+            workspace_context={"product_mode": "standalone", "environment_mode": "quiet_hours", "network_quality": "poor"},
+        ),
+        current_user=user,
+    )
+
+    runtime = start.realtime_state["runtime"]
+    assert runtime["product_mode"] == "standalone"
+    assert runtime["latency_strategy"]["route"] == "caption_text"
+    assert runtime["prosody"]["volume_hint"] == "low"
+    assert runtime["conversation_timing"]["acknowledgement_ms"] <= 500
+    assert runtime["presence_scope"] == "standalone:user:7"
+
+
+@pytest.mark.asyncio
 async def test_orb_session_rejects_cross_user_access(monkeypatch):
     monkeypatch.setattr("services.orb_voice_session_service.record_audit_event", lambda **kwargs: None)
     service = OrbVoiceSessionService(assistant_response_service=FakeAssistantResponseService())
