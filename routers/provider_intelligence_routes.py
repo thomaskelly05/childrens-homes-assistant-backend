@@ -5,6 +5,7 @@ from typing import Any
 from fastapi import APIRouter, Depends
 
 from auth.dependencies import get_current_user
+from routers.document_os_route_utils import EvidencePayload
 from services.provider_intelligence_service import ProviderIntelligenceService
 
 router = APIRouter(prefix="/provider/intelligence", tags=["provider-intelligence"])
@@ -18,3 +19,17 @@ def provider_dashboard(
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
     return service.build_dashboard(current_user=current_user, days=days)
+
+
+@router.post("/os-snapshot")
+def provider_os_snapshot(
+    payload: EvidencePayload,
+    current_user: dict[str, Any] = Depends(get_current_user),
+):
+    return service.build_os_snapshot(records=payload.records, current_user=current_user)
+
+
+@router.get("/os-snapshot-demo")
+def provider_os_snapshot_demo():
+    records = [{"title": "Provider QA", "summary": "Reg 44 evidence gap and safeguarding oversight review."}]
+    return service.build_os_snapshot(records=records, current_user={"provider_id": "demo"})

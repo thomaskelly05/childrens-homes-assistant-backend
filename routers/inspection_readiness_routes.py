@@ -5,6 +5,8 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException
 
 from auth.dependencies import get_current_user
+from routers.document_os_route_utils import EvidencePayload
+from services.inspection_readiness_service import inspection_readiness_service as inspection_os_readiness_service
 from services.inspection_pack_service import inspection_pack_service
 
 
@@ -34,3 +36,9 @@ def inspection_readiness(current_user: dict[str, Any] = Depends(_require_manager
         records=[],
         documents=[],
     )
+
+
+@router.post("/readiness/snapshot")
+def inspection_readiness_snapshot(payload: EvidencePayload, current_user: dict[str, Any] = Depends(_require_manager)):
+    snapshot = inspection_os_readiness_service.snapshot(records=payload.records)
+    return {"ok": True, "home_id": current_user.get("home_id") or current_user.get("selected_home_id"), "snapshot": snapshot}

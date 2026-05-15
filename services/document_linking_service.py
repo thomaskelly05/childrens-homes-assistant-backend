@@ -4,6 +4,7 @@ from typing import Any
 from uuid import uuid4
 
 from services.document_permission_service import document_permission_service
+from services.document_os_core import EvidenceLinkingMixin, NO_EVIDENCE_FOUND
 
 
 ALLOWED_LINK_TYPES = {
@@ -17,10 +18,23 @@ ALLOWED_LINK_TYPES = {
     "plan",
     "review",
     "report",
+    "risks",
+    "plans",
+    "tasks",
+    "reg44",
+    "reg45",
+    "inspections",
+    "provider_qa",
+    "staff_supervision",
+    "emotional_wellbeing",
+    "child_journey",
+    "placement_stability",
+    "relational_intelligence",
+    "workforce_intelligence",
 }
 
 
-class DocumentLinkingService:
+class DocumentLinkingService(EvidenceLinkingMixin):
     """Scoped document links to chronology, evidence, actions and plans."""
 
     def prepare_link(self, *, document: dict[str, Any], link: dict[str, Any], current_user: dict[str, Any]) -> dict[str, Any]:
@@ -50,6 +64,13 @@ class DocumentLinkingService:
             if required not in types:
                 gaps.append({"key": f"missing_{required}", "message": f"Limited evidence found: consider linking a {required.replace('_', ' ')} record."})
         return gaps
+
+    def suggest_links(self, *, document: dict[str, Any], records: list[dict[str, Any]]) -> dict[str, Any]:
+        """Suggest links only from supplied records; unsupported areas say no evidence found."""
+        result = self.build_links(document=document, records=records)
+        if not records:
+            result["evidence_gaps"] = [{"link_type": link_type, "message": NO_EVIDENCE_FOUND} for link_type in self.LINK_TERMS]
+        return result
 
 
 document_linking_service = DocumentLinkingService()
