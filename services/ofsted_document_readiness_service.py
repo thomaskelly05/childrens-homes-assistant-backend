@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from services.document_review_scheduler import document_review_scheduler
+from services.document_gap_analysis_service import document_gap_analysis_service
 from services.home_document_catalogue_service import home_document_catalogue_service
 from services.risk_intelligence_language import SAFE_DECISION_SUPPORT_NOTICE, evidence_gap, review_prompt, safe_payload
 
@@ -21,6 +22,12 @@ class OfstedDocumentReadinessService:
         catalogue = home_document_catalogue_service.catalogue(home_id=home_id, child_ids=child_ids, staff_ids=staff_ids)
         existing_by_type = {str(doc.get("document_type") or doc.get("title") or "").lower(): doc for doc in existing_documents or []}
         checked = [self._merge(item, existing_by_type) for item in catalogue["items"]]
+        gap_analysis = document_gap_analysis_service.analyse(
+            home_id=home_id,
+            existing_documents=existing_documents,
+            child_ids=child_ids,
+            staff_ids=staff_ids,
+        )
         schedule = document_review_scheduler.schedule(documents=checked)
         missing = [item for item in checked if item["missing_incomplete_status"] == "missing"]
         weak = [item for item in checked if item["evidence_sufficiency"] in {"weak", "limited"}]
@@ -31,6 +38,7 @@ class OfstedDocumentReadinessService:
             "home_id": home_id,
             "catalogue_counts": catalogue["counts"],
             "documents": checked,
+            "document_gap_analysis": gap_analysis,
             "review_schedule": schedule,
             "inspection_readiness_intelligence": [
                 *[self._message(item, "Review may be helpful; this document appears overdue.") for item in overdue],

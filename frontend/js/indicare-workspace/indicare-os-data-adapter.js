@@ -24,7 +24,7 @@ const ENDPOINT_GROUPS = {
   safeguarding: ["workspace:safeguarding", "/api/safeguarding", "/api/risks", "/api/concerns"],
   workforce: ["/api/workforce", "/api/staff", "/api/users"],
   tasks: ["workspace:tasks", "/api/tasks", "/api/actions", "/api/reminders"],
-  reports: ["workspace:reports", "/api/reports", "/api/inspection", "/api/inspection/readiness"],
+  reports: ["workspace:reports", "/inspection/readiness", "/api/reports", "/api/inspection", "/api/inspection/readiness"],
   handover: ["workspace:handover", "/api/handover", "/api/shift-handover"],
   health: ["workspace:health", "/api/health", "/api/wellbeing"],
   education: ["workspace:education", "/api/education", "/api/pep"],

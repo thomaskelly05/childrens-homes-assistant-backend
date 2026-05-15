@@ -5,7 +5,9 @@ from collections import Counter
 from typing import Any
 
 from services.emotional_progression_service import emotional_progression_service
+from services.neurodiversity_support_service import neurodiversity_support_service
 from services.relationship_continuity_service import relationship_continuity_service
+from services.trauma_informed_practice_service import trauma_informed_practice_service
 
 
 THEME_PATTERNS = {
@@ -94,6 +96,8 @@ class NarrativeContinuityService:
 
         relationship = relationship_continuity_service.markers(records=scoped, young_person_id=young_person_id, home_id=home_id)
         emotional = emotional_progression_service.progression(records=scoped, young_person_id=young_person_id, home_id=home_id)
+        trauma = trauma_informed_practice_service.analyse(text=" ".join(_record_text(record) for record in scoped))
+        neurodiversity = neurodiversity_support_service.analyse(text=" ".join(_record_text(record) for record in scoped))
         child_name = (child or {}).get("preferred_name") or (child or {}).get("preferredName") or (child or {}).get("name") or "This child"
 
         return {
@@ -116,6 +120,8 @@ class NarrativeContinuityService:
             "wellbeing_continuity": emotional.get("wellbeing_continuity"),
             "placement_journey": self._placement_journey(child=child, records=ordered),
             "relationship_continuity": relationship,
+            "trauma_informed_continuity": trauma,
+            "neurodiversity_aware_continuity": neurodiversity,
             "child_voice_continuity": child_voice[:5],
             "what_worried_adults": worries[:5],
             "what_next_shift_should_understand": self._next_shift_understanding(child_name, ordered, unresolved, strengths, worries),

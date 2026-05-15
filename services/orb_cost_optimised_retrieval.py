@@ -9,6 +9,7 @@ from services.chronology_cluster_service import chronology_cluster_service
 from services.metadata_extraction_service import metadata_extraction_service
 from services.provider_data_intelligence_settings_service import provider_data_intelligence_settings_service
 from services.regulatory_graph_service import regulatory_graph_service
+from services.regulatory_ontology_service import regulatory_ontology_service
 
 
 def _text(value: Any) -> str:
@@ -93,8 +94,10 @@ class OrbCostOptimisedRetrievalService:
         pack.relevant_metadata = {
             **pack.relevant_metadata,
             "intent": decision["intent"],
+            "regulatory_ontology_summary": regulatory_ontology_service.summary().model_dump(mode="json"),
             "retrieval_strategy": [
                 "intent_route",
+                "regulatory_ontology",
                 "metadata_query",
                 "regulatory_graph",
                 "chronology_clusters",

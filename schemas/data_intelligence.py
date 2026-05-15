@@ -51,18 +51,29 @@ class CareMetadata(BaseModel):
     child_voice_present: bool = False
     child_voice_missing: bool = False
     emotional_wellbeing_present: bool = False
+    trauma_informed_support: bool = False
+    neurodiversity_adjustment: bool = False
+    sensory_factor: bool = False
     health_present: bool = False
     education_present: bool = False
     sleep_present: bool = False
     family_contact_present: bool = False
     exercise_activity_present: bool = False
     relationship_present: bool = False
+    regulation_support_present: bool = False
+    behaviour_support_present: bool = False
     positive_progress_present: bool = False
     safeguarding_marker: bool = False
     risk_marker: bool = False
+    exploitation_possible_indicator: bool = False
     missing_marker: bool = False
     incident_marker: bool = False
     follow_up_required: bool = False
+    plan_update_suggested: bool = False
+    risk_update_suggested: bool = False
+    document_evidence_relevance: bool = False
+    inspection_relevance: bool = False
+    handover_relevance: bool = False
     manager_review_required: bool = False
     detected_signals: list[str] = Field(default_factory=list)
     record_quality_flags: list[str] = Field(default_factory=list)

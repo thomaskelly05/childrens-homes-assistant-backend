@@ -22,6 +22,10 @@ CHEAP_FEATURES = {
     "regulatory_mapping",
     "record_quality_flags",
     "link_suggestions",
+    "ontology_lookup",
+    "operational_state",
+    "document_gap_analysis",
+    "annex_a_draft",
     "navigation",
     "route",
 }
@@ -98,6 +102,27 @@ class AICostControlService:
             },
         }
         return EvidencePack(**data)
+
+    def retrieval_controls(self) -> dict[str, Any]:
+        return {
+            "prefer": [
+                "metadata first",
+                "regulatory graph first",
+                "cached summaries",
+                "cluster summaries",
+                "evidence packs",
+                "top citations only",
+                "small model/rules first",
+            ],
+            "blocked": [
+                "full records to AI",
+                "unrelated chronology",
+                "cross-child data",
+                "child names to external services unnecessarily",
+                "repeated live location lookups",
+            ],
+            "external_ai_default": False,
+        }
 
     def _plan(
         self,

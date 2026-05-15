@@ -36,6 +36,35 @@ SIGNAL_KEYWORDS: dict[str, tuple[str, ...]] = {
     ),
     "exercise_activity_present": ("activity", "football", "gym", "swim", "walk", "exercise", "club"),
     "relationship_present": ("friend", "peer", "relationship", "staff", "trusted adult", "visitor"),
+    "trauma_informed_support": (
+        "emotional safety",
+        "predictable",
+        "repair",
+        "restorative",
+        "non-punitive",
+        "curious",
+        "debrief",
+        "regulated",
+        "co-regulation",
+        "trusted adult",
+        "choice",
+    ),
+    "neurodiversity_adjustment": (
+        "processing time",
+        "visual timetable",
+        "sensory",
+        "transition",
+        "routine change",
+        "communication preference",
+        "masking",
+        "shutdown",
+        "meltdown",
+        "demand avoidance",
+        "executive functioning",
+    ),
+    "sensory_factor": ("sensory", "noise", "bright", "busy", "texture", "smell", "overstimulated", "overwhelmed"),
+    "regulation_support_present": ("regulated", "co-regulation", "breathing", "calming", "quiet space", "reassured"),
+    "behaviour_support_present": ("behaviour support", "pbs", "de-escalat", "restorative", "repair", "boundary"),
     "positive_progress_present": (
         "achievement",
         "completed",
@@ -47,10 +76,16 @@ SIGNAL_KEYWORDS: dict[str, tuple[str, ...]] = {
         "success",
     ),
     "safeguarding_marker": ("allegation", "cse", "exploitation", "harm", "lado", "safeguard", "self-harm"),
+    "exploitation_possible_indicator": ("cse", "cce", "exploitation", "unknown adult", "new phone", "hotel", "train station"),
     "risk_marker": ("risk", "unsafe", "threat", "weapon", "substance", "restraint", "de-escalat"),
     "missing_marker": ("abscond", "missing", "police", "returned", "unauthorised absence"),
     "incident_marker": ("incident", "injury", "restraint", "physical intervention", "damage", "assault"),
     "follow_up_required": ("action required", "follow up", "follow-up", "to do", "needs review", "referral"),
+    "plan_update_suggested": ("update plan", "plan review", "care plan", "placement plan", "pbs plan"),
+    "risk_update_suggested": ("risk review", "risk assessment", "risk update", "missing risk", "locality risk"),
+    "document_evidence_relevance": ("document", "evidence", "plan", "policy", "report", "sign-off", "signoff"),
+    "inspection_relevance": ("ofsted", "inspection", "sccif", "quality standard", "reg 44", "reg 45"),
+    "handover_relevance": ("handover", "next shift", "briefing", "shift"),
     "manager_review_required": ("manager review", "escalate", "senior", "significant", "oversight"),
 }
 
@@ -135,6 +170,23 @@ class CareSignalService:
             metadata.safeguarding_marker = True
             if "safeguarding_marker" not in detected:
                 detected.append("safeguarding_marker")
+
+        if metadata.safeguarding_marker or metadata.risk_marker or metadata.missing_marker or metadata.incident_marker:
+            metadata.inspection_relevance = True
+            metadata.handover_relevance = True
+            for field in ("inspection_relevance", "handover_relevance"):
+                if field not in detected:
+                    detected.append(field)
+
+        if metadata.exploitation_possible_indicator or metadata.missing_marker:
+            metadata.risk_update_suggested = True
+            if "risk_update_suggested" not in detected:
+                detected.append("risk_update_suggested")
+
+        if metadata.trauma_informed_support or metadata.neurodiversity_adjustment:
+            metadata.plan_update_suggested = True
+            if "plan_update_suggested" not in detected:
+                detected.append("plan_update_suggested")
 
         metadata.detected_signals = sorted(set(detected))
         return metadata
