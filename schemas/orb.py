@@ -81,12 +81,15 @@ OrbEventType = Literal[
 class OrbVoiceProfile(BaseModel):
     model_config = ConfigDict(extra="allow")
 
-    name: str = "IndiCare British Female"
+    profile_id: str = "british_female_calm"
+    name: str = "british_female_calm"
     provider_voice: str = "shimmer"
     accent: str = "British"
-    tone: str = "calm, warm, professional"
+    tone: str = "calm, concise, warm, professional and human"
+    tone_profile: str = "calm_concise_human"
+    product_name: str = "ORB powered by IndiCare"
     speed: str = "medium"
-    speaking_speed: str = "medium"
+    speaking_speed: str = "medium-slow"
     expressiveness: str = "natural but not theatrical"
     use_case: str = "children's home operational support"
     voice_style: str | None = None

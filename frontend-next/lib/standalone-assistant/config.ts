@@ -44,7 +44,7 @@ export const assistantNavItems: AssistantNavItem[] = [
   { label: 'Apps', href: '/assistant/apps', icon: AppWindow },
   { label: 'Knowledge', href: '/assistant', icon: BookOpen },
   { label: 'Templates', href: '/assistant/apps/templates', icon: FileText },
-  { label: 'Voice', href: '/assistant/apps/voice', icon: Mic },
+  { label: 'Voice', href: '/assistant/voice', icon: Mic },
   { label: 'Profile', href: '/assistant/profile', icon: UserRound },
   { label: 'Settings', href: '/assistant/settings', icon: Settings }
 ]
@@ -57,7 +57,7 @@ export const assistantApps: AssistantApp[] = [
   { slug: 'templates', name: 'Templates', description: 'Reusable care-sector templates for notes, reports, policies, letters and plans.', route: '/assistant/apps/templates', status: 'foundation' },
   { slug: 'policies', name: 'Policy Writer', description: 'Policy and procedure drafting workspace with references and review controls.', route: '/assistant/apps/policies', status: 'foundation' },
   { slug: 'meetings', name: 'Meeting Notes', description: 'Meeting summaries, decisions, action extraction and follow-up drafting.', route: '/assistant/apps/meetings', status: 'foundation' },
-  { slug: 'voice', name: 'Voice Studio', description: 'Standalone voice mode, captions and Orb-style glowing visual for general and sector support.', route: '/assistant/apps/voice', status: 'foundation' }
+  { slug: 'voice', name: 'Voice Studio', description: 'Standalone voice mode, captions and Orb-style glowing visual for general and sector support.', route: '/assistant/voice', status: 'foundation' }
 ]
 
 export const documentTypes = [

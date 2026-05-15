@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import os
+import re
 from typing import Any
 
 from assistant.llm_provider import ChatStreamRequest, get_llm_provider
+from services.standalone_sector_knowledge_service import search_sector_knowledge
 
 
 def _text(value: Any) -> str:
@@ -48,14 +50,42 @@ class OrbGeneralAssistantService:
 
     def _fallback_answer(self, message: str) -> str:
         lower = message.lower()
+        arithmetic = re.fullmatch(r"\s*(?:what\s+is\s+)?(-?\d+(?:\.\d+)?)\s*([+\-*/])\s*(-?\d+(?:\.\d+)?)\s*\??\s*", lower)
+        if arithmetic:
+            left = float(arithmetic.group(1))
+            operator = arithmetic.group(2)
+            right = float(arithmetic.group(3))
+            if operator == "/" and right == 0:
+                return "You cannot divide by zero."
+            result = {
+                "+": left + right,
+                "-": left - right,
+                "*": left * right,
+                "/": left / right,
+            }[operator]
+            readable = int(result) if result.is_integer() else round(result, 4)
+            return f"{readable}."
         if "indicare" in lower:
             return (
                 "IndiCare OS is a care operations platform for children's homes. It brings together records, chronology, "
                 "daily notes, incidents, safeguarding, handover, actions, reports and inspection-readiness support, with "
                 "assistant features that respect role and home permissions."
             )
+        if any(term in lower for term in ("reg ", "regulation", "sccif", "ofsted", "children's homes", "childrens homes", "trauma-informed", "trauma informed", "supervision")):
+            sources = search_sector_knowledge(message, limit=2)
+            if "trauma" in lower:
+                return "Trauma-informed practice means noticing behaviour as communication, reducing shame, offering predictable choices, and responding with curiosity before consequence. Keep records factual: what happened, what the child may have needed, what staff did, and what changed."
+            if "supervision" in lower and "prepare" in lower:
+                return "Yes, I can help. Keep supervision focused on wellbeing, practice reflection, safeguarding themes, learning, actions, and any support the staff member needs. Bring one clear example and one follow-up action."
+            if sources:
+                primary = sources[0]
+                return f"{primary['label']}: {primary['excerpt']} I can explain this in plainer language or turn it into a short briefing."
+        if any(term in lower for term in ("email", "letter", "rewrite", "professional")):
+            return "Yes, I can help with that. Share the rough points, who it is for, and the tone you want. I will make it clear, professional and concise."
+        if "summarise" in lower or "summarize" in lower:
+            return "Paste the text you want summarised, and I will pull out the key points, actions and any uncertainties."
         if any(term in lower for term in ("weather", "news", "score", "played last week", "price", "schedule")):
-            return "That is a current-facts question, so Orb needs a configured live tool/search provider before answering reliably."
+            return "I cannot check live information right now, but I can still help from general knowledge or work with details you paste in."
         return "I can help with that. Ask me for an explanation, draft, plan, summary or calculation, and I will keep it concise."
 
 

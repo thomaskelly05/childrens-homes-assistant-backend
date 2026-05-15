@@ -34,10 +34,13 @@ export type OrbState =
 export type OrbActivationMode = 'click_tap_orb' | 'push_to_talk' | 'press_to_talk' | 'hey_indicare_placeholder' | 'wake_word_placeholder' | 'keyboard_shortcut'
 
 export type OrbVoiceProfile = {
+  profile_id?: string
   name: string
   provider_voice: string
   accent: string
   tone: string
+  tone_profile?: string
+  product_name?: string
   speed: string
   speaking_speed?: string
   expressiveness: string
@@ -260,12 +263,15 @@ export type OrbApiResponse<T> = {
 }
 
 export const defaultOrbVoiceProfile: OrbVoiceProfile = {
-  name: 'IndiCare British Female',
+  profile_id: 'british_female_calm',
+  name: 'british_female_calm',
   provider_voice: 'shimmer',
   accent: 'British',
-  tone: 'calm, warm, professional',
+  tone: 'calm, concise, warm, professional and human',
+  tone_profile: 'calm_concise_human',
+  product_name: 'ORB powered by IndiCare',
   speed: 'medium',
-  speaking_speed: 'medium',
+  speaking_speed: 'medium-slow',
   expressiveness: 'natural but not theatrical',
   use_case: "children's home operational support",
   formality: 'professional',

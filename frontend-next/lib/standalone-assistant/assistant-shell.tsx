@@ -65,7 +65,7 @@ export function StandaloneAssistantShell({
                 <h1 className="mt-1 text-3xl font-black tracking-[-0.06em]">{title}</h1>
                 <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-500 dark:text-slate-400">{subtitle}</p>
               </div>
-              <Link href="/assistant/apps/voice" className="rounded-full border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-white/10 dark:bg-white/10 dark:text-white">
+              <Link href="/assistant/voice" className="rounded-full border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-white/10 dark:bg-white/10 dark:text-white">
                 Voice mode
               </Link>
             </div>
