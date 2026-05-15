@@ -4,6 +4,7 @@ from typing import Any
 
 from db.connection import get_db_connection, release_db_connection
 from services.manager_intelligence_service import ManagerIntelligenceService
+from services.document_os_core import evidence_ref, matching_records, NO_EVIDENCE_FOUND
 
 
 class ProviderIntelligenceService:
@@ -61,6 +62,31 @@ class ProviderIntelligenceService:
             "days": days,
             "summary": self._summary(results),
             "homes": sorted(results, key=lambda item: self._risk_score(item.get("risk")), reverse=True),
+        }
+
+    def build_os_snapshot(self, *, records: list[dict[str, Any]], current_user: dict[str, Any] | None = None) -> dict[str, Any]:
+        """Provider Oversight OS snapshot from supplied evidence only."""
+        areas = {
+            "safeguarding": ("safeguarding", "missing", "exploitation", "lado"),
+            "inspection_readiness": ("ofsted", "inspection", "reg 44", "reg 45"),
+            "workforce": ("staff", "supervision", "agency", "training"),
+            "quality_assurance": ("qa", "audit", "quality assurance", "evidence gap"),
+            "placement_stability": ("placement", "stability", "breakdown", "notice"),
+        }
+        sections = {}
+        for area, terms in areas.items():
+            matches = matching_records(records, terms)
+            sections[area] = {
+                "summary": f"{len(matches)} evidence item(s) found." if matches else NO_EVIDENCE_FOUND,
+                "evidence_links": [evidence_ref(record, reason=f"provider oversight: {area}") for record in matches[:10]],
+            }
+        return {
+            "ok": True,
+            "status": "draft",
+            "editable": True,
+            "human_review_required": True,
+            "provider_id": (current_user or {}).get("provider_id"),
+            "sections": sections,
         }
 
     def _homes_for_user(self, current_user: dict[str, Any]) -> list[dict[str, Any]]:

@@ -1,5 +1,8 @@
 from fastapi import APIRouter
 
+from routers.document_os_route_utils import EvidencePayload
+from services.quality_assurance_service import quality_assurance_service
+
 router = APIRouter(prefix="/qa", tags=["QA"])
 
 
@@ -28,3 +31,8 @@ def qa_dashboard():
             },
         ],
     }
+
+
+@router.post("/audits/draft")
+def qa_audit(payload: EvidencePayload):
+    return {"ok": True, "audit": quality_assurance_service.audit(records=payload.records, audit_type=payload.audit_type or "file")}

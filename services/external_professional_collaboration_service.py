@@ -1,0 +1,3 @@
+from services.document_os_core import ExternalProfessionalCollaborationService, external_professional_collaboration_service
+
+__all__ = ["ExternalProfessionalCollaborationService", "external_professional_collaboration_service"]

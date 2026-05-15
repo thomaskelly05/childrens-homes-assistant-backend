@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>IndiCare OS | Documents OS</title>
+  <link rel="stylesheet" href="/css/document-os.css" />
+</head>
+<body>
+  <main class="os-page">
+    <section class="hero">
+      <p class="eyebrow">Documents OS</p>
+      <h1>Editable, evidence-linked children’s homes documents.</h1>
+      <p>Complete digital forms, upload paper records for extraction, review confidence, link evidence and keep manager sign-off human-led.</p>
+      <div class="actions">
+        <a class="button" href="/inspection-mode.html">Inspection mode</a>
+        <a class="button secondary" href="/safeguarding-flow.html">Safeguarding flow</a>
+      </div>
+    </section>
+    <section class="grid">
+      <article class="panel"><h2>Template registry</h2><p class="stat" id="templateCount">0</p><p>Unique templates with Ofsted, SCCIF and Quality Standards metadata.</p></article>
+      <article class="panel"><h2>Safety rules</h2><p>Draft-only AI, editable forms, no invented evidence, manager sign-off required.</p></article>
+      <article class="panel"><h2>Paper extraction</h2><p>Heading, synonym, date, child voice, safeguarding and action extraction.</p></article>
+      <article class="panel wide"><h2>Templates</h2><div class="list" id="templateList"></div></article>
+      <article class="panel wide">
+        <h2>Try deterministic extraction</h2>
+        <div class="grid">
+          <label>Template id<input id="templateId" value="placement_plan" /></label>
+          <label class="wide">Source text<textarea id="sourceText" rows="5">Child said they feel safer when staff explain the plan. Risk: missing from care. Action: manager review by Friday.</textarea></label>
+        </div>
+        <div class="actions"><button id="extractBtn">Extract into editable draft</button></div>
+        <p id="extractResult" class="notice panel">No extraction run yet.</p>
+      </article>
+    </section>
+  </main>
+  <script src="/js/document-os.js"></script>
+</body>
+</html>

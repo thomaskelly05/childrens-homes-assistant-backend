@@ -1,0 +1,5 @@
+from services.document_os_core import DocumentDecisionAccountabilityService, decision_accountability_service
+
+DecisionAccountabilityService = DocumentDecisionAccountabilityService
+
+__all__ = ["DecisionAccountabilityService", "decision_accountability_service"]
