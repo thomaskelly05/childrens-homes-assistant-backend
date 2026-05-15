@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from core.router_loader import ROUTERS, get_failed_routers
+from core.router_loader import ROUTERS, get_failed_routers, get_route_conflicts, get_router_registry_summary
 
 router = APIRouter(prefix='/api/os-diagnostics', tags=['OS Diagnostics'])
 
@@ -43,11 +43,15 @@ EXPECTED_ENDPOINTS = [
 @router.get('/router-status')
 async def router_status():
     failed = get_failed_routers()
+    conflicts = get_route_conflicts()
     return {
         'ok': len(failed) == 0,
         'configured_router_count': len(ROUTERS),
         'failed_router_count': len(failed),
         'failed_routers': failed,
+        'route_conflict_count': len(conflicts),
+        'route_conflicts': conflicts,
+        'registry_summary': get_router_registry_summary(),
         'configured_routers': ROUTERS,
     }
 

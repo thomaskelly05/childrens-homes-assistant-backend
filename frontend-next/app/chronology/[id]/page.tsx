@@ -9,11 +9,13 @@ import { RegulatoryWorkflowPanel } from '@/components/indicare/workflows/regulat
 import { getChronologyEventById, getChronologyEvents } from '@/lib/chronology/selectors'
 import { getCareActions, getEvidenceItems } from '@/lib/evidence/selectors'
 import { fullName, getStaffById, getYoungPersonById } from '@/lib/indicare/selectors'
+import { getOsChronology, getOsChronologyEvent } from '@/lib/os-api/chronology'
 import { mapEventToRegulatoryReferences } from '@/lib/regulatory-framework/mapping'
 
 export default async function ChronologyDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const event = getChronologyEventById(id)
+  const liveEvent = await getOsChronologyEvent(id)
+  const event = liveEvent.data || getChronologyEventById(id)
 
   if (!event) {
     return (
@@ -35,7 +37,9 @@ export default async function ChronologyDetailPage({ params }: { params: Promise
   const actions = getCareActions().filter((action) => event.actionIds.includes(action.id))
   const linkedPeople = event.youngPersonIds.map((personId) => getYoungPersonById(personId)).filter(Boolean)
   const linkedStaff = event.staffIds.map((staffId) => getStaffById(staffId)).filter(Boolean)
-  const context = getChronologyEvents().filter((item) => item.id !== event.id && item.youngPersonIds.some((personId) => event.youngPersonIds.includes(personId))).slice(0, 4)
+  const liveContext = event.youngPersonIds[0] ? await getOsChronology({ youngPersonId: event.youngPersonIds[0] }) : null
+  const contextSource = liveContext?.data.length ? liveContext.data : getChronologyEvents()
+  const context = contextSource.filter((item) => item.id !== event.id && item.youngPersonIds.some((personId) => event.youngPersonIds.includes(personId))).slice(0, 4)
   const workflow = event.eventType === 'reg44_finding' ? 'reg44' : event.eventType === 'reg45_evidence' ? 'reg45' : event.eventType === 'lac_review' ? 'lac_review' : event.eventType === 'incident' || event.eventType === 'missing_episode' ? 'incident' : event.eventType === 'safeguarding' ? 'safeguarding' : 'daily_recording'
 
   return (

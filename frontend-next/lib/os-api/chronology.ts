@@ -46,3 +46,8 @@ export async function getOsChronology(params: { sourceType?: ChronologySourceTyp
   )
   return { ...result, data: result.data.map(mapOsChronology) }
 }
+
+export async function getOsChronologyEvent(id: string): Promise<OsApiResult<ChronologyEvent | null>> {
+  const result = await osGet<Record<string, any> | null>(`/os/chronology/${encodeURIComponent(id)}`, null)
+  return { ...result, data: result.data ? mapOsChronology(result.data) : null }
+}

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Mic, Send } from 'lucide-react'
 
+import { assistantErrorMessage, buildStandaloneAssistantContext, queryAssistant } from '@/lib/assistant-core/client'
 import { StandaloneAssistantShell, StandaloneOrbVisual } from '@/lib/standalone-assistant/assistant-shell'
 import { assistantBrains, assistantPrompts } from '@/lib/standalone-assistant/config'
 import type { StandaloneBrainId } from '@/lib/standalone-assistant/types'
@@ -16,7 +17,13 @@ export default function AssistantPage() {
   const [brain, setBrain] = useState<StandaloneBrainId>('general_assistant')
   const [input, setInput] = useState('')
   const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [voiceOpen, setVoiceOpen] = useState(false)
+  const [conversationId] = useState(() => {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID()
+    return `standalone-${Date.now()}`
+  })
 
   useEffect(() => {
     try {
@@ -31,22 +38,42 @@ export default function AssistantPage() {
     window.localStorage.setItem('indicare.standalone-assistant.history.v1', JSON.stringify(messages.slice(-40)))
   }, [messages])
 
-  function sendMessage(text = input) {
+  async function sendMessage(text = input) {
     const value = text.trim()
-    if (!value) return
+    if (!value || loading) return
     setInput('')
-    const asksForOsRecords = /\b(child|young person|handover|chronology|document|risk|incident|daily note|home record|Jamie)\b/i.test(value)
-    const reply = asksForOsRecords
-      ? 'This standalone assistant cannot access OS records, child documents, chronology, risk intelligence or home data. Paste the content you want help with, and I can draft from that only.'
-      : 'I can help shape this into clearer care language. I’ll keep it grounded in what you paste here and flag anything that needs manager review.'
-    setMessages((current) => [
-      ...current,
-      { role: 'user', content: value },
-      {
-        role: 'assistant',
-        content: reply
-      }
-    ])
+    setError(null)
+    setLoading(true)
+    setMessages((current) => [...current, { role: 'user', content: value }])
+
+    try {
+      const data = await queryAssistant({
+        message: value,
+        mode: 'standalone',
+        context: {
+          ...buildStandaloneAssistantContext({
+            conversationId,
+            activeSection: brain
+          }),
+          assistant_brain: brain
+        },
+        conversation_id: conversationId,
+        project_id: `standalone-${brain}`
+      })
+      setMessages((current) => [...current, { role: 'assistant', content: data.answer }])
+    } catch (assistantError) {
+      const message = assistantErrorMessage(assistantError)
+      setError(message)
+      setMessages((current) => [
+        ...current,
+        {
+          role: 'assistant',
+          content: 'I could not reach the live assistant endpoint for this message. This standalone surface has not used OS records, child files, home records or staff records.'
+        }
+      ])
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -66,8 +93,13 @@ export default function AssistantPage() {
                   <option key={item.id} value={item.id}>{item.name}</option>
                 ))}
               </select>
-              <span className="rounded-full bg-cyan-50 px-3 py-2 text-xs font-black text-cyan-700 dark:bg-cyan-300/10 dark:text-cyan-200">Conversation saved locally</span>
+              <span className="rounded-full bg-cyan-50 px-3 py-2 text-xs font-black text-cyan-700 dark:bg-cyan-300/10 dark:text-cyan-200">{loading ? 'Assistant thinking' : 'Live isolated assistant'}</span>
             </div>
+            {error ? (
+              <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800 dark:border-amber-300/20 dark:bg-amber-300/10 dark:text-amber-100">
+                {error}
+              </div>
+            ) : null}
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto p-5">
@@ -99,7 +131,7 @@ export default function AssistantPage() {
                     <button
                       key={prompt}
                       type="button"
-                      onClick={() => sendMessage(prompt)}
+                      onClick={() => void sendMessage(prompt)}
                       className="rounded-3xl border border-slate-200 bg-white px-5 py-4 text-left text-sm font-bold leading-6 text-slate-700 transition hover:border-cyan-300 hover:bg-cyan-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-cyan-300/10"
                     >
                       {prompt}
@@ -114,7 +146,7 @@ export default function AssistantPage() {
             className="p-4"
             onSubmit={(event) => {
               event.preventDefault()
-              sendMessage()
+              void sendMessage()
             }}
           >
             <div className="flex items-end gap-3 rounded-[30px] bg-slate-50 p-3 ring-1 ring-slate-200/80 dark:bg-white/5 dark:ring-white/10">
@@ -128,9 +160,9 @@ export default function AssistantPage() {
                 <Mic className="mr-2 inline h-4 w-4" aria-hidden />
                 Voice
               </button>
-              <button type="submit" className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg shadow-slate-950/10 dark:bg-cyan-300 dark:text-slate-950">
+              <button type="submit" disabled={loading} className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg shadow-slate-950/10 disabled:opacity-60 dark:bg-cyan-300 dark:text-slate-950">
                 <Send className="mr-2 inline h-4 w-4" aria-hidden />
-                Send
+                {loading ? 'Sending' : 'Send'}
               </button>
             </div>
           </form>
