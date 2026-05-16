@@ -23,4 +23,18 @@ Canonical DTO:
 - `services.audit_replay_service`
 - `repositories.operational_writeback_repository.transition_record`
 
+## Enterprise recovery direction
+
+Durability should be append-first. Failed saves, lifecycle transitions, queue retries, chronology projections, evidence reviews, governance sign-offs and assistant oversight events should remain queryable after interruption or reconnect.
+
+Recovery tooling should validate:
+
+- lifecycle integrity
+- chronology integrity
+- replay cursor progress
+- queue reconciliation
+- stale operational state
+- duplicate transition protection
+- safe retry metadata
+
 Do not commit temporary recovery hacks or frontend-only retry behaviour that hides failed persistence.
