@@ -63,7 +63,7 @@ export function CanonicalEvidenceTraversal({ traversal }: { traversal: EvidenceT
       {traversal.edges.map((edge) => (
         <article key={`${edge.source_id}:${edge.target_id}:${edge.relationship}`} className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4">
           <span className="rounded-full bg-white px-3 py-1 text-[11px] font-black uppercase tracking-[0.14em] text-emerald-700">{edge.relationship.replaceAll('_', ' ')}</span>
-          <p className="mt-3 text-sm font-black text-emerald-950">{edge.source_id} -> {edge.target_id}</p>
+          <p className="mt-3 text-sm font-black text-emerald-950">{edge.source_id} {'->'} {edge.target_id}</p>
           <p className="mt-2 text-sm leading-6 text-emerald-800">{edge.why_linked}</p>
         </article>
       ))}
