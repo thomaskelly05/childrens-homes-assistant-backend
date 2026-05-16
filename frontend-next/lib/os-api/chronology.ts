@@ -35,7 +35,13 @@ export function mapOsChronology(row: Record<string, any>): ChronologyEvent {
     createdAt: String(row.created_at || row.createdAt || row.date_time || ''),
     updatedAt: String(row.updated_at || row.updatedAt || row.date_time || ''),
     visibility: row.visibility || 'home',
-    citationLabel: String(row.citation_label || row.citationLabel || row.title || 'Source record')
+    citationLabel: String(row.citation_label || row.citationLabel || row.title || 'Source record'),
+    replayCursor: Number(row.replay_cursor || row.replayCursor || 0) || undefined,
+    sourceEventIds: Array.isArray(row.source_event_ids) ? row.source_event_ids.map(String) : row.sourceEventIds || [],
+    linkedOperationalStateIds: Array.isArray(row.linked_operational_states) ? row.linked_operational_states.map(String) : row.linkedOperationalStateIds || [],
+    linkedGovernanceReviewIds: Array.isArray(row.linked_governance_reviews) ? row.linked_governance_reviews.map(String) : row.linkedGovernanceReviewIds || [],
+    linkedInspectionIds: Array.isArray(row.linked_inspections) ? row.linked_inspections.map(String) : row.linkedInspectionIds || [],
+    linkedSignoffIds: Array.isArray(row.linked_signoffs) ? row.linked_signoffs.map(String) : row.linkedSignoffIds || []
   }
 }
 
