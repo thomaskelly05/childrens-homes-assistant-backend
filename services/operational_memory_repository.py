@@ -139,8 +139,7 @@ class OperationalMemoryRepository:
             inserted["governance_signoff_history_id"] = self.append(conn, "governance_signoff_history", event)
         if event.evidence_references:
             inserted["evidence_relationship_history_id"] = self.append(conn, "evidence_relationship_history", event)
-        if event.chronology_references:
-            inserted["chronology_snapshot_history_id"] = self.append(conn, "chronology_snapshot_history", event)
+        inserted["chronology_snapshot_history_id"] = self.append(conn, "chronology_snapshot_history", event)
         return inserted
 
     def _ids(self, lifecycle_context: dict[str, Any], key: str) -> list[str]:

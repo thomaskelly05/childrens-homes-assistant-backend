@@ -78,6 +78,12 @@ export type ChronologyEvent = {
   updatedAt: string
   visibility: ChronologyVisibility
   citationLabel: string
+  replayCursor?: number
+  sourceEventIds?: string[]
+  linkedOperationalStateIds?: string[]
+  linkedGovernanceReviewIds?: string[]
+  linkedInspectionIds?: string[]
+  linkedSignoffIds?: string[]
 }
 
 export type ChronologyFilter = {
