@@ -1,7 +1,9 @@
 import Link from 'next/link'
 
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
+import { OperationalLifecyclePanel } from '@/components/indicare/operational-lifecycle-panel'
 import { Card, DataTable, EmptyState, PageHeader, SectionHeader, StatCard, StatusBadge } from '@/components/indicare/ui'
+import { deriveLifecycleState } from '@/lib/lifecycle/selectors'
 import { getAssistantGovernance, getProviderSettings } from '@/lib/os-api/platform'
 
 function valueLabel(value: unknown) {
@@ -30,6 +32,14 @@ export default async function SettingsPage() {
     ['Streaming', governance.streaming_enabled ?? governance.streamingEnabled],
     ['Prompt/transcript storage', governance.store_prompts ?? governance.prompt_storage_enabled]
   ]
+  const governanceLifecycle = aiRows.map(([label, value]) => deriveLifecycleState({
+    id: String(label).toLowerCase().replaceAll(' ', '_'),
+    type: 'governance_control',
+    title: label,
+    status: value === false || value === undefined || value === null ? 'in_review' : 'resolved',
+    review_notes: valueLabel(value),
+    governance_ids: [String(label)]
+  }, 'governance_control'))
   return (
     <div className="space-y-6">
       <PageHeader
@@ -67,6 +77,13 @@ export default async function SettingsPage() {
           empty={<EmptyState title="No AI governance returned" description="No assistant governance settings are available for this session." />}
         />
         <p className="mt-5 rounded-2xl border border-amber-100 bg-amber-50 p-4 text-sm leading-6 text-amber-900">Assistant output remains draft support. Safeguarding, regulatory and clinical decisions require professional judgement and manager oversight.</p>
+      </Card>
+      <Card>
+        <OperationalLifecyclePanel
+          title="Governance review lifecycle"
+          description="Provider and assistant controls are grouped as reviewable governance states without changing policy from the UI."
+          items={governanceLifecycle}
+        />
       </Card>
       <Card>
         <SectionHeader eyebrow="ORB" title="Voice and runtime settings" />

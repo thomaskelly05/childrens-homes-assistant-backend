@@ -1,7 +1,9 @@
 import Link from 'next/link'
 
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
+import { OperationalLifecyclePanel } from '@/components/indicare/operational-lifecycle-panel'
 import { Card, DataTable, EmptyState, PageHeader, SectionHeader, StatCard } from '@/components/indicare/ui'
+import { deriveLifecycleState } from '@/lib/lifecycle/selectors'
 import { getOsManagementOversight } from '@/lib/os-api/management'
 
 export default async function ManagementPage() {
@@ -23,6 +25,11 @@ export default async function ManagementPage() {
     { label: 'Request evidence', href: '/evidence' },
     { label: 'Review chronology links', href: '/chronology' },
     { label: 'Assign follow-up action', href: '/actions' }
+  ]
+  const lifecycleItems = [
+    ...data.escalation_queue.map((item) => deriveLifecycleState({ ...item, status: item.status || 'escalated' }, 'escalation')),
+    ...data.review_queue.map((item) => deriveLifecycleState({ ...item, status: item.status || 'in_review' }, 'manager_review')),
+    ...data.sign_off_queue.map((item) => deriveLifecycleState({ ...item, status: item.status || 'in_review' }, 'sign_off'))
   ]
 
   return (
@@ -67,6 +74,13 @@ export default async function ManagementPage() {
           </div>
         </Card>
       </section>
+      <Card>
+        <OperationalLifecyclePanel
+          title="Oversight lifecycle queue"
+          description="Escalations, manager reviews and sign-offs are consolidated as durable lifecycle work."
+          items={lifecycleItems}
+        />
+      </Card>
       <section className="grid gap-6 xl:grid-cols-3">
         <Card>
           <SectionHeader eyebrow="Escalations" title="Safeguarding escalation queue" />

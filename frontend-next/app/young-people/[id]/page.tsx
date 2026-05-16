@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
+import { OperationalLifecyclePanel } from '@/components/indicare/operational-lifecycle-panel'
 import { Card, DataTable, EmptyState, PageHeader, RecordTimeline, RiskBadge, SectionHeader, StatCard, StatusBadge } from '@/components/indicare/ui'
 import { getYoungPersonOverview } from '@/lib/os-api/platform'
 
@@ -60,6 +61,7 @@ export default async function YoungPersonDetailPage({ params }: { params: Promis
               <h3 className="text-lg font-black text-slate-950">Operational state</h3>
               <p className="mt-2 text-sm leading-7 text-slate-600">{data.actions.length ? `${data.actions.length} open or linked actions are visible.` : 'No linked actions were returned for this child.'}</p>
               <p className="mt-2 text-sm leading-7 text-slate-600">{data.evidence.length ? `${data.evidence.length} evidence items are visible.` : 'No linked evidence was returned for this child.'}</p>
+              <p className="mt-2 text-sm leading-7 text-slate-600">{data.lifecycle.filter((item) => item.currentState !== 'resolved' && item.currentState !== 'archived').length} lifecycle item(s) need review or monitoring.</p>
             </div>
             <div className="rounded-[24px] border border-slate-100 bg-slate-50/70 p-5">
               <h3 className="text-lg font-black text-slate-950">Communication and sensory needs</h3>
@@ -83,6 +85,15 @@ export default async function YoungPersonDetailPage({ params }: { params: Promis
           </div>
         </Card>
       </section>
+
+      <Card>
+        <OperationalLifecyclePanel
+          title="Child-linked lifecycle"
+          description="Actions, evidence, documents and chronology are grouped into reviewable lifecycle states for this child."
+          items={data.lifecycle}
+          hrefForItem={(item) => item.entityType.includes('document') ? `/documents/${encodeURIComponent(item.id)}` : item.entityType.includes('chronology') ? `/chronology/${encodeURIComponent(item.id)}` : undefined}
+        />
+      </Card>
 
       <Card>
         <SectionHeader eyebrow="What happened" title="Recent chronology" description="Open the full chronology for filters, source links, evidence and regulatory context." />

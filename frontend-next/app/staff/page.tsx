@@ -1,6 +1,7 @@
 import Link from 'next/link'
 
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
+import { OperationalLifecyclePanel } from '@/components/indicare/operational-lifecycle-panel'
 import { Card, DataTable, EmptyState, PageHeader, SectionHeader, StatCard, StatusBadge } from '@/components/indicare/ui'
 import { StaffAccessControls } from '@/components/settings/staff-access-controls'
 import { getStaff } from '@/lib/os-api/platform'
@@ -24,6 +25,14 @@ export default async function StaffPage() {
         <StatCard label="Supervision" value="Route available" detail="/supervision/submissions" />
         <StatCard label="Safer recruitment" value="Restricted" detail="Shown only if backend returns it" />
       </section>
+      <Card>
+        <OperationalLifecyclePanel
+          title="Staff oversight lifecycle"
+          description="Staff records are shown as operational oversight states without exposing protected HR data."
+          items={staffResult.data.lifecycle}
+          hrefForItem={(item) => `/staff/${encodeURIComponent(item.id)}`}
+        />
+      </Card>
       <Card>
         <SectionHeader eyebrow="Directory" title="Staff team" description="This table avoids exposing HR fields unless they are explicitly present in the live response." />
         <DataTable
