@@ -5,6 +5,8 @@ Shared DTOs are the platform contract between routers, services, repositories, f
 Current canonical operational-state schema version:
 
 - `2026-05-16.v1`
+- `2026-05-16.audit.v1`
+- `2026-05-16.inspection.v1`
 
 ## Rules
 
@@ -27,3 +29,7 @@ Compatibility transforms should:
 ## Future architecture
 
 Add versioned DTO modules for chronology, evidence, inspection, assistant context, operational queues and provider governance. Frontend adapters should render from versioned DTOs rather than `Record<string, any>` shapes.
+
+## Enterprise hardening update
+
+Audit and inspection now have dedicated versioned contract modules. Frontend OS API results now distinguish `live`, `synthetic` and `unavailable` provenance.

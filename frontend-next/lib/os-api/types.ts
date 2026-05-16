@@ -1,9 +1,14 @@
-export type OsApiSource = 'live' | 'unavailable'
+export type OsApiSource = 'live' | 'synthetic' | 'unavailable'
 
 export type OsApiResult<T> = {
   data: T
   source: OsApiSource
   meta?: Record<string, unknown>
+  provenance?: {
+    source: OsApiSource
+    contract?: string
+    schemaVersion?: string
+  }
   warning?: string
   error?: string
 }
@@ -36,5 +41,6 @@ export type OsTransitionResult = {
   workflow_event_id?: string
   chronology_event_id?: string
   audit_event_id?: string
+  operational_memory_ids?: Record<string, string | null>
   updated_record?: Record<string, unknown>
 }

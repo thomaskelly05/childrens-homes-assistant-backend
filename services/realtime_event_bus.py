@@ -10,8 +10,8 @@ from collections import defaultdict, deque
 from datetime import datetime, timezone
 from typing import Any
 
-from auth.permissions import PROVIDER_LEVEL_ROLES
-from auth.rbac import has_permission, normalise_role
+from core.policy_engine import context_from_user, policy_engine
+from core.provider_context import ProviderContextError
 from services.orb_observability_service import orb_observability_service
 
 logger = logging.getLogger("indicare.realtime.event_bus")
@@ -44,26 +44,6 @@ def _home_id(value: Any) -> str | None:
         return str(value)
 
 
-def _allowed_home_ids(current_user: dict[str, Any]) -> set[str]:
-    values = (
-        current_user.get("allowed_home_ids")
-        or current_user.get("allowedHomeIds")
-        or current_user.get("home_ids")
-        or current_user.get("homeIds")
-        or []
-    )
-    if isinstance(values, (str, int)):
-        values = [values]
-    allowed = {_home_id(value) for value in values}
-    for key in ("home_id", "homeId", "default_home_id"):
-        allowed.add(_home_id(current_user.get(key)))
-    return {value for value in allowed if value}
-
-
-def _is_provider_level(current_user: dict[str, Any]) -> bool:
-    return normalise_role(current_user.get("role")) in PROVIDER_LEVEL_ROLES
-
-
 def _safe_payload(payload: dict[str, Any]) -> dict[str, Any]:
     redacted_keys = {"text", "transcript", "prompt", "audio", "child_name", "young_person_name", "content"}
     safe: dict[str, Any] = {}
@@ -88,11 +68,13 @@ class RealtimeEventBus:
         self._recent_dedupe: dict[str, float] = {}
         self._throttle: dict[str, deque[float]] = defaultdict(lambda: deque(maxlen=50))
         self._memory_events: dict[str, deque[dict[str, Any]]] = defaultdict(lambda: deque(maxlen=50))
+        self._sequence = 0
 
     def reset_for_tests(self) -> None:
         self._recent_dedupe.clear()
         self._throttle.clear()
         self._memory_events.clear()
+        self._sequence = 0
 
     def publish(
         self,
@@ -112,7 +94,7 @@ class RealtimeEventBus:
             raise PermissionError("Realtime events must be home-scoped")
         if not self.can_access_home(actor, home_scope):
             raise PermissionError("Realtime event home scope is not permitted for this actor")
-        if required_permission and not has_permission(actor.get("role"), required_permission):
+        if required_permission and not policy_engine.has_permission(actor, required_permission, home_id=home_scope):
             raise PermissionError("Realtime event permission denied")
 
         event_payload = _safe_payload(payload or {})
@@ -123,10 +105,13 @@ class RealtimeEventBus:
             orb_observability_service.record_event("realtime_event_throttled", home_id=home_scope, metadata={"event_type": event_type})
             return {"published": False, "throttled": True, "event_id": dedupe}
 
+        self._sequence += 1
         event = {
             "id": f"evt_{uuid.uuid4().hex[:16]}",
+            "cursor": self._sequence,
             "type": event_type,
             "home_id": home_scope,
+            "provider_id": actor.get("provider_id") or actor.get("providerId"),
             "payload": event_payload,
             "actor_id": str(actor.get("id") or actor.get("sub") or ""),
             "created_at": datetime.now(timezone.utc).isoformat(),
@@ -149,13 +134,41 @@ class RealtimeEventBus:
         channel = self._channel(home_scope)
         return list(self._memory_events[channel])[-limit:]
 
+    def replay_for_user(
+        self,
+        *,
+        current_user: dict[str, Any],
+        home_id: int | str | None,
+        after_cursor: int | None = None,
+        since: str | None = None,
+        limit: int = 100,
+    ) -> dict[str, Any]:
+        home_scope = _home_id(home_id)
+        if not home_scope or not self.can_access_home(current_user, home_scope):
+            return {"ok": False, "events": [], "reason": "home_scope_denied", "next_cursor": after_cursor or 0}
+        if not policy_engine.has_permission(current_user, "realtime:subscribe", home_id=home_scope):
+            return {"ok": False, "events": [], "reason": "permission_denied", "next_cursor": after_cursor or 0}
+        events = list(self._memory_events[self._channel(home_scope)])
+        if after_cursor is not None:
+            events = [event for event in events if int(event.get("cursor") or 0) > after_cursor]
+        if since:
+            events = [event for event in events if str(event.get("created_at") or "") >= since]
+        capped = events[: max(1, min(limit, 500))]
+        next_cursor = int(capped[-1]["cursor"]) if capped else after_cursor or 0
+        return {"ok": True, "events": capped, "next_cursor": next_cursor}
+
     def can_access_home(self, current_user: dict[str, Any], home_id: int | str | None) -> bool:
-        if _is_provider_level(current_user):
-            return True
-        return _home_id(home_id) in _allowed_home_ids(current_user)
+        try:
+            return context_from_user(current_user).can_access_home(home_id)
+        except ProviderContextError:
+            return False
 
     def event_visible_to_user(self, event: dict[str, Any], current_user: dict[str, Any]) -> bool:
-        return self.can_access_home(current_user, event.get("home_id")) and has_permission(current_user.get("role"), "assistant:access")
+        return self.can_access_home(current_user, event.get("home_id")) and policy_engine.has_permission(
+            current_user,
+            "realtime:subscribe",
+            home_id=event.get("home_id"),
+        )
 
     def _redis(self) -> Any | None:
         if self._redis_client is not None:

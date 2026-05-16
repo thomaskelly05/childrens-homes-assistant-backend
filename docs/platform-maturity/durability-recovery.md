@@ -27,6 +27,10 @@ Canonical DTO:
 
 Durability should be append-first. Failed saves, lifecycle transitions, queue retries, chronology projections, evidence reviews, governance sign-offs and assistant oversight events should remain queryable after interruption or reconnect.
 
+## Enterprise hardening update
+
+The operational memory migration introduces append-only lifecycle, audit, event log, governance signoff, evidence relationship and chronology snapshot tables. Lifecycle transitions append memory rows when those tables exist.
+
 Recovery tooling should validate:
 
 - lifecycle integrity

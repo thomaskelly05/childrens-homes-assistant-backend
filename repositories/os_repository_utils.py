@@ -5,6 +5,7 @@ from typing import Any
 
 from psycopg2.extras import RealDictCursor
 
+from core.policy_engine import context_from_user, policy_engine
 
 ADMIN_ROLES = {"admin", "provider_admin", "super_admin", "founder", "owner"}
 MANAGER_ROLES = ADMIN_ROLES | {"manager", "registered_manager", "deputy_manager", "responsible_individual"}
@@ -33,19 +34,7 @@ def current_home_id(current_user: dict[str, Any]) -> int | None:
 
 
 def current_allowed_home_ids(current_user: dict[str, Any]) -> list[int]:
-    raw_values = (
-        current_user.get("allowed_home_ids")
-        or current_user.get("allowedHomeIds")
-        or current_user.get("home_ids")
-        or current_user.get("homeIds")
-        or []
-    )
-    values = raw_values if isinstance(raw_values, (list, tuple, set)) else [raw_values]
-    allowed = {safe_id for item in values if (safe_id := safe_int(item)) is not None}
-    home_id = current_home_id(current_user)
-    if home_id is not None:
-        allowed.add(home_id)
-    return sorted(allowed)
+    return list(context_from_user(current_user).home_ids)
 
 
 def current_provider_id(current_user: dict[str, Any]) -> int | None:
@@ -57,15 +46,15 @@ def current_role(current_user: dict[str, Any]) -> str:
 
 
 def is_admin(current_user: dict[str, Any]) -> bool:
-    return current_role(current_user) in ADMIN_ROLES
+    return context_from_user(current_user).tenancy_scope == "platform"
 
 
 def is_manager(current_user: dict[str, Any]) -> bool:
-    return current_role(current_user) in MANAGER_ROLES
+    return policy_engine.has_permission(current_user, "governance:review") or current_role(current_user) in MANAGER_ROLES
 
 
 def can_write_records(current_user: dict[str, Any]) -> bool:
-    return current_role(current_user) in WRITER_ROLES
+    return policy_engine.has_permission(current_user, "records:write") or current_role(current_user) in WRITER_ROLES
 
 
 def table_exists(conn: Any, table_name: str) -> bool:
@@ -200,12 +189,13 @@ def build_scope_where(
     where: list[str] = []
     params: list[Any] = []
 
-    resolved_provider = provider_id if provider_id is not None else current_provider_id(current_user)
-    allowed_home_ids = current_allowed_home_ids(current_user)
+    context = context_from_user(current_user)
+    resolved_provider = provider_id if provider_id is not None else context.provider_id
+    allowed_home_ids = list(context.home_ids)
 
-    if not is_admin(current_user) and "home_id" in cols:
+    if context.tenancy_scope != "platform" and "home_id" in cols:
         if home_id is not None:
-            if home_id in allowed_home_ids:
+            if context.can_access_home(home_id):
                 where.append("home_id = %s")
                 params.append(home_id)
             else:
@@ -225,7 +215,7 @@ def build_scope_where(
     if provider_id is not None and "provider_id" in cols:
         where.append("provider_id = %s")
         params.append(provider_id)
-    elif resolved_provider is not None and not is_admin(current_user) and "provider_id" in cols:
+    elif resolved_provider is not None and context.tenancy_scope != "platform" and "provider_id" in cols:
         where.append("provider_id = %s")
         params.append(resolved_provider)
 

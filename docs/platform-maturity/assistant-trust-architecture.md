@@ -23,6 +23,10 @@ Assistant and ORB responses that use operational context should carry:
 
 Permission filtering must happen before context is assembled. Hidden child, staff, audit, governance and provider-only data must not reach retrieval prompts, citations or ORB context.
 
+## Enterprise hardening update
+
+Assistant retrieval scope checks now resolve `ProviderContext` before retrieving chronology, evidence, documents, actions or reports. Missing or cross-home scope fails before source assembly.
+
 ## Future architecture
 
 Use one assistant runtime facade with modality-specific adapters for text assistant and ORB. Preserve ORB runtime separation while sharing citation, oversight and governance audit contracts.

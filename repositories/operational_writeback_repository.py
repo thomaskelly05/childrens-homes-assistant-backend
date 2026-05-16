@@ -22,6 +22,7 @@ from repositories.os_repository_utils import (
     table_exists,
 )
 from services.operational_lifecycle_service import operational_lifecycle_service
+from services.operational_memory_repository import operational_memory_repository
 from services.realtime_event_bus import realtime_event_bus
 
 
@@ -555,6 +556,19 @@ def transition_record(conn: Any, *, entity_type: str, record_id: str, payload: d
         current_user=current_user,
         metadata={**metadata, "workflow_event_id": workflow_event_id, "chronology_event_id": chronology_event_id},
     )
+    operational_memory_ids: dict[str, str | None] = {}
+    if table_exists(conn, "operational_lifecycle_history"):
+        operational_memory_ids = operational_memory_repository.append_lifecycle_transition(
+            conn,
+            current_user=current_user,
+            entity_type=entity_type,
+            entity_id=record_id,
+            previous_state=_row_to_jsonable(before),
+            next_state=_row_to_jsonable(after),
+            transition_type=transition,
+            lifecycle_context=lifecycle_context,
+            correlation_id=payload.get("correlation_id") or payload.get("request_id"),
+        )
     home_id = after.get("home_id") or current_home_id(current_user)
     if home_id:
         try:
@@ -587,6 +601,7 @@ def transition_record(conn: Any, *, entity_type: str, record_id: str, payload: d
         "workflow_event_id": workflow_event_id,
         "chronology_event_id": chronology_event_id,
         "audit_event_id": audit_event_id,
+        "operational_memory_ids": operational_memory_ids,
         "lifecycle": lifecycle_context,
     }
 

@@ -5,10 +5,12 @@ from typing import Any
 
 from fastapi import HTTPException
 
+from core.policy_engine import context_from_user
+from core.provider_context import ProviderContextError
 from repositories.actions_repository import list_actions
 from repositories.documents_repository import list_documents
 from repositories.evidence_repository import build_coverage, list_evidence
-from repositories.os_repository_utils import current_allowed_home_ids, current_role, is_admin, safe_int
+from repositories.os_repository_utils import safe_int
 from repositories.reports_repository import list_reports
 from repositories.workspaces_repository import adult_workspace, young_person_workspace
 from services.assistant_context_service import SharedAssistantContext
@@ -44,14 +46,12 @@ def _scope_filters(context: SharedAssistantContext) -> dict[str, Any]:
 
 
 def _assert_scope_allowed(context: SharedAssistantContext, current_user: dict[str, Any]) -> None:
-    if is_admin(current_user):
-        return
-    allowed = set(current_allowed_home_ids(current_user))
-    requested_home_id = context.home_id
-    if requested_home_id is not None and allowed and requested_home_id not in allowed:
-        raise HTTPException(status_code=403, detail="You do not have access to this home.")
-    if requested_home_id is not None and not allowed:
-        raise HTTPException(status_code=403, detail="No home access is assigned to this account.")
+    try:
+        provider_context = context_from_user(current_user, requested_home_id=context.home_id)
+    except ProviderContextError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    if not provider_context.assistant_access:
+        raise HTTPException(status_code=403, detail="You do not have permission to use the assistant.")
 
 
 def _normalise_source(source: dict[str, Any], source_type: str) -> dict[str, Any]:
