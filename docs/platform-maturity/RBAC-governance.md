@@ -15,6 +15,10 @@ Canonical integration points:
 
 Role aliases, canonical roles and permissions should be defined once and imported everywhere. Do not add role literal sets inside feature routes, repositories or frontend-only governance checks.
 
+## Enterprise hardening update
+
+`core.policy_engine` now defines the canonical operational permission set and evaluates permissions with `ProviderContext`. Auth dependencies, repository scope helpers, assistant retrieval and realtime subscription checks are migrating through this policy path.
+
 ## Access requirements
 
 Sensitive reads and writes must validate:
