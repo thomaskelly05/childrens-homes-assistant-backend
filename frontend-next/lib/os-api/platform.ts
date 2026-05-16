@@ -191,7 +191,7 @@ function buildAttentionCards(data: Omit<CommandCentreData, 'attention'>): Attent
     return (event.safeguardingFlags.length || event.actionIds.length) && !/child voice|said|told|wishes|wanted/.test(text)
   })
 
-  return [
+  const cards: AttentionCard[] = [
     {
       id: 'safeguarding-open',
       priority: 1,
@@ -252,7 +252,8 @@ function buildAttentionCards(data: Omit<CommandCentreData, 'attention'>): Attent
       count: childVoiceMissing.length,
       status: childVoiceMissing.length ? 'pattern to consider' : 'not enough evidence'
     }
-  ].sort((a, b) => a.priority - b.priority)
+  ]
+  return cards.sort((a, b) => a.priority - b.priority)
 }
 
 export async function getCommandCentre(): Promise<OsApiResult<CommandCentreData>> {
