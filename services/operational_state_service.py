@@ -260,14 +260,16 @@ class OperationalStateService:
                 continue
             source_text = " ".join([_lower(action.get("source_type")), _lower(action.get("title")), _lower(action.get("description")), _lower(action.get("regulation"))])
             priority = _normalise_priority(action.get("priority"), default="high" if action.get("status") == "overdue" else "medium")
-            if _lower(action.get("status")) == "overdue":
+            if "inspection" in source_text or "reg44" in source_text or "reg45" in source_text or "annex" in source_text:
+                state_type, category, title = "inspection_action", "inspection", "Inspection follow-up required"
+                reason = "An inspection or regulatory action remains open."
+                if _lower(action.get("status")) == "overdue":
+                    reason = "An inspection or regulatory action is overdue or marked late."
+                next_action = "Link supporting evidence and confirm whether manager sign-off is needed."
+            elif _lower(action.get("status")) == "overdue":
                 state_type, category, title = "overdue_review", "workflow", "Review overdue"
                 reason = "An open action is overdue or marked late."
                 next_action = "Review the source record, update the action owner and record progress."
-            elif "inspection" in source_text or "reg44" in source_text or "reg45" in source_text or "annex" in source_text:
-                state_type, category, title = "inspection_action", "inspection", "Inspection follow-up required"
-                reason = "An inspection or regulatory action remains open."
-                next_action = "Link supporting evidence and confirm whether manager sign-off is needed."
             elif action.get("evidence_required"):
                 state_type, category, title = "missing_evidence", "evidence", "Evidence overdue"
                 reason = "The action identifies evidence that still needs to be gathered or linked."

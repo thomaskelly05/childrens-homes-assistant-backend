@@ -222,10 +222,11 @@ class AssistantRetrievalService:
             }
             for state in operational_snapshot.states[:8]
         ]
-        sources.extend(_normalise_source(item, "operational_state") for item in operational_state_sources)
-
         ranked = _sort_sources(message, sources, context)
         selected = ranked[: max(1, min(limit, 40))]
+        if operational_state_sources and len(selected) < max(1, min(limit, 40)):
+            remaining_slots = max(1, min(limit, 40)) - len(selected)
+            selected.extend(_normalise_source(item, "operational_state") for item in operational_state_sources[:remaining_slots])
         open_actions = [
             action
             for action in actions
