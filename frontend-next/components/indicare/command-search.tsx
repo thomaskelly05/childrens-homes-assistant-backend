@@ -1,23 +1,28 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { useRouter } from 'next/navigation'
 import { Eye, Search, Sparkles } from 'lucide-react'
 
 import { SlideOverPreview } from '@/components/indicare/previews/slide-over-preview'
 import { useAuth } from '@/contexts/auth-context'
 import { userHasAnyPermission } from '@/lib/auth/permissions'
-import { searchIndiCare } from '@/lib/indicare/search'
+import type { SearchResult } from '@/lib/os-api/command-search'
 
 export function CommandSearch() {
+  const router = useRouter()
   const [query, setQuery] = useState('')
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([])
+  const [loading, setLoading] = useState(false)
+  const [warning, setWarning] = useState<string | null>(null)
   const [previewIndex, setPreviewIndex] = useState(0)
   const [previewOpen, setPreviewOpen] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const { user } = useAuth()
   const results = useMemo(
-    () => searchIndiCare(query).filter((result) => userHasAnyPermission(user, result.permissionsRequired)),
-    [query, user]
+    () => searchResults.filter((result) => userHasAnyPermission(user, result.permissionsRequired)),
+    [searchResults, user]
   )
   const selectedResult = results[previewIndex] || results[0]
 
@@ -40,6 +45,57 @@ export function CommandSearch() {
     setPreviewIndex(0)
   }, [query])
 
+  useEffect(() => {
+    const clean = query.trim()
+    if (!clean) {
+      setSearchResults([])
+      setWarning(null)
+      setLoading(false)
+      return
+    }
+
+    const controller = new AbortController()
+    const handle = window.setTimeout(async () => {
+      setLoading(true)
+      try {
+        const response = await fetch(`/api/command-search?q=${encodeURIComponent(clean)}`, {
+          cache: 'no-store',
+          credentials: 'include',
+          signal: controller.signal
+        })
+        const payload = await response.json().catch(() => ({ results: [] }))
+        if (!response.ok) throw new Error(payload?.warning || 'Search is not available just now.')
+        setSearchResults(Array.isArray(payload.results) ? payload.results : [])
+        setWarning(payload.warning || (payload.source !== 'live' ? 'Live search is not available just now.' : null))
+      } catch (error) {
+        if (controller.signal.aborted) return
+        setSearchResults([])
+        setWarning(error instanceof Error ? error.message : 'Search is not available just now.')
+      } finally {
+        if (!controller.signal.aborted) setLoading(false)
+      }
+    }, 180)
+
+    return () => {
+      controller.abort()
+      window.clearTimeout(handle)
+    }
+  }, [query])
+
+  function handleInputKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      setPreviewIndex((index) => Math.min(index + 1, Math.max(results.length - 1, 0)))
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      setPreviewIndex((index) => Math.max(index - 1, 0))
+    } else if (event.key === 'Enter' && selectedResult) {
+      event.preventDefault()
+      setQuery('')
+      router.push(selectedResult.href)
+    }
+  }
+
   return (
     <div className="relative w-full max-w-2xl">
       <label className="sr-only" htmlFor="global-command-search">Search IndiCare OS</label>
@@ -50,7 +106,8 @@ export function CommandSearch() {
           id="global-command-search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search records, actions, chronology, documents... Cmd/Ctrl K"
+          onKeyDown={handleInputKeyDown}
+          placeholder="Search child, document, chronology, evidence... Cmd/Ctrl K"
           className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-slate-800 outline-none placeholder:text-slate-400"
         />
         <span className="hidden rounded-full bg-slate-100 px-2 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-slate-500 sm:inline">Cmd K</span>
@@ -83,6 +140,9 @@ export function CommandSearch() {
                       >
                         <strong className="block truncate text-sm font-black text-slate-950">{result.title}</strong>
                         <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">{result.description}</p>
+                        <p className="mt-1 text-[11px] font-bold leading-5 text-slate-400">
+                          {[result.date, result.linkedContext, result.whyItMatters].filter(Boolean).join(' · ')}
+                        </p>
                       </Link>
                       <span className="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">{result.group}</span>
                     </div>
@@ -113,6 +173,7 @@ export function CommandSearch() {
                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Preview</p>
                   <h3 className="mt-2 text-sm font-black text-slate-950">{selectedResult.title}</h3>
                   <p className="mt-2 text-xs leading-5 text-slate-500">{selectedResult.description}</p>
+                  {selectedResult.whyItMatters ? <p className="mt-2 text-xs font-bold leading-5 text-blue-700">{selectedResult.whyItMatters}</p> : null}
                   <div className="mt-3 grid gap-2">
                     {selectedResult.actions.map((action) => (
                       <Link key={action.id} href={action.route} className="rounded-2xl bg-white px-3 py-2 text-xs font-black text-slate-700">
@@ -124,8 +185,9 @@ export function CommandSearch() {
               ) : null}
             </div>
           ) : (
-            <p className="px-4 py-5 text-sm font-semibold text-slate-500">No records match your search.</p>
+            <p className="px-4 py-5 text-sm font-semibold text-slate-500">{loading ? 'Searching live OS records...' : 'No live records match your search.'}</p>
           )}
+          {warning ? <p className="mt-2 rounded-2xl bg-amber-50 px-4 py-3 text-xs font-bold leading-5 text-amber-800">{warning}</p> : null}
         </div>
       ) : null}
       {selectedResult ? (
