@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { Eye, Search, Sparkles } from 'lucide-react'
 
@@ -27,7 +27,7 @@ export function CommandSearch() {
   const selectedResult = results[previewIndex] || results[0]
 
   useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
+    function onKeyDown(event: globalThis.KeyboardEvent) {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault()
         inputRef.current?.focus()
@@ -82,7 +82,7 @@ export function CommandSearch() {
     }
   }, [query])
 
-  function handleInputKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+  function handleInputKeyDown(event: ReactKeyboardEvent<HTMLInputElement>) {
     if (event.key === 'ArrowDown') {
       event.preventDefault()
       setPreviewIndex((index) => Math.min(index + 1, Math.max(results.length - 1, 0)))
