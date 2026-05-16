@@ -427,18 +427,27 @@ def _infer_output_overrides(
     if any(term in text for term in report_terms):
         task_type = "summary"
         output_type = "plain_response"
+        mode = "general_practice"
 
         if "report" in text or "reg 45" in text or "reg45" in text:
             task_type = "report"
             output_type = "structured_report"
+            mode = "manager_review"
+
+        if "chronology" in text:
+            task_type = "recording"
+            output_type = "chronology_entry"
+            mode = "chronology"
 
         if "review pack" in text:
             task_type = "report"
             output_type = "structured_report"
+            mode = "manager_review"
 
         return {
             "task_type": task_type,
             "output_type": output_type,
+            "mode": mode,
         }
 
     return {}
@@ -554,8 +563,16 @@ def build_orchestrator_result(req: OrchestratorRequest) -> OrchestratorResult:
     if inferred_overrides.get("output_type"):
         output_type = inferred_overrides["output_type"]
 
+    if inferred_overrides.get("mode"):
+        mode = inferred_overrides["mode"]
+
     if inferred_overrides.get("response_stance"):
         response_stance = inferred_overrides["response_stance"]
+
+    runtime.mode = mode
+    runtime.task_type = task_type
+    runtime.output_type = output_type
+    runtime.response_stance = response_stance
 
     response_plan = build_response_plan(
         message=req.message,

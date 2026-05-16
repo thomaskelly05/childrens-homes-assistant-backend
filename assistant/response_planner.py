@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -350,7 +351,14 @@ def _normalise_text(value: Any) -> str:
 
 def _contains_any(text: str, keywords: set[str]) -> bool:
     lower = _normalise_text(text)
-    return any(keyword.lower() in lower for keyword in keywords)
+    for keyword in keywords:
+        term = keyword.lower()
+        if len(term) <= 2:
+            if re.search(rf"(?<![a-z0-9]){re.escape(term)}(?![a-z0-9])", lower):
+                return True
+        elif term in lower:
+            return True
+    return False
 
 
 def _normalise_surface(value: str | None) -> str:
