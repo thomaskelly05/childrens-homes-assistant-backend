@@ -30,8 +30,10 @@ def _int_values(value: Any) -> tuple[int, ...]:
     return tuple(sorted(item for item in clean if item is not None))
 
 
-def _is_platform_role(role: str) -> bool:
-    return role in {"admin", "super_admin", "superadmin", "founder", "owner"}
+def _is_platform_role(raw_role: str, provider_id: int | None) -> bool:
+    if raw_role in {"super_admin", "superadmin", "founder", "owner"}:
+        return True
+    return raw_role == "admin" and provider_id is None
 
 
 @dataclass(frozen=True)
@@ -97,6 +99,7 @@ def resolve_provider_context(
     require_home_scope: bool = False,
     require_provider_scope: bool = False,
 ) -> ProviderContext:
+    raw_role = str(current_user.get("role") or "").strip().lower().replace("-", "_").replace(" ", "_")
     role = normalise_role(current_user.get("role"))
     permissions = frozenset(current_user.get("permissions") or permissions_for_role(role))
     provider_id = _safe_int(
@@ -122,9 +125,10 @@ def resolve_provider_context(
     if primary_home_id is not None:
         home_ids.add(primary_home_id)
 
-    provider_oversight = "provider:oversight" in permissions or _is_platform_role(role)
+    platform_role = _is_platform_role(raw_role, provider_id)
+    provider_oversight = "provider:oversight" in permissions or platform_role
     tenancy_scope: TenancyScope
-    if _is_platform_role(role):
+    if platform_role:
         tenancy_scope = "platform"
     elif provider_id is not None and provider_oversight:
         tenancy_scope = "provider"
