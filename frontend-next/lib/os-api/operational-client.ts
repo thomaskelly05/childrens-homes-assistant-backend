@@ -1,31 +1,22 @@
 import type { OsTransitionPayload, OsTransitionResult } from './types'
-
-const API_BASE = (
-  process.env.NEXT_PUBLIC_BACKEND_URL ||
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  ''
-).replace(/\/+$/, '')
-
-function url(path: string) {
-  return `${API_BASE}${path.startsWith('/') ? path : `/${path}`}`
-}
+import { authFetch } from '@/lib/auth/api'
+import { emitOperationalEvent } from './events'
 
 async function postJson<T>(path: string, body: unknown): Promise<T> {
-  const response = await fetch(url(path), {
+  const payload = await authFetch<any>(path.startsWith('/') ? path : `/${path}`, {
     method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
   })
-  if (!response.ok) {
-    throw new Error(`${response.status} ${response.statusText}`)
-  }
-  const payload = await response.json()
   return (payload.data ?? payload) as T
 }
 
-export function transitionRecord(entityType: string, recordId: string, payload: OsTransitionPayload) {
-  return postJson<OsTransitionResult>(`/os/workflows/records/${entityType}/${encodeURIComponent(recordId)}/transition`, payload)
+export async function transitionRecord(entityType: string, recordId: string, payload: OsTransitionPayload) {
+  const result = await postJson<OsTransitionResult>(`/os/workflows/records/${entityType}/${encodeURIComponent(recordId)}/transition`, payload)
+  emitOperationalEvent('record:updated', { entityType, recordId, result })
+  emitOperationalEvent('chronology:refresh', { entityType, recordId })
+  emitOperationalEvent('assistant-context:refresh', { entityType, recordId })
+  emitOperationalEvent('command-centre:refresh', { entityType, recordId })
+  return result
 }
 
 export function addRecordComment(entityType: string, recordId: string, body: string) {

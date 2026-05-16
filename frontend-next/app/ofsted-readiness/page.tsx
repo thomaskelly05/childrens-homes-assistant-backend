@@ -1,89 +1,100 @@
 import Link from 'next/link'
 
-import { Card, PageHeader, SectionHeader, StatCard } from '@/components/indicare/ui'
-import { EvidenceGapCard } from '@/components/indicare/workflows/evidence-gap-card'
-import { ManagementOversightPanel } from '@/components/indicare/workflows/management-oversight-panel'
-import { NextBestActions } from '@/components/indicare/workflows/next-best-actions'
-import { SccifCoveragePanel } from '@/components/indicare/workflows/sccif-coverage-panel'
-import { getChronologyEvents } from '@/lib/chronology/selectors'
-import { getCareActions, getEvidenceGaps, getEvidenceItems } from '@/lib/evidence/selectors'
-import { getRegulatoryCoverage, getSccifCoverage, getQualityStandardCoverage } from '@/lib/regulatory-framework/mapping'
+import { LiveDataStatus } from '@/components/indicare/live-data-status'
+import { Card, DataTable, EmptyState, PageHeader, SectionHeader, StatCard, StatusBadge } from '@/components/indicare/ui'
+import { getCommandCentre, getInspectionReadiness } from '@/lib/os-api/platform'
 
-export default function OfstedReadinessPage() {
-  const events = getChronologyEvents()
-  const evidence = getEvidenceItems()
-  const actions = getCareActions()
-  const gaps = getEvidenceGaps()
-  const regulatoryCoverage = getRegulatoryCoverage(events, evidence, actions)
-  const sccifCoverage = getSccifCoverage(events, evidence, actions)
-  const qualityCoverage = getQualityStandardCoverage(events, evidence, actions)
-  const childrenHomesCoverage = regulatoryCoverage.items.filter((item) => item.reference.framework === 'children_homes_regulations_2015')
-  const evidenceGapItems = regulatoryCoverage.evidenceGaps.slice(0, 8)
-  const needsReviewItems = regulatoryCoverage.needsReview.slice(0, 6)
-  const reg44Actions = actions.filter((action) => action.regulation?.includes('44'))
-  const reg45Items = regulatoryCoverage.items.filter((item) => item.reference.framework === 'reg45' || item.reference.code.includes('45'))
-  const lacItems = regulatoryCoverage.items.filter((item) => item.reference.framework === 'lac_review')
-  const safeguardingItems = regulatoryCoverage.items.filter((item) => item.reference.title.toLowerCase().includes('safeguarding') || item.reference.title.toLowerCase().includes('protection'))
-  const childVoiceItems = regulatoryCoverage.items.filter((item) => item.reference.title.toLowerCase().includes('voice') || item.reference.title.toLowerCase().includes('views'))
-  const educationItems = regulatoryCoverage.items.filter((item) => item.reference.title.toLowerCase().includes('education'))
-  const healthItems = regulatoryCoverage.items.filter((item) => item.reference.title.toLowerCase().includes('health'))
-  const leadershipItems = regulatoryCoverage.items.filter((item) => item.reference.title.toLowerCase().includes('leadership') || item.reference.title.toLowerCase().includes('management'))
+function objectRows(value: Record<string, any>) {
+  return Object.entries(value)
+    .filter(([, item]) => item !== undefined && item !== null && typeof item !== 'function')
+    .slice(0, 12)
+    .map(([key, item]) => [
+      key.replaceAll('_', ' '),
+      typeof item === 'object' ? JSON.stringify(item).slice(0, 220) : String(item),
+      <StatusBadge key={key} value={item ? 'returned' : 'not returned'} />
+    ])
+}
+
+export default async function OfstedReadinessPage() {
+  const [readiness, command] = await Promise.all([getInspectionReadiness(), getCommandCentre()])
+  const evidenceReview = command.data.evidence.filter((item) => ['draft', 'partial', 'review_required'].includes(item.quality))
+  const documentReview = command.data.documents.filter((document) => ['review_required', 'action_plan_open', 'processing'].includes(document.status))
+  const reg44Evidence = command.data.documents.filter((document) => document.documentType.includes('reg44') || document.regulation?.includes('44'))
+  const reg45Evidence = command.data.documents.filter((document) => document.documentType.includes('reg45') || document.regulation?.includes('45'))
+  const safeguardingEvidence = command.data.chronology.filter((event) => event.safeguardingFlags.length || event.category.toLowerCase().includes('safeguard'))
+  const childVoiceMarkers = command.data.chronology.filter((event) => /child voice|said|told|wanted|wishes/i.test(`${event.title} ${event.summary} ${event.fullText} ${event.tags.join(' ')}`))
 
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Ofsted readiness"
+        eyebrow="Inspection readiness"
         title="SCCIF and regulatory evidence readiness"
-        description="Readiness indicators based on current demo records. This is not a final compliance judgement; it highlights source evidence, gaps, overdue actions and management oversight needs."
+        description="Operational evidence organisation for SCCIF, Quality Standards, Children’s Homes Regulations, Reg 44, Reg 45, Reg 40 and Annex A. No inspection score is shown unless the backend returns one."
         action={<Link href="/regulatory" className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">Open framework</Link>}
       />
+      <LiveDataStatus result={readiness} />
       <section className="grid gap-4 md:grid-cols-4">
-        <StatCard label="SCCIF areas" value={sccifCoverage.items.length} detail="Judgement area coverage" href="/regulatory" />
-        <StatCard label="Quality Standards" value={qualityCoverage.items.length} detail="Operational quality links" href="/regulatory" />
-        <StatCard label="Regulation references" value={childrenHomesCoverage.length} detail="Children's Homes Regulations" href="/regulatory" />
-        <StatCard label="Evidence gaps" value={evidenceGapItems.length} detail="Needs action or review" href="/evidence" />
-      </section>
-      <section className="grid gap-4 md:grid-cols-5">
-        <StatCard label="Strong evidence" value={regulatoryCoverage.strongEvidence.length} detail="Readiness indicator" href="/evidence" />
-        <StatCard label="Needs review" value={needsReviewItems.length} detail="Review before reliance" href="/actions" />
-        <StatCard label="Action overdue" value={actions.filter((action) => action.status === 'overdue').length} detail="Open action register" href="/actions" />
-        <StatCard label="Reg 44 actions" value={reg44Actions.length} detail="Independent visitor follow-up" href="/documents/regulatory" />
-        <StatCard label="Reg 45 readiness" value={reg45Items.filter((item) => item.evidenceStrength !== 'gap').length} detail="Draft review evidence" href="/reports" />
+        <StatCard label="Readiness sections" value={readiness.data.sections.length || 'Not calculated'} detail="Backend pack sections" href="/regulatory" />
+        <StatCard label="Evidence gaps" value={readiness.data.evidenceGaps.length + evidenceReview.length} detail="Backend gaps plus review-required evidence" href="/evidence" />
+        <StatCard label="Reg 44 evidence" value={reg44Evidence.length} detail="Documents linked to Reg 44" href="/documents/regulatory" />
+        <StatCard label="Reg 45 evidence" value={reg45Evidence.length} detail="Documents linked to Reg 45" href="/reports" />
+        <StatCard label="Safeguarding evidence" value={safeguardingEvidence.length} detail="Chronology with safeguarding relevance" href="/safeguarding" />
+        <StatCard label="Child voice markers" value={childVoiceMarkers.length} detail="Visible wishes/feelings markers" href="/chronology" />
+        <StatCard label="Documents for review" value={documentReview.length} detail="Review or sign-off needed" href="/documents" />
+        <StatCard label="Open actions" value={command.data.actions.filter((action) => action.status !== 'completed').length} detail="Follow-up evidence queue" href="/actions" />
       </section>
       <Card>
-        <SectionHeader eyebrow="Next best actions" title="Operational priorities" />
-        <NextBestActions actions={actions} gaps={gaps} coverageItems={regulatoryCoverage.items} />
+        <SectionHeader eyebrow="Backend readiness pack" title="Returned readiness fields" description="Raw fields are shown as operational evidence, not an inspection judgement." />
+        <DataTable
+          headers={['Field', 'Value', 'Status']}
+          rows={objectRows(readiness.data.raw)}
+          empty={<EmptyState title="No readiness pack returned" description="The backend readiness route did not return a pack for this session, or access is restricted." />}
+        />
       </Card>
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
         <Card>
-          <SectionHeader eyebrow="SCCIF" title="Judgement area coverage" />
-          <SccifCoveragePanel items={sccifCoverage.items} />
+          <SectionHeader eyebrow="Evidence gaps" title="Gaps and review-required evidence" />
+          <DataTable
+            headers={['Item', 'Status', 'Why it matters']}
+            rows={[
+              ...readiness.data.evidenceGaps.map((gap) => [gap.title, <StatusBadge key={gap.id} value={gap.status || 'possible gap'} />, gap.summary]),
+              ...evidenceReview.map((item) => [<Link key={item.id} href={`/evidence/${encodeURIComponent(item.id)}`} className="font-black text-slate-950 hover:text-blue-700">{item.title}</Link>, <StatusBadge key={item.id} value={item.quality.replaceAll('_', ' ')} />, item.description || item.linkedRegulation || 'Evidence needs review before reliance.'])
+            ]}
+            empty={<EmptyState title="No evidence gaps returned" description="No backend evidence gaps or review-required evidence were returned." />}
+          />
         </Card>
         <Card>
-          <SectionHeader eyebrow="Management oversight" title="Oversight and review checks" />
-          <ManagementOversightPanel events={events} actions={actions} />
+          <SectionHeader eyebrow="Actions" title="Inspection-related follow-up" />
+          <DataTable
+            headers={['Action', 'Status', 'Evidence required']}
+            rows={command.data.actions.filter((action) => action.status !== 'completed').slice(0, 10).map((action) => [
+              <Link key={action.id} href={`/actions/${encodeURIComponent(action.id)}`} className="font-black text-slate-950 hover:text-blue-700">{action.title}</Link>,
+              <StatusBadge key={action.id} value={action.status} />,
+              action.evidenceRequired.join(', ') || action.description || 'Review source record.'
+            ])}
+            empty={<EmptyState title="No open actions returned" description="The backend did not return open inspection or evidence actions." />}
+          />
         </Card>
       </section>
       <section className="grid gap-6 xl:grid-cols-2">
         <Card>
-          <SectionHeader eyebrow="Evidence gaps" title="Clickable gap list" />
+          <SectionHeader eyebrow="Regulatory mapping" title="Framework areas" description="Routes exist for SCCIF, Quality Standards, Children’s Homes Regulations, Reg 44, Reg 45, Reg 40 and Annex A readiness; typed backend DTOs remain the next step." />
           <div className="grid gap-3 md:grid-cols-2">
-            {evidenceGapItems.map((item) => <EvidenceGapCard key={item.reference.id} item={item} />)}
+            {['SCCIF', 'Quality Standards', 'Children’s Homes Regulations', 'Annex A', 'Reg 44', 'Reg 45', 'Reg 40', 'Leadership and management'].map((label) => (
+              <Link key={label} href="/regulatory" className="rounded-[22px] border border-slate-100 bg-slate-50 p-4 text-sm font-black text-slate-700 hover:bg-blue-50">{label}</Link>
+            ))}
           </div>
         </Card>
         <Card>
-          <SectionHeader eyebrow="Report readiness" title="Reg 45, LAC review and Ofsted pack" />
+          <SectionHeader eyebrow="Report readiness" title="Evidence relationship shortcuts" />
           <div className="grid gap-3">
             {[
-              ['Reg 44 action status', reg44Actions.length, '/documents/regulatory'],
-              ['Reg 45 readiness', reg45Items.filter((item) => item.evidenceStrength !== 'gap').length, '/reports'],
-              ['LAC review readiness', lacItems.filter((item) => item.evidenceStrength !== 'gap').length, '/reports'],
-              ['Safeguarding evidence strength', safeguardingItems.filter((item) => ['strong', 'adequate'].includes(item.evidenceStrength)).length, '/chronology'],
-              ['Children voice evidence', childVoiceItems.filter((item) => item.evidence.length || item.events.length).length, '/evidence'],
-              ['Education evidence', educationItems.filter((item) => item.evidence.length || item.events.length).length, '/evidence'],
-              ['Health evidence', healthItems.filter((item) => item.evidence.length || item.events.length).length, '/evidence'],
-              ['Leadership and management evidence', leadershipItems.filter((item) => item.evidence.length || item.events.length).length, '/regulatory'],
-              ['Protection of children evidence', safeguardingItems.filter((item) => item.events.length).length, '/regulatory/chr-reg-12']
+              ['Reg 44 documents', reg44Evidence.length, '/documents/regulatory'],
+              ['Reg 45 documents', reg45Evidence.length, '/reports'],
+              ['Safeguarding-linked chronology', safeguardingEvidence.length, '/safeguarding'],
+              ['Child voice evidence markers', childVoiceMarkers.length, '/chronology'],
+              ['Evidence review queue', evidenceReview.length, '/evidence'],
+              ['Documents awaiting review', documentReview.length, '/documents']
             ].map(([label, value, href]) => (
               <Link key={label} href={href as string} className="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm font-black text-slate-700">
                 <span>{label}</span>

@@ -1,213 +1,164 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
-import { RecordQuestionPanel } from '@/components/indicare/record-question-panel'
-import { AlertCard, Card, DataTable, EmptyState, PageHeader, RecordTimeline, RiskBadge, SectionHeader, StatusBadge } from '@/components/indicare/ui'
-import { buildOfstedEvidenceOutline, buildRiskReview, buildSafeguardingChronology, buildWeeklyCareSummary } from '@/lib/indicare/reports'
-import { fullName, getStaffById, getYoungPersonSummary } from '@/lib/indicare/selectors'
+import { LiveDataStatus } from '@/components/indicare/live-data-status'
+import { Card, DataTable, EmptyState, PageHeader, RecordTimeline, RiskBadge, SectionHeader, StatCard, StatusBadge } from '@/components/indicare/ui'
+import { getYoungPersonOverview } from '@/lib/os-api/platform'
 
 export default async function YoungPersonDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const summary = getYoungPersonSummary(id)
-  if (!summary) notFound()
+  const overview = await getYoungPersonOverview(id)
+  const data = overview.data
+  const person = data.profile
+  if (!person && overview.source === 'live') notFound()
 
-  const person = summary.youngPerson
+  const displayName = person?.displayName || person?.preferredName || `Young person ${id}`
+  const safeguarding = data.safeguarding
+  const childVoiceMarkers = data.chronology.filter((event) => /child voice|said|told|wanted|wishes/i.test(`${event.title} ${event.summary} ${event.fullText} ${event.tags.join(' ')}`))
+  const managerReview = data.chronology.filter((event) => /manager|oversight|review|rm|ri/i.test(`${event.title} ${event.summary} ${event.tags.join(' ')}`))
   const tabs = [
-    { label: 'Overview', href: '#overview', active: true },
+    { label: 'Overview', href: '#overview' },
+    { label: 'Records', href: '#records' },
     { label: 'Chronology', href: `/young-people/${id}/chronology` },
-    { label: 'Risk intelligence', href: `/young-people/${id}/risk-intelligence` },
-    { label: 'Locality', href: `/young-people/${id}/locality` },
-    { label: 'Missing risk', href: `/young-people/${id}/missing-risk` },
-    { label: 'Exploitation support', href: `/young-people/${id}/exploitation-risk` },
-    { label: 'Daily Logs', href: '#daily-logs' },
-    { label: 'Incidents', href: '#incidents' },
-    { label: 'Risk', href: `/young-people/${id}/risk-assessments` },
     { label: 'Safeguarding', href: '#safeguarding' },
-    { label: 'Medication', href: '#medication' },
-    { label: 'Keywork', href: '#keywork' },
-    { label: 'Appointments', href: '#appointments' },
     { label: 'Plans', href: `/young-people/${id}/plans` },
+    { label: 'Health', href: `/health?young_person_id=${id}` },
+    { label: 'Education', href: `/documents?young_person_id=${id}&type=education` },
     { label: 'Documents', href: `/young-people/${id}/documents` },
-    { label: 'Reports', href: '#reports' },
-    { label: 'Audit', href: '#audit' }
+    { label: 'Intelligence', href: '#intelligence' },
+    { label: 'Assistant', href: '#assistant' }
   ]
-  const weekly = buildWeeklyCareSummary(id)
-  const risk = buildRiskReview(id)
-  const safeguarding = buildSafeguardingChronology(id)
-  const ofsted = buildOfstedEvidenceOutline(id)
 
   return (
     <div className="space-y-6">
       <PageHeader
         eyebrow="Young person record"
-        title={`${person.preferredName} ${person.lastName}`}
-        description={`${person.legalStatus}. ${person.communicationNeeds}`}
-        action={<Link href="/assistant" className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">Ask assistant</Link>}
+        title={displayName}
+        description={`${person?.legalStatus || 'Legal status not returned'}. ${person?.carePlanning || 'Care planning summary will show when returned by the backend.'}`}
+        action={<Link href={`/young-people/${encodeURIComponent(id)}/journey`} className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">Open Care Hub</Link>}
       />
+      <LiveDataStatus result={overview} />
 
       <div className="flex gap-2 overflow-auto rounded-[24px] border border-white/70 bg-white/80 p-2 shadow-sm">
         {tabs.map((tab) => (
-          <Link key={tab.label} href={tab.href} className={`whitespace-nowrap rounded-2xl px-4 py-3 text-sm font-black ${tab.active ? 'bg-slate-950 text-white' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`}>{tab.label}</Link>
+          <Link key={tab.label} href={tab.href} className="whitespace-nowrap rounded-2xl px-4 py-3 text-sm font-black text-slate-500 hover:bg-slate-100 hover:text-slate-900">{tab.label}</Link>
         ))}
       </div>
 
       <section id="overview" className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(300px,0.8fr)]">
         <Card>
-          <SectionHeader eyebrow="Profile" title="Overview" />
+          <SectionHeader eyebrow="Overview" title="Current care picture" />
           <div className="grid gap-4 md:grid-cols-2">
             <div className="rounded-[24px] border border-slate-100 bg-slate-50/70 p-5">
-              <RiskBadge value={person.riskLevel} />
-              <StatusBadge value={person.safeguardingStatus} />
-              <h2 className="mt-4 text-2xl font-black text-slate-950">{fullName(person)}</h2>
-              <p className="mt-2 text-sm leading-7 text-slate-600">Age {person.age} · {person.gender} · {person.educationStatus}</p>
-              <p className="mt-3 text-sm leading-7 text-slate-600">{person.healthSummary}</p>
+              <RiskBadge value={(person?.riskLevel || 'medium') as any} />
+              <StatusBadge value={person?.placementStatus || person?.status || 'active'} />
+              <h2 className="mt-4 text-2xl font-black text-slate-950">{displayName}</h2>
+              <p className="mt-2 text-sm leading-7 text-slate-600">Age {person?.age || 'not returned'} · Home {person?.home_id ? String(person.home_id) : 'not returned'} · Key worker {person?.keyWorkerId || 'not returned'}</p>
+              <p className="mt-3 text-sm leading-7 text-slate-600">{person?.legalStatus || 'Legal status has not been returned by the backend.'}</p>
             </div>
             <div className="rounded-[24px] border border-slate-100 bg-slate-50/70 p-5">
-              <h3 className="text-lg font-black text-slate-950">Placement</h3>
-              <p className="mt-2 text-sm leading-7 text-slate-600">{summary.placement?.placementType} with {summary.placement?.localAuthority}</p>
-              <p className="mt-2 text-sm leading-7 text-slate-600">Social worker: {summary.placement?.socialWorkerName} · {summary.placement?.socialWorkerContact}</p>
-              <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-600">
-                {summary.placement?.placementGoals.map((goal) => <li key={goal}>{goal}</li>)}
-              </ul>
+              <h3 className="text-lg font-black text-slate-950">Operational state</h3>
+              <p className="mt-2 text-sm leading-7 text-slate-600">{data.actions.length ? `${data.actions.length} open or linked actions are visible.` : 'No linked actions were returned for this child.'}</p>
+              <p className="mt-2 text-sm leading-7 text-slate-600">{data.evidence.length ? `${data.evidence.length} evidence items are visible.` : 'No linked evidence was returned for this child.'}</p>
             </div>
             <div className="rounded-[24px] border border-slate-100 bg-slate-50/70 p-5">
-              <h3 className="text-lg font-black text-slate-950">Key contacts</h3>
-              <div className="mt-3 space-y-3 text-sm leading-6 text-slate-600">
-                <p>Key worker: {summary.keyWorker ? fullName(summary.keyWorker) : 'Unallocated'}</p>
-                {person.importantContacts.map((contact) => <p key={contact.name}>{contact.name} · {contact.relationship} · {contact.phone}</p>)}
-              </div>
+              <h3 className="text-lg font-black text-slate-950">Communication and sensory needs</h3>
+              <p className="mt-3 text-sm leading-7 text-slate-600">{String((person as any)?.communication_needs || (person as any)?.communicationNeeds || 'Not returned by the backend yet.')}</p>
+              <p className="mt-2 text-sm leading-7 text-slate-600">{String((person as any)?.sensory_needs || (person as any)?.sensoryNeeds || 'Sensory needs not returned.')}</p>
             </div>
             <div className="rounded-[24px] border border-slate-100 bg-slate-50/70 p-5">
-              <h3 className="text-lg font-black text-slate-950">Likes, dislikes and needs</h3>
-              <p className="mt-3 text-sm leading-7 text-slate-600">Likes: {person.likes.join(', ')}</p>
-              <p className="mt-2 text-sm leading-7 text-slate-600">Dislikes: {person.dislikes.join(', ')}</p>
-              <p className="mt-2 text-sm leading-7 text-slate-600">Allergies: {person.allergies.join(', ')}</p>
+              <h3 className="text-lg font-black text-slate-950">Current evidence picture</h3>
+              <p className="mt-3 text-sm leading-7 text-slate-600">{data.documents.length} documents · {data.evidence.length} evidence items · {data.chronology.length} chronology events.</p>
+              <p className="mt-2 text-sm leading-7 text-slate-600">Evidence gaps are only shown when returned or deterministically indicated by missing links.</p>
             </div>
           </div>
         </Card>
 
         <Card>
-          <SectionHeader eyebrow="Assistant actions" title="Contextual care actions" />
+          <SectionHeader eyebrow="Attention" title="What may need review" />
           <div className="space-y-3">
-            {['Summarise this young person', 'Draft weekly care summary', 'Identify missing evidence', 'Prepare handover', 'Create risk review outline', 'Summarise recent incidents'].map((action) => (
-              <Link key={action} href="/assistant" className="block rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4 text-sm font-black text-slate-700 hover:bg-slate-100">{action}</Link>
+            <StatCard label="Safeguarding events" value={safeguarding.length} detail="Needs review where open or high significance" href="#safeguarding" />
+            <StatCard label="Child voice markers" value={childVoiceMarkers.length} detail="Visible wishes, feelings or words" href="#intelligence" />
+            <StatCard label="Management oversight" value={managerReview.length} detail="Review markers visible in chronology" href="#intelligence" />
+          </div>
+        </Card>
+      </section>
+
+      <Card>
+        <SectionHeader eyebrow="What happened" title="Recent chronology" description="Open the full chronology for filters, source links, evidence and regulatory context." />
+        <Link href={`/young-people/${id}/chronology`} className="mb-5 inline-flex rounded-2xl bg-blue-600 px-4 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">Open full chronology</Link>
+        <RecordTimeline items={data.chronology.slice(0, 9).map((event) => ({
+          id: event.id,
+          title: event.title,
+          date: event.dateTime,
+          body: event.summary || 'No summary was returned for this event.',
+          href: `/chronology/${encodeURIComponent(event.id)}`
+        }))} />
+      </Card>
+
+      <section id="records" className="grid gap-6 xl:grid-cols-2">
+        <Card>
+          <SectionHeader eyebrow="Records" title="Backend-supported record areas" />
+          <div className="grid gap-3 md:grid-cols-2">
+            {[
+              ['Daily notes', `/young-people/${id}/daily-note/new`],
+              ['Incidents', `/incidents?young_person_id=${id}`],
+              ['Missing episodes', `/safeguarding?young_person_id=${id}`],
+              ['Health', `/health?young_person_id=${id}`],
+              ['Education', `/documents?young_person_id=${id}&type=education`],
+              ['Key work', `/keywork?young_person_id=${id}`],
+              ['Risk assessments', `/risk-assessments?young_person_id=${id}`],
+              ['Placement records', `/placements?young_person_id=${id}`]
+            ].map(([label, href]) => (
+              <Link key={label} href={href} className="rounded-[22px] border border-slate-100 bg-slate-50 p-4 text-sm font-black text-slate-700 hover:bg-blue-50">{label}</Link>
             ))}
           </div>
         </Card>
-      </section>
-
-      <RecordQuestionPanel scope={{ youngPersonIds: [id], dateFrom: '2026-05-07', dateTo: '2026-05-13' }} title={`Ask IndiCare about ${person.preferredName}'s records`} defaultQuestion={`What has changed for ${person.preferredName} this week?`} />
-
-      <Card>
-        <SectionHeader eyebrow="Timeline" title="Recent joined-up timeline" description="Open the full chronology for source citations, evidence gaps, actions and report-ready filtering." />
-        <Link href={`/young-people/${id}/chronology`} className="mb-5 inline-flex rounded-2xl bg-blue-600 px-4 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">Open full chronology</Link>
-        <RecordTimeline
-          items={[
-            ...summary.dailyLogs.map((log) => ({ id: log.id, title: `${log.shift} daily log`, date: log.date, body: log.presentation })),
-            ...summary.incidents.map((incident) => ({ id: incident.id, title: incident.type, date: new Date(incident.dateTime).toLocaleDateString('en-GB'), body: incident.outcome, href: `/incidents/${incident.id}` })),
-            ...summary.safeguarding.map((event) => ({ id: event.id, title: event.concernType, date: event.date, body: event.actionTaken }))
-          ].slice(0, 9)}
-        />
-      </Card>
-
-      <section id="daily-logs" className="grid gap-6 xl:grid-cols-2">
-        <Card>
-          <SectionHeader eyebrow="Daily logs" title="Recent daily recording" />
-          <DataTable
-            headers={['Date', 'Shift', 'Mood', 'Staff', 'Actions']}
-            rows={summary.dailyLogs.map((log) => [log.date, log.shift, log.mood, getStaffById(log.staffId)?.firstName || 'Staff', log.followUpActions.join(', ') || 'None'])}
-            empty={<EmptyState title="No daily logs" description="No daily logs are linked to this young person yet." />}
-          />
-        </Card>
-
-        <Card id="incidents">
-          <SectionHeader eyebrow="Incidents" title="Incident history" />
-          <DataTable
-            headers={['Date', 'Type', 'Severity', 'Status', 'Follow-up']}
-            rows={summary.incidents.map((incident) => [new Date(incident.dateTime).toLocaleDateString('en-GB'), <Link key={incident.id} href={`/incidents/${incident.id}`} className="font-bold text-blue-700">{incident.type}</Link>, <RiskBadge key="severity" value={incident.severity} />, <StatusBadge key="status" value={incident.status} />, incident.followUpActions.join(', ')])}
-            empty={<EmptyState title="No incidents" description="No incidents match this young person's record." />}
-          />
-        </Card>
-      </section>
-
-      <section id="risk" className="grid gap-6 xl:grid-cols-2">
-        <Card>
-          <SectionHeader eyebrow="Risk" title="Risk assessments" />
-          <DataTable
-            headers={['Category', 'Risk', 'Review', 'Controls']}
-            rows={summary.risks.map((item) => [item.category, <RiskBadge key="risk" value={item.riskLevel} />, item.reviewDate, item.controlMeasures.join(', ')])}
-            empty={<EmptyState title="No risk assessments" description="No risk assessments are linked yet." />}
-          />
-        </Card>
         <Card id="safeguarding">
-          <SectionHeader eyebrow="Safeguarding" title="Chronology" />
+          <SectionHeader eyebrow="Safeguarding" title="Follow-up and chronology" />
           <DataTable
-            headers={['Date', 'Concern', 'Action', 'Status']}
-            rows={summary.safeguarding.map((item) => [item.date, item.concernType, item.actionTaken, <StatusBadge key="status" value={item.status} />])}
-            empty={<EmptyState title="No safeguarding entries" description="No safeguarding records are linked yet." />}
+            headers={['Date', 'Event', 'Evidence', 'Actions']}
+            rows={safeguarding.map((event) => [event.dateTime, event.title, event.evidenceIds.length, event.actionIds.length])}
+            empty={<EmptyState title="No safeguarding events" description="No safeguarding-linked chronology was returned for this child." />}
           />
         </Card>
       </section>
 
-      <section id="medication" className="grid gap-6 xl:grid-cols-2">
+      <section id="intelligence" className="grid gap-6 xl:grid-cols-2">
         <Card>
-          <SectionHeader eyebrow="Medication" title="Medication and allergies" />
+          <SectionHeader eyebrow="Deterministic intelligence" title="Indicators to consider" description="These are deterministic markers from visible metadata and wording, not automated decisions." />
           <DataTable
-            headers={['Medication', 'Dosage', 'Frequency', 'Alert']}
-            rows={summary.medication.map((med) => [med.medicationName, med.dosage, med.frequency, med.administrationHistory.some((entry) => ['missed', 'overdue'].includes(entry.status)) ? 'Check administration history' : 'No alert'])}
-            empty={<EmptyState title="No medication" description="No medication records are linked yet." />}
-          />
-        </Card>
-        <Card id="keywork">
-          <SectionHeader eyebrow="Keywork" title="Voice and direct work" />
-          <DataTable
-            headers={['Date', 'Topic', 'Young person voice', 'Next']}
-            rows={summary.keywork.map((session) => [session.date, session.topic, session.youngPersonVoice, session.nextSessionDate])}
-            empty={<EmptyState title="No keywork sessions" description="No keywork sessions are linked yet." />}
-          />
-        </Card>
-      </section>
-
-      <section id="appointments" className="grid gap-6 xl:grid-cols-2">
-        <Card>
-          <SectionHeader eyebrow="Appointments" title="Appointments" />
-          <DataTable
-            headers={['Date', 'Type', 'Professional', 'Outcome']}
-            rows={summary.appointments.map((appointment) => [new Date(appointment.dateTime).toLocaleString('en-GB'), appointment.type, appointment.professional, appointment.outcome])}
-            empty={<EmptyState title="No appointments" description="No appointments are linked yet." />}
+            headers={['Indicator', 'Count', 'Language']}
+            rows={[
+              ['Child voice markers', childVoiceMarkers.length, childVoiceMarkers.length ? 'Evidence indicator' : 'Possible gap'],
+              ['Management oversight markers', managerReview.length, managerReview.length ? 'Evidence indicator' : 'Needs manager review if relevant'],
+              ['Safeguarding signals', safeguarding.length, safeguarding.length ? 'Suggested review' : 'Not enough evidence available'],
+              ['Evidence links', data.chronology.filter((event) => event.evidenceIds.length).length, 'Evidence indicator']
+            ]}
+            empty={<EmptyState title="No intelligence indicators" description="No deterministic indicators were available from the returned records." />}
           />
         </Card>
         <Card id="documents">
-          <SectionHeader eyebrow="Documents" title="Documents and reports" />
+          <SectionHeader eyebrow="Documents" title="Documents and evidence" />
           <DataTable
-            headers={['Title', 'Category/type', 'Review/status']}
-            rows={[
-              ...summary.documents.map((doc) => [doc.title, doc.category, doc.reviewDate]),
-              ...summary.reports.map((report) => [<Link key={report.id} href={`/reports/${report.id}`} className="font-bold text-blue-700">{report.title}</Link>, report.type, <StatusBadge key="status" value={report.status} />])
-            ]}
-            empty={<EmptyState title="No documents or reports" description="No documents or reports are linked yet." />}
+            headers={['Title', 'Type', 'Status']}
+            rows={data.documents.map((document) => [
+              <Link key={document.id} href={`/documents/${encodeURIComponent(document.id)}`} className="font-bold text-blue-700">{document.title}</Link>,
+              document.documentType.replaceAll('_', ' '),
+              <StatusBadge key={document.id} value={document.status.replaceAll('_', ' ')} />
+            ])}
+            empty={<EmptyState title="No documents" description="No documents are linked or visible for this child." />}
           />
         </Card>
       </section>
 
-      <section id="reports" className="grid gap-6 xl:grid-cols-2">
-        <Card>
-          <SectionHeader eyebrow="Report drafts" title="Structured generated sections" description="Preview of report generation foundations from connected records." />
-          <div className="space-y-4">
-            {[weekly[0], weekly[1], risk[0], safeguarding[0], ofsted[8]].map((section) => (
-              <AlertCard key={section.title} title={section.title} body={section.body} />
-            ))}
-          </div>
-        </Card>
-        <Card id="audit">
-          <SectionHeader eyebrow="Audit" title="Audit trail foundations" />
-          <DataTable
-            headers={['When', 'Actor', 'Action']}
-            rows={summary.audit.map((event) => [new Date(event.timestamp).toLocaleString('en-GB'), getStaffById(event.actorId)?.firstName || event.actorId, event.action])}
-            empty={<EmptyState title="No audit events" description="No audit events are linked to this record yet." />}
-          />
-        </Card>
-      </section>
+      <Card id="assistant">
+        <SectionHeader eyebrow="Assistant" title="In-shell ORB context" description="Use the floating in-shell ORB on this page for child-scoped support. The standalone Assistant / ORB remains separate and does not retrieve child records by default." />
+        <div className="flex flex-wrap gap-3">
+          <Link href={`/assistant?youngPersonId=${encodeURIComponent(id)}`} className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700">Open standalone Assistant / ORB with explicit context</Link>
+          <Link href={`/young-people/${encodeURIComponent(id)}/journey`} className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white">Return to Care Hub</Link>
+        </div>
+      </Card>
     </div>
   )
 }

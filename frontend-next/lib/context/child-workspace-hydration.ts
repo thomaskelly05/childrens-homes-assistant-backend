@@ -19,15 +19,7 @@ export type ChildWorkspaceReadyState = {
   reason?: string
 }
 
-const childWorkspaceRequiredRoots = new Set([
-  'actions',
-  'chronology',
-  'documents',
-  'evidence',
-  'reports',
-  'risk-assessments',
-  'safeguarding'
-])
+const childWorkspaceRequiredRoots = new Set<string>()
 
 const childWorkspaceQueryRoots = new Set([
   'actions',

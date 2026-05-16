@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Bell, ClipboardPlus, FileText, Home, MessageSquarePlus, UserRound } from 'lucide-react'
+import { Bell, ClipboardPlus, FileText, Home, MessageSquarePlus, ShieldAlert, UserRound } from 'lucide-react'
 
 import { childQuickActionHref, contextualChildQuickActions } from '@/lib/child-journey/workflows'
 import { useActiveChild } from '@/lib/context/active-child-context'
@@ -13,11 +13,12 @@ export function MobileNav() {
   const childMatch = pathname.match(/^\/young-people\/([^/]+)/)
   const childId = childMatch?.[1] || activeChild?.id
   const items = [
-    { label: 'Home', href: '/home', icon: Home },
-    { label: 'Child', href: childId ? `/young-people/${encodeURIComponent(childId)}/journey` : '/home', icon: UserRound },
+    { label: 'Command', href: '/dashboard', icon: Home },
+    { label: 'People', href: childId ? `/young-people/${encodeURIComponent(childId)}/journey` : '/young-people', icon: UserRound },
     { label: 'Story', href: childId ? `/young-people/${encodeURIComponent(childId)}/daily-note/new` : '/home', icon: ClipboardPlus },
-    { label: 'Events', href: childScopedHref('/chronology'), icon: FileText },
-    { label: 'Orb', href: '/assistant', icon: MessageSquarePlus },
+    { label: 'Events', href: childId ? `/young-people/${encodeURIComponent(childId)}/chronology` : childScopedHref('/chronology'), icon: FileText },
+    { label: 'Safe', href: childId ? `/safeguarding?young_person_id=${encodeURIComponent(childId)}` : '/safeguarding', icon: ShieldAlert },
+    { label: 'ORB', href: '/assistant', icon: MessageSquarePlus },
     { label: 'Alerts', href: '/notifications', icon: Bell }
   ]
   const quickActions = childId

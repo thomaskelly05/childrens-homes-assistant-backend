@@ -9,8 +9,6 @@ import { QualityStandardBadges } from '@/components/indicare/workflows/quality-s
 import { RecordQuestionPanel } from '@/components/indicare/record-question-panel'
 import { getActionsFromChronology, getEvidenceGapsFromChronology, filterChronology } from '@/lib/chronology/selectors'
 import { ChronologyEvent, ChronologyFilter } from '@/lib/chronology/types'
-import { getEvidenceItems } from '@/lib/evidence/selectors'
-import { getStaffById, getYoungPersonById } from '@/lib/indicare/selectors'
 import { mapEventToRegulatoryReferences } from '@/lib/regulatory-framework/mapping'
 import { routeToAction, routeToChronologyEvent, routeToEvidence, routeToSourceRecord } from '@/lib/routes/os-routes'
 
@@ -36,11 +34,11 @@ function formatDate(value: string) {
 }
 
 function peopleLabels(ids: string[]) {
-  return ids.map((id) => getYoungPersonById(id)?.preferredName || id).join(', ')
+  return ids.join(', ')
 }
 
 function staffLabels(ids: string[]) {
-  return ids.map((id) => getStaffById(id)?.firstName || id).join(', ')
+  return ids.join(', ')
 }
 
 function markerForEvent(event: ChronologyEvent) {
@@ -94,8 +92,7 @@ export function ChronologyFoundation({
   const panelEvents = selectedEvent ? [selectedEvent] : filteredEvents
   const panelActions = getActionsFromChronology(panelEvents.length ? panelEvents : filteredEvents)
   const panelGaps = getEvidenceGapsFromChronology(panelEvents.length ? panelEvents : filteredEvents)
-  const evidenceIds = new Set((panelEvents.length ? panelEvents : filteredEvents).flatMap((event) => event.evidenceIds))
-  const panelEvidence = getEvidenceItems().filter((item) => evidenceIds.has(item.id))
+  const panelEvidence: [] = []
   const categories = Array.from(new Set(events.map((event) => event.category))).sort()
   const staffIds = Array.from(new Set(events.flatMap((event) => event.staffIds))).sort()
   const youngPersonIds = Array.from(new Set(events.flatMap((event) => event.youngPersonIds))).sort()
@@ -137,14 +134,14 @@ export function ChronologyFoundation({
               Young person
               <select value={filters.youngPersonIds?.[0] || ''} onChange={(event) => setFilters((current) => ({ ...current, youngPersonIds: event.target.value ? [event.target.value] : undefined }))} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
                 <option value="">All</option>
-                {youngPersonIds.map((id) => <option key={id} value={id}>{getYoungPersonById(id)?.preferredName || id}</option>)}
+                {youngPersonIds.map((id) => <option key={id} value={id}>{id}</option>)}
               </select>
             </label>
             <label className="block text-sm font-bold text-slate-600">
               Staff member
               <select value={filters.staffIds?.[0] || ''} onChange={(event) => setFilters((current) => ({ ...current, staffIds: event.target.value ? [event.target.value] : undefined }))} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
                 <option value="">All</option>
-                {staffIds.map((id) => <option key={id} value={id}>{getStaffById(id)?.firstName || id}</option>)}
+                {staffIds.map((id) => <option key={id} value={id}>{id}</option>)}
               </select>
             </label>
             <label className="block text-sm font-bold text-slate-600">

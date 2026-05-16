@@ -42,7 +42,7 @@ export function ChildSelectorHome({
             <div>
               <p className="text-[11px] font-black uppercase tracking-[0.18em] text-blue-700">Shift summary</p>
               <h2 className="mt-2 text-xl font-black text-slate-950">Start calm, then enter one journey.</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-500">Oak House evening shift. Detailed chronology, actions and reports stay hidden until a child is selected.</p>
+              <p className="mt-2 text-sm leading-6 text-slate-500">Detailed chronology, actions and reports stay hidden until a child is selected.</p>
               <Link href="/shifts/current" className="mt-4 inline-flex text-sm font-black text-blue-700">Open shift context</Link>
             </div>
           </div>
@@ -52,8 +52,8 @@ export function ChildSelectorHome({
             <ClipboardList className="mt-1 h-5 w-5 text-emerald-700" aria-hidden />
             <div>
               <p className="text-[11px] font-black uppercase tracking-[0.18em] text-emerald-700">Personal tasks</p>
-              <h2 className="mt-2 text-xl font-black text-slate-950">3 reminders for your role</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-500">Your personal reminders are available without exposing mixed child records.</p>
+              <h2 className="mt-2 text-xl font-black text-slate-950">Role-safe reminders</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-500">Personal reminders appear when the backend returns tasks for your role.</p>
               <Link href="/actions" className="mt-4 inline-flex text-sm font-black text-emerald-700">Open after selecting child</Link>
             </div>
           </div>
