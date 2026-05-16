@@ -17,6 +17,8 @@ export type LifecycleEntityType =
   | 'action'
   | 'evidence'
 
+export type LifecycleStatus = 'open' | 'acknowledged' | 'in_review' | 'resolved' | 'reopened' | 'escalated' | 'archived'
+
 export type LifecycleState = {
   entityType: LifecycleEntityType
   recordId: string
@@ -26,4 +28,41 @@ export type LifecycleState = {
   nextSteps: string[]
   requiredActions: string[]
   blockers: string[]
+}
+
+export type LifecycleHistoryItem = {
+  id: string
+  transition: string
+  status: LifecycleStatus
+  actor?: string
+  occurredAt?: string
+  notes?: string
+  evidenceIds: string[]
+  chronologyIds: string[]
+  governanceIds: string[]
+}
+
+export type OperationalLifecycleView = {
+  id: string
+  entityType: string
+  title: string
+  currentState: LifecycleStatus
+  transition?: string
+  assignedTo?: string
+  assignedRole?: string
+  resolvedBy?: string
+  resolvedAt?: string
+  resolutionReason?: string
+  reviewNotes?: string
+  escalatedBy?: string
+  escalatedAt?: string
+  escalationReason?: string
+  signoffState?: string
+  signedOffBy?: string
+  signedOffAt?: string
+  evidenceIds: string[]
+  chronologyIds: string[]
+  governanceIds: string[]
+  history: LifecycleHistoryItem[]
+  summary: string
 }

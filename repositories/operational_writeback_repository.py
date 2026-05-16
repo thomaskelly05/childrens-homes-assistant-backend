@@ -21,6 +21,8 @@ from repositories.os_repository_utils import (
     table_columns,
     table_exists,
 )
+from services.operational_lifecycle_service import operational_lifecycle_service
+from services.realtime_event_bus import realtime_event_bus
 
 
 ENTITY_TABLES: dict[str, list[str]] = {
@@ -63,6 +65,24 @@ SOURCE_TYPE_TABLES: dict[str, str] = {
 }
 
 STATUS_BY_ENTITY: dict[str, dict[str, str]] = {
+    "operational_state": {
+        "open": "open",
+        "acknowledge": "acknowledged",
+        "acknowledged": "acknowledged",
+        "assign": "acknowledged",
+        "review": "in_review",
+        "start_review": "in_review",
+        "in_review": "in_review",
+        "resolve": "resolved",
+        "resolved": "resolved",
+        "reopen": "reopened",
+        "reopened": "reopened",
+        "escalate": "escalated",
+        "escalated": "escalated",
+        "archive": "archived",
+        "archived": "archived",
+        "sign_off": "resolved",
+    },
     "action": {
         "complete": "completed",
         "completed": "completed",
@@ -157,6 +177,8 @@ MANAGER_TRANSITIONS = {
     "archived",
     "archive",
     "ri_review",
+    "signoff",
+    "sign_off",
 }
 
 
@@ -369,7 +391,7 @@ def _status_for(entity_type: str, transition: str, payload: dict[str, Any]) -> s
     if payload.get("status"):
         return str(payload["status"])
     mapping = STATUS_BY_ENTITY.get(entity_type) or STATUS_BY_ENTITY.get(entity_type.replace("_record", "_log")) or {}
-    return mapping.get(transition) or normalise_status(transition)
+    return mapping.get(transition) or operational_lifecycle_service.status_for_transition(transition) or normalise_status(transition)
 
 
 def _update_columns(
@@ -397,6 +419,32 @@ def _update_columns(
     if transition in {"assign", "escalate"}:
         set_col(first_col(cols, ["assigned_to_user_id", "assigned_to", "owner_user_id", "owner_id", "staff_id"]), safe_int(payload.get("assigned_to_staff_id") or payload.get("assigned_to_user_id")))
         set_col("assigned_role", payload.get("assigned_role"))
+    if transition in {"acknowledge", "acknowledged"} or status == "acknowledged":
+        set_col(first_col(cols, ["acknowledged_by", "acknowledged_by_user_id"]), current_user_id(current_user))
+        if "acknowledged_at" in cols and "acknowledged_at" not in touched:
+            updates.append("acknowledged_at = NOW()")
+            touched.add("acknowledged_at")
+    if transition in {"review", "start_review", "in_review", "manager_review"} or status == "in_review":
+        set_col(first_col(cols, ["reviewed_by", "reviewer_id", "manager_reviewed_by"]), current_user_id(current_user))
+        set_col(first_col(cols, ["review_notes", "manager_review_notes", "review_comment"]), payload.get("review_notes") or payload.get("notes") or payload.get("comment"))
+        for timestamp_col in ["reviewed_at", "review_started_at", "manager_reviewed_at"]:
+            if timestamp_col in cols and timestamp_col not in touched:
+                updates.append(f"{quote_ident(timestamp_col)} = NOW()")
+                touched.add(timestamp_col)
+                break
+    if transition in {"resolve", "resolved"} or status == "resolved":
+        set_col(first_col(cols, ["resolved_by", "resolved_by_user_id"]), current_user_id(current_user))
+        set_col(first_col(cols, ["resolution_reason", "resolution_notes"]), payload.get("resolution_reason") or payload.get("reason") or payload.get("notes"))
+        if "resolved_at" in cols and "resolved_at" not in touched:
+            updates.append("resolved_at = NOW()")
+            touched.add("resolved_at")
+    if transition in {"escalate", "escalated"} or status == "escalated":
+        set_col(first_col(cols, ["escalated_by", "escalated_by_user_id"]), current_user_id(current_user))
+        set_col(first_col(cols, ["escalation_reason", "escalation_notes"]), payload.get("escalation_reason") or payload.get("reason") or payload.get("notes"))
+        set_col("escalation_level", payload.get("escalation_level") or payload.get("priority") or payload.get("severity"))
+        if "escalated_at" in cols and "escalated_at" not in touched:
+            updates.append("escalated_at = NOW()")
+            touched.add("escalated_at")
     if payload.get("due_date") or payload.get("due_at"):
         set_col(first_col(cols, ["due_date", "due_at", "target_date", "action_due_date"]), payload.get("due_date") or payload.get("due_at"))
     if transition in {"complete", "completed", "management_sign_off", "sign_off", "close", "closed"} or status in {"completed", "closed"}:
@@ -412,8 +460,8 @@ def _update_columns(
                 touched.add(timestamp_col)
                 if timestamp_col != "locked_at":
                     break
-    if transition == "reopen":
-        for column in ["completed_at", "closed_at", "approved_at", "locked_at"]:
+    if transition in {"reopen", "reopened"} or status == "reopened":
+        for column in ["completed_at", "closed_at", "approved_at", "locked_at", "resolved_at", "signed_off_at"]:
             if column in cols and column not in touched:
                 updates.append(f"{quote_ident(column)} = NULL")
                 touched.add(column)
@@ -457,12 +505,21 @@ def transition_record(conn: Any, *, entity_type: str, record_id: str, payload: d
 
     after = dict(after_row)
     notes = payload.get("notes") or payload.get("comment")
+    lifecycle_context = operational_lifecycle_service.build_transition_context(
+        entity_type=entity_type,
+        entity_id=record_id,
+        transition=transition,
+        status=status,
+        payload=payload,
+        current_user=current_user,
+    )
     metadata = {
         **(payload.get("metadata") or {}),
         "transition": transition,
         "status": status,
         "entity_type": entity_type,
         "record_id": record_id,
+        "lifecycle": lifecycle_context,
     }
     workflow_event_id = _insert_workflow_event(
         conn,
@@ -498,6 +555,26 @@ def transition_record(conn: Any, *, entity_type: str, record_id: str, payload: d
         current_user=current_user,
         metadata={**metadata, "workflow_event_id": workflow_event_id, "chronology_event_id": chronology_event_id},
     )
+    home_id = after.get("home_id") or current_home_id(current_user)
+    if home_id:
+        try:
+            awareness = operational_lifecycle_service.build_realtime_awareness_event(
+                home_id=home_id,
+                entity_type=entity_type,
+                entity_id=record_id,
+                status=status,
+                transition=transition,
+            ).model_dump(mode="json")
+            realtime_event_bus.publish(
+                event_type=awareness["event_type"],
+                home_id=home_id,
+                actor=current_user,
+                payload=awareness,
+                dedupe_key=awareness.get("dedupe_key"),
+                throttle_key=f"{home_id}:operational_state.lifecycle",
+            )
+        except Exception:
+            pass
 
     return {
         "entity_type": entity_type,
@@ -510,6 +587,7 @@ def transition_record(conn: Any, *, entity_type: str, record_id: str, payload: d
         "workflow_event_id": workflow_event_id,
         "chronology_event_id": chronology_event_id,
         "audit_event_id": audit_event_id,
+        "lifecycle": lifecycle_context,
     }
 
 
@@ -630,3 +708,67 @@ def list_audit_timeline(conn: Any, *, entity_type: str, record_id: str, current_
         )
         rows = [dict(row) for row in (cur.fetchall() or [])]
     return [_row_to_jsonable(row) or {} for row in rows]
+
+
+def get_lifecycle_snapshot(conn: Any, *, entity_type: str, record_id: str, current_user: dict[str, Any], limit: int = 100) -> dict[str, Any]:
+    table_name, raw_id, row = _resolve_record(conn, entity_type=entity_type, record_id=record_id, payload={}, current_user=current_user)
+    history_rows: list[dict[str, Any]] = []
+    if table_exists(conn, "record_workflow_events"):
+        cols = table_columns(conn, "record_workflow_events")
+        id_col = first_col(cols, ["entity_id", "record_id", "source_id"])
+        type_col = first_col(cols, ["entity_type", "record_type", "source_table"])
+        select_cols = [
+            col
+            for col in [
+                "id",
+                "entity_type",
+                "entity_id",
+                "record_type",
+                "record_id",
+                "source_table",
+                "source_id",
+                "event_type",
+                "status",
+                "workflow_status",
+                "description",
+                "summary",
+                "notes",
+                "event_at",
+                "created_at",
+                "created_by",
+                "metadata",
+            ]
+            if col in cols
+        ]
+        if id_col and select_cols:
+            params: list[Any] = [raw_id, record_id]
+            where = [f"{quote_ident(id_col)}::text IN (%s, %s)"]
+            if type_col:
+                where.append(f"({quote_ident(type_col)}::text = %s OR {quote_ident(type_col)}::text = %s)")
+                params.extend([entity_type, table_name])
+            params.append(max(1, min(limit, 300)))
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    f"""
+                    SELECT {", ".join(quote_ident(col) for col in select_cols)}
+                    FROM public.record_workflow_events
+                    WHERE {" AND ".join(where)}
+                    ORDER BY {quote_ident(first_col(cols, ["event_at", "created_at", "id"]) or "id")} DESC NULLS LAST
+                    LIMIT %s
+                    """,
+                    tuple(params),
+                )
+                history_rows = [dict(item) for item in (cur.fetchall() or [])]
+    audit_rows = list_audit_timeline(conn, entity_type=entity_type, record_id=record_id, current_user=current_user, limit=limit)
+    snapshot = operational_lifecycle_service.snapshot_from_record(
+        entity_type=entity_type,
+        entity_id=record_id,
+        record=_row_to_jsonable(row) or {},
+        history_rows=[_row_to_jsonable(item) or {} for item in history_rows],
+        audit_rows=audit_rows,
+    )
+    return {
+        **snapshot.model_dump(mode="json"),
+        "source_table": table_name,
+        "source_id": raw_id,
+    }

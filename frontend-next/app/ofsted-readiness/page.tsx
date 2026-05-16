@@ -1,7 +1,9 @@
 import Link from 'next/link'
 
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
+import { OperationalLifecyclePanel } from '@/components/indicare/operational-lifecycle-panel'
 import { Card, DataTable, EmptyState, PageHeader, SectionHeader, StatCard, StatusBadge } from '@/components/indicare/ui'
+import { deriveLifecycleState } from '@/lib/lifecycle/selectors'
 import { getCommandCentre, getInspectionReadiness } from '@/lib/os-api/platform'
 
 function objectRows(value: Record<string, any>) {
@@ -23,6 +25,12 @@ export default async function OfstedReadinessPage() {
   const reg45Evidence = command.data.documents.filter((document) => document.documentType.includes('reg45') || document.regulation?.includes('45'))
   const safeguardingEvidence = command.data.chronology.filter((event) => event.safeguardingFlags.length || event.category.toLowerCase().includes('safeguard'))
   const childVoiceMarkers = command.data.chronology.filter((event) => /child voice|said|told|wanted|wishes/i.test(`${event.title} ${event.summary} ${event.fullText} ${event.tags.join(' ')}`))
+  const traceabilityLifecycle = [
+    ...readiness.data.evidenceGaps.map((item) => deriveLifecycleState(item.raw || item, 'inspection_evidence_gap')),
+    ...evidenceReview.map((item) => deriveLifecycleState(item as any, 'evidence')),
+    ...documentReview.map((item) => deriveLifecycleState(item as any, 'document')),
+    ...command.data.actions.filter((action) => action.status !== 'completed').map((item) => deriveLifecycleState(item as any, 'inspection_action'))
+  ]
 
   return (
     <div className="space-y-6">
@@ -76,6 +84,14 @@ export default async function OfstedReadinessPage() {
           />
         </Card>
       </section>
+      <Card>
+        <OperationalLifecyclePanel
+          title="Inspection evidence lifecycle"
+          description="Evidence gaps, review-required documents and open inspection actions are shown as traceable operational states."
+          items={traceabilityLifecycle}
+          hrefForItem={(item) => item.entityType.includes('document') ? `/documents/${encodeURIComponent(item.id)}` : item.entityType.includes('evidence') ? `/evidence/${encodeURIComponent(item.id)}` : undefined}
+        />
+      </Card>
       <section className="grid gap-6 xl:grid-cols-2">
         <Card>
           <SectionHeader eyebrow="Regulatory mapping" title="Framework areas" description="Routes exist for SCCIF, Quality Standards, Children’s Homes Regulations, Reg 44, Reg 45, Reg 40 and Annex A readiness; typed backend DTOs remain the next step." />

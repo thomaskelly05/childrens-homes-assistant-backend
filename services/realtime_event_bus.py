@@ -27,6 +27,11 @@ REALTIME_EVENT_TYPES = {
     "incident.update",
     "management.alert",
     "assistant.context_refresh",
+    "operational_state.lifecycle",
+    "audit.timeline",
+    "inspection.evidence",
+    "governance.signoff",
+    "evidence.graph",
 }
 
 

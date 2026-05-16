@@ -2,6 +2,8 @@ import type { CareAction } from '@/lib/evidence/types'
 import type { HomeDocument } from '@/lib/documents/types'
 import type { EvidenceItem } from '@/lib/evidence/types'
 import type { ChronologyEvent } from '@/lib/chronology/types'
+import { deriveLifecycleState } from '@/lib/lifecycle/selectors'
+import type { OperationalLifecycleView } from '@/lib/lifecycle/types'
 
 import { getOsActions } from './actions'
 import { mapOsChronology, getOsChronology } from './chronology'
@@ -29,6 +31,7 @@ export type OperationalRecord = {
   evidenceIds: string[]
   actionIds: string[]
   regulationLinks: string[]
+  lifecycle: OperationalLifecycleView
   raw: UnknownRecord
 }
 
@@ -52,6 +55,7 @@ export type CommandCentreData = {
   evidence: EvidenceItem[]
   workforce: OperationalRecord[]
   homes: OperationalRecord[]
+  lifecycle: OperationalLifecycleView[]
   attention: AttentionCard[]
 }
 
@@ -62,6 +66,7 @@ export type YoungPersonOverview = {
   actions: CareAction[]
   evidence: EvidenceItem[]
   documents: HomeDocument[]
+  lifecycle: OperationalLifecycleView[]
 }
 
 export type SafeguardingDashboard = {
@@ -70,11 +75,13 @@ export type SafeguardingDashboard = {
   actions: CareAction[]
   missingChildVoice: ChronologyEvent[]
   missingOversight: ChronologyEvent[]
+  lifecycle: OperationalLifecycleView[]
 }
 
 export type StaffDirectory = {
   staff: OperationalRecord[]
   currentUser?: OperationalRecord
+  lifecycle: OperationalLifecycleView[]
 }
 
 export type InspectionReadiness = {
@@ -151,6 +158,7 @@ export function mapOperationalRecord(row: UnknownRecord, fallbackType = 'record'
     evidenceIds: strings(row.evidence_ids || row.evidenceIds),
     actionIds: strings(row.action_ids || row.actionIds),
     regulationLinks: strings(row.regulation_links || row.regulationLinks || row.regulations),
+    lifecycle: deriveLifecycleState(row, fallbackType),
     raw: row
   }
 }
@@ -267,15 +275,26 @@ export async function getCommandCentre(): Promise<OsApiResult<CommandCentreData>
     getOsEvidence()
   ])
   const contextObject = asObject(context.data)
+  const safeguardingRecords = asArray(safeguarding.data, ['items', 'safeguarding']).map((row) => mapOperationalRecord(row, 'safeguarding'))
+  const workforce = asArray(contextObject.workforce).map((row) => mapOperationalRecord(row, 'staff'))
+  const homes = asArray(contextObject.homes).map((row) => mapOperationalRecord(row, 'home'))
   const base = {
     children: people.data,
     chronology: chronology.data,
-    safeguarding: asArray(safeguarding.data, ['items', 'safeguarding']).map((row) => mapOperationalRecord(row, 'safeguarding')),
+    safeguarding: safeguardingRecords,
     actions: actions.data,
     documents: documents.data,
     evidence: evidence.data,
-    workforce: asArray(contextObject.workforce).map((row) => mapOperationalRecord(row, 'staff')),
-    homes: asArray(contextObject.homes).map((row) => mapOperationalRecord(row, 'home'))
+    workforce,
+    homes,
+    lifecycle: [
+      ...safeguardingRecords.map((record) => record.lifecycle),
+      ...workforce.map((record) => record.lifecycle),
+      ...homes.map((record) => record.lifecycle),
+      ...actions.data.map((action) => deriveLifecycleState(action as UnknownRecord, 'action')),
+      ...documents.data.map((document) => deriveLifecycleState(document as UnknownRecord, 'document')),
+      ...evidence.data.map((item) => deriveLifecycleState(item as UnknownRecord, 'evidence'))
+    ]
   }
   return mergeResult([context, people, chronology, safeguarding, actions, documents, evidence], {
     ...base,
@@ -318,7 +337,13 @@ export async function getYoungPersonOverview(id: string): Promise<OsApiResult<Yo
     safeguarding: chronology.filter((event) => event.safeguardingFlags.length || `${event.title} ${event.category}`.toLowerCase().includes('safeguard')),
     actions: workspace.data.actions,
     evidence: childEvidence,
-    documents: childDocuments
+    documents: childDocuments,
+    lifecycle: [
+      ...workspace.data.actions.map((action) => deriveLifecycleState(action as UnknownRecord, 'action')),
+      ...childDocuments.map((document) => deriveLifecycleState(document as UnknownRecord, 'document')),
+      ...childEvidence.map((item) => deriveLifecycleState(item as UnknownRecord, 'evidence')),
+      ...chronology.map((event) => deriveLifecycleState(event as UnknownRecord, 'chronology'))
+    ]
   })
 }
 
@@ -367,12 +392,18 @@ export async function getSafeguardingDashboard(youngPersonId?: string): Promise<
     const text = `${event.title} ${event.summary} ${event.tags.join(' ')}`.toLowerCase()
     return !/manager|oversight|review|rm|ri/.test(text)
   })
+  const safeguardingRecords = asArray(records.data, ['items', 'safeguarding']).map((row) => mapOperationalRecord(row, 'safeguarding'))
   return mergeResult([records, chronology, actions], {
-    records: asArray(records.data, ['items', 'safeguarding']).map((row) => mapOperationalRecord(row, 'safeguarding')),
+    records: safeguardingRecords,
     chronology: events,
     actions: actions.data,
     missingChildVoice,
-    missingOversight
+    missingOversight,
+    lifecycle: [
+      ...safeguardingRecords.map((record) => record.lifecycle),
+      ...actions.data.map((action) => deriveLifecycleState(action as UnknownRecord, 'action')),
+      ...events.map((event) => deriveLifecycleState(event as UnknownRecord, 'chronology'))
+    ]
   })
 }
 
@@ -442,7 +473,8 @@ export async function getStaff(): Promise<OsApiResult<StaffDirectory>> {
     ...context,
     data: {
       staff,
-      currentUser: staff[0]
+      currentUser: staff[0],
+      lifecycle: staff.map((member) => member.lifecycle)
     }
   }
 }

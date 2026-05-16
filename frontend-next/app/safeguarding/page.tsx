@@ -1,6 +1,7 @@
 import Link from 'next/link'
 
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
+import { OperationalLifecyclePanel } from '@/components/indicare/operational-lifecycle-panel'
 import { Card, DataTable, EmptyState, PageHeader, RecordTimeline, SectionHeader, StatCard, StatusBadge } from '@/components/indicare/ui'
 import { getSafeguardingDashboard } from '@/lib/os-api/platform'
 
@@ -60,6 +61,14 @@ export default async function SafeguardingPage({
           </div>
         </Card>
       </section>
+      <Card>
+        <OperationalLifecyclePanel
+          title="Safeguarding lifecycle oversight"
+          description="Acknowledgement, review, escalation and resolution markers are visible where returned by the backend or inferred from status."
+          items={data.lifecycle}
+          hrefForItem={(item) => item.entityType.includes('chronology') ? `/chronology/${encodeURIComponent(item.id)}` : undefined}
+        />
+      </Card>
       <Card>
         <SectionHeader eyebrow="Register" title="Concern details and next action" />
         <DataTable

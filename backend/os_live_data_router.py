@@ -12,7 +12,7 @@ from db.connection import get_db
 from repositories.actions_repository import create_action, get_action, list_actions, update_action
 from repositories.documents_repository import create_document_metadata, create_reg44_metadata, get_document, list_documents
 from repositories.evidence_repository import build_coverage, create_evidence_link, get_evidence, list_evidence
-from repositories.operational_writeback_repository import create_comment, create_review_request, list_audit_timeline, transition_record
+from repositories.operational_writeback_repository import create_comment, create_review_request, get_lifecycle_snapshot, list_audit_timeline, transition_record
 from repositories.reports_repository import generate_report_draft, get_report, list_reports, save_report_draft, update_report_workflow
 from repositories.workflow_repository import create_workflow_event, get_workflow, list_workflows
 from repositories.workspaces_repository import adult_workspace, get_adult, get_young_person, list_adults, list_young_people, young_person_workspace
@@ -20,6 +20,7 @@ from services.document_extraction_pipeline import extraction_pipeline
 from services.document_security_service import document_security_service
 from services.file_storage import storage_from_env
 from services.os_chronology_service import get_chronology_event, list_chronology
+from services.operational_lifecycle_service import operational_lifecycle_service
 
 
 router = APIRouter(prefix="/os", tags=["OS Live Data"])
@@ -232,6 +233,24 @@ def os_action_sign_off(action_id: str, payload: FlexiblePayload | None = None, c
 @router.post("/workflows/records/{entity_type}/{record_id}/transition")
 def os_record_transition(entity_type: str, record_id: str, payload: FlexiblePayload, current_user=Depends(get_current_user), conn=Depends(get_db)):
     return ok(transition_record(conn, entity_type=entity_type, record_id=record_id, payload=payload.model_dump(exclude_unset=True), current_user=current_user))
+
+
+@router.get("/operational-states/lifecycle/definitions")
+def os_operational_lifecycle_definitions(current_user=Depends(get_current_user)):
+    return ok({
+        "states": operational_lifecycle_service.statuses(),
+        "transitions": ["open", "acknowledge", "assign", "review", "resolve", "reopen", "escalate", "archive", "sign_off"],
+        "principles": [
+            "Lifecycle events are operational records, not blame markers.",
+            "Resolution should retain evidence, chronology and governance links.",
+            "Sign-off remains a management action where policy requires it.",
+        ],
+    })
+
+
+@router.get("/workflows/records/{entity_type}/{record_id}/lifecycle")
+def os_record_lifecycle(entity_type: str, record_id: str, limit: int = Query(default=100, ge=1, le=300), current_user=Depends(get_current_user), conn=Depends(get_db)):
+    return ok(get_lifecycle_snapshot(conn, entity_type=entity_type, record_id=record_id, current_user=current_user, limit=limit))
 
 
 @router.get("/evidence")

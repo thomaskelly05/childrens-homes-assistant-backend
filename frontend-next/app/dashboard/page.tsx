@@ -1,6 +1,7 @@
 import Link from 'next/link'
 
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
+import { OperationalLifecyclePanel } from '@/components/indicare/operational-lifecycle-panel'
 import { AlertCard, Card, DataTable, EmptyState, PageHeader, RecordTimeline, SectionHeader, StatCard, StatusBadge } from '@/components/indicare/ui'
 import { getCommandCentre } from '@/lib/os-api/platform'
 
@@ -78,6 +79,15 @@ export default async function DashboardPage() {
           </div>
         </Card>
       </section>
+
+      <Card>
+        <OperationalLifecyclePanel
+          title="Current operational lifecycle"
+          description="Open, review, escalation and resolution states derived from live records and lifecycle metadata where present."
+          items={data.lifecycle}
+          hrefForItem={(item) => item.entityType.includes('document') ? `/documents/${encodeURIComponent(item.id)}` : item.entityType.includes('evidence') ? `/evidence/${encodeURIComponent(item.id)}` : undefined}
+        />
+      </Card>
 
       <section className="grid gap-6 xl:grid-cols-2">
         <Card>
