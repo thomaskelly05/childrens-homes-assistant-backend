@@ -6,15 +6,19 @@ import {
   Bell,
   ChevronRight,
   ClipboardCheck,
+  Building2,
   FileText,
   Home,
   Sparkles,
   UserRound,
+  UsersRound,
   FolderOpen,
   LogOut,
   Gauge,
   Clock3,
   ShieldCheck,
+  ShieldAlert,
+  SearchCheck,
   Settings
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
@@ -43,22 +47,24 @@ type NavItem = {
 }
 
 const navItems: NavItem[] = [
-  { section: 'Global', href: '/home', label: 'Home', icon: Home, permissions: ['records:read'] },
-  { section: 'Global', href: '/active-child', label: 'Current Child', icon: UserRound, permissions: ['records:read'], scoped: true },
-  { section: 'Child', href: '/daily-note', label: 'Quick Record', icon: ClipboardCheck, permissions: ['records:read'], scoped: true, activeRoots: ['daily-logs', 'incidents', 'keywork', 'medication', 'health'] },
-  { section: 'Child', href: '/chronology', label: 'Chronology', icon: Clock3, permissions: ['records:read'], scoped: true },
-  { section: 'Child', href: '/plans', label: 'Plans', icon: ClipboardCheck, permissions: ['records:read'], scoped: true, activeRoots: ['placements', 'risk-assessments'] },
-  { section: 'Child', href: '/documents', label: 'Documents', icon: FolderOpen, permissions: ['records:read'], scoped: true },
-  { section: 'Child', href: '/reports', label: 'Reports', icon: FileText, permissions: ['reports:read'], scoped: true },
-  { section: 'Global', href: '/assistant', label: 'Orb', icon: Sparkles, permissions: ['assistant:access'], activeRoots: ['assistant'] },
-  { section: 'Global', href: '/notifications', label: 'Notifications', icon: Bell, permissions: ['records:read'], activeRoots: ['notifications'] },
-  { section: 'Global', href: '/shifts/current', label: 'Shift', icon: Clock3, permissions: ['records:read'], activeRoots: ['shifts', 'handover'] },
-  { section: 'System', href: '/settings', label: 'Settings', icon: Settings, permissions: ['records:read'], activeRoots: ['settings'] },
-  { section: 'System', href: '/management', label: 'Reviews', icon: Gauge, permissions: ['reports:read'], activeRoots: ['management'] }
+  { section: 'Global', href: '/dashboard', label: 'Command Centre', icon: Home, permissions: ['records:read'], activeRoots: ['dashboard'] },
+  { section: 'Global', href: '/young-people', label: 'Young People', icon: UserRound, permissions: ['records:read'], activeRoots: ['young-people'] },
+  { section: 'Global', href: '/staff', label: 'Staff', icon: UsersRound, permissions: ['staff:read'], activeRoots: ['staff'] },
+  { section: 'Global', href: '/safeguarding', label: 'Safeguarding', icon: ShieldAlert, permissions: ['records:read'], activeRoots: ['safeguarding'] },
+  { section: 'Global', href: '/chronology', label: 'Chronology', icon: Clock3, permissions: ['records:read'], activeRoots: ['chronology'] },
+  { section: 'Global', href: '/documents', label: 'Documents & Evidence', icon: FolderOpen, permissions: ['records:read'], activeRoots: ['documents', 'evidence'] },
+  { section: 'Global', href: '/ofsted-readiness', label: 'Inspection Readiness', icon: SearchCheck, permissions: ['reports:read'], activeRoots: ['ofsted-readiness', 'regulatory', 'reg44'] },
+  { section: 'Global', href: '/settings', label: 'Governance', icon: Settings, permissions: ['settings:read', 'settings:manage'], activeRoots: ['settings'] },
+  { section: 'Global', href: '/assistant', label: 'Assistant / ORB', icon: Sparkles, permissions: ['assistant:access'], activeRoots: ['assistant'] },
+  { section: 'Global', href: '/setup', label: 'Provider Settings', icon: Building2, permissions: ['settings:read', 'settings:manage'], activeRoots: ['setup'] },
+  { section: 'System', href: '/notifications', label: 'Notifications', icon: Bell, permissions: ['records:read'], activeRoots: ['notifications'] },
+  { section: 'System', href: '/shifts/current', label: 'Shift', icon: ClipboardCheck, permissions: ['records:read'], activeRoots: ['shifts', 'handover'] },
+  { section: 'System', href: '/management', label: 'Reviews', icon: Gauge, permissions: ['reports:read'], activeRoots: ['management'] },
+  { section: 'System', href: '/active-child', label: 'Current Child', icon: FileText, permissions: ['records:read'], scoped: true }
 ]
 
 const recordWorkspaceRoots = ['actions', 'reports', 'evidence', 'documents', 'chronology', 'daily-logs', 'incidents', 'safeguarding', 'medication', 'health', 'keywork', 'appointments', 'risk-assessments', 'reg44']
-const childContextRequiredRoots = ['chronology', 'actions', 'reports', 'documents', 'evidence', 'safeguarding']
+const childContextRequiredRoots = ['actions', 'reports']
 
 function selectedYoungPersonId(pathname: string) {
   const parts = pathname.split('/').filter(Boolean)
@@ -260,8 +266,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   const primaryNav = visibleNavItems.filter((item) => item.section !== 'System')
   const secondaryNav = [
     { label: 'Journey', href: selectedId ? `/young-people/${encodeURIComponent(selectedId)}/journey` : '/home' },
-    { label: 'Daily Story', href: selectedId ? `/young-people/${encodeURIComponent(selectedId)}/daily-note/new` : '/home' },
-    { label: 'Important Events', href: childScopedHref('/chronology') },
+    { label: 'Records', href: selectedId ? `/young-people/${encodeURIComponent(selectedId)}` : '/young-people' },
+    { label: 'Daily Note', href: selectedId ? `/young-people/${encodeURIComponent(selectedId)}/daily-note/new` : '/home' },
+    { label: 'Chronology', href: selectedId ? `/young-people/${encodeURIComponent(selectedId)}/chronology` : '/chronology' },
+    { label: 'Safeguarding', href: selectedId ? `/safeguarding?young_person_id=${encodeURIComponent(selectedId)}` : '/safeguarding' },
     { label: 'Plans', href: selectedId ? `/documents?young_person_id=${encodeURIComponent(selectedId)}&scope=plans` : '/documents' },
     { label: 'Risks', href: selectedId ? `/risk-assessments?young_person_id=${encodeURIComponent(selectedId)}` : '/risk-assessments' },
     { label: 'Documents', href: childScopedHref('/documents') },
@@ -272,7 +280,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="orb-os-shell min-h-screen bg-[#f3f6fb] text-slate-900">
       <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-[#f8fafc]/95 px-3 py-3 backdrop-blur-xl md:px-6">
         <div className="flex items-center gap-3">
-          <Link href="/home" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-sm font-black text-white shadow-lg shadow-slate-950/20" aria-label="Home">
+          <Link href="/dashboard" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-sm font-black text-white shadow-lg shadow-slate-950/20" aria-label="Command Centre">
             IC
           </Link>
           <div className="hidden min-w-0 lg:block">

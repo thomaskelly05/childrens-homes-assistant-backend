@@ -4,9 +4,9 @@ import { notFound } from 'next/navigation'
 import { ChronologyFoundation } from '@/components/indicare/chronology-foundation'
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
 import { PageHeader, StatCard } from '@/components/indicare/ui'
-import { getChronologyForYoungPerson, getSafeguardingChronology } from '@/lib/chronology/selectors'
-import { getYoungPersonById } from '@/lib/indicare/selectors'
+import { getSafeguardingChronology } from '@/lib/chronology/selectors'
 import { getOsChronology } from '@/lib/os-api/chronology'
+import { getYoungPersonOverview } from '@/lib/os-api/platform'
 
 export default async function YoungPersonChronologyPage({
   params,
@@ -17,12 +17,10 @@ export default async function YoungPersonChronologyPage({
 }) {
   const { id } = await params
   const query = await searchParams
-  const person = getYoungPersonById(id)
-  const chronology = await getOsChronology({ youngPersonId: id })
-  const fallbackEvents = getChronologyForYoungPerson(id)
-  const events = chronology.source === 'live' || chronology.data.length ? chronology.data : fallbackEvents
-  if (!person && events.length === 0) notFound()
-  const preferredName = person?.preferredName || `Young person #${id}`
+  const [chronology, overview] = await Promise.all([getOsChronology({ youngPersonId: id }), getYoungPersonOverview(id)])
+  const events = chronology.data
+  if (!overview.data.profile && chronology.source === 'live' && events.length === 0) notFound()
+  const preferredName = overview.data.profile?.preferredName || overview.data.profile?.displayName || `Young person #${id}`
 
   return (
     <div className="space-y-6">

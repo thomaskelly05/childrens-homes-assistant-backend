@@ -36,6 +36,66 @@ const nextConfig: NextConfig = {
         destination: `${backendOrigin}/os/:path*`
       },
       {
+        source: '/os-command/:path*',
+        destination: `${backendOrigin}/os-command/:path*`
+      },
+      {
+        source: '/young-people/:path*',
+        destination: `${backendOrigin}/young-people/:path*`
+      },
+      {
+        source: '/inspection/:path*',
+        destination: `${backendOrigin}/inspection/:path*`
+      },
+      {
+        source: '/inspection-os/:path*',
+        destination: `${backendOrigin}/inspection-os/:path*`
+      },
+      {
+        source: '/staff/:path*',
+        destination: `${backendOrigin}/staff/:path*`
+      },
+      {
+        source: '/staff-today/:path*',
+        destination: `${backendOrigin}/staff-today/:path*`
+      },
+      {
+        source: '/supervision/:path*',
+        destination: `${backendOrigin}/supervision/:path*`
+      },
+      {
+        source: '/tasks/:path*',
+        destination: `${backendOrigin}/tasks/:path*`
+      },
+      {
+        source: '/evidence/:path*',
+        destination: `${backendOrigin}/evidence/:path*`
+      },
+      {
+        source: '/workspace-records/:path*',
+        destination: `${backendOrigin}/workspace-records/:path*`
+      },
+      {
+        source: '/workspace/:path*',
+        destination: `${backendOrigin}/workspace/:path*`
+      },
+      {
+        source: '/account/:path*',
+        destination: `${backendOrigin}/account/:path*`
+      },
+      {
+        source: '/standalone-intelligence/:path*',
+        destination: `${backendOrigin}/standalone-intelligence/:path*`
+      },
+      {
+        source: '/standalone-search/:path*',
+        destination: `${backendOrigin}/standalone-search/:path*`
+      },
+      {
+        source: '/standalone-workflows/:path*',
+        destination: `${backendOrigin}/standalone-workflows/:path*`
+      },
+      {
         source: '/mfa',
         destination: `${backendOrigin}/mfa`
       },

@@ -1,17 +1,17 @@
 import Link from 'next/link'
 
-import { ActionsPanel, EvidenceGapsPanel } from '@/components/indicare/action-evidence-panels'
+import { ActionsPanel, EvidenceItemsPanel } from '@/components/indicare/action-evidence-panels'
 import { DocumentUploadPanel } from '@/components/indicare/document-upload-panel'
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
 import { Card, DataTable, EmptyState, PageHeader, SectionHeader, StatCard, StatusBadge } from '@/components/indicare/ui'
-import { getEvidenceGaps } from '@/lib/evidence/selectors'
-import { getStaffById } from '@/lib/indicare/selectors'
 import { getOsActions } from '@/lib/os-api/actions'
 import { getOsDocuments } from '@/lib/os-api/documents'
+import { getOsEvidence } from '@/lib/os-api/evidence'
 
 export default async function DocumentsPage() {
-  const [documentsResult, actionsResult] = await Promise.all([getOsDocuments(), getOsActions()])
+  const [documentsResult, actionsResult, evidenceResult] = await Promise.all([getOsDocuments(), getOsActions(), getOsEvidence()])
   const documents = documentsResult.data
+  const evidenceForReview = evidenceResult.data.filter((item) => ['draft', 'partial', 'review_required'].includes(item.quality))
   const regulatoryDocuments = documents.filter((document) => Boolean(document.regulation) || document.documentType.startsWith('reg'))
   const reviewDocuments = documents.filter((document) => ['review_required', 'action_plan_open'].includes(document.status))
   const reg44 = regulatoryDocuments.find((document) => document.documentType === 'reg44_report')
@@ -57,8 +57,8 @@ export default async function DocumentsPage() {
         </Card>
         <div className="space-y-6">
           <Card>
-            <SectionHeader eyebrow="Evidence gaps" title="Gaps from documents" />
-            <EvidenceGapsPanel gaps={getEvidenceGaps()} />
+            <SectionHeader eyebrow="Evidence review" title="Evidence needing review" />
+            <EvidenceItemsPanel evidence={evidenceForReview} />
           </Card>
           <Card>
             <SectionHeader eyebrow="Actions generated" title="Document action plan" />
@@ -71,12 +71,11 @@ export default async function DocumentsPage() {
         <DataTable
           headers={['Title', 'Type', 'Regulation', 'Uploaded by', 'Uploaded', 'Review', 'Status', 'Tags']}
           rows={documents.map((document) => {
-            const uploader = getStaffById(document.uploadedBy)
             return [
               <Link key={document.id} href={`/documents/${document.id}`} className="font-black text-slate-950 hover:text-blue-700">{document.title}</Link>,
               document.documentType.replaceAll('_', ' '),
               document.regulation || 'Care record',
-              uploader?.firstName || document.uploadedBy,
+              document.uploadedBy || 'Not returned',
               new Date(document.uploadedAt).toLocaleDateString('en-GB'),
               document.reviewRequiredBy || 'Not set',
               <StatusBadge key="status" value={document.status.replaceAll('_', ' ')} />,
