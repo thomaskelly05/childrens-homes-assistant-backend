@@ -2,7 +2,7 @@ import Link from 'next/link'
 
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
 import { Card, DataTable, EmptyState, PageHeader, SectionHeader, StatCard, StatusBadge } from '@/components/indicare/ui'
-import { getAssistantGovernance, getProviderSettings } from '@/lib/os-api/platform'
+import { getAssistantGovernance, getOperationalStateSnapshot, getProviderSettings } from '@/lib/os-api/platform'
 
 function valueLabel(value: unknown) {
   if (value === true) return 'Enabled'
@@ -14,12 +14,13 @@ function valueLabel(value: unknown) {
 }
 
 export default async function SettingsPage() {
-  const [providerResult, governanceResult] = await Promise.all([getProviderSettings(), getAssistantGovernance()])
+  const [providerResult, governanceResult, operationalStateResult] = await Promise.all([getProviderSettings(), getAssistantGovernance(), getOperationalStateSnapshot()])
   const governance = governanceResult.data.aiGovernance || {}
   const account = providerResult.data.account || {}
   const profile = account.profile || {}
   const user = account.user || {}
   const osContext = providerResult.data.osContext || {}
+  const governanceStates = operationalStateResult.data.states.filter((state) => ['governance', 'documents', 'inspection'].includes(state.category)).slice(0, 8)
   const aiRows = [
     ['External AI processing', governance.external_ai_enabled ?? governance.externalAIEnabled],
     ['Redaction mode', governance.redaction_mode ?? governance.redactionMode],
@@ -39,11 +40,13 @@ export default async function SettingsPage() {
       />
       <LiveDataStatus result={providerResult} />
       <LiveDataStatus result={governanceResult} />
+      <LiveDataStatus result={operationalStateResult} />
       <section className="grid gap-4 md:grid-cols-4">
         <StatCard label="Homes visible" value={Array.isArray(osContext.homes) ? osContext.homes.length : 0} detail="Returned by /api/os/context" />
         <StatCard label="Children visible" value={Array.isArray(osContext.children) ? osContext.children.length : 0} detail="Current role scope" />
         <StatCard label="Assistant policy" value={Object.keys(governance).length ? 'Returned' : 'Not configured'} detail="/api/ai/governance/status" />
         <StatCard label="ORB runtime" value={governanceResult.data.orbHealth ? 'Available' : 'Not returned'} detail="/orb/health" />
+        <StatCard label="Governance states" value={governanceStates.length} detail="Operational review indicators" />
       </section>
       <Card>
         <SectionHeader eyebrow="Provider" title="Account and home context" />
@@ -95,6 +98,19 @@ export default async function SettingsPage() {
             </div>
           ))}
         </div>
+      </Card>
+      <Card>
+        <SectionHeader eyebrow="Operational governance" title="Review history and sign-off indicators" description="Unified operational states expose audit, sign-off and inspection review prompts where backend evidence exists." />
+        <DataTable
+          headers={['Indicator', 'Priority', 'Why', 'Next action']}
+          rows={governanceStates.map((state) => [
+            state.title,
+            <StatusBadge key={state.id} value={state.priority} />,
+            state.reason,
+            state.nextAction
+          ])}
+          empty={<EmptyState title="No governance operational states" description="No governance review states were returned for this session." />}
+        />
       </Card>
     </div>
   )

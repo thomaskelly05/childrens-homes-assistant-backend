@@ -8,6 +8,7 @@ import { getStaff } from '@/lib/os-api/platform'
 export default async function StaffPage() {
   const staffResult = await getStaff()
   const staff = staffResult.data.staff
+  const staffStates = staffResult.data.operationalState.states.filter((state) => state.category === 'staff' || state.linkedStaffId).slice(0, 8)
   return (
     <div className="space-y-6">
       <PageHeader
@@ -20,10 +21,23 @@ export default async function StaffPage() {
       <StaffAccessControls />
       <section className="grid gap-4 md:grid-cols-4">
         <StatCard label="Visible staff" value={staff.length} detail="Returned by workforce/profile routes" />
-        <StatCard label="Training" value="Not yet configured" detail="No unified backend DTO yet" />
+        <StatCard label="Staff review states" value={staffStates.length} detail="Training, supervision or checks requiring review" />
         <StatCard label="Supervision" value="Route available" detail="/supervision/submissions" />
         <StatCard label="Safer recruitment" value="Restricted" detail="Shown only if backend returns it" />
       </section>
+      <Card>
+        <SectionHeader eyebrow="Operational states" title="Staff oversight queue" description="Shows staff compliance indicators only when permission-safe backend records expose them." />
+        <DataTable
+          headers={['Indicator', 'Priority', 'Reason', 'Next action']}
+          rows={staffStates.map((state) => [
+            state.title,
+            <StatusBadge key={state.id} value={state.priority} />,
+            state.reason,
+            state.nextAction
+          ])}
+          empty={<EmptyState title="No staff operational states" description="No staff compliance states were returned for this session." />}
+        />
+      </Card>
       <Card>
         <SectionHeader eyebrow="Directory" title="Staff team" description="This table avoids exposing HR fields unless they are explicitly present in the live response." />
         <DataTable

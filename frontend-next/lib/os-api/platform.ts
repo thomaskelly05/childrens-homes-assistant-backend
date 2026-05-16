@@ -43,6 +43,104 @@ export type AttentionCard = {
   status: string
 }
 
+export type OperationalStateLink = {
+  linkType: string
+  id: string
+  label: string
+  href?: string
+  sourceType?: string
+}
+
+export type OperationalState = {
+  id: string
+  stateType: string
+  category: string
+  title: string
+  severity: string
+  priority: 'low' | 'medium' | 'high' | 'urgent'
+  priorityScore: number
+  scopeType: string
+  linkedChildId?: string
+  linkedStaffId?: string
+  linkedHomeId?: string
+  linkedDocumentId?: string
+  reason: string
+  createdAt: string
+  updatedAt: string
+  nextAction: string
+  evidenceLinks: OperationalStateLink[]
+  chronologyLinks: OperationalStateLink[]
+  regulationRelevance: string[]
+  reviewRequired: boolean
+  resolved: boolean
+  status: string
+  sourceType?: string
+  sourceId?: string
+}
+
+export type OperationalQueue = {
+  id: string
+  queueType: string
+  title: string
+  count: number
+  highestPriority: 'low' | 'medium' | 'high' | 'urgent'
+  highestPriorityScore: number
+  status: string
+  reason: string
+  nextAction: string
+  operationalStateIds: string[]
+  linkedChildIds: string[]
+  linkedStaffIds: string[]
+  linkedHomeIds: string[]
+  evidenceLinks: OperationalStateLink[]
+  chronologyLinks: OperationalStateLink[]
+  regulationRelevance: string[]
+  updatedAt: string
+}
+
+export type EvidenceRelationship = {
+  id: string
+  relationshipType: string
+  sourceType: string
+  sourceId: string
+  sourceLabel: string
+  targetType: string
+  targetId: string
+  targetLabel: string
+  regulationRelevance: string[]
+  chronologyEventIds: string[]
+  operationalStateIds: string[]
+  usedInInspectionReadiness: boolean
+  confidence: string
+}
+
+export type OperationalSearchResult = {
+  id: string
+  resultType: string
+  title: string
+  summary: string
+  href?: string
+  priority: 'low' | 'medium' | 'high' | 'urgent'
+  sourceType?: string
+  sourceId?: string
+  linkedChildId?: string
+  linkedStaffId?: string
+  linkedHomeId?: string
+  evidenceLinks: OperationalStateLink[]
+  chronologyLinks: OperationalStateLink[]
+  regulationRelevance: string[]
+}
+
+export type OperationalStateSnapshot = {
+  generatedAt: string
+  scope: UnknownRecord
+  states: OperationalState[]
+  queues: OperationalQueue[]
+  evidenceRelationships: EvidenceRelationship[]
+  summary: UnknownRecord
+  refresh: UnknownRecord
+}
+
 export type CommandCentreData = {
   children: OsPersonSummary[]
   chronology: ChronologyEvent[]
@@ -53,6 +151,7 @@ export type CommandCentreData = {
   workforce: OperationalRecord[]
   homes: OperationalRecord[]
   attention: AttentionCard[]
+  operationalState: OperationalStateSnapshot
 }
 
 export type YoungPersonOverview = {
@@ -62,6 +161,7 @@ export type YoungPersonOverview = {
   actions: CareAction[]
   evidence: EvidenceItem[]
   documents: HomeDocument[]
+  operationalState: OperationalStateSnapshot
 }
 
 export type SafeguardingDashboard = {
@@ -70,11 +170,13 @@ export type SafeguardingDashboard = {
   actions: CareAction[]
   missingChildVoice: ChronologyEvent[]
   missingOversight: ChronologyEvent[]
+  operationalState: OperationalStateSnapshot
 }
 
 export type StaffDirectory = {
   staff: OperationalRecord[]
   currentUser?: OperationalRecord
+  operationalState: OperationalStateSnapshot
 }
 
 export type InspectionReadiness = {
@@ -108,6 +210,16 @@ function asArray(value: unknown, keys: string[] = ['items', 'records', 'data']):
 
 function strings(value: unknown): string[] {
   return Array.isArray(value) ? value.map(String).filter(Boolean) : []
+}
+
+const emptyOperationalState: OperationalStateSnapshot = {
+  generatedAt: '',
+  scope: {},
+  states: [],
+  queues: [],
+  evidenceRelationships: [],
+  summary: {},
+  refresh: {}
 }
 
 function firstString(row: UnknownRecord, keys: string[], fallback = '') {
@@ -155,6 +267,122 @@ export function mapOperationalRecord(row: UnknownRecord, fallbackType = 'record'
   }
 }
 
+function priority(value: unknown): OperationalState['priority'] {
+  const normalised = String(value || 'medium').toLowerCase()
+  return ['low', 'medium', 'high', 'urgent'].includes(normalised) ? normalised as OperationalState['priority'] : 'medium'
+}
+
+function mapOperationalLink(row: UnknownRecord): OperationalStateLink {
+  return {
+    linkType: firstString(row, ['link_type', 'linkType'], 'source'),
+    id: firstString(row, ['id', 'source_id', 'sourceId'], ''),
+    label: firstString(row, ['label', 'title'], 'Source'),
+    href: firstString(row, ['href', 'url'], '') || undefined,
+    sourceType: firstString(row, ['source_type', 'sourceType'], '') || undefined
+  }
+}
+
+function mapOperationalState(row: UnknownRecord): OperationalState {
+  return {
+    id: firstString(row, ['id'], ''),
+    stateType: firstString(row, ['state_type', 'stateType'], 'operational_state'),
+    category: firstString(row, ['category'], 'workflow'),
+    title: firstString(row, ['title'], 'Operational state'),
+    severity: firstString(row, ['severity'], 'medium'),
+    priority: priority(row.priority),
+    priorityScore: Number(row.priority_score ?? row.priorityScore ?? 50),
+    scopeType: firstString(row, ['scope_type', 'scopeType'], 'provider'),
+    linkedChildId: firstString(row, ['linked_child_id', 'linkedChildId'], '') || undefined,
+    linkedStaffId: firstString(row, ['linked_staff_id', 'linkedStaffId'], '') || undefined,
+    linkedHomeId: firstString(row, ['linked_home_id', 'linkedHomeId'], '') || undefined,
+    linkedDocumentId: firstString(row, ['linked_document_id', 'linkedDocumentId'], '') || undefined,
+    reason: firstString(row, ['reason', 'summary'], 'Needs review.'),
+    createdAt: firstString(row, ['created_at', 'createdAt'], ''),
+    updatedAt: firstString(row, ['updated_at', 'updatedAt'], ''),
+    nextAction: firstString(row, ['next_action', 'nextAction'], 'Review the source record.'),
+    evidenceLinks: asArray(row.evidence_links || row.evidenceLinks).map(mapOperationalLink),
+    chronologyLinks: asArray(row.chronology_links || row.chronologyLinks).map(mapOperationalLink),
+    regulationRelevance: strings(row.regulation_relevance || row.regulationRelevance),
+    reviewRequired: Boolean(row.review_required ?? row.reviewRequired ?? true),
+    resolved: Boolean(row.resolved),
+    status: firstString(row, ['status'], 'needs review'),
+    sourceType: firstString(row, ['source_type', 'sourceType'], '') || undefined,
+    sourceId: firstString(row, ['source_id', 'sourceId'], '') || undefined
+  }
+}
+
+function mapOperationalQueue(row: UnknownRecord): OperationalQueue {
+  return {
+    id: firstString(row, ['id'], ''),
+    queueType: firstString(row, ['queue_type', 'queueType'], 'operational_queue'),
+    title: firstString(row, ['title'], 'Operational queue'),
+    count: Number(row.count || 0),
+    highestPriority: priority(row.highest_priority || row.highestPriority),
+    highestPriorityScore: Number(row.highest_priority_score ?? row.highestPriorityScore ?? 50),
+    status: firstString(row, ['status'], 'needs review'),
+    reason: firstString(row, ['reason'], 'Needs review.'),
+    nextAction: firstString(row, ['next_action', 'nextAction'], 'Review source records.'),
+    operationalStateIds: strings(row.operational_state_ids || row.operationalStateIds),
+    linkedChildIds: strings(row.linked_child_ids || row.linkedChildIds),
+    linkedStaffIds: strings(row.linked_staff_ids || row.linkedStaffIds),
+    linkedHomeIds: strings(row.linked_home_ids || row.linkedHomeIds),
+    evidenceLinks: asArray(row.evidence_links || row.evidenceLinks).map(mapOperationalLink),
+    chronologyLinks: asArray(row.chronology_links || row.chronologyLinks).map(mapOperationalLink),
+    regulationRelevance: strings(row.regulation_relevance || row.regulationRelevance),
+    updatedAt: firstString(row, ['updated_at', 'updatedAt'], '')
+  }
+}
+
+function mapEvidenceRelationship(row: UnknownRecord): EvidenceRelationship {
+  return {
+    id: firstString(row, ['id'], ''),
+    relationshipType: firstString(row, ['relationship_type', 'relationshipType'], 'relationship'),
+    sourceType: firstString(row, ['source_type', 'sourceType'], ''),
+    sourceId: firstString(row, ['source_id', 'sourceId'], ''),
+    sourceLabel: firstString(row, ['source_label', 'sourceLabel'], 'Source'),
+    targetType: firstString(row, ['target_type', 'targetType'], ''),
+    targetId: firstString(row, ['target_id', 'targetId'], ''),
+    targetLabel: firstString(row, ['target_label', 'targetLabel'], 'Target'),
+    regulationRelevance: strings(row.regulation_relevance || row.regulationRelevance),
+    chronologyEventIds: strings(row.chronology_event_ids || row.chronologyEventIds),
+    operationalStateIds: strings(row.operational_state_ids || row.operationalStateIds),
+    usedInInspectionReadiness: Boolean(row.used_in_inspection_readiness ?? row.usedInInspectionReadiness),
+    confidence: firstString(row, ['confidence'], 'deterministic')
+  }
+}
+
+function mapOperationalSearchResult(row: UnknownRecord): OperationalSearchResult {
+  return {
+    id: firstString(row, ['id'], ''),
+    resultType: firstString(row, ['result_type', 'resultType'], 'record'),
+    title: firstString(row, ['title'], 'Search result'),
+    summary: firstString(row, ['summary'], ''),
+    href: firstString(row, ['href'], '') || undefined,
+    priority: priority(row.priority),
+    sourceType: firstString(row, ['source_type', 'sourceType'], '') || undefined,
+    sourceId: firstString(row, ['source_id', 'sourceId'], '') || undefined,
+    linkedChildId: firstString(row, ['linked_child_id', 'linkedChildId'], '') || undefined,
+    linkedStaffId: firstString(row, ['linked_staff_id', 'linkedStaffId'], '') || undefined,
+    linkedHomeId: firstString(row, ['linked_home_id', 'linkedHomeId'], '') || undefined,
+    evidenceLinks: asArray(row.evidence_links || row.evidenceLinks).map(mapOperationalLink),
+    chronologyLinks: asArray(row.chronology_links || row.chronologyLinks).map(mapOperationalLink),
+    regulationRelevance: strings(row.regulation_relevance || row.regulationRelevance)
+  }
+}
+
+function mapOperationalSnapshot(value: unknown): OperationalStateSnapshot {
+  const row = asObject(value)
+  return {
+    generatedAt: firstString(row, ['generated_at', 'generatedAt'], ''),
+    scope: asObject(row.scope),
+    states: asArray(row.states).map(mapOperationalState),
+    queues: asArray(row.queues).map(mapOperationalQueue),
+    evidenceRelationships: asArray(row.evidence_relationships || row.evidenceRelationships || row.relationships).map(mapEvidenceRelationship),
+    summary: asObject(row.summary),
+    refresh: asObject(row.refresh)
+  }
+}
+
 function sourceFor(results: Array<OsApiResult<unknown>>): OsApiResult<unknown>['source'] {
   return results.some((result) => result.source === 'live') ? 'live' : 'unavailable'
 }
@@ -180,7 +408,35 @@ function isOpenStatus(value: string | undefined) {
   return !value || /open|active|review|overdue|pending|in_progress|monitor/i.test(value)
 }
 
+function attentionTheme(queueType: string): AttentionCard['theme'] {
+  if (queueType.includes('safeguarding')) return 'safeguarding'
+  if (queueType.includes('evidence') || queueType.includes('inspection')) return 'compliance'
+  if (queueType.includes('document') || queueType.includes('sign')) return 'documentation'
+  if (queueType.includes('staff') || queueType.includes('management')) return 'administration'
+  return 'operational_risk'
+}
+
 function buildAttentionCards(data: Omit<CommandCentreData, 'attention'>): AttentionCard[] {
+  const queueCards = data.operationalState.queues.slice(0, 6).map((queue, index): AttentionCard => ({
+    id: queue.id,
+    priority: index + 1,
+    theme: attentionTheme(queue.queueType),
+    title: queue.title,
+    body: queue.reason || queue.nextAction,
+    href: queue.queueType.includes('safeguarding')
+      ? '/safeguarding'
+      : queue.queueType.includes('inspection')
+        ? '/ofsted-readiness'
+        : queue.queueType.includes('evidence')
+          ? '/evidence'
+          : queue.queueType.includes('staff')
+            ? '/staff'
+            : '/dashboard',
+    count: queue.count,
+    status: queue.status.replaceAll('_', ' ')
+  }))
+  if (queueCards.length) return queueCards
+
   const safeguardingOpen = data.safeguarding.filter((item) => isOpenStatus(item.status))
   const highChronology = data.chronology.filter((event) => ['high', 'critical'].includes(event.severity) || event.safeguardingFlags.length)
   const openActions = data.actions.filter((action) => action.status !== 'completed')
@@ -257,14 +513,15 @@ function buildAttentionCards(data: Omit<CommandCentreData, 'attention'>): Attent
 }
 
 export async function getCommandCentre(): Promise<OsApiResult<CommandCentreData>> {
-  const [context, people, chronology, safeguarding, actions, documents, evidence] = await Promise.all([
+  const [context, people, chronology, safeguarding, actions, documents, evidence, operationalState] = await Promise.all([
     osGet<UnknownRecord>('/api/os/context', {}),
     getOsYoungPeople(),
     getOsChronology(),
     osGet<unknown>('/api/safeguarding', {}),
     getOsActions(),
     getOsDocuments(),
-    getOsEvidence()
+    getOsEvidence(),
+    getOperationalStateSnapshot()
   ])
   const contextObject = asObject(context.data)
   const base = {
@@ -275,9 +532,10 @@ export async function getCommandCentre(): Promise<OsApiResult<CommandCentreData>
     documents: documents.data,
     evidence: evidence.data,
     workforce: asArray(contextObject.workforce).map((row) => mapOperationalRecord(row, 'staff')),
-    homes: asArray(contextObject.homes).map((row) => mapOperationalRecord(row, 'home'))
+    homes: asArray(contextObject.homes).map((row) => mapOperationalRecord(row, 'home')),
+    operationalState: operationalState.data
   }
-  return mergeResult([context, people, chronology, safeguarding, actions, documents, evidence], {
+  return mergeResult([context, people, chronology, safeguarding, actions, documents, evidence, operationalState], {
     ...base,
     attention: buildAttentionCards(base)
   })
@@ -288,11 +546,12 @@ export async function getYoungPeople() {
 }
 
 export async function getYoungPersonOverview(id: string): Promise<OsApiResult<YoungPersonOverview>> {
-  const [profile, workspace, documents, evidence] = await Promise.all([
+  const [profile, workspace, documents, evidence, operationalState] = await Promise.all([
     osGet<UnknownRecord>(`/os/young-people/${encodeURIComponent(id)}`, {}),
     getOsYoungPersonWorkspace(id),
     getOsDocuments(),
-    getOsEvidence()
+    getOsEvidence(),
+    getOperationalStateSnapshot({ young_person_id: id })
   ])
   const profileObject = asObject(profile.data)
   const workspaceProfile = workspace.data.youngPerson
@@ -312,13 +571,14 @@ export async function getYoungPersonOverview(id: string): Promise<OsApiResult<Yo
   const chronology = workspace.data.chronology
   const childDocuments = documents.data.filter((document) => String((document as any).youngPersonId || (document as any).young_person_id || '') === id || !((document as any).youngPersonId || (document as any).young_person_id))
   const childEvidence = evidence.data.filter((item) => !item.youngPersonId || item.youngPersonId === id)
-  return mergeResult([profile, workspace, documents, evidence], {
+  return mergeResult([profile, workspace, documents, evidence, operationalState], {
     profile: mappedProfile,
     chronology,
     safeguarding: chronology.filter((event) => event.safeguardingFlags.length || `${event.title} ${event.category}`.toLowerCase().includes('safeguard')),
     actions: workspace.data.actions,
     evidence: childEvidence,
-    documents: childDocuments
+    documents: childDocuments,
+    operationalState: operationalState.data
   })
 }
 
@@ -353,10 +613,11 @@ export async function getChronology(params: Parameters<typeof getOsChronology>[0
 }
 
 export async function getSafeguardingDashboard(youngPersonId?: string): Promise<OsApiResult<SafeguardingDashboard>> {
-  const [records, chronology, actions] = await Promise.all([
+  const [records, chronology, actions, operationalState] = await Promise.all([
     osGet<unknown>('/api/safeguarding', {}),
     osGet<UnknownRecord[]>(`/os/chronology${queryString({ safeguarding_only: true, young_person_id: youngPersonId })}`, []),
-    getOsActions({ sourceType: 'safeguarding' })
+    getOsActions({ sourceType: 'safeguarding' }),
+    getOperationalStateSnapshot({ young_person_id: youngPersonId })
   ])
   const events = Array.isArray(chronology.data) ? chronology.data.map(mapOsChronology) : []
   const missingChildVoice = events.filter((event) => {
@@ -367,12 +628,13 @@ export async function getSafeguardingDashboard(youngPersonId?: string): Promise<
     const text = `${event.title} ${event.summary} ${event.tags.join(' ')}`.toLowerCase()
     return !/manager|oversight|review|rm|ri/.test(text)
   })
-  return mergeResult([records, chronology, actions], {
+  return mergeResult([records, chronology, actions, operationalState], {
     records: asArray(records.data, ['items', 'safeguarding']).map((row) => mapOperationalRecord(row, 'safeguarding')),
     chronology: events,
     actions: actions.data,
     missingChildVoice,
-    missingOversight
+    missingOversight,
+    operationalState: operationalState.data
   })
 }
 
@@ -435,14 +697,73 @@ export async function getEvidenceLinks() {
 }
 
 export async function getStaff(): Promise<OsApiResult<StaffDirectory>> {
-  const context = await osGet<UnknownRecord>('/api/os/context', {})
+  const [context, operationalState] = await Promise.all([
+    osGet<UnknownRecord>('/api/os/context', {}),
+    getOperationalStateSnapshot()
+  ])
   const contextObject = asObject(context.data)
   const staff = asArray(contextObject.workforce).map((row) => mapOperationalRecord(row, 'staff'))
+  return mergeResult([context, operationalState], {
+    staff,
+    currentUser: staff[0],
+    operationalState: operationalState.data
+  })
+}
+
+export async function getOperationalStateSnapshot(params: {
+  home_id?: string | number
+  young_person_id?: string | number
+  staff_id?: string | number
+  state_type?: string
+} = {}): Promise<OsApiResult<OperationalStateSnapshot>> {
+  const result = await osGet<UnknownRecord>(`/os/operational-states${queryString(params)}`, emptyOperationalState as unknown as UnknownRecord)
   return {
-    ...context,
+    ...result,
+    data: mapOperationalSnapshot(result.data)
+  }
+}
+
+export async function getEvidenceGraph(params: {
+  home_id?: string | number
+  young_person_id?: string | number
+} = {}): Promise<OsApiResult<{ relationships: EvidenceRelationship[]; summary: UnknownRecord }>> {
+  const result = await osGet<UnknownRecord>(`/os/evidence-graph${queryString(params)}`, { relationships: [], summary: {} })
+  const raw = asObject(result.data)
+  return {
+    ...result,
     data: {
-      staff,
-      currentUser: staff[0]
+      relationships: asArray(raw.relationships || raw.evidence_relationships).map(mapEvidenceRelationship),
+      summary: asObject(raw.summary)
+    }
+  }
+}
+
+export async function getOperationalSearch(params: {
+  query?: string
+  young_person_id?: string | number
+  state_type?: string
+  unresolved_only?: boolean
+  safeguarding_relevant?: boolean
+  evidence_gaps_only?: boolean
+  regulation?: string
+  limit?: number
+} = {}): Promise<OsApiResult<{ results: OperationalSearchResult[]; summary: UnknownRecord }>> {
+  const body = {
+    query: params.query || '',
+    state_type: params.state_type,
+    unresolved_only: params.unresolved_only ?? false,
+    safeguarding_relevant: params.safeguarding_relevant ?? false,
+    evidence_gaps_only: params.evidence_gaps_only ?? false,
+    regulation: params.regulation,
+    limit: params.limit || 50
+  }
+  const result = await osPost<UnknownRecord>(`/os/operational-search${queryString({ young_person_id: params.young_person_id })}`, body, { results: [], summary: {} })
+  const raw = asObject(result.data)
+  return {
+    ...result,
+    data: {
+      results: asArray(raw.results).map(mapOperationalSearchResult),
+      summary: asObject(raw.summary)
     }
   }
 }
@@ -460,8 +781,8 @@ export async function getStaffSupervision(staffUserId?: string) {
 }
 
 export async function getOperationalStates() {
-  const command = await getCommandCentre()
-  return { ...command, data: command.data.attention }
+  const snapshot = await getOperationalStateSnapshot()
+  return { ...snapshot, data: snapshot.data.states }
 }
 
 export async function getAssistantContext(youngPersonId?: string) {

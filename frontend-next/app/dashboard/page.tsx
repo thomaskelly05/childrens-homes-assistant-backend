@@ -18,6 +18,7 @@ export default async function DashboardPage() {
   const documentsForReview = data.documents.filter((document) => ['review_required', 'action_plan_open', 'processing'].includes(document.status))
   const reviewEvidence = data.evidence.filter((item) => ['draft', 'partial', 'review_required'].includes(item.quality))
   const recentChronology = data.chronology.slice(0, 8)
+  const priorityStates = data.operationalState.states.slice(0, 8)
 
   return (
     <div className="space-y-6">
@@ -78,6 +79,20 @@ export default async function DashboardPage() {
           </div>
         </Card>
       </section>
+
+      <Card>
+        <SectionHeader eyebrow="Operational state engine" title="Highest priority review indicators" description="Deterministic workflow, evidence and chronology indicators. These are not automated conclusions." />
+        <DataTable
+          headers={['State', 'Priority', 'Why', 'Next action']}
+          rows={priorityStates.map((state) => [
+            <Link key={state.id} href={state.linkedChildId ? `/young-people/${encodeURIComponent(state.linkedChildId)}` : state.category === 'safeguarding' ? '/safeguarding' : state.category === 'inspection' ? '/ofsted-readiness' : state.category === 'evidence' ? '/evidence' : '/dashboard'} className="font-black text-slate-950 hover:text-blue-700">{state.title}</Link>,
+            <StatusBadge key="priority" value={state.priority} />,
+            state.reason,
+            state.nextAction
+          ])}
+          empty={<EmptyState title="No operational states returned" description="The backend did not return unresolved operational states for this session." />}
+        />
+      </Card>
 
       <section className="grid gap-6 xl:grid-cols-2">
         <Card>

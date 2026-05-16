@@ -13,6 +13,7 @@ from repositories.reports_repository import list_reports
 from repositories.workspaces_repository import adult_workspace, young_person_workspace
 from services.assistant_context_service import SharedAssistantContext
 from services.os_chronology_service import list_chronology
+from services.operational_state_service import operational_state_service
 
 
 @dataclass
@@ -199,6 +200,30 @@ class AssistantRetrievalService:
                 for item in workspace_payload.get(key) or []:
                     sources.append(_normalise_source(item, key.rstrip("s") or "record"))
 
+        operational_snapshot = operational_state_service.build_snapshot(
+            current_user=current_user,
+            chronology=chronology,
+            actions=actions,
+            evidence=evidence,
+            documents=documents,
+            workforce=[],
+            scope=filters,
+        )
+        operational_state_sources = [
+            {
+                "source_type": "operational_state",
+                "source_id": state.id,
+                "title": state.title,
+                "summary": f"{state.reason} Next action: {state.next_action}",
+                "date_time": state.updated_at,
+                "confidence": "deterministic",
+                "source_quality": "review_indicator",
+                "regulation_links": [{"label": ref, "type": "regulation"} for ref in state.regulation_relevance],
+            }
+            for state in operational_snapshot.states[:8]
+        ]
+        sources.extend(_normalise_source(item, "operational_state") for item in operational_state_sources)
+
         ranked = _sort_sources(message, sources, context)
         selected = ranked[: max(1, min(limit, 40))]
         open_actions = [
@@ -221,6 +246,19 @@ class AssistantRetrievalService:
                     "severity": "review",
                 }
             )
+        for state in operational_snapshot.states:
+            if state.category == "evidence" and state.id not in {str(gap.get("source_id")) for gap in gaps}:
+                gaps.append(
+                    {
+                        "area": "operational_state",
+                        "gap": state.reason,
+                        "source_id": state.id,
+                        "severity": state.priority,
+                        "next_action": state.next_action,
+                    }
+                )
+            if len(gaps) >= 8:
+                break
 
         regulatory_links: list[dict[str, Any]] = []
         for source in selected:
@@ -251,6 +289,18 @@ class AssistantRetrievalService:
                     "source_id": action.get("source_id"),
                 }
                 for action in open_actions
+            ] + [
+                {
+                    "id": state.id,
+                    "title": state.title,
+                    "priority": state.priority,
+                    "status": state.status,
+                    "route": "/dashboard",
+                    "source_type": "operational_state",
+                    "source_id": state.id,
+                    "review_required": state.review_required,
+                }
+                for state in operational_snapshot.states[:4]
             ],
             evidence_gaps=gaps,
             regulatory_links=regulatory_links[:12],

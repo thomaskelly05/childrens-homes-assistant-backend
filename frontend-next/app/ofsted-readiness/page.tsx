@@ -23,6 +23,7 @@ export default async function OfstedReadinessPage() {
   const reg45Evidence = command.data.documents.filter((document) => document.documentType.includes('reg45') || document.regulation?.includes('45'))
   const safeguardingEvidence = command.data.chronology.filter((event) => event.safeguardingFlags.length || event.category.toLowerCase().includes('safeguard'))
   const childVoiceMarkers = command.data.chronology.filter((event) => /child voice|said|told|wanted|wishes/i.test(`${event.title} ${event.summary} ${event.fullText} ${event.tags.join(' ')}`))
+  const inspectionStates = command.data.operationalState.states.filter((state) => ['inspection', 'evidence', 'documents'].includes(state.category)).slice(0, 10)
 
   return (
     <div className="space-y-6">
@@ -42,6 +43,7 @@ export default async function OfstedReadinessPage() {
         <StatCard label="Child voice markers" value={childVoiceMarkers.length} detail="Visible wishes/feelings markers" href="/chronology" />
         <StatCard label="Documents for review" value={documentReview.length} detail="Review or sign-off needed" href="/documents" />
         <StatCard label="Open actions" value={command.data.actions.filter((action) => action.status !== 'completed').length} detail="Follow-up evidence queue" href="/actions" />
+        <StatCard label="Review indicators" value={inspectionStates.length} detail="Operational states linked to readiness" href="/ofsted-readiness" />
       </section>
       <Card>
         <SectionHeader eyebrow="Backend readiness pack" title="Returned readiness fields" description="Raw fields are shown as operational evidence, not an inspection judgement." />
@@ -76,6 +78,19 @@ export default async function OfstedReadinessPage() {
           />
         </Card>
       </section>
+      <Card>
+        <SectionHeader eyebrow="Operational states" title="Inspection readiness indicators" description="Review prompts are evidence and workflow indicators, not an inspection judgement." />
+        <DataTable
+          headers={['Indicator', 'Priority', 'Regulation', 'Next action']}
+          rows={inspectionStates.map((state) => [
+            state.title,
+            <StatusBadge key={state.id} value={state.priority} />,
+            state.regulationRelevance.join(', ') || 'Not mapped',
+            state.nextAction
+          ])}
+          empty={<EmptyState title="No inspection operational states" description="No unresolved inspection readiness states were returned." />}
+        />
+      </Card>
       <section className="grid gap-6 xl:grid-cols-2">
         <Card>
           <SectionHeader eyebrow="Regulatory mapping" title="Framework areas" description="Routes exist for SCCIF, Quality Standards, Children’s Homes Regulations, Reg 44, Reg 45, Reg 40 and Annex A readiness; typed backend DTOs remain the next step." />

@@ -12,6 +12,7 @@ This document maps the main operational records to storage, APIs, frontend views
 | Documents | Document metadata, file storage and extraction pipeline | `/os/documents`, `/documents/*`, document engine routes | Documents workspace and document detail links | Document uploads can become chronology/evidence context | Evidence links, stale document checks and inspection packs | Retrieved as document sources when in scope |
 | Evidence | Evidence repository and coverage helpers | `/os/evidence`, `/os/evidence/attach`, `/evidence/*` | Evidence workspace and linked panels | Evidence IDs on chronology entries | Inspection readiness, Annex A and reports | Retrieved as evidence sources and evidence gaps |
 | Actions/handover | Action and handover repositories | `/os/actions`, handover routes | Actions, handover and shift pages | Actions linked to chronology entries | Follow-up and readiness evidence | Suggested actions and related records |
+| Operational states | Derived from chronology, actions, evidence, documents and workforce projections | `/os/operational-states`, `/os/operational-queues`, `/os/evidence-graph`, `/os/operational-search` | Command Centre, Young Person, Staff, Safeguarding, Inspection, Governance, Search | Chronology links become review indicators | Evidence graph links states to evidence, documents and regulations | Assistant receives a minimal context brief with highest priority review indicators |
 
 ## Save/load flow
 
@@ -34,3 +35,7 @@ Reports should use actual records from chronology, evidence, documents and works
 Embedded assistants and Orb build a shared context from the active page, selected child/home/record and visible record IDs. Retrieval then collects scoped chronology, actions, evidence, documents, reports and workspace data before building citations and evidence gaps.
 
 Standalone assistant intentionally skips this operational flow.
+
+## Operational state flow
+
+Operational states are recomputed from permitted source records on read. They are review indicators, not conclusions. Source record changes should invalidate chronology, dashboard and operational queue projections through the refresh events returned by the operational state snapshot.

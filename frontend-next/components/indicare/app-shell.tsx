@@ -54,6 +54,7 @@ const navItems: NavItem[] = [
   { section: 'Global', href: '/chronology', label: 'Chronology', icon: Clock3, permissions: ['records:read'], activeRoots: ['chronology'] },
   { section: 'Global', href: '/documents', label: 'Documents & Evidence', icon: FolderOpen, permissions: ['records:read'], activeRoots: ['documents', 'evidence'] },
   { section: 'Global', href: '/ofsted-readiness', label: 'Inspection Readiness', icon: SearchCheck, permissions: ['reports:read'], activeRoots: ['ofsted-readiness', 'regulatory', 'reg44'] },
+  { section: 'Global', href: '/search', label: 'Operational Search', icon: SearchCheck, permissions: ['records:read'], activeRoots: ['search'] },
   { section: 'Global', href: '/settings', label: 'Governance', icon: Settings, permissions: ['settings:read', 'settings:manage'], activeRoots: ['settings'] },
   { section: 'Global', href: '/assistant', label: 'Assistant / ORB', icon: Sparkles, permissions: ['assistant:access'], activeRoots: ['assistant'] },
   { section: 'Global', href: '/setup', label: 'Provider Settings', icon: Building2, permissions: ['settings:read', 'settings:manage'], activeRoots: ['setup'] },

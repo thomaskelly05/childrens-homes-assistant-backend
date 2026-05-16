@@ -118,6 +118,7 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
         "inspection",
         (
             "routers.operational_intelligence_routes",
+            "routers.operational_state_routes",
             "routers.inspection_os_routes",
             "routers.inspection_readiness_routes",
             "routers.rm_dashboard_routes",

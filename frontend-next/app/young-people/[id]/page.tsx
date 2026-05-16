@@ -16,6 +16,7 @@ export default async function YoungPersonDetailPage({ params }: { params: Promis
   const safeguarding = data.safeguarding
   const childVoiceMarkers = data.chronology.filter((event) => /child voice|said|told|wanted|wishes/i.test(`${event.title} ${event.summary} ${event.fullText} ${event.tags.join(' ')}`))
   const managerReview = data.chronology.filter((event) => /manager|oversight|review|rm|ri/i.test(`${event.title} ${event.summary} ${event.tags.join(' ')}`))
+  const operationalStates = data.operationalState.states.slice(0, 6)
   const tabs = [
     { label: 'Overview', href: '#overview' },
     { label: 'Records', href: '#records' },
@@ -58,7 +59,7 @@ export default async function YoungPersonDetailPage({ params }: { params: Promis
             </div>
             <div className="rounded-[24px] border border-slate-100 bg-slate-50/70 p-5">
               <h3 className="text-lg font-black text-slate-950">Operational state</h3>
-              <p className="mt-2 text-sm leading-7 text-slate-600">{data.actions.length ? `${data.actions.length} open or linked actions are visible.` : 'No linked actions were returned for this child.'}</p>
+              <p className="mt-2 text-sm leading-7 text-slate-600">{operationalStates.length ? `${operationalStates.length} review indicators are visible.` : 'No unresolved operational states were returned for this child.'}</p>
               <p className="mt-2 text-sm leading-7 text-slate-600">{data.evidence.length ? `${data.evidence.length} evidence items are visible.` : 'No linked evidence was returned for this child.'}</p>
             </div>
             <div className="rounded-[24px] border border-slate-100 bg-slate-50/70 p-5">
@@ -94,6 +95,20 @@ export default async function YoungPersonDetailPage({ params }: { params: Promis
           body: event.summary || 'No summary was returned for this event.',
           href: `/chronology/${encodeURIComponent(event.id)}`
         }))} />
+      </Card>
+
+      <Card>
+        <SectionHeader eyebrow="Operational awareness" title="Review indicators for this child" description="Calm operational prompts derived from visible workflow, evidence and chronology signals." />
+        <DataTable
+          headers={['Indicator', 'Priority', 'Reason', 'Next action']}
+          rows={operationalStates.map((state) => [
+            state.title,
+            <StatusBadge key={state.id} value={state.priority} />,
+            state.reason,
+            state.nextAction
+          ])}
+          empty={<EmptyState title="No child operational states" description="No unresolved operational states were returned for this child." />}
+        />
       </Card>
 
       <section id="records" className="grid gap-6 xl:grid-cols-2">

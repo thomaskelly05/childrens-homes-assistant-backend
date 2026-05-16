@@ -19,6 +19,7 @@ export default async function SafeguardingPage({
   const dashboard = await getSafeguardingDashboard(query.young_person_id)
   const data = dashboard.data
   const openRecords = data.records.filter((record) => record.status !== 'closed')
+  const safeguardingStates = data.operationalState.states.filter((state) => state.category === 'safeguarding' || state.stateType.includes('child_voice')).slice(0, 8)
   return (
     <div className="space-y-6">
       <PageHeader
@@ -34,6 +35,7 @@ export default async function SafeguardingPage({
         <StatCard label="Possible child voice gaps" value={data.missingChildVoice.length} detail="Needs professional review" />
         <StatCard label="Possible oversight gaps" value={data.missingOversight.length} detail="Manager review marker not visible" />
         <StatCard label="Evidence links" value={data.chronology.filter((event) => event.evidenceIds.length).length} detail="Chronology events with evidence IDs" />
+        <StatCard label="Review indicators" value={safeguardingStates.length} detail="Operational states linked to safeguarding" />
       </section>
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
         <Card>
@@ -60,6 +62,19 @@ export default async function SafeguardingPage({
           </div>
         </Card>
       </section>
+      <Card>
+        <SectionHeader eyebrow="Operational states" title="Safeguarding review indicators" description="Workflow and evidence markers only; no automated safeguarding conclusion is made." />
+        <DataTable
+          headers={['Indicator', 'Priority', 'Reason', 'Next action']}
+          rows={safeguardingStates.map((state) => [
+            state.title,
+            <StatusBadge key={state.id} value={state.priority} />,
+            state.reason,
+            state.nextAction
+          ])}
+          empty={<EmptyState title="No safeguarding operational states" description="No unresolved safeguarding states were returned for this session." />}
+        />
+      </Card>
       <Card>
         <SectionHeader eyebrow="Register" title="Concern details and next action" />
         <DataTable
