@@ -70,6 +70,7 @@ const navItems: NavItem[] = [
 const recordWorkspaceRoots = ['actions', 'reports', 'evidence', 'documents', 'chronology', 'daily-logs', 'incidents', 'safeguarding', 'medication', 'health', 'keywork', 'appointments', 'risk-assessments', 'reg44']
 const childContextRequiredRoots = ['actions', 'reports']
 const e2eUiMode = process.env.NEXT_PUBLIC_E2E_TEST_MODE === '1' && process.env.NODE_ENV !== 'production'
+const e2eWorkspaceHydrationBypass = process.env.NEXT_PUBLIC_E2E_TEST_MODE === '1' && process.env.NODE_ENV !== 'production'
 
 function selectedYoungPersonId(pathname: string) {
   const parts = pathname.split('/').filter(Boolean)
@@ -137,6 +138,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const routeRequiresChildContext = pathParts.length === 1 && childContextRequiredRoots.includes(pathParts[0] || '')
   const childContextRedirect = activeChild && routeRequiresChildContext ? childScopedHref(`/${pathParts[0]}`) : null
   const requiresWorkspaceHydration = !e2eUiMode && routeRequiresChildWorkspace(pathname, typeof window === 'undefined' ? null : new URLSearchParams(window.location.search))
+  const requiresWorkspaceHydration = !e2eWorkspaceHydrationBypass && routeRequiresChildWorkspace(pathname, typeof window === 'undefined' ? null : new URLSearchParams(window.location.search))
 
   useEffect(() => {
     if (childContextRedirect && childContextRedirect !== pathname) {

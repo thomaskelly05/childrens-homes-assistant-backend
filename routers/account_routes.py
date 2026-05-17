@@ -3,12 +3,13 @@ from __future__ import annotations
 import base64
 import binascii
 import re
+import json
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from passlib.context import CryptContext
 from pydantic import BaseModel, Field
-from psycopg2.extras import RealDictCursor
+from psycopg2.extras import Json, RealDictCursor
 
 from auth.session_user import get_current_user
 from db.connection import get_db
@@ -18,11 +19,30 @@ router = APIRouter(
     tags=["Account"],
     dependencies=[Depends(get_current_user)],
 )
+compat_router = APIRouter(
+    prefix="/api",
+    tags=["Account compatibility"],
+    dependencies=[Depends(get_current_user)],
+)
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 ALLOWED_PROFILE_IMAGE_MIME_TYPES = {"image/png", "image/jpeg", "image/webp"}
 MAX_PROFILE_IMAGE_BYTES = 1_500_000
+CRITICAL_DASHBOARD_WIDGETS = (
+    "safeguarding-open",
+    "child-wellbeing",
+    "operational-actions",
+)
+RECOMMENDED_DASHBOARD_WIDGET_ORDER = (
+    *CRITICAL_DASHBOARD_WIDGETS,
+    "my-children",
+    "my-recent-records",
+    "my-pinned-templates",
+    "documents-review",
+    "inspection-evidence",
+    "child-voice",
+)
 
 PREFERENCES_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS user_profile_preferences (
@@ -36,11 +56,34 @@ CREATE TABLE IF NOT EXISTS user_profile_preferences (
     assistant_tone TEXT DEFAULT 'professional',
     compact_mode BOOLEAN DEFAULT FALSE,
     email_notifications BOOLEAN DEFAULT TRUE,
+    role_title TEXT,
+    operational_focus TEXT,
+    dashboard_preferences JSONB DEFAULT '{}'::jsonb,
+    pinned_widgets JSONB DEFAULT '[]'::jsonb,
+    hidden_optional_widgets JSONB DEFAULT '[]'::jsonb,
+    widget_order JSONB DEFAULT '[]'::jsonb,
+    favourite_children JSONB DEFAULT '[]'::jsonb,
+    favourite_templates JSONB DEFAULT '[]'::jsonb,
+    quick_actions JSONB DEFAULT '[]'::jsonb,
+    recent_activity JSONB DEFAULT '[]'::jsonb,
     notes TEXT,
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now()
 )
 """
+
+PREFERENCES_ALTER_SQL = (
+    "ALTER TABLE user_profile_preferences ADD COLUMN IF NOT EXISTS role_title TEXT",
+    "ALTER TABLE user_profile_preferences ADD COLUMN IF NOT EXISTS operational_focus TEXT",
+    "ALTER TABLE user_profile_preferences ADD COLUMN IF NOT EXISTS dashboard_preferences JSONB DEFAULT '{}'::jsonb",
+    "ALTER TABLE user_profile_preferences ADD COLUMN IF NOT EXISTS pinned_widgets JSONB DEFAULT '[]'::jsonb",
+    "ALTER TABLE user_profile_preferences ADD COLUMN IF NOT EXISTS hidden_optional_widgets JSONB DEFAULT '[]'::jsonb",
+    "ALTER TABLE user_profile_preferences ADD COLUMN IF NOT EXISTS widget_order JSONB DEFAULT '[]'::jsonb",
+    "ALTER TABLE user_profile_preferences ADD COLUMN IF NOT EXISTS favourite_children JSONB DEFAULT '[]'::jsonb",
+    "ALTER TABLE user_profile_preferences ADD COLUMN IF NOT EXISTS favourite_templates JSONB DEFAULT '[]'::jsonb",
+    "ALTER TABLE user_profile_preferences ADD COLUMN IF NOT EXISTS quick_actions JSONB DEFAULT '[]'::jsonb",
+    "ALTER TABLE user_profile_preferences ADD COLUMN IF NOT EXISTS recent_activity JSONB DEFAULT '[]'::jsonb",
+)
 
 
 class ProfileUpdatePayload(BaseModel):
@@ -55,7 +98,33 @@ class ProfileUpdatePayload(BaseModel):
     assistant_tone: str | None = Field(default="professional", max_length=32)
     compact_mode: bool | None = False
     email_notifications: bool | None = True
+    role_title: str | None = Field(default=None, max_length=160)
+    operational_focus: str | None = Field(default=None, max_length=1000)
+    dashboard_preferences: dict[str, Any] | None = None
+    pinned_widgets: list[str] | None = None
+    hidden_optional_widgets: list[str] | None = None
+    widget_order: list[str] | None = None
+    favourite_children: list[str] | None = None
+    favourite_templates: list[str] | None = None
+    quick_actions: list[str] | None = None
     notes: str | None = Field(default=None, max_length=2000)
+
+
+class DashboardPreferencesPayload(BaseModel):
+    dashboard_preferences: dict[str, Any] | None = None
+    pinned_widgets: list[str] | None = None
+    hidden_optional_widgets: list[str] | None = None
+    widget_order: list[str] | None = None
+    favourite_children: list[str] | None = None
+    favourite_templates: list[str] | None = None
+    quick_actions: list[str] | None = None
+    operational_focus: str | None = Field(default=None, max_length=1000)
+    layout_density: str | None = Field(default=None, max_length=32)
+    last_selected_home: str | int | None = None
+
+
+class AvatarPayload(BaseModel):
+    profile_image_data: str = Field(..., max_length=2_500_000)
 
 
 class PasswordChangePayload(BaseModel):
@@ -126,6 +195,8 @@ def _column_exists(conn, table_name: str, column_name: str) -> bool:
 def _ensure_preferences_table(conn) -> None:
     with conn.cursor() as cur:
         cur.execute(PREFERENCES_TABLE_SQL)
+        for statement in PREFERENCES_ALTER_SQL:
+            cur.execute(statement)
     conn.commit()
 
 
@@ -187,6 +258,16 @@ def _get_preferences(conn, user_id: int) -> dict[str, Any]:
                 assistant_tone,
                 compact_mode,
                 email_notifications,
+                role_title,
+                operational_focus,
+                dashboard_preferences,
+                pinned_widgets,
+                hidden_optional_widgets,
+                widget_order,
+                favourite_children,
+                favourite_templates,
+                quick_actions,
+                recent_activity,
                 notes,
                 updated_at
             FROM user_profile_preferences
@@ -207,6 +288,16 @@ def _get_preferences(conn, user_id: int) -> dict[str, Any]:
         "assistant_tone": "professional",
         "compact_mode": False,
         "email_notifications": True,
+        "role_title": None,
+        "operational_focus": None,
+        "dashboard_preferences": {},
+        "pinned_widgets": [],
+        "hidden_optional_widgets": [],
+        "widget_order": [],
+        "favourite_children": [],
+        "favourite_templates": [],
+        "quick_actions": [],
+        "recent_activity": [],
         "notes": None,
     }
 
@@ -229,6 +320,8 @@ def _profile_payload(conn, user_id: int) -> dict[str, Any]:
             **preferences,
             "display_name": display_name,
             "initials": _initials(display_name),
+            "critical_widgets": list(CRITICAL_DASHBOARD_WIDGETS),
+            "recommended_widget_order": list(RECOMMENDED_DASHBOARD_WIDGET_ORDER),
         },
     }
 
@@ -240,6 +333,72 @@ def _initials(name: str) -> str:
     if len(parts) == 1:
         return parts[0][:2].upper()
     return f"{parts[0][0]}{parts[-1][0]}".upper()
+
+
+def _as_json_object(value: Any) -> dict[str, Any]:
+    if value is None:
+        return {}
+    if isinstance(value, dict):
+        return value
+    if isinstance(value, str):
+        try:
+            parsed = json.loads(value)
+        except json.JSONDecodeError:
+            return {}
+        return parsed if isinstance(parsed, dict) else {}
+    return {}
+
+
+def _as_string_list(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, str):
+        try:
+            parsed = json.loads(value)
+            value = parsed
+        except json.JSONDecodeError:
+            value = [value]
+    if not isinstance(value, (list, tuple, set)):
+        return []
+    cleaned: list[str] = []
+    for item in value:
+        text = str(item).strip()
+        if text and text not in cleaned:
+            cleaned.append(text)
+    return cleaned
+
+
+def _normalise_dashboard_payload(payload: DashboardPreferencesPayload | ProfileUpdatePayload) -> dict[str, Any]:
+    dashboard_preferences = _as_json_object(getattr(payload, "dashboard_preferences", None))
+    density = _clean(getattr(payload, "layout_density", None))
+    if density:
+        dashboard_preferences["layout_density"] = density if density in {"comfortable", "compact"} else "comfortable"
+    last_selected_home = getattr(payload, "last_selected_home", None)
+    if last_selected_home not in (None, ""):
+        dashboard_preferences["last_selected_home"] = str(last_selected_home)
+
+    hidden_optional_widgets = [
+        widget
+        for widget in _as_string_list(getattr(payload, "hidden_optional_widgets", None))
+        if widget not in CRITICAL_DASHBOARD_WIDGETS
+    ]
+    widget_order = _as_string_list(getattr(payload, "widget_order", None))
+    if not widget_order:
+        widget_order = list(RECOMMENDED_DASHBOARD_WIDGET_ORDER)
+    for critical in reversed(CRITICAL_DASHBOARD_WIDGETS):
+        if critical in widget_order:
+            widget_order.remove(critical)
+        widget_order.insert(0, critical)
+
+    return {
+        "dashboard_preferences": dashboard_preferences,
+        "pinned_widgets": _as_string_list(getattr(payload, "pinned_widgets", None)),
+        "hidden_optional_widgets": hidden_optional_widgets,
+        "widget_order": widget_order,
+        "favourite_children": _as_string_list(getattr(payload, "favourite_children", None)),
+        "favourite_templates": _as_string_list(getattr(payload, "favourite_templates", None)),
+        "quick_actions": _as_string_list(getattr(payload, "quick_actions", None)),
+    }
 
 
 @router.get("/me")
@@ -279,6 +438,10 @@ def update_profile(
         raise HTTPException(status_code=400, detail="Invalid assistant tone.")
 
     image = _validate_profile_image_data_url(_clean(payload.profile_image_data))
+    image = _clean(payload.profile_image_data)
+    if image and not image.startswith("data:image/"):
+        raise HTTPException(status_code=400, detail="Profile image must be an image data URL.")
+    dashboard = _normalise_dashboard_payload(payload)
 
     try:
         _ensure_preferences_table(conn)
@@ -313,10 +476,19 @@ def update_profile(
                     assistant_tone,
                     compact_mode,
                     email_notifications,
+                    role_title,
+                    operational_focus,
+                    dashboard_preferences,
+                    pinned_widgets,
+                    hidden_optional_widgets,
+                    widget_order,
+                    favourite_children,
+                    favourite_templates,
+                    quick_actions,
                     notes,
                     updated_at
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, now())
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, now())
                 ON CONFLICT (user_id) DO UPDATE SET
                     display_name = EXCLUDED.display_name,
                     phone = EXCLUDED.phone,
@@ -327,6 +499,15 @@ def update_profile(
                     assistant_tone = EXCLUDED.assistant_tone,
                     compact_mode = EXCLUDED.compact_mode,
                     email_notifications = EXCLUDED.email_notifications,
+                    role_title = EXCLUDED.role_title,
+                    operational_focus = EXCLUDED.operational_focus,
+                    dashboard_preferences = EXCLUDED.dashboard_preferences,
+                    pinned_widgets = EXCLUDED.pinned_widgets,
+                    hidden_optional_widgets = EXCLUDED.hidden_optional_widgets,
+                    widget_order = EXCLUDED.widget_order,
+                    favourite_children = EXCLUDED.favourite_children,
+                    favourite_templates = EXCLUDED.favourite_templates,
+                    quick_actions = EXCLUDED.quick_actions,
                     notes = EXCLUDED.notes,
                     updated_at = now()
                 """,
@@ -341,6 +522,15 @@ def update_profile(
                     assistant_tone,
                     bool(payload.compact_mode),
                     bool(payload.email_notifications),
+                    _clean(payload.role_title),
+                    _clean(payload.operational_focus),
+                    Json(dashboard["dashboard_preferences"]),
+                    Json(dashboard["pinned_widgets"]),
+                    Json(dashboard["hidden_optional_widgets"]),
+                    Json(dashboard["widget_order"]),
+                    Json(dashboard["favourite_children"]),
+                    Json(dashboard["favourite_templates"]),
+                    Json(dashboard["quick_actions"]),
                     _clean(payload.notes),
                 ),
             )
@@ -354,6 +544,155 @@ def update_profile(
     except Exception as exc:
         conn.rollback()
         raise HTTPException(status_code=500, detail=f"Could not update profile: {exc}") from exc
+
+
+@router.get("/dashboard-preferences")
+def get_dashboard_preferences(
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    profile = _profile_payload(conn, _user_id(current_user))["profile"]
+    return {
+        "ok": True,
+        "dashboard_preferences": _as_json_object(profile.get("dashboard_preferences")),
+        "pinned_widgets": _as_string_list(profile.get("pinned_widgets")),
+        "hidden_optional_widgets": _as_string_list(profile.get("hidden_optional_widgets")),
+        "widget_order": _as_string_list(profile.get("widget_order")) or list(RECOMMENDED_DASHBOARD_WIDGET_ORDER),
+        "favourite_children": _as_string_list(profile.get("favourite_children")),
+        "favourite_templates": _as_string_list(profile.get("favourite_templates")),
+        "quick_actions": _as_string_list(profile.get("quick_actions")),
+        "critical_widgets": list(CRITICAL_DASHBOARD_WIDGETS),
+        "recommended_widget_order": list(RECOMMENDED_DASHBOARD_WIDGET_ORDER),
+        "operational_focus": profile.get("operational_focus"),
+    }
+
+
+@router.put("/dashboard-preferences")
+def update_dashboard_preferences(
+    payload: DashboardPreferencesPayload,
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    user_id = _user_id(current_user)
+    dashboard = _normalise_dashboard_payload(payload)
+    try:
+        _ensure_preferences_table(conn)
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO user_profile_preferences (
+                    user_id,
+                    operational_focus,
+                    dashboard_preferences,
+                    pinned_widgets,
+                    hidden_optional_widgets,
+                    widget_order,
+                    favourite_children,
+                    favourite_templates,
+                    quick_actions,
+                    updated_at
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, now())
+                ON CONFLICT (user_id) DO UPDATE SET
+                    operational_focus = EXCLUDED.operational_focus,
+                    dashboard_preferences = EXCLUDED.dashboard_preferences,
+                    pinned_widgets = EXCLUDED.pinned_widgets,
+                    hidden_optional_widgets = EXCLUDED.hidden_optional_widgets,
+                    widget_order = EXCLUDED.widget_order,
+                    favourite_children = EXCLUDED.favourite_children,
+                    favourite_templates = EXCLUDED.favourite_templates,
+                    quick_actions = EXCLUDED.quick_actions,
+                    updated_at = now()
+                """,
+                (
+                    user_id,
+                    _clean(payload.operational_focus),
+                    Json(dashboard["dashboard_preferences"]),
+                    Json(dashboard["pinned_widgets"]),
+                    Json(dashboard["hidden_optional_widgets"]),
+                    Json(dashboard["widget_order"]),
+                    Json(dashboard["favourite_children"]),
+                    Json(dashboard["favourite_templates"]),
+                    Json(dashboard["quick_actions"]),
+                ),
+            )
+        conn.commit()
+        return get_dashboard_preferences(conn=conn, current_user=current_user)
+    except Exception as exc:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=f"Could not update dashboard preferences: {exc}") from exc
+
+
+@compat_router.get("/profile/dashboard-preferences")
+def get_dashboard_preferences_compat(
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    return get_dashboard_preferences(conn=conn, current_user=current_user)
+
+
+@compat_router.put("/profile/dashboard-preferences")
+def update_dashboard_preferences_compat(
+    payload: DashboardPreferencesPayload,
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    return update_dashboard_preferences(payload, conn=conn, current_user=current_user)
+
+
+@compat_router.post("/profile/avatar")
+def update_profile_avatar(
+    payload: AvatarPayload,
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    image = _clean(payload.profile_image_data)
+    if not image or not image.startswith("data:image/"):
+        raise HTTPException(status_code=400, detail="Profile image must be an image data URL.")
+    user_id = _user_id(current_user)
+    try:
+        _ensure_preferences_table(conn)
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO user_profile_preferences (user_id, profile_image_data, updated_at)
+                VALUES (%s, %s, now())
+                ON CONFLICT (user_id) DO UPDATE SET
+                    profile_image_data = EXCLUDED.profile_image_data,
+                    updated_at = now()
+                """,
+                (user_id, image),
+            )
+        conn.commit()
+        return _profile_payload(conn, user_id)
+    except Exception as exc:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=f"Could not update avatar: {exc}") from exc
+
+
+@compat_router.delete("/profile/avatar")
+def delete_profile_avatar(
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    user_id = _user_id(current_user)
+    try:
+        _ensure_preferences_table(conn)
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE user_profile_preferences
+                SET profile_image_data = NULL,
+                    updated_at = now()
+                WHERE user_id = %s
+                """,
+                (user_id,),
+            )
+        conn.commit()
+        return _profile_payload(conn, user_id)
+    except Exception as exc:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=f"Could not remove avatar: {exc}") from exc
 
 
 @router.post("/change-password")

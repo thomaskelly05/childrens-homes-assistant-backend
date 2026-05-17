@@ -10,6 +10,7 @@ from db.connection import get_db
 from services.young_person_service import YoungPersonService
 
 router = APIRouter(prefix="/young-people", tags=["Young People Profile"])
+compat_router = APIRouter(prefix="/api", tags=["Young People Profile compatibility"])
 
 
 PROVIDER_ROLES = {
@@ -151,6 +152,10 @@ class YoungPersonUpdatePayload(BaseModel):
     summary_risk_level: str | None = None
     photo_url: str | None = None
     archived: bool | None = None
+
+
+class AvatarPayload(BaseModel):
+    profile_image_data: str = Field(..., max_length=2_500_000)
 
 
 class CommunicationProfilePayload(BaseModel):
@@ -557,6 +562,53 @@ def _upsert_section_response(
         data=data,
     )
     return {"ok": True, response_key: row}
+
+
+def _validate_image_data_url(value: str | None) -> str:
+    image = str(value or "").strip()
+    if not image.startswith("data:image/"):
+        raise HTTPException(status_code=400, detail="Profile image must be an image data URL")
+    if ";base64," not in image:
+        raise HTTPException(status_code=400, detail="Profile image must be base64 encoded")
+    return image
+
+
+@compat_router.post("/young-people/{young_person_id}/avatar")
+def update_young_person_avatar(
+    young_person_id: int,
+    payload: AvatarPayload,
+    current_user=Depends(get_current_user),
+):
+    _assert_can_edit(current_user)
+    _load_and_check_young_person(young_person_id, current_user)
+    image = _validate_image_data_url(payload.profile_image_data)
+    try:
+        row = YoungPersonService.update_young_person(young_person_id, {"photo_url": image})
+        if not row:
+            raise HTTPException(status_code=404, detail="Young person not found")
+        return {"ok": True, "young_person": row}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to update avatar: {str(e)}")
+
+
+@compat_router.delete("/young-people/{young_person_id}/avatar")
+def delete_young_person_avatar(
+    young_person_id: int,
+    current_user=Depends(get_current_user),
+):
+    _assert_can_edit(current_user)
+    _load_and_check_young_person(young_person_id, current_user)
+    try:
+        row = YoungPersonService.update_young_person(young_person_id, {"photo_url": None})
+        if not row:
+            raise HTTPException(status_code=404, detail="Young person not found")
+        return {"ok": True, "young_person": row}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to remove avatar: {str(e)}")
 
 
 @router.get("/{young_person_id}/communication-profile")
