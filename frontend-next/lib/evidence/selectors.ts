@@ -1,4 +1,3 @@
-import { demoCareActions, demoEvidenceGaps, demoEvidenceItems } from './demo-data'
 import { CareAction, CareActionStatus, EvidenceGap, EvidenceItem } from './types'
 
 function byDateDesc<T>(items: T[], getDate: (item: T) => string) {
@@ -6,7 +5,7 @@ function byDateDesc<T>(items: T[], getDate: (item: T) => string) {
 }
 
 export function getCareActions(): CareAction[] {
-  return byDateDesc(demoCareActions, (action) => action.createdAt)
+  return byDateDesc([], (action) => action.createdAt)
 }
 
 export function getOpenCareActions(): CareAction[] {
@@ -26,7 +25,7 @@ export function getActionsByRegulation(regulation: string): CareAction[] {
 }
 
 export function getEvidenceItems(): EvidenceItem[] {
-  return byDateDesc(demoEvidenceItems, (item) => item.createdAt)
+  return byDateDesc([], (item) => item.createdAt)
 }
 
 export function getEvidenceByYoungPerson(youngPersonId: string): EvidenceItem[] {
@@ -42,7 +41,7 @@ export function getEvidenceBySource(sourceType: string, sourceId: string): Evide
 }
 
 export function getEvidenceGaps(): EvidenceGap[] {
-  return [...demoEvidenceGaps]
+  return []
 }
 
 export function getEvidenceGapsByYoungPerson(youngPersonId: string): EvidenceGap[] {
