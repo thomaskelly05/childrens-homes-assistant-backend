@@ -25,9 +25,11 @@
   async function extract() {
     const templateId = $("templateId").value || "placement_plan";
     const sourceText = $("sourceText").value || "";
-    const params = new URLSearchParams({ template_id: templateId, source_text: sourceText });
-    const data = await json(`/api/document-os/extraction/demo?${params.toString()}`);
-    $("extractResult").textContent = `Confidence ${data.confidence_score}. Draft only: ${data.draft_only}. ${data.review_notes.join(" ")}`;
+    const data = await json("/api/document-os/extraction", {
+      method: "POST",
+      body: JSON.stringify({ template_id: templateId, source_text: sourceText, upload: {} }),
+    });
+    $("extractResult").textContent = `Confidence ${data.confidence_score}. Draft only: ${data.draft_only}. ${(data.review_notes || []).join(" ")}`;
   }
   document.addEventListener("DOMContentLoaded", () => {
     loadTemplates();
