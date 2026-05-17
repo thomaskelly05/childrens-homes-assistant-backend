@@ -10,7 +10,7 @@ export default async function MyRecordingPage() {
     <div className="space-y-6">
       <PageHeader eyebrow="My recording" title="My rapid recording workspace" description="Complete overdue recording and open quick-add tools for this shift." />
       <LiveDataStatus result={staffResult} />
-      <LiveStaffOperationalWorkspace staff={staffResult.data.currentUser} children={command.data.children} actions={command.data.actions} attention={command.data.attention} />
+      <LiveStaffOperationalWorkspace staff={staffResult.data.currentUser} visibleChildren={command.data.children} actions={command.data.actions} attention={command.data.attention} />
       <RapidRecordingDrawer />
     </div>
   )

@@ -33,11 +33,11 @@ function labelFor(id: string) {
 
 export function DashboardPreferencesPanel({
   initialPreferences,
-  children,
+  visibleChildren,
   templates
 }: {
   initialPreferences: DashboardPreferences
-  children: Array<{ id: string; name: string }>
+  visibleChildren: Array<{ id: string; name: string }>
   templates: Array<{ id: string; title: string }>
 }) {
   const [preferences, setPreferences] = useState(initialPreferences)
@@ -47,7 +47,6 @@ export function DashboardPreferencesPanel({
   const order = preferences.widget_order?.length ? preferences.widget_order : preferences.recommended_widget_order || []
   const pinned = new Set(preferences.pinned_widgets || [])
   const hidden = new Set(preferences.hidden_optional_widgets || [])
-  const favourites = new Set(preferences.favourite_children || [])
 
   function update(next: Partial<DashboardPreferences>) {
     setPreferences((current) => ({ ...current, ...next }))
@@ -141,7 +140,7 @@ export function DashboardPreferencesPanel({
       <div className="grid gap-3 md:grid-cols-2">
         <PreferencePicker
           label="Favourite children"
-          options={children.map((child) => ({ value: child.id, label: child.name }))}
+          options={visibleChildren.map((child) => ({ value: child.id, label: child.name }))}
           selected={preferences.favourite_children || []}
           onChange={(value) => update({ favourite_children: value })}
         />

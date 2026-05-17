@@ -19,7 +19,7 @@ export default async function MyStaffWorkspacePage() {
       />
       <LiveDataStatus result={staffResult} />
       <LiveDataStatus result={command} />
-      <LiveStaffOperationalWorkspace staff={currentStaff} children={command.data.children} actions={command.data.actions} attention={command.data.attention} />
+      <LiveStaffOperationalWorkspace staff={currentStaff} visibleChildren={command.data.children} actions={command.data.actions} attention={command.data.attention} />
     </div>
   )
 }

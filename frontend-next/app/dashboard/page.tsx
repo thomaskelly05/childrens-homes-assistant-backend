@@ -60,7 +60,7 @@ export default async function DashboardPage() {
           <SectionHeader eyebrow="Workspace personalisation" title="Shape a calm workspace" description="Critical safeguarding and action widgets stay visible. Optional widgets, favourites and order can be personalised without breaking operational truth." />
           <DashboardPreferencesPanel
             initialPreferences={profile}
-            children={data.children.map((child) => ({ id: child.id, name: child.preferredName || child.displayName }))}
+            visibleChildren={data.children.map((child) => ({ id: child.id, name: child.preferredName || child.displayName }))}
             templates={templatesFor('child').slice(0, 8).map((template) => ({ id: template.templateId, title: template.title }))}
           />
         </Card>

@@ -325,7 +325,7 @@ export async function getYoungPersonOverview(id: string): Promise<OsApiResult<Yo
   const formulation = asObject(bundle.formulation)
   const contacts = asArray(bundle.contacts)
   const rawProfile = Object.keys(bundlePerson).length ? { ...profileObject, ...bundlePerson } : profileObject
-  const enrichedProfile = {
+  const enrichedProfile: UnknownRecord = {
     ...rawProfile,
     identity_profile: identityProfile,
     communication_profile: communicationProfile,

@@ -7,23 +7,23 @@ import type { OsPersonSummary } from '@/lib/os-api/workspaces'
 
 export function LiveStaffOperationalWorkspace({
   staff,
-  children,
+  visibleChildren,
   actions,
   attention
 }: {
   staff?: OperationalRecord
-  children: OsPersonSummary[]
+  visibleChildren: OsPersonSummary[]
   actions: CareAction[]
   attention: AttentionCard[]
 }) {
   const openActions = actions.filter((action) => action.status !== 'completed')
-  const priorityChildren = children.filter((child) => ['high', 'critical'].includes(String(child.riskLevel || '').toLowerCase()))
+  const priorityChildren = visibleChildren.filter((child) => ['high', 'critical'].includes(String(child.riskLevel || '').toLowerCase()))
   const recentRecords = attention.filter((item) => item.count > 0)
 
   return (
     <>
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Metric label="Visible children" value={children.length} />
+        <Metric label="Visible children" value={visibleChildren.length} />
         <Metric label="Needs attention" value={recentRecords.length} />
         <Metric label="My open actions" value={openActions.length} />
         <Metric label="Priority children" value={priorityChildren.length} />
@@ -69,7 +69,7 @@ export function LiveStaffOperationalWorkspace({
           <SectionHeader eyebrow="My children" title="Children in my visible scope" description="Favourite assignment still needs stored allocation data; until then this table stays provider/home scoped." />
           <DataTable
             headers={['Child', 'Home', 'Status', 'Open']}
-            rows={children.slice(0, 8).map((child) => [
+            rows={visibleChildren.slice(0, 8).map((child) => [
               child.preferredName || child.displayName,
               String(child.home_id || child.homeName || 'Not returned'),
               <StatusBadge key="status" value={child.placementStatus || child.status || 'active'} />,
