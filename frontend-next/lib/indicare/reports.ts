@@ -1,8 +1,9 @@
-import { indicareData } from './demo-data'
 import {
   Incident,
+  Placement,
   ReportRecord,
-  ReportSection
+  ReportSection,
+  YoungPersonSummary
 } from './types'
 import {
   fullName,
@@ -22,8 +23,12 @@ function personLabel(youngPersonId: string) {
   return person ? fullName(person) : 'Young person'
 }
 
+function emptySummary(youngPersonId: string): YoungPersonSummary | undefined {
+  return getYoungPersonSummary(youngPersonId)
+}
+
 export function buildWeeklyCareSummary(youngPersonId: string): ReportSection[] {
-  const summary = getYoungPersonSummary(youngPersonId)
+  const summary = emptySummary(youngPersonId)
   if (!summary) return []
 
   return [
@@ -64,7 +69,7 @@ export function buildWeeklyCareSummary(youngPersonId: string): ReportSection[] {
 }
 
 export function buildRiskReview(youngPersonId: string): ReportSection[] {
-  const summary = getYoungPersonSummary(youngPersonId)
+  const summary = emptySummary(youngPersonId)
   if (!summary) return []
 
   return summary.risks.map((risk) =>
@@ -77,7 +82,7 @@ export function buildRiskReview(youngPersonId: string): ReportSection[] {
 }
 
 export function buildSafeguardingChronology(youngPersonId: string): ReportSection[] {
-  const summary = getYoungPersonSummary(youngPersonId)
+  const summary = emptySummary(youngPersonId)
   if (!summary) return []
 
   return summary.safeguarding.map((event) =>
@@ -90,9 +95,9 @@ export function buildSafeguardingChronology(youngPersonId: string): ReportSectio
 }
 
 export function buildOfstedEvidenceOutline(youngPersonId: string): ReportSection[] {
-  const summary = getYoungPersonSummary(youngPersonId)
+  const summary = emptySummary(youngPersonId)
   const name = personLabel(youngPersonId)
-  const placement = getPlacementForYoungPerson(youngPersonId)
+  const placement: Placement | undefined = getPlacementForYoungPerson(youngPersonId)
 
   if (!summary) return []
 
@@ -110,17 +115,8 @@ export function buildOfstedEvidenceOutline(youngPersonId: string): ReportSection
   ]
 }
 
-export function buildIncidentSummary(incidentId: string): ReportSection[] {
-  const incident = indicareData.incidents.find((item) => item.id === incidentId)
-  if (!incident) return []
-
-  return [
-    section('Incident overview', `${incident.type} at ${incident.location} on ${new Date(incident.dateTime).toLocaleString('en-GB')}.`, [incident.id]),
-    section('What happened', incident.description, [incident.id]),
-    section('Triggers and de-escalation', `Trigger: ${incident.trigger}. De-escalation used: ${incident.deEscalationUsed.join(', ')}.`, [incident.id]),
-    section('Outcome and follow-up', `${incident.outcome} Follow-up: ${incident.followUpActions.join('; ') || 'none recorded'}.`, [incident.id]),
-    section('Management oversight', incident.managerReview, [incident.id])
-  ]
+export function buildIncidentSummary(_incidentId: string): ReportSection[] {
+  return []
 }
 
 export function buildReportDraft(report: ReportRecord) {
@@ -147,6 +143,6 @@ export function buildReportDraft(report: ReportRecord) {
   }
 }
 
-export function incidentSummaryForRecord(incident: Incident): ReportSection[] {
-  return buildIncidentSummary(incident.id)
+export function incidentSummaryForRecord(_incident: Incident): ReportSection[] {
+  return []
 }
