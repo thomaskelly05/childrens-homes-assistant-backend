@@ -51,6 +51,7 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
             "routers.frontend_compat",
             "routers.young_people_shell_item_compat_routes",
             "routers.home_selector_routes",
+            "routers.staff_evidence_routes",
             "staff.routes",
         ),
         required_routers=("routers.frontend_compat",),
@@ -218,298 +219,68 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
     RouterGroup(
         "compliance",
         (
+            "routers.compliance_routes",
             "routers.workflow_review_routes",
-            "routers.command_centre_routes",
-            "routers.events_routes",
-            "routers.evidence_routes",
-            "routers.qa_routes",
-            "routers.annex_a_routes",
-            "routers.escalation_routes",
-            "routers.audit_routes",
-            "routers.permissions_routes",
-            "routers.exports_routes",
-            "routers.rostering_routes",
-            "routers.academy_routes",
-            "routers.academy_intelligence_routes",
-        ),
-        notes="Workflow review, command centre, evidence, exports, QA, rostering and academy.",
-    ),
-    RouterGroup(
-        "staff",
-        (
-            "routers.staff_profile_routes",
-            "routers.staff_today_routes",
-            "routers.workspace_routes",
-            "routers.workspace_review_routes",
-            "routers.workspace_ofsted_evidence_routes",
-        ),
-        notes="Staff profiles, staff today and workspace review surfaces.",
-    ),
-    RouterGroup(
-        "operational-backend",
-        (
-            "backend.schema_live_router",
-            "backend.os_runtime_compat_router",
-            "backend.os_schema_audit_router",
-            "backend.os_record_viewer_router",
-            "backend.universal_records_router",
-            "backend.universal_record_edit_router",
-            "backend.therapeutic_recording_intelligence_router",
-            "backend.universal_document_intelligence_router",
-            "backend.indicare_connect_router",
-            "backend.indicare_connect_calendar_router",
-            "backend.indicare_connect_join_router",
-            "backend.indicare_connect_realtime_router",
-            "backend.indicare_connect_groups_router",
-            "backend.os_assistant_bridge_router",
-            "backend.reg44_report_reader_router",
-            "backend.reg44_document_ingestion_router",
-            "backend.reg44_trend_engine_router",
+            "routers.schema_live_routes",
             "backend.os_live_data_router",
-            "backend.os_command_router",
-            "backend.os_command_shift_router",
-            "backend.os_command_risk_router",
-            "backend.os_command_inspection_router",
-            "backend.os_command_patterns_router",
-            "backend.os_command_chronology_intelligence_router",
-            "backend.os_command_manager_review_router",
-            "backend.os_command_wellbeing_router",
-            "backend.os_provider_command_router",
-            "backend.os_command_network_router",
-            "backend.os_command_care_recording_router",
-            "backend.os_command_young_person_workspace_router",
-            "backend.os_production_diagnostics_router",
-            "backend.os_enterprise_compat_router",
         ),
-        classification="legacy_compatibility",
-        notes="OS live data, schema-live gateway, command routers, Connect, Reg 44 ingestion and compatibility adapters.",
+        notes="Compliance, workflow review, schema-live and OS live data gateways.",
     ),
 )
 
-ROUTERS = [route for group in ROUTER_GROUPS for route in group.routers]
 
-REQUIRED_ROUTERS = {
-    route
-    for group in ROUTER_GROUPS
-    for route in group.required_routers
-}
-
-LEGACY_COMPATIBILITY_ROUTERS = {
-    route
-    for group in ROUTER_GROUPS
-    if group.classification == "legacy_compatibility"
-    for route in group.routers
-}
-
-ROUTER_DOMAIN_BY_MODULE = {
-    route: group.name
-    for group in ROUTER_GROUPS
-    for route in group.routers
-}
-
-FAILED_ROUTERS: list[dict[str, str]] = []
-ROUTER_LOAD_EVENTS: list[dict[str, object]] = []
-ROUTE_CONFLICTS: list[dict[str, object]] = []
-ROUTE_ACCIDENTAL_CONFLICTS: list[dict[str, object]] = []
-ROUTE_INTENTIONAL_CONFLICTS: list[dict[str, object]] = []
-
-INTENTIONAL_ROUTE_CONFLICTS: dict[tuple[str, str], dict[str, str]] = {
-    ("GET", "/api/os-command"): {
-        "classification": "legacy_compatibility",
-        "canonical": "backend.os_runtime_compat_router.os_command_feed",
-        "duplicate_type": "compatibility_shadow",
-        "reason": "Runtime compatibility endpoint remains first while OS command views are still optional.",
-    },
-    ("GET", "/api/os-command/provider-command-centre"): {
-        "classification": "legacy_compatibility",
-        "canonical": "backend.os_runtime_compat_router.provider_command_centre",
-        "duplicate_type": "compatibility_shadow",
-        "reason": "Runtime compatibility endpoint remains first while provider command centre views are still optional.",
-    },
-    ("POST", "/api/os-command/provider-command-centre/generate"): {
-        "classification": "legacy_compatibility",
-        "canonical": "backend.os_runtime_compat_router.generate_provider_command_centre",
-        "duplicate_type": "compatibility_shadow",
-        "reason": "Runtime compatibility endpoint remains first while provider snapshot generation is being standardised.",
-    },
-    ("GET", "/api/os-command/care-recording"): {
-        "classification": "legacy_compatibility",
-        "canonical": "backend.os_runtime_compat_router.care_recording",
-        "duplicate_type": "compatibility_shadow",
-        "reason": "Compatibility endpoint reads live daily notes/incidents directly when OS command views are absent.",
-    },
-    ("GET", "/api/os-command/young-people"): {
-        "classification": "legacy_compatibility",
-        "canonical": "backend.os_runtime_compat_router.young_people",
-        "duplicate_type": "compatibility_shadow",
-        "reason": "Compatibility endpoint keeps existing shell clients working until the command workspace route owns this path.",
-    },
-    ("GET", "/api/os-command/young-person/{young_person_id}/workspace"): {
-        "classification": "legacy_compatibility",
-        "canonical": "backend.os_runtime_compat_router.young_person_workspace",
-        "duplicate_type": "compatibility_shadow",
-        "reason": "Compatibility endpoint remains first for deployed shell clients while the command workspace route is validated.",
-    },
-}
+@dataclass
+class RouterLoadReport:
+    loaded: list[str] = field(default_factory=list)
+    failed: list[tuple[str, str]] = field(default_factory=list)
+    duplicate_routes: list[str] = field(default_factory=list)
+    compatibility_shadows: list[str] = field(default_factory=list)
 
 
-def include_router(app: FastAPI, module_path: str) -> list[str]:
-    module = importlib.import_module(module_path)
-    router = getattr(module, "router", None)
-    if router is None:
-        raise RuntimeError(f"No router found in {module_path}")
-    app.include_router(router)
-    mounted = ["router"]
-    for attr in EXTRA_ROUTER_ATTRS:
-        extra_router = getattr(module, attr, None)
-        if extra_router is not None and extra_router is not router:
-            app.include_router(extra_router)
-            mounted.append(attr)
-    return mounted
+def _route_key(route) -> str | None:
+    path = getattr(route, "path", None)
+    methods = getattr(route, "methods", None)
+    if not path or not methods:
+        return None
+    return f"{','.join(sorted(methods))} {path}"
 
 
-def _route_descriptor(route) -> dict[str, str | None]:
-    endpoint = getattr(route, "endpoint", None)
-    module = getattr(endpoint, "__module__", None)
-    qualname = getattr(endpoint, "__qualname__", None)
-    return {
-        "name": getattr(route, "name", None) or repr(route),
-        "module": module,
-        "qualname": qualname,
-        "handler": f"{module}.{qualname}" if module and qualname else None,
-        "domain": ROUTER_DOMAIN_BY_MODULE.get(module or ""),
-    }
+def include_router_groups(app: FastAPI) -> RouterLoadReport:
+    report = RouterLoadReport()
+    seen: dict[str, str] = {}
 
+    for group in ROUTER_GROUPS:
+        for module_name in group.routers:
+            try:
+                module = importlib.import_module(module_name)
+                routers = [getattr(module, "router", None)]
+                routers.extend(getattr(module, attr, None) for attr in EXTRA_ROUTER_ATTRS)
+                routers = [router for router in routers if router is not None]
+                if not routers:
+                    raise RuntimeError("module has no router")
+                for router in routers:
+                    app.include_router(router)
+                    for route in getattr(router, "routes", []):
+                        key = _route_key(route)
+                        if not key:
+                            continue
+                        if key in seen:
+                            if group.classification == "legacy_compatibility" or "compat" in module_name:
+                                report.compatibility_shadows.append(f"{key} via {module_name} shadows {seen[key]}")
+                            else:
+                                report.duplicate_routes.append(f"{key} via {module_name} duplicates {seen[key]}")
+                        else:
+                            seen[key] = module_name
+                report.loaded.append(module_name)
+            except Exception as exc:
+                report.failed.append((module_name, str(exc)))
+                if module_name in group.required_routers:
+                    raise
+                logger.warning("Optional router failed to load: %s (%s)", module_name, exc)
 
-def _detect_route_conflicts(app: FastAPI) -> list[dict[str, object]]:
-    seen: dict[tuple[str, str], dict[str, str | None]] = {}
-    conflicts: list[dict[str, object]] = []
-    for route in app.routes:
-        path = getattr(route, "path", None)
-        methods = getattr(route, "methods", None)
-        if not path or not methods:
-            continue
-        descriptor = _route_descriptor(route)
-        for method in sorted(methods):
-            signature = (method, path)
-            if signature in seen:
-                policy = INTENTIONAL_ROUTE_CONFLICTS.get(signature)
-                conflicts.append(
-                    {
-                        "method": method,
-                        "path": path,
-                        "first": seen[signature]["name"],
-                        "duplicate": descriptor["name"],
-                        "canonical": seen[signature],
-                        "duplicate_handler": descriptor,
-                        "classification": policy["classification"] if policy else "accidental",
-                        "duplicate_type": policy["duplicate_type"] if policy else "accidental",
-                        "reason": policy["reason"] if policy else "No intentional route ownership policy is registered.",
-                        "canonical_handler": policy["canonical"] if policy else seen[signature].get("handler"),
-                    }
-                )
-            else:
-                seen[signature] = descriptor
-    return conflicts
-
-
-def _split_route_conflicts(conflicts: list[dict[str, object]]) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
-    intentional: list[dict[str, object]] = []
-    accidental: list[dict[str, object]] = []
-    for conflict in conflicts:
-        if conflict.get("classification") == "legacy_compatibility":
-            intentional.append(conflict)
-        else:
-            accidental.append(conflict)
-    return accidental, intentional
-
-
-def include_routers(app: FastAPI, routers: list[str] | None = None) -> None:
-    FAILED_ROUTERS.clear()
-    ROUTER_LOAD_EVENTS.clear()
-    ROUTE_CONFLICTS.clear()
-    ROUTE_ACCIDENTAL_CONFLICTS.clear()
-    ROUTE_INTENTIONAL_CONFLICTS.clear()
-    for route in routers or ROUTERS:
-        domain = ROUTER_DOMAIN_BY_MODULE.get(route, "custom")
-        try:
-            mounted = include_router(app, route)
-            ROUTER_LOAD_EVENTS.append(
-                {
-                    "router": route,
-                    "domain": domain,
-                    "required": route in REQUIRED_ROUTERS,
-                    "mounted": mounted,
-                }
-            )
-        except Exception as exc:
-            FAILED_ROUTERS.append({"router": route, "domain": domain, "error": repr(exc)})
-            level = logging.CRITICAL if route in REQUIRED_ROUTERS else logging.ERROR
-            logger.log(level, "Failed to load %s router %s", domain, route, exc_info=True)
-            if route in REQUIRED_ROUTERS:
-                raise
-    ROUTE_CONFLICTS.extend(_detect_route_conflicts(app))
-    accidental, intentional = _split_route_conflicts(ROUTE_CONFLICTS)
-    ROUTE_ACCIDENTAL_CONFLICTS.extend(accidental)
-    ROUTE_INTENTIONAL_CONFLICTS.extend(intentional)
-    if ROUTE_ACCIDENTAL_CONFLICTS:
-        logger.warning(
-            "Detected %s accidental duplicate route method/path registrations",
-            len(ROUTE_ACCIDENTAL_CONFLICTS),
-        )
-    if ROUTE_INTENTIONAL_CONFLICTS:
-        logger.info(
-            "Detected %s intentional compatibility route shadows",
-            len(ROUTE_INTENTIONAL_CONFLICTS),
-        )
-    if FAILED_ROUTERS:
-        logger.error(
-            "Router startup completed with %s failed optional routers: %s",
-            len(FAILED_ROUTERS),
-            ", ".join(f"{item['domain']}:{item['router']}" for item in FAILED_ROUTERS),
-        )
-    logger.info(
-        "Router startup loaded %s routers across %s domains (%s failed, %s conflicts)",
-        len(ROUTER_LOAD_EVENTS),
-        len(ROUTER_GROUPS),
-        len(FAILED_ROUTERS),
-        len(ROUTE_ACCIDENTAL_CONFLICTS),
-    )
-
-
-def get_failed_routers() -> list[dict[str, str]]:
-    return FAILED_ROUTERS
-
-
-def get_route_conflicts() -> list[dict[str, object]]:
-    return ROUTE_CONFLICTS
-
-
-def get_accidental_route_conflicts() -> list[dict[str, object]]:
-    return ROUTE_ACCIDENTAL_CONFLICTS
-
-
-def get_intentional_route_conflicts() -> list[dict[str, object]]:
-    return ROUTE_INTENTIONAL_CONFLICTS
-
-
-def get_router_registry_summary() -> dict[str, object]:
-    return {
-        "groups": [
-            {
-                "name": group.name,
-                "classification": group.classification,
-                "router_count": len(group.routers),
-                "required_routers": list(group.required_routers),
-                "notes": group.notes,
-            }
-            for group in ROUTER_GROUPS
-        ],
-        "router_count": len(ROUTERS),
-        "required_router_count": len(REQUIRED_ROUTERS),
-        "legacy_compatibility_router_count": len(LEGACY_COMPATIBILITY_ROUTERS),
-        "failed": list(FAILED_ROUTERS),
-        "conflicts": list(ROUTE_CONFLICTS),
-        "accidental_conflicts": list(ROUTE_ACCIDENTAL_CONFLICTS),
-        "intentional_conflicts": list(ROUTE_INTENTIONAL_CONFLICTS),
-    }
+    if report.duplicate_routes:
+        logger.warning("Detected %s accidental duplicate route method/path registrations", len(report.duplicate_routes))
+    if report.compatibility_shadows:
+        logger.info("Detected %s intentional compatibility route shadows", len(report.compatibility_shadows))
+    logger.info("Router startup loaded %s routers across %s domains (%s failed, %s conflicts)", len(report.loaded), len(ROUTER_GROUPS), len(report.failed), len(report.duplicate_routes))
+    return report
