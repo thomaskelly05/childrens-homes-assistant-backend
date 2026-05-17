@@ -11,7 +11,7 @@ export default function DocumentTemplatesPage() {
         <StatCard label="Home templates" value={templatesFor('home').length} />
         <StatCard label="Staff templates" value={templatesFor('staff').length} />
       </section>
-      <DocumentTemplateGrid templates={documentTemplates.map((template) => ({ ...template, href: template.scope === 'child' ? `/documents/new?scope=child&child_id=yp-1&template=${template.templateId}` : `/documents/new?scope=${template.scope}&template=${template.templateId}` }))} />
+      <DocumentTemplateGrid templates={documentTemplates.map((template) => ({ ...template, href: template.scope === 'child' ? `/young-people?intent=document-template&template=${template.templateId}` : `/documents/new?scope=${template.scope}&template=${template.templateId}` }))} />
     </div>
   )
 }

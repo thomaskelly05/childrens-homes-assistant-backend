@@ -8,6 +8,7 @@ from auth.dependencies import get_current_user
 from db.connection import get_db
 from schemas.connect_contracts import ConnectMessageCreate, ConnectMessageUpdate, ConnectThreadCreate
 from services.connect_service import ConnectService
+from services.experience_bundle_service import ExperienceBundleService
 
 
 router = APIRouter(prefix="/api/connect", tags=["IndiCare Connect"])
@@ -16,6 +17,10 @@ ui_router = APIRouter(prefix="/api", tags=["Personalised Today"])
 
 def _service() -> ConnectService:
     return ConnectService()
+
+
+def _bundle_service() -> ExperienceBundleService:
+    return ExperienceBundleService()
 
 
 @router.get("/threads")
@@ -110,6 +115,14 @@ def me_today(
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
     return _service().me_today(conn, current_user)
+
+
+@ui_router.get("/me/workspace")
+def me_workspace(
+    conn=Depends(get_db),
+    current_user: dict[str, Any] = Depends(get_current_user),
+):
+    return _bundle_service().adult_workspace_bundle(conn, current_user)
 
 
 @ui_router.get("/home/today")

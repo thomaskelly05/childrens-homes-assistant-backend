@@ -8,9 +8,11 @@ from pydantic import BaseModel
 
 from auth.dependencies import get_current_user
 from db.connection import get_db_connection, release_db_connection
+from services.experience_bundle_service import ExperienceBundleService
 from services.workspace_orchestrator_service import WorkspaceOrchestratorService
 
 router = APIRouter(prefix="/workspace", tags=["workspace"])
+compat_router = APIRouter(prefix="/api", tags=["workspace compatibility"])
 
 
 class DocumentActionRequest(BaseModel):
@@ -31,6 +33,7 @@ class WorkspaceRecordCreateRequest(BaseModel):
 
 
 service = WorkspaceOrchestratorService()
+bundle_service = ExperienceBundleService()
 
 
 @router.get("/child/{young_person_id}")
@@ -49,6 +52,20 @@ def get_home_workspace(
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
     return service.home_workspace(home_id=home_id, current_user=current_user, days=days)
+
+
+@compat_router.get("/homes/{home_id}/operational-bundle")
+def get_home_operational_bundle(
+    home_id: int,
+    current_user: dict[str, Any] = Depends(get_current_user),
+):
+    conn = None
+    try:
+        conn = get_db_connection()
+        return bundle_service.home_operational_bundle(conn, current_user, home_id)
+    finally:
+        if conn is not None:
+            release_db_connection(conn)
 
 
 @router.get("/manager")

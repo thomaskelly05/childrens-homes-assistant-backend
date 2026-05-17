@@ -19,7 +19,6 @@ import {
   ShieldCheck,
   ShieldAlert,
   SearchCheck,
-  Settings,
   MessageCircle
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
@@ -50,17 +49,17 @@ type NavItem = {
 }
 
 const navItems: NavItem[] = [
-  { section: 'Global', href: '/dashboard', label: 'Command Centre', icon: Home, permissions: ['records:read'], activeRoots: ['dashboard'] },
-  { section: 'Global', href: '/young-people', label: 'Young People', icon: UserRound, permissions: ['records:read'], activeRoots: ['young-people'] },
-  { section: 'Global', href: '/staff', label: 'Staff', icon: UsersRound, permissions: ['staff:read'], activeRoots: ['staff'] },
-  { section: 'Global', href: '/safeguarding', label: 'Safeguarding', icon: ShieldAlert, permissions: ['records:read'], activeRoots: ['safeguarding'] },
-  { section: 'Global', href: '/chronology', label: 'Chronology', icon: Clock3, permissions: ['records:read'], activeRoots: ['chronology'] },
-  { section: 'Global', href: '/documents', label: 'Documents & Evidence', icon: FolderOpen, permissions: ['records:read'], activeRoots: ['documents', 'evidence'] },
+  { section: 'Global', href: '/home', label: 'Home', icon: Home, permissions: ['records:read'], activeRoots: ['home'] },
+  { section: 'Global', href: '/workspace', label: 'Workspace', icon: Gauge, permissions: ['records:read'], activeRoots: ['workspace', 'dashboard', 'staff'] },
+  { section: 'Global', href: '/young-people', label: 'Children', icon: UserRound, permissions: ['records:read'], activeRoots: ['young-people', 'children'] },
+  { section: 'Global', href: '/homes', label: 'Homes', icon: Building2, permissions: ['records:read'], activeRoots: ['homes'] },
   { section: 'Global', href: '/connect', label: 'Connect', icon: MessageCircle, permissions: ['records:read'], activeRoots: ['connect'] },
-  { section: 'Global', href: '/ofsted-readiness', label: 'Inspection Readiness', icon: SearchCheck, permissions: ['reports:read'], activeRoots: ['ofsted-readiness', 'regulatory', 'reg44'] },
-  { section: 'Global', href: '/settings', label: 'Governance', icon: Settings, permissions: ['settings:read', 'settings:manage'], activeRoots: ['settings'] },
-  { section: 'Global', href: '/assistant', label: 'Assistant / ORB', icon: Sparkles, permissions: ['assistant:access'], activeRoots: ['assistant'] },
-  { section: 'Global', href: '/setup', label: 'Provider Settings', icon: Building2, permissions: ['settings:read', 'settings:manage'], activeRoots: ['setup'] },
+  { section: 'Global', href: '/chronology', label: 'Chronology', icon: Clock3, permissions: ['records:read'], activeRoots: ['chronology'] },
+  { section: 'Global', href: '/documents', label: 'Documents', icon: FolderOpen, permissions: ['records:read'], activeRoots: ['documents', 'evidence'] },
+  { section: 'Global', href: '/safeguarding', label: 'Safeguarding', icon: ShieldAlert, permissions: ['records:read'], activeRoots: ['safeguarding'] },
+  { section: 'Global', href: '/ofsted-readiness', label: 'Inspection', icon: SearchCheck, permissions: ['reports:read'], activeRoots: ['ofsted-readiness', 'regulatory', 'reg44'] },
+  { section: 'Global', href: '/assistant', label: 'ORB', icon: Sparkles, permissions: ['assistant:access'], activeRoots: ['assistant'] },
+  { section: 'Global', href: '/profile', label: 'Profile', icon: UsersRound, permissions: ['records:read'], activeRoots: ['profile'] },
   { section: 'System', href: '/notifications', label: 'Notifications', icon: Bell, permissions: ['records:read'], activeRoots: ['notifications'] },
   { section: 'System', href: '/shifts/current', label: 'Shift', icon: ClipboardCheck, permissions: ['records:read'], activeRoots: ['shifts', 'handover'] },
   { section: 'System', href: '/management', label: 'Reviews', icon: Gauge, permissions: ['reports:read'], activeRoots: ['management'] },
@@ -69,12 +68,12 @@ const navItems: NavItem[] = [
 
 const recordWorkspaceRoots = ['actions', 'reports', 'evidence', 'documents', 'chronology', 'daily-logs', 'incidents', 'safeguarding', 'medication', 'health', 'keywork', 'appointments', 'risk-assessments', 'reg44']
 const childContextRequiredRoots = ['actions', 'reports']
-const e2eUiMode = process.env.NEXT_PUBLIC_E2E_TEST_MODE === '1' && process.env.NODE_ENV !== 'production'
 const e2eWorkspaceHydrationBypass = process.env.NEXT_PUBLIC_E2E_TEST_MODE === '1' && process.env.NODE_ENV !== 'production'
 
 function selectedYoungPersonId(pathname: string) {
   const parts = pathname.split('/').filter(Boolean)
   if (parts[0] === 'young-people' && parts[1]) return parts[1]
+  if (parts[0] === 'children' && parts[1]) return parts[1]
   return undefined
 }
 
@@ -137,7 +136,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   const isRecordWorkspace = pathParts.length >= 2 && recordWorkspaceRoots.includes(pathParts[0]) && !['new', 'current'].includes(pathParts[pathParts.length - 1])
   const routeRequiresChildContext = pathParts.length === 1 && childContextRequiredRoots.includes(pathParts[0] || '')
   const childContextRedirect = activeChild && routeRequiresChildContext ? childScopedHref(`/${pathParts[0]}`) : null
-  const requiresWorkspaceHydration = !e2eUiMode && routeRequiresChildWorkspace(pathname, typeof window === 'undefined' ? null : new URLSearchParams(window.location.search))
   const requiresWorkspaceHydration = !e2eWorkspaceHydrationBypass && routeRequiresChildWorkspace(pathname, typeof window === 'undefined' ? null : new URLSearchParams(window.location.search))
 
   useEffect(() => {
@@ -282,6 +280,16 @@ export function AppShell({ children }: { children: ReactNode }) {
     { label: 'Documents', href: childScopedHref('/documents') },
     { label: 'Reviews', href: selectedId ? `/reports?young_person_id=${encodeURIComponent(selectedId)}&type=review` : '/reports' }
   ]
+  const childDomainActive = pathParts[0] === 'young-people' || pathParts[0] === 'children'
+  const displayBreadcrumbs = pathname === '/profile'
+    ? [{ label: 'Workspace', href: '/workspace' }, { label: 'My profile', current: true }]
+    : pathname === '/workspace'
+      ? [{ label: 'Workspace', current: true }]
+      : pathParts[0] === 'children' || pathParts[0] === 'young-people'
+        ? [{ label: 'Children', href: '/young-people' }, { label: activeChildName || selectedId || 'Child profile', current: true }]
+        : pathParts[0] === 'homes'
+          ? [{ label: 'Homes', href: '/home' }, { label: titleFromPath(pathname), current: true }]
+          : breadcrumbs
 
   return (
     <div className="orb-os-shell min-h-screen bg-[#f3f6fb] text-slate-900">
@@ -340,7 +348,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             </details>
           </div>
         </div>
-        {activeChild ? (
+        {activeChild && childDomainActive ? (
           <nav className="mt-3 flex gap-2 overflow-x-auto pb-1 text-xs font-black uppercase tracking-[0.12em]" aria-label="Child workspace navigation">
             {secondaryNav.map((item) => {
               const active = pathname === item.href || (item.href !== '/home' && pathname.startsWith(item.href.split('?')[0]))
@@ -353,7 +361,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </nav>
         ) : null}
         <nav className="mt-3 flex flex-wrap items-center gap-1 text-xs font-black uppercase tracking-[0.14em] text-slate-400" aria-label="Context breadcrumb">
-          {breadcrumbs.map((crumb, index) => (
+          {displayBreadcrumbs.map((crumb, index) => (
             <span key={`${crumb.label}-${index}`} className="inline-flex items-center gap-1">
               {index > 0 ? <ChevronRight className="h-3 w-3" aria-hidden /> : null}
               {crumb.href && !crumb.current ? <Link href={crumb.href} className="hover:text-blue-700">{crumb.label}</Link> : <span className={crumb.current ? 'text-slate-800' : undefined}>{crumb.label}</span>}

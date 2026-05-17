@@ -5,6 +5,7 @@ import { FormEvent, useState } from 'react'
 export function CreateThreadPanel() {
   const [title, setTitle] = useState('')
   const [threadType, setThreadType] = useState('home_channel')
+  const [memberIds, setMemberIds] = useState('')
   const [status, setStatus] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
 
@@ -18,10 +19,15 @@ export function CreateThreadPanel() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ title, thread_type: threadType })
+        body: JSON.stringify({
+          title,
+          thread_type: threadType,
+          member_ids: memberIds.split(',').map((item) => Number(item.trim())).filter((item) => Number.isFinite(item) && item > 0)
+        })
       })
       if (!response.ok) throw new Error('Thread could not be created.')
       setTitle('')
+      setMemberIds('')
       setStatus('Thread created. Refresh to open it.')
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Thread could not be created.')
@@ -45,6 +51,12 @@ export function CreateThreadPanel() {
         <option value="group">Group thread</option>
         <option value="handover">Handover thread</option>
       </select>
+      <input
+        value={memberIds}
+        onChange={(event) => setMemberIds(event.target.value)}
+        placeholder="Real staff user ids, comma separated"
+        className="w-full rounded-2xl border border-white bg-white px-4 py-3 text-sm font-bold text-slate-900 outline-none focus:ring-4 focus:ring-blue-100"
+      />
       <button type="submit" disabled={creating || !title.trim()} className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white disabled:opacity-60">
         {creating ? 'Creating...' : 'Create thread'}
       </button>

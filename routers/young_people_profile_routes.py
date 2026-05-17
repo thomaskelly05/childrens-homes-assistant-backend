@@ -7,10 +7,12 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from auth.current_user import get_current_user
 from db.connection import get_db
+from services.experience_bundle_service import ExperienceBundleService
 from services.young_person_service import YoungPersonService
 
 router = APIRouter(prefix="/young-people", tags=["Young People Profile"])
 compat_router = APIRouter(prefix="/api", tags=["Young People Profile compatibility"])
+bundle_service = ExperienceBundleService()
 
 
 PROVIDER_ROLES = {
@@ -103,6 +105,15 @@ def _load_and_check_young_person(
 
     _assert_young_person_access(current_user, record)
     return record
+
+
+@compat_router.get("/young-people/{young_person_id}/profile-bundle")
+def get_young_person_profile_bundle(
+    young_person_id: int,
+    conn=Depends(get_db),
+    current_user: dict[str, Any] = Depends(get_current_user),
+):
+    return bundle_service.child_profile_bundle(conn, current_user, young_person_id)
 
 
 def _scoped_list_filters(current_user: dict[str, Any]) -> tuple[int | None, int | None]:
