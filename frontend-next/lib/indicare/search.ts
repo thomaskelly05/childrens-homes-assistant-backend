@@ -1,4 +1,4 @@
-import { getEntityActions, getEntityRoute, normalizeEntityType, type EntityType } from '@/lib/navigation/entity-resolver'
+import { getEntityActions, normalizeEntityType, type EntityType } from '@/lib/navigation/entity-resolver'
 
 export type SearchResult = {
   id: string
