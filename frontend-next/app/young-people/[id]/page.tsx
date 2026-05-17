@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { notFound } from 'next/navigation'
 
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
@@ -40,6 +41,11 @@ export default async function YoungPersonDetailPage({ params }: { params: Promis
 
   const displayName = person?.displayName || person?.preferredName || `Young person ${id}`
   const profile = person as Record<string, unknown> | undefined
+  const avatarUrl = profileText(profile, ['profile_image_url', 'profile_photo_url', 'photo_url'], '')
+  const whatMatters = profileText(profile, ['what_matters_to_me', 'whatMattersToMe', 'interests', 'strengths_summary'], 'Not returned yet')
+  const whatHelps = profileText(profile, ['what_helps', 'whatWorks', 'de_escalation_strategies', 'support_strategies'], 'Not returned yet')
+  const communicationStyle = profileText(profile, ['communication_style', 'communication_needs', 'communicationNeeds'], 'Not returned yet')
+  const sensorySupport = profileText(profile, ['sensory_needs', 'sensory_profile', 'sensoryNeeds'], 'Not returned yet')
   const keyDetails = [
     ['Age / DOB', [person?.age ? `Age ${person.age}` : undefined, profileText(profile, ['date_of_birth', 'dateOfBirth', 'dob'], '')].filter(Boolean).join(' · ') || 'Not returned'],
     ['Home', profileText(profile, ['home_name', 'homeName', 'home_id', 'homeId'], 'Not returned')],
@@ -48,12 +54,12 @@ export default async function YoungPersonDetailPage({ params }: { params: Promis
     ['Legal status', person?.legalStatus || profileText(profile, ['legal_status', 'legalStatus'], 'Not returned')]
   ]
   const supportNeeds = [
-    ['Communication', profileText(profile, ['communication_needs', 'communicationNeeds'], 'Not returned yet')],
-    ['Sensory needs', profileText(profile, ['sensory_needs', 'sensoryNeeds'], 'Not returned yet')],
+    ['What matters to me', whatMatters],
+    ['What helps me', whatHelps],
+    ['Communication style', communicationStyle],
+    ['Emotional / sensory support', sensorySupport],
     ['Routines', profileText(profile, ['routines', 'daily_routine', 'routine'], 'Not returned yet')],
-    ['What helps', profileText(profile, ['what_helps', 'whatWorks', 'de_escalation_strategies', 'support_strategies'], 'Not returned yet')],
-    ['Known triggers', profileText(profile, ['known_triggers', 'triggers'], 'Not returned yet')],
-    ['What does not help', profileText(profile, ['does_not_help', 'whatDoesNotHelp'], 'Not returned yet')]
+    ['What does not help', profileText(profile, ['what_does_not_help', 'does_not_help', 'whatDoesNotHelp'], 'Not returned yet')]
   ]
   const contactRows = profileList(profile, ['important_contacts', 'contacts', 'key_contacts']).map((contact) => [contact])
   const safeguarding = data.safeguarding
@@ -90,18 +96,35 @@ export default async function YoungPersonDetailPage({ params }: { params: Promis
 
       <section id="overview" className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(300px,0.8fr)]">
         <Card>
-          <SectionHeader eyebrow="Two-minute overview" title="Who this child is" description="The first screen should help any staff member understand the child, current state and next action quickly." />
-          <div className="rounded-[28px] bg-slate-50 p-5">
+          <SectionHeader eyebrow="Two-minute overview" title="Person first, then operational context" description="The first screen leads with identity, communication and what helps. Risk remains visible without defining the child." />
+          <div className="rounded-[30px] bg-gradient-to-br from-white via-blue-50/70 to-slate-50 p-5 ring-1 ring-blue-100">
             <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
+              <div className="flex min-w-0 flex-1 flex-wrap gap-5">
+                <div className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-[30px] bg-gradient-to-br from-blue-600 to-sky-400 text-3xl font-black text-white shadow-lg shadow-blue-500/25">
+                  {avatarUrl ? <Image src={avatarUrl} alt="" width={112} height={112} unoptimized className="h-full w-full object-cover" /> : (person?.preferredName || displayName).slice(0, 2).toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap gap-2">
                   <RiskBadge value={person?.riskLevel as any} />
                   <StatusBadge value={person?.placementStatus || person?.status || 'active'} />
                 </div>
                 <h2 className="mt-4 text-3xl font-black tracking-[-0.05em] text-slate-950">{displayName}</h2>
-                <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-600">{person?.carePlanning || 'Care planning summary will show when returned by the backend.'}</p>
+                <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-600">{profileText(profile, ['child_voice_summary'], '') || person?.carePlanning || 'Care planning and child voice summaries will show when returned by the backend.'}</p>
+                </div>
               </div>
               <Link href={`/young-people/${encodeURIComponent(id)}/daily-note/new`} className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">Add daily note</Link>
+            </div>
+            <div className="mt-5 grid gap-3 md:grid-cols-3">
+              {[
+                ['What matters to me', whatMatters],
+                ['What helps me', whatHelps],
+                ['How I communicate', communicationStyle]
+              ].map(([label, value]) => (
+                <div key={label} className="rounded-[24px] bg-white/85 p-4 ring-1 ring-white">
+                  <p className="text-[11px] font-black uppercase tracking-[0.16em] text-blue-700">{label}</p>
+                  <p className="mt-2 text-sm font-bold leading-6 text-slate-700">{value}</p>
+                </div>
+              ))}
             </div>
             <dl className="mt-5 grid gap-3 md:grid-cols-2">
               {keyDetails.map(([label, value]) => (

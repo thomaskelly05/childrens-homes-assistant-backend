@@ -1,9 +1,11 @@
 import Link from 'next/link'
 
+import { DashboardPreferencesPanel } from '@/components/indicare/dashboard-preferences-panel'
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
 import { OperationalLifecyclePanel } from '@/components/indicare/operational-lifecycle-panel'
 import { AlertCard, Card, DataTable, EmptyState, PageHeader, RecordTimeline, SectionHeader, StatusBadge } from '@/components/indicare/ui'
-import { getCommandCentre } from '@/lib/os-api/platform'
+import { templatesFor } from '@/lib/document-system/templates'
+import { getCommandCentre, getProviderSettings } from '@/lib/os-api/platform'
 
 function formatDate(value?: string) {
   if (!value) return 'Date not recorded'
@@ -12,8 +14,13 @@ function formatDate(value?: string) {
 }
 
 export default async function DashboardPage() {
-  const command = await getCommandCentre()
+  const [command, providerSettings] = await Promise.all([getCommandCentre(), getProviderSettings()])
   const data = command.data
+  const account = providerSettings.data.account || {}
+  const profile = (account.profile || {}) as Record<string, any>
+  const user = (account.user || {}) as Record<string, any>
+  const adultName = profile.display_name || user.email || 'Your workspace'
+  const roleTitle = profile.role_title || user.role || 'role not returned'
   const openActions = data.actions.filter((action) => action.status !== 'completed')
   const safeguardingOpen = data.safeguarding.filter((item) => item.status !== 'closed')
   const documentsForReview = data.documents.filter((document) => ['review_required', 'action_plan_open', 'processing'].includes(document.status))
@@ -25,10 +32,39 @@ export default async function DashboardPage() {
       <PageHeader
         eyebrow="Command centre"
         title="What needs attention now"
-        description="A live operating picture for safeguarding, child wellbeing, operational risk, compliance and documentation. It only shows records returned by the backend."
-        action={<Link href="/young-people" className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">Choose child / record</Link>}
+        description={`${adultName} - ${roleTitle}. A live operating picture for safeguarding, child wellbeing, operational risk, compliance and documentation.`}
+        action={<Link href="/staff/me" className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">My workspace</Link>}
       />
       <LiveDataStatus result={command} />
+      <LiveDataStatus result={providerSettings} />
+
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+        <Card className="bg-gradient-to-br from-white via-blue-50/60 to-white">
+          <SectionHeader eyebrow="Adult identity" title={`Good to see you, ${adultName}`} description="Your workspace uses live account, home and provider context. Missing profile fields stay visible as honest gaps." />
+          <dl className="grid gap-3 sm:grid-cols-2">
+            {[
+              ['Preferred name', profile.display_name || 'Not returned'],
+              ['Role title', roleTitle],
+              ['Home', user.home_id || 'Not returned'],
+              ['Provider', user.provider_id || 'Not returned']
+            ].map(([label, value]) => (
+              <div key={label} className="rounded-2xl bg-white/80 p-4 ring-1 ring-white">
+                <dt className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">{label}</dt>
+                <dd className="mt-2 text-sm font-black text-slate-800">{value}</dd>
+              </div>
+            ))}
+          </dl>
+          <p className="mt-5 rounded-2xl bg-white/80 p-4 text-sm font-bold leading-6 text-slate-600">{profile.operational_focus || 'No personal operational focus has been saved yet.'}</p>
+        </Card>
+        <Card>
+          <SectionHeader eyebrow="Workspace personalisation" title="Shape a calm workspace" description="Critical safeguarding and action widgets stay visible. Optional widgets, favourites and order can be personalised without breaking operational truth." />
+          <DashboardPreferencesPanel
+            initialPreferences={profile}
+            children={data.children.map((child) => ({ id: child.id, name: child.preferredName || child.displayName }))}
+            templates={templatesFor('child').slice(0, 8).map((template) => ({ id: template.templateId, title: template.title }))}
+          />
+        </Card>
+      </section>
 
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(300px,0.65fr)]">
         <Card>

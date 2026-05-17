@@ -309,31 +309,59 @@ export async function getYoungPeople() {
 }
 
 export async function getYoungPersonOverview(id: string): Promise<OsApiResult<YoungPersonOverview>> {
-  const [profile, workspace, documents, evidence] = await Promise.all([
+  const [profile, profileBundle, workspace, documents, evidence] = await Promise.all([
     osGet<UnknownRecord>(`/os/young-people/${encodeURIComponent(id)}`, {}),
+    osGet<UnknownRecord>(`/young-people/${encodeURIComponent(id)}`, {}),
     getOsYoungPersonWorkspace(id),
     getOsDocuments(),
     getOsEvidence()
   ])
   const profileObject = asObject(profile.data)
+  const bundleObject = asObject(profileBundle.data)
+  const bundle = asObject(bundleObject.bundle)
+  const bundlePerson = asObject(bundle.young_person || bundleObject.young_person)
+  const identityProfile = asObject(bundle.identity_profile)
+  const communicationProfile = asObject(bundle.communication_profile)
+  const formulation = asObject(bundle.formulation)
+  const contacts = asArray(bundle.contacts)
+  const rawProfile = Object.keys(bundlePerson).length ? { ...profileObject, ...bundlePerson } : profileObject
+  const enrichedProfile = {
+    ...rawProfile,
+    identity_profile: identityProfile,
+    communication_profile: communicationProfile,
+    formulation,
+    contacts,
+    what_matters_to_me: firstString(identityProfile, ['what_matters_to_me'], ''),
+    interests: firstString(identityProfile, ['interests'], ''),
+    strengths: firstString(identityProfile, ['strengths_summary', 'strengths'], ''),
+    strengths_summary: firstString(identityProfile, ['strengths_summary', 'strengths'], ''),
+    communication_style: firstString(communicationProfile, ['communication_style'], ''),
+    sensory_needs: firstString(communicationProfile, ['sensory_needs', 'sensory_profile'], ''),
+    what_helps: firstString(communicationProfile, ['what_helps']) || firstString(formulation, ['what_helps'], ''),
+    what_does_not_help: firstString(communicationProfile, ['what_to_avoid', 'what_does_not_help']) || firstString(formulation, ['what_adults_should_avoid'], ''),
+    routines: firstString(communicationProfile, ['routines_and_predictability', 'routines'], ''),
+    child_voice_summary: firstString(formulation, ['child_voice_summary'], ''),
+    important_contacts: contacts,
+    profile_image_url: firstString(rawProfile, ['profile_image_url', 'profile_photo_url', 'photo_url'], '')
+  }
   const workspaceProfile = workspace.data.youngPerson
-  const mappedProfile: OsPersonSummary | undefined = profile.source === 'live' && Object.keys(profileObject).length
+  const mappedProfile: OsPersonSummary | undefined = (profile.source === 'live' || profileBundle.source === 'live') && Object.keys(enrichedProfile).length
     ? {
-        ...profileObject,
-        id: String(profileObject.id || id),
-        displayName: firstString(profileObject, ['display_name', 'displayName', 'name'], `Young person ${id}`),
-        preferredName: firstString(profileObject, ['preferred_name', 'preferredName', 'first_name'], ''),
-        age: profileObject.age,
-        riskLevel: firstString(profileObject, ['risk_level', 'riskLevel', 'risk'], ''),
-        keyWorkerId: firstString(profileObject, ['key_worker_id', 'primary_keyworker_id', 'allocated_key_worker_id'], ''),
-        placementStatus: firstString(profileObject, ['placement_status', 'status'], ''),
-        legalStatus: firstString(profileObject, ['legal_status', 'legalStatus'], '')
+        ...enrichedProfile,
+        id: String(enrichedProfile.id || id),
+        displayName: firstString(enrichedProfile, ['display_name', 'displayName', 'name'], `Young person ${id}`),
+        preferredName: firstString(enrichedProfile, ['preferred_name', 'preferredName', 'first_name'], ''),
+        age: enrichedProfile.age,
+        riskLevel: firstString(enrichedProfile, ['risk_level', 'summary_risk_level', 'riskLevel', 'risk'], ''),
+        keyWorkerId: firstString(enrichedProfile, ['key_worker_id', 'primary_keyworker_id', 'allocated_key_worker_id'], ''),
+        placementStatus: firstString(enrichedProfile, ['placement_status', 'status'], ''),
+        legalStatus: firstString(enrichedProfile, ['legal_status', 'legalStatus'], '')
       }
     : workspaceProfile
   const chronology = workspace.data.chronology
   const childDocuments = documents.data.filter((document) => String((document as any).youngPersonId || (document as any).young_person_id || '') === id || !((document as any).youngPersonId || (document as any).young_person_id))
   const childEvidence = evidence.data.filter((item) => !item.youngPersonId || item.youngPersonId === id)
-  return mergeResult([profile, workspace, documents, evidence], {
+  return mergeResult([profile, profileBundle, workspace, documents, evidence], {
     profile: mappedProfile,
     chronology,
     safeguarding: chronology.filter((event) => event.safeguardingFlags.length || `${event.title} ${event.category}`.toLowerCase().includes('safeguard')),
@@ -468,15 +496,33 @@ export async function getEvidenceLinks() {
 }
 
 export async function getStaff(): Promise<OsApiResult<StaffDirectory>> {
-  const context = await osGet<UnknownRecord>('/api/os/context', {})
+  const [context, account] = await Promise.all([
+    osGet<UnknownRecord>('/api/os/context', {}),
+    osGet<UnknownRecord>('/account/me', {})
+  ])
   const contextObject = asObject(context.data)
+  const accountObject = asObject(account.data)
+  const accountUser = asObject(accountObject.user)
+  const accountProfile = asObject(accountObject.profile)
   const staff = asArray(contextObject.workforce).map((row) => mapOperationalRecord(row, 'staff'))
+  const userId = firstString(accountUser, ['id', 'user_id'], '')
+  const email = firstString(accountUser, ['email'], '').toLowerCase()
+  const currentUser = staff.find((member) => member.id === userId || String(member.raw.email || '').toLowerCase() === email) || (userId || email ? mapOperationalRecord({
+    id: userId || email || 'current-user',
+    title: firstString(accountProfile, ['display_name'], '') || firstString(accountUser, ['email'], 'Current user'),
+    summary: firstString(accountProfile, ['operational_focus', 'role_title'], 'Your live account is available, but no staff workspace records were returned.'),
+    role: firstString(accountProfile, ['role_title'], '') || firstString(accountUser, ['role'], ''),
+    status: 'active',
+    home_id: accountUser.home_id,
+    provider_id: accountUser.provider_id,
+    email
+  }, 'staff') : undefined)
   return {
     ...context,
     data: {
       staff,
-      currentUser: staff[0],
-      lifecycle: staff.map((member) => member.lifecycle)
+      currentUser,
+      lifecycle: [...staff, ...(currentUser && !staff.some((member) => member.id === currentUser.id) ? [currentUser] : [])].map((member) => member.lifecycle)
     }
   }
 }

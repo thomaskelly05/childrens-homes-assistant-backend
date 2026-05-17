@@ -1,12 +1,14 @@
 import { notFound } from 'next/navigation'
 
 import { DocumentEditorShell } from '@/components/document-editor/document-editor-shell'
-import { getYoungPersonSummary } from '@/lib/indicare/selectors'
+import { getYoungPersonOverview } from '@/lib/os-api/platform'
 
 export default async function YoungPersonDocumentPage({ params }: { params: Promise<{ id: string; documentId: string }> }) {
   const { id, documentId } = await params
-  const summary = getYoungPersonSummary(id)
-  if (!summary) notFound()
+  const overview = await getYoungPersonOverview(id)
+  const person = overview.data.profile
+  if (!person && overview.source === 'live') notFound()
+  const childName = person?.preferredName || person?.displayName || `Young person ${id}`
 
-  return <DocumentEditorShell scope="child" childId={id} documentId={documentId} title={`${summary.youngPerson.preferredName} document`} />
+  return <DocumentEditorShell scope="child" childId={id} documentId={documentId} title={`${childName} document`} />
 }
