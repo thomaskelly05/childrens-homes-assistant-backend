@@ -29,4 +29,4 @@ def emotional_wellbeing(payload: EvidencePayload):
 
 @router.post("/workforce-culture")
 def workforce_culture(payload: EvidencePayload):
-    return {"ok": True, "workforce": workforce_culture_service.analyse(records=payload.records)}
+    return {"ok": True, "workforce": workforce_culture_intelligence_service.analyse(records=payload.records)}
