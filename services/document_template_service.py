@@ -2,91 +2,60 @@ from __future__ import annotations
 
 import re
 from functools import lru_cache
-from typing import Iterable
+from typing import Any, Iterable
 
 from schemas.document_templates import DocumentScope, DocumentSectionTemplate, DocumentTemplate
 
 
 CHILD_VOICE_PROMPTS = [
-    "What mattered to the child?",
-    "How did the child experience this?",
-    "What support helped?",
-    "What changed emotionally?",
-    "What strengths were seen?",
-    "What relationships supported progress?",
-    "How was the child's voice included?",
-    "What should adults reflect on?",
-    "What has improved from the child's starting point?",
-    "What still needs support?",
-    "What should the next adults know?",
+    "What did the child say, show or choose?",
+    "How was the child's experience understood?",
+    "What helped the child feel safer or more connected?",
+    "What should adults change next?",
 ]
 
 THERAPEUTIC_GUIDANCE = [
     "Write with curiosity before certainty.",
     "Describe behaviour as communication and avoid punitive phrasing.",
-    "Name strengths, relationships and progress from the child's starting point.",
     "Separate observed facts from professional reflection.",
-    "Do not make safeguarding conclusions without cited evidence and manager oversight.",
+    "Name what helped, what did not help, and the repair or follow-up needed.",
 ]
 
-CHILD_TEMPLATES = [
-    "Care Plan",
-    "Placement Plan",
-    "Matching Assessment",
-    "Impact Risk Assessment",
-    "Individual Risk Assessment",
-    "Missing From Care Protocol",
-    "Positive Behaviour Support Plan",
-    "Education Plan",
-    "Health Plan",
-    "Medication Plan",
-    "Family Contact Plan",
-    "Independence Plan",
-    "Online Safety Plan",
-    "Self-Harm Risk Assessment",
-    "Safety Plan",
-    "Keywork Plan",
-    "Emotional Wellbeing Plan",
-    "CSE/CCE Risk Assessment",
-    "Bullying/Peer Relationship Plan",
-]
+QUALITY = {
+    "purpose": "Quality and Purpose",
+    "views": "Views, Wishes and Feelings",
+    "education": "Education",
+    "enjoyment": "Enjoyment and Achievement",
+    "health": "Health and Well-being",
+    "relationships": "Positive Relationships",
+    "protection": "Protection of Children",
+    "leadership": "Leadership and Management",
+    "planning": "Care Planning",
+}
 
-HOME_TEMPLATES = [
-    "Statement of Purpose",
-    "Children's Guide",
-    "Locality Risk Assessment",
-    "Safeguarding Policy",
-    "Missing Child Policy",
-    "Behaviour Management Policy",
-    "Restraint Policy",
-    "Complaints Policy",
-    "Whistleblowing Policy",
-    "Medication Policy",
-    "Admissions Policy",
-    "Equality & Diversity Policy",
-    "Data Protection Policy",
-    "Online Safety Policy",
-    "Business Continuity Plan",
-    "Fire Risk Assessment",
-    "Health & Safety Risk Assessment",
-    "Workforce Development Plan",
-    "Quality Assurance Calendar",
-    "Reg 44 Report",
-    "Reg 45 Review",
-    "Ofsted Action Plan",
-]
+SCCIF = {
+    "progress": "experiences and progress of children",
+    "protection": "help and protection",
+    "leadership": "effectiveness of leaders and managers",
+    "overall": "overall experiences and progress",
+}
 
-STAFF_TEMPLATES = [
-    "Supervision Record",
-    "Appraisal",
-    "Induction",
-    "Probation",
-    "Training Matrix",
-    "Competency Assessment",
-    "Safer Recruitment Checklist",
-    "DBS Tracking",
-    "Staff Development Plan",
-]
+REG = {
+    "5": "Children's Homes Regulations 2015 Regulation 5 - engaging with the wider system",
+    "6": "Children's Homes Regulations 2015 Regulation 6 - quality and purpose standard",
+    "7": "Children's Homes Regulations 2015 Regulation 7 - children's views, wishes and feelings standard",
+    "8": "Children's Homes Regulations 2015 Regulation 8 - education standard",
+    "9": "Children's Homes Regulations 2015 Regulation 9 - enjoyment and achievement standard",
+    "10": "Children's Homes Regulations 2015 Regulation 10 - health and well-being standard",
+    "11": "Children's Homes Regulations 2015 Regulation 11 - positive relationships standard",
+    "12": "Children's Homes Regulations 2015 Regulation 12 - protection of children standard",
+    "13": "Children's Homes Regulations 2015 Regulation 13 - leadership and management standard",
+    "14": "Children's Homes Regulations 2015 Regulation 14 - care planning standard",
+    "35": "Children's Homes Regulations 2015 Regulation 35 - behaviour management policies and records",
+    "40": "Children's Homes Regulations 2015 Regulation 40 - notification of serious events",
+    "44": "Children's Homes Regulations 2015 Regulation 44 - independent person visits",
+    "45": "Children's Homes Regulations 2015 Regulation 45 - review of quality of care",
+}
 
 
 def slug(value: str) -> str:
@@ -101,115 +70,700 @@ def _section(title: str, purpose: str, prompts: Iterable[str], *, required: bool
         prompts=list(prompts),
         required=required,
         therapeutic_guidance=THERAPEUTIC_GUIDANCE if required else THERAPEUTIC_GUIDANCE[:2],
+        evidence_links=["supporting record", "manager review"] if required else ["optional appendix"],
+        chronology_links=["create chronology marker when this changes risk, wellbeing, plan or statutory action"] if required else [],
     )
 
 
-def _child_sections(title: str) -> list[DocumentSectionTemplate]:
-    risk_prompts = [
-        "What is known from recent daily notes, incidents, safeguarding or missing episodes?",
-        "Which protective adults, routines or places reduce risk?",
-        "What should staff do first, next and if concern increases?",
+def _spec(
+    template_id: str,
+    title: str,
+    category: str,
+    scope: str,
+    sections: list[tuple[str, str, list[str]]],
+    *,
+    regulations: list[str],
+    quality: list[str],
+    sccif: list[str],
+    review_frequency: str,
+    owner_role: str,
+    description: str,
+    child_voice: bool = True,
+    signoff: list[str] | None = None,
+    export_ready: bool = True,
+) -> dict[str, Any]:
+    return {
+        "template_id": template_id,
+        "title": title,
+        "category": category,
+        "scope": scope,
+        "sections": sections,
+        "regulatory_links": [REG[key] for key in regulations],
+        "quality_standard_links": [QUALITY[key] for key in quality],
+        "sccif_links": [SCCIF[key] for key in sccif],
+        "review_frequency": review_frequency,
+        "owner_role": owner_role,
+        "description": description,
+        "child_voice": child_voice,
+        "signoff_requirements": signoff or ["author confirmation", "manager oversight where risk, safeguarding or plan change is present"],
+        "export_ready": export_ready,
+    }
+
+
+TEMPLATE_SPECS: list[dict[str, Any]] = [
+    _spec(
+        "daily_note",
+        "Daily Note",
+        "daily_recording",
+        "child",
+        [
+            ("Presentation and regulation", "Capture the child's emotional presentation, regulation needs and what helped across the day.", ["How did the child appear emotionally?", "What co-regulation, sensory support or routine helped?"]),
+            ("Routine, health and care", "Record food, sleep, personal care, medication prompts and health observations without over-medicalising.", ["What routine went well?", "Were there health, sleep or appetite changes?"]),
+            ("Relationships and positives", "Notice connection, strengths, play, humour, repair and ordinary moments of progress.", ["Who did the child connect with?", "What positive moment should tomorrow's staff know?"]),
+            ("Education, activity and home life", "Summarise attendance, learning, activity, family time and community participation.", ["What did the child engage with?", "What support was offered when engagement was hard?"]),
+            ("Child voice and staff reflection", "Hold the child's words alongside a brief reflective view of what adults should adjust.", CHILD_VOICE_PROMPTS),
+            ("Actions for next shift", "Identify practical follow-up, chronology markers and evidence links for handover.", ["What action is open?", "What should be linked to chronology or evidence?"]),
+        ],
+        regulations=["6", "7", "10", "11", "14"],
+        quality=["purpose", "views", "health", "relationships", "planning"],
+        sccif=["progress", "overall"],
+        review_frequency="daily, with manager sampling weekly",
+        owner_role="residential staff / shift lead",
+        description="A calm end-of-day care record centred on presentation, routine, relationships, child voice and next-shift support.",
+    ),
+    _spec(
+        "incident_report",
+        "Incident Report",
+        "incident_and_safety",
+        "child",
+        [
+            ("Early signs and antecedents", "Describe context, triggers, unmet need, sensory factors and relational stress before the incident.", ["What was happening before distress increased?", "What might have been underneath this?"]),
+            ("Incident timeline", "Record a clear factual sequence with times, people present and observed impact.", ["What happened first, next and after?", "Who was present?"]),
+            ("De-escalation and support offered", "Show preventative and in-the-moment support attempted before any restrictive response.", ["What support was offered?", "What helped or did not help?"]),
+            ("Impact, injury or damage", "Record wellbeing impact, medical checks, property damage and immediate safety steps.", ["Was anyone hurt?", "What safety action was taken?"]),
+            ("Notifications and safeguarding relevance", "Record who was informed and whether Reg 40, social worker, police or safeguarding advice was considered.", ["Who was notified?", "Is statutory notification required?"]),
+            ("Repair, learning and manager review", "Capture restorative work, child debrief, staff reflection, plan updates and oversight.", ["What repair happened?", "What should change in the plan?"]),
+        ],
+        regulations=["11", "12", "35", "40"],
+        quality=["relationships", "protection", "leadership", "planning"],
+        sccif=["protection", "leadership", "overall"],
+        review_frequency="same shift, manager review within 24 hours when significant",
+        owner_role="recording staff / registered manager",
+        description="A structured safety record for incidents, de-escalation, impact, notifications, restorative work and oversight.",
+    ),
+    _spec(
+        "safeguarding_concern",
+        "Safeguarding Concern",
+        "safeguarding",
+        "child",
+        [
+            ("Concern source", "Record whether the concern came from disclosure, observation, third-party information or pattern.", ["What was seen, heard or reported?", "What is the source?"]),
+            ("Child voice and immediate safety", "Use the child's words where known and show immediate protective steps.", ["What did the child say or show?", "What safety step was taken now?"]),
+            ("Known context and vulnerability", "Link relevant chronology, risks, relationships, online activity, missing episodes or exploitation indicators.", ["What known vulnerability matters?", "What linked evidence exists?"]),
+            ("People informed", "Record manager, social worker, family where appropriate, police, LADO or professionals informed.", ["Who was informed and when?", "What advice was given?"]),
+            ("Statutory and Reg 40 consideration", "Record professional decisions about referral, notification and escalation without presenting legal advice.", ["Was Reg 40 considered?", "What external action is required?"]),
+            ("Management oversight and follow-up", "Set review owner, next safety planning step and evidence gap.", ["Who owns the next step?", "What must be reviewed?"]),
+        ],
+        regulations=["5", "7", "12", "13", "40"],
+        quality=["views", "protection", "leadership", "planning"],
+        sccif=["protection", "leadership", "overall"],
+        review_frequency="immediate recording and manager review the same day",
+        owner_role="safeguarding lead / registered manager",
+        description="A safeguarding-first record for disclosure, observation, immediate safety, statutory action and manager oversight.",
+    ),
+    _spec(
+        "missing_from_care_episode",
+        "Missing From Care Episode",
+        "missing_from_care",
+        "child",
+        [
+            ("Last seen and presentation", "Record where the child was last seen, mood, clothing, companions and known destination clues.", ["Where and when was the child last seen?", "How did they appear?"]),
+            ("Known risks and protective factors", "Link missing protocol, triggers, exploitation risk, health needs and trusted adults.", ["What risk increases concern?", "What protective contact may help?"]),
+            ("Search and welfare actions", "Record proportionate actions staff took, checks completed and rationale for escalation.", ["Which places and contacts were checked?", "What action was taken?"]),
+            ("Notifications and professional coordination", "Record police, social worker, manager, family and placing authority communication.", ["Who was notified and at what time?", "What reference number or advice was given?"]),
+            ("Return circumstances and wellbeing", "Capture how the child returned, presentation, medical needs, food/sleep/warmth and immediate support.", ["How did the child return?", "What did they need first?"]),
+            ("Debrief, RHI and safety planning", "Record debrief, return home interview status, plan update, chronology and evidence links.", ["Was a return interview offered or arranged?", "What safety plan changed?"]),
+        ],
+        regulations=["5", "7", "12", "13", "40"],
+        quality=["views", "protection", "relationships", "planning"],
+        sccif=["protection", "leadership", "overall"],
+        review_frequency="during episode, on return and at manager review",
+        owner_role="shift lead / registered manager",
+        description="A missing episode record that follows risk, notification, return support, debrief and safety planning.",
+    ),
+    _spec(
+        "return_home_interview",
+        "Return Home Interview",
+        "missing_from_care",
+        "child",
+        [
+            ("Interview context and consent", "Record who completed the conversation, timing, setting and whether the child could engage.", ["Where did the conversation happen?", "Was the child able to engage at that time?"]),
+            ("Child's account", "Capture the child's own account, wishes and worries without challenge or blame.", ["What did the child say happened?", "What did they want adults to understand?"]),
+            ("Push and pull factors", "Identify relationship, placement, online, exploitation, family or emotional factors linked to going missing.", ["What pulled the child away?", "What made home hard at that time?"]),
+            ("Safety, health and exploitation checks", "Record health needs, harm, contact with unsafe adults, substances, money, transport or online risks.", ["Is there any indication of harm?", "What safeguarding action is needed?"]),
+            ("What would help next time", "Translate learning into relational, sensory, communication and practical prevention.", ["What support might help earlier?", "Who should the child speak with?"]),
+            ("Plan update and professional action", "Record missing risk assessment update, chronology link, social worker update and manager oversight.", ["Which plan needs updating?", "Who owns follow-up?"]),
+        ],
+        regulations=["7", "12", "13", "14", "40"],
+        quality=["views", "protection", "relationships", "planning"],
+        sccif=["protection", "progress", "overall"],
+        review_frequency="after every missing episode where the child can engage",
+        owner_role="independent interviewer / key worker / manager",
+        description="A child-centred return interview record that turns missing-episode learning into safer support.",
+    ),
+    _spec(
+        "key_work_session",
+        "Key Work Session",
+        "therapeutic_work",
+        "child",
+        [
+            ("Planned purpose or emerging theme", "Record whether the session was planned or responsive and the agreed theme.", ["What prompted the session?", "Was it planned or in response to the child?"]),
+            ("Child's views and emotional content", "Capture words, feelings, silences, play, body language or communication aids.", CHILD_VOICE_PROMPTS),
+            ("Therapeutic response", "Record validation, curiosity, pacing, repair, sensory or communication adjustments used.", ["How did staff respond therapeutically?", "What helped the child stay engaged?"]),
+            ("Meaning and formulation", "Reflect on need, trauma reminders, identity, relationships and protective strengths.", ["What might sit beneath the presentation?", "What strength was visible?"]),
+            ("Agreed actions and follow-up", "Record what the child and adults agreed, timescales and linked evidence.", ["What did the child agree to?", "What will adults do next?"]),
+        ],
+        regulations=["6", "7", "10", "11", "14"],
+        quality=["views", "health", "relationships", "planning"],
+        sccif=["progress", "overall"],
+        review_frequency="after each session, sampled in supervision",
+        owner_role="key worker / therapeutic lead",
+        description="A therapeutic direct-work record focused on child voice, meaning, response and follow-up.",
+    ),
+    _spec(
+        "behaviour_support_reflection",
+        "Behaviour Support Reflection",
+        "therapeutic_work",
+        "child",
+        [
+            ("Trigger map", "Explore what happened before distress behaviour, including sensory, communication and relationship factors.", ["What may have triggered distress?", "Were sensory or communication needs present?"]),
+            ("Unmet need hypothesis", "Record a reflective hypothesis about need, not a label or judgement.", ["What need might the behaviour have communicated?", "What history or pattern matters?"]),
+            ("Staff response", "Describe adult tone, proximity, choices, boundaries and regulation strategies.", ["What did staff do?", "What was supportive or unhelpful?"]),
+            ("What helped recovery", "Identify co-regulation, space, trusted adult, activity, sleep, food or sensory support.", ["What helped the child recover?", "What should be repeated?"]),
+            ("Restorative work and plan learning", "Record repair, relationship rebuilding, plan amendments and manager sampling.", ["What repair happened?", "What should change in support plans?"]),
+        ],
+        regulations=["10", "11", "12", "35"],
+        quality=["health", "relationships", "protection", "planning"],
+        sccif=["progress", "protection", "overall"],
+        review_frequency="after distress behaviour or plan review",
+        owner_role="key worker / shift lead",
+        description="A reflective behaviour-support record that treats behaviour as communication and turns learning into plan updates.",
+    ),
+    _spec(
+        "physical_intervention_restraint_review",
+        "Physical Intervention / Restraint Review",
+        "incident_and_safety",
+        "child",
+        [
+            ("Immediate risk threshold", "Record the serious harm risk that made intervention considered, and alternatives attempted.", ["What immediate risk was present?", "Which alternatives were attempted first?"]),
+            ("Intervention detail", "Record duration, staff involved, holds used, dignity considerations and observation.", ["What intervention was used?", "How was dignity protected?"]),
+            ("Child and staff wellbeing checks", "Record physical and emotional checks, medical attention and post-incident support.", ["How was the child checked?", "How were staff supported?"]),
+            ("Child debrief and advocacy", "Capture the child's experience, complaint/advocacy offer and what they want changed.", ["What did the child say afterwards?", "Was advocacy offered?"]),
+            ("Manager review and restraint reduction", "Record legality/proportionality review, learning and restraint-reduction action.", ["Was the intervention proportionate?", "What reduces future restraint risk?"]),
+        ],
+        regulations=["7", "10", "12", "13", "35", "40"],
+        quality=["views", "health", "protection", "leadership"],
+        sccif=["protection", "leadership", "overall"],
+        review_frequency="same day and in restraint monitoring review",
+        owner_role="registered manager / restraint lead",
+        description="A restraint review that starts with prevention, dignity, debrief and reduction learning.",
+        signoff=["author confirmation", "registered manager review", "responsible individual sampling where threshold met"],
+    ),
+    _spec(
+        "sanction_consequence_review",
+        "Sanction / Consequence Review",
+        "positive_relationships",
+        "child",
+        [
+            ("Reason and relational context", "Record why a consequence was considered and the relational context around it.", ["What boundary needed repair?", "What relationship factors matter?"]),
+            ("Child understanding and fairness", "Record whether the child understood, could share views and had support to engage.", ["What did the child understand?", "Was the response fair and proportionate?"]),
+            ("Restorative alternative considered", "Show repair, restitution, conversation or natural consequence options considered.", ["What restorative option was offered?", "What helped learning?"]),
+            ("Impact on relationships and wellbeing", "Record emotional impact, shame risk, inclusion, contact, education or activity impact.", ["Could this increase shame or exclusion?", "How was connection maintained?"]),
+            ("Manager oversight and review", "Confirm recording, review, pattern monitoring and plan learning.", ["Who reviewed this?", "Is there a pattern needing support?"]),
+        ],
+        regulations=["7", "11", "13", "35"],
+        quality=["views", "relationships", "leadership", "planning"],
+        sccif=["progress", "leadership", "overall"],
+        review_frequency="when used, with manager sampling",
+        owner_role="shift lead / registered manager",
+        description="A restorative review of consequences that checks fairness, learning, relationship repair and oversight.",
+    ),
+    _spec(
+        "bullying_concern",
+        "Bullying Concern",
+        "safeguarding",
+        "child",
+        [
+            ("Concern pattern", "Record repeated behaviour, power imbalance, online/offline context and affected children.", ["What pattern is emerging?", "Who may be affected?"]),
+            ("Child voice and impact", "Capture the child's experience, sense of safety, friendships and emotional impact.", ["What did the child say or show?", "Where do they feel unsafe?"]),
+            ("Immediate safety and supervision", "Record practical safety, staffing, online safety and environmental adjustments.", ["What changed immediately?", "How is supervision adjusted?"]),
+            ("Support for all children", "Record support for the child harmed and reflective work with the child causing harm.", ["What support is offered to each child?", "What need might be underneath?"]),
+            ("Professional escalation and review", "Record notifications, safeguarding threshold, family/social worker updates and manager review.", ["Who was updated?", "What will be reviewed?"]),
+        ],
+        regulations=["7", "11", "12", "13"],
+        quality=["views", "relationships", "protection", "leadership"],
+        sccif=["protection", "progress", "overall"],
+        review_frequency="at each concern and weekly while open",
+        owner_role="key worker / safeguarding lead",
+        description="A peer-safety record for bullying concerns, impact, support and review.",
+    ),
+    _spec(
+        "child_voice_record",
+        "Child Voice Record",
+        "child_voice",
+        "child",
+        [
+            ("How the child communicated", "Record words, play, behaviour, choices, creative work, advocacy or communication aids.", ["How did the child communicate?", "Was interpretation checked?"]),
+            ("What matters to the child", "Capture wishes, worries, preferences, identity, culture, relationships and routines.", ["What matters most to the child?", "What should adults respect?"]),
+            ("Adult response", "Record how adults listened, validated, adapted and avoided over-promising.", ["How did adults respond?", "What changed because of the child voice?"]),
+            ("Decision impact", "Show how the view influenced care planning, risk, education, health or contact decisions.", ["Which decision did this influence?", "What could not change and why?"]),
+            ("Feedback loop", "Record how the child will be told what happened next.", ["How will the child get feedback?", "Who will follow up?"]),
+        ],
+        regulations=["7", "14"],
+        quality=["views", "planning", "relationships"],
+        sccif=["progress", "overall"],
+        review_frequency="whenever views affect care or decisions",
+        owner_role="key worker / advocate",
+        description="A focused voice record showing how a child's views changed practice or decisions.",
+    ),
+    _spec(
+        "family_contact_record",
+        "Family Contact Record",
+        "family_and_network",
+        "child",
+        [
+            ("Contact arrangement", "Record who, when, where, supervision level and plan expectations.", ["What contact was planned?", "What support was agreed?"]),
+            ("Before-contact presentation", "Record anticipation, worry, excitement, dysregulation or support needs before contact.", ["How did the child appear before contact?", "What preparation helped?"]),
+            ("During-contact observations", "Record warmth, stress, repair, boundaries and child-led moments.", ["What was positive?", "What seemed difficult?"]),
+            ("After-contact recovery", "Record emotional impact, routine, food, sleep, sensory or relational support afterwards.", ["How did the child appear afterwards?", "What helped recovery?"]),
+            ("Plan implications", "Record social worker updates, risk changes, wishes, chronology and review actions.", ["Does the contact plan need review?", "Who must be updated?"]),
+        ],
+        regulations=["5", "7", "11", "14"],
+        quality=["views", "relationships", "planning"],
+        sccif=["progress", "overall"],
+        review_frequency="after each family-time episode",
+        owner_role="contact supervisor / key worker",
+        description="A family-time record that balances relationships, emotional impact, safety and plan learning.",
+    ),
+    _spec(
+        "professional_contact_record",
+        "Professional Contact Record",
+        "multi_agency",
+        "child",
+        [
+            ("Professional and purpose", "Record who contacted the home, role, agency, reason and urgency.", ["Who made contact?", "What was the purpose?"]),
+            ("Information shared", "Summarise information shared and any confidentiality or consent considerations.", ["What information was shared?", "What should not be shared wider?"]),
+            ("Child impact", "Explain what the contact means for the child, not just the adults.", ["How does this affect the child?", "Does the child need an update?"]),
+            ("Agreed actions", "Record actions, owners, timescales and evidence required.", ["Who owns the action?", "When is it due?"]),
+            ("Escalation or oversight", "Record manager awareness, challenge, disagreement or escalation where relevant.", ["Does this need manager oversight?", "Is professional challenge required?"]),
+        ],
+        regulations=["5", "13", "14"],
+        quality=["purpose", "leadership", "planning"],
+        sccif=["leadership", "overall"],
+        review_frequency="at each significant professional contact",
+        owner_role="recording staff / manager",
+        description="A concise multi-agency communication record focused on child impact, action and oversight.",
+    ),
+    _spec(
+        "health_appointment_record",
+        "Health Appointment Record",
+        "health",
+        "child",
+        [
+            ("Appointment details", "Record date, clinician, reason, preparation and support offered.", ["What appointment happened?", "How was the child prepared?"]),
+            ("Child experience", "Capture the child's worries, questions, consent, sensory needs and preferences.", ["What did the child say or show?", "What helped them cope?"]),
+            ("Clinical outcome", "Record advice, diagnosis, tests, prescriptions or follow-up in plain operational language.", ["What was advised?", "What follow-up is required?"]),
+            ("Medication or treatment implications", "Link MAR, medication profile, side effects, allergies and monitoring needs.", ["Does medication support change?", "What monitoring is needed?"]),
+            ("Care plan and professional updates", "Record plan updates, social worker/family communication and evidence links.", ["Which plan changed?", "Who needs to know?"]),
+        ],
+        regulations=["5", "7", "10", "14"],
+        quality=["views", "health", "planning"],
+        sccif=["progress", "overall"],
+        review_frequency="after each appointment",
+        owner_role="health lead / key worker",
+        description="A health appointment record connecting the child's experience, clinical outcome and care-plan action.",
+    ),
+    _spec(
+        "medication_concern_health_follow_up",
+        "Medication Concern / Health Follow-up",
+        "health",
+        "child",
+        [
+            ("Concern or variation", "Record missed dose, refusal to take at that time, side effect, stock issue or health concern factually.", ["What variation or concern occurred?", "What is known factually?"]),
+            ("Immediate welfare check", "Record symptoms, distress, advice sought and safety actions.", ["How is the child now?", "Was advice sought?"]),
+            ("Child view and support", "Capture the child's explanation, worries, taste/sensory issues or preference.", ["What did the child say?", "What support might help next time?"]),
+            ("Professional advice and notifications", "Record pharmacy, GP, NHS 111, manager, social worker or family updates.", ["Who was informed?", "What advice was given?"]),
+            ("MAR/profile update and review", "Record medication profile changes, monitoring, chronology and manager sign-off.", ["What needs updating?", "Who reviews the MAR?"]),
+        ],
+        regulations=["10", "12", "13", "14"],
+        quality=["health", "protection", "leadership", "planning"],
+        sccif=["protection", "leadership", "overall"],
+        review_frequency="immediate and at medication audit",
+        owner_role="medication lead / registered manager",
+        description="A non-blaming medication and health follow-up record for welfare, advice, updates and audit.",
+    ),
+    _spec(
+        "education_update",
+        "Education Update",
+        "education",
+        "child",
+        [
+            ("Attendance and engagement", "Record attendance, punctuality, learning engagement and support needs.", ["Did the child attend?", "What helped engagement?"]),
+            ("Learning, achievement and strengths", "Record progress, interests, achievements and moments of confidence.", ["What went well?", "What achievement should be noticed?"]),
+            ("Barriers and support", "Explore emotional, sensory, relationship, transport or curriculum barriers.", ["What made learning difficult?", "What support was offered?"]),
+            ("Child view", "Capture how the child feels about school, learning, peers and adults.", CHILD_VOICE_PROMPTS),
+            ("PEP, school and home actions", "Record agreed actions, professional contact, chronology and plan updates.", ["What school/home action is agreed?", "Does PEP need updating?"]),
+        ],
+        regulations=["5", "7", "8", "9", "14"],
+        quality=["views", "education", "enjoyment", "planning"],
+        sccif=["progress", "overall"],
+        review_frequency="weekly or after significant education event",
+        owner_role="education lead / key worker",
+        description="An education update that links attendance, learning, barriers, child voice and PEP action.",
+    ),
+    _spec(
+        "care_plan_review",
+        "Care Plan Review",
+        "care_planning",
+        "child",
+        [
+            ("What has changed", "Summarise changes in needs, strengths, risk, relationships and progress since last review.", ["What has changed for the child?", "What evidence shows this?"]),
+            ("Child voice and participation", "Record how the child contributed and what they want adults to understand.", CHILD_VOICE_PROMPTS),
+            ("Outcomes and evidence", "Link daily notes, keywork, incidents, education, health, contact and professional evidence.", ["Which evidence supports progress?", "Where is evidence missing?"]),
+            ("Risk and support plan alignment", "Check whether risk assessments, behaviour support and placement plans still match reality.", ["Which plans need updating?", "What support is working?"]),
+            ("Decisions, actions and sign-off", "Record decisions, responsible adults, timescales, disagreement and manager oversight.", ["What has been decided?", "Who owns each action?"]),
+        ],
+        regulations=["5", "6", "7", "13", "14"],
+        quality=["purpose", "views", "leadership", "planning"],
+        sccif=["progress", "leadership", "overall"],
+        review_frequency="monthly or before statutory review",
+        owner_role="key worker / registered manager",
+        description="A care-plan review that turns evidence, child voice and professional decisions into accountable actions.",
+    ),
+    _spec(
+        "risk_assessment_review",
+        "Risk Assessment Review",
+        "risk_assessment",
+        "child",
+        [
+            ("Current risk picture", "Summarise current risks, protective factors and evidence from recent records.", ["What risk is current?", "What evidence supports this?"]),
+            ("Triggers and early signs", "Record known triggers, sensory/communication needs and early signs of distress.", ["What tends to happen before concern increases?", "What should staff notice early?"]),
+            ("Protective relationships and routines", "Identify trusted adults, routines, spaces and activities that reduce risk.", ["Who helps?", "What routine or place is protective?"]),
+            ("Control measures and least restrictive support", "Describe practical support, supervision and escalation that protects without unnecessary restriction.", ["What is the least restrictive support?", "When should this escalate?"]),
+            ("Review decision and chronology", "Record rating change, rationale, chronology link and manager sign-off.", ["Has risk changed?", "What chronology evidence explains the decision?"]),
+        ],
+        regulations=["7", "10", "11", "12", "13", "14"],
+        quality=["views", "health", "relationships", "protection", "planning"],
+        sccif=["protection", "leadership", "overall"],
+        review_frequency="monthly or after significant event",
+        owner_role="key worker / registered manager",
+        description="A live risk review that links current evidence, protective support and least restrictive action.",
+    ),
+    _spec(
+        "placement_plan_update",
+        "Placement Plan Update",
+        "care_planning",
+        "child",
+        [
+            ("Reason for update", "Record the event, review, child request or professional decision prompting the change.", ["Why is the placement plan changing?", "Who requested or agreed it?"]),
+            ("Child's day-to-day support", "Update routines, relationships, identity, culture, communication and emotional support.", ["What does the child need day to day?", "What helps them feel settled?"]),
+            ("Health, education and contact alignment", "Check that operational arrangements match professional plans.", ["Does education/health/contact support still match need?", "What coordination is needed?"]),
+            ("Risk, safeguarding and missing alignment", "Ensure the placement plan reflects current risk assessments and safety planning.", ["Which risk plan changed?", "What staff instruction is different?"]),
+            ("Agreement, sharing and review", "Record child involvement, social worker agreement, family where appropriate and next review.", ["Who receives the update?", "How will the child be told?"]),
+        ],
+        regulations=["5", "6", "7", "12", "14"],
+        quality=["purpose", "views", "protection", "planning"],
+        sccif=["progress", "protection", "overall"],
+        review_frequency="when care arrangements change",
+        owner_role="registered manager / social worker liaison",
+        description="A placement-plan update focused on day-to-day support, alignment and accountable sharing.",
+    ),
+    _spec(
+        "individual_behaviour_support_plan",
+        "Individual Behaviour Support Plan",
+        "therapeutic_work",
+        "child",
+        [
+            ("Strengths and communication", "Start with strengths, communication style, identity and what helps connection.", ["What strengths should staff notice?", "How does the child communicate need?"]),
+            ("Triggers and sensory needs", "Record trauma reminders, sensory preferences, transitions, peer dynamics and communication needs.", ["What can increase distress?", "What sensory support helps?"]),
+            ("Proactive support", "Set routines, relationships, choices, scripts, activities and regulation supports.", ["What should staff do early?", "Which adult approach helps?"]),
+            ("When distress increases", "Describe staged support, safe boundaries, de-escalation and escalation thresholds.", ["What should staff do first, next and if risk increases?", "What should staff avoid?"]),
+            ("Repair, review and learning", "Plan restorative work, review evidence and manager oversight.", ["How is repair supported?", "What evidence will show the plan is working?"]),
+        ],
+        regulations=["7", "10", "11", "12", "35"],
+        quality=["views", "health", "relationships", "protection", "planning"],
+        sccif=["progress", "protection", "overall"],
+        review_frequency="monthly and after significant distress behaviour",
+        owner_role="key worker / therapeutic lead",
+        description="A proactive behaviour-support plan built around strengths, triggers, regulation and repair.",
+    ),
+    _spec(
+        "missing_risk_assessment",
+        "Missing Risk Assessment",
+        "missing_from_care",
+        "child",
+        [
+            ("Missing history and patterns", "Summarise frequency, locations, timings, companions and return patterns.", ["What pattern is known?", "What recent evidence matters?"]),
+            ("Push, pull and exploitation indicators", "Record home stressors, relationships, online contact, substances, money, transport or adult concern.", ["What pulls the child away?", "What exploitation indicator is present?"]),
+            ("Wellbeing and health vulnerabilities", "Record medication, mental health, self-injury, sleep, weather and immediate welfare risks.", ["What health or wellbeing risk increases concern?", "What should police know?"]),
+            ("Prevention and response plan", "Set early support, agreed searches, notifications and professional thresholds.", ["What should staff do early?", "When is police notification required?"]),
+            ("Return support and RHI plan", "Plan return response, debrief, interview, food/warmth/medical needs and review.", ["What helps the child return safely?", "How will learning update the plan?"]),
+        ],
+        regulations=["5", "7", "12", "13", "40"],
+        quality=["views", "protection", "health", "planning"],
+        sccif=["protection", "leadership", "overall"],
+        review_frequency="monthly and after every missing episode",
+        owner_role="registered manager / missing lead",
+        description="A missing risk assessment that makes prevention, response, return support and review explicit.",
+    ),
+    _spec(
+        "internet_social_media_safety_plan",
+        "Internet/Social Media Safety Plan",
+        "safeguarding",
+        "child",
+        [
+            ("Digital life and strengths", "Record positive online use, friendships, interests, identity and learning.", ["What does the child enjoy online?", "What strengths or connection are present?"]),
+            ("Known online risks", "Record grooming, bullying, sharing images, contact with unsafe adults, gaming or location risks.", ["What online risk is known?", "What evidence supports this?"]),
+            ("Child voice and digital boundaries", "Capture the child's understanding, wishes, privacy and worries.", ["What does the child think is safe?", "What boundary feels hard?"]),
+            ("Support and safety settings", "Set education, supervision, device settings, trusted adult check-ins and response plan.", ["What support is least restrictive?", "Which settings or routines help?"]),
+            ("Review and professional action", "Record police/social worker advice, chronology, evidence and manager review.", ["Who needs to know?", "When will this be reviewed?"]),
+        ],
+        regulations=["7", "12", "13", "14"],
+        quality=["views", "protection", "planning", "leadership"],
+        sccif=["protection", "overall"],
+        review_frequency="monthly or after online concern",
+        owner_role="key worker / safeguarding lead",
+        description="A digital safety plan that balances online belonging, privacy, education and safeguarding.",
+    ),
+    _spec(
+        "reg_44_evidence_note",
+        "Reg 44 Evidence Note",
+        "inspection_readiness",
+        "home",
+        [
+            ("Visit evidence sampled", "Record records, rooms, routines, incidents, complaints and observations sampled during the visit.", ["What was sampled?", "What source evidence supports the note?"]),
+            ("Children's views", "Capture children's views, wishes, feelings and lived experience from the visit.", ["What did children say or show?", "What changed because of their view?"]),
+            ("Staff views and practice", "Record staff confidence, supervision, safeguarding understanding and culture observations.", ["What did staff understand well?", "Where is support needed?"]),
+            ("Safeguarding and environment", "Record safety, missing, restraint, complaints, medication, environment and immediate concern checks.", ["Is there any safeguarding concern?", "What environmental evidence matters?"]),
+            ("Leadership oversight and actions", "Set manager/RI actions, responsible owners, timescales and evidence required.", ["What action is required?", "Who will verify completion?"]),
+        ],
+        regulations=["13", "44"],
+        quality=["views", "protection", "leadership", "purpose"],
+        sccif=["protection", "leadership", "overall"],
+        review_frequency="monthly",
+        owner_role="independent person / registered manager",
+        description="A Reg 44 evidence note for visit sampling, children's views, safeguarding, environment and leadership action.",
+        child_voice=True,
+        signoff=["independent person completion", "registered manager response", "responsible individual oversight"],
+    ),
+    _spec(
+        "reg_45_review_evidence_note",
+        "Reg 45 Review Evidence Note",
+        "inspection_readiness",
+        "home",
+        [
+            ("Quality of care evidence", "Summarise evidence about experiences, progress, safety, relationships and outcomes.", ["What evidence shows quality of care?", "Where is evidence thin?"]),
+            ("Patterns and trends", "Analyse incidents, missing, restraint, complaints, education, health and workforce trends.", ["What pattern is improving?", "What pattern needs action?"]),
+            ("Children and family feedback", "Record feedback from children, families and placing authorities.", ["What are children and families saying?", "How was feedback used?"]),
+            ("Workforce and leadership", "Review staffing, supervision, training, culture, management oversight and quality assurance.", ["What workforce evidence matters?", "What oversight is visible?"]),
+            ("Improvement actions", "Set evidence-led improvement actions, owners, dates and review measures.", ["What action will improve outcomes?", "How will impact be measured?"]),
+        ],
+        regulations=["13", "45"],
+        quality=["purpose", "views", "protection", "leadership"],
+        sccif=["progress", "leadership", "overall"],
+        review_frequency="six-monthly",
+        owner_role="registered manager / responsible individual",
+        description="A Reg 45 review note focused on evidence, trends, outcomes, workforce and improvement action.",
+        signoff=["registered manager sign-off", "responsible individual review", "provider oversight"],
+    ),
+    _spec(
+        "annex_a_evidence_summary",
+        "Annex A Evidence Summary",
+        "inspection_readiness",
+        "home",
+        [
+            ("Children living at the home", "Summarise cohort context, admissions, discharges and key changes without unnecessary identifiers.", ["What cohort change matters?", "What does this mean for care?"]),
+            ("Safeguarding and notifications", "Summarise open safeguarding, Reg 40, missing, restraint and complaints evidence.", ["What notifications or concerns are open?", "What evidence supports oversight?"]),
+            ("Outcomes and progress", "Summarise education, health, relationships, enjoyment and achievement evidence.", ["What progress is visible?", "Where is there no evidence found?"]),
+            ("Workforce and leadership", "Summarise staffing, supervision, training, recruitment checks and management monitoring.", ["What workforce evidence is ready?", "What needs follow-up?"]),
+            ("Documents and evidence gaps", "List missing evidence, document review gaps and actions for inspection readiness.", ["What evidence gap remains?", "Who owns the action?"]),
+        ],
+        regulations=["13", "44", "45"],
+        quality=["purpose", "protection", "leadership", "planning"],
+        sccif=["leadership", "overall"],
+        review_frequency="monthly and before inspection window",
+        owner_role="registered manager / provider lead",
+        description="An Annex A operating summary that shows evidence, gaps and ownership without pretending absent evidence exists.",
+        child_voice=False,
+        signoff=["registered manager review", "provider oversight"],
+    ),
+    _spec(
+        "manager_oversight_note",
+        "Manager Oversight Note",
+        "leadership_and_management",
+        "home",
+        [
+            ("Record sampled", "Identify records, child, date range and why the sample was selected.", ["What was sampled?", "Why now?"]),
+            ("Quality and safety judgement", "Record what was strong, what needs correction and any immediate safeguarding action.", ["What is good evidence?", "What requires action?"]),
+            ("Therapeutic recording feedback", "Check child voice, reflective language, evidence and restorative practice.", ["Is language therapeutic?", "Is child voice visible?"]),
+            ("Actions and accountability", "Set action owner, due date, follow-up and escalation if overdue.", ["Who owns the action?", "When will completion be checked?"]),
+            ("Learning for team or system", "Identify training, supervision or system learning without blaming individuals.", ["What does the team need to learn?", "What system support is needed?"]),
+        ],
+        regulations=["13", "14", "44", "45"],
+        quality=["leadership", "planning", "protection"],
+        sccif=["leadership", "overall"],
+        review_frequency="weekly sampling and after significant events",
+        owner_role="registered manager / deputy manager",
+        description="A manager QA note for sampled records, therapeutic quality, actions and system learning.",
+        child_voice=False,
+    ),
+    _spec(
+        "staff_supervision_record",
+        "Staff Supervision Record",
+        "staff_leadership",
+        "staff",
+        [
+            ("Staff wellbeing and support", "Create a safe space for wellbeing, workload, confidence and support needs.", ["How is the staff member managing?", "What support is needed?"]),
+            ("Practice reflection", "Reflect on relationships, safeguarding, boundaries, therapeutic practice and learning.", ["What practice felt strong?", "What felt difficult?"]),
+            ("Children's experiences", "Discuss the impact of practice on children, using evidence and child voice where appropriate.", ["How are children experiencing this staff member's practice?", "What evidence supports this?"]),
+            ("Development and competency", "Review training, observations, probation/appraisal goals and competence evidence.", ["What competency evidence is present?", "What development is next?"]),
+            ("Actions, accountability and sign-off", "Agree actions, owners, timescales, confidentiality and next supervision.", ["What action is agreed?", "When is the next supervision?"]),
+        ],
+        regulations=["13"],
+        quality=["leadership", "protection", "relationships"],
+        sccif=["leadership", "overall"],
+        review_frequency="monthly",
+        owner_role="supervisor / registered manager",
+        description="A reflective supervision record balancing wellbeing, child impact, development and accountability.",
+        child_voice=False,
+        signoff=["supervisor sign-off", "staff member acknowledgement"],
+    ),
+    _spec(
+        "staff_reflective_practice_note",
+        "Staff Reflective Practice Note",
+        "staff_leadership",
+        "staff",
+        [
+            ("Situation reflected on", "Name the situation, child impact and why reflection is useful.", ["What situation is being reflected on?", "Why does it matter for children?"]),
+            ("Feelings and assumptions", "Explore emotional response, assumptions and possible bias with psychological safety.", ["What did the staff member notice in themselves?", "What assumption might need checking?"]),
+            ("Trauma-informed lens", "Consider trauma reminders, attachment, sensory or communication needs and staff response.", ["What might have been underneath the child's presentation?", "What response helped?"]),
+            ("Learning and repair", "Record learning, restorative work, relationship repair or practice adjustment.", ["What repair is needed?", "What will be done differently?"]),
+            ("Supervisor support", "Identify supervision, coaching, training or manager action needed.", ["What support is needed?", "How will learning be followed up?"]),
+        ],
+        regulations=["13"],
+        quality=["leadership", "relationships", "protection"],
+        sccif=["leadership", "overall"],
+        review_frequency="after significant practice learning or supervision",
+        owner_role="staff member / supervisor",
+        description="A psychologically safe reflective practice note that converts learning into better care.",
+        child_voice=False,
+    ),
+    _spec(
+        "safer_recruitment_checklist",
+        "Safer Recruitment Checklist",
+        "staff_leadership",
+        "staff",
+        [
+            ("Role and safer recruitment plan", "Record role, panel, advertising, shortlisting and safer recruitment responsibilities.", ["What role is being recruited?", "Who is responsible for checks?"]),
+            ("Identity, right to work and references", "Track verified identity, right to work, employment history and references.", ["What evidence has been checked?", "What gap remains?"]),
+            ("DBS and barred list checks", "Record DBS status, barred list where applicable, risk assessment and start constraints.", ["What check is complete?", "Is any risk assessment needed?"]),
+            ("Values and safeguarding interview evidence", "Capture values-based evidence, safeguarding judgement and therapeutic fit.", ["How was safeguarding curiosity tested?", "What values evidence is present?"]),
+            ("Manager decision and audit trail", "Record decision, conditions, induction actions, sign-off and provider oversight if needed.", ["Who approved appointment?", "What condition must be tracked?"]),
+        ],
+        regulations=["13"],
+        quality=["leadership", "protection"],
+        sccif=["leadership", "protection", "overall"],
+        review_frequency="per recruitment episode before unsupervised work",
+        owner_role="registered manager / recruitment lead",
+        description="A safer recruitment checklist that keeps safeguarding evidence, values and sign-off together.",
+        child_voice=False,
+        signoff=["recruiting manager sign-off", "registered manager approval"],
+    ),
+    _spec(
+        "training_competency_review",
+        "Training/Competency Review",
+        "staff_leadership",
+        "staff",
+        [
+            ("Role requirements", "Record mandatory, role-specific and child-specific competence requirements.", ["What competence is required for this role?", "What child-specific learning is needed?"]),
+            ("Training completed", "Summarise training, refreshers, observations, mentoring and evidence.", ["What training evidence exists?", "What is overdue?"]),
+            ("Practice observation", "Record observed practice, strengths, confidence and areas needing support.", ["What was observed in practice?", "What impact did this have on children?"]),
+            ("Competency decision", "Make a clear supported decision about competence, supervision level or restrictions.", ["Is competence evidenced?", "What support or restriction is needed?"]),
+            ("Development plan", "Agree actions, timescales, review date and manager sign-off.", ["What development action is agreed?", "When will competence be reviewed?"]),
+        ],
+        regulations=["13"],
+        quality=["leadership", "protection", "relationships"],
+        sccif=["leadership", "overall"],
+        review_frequency="quarterly or after role/need changes",
+        owner_role="registered manager / training lead",
+        description="A training and competency review that links workforce evidence to safe, therapeutic care.",
+        child_voice=False,
+    ),
+    _spec(
+        "home_statement_of_purpose",
+        "Statement of Purpose",
+        "home_policy",
+        "home",
+        [
+            ("Aims and care model", "Describe the home's purpose, therapeutic model and children it is designed to support.", ["What is the home's purpose?", "How does the model meet children's needs?"]),
+            ("Services and day-to-day experience", "Set out accommodation, education support, health support, activities and family relationships.", ["What will children experience day to day?", "How are views included?"]),
+            ("Safeguarding and leadership", "Explain safeguarding arrangements, management structure, staffing and quality assurance.", ["How are children protected?", "How is leadership oversight shown?"]),
+            ("Review and evidence", "Record review date, consultation, evidence, version history and sign-off.", ["Who reviewed this?", "What evidence led to change?"]),
+        ],
+        regulations=["6", "7", "12", "13"],
+        quality=["purpose", "views", "protection", "leadership"],
+        sccif=["leadership", "overall"],
+        review_frequency="annual or when service changes",
+        owner_role="registered manager / responsible individual",
+        description="A live statement of purpose template connected to therapeutic model, safeguarding and review evidence.",
+        child_voice=False,
+        signoff=["registered manager sign-off", "responsible individual approval"],
+    ),
+]
+
+
+def _make_template(spec: dict[str, Any]) -> DocumentTemplate:
+    scope = DocumentScope(spec["scope"])
+    required = [_section(title, purpose, prompts) for title, purpose, prompts in spec["sections"]]
+    optional = [
+        _section("Linked chronology and evidence", "Attach source records, chronology events, actions and professional evidence.", ["Which records evidence this document?", "What chronology marker should be linked?"], required=False),
+        _section("Review notes and ORB prompts", "Store accepted drafting prompts, manager review notes and rejected suggestions.", ["Which prompt was accepted, declined or needs review?"], required=False),
     ]
-    return [
-        _section("Child voice and wishes", "Record the child's words, preferences, worries and hopes.", CHILD_VOICE_PROMPTS[:6]),
-        _section("Story and starting point", "Explain the child's context without blame or adult-centred shorthand.", CHILD_VOICE_PROMPTS[6:]),
-        _section("Strengths, relationships and what helps", "Show protective relationships, strengths and regulation support.", ["What has helped before?", "Who does the child trust?", "What helps the child feel safe?"]),
-        _section("Current needs, risks and support", "Translate needs and risks into practical adult responses.", risk_prompts),
-        _section("Actions, evidence and review", "Link actions, chronology, evidence and manager review.", ["What evidence supports this?", "What follow-up is still open?", "When should this be reviewed?"]),
-    ]
-
-
-def _home_sections(title: str) -> list[DocumentSectionTemplate]:
-    return [
-        _section("Purpose and child impact", "Explain how this document improves children's experiences and safety.", ["What changes for children because this document exists?", "How will staff know it is working?"]),
-        _section("Practice expectations", "Set out clear expectations for staff and leaders.", ["What must happen in day-to-day practice?", "What must be escalated?"]),
-        _section("Evidence and oversight", "Show linked evidence, review ownership and QA checks.", ["What evidence must be sampled?", "Who reviews this and when?"]),
-        _section("Actions and inspection readiness", "Connect improvement actions, review history and Ofsted/SCCIF evidence.", ["What action is open?", "What would an inspector need to understand quickly?"]),
-    ]
-
-
-def _staff_sections(title: str) -> list[DocumentSectionTemplate]:
-    return [
-        _section("Reflective practice", "Support honest, psychologically safe reflection on practice.", ["What went well?", "What felt difficult?", "What learning is emerging?"]),
-        _section("Wellbeing, support and accountability", "Record support needs, agreed actions and appropriate accountability.", ["What support is needed?", "What action is agreed?", "What should be followed up?"]),
-        _section("Development evidence", "Link supervision, training, competency and development evidence.", ["What evidence shows progress?", "What training or mentoring is needed?"]),
-        _section("Sign-off and next review", "Confirm review ownership, signatures and next review date.", ["Who signs this?", "When is the next review?", "What remains confidential?"]),
-    ]
-
-
-def _category(title: str, scope: DocumentScope) -> str:
-    text = title.lower()
-    if scope == DocumentScope.CHILD and "risk" in text:
-        return "risk_assessment"
-    if scope == DocumentScope.CHILD and "plan" in text:
-        return "child_plan"
-    if scope == DocumentScope.HOME and ("policy" in text or "purpose" in text or "guide" in text):
-        return "home_policy"
-    if scope == DocumentScope.HOME and ("reg " in text or "ofsted" in text or "quality" in text):
-        return "inspection_readiness"
-    if scope == DocumentScope.STAFF:
-        return "staff_confidential"
-    return f"{scope.value}_document"
-
-
-def _frequency(title: str, scope: DocumentScope) -> str:
-    text = title.lower()
-    if "reg 44" in text:
-        return "monthly"
-    if "reg 45" in text:
-        return "six-monthly"
-    if "risk" in text or "missing" in text or "self-harm" in text or "safety" in text:
-        return "monthly or after significant event"
-    if scope == DocumentScope.STAFF and ("supervision" in text):
-        return "monthly"
-    return "annual or when circumstances change"
-
-
-def _regulations(title: str, scope: DocumentScope) -> list[str]:
-    text = title.lower()
-    if "reg 44" in text:
-        return ["Children's Homes Regulations 2015 Regulation 44"]
-    if "reg 45" in text:
-        return ["Children's Homes Regulations 2015 Regulation 45"]
-    if scope == DocumentScope.STAFF:
-        return ["Regulation 32", "Regulation 33"]
-    if "safeguarding" in text or "missing" in text or "risk" in text or "safety" in text:
-        return ["Regulation 12", "Regulation 13"]
-    return ["Children's Homes Regulations 2015", "The Children Act 1989 care planning framework"]
-
-
-def _make_template(title: str, scope: DocumentScope) -> DocumentTemplate:
-    required = _child_sections(title) if scope == DocumentScope.CHILD else _home_sections(title) if scope == DocumentScope.HOME else _staff_sections(title)
-    template_id = f"{scope.value}_{slug(title)}"
     return DocumentTemplate(
-        template_id=template_id,
-        title=title,
-        category=_category(title, scope),
+        template_id=spec["template_id"],
+        title=spec["title"],
+        category=spec["category"],
         scope=scope,
-        description=f"Operational {title.lower()} workspace with editable sections, evidence links, review, sign-off and audit-ready history.",
-        review_frequency=_frequency(title, scope),
-        owner_role="key worker / registered manager" if scope == DocumentScope.CHILD else "registered manager / responsible individual" if scope == DocumentScope.HOME else "registered manager / supervisor",
+        description=spec["description"],
+        review_frequency=spec["review_frequency"],
+        owner_role=spec["owner_role"],
         required_sections=required,
-        optional_sections=[
-            _section("Appendix: chronology and evidence", "Optional linked chronology, evidence, actions and review appendix.", ["Which linked records should appear in the appendix?"], required=False),
-            _section("Orb drafting notes", "Optional assistant suggestions that must be accepted by a human before saving.", ["Which suggestion was accepted, declined or needs manager review?"], required=False),
-        ],
-        regulatory_links=_regulations(title, scope),
-        quality_standard_links=["Quality Standards: children's views, wishes and feelings", "Quality Standards: protection of children", "Quality Standards: leadership and management"],
-        sccif_links=["experiences and progress", "help and protection", "leadership and management"],
-        evidence_requirements=["linked chronology entries", "linked evidence records", "linked actions with owners", "review history", "signature/sign-off where required"],
-        signoff_requirements=["author confirms evidence is accurate", "manager QA review", "responsible person sign-off for regulatory documents" if scope == DocumentScope.HOME else "manager sign-off before approval"],
-        export_profile={"print_html": True, "pdf": False, "appendices": ["chronology", "evidence", "review_history", "signatures"], "watermark": "Confidential care record"},
-        orb_prompt_pack=[
-            "strengthen child voice" if scope == DocumentScope.CHILD else "prepare for manager review",
-            "make this more reflective",
-            "identify missing follow-up",
-            "show evidence gaps",
-            "summarise chronology themes",
-        ],
-        child_voice_prompts=CHILD_VOICE_PROMPTS if scope == DocumentScope.CHILD else [],
-        therapeutic_guidance=THERAPEUTIC_GUIDANCE if scope == DocumentScope.CHILD else ["Keep wording specific, evidence-led and supportive.", "Use review language, not blame language."],
-        inspection_relevance="Shows editable, scoped, evidence-linked practice with review history, leadership oversight and inspection-ready appendices.",
+        optional_sections=optional,
+        regulatory_links=spec["regulatory_links"],
+        quality_standard_links=spec["quality_standard_links"],
+        sccif_links=spec["sccif_links"],
+        evidence_requirements=["linked source record", "linked chronology where relevant", "management review/audit trail", "child/home/staff scope link", "sign-off history where required"],
+        chronology_requirements=["add or link chronology event when the document changes risk, plan, safeguarding, wellbeing, statutory action or inspection evidence"],
+        signoff_requirements=spec["signoff_requirements"],
+        export_profile={"print_html": spec["export_ready"], "pdf": spec["export_ready"], "appendices": ["chronology", "evidence", "review_history", "signatures"], "watermark": "Confidential care record"},
+        orb_prompt_pack=["strengthen child voice", "check therapeutic language", "identify missing evidence", "prepare manager review", "summarise actions without adding unsupported facts"],
+        child_voice_prompts=CHILD_VOICE_PROMPTS if spec["child_voice"] else [],
+        therapeutic_guidance=THERAPEUTIC_GUIDANCE,
+        inspection_relevance="Operational evidence mapping only: this supports inspection readiness, but is not legal advice.",
+        workflow={
+            "browse": True,
+            "create_document": True,
+            "save_draft": True,
+            "reopen_draft": True,
+            "edit": True,
+            "review": True,
+            "sign_off": True,
+            "link_child_home_staff": True,
+            "link_evidence": True,
+            "link_chronology": True,
+            "searchable": True,
+            "export_print_ready": spec["export_ready"],
+        },
     )
 
 
@@ -218,18 +772,17 @@ class DocumentTemplateService:
 
     @lru_cache(maxsize=1)
     def templates(self) -> tuple[DocumentTemplate, ...]:
-        return tuple(
-            [_make_template(title, DocumentScope.CHILD) for title in CHILD_TEMPLATES]
-            + [_make_template(title, DocumentScope.HOME) for title in HOME_TEMPLATES]
-            + [_make_template(title, DocumentScope.STAFF) for title in STAFF_TEMPLATES]
-        )
+        return tuple(_make_template(spec) for spec in TEMPLATE_SPECS)
 
-    def list_templates(self, *, scope: str | None = None, category: str | None = None) -> list[DocumentTemplate]:
+    def list_templates(self, *, scope: str | None = None, category: str | None = None, query: str | None = None) -> list[DocumentTemplate]:
         items = list(self.templates())
         if scope:
             items = [item for item in items if item.scope.value == scope]
         if category:
             items = [item for item in items if item.category == category]
+        if query:
+            terms = [term for term in re.split(r"\s+", query.lower().strip()) if term]
+            items = [item for item in items if all(term in self._search_text(item) for term in terms)]
         return items
 
     def get_template(self, template_id: str) -> DocumentTemplate:
@@ -241,6 +794,23 @@ class DocumentTemplateService:
     def blank_sections(self, template_id: str) -> dict[str, str]:
         template = self.get_template(template_id)
         return {section.section_id: "" for section in [*template.required_sections, *template.optional_sections]}
+
+    def search_templates(self, query: str, *, scope: str | None = None) -> list[DocumentTemplate]:
+        return self.list_templates(scope=scope, query=query)
+
+    def _search_text(self, template: DocumentTemplate) -> str:
+        values = [
+            template.template_id,
+            template.title,
+            template.category,
+            template.description,
+            template.scope.value,
+            *template.regulatory_links,
+            *template.quality_standard_links,
+            *template.sccif_links,
+            *(section.title for section in template.required_sections),
+        ]
+        return " ".join(values).lower()
 
 
 document_template_service = DocumentTemplateService()

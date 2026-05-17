@@ -127,8 +127,8 @@ def _insert_version(conn: Any, document: dict[str, Any], reason: str, current_us
 
 
 @router.get("/templates")
-def list_templates(scope: str | None = None, category: str | None = None) -> dict[str, Any]:
-    templates = document_template_service.list_templates(scope=scope, category=category)
+def list_templates(scope: str | None = None, category: str | None = None, query: str | None = None, q: str | None = None) -> dict[str, Any]:
+    templates = document_template_service.list_templates(scope=scope, category=category, query=query or q)
     return {"ok": True, "templates": [template.model_dump() for template in templates]}
 
 
@@ -191,7 +191,7 @@ def create_document(payload: DocumentCreateRequest, conn: Any = Depends(get_db),
 
 
 @router.get("/documents")
-def list_documents(scope: str | None = None, child_id: str | None = None, home_id: str | None = None, staff_id: str | None = None, conn: Any = Depends(get_db), current_user: dict[str, Any] = Depends(get_current_user)) -> dict[str, Any]:
+def list_documents(scope: str | None = None, child_id: str | None = None, home_id: str | None = None, staff_id: str | None = None, query: str | None = None, q: str | None = None, conn: Any = Depends(get_db), current_user: dict[str, Any] = Depends(get_current_user)) -> dict[str, Any]:
     ensure_schema(conn)
     where = []
     params: list[Any] = []
@@ -199,6 +199,10 @@ def list_documents(scope: str | None = None, child_id: str | None = None, home_i
         if value:
             where.append(f"{key} = %s")
             params.append(value)
+    search = (query or q or "").strip()
+    if search:
+        where.append("(title ILIKE %s OR template_id ILIKE %s OR status ILIKE %s OR sections::text ILIKE %s OR metadata::text ILIKE %s OR links::text ILIKE %s)")
+        params.extend([f"%{search}%"] * 6)
     sql = "SELECT * FROM document_instances"
     if where:
         sql += " WHERE " + " AND ".join(where)
