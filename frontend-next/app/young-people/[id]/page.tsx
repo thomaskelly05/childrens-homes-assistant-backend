@@ -42,6 +42,7 @@ export default async function YoungPersonDetailPage({ params, searchParams }: { 
           </div>
           <div className="flex flex-wrap gap-3">
             <Link href={`/young-people/${encodeURIComponent(id)}/daily-note/new`} className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">Add daily note</Link>
+            <Link href={`/young-people/${encodeURIComponent(id)}/records/new`} className="rounded-2xl bg-white px-5 py-3 text-sm font-black text-blue-700 ring-1 ring-blue-100">New linked record</Link>
             <Link href={`/young-people/${encodeURIComponent(id)}/documents/generate`} className="rounded-2xl bg-white px-5 py-3 text-sm font-black text-blue-700 ring-1 ring-blue-100">Generate document</Link>
             <Link href={`/young-people/${encodeURIComponent(id)}/reports`} className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white">Live reports</Link>
           </div>
