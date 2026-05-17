@@ -1,19 +1,24 @@
 import Link from 'next/link'
 
 import { CareAction, EvidenceGap, EvidenceItem } from '@/lib/evidence/types'
-import { getStaffById, getYoungPersonById } from '@/lib/indicare/selectors'
 import { routeToAction, routeToChronologyEvent, routeToEvidence } from '@/lib/routes/os-routes'
 
 function personName(id?: string) {
-  const person = getYoungPersonById(id)
-  return person ? person.preferredName : 'Home-wide'
+  return id ? `Child ${id}` : 'Home-wide'
+}
+
+function staffName(id?: string) {
+  return id ? `Staff ${id}` : 'Unassigned'
 }
 
 export function ActionsPanel({ actions }: { actions: CareAction[] }) {
+  if (!actions.length) {
+    return <p className="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm font-bold leading-6 text-slate-500">No linked actions were returned by the live OS.</p>
+  }
+
   return (
     <div className="space-y-3">
       {actions.map((action) => {
-        const assignee = getStaffById(action.assignedToStaffId)
         return (
           <article key={action.id} className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
             <div className="flex flex-wrap items-center gap-2">
@@ -22,7 +27,7 @@ export function ActionsPanel({ actions }: { actions: CareAction[] }) {
             </div>
             <Link href={routeToAction(action.id)} className="mt-3 block text-sm font-black text-slate-950 hover:text-blue-700">{action.title}</Link>
             <p className="mt-2 text-sm leading-6 text-slate-600">{action.description}</p>
-            <p className="mt-3 text-xs font-bold text-slate-500">Due {action.dueDate} · {personName(action.youngPersonId)} · {assignee?.firstName || action.assignedToStaffId}</p>
+            <p className="mt-3 text-xs font-bold text-slate-500">Due {action.dueDate || 'not set'} · {personName(action.youngPersonId)} · {staffName(action.assignedToStaffId)}</p>
             <div className="mt-3 flex flex-wrap gap-2">
               <Link href={routeToAction(action.id)} className="rounded-full border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-black text-blue-700">Open action</Link>
               <Link href="/evidence" className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-600">Open evidence workspace</Link>
@@ -35,6 +40,10 @@ export function ActionsPanel({ actions }: { actions: CareAction[] }) {
 }
 
 export function EvidenceGapsPanel({ gaps }: { gaps: EvidenceGap[] }) {
+  if (!gaps.length) {
+    return <p className="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm font-bold leading-6 text-slate-500">No evidence gaps were returned by the live OS.</p>
+  }
+
   return (
     <div className="space-y-3">
       {gaps.map((gap) => (
@@ -50,6 +59,10 @@ export function EvidenceGapsPanel({ gaps }: { gaps: EvidenceGap[] }) {
 }
 
 export function EvidenceItemsPanel({ evidence }: { evidence: EvidenceItem[] }) {
+  if (!evidence.length) {
+    return <p className="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm font-bold leading-6 text-slate-500">No linked evidence was returned by the live OS.</p>
+  }
+
   return (
     <div className="space-y-3">
       {evidence.map((item) => (

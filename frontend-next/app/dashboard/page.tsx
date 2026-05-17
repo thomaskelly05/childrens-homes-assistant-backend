@@ -2,7 +2,7 @@ import Link from 'next/link'
 
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
 import { OperationalLifecyclePanel } from '@/components/indicare/operational-lifecycle-panel'
-import { AlertCard, Card, DataTable, EmptyState, PageHeader, RecordTimeline, SectionHeader, StatCard, StatusBadge } from '@/components/indicare/ui'
+import { AlertCard, Card, DataTable, EmptyState, PageHeader, RecordTimeline, SectionHeader, StatusBadge } from '@/components/indicare/ui'
 import { getCommandCentre } from '@/lib/os-api/platform'
 
 function formatDate(value?: string) {
@@ -30,31 +30,46 @@ export default async function DashboardPage() {
       />
       <LiveDataStatus result={command} />
 
-      <section className="grid gap-4 xl:grid-cols-3">
-        {data.attention.map((item) => (
-          <Link key={item.id} href={item.href} className="rounded-[28px] border border-white/70 bg-white p-5 shadow-[0_14px_40px_rgba(15,23,42,0.06)] transition hover:-translate-y-0.5 hover:border-blue-100 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-blue-100">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-blue-700">{item.theme.replaceAll('_', ' ')}</p>
-                <h2 className="mt-2 text-xl font-black tracking-[-0.04em] text-slate-950">{item.title}</h2>
-              </div>
-              <StatusBadge value={item.status} />
-            </div>
-            <p className="mt-4 text-4xl font-black tracking-[-0.06em] text-slate-950">{item.count}</p>
-            <p className="mt-3 text-sm leading-6 text-slate-600">{item.body}</p>
-          </Link>
-        ))}
-      </section>
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(300px,0.65fr)]">
+        <Card>
+          <SectionHeader eyebrow="Attention queue" title="Start here" description="One ordered queue for safeguarding, child wellbeing, open actions and evidence gaps." />
+          <div className="space-y-3">
+            {data.attention.map((item) => (
+              <Link key={item.id} href={item.href} className="group block rounded-[24px] border border-slate-100 bg-slate-50 p-4 transition hover:border-blue-100 hover:bg-white hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-blue-100">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-black uppercase tracking-[0.2em] text-blue-700">{item.theme.replaceAll('_', ' ')}</p>
+                    <h2 className="mt-1 text-lg font-black tracking-[-0.03em] text-slate-950">{item.title}</h2>
+                    <p className="mt-2 text-sm leading-6 text-slate-600">{item.body}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-3xl font-black tracking-[-0.06em] text-slate-950">{item.count}</p>
+                    <StatusBadge value={item.status} />
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </Card>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Young people" value={data.children.length} detail="Visible to this session" href="/young-people" />
-        <StatCard label="Open safeguarding" value={safeguardingOpen.length} detail="Records or alerts needing review" href="/safeguarding" />
-        <StatCard label="Open actions" value={openActions.length} detail="Follow-up still active" href="/actions" />
-        <StatCard label="Chronology events" value={data.chronology.length} detail="Recent connected events" href="/chronology" />
-        <StatCard label="Evidence review" value={reviewEvidence.length} detail="Draft, partial or review required" href="/evidence" />
-        <StatCard label="Documents for review" value={documentsForReview.length} detail="Processing or awaiting sign-off" href="/documents" />
-        <StatCard label="Staff visible" value={data.workforce.length} detail="Current workforce projection" href="/staff" />
-        <StatCard label="Homes visible" value={data.homes.length} detail="Provider/home scope returned" href="/settings" />
+        <Card>
+          <SectionHeader eyebrow="Operating picture" title="Live counts" description="Counts support the queue; they do not compete with it." />
+          <dl className="grid gap-3">
+            {[
+              ['Young people', data.children.length, '/young-people'],
+              ['Open safeguarding', safeguardingOpen.length, '/safeguarding'],
+              ['Open actions', openActions.length, '/actions'],
+              ['Evidence review', reviewEvidence.length, '/evidence'],
+              ['Documents for review', documentsForReview.length, '/documents'],
+              ['Recent chronology', data.chronology.length, '/chronology']
+            ].map(([label, value, href]) => (
+              <Link key={label} href={String(href)} className="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm font-black text-slate-700 hover:bg-blue-50">
+                <dt>{label}</dt>
+                <dd className="text-lg text-slate-950">{value}</dd>
+              </Link>
+            ))}
+          </dl>
+        </Card>
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.8fr)]">

@@ -6,6 +6,31 @@ import { OperationalLifecyclePanel } from '@/components/indicare/operational-lif
 import { Card, DataTable, EmptyState, PageHeader, RecordTimeline, RiskBadge, SectionHeader, StatCard, StatusBadge } from '@/components/indicare/ui'
 import { getYoungPersonOverview } from '@/lib/os-api/platform'
 
+function profileText(profile: Record<string, unknown> | undefined, keys: string[], fallback = 'Not returned') {
+  if (!profile) return fallback
+  for (const key of keys) {
+    const value = profile[key]
+    if (value !== undefined && value !== null && String(value).trim()) return String(value)
+  }
+  return fallback
+}
+
+function profileList(profile: Record<string, unknown> | undefined, keys: string[]) {
+  if (!profile) return []
+  for (const key of keys) {
+    const value = profile[key]
+    if (Array.isArray(value)) return value.map((item) => {
+      if (item && typeof item === 'object') {
+        const row = item as Record<string, unknown>
+        return [row.name, row.role || row.relationship, row.phone || row.email].filter(Boolean).join(' · ')
+      }
+      return String(item)
+    }).filter(Boolean)
+    if (typeof value === 'string' && value.trim()) return value.split(/\n|,/).map((item) => item.trim()).filter(Boolean)
+  }
+  return []
+}
+
 export default async function YoungPersonDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const overview = await getYoungPersonOverview(id)
@@ -14,6 +39,23 @@ export default async function YoungPersonDetailPage({ params }: { params: Promis
   if (!person && overview.source === 'live') notFound()
 
   const displayName = person?.displayName || person?.preferredName || `Young person ${id}`
+  const profile = person as Record<string, unknown> | undefined
+  const keyDetails = [
+    ['Age / DOB', [person?.age ? `Age ${person.age}` : undefined, profileText(profile, ['date_of_birth', 'dateOfBirth', 'dob'], '')].filter(Boolean).join(' · ') || 'Not returned'],
+    ['Home', profileText(profile, ['home_name', 'homeName', 'home_id', 'homeId'], 'Not returned')],
+    ['Placement', person?.placementStatus || person?.status || 'Not returned'],
+    ['Key worker', profileText(profile, ['key_worker_name', 'keyWorkerName', 'key_worker_id', 'keyWorkerId', 'allocated_key_worker_id'], 'Not returned')],
+    ['Legal status', person?.legalStatus || profileText(profile, ['legal_status', 'legalStatus'], 'Not returned')]
+  ]
+  const supportNeeds = [
+    ['Communication', profileText(profile, ['communication_needs', 'communicationNeeds'], 'Not returned yet')],
+    ['Sensory needs', profileText(profile, ['sensory_needs', 'sensoryNeeds'], 'Not returned yet')],
+    ['Routines', profileText(profile, ['routines', 'daily_routine', 'routine'], 'Not returned yet')],
+    ['What helps', profileText(profile, ['what_helps', 'whatWorks', 'de_escalation_strategies', 'support_strategies'], 'Not returned yet')],
+    ['Known triggers', profileText(profile, ['known_triggers', 'triggers'], 'Not returned yet')],
+    ['What does not help', profileText(profile, ['does_not_help', 'whatDoesNotHelp'], 'Not returned yet')]
+  ]
+  const contactRows = profileList(profile, ['important_contacts', 'contacts', 'key_contacts']).map((contact) => [contact])
   const safeguarding = data.safeguarding
   const childVoiceMarkers = data.chronology.filter((event) => /child voice|said|told|wanted|wishes/i.test(`${event.title} ${event.summary} ${event.fullText} ${event.tags.join(' ')}`))
   const managerReview = data.chronology.filter((event) => /manager|oversight|review|rm|ri/i.test(`${event.title} ${event.summary} ${event.tags.join(' ')}`))
@@ -48,41 +90,60 @@ export default async function YoungPersonDetailPage({ params }: { params: Promis
 
       <section id="overview" className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(300px,0.8fr)]">
         <Card>
-          <SectionHeader eyebrow="Overview" title="Current care picture" />
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-[24px] border border-slate-100 bg-slate-50/70 p-5">
-              <RiskBadge value={(person?.riskLevel || 'medium') as any} />
-              <StatusBadge value={person?.placementStatus || person?.status || 'active'} />
-              <h2 className="mt-4 text-2xl font-black text-slate-950">{displayName}</h2>
-              <p className="mt-2 text-sm leading-7 text-slate-600">Age {person?.age || 'not returned'} · Home {person?.home_id ? String(person.home_id) : 'not returned'} · Key worker {person?.keyWorkerId || 'not returned'}</p>
-              <p className="mt-3 text-sm leading-7 text-slate-600">{person?.legalStatus || 'Legal status has not been returned by the backend.'}</p>
+          <SectionHeader eyebrow="Two-minute overview" title="Who this child is" description="The first screen should help any staff member understand the child, current state and next action quickly." />
+          <div className="rounded-[28px] bg-slate-50 p-5">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <div className="flex flex-wrap gap-2">
+                  <RiskBadge value={(person?.riskLevel || 'medium') as any} />
+                  <StatusBadge value={person?.placementStatus || person?.status || 'active'} />
+                </div>
+                <h2 className="mt-4 text-3xl font-black tracking-[-0.05em] text-slate-950">{displayName}</h2>
+                <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-600">{person?.carePlanning || 'Care planning summary will show when returned by the backend.'}</p>
+              </div>
+              <Link href={`/young-people/${encodeURIComponent(id)}/daily-note/new`} className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">Add daily note</Link>
             </div>
-            <div className="rounded-[24px] border border-slate-100 bg-slate-50/70 p-5">
-              <h3 className="text-lg font-black text-slate-950">Operational state</h3>
-              <p className="mt-2 text-sm leading-7 text-slate-600">{data.actions.length ? `${data.actions.length} open or linked actions are visible.` : 'No linked actions were returned for this child.'}</p>
-              <p className="mt-2 text-sm leading-7 text-slate-600">{data.evidence.length ? `${data.evidence.length} evidence items are visible.` : 'No linked evidence was returned for this child.'}</p>
-              <p className="mt-2 text-sm leading-7 text-slate-600">{data.lifecycle.filter((item) => item.currentState !== 'resolved' && item.currentState !== 'archived').length} lifecycle item(s) need review or monitoring.</p>
-            </div>
-            <div className="rounded-[24px] border border-slate-100 bg-slate-50/70 p-5">
-              <h3 className="text-lg font-black text-slate-950">Communication and sensory needs</h3>
-              <p className="mt-3 text-sm leading-7 text-slate-600">{String((person as any)?.communication_needs || (person as any)?.communicationNeeds || 'Not returned by the backend yet.')}</p>
-              <p className="mt-2 text-sm leading-7 text-slate-600">{String((person as any)?.sensory_needs || (person as any)?.sensoryNeeds || 'Sensory needs not returned.')}</p>
-            </div>
-            <div className="rounded-[24px] border border-slate-100 bg-slate-50/70 p-5">
-              <h3 className="text-lg font-black text-slate-950">Current evidence picture</h3>
-              <p className="mt-3 text-sm leading-7 text-slate-600">{data.documents.length} documents · {data.evidence.length} evidence items · {data.chronology.length} chronology events.</p>
-              <p className="mt-2 text-sm leading-7 text-slate-600">Evidence gaps are only shown when returned or deterministically indicated by missing links.</p>
-            </div>
+            <dl className="mt-5 grid gap-3 md:grid-cols-2">
+              {keyDetails.map(([label, value]) => (
+                <div key={label} className="rounded-2xl bg-white px-4 py-3">
+                  <dt className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">{label}</dt>
+                  <dd className="mt-1 text-sm font-bold leading-6 text-slate-800">{value}</dd>
+                </div>
+              ))}
+            </dl>
           </div>
         </Card>
 
         <Card>
-          <SectionHeader eyebrow="Attention" title="What may need review" />
+          <SectionHeader eyebrow="Today" title="What needs attention" />
           <div className="space-y-3">
             <StatCard label="Safeguarding events" value={safeguarding.length} detail="Needs review where open or high significance" href="#safeguarding" />
             <StatCard label="Child voice markers" value={childVoiceMarkers.length} detail="Visible wishes, feelings or words" href="#intelligence" />
             <StatCard label="Management oversight" value={managerReview.length} detail="Review markers visible in chronology" href="#intelligence" />
+            <StatCard label="Open actions" value={data.actions.filter((action) => action.status !== 'completed').length} detail="Unresolved follow-up visible to this child" href="/actions" />
           </div>
+        </Card>
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-2">
+        <Card>
+          <SectionHeader eyebrow="Support" title="What helps this child" description="Plain-language care intelligence for staff on shift." />
+          <dl className="grid gap-3 md:grid-cols-2">
+            {supportNeeds.map(([label, value]) => (
+              <div key={label} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                <dt className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">{label}</dt>
+                <dd className="mt-2 text-sm font-bold leading-6 text-slate-700">{value}</dd>
+              </div>
+            ))}
+          </dl>
+        </Card>
+        <Card>
+          <SectionHeader eyebrow="Contacts" title="Key people" description="Professional and family contacts should appear here when the backend returns them." />
+          <DataTable
+            headers={['Contact']}
+            rows={contactRows}
+            empty={<EmptyState title="No key contacts returned" description="Social worker, school, health, placing authority and family contacts should be added to the live child profile." />}
+          />
         </Card>
       </section>
 
@@ -109,17 +170,17 @@ export default async function YoungPersonDetailPage({ params }: { params: Promis
 
       <section id="records" className="grid gap-6 xl:grid-cols-2">
         <Card>
-          <SectionHeader eyebrow="Records" title="Backend-supported record areas" />
+          <SectionHeader eyebrow="Quick actions" title="Record or open the next thing" description="Each action keeps this child in scope and avoids duplicate entry points." />
           <div className="grid gap-3 md:grid-cols-2">
             {[
               ['Daily notes', `/young-people/${id}/daily-note/new`],
-              ['Incidents', `/incidents?young_person_id=${id}`],
-              ['Missing episodes', `/safeguarding?young_person_id=${id}`],
-              ['Health', `/health?young_person_id=${id}`],
-              ['Education', `/documents?young_person_id=${id}&type=education`],
-              ['Key work', `/keywork?young_person_id=${id}`],
-              ['Risk assessments', `/risk-assessments?young_person_id=${id}`],
-              ['Placement records', `/placements?young_person_id=${id}`]
+              ['Add incident', `/young-people/${id}/incidents/new`],
+              ['Add safeguarding record', `/young-people/${id}/safeguarding/new`],
+              ['Add missing episode', `/young-people/${id}/missing/new`],
+              ['Add health record', `/young-people/${id}/health/new`],
+              ['Add education record', `/documents?young_person_id=${id}&type=education&intent=new`],
+              ['Upload document', `/documents?young_person_id=${id}`],
+              ['Open Assistant / ORB', `/assistant?youngPersonId=${id}`]
             ].map(([label, href]) => (
               <Link key={label} href={href} className="rounded-[22px] border border-slate-100 bg-slate-50 p-4 text-sm font-black text-slate-700 hover:bg-blue-50">{label}</Link>
             ))}
