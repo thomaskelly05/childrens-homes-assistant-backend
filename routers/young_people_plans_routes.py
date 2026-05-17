@@ -68,6 +68,59 @@ def _load_and_check_plan(conn, plan_id: int, current_user: dict[str, Any]) -> di
     return row
 
 
+def _link_support_plan_update(conn, *, plan_id: int, current_user: dict[str, Any]) -> dict[str, Any]:
+    plan = YoungPersonPlansService.get_support_plan(conn, plan_id)
+    workflow = YoungPeopleLinkingService.process_record_event(
+        conn=conn,
+        young_person_id=int(plan["young_person_id"]),
+        source_table="support_plans",
+        source_id=plan_id,
+        event_type="updated",
+        title=f"{plan.get('title') or 'Support plan'} updated",
+        summary=plan.get("summary") or plan.get("presenting_need") or "Support plan updated",
+        narrative="\n".join(
+            str(value)
+            for value in [
+                plan.get("summary"),
+                plan.get("presenting_need"),
+                plan.get("child_voice"),
+                plan.get("proactive_strategies"),
+                plan.get("pace_guidance"),
+                plan.get("triggers"),
+                plan.get("protective_factors"),
+            ]
+            if value
+        ) or "Support plan updated",
+        category="support_plan",
+        subcategory=plan.get("plan_type") or "support_plan",
+        significance="medium",
+        review_date=plan.get("review_date"),
+        due_date=plan.get("review_date"),
+        owner_id=plan.get("owner_id"),
+        created_by=_safe_int(current_user.get("user_id") or current_user.get("id")),
+        workflow={
+            "link_chronology": True,
+            "create_task": bool(plan.get("review_date")),
+            "manager_review": True,
+            "safeguarding": False,
+            "link_support_plans": False,
+            "link_monthly_reviews": True,
+            "link_quality_standards": True,
+        },
+        metadata={
+            "severity": "medium",
+            "workflow_status": plan.get("workflow_status") or plan.get("approval_status") or plan.get("status"),
+            "quality_standards": ["protection_of_children"],
+            "standards_rationale": "Support plan updated and linked for review",
+            "evidence_strength": "strong",
+            "response_actions": plan.get("proactive_strategies"),
+            "judgement_areas": ["helped_and_protected"],
+        },
+    )
+    conn.commit()
+    return workflow
+
+
 class SupportPlanCreatePayload(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
@@ -123,163 +176,75 @@ class ReviewDecisionPayload(BaseModel):
 
 
 @router.get("/{young_person_id}/plans")
-def list_plans(
-    young_person_id: int,
-    conn=Depends(get_db),
-    current_user=Depends(get_current_user),
-):
+def list_plans(young_person_id: int, conn=Depends(get_db), current_user=Depends(get_current_user)):
     _load_and_check_young_person(conn, young_person_id, current_user)
-    rows = YoungPersonPlansService.list_plans_for_young_person(
-        conn,
-        young_person_id=young_person_id,
-        archived=False,
-    )
+    rows = YoungPersonPlansService.list_plans_for_young_person(conn, young_person_id=young_person_id, archived=False)
     return {"items": rows, "count": len(rows)}
 
 
 @router.get("/{young_person_id}/plans/archive")
-def list_archived_plans(
-    young_person_id: int,
-    conn=Depends(get_db),
-    current_user=Depends(get_current_user),
-):
+def list_archived_plans(young_person_id: int, conn=Depends(get_db), current_user=Depends(get_current_user)):
     _load_and_check_young_person(conn, young_person_id, current_user)
-    rows = YoungPersonPlansService.list_plans_for_young_person(
-        conn,
-        young_person_id=young_person_id,
-        archived=True,
-    )
+    rows = YoungPersonPlansService.list_plans_for_young_person(conn, young_person_id=young_person_id, archived=True)
     return {"items": rows, "count": len(rows)}
 
 
 @router.get("/plans/{plan_id}")
-def get_support_plan(
-    plan_id: int,
-    conn=Depends(get_db),
-    current_user=Depends(get_current_user),
-):
+def get_support_plan(plan_id: int, conn=Depends(get_db), current_user=Depends(get_current_user)):
     _load_and_check_plan(conn, plan_id, current_user)
     return YoungPersonPlansService.get_support_plan(conn, plan_id)
 
 
 @router.post("/{young_person_id}/plans")
-def create_support_plan(
-    young_person_id: int,
-    payload: SupportPlanCreatePayload,
-    conn=Depends(get_db),
-    current_user=Depends(get_current_user),
-):
+def create_support_plan(young_person_id: int, payload: SupportPlanCreatePayload, conn=Depends(get_db), current_user=Depends(get_current_user)):
     _assert_can_edit(current_user)
     _load_and_check_young_person(conn, young_person_id, current_user)
-
-    return YoungPersonPlansService.create_support_plan(
-        conn,
-        young_person_id=young_person_id,
-        payload=payload.model_dump(exclude_none=True, by_alias=False),
-        actor_user_id=_safe_int(current_user.get("user_id")),
-        linking_service=YoungPeopleLinkingService,
-    )
+    return YoungPersonPlansService.create_support_plan(conn, young_person_id=young_person_id, payload=payload.model_dump(exclude_none=True, by_alias=False), actor_user_id=_safe_int(current_user.get("user_id")), linking_service=YoungPeopleLinkingService)
 
 
 @router.patch("/plans/{plan_id}")
 @router.put("/plans/{plan_id}")
-def update_support_plan(
-    plan_id: int,
-    payload: SupportPlanUpdatePayload,
-    conn=Depends(get_db),
-    current_user=Depends(get_current_user),
-):
+def update_support_plan(plan_id: int, payload: SupportPlanUpdatePayload, conn=Depends(get_db), current_user=Depends(get_current_user)):
     _assert_can_edit(current_user)
     _load_and_check_plan(conn, plan_id, current_user)
-
-    return YoungPersonPlansService.update_support_plan(
-        conn,
-        plan_id=plan_id,
-        payload=payload.model_dump(exclude_unset=True, by_alias=False),
-    )
+    result = YoungPersonPlansService.update_support_plan(conn, plan_id=plan_id, payload=payload.model_dump(exclude_unset=True, by_alias=False))
+    workflow = _link_support_plan_update(conn, plan_id=plan_id, current_user=current_user)
+    return {**result, "workflow": workflow}
 
 
 @router.post("/plans/{plan_id}/submit")
 @router.put("/plans/{plan_id}/submit")
-def submit_support_plan(
-    plan_id: int,
-    conn=Depends(get_db),
-    current_user=Depends(get_current_user),
-):
+def submit_support_plan(plan_id: int, conn=Depends(get_db), current_user=Depends(get_current_user)):
     _assert_can_edit(current_user)
     _load_and_check_plan(conn, plan_id, current_user)
-
-    return YoungPersonPlansService.submit_support_plan(
-        conn,
-        plan_id=plan_id,
-        actor_user_id=_safe_int(current_user.get("user_id")),
-        linking_service=YoungPeopleLinkingService,
-    )
+    return YoungPersonPlansService.submit_support_plan(conn, plan_id=plan_id, actor_user_id=_safe_int(current_user.get("user_id")), linking_service=YoungPeopleLinkingService)
 
 
 @router.post("/plans/{plan_id}/approve")
 @router.put("/plans/{plan_id}/approve")
-def approve_support_plan(
-    plan_id: int,
-    payload: ReviewDecisionPayload,
-    conn=Depends(get_db),
-    current_user=Depends(get_current_user),
-):
+def approve_support_plan(plan_id: int, payload: ReviewDecisionPayload, conn=Depends(get_db), current_user=Depends(get_current_user)):
     _assert_can_review(current_user)
     _load_and_check_plan(conn, plan_id, current_user)
-
-    return YoungPersonPlansService.approve_support_plan(
-        conn,
-        plan_id=plan_id,
-        approved_by=_safe_int(current_user.get("user_id")),
-        review_note=payload.review_note,
-        linking_service=YoungPeopleLinkingService,
-    )
+    return YoungPersonPlansService.approve_support_plan(conn, plan_id=plan_id, approved_by=_safe_int(current_user.get("user_id")), review_note=payload.review_note, linking_service=YoungPeopleLinkingService)
 
 
 @router.post("/plans/{plan_id}/return")
 @router.put("/plans/{plan_id}/return")
-def return_support_plan(
-    plan_id: int,
-    payload: ReviewDecisionPayload,
-    conn=Depends(get_db),
-    current_user=Depends(get_current_user),
-):
+def return_support_plan(plan_id: int, payload: ReviewDecisionPayload, conn=Depends(get_db), current_user=Depends(get_current_user)):
     _assert_can_review(current_user)
     _load_and_check_plan(conn, plan_id, current_user)
-
-    return YoungPersonPlansService.return_support_plan(
-        conn,
-        plan_id=plan_id,
-        actor_user_id=_safe_int(current_user.get("user_id")),
-        review_note=payload.review_note,
-        linking_service=YoungPeopleLinkingService,
-    )
+    return YoungPersonPlansService.return_support_plan(conn, plan_id=plan_id, actor_user_id=_safe_int(current_user.get("user_id")), review_note=payload.review_note, linking_service=YoungPeopleLinkingService)
 
 
 @router.post("/plans/{plan_id}/archive")
 @router.put("/plans/{plan_id}/archive")
-def archive_support_plan(
-    plan_id: int,
-    conn=Depends(get_db),
-    current_user=Depends(get_current_user),
-):
+def archive_support_plan(plan_id: int, conn=Depends(get_db), current_user=Depends(get_current_user)):
     _assert_can_review(current_user)
     _load_and_check_plan(conn, plan_id, current_user)
-
-    return YoungPersonPlansService.archive_support_plan(
-        conn,
-        plan_id=plan_id,
-        actor_user_id=_safe_int(current_user.get("user_id")),
-        linking_service=YoungPeopleLinkingService,
-    )
+    return YoungPersonPlansService.archive_support_plan(conn, plan_id=plan_id, actor_user_id=_safe_int(current_user.get("user_id")), linking_service=YoungPeopleLinkingService)
 
 
 @router.get("/plans/{plan_id}/export")
-def export_support_plan(
-    plan_id: int,
-    conn=Depends(get_db),
-    current_user=Depends(get_current_user),
-):
+def export_support_plan(plan_id: int, conn=Depends(get_db), current_user=Depends(get_current_user)):
     _load_and_check_plan(conn, plan_id, current_user)
     return YoungPersonPlansService.export_support_plan(conn, plan_id)
