@@ -30,6 +30,8 @@ class DocumentSectionTemplate(BaseModel):
     prompts: list[str] = Field(default_factory=list)
     required: bool = True
     therapeutic_guidance: list[str] = Field(default_factory=list)
+    evidence_links: list[str] = Field(default_factory=list)
+    chronology_links: list[str] = Field(default_factory=list)
 
 
 class DocumentTemplate(BaseModel):
@@ -46,12 +48,14 @@ class DocumentTemplate(BaseModel):
     quality_standard_links: list[str] = Field(default_factory=list)
     sccif_links: list[str] = Field(default_factory=list)
     evidence_requirements: list[str] = Field(default_factory=list)
+    chronology_requirements: list[str] = Field(default_factory=list)
     signoff_requirements: list[str] = Field(default_factory=list)
     export_profile: dict[str, Any] = Field(default_factory=dict)
     orb_prompt_pack: list[str] = Field(default_factory=list)
     child_voice_prompts: list[str] = Field(default_factory=list)
     therapeutic_guidance: list[str] = Field(default_factory=list)
     inspection_relevance: str
+    workflow: dict[str, Any] = Field(default_factory=dict)
 
 
 class DocumentInstance(BaseModel):

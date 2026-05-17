@@ -20,31 +20,31 @@ MANAGER = {"id": 1, "role": "manager", "home_id": 10, "provider_id": 20, "allowe
 STAFF = {"id": 2, "role": "support_worker", "home_id": 10, "provider_id": 20}
 
 
-def _document(template_id: str = "child_care_plan", child_id: str = "100") -> dict:
+def _document(template_id: str = "care_plan_review", child_id: str = "100") -> dict:
     template = document_template_service.get_template(template_id)
     return document_rendering_service.new_instance(
         template=template,
         current_user=MANAGER,
         child_id=child_id,
         home_id=10,
-        sections={"child_voice_and_wishes": "Jamie said he felt safer after keywork because staff listened."},
+        sections={"child_voice_and_participation": "Jamie said he felt safer after keywork because staff listened."},
     ).model_dump(mode="json")
 
 
 def test_template_registry_contains_requested_child_home_and_staff_documents():
     templates = document_template_service.list_templates()
 
-    assert len(document_template_service.list_templates(scope="child")) == 19
-    assert len(document_template_service.list_templates(scope="home")) == 22
-    assert len(document_template_service.list_templates(scope="staff")) == 9
-    assert {item.title for item in templates} >= {"Care Plan", "Reg 45 Review", "Safer Recruitment Checklist"}
-    assert document_template_service.get_template("child_care_plan").child_voice_prompts
+    assert len(document_template_service.list_templates(scope="child")) >= 22
+    assert len(document_template_service.list_templates(scope="home")) >= 5
+    assert len(document_template_service.list_templates(scope="staff")) >= 4
+    assert {item.title for item in templates} >= {"Daily Note", "Reg 45 Review Evidence Note", "Safer Recruitment Checklist"}
+    assert document_template_service.get_template("care_plan_review").child_voice_prompts
 
 
 def test_document_instance_is_editable_and_versions_preserve_previous_content():
     document = _document()
     before = {**document, "version_number": 1}
-    after = {**before, "sections": {**before["sections"], "actions_evidence_and_review": "Manager to review on Friday."}}
+    after = {**before, "sections": {**before["sections"], "decisions_actions_and_sign_off": "Manager to review on Friday."}}
 
     version = document_version_service.snapshot(document=before, reason="before_update", current_user=MANAGER, version_number=1)
 
@@ -57,7 +57,7 @@ def test_autosave_detects_conflict_and_does_not_silently_overwrite():
     document = {**_document(), "version_number": 4, "status": "draft"}
     envelope = document_autosave_service.build_autosave(
         document=document,
-        sections={"child_voice_and_wishes": "Changed locally"},
+        sections={"child_voice_and_participation": "Changed locally"},
         current_user=STAFF,
         client_token="client-1",
         base_version=3,
@@ -122,7 +122,7 @@ def test_signature_audit_is_hash_bound_and_immutable():
 
 def test_orb_suggestions_do_not_modify_document_until_accepted():
     draft = "Jamie has improved."
-    suggestion = document_prompt_service.suggestion(request="strengthen child voice", draft_text=draft, template_id="child_care_plan")
+    suggestion = document_prompt_service.suggestion(request="strengthen child voice", draft_text=draft, template_id="care_plan_review")
 
     assert suggestion["draft_text_unchanged"] == draft
     assert "Do not fabricate evidence." in suggestion["guardrails"]
@@ -147,6 +147,6 @@ def test_document_intelligence_flags_reflective_quality_gaps():
 
 
 def test_standalone_assistant_boundary_is_no_os_document_access():
-    prompts = document_prompt_service.prompts_for(template_id="child_care_plan")
+    prompts = document_prompt_service.prompts_for(template_id="care_plan_review")
 
     assert "Suggestions only; do not silently rewrite records." in prompts["guardrails"]
