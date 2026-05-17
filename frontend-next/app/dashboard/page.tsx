@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
 import { OperationalLifecyclePanel } from '@/components/indicare/operational-lifecycle-panel'
 import { AlertCard, Card, DataTable, EmptyState, PageHeader, RecordTimeline, SectionHeader, StatusBadge } from '@/components/indicare/ui'
+import { getMeToday } from '@/lib/os-api/connect'
 import { getCommandCentre } from '@/lib/os-api/platform'
 
 function formatDate(value?: string) {
@@ -12,8 +13,9 @@ function formatDate(value?: string) {
 }
 
 export default async function DashboardPage() {
-  const command = await getCommandCentre()
+  const [command, todayResult] = await Promise.all([getCommandCentre(), getMeToday()])
   const data = command.data
+  const today = todayResult.data
   const openActions = data.actions.filter((action) => action.status !== 'completed')
   const safeguardingOpen = data.safeguarding.filter((item) => item.status !== 'closed')
   const documentsForReview = data.documents.filter((document) => ['review_required', 'action_plan_open', 'processing'].includes(document.status))
@@ -29,6 +31,34 @@ export default async function DashboardPage() {
         action={<Link href="/young-people" className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">Choose child / record</Link>}
       />
       <LiveDataStatus result={command} />
+
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(300px,0.7fr)]">
+        <Card className="bg-gradient-to-br from-white via-blue-50/70 to-white">
+          <SectionHeader eyebrow="My day" title={`Welcome back, ${today.adult?.preferred_name || today.adult?.name || 'there'}`} description="Personalised workspace signals from schema-backed APIs only." />
+          <div className="grid gap-3 md:grid-cols-3">
+            <Link href="/handover/current" className="rounded-2xl bg-white p-4 shadow-sm">
+              <strong className="block text-3xl font-black text-slate-950">{today.handover?.summary?.total || 0}</strong>
+              <span className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Handover items</span>
+            </Link>
+            <Link href="/connect" className="rounded-2xl bg-white p-4 shadow-sm">
+              <strong className="block text-3xl font-black text-slate-950">{today.connect?.count || 0}</strong>
+              <span className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Unread Connect</span>
+            </Link>
+            <Link href="/notifications" className="rounded-2xl bg-white p-4 shadow-sm">
+              <strong className="block text-3xl font-black text-slate-950">{today.notifications?.unread || 0}</strong>
+              <span className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Notifications</span>
+            </Link>
+          </div>
+        </Card>
+        <Card>
+          <SectionHeader eyebrow="Dashboard preferences" title="Pinned workspace" description="Critical safety widgets remain locked on." />
+          <div className="flex flex-wrap gap-2">
+            {((today.dashboard_preferences?.layout as Array<{ id: string; pinned?: boolean; locked?: boolean }> | undefined) || []).filter((item) => item.pinned !== false).slice(0, 8).map((item) => (
+              <StatusBadge key={item.id} value={`${item.id.replaceAll('_', ' ')}${item.locked ? ' locked' : ''}`} />
+            ))}
+          </div>
+        </Card>
+      </section>
 
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(300px,0.65fr)]">
         <Card>

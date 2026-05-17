@@ -40,6 +40,8 @@ export default async function YoungPersonDetailPage({ params }: { params: Promis
 
   const displayName = person?.displayName || person?.preferredName || `Young person ${id}`
   const profile = person as Record<string, unknown> | undefined
+  const photoUrl = profileText(profile, ['photo_url', 'photoUrl', 'profile_photo', 'avatar_url'], '')
+  const initials = displayName.split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase()
   const keyDetails = [
     ['Age / DOB', [person?.age ? `Age ${person.age}` : undefined, profileText(profile, ['date_of_birth', 'dateOfBirth', 'dob'], '')].filter(Boolean).join(' · ') || 'Not returned'],
     ['Home', profileText(profile, ['home_name', 'homeName', 'home_id', 'homeId'], 'Not returned')],
@@ -92,8 +94,13 @@ export default async function YoungPersonDetailPage({ params }: { params: Promis
         <Card>
           <SectionHeader eyebrow="Two-minute overview" title="Who this child is" description="The first screen should help any staff member understand the child, current state and next action quickly." />
           <div className="rounded-[28px] bg-slate-50 p-5">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
+            <div className="flex flex-wrap items-start gap-5">
+              {photoUrl ? (
+                <div className="h-28 w-28 rounded-[32px] bg-cover bg-center shadow-xl shadow-slate-950/10" style={{ backgroundImage: `url(${photoUrl})` }} aria-label={`${displayName} photo`} />
+              ) : (
+                <div className="flex h-28 w-28 items-center justify-center rounded-[32px] bg-gradient-to-br from-blue-600 to-slate-950 text-3xl font-black text-white shadow-xl shadow-slate-950/10">{initials}</div>
+              )}
+              <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap gap-2">
                   <RiskBadge value={person?.riskLevel as any} />
                   <StatusBadge value={person?.placementStatus || person?.status || 'active'} />
@@ -129,6 +136,15 @@ export default async function YoungPersonDetailPage({ params }: { params: Promis
         <Card>
           <SectionHeader eyebrow="Support" title="What helps this child" description="Plain-language care intelligence for staff on shift." />
           <dl className="grid gap-3 md:grid-cols-2">
+            {[
+              ['What matters to me', profileText(profile, ['what_matters_to_me', 'whatMattersToMe', 'what_matters'], 'Not returned yet')],
+              ['Strengths and interests', profileText(profile, ['strengths_interests', 'strengthsAndInterests', 'interests', 'strengths'], 'Not returned yet')]
+            ].map(([label, value]) => (
+              <div key={label} className="rounded-2xl border border-blue-100 bg-blue-50/70 p-4 md:col-span-2">
+                <dt className="text-[11px] font-black uppercase tracking-[0.16em] text-blue-700">{label}</dt>
+                <dd className="mt-2 text-sm font-bold leading-6 text-slate-700">{value}</dd>
+              </div>
+            ))}
             {supportNeeds.map(([label, value]) => (
               <div key={label} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
                 <dt className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">{label}</dt>

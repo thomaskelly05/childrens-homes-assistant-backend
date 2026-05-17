@@ -31,8 +31,8 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 
 const publicPathPrefixes = ['/login', '/unauthorized']
 const e2eAuthEnabled = process.env.NEXT_PUBLIC_E2E_TEST_MODE === '1' && process.env.NODE_ENV !== 'production'
-const e2eEmail = process.env.NEXT_PUBLIC_E2E_USER_EMAIL || 'manager.demo@indicare.local'
-const e2ePassword = process.env.NEXT_PUBLIC_E2E_USER_PASSWORD || 'IndiCareDemo123!'
+const e2eEmail = process.env.NEXT_PUBLIC_E2E_USER_EMAIL || 'e2e.manager@indicare.local'
+const e2ePassword = process.env.NEXT_PUBLIC_E2E_USER_PASSWORD || 'ChangeMeForE2E123!'
 
 const e2eUser: StaffUser = {
   id: 9001,
@@ -129,7 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return {
           ok: false,
           authenticated: false,
-          message: 'E2E demo credentials were not accepted.'
+          message: 'E2E credentials were not accepted.'
         }
       }
       setUser(e2eUser)
@@ -140,7 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return {
         ok: true,
         authenticated: true,
-        message: 'E2E demo user authenticated.',
+        message: 'E2E user authenticated.',
         user: e2eUser
       }
     }

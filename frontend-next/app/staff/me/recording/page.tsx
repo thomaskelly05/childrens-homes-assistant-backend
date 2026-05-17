@@ -6,7 +6,7 @@ export default function MyRecordingPage() {
   return (
     <div className="space-y-6">
       <PageHeader eyebrow="My recording" title="My rapid recording workspace" description="Complete overdue recording and open quick-add tools for this shift." />
-      <StaffOperationalWorkspace staffId="staff-abi" />
+      <StaffOperationalWorkspace />
       <RapidRecordingDrawer />
     </div>
   )

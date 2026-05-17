@@ -10,7 +10,6 @@ import { generateReport } from '@/lib/regulatory-reporting/generators'
 import { reportTemplates } from '@/lib/regulatory-reporting/templates'
 import { ReportTemplateId } from '@/lib/regulatory-reporting/types'
 import { getEvidenceItems } from '@/lib/evidence/selectors'
-import { indicareData } from '@/lib/indicare/demo-data'
 import { getRegulatoryReferenceById } from '@/lib/regulatory-framework/selectors'
 
 function isRegulatoryReference(reference: ReturnType<typeof getRegulatoryReferenceById>): reference is NonNullable<ReturnType<typeof getRegulatoryReferenceById>> {
@@ -69,8 +68,8 @@ export function ReportingFoundation() {
                 Young person
                 <select value={youngPersonId} onChange={(event) => setYoungPersonId(event.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
                   <option value="">Home-wide</option>
-                  {indicareData.youngPeople.map((person) => <option key={person.id} value={person.id}>{person.preferredName} {person.lastName}</option>)}
                 </select>
+                <span className="mt-2 block text-xs font-bold leading-5 text-slate-500">Child-specific options appear here when live report context returns children.</span>
               </label>
               <label className="block text-sm font-bold text-slate-600">
                 Date from

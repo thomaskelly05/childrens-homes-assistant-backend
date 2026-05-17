@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import base64
+import binascii
+import re
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -17,6 +20,9 @@ router = APIRouter(
 )
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+ALLOWED_PROFILE_IMAGE_MIME_TYPES = {"image/png", "image/jpeg", "image/webp"}
+MAX_PROFILE_IMAGE_BYTES = 1_500_000
 
 PREFERENCES_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS user_profile_preferences (
@@ -69,6 +75,31 @@ def _clean(value: Any, fallback: str | None = None) -> str | None:
         return fallback
     text = str(value).strip()
     return text if text else fallback
+
+
+def _validate_profile_image_data_url(image: str | None) -> str | None:
+    if not image:
+        return None
+    match = re.match(r"^data:(image/[a-zA-Z0-9.+-]+);base64,(.+)$", image, re.DOTALL)
+    if not match:
+        raise HTTPException(status_code=400, detail="Profile image must be a base64 image data URL.")
+    mime_type, encoded = match.groups()
+    if mime_type not in ALLOWED_PROFILE_IMAGE_MIME_TYPES:
+        raise HTTPException(status_code=400, detail="Profile image must be PNG, JPEG or WebP.")
+    try:
+        decoded = base64.b64decode(encoded, validate=True)
+    except (binascii.Error, ValueError):
+        raise HTTPException(status_code=400, detail="Profile image data is not valid base64.")
+    if len(decoded) > MAX_PROFILE_IMAGE_BYTES:
+        raise HTTPException(status_code=400, detail="Profile image must be 1.5MB or smaller.")
+    signatures = {
+        "image/png": b"\x89PNG\r\n\x1a\n",
+        "image/jpeg": b"\xff\xd8\xff",
+        "image/webp": b"RIFF",
+    }
+    if not decoded.startswith(signatures[mime_type]):
+        raise HTTPException(status_code=400, detail="Profile image content does not match its MIME type.")
+    return image
 
 
 def _column_exists(conn, table_name: str, column_name: str) -> bool:
@@ -247,9 +278,7 @@ def update_profile(
     if assistant_tone not in {"professional", "warm", "concise", "reflective", "inspection_ready"}:
         raise HTTPException(status_code=400, detail="Invalid assistant tone.")
 
-    image = _clean(payload.profile_image_data)
-    if image and not image.startswith("data:image/"):
-        raise HTTPException(status_code=400, detail="Profile image must be an image data URL.")
+    image = _validate_profile_image_data_url(_clean(payload.profile_image_data))
 
     try:
         _ensure_preferences_table(conn)

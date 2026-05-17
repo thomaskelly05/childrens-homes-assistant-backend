@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 
-const e2eEmail = process.env.NEXT_PUBLIC_E2E_USER_EMAIL || 'manager.demo@indicare.local'
-const e2ePassword = process.env.NEXT_PUBLIC_E2E_USER_PASSWORD || 'IndiCareDemo123!'
+const e2eEmail = process.env.NEXT_PUBLIC_E2E_USER_EMAIL || 'e2e.manager@indicare.local'
+const e2ePassword = process.env.NEXT_PUBLIC_E2E_USER_PASSWORD || 'ChangeMeForE2E123!'
 
 test('child workspace shell stays live-empty, scoped, and clears sensitive state on logout', async ({ page }) => {
   const failedResponses: string[] = []
