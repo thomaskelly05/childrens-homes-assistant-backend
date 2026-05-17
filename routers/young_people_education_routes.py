@@ -22,6 +22,10 @@ def _safe_int(value: Any) -> int | None:
         return None
 
 
+def _actor_id(current_user: dict[str, Any]) -> int | None:
+    return _safe_int(current_user.get("user_id") or current_user.get("id"))
+
+
 def _user_home_id(current_user: dict[str, Any]) -> int | None:
     return _safe_int(current_user.get("home_id"))
 
@@ -60,6 +64,46 @@ def _load_and_check_education_record(conn, record_id: int, current_user: dict[st
     row = YoungPersonEducationService.get_education_record_row(conn, record_id)
     _assert_home_access(current_user, _safe_int(row.get("home_id")))
     return row
+
+
+def _link_education_profile_event(conn, *, row: dict[str, Any], event_type: str, current_user: dict[str, Any]) -> dict[str, Any]:
+    actor = _actor_id(current_user)
+    young_person_id = int(row.get("young_person_id"))
+    title = "Education profile updated" if event_type == "updated" else "Education profile created"
+    narrative = " ".join(str(row.get(key) or "") for key in ("school_name", "year_group", "education_status", "sen_status", "ehcp_details", "designated_teacher", "pep_status", "support_summary"))
+    review_required = bool(row.get("ehcp_details") or row.get("pep_status") or row.get("support_summary"))
+    workflow = YoungPeopleLinkingService.process_record_event(
+        conn=conn,
+        young_person_id=young_person_id,
+        source_table="young_person_education_profile",
+        source_id=int(row.get("id")),
+        event_type=event_type,
+        title=title,
+        summary="Education profile details changed, including school, SEN/EHCP, PEP, attendance or support information where supplied.",
+        narrative=narrative or "Education profile updated",
+        category="education",
+        subcategory="education_profile",
+        significance="medium",
+        owner_id=actor,
+        created_by=actor,
+        workflow={
+            "link_chronology": True,
+            "create_task": review_required,
+            "manager_review": review_required,
+            "safeguarding": False,
+            "link_support_plans": True,
+            "link_monthly_reviews": True,
+            "link_quality_standards": True,
+        },
+        metadata={
+            "education_update": narrative,
+            "quality_standards": ["reg_8_education"],
+            "standards_rationale": "Linked from education profile update",
+            "evidence_strength": "medium",
+        },
+    )
+    conn.commit()
+    return workflow
 
 
 class EducationProfileUpsertPayload(BaseModel):
@@ -101,76 +145,43 @@ class EducationRecordUpdatePayload(BaseModel):
 
 
 @router.get("/{young_person_id}/education")
-def get_young_person_education(
-    young_person_id: int,
-    conn=Depends(get_db),
-    current_user=Depends(get_current_user),
-):
+def get_young_person_education(young_person_id: int, conn=Depends(get_db), current_user=Depends(get_current_user)):
     _load_and_check_young_person(conn, young_person_id, current_user)
     return YoungPersonEducationService.get_education_bundle(conn, young_person_id)
 
 
 @router.get("/education-records/{record_id}")
-def get_education_record(
-    record_id: int,
-    conn=Depends(get_db),
-    current_user=Depends(get_current_user),
-):
+def get_education_record(record_id: int, conn=Depends(get_db), current_user=Depends(get_current_user)):
     _load_and_check_education_record(conn, record_id, current_user)
     return YoungPersonEducationService.get_education_record(conn, record_id)
 
 
 @router.put("/{young_person_id}/education/profile")
 @router.put("/{young_person_id}/education-profile")
-def upsert_education_profile(
-    young_person_id: int,
-    payload: EducationProfileUpsertPayload,
-    conn=Depends(get_db),
-    current_user=Depends(get_current_user),
-):
+def upsert_education_profile(young_person_id: int, payload: EducationProfileUpsertPayload, conn=Depends(get_db), current_user=Depends(get_current_user)):
     _assert_can_edit(current_user)
     _load_and_check_young_person(conn, young_person_id, current_user)
-
-    row = YoungPersonEducationService.upsert_education_profile(
-        conn,
-        young_person_id=young_person_id,
-        payload=payload.model_dump(exclude_none=True),
-    )
-    return {"ok": True, "education_profile": row}
+    row = YoungPersonEducationService.upsert_education_profile(conn, young_person_id=young_person_id, payload=payload.model_dump(exclude_none=True))
+    workflow = _link_education_profile_event(conn, row=row, event_type="updated", current_user=current_user)
+    return {"ok": True, "education_profile": row, "workflow": workflow}
 
 
 @router.post("/{young_person_id}/education-records")
-def create_education_record(
-    young_person_id: int,
-    payload: EducationRecordCreatePayload,
-    conn=Depends(get_db),
-    current_user=Depends(get_current_user),
-):
+def create_education_record(young_person_id: int, payload: EducationRecordCreatePayload, conn=Depends(get_db), current_user=Depends(get_current_user)):
     _assert_can_edit(current_user)
     _load_and_check_young_person(conn, young_person_id, current_user)
-
     return YoungPersonEducationService.create_education_record(
         conn,
         young_person_id=young_person_id,
         payload=payload.model_dump(exclude_none=True),
-        actor_user_id=_safe_int(current_user.get("user_id")),
+        actor_user_id=_actor_id(current_user),
         linking_service=YoungPeopleLinkingService(),
     )
 
 
 @router.patch("/education-records/{record_id}")
 @router.put("/education-records/{record_id}")
-def update_education_record(
-    record_id: int,
-    payload: EducationRecordUpdatePayload,
-    conn=Depends(get_db),
-    current_user=Depends(get_current_user),
-):
+def update_education_record(record_id: int, payload: EducationRecordUpdatePayload, conn=Depends(get_db), current_user=Depends(get_current_user)):
     _assert_can_edit(current_user)
     _load_and_check_education_record(conn, record_id, current_user)
-
-    return YoungPersonEducationService.update_education_record(
-        conn,
-        record_id=record_id,
-        payload=payload.model_dump(exclude_unset=True),
-    )
+    return YoungPersonEducationService.update_education_record(conn, record_id=record_id, payload=payload.model_dump(exclude_unset=True))
