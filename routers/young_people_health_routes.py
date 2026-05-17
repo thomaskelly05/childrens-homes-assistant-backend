@@ -30,6 +30,10 @@ def _user_role(current_user: dict[str, Any]) -> str:
     return str(current_user.get("role") or "").strip().lower()
 
 
+def _actor_id(current_user: dict[str, Any]) -> int | None:
+    return _safe_int(current_user.get("user_id") or current_user.get("id"))
+
+
 def _assert_home_access(current_user: dict[str, Any], record_home_id: int | None) -> None:
     role = _user_role(current_user)
     user_home_id = _user_home_id(current_user)
@@ -72,6 +76,136 @@ def _load_and_check_medication_record(conn, record_id: int, current_user: dict[s
     row = YoungPersonHealthService.get_medication_record(conn, record_id)
     _assert_home_access(current_user, _safe_int(row.get("home_id")))
     return row
+
+
+def _link_health_profile_event(conn, *, row: dict[str, Any], event_type: str, current_user: dict[str, Any]) -> dict[str, Any]:
+    actor = _actor_id(current_user)
+    young_person_id = int(row.get("young_person_id"))
+    title = "Health profile updated" if event_type == "updated" else "Health profile created"
+    summary = "Health profile details changed, including GP, allergies, diagnoses, mental health, medication or consent information where supplied."
+    workflow = YoungPeopleLinkingService.process_record_event(
+        conn=conn,
+        young_person_id=young_person_id,
+        source_table="young_person_health_profile",
+        source_id=int(row.get("id")),
+        event_type=event_type,
+        title=title,
+        summary=summary,
+        narrative=" ".join(str(row.get(key) or "") for key in ("allergies", "diagnoses", "mental_health_summary", "medication_summary", "consent_notes")) or summary,
+        category="health",
+        subcategory="health_profile",
+        significance="medium",
+        owner_id=actor,
+        created_by=actor,
+        workflow={
+            "link_chronology": True,
+            "create_task": False,
+            "manager_review": True,
+            "safeguarding": False,
+            "link_support_plans": True,
+            "link_monthly_reviews": True,
+            "link_quality_standards": True,
+        },
+        metadata={
+            "health_update": summary,
+            "quality_standards": ["reg_10_health_and_wellbeing"],
+            "standards_rationale": "Linked from health profile update",
+            "evidence_strength": "medium",
+        },
+    )
+    conn.commit()
+    return workflow
+
+
+def _link_medication_profile_event(conn, *, row: dict[str, Any], event_type: str, current_user: dict[str, Any]) -> dict[str, Any]:
+    actor = _actor_id(current_user)
+    young_person_id = int(row.get("young_person_id"))
+    medication = row.get("medication_name") or "Medication"
+    title = f"Medication profile {event_type}: {medication}"
+    summary = f"Medication profile {event_type} for {medication}."
+    requires_review = row.get("is_active") is False or bool(row.get("end_date")) or bool(row.get("prn_guidance"))
+    workflow = YoungPeopleLinkingService.process_record_event(
+        conn=conn,
+        young_person_id=young_person_id,
+        source_table="medication_profiles",
+        source_id=int(row.get("id")),
+        event_type=event_type,
+        title=title,
+        summary=summary,
+        narrative=" ".join(str(row.get(key) or "") for key in ("medication_name", "dosage", "route", "frequency", "prn_guidance", "prescribed_by", "notes")) or summary,
+        category="health",
+        subcategory="medication_profile",
+        significance="medium" if not requires_review else "high",
+        review_date=row.get("end_date"),
+        owner_id=actor,
+        created_by=actor,
+        workflow={
+            "link_chronology": True,
+            "create_task": requires_review,
+            "manager_review": requires_review,
+            "safeguarding": False,
+            "link_support_plans": True,
+            "link_monthly_reviews": True,
+            "link_quality_standards": True,
+        },
+        metadata={
+            "health_update": summary,
+            "medication_name": medication,
+            "quality_standards": ["reg_10_health_and_wellbeing"],
+            "standards_rationale": "Linked from medication profile workflow",
+            "evidence_strength": "medium" if not requires_review else "high",
+        },
+    )
+    conn.commit()
+    return workflow
+
+
+def _link_medication_record_event(conn, *, row: dict[str, Any], event_type: str, current_user: dict[str, Any]) -> dict[str, Any]:
+    actor = _actor_id(current_user)
+    young_person_id = int(row.get("young_person_id"))
+    medication = row.get("medication_name") or "Medication"
+    status = str(row.get("status") or "recorded").lower()
+    error_flag = bool(row.get("error_flag"))
+    review_required = error_flag or status in {"refused", "omitted", "missed", "error", "not_administered"} or bool(row.get("error_details"))
+    title = f"Medication administration {event_type}: {medication}"
+    summary = f"Medication administration {event_type} for {medication}; status: {status}."
+    workflow = YoungPeopleLinkingService.process_record_event(
+        conn=conn,
+        young_person_id=young_person_id,
+        source_table="medication_records",
+        source_id=int(row.get("id")),
+        event_type=event_type,
+        title=title,
+        summary=summary,
+        narrative=" ".join(str(row.get(key) or "") for key in ("medication_name", "dose", "route", "status", "refusal_reason", "omission_reason", "error_details")) or summary,
+        category="health",
+        subcategory="medication_administration",
+        significance="high" if review_required else "medium",
+        due_date=row.get("scheduled_time") or row.get("administered_time"),
+        owner_id=actor,
+        created_by=actor,
+        workflow={
+            "link_chronology": True,
+            "create_task": review_required,
+            "manager_review": review_required,
+            "safeguarding": error_flag,
+            "link_support_plans": True,
+            "link_monthly_reviews": True,
+            "link_quality_standards": True,
+        },
+        metadata={
+            "health_update": summary,
+            "medication_name": medication,
+            "medication_status": status,
+            "medication_error": error_flag,
+            "response_actions": row.get("error_details") or row.get("refusal_reason") or row.get("omission_reason"),
+            "quality_standards": ["reg_10_health_and_wellbeing"],
+            "standards_rationale": "Linked from medication administration workflow",
+            "evidence_strength": "high" if review_required else "medium",
+        },
+    )
+    conn.commit()
+    return workflow
 
 
 class HealthProfileUpsertPayload(BaseModel):
@@ -175,166 +309,97 @@ class MedicationRecordUpdatePayload(BaseModel):
 
 
 @router.get("/{young_person_id}/health")
-def get_young_person_health(
-    young_person_id: int,
-    conn=Depends(get_db),
-    current_user=Depends(get_current_user),
-):
+def get_young_person_health(young_person_id: int, conn=Depends(get_db), current_user=Depends(get_current_user)):
     _load_and_check_young_person(conn, young_person_id, current_user)
     return YoungPersonHealthService.get_health_bundle(conn, young_person_id)
 
 
 @router.get("/health-records/{record_id}")
-def get_health_record(
-    record_id: int,
-    conn=Depends(get_db),
-    current_user=Depends(get_current_user),
-):
+def get_health_record(record_id: int, conn=Depends(get_db), current_user=Depends(get_current_user)):
     row = _load_and_check_health_record(conn, record_id, current_user)
     return YoungPersonHealthService.transform_health_record(row)
 
 
 @router.get("/medication-profiles/{profile_id}")
-def get_medication_profile(
-    profile_id: int,
-    conn=Depends(get_db),
-    current_user=Depends(get_current_user),
-):
+def get_medication_profile(profile_id: int, conn=Depends(get_db), current_user=Depends(get_current_user)):
     row = _load_and_check_medication_profile(conn, profile_id, current_user)
     return YoungPersonHealthService.transform_medication_profile(row)
 
 
 @router.get("/medication-records/{record_id}")
-def get_medication_record(
-    record_id: int,
-    conn=Depends(get_db),
-    current_user=Depends(get_current_user),
-):
+def get_medication_record(record_id: int, conn=Depends(get_db), current_user=Depends(get_current_user)):
     row = _load_and_check_medication_record(conn, record_id, current_user)
     return YoungPersonHealthService.transform_medication_record(row)
 
 
 @router.put("/{young_person_id}/health/profile")
 @router.put("/{young_person_id}/health-profile")
-def upsert_health_profile(
-    young_person_id: int,
-    payload: HealthProfileUpsertPayload,
-    conn=Depends(get_db),
-    current_user=Depends(get_current_user),
-):
+def upsert_health_profile(young_person_id: int, payload: HealthProfileUpsertPayload, conn=Depends(get_db), current_user=Depends(get_current_user)):
     _assert_can_edit(current_user)
     _load_and_check_young_person(conn, young_person_id, current_user)
-
-    row = YoungPersonHealthService.upsert_health_profile(
-        conn,
-        young_person_id=young_person_id,
-        payload=payload.model_dump(exclude_none=True),
-    )
-    return {"ok": True, "health_profile": row}
+    row = YoungPersonHealthService.upsert_health_profile(conn, young_person_id=young_person_id, payload=payload.model_dump(exclude_none=True))
+    workflow = _link_health_profile_event(conn, row=row, event_type="updated", current_user=current_user)
+    return {"ok": True, "health_profile": row, "workflow": workflow}
 
 
 @router.post("/{young_person_id}/health-records")
-def create_health_record(
-    young_person_id: int,
-    payload: HealthRecordCreatePayload,
-    conn=Depends(get_db),
-    current_user=Depends(get_current_user),
-):
+def create_health_record(young_person_id: int, payload: HealthRecordCreatePayload, conn=Depends(get_db), current_user=Depends(get_current_user)):
     _assert_can_edit(current_user)
     _load_and_check_young_person(conn, young_person_id, current_user)
-
     return YoungPersonHealthService.create_health_record(
         conn,
         young_person_id=young_person_id,
         payload=payload.model_dump(exclude_none=True),
-        actor_user_id=_safe_int(current_user.get("user_id")),
+        actor_user_id=_actor_id(current_user),
         linking_service=YoungPeopleLinkingService,
     )
 
 
 @router.patch("/health-records/{record_id}")
 @router.put("/health-records/{record_id}")
-def update_health_record(
-    record_id: int,
-    payload: HealthRecordUpdatePayload,
-    conn=Depends(get_db),
-    current_user=Depends(get_current_user),
-):
+def update_health_record(record_id: int, payload: HealthRecordUpdatePayload, conn=Depends(get_db), current_user=Depends(get_current_user)):
     _assert_can_edit(current_user)
     _load_and_check_health_record(conn, record_id, current_user)
-
-    return YoungPersonHealthService.update_health_record(
-        conn,
-        record_id=record_id,
-        payload=payload.model_dump(exclude_unset=True),
-    )
+    return YoungPersonHealthService.update_health_record(conn, record_id=record_id, payload=payload.model_dump(exclude_unset=True))
 
 
 @router.post("/{young_person_id}/medication-profiles")
-def create_medication_profile(
-    young_person_id: int,
-    payload: MedicationProfileCreatePayload,
-    conn=Depends(get_db),
-    current_user=Depends(get_current_user),
-):
+def create_medication_profile(young_person_id: int, payload: MedicationProfileCreatePayload, conn=Depends(get_db), current_user=Depends(get_current_user)):
     _assert_can_edit(current_user)
     _load_and_check_young_person(conn, young_person_id, current_user)
-
-    return YoungPersonHealthService.create_medication_profile(
-        conn,
-        young_person_id=young_person_id,
-        payload=payload.model_dump(exclude_none=True),
-    )
+    result = YoungPersonHealthService.create_medication_profile(conn, young_person_id=young_person_id, payload=payload.model_dump(exclude_none=True))
+    row = _load_and_check_medication_profile(conn, int(result["id"]), current_user)
+    workflow = _link_medication_profile_event(conn, row=row, event_type="created", current_user=current_user)
+    return {**result, "workflow": workflow}
 
 
 @router.patch("/medication-profiles/{profile_id}")
 @router.put("/medication-profiles/{profile_id}")
-def update_medication_profile(
-    profile_id: int,
-    payload: MedicationProfileUpdatePayload,
-    conn=Depends(get_db),
-    current_user=Depends(get_current_user),
-):
+def update_medication_profile(profile_id: int, payload: MedicationProfileUpdatePayload, conn=Depends(get_db), current_user=Depends(get_current_user)):
     _assert_can_edit(current_user)
     _load_and_check_medication_profile(conn, profile_id, current_user)
-
-    return YoungPersonHealthService.update_medication_profile(
-        conn,
-        profile_id=profile_id,
-        payload=payload.model_dump(exclude_unset=True),
-    )
+    result = YoungPersonHealthService.update_medication_profile(conn, profile_id=profile_id, payload=payload.model_dump(exclude_unset=True))
+    row = _load_and_check_medication_profile(conn, profile_id, current_user)
+    workflow = _link_medication_profile_event(conn, row=row, event_type="updated", current_user=current_user)
+    return {**result, "workflow": workflow}
 
 
 @router.post("/{young_person_id}/medication-records")
-def create_medication_record(
-    young_person_id: int,
-    payload: MedicationRecordCreatePayload,
-    conn=Depends(get_db),
-    current_user=Depends(get_current_user),
-):
+def create_medication_record(young_person_id: int, payload: MedicationRecordCreatePayload, conn=Depends(get_db), current_user=Depends(get_current_user)):
     _assert_can_edit(current_user)
     _load_and_check_young_person(conn, young_person_id, current_user)
-
-    return YoungPersonHealthService.create_medication_record(
-        conn,
-        young_person_id=young_person_id,
-        payload=payload.model_dump(exclude_none=True),
-    )
+    result = YoungPersonHealthService.create_medication_record(conn, young_person_id=young_person_id, payload=payload.model_dump(exclude_none=True))
+    row = _load_and_check_medication_record(conn, int(result["id"]), current_user)
+    workflow = _link_medication_record_event(conn, row=row, event_type="created", current_user=current_user)
+    return {**result, "workflow": workflow}
 
 
 @router.patch("/medication-records/{record_id}")
 @router.put("/medication-records/{record_id}")
-def update_medication_record(
-    record_id: int,
-    payload: MedicationRecordUpdatePayload,
-    conn=Depends(get_db),
-    current_user=Depends(get_current_user),
-):
+def update_medication_record(record_id: int, payload: MedicationRecordUpdatePayload, conn=Depends(get_db), current_user=Depends(get_current_user)):
     _assert_can_edit(current_user)
     _load_and_check_medication_record(conn, record_id, current_user)
-
-    return YoungPersonHealthService.update_medication_record(
-        conn,
-        record_id=record_id,
-        payload=payload.model_dump(exclude_unset=True),
-    )
+    result = YoungPersonHealthService.update_medication_record(conn, record_id=record_id, payload=payload.model_dump(exclude_unset=True))
+    row = _load_and_check_medication_record(conn, record_id, current_user)
+    workflow = _link_medication_record_event(conn, row=row, event_type="updated", current_user=current_user)
+    return {**result, "workflow": workflow}
