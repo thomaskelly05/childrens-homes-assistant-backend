@@ -73,15 +73,20 @@ export function StatusBadge({ value }: { value: string }) {
   return <span className={`inline-flex rounded-full border px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em] ${toneClasses[tone]}`}>{value}</span>
 }
 
-export function RiskBadge({ value }: { value: RiskLevel }) {
+export function RiskBadge({ value }: { value?: RiskLevel | 'not_returned' | 'not recorded' | 'unknown' }) {
   const tone: Record<RiskLevel, BadgeTone> = {
     low: 'emerald',
     medium: 'amber',
     high: 'red',
     critical: 'purple'
   }
+  const safeValue = value === 'low' || value === 'medium' || value === 'high' || value === 'critical' ? value : null
 
-  return <span className={`inline-flex rounded-full border px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em] ${toneClasses[tone[value]]}`}>{value}</span>
+  if (!safeValue) {
+    return <span className={`inline-flex rounded-full border px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em] ${toneClasses.slate}`}>risk not returned</span>
+  }
+
+  return <span className={`inline-flex rounded-full border px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em] ${toneClasses[tone[safeValue]]}`}>{safeValue}</span>
 }
 
 export function StatCard({

@@ -65,7 +65,7 @@ export default async function YoungPersonDetailPage({ params }: { params: Promis
     { label: 'Chronology', href: `/young-people/${id}/chronology` },
     { label: 'Safeguarding', href: '#safeguarding' },
     { label: 'Plans', href: `/young-people/${id}/plans` },
-    { label: 'Health', href: `/health?young_person_id=${id}` },
+    { label: 'Health', href: `/young-people/${id}/health/new` },
     { label: 'Education', href: `/documents?young_person_id=${id}&type=education` },
     { label: 'Documents', href: `/young-people/${id}/documents` },
     { label: 'Intelligence', href: '#intelligence' },
@@ -95,7 +95,7 @@ export default async function YoungPersonDetailPage({ params }: { params: Promis
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <div className="flex flex-wrap gap-2">
-                  <RiskBadge value={(person?.riskLevel || 'medium') as any} />
+                  <RiskBadge value={person?.riskLevel as any} />
                   <StatusBadge value={person?.placementStatus || person?.status || 'active'} />
                 </div>
                 <h2 className="mt-4 text-3xl font-black tracking-[-0.05em] text-slate-950">{displayName}</h2>
@@ -152,7 +152,7 @@ export default async function YoungPersonDetailPage({ params }: { params: Promis
           title="Child-linked lifecycle"
           description="Actions, evidence, documents and chronology are grouped into reviewable lifecycle states for this child."
           items={data.lifecycle}
-          hrefForItem={(item) => item.entityType.includes('document') ? `/documents/${encodeURIComponent(item.id)}` : item.entityType.includes('chronology') ? `/chronology/${encodeURIComponent(item.id)}` : undefined}
+          hrefForItem={(item) => item.entityType.includes('document') ? `/documents/${encodeURIComponent(item.id)}` : item.entityType.includes('evidence') ? `/evidence/${encodeURIComponent(item.id)}` : item.entityType.includes('chronology') ? `/chronology/${encodeURIComponent(item.id)}` : undefined}
         />
       </Card>
 
@@ -180,7 +180,7 @@ export default async function YoungPersonDetailPage({ params }: { params: Promis
               ['Add health record', `/young-people/${id}/health/new`],
               ['Add education record', `/documents?young_person_id=${id}&type=education&intent=new`],
               ['Upload document', `/documents?young_person_id=${id}`],
-              ['Open Assistant / ORB', `/assistant?youngPersonId=${id}`]
+              ['Open Assistant / ORB guidance', '#assistant']
             ].map(([label, href]) => (
               <Link key={label} href={href} className="rounded-[22px] border border-slate-100 bg-slate-50 p-4 text-sm font-black text-slate-700 hover:bg-blue-50">{label}</Link>
             ))}
@@ -227,7 +227,7 @@ export default async function YoungPersonDetailPage({ params }: { params: Promis
       <Card id="assistant">
         <SectionHeader eyebrow="Assistant" title="In-shell ORB context" description="Use the floating in-shell ORB on this page for child-scoped support. The standalone Assistant / ORB remains separate and does not retrieve child records by default." />
         <div className="flex flex-wrap gap-3">
-          <Link href={`/assistant?youngPersonId=${encodeURIComponent(id)}`} className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700">Open standalone Assistant / ORB with explicit context</Link>
+          <Link href="/assistant" className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700">Open standalone Assistant / ORB</Link>
           <Link href={`/young-people/${encodeURIComponent(id)}/journey`} className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white">Return to Care Hub</Link>
         </div>
       </Card>

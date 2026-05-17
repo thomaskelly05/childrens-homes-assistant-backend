@@ -24,10 +24,6 @@ const nextConfig: NextConfig = {
         destination: `${backendOrigin}/health`
       },
       {
-        source: '/assistant/:path*',
-        destination: `${backendOrigin}/assistant/:path*`
-      },
-      {
         source: '/orb/:path*',
         destination: `${backendOrigin}/orb/:path*`
       },
@@ -40,20 +36,12 @@ const nextConfig: NextConfig = {
         destination: `${backendOrigin}/os-command/:path*`
       },
       {
-        source: '/young-people/:path*',
-        destination: `${backendOrigin}/young-people/:path*`
-      },
-      {
         source: '/inspection/:path*',
         destination: `${backendOrigin}/inspection/:path*`
       },
       {
         source: '/inspection-os/:path*',
         destination: `${backendOrigin}/inspection-os/:path*`
-      },
-      {
-        source: '/staff/:path*',
-        destination: `${backendOrigin}/staff/:path*`
       },
       {
         source: '/staff-today/:path*',
@@ -66,10 +54,6 @@ const nextConfig: NextConfig = {
       {
         source: '/tasks/:path*',
         destination: `${backendOrigin}/tasks/:path*`
-      },
-      {
-        source: '/evidence/:path*',
-        destination: `${backendOrigin}/evidence/:path*`
       },
       {
         source: '/workspace-records/:path*',

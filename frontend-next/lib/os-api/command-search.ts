@@ -197,7 +197,27 @@ function buildIndex(data: CommandCentreData): SearchResult[] {
     } satisfies SearchResult
   })
 
-  return [...children, ...safeguarding, ...actions, ...documents, ...evidence, ...chronology, ...staff]
+  const homes = data.homes.map((home) => {
+    const href = '/home'
+    return {
+      id: home.id,
+      type: 'home',
+      entityType: normalizeEntityType('home'),
+      group: 'Homes',
+      title: home.title,
+      description: home.summary || 'Home operating picture',
+      href,
+      previewHref: href,
+      chronologyHref: '/chronology',
+      permissionsRequired: ['records:read'],
+      actions: resultActions({ entity_type: 'home', entity_id: home.id }, href),
+      date: formatDate(home.date),
+      linkedContext: home.status,
+      whyItMatters: home.priority || 'Home situational awareness'
+    } satisfies SearchResult
+  })
+
+  return [...children, ...homes, ...safeguarding, ...actions, ...documents, ...evidence, ...chronology, ...staff]
 }
 
 export async function getCommandSearchResults(query: string): Promise<OsApiResult<SearchResult[]>> {
