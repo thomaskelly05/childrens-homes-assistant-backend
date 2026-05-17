@@ -1,11 +1,15 @@
 import { CareAction, CareActionStatus, EvidenceGap, EvidenceItem } from './types'
 
-function byDateDesc<T>(items: T[], getDate: (item: T) => string) {
+function byDateDesc<T>(items: readonly T[], getDate: (item: T) => string) {
   return [...items].sort((left, right) => new Date(getDate(right)).getTime() - new Date(getDate(left)).getTime())
 }
 
+const liveCareActions: CareAction[] = []
+const liveEvidenceItems: EvidenceItem[] = []
+const liveEvidenceGaps: EvidenceGap[] = []
+
 export function getCareActions(): CareAction[] {
-  return byDateDesc([], (action) => action.createdAt)
+  return byDateDesc<CareAction>(liveCareActions, (action) => action.createdAt)
 }
 
 export function getOpenCareActions(): CareAction[] {
@@ -25,7 +29,7 @@ export function getActionsByRegulation(regulation: string): CareAction[] {
 }
 
 export function getEvidenceItems(): EvidenceItem[] {
-  return byDateDesc([], (item) => item.createdAt)
+  return byDateDesc<EvidenceItem>(liveEvidenceItems, (item) => item.createdAt)
 }
 
 export function getEvidenceByYoungPerson(youngPersonId: string): EvidenceItem[] {
@@ -41,7 +45,7 @@ export function getEvidenceBySource(sourceType: string, sourceId: string): Evide
 }
 
 export function getEvidenceGaps(): EvidenceGap[] {
-  return []
+  return liveEvidenceGaps
 }
 
 export function getEvidenceGapsByYoungPerson(youngPersonId: string): EvidenceGap[] {
