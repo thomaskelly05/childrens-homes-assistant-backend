@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from auth.current_user import get_current_user
 from db.connection import get_db
+from services.record_versioning_service import record_versioning_service
 from services.young_people_linking_service import YoungPeopleLinkingService
 from services.young_person_plans_service import YoungPersonPlansService
 
@@ -206,10 +207,20 @@ def create_support_plan(young_person_id: int, payload: SupportPlanCreatePayload,
 @router.put("/plans/{plan_id}")
 def update_support_plan(plan_id: int, payload: SupportPlanUpdatePayload, conn=Depends(get_db), current_user=Depends(get_current_user)):
     _assert_can_edit(current_user)
-    _load_and_check_plan(conn, plan_id, current_user)
+    before = _load_and_check_plan(conn, plan_id, current_user)
     result = YoungPersonPlansService.update_support_plan(conn, plan_id=plan_id, payload=payload.model_dump(exclude_unset=True, by_alias=False))
+    after = YoungPersonPlansService.get_support_plan(conn, plan_id)
+    versioned = record_versioning_service.capture_version(
+        conn,
+        source_table="support_plans",
+        source_id=plan_id,
+        before=before,
+        after=after,
+        changed_by=_safe_int(current_user.get("user_id") or current_user.get("id")),
+        change_reason="support_plan_updated",
+    )
     workflow = _link_support_plan_update(conn, plan_id=plan_id, current_user=current_user)
-    return {**result, "workflow": workflow}
+    return {**result, "workflow": workflow, "versioned": versioned}
 
 
 @router.post("/plans/{plan_id}/submit")
