@@ -19,7 +19,11 @@ export default async function SafeguardingPage({
   const query = await searchParams
   const dashboard = await getSafeguardingDashboard(query.young_person_id)
   const data = dashboard.data
-  const openRecords = data.records.filter((record) => record.status !== 'closed')
+  const openRecords = data.records.filter((record) => record.status !== 'closed').slice(0, 8)
+  const timelineEvents = data.chronology.slice(0, 15)
+  const openActions = data.actions.filter((action) => action.status !== 'completed').slice(0, 10)
+  const lifecycle = data.lifecycle.slice(0, 20)
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -29,9 +33,9 @@ export default async function SafeguardingPage({
       />
       <LiveDataStatus result={dashboard} />
       <section className="grid gap-4 md:grid-cols-3">
-        <StatCard label="Open concerns" value={openRecords.length} detail="Safeguarding records or alerts returned" />
-        <StatCard label="Safeguarding chronology" value={data.chronology.length} detail="Events marked or queried as safeguarding relevant" />
-        <StatCard label="Open actions" value={data.actions.filter((action) => action.status !== 'completed').length} detail="Follow-up requiring review" />
+        <StatCard label="Open concerns" value={openRecords.length} detail="First 8 open records shown" />
+        <StatCard label="Safeguarding chronology" value={data.chronology.length} detail="First 15 events shown" />
+        <StatCard label="Open actions" value={openActions.length} detail="First 10 actions shown" />
         <StatCard label="Possible child voice gaps" value={data.missingChildVoice.length} detail="Needs professional review" />
         <StatCard label="Possible oversight gaps" value={data.missingOversight.length} detail="Manager review marker not visible" />
         <StatCard label="Evidence links" value={data.chronology.filter((event) => event.evidenceIds.length).length} detail="Chronology events with evidence IDs" />
@@ -39,7 +43,7 @@ export default async function SafeguardingPage({
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
         <Card>
           <SectionHeader eyebrow="Chronology" title="Safeguarding-linked timeline" description="Source chronology with cautious markers only where metadata or wording is present." />
-          <RecordTimeline items={data.chronology.map((event) => ({
+          <RecordTimeline items={timelineEvents.map((event) => ({
             id: event.id,
             title: event.title,
             date: formatDate(event.dateTime),
@@ -50,8 +54,8 @@ export default async function SafeguardingPage({
         <Card>
           <SectionHeader eyebrow="Review" title="Open concern cards" />
           <div className="space-y-4">
-            {openRecords.slice(0, 8).map((record) => (
-              <Link key={record.id} href={record.href || '/safeguarding'} className="block rounded-[22px] border border-slate-100 bg-slate-50/70 p-4">
+            {openRecords.map((record) => (
+              <Link prefetch={false} key={record.id} href={record.href || '/safeguarding'} className="block rounded-[22px] border border-slate-100 bg-slate-50/70 p-4">
                 <StatusBadge value={record.status || 'needs review'} />
                 <h3 className="mt-3 text-lg font-black text-slate-950">{record.title}</h3>
                 <p className="mt-2 text-sm leading-6 text-slate-600">{record.summary}</p>
@@ -65,7 +69,7 @@ export default async function SafeguardingPage({
         <OperationalLifecyclePanel
           title="Safeguarding lifecycle oversight"
           description="Acknowledgement, review, escalation and resolution markers are visible where returned by the backend or inferred from status."
-          items={data.lifecycle}
+          items={lifecycle}
           hrefForItem={(item) => item.entityType.includes('chronology') ? `/chronology/${encodeURIComponent(item.id)}` : undefined}
         />
       </Card>
@@ -73,10 +77,10 @@ export default async function SafeguardingPage({
         <SectionHeader eyebrow="Register" title="Concern details and next action" />
         <DataTable
           headers={['Date', 'Young person', 'Concern', 'Status', 'Evidence/actions']}
-          rows={data.records.map((record) => [
+          rows={data.records.slice(0, 20).map((record) => [
             formatDate(record.date),
             record.childName || record.youngPersonId || 'Not linked',
-            <Link key={record.id} href={record.href || '/safeguarding'} className="font-black text-slate-950 hover:text-blue-700">{record.title}</Link>,
+            <Link prefetch={false} key={record.id} href={record.href || '/safeguarding'} className="font-black text-slate-950 hover:text-blue-700">{record.title}</Link>,
             <StatusBadge key="status" value={record.status || 'needs review'} />,
             `${record.evidenceIds.length} evidence · ${record.actionIds.length} actions`
           ])}
