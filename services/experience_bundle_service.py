@@ -10,6 +10,22 @@ from core.policy_engine import context_from_user, policy_engine
 from core.provider_context import ProviderContext
 from services.connect_service import ConnectService
 
+_COLUMN_CACHE: dict[str, set[str]] = {}
+_TABLE_EXISTS_CACHE: dict[str, bool] = {}
+HEAVY_FIELD_HINTS = (
+    "image_data",
+    "photo_data",
+    "avatar_data",
+    "file_data",
+    "document_data",
+    "binary",
+    "blob",
+    "base64",
+    "raw_audio",
+    "transcript_raw",
+)
+MAX_INLINE_VALUE_LENGTH = 1200
+
 
 def _serialise(value: Any) -> Any:
     if isinstance(value, (datetime, date)):
@@ -17,8 +33,20 @@ def _serialise(value: Any) -> Any:
     return value
 
 
+def _trim_value(key: str, value: Any) -> Any:
+    if value is None:
+        return None
+    lower_key = key.lower()
+    if any(hint in lower_key for hint in HEAVY_FIELD_HINTS):
+        return "[omitted-heavy-field]"
+    value = _serialise(value)
+    if isinstance(value, str) and len(value) > MAX_INLINE_VALUE_LENGTH:
+        return value[:MAX_INLINE_VALUE_LENGTH] + "... [truncated]"
+    return value
+
+
 def _rowdict(row: Any) -> dict[str, Any]:
-    return {key: _serialise(value) for key, value in dict(row).items()} if row else {}
+    return {key: _trim_value(key, value) for key, value in dict(row).items()} if row else {}
 
 
 def _safe_int(value: Any) -> int | None:
@@ -67,11 +95,11 @@ class ExperienceBundleService:
         home_id = _safe_int(user.get("home_id") or staff.get("home_id") or context.primary_home_id)
         home = self._home(conn, home_id, context)
         handover = self.connect_service.handover_today(conn, current_user, home_id=home_id)
-        notifications = self._notifications(conn, current_user, context, home_id=home_id, limit=12)
+        notifications = self._notifications(conn, current_user, context, home_id=home_id, limit=8)
         connect = self._connect(conn, current_user, context, home_id=home_id)
         children = self._visible_children(conn, context, home_id=home_id)
-        actions = self._actions(conn, context, user_id=user_id, home_id=home_id, limit=20)
-        chronology = self._chronology(conn, context, home_id=home_id, limit=12)
+        actions = self._actions(conn, context, user_id=user_id, home_id=home_id, limit=12)
+        chronology = self._chronology(conn, context, home_id=home_id, limit=8)
 
         display_name = _display_name({**user, **profile}) or _display_name(staff) or _display_name(current_user)
         return {
@@ -84,7 +112,7 @@ class ExperienceBundleService:
                 "role": user.get("role") or staff.get("role") or current_user.get("role"),
                 "home_id": home_id,
                 "provider_id": user.get("provider_id") or staff.get("provider_id") or context.provider_id,
-                "avatar_url": profile.get("profile_image_data") or user.get("avatar_url") or staff.get("avatar_url"),
+                "avatar_url": profile.get("profile_image_url") or user.get("avatar_url") or staff.get("avatar_url"),
                 "profile_notes": profile.get("notes"),
                 "status": staff.get("employment_status") or user.get("status") or "active",
             },
@@ -97,7 +125,7 @@ class ExperienceBundleService:
             },
             "handover": {
                 "status": "available" if handover.get("available") else "unavailable",
-                "items": handover.get("items") or [],
+                "items": (handover.get("items") or [])[:8],
                 "unread_required_count": int((handover.get("summary") or {}).get("unacknowledged") or 0),
                 "summary": handover.get("summary") or {},
             },
@@ -128,8 +156,8 @@ class ExperienceBundleService:
         communication = self._first_for_child(conn, "young_person_communication_profile", young_person_id)
         about_me = self._first_for_child(conn, "young_person_all_about_me", young_person_id)
         key_worker = self._one_by_id(conn, "staff", _safe_int(child.get("primary_keyworker_id")))
-        active_safeguarding = self._records_for_child(conn, "safeguarding_records", young_person_id, limit=6)
-        missing = self._records_for_child(conn, "missing_episodes", young_person_id, limit=6)
+        active_safeguarding = self._records_for_child(conn, "safeguarding_records", young_person_id, limit=4)
+        missing = self._records_for_child(conn, "missing_episodes", young_person_id, limit=4)
 
         return {
             "identity": {
@@ -163,18 +191,18 @@ class ExperienceBundleService:
                 "what_does_not_help": communication.get("what_to_avoid") or communication.get("what_does_not_help"),
                 "routines": communication.get("routines_and_predictability") or about_me.get("routines"),
             },
-            "relationships": self._records_for_child(conn, "young_person_contacts", young_person_id, limit=20),
+            "relationships": self._records_for_child(conn, "young_person_contacts", young_person_id, limit=12),
             "safety": {
                 "current_risk_level": child.get("summary_risk_level"),
                 "safeguarding_status": "active" if active_safeguarding else "no_active_records_returned",
                 "missing_status": "active" if missing else "no_active_records_returned",
-                "active_concerns": active_safeguarding[:5],
+                "active_concerns": active_safeguarding[:4],
             },
             "plans": self._plans(conn, young_person_id),
-            "documents": self._records_for_child(conn, "documents", young_person_id, limit=20),
-            "recent_chronology": self._records_for_child(conn, "chronology_events", young_person_id, limit=12),
-            "evidence": self._records_for_child(conn, "inspection_evidence_facts", young_person_id, limit=12),
-            "actions": self._records_for_child(conn, "actions", young_person_id, limit=20),
+            "documents": self._records_for_child(conn, "documents", young_person_id, limit=12),
+            "recent_chronology": self._records_for_child(conn, "chronology_events", young_person_id, limit=8),
+            "evidence": self._records_for_child(conn, "inspection_evidence_facts", young_person_id, limit=8),
+            "actions": self._records_for_child(conn, "actions", young_person_id, limit=12),
         }
 
     def home_operational_bundle(self, conn: Any, current_user: dict[str, Any], home_id: int) -> dict[str, Any]:
@@ -183,14 +211,14 @@ class ExperienceBundleService:
         if not home:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Home not found")
         children = self._visible_children(conn, context, home_id=home_id)
-        safeguarding = self._records_for_home(conn, "safeguarding_records", home_id, limit=20)
-        missing = self._records_for_home(conn, "missing_episodes", home_id, limit=20)
-        actions = self._actions(conn, context, home_id=home_id, limit=40)
-        notifications = self._notifications(conn, current_user, context, home_id=home_id, limit=20)
+        safeguarding = self._records_for_home(conn, "safeguarding_records", home_id, limit=12)
+        missing = self._records_for_home(conn, "missing_episodes", home_id, limit=12)
+        actions = self._actions(conn, context, home_id=home_id, limit=20)
+        notifications = self._notifications(conn, current_user, context, home_id=home_id, limit=10)
         connect = self._connect(conn, current_user, context, home_id=home_id)
         handover = self.connect_service.handover_today(conn, current_user, home_id=home_id)
-        reg44 = self._records_for_home(conn, "reg44_actions", home_id, limit=20)
-        reg45 = self._records_for_home(conn, "reg45_actions", home_id, limit=20)
+        reg44 = self._records_for_home(conn, "reg44_actions", home_id, limit=10)
+        reg45 = self._records_for_home(conn, "reg45_actions", home_id, limit=10)
 
         return {
             "home": home,
@@ -202,7 +230,7 @@ class ExperienceBundleService:
             "missing": {"open_count": len(missing), "items": missing},
             "handover": {
                 "status": "available" if handover.get("available") else "unavailable",
-                "items": handover.get("items") or [],
+                "items": (handover.get("items") or [])[:8],
                 "summary": handover.get("summary") or {},
             },
             "notifications": notifications,
@@ -213,7 +241,7 @@ class ExperienceBundleService:
                 "readiness": self._latest_for_home(conn, "inspection_readiness_runs", home_id),
             },
             "actions": actions,
-            "recent_chronology": self._records_for_home(conn, "chronology_events", home_id, limit=15),
+            "recent_chronology": self._records_for_home(conn, "chronology_events", home_id, limit=10),
             "operational_pressure": {
                 "children_count": len(children),
                 "safeguarding_open": len(safeguarding),
@@ -231,23 +259,39 @@ class ExperienceBundleService:
         return context_from_user(current_user)
 
     def _table_exists(self, conn: Any, table_name: str) -> bool:
+        if table_name in _TABLE_EXISTS_CACHE:
+            return _TABLE_EXISTS_CACHE[table_name]
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
                 "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = %s) AS exists",
                 (table_name,),
             )
             row = cur.fetchone()
-        return bool(row and row.get("exists"))
+        exists = bool(row and row.get("exists"))
+        _TABLE_EXISTS_CACHE[table_name] = exists
+        return exists
 
     def _columns(self, conn: Any, table_name: str) -> set[str]:
+        if table_name in _COLUMN_CACHE:
+            return _COLUMN_CACHE[table_name]
         if not self._table_exists(conn, table_name):
+            _COLUMN_CACHE[table_name] = set()
             return set()
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
                 "SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = %s",
                 (table_name,),
             )
-            return {str(row["column_name"]) for row in cur.fetchall()}
+            columns = {str(row["column_name"]) for row in cur.fetchall()}
+        _COLUMN_CACHE[table_name] = columns
+        return columns
+
+    def _select_sql(self, table_name: str, columns: set[str]) -> str:
+        selected = [column for column in columns if not any(hint in column.lower() for hint in HEAVY_FIELD_HINTS)]
+        if not selected:
+            selected = list(columns)
+        ordered = sorted(selected, key=lambda value: (value != "id", value))
+        return f'SELECT {", ".join(f"\"{column}\"" for column in ordered)} FROM "{table_name}"'
 
     def _one_by_id(self, conn: Any, table_name: str, record_id: int | None) -> dict[str, Any]:
         if not record_id:
@@ -256,7 +300,7 @@ class ExperienceBundleService:
         if "id" not in columns:
             return {}
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(f'SELECT * FROM "{table_name}" WHERE id = %s LIMIT 1', (record_id,))
+            cur.execute(f'{self._select_sql(table_name, columns)} WHERE id = %s LIMIT 1', (record_id,))
             return _rowdict(cur.fetchone())
 
     def _first_for_user(self, conn: Any, table_name: str, user_id: int | None) -> dict[str, Any]:
@@ -265,7 +309,7 @@ class ExperienceBundleService:
         if not user_id or not user_col:
             return {}
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(f'SELECT * FROM "{table_name}" WHERE {user_col} = %s LIMIT 1', (user_id,))
+            cur.execute(f'{self._select_sql(table_name, columns)} WHERE {user_col} = %s LIMIT 1', (user_id,))
             return _rowdict(cur.fetchone())
 
     def _first_for_child(self, conn: Any, table_name: str, young_person_id: int) -> dict[str, Any]:
@@ -273,7 +317,7 @@ class ExperienceBundleService:
         if "young_person_id" not in columns:
             return {}
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(f'SELECT * FROM "{table_name}" WHERE young_person_id = %s ORDER BY id DESC LIMIT 1', (young_person_id,))
+            cur.execute(f'{self._select_sql(table_name, columns)} WHERE young_person_id = %s ORDER BY id DESC LIMIT 1', (young_person_id,))
             return _rowdict(cur.fetchone())
 
     def _staff_for_user(self, conn: Any, user: dict[str, Any]) -> dict[str, Any]:
@@ -292,7 +336,7 @@ class ExperienceBundleService:
         if not clauses:
             return {}
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(f'SELECT * FROM staff WHERE {" OR ".join(clauses)} LIMIT 1', tuple(params))
+            cur.execute(f'{self._select_sql("staff", columns)} WHERE {" OR ".join(clauses)} LIMIT 1', tuple(params))
             return _rowdict(cur.fetchone())
 
     def _home(self, conn: Any, home_id: int | None, context: ProviderContext) -> dict[str, Any]:
@@ -318,10 +362,10 @@ class ExperienceBundleService:
         if context.provider_id and context.tenancy_scope != "platform" and "provider_id" in columns:
             where.append("provider_id = %s")
             params.append(context.provider_id)
-        sql = "SELECT * FROM young_people"
+        sql = self._select_sql("young_people", columns)
         if where:
             sql += f" WHERE {' AND '.join(where)}"
-        sql += " ORDER BY first_name, last_name LIMIT 50" if {"first_name", "last_name"} <= columns else " ORDER BY id LIMIT 50"
+        sql += " ORDER BY first_name, last_name LIMIT 30" if {"first_name", "last_name"} <= columns else " ORDER BY id LIMIT 30"
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(sql, tuple(params))
             return [_rowdict(row) for row in cur.fetchall()]
@@ -333,7 +377,7 @@ class ExperienceBundleService:
         order_col = self._order_column(columns)
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
-                f'SELECT * FROM "{table_name}" WHERE young_person_id = %s ORDER BY "{order_col}" DESC LIMIT %s',
+                f'{self._select_sql(table_name, columns)} WHERE young_person_id = %s ORDER BY "{order_col}" DESC LIMIT %s',
                 (young_person_id, limit),
             )
             return [_rowdict(row) for row in cur.fetchall()]
@@ -345,7 +389,7 @@ class ExperienceBundleService:
         order_col = self._order_column(columns)
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
-                f'SELECT * FROM "{table_name}" WHERE home_id = %s ORDER BY "{order_col}" DESC LIMIT %s',
+                f'{self._select_sql(table_name, columns)} WHERE home_id = %s ORDER BY "{order_col}" DESC LIMIT %s',
                 (home_id, limit),
             )
             return [_rowdict(row) for row in cur.fetchall()]
@@ -357,9 +401,9 @@ class ExperienceBundleService:
     def _plans(self, conn: Any, young_person_id: int) -> list[dict[str, Any]]:
         plans: list[dict[str, Any]] = []
         for table_name in ("risk_assessments", "placement_plans", "support_plans", "behaviour_support_plans", "safety_plans"):
-            for row in self._records_for_child(conn, table_name, young_person_id, limit=5):
+            for row in self._records_for_child(conn, table_name, young_person_id, limit=3):
                 plans.append({"source": table_name, **row})
-        return plans[:20]
+        return plans[:12]
 
     def _actions(self, conn: Any, context: ProviderContext, user_id: int | None = None, home_id: int | None = None, limit: int = 20) -> list[dict[str, Any]]:
         for table_name in ("actions", "care_actions", "tasks", "handover_items"):
@@ -403,7 +447,7 @@ class ExperienceBundleService:
                 where.append("(" + " OR ".join(f"{col} = %s" for col in user_cols) + ")")
                 params.extend([user_id] * len(user_cols))
         order_col = self._order_column(columns)
-        sql = f'SELECT * FROM "{table_name}"'
+        sql = self._select_sql(table_name, columns)
         if where:
             sql += f" WHERE {' AND '.join(where)}"
         sql += f' ORDER BY "{order_col}" DESC LIMIT %s'
@@ -439,7 +483,7 @@ class ExperienceBundleService:
 
     def _connect(self, conn: Any, current_user: dict[str, Any], context: ProviderContext, home_id: int | None) -> dict[str, Any]:
         unread = self.connect_service.unread(conn, current_user)
-        threads = self.connect_service.list_threads(conn, current_user, home_id=home_id, limit=8)
+        threads = self.connect_service.list_threads(conn, current_user, home_id=home_id, limit=5)
         home_channel = next((thread for thread in threads.get("items", []) if thread.get("thread_type") == "home_channel"), None)
         return {
             "unread_count": int(unread.get("count") or 0),
