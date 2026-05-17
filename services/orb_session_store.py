@@ -27,6 +27,18 @@ def _json(value: Any) -> str:
     return json.dumps(value, default=str, separators=(",", ":"))
 
 
+def _pg_json(value: Any) -> Json:
+    """Return a psycopg2 JSON adapter that can safely persist runtime payloads.
+
+    Orb session payloads can include hydrated auth/user records from Postgres.
+    Those records may contain datetime values such as current_user.created_at.
+    psycopg2.extras.Json uses json.dumps without default=str unless we pass a
+    custom dumps function, so nested datetime values otherwise break JSONB writes.
+    """
+
+    return Json(value if value is not None else {}, dumps=_json)
+
+
 def _loads(value: str | bytes | None) -> dict[str, Any] | None:
     if not value:
         return None
@@ -441,7 +453,7 @@ class OrbSessionStore:
                         record["session_id"],
                         record.get("user_id"),
                         str(record.get("home_id")) if record.get("home_id") is not None else None,
-                        Json(record.get("payload") or {}),
+                        _pg_json(record.get("payload") or {}),
                         record.get("expires_at"),
                     ),
                 )
@@ -489,7 +501,7 @@ class OrbSessionStore:
             with conn.cursor() as cur:
                 cur.execute(
                     "UPDATE orb_realtime_sessions SET realtime_state = %s, updated_at = now() WHERE session_id = %s",
-                    (Json(state), session_id),
+                    (_pg_json(state or {}), session_id),
                 )
             conn.commit()
         finally:
@@ -516,7 +528,7 @@ class OrbSessionStore:
             with conn.cursor() as cur:
                 cur.execute(
                     "UPDATE orb_realtime_sessions SET websocket_bindings = %s, updated_at = now() WHERE session_id = %s",
-                    (Json(bindings), session_id),
+                    (_pg_json(bindings or {}), session_id),
                 )
             conn.commit()
         finally:
@@ -543,7 +555,7 @@ class OrbSessionStore:
             with conn.cursor() as cur:
                 cur.execute(
                     "UPDATE orb_realtime_sessions SET websocket_bindings = %s, updated_at = now() WHERE session_id = %s",
-                    (Json(bindings), session_id),
+                    (_pg_json(bindings or {}), session_id),
                 )
             conn.commit()
         finally:
