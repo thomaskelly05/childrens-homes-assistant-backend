@@ -1,6 +1,3 @@
-import { indicareData } from '@/lib/indicare/demo-data'
-
-import { demoChronologyEvents } from './demo-data'
 import { ChronologyEvent } from './types'
 
 export type ChronologyRepository = {
@@ -8,41 +5,52 @@ export type ChronologyRepository = {
   getEvent: (id: string) => Promise<ChronologyEvent | undefined>
 }
 
-export const demoChronologyRepository: ChronologyRepository = {
-  async listEvents() {
-    return demoChronologyEvents
-  },
-  async getEvent(id: string) {
-    return demoChronologyEvents.find((event) => event.id === id)
+async function readJson<T>(url: string, fallback: T): Promise<T> {
+  try {
+    const response = await fetch(url, { cache: 'no-store' })
+    if (!response.ok) return fallback
+    const payload = await response.json()
+    if (Array.isArray(payload)) return payload as T
+    return (payload?.items || payload?.timeline || payload?.chronology || payload?.records || fallback) as T
+  } catch {
+    return fallback
   }
 }
 
+export const liveChronologyRepository: ChronologyRepository = {
+  async listEvents() {
+    return readJson<ChronologyEvent[]>('/api/chronology', [])
+  },
+  async getEvent(id: string) {
+    const events = await this.listEvents()
+    return events.find((event) => event.id === id)
+  }
+}
+
+export const demoChronologyRepository = liveChronologyRepository
+
 export function mapLegacyRecordCountsToChronologySummary() {
   return {
-    dailyLogs: indicareData.dailyLogs.length,
-    incidents: indicareData.incidents.length,
-    safeguarding: indicareData.safeguardingEvents.length,
-    medication: indicareData.medicationRecords.length,
-    keywork: indicareData.keyworkSessions.length,
-    appointments: indicareData.appointments.length,
-    documents: indicareData.documents.length,
-    mappedChronologyEvents: demoChronologyEvents.length,
-    adapterStatus: 'Demo repository in use; replace with backend chronology API when persistence is ready.'
+    dailyLogs: 0,
+    incidents: 0,
+    safeguarding: 0,
+    medication: 0,
+    keywork: 0,
+    appointments: 0,
+    documents: 0,
+    mappedChronologyEvents: 0,
+    adapterStatus: 'Live chronology repository in use. No demo data is loaded.'
   }
 }
 
 export function chronologyApiAdapter(baseUrl = '/api/chronology'): ChronologyRepository {
   return {
     async listEvents() {
-      const response = await fetch(baseUrl)
-      if (!response.ok) throw new Error('Unable to load chronology events')
-      return response.json() as Promise<ChronologyEvent[]>
+      return readJson<ChronologyEvent[]>(baseUrl, [])
     },
     async getEvent(id: string) {
-      const response = await fetch(`${baseUrl}/${id}`)
-      if (response.status === 404) return undefined
-      if (!response.ok) throw new Error('Unable to load chronology event')
-      return response.json() as Promise<ChronologyEvent>
+      const events = await this.listEvents()
+      return events.find((event) => event.id === id)
     }
   }
 }
