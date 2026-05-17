@@ -17,7 +17,7 @@ logger = logging.getLogger("indicare.orb.realtime")
 OPENAI_REALTIME_CLIENT_SECRET_URL = os.getenv("OPENAI_REALTIME_CLIENT_SECRET_URL", "https://api.openai.com/v1/realtime/client_secrets")
 OPENAI_REALTIME_SESSION_URL = os.getenv("OPENAI_REALTIME_SESSION_URL", "https://api.openai.com/v1/realtime/sessions")
 DEFAULT_REALTIME_MODEL = os.getenv("ORB_REALTIME_MODEL") or os.getenv("INDICARE_REALTIME_MODEL", "gpt-realtime")
-ALLOWED_SYNTHETIC_VOICES = {"alloy", "ash", "ballad", "coral", "echo", "sage", "shimmer", "verse"}
+ALLOWED_SYNTHETIC_VOICES = {"alloy", "ash", "ballad", "coral", "echo", "sage", "shimmer", "verse", "marin", "cedar"}
 
 
 def _enabled(value: str | None, default: bool = True) -> bool:
@@ -30,6 +30,17 @@ def _provider_voice(value: str | None) -> str:
     configured = os.getenv("ORB_DEFAULT_VOICE") or os.getenv("INDICARE_REALTIME_VOICE") or "shimmer"
     voice = str(value or configured).strip().lower()
     return voice if voice in ALLOWED_SYNTHETIC_VOICES else "shimmer"
+
+
+def _turn_detection() -> dict[str, Any]:
+    return {
+        "type": "server_vad",
+        "threshold": 0.48,
+        "prefix_padding_ms": 280,
+        "silence_duration_ms": 520,
+        "create_response": False,
+        "interrupt_response": True,
+    }
 
 
 def _public_openai_session_payload(payload: dict[str, Any]) -> dict[str, Any]:
@@ -88,6 +99,8 @@ class OrbRealtimeProviderService:
         return time.time() >= self._circuit_open_until
 
     def session_body(self, *, instructions: str, voice: str | None = None) -> dict[str, Any]:
+        """Legacy /sessions fallback shape."""
+
         return {
             "type": "realtime",
             "model": DEFAULT_REALTIME_MODEL,
@@ -95,19 +108,30 @@ class OrbRealtimeProviderService:
             "instructions": instructions,
             "modalities": ["audio", "text"],
             "input_audio_transcription": {"model": "whisper-1"},
-            "turn_detection": {
-                "type": "server_vad",
-                "threshold": 0.48,
-                "prefix_padding_ms": 280,
-                "silence_duration_ms": 520,
-                "create_response": False,
-                "interrupt_response": True,
-            },
+            "turn_detection": _turn_detection(),
             "input_audio_noise_reduction": {"type": "near_field"},
         }
 
+    def client_secret_session_body(self, *, instructions: str, voice: str | None = None) -> dict[str, Any]:
+        provider_voice = _provider_voice(voice)
+        return {
+            "type": "realtime",
+            "model": DEFAULT_REALTIME_MODEL,
+            "instructions": instructions,
+            "audio": {
+                "input": {
+                    "turn_detection": _turn_detection(),
+                    "transcription": {"model": os.getenv("ORB_REALTIME_TRANSCRIPTION_MODEL", "whisper-1")},
+                    "noise_reduction": {"type": "near_field"},
+                },
+                "output": {
+                    "voice": provider_voice,
+                },
+            },
+        }
+
     def client_secret_body(self, *, instructions: str, voice: str | None = None) -> dict[str, Any]:
-        return {"session": self.session_body(instructions=instructions, voice=voice)}
+        return {"session": self.client_secret_session_body(instructions=instructions, voice=voice)}
 
     async def _post_openai(self, client: httpx.AsyncClient, *, url: str, body: dict[str, Any], api_key: str) -> httpx.Response:
         return await client.post(
