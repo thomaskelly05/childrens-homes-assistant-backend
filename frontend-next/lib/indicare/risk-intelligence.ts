@@ -1,5 +1,5 @@
-import { indicareData } from './demo-data'
 import { getYoungPersonSummary, isOverdue } from './selectors'
+import { getOsChronology } from '@/lib/os-api/chronology'
 
 type EvidenceItem = {
   id: string
@@ -111,27 +111,80 @@ export function buildRiskIntelligenceView(youngPersonId: string) {
   }
 }
 
+export async function buildLiveRiskIntelligenceView(youngPersonId: string) {
+  const chronology = await getOsChronology({ youngPersonId })
+  const evidence: EvidenceItem[] = chronology.data.map((event) => ({
+    id: event.id,
+    type: event.category || 'chronology',
+    title: event.title,
+    date: event.dateTime,
+    summary: `${event.summary} ${event.fullText}`.trim()
+  }))
+  const matching = (terms: string[]) => evidence.filter((item) => textIncludes(`${item.title} ${item.summary}`, terms))
+  const missing = matching(['missing', 'returned', 'safe route'])
+  const exploitation = matching(['exploitation', 'unknown adult', 'peer group', 'missing', 'transport', 'phone', 'gift'])
+  const wellbeing = matching(['anxious', 'heightened', 'settled', 'sleep', 'wellbeing'])
+  const education = matching(['school', 'education', 'attendance', 'timetable'])
+  const family = matching(['family', 'contact', 'mum', 'dad', 'aunt'])
+  return {
+    person: { id: youngPersonId },
+    overview: [
+      guidance('Live chronology risk review', `${evidence.length} chronology item(s) were available for scoped risk review.`, evidence),
+      guidance('Pattern suggests protective context', `Evidence found across ${wellbeing.length + education.length + family.length} wellbeing, education or family-context record(s).`, [...wellbeing, ...education, ...family]),
+      guidance('Review recommended before plan changes', 'Draft suggestions should remain manager-reviewed and source-linked.', evidence.slice(0, 4))
+    ],
+    domains: [
+      guidance('Missing', missing.length ? 'records indicate missing-related context appears in live evidence.' : 'no live evidence found for missing-related context.', missing),
+      guidance('Exploitation support', exploitation.length ? 'possible indicator evidence should be reviewed with safeguarding leads.' : 'no live evidence found for exploitation indicators.', exploitation),
+      guidance('Emotional wellbeing', wellbeing.length ? 'pattern suggests emotional presentation links to recent live records.' : 'no live evidence found for emotional progression.', wellbeing),
+      guidance('Education', education.length ? 'records indicate education context is visible.' : 'no live evidence found for education context.', education),
+      guidance('Family contact', family.length ? 'pattern suggests family contact context appears in live records.' : 'no live evidence found for family contact context.', family)
+    ],
+    reviewPrompts: [
+      'check chronology links before updating any plan.',
+      'protective factors should remain visible beside concerns.',
+      'manager oversight is needed for draft risk changes.'
+    ],
+    allEvidence: evidence
+  }
+}
+
 export function buildLocalityView(youngPersonId: string) {
   const view = buildRiskIntelligenceView(youngPersonId)
   if (!view) return undefined
-  const incidentLocations = indicareData.incidents
-    .filter((incident) => incident.youngPersonId === youngPersonId)
-    .map((incident) => ({
-      name: incident.location,
-      category: incident.location === 'Community' ? 'transport/community' : 'home context',
-      summary: `records indicate ${incident.location} appears in ${incident.type.toLowerCase()} evidence.`,
-      evidence: matchingEvidence(youngPersonId, [incident.location, incident.type])
-    }))
   return {
     ...view,
-    locations: incidentLocations,
+    locations: [],
     protectiveResources: [
       guidance('Education setting', 'records indicate education access is a protective resource when current attendance evidence supports it.', matchingEvidence(youngPersonId, ['school', 'education'])),
-      guidance('Known interests', `records indicate interests may support staff engagement: ${view.person.likes.slice(0, 3).join(', ')}.`, [])
+      guidance('Known interests', `records indicate interests may support staff engagement: ${view.person.likes?.slice(0, 3).join(', ') || 'no live interests returned'}.`, [])
     ],
     evidenceGaps: [
       'consider checking transport links and travel estimates.',
-      'no evidence found for current GP, hospital or CAMHS proximity in scoped demo records.',
+      'review current GP, hospital or CAMHS proximity in live child profile records.',
+      'review recommended: safe spaces/resources need staff-confirmed notes.'
+    ]
+  }
+}
+
+export async function buildLiveLocalityView(youngPersonId: string) {
+  const view = await buildLiveRiskIntelligenceView(youngPersonId)
+  const localityEvidence = view.allEvidence.filter((item) => textIncludes(`${item.title} ${item.summary}`, ['community', 'school', 'home', 'transport', 'route', 'location']))
+  return {
+    ...view,
+    locations: localityEvidence.slice(0, 8).map((item) => ({
+      name: item.title,
+      category: item.type,
+      summary: item.summary,
+      evidence: [item]
+    })),
+    protectiveResources: [
+      guidance('Education setting', 'records indicate education access is a protective resource when current attendance evidence supports it.', view.allEvidence.filter((item) => textIncludes(`${item.title} ${item.summary}`, ['school', 'education']))),
+      guidance('Known interests', 'Interests should be pulled from the live young person profile when available.', [])
+    ],
+    evidenceGaps: [
+      'consider checking transport links and travel estimates.',
+      'review current GP, hospital or CAMHS proximity in live child profile records.',
       'review recommended: safe spaces/resources need staff-confirmed notes.'
     ]
   }
