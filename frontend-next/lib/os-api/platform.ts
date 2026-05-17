@@ -261,7 +261,9 @@ function buildAttentionCards(data: Omit<CommandCentreData, 'attention'>): Attent
       status: childVoiceMissing.length ? 'pattern to consider' : 'not enough evidence'
     }
   ]
-  return cards.sort((a, b) => a.priority - b.priority)
+  return cards
+    .filter((card) => card.count > 0)
+    .sort((a, b) => a.priority - b.priority)
 }
 
 export async function getCommandCentre(): Promise<OsApiResult<CommandCentreData>> {

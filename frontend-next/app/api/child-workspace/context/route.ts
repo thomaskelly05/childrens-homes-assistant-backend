@@ -22,19 +22,24 @@ export async function GET(request: Request) {
   }
 
   const cookieHeader = (await cookies()).toString()
+  const headers = cookieHeader ? { cookie: cookieHeader } : undefined
   const response = await fetch(`${BACKEND_ORIGIN}/child-workspace/context/${encodeURIComponent(childId)}`, {
     cache: 'no-store',
-    headers: cookieHeader ? { cookie: cookieHeader } : undefined
+    headers
+  }).catch(() => undefined)
+  const fallbackResponse = response?.ok ? response : await fetch(`${BACKEND_ORIGIN}/young-people/${encodeURIComponent(childId)}/journey`, {
+    cache: 'no-store',
+    headers
   }).catch(() => undefined)
 
-  if (!response) {
+  if (!fallbackResponse) {
     return NextResponse.json({ ok: false, error: 'This child workspace is not available just now.' }, { status: 503 })
   }
 
-  const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>
-  if (!response.ok) {
-    return NextResponse.json({ ok: false, error: calmError(response.status) }, { status: response.status })
+  const payload = (await fallbackResponse.json().catch(() => ({}))) as Record<string, unknown>
+  if (!fallbackResponse.ok) {
+    return NextResponse.json({ ok: false, error: calmError(fallbackResponse.status) }, { status: fallbackResponse.status })
   }
 
-  return NextResponse.json(payload)
+  return NextResponse.json({ ok: true, childId, source: response?.ok ? 'child-workspace' : 'young-person-journey', data: payload })
 }

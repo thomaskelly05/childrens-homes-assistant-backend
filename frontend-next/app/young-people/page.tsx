@@ -11,7 +11,7 @@ export default async function YoungPeoplePage() {
       <Link key="name" href={`/young-people/${person.id}/journey`} className="font-black text-slate-950 hover:text-blue-700">{person.displayName}<span className="block text-xs font-bold text-slate-400">Preferred: {person.preferredName || person.displayName}</span></Link>,
       person.age || 'Unknown',
       person.placementStatus || 'No placement',
-      <RiskBadge key="risk" value={(person.riskLevel || 'medium') as 'low' | 'medium' | 'high' | 'critical'} />,
+      <RiskBadge key="risk" value={person.riskLevel as any} />,
       person.keyWorkerId || 'Unallocated',
       <Link key="chronology" href={`/young-people/${person.id}/chronology`} className="font-bold text-blue-700">Open chronology</Link>,
       <Link key="workspace" href={`/young-people/${person.id}/journey`} className="font-bold text-blue-700">Enter journey</Link>,

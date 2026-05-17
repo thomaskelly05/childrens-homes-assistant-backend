@@ -49,6 +49,9 @@ export default async function DashboardPage() {
                 </div>
               </Link>
             ))}
+            {!data.attention.length ? (
+              <EmptyState title="No urgent attention items returned" description="The backend did not return open safeguarding, action, document or evidence items for this session." />
+            ) : null}
           </div>
         </Card>
 

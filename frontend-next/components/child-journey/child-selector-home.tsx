@@ -20,13 +20,16 @@ export function ChildSelectorHome({
 }) {
   const result: OsApiResult<ChildSelectorCard[]> = { data: cards, source, error }
   const { activeChild, recentChildren, selectChild } = useActiveChild()
+  const activeRisks = cards.reduce((total, child) => total + child.activeRisksCount, 0)
+  const actionsDue = cards.reduce((total, child) => total + child.actionsDue, 0)
+  const higherRiskChildren = cards.filter((child) => child.riskLevel === 'high' || child.riskLevel === 'critical').length
 
   return (
     <div className="space-y-6">
       <PageHeader
         eyebrow="Home"
-        title="Choose a young person"
-        description="Start here after sign-in. Pick the child you are supporting, enter their journey, then add the right record without selecting them again."
+        title="Home operating picture"
+        description="Start with the home view, then enter one child's journey. Counts come from the live child records visible to this session."
         action={
           <Link href="/shifts/current" className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700 shadow-sm transition hover:bg-slate-50">
             Current shift
@@ -34,6 +37,21 @@ export function ChildSelectorHome({
         }
       />
       <LiveDataStatus result={result} />
+
+      <section className="grid gap-4 lg:grid-cols-4" aria-label="Home situational awareness">
+        {[
+          ['Children living here', cards.length, 'Open the right child before recording.'],
+          ['Active risks visible', activeRisks, 'Review risk context inside each child journey.'],
+          ['Actions due', actionsDue, 'Open actions stay linked to the child record.'],
+          ['Higher-risk children', higherRiskChildren, 'Use calm review, not alarm language.']
+        ].map(([label, value, detail]) => (
+          <Card key={label}>
+            <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">{label}</p>
+            <strong className="mt-3 block text-4xl font-black tracking-[-0.06em] text-slate-950">{value}</strong>
+            <p className="mt-2 text-sm leading-6 text-slate-500">{detail}</p>
+          </Card>
+        ))}
+      </section>
 
       <section className="grid gap-4 lg:grid-cols-3">
         <Card>
@@ -123,7 +141,7 @@ export function ChildSelectorHome({
 
               <div className="mt-5 flex flex-wrap gap-2">
                 <StatusBadge value={child.placementStatus || child.status || 'Active'} />
-                <RiskBadge value={(child.riskLevel || 'medium') as any} />
+                <RiskBadge value={child.riskLevel} />
               </div>
 
               <div className="mt-5 rounded-[24px] border border-blue-100 bg-blue-50/70 p-4">
