@@ -1,4 +1,5 @@
 import { cookies } from 'next/headers'
+import { createHash } from 'crypto'
 
 import type { OsApiResult, OsEnvelope } from './types'
 
@@ -8,6 +9,17 @@ const API_BASE = (
   process.env.BACKEND_URL ||
   'http://localhost:8000'
 ).replace(/\/+$/, '')
+
+const OS_GET_CACHE_TTL_MS = Number(process.env.OS_GET_CACHE_TTL_MS || process.env.NEXT_PUBLIC_OS_GET_CACHE_TTL_MS || 12000)
+const OS_FETCH_TIMEOUT_MS = Number(process.env.OS_FETCH_TIMEOUT_MS || process.env.NEXT_PUBLIC_OS_FETCH_TIMEOUT_MS || 9000)
+const OS_CACHE_MAX_ENTRIES = Number(process.env.OS_GET_CACHE_MAX_ENTRIES || 300)
+
+type CacheEntry<T> = {
+  expiresAt: number
+  promise: Promise<OsApiResult<T>>
+}
+
+const osGetCache = new Map<string, CacheEntry<unknown>>()
 
 function resolveOsUrl(path: string) {
   return `${API_BASE}${path.startsWith('/') ? path : `/${path}`}`
@@ -30,12 +42,38 @@ function emptyData<T>(example: T): T {
   return undefined as T
 }
 
-export async function osGet<T>(path: string, fallback: T): Promise<OsApiResult<T>> {
+function cacheKey(path: string, cookieHeader: string) {
+  const cookieHash = createHash('sha256').update(cookieHeader || 'anonymous').digest('hex').slice(0, 16)
+  return `${cookieHash}:${path}`
+}
+
+function pruneCache() {
+  const now = Date.now()
+  for (const [key, entry] of osGetCache) {
+    if (entry.expiresAt <= now) osGetCache.delete(key)
+  }
+  while (osGetCache.size > OS_CACHE_MAX_ENTRIES) {
+    const first = osGetCache.keys().next().value
+    if (!first) break
+    osGetCache.delete(first)
+  }
+}
+
+async function fetchWithTimeout(url: string, init: RequestInit) {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), OS_FETCH_TIMEOUT_MS)
   try {
-    const cookieHeader = (await cookies()).toString()
-    const response = await fetch(resolveOsUrl(path), {
+    return await fetch(url, { ...init, signal: controller.signal })
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+async function doOsGet<T>(path: string, fallback: T, cookieHeader: string): Promise<OsApiResult<T>> {
+  try {
+    const response = await fetchWithTimeout(resolveOsUrl(path), {
       cache: 'no-store',
-      headers: cookieHeader ? { cookie: cookieHeader } : undefined
+      headers: cookieHeader ? { cookie: cookieHeader, 'x-indicare-rsc': '1' } : { 'x-indicare-rsc': '1' }
     })
     if (!response.ok) {
       return { data: emptyData(fallback), source: 'unavailable', warning: calmOsWarning(response.status), error: developerDetail(`${response.status} ${response.statusText}`) }
@@ -52,10 +90,23 @@ export async function osGet<T>(path: string, fallback: T): Promise<OsApiResult<T
   }
 }
 
+export async function osGet<T>(path: string, fallback: T): Promise<OsApiResult<T>> {
+  const cookieHeader = (await cookies()).toString()
+  const key = cacheKey(path, cookieHeader)
+  const now = Date.now()
+  const existing = osGetCache.get(key) as CacheEntry<T> | undefined
+  if (existing && existing.expiresAt > now) return existing.promise
+
+  pruneCache()
+  const promise = doOsGet(path, fallback, cookieHeader)
+  osGetCache.set(key, { expiresAt: now + OS_GET_CACHE_TTL_MS, promise })
+  return promise
+}
+
 export async function osPost<T>(path: string, body: unknown, fallback: T): Promise<OsApiResult<T>> {
   try {
     const cookieHeader = (await cookies()).toString()
-    const response = await fetch(resolveOsUrl(path), {
+    const response = await fetchWithTimeout(resolveOsUrl(path), {
       method: 'POST',
       cache: 'no-store',
       headers: {
