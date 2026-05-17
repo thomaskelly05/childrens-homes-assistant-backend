@@ -1,8 +1,7 @@
-import { demoHomeDocuments } from './demo-data'
 import { HomeDocument, HomeDocumentType } from './types'
 
 export function getHomeDocuments(): HomeDocument[] {
-  return [...demoHomeDocuments].sort((left, right) => new Date(right.uploadedAt).getTime() - new Date(left.uploadedAt).getTime())
+  return []
 }
 
 export function getHomeDocumentById(id: string): HomeDocument | undefined {
