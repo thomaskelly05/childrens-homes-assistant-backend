@@ -248,6 +248,7 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
     RouterGroup(
         "operational-backend",
         (
+            "backend.schema_live_router",
             "backend.os_runtime_compat_router",
             "backend.os_schema_audit_router",
             "backend.os_record_viewer_router",
@@ -281,7 +282,7 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
             "backend.os_enterprise_compat_router",
         ),
         classification="legacy_compatibility",
-        notes="OS live data, command routers, Connect, Reg 44 ingestion and compatibility adapters.",
+        notes="OS live data, schema-live gateway, command routers, Connect, Reg 44 ingestion and compatibility adapters.",
     ),
 )
 
