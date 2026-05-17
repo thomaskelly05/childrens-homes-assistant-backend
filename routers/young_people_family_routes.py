@@ -22,6 +22,10 @@ def _safe_int(value: Any) -> int | None:
         return None
 
 
+def _actor_id(current_user: dict[str, Any]) -> int | None:
+    return _safe_int(current_user.get("user_id") or current_user.get("id"))
+
+
 def _user_home_id(current_user: dict[str, Any]) -> int | None:
     return _safe_int(current_user.get("home_id"))
 
@@ -66,6 +70,53 @@ def _load_and_check_family_record(conn, record_id: int, current_user: dict[str, 
     row = YoungPersonFamilyService.get_family_contact_record_row(conn, record_id)
     _assert_home_access(current_user, _safe_int(row.get("home_id")))
     return row
+
+
+def _link_family_contact_profile_event(conn, *, row: dict[str, Any], event_type: str, current_user: dict[str, Any]) -> dict[str, Any]:
+    actor = _actor_id(current_user)
+    young_person_id = int(row.get("young_person_id"))
+    name = row.get("full_name") or "Family/contact profile"
+    restricted = bool(row.get("is_restricted_contact"))
+    supervised = bool(row.get("supervision_level"))
+    approved = bool(row.get("is_approved_contact"))
+    requires_review = restricted or supervised or not approved
+    title = f"Family contact profile {event_type}: {name}"
+    summary = f"Family/contact profile {event_type} for {name}."
+    workflow = YoungPeopleLinkingService.process_record_event(
+        conn=conn,
+        young_person_id=young_person_id,
+        source_table="young_person_contacts",
+        source_id=int(row.get("id")),
+        event_type=event_type,
+        title=title,
+        summary=summary,
+        narrative=" ".join(str(row.get(key) or "") for key in ("full_name", "relationship_to_young_person", "contact_type", "supervision_level", "notes")) or summary,
+        category="family",
+        subcategory="contact_profile",
+        significance="high" if requires_review else "medium",
+        owner_id=actor,
+        created_by=actor,
+        workflow={
+            "link_chronology": True,
+            "create_task": requires_review,
+            "manager_review": requires_review,
+            "safeguarding": restricted,
+            "link_support_plans": True,
+            "link_monthly_reviews": True,
+            "link_quality_standards": True,
+        },
+        metadata={
+            "family_update": summary,
+            "restricted_contact": restricted,
+            "supervision_level": row.get("supervision_level"),
+            "approved_contact": approved,
+            "quality_standards": ["reg_11_positive_relationships"],
+            "standards_rationale": "Linked from family/contact profile workflow",
+            "evidence_strength": "high" if requires_review else "medium",
+        },
+    )
+    conn.commit()
+    return workflow
 
 
 class FamilyContactCreatePayload(BaseModel):
@@ -129,102 +180,60 @@ class FamilyContactRecordUpdatePayload(BaseModel):
 
 
 @router.get("/{young_person_id}/family")
-def get_young_person_family(
-    young_person_id: int,
-    conn=Depends(get_db),
-    current_user=Depends(get_current_user),
-):
+def get_young_person_family(young_person_id: int, conn=Depends(get_db), current_user=Depends(get_current_user)):
     _load_and_check_young_person(conn, young_person_id, current_user)
     return YoungPersonFamilyService.get_family_bundle(conn, young_person_id)
 
 
 @router.get("/family/contacts/{contact_id}")
-def get_family_contact(
-    contact_id: int,
-    conn=Depends(get_db),
-    current_user=Depends(get_current_user),
-):
+def get_family_contact(contact_id: int, conn=Depends(get_db), current_user=Depends(get_current_user)):
     _load_and_check_contact(conn, contact_id, current_user)
     return YoungPersonFamilyService.get_contact(conn, contact_id)
 
 
 @router.get("/family/records/{record_id}")
-def get_family_contact_record(
-    record_id: int,
-    conn=Depends(get_db),
-    current_user=Depends(get_current_user),
-):
+def get_family_contact_record(record_id: int, conn=Depends(get_db), current_user=Depends(get_current_user)):
     _load_and_check_family_record(conn, record_id, current_user)
     return YoungPersonFamilyService.get_family_contact_record(conn, record_id)
 
 
 @router.post("/{young_person_id}/family/contacts")
-def create_family_contact(
-    young_person_id: int,
-    payload: FamilyContactCreatePayload,
-    conn=Depends(get_db),
-    current_user=Depends(get_current_user),
-):
+def create_family_contact(young_person_id: int, payload: FamilyContactCreatePayload, conn=Depends(get_db), current_user=Depends(get_current_user)):
     _assert_can_edit(current_user)
     _load_and_check_young_person(conn, young_person_id, current_user)
-
-    return YoungPersonFamilyService.create_contact(
-        conn,
-        young_person_id=young_person_id,
-        payload=payload.model_dump(exclude_none=True),
-    )
+    contact = YoungPersonFamilyService.create_contact(conn, young_person_id=young_person_id, payload=payload.model_dump(exclude_none=True))
+    row = _load_and_check_contact(conn, int(contact["id"]), current_user)
+    workflow = _link_family_contact_profile_event(conn, row=row, event_type="created", current_user=current_user)
+    return {**contact, "workflow": workflow}
 
 
 @router.patch("/family/contacts/{contact_id}")
 @router.put("/family/contacts/{contact_id}")
-def update_family_contact(
-    contact_id: int,
-    payload: FamilyContactUpdatePayload,
-    conn=Depends(get_db),
-    current_user=Depends(get_current_user),
-):
+def update_family_contact(contact_id: int, payload: FamilyContactUpdatePayload, conn=Depends(get_db), current_user=Depends(get_current_user)):
     _assert_can_edit(current_user)
     _load_and_check_contact(conn, contact_id, current_user)
-
-    return YoungPersonFamilyService.update_contact(
-        conn,
-        contact_id=contact_id,
-        payload=payload.model_dump(exclude_unset=True),
-    )
+    contact = YoungPersonFamilyService.update_contact(conn, contact_id=contact_id, payload=payload.model_dump(exclude_unset=True))
+    row = _load_and_check_contact(conn, contact_id, current_user)
+    workflow = _link_family_contact_profile_event(conn, row=row, event_type="updated", current_user=current_user)
+    return {**contact, "workflow": workflow}
 
 
 @router.post("/{young_person_id}/family/records")
-def create_family_contact_record(
-    young_person_id: int,
-    payload: FamilyContactRecordCreatePayload,
-    conn=Depends(get_db),
-    current_user=Depends(get_current_user),
-):
+def create_family_contact_record(young_person_id: int, payload: FamilyContactRecordCreatePayload, conn=Depends(get_db), current_user=Depends(get_current_user)):
     _assert_can_edit(current_user)
     _load_and_check_young_person(conn, young_person_id, current_user)
-
     return YoungPersonFamilyService.create_family_contact_record(
         conn,
         young_person_id=young_person_id,
         payload=payload.model_dump(exclude_none=True),
-        actor_user_id=_safe_int(current_user.get("user_id")),
+        actor_user_id=_actor_id(current_user),
         linking_service=YoungPeopleLinkingService,
     )
 
 
 @router.patch("/family/records/{record_id}")
 @router.put("/family/records/{record_id}")
-def update_family_contact_record(
-    record_id: int,
-    payload: FamilyContactRecordUpdatePayload,
-    conn=Depends(get_db),
-    current_user=Depends(get_current_user),
-):
+def update_family_contact_record(record_id: int, payload: FamilyContactRecordUpdatePayload, conn=Depends(get_db), current_user=Depends(get_current_user)):
     _assert_can_edit(current_user)
     _load_and_check_family_record(conn, record_id, current_user)
-
-    return YoungPersonFamilyService.update_family_contact_record(
-        conn,
-        record_id=record_id,
-        payload=payload.model_dump(exclude_unset=True),
-    )
+    return YoungPersonFamilyService.update_family_contact_record(conn, record_id=record_id, payload=payload.model_dump(exclude_unset=True))
