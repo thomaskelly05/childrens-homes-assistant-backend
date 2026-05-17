@@ -40,6 +40,9 @@ class BundleForTest(ExperienceBundleService):
     def _actions(self, conn, context, user_id=None, home_id=None, limit=40):
         return [{"id": 3, "title": "Action"}]
 
+    def _scoped_rows(self, *args, **kwargs):
+        return []
+
 
 def test_home_operational_bundle_reports_pressure_from_real_sections():
     result = BundleForTest(FakeConnect()).home_operational_bundle(None, {"id": 1, "role": "manager", "provider_id": 7, "home_id": 3}, 3)

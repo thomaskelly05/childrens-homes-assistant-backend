@@ -33,6 +33,33 @@ export type ConnectThreadResponse = {
   messages: ConnectMessage[]
 }
 
+export type MeToday = {
+  adult: Record<string, any>
+  home: Record<string, any> | null
+  provider?: Record<string, any> | null
+  handover: Record<string, any>
+  connect: { count: number; threads: Record<string, any>[] }
+  notifications: { unread: number; items: Record<string, any>[] }
+  tasks_due_today?: Record<string, any>[]
+  key_children?: Record<string, any>[]
+  recent_activity?: Record<string, any>[]
+  dashboard_preferences?: Record<string, any>
+}
+
+export type NotificationsResponse = {
+  ok?: boolean
+  available?: boolean
+  items: Array<Record<string, any>>
+  unread?: number
+}
+
+export type HandoverTodayResponse = {
+  ok?: boolean
+  available?: boolean
+  items: Array<Record<string, any>>
+  summary?: Record<string, any>
+}
+
 export async function getConnectThreads(): Promise<OsApiResult<ConnectThreadsResponse>> {
   return osGet<ConnectThreadsResponse>('/api/connect/threads', { items: [] })
 }
@@ -41,7 +68,15 @@ export async function getConnectThread(threadId: string): Promise<OsApiResult<Co
   return osGet<ConnectThreadResponse>(`/api/connect/threads/${encodeURIComponent(threadId)}`, { thread: null, messages: [] })
 }
 
-export async function getMeToday(): Promise<OsApiResult<any>> {
+export async function getNotifications(): Promise<OsApiResult<NotificationsResponse>> {
+  return osGet<NotificationsResponse>('/api/notifications', { items: [], unread: 0 })
+}
+
+export async function getHandoverToday(): Promise<OsApiResult<HandoverTodayResponse>> {
+  return osGet<HandoverTodayResponse>('/api/handover/today', { items: [], summary: {} })
+}
+
+export async function getMeToday(): Promise<OsApiResult<MeToday>> {
   const result = await getWorkspaceBundle()
   const bundle = result.data || emptyWorkspaceBundle
   return {
