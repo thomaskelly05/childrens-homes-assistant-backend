@@ -198,8 +198,7 @@ export class OrbRealtimeClient {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${options.ephemeralKey}`,
-        'Content-Type': 'application/sdp',
-        'OpenAI-Beta': 'realtime=v1'
+        'Content-Type': 'application/sdp'
       },
       body: offer.sdp || ''
     })
@@ -207,7 +206,10 @@ export class OrbRealtimeClient {
       this.callbacks.onStateChange(response.status === 401 ? 'expired' : 'permission_denied')
       throw new OrbNonRetryableError(response.status === 401 ? 'Voice access expired. Please sign in again.' : "I can't access voice in this context.")
     }
-    if (!response.ok) throw new Error(process.env.NODE_ENV === 'development' ? `Realtime provider failed (${response.status})` : 'Realtime audio could not connect just now')
+    if (!response.ok) {
+      const detail = process.env.NODE_ENV === 'development' ? await response.text().catch(() => '') : ''
+      throw new Error(process.env.NODE_ENV === 'development' ? `Realtime provider failed (${response.status}) ${detail}` : 'Realtime audio could not connect just now')
+    }
     await peer.setRemoteDescription({ type: 'answer', sdp: await response.text() })
   }
 
