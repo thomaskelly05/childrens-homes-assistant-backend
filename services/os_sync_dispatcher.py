@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from services.staff_linking_service import STAFF_TABLES, staff_linking_service
 from services.young_person_os_sync import YoungPersonOSSync
 
 
@@ -18,26 +19,16 @@ TABLE_ALIASES = {
     "uploaded_documents": "support_plans",
     "generated_documents": "support_plans",
     "inspection_evidence_facts": "support_plans",
-    "staff_supervisions": "keywork_sessions",
-    "staff_training_matrix": "keywork_sessions",
-    "staff_probation_reviews": "keywork_sessions",
-    "staff_profile": "keywork_sessions",
-    "staff": "keywork_sessions",
 }
 
 
 class OSSyncDispatcher:
     """
-    Routes saved domain records into the shared young person OS sync layer.
+    Routes saved domain records into the OS sync layer.
 
-    This is intentionally tolerant:
-    - unsupported source tables are ignored
-    - missing/invalid records are ignored
-    - the caller should not fail just because OS sync has no handler yet
-
-    Legacy/profile/document/staff tables are normalised into the closest
-    existing child-record sync pathway so chronology, standards, compliance and
-    record links are still produced while dedicated sync handlers are added.
+    Staff/workforce records now use StaffLinkingService so they remain workforce
+    evidence. Child-linked compatibility tables still route through the closest
+    existing child-record sync pathway.
     """
 
     def __init__(self) -> None:
@@ -48,6 +39,14 @@ class OSSyncDispatcher:
             return False
 
         original_table = str(source_table).strip().lower()
+        if original_table in STAFF_TABLES:
+            return staff_linking_service.sync_staff_record(
+                NoneSafeConnection.from_record(record),
+                source_table=original_table,
+                record=record,
+                recorded_by_name=recorded_by_name,
+            )
+
         table = TABLE_ALIASES.get(original_table, original_table)
         payload = dict(record)
         payload.setdefault("original_source_table", original_table)
@@ -61,44 +60,59 @@ class OSSyncDispatcher:
         if table == "daily_notes":
             self.os_sync.sync_daily_note(payload, recorded_by_name=recorded_by_name)
             return True
-
         if table == "incidents":
             self.os_sync.sync_incident(payload, recorded_by_name=recorded_by_name)
             return True
-
         if table == "risk_assessments":
             self.os_sync.sync_risk_assessment(payload, recorded_by_name=recorded_by_name)
             return True
-
         if table == "support_plans":
             self.os_sync.sync_support_plan(payload, recorded_by_name=recorded_by_name)
             return True
-
         if table == "young_person_appointments":
             self.os_sync.sync_young_person_appointment(payload, recorded_by_name=recorded_by_name)
             return True
-
         if table == "keywork_sessions":
             self.os_sync.sync_keywork_session(payload, recorded_by_name=recorded_by_name)
             return True
-
         if table == "health_records":
             self.os_sync.sync_health_record(payload, recorded_by_name=recorded_by_name)
             return True
-
         if table == "education_records":
             self.os_sync.sync_education_record(payload, recorded_by_name=recorded_by_name)
             return True
-
         if table == "family_contact_records":
             self.os_sync.sync_family_contact_record(payload, recorded_by_name=recorded_by_name)
             return True
-
-        # Keep operational appointments separate unless you later choose to map them.
         if table == "appointments":
             return False
-
         return False
+
+
+class NoneSafeConnection:
+    """Placeholder shim to fetch a DB connection lazily for staff sync."""
+
+    @staticmethod
+    def from_record(_record: dict[str, Any]):
+        from db.connection import get_db_connection, release_db_connection
+
+        class _ConnectionProxy:
+            def __init__(self) -> None:
+                self._conn = get_db_connection()
+
+            def __getattr__(self, item):
+                return getattr(self._conn, item)
+
+            def commit(self):
+                try:
+                    return self._conn.commit()
+                finally:
+                    release_db_connection(self._conn)
+
+            def rollback(self):
+                return self._conn.rollback()
+
+        return _ConnectionProxy()
 
 
 os_sync_dispatcher = OSSyncDispatcher()
