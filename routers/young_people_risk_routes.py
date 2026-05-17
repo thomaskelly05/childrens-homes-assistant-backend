@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 from auth.current_user import get_current_user
 from db.connection import get_db
+from services.record_versioning_service import record_versioning_service
 from services.young_people_linking_service import YoungPeopleLinkingService
 from services.young_person_risk_service import YoungPersonRiskService
 
@@ -201,10 +202,20 @@ def create_risk_assessment(young_person_id: int, payload: RiskAssessmentCreatePa
 @router.put("/risk/{risk_id}")
 def update_risk_assessment(risk_id: int, payload: RiskAssessmentUpdatePayload, conn=Depends(get_db), current_user=Depends(get_current_user)):
     _assert_can_edit(current_user)
-    _load_and_check_risk(conn, risk_id, current_user)
+    before = _load_and_check_risk(conn, risk_id, current_user)
     result = YoungPersonRiskService.update_risk_assessment(conn, risk_id=risk_id, payload=payload.model_dump(exclude_unset=True))
+    after = YoungPersonRiskService.get_risk(conn, risk_id)
+    versioned = record_versioning_service.capture_version(
+        conn,
+        source_table="risk_assessments",
+        source_id=risk_id,
+        before=before,
+        after=after,
+        changed_by=_safe_int(current_user.get("user_id") or current_user.get("id")),
+        change_reason="risk_assessment_updated",
+    )
     workflow = _link_risk_update(conn, risk_id=risk_id, current_user=current_user)
-    return {**result, "workflow": workflow}
+    return {**result, "workflow": workflow, "versioned": versioned}
 
 
 @router.post("/risk/{risk_id}/submit")
