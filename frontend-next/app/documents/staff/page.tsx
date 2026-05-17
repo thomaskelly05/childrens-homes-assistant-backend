@@ -7,7 +7,7 @@ export default function StaffDocumentsPage() {
   return (
     <div className="space-y-6">
       <PageHeader eyebrow="Staff documents" title="Confidential staff document system" description="Staff-scoped supervision, appraisal, induction, recruitment and training documents with role-based access and sign-off." />
-      <DocumentTemplateGrid templates={templates} hrefFor={(template) => `/documents/new?scope=staff&template=${template.templateId}`} />
+      <DocumentTemplateGrid templates={templates.map((template) => ({ ...template, href: `/documents/new?scope=staff&template=${template.templateId}` }))} />
     </div>
   )
 }

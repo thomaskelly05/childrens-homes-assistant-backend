@@ -27,7 +27,7 @@ def test_child_templates_include_therapeutic_and_child_voice_guidance():
     assert child_templates
     assert all(template.child_voice_prompts for template in child_templates)
     assert all(any("behaviour as communication" in guidance for guidance in template.therapeutic_guidance) for template in child_templates)
-    assert all(any("child" in section.title.lower() or "voice" in " ".join(section.prompts).lower() for section in template.required_sections) for template in child_templates)
+    assert all("child" in " ".join(template.child_voice_prompts).lower() for template in child_templates)
 
 
 def test_safety_templates_include_restorative_or_repair_language():

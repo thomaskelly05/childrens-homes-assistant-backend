@@ -21,7 +21,7 @@ def test_create_save_reopen_review_signoff_contract_for_template_document():
     saved = {**document, "sections": {**document["sections"], "therapeutic_response": "Staff paced the conversation and offered a sensory break."}, "version_number": 2}
     reopened = document_rendering_service.render_editor_payload(instance=saved, template=template)
 
-    assert reopened["completion"]["completed_sections"] == 2
+    assert reopened["completion"]["completed"] == 2
     assert any(section["section_id"] == "therapeutic_response" and section["content"] for section in reopened["editor_sections"])
 
     review = document_review_service.transition(document={**saved, "status": "draft"}, target_status="submit", current_user=MANAGER, comment="Submitted for manager review.")

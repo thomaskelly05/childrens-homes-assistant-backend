@@ -33,4 +33,4 @@ def test_document_template_browser_can_open_required_templates():
     for template_id in ["daily_note", "safeguarding_concern", "missing_from_care_episode", "key_work_session", "reg_44_evidence_note"]:
         assert template_id in templates
     assert "Search templates" in grid
-    assert "hrefFor(template)" in grid
+    assert "href={template.href}" in grid

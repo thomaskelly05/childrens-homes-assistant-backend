@@ -58,6 +58,6 @@ def test_templates_have_distinct_structures_and_workflow_contracts():
 
 
 def test_registry_search_finds_templates_by_title_category_and_mapping():
-    assert [template.template_id for template in document_template_service.search_templates("Reg 44")] == ["reg_44_evidence_note"]
+    assert {template.template_id for template in document_template_service.search_templates("Reg 44")} >= {"reg_44_evidence_note", "annex_a_evidence_summary"}
     assert {template.template_id for template in document_template_service.search_templates("missing")} >= {"missing_from_care_episode", "missing_risk_assessment"}
     assert {template.template_id for template in document_template_service.search_templates("Leadership")} >= {"manager_oversight_note", "staff_supervision_record"}

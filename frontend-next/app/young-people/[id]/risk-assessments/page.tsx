@@ -14,7 +14,7 @@ export default async function YoungPersonRiskDocumentsPage({ params }: { params:
   return (
     <div className="space-y-6">
       <PageHeader eyebrow="Risk assessments" title={`${summary.youngPerson.preferredName}'s risk documents`} description="Risk documents remain child-scoped and connect to incidents, safeguarding, missing episodes, evidence and actions for this child only." />
-      <DocumentTemplateGrid templates={templates} hrefFor={(template) => `/young-people/${id}/documents/new?template=${template.templateId}`} />
+      <DocumentTemplateGrid templates={templates.map((template) => ({ ...template, href: `/young-people/${id}/documents/new?template=${template.templateId}` }))} />
     </div>
   )
 }

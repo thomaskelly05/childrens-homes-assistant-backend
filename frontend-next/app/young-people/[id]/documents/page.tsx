@@ -44,7 +44,7 @@ export default async function YoungPersonDocumentsPage({ params }: { params: Pro
           empty={<EmptyState title="No documents linked" description="No documents are visible for this child yet." />}
         />
       </Card>
-      <DocumentTemplateGrid templates={templates} hrefFor={(template) => `/young-people/${id}/documents/new?template=${template.templateId}`} />
+      <DocumentTemplateGrid templates={templates.map((template) => ({ ...template, href: `/young-people/${id}/documents/new?template=${template.templateId}` }))} />
     </div>
   )
 }
