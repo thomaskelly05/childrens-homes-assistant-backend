@@ -51,6 +51,18 @@ function calmOrbError(error: unknown, fallback = "I couldn't load that just now.
   return fallback
 }
 
+function providerRealtimeReady(data: OrbSessionStartData) {
+  const providerSession = (data.provider_session || {}) as Record<string, unknown>
+  return Boolean(
+    data.realtime?.transport === 'webrtc' &&
+    data.provider === 'openai_realtime' &&
+    data.provider_configured &&
+    !data.realtime?.fallback_text_mode &&
+    !providerSession.fallback_text_mode &&
+    !providerSession.error
+  )
+}
+
 export function loadOrbPreferences(): OrbPreferences {
   if (typeof window === 'undefined') return defaultOrbPreferences
   try {
@@ -247,6 +259,7 @@ export class OrbRuntimeController {
         preferences: this.snapshot.preferences,
         workspace_context: { role }
       }, this.abortController.signal)
+      const realtimeReady = providerRealtimeReady(data)
       this.snapshot = {
         ...this.snapshot,
         sessionId: data.session_id,
@@ -254,11 +267,11 @@ export class OrbRuntimeController {
         modeDecision: data.mode_decision,
         transcript: [],
         connected: true,
-        realtimeAvailable: data.realtime?.transport === 'webrtc' && data.provider === 'openai_realtime' && data.provider_configured,
+        realtimeAvailable: realtimeReady,
         realtimeState: data.realtime_state || {},
         memorySnapshot: data.memory_snapshot || {},
         loading: false,
-        error: undefined
+        error: realtimeReady ? undefined : 'Voice is unavailable just now. I can continue in text.'
       }
       this.armHardStateRecovery()
       await this.connectRealtimeIfAvailable(data)
@@ -447,14 +460,18 @@ export class OrbRuntimeController {
 
   private async realtimeOptionsFromSession(data: OrbSessionStartData): Promise<OrbRealtimeConnectOptions | null> {
     const realtime = data.realtime || {}
-    if (realtime.transport !== 'webrtc' || data.provider !== 'openai_realtime' || !data.provider_configured) {
-      const status = typeof realtime.status === 'string' ? realtime.status : 'Voice is unavailable just now. I can continue in text.'
-      this.snapshot = { ...this.snapshot, realtimeAvailable: false, error: status.includes('not connected') ? 'Voice is unavailable just now. I can continue in text.' : this.snapshot.error }
-      return null
-    }
     const providerSession = data.provider_session as {
+      fallback_text_mode?: boolean
+      error?: string
+      status?: number
+      unavailable_reason?: string
       session?: { client_secret?: { value?: string }, model?: string },
       model?: string
+    }
+    if (!providerRealtimeReady(data)) {
+      const status = providerSession?.unavailable_reason || (typeof realtime.status === 'string' ? realtime.status : 'Voice is unavailable just now. I can continue in text.')
+      this.snapshot = { ...this.snapshot, realtimeAvailable: false, error: status.includes('not connected') ? 'Voice is unavailable just now. I can continue in text.' : status }
+      return null
     }
     const ephemeralKey = providerSession.session?.client_secret?.value
     const model = providerSession.model || providerSession.session?.model
@@ -491,15 +508,16 @@ export class OrbRuntimeController {
       if (this.applyAuthFailure(error)) return null
       throw error
     }
+    const realtimeReady = providerRealtimeReady(data)
     this.snapshot = {
       ...this.snapshot,
       sessionId: data.session_id,
       state: 'reconnecting',
       connected: true,
-      realtimeAvailable: data.realtime?.transport === 'webrtc' && data.provider === 'openai_realtime' && data.provider_configured,
+      realtimeAvailable: realtimeReady,
       realtimeState: data.realtime_state || {},
       memorySnapshot: data.memory_snapshot || this.snapshot.memorySnapshot,
-      error: undefined
+      error: realtimeReady ? undefined : 'Voice is unavailable just now. I can continue in text.'
     }
     this.emit()
     return this.realtimeOptionsFromSession(data)
@@ -518,207 +536,3 @@ export class OrbRuntimeController {
         lowBandwidthMode: prefersLowBandwidthMode(),
         reconnectBanner: ['reconnecting', 'offline', 'unavailable', 'expired'].includes(state)
       }
-    }
-    this.emit()
-  }
-
-  private handleRealtimeEvent(raw: unknown) {
-    let event: Record<string, unknown>
-    try {
-      event = JSON.parse(String(raw)) as Record<string, unknown>
-    } catch {
-      return
-    }
-    const type = String(event.type || '')
-    if (type === 'input_audio_buffer.speech_started') {
-      if (this.snapshot.state === 'speaking' || this.snapshot.loading) {
-        void this.interrupt()
-      } else {
-        this.snapshot = { ...this.snapshot, state: 'listening' }
-        this.emit()
-      }
-      this.resetSilenceTimer(this.activeContext)
-      if (this.snapshot.sessionId) {
-        void this.sendEvent(this.snapshot.sessionId, { type: 'speech_started', context: this.activeContext }).catch(() => undefined)
-      }
-      return
-    }
-    if (type === 'input_audio_buffer.speech_stopped') {
-      this.clearSilenceTimer()
-      this.snapshot = { ...this.snapshot, state: 'thinking' }
-      this.emit()
-      if (this.snapshot.sessionId) {
-        void this.sendEvent(this.snapshot.sessionId, { type: 'speech_stopped', context: this.activeContext }).catch(() => undefined)
-      }
-      return
-    }
-    if (type === 'conversation.item.input_audio_transcription.delta') {
-      const delta = typeof event.delta === 'string' ? event.delta : ''
-      if (!delta) return
-      const text = `${this.snapshot.partialTranscript}${delta}`
-      void this.updatePartialTranscript(text, this.activeContext)
-      return
-    }
-    if (type === 'conversation.item.input_audio_transcription.completed') {
-      const transcript = typeof event.transcript === 'string' ? event.transcript.trim() : ''
-      this.clearSilenceTimer()
-      if (transcript) {
-        this.snapshot = { ...this.snapshot, partialTranscript: transcript, state: 'thinking' }
-        this.emit()
-        void this.sendText(transcript, this.activeContext)
-      }
-      return
-    }
-    if (type === 'response.created') {
-      this.snapshot = { ...this.snapshot, state: 'thinking' }
-      this.emit()
-      return
-    }
-    if (type === 'response.audio_transcript.delta') {
-      const delta = typeof event.delta === 'string' ? event.delta : ''
-      this.snapshot = { ...this.snapshot, state: 'speaking', partialTranscript: `${this.snapshot.partialTranscript}${delta}` }
-      this.emit()
-      if (this.snapshot.sessionId && delta) {
-        void this.sendEvent(this.snapshot.sessionId, { type: 'response_delta', text: delta, context: this.activeContext }).catch(() => undefined)
-      }
-      return
-    }
-    if (type === 'response.done') {
-      this.clearHardStateRecovery()
-      this.snapshot = { ...this.snapshot, state: 'idle', partialTranscript: '', realtimeState: { ...this.snapshot.realtimeState, silence_awareness: 'present_without_pushing' } }
-      this.emit()
-      if (this.snapshot.sessionId) {
-        void this.sendEvent(this.snapshot.sessionId, { type: 'response_done', context: this.activeContext }).catch(() => undefined)
-      }
-      return
-    }
-    if (type === 'error') {
-      this.snapshot = { ...this.snapshot, state: 'error', error: 'Voice is unavailable just now. I can continue in text.' }
-      this.emit()
-    }
-  }
-
-  private sendRealtimeEvent(payload: Record<string, unknown>) {
-    this.realtimeClient.send(payload)
-  }
-
-  private stopAssistantAudio() {
-    this.realtimeClient.stopAudio()
-  }
-
-  private async speakAssistantTurn(text: string) {
-    const spoken = this.prepareSpokenText(text)
-    if (!spoken) return
-    this.snapshot = { ...this.snapshot, state: 'speaking', partialTranscript: '' }
-    this.emit()
-    if (this.snapshot.sessionId) {
-      await this.sendEvent(this.snapshot.sessionId, { type: 'response_started', context: this.activeContext }).catch(() => undefined)
-    }
-    if (this.realtimeClient.send({
-      type: 'response.create',
-      response: {
-        modalities: ['audio', 'text'],
-        instructions: `Speak this ORB powered by IndiCare answer naturally, in a calm British female voice. Keep the delivery brief, warm and interruptible. Do not add citations or extra commentary. Say exactly: ${JSON.stringify(spoken)}`
-      }
-    })) {
-      return
-    }
-    this.speakWithBrowserVoice(spoken)
-  }
-
-  private speakWithBrowserVoice(text: string) {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') {
-      this.snapshot = { ...this.snapshot, state: 'idle', partialTranscript: '' }
-      this.emit()
-      return
-    }
-    this.stopBrowserSpeech()
-    const utterance = new SpeechSynthesisUtterance(text)
-    utterance.lang = 'en-GB'
-    utterance.rate = 0.94
-    utterance.pitch = 1.02
-    const voices = window.speechSynthesis.getVoices()
-    utterance.voice = voices.find((voice) => voice.lang.toLowerCase().startsWith('en-gb') && /female|serena|samantha|kate|susan|victoria/i.test(voice.name)) || voices.find((voice) => voice.lang.toLowerCase().startsWith('en-gb')) || null
-    utterance.onend = () => {
-      this.clearHardStateRecovery()
-      this.browserUtterance = null
-      this.snapshot = { ...this.snapshot, state: 'idle', partialTranscript: '' }
-      this.emit()
-      if (this.snapshot.sessionId) {
-        void this.sendEvent(this.snapshot.sessionId, { type: 'response_done', context: this.activeContext }).catch(() => undefined)
-      }
-    }
-    utterance.onerror = () => {
-      this.browserUtterance = null
-      this.snapshot = { ...this.snapshot, state: 'idle' }
-      this.emit()
-    }
-    this.browserUtterance = utterance
-    window.speechSynthesis.speak(utterance)
-  }
-
-  private stopBrowserSpeech() {
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel()
-    }
-    this.browserUtterance = null
-  }
-
-  private prepareSpokenText(text: string) {
-    return text
-      .replace(/\n{2,}/g, ' ')
-      .replace(/\[[^\]]*citation[^\]]*\]/gi, '')
-      .replace(/\s+/g, ' ')
-      .trim()
-  }
-
-  private resetSilenceTimer(context: OrbContext) {
-    this.clearSilenceTimer()
-    this.silenceTimer = setTimeout(() => {
-      if (this.snapshot.state !== 'listening') return
-      this.snapshot = { ...this.snapshot, state: 'idle', partialTranscript: '' }
-      this.emit()
-      if (this.snapshot.sessionId) {
-        void this.sendEvent(this.snapshot.sessionId, { type: 'silence_timeout', context }).catch(() => undefined)
-      }
-    }, 12000)
-  }
-
-  private clearSilenceTimer() {
-    if (!this.silenceTimer) return
-    clearTimeout(this.silenceTimer)
-    this.silenceTimer = null
-  }
-
-  private armHardStateRecovery() {
-    this.clearHardStateRecovery()
-    this.hardStateTimer = setTimeout(() => {
-      if (!['thinking', 'speaking', 'connecting', 'reconnecting'].includes(this.snapshot.state)) return
-      this.snapshot = { ...this.snapshot, state: 'idle', loading: false, partialTranscript: '', error: 'Orb paused that turn safely. You can carry on from the same context.' }
-      this.emit()
-      if (this.snapshot.sessionId) {
-        void this.sendEvent(this.snapshot.sessionId, { type: 'error', state: 'idle', context: this.activeContext, metadata: { recovery: 'hard_state_timeout' } }).catch(() => undefined)
-      }
-    }, 45000)
-  }
-
-  private clearHardStateRecovery() {
-    if (!this.hardStateTimer) return
-    clearTimeout(this.hardStateTimer)
-    this.hardStateTimer = null
-  }
-
-  private closeRealtime() {
-    this.realtimeClient.close()
-  }
-
-  private async recoverMediaAfterWake() {
-    if (this.snapshot.microphone !== 'granted') return
-    const stream = await this.audioRecovery.recoverMicrophone('browser_wake')
-    if (stream && stream !== this.stream) {
-      this.stream = stream
-      this.realtimeClient.handleWake()
-    }
-  }
-}
-
