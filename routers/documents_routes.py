@@ -15,6 +15,7 @@ import logging
 
 from auth.session_user import get_current_user
 from db.connection import get_db
+from services.os_sync_hooks import sync_after_save
 
 router = APIRouter(
     prefix="/documents",
@@ -39,6 +40,8 @@ ALLOWED_DOC_TYPES = {
 
 class DocumentRequest(BaseModel):
     description: str = Field(..., min_length=10, max_length=MAX_DESCRIPTION_LENGTH)
+    young_person_id: int | None = None
+    title: str | None = None
 
 
 def require_document_access(current_user: dict):
@@ -105,9 +108,9 @@ def audit_document_action(
     action: str,
     target_type: str,
     details: dict,
-):
+) -> int | None:
     try:
-        with conn.cursor() as cur:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
                 """
                 INSERT INTO admin_audit_log (
@@ -119,6 +122,7 @@ def audit_document_action(
                     created_at
                 )
                 VALUES (%s, %s, %s, NULL, %s::jsonb, NOW())
+                RETURNING id, created_at
                 """,
                 (
                     admin_user_id,
@@ -127,10 +131,68 @@ def audit_document_action(
                     json.dumps(details),
                 ),
             )
+            row = cur.fetchone()
         conn.commit()
+        return int(row["id"]) if row and row.get("id") is not None else None
     except Exception:
         conn.rollback()
         logger.exception("Failed to write admin audit log")
+        return None
+
+
+def sync_generated_document(
+    *,
+    audit_id: int | None,
+    payload: DocumentRequest,
+    current_user: dict,
+    document_type: str,
+    title: str,
+    download_name: str,
+    model_text: str,
+) -> None:
+    if not audit_id or not payload.young_person_id:
+        return
+    record = {
+        "id": audit_id,
+        "young_person_id": payload.young_person_id,
+        "home_id": current_user.get("home_id"),
+        "title": payload.title or title,
+        "summary": f"Generated {title} document: {payload.description[:240]}",
+        "narrative": model_text[:4000],
+        "description": payload.description,
+        "document_type": document_type,
+        "file_name": download_name,
+        "status": "generated",
+        "workflow_status": "generated",
+        "created_by": current_user.get("user_id") or current_user.get("id"),
+        "created_by_name": current_user.get("name") or current_user.get("email"),
+        "recorded_by_name": current_user.get("name") or current_user.get("email"),
+        "quality_standards": quality_standards_for_document(document_type),
+        "judgement_areas": judgement_areas_for_document(document_type),
+        "standards_rationale": f"Generated {document_type} document linked into OS evidence trail",
+        "evidence_strength": "medium",
+    }
+    sync_after_save(source_table="generated_documents", record=record, recorded_by_name=record.get("recorded_by_name"))
+
+
+def quality_standards_for_document(document_type: str) -> list[str]:
+    mapping = {
+        "incident": ["protection_of_children"],
+        "risk": ["protection_of_children"],
+        "daily-log": ["quality_and_purpose_of_care"],
+        "handover": ["leadership_and_management"],
+        "safeguarding": ["protection_of_children"],
+        "reflection": ["leadership_and_management"],
+    }
+    return mapping.get(document_type, ["quality_and_purpose_of_care"])
+
+
+def judgement_areas_for_document(document_type: str) -> list[str]:
+    if document_type in {"incident", "risk", "safeguarding"}:
+        return ["helped_and_protected"]
+    if document_type in {"handover", "reflection"}:
+        return ["leadership_and_management"]
+    return ["experiences_and_progress"]
 
 
 def safe_model_text(prompt: str) -> str:
@@ -242,13 +304,14 @@ Situation:
     text = safe_model_text(prompt)
     doc = write_simple_doc("Incident Report", text)
 
-    audit_document_action(
+    audit_id = audit_document_action(
         conn,
         int(current_user["user_id"]),
         "generate_incident_document",
         "document_generation",
-        {"home_id": current_user.get("home_id")},
+        {"home_id": current_user.get("home_id"), "young_person_id": payload.young_person_id, "document_type": "incident"},
     )
+    sync_generated_document(audit_id=audit_id, payload=payload, current_user=current_user, document_type="incident", title="Incident Report", download_name="Incident_Report.docx", model_text=text)
 
     return save_and_return_doc(doc, "Incident_Report.docx", background_tasks)
 
@@ -325,13 +388,15 @@ Situation:
         row[8].text = ""
         row[9].text = ""
 
-    audit_document_action(
+    text = "\n".join(f"{item['hazard']}: {item['controls']}" for item in risks)
+    audit_id = audit_document_action(
         conn,
         int(current_user["user_id"]),
         "generate_risk_document",
         "document_generation",
-        {"home_id": current_user.get("home_id")},
+        {"home_id": current_user.get("home_id"), "young_person_id": payload.young_person_id, "document_type": "risk"},
     )
+    sync_generated_document(audit_id=audit_id, payload=payload, current_user=current_user, document_type="risk", title="Risk Assessment", download_name="Risk_Assessment.docx", model_text=text)
 
     return save_and_return_doc(doc, "Risk_Assessment.docx", background_tasks)
 
@@ -366,13 +431,14 @@ Notes:
     text = safe_model_text(prompt)
     doc = write_simple_doc("Daily Log Entry", text)
 
-    audit_document_action(
+    audit_id = audit_document_action(
         conn,
         int(current_user["user_id"]),
         "generate_daily_log_document",
         "document_generation",
-        {"home_id": current_user.get("home_id")},
+        {"home_id": current_user.get("home_id"), "young_person_id": payload.young_person_id, "document_type": "daily-log"},
     )
+    sync_generated_document(audit_id=audit_id, payload=payload, current_user=current_user, document_type="daily-log", title="Daily Log Entry", download_name="Daily_Log.docx", model_text=text)
 
     return save_and_return_doc(doc, "Daily_Log.docx", background_tasks)
 
@@ -407,13 +473,14 @@ Notes:
     text = safe_model_text(prompt)
     doc = write_simple_doc("Shift Handover", text)
 
-    audit_document_action(
+    audit_id = audit_document_action(
         conn,
         int(current_user["user_id"]),
         "generate_handover_document",
         "document_generation",
-        {"home_id": current_user.get("home_id")},
+        {"home_id": current_user.get("home_id"), "young_person_id": payload.young_person_id, "document_type": "handover"},
     )
+    sync_generated_document(audit_id=audit_id, payload=payload, current_user=current_user, document_type="handover", title="Shift Handover", download_name="Shift_Handover.docx", model_text=text)
 
     return save_and_return_doc(doc, "Shift_Handover.docx", background_tasks)
 
@@ -447,13 +514,14 @@ Concern:
     text = safe_model_text(prompt)
     doc = write_simple_doc("Safeguarding Concern Record", text)
 
-    audit_document_action(
+    audit_id = audit_document_action(
         conn,
         int(current_user["user_id"]),
         "generate_safeguarding_document",
         "document_generation",
-        {"home_id": current_user.get("home_id")},
+        {"home_id": current_user.get("home_id"), "young_person_id": payload.young_person_id, "document_type": "safeguarding"},
     )
+    sync_generated_document(audit_id=audit_id, payload=payload, current_user=current_user, document_type="safeguarding", title="Safeguarding Concern Record", download_name="Safeguarding_Record.docx", model_text=text)
 
     return save_and_return_doc(doc, "Safeguarding_Record.docx", background_tasks)
 
@@ -486,12 +554,13 @@ Reflection:
     text = safe_model_text(prompt)
     doc = write_simple_doc("Reflective Practice Record", text)
 
-    audit_document_action(
+    audit_id = audit_document_action(
         conn,
         int(current_user["user_id"]),
         "generate_reflection_document",
         "document_generation",
-        {"home_id": current_user.get("home_id")},
+        {"home_id": current_user.get("home_id"), "young_person_id": payload.young_person_id, "document_type": "reflection"},
     )
+    sync_generated_document(audit_id=audit_id, payload=payload, current_user=current_user, document_type="reflection", title="Reflective Practice Record", download_name="Reflective_Practice.docx", model_text=text)
 
     return save_and_return_doc(doc, "Reflective_Practice.docx", background_tasks)
