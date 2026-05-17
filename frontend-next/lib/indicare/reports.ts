@@ -1,13 +1,11 @@
 import {
   Incident,
-  Placement,
   ReportRecord,
   ReportSection,
   YoungPersonSummary
 } from './types'
 import {
   fullName,
-  getPlacementForYoungPerson,
   getStaffById,
   getYoungPersonById,
   getYoungPersonSummary,
@@ -97,13 +95,12 @@ export function buildSafeguardingChronology(youngPersonId: string): ReportSectio
 export function buildOfstedEvidenceOutline(youngPersonId: string): ReportSection[] {
   const summary = emptySummary(youngPersonId)
   const name = personLabel(youngPersonId)
-  const placement: Placement | undefined = getPlacementForYoungPerson(youngPersonId)
 
   if (!summary) return []
 
   return [
     section('Child-centred profile', `${name}'s record includes identity, communication, health and relationship information.`, ['profile']),
-    section('Placement planning', `${placement?.placementType || 'Placement'} goals are visible with local authority details and social worker contact.`, placement ? [placement.id] : []),
+    section('Placement planning', 'Placement goals, local authority details and social worker contact should be pulled from the live placement endpoint when available.', []),
     section('Daily recording', `${summary.dailyLogs.length} daily log(s) show routine, presentation and actions.`, summary.dailyLogs.map((log) => log.id)),
     section('Risk management', `${summary.risks.length} risk assessment(s) are linked and review dates are visible.`, summary.risks.map((risk) => risk.id)),
     section('Safeguarding chronology', `${summary.safeguarding.length} safeguarding event(s) are available for chronology review.`, summary.safeguarding.map((event) => event.id)),
