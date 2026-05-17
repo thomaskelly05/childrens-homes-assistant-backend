@@ -20,7 +20,9 @@ export default async function RegulatoryDocumentsPage() {
       regulation: action.regulation,
       priority: action.priority,
       youngPersonId: action.youngPersonId,
-      sourceEventIds: action.sourceId ? [action.sourceId] : []
+      homeId: action.homeId,
+      sourceEventIds: action.sourceId ? [action.sourceId] : [],
+      suggestedAction: 'Attach evidence to the live Reg 44 action.'
     }))
   const reg45Evidence = evidenceResult.data.filter((item) => item.linkedRegulation?.includes('45'))
 

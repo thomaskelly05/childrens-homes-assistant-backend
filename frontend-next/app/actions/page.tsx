@@ -19,7 +19,9 @@ export default async function ActionsPage() {
       regulation: action.regulation,
       priority: action.priority,
       youngPersonId: action.youngPersonId,
-      sourceEventIds: action.sourceId ? [action.sourceId] : []
+      homeId: action.homeId,
+      sourceEventIds: action.sourceId ? [action.sourceId] : [],
+      suggestedAction: 'Attach evidence to the live action record.'
     }))
   const events = chronologyResult.data
 

@@ -157,6 +157,9 @@ def detect_mode(message: str) -> str:
     if re.search(r"\b(write|draft|create)\b.*\b(chronology|timeline)\b", text):
         return "chronology"
 
+    if re.search(r"\b(audit|quality check|manager review)\b", text) or "what would ofsted think" in text:
+        return "manager_review"
+
     if re.search(r"\b(rewrite|reword|improve)\b", text):
         return "rewrite"
 
