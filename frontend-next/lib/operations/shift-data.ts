@@ -1,6 +1,8 @@
-import { indicareData } from '@/lib/indicare/demo-data'
 import type { DailyLog, RiskLevel, StaffMember, YoungPerson } from '@/lib/indicare/types'
-import { getAssignedYoungPeople, getIncidentsByStaff, getLogsByStaff, getStaffById, getYoungPersonById } from '@/lib/indicare/selectors'
+import { getCommandCentre, getSafeguardingDashboard } from '@/lib/os-api/platform'
+import { getOsActions } from '@/lib/os-api/actions'
+import { getOsChronology } from '@/lib/os-api/chronology'
+import { getOsYoungPeople } from '@/lib/os-api/workspaces'
 
 export type OperationalCard = {
   id: string
@@ -76,102 +78,99 @@ export const rapidRecordingTypes: RapidRecordingType[] = [
   { id: 'handover', label: 'Handover', route: '/handover/current', hint: 'Prepare concise handover points with actions and evidence links.' }
 ]
 
-const referenceDate = new Date('2026-05-13T12:00:00.000Z')
-
-function firstStaff() {
-  return indicareData.staff[0]
+function toRisk(value: string | undefined): RiskLevel {
+  const normalised = String(value || 'medium').toLowerCase()
+  return ['low', 'medium', 'high', 'critical'].includes(normalised) ? normalised as RiskLevel : 'medium'
 }
 
-function childName(id: string) {
-  const child = getYoungPersonById(id)
-  return child?.preferredName || id
+function cardType(value: string): OperationalCard['type'] {
+  const text = value.toLowerCase()
+  if (text.includes('missing')) return 'missing episode'
+  if (text.includes('safeguard')) return 'safeguarding alert'
+  if (text.includes('medication')) return 'medication concern'
+  if (text.includes('record')) return 'missing recording'
+  if (text.includes('incident')) return 'active incident'
+  return 'placement concern'
 }
 
-function highRiskChildren() {
-  return indicareData.youngPeople.filter((child) => ['high', 'critical'].includes(child.riskLevel))
-}
-
-function openIncidents() {
-  return indicareData.incidents.filter((incident) => incident.status !== 'closed')
-}
-
-function safeguardingConcerns() {
-  return indicareData.safeguardingEvents.filter((event) => event.status !== 'closed')
-}
-
-function overdueLogs() {
-  return indicareData.dailyLogs.filter((log) => new Date(`${log.date}T23:59:59.999Z`).getTime() < referenceDate.getTime())
-}
-
-function buildCards(): OperationalCard[] {
-  const cards: OperationalCard[] = []
-  const incident = openIncidents()[0]
-  if (incident) {
-    cards.push({
-      id: incident.id,
-      type: incident.safeguardingRequired ? 'safeguarding alert' : 'active incident',
-      title: `${childName(incident.youngPersonId)} - ${incident.type}`,
-      summary: incident.description,
-      urgency: incident.severity,
-      priorityScore: incident.safeguardingRequired ? 92 : 72,
-      assignment: incident.staffIds[0],
-      href: `/incidents/${incident.id}`
-    })
-  }
-
-  highRiskChildren().forEach((child, index) => {
-    cards.push({
-      id: `risk-${child.id}`,
-      type: child.safeguardingStatus === 'active' ? 'safeguarding alert' : 'placement concern',
-      title: `${child.preferredName} needs shift awareness`,
-      summary: `${child.preferredName} is ${child.riskLevel} risk with ${child.safeguardingStatus} safeguarding status.`,
-      urgency: child.riskLevel,
-      priorityScore: 80 - index * 8,
-      assignment: child.allocatedKeyWorkerId,
-      href: `/young-people/${child.id}`
-    })
-  })
-
-  overdueLogs().slice(0, 2).forEach((log, index) => {
-    cards.push({
-      id: `recording-${log.id}`,
-      type: 'missing recording',
-      title: `${childName(log.youngPersonId)} recording follow-up`,
-      summary: log.followUpActions.join(', ') || 'Recording follow-up is required.',
-      urgency: 'medium',
-      priorityScore: 58 - index * 4,
-      assignment: log.staffId,
-      href: '/daily-logs'
-    })
-  })
-
-  return cards.slice(0, 6)
+function scoreFor(urgency: RiskLevel, index = 0) {
+  const base = urgency === 'critical' ? 96 : urgency === 'high' ? 84 : urgency === 'medium' ? 62 : 36
+  return Math.max(1, base - index * 3)
 }
 
 export function currentShift() {
-  const cards = buildCards()
   return {
-    id: 'shift-evening-oak-house',
-    homeName: 'Oak House',
-    shiftType: 'Evening shift',
+    id: 'live-shift-summary',
+    homeName: 'Live home',
+    shiftType: 'Current shift',
     stats: {
-      activeStaff: indicareData.staff.filter((staff) => staff.status === 'active').length,
-      assignedChildren: indicareData.youngPeople.filter((child) => child.status === 'active').length,
-      outstandingTasks: cards.length,
+      activeStaff: 0,
+      assignedChildren: 0,
+      outstandingTasks: 0,
+      managerEscalations: 0,
+      incidents: 0,
+      safeguardingConcerns: 0,
+      medicationAlerts: 0,
+      welfareChecksDue: 0
+    },
+    cards: [] as OperationalCard[],
+    lifecycle: [
+      { label: 'live data required', completed: false },
+      { label: 'open liveShift() for schema-backed data', completed: false }
+    ] satisfies ShiftLifecycleState[],
+    activeStaff: [] as StaffMember[]
+  }
+}
+
+export async function liveCurrentShift() {
+  const command = await getCommandCentre()
+  const children = command.data.children
+  const openActions = command.data.actions.filter((action) => action.status !== 'completed')
+  const safeguarding = command.data.safeguarding.filter((record) => record.status !== 'closed')
+  const cards: OperationalCard[] = [
+    ...command.data.attention.map((item, index) => ({
+      id: item.id,
+      type: cardType(item.theme),
+      title: item.title,
+      summary: item.body,
+      urgency: toRisk(item.status.includes('critical') ? 'critical' : item.status.includes('review') || item.status.includes('needed') ? 'high' : 'medium'),
+      priorityScore: scoreFor(toRisk(item.status.includes('critical') ? 'critical' : item.status.includes('review') || item.status.includes('needed') ? 'high' : 'medium'), index),
+      href: item.href
+    })),
+    ...openActions.slice(0, 4).map((action, index) => ({
+      id: `action-${action.id}`,
+      type: cardType(action.sourceType || action.title),
+      title: action.title,
+      summary: action.description,
+      urgency: toRisk(action.priority === 'urgent' ? 'critical' : action.priority),
+      priorityScore: scoreFor(toRisk(action.priority === 'urgent' ? 'critical' : action.priority), index),
+      assignment: action.assignedToStaffId,
+      href: `/actions/${encodeURIComponent(action.id)}`
+    }))
+  ].slice(0, 8)
+
+  return {
+    id: 'live-shift-summary',
+    homeName: command.data.homes[0]?.title || 'Live home',
+    shiftType: 'Current shift',
+    stats: {
+      activeStaff: command.data.workforce.length,
+      assignedChildren: children.length,
+      outstandingTasks: openActions.length,
       managerEscalations: cards.filter((card) => ['high', 'critical'].includes(card.urgency)).length,
-      incidents: openIncidents().length,
-      safeguardingConcerns: safeguardingConcerns().length,
-      medicationAlerts: indicareData.medicationRecords.filter((record) => record.administrationHistory.some((entry) => ['missed', 'overdue'].includes(entry.status))).length,
-      welfareChecksDue: highRiskChildren().length
+      incidents: command.data.chronology.filter((event) => `${event.category} ${event.title}`.toLowerCase().includes('incident')).length,
+      safeguardingConcerns: safeguarding.length,
+      medicationAlerts: command.data.chronology.filter((event) => `${event.category} ${event.title}`.toLowerCase().includes('medication')).length,
+      welfareChecksDue: children.filter((child) => ['high', 'critical'].includes(String(child.riskLevel || '').toLowerCase())).length
     },
     cards,
     lifecycle: [
       { label: 'shift started', completed: true },
-      { label: 'welfare checks', completed: false },
-      { label: 'recording quality review', completed: false },
+      { label: 'live priorities loaded', completed: cards.length > 0 },
+      { label: 'open actions reviewed', completed: openActions.length === 0 },
       { label: 'handover prepared', completed: false }
     ] satisfies ShiftLifecycleState[],
-    activeStaff: indicareData.staff.filter((staff) => staff.status === 'active')
+    activeStaff: [] as StaffMember[]
   }
 }
 
@@ -197,83 +196,94 @@ export function proactiveAssistantSupport() {
 }
 
 export function currentHandover() {
-  const items: HandoverAction[] = buildCards().map((card) => ({
-    id: `handover-${card.id}`,
-    title: card.title,
-    details: card.summary,
-    priority: card.urgency,
-    requiresFollowUp: card.urgency !== 'low',
-    href: card.href
-  }))
-  const timeline: HandoverTimelineItem[] = items.map((item, index) => ({
-    id: `timeline-${item.id}`,
-    type: item.title.toLowerCase().includes('safeguarding') ? 'safeguarding review' : 'handover action',
-    title: item.title,
-    details: item.details,
-    date: new Date(referenceDate.getTime() - index * 60 * 60 * 1000).toISOString(),
-    href: item.href
-  }))
-  const unresolvedActions = items.filter((item) => item.requiresFollowUp)
-  const safeguardingAlerts = safeguardingConcerns().map((event) => ({
-    id: event.id,
-    title: `${childName(event.youngPersonId)} - ${event.concernType}`,
-    details: event.actionTaken,
-    href: `/safeguarding/${event.id}`
-  }))
-  const childrenRequiringAttention = highRiskChildren().map((child) => ({
-    id: child.id,
-    title: child.preferredName,
-    details: `${child.riskLevel} risk; ${child.safeguardingStatus} safeguarding status.`,
-    href: `/young-people/${child.id}/journey`
-  }))
-  const keyEventsToday = [
-    ...openIncidents().map((incident) => ({
-      id: `incident-${incident.id}`,
-      title: `${childName(incident.youngPersonId)} - ${incident.type}`,
-      details: incident.outcome,
-      href: `/incidents/${incident.id}`
-    })),
-    ...indicareData.dailyLogs.slice(0, 3).map((log) => ({
-      id: `daily-${log.id}`,
-      title: `${childName(log.youngPersonId)} - ${log.shift} note`,
-      details: log.presentation,
-      href: `/daily-logs/${log.id}`
-    }))
-  ]
+  return {
+    items: [] as HandoverAction[],
+    timeline: [] as HandoverTimelineItem[],
+    unresolvedActions: [] as HandoverAction[],
+    safeguardingAlerts: [] as HandoverAction[],
+    childrenRequiringAttention: [] as HandoverAction[],
+    keyEventsToday: [] as HandoverAction[],
+    recordingGaps: [] as HandoverAction[]
+  }
+}
 
+export async function liveCurrentHandover() {
+  const [actions, chronology, safeguarding, youngPeople] = await Promise.all([
+    getOsActions(),
+    getOsChronology(),
+    getSafeguardingDashboard(),
+    getOsYoungPeople()
+  ])
+  const openActions = actions.data.filter((action) => action.status !== 'completed')
+  const items: HandoverAction[] = openActions.slice(0, 10).map((action) => ({
+    id: `handover-${action.id}`,
+    title: action.title,
+    details: action.description,
+    priority: action.priority,
+    requiresFollowUp: action.status !== 'completed',
+    href: `/actions/${encodeURIComponent(action.id)}`
+  }))
+  const timeline: HandoverTimelineItem[] = chronology.data.slice(0, 15).map((event) => ({
+    id: `timeline-${event.id}`,
+    type: event.category || 'chronology',
+    title: event.title,
+    details: event.summary,
+    date: event.dateTime,
+    href: `/chronology/${encodeURIComponent(event.id)}`
+  }))
+  const safeguardingAlerts = safeguarding.data.records.slice(0, 8).map((record) => ({
+    id: record.id,
+    title: record.title,
+    details: record.summary,
+    priority: record.priority || 'high',
+    requiresFollowUp: record.status !== 'closed',
+    href: record.href || '/safeguarding'
+  }))
+  const childrenRequiringAttention = youngPeople.data
+    .filter((child) => ['high', 'critical'].includes(String(child.riskLevel || '').toLowerCase()))
+    .slice(0, 8)
+    .map((child) => ({
+      id: child.id,
+      title: child.displayName || child.preferredName || `Young person ${child.id}`,
+      details: `${child.riskLevel || 'risk not returned'} · ${child.placementStatus || 'placement status not returned'}`,
+      priority: child.riskLevel || 'medium',
+      requiresFollowUp: true,
+      href: `/young-people/${encodeURIComponent(child.id)}`
+    }))
   return {
     items,
     timeline,
-    unresolvedActions,
+    unresolvedActions: items.filter((item) => item.requiresFollowUp),
     safeguardingAlerts,
     childrenRequiringAttention,
-    keyEventsToday,
-    recordingGaps: overdueLogs().map((log) => ({
-      id: log.id,
-      title: `${childName(log.youngPersonId)} recording follow-up`,
-      details: log.followUpActions.join(', ') || 'Daily note follow-up needs review.',
-      href: '/daily-logs'
-    }))
+    keyEventsToday: timeline.slice(0, 8),
+    recordingGaps: chronology.data
+      .filter((event) => `${event.title} ${event.summary}`.toLowerCase().includes('missing recording'))
+      .slice(0, 8)
+      .map((event) => ({
+        id: event.id,
+        title: event.title,
+        details: event.summary,
+        priority: event.severity || 'medium',
+        requiresFollowUp: true,
+        href: `/chronology/${encodeURIComponent(event.id)}`
+      }))
   }
 }
 
 export function handoverHistory() {
-  return [
-    {
-      id: 'handover-2026-05-12',
-      shift: '12 May evening',
-      status: 'signed off',
-      summary: 'Handover signed with safeguarding review and recording follow-up visible.',
-      href: '/handover/current'
-    },
-    {
-      id: 'handover-2026-05-11',
-      shift: '11 May evening',
-      status: 'reviewed',
-      summary: 'No critical incidents; child voice evidence carried forward for manager review.',
-      href: '/handover/current'
-    }
-  ]
+  return [] as Array<{ id: string; shift: string; status: string; summary: string; href: string }>
+}
+
+export async function liveHandoverHistory() {
+  const chronology = await getOsChronology()
+  return chronology.data.slice(0, 12).map((event) => ({
+    id: `handover-history-${event.id}`,
+    shift: event.dateTime || 'Live chronology event',
+    status: event.severity || 'recorded',
+    summary: event.summary || event.title,
+    href: `/chronology/${encodeURIComponent(event.id)}`
+  }))
 }
 
 export function safeguardingWorkflowTimeline(): HandoverTimelineItem[] {
@@ -302,53 +312,79 @@ export function safeguardingWorkflowTimeline(): HandoverTimelineItem[] {
   ]
 }
 
-export function staffOperationalWorkspace(staffId: string): StaffOperationalWorkspace {
-  const staff = getStaffById(staffId) || firstStaff()
-  const assignedChildren = staff ? getAssignedYoungPeople(staff.id) : []
-  const incidents = staff ? getIncidentsByStaff(staff.id) : []
-  const logs = staff ? getLogsByStaff(staff.id) : []
-  const recordingDue = logs.length ? logs : overdueLogs().filter((log) => !staff || log.staffId === staff.id)
-  const needsAttention: StaffOperationalTask[] = incidents.slice(0, 4).map((incident) => ({
-    id: incident.id,
-    title: `${childName(incident.youngPersonId)} - ${incident.type}`,
-    summary: incident.description,
-    urgency: incident.severity,
-    href: `/incidents/${incident.id}`
+export async function liveSafeguardingWorkflowTimeline(): Promise<HandoverTimelineItem[]> {
+  const dashboard = await getSafeguardingDashboard()
+  const live = dashboard.data.lifecycle.slice(0, 20).map((item) => ({
+    id: item.id,
+    type: item.entityType,
+    title: item.label,
+    details: item.reason || item.status,
+    date: item.dueAt,
+    href: item.entityType.includes('chronology') ? `/chronology/${encodeURIComponent(item.id)}` : '/safeguarding'
   }))
-  const recordingTasks: StaffOperationalTask[] = recordingDue.slice(0, 4).map((log) => ({
-    id: log.id,
-    title: `${childName(log.youngPersonId)} recording due`,
-    summary: log.followUpActions.join(', ') || 'Recording review required.',
-    urgency: 'review',
-    href: '/daily-logs'
-  }))
-  const awaitingReview: StaffOperationalTask[] = safeguardingConcerns().slice(0, 3).map((event) => ({
-    id: event.id,
-    title: `${childName(event.youngPersonId)} safeguarding review`,
-    summary: event.description,
-    urgency: 'high',
-    href: `/safeguarding/${event.id}`
-  }))
-  const handoverActions = [...needsAttention, ...recordingTasks].slice(0, 5).map((task) => ({
-    id: `handover-${task.id}`,
-    title: task.title,
-    details: task.summary,
-    priority: task.urgency,
-    requiresFollowUp: task.urgency !== 'low',
-    href: task.href
-  }))
+  return live.length ? live : safeguardingWorkflowTimeline()
+}
 
+export function staffOperationalWorkspace(_staffId: string): StaffOperationalWorkspace {
   return {
-    staff,
-    assignedChildren,
-    outstandingTasks: [...needsAttention, ...recordingTasks, ...awaitingReview],
-    recordingDue,
-    handoverActions,
+    staff: undefined,
+    assignedChildren: [],
+    outstandingTasks: [],
+    recordingDue: [],
+    handoverActions: [],
     queues: {
-      needsAttention,
-      recordingOverdue: recordingTasks,
-      awaitingReview
+      needsAttention: [],
+      recordingOverdue: [],
+      awaitingReview: []
     }
   }
 }
 
+export async function liveStaffOperationalWorkspace(_staffId: string): Promise<StaffOperationalWorkspace> {
+  const [actions, youngPeople] = await Promise.all([getOsActions(), getOsYoungPeople()])
+  const tasks: StaffOperationalTask[] = actions.data.filter((action) => action.status !== 'completed').slice(0, 20).map((action) => ({
+    id: action.id,
+    title: action.title,
+    summary: action.description,
+    urgency: action.priority,
+    href: `/actions/${encodeURIComponent(action.id)}`
+  }))
+  return {
+    staff: undefined,
+    assignedChildren: youngPeople.data.map((person) => ({
+      id: person.id,
+      firstName: person.preferredName || person.displayName || 'Young',
+      lastName: 'Person',
+      preferredName: person.preferredName || person.displayName || `Young person ${person.id}`,
+      dateOfBirth: '',
+      age: typeof person.age === 'number' ? person.age : 0,
+      status: 'active',
+      riskLevel: toRisk(person.riskLevel),
+      safeguardingStatus: '',
+      educationStatus: '',
+      healthSummary: '',
+      allocatedKeyWorkerId: '',
+      currentPlacementId: '',
+      likes: [],
+      dislikes: [],
+      communicationNeeds: [],
+      sensoryNeeds: [],
+      routines: []
+    })) as YoungPerson[],
+    outstandingTasks: tasks,
+    recordingDue: [],
+    handoverActions: tasks.slice(0, 8).map((task) => ({
+      id: `handover-${task.id}`,
+      title: task.title,
+      details: task.summary,
+      priority: task.urgency,
+      requiresFollowUp: true,
+      href: task.href
+    })),
+    queues: {
+      needsAttention: tasks.filter((task) => ['high', 'urgent', 'critical'].includes(task.urgency)),
+      recordingOverdue: [],
+      awaitingReview: tasks.filter((task) => task.urgency !== 'low')
+    }
+  }
+}
