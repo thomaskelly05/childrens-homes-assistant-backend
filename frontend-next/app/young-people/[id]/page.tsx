@@ -6,8 +6,9 @@ import { ChildIdentitySurface, ChronologySurface, ContextSurface, WorkspaceStack
 import { DataTable, EmptyState, RecordTimeline, RiskBadge, SectionHeader, StatusBadge } from '@/components/indicare/ui'
 import { getChildProfileBundle, recordTitle, text } from '@/lib/os-api/bundles'
 
-export default async function YoungPersonDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function YoungPersonDetailPage({ params, searchParams }: { params: Promise<{ id: string }>, searchParams: Promise<Record<string, string | undefined>> }) {
   const { id } = await params
+  const query = await searchParams
   const result = await getChildProfileBundle(id)
   const bundle = result.data
   const identity = bundle.identity || {}
@@ -35,10 +36,15 @@ export default async function YoungPersonDetailPage({ params }: { params: Promis
                 <RiskBadge value={identity.risk_level as any} />
                 <StatusBadge value={text(identity, ['placement_status'], 'placement not returned')} />
                 <StatusBadge value={identity.age ? `age ${identity.age}` : 'age not returned'} />
+                {query.saved ? <StatusBadge value={`saved: ${query.saved}`} /> : null}
               </div>
             </div>
           </div>
-          <Link href={`/young-people/${encodeURIComponent(id)}/daily-note/new`} className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">Add daily note</Link>
+          <div className="flex flex-wrap gap-3">
+            <Link href={`/young-people/${encodeURIComponent(id)}/daily-note/new`} className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">Add daily note</Link>
+            <Link href={`/young-people/${encodeURIComponent(id)}/documents/generate`} className="rounded-2xl bg-white px-5 py-3 text-sm font-black text-blue-700 ring-1 ring-blue-100">Generate document</Link>
+            <Link href={`/young-people/${encodeURIComponent(id)}/reports`} className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white">Live reports</Link>
+          </div>
         </div>
       </ChildIdentitySurface>
       <LiveDataStatus result={result} />
