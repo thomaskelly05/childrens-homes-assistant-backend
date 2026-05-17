@@ -4,10 +4,16 @@ import Link from 'next/link'
 import { Bell } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
+const e2eUiMode = process.env.NEXT_PUBLIC_E2E_TEST_MODE === '1' && process.env.NODE_ENV !== 'production'
+
 export function NotificationBell() {
   const [count, setCount] = useState(0)
 
   useEffect(() => {
+    if (e2eUiMode) {
+      setCount(0)
+      return
+    }
     let active = true
     async function load() {
       try {

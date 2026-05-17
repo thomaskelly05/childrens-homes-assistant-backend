@@ -6,6 +6,8 @@ import { useEffect, useState } from 'react'
 
 import type { MeToday } from '@/lib/os-api/connect'
 
+const e2eUiMode = process.env.NEXT_PUBLIC_E2E_TEST_MODE === '1' && process.env.NODE_ENV !== 'production'
+
 function greeting() {
   const hour = new Date().getHours()
   if (hour < 12) return 'Good morning'
@@ -20,6 +22,22 @@ export function WelcomePanel() {
   useEffect(() => {
     const key = `indicare-welcome-dismissed-${new Date().toISOString().slice(0, 10)}`
     if (window.localStorage.getItem(key) === '1') return
+    if (e2eUiMode) {
+      setToday({
+        adult: { id: 0, name: 'there', preferred_name: 'there' },
+        home: null,
+        provider: null,
+        handover: { items: [], summary: { total: 0, urgent: 0, children_needing_attention: 0, unacknowledged: 0 } },
+        connect: { count: 0, threads: [] },
+        notifications: { unread: 0, items: [] },
+        tasks_due_today: [],
+        key_children: [],
+        recent_activity: [],
+        dashboard_preferences: {}
+      })
+      setVisible(true)
+      return
+    }
     let active = true
     async function load() {
       try {
