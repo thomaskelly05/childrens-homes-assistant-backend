@@ -1,6 +1,7 @@
 import logging
 import os
 
+from psycopg2 import OperationalError, InterfaceError
 from psycopg2.pool import ThreadedConnectionPool
 from psycopg2.extras import RealDictCursor
 from sqlalchemy.orm import declarative_base
@@ -19,6 +20,7 @@ DB_POOL_MIN = int(os.getenv("DB_POOL_MIN", "2"))
 DB_POOL_MAX = int(os.getenv("DB_POOL_MAX", "20"))
 DB_STATEMENT_TIMEOUT_MS = int(os.getenv("DB_STATEMENT_TIMEOUT_MS", "15000"))
 DB_IDLE_TX_TIMEOUT_MS = int(os.getenv("DB_IDLE_TX_TIMEOUT_MS", "15000"))
+DB_CONNECT_RETRIES = int(os.getenv("DB_CONNECT_RETRIES", "2"))
 
 db_pool: ThreadedConnectionPool | None = None
 
@@ -58,12 +60,23 @@ def close_db_pool():
 
 def _prepare_connection(conn):
     if conn.closed:
-        raise RuntimeError("Received closed database connection from pool")
+        raise OperationalError("Received closed database connection from pool")
 
     with conn.cursor() as cur:
         cur.execute("SELECT 1")
         cur.execute(f"SET statement_timeout TO {DB_STATEMENT_TIMEOUT_MS}")
         cur.execute(f"SET idle_in_transaction_session_timeout TO {DB_IDLE_TX_TIMEOUT_MS}")
+
+
+def _discard_connection(conn) -> None:
+    global db_pool
+
+    if conn is None or db_pool is None:
+        return
+    try:
+        db_pool.putconn(conn, close=True)
+    except Exception:
+        logger.warning("Failed to discard unhealthy DB connection", exc_info=True)
 
 
 def get_db_connection():
@@ -72,19 +85,43 @@ def get_db_connection():
     if db_pool is None:
         init_db_pool()
 
-    conn = db_pool.getconn()
-    _prepare_connection(conn)
-    return conn
+    last_error: Exception | None = None
+    attempts = max(1, DB_CONNECT_RETRIES + 1)
+
+    for attempt in range(1, attempts + 1):
+        conn = None
+        try:
+            conn = db_pool.getconn()
+            _prepare_connection(conn)
+            return conn
+        except (OperationalError, InterfaceError, RuntimeError) as exc:
+            last_error = exc
+            logger.warning(
+                "Database connection validation failed on attempt %s/%s; discarding pooled connection",
+                attempt,
+                attempts,
+                exc_info=True,
+            )
+            _discard_connection(conn)
+            if attempt == attempts:
+                break
+        except Exception as exc:
+            last_error = exc
+            _discard_connection(conn)
+            raise
+
+    raise last_error or RuntimeError("Unable to acquire database connection")
 
 
 def release_db_connection(conn, *, close: bool = False):
     global db_pool
 
-    if conn is None:
+    if conn is None or db_pool is None:
         return
 
     try:
         if conn.closed:
+            db_pool.putconn(conn, close=True)
             return
 
         if close:
@@ -102,7 +139,7 @@ def get_db():
         conn = get_db_connection()
         yield conn
 
-        if not conn.closed:
+        if conn is not None and not conn.closed:
             conn.commit()
 
     except Exception:
