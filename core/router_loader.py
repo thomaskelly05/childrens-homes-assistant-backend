@@ -46,6 +46,7 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
         "operational",
         (
             "routers.notifications_routes",
+            "routers.connect_routes",
             "routers.shift_routes",
             "routers.frontend_compat",
             "routers.young_people_shell_item_compat_routes",

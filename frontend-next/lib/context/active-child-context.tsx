@@ -48,6 +48,7 @@ const ActiveChildContext = createContext<ActiveChildContextValue | undefined>(un
 const activeChildKey = 'child-context:active.v1'
 const recentChildrenKey = 'child-context:recent.v1'
 const lockVersionKey = 'child-context:lock-version.v1'
+const e2eUiMode = process.env.NEXT_PUBLIC_E2E_TEST_MODE === '1' && process.env.NODE_ENV !== 'production'
 
 function safeStorage(storage: Storage | undefined, key: string) {
   if (!storage) return null
@@ -245,6 +246,12 @@ export function ActiveChildProvider({ children }: { children: ReactNode }) {
     if (status !== 'authenticated' || !csrfReady || !canReadRecords || !activeChild?.id) {
       setPreloadStatus(activeChild ? 'loading' : 'idle')
       setPreloadSummary(null)
+      return
+    }
+    if (e2eUiMode) {
+      setPreloadStatus('ready')
+      setPreloadSummary(null)
+      markChildWorkspaceReady(activeChild.id, lockVersion)
       return
     }
     const controller = new AbortController()

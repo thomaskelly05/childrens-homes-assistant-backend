@@ -1,6 +1,23 @@
 import { IndiCareData } from './types'
 
-export const indicareData: IndiCareData = {
+const emptyIndiCareData: IndiCareData = {
+  youngPeople: [],
+  staff: [],
+  placements: [],
+  dailyLogs: [],
+  incidents: [],
+  safeguardingEvents: [],
+  riskAssessments: [],
+  medicationRecords: [],
+  keyworkSessions: [],
+  appointments: [],
+  documents: [],
+  reports: [],
+  notifications: [],
+  audit: []
+}
+
+const demoIndiCareData: IndiCareData = {
   youngPeople: [
     {
       id: 'yp-jamie',
@@ -481,3 +498,7 @@ export const indicareData: IndiCareData = {
     }
   ]
 }
+
+export const indicareData: IndiCareData = process.env.NEXT_PUBLIC_DEMO_DATA_MODE === '1' && process.env.NODE_ENV !== 'production'
+  ? demoIndiCareData
+  : emptyIndiCareData

@@ -19,12 +19,15 @@ import {
   ShieldCheck,
   ShieldAlert,
   SearchCheck,
-  Settings
+  Settings,
+  MessageCircle
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { ReactNode, useEffect } from 'react'
 
 import { CommandSearch } from '@/components/indicare/command-search'
+import { NotificationBell } from '@/components/connect/notification-bell'
+import { WelcomePanel } from '@/components/connect/welcome-panel'
 import { OrbButton } from '@/components/indicare/orb/orb-button'
 import { QuickActionButton } from '@/components/child-journey/quick-action-button'
 import { MobileNav } from '@/components/mobile-nav'
@@ -53,6 +56,7 @@ const navItems: NavItem[] = [
   { section: 'Global', href: '/safeguarding', label: 'Safeguarding', icon: ShieldAlert, permissions: ['records:read'], activeRoots: ['safeguarding'] },
   { section: 'Global', href: '/chronology', label: 'Chronology', icon: Clock3, permissions: ['records:read'], activeRoots: ['chronology'] },
   { section: 'Global', href: '/documents', label: 'Documents & Evidence', icon: FolderOpen, permissions: ['records:read'], activeRoots: ['documents', 'evidence'] },
+  { section: 'Global', href: '/connect', label: 'Connect', icon: MessageCircle, permissions: ['records:read'], activeRoots: ['connect'] },
   { section: 'Global', href: '/ofsted-readiness', label: 'Inspection Readiness', icon: SearchCheck, permissions: ['reports:read'], activeRoots: ['ofsted-readiness', 'regulatory', 'reg44'] },
   { section: 'Global', href: '/settings', label: 'Governance', icon: Settings, permissions: ['settings:read', 'settings:manage'], activeRoots: ['settings'] },
   { section: 'Global', href: '/assistant', label: 'Assistant / ORB', icon: Sparkles, permissions: ['assistant:access'], activeRoots: ['assistant'] },
@@ -65,6 +69,7 @@ const navItems: NavItem[] = [
 
 const recordWorkspaceRoots = ['actions', 'reports', 'evidence', 'documents', 'chronology', 'daily-logs', 'incidents', 'safeguarding', 'medication', 'health', 'keywork', 'appointments', 'risk-assessments', 'reg44']
 const childContextRequiredRoots = ['actions', 'reports']
+const e2eUiMode = process.env.NEXT_PUBLIC_E2E_TEST_MODE === '1' && process.env.NODE_ENV !== 'production'
 const e2eWorkspaceHydrationBypass = process.env.NEXT_PUBLIC_E2E_TEST_MODE === '1' && process.env.NODE_ENV !== 'production'
 
 function selectedYoungPersonId(pathname: string) {
@@ -132,6 +137,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const isRecordWorkspace = pathParts.length >= 2 && recordWorkspaceRoots.includes(pathParts[0]) && !['new', 'current'].includes(pathParts[pathParts.length - 1])
   const routeRequiresChildContext = pathParts.length === 1 && childContextRequiredRoots.includes(pathParts[0] || '')
   const childContextRedirect = activeChild && routeRequiresChildContext ? childScopedHref(`/${pathParts[0]}`) : null
+  const requiresWorkspaceHydration = !e2eUiMode && routeRequiresChildWorkspace(pathname, typeof window === 'undefined' ? null : new URLSearchParams(window.location.search))
   const requiresWorkspaceHydration = !e2eWorkspaceHydrationBypass && routeRequiresChildWorkspace(pathname, typeof window === 'undefined' ? null : new URLSearchParams(window.location.search))
 
   useEffect(() => {
@@ -313,9 +319,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <ShieldCheck className="mr-2 h-4 w-4" aria-hidden />
               {activeChildName ? 'Switch child' : 'Choose child'}
             </Link>
-            <Link href="/notifications" className="rounded-2xl border border-slate-200 bg-white p-3 text-slate-700 shadow-sm" aria-label="Notifications">
-              <Bell className="h-5 w-5" aria-hidden />
-            </Link>
+            <NotificationBell />
             <div className="hidden rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 shadow-sm xl:block">
               {today}
             </div>
@@ -326,7 +330,8 @@ export function AppShell({ children }: { children: ReactNode }) {
               <div className="absolute right-0 mt-2 w-64 rounded-[24px] border border-slate-200 bg-white p-4 shadow-2xl shadow-slate-950/15">
                 <p className="text-sm font-black text-slate-950">{displayName(user)}</p>
                 <p className="mt-1 text-xs font-bold text-slate-500">{labelForRole(user.role)}</p>
-                <Link href="/settings" className="mt-4 flex rounded-2xl bg-slate-50 px-4 py-3 text-sm font-black text-slate-700">Settings</Link>
+                <Link href="/profile" className="mt-4 flex rounded-2xl bg-slate-50 px-4 py-3 text-sm font-black text-slate-700">My profile</Link>
+                <Link href="/settings" className="mt-2 flex rounded-2xl bg-slate-50 px-4 py-3 text-sm font-black text-slate-700">Settings</Link>
                 <button type="button" onClick={() => void logout()} data-testid="logout-button" className="mt-2 flex w-full items-center justify-center rounded-2xl border border-slate-200 px-4 py-3 text-sm font-black text-slate-700">
                   <LogOut className="mr-2 h-4 w-4" aria-hidden />
                   Log out
@@ -357,7 +362,10 @@ export function AppShell({ children }: { children: ReactNode }) {
         </nav>
       </header>
 
-      <main className="min-w-0 px-4 py-6 pb-32 md:px-8 md:py-8">{children}</main>
+      <main className="min-w-0 px-4 py-6 pb-32 md:px-8 md:py-8">
+        <WelcomePanel />
+        {children}
+      </main>
       <OrbButton context={orbContext} role={user.role} />
       <QuickActionButton selectedYoungPersonId={selectedId} selectedYoungPersonName={activeChildName} />
       <MobileNav />

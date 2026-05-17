@@ -5,14 +5,13 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { ShieldCheck, Sparkles } from 'lucide-react'
 
 import { useAuth } from '@/contexts/auth-context'
-import { roleLabels } from '@/lib/auth/permissions'
 
 function LoginPanel() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { login, status } = useAuth()
-  const [email, setEmail] = useState('manager.demo@indicare.local')
-  const [password, setPassword] = useState('IndiCareDemo123!')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [remember, setRemember] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(searchParams.get('expired') ? 'Your session expired. Please sign in again.' : null)
@@ -148,9 +147,9 @@ function LoginPanel() {
           </form>
 
           <div className="mt-6 rounded-[24px] border border-slate-100 bg-slate-50 p-4">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Demo users</p>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Live workspace</p>
             <p className="mt-2 text-sm leading-6 text-slate-600">
-              Use <strong>IndiCareDemo123!</strong> with admin, manager, deputy, support or viewer demo emails. Current default: {roleLabels.manager}.
+              Sign in with your provider-issued account. Demo credentials are not shown on live routes.
             </p>
           </div>
         </section>
