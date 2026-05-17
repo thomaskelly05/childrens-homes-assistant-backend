@@ -12,7 +12,7 @@ import { defaultOrbPreferences, defaultOrbVoiceProfile } from '@/lib/orb/types'
 const setupPhrases = [
   'Hey IndiCare, start my shift.',
   'Orb, create a daily note.',
-  'Orb, summarise Jamie\'s chronology.',
+  'Orb, summarise this child\'s chronology.',
   'Orb, what would Ofsted challenge?'
 ]
 

@@ -9,25 +9,6 @@ function narrative(record: ChronologyRecord) {
 }
 
 export function CareOperatingStream({ records }: { records: ChronologyRecord[] }) {
-  const source = records.length ? records : [
-    {
-      id: 'demo-1',
-      record_type: 'Daily record',
-      title: 'Evening support and emotional regulation',
-      summary: 'Young person accepted staff reassurance, completed the evening routine and remained settled. No escalation indicators were identified.',
-      status: 'Recorded',
-      inspection_relevant: true
-    },
-    {
-      id: 'demo-2',
-      record_type: 'Assistant insight',
-      title: 'Positive routine pattern strengthening',
-      summary: 'Engagement appears stronger when the evening routine is structured and emotionally prepared in advance.',
-      status: 'Insight',
-      manager_review_required: true
-    }
-  ]
-
   return (
     <section className="rounded-[34px] border border-white/70 bg-white p-8 shadow-[0_18px_55px_rgba(15,23,42,0.07)]">
       <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
@@ -48,8 +29,15 @@ export function CareOperatingStream({ records }: { records: ChronologyRecord[] }
         </button>
       </div>
 
+      {!records.length ? (
+        <div className="rounded-[28px] border border-dashed border-slate-200 bg-slate-50/80 p-8 text-center">
+          <h3 className="text-xl font-black tracking-[-0.03em] text-slate-950">No live care records returned</h3>
+          <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-slate-500">Daily records, incidents, health, education, direct work and oversight will appear only when returned by the backend.</p>
+        </div>
+      ) : null}
+
       <div className="relative space-y-5 before:absolute before:left-5 before:top-3 before:h-[calc(100%-24px)] before:w-px before:bg-slate-200">
-        {source.slice(0, 14).map((record, index) => (
+        {records.slice(0, 14).map((record, index) => (
           <article key={`${record.id || index}`} className="relative pl-12">
             <div className="absolute left-0 top-6 flex h-10 w-10 items-center justify-center rounded-full border border-blue-100 bg-blue-50 text-xs font-black text-blue-700 shadow-sm">
               {index + 1}

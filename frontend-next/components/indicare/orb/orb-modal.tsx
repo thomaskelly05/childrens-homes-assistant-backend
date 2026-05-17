@@ -221,7 +221,7 @@ export function OrbModal({
             <OrbTranscript transcript={snapshot.transcript} partialTranscript={snapshot.partialTranscript} />
             <div className="rounded-[24px] border border-blue-100 bg-blue-50 p-4 text-sm leading-6 text-blue-900">
               <FileText className="mr-2 inline h-4 w-4" aria-hidden />
-              Try: &quot;Continue my shift&quot;, &quot;What improved for Jamie?&quot;, &quot;Draft the review calmly&quot;, or &quot;What follow-up is still outstanding?&quot;
+              Try: &quot;Continue my shift&quot;, &quot;What improved for this child?&quot;, &quot;Draft the review calmly&quot;, or &quot;What follow-up is still outstanding?&quot;
             </div>
           </main>
         </div>
