@@ -5,7 +5,7 @@ import type { OsApiResult } from './types'
 
 function status(value: unknown): HomeDocumentStatus {
   const normalised = String(value || 'uploaded') as HomeDocumentStatus
-  return ['uploaded', 'processing', 'review_required', 'action_plan_open', 'approved', 'archived'].includes(normalised) ? normalised : 'uploaded'
+  return ['draft', 'uploaded', 'processing', 'review', 'review_required', 'returned_for_update', 'action_plan_open', 'approved', 'signed_off', 'archived'].includes(normalised) ? normalised : 'uploaded'
 }
 
 function documentType(value: unknown): HomeDocumentType {

@@ -179,6 +179,8 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
             "routers.manager_routes",
             "routers.home_inspection_compat_routes",
             "routers.safeguarding_flowchart_routes",
+            "routers.safeguarding_domain_routes",
+            "routers.missing_episode_routes",
         ),
         classification="mixed",
         notes="Risk, actions, visibility, supervision, manager review and document governance.",

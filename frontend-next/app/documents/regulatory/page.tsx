@@ -1,28 +1,43 @@
 import Link from 'next/link'
 
 import { ActionsPanel, EvidenceGapsPanel, EvidenceItemsPanel } from '@/components/indicare/action-evidence-panels'
+import { LiveDataStatus } from '@/components/indicare/live-data-status'
 import { Card, DataTable, EmptyState, PageHeader, SectionHeader, StatCard, StatusBadge } from '@/components/indicare/ui'
-import { getRegulatoryDocuments } from '@/lib/documents/selectors'
-import { getEvidenceByRegulation, getEvidenceGapsByRegulation, getOpenCareActions } from '@/lib/evidence/selectors'
-import { getStaffById } from '@/lib/indicare/selectors'
+import { getOsActions } from '@/lib/os-api/actions'
+import { getOsDocuments } from '@/lib/os-api/documents'
+import { getOsEvidence } from '@/lib/os-api/evidence'
 
-export default function RegulatoryDocumentsPage() {
-  const documents = getRegulatoryDocuments()
-  const reg44Actions = getOpenCareActions().filter((action) => action.regulation?.includes('44'))
+export default async function RegulatoryDocumentsPage() {
+  const [documentsResult, actionsResult, evidenceResult] = await Promise.all([getOsDocuments(), getOsActions(), getOsEvidence()])
+  const documents = documentsResult.data.filter((document) => ['reg44_report', 'reg45_report', 'inspection_report'].includes(document.documentType))
+  const reg44Actions = actionsResult.data.filter((action) => action.regulation?.includes('44'))
+  const reg44Gaps = reg44Actions
+    .filter((action) => action.evidenceRequired.length && !action.evidenceIds.length)
+    .map((action) => ({
+      id: `reg44-action-evidence:${action.id}`,
+      title: action.title,
+      description: `Evidence required: ${action.evidenceRequired.join(', ')}`,
+      regulation: action.regulation,
+      priority: action.priority,
+      youngPersonId: action.youngPersonId,
+      sourceEventIds: action.sourceId ? [action.sourceId] : []
+    }))
+  const reg45Evidence = evidenceResult.data.filter((item) => item.linkedRegulation?.includes('45'))
 
   return (
     <div className="space-y-6">
       <PageHeader
         eyebrow="Regulatory documents"
         title="Reg 44 and Reg 45 document intelligence"
-        description="Regulatory documents feed findings, actions, evidence requirements, chronology links and draft reporting. Extraction is deterministic demo data."
+        description="Regulatory documents feed findings, actions, evidence requirements, chronology links and draft reporting from live OS records."
         action={<Link href="/documents" className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700">Back to documents</Link>}
       />
+      <LiveDataStatus result={documentsResult} />
       <section className="grid gap-4 md:grid-cols-4">
         <StatCard label="Regulatory docs" value={documents.length} />
         <StatCard label="Reg 44 actions" value={reg44Actions.length} href="/actions" />
-        <StatCard label="Reg 44 gaps" value={getEvidenceGapsByRegulation('44').length} href="/evidence" />
-        <StatCard label="Reg 45 evidence" value={getEvidenceByRegulation('45').length} href="/reports" />
+        <StatCard label="Reg 44 evidence required" value={reg44Gaps.length} href="/evidence" />
+        <StatCard label="Reg 45 evidence" value={reg45Evidence.length} href="/reports" />
       </section>
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
         <Card>
@@ -33,7 +48,7 @@ export default function RegulatoryDocumentsPage() {
               <Link key={document.id} href={`/documents/${document.id}`} className="font-black text-slate-950 hover:text-blue-700">{document.title}</Link>,
               document.documentType.replaceAll('_', ' '),
               `${document.periodStart || 'Open'} to ${document.periodEnd || 'Open'}`,
-              getStaffById(document.uploadedBy)?.firstName || document.uploadedBy,
+              document.uploadedBy || 'Not recorded',
               <StatusBadge key="status" value={document.status.replaceAll('_', ' ')} />,
               document.extractedFindings.length
             ])}
@@ -47,11 +62,11 @@ export default function RegulatoryDocumentsPage() {
           </Card>
           <Card>
             <SectionHeader eyebrow="Reg 44 gaps" title="Evidence still required" />
-            <EvidenceGapsPanel gaps={getEvidenceGapsByRegulation('44')} />
+            <EvidenceGapsPanel gaps={reg44Gaps} />
           </Card>
           <Card>
             <SectionHeader eyebrow="Reg 45 evidence" title="Quality of care evidence" />
-            <EvidenceItemsPanel evidence={getEvidenceByRegulation('45')} />
+            <EvidenceItemsPanel evidence={reg45Evidence} />
           </Card>
         </div>
       </section>

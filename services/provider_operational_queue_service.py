@@ -10,6 +10,16 @@ from services.operational_memory_replay_service import operational_memory_replay
 
 QUEUE_CATEGORIES = (
     "safeguarding_escalations",
+    "unresolved_safeguarding",
+    "overdue_review",
+    "child_voice_missing",
+    "external_notification_pending",
+    "unresolved_safeguarding_actions",
+    "active_missing_episodes",
+    "overdue_RHI",
+    "repeated_missing_patterns",
+    "safeguarding_escalation",
+    "unresolved_follow_up",
     "unresolved_lifecycle_states",
     "unresolved_reviews",
     "stale_evidence",
@@ -89,6 +99,25 @@ class ProviderOperationalQueueService:
         items: list[ProviderOperationalQueueItem] = []
         if event.entity_type == "safeguarding" or "safeguarding" in text or status == "escalated":
             items.append(self._item(event, "safeguarding_escalations", status, "Safeguarding escalation needs oversight."))
+        if event.entity_type == "safeguarding" and status not in RESOLVED_STATUSES:
+            items.append(self._item(event, "unresolved_safeguarding", status, "Safeguarding lifecycle remains open."))
+            if not state.get("child_voice"):
+                items.append(self._item(event, "child_voice_missing", status, "Child voice has not yet been recorded."))
+            if state.get("external_notification_required") and not state.get("external_notification_at"):
+                items.append(self._item(event, "external_notification_pending", status, "External safeguarding notification remains pending."))
+            if status == "action_required" and not state.get("linked_action_ids"):
+                items.append(self._item(event, "unresolved_safeguarding_actions", status, "Safeguarding action is required but not yet linked."))
+        if event.entity_type == "missing_episode":
+            if status in {"reported_missing", "police_notified", "return_pending"}:
+                items.append(self._item(event, "active_missing_episodes", status, "Missing episode remains active."))
+            if status == "rhi_required" or status == "RHI_required":
+                items.append(self._item(event, "overdue_RHI", status, "Return-home interview requires review."))
+            if "repeated_pattern" in text or event.transition_type == "repeated_pattern_detected":
+                items.append(self._item(event, "repeated_missing_patterns", status, "Repeated missing pattern requires human review."))
+            if state.get("risk_level") in {"high", "critical"} and not state.get("safeguarding_link_ids"):
+                items.append(self._item(event, "safeguarding_escalation", status, "High-risk missing episode needs safeguarding linkage."))
+            if state.get("follow_up_action_ids") and status not in RESOLVED_STATUSES:
+                items.append(self._item(event, "unresolved_follow_up", status, "Missing episode follow-up remains open."))
         if status not in RESOLVED_STATUSES:
             items.append(self._item(event, "unresolved_lifecycle_states", status, "Lifecycle state is not resolved."))
         if "review" in status or "review" in text:

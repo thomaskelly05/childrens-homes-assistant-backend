@@ -1,10 +1,12 @@
 import Link from 'next/link'
 
+import { LiveDataStatus } from '@/components/indicare/live-data-status'
 import { Card, PageHeader, RecordTimeline, SectionHeader, StatusBadge } from '@/components/indicare/ui'
-import { safeguardingWorkflowTimeline } from '@/lib/operations/shift-data'
+import { getOsChronology } from '@/lib/os-api/chronology'
 
-export default function SafeguardingEscalationsPage() {
-  const timeline = safeguardingWorkflowTimeline()
+export default async function SafeguardingEscalationsPage() {
+  const chronologyResult = await getOsChronology({ sourceType: 'safeguarding' })
+  const timeline = chronologyResult.data
 
   return (
     <div className="space-y-6">
@@ -13,6 +15,7 @@ export default function SafeguardingEscalationsPage() {
         title="Operational safeguarding flow"
         description="Incident to safeguarding consideration, manager review, strategy discussion, actions, evidence, chronology update and oversight sign-off. No automatic safeguarding conclusions are made."
       />
+      <LiveDataStatus result={chronologyResult} />
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
         <Card>
           <SectionHeader eyebrow="Workflow" title="Escalation timeline" />
@@ -20,9 +23,9 @@ export default function SafeguardingEscalationsPage() {
             items={timeline.map((item) => ({
               id: item.id,
               title: item.title,
-              date: item.type,
-              body: item.details,
-              href: item.href
+              date: item.dateTime,
+              body: item.summary,
+              href: item.sourceId ? `/safeguarding/${item.sourceId}` : '/safeguarding'
             }))}
           />
         </Card>
