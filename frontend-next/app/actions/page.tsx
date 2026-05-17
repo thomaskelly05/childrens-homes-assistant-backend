@@ -3,7 +3,6 @@ import { LiveDataStatus } from '@/components/indicare/live-data-status'
 import { Card, PageHeader, SectionHeader, StatCard } from '@/components/indicare/ui'
 import { ManagementOversightPanel } from '@/components/indicare/workflows/management-oversight-panel'
 import { NextBestActions } from '@/components/indicare/workflows/next-best-actions'
-import { getEvidenceGaps } from '@/lib/evidence/selectors'
 import { getOsActions } from '@/lib/os-api/actions'
 import { getOsChronology } from '@/lib/os-api/chronology'
 
@@ -11,7 +10,19 @@ export default async function ActionsPage() {
   const [actionsResult, chronologyResult] = await Promise.all([getOsActions(), getOsChronology()])
   const actions = actionsResult.data
   const openActions = actions.filter((action) => action.status !== 'completed')
-  const gaps = getEvidenceGaps()
+  const gaps = actions
+    .filter((action) => action.evidenceRequired.length && !action.evidenceIds.length)
+    .map((action) => ({
+      id: `action-evidence:${action.id}`,
+      title: action.title,
+      description: `Evidence required: ${action.evidenceRequired.join(', ')}`,
+      regulation: action.regulation,
+      priority: action.priority,
+      youngPersonId: action.youngPersonId,
+      homeId: action.homeId,
+      sourceEventIds: action.sourceId ? [action.sourceId] : [],
+      suggestedAction: 'Attach evidence to the live action record.'
+    }))
   const events = chronologyResult.data
 
   return (
@@ -26,7 +37,7 @@ export default async function ActionsPage() {
         <StatCard label="Actions" value={actions.length} />
         <StatCard label="Open" value={openActions.length} />
         <StatCard label="Overdue" value={actions.filter((action) => action.status === 'overdue').length} />
-        <StatCard label="Evidence gaps" value={gaps.length} href="/evidence" />
+        <StatCard label="Evidence required" value={gaps.length} href="/evidence" />
       </section>
       <Card>
         <SectionHeader eyebrow="Workflow" title="Next best actions" description="Cards link to the action, evidence or chronology workflow that should be opened next." />

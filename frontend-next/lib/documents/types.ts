@@ -1,4 +1,4 @@
-export type HomeDocumentStatus = 'uploaded' | 'processing' | 'review_required' | 'action_plan_open' | 'approved' | 'archived'
+export type HomeDocumentStatus = 'draft' | 'uploaded' | 'processing' | 'review' | 'review_required' | 'returned_for_update' | 'action_plan_open' | 'approved' | 'signed_off' | 'archived'
 
 export type HomeDocumentType =
   | 'reg44_report'

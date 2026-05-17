@@ -1,12 +1,14 @@
 import Link from 'next/link'
 
-import { Card, PageHeader, RecordTimeline, SectionHeader, StatCard, StatusBadge } from '@/components/indicare/ui'
-import { MobileActionBar } from '@/components/operations/operational-cards'
-import { RapidRecordingDrawer } from '@/components/operations/rapid-recording'
-import { currentHandover } from '@/lib/operations/shift-data'
+import { LiveDataStatus } from '@/components/indicare/live-data-status'
+import { Card, EmptyState, PageHeader, RecordTimeline, SectionHeader, StatCard, StatusBadge } from '@/components/indicare/ui'
+import { getCommandCentre } from '@/lib/os-api/platform'
 
-export default function CurrentHandoverPage() {
-  const handover = currentHandover()
+export default async function CurrentHandoverPage() {
+  const commandResult = await getCommandCentre()
+  const command = commandResult.data
+  const chronology = command.chronology.slice(0, 12)
+  const openActions = command.actions.filter((action) => action.status !== 'completed')
 
   return (
     <div className="space-y-6">
@@ -16,67 +18,46 @@ export default function CurrentHandoverPage() {
         description="A timeline-led shift handover with linked incidents, safeguarding workflow state, evidence/actions context and management sign-off readiness."
         action={<Link href="/handover/history" className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700 shadow-sm">History</Link>}
       />
+      <LiveDataStatus result={commandResult} />
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Handover items" value={handover.items.length} detail="Ready for next shift" href="/handover/current" entity={{ entity_type: 'handover' }} />
-        <StatCard label="Follow-up required" value={handover.unresolvedActions.length} detail="Needs explicit assignment" href="/actions" entity={{ entity_type: 'action' }} />
-        <StatCard label="Safeguarding timeline" value={handover.safeguardingAlerts.length} detail="Review required language only" href="/safeguarding" entity={{ entity_type: 'safeguarding_concern' }} />
-        <StatCard label="Sign-off state" value="Pending" detail="Manager oversight remains visible" href="/management" entity={{ entity_type: 'qa_review' }} />
-      </section>
-
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {[
-          ['What do I need to know?', handover.keyEventsToday.slice(0, 3)],
-          ['What changed today?', handover.timeline.slice(0, 3)],
-          ['What requires follow-up?', handover.unresolvedActions.slice(0, 3)],
-          ['Which children require attention?', handover.childrenRequiringAttention.slice(0, 3)]
-        ].map(([title, items]) => (
-          <Card key={String(title)}>
-            <SectionHeader eyebrow="Handover intelligence" title={String(title)} />
-            <div className="space-y-3">
-              {(items as Array<{ id: string; title: string; details: string; href: string }>).map((item) => (
-                <Link key={item.id} href={item.href} className="block rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm transition hover:bg-white hover:shadow-lg">
-                  <strong className="text-slate-950">{item.title}</strong>
-                  <span className="mt-2 block leading-6 text-slate-600">{item.details}</span>
-                </Link>
-              ))}
-            </div>
-          </Card>
-        ))}
+        <StatCard label="Handover items" value={chronology.length} detail="Recent live chronology" href="/handover/current" entity={{ entity_type: 'handover' }} />
+        <StatCard label="Follow-up required" value={openActions.length} detail="Needs explicit assignment" href="/actions" entity={{ entity_type: 'action' }} />
+        <StatCard label="Safeguarding timeline" value={command.safeguarding.length} detail="Review required language only" href="/safeguarding" entity={{ entity_type: 'safeguarding_concern' }} />
+        <StatCard label="Sign-off state" value="-" detail="Awaiting live handover sign-off storage" href="/management" entity={{ entity_type: 'qa_review' }} />
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
         <Card>
           <SectionHeader eyebrow="Timeline" title="Handover timeline" />
           <RecordTimeline
-            items={handover.timeline.map((item) => ({
+            items={chronology.map((item) => ({
               id: item.id,
               title: item.title,
-              date: 'date' in item && typeof item.date === 'string' ? new Date(item.date).toLocaleString('en-GB') : 'Review required',
-              body: item.details,
-              href: item.href
+              date: item.dateTime,
+              body: item.summary,
+              href: item.sourceId ? `/chronology/${item.id}` : '/chronology'
             }))}
           />
         </Card>
 
         <Card>
           <SectionHeader eyebrow="Actions" title="Handover actions" description="Unresolved actions, safeguarding alerts, recording gaps and review items stay visible until assigned or signed off." />
-          <div className="space-y-3">
-            {handover.items.map((item) => (
-              <Link key={item.id} href={item.href} className="block rounded-2xl border border-slate-100 bg-slate-50 p-4 transition hover:bg-white hover:shadow-lg">
+          {openActions.length ? (
+            <div className="space-y-3">
+              {openActions.map((item) => (
+              <Link key={item.id} href={`/actions/${item.id}`} className="block rounded-2xl border border-slate-100 bg-slate-50 p-4 transition hover:bg-white hover:shadow-lg">
                 <div className="flex items-start justify-between gap-3">
                   <strong className="text-sm font-black text-slate-950">{item.title}</strong>
                   <StatusBadge value={item.priority} />
                 </div>
-                <p className="mt-2 text-sm leading-6 text-slate-600">{item.details}</p>
+                <p className="mt-2 text-sm leading-6 text-slate-600">{item.description}</p>
               </Link>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : <EmptyState title="No open handover actions" description="No open actions were returned by the live OS." />}
         </Card>
       </section>
-
-      <MobileActionBar />
-      <RapidRecordingDrawer />
     </div>
   )
 }

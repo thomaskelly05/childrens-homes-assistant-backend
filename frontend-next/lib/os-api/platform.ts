@@ -193,7 +193,7 @@ function buildAttentionCards(data: Omit<CommandCentreData, 'attention'>): Attent
   const highChronology = data.chronology.filter((event) => ['high', 'critical'].includes(event.severity) || event.safeguardingFlags.length)
   const openActions = data.actions.filter((action) => action.status !== 'completed')
   const evidenceGaps = data.evidence.filter((item) => ['draft', 'partial', 'review_required'].includes(item.quality))
-  const documentsForReview = data.documents.filter((document) => ['review_required', 'action_plan_open', 'processing'].includes(document.status))
+  const documentsForReview = data.documents.filter((document) => ['draft', 'review', 'review_required', 'returned_for_update', 'action_plan_open', 'processing'].includes(document.status))
   const childVoiceMissing = data.chronology.filter((event) => {
     const text = `${event.title} ${event.summary} ${event.fullText} ${event.tags.join(' ')}`.toLowerCase()
     return (event.safeguardingFlags.length || event.actionIds.length) && !/child voice|said|told|wishes|wanted/.test(text)
