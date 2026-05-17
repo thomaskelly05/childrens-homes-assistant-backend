@@ -15,7 +15,7 @@ from services.safe_logging import safe_log_dict
 logger = logging.getLogger("indicare.orb.realtime")
 
 OPENAI_REALTIME_SESSION_URL = "https://api.openai.com/v1/realtime/sessions"
-DEFAULT_REALTIME_MODEL = os.getenv("ORB_REALTIME_MODEL") or os.getenv("INDICARE_REALTIME_MODEL", "gpt-4o-realtime-preview")
+DEFAULT_REALTIME_MODEL = os.getenv("ORB_REALTIME_MODEL") or os.getenv("INDICARE_REALTIME_MODEL", "gpt-realtime")
 ALLOWED_SYNTHETIC_VOICES = {"alloy", "ash", "ballad", "coral", "echo", "sage", "shimmer", "verse"}
 
 
@@ -71,7 +71,7 @@ class OrbRealtimeProviderService:
         return time.time() >= self._circuit_open_until
 
     def session_body(self, *, instructions: str, voice: str | None = None) -> dict[str, Any]:
-        return {
+        body: dict[str, Any] = {
             "model": DEFAULT_REALTIME_MODEL,
             "voice": _provider_voice(voice),
             "instructions": instructions,
@@ -87,6 +87,7 @@ class OrbRealtimeProviderService:
             },
             "input_audio_noise_reduction": {"type": "near_field"},
         }
+        return body
 
     async def create_ephemeral_session(
         self,
@@ -131,7 +132,6 @@ class OrbRealtimeProviderService:
                     headers={
                         "Authorization": f"Bearer {api_key}",
                         "Content-Type": "application/json",
-                        "OpenAI-Beta": "realtime=v1",
                     },
                     json=body,
                 )
@@ -167,7 +167,7 @@ class OrbRealtimeProviderService:
         if response.status_code >= 400:
             self._metrics[f"status_{response.status_code}"] += 1
             error_body = _safe_error_body(response)
-            self._last_failure = {"error": "realtime_session_failed", "status": response.status_code, "at": issued_at}
+            self._last_failure = {"error": "realtime_session_failed", "status": response.status_code, "at": issued_at, "body": error_body}
             self._record_failure("realtime_session_failed", retryable=response.status_code in {408, 409, 425, 429, 500, 502, 503, 504}, status=response.status_code)
             logger.warning(
                 "orb_realtime_provider_failed session_id=%s user_id=%s status=%s latency_ms=%s body=%s",
