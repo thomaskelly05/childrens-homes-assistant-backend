@@ -14,7 +14,8 @@ from services.safe_logging import safe_log_dict
 
 logger = logging.getLogger("indicare.orb.realtime")
 
-OPENAI_REALTIME_SESSION_URL = "https://api.openai.com/v1/realtime/sessions"
+OPENAI_REALTIME_CLIENT_SECRET_URL = os.getenv("OPENAI_REALTIME_CLIENT_SECRET_URL", "https://api.openai.com/v1/realtime/client_secrets")
+OPENAI_REALTIME_SESSION_URL = os.getenv("OPENAI_REALTIME_SESSION_URL", "https://api.openai.com/v1/realtime/sessions")
 DEFAULT_REALTIME_MODEL = os.getenv("ORB_REALTIME_MODEL") or os.getenv("INDICARE_REALTIME_MODEL", "gpt-realtime")
 ALLOWED_SYNTHETIC_VOICES = {"alloy", "ash", "ballad", "coral", "echo", "sage", "shimmer", "verse"}
 
@@ -54,6 +55,22 @@ def _safe_error_body(response: httpx.Response) -> dict[str, Any]:
     return safe_log_dict(parsed if isinstance(parsed, dict) else {"message": str(parsed)[:500]})
 
 
+def _client_secret_value(payload: dict[str, Any]) -> str | None:
+    client_secret = payload.get("client_secret")
+    if isinstance(client_secret, dict):
+        value = client_secret.get("value")
+        return str(value) if value else None
+    value = payload.get("value")
+    return str(value) if value else None
+
+
+def _client_secret_expires_at(payload: dict[str, Any]) -> Any:
+    client_secret = payload.get("client_secret")
+    if isinstance(client_secret, dict):
+        return client_secret.get("expires_at")
+    return payload.get("expires_at")
+
+
 class OrbRealtimeProviderService:
     """Server-side OpenAI realtime token issuer and safe provider health tracker."""
 
@@ -71,7 +88,8 @@ class OrbRealtimeProviderService:
         return time.time() >= self._circuit_open_until
 
     def session_body(self, *, instructions: str, voice: str | None = None) -> dict[str, Any]:
-        body: dict[str, Any] = {
+        return {
+            "type": "realtime",
             "model": DEFAULT_REALTIME_MODEL,
             "voice": _provider_voice(voice),
             "instructions": instructions,
@@ -87,7 +105,19 @@ class OrbRealtimeProviderService:
             },
             "input_audio_noise_reduction": {"type": "near_field"},
         }
-        return body
+
+    def client_secret_body(self, *, instructions: str, voice: str | None = None) -> dict[str, Any]:
+        return {"session": self.session_body(instructions=instructions, voice=voice)}
+
+    async def _post_openai(self, client: httpx.AsyncClient, *, url: str, body: dict[str, Any], api_key: str) -> httpx.Response:
+        return await client.post(
+            url,
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            json=body,
+        )
 
     async def create_ephemeral_session(
         self,
@@ -97,7 +127,8 @@ class OrbRealtimeProviderService:
         current_user: dict[str, Any] | None = None,
         orb_session_id: str | None = None,
     ) -> dict[str, Any]:
-        body = self.session_body(instructions=instructions, voice=voice)
+        session_body = self.session_body(instructions=instructions, voice=voice)
+        client_secret_body = self.client_secret_body(instructions=instructions, voice=voice)
         api_key = os.getenv("OPENAI_API_KEY") if self.configured() else None
         issued_at = datetime.now(timezone.utc).isoformat()
         if not api_key:
@@ -109,7 +140,7 @@ class OrbRealtimeProviderService:
                 "env_gated": True,
                 "fallback_text_mode": True,
                 "unavailable_reason": "Realtime audio is not connected yet. Typed Orb remains available.",
-                "request_body": {key: value for key, value in body.items() if key != "instructions"},
+                "request_body": {key: value for key, value in session_body.items() if key != "instructions"},
             }
         if not self.provider_available():
             self._metrics["circuit_open"] += 1
@@ -125,19 +156,17 @@ class OrbRealtimeProviderService:
             }
 
         start = time.perf_counter()
+        response: httpx.Response | None = None
+        endpoint_used = "client_secrets"
         try:
             async with httpx.AsyncClient(timeout=httpx.Timeout(20.0, connect=8.0)) as client:
-                response = await client.post(
-                    OPENAI_REALTIME_SESSION_URL,
-                    headers={
-                        "Authorization": f"Bearer {api_key}",
-                        "Content-Type": "application/json",
-                    },
-                    json=body,
-                )
+                response = await self._post_openai(client, url=OPENAI_REALTIME_CLIENT_SECRET_URL, body=client_secret_body, api_key=api_key)
+                if response.status_code == 404:
+                    endpoint_used = "sessions_fallback"
+                    response = await self._post_openai(client, url=OPENAI_REALTIME_SESSION_URL, body=session_body, api_key=api_key)
         except httpx.TimeoutException as exc:
             self._metrics["timeouts"] += 1
-            self._last_failure = {"error": "provider_timeout", "message": str(exc)[:240], "at": issued_at}
+            self._last_failure = {"error": "provider_timeout", "message": str(exc)[:240], "at": issued_at, "endpoint": endpoint_used}
             self._record_failure("provider_timeout", retryable=True)
             logger.warning("orb_realtime_provider_timeout session_id=%s user_id=%s", orb_session_id, (current_user or {}).get("id"))
             return {
@@ -150,7 +179,7 @@ class OrbRealtimeProviderService:
             }
         except httpx.RequestError as exc:
             self._metrics["request_errors"] += 1
-            self._last_failure = {"error": "provider_unreachable", "message": str(exc)[:240], "at": issued_at}
+            self._last_failure = {"error": "provider_unreachable", "message": str(exc)[:240], "at": issued_at, "endpoint": endpoint_used}
             self._record_failure("provider_unreachable", retryable=True)
             logger.warning("orb_realtime_provider_unreachable session_id=%s user_id=%s", orb_session_id, (current_user or {}).get("id"))
             return {
@@ -164,16 +193,18 @@ class OrbRealtimeProviderService:
 
         latency_ms = round((time.perf_counter() - start) * 1000, 2)
         self._last_latency_ms = latency_ms
-        if response.status_code >= 400:
-            self._metrics[f"status_{response.status_code}"] += 1
-            error_body = _safe_error_body(response)
-            self._last_failure = {"error": "realtime_session_failed", "status": response.status_code, "at": issued_at, "body": error_body}
-            self._record_failure("realtime_session_failed", retryable=response.status_code in {408, 409, 425, 429, 500, 502, 503, 504}, status=response.status_code)
+        if response is None or response.status_code >= 400:
+            status_code = response.status_code if response is not None else 0
+            self._metrics[f"status_{status_code}"] += 1
+            error_body = _safe_error_body(response) if response is not None else {"message": "No provider response"}
+            self._last_failure = {"error": "realtime_session_failed", "status": status_code, "at": issued_at, "body": error_body, "endpoint": endpoint_used}
+            self._record_failure("realtime_session_failed", retryable=status_code in {408, 409, 425, 429, 500, 502, 503, 504}, status=status_code or None)
             logger.warning(
-                "orb_realtime_provider_failed session_id=%s user_id=%s status=%s latency_ms=%s body=%s",
+                "orb_realtime_provider_failed session_id=%s user_id=%s status=%s endpoint=%s latency_ms=%s body=%s",
                 orb_session_id,
                 (current_user or {}).get("id"),
-                response.status_code,
+                status_code,
+                endpoint_used,
                 latency_ms,
                 error_body,
             )
@@ -181,28 +212,40 @@ class OrbRealtimeProviderService:
                 "provider": "openai_realtime",
                 "configured": True,
                 "error": "realtime_session_failed",
-                "status": response.status_code,
+                "status": status_code,
                 "fallback_text_mode": True,
-                "retryable": response.status_code in {408, 409, 425, 429, 500, 502, 503, 504},
+                "retryable": status_code in {408, 409, 425, 429, 500, 502, 503, 504},
                 "unavailable_reason": "Realtime audio could not be started just now. Typed Orb remains available.",
             }
 
-        data = _public_openai_session_payload(response.json())
-        client_secret = data.get("client_secret") if isinstance(data, dict) else None
-        expires_at = client_secret.get("expires_at") if isinstance(client_secret, dict) else None
+        raw = response.json()
+        data = _public_openai_session_payload(raw if isinstance(raw, dict) else {})
+        secret_value = _client_secret_value(data)
+        expires_at = _client_secret_expires_at(data)
+        wrapped_session = data
+        if endpoint_used == "client_secrets":
+            wrapped_session = {
+                "id": data.get("id") or f"orb_realtime_{int(time.time())}",
+                "object": data.get("object") or "realtime.client_secret",
+                "model": DEFAULT_REALTIME_MODEL,
+                "voice": session_body["voice"],
+                "client_secret": {"value": secret_value, "expires_at": expires_at},
+            }
         self._metrics["sessions_created"] += 1
+        self._metrics[f"endpoint_{endpoint_used}"] += 1
         self._consecutive_failures = 0
         orb_observability_service.record_provider_success(latency_ms)
         return {
             "provider": "openai_realtime",
             "configured": True,
-            "session": data,
+            "session": wrapped_session,
             "model": DEFAULT_REALTIME_MODEL,
-            "voice": body["voice"],
+            "voice": session_body["voice"],
             "issued_at": issued_at,
             "expires_at": expires_at,
             "refresh_recommended_seconds": 55,
             "provider_latency_ms": latency_ms,
+            "provider_endpoint": endpoint_used,
             "fallback_text_mode": False,
         }
 
