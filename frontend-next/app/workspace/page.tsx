@@ -3,7 +3,8 @@ import Link from 'next/link'
 
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
 import { EmptyState, RiskBadge, StatusBadge } from '@/components/indicare/ui'
-import { getWorkspaceBundle, text } from '@/lib/os-api/bundles'
+import { text } from '@/lib/os-api/bundles'
+import { getServerWorkspaceBundle } from '@/lib/os-api/server-bundles'
 
 function initials(name: string) {
   return name
@@ -20,17 +21,17 @@ function childName(child: Record<string, any>) {
 }
 
 function childPhoto(child: Record<string, any>) {
-  return text(child, ['photo_url', 'photoUrl', 'profile_photo_url', 'image_url', 'avatar_url'], '')
+  return text(child, ['photo_url', 'photoUrl', 'profile_photo_path', 'profilePhotoPath', 'profile_photo_url', 'image_url', 'avatar_url'], '')
 }
 
 export default async function WorkspacePage() {
-  const result = await getWorkspaceBundle()
+  const result = await getServerWorkspaceBundle()
   const bundle = result.data
   const identity = bundle.identity || {}
   const home = bundle.home || {}
   const displayName = text(identity, ['preferred_name', 'display_name', 'email'], 'there')
   const homeName = text(home, ['name', 'home_name', 'title'], identity.home_id ? `Home ${identity.home_id}` : 'your home')
-  const children = [...bundle.children.priority, ...bundle.children.favourites]
+  const children = [...bundle.children.priority, ...bundle.children.favourites, ...bundle.children.visible]
   const uniqueChildren = children.filter((child, index, arr) => arr.findIndex((other) => String(other.id) === String(child.id)) === index)
 
   return (
@@ -57,8 +58,8 @@ export default async function WorkspacePage() {
           {uniqueChildren.map((child) => {
             const name = childName(child)
             const photo = childPhoto(child)
-            const risk = text(child, ['risk_level', 'riskLevel', 'current_risk_level'], 'medium')
-            const status = text(child, ['placement_status', 'status'], 'active')
+            const risk = text(child, ['summary_risk_level', 'risk_level', 'riskLevel', 'current_risk_level'], 'medium')
+            const status = text(child, ['placement_status', 'placementStatus', 'status'], 'active')
             const childId = String(child.id)
             return (
               <Link key={childId} href={`/young-people/${encodeURIComponent(childId)}`} className="group overflow-hidden rounded-[34px] bg-white shadow-lg shadow-slate-200/70 ring-1 ring-white transition duration-200 hover:-translate-y-1 hover:shadow-2xl hover:shadow-blue-200/50">
@@ -87,7 +88,7 @@ export default async function WorkspacePage() {
 
         {!uniqueChildren.length ? (
           <div className="mt-8 rounded-[32px] bg-white p-8 shadow-sm ring-1 ring-slate-100">
-            <EmptyState title="No young people are available yet" description="Once live child records are assigned or favourited, professional selector cards will appear here after login." />
+            <EmptyState title="No young people are available yet" description="The server-authenticated workspace bundle returned no child records for your current schema scope." />
           </div>
         ) : null}
       </section>
