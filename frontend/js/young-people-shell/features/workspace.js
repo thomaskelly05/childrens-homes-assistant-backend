@@ -32,11 +32,11 @@ const WORKSPACE_RECORD_TYPE_MAP = Object.freeze({
   education_record: "education",
   family_contact: "family",
   communication: "chronology",
-  document: "chronology",
-  statutory_document: "chronology",
+  document: "documents",
+  statutory_document: "documents",
   task: "chronology",
-  safeguarding_record: "chronology",
-  missing_episode: "chronology",
+  safeguarding_record: "safeguarding",
+  missing_episode: "safeguarding",
   achievement_record: "education",
   keywork: "chronology",
   medication_record: "health",
@@ -117,6 +117,13 @@ function getPrimaryDate(item = {}) {
     item.contact_datetime ||
     item.session_date ||
     item.handover_datetime ||
+    item.handover_date ||
+    item.missing_from ||
+    item.returned_at ||
+    item.issue_date ||
+    item.expiry_date ||
+    item.administered_time ||
+    item.scheduled_time ||
     item.due_date ||
     item.review_date ||
     item.created_at ||
@@ -135,6 +142,8 @@ function getRecordTitle(item = {}) {
     item.category ||
     item.incident_type ||
     item.appointment_type ||
+    item.medication_name ||
+    item.document_type ||
     item.health_area ||
     item.education_area ||
     item.topic ||
@@ -145,15 +154,20 @@ function getRecordTitle(item = {}) {
 function getRecordSummary(item = {}) {
   return (
     item.summary ||
+    item.summary_text ||
     item.description ||
+    item.concern_summary ||
+    item.circumstances ||
+    item.narrative ||
     item.note ||
     item.details ||
-    item.narrative ||
     item.body ||
     item.outcome ||
     item.presentation ||
     item.behaviour_update ||
     item.actions_required ||
+    item.actions_taken ||
+    item.follow_up_actions ||
     ""
   );
 }
@@ -544,6 +558,8 @@ function renderWorkspace({
   recent,
   upcoming,
   urgent,
+  safeguarding,
+  documents,
   searchActive = false,
   visibilitySignals = [],
   insightStory = "",
@@ -584,6 +600,14 @@ function renderWorkspace({
           <span class="overview-stat-label">Upcoming</span>
           <strong class="overview-stat-value">${upcoming.length}</strong>
         </article>
+        <article class="overview-stat-card">
+          <span class="overview-stat-label">Safeguarding</span>
+          <strong class="overview-stat-value">${safeguarding.length}</strong>
+        </article>
+        <article class="overview-stat-card">
+          <span class="overview-stat-label">Documents</span>
+          <strong class="overview-stat-value">${documents.length}</strong>
+        </article>
       </div>
 
       <div class="overview-grid">
@@ -596,6 +620,16 @@ function renderWorkspace({
           <section class="overview-section-card">
             <div class="overview-section-head"><h3>Recent</h3></div>
             ${renderRows(recent)}
+          </section>
+
+          <section class="overview-section-card">
+            <div class="overview-section-head"><h3>Safeguarding and missing episodes</h3></div>
+            ${renderRows(safeguarding)}
+          </section>
+
+          <section class="overview-section-card">
+            <div class="overview-section-head"><h3>Documents and statutory evidence</h3></div>
+            ${renderRows(documents)}
           </section>
 
           <section class="overview-section-card">
@@ -698,6 +732,10 @@ async function fetchAll(id, search = {}) {
   const shouldFetchEducation =
     !recordTypeBucket || recordTypeBucket === "education";
   const shouldFetchFamily = !recordTypeBucket || recordTypeBucket === "family";
+  const shouldFetchSafeguarding =
+    !recordTypeBucket || recordTypeBucket === "safeguarding";
+  const shouldFetchDocuments =
+    !recordTypeBucket || recordTypeBucket === "documents";
 
   const ids = { youngPersonId: id };
 
@@ -711,9 +749,14 @@ async function fetchAll(id, search = {}) {
     incidents,
     keywork,
     health,
+    medication,
     education,
     family,
     handoverRecords,
+    safeguardingRecords,
+    missingEpisodes,
+    documents,
+    statutoryDocuments,
   ] = await Promise.all([
     shouldFetchPlans ? safeList("support_plan", ids) : [],
     shouldFetchPlans ? safeList("risk", ids) : [],
@@ -724,9 +767,14 @@ async function fetchAll(id, search = {}) {
     shouldFetchChronology ? safeList("incident", ids) : [],
     shouldFetchChronology ? safeList("keywork", ids) : [],
     shouldFetchHealth ? safeList("health_record", ids) : [],
+    shouldFetchHealth ? safeList("medication_record", ids) : [],
     shouldFetchEducation ? safeList("education_record", ids) : [],
     shouldFetchFamily ? safeList("family_contact", ids) : [],
     shouldFetchChronology ? safeList("handover_record", ids) : [],
+    shouldFetchSafeguarding ? safeList("safeguarding_record", ids) : [],
+    shouldFetchSafeguarding ? safeList("missing_episode", ids) : [],
+    shouldFetchDocuments ? safeList("document", ids) : [],
+    shouldFetchDocuments ? safeList("statutory_document", ids) : [],
   ]);
 
   return {
@@ -740,9 +788,11 @@ async function fetchAll(id, search = {}) {
     ]),
     tasks: normaliseRecords(tasks),
     daily_notes: normaliseRecords(dailyNotes),
-    health: normaliseRecords(health),
+    health: normaliseRecords([...health, ...medication]),
     education: normaliseRecords(education),
     family: normaliseRecords(family),
+    safeguarding: normaliseRecords([...safeguardingRecords, ...missingEpisodes]),
+    documents: normaliseRecords([...documents, ...statutoryDocuments]),
   };
 }
 
@@ -767,6 +817,8 @@ function applySearch(data, search = {}) {
     health: filterCollection(data.health, search),
     education: filterCollection(data.education, search),
     family: filterCollection(data.family, search),
+    safeguarding: filterCollection(data.safeguarding, search),
+    documents: filterCollection(data.documents, search),
   };
 }
 
@@ -779,6 +831,8 @@ function buildTodayItems(data) {
       ...data.health,
       ...data.education,
       ...data.family,
+      ...data.safeguarding,
+      ...data.documents,
     ].filter((item) => isToday(getPrimaryDate(item)))
   );
 }
@@ -792,6 +846,8 @@ function buildRecentItems(data) {
       ...data.health,
       ...data.education,
       ...data.family,
+      ...data.safeguarding,
+      ...data.documents,
       ...data.plans,
     ])
   ).slice(0, 10);
@@ -799,12 +855,12 @@ function buildRecentItems(data) {
 
 function buildUpcomingItems(data) {
   return dedupeById(
-    [...data.appointments, ...data.tasks]
+    [...data.appointments, ...data.tasks, ...data.documents]
       .filter((item) => {
         const status = getStatus(item);
 
         return (
-          !["completed", "closed", "done", "approved"].includes(status) &&
+          !["completed", "closed", "done", "approved", "archived"].includes(status) &&
           isFuture(getPrimaryDate(item))
         );
       })
@@ -826,6 +882,17 @@ function buildUrgentItems(data) {
     ["high", "critical"].includes(getSeverity(item))
   );
 
+  const urgentSafeguarding = data.safeguarding.filter((item) =>
+    ["high", "critical"].includes(getSeverity(item)) ||
+    ["reported_missing", "police_notified", "submitted", "returned"].includes(
+      getStatus(item)
+    )
+  );
+
+  const urgentDocuments = data.documents.filter((item) =>
+    ["expired", "amendment_requested", "returned"].includes(getStatus(item))
+  );
+
   const urgentTasks = data.tasks.filter((item) => {
     const status = getStatus(item);
     const severity = getSeverity(item);
@@ -833,10 +900,13 @@ function buildUrgentItems(data) {
     return status === "overdue" || ["high", "critical"].includes(severity);
   });
 
-  return dedupeById([...urgentPlans, ...urgentChronology, ...urgentTasks]).slice(
-    0,
-    10
-  );
+  return dedupeById([
+    ...urgentPlans,
+    ...urgentChronology,
+    ...urgentSafeguarding,
+    ...urgentDocuments,
+    ...urgentTasks,
+  ]).slice(0, 10);
 }
 
 function bindWorkspaceRowEvents(records = []) {
@@ -928,12 +998,20 @@ export async function loadCurrentView(options = {}) {
     const recent = buildRecentItems(filteredData);
     const upcoming = buildUpcomingItems(filteredData);
     const urgent = buildUrgentItems(filteredData);
+    const safeguarding = sortNormalisedRecordsNewestFirst(
+      filteredData.safeguarding || []
+    ).slice(0, 8);
+    const documents = sortNormalisedRecordsNewestFirst(
+      filteredData.documents || []
+    ).slice(0, 8);
 
     const allRenderedRecords = dedupeById([
       ...today,
       ...recent,
       ...upcoming,
       ...urgent,
+      ...safeguarding,
+      ...documents,
     ]);
 
     const visibilitySignals = makeArray(visibility?.signals || []);
@@ -952,6 +1030,8 @@ export async function loadCurrentView(options = {}) {
       recent,
       upcoming,
       urgent,
+      safeguarding,
+      documents,
       searchActive,
       visibilitySignals,
       insightStory: visibility?.insight_story || "",
