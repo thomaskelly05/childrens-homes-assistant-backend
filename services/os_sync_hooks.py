@@ -23,7 +23,11 @@ SUPPORTED_SYNC_TABLES = {
     "young_person_education_profile",
     "family_contact_records",
     "young_person_contacts",
+    "missing_episodes",
+    "safeguarding_records",
+    "handover_records",
     "documents",
+    "statutory_documents",
     "child_documents",
     "uploaded_documents",
     "generated_documents",
@@ -37,9 +41,8 @@ SUPPORTED_SYNC_TABLES = {
 
 
 def sync_after_save(
-    *,
-    source_table: str,
-    record: dict[str, Any] | None,
+    source_table: str | None = None,
+    record: dict[str, Any] | None = None,
     recorded_by_name: str | None = None,
 ) -> bool:
     """
@@ -47,6 +50,10 @@ def sync_after_save(
 
     Returns True if a supported record was dispatched.
     Returns False if ignored or if sync failed.
+
+    Accepts both historical calling styles:
+    - sync_after_save(source_table="daily_notes", record=row)
+    - sync_after_save("daily_notes", row)
     """
 
     if not source_table or not isinstance(record, dict) or not record:
