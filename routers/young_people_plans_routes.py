@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from auth.current_user import get_current_user
 from db.connection import get_db
 from services.record_versioning_service import record_versioning_service
+from services.workflow_response import gold_standard_response, sync_not_observed
 from services.young_people_linking_service import YoungPeopleLinkingService
 from services.young_person_plans_service import YoungPersonPlansService
 
@@ -67,6 +68,31 @@ def _load_and_check_plan(conn, plan_id: int, current_user: dict[str, Any]) -> di
     row = YoungPersonPlansService.fetch_plan_by_id(conn, plan_id)
     _assert_home_access(current_user, _safe_int(row.get("home_id")))
     return row
+
+
+def _plan_gold_response(
+    conn,
+    *,
+    plan_id: int,
+    result: dict[str, Any] | None = None,
+    workflow: Any | None = None,
+    versioned: Any | None = None,
+    message: str | None = None,
+) -> dict[str, Any]:
+    result = result or {}
+    item = YoungPersonPlansService.get_support_plan(conn, plan_id)
+    workflow_payload = workflow if workflow is not None else result.get("workflow") or {}
+    sync_payload = result.get("sync") or sync_not_observed()
+    return gold_standard_response(
+        id=plan_id,
+        item=item,
+        message=message or result.get("message"),
+        workflow=workflow_payload,
+        sync=sync_payload,
+        versioned=versioned if versioned is not None else result.get("versioned"),
+        support_plan=item,
+        legacy=result,
+    )
 
 
 def _link_support_plan_update(conn, *, plan_id: int, current_user: dict[str, Any]) -> dict[str, Any]:
@@ -200,7 +226,11 @@ def get_support_plan(plan_id: int, conn=Depends(get_db), current_user=Depends(ge
 def create_support_plan(young_person_id: int, payload: SupportPlanCreatePayload, conn=Depends(get_db), current_user=Depends(get_current_user)):
     _assert_can_edit(current_user)
     _load_and_check_young_person(conn, young_person_id, current_user)
-    return YoungPersonPlansService.create_support_plan(conn, young_person_id=young_person_id, payload=payload.model_dump(exclude_none=True, by_alias=False), actor_user_id=_safe_int(current_user.get("user_id")), linking_service=YoungPeopleLinkingService)
+    result = YoungPersonPlansService.create_support_plan(conn, young_person_id=young_person_id, payload=payload.model_dump(exclude_none=True, by_alias=False), actor_user_id=_safe_int(current_user.get("user_id")), linking_service=YoungPeopleLinkingService)
+    plan_id = _safe_int(result.get("id") if isinstance(result, dict) else None)
+    if not plan_id:
+        return result
+    return _plan_gold_response(conn, plan_id=plan_id, result=result, message="Support plan created")
 
 
 @router.patch("/plans/{plan_id}")
@@ -220,7 +250,7 @@ def update_support_plan(plan_id: int, payload: SupportPlanUpdatePayload, conn=De
         change_reason="support_plan_updated",
     )
     workflow = _link_support_plan_update(conn, plan_id=plan_id, current_user=current_user)
-    return {**result, "workflow": workflow, "versioned": versioned}
+    return _plan_gold_response(conn, plan_id=plan_id, result=result, workflow=workflow, versioned=versioned, message="Support plan updated")
 
 
 @router.post("/plans/{plan_id}/submit")
@@ -228,7 +258,8 @@ def update_support_plan(plan_id: int, payload: SupportPlanUpdatePayload, conn=De
 def submit_support_plan(plan_id: int, conn=Depends(get_db), current_user=Depends(get_current_user)):
     _assert_can_edit(current_user)
     _load_and_check_plan(conn, plan_id, current_user)
-    return YoungPersonPlansService.submit_support_plan(conn, plan_id=plan_id, actor_user_id=_safe_int(current_user.get("user_id")), linking_service=YoungPeopleLinkingService)
+    result = YoungPersonPlansService.submit_support_plan(conn, plan_id=plan_id, actor_user_id=_safe_int(current_user.get("user_id")), linking_service=YoungPeopleLinkingService)
+    return _plan_gold_response(conn, plan_id=plan_id, result=result, message="Support plan submitted")
 
 
 @router.post("/plans/{plan_id}/approve")
@@ -236,7 +267,8 @@ def submit_support_plan(plan_id: int, conn=Depends(get_db), current_user=Depends
 def approve_support_plan(plan_id: int, payload: ReviewDecisionPayload, conn=Depends(get_db), current_user=Depends(get_current_user)):
     _assert_can_review(current_user)
     _load_and_check_plan(conn, plan_id, current_user)
-    return YoungPersonPlansService.approve_support_plan(conn, plan_id=plan_id, approved_by=_safe_int(current_user.get("user_id")), review_note=payload.review_note, linking_service=YoungPeopleLinkingService)
+    result = YoungPersonPlansService.approve_support_plan(conn, plan_id=plan_id, approved_by=_safe_int(current_user.get("user_id")), review_note=payload.review_note, linking_service=YoungPeopleLinkingService)
+    return _plan_gold_response(conn, plan_id=plan_id, result=result, message="Support plan approved")
 
 
 @router.post("/plans/{plan_id}/return")
@@ -244,7 +276,8 @@ def approve_support_plan(plan_id: int, payload: ReviewDecisionPayload, conn=Depe
 def return_support_plan(plan_id: int, payload: ReviewDecisionPayload, conn=Depends(get_db), current_user=Depends(get_current_user)):
     _assert_can_review(current_user)
     _load_and_check_plan(conn, plan_id, current_user)
-    return YoungPersonPlansService.return_support_plan(conn, plan_id=plan_id, actor_user_id=_safe_int(current_user.get("user_id")), review_note=payload.review_note, linking_service=YoungPeopleLinkingService)
+    result = YoungPersonPlansService.return_support_plan(conn, plan_id=plan_id, actor_user_id=_safe_int(current_user.get("user_id")), review_note=payload.review_note, linking_service=YoungPeopleLinkingService)
+    return _plan_gold_response(conn, plan_id=plan_id, result=result, message="Support plan returned")
 
 
 @router.post("/plans/{plan_id}/archive")
@@ -252,7 +285,8 @@ def return_support_plan(plan_id: int, payload: ReviewDecisionPayload, conn=Depen
 def archive_support_plan(plan_id: int, conn=Depends(get_db), current_user=Depends(get_current_user)):
     _assert_can_review(current_user)
     _load_and_check_plan(conn, plan_id, current_user)
-    return YoungPersonPlansService.archive_support_plan(conn, plan_id=plan_id, actor_user_id=_safe_int(current_user.get("user_id")), linking_service=YoungPeopleLinkingService)
+    result = YoungPersonPlansService.archive_support_plan(conn, plan_id=plan_id, actor_user_id=_safe_int(current_user.get("user_id")), linking_service=YoungPeopleLinkingService)
+    return _plan_gold_response(conn, plan_id=plan_id, result=result, message="Support plan archived")
 
 
 @router.get("/plans/{plan_id}/export")
