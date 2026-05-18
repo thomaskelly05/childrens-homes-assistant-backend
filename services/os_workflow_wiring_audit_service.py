@@ -33,19 +33,19 @@ class WorkflowContract:
 WORKFLOW_CONTRACTS: tuple[WorkflowContract, ...] = (
     WorkflowContract("daily_note", "Daily note", "daily_notes", "daily_notes", "daily-notes", "/young-people/{young_person_id}/daily-notes", "/young-people/{young_person_id}/daily-notes", "/young-people/daily-notes/{daily_note_id}", "/young-people/daily-notes/{daily_note_id}", "/young-people/daily-notes/{daily_note_id}/archive", "/young-people/{young_person_id}/daily-notes"),
     WorkflowContract("incident", "Incident", "incidents", "incidents", "incidents", "/young-people/{young_person_id}/incidents", "/young-people/{young_person_id}/incidents", "/young-people/incidents/{incident_id}", "/young-people/incidents/{incident_id}", "/young-people/incidents/{incident_id}/archive", "/young-people/{young_person_id}/incidents"),
-    WorkflowContract("safeguarding_record", "Safeguarding record", "safeguarding_records", "safeguarding_records", "safeguarding", "/young-people/{young_person_id}/safeguarding", "/young-people/{young_person_id}/safeguarding", "/young-people/safeguarding/{record_id}", "/young-people/safeguarding/{record_id}", assistant_route="/young-people/{young_person_id}/safeguarding"),
-    WorkflowContract("missing_episode", "Missing episode", "missing_episodes", "missing_episodes", "safeguarding", "/young-people/{young_person_id}/missing-episodes", "/young-people/{young_person_id}/missing-episodes", "/young-people/missing-episodes/{record_id}", "/young-people/missing-episodes/{record_id}", assistant_route="/young-people/{young_person_id}/missing-episodes"),
-    WorkflowContract("risk", "Risk assessment", "risk_assessments", "risk_assessments", "risk", "/young-people/{young_person_id}/risk", "/young-people/{young_person_id}/risk", "/young-people/risk/{record_id}", "/young-people/risk/{record_id}", assistant_route="/young-people/{young_person_id}/risk"),
-    WorkflowContract("support_plan", "Support plan", "support_plans", "support_plans", "plans", "/young-people/{young_person_id}/plans", "/young-people/{young_person_id}/plans", "/young-people/plans/{record_id}", "/young-people/plans/{record_id}", assistant_route="/young-people/{young_person_id}/plans"),
-    WorkflowContract("health_record", "Health record", "health_records", "health_records", "health", "/young-people/{young_person_id}/health", "/young-people/{young_person_id}/health-records", "/young-people/health-records/{record_id}", "/young-people/health-records/{record_id}", assistant_route="/young-people/{young_person_id}/health"),
-    WorkflowContract("medication_record", "Medication record", "medication_records", "medication_records", "medication", "/young-people/{young_person_id}/medication-records", "/young-people/{young_person_id}/medication-records", "/young-people/medication-records/{record_id}", "/young-people/medication-records/{record_id}", assistant_route="/young-people/{young_person_id}/medication-records"),
-    WorkflowContract("education_record", "Education record", "education_records", "education_records", "education", "/young-people/{young_person_id}/education", "/young-people/{young_person_id}/education-records", "/young-people/education-records/{record_id}", "/young-people/education-records/{record_id}", assistant_route="/young-people/{young_person_id}/education"),
-    WorkflowContract("family_contact", "Family contact", "family_contact_records", "family_contact_records", "family", "/young-people/{young_person_id}/family", "/young-people/{young_person_id}/family/records", "/young-people/family/records/{record_id}", "/young-people/family/records/{record_id}", assistant_route="/young-people/{young_person_id}/family"),
-    WorkflowContract("keywork", "Key work session", "keywork_sessions", "keywork_sessions", "keywork", "/young-people/{young_person_id}/keywork", "/young-people/{young_person_id}/keywork", "/young-people/keywork/{record_id}", "/young-people/keywork/{record_id}", assistant_route="/young-people/{young_person_id}/keywork"),
-    WorkflowContract("appointment", "Appointment", "young_person_appointments", "young_person_appointments", "appointments", "/young-people/{young_person_id}/appointments", "/young-people/{young_person_id}/appointments", "/young-people/appointments/{record_id}", "/young-people/appointments/{record_id}", assistant_route="/young-people/{young_person_id}/appointments"),
-    WorkflowContract("document", "Document", "documents", "documents", "documents", "/young-people/{young_person_id}/documents", "/young-people/{young_person_id}/documents", "/young-people/documents/{record_id}", "/young-people/documents/{record_id}", assistant_route="/young-people/{young_person_id}/documents", timeline_visible=False),
-    WorkflowContract("statutory_document", "Statutory document", "statutory_documents", "statutory_documents", "documents", "/young-people/{young_person_id}/statutory-documents", "/young-people/{young_person_id}/statutory-documents", "/young-people/statutory-documents/{record_id}", "/young-people/statutory-documents/{record_id}", assistant_route="/young-people/{young_person_id}/statutory-documents", timeline_visible=False),
-    WorkflowContract("handover_record", "Handover record", "handover_records", "handover_records", "handover", "/young-people/{young_person_id}/handover", "/young-people/{young_person_id}/handover", "/young-people/handover/{record_id}", "/young-people/handover/{record_id}", assistant_route="/young-people/{young_person_id}/handover"),
+    WorkflowContract("safeguarding_record", "Safeguarding record", "safeguarding_records", "safeguarding_records", "safeguarding", "/young-people/{young_person_id}/safeguarding", "/young-people/{young_person_id}/safeguarding", "/young-people/safeguarding/{record_id}", "/young-people/safeguarding/{record_id}", "/young-people/safeguarding/{record_id}/archive", "/young-people/{young_person_id}/safeguarding"),
+    WorkflowContract("missing_episode", "Missing episode", "missing_episodes", "missing_episodes", "safeguarding", "/young-people/{young_person_id}/missing-episodes", "/young-people/{young_person_id}/missing-episodes", "/young-people/missing-episodes/{record_id}", "/young-people/missing-episodes/{record_id}", "/young-people/missing-episodes/{record_id}/archive", "/young-people/{young_person_id}/missing-episodes"),
+    WorkflowContract("risk", "Risk assessment", "risk_assessments", "risk_assessments", "risk", "/young-people/{young_person_id}/risk", "/young-people/{young_person_id}/risk", "/young-people/risk/{record_id}", "/young-people/risk/{record_id}", "/young-people/risk/{record_id}/archive", "/young-people/{young_person_id}/risk"),
+    WorkflowContract("support_plan", "Support plan", "support_plans", "support_plans", "plans", "/young-people/{young_person_id}/plans", "/young-people/{young_person_id}/plans", "/young-people/plans/{record_id}", "/young-people/plans/{record_id}", "/young-people/plans/{record_id}/archive", "/young-people/{young_person_id}/plans"),
+    WorkflowContract("health_record", "Health record", "health_records", "health_records", "health", "/young-people/{young_person_id}/health", "/young-people/{young_person_id}/health-records", "/young-people/health-records/{record_id}", "/young-people/health-records/{record_id}", "/young-people/health-records/{record_id}/archive", "/young-people/{young_person_id}/health"),
+    WorkflowContract("medication_record", "Medication record", "medication_records", "medication_records", "medication", "/young-people/{young_person_id}/medication-records", "/young-people/{young_person_id}/medication-records", "/young-people/medication-records/{record_id}", "/young-people/medication-records/{record_id}", "/young-people/medication-records/{record_id}/archive", "/young-people/{young_person_id}/medication-records"),
+    WorkflowContract("education_record", "Education record", "education_records", "education_records", "education", "/young-people/{young_person_id}/education", "/young-people/{young_person_id}/education-records", "/young-people/education-records/{record_id}", "/young-people/education-records/{record_id}", "/young-people/education-records/{record_id}/archive", "/young-people/{young_person_id}/education"),
+    WorkflowContract("family_contact", "Family contact", "family_contact_records", "family_contact_records", "family", "/young-people/{young_person_id}/family", "/young-people/{young_person_id}/family/records", "/young-people/family/records/{record_id}", "/young-people/family/records/{record_id}", "/young-people/family/records/{record_id}/archive", "/young-people/{young_person_id}/family"),
+    WorkflowContract("keywork", "Key work session", "keywork_sessions", "keywork_sessions", "keywork", "/young-people/{young_person_id}/keywork", "/young-people/{young_person_id}/keywork", "/young-people/keywork/{record_id}", "/young-people/keywork/{record_id}", "/young-people/keywork/{record_id}/archive", "/young-people/{young_person_id}/keywork"),
+    WorkflowContract("appointment", "Appointment", "young_person_appointments", "young_person_appointments", "appointments", "/young-people/{young_person_id}/appointments", "/young-people/{young_person_id}/appointments", "/young-people/appointments/{record_id}", "/young-people/appointments/{record_id}", "/young-people/appointments/{record_id}/archive", "/young-people/{young_person_id}/appointments"),
+    WorkflowContract("document", "Document", "documents", "documents", "documents", "/young-people/{young_person_id}/documents", "/young-people/{young_person_id}/documents", "/young-people/documents/{record_id}", "/young-people/documents/{record_id}", "/young-people/documents/{record_id}/archive", "/young-people/{young_person_id}/documents", timeline_visible=False),
+    WorkflowContract("statutory_document", "Statutory document", "statutory_documents", "statutory_documents", "documents", "/young-people/{young_person_id}/statutory-documents", "/young-people/{young_person_id}/statutory-documents", "/young-people/statutory-documents/{record_id}", "/young-people/statutory-documents/{record_id}", "/young-people/statutory-documents/{record_id}/archive", "/young-people/{young_person_id}/statutory-documents", timeline_visible=False),
+    WorkflowContract("handover_record", "Handover record", "handover_records", "handover_records", "handover", "/young-people/{young_person_id}/handover", "/young-people/{young_person_id}/handover", "/young-people/handover/{record_id}", "/young-people/handover/{record_id}", "/young-people/handover/{record_id}/archive", "/young-people/{young_person_id}/handover"),
 )
 
 
@@ -92,9 +92,7 @@ def build_table_index(cursor: Any) -> dict[str, dict[str, Any]]:
 
 def workflow_status(checks: dict[str, bool]) -> str:
     if checks["table"] and checks["list_route"] and checks["create_route"] and checks["outer_sync_supported"]:
-        if checks["child_sync_supported"] or not checks["timeline_visible"]:
-            return "wired"
-        return "partially_wired"
+        return "wired"
     if any(checks.values()):
         return "needs_wiring"
     return "missing"
@@ -117,7 +115,7 @@ def audit_workflow_contracts(*, app: FastAPI, cursor: Any) -> dict[str, Any]:
             "archive_route": route_exists(route_index, contract.archive_route, "POST") if contract.archive_route else False,
             "assistant_route": route_exists(route_index, contract.assistant_route, "GET") if contract.assistant_route else False,
             "outer_sync_supported": contract.sync_table in SUPPORTED_SYNC_TABLES,
-            "child_sync_supported": contract.sync_table in child_sync_tables,
+            "specialist_child_sync_supported": contract.sync_table in child_sync_tables,
             "timeline_visible": contract.timeline_visible,
         }
         workflows[contract.record_type] = {
@@ -135,15 +133,15 @@ def audit_workflow_contracts(*, app: FastAPI, cursor: Any) -> dict[str, Any]:
             },
             "sync": {
                 "source_table": contract.sync_table,
-                "outer_hook_supported": checks["outer_sync_supported"],
-                "child_sync_supported": checks["child_sync_supported"],
+                "runtime_os_sync_supported": checks["outer_sync_supported"],
+                "specialist_child_sync_supported": checks["specialist_child_sync_supported"],
                 "timeline_visible": contract.timeline_visible,
                 "assistant_readable": contract.assistant_readable,
                 "ofsted_relevant": contract.ofsted_relevant,
             },
             "checks": checks,
             "status": workflow_status(checks),
-            "missing": [key for key, ok in checks.items() if not ok and key != "archive_route"],
+            "missing": [key for key, ok in checks.items() if not ok and key not in {"archive_route", "specialist_child_sync_supported"}],
         }
 
     status_counts: dict[str, int] = {}
