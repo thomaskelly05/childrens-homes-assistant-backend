@@ -1,6 +1,3 @@
-import { cookies } from 'next/headers'
-import { createHash } from 'crypto'
-
 import type { OsApiResult, OsEnvelope } from './types'
 
 const API_BASE = (
@@ -22,6 +19,7 @@ type CacheEntry<T> = {
 const osGetCache = new Map<string, CacheEntry<unknown>>()
 
 function resolveOsUrl(path: string) {
+  if (typeof window !== 'undefined') return path.startsWith('/') ? path : `/${path}`
   return `${API_BASE}${path.startsWith('/') ? path : `/${path}`}`
 }
 
@@ -42,9 +40,8 @@ function emptyData<T>(example: T): T {
   return undefined as T
 }
 
-function cacheKey(path: string, cookieHeader: string) {
-  const cookieHash = createHash('sha256').update(cookieHeader || 'anonymous').digest('hex').slice(0, 16)
-  return `${cookieHash}:${path}`
+function cacheKey(path: string) {
+  return `shared:${path}`
 }
 
 function pruneCache() {
@@ -69,11 +66,12 @@ async function fetchWithTimeout(url: string, init: RequestInit) {
   }
 }
 
-async function doOsGet<T>(path: string, fallback: T, cookieHeader: string): Promise<OsApiResult<T>> {
+async function doOsGet<T>(path: string, fallback: T): Promise<OsApiResult<T>> {
   try {
     const response = await fetchWithTimeout(resolveOsUrl(path), {
       cache: 'no-store',
-      headers: cookieHeader ? { cookie: cookieHeader, 'x-indicare-rsc': '1' } : { 'x-indicare-rsc': '1' }
+      credentials: 'include',
+      headers: { 'x-indicare-rsc': '1' }
     })
     if (!response.ok) {
       return { data: emptyData(fallback), source: 'unavailable', warning: calmOsWarning(response.status), error: developerDetail(`${response.status} ${response.statusText}`) }
@@ -91,27 +89,25 @@ async function doOsGet<T>(path: string, fallback: T, cookieHeader: string): Prom
 }
 
 export async function osGet<T>(path: string, fallback: T): Promise<OsApiResult<T>> {
-  const cookieHeader = (await cookies()).toString()
-  const key = cacheKey(path, cookieHeader)
+  const key = cacheKey(path)
   const now = Date.now()
   const existing = osGetCache.get(key) as CacheEntry<T> | undefined
   if (existing && existing.expiresAt > now) return existing.promise
 
   pruneCache()
-  const promise = doOsGet(path, fallback, cookieHeader)
+  const promise = doOsGet(path, fallback)
   osGetCache.set(key, { expiresAt: now + OS_GET_CACHE_TTL_MS, promise })
   return promise
 }
 
 export async function osPost<T>(path: string, body: unknown, fallback: T): Promise<OsApiResult<T>> {
   try {
-    const cookieHeader = (await cookies()).toString()
     const response = await fetchWithTimeout(resolveOsUrl(path), {
       method: 'POST',
       cache: 'no-store',
+      credentials: 'include',
       headers: {
-        'Content-Type': 'application/json',
-        ...(cookieHeader ? { cookie: cookieHeader } : {})
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify(body)
     })
