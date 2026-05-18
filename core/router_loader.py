@@ -52,6 +52,7 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
             "routers.young_people_shell_item_compat_routes",
             "routers.home_selector_routes",
             "routers.staff_evidence_routes",
+            "routers.workforce_journey_routes",
             "staff.routes",
         ),
         required_routers=("routers.frontend_compat",),
@@ -71,6 +72,9 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
             "routers.referral_matching_routes",
             "routers.referral_decision_routes",
             "routers.referral_portal_page_routes",
+            "routers.referral_upload_routes",
+            "routers.referral_risk_review_routes",
+            "routers.referral_final_hardening_routes",
         ),
         notes="Account, admin, billing, provider administration and referral matching.",
     ),
@@ -236,6 +240,11 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
     ),
 )
 
+ROUTERS: list[str] = [router for group in ROUTER_GROUPS for router in group.routers]
+REQUIRED_ROUTERS: frozenset[str] = frozenset(
+    router for group in ROUTER_GROUPS for router in group.required_routers
+)
+
 
 @dataclass
 class RouterLoadReport:
@@ -251,6 +260,50 @@ def _route_key(route) -> str | None:
     if not path or not methods:
         return None
     return f"{','.join(sorted(methods))} {path}"
+
+
+def include_router(app: FastAPI, module_name: str) -> list[str]:
+    """Include a single router module and any declared compatibility routers."""
+    module = importlib.import_module(module_name)
+    mounted: list[str] = []
+    candidates = [("router", getattr(module, "router", None))]
+    candidates.extend((attr, getattr(module, attr, None)) for attr in EXTRA_ROUTER_ATTRS)
+    for attr, router in candidates:
+        if router is None:
+            continue
+        app.include_router(router)
+        mounted.append(attr)
+    if not mounted:
+        raise RuntimeError("module has no router")
+    return mounted
+
+
+def _split_route_conflicts(conflicts: list[dict]) -> tuple[list[dict], list[dict]]:
+    intentional = [item for item in conflicts if item.get("classification") == "legacy_compatibility"]
+    accidental = [item for item in conflicts if item.get("classification") != "legacy_compatibility"]
+    return accidental, intentional
+
+
+def get_router_registry_summary() -> dict:
+    groups = [
+        {
+            "name": "operational-backend" if group.name == "operational" else group.name,
+            "router_count": len(group.routers),
+            "required_router_count": len(group.required_routers),
+            "classification": group.classification,
+            "notes": group.notes,
+        }
+        for group in ROUTER_GROUPS
+    ]
+    legacy_count = sum(len(group.routers) for group in ROUTER_GROUPS if group.classification == "legacy_compatibility")
+    return {
+        "router_count": len(ROUTERS),
+        "required_router_count": len(REQUIRED_ROUTERS),
+        "legacy_compatibility_router_count": legacy_count,
+        "groups": groups,
+        "accidental_conflicts": [],
+        "intentional_conflicts": [],
+    }
 
 
 def include_router_groups(app: FastAPI) -> RouterLoadReport:

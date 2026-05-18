@@ -17,7 +17,8 @@ const els = {
   referralList: $("referralList"), refreshBtn: $("refreshBtn"), newReferralBtn: $("newReferralBtn"),
   newReferralPanel: $("newReferralPanel"), reviewPanel: $("reviewPanel"), referralForm: $("referralForm"),
   capabilityForm: $("capabilityForm"), capabilityChecks: $("capabilityChecks"), documentForm: $("documentForm"),
-  riskFlags: $("riskFlags"), scoreAllBtn: $("scoreAllBtn"), scoreOneBtn: $("scoreOneBtn"), scoreHomeId: $("scoreHomeId"),
+  fileUploadForm: $("fileUploadForm"), referralFile: $("referralFile"), riskFlags: $("riskFlags"),
+  scoreAllBtn: $("scoreAllBtn"), scoreOneBtn: $("scoreOneBtn"), scoreHomeId: $("scoreHomeId"),
   matchingResults: $("matchingResults"), convertHomeId: $("convertHomeId"), convertBtn: $("convertBtn"),
   conversionResult: $("conversionResult"), decisionReason: $("decisionReason"), decisionHomeId: $("decisionHomeId"),
   acceptInPrincipleBtn: $("acceptInPrincipleBtn"), requestMoreInfoBtn: $("requestMoreInfoBtn"), declineReferralBtn: $("declineReferralBtn"),
@@ -45,6 +46,19 @@ async function api(path, options = {}) {
   const text = await response.text();
   const data = text ? JSON.parse(text) : {};
   if (!response.ok) throw new Error(data?.detail || data?.error || `Request failed: ${response.status}`);
+  return data;
+}
+
+async function apiForm(path, formData) {
+  const response = await fetch(path, {
+    method: "POST",
+    credentials: "include",
+    headers: { Accept: "application/json" },
+    body: formData
+  });
+  const text = await response.text();
+  const data = text ? JSON.parse(text) : {};
+  if (!response.ok) throw new Error(data?.detail || data?.error || `Upload failed: ${response.status}`);
   return data;
 }
 
@@ -88,7 +102,30 @@ function renderRiskFlags(referral = {}) {
   if (!els.riskFlags) return;
   const flags = referral.risk_flags || [];
   if (!flags.length) { els.riskFlags.innerHTML = `<p class="muted">No extracted risk flags yet. Add or scan referral text.</p>`; return; }
-  els.riskFlags.innerHTML = flags.map((flag) => `<article class="row"><div class="row-title"><span>${escapeHtml(flag.flag_label || flag.flag_key)}</span><span class="status ${escapeHtml(statusClass(flag.severity))}">${escapeHtml(flag.severity || "medium")}</span></div><div class="row-meta">${escapeHtml(flag.evidence || "Evidence not recorded.")}</div></article>`).join("");
+
+  const pendingCount = flags.filter((flag) => (flag.manager_review_status || "pending") === "pending").length;
+  els.riskFlags.innerHTML = `
+    <article class="score-card">
+      <h3>Manager risk review</h3>
+      <p>${escapeHtml(pendingCount)} extracted flag(s) still need manager review before matching should be relied on.</p>
+      <p class="muted">Confirm what is accurate, override wording/severity where the referral pack is unclear, dismiss false positives, or request more information.</p>
+    </article>
+    ${flags.map((flag) => {
+      const reviewStatus = flag.manager_review_status || "pending";
+      const label = flag.manager_override_label || flag.flag_label || flag.flag_key;
+      const severity = flag.manager_override_severity || flag.severity || "medium";
+      return `<article class="row" data-risk-flag-id="${escapeHtml(flag.id)}">
+        <div class="row-title"><span>${escapeHtml(label)}</span><span class="status ${escapeHtml(statusClass(severity))}">${escapeHtml(severity)}</span></div>
+        <div class="row-meta">Review: <strong>${escapeHtml(reviewStatus)}</strong> · ${escapeHtml(flag.evidence || "Evidence not recorded.")}</div>
+        ${flag.manager_review_note ? `<p>${escapeHtml(flag.manager_review_note)}</p>` : ""}
+        <div class="grid" style="margin-top:10px">
+          <button class="success" type="button" data-risk-review="confirmed" data-risk-flag-id="${escapeHtml(flag.id)}">Confirm</button>
+          <button class="secondary" type="button" data-risk-review="overridden" data-risk-flag-id="${escapeHtml(flag.id)}">Override</button>
+          <button class="warning" type="button" data-risk-review="needs_more_information" data-risk-flag-id="${escapeHtml(flag.id)}">Need info</button>
+          <button class="danger" type="button" data-risk-review="dismissed" data-risk-flag-id="${escapeHtml(flag.id)}">Dismiss</button>
+        </div>
+      </article>`;
+    }).join("")}`;
 }
 
 function renderMatching(referral = {}) {
@@ -163,7 +200,19 @@ async function addDocument(event) {
   event.preventDefault();
   if (!state.selectedReferral?.id) return showToast("Select a referral first", "error");
   await api(`/referrals/${encodeURIComponent(state.selectedReferral.id)}/documents`, { method: "POST", body: JSON.stringify(formToObject(event.currentTarget)) });
-  showToast("Document added and scanned");
+  showToast("Document text added and scanned");
+  event.currentTarget.reset();
+  await selectReferral(state.selectedReferral.id);
+}
+
+async function uploadDocumentFile(event) {
+  event.preventDefault();
+  if (!state.selectedReferral?.id) return showToast("Select a referral first", "error");
+  const formData = new FormData(event.currentTarget);
+  const file = formData.get("file");
+  if (!file || !file.name) return showToast("Choose a referral file first", "error");
+  await apiForm(`/referrals/${encodeURIComponent(state.selectedReferral.id)}/documents/upload`, formData);
+  showToast("Referral file uploaded and scanned");
   event.currentTarget.reset();
   await selectReferral(state.selectedReferral.id);
 }
@@ -184,11 +233,26 @@ async function scoreOneHome() {
   await selectReferral(state.selectedReferral.id);
 }
 
+async function reviewRiskFlag(flagId, status) {
+  if (!state.selectedReferral?.id) return showToast("Select a referral first", "error");
+  const note = window.prompt("Add manager review note / rationale", "") || "";
+  const payload = { review_note: note };
+  if (status === "overridden") {
+    const severity = window.prompt("Override severity: low, medium or high", "medium") || "medium";
+    const label = window.prompt("Override label", "") || "";
+    payload.manager_override_severity = severity;
+    if (label) payload.manager_override_label = label;
+  }
+  await api(`/referrals/${encodeURIComponent(state.selectedReferral.id)}/risk-flags/${encodeURIComponent(flagId)}/review/${encodeURIComponent(status)}`, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+  showToast("Referral risk flag reviewed");
+  await selectReferral(state.selectedReferral.id);
+}
+
 function decisionPayload() {
-  return {
-    decision_reason: els.decisionReason?.value || "",
-    home_id: Number(els.decisionHomeId?.value || els.convertHomeId?.value || 0) || undefined
-  };
+  return { decision_reason: els.decisionReason?.value || "", home_id: Number(els.decisionHomeId?.value || els.convertHomeId?.value || 0) || undefined };
 }
 
 async function recordDecision(action) {
@@ -225,6 +289,12 @@ function bindEvents() {
   els.capabilityForm?.addEventListener("submit", (event) => saveCapability(event).catch((error) => showToast(error.message, "error")));
   els.referralForm?.addEventListener("submit", (event) => createReferral(event).catch((error) => showToast(error.message, "error")));
   els.documentForm?.addEventListener("submit", (event) => addDocument(event).catch((error) => showToast(error.message, "error")));
+  els.fileUploadForm?.addEventListener("submit", (event) => uploadDocumentFile(event).catch((error) => showToast(error.message, "error")));
+  els.riskFlags?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-risk-review]");
+    if (!button) return;
+    reviewRiskFlag(button.dataset.riskFlagId, button.dataset.riskReview).catch((error) => showToast(error.message, "error"));
+  });
   els.scoreAllBtn?.addEventListener("click", () => scoreAllHomes().catch((error) => showToast(error.message, "error")));
   els.scoreOneBtn?.addEventListener("click", () => scoreOneHome().catch((error) => showToast(error.message, "error")));
   els.acceptInPrincipleBtn?.addEventListener("click", () => recordDecision("accept-in-principle").catch((error) => showToast(error.message, "error")));

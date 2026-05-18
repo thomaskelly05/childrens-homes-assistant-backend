@@ -4,6 +4,7 @@ import re
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
+from typing import Any
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 
@@ -25,6 +26,10 @@ TEXT_MIME_TYPES = {
     "text/xml",
     "text/html",
 }
+from services.referral_upload_service import ReferralUploadService
+from services.workflow_response import gold_standard_response
+
+router = APIRouter(prefix="/referrals", tags=["Referral Uploads"])
 
 
 def _safe_int(value: Any) -> int | None:
@@ -118,6 +123,27 @@ async def upload_referral_document(
             "size_bytes": len(data),
             "extraction_method": extraction_method,
             "requires_manual_review": extraction_method in {"pdf_lightweight_fallback", "unsupported_binary_saved_only"},
+    content = await file.read()
+    if len(content) > 15 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Referral document is too large. Maximum size is 15MB.")
+
+    extraction = ReferralUploadService.extract_text_from_bytes(
+        content=content,
+        filename=file.filename,
+        content_type=file.content_type,
+    )
+    payload = {
+        "document_type": document_type,
+        "title": title or file.filename or "Referral document",
+        "file_name": file.filename,
+        "file_type": file.content_type,
+        "extracted_text": extraction.get("extracted_text") or "",
+        "extracted_metadata": {
+            "upload_mode": "multipart",
+            "file_name": file.filename,
+            "file_type": file.content_type,
+            "file_size": len(content),
+            "extraction": extraction,
         },
     }
     item = ReferralMatchingService.add_document(
@@ -132,5 +158,7 @@ async def upload_referral_document(
         message="Referral document uploaded and scanned",
         workflow={"extraction_status": item.get("extraction_status"), "method": extraction_method},
         sync={"attempted": False, "reason": "pre_placement_referral_upload"},
+        workflow={"extraction_status": item.get("extraction_status"), "upload_status": extraction.get("extraction_status")},
+        sync={"attempted": False, "reason": "referral_upload_pre_placement"},
         referral_document=item,
     )

@@ -1,52 +1,73 @@
 import Link from 'next/link'
 
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
-import { OperationalLifecyclePanel } from '@/components/indicare/operational-lifecycle-panel'
 import { Card, DataTable, EmptyState, PageHeader, SectionHeader, StatCard, StatusBadge } from '@/components/indicare/ui'
 import { StaffAccessControls } from '@/components/settings/staff-access-controls'
-import { getStaff } from '@/lib/os-api/platform'
+import { getWorkforceDashboard, getWorkforceNavigation } from '@/lib/os-api/workforce'
 
 export default async function StaffPage() {
-  const staffResult = await getStaff()
-  const staff = staffResult.data.staff
+  const [dashboardResult, navigationResult] = await Promise.all([
+    getWorkforceDashboard(),
+    getWorkforceNavigation()
+  ])
+  const dashboard = dashboardResult.data
+  const modules = navigationResult.data.modules
+  const staff = dashboard.training.matrix.map((row) => row.staff)
+  const enabledModules = modules.filter((item) => item.enabled)
+  const hiddenModules = modules.filter((item) => !item.enabled)
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Staff"
-        title="Staff working-life area"
-        description="Workforce, practice quality and oversight surfaces. HR and protected information stays permission-safe and is only shown when the backend returns it."
-        action={<Link href="/staff/me" className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">My workspace</Link>}
+        eyebrow="Adults / Staff"
+        title="Workforce dashboard"
+        description="Manager-facing Reg 13 view of supervision, training, probation, safer recruitment, wellbeing, staffing sufficiency, recording quality and inspection evidence."
+        action={<Link href="/staff/all" className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">All staff</Link>}
       />
-      <LiveDataStatus result={staffResult} />
+      <LiveDataStatus result={dashboardResult} />
       <StaffAccessControls />
       <section className="grid gap-4 md:grid-cols-4">
-        <StatCard label="Visible staff" value={staff.length} detail="Returned by workforce/profile routes" />
-        <StatCard label="Training" value="Not yet configured" detail="No unified backend DTO yet" />
-        <StatCard label="Supervision" value="Route available" detail="/supervision/submissions" />
-        <StatCard label="Safer recruitment" value="Restricted" detail="Shown only if backend returns it" />
+        <StatCard label="Visible staff" value={dashboard.staff_count} detail="Returned by Workforce Journey OS" />
+        <StatCard label="Training due / expired" value={(dashboard.training.summary.due || 0) + (dashboard.training.summary.expired || 0)} detail="Mandatory role matrix" href="/staff/training-matrix" />
+        <StatCard label="Supervisions" value={dashboard.supervision.records.length} detail="Draft, submit, review, return, archive" href="/staff/supervision" />
+        <StatCard label="Inspection evidence" value={dashboard.evidence.items.length} detail="Reg 13 and SCCIF leadership links" href="/staff/evidence" />
+      </section>
+      <section className="grid gap-4 lg:grid-cols-3">
+        {dashboard.alerts.map((alert) => (
+          <Card key={alert.id} className={alert.count ? 'ring-amber-100' : ''}>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">{alert.severity}</p>
+                <h2 className="mt-2 text-lg font-black tracking-[-0.03em] text-slate-950">{alert.label}</h2>
+              </div>
+              <StatusBadge value={alert.count ? `${alert.count} open` : 'clear'} />
+            </div>
+          </Card>
+        ))}
       </section>
       <Card>
-        <OperationalLifecyclePanel
-          title="Staff oversight lifecycle"
-          description="Staff records are shown as operational oversight states without exposing protected HR data."
-          items={staffResult.data.lifecycle}
-          hrefForItem={(item) => `/staff/${encodeURIComponent(item.id)}`}
-        />
+        <SectionHeader eyebrow="Adults / Staff menu" title="Workforce operating system" description="Incomplete modules stay feature-flagged until their workflows are safe to expose." />
+        <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-4">
+          {enabledModules.map((item) => (
+            <Link key={item.id} href={item.href} className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-black text-blue-800 transition hover:bg-blue-100">{item.label}</Link>
+          ))}
+          {hiddenModules.map((item) => (
+            <div key={item.id} className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm font-black text-slate-400" title={item.reason || undefined}>{item.label}</div>
+          ))}
+        </div>
       </Card>
       <Card>
-        <SectionHeader eyebrow="Directory" title="Staff team" description="This table avoids exposing HR fields unless they are explicitly present in the live response." />
+        <SectionHeader eyebrow="Dashboard detail" title="Staff team" description="Central staff profiles link employment, safer recruitment, training, supervision, probation, wellbeing, documents, evidence and recording history." />
         <DataTable
-          headers={['Name', 'Role', 'Status', 'Practice links', 'Protected information']}
+          headers={['Name', 'Role', 'Status', 'Open profile', 'Inspection evidence']}
           rows={staff.map((member) => [
             <Link key={member.id} href={`/staff/${encodeURIComponent(member.id)}`} className="font-black text-slate-950 hover:text-blue-700">{member.title}</Link>,
-            member.raw.role || 'Role not returned',
+            member.role || member.raw?.role || 'Role not returned',
             <StatusBadge key="status" value={member.status || 'active'} />,
             <div key="queues" className="flex flex-wrap gap-2">
-              <Link href={`/staff/${encodeURIComponent(member.id)}/tasks`} className="font-bold text-blue-700">Tasks</Link>
-              <Link href={`/staff/${encodeURIComponent(member.id)}/recording`} className="font-bold text-blue-700">Recording</Link>
-              <Link href={`/staff/${encodeURIComponent(member.id)}/handover`} className="font-bold text-blue-700">Handover</Link>
+              <Link href={`/staff/${encodeURIComponent(member.id)}`} className="font-bold text-blue-700">Profile hub</Link>
+              <Link href={`/staff/${encodeURIComponent(member.id)}/workspace`} className="font-bold text-blue-700">Workspace</Link>
             </div>,
-            'HR, DBS and safer recruitment data are hidden unless provided by a role-safe backend route.'
+            'Reg 13 and SCCIF leadership and management'
           ])}
           empty={<EmptyState title="No staff found" description="No staff records match your current filters." />}
         />
