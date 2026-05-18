@@ -40,6 +40,16 @@ CAPABILITY_MAP = {
     "high_supervision": "accepts_high_supervision",
 }
 
+CONFLICT_PAIRS = {
+    ("cse", "sexualised"),
+    ("criminal_exploitation", "gang"),
+    ("knife", "aggression"),
+    ("fire", "trauma"),
+    ("self_harm", "suicidal"),
+    ("missing", "criminal_exploitation"),
+    ("substance", "criminal_exploitation"),
+}
+
 REGULATORY_MAPPING = {
     "quality_standards": [
         "reg_6_quality_and_purpose",
@@ -191,8 +201,8 @@ class ReferralMatchingService:
             "knife": ["knife", "weapon"],
             "fire": ["fire setting", "arson", "fire-setting"],
             "self_harm": ["self harm", "self-harm"],
-            "suicidal": ["suicidal", "suicide ideation"],
-            "aggression": ["aggression", "assault", "violent"],
+            "suicidal": ["suicidal", "suicide ideation", "suicidal ideation"],
+            "aggression": ["aggression", "assault", "violent", "violence"],
             "sexualised": ["sexualised", "sexualized"],
             "missing": ["missing from care", "missing episode", "abscond"],
             "substance": ["substance", "cannabis", "alcohol", "drug use"],
@@ -211,6 +221,7 @@ class ReferralMatchingService:
         ReferralMatchingService.ensure_schema(conn)
         text = payload.get("extracted_text") or ""
         flags = ReferralMatchingService.infer_flags_from_text(text)
+        inferred = ReferralMatchingService.extract_referral_fields_from_text(text)
         with conn.cursor() as cur:
             cur.execute(
                 """
@@ -228,7 +239,7 @@ class ReferralMatchingService:
                     payload.get("file_url"),
                     payload.get("file_type"),
                     text,
-                    payload.get("extracted_metadata") or {},
+                    {**(payload.get("extracted_metadata") or {}), "inferred_fields": inferred},
                     "extracted" if text else "pending",
                     actor_user_id,
                 ),
@@ -243,18 +254,166 @@ class ReferralMatchingService:
                     """,
                     (referral_id, flag["flag_key"], flag["flag_label"], flag["severity"], flag["evidence"], flag["confidence"], doc["id"]),
                 )
+            update_values = {
+                "ai_extraction_status": "extracted" if text else "pending",
+                "ai_confidence": 0.65 if flags or inferred else None,
+                "extracted_metadata": {"document_flag_count": len(flags), "inferred_fields": inferred},
+                "reason_for_referral": inferred.get("reason_for_referral"),
+                "presenting_needs": inferred.get("presenting_needs"),
+                "risk_summary": inferred.get("risk_summary"),
+                "education_summary": inferred.get("education_summary"),
+                "health_summary": inferred.get("health_summary"),
+                "family_contact_summary": inferred.get("family_contact_summary"),
+                "child_voice": inferred.get("child_voice"),
+                "referral_id": referral_id,
+            }
             cur.execute(
                 """
                 UPDATE referral_cases
-                SET ai_extraction_status = %s,
-                    extracted_metadata = COALESCE(extracted_metadata, '{}'::jsonb) || %s::jsonb,
+                SET ai_extraction_status = %(ai_extraction_status)s,
+                    ai_confidence = COALESCE(%(ai_confidence)s, ai_confidence),
+                    extracted_metadata = COALESCE(extracted_metadata, '{}'::jsonb) || %(extracted_metadata)s::jsonb,
+                    reason_for_referral = COALESCE(reason_for_referral, %(reason_for_referral)s),
+                    presenting_needs = COALESCE(presenting_needs, %(presenting_needs)s),
+                    risk_summary = COALESCE(risk_summary, %(risk_summary)s),
+                    education_summary = COALESCE(education_summary, %(education_summary)s),
+                    health_summary = COALESCE(health_summary, %(health_summary)s),
+                    family_contact_summary = COALESCE(family_contact_summary, %(family_contact_summary)s),
+                    child_voice = COALESCE(child_voice, %(child_voice)s),
                     updated_at = NOW()
-                WHERE id = %s
+                WHERE id = %(referral_id)s
                 """,
-                ("extracted" if text else "pending", {"document_flag_count": len(flags)}, referral_id),
+                update_values,
             )
         conn.commit()
         return doc
+
+    @staticmethod
+    def extract_referral_fields_from_text(text: str | None) -> dict[str, str]:
+        source = " ".join(str(text or "").split())
+        lower = source.lower()
+        if not source:
+            return {}
+
+        def window_after(label_words: list[str], chars: int = 420) -> str | None:
+            for label in label_words:
+                idx = lower.find(label)
+                if idx >= 0:
+                    return source[idx: idx + chars].strip()
+            return None
+
+        inferred = {
+            "reason_for_referral": window_after(["reason for referral", "placement request", "referral reason"], 360),
+            "presenting_needs": window_after(["presenting needs", "needs", "support needs"], 420),
+            "risk_summary": window_after(["risk", "risks", "safeguarding"], 460),
+            "education_summary": window_after(["education", "school", "ehcp"], 360),
+            "health_summary": window_after(["health", "diagnosis", "diagnoses", "medication"], 360),
+            "family_contact_summary": window_after(["family", "contact", "parent"], 360),
+            "child_voice": window_after(["child voice", "wishes and feelings", "young person says"], 360),
+        }
+        return {key: value for key, value in inferred.items() if value}
+
+    @staticmethod
+    def _existing_child_risk_text(conn, young_person_id: int) -> str:
+        chunks: list[str] = []
+        with conn.cursor() as cur:
+            for table, cols in (
+                ("risk_assessments", ("title", "concern_summary", "summary")),
+                ("incidents", ("incident_type", "description", "outcome")),
+                ("safeguarding_records", ("title", "concern_summary", "narrative")),
+                ("missing_episodes", ("missing_context", "return_interview_summary", "risk_summary")),
+            ):
+                try:
+                    cur.execute(
+                        f"""
+                        SELECT * FROM {table}
+                        WHERE young_person_id = %s
+                        ORDER BY updated_at DESC NULLS LAST, created_at DESC NULLS LAST, id DESC
+                        LIMIT 5
+                        """,
+                        (young_person_id,),
+                    )
+                    for row in cur.fetchall() or []:
+                        item = dict(row)
+                        chunks.extend(str(item.get(col) or "") for col in cols)
+                except Exception:
+                    continue
+        return " ".join(part for part in chunks if part)
+
+    @staticmethod
+    def weight_peer_risk(conn, *, referral_id: int, home_id: int) -> list[dict[str, Any]]:
+        ReferralMatchingService.ensure_schema(conn)
+        referral = ReferralMatchingService.get_referral(conn, referral_id)
+        incoming_flags = {flag.get("flag_key"): flag for flag in referral.get("risk_flags") or [] if flag.get("flag_key")}
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                DELETE FROM referral_peer_risk_weightings
+                WHERE referral_id = %s AND home_id = %s
+                """,
+                (referral_id, home_id),
+            )
+            cur.execute(
+                """
+                SELECT id, first_name, last_name, preferred_name
+                FROM young_people
+                WHERE home_id = %s
+                  AND COALESCE(status, 'active') IN ('active', 'living', 'placed')
+                ORDER BY id
+                """,
+                (home_id,),
+            )
+            children = [dict(row) for row in (cur.fetchall() or [])]
+
+        created: list[dict[str, Any]] = []
+        for child in children:
+            yp_id = int(child["id"])
+            child_flags = {flag.get("flag_key") for flag in ReferralMatchingService.infer_flags_from_text(ReferralMatchingService._existing_child_risk_text(conn, yp_id))}
+            if not child_flags:
+                continue
+            for incoming_key, incoming in incoming_flags.items():
+                if incoming_key in child_flags:
+                    level = "high_overlap" if incoming.get("severity") == "high" else "medium_overlap"
+                    weight = 18 if incoming.get("severity") == "high" else 10
+                    rationale = f"Incoming referral and current young person both show {incoming.get('flag_label') or incoming_key}."
+                elif any((incoming_key, child_key) in CONFLICT_PAIRS or (child_key, incoming_key) in CONFLICT_PAIRS for child_key in child_flags):
+                    level = "known_interaction_risk"
+                    weight = 14 if incoming.get("severity") == "high" else 8
+                    rationale = f"Incoming referral flag {incoming.get('flag_label') or incoming_key} may interact with current household risks."
+                else:
+                    continue
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """
+                        INSERT INTO referral_peer_risk_weightings (
+                            referral_id, home_id, existing_young_person_id, risk_domain,
+                            compatibility_level, risk_weight, rationale, protective_factors
+                        ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+                        RETURNING *
+                        """,
+                        (
+                            referral_id,
+                            home_id,
+                            yp_id,
+                            incoming_key,
+                            level,
+                            weight,
+                            rationale,
+                            "Requires manager review of routines, staffing, bedroom location, triggers and protective relationships before acceptance.",
+                        ),
+                    )
+                    created.append(dict(cur.fetchone()))
+        conn.commit()
+        return created
+
+    @staticmethod
+    def peer_impact_summary(weightings: list[dict[str, Any]]) -> str:
+        if not weightings:
+            return "No direct peer-risk overlap was identified from currently available records. Manager review is still required."
+        total = sum(float(item.get("risk_weight") or 0) for item in weightings)
+        highest = sorted(weightings, key=lambda item: float(item.get("risk_weight") or 0), reverse=True)[:3]
+        domains = ", ".join(dict.fromkeys(str(item.get("risk_domain")) for item in highest if item.get("risk_domain")))
+        return f"Peer-risk review found {len(weightings)} household compatibility flags with total peer weighting {total:.0f}. Main domains: {domains}."
 
     @staticmethod
     def score_home(conn, *, referral_id: int, home_id: int, actor_user_id: int | None = None) -> dict[str, Any]:
@@ -283,13 +442,20 @@ class ReferralMatchingService:
         if capability.get("current_capacity", 0) <= 0 and not capability.get("emergency_bed_available"):
             fit_score -= 30
             unmet.append({"flag_key": "capacity", "label": "No current capacity", "severity": "high"})
+        peer_weightings = ReferralMatchingService.weight_peer_risk(conn, referral_id=referral_id, home_id=home_id)
+        peer_weight = sum(float(item.get("risk_weight") or 0) for item in peer_weightings)
+        risk_score += peer_weight
+        fit_score -= min(35.0, peer_weight / 2)
         fit_score = max(0.0, min(100.0, fit_score))
-        status = "potential_match" if fit_score >= 70 and not unmet else "needs_review" if fit_score >= 45 else "not_recommended"
+        status = "potential_match" if fit_score >= 70 and not unmet and peer_weight < 20 else "needs_review" if fit_score >= 45 else "not_recommended"
+        peer_summary = ReferralMatchingService.peer_impact_summary(peer_weightings)
         rationale = {
             **REGULATORY_MAPPING,
             "unmet_needs_count": len(unmet),
             "fit_score": fit_score,
             "risk_score": risk_score,
+            "peer_risk_weight": peer_weight,
+            "peer_weighting_count": len(peer_weightings),
         }
         with conn.cursor() as cur:
             cur.execute(
@@ -322,7 +488,7 @@ class ReferralMatchingService:
                     status,
                     matched,
                     unmet,
-                    "Peer weighting requires current home cohort review before final acceptance.",
+                    peer_summary,
                     status,
                     rationale,
                     actor_user_id,
