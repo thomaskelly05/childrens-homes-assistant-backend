@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from auth.current_user import get_current_user
 from db.connection import get_db
 from services.record_versioning_service import record_versioning_service
+from services.workflow_response import gold_standard_response, sync_not_observed
 from services.young_people_linking_service import YoungPeopleLinkingService
 from services.young_person_risk_service import YoungPersonRiskService
 
@@ -67,6 +68,31 @@ def _load_and_check_risk(conn, risk_id: int, current_user: dict[str, Any]) -> di
     row = YoungPersonRiskService.fetch_risk_by_id(conn, risk_id)
     _assert_home_access(current_user, _safe_int(row.get("home_id")))
     return row
+
+
+def _risk_gold_response(
+    conn,
+    *,
+    risk_id: int,
+    result: dict[str, Any] | None = None,
+    workflow: Any | None = None,
+    versioned: Any | None = None,
+    message: str | None = None,
+) -> dict[str, Any]:
+    result = result or {}
+    item = YoungPersonRiskService.get_risk(conn, risk_id)
+    workflow_payload = workflow if workflow is not None else result.get("workflow") or {}
+    sync_payload = result.get("sync") or sync_not_observed()
+    return gold_standard_response(
+        id=risk_id,
+        item=item,
+        message=message or result.get("message"),
+        workflow=workflow_payload,
+        sync=sync_payload,
+        versioned=versioned if versioned is not None else result.get("versioned"),
+        risk=item,
+        legacy=result,
+    )
 
 
 def _link_risk_update(conn, *, risk_id: int, current_user: dict[str, Any]) -> dict[str, Any]:
@@ -195,7 +221,11 @@ def get_risk_assessment(risk_id: int, conn=Depends(get_db), current_user=Depends
 def create_risk_assessment(young_person_id: int, payload: RiskAssessmentCreatePayload, conn=Depends(get_db), current_user=Depends(get_current_user)):
     _assert_can_edit(current_user)
     _load_and_check_young_person(conn, young_person_id, current_user)
-    return YoungPersonRiskService.create_risk_assessment(conn, young_person_id=young_person_id, payload=payload.model_dump(exclude_none=True), actor_user_id=_safe_int(current_user.get("user_id")), linking_service=YoungPeopleLinkingService)
+    result = YoungPersonRiskService.create_risk_assessment(conn, young_person_id=young_person_id, payload=payload.model_dump(exclude_none=True), actor_user_id=_safe_int(current_user.get("user_id")), linking_service=YoungPeopleLinkingService)
+    risk_id = _safe_int(result.get("id") if isinstance(result, dict) else None)
+    if not risk_id:
+        return result
+    return _risk_gold_response(conn, risk_id=risk_id, result=result, message="Risk assessment created")
 
 
 @router.patch("/risk/{risk_id}")
@@ -215,7 +245,7 @@ def update_risk_assessment(risk_id: int, payload: RiskAssessmentUpdatePayload, c
         change_reason="risk_assessment_updated",
     )
     workflow = _link_risk_update(conn, risk_id=risk_id, current_user=current_user)
-    return {**result, "workflow": workflow, "versioned": versioned}
+    return _risk_gold_response(conn, risk_id=risk_id, result=result, workflow=workflow, versioned=versioned, message="Risk assessment updated")
 
 
 @router.post("/risk/{risk_id}/submit")
@@ -223,7 +253,8 @@ def update_risk_assessment(risk_id: int, payload: RiskAssessmentUpdatePayload, c
 def submit_risk_assessment(risk_id: int, conn=Depends(get_db), current_user=Depends(get_current_user)):
     _assert_can_edit(current_user)
     _load_and_check_risk(conn, risk_id, current_user)
-    return YoungPersonRiskService.submit_risk_assessment(conn, risk_id=risk_id, actor_user_id=_safe_int(current_user.get("user_id")), linking_service=YoungPeopleLinkingService)
+    result = YoungPersonRiskService.submit_risk_assessment(conn, risk_id=risk_id, actor_user_id=_safe_int(current_user.get("user_id")), linking_service=YoungPeopleLinkingService)
+    return _risk_gold_response(conn, risk_id=risk_id, result=result, message="Risk assessment submitted")
 
 
 @router.post("/risk/{risk_id}/approve")
@@ -232,7 +263,8 @@ def approve_risk_assessment(risk_id: int, payload: RiskReviewPayload, conn=Depen
     _assert_can_review(current_user)
     _load_and_check_risk(conn, risk_id, current_user)
     approved_by = payload.approved_by or _safe_int(current_user.get("user_id"))
-    return YoungPersonRiskService.approve_risk_assessment(conn, risk_id=risk_id, approved_by=approved_by, review_note=payload.review_note, linking_service=YoungPeopleLinkingService)
+    result = YoungPersonRiskService.approve_risk_assessment(conn, risk_id=risk_id, approved_by=approved_by, review_note=payload.review_note, linking_service=YoungPeopleLinkingService)
+    return _risk_gold_response(conn, risk_id=risk_id, result=result, message="Risk assessment approved")
 
 
 @router.post("/risk/{risk_id}/return")
@@ -240,7 +272,8 @@ def approve_risk_assessment(risk_id: int, payload: RiskReviewPayload, conn=Depen
 def return_risk_assessment(risk_id: int, payload: RiskReviewPayload, conn=Depends(get_db), current_user=Depends(get_current_user)):
     _assert_can_review(current_user)
     _load_and_check_risk(conn, risk_id, current_user)
-    return YoungPersonRiskService.return_risk_assessment(conn, risk_id=risk_id, actor_user_id=_safe_int(current_user.get("user_id")), review_note=payload.review_note, linking_service=YoungPeopleLinkingService)
+    result = YoungPersonRiskService.return_risk_assessment(conn, risk_id=risk_id, actor_user_id=_safe_int(current_user.get("user_id")), review_note=payload.review_note, linking_service=YoungPeopleLinkingService)
+    return _risk_gold_response(conn, risk_id=risk_id, result=result, message="Risk assessment returned")
 
 
 @router.post("/risk/{risk_id}/archive")
@@ -248,4 +281,5 @@ def return_risk_assessment(risk_id: int, payload: RiskReviewPayload, conn=Depend
 def archive_risk_assessment(risk_id: int, conn=Depends(get_db), current_user=Depends(get_current_user)):
     _assert_can_review(current_user)
     _load_and_check_risk(conn, risk_id, current_user)
-    return YoungPersonRiskService.archive_risk_assessment(conn, risk_id=risk_id, actor_user_id=_safe_int(current_user.get("user_id")), linking_service=YoungPeopleLinkingService)
+    result = YoungPersonRiskService.archive_risk_assessment(conn, risk_id=risk_id, actor_user_id=_safe_int(current_user.get("user_id")), linking_service=YoungPeopleLinkingService)
+    return _risk_gold_response(conn, risk_id=risk_id, result=result, message="Risk assessment archived")
