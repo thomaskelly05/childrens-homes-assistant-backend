@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import logging
+import os
+from datetime import date
 from typing import Any
 
 from fastapi import HTTPException
@@ -12,23 +15,48 @@ from repositories.os_repository_utils import build_scope_where, current_home_id,
 from repositories.reports_repository import list_reports
 from services.os_chronology_service import list_chronology
 
+logger = logging.getLogger(__name__)
+
+
+def _age_from_dob(value: Any) -> int | None:
+    if not value:
+        return None
+    try:
+        dob = value if isinstance(value, date) else date.fromisoformat(str(value)[:10])
+    except Exception:
+        return None
+    today = date.today()
+    return today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+
 
 def _young_person_row(row: dict[str, Any]) -> dict[str, Any]:
     return {
         "id": str(row.get("id") or row.get("young_person_id")),
         "home_id": str(row["home_id"]) if row.get("home_id") is not None else None,
+        "provider_id": str(row["provider_id"]) if row.get("provider_id") is not None else None,
         "first_name": row.get("first_name"),
         "last_name": row.get("last_name"),
         "preferred_name": row.get("preferred_name") or row.get("display_name") or row.get("first_name"),
         "display_name": row.get("display_name") or " ".join([str(row.get("first_name") or ""), str(row.get("last_name") or "")]).strip(),
         "date_of_birth": str(row.get("date_of_birth")) if row.get("date_of_birth") is not None else None,
-        "age": row.get("age"),
+        "age": row.get("age") if row.get("age") is not None else _age_from_dob(row.get("date_of_birth")),
+        "gender": row.get("gender"),
+        "admission_date": str(row.get("admission_date")) if row.get("admission_date") is not None else None,
         "placement_status": row.get("placement_status") or row.get("status") or "active",
-        "key_worker_id": str(row.get("primary_keyworker_id")) if row.get("primary_keyworker_id") is not None else None,
+        "primary_keyworker_id": str(row.get("primary_keyworker_id")) if row.get("primary_keyworker_id") is not None else None,
+        "key_worker_id": str(row.get("key_worker_id") or row.get("primary_keyworker_id")) if row.get("key_worker_id") is not None or row.get("primary_keyworker_id") is not None else None,
+        "summary_risk_level": row.get("summary_risk_level") or row.get("risk_level") or row.get("os_state") or "medium",
         "risk_level": row.get("summary_risk_level") or row.get("risk_level") or row.get("os_state") or "medium",
         "legal_status": row.get("legal_status") or row.get("legal_status_summary"),
-        "care_planning": row.get("care_planning") or row.get("placement_plan_summary"),
+        "legal_status_summary": row.get("legal_status_summary") or row.get("legal_status"),
+        "care_planning": row.get("current_placement_plan_status") or row.get("care_planning") or row.get("placement_plan_summary"),
+        "current_placement_plan_status": row.get("current_placement_plan_status") or row.get("care_planning") or row.get("placement_plan_summary"),
         "photo_url": row.get("photo_url"),
+        "profile_photo_path": row.get("profile_photo_path"),
+        "placing_authority": row.get("placing_authority"),
+        "social_worker_name": row.get("social_worker_name"),
+        "social_worker_email": row.get("social_worker_email"),
+        "social_worker_phone": row.get("social_worker_phone"),
         "status": row.get("placement_status") or row.get("status") or "active",
         "metadata": {key: value for key, value in row.items() if key not in {"id", "young_person_id"}},
     }
@@ -45,22 +73,32 @@ def list_young_people(conn: Any, *, current_user: dict[str, Any], limit: int = 2
             "id",
             "young_person_id",
             "home_id",
+            "provider_id",
             "first_name",
             "last_name",
             "preferred_name",
             "display_name",
             "date_of_birth",
             "age",
+            "gender",
+            "admission_date",
             "placement_status",
             "primary_keyworker_id",
+            "key_worker_id",
             "summary_risk_level",
             "risk_level",
             "os_state",
             "legal_status",
             "legal_status_summary",
             "care_planning",
+            "current_placement_plan_status",
             "placement_plan_summary",
             "photo_url",
+            "profile_photo_path",
+            "placing_authority",
+            "social_worker_name",
+            "social_worker_email",
+            "social_worker_phone",
             "status",
             "archived",
             "created_at",
@@ -86,6 +124,17 @@ def list_young_people(conn: Any, *, current_user: dict[str, Any], limit: int = 2
             tuple(params),
         )
         rows = [dict(row) for row in (cur.fetchall() or [])]
+    if os.getenv("OS_LIVE_DATA_DEBUG") == "1":
+        logger.info(
+            "os_live_young_people user_id=%s role=%s home_id=%s provider_id=%s allowed_home_ids_count=%s filters=%s returned=%s",
+            current_user.get("id") or current_user.get("user_id"),
+            current_user.get("role"),
+            current_user.get("home_id"),
+            current_user.get("provider_id"),
+            len(current_user.get("allowed_home_ids") or []),
+            {"table": table_name, "where_count": len(where)},
+            len(rows),
+        )
     return [_young_person_row(row) for row in rows]
 
 

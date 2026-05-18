@@ -2,7 +2,8 @@ import Link from 'next/link'
 
 import { EmptyState, SectionHeader } from '@/components/indicare/ui'
 import { buildLiveOfstedEvidenceOutline, buildLiveRiskReview, buildLiveSafeguardingChronology, buildLiveWeeklyCareSummary } from '@/lib/indicare/reports'
-import { getChildProfileBundle, text } from '@/lib/os-api/bundles'
+import { text } from '@/lib/os-api/bundles'
+import { getServerChildProfileBundle } from '@/lib/os-api/server-bundles'
 
 type Section = {
   title: string
@@ -29,7 +30,7 @@ function ReportPanel({ title, sections }: { title: string; sections: Section[] }
 
 export default async function YoungPersonReportsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const result = await getChildProfileBundle(id)
+  const result = await getServerChildProfileBundle(id)
   const identity = result.data.identity || {}
   const name = text(identity, ['preferred_name', 'first_name', 'display_name'], `Young person ${id}`)
   const [weekly, risk, safeguarding, ofsted] = await Promise.all([

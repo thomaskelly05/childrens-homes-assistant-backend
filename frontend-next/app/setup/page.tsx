@@ -31,7 +31,7 @@ export default function SetupPage() {
         eyebrow="Setup"
         title="Home onboarding readiness"
         description="A coherent setup path for provider pilots: configure the organisation, home, staff access, child setup, documents, SCCIF mapping and Orb privacy before entering daily workflows."
-        action={<Link href="/home" className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">Enter child selector</Link>}
+        action={<Link href="/young-people" className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">Enter child selector</Link>}
       />
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">

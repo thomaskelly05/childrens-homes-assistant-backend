@@ -1,15 +1,9 @@
-import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
-import { getChildProfileBundle, text } from '@/lib/os-api/bundles'
-
-const API_BASE = (
-  process.env.NEXT_PUBLIC_BACKEND_URL ||
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  process.env.BACKEND_URL ||
-  'http://localhost:8000'
-).replace(/\/+$/, '')
+import { text } from '@/lib/os-api/bundles'
+import { getServerChildProfileBundle } from '@/lib/os-api/server-bundles'
+import { osServerPost } from '@/lib/os-api/server-client'
 
 const documentTypes = [
   { id: 'daily-log', label: 'Daily log' },
@@ -22,25 +16,16 @@ const documentTypes = [
 
 async function generateDocument(youngPersonId: string, formData: FormData): Promise<void> {
   'use server'
-  const cookieHeader = (await cookies()).toString()
   const type = String(formData.get('document_type') || 'daily-log')
   const description = String(formData.get('description') || '').trim()
   const title = String(formData.get('title') || '').trim()
-  const response = await fetch(`${API_BASE}/documents/${encodeURIComponent(type)}`, {
-    method: 'POST',
-    cache: 'no-store',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(cookieHeader ? { cookie: cookieHeader } : {})
-    },
-    body: JSON.stringify({
+  const response = await osServerPost(`/documents/${encodeURIComponent(type)}`, {
       description,
       title: title || undefined,
       young_person_id: Number(youngPersonId)
-    })
-  })
-  if (!response.ok) {
-    redirect(`/young-people/${encodeURIComponent(youngPersonId)}/documents/generate?error=${response.status}`)
+    }, {})
+  if (response.source !== 'live') {
+    redirect(`/young-people/${encodeURIComponent(youngPersonId)}/documents/generate?error=${encodeURIComponent(response.error || response.warning || 'unavailable')}`)
   }
   redirect(`/young-people/${encodeURIComponent(youngPersonId)}/documents/generate?saved=1&type=${encodeURIComponent(type)}`)
 }
@@ -48,7 +33,7 @@ async function generateDocument(youngPersonId: string, formData: FormData): Prom
 export default async function GenerateChildDocumentPage({ params, searchParams }: { params: Promise<{ id: string }>, searchParams: Promise<Record<string, string | undefined>> }) {
   const { id } = await params
   const query = await searchParams
-  const result = await getChildProfileBundle(id)
+  const result = await getServerChildProfileBundle(id)
   const bundle = result.data
   const identity = bundle.identity || {}
   const name = text(identity, ['preferred_name', 'first_name', 'display_name'], `Young person ${id}`)

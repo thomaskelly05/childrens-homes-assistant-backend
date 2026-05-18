@@ -1,3 +1,5 @@
+import 'server-only'
+
 import { cookies } from 'next/headers'
 
 import type { OsApiResult, OsEnvelope } from './types'
@@ -6,7 +8,7 @@ const API_BASE = (
   process.env.NEXT_PUBLIC_BACKEND_URL ||
   process.env.NEXT_PUBLIC_API_BASE_URL ||
   process.env.BACKEND_URL ||
-  'http://localhost:8000'
+  'https://api.indicare.co.uk'
 ).replace(/\/+$/, '')
 
 function calmOsWarning(status?: number) {
@@ -36,6 +38,34 @@ export async function osServerGet<T>(path: string, fallback: T): Promise<OsApiRe
       return { data: emptyData(fallback), source: 'unavailable', warning: calmOsWarning(response.status), error: process.env.NODE_ENV === 'development' ? `${response.status} ${response.statusText}` : undefined }
     }
     const payload = (await response.json()) as OsEnvelope<T> | T
+    const envelope = payload as OsEnvelope<T>
+    return {
+      data: envelope && 'data' in envelope ? (envelope.data as T) : (payload as T),
+      meta: envelope && 'meta' in envelope ? envelope.meta : undefined,
+      source: 'live'
+    }
+  } catch (error) {
+    return { data: emptyData(fallback), source: 'unavailable', warning: "I couldn't load that just now.", error: process.env.NODE_ENV === 'development' ? String(error) : undefined }
+  }
+}
+
+export async function osServerPost<T>(path: string, body: unknown, fallback: T, init: { method?: 'POST' | 'PUT' | 'PATCH' | 'DELETE' } = {}): Promise<OsApiResult<T>> {
+  try {
+    const cookieHeader = (await cookies()).toString()
+    const response = await fetch(`${API_BASE}${path.startsWith('/') ? path : `/${path}`}`, {
+      method: init.method || 'POST',
+      cache: 'no-store',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(cookieHeader ? { cookie: cookieHeader } : {}),
+        'x-indicare-rsc': '1'
+      },
+      body: JSON.stringify(body)
+    })
+    if (!response.ok) {
+      return { data: emptyData(fallback), source: 'unavailable', warning: calmOsWarning(response.status), error: `${response.status} ${response.statusText}` }
+    }
+    const payload = (await response.json().catch(() => fallback)) as OsEnvelope<T> | T
     const envelope = payload as OsEnvelope<T>
     return {
       data: envelope && 'data' in envelope ? (envelope.data as T) : (payload as T),

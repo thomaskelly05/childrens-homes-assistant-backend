@@ -39,7 +39,7 @@ export function QuickRecordSheet() {
         </div>
 
         <div className="flex flex-wrap gap-3">
-          <Link href="/home" className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">
+          <Link href="/young-people" className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">
             Choose child to save
           </Link>
 

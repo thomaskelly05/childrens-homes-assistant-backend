@@ -311,10 +311,10 @@ export async function getYoungPeople() {
 export async function getYoungPersonOverview(id: string): Promise<OsApiResult<YoungPersonOverview>> {
   const [profile, profileBundle, workspace, documents, evidence] = await Promise.all([
     osGet<UnknownRecord>(`/os/young-people/${encodeURIComponent(id)}`, {}),
-    osGet<UnknownRecord>(`/young-people/${encodeURIComponent(id)}`, {}),
+    osGet<UnknownRecord>(`/api/young-people/${encodeURIComponent(id)}/profile-bundle`, {}),
     getOsYoungPersonWorkspace(id),
-    getOsDocuments(),
-    getOsEvidence()
+    getOsDocuments({ youngPersonId: id }),
+    getOsEvidence({ youngPersonId: id })
   ])
   const profileObject = asObject(profile.data)
   const bundleObject = asObject(profileBundle.data)
@@ -394,8 +394,7 @@ export async function getYoungPersonSafeguardingSignals(id: string) {
 }
 
 export async function getYoungPersonDocuments(id: string) {
-  const result = await getOsDocuments()
-  return { ...result, data: result.data.filter((document) => String((document as any).youngPersonId || (document as any).young_person_id || '') === id || !((document as any).youngPersonId || (document as any).young_person_id)) }
+  return getOsDocuments({ youngPersonId: id })
 }
 
 export async function getYoungPersonOperationalState(id: string) {
@@ -411,7 +410,7 @@ export async function getSafeguardingDashboard(youngPersonId?: string): Promise<
   const [records, chronology, actions] = await Promise.all([
     osGet<unknown>('/api/safeguarding', {}),
     osGet<UnknownRecord[]>(`/os/chronology${queryString({ safeguarding_only: true, young_person_id: youngPersonId })}`, []),
-    getOsActions({ sourceType: 'safeguarding' })
+    getOsActions({ sourceType: 'safeguarding', youngPersonId })
   ])
   const events = Array.isArray(chronology.data) ? chronology.data.map(mapOsChronology) : []
   const missingChildVoice = events.filter((event) => {

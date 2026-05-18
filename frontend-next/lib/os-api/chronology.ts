@@ -128,7 +128,10 @@ export function mapOsChronology(row: Record<string, any>): ChronologyEvent {
     tags: asStringArray(row.tags || metadata.tags),
     linkedRecordIds: asStringArray(row.linked_record_ids || row.linkedRecordIds || row.source_id || row.sourceId),
     evidenceIds: asStringArray(row.evidence_ids || row.evidenceIds || row.evidence_refs || metadata.evidence_ids),
+    documentIds: asStringArray(row.document_ids || row.documentIds || metadata.document_ids),
     regulationLinks: Array.isArray(row.regulation_links) ? row.regulation_links : row.regulationLinks || [],
+    sccifLinks: asStringArray(row.sccif_links || row.sccifLinks || row.sccif_area || metadata.sccif_links),
+    qualityStandardLinks: asStringArray(row.quality_standard_links || row.qualityStandardLinks || metadata.quality_standard_links),
     safeguardingFlags: asStringArray(row.safeguarding_flags || row.safeguardingFlags || (row.safeguarding_relevant ? 'Safeguarding' : undefined)),
     riskFlags: asStringArray(row.risk_flags || row.riskFlags || row.risk_level),
     actionIds: asStringArray(row.action_ids || row.actionIds || row.actions_taken || metadata.action_ids),
@@ -147,9 +150,7 @@ export function mapOsChronology(row: Record<string, any>): ChronologyEvent {
 }
 
 export async function getOsChronology(params: { sourceType?: ChronologySourceType; youngPersonId?: string; search?: string } = {}): Promise<OsApiResult<ChronologyEvent[]>> {
-  const path = params.youngPersonId
-    ? `/young-people/${encodeURIComponent(params.youngPersonId)}/timeline${queryString({ record_type: params.sourceType, search: params.search })}`
-    : `/api/chronology${queryString({ search: params.search })}`
+  const path = `/os/chronology${queryString({ young_person_id: params.youngPersonId, source_type: params.sourceType, search: params.search })}`
 
   const result = await osGet<any>(path, [])
   let rows = extractRows(result.data).map(mapOsChronology)

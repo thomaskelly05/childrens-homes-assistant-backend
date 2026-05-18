@@ -18,6 +18,8 @@ PROVIDER_LEVEL_ROLES = {
     "provider_admin",
     "super_admin",
     "superadmin",
+    "founder",
+    "owner",
     "administrator",
     "ri",
     "responsible_individual",

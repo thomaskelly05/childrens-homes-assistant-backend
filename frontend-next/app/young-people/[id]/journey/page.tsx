@@ -103,7 +103,7 @@ export default async function ChildJourneyPage({
   return (
     <div className="space-y-6">
       <nav className="flex flex-wrap items-center gap-2 text-sm font-bold text-slate-500" aria-label="Breadcrumb">
-        <Link href="/home" className="hover:text-blue-700">Home</Link>
+        <Link href="/young-people" className="hover:text-blue-700">Children</Link>
         <span>/</span>
         <Link href={`/young-people/${encodeURIComponent(id)}/journey`} className="hover:text-blue-700">{childName}</Link>
         <span>/</span>

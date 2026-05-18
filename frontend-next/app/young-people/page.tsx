@@ -64,6 +64,7 @@ export default async function YoungPeoplePage() {
             const photo = childPhoto(person as any)
             const risk = String(person.riskLevel || (person as any).summary_risk_level || (person as any).risk_level || 'medium')
             const status = String(person.placementStatus || (person as any).placement_status || person.status || 'active')
+            const keyWorker = String((person as any).keyWorkerName || (person as any).key_worker_name || person.keyWorkerId || 'Key worker not returned')
             const id = String(person.id)
             return (
               <Link key={id} href={`/young-people/${encodeURIComponent(id)}`} className="group overflow-hidden rounded-[34px] bg-white shadow-lg shadow-slate-200/70 ring-1 ring-white transition duration-200 hover:-translate-y-1 hover:shadow-2xl hover:shadow-blue-200/50">
@@ -84,6 +85,7 @@ export default async function YoungPeoplePage() {
                     <StatusBadge value={status} />
                   </div>
                   <p className="text-sm leading-6 text-slate-600">Open this child’s scoped profile for daily notes, linked records, documents, reports and chronology.</p>
+                  <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Key worker: {keyWorker}</p>
                 </div>
               </Link>
             )

@@ -10,7 +10,7 @@ export default async function IncidentsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow="Incidents" title="Incident management" description="Incident records with severity, safeguarding flags, staff involvement, follow-up actions and manager review status." action={<Link href="/home" className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">Choose child to create incident</Link>} />
+      <PageHeader eyebrow="Incidents" title="Incident management" description="Incident records with severity, safeguarding flags, staff involvement, follow-up actions and manager review status." action={<Link href="/young-people" className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">Choose child to create incident</Link>} />
       <LiveDataStatus result={incidentsResult} />
       <section className="grid gap-4 md:grid-cols-4">
         <StatCard label="Total incidents" value={incidents.length} />

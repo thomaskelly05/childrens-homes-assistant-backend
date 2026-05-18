@@ -1,13 +1,7 @@
-import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
-const API_BASE = (
-  process.env.NEXT_PUBLIC_BACKEND_URL ||
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  process.env.BACKEND_URL ||
-  'http://localhost:8000'
-).replace(/\/+$/, '')
+import { osServerPost } from '@/lib/os-api/server-client'
 
 function value(formData: FormData, key: string) {
   return String(formData.get(key) || '').trim()
@@ -15,15 +9,7 @@ function value(formData: FormData, key: string) {
 
 async function saveStaffEvidence(formData: FormData) {
   'use server'
-  const cookieHeader = (await cookies()).toString()
-  const response = await fetch(`${API_BASE}/staff/evidence`, {
-    method: 'POST',
-    cache: 'no-store',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(cookieHeader ? { cookie: cookieHeader } : {})
-    },
-    body: JSON.stringify({
+  const response = await osServerPost('/staff/evidence', {
       staff_id: value(formData, 'staff_id') ? Number(value(formData, 'staff_id')) : undefined,
       evidence_type: value(formData, 'evidence_type') || 'supervision',
       title: value(formData, 'title'),
@@ -35,9 +21,8 @@ async function saveStaffEvidence(formData: FormData) {
       review_note: value(formData, 'review_note'),
       review_date: value(formData, 'review_date') || undefined,
       status: value(formData, 'status') || 'recorded'
-    })
-  })
-  if (!response.ok) redirect(`/staff/evidence/new?error=${response.status}`)
+    }, {})
+  if (response.source !== 'live') redirect(`/staff/evidence/new?error=${encodeURIComponent(response.error || response.warning || 'unavailable')}`)
   redirect('/staff/evidence/new?saved=1')
 }
 
@@ -45,7 +30,7 @@ export default async function NewStaffEvidencePage({ searchParams }: { searchPar
   const query = await searchParams
   return (
     <main className="mx-auto max-w-5xl px-6 py-10">
-      <Link href="/workspace" className="text-sm font-black text-blue-700">← Back to workspace</Link>
+      <Link href="/young-people" className="text-sm font-black text-blue-700">← Back to children</Link>
       <div className="mt-6 rounded-[32px] bg-white p-8 shadow-sm ring-1 ring-slate-100">
         <p className="text-[11px] font-black uppercase tracking-[0.24em] text-blue-700">Workforce evidence</p>
         <h1 className="mt-3 text-4xl font-black tracking-[-0.06em] text-slate-950">Create staff evidence</h1>

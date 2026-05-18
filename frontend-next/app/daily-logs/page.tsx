@@ -10,7 +10,7 @@ export default async function DailyLogsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow="Daily logs" title="Daily recording" description="Shift-by-shift daily logs linked into young person records, staff activity, reports, handover and audit evidence." action={<Link href="/home" className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">Choose child to add daily note</Link>} />
+      <PageHeader eyebrow="Daily logs" title="Daily recording" description="Shift-by-shift daily logs linked into young person records, staff activity, reports, handover and audit evidence." action={<Link href="/young-people" className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">Choose child to add daily note</Link>} />
       <LiveDataStatus result={dailyLogsResult} />
       <section className="grid gap-4 md:grid-cols-3">
         <StatCard label="Daily logs" value={logs.length} />

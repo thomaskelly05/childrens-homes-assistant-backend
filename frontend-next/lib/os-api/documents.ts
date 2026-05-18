@@ -1,6 +1,6 @@
 import type { ExtractedFinding, HomeDocument, HomeDocumentStatus, HomeDocumentType } from '@/lib/documents/types'
 
-import { osGet } from './client'
+import { osGet, queryString } from './client'
 import type { OsApiResult } from './types'
 
 function status(value: unknown): HomeDocumentStatus {
@@ -67,8 +67,8 @@ export function mapOsDocument(row: Record<string, any>): HomeDocument {
   }
 }
 
-export async function getOsDocuments(): Promise<OsApiResult<HomeDocument[]>> {
-  const result = await osGet<Record<string, any>[]>('/os/documents', [])
+export async function getOsDocuments(params: { youngPersonId?: string; documentType?: string } = {}): Promise<OsApiResult<HomeDocument[]>> {
+  const result = await osGet<Record<string, any>[]>(`/os/documents${queryString({ young_person_id: params.youngPersonId, document_type: params.documentType })}`, [])
   return { ...result, data: result.data.map(mapOsDocument) }
 }
 

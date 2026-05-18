@@ -1,15 +1,9 @@
-import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
-import { getChildProfileBundle, text } from '@/lib/os-api/bundles'
-
-const API_BASE = (
-  process.env.NEXT_PUBLIC_BACKEND_URL ||
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  process.env.BACKEND_URL ||
-  'http://localhost:8000'
-).replace(/\/+$/, '')
+import { text } from '@/lib/os-api/bundles'
+import { getServerChildProfileBundle } from '@/lib/os-api/server-bundles'
+import { osServerPost } from '@/lib/os-api/server-client'
 
 function value(formData: FormData, key: string) {
   return String(formData.get(key) || '').trim()
@@ -21,7 +15,6 @@ function bool(formData: FormData, key: string) {
 
 async function saveLinkedRecord(youngPersonId: string, formData: FormData) {
   'use server'
-  const cookieHeader = (await cookies()).toString()
   const type = value(formData, 'record_type') || 'support_plan'
   const title = value(formData, 'title')
   const summary = value(formData, 'summary')
@@ -133,18 +126,10 @@ async function saveLinkedRecord(youngPersonId: string, formData: FormData) {
     }
   }
 
-  const response = await fetch(`${API_BASE}${endpointMap[type]}`, {
-    method,
-    cache: 'no-store',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(cookieHeader ? { cookie: cookieHeader } : {})
-    },
-    body: JSON.stringify(body)
-  })
+  const response = await osServerPost(endpointMap[type], body, {}, { method })
 
-  if (!response.ok) {
-    redirect(`/young-people/${encodeURIComponent(youngPersonId)}/records/new?error=${response.status}&type=${encodeURIComponent(type)}`)
+  if (response.source !== 'live') {
+    redirect(`/young-people/${encodeURIComponent(youngPersonId)}/records/new?error=${encodeURIComponent(response.error || response.warning || 'unavailable')}&type=${encodeURIComponent(type)}`)
   }
   redirect(`/young-people/${encodeURIComponent(youngPersonId)}?saved=${encodeURIComponent(type)}`)
 }
@@ -152,7 +137,7 @@ async function saveLinkedRecord(youngPersonId: string, formData: FormData) {
 export default async function NewLinkedRecordPage({ params, searchParams }: { params: Promise<{ id: string }>, searchParams: Promise<Record<string, string | undefined>> }) {
   const { id } = await params
   const query = await searchParams
-  const result = await getChildProfileBundle(id)
+  const result = await getServerChildProfileBundle(id)
   const name = text(result.data.identity || {}, ['preferred_name', 'first_name', 'display_name'], `Young person ${id}`)
   const action = saveLinkedRecord.bind(null, id)
   const defaultType = query.type || 'support_plan'

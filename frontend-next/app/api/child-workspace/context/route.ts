@@ -10,7 +10,7 @@ const BACKEND_ORIGIN = (
 
 function calmError(status: number) {
   if (status === 401 || status === 403) return "I couldn't verify access to this child workspace."
-  if (status === 404) return 'No records found yet.'
+  if (status === 404) return 'Live child workspace returned 0 rows for this child.'
   return 'This child workspace is not available just now.'
 }
 
@@ -27,7 +27,7 @@ export async function GET(request: Request) {
     cache: 'no-store',
     headers
   }).catch(() => undefined)
-  const fallbackResponse = response?.ok ? response : await fetch(`${BACKEND_ORIGIN}/young-people/${encodeURIComponent(childId)}/journey`, {
+  const fallbackResponse = response?.ok ? response : await fetch(`${BACKEND_ORIGIN}/os/young-people/${encodeURIComponent(childId)}/workspace`, {
     cache: 'no-store',
     headers
   }).catch(() => undefined)
@@ -41,5 +41,5 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: false, error: calmError(fallbackResponse.status) }, { status: fallbackResponse.status })
   }
 
-  return NextResponse.json({ ok: true, childId, source: response?.ok ? 'child-workspace' : 'young-person-journey', data: payload })
+  return NextResponse.json({ ok: true, childId, source: response?.ok ? 'child-workspace' : 'os-young-person-workspace', data: payload })
 }

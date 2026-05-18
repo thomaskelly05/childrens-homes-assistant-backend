@@ -34,11 +34,12 @@ export function mapOsAction(row: Record<string, any>): CareAction {
   }
 }
 
-export async function getOsActions(params: { status?: string; sourceType?: string; sourceId?: string } = {}): Promise<OsApiResult<CareAction[]>> {
+export async function getOsActions(params: { status?: string; sourceType?: string; sourceId?: string; youngPersonId?: string } = {}): Promise<OsApiResult<CareAction[]>> {
   const query = new URLSearchParams()
   if (params.status) query.set('status', params.status)
   if (params.sourceType) query.set('source_type', params.sourceType)
   if (params.sourceId) query.set('source_id', params.sourceId)
+  if (params.youngPersonId) query.set('young_person_id', params.youngPersonId)
   const result = await osGet<Record<string, any>[]>(`/os/actions${query.toString() ? `?${query}` : ''}`, [])
   return { ...result, data: result.data.map(mapOsAction) }
 }

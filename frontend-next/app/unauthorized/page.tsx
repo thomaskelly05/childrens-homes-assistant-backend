@@ -9,8 +9,8 @@ export default function UnauthorizedPage() {
         <p className="mt-4 text-sm leading-6 text-slate-600">
           IndiCare OS restricts records, assistant workflows and settings by staff role. Ask an administrator or registered manager to update your permissions.
         </p>
-        <Link href="/dashboard" className="mt-6 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg shadow-slate-950/20">
-          Back to dashboard
+        <Link href="/young-people" className="mt-6 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg shadow-slate-950/20">
+          Back to children
         </Link>
       </section>
     </main>

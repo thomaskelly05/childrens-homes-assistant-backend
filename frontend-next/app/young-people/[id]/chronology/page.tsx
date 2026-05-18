@@ -3,10 +3,10 @@ import { notFound } from 'next/navigation'
 
 import { ChronologyFoundation } from '@/components/indicare/chronology-foundation'
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
-import { PageHeader, StatCard } from '@/components/indicare/ui'
+import { EmptyState, PageHeader, StatCard } from '@/components/indicare/ui'
 import { getSafeguardingChronology } from '@/lib/chronology/selectors'
-import { getOsChronology } from '@/lib/os-api/chronology'
-import { getYoungPersonOverview } from '@/lib/os-api/platform'
+import { getServerOsChronology } from '@/lib/os-api/server-records'
+import { getServerOsYoungPersonWorkspace } from '@/lib/os-api/server-workspaces'
 
 export default async function YoungPersonChronologyPage({
   params,
@@ -17,10 +17,10 @@ export default async function YoungPersonChronologyPage({
 }) {
   const { id } = await params
   const query = await searchParams
-  const [chronology, overview] = await Promise.all([getOsChronology({ youngPersonId: id }), getYoungPersonOverview(id)])
+  const [chronology, workspace] = await Promise.all([getServerOsChronology({ youngPersonId: id }), getServerOsYoungPersonWorkspace(id)])
   const events = chronology.data
-  if (!overview.data.profile && chronology.source === 'live' && events.length === 0) notFound()
-  const preferredName = overview.data.profile?.preferredName || overview.data.profile?.displayName || `Young person #${id}`
+  if (!workspace.data.youngPerson && chronology.source === 'live' && events.length === 0) notFound()
+  const preferredName = workspace.data.youngPerson?.preferredName || workspace.data.youngPerson?.displayName || `Young person #${id}`
 
   return (
     <div className="space-y-6">
@@ -37,7 +37,11 @@ export default async function YoungPersonChronologyPage({
         <StatCard label="Evidence linked" value={events.filter((event) => event.evidenceIds.length).length} />
         <StatCard label="Actions linked" value={events.filter((event) => event.actionIds.length).length} />
       </section>
-      <ChronologyFoundation events={events} initialYoungPersonId={id} initialView={query.filter || query.source} />
+      {events.length ? (
+        <ChronologyFoundation events={events} initialYoungPersonId={id} initialView={query.filter || query.source} />
+      ) : (
+        <EmptyState title="Live chronology returned 0 rows for this child" description="The /os/chronology endpoint returned no rows for this young_person_id in the current user scope." />
+      )}
     </div>
   )
 }
