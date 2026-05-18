@@ -1,10 +1,16 @@
-import Image from 'next/image'
 import Link from 'next/link'
 
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
 import { EmptyState, RiskBadge, StatusBadge } from '@/components/indicare/ui'
 import { text } from '@/lib/os-api/bundles'
 import { getServerWorkspaceBundle } from '@/lib/os-api/server-bundles'
+
+const API_BASE = (
+  process.env.NEXT_PUBLIC_BACKEND_URL ||
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  process.env.BACKEND_URL ||
+  'https://api.indicare.co.uk'
+).replace(/\/+$/, '')
 
 function initials(name: string) {
   return name
@@ -16,12 +22,21 @@ function initials(name: string) {
     .toUpperCase() || 'YP'
 }
 
+function normalisePhotoPath(value: unknown) {
+  const raw = String(value || '').trim()
+  if (!raw || raw === 'Not returned yet' || raw === 'null' || raw === 'undefined') return ''
+  if (raw.startsWith('data:image/')) return raw
+  if (raw.startsWith('http://') || raw.startsWith('https://')) return raw
+  if (raw.startsWith('/')) return `${API_BASE}${raw}`
+  return ''
+}
+
 function childName(child: Record<string, any>) {
   return text(child, ['preferred_name', 'preferredName', 'first_name', 'firstName', 'display_name', 'displayName'], 'Young person')
 }
 
 function childPhoto(child: Record<string, any>) {
-  return text(child, ['photo_url', 'photoUrl', 'profile_photo_path', 'profilePhotoPath', 'profile_photo_url', 'image_url', 'avatar_url'], '')
+  return normalisePhotoPath(child.photo_url || child.photoUrl || child.profile_photo_path || child.profilePhotoPath || child.profile_photo_url || child.image_url || child.avatar_url)
 }
 
 export default async function WorkspacePage() {
@@ -65,7 +80,7 @@ export default async function WorkspacePage() {
               <Link key={childId} href={`/young-people/${encodeURIComponent(childId)}`} className="group overflow-hidden rounded-[34px] bg-white shadow-lg shadow-slate-200/70 ring-1 ring-white transition duration-200 hover:-translate-y-1 hover:shadow-2xl hover:shadow-blue-200/50">
                 <div className="relative h-72 bg-slate-200">
                   {photo ? (
-                    <Image src={photo} alt={name} fill sizes="(min-width: 1280px) 33vw, (min-width: 640px) 50vw, 100vw" className="object-cover transition duration-300 group-hover:scale-105" />
+                    <img src={photo} alt={name} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" loading="eager" />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-blue-600 via-sky-400 to-cyan-200 text-6xl font-black text-white">{initials(name)}</div>
                   )}
