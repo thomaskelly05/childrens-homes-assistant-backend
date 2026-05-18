@@ -7,6 +7,9 @@ from pydantic import BaseModel
 
 from auth.current_user import get_current_user
 from db.connection import get_db
+from services.os_sync_hooks import sync_after_save
+from services.workflow_response import gold_standard_response
+from services.young_people_linking_service import YoungPeopleLinkingService
 from services.young_person_service import YoungPersonService
 
 router = APIRouter(prefix="/young-people", tags=["Young People Handover"])
@@ -27,6 +30,10 @@ def _user_home_id(current_user: dict[str, Any]) -> int | None:
 
 def _user_role(current_user: dict[str, Any]) -> str:
     return str(current_user.get("role") or "").strip().lower()
+
+
+def _actor_id(current_user: dict[str, Any]) -> int | None:
+    return _safe_int(current_user.get("user_id") or current_user.get("id"))
 
 
 def _assert_home_access(current_user: dict[str, Any], record_home_id: int | None) -> None:
@@ -90,34 +97,135 @@ def _load_and_check_handover(
     if not row:
         raise HTTPException(status_code=404, detail="Handover not found")
 
-    _assert_home_access(current_user, _safe_int(row.get("home_id")))
-    return row
+    item = _normalise_handover_row(dict(row))
+    _assert_home_access(current_user, _safe_int(item.get("home_id")))
+    return item
 
 
-def _normalise_handover_row(row: dict[str, Any] | None) -> dict[str, Any] | None:
+def _normalise_handover_row(row: dict[str, Any] | None) -> dict[str, Any]:
     if not row:
-        return None
+        return {}
 
-    return {
+    item = {
         "id": row.get("id"),
         "young_person_id": row.get("young_person_id"),
+        "home_id": row.get("home_id"),
         "handover_date": row.get("handover_date"),
         "shift_type": row.get("shift_type"),
         "title": row.get("title"),
         "summary_text": row.get("summary_text"),
+        "summary": row.get("summary_text"),
         "status": row.get("status") or "draft",
+        "workflow_status": row.get("status") or "draft",
         "source_window_start": row.get("source_window_start"),
         "source_window_end": row.get("source_window_end"),
         "generated_by": row.get("generated_by"),
         "approved_by": row.get("approved_by"),
         "created_at": row.get("created_at"),
         "updated_at": row.get("updated_at"),
+        "record_type": "handover_record",
+        "recorded_at": row.get("handover_date") or row.get("created_at"),
     }
+    return item
+
+
+def _sync_handover(item: dict[str, Any]) -> dict[str, Any]:
+    try:
+        ok = sync_after_save("handover_records", item)
+        return {"attempted": True, "ok": bool(ok), "source_table": "handover_records"}
+    except Exception as error:
+        return {"attempted": True, "ok": False, "source_table": "handover_records", "error": str(error)}
+
+
+def _link_handover_event(conn, *, item: dict[str, Any], event_type: str, current_user: dict[str, Any]) -> dict[str, Any]:
+    status = str(item.get("status") or "draft").lower()
+    workflow = YoungPeopleLinkingService.process_record_event(
+        conn=conn,
+        young_person_id=int(item["young_person_id"]),
+        source_table="handover_records",
+        source_id=int(item["id"]),
+        event_type=event_type,
+        title=f"Handover {event_type}: {item.get('title') or 'Shift handover'}",
+        summary=item.get("summary_text") or f"Handover {event_type}",
+        narrative=item.get("summary_text") or f"Handover {event_type}",
+        category="handover",
+        subcategory=item.get("shift_type") or "shift",
+        significance="medium" if status not in {"returned", "archived"} else "high",
+        due_date=item.get("handover_date"),
+        owner_id=item.get("generated_by"),
+        created_by=_actor_id(current_user),
+        workflow={
+            "link_chronology": True,
+            "create_task": status in {"submitted", "returned"},
+            "manager_review": status in {"submitted", "returned", "approved"},
+            "safeguarding": False,
+            "link_support_plans": True,
+            "link_monthly_reviews": True,
+            "link_quality_standards": True,
+        },
+        metadata={
+            "handover_status": status,
+            "shift_type": item.get("shift_type"),
+            "quality_standards": ["leadership_and_management"],
+            "standards_rationale": "Linked from young person handover workflow",
+            "evidence_strength": "medium",
+        },
+    )
+    conn.commit()
+    return workflow
+
+
+def _handover_response(
+    *,
+    item: dict[str, Any],
+    workflow: dict[str, Any] | None = None,
+    sync: dict[str, Any] | None = None,
+    message: str | None = None,
+) -> dict[str, Any]:
+    return gold_standard_response(
+        id=item.get("id"),
+        item=item,
+        message=message,
+        workflow=workflow or {},
+        sync=sync or {},
+        handover=item,
+        handover_record=item,
+    )
+
+
+def _update_handover_status(conn, handover_id: int, status: str, current_user: dict[str, Any]) -> dict[str, Any]:
+    approved_by = _actor_id(current_user) if status == "approved" else None
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE handover_records
+            SET status = %s,
+                approved_by = COALESCE(%s, approved_by),
+                updated_at = NOW()
+            WHERE id = %s
+            RETURNING *
+            """,
+            (status, approved_by, handover_id),
+        )
+        row = cur.fetchone()
+
+    if not row:
+        raise HTTPException(status_code=404, detail="Handover not found")
+
+    conn.commit()
+    return _normalise_handover_row(dict(row))
 
 
 class GenerateHandoverPayload(BaseModel):
     shift_type: str | None = "day"
     title: str | None = "Shift Handover"
+
+
+class HandoverUpdatePayload(BaseModel):
+    shift_type: str | None = None
+    title: str | None = None
+    summary_text: str | None = None
+    status: str | None = None
 
 
 class HandoverDecisionPayload(BaseModel):
@@ -139,6 +247,7 @@ def get_handover_records(
                 SELECT
                     h.id,
                     h.young_person_id,
+                    yp.home_id,
                     h.handover_date,
                     h.shift_type,
                     h.title,
@@ -151,7 +260,9 @@ def get_handover_records(
                     h.created_at,
                     h.updated_at
                 FROM handover_records h
+                JOIN young_people yp ON yp.id = h.young_person_id
                 WHERE h.young_person_id = %s
+                  AND COALESCE(h.status, 'draft') <> 'archived'
                 ORDER BY h.handover_date DESC, h.created_at DESC, h.id DESC
                 """,
                 (young_person_id,),
@@ -159,12 +270,7 @@ def get_handover_records(
             rows = cur.fetchall() or []
 
         items = [_normalise_handover_row(dict(row)) for row in rows]
-
-        return {
-            "ok": True,
-            "items": items,
-            "count": len(items),
-        }
+        return {"ok": True, "items": items, "handover_records": items, "count": len(items)}
 
     except HTTPException:
         raise
@@ -172,6 +278,49 @@ def get_handover_records(
         raise HTTPException(status_code=500, detail=f"Failed to load handover: {str(exc)}")
 
 
+@router.get("/{young_person_id}/handover/archive")
+def get_archived_handover_records(
+    young_person_id: int,
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    _load_and_check_young_person(young_person_id, current_user)
+
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT h.*, yp.home_id
+                FROM handover_records h
+                JOIN young_people yp ON yp.id = h.young_person_id
+                WHERE h.young_person_id = %s
+                  AND COALESCE(h.status, '') = 'archived'
+                ORDER BY h.updated_at DESC NULLS LAST, h.id DESC
+                """,
+                (young_person_id,),
+            )
+            rows = cur.fetchall() or []
+
+        items = [_normalise_handover_row(dict(row)) for row in rows]
+        return {"ok": True, "items": items, "handover_records": items, "count": len(items)}
+
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to load archived handover: {str(exc)}")
+
+
+@router.get("/handover/{handover_id}")
+def get_handover_record(
+    handover_id: int,
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    item = _load_and_check_handover(conn, handover_id, current_user)
+    return _handover_response(item=item, message="Handover loaded")
+
+
+@router.post("/{young_person_id}/handover")
 @router.post("/{young_person_id}/handover/generate")
 def generate_handover_record(
     young_person_id: int,
@@ -390,8 +539,7 @@ def generate_handover_record(
                 parts.append(keywork_text)
 
             summary_text = " ".join(parts) if parts else "No recent records were available to generate a handover summary."
-
-            actor_user_id = _safe_int(current_user.get("user_id"))
+            actor_user_id = _actor_id(current_user)
 
             cur.execute(
                 """
@@ -434,16 +582,83 @@ def generate_handover_record(
             row = cur.fetchone()
 
         conn.commit()
-        return {
-            "ok": True,
-            "handover": _normalise_handover_row(dict(row)) if row else None,
-        }
+        item = _normalise_handover_row(dict(row)) if row else {}
+        workflow = _link_handover_event(conn, item=item, event_type="created", current_user=current_user)
+        sync = _sync_handover(item)
+        return _handover_response(item=item, workflow=workflow, sync=sync, message="Handover generated")
 
     except HTTPException:
         raise
     except Exception as exc:
         conn.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to generate handover: {str(exc)}")
+
+
+@router.patch("/handover/{handover_id}")
+@router.put("/handover/{handover_id}")
+def update_handover(
+    handover_id: int,
+    payload: HandoverUpdatePayload,
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    _assert_can_edit(current_user)
+    _load_and_check_handover(conn, handover_id, current_user)
+    updates = payload.model_dump(exclude_unset=True)
+    if not updates:
+        raise HTTPException(status_code=400, detail="No changes provided")
+
+    allowed = {"shift_type", "title", "summary_text", "status"}
+    updates = {key: value for key, value in updates.items() if key in allowed}
+    if not updates:
+        raise HTTPException(status_code=400, detail="No supported changes provided")
+
+    try:
+        set_parts: list[str] = []
+        values: list[Any] = []
+        for field, value in updates.items():
+            set_parts.append(f"{field} = %s")
+            values.append(value)
+        set_parts.append("updated_at = NOW()")
+        values.append(handover_id)
+
+        with conn.cursor() as cur:
+            cur.execute(
+                f"""
+                UPDATE handover_records
+                SET {", ".join(set_parts)}
+                WHERE id = %s
+                RETURNING *
+                """,
+                values,
+            )
+            row = cur.fetchone()
+        conn.commit()
+        item = _normalise_handover_row(dict(row)) if row else {}
+        workflow = _link_handover_event(conn, item=item, event_type="updated", current_user=current_user)
+        sync = _sync_handover(item)
+        return _handover_response(item=item, workflow=workflow, sync=sync, message="Handover updated")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to update handover: {str(exc)}")
+
+
+@router.put("/handover/{handover_id}/submit")
+@router.post("/handover/{handover_id}/submit")
+def submit_handover(
+    handover_id: int,
+    payload: HandoverDecisionPayload | None = None,
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    _assert_can_edit(current_user)
+    _load_and_check_handover(conn, handover_id, current_user)
+    item = _update_handover_status(conn, handover_id, "submitted", current_user)
+    workflow = _link_handover_event(conn, item=item, event_type="submitted", current_user=current_user)
+    sync = _sync_handover(item)
+    return _handover_response(item=item, workflow=workflow, sync=sync, message="Handover submitted")
 
 
 @router.put("/handover/{handover_id}/approve")
@@ -456,37 +671,26 @@ def approve_handover(
 ):
     _assert_can_review(current_user)
     _load_and_check_handover(conn, handover_id, current_user)
+    item = _update_handover_status(conn, handover_id, "approved", current_user)
+    workflow = _link_handover_event(conn, item=item, event_type="approved", current_user=current_user)
+    sync = _sync_handover(item)
+    return _handover_response(item=item, workflow=workflow, sync=sync, message="Handover approved")
 
-    try:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                UPDATE handover_records
-                SET
-                    status = 'approved',
-                    approved_by = %s,
-                    updated_at = NOW()
-                WHERE id = %s
-                RETURNING *
-                """,
-                (_safe_int(current_user.get("user_id")), handover_id),
-            )
-            row = cur.fetchone()
 
-        if not row:
-            raise HTTPException(status_code=404, detail="Handover not found")
-
-        conn.commit()
-        return {
-            "ok": True,
-            "handover": _normalise_handover_row(dict(row)),
-        }
-
-    except HTTPException:
-        raise
-    except Exception as exc:
-        conn.rollback()
-        raise HTTPException(status_code=500, detail=f"Failed to approve handover: {str(exc)}")
+@router.put("/handover/{handover_id}/return")
+@router.post("/handover/{handover_id}/return")
+def return_handover(
+    handover_id: int,
+    payload: HandoverDecisionPayload | None = None,
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    _assert_can_review(current_user)
+    _load_and_check_handover(conn, handover_id, current_user)
+    item = _update_handover_status(conn, handover_id, "returned", current_user)
+    workflow = _link_handover_event(conn, item=item, event_type="returned", current_user=current_user)
+    sync = _sync_handover(item)
+    return _handover_response(item=item, workflow=workflow, sync=sync, message="Handover returned")
 
 
 @router.put("/handover/{handover_id}/archive")
@@ -498,33 +702,7 @@ def archive_handover(
 ):
     _assert_can_review(current_user)
     _load_and_check_handover(conn, handover_id, current_user)
-
-    try:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                UPDATE handover_records
-                SET
-                    status = 'archived',
-                    updated_at = NOW()
-                WHERE id = %s
-                RETURNING *
-                """,
-                (handover_id,),
-            )
-            row = cur.fetchone()
-
-        if not row:
-            raise HTTPException(status_code=404, detail="Handover not found")
-
-        conn.commit()
-        return {
-            "ok": True,
-            "handover": _normalise_handover_row(dict(row)),
-        }
-
-    except HTTPException:
-        raise
-    except Exception as exc:
-        conn.rollback()
-        raise HTTPException(status_code=500, detail=f"Failed to archive handover: {str(exc)}")
+    item = _update_handover_status(conn, handover_id, "archived", current_user)
+    workflow = _link_handover_event(conn, item=item, event_type="archived", current_user=current_user)
+    sync = _sync_handover(item)
+    return _handover_response(item=item, workflow=workflow, sync=sync, message="Handover archived")
