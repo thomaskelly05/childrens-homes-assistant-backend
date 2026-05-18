@@ -314,6 +314,15 @@ def get_young_person_health(young_person_id: int, conn=Depends(get_db), current_
     return YoungPersonHealthService.get_health_bundle(conn, young_person_id)
 
 
+@router.get("/{young_person_id}/medication-records")
+def list_medication_records(young_person_id: int, conn=Depends(get_db), current_user=Depends(get_current_user)):
+    _load_and_check_young_person(conn, young_person_id, current_user)
+    bundle = YoungPersonHealthService.get_health_bundle(conn, young_person_id)
+    rows = bundle.get("medication_records") if isinstance(bundle, dict) else []
+    rows = rows if isinstance(rows, list) else []
+    return {"items": rows, "medication_records": rows, "count": len(rows)}
+
+
 @router.get("/health-records/{record_id}")
 def get_health_record(record_id: int, conn=Depends(get_db), current_user=Depends(get_current_user)):
     row = _load_and_check_health_record(conn, record_id, current_user)
