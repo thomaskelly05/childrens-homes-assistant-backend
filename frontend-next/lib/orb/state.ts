@@ -43,6 +43,7 @@ export type OrbRuntimeSnapshot = {
 }
 
 const STORAGE_KEY = 'indicare.orb.preferences.v1'
+const AMELIA_BROWSER_VOICE_NAME = /female|serena|samantha|kate|susan|victoria|libby|sonia|moira|fiona|ava/i
 
 function calmOrbError(error: unknown, fallback = "I couldn't load that just now.") {
   if (error instanceof AssistantClientError) return error.message
@@ -636,7 +637,7 @@ export class OrbRuntimeController {
       type: 'response.create',
       response: {
         modalities: ['audio', 'text'],
-        instructions: `Speak this ORB powered by IndiCare answer naturally, in a calm British female voice. Keep the delivery brief, warm and interruptible. Do not add citations or extra commentary. Say exactly: ${JSON.stringify(spoken)}`
+        instructions: `You are Amelia, ORB powered by IndiCare. Speak this answer as a calm British female care-sector voice: warm, concise, emotionally steady, neutral UK with soft North East warmth where possible, and interruptible. Do not add citations or extra commentary. Say exactly: ${JSON.stringify(spoken)}`
       }
     })) {
       return
@@ -653,10 +654,10 @@ export class OrbRuntimeController {
     this.stopBrowserSpeech()
     const utterance = new SpeechSynthesisUtterance(text)
     utterance.lang = 'en-GB'
-    utterance.rate = 0.94
-    utterance.pitch = 1.02
+    utterance.rate = 0.92
+    utterance.pitch = 1.04
     const voices = window.speechSynthesis.getVoices()
-    utterance.voice = voices.find((voice) => voice.lang.toLowerCase().startsWith('en-gb') && /female|serena|samantha|kate|susan|victoria/i.test(voice.name)) || voices.find((voice) => voice.lang.toLowerCase().startsWith('en-gb')) || null
+    utterance.voice = voices.find((voice) => voice.lang.toLowerCase().startsWith('en-gb') && AMELIA_BROWSER_VOICE_NAME.test(voice.name)) || voices.find((voice) => voice.lang.toLowerCase().startsWith('en-gb')) || null
     utterance.onend = () => {
       this.clearHardStateRecovery()
       this.browserUtterance = null
