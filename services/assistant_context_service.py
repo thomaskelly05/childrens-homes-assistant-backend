@@ -129,11 +129,20 @@ def build_shared_assistant_context(
             workspace_type = "regulatory"
         elif "young-people" in route or "young_people" in route:
             workspace_type = "young_person"
+        elif "/staff" in route or "workforce" in route:
+            workspace_type = "adult"
         else:
             workspace_type = "dashboard"
 
+    selected_staff_id = _safe_context_int(
+        raw_context.get("selected_staff_id")
+        or raw_context.get("staff_id")
+        or raw_context.get("selectedStaffId")
+        or raw_context.get("adult_id")
+    )
     staff_profile = {
-        "id": user_id,
+        "id": selected_staff_id or user_id,
+        "selected_staff_id": selected_staff_id,
         "name": " ".join(
             item
             for item in [

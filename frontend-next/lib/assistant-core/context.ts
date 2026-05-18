@@ -6,6 +6,7 @@ export type BuildAssistantContextInput = {
   pageTitle?: string | null
   workspaceType?: string | null
   selectedYoungPersonId?: string | number | null
+  selectedStaffId?: string | number | null
   selectedRecordId?: string | number | null
   selectedRecordType?: string | null
   selectedReportId?: string | number | null
@@ -47,6 +48,7 @@ export function inferWorkspaceType(route?: string | null) {
   if (value.includes('regulatory') || value.includes('ofsted')) return 'regulatory'
   if (value.includes('document')) return 'documents'
   if (value.includes('young-people')) return 'young_person'
+  if (value.includes('/staff')) return 'adult'
   return 'dashboard'
 }
 
@@ -58,6 +60,8 @@ export function buildAssistantContext(input: BuildAssistantContextInput): Assist
     page_title: input.pageTitle ?? null,
     home_id: numberOrNull(input.homeId),
     selected_young_person_id: numberOrNull(input.selectedYoungPersonId),
+    selected_staff_id: numberOrNull(input.selectedStaffId),
+    staff_id: numberOrNull(input.selectedStaffId),
     selected_record_id: stringOrNull(input.selectedRecordId),
     selected_record_type: stringOrNull(input.selectedRecordType),
     selected_report_id: stringOrNull(input.selectedReportId),

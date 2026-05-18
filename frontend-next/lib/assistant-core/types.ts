@@ -29,6 +29,8 @@ export type AssistantContext = {
   current_route?: string | null
   current_workspace_type?: string | null
   selected_young_person_id?: number | null
+  selected_staff_id?: number | null
+  staff_id?: number | null
   selected_record_id?: string | null
   selected_record_type?: string | null
   selected_report_id?: string | null

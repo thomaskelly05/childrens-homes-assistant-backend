@@ -120,6 +120,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   const routeSelectedId = selectedYoungPersonId(pathname)
   const selectedId = routeSelectedId || activeChild?.id
   const selectedEntityContext = entityContextFromPath(pathname)
+  const selectedStaffId = pathParts[0] === 'staff' && pathParts[1] && !['all', 'evidence', 'induction', 'probation', 'supervision', 'training-matrix', 'command-centre', 'risk', 'relationships', 'recording-quality'].includes(pathParts[1])
+    ? decodeURIComponent(pathParts[1])
+    : null
   const activeChildName = activeChild?.preferredName || activeChild?.displayName
   const pageTitle = activeChildName ? `${activeChildName}'s journey` : titleFromPath(pathname)
   const today = new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }).format(new Date())
@@ -205,6 +208,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     route: pathname,
     pageTitle,
     selectedYoungPersonId: selectedId,
+    selectedStaffId,
     selectedRecordId: selectedEntityContext?.selected_record_id,
     selectedRecordType: selectedEntityContext?.selected_record_type,
     activeFilters: selectedId ? { young_person_id: selectedId, active_child_id: selectedId, context_lock_version: lockVersion } : {},

@@ -15,6 +15,7 @@ from repositories.reports_repository import list_reports
 from repositories.workspaces_repository import adult_workspace, young_person_workspace
 from services.assistant_context_service import SharedAssistantContext
 from services.os_chronology_service import list_chronology
+from services.workforce_intelligence_service import WorkforceIntelligenceService
 
 
 @dataclass
@@ -198,6 +199,36 @@ class AssistantRetrievalService:
             for key in ("chronology", "actions", "evidence", "documents", "reports", "records_authored"):
                 for item in workspace_payload.get(key) or []:
                     sources.append(_normalise_source(item, key.rstrip("s") or "record"))
+
+        workforce_terms = {"workforce", "staff", "supervision", "training", "probation", "recording quality", "inspection workforce"}
+        route = _safe_lower(context.current_route)
+        if context.current_workspace_type == "adult" or "staff" in route or any(term in _safe_lower(message) for term in workforce_terms):
+            staff_id = None
+            if context.staff_profile:
+                staff_id = safe_int(context.staff_profile.get("selected_staff_id") or context.staff_profile.get("id"))
+            workforce_context = guarded(
+                "workforce_intelligence",
+                lambda: WorkforceIntelligenceService().orb_context(conn, current_user=current_user, staff_id=staff_id),
+            )
+            if isinstance(workforce_context, dict):
+                for item in workforce_context.get("evidence_sources") or []:
+                    sources.append(_normalise_source(item, "workforce_evidence"))
+                summary = workforce_context.get("workforce_summary")
+                if isinstance(summary, dict):
+                    sources.append(
+                        _normalise_source(
+                            {
+                                "id": "workforce_intelligence_summary",
+                                "title": "Workforce intelligence summary",
+                                "summary": str(summary),
+                                "source_type": "workforce_intelligence",
+                                "regulation_links": ["reg_13_leadership_and_management"],
+                                "sccif_links": ["leadership_and_management"],
+                                "route": "/staff/command-centre",
+                            },
+                            "workforce_intelligence",
+                        )
+                    )
 
         ranked = _sort_sources(message, sources, context)
         selected = ranked[: max(1, min(limit, 40))]

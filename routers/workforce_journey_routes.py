@@ -7,11 +7,13 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from auth.current_user import get_current_user
 from db.connection import get_db
+from services.workforce_intelligence_service import WorkforceIntelligenceService
 from services.workforce_journey_service import WorkforceJourneyService
 
 
 router = APIRouter(prefix="/api/workforce-os", tags=["Workforce Journey OS"])
 service = WorkforceJourneyService()
+intelligence_service = WorkforceIntelligenceService(service)
 
 
 class SupervisionActionPayload(BaseModel):
@@ -90,6 +92,46 @@ def workforce_evidence(conn=Depends(get_db), current_user: dict[str, Any] = Depe
 @router.get("/supervision")
 def workforce_supervision(staff_id: int | None = None, conn=Depends(get_db), current_user: dict[str, Any] = Depends(get_current_user)):
     return {"ok": True, "data": service.list_supervision(conn, current_user=current_user, staff_id=staff_id)}
+
+
+@router.get("/intelligence")
+def workforce_intelligence(conn=Depends(get_db), current_user: dict[str, Any] = Depends(get_current_user)):
+    return {"ok": True, "data": intelligence_service.dashboard(conn, current_user=current_user)}
+
+
+@router.get("/chronology")
+def workforce_chronology(staff_id: int | None = None, conn=Depends(get_db), current_user: dict[str, Any] = Depends(get_current_user)):
+    return {"ok": True, "data": intelligence_service.chronology(conn, current_user=current_user, staff_id=staff_id)}
+
+
+@router.get("/staff/{staff_id}/chronology")
+def workforce_staff_chronology(staff_id: int, conn=Depends(get_db), current_user: dict[str, Any] = Depends(get_current_user)):
+    return {"ok": True, "data": intelligence_service.chronology(conn, current_user=current_user, staff_id=staff_id)}
+
+
+@router.get("/recording-quality")
+def workforce_recording_quality(staff_id: int | None = None, conn=Depends(get_db), current_user: dict[str, Any] = Depends(get_current_user)):
+    return {"ok": True, "data": intelligence_service.recording_quality(conn, current_user=current_user, staff_id=staff_id)}
+
+
+@router.get("/risk")
+def workforce_risk(staff_id: int | None = None, conn=Depends(get_db), current_user: dict[str, Any] = Depends(get_current_user)):
+    return {"ok": True, "data": intelligence_service.risk(conn, current_user=current_user, staff_id=staff_id)}
+
+
+@router.get("/relationships")
+def workforce_relationships(staff_id: int | None = None, conn=Depends(get_db), current_user: dict[str, Any] = Depends(get_current_user)):
+    return {"ok": True, "data": intelligence_service.relationships(conn, current_user=current_user, staff_id=staff_id)}
+
+
+@router.get("/command-centre")
+def workforce_command_centre(conn=Depends(get_db), current_user: dict[str, Any] = Depends(get_current_user)):
+    return {"ok": True, "data": intelligence_service.command_centre(conn, current_user=current_user)}
+
+
+@router.get("/orb-context")
+def workforce_orb_context(staff_id: int | None = None, conn=Depends(get_db), current_user: dict[str, Any] = Depends(get_current_user)):
+    return {"ok": True, "data": intelligence_service.orb_context(conn, current_user=current_user, staff_id=staff_id)}
 
 
 @router.post("/supervision")

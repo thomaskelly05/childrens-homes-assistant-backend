@@ -29,6 +29,10 @@ CORE_MODULES = {
     "induction",
     "probation",
     "staff_evidence",
+    "workforce_command_centre",
+    "workforce_risk",
+    "recording_quality",
+    "relationship_intelligence",
 }
 
 WORKFORCE_NAVIGATION = [
@@ -47,7 +51,10 @@ WORKFORCE_NAVIGATION = [
     ("staff_journal", "Staff Journal", "/staff-journal/me", True),
     ("rota_shifts", "Rota & Shifts", "/shifts/current", True),
     ("staff_evidence", "Staff Evidence", "/staff/evidence", True),
-    ("recording_quality", "Recording Quality", "/staff/recording-quality", False),
+    ("workforce_command_centre", "Workforce Command Centre", "/staff/command-centre", True),
+    ("workforce_risk", "Workforce Risk", "/staff/risk", True),
+    ("recording_quality", "Recording Quality", "/staff/recording-quality", True),
+    ("relationship_intelligence", "Relationship Intelligence", "/staff/relationships", True),
     ("conduct_capability", "Conduct / Capability", "/staff/conduct-capability", False),
     ("agency_staff", "Agency Staff", "/staff/agency", False),
     ("exit_offboarding", "Exit / Offboarding", "/staff/offboarding", False),
@@ -164,6 +171,8 @@ class WorkforceJourneyService:
         flags = {
             "workforce_journey_os": journey_enabled,
             "workforce_full_navigation": full_nav_enabled,
+            "workforce_intelligence_layer": _env_flag("WORKFORCE_INTELLIGENCE_LAYER_ENABLED", True) and journey_enabled,
+            "orb_workforce_intelligence": _env_flag("ORB_WORKFORCE_INTELLIGENCE_ENABLED", True) and journey_enabled,
         }
         for module_id, _label, _href, is_core in WORKFORCE_NAVIGATION:
             flags[module_id] = journey_enabled and (is_core or full_nav_enabled)
@@ -190,6 +199,11 @@ class WorkforceJourneyService:
         probation = self.probation(conn, current_user=current_user)
         evidence = self.evidence(conn, current_user=current_user)
         alerts = self._dashboard_alerts(staff, training, supervision, probation)
+        intelligence = None
+        if self.feature_flags().get("workforce_intelligence_layer"):
+            from services.workforce_intelligence_service import WorkforceIntelligenceService
+
+            intelligence = WorkforceIntelligenceService(self).dashboard(conn, current_user=current_user)
         return {
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "home_id": self._home_id(current_user),
@@ -199,6 +213,7 @@ class WorkforceJourneyService:
             "supervision": supervision,
             "probation": probation,
             "evidence": evidence,
+            "intelligence": intelligence,
             "feature_flags": self.feature_flags(),
         }
 
@@ -221,6 +236,18 @@ class WorkforceJourneyService:
             "concerns": self._optional_rows(conn, "staff_practice_concerns", staff_id=staff_id),
             "evidence": self._optional_rows(conn, "workforce_evidence", staff_id=staff_id),
         }
+        intelligence = None
+        if self.feature_flags().get("workforce_intelligence_layer"):
+            from services.workforce_intelligence_service import WorkforceIntelligenceService
+
+            intelligence_service = WorkforceIntelligenceService(self)
+            intelligence = {
+                "chronology": intelligence_service.chronology(conn, current_user=current_user, staff_id=staff_id, limit=20),
+                "recording_quality": intelligence_service.recording_quality(conn, current_user=current_user, staff_id=staff_id),
+                "risk": intelligence_service.risk(conn, current_user=current_user, staff_id=staff_id),
+                "relationships": intelligence_service.relationships(conn, current_user=current_user, staff_id=staff_id),
+                "orb_context": intelligence_service.orb_context(conn, current_user=current_user, staff_id=staff_id),
+            }
         return {
             "staff": self._staff_card(staff),
             "overview": {
@@ -251,6 +278,7 @@ class WorkforceJourneyService:
             "evidence": rows["evidence"],
             "documents": rows["documents"],
             "inspection_readiness": self._inspection_links(rows["evidence"]),
+            "intelligence": intelligence,
         }
 
     def training_matrix(self, conn, *, current_user: dict[str, Any], staff_id: int | None = None) -> dict[str, Any]:
