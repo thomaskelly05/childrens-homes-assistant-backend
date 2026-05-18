@@ -98,6 +98,13 @@ def score_referral_home(referral_id: int, home_id: int, current_user=Depends(get
     return gold_standard_response(id=item.get("id"), item=item, message="Referral scored against home", workflow={"compatibility_status": item.get("compatibility_status")}, sync={"attempted": False, "reason": "matching_assessment"}, matching_assessment=item)
 
 
+@router.post("/{referral_id}/peer-risk/homes/{home_id}")
+def review_referral_peer_risk(referral_id: int, home_id: int, current_user=Depends(get_current_user), conn=Depends(get_db)):
+    _assert_manager(current_user)
+    items = ReferralMatchingService.weight_peer_risk(conn, referral_id=referral_id, home_id=home_id)
+    return {"ok": True, "items": items, "peer_weightings": items, "count": len(items), "summary": ReferralMatchingService.peer_impact_summary(items)}
+
+
 @router.post("/{referral_id}/convert")
 def convert_referral_to_young_person(referral_id: int, payload: dict[str, Any] = Body(...), current_user=Depends(get_current_user), conn=Depends(get_db)):
     _assert_manager(current_user)
