@@ -15,6 +15,13 @@ type GuidanceItem = {
   evidence: EvidenceItem[]
 }
 
+type LocalityLocation = {
+  name: string
+  category: string
+  summary: string
+  evidence: EvidenceItem[]
+}
+
 function textIncludes(value: string, terms: string[]) {
   const lower = value.toLowerCase()
   return terms.some((term) => lower.includes(term))
@@ -152,9 +159,10 @@ export async function buildLiveRiskIntelligenceView(youngPersonId: string) {
 export function buildLocalityView(youngPersonId: string) {
   const view = buildRiskIntelligenceView(youngPersonId)
   if (!view) return undefined
+  const locations: LocalityLocation[] = []
   return {
     ...view,
-    locations: [],
+    locations,
     protectiveResources: [
       guidance('Education setting', 'records indicate education access is a protective resource when current attendance evidence supports it.', matchingEvidence(youngPersonId, ['school', 'education'])),
       guidance('Known interests', `records indicate interests may support staff engagement: ${view.person.likes?.slice(0, 3).join(', ') || 'no live interests returned'}.`, [])
@@ -170,14 +178,15 @@ export function buildLocalityView(youngPersonId: string) {
 export async function buildLiveLocalityView(youngPersonId: string) {
   const view = await buildLiveRiskIntelligenceView(youngPersonId)
   const localityEvidence = view.allEvidence.filter((item) => textIncludes(`${item.title} ${item.summary}`, ['community', 'school', 'home', 'transport', 'route', 'location']))
+  const locations: LocalityLocation[] = localityEvidence.slice(0, 8).map((item) => ({
+    name: item.title,
+    category: item.type,
+    summary: item.summary,
+    evidence: [item]
+  }))
   return {
     ...view,
-    locations: localityEvidence.slice(0, 8).map((item) => ({
-      name: item.title,
-      category: item.type,
-      summary: item.summary,
-      evidence: [item]
-    })),
+    locations,
     protectiveResources: [
       guidance('Education setting', 'records indicate education access is a protective resource when current attendance evidence supports it.', view.allEvidence.filter((item) => textIncludes(`${item.title} ${item.summary}`, ['school', 'education']))),
       guidance('Known interests', 'Interests should be pulled from the live young person profile when available.', [])
