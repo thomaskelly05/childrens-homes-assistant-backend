@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from auth.current_user import get_current_user
 from db.connection import get_db
+from services.workflow_response import gold_standard_response, sync_not_observed
 from services.young_people_linking_service import YoungPeopleLinkingService
 from services.young_person_incidents_service import YoungPersonIncidentsService
 
@@ -66,6 +67,27 @@ def _load_and_check_incident(conn, incident_id: int, current_user: dict[str, Any
     row, _ = YoungPersonIncidentsService.fetch_incident_by_id(conn, incident_id)
     _assert_home_access(current_user, _safe_int(row.get("home_id")))
     return row
+
+
+def _incident_gold_response(
+    conn,
+    *,
+    incident_id: int,
+    result: dict[str, Any] | None = None,
+    message: str | None = None,
+) -> dict[str, Any]:
+    result = result or {}
+    item = YoungPersonIncidentsService.get_incident(conn, incident_id)
+    return gold_standard_response(
+        id=incident_id,
+        item=item,
+        message=message or result.get("message"),
+        workflow=result.get("workflow") or {},
+        sync=result.get("sync") or sync_not_observed(),
+        intelligence=result.get("intelligence"),
+        incident=item,
+        legacy=result,
+    )
 
 
 class IncidentCreatePayload(BaseModel):
@@ -199,13 +221,17 @@ def create_incident(
     _assert_can_edit(current_user)
     _load_and_check_young_person(conn, young_person_id, current_user)
 
-    return YoungPersonIncidentsService.create_incident(
+    result = YoungPersonIncidentsService.create_incident(
         conn,
         young_person_id=young_person_id,
         payload=payload.model_dump(exclude_none=True, by_alias=False),
         actor_user_id=_safe_int(current_user.get("user_id")),
         linking_service=YoungPeopleLinkingService,
     )
+    incident_id = _safe_int(result.get("id") if isinstance(result, dict) else None)
+    if not incident_id:
+        return result
+    return _incident_gold_response(conn, incident_id=incident_id, result=result, message="Incident created")
 
 
 @router.patch("/incidents/{incident_id}")
@@ -218,11 +244,12 @@ def update_incident(
     _assert_can_edit(current_user)
     _load_and_check_incident(conn, incident_id, current_user)
 
-    return YoungPersonIncidentsService.update_incident(
+    result = YoungPersonIncidentsService.update_incident(
         conn,
         incident_id=incident_id,
         payload=payload.model_dump(exclude_unset=True, by_alias=False),
     )
+    return _incident_gold_response(conn, incident_id=incident_id, result=result, message="Incident updated")
 
 
 @router.post("/incidents/{incident_id}/submit")
@@ -234,12 +261,13 @@ def submit_incident(
     _assert_can_edit(current_user)
     _load_and_check_incident(conn, incident_id, current_user)
 
-    return YoungPersonIncidentsService.submit_incident(
+    result = YoungPersonIncidentsService.submit_incident(
         conn,
         incident_id=incident_id,
         actor_user_id=_safe_int(current_user.get("user_id")),
         linking_service=YoungPeopleLinkingService,
     )
+    return _incident_gold_response(conn, incident_id=incident_id, result=result, message="Incident submitted")
 
 
 @router.post("/incidents/{incident_id}/approve")
@@ -254,13 +282,14 @@ def approve_incident(
 
     approved_by = payload.approved_by or _safe_int(current_user.get("user_id"))
 
-    return YoungPersonIncidentsService.approve_incident(
+    result = YoungPersonIncidentsService.approve_incident(
         conn,
         incident_id=incident_id,
         approved_by=approved_by,
         review_note=payload.review_note,
         linking_service=YoungPeopleLinkingService,
     )
+    return _incident_gold_response(conn, incident_id=incident_id, result=result, message="Incident approved")
 
 
 @router.post("/incidents/{incident_id}/return")
@@ -273,13 +302,14 @@ def return_incident(
     _assert_can_review(current_user)
     _load_and_check_incident(conn, incident_id, current_user)
 
-    return YoungPersonIncidentsService.return_incident(
+    result = YoungPersonIncidentsService.return_incident(
         conn,
         incident_id=incident_id,
         actor_user_id=_safe_int(current_user.get("user_id")),
         review_note=payload.review_note,
         linking_service=YoungPeopleLinkingService,
     )
+    return _incident_gold_response(conn, incident_id=incident_id, result=result, message="Incident returned")
 
 
 @router.post("/incidents/{incident_id}/archive")
@@ -291,12 +321,13 @@ def archive_incident(
     _assert_can_review(current_user)
     _load_and_check_incident(conn, incident_id, current_user)
 
-    return YoungPersonIncidentsService.archive_incident(
+    result = YoungPersonIncidentsService.archive_incident(
         conn,
         incident_id=incident_id,
         actor_user_id=_safe_int(current_user.get("user_id")),
         linking_service=YoungPeopleLinkingService,
     )
+    return _incident_gold_response(conn, incident_id=incident_id, result=result, message="Incident archived")
 
 
 @router.get("/incidents/{incident_id}/export")
