@@ -1,6 +1,6 @@
 import { getOsActions } from '@/lib/os-api/actions'
 import { getOsEvidence } from '@/lib/os-api/evidence'
-import { CareAction, CareActionStatus, EvidenceGap, EvidenceItem } from './types'
+import { ActionPriority, CareAction, CareActionStatus, EvidenceGap, EvidenceItem } from './types'
 
 function byDateDesc<T>(items: readonly T[], getDate: (item: T) => string) {
   return [...items].sort((left, right) => new Date(getDate(right)).getTime() - new Date(getDate(left)).getTime())
@@ -9,6 +9,13 @@ function byDateDesc<T>(items: readonly T[], getDate: (item: T) => string) {
 const legacyCareActions: CareAction[] = []
 const legacyEvidenceItems: EvidenceItem[] = []
 const legacyEvidenceGaps: EvidenceGap[] = []
+
+function priorityForQuality(quality: EvidenceItem['quality']): ActionPriority {
+  if (quality === 'review_required') return 'high'
+  if (quality === 'partial') return 'medium'
+  if (quality === 'draft') return 'medium'
+  return 'low'
+}
 
 export function getCareActions(): CareAction[] {
   return byDateDesc<CareAction>(legacyCareActions, (action) => action.createdAt)
@@ -107,16 +114,16 @@ export async function getLiveEvidenceGaps(): Promise<EvidenceGap[]> {
   const items = await getLiveEvidenceItems()
   return items
     .filter((item) => ['draft', 'partial', 'review_required'].includes(item.quality))
-    .map((item) => ({
+    .map((item): EvidenceGap => ({
       id: `gap-${item.id}`,
+      title: `Evidence gap: ${item.title}`,
       youngPersonId: item.youngPersonId,
+      homeId: item.homeId,
       regulation: item.linkedRegulation || 'Regulation 13',
       description: item.description || item.title,
-      severity: item.quality === 'review_required' ? 'high' : 'medium',
+      priority: priorityForQuality(item.quality),
       suggestedAction: 'Review and strengthen the linked evidence before relying on it for inspection or care-plan decisions.',
-      sourceType: item.sourceType,
-      sourceId: item.sourceId,
-      createdAt: item.createdAt
+      sourceEventIds: [item.sourceId || item.id].filter(Boolean)
     }))
 }
 
