@@ -17,7 +17,8 @@ const els = {
   referralList: $("referralList"), refreshBtn: $("refreshBtn"), newReferralBtn: $("newReferralBtn"),
   newReferralPanel: $("newReferralPanel"), reviewPanel: $("reviewPanel"), referralForm: $("referralForm"),
   capabilityForm: $("capabilityForm"), capabilityChecks: $("capabilityChecks"), documentForm: $("documentForm"),
-  riskFlags: $("riskFlags"), scoreAllBtn: $("scoreAllBtn"), scoreOneBtn: $("scoreOneBtn"), scoreHomeId: $("scoreHomeId"),
+  fileUploadForm: $("fileUploadForm"), referralFile: $("referralFile"), riskFlags: $("riskFlags"),
+  scoreAllBtn: $("scoreAllBtn"), scoreOneBtn: $("scoreOneBtn"), scoreHomeId: $("scoreHomeId"),
   matchingResults: $("matchingResults"), convertHomeId: $("convertHomeId"), convertBtn: $("convertBtn"),
   conversionResult: $("conversionResult"), decisionReason: $("decisionReason"), decisionHomeId: $("decisionHomeId"),
   acceptInPrincipleBtn: $("acceptInPrincipleBtn"), requestMoreInfoBtn: $("requestMoreInfoBtn"), declineReferralBtn: $("declineReferralBtn"),
@@ -45,6 +46,19 @@ async function api(path, options = {}) {
   const text = await response.text();
   const data = text ? JSON.parse(text) : {};
   if (!response.ok) throw new Error(data?.detail || data?.error || `Request failed: ${response.status}`);
+  return data;
+}
+
+async function apiForm(path, formData) {
+  const response = await fetch(path, {
+    method: "POST",
+    credentials: "include",
+    headers: { Accept: "application/json" },
+    body: formData
+  });
+  const text = await response.text();
+  const data = text ? JSON.parse(text) : {};
+  if (!response.ok) throw new Error(data?.detail || data?.error || `Upload failed: ${response.status}`);
   return data;
 }
 
@@ -163,7 +177,19 @@ async function addDocument(event) {
   event.preventDefault();
   if (!state.selectedReferral?.id) return showToast("Select a referral first", "error");
   await api(`/referrals/${encodeURIComponent(state.selectedReferral.id)}/documents`, { method: "POST", body: JSON.stringify(formToObject(event.currentTarget)) });
-  showToast("Document added and scanned");
+  showToast("Document text added and scanned");
+  event.currentTarget.reset();
+  await selectReferral(state.selectedReferral.id);
+}
+
+async function uploadDocumentFile(event) {
+  event.preventDefault();
+  if (!state.selectedReferral?.id) return showToast("Select a referral first", "error");
+  const formData = new FormData(event.currentTarget);
+  const file = formData.get("file");
+  if (!file || !file.name) return showToast("Choose a referral file first", "error");
+  await apiForm(`/referrals/${encodeURIComponent(state.selectedReferral.id)}/documents/upload`, formData);
+  showToast("Referral file uploaded and scanned");
   event.currentTarget.reset();
   await selectReferral(state.selectedReferral.id);
 }
@@ -185,10 +211,7 @@ async function scoreOneHome() {
 }
 
 function decisionPayload() {
-  return {
-    decision_reason: els.decisionReason?.value || "",
-    home_id: Number(els.decisionHomeId?.value || els.convertHomeId?.value || 0) || undefined
-  };
+  return { decision_reason: els.decisionReason?.value || "", home_id: Number(els.decisionHomeId?.value || els.convertHomeId?.value || 0) || undefined };
 }
 
 async function recordDecision(action) {
@@ -225,6 +248,7 @@ function bindEvents() {
   els.capabilityForm?.addEventListener("submit", (event) => saveCapability(event).catch((error) => showToast(error.message, "error")));
   els.referralForm?.addEventListener("submit", (event) => createReferral(event).catch((error) => showToast(error.message, "error")));
   els.documentForm?.addEventListener("submit", (event) => addDocument(event).catch((error) => showToast(error.message, "error")));
+  els.fileUploadForm?.addEventListener("submit", (event) => uploadDocumentFile(event).catch((error) => showToast(error.message, "error")));
   els.scoreAllBtn?.addEventListener("click", () => scoreAllHomes().catch((error) => showToast(error.message, "error")));
   els.scoreOneBtn?.addEventListener("click", () => scoreOneHome().catch((error) => showToast(error.message, "error")));
   els.acceptInPrincipleBtn?.addEventListener("click", () => recordDecision("accept-in-principle").catch((error) => showToast(error.message, "error")));
