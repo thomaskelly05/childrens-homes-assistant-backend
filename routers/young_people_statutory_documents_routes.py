@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Body
 from fastapi.responses import FileResponse
@@ -8,6 +9,9 @@ from auth.current_user import get_current_user
 from db.connection import get_db
 from services.audit_event_service import record_audit_event
 from services.document_security_service import document_security_service, max_upload_bytes, scope_matches
+from services.os_sync_hooks import sync_after_save
+from services.workflow_response import gold_standard_response
+from services.young_people_linking_service import YoungPeopleLinkingService
 
 router = APIRouter(prefix="/young-people", tags=["Young People Statutory Documents"])
 
@@ -53,6 +57,15 @@ def _assert_young_person_access(conn, young_person_id: int, current_user: dict) 
     return row
 
 
+def _shape_document(row: dict[str, Any] | None) -> dict[str, Any]:
+    item = dict(row or {})
+    item.setdefault("record_type", "statutory_document")
+    item.setdefault("workflow_status", item.get("status") or "current")
+    item.setdefault("recorded_at", item.get("created_at") or item.get("issue_date"))
+    item.setdefault("summary", item.get("description") or item.get("title") or "Statutory document")
+    return item
+
+
 def _load_document(conn, document_id: int) -> dict:
     with conn.cursor() as cur:
         cur.execute(
@@ -67,7 +80,7 @@ def _load_document(conn, document_id: int) -> dict:
         row = cur.fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Statutory document not found")
-    return dict(row)
+    return _shape_document(dict(row))
 
 
 def _assert_document_access(conn, document_id: int, current_user: dict) -> dict:
@@ -85,6 +98,87 @@ def _assert_document_access(conn, document_id: int, current_user: dict) -> dict:
     return row
 
 
+def _sync_statutory_document(item: dict[str, Any]) -> dict[str, Any]:
+    try:
+        ok = sync_after_save("statutory_documents", item)
+        return {"attempted": True, "ok": bool(ok), "source_table": "statutory_documents"}
+    except Exception as error:
+        return {"attempted": True, "ok": False, "source_table": "statutory_documents", "error": str(error)}
+
+
+def _link_statutory_document_event(conn, *, item: dict[str, Any], event_type: str, current_user: dict[str, Any]) -> dict[str, Any]:
+    status = str(item.get("status") or "current").lower()
+    workflow = YoungPeopleLinkingService.process_record_event(
+        conn=conn,
+        young_person_id=int(item["young_person_id"]),
+        source_table="statutory_documents",
+        source_id=int(item["id"]),
+        event_type=event_type,
+        title=f"Statutory document {event_type}: {item.get('title') or item.get('document_type') or 'Document'}",
+        summary=item.get("description") or item.get("title") or f"Statutory document {event_type}",
+        narrative=item.get("description") or item.get("title") or f"Statutory document {event_type}",
+        category="document",
+        subcategory=item.get("document_type") or "statutory_document",
+        significance="high" if status in {"expired", "amendment_requested", "archived"} else "medium",
+        review_date=item.get("review_date") or item.get("expiry_date"),
+        due_date=item.get("review_date") or item.get("expiry_date"),
+        owner_id=item.get("uploaded_by"),
+        created_by=_current_user_id(current_user),
+        workflow={
+            "link_chronology": True,
+            "create_task": bool(item.get("review_date") or item.get("expiry_date")),
+            "manager_review": status in {"submitted", "under_review", "amendment_requested", "approved"},
+            "safeguarding": False,
+            "link_support_plans": True,
+            "link_monthly_reviews": True,
+            "link_quality_standards": True,
+        },
+        metadata={
+            "document_type": item.get("document_type"),
+            "document_status": status,
+            "compliance_category": item.get("compliance_category"),
+            "linked_standard_code": item.get("linked_standard_code"),
+            "quality_standards": [item.get("linked_standard_code") or "leadership_and_management"],
+            "standards_rationale": "Linked from statutory document workflow",
+            "evidence_strength": "strong",
+        },
+    )
+    conn.commit()
+    return workflow
+
+
+def _document_response(*, item: dict[str, Any], workflow: dict[str, Any] | None = None, sync: dict[str, Any] | None = None, message: str | None = None) -> dict[str, Any]:
+    return gold_standard_response(
+        id=item.get("id"),
+        item=item,
+        message=message,
+        workflow=workflow or {},
+        sync=sync or {},
+        statutory_document=item,
+        document=item,
+    )
+
+
+def _update_document_status(conn, document_id: int, status: str) -> dict[str, Any]:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE statutory_documents
+            SET status = %s,
+                archived = CASE WHEN %s = 'archived' THEN TRUE ELSE COALESCE(archived, FALSE) END,
+                updated_at = NOW()
+            WHERE id = %s
+            RETURNING *
+            """,
+            (status, status, document_id),
+        )
+        row = cur.fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Statutory document not found")
+    conn.commit()
+    return _shape_document(dict(row))
+
+
 @router.get("/{young_person_id}/statutory-documents")
 def list_statutory_documents(young_person_id: int, current_user=Depends(get_current_user), conn=Depends(get_db)):
     try:
@@ -100,7 +194,8 @@ def list_statutory_documents(young_person_id: int, current_user=Depends(get_curr
                 """,
                 (young_person_id,),
             )
-            return cur.fetchall()
+            rows = [_shape_document(dict(row)) for row in (cur.fetchall() or [])]
+            return {"ok": True, "items": rows, "statutory_documents": rows, "count": len(rows)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to load statutory documents: {str(e)}")
 
@@ -120,7 +215,8 @@ def list_statutory_documents_archive(young_person_id: int, current_user=Depends(
                 """,
                 (young_person_id,),
             )
-            return cur.fetchall()
+            rows = [_shape_document(dict(row)) for row in (cur.fetchall() or [])]
+            return {"ok": True, "items": rows, "statutory_documents": rows, "count": len(rows)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to load archived statutory documents: {str(e)}")
 
@@ -128,7 +224,8 @@ def list_statutory_documents_archive(young_person_id: int, current_user=Depends(
 @router.get("/statutory-documents/{document_id}")
 def get_statutory_document(document_id: int, current_user=Depends(get_current_user), conn=Depends(get_db)):
     try:
-        return _assert_document_access(conn, document_id, current_user)
+        item = _assert_document_access(conn, document_id, current_user)
+        return _document_response(item=item, message="Statutory document loaded")
     except HTTPException:
         raise
     except Exception as e:
@@ -186,18 +283,22 @@ def create_statutory_document(young_person_id: int, payload: dict = Body(...), c
                 },
             )
             row = cur.fetchone()
-
         conn.commit()
-        return row
+        item = _shape_document(dict(row))
+        workflow = _link_statutory_document_event(conn, item=item, event_type="created", current_user=current_user)
+        sync = _sync_statutory_document(item)
+        return _document_response(item=item, workflow=workflow, sync=sync, message="Statutory document created")
     except Exception as e:
         conn.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to create statutory document: {str(e)}")
 
 
+@router.patch("/statutory-documents/{document_id}")
 @router.put("/statutory-documents/{document_id}")
 def update_statutory_document(document_id: int, payload: dict = Body(...), current_user=Depends(get_current_user), conn=Depends(get_db)):
     try:
-        _assert_document_access(conn, document_id, current_user)
+        before = _assert_document_access(conn, document_id, current_user)
+        merged = {**before, **payload, "id": document_id}
         with conn.cursor() as cur:
             cur.execute(
                 """
@@ -217,20 +318,61 @@ def update_statutory_document(document_id: int, payload: dict = Body(...), curre
                 WHERE id = %(id)s
                 RETURNING *
                 """,
-                {**payload, "id": document_id},
+                merged,
             )
             row = cur.fetchone()
-
         if not row:
             raise HTTPException(status_code=404, detail="Statutory document not found")
-
         conn.commit()
-        return row
+        item = _shape_document(dict(row))
+        workflow = _link_statutory_document_event(conn, item=item, event_type="updated", current_user=current_user)
+        sync = _sync_statutory_document(item)
+        return _document_response(item=item, workflow=workflow, sync=sync, message="Statutory document updated")
     except HTTPException:
         raise
     except Exception as e:
         conn.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to update statutory document: {str(e)}")
+
+
+@router.post("/statutory-documents/{document_id}/submit")
+@router.put("/statutory-documents/{document_id}/submit")
+def submit_statutory_document(document_id: int, current_user=Depends(get_current_user), conn=Depends(get_db)):
+    _assert_document_access(conn, document_id, current_user)
+    item = _update_document_status(conn, document_id, "submitted")
+    workflow = _link_statutory_document_event(conn, item=item, event_type="submitted", current_user=current_user)
+    sync = _sync_statutory_document(item)
+    return _document_response(item=item, workflow=workflow, sync=sync, message="Statutory document submitted")
+
+
+@router.post("/statutory-documents/{document_id}/approve")
+@router.put("/statutory-documents/{document_id}/approve")
+def approve_statutory_document(document_id: int, current_user=Depends(get_current_user), conn=Depends(get_db)):
+    _assert_document_access(conn, document_id, current_user)
+    item = _update_document_status(conn, document_id, "approved")
+    workflow = _link_statutory_document_event(conn, item=item, event_type="approved", current_user=current_user)
+    sync = _sync_statutory_document(item)
+    return _document_response(item=item, workflow=workflow, sync=sync, message="Statutory document approved")
+
+
+@router.post("/statutory-documents/{document_id}/return")
+@router.put("/statutory-documents/{document_id}/return")
+def return_statutory_document(document_id: int, current_user=Depends(get_current_user), conn=Depends(get_db)):
+    _assert_document_access(conn, document_id, current_user)
+    item = _update_document_status(conn, document_id, "amendment_requested")
+    workflow = _link_statutory_document_event(conn, item=item, event_type="returned", current_user=current_user)
+    sync = _sync_statutory_document(item)
+    return _document_response(item=item, workflow=workflow, sync=sync, message="Statutory document returned")
+
+
+@router.post("/statutory-documents/{document_id}/archive")
+@router.put("/statutory-documents/{document_id}/archive")
+def archive_statutory_document(document_id: int, current_user=Depends(get_current_user), conn=Depends(get_db)):
+    _assert_document_access(conn, document_id, current_user)
+    item = _update_document_status(conn, document_id, "archived")
+    workflow = _link_statutory_document_event(conn, item=item, event_type="archived", current_user=current_user)
+    sync = _sync_statutory_document(item)
+    return _document_response(item=item, workflow=workflow, sync=sync, message="Statutory document archived")
 
 
 @router.post("/{young_person_id}/statutory-documents/upload")
@@ -274,7 +416,7 @@ def upload_statutory_document(
                 """
                 INSERT INTO statutory_documents (
                     young_person_id,
-                    scope.get("home_id"),
+                    home_id,
                     document_type,
                     title,
                     description,
@@ -305,7 +447,7 @@ def upload_statutory_document(
                 """,
                 (
                     young_person_id,
-                    home_id,
+                    scope.get("home_id") or home_id,
                     document_type,
                     title,
                     description,
@@ -322,9 +464,11 @@ def upload_statutory_document(
                 ),
             )
             row = cur.fetchone()
-
         conn.commit()
-        return row
+        item = _shape_document(dict(row))
+        workflow = _link_statutory_document_event(conn, item=item, event_type="uploaded", current_user=current_user)
+        sync = _sync_statutory_document(item)
+        return _document_response(item=item, workflow=workflow, sync=sync, message="Statutory document uploaded")
     except Exception as e:
         conn.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to upload statutory document: {str(e)}")
