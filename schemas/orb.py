@@ -81,19 +81,19 @@ OrbEventType = Literal[
 class OrbVoiceProfile(BaseModel):
     model_config = ConfigDict(extra="allow")
 
-    profile_id: str = "british_female_calm"
-    name: str = "british_female_calm"
+    profile_id: str = "amelia_british_female_calm"
+    name: str = "Amelia"
     provider_voice: str = "shimmer"
-    accent: str = "British"
-    tone: str = "calm, concise, warm, professional and human"
-    tone_profile: str = "calm_concise_human"
+    accent: str = "British female, neutral UK with a soft North East warmth where possible"
+    tone: str = "calm, concise, warm, professional, emotionally steady and human"
+    tone_profile: str = "british_female_calm_care_companion"
     product_name: str = "ORB powered by IndiCare"
-    speed: str = "medium"
+    speed: str = "medium-slow"
     speaking_speed: str = "medium-slow"
-    expressiveness: str = "natural but not theatrical"
-    use_case: str = "children's home operational support"
-    voice_style: str | None = None
-    formality: str = "professional"
+    expressiveness: str = "natural, reassuring and lightly warm; never theatrical"
+    use_case: str = "children's home operational voice support"
+    voice_style: str | None = "british_female_care_companion"
+    formality: str = "professional but human"
     accessibility_mode: bool = False
     quiet_mode: bool = False
     concise_mode: bool = False
@@ -105,8 +105,8 @@ class OrbPreferences(BaseModel):
 
     activation_mode: OrbActivationMode = "click_tap_orb"
     wake_phrase: str = "Hey IndiCare"
-    voice_style: str = "calm_operational"
-    speaking_speed: str = "medium"
+    voice_style: str = "british_female_care_companion"
+    speaking_speed: str = "medium-slow"
     response_detail: Literal["concise", "balanced", "detailed"] = "concise"
     concise_answers: bool = True
     read_citations_aloud: bool = False
@@ -303,4 +303,3 @@ class OrbTranscriptResponse(BaseModel):
     session_id: str
     transcript: list[OrbTranscriptEntry] = Field(default_factory=list)
     storage_policy: dict[str, Any] = Field(default_factory=dict)
-
