@@ -1,7 +1,19 @@
+function realtimeProxyUrl() {
+  const explicit = window.INDICARE_REALTIME_WS_URL || window.INDICARE_ASSISTANT_REALTIME_WS_URL
+  if (explicit) return explicit
+
+  const apiBase = window.INDICARE_API_BASE_URL || window.NEXT_PUBLIC_API_BASE_URL || ''
+  if (apiBase) {
+    const base = String(apiBase).replace(/\/$/, '')
+    return base.replace(/^https:/, 'wss:').replace(/^http:/, 'ws:') + '/assistant/realtime/ws'
+  }
+
+  return window.location.origin.replace(/^https:/, 'wss:').replace(/^http:/, 'ws:') + '/assistant/realtime/ws'
+}
+
 export class OpenAIRealtimeVoice {
-  constructor({ apiKey, model = 'gpt-4o-realtime-preview', voice = 'alloy', onEvent = () => {} } = {}) {
-    this.apiKey = apiKey || window.OPENAI_API_KEY || ''
-    this.model = model
+  constructor({ voice = 'alloy', onEvent = () => {} } = {}) {
+    this.url = realtimeProxyUrl()
     this.voice = voice
     this.onEvent = onEvent
     this.socket = null
@@ -11,18 +23,10 @@ export class OpenAIRealtimeVoice {
 
   async connect() {
     if (this.connected || this.connecting) return
-    if (!this.apiKey) throw new Error('OpenAI realtime API key is missing')
-
     this.connecting = true
-    const url = `wss://api.openai.com/v1/realtime?model=${encodeURIComponent(this.model)}`
 
     await new Promise((resolve, reject) => {
-      const socket = new WebSocket(url, [
-        'realtime',
-        `openai-insecure-api-key.${this.apiKey}`,
-        'openai-beta.realtime-v1'
-      ])
-
+      const socket = new WebSocket(this.url)
       this.socket = socket
 
       socket.onopen = () => {
@@ -32,7 +36,7 @@ export class OpenAIRealtimeVoice {
           type: 'session.update',
           session: {
             voice: this.voice,
-            instructions: 'You are IndiCare Intelligence. Speak in a calm, emotionally intelligent British professional voice for adults working in residential children\'s homes. Keep replies concise and conversational.',
+            instructions: 'You are IndiCare Intelligence. Speak calmly, professionally and concisely.',
             modalities: ['text', 'audio'],
             input_audio_format: 'pcm16',
             output_audio_format: 'pcm16',
@@ -52,13 +56,17 @@ export class OpenAIRealtimeVoice {
 
       socket.onerror = event => {
         this.connecting = false
-        this.onEvent('error', { error: 'OpenAI realtime websocket error', event })
-        reject(new Error('OpenAI realtime websocket error'))
+        this.onEvent('error', { error: 'Realtime websocket proxy error', event })
+        reject(new Error('Realtime websocket proxy error'))
       }
 
       socket.onmessage = event => {
         try {
           const payload = JSON.parse(event.data)
+          if (payload && payload.type === 'error') {
+            this.onEvent('error', payload)
+            return
+          }
           this.onEvent(payload.type, payload)
         } catch (error) {
           this.onEvent('error', { error })
