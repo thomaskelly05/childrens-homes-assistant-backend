@@ -8,18 +8,20 @@ import { childQuickActionHref, contextualChildQuickActions } from '@/lib/child-j
 import { useActiveChild } from '@/lib/context/active-child-context'
 
 export function MobileNav() {
-  const pathname = usePathname() || '/home'
+  const pathname = usePathname() || '/young-people'
   const { activeChild, childScopedHref } = useActiveChild()
   const childMatch = pathname.match(/^\/young-people\/([^/]+)/)
   const childId = childMatch?.[1] || activeChild?.id
-  const items = [
-    { label: 'Command', href: '/dashboard', icon: Home },
-    { label: 'People', href: childId ? `/young-people/${encodeURIComponent(childId)}/journey` : '/young-people', icon: UserRound },
-    { label: 'Story', href: childId ? `/young-people/${encodeURIComponent(childId)}/daily-note/new` : '/home', icon: ClipboardPlus },
-    { label: 'Events', href: childId ? `/young-people/${encodeURIComponent(childId)}/chronology` : childScopedHref('/chronology'), icon: FileText },
-    { label: 'Safe', href: childId ? `/safeguarding?young_person_id=${encodeURIComponent(childId)}` : '/safeguarding', icon: ShieldAlert },
+  const items = childId ? [
+    { label: 'People', href: `/young-people/${encodeURIComponent(childId)}/journey`, icon: UserRound },
+    { label: 'Story', href: `/young-people/${encodeURIComponent(childId)}/daily-note/new`, icon: ClipboardPlus },
+    { label: 'Events', href: `/young-people/${encodeURIComponent(childId)}/chronology`, icon: FileText },
+    { label: 'Safe', href: `/safeguarding?young_person_id=${encodeURIComponent(childId)}`, icon: ShieldAlert },
     { label: 'ORB', href: '/assistant', icon: MessageSquarePlus },
     { label: 'Alerts', href: '/notifications', icon: Bell }
+  ] : [
+    { label: 'Choose', href: '/young-people', icon: Home },
+    { label: 'Children', href: '/young-people', icon: UserRound }
   ]
   const quickActions = childId
     ? contextualChildQuickActions({ workflow: 'mobile' }).map((action) => ({
@@ -28,9 +30,7 @@ export function MobileNav() {
         icon: action.id === 'dictate-orb' ? MessageSquarePlus : ClipboardPlus
       }))
     : [
-        { label: 'Choose child', href: '/home', icon: ClipboardPlus },
-        { label: 'Quick record', href: '/home', icon: ClipboardPlus },
-        { label: 'Assistant', href: '/assistant', icon: MessageSquarePlus }
+        { label: 'Choose child', href: '/young-people', icon: ClipboardPlus }
       ]
 
   return (
@@ -39,7 +39,7 @@ export function MobileNav() {
         {quickActions.map((item) => {
           const Icon = item.icon
           return (
-            <Link key={item.label} href={item.href} className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-full bg-white/95 px-3 py-2 text-[11px] font-black text-slate-700 shadow-lg shadow-slate-900/10 ring-1 ring-white/70">
+            <Link prefetch={false} key={item.label} href={item.href} className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-full bg-white/95 px-3 py-2 text-[11px] font-black text-slate-700 shadow-lg shadow-slate-900/10 ring-1 ring-white/70">
               <Icon className="h-3.5 w-3.5" aria-hidden />
               {item.label}
             </Link>
@@ -48,13 +48,14 @@ export function MobileNav() {
       </div>
       <nav className="flex items-center justify-between rounded-[28px] bg-white/90 px-3 py-2 shadow-[0_20px_60px_rgba(15,23,42,0.12)] ring-1 ring-white/70 backdrop-blur-xl">
         {items.map((item) => {
-          const active = pathname === item.href || (item.href !== '/home' && pathname.startsWith(item.href))
+          const active = pathname === item.href || (item.href !== '/young-people' && pathname.startsWith(item.href))
           const Icon = item.icon
           return (
             <Link
+              prefetch={false}
               key={`${item.label}-${item.href}`}
               href={item.href}
-                className={active ? 'min-h-12 rounded-2xl bg-slate-950 px-3 py-2 text-xs font-black text-white' : 'min-h-12 px-2 py-2 text-xs font-black text-slate-500'}
+              className={active ? 'min-h-12 rounded-2xl bg-slate-950 px-3 py-2 text-xs font-black text-white' : 'min-h-12 px-2 py-2 text-xs font-black text-slate-500'}
             >
               <Icon className="mx-auto h-4 w-4" aria-hidden />
               <span className="mt-1 block">{item.label}</span>
