@@ -19,6 +19,10 @@ TABLE_ALIASES = {
     "uploaded_documents": "support_plans",
     "generated_documents": "support_plans",
     "inspection_evidence_facts": "support_plans",
+    "statutory_documents": "support_plans",
+    "handover_records": "support_plans",
+    "safeguarding_records": "incidents",
+    "missing_episodes": "incidents",
 }
 
 
@@ -55,7 +59,7 @@ class OSSyncDispatcher:
             payload.setdefault("primary_record_type", original_table.rstrip("s"))
             payload.setdefault("record_type", original_table.rstrip("s"))
             payload.setdefault("event_type", original_table.rstrip("s"))
-            payload.setdefault("standards_rationale", f"Auto-linked from {original_table} through legacy OS sync alias")
+            payload.setdefault("standards_rationale", f"Auto-linked from {original_table} through OS sync alias")
 
         if table == "daily_notes":
             self.os_sync.sync_daily_note(payload, recorded_by_name=recorded_by_name)
