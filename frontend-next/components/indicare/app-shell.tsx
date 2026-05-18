@@ -14,7 +14,6 @@ import {
   FolderOpen,
   LogOut,
   Gauge,
-  Clock3,
   ShieldCheck,
   ShieldAlert,
   SearchCheck,
@@ -25,7 +24,6 @@ import { ReactNode, useEffect } from 'react'
 
 import { CommandSearch } from '@/components/indicare/command-search'
 import { NotificationBell } from '@/components/connect/notification-bell'
-import { WelcomePanel } from '@/components/connect/welcome-panel'
 import { OrbButton } from '@/components/indicare/orb/orb-button'
 import { QuickActionButton } from '@/components/child-journey/quick-action-button'
 import { MobileNav } from '@/components/mobile-nav'
@@ -45,22 +43,23 @@ type NavItem = {
   permissions: string[]
   scoped?: boolean
   activeRoots?: string[]
+  requiresChild?: boolean
 }
 
 const navItems: NavItem[] = [
   { section: 'Global', href: '/young-people', label: 'Children', icon: UserRound, permissions: ['records:read'], activeRoots: ['home', 'dashboard', 'workspace', 'young-people', 'children'] },
-  { section: 'Global', href: '/homes', label: 'Homes', icon: Building2, permissions: ['records:read'], activeRoots: ['homes'] },
-  { section: 'Global', href: '/connect', label: 'Connect', icon: MessageCircle, permissions: ['records:read'], activeRoots: ['connect'] },
-  { section: 'Global', href: '/chronology', label: 'Chronology', icon: Clock3, permissions: ['records:read'], activeRoots: ['chronology'] },
-  { section: 'Global', href: '/documents', label: 'Documents', icon: FolderOpen, permissions: ['records:read'], activeRoots: ['documents', 'evidence'] },
-  { section: 'Global', href: '/safeguarding', label: 'Safeguarding', icon: ShieldAlert, permissions: ['records:read'], activeRoots: ['safeguarding'] },
-  { section: 'Global', href: '/ofsted-readiness', label: 'Inspection', icon: SearchCheck, permissions: ['reports:read'], activeRoots: ['ofsted-readiness', 'regulatory', 'reg44'] },
-  { section: 'Global', href: '/assistant', label: 'ORB', icon: Sparkles, permissions: ['assistant:access'], activeRoots: ['assistant'] },
+  { section: 'Global', href: '/homes', label: 'Homes', icon: Building2, permissions: ['records:read'], activeRoots: ['homes'], requiresChild: true },
+  { section: 'Global', href: '/connect', label: 'Connect', icon: MessageCircle, permissions: ['records:read'], activeRoots: ['connect'], requiresChild: true },
+  { section: 'Global', href: '/chronology', label: 'Chronology', icon: FileText, permissions: ['records:read'], activeRoots: ['chronology'], requiresChild: true },
+  { section: 'Global', href: '/documents', label: 'Documents', icon: FolderOpen, permissions: ['records:read'], activeRoots: ['documents', 'evidence'], requiresChild: true },
+  { section: 'Global', href: '/safeguarding', label: 'Safeguarding', icon: ShieldAlert, permissions: ['records:read'], activeRoots: ['safeguarding'], requiresChild: true },
+  { section: 'Global', href: '/ofsted-readiness', label: 'Inspection', icon: SearchCheck, permissions: ['reports:read'], activeRoots: ['ofsted-readiness', 'regulatory', 'reg44'], requiresChild: true },
+  { section: 'Global', href: '/assistant', label: 'ORB', icon: Sparkles, permissions: ['assistant:access'], activeRoots: ['assistant'], requiresChild: true },
   { section: 'Global', href: '/profile', label: 'Profile', icon: UsersRound, permissions: ['records:read'], activeRoots: ['profile'] },
-  { section: 'System', href: '/notifications', label: 'Notifications', icon: Bell, permissions: ['records:read'], activeRoots: ['notifications'] },
-  { section: 'System', href: '/shifts/current', label: 'Shift', icon: ClipboardCheck, permissions: ['records:read'], activeRoots: ['shifts', 'handover'] },
-  { section: 'System', href: '/management', label: 'Reviews', icon: Gauge, permissions: ['reports:read'], activeRoots: ['management'] },
-  { section: 'System', href: '/active-child', label: 'Current Child', icon: FileText, permissions: ['records:read'], scoped: true }
+  { section: 'System', href: '/notifications', label: 'Notifications', icon: Bell, permissions: ['records:read'], activeRoots: ['notifications'], requiresChild: true },
+  { section: 'System', href: '/shifts/current', label: 'Shift', icon: ClipboardCheck, permissions: ['records:read'], activeRoots: ['shifts', 'handover'], requiresChild: true },
+  { section: 'System', href: '/management', label: 'Reviews', icon: Gauge, permissions: ['reports:read'], activeRoots: ['management'], requiresChild: true },
+  { section: 'System', href: '/active-child', label: 'Current Child', icon: FileText, permissions: ['records:read'], scoped: true, requiresChild: true }
 ]
 
 const recordWorkspaceRoots = ['actions', 'reports', 'evidence', 'documents', 'chronology', 'daily-logs', 'incidents', 'safeguarding', 'medication', 'health', 'keywork', 'appointments', 'risk-assessments', 'reg44']
@@ -77,7 +76,7 @@ function selectedYoungPersonId(pathname: string) {
 function titleFromPath(pathname: string) {
   if (pathname === '/' || pathname === '/home' || pathname === '/dashboard' || pathname === '/workspace') return 'Children'
   const parts = pathname.split('/').filter(Boolean)
-  if (!parts.length) return 'Home'
+  if (!parts.length) return 'Children'
   return parts[0].split('-').map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`).join(' ')
 }
 
@@ -87,6 +86,7 @@ function labelForRole(role: keyof typeof roleLabels | string | undefined) {
 
 function hrefForNavItem(item: NavItem, activeChildId: string | undefined, childScopedHref: (href: string) => string) {
   const encodedChildId = activeChildId ? encodeURIComponent(activeChildId) : null
+  if (item.requiresChild && !encodedChildId && item.href !== '/young-people' && item.href !== '/profile') return '/young-people'
   if (item.href === '/active-child' || item.href === '/journey') {
     return encodedChildId ? `/young-people/${encodedChildId}/journey` : '/young-people'
   }
@@ -94,25 +94,25 @@ function hrefForNavItem(item: NavItem, activeChildId: string | undefined, childS
     return encodedChildId ? `/young-people/${encodedChildId}/daily-note/new` : '/young-people'
   }
   if (item.href === '/plans') {
-    return encodedChildId ? `/documents?young_person_id=${encodedChildId}&scope=plans` : '/documents'
+    return encodedChildId ? `/documents?young_person_id=${encodedChildId}&scope=plans` : '/young-people'
   }
+  if (item.href === '/chronology') return encodedChildId ? `/young-people/${encodedChildId}/chronology` : '/young-people'
+  if (item.href === '/documents') return encodedChildId ? `/documents?young_person_id=${encodedChildId}` : '/young-people'
+  if (item.href === '/safeguarding') return encodedChildId ? `/safeguarding?young_person_id=${encodedChildId}` : '/young-people'
   return item.scoped ? childScopedHref(item.href) : item.href
 }
 
 function isNavItemActive(item: NavItem, pathname: string) {
   const parts = pathname.split('/').filter(Boolean)
-  const root = parts[0] || 'home'
+  const root = parts[0] || 'young-people'
   if (item.activeRoots?.includes(root)) return true
-  if (item.href === '/journey') return parts[0] === 'young-people' && parts[2] === 'journey'
-  if (item.href === '/daily-note') return parts[0] === 'young-people' && parts[2] === 'daily-note'
-  if (item.href === '/plans') return ['placements', 'risk-assessments'].includes(root) || pathname.includes('focus=plans')
   return pathname === item.href || pathname.startsWith(item.href)
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
   const currentPathname = usePathname()
   const router = useRouter()
-  const pathname = currentPathname || '/home'
+  const pathname = currentPathname || '/young-people'
   const { status, user, logout } = useAuth()
   const { activeChild, breadcrumbs, childScopedHref, lockVersion, readyState } = useActiveChild()
   const pathParts = pathname.split('/').filter(Boolean)
@@ -134,6 +134,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const routeRequiresChildContext = pathParts.length === 1 && childContextRequiredRoots.includes(pathParts[0] || '')
   const childContextRedirect = activeChild && routeRequiresChildContext ? childScopedHref(`/${pathParts[0]}`) : null
   const requiresWorkspaceHydration = !e2eWorkspaceHydrationBypass && routeRequiresChildWorkspace(pathname, typeof window === 'undefined' ? null : new URLSearchParams(window.location.search))
+  const isSelectorRoute = pathname === '/' || pathname === '/home' || pathname === '/dashboard' || pathname === '/workspace' || pathname === '/young-people'
 
   useEffect(() => {
     if (childContextRedirect && childContextRedirect !== pathname) {
@@ -141,9 +142,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     }
   }, [childContextRedirect, pathname, router])
 
-  if (isPublicPage) {
-    return <>{children}</>
-  }
+  if (isPublicPage) return <>{children}</>
 
   if (status === 'loading' || !user) {
     return (
@@ -162,10 +161,10 @@ export function AppShell({ children }: { children: ReactNode }) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#f3f6fb] px-6 text-slate-900">
         <div className="w-full max-w-lg rounded-[32px] border border-amber-100 bg-white p-8 text-center shadow-2xl shadow-slate-950/10">
-          <p className="text-[11px] font-black uppercase tracking-[0.22em] text-amber-600">Unauthorized</p>
+          <p className="text-[11px] font-black uppercase tracking-[0.22em] text-amber-600">Unauthorised</p>
           <h1 className="mt-3 text-3xl font-black tracking-[-0.05em] text-slate-950">You do not have access to this workspace area</h1>
           <p className="mt-4 text-sm leading-6 text-slate-600">Your current role is {labelForRole(user.role)}. Ask an administrator or registered manager if your access needs changing.</p>
-          <Link href="/young-people" className="mt-6 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg shadow-slate-950/20">Choose child</Link>
+          <Link prefetch={false} href="/young-people" className="mt-6 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg shadow-slate-950/20">Choose child</Link>
         </div>
       </div>
     )
@@ -181,7 +180,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <p className="mt-6 text-[11px] font-black uppercase tracking-[0.22em] text-blue-700">Child context required</p>
           <h1 className="mt-3 text-3xl font-black tracking-[-0.05em] text-slate-950">Select a child before opening detailed records</h1>
           <p className="mt-4 text-sm leading-7 text-slate-600">Chronology, actions, documents, reports and safeguarding detail stay hidden until the OS is locked to one child.</p>
-          <Link href="/young-people" className="mt-6 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg shadow-slate-950/20">Choose child</Link>
+          <Link prefetch={false} href="/young-people" className="mt-6 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg shadow-slate-950/20">Choose child</Link>
         </div>
       </div>
     )
@@ -194,19 +193,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <p className="text-[11px] font-black uppercase tracking-[0.22em] text-blue-700">Preparing child workspace</p>
           <h1 className="mt-3 text-3xl font-black tracking-[-0.05em] text-slate-950">{readyState.phase === 'blocked' ? 'Live child workspace returned 0 rows.' : 'Opening the selected child journey'}</h1>
           <p className="mt-4 text-sm leading-6 text-slate-600">{readyState.reason || 'Checking child, session and role context before records load.'}</p>
-          {readyState.phase === 'active_child' ? <Link href="/young-people" className="mt-6 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg shadow-slate-950/20">Choose child</Link> : null}
-        </div>
-      </div>
-    )
-  }
-
-  if (childContextRedirect && childContextRedirect !== pathname) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f3f6fb] px-6 text-slate-900">
-        <div className="w-full max-w-lg rounded-[32px] border border-blue-100 bg-white p-8 text-center shadow-2xl shadow-slate-950/10">
-          <p className="text-[11px] font-black uppercase tracking-[0.22em] text-blue-700">Entering child journey</p>
-          <h1 className="mt-3 text-3xl font-black tracking-[-0.05em] text-slate-950">Opening {activeChildName}&apos;s scoped workspace</h1>
-          <p className="mt-4 text-sm leading-6 text-slate-600">Detailed records are being filtered to the active child context.</p>
+          {readyState.phase === 'active_child' ? <Link prefetch={false} href="/young-people" className="mt-6 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg shadow-slate-950/20">Choose child</Link> : null}
         </div>
       </div>
     )
@@ -232,11 +219,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     selected_record_id: selectedEntityContext?.selected_record_id,
     selected_record_type: selectedEntityContext?.selected_record_type,
     current_record_summary: activeChildName ? `Active child context is locked to ${activeChildName}.` : undefined,
-    current_child: selectedId ? {
-      id: selectedId,
-      name: activeChildName || selectedId,
-      current_route: pathname
-    } : undefined,
+    current_child: selectedId ? { id: selectedId, name: activeChildName || selectedId, current_route: pathname } : undefined,
     child_context_lock: activeChild ? {
       active: true,
       child_id: activeChild.id,
@@ -252,9 +235,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     assistant_context: assistantContext
   }
 
-  if (isStandaloneAssistant) {
-    return <>{children}</>
-  }
+  if (isStandaloneAssistant) return <>{children}</>
 
   if (isChildRecordingWorkspace || isRecordWorkspace) {
     return (
@@ -265,34 +246,34 @@ export function AppShell({ children }: { children: ReactNode }) {
     )
   }
 
-  const primaryNav = visibleNavItems.filter((item) => item.section !== 'System')
-  const secondaryNav = [
-    { label: 'Journey', href: selectedId ? `/young-people/${encodeURIComponent(selectedId)}/journey` : '/young-people' },
-    { label: 'Records', href: selectedId ? `/young-people/${encodeURIComponent(selectedId)}` : '/young-people' },
-    { label: 'Daily Note', href: selectedId ? `/young-people/${encodeURIComponent(selectedId)}/daily-note/new` : '/young-people' },
-    { label: 'Chronology', href: selectedId ? `/young-people/${encodeURIComponent(selectedId)}/chronology` : '/chronology' },
-    { label: 'Safeguarding', href: selectedId ? `/safeguarding?young_person_id=${encodeURIComponent(selectedId)}` : '/safeguarding' },
-    { label: 'Plans', href: selectedId ? `/documents?young_person_id=${encodeURIComponent(selectedId)}&scope=plans` : '/documents' },
-    { label: 'Risks', href: selectedId ? `/risk-assessments?young_person_id=${encodeURIComponent(selectedId)}` : '/risk-assessments' },
+  const primaryNav = visibleNavItems
+    .filter((item) => item.section !== 'System')
+    .filter((item) => selectedId || !item.requiresChild)
+  const secondaryNav = selectedId ? [
+    { label: 'Journey', href: `/young-people/${encodeURIComponent(selectedId)}/journey` },
+    { label: 'Records', href: `/young-people/${encodeURIComponent(selectedId)}` },
+    { label: 'Daily Note', href: `/young-people/${encodeURIComponent(selectedId)}/daily-note/new` },
+    { label: 'Chronology', href: `/young-people/${encodeURIComponent(selectedId)}/chronology` },
+    { label: 'Safeguarding', href: `/safeguarding?young_person_id=${encodeURIComponent(selectedId)}` },
+    { label: 'Plans', href: `/documents?young_person_id=${encodeURIComponent(selectedId)}&scope=plans` },
+    { label: 'Risks', href: `/risk-assessments?young_person_id=${encodeURIComponent(selectedId)}` },
     { label: 'Documents', href: childScopedHref('/documents') },
-    { label: 'Reviews', href: selectedId ? `/reports?young_person_id=${encodeURIComponent(selectedId)}&type=review` : '/reports' }
-  ]
+    { label: 'Reviews', href: `/reports?young_person_id=${encodeURIComponent(selectedId)}&type=review` }
+  ] : []
   const childDomainActive = pathParts[0] === 'young-people' || pathParts[0] === 'children'
   const displayBreadcrumbs = pathname === '/profile'
     ? [{ label: 'Children', href: '/young-people' }, { label: 'My profile', current: true }]
-    : pathname === '/workspace'
+    : isSelectorRoute
       ? [{ label: 'Children', href: '/young-people', current: true }]
       : pathParts[0] === 'children' || pathParts[0] === 'young-people'
         ? [{ label: 'Children', href: '/young-people' }, { label: activeChildName || selectedId || 'Child profile', current: true }]
-        : pathParts[0] === 'homes'
-          ? [{ label: 'Homes', href: '/young-people' }, { label: titleFromPath(pathname), current: true }]
-          : breadcrumbs
+        : breadcrumbs
 
   return (
     <div className="orb-os-shell min-h-screen bg-[#f3f6fb] text-slate-900">
       <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-[#f8fafc]/95 px-3 py-3 backdrop-blur-xl md:px-6">
         <div className="flex items-center gap-3">
-          <Link href="/young-people" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-sm font-black text-white shadow-lg shadow-slate-950/20" aria-label="Choose child">
+          <Link prefetch={false} href="/young-people" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-sm font-black text-white shadow-lg shadow-slate-950/20" aria-label="Choose child">
             IC
           </Link>
           <div className="hidden min-w-0 lg:block">
@@ -306,11 +287,10 @@ export function AppShell({ children }: { children: ReactNode }) {
               const href = hrefForNavItem(item, selectedId, childScopedHref)
               return (
                 <Link
+                  prefetch={false}
                   key={item.href}
                   href={href}
-                  className={`inline-flex shrink-0 items-center gap-2 rounded-2xl px-3 py-2 text-sm font-black transition focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    active ? 'bg-slate-950 text-white shadow-lg shadow-slate-950/15' : 'text-slate-600 hover:bg-white hover:text-slate-950'
-                  }`}
+                  className={`inline-flex shrink-0 items-center gap-2 rounded-2xl px-3 py-2 text-sm font-black transition focus:outline-none focus:ring-2 focus:ring-blue-500 ${active ? 'bg-slate-950 text-white shadow-lg shadow-slate-950/15' : 'text-slate-600 hover:bg-white hover:text-slate-950'}`}
                 >
                   <Icon className="h-4 w-4" aria-hidden />
                   {item.label}
@@ -320,23 +300,19 @@ export function AppShell({ children }: { children: ReactNode }) {
           </nav>
           <div className="ml-auto flex items-center gap-2">
             <CommandSearch />
-            <Link href="/young-people" className="hidden rounded-2xl border border-blue-100 bg-blue-50 px-3 py-2 text-sm font-black text-blue-800 shadow-sm transition hover:bg-blue-100 md:inline-flex">
+            <Link prefetch={false} href="/young-people" className="hidden rounded-2xl border border-blue-100 bg-blue-50 px-3 py-2 text-sm font-black text-blue-800 shadow-sm transition hover:bg-blue-100 md:inline-flex">
               <ShieldCheck className="mr-2 h-4 w-4" aria-hidden />
               {activeChildName ? 'Switch child' : 'Choose child'}
             </Link>
-            <NotificationBell />
-            <div className="hidden rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 shadow-sm xl:block">
-              {today}
-            </div>
+            {selectedId ? <NotificationBell /> : null}
+            <div className="hidden rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 shadow-sm xl:block">{today}</div>
             <details className="relative hidden md:block">
-              <summary className="list-none rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-black text-slate-700 shadow-sm marker:hidden">
-                Profile
-              </summary>
+              <summary className="list-none rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-black text-slate-700 shadow-sm marker:hidden">Profile</summary>
               <div className="absolute right-0 mt-2 w-64 rounded-[24px] border border-slate-200 bg-white p-4 shadow-2xl shadow-slate-950/15">
                 <p className="text-sm font-black text-slate-950">{displayName(user)}</p>
                 <p className="mt-1 text-xs font-bold text-slate-500">{labelForRole(user.role)}</p>
-                <Link href="/profile" className="mt-4 flex rounded-2xl bg-slate-50 px-4 py-3 text-sm font-black text-slate-700">My profile</Link>
-                <Link href="/settings" className="mt-2 flex rounded-2xl bg-slate-50 px-4 py-3 text-sm font-black text-slate-700">Settings</Link>
+                <Link prefetch={false} href="/profile" className="mt-4 flex rounded-2xl bg-slate-50 px-4 py-3 text-sm font-black text-slate-700">My profile</Link>
+                <Link prefetch={false} href="/settings" className="mt-2 flex rounded-2xl bg-slate-50 px-4 py-3 text-sm font-black text-slate-700">Settings</Link>
                 <button type="button" onClick={() => void logout()} data-testid="logout-button" className="mt-2 flex w-full items-center justify-center rounded-2xl border border-slate-200 px-4 py-3 text-sm font-black text-slate-700">
                   <LogOut className="mr-2 h-4 w-4" aria-hidden />
                   Log out
@@ -345,12 +321,12 @@ export function AppShell({ children }: { children: ReactNode }) {
             </details>
           </div>
         </div>
-        {activeChild && childDomainActive ? (
+        {activeChild && childDomainActive && secondaryNav.length ? (
           <nav className="mt-3 flex gap-2 overflow-x-auto pb-1 text-xs font-black uppercase tracking-[0.12em]" aria-label="Child workspace navigation">
             {secondaryNav.map((item) => {
-              const active = pathname === item.href || (item.href !== '/home' && pathname.startsWith(item.href.split('?')[0]))
+              const active = pathname === item.href || (item.href !== '/young-people' && pathname.startsWith(item.href.split('?')[0]))
               return (
-                <Link key={`${item.label}-${item.href}`} href={item.href} className={`shrink-0 rounded-full px-4 py-2 transition ${active ? 'bg-blue-700 text-white' : 'bg-white text-slate-500 ring-1 ring-slate-200 hover:text-slate-950'}`}>
+                <Link prefetch={false} key={`${item.label}-${item.href}`} href={item.href} className={`shrink-0 rounded-full px-4 py-2 transition ${active ? 'bg-blue-700 text-white' : 'bg-white text-slate-500 ring-1 ring-slate-200 hover:text-slate-950'}`}>
                   {item.label}
                 </Link>
               )
@@ -361,14 +337,13 @@ export function AppShell({ children }: { children: ReactNode }) {
           {displayBreadcrumbs.map((crumb, index) => (
             <span key={`${crumb.label}-${index}`} className="inline-flex items-center gap-1">
               {index > 0 ? <ChevronRight className="h-3 w-3" aria-hidden /> : null}
-              {crumb.href && !crumb.current ? <Link href={crumb.href} className="hover:text-blue-700">{crumb.label}</Link> : <span className={crumb.current ? 'text-slate-800' : undefined}>{crumb.label}</span>}
+              {crumb.href && !crumb.current ? <Link prefetch={false} href={crumb.href} className="hover:text-blue-700">{crumb.label}</Link> : <span className={crumb.current ? 'text-slate-800' : undefined}>{crumb.label}</span>}
             </span>
           ))}
         </nav>
       </header>
 
       <main className="min-w-0 px-4 py-6 pb-32 md:px-8 md:py-8">
-        <WelcomePanel />
         {children}
       </main>
       <OrbButton context={orbContext} role={user.role} />
