@@ -7,6 +7,9 @@ from pydantic import BaseModel
 
 from auth.current_user import get_current_user
 from db.connection import get_db
+from services.os_sync_hooks import sync_after_save
+from services.workflow_response import gold_standard_response
+from services.young_people_linking_service import YoungPeopleLinkingService
 from services.young_person_service import YoungPersonService
 
 router = APIRouter(prefix="/young-people", tags=["Young People Appointments"])
@@ -50,6 +53,10 @@ class AppointmentUpdatePayload(BaseModel):
     status: str | None = None
 
 
+class AppointmentReviewPayload(BaseModel):
+    review_note: str | None = None
+
+
 def _safe_int(value: Any) -> int | None:
     try:
         if value is None:
@@ -65,6 +72,10 @@ def _user_home_id(current_user: dict[str, Any]) -> int | None:
 
 def _user_role(current_user: dict[str, Any]) -> str:
     return str(current_user.get("role") or "").strip().lower()
+
+
+def _actor_id(current_user: dict[str, Any]) -> int | None:
+    return _safe_int(current_user.get("user_id") or current_user.get("id"))
 
 
 def _assert_home_access(current_user: dict[str, Any], record_home_id: int | None) -> None:
@@ -87,6 +98,12 @@ def _assert_can_edit(current_user: dict[str, Any]) -> None:
         raise HTTPException(status_code=403, detail="You do not have permission to edit this record")
 
 
+def _assert_can_review(current_user: dict[str, Any]) -> None:
+    role = _user_role(current_user)
+    if role not in {"admin", "provider_admin", "manager"}:
+        raise HTTPException(status_code=403, detail="You do not have permission to review this record")
+
+
 def _load_and_check_young_person(
     young_person_id: int,
     current_user: dict[str, Any],
@@ -97,6 +114,14 @@ def _load_and_check_young_person(
 
     _assert_home_access(current_user, _safe_int(record.get("home_id")))
     return record
+
+
+def _shape_appointment(row: dict[str, Any]) -> dict[str, Any]:
+    item = dict(row or {})
+    item["record_type"] = "appointment"
+    item["recorded_at"] = item.get("appointment_date") or item.get("created_at")
+    item.setdefault("workflow_status", item.get("status") or "scheduled")
+    return item
 
 
 def _load_and_check_appointment(
@@ -123,9 +148,107 @@ def _load_and_check_appointment(
     if not row:
         raise HTTPException(status_code=404, detail="Appointment not found")
 
-    row = dict(row)
-    _assert_home_access(current_user, _safe_int(row.get("home_id")))
-    return row
+    item = _shape_appointment(dict(row))
+    _assert_home_access(current_user, _safe_int(item.get("home_id")))
+    return item
+
+
+def _link_appointment_event(conn, *, item: dict[str, Any], event_type: str, current_user: dict[str, Any]) -> dict[str, Any]:
+    status = str(item.get("status") or "scheduled").lower()
+    review_required = status in {"submitted", "returned", "cancelled", "archived"} or bool(item.get("follow_up_actions"))
+    workflow = YoungPeopleLinkingService.process_record_event(
+        conn=conn,
+        young_person_id=int(item["young_person_id"]),
+        source_table="young_person_appointments",
+        source_id=int(item["id"]),
+        event_type=event_type,
+        title=f"Appointment {event_type}: {item.get('title') or 'Appointment'}",
+        summary=item.get("summary") or item.get("purpose") or item.get("outcome_notes") or f"Appointment {event_type}",
+        narrative="\n".join(
+            str(value)
+            for value in [
+                item.get("title"),
+                item.get("purpose"),
+                item.get("child_voice"),
+                item.get("preparation_notes"),
+                item.get("outcome_notes"),
+                item.get("follow_up_actions"),
+            ]
+            if value
+        ) or f"Appointment {event_type}",
+        category="appointment",
+        subcategory=item.get("appointment_type") or "general",
+        significance="medium" if not review_required else "high",
+        due_date=item.get("appointment_date"),
+        owner_id=item.get("created_by"),
+        created_by=_actor_id(current_user),
+        workflow={
+            "link_chronology": True,
+            "create_task": bool(item.get("follow_up_actions")),
+            "manager_review": review_required,
+            "safeguarding": False,
+            "link_support_plans": bool(item.get("linked_plan_id")),
+            "link_monthly_reviews": True,
+            "link_quality_standards": True,
+        },
+        metadata={
+            "appointment_type": item.get("appointment_type"),
+            "appointment_status": status,
+            "professional_name": item.get("professional_name"),
+            "professional_role": item.get("professional_role"),
+            "quality_standards": ["reg_10_health_and_wellbeing"],
+            "standards_rationale": "Linked from young person appointment workflow",
+            "evidence_strength": "medium" if not review_required else "high",
+        },
+    )
+    conn.commit()
+    return workflow
+
+
+def _sync_appointment(item: dict[str, Any]) -> dict[str, Any]:
+    try:
+        ok = sync_after_save("young_person_appointments", item)
+        return {"attempted": True, "ok": bool(ok), "source_table": "young_person_appointments"}
+    except Exception as error:
+        return {"attempted": True, "ok": False, "source_table": "young_person_appointments", "error": str(error)}
+
+
+def _appointment_response(
+    *,
+    item: dict[str, Any],
+    workflow: dict[str, Any] | None = None,
+    sync: dict[str, Any] | None = None,
+    message: str | None = None,
+) -> dict[str, Any]:
+    return gold_standard_response(
+        id=item.get("id"),
+        item=item,
+        message=message,
+        workflow=workflow or {},
+        sync=sync or {},
+        appointment=item,
+    )
+
+
+def _update_appointment_status(conn, appointment_id: int, status: str) -> dict[str, Any]:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE young_person_appointments
+            SET status = %s,
+                updated_at = NOW()
+            WHERE id = %s
+            RETURNING *
+            """,
+            (status, appointment_id),
+        )
+        row = cur.fetchone()
+
+    if not row:
+        raise HTTPException(status_code=404, detail="Appointment not found")
+
+    conn.commit()
+    return _shape_appointment(dict(row))
 
 
 @router.get("/{young_person_id}/appointments")
@@ -164,26 +287,51 @@ def list_appointments(
                     a.updated_at
                 FROM young_person_appointments a
                 WHERE a.young_person_id = %s
+                  AND COALESCE(a.status, 'scheduled') <> 'archived'
                 ORDER BY a.appointment_date ASC NULLS LAST, a.id DESC
                 """,
                 (young_person_id,),
             )
             rows = cur.fetchall() or []
 
-        items = [dict(row) for row in rows]
-        for item in items:
-            item["record_type"] = "appointment"
-            item["recorded_at"] = item.get("appointment_date") or item.get("created_at")
-
-        return {
-            "items": items,
-            "count": len(items),
-        }
+        items = [_shape_appointment(dict(row)) for row in rows]
+        return {"items": items, "count": len(items)}
 
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to load appointments: {str(e)}")
+
+
+@router.get("/{young_person_id}/appointments/archive")
+def list_archived_appointments(
+    young_person_id: int,
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    _load_and_check_young_person(young_person_id, current_user)
+
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT a.*
+                FROM young_person_appointments a
+                WHERE a.young_person_id = %s
+                  AND COALESCE(a.status, '') = 'archived'
+                ORDER BY a.updated_at DESC NULLS LAST, a.id DESC
+                """,
+                (young_person_id,),
+            )
+            rows = cur.fetchall() or []
+
+        items = [_shape_appointment(dict(row)) for row in rows]
+        return {"items": items, "count": len(items)}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load archived appointments: {str(e)}")
 
 
 @router.post("/{young_person_id}/appointments")
@@ -197,7 +345,7 @@ def create_appointment(
     _load_and_check_young_person(young_person_id, current_user)
 
     try:
-        actor_user_id = _safe_int(current_user.get("user_id"))
+        actor_user_id = _actor_id(current_user)
 
         with conn.cursor() as cur:
             cur.execute(
@@ -253,15 +401,10 @@ def create_appointment(
             row = cur.fetchone()
 
         conn.commit()
-
-        appointment = dict(row) if row else {}
-        appointment["record_type"] = "appointment"
-        appointment["recorded_at"] = appointment.get("appointment_date") or appointment.get("created_at")
-
-        return {
-            "ok": True,
-            "appointment": appointment,
-        }
+        appointment = _shape_appointment(dict(row) if row else {})
+        workflow = _link_appointment_event(conn, item=appointment, event_type="created", current_user=current_user)
+        sync = _sync_appointment(appointment)
+        return _appointment_response(item=appointment, workflow=workflow, sync=sync, message="Appointment created")
 
     except HTTPException:
         raise
@@ -278,13 +421,7 @@ def get_appointment(
 ):
     try:
         row = _load_and_check_appointment(conn, appointment_id, current_user)
-        row["record_type"] = "appointment"
-        row["recorded_at"] = row.get("appointment_date") or row.get("created_at")
-
-        return {
-            "ok": True,
-            "appointment": row,
-        }
+        return _appointment_response(item=row, message="Appointment loaded")
 
     except HTTPException:
         raise
@@ -333,21 +470,78 @@ def update_appointment(
             raise HTTPException(status_code=404, detail="Appointment not found")
 
         conn.commit()
-
-        appointment = dict(row)
-        appointment["record_type"] = "appointment"
-        appointment["recorded_at"] = appointment.get("appointment_date") or appointment.get("created_at")
-
-        return {
-            "ok": True,
-            "appointment": appointment,
-        }
+        appointment = _shape_appointment(dict(row))
+        workflow = _link_appointment_event(conn, item=appointment, event_type="updated", current_user=current_user)
+        sync = _sync_appointment(appointment)
+        return _appointment_response(item=appointment, workflow=workflow, sync=sync, message="Appointment updated")
 
     except HTTPException:
         raise
     except Exception as e:
         conn.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to update appointment: {str(e)}")
+
+
+@router.post("/appointments/{appointment_id}/submit")
+@router.put("/appointments/{appointment_id}/submit")
+def submit_appointment(
+    appointment_id: int,
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    _assert_can_edit(current_user)
+    _load_and_check_appointment(conn, appointment_id, current_user)
+    appointment = _update_appointment_status(conn, appointment_id, "submitted")
+    workflow = _link_appointment_event(conn, item=appointment, event_type="submitted", current_user=current_user)
+    sync = _sync_appointment(appointment)
+    return _appointment_response(item=appointment, workflow=workflow, sync=sync, message="Appointment submitted")
+
+
+@router.post("/appointments/{appointment_id}/approve")
+@router.put("/appointments/{appointment_id}/approve")
+def approve_appointment(
+    appointment_id: int,
+    payload: AppointmentReviewPayload | None = None,
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    _assert_can_review(current_user)
+    _load_and_check_appointment(conn, appointment_id, current_user)
+    appointment = _update_appointment_status(conn, appointment_id, "approved")
+    workflow = _link_appointment_event(conn, item=appointment, event_type="approved", current_user=current_user)
+    sync = _sync_appointment(appointment)
+    return _appointment_response(item=appointment, workflow=workflow, sync=sync, message="Appointment approved")
+
+
+@router.post("/appointments/{appointment_id}/return")
+@router.put("/appointments/{appointment_id}/return")
+def return_appointment(
+    appointment_id: int,
+    payload: AppointmentReviewPayload | None = None,
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    _assert_can_review(current_user)
+    _load_and_check_appointment(conn, appointment_id, current_user)
+    appointment = _update_appointment_status(conn, appointment_id, "returned")
+    workflow = _link_appointment_event(conn, item=appointment, event_type="returned", current_user=current_user)
+    sync = _sync_appointment(appointment)
+    return _appointment_response(item=appointment, workflow=workflow, sync=sync, message="Appointment returned")
+
+
+@router.post("/appointments/{appointment_id}/archive")
+@router.put("/appointments/{appointment_id}/archive")
+def archive_appointment(
+    appointment_id: int,
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    _assert_can_review(current_user)
+    _load_and_check_appointment(conn, appointment_id, current_user)
+    appointment = _update_appointment_status(conn, appointment_id, "archived")
+    workflow = _link_appointment_event(conn, item=appointment, event_type="archived", current_user=current_user)
+    sync = _sync_appointment(appointment)
+    return _appointment_response(item=appointment, workflow=workflow, sync=sync, message="Appointment archived")
 
 
 @router.post("/appointments/{appointment_id}/complete")
@@ -358,41 +552,10 @@ def complete_appointment(
 ):
     _assert_can_edit(current_user)
     _load_and_check_appointment(conn, appointment_id, current_user)
-
-    try:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                UPDATE young_person_appointments
-                SET
-                    status = 'completed',
-                    updated_at = NOW()
-                WHERE id = %s
-                RETURNING *
-                """,
-                (appointment_id,),
-            )
-            row = cur.fetchone()
-
-        if not row:
-            raise HTTPException(status_code=404, detail="Appointment not found")
-
-        conn.commit()
-
-        appointment = dict(row)
-        appointment["record_type"] = "appointment"
-        appointment["recorded_at"] = appointment.get("appointment_date") or appointment.get("created_at")
-
-        return {
-            "ok": True,
-            "appointment": appointment,
-        }
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        conn.rollback()
-        raise HTTPException(status_code=500, detail=f"Failed to complete appointment: {str(e)}")
+    appointment = _update_appointment_status(conn, appointment_id, "completed")
+    workflow = _link_appointment_event(conn, item=appointment, event_type="completed", current_user=current_user)
+    sync = _sync_appointment(appointment)
+    return _appointment_response(item=appointment, workflow=workflow, sync=sync, message="Appointment completed")
 
 
 @router.post("/appointments/{appointment_id}/cancel")
@@ -403,38 +566,7 @@ def cancel_appointment(
 ):
     _assert_can_edit(current_user)
     _load_and_check_appointment(conn, appointment_id, current_user)
-
-    try:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                UPDATE young_person_appointments
-                SET
-                    status = 'cancelled',
-                    updated_at = NOW()
-                WHERE id = %s
-                RETURNING *
-                """,
-                (appointment_id,),
-            )
-            row = cur.fetchone()
-
-        if not row:
-            raise HTTPException(status_code=404, detail="Appointment not found")
-
-        conn.commit()
-
-        appointment = dict(row)
-        appointment["record_type"] = "appointment"
-        appointment["recorded_at"] = appointment.get("appointment_date") or appointment.get("created_at")
-
-        return {
-            "ok": True,
-            "appointment": appointment,
-        }
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        conn.rollback()
-        raise HTTPException(status_code=500, detail=f"Failed to cancel appointment: {str(e)}")
+    appointment = _update_appointment_status(conn, appointment_id, "cancelled")
+    workflow = _link_appointment_event(conn, item=appointment, event_type="cancelled", current_user=current_user)
+    sync = _sync_appointment(appointment)
+    return _appointment_response(item=appointment, workflow=workflow, sync=sync, message="Appointment cancelled")
