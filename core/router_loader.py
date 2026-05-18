@@ -222,9 +222,10 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
             "routers.compliance_routes",
             "routers.workflow_review_routes",
             "routers.schema_live_routes",
+            "routers.os_workflow_wiring_audit_routes",
             "backend.os_live_data_router",
         ),
-        notes="Compliance, workflow review, schema-live and OS live data gateways.",
+        notes="Compliance, workflow review, schema-live, OS workflow wiring audit and OS live data gateways.",
     ),
 )
 
