@@ -44,6 +44,10 @@ const nextConfig: NextConfig = {
         destination: `${backendOrigin}/inspection-os/:path*`
       },
       {
+        source: '/staff/evidence',
+        destination: `${backendOrigin}/staff/evidence`
+      },
+      {
         source: '/staff-today/:path*',
         destination: `${backendOrigin}/staff-today/:path*`
       },
