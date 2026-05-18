@@ -30,7 +30,9 @@ function str(value: unknown, fallback = '') {
 }
 
 function arr<T = any>(value: unknown): T[] {
-  return Array.isArray(value) ? value as T[] : []
+  if (Array.isArray(value)) return value as T[]
+  if (value === null || value === undefined || value === '') return []
+  return [value as T]
 }
 
 function rowList(payload: unknown): Record<string, any>[] {
@@ -63,11 +65,13 @@ function mapYoungPerson(row: Record<string, any>): YoungPerson {
   return {
     id: str(row.id || row.source_id),
     firstName: str(row.first_name || row.firstName || row.preferredName || row.displayName || 'Young'),
-    lastName: str(row.last_name || row.lastName || row.displayName ? '' : 'Person'),
+    lastName: str(row.last_name || row.lastName || (row.displayName ? '' : 'Person')),
     preferredName: str(row.preferred_name || row.preferredName || row.display_name || row.displayName || row.first_name || row.firstName || 'Young person'),
     dateOfBirth: str(row.date_of_birth || row.dateOfBirth),
     age: Number(row.age || 0),
-    status: str(row.status || row.placementStatus || 'active') as YoungPerson['status'],
+    gender: str(row.gender || row.sex),
+    status: str(row.status || row.placementStatus || 'active'),
+    legalStatus: str(row.legal_status || row.legalStatus),
     riskLevel: str(row.risk_level || row.riskLevel || 'medium') as YoungPerson['riskLevel'],
     safeguardingStatus: str(row.safeguarding_status || row.safeguardingStatus || ''),
     educationStatus: str(row.education_status || row.educationStatus || ''),
@@ -76,6 +80,12 @@ function mapYoungPerson(row: Record<string, any>): YoungPerson {
     currentPlacementId: str(row.current_placement_id || row.placement_id || row.currentPlacementId),
     likes: arr<string>(row.likes),
     dislikes: arr<string>(row.dislikes),
+    allergies: arr<string>(row.allergies),
+    importantContacts: arr<Record<string, any>>(row.important_contacts || row.importantContacts).map((contact) => ({
+      name: str(contact.name || contact.full_name || contact.fullName),
+      relationship: str(contact.relationship || contact.relationship_to_young_person),
+      phone: str(contact.phone || contact.telephone || contact.mobile)
+    })),
     communicationNeeds: arr<string>(row.communication_needs || row.communicationNeeds),
     sensoryNeeds: arr<string>(row.sensory_needs || row.sensoryNeeds),
     routines: arr<string>(row.routines)
@@ -93,7 +103,10 @@ function mapStaff(row: Record<string, any>): StaffMember {
     status: str(row.status || row.employment_status || 'active') as StaffMember['status'],
     startDate: str(row.start_date || row.created_at),
     training: [],
-    supervision: []
+    supervision: [],
+    qualifications: [],
+    assignedYoungPeople: [],
+    shiftPattern: ''
   }
 }
 
@@ -101,16 +114,24 @@ function mapIncident(event: any): Incident {
   return {
     id: str(event.id),
     youngPersonId: str(event.youngPersonIds?.[0] || event.young_person_id || ''),
+    staffIds: arr<string>(event.staffIds || event.staff_ids || event.createdBy || event.created_by),
     dateTime: str(event.dateTime || event.date_time || event.created_at),
     type: str(event.eventType || event.category || 'incident'),
+    severity: str(event.severity || 'medium') as Incident['severity'],
     location: str(event.location || ''),
+    status: str(event.status || 'open'),
     description: str(event.fullText || event.summary || event.title),
     trigger: str(event.trigger || ''),
     deEscalationUsed: arr<string>(event.deEscalationUsed || event.de_escalation_used),
     outcome: str(event.outcome || event.summary || ''),
+    injuries: str(event.injuries || ''),
+    policeInvolved: Boolean(event.policeInvolved || event.police_involved),
+    ambulanceInvolved: Boolean(event.ambulanceInvolved || event.ambulance_involved),
+    safeguardingRequired: Boolean(event.safeguardingRequired || event.safeguarding_required || event.safeguardingFlags?.length),
+    managerReview: str(event.managerReview || event.manager_review || event.managerReviewStatus || 'pending'),
     followUpActions: arr<string>(event.actionIds || event.action_ids),
     recordedBy: str(event.createdBy || event.created_by),
-    managerReviewStatus: str(event.managerReviewStatus || 'pending') as Incident['managerReviewStatus'],
+    managerReviewStatus: str(event.managerReviewStatus || event.managerReview || 'pending'),
     safeguardingLinked: Boolean(event.safeguardingFlags?.length),
     restraintUsed: str(event.title || event.category || '').toLowerCase().includes('restraint')
   }
@@ -120,8 +141,11 @@ function mapDailyLog(event: any): DailyLog {
   return {
     id: str(event.id),
     youngPersonId: str(event.youngPersonIds?.[0] || event.young_person_id || ''),
+    staffId: str(event.staffId || event.staff_id || event.createdBy || event.created_by),
     date: str(event.dateTime || event.date_time || event.created_at).slice(0, 10),
+    createdAt: str(event.createdAt || event.created_at || event.dateTime),
     shift: str(event.category || 'daily note'),
+    mood: str(event.mood || ''),
     presentation: str(event.summary || event.fullText || event.title),
     positiveMoments: [],
     concerns: event.severity === 'high' || event.severity === 'critical' ? [str(event.summary || event.title)] : [],
@@ -130,8 +154,7 @@ function mapDailyLog(event: any): DailyLog {
     educationAndActivities: '',
     familyContact: '',
     followUpActions: arr<string>(event.actionIds || event.action_ids),
-    recordedBy: str(event.createdBy || event.created_by),
-    createdAt: str(event.createdAt || event.created_at || event.dateTime)
+    recordedBy: str(event.createdBy || event.created_by)
   }
 }
 
@@ -144,6 +167,7 @@ function mapRisk(event: any): RiskAssessment {
     description: str(event.summary || event.fullText || event.title),
     controlMeasures: arr<string>(event.riskFlags || event.risk_flags),
     reviewDate: str(event.updatedAt || event.updated_at || event.createdAt || event.created_at).slice(0, 10),
+    reviewedBy: str(event.createdBy || event.created_by),
     responsibleStaffId: str(event.createdBy || event.created_by),
     status: 'active'
   }
@@ -169,23 +193,29 @@ function buildSummaryFromWorkspace(id: string, workspace: Awaited<ReturnType<typ
   const keywork = chronology.filter((event) => `${event.sourceType} ${event.eventType} ${event.category}`.toLowerCase().includes('keywork')).map((event) => ({
     id: event.id,
     youngPersonId: id,
+    staffId: str(event.createdBy || event.created_by),
     date: event.dateTime.slice(0, 10),
     topic: event.title,
+    goals: [],
     youngPersonVoice: event.summary || event.fullText,
-    staffReflection: '',
     actions: event.actionIds,
+    nextSessionDate: '',
+    staffReflection: '',
     recordedBy: event.createdBy
   }))
   const risks = chronology.filter((event) => event.riskFlags.length || `${event.sourceType} ${event.eventType} ${event.category}`.toLowerCase().includes('risk')).map(mapRisk)
   const appointments = chronology.filter((event) => `${event.sourceType} ${event.eventType} ${event.category}`.toLowerCase().includes('appointment')).map((event) => ({
     id: event.id,
     youngPersonId: id,
+    staffId: str(event.createdBy || event.created_by),
+    type: event.title,
     appointmentType: event.title,
     dateTime: event.dateTime,
     professional: '',
     location: '',
     outcome: event.summary,
     followUpRequired: Boolean(event.actionIds.length),
+    status: 'scheduled',
     nextAppointmentDate: undefined
   }))
   const medication = chronology.filter((event) => `${event.sourceType} ${event.eventType} ${event.category}`.toLowerCase().includes('medication')).map((event) => ({
@@ -194,9 +224,12 @@ function buildSummaryFromWorkspace(id: string, workspace: Awaited<ReturnType<typ
     medicationName: event.title,
     dosage: '',
     frequency: '',
+    route: '',
+    prescribedBy: '',
     status: 'active',
     reviewDate: event.updatedAt.slice(0, 10),
-    notes: event.summary
+    notes: event.summary,
+    administrationHistory: []
   }))
   return {
     youngPerson: person,
@@ -208,6 +241,7 @@ function buildSummaryFromWorkspace(id: string, workspace: Awaited<ReturnType<typ
     appointments,
     medication,
     safeguarding,
+    documents: [],
     reports: [],
     audit: []
   }
