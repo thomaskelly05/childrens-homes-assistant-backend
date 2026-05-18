@@ -263,18 +263,19 @@ export type OrbApiResponse<T> = {
 }
 
 export const defaultOrbVoiceProfile: OrbVoiceProfile = {
-  profile_id: 'british_female_calm',
-  name: 'british_female_calm',
+  profile_id: 'amelia_british_female_calm',
+  name: 'Amelia',
   provider_voice: 'shimmer',
-  accent: 'British',
-  tone: 'calm, concise, warm, professional and human',
-  tone_profile: 'calm_concise_human',
+  accent: 'British female, neutral UK with a soft North East warmth where possible',
+  tone: 'calm, concise, warm, professional, emotionally steady and human',
+  tone_profile: 'british_female_calm_care_companion',
   product_name: 'ORB powered by IndiCare',
-  speed: 'medium',
+  speed: 'medium-slow',
   speaking_speed: 'medium-slow',
-  expressiveness: 'natural but not theatrical',
-  use_case: "children's home operational support",
-  formality: 'professional',
+  expressiveness: 'natural, reassuring and lightly warm; never theatrical',
+  use_case: "children's home operational voice support",
+  voice_style: 'british_female_care_companion',
+  formality: 'professional but human',
   accessibility_mode: false,
   quiet_mode: false,
   concise_mode: false,
@@ -284,8 +285,8 @@ export const defaultOrbVoiceProfile: OrbVoiceProfile = {
 export const defaultOrbPreferences: OrbPreferences = {
   activation_mode: 'click_tap_orb',
   wake_phrase: 'Hey IndiCare',
-  voice_style: 'calm_operational',
-  speaking_speed: 'medium',
+  voice_style: 'british_female_care_companion',
+  speaking_speed: 'medium-slow',
   response_detail: 'concise',
   concise_answers: true,
   read_citations_aloud: false,
@@ -310,4 +311,3 @@ export const defaultOrbPreferences: OrbPreferences = {
   interruption_sensitivity: 'medium',
   ambient_noise_sensitivity: 'medium'
 }
-
