@@ -14,6 +14,7 @@ from repositories.os_repository_utils import safe_int
 from repositories.reports_repository import list_reports
 from repositories.workspaces_repository import adult_workspace, young_person_workspace
 from services.assistant_context_service import SharedAssistantContext
+from services.governance_intelligence_service import GovernanceIntelligenceService, governance_feature_flags
 from services.os_chronology_service import list_chronology
 from services.workforce_intelligence_service import WorkforceIntelligenceService
 
@@ -227,6 +228,63 @@ class AssistantRetrievalService:
                                 "route": "/staff/command-centre",
                             },
                             "workforce_intelligence",
+                        )
+                    )
+
+        governance_terms = {
+            "governance",
+            "inspection readiness",
+            "inspection",
+            "sccif",
+            "reg 44",
+            "reg44",
+            "reg 45",
+            "reg45",
+            "provider oversight",
+            "leadership",
+            "evidence matrix",
+            "quality standards",
+            "ofsted",
+        }
+        governance_modes = {
+            "regulatory_readiness",
+            "reg44_action_plan",
+            "reg45_writer",
+            "ofsted_evidence_pack",
+            "quality_review",
+            "governance_review",
+        }
+        if (
+            governance_feature_flags().get("orb_governance_retrieval", True)
+            and (
+                context.assistant_mode in governance_modes
+                or "governance" in route
+                or "ofsted" in route
+                or any(term in _safe_lower(message) for term in governance_terms)
+            )
+        ):
+            governance_centre = guarded(
+                "governance_intelligence",
+                lambda: GovernanceIntelligenceService().build_command_centre(conn, current_user=current_user, days=30, home_id=context.home_id),
+            )
+            if isinstance(governance_centre, dict):
+                governance_context = governance_centre.get("orb_governance_summary") or {}
+                for item in governance_context.get("evidence_sources") or []:
+                    sources.append(_normalise_source(item, "governance_evidence"))
+                summary = governance_context.get("governance_summary")
+                if isinstance(summary, dict):
+                    sources.append(
+                        _normalise_source(
+                            {
+                                "id": "governance_intelligence_summary",
+                                "title": "Governance intelligence summary",
+                                "summary": str(summary),
+                                "source_type": "governance_intelligence",
+                                "regulation_links": ["reg_13", "reg_44", "reg_45"],
+                                "sccif_links": ["sccif_effectiveness_of_leaders", "sccif_management_oversight"],
+                                "route": "/governance/command-centre",
+                            },
+                            "governance_intelligence",
                         )
                     )
 
