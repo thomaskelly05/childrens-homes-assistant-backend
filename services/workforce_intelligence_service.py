@@ -136,7 +136,9 @@ def calculate_recording_quality_score(record: dict[str, Any], *, now: datetime |
     has_safeguarding = _contains_any(text, SAFEGUARDING_TERMS)
     has_restorative = _contains_any(text, RESTORATIVE_TERMS)
     vague_hits = sorted(term for term in VAGUE_TERMS if term in text.lower())
-    has_reflection = bool(_text(record.get("reflection"))) or _contains_any(text, REFLECTION_TERMS) or word_count >= 90
+    reflection_text = _text(record.get("reflection"))
+    has_reflection = bool(reflection_text) or _contains_any(text, REFLECTION_TERMS) or word_count >= 90
+    strong_reflection = bool(reflection_text and _contains_any(reflection_text, REFLECTION_TERMS)) or (has_reflection and word_count >= 60)
 
     occurred = record.get("note_date") or record.get("date_time") or record.get("occurred_at") or record.get("event_at")
     submitted = record.get("submitted_at") or record.get("created_at") or record.get("updated_at")
@@ -173,7 +175,7 @@ def calculate_recording_quality_score(record: dict[str, Any], *, now: datetime |
         "safeguarding_language_present": has_safeguarding,
         "restorative_language_present": has_restorative,
         "vague_wording_hits": vague_hits,
-        "reflection_quality": "strong" if has_reflection and word_count >= 60 else "limited" if has_reflection else "missing",
+        "reflection_quality": "strong" if strong_reflection else "limited" if has_reflection else "missing",
         "timeliness_hours": timeliness_hours,
         "created_at": _iso(record.get("created_at") or record.get("updated_at")),
         "source_type": record.get("source_type") or record.get("record_type") or "recording",

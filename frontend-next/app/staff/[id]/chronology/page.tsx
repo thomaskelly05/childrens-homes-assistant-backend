@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
 
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
 import { Card, DataTable, EmptyState, PageHeader, RecordTimeline, SectionHeader, StatCard } from '@/components/indicare/ui'
@@ -12,7 +11,7 @@ export default async function StaffChronologyPage({ params }: { params: Promise<
     getWorkforceChronology(id)
   ])
   const profile = profileResult.data
-  if (!profile) notFound()
+  const staffTitle = profile?.staff?.title || `Staff #${id}`
   const chronology = chronologyResult.data
   const items = chronology.events.map((event) => ({
     id: String(event.id),
@@ -26,7 +25,7 @@ export default async function StaffChronologyPage({ params }: { params: Promise<
     <div className="space-y-6">
       <PageHeader
         eyebrow="Workforce Chronology"
-        title={`${profile.staff.title} timeline`}
+        title={`${staffTitle} timeline`}
         description="Evidence-aware staff chronology for supervision, training, probation, practice concerns, wellbeing, recognition, incidents, role changes and lifecycle events."
         action={<Link href={`/staff/${encodeURIComponent(id)}`} className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">Profile hub</Link>}
       />
