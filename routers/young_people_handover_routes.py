@@ -36,6 +36,44 @@ def _actor_id(current_user: dict[str, Any]) -> int | None:
     return _safe_int(current_user.get("user_id") or current_user.get("id"))
 
 
+def _compact_text(*values: Any) -> str | None:
+    parts = [str(value).strip() for value in values if value not in (None, "") and str(value).strip()]
+    return "\n\n".join(parts) or None
+
+
+def _date_from_datetime(value: Any) -> Any:
+    if not value:
+        return None
+    text = str(value)
+    return text[:10] if len(text) >= 10 else text
+
+
+def _handover_summary_from_payload(payload: Any) -> str | None:
+    if not payload:
+        return None
+    data = payload.model_dump(exclude_none=True) if hasattr(payload, "model_dump") else dict(payload or {})
+    return _compact_text(
+        data.get("summary_text") or data.get("summary"),
+        f"Risks to monitor: {data.get('risks_to_monitor')}" if data.get("risks_to_monitor") else None,
+        f"Positive updates: {data.get('positive_updates')}" if data.get("positive_updates") else None,
+        f"Actions required: {data.get('actions_required')}" if data.get("actions_required") else None,
+    )
+
+
+def _handover_date_from_payload(payload: Any) -> Any:
+    if not payload:
+        return None
+    data = payload.model_dump(exclude_none=True) if hasattr(payload, "model_dump") else dict(payload or {})
+    return data.get("handover_date") or _date_from_datetime(data.get("handover_datetime"))
+
+
+def _shift_from_payload(payload: Any) -> str:
+    if not payload:
+        return "day"
+    data = payload.model_dump(exclude_none=True) if hasattr(payload, "model_dump") else dict(payload or {})
+    return data.get("shift_type") or data.get("shift") or "day"
+
+
 def _assert_home_access(current_user: dict[str, Any], record_home_id: int | None) -> None:
     role = _user_role(current_user)
     user_home_id = _user_home_id(current_user)
@@ -218,13 +256,27 @@ def _update_handover_status(conn, handover_id: int, status: str, current_user: d
 
 class GenerateHandoverPayload(BaseModel):
     shift_type: str | None = "day"
+    shift: str | None = None
     title: str | None = "Shift Handover"
+    handover_datetime: str | None = None
+    handover_date: str | None = None
+    summary: str | None = None
+    summary_text: str | None = None
+    risks_to_monitor: str | None = None
+    positive_updates: str | None = None
+    actions_required: str | None = None
+    status: str | None = "draft"
 
 
 class HandoverUpdatePayload(BaseModel):
     shift_type: str | None = None
+    shift: str | None = None
     title: str | None = None
     summary_text: str | None = None
+    summary: str | None = None
+    risks_to_monitor: str | None = None
+    positive_updates: str | None = None
+    actions_required: str | None = None
     status: str | None = None
 
 
@@ -335,211 +387,219 @@ def generate_handover_record(
 
     try:
         with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT
-                    note_date,
-                    shift_type,
-                    mood,
-                    presentation,
-                    activities,
-                    education_update,
-                    health_update,
-                    family_update,
-                    behaviour_update,
-                    young_person_voice,
-                    positives,
-                    actions_required,
-                    workflow_status,
-                    created_at
-                FROM daily_notes
-                WHERE young_person_id = %s
-                  AND COALESCE(archived, FALSE) = FALSE
-                ORDER BY note_date DESC, created_at DESC
-                LIMIT 3
-                """,
-                (young_person_id,),
-            )
-            daily_rows = cur.fetchall() or []
+            manual_summary = _handover_summary_from_payload(payload)
+            summary_text = manual_summary
 
-            cur.execute(
-                """
-                SELECT
-                    incident_datetime,
-                    incident_type,
-                    description,
-                    staff_response,
-                    outcome,
-                    severity,
-                    manager_review_status,
-                    created_at
-                FROM incidents
-                WHERE young_person_id = %s
-                  AND COALESCE(archived, FALSE) = FALSE
-                ORDER BY incident_datetime DESC, created_at DESC
-                LIMIT 3
-                """,
-                (young_person_id,),
-            )
-            incident_rows = cur.fetchall() or []
-
-            cur.execute(
-                """
-                SELECT
-                    session_date,
-                    topic,
-                    summary,
-                    child_voice,
-                    reflective_analysis,
-                    actions_agreed,
-                    status,
-                    created_at
-                FROM keywork_sessions
-                WHERE young_person_id = %s
-                  AND COALESCE(archived, FALSE) = FALSE
-                ORDER BY session_date DESC, created_at DESC
-                LIMIT 3
-                """,
-                (young_person_id,),
-            )
-            keywork_rows = cur.fetchall() or []
-
-            cur.execute(
-                """
-                SELECT
-                    title,
-                    concern_summary,
-                    severity,
-                    status,
-                    approval_status,
-                    updated_at
-                FROM risk_assessments
-                WHERE young_person_id = %s
-                  AND COALESCE(archived, FALSE) = FALSE
-                ORDER BY updated_at DESC, id DESC
-                LIMIT 3
-                """,
-                (young_person_id,),
-            )
-            risk_rows = cur.fetchall() or []
-
-            cur.execute(
-                """
-                SELECT
-                    title,
-                    description,
-                    severity,
-                    is_active,
-                    review_date,
-                    created_at
-                FROM young_person_alerts
-                WHERE young_person_id = %s
-                  AND COALESCE(is_active, TRUE) = TRUE
-                ORDER BY
-                    COALESCE(review_date, CURRENT_DATE) ASC,
-                    created_at DESC,
-                    id DESC
-                LIMIT 5
-                """,
-                (young_person_id,),
-            )
-            alert_rows = cur.fetchall() or []
-
-            cur.execute(
-                """
-                SELECT
-                    title,
-                    summary,
-                    review_date,
-                    status,
-                    approval_status,
-                    updated_at
-                FROM support_plans
-                WHERE young_person_id = %s
-                  AND COALESCE(archived, FALSE) = FALSE
-                ORDER BY
-                    review_date ASC NULLS LAST,
-                    updated_at DESC,
-                    id DESC
-                LIMIT 3
-                """,
-                (young_person_id,),
-            )
-            plan_rows = cur.fetchall() or []
-
-            parts: list[str] = []
-
-            if alert_rows:
-                alert_text = "; ".join(
-                    [
-                        f"{row.get('title') or 'Alert'} ({row.get('severity') or 'standard'})"
-                        for row in alert_rows
-                    ]
+            if not summary_text:
+                cur.execute(
+                    """
+                    SELECT
+                        note_date,
+                        shift_type,
+                        mood,
+                        presentation,
+                        activities,
+                        education_update,
+                        health_update,
+                        family_update,
+                        behaviour_update,
+                        young_person_voice,
+                        positives,
+                        actions_required,
+                        workflow_status,
+                        created_at
+                    FROM daily_notes
+                    WHERE young_person_id = %s
+                      AND COALESCE(archived, FALSE) = FALSE
+                    ORDER BY note_date DESC, created_at DESC
+                    LIMIT 3
+                    """,
+                    (young_person_id,),
                 )
-                parts.append(f"Active alerts: {alert_text}.")
+                daily_rows = cur.fetchall() or []
 
-            if risk_rows:
-                risk_text = "; ".join(
-                    [
-                        f"{row.get('title') or 'Risk'} - {row.get('concern_summary') or 'No summary recorded'}"
-                        for row in risk_rows
-                    ]
+                cur.execute(
+                    """
+                    SELECT
+                        incident_datetime,
+                        incident_type,
+                        description,
+                        staff_response,
+                        outcome,
+                        severity,
+                        manager_review_status,
+                        created_at
+                    FROM incidents
+                    WHERE young_person_id = %s
+                      AND COALESCE(archived, FALSE) = FALSE
+                    ORDER BY incident_datetime DESC, created_at DESC
+                    LIMIT 3
+                    """,
+                    (young_person_id,),
                 )
-                parts.append(f"Current risks: {risk_text}.")
+                incident_rows = cur.fetchall() or []
 
-            if plan_rows:
-                plan_text = "; ".join(
-                    [
-                        f"{row.get('title') or 'Plan'} ({row.get('approval_status') or row.get('status') or 'draft'})"
-                        for row in plan_rows
-                    ]
+                cur.execute(
+                    """
+                    SELECT
+                        session_date,
+                        topic,
+                        summary,
+                        child_voice,
+                        reflective_analysis,
+                        actions_agreed,
+                        status,
+                        created_at
+                    FROM keywork_sessions
+                    WHERE young_person_id = %s
+                      AND COALESCE(archived, FALSE) = FALSE
+                    ORDER BY session_date DESC, created_at DESC
+                    LIMIT 3
+                    """,
+                    (young_person_id,),
                 )
-                parts.append(f"Current plans: {plan_text}.")
+                keywork_rows = cur.fetchall() or []
 
-            latest_daily = daily_rows[0] if daily_rows else None
-            if latest_daily:
-                presentation = latest_daily.get("presentation") or latest_daily.get("mood") or "No presentation recorded"
-                activities = latest_daily.get("activities") or "No activity detail recorded"
-                parts.append(f"Presentation and daily living: {presentation}. Activities included {activities}.")
+                cur.execute(
+                    """
+                    SELECT
+                        title,
+                        concern_summary,
+                        severity,
+                        status,
+                        approval_status,
+                        updated_at
+                    FROM risk_assessments
+                    WHERE young_person_id = %s
+                      AND COALESCE(archived, FALSE) = FALSE
+                    ORDER BY updated_at DESC, id DESC
+                    LIMIT 3
+                    """,
+                    (young_person_id,),
+                )
+                risk_rows = cur.fetchall() or []
 
-                if latest_daily.get("education_update"):
-                    parts.append(f"Education: {latest_daily.get('education_update')}")
-                if latest_daily.get("health_update"):
-                    parts.append(f"Health: {latest_daily.get('health_update')}")
-                if latest_daily.get("family_update"):
-                    parts.append(f"Family/contact: {latest_daily.get('family_update')}")
-                if latest_daily.get("behaviour_update"):
-                    parts.append(f"Behaviour/regulation: {latest_daily.get('behaviour_update')}")
-                if latest_daily.get("young_person_voice"):
-                    parts.append(f"Young person's voice: {latest_daily.get('young_person_voice')}")
-                if latest_daily.get("positives"):
-                    parts.append(f"Positives: {latest_daily.get('positives')}")
-                if latest_daily.get("actions_required"):
-                    parts.append(f"Actions for next shift: {latest_daily.get('actions_required')}")
+                cur.execute(
+                    """
+                    SELECT
+                        title,
+                        description,
+                        severity,
+                        is_active,
+                        review_date,
+                        created_at
+                    FROM young_person_alerts
+                    WHERE young_person_id = %s
+                      AND COALESCE(is_active, TRUE) = TRUE
+                    ORDER BY
+                        COALESCE(review_date, CURRENT_DATE) ASC,
+                        created_at DESC,
+                        id DESC
+                    LIMIT 5
+                    """,
+                    (young_person_id,),
+                )
+                alert_rows = cur.fetchall() or []
 
-            latest_incident = incident_rows[0] if incident_rows else None
-            if latest_incident:
-                incident_type = latest_incident.get("incident_type") or "Incident"
-                description = latest_incident.get("description") or "No description recorded"
-                staff_response = latest_incident.get("staff_response") or "No staff response recorded"
-                outcome = latest_incident.get("outcome")
-                incident_text = f"Recent incident: {incident_type}. {description}. Staff response: {staff_response}"
-                if outcome:
-                    incident_text += f" Outcome: {outcome}"
-                parts.append(incident_text)
+                cur.execute(
+                    """
+                    SELECT
+                        title,
+                        summary,
+                        review_date,
+                        status,
+                        approval_status,
+                        updated_at
+                    FROM support_plans
+                    WHERE young_person_id = %s
+                      AND COALESCE(archived, FALSE) = FALSE
+                    ORDER BY
+                        review_date ASC NULLS LAST,
+                        updated_at DESC,
+                        id DESC
+                    LIMIT 3
+                    """,
+                    (young_person_id,),
+                )
+                plan_rows = cur.fetchall() or []
 
-            latest_keywork = keywork_rows[0] if keywork_rows else None
-            if latest_keywork:
-                topic = latest_keywork.get("topic") or "Key work"
-                summary = latest_keywork.get("summary") or latest_keywork.get("reflective_analysis") or "No summary recorded"
-                actions = latest_keywork.get("actions_agreed")
-                keywork_text = f"Recent key work focus: {topic}. {summary}"
-                if actions:
-                    keywork_text += f" Actions agreed: {actions}"
-                parts.append(keywork_text)
+                parts: list[str] = []
 
-            summary_text = " ".join(parts) if parts else "No recent records were available to generate a handover summary."
+                if alert_rows:
+                    alert_text = "; ".join(
+                        [
+                            f"{row.get('title') or 'Alert'} ({row.get('severity') or 'standard'})"
+                            for row in alert_rows
+                        ]
+                    )
+                    parts.append(f"Active alerts: {alert_text}.")
+
+                if risk_rows:
+                    risk_text = "; ".join(
+                        [
+                            f"{row.get('title') or 'Risk'} - {row.get('concern_summary') or 'No summary recorded'}"
+                            for row in risk_rows
+                        ]
+                    )
+                    parts.append(f"Current risks: {risk_text}.")
+
+                if plan_rows:
+                    plan_text = "; ".join(
+                        [
+                            f"{row.get('title') or 'Plan'} ({row.get('approval_status') or row.get('status') or 'draft'})"
+                            for row in plan_rows
+                        ]
+                    )
+                    parts.append(f"Current plans: {plan_text}.")
+
+                latest_daily = daily_rows[0] if daily_rows else None
+                if latest_daily:
+                    presentation = latest_daily.get("presentation") or latest_daily.get("mood") or "No presentation recorded"
+                    activities = latest_daily.get("activities") or "No activity detail recorded"
+                    parts.append(f"Presentation and daily living: {presentation}. Activities included {activities}.")
+
+                    if latest_daily.get("education_update"):
+                        parts.append(f"Education: {latest_daily.get('education_update')}")
+                    if latest_daily.get("health_update"):
+                        parts.append(f"Health: {latest_daily.get('health_update')}")
+                    if latest_daily.get("family_update"):
+                        parts.append(f"Family/contact: {latest_daily.get('family_update')}")
+                    if latest_daily.get("behaviour_update"):
+                        parts.append(f"Behaviour/regulation: {latest_daily.get('behaviour_update')}")
+                    if latest_daily.get("young_person_voice"):
+                        parts.append(f"Young person's voice: {latest_daily.get('young_person_voice')}")
+                    if latest_daily.get("positives"):
+                        parts.append(f"Positives: {latest_daily.get('positives')}")
+                    if latest_daily.get("actions_required"):
+                        parts.append(f"Actions for next shift: {latest_daily.get('actions_required')}")
+
+                latest_incident = incident_rows[0] if incident_rows else None
+                if latest_incident:
+                    incident_type = latest_incident.get("incident_type") or "Incident"
+                    description = latest_incident.get("description") or "No description recorded"
+                    staff_response = latest_incident.get("staff_response") or "No staff response recorded"
+                    outcome = latest_incident.get("outcome")
+                    incident_text = f"Recent incident: {incident_type}. {description}. Staff response: {staff_response}"
+                    if outcome:
+                        incident_text += f" Outcome: {outcome}"
+                    parts.append(incident_text)
+
+                latest_keywork = keywork_rows[0] if keywork_rows else None
+                if latest_keywork:
+                    topic = latest_keywork.get("topic") or "Key work"
+                    summary = latest_keywork.get("summary") or latest_keywork.get("reflective_analysis") or "No summary recorded"
+                    actions = latest_keywork.get("actions_agreed")
+                    keywork_text = f"Recent key work focus: {topic}. {summary}"
+                    if actions:
+                        keywork_text += f" Actions agreed: {actions}"
+                    parts.append(keywork_text)
+
+                summary_text = " ".join(parts) if parts else "No recent records were available to generate a handover summary."
+
             actor_user_id = _actor_id(current_user)
+            handover_date = _handover_date_from_payload(payload)
+            shift_type = _shift_from_payload(payload)
+            status = payload.status or "draft"
 
             cur.execute(
                 """
@@ -558,11 +618,11 @@ def generate_handover_record(
                 )
                 VALUES (
                     %s,
-                    CURRENT_DATE,
+                    COALESCE(%s::date, CURRENT_DATE),
                     %s,
                     %s,
                     %s,
-                    'draft',
+                    %s,
                     NOW() - INTERVAL '7 days',
                     NOW(),
                     %s,
@@ -573,9 +633,11 @@ def generate_handover_record(
                 """,
                 (
                     young_person_id,
-                    payload.shift_type or "day",
+                    handover_date,
+                    shift_type,
                     payload.title or "Shift Handover",
                     summary_text,
+                    status,
                     actor_user_id,
                 ),
             )
@@ -604,12 +666,17 @@ def update_handover(
 ):
     _assert_can_edit(current_user)
     _load_and_check_handover(conn, handover_id, current_user)
-    updates = payload.model_dump(exclude_unset=True)
-    if not updates:
-        raise HTTPException(status_code=400, detail="No changes provided")
-
-    allowed = {"shift_type", "title", "summary_text", "status"}
-    updates = {key: value for key, value in updates.items() if key in allowed}
+    raw_updates = payload.model_dump(exclude_unset=True)
+    updates: dict[str, Any] = {}
+    if "shift_type" in raw_updates or "shift" in raw_updates:
+        updates["shift_type"] = raw_updates.get("shift_type") or raw_updates.get("shift")
+    if "title" in raw_updates:
+        updates["title"] = raw_updates.get("title")
+    summary_text = _handover_summary_from_payload(raw_updates)
+    if summary_text:
+        updates["summary_text"] = summary_text
+    if "status" in raw_updates:
+        updates["status"] = raw_updates.get("status")
     if not updates:
         raise HTTPException(status_code=400, detail="No supported changes provided")
 
