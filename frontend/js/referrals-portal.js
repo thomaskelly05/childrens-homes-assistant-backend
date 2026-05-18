@@ -1,24 +1,15 @@
 const state = { referrals: [], selectedReferral: null };
 
 const CAPABILITY_OPTIONS = [
-  ["accepts_autism", "Autism"],
-  ["accepts_learning_disability", "Learning disability"],
-  ["accepts_global_developmental_delay", "Global developmental delay"],
-  ["accepts_trauma_history", "Trauma history"],
-  ["accepts_cse_risk", "CSE risk"],
-  ["accepts_knife_risk", "Knife/weapons risk"],
-  ["accepts_fire_setting", "Fire setting"],
-  ["accepts_self_harm", "Self-harm"],
-  ["accepts_suicidal_ideation", "Suicidal ideation"],
-  ["accepts_physical_aggression", "Physical aggression"],
-  ["accepts_sexualised_behaviour", "Sexualised behaviour"],
-  ["accepts_missing_from_care", "Missing from care"],
-  ["accepts_substance_misuse", "Substance misuse"],
-  ["accepts_criminal_exploitation", "Criminal exploitation"],
-  ["accepts_gang_affiliation", "Gang affiliation"],
-  ["accepts_high_supervision", "High supervision"],
-  ["accepts_deprivation_of_liberty", "DOLs / deprivation of liberty"],
-  ["emergency_bed_available", "Emergency bed available"]
+  ["accepts_autism", "Autism"], ["accepts_learning_disability", "Learning disability"],
+  ["accepts_global_developmental_delay", "Global developmental delay"], ["accepts_trauma_history", "Trauma history"],
+  ["accepts_cse_risk", "CSE risk"], ["accepts_knife_risk", "Knife/weapons risk"],
+  ["accepts_fire_setting", "Fire setting"], ["accepts_self_harm", "Self-harm"],
+  ["accepts_suicidal_ideation", "Suicidal ideation"], ["accepts_physical_aggression", "Physical aggression"],
+  ["accepts_sexualised_behaviour", "Sexualised behaviour"], ["accepts_missing_from_care", "Missing from care"],
+  ["accepts_substance_misuse", "Substance misuse"], ["accepts_criminal_exploitation", "Criminal exploitation"],
+  ["accepts_gang_affiliation", "Gang affiliation"], ["accepts_high_supervision", "High supervision"],
+  ["accepts_deprivation_of_liberty", "DOLs / deprivation of liberty"], ["emergency_bed_available", "Emergency bed available"]
 ];
 
 const $ = (id) => document.getElementById(id);
@@ -28,16 +19,13 @@ const els = {
   capabilityForm: $("capabilityForm"), capabilityChecks: $("capabilityChecks"), documentForm: $("documentForm"),
   riskFlags: $("riskFlags"), scoreAllBtn: $("scoreAllBtn"), scoreOneBtn: $("scoreOneBtn"), scoreHomeId: $("scoreHomeId"),
   matchingResults: $("matchingResults"), convertHomeId: $("convertHomeId"), convertBtn: $("convertBtn"),
-  conversionResult: $("conversionResult"), toast: $("toast")
+  conversionResult: $("conversionResult"), decisionReason: $("decisionReason"), decisionHomeId: $("decisionHomeId"),
+  acceptInPrincipleBtn: $("acceptInPrincipleBtn"), requestMoreInfoBtn: $("requestMoreInfoBtn"), declineReferralBtn: $("declineReferralBtn"),
+  decisionResult: $("decisionResult"), toast: $("toast")
 };
 
 function escapeHtml(value = "") {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+  return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
 }
 
 function showToast(message, kind = "info") {
@@ -69,15 +57,11 @@ function formToObject(form) {
 }
 
 function statusClass(status = "") { return String(status || "").toLowerCase().replace(/[^a-z0-9_]+/g, "_"); }
-function referralName(referral = {}) {
-  return [referral.preferred_name || referral.young_person_first_name, referral.young_person_last_name].filter(Boolean).join(" ") || `Referral #${referral.id}`;
-}
+function referralName(referral = {}) { return [referral.preferred_name || referral.young_person_first_name, referral.young_person_last_name].filter(Boolean).join(" ") || `Referral #${referral.id}`; }
 
 function renderCapabilityChecks() {
   if (!els.capabilityChecks) return;
-  els.capabilityChecks.innerHTML = CAPABILITY_OPTIONS.map(([name, label]) => `
-    <label class="check"><input type="checkbox" name="${escapeHtml(name)}" /><span>${escapeHtml(label)}</span></label>
-  `).join("");
+  els.capabilityChecks.innerHTML = CAPABILITY_OPTIONS.map(([name, label]) => `<label class="check"><input type="checkbox" name="${escapeHtml(name)}" /><span>${escapeHtml(label)}</span></label>`).join("");
 }
 
 function renderReferralList() {
@@ -87,8 +71,7 @@ function renderReferralList() {
     <article class="row ${state.selectedReferral?.id === referral.id ? "active" : ""}" data-referral-id="${escapeHtml(referral.id)}">
       <div class="row-title"><span>${escapeHtml(referralName(referral))}</span><span class="status ${escapeHtml(statusClass(referral.status))}">${escapeHtml(referral.status || "received")}</span></div>
       <div class="row-meta">${escapeHtml(referral.source_local_authority || "No LA recorded")} · ${escapeHtml(referral.urgency || "standard")}</div>
-    </article>
-  `).join("");
+    </article>`).join("");
   els.referralList.querySelectorAll("[data-referral-id]").forEach((row) => row.addEventListener("click", () => selectReferral(Number(row.dataset.referralId))));
 }
 
@@ -97,25 +80,15 @@ function renderOverview(referral = {}) {
   if (!panel) return;
   panel.innerHTML = `
     <div><h2>${escapeHtml(referralName(referral))}</h2><p>${escapeHtml(referral.reason_for_referral || "No referral reason recorded yet.")}</p>
-      <div class="pill-row"><span class="pill">${escapeHtml(referral.source_local_authority || "Local authority unknown")}</span><span class="pill">${escapeHtml(referral.urgency || "standard")}</span><span class="pill">${escapeHtml(referral.legal_status || "legal status not set")}</span><span class="pill">${escapeHtml(referral.ai_extraction_status || "pending extraction")}</span></div>
-    </div>
-    <div class="grid">
-      <div class="score-card"><strong>Presenting needs</strong><p>${escapeHtml(referral.presenting_needs || "Not yet populated.")}</p></div>
-      <div class="score-card"><strong>Risk summary</strong><p>${escapeHtml(referral.risk_summary || "Not yet populated.")}</p></div>
-      <div class="score-card"><strong>Education</strong><p>${escapeHtml(referral.education_summary || "Not yet populated.")}</p></div>
-      <div class="score-card"><strong>Health</strong><p>${escapeHtml(referral.health_summary || "Not yet populated.")}</p></div>
-      <div class="score-card"><strong>Family/contact</strong><p>${escapeHtml(referral.family_contact_summary || "Not yet populated.")}</p></div>
-      <div class="score-card"><strong>Child voice</strong><p>${escapeHtml(referral.child_voice || "Not yet populated.")}</p></div>
-    </div>`;
+      <div class="pill-row"><span class="pill">${escapeHtml(referral.source_local_authority || "Local authority unknown")}</span><span class="pill">${escapeHtml(referral.urgency || "standard")}</span><span class="pill">${escapeHtml(referral.legal_status || "legal status not set")}</span><span class="pill">${escapeHtml(referral.ai_extraction_status || "pending extraction")}</span><span class="pill">Decision: ${escapeHtml(referral.manager_decision || "not recorded")}</span></div></div>
+    <div class="grid"><div class="score-card"><strong>Presenting needs</strong><p>${escapeHtml(referral.presenting_needs || "Not yet populated.")}</p></div><div class="score-card"><strong>Risk summary</strong><p>${escapeHtml(referral.risk_summary || "Not yet populated.")}</p></div><div class="score-card"><strong>Education</strong><p>${escapeHtml(referral.education_summary || "Not yet populated.")}</p></div><div class="score-card"><strong>Health</strong><p>${escapeHtml(referral.health_summary || "Not yet populated.")}</p></div><div class="score-card"><strong>Family/contact</strong><p>${escapeHtml(referral.family_contact_summary || "Not yet populated.")}</p></div><div class="score-card"><strong>Child voice</strong><p>${escapeHtml(referral.child_voice || "Not yet populated.")}</p></div></div>`;
 }
 
 function renderRiskFlags(referral = {}) {
   if (!els.riskFlags) return;
   const flags = referral.risk_flags || [];
   if (!flags.length) { els.riskFlags.innerHTML = `<p class="muted">No extracted risk flags yet. Add or scan referral text.</p>`; return; }
-  els.riskFlags.innerHTML = flags.map((flag) => `
-    <article class="row"><div class="row-title"><span>${escapeHtml(flag.flag_label || flag.flag_key)}</span><span class="status ${escapeHtml(statusClass(flag.severity))}">${escapeHtml(flag.severity || "medium")}</span></div><div class="row-meta">${escapeHtml(flag.evidence || "Evidence not recorded.")}</div></article>
-  `).join("");
+  els.riskFlags.innerHTML = flags.map((flag) => `<article class="row"><div class="row-title"><span>${escapeHtml(flag.flag_label || flag.flag_key)}</span><span class="status ${escapeHtml(statusClass(flag.severity))}">${escapeHtml(flag.severity || "medium")}</span></div><div class="row-meta">${escapeHtml(flag.evidence || "Evidence not recorded.")}</div></article>`).join("");
 }
 
 function renderMatching(referral = {}) {
@@ -128,6 +101,13 @@ function renderMatching(referral = {}) {
   }).join("");
 }
 
+function renderDecision(result = null) {
+  if (!els.decisionResult) return;
+  const referral = result?.referral || result?.item || state.selectedReferral;
+  if (!referral) { els.decisionResult.innerHTML = ""; return; }
+  els.decisionResult.innerHTML = `<article class="score-card"><h3>Decision status</h3><p><strong>${escapeHtml(referral.status || "received")}</strong></p><p>${escapeHtml(referral.decision_reason || "No decision rationale recorded yet.")}</p></article>`;
+}
+
 function renderConversion(result = null) {
   if (!els.conversionResult) return;
   if (!result) { els.conversionResult.innerHTML = ""; return; }
@@ -135,14 +115,15 @@ function renderConversion(result = null) {
   const youngPerson = item.young_person || {};
   const plan = item.initial_care_plan || {};
   const risk = item.matching_risk_assessment || {};
-  els.conversionResult.innerHTML = `<article class="score-card"><h3>Referral converted</h3><p>Young person ID: <strong>${escapeHtml(youngPerson.id || "created")}</strong></p><p>Initial care plan: <strong>${escapeHtml(plan.id || "created")}</strong></p><p>Matching risk assessment: <strong>${escapeHtml(risk.id || "created")}</strong></p>${youngPerson.id ? `<a class="button primary" href="/young-people.html?id=${encodeURIComponent(youngPerson.id)}">Open child profile</a>` : ""}</article>`;
+  const docs = item.copied_referral_documents || [];
+  els.conversionResult.innerHTML = `<article class="score-card"><h3>Referral converted with evidence</h3><p>Young person ID: <strong>${escapeHtml(youngPerson.id || "created")}</strong></p><p>Initial care plan: <strong>${escapeHtml(plan.id || "created")}</strong></p><p>Matching risk assessment: <strong>${escapeHtml(risk.id || "created")}</strong></p><p>Copied referral evidence documents: <strong>${escapeHtml(docs.length)}</strong></p>${youngPerson.id ? `<a class="button primary" href="/young-people.html?id=${encodeURIComponent(youngPerson.id)}">Open child profile</a>` : ""}</article>`;
 }
 
 function renderSelectedReferral() {
   const referral = state.selectedReferral;
   if (!referral) { els.reviewPanel?.classList.add("hidden"); return; }
   els.reviewPanel?.classList.remove("hidden");
-  renderOverview(referral); renderRiskFlags(referral); renderMatching(referral); renderConversion(null); renderReferralList();
+  renderOverview(referral); renderRiskFlags(referral); renderMatching(referral); renderDecision(); renderConversion(null); renderReferralList();
 }
 
 async function loadReferrals() {
@@ -170,8 +151,7 @@ async function saveCapability(event) {
 
 async function createReferral(event) {
   event.preventDefault();
-  const data = formToObject(event.currentTarget);
-  const result = await api("/referrals", { method: "POST", body: JSON.stringify(data) });
+  const result = await api("/referrals", { method: "POST", body: JSON.stringify(formToObject(event.currentTarget)) });
   showToast("Referral created");
   event.currentTarget.reset();
   await loadReferrals();
@@ -204,12 +184,28 @@ async function scoreOneHome() {
   await selectReferral(state.selectedReferral.id);
 }
 
+function decisionPayload() {
+  return {
+    decision_reason: els.decisionReason?.value || "",
+    home_id: Number(els.decisionHomeId?.value || els.convertHomeId?.value || 0) || undefined
+  };
+}
+
+async function recordDecision(action) {
+  if (!state.selectedReferral?.id) return showToast("Select a referral first", "error");
+  const result = await api(`/referrals/${encodeURIComponent(state.selectedReferral.id)}/decision/${action}`, { method: "POST", body: JSON.stringify(decisionPayload()) });
+  showToast(result.message || "Referral decision recorded");
+  renderDecision(result);
+  await loadReferrals();
+  await selectReferral(state.selectedReferral.id);
+}
+
 async function convertReferral() {
   if (!state.selectedReferral?.id) return showToast("Select a referral first", "error");
-  const homeId = Number(els.convertHomeId?.value || 0);
+  const homeId = Number(els.convertHomeId?.value || els.decisionHomeId?.value || 0);
   if (!homeId) return showToast("Accepted home ID is required", "error");
-  const result = await api(`/referrals/${encodeURIComponent(state.selectedReferral.id)}/convert`, { method: "POST", body: JSON.stringify({ home_id: homeId }) });
-  showToast("Referral converted into child journey");
+  const result = await api(`/referrals/${encodeURIComponent(state.selectedReferral.id)}/convert-with-evidence`, { method: "POST", body: JSON.stringify({ home_id: homeId }) });
+  showToast("Referral converted into child journey with evidence");
   renderConversion(result);
   await loadReferrals();
   await selectReferral(state.selectedReferral.id);
@@ -231,14 +227,11 @@ function bindEvents() {
   els.documentForm?.addEventListener("submit", (event) => addDocument(event).catch((error) => showToast(error.message, "error")));
   els.scoreAllBtn?.addEventListener("click", () => scoreAllHomes().catch((error) => showToast(error.message, "error")));
   els.scoreOneBtn?.addEventListener("click", () => scoreOneHome().catch((error) => showToast(error.message, "error")));
+  els.acceptInPrincipleBtn?.addEventListener("click", () => recordDecision("accept-in-principle").catch((error) => showToast(error.message, "error")));
+  els.requestMoreInfoBtn?.addEventListener("click", () => recordDecision("request-more-information").catch((error) => showToast(error.message, "error")));
+  els.declineReferralBtn?.addEventListener("click", () => recordDecision("decline").catch((error) => showToast(error.message, "error")));
   els.convertBtn?.addEventListener("click", () => convertReferral().catch((error) => showToast(error.message, "error")));
 }
 
-function init() {
-  renderCapabilityChecks();
-  bindTabs();
-  bindEvents();
-  loadReferrals().catch((error) => showToast(error.message, "error"));
-}
-
+function init() { renderCapabilityChecks(); bindTabs(); bindEvents(); loadReferrals().catch((error) => showToast(error.message, "error")); }
 init();
