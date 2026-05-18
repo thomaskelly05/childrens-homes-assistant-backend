@@ -9,6 +9,7 @@ from auth.current_user import get_current_user
 from db.connection import get_db
 from services.os_sync_hooks import sync_after_save
 from services.workflow_response import gold_standard_response
+from services.young_people_linking_service import YoungPeopleLinkingService
 
 router = APIRouter(prefix="/young-people", tags=["Young People Remaining Lifecycle Compat"])
 
@@ -19,13 +20,48 @@ class LifecycleConfig:
     table: str
     response_key: str
     title: str
+    domain: str
+    standard_codes: tuple[str, ...]
+    judgement_areas: tuple[str, ...]
 
 
 CONFIGS = {
-    "health": LifecycleConfig("health_record", "health_records", "health_record", "Health record"),
-    "medication": LifecycleConfig("medication_record", "medication_records", "medication_record", "Medication record"),
-    "education": LifecycleConfig("education_record", "education_records", "education_record", "Education record"),
-    "family": LifecycleConfig("family_contact", "family_contact_records", "family_contact", "Family contact record"),
+    "health": LifecycleConfig(
+        "health_record",
+        "health_records",
+        "health_record",
+        "Health record",
+        "health",
+        ("reg_10_health_and_wellbeing",),
+        ("health_and_wellbeing",),
+    ),
+    "medication": LifecycleConfig(
+        "medication_record",
+        "medication_records",
+        "medication_record",
+        "Medication record",
+        "health",
+        ("reg_10_health_and_wellbeing",),
+        ("health_and_wellbeing",),
+    ),
+    "education": LifecycleConfig(
+        "education_record",
+        "education_records",
+        "education_record",
+        "Education record",
+        "education",
+        ("reg_8_education",),
+        ("education",),
+    ),
+    "family": LifecycleConfig(
+        "family_contact",
+        "family_contact_records",
+        "family_contact",
+        "Family contact record",
+        "family",
+        ("reg_11_positive_relationships",),
+        ("positive_relationships",),
+    ),
 }
 
 
@@ -160,12 +196,74 @@ def _sync(config: LifecycleConfig, item: dict[str, Any]) -> dict[str, Any]:
         return {"attempted": True, "ok": False, "source_table": config.table, "error": str(error)}
 
 
-def _response(config: LifecycleConfig, *, item: dict[str, Any], message: str, sync: dict[str, Any] | None = None) -> dict[str, Any]:
+def _link(conn, config: LifecycleConfig, item: dict[str, Any], status: str, current_user: dict[str, Any]) -> dict[str, Any]:
+    review_required = status in {"submitted", "returned"}
+    archived = status == "archived"
+    summary = item.get("summary") or item.get("title") or f"{config.title} {status}"
+    narrative = "\n".join(
+        str(value)
+        for value in [
+            item.get("summary"),
+            item.get("outcome"),
+            item.get("achievement_note"),
+            item.get("concerns"),
+            item.get("error_details"),
+            item.get("manager_review_comment"),
+        ]
+        if value
+    ) or summary
+    workflow = YoungPeopleLinkingService.process_record_event(
+        conn=conn,
+        young_person_id=int(item["young_person_id"]),
+        source_table=config.table,
+        source_id=int(item["id"]),
+        event_type=status,
+        title=f"{config.title} {status}: {item.get('title') or config.title}",
+        summary=summary,
+        narrative=narrative,
+        category=config.domain,
+        subcategory=config.record_type,
+        significance="high" if review_required else "medium",
+        review_date=item.get("review_date") or item.get("next_action_date") or item.get("due_date"),
+        due_date=item.get("next_action_date") or item.get("due_date") or item.get("review_date"),
+        owner_id=item.get("created_by"),
+        created_by=_actor_id(current_user),
+        workflow={
+            "link_chronology": not archived,
+            "create_task": review_required,
+            "manager_review": review_required or status == "approved",
+            "safeguarding": config.record_type == "medication_record" and bool(item.get("error_flag")),
+            "link_support_plans": True,
+            "link_monthly_reviews": True,
+            "link_quality_standards": True,
+        },
+        metadata={
+            "workflow_status": status,
+            "domain": config.domain,
+            "record_type": config.record_type,
+            "quality_standards": list(config.standard_codes),
+            "judgement_areas": list(config.judgement_areas),
+            "standards_rationale": f"Linked from {config.title.lower()} lifecycle transition",
+            "evidence_strength": "high" if review_required else "medium",
+            "response_actions": item.get("manager_review_comment"),
+        },
+    )
+    return workflow
+
+
+def _response(
+    config: LifecycleConfig,
+    *,
+    item: dict[str, Any],
+    message: str,
+    sync: dict[str, Any] | None = None,
+    workflow: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     return gold_standard_response(
         id=item.get("id"),
         item=item,
         message=message,
-        workflow={"workflow_status": item.get("workflow_status"), "status": item.get("status")},
+        workflow=workflow or {"workflow_status": item.get("workflow_status"), "status": item.get("status")},
         sync=sync or {},
         **{config.response_key: item},
     )
@@ -185,8 +283,9 @@ def _transition_endpoint(config_key: str, record_id: int, status: str, payload: 
         _assert_can_edit(current_user)
     _load(conn, config, record_id, current_user)
     item = _transition(conn, config, record_id, status, current_user, _note(payload))
+    workflow = _link(conn, config, item, status, current_user)
     sync = _sync(config, item)
-    return _response(config, item=item, message=f"{config.title} {status}", sync=sync)
+    return _response(config, item=item, message=f"{config.title} {status}", sync=sync, workflow=workflow)
 
 
 @router.get("/{young_person_id}/education/archive")
