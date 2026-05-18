@@ -30,6 +30,16 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 
 const publicPathPrefixes = ['/login', '/unauthorized']
+const publicAssetPaths = new Set([
+  '/favicon.ico',
+  '/apple-touch-icon.png',
+  '/apple-touch-icon-precomposed.png',
+  '/manifest.json',
+  '/site.webmanifest',
+  '/robots.txt',
+  '/sitemap.xml'
+])
+const publicAssetPrefixes = ['/_next/', '/static/', '/images/', '/icons/']
 const e2eAuthEnabled = process.env.NEXT_PUBLIC_E2E_TEST_MODE === '1' && process.env.NODE_ENV !== 'production'
 const e2eEmail = process.env.NEXT_PUBLIC_E2E_USER_EMAIL || 'e2e.manager@indicare.local'
 const e2ePassword = process.env.NEXT_PUBLIC_E2E_USER_PASSWORD || 'ChangeMeForE2E123!'
@@ -52,6 +62,8 @@ const e2eUser: StaffUser = {
 }
 
 function isPublicPath(pathname: string) {
+  if (publicAssetPaths.has(pathname)) return true
+  if (publicAssetPrefixes.some((prefix) => pathname.startsWith(prefix))) return true
   return publicPathPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))
 }
 
