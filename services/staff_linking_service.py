@@ -9,17 +9,25 @@ logger = logging.getLogger("indicare.staff.linking")
 
 STAFF_TABLES = {
     "staff_supervisions",
+    "workforce_supervision_records",
     "staff_training_matrix",
+    "staff_training_records",
+    "staff_induction_checklist_items",
     "staff_probation_reviews",
     "staff_profile",
+    "workforce_evidence",
     "staff",
 }
 
 STAFF_REGULATION_LINKS = {
     "staff_supervisions": ["reg_13_leadership_and_management"],
+    "workforce_supervision_records": ["reg_13_leadership_and_management"],
     "staff_training_matrix": ["reg_13_leadership_and_management"],
+    "staff_training_records": ["reg_13_leadership_and_management"],
+    "staff_induction_checklist_items": ["reg_13_leadership_and_management"],
     "staff_probation_reviews": ["reg_13_leadership_and_management"],
     "staff_profile": ["reg_13_leadership_and_management"],
+    "workforce_evidence": ["reg_13_leadership_and_management"],
     "staff": ["reg_13_leadership_and_management"],
 }
 

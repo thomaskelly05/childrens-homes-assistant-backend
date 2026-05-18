@@ -33,9 +33,13 @@ SUPPORTED_SYNC_TABLES = {
     "generated_documents",
     "inspection_evidence_facts",
     "staff_supervisions",
+    "workforce_supervision_records",
     "staff_training_matrix",
+    "staff_training_records",
+    "staff_induction_checklist_items",
     "staff_probation_reviews",
     "staff_profile",
+    "workforce_evidence",
     "staff",
 }
 

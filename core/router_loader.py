@@ -52,6 +52,7 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
             "routers.young_people_shell_item_compat_routes",
             "routers.home_selector_routes",
             "routers.staff_evidence_routes",
+            "routers.workforce_journey_routes",
             "staff.routes",
         ),
         required_routers=("routers.frontend_compat",),
