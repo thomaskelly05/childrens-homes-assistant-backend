@@ -3,14 +3,14 @@ import Link from 'next/link'
 
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
 import { EmptyState, RiskBadge, StatusBadge } from '@/components/indicare/ui'
-import { getServerOsYoungPeople } from '@/lib/os-api/workspaces'
+import { getServerOsYoungPeople } from '@/lib/os-api/server-workspaces'
 
 function childName(person: Record<string, any>) {
   return String(person.preferredName || person.preferred_name || person.displayName || person.display_name || person.firstName || person.first_name || 'Young person')
 }
 
 function childPhoto(person: Record<string, any>) {
-  return String(person.photoUrl || person.photo_url || person.profile_photo_url || person.image_url || person.avatar_url || '')
+  return String(person.photoUrl || person.photo_url || person.profile_photo_path || person.profilePhotoPath || person.profile_photo_url || person.image_url || person.avatar_url || '')
 }
 
 function initials(name: string) {
@@ -47,7 +47,7 @@ export default async function YoungPeoplePage() {
           {people.map((person) => {
             const name = childName(person as any)
             const photo = childPhoto(person as any)
-            const risk = String(person.riskLevel || (person as any).risk_level || 'medium')
+            const risk = String(person.riskLevel || (person as any).summary_risk_level || (person as any).risk_level || 'medium')
             const status = String(person.placementStatus || (person as any).placement_status || person.status || 'active')
             const id = String(person.id)
             return (
