@@ -62,6 +62,19 @@ def _is_static_path(path: str) -> bool:
     return path.startswith(("/css", "/js", "/assets", "/components")) or path == "/favicon.ico"
 
 
+def _is_public_cross_origin_asset(path: str) -> bool:
+    """Assets are intentionally read by the separate Next.js frontend domain.
+
+    The backend and frontend are hosted on different Render origins in production.
+    A global `Cross-Origin-Resource-Policy: same-origin` blocks images such as
+    `/assets/uploads/young_people/young_person_1.png` when they are embedded by
+    the frontend. Static UI assets are public/read-only, so they can safely be
+    marked cross-origin while sensitive API routes stay same-origin/no-store.
+    """
+
+    return path.startswith(("/assets", "/css", "/js", "/components")) or path == "/favicon.ico"
+
+
 def _safe_actor_from_request(request: Request) -> dict:
     token = (request.cookies.get(auth_settings.session_cookie_name) or "").strip()
     if not token:
@@ -132,7 +145,15 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
         response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(self), geolocation=(), payment=(), usb=(), interest-cohort=()")
         response.headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
-        response.headers.setdefault("Cross-Origin-Resource-Policy", "same-origin")
+
+        if _is_public_cross_origin_asset(path):
+            response.headers["Cross-Origin-Resource-Policy"] = "cross-origin"
+            origin = request.headers.get("origin")
+            if origin:
+                response.headers["Access-Control-Allow-Origin"] = origin
+                response.headers.setdefault("Vary", "Origin")
+        else:
+            response.headers.setdefault("Cross-Origin-Resource-Policy", "same-origin")
 
         if _is_static_path(path):
             response.headers.setdefault("Cache-Control", "public, max-age=3600")
