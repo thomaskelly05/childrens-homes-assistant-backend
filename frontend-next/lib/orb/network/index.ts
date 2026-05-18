@@ -201,13 +201,12 @@ export class OrbRealtimeClient {
   private async negotiate(peer: RTCPeerConnection, options: OrbRealtimeConnectOptions) {
     const offer = await peer.createOffer()
     await peer.setLocalDescription(offer)
+    const headers = new Headers()
+    headers.set('Authorization', `Bearer ${options.ephemeralKey}`)
+    headers.set('Content-Type', 'application/sdp')
     const response = await fetch(`https://api.openai.com/v1/realtime?model=${encodeURIComponent(options.model)}`, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${options.ephemeralKey}`,
-        'Content-Type': 'application/sdp',
-        'OpenAI-Beta': 'realtime=v1'
-      },
+      headers,
       body: offer.sdp || ''
     })
     if (response.status === 401 || response.status === 403) {
