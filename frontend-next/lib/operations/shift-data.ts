@@ -89,10 +89,13 @@ export function shiftLifecycle(): ShiftLifecycleState[] {
 
 export async function liveShiftLifecycle(): Promise<ShiftLifecycleState[]> {
   const command = await getCommandCentre()
-  const states = command.data.lifecycle?.slice(0, 5).map((item: any) => ({
-    label: String(item.title || item.name || item.status || item.entityType || 'Operational state'),
-    completed: ['complete', 'completed', 'resolved', 'signed_off'].includes(String(item.status || '').toLowerCase())
-  })) || []
+  const states = command.data.lifecycle?.slice(0, 5).map((item) => {
+    const safe = item as any
+    return {
+      label: String(safe.title || safe.name || safe.label || safe.status || safe.entityType || 'Operational state'),
+      completed: ['complete', 'completed', 'resolved', 'signed_off'].includes(String(safe.status || '').toLowerCase())
+    }
+  }) || []
   return states.length ? states : shiftLifecycle()
 }
 
@@ -159,15 +162,12 @@ export async function liveHandoverHistory(): Promise<HandoverTimelineItem[]> {
   const chronology = await getOsChronology()
   return chronology.data.slice(0, 12).map((event) => ({
     id: `handover-history-${event.id}`,
-    shift: event.dateTime || 'Live chronology event',
     type: event.eventType,
     title: event.title,
-    status: event.severity || 'recorded',
     details: event.summary || event.fullText || event.title,
     date: event.dateTime,
-    summary: event.summary || event.title,
     href: `/chronology/${encodeURIComponent(event.id)}`
-  })) as HandoverTimelineItem[]
+  }))
 }
 
 export function safeguardingWorkflowTimeline(): HandoverTimelineItem[] {
@@ -199,15 +199,17 @@ export function safeguardingWorkflowTimeline(): HandoverTimelineItem[] {
 export async function liveSafeguardingWorkflowTimeline(): Promise<HandoverTimelineItem[]> {
   const dashboard = await getSafeguardingDashboard()
   const live = dashboard.data.lifecycle.slice(0, 20).map((item) => {
-    const itemAny = item as any
-    const title = String(itemAny.title || itemAny.name || itemAny.entityTitle || itemAny.status || item.entityType || 'Safeguarding workflow item')
+    const safe = item as any
+    const entityType = String(safe.entityType || safe.entity_type || 'safeguarding')
+    const id = String(safe.id || safe.sourceId || safe.source_id || entityType)
+    const title = String(safe.title || safe.name || safe.entityTitle || safe.label || safe.status || entityType || 'Safeguarding workflow item')
     return {
-      id: item.id,
-      type: item.entityType,
+      id,
+      type: entityType,
       title,
-      details: item.reason || item.status || title,
-      date: item.dueAt,
-      href: item.entityType.includes('chronology') ? `/chronology/${encodeURIComponent(item.id)}` : '/safeguarding'
+      details: String(safe.reason || safe.details || safe.summary || safe.status || title),
+      date: safe.dueAt || safe.due_at || safe.createdAt || safe.created_at,
+      href: entityType.includes('chronology') ? `/chronology/${encodeURIComponent(id)}` : '/safeguarding'
     }
   })
   return live.length ? live : safeguardingWorkflowTimeline()
