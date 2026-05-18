@@ -16,6 +16,8 @@ export type ChildSelectorCard = {
   actionsDue: number
   importantAlert?: string
   lastRecordedNote: string
+  photoUrl?: string
+  profilePhotoPath?: string
 }
 
 export type JourneyTimelineItem = {
@@ -92,22 +94,24 @@ function coerceLiveCards(payload: unknown): ChildSelectorCard[] {
           : []
 
   return source.map((item: any) => {
-    const displayName = item.display_name || item.displayName || [item.first_name, item.last_name].filter(Boolean).join(' ') || item.name || `Young person ${item.id}`
+    const displayName = item.display_name || item.displayName || item.preferred_name || item.preferredName || [item.first_name, item.last_name].filter(Boolean).join(' ') || item.name || `Young person ${item.id}`
     return {
       id: String(item.id),
       displayName,
       preferredName: item.preferred_name || item.preferredName || item.first_name,
       avatarLabel: initials(displayName),
       age: Number.isFinite(Number(item.age)) ? Number(item.age) : undefined,
-      status: item.status || item.placement_status,
+      status: item.placement_status || item.placementStatus || item.status,
       placementStatus: item.placement_status || item.placementStatus || item.status,
-      riskLevel: riskFromValue(item.risk_level || item.riskLevel),
+      riskLevel: riskFromValue(item.summary_risk_level || item.risk_level || item.riskLevel),
       keyWorkerName: item.key_worker_name || item.keyWorkerName || 'Key worker not assigned',
       currentMood: item.current_mood || item.currentMood || 'Not recorded today',
       activeRisksCount: Number(item.active_risks_count || item.activeRisksCount || 0),
       actionsDue: Number(item.actions_due || item.actionsDue || 0),
       importantAlert: item.important_alert || item.importantAlert,
-      lastRecordedNote: item.last_recorded_note || item.lastRecordedNote || 'No daily note has been recorded yet.'
+      lastRecordedNote: item.last_recorded_note || item.lastRecordedNote || 'No daily note has been recorded yet.',
+      photoUrl: item.photo_url || item.photoUrl || item.profile_photo_path || item.profilePhotoPath,
+      profilePhotoPath: item.profile_photo_path || item.profilePhotoPath
     }
   })
 }
@@ -128,27 +132,28 @@ function emptyJourneyData(id: string, source: ChildJourneyData['source'] = 'unav
 function coerceLiveJourney(id: string, payload: any, fallback: ChildJourneyData): ChildJourneyData {
   const childPayload = payload?.child || payload?.young_person || payload?.youngPerson
   const displayName = childPayload
-    ? childPayload.display_name || childPayload.displayName || [childPayload.first_name, childPayload.last_name].filter(Boolean).join(' ') || childPayload.name
+    ? childPayload.display_name || childPayload.displayName || childPayload.preferred_name || childPayload.preferredName || [childPayload.first_name, childPayload.last_name].filter(Boolean).join(' ') || childPayload.name
     : undefined
 
+  const chronology = Array.isArray(payload?.chronology) ? payload.chronology : Array.isArray(payload?.timeline) ? payload.timeline : []
   const base = {
     source: 'live',
     child: childPayload ? {
       id: String(childPayload.id || id),
       firstName: childPayload.first_name || childPayload.firstName || displayName || 'Young',
-      lastName: childPayload.last_name || childPayload.lastName || 'Person',
+      lastName: childPayload.last_name || childPayload.lastName || '',
       preferredName: childPayload.preferred_name || childPayload.preferredName || childPayload.first_name || displayName || `Young person ${id}`,
       displayName,
       age: Number(childPayload.age || 0),
       gender: childPayload.gender || '',
-      status: childPayload.status || 'active',
-      legalStatus: childPayload.legal_status || childPayload.legalStatus || '',
+      status: childPayload.placement_status || childPayload.placementStatus || childPayload.status || 'active',
+      legalStatus: childPayload.legal_status_summary || childPayload.legal_status || childPayload.legalStatus || '',
       communicationNeeds: childPayload.communication_needs || childPayload.communicationNeeds || '',
       educationStatus: childPayload.education_status || childPayload.educationStatus || '',
       healthSummary: childPayload.health_summary || childPayload.healthSummary || '',
-      riskLevel: riskFromValue(childPayload.risk_level || childPayload.riskLevel),
+      riskLevel: riskFromValue(childPayload.summary_risk_level || childPayload.risk_level || childPayload.riskLevel),
       safeguardingStatus: childPayload.safeguarding_status || childPayload.safeguardingStatus || '',
-      allocatedKeyWorkerId: String(childPayload.allocated_key_worker_id || childPayload.allocatedKeyWorkerId || ''),
+      allocatedKeyWorkerId: String(childPayload.primary_keyworker_id || childPayload.key_worker_id || childPayload.allocated_key_worker_id || childPayload.allocatedKeyWorkerId || ''),
       likes: [],
       dislikes: [],
       allergies: [],
@@ -156,7 +161,15 @@ function coerceLiveJourney(id: string, payload: any, fallback: ChildJourneyData)
       placementStatus: childPayload.placement_status || childPayload.placementStatus
     } : fallback.child,
     dailyNotes: Array.isArray(payload?.dailyNotes) ? payload.dailyNotes : Array.isArray(payload?.daily_notes) ? payload.daily_notes : fallback.dailyNotes,
-    timeline: Array.isArray(payload?.timeline) ? payload.timeline : fallback.timeline,
+    timeline: chronology.map((event: any) => ({
+      id: String(event.id),
+      title: event.title || event.category || event.event_type || 'Chronology event',
+      summary: event.summary || event.full_text || event.fullText || '',
+      category: event.category || event.event_type || event.eventType || 'chronology',
+      severity: riskFromValue(event.severity),
+      occurredAt: event.date_time || event.dateTime || event.created_at || event.createdAt || '',
+      href: `/chronology/${encodeURIComponent(String(event.id))}`
+    })),
     actions: Array.isArray(payload?.actions) ? payload.actions : fallback.actions,
     evidence: Array.isArray(payload?.evidence) ? payload.evidence : fallback.evidence
   } satisfies Omit<ChildJourneyData, 'story'>
@@ -191,7 +204,7 @@ export function todayLong() {
 
 export async function getChildSelectorCards() {
   const fallback: ChildSelectorCard[] = []
-  const result = await osGet<unknown>('/young-people', fallback)
+  const result = await osGet<unknown>('/os/young-people', fallback)
   if (result.source === 'live') {
     const cards = coerceLiveCards(result.data)
     return { cards, source: 'live' as const, error: result.error }
@@ -201,7 +214,7 @@ export async function getChildSelectorCards() {
 
 export async function getChildJourneyData(id: string): Promise<ChildJourneyData> {
   const fallback = emptyJourneyData(id)
-  const result = await osGet<unknown>(`/young-people/${encodeURIComponent(id)}/journey`, fallback)
+  const result = await osGet<unknown>(`/os/young-people/${encodeURIComponent(id)}/workspace`, fallback)
   if (result.source === 'live') {
     return coerceLiveJourney(id, result.data, fallback)
   }
