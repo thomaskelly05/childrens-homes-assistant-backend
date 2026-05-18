@@ -49,6 +49,7 @@ type NavItem = {
 const navItems: NavItem[] = [
   { section: 'Global', href: '/young-people', label: 'Children', icon: UserRound, permissions: ['records:read'], activeRoots: ['home', 'dashboard', 'workspace', 'young-people', 'children'] },
   { section: 'Global', href: '/staff', label: 'Staff', icon: UsersRound, permissions: ['staff:read'], activeRoots: ['staff'] },
+  { section: 'Global', href: '/governance/command-centre', label: 'Governance', icon: ShieldCheck, permissions: ['reports:read'], activeRoots: ['governance'] },
   { section: 'Global', href: '/homes', label: 'Homes', icon: Building2, permissions: ['records:read'], activeRoots: ['homes'], requiresChild: true },
   { section: 'Global', href: '/connect', label: 'Connect', icon: MessageCircle, permissions: ['records:read'], activeRoots: ['connect'], requiresChild: true },
   { section: 'Global', href: '/chronology', label: 'Chronology', icon: FileText, permissions: ['records:read'], activeRoots: ['chronology'], requiresChild: true },
