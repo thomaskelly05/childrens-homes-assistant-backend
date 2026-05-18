@@ -12,7 +12,6 @@ from services.young_people_linking_service import YoungPeopleLinkingService
 
 router = APIRouter(prefix="/young-people", tags=["Young People Safeguarding"])
 
-
 SAFE_STATUSES = {"draft", "submitted", "approved", "returned", "archived", "open", "closed"}
 
 
@@ -92,6 +91,53 @@ def _assert_home_access(conn, young_person_id: int, current_user: dict[str, Any]
     if user_home_id != _safe_int(scope.get("home_id")):
         raise HTTPException(status_code=403, detail="You do not have access to this young person")
     return scope
+
+
+def _bool_label(data: dict[str, Any], key: str, label: str) -> str | None:
+    value = data.get(key)
+    if value is True or str(value).lower() in {"true", "1", "yes", "on"}:
+        return label
+    return None
+
+
+def _normalise_payload(data: dict[str, Any] | None) -> dict[str, Any]:
+    data = dict(data or {})
+    notifications = [
+        _bool_label(data, "placing_authority_notified", "placing authority notified"),
+        _bool_label(data, "ofsted_notified", "Ofsted notified"),
+        _bool_label(data, "police_notified", "police notified"),
+    ]
+    notifications = [item for item in notifications if item]
+    narrative_parts = [
+        data.get("narrative") or data.get("description"),
+        data.get("disclosure_details"),
+        data.get("presentation"),
+        data.get("referral_details"),
+    ]
+    action_parts = [
+        data.get("actions_taken"),
+        data.get("immediate_action_taken"),
+        data.get("actions_required"),
+    ]
+    oversight_parts = [
+        data.get("manager_review_comment"),
+        data.get("manager_oversight"),
+    ]
+    if notifications:
+        action_parts.append("; ".join(notifications))
+
+    normalised = {
+        **data,
+        "title": data.get("title") or data.get("concern_type") or "Safeguarding record",
+        "category": data.get("category") or data.get("concern_type") or "safeguarding",
+        "severity": data.get("severity") or "high",
+        "concern_summary": data.get("concern_summary") or data.get("summary") or data.get("description"),
+        "narrative": "\n".join(str(value) for value in narrative_parts if value) or None,
+        "child_voice": data.get("child_voice") or data.get("young_person_voice") or data.get("disclosure_details"),
+        "actions_taken": "\n".join(str(value) for value in action_parts if value) or None,
+        "manager_review_comment": "\n".join(str(value) for value in oversight_parts if value) or None,
+    }
+    return normalised
 
 
 def _shape(row: dict[str, Any] | None) -> dict[str, Any]:
@@ -242,7 +288,7 @@ def create_safeguarding_record(young_person_id: int, payload: dict[str, Any] = B
     _assert_can_edit(current_user)
     _ensure_schema(conn)
     scope = _assert_home_access(conn, young_person_id, current_user)
-    data = dict(payload or {})
+    data = _normalise_payload(payload)
     status = data.get("status") if data.get("status") in SAFE_STATUSES else "draft"
     with conn.cursor() as cur:
         cur.execute(
@@ -250,9 +296,9 @@ def create_safeguarding_record(young_person_id: int, payload: dict[str, Any] = B
             INSERT INTO safeguarding_records (
                 young_person_id, home_id, title, category, severity, concern_summary,
                 narrative, child_voice, actions_taken, status, workflow_status,
-                created_by, archived, created_at, updated_at
+                manager_review_comment, created_by, archived, created_at, updated_at
             ) VALUES (
-                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, FALSE, NOW(), NOW()
+                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, FALSE, NOW(), NOW()
             ) RETURNING *
             """,
             (
@@ -261,12 +307,13 @@ def create_safeguarding_record(young_person_id: int, payload: dict[str, Any] = B
                 data.get("title") or "Safeguarding record",
                 data.get("category") or "safeguarding",
                 data.get("severity") or "high",
-                data.get("concern_summary") or data.get("summary"),
-                data.get("narrative") or data.get("description"),
+                data.get("concern_summary"),
+                data.get("narrative"),
                 data.get("child_voice"),
                 data.get("actions_taken"),
                 status,
                 data.get("workflow_status") or status,
+                data.get("manager_review_comment"),
                 _actor_id(current_user),
             ),
         )
@@ -289,9 +336,9 @@ def get_safeguarding_record(record_id: int, current_user=Depends(get_current_use
 def update_safeguarding_record(record_id: int, payload: dict[str, Any] = Body(...), current_user=Depends(get_current_user), conn=Depends(get_db)):
     _assert_can_edit(current_user)
     _load_record(conn, record_id, current_user)
-    data = dict(payload or {})
+    data = _normalise_payload(payload)
     allowed = ["title", "category", "severity", "concern_summary", "narrative", "child_voice", "actions_taken", "status", "workflow_status", "manager_review_comment", "archived"]
-    updates = {key: data[key] for key in allowed if key in data}
+    updates = {key: data[key] for key in allowed if key in data and data[key] is not None}
     if not updates:
         raise HTTPException(status_code=400, detail="No supported changes provided")
     if "status" in updates and updates["status"] not in SAFE_STATUSES:
@@ -321,7 +368,8 @@ def update_safeguarding_record(record_id: int, payload: dict[str, Any] = Body(..
 def submit_safeguarding_record(record_id: int, payload: dict[str, Any] | None = None, current_user=Depends(get_current_user), conn=Depends(get_db)):
     _assert_can_edit(current_user)
     _load_record(conn, record_id, current_user)
-    item = _update_status(conn, record_id, "submitted", current_user, (payload or {}).get("review_note") if payload else None)
+    note = _normalise_payload(payload).get("manager_review_comment") if payload else None
+    item = _update_status(conn, record_id, "submitted", current_user, note)
     workflow = _link(conn, item=item, event_type="submitted", current_user=current_user)
     sync = _sync(item)
     return _response(item=item, workflow=workflow, sync=sync, message="Safeguarding record submitted")
@@ -332,7 +380,8 @@ def submit_safeguarding_record(record_id: int, payload: dict[str, Any] | None = 
 def approve_safeguarding_record(record_id: int, payload: dict[str, Any] | None = None, current_user=Depends(get_current_user), conn=Depends(get_db)):
     _assert_can_review(current_user)
     _load_record(conn, record_id, current_user)
-    item = _update_status(conn, record_id, "approved", current_user, (payload or {}).get("review_note") if payload else None)
+    note = _normalise_payload(payload).get("manager_review_comment") if payload else None
+    item = _update_status(conn, record_id, "approved", current_user, note)
     workflow = _link(conn, item=item, event_type="approved", current_user=current_user)
     sync = _sync(item)
     return _response(item=item, workflow=workflow, sync=sync, message="Safeguarding record approved")
@@ -343,7 +392,8 @@ def approve_safeguarding_record(record_id: int, payload: dict[str, Any] | None =
 def return_safeguarding_record(record_id: int, payload: dict[str, Any] | None = None, current_user=Depends(get_current_user), conn=Depends(get_db)):
     _assert_can_review(current_user)
     _load_record(conn, record_id, current_user)
-    item = _update_status(conn, record_id, "returned", current_user, (payload or {}).get("review_note") if payload else None)
+    note = _normalise_payload(payload).get("manager_review_comment") if payload else None
+    item = _update_status(conn, record_id, "returned", current_user, note)
     workflow = _link(conn, item=item, event_type="returned", current_user=current_user)
     sync = _sync(item)
     return _response(item=item, workflow=workflow, sync=sync, message="Safeguarding record returned")
@@ -354,7 +404,8 @@ def return_safeguarding_record(record_id: int, payload: dict[str, Any] | None = 
 def archive_safeguarding_record(record_id: int, payload: dict[str, Any] | None = None, current_user=Depends(get_current_user), conn=Depends(get_db)):
     _assert_can_review(current_user)
     _load_record(conn, record_id, current_user)
-    item = _update_status(conn, record_id, "archived", current_user, (payload or {}).get("review_note") if payload else None)
+    note = _normalise_payload(payload).get("manager_review_comment") if payload else None
+    item = _update_status(conn, record_id, "archived", current_user, note)
     workflow = _link(conn, item=item, event_type="archived", current_user=current_user)
     sync = _sync(item)
     return _response(item=item, workflow=workflow, sync=sync, message="Safeguarding record archived")
