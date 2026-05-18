@@ -34,6 +34,12 @@ const HEARTBEAT_MS = 15000
 const ORB_SERVER_VAD_SILENCE_MS = 520
 
 class OrbNonRetryableError extends Error {}
+class OrbRealtimeNegotiationError extends Error {
+  constructor(message: string, public detail: Record<string, unknown> = {}) {
+    super(message)
+    this.name = 'OrbRealtimeNegotiationError'
+  }
+}
 
 function delayForAttempt(attempt: number) {
   return Math.min(1000 * 2 ** Math.max(0, attempt - 1), 15000)
@@ -41,7 +47,7 @@ function delayForAttempt(attempt: number) {
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
   return new Promise<T>((resolve, reject) => {
-    const timer = window.setTimeout(() => reject(new Error(message)), timeoutMs)
+    const timer = window.setTimeout(() => reject(new OrbRealtimeNegotiationError(message, { reason: 'negotiation_timeout' })), timeoutMs)
     promise.then(
       (value) => {
         window.clearTimeout(timer)
@@ -80,7 +86,7 @@ export class OrbRealtimeClient {
 
     if (typeof window === 'undefined' || typeof RTCPeerConnection === 'undefined') {
       this.callbacks.onStateChange('unavailable', { reason: 'webrtc_unsupported' })
-      throw new Error('Realtime audio is not supported in this browser')
+      throw new OrbNonRetryableError('Realtime audio is not supported in this browser')
     }
 
     if (typeof navigator !== 'undefined' && navigator.onLine === false) {
@@ -146,9 +152,10 @@ export class OrbRealtimeClient {
     } catch (error) {
       this.closePeer()
       const retryable = !(error instanceof OrbNonRetryableError)
-      this.callbacks.onError(error instanceof Error ? error.message : 'Realtime voice negotiation failed', { retryable })
+      const detail = error instanceof OrbRealtimeNegotiationError ? error.detail : { retryable }
+      this.callbacks.onError(error instanceof Error ? error.message : 'Realtime voice negotiation failed', { ...detail, retryable })
       if (!retryable) return
-      this.scheduleReconnect('negotiation_failed')
+      this.scheduleReconnect(String(detail.reason || 'negotiation_failed'))
     }
   }
 
@@ -198,7 +205,8 @@ export class OrbRealtimeClient {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${options.ephemeralKey}`,
-        'Content-Type': 'application/sdp'
+        'Content-Type': 'application/sdp',
+        'OpenAI-Beta': 'realtime=v1'
       },
       body: offer.sdp || ''
     })
@@ -207,10 +215,22 @@ export class OrbRealtimeClient {
       throw new OrbNonRetryableError(response.status === 401 ? 'Voice access expired. Please sign in again.' : "I can't access voice in this context.")
     }
     if (!response.ok) {
-      const detail = process.env.NODE_ENV === 'development' ? await response.text().catch(() => '') : ''
-      throw new Error(process.env.NODE_ENV === 'development' ? `Realtime provider failed (${response.status}) ${detail}` : 'Realtime audio could not connect just now')
+      const body = await response.text().catch(() => '')
+      throw new OrbRealtimeNegotiationError(
+        `Realtime audio could not connect just now (${response.status}).`,
+        {
+          reason: 'provider_sdp_negotiation_failed',
+          status: response.status,
+          statusText: response.statusText,
+          body: process.env.NODE_ENV === 'development' ? body.slice(0, 500) : undefined,
+        }
+      )
     }
-    await peer.setRemoteDescription({ type: 'answer', sdp: await response.text() })
+    const answer = await response.text()
+    if (!answer.trim()) {
+      throw new OrbRealtimeNegotiationError('Realtime audio returned an empty connection answer.', { reason: 'empty_sdp_answer' })
+    }
+    await peer.setRemoteDescription({ type: 'answer', sdp: answer })
   }
 
   private scheduleReconnect(reason: string, explicitDelay?: number) {
@@ -218,7 +238,7 @@ export class OrbRealtimeClient {
     this.clearReconnectTimer()
     if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
       this.callbacks.onStateChange('unavailable', { reason, attempts: this.reconnectAttempts })
-      this.callbacks.onError('Realtime audio needs a moment. You can still type to Orb.', { reason })
+      this.callbacks.onError('Realtime audio needs a moment. You can still type to Orb.', { reason, attempts: this.reconnectAttempts })
       return
     }
     this.reconnectAttempts += 1
@@ -234,7 +254,7 @@ export class OrbRealtimeClient {
       const refreshed = await this.callbacks.refreshCredentials().catch(() => null)
       if (!refreshed) {
         this.callbacks.onStateChange('unavailable', { reason: 'credential_refresh_failed' })
-        this.callbacks.onError('Realtime audio could not refresh securely. You can still type to Orb.')
+        this.callbacks.onError('Realtime audio could not refresh securely. You can still type to Orb.', { reason: 'credential_refresh_failed' })
         return
       }
       await this.connect(refreshed)
