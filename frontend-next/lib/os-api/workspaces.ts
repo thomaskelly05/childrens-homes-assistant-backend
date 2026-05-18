@@ -1,5 +1,6 @@
 import { mapOsChronology } from './chronology'
 import { osGet } from './client'
+import { osServerGet } from './server-client'
 import { mapOsAction } from './actions'
 import { mapOsEvidence } from './evidence'
 import type { OsApiResult } from './types'
@@ -17,6 +18,7 @@ export type OsPersonSummary = {
   placementStatus?: string
   legalStatus?: string
   carePlanning?: string
+  photoUrl?: string
   [key: string]: unknown
 }
 
@@ -42,23 +44,13 @@ function mapPerson(row: Record<string, any>): OsPersonSummary {
     age: row.age,
     riskLevel: row.risk_level || row.riskLevel,
     keyWorkerId: row.key_worker_id || row.allocated_key_worker_id || row.keyWorkerId,
+    photoUrl: row.photo_url || row.photoUrl || row.profile_photo_url || row.image_url || row.avatar_url,
     role: row.role,
     email: row.email
   }
 }
 
-export async function getOsYoungPeople(): Promise<OsApiResult<OsPersonSummary[]>> {
-  const result = await osGet<Record<string, any>[]>('/os/young-people', [])
-  return { ...result, data: result.data.map(mapPerson) }
-}
-
-export async function getOsYoungPersonWorkspace(id: string): Promise<OsApiResult<OsWorkspace>> {
-  const fallback: OsWorkspace = {
-    chronology: [],
-    actions: [],
-    evidence: []
-  }
-  const result = await osGet<Record<string, any>>(`/os/young-people/${encodeURIComponent(id)}/workspace`, fallback as any)
+function mapWorkspaceData(result: OsApiResult<Record<string, any>>, fallback: OsWorkspace): OsApiResult<OsWorkspace> {
   if (result.source === 'unavailable') return { ...result, data: fallback }
   return {
     ...result,
@@ -71,9 +63,7 @@ export async function getOsYoungPersonWorkspace(id: string): Promise<OsApiResult
   }
 }
 
-export async function getOsAdultWorkspace(id: string): Promise<OsApiResult<OsWorkspace>> {
-  const fallback: OsWorkspace = { chronology: [], actions: [], evidence: [] }
-  const result = await osGet<Record<string, any>>(`/os/adults/${encodeURIComponent(id)}/workspace`, fallback as any)
+function mapAdultWorkspaceData(result: OsApiResult<Record<string, any>>, fallback: OsWorkspace): OsApiResult<OsWorkspace> {
   if (result.source === 'unavailable') return { ...result, data: fallback }
   return {
     ...result,
@@ -85,4 +75,38 @@ export async function getOsAdultWorkspace(id: string): Promise<OsApiResult<OsWor
       evidence: Array.isArray(result.data.evidence) ? result.data.evidence.map(mapOsEvidence) : []
     }
   }
+}
+
+export async function getOsYoungPeople(): Promise<OsApiResult<OsPersonSummary[]>> {
+  const result = await osGet<Record<string, any>[]>('/os/young-people', [])
+  return { ...result, data: result.data.map(mapPerson) }
+}
+
+export async function getServerOsYoungPeople(): Promise<OsApiResult<OsPersonSummary[]>> {
+  const result = await osServerGet<Record<string, any>[]>('/os/young-people', [])
+  return { ...result, data: result.data.map(mapPerson) }
+}
+
+export async function getOsYoungPersonWorkspace(id: string): Promise<OsApiResult<OsWorkspace>> {
+  const fallback: OsWorkspace = { chronology: [], actions: [], evidence: [] }
+  const result = await osGet<Record<string, any>>(`/os/young-people/${encodeURIComponent(id)}/workspace`, fallback as any)
+  return mapWorkspaceData(result, fallback)
+}
+
+export async function getServerOsYoungPersonWorkspace(id: string): Promise<OsApiResult<OsWorkspace>> {
+  const fallback: OsWorkspace = { chronology: [], actions: [], evidence: [] }
+  const result = await osServerGet<Record<string, any>>(`/os/young-people/${encodeURIComponent(id)}/workspace`, fallback as any)
+  return mapWorkspaceData(result, fallback)
+}
+
+export async function getOsAdultWorkspace(id: string): Promise<OsApiResult<OsWorkspace>> {
+  const fallback: OsWorkspace = { chronology: [], actions: [], evidence: [] }
+  const result = await osGet<Record<string, any>>(`/os/adults/${encodeURIComponent(id)}/workspace`, fallback as any)
+  return mapAdultWorkspaceData(result, fallback)
+}
+
+export async function getServerOsAdultWorkspace(id: string): Promise<OsApiResult<OsWorkspace>> {
+  const fallback: OsWorkspace = { chronology: [], actions: [], evidence: [] }
+  const result = await osServerGet<Record<string, any>>(`/os/adults/${encodeURIComponent(id)}/workspace`, fallback as any)
+  return mapAdultWorkspaceData(result, fallback)
 }
