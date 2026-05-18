@@ -527,7 +527,7 @@ export async function getStaff(): Promise<OsApiResult<StaffDirectory>> {
 }
 
 export async function getStaffProfile(staffUserId: string) {
-  return osGet<unknown>(`/staff/${encodeURIComponent(staffUserId)}`, {})
+  return osGet<unknown>(`/api/workforce-os/staff/${encodeURIComponent(staffUserId)}/profile`, {})
 }
 
 export async function getStaffTraining(staffUserId?: string) {

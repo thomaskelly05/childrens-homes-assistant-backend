@@ -30,7 +30,7 @@ export default async function NewStaffEvidencePage({ searchParams }: { searchPar
   const query = await searchParams
   return (
     <main className="mx-auto max-w-5xl px-6 py-10">
-      <Link href="/young-people" className="text-sm font-black text-blue-700">← Back to children</Link>
+      <Link href="/staff/evidence" className="text-sm font-black text-blue-700">← Back to staff evidence</Link>
       <div className="mt-6 rounded-[32px] bg-white p-8 shadow-sm ring-1 ring-slate-100">
         <p className="text-[11px] font-black uppercase tracking-[0.24em] text-blue-700">Workforce evidence</p>
         <h1 className="mt-3 text-4xl font-black tracking-[-0.06em] text-slate-950">Create staff evidence</h1>
