@@ -68,8 +68,9 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
             "routers.billing_routes",
             "routers.indicare_mail_routes",
             "routers.provider_oversight_routes",
+            "routers.referral_matching_routes",
         ),
-        notes="Account, admin, billing and provider administration.",
+        notes="Account, admin, billing, provider administration and referral matching.",
     ),
     RouterGroup(
         "assistant",
