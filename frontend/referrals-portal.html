@@ -7,287 +7,91 @@
   <meta name="description" content="Referral matching portal for residential children's homes." />
   <meta name="robots" content="noindex,nofollow" />
   <style>
-    :root {
-      color-scheme: light;
-      --bg: #f6f7fb;
-      --card: #ffffff;
-      --text: #111827;
-      --muted: #667085;
-      --line: #e5e7eb;
-      --brand: #2563eb;
-      --brand-soft: #dbeafe;
-      --danger: #b42318;
-      --warning: #b54708;
-      --success: #047857;
-      --shadow: 0 18px 50px rgba(15, 23, 42, .08);
-      --radius: 22px;
-    }
-
+    :root { color-scheme: light; --bg: #f6f7fb; --card: #ffffff; --text: #111827; --muted: #667085; --line: #e5e7eb; --brand: #2563eb; --brand-soft: #dbeafe; --danger: #b42318; --warning: #b54708; --success: #047857; --shadow: 0 18px 50px rgba(15, 23, 42, .08); --radius: 22px; }
     * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: radial-gradient(circle at top left, #dbeafe 0, transparent 36rem), var(--bg);
-      color: var(--text);
-    }
+    body { margin: 0; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: radial-gradient(circle at top left, #dbeafe 0, transparent 36rem), var(--bg); color: var(--text); }
     a { color: inherit; }
     .shell { min-height: 100vh; padding: 28px; }
-    .topbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 20px;
-      margin-bottom: 24px;
-    }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 24px; }
     .brand { display: flex; align-items: center; gap: 14px; }
-    .logo {
-      width: 48px; height: 48px; border-radius: 18px;
-      display: grid; place-items: center;
-      background: linear-gradient(135deg, #2563eb, #7c3aed, #06b6d4);
-      color: white; font-weight: 800; box-shadow: var(--shadow);
-    }
+    .logo { width: 48px; height: 48px; border-radius: 18px; display: grid; place-items: center; background: linear-gradient(135deg, #2563eb, #7c3aed, #06b6d4); color: white; font-weight: 800; box-shadow: var(--shadow); }
     h1, h2, h3 { margin: 0; line-height: 1.1; }
     h1 { font-size: clamp(28px, 4vw, 46px); letter-spacing: -.04em; }
     h2 { font-size: 22px; letter-spacing: -.02em; }
     h3 { font-size: 16px; }
     p { color: var(--muted); line-height: 1.55; }
-    .hero {
-      background: rgba(255,255,255,.82);
-      backdrop-filter: blur(18px);
-      border: 1px solid rgba(255,255,255,.72);
-      border-radius: 30px;
-      box-shadow: var(--shadow);
-      padding: 28px;
-      margin-bottom: 22px;
-      display: grid;
-      grid-template-columns: 1.3fr .7fr;
-      gap: 24px;
-    }
+    .hero { background: rgba(255,255,255,.82); backdrop-filter: blur(18px); border: 1px solid rgba(255,255,255,.72); border-radius: 30px; box-shadow: var(--shadow); padding: 28px; margin-bottom: 22px; display: grid; grid-template-columns: 1.3fr .7fr; gap: 24px; }
     .hero p { max-width: 900px; }
-    .hero-panel {
-      background: #0f172a;
-      color: white;
-      border-radius: 24px;
-      padding: 22px;
-      display: grid;
-      gap: 12px;
-      align-content: start;
-    }
+    .hero-panel { background: #0f172a; color: white; border-radius: 24px; padding: 22px; display: grid; gap: 12px; align-content: start; }
     .hero-panel p { color: #cbd5e1; margin: 0; }
     .pill-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
-    .pill {
-      display: inline-flex; align-items: center; gap: 8px;
-      padding: 8px 12px; border-radius: 999px;
-      background: var(--brand-soft); color: #1d4ed8; font-weight: 700; font-size: 12px;
-    }
-    .layout {
-      display: grid;
-      grid-template-columns: 360px minmax(0, 1fr);
-      gap: 22px;
-    }
-    .card {
-      background: rgba(255,255,255,.9);
-      border: 1px solid rgba(226,232,240,.9);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      padding: 20px;
-    }
+    .pill { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 999px; background: var(--brand-soft); color: #1d4ed8; font-weight: 700; font-size: 12px; }
+    .layout { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 22px; }
+    .card { background: rgba(255,255,255,.9); border: 1px solid rgba(226,232,240,.9); border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px; }
     .stack { display: grid; gap: 16px; }
     .tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
-    .tab, button, .button {
-      border: 0; border-radius: 14px; padding: 10px 14px;
-      background: #eef2ff; color: #1e1b4b;
-      font-weight: 800; cursor: pointer;
-      text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-    }
+    .tab, button, .button { border: 0; border-radius: 14px; padding: 10px 14px; background: #eef2ff; color: #1e1b4b; font-weight: 800; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
     .tab.active, button.primary, .button.primary { background: var(--brand); color: white; }
     button.secondary { background: #f3f4f6; color: #111827; }
     button.danger { background: #fee2e2; color: var(--danger); }
+    button.warning { background: #fef3c7; color: var(--warning); }
+    button.success { background: #d1fae5; color: var(--success); }
     button:disabled { opacity: .45; cursor: not-allowed; }
     label { font-weight: 800; font-size: 13px; display: block; margin-bottom: 6px; }
-    input, select, textarea {
-      width: 100%; border: 1px solid var(--line); border-radius: 14px;
-      padding: 11px 12px; font: inherit; background: white;
-    }
+    input, select, textarea { width: 100%; border: 1px solid var(--line); border-radius: 14px; padding: 11px 12px; font: inherit; background: white; }
     textarea { min-height: 96px; resize: vertical; }
     .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
     .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
     .check-grid { display: grid; gap: 8px; }
-    .check {
-      display: flex; align-items: center; gap: 10px;
-      padding: 10px; border: 1px solid var(--line); border-radius: 14px; background: #fff;
-    }
+    .check { display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
     .check input { width: auto; }
     .check span { font-size: 13px; font-weight: 700; }
     .list { display: grid; gap: 10px; }
-    .row {
-      border: 1px solid var(--line); background: #fff; border-radius: 16px;
-      padding: 14px; cursor: pointer;
-    }
+    .row { border: 1px solid var(--line); background: #fff; border-radius: 16px; padding: 14px; cursor: pointer; }
     .row:hover { border-color: #93c5fd; }
     .row.active { border-color: var(--brand); background: #eff6ff; }
     .row-title { display: flex; justify-content: space-between; gap: 12px; font-weight: 900; }
     .row-meta { color: var(--muted); font-size: 12px; margin-top: 6px; }
-    .status {
-      display: inline-flex; align-items: center; padding: 4px 8px; border-radius: 999px;
-      background: #f3f4f6; color: #374151; font-size: 12px; font-weight: 800;
-    }
-    .status.converted, .status.potential_match { background: #d1fae5; color: var(--success); }
-    .status.needs_review, .status.received { background: #fef3c7; color: var(--warning); }
-    .status.not_recommended { background: #fee2e2; color: var(--danger); }
-    .score-card {
-      border: 1px solid var(--line); border-radius: 18px; padding: 14px; background: #fff;
-      display: grid; gap: 8px;
-    }
+    .status { display: inline-flex; align-items: center; padding: 4px 8px; border-radius: 999px; background: #f3f4f6; color: #374151; font-size: 12px; font-weight: 800; }
+    .status.converted, .status.potential_match, .status.accepted_in_principle { background: #d1fae5; color: var(--success); }
+    .status.needs_review, .status.received, .status.more_information_requested { background: #fef3c7; color: var(--warning); }
+    .status.not_recommended, .status.declined { background: #fee2e2; color: var(--danger); }
+    .score-card { border: 1px solid var(--line); border-radius: 18px; padding: 14px; background: #fff; display: grid; gap: 8px; }
     .score { font-size: 28px; font-weight: 900; letter-spacing: -.04em; }
     .muted { color: var(--muted); }
     .hidden { display: none !important; }
-    .toast {
-      position: fixed; right: 24px; bottom: 24px; max-width: 420px;
-      background: #111827; color: white; padding: 14px 16px; border-radius: 16px;
-      box-shadow: var(--shadow); z-index: 50;
-    }
-    @media (max-width: 980px) {
-      .hero, .layout { grid-template-columns: 1fr; }
-      .grid, .grid-3 { grid-template-columns: 1fr; }
-      .shell { padding: 16px; }
-    }
+    .toast { position: fixed; right: 24px; bottom: 24px; max-width: 420px; background: #111827; color: white; padding: 14px 16px; border-radius: 16px; box-shadow: var(--shadow); z-index: 50; }
+    @media (max-width: 980px) { .hero, .layout { grid-template-columns: 1fr; } .grid, .grid-3 { grid-template-columns: 1fr; } .shell { padding: 16px; } }
   </style>
 </head>
 <body>
   <main class="shell">
     <header class="topbar">
-      <div class="brand">
-        <div class="logo">IC</div>
-        <div>
-          <strong>IndiCare OS</strong>
-          <div class="muted">Referral matching portal</div>
-        </div>
-      </div>
+      <div class="brand"><div class="logo">IC</div><div><strong>IndiCare OS</strong><div class="muted">Referral matching portal</div></div></div>
       <a class="button" href="/">Back to OS</a>
     </header>
-
     <section class="hero">
       <div>
         <h1>Start the child journey safely, before admission.</h1>
-        <p>
-          Upload and review referral information, define what each home can safely offer, score matching suitability,
-          weigh the impact on children already living in the home, and convert an accepted referral into a live child profile,
-          care plan and matching risk assessment.
-        </p>
-        <div class="pill-row">
-          <span class="pill">Quality Standards aligned</span>
-          <span class="pill">SCCIF aware</span>
-          <span class="pill">Reg 6 / 12 / 13 matching</span>
-          <span class="pill">Peer risk weighting</span>
-        </div>
+        <p>Upload and review referral information, define what each home can safely offer, score matching suitability, weigh the impact on children already living in the home, and convert an accepted referral into a live child profile, care plan and matching risk assessment.</p>
+        <div class="pill-row"><span class="pill">Quality Standards aligned</span><span class="pill">SCCIF aware</span><span class="pill">Reg 6 / 12 / 13 matching</span><span class="pill">Peer risk weighting</span></div>
       </div>
-      <aside class="hero-panel">
-        <h2>Portal flow</h2>
-        <p>1. Manager sets home capability checkboxes.</p>
-        <p>2. Referral documents are uploaded/scanned.</p>
-        <p>3. Needs and risk flags are extracted.</p>
-        <p>4. Homes are scored for fit and risk.</p>
-        <p>5. Accepted referrals become the child journey.</p>
-      </aside>
+      <aside class="hero-panel"><h2>Portal flow</h2><p>1. Manager sets home capability checkboxes.</p><p>2. Referral documents are uploaded/scanned.</p><p>3. Needs and risk flags are extracted.</p><p>4. Homes are scored for fit and risk.</p><p>5. A decision is recorded and accepted referrals become the child journey.</p></aside>
     </section>
-
     <section class="layout">
       <aside class="stack">
-        <div class="card">
-          <h2>Referrals</h2>
-          <p class="muted">Select a referral to review matching and conversion.</p>
-          <div class="grid">
-            <button class="primary" id="refreshBtn">Refresh</button>
-            <button class="secondary" id="newReferralBtn">New referral</button>
-          </div>
-          <div class="list" id="referralList" style="margin-top:14px"></div>
-        </div>
-
-        <div class="card">
-          <h2>Home capability</h2>
-          <p class="muted">Set what a home can safely consider for matching.</p>
-          <form id="capabilityForm" class="stack">
-            <div class="grid">
-              <div><label for="capHomeId">Home ID</label><input id="capHomeId" name="home_id" type="number" min="1" required /></div>
-              <div><label for="capacity">Capacity</label><input id="capacity" name="current_capacity" type="number" min="0" value="0" /></div>
-              <div><label for="ageMin">Age min</label><input id="ageMin" name="accepts_age_min" type="number" min="0" /></div>
-              <div><label for="ageMax">Age max</label><input id="ageMax" name="accepts_age_max" type="number" min="0" /></div>
-            </div>
-            <div class="check-grid" id="capabilityChecks"></div>
-            <div><label for="matchingNotes">Matching notes</label><textarea id="matchingNotes" name="matching_notes"></textarea></div>
-            <button class="primary" type="submit">Save capability</button>
-          </form>
-        </div>
+        <div class="card"><h2>Referrals</h2><p class="muted">Select a referral to review matching and conversion.</p><div class="grid"><button class="primary" id="refreshBtn">Refresh</button><button class="secondary" id="newReferralBtn">New referral</button></div><div class="list" id="referralList" style="margin-top:14px"></div></div>
+        <div class="card"><h2>Home capability</h2><p class="muted">Set what a home can safely consider for matching.</p><form id="capabilityForm" class="stack"><div class="grid"><div><label for="capHomeId">Home ID</label><input id="capHomeId" name="home_id" type="number" min="1" required /></div><div><label for="capacity">Capacity</label><input id="capacity" name="current_capacity" type="number" min="0" value="0" /></div><div><label for="ageMin">Age min</label><input id="ageMin" name="accepts_age_min" type="number" min="0" /></div><div><label for="ageMax">Age max</label><input id="ageMax" name="accepts_age_max" type="number" min="0" /></div></div><div class="check-grid" id="capabilityChecks"></div><div><label for="matchingNotes">Matching notes</label><textarea id="matchingNotes" name="matching_notes"></textarea></div><button class="primary" type="submit">Save capability</button></form></div>
       </aside>
-
       <section class="stack">
-        <div class="card" id="newReferralPanel">
-          <h2>Create referral</h2>
-          <form id="referralForm" class="stack">
-            <div class="grid-3">
-              <div><label>Referral reference</label><input name="referral_reference" /></div>
-              <div><label>Local authority</label><input name="source_local_authority" /></div>
-              <div><label>Urgency</label><select name="urgency"><option>standard</option><option>urgent</option><option>emergency</option></select></div>
-            </div>
-            <div class="grid-3">
-              <div><label>First name</label><input name="young_person_first_name" required /></div>
-              <div><label>Last name</label><input name="young_person_last_name" required /></div>
-              <div><label>Preferred name</label><input name="preferred_name" /></div>
-              <div><label>Date of birth</label><input name="date_of_birth" type="date" /></div>
-              <div><label>Age</label><input name="age" type="number" /></div>
-              <div><label>Gender</label><input name="gender" /></div>
-            </div>
-            <div><label>Reason for referral</label><textarea name="reason_for_referral"></textarea></div>
-            <div><label>Presenting needs</label><textarea name="presenting_needs"></textarea></div>
-            <div><label>Known risk summary</label><textarea name="risk_summary"></textarea></div>
-            <div><label>Child voice</label><textarea name="child_voice"></textarea></div>
-            <button class="primary" type="submit">Create referral</button>
-          </form>
-        </div>
-
+        <div class="card" id="newReferralPanel"><h2>Create referral</h2><form id="referralForm" class="stack"><div class="grid-3"><div><label>Referral reference</label><input name="referral_reference" /></div><div><label>Local authority</label><input name="source_local_authority" /></div><div><label>Urgency</label><select name="urgency"><option>standard</option><option>urgent</option><option>emergency</option></select></div></div><div class="grid-3"><div><label>First name</label><input name="young_person_first_name" required /></div><div><label>Last name</label><input name="young_person_last_name" required /></div><div><label>Preferred name</label><input name="preferred_name" /></div><div><label>Date of birth</label><input name="date_of_birth" type="date" /></div><div><label>Age</label><input name="age" type="number" /></div><div><label>Gender</label><input name="gender" /></div></div><div><label>Reason for referral</label><textarea name="reason_for_referral"></textarea></div><div><label>Presenting needs</label><textarea name="presenting_needs"></textarea></div><div><label>Known risk summary</label><textarea name="risk_summary"></textarea></div><div><label>Child voice</label><textarea name="child_voice"></textarea></div><button class="primary" type="submit">Create referral</button></form></div>
         <div class="card hidden" id="reviewPanel">
-          <div class="tabs">
-            <button class="tab active" data-tab="overview" type="button">Overview</button>
-            <button class="tab" data-tab="documents" type="button">Documents & extraction</button>
-            <button class="tab" data-tab="matching" type="button">Matching</button>
-            <button class="tab" data-tab="convert" type="button">Convert</button>
-          </div>
-
+          <div class="tabs"><button class="tab active" data-tab="overview" type="button">Overview</button><button class="tab" data-tab="documents" type="button">Documents & extraction</button><button class="tab" data-tab="matching" type="button">Matching</button><button class="tab" data-tab="decision" type="button">Decision</button><button class="tab" data-tab="convert" type="button">Convert</button></div>
           <section data-panel="overview" class="stack"></section>
-          <section data-panel="documents" class="stack hidden">
-            <h2>Referral document scan</h2>
-            <p class="muted">Paste extracted text for now. Full file OCR/extraction can be connected next.</p>
-            <form id="documentForm" class="stack">
-              <div class="grid">
-                <div><label>Document type</label><input name="document_type" value="referral_document" /></div>
-                <div><label>Title</label><input name="title" value="Referral pack" /></div>
-              </div>
-              <div><label>Extracted text</label><textarea name="extracted_text" placeholder="Paste referral, CLA review, EHCP, risk documents or social worker summary text here..."></textarea></div>
-              <button class="primary" type="submit">Add and scan document</button>
-            </form>
-            <div id="riskFlags" class="list"></div>
-          </section>
-
-          <section data-panel="matching" class="stack hidden">
-            <h2>Home matching</h2>
-            <div class="grid">
-              <button class="primary" id="scoreAllBtn" type="button">Score all configured homes</button>
-              <div><label>Score one home ID</label><input id="scoreHomeId" type="number" min="1" /></div>
-            </div>
-            <button class="secondary" id="scoreOneBtn" type="button">Score selected home</button>
-            <div id="matchingResults" class="grid"></div>
-          </section>
-
-          <section data-panel="convert" class="stack hidden">
-            <h2>Convert to child journey</h2>
-            <p class="muted">This creates the young person profile, initial referral-informed care plan and initial matching risk assessment.</p>
-            <div class="grid">
-              <div><label>Accepted home ID</label><input id="convertHomeId" type="number" min="1" /></div>
-              <div style="align-self:end"><button class="primary" id="convertBtn" type="button">Convert referral</button></div>
-            </div>
-            <div id="conversionResult"></div>
-          </section>
+          <section data-panel="documents" class="stack hidden"><h2>Referral document scan</h2><p class="muted">Paste extracted text for now. Full file OCR/extraction can be connected next.</p><form id="documentForm" class="stack"><div class="grid"><div><label>Document type</label><input name="document_type" value="referral_document" /></div><div><label>Title</label><input name="title" value="Referral pack" /></div></div><div><label>Extracted text</label><textarea name="extracted_text" placeholder="Paste referral, CLA review, EHCP, risk documents or social worker summary text here..."></textarea></div><button class="primary" type="submit">Add and scan document</button></form><div id="riskFlags" class="list"></div></section>
+          <section data-panel="matching" class="stack hidden"><h2>Home matching</h2><div class="grid"><button class="primary" id="scoreAllBtn" type="button">Score all configured homes</button><div><label>Score one home ID</label><input id="scoreHomeId" type="number" min="1" /></div></div><button class="secondary" id="scoreOneBtn" type="button">Score selected home</button><div id="matchingResults" class="grid"></div></section>
+          <section data-panel="decision" class="stack hidden"><h2>Management decision</h2><p class="muted">Record whether this referral is accepted in principle, declined, or requires more information.</p><div><label>Decision note / rationale</label><textarea id="decisionReason" placeholder="Explain matching rationale, risks, missing information or reasons for declining..."></textarea></div><div><label>Recommended home ID</label><input id="decisionHomeId" type="number" min="1" /></div><div class="grid-3"><button class="success" id="acceptInPrincipleBtn" type="button">Accept in principle</button><button class="warning" id="requestMoreInfoBtn" type="button">Request more information</button><button class="danger" id="declineReferralBtn" type="button">Decline</button></div><div id="decisionResult"></div></section>
+          <section data-panel="convert" class="stack hidden"><h2>Convert to child journey</h2><p class="muted">This creates the young person profile, initial referral-informed care plan, initial matching risk assessment, copies referral evidence into child documents and creates an admission chronology event.</p><div class="grid"><div><label>Accepted home ID</label><input id="convertHomeId" type="number" min="1" /></div><div style="align-self:end"><button class="primary" id="convertBtn" type="button">Convert with evidence</button></div></div><div id="conversionResult"></div></section>
         </div>
       </section>
     </section>
