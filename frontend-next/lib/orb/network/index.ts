@@ -205,48 +205,73 @@ export class OrbRealtimeClient {
     }
   }
 
+  private async postSdp(endpoint: string, options: OrbRealtimeConnectOptions, sdp: string) {
+    return fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${options.ephemeralKey}`,
+        'Content-Type': 'application/sdp'
+      },
+      body: sdp
+    })
+  }
+
   private async negotiate(peer: RTCPeerConnection, options: OrbRealtimeConnectOptions) {
     const offer = await peer.createOffer()
     await peer.setLocalDescription(offer)
-    let response: Response
-    try {
-      response = await fetch(OPENAI_REALTIME_SDP_URL, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${options.ephemeralKey}`,
-          'Content-Type': 'application/sdp'
-        },
-        body: offer.sdp || ''
-      })
-    } catch (error) {
-      throw new OrbRealtimeNegotiationError('Realtime audio could not reach OpenAI from this browser.', {
-        reason: 'network_fetch_failed',
-        error: error instanceof Error ? error.message : String(error),
-        model: options.model,
-        endpoint: OPENAI_REALTIME_SDP_URL
-      })
-    }
-    if (response.status === 401 || response.status === 403) {
-      this.callbacks.onStateChange(response.status === 401 ? 'expired' : 'permission_denied')
-      throw new OrbNonRetryableError(response.status === 401 ? 'Voice access expired. Please sign in again.' : "I can't access voice in this context.")
-    }
-    if (!response.ok) {
+    const sdp = offer.sdp || ''
+    const endpoints = [
+      OPENAI_REALTIME_SDP_URL,
+      `${OPENAI_REALTIME_SDP_URL}?model=${encodeURIComponent(options.model)}`
+    ]
+    const failures: Array<Record<string, unknown>> = []
+    let response: Response | null = null
+    let endpoint = endpoints[0]
+
+    for (const candidate of endpoints) {
+      endpoint = candidate
+      try {
+        response = await this.postSdp(candidate, options, sdp)
+      } catch (error) {
+        failures.push({
+          endpoint: candidate,
+          reason: 'network_fetch_failed',
+          error: error instanceof Error ? error.message : String(error),
+          model: options.model
+        })
+        continue
+      }
+
+      if (response.status === 401 || response.status === 403) {
+        this.callbacks.onStateChange(response.status === 401 ? 'expired' : 'permission_denied')
+        throw new OrbNonRetryableError(response.status === 401 ? 'Voice access expired. Please sign in again.' : "I can't access voice in this context.")
+      }
+
+      if (response.ok) break
+
       const body = await response.text().catch(() => '')
-      throw new OrbRealtimeNegotiationError(
-        `Realtime audio could not connect just now (${response.status}).`,
-        {
-          reason: 'provider_sdp_negotiation_failed',
-          status: response.status,
-          statusText: response.statusText,
-          body: body.slice(0, 500),
-          model: options.model,
-          endpoint: OPENAI_REALTIME_SDP_URL,
-        }
-      )
+      failures.push({
+        endpoint: candidate,
+        reason: 'provider_sdp_negotiation_failed',
+        status: response.status,
+        statusText: response.statusText,
+        body: body.slice(0, 500),
+        model: options.model
+      })
+      response = null
     }
+
+    if (!response) {
+      throw new OrbRealtimeNegotiationError('Realtime audio could not connect just now.', {
+        reason: 'provider_sdp_negotiation_failed',
+        failures,
+        model: options.model,
+      })
+    }
+
     const answer = await response.text()
     if (!answer.trim()) {
-      throw new OrbRealtimeNegotiationError('Realtime audio returned an empty connection answer.', { reason: 'empty_sdp_answer', model: options.model, endpoint: OPENAI_REALTIME_SDP_URL })
+      throw new OrbRealtimeNegotiationError('Realtime audio returned an empty connection answer.', { reason: 'empty_sdp_answer', model: options.model, endpoint })
     }
     await peer.setRemoteDescription({ type: 'answer', sdp: answer })
   }
