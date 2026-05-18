@@ -28,7 +28,7 @@ type OrbRealtimeClientCallbacks = {
   refreshCredentials: () => Promise<OrbRealtimeConnectOptions | null>
 }
 
-const MAX_RECONNECT_ATTEMPTS = 5
+const MAX_RECONNECT_ATTEMPTS = 2
 const NEGOTIATION_TIMEOUT_MS = 20000
 const HEARTBEAT_MS = 15000
 const ORB_SERVER_VAD_SILENCE_MS = 520
@@ -42,7 +42,7 @@ class OrbRealtimeNegotiationError extends Error {
 }
 
 function delayForAttempt(attempt: number) {
-  return Math.min(1000 * 2 ** Math.max(0, attempt - 1), 15000)
+  return Math.min(1000 * 2 ** Math.max(0, attempt - 1), 8000)
 }
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
@@ -74,13 +74,14 @@ export class OrbRealtimeClient {
   private reconnectAttempts = 0
   private stopped = false
   private current: OrbRealtimeConnectOptions | null = null
+  private negotiationFailed = false
 
   constructor(private callbacks: OrbRealtimeClientCallbacks) {}
 
   async connect(options: OrbRealtimeConnectOptions) {
     this.stopped = false
     this.current = options
-    this.callbacks.onStateChange('connecting')
+    this.callbacks.onStateChange('connecting', { transport: 'webrtc', model: options.model })
     this.clearReconnectTimer()
     this.closePeer()
 
@@ -109,15 +110,15 @@ export class OrbRealtimeClient {
     }
 
     peer.onconnectionstatechange = () => {
-      if (this.stopped) return
+      if (this.stopped || this.negotiationFailed) return
       if (peer.connectionState === 'connected') {
         this.reconnectAttempts = 0
-        this.callbacks.onStateChange('listening')
+        this.callbacks.onStateChange('listening', { transport: 'webrtc' })
         this.startHeartbeat()
         return
       }
       if (['failed', 'disconnected', 'closed'].includes(peer.connectionState)) {
-        this.callbacks.onStateChange('reconnecting', { connectionState: peer.connectionState })
+        this.callbacks.onStateChange('reconnecting', { connectionState: peer.connectionState, transport: 'webrtc' })
         this.scheduleReconnect(`peer_${peer.connectionState}`)
       }
     }
@@ -127,7 +128,8 @@ export class OrbRealtimeClient {
     channel.onmessage = (event) => this.callbacks.onEvent(event.data)
     channel.onopen = () => {
       this.reconnectAttempts = 0
-      this.callbacks.onStateChange('listening')
+      this.negotiationFailed = false
+      this.callbacks.onStateChange('listening', { transport: 'webrtc', dataChannel: 'open' })
       this.send({
         type: 'session.update',
         session: {
@@ -144,16 +146,19 @@ export class OrbRealtimeClient {
       this.startHeartbeat()
     }
     channel.onerror = () => {
-      if (!this.stopped) this.scheduleReconnect('data_channel_error')
+      if (!this.stopped && !this.negotiationFailed) this.scheduleReconnect('data_channel_error')
     }
 
     try {
       await withTimeout(this.negotiate(peer, options), NEGOTIATION_TIMEOUT_MS, 'Realtime negotiation timed out')
     } catch (error) {
+      this.negotiationFailed = true
       this.closePeer()
-      const retryable = !(error instanceof OrbNonRetryableError)
-      const detail = error instanceof OrbRealtimeNegotiationError ? error.detail : { retryable }
-      this.callbacks.onError(error instanceof Error ? error.message : 'Realtime voice negotiation failed', { ...detail, retryable })
+      const detail = error instanceof OrbRealtimeNegotiationError ? error.detail : {}
+      const isBrowserNegotiationFailure = detail.reason === 'provider_sdp_negotiation_failed' || detail.reason === 'negotiation_timeout' || detail.reason === 'network_fetch_failed'
+      const retryable = !(error instanceof OrbNonRetryableError) && !isBrowserNegotiationFailure
+      this.callbacks.onStateChange('unavailable', { ...detail, retryable, transport: 'webrtc' })
+      this.callbacks.onError(error instanceof Error ? error.message : 'Realtime voice negotiation failed', { ...detail, retryable, transport: 'webrtc' })
       if (!retryable) return
       this.scheduleReconnect(String(detail.reason || 'negotiation_failed'))
     }
@@ -172,6 +177,7 @@ export class OrbRealtimeClient {
 
   close() {
     this.stopped = true
+    this.negotiationFailed = false
     this.clearReconnectTimer()
     this.stopHeartbeat()
     this.closePeer()
@@ -181,7 +187,7 @@ export class OrbRealtimeClient {
   }
 
   handleBrowserOnline() {
-    if (this.stopped || !this.current) return
+    if (this.stopped || !this.current || this.negotiationFailed) return
     this.scheduleReconnect('browser_online', 0)
   }
 
@@ -191,7 +197,7 @@ export class OrbRealtimeClient {
   }
 
   handleWake() {
-    if (this.stopped || !this.current) return
+    if (this.stopped || !this.current || this.negotiationFailed) return
     void resumeOrbAudioElement(this.audio)
     if (!this.peer || ['failed', 'disconnected', 'closed'].includes(this.peer.connectionState)) {
       this.scheduleReconnect('browser_wake', 0)
@@ -201,14 +207,23 @@ export class OrbRealtimeClient {
   private async negotiate(peer: RTCPeerConnection, options: OrbRealtimeConnectOptions) {
     const offer = await peer.createOffer()
     await peer.setLocalDescription(offer)
-    const headers = new Headers()
-    headers.set('Authorization', `Bearer ${options.ephemeralKey}`)
-    headers.set('Content-Type', 'application/sdp')
-    const response = await fetch(`https://api.openai.com/v1/realtime?model=${encodeURIComponent(options.model)}`, {
-      method: 'POST',
-      headers,
-      body: offer.sdp || ''
-    })
+    let response: Response
+    try {
+      response = await fetch(`https://api.openai.com/v1/realtime?model=${encodeURIComponent(options.model)}`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${options.ephemeralKey}`,
+          'Content-Type': 'application/sdp'
+        },
+        body: offer.sdp || ''
+      })
+    } catch (error) {
+      throw new OrbRealtimeNegotiationError('Realtime audio could not reach OpenAI from this browser.', {
+        reason: 'network_fetch_failed',
+        error: error instanceof Error ? error.message : String(error),
+        model: options.model
+      })
+    }
     if (response.status === 401 || response.status === 403) {
       this.callbacks.onStateChange(response.status === 401 ? 'expired' : 'permission_denied')
       throw new OrbNonRetryableError(response.status === 401 ? 'Voice access expired. Please sign in again.' : "I can't access voice in this context.")
@@ -221,19 +236,20 @@ export class OrbRealtimeClient {
           reason: 'provider_sdp_negotiation_failed',
           status: response.status,
           statusText: response.statusText,
-          body: process.env.NODE_ENV === 'development' ? body.slice(0, 500) : undefined,
+          body: body.slice(0, 500),
+          model: options.model,
         }
       )
     }
     const answer = await response.text()
     if (!answer.trim()) {
-      throw new OrbRealtimeNegotiationError('Realtime audio returned an empty connection answer.', { reason: 'empty_sdp_answer' })
+      throw new OrbRealtimeNegotiationError('Realtime audio returned an empty connection answer.', { reason: 'empty_sdp_answer', model: options.model })
     }
     await peer.setRemoteDescription({ type: 'answer', sdp: answer })
   }
 
   private scheduleReconnect(reason: string, explicitDelay?: number) {
-    if (this.stopped) return
+    if (this.stopped || this.negotiationFailed) return
     this.clearReconnectTimer()
     if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
       this.callbacks.onStateChange('unavailable', { reason, attempts: this.reconnectAttempts })
@@ -244,7 +260,7 @@ export class OrbRealtimeClient {
     const delayMs = explicitDelay ?? delayForAttempt(this.reconnectAttempts)
     this.callbacks.onStateChange('reconnecting', { reason, attempt: this.reconnectAttempts, next_attempt_ms: delayMs, continuity_message: 'Reconnecting calmly; typed Orb remains available.' })
     this.reconnectTimer = window.setTimeout(async () => {
-      if (this.stopped) return
+      if (this.stopped || this.negotiationFailed) return
       if (typeof navigator !== 'undefined' && navigator.onLine === false) {
         this.callbacks.onStateChange('offline')
         this.scheduleReconnect('offline')
@@ -263,7 +279,7 @@ export class OrbRealtimeClient {
   private startHeartbeat() {
     this.stopHeartbeat()
     this.heartbeatTimer = window.setInterval(() => {
-      if (this.stopped || !this.peer) return
+      if (this.stopped || !this.peer || this.negotiationFailed) return
       if (this.peer.connectionState !== 'connected' && this.channel?.readyState !== 'open') {
         this.scheduleReconnect('heartbeat_dead_session')
       }
