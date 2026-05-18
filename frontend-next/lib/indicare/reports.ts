@@ -204,10 +204,11 @@ export async function buildLiveReportDraft(report: ReportRecord) {
 }
 
 export function incidentSummaryForRecord(incident: Incident): ReportSection[] {
+  const managerReview = incident.managerReview || 'not recorded'
   return [
     section('Incident summary', incident.description || incident.type, [incident.id]),
     section('Trigger and de-escalation', `Trigger: ${incident.trigger || 'not recorded'}. De-escalation used: ${incident.deEscalationUsed.join(', ') || 'not recorded'}.`, [incident.id]),
     section('Outcome and follow-up', `${incident.outcome || 'No outcome recorded.'} Follow-up: ${incident.followUpActions.join('; ') || 'none recorded'}.`, [incident.id]),
-    section('Manager/safeguarding review', `Manager review status: ${incident.managerReviewStatus}. Safeguarding linked: ${incident.safeguardingLinked ? 'yes' : 'no'}.`, [incident.id])
+    section('Manager/safeguarding review', `Manager review status: ${managerReview}. Safeguarding required: ${incident.safeguardingRequired ? 'yes' : 'no'}.`, [incident.id])
   ]
 }
