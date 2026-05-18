@@ -143,10 +143,10 @@ const RECORD_ENDPOINTS = Object.freeze({
   },
   risk: {
     list: "/young-people/:youngPersonId/risk",
-    create: "/young-people/:youngPersonId/risk-assessments",
-    get: "/young-people/risk-assessments/:recordId",
-    update: "/young-people/risk-assessments/:recordId",
-    replace: "/young-people/risk-assessments/:recordId",
+    create: "/young-people/:youngPersonId/risk",
+    get: "/young-people/risk/:recordId",
+    update: "/young-people/risk/:recordId",
+    replace: "/young-people/risk/:recordId",
   },
   support_plan: {
     list: "/young-people/:youngPersonId/plans",
