@@ -177,8 +177,8 @@ function buildSummaryFromWorkspace(id: string, workspace: Awaited<ReturnType<typ
   const person = workspace.youngPerson ? mapYoungPerson(workspace.youngPerson as any) : undefined
   if (!person) return undefined
   const chronology = workspace.chronology || []
-  const dailyLogs = chronology.filter((event) => ['daily_log', 'daily_note', 'daily_notes'].includes(String(event.sourceType || event.eventType))).map(mapDailyLog)
-  const incidents = chronology.filter((event) => `${event.sourceType} ${event.eventType} ${event.category}`.toLowerCase().includes('incident')).map(mapIncident)
+  const dailyLogs = chronology.filter((event) => ['daily_log', 'daily_note', 'daily_notes'].includes(String(event.sourceType || event.eventType))).map((event) => mapDailyLog(event))
+  const incidents = chronology.filter((event) => `${event.sourceType} ${event.eventType} ${event.category}`.toLowerCase().includes('incident')).map((event) => mapIncident(event))
   const safeguarding = chronology.filter((event) => event.safeguardingFlags.length || `${event.sourceType} ${event.eventType} ${event.category}`.toLowerCase().includes('safeguard')).map((event) => ({
     id: event.id,
     youngPersonId: id,
@@ -193,7 +193,7 @@ function buildSummaryFromWorkspace(id: string, workspace: Awaited<ReturnType<typ
   const keywork = chronology.filter((event) => `${event.sourceType} ${event.eventType} ${event.category}`.toLowerCase().includes('keywork')).map((event) => ({
     id: event.id,
     youngPersonId: id,
-    staffId: str(event.createdBy || event.created_by),
+    staffId: str(event.createdBy),
     date: event.dateTime.slice(0, 10),
     topic: event.title,
     goals: [],
@@ -203,11 +203,11 @@ function buildSummaryFromWorkspace(id: string, workspace: Awaited<ReturnType<typ
     staffReflection: '',
     recordedBy: event.createdBy
   }))
-  const risks = chronology.filter((event) => event.riskFlags.length || `${event.sourceType} ${event.eventType} ${event.category}`.toLowerCase().includes('risk')).map(mapRisk)
+  const risks = chronology.filter((event) => event.riskFlags.length || `${event.sourceType} ${event.eventType} ${event.category}`.toLowerCase().includes('risk')).map((event) => mapRisk(event))
   const appointments = chronology.filter((event) => `${event.sourceType} ${event.eventType} ${event.category}`.toLowerCase().includes('appointment')).map((event) => ({
     id: event.id,
     youngPersonId: id,
-    staffId: str(event.createdBy || event.created_by),
+    staffId: str(event.createdBy),
     type: event.title,
     appointmentType: event.title,
     dateTime: event.dateTime,
@@ -284,7 +284,7 @@ export function getIncidentsForYoungPerson(_youngPersonId: string): Incident[] {
 
 export async function getLiveIncidentsForYoungPerson(youngPersonId: string): Promise<Incident[]> {
   const chronology = await getOsChronology({ youngPersonId })
-  return chronology.data.filter((event) => `${event.sourceType} ${event.eventType} ${event.category}`.toLowerCase().includes('incident')).map(mapIncident)
+  return chronology.data.filter((event) => `${event.sourceType} ${event.eventType} ${event.category}`.toLowerCase().includes('incident')).map((event) => mapIncident(event))
 }
 
 export function getAppointmentsForYoungPerson(_youngPersonId: string): Appointment[] {
@@ -302,7 +302,7 @@ export function getAssignedYoungPeople(_staffId: string): YoungPerson[] {
 
 export async function getLiveAssignedYoungPeople(staffId: string): Promise<YoungPerson[]> {
   const people = await getOsYoungPeople()
-  return people.data.filter((person) => String(person.keyWorkerId || person.key_worker_id || '') === String(staffId)).map((person) => mapYoungPerson(person as any))
+  return people.data.filter((person) => String((person as any).keyWorkerId || (person as any).key_worker_id || '') === String(staffId)).map((person) => mapYoungPerson(person as any))
 }
 
 export function getLogsByStaff(_staffId: string): DailyLog[] {
