@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict
 
 from auth.current_user import get_current_user
 from db.connection import get_db
+from services.workflow_response import gold_standard_response, sync_not_observed
 from services.young_people_linking_service import YoungPeopleLinkingService
 from services.young_person_keywork_service import YoungPersonKeyworkService
 
@@ -68,6 +69,26 @@ def _load_and_check_keywork(conn, keywork_id: int, current_user: dict[str, Any])
     return row
 
 
+def _keywork_gold_response(
+    conn,
+    *,
+    keywork_id: int,
+    result: dict[str, Any] | None = None,
+    message: str | None = None,
+) -> dict[str, Any]:
+    result = result or {}
+    item = YoungPersonKeyworkService.get_keywork(conn, keywork_id)
+    return gold_standard_response(
+        id=keywork_id,
+        item=item,
+        message=message or result.get("message"),
+        workflow=result.get("workflow") or {},
+        sync=result.get("sync") or sync_not_observed(),
+        keywork=item,
+        legacy=result,
+    )
+
+
 class KeyworkCreatePayload(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
@@ -117,6 +138,17 @@ def list_keywork(
     return {"items": rows, "count": len(rows)}
 
 
+@router.get("/{young_person_id}/keywork/archive")
+def list_archived_keywork(
+    young_person_id: int,
+    conn=Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    _load_and_check_young_person(conn, young_person_id, current_user)
+    rows = YoungPersonKeyworkService.list_keywork(conn, young_person_id, archived=True)
+    return {"items": rows, "count": len(rows)}
+
+
 @router.get("/keywork/{keywork_id}")
 def get_keywork(
     keywork_id: int,
@@ -137,13 +169,17 @@ def create_keywork(
     _assert_can_edit(current_user)
     _load_and_check_young_person(conn, young_person_id, current_user)
 
-    return YoungPersonKeyworkService.create_keywork(
+    result = YoungPersonKeyworkService.create_keywork(
         conn,
         young_person_id=young_person_id,
         payload=payload.model_dump(exclude_none=True),
         actor_user_id=_safe_int(current_user.get("user_id")),
         linking_service=YoungPeopleLinkingService,
     )
+    keywork_id = _safe_int(result.get("id") if isinstance(result, dict) else None)
+    if not keywork_id:
+        return result
+    return _keywork_gold_response(conn, keywork_id=keywork_id, result=result, message="Keywork session created")
 
 
 @router.patch("/keywork/{keywork_id}")
@@ -157,12 +193,13 @@ def update_keywork(
     _assert_can_edit(current_user)
     _load_and_check_keywork(conn, keywork_id, current_user)
 
-    return YoungPersonKeyworkService.update_keywork(
+    result = YoungPersonKeyworkService.update_keywork(
         conn,
         keywork_id=keywork_id,
         payload=payload.model_dump(exclude_unset=True),
         actor_user_id=_safe_int(current_user.get("user_id")),
     )
+    return _keywork_gold_response(conn, keywork_id=keywork_id, result=result, message="Keywork session updated")
 
 
 @router.post("/keywork/{keywork_id}/submit")
@@ -175,12 +212,13 @@ def submit_keywork(
     _assert_can_edit(current_user)
     _load_and_check_keywork(conn, keywork_id, current_user)
 
-    return YoungPersonKeyworkService.submit_keywork(
+    result = YoungPersonKeyworkService.submit_keywork(
         conn,
         keywork_id=keywork_id,
         actor_user_id=_safe_int(current_user.get("user_id")),
         linking_service=YoungPeopleLinkingService,
     )
+    return _keywork_gold_response(conn, keywork_id=keywork_id, result=result, message="Keywork session submitted")
 
 
 @router.post("/keywork/{keywork_id}/approve")
@@ -194,13 +232,14 @@ def approve_keywork(
     _assert_can_review(current_user)
     _load_and_check_keywork(conn, keywork_id, current_user)
 
-    return YoungPersonKeyworkService.approve_keywork(
+    result = YoungPersonKeyworkService.approve_keywork(
         conn,
         keywork_id=keywork_id,
         approved_by=payload.approved_by or _safe_int(current_user.get("user_id")),
         review_note=payload.review_note,
         linking_service=YoungPeopleLinkingService,
     )
+    return _keywork_gold_response(conn, keywork_id=keywork_id, result=result, message="Keywork session approved")
 
 
 @router.post("/keywork/{keywork_id}/return")
@@ -214,13 +253,14 @@ def return_keywork(
     _assert_can_review(current_user)
     _load_and_check_keywork(conn, keywork_id, current_user)
 
-    return YoungPersonKeyworkService.return_keywork(
+    result = YoungPersonKeyworkService.return_keywork(
         conn,
         keywork_id=keywork_id,
         actor_user_id=_safe_int(current_user.get("user_id")),
         review_note=payload.review_note,
         linking_service=YoungPeopleLinkingService,
     )
+    return _keywork_gold_response(conn, keywork_id=keywork_id, result=result, message="Keywork session returned")
 
 
 @router.post("/keywork/{keywork_id}/archive")
@@ -233,9 +273,10 @@ def archive_keywork(
     _assert_can_review(current_user)
     _load_and_check_keywork(conn, keywork_id, current_user)
 
-    return YoungPersonKeyworkService.archive_keywork(
+    result = YoungPersonKeyworkService.archive_keywork(
         conn,
         keywork_id=keywork_id,
         actor_user_id=_safe_int(current_user.get("user_id")),
         linking_service=YoungPeopleLinkingService,
     )
+    return _keywork_gold_response(conn, keywork_id=keywork_id, result=result, message="Keywork session archived")
