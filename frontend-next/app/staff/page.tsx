@@ -15,6 +15,9 @@ export default async function StaffPage() {
   const staff = dashboard.training.matrix.map((row) => row.staff)
   const enabledModules = modules.filter((item) => item.enabled)
   const hiddenModules = modules.filter((item) => !item.enabled)
+  const intelligence = dashboard.intelligence
+  const health = intelligence?.risk?.home_health
+  const quality = intelligence?.recording_quality?.home_trends
   return (
     <div className="space-y-6">
       <PageHeader
@@ -30,6 +33,12 @@ export default async function StaffPage() {
         <StatCard label="Training due / expired" value={(dashboard.training.summary.due || 0) + (dashboard.training.summary.expired || 0)} detail="Mandatory role matrix" href="/staff/training-matrix" />
         <StatCard label="Supervisions" value={dashboard.supervision.records.length} detail="Draft, submit, review, return, archive" href="/staff/supervision" />
         <StatCard label="Inspection evidence" value={dashboard.evidence.items.length} detail="Reg 13 and SCCIF leadership links" href="/staff/evidence" />
+      </section>
+      <section className="grid gap-4 md:grid-cols-4">
+        <StatCard label="Workforce health" value={health?.score ?? 'n/a'} detail={health?.level ? `Home health is ${health.level}` : 'Risk engine waiting for records'} href="/staff/risk" />
+        <StatCard label="Practice quality" value={quality?.average_score ?? 'n/a'} detail={`${quality?.records_reviewed ?? 0} recordings reviewed`} href="/staff/recording-quality" />
+        <StatCard label="Chronology events" value={intelligence?.chronology?.summary?.total ?? 0} detail="Supervision, training, concerns and evidence" href="/staff/command-centre" />
+        <StatCard label="Relational indicators" value={intelligence?.relationships?.home_view?.tracked_relationships ?? 0} detail="Consistency and relational safety" href="/staff/relationships" />
       </section>
       <section className="grid gap-4 lg:grid-cols-3">
         {dashboard.alerts.map((alert) => (

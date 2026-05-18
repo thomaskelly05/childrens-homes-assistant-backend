@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
-import { Card, DataTable, EmptyState, PageHeader, SectionHeader, StatCard, StatusBadge } from '@/components/indicare/ui'
+import { Card, DataTable, EmptyState, PageHeader, RecordTimeline, SectionHeader, StatCard, StatusBadge } from '@/components/indicare/ui'
 import { getWorkforceStaffProfile } from '@/lib/os-api/workforce'
 
 function count(value: unknown[] | undefined) {
@@ -15,6 +15,16 @@ export default async function StaffDetailPage({ params }: { params: Promise<{ id
   const profile = profileResult.data
   if (!profile) notFound()
   const member = profile.staff
+  const intelligence = profile.intelligence
+  const quality = intelligence?.recording_quality?.home_trends
+  const risk = intelligence?.risk?.staff_risks?.[0]
+  const timelineItems = (intelligence?.chronology?.events ?? []).slice(0, 8).map((event) => ({
+    id: String(event.id),
+    title: String(event.title || event.event_type || 'Workforce event'),
+    date: String(event.event_at || 'Date not returned'),
+    body: String(event.summary || event.severity || 'No summary returned.'),
+    href: event.route ? String(event.route) : undefined
+  }))
 
   return (
     <div className="space-y-6">
@@ -31,6 +41,15 @@ export default async function StaffDetailPage({ params }: { params: Promise<{ id
         <StatCard label="Probation reviews" value={profile.probation.reviews.length} detail="1, 3 and 6 month support" href={`/staff/probation?staff_id=${encodeURIComponent(id)}`} />
         <StatCard label="Evidence links" value={profile.evidence.length} detail="Reg 13 / SCCIF" href="/staff/evidence" />
       </section>
+      <section className="grid gap-4 md:grid-cols-3">
+        <StatCard label="Risk score" value={risk?.score ?? 'n/a'} detail={risk?.level ? `Current level: ${risk.level}` : 'No risk score returned'} href={`/staff/risk?staff_id=${encodeURIComponent(id)}`} />
+        <StatCard label="Recording quality" value={quality?.average_score ?? 'n/a'} detail={`${quality?.records_reviewed ?? 0} records scored`} href={`/staff/recording-quality?staff_id=${encodeURIComponent(id)}`} />
+        <StatCard label="Chronology events" value={intelligence?.chronology?.summary?.total ?? 0} detail="Evidence-aware timeline" href={`/staff/${encodeURIComponent(id)}/chronology`} />
+      </section>
+      <Card>
+        <SectionHeader eyebrow="Workforce chronology" title="Evidence-aware staff timeline" description="Aggregates supervision, training, probation, wellbeing, practice concerns, incidents, recognition and lifecycle events." />
+        <RecordTimeline items={timelineItems} />
+      </Card>
       <Card>
         <SectionHeader eyebrow="Overview" title="Employment and safer recruitment" description="Protected data only appears when the backend returns it for the current role." />
         <DataTable
