@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict
 
 from auth.current_user import get_current_user
 from db.connection import get_db
+from services.workflow_response import gold_standard_response, sync_not_observed
 from services.young_people_linking_service import YoungPeopleLinkingService
 from services.young_person_health_service import YoungPersonHealthService
 
@@ -76,6 +77,70 @@ def _load_and_check_medication_record(conn, record_id: int, current_user: dict[s
     row = YoungPersonHealthService.get_medication_record(conn, record_id)
     _assert_home_access(current_user, _safe_int(row.get("home_id")))
     return row
+
+
+def _health_record_gold_response(
+    conn,
+    *,
+    record_id: int,
+    result: dict[str, Any] | None = None,
+    workflow: Any | None = None,
+    message: str | None = None,
+) -> dict[str, Any]:
+    result = result or {}
+    row = YoungPersonHealthService.get_health_record(conn, record_id)
+    item = YoungPersonHealthService.transform_health_record(row)
+    return gold_standard_response(
+        id=record_id,
+        item=item,
+        message=message or result.get("message"),
+        workflow=workflow if workflow is not None else result.get("workflow") or {},
+        sync=result.get("sync") or sync_not_observed(),
+        health_record=item,
+        legacy=result,
+    )
+
+
+def _medication_profile_gold_response(
+    *,
+    item: dict[str, Any],
+    result: dict[str, Any] | None = None,
+    workflow: Any | None = None,
+    message: str | None = None,
+) -> dict[str, Any]:
+    result = result or {}
+    return gold_standard_response(
+        id=item.get("id"),
+        item=item,
+        message=message or result.get("message"),
+        workflow=workflow if workflow is not None else result.get("workflow") or {},
+        sync=result.get("sync") or sync_not_observed(),
+        medication_profile=item,
+        legacy=result,
+    )
+
+
+def _medication_record_gold_response(
+    *,
+    item: dict[str, Any],
+    result: dict[str, Any] | None = None,
+    workflow: Any | None = None,
+    message: str | None = None,
+) -> dict[str, Any]:
+    result = result or {}
+    return gold_standard_response(
+        id=item.get("id"),
+        item=item,
+        message=message or result.get("message"),
+        workflow=workflow if workflow is not None else result.get("workflow") or {},
+        sync=result.get("sync") or sync_not_observed(),
+        medication_record=item,
+        legacy=result,
+    )
+
+
+def _filter_archived(rows: list[dict[str, Any]], archived: bool) -> list[dict[str, Any]]:
+    return [row for row in rows if bool(row.get("archived")) is archived]
 
 
 def _link_health_profile_event(conn, *, row: dict[str, Any], event_type: str, current_user: dict[str, Any]) -> dict[str, Any]:
@@ -314,12 +379,30 @@ def get_young_person_health(young_person_id: int, conn=Depends(get_db), current_
     return YoungPersonHealthService.get_health_bundle(conn, young_person_id)
 
 
+@router.get("/{young_person_id}/health/archive")
+def list_archived_health_records(young_person_id: int, conn=Depends(get_db), current_user=Depends(get_current_user)):
+    _load_and_check_young_person(conn, young_person_id, current_user)
+    bundle = YoungPersonHealthService.get_health_bundle(conn, young_person_id)
+    records = bundle.get("health_records") if isinstance(bundle, dict) else []
+    rows = _filter_archived(records if isinstance(records, list) else [], True)
+    return {"items": rows, "health_records": rows, "count": len(rows)}
+
+
 @router.get("/{young_person_id}/medication-records")
 def list_medication_records(young_person_id: int, conn=Depends(get_db), current_user=Depends(get_current_user)):
     _load_and_check_young_person(conn, young_person_id, current_user)
     bundle = YoungPersonHealthService.get_health_bundle(conn, young_person_id)
     rows = bundle.get("medication_records") if isinstance(bundle, dict) else []
     rows = rows if isinstance(rows, list) else []
+    return {"items": rows, "medication_records": rows, "count": len(rows)}
+
+
+@router.get("/{young_person_id}/medication-records/archive")
+def list_archived_medication_records(young_person_id: int, conn=Depends(get_db), current_user=Depends(get_current_user)):
+    _load_and_check_young_person(conn, young_person_id, current_user)
+    bundle = YoungPersonHealthService.get_health_bundle(conn, young_person_id)
+    records = bundle.get("medication_records") if isinstance(bundle, dict) else []
+    rows = _filter_archived(records if isinstance(records, list) else [], True)
     return {"items": rows, "medication_records": rows, "count": len(rows)}
 
 
@@ -348,20 +431,31 @@ def upsert_health_profile(young_person_id: int, payload: HealthProfileUpsertPayl
     _load_and_check_young_person(conn, young_person_id, current_user)
     row = YoungPersonHealthService.upsert_health_profile(conn, young_person_id=young_person_id, payload=payload.model_dump(exclude_none=True))
     workflow = _link_health_profile_event(conn, row=row, event_type="updated", current_user=current_user)
-    return {"ok": True, "health_profile": row, "workflow": workflow}
+    return gold_standard_response(
+        id=row.get("id"),
+        item=row,
+        message="Health profile updated",
+        workflow=workflow,
+        sync=sync_not_observed("health_profile_linking_observed_but_os_sync_not_exposed"),
+        health_profile=row,
+    )
 
 
 @router.post("/{young_person_id}/health-records")
 def create_health_record(young_person_id: int, payload: HealthRecordCreatePayload, conn=Depends(get_db), current_user=Depends(get_current_user)):
     _assert_can_edit(current_user)
     _load_and_check_young_person(conn, young_person_id, current_user)
-    return YoungPersonHealthService.create_health_record(
+    result = YoungPersonHealthService.create_health_record(
         conn,
         young_person_id=young_person_id,
         payload=payload.model_dump(exclude_none=True),
         actor_user_id=_actor_id(current_user),
         linking_service=YoungPeopleLinkingService,
     )
+    record_id = _safe_int(result.get("id") if isinstance(result, dict) else None)
+    if not record_id:
+        return result
+    return _health_record_gold_response(conn, record_id=record_id, result=result, message="Health record created")
 
 
 @router.patch("/health-records/{record_id}")
@@ -369,7 +463,8 @@ def create_health_record(young_person_id: int, payload: HealthRecordCreatePayloa
 def update_health_record(record_id: int, payload: HealthRecordUpdatePayload, conn=Depends(get_db), current_user=Depends(get_current_user)):
     _assert_can_edit(current_user)
     _load_and_check_health_record(conn, record_id, current_user)
-    return YoungPersonHealthService.update_health_record(conn, record_id=record_id, payload=payload.model_dump(exclude_unset=True))
+    result = YoungPersonHealthService.update_health_record(conn, record_id=record_id, payload=payload.model_dump(exclude_unset=True))
+    return _health_record_gold_response(conn, record_id=record_id, result=result, message="Health record updated")
 
 
 @router.post("/{young_person_id}/medication-profiles")
@@ -378,8 +473,9 @@ def create_medication_profile(young_person_id: int, payload: MedicationProfileCr
     _load_and_check_young_person(conn, young_person_id, current_user)
     result = YoungPersonHealthService.create_medication_profile(conn, young_person_id=young_person_id, payload=payload.model_dump(exclude_none=True))
     row = _load_and_check_medication_profile(conn, int(result["id"]), current_user)
+    item = YoungPersonHealthService.transform_medication_profile(row)
     workflow = _link_medication_profile_event(conn, row=row, event_type="created", current_user=current_user)
-    return {**result, "workflow": workflow}
+    return _medication_profile_gold_response(item=item, result=result, workflow=workflow, message="Medication profile created")
 
 
 @router.patch("/medication-profiles/{profile_id}")
@@ -389,8 +485,9 @@ def update_medication_profile(profile_id: int, payload: MedicationProfileUpdateP
     _load_and_check_medication_profile(conn, profile_id, current_user)
     result = YoungPersonHealthService.update_medication_profile(conn, profile_id=profile_id, payload=payload.model_dump(exclude_unset=True))
     row = _load_and_check_medication_profile(conn, profile_id, current_user)
+    item = YoungPersonHealthService.transform_medication_profile(row)
     workflow = _link_medication_profile_event(conn, row=row, event_type="updated", current_user=current_user)
-    return {**result, "workflow": workflow}
+    return _medication_profile_gold_response(item=item, result=result, workflow=workflow, message="Medication profile updated")
 
 
 @router.post("/{young_person_id}/medication-records")
@@ -399,8 +496,9 @@ def create_medication_record(young_person_id: int, payload: MedicationRecordCrea
     _load_and_check_young_person(conn, young_person_id, current_user)
     result = YoungPersonHealthService.create_medication_record(conn, young_person_id=young_person_id, payload=payload.model_dump(exclude_none=True))
     row = _load_and_check_medication_record(conn, int(result["id"]), current_user)
+    item = YoungPersonHealthService.transform_medication_record(row)
     workflow = _link_medication_record_event(conn, row=row, event_type="created", current_user=current_user)
-    return {**result, "workflow": workflow}
+    return _medication_record_gold_response(item=item, result=result, workflow=workflow, message="Medication record created")
 
 
 @router.patch("/medication-records/{record_id}")
@@ -410,5 +508,6 @@ def update_medication_record(record_id: int, payload: MedicationRecordUpdatePayl
     _load_and_check_medication_record(conn, record_id, current_user)
     result = YoungPersonHealthService.update_medication_record(conn, record_id=record_id, payload=payload.model_dump(exclude_unset=True))
     row = _load_and_check_medication_record(conn, record_id, current_user)
+    item = YoungPersonHealthService.transform_medication_record(row)
     workflow = _link_medication_record_event(conn, row=row, event_type="updated", current_user=current_user)
-    return {**result, "workflow": workflow}
+    return _medication_record_gold_response(item=item, result=result, workflow=workflow, message="Medication record updated")
