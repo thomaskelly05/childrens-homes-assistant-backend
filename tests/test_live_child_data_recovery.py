@@ -184,6 +184,8 @@ def test_cookie_forwarding_stays_in_server_only_modules_or_api_routes():
     root = Path(__file__).resolve().parents[1] / "frontend-next"
     offenders = []
     for path in root.rglob("*.ts*"):
+        if path.name.endswith(".tsbuildinfo"):
+            continue
         text = path.read_text()
         if "next/headers" not in text:
             continue

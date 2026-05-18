@@ -13,6 +13,7 @@ import {
   UsersRound,
   FolderOpen,
   LogOut,
+  Gauge,
   Clock3,
   ShieldCheck,
   ShieldAlert,
