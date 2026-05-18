@@ -6,6 +6,7 @@ import secrets
 import time
 import uuid
 from typing import Callable
+from urllib.parse import urlparse
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
@@ -46,6 +47,11 @@ CSRF_EXEMPT_PREFIXES = (
     "/health",
 )
 
+TRUSTED_ORIGIN_ORB_BOOTSTRAP_PATHS = (
+    "/orb/realtime/session",
+    "/orb/session/start",
+)
+
 SKIP_PATHS = (
     "/health",
     "/css",
@@ -75,6 +81,32 @@ def _is_public_cross_origin_asset(path: str) -> bool:
     return path.startswith(("/assets", "/css", "/js", "/components")) or path == "/favicon.ico"
 
 
+def _normalise_origin(value: str | None) -> str:
+    if not value:
+        return ""
+    parsed = urlparse(value.strip())
+    if not parsed.scheme or not parsed.netloc:
+        return ""
+    return f"{parsed.scheme.lower()}://{parsed.netloc.lower()}"
+
+
+def _trusted_frontend_origins(request: Request) -> set[str]:
+    origins = {
+        _normalise_origin(os.getenv("FRONTEND_APP_URL")),
+        _normalise_origin(os.getenv("APP_BASE_URL")),
+        _normalise_origin(os.getenv("NEXT_PUBLIC_APP_URL")),
+        _normalise_origin(str(request.base_url)),
+    }
+    extra = os.getenv("TRUSTED_FRONTEND_ORIGINS", "")
+    for origin in extra.split(","):
+        origins.add(_normalise_origin(origin))
+    return {origin for origin in origins if origin}
+
+
+def _request_origin(request: Request) -> str:
+    return _normalise_origin(request.headers.get("origin") or request.headers.get("referer"))
+
+
 def _safe_actor_from_request(request: Request) -> dict:
     token = (request.cookies.get(auth_settings.session_cookie_name) or "").strip()
     if not token:
@@ -89,6 +121,24 @@ def _safe_actor_from_request(request: Request) -> dict:
     except (TypeError, ValueError):
         return {}
     return {"id": user_id}
+
+
+def _has_authenticated_session(request: Request) -> bool:
+    return bool(_safe_actor_from_request(request))
+
+
+def _trusted_orb_bootstrap_request(request: Request) -> bool:
+    path = request.url.path
+    if request.method.upper() != "POST":
+        return False
+    if path not in TRUSTED_ORIGIN_ORB_BOOTSTRAP_PATHS:
+        return False
+    if not _has_authenticated_session(request):
+        return False
+    origin = _request_origin(request)
+    if not origin:
+        return False
+    return origin in _trusted_frontend_origins(request)
 
 
 class CsrfProtectionMiddleware(BaseHTTPMiddleware):
@@ -106,27 +156,37 @@ class CsrfProtectionMiddleware(BaseHTTPMiddleware):
             if not expected:
                 request.session["csrf_token"] = cookie_token
             return await call_next(request)
-        if not expected or not supplied or not secrets.compare_digest(expected, supplied):
-            logger.warning(
-                "csrf_blocked method=%s path=%s ip=%s",
-                request.method,
-                path,
-                request.client.host if request.client else None,
-            )
+        if expected and supplied and secrets.compare_digest(expected, supplied):
+            return await call_next(request)
+        if _trusted_orb_bootstrap_request(request):
             record_audit_event(
-                event_type="security.csrf_blocked",
-                action="csrf_blocked",
-                outcome="blocked",
+                event_type="security.csrf_trusted_orb_bootstrap",
+                action="csrf_trusted_orb_bootstrap",
+                outcome="allowed",
                 request=request,
                 actor=_safe_actor_from_request(request),
-                metadata={"path": path, "method": request.method},
+                metadata={"path": path, "method": request.method, "origin": _request_origin(request)},
             )
-            return JSONResponse(
-                status_code=403,
-                content={"detail": auth_error_detail("csrf_invalid", "Invalid CSRF token")},
-            )
+            return await call_next(request)
 
-        return await call_next(request)
+        logger.warning(
+            "csrf_blocked method=%s path=%s ip=%s",
+            request.method,
+            path,
+            request.client.host if request.client else None,
+        )
+        record_audit_event(
+            event_type="security.csrf_blocked",
+            action="csrf_blocked",
+            outcome="blocked",
+            request=request,
+            actor=_safe_actor_from_request(request),
+            metadata={"path": path, "method": request.method},
+        )
+        return JSONResponse(
+            status_code=403,
+            content={"detail": auth_error_detail("csrf_invalid", "Invalid CSRF token")},
+        )
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
