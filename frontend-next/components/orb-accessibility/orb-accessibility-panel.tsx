@@ -17,15 +17,16 @@ const controls: Array<{ key: keyof OrbAccessibilityPreferences; label: string }>
   { key: 'hearingAccessibility', label: 'Hearing accessibility' },
   { key: 'motorAccessibility', label: 'Motor accessibility' },
   { key: 'emotionalRegulationMode', label: 'Emotional regulation mode' },
+  { key: 'sensorySafeMode', label: 'Sensory-safe mode' },
   { key: 'captions', label: 'Captions' },
   { key: 'transcript', label: 'Transcript' },
   { key: 'reducedMotion', label: 'Reduced motion' },
   { key: 'highContrast', label: 'High contrast' },
-  { key: 'largerText', label: 'Larger text' },
+  { key: 'largerText', label: 'Font scaling' },
   { key: 'simplifiedLayout', label: 'Simplified layout' },
   { key: 'focusMode', label: 'Focus mode' },
   { key: 'largeTapTargets', label: 'Large tap targets' },
-  { key: 'voiceFirstNavigation', label: 'Voice-first navigation' }
+  { key: 'voiceFirstNavigation', label: 'Voice accessibility' }
 ]
 
 export function OrbAccessibilityPanel() {

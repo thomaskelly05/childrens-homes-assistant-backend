@@ -1,4 +1,4 @@
-export type StaffRole = 'admin' | 'manager' | 'deputy_manager' | 'support_worker' | 'viewer'
+export type StaffRole = 'admin' | 'responsible_individual' | 'provider' | 'manager' | 'deputy_manager' | 'support_worker' | 'viewer'
 
 export type StaffUser = {
   id: number

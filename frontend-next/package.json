@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "e2e": "playwright test",
-    "route:audit": "node scripts/audit-routes.mjs"
+    "route:audit": "node scripts/audit-routes.mjs",
+    "operational:audit": "node scripts/audit-operational-frontend.mjs"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.2",

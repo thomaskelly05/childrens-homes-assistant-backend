@@ -185,6 +185,16 @@ textarea:focus-visible {
     linear-gradient(180deg, #06111f 0%, #08111c 100%);
 }
 
+[data-orb-sensory-safe='true'] body {
+  background: #f8fafc;
+}
+
+[data-orb-sensory-safe='true'] main,
+[data-orb-sensory-safe='true'] section,
+[data-orb-sensory-safe='true'] aside {
+  box-shadow: none !important;
+}
+
 .orb-simple-layout * {
   box-shadow: none !important;
 }

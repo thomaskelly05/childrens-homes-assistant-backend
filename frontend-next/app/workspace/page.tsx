@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
 
 export default async function WorkspacePage() {
-  redirect('/young-people')
+  redirect('/command-centre')
 }
