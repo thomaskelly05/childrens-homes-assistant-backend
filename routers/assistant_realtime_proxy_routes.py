@@ -18,7 +18,7 @@ router = APIRouter(prefix="/assistant/realtime", tags=["Assistant Realtime Proxy
 
 OPENAI_REALTIME_URL = os.getenv(
     "OPENAI_REALTIME_URL",
-    "wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview"
+    "wss://api.openai.com/v1/realtime?model=gpt-realtime"
 )
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
@@ -94,8 +94,7 @@ async def assistant_realtime_proxy(websocket: WebSocket):
         return
 
     headers = {
-        "Authorization": f"Bearer {OPENAI_API_KEY}",
-        "OpenAI-Beta": "realtime=v1"
+        "Authorization": f"Bearer {OPENAI_API_KEY}"
     }
 
     try:
