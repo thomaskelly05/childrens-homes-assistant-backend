@@ -4,27 +4,36 @@ import Link from 'next/link'
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
 import { ChildIdentitySurface, ChronologySurface, ContextSurface, WorkspaceStack } from '@/components/indicare/operational-surfaces'
 import { DataTable, EmptyState, RecordTimeline, RiskBadge, SectionHeader, StatusBadge } from '@/components/indicare/ui'
-import { getChildProfileBundle, recordTitle, text } from '@/lib/os-api/bundles'
+import { recordTitle, text } from '@/lib/os-api/bundles'
+import { getServerChildProfileBundle } from '@/lib/os-api/server-bundles'
+
+function normalisePhoto(value: unknown) {
+  const raw = String(value || '').trim()
+  if (!raw || raw === 'null' || raw === 'undefined' || raw === 'Not returned yet') return ''
+  if (raw.startsWith('data:image/') || raw.startsWith('http://') || raw.startsWith('https://')) return raw
+  return ''
+}
 
 export default async function YoungPersonDetailPage({ params, searchParams }: { params: Promise<{ id: string }>, searchParams: Promise<Record<string, string | undefined>> }) {
   const { id } = await params
   const query = await searchParams
-  const result = await getChildProfileBundle(id)
+  const result = await getServerChildProfileBundle(id)
   const bundle = result.data
   const identity = bundle.identity || {}
   if (!identity.id && result.source === 'live') notFound()
-  const displayName = text(identity, ['preferred_name', 'first_name'], `Young person ${id}`)
+  const displayName = text(identity, ['preferred_name', 'first_name', 'display_name'], `Young person ${id}`)
   const initials = displayName.slice(0, 2).toUpperCase()
   const keyWorker = identity.key_worker && typeof identity.key_worker === 'object' ? identity.key_worker as Record<string, any> : {}
   const safetyItems = bundle.safety.active_concerns || []
+  const photo = normalisePhoto(identity.photo_url || identity.photoUrl || identity.profile_photo_path || identity.profilePhotoPath)
 
   return (
     <WorkspaceStack>
       <ChildIdentitySurface>
         <div className="flex flex-wrap items-start justify-between gap-6">
           <div className="flex min-w-0 flex-1 flex-wrap gap-5">
-            {identity.photo_url ? (
-              <div className="h-28 w-28 rounded-[32px] bg-cover bg-center shadow-xl shadow-slate-950/10" style={{ backgroundImage: `url(${identity.photo_url})` }} />
+            {photo ? (
+              <div className="h-28 w-28 rounded-[32px] bg-cover bg-center shadow-xl shadow-slate-950/10" style={{ backgroundImage: `url(${photo})` }} />
             ) : (
               <div className="flex h-28 w-28 items-center justify-center rounded-[32px] bg-gradient-to-br from-blue-600 to-sky-400 text-3xl font-black text-white shadow-xl shadow-blue-500/20">{initials}</div>
             )}
@@ -33,8 +42,8 @@ export default async function YoungPersonDetailPage({ params, searchParams }: { 
               <h1 className="mt-3 text-5xl font-black tracking-[-0.07em] text-slate-950">{displayName}</h1>
               <p className="mt-4 max-w-3xl text-base leading-8 text-slate-600">{text(bundle.personhood, ['what_matters_to_me'], 'What matters to this child has not been recorded yet.')}</p>
               <div className="mt-5 flex flex-wrap gap-2">
-                <RiskBadge value={identity.risk_level as any} />
-                <StatusBadge value={text(identity, ['placement_status'], 'placement not returned')} />
+                <RiskBadge value={text(identity, ['summary_risk_level', 'risk_level', 'riskLevel'], 'medium') as any} />
+                <StatusBadge value={text(identity, ['placement_status', 'placementStatus'], 'placement not returned')} />
                 <StatusBadge value={identity.age ? `age ${identity.age}` : 'age not returned'} />
                 {query.saved ? <StatusBadge value={`saved: ${query.saved}`} /> : null}
               </div>
@@ -123,8 +132,8 @@ export default async function YoungPersonDetailPage({ params, searchParams }: { 
         <RecordTimeline items={bundle.recent_chronology.map((event, index) => ({
           id: String(event.id || index),
           title: recordTitle(event, 'Chronology event'),
-          date: String(event.event_datetime || event.created_at || ''),
-          body: text(event, ['summary', 'description', 'body'], 'No summary returned.'),
+          date: String(event.event_datetime || event.created_at || event.dateTime || ''),
+          body: text(event, ['summary', 'description', 'body', 'fullText'], 'No summary returned.'),
           href: event.id ? `/chronology/${encodeURIComponent(String(event.id))}` : undefined
         }))} />
       </ChronologySurface>
