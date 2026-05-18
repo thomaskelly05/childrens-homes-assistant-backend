@@ -215,6 +215,7 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
             "routers.young_people_statutory_documents_routes",
             "routers.young_people_missing_episodes_compat_routes",
             "routers.young_people_documents_compat_routes",
+            "routers.young_people_safeguarding_compat_routes",
         ),
         notes="Young person records that feed chronology, reports and evidence retrieval.",
     ),
