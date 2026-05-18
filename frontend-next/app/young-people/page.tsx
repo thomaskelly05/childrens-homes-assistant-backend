@@ -3,7 +3,7 @@ import Link from 'next/link'
 
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
 import { EmptyState, RiskBadge, StatusBadge } from '@/components/indicare/ui'
-import { getOsYoungPeople } from '@/lib/os-api/workspaces'
+import { getServerOsYoungPeople } from '@/lib/os-api/workspaces'
 
 function childName(person: Record<string, any>) {
   return String(person.preferredName || person.preferred_name || person.displayName || person.display_name || person.firstName || person.first_name || 'Young person')
@@ -24,7 +24,7 @@ function initials(name: string) {
 }
 
 export default async function YoungPeoplePage() {
-  const peopleResult = await getOsYoungPeople()
+  const peopleResult = await getServerOsYoungPeople()
   const people = peopleResult.data
 
   return (
