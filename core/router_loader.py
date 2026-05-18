@@ -284,3 +284,8 @@ def include_router_groups(app: FastAPI) -> RouterLoadReport:
         logger.info("Detected %s intentional compatibility route shadows", len(report.compatibility_shadows))
     logger.info("Router startup loaded %s routers across %s domains (%s failed, %s conflicts)", len(report.loaded), len(ROUTER_GROUPS), len(report.failed), len(report.duplicate_routes))
     return report
+
+
+def include_routers(app: FastAPI) -> RouterLoadReport:
+    """Backwards-compatible entrypoint used by core.app_factory."""
+    return include_router_groups(app)
