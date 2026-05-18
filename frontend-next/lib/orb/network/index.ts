@@ -32,6 +32,7 @@ const MAX_RECONNECT_ATTEMPTS = 2
 const NEGOTIATION_TIMEOUT_MS = 20000
 const HEARTBEAT_MS = 15000
 const ORB_SERVER_VAD_SILENCE_MS = 520
+const OPENAI_REALTIME_SDP_URL = 'https://api.openai.com/v1/realtime'
 
 class OrbNonRetryableError extends Error {}
 class OrbRealtimeNegotiationError extends Error {
@@ -209,7 +210,7 @@ export class OrbRealtimeClient {
     await peer.setLocalDescription(offer)
     let response: Response
     try {
-      response = await fetch(`https://api.openai.com/v1/realtime?model=${encodeURIComponent(options.model)}`, {
+      response = await fetch(OPENAI_REALTIME_SDP_URL, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${options.ephemeralKey}`,
@@ -221,7 +222,8 @@ export class OrbRealtimeClient {
       throw new OrbRealtimeNegotiationError('Realtime audio could not reach OpenAI from this browser.', {
         reason: 'network_fetch_failed',
         error: error instanceof Error ? error.message : String(error),
-        model: options.model
+        model: options.model,
+        endpoint: OPENAI_REALTIME_SDP_URL
       })
     }
     if (response.status === 401 || response.status === 403) {
@@ -238,12 +240,13 @@ export class OrbRealtimeClient {
           statusText: response.statusText,
           body: body.slice(0, 500),
           model: options.model,
+          endpoint: OPENAI_REALTIME_SDP_URL,
         }
       )
     }
     const answer = await response.text()
     if (!answer.trim()) {
-      throw new OrbRealtimeNegotiationError('Realtime audio returned an empty connection answer.', { reason: 'empty_sdp_answer', model: options.model })
+      throw new OrbRealtimeNegotiationError('Realtime audio returned an empty connection answer.', { reason: 'empty_sdp_answer', model: options.model, endpoint: OPENAI_REALTIME_SDP_URL })
     }
     await peer.setRemoteDescription({ type: 'answer', sdp: answer })
   }
