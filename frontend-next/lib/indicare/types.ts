@@ -15,7 +15,7 @@ export type YoungPerson = {
   gender: string
   status: string
   legalStatus: string
-  communicationNeeds: string
+  communicationNeeds: string | string[]
   educationStatus: string
   healthSummary: string
   riskLevel: RiskLevel
@@ -25,6 +25,10 @@ export type YoungPerson = {
   dislikes: string[]
   allergies: string[]
   importantContacts: ImportantContact[]
+  dateOfBirth?: string
+  currentPlacementId?: string
+  sensoryNeeds?: string[]
+  routines?: string[]
 }
 
 export type StaffMember = {
@@ -38,6 +42,9 @@ export type StaffMember = {
   shiftPattern: string
   email: string
   phone: string
+  startDate?: string
+  training?: unknown[]
+  supervision?: unknown[]
 }
 
 export type Placement = {
@@ -63,6 +70,13 @@ export type DailyLog = {
   mood: string
   presentation: string
   followUpActions: string[]
+  positiveMoments?: string[]
+  concerns?: string[]
+  routines?: string[]
+  foodAndSleep?: string
+  educationAndActivities?: string
+  familyContact?: string
+  recordedBy?: string
 }
 
 export type Incident = {
@@ -84,6 +98,10 @@ export type Incident = {
   safeguardingRequired: boolean
   managerReview: string
   followUpActions: string[]
+  managerReviewStatus?: string
+  safeguardingLinked?: boolean
+  restraintUsed?: boolean
+  recordedBy?: string
 }
 
 export type SafeguardingEvent = {
@@ -108,6 +126,7 @@ export type RiskAssessment = {
   reviewDate: string
   reviewedBy: string
   status: string
+  responsibleStaffId?: string
 }
 
 export type MedicationAdministration = {
@@ -126,6 +145,8 @@ export type MedicationRecord = {
   prescribedBy: string
   status: string
   administrationHistory: MedicationAdministration[]
+  reviewDate?: string
+  notes?: string
 }
 
 export type KeyworkSession = {
@@ -138,6 +159,8 @@ export type KeyworkSession = {
   youngPersonVoice: string
   actions: string[]
   nextSessionDate: string
+  staffReflection?: string
+  recordedBy?: string
 }
 
 export type Appointment = {
@@ -151,6 +174,8 @@ export type Appointment = {
   outcome: string
   followUpRequired: boolean
   status: string
+  appointmentType?: string
+  nextAppointmentDate?: string
 }
 
 export type DocumentRecord = {
