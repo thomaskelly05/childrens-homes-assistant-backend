@@ -71,6 +71,7 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
             "routers.referral_matching_routes",
             "routers.referral_decision_routes",
             "routers.referral_portal_page_routes",
+            "routers.referral_upload_routes",
         ),
         notes="Account, admin, billing, provider administration and referral matching.",
     ),
