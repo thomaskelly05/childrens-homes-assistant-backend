@@ -177,6 +177,10 @@ def normalise_severity(value: Any) -> str:
     return "medium"
 
 
+def _provider_only_scope_allowed(cols: set[str], context: Any, resolved_provider: int | None) -> bool:
+    return bool(resolved_provider is not None and context.tenancy_scope != "platform" and "provider_id" in cols)
+
+
 def build_scope_where(
     cols: set[str],
     current_user: dict[str, Any],
@@ -192,12 +196,17 @@ def build_scope_where(
     context = context_from_user(current_user)
     resolved_provider = provider_id if provider_id is not None else context.provider_id
     allowed_home_ids = list(context.home_ids)
+    provider_scope_used = False
 
     if context.tenancy_scope != "platform" and "home_id" in cols:
         if home_id is not None:
             if context.can_access_home(home_id):
                 where.append("home_id = %s")
                 params.append(home_id)
+            elif _provider_only_scope_allowed(cols, context, resolved_provider):
+                where.append("provider_id = %s")
+                params.append(resolved_provider)
+                provider_scope_used = True
             else:
                 where.append("1 = 0")
         elif len(allowed_home_ids) == 1:
@@ -206,22 +215,30 @@ def build_scope_where(
         elif allowed_home_ids:
             where.append("home_id = ANY(%s)")
             params.append(allowed_home_ids)
+        elif _provider_only_scope_allowed(cols, context, resolved_provider):
+            where.append("provider_id = %s")
+            params.append(resolved_provider)
+            provider_scope_used = True
         else:
             where.append("1 = 0")
     elif home_id is not None and "home_id" in cols:
         where.append("home_id = %s")
         params.append(home_id)
 
-    if provider_id is not None and "provider_id" in cols:
+    if provider_id is not None and "provider_id" in cols and not provider_scope_used:
         where.append("provider_id = %s")
         params.append(provider_id)
-    elif resolved_provider is not None and context.tenancy_scope != "platform" and "provider_id" in cols:
+    elif resolved_provider is not None and context.tenancy_scope != "platform" and "provider_id" in cols and not provider_scope_used:
         where.append("provider_id = %s")
         params.append(resolved_provider)
 
-    if young_person_id is not None and "young_person_id" in cols:
-        where.append("young_person_id = %s")
-        params.append(young_person_id)
+    if young_person_id is not None:
+        if "young_person_id" in cols:
+            where.append("young_person_id = %s")
+            params.append(young_person_id)
+        elif "id" in cols:
+            where.append("id = %s")
+            params.append(young_person_id)
 
     if staff_id is not None:
         staff_col = first_col(cols, ["staff_id", "staff_user_id", "owner_id", "assigned_to_user_id", "created_by", "author_id"])
@@ -233,4 +250,3 @@ def build_scope_where(
         where.append("COALESCE(archived, FALSE) = FALSE")
 
     return where, params
-
