@@ -238,6 +238,62 @@ function hasValue(value) {
   return value !== null && value !== undefined && String(value).trim() !== "";
 }
 
+function truthy(value) {
+  return value === true || ["true", "1", "yes", "on"].includes(String(value || "").trim().toLowerCase());
+}
+
+function compactText(...values) {
+  const parts = values
+    .filter((value) => hasValue(value))
+    .map((value) => String(value).trim())
+    .filter(Boolean);
+  return parts.join("\n") || "";
+}
+
+function toNumberOrNull(value) {
+  if (!hasValue(value)) return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function normalisePayloadForRecordType(recordType, payload = {}) {
+  const type = normaliseRecordType(recordType);
+  const data = safeObject(payload);
+
+  if (type !== "medication_record") return data;
+
+  const status = String(data.status || "recorded").trim().toLowerCase();
+  const administeredTime = data.administered_time || data.administered_at || data.recorded_at || "";
+  const scheduledTime = data.scheduled_time || data.scheduled_at || administeredTime || "";
+  const notes = compactText(data.notes, data.actions_required);
+  const errorDetails = compactText(data.error_details, status === "error" ? notes : "");
+  const managerReviewStatus =
+    data.manager_review_status || (truthy(data.manager_review_needed) ? "required" : "");
+
+  const normalised = {
+    ...data,
+    medication_profile_id: toNumberOrNull(data.medication_profile_id),
+    scheduled_time: scheduledTime,
+    administered_time: administeredTime,
+    medication_name: data.medication_name || data.title || "Medication",
+    dose: data.dose || data.dosage || "",
+    route: data.route || "",
+    status,
+    refusal_reason: data.refusal_reason || "",
+    omission_reason: data.omission_reason || "",
+    error_flag: data.error_flag ?? (status === "error" || Boolean(errorDetails)),
+    error_details: errorDetails,
+    manager_review_status: managerReviewStatus,
+    administered_by: toNumberOrNull(data.administered_by),
+  };
+
+  if (!normalised.error_details && notes) {
+    normalised.error_details = notes;
+  }
+
+  return normalised;
+}
+
 function buildQuery(params = {}) {
   const query = new URLSearchParams();
 
@@ -536,7 +592,8 @@ export async function createRecord(recordType, ids = {}, payload = {}) {
   const type = normaliseRecordType(recordType);
   const url = buildRecordActionUrl(type, "create", ids);
   const listUrl = buildRecordActionUrl(type, "list", ids);
-  const response = await apiSend(url, "POST", payload, {
+  const normalisedPayload = normalisePayloadForRecordType(type, payload);
+  const response = await apiSend(url, "POST", normalisedPayload, {
     invalidatePrefixes: [listUrl, url],
   });
 
@@ -548,7 +605,8 @@ export async function updateRecord(recordType, ids = {}, recordId = "", payload 
   const scopedIds = idsWithRecordId(ids, recordId);
   const url = buildRecordActionUrl(type, "update", scopedIds);
   const listUrl = buildRecordActionUrl(type, "list", ids);
-  const response = await apiSend(url, getActionMethod(type, "update", "PATCH"), payload, {
+  const normalisedPayload = normalisePayloadForRecordType(type, payload);
+  const response = await apiSend(url, getActionMethod(type, "update", "PATCH"), normalisedPayload, {
     invalidatePrefixes: [listUrl],
   });
 
@@ -560,7 +618,8 @@ export async function replaceRecord(recordType, ids = {}, recordId = "", payload
   const scopedIds = idsWithRecordId(ids, recordId);
   const url = buildRecordActionUrl(type, "replace", scopedIds);
   const listUrl = buildRecordActionUrl(type, "list", ids);
-  const response = await apiSend(url, getActionMethod(type, "replace", "PUT"), payload, {
+  const normalisedPayload = normalisePayloadForRecordType(type, payload);
+  const response = await apiSend(url, getActionMethod(type, "replace", "PUT"), normalisedPayload, {
     invalidatePrefixes: [listUrl],
   });
 
