@@ -45,6 +45,13 @@ BILLING_EXEMPT_ROLES = {
     "superadmin",
 }
 
+PROVIDER_HOME_ROLES = BILLING_EXEMPT_ROLES | {
+    "responsible_individual",
+    "ri",
+    "operations_manager",
+    "regional_manager",
+}
+
 
 def get_bearer_token(
     credentials: HTTPAuthorizationCredentials | None = Depends(security),
@@ -110,6 +117,38 @@ def _get_user_by_id(conn: Any, user_id: int) -> dict[str, Any] | None:
         )
         row = cur.fetchone()
         return dict(row) if row else None
+
+
+def _provider_home_ids(conn: Any, provider_id: Any) -> list[int]:
+    try:
+        if provider_id in (None, ""):
+            return []
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT to_regclass('public.homes') IS NOT NULL AS exists")
+            exists_row = cur.fetchone()
+            if not exists_row or not bool(exists_row.get("exists")):
+                return []
+            cur.execute(
+                """
+                SELECT id
+                FROM homes
+                WHERE provider_id = %s
+                AND COALESCE(archived, FALSE) = FALSE
+                ORDER BY id ASC
+                """,
+                (provider_id,),
+            )
+            rows = cur.fetchall() or []
+        ids = []
+        for row in rows:
+            try:
+                ids.append(int(row["id"]))
+            except Exception:
+                continue
+        return ids
+    except Exception:
+        logger.warning("Could not derive provider home ids for provider_id=%s", provider_id, exc_info=True)
+        return []
 
 
 def _is_billing_exempt_path(request_path: str) -> bool:
@@ -260,6 +299,11 @@ def get_current_user(
             allowed_home_ids = [int(home_id)]
         except (TypeError, ValueError):
             allowed_home_ids = []
+
+    if not allowed_home_ids and provider_id is not None and role in PROVIDER_HOME_ROLES:
+        allowed_home_ids = _provider_home_ids(conn, provider_id)
+        if allowed_home_ids and home_id is None:
+            home_id = allowed_home_ids[0]
 
     return {
         **user,
