@@ -90,8 +90,8 @@ export function QuickActionButton({
               ) : (
                 <div className="rounded-[28px] border border-blue-100 bg-blue-50 p-6">
                   <h3 className="text-xl font-black text-slate-950">Select the child once</h3>
-                  <p className="mt-3 text-sm leading-7 text-slate-600">Quick actions are child-linked. Home shows each child clearly, then every form opens with that child already selected.</p>
-                  <Link href="/home" onClick={() => setOpen(false)} className="mt-5 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg shadow-slate-950/20">
+                  <p className="mt-3 text-sm leading-7 text-slate-600">Quick actions are child-linked. The selector shows each child clearly, then every form opens with that child already selected.</p>
+                  <Link href="/young-people" onClick={() => setOpen(false)} className="mt-5 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg shadow-slate-950/20">
                     Go to child selector
                   </Link>
                 </div>

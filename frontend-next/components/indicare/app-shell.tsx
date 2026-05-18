@@ -8,13 +8,11 @@ import {
   ClipboardCheck,
   Building2,
   FileText,
-  Home,
   Sparkles,
   UserRound,
   UsersRound,
   FolderOpen,
   LogOut,
-  Gauge,
   Clock3,
   ShieldCheck,
   ShieldAlert,
@@ -49,9 +47,7 @@ type NavItem = {
 }
 
 const navItems: NavItem[] = [
-  { section: 'Global', href: '/home', label: 'Home', icon: Home, permissions: ['records:read'], activeRoots: ['home'] },
-  { section: 'Global', href: '/workspace', label: 'Workspace', icon: Gauge, permissions: ['records:read'], activeRoots: ['workspace', 'dashboard', 'staff'] },
-  { section: 'Global', href: '/young-people', label: 'Children', icon: UserRound, permissions: ['records:read'], activeRoots: ['young-people', 'children'] },
+  { section: 'Global', href: '/young-people', label: 'Children', icon: UserRound, permissions: ['records:read'], activeRoots: ['home', 'dashboard', 'workspace', 'young-people', 'children'] },
   { section: 'Global', href: '/homes', label: 'Homes', icon: Building2, permissions: ['records:read'], activeRoots: ['homes'] },
   { section: 'Global', href: '/connect', label: 'Connect', icon: MessageCircle, permissions: ['records:read'], activeRoots: ['connect'] },
   { section: 'Global', href: '/chronology', label: 'Chronology', icon: Clock3, permissions: ['records:read'], activeRoots: ['chronology'] },
@@ -78,7 +74,7 @@ function selectedYoungPersonId(pathname: string) {
 }
 
 function titleFromPath(pathname: string) {
-  if (pathname === '/' || pathname === '/home') return 'Home'
+  if (pathname === '/' || pathname === '/home' || pathname === '/dashboard' || pathname === '/workspace') return 'Children'
   const parts = pathname.split('/').filter(Boolean)
   if (!parts.length) return 'Home'
   return parts[0].split('-').map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`).join(' ')
@@ -91,10 +87,10 @@ function labelForRole(role: keyof typeof roleLabels | string | undefined) {
 function hrefForNavItem(item: NavItem, activeChildId: string | undefined, childScopedHref: (href: string) => string) {
   const encodedChildId = activeChildId ? encodeURIComponent(activeChildId) : null
   if (item.href === '/active-child' || item.href === '/journey') {
-    return encodedChildId ? `/young-people/${encodedChildId}/journey` : '/home'
+    return encodedChildId ? `/young-people/${encodedChildId}/journey` : '/young-people'
   }
   if (item.href === '/daily-note') {
-    return encodedChildId ? `/young-people/${encodedChildId}/daily-note/new` : '/home'
+    return encodedChildId ? `/young-people/${encodedChildId}/daily-note/new` : '/young-people'
   }
   if (item.href === '/plans') {
     return encodedChildId ? `/documents?young_person_id=${encodedChildId}&scope=plans` : '/documents'
@@ -109,7 +105,7 @@ function isNavItemActive(item: NavItem, pathname: string) {
   if (item.href === '/journey') return parts[0] === 'young-people' && parts[2] === 'journey'
   if (item.href === '/daily-note') return parts[0] === 'young-people' && parts[2] === 'daily-note'
   if (item.href === '/plans') return ['placements', 'risk-assessments'].includes(root) || pathname.includes('focus=plans')
-  return pathname === item.href || (item.href !== '/home' && item.href !== '/dashboard' && pathname.startsWith(item.href))
+  return pathname === item.href || pathname.startsWith(item.href)
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -168,7 +164,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <p className="text-[11px] font-black uppercase tracking-[0.22em] text-amber-600">Unauthorized</p>
           <h1 className="mt-3 text-3xl font-black tracking-[-0.05em] text-slate-950">You do not have access to this workspace area</h1>
           <p className="mt-4 text-sm leading-6 text-slate-600">Your current role is {labelForRole(user.role)}. Ask an administrator or registered manager if your access needs changing.</p>
-          <Link href="/home" className="mt-6 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg shadow-slate-950/20">Back home</Link>
+          <Link href="/young-people" className="mt-6 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg shadow-slate-950/20">Choose child</Link>
         </div>
       </div>
     )
@@ -184,7 +180,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <p className="mt-6 text-[11px] font-black uppercase tracking-[0.22em] text-blue-700">Child context required</p>
           <h1 className="mt-3 text-3xl font-black tracking-[-0.05em] text-slate-950">Select a child before opening detailed records</h1>
           <p className="mt-4 text-sm leading-7 text-slate-600">Chronology, actions, documents, reports and safeguarding detail stay hidden until the OS is locked to one child.</p>
-          <Link href="/home" className="mt-6 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg shadow-slate-950/20">Choose child</Link>
+          <Link href="/young-people" className="mt-6 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg shadow-slate-950/20">Choose child</Link>
         </div>
       </div>
     )
@@ -195,9 +191,9 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="flex min-h-screen items-center justify-center bg-[#f3f6fb] px-6 text-slate-900">
         <div className="w-full max-w-lg rounded-[32px] border border-blue-100 bg-white p-8 text-center shadow-2xl shadow-slate-950/10">
           <p className="text-[11px] font-black uppercase tracking-[0.22em] text-blue-700">Preparing child workspace</p>
-          <h1 className="mt-3 text-3xl font-black tracking-[-0.05em] text-slate-950">{readyState.phase === 'blocked' ? 'No records found yet.' : 'Opening the selected child journey'}</h1>
+          <h1 className="mt-3 text-3xl font-black tracking-[-0.05em] text-slate-950">{readyState.phase === 'blocked' ? 'Live child workspace returned 0 rows.' : 'Opening the selected child journey'}</h1>
           <p className="mt-4 text-sm leading-6 text-slate-600">{readyState.reason || 'Checking child, session and role context before records load.'}</p>
-          {readyState.phase === 'active_child' ? <Link href="/home" className="mt-6 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg shadow-slate-950/20">Choose child</Link> : null}
+          {readyState.phase === 'active_child' ? <Link href="/young-people" className="mt-6 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg shadow-slate-950/20">Choose child</Link> : null}
         </div>
       </div>
     )
@@ -270,9 +266,9 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const primaryNav = visibleNavItems.filter((item) => item.section !== 'System')
   const secondaryNav = [
-    { label: 'Journey', href: selectedId ? `/young-people/${encodeURIComponent(selectedId)}/journey` : '/home' },
+    { label: 'Journey', href: selectedId ? `/young-people/${encodeURIComponent(selectedId)}/journey` : '/young-people' },
     { label: 'Records', href: selectedId ? `/young-people/${encodeURIComponent(selectedId)}` : '/young-people' },
-    { label: 'Daily Note', href: selectedId ? `/young-people/${encodeURIComponent(selectedId)}/daily-note/new` : '/home' },
+    { label: 'Daily Note', href: selectedId ? `/young-people/${encodeURIComponent(selectedId)}/daily-note/new` : '/young-people' },
     { label: 'Chronology', href: selectedId ? `/young-people/${encodeURIComponent(selectedId)}/chronology` : '/chronology' },
     { label: 'Safeguarding', href: selectedId ? `/safeguarding?young_person_id=${encodeURIComponent(selectedId)}` : '/safeguarding' },
     { label: 'Plans', href: selectedId ? `/documents?young_person_id=${encodeURIComponent(selectedId)}&scope=plans` : '/documents' },
@@ -282,20 +278,20 @@ export function AppShell({ children }: { children: ReactNode }) {
   ]
   const childDomainActive = pathParts[0] === 'young-people' || pathParts[0] === 'children'
   const displayBreadcrumbs = pathname === '/profile'
-    ? [{ label: 'Workspace', href: '/workspace' }, { label: 'My profile', current: true }]
+    ? [{ label: 'Children', href: '/young-people' }, { label: 'My profile', current: true }]
     : pathname === '/workspace'
-      ? [{ label: 'Workspace', current: true }]
+      ? [{ label: 'Children', href: '/young-people', current: true }]
       : pathParts[0] === 'children' || pathParts[0] === 'young-people'
         ? [{ label: 'Children', href: '/young-people' }, { label: activeChildName || selectedId || 'Child profile', current: true }]
         : pathParts[0] === 'homes'
-          ? [{ label: 'Homes', href: '/home' }, { label: titleFromPath(pathname), current: true }]
+          ? [{ label: 'Homes', href: '/young-people' }, { label: titleFromPath(pathname), current: true }]
           : breadcrumbs
 
   return (
     <div className="orb-os-shell min-h-screen bg-[#f3f6fb] text-slate-900">
       <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-[#f8fafc]/95 px-3 py-3 backdrop-blur-xl md:px-6">
         <div className="flex items-center gap-3">
-          <Link href="/dashboard" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-sm font-black text-white shadow-lg shadow-slate-950/20" aria-label="Command Centre">
+          <Link href="/young-people" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-sm font-black text-white shadow-lg shadow-slate-950/20" aria-label="Choose child">
             IC
           </Link>
           <div className="hidden min-w-0 lg:block">
@@ -323,7 +319,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </nav>
           <div className="ml-auto flex items-center gap-2">
             <CommandSearch />
-            <Link href="/home" className="hidden rounded-2xl border border-blue-100 bg-blue-50 px-3 py-2 text-sm font-black text-blue-800 shadow-sm transition hover:bg-blue-100 md:inline-flex">
+            <Link href="/young-people" className="hidden rounded-2xl border border-blue-100 bg-blue-50 px-3 py-2 text-sm font-black text-blue-800 shadow-sm transition hover:bg-blue-100 md:inline-flex">
               <ShieldCheck className="mr-2 h-4 w-4" aria-hidden />
               {activeChildName ? 'Switch child' : 'Choose child'}
             </Link>

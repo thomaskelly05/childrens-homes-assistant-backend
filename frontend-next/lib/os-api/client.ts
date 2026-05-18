@@ -4,7 +4,7 @@ const API_BASE = (
   process.env.NEXT_PUBLIC_BACKEND_URL ||
   process.env.NEXT_PUBLIC_API_BASE_URL ||
   process.env.BACKEND_URL ||
-  'http://localhost:8000'
+  'https://api.indicare.co.uk'
 ).replace(/\/+$/, '')
 
 const OS_GET_CACHE_TTL_MS = Number(process.env.OS_GET_CACHE_TTL_MS || process.env.NEXT_PUBLIC_OS_GET_CACHE_TTL_MS || 12000)

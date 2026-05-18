@@ -29,6 +29,7 @@ export type OsPersonSummary = {
   socialWorkerPhone?: string
   placingAuthority?: string
   admissionDate?: string
+  gender?: string
   [key: string]: unknown
 }
 
@@ -39,6 +40,18 @@ export type OsWorkspace = {
   recordsAuthored?: ReturnType<typeof mapOsChronology>[]
   actions: ReturnType<typeof mapOsAction>[]
   evidence: ReturnType<typeof mapOsEvidence>[]
+}
+
+function ageFromDateOfBirth(value: unknown) {
+  const raw = String(value || '').slice(0, 10)
+  if (!raw) return undefined
+  const dob = new Date(raw)
+  if (Number.isNaN(dob.getTime())) return undefined
+  const today = new Date()
+  let age = today.getFullYear() - dob.getFullYear()
+  const monthDelta = today.getMonth() - dob.getMonth()
+  if (monthDelta < 0 || (monthDelta === 0 && today.getDate() < dob.getDate())) age -= 1
+  return age >= 0 ? age : undefined
 }
 
 export function mapPerson(row: Record<string, any>): OsPersonSummary {
@@ -61,7 +74,8 @@ export function mapPerson(row: Record<string, any>): OsPersonSummary {
     preferredName: preferredName ? String(preferredName) : undefined,
     dateOfBirth: row.date_of_birth || row.dateOfBirth,
     admissionDate: row.admission_date || row.admissionDate,
-    age: row.age,
+    age: row.age ?? ageFromDateOfBirth(row.date_of_birth || row.dateOfBirth),
+    gender: row.gender,
     riskLevel: row.summary_risk_level || row.risk_level || row.riskLevel,
     keyWorkerId: row.key_worker_id || row.primary_keyworker_id || row.allocated_key_worker_id || row.keyWorkerId,
     photoUrl: row.photo_url || row.photoUrl || row.profile_photo_path || row.profilePhotoPath || row.image_url || row.avatar_url,

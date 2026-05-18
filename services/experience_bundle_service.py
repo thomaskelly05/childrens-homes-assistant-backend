@@ -8,6 +8,7 @@ from psycopg2.extras import RealDictCursor
 
 from core.policy_engine import context_from_user, policy_engine
 from core.provider_context import ProviderContext
+from repositories.workspaces_repository import young_person_workspace
 from services.connect_service import ConnectService
 
 _COLUMN_CACHE: dict[str, set[str]] = {}
@@ -147,7 +148,8 @@ class ExperienceBundleService:
 
     def child_profile_bundle(self, conn: Any, current_user: dict[str, Any], young_person_id: int) -> dict[str, Any]:
         context = self._authorise(current_user, "records:read")
-        child = self._one_by_id(conn, "young_people", young_person_id)
+        workspace = self._child_workspace(conn, current_user, young_person_id)
+        child = workspace.get("young_person") or {}
         if not child:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Young person not found")
         self._assert_record_scope(context, child)
@@ -162,17 +164,28 @@ class ExperienceBundleService:
         return {
             "identity": {
                 "id": child.get("id"),
+                "home_id": child.get("home_id"),
+                "provider_id": child.get("provider_id"),
                 "first_name": child.get("first_name"),
                 "last_name": child.get("last_name"),
                 "preferred_name": child.get("preferred_name") or child.get("first_name"),
                 "age": child.get("age") or _age_from_dob(child.get("date_of_birth")),
                 "date_of_birth": child.get("date_of_birth"),
-                "home_id": child.get("home_id"),
-                "provider_id": child.get("provider_id"),
+                "admission_date": child.get("admission_date"),
+                "gender": child.get("gender"),
                 "placement_status": child.get("placement_status"),
                 "key_worker": key_worker or None,
-                "photo_url": child.get("photo_url") or child.get("profile_photo_path"),
-                "risk_level": child.get("summary_risk_level"),
+                "key_worker_id": child.get("key_worker_id") or child.get("primary_keyworker_id"),
+                "photo_url": child.get("photo_url"),
+                "profile_photo_path": child.get("profile_photo_path"),
+                "summary_risk_level": child.get("summary_risk_level") or child.get("risk_level"),
+                "risk_level": child.get("summary_risk_level") or child.get("risk_level"),
+                "placing_authority": child.get("placing_authority"),
+                "social_worker_name": child.get("social_worker_name"),
+                "social_worker_email": child.get("social_worker_email"),
+                "social_worker_phone": child.get("social_worker_phone"),
+                "legal_status_summary": child.get("legal_status_summary") or child.get("legal_status"),
+                "current_placement_plan_status": child.get("current_placement_plan_status") or child.get("care_planning"),
             },
             "personhood": {
                 "what_matters_to_me": identity_profile.get("what_matters_to_me") or about_me.get("what_matters_to_me"),
@@ -193,16 +206,16 @@ class ExperienceBundleService:
             },
             "relationships": self._records_for_child(conn, "young_person_contacts", young_person_id, limit=12),
             "safety": {
-                "current_risk_level": child.get("summary_risk_level"),
+                "current_risk_level": child.get("summary_risk_level") or child.get("risk_level"),
                 "safeguarding_status": "active" if active_safeguarding else "no_active_records_returned",
                 "missing_status": "active" if missing else "no_active_records_returned",
                 "active_concerns": active_safeguarding[:4],
             },
             "plans": self._plans(conn, young_person_id),
-            "documents": self._records_for_child(conn, "documents", young_person_id, limit=12),
-            "recent_chronology": self._records_for_child(conn, "chronology_events", young_person_id, limit=8),
-            "evidence": self._records_for_child(conn, "inspection_evidence_facts", young_person_id, limit=8),
-            "actions": self._records_for_child(conn, "actions", young_person_id, limit=12),
+            "documents": workspace.get("documents") or [],
+            "recent_chronology": workspace.get("chronology") or [],
+            "evidence": workspace.get("evidence") or [],
+            "actions": workspace.get("actions") or [],
         }
 
     def home_operational_bundle(self, conn: Any, current_user: dict[str, Any], home_id: int) -> dict[str, Any]:
@@ -381,6 +394,17 @@ class ExperienceBundleService:
                 (young_person_id, limit),
             )
             return [_rowdict(row) for row in cur.fetchall()]
+
+    def _child_workspace(self, conn: Any, current_user: dict[str, Any], young_person_id: int) -> dict[str, Any]:
+        if conn is None:
+            return {
+                "young_person": self._one_by_id(conn, "young_people", young_person_id),
+                "chronology": self._records_for_child(conn, "chronology_events", young_person_id, limit=8),
+                "documents": self._records_for_child(conn, "documents", young_person_id, limit=12),
+                "evidence": self._records_for_child(conn, "inspection_evidence_facts", young_person_id, limit=8),
+                "actions": self._records_for_child(conn, "actions", young_person_id, limit=12),
+            }
+        return young_person_workspace(conn, young_person_id=young_person_id, current_user=current_user)
 
     def _records_for_home(self, conn: Any, table_name: str, home_id: int, limit: int) -> list[dict[str, Any]]:
         columns = self._columns(conn, table_name)

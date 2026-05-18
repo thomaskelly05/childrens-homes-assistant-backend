@@ -1,6 +1,6 @@
 import type { EvidenceItem, EvidenceQuality, EvidenceType } from '@/lib/evidence/types'
 
-import { osGet, osPost } from './client'
+import { osGet, osPost, queryString } from './client'
 import type { OsApiResult } from './types'
 
 function quality(value: unknown): EvidenceQuality {
@@ -44,8 +44,8 @@ export function mapOsEvidence(row: Record<string, any>): EvidenceItem {
   }
 }
 
-export async function getOsEvidence(): Promise<OsApiResult<EvidenceItem[]>> {
-  const result = await osGet<Record<string, any>[]>('/os/evidence', [])
+export async function getOsEvidence(params: { youngPersonId?: string; sourceType?: string } = {}): Promise<OsApiResult<EvidenceItem[]>> {
+  const result = await osGet<Record<string, any>[]>(`/os/evidence${queryString({ young_person_id: params.youngPersonId, source_type: params.sourceType })}`, [])
   return { ...result, data: result.data.map(mapOsEvidence) }
 }
 

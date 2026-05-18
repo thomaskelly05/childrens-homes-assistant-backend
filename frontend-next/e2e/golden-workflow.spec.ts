@@ -26,7 +26,7 @@ test('child workspace shell stays live-empty, scoped, and clears sensitive state
   await expect(page).toHaveURL(/\/home$/)
   await expect(page.getByRole('heading', { name: 'No young people are available' })).toBeVisible()
   await expect(page.getByText('Check your home access or ask a manager')).toBeVisible()
-  await expect(page.getByText('No records found yet.')).toHaveCount(2)
+  await expect(page.getByText(/Live child workspace returned 0 rows|Live endpoint returned no rows/)).toHaveCount(2)
   await expect(page.getByText('Last recorded note')).toHaveCount(0)
 
   await page.goto('/chronology')

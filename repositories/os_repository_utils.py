@@ -7,8 +7,8 @@ from psycopg2.extras import RealDictCursor
 
 from core.policy_engine import context_from_user, policy_engine
 
-ADMIN_ROLES = {"admin", "provider_admin", "super_admin", "founder", "owner"}
-MANAGER_ROLES = ADMIN_ROLES | {"manager", "registered_manager", "deputy_manager", "responsible_individual"}
+ADMIN_ROLES = {"admin", "provider_admin", "super_admin", "superadmin", "founder", "owner"}
+MANAGER_ROLES = ADMIN_ROLES | {"manager", "registered_manager", "deputy_manager", "responsible_individual", "ri"}
 WRITER_ROLES = MANAGER_ROLES | {"staff", "support_worker", "senior_support_worker", "key_worker"}
 
 

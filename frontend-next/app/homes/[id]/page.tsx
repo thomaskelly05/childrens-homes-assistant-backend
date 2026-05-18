@@ -29,7 +29,7 @@ export default async function HomeHeartbeatPage({ params }: { params: Promise<{ 
               <StatusBadge value={`${bundle.operational_pressure.missing_open || 0} missing`} />
             </div>
           </div>
-          <Link href="/workspace" className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">My workspace</Link>
+          <Link href="/young-people" className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">Children</Link>
         </div>
       </HomeHeartbeatSurface>
       <LiveDataStatus result={result} />

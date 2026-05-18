@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowRight, ClipboardList, Clock3, FileText, Search, ShieldCheck } from 'lucide-react'
+import { ArrowRight, Search, ShieldCheck } from 'lucide-react'
 
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
 import { Card, PageHeader, RiskBadge, StatusBadge } from '@/components/indicare/ui'
@@ -19,110 +19,28 @@ export function ChildSelectorHome({
   error?: string
 }) {
   const result: OsApiResult<ChildSelectorCard[]> = { data: cards, source, error }
-  const { activeChild, recentChildren, selectChild } = useActiveChild()
-  const activeRisks = cards.reduce((total, child) => total + child.activeRisksCount, 0)
-  const actionsDue = cards.reduce((total, child) => total + child.actionsDue, 0)
-  const higherRiskChildren = cards.filter((child) => child.riskLevel === 'high' || child.riskLevel === 'critical').length
+  const { selectChild } = useActiveChild()
 
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Home"
-        title="Home operating picture"
-        description="Start with the home view, then enter one child's journey. Counts come from the live child records visible to this session."
-        action={
-          <Link href="/shifts/current" className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700 shadow-sm transition hover:bg-slate-50">
-            Current shift
-          </Link>
-        }
+        eyebrow="Children"
+        title="Choose a young person"
+        description="Select a child to open their scoped profile. Chronology, actions, documents, evidence and ORB context stay focused on that young person."
       />
       <LiveDataStatus result={result} />
-
-      <section className="grid gap-4 lg:grid-cols-4" aria-label="Home situational awareness">
-        {[
-          ['Children living here', cards.length, 'Open the right child before recording.'],
-          ['Active risks visible', activeRisks, 'Review risk context inside each child journey.'],
-          ['Actions due', actionsDue, 'Open actions stay linked to the child record.'],
-          ['Higher-risk children', higherRiskChildren, 'Use calm review, not alarm language.']
-        ].map(([label, value, detail]) => (
-          <Card key={label}>
-            <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">{label}</p>
-            <strong className="mt-3 block text-4xl font-black tracking-[-0.06em] text-slate-950">{value}</strong>
-            <p className="mt-2 text-sm leading-6 text-slate-500">{detail}</p>
-          </Card>
-        ))}
-      </section>
-
-      <section className="grid gap-4 lg:grid-cols-3">
-        <Card>
-          <div className="flex items-start gap-3">
-            <Clock3 className="mt-1 h-5 w-5 text-blue-700" aria-hidden />
-            <div>
-              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-blue-700">Shift summary</p>
-              <h2 className="mt-2 text-xl font-black text-slate-950">Start calm, then enter one journey.</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-500">Detailed chronology, actions and reports stay hidden until a child is selected.</p>
-              <Link href="/shifts/current" className="mt-4 inline-flex text-sm font-black text-blue-700">Open shift context</Link>
-            </div>
-          </div>
-        </Card>
-        <Card>
-          <div className="flex items-start gap-3">
-            <ClipboardList className="mt-1 h-5 w-5 text-emerald-700" aria-hidden />
-            <div>
-              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-emerald-700">Personal tasks</p>
-              <h2 className="mt-2 text-xl font-black text-slate-950">Role-safe reminders</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-500">Personal reminders appear when the backend returns tasks for your role.</p>
-              <Link href="/actions" className="mt-4 inline-flex text-sm font-black text-emerald-700">Open after selecting child</Link>
-            </div>
-          </div>
-        </Card>
-        <Card>
-          <div className="flex items-start gap-3">
-            <FileText className="mt-1 h-5 w-5 text-purple-700" aria-hidden />
-            <div>
-              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-purple-700">Continue draft</p>
-              <h2 className="mt-2 text-xl font-black text-slate-950">{activeChild ? `Continue ${activeChild.preferredName || activeChild.displayName}'s journey` : 'No child draft open'}</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-500">Drafts are restored only inside the child journey they belong to.</p>
-              {activeChild ? <Link href={`/young-people/${encodeURIComponent(activeChild.id)}/journey`} className="mt-4 inline-flex text-sm font-black text-purple-700">Continue safely</Link> : null}
-            </div>
-          </div>
-        </Card>
-      </section>
-
-      {recentChildren.length ? (
-        <section className="rounded-[28px] border border-white/80 bg-white p-5 shadow-[0_16px_46px_rgba(15,23,42,0.06)]">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Recent children</p>
-              <h2 className="mt-1 text-xl font-black text-slate-950">Return to a recent journey</h2>
-            </div>
-          </div>
-          <div className="mt-4 flex flex-wrap gap-2">
-            {recentChildren.map((child) => (
-              <Link
-                key={child.id}
-                href={`/young-people/${encodeURIComponent(child.id)}/journey`}
-                onClick={() => selectChild(child, 'manual')}
-                className="rounded-full border border-blue-100 bg-blue-50 px-4 py-2 text-sm font-black text-blue-800"
-              >
-                {child.preferredName || child.displayName}
-              </Link>
-            ))}
-          </div>
-        </section>
-      ) : null}
 
       <section className="grid gap-4 sm:gap-5 lg:grid-cols-2 2xl:grid-cols-3" aria-label="Young person selector" data-testid="child-selector">
         {cards.map((child) => (
           <Link
             key={child.id}
-            href={`/young-people/${encodeURIComponent(child.id)}/journey`}
+            href={`/young-people/${encodeURIComponent(child.id)}`}
             onClick={() => selectChild({
               id: child.id,
               displayName: child.displayName,
               preferredName: child.preferredName
             }, 'manual')}
-            aria-label={`Enter ${child.preferredName || child.displayName}'s journey`}
+            aria-label={`Open ${child.preferredName || child.displayName}'s profile`}
             data-testid={`child-card-${child.id}`}
             className="group block rounded-[28px] border border-white/80 bg-white p-4 shadow-[0_18px_50px_rgba(15,23,42,0.08)] transition hover:-translate-y-1 hover:border-blue-100 hover:shadow-2xl focus:outline-none focus:ring-4 focus:ring-blue-100 sm:rounded-[32px] sm:p-5"
           >
@@ -156,7 +74,7 @@ export function ChildSelectorHome({
 
               <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
                 <span className="inline-flex items-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg shadow-slate-950/20" data-testid={`enter-journey-button-${child.id}`}>
-                  Enter Journey
+                  Open profile
                   <ArrowRight className="ml-2 h-4 w-4 transition group-hover:translate-x-1" aria-hidden />
                 </span>
                 <span className="inline-flex items-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-600">

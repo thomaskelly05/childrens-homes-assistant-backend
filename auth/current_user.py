@@ -48,6 +48,7 @@ BILLING_EXEMPT_ROLES = {
 PROVIDER_HOME_ROLES = BILLING_EXEMPT_ROLES | {
     "responsible_individual",
     "ri",
+    "registered_manager",
     "operations_manager",
     "regional_manager",
 }
@@ -300,8 +301,9 @@ def get_current_user(
         except (TypeError, ValueError):
             allowed_home_ids = []
 
-    if not allowed_home_ids and provider_id is not None and role in PROVIDER_HOME_ROLES:
-        allowed_home_ids = _provider_home_ids(conn, provider_id)
+    if provider_id is not None and role in PROVIDER_HOME_ROLES:
+        provider_home_ids = _provider_home_ids(conn, provider_id)
+        allowed_home_ids = sorted(set(allowed_home_ids).union(provider_home_ids))
         if allowed_home_ids and home_id is None:
             home_id = allowed_home_ids[0]
 
