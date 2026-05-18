@@ -34,7 +34,8 @@ test('child workspace shell stays live-empty, scoped, and clears sensitive state
   await expect(page.getByTestId('operational-quick-actions')).toContainText('Quick actions')
 
   await page.goto('/chronology')
-  await expect(page.getByText('Select a child before opening detailed records')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Connected care chronology' })).toBeVisible()
+  await expect(page.getByTestId('unified-chronology-timeline')).toBeVisible()
   await page.goto('/command-centre')
 
   await page.evaluate(() => {
@@ -46,7 +47,7 @@ test('child workspace shell stays live-empty, scoped, and clears sensitive state
     sessionStorage.setItem('record-context:5', 'record')
   })
 
-  await page.getByText('Profile').click()
+  await page.getByText('Profile', { exact: true }).click()
   await page.getByTestId('logout-button').click()
   await expect(page).toHaveURL(/\/login$/)
   await expect(page.getByTestId('login-form')).toBeVisible()

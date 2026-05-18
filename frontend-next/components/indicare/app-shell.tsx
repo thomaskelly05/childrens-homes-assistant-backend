@@ -63,7 +63,6 @@ const navItems: NavItem[] = [
   { section: 'System', href: '/shifts/current', label: 'Shift', icon: ClipboardCheck, permissions: ['records:read'], activeRoots: ['shifts', 'handover'], requiresChild: true },
   { section: 'System', href: '/management', label: 'Reviews', icon: ShieldAlert, permissions: ['reports:read'], activeRoots: ['management'] }
 ]
-
 const recordWorkspaceRoots = ['actions', 'reports', 'evidence', 'documents', 'chronology', 'daily-logs', 'incidents', 'safeguarding', 'medication', 'health', 'keywork', 'appointments', 'risk-assessments', 'reg44']
 const childContextRequiredRoots = ['actions', 'reports']
 const e2eWorkspaceHydrationBypass = process.env.NEXT_PUBLIC_E2E_TEST_MODE === '1' && process.env.NODE_ENV !== 'production'
@@ -286,7 +285,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">IndiCare OS</p>
             <p className="truncate text-sm font-black text-slate-950">{activeChildName ? `${activeChildName}'s workspace` : 'Choose child'}</p>
           </div>
-          <nav aria-label="Operational navigation" className="hidden min-w-0 flex-1 items-center gap-1 overflow-x-auto lg:flex">
+          <nav data-testid="operational-navigation" aria-label="Operational navigation" className="hidden min-w-0 flex-1 items-center gap-1 overflow-x-auto lg:flex">
             {primaryNav.map((item) => {
               const active = isNavItemActive(item, pathname)
               const Icon = item.icon
