@@ -212,7 +212,7 @@ export function RecordTimeline({
   }
 
   return (
-    <div className="relative space-y-4 before:absolute before:left-4 before:top-3 before:h-[calc(100%-24px)] before:w-px before:bg-slate-200">
+    <div data-testid="unified-chronology-timeline" className="relative space-y-4 before:absolute before:left-4 before:top-3 before:h-[calc(100%-24px)] before:w-px before:bg-slate-200">
       {items.map((item) => {
         const content = (
           <article className="relative pl-11">

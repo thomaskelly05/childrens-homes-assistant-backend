@@ -4,6 +4,7 @@ const e2eEmail = process.env.NEXT_PUBLIC_E2E_USER_EMAIL || 'e2e.manager@indicare
 const e2ePassword = process.env.NEXT_PUBLIC_E2E_USER_PASSWORD || 'ChangeMeForE2E123!'
 
 test('child workspace shell stays live-empty, scoped, and clears sensitive state on logout', async ({ page }) => {
+  await page.setViewportSize({ width: 1680, height: 1100 })
   const failedResponses: string[] = []
   const consoleErrors: string[] = []
 
@@ -23,15 +24,19 @@ test('child workspace shell stays live-empty, scoped, and clears sensitive state
   await page.getByLabel('Password').fill(e2ePassword)
   await page.getByTestId('login-submit').click()
 
-  await expect(page).toHaveURL(/\/home$/)
-  await expect(page.getByRole('heading', { name: 'No young people are available' })).toBeVisible()
-  await expect(page.getByText('Check your home access or ask a manager')).toBeVisible()
-  await expect(page.getByText(/Live child workspace returned 0 rows|Live endpoint returned no rows/)).toHaveCount(2)
-  await expect(page.getByText('Last recorded note')).toHaveCount(0)
+  await expect(page).toHaveURL(/\/command-centre$/)
+  await expect(page.getByRole('heading', { name: 'One operational leadership workspace' })).toBeVisible()
+  await expect(page.getByTestId('operational-navigation')).toContainText('Command Centre')
+  await expect(page.getByTestId('operational-navigation')).toContainText('Children')
+  await expect(page.getByTestId('operational-navigation')).toContainText('Workforce')
+  await expect(page.getByTestId('contextual-orb-panel')).toContainText('Embedded operational intelligence')
+  await expect(page.getByTestId('operational-alerts')).toContainText('Operational alerts')
+  await expect(page.getByTestId('operational-quick-actions')).toContainText('Quick actions')
 
   await page.goto('/chronology')
-  await expect(page.getByText('Select a child before opening detailed records')).toBeVisible()
-  await page.goto('/home')
+  await expect(page.getByRole('heading', { name: 'Connected care chronology' })).toBeVisible()
+  await expect(page.getByTestId('unified-chronology-timeline')).toBeVisible()
+  await page.goto('/command-centre')
 
   await page.evaluate(() => {
     localStorage.setItem('indicare-recording-draft:5:daily-note', 'draft')
@@ -42,7 +47,7 @@ test('child workspace shell stays live-empty, scoped, and clears sensitive state
     sessionStorage.setItem('record-context:5', 'record')
   })
 
-  await page.getByText('Profile').click()
+  await page.getByText('Profile', { exact: true }).click()
   await page.getByTestId('logout-button').click()
   await expect(page).toHaveURL(/\/login$/)
   await expect(page.getByTestId('login-form')).toBeVisible()

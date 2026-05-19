@@ -43,17 +43,18 @@ const publicAssetPrefixes = ['/_next/', '/static/', '/images/', '/icons/']
 const e2eAuthEnabled = process.env.NEXT_PUBLIC_E2E_TEST_MODE === '1' && process.env.NODE_ENV !== 'production'
 const e2eEmail = process.env.NEXT_PUBLIC_E2E_USER_EMAIL || 'e2e.manager@indicare.local'
 const e2ePassword = process.env.NEXT_PUBLIC_E2E_USER_PASSWORD || 'ChangeMeForE2E123!'
+const e2eRole = normaliseRole(process.env.NEXT_PUBLIC_E2E_USER_ROLE || 'manager')
 
 const e2eUser: StaffUser = {
   id: 9001,
   email: e2eEmail,
-  role: 'manager',
+  role: e2eRole,
   home_id: 1,
   provider_id: 1,
   first_name: 'E2E',
   last_name: 'Manager',
   is_active: true,
-  permissions: permissionsForRole('manager'),
+  permissions: permissionsForRole(e2eRole),
   subscription_active: true,
   subscription_status: 'active',
   plan_name: 'E2E',

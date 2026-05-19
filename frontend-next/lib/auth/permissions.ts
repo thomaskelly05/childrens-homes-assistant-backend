@@ -2,6 +2,8 @@ import type { StaffRole, StaffUser } from './types'
 
 export const roleLabels: Record<StaffRole, string> = {
   admin: 'Administrator',
+  responsible_individual: 'Responsible individual',
+  provider: 'Provider',
   manager: 'Registered manager',
   deputy_manager: 'Deputy manager',
   support_worker: 'Support worker',
@@ -23,6 +25,26 @@ export const permissionsByRole: Record<StaffRole, string[]> = {
     'staff:manage',
     'settings:manage',
     'users:manage'
+  ],
+  responsible_individual: [
+    'assistant:access',
+    'assistant:quality',
+    'assistant:send_reports',
+    'audit:read',
+    'records:read',
+    'reports:read',
+    'reports:write',
+    'staff:read',
+    'settings:read'
+  ],
+  provider: [
+    'assistant:access',
+    'assistant:quality',
+    'audit:read',
+    'records:read',
+    'reports:read',
+    'staff:read',
+    'settings:read'
   ],
   manager: [
     'assistant:access',
@@ -60,9 +82,8 @@ export const permissionsByRole: Record<StaffRole, string[]> = {
 
 const roleAliases: Record<string, StaffRole> = {
   administrator: 'admin',
-  provider_admin: 'admin',
-  responsible_individual: 'admin',
-  ri: 'admin',
+  provider_admin: 'provider',
+  ri: 'responsible_individual',
   owner: 'admin',
   super_admin: 'admin',
   superadmin: 'admin',

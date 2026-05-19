@@ -5,6 +5,7 @@ import { AppShell } from '@/components/indicare/app-shell'
 import { OrbAccessibilityHydrator } from '@/components/orb-accessibility/orb-accessibility-hydrator'
 import { AuthProvider } from '@/contexts/auth-context'
 import { ActiveChildProvider } from '@/lib/context/active-child-context'
+import { OperationalContextProvider } from '@/lib/operational/operational-context'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -23,7 +24,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <OrbAccessibilityHydrator />
         <AuthProvider>
           <ActiveChildProvider>
-            <AppShell>{children}</AppShell>
+            <OperationalContextProvider>
+              <AppShell>{children}</AppShell>
+            </OperationalContextProvider>
           </ActiveChildProvider>
         </AuthProvider>
       </body>

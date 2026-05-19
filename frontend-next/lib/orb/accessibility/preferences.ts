@@ -5,6 +5,7 @@ export type OrbAccessibilityPreferences = {
   hearingAccessibility: boolean
   motorAccessibility: boolean
   emotionalRegulationMode: boolean
+  sensorySafeMode: boolean
   captions: boolean
   transcript: boolean
   reducedMotion: boolean
@@ -25,6 +26,7 @@ export const defaultOrbAccessibilityPreferences: OrbAccessibilityPreferences = {
   hearingAccessibility: false,
   motorAccessibility: false,
   emotionalRegulationMode: false,
+  sensorySafeMode: false,
   captions: false,
   transcript: false,
   reducedMotion: false,

@@ -27,6 +27,9 @@ import { NotificationBell } from '@/components/connect/notification-bell'
 import { OrbButton } from '@/components/indicare/orb/orb-button'
 import { QuickActionButton } from '@/components/child-journey/quick-action-button'
 import { MobileNav } from '@/components/mobile-nav'
+import { ContextualOrbPanel } from '@/components/indicare/operational/contextual-orb-panel'
+import { OperationalAlertsPanel } from '@/components/indicare/operational/operational-alerts-panel'
+import { OperationalQuickActions } from '@/components/indicare/operational/operational-quick-actions'
 import { useAuth } from '@/contexts/auth-context'
 import { buildAssistantContext } from '@/lib/assistant-core/context'
 import { displayName, roleLabels, userHasAnyPermission } from '@/lib/auth/permissions'
@@ -47,23 +50,19 @@ type NavItem = {
 }
 
 const navItems: NavItem[] = [
-  { section: 'Global', href: '/young-people', label: 'Children', icon: UserRound, permissions: ['records:read'], activeRoots: ['home', 'dashboard', 'workspace', 'young-people', 'children'] },
-  { section: 'Global', href: '/staff', label: 'Staff', icon: UsersRound, permissions: ['staff:read'], activeRoots: ['staff'] },
-  { section: 'Global', href: '/governance/command-centre', label: 'Governance', icon: ShieldCheck, permissions: ['reports:read'], activeRoots: ['governance'] },
-  { section: 'Global', href: '/homes', label: 'Homes', icon: Building2, permissions: ['records:read'], activeRoots: ['homes'], requiresChild: true },
-  { section: 'Global', href: '/connect', label: 'Connect', icon: MessageCircle, permissions: ['records:read'], activeRoots: ['connect'], requiresChild: true },
-  { section: 'Global', href: '/chronology', label: 'Chronology', icon: FileText, permissions: ['records:read'], activeRoots: ['chronology'], requiresChild: true },
-  { section: 'Global', href: '/documents', label: 'Documents', icon: FolderOpen, permissions: ['records:read'], activeRoots: ['documents', 'evidence'], requiresChild: true },
-  { section: 'Global', href: '/safeguarding', label: 'Safeguarding', icon: ShieldAlert, permissions: ['records:read'], activeRoots: ['safeguarding'], requiresChild: true },
-  { section: 'Global', href: '/ofsted-readiness', label: 'Inspection', icon: SearchCheck, permissions: ['reports:read'], activeRoots: ['ofsted-readiness', 'regulatory', 'reg44'], requiresChild: true },
-  { section: 'Global', href: '/assistant', label: 'ORB', icon: Sparkles, permissions: ['assistant:access'], activeRoots: ['assistant'], requiresChild: true },
-  { section: 'Global', href: '/profile', label: 'Profile', icon: UsersRound, permissions: ['records:read'], activeRoots: ['profile'] },
+  { section: 'Global', href: '/command-centre', label: 'Command Centre', icon: Gauge, permissions: ['reports:read'], activeRoots: ['command-centre', 'home', 'dashboard', 'workspace'] },
+  { section: 'Global', href: '/young-people', label: 'Children', icon: UserRound, permissions: ['records:read'], activeRoots: ['young-people', 'children'] },
+  { section: 'Global', href: '/staff', label: 'Workforce', icon: UsersRound, permissions: ['staff:read'], activeRoots: ['staff'] },
+  { section: 'Global', href: '/governance/command-centre', label: 'Governance', icon: ShieldCheck, permissions: ['reports:read'], activeRoots: ['governance', 'management', 'reg44'] },
+  { section: 'Global', href: '/ofsted-readiness', label: 'Inspection', icon: SearchCheck, permissions: ['reports:read'], activeRoots: ['ofsted-readiness', 'regulatory'] },
+  { section: 'Global', href: '/documents', label: 'Documents', icon: FolderOpen, permissions: ['records:read'], activeRoots: ['documents', 'evidence'] },
+  { section: 'Global', href: '/reports', label: 'Reports', icon: FileText, permissions: ['reports:read'], activeRoots: ['reports'] },
+  { section: 'Global', href: '/assistant', label: 'ORB', icon: Sparkles, permissions: ['assistant:access'], activeRoots: ['assistant', 'voice'] },
+  { section: 'Global', href: '/settings', label: 'Admin', icon: Building2, permissions: ['settings:read', 'settings:manage', 'users:manage'], activeRoots: ['settings', 'profile', 'setup', 'schema-live'] },
   { section: 'System', href: '/notifications', label: 'Notifications', icon: Bell, permissions: ['records:read'], activeRoots: ['notifications'], requiresChild: true },
   { section: 'System', href: '/shifts/current', label: 'Shift', icon: ClipboardCheck, permissions: ['records:read'], activeRoots: ['shifts', 'handover'], requiresChild: true },
-  { section: 'System', href: '/management', label: 'Reviews', icon: Gauge, permissions: ['reports:read'], activeRoots: ['management'], requiresChild: true },
-  { section: 'System', href: '/active-child', label: 'Current Child', icon: FileText, permissions: ['records:read'], scoped: true, requiresChild: true }
+  { section: 'System', href: '/management', label: 'Reviews', icon: ShieldAlert, permissions: ['reports:read'], activeRoots: ['management'] }
 ]
-
 const recordWorkspaceRoots = ['actions', 'reports', 'evidence', 'documents', 'chronology', 'daily-logs', 'incidents', 'safeguarding', 'medication', 'health', 'keywork', 'appointments', 'risk-assessments', 'reg44']
 const childContextRequiredRoots = ['actions', 'reports']
 const e2eWorkspaceHydrationBypass = process.env.NEXT_PUBLIC_E2E_TEST_MODE === '1' && process.env.NODE_ENV !== 'production'
@@ -286,7 +285,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">IndiCare OS</p>
             <p className="truncate text-sm font-black text-slate-950">{activeChildName ? `${activeChildName}'s workspace` : 'Choose child'}</p>
           </div>
-          <nav aria-label="Operational navigation" className="hidden min-w-0 flex-1 items-center gap-1 overflow-x-auto lg:flex">
+          <nav data-testid="operational-navigation" aria-label="Operational navigation" className="hidden min-w-0 flex-1 items-center gap-1 overflow-x-auto lg:flex">
             {primaryNav.map((item) => {
               const active = isNavItemActive(item, pathname)
               const Icon = item.icon
@@ -349,9 +348,16 @@ export function AppShell({ children }: { children: ReactNode }) {
         </nav>
       </header>
 
-      <main className="min-w-0 px-4 py-6 pb-32 md:px-8 md:py-8">
-        {children}
-      </main>
+      <div data-testid="operational-shell-workspace" className="grid min-w-0 gap-6 px-4 py-6 pb-32 md:px-8 md:py-8 2xl:grid-cols-[minmax(0,1fr)_320px]">
+        <main className="min-w-0" aria-label="Operational workspace">
+          {children}
+        </main>
+        <aside className="hidden space-y-4 2xl:block" aria-label="Operational intelligence panel">
+          <ContextualOrbPanel />
+          <OperationalAlertsPanel />
+          <OperationalQuickActions selectedYoungPersonId={selectedId} selectedYoungPersonName={activeChildName} />
+        </aside>
+      </div>
       <OrbButton context={orbContext} role={user.role} />
       <QuickActionButton selectedYoungPersonId={selectedId} selectedYoungPersonName={activeChildName} />
       <MobileNav />

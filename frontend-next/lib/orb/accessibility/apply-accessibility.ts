@@ -11,6 +11,7 @@ export function orbAccessibilityClassNames(preferences: Partial<OrbAccessibility
     preferences.lowVisionMode ? 'orb-low-vision' : '',
     preferences.motorAccessibility ? 'orb-motor-accessible' : '',
     preferences.emotionalRegulationMode ? 'orb-emotional-regulation' : '',
+    preferences.sensorySafeMode ? 'orb-sensory-safe' : '',
     preferences.neurodiverseMode ? 'orb-neurodiverse' : '',
     preferences.largeTapTargets ? '[&_button]:min-h-12' : ''
   ].filter(Boolean).join(' ')
@@ -27,6 +28,7 @@ export function applyOrbAccessibilityToDocument(preferences: Partial<OrbAccessib
   root.dataset.orbHearing = preferences.hearingAccessibility ? 'true' : 'false'
   root.dataset.orbMotor = preferences.motorAccessibility ? 'true' : 'false'
   root.dataset.orbEmotionalRegulation = preferences.emotionalRegulationMode ? 'true' : 'false'
+  root.dataset.orbSensorySafe = preferences.sensorySafeMode ? 'true' : 'false'
   root.dataset.orbSimpleLayout = preferences.simplifiedLayout ? 'true' : 'false'
   root.dataset.orbFocusMode = preferences.focusMode ? 'true' : 'false'
   root.dataset.orbCaptions = preferences.captions ? 'true' : 'false'

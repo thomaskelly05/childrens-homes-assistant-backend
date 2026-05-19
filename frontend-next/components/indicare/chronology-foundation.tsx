@@ -101,7 +101,7 @@ export function ChronologyFoundation({
   const childVoiceCount = events.filter((event) => event.tags.includes('child-voice') || /child voice|said|told staff|wanted|wishes/i.test(event.fullText)).length
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)_360px]">
+    <div data-testid="unified-chronology-timeline" className="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)_360px]">
       <aside className="space-y-4">
         <section className="rounded-[28px] border border-white/70 bg-white p-5 shadow-[0_14px_40px_rgba(15,23,42,0.06)]">
           <h2 className="text-lg font-black text-slate-950">Saved views</h2>
