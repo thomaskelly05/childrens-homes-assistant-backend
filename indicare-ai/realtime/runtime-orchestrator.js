@@ -5,6 +5,8 @@ import { SpeechSynthesisStream } from './speech-synthesis-stream.js'
 import { TurnTakingController } from './turn-taking-controller.js'
 import { VoiceActivityDetector } from './voice-activity-detector.js'
 
+const ASSISTANT_AUDIO_ECHO_GUARD_MS = 900
+
 export class RuntimeOrchestrator {
   constructor({ realtime }) {
     if (!realtime) throw new Error('RuntimeOrchestrator requires the OpenAI realtime voice runtime')
@@ -14,19 +16,24 @@ export class RuntimeOrchestrator {
     this.listeners = new Set()
     this.started = false
     this.assistantText = ''
+    this.assistantSpeaking = false
+    this.micMutedUntil = 0
 
     this.speech = new SpeechSynthesisStream({
-      onStart: () => this.emit('assistant-speaking'),
-      onEnd: () => this.emit('assistant-finished'),
+      onStart: () => this.markAssistantSpeaking(),
+      onEnd: () => this.markAssistantFinished(),
       onError: error => this.emit('error', { error })
     })
 
     this.vad = new VoiceActivityDetector({
       onSpeechStart: () => {
+        if (this.isMicGated()) return
         this.turns.userSpeech('', { final: false })
         this.emit('speech-start')
       },
-      onSpeechEnd: () => this.emit('speech-end'),
+      onSpeechEnd: () => {
+        if (!this.isMicGated()) this.emit('speech-end')
+      },
       onLevel: level => this.emit('audio-level', { level })
     })
 
@@ -51,12 +58,16 @@ export class RuntimeOrchestrator {
     await this.realtime.connect()
     await this.audio.start()
     this.started = true
+    this.assistantSpeaking = false
+    this.micMutedUntil = 0
     this.emit('started')
   }
 
   stop() {
     if (!this.started) return
     this.started = false
+    this.assistantSpeaking = false
+    this.micMutedUntil = 0
     this.audio.stop()
     this.turns.reset()
     this.vad.reset()
@@ -65,8 +76,29 @@ export class RuntimeOrchestrator {
     this.emit('stopped')
   }
 
+  isMicGated() {
+    return this.assistantSpeaking || Date.now() < this.micMutedUntil
+  }
+
+  gateMicAfterAssistantAudio() {
+    this.micMutedUntil = Date.now() + ASSISTANT_AUDIO_ECHO_GUARD_MS
+  }
+
+  markAssistantSpeaking() {
+    this.assistantSpeaking = true
+    this.gateMicAfterAssistantAudio()
+    this.emit('assistant-speaking')
+  }
+
+  markAssistantFinished() {
+    this.assistantSpeaking = false
+    this.gateMicAfterAssistantAudio()
+    this.emit('assistant-finished')
+  }
+
   handleAudioChunk(chunk) {
     if (!this.started) return
+    if (this.isMicGated()) return
     this.vad.process(chunk)
     this.realtime.sendAudio(chunk)
   }
@@ -95,13 +127,23 @@ export class RuntimeOrchestrator {
     }
 
     if (type === 'response.audio.delta') {
+      this.markAssistantSpeaking()
       this.speech.playPcm16Base64(payload.delta)
-      this.emit('assistant-speaking')
+      return
     }
-    if (type === 'response.done') this.emit('assistant-finished')
-    if (type === 'input_audio_buffer.speech_started') this.interruptAssistant()
+
+    if (type === 'response.done') {
+      this.markAssistantFinished()
+      return
+    }
+
+    if (type === 'input_audio_buffer.speech_started') {
+      if (!this.isMicGated()) this.interruptAssistant()
+      return
+    }
+
     if (type === 'conversation.item.input_audio_transcription.completed' && payload.transcript) {
-      this.memory.append({ role: 'user', content: payload.transcript })
+      if (!this.isMicGated()) this.memory.append({ role: 'user', content: payload.transcript })
     }
 
     if (type === 'error') this.emit('error', payload)
@@ -109,8 +151,11 @@ export class RuntimeOrchestrator {
   }
 
   interruptAssistant() {
+    if (!this.assistantSpeaking) return
+    this.assistantSpeaking = false
     this.speech.stop()
     this.realtime.interrupt()
+    this.gateMicAfterAssistantAudio()
     this.emit('interrupted')
   }
 
