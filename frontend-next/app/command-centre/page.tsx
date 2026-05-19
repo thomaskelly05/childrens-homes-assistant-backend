@@ -57,7 +57,7 @@ export default async function UnifiedCommandCentrePage() {
         eyebrow="Unified command centre"
         title="One operational leadership workspace"
         description="A calm command centre joining workforce health, child journey health, governance risk, safeguarding concerns, relational stability, inspection readiness, operational alerts and ORB summaries."
-        action={<Link prefetch={false} href="/assistant?context=command-centre" className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg shadow-slate-950/20">Ask ORB about this view</Link>}
+        action={<Link prefetch={false} href="/orb?context=command-centre" className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg shadow-slate-950/20">Ask ORB about this view</Link>}
       />
 
       <section className="grid gap-3 md:grid-cols-3">

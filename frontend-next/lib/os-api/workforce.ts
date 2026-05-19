@@ -125,6 +125,17 @@ export type WorkforceIntelligence = {
 
 export type WorkforceProfileIntelligence = Omit<WorkforceIntelligence, 'command_centre'>
 
+const emptyWorkforceDashboard: WorkforceDashboard = {
+  staff_count: 0,
+  alerts: [],
+  training: { matrix: [], summary: {} },
+  supervision: { records: [], reflective_prompts: [], workflow: [], actions: [] },
+  probation: { reviews: [], milestones: [], support_actions: [] },
+  evidence: { items: [], inspection_links: {}, regulation_links: [] },
+  intelligence: null,
+  feature_flags: {}
+}
+
 function object(value: unknown): UnknownRecord {
   return value && typeof value === 'object' && !Array.isArray(value) ? value as UnknownRecord : {}
 }
@@ -134,6 +145,37 @@ function envelopeData<T>(value: unknown, fallback: T): T {
   return (root.data ?? root.navigation ?? root.feature_flags ?? fallback) as T
 }
 
+function normaliseWorkforceDashboard(value: unknown): WorkforceDashboard {
+  const data = object(value)
+  const fallback = emptyWorkforceDashboard
+  return {
+    staff_count: Number(data.staff_count ?? data.staffCount ?? fallback.staff_count),
+    alerts: Array.isArray(data.alerts) ? data.alerts as WorkforceDashboard['alerts'] : [],
+    training: {
+      matrix: Array.isArray(object(data.training).matrix) ? object(data.training).matrix as TrainingMatrixRow[] : [],
+      summary: object(object(data.training).summary)
+    },
+    supervision: {
+      records: Array.isArray(object(data.supervision).records) ? object(data.supervision).records as UnknownRecord[] : [],
+      reflective_prompts: Array.isArray(object(data.supervision).reflective_prompts) ? object(data.supervision).reflective_prompts as string[] : [],
+      workflow: Array.isArray(object(data.supervision).workflow) ? object(data.supervision).workflow as string[] : [],
+      actions: Array.isArray(object(data.supervision).actions) ? object(data.supervision).actions as UnknownRecord[] : []
+    },
+    probation: {
+      reviews: Array.isArray(object(data.probation).reviews) ? object(data.probation).reviews as UnknownRecord[] : [],
+      milestones: Array.isArray(object(data.probation).milestones) ? object(data.probation).milestones as UnknownRecord[] : [],
+      support_actions: Array.isArray(object(data.probation).support_actions) ? object(data.probation).support_actions as UnknownRecord[] : []
+    },
+    evidence: {
+      items: Array.isArray(object(data.evidence).items) ? object(data.evidence).items as UnknownRecord[] : [],
+      inspection_links: object(object(data.evidence).inspection_links),
+      regulation_links: Array.isArray(object(data.evidence).regulation_links) ? object(data.evidence).regulation_links as string[] : []
+    },
+    intelligence: data.intelligence ? data.intelligence as WorkforceIntelligence : null,
+    feature_flags: object(data.feature_flags)
+  }
+}
+
 export async function getWorkforceNavigation(): Promise<OsApiResult<{ modules: WorkforceNavItem[]; feature_flags: Record<string, boolean> }>> {
   const result = await osGet<UnknownRecord>('/api/workforce-os/navigation', {})
   return { ...result, data: envelopeData(result.data, { modules: [], feature_flags: {} }) }
@@ -141,18 +183,10 @@ export async function getWorkforceNavigation(): Promise<OsApiResult<{ modules: W
 
 export async function getWorkforceDashboard(): Promise<OsApiResult<WorkforceDashboard>> {
   const result = await osGet<UnknownRecord>('/api/workforce-os/dashboard', {})
+  const data = envelopeData(result.data, emptyWorkforceDashboard)
   return {
     ...result,
-    data: envelopeData(result.data, {
-      staff_count: 0,
-      alerts: [],
-      training: { matrix: [], summary: {} },
-      supervision: { records: [], reflective_prompts: [], workflow: [], actions: [] },
-      probation: { reviews: [], milestones: [], support_actions: [] },
-      evidence: { items: [], inspection_links: {}, regulation_links: [] },
-      intelligence: null,
-      feature_flags: {}
-    })
+    data: normaliseWorkforceDashboard(data)
   }
 }
 

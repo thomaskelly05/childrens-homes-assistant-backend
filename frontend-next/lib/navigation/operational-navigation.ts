@@ -132,13 +132,13 @@ export const operationalNavigation: OperationalNavItem[] = [
   },
   {
     domain: 'orb',
-    href: '/assistant',
+    href: '/orb',
     label: 'ORB',
-    description: 'Embedded operational intelligence with page, role and record context.',
+    description: 'Live operational intelligence with role, scope, record context and evidence citations.',
     icon: Sparkles,
     permissions: ['assistant:access'],
     roleScopes: ['rm', 'ri', 'staff', 'provider', 'admin'],
-    activeRoots: ['assistant', 'voice', 'settings']
+    activeRoots: ['orb', 'assistant', 'voice', 'settings']
   },
   {
     domain: 'admin',

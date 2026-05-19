@@ -27,14 +27,12 @@ function normalisePhoto(value: unknown) {
 export default async function YoungPersonDetailPage({ params, searchParams }: { params: Promise<{ id: string }>, searchParams: Promise<Record<string, string | undefined>> }) {
   const { id } = await params
   const query = await searchParams
-  const [result, workspaceResult, chronologyResult, documentsResult, evidenceResult, actionsResult] = await Promise.all([
-    getServerChildProfileBundle(id),
-    getServerOsYoungPersonWorkspace(id),
-    getServerOsChronology({ youngPersonId: id }),
-    getServerOsDocuments({ youngPersonId: id }),
-    getServerOsEvidence({ youngPersonId: id }),
-    getServerOsActions({ youngPersonId: id })
-  ])
+  const result = await getServerChildProfileBundle(id)
+  const workspaceResult = await getServerOsYoungPersonWorkspace(id)
+  const chronologyResult = await getServerOsChronology({ youngPersonId: id })
+  const documentsResult = await getServerOsDocuments({ youngPersonId: id })
+  const evidenceResult = await getServerOsEvidence({ youngPersonId: id })
+  const actionsResult = await getServerOsActions({ youngPersonId: id })
   const bundle = result.data
   const identity = bundle.identity || {}
   if (!identity.id && result.source === 'live') notFound()

@@ -294,55 +294,72 @@ def list_chronology(
     page: int = 1,
     page_size: int = 50,
 ) -> dict[str, Any]:
+    conn = get_db_connection()
+    try:
+        return list_chronology_for_connection(
+            conn,
+            current_user=current_user,
+            filters=filters,
+            page=page,
+            page_size=page_size,
+        )
+    finally:
+        release_db_connection(conn)
+
+
+def list_chronology_for_connection(
+    conn: Any,
+    *,
+    current_user: dict[str, Any],
+    filters: dict[str, Any] | None = None,
+    page: int = 1,
+    page_size: int = 50,
+) -> dict[str, Any]:
     filters = filters or {}
     page = max(1, int(page or 1))
     page_size = max(1, min(int(page_size or 50), 200))
     source_limit = max(page * page_size + page_size, 250)
 
-    conn = get_db_connection()
-    try:
-        items: list[dict[str, Any]] = []
-        for source in SOURCE_TABLES:
-            items.extend(
-                _query_source(
-                    conn,
-                    source,
-                    current_user=current_user,
-                    filters=filters,
-                    source_limit=source_limit,
-                )
+    items: list[dict[str, Any]] = []
+    for source in SOURCE_TABLES:
+        items.extend(
+            _query_source(
+                conn,
+                source,
+                current_user=current_user,
+                filters=filters,
+                source_limit=source_limit,
             )
+        )
 
-        items = _dedupe_chronology_items(items)
+    items = _dedupe_chronology_items(items)
 
-        if filters.get("category"):
-            category = str(filters["category"]).lower()
-            items = [item for item in items if category in str(item.get("category") or "").lower()]
-        if filters.get("regulation"):
-            regulation = str(filters["regulation"]).lower()
-            items = [
-                item
-                for item in items
-                if any(regulation in str(link.get("regulation") or "").lower() for link in item.get("regulation_links") or [])
-            ]
-        if filters.get("actions_required"):
-            items = [item for item in items if item.get("action_ids") or "manager-review" in set(item.get("tags") or [])]
-        if filters.get("evidence_only"):
-            items = [item for item in items if item.get("evidence_ids") or item.get("source_type") == "evidence"]
+    if filters.get("category"):
+        category = str(filters["category"]).lower()
+        items = [item for item in items if category in str(item.get("category") or "").lower()]
+    if filters.get("regulation"):
+        regulation = str(filters["regulation"]).lower()
+        items = [
+            item
+            for item in items
+            if any(regulation in str(link.get("regulation") or "").lower() for link in item.get("regulation_links") or [])
+        ]
+    if filters.get("actions_required"):
+        items = [item for item in items if item.get("action_ids") or "manager-review" in set(item.get("tags") or [])]
+    if filters.get("evidence_only"):
+        items = [item for item in items if item.get("evidence_ids") or item.get("source_type") == "evidence"]
 
-        items.sort(key=lambda item: item.get("date_time") or "", reverse=True)
-        total = len(items)
-        start = (page - 1) * page_size
-        end = start + page_size
-        return {
-            "items": items[start:end],
-            "page": page,
-            "page_size": page_size,
-            "total": total,
-            "has_more": end < total,
-        }
-    finally:
-        release_db_connection(conn)
+    items.sort(key=lambda item: item.get("date_time") or "", reverse=True)
+    total = len(items)
+    start = (page - 1) * page_size
+    end = start + page_size
+    return {
+        "items": items[start:end],
+        "page": page,
+        "page_size": page_size,
+        "total": total,
+        "has_more": end < total,
+    }
 
 
 def _dedupe_chronology_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:

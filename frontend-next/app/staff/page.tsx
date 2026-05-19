@@ -6,10 +6,8 @@ import { StaffAccessControls } from '@/components/settings/staff-access-controls
 import { getWorkforceDashboard, getWorkforceNavigation } from '@/lib/os-api/workforce'
 
 export default async function StaffPage() {
-  const [dashboardResult, navigationResult] = await Promise.all([
-    getWorkforceDashboard(),
-    getWorkforceNavigation()
-  ])
+  const dashboardResult = await getWorkforceDashboard()
+  const navigationResult = await getWorkforceNavigation()
   const dashboard = dashboardResult.data
   const modules = navigationResult.data.modules
   const staff = dashboard.training.matrix.map((row) => row.staff)

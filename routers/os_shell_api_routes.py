@@ -4,6 +4,7 @@ import json
 from typing import Any
 
 from fastapi import APIRouter, Depends
+from psycopg2.errors import UndefinedTable
 
 from auth.current_user import get_current_user
 from db.connection import get_db
@@ -178,17 +179,26 @@ def _list_record_items(
 
 
 def _list_children(conn: Any, current_user: dict[str, Any], *, limit: int = 250) -> list[dict[str, Any]]:
-    rows = yp.list_young_people(
-        conn,
-        home_id=_home_id(current_user),
-        provider_id=_provider_id(current_user),
-        include_archived=False,
-        search="",
-        sort_by="last_name",
-        sort_dir="asc",
-        limit=limit,
-        offset=0,
-    )
+    if not _table_exists(conn, "young_people"):
+        return []
+    try:
+        rows = yp.list_young_people(
+            conn,
+            home_id=_home_id(current_user),
+            provider_id=_provider_id(current_user),
+            include_archived=False,
+            search="",
+            sort_by="last_name",
+            sort_dir="asc",
+            limit=limit,
+            offset=0,
+        )
+    except UndefinedTable:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        return []
     return [_normalise_child(dict(row)) for row in rows]
 
 

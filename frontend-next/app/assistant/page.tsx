@@ -1,10 +1,5 @@
-import { OrbStandaloneExperience } from '@/components/orb-standalone/orb-standalone-experience'
-import { OrbStandaloneShell } from '@/components/orb-standalone/orb-standalone-shell'
+import { redirect } from 'next/navigation'
 
 export default function AssistantPage() {
-  return (
-    <OrbStandaloneShell>
-      <OrbStandaloneExperience />
-    </OrbStandaloneShell>
-  )
+  redirect('/orb')
 }

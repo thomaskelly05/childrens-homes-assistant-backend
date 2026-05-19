@@ -9,7 +9,9 @@ import { getOsDocuments } from '@/lib/os-api/documents'
 import { getOsEvidence } from '@/lib/os-api/evidence'
 
 export default async function DocumentsPage() {
-  const [documentsResult, actionsResult, evidenceResult] = await Promise.all([getOsDocuments(), getOsActions(), getOsEvidence()])
+  const documentsResult = await getOsDocuments()
+  const actionsResult = await getOsActions()
+  const evidenceResult = await getOsEvidence()
   const documents = documentsResult.data
   const evidenceForReview = evidenceResult.data.filter((item) => ['draft', 'partial', 'review_required'].includes(item.quality))
   const regulatoryDocuments = documents.filter((document) => Boolean(document.regulation) || document.documentType.startsWith('reg'))
