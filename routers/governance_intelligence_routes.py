@@ -12,6 +12,11 @@ from services.governance_intelligence_service import (
     governance_intelligence_service,
     validate_reg44_transition,
 )
+from services.intelligence.projection_snapshot_service import (
+    ProjectionSnapshot,
+    projection_snapshot_key,
+    projection_snapshot_service,
+)
 
 
 router = APIRouter(prefix="/api/governance-os", tags=["Governance OS"])
@@ -26,6 +31,56 @@ class EvidenceMatrixPayload(BaseModel):
 class Reg44TransitionPayload(BaseModel):
     current_status: str
     next_status: str
+
+
+def _safe_int(value: Any) -> int | None:
+    try:
+        if value in (None, "", "null", "None"):
+            return None
+        return int(value)
+    except Exception:
+        return None
+
+
+def _home_id(current_user: dict[str, Any], explicit_home_id: int | None = None) -> int | None:
+    return explicit_home_id or _safe_int(current_user.get("home_id") or current_user.get("selected_home_id") or current_user.get("default_home_id"))
+
+
+def _provider_id(current_user: dict[str, Any]) -> int | None:
+    return _safe_int(current_user.get("provider_id") or current_user.get("providerId"))
+
+
+def _governance_snapshot_key(current_user: dict[str, Any], *, days: int, home_id: int | None) -> str:
+    return projection_snapshot_key("governance", "command-centre", "home", _home_id(current_user, home_id), "provider", _provider_id(current_user), "days", days)
+
+
+def _build_governance_command_centre(conn: Any, *, current_user: dict[str, Any], days: int, home_id: int | None) -> dict[str, Any]:
+    key = _governance_snapshot_key(current_user, days=days, home_id=home_id)
+    cached = projection_snapshot_service.get(key)
+    if cached and not cached.get("stale") and isinstance(cached.get("payload"), dict):
+        payload = cached["payload"]
+        payload["snapshot"] = {"hit": True, "projection_key": key, "version": cached.get("version"), "generated_at": cached.get("generated_at")}
+        return payload
+
+    payload = governance_intelligence_service.build_command_centre(
+        conn,
+        current_user=current_user,
+        days=days,
+        home_id=home_id,
+    )
+    projection_snapshot_service.put(
+        ProjectionSnapshot(
+            projection_key=key,
+            projection_type="command_centre",
+            domain="governance",
+            payload=payload,
+            home_id=_home_id(current_user, home_id),
+            provider_id=_provider_id(current_user),
+            metadata={"days": days, "source": "governance_intelligence_service.build_command_centre"},
+        )
+    )
+    payload["snapshot"] = {"hit": False, "projection_key": key, "stored": True}
+    return payload
 
 
 @router.get("/feature-flags")
@@ -47,7 +102,7 @@ def governance_command_centre(
 ):
     return {
         "ok": True,
-        "data": governance_intelligence_service.build_command_centre(
+        "data": _build_governance_command_centre(
             conn,
             current_user=current_user,
             days=days,
@@ -69,7 +124,7 @@ def governance_risk(
     conn=Depends(get_db),
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
-    centre = governance_intelligence_service.build_command_centre(conn, current_user=current_user, days=days, home_id=home_id)
+    centre = _build_governance_command_centre(conn, current_user=current_user, days=days, home_id=home_id)
     return {"ok": True, "data": centre.get("governance_risk", {})}
 
 
@@ -104,7 +159,7 @@ def governance_provider_oversight(
     conn=Depends(get_db),
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
-    centre = governance_intelligence_service.build_command_centre(conn, current_user=current_user, days=days)
+    centre = _build_governance_command_centre(conn, current_user=current_user, days=days, home_id=None)
     return {"ok": True, "data": centre.get("provider_oversight", {})}
 
 
@@ -114,7 +169,7 @@ def governance_orb_context(
     conn=Depends(get_db),
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
-    centre = governance_intelligence_service.build_command_centre(conn, current_user=current_user, days=days)
+    centre = _build_governance_command_centre(conn, current_user=current_user, days=days, home_id=None)
     return {"ok": True, "data": centre.get("orb_governance_summary", {})}
 
 
@@ -124,5 +179,5 @@ def governance_inspection_forecast(
     conn=Depends(get_db),
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
-    centre = governance_intelligence_service.build_command_centre(conn, current_user=current_user, days=days)
+    centre = _build_governance_command_centre(conn, current_user=current_user, days=days, home_id=None)
     return {"ok": True, "data": centre.get("inspection_readiness", {})}
