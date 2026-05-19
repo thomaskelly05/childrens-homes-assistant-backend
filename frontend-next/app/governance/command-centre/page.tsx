@@ -23,6 +23,7 @@ export default async function GovernanceCommandCentrePage() {
   const actions = data.governance_actions || []
   const reg44Visits = Array.isArray(data.reg44?.visits) ? data.reg44.visits : []
   const orbSummary = data.orb_governance_summary?.governance_summary || {}
+  const snapshot = data.snapshot || {}
 
   return (
     <div className="space-y-6">
@@ -32,7 +33,34 @@ export default async function GovernanceCommandCentrePage() {
         description="One leadership view for inspection readiness, workforce health, safeguarding drift, child journey health, governance actions, evidence gaps, Reg 44, Reg 45 and ORB governance summaries."
         action={<Link prefetch={false} href="/ofsted-readiness" className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">Open inspection readiness</Link>}
       />
-      <LiveDataStatus result={centre} />
+
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <LiveDataStatus result={centre} />
+
+        <Card>
+          <SectionHeader eyebrow="Projection status" title="Governance operational snapshot" description="The Governance OS now uses reusable operational projections instead of rebuilding governance intelligence every page load." />
+          <div className="space-y-3 text-sm">
+            <div className="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
+              <span className="font-bold text-slate-600">Snapshot mode</span>
+              <StatusBadge value={snapshot.hit ? 'projection cache hit' : 'live rebuild'} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-2xl border border-slate-100 bg-white px-4 py-3">
+                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Version</p>
+                <p className="mt-1 text-sm font-bold text-slate-700">{text(snapshot.version, 'v1')}</p>
+              </div>
+              <div className="rounded-2xl border border-slate-100 bg-white px-4 py-3">
+                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Generated</p>
+                <p className="mt-1 text-sm font-bold text-slate-700">{text(snapshot.generated_at, 'Live')}</p>
+              </div>
+            </div>
+            <div className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3">
+              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-blue-400">Projection key</p>
+              <p className="mt-1 break-all text-xs font-bold text-blue-700">{text(snapshot.projection_key, 'Not returned')}</p>
+            </div>
+          </div>
+        </Card>
+      </div>
 
       <section className="grid gap-4 md:grid-cols-5">
         <StatCard label="Inspection readiness" value={text(summary.inspection_readiness, 'Review')} detail="Backend readiness forecast" href="/ofsted-readiness" />
