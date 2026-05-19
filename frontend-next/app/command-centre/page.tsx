@@ -17,11 +17,14 @@ function count(value: unknown) {
 }
 
 export default async function UnifiedCommandCentrePage() {
-  const [platform, governance, workforce] = await Promise.all([
-    getCommandCentre(),
-    getGovernanceCommandCentre(),
-    getWorkforceCommandCentre()
-  ])
+  // Keep OS hydration deliberately sequential on the server. The command centre
+  // touches high-level platform, governance and workforce bundles; loading them
+  // in parallel can briefly exhaust the shared Postgres pool during sign-in and
+  // first-load bursts. The API client still uses no-store, so data remains live.
+  const platform = await getCommandCentre()
+  const governance = await getGovernanceCommandCentre()
+  const workforce = await getWorkforceCommandCentre()
+
   const platformData = platform.data
   const governanceData = governance.data
   const workforceData = workforce.data
