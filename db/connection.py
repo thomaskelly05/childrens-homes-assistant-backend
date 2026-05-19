@@ -1,9 +1,9 @@
 import logging
 import os
 
-from psycopg2 import OperationalError, InterfaceError
-from psycopg2.pool import ThreadedConnectionPool
+from psycopg2 import InterfaceError, OperationalError
 from psycopg2.extras import RealDictCursor
+from psycopg2.pool import PoolError, ThreadedConnectionPool
 from sqlalchemy.orm import declarative_base
 
 logger = logging.getLogger(__name__)
@@ -16,13 +16,33 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise RuntimeError("DATABASE_URL is not set")
 
-DB_POOL_MIN = int(os.getenv("DB_POOL_MIN", "2"))
-DB_POOL_MAX = int(os.getenv("DB_POOL_MAX", "20"))
+DB_POOL_MIN = int(os.getenv("DB_POOL_MIN", "5"))
+DB_POOL_MAX = int(os.getenv("DB_POOL_MAX", "50"))
+if DB_POOL_MAX < DB_POOL_MIN:
+    logger.warning("DB_POOL_MAX=%s is lower than DB_POOL_MIN=%s; raising max to min", DB_POOL_MAX, DB_POOL_MIN)
+    DB_POOL_MAX = DB_POOL_MIN
+
 DB_STATEMENT_TIMEOUT_MS = int(os.getenv("DB_STATEMENT_TIMEOUT_MS", "15000"))
 DB_IDLE_TX_TIMEOUT_MS = int(os.getenv("DB_IDLE_TX_TIMEOUT_MS", "15000"))
 DB_CONNECT_RETRIES = int(os.getenv("DB_CONNECT_RETRIES", "2"))
+DB_POOL_EXHAUSTION_WARN_INTERVAL = int(os.getenv("DB_POOL_EXHAUSTION_WARN_INTERVAL", "10"))
+
+_db_pool_exhaustion_count = 0
 
 db_pool: ThreadedConnectionPool | None = None
+
+
+def pool_status() -> dict[str, int | None]:
+    if db_pool is None:
+        return {"min": DB_POOL_MIN, "max": DB_POOL_MAX, "used": 0, "available": 0}
+
+    used = len(getattr(db_pool, "_used", {}) or {})
+    available = len(getattr(db_pool, "_pool", []) or [])
+    return {"min": DB_POOL_MIN, "max": DB_POOL_MAX, "used": used, "available": available}
+
+
+def _log_pool_state(level: int, message: str, *, exc_info: bool = False) -> None:
+    logger.log(level, "%s pool=%s", message, pool_status(), exc_info=exc_info)
 
 
 def init_db_pool():
@@ -36,16 +56,16 @@ def init_db_pool():
         maxconn=DB_POOL_MAX,
         dsn=DATABASE_URL,
         cursor_factory=RealDictCursor,
-        sslmode="require",
-        connect_timeout=10,
-        application_name="indicare-api",
+        sslmode=os.getenv("DB_SSLMODE", "require"),
+        connect_timeout=int(os.getenv("DB_CONNECT_TIMEOUT", "10")),
+        application_name=os.getenv("DB_APPLICATION_NAME", "indicare-api"),
         keepalives=1,
         keepalives_idle=30,
         keepalives_interval=10,
         keepalives_count=5,
     )
 
-    logger.info("Database pool initialised (min=%s, max=%s)", DB_POOL_MIN, DB_POOL_MAX)
+    _log_pool_state(logging.INFO, "Database pool initialised")
     return db_pool
 
 
@@ -80,7 +100,7 @@ def _discard_connection(conn) -> None:
 
 
 def get_db_connection():
-    global db_pool
+    global db_pool, _db_pool_exhaustion_count
 
     if db_pool is None:
         init_db_pool()
@@ -94,12 +114,22 @@ def get_db_connection():
             conn = db_pool.getconn()
             _prepare_connection(conn)
             return conn
+        except PoolError as exc:
+            _db_pool_exhaustion_count += 1
+            last_error = exc
+            if _db_pool_exhaustion_count == 1 or _db_pool_exhaustion_count % DB_POOL_EXHAUSTION_WARN_INTERVAL == 0:
+                _log_pool_state(
+                    logging.ERROR,
+                    f"Database connection pool exhausted on attempt {attempt}/{attempts}",
+                    exc_info=True,
+                )
+            if attempt == attempts:
+                break
         except (OperationalError, InterfaceError, RuntimeError) as exc:
             last_error = exc
-            logger.warning(
-                "Database connection validation failed on attempt %s/%s; discarding pooled connection",
-                attempt,
-                attempts,
+            _log_pool_state(
+                logging.WARNING,
+                f"Database connection validation failed on attempt {attempt}/{attempts}; discarding pooled connection",
                 exc_info=True,
             )
             _discard_connection(conn)
@@ -123,6 +153,11 @@ def release_db_connection(conn, *, close: bool = False):
         if conn.closed:
             db_pool.putconn(conn, close=True)
             return
+
+        try:
+            conn.rollback()
+        except Exception:
+            close = True
 
         if close:
             db_pool.putconn(conn, close=True)
