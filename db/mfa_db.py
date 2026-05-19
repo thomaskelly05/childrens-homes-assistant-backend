@@ -34,6 +34,25 @@ def _invalidate_mfa_cache(user_id: int) -> None:
     _MFA_CACHE.pop(int(user_id), None)
 
 
+def _acquire(optional_conn: Any | None):
+    if optional_conn is not None:
+        return optional_conn, False
+    return get_db_connection(), True
+
+
+def _release(conn: Any | None, owned: bool) -> None:
+    if owned and conn is not None:
+        release_db_connection(conn)
+
+
+def _rollback(conn: Any | None) -> None:
+    if conn is not None and not getattr(conn, "closed", False):
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+
+
 def hash_recovery_code(code: str) -> str:
     return hashlib.sha256(code.encode("utf-8")).hexdigest()
 
@@ -159,17 +178,18 @@ def log_auth_event(
             release_db_connection(conn)
 
 
-def get_user_mfa(user_id: int) -> dict[str, Any] | None:
+def get_user_mfa(user_id: int, conn: Any | None = None) -> dict[str, Any] | None:
     user_id = int(user_id)
     cached = _MFA_CACHE.get(user_id)
     now = _now()
     if cached and cached[0] > now:
         return cached[1]
 
-    conn = None
+    db_conn = None
+    owned = False
     try:
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        db_conn, owned = _acquire(conn)
+        with db_conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
                 """
                 SELECT
@@ -212,11 +232,11 @@ def get_user_mfa(user_id: int) -> dict[str, Any] | None:
             _prune_mfa_cache()
             return result
     except Exception:
+        _rollback(db_conn)
         logger.warning("Failed to load MFA state for user_id=%s", user_id, exc_info=True)
         return None
     finally:
-        if conn is not None:
-            release_db_connection(conn)
+        _release(db_conn, owned)
 
 
 def upsert_user_mfa_secret(user_id: int, email: str | None, totp_secret: str) -> None:

@@ -317,7 +317,7 @@ def _build_qr_code_data_url(value: str) -> str:
 def mfa_status(request: Request, conn=Depends(get_db)):
     session_user = _get_session_user(request)
     user = _assert_active_user(_get_user_row(conn, session_user.user_id))
-    mfa_row = get_user_mfa(session_user.user_id)
+    mfa_row = get_user_mfa(session_user.user_id, conn=conn)
 
     return {
         "ok": True,
@@ -336,7 +336,7 @@ def get_mfa_setup(request: Request, conn=Depends(get_db)):
         session_user = _get_session_user(request)
         user = _assert_active_user(_get_user_row(conn, session_user.user_id))
 
-        mfa_row = get_user_mfa(session_user.user_id)
+        mfa_row = get_user_mfa(session_user.user_id, conn=conn)
         if mfa_row and mfa_row.get("is_enabled"):
             return {
                 "ok": True,
@@ -477,7 +477,7 @@ def complete_mfa_setup(
         "message": "MFA enabled successfully",
         "mfa_enabled": True,
         "mfa_verified": True,
-        "has_passkeys": user_has_passkeys(user["id"]),
+        "has_passkeys": user_has_passkeys(user["id"], conn=conn),
         "recovery_codes": recovery_codes,
     }
 
@@ -492,7 +492,7 @@ def verify_mfa(
     session_user = _get_session_user(request)
     user = _assert_active_user(_get_user_row(conn, session_user.user_id))
 
-    mfa_row = get_user_mfa(user["id"])
+    mfa_row = get_user_mfa(user["id"], conn=conn)
     if not mfa_row or not mfa_row.get("is_enabled"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -536,7 +536,7 @@ def verify_mfa(
         "ok": True,
         "message": "MFA verified",
         "mfa_verified": True,
-        "has_passkeys": user_has_passkeys(user["id"]),
+        "has_passkeys": user_has_passkeys(user["id"], conn=conn),
     }
 
 
@@ -550,7 +550,7 @@ def verify_recovery_code(
     session_user = _get_session_user(request)
     user = _assert_active_user(_get_user_row(conn, session_user.user_id))
 
-    mfa_row = get_user_mfa(user["id"])
+    mfa_row = get_user_mfa(user["id"], conn=conn)
     if not mfa_row or not mfa_row.get("is_enabled"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -593,7 +593,7 @@ def verify_recovery_code(
         "ok": True,
         "message": "Recovery code accepted",
         "mfa_verified": True,
-        "has_passkeys": user_has_passkeys(user["id"]),
+        "has_passkeys": user_has_passkeys(user["id"], conn=conn),
         "remaining_recovery_codes": count_unused_recovery_codes(user["id"]),
     }
 
@@ -610,7 +610,7 @@ def disable_mfa_route(
 
     user = _assert_active_user(_get_user_row(conn, int(user_id)))
 
-    mfa_row = get_user_mfa(user["id"])
+    mfa_row = get_user_mfa(user["id"], conn=conn)
     if not mfa_row or not mfa_row.get("is_enabled"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -663,7 +663,7 @@ def regenerate_recovery_codes(
 
     user = _assert_active_user(_get_user_row(conn, int(user_id)))
 
-    mfa_row = get_user_mfa(user["id"])
+    mfa_row = get_user_mfa(user["id"], conn=conn)
     if not mfa_row or not mfa_row.get("is_enabled"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

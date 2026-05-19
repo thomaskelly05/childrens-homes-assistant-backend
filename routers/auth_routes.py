@@ -236,9 +236,9 @@ def _get_billing_safe(conn: Any, user_id: int) -> dict[str, Any] | None:
     except Exception:
         return None
 
-def _get_mfa_safe(user_id: int) -> dict[str, Any] | None:
+def _get_mfa_safe(user_id: int, conn: Any | None = None) -> dict[str, Any] | None:
     try:
-        return get_user_mfa(user_id)
+        return get_user_mfa(user_id, conn=conn)
     except Exception:
         return None
 
@@ -327,7 +327,7 @@ def login(payload: LoginRequest, request: Request, response: Response, conn=Depe
         _deny_login(request=request, email=email, user_id=user["id"], log_detail="Invalid credentials")
 
     csrf_token = secrets.token_urlsafe(32)
-    mfa_row = _get_mfa_safe(int(user["id"]))
+    mfa_row = _get_mfa_safe(int(user["id"]), conn)
     mfa_enabled = bool(mfa_row and bool(mfa_row.get("is_enabled")))
     force_mfa = _mfa_required_for_role(user.get("role"))
     mfa_pending = bool(mfa_enabled or force_mfa)
@@ -339,7 +339,7 @@ def login(payload: LoginRequest, request: Request, response: Response, conn=Depe
         _safe_session_reset(request)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Session could not be created")
 
-    session_id = create_session_record(user_id=int(user["id"]), request=request, mfa_verified=not mfa_pending)
+    session_id = create_session_record(user_id=int(user["id"]), request=request, mfa_verified=not mfa_pending, conn=conn)
     token = create_session_token(
         user["id"],
         email=user.get("email"),
@@ -400,7 +400,7 @@ def check_auth(request: Request, authorization: str | None = Header(default=None
                 pending_user = _get_user_by_id(conn, pending_user_id)
                 role = pending_user.get("role") if pending_user else None
                 email = pending_user.get("email") if pending_user else email
-                mfa_row = _get_mfa_safe(pending_user_id)
+                mfa_row = _get_mfa_safe(pending_user_id, conn)
                 mfa_enabled = bool(mfa_row and bool(mfa_row.get("is_enabled")))
             except Exception:
                 mfa_enabled = False
@@ -429,7 +429,7 @@ def check_auth(request: Request, authorization: str | None = Header(default=None
     if not user or user_id is None or user.get("archived") is True or user.get("is_active") is False:
         return {"authenticated": False, "mfa_pending": False}
     billing = _get_billing_safe(conn, user_id)
-    mfa_row = _get_mfa_safe(user_id)
+    mfa_row = _get_mfa_safe(user_id, conn)
     mfa_enabled = bool(mfa_row and bool(mfa_row.get("is_enabled")))
     mfa_verified = request.session.get(SESSION_MFA_VERIFIED_KEY) is True
     user_payload = _session_user_payload(user, billing)
@@ -443,10 +443,10 @@ def get_me(request: Request, response: Response, authorization: str | None = Hea
     user = _validate_active_user(user)
     _ensure_csrf_cookie(request, response)
     billing = _get_billing_safe(conn, user_id)
-    mfa_row = _get_mfa_safe(user_id)
+    mfa_row = _get_mfa_safe(user_id, conn)
     mfa_enabled = bool(mfa_row and bool(mfa_row.get("is_enabled")))
     mfa_verified = request.session.get(SESSION_MFA_VERIFIED_KEY) is True
-    has_passkeys = user_has_passkeys(user_id)
+    has_passkeys = user_has_passkeys(user_id, conn=conn)
     return {"ok": True, "user": _full_user_payload(user, billing, mfa_enabled=mfa_enabled, mfa_verified=mfa_verified, has_passkeys=has_passkeys), "mfa_mandatory": _mfa_required_for_role(user.get("role"))}
 
 @router.get("/auth-policy")

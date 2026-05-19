@@ -32,6 +32,25 @@ def _invalidate_user_cache(user_id: int) -> None:
     _PASSKEY_EXISTS_CACHE.pop(int(user_id), None)
 
 
+def _acquire(optional_conn: Any | None):
+    if optional_conn is not None:
+        return optional_conn, False
+    return get_db_connection(), True
+
+
+def _release(conn: Any | None, owned: bool) -> None:
+    if owned and conn is not None:
+        release_db_connection(conn)
+
+
+def _rollback(conn: Any | None) -> None:
+    if conn is not None and not getattr(conn, "closed", False):
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+
+
 def init_passkeys_table() -> None:
     conn = get_db_connection()
     try:
@@ -84,17 +103,18 @@ def init_passkeys_table() -> None:
         release_db_connection(conn)
 
 
-def user_has_passkeys(user_id: int) -> bool:
+def user_has_passkeys(user_id: int, conn: Any | None = None) -> bool:
     user_id = int(user_id)
     cached = _PASSKEY_EXISTS_CACHE.get(user_id)
     now = _now()
     if cached and cached[0] > now:
         return cached[1]
 
-    conn = None
+    db_conn = None
+    owned = False
     try:
-        conn = get_db_connection()
-        with conn.cursor() as cur:
+        db_conn, owned = _acquire(conn)
+        with db_conn.cursor() as cur:
             cur.execute(
                 """
                 SELECT 1
@@ -109,17 +129,19 @@ def user_has_passkeys(user_id: int) -> bool:
             _prune_cache()
             return exists
     except Exception:
+        _rollback(db_conn)
         logger.warning("Failed checking passkeys for user_id=%s", user_id, exc_info=True)
         return False
     finally:
-        if conn is not None:
-            release_db_connection(conn)
+        _release(db_conn, owned)
 
 
-def list_user_passkeys(user_id: int) -> list[dict[str, Any]]:
-    conn = get_db_connection()
+def list_user_passkeys(user_id: int, conn: Any | None = None) -> list[dict[str, Any]]:
+    db_conn = None
+    owned = False
     try:
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        db_conn, owned = _acquire(conn)
+        with db_conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
                 """
                 SELECT
@@ -140,14 +162,19 @@ def list_user_passkeys(user_id: int) -> list[dict[str, Any]]:
             )
             rows = cur.fetchall() or []
             return [dict(row) for row in rows]
+    except Exception:
+        _rollback(db_conn)
+        raise
     finally:
-        release_db_connection(conn)
+        _release(db_conn, owned)
 
 
-def get_passkey_by_credential_id(credential_id: str) -> dict[str, Any] | None:
-    conn = get_db_connection()
+def get_passkey_by_credential_id(credential_id: str, conn: Any | None = None) -> dict[str, Any] | None:
+    db_conn = None
+    owned = False
     try:
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        db_conn, owned = _acquire(conn)
+        with db_conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
                 """
                 SELECT
@@ -170,8 +197,11 @@ def get_passkey_by_credential_id(credential_id: str) -> dict[str, Any] | None:
             )
             row = cur.fetchone()
             return dict(row) if row else None
+    except Exception:
+        _rollback(db_conn)
+        raise
     finally:
-        release_db_connection(conn)
+        _release(db_conn, owned)
 
 
 def create_user_passkey(
@@ -183,10 +213,13 @@ def create_user_passkey(
     transports: str | None = None,
     aaguid: str | None = None,
     nickname: str | None = None,
+    conn: Any | None = None,
 ) -> None:
-    conn = get_db_connection()
+    db_conn = None
+    owned = False
     try:
-        with conn.cursor() as cur:
+        db_conn, owned = _acquire(conn)
+        with db_conn.cursor() as cur:
             cur.execute(
                 """
                 INSERT INTO user_passkeys (
@@ -213,19 +246,26 @@ def create_user_passkey(
                     nickname,
                 ),
             )
-        conn.commit()
+        if owned:
+            db_conn.commit()
         _invalidate_user_cache(user_id)
+    except Exception:
+        _rollback(db_conn)
+        raise
     finally:
-        release_db_connection(conn)
+        _release(db_conn, owned)
 
 
 def update_passkey_sign_count(
     credential_id: str,
     sign_count: int,
+    conn: Any | None = None,
 ) -> None:
-    conn = get_db_connection()
+    db_conn = None
+    owned = False
     try:
-        with conn.cursor() as cur:
+        db_conn, owned = _acquire(conn)
+        with db_conn.cursor() as cur:
             cur.execute(
                 """
                 UPDATE user_passkeys
@@ -235,15 +275,21 @@ def update_passkey_sign_count(
                 """,
                 (int(sign_count), credential_id),
             )
-        conn.commit()
+        if owned:
+            db_conn.commit()
+    except Exception:
+        _rollback(db_conn)
+        raise
     finally:
-        release_db_connection(conn)
+        _release(db_conn, owned)
 
 
-def delete_user_passkey(user_id: int, passkey_id: int) -> bool:
-    conn = get_db_connection()
+def delete_user_passkey(user_id: int, passkey_id: int, conn: Any | None = None) -> bool:
+    db_conn = None
+    owned = False
     try:
-        with conn.cursor() as cur:
+        db_conn, owned = _acquire(conn)
+        with db_conn.cursor() as cur:
             cur.execute(
                 """
                 DELETE FROM user_passkeys
@@ -252,8 +298,12 @@ def delete_user_passkey(user_id: int, passkey_id: int) -> bool:
                 (int(passkey_id), int(user_id)),
             )
             deleted = cur.rowcount > 0
-        conn.commit()
+        if owned:
+            db_conn.commit()
         _invalidate_user_cache(user_id)
         return deleted
+    except Exception:
+        _rollback(db_conn)
+        raise
     finally:
-        release_db_connection(conn)
+        _release(db_conn, owned)
