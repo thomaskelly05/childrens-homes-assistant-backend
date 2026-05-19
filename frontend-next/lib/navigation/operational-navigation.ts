@@ -90,7 +90,7 @@ export const operationalNavigation: OperationalNavItem[] = [
   {
     domain: 'children',
     href: '/young-people',
-    label: 'Young People',
+    label: 'Children',
     description: 'Child journeys, records, chronology, plans, risks and documents.',
     icon: UserRound,
     permissions: ['records:read'],
