@@ -1,16 +1,23 @@
 import {
   Bell,
+  BookOpen,
   Building2,
+  CalendarDays,
   ClipboardCheck,
+  ClipboardList,
   FileText,
   FolderOpen,
   Gauge,
+  HeartPulse,
   SearchCheck,
   Settings,
   ShieldCheck,
   Sparkles,
+  Stethoscope,
   UserRound,
-  UsersRound
+  UsersRound,
+  Siren,
+  ListTodo
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -20,12 +27,22 @@ import { normaliseRole, userHasAnyPermission } from '@/lib/auth/permissions'
 export type OperationalDomain =
   | 'command-centre'
   | 'children'
+  | 'daily-care'
+  | 'chronology'
+  | 'plans'
+  | 'wellbeing'
+  | 'incidents'
+  | 'education'
+  | 'health'
+  | 'calendar'
   | 'workforce'
   | 'governance'
   | 'inspection'
   | 'documents'
   | 'reports'
   | 'orb'
+  | 'notifications'
+  | 'tasks'
   | 'admin'
 
 export type OperationalRole = 'rm' | 'ri' | 'staff' | 'provider' | 'admin'
@@ -73,12 +90,92 @@ export const operationalNavigation: OperationalNavItem[] = [
   {
     domain: 'children',
     href: '/young-people',
-    label: 'Children',
+    label: 'Young People',
     description: 'Child journeys, records, chronology, plans, risks and documents.',
     icon: UserRound,
     permissions: ['records:read'],
     roleScopes: ['rm', 'ri', 'staff', 'provider', 'admin'],
     activeRoots: ['home', 'dashboard', 'workspace', 'young-people', 'children']
+  },
+  {
+    domain: 'daily-care',
+    href: '/daily-logs',
+    label: 'Daily Care',
+    description: 'Daily notes, handovers, keywork, routines and reflective recording.',
+    icon: ClipboardList,
+    permissions: ['records:read'],
+    roleScopes: ['rm', 'ri', 'staff', 'provider', 'admin'],
+    activeRoots: ['daily-logs', 'handover', 'keywork', 'shifts']
+  },
+  {
+    domain: 'chronology',
+    href: '/chronology',
+    label: 'Chronology',
+    description: 'Meaning over time across events, evidence, actions and trajectories.',
+    icon: CalendarDays,
+    permissions: ['records:read'],
+    roleScopes: ['rm', 'ri', 'staff', 'provider', 'admin'],
+    activeRoots: ['chronology']
+  },
+  {
+    domain: 'plans',
+    href: '/documents?scope=plans',
+    label: 'Plans',
+    description: 'Care plans, risk plans, placement plans and review documents.',
+    icon: ClipboardCheck,
+    permissions: ['records:read'],
+    roleScopes: ['rm', 'ri', 'staff', 'provider', 'admin'],
+    activeRoots: ['plans', 'risk-assessments']
+  },
+  {
+    domain: 'wellbeing',
+    href: '/wellbeing',
+    label: 'Wellbeing',
+    description: 'Child and workforce wellbeing posture from chronology and Workforce OS.',
+    icon: HeartPulse,
+    permissions: ['records:read'],
+    roleScopes: ['rm', 'ri', 'staff', 'provider', 'admin'],
+    activeRoots: ['wellbeing']
+  },
+  {
+    domain: 'incidents',
+    href: '/incidents',
+    label: 'Incidents',
+    description: 'Incident review, safeguarding links, actions and reflective follow-up.',
+    icon: Siren,
+    permissions: ['records:read'],
+    roleScopes: ['rm', 'ri', 'staff', 'provider', 'admin'],
+    activeRoots: ['incidents', 'safeguarding']
+  },
+  {
+    domain: 'education',
+    href: '/education',
+    label: 'Education',
+    description: 'Education engagement, school themes and progress evidence.',
+    icon: BookOpen,
+    permissions: ['records:read'],
+    roleScopes: ['rm', 'ri', 'staff', 'provider', 'admin'],
+    activeRoots: ['education']
+  },
+  {
+    domain: 'health',
+    href: '/health',
+    label: 'Health',
+    description: 'Health, medication, appointments and emotional regulation context.',
+    icon: Stethoscope,
+    permissions: ['records:read'],
+    roleScopes: ['rm', 'ri', 'staff', 'provider', 'admin'],
+    activeRoots: ['health', 'medication', 'appointments']
+  },
+  {
+    domain: 'calendar',
+    href: '/calendar',
+    label: 'Calendar',
+    description: 'Appointments, handovers and operational continuity by date.',
+    icon: CalendarDays,
+    permissions: ['records:read'],
+    roleScopes: ['rm', 'ri', 'staff', 'provider', 'admin'],
+    activeRoots: ['calendar', 'appointments']
   },
   {
     domain: 'workforce',
@@ -119,6 +216,26 @@ export const operationalNavigation: OperationalNavItem[] = [
     permissions: ['records:read'],
     roleScopes: ['rm', 'ri', 'staff', 'provider', 'admin'],
     activeRoots: ['documents', 'evidence']
+  },
+  {
+    domain: 'tasks',
+    href: '/actions',
+    label: 'Tasks',
+    description: 'Operational actions, follow-up and review commitments.',
+    icon: ListTodo,
+    permissions: ['records:read'],
+    roleScopes: ['rm', 'ri', 'staff', 'provider', 'admin'],
+    activeRoots: ['actions', 'tasks']
+  },
+  {
+    domain: 'notifications',
+    href: '/notifications',
+    label: 'Notifications',
+    description: 'Provider-scoped alerts, messages and operational notifications.',
+    icon: Bell,
+    permissions: ['records:read'],
+    roleScopes: ['rm', 'ri', 'staff', 'provider', 'admin'],
+    activeRoots: ['notifications', 'connect']
   },
   {
     domain: 'reports',

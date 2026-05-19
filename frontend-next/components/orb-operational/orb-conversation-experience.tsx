@@ -64,6 +64,7 @@ export function OrbConversationExperience({ childrenOptions }: { childrenOptions
   const latestContext = latestIntelligence?.context_used
   const isDegraded = Boolean(latestContext?.degraded)
   const statusLabel = isDegraded ? 'Partial context' : latestContext?.snapshot_hit ? 'Snapshot + live' : 'Live DB backed'
+  const cognitionTimeline = messages.filter((message) => message.role === 'assistant' && message.response)
 
   async function submit(event?: FormEvent<HTMLFormElement>, override?: string, overrideScope?: OrbScope) {
     event?.preventDefault()
@@ -109,8 +110,8 @@ export function OrbConversationExperience({ childrenOptions }: { childrenOptions
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-[11px] font-black uppercase tracking-[0.24em] text-blue-700">Operational ORB</p>
-            <h1 className="mt-3 text-4xl font-black tracking-[-0.07em] text-slate-950 md:text-6xl">Ask live IndiCare records</h1>
-            <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-600">ORB retrieves live permitted records, cites sources where available, and keeps professional judgement with the registered manager and safeguarding leads.</p>
+            <h1 className="mt-3 text-4xl font-black tracking-[-0.07em] text-slate-950 md:text-6xl">Reflective operational cognition</h1>
+            <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-600">ORB retrieves live permitted records, cites sources where available, and presents reasoning as reviewable operational cognition for registered managers and safeguarding leads.</p>
           </div>
           <div className={`rounded-2xl px-4 py-3 text-xs font-black uppercase tracking-[0.16em] ${isDegraded ? 'bg-amber-50 text-amber-800' : 'bg-blue-50 text-blue-700'}`}>
             {statusLabel}
@@ -167,7 +168,23 @@ export function OrbConversationExperience({ childrenOptions }: { childrenOptions
           {messages.map((message) => (
             <article key={message.id} className={`rounded-[24px] p-4 ${message.role === 'user' ? 'ml-auto max-w-2xl bg-slate-950 text-white' : 'mr-auto max-w-4xl bg-white text-slate-800 shadow-sm ring-1 ring-slate-100'}`}>
               <p className="text-[11px] font-black uppercase tracking-[0.18em] opacity-60">{message.role === 'user' ? 'You' : 'ORB'}</p>
-              <div className="mt-2 whitespace-pre-wrap text-sm font-semibold leading-7">{message.text}</div>
+                <div className="mt-2 whitespace-pre-wrap text-sm font-semibold leading-7">{message.text}</div>
+                {message.response ? (
+                  <div className="mt-4 grid gap-3 md:grid-cols-3">
+                    <div className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-blue-950">
+                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-blue-600">Evidence</p>
+                      <p className="mt-1 text-sm font-black">{message.response.sources?.length || 0} source{message.response.sources?.length === 1 ? '' : 's'}</p>
+                    </div>
+                    <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-emerald-950">
+                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-600">Actions</p>
+                      <p className="mt-1 text-sm font-black">{message.response.actions?.length || 0} suggested</p>
+                    </div>
+                    <div className="rounded-2xl border border-purple-100 bg-purple-50 px-4 py-3 text-purple-950">
+                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-purple-600">Confidence</p>
+                      <p className="mt-1 text-sm font-black">{message.response.confidence || 'review'}</p>
+                    </div>
+                  </div>
+                ) : null}
             </article>
           ))}
           {pending ? <div className="rounded-[24px] bg-white p-4 text-sm font-black text-blue-700 ring-1 ring-blue-100">ORB is checking live records...</div> : null}
@@ -217,6 +234,20 @@ export function OrbConversationExperience({ childrenOptions }: { childrenOptions
             {(latestIntelligence?.regulatory_reasoning?.management_considerations || []).slice(0, 2).map((item) => <li key={item}>- {item}</li>)}
             {!latestIntelligence?.therapeutic_reasoning?.therapeutic_observations?.length && !latestIntelligence?.regulatory_reasoning?.management_considerations?.length ? <li>RM review prompts appear here after the first response.</li> : null}
           </ul>
+        </section>
+
+        <section className="rounded-[32px] bg-white p-5 shadow-lg shadow-slate-200/60 ring-1 ring-white">
+          <h2 className="text-lg font-black text-slate-950">Cognition timeline</h2>
+          <div className="mt-4 space-y-3">
+            {cognitionTimeline.map((message, index) => (
+              <article key={message.id} className="rounded-2xl border border-slate-100 bg-slate-50 p-3">
+                <p className="text-[11px] font-black uppercase tracking-[0.16em] text-blue-700">Step {index + 1}</p>
+                <p className="mt-1 text-sm font-black text-slate-900">{message.response?.context_used?.scope || scope} reasoning</p>
+                <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">{message.response?.sources?.length || 0} sources, {message.response?.context_used?.projection_keys?.length || 0} projection keys, confidence {message.response?.confidence || 'review'}.</p>
+              </article>
+            ))}
+            {!cognitionTimeline.length ? <p className="text-sm font-semibold leading-6 text-slate-500">Timeline appears after ORB checks live context.</p> : null}
+          </div>
         </section>
 
         <section className="rounded-[32px] bg-white p-5 shadow-lg shadow-slate-200/60 ring-1 ring-white">

@@ -45,7 +45,7 @@ function selectedYoungPersonId(pathname: string) {
 }
 
 function titleFromPath(pathname: string) {
-  if (pathname === '/' || pathname === '/home' || pathname === '/dashboard' || pathname === '/workspace') return 'Children'
+  if (pathname === '/' || pathname === '/home' || pathname === '/dashboard' || pathname === '/workspace' || pathname === '/command-centre') return 'Command Centre'
   const parts = pathname.split('/').filter(Boolean)
   if (!parts.length) return 'Children'
   return parts[0].split('-').map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`).join(' ')
@@ -97,7 +97,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#f3f6fb] px-6 text-slate-900">
         <div className="w-full max-w-md rounded-[32px] border border-slate-200 bg-white p-8 text-center shadow-2xl shadow-slate-950/10">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-950 text-sm font-black text-white">IC</div>
+          <div className="orb-motion-breathing mx-auto h-14 w-14 rounded-2xl bg-[radial-gradient(circle_at_30%_20%,#fff,transparent_24%),linear-gradient(135deg,#38bdf8,#2563eb_52%,#0f172a)] shadow-[0_0_48px_rgba(37,99,235,0.36)]" aria-hidden />
           <p className="mt-6 text-[11px] font-black uppercase tracking-[0.22em] text-blue-600">Checking session</p>
           <h1 className="mt-2 text-2xl font-black tracking-[-0.04em] text-slate-950">Loading IndiCare OS</h1>
           <p className="mt-3 text-sm leading-6 text-slate-500">Verifying your secure workspace access.</p>
@@ -198,6 +198,14 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const primaryNav = visibleNavItems.filter((item) => selectedId || !item.requiresChild)
   const secondaryNav = selectedId ? childWorkspaceNavigation.map((item) => ({ label: item.label, href: item.href(selectedId) })) : []
+  const navigationGroups = [
+    { label: 'Home', domains: ['command-centre', 'children', 'daily-care', 'chronology', 'plans', 'wellbeing'] },
+    { label: 'Care operations', domains: ['incidents', 'education', 'health', 'calendar', 'documents', 'reports'] },
+    { label: 'Leadership', domains: ['workforce', 'governance', 'inspection', 'tasks', 'notifications', 'orb', 'admin'] }
+  ].map((group) => ({
+    ...group,
+    items: primaryNav.filter((item) => group.domains.includes(item.domain))
+  })).filter((group) => group.items.length)
   const childDomainActive = pathParts[0] === 'young-people' || pathParts[0] === 'children'
   const displayBreadcrumbs = pathname === '/profile'
     ? [{ label: 'Children', href: '/young-people' }, { label: 'My profile', current: true }]
@@ -208,88 +216,115 @@ export function AppShell({ children }: { children: ReactNode }) {
         : breadcrumbs
 
   return (
-    <div className="orb-os-shell min-h-screen bg-[#f3f6fb] text-slate-900">
-      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-[#f8fafc]/95 px-3 py-3 backdrop-blur-xl md:px-6">
-        <div className="flex items-center gap-3">
-          <Link prefetch={false} href="/young-people" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-sm font-black text-white shadow-lg shadow-slate-950/20" aria-label="Choose child">
-            IC
+    <div className="orb-os-shell min-h-screen bg-[#eef4fb] text-slate-900">
+      <div className="lg:grid lg:min-h-screen lg:grid-cols-[280px_minmax(0,1fr)]">
+        <aside className="sticky top-0 hidden h-screen min-h-0 flex-col border-r border-white/70 bg-slate-950 px-4 py-5 text-white shadow-[24px_0_80px_rgba(15,23,42,0.12)] lg:flex" aria-label="Primary operational navigation">
+          <Link prefetch={false} href="/command-centre" className="flex items-center gap-3 rounded-[26px] bg-white/8 p-3 ring-1 ring-white/10">
+            <span className="orb-motion-breathing relative h-12 w-12 rounded-2xl bg-[radial-gradient(circle_at_30%_20%,#fff,transparent_24%),linear-gradient(135deg,#38bdf8,#2563eb_52%,#111827)] shadow-[0_0_42px_rgba(56,189,248,0.36)]" aria-hidden />
+            <span>
+              <span className="block text-[10px] font-black uppercase tracking-[0.24em] text-blue-200">IndiCare OS</span>
+              <span className="mt-1 block text-sm font-black text-white">Operational cognition</span>
+            </span>
           </Link>
-          <div className="hidden min-w-0 lg:block">
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">IndiCare OS</p>
-            <p className="truncate text-sm font-black text-slate-950">{activeChildName ? `${activeChildName}'s workspace` : 'Choose child'}</p>
+          <div className="mt-4 rounded-[24px] border border-blue-300/10 bg-blue-300/10 p-4">
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-blue-200">Atmosphere</p>
+            <p className="mt-2 text-sm font-bold leading-6 text-blue-50">{activeChildName ? `${activeChildName}'s workspace is active` : 'Home-wide reflective view active'}</p>
           </div>
-          <nav data-testid="operational-navigation" aria-label="Operational navigation" className="hidden min-w-0 flex-1 items-center gap-1 overflow-x-auto lg:flex">
-            {primaryNav.map((item) => {
-              const active = isOperationalNavItemActive(item, pathname)
-              const Icon = item.icon
-              const href = hrefForOperationalItem(item, selectedId, childScopedHref)
-              return (
-                <Link
-                  prefetch={false}
-                  key={item.href}
-                  href={href}
-                  className={`inline-flex shrink-0 items-center gap-2 rounded-2xl px-3 py-2 text-sm font-black transition focus:outline-none focus:ring-2 focus:ring-blue-500 ${active ? 'bg-slate-950 text-white shadow-lg shadow-slate-950/15' : 'text-slate-600 hover:bg-white hover:text-slate-950'}`}
-                >
-                  <Icon className="h-4 w-4" aria-hidden />
-                  {item.label}
-                </Link>
-              )
-            })}
-          </nav>
-          <div className="ml-auto flex items-center gap-2">
-            <CommandSearch />
-            <Link prefetch={false} href="/young-people" className="hidden rounded-2xl border border-blue-100 bg-blue-50 px-3 py-2 text-sm font-black text-blue-800 shadow-sm transition hover:bg-blue-100 md:inline-flex">
-              <ShieldCheck className="mr-2 h-4 w-4" aria-hidden />
-              {activeChildName ? 'Switch child' : 'Choose child'}
-            </Link>
-            {selectedId ? <NotificationBell /> : null}
-            <div className="hidden rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 shadow-sm xl:block">{today}</div>
-            <details className="relative hidden md:block">
-              <summary className="list-none rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-black text-slate-700 shadow-sm marker:hidden">Profile</summary>
-              <div className="absolute right-0 mt-2 w-64 rounded-[24px] border border-slate-200 bg-white p-4 shadow-2xl shadow-slate-950/15">
-                <p className="text-sm font-black text-slate-950">{displayName(user)}</p>
-                <p className="mt-1 text-xs font-bold text-slate-500">{labelForRole(user.role)}</p>
-                <Link prefetch={false} href="/profile" className="mt-4 flex rounded-2xl bg-slate-50 px-4 py-3 text-sm font-black text-slate-700">My profile</Link>
-                <Link prefetch={false} href="/settings" className="mt-2 flex rounded-2xl bg-slate-50 px-4 py-3 text-sm font-black text-slate-700">Settings</Link>
-                <button type="button" onClick={() => void logout()} data-testid="logout-button" className="mt-2 flex w-full items-center justify-center rounded-2xl border border-slate-200 px-4 py-3 text-sm font-black text-slate-700">
-                  <LogOut className="mr-2 h-4 w-4" aria-hidden />
-                  Log out
-                </button>
+          <nav data-testid="operational-navigation" className="mt-5 min-h-0 flex-1 space-y-5 overflow-y-auto pr-1" aria-label="Operational navigation">
+            {navigationGroups.map((group) => (
+              <div key={group.label}>
+                <p className="px-3 text-[10px] font-black uppercase tracking-[0.22em] text-slate-500">{group.label}</p>
+                <div className="mt-2 space-y-1">
+                  {group.items.map((item) => {
+                    const active = isOperationalNavItemActive(item, pathname)
+                    const Icon = item.icon
+                    const href = hrefForOperationalItem(item, selectedId, childScopedHref)
+                    return (
+                      <Link
+                        prefetch={false}
+                        key={`${item.domain}-${item.href}`}
+                        href={href}
+                        className={`group flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-black transition focus:outline-none focus:ring-2 focus:ring-blue-300 ${active ? 'bg-white text-slate-950 shadow-lg shadow-blue-950/20' : 'text-slate-300 hover:bg-white/10 hover:text-white'}`}
+                      >
+                        <Icon className={`h-4 w-4 ${active ? 'text-blue-600' : 'text-blue-200/70 group-hover:text-blue-200'}`} aria-hidden />
+                        <span className="truncate">{item.label}</span>
+                      </Link>
+                    )
+                  })}
+                </div>
               </div>
-            </details>
+            ))}
+          </nav>
+          <Link prefetch={false} href="/orb" className="mt-4 rounded-[24px] border border-blue-300/20 bg-[radial-gradient(circle_at_top,#38bdf833,transparent_55%),rgba(255,255,255,0.08)] p-4 shadow-[0_0_46px_rgba(56,189,248,0.14)]">
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-blue-200">ORB live</p>
+            <p className="mt-2 text-sm font-black text-white">Reflective intelligence stays available on every route.</p>
+          </Link>
+        </aside>
+
+        <div className="min-w-0">
+          <header className="sticky top-0 z-40 border-b border-white/80 bg-[#f8fafc]/90 px-3 py-3 backdrop-blur-xl md:px-6">
+            <div className="flex items-center gap-3">
+              <Link prefetch={false} href="/command-centre" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[radial-gradient(circle_at_30%_20%,#fff,transparent_24%),linear-gradient(135deg,#38bdf8,#2563eb_52%,#0f172a)] shadow-lg shadow-blue-500/20 lg:hidden" aria-label="Open command centre" />
+              <div className="min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600">Operational top bar</p>
+                <p className="truncate text-sm font-black text-slate-950">{pageTitle}</p>
+              </div>
+              <div className="ml-auto flex items-center gap-2">
+                <CommandSearch />
+                <Link prefetch={false} href="/young-people" className="hidden rounded-2xl border border-blue-100 bg-blue-50 px-3 py-2 text-sm font-black text-blue-800 shadow-sm transition hover:bg-blue-100 md:inline-flex">
+                  <ShieldCheck className="mr-2 h-4 w-4" aria-hidden />
+                  {activeChildName ? 'Switch child' : 'Choose child'}
+                </Link>
+                {selectedId ? <NotificationBell /> : null}
+                <div className="hidden rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 shadow-sm xl:block">{today}</div>
+                <details className="relative hidden md:block">
+                  <summary className="list-none rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-black text-slate-700 shadow-sm marker:hidden">Profile</summary>
+                  <div className="absolute right-0 mt-2 w-64 rounded-[24px] border border-slate-200 bg-white p-4 shadow-2xl shadow-slate-950/15">
+                    <p className="text-sm font-black text-slate-950">{displayName(user)}</p>
+                    <p className="mt-1 text-xs font-bold text-slate-500">{labelForRole(user.role)}</p>
+                    <Link prefetch={false} href="/profile" className="mt-4 flex rounded-2xl bg-slate-50 px-4 py-3 text-sm font-black text-slate-700">My profile</Link>
+                    <Link prefetch={false} href="/settings" className="mt-2 flex rounded-2xl bg-slate-50 px-4 py-3 text-sm font-black text-slate-700">Settings</Link>
+                    <button type="button" onClick={() => void logout()} data-testid="logout-button" className="mt-2 flex w-full items-center justify-center rounded-2xl border border-slate-200 px-4 py-3 text-sm font-black text-slate-700">
+                      <LogOut className="mr-2 h-4 w-4" aria-hidden />
+                      Log out
+                    </button>
+                  </div>
+                </details>
+              </div>
+            </div>
+            {activeChild && childDomainActive && secondaryNav.length ? (
+              <nav className="mt-3 flex gap-2 overflow-x-auto pb-1 text-xs font-black uppercase tracking-[0.12em]" aria-label="Child workspace navigation">
+                {secondaryNav.map((item) => {
+                  const active = pathname === item.href || (item.href !== '/young-people' && pathname.startsWith(item.href.split('?')[0]))
+                  return (
+                    <Link prefetch={false} key={`${item.label}-${item.href}`} href={item.href} className={`shrink-0 rounded-full px-4 py-2 transition ${active ? 'bg-blue-700 text-white' : 'bg-white text-slate-500 ring-1 ring-slate-200 hover:text-slate-950'}`}>
+                      {item.label}
+                    </Link>
+                  )
+                })}
+              </nav>
+            ) : null}
+            <nav className="mt-3 flex flex-wrap items-center gap-1 text-xs font-black uppercase tracking-[0.14em] text-slate-400" aria-label="Context breadcrumb">
+              {displayBreadcrumbs.map((crumb, index) => (
+                <span key={`${crumb.label}-${index}`} className="inline-flex items-center gap-1">
+                  {index > 0 ? <ChevronRight className="h-3 w-3" aria-hidden /> : null}
+                  {crumb.href && !crumb.current ? <Link prefetch={false} href={crumb.href} className="hover:text-blue-700">{crumb.label}</Link> : <span className={crumb.current ? 'text-slate-800' : undefined}>{crumb.label}</span>}
+                </span>
+              ))}
+            </nav>
+          </header>
+
+          <div data-testid="operational-shell-workspace" className="grid min-w-0 gap-6 px-4 py-6 pb-32 md:px-8 md:py-8 2xl:grid-cols-[minmax(0,1fr)_320px]">
+            <main className="min-w-0" aria-label="Operational workspace">
+              {children}
+            </main>
+            <aside className="hidden space-y-4 2xl:block" aria-label="Operational intelligence panel">
+              <ContextualOrbPanel />
+              <OperationalAlertsPanel />
+              <OperationalQuickActions selectedYoungPersonId={selectedId} selectedYoungPersonName={activeChildName} />
+            </aside>
           </div>
         </div>
-        {activeChild && childDomainActive && secondaryNav.length ? (
-          <nav className="mt-3 flex gap-2 overflow-x-auto pb-1 text-xs font-black uppercase tracking-[0.12em]" aria-label="Child workspace navigation">
-            {secondaryNav.map((item) => {
-              const active = pathname === item.href || (item.href !== '/young-people' && pathname.startsWith(item.href.split('?')[0]))
-              return (
-                <Link prefetch={false} key={`${item.label}-${item.href}`} href={item.href} className={`shrink-0 rounded-full px-4 py-2 transition ${active ? 'bg-blue-700 text-white' : 'bg-white text-slate-500 ring-1 ring-slate-200 hover:text-slate-950'}`}>
-                  {item.label}
-                </Link>
-              )
-            })}
-          </nav>
-        ) : null}
-        <nav className="mt-3 flex flex-wrap items-center gap-1 text-xs font-black uppercase tracking-[0.14em] text-slate-400" aria-label="Context breadcrumb">
-          {displayBreadcrumbs.map((crumb, index) => (
-            <span key={`${crumb.label}-${index}`} className="inline-flex items-center gap-1">
-              {index > 0 ? <ChevronRight className="h-3 w-3" aria-hidden /> : null}
-              {crumb.href && !crumb.current ? <Link prefetch={false} href={crumb.href} className="hover:text-blue-700">{crumb.label}</Link> : <span className={crumb.current ? 'text-slate-800' : undefined}>{crumb.label}</span>}
-            </span>
-          ))}
-        </nav>
-      </header>
-
-      <div data-testid="operational-shell-workspace" className="grid min-w-0 gap-6 px-4 py-6 pb-32 md:px-8 md:py-8 2xl:grid-cols-[minmax(0,1fr)_320px]">
-        <main className="min-w-0" aria-label="Operational workspace">
-          {children}
-        </main>
-        <aside className="hidden space-y-4 2xl:block" aria-label="Operational intelligence panel">
-          <ContextualOrbPanel />
-          <OperationalAlertsPanel />
-          <OperationalQuickActions selectedYoungPersonId={selectedId} selectedYoungPersonName={activeChildName} />
-        </aside>
       </div>
       <OrbButton context={orbContext} role={user.role} />
       <QuickActionButton selectedYoungPersonId={selectedId} selectedYoungPersonName={activeChildName} />

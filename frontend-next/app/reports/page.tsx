@@ -1,6 +1,7 @@
 import Link from 'next/link'
 
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
+import { CognitionPromptStack, OperationalSignalGrid } from '@/components/indicare/operational-cognition-widgets'
 import { Card, DataTable, EmptyState, PageHeader, SectionHeader, StatCard, StatusBadge } from '@/components/indicare/ui'
 import { getOsReports } from '@/lib/os-api/reports'
 import { reportTemplates } from '@/lib/regulatory-reporting/templates'
@@ -8,6 +9,8 @@ import { reportTemplates } from '@/lib/regulatory-reporting/templates'
 export default async function ReportsPage() {
   const reportsResult = await getOsReports()
   const reports = reportsResult.data
+  const reviewReports = reports.filter((report) => report.status.includes('review'))
+  const citedReports = reports.filter((report) => report.citations.length)
 
   return (
     <div className="space-y-6">
@@ -24,6 +27,24 @@ export default async function ReportsPage() {
         <StatCard label="Review" value={reports.filter((report) => report.status.includes('review')).length} />
         <StatCard label="Citations linked" value={reports.reduce((total, report) => total + report.citations.length, 0)} />
       </section>
+      <OperationalSignalGrid
+        signals={[
+          { label: 'Evidence quality', value: citedReports.length, detail: 'Reports with citations attached', tone: 'blue' },
+          { label: 'Review posture', value: reviewReports.length, detail: 'Drafts requiring professional review', tone: reviewReports.length ? 'amber' : 'emerald' },
+          { label: 'SCCIF readiness', value: reportTemplates.length, detail: 'Available regulatory and care templates', tone: 'purple' },
+          { label: 'Child voice', value: reports.filter((report) => /child voice|wishes|feelings/i.test(`${report.title} ${report.body || ''}`)).length, detail: 'Visible child voice markers in report metadata', tone: 'emerald' }
+        ]}
+      />
+      <CognitionPromptStack
+        title="Report review prompts"
+        prompts={[
+          'What evidence would help this report read as the child’s lived journey rather than a compliance summary?',
+          'Which citations are strongest for SCCIF leadership, protection and progress?',
+          'Where does the report need clearer child voice, family context or relationship impact?',
+          'What manager review should happen before this report is relied on externally?'
+        ]}
+        action={<Link href="/orb?scope=inspection" className="rounded-2xl bg-white px-4 py-3 text-sm font-black text-slate-950">Ask ORB</Link>}
+      />
       <Card>
         <SectionHeader eyebrow="Register" title="Generated and draft reports" />
         <DataTable
