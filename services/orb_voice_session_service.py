@@ -29,6 +29,7 @@ from services.assistant_context_service import build_shared_assistant_context
 from services.assistant_prompt_policy import assert_safe_assistant_message
 from services.assistant_response_service import AssistantResponseService
 from services.audit_event_service import record_audit_event
+from services.db_pool_monitor import db_pool_snapshot
 from services.operational_intelligence_service import build_orb_operational_intelligence_snapshot
 from services.orb_general_assistant_service import orb_general_assistant_service
 from services.orb_identity_service import orb_identity_service
@@ -1086,12 +1087,38 @@ class OrbVoiceSessionService:
                 mode=decision.assistant_mode,
                 conversation_id=session.id,
             )
-            assistant_data = self.assistant_response_service.query(
-                conn,
-                message=safe_message,
-                context=shared_context,
-                current_user=current_user,
-            )
+            voice_continuity = {
+                "active_child_id": context.selected_young_person_id or _memory_selected_child_id(memory_context),
+                "recent_topic": safe_message[:240],
+                "recent_citation_count": len(session.citations_used),
+                "recent_record_count": len(session.related_records),
+            }
+            if hasattr(shared_context, "model_copy"):
+                shared_context = shared_context.model_copy(update={"orb_voice_continuity": voice_continuity})
+            else:
+                shared_context["orb_voice_continuity"] = voice_continuity
+            pool = db_pool_snapshot()
+            if pool.get("saturated") and session.related_records:
+                assistant_data = {
+                    "answer": _operational_recovery_answer(
+                        message=safe_message,
+                        related_records=session.related_records[-12:],
+                        context=context,
+                        memory_context=memory_context,
+                    ) or "The database is under pressure, so I am using the recent scoped conversation context. Please retry before relying on this for a final manager decision.",
+                    "citations": session.citations_used[-8:],
+                    "related_records": session.related_records[-12:],
+                    "suggested_actions": [{"label": "Retry when live records are available", "type": "review"}],
+                    "evidence_gaps": [{"label": "Partial live context", "detail": "Database pool saturation triggered safe voice degradation."}],
+                    "regulatory_links": [],
+                }
+            else:
+                assistant_data = self.assistant_response_service.query(
+                    conn,
+                    message=safe_message,
+                    context=shared_context,
+                    current_user=current_user,
+                )
         elif decision.brain == "web_research_brain":
             assistant_data = await orb_web_search_service.answer(safe_message)
         elif decision.brain == "productivity_brain":

@@ -130,4 +130,49 @@ def test_orb_context_uses_live_context_where_available(monkeypatch, fake_state):
     assert response["sources"][0]["record_type"] == "daily_log"
     assert response["sources"][0]["record_id"] == "42"
     assert "[1]" in response["answer"]
+    assert "Child-centred narrative" in response["answer"]
+    assert "Inspection/regulatory relevance" in response["answer"]
     assert response["context_used"]["live_tables"] == ["daily_notes", "young_people"]
+
+
+def test_orb_context_uses_projection_first_when_pool_saturated(monkeypatch, fake_state):
+    monkeypatch.setattr("services.orb_operational_context_service.db_pool_snapshot", lambda: {"saturated": True, "saturation_pct": 92.0})
+    monkeypatch.setattr("services.orb_operational_context_service._existing_tables", lambda _conn: ["operational_projection_snapshots"])
+    monkeypatch.setattr(
+        "services.orb_operational_context_service._snapshot_rows",
+        lambda *_args, **_kwargs: [
+            {
+                "projection_key": "child-10-care-journey",
+                "projection_type": "care_journey",
+                "domain": "child",
+                "payload": {"title": "Care journey snapshot", "summary": "Jamie has sensory and education support evidence."},
+                "metadata": {},
+                "version": 1,
+                "stale": False,
+                "generated_at": "2026-05-19T09:00:00Z",
+                "updated_at": "2026-05-19T09:00:00Z",
+            }
+        ],
+    )
+    monkeypatch.setattr("services.orb_operational_context_service.list_chronology_for_connection", lambda *_args, **_kwargs: {"items": []})
+    monkeypatch.setattr("services.orb_operational_context_service.list_documents", lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("documents should be skipped")))
+    monkeypatch.setattr("services.orb_operational_context_service.list_actions", lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("actions should be skipped")))
+    monkeypatch.setattr("services.orb_operational_context_service.list_evidence", lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("evidence should be skipped")))
+    monkeypatch.setattr("services.orb_operational_context_service.list_reports", lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("reports should be skipped")))
+    monkeypatch.setattr("services.orb_operational_context_service.list_young_people", lambda *_args, **_kwargs: [])
+
+    context = build_orb_context(
+        FakeConn(),
+        current_user=fake_state["user"],
+        scope="child",
+        message="Summarise this young person's recent care journey.",
+        young_person_id=10,
+    )
+    response = build_orb_response(context)
+
+    assert response["context_used"]["degraded"] is True
+    assert response["context_used"]["snapshot_hit"] is True
+    assert response["context_used"]["pool_saturation_pct"] == 92.0
+    assert response["sources"][0]["record_type"] == "snapshot_child"
+    assert "Short operational summary" in response["answer"]
+    assert "Evidence sources" in response["answer"]

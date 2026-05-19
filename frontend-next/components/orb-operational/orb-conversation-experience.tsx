@@ -2,7 +2,7 @@
 
 import { FormEvent, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import { Send, ShieldCheck, Sparkles } from 'lucide-react'
+import { Activity, BadgeCheck, Mic2, Send, ShieldCheck, Sparkles } from 'lucide-react'
 
 import { queryOrbConversation, type OrbConversationResponse, type OrbScope } from '@/lib/os-api/orb'
 import type { OsPersonSummary } from '@/lib/os-api/workspaces'
@@ -12,6 +12,25 @@ type Message = {
   role: 'user' | 'assistant'
   text: string
   response?: OrbConversationResponse
+}
+
+type OrbIntelligenceResponse = OrbConversationResponse & {
+  care_journey?: {
+    emotional_themes?: string[]
+    protective_factors?: string[]
+    evidence_gaps?: string[]
+  }
+  regulatory_reasoning?: {
+    inspection_relevance?: Array<{ label?: string; reason?: string }>
+    management_considerations?: string[]
+  }
+  therapeutic_reasoning?: {
+    therapeutic_observations?: string[]
+  }
+  context_used?: OrbConversationResponse['context_used'] & {
+    degraded?: boolean
+    pool_saturation_pct?: number
+  }
 }
 
 const scopeOptions: Array<{ value: OrbScope; label: string; prompt: string }> = [
@@ -41,6 +60,10 @@ export function OrbConversationExperience({ childrenOptions }: { childrenOptions
   const [warning, setWarning] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
   const latestResponse = useMemo(() => [...messages].reverse().find((message) => message.response)?.response, [messages])
+  const latestIntelligence = latestResponse as OrbIntelligenceResponse | undefined
+  const latestContext = latestIntelligence?.context_used
+  const isDegraded = Boolean(latestContext?.degraded)
+  const statusLabel = isDegraded ? 'Partial context' : latestContext?.snapshot_hit ? 'Snapshot + live' : 'Live DB backed'
 
   async function submit(event?: FormEvent<HTMLFormElement>, override?: string, overrideScope?: OrbScope) {
     event?.preventDefault()
@@ -89,8 +112,8 @@ export function OrbConversationExperience({ childrenOptions }: { childrenOptions
             <h1 className="mt-3 text-4xl font-black tracking-[-0.07em] text-slate-950 md:text-6xl">Ask live IndiCare records</h1>
             <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-600">ORB retrieves live permitted records, cites sources where available, and keeps professional judgement with the registered manager and safeguarding leads.</p>
           </div>
-          <div className="rounded-2xl bg-blue-50 px-4 py-3 text-xs font-black uppercase tracking-[0.16em] text-blue-700">
-            {latestResponse?.context_used?.snapshot_hit ? 'Snapshot + live' : 'Live DB backed'}
+          <div className={`rounded-2xl px-4 py-3 text-xs font-black uppercase tracking-[0.16em] ${isDegraded ? 'bg-amber-50 text-amber-800' : 'bg-blue-50 text-blue-700'}`}>
+            {statusLabel}
           </div>
         </div>
 
@@ -108,6 +131,19 @@ export function OrbConversationExperience({ childrenOptions }: { childrenOptions
               {childrenOptions.map((person) => <option key={person.id} value={person.id}>{childName(person)}</option>)}
             </select>
           </label>
+        </div>
+
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          {[
+            ['Voice state', 'Typed ORB active; voice available from shell'],
+            ['RM review', 'Themes support review, not final decisions'],
+            ['Inspection context', latestIntelligence?.regulatory_reasoning?.inspection_relevance?.[0]?.label || 'SCCIF-aware evidence view']
+          ].map(([label, value]) => (
+            <div key={label} className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">{label}</p>
+              <p className="mt-1 text-xs font-black text-slate-800">{value}</p>
+            </div>
+          ))}
         </div>
 
         <div className="mt-6 flex flex-wrap gap-2">
@@ -167,12 +203,30 @@ export function OrbConversationExperience({ childrenOptions }: { childrenOptions
         </section>
 
         <section className="rounded-[32px] bg-white p-5 shadow-lg shadow-slate-200/60 ring-1 ring-white">
+          <div className="flex items-center gap-2">
+            <Activity className="h-5 w-5 text-blue-600" aria-hidden />
+            <h2 className="text-lg font-black text-slate-950">Operational intelligence</h2>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {(latestIntelligence?.care_journey?.emotional_themes?.length ? latestIntelligence.care_journey.emotional_themes : ['Themes appear after ORB checks records']).map((item) => (
+              <span key={item} className="rounded-full bg-blue-50 px-3 py-1 text-[11px] font-black text-blue-800">{item}</span>
+            ))}
+          </div>
+          <ul className="mt-4 space-y-2 text-xs font-semibold leading-5 text-slate-600">
+            {(latestIntelligence?.therapeutic_reasoning?.therapeutic_observations || []).slice(0, 2).map((item) => <li key={item}>- {item}</li>)}
+            {(latestIntelligence?.regulatory_reasoning?.management_considerations || []).slice(0, 2).map((item) => <li key={item}>- {item}</li>)}
+            {!latestIntelligence?.therapeutic_reasoning?.therapeutic_observations?.length && !latestIntelligence?.regulatory_reasoning?.management_considerations?.length ? <li>RM review prompts appear here after the first response.</li> : null}
+          </ul>
+        </section>
+
+        <section className="rounded-[32px] bg-white p-5 shadow-lg shadow-slate-200/60 ring-1 ring-white">
           <h2 className="text-lg font-black text-slate-950">Sources</h2>
           <div className="mt-4 space-y-3">
             {latestResponse?.sources?.map((source) => (
               <article key={`${source.record_type}-${source.record_id}`} className="rounded-2xl border border-slate-100 bg-slate-50 p-3">
                 <p className="text-[11px] font-black uppercase tracking-[0.16em] text-blue-700">{source.citation_ref} {source.record_type.replaceAll('_', ' ')}</p>
                 <h3 className="mt-1 text-sm font-black text-slate-900">{source.title}</h3>
+                {source.date ? <p className="mt-1 text-[11px] font-bold text-slate-400">{source.date}</p> : null}
                 <p className="mt-1 line-clamp-3 text-xs font-semibold leading-5 text-slate-500">{source.summary || 'Record available for review.'}</p>
                 {source.route ? <Link href={source.route} className="mt-2 inline-block text-xs font-black text-blue-700">Open source</Link> : null}
               </article>
@@ -194,11 +248,25 @@ export function OrbConversationExperience({ childrenOptions }: { childrenOptions
         </section>
 
         <section className="rounded-[32px] bg-slate-950 p-5 text-white shadow-lg shadow-slate-300/60">
-          <h2 className="text-lg font-black">Context used</h2>
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-lg font-black">Context used</h2>
+            <span className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] ${isDegraded ? 'bg-amber-300 text-slate-950' : 'bg-emerald-300 text-slate-950'}`}>
+              {statusLabel}
+            </span>
+          </div>
           <p className="mt-3 text-sm font-semibold leading-6 text-slate-300">Scope: {latestResponse?.context_used?.scope || scope}</p>
           <p className="text-sm font-semibold leading-6 text-slate-300">Confidence: {latestResponse?.confidence || 'not run yet'}</p>
           <p className="text-sm font-semibold leading-6 text-slate-300">Live tables: {latestResponse?.context_used?.live_tables?.length || 0}</p>
           <p className="text-sm font-semibold leading-6 text-slate-300">Projection keys: {latestResponse?.context_used?.projection_keys?.length || 0}</p>
+          <p className="text-sm font-semibold leading-6 text-slate-300">Pool saturation: {latestContext?.pool_saturation_pct ?? 0}%</p>
+          <Link href="/voice" className="mt-4 flex items-center gap-2 rounded-2xl bg-white/10 px-4 py-3 text-sm font-black text-white">
+            <Mic2 className="h-4 w-4" aria-hidden />
+            Open voice ORB
+          </Link>
+          <div className="mt-3 flex items-start gap-2 rounded-2xl bg-white/10 p-3 text-xs font-semibold leading-5 text-slate-200">
+            <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" aria-hidden />
+            Snapshot/live indicators help managers understand how much evidence ORB used.
+          </div>
         </section>
       </aside>
     </div>

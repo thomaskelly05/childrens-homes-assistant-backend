@@ -591,7 +591,7 @@ def list_passkeys_route(
     conn=Depends(get_db),
 ):
     user = _get_authenticated_user_from_request(request, conn, authorization)
-    items = list_user_passkeys(int(user["id"]))
+    items = list_user_passkeys(int(user["id"]), conn=conn)
     return {
         "ok": True,
         "items": items,
@@ -606,7 +606,7 @@ def passkey_status(
     conn=Depends(get_db),
 ):
     user = _get_authenticated_user_from_request(request, conn, authorization)
-    has_keys = user_has_passkeys(int(user["id"]))
+    has_keys = user_has_passkeys(int(user["id"]), conn=conn)
     return {
         "ok": True,
         "has_passkeys": has_keys,
@@ -659,7 +659,7 @@ def register_passkey_options(
     }
 
     try:
-        existing = list_user_passkeys(user_id)
+        existing = list_user_passkeys(user_id, conn=conn)
     except Exception:
         existing = []
 
@@ -712,6 +712,7 @@ def register_passkey_verify(
             transports=_safe_json(transports),
             aaguid=None,
             nickname=nickname,
+            conn=conn,
         )
     except Exception as exc:
         message = str(exc).lower()
@@ -757,7 +758,7 @@ def authenticate_passkey_options(
     user = _validate_active_user(user)
 
     try:
-        passkeys = list_user_passkeys(int(user["id"]))
+        passkeys = list_user_passkeys(int(user["id"]), conn=conn)
     except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -817,7 +818,7 @@ def authenticate_passkey_verify(
     credential = payload.credential or {}
     credential_id = _validate_passkey_authentication_ceremony(request, credential)
 
-    stored_passkey = get_passkey_by_credential_id(credential_id)
+    stored_passkey = get_passkey_by_credential_id(credential_id, conn=conn)
     if not stored_passkey:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -850,7 +851,7 @@ def authenticate_passkey_verify(
 
     current_sign_count = int(stored_passkey.get("sign_count") or 0)
     try:
-        update_passkey_sign_count(credential_id, current_sign_count + 1)
+        update_passkey_sign_count(credential_id, current_sign_count + 1, conn=conn)
     except Exception:
         pass
 
@@ -870,7 +871,7 @@ def delete_passkey_route(
     conn=Depends(get_db),
 ):
     user = _get_authenticated_user_from_request(request, conn, authorization)
-    deleted = delete_user_passkey(int(user["id"]), passkey_id)
+    deleted = delete_user_passkey(int(user["id"]), passkey_id, conn=conn)
 
     if not deleted:
         raise HTTPException(

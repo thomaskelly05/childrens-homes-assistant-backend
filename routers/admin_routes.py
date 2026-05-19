@@ -9,6 +9,7 @@ from psycopg2.extras import RealDictCursor
 
 from auth.current_user import get_current_user
 from db.connection import get_db
+from services.db_pool_monitor import db_pool_snapshot
 
 logger = logging.getLogger(__name__)
 
@@ -142,6 +143,11 @@ def get_current_admin(current_user=Depends(get_current_user)):
         raise HTTPException(status_code=403, detail="Admin access required")
 
     return current_user
+
+
+@router.get("/db-pool")
+def get_db_pool_status(admin=Depends(get_current_admin)):
+    return {"ok": True, "pool": db_pool_snapshot()}
 
 
 def normalise_role(role: str) -> str:

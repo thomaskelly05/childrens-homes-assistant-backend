@@ -56,24 +56,43 @@ def _prune_cache(cache: dict[str, Any], *, max_entries: int = _CACHE_MAX_ENTRIES
         cache.pop(key, None)
 
 
-def ensure_session_table() -> None:
+def _acquire(optional_conn: Any | None):
+    if optional_conn is not None:
+        return optional_conn, False
+    return get_db_connection(), True
+
+
+def _release(conn: Any | None, owned: bool) -> None:
+    if owned and conn is not None:
+        release_db_connection(conn)
+
+
+def _rollback(conn: Any | None) -> None:
+    if conn is not None and not getattr(conn, "closed", False):
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+
+
+def ensure_session_table(conn: Any | None = None) -> None:
     global _TABLE_READY
     if _TABLE_READY:
         return
-    conn = None
+    db_conn = None
+    owned = False
     try:
-        conn = get_db_connection()
-        with conn.cursor() as cur:
+        db_conn, owned = _acquire(conn)
+        with db_conn.cursor() as cur:
             cur.execute(CREATE_SESSION_TABLE_SQL)
-        conn.commit()
+        if owned:
+            db_conn.commit()
         _TABLE_READY = True
     except Exception:
-        if conn and not conn.closed:
-            conn.rollback()
+        _rollback(db_conn)
         logger.warning("Could not initialise user_sessions table", exc_info=True)
     finally:
-        if conn is not None:
-            release_db_connection(conn)
+        _release(db_conn, owned)
 
 
 def _client_ip(request: Request | None) -> str | None:
@@ -104,13 +123,15 @@ def create_session_record(
     request: Request | None,
     mfa_verified: bool = False,
     passkey_authenticated: bool = False,
+    conn: Any | None = None,
 ) -> str:
-    ensure_session_table()
+    ensure_session_table(conn)
     session_id = secrets.token_urlsafe(32)
-    conn = None
+    db_conn = None
+    owned = False
     try:
-        conn = get_db_connection()
-        with conn.cursor() as cur:
+        db_conn, owned = _acquire(conn)
+        with db_conn.cursor() as cur:
             cur.execute(
                 """
                 INSERT INTO user_sessions (
@@ -128,20 +149,19 @@ def create_session_record(
                     bool(passkey_authenticated),
                 ),
             )
-        conn.commit()
+        if owned:
+            db_conn.commit()
         _SESSION_REVOKED_CACHE[session_id] = (_now() + SESSION_REVOKED_CACHE_TTL_SECONDS, False)
         _SESSION_TOUCH_CACHE[session_id] = _now()
     except Exception:
-        if conn and not conn.closed:
-            conn.rollback()
+        _rollback(db_conn)
         logger.warning("Failed to create session record for user_id=%s", user_id, exc_info=True)
     finally:
-        if conn is not None:
-            release_db_connection(conn)
+        _release(db_conn, owned)
     return session_id
 
 
-def touch_session(session_id: str | None) -> None:
+def touch_session(session_id: str | None, conn: Any | None = None) -> None:
     if not session_id:
         return
     now = _now()
@@ -150,37 +170,38 @@ def touch_session(session_id: str | None) -> None:
         return
     _SESSION_TOUCH_CACHE[session_id] = now
     _prune_cache(_SESSION_TOUCH_CACHE)
-    ensure_session_table()
-    conn = None
+    ensure_session_table(conn)
+    db_conn = None
+    owned = False
     try:
-        conn = get_db_connection()
-        with conn.cursor() as cur:
+        db_conn, owned = _acquire(conn)
+        with db_conn.cursor() as cur:
             cur.execute(
                 "UPDATE user_sessions SET last_seen_at = NOW() WHERE session_id = %s AND revoked_at IS NULL",
                 (session_id,),
             )
-        conn.commit()
+        if owned:
+            db_conn.commit()
     except Exception:
-        if conn and not conn.closed:
-            conn.rollback()
+        _rollback(db_conn)
         logger.warning("Failed to touch session", exc_info=True)
     finally:
-        if conn is not None:
-            release_db_connection(conn)
+        _release(db_conn, owned)
 
 
-def is_session_revoked(session_id: str | None) -> bool:
+def is_session_revoked(session_id: str | None, conn: Any | None = None) -> bool:
     if not session_id:
         return False
     now = _now()
     cached = _SESSION_REVOKED_CACHE.get(session_id)
     if cached and cached[0] > now:
         return cached[1]
-    ensure_session_table()
-    conn = None
+    ensure_session_table(conn)
+    db_conn = None
+    owned = False
     try:
-        conn = get_db_connection()
-        with conn.cursor() as cur:
+        db_conn, owned = _acquire(conn)
+        with db_conn.cursor() as cur:
             cur.execute("SELECT revoked_at FROM user_sessions WHERE session_id = %s LIMIT 1", (session_id,))
             row = cur.fetchone()
             if not row:
@@ -193,19 +214,20 @@ def is_session_revoked(session_id: str | None) -> bool:
             _prune_cache(_SESSION_REVOKED_CACHE)
             return is_revoked
     except Exception:
+        _rollback(db_conn)
         logger.warning("Failed to check revoked session", exc_info=True)
         return False
     finally:
-        if conn is not None:
-            release_db_connection(conn)
+        _release(db_conn, owned)
 
 
-def revoke_session(session_id: str, reason: str = "revoked") -> bool:
-    ensure_session_table()
-    conn = None
+def revoke_session(session_id: str, reason: str = "revoked", conn: Any | None = None) -> bool:
+    ensure_session_table(conn)
+    db_conn = None
+    owned = False
     try:
-        conn = get_db_connection()
-        with conn.cursor() as cur:
+        db_conn, owned = _acquire(conn)
+        with db_conn.cursor() as cur:
             cur.execute(
                 """
                 UPDATE user_sessions
@@ -215,26 +237,26 @@ def revoke_session(session_id: str, reason: str = "revoked") -> bool:
                 (reason, session_id),
             )
             changed = cur.rowcount > 0
-        conn.commit()
+        if owned:
+            db_conn.commit()
         _SESSION_REVOKED_CACHE[session_id] = (_now() + SESSION_REVOKED_CACHE_TTL_SECONDS, True)
         _SESSION_TOUCH_CACHE.pop(session_id, None)
         return changed
     except Exception:
-        if conn and not conn.closed:
-            conn.rollback()
+        _rollback(db_conn)
         logger.warning("Failed to revoke session", exc_info=True)
         return False
     finally:
-        if conn is not None:
-            release_db_connection(conn)
+        _release(db_conn, owned)
 
 
-def revoke_user_sessions(user_id: int, *, except_session_id: str | None = None, reason: str = "admin_revoke") -> int:
-    ensure_session_table()
-    conn = None
+def revoke_user_sessions(user_id: int, *, except_session_id: str | None = None, reason: str = "admin_revoke", conn: Any | None = None) -> int:
+    ensure_session_table(conn)
+    db_conn = None
+    owned = False
     try:
-        conn = get_db_connection()
-        with conn.cursor() as cur:
+        db_conn, owned = _acquire(conn)
+        with db_conn.cursor() as cur:
             if except_session_id:
                 cur.execute(
                     """
@@ -255,7 +277,8 @@ def revoke_user_sessions(user_id: int, *, except_session_id: str | None = None, 
                 )
             rows = cur.fetchall() or []
             changed = len(rows)
-        conn.commit()
+        if owned:
+            db_conn.commit()
         for row in rows:
             sid = row.get("session_id") if isinstance(row, dict) else row[0]
             if sid:
@@ -263,13 +286,11 @@ def revoke_user_sessions(user_id: int, *, except_session_id: str | None = None, 
                 _SESSION_TOUCH_CACHE.pop(str(sid), None)
         return int(changed or 0)
     except Exception:
-        if conn and not conn.closed:
-            conn.rollback()
+        _rollback(db_conn)
         logger.warning("Failed to revoke user sessions", exc_info=True)
         return 0
     finally:
-        if conn is not None:
-            release_db_connection(conn)
+        _release(db_conn, owned)
 
 
 def set_trusted_device(session_id: str, trusted: bool) -> bool:
@@ -302,12 +323,13 @@ def set_trusted_device(session_id: str, trusted: bool) -> bool:
             release_db_connection(conn)
 
 
-def list_user_sessions(user_id: int) -> list[dict[str, Any]]:
-    ensure_session_table()
-    conn = None
+def list_user_sessions(user_id: int, conn: Any | None = None) -> list[dict[str, Any]]:
+    ensure_session_table(conn)
+    db_conn = None
+    owned = False
     try:
-        conn = get_db_connection()
-        with conn.cursor() as cur:
+        db_conn, owned = _acquire(conn)
+        with db_conn.cursor() as cur:
             cur.execute(
                 """
                 SELECT session_id, created_at, last_seen_at, revoked_at, revoke_reason,
@@ -322,8 +344,8 @@ def list_user_sessions(user_id: int) -> list[dict[str, Any]]:
             rows = cur.fetchall() or []
             return [dict(row) if isinstance(row, dict) else row for row in rows]
     except Exception:
+        _rollback(db_conn)
         logger.warning("Failed to list sessions", exc_info=True)
         return []
     finally:
-        if conn is not None:
-            release_db_connection(conn)
+        _release(db_conn, owned)

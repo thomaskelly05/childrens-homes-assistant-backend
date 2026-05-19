@@ -19,7 +19,12 @@ from repositories.os_repository_utils import (
 from repositories.reports_repository import list_reports
 from repositories.workspaces_repository import get_young_person, list_young_people
 from services.governance_intelligence_service import GovernanceIntelligenceService
+from services.db_pool_monitor import db_pool_snapshot
+from services.orb_care_journey_service import OrbCareJourneyService
 from services.os_chronology_service import list_chronology_for_connection
+from services.orb_regulatory_reasoning_service import OrbRegulatoryReasoningService
+from services.orb_response_composer import OrbResponseComposer
+from services.orb_therapeutic_reasoning_service import OrbTherapeuticReasoningService
 from services.workforce_intelligence_service import WorkforceIntelligenceService
 
 VALID_SCOPES = {"home", "child", "workforce", "governance", "inspection", "provider"}
@@ -274,6 +279,21 @@ def _answer_for(*, message: str, scope: str, intent: str, sources: list[dict[str
     return answer, " ".join(summary_parts), confidence
 
 
+def _projection_source(row: dict[str, Any], index: int) -> dict[str, Any]:
+    payload = row.get("payload") if isinstance(row.get("payload"), dict) else {}
+    metadata = row.get("metadata") if isinstance(row.get("metadata"), dict) else {}
+    title = payload.get("title") or metadata.get("title") or row.get("projection_key")
+    summary = payload.get("summary") or payload.get("narrative") or metadata.get("summary") or "Projection snapshot available for review."
+    return _source(
+        _text(title, "Operational projection snapshot"),
+        f"snapshot_{row.get('domain') or row.get('projection_type') or 'operational'}",
+        row.get("projection_key") or row.get("version") or index,
+        date_value=row.get("updated_at") or row.get("generated_at"),
+        summary=summary,
+        index=index,
+    )
+
+
 def build_orb_context(
     conn: Any,
     current_user: dict[str, Any],
@@ -293,19 +313,23 @@ def build_orb_context(
         filters["date_from"] = date.today().isoformat()
 
     errors: list[str] = []
+    pool_snapshot = db_pool_snapshot()
     snapshot_rows = _guarded(conn, errors, "projection_snapshots", lambda: _snapshot_rows(conn, current_user, scope=resolved_scope, home_id=resolved_home_id, young_person_id=young_person_id, staff_id=staff_id, limit=8), [])
+    degrade_live_reads = bool(pool_snapshot.get("saturated")) and bool(snapshot_rows)
     live_tables = _guarded(conn, errors, "schema_introspection", lambda: _existing_tables(conn), [])
     child_profile = None
     if young_person_id is not None:
         child_profile = _guarded(conn, errors, "child_profile", lambda: get_young_person(conn, young_person_id=young_person_id, current_user=current_user), None)
 
     chronology = _guarded(conn, errors, "chronology", lambda: list_chronology_for_connection(conn, current_user=current_user, filters=filters, page=1, page_size=min(limit, 80)).get("items", []), [])
-    safeguarding = _guarded(conn, errors, "safeguarding", lambda: list_chronology_for_connection(conn, current_user=current_user, filters={**filters, "safeguarding_only": True}, page=1, page_size=min(limit, 40)).get("items", []), [])
-    documents = _guarded(conn, errors, "documents", lambda: list_documents(conn, current_user=current_user, filters=filters, limit=limit), [])
-    actions = _guarded(conn, errors, "actions", lambda: list_actions(conn, current_user=current_user, filters=filters, limit=limit), [])
-    evidence = _guarded(conn, errors, "evidence", lambda: list_evidence(conn, current_user=current_user, filters=filters, limit=limit), [])
-    reports = _guarded(conn, errors, "reports", lambda: list_reports(conn, current_user=current_user, filters=filters, limit=limit), [])
-    children = [] if young_person_id is not None else _guarded(conn, errors, "children", lambda: list_young_people(conn, current_user=current_user, limit=100), [])
+    safeguarding = [] if degrade_live_reads else _guarded(conn, errors, "safeguarding", lambda: list_chronology_for_connection(conn, current_user=current_user, filters={**filters, "safeguarding_only": True}, page=1, page_size=min(limit, 40)).get("items", []), [])
+    documents = [] if degrade_live_reads else _guarded(conn, errors, "documents", lambda: list_documents(conn, current_user=current_user, filters=filters, limit=limit), [])
+    actions = [] if degrade_live_reads else _guarded(conn, errors, "actions", lambda: list_actions(conn, current_user=current_user, filters=filters, limit=limit), [])
+    evidence = [] if degrade_live_reads else _guarded(conn, errors, "evidence", lambda: list_evidence(conn, current_user=current_user, filters=filters, limit=limit), [])
+    reports = [] if degrade_live_reads else _guarded(conn, errors, "reports", lambda: list_reports(conn, current_user=current_user, filters=filters, limit=limit), [])
+    children = [] if young_person_id is not None or degrade_live_reads else _guarded(conn, errors, "children", lambda: list_young_people(conn, current_user=current_user, limit=100), [])
+    if degrade_live_reads:
+        errors.append("db_pool: saturated; using projection-first partial context")
 
     governance = {}
     if resolved_scope in {"governance", "inspection", "provider"} or intent in {"inspection_sccif", "reg44_reg45"}:
@@ -331,10 +355,26 @@ def build_orb_context(
         "snapshots": snapshot_rows,
         "live_tables": live_tables,
         "errors": errors,
+        "pool": pool_snapshot,
+        "degraded": degrade_live_reads,
     }
     sources = _sources_from_context(context, max(1, min(limit, 50)))
-    answer, summary, confidence = _answer_for(message=message, scope=resolved_scope, intent=intent, sources=sources, context=context, errors=errors)
+    if not sources and snapshot_rows:
+        sources = [_projection_source(row, index + 1) for index, row in enumerate(snapshot_rows[: min(limit, 10)])]
+    care_journey = OrbCareJourneyService().build({**context, "sources": sources})
+    regulatory_reasoning = OrbRegulatoryReasoningService().build(context=context, care_journey=care_journey)
+    therapeutic_reasoning = OrbTherapeuticReasoningService().build(context=context, care_journey=care_journey)
+    answer, summary, confidence = OrbResponseComposer().compose(
+        context={**context, "sources": sources},
+        care_journey=care_journey,
+        regulatory=regulatory_reasoning,
+        therapeutic=therapeutic_reasoning,
+        guardrails=GUARDRAILS,
+    )
     context["sources"] = sources
+    context["care_journey"] = care_journey
+    context["regulatory_reasoning"] = regulatory_reasoning
+    context["therapeutic_reasoning"] = therapeutic_reasoning
     context["answer"] = answer
     context["summary"] = summary
     context["confidence"] = confidence
@@ -344,6 +384,8 @@ def build_orb_context(
         "projection_keys": [row.get("projection_key") for row in snapshot_rows if row.get("projection_key")],
         "live_tables": live_tables,
         "snapshot_hit": bool(snapshot_rows),
+        "degraded": degrade_live_reads,
+        "pool_saturation_pct": pool_snapshot.get("saturation_pct"),
     }
     return context
 
@@ -369,4 +411,7 @@ def build_orb_response(context: dict[str, Any]) -> dict[str, Any]:
         "confidence": context.get("confidence") or "low",
         "guardrails": GUARDRAILS,
         "context_used": context.get("context_used") or {},
+        "care_journey": context.get("care_journey") or {},
+        "regulatory_reasoning": context.get("regulatory_reasoning") or {},
+        "therapeutic_reasoning": context.get("therapeutic_reasoning") or {},
     }

@@ -37,6 +37,11 @@ class CapturingAssistantResponseService:
         }
 
 
+class FailingAssistantResponseService:
+    def query(self, *_args, **_kwargs):
+        raise AssertionError("live retrieval should be skipped during saturated voice degradation")
+
+
 @pytest.mark.asyncio
 async def test_write_intent_creates_pending_draft_not_silent_save(monkeypatch):
     monkeypatch.setattr("services.orb_voice_session_service.record_audit_event", lambda **kwargs: None)
@@ -197,6 +202,43 @@ async def test_handover_recovery_uses_scoped_records_without_cross_child_leak(mo
 
 
 @pytest.mark.asyncio
+async def test_voice_turn_degrades_to_recent_context_when_pool_saturated(monkeypatch):
+    monkeypatch.setattr("services.orb_voice_session_service.record_audit_event", lambda **kwargs: None)
+    monkeypatch.setattr("services.orb_voice_session_service.db_pool_snapshot", lambda: {"saturated": True, "saturation_pct": 91.0})
+    service = OrbVoiceSessionService(assistant_response_service=FailingAssistantResponseService())
+    user = {"id": 7, "role": "support_worker", "home_id": 1, "allowed_home_ids": [1]}
+    start = await service.start_session(
+        request=OrbSessionStartRequest(
+            context=OrbContext(workspace="handover", home_id=1, selected_young_person_id=10, current_child={"id": 10, "preferredName": "Jamie"}),
+            provider="mock_voice",
+        ),
+        current_user=user,
+    )
+    session = service.get_session(start.session_id)
+    session.related_records = [
+        {
+            "id": "note-1",
+            "home_id": 1,
+            "young_person_id": 10,
+            "record_type": "daily_note",
+            "summary": "Jamie had a settled evening and staff used his sensory routine before bedtime.",
+        }
+    ]
+    session.citations_used = [{"label": "Daily note #1", "source_type": "daily_note", "source_id": "note-1"}]
+
+    response = await service.handle_event(
+        session_id=start.session_id,
+        event=OrbSessionEventRequest(type="user_text", text="Give me a handover for Jamie", context=OrbContext(home_id=1, selected_young_person_id=10, current_child={"id": 10, "preferredName": "Jamie"})),
+        conn=object(),
+        current_user=user,
+    )
+
+    assert response.assistant_turn is not None
+    assert "Jamie had a settled evening" in response.assistant_turn.content
+    assert response.citations
+
+
+@pytest.mark.asyncio
 async def test_realtime_partial_and_silence_state(monkeypatch):
     monkeypatch.setattr("services.orb_voice_session_service.record_audit_event", lambda **kwargs: None)
     service = OrbVoiceSessionService(assistant_response_service=FakeAssistantResponseService())
@@ -290,8 +332,8 @@ async def test_voice_session_uses_calm_british_defaults_and_text_fallback(monkey
         current_user=user,
     )
 
-    assert start.voice_profile.profile_id == "british_female_calm"
-    assert start.voice_profile.tone_profile == "calm_concise_human"
+    assert start.voice_profile.profile_id == "amelia_british_female_calm"
+    assert start.voice_profile.tone_profile == "british_female_calm_care_companion"
     assert start.voice_profile.product_name == "ORB powered by IndiCare"
     assert start.realtime["fallback_text_mode"] is True
     assert start.realtime_state["runtime"]["voice_orchestration"]["voice_profile"] == "british_female_calm"

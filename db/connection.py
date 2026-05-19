@@ -1,5 +1,6 @@
 import logging
 import os
+from contextlib import contextmanager
 
 from psycopg2 import InterfaceError, OperationalError
 from psycopg2.extras import RealDictCursor
@@ -34,11 +35,18 @@ db_pool: ThreadedConnectionPool | None = None
 
 def pool_status() -> dict[str, int | None]:
     if db_pool is None:
-        return {"min": DB_POOL_MIN, "max": DB_POOL_MAX, "used": 0, "available": 0}
+        return {"min": DB_POOL_MIN, "max": DB_POOL_MAX, "used": 0, "available": 0, "waiting": 0, "acquisition_failures": _db_pool_exhaustion_count}
 
     used = len(getattr(db_pool, "_used", {}) or {})
     available = len(getattr(db_pool, "_pool", []) or [])
-    return {"min": DB_POOL_MIN, "max": DB_POOL_MAX, "used": used, "available": available}
+    return {
+        "min": DB_POOL_MIN,
+        "max": DB_POOL_MAX,
+        "used": used,
+        "available": available,
+        "waiting": 0,
+        "acquisition_failures": _db_pool_exhaustion_count,
+    }
 
 
 def _log_pool_state(level: int, message: str, *, exc_info: bool = False) -> None:
@@ -165,6 +173,24 @@ def release_db_connection(conn, *, close: bool = False):
             db_pool.putconn(conn)
     except Exception:
         logger.warning("Failed to release DB connection back to pool", exc_info=True)
+
+
+@contextmanager
+def db_session(*, commit: bool = True):
+    """Acquire and always return a pooled connection for service-layer code."""
+
+    conn = None
+    try:
+        conn = get_db_connection()
+        yield conn
+        if commit and conn is not None and not conn.closed:
+            conn.commit()
+    except Exception:
+        if conn is not None and not conn.closed:
+            conn.rollback()
+        raise
+    finally:
+        release_db_connection(conn)
 
 
 def get_db():

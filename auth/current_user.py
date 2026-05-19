@@ -196,12 +196,12 @@ def _decode_user_id_from_payload(payload: dict[str, Any]) -> int:
         raise unauthorised("session_invalid", "Invalid session subject") from exc
 
 
-def _enforce_session_state(payload: dict[str, Any]) -> None:
+def _enforce_session_state(payload: dict[str, Any], conn: Any) -> None:
     session_id = payload.get("sid")
-    if session_id and is_session_revoked(str(session_id)):
+    if session_id and is_session_revoked(str(session_id), conn=conn):
         raise unauthorised("session_revoked", "Session has been revoked")
     if session_id:
-        touch_session(str(session_id))
+        touch_session(str(session_id), conn=conn)
 
 
 def _load_active_user(conn: Any, user_id: int) -> dict[str, Any]:
@@ -273,8 +273,8 @@ def get_current_user(
         raise unauthorised("not_authenticated", "Not authenticated")
 
     payload = _decode_session_payload(token)
-    _enforce_session_state(payload)
     user_id = _decode_user_id_from_payload(payload)
+    _enforce_session_state(payload, conn)
     user = _load_active_user(conn, user_id)
 
     role = _normalise_role(user.get("role"))
