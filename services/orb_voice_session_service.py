@@ -25,6 +25,7 @@ from schemas.orb import (
     OrbVoiceDraft,
     OrbVoiceProfile,
 )
+from services.assistant_context_service import build_shared_assistant_context
 from services.assistant_prompt_policy import assert_safe_assistant_message
 from services.assistant_response_service import AssistantResponseService
 from services.audit_event_service import record_audit_event
@@ -340,6 +341,16 @@ def _conversation_scope(context: OrbContext, decision: OrbModeDecision) -> str:
     if "governance" in workspace or "management" in workspace:
         return "governance"
     return "home"
+
+
+def _normalise_gap_items(items: list[Any]) -> list[dict[str, Any]]:
+    gaps: list[dict[str, Any]] = []
+    for item in items:
+        if isinstance(item, dict):
+            gaps.append(item)
+        elif item:
+            gaps.append({"label": "Evidence gap", "detail": str(item)})
+    return gaps
 
 
 def _draft_type(message: str) -> str:
@@ -1110,6 +1121,28 @@ class OrbVoiceSessionService:
                     "evidence_gaps": [{"label": "Partial live context", "detail": "Database pool saturation triggered safe voice degradation."}],
                     "regulatory_links": [],
                 }
+            elif not isinstance(self.assistant_response_service, AssistantResponseService):
+                shared_context = build_shared_assistant_context(
+                    current_user=current_user,
+                    requested_context=_assistant_context_from_orb(
+                        context,
+                        decision,
+                        session.id,
+                        memory_context=memory_context,
+                    ),
+                    mode=decision.assistant_mode,
+                    conversation_id=session.id,
+                )
+                if hasattr(shared_context, "model_copy"):
+                    shared_context = shared_context.model_copy(update={"orb_voice_continuity": voice_continuity})
+                else:
+                    shared_context["orb_voice_continuity"] = voice_continuity
+                assistant_data = self.assistant_response_service.query(
+                    conn,
+                    message=safe_message,
+                    context=shared_context,
+                    current_user=current_user,
+                )
             else:
                 orb_context = build_orb_context(
                     conn,
@@ -1129,7 +1162,7 @@ class OrbVoiceSessionService:
                     if item.get("record_id")
                 ]
                 assistant_data["suggested_actions"] = assistant_data.get("actions") or []
-                assistant_data["evidence_gaps"] = (assistant_data.get("regulatory_reasoning") or {}).get("evidence_gaps") or []
+                assistant_data["evidence_gaps"] = _normalise_gap_items((assistant_data.get("regulatory_reasoning") or {}).get("evidence_gaps") or [])
                 assistant_data["regulatory_links"] = (assistant_data.get("regulatory_reasoning") or {}).get("inspection_relevance") or []
         elif decision.brain == "web_research_brain":
             assistant_data = await orb_web_search_service.answer(safe_message)
@@ -1238,7 +1271,7 @@ class OrbVoiceSessionService:
             citations=citations,
             related_records=related_records,
             suggested_actions=list(assistant_data.get("suggested_actions") or []),
-            evidence_gaps=list(assistant_data.get("evidence_gaps") or []),
+            evidence_gaps=_normalise_gap_items(list(assistant_data.get("evidence_gaps") or [])),
             regulatory_links=list(assistant_data.get("regulatory_links") or []),
             tools_used=tools_used,
             tool_orchestration=tool_orchestration,
