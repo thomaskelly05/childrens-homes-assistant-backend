@@ -1,8 +1,10 @@
 import Link from 'next/link'
 
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
+import { CognitionPromptStack, OperationalBarChart, OperationalSignalGrid } from '@/components/indicare/operational-cognition-widgets'
 import { Card, DataTable, EmptyState, PageHeader, SectionHeader, StatCard, StatusBadge } from '@/components/indicare/ui'
 import { getGovernanceCommandCentre } from '@/lib/os-api/governance'
+import { valueFromRecord } from '@/lib/operational/cognition-metrics'
 
 function text(value: unknown, fallback: unknown = 'Not returned'): string | number {
   if (value === undefined || value === null || value === '') return typeof fallback === 'number' ? fallback : String(fallback ?? 'Not returned')
@@ -24,6 +26,19 @@ export default async function GovernanceCommandCentrePage() {
   const reg44Visits = Array.isArray(data.reg44?.visits) ? data.reg44.visits : []
   const orbSummary = data.orb_governance_summary?.governance_summary || {}
   const snapshot = data.snapshot || {}
+  const governanceSignals = [
+    { label: 'SCCIF visibility', value: text(summary.inspection_readiness, valueFromRecord(data.inspection_readiness || {}, ['status'], 'Review')), detail: `${matrixEntries.length} evidence matrix entr${matrixEntries.length === 1 ? 'y' : 'ies'}`, tone: 'blue' as const },
+    { label: 'Operational drift', value: text(summary.governance_risk, valueFromRecord(data.governance_risk || {}, ['level', 'status'], 'Review')), detail: `${actions.length} governance action${actions.length === 1 ? '' : 's'}`, tone: actions.length ? 'amber' as const : 'emerald' as const },
+    { label: 'Safeguarding posture', value: text(summary.safeguarding_posture, valueFromRecord(data.safeguarding_drift || {}, ['status', 'level'], 'Review')), detail: 'Safeguarding drift from Governance OS', tone: 'purple' as const },
+    { label: 'Child voice visibility', value: text(summary.child_voice_visibility, valueFromRecord(data.child_journey_health || {}, ['child_voice_visibility', 'status'], 'Review')), detail: 'Child journey health summary', tone: 'emerald' as const }
+  ]
+  const oversightData = [
+    { label: 'Actions', value: actions.length },
+    { label: 'Concerns', value: data.unresolved_concerns.length },
+    { label: 'Evidence', value: matrixEntries.length },
+    { label: 'Reg 44', value: reg44Visits.length },
+    { label: 'Flags', value: Object.keys(data.feature_flags || {}).length }
+  ]
 
   return (
     <div className="space-y-6">
@@ -68,6 +83,22 @@ export default async function GovernanceCommandCentrePage() {
         <StatCard label="Evidence gaps" value={text(summary.evidence_gaps, 0)} detail={`${text(matrixSummary.evidence_sources, 0)} sources indexed`} href="/evidence" />
         <StatCard label="Open concerns" value={text(summary.unresolved_concerns, actions.length)} detail="Consolidated governance actions" href="/actions" />
         <StatCard label="Workforce alerts" value={text(summary.workforce_alerts, 0)} detail="From Workforce OS command centre" href="/staff/command-centre" />
+      </section>
+
+      <OperationalSignalGrid signals={governanceSignals} />
+
+      <section className="grid gap-6 xl:grid-cols-2">
+        <OperationalBarChart title="Governance oversight visibility" data={oversightData} />
+        <CognitionPromptStack
+          title="Reflective operational oversight"
+          prompts={[
+            'Which SCCIF area has evidence quality but not enough child voice?',
+            'Where might operational drift be developing before it becomes safeguarding-critical?',
+            'What governance action would create the clearest leadership grip today?',
+            'Which workforce or chronology signal should the registered manager evidence next?'
+          ]}
+          action={<Link href="/orb?scope=governance" className="rounded-2xl bg-white px-4 py-3 text-sm font-black text-slate-950">Ask ORB</Link>}
+        />
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.8fr)]">

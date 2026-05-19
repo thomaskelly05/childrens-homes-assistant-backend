@@ -2,12 +2,14 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
+import { CognitionPromptStack, OperationalBarChart, OperationalSignalGrid, OperationalTrendChart, WellbeingRing } from '@/components/indicare/operational-cognition-widgets'
 import { ChildIdentitySurface, ChronologySurface, ContextSurface, WorkspaceStack } from '@/components/indicare/operational-surfaces'
 import { DataTable, EmptyState, RecordTimeline, RiskBadge, SectionHeader, StatusBadge } from '@/components/indicare/ui'
 import { recordTitle, text } from '@/lib/os-api/bundles'
 import { getServerChildProfileBundle } from '@/lib/os-api/server-bundles'
 import { getServerOsActions, getServerOsChronology, getServerOsDocuments, getServerOsEvidence } from '@/lib/os-api/server-records'
 import { getServerOsYoungPersonWorkspace } from '@/lib/os-api/server-workspaces'
+import { buildChronologyThemeData, buildChronologyTrendData } from '@/lib/operational/cognition-metrics'
 
 const API_BASE = (
   process.env.NEXT_PUBLIC_BACKEND_URL ||
@@ -46,6 +48,24 @@ export default async function YoungPersonDetailPage({ params, searchParams }: { 
   const evidence = evidenceResult.data
   const actions = actionsResult.data
   const dailyNotes = chronology.filter((event) => event.sourceType === 'daily_log')
+  const emotionalEvents = chronology.filter((event) => /wellbeing|mood|emotion|regulation|settled|anxious|low/i.test(`${event.title} ${event.summary} ${event.fullText}`))
+  const relationshipEvents = chronology.filter((event) => /relationship|family|contact|trusted adult|peer/i.test(`${event.title} ${event.summary} ${event.fullText}`))
+  const highConcernEvents = chronology.filter((event) => event.severity === 'high' || event.severity === 'critical' || event.safeguardingFlags.length)
+  const supportEffectiveness = chronology.length ? Math.max(0, Math.min(100, Math.round(((chronology.length - highConcernEvents.length) / chronology.length) * 100))) : 100
+  const communicationStyle = text(bundle.communication, ['communication_style'], 'Not returned yet')
+  const pronouns = text(identity, ['pronouns'], 'Pronouns not returned')
+  const trustedAdults = [text(keyWorker, ['full_name', 'display_name', 'email'], ''), text(identity, ['trusted_adults', 'trustedAdults'], '')].filter(Boolean).join(' · ') || 'Trusted adults not returned'
+  const journeySignals = [
+    { label: 'Pronouns', value: pronouns, detail: 'Identity language from the child profile bundle', tone: 'blue' as const },
+    { label: 'Communication style', value: communicationStyle, detail: 'How adults should listen and respond', tone: 'purple' as const },
+    { label: 'Trusted adults', value: trustedAdults, detail: 'Key relational anchors returned by live profile data', tone: 'emerald' as const },
+    { label: 'Sensory support', value: text(bundle.communication, ['sensory_needs'], 'Not returned'), detail: 'Sensory and regulation context', tone: 'slate' as const }
+  ]
+  const childRings = [
+    { label: 'Emotional safety', value: chronology.length ? Math.max(0, 100 - highConcernEvents.length * 12 + emotionalEvents.length * 3) : 100, detail: `${emotionalEvents.length} emotional wellbeing signal${emotionalEvents.length === 1 ? '' : 's'}`, tone: 'blue' as const },
+    { label: 'Relationships', value: chronology.length ? Math.min(100, 62 + relationshipEvents.length * 6) : 70, detail: `${relationshipEvents.length} relationship marker${relationshipEvents.length === 1 ? '' : 's'}`, tone: 'purple' as const },
+    { label: 'Support effect', value: supportEffectiveness, detail: `${highConcernEvents.length} high-concern event${highConcernEvents.length === 1 ? '' : 's'} in chronology`, tone: highConcernEvents.length ? 'amber' as const : 'emerald' as const }
+  ]
   const profileDiagnostics = [
     ['Workspace', workspaceResult.source === 'live' ? 'live /os workspace' : workspaceResult.warning || 'workspace unavailable'],
     ['Chronology', `Live chronology returned ${chronology.length} row${chronology.length === 1 ? '' : 's'} for this child`],
@@ -71,6 +91,8 @@ export default async function YoungPersonDetailPage({ params, searchParams }: { 
               <div className="mt-5 flex flex-wrap gap-2">
                 <RiskBadge value={text(identity, ['summary_risk_level', 'risk_level', 'riskLevel'], 'medium') as any} />
                 <StatusBadge value={text(identity, ['placement_status', 'placementStatus'], 'placement not returned')} />
+                <StatusBadge value={pronouns} />
+                <StatusBadge value={`communication: ${communicationStyle}`} />
                 <StatusBadge value={identity.age ? `age ${identity.age}` : 'age not returned'} />
                 <StatusBadge value={`key worker: ${text(keyWorker, ['full_name', 'display_name', 'email'], text(identity, ['key_worker_name', 'keyWorkerName', 'key_worker_id', 'keyWorkerId'], 'not returned'))}`} />
                 {query.saved ? <StatusBadge value={`saved: ${query.saved}`} /> : null}
@@ -94,6 +116,29 @@ export default async function YoungPersonDetailPage({ params, searchParams }: { 
             <p className="mt-2 text-sm font-bold leading-6 text-slate-700">{value}</p>
           </ContextSurface>
         ))}
+      </section>
+
+      <OperationalSignalGrid signals={journeySignals} />
+
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <OperationalTrendChart title="Lived journey trajectory" description="Live chronology volume with high-concern events overlaid as the secondary signal." data={buildChronologyTrendData(chronology)} />
+        <div className="grid gap-4">
+          {childRings.map((ring) => <WellbeingRing key={ring.label} {...ring} />)}
+        </div>
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-2">
+        <OperationalBarChart title="Child-centred chronology themes" data={buildChronologyThemeData(chronology)} />
+        <CognitionPromptStack
+          title="Therapeutic recording prompts"
+          prompts={[
+            'What changed for the child, and what might the child have been communicating?',
+            'Which adult response appeared supportive, relational and emotionally safe?',
+            'What helped routines, regulation, belonging or trust?',
+            'What should the registered manager review next in the child journey?'
+          ]}
+          action={<Link href={`/orb?scope=child&young_person_id=${encodeURIComponent(id)}`} className="rounded-2xl bg-white px-4 py-3 text-sm font-black text-slate-950">Ask ORB</Link>}
+        />
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(340px,0.75fr)]">

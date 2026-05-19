@@ -1,10 +1,12 @@
 import Link from 'next/link'
 
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
+import { CognitionPromptStack, OperationalBarChart, OperationalSignalGrid, OperationalTrendChart, WellbeingRing } from '@/components/indicare/operational-cognition-widgets'
 import { Card, DataTable, EmptyState, PageHeader, SectionHeader, StatCard, StatusBadge } from '@/components/indicare/ui'
 import { getGovernanceCommandCentre } from '@/lib/os-api/governance'
 import { getCommandCentre } from '@/lib/os-api/platform'
 import { getWorkforceCommandCentre } from '@/lib/os-api/workforce'
+import { buildChronologyThemeData, buildChronologyTrendData, buildCommandCentreSignals, buildOperationalPressureData, buildReflectivePrompts, buildWellbeingRings } from '@/lib/operational/cognition-metrics'
 
 function text(value: unknown, fallback: unknown = 'Not returned'): string | number {
   if (value === undefined || value === null || value === '') return typeof fallback === 'number' ? fallback : String(fallback ?? 'Not returned')
@@ -30,6 +32,12 @@ export default async function UnifiedCommandCentrePage() {
   const workforceData = workforce.data
   const governanceSummary = governanceData.summary || {}
   const orbSummary = governanceData.orb_governance_summary?.governance_summary || governanceData.orb_governance_summary || {}
+  const signals = buildCommandCentreSignals(platformData, governanceData, workforceData)
+  const pressureData = buildOperationalPressureData(platformData, governanceData, workforceData)
+  const chronologyTrend = buildChronologyTrendData(platformData.chronology)
+  const chronologyThemes = buildChronologyThemeData(platformData.chronology)
+  const wellbeingRings = buildWellbeingRings(platformData, workforceData)
+  const reflectivePrompts = buildReflectivePrompts(platformData, governanceData, workforceData)
   const operationalAlerts = [
     ...platformData.attention.map((item) => ({
       title: item.title,
@@ -55,8 +63,8 @@ export default async function UnifiedCommandCentrePage() {
     <div className="space-y-6">
       <PageHeader
         eyebrow="Unified command centre"
-        title="One operational leadership workspace"
-        description="A calm command centre joining workforce health, child journey health, governance risk, safeguarding concerns, relational stability, inspection readiness, operational alerts and ORB summaries."
+        title="Operational heartbeat of the home"
+        description="A calm live view of atmosphere, safeguarding posture, child wellbeing trajectories, workforce pressure, chronology themes, inspection readiness and ORB reflective prompts."
         action={<Link prefetch={false} href="/orb?context=command-centre" className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg shadow-slate-950/20">Ask ORB about this view</Link>}
       />
 
@@ -65,6 +73,26 @@ export default async function UnifiedCommandCentrePage() {
         <LiveDataStatus result={governance} />
         <LiveDataStatus result={workforce} />
       </section>
+
+      <OperationalSignalGrid signals={signals} />
+
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <OperationalTrendChart title="Child wellbeing and chronology trajectory" description="Monthly live chronology volume with high-concern events overlaid as the secondary signal." data={chronologyTrend} />
+        <div className="grid gap-4">
+          {wellbeingRings.map((ring) => <WellbeingRing key={ring.label} {...ring} />)}
+        </div>
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-2">
+        <OperationalBarChart title="Pressure by operational domain" data={pressureData} />
+        <OperationalBarChart title="Meaningful chronology themes" data={chronologyThemes} />
+      </section>
+
+      <CognitionPromptStack
+        title="RM reflective prompts"
+        prompts={reflectivePrompts}
+        action={<Link prefetch={false} href="/orb?context=command-centre" className="rounded-2xl bg-white px-4 py-3 text-sm font-black text-slate-950">Ask ORB</Link>}
+      />
 
       <section className="grid gap-4 md:grid-cols-4 xl:grid-cols-8">
         <StatCard label="Children" value={platformData.children.length} detail="Visible child records" href="/young-people" />
