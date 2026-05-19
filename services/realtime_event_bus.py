@@ -86,6 +86,7 @@ class RealtimeEventBus:
         required_permission: str = "assistant:access",
         dedupe_key: str | None = None,
         throttle_key: str | None = None,
+        correlation_id: str | None = None,
     ) -> dict[str, Any]:
         if event_type not in REALTIME_EVENT_TYPES:
             raise ValueError(f"Unsupported realtime event type: {event_type}")
@@ -97,23 +98,31 @@ class RealtimeEventBus:
         if required_permission and not policy_engine.has_permission(actor, required_permission, home_id=home_scope):
             raise PermissionError("Realtime event permission denied")
 
-        event_payload = _safe_payload(payload or {})
+        raw_payload = payload or {}
+        event_payload = _safe_payload(raw_payload)
         dedupe = dedupe_key or self._dedupe_hash(event_type, home_scope, event_payload)
         if self._is_duplicate(dedupe):
-            return {"published": False, "duplicate": True, "event_id": dedupe}
+            return {"published": False, "duplicate": True, "event_id": dedupe, "dedupe_key": dedupe}
         if self._is_throttled(throttle_key or f"{home_scope}:{event_type}"):
-            orb_observability_service.record_event("realtime_event_throttled", home_id=home_scope, metadata={"event_type": event_type})
-            return {"published": False, "throttled": True, "event_id": dedupe}
+            orb_observability_service.record_event("realtime_event_throttled", home_id=home_scope, metadata={"event_type": event_type, "dedupe_key": dedupe})
+            return {"published": False, "throttled": True, "event_id": dedupe, "dedupe_key": dedupe}
 
         self._sequence += 1
+        stable_correlation_id = correlation_id or str(raw_payload.get("correlation_id") or raw_payload.get("request_id") or dedupe)
         event = {
             "id": f"evt_{uuid.uuid4().hex[:16]}",
             "cursor": self._sequence,
             "type": event_type,
             "home_id": home_scope,
             "provider_id": actor.get("provider_id") or actor.get("providerId"),
-            "payload": event_payload,
+            "payload": {
+                **event_payload,
+                "correlation_id": stable_correlation_id,
+                "dedupe_key": dedupe,
+            },
             "actor_id": str(actor.get("id") or actor.get("sub") or ""),
+            "correlation_id": stable_correlation_id,
+            "dedupe_key": dedupe,
             "created_at": datetime.now(timezone.utc).isoformat(),
         }
         channel = self._channel(home_scope)
@@ -124,8 +133,8 @@ class RealtimeEventBus:
             except Exception:
                 logger.warning("Redis realtime publish failed; retaining local replay buffer", exc_info=True)
         self._memory_events[channel].append(event)
-        orb_observability_service.record_event("realtime_event_published", home_id=home_scope, metadata={"event_type": event_type})
-        return {"published": True, "event_id": event["id"], "channel": channel}
+        orb_observability_service.record_event("realtime_event_published", home_id=home_scope, metadata={"event_type": event_type, "dedupe_key": dedupe})
+        return {"published": True, "event_id": event["id"], "channel": channel, "dedupe_key": dedupe, "correlation_id": stable_correlation_id}
 
     def recent_events_for_user(self, *, current_user: dict[str, Any], home_id: int | str | None, limit: int = 20) -> list[dict[str, Any]]:
         home_scope = _home_id(home_id)
