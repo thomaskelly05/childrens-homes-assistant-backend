@@ -18,8 +18,12 @@ type CacheEntry<T> = {
 
 const osGetCache = new Map<string, CacheEntry<unknown>>()
 
+function isServerRuntime() {
+  return typeof window === 'undefined'
+}
+
 function resolveOsUrl(path: string) {
-  if (typeof window !== 'undefined') return path.startsWith('/') ? path : `/${path}`
+  if (!isServerRuntime()) return path.startsWith('/') ? path : `/${path}`
   return `${API_BASE}${path.startsWith('/') ? path : `/${path}`}`
 }
 
@@ -66,12 +70,44 @@ async function fetchWithTimeout(url: string, init: RequestInit) {
   }
 }
 
+async function serverAuthHeaders(): Promise<Record<string, string>> {
+  if (!isServerRuntime()) return {}
+
+  try {
+    const nextHeaders = await import('next/headers')
+    const cookieStore = await nextHeaders.cookies()
+    const cookieHeader = cookieStore
+      .getAll()
+      .map((cookie) => `${encodeURIComponent(cookie.name)}=${encodeURIComponent(cookie.value)}`)
+      .join('; ')
+
+    const incomingHeaders = await nextHeaders.headers()
+    const authHeader = incomingHeaders.get('authorization')
+    const csrfHeader = incomingHeaders.get('x-csrf-token') || incomingHeaders.get('x-xsrf-token')
+
+    return {
+      ...(cookieHeader ? { cookie: cookieHeader } : {}),
+      ...(authHeader ? { authorization: authHeader } : {}),
+      ...(csrfHeader ? { 'x-csrf-token': csrfHeader } : {})
+    }
+  } catch {
+    return {}
+  }
+}
+
+async function osHeaders(extra: HeadersInit = {}) {
+  return {
+    ...(await serverAuthHeaders()),
+    ...extra
+  }
+}
+
 async function doOsGet<T>(path: string, fallback: T): Promise<OsApiResult<T>> {
   try {
     const response = await fetchWithTimeout(resolveOsUrl(path), {
       cache: 'no-store',
       credentials: 'include',
-      headers: { 'x-indicare-rsc': '1' }
+      headers: await osHeaders({ 'x-indicare-rsc': '1' })
     })
     if (!response.ok) {
       return { data: emptyData(fallback), source: 'unavailable', warning: calmOsWarning(response.status), error: developerDetail(`${response.status} ${response.statusText}`) }
@@ -89,6 +125,11 @@ async function doOsGet<T>(path: string, fallback: T): Promise<OsApiResult<T>> {
 }
 
 export async function osGet<T>(path: string, fallback: T): Promise<OsApiResult<T>> {
+  // Server components must not share auth-scoped API results across users or requests.
+  // They also need the incoming cookies forwarded explicitly; browser fetch credentials
+  // do not help when the call is made by the Next.js server runtime.
+  if (isServerRuntime()) return doOsGet(path, fallback)
+
   const key = cacheKey(path)
   const now = Date.now()
   const existing = osGetCache.get(key) as CacheEntry<T> | undefined
@@ -97,6 +138,9 @@ export async function osGet<T>(path: string, fallback: T): Promise<OsApiResult<T
   pruneCache()
   const promise = doOsGet(path, fallback)
   osGetCache.set(key, { expiresAt: now + OS_GET_CACHE_TTL_MS, promise })
+  promise.then((result) => {
+    if (result.source !== 'live') osGetCache.delete(key)
+  }).catch(() => osGetCache.delete(key))
   return promise
 }
 
@@ -106,9 +150,10 @@ export async function osPost<T>(path: string, body: unknown, fallback: T): Promi
       method: 'POST',
       cache: 'no-store',
       credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: await osHeaders({
+        'Content-Type': 'application/json',
+        'x-indicare-rsc': '1'
+      }),
       body: JSON.stringify(body)
     })
     if (!response.ok) {
