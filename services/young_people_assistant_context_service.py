@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+import time
 from collections import Counter
 from datetime import date, datetime
 from typing import Any
@@ -23,6 +25,33 @@ CARE_SOURCES: tuple[dict[str, str], ...] = (
 
 HIGH_SIGNAL_TYPES = {"incident", "safeguarding", "risk", "missing_episode"}
 HIGH_SIGNAL_SEVERITIES = {"high", "critical", "urgent", "significant", "red"}
+CONTEXT_CACHE_TTL_SECONDS = int(os.getenv("YOUNG_PERSON_ASSISTANT_CONTEXT_CACHE_TTL_SECONDS", "20"))
+CONTEXT_CACHE_MAX_ENTRIES = int(os.getenv("YOUNG_PERSON_ASSISTANT_CONTEXT_CACHE_MAX_ENTRIES", "1000"))
+_CONTEXT_CACHE: dict[tuple[int, int | None, int | None, int], tuple[float, dict[str, Any]]] = {}
+
+
+def _now() -> float:
+    return time.time()
+
+
+def _cache_get(key: tuple[int, int | None, int | None, int]) -> dict[str, Any] | None:
+    cached = _CONTEXT_CACHE.get(key)
+    if not cached:
+        return None
+    expires_at, payload = cached
+    if expires_at <= _now():
+        _CONTEXT_CACHE.pop(key, None)
+        return None
+    return {**payload, "cache": "memory"}
+
+
+def _cache_set(key: tuple[int, int | None, int | None, int], payload: dict[str, Any]) -> None:
+    _CONTEXT_CACHE[key] = (_now() + CONTEXT_CACHE_TTL_SECONDS, payload)
+    while len(_CONTEXT_CACHE) > CONTEXT_CACHE_MAX_ENTRIES:
+        first_key = next(iter(_CONTEXT_CACHE), None)
+        if first_key is None:
+            break
+        _CONTEXT_CACHE.pop(first_key, None)
 
 
 def _serialise(value: Any) -> Any:
@@ -168,48 +197,17 @@ def _build_alerts(timeline: list[dict[str, Any]], risk_signals: list[dict[str, A
     risk_count = counts.get("risk", 0)
 
     if safeguarding_count >= 2:
-        alerts.append({
-            "level": "high",
-            "title": "Multiple safeguarding records",
-            "summary": f"{safeguarding_count} safeguarding record(s) are visible. Check management oversight, actions taken and follow-up evidence.",
-        })
-
+        alerts.append({"level": "high", "title": "Multiple safeguarding records", "summary": f"{safeguarding_count} safeguarding record(s) are visible. Check management oversight, actions taken and follow-up evidence."})
     if incident_count >= 3:
-        alerts.append({
-            "level": "warning",
-            "title": "Repeated incidents",
-            "summary": f"{incident_count} incident record(s) are visible. Review for escalation, triggers, patterns and plan updates.",
-        })
-
+        alerts.append({"level": "warning", "title": "Repeated incidents", "summary": f"{incident_count} incident record(s) are visible. Review for escalation, triggers, patterns and plan updates."})
     if missing_count:
-        alerts.append({
-            "level": "high",
-            "title": "Missing episode evidence",
-            "summary": f"{missing_count} missing episode record(s) are visible. Check return home interviews, risk review and multi-agency follow-up.",
-        })
-
+        alerts.append({"level": "high", "title": "Missing episode evidence", "summary": f"{missing_count} missing episode record(s) are visible. Check return home interviews, risk review and multi-agency follow-up."})
     if risk_count or risk_signals:
-        alerts.append({
-            "level": "medium",
-            "title": "Risk review required",
-            "summary": f"{max(risk_count, len(risk_signals))} risk/safeguarding signal(s) should be checked for current controls and review dates.",
-        })
-
-    has_keywork = any(item.get("record_type") == "keywork" for item in timeline)
-    if not has_keywork and timeline:
-        alerts.append({
-            "level": "medium",
-            "title": "Child voice may be under-evidenced",
-            "summary": "No keywork evidence is visible in the current context window. Check whether the child’s wishes, feelings and voice are clearly recorded.",
-        })
-
-    has_plan = any(item.get("record_type") == "support_plan" for item in timeline)
-    if not has_plan and (incident_count or safeguarding_count or risk_count):
-        alerts.append({
-            "level": "medium",
-            "title": "Plan linkage gap",
-            "summary": "Risk, safeguarding or incident evidence is visible without support plan review evidence in the current window. Check whether plans reflect recent events.",
-        })
+        alerts.append({"level": "medium", "title": "Risk review required", "summary": f"{max(risk_count, len(risk_signals))} risk/safeguarding signal(s) should be checked for current controls and review dates."})
+    if not any(item.get("record_type") == "keywork" for item in timeline) and timeline:
+        alerts.append({"level": "medium", "title": "Child voice may be under-evidenced", "summary": "No keywork evidence is visible in the current context window. Check whether the child’s wishes, feelings and voice are clearly recorded."})
+    if not any(item.get("record_type") == "support_plan" for item in timeline) and (incident_count or safeguarding_count or risk_count):
+        alerts.append({"level": "medium", "title": "Plan linkage gap", "summary": "Risk, safeguarding or incident evidence is visible without support plan review evidence in the current window. Check whether plans reflect recent events."})
 
     return alerts[:6]
 
@@ -221,21 +219,14 @@ def _build_patterns(timeline: list[dict[str, Any]], risk_signals: list[dict[str,
     if timeline:
         top = ", ".join(f"{key.replace('_', ' ')}: {value}" for key, value in counts.most_common(4))
         patterns.append(f"Current evidence mix: {top}.")
-
-    incident_count = counts.get("incident", 0)
-    if incident_count:
-        patterns.append(f"There are {incident_count} incident record(s) in the current context window.")
-
-    safeguarding_count = counts.get("safeguarding", 0)
-    if safeguarding_count:
-        patterns.append(f"There are {safeguarding_count} safeguarding record(s) requiring clear action and oversight.")
-
+    if counts.get("incident", 0):
+        patterns.append(f"There are {counts.get('incident', 0)} incident record(s) in the current context window.")
+    if counts.get("safeguarding", 0):
+        patterns.append(f"There are {counts.get('safeguarding', 0)} safeguarding record(s) requiring clear action and oversight.")
     if risk_signals:
         patterns.append(f"There are {len(risk_signals)} risk or safeguarding signal(s) to review.")
-
     if not any(item.get("record_type") == "keywork" for item in timeline):
         patterns.append("No keywork evidence is visible in the current context window; consider whether the child’s voice is sufficiently evidenced.")
-
     if not any(item.get("record_type") == "support_plan" for item in timeline):
         patterns.append("No support plan review evidence is visible in the current context window; check whether plans reflect recent events.")
 
@@ -277,9 +268,13 @@ def build_young_person_assistant_context(
     provider_id: int | None = None,
     limit: int = 100,
 ) -> dict[str, Any]:
-    conn = None
     safe_limit = max(1, min(int(limit or 100), 250))
+    cache_key = (int(young_person_id), home_id, provider_id, safe_limit)
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
 
+    conn = None
     try:
         conn = get_db_connection()
         with conn.cursor() as cursor:
@@ -295,7 +290,7 @@ def build_young_person_assistant_context(
         inspection_prompts = _build_inspection_prompts(timeline, risk_signals)
         sources = _build_sources(timeline)
 
-        return {
+        payload = {
             "ok": True,
             "status": "ok",
             "young_person_id": young_person_id,
@@ -323,6 +318,8 @@ def build_young_person_assistant_context(
                 "inspection_prompt_count": len(inspection_prompts),
             },
         }
+        _cache_set(cache_key, payload)
+        return payload
     finally:
         if conn is not None:
             release_db_connection(conn)
