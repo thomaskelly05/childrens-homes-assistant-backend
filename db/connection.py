@@ -17,15 +17,15 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise RuntimeError("DATABASE_URL is not set")
 
-DB_POOL_MIN = int(os.getenv("DB_POOL_MIN", "5"))
-DB_POOL_MAX = int(os.getenv("DB_POOL_MAX", "50"))
+DB_POOL_MIN = int(os.getenv("DB_POOL_MIN", "1"))
+DB_POOL_MAX = int(os.getenv("DB_POOL_MAX", "8"))
 if DB_POOL_MAX < DB_POOL_MIN:
     logger.warning("DB_POOL_MAX=%s is lower than DB_POOL_MIN=%s; raising max to min", DB_POOL_MAX, DB_POOL_MIN)
     DB_POOL_MAX = DB_POOL_MIN
 
-DB_STATEMENT_TIMEOUT_MS = int(os.getenv("DB_STATEMENT_TIMEOUT_MS", "15000"))
-DB_IDLE_TX_TIMEOUT_MS = int(os.getenv("DB_IDLE_TX_TIMEOUT_MS", "15000"))
-DB_CONNECT_RETRIES = int(os.getenv("DB_CONNECT_RETRIES", "2"))
+DB_STATEMENT_TIMEOUT_MS = int(os.getenv("DB_STATEMENT_TIMEOUT_MS", "10000"))
+DB_IDLE_TX_TIMEOUT_MS = int(os.getenv("DB_IDLE_TX_TIMEOUT_MS", "10000"))
+DB_CONNECT_RETRIES = int(os.getenv("DB_CONNECT_RETRIES", "1"))
 DB_POOL_EXHAUSTION_WARN_INTERVAL = int(os.getenv("DB_POOL_EXHAUSTION_WARN_INTERVAL", "10"))
 
 _db_pool_exhaustion_count = 0
