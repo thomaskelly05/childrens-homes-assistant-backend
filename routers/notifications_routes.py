@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import logging
+import os
+import time
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -11,6 +13,11 @@ from db.connection import get_db
 
 logger = logging.getLogger("indicare.notifications")
 router = APIRouter(prefix="/notifications", tags=["Notifications"])
+
+NOTIFICATION_READ_CACHE_TTL_SECONDS = int(os.getenv("NOTIFICATION_READ_CACHE_TTL_SECONDS", "12"))
+_NOTIFICATION_LIST_CACHE: dict[tuple[int, bool, int], tuple[float, dict[str, Any]]] = {}
+_NOTIFICATION_COUNT_CACHE: dict[int, tuple[float, dict[str, Any]]] = {}
+_CACHE_MAX_ENTRIES = int(os.getenv("NOTIFICATION_CACHE_MAX_ENTRIES", "1000"))
 
 
 def _safe_int(value: Any) -> int | None:
@@ -45,6 +52,58 @@ def _notifications_unavailable_response(limit: int = 50) -> dict[str, Any]:
     }
 
 
+def _now() -> float:
+    return time.time()
+
+
+def _prune_caches() -> None:
+    for cache in (_NOTIFICATION_LIST_CACHE, _NOTIFICATION_COUNT_CACHE):
+        while len(cache) > _CACHE_MAX_ENTRIES:
+            first_key = next(iter(cache), None)
+            if first_key is None:
+                break
+            cache.pop(first_key, None)
+
+
+def _invalidate_user_cache(user_id: int) -> None:
+    for key in list(_NOTIFICATION_LIST_CACHE.keys()):
+        if key[0] == user_id:
+            _NOTIFICATION_LIST_CACHE.pop(key, None)
+    _NOTIFICATION_COUNT_CACHE.pop(user_id, None)
+
+
+def _cached_list(user_id: int, unread_only: bool, limit: int) -> dict[str, Any] | None:
+    cached = _NOTIFICATION_LIST_CACHE.get((user_id, unread_only, limit))
+    if not cached:
+        return None
+    expires_at, payload = cached
+    if expires_at <= _now():
+        _NOTIFICATION_LIST_CACHE.pop((user_id, unread_only, limit), None)
+        return None
+    return {**payload, "cache": "memory"}
+
+
+def _set_cached_list(user_id: int, unread_only: bool, limit: int, payload: dict[str, Any]) -> None:
+    _NOTIFICATION_LIST_CACHE[(user_id, unread_only, limit)] = (_now() + NOTIFICATION_READ_CACHE_TTL_SECONDS, payload)
+    _prune_caches()
+
+
+def _cached_count(user_id: int) -> dict[str, Any] | None:
+    cached = _NOTIFICATION_COUNT_CACHE.get(user_id)
+    if not cached:
+        return None
+    expires_at, payload = cached
+    if expires_at <= _now():
+        _NOTIFICATION_COUNT_CACHE.pop(user_id, None)
+        return None
+    return {**payload, "cache": "memory"}
+
+
+def _set_cached_count(user_id: int, payload: dict[str, Any]) -> None:
+    _NOTIFICATION_COUNT_CACHE[user_id] = (_now() + NOTIFICATION_READ_CACHE_TTL_SECONDS, payload)
+    _prune_caches()
+
+
 @router.get("")
 def list_notifications(
     unread_only: bool = False,
@@ -54,6 +113,10 @@ def list_notifications(
 ):
     user_id = _current_user_id(current_user)
     safe_limit = max(1, min(int(limit or 50), 100))
+    cached = _cached_list(user_id, unread_only, safe_limit)
+    if cached is not None:
+        return cached
+
     unread_clause = "AND read_at IS NULL" if unread_only else ""
 
     try:
@@ -85,7 +148,9 @@ def list_notifications(
                 """,
                 (user_id, safe_limit),
             )
-            return {"items": cur.fetchall(), "limit": safe_limit, "available": True}
+            payload = {"items": cur.fetchall(), "limit": safe_limit, "available": True}
+            _set_cached_list(user_id, unread_only, safe_limit, payload)
+            return payload
     except Exception as exc:
         _rollback(conn)
         logger.warning("notifications_unavailable user_id=%s error=%s", user_id, exc)
@@ -98,6 +163,9 @@ def unread_count(
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
     user_id = _current_user_id(current_user)
+    cached = _cached_count(user_id)
+    if cached is not None:
+        return cached
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
@@ -111,7 +179,9 @@ def unread_count(
                 (user_id,),
             )
             row = cur.fetchone() or {"count": 0}
-            return {"count": row.get("count", 0), "available": True}
+            payload = {"count": row.get("count", 0), "available": True}
+            _set_cached_count(user_id, payload)
+            return payload
     except Exception as exc:
         _rollback(conn)
         logger.warning("notification_count_unavailable user_id=%s error=%s", user_id, exc)
@@ -140,6 +210,7 @@ def mark_notification_read(
             if not row:
                 raise HTTPException(status_code=404, detail="Notification not found")
             conn.commit()
+            _invalidate_user_cache(user_id)
             return {"ok": True, "notification": row}
     except HTTPException:
         raise
@@ -183,6 +254,7 @@ def snooze_notification(
             row = cur.fetchone()
             if not row:
                 raise HTTPException(status_code=404, detail="Notification not found")
+            _invalidate_user_cache(user_id)
             return {
                 "ok": True,
                 "notification": row,
@@ -219,6 +291,7 @@ def mark_all_read(
             )
             rows = cur.fetchall()
             conn.commit()
+            _invalidate_user_cache(user_id)
             return {"ok": True, "updated": len(rows)}
     except Exception as exc:
         _rollback(conn)
@@ -248,6 +321,7 @@ def dismiss_notification(
             if not row:
                 raise HTTPException(status_code=404, detail="Notification not found")
             conn.commit()
+            _invalidate_user_cache(user_id)
             return {"ok": True, "notification": row}
     except HTTPException:
         raise
