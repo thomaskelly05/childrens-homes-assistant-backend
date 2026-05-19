@@ -30,7 +30,7 @@ for (const route of ['app/command-centre/page.tsx', 'app/young-people/page.tsx',
 }
 
 for (const label of ['Command Centre', 'Children', 'Workforce', 'Governance', 'Inspection', 'Documents', 'Reports', 'ORB', 'Admin']) {
-  check(`domain navigation includes ${label}`, appShell.includes(label) && nav.includes(label))
+  check(`domain navigation includes ${label}`, nav.includes(label))
 }
 
 for (const duplicate of ["href: '/homes'", "href: '/connect'", "href: '/chronology'", "href: '/safeguarding'", "href: '/profile'"]) {
@@ -45,6 +45,8 @@ check('layout provides OperationalContextProvider', layout.includes('Operational
 check('shell renders contextual ORB panel', appShell.includes('ContextualOrbPanel'))
 check('shell renders operational alerts', appShell.includes('OperationalAlertsPanel'))
 check('shell renders quick actions', appShell.includes('OperationalQuickActions'))
+check('shell uses shared operational navigation', appShell.includes('visibleOperationalNavigation') && appShell.includes('hrefForOperationalItem'))
+check('shell uses shared child workspace navigation', appShell.includes('childWorkspaceNavigation'))
 check('mobile nav uses shared operational navigation', mobileNav.includes('visibleOperationalNavigation'))
 check('ORB context receives operational memory', operationalContext.includes('operational_memory'))
 check('ORB context includes chronology context', operationalContext.includes('currentChronologyContext'))

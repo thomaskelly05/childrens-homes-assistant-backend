@@ -37,8 +37,10 @@ def test_platform_integrity_matrix_covers_core_operational_domains():
         "reports",
         "alerts",
         "dashboard",
+        "documents",
     ]
     assert "academy" in audit["integrity_matrix"]["needs_attention"]
+    assert audit["platform_integrity_matrix_summary"]["validated_columns"][-1] == "Documents"
 
 
 def test_platform_integrity_summarises_reference_workflows_and_unfinished_areas():
@@ -48,6 +50,10 @@ def test_platform_integrity_summarises_reference_workflows_and_unfinished_areas(
     assert "chronology_projection" in audit["reporting_consistency"]["must_source"]
     assert "Academy is still legacy-shell only." in audit["hidden_unfinished_areas"]
     assert audit["feature_flags"]["added"] == []
+    assert audit["academy_operational_wiring"]["backend_routes"] == "mounted_by_core_router_loader"
+    assert "routers.academy_routes" in audit["route_migration_summary"]["routes_migrated_this_sprint"]
+    assert any(item["pathway"] == "/os/chronology" for item in audit["deprecated_pathway_registry"])
+    assert any(item["surface"] == "frontend legacy HTML/JS" for item in audit["compatibility_only_registry"])
 
 
 def test_os_wiring_integrity_route_is_database_free():
@@ -61,4 +67,5 @@ def test_os_wiring_integrity_route_is_database_free():
     assert payload["ok"] is True
     assert payload["audit_type"] == "platform_operational_integrity"
     assert "integrity_matrix" in payload
+    assert "operational_migration_map" in payload
 

@@ -165,9 +165,11 @@ def test_governance_command_centre_frontend_smoke_contracts():
     adapter = (root / "lib/os-api/governance.ts").read_text()
     page = (root / "app/governance/command-centre/page.tsx").read_text()
     shell = (root / "components/indicare/app-shell.tsx").read_text()
+    operational_navigation = (root / "lib/navigation/operational-navigation.ts").read_text()
 
     assert "/api/governance-os/command-centre" in adapter
     assert "getGovernanceCommandCentre" in page
     assert "SCCIF evidence matrix" in page
     assert "Reg 44 lifecycle" in page
-    assert "/governance/command-centre" in shell
+    assert "visibleOperationalNavigation" in shell
+    assert "/governance/command-centre" in operational_navigation

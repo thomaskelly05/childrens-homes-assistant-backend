@@ -3,23 +3,10 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
-  Bell,
   ChevronRight,
-  ClipboardCheck,
-  Building2,
-  FileText,
-  Sparkles,
-  UserRound,
-  UsersRound,
-  FolderOpen,
   LogOut,
-  Gauge,
   ShieldCheck,
-  ShieldAlert,
-  SearchCheck,
-  MessageCircle
 } from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
 import { ReactNode, useEffect } from 'react'
 
 import { CommandSearch } from '@/components/indicare/command-search'
@@ -36,33 +23,16 @@ import { displayName, roleLabels, userHasAnyPermission } from '@/lib/auth/permis
 import { useActiveChild } from '@/lib/context/active-child-context'
 import { routeRequiresChildWorkspace } from '@/lib/context/child-workspace-hydration'
 import { entityContextFromPath } from '@/lib/navigation/entity-resolver'
+import {
+  childWorkspaceNavigation,
+  hrefForOperationalItem,
+  isOperationalNavItemActive,
+  operationalNavigation,
+  operationalUtilities,
+  visibleOperationalNavigation
+} from '@/lib/navigation/operational-navigation'
 import type { OrbContext } from '@/lib/orb/types'
 
-type NavItem = {
-  section: 'Global' | 'Child' | 'System'
-  href: string
-  label: string
-  icon: LucideIcon
-  permissions: string[]
-  scoped?: boolean
-  activeRoots?: string[]
-  requiresChild?: boolean
-}
-
-const navItems: NavItem[] = [
-  { section: 'Global', href: '/command-centre', label: 'Command Centre', icon: Gauge, permissions: ['reports:read'], activeRoots: ['command-centre', 'home', 'dashboard', 'workspace'] },
-  { section: 'Global', href: '/young-people', label: 'Children', icon: UserRound, permissions: ['records:read'], activeRoots: ['young-people', 'children'] },
-  { section: 'Global', href: '/staff', label: 'Workforce', icon: UsersRound, permissions: ['staff:read'], activeRoots: ['staff'] },
-  { section: 'Global', href: '/governance/command-centre', label: 'Governance', icon: ShieldCheck, permissions: ['reports:read'], activeRoots: ['governance', 'management', 'reg44'] },
-  { section: 'Global', href: '/ofsted-readiness', label: 'Inspection', icon: SearchCheck, permissions: ['reports:read'], activeRoots: ['ofsted-readiness', 'regulatory'] },
-  { section: 'Global', href: '/documents', label: 'Documents', icon: FolderOpen, permissions: ['records:read'], activeRoots: ['documents', 'evidence'] },
-  { section: 'Global', href: '/reports', label: 'Reports', icon: FileText, permissions: ['reports:read'], activeRoots: ['reports'] },
-  { section: 'Global', href: '/assistant', label: 'ORB', icon: Sparkles, permissions: ['assistant:access'], activeRoots: ['assistant', 'voice'] },
-  { section: 'Global', href: '/settings', label: 'Admin', icon: Building2, permissions: ['settings:read', 'settings:manage', 'users:manage'], activeRoots: ['settings', 'profile', 'setup', 'schema-live'] },
-  { section: 'System', href: '/notifications', label: 'Notifications', icon: Bell, permissions: ['records:read'], activeRoots: ['notifications'], requiresChild: true },
-  { section: 'System', href: '/shifts/current', label: 'Shift', icon: ClipboardCheck, permissions: ['records:read'], activeRoots: ['shifts', 'handover'], requiresChild: true },
-  { section: 'System', href: '/management', label: 'Reviews', icon: ShieldAlert, permissions: ['reports:read'], activeRoots: ['management'] }
-]
 const recordWorkspaceRoots = ['actions', 'reports', 'evidence', 'documents', 'chronology', 'daily-logs', 'incidents', 'safeguarding', 'medication', 'health', 'keywork', 'appointments', 'risk-assessments', 'reg44']
 const childContextRequiredRoots = ['actions', 'reports']
 const e2eWorkspaceHydrationBypass = process.env.NEXT_PUBLIC_E2E_TEST_MODE === '1' && process.env.NODE_ENV !== 'production'
@@ -85,31 +55,6 @@ function labelForRole(role: keyof typeof roleLabels | string | undefined) {
   return role && role in roleLabels ? roleLabels[role as keyof typeof roleLabels] : roleLabels.viewer
 }
 
-function hrefForNavItem(item: NavItem, activeChildId: string | undefined, childScopedHref: (href: string) => string) {
-  const encodedChildId = activeChildId ? encodeURIComponent(activeChildId) : null
-  if (item.requiresChild && !encodedChildId && item.href !== '/young-people' && item.href !== '/profile') return '/young-people'
-  if (item.href === '/active-child' || item.href === '/journey') {
-    return encodedChildId ? `/young-people/${encodedChildId}/journey` : '/young-people'
-  }
-  if (item.href === '/daily-note') {
-    return encodedChildId ? `/young-people/${encodedChildId}/daily-note/new` : '/young-people'
-  }
-  if (item.href === '/plans') {
-    return encodedChildId ? `/documents?young_person_id=${encodedChildId}&scope=plans` : '/young-people'
-  }
-  if (item.href === '/chronology') return encodedChildId ? `/young-people/${encodedChildId}/chronology` : '/young-people'
-  if (item.href === '/documents') return encodedChildId ? `/documents?young_person_id=${encodedChildId}` : '/young-people'
-  if (item.href === '/safeguarding') return encodedChildId ? `/safeguarding?young_person_id=${encodedChildId}` : '/young-people'
-  return item.scoped ? childScopedHref(item.href) : item.href
-}
-
-function isNavItemActive(item: NavItem, pathname: string) {
-  const parts = pathname.split('/').filter(Boolean)
-  const root = parts[0] || 'young-people'
-  if (item.activeRoots?.includes(root)) return true
-  return pathname === item.href || pathname.startsWith(item.href)
-}
-
 export function AppShell({ children }: { children: ReactNode }) {
   const currentPathname = usePathname()
   const router = useRouter()
@@ -120,16 +65,16 @@ export function AppShell({ children }: { children: ReactNode }) {
   const routeSelectedId = selectedYoungPersonId(pathname)
   const selectedId = routeSelectedId || activeChild?.id
   const selectedEntityContext = entityContextFromPath(pathname)
-  const selectedStaffId = pathParts[0] === 'staff' && pathParts[1] && !['all', 'evidence', 'induction', 'probation', 'supervision', 'training-matrix', 'command-centre', 'risk', 'relationships', 'recording-quality'].includes(pathParts[1])
+  const selectedStaffId = pathParts[0] === 'staff' && pathParts[1] && !['all', 'me', 'evidence', 'induction', 'probation', 'supervision', 'training-matrix', 'command-centre', 'risk', 'relationships', 'recording-quality'].includes(pathParts[1])
     ? decodeURIComponent(pathParts[1])
     : null
   const activeChildName = activeChild?.preferredName || activeChild?.displayName
   const pageTitle = activeChildName ? `${activeChildName}'s journey` : titleFromPath(pathname)
   const today = new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }).format(new Date())
   const isPublicPage = pathname === '/login' || pathname.startsWith('/login/') || pathname === '/unauthorized'
-  const visibleNavItems = navItems.filter((item) => userHasAnyPermission(user, item.permissions))
-  const matchedRoute = navItems
-    .filter((item) => !item.scoped && (pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))))
+  const visibleNavItems = visibleOperationalNavigation(user)
+  const matchedRoute = [...operationalNavigation, ...operationalUtilities]
+    .filter((item) => pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href)))
     .sort((a, b) => b.href.length - a.href.length)[0]
   const hasRouteAccess = !matchedRoute || userHasAnyPermission(user, matchedRoute.permissions)
   const isStandaloneAssistant = pathname === '/assistant' || pathname.startsWith('/assistant/')
@@ -251,20 +196,8 @@ export function AppShell({ children }: { children: ReactNode }) {
     )
   }
 
-  const primaryNav = visibleNavItems
-    .filter((item) => item.section !== 'System')
-    .filter((item) => selectedId || !item.requiresChild)
-  const secondaryNav = selectedId ? [
-    { label: 'Journey', href: `/young-people/${encodeURIComponent(selectedId)}/journey` },
-    { label: 'Records', href: `/young-people/${encodeURIComponent(selectedId)}` },
-    { label: 'Daily Note', href: `/young-people/${encodeURIComponent(selectedId)}/daily-note/new` },
-    { label: 'Chronology', href: `/young-people/${encodeURIComponent(selectedId)}/chronology` },
-    { label: 'Safeguarding', href: `/safeguarding?young_person_id=${encodeURIComponent(selectedId)}` },
-    { label: 'Plans', href: `/documents?young_person_id=${encodeURIComponent(selectedId)}&scope=plans` },
-    { label: 'Risks', href: `/risk-assessments?young_person_id=${encodeURIComponent(selectedId)}` },
-    { label: 'Documents', href: childScopedHref('/documents') },
-    { label: 'Reviews', href: `/reports?young_person_id=${encodeURIComponent(selectedId)}&type=review` }
-  ] : []
+  const primaryNav = visibleNavItems.filter((item) => selectedId || !item.requiresChild)
+  const secondaryNav = selectedId ? childWorkspaceNavigation.map((item) => ({ label: item.label, href: item.href(selectedId) })) : []
   const childDomainActive = pathParts[0] === 'young-people' || pathParts[0] === 'children'
   const displayBreadcrumbs = pathname === '/profile'
     ? [{ label: 'Children', href: '/young-people' }, { label: 'My profile', current: true }]
@@ -287,9 +220,9 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
           <nav data-testid="operational-navigation" aria-label="Operational navigation" className="hidden min-w-0 flex-1 items-center gap-1 overflow-x-auto lg:flex">
             {primaryNav.map((item) => {
-              const active = isNavItemActive(item, pathname)
+              const active = isOperationalNavItemActive(item, pathname)
               const Icon = item.icon
-              const href = hrefForNavItem(item, selectedId, childScopedHref)
+              const href = hrefForOperationalItem(item, selectedId, childScopedHref)
               return (
                 <Link
                   prefetch={false}

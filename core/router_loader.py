@@ -60,6 +60,15 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
         notes="Core shell compatibility, homes, staff and shift operations.",
     ),
     RouterGroup(
+        "academy",
+        (
+            "routers.academy_routes",
+            "routers.academy_intelligence_routes",
+        ),
+        classification="primary",
+        notes="Academy, training, competencies and workforce compliance intelligence.",
+    ),
+    RouterGroup(
         "provider",
         (
             "routers.account_routes",
