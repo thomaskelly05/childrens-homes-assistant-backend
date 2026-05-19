@@ -18,8 +18,25 @@
     voices: [],
     preferredVoice: null,
     lastAssistantText: "",
+    lastSpokenAt: 0,
+    lastSubmittedText: "",
+    replySpeakTimer: 0,
     observer: null,
   };
+
+  function emit(name, detail) {
+    window.dispatchEvent(new CustomEvent(`indicare:voice:${name}`, { detail: detail || snapshot() }));
+  }
+
+  function snapshot() {
+    return {
+      listening: state.listening,
+      speaking: state.speaking,
+      enabled: state.enabled,
+      lastAssistantText: state.lastAssistantText,
+      lastSubmittedText: state.lastSubmittedText,
+    };
+  }
 
   function loadCss() {
     if (document.querySelector('link[data-indicare-voice-css="true"]')) return;
@@ -104,10 +121,12 @@
 
   function openPanel() {
     $("voicePanel")?.classList.remove("hidden");
+    emit("open");
   }
 
   function closePanel() {
     $("voicePanel")?.classList.add("hidden");
+    emit("close");
   }
 
   function loadVoices() {
@@ -151,6 +170,7 @@
       setStateClass("listening", true);
       setStatus("I’m listening. Speak naturally.");
       setTranscript("Listening...");
+      emit("listening");
     };
 
     recognition.onresult = (event) => {
@@ -169,11 +189,13 @@
       state.listening = false;
       setStateClass("listening", false);
       setStatus(event.error === "not-allowed" ? "Microphone permission is blocked." : "I couldn’t hear that clearly.");
+      emit("error", { error: event.error || "speech_recognition_error" });
     };
 
     recognition.onend = () => {
       state.listening = false;
       setStateClass("listening", false);
+      emit("stopped");
       const text = state.transcript.trim();
       if (!text) {
         setStatus("Ready when you are.");
@@ -193,6 +215,7 @@
       return;
     }
     if (state.speaking && supportsSpeechSynthesis()) window.speechSynthesis.cancel();
+    if (state.listening) return;
     if (!state.recognition) state.recognition = createRecognition();
     try {
       state.recognition.start();
@@ -204,11 +227,13 @@
   function stopListening() {
     if (state.recognition && state.listening) state.recognition.stop();
     if (state.speaking && supportsSpeechSynthesis()) window.speechSynthesis.cancel();
+    window.clearTimeout(state.replySpeakTimer);
     state.listening = false;
     state.speaking = false;
     setStateClass("listening", false);
     setStateClass("speaking", false);
     setStatus("Stopped.");
+    emit("stopped");
   }
 
   function warmPrompt(text) {
@@ -271,6 +296,7 @@
       setStatus("I couldn’t find the assistant input.");
       return;
     }
+    state.lastSubmittedText = text;
     input.value = warmPrompt(text);
     input.focus();
     input.dispatchEvent(new Event("input", { bubbles: true }));
@@ -298,6 +324,13 @@
     return latest ? plainTextFromHtml(latest.innerHTML).trim() : "";
   }
 
+  function latestAssistantLooksBusy() {
+    const latestWrap = document.querySelector("#messages .wrap.assistant:last-child");
+    if (!latestWrap) return false;
+    const text = latestWrap.textContent || "";
+    return /thinking|typing|loading|\.\.\./i.test(text) || latestWrap.querySelector(".meta,.spinner,.loading,.typing");
+  }
+
   function shortenForSpeech(text) {
     const clean = String(text || "").replace(/\s+/g, " ").trim();
     if (clean.length <= 900) return clean;
@@ -309,6 +342,8 @@
     if (!supportsSpeechSynthesis()) return;
     const clean = shortenForSpeech(text);
     if (!clean) return;
+    const now = Date.now();
+    if (clean === state.lastAssistantText && now - state.lastSpokenAt < 2500) return;
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(clean);
     utterance.lang = "en-GB";
@@ -318,19 +353,23 @@
     if (state.preferredVoice) utterance.voice = state.preferredVoice;
     utterance.onstart = () => {
       state.speaking = true;
+      state.lastSpokenAt = Date.now();
       openPanel();
       setStateClass("speaking", true);
       setStatus("I’m speaking.");
+      emit("speaking");
     };
     utterance.onend = () => {
       state.speaking = false;
       setStateClass("speaking", false);
       setStatus("Ready when you are.");
+      emit("speech-ended");
     };
     utterance.onerror = () => {
       state.speaking = false;
       setStateClass("speaking", false);
       setStatus("I couldn’t read that aloud.");
+      emit("speech-ended");
     };
     window.speechSynthesis.speak(utterance);
   }
@@ -344,17 +383,23 @@
     speak(text);
   }
 
+  function scheduleLatestReplySpeech() {
+    window.clearTimeout(state.replySpeakTimer);
+    state.replySpeakTimer = window.setTimeout(() => {
+      if (!state.enabled || state.listening || state.speaking || latestAssistantLooksBusy()) return;
+      const latest = latestAssistantMessageText();
+      if (!latest || latest === state.lastAssistantText) return;
+      state.lastAssistantText = latest;
+      localStorage.setItem(LAST_SPOKEN_KEY, latest);
+      speak(latest);
+    }, 1200);
+  }
+
   function observeAssistantReplies() {
     const messages = $("messages");
     if (!messages || state.observer) return;
     state.observer = new MutationObserver(() => {
-      const latest = latestAssistantMessageText();
-      if (!latest || latest === state.lastAssistantText) return;
-      const pending = document.querySelector("#messages .wrap.assistant:last-child .meta");
-      if (pending) return;
-      state.lastAssistantText = latest;
-      localStorage.setItem(LAST_SPOKEN_KEY, latest);
-      if (state.enabled) speak(latest);
+      scheduleLatestReplySpeech();
     });
     state.observer.observe(messages, { childList: true, subtree: true, characterData: true });
   }
@@ -386,6 +431,18 @@
     });
   }
 
+  window.IndiCareVoiceCompanion = {
+    version: "1.1.0",
+    snapshot,
+    open: openPanel,
+    close: closePanel,
+    start: startListening,
+    stop: stopListening,
+    speak,
+    speakLastReply,
+    isActive: () => state.listening || state.speaking,
+  };
+
   window.addEventListener("DOMContentLoaded", () => {
     loadCss();
     installUi();
@@ -394,5 +451,6 @@
     if (supportsSpeechSynthesis()) window.speechSynthesis.onvoiceschanged = loadVoices;
     observeAssistantReplies();
     setStatus(supportsSpeechRecognition() ? "Ready when you are." : "Voice recognition is limited in this browser.");
+    emit("ready");
   });
 })();
