@@ -27,6 +27,10 @@ type OrbIntelligenceResponse = OrbConversationResponse & {
   therapeutic_reasoning?: {
     therapeutic_observations?: string[]
   }
+  context_used?: OrbConversationResponse['context_used'] & {
+    degraded?: boolean
+    pool_saturation_pct?: number
+  }
 }
 
 const scopeOptions: Array<{ value: OrbScope; label: string; prompt: string }> = [
@@ -57,8 +61,9 @@ export function OrbConversationExperience({ childrenOptions }: { childrenOptions
   const abortRef = useRef<AbortController | null>(null)
   const latestResponse = useMemo(() => [...messages].reverse().find((message) => message.response)?.response, [messages])
   const latestIntelligence = latestResponse as OrbIntelligenceResponse | undefined
-  const isDegraded = Boolean(latestResponse?.context_used?.degraded)
-  const statusLabel = isDegraded ? 'Partial context' : latestResponse?.context_used?.snapshot_hit ? 'Snapshot + live' : 'Live DB backed'
+  const latestContext = latestIntelligence?.context_used
+  const isDegraded = Boolean(latestContext?.degraded)
+  const statusLabel = isDegraded ? 'Partial context' : latestContext?.snapshot_hit ? 'Snapshot + live' : 'Live DB backed'
 
   async function submit(event?: FormEvent<HTMLFormElement>, override?: string, overrideScope?: OrbScope) {
     event?.preventDefault()
@@ -253,7 +258,7 @@ export function OrbConversationExperience({ childrenOptions }: { childrenOptions
           <p className="text-sm font-semibold leading-6 text-slate-300">Confidence: {latestResponse?.confidence || 'not run yet'}</p>
           <p className="text-sm font-semibold leading-6 text-slate-300">Live tables: {latestResponse?.context_used?.live_tables?.length || 0}</p>
           <p className="text-sm font-semibold leading-6 text-slate-300">Projection keys: {latestResponse?.context_used?.projection_keys?.length || 0}</p>
-          <p className="text-sm font-semibold leading-6 text-slate-300">Pool saturation: {latestResponse?.context_used?.pool_saturation_pct ?? 0}%</p>
+          <p className="text-sm font-semibold leading-6 text-slate-300">Pool saturation: {latestContext?.pool_saturation_pct ?? 0}%</p>
           <Link href="/voice" className="mt-4 flex items-center gap-2 rounded-2xl bg-white/10 px-4 py-3 text-sm font-black text-white">
             <Mic2 className="h-4 w-4" aria-hidden />
             Open voice ORB

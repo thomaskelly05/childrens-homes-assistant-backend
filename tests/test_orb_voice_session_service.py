@@ -332,8 +332,8 @@ async def test_voice_session_uses_calm_british_defaults_and_text_fallback(monkey
         current_user=user,
     )
 
-    assert start.voice_profile.profile_id == "british_female_calm"
-    assert start.voice_profile.tone_profile == "calm_concise_human"
+    assert start.voice_profile.profile_id == "amelia_british_female_calm"
+    assert start.voice_profile.tone_profile == "british_female_calm_care_companion"
     assert start.voice_profile.product_name == "ORB powered by IndiCare"
     assert start.realtime["fallback_text_mode"] is True
     assert start.realtime_state["runtime"]["voice_orchestration"]["voice_profile"] == "british_female_calm"

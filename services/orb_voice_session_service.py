@@ -1087,12 +1087,16 @@ class OrbVoiceSessionService:
                 mode=decision.assistant_mode,
                 conversation_id=session.id,
             )
-            shared_context["orb_voice_continuity"] = {
+            voice_continuity = {
                 "active_child_id": context.selected_young_person_id or _memory_selected_child_id(memory_context),
                 "recent_topic": safe_message[:240],
                 "recent_citation_count": len(session.citations_used),
                 "recent_record_count": len(session.related_records),
             }
+            if hasattr(shared_context, "model_copy"):
+                shared_context = shared_context.model_copy(update={"orb_voice_continuity": voice_continuity})
+            else:
+                shared_context["orb_voice_continuity"] = voice_continuity
             pool = db_pool_snapshot()
             if pool.get("saturated") and session.related_records:
                 assistant_data = {

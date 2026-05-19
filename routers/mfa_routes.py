@@ -40,6 +40,20 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth/mfa", tags=["MFA"])
 
+
+def _get_user_mfa_safe(user_id: int, conn=None):
+    try:
+        return get_user_mfa(user_id, conn=conn)
+    except TypeError:
+        return get_user_mfa(user_id)
+
+
+def _user_has_passkeys_safe(user_id: int, conn=None) -> bool:
+    try:
+        return user_has_passkeys(user_id, conn=conn)
+    except TypeError:
+        return user_has_passkeys(user_id)
+
 RECOVERY_CODE_COUNT = int(os.getenv("MFA_RECOVERY_CODE_COUNT", "8"))
 RECOVERY_CODE_LENGTH = int(os.getenv("MFA_RECOVERY_CODE_LENGTH", "10"))
 MFA_WINDOW = int(os.getenv("MFA_TOTP_WINDOW", "1"))
@@ -317,7 +331,7 @@ def _build_qr_code_data_url(value: str) -> str:
 def mfa_status(request: Request, conn=Depends(get_db)):
     session_user = _get_session_user(request)
     user = _assert_active_user(_get_user_row(conn, session_user.user_id))
-    mfa_row = get_user_mfa(session_user.user_id, conn=conn)
+    mfa_row = _get_user_mfa_safe(session_user.user_id, conn=conn)
 
     return {
         "ok": True,
@@ -336,7 +350,7 @@ def get_mfa_setup(request: Request, conn=Depends(get_db)):
         session_user = _get_session_user(request)
         user = _assert_active_user(_get_user_row(conn, session_user.user_id))
 
-        mfa_row = get_user_mfa(session_user.user_id, conn=conn)
+        mfa_row = _get_user_mfa_safe(session_user.user_id, conn=conn)
         if mfa_row and mfa_row.get("is_enabled"):
             return {
                 "ok": True,
@@ -477,7 +491,7 @@ def complete_mfa_setup(
         "message": "MFA enabled successfully",
         "mfa_enabled": True,
         "mfa_verified": True,
-        "has_passkeys": user_has_passkeys(user["id"], conn=conn),
+        "has_passkeys": _user_has_passkeys_safe(user["id"], conn=conn),
         "recovery_codes": recovery_codes,
     }
 
@@ -492,7 +506,7 @@ def verify_mfa(
     session_user = _get_session_user(request)
     user = _assert_active_user(_get_user_row(conn, session_user.user_id))
 
-    mfa_row = get_user_mfa(user["id"], conn=conn)
+    mfa_row = _get_user_mfa_safe(user["id"], conn=conn)
     if not mfa_row or not mfa_row.get("is_enabled"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -536,7 +550,7 @@ def verify_mfa(
         "ok": True,
         "message": "MFA verified",
         "mfa_verified": True,
-        "has_passkeys": user_has_passkeys(user["id"], conn=conn),
+        "has_passkeys": _user_has_passkeys_safe(user["id"], conn=conn),
     }
 
 
@@ -550,7 +564,7 @@ def verify_recovery_code(
     session_user = _get_session_user(request)
     user = _assert_active_user(_get_user_row(conn, session_user.user_id))
 
-    mfa_row = get_user_mfa(user["id"], conn=conn)
+    mfa_row = _get_user_mfa_safe(user["id"], conn=conn)
     if not mfa_row or not mfa_row.get("is_enabled"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -593,7 +607,7 @@ def verify_recovery_code(
         "ok": True,
         "message": "Recovery code accepted",
         "mfa_verified": True,
-        "has_passkeys": user_has_passkeys(user["id"], conn=conn),
+        "has_passkeys": _user_has_passkeys_safe(user["id"], conn=conn),
         "remaining_recovery_codes": count_unused_recovery_codes(user["id"]),
     }
 
@@ -610,7 +624,7 @@ def disable_mfa_route(
 
     user = _assert_active_user(_get_user_row(conn, int(user_id)))
 
-    mfa_row = get_user_mfa(user["id"], conn=conn)
+    mfa_row = _get_user_mfa_safe(user["id"], conn=conn)
     if not mfa_row or not mfa_row.get("is_enabled"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -663,7 +677,7 @@ def regenerate_recovery_codes(
 
     user = _assert_active_user(_get_user_row(conn, int(user_id)))
 
-    mfa_row = get_user_mfa(user["id"], conn=conn)
+    mfa_row = _get_user_mfa_safe(user["id"], conn=conn)
     if not mfa_row or not mfa_row.get("is_enabled"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

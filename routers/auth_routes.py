@@ -239,8 +239,25 @@ def _get_billing_safe(conn: Any, user_id: int) -> dict[str, Any] | None:
 def _get_mfa_safe(user_id: int, conn: Any | None = None) -> dict[str, Any] | None:
     try:
         return get_user_mfa(user_id, conn=conn)
+    except TypeError:
+        try:
+            return get_user_mfa(user_id)
+        except Exception:
+            return None
     except Exception:
         return None
+
+
+def _user_has_passkeys_safe(user_id: int, conn: Any | None = None) -> bool:
+    try:
+        return user_has_passkeys(user_id, conn=conn)
+    except TypeError:
+        try:
+            return user_has_passkeys(user_id)
+        except Exception:
+            return False
+    except Exception:
+        return False
 
 def _session_user_payload(user: dict[str, Any], billing: dict[str, Any] | None) -> dict[str, Any]:
     return staff_user_payload(user, billing=billing)
@@ -446,7 +463,7 @@ def get_me(request: Request, response: Response, authorization: str | None = Hea
     mfa_row = _get_mfa_safe(user_id, conn)
     mfa_enabled = bool(mfa_row and bool(mfa_row.get("is_enabled")))
     mfa_verified = request.session.get(SESSION_MFA_VERIFIED_KEY) is True
-    has_passkeys = user_has_passkeys(user_id, conn=conn)
+    has_passkeys = _user_has_passkeys_safe(user_id, conn)
     return {"ok": True, "user": _full_user_payload(user, billing, mfa_enabled=mfa_enabled, mfa_verified=mfa_verified, has_passkeys=has_passkeys), "mfa_mandatory": _mfa_required_for_role(user.get("role"))}
 
 @router.get("/auth-policy")
