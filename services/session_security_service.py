@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import os
 import secrets
+import time
 from typing import Any
 
 from fastapi import Request
@@ -36,6 +38,22 @@ CREATE INDEX IF NOT EXISTS idx_user_sessions_last_seen_at ON user_sessions (last
 """
 
 _TABLE_READY = False
+SESSION_REVOKED_CACHE_TTL_SECONDS = int(os.getenv("SESSION_REVOKED_CACHE_TTL_SECONDS", "30"))
+SESSION_TOUCH_THROTTLE_SECONDS = int(os.getenv("SESSION_TOUCH_THROTTLE_SECONDS", "300"))
+_SESSION_REVOKED_CACHE: dict[str, tuple[float, bool]] = {}
+_SESSION_TOUCH_CACHE: dict[str, float] = {}
+_CACHE_MAX_ENTRIES = int(os.getenv("SESSION_SECURITY_CACHE_MAX_ENTRIES", "5000"))
+
+
+def _now() -> float:
+    return time.time()
+
+
+def _prune_cache(cache: dict[str, Any], *, max_entries: int = _CACHE_MAX_ENTRIES) -> None:
+    if len(cache) <= max_entries:
+        return
+    for key in list(cache.keys())[: max(1, len(cache) - max_entries)]:
+        cache.pop(key, None)
 
 
 def ensure_session_table() -> None:
@@ -111,6 +129,8 @@ def create_session_record(
                 ),
             )
         conn.commit()
+        _SESSION_REVOKED_CACHE[session_id] = (_now() + SESSION_REVOKED_CACHE_TTL_SECONDS, False)
+        _SESSION_TOUCH_CACHE[session_id] = _now()
     except Exception:
         if conn and not conn.closed:
             conn.rollback()
@@ -124,6 +144,12 @@ def create_session_record(
 def touch_session(session_id: str | None) -> None:
     if not session_id:
         return
+    now = _now()
+    last_touch = _SESSION_TOUCH_CACHE.get(session_id)
+    if last_touch and now - last_touch < SESSION_TOUCH_THROTTLE_SECONDS:
+        return
+    _SESSION_TOUCH_CACHE[session_id] = now
+    _prune_cache(_SESSION_TOUCH_CACHE)
     ensure_session_table()
     conn = None
     try:
@@ -146,6 +172,10 @@ def touch_session(session_id: str | None) -> None:
 def is_session_revoked(session_id: str | None) -> bool:
     if not session_id:
         return False
+    now = _now()
+    cached = _SESSION_REVOKED_CACHE.get(session_id)
+    if cached and cached[0] > now:
+        return cached[1]
     ensure_session_table()
     conn = None
     try:
@@ -154,9 +184,14 @@ def is_session_revoked(session_id: str | None) -> bool:
             cur.execute("SELECT revoked_at FROM user_sessions WHERE session_id = %s LIMIT 1", (session_id,))
             row = cur.fetchone()
             if not row:
+                _SESSION_REVOKED_CACHE[session_id] = (now + SESSION_REVOKED_CACHE_TTL_SECONDS, False)
+                _prune_cache(_SESSION_REVOKED_CACHE)
                 return False
             revoked_at = row.get("revoked_at") if isinstance(row, dict) else row[0]
-            return revoked_at is not None
+            is_revoked = revoked_at is not None
+            _SESSION_REVOKED_CACHE[session_id] = (now + SESSION_REVOKED_CACHE_TTL_SECONDS, is_revoked)
+            _prune_cache(_SESSION_REVOKED_CACHE)
+            return is_revoked
     except Exception:
         logger.warning("Failed to check revoked session", exc_info=True)
         return False
@@ -181,6 +216,8 @@ def revoke_session(session_id: str, reason: str = "revoked") -> bool:
             )
             changed = cur.rowcount > 0
         conn.commit()
+        _SESSION_REVOKED_CACHE[session_id] = (_now() + SESSION_REVOKED_CACHE_TTL_SECONDS, True)
+        _SESSION_TOUCH_CACHE.pop(session_id, None)
         return changed
     except Exception:
         if conn and not conn.closed:
@@ -203,6 +240,7 @@ def revoke_user_sessions(user_id: int, *, except_session_id: str | None = None, 
                     """
                     UPDATE user_sessions SET revoked_at = NOW(), revoke_reason = %s
                     WHERE user_id = %s AND session_id <> %s AND revoked_at IS NULL
+                    RETURNING session_id
                     """,
                     (reason, int(user_id), except_session_id),
                 )
@@ -211,11 +249,18 @@ def revoke_user_sessions(user_id: int, *, except_session_id: str | None = None, 
                     """
                     UPDATE user_sessions SET revoked_at = NOW(), revoke_reason = %s
                     WHERE user_id = %s AND revoked_at IS NULL
+                    RETURNING session_id
                     """,
                     (reason, int(user_id)),
                 )
-            changed = cur.rowcount
+            rows = cur.fetchall() or []
+            changed = len(rows)
         conn.commit()
+        for row in rows:
+            sid = row.get("session_id") if isinstance(row, dict) else row[0]
+            if sid:
+                _SESSION_REVOKED_CACHE[str(sid)] = (_now() + SESSION_REVOKED_CACHE_TTL_SECONDS, True)
+                _SESSION_TOUCH_CACHE.pop(str(sid), None)
         return int(changed or 0)
     except Exception:
         if conn and not conn.closed:
@@ -245,6 +290,7 @@ def set_trusted_device(session_id: str, trusted: bool) -> bool:
             )
             changed = cur.rowcount > 0
         conn.commit()
+        _SESSION_TOUCH_CACHE[session_id] = _now()
         return changed
     except Exception:
         if conn and not conn.closed:
