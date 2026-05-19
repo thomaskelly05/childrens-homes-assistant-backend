@@ -68,6 +68,10 @@ def _is_static_path(path: str) -> bool:
     return path.startswith(("/css", "/js", "/assets", "/components")) or path == "/favicon.ico"
 
 
+def _is_probe_path(path: str) -> bool:
+    return path.lower().startswith("/.env")
+
+
 def _is_public_cross_origin_asset(path: str) -> bool:
     """Assets are intentionally read by the separate Next.js frontend domain.
 
@@ -191,8 +195,11 @@ class CsrfProtectionMiddleware(BaseHTTPMiddleware):
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
-        response = await call_next(request)
         path = request.url.path
+        if _is_probe_path(path):
+            return Response(status_code=404)
+
+        response = await call_next(request)
 
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
         response.headers["X-Frame-Options"] = "SAMEORIGIN"
@@ -230,6 +237,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 class AuditLoggingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         path = request.url.path
+        if _is_probe_path(path):
+            return Response(status_code=404)
         if path.startswith(SKIP_PATHS):
             return await call_next(request)
 
