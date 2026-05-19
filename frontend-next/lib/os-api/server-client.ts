@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 
 import type { OsApiResult, OsEnvelope } from './types'
 
@@ -24,15 +24,23 @@ function emptyData<T>(example: T): T {
   return undefined as T
 }
 
+async function authHeaders(contentType?: string) {
+  const cookieHeader = (await cookies()).toString()
+  const incoming = await headers()
+  const authorization = incoming.get('authorization') || ''
+  return {
+    ...(contentType ? { 'Content-Type': contentType } : {}),
+    ...(cookieHeader ? { cookie: cookieHeader } : {}),
+    ...(authorization ? { authorization } : {}),
+    'x-indicare-rsc': '1'
+  }
+}
+
 export async function osServerGet<T>(path: string, fallback: T): Promise<OsApiResult<T>> {
   try {
-    const cookieHeader = (await cookies()).toString()
     const response = await fetch(`${API_BASE}${path.startsWith('/') ? path : `/${path}`}`, {
       cache: 'no-store',
-      headers: {
-        ...(cookieHeader ? { cookie: cookieHeader } : {}),
-        'x-indicare-rsc': '1'
-      }
+      headers: await authHeaders()
     })
     if (!response.ok) {
       return { data: emptyData(fallback), source: 'unavailable', warning: calmOsWarning(response.status), error: process.env.NODE_ENV === 'development' ? `${response.status} ${response.statusText}` : undefined }
@@ -51,15 +59,10 @@ export async function osServerGet<T>(path: string, fallback: T): Promise<OsApiRe
 
 export async function osServerPost<T>(path: string, body: unknown, fallback: T, init: { method?: 'POST' | 'PUT' | 'PATCH' | 'DELETE' } = {}): Promise<OsApiResult<T>> {
   try {
-    const cookieHeader = (await cookies()).toString()
     const response = await fetch(`${API_BASE}${path.startsWith('/') ? path : `/${path}`}`, {
       method: init.method || 'POST',
       cache: 'no-store',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(cookieHeader ? { cookie: cookieHeader } : {}),
-        'x-indicare-rsc': '1'
-      },
+      headers: await authHeaders('application/json'),
       body: JSON.stringify(body)
     })
     if (!response.ok) {
