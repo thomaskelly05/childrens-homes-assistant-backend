@@ -1,10 +1,35 @@
 from __future__ import annotations
 
+import logging
+import os
+import time
 from typing import Any
 
 from psycopg2.extras import RealDictCursor
 
 from db.connection import get_db_connection, release_db_connection
+
+logger = logging.getLogger("indicare.passkeys")
+
+PASSKEY_CACHE_TTL_SECONDS = int(os.getenv("PASSKEY_CACHE_TTL_SECONDS", "60"))
+_PASSKEY_EXISTS_CACHE: dict[int, tuple[float, bool]] = {}
+_CACHE_MAX_ENTRIES = int(os.getenv("PASSKEY_CACHE_MAX_ENTRIES", "5000"))
+
+
+def _now() -> float:
+    return time.time()
+
+
+def _prune_cache() -> None:
+    while len(_PASSKEY_EXISTS_CACHE) > _CACHE_MAX_ENTRIES:
+        first_key = next(iter(_PASSKEY_EXISTS_CACHE), None)
+        if first_key is None:
+            break
+        _PASSKEY_EXISTS_CACHE.pop(first_key, None)
+
+
+def _invalidate_user_cache(user_id: int) -> None:
+    _PASSKEY_EXISTS_CACHE.pop(int(user_id), None)
 
 
 def init_passkeys_table() -> None:
@@ -121,8 +146,15 @@ def init_passkeys_table() -> None:
 
 
 def user_has_passkeys(user_id: int) -> bool:
-    conn = get_db_connection()
+    user_id = int(user_id)
+    cached = _PASSKEY_EXISTS_CACHE.get(user_id)
+    now = _now()
+    if cached and cached[0] > now:
+        return cached[1]
+
+    conn = None
     try:
+        conn = get_db_connection()
         with conn.cursor() as cur:
             cur.execute(
                 """
@@ -133,9 +165,16 @@ def user_has_passkeys(user_id: int) -> bool:
                 """,
                 (user_id,),
             )
-            return cur.fetchone() is not None
+            exists = cur.fetchone() is not None
+            _PASSKEY_EXISTS_CACHE[user_id] = (now + PASSKEY_CACHE_TTL_SECONDS, exists)
+            _prune_cache()
+            return exists
+    except Exception:
+        logger.warning("Failed checking passkeys for user_id=%s", user_id, exc_info=True)
+        return False
     finally:
-        release_db_connection(conn)
+        if conn is not None:
+            release_db_connection(conn)
 
 
 def list_user_passkeys(user_id: int) -> list[dict[str, Any]]:
@@ -236,6 +275,7 @@ def create_user_passkey(
                 ),
             )
         conn.commit()
+        _invalidate_user_cache(user_id)
     finally:
         release_db_connection(conn)
 
@@ -257,24 +297,5 @@ def update_passkey_sign_count(
                 (int(sign_count), credential_id),
             )
         conn.commit()
-    finally:
-        release_db_connection(conn)
-
-
-def delete_user_passkey(user_id: int, passkey_id: int) -> bool:
-    conn = get_db_connection()
-    try:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                DELETE FROM user_passkeys
-                WHERE id = %s
-                  AND user_id = %s
-                """,
-                (passkey_id, user_id),
-            )
-            deleted = cur.rowcount > 0
-        conn.commit()
-        return deleted
     finally:
         release_db_connection(conn)
