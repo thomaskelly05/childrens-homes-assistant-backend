@@ -25,7 +25,7 @@ test('child workspace shell stays live-empty, scoped, and clears sensitive state
   await page.getByTestId('login-submit').click()
 
   await expect(page).toHaveURL(/\/command-centre$/)
-  await expect(page.getByRole('heading', { name: 'One operational leadership workspace' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Operational heartbeat of the home' })).toBeVisible()
   await expect(page.getByTestId('operational-navigation')).toContainText('Command Centre')
   await expect(page.getByTestId('operational-navigation')).toContainText('Children')
   await expect(page.getByTestId('operational-navigation')).toContainText('Workforce')
