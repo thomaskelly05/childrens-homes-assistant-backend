@@ -10,13 +10,14 @@
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
   const state = {
-    version: '1.0.0',
+    version: '1.1.0',
     supported: Boolean(SpeechRecognition),
     enabled: localStorage.getItem(WAKE_KEY) === 'true',
     listening: false,
     recognition: null,
     cooldownUntil: 0,
     restartTimer: 0,
+    pausedByVoice: false,
     lastTranscript: '',
     lastWakeAt: 0,
     error: null
@@ -36,6 +37,7 @@
       supported: state.supported,
       enabled: state.enabled,
       listening: state.listening,
+      pausedByVoice: state.pausedByVoice,
       lastTranscript: state.lastTranscript,
       lastWakeAt: state.lastWakeAt,
       error: state.error
@@ -51,10 +53,15 @@
     return WAKE_PHRASES.some((phrase) => t.includes(phrase));
   }
 
+  function voiceIsActive() {
+    return Boolean(window.IndiCareVoiceCompanion?.isActive?.());
+  }
+
   function openAssistantVoice() {
     core()?.setListening?.();
     if (window.IndiCareVoiceCompanion?.open) {
       window.IndiCareVoiceCompanion.open();
+      window.IndiCareVoiceCompanion.start?.();
       return true;
     }
     const button = document.querySelector('#voiceOrb, #openVoiceCompanion, .voice-trigger, .mic-btn');
@@ -67,13 +74,14 @@
 
   function onWake(transcript) {
     const now = Date.now();
-    if (now < state.cooldownUntil) return;
-    state.cooldownUntil = now + 3500;
+    if (now < state.cooldownUntil || voiceIsActive()) return;
+    state.cooldownUntil = now + 5000;
     state.lastWakeAt = now;
     state.lastTranscript = transcript;
     core()?.markChatStarted?.();
     core()?.setListening?.();
     emit('detected', { transcript, at: now });
+    pauseForVoice();
     openAssistantVoice();
   }
 
@@ -92,6 +100,7 @@
     };
 
     recognition.onresult = (event) => {
+      if (state.pausedByVoice || voiceIsActive()) return;
       let transcript = '';
       for (let i = event.resultIndex; i < event.results.length; i += 1) {
         transcript += event.results[i][0]?.transcript || '';
@@ -112,7 +121,7 @@
       state.listening = false;
       document.body?.classList.remove('ic-wake-listening');
       emit('stopped');
-      if (state.enabled && !document.hidden) {
+      if (state.enabled && !state.pausedByVoice && !voiceIsActive() && !document.hidden) {
         window.clearTimeout(state.restartTimer);
         state.restartTimer = window.setTimeout(() => start(false), 850);
       }
@@ -151,6 +160,7 @@
 
   function disable(clearStorage) {
     state.enabled = false;
+    state.pausedByVoice = false;
     if (clearStorage !== false) localStorage.setItem(WAKE_KEY, 'false');
     window.clearTimeout(state.restartTimer);
     if (state.recognition) {
@@ -163,7 +173,7 @@
   }
 
   function start(force) {
-    if (!state.supported || (!state.enabled && !force) || document.hidden) return snapshot();
+    if (!state.supported || (!state.enabled && !force) || document.hidden || state.pausedByVoice || voiceIsActive()) return snapshot();
     if (state.listening) return snapshot();
     if (!state.recognition) state.recognition = buildRecognition();
     try {
@@ -176,12 +186,31 @@
   }
 
   function stop() {
+    window.clearTimeout(state.restartTimer);
     if (state.recognition) {
       try { state.recognition.stop(); } catch (_) { /* ignore */ }
     }
     state.listening = false;
     document.body?.classList.remove('ic-wake-listening');
     emit('stopped');
+    return snapshot();
+  }
+
+  function pauseForVoice() {
+    if (!state.enabled) return snapshot();
+    state.pausedByVoice = true;
+    stop();
+    emit('paused-for-voice');
+    return snapshot();
+  }
+
+  function resumeAfterVoice() {
+    if (!state.enabled) return snapshot();
+    state.pausedByVoice = false;
+    state.cooldownUntil = Date.now() + 1200;
+    window.clearTimeout(state.restartTimer);
+    state.restartTimer = window.setTimeout(() => start(false), 1200);
+    emit('resumed-after-voice');
     return snapshot();
   }
 
@@ -197,8 +226,12 @@
   function installLifecycle() {
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) stop();
-      else if (state.enabled) start(false);
+      else if (state.enabled && !state.pausedByVoice && !voiceIsActive()) start(false);
     });
+    window.addEventListener('indicare:voice:listening', pauseForVoice);
+    window.addEventListener('indicare:voice:speaking', pauseForVoice);
+    window.addEventListener('indicare:voice:stopped', resumeAfterVoice);
+    window.addEventListener('indicare:voice:speech-ended', resumeAfterVoice);
   }
 
   function init() {
@@ -215,6 +248,8 @@
     disable,
     start,
     stop,
+    pauseForVoice,
+    resumeAfterVoice,
     isSupported: () => state.supported,
     phrases: () => [...WAKE_PHRASES]
   };
