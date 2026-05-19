@@ -69,10 +69,14 @@ async function toggleVoice() {
 }
 
 async function startVoice() {
+  state.active = true
   state.connecting = true
+  state.connected = false
+  state.speaking = false
+  state.listening = true
   state.error = ''
-  state.status = 'Requesting microphone'
-  state.detail = 'Allow microphone access to start a continuous realtime conversation.'
+  state.status = 'Listening'
+  state.detail = 'Opening your microphone and connecting realtime voice. You can speak naturally.'
   render()
 
   try {
@@ -87,13 +91,20 @@ async function startVoice() {
 
     state.active = true
     state.listening = true
-    state.status = 'Listening'
-    state.detail = 'Speak naturally. Interruptions and turn-taking stay inside the single realtime runtime.'
+    state.status = state.connected ? 'Listening' : 'Listening locally'
+    state.detail = state.connected
+      ? 'Speak naturally. Interruptions and turn-taking stay inside the single realtime runtime.'
+      : 'Microphone is open. Realtime voice is still connecting.'
   } catch (error) {
     state.error = String(error?.message || error)
-    state.status = 'Voice failed'
-    state.detail = 'Realtime voice failed fast; no legacy renderer was started.'
+    state.status = 'Voice connection failed'
+    state.detail = 'The orb opened, but realtime could not connect. Check microphone permission and realtime session configuration.'
     console.error('[IndiCare voice] start failed', error)
+    state.runtime?.stop?.()
+    state.active = false
+    state.connected = false
+    state.speaking = false
+    state.listening = false
   } finally {
     state.connecting = false
     render()
@@ -109,13 +120,21 @@ function stopVoice() {
   state.level = 0
   state.status = 'Tap the orb to begin'
   state.detail = 'Realtime voice only. No text panel. No legacy renderer.'
+  state.error = ''
   render()
 }
 
 function handleRuntimeEvent(type, payload = {}) {
+  if (type === 'started' || type === 'speech-start') {
+    state.active = true
+    state.listening = true
+    state.status = 'Listening'
+  }
+
   if (type === 'connected' || type === 'reconnected') {
     state.connected = true
     state.status = 'Listening'
+    state.detail = 'Realtime voice connected. Speak naturally.'
   }
 
   if (type === 'disconnected' || type === 'reconnecting') {
@@ -124,17 +143,12 @@ function handleRuntimeEvent(type, payload = {}) {
   }
 
   if (type === 'failed' || type === 'error' || type === 'audio-error') {
-    state.error = String(payload.error?.message || payload.error || payload.reason || 'Realtime voice error')
+    state.error = String(payload.error?.message || payload.error || payload.reason || payload.message || 'Realtime voice error')
     state.status = 'Voice failed'
   }
 
   if (type === 'audio-level') {
     state.level = payload.level || 0
-  }
-
-  if (type === 'speech-start') {
-    state.listening = true
-    state.status = 'Listening'
   }
 
   if (type === 'assistant-speaking') {
@@ -147,6 +161,15 @@ function handleRuntimeEvent(type, payload = {}) {
     state.speaking = false
     state.listening = true
     state.status = 'Listening'
+  }
+
+  if (type === 'stopped') {
+    state.active = false
+    state.connected = false
+    state.speaking = false
+    state.listening = false
+    state.level = 0
+    state.status = 'Tap the orb to begin'
   }
 
   render()
