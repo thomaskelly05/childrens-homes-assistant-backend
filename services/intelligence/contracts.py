@@ -12,6 +12,7 @@ PILLARS: tuple[str, ...] = (
     "reports",
     "alerts",
     "dashboard",
+    "documents",
 )
 
 STATUS_WEIGHT = {
@@ -36,6 +37,7 @@ class OperationalDomainContract:
     reports: str
     alerts: str
     dashboard: str
+    documents: str
     canonical_services: tuple[str, ...]
     primary_routes: tuple[str, ...]
     compatibility_surfaces: tuple[str, ...] = ()
@@ -82,6 +84,7 @@ OPERATIONAL_DOMAIN_CONTRACTS: tuple[OperationalDomainContract, ...] = (
         reports="partial",
         alerts="strong",
         dashboard="strong",
+        documents="strong",
         canonical_services=(
             "YoungPersonDailyNotesService",
             "YoungPeopleLinkingService",
@@ -117,6 +120,7 @@ OPERATIONAL_DOMAIN_CONTRACTS: tuple[OperationalDomainContract, ...] = (
         reports="partial",
         alerts="strong",
         dashboard="strong",
+        documents="partial",
         canonical_services=("WorkforceJourneyService", "WorkforceIntelligenceService", "StaffLinkingService"),
         primary_routes=("routers/workforce_journey_routes.py", "routers/staff_evidence_routes.py"),
         compatibility_surfaces=("routers/supervision_routes.py", "frontend/supervision.html"),
@@ -139,6 +143,7 @@ OPERATIONAL_DOMAIN_CONTRACTS: tuple[OperationalDomainContract, ...] = (
         reports="strong",
         alerts="strong",
         dashboard="strong",
+        documents="strong",
         canonical_services=("GovernanceIntelligenceService", "Reg44 lifecycle validators", "Manager review queue"),
         primary_routes=("routers/governance_intelligence_routes.py", "routers/workspace_review_routes.py"),
         compatibility_surfaces=("routers/workflow_review_routes.py",),
@@ -161,6 +166,7 @@ OPERATIONAL_DOMAIN_CONTRACTS: tuple[OperationalDomainContract, ...] = (
         reports="strong",
         alerts="partial",
         dashboard="strong",
+        documents="strong",
         canonical_services=("InspectionOSService", "EvidenceGraphService", "ofsted_evidence_engine_service"),
         primary_routes=("routers/inspection_os_routes.py", "routers/inspection_readiness_routes.py", "routers/ofsted_pack_routes.py"),
         compatibility_surfaces=("routers/home_inspection_compat_routes.py",),
@@ -180,6 +186,7 @@ OPERATIONAL_DOMAIN_CONTRACTS: tuple[OperationalDomainContract, ...] = (
         reports="partial",
         alerts="strong",
         dashboard="strong",
+        documents="strong",
         canonical_services=("SafeguardingDomainService", "MissingEpisodeService", "OperationalMemoryRepository"),
         primary_routes=("routers/safeguarding_domain_routes.py", "routers/missing_episode_routes.py"),
         compatibility_surfaces=(
@@ -205,6 +212,7 @@ OPERATIONAL_DOMAIN_CONTRACTS: tuple[OperationalDomainContract, ...] = (
         reports="strong",
         alerts="partial",
         dashboard="strong",
+        documents="partial",
         canonical_services=("ChronologyWriter", "ChronologyProjectionService", "OperationalMemoryReplayService"),
         primary_routes=("routers/operational_memory_routes.py", "routers/young_people_chronology_routes.py"),
         compatibility_surfaces=("routers/frontend_compat.py", "services/os_chronology_service.py"),
@@ -224,6 +232,7 @@ OPERATIONAL_DOMAIN_CONTRACTS: tuple[OperationalDomainContract, ...] = (
         reports="strong",
         alerts="partial",
         dashboard="partial",
+        documents="canonical",
         canonical_services=("DocumentTemplateService", "document_intelligence_service", "DocumentSignoffService"),
         primary_routes=("routers/document_engine_routes.py", "routers/document_template_routes.py", "routers/document_signoff_routes.py"),
         compatibility_surfaces=("routers/documents_routes.py", "services/document_os_core.py"),
@@ -246,6 +255,7 @@ OPERATIONAL_DOMAIN_CONTRACTS: tuple[OperationalDomainContract, ...] = (
         reports="strong",
         alerts="missing",
         dashboard="partial",
+        documents="strong",
         canonical_services=("DocumentTemplateService",),
         primary_routes=("routers/document_template_routes.py",),
         compatibility_surfaces=("frontend/documents-hub.html",),
@@ -265,6 +275,7 @@ OPERATIONAL_DOMAIN_CONTRACTS: tuple[OperationalDomainContract, ...] = (
         reports="partial",
         alerts="partial",
         dashboard="partial",
+        documents="partial",
         canonical_services=("AcademyService", "AcademyWorkbookService"),
         primary_routes=("routers/academy_routes.py", "routers/academy_intelligence_routes.py"),
         compatibility_surfaces=("frontend/academy.html", "frontend/js/features/training-centre.js"),
@@ -287,6 +298,7 @@ OPERATIONAL_DOMAIN_CONTRACTS: tuple[OperationalDomainContract, ...] = (
         reports="strong",
         alerts="partial",
         dashboard="partial",
+        documents="strong",
         canonical_services=("report_fact_service", "report_scheduler", "repositories.reports_repository"),
         primary_routes=("routers/reports_routes.py", "routers/young_people_reports_routes.py", "routers/ofsted_ai_report_routes.py"),
         compatibility_surfaces=("routers/reports_routes.py compat_router",),
@@ -306,6 +318,7 @@ OPERATIONAL_DOMAIN_CONTRACTS: tuple[OperationalDomainContract, ...] = (
         reports="strong",
         alerts="strong",
         dashboard="strong",
+        documents="strong",
         canonical_services=("build_shared_assistant_context", "orb_context_retrieval_service", "orb_websocket_gateway"),
         primary_routes=("routers/orb_routes.py", "routers/assistant_os_routes.py"),
         compatibility_surfaces=("routers/assistant_realtime_proxy_routes.py", "routers/indicare_ai_realtime_routes.py"),
@@ -328,6 +341,7 @@ OPERATIONAL_DOMAIN_CONTRACTS: tuple[OperationalDomainContract, ...] = (
         reports="partial",
         alerts="strong",
         dashboard="strong",
+        documents="partial",
         canonical_services=("LiveAlertsService", "RealtimeAlertsService", "RealtimeEventBus"),
         primary_routes=("routers/live_alerts_routes.py", "routers/realtime_alerts_routes.py", "routers/notifications_routes.py"),
         compatibility_surfaces=("services/workflow_automation.py",),
@@ -347,6 +361,7 @@ OPERATIONAL_DOMAIN_CONTRACTS: tuple[OperationalDomainContract, ...] = (
         reports="partial",
         alerts="strong",
         dashboard="strong",
+        documents="partial",
         canonical_services=("tasks_routes", "OperationalActionEngine", "workflow_automation"),
         primary_routes=("routers/tasks_routes.py", "routers/actions_routes.py"),
         compatibility_surfaces=("services/task_engine.py",),
@@ -366,6 +381,7 @@ OPERATIONAL_DOMAIN_CONTRACTS: tuple[OperationalDomainContract, ...] = (
         reports="strong",
         alerts="strong",
         dashboard="strong",
+        documents="strong",
         canonical_services=("ProviderOperationalQueueService", "ProviderOversightService"),
         primary_routes=("routers/provider_oversight_routes.py", "routers/provider_intelligence_routes.py"),
         compatibility_surfaces=(),
@@ -385,6 +401,7 @@ OPERATIONAL_DOMAIN_CONTRACTS: tuple[OperationalDomainContract, ...] = (
         reports="partial",
         alerts="strong",
         dashboard="strong",
+        documents="partial",
         canonical_services=("RealtimeEventBus", "RealtimeReplayService", "event_reconciliation_service"),
         primary_routes=("routers/realtime_replay_routes.py", "routers/orb_routes.py"),
         compatibility_surfaces=("frontend/js/indicare-workspace/indicare-event-bus.js",),

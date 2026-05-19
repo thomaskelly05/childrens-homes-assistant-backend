@@ -17,7 +17,7 @@ def test_router_groups_preserve_flat_manifest_order():
 
     assert ROUTERS == grouped
     assert len(ROUTERS) == len(set(ROUTERS))
-    assert {"auth", "assistant", "chronology", "reporting", "documents", "safeguarding"} <= {
+    assert {"auth", "assistant", "academy", "chronology", "reporting", "documents", "safeguarding"} <= {
         group.name for group in ROUTER_GROUPS
     }
 
@@ -55,6 +55,18 @@ def test_router_registry_summary_reports_domains_and_compatibility():
     assert any(group["name"] == "operational-backend" for group in summary["groups"])
     assert "accidental_conflicts" in summary
     assert "intentional_conflicts" in summary
+    assert any(group["name"] == "academy" and group["classification"] == "primary" for group in summary["groups"])
+
+
+def test_academy_routes_are_mounted_by_loader():
+    app = FastAPI()
+
+    mounted = include_router(app, "routers.academy_routes")
+    routes = {(method, route.path) for route in app.routes for method in getattr(route, "methods", [])}
+
+    assert "router" in mounted
+    assert ("GET", "/academy/dashboard/me") in routes
+    assert ("GET", "/academy/modules") in routes
 
 
 def test_route_conflict_policy_splits_intentional_and_accidental():
