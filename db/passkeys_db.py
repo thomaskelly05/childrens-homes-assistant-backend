@@ -54,62 +54,14 @@ def init_passkeys_table() -> None:
                 """
             )
 
-            cur.execute(
-                """
-                ALTER TABLE user_passkeys
-                ADD COLUMN IF NOT EXISTS public_key TEXT
-                """
-            )
-
-            cur.execute(
-                """
-                ALTER TABLE user_passkeys
-                ADD COLUMN IF NOT EXISTS credential_public_key TEXT
-                """
-            )
-
-            cur.execute(
-                """
-                ALTER TABLE user_passkeys
-                ADD COLUMN IF NOT EXISTS sign_count BIGINT NOT NULL DEFAULT 0
-                """
-            )
-
-            cur.execute(
-                """
-                ALTER TABLE user_passkeys
-                ADD COLUMN IF NOT EXISTS transports TEXT
-                """
-            )
-
-            cur.execute(
-                """
-                ALTER TABLE user_passkeys
-                ADD COLUMN IF NOT EXISTS aaguid TEXT
-                """
-            )
-
-            cur.execute(
-                """
-                ALTER TABLE user_passkeys
-                ADD COLUMN IF NOT EXISTS nickname TEXT
-                """
-            )
-
-            cur.execute(
-                """
-                ALTER TABLE user_passkeys
-                ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-                """
-            )
-
-            cur.execute(
-                """
-                ALTER TABLE user_passkeys
-                ADD COLUMN IF NOT EXISTS last_used_at TIMESTAMPTZ
-                """
-            )
-
+            cur.execute("ALTER TABLE user_passkeys ADD COLUMN IF NOT EXISTS public_key TEXT")
+            cur.execute("ALTER TABLE user_passkeys ADD COLUMN IF NOT EXISTS credential_public_key TEXT")
+            cur.execute("ALTER TABLE user_passkeys ADD COLUMN IF NOT EXISTS sign_count BIGINT NOT NULL DEFAULT 0")
+            cur.execute("ALTER TABLE user_passkeys ADD COLUMN IF NOT EXISTS transports TEXT")
+            cur.execute("ALTER TABLE user_passkeys ADD COLUMN IF NOT EXISTS aaguid TEXT")
+            cur.execute("ALTER TABLE user_passkeys ADD COLUMN IF NOT EXISTS nickname TEXT")
+            cur.execute("ALTER TABLE user_passkeys ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()")
+            cur.execute("ALTER TABLE user_passkeys ADD COLUMN IF NOT EXISTS last_used_at TIMESTAMPTZ")
             cur.execute(
                 """
                 UPDATE user_passkeys
@@ -118,27 +70,14 @@ def init_passkeys_table() -> None:
                   AND public_key IS NOT NULL
                 """
             )
-
             cur.execute(
                 """
                 CREATE UNIQUE INDEX IF NOT EXISTS idx_user_passkeys_credential_id_unique
                 ON user_passkeys (credential_id)
                 """
             )
-
-            cur.execute(
-                """
-                CREATE INDEX IF NOT EXISTS idx_user_passkeys_user_id
-                ON user_passkeys (user_id)
-                """
-            )
-
-            cur.execute(
-                """
-                CREATE INDEX IF NOT EXISTS idx_user_passkeys_created_at
-                ON user_passkeys (created_at)
-                """
-            )
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_user_passkeys_user_id ON user_passkeys (user_id)")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_user_passkeys_created_at ON user_passkeys (created_at)")
 
         conn.commit()
     finally:
@@ -297,5 +236,24 @@ def update_passkey_sign_count(
                 (int(sign_count), credential_id),
             )
         conn.commit()
+    finally:
+        release_db_connection(conn)
+
+
+def delete_user_passkey(user_id: int, passkey_id: int) -> bool:
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                DELETE FROM user_passkeys
+                WHERE id = %s AND user_id = %s
+                """,
+                (int(passkey_id), int(user_id)),
+            )
+            deleted = cur.rowcount > 0
+        conn.commit()
+        _invalidate_user_cache(user_id)
+        return deleted
     finally:
         release_db_connection(conn)
