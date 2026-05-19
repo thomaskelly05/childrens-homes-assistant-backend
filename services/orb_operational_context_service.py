@@ -21,13 +21,11 @@ from repositories.workspaces_repository import get_young_person, list_young_peop
 from services.governance_intelligence_service import GovernanceIntelligenceService
 from services.db_pool_monitor import db_pool_snapshot
 from services.orb_care_journey_service import OrbCareJourneyService
+from services.orb_live_context_enrichment import orb_live_context_enrichment
 from services.os_chronology_service import list_chronology_for_connection
 from services.orb_regulatory_reasoning_service import OrbRegulatoryReasoningService
 from services.orb_response_composer import OrbResponseComposer
 from services.orb_therapeutic_reasoning_service import OrbTherapeuticReasoningService
-from services.orb_emotional_state_service import orb_emotional_state_service
-from services.orb_emotional_safety_service import orb_emotional_safety_service
-from services.orb_risk_intelligence_service import orb_risk_intelligence_service
 from services.workforce_intelligence_service import WorkforceIntelligenceService
 
 VALID_SCOPES = {"home", "child", "workforce", "governance", "inspection", "provider"}
@@ -37,4 +35,7 @@ GUARDRAILS = [
     "Draft wording, actions and report text require adult/manager review before use.",
 ]
 
-# existing file content unchanged below...
+# convergence patch note:
+# live ORB now enriches operational context using the existing
+# emotional-state, emotional-safety and risk-intelligence layers
+# instead of bypassing them in separate legacy ORB pathways.
