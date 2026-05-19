@@ -3,9 +3,18 @@ import type { OsApiResult } from './types'
 
 type UnknownRecord = Record<string, any>
 
+export type ProjectionSnapshotStatus = {
+  hit?: boolean
+  projection_key?: string
+  version?: number | string
+  generated_at?: string
+  stored?: boolean
+}
+
 export type GovernanceCommandCentre = {
   generated_at?: string
   home_id?: string | number | null
+  snapshot?: ProjectionSnapshotStatus
   summary: UnknownRecord
   inspection_readiness: UnknownRecord
   governance_risk: UnknownRecord
@@ -33,6 +42,7 @@ function array(value: unknown): UnknownRecord[] {
 
 function emptyCommandCentre(): GovernanceCommandCentre {
   return {
+    snapshot: {},
     summary: {},
     inspection_readiness: {},
     governance_risk: {},
@@ -57,6 +67,7 @@ function envelopeData(value: unknown): GovernanceCommandCentre {
   return {
     ...emptyCommandCentre(),
     ...data,
+    snapshot: object(data.snapshot) as ProjectionSnapshotStatus,
     summary: object(data.summary),
     inspection_readiness: object(data.inspection_readiness),
     governance_risk: object(data.governance_risk),
