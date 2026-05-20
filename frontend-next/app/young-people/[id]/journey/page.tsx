@@ -6,7 +6,7 @@ import { LiveDataStatus } from '@/components/indicare/live-data-status'
 import { Card, EmptyState, RiskBadge, SectionHeader, StatusBadge } from '@/components/indicare/ui'
 import { NarrativeContinuityPanel } from '@/components/narrative/narrative-continuity-panel'
 import { WorkflowSaveIndicator } from '@/components/system-feedback/workflow-save-indicator'
-import { getChildJourneyData, todayLong } from '@/lib/child-journey/data'
+import { getChildExperienceIntelligence, getChildJourneyData, todayLong } from '@/lib/child-journey/data'
 import { childQuickActionHref, contextualChildQuickActions } from '@/lib/child-journey/workflows'
 import { getEntityRoute } from '@/lib/navigation/entity-resolver'
 import { buildNarrativeContinuity } from '@/lib/narrative/continuity'
@@ -38,6 +38,16 @@ function savedRecordHref(childId: string, routeType?: string, recordId?: string)
   return getEntityRoute({ entity_type: routeType || 'chronology', entity_id: recordId, linked_child_id: childId })
 }
 
+function bulletList(items: string[] | undefined, empty: string) {
+  const visible = Array.isArray(items) ? items.filter(Boolean).slice(0, 4) : []
+  if (!visible.length) return <p className="text-sm font-bold leading-6 text-slate-500">{empty}</p>
+  return (
+    <ul className="space-y-2 text-sm font-bold leading-6 text-slate-700">
+      {visible.map((item, index) => <li key={`${item}-${index}`}>- {item}</li>)}
+    </ul>
+  )
+}
+
 export default async function ChildJourneyPage({
   params,
   searchParams
@@ -47,7 +57,10 @@ export default async function ChildJourneyPage({
 }) {
   const { id } = await params
   const query = await searchParams
-  const data = await getChildJourneyData(id)
+  const [data, experienceResult] = await Promise.all([
+    getChildJourneyData(id),
+    getChildExperienceIntelligence(id)
+  ])
   const child = data.child
   if (!child && data.source === 'live') notFound()
 
@@ -60,6 +73,7 @@ export default async function ChildJourneyPage({
   const welfareSummary = lastDailyNote?.summary || data.timeline[0]?.summary || 'No daily note has been recorded yet today.'
   const savedIndicator = query.saved ? saveStateFromStatus(query.status || 'saved') : null
   const narrativeContinuity = buildNarrativeContinuity(data)
+  const experienceIntelligence = experienceResult.intelligence
   const quickActions = contextualChildQuickActions({ workflow: 'journey', unresolvedActions: actionsDueToday.length })
   const focus = query.focus || ''
   const supportSignals = [...data.timeline, ...data.dailyNotes].filter((item) => /settled|calm|helped|support|routine|keywork|trusted|positive|progress|achiev/i.test(`${item.title} ${item.summary}`)).slice(0, 4)
@@ -129,7 +143,7 @@ export default async function ChildJourneyPage({
     ['Handover', `/handover/current?young_person_id=${encodeURIComponent(id)}`, 'Prepare next-shift guidance for this child.'],
     ['Reg 44 Action', `/young-people/${encodeURIComponent(id)}/reg44-action/new`, 'Link independent visit actions to child-centred evidence.'],
     ['Reg 45 Evidence', `/young-people/${encodeURIComponent(id)}/reg45-evidence/new`, 'Link quality of care evidence to child outcomes.'],
-    ['Orb', `/assistant?youngPersonId=${encodeURIComponent(id)}`, 'Ask Orb for draft suggestions only.']
+    ['Orb', `/orb?scope=child&young_person_id=${encodeURIComponent(id)}`, 'Ask Orb for draft suggestions only.']
   ]
 
   return (
@@ -180,7 +194,7 @@ export default async function ChildJourneyPage({
               <ClipboardPlus className="mr-2 h-4 w-4" aria-hidden />
               Add Daily Note
             </ActionLink>
-            <ActionLink href={`/assistant?youngPersonId=${encodeURIComponent(id)}`} tone="light">
+            <ActionLink href={`/orb?scope=child&young_person_id=${encodeURIComponent(id)}`} tone="light">
               <Sparkles className="mr-2 h-4 w-4" aria-hidden />
               Ask Orb
             </ActionLink>
@@ -189,6 +203,40 @@ export default async function ChildJourneyPage({
       </header>
 
       <NarrativeContinuityPanel childName={childName} continuity={narrativeContinuity} />
+
+      {experienceIntelligence ? (
+        <Card>
+          <SectionHeader eyebrow="Existing child experience intelligence" title="Support effectiveness, voice and impact" description="This panel reuses the active child experience intelligence route so the modern journey carries the same lived-experience signals as the legacy shell." />
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            {[
+              ['Experience status', experienceIntelligence.status || 'Not returned'],
+              ['Risk trajectory', experienceIntelligence.trends?.risk_trajectory || experienceIntelligence.signals?.risk_level || 'Not returned'],
+              ['Emotional distress', experienceIntelligence.trends?.emotional_distress || 'Not returned'],
+              ['Child voice visible', experienceIntelligence.signals?.child_voice_visible ? 'Visible in records' : 'Needs checking in source records']
+            ].map(([label, detail]) => (
+              <div key={label} className="rounded-[22px] border border-emerald-100 bg-emerald-50 p-4">
+                <p className="text-[11px] font-black uppercase tracking-[0.16em] text-emerald-700">{label}</p>
+                <p className="mt-2 text-sm font-bold leading-6 text-emerald-950">{detail}</p>
+              </div>
+            ))}
+          </div>
+          {experienceIntelligence.summary ? <p className="mt-4 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm font-bold leading-6 text-slate-700">{experienceIntelligence.summary}</p> : null}
+          <div className="mt-4 grid gap-4 lg:grid-cols-3">
+            <div className="rounded-2xl border border-slate-100 bg-white px-4 py-3">
+              <p className="mb-2 text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">What appears stabilising?</p>
+              {bulletList(experienceIntelligence.signals?.positive_anchors, 'No stabilising anchors returned by child experience intelligence.')}
+            </div>
+            <div className="rounded-2xl border border-slate-100 bg-white px-4 py-3">
+              <p className="mb-2 text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">Relationship continuity</p>
+              {bulletList(experienceIntelligence.signals?.relationship_mentions, 'No relationship continuity markers returned by child experience intelligence.')}
+            </div>
+            <div className="rounded-2xl border border-slate-100 bg-white px-4 py-3">
+              <p className="mb-2 text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">What may Ofsted ask?</p>
+              {bulletList(experienceIntelligence.ofsted_lens?.inspection_questions, 'No inspection questions returned by child experience intelligence.')}
+            </div>
+          </div>
+        </Card>
+      ) : null}
 
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1.05fr)_minmax(340px,0.95fr)]" data-testid="child-lived-experience-view">
         <Card>

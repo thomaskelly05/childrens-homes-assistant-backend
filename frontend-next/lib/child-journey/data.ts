@@ -65,6 +65,34 @@ export type ChildJourneyData = {
   story: ChildJourneyStory
 }
 
+export type ChildExperienceIntelligence = {
+  status?: string
+  summary?: string
+  scores?: Record<string, number>
+  trends?: Record<string, string>
+  signals?: {
+    risk_level?: string
+    triggers?: string[]
+    positive_anchors?: string[]
+    relationship_mentions?: string[]
+    child_voice_visible?: boolean
+  }
+  ofsted_lens?: {
+    strengths?: string[]
+    concerns?: string[]
+    inspection_questions?: string[]
+  }
+  recommendations?: string[]
+  limitations?: string[]
+  context_coverage?: Record<string, unknown>
+}
+
+export type ChildExperienceIntelligenceResult = {
+  source: 'live' | 'unavailable'
+  error?: string
+  intelligence?: ChildExperienceIntelligence
+}
+
 export type ChildJourneyStory = {
   storySoFar: string
   whatChanged: string
@@ -219,4 +247,19 @@ export async function getChildJourneyData(id: string): Promise<ChildJourneyData>
     return coerceLiveJourney(id, result.data, fallback)
   }
   return emptyJourneyData(id, 'unavailable', result.error)
+}
+
+export async function getChildExperienceIntelligence(id: string): Promise<ChildExperienceIntelligenceResult> {
+  const fallback = { intelligence: undefined as ChildExperienceIntelligence | undefined }
+  const result = await osGet<{ intelligence?: ChildExperienceIntelligence }>(
+    `/young-people/${encodeURIComponent(id)}/experience-intelligence`,
+    fallback
+  )
+  if (result.source !== 'live' || !result.data?.intelligence) {
+    return { source: 'unavailable', error: result.error }
+  }
+  return {
+    source: 'live',
+    intelligence: result.data.intelligence
+  }
 }

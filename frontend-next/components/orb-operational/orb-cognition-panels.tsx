@@ -68,6 +68,7 @@ export function OrbCognitionPanels({ response }: { response?: OrbConversationRes
   const rmReflection = record(response?.rm_reflection)
   const careJourney = record(response?.care_journey)
   const regulatory = record(response?.regulatory_reasoning)
+  const therapeutic = record(response?.therapeutic_reasoning)
 
   const themes = list(cognition.themes)
   const impactIndicators = list(cognition.impact_indicators)
@@ -76,6 +77,8 @@ export function OrbCognitionPanels({ response }: { response?: OrbConversationRes
   const pressureIndicators = list(atmosphere.operational_pressure_indicators)
   const stabilityIndicators = list(atmosphere.stability_indicators)
   const reflectionPrompts = list(rmReflection.rm_reflection_prompts)
+  const therapeuticObservations = list(therapeutic.therapeutic_observations)
+  const languageGuardrails = list(therapeutic.language_guardrails)
   const relationshipMarkers = [
     ...themes.filter((theme) => /relationship|voice|belonging|emotional/i.test(theme)),
     ...list(careJourney.protective_factors)
@@ -133,7 +136,7 @@ export function OrbCognitionPanels({ response }: { response?: OrbConversationRes
           <Sparkles className="h-5 w-5 text-blue-600" aria-hidden />
           <h2 className="text-lg font-black text-slate-950">Reflective maturity</h2>
         </div>
-        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        <div className="mt-4 grid gap-4 lg:grid-cols-3">
           <div>
             <p className="mb-2 text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">RM reflection</p>
             <InsightList items={[...reflectionPrompts, ...cognitionPrompts]} empty="Reflective prompts appear from ORB RM reflection after records are checked." />
@@ -141,6 +144,20 @@ export function OrbCognitionPanels({ response }: { response?: OrbConversationRes
           <div>
             <p className="mb-2 text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Oversight considerations</p>
             <InsightList items={oversight} empty="Governance, evidence and trajectory considerations appear when relevant to the selected scope." />
+          </div>
+          <div>
+            <p className="mb-2 text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Therapeutic reasoning</p>
+            <InsightList items={therapeuticObservations} empty="Therapeutic observations appear when ORB returns child-centred lived-experience reasoning." />
+          </div>
+        </div>
+        <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.7fr)]">
+          <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3">
+            <p className="text-[11px] font-black uppercase tracking-[0.18em] text-emerald-700">Reflective therapeutic prompt</p>
+            <p className="mt-1 text-sm font-semibold leading-6 text-emerald-950">{text(therapeutic.reflective_prompt, 'ORB has not returned a therapeutic prompt for this response yet.')}</p>
+          </div>
+          <div className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
+            <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Language guardrails</p>
+            <InsightList items={languageGuardrails} empty="Language guardrails appear with ORB therapeutic reasoning." />
           </div>
         </div>
         <div className="mt-4 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">

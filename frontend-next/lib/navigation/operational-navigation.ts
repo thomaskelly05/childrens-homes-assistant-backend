@@ -150,7 +150,7 @@ export const operationalNavigation: OperationalNavItem[] = [
     icon: Sparkles,
     permissions: ['assistant:access'],
     roleScopes: ['rm', 'ri', 'staff', 'provider', 'admin'],
-    activeRoots: ['orb', 'assistant', 'voice', 'settings']
+    activeRoots: ['orb']
   },
   {
     domain: 'admin',
