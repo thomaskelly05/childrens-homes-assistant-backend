@@ -410,7 +410,7 @@ export async function POST(request: Request) {
   let payload: Record<string, any> = {}
   let routeType: string = workflowId
   let submitPath: string | undefined
-  let createMethod = 'POST'
+  const createMethod = 'POST'
 
   if (workflowId === 'child-profile') {
     const payloads = childProfilePayloads(values)
