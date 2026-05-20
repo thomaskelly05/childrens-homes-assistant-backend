@@ -93,6 +93,7 @@ export function OrbConversationExperience({
   const isDegraded = Boolean(latestContext?.degraded)
   const statusLabel = isDegraded ? 'Partial context' : latestContext?.snapshot_hit ? 'Snapshot + live' : 'Live DB backed'
   const cognitionTimeline = messages.filter((message) => message.role === 'assistant' && message.response)
+  const voiceHref = `/orb?voice=1&scope=${encodeURIComponent(scope)}${youngPersonId ? `&young_person_id=${encodeURIComponent(youngPersonId)}` : ''}`
 
   async function submit(event?: FormEvent<HTMLFormElement>, override?: string, overrideScope?: OrbScope) {
     event?.preventDefault()
@@ -164,7 +165,7 @@ export function OrbConversationExperience({
 
         <div className="mt-4 grid gap-3 md:grid-cols-3">
           {[
-            ['Voice state', 'Typed ORB active; voice available from shell'],
+            ['Voice state', 'Voice ORB now stays inside this same ORB workspace'],
             ['RM review', 'Themes support review, not final decisions'],
             ['Inspection context', latestIntelligence?.regulatory_reasoning?.inspection_relevance?.[0]?.label || 'SCCIF-aware evidence view']
           ].map(([label, value]) => (
@@ -311,13 +312,13 @@ export function OrbConversationExperience({
           <p className="text-sm font-semibold leading-6 text-slate-300">Live tables: {latestResponse?.context_used?.live_tables?.length || 0}</p>
           <p className="text-sm font-semibold leading-6 text-slate-300">Projection keys: {latestResponse?.context_used?.projection_keys?.length || 0}</p>
           <p className="text-sm font-semibold leading-6 text-slate-300">Pool saturation: {latestContext?.pool_saturation_pct ?? 0}%</p>
-          <Link href="/voice" className="mt-4 flex items-center gap-2 rounded-2xl bg-white/10 px-4 py-3 text-sm font-black text-white">
+          <Link href={voiceHref} className="mt-4 flex items-center gap-2 rounded-2xl bg-white/10 px-4 py-3 text-sm font-black text-white">
             <Mic2 className="h-4 w-4" aria-hidden />
-            Open voice ORB
+            Voice ORB uses this same scope
           </Link>
           <div className="mt-3 flex items-start gap-2 rounded-2xl bg-white/10 p-3 text-xs font-semibold leading-5 text-slate-200">
             <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" aria-hidden />
-            Snapshot/live indicators help managers understand how much evidence ORB used.
+            Voice and typed ORB now share the same operational cognition route and review guardrails.
           </div>
         </section>
       </aside>
