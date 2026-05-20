@@ -42,7 +42,7 @@ export default async function GovernanceCommandCentrePage() {
   const oversightRows = [
     ['What themes are emerging?', label(summary.safeguarding_posture || summary.governance_risk || valueFromRecord(data.safeguarding_drift || {}, ['summary', 'status'], 'Review safeguarding, workforce and evidence themes'))],
     ['Where is oversight strongest?', matrixEntries.length ? `${matrixEntries.length} SCCIF evidence entries visible` : label(summary.inspection_readiness, 'Evidence matrix not returned')],
-    ['Where may evidence need strengthening?', label(summary.evidence_gaps, valueFromRecord(data.evidence_matrix?.summary || {}, ['gaps', 'evidence_gaps'], 'Review evidence matrix gaps'))],
+    ['Where may evidence need strengthening?', label(summary.evidence_gaps, String(valueFromRecord(data.evidence_matrix?.summary || {}, ['gaps', 'evidence_gaps'], 'Review evidence matrix gaps')))],
     ['Where is child voice visible?', label(summary.child_voice_visibility || valueFromRecord(data.child_journey_health || {}, ['child_voice_visibility', 'summary'], 'Review child journey health'))],
     ['What operational pressures exist?', actions.length || data.unresolved_concerns.length ? `${actions.length} governance action(s), ${data.unresolved_concerns.length} unresolved concern(s)` : 'No governance action pressure returned']
   ]

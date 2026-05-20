@@ -15,7 +15,7 @@ function list(value: unknown): string[] {
   return value.map((item) => String(item || '').trim()).filter(Boolean)
 }
 
-function text(value: unknown, fallback = 'Not returned') {
+function text(value: unknown, fallback: unknown = 'Not returned') {
   if (value === undefined || value === null || value === '') return fallback
   if (typeof value === 'object') return JSON.stringify(value).slice(0, 180)
   return String(value)
