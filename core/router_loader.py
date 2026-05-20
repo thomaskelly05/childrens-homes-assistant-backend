@@ -217,9 +217,10 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
             "routers.os_workflow_wiring_audit_routes",
             "backend.os_schema_audit_router",
             "backend.os_single_source_audit_router",
+            "backend.os_security_convergence_router",
             "backend.os_live_data_router",
         ),
-        notes="Compliance, workflow review, schema-live, OS source-of-truth/schema/workflow wiring audits and OS live data gateways.",
+        notes="Compliance, workflow review, schema-live, security/source-of-truth/schema/workflow audits and OS live data gateways.",
     ),
 )
 
