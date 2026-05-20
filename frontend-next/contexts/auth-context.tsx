@@ -41,7 +41,6 @@ const publicAssetPaths = new Set([
 ])
 const publicAssetPrefixes = ['/_next/', '/static/', '/images/', '/icons/']
 const AUTH_CACHE_KEY = 'indicare.auth.identity.v1'
-const AUTH_CACHE_TTL_MS = 60_000
 const e2eAuthEnabled = process.env.NEXT_PUBLIC_E2E_TEST_MODE === '1' && process.env.NODE_ENV !== 'production'
 const e2eEmail = process.env.NEXT_PUBLIC_E2E_USER_EMAIL || 'e2e.manager@indicare.local'
 const e2ePassword = process.env.NEXT_PUBLIC_E2E_USER_PASSWORD || 'ChangeMeForE2E123!'
@@ -61,7 +60,8 @@ const e2eUser: StaffUser = {
   subscription_status: 'active',
   plan_name: 'E2E',
   mfa_enabled: true,
-  mfa_verified: true
+  mfa_verified: true,
+  has_passkeys: true
 }
 
 function isPublicPath(pathname: string) {
@@ -83,29 +83,12 @@ function hasUserPayload(response: AuthMeResponse): response is AuthMeResponse & 
   return Boolean(response?.user && typeof response.user === 'object')
 }
 
-function readCachedUser(): StaffUser | null {
-  if (typeof window === 'undefined') return null
-  try {
-    const raw = window.sessionStorage.getItem(AUTH_CACHE_KEY)
-    if (!raw) return null
-    const parsed = JSON.parse(raw) as { at?: number; user?: StaffUser }
-    if (!parsed.at || Date.now() - parsed.at > AUTH_CACHE_TTL_MS || !parsed.user) return null
-    return normaliseUser(parsed.user)
-  } catch {
-    return null
-  }
-}
-
-function writeCachedUser(user: StaffUser | null) {
+function clearCachedIdentity() {
   if (typeof window === 'undefined') return
   try {
-    if (!user) {
-      window.sessionStorage.removeItem(AUTH_CACHE_KEY)
-      return
-    }
-    window.sessionStorage.setItem(AUTH_CACHE_KEY, JSON.stringify({ at: Date.now(), user }))
+    window.sessionStorage.removeItem(AUTH_CACHE_KEY)
   } catch {
-    // Ignore storage failures; auth still works through the API.
+    // Ignore storage failures; live auth remains authoritative.
   }
 }
 
@@ -134,16 +117,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return
       }
 
-      const cached = readCachedUser()
-      if (cached) {
-        setUser(cached)
-        setStatus('authenticated')
-        setSessionExpired(false)
-        setCsrfReady(Boolean(getCsrfToken()))
-        logoutRedirecting.current = false
-        return
-      }
-
       setStatus('loading')
       try {
         const response = await authFetch<AuthMeResponse>('/auth/me')
@@ -151,7 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           throw new AuthApiError(401, 'Your session could not be loaded')
         }
         const nextUser = normaliseUser(response.user)
-        writeCachedUser(nextUser)
+        clearCachedIdentity()
         setUser(nextUser)
         setStatus('authenticated')
         setSessionExpired(false)
@@ -159,7 +132,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logoutRedirecting.current = false
       } catch (caught) {
         const authError = caught instanceof AuthApiError ? caught : null
-        writeCachedUser(null)
+        clearCachedIdentity()
         setUser(null)
         setStatus('unauthenticated')
         setError(authError?.message || 'Your session could not be loaded')
@@ -208,7 +181,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSessionExpired(false)
       setCsrfReady(true)
       logoutRedirecting.current = false
-      writeCachedUser(e2eUser)
       return {
         ok: true,
         authenticated: true,
@@ -216,15 +188,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user: e2eUser
       }
     }
+    clearCachedIdentity()
     const response = await authFetch<LoginResponse>('/auth/login', {
       method: 'POST',
       body: JSON.stringify(input)
     })
 
     if (response.user) {
-      const nextUser = normaliseUser(response.user)
-      writeCachedUser(nextUser)
-      setUser(nextUser)
+      setUser(normaliseUser(response.user))
     }
 
     if (response.user && response.authenticated) {
@@ -245,7 +216,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       logoutRedirecting.current = true
       clearSensitiveBrowserState()
-      writeCachedUser(null)
+      clearCachedIdentity()
       setUser(null)
       setStatus('unauthenticated')
       setCsrfReady(false)
