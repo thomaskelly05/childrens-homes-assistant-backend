@@ -100,6 +100,7 @@ def test_sprint_i_journey_has_safe_empty_states_and_child_centred_sections():
 
 def test_sprint_i_schema_audit_names_real_workflow_tables():
     schema_audit = (ROOT / "backend/os_schema_audit_router.py").read_text()
+    router_loader = (ROOT / "core/router_loader.py").read_text()
 
     for table in [
         "young_people",
@@ -129,6 +130,19 @@ def test_sprint_i_schema_audit_names_real_workflow_tables():
         "audit_events",
     ]:
         assert table in schema_audit
+
+    for sprint_j_domain in [
+        "staff_workforce",
+        "chronology",
+        "evidence_links",
+        "governance_reg44_reg45",
+        "orb_memory_context",
+        "safe_fallback",
+        "duplicate_table_groups",
+    ]:
+        assert sprint_j_domain in schema_audit
+
+    assert "backend.os_schema_audit_router" in router_loader
 
 
 def test_sprint_h_final_navigation_is_the_primary_operational_navigation():
