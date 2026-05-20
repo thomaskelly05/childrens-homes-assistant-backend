@@ -18,16 +18,18 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise RuntimeError("DATABASE_URL is not set")
 
-DB_POOL_MIN = int(os.getenv("DB_POOL_MIN", "1"))
-DB_POOL_MAX = int(os.getenv("DB_POOL_MAX", "8"))
+# Increased defaults because IndiCare now loads live operational cognition,
+# chronology, governance and workforce state concurrently.
+DB_POOL_MIN = int(os.getenv("DB_POOL_MIN", "5"))
+DB_POOL_MAX = int(os.getenv("DB_POOL_MAX", "25"))
 if DB_POOL_MAX < DB_POOL_MIN:
     logger.warning("DB_POOL_MAX=%s is lower than DB_POOL_MIN=%s; raising max to min", DB_POOL_MAX, DB_POOL_MIN)
     DB_POOL_MAX = DB_POOL_MIN
 
-DB_POOL_WAIT_TIMEOUT_SECONDS = float(os.getenv("DB_POOL_WAIT_TIMEOUT_SECONDS", "3"))
-DB_STATEMENT_TIMEOUT_MS = int(os.getenv("DB_STATEMENT_TIMEOUT_MS", "10000"))
-DB_IDLE_TX_TIMEOUT_MS = int(os.getenv("DB_IDLE_TX_TIMEOUT_MS", "10000"))
-DB_CONNECT_RETRIES = int(os.getenv("DB_CONNECT_RETRIES", "1"))
+DB_POOL_WAIT_TIMEOUT_SECONDS = float(os.getenv("DB_POOL_WAIT_TIMEOUT_SECONDS", "10"))
+DB_STATEMENT_TIMEOUT_MS = int(os.getenv("DB_STATEMENT_TIMEOUT_MS", "15000"))
+DB_IDLE_TX_TIMEOUT_MS = int(os.getenv("DB_IDLE_TX_TIMEOUT_MS", "15000"))
+DB_CONNECT_RETRIES = int(os.getenv("DB_CONNECT_RETRIES", "2"))
 DB_POOL_EXHAUSTION_WARN_INTERVAL = int(os.getenv("DB_POOL_EXHAUSTION_WARN_INTERVAL", "10"))
 
 _db_pool_exhaustion_count = 0
@@ -228,8 +230,6 @@ def release_db_connection(conn, *, close: bool = False):
 
 @contextmanager
 def db_session(*, commit: bool = True):
-    """Acquire and always return a pooled connection for service-layer code."""
-
     conn = None
     try:
         conn = get_db_connection()
