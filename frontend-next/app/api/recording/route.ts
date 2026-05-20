@@ -187,6 +187,20 @@ function familyPayload(values: Record<string, string>) {
   }
 }
 
+function educationPayload(values: Record<string, string>) {
+  return {
+    record_date: values.record_date || todayIsoDate(),
+    attendance_status: values.attendance_status,
+    provision_name: values.provision_name,
+    behaviour_summary: values.behaviour_summary,
+    learning_engagement: values.learning_engagement,
+    issue_raised: values.issue_raised,
+    action_taken: values.action_taken,
+    professional_involved: values.professional_involved,
+    achievement_note: values.achievement_note
+  }
+}
+
 function healthPayload(values: Record<string, string>, appointment = false) {
   const summary = appointment
     ? text(values, ['appointment_outcome', 'advice_received'])
@@ -200,6 +214,44 @@ function healthPayload(values: Record<string, string>, appointment = false) {
     follow_up_required: Boolean(values.follow_up),
     next_action_date: undefined,
     event_datetime: values.appointment_datetime || nowIso()
+  }
+}
+
+function riskPayload(values: Record<string, string>) {
+  return {
+    category: values.category || 'other',
+    title: values.title || 'Risk assessment',
+    concern_summary: values.concern_summary,
+    known_triggers: values.known_triggers,
+    early_warning_signs: values.early_warning_signs,
+    contextual_factors: values.contextual_factors,
+    current_controls: values.current_controls,
+    deescalation_strategies: values.deescalation_strategies,
+    response_actions: values.response_actions,
+    child_views: values.child_views,
+    severity: values.severity || 'medium',
+    likelihood: values.likelihood || 'medium',
+    review_date: values.review_date,
+    approval_status: 'draft',
+    status: 'active'
+  }
+}
+
+function supportPlanPayload(values: Record<string, string>) {
+  return {
+    plan_type: values.plan_type || 'support_plan',
+    title: values.title || 'Support plan',
+    presenting_need: values.presenting_need,
+    summary: values.summary,
+    child_voice: values.child_voice,
+    proactive_strategies: values.proactive_strategies,
+    pace_guidance: values.pace_guidance,
+    triggers: values.triggers,
+    protective_factors: values.protective_factors,
+    staff_guidance: values.staff_guidance,
+    review_date: values.review_date,
+    approval_status: 'draft',
+    status: 'draft'
   }
 }
 
@@ -323,14 +375,14 @@ function handoverPayload(values: Record<string, string>) {
 
 function documentEvidencePayload(childId: string, values: Record<string, string>) {
   return {
-    title: values.document_title,
-    description: values.document_summary || values.follow_up,
+    title: values.document_title || values.finding || values.review_period || 'Child journey evidence',
+    description: text(values, ['document_summary', 'impact_for_child', 'linked_chronology', 'finding', 'action_response', 'impact_for_children', 'evidence_reviewed', 'child_outcomes', 'safeguarding', 'workforce', 'leadership', 'improvement_actions', 'follow_up']),
     evidence_type: 'document',
     source_type: 'document',
     source_id: childId,
     young_person_id: Number(childId),
-    linked_regulation: values.document_type,
-    tags: ['child_journey', 'uploaded_document']
+    linked_regulation: values.document_type || (values.finding ? 'Reg 44' : values.review_period ? 'Reg 45' : undefined),
+    tags: ['child_journey', 'uploaded_document', values.document_type, values.review_period ? 'reg45' : undefined, values.finding ? 'reg44' : undefined].filter(Boolean)
   }
 }
 
@@ -358,7 +410,7 @@ export async function POST(request: Request) {
   let payload: Record<string, any> = {}
   let routeType: string = workflowId
   let submitPath: string | undefined
-  let createMethod = 'POST'
+  const createMethod = 'POST'
 
   if (workflowId === 'child-profile') {
     const payloads = childProfilePayloads(values)
@@ -432,6 +484,11 @@ export async function POST(request: Request) {
     payload = familyPayload(values)
     routeType = 'family-contact'
     submitPath = '/young-people/family/records/{id}/submit'
+  } else if (workflowId === 'education-update') {
+    path = `${childPath}/education-records`
+    payload = educationPayload(values)
+    routeType = 'education-records'
+    submitPath = '/young-people/education-records/{id}/submit'
   } else if (workflowId === 'health') {
     path = `${childPath}/health-records`
     payload = healthPayload(values)
@@ -463,6 +520,16 @@ export async function POST(request: Request) {
     }
     routeType = 'incidents'
     submitPath = '/young-people/incidents/{id}/submit'
+  } else if (workflowId === 'risk-assessment') {
+    path = `${childPath}/risk`
+    payload = riskPayload(values)
+    routeType = 'risk'
+    submitPath = '/young-people/risk/{id}/submit'
+  } else if (workflowId === 'support-plan') {
+    path = `${childPath}/plans`
+    payload = supportPlanPayload(values)
+    routeType = 'plans'
+    submitPath = '/young-people/plans/{id}/submit'
   } else if (workflowId === 'shift-handover') {
     path = `${childPath}/handover`
     payload = handoverPayload(values)
@@ -474,6 +541,10 @@ export async function POST(request: Request) {
     routeType = 'health'
     submitPath = '/young-people/health-records/{id}/submit'
   } else if (workflowId === 'documents') {
+    path = '/os/evidence/attach'
+    payload = documentEvidencePayload(childId, values)
+    routeType = 'evidence'
+  } else if (workflowId === 'reg44-action' || workflowId === 'reg45-evidence') {
     path = '/os/evidence/attach'
     payload = documentEvidencePayload(childId, values)
     routeType = 'evidence'
@@ -511,7 +582,7 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     ok: true,
-    status: submitResult?.ok ? 'submitted' : 'draft',
+    status: submitResult?.ok ? 'submitted' : intent === 'submit' && !submitPath ? 'submitted' : 'draft',
     recordId: recordId ? String(recordId) : undefined,
     routeType,
     sourceType: workflowId,

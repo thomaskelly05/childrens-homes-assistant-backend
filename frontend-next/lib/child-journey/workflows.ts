@@ -10,12 +10,17 @@ export type RecordingWorkflowId =
   | 'body-map'
   | 'keywork'
   | 'family-contact'
+  | 'education-update'
   | 'health'
   | 'medication-record'
   | 'physical-intervention'
+  | 'risk-assessment'
+  | 'support-plan'
   | 'shift-handover'
   | 'appointment-outcome'
   | 'documents'
+  | 'reg44-action'
+  | 'reg45-evidence'
 
 export type RecordingField = {
   name: string
@@ -91,6 +96,8 @@ const coreLinkage = ['chronology', 'evidence', 'actions', 'audit trail', 'ORB co
 const childProgressTags = ['SCCIF experiences and progress', 'Child voice', 'Positive relationships']
 const protectionTags = ['SCCIF help and protection', 'Reg 12', 'Reg 13']
 const leadershipTags = ['SCCIF leadership and management', 'Quality Standards', 'manager review']
+const healthTags = ['SCCIF experiences and progress', 'Health and wellbeing', 'SCCIF help and protection']
+const educationTags = ['SCCIF experiences and progress', 'Education', 'Child voice']
 
 const dailyNoteSections: RecordingSection[] = [
   {
@@ -315,6 +322,12 @@ export const recordingWorkflows: Record<RecordingWorkflowId, RecordingWorkflow> 
     tone: 'Start with today, then create linked records only where needed.',
     primaryField: 'narrative',
     regulatoryBadges: ['SCCIF experiences and progress', 'Quality Standards', 'Reg 7', 'Reg 12'],
+    lifecycle: standardRecordLifecycle,
+    scope: ['child', 'home', 'staff'],
+    sourceRecordType: 'daily_note',
+    sccifAreas: ['SCCIF experiences and progress', 'SCCIF help and protection', 'SCCIF leadership and management'],
+    qualityStandards: ['Reg 7', 'Reg 9', 'Reg 12'],
+    linkage: coreLinkage,
     sections: dailyNoteSections
   },
   incidents: {
@@ -327,6 +340,13 @@ export const recordingWorkflows: Record<RecordingWorkflowId, RecordingWorkflow> 
     tone: 'Facts first, support and outcome next.',
     primaryField: 'what_happened',
     regulatoryBadges: ['Reg 12', 'Reg 13', 'SCCIF protection'],
+    lifecycle: standardRecordLifecycle,
+    escalationLifecycle: extendedRecordLifecycle,
+    scope: ['child', 'home', 'staff'],
+    sourceRecordType: 'incident',
+    sccifAreas: protectionTags,
+    qualityStandards: ['Reg 12', 'Reg 13', 'Reg 35'],
+    linkage: coreLinkage,
     sections: [
       {
         title: 'Incident facts',
@@ -366,6 +386,13 @@ export const recordingWorkflows: Record<RecordingWorkflowId, RecordingWorkflow> 
     tone: 'Review facts, safety action and who must be informed.',
     primaryField: 'concern_summary',
     regulatoryBadges: ['Reg 12', 'Working Together', 'SCCIF protection'],
+    lifecycle: ['Draft', 'Submitted', 'Manager threshold review', 'Actions set', 'Closed'],
+    escalationLifecycle: extendedRecordLifecycle,
+    scope: ['child', 'home', 'staff'],
+    sourceRecordType: 'safeguarding_record',
+    sccifAreas: protectionTags,
+    qualityStandards: ['Reg 12', 'Reg 13', 'Working Together'],
+    linkage: coreLinkage,
     sections: [
       {
         title: 'Concern and safety',
@@ -393,6 +420,13 @@ export const recordingWorkflows: Record<RecordingWorkflowId, RecordingWorkflow> 
     tone: 'Safe return, chronology, return interview and risk plan link.',
     primaryField: 'last_seen',
     regulatoryBadges: ['Reg 12', 'Missing from care protocol', 'SCCIF protection'],
+    lifecycle: ['Draft', 'Live episode', 'Returned', 'Return interview', 'Manager review', 'Closed'],
+    escalationLifecycle: extendedRecordLifecycle,
+    scope: ['child', 'home', 'staff'],
+    sourceRecordType: 'missing_episode',
+    sccifAreas: protectionTags,
+    qualityStandards: ['Reg 12', 'Reg 13'],
+    linkage: coreLinkage,
     sections: [
       {
         title: 'Missing episode',
@@ -422,6 +456,12 @@ export const recordingWorkflows: Record<RecordingWorkflowId, RecordingWorkflow> 
     tone: 'Factual body observation and health follow-up.',
     primaryField: 'body_map_observation',
     regulatoryBadges: ['Reg 10', 'Reg 12', 'Health evidence'],
+    lifecycle: ['Draft', 'Submitted', 'Health / manager review', 'Actioned', 'Closed'],
+    scope: ['child', 'home', 'staff'],
+    sourceRecordType: 'incident',
+    sccifAreas: healthTags,
+    qualityStandards: ['Reg 10', 'Reg 12'],
+    linkage: coreLinkage,
     sections: [
       {
         title: 'Observation',
@@ -445,6 +485,12 @@ export const recordingWorkflows: Record<RecordingWorkflowId, RecordingWorkflow> 
     tone: 'Voice, relationship and progress from starting points.',
     primaryField: 'direct_work_completed',
     regulatoryBadges: ['Reg 7', 'Quality of care', 'SCCIF progress'],
+    lifecycle: standardRecordLifecycle,
+    scope: ['child', 'home', 'staff'],
+    sourceRecordType: 'keywork_session',
+    sccifAreas: childProgressTags,
+    qualityStandards: ['Reg 7', 'Reg 9'],
+    linkage: coreLinkage,
     sections: [
       {
         title: 'Session',
@@ -471,6 +517,12 @@ export const recordingWorkflows: Record<RecordingWorkflowId, RecordingWorkflow> 
     tone: 'Relationship context and child experience.',
     primaryField: 'during_presentation',
     regulatoryBadges: ['Reg 9', 'Reg 7', 'SCCIF relationships'],
+    lifecycle: standardRecordLifecycle,
+    scope: ['child', 'home', 'staff'],
+    sourceRecordType: 'family_contact_record',
+    sccifAreas: ['SCCIF experiences and progress', 'Positive relationships', 'Child voice'],
+    qualityStandards: ['Reg 7', 'Reg 9', 'Reg 11'],
+    linkage: coreLinkage,
     sections: [
       {
         title: 'Family contact',
@@ -489,6 +541,40 @@ export const recordingWorkflows: Record<RecordingWorkflowId, RecordingWorkflow> 
       }
     ]
   },
+  'education-update': {
+    id: 'education-update',
+    routeSegment: 'education-update',
+    eyebrow: 'Education',
+    title: 'Add Education Update',
+    description: 'Record attendance, engagement, achievement, worries and what adults will do next using the education record route.',
+    quickActionLabel: 'Education Update',
+    tone: 'Learning, belonging, barriers and the support adults put in place.',
+    primaryField: 'learning_engagement',
+    regulatoryBadges: ['SCCIF experiences and progress', 'Reg 8', 'Education evidence'],
+    lifecycle: standardRecordLifecycle,
+    scope: ['child', 'home', 'staff'],
+    sourceRecordType: 'education_record',
+    sccifAreas: educationTags,
+    qualityStandards: ['Reg 8', 'Reg 7'],
+    linkage: coreLinkage,
+    sections: [
+      {
+        title: 'Education and learning',
+        badge: 'Learning',
+        fields: [
+          { name: 'record_date', label: 'Record date', type: 'date' },
+          select('attendance_status', 'Attendance / engagement', ['Attended', 'Partial attendance', 'Refused', 'Excluded / suspended', 'Not timetabled', 'Home learning', 'Other']),
+          { name: 'provision_name', label: 'School / provision', type: 'text' },
+          textarea('learning_engagement', 'How was learning for the child?', 'Engagement, anxiety, strengths, barriers, support and what changed.', undefined, true),
+          textarea('behaviour_summary', 'Presentation and relationships in education', 'Peer, teacher, transition, transport, routine or relationship context.'),
+          textarea('issue_raised', 'Worries or barriers', 'Any refusal, exclusion, bullying, anxiety, missing learning, SEN or safety concern.'),
+          textarea('action_taken', 'What did adults do next?', 'Support, calls, timetable changes, virtual school, social worker or plan update.'),
+          { name: 'professional_involved', label: 'Professional involved', type: 'text' },
+          textarea('achievement_note', 'Achievement / progress', 'What went well, what helped and what this means for the child.')
+        ]
+      }
+    ]
+  },
   health: {
     id: 'health',
     routeSegment: 'health',
@@ -499,6 +585,12 @@ export const recordingWorkflows: Record<RecordingWorkflowId, RecordingWorkflow> 
     tone: 'Health action, medication context and follow-up.',
     primaryField: 'health_update',
     regulatoryBadges: ['Reg 10', 'Health and wellbeing', 'SCCIF health'],
+    lifecycle: standardRecordLifecycle,
+    scope: ['child', 'home', 'staff'],
+    sourceRecordType: 'health_record',
+    sccifAreas: healthTags,
+    qualityStandards: ['Reg 10', 'Reg 12'],
+    linkage: coreLinkage,
     sections: [
       {
         title: 'Health note',
@@ -584,6 +676,80 @@ export const recordingWorkflows: Record<RecordingWorkflowId, RecordingWorkflow> 
       }
     ]
   },
+  'risk-assessment': {
+    id: 'risk-assessment',
+    routeSegment: 'risk-assessment',
+    eyebrow: 'Risk',
+    title: 'Add Risk Assessment',
+    description: 'Record dynamic risk with the child story, known triggers, protective factors, controls and review action.',
+    quickActionLabel: 'Risk Assessment',
+    tone: 'Risk, safety, relationships and what adults must notice early.',
+    primaryField: 'concern_summary',
+    regulatoryBadges: ['SCCIF help and protection', 'Reg 12', 'Risk assessment'],
+    lifecycle: standardRecordLifecycle,
+    escalationLifecycle: extendedRecordLifecycle,
+    scope: ['child', 'home', 'staff'],
+    sourceRecordType: 'risk_assessment',
+    sccifAreas: protectionTags,
+    qualityStandards: ['Reg 12', 'Reg 13'],
+    linkage: coreLinkage,
+    sections: [
+      {
+        title: 'Risk picture',
+        badge: 'Safety',
+        fields: [
+          select('category', 'Risk area', ['missing', 'exploitation', 'self-harm', 'aggression', 'online safety', 'substance use', 'health', 'relationships', 'community', 'other']),
+          { name: 'title', label: 'Risk assessment title', type: 'text', required: true },
+          textarea('concern_summary', 'What is the risk and context?', 'What is happening, what it may mean for the child and why review is needed.', undefined, true),
+          textarea('known_triggers', 'Known triggers / early signs', 'What adults should notice early.'),
+          textarea('early_warning_signs', 'Early warning signs', 'Small changes in mood, routine, relationships or behaviour.'),
+          textarea('contextual_factors', 'Contextual factors', 'Places, people, online context, community, school, family or peer context.'),
+          textarea('current_controls', 'Current controls / what helps', 'Protective routines, relationships, boundaries and safeguards.'),
+          textarea('deescalation_strategies', 'De-escalation / recovery', 'What adults do before, during and after escalation.'),
+          textarea('response_actions', 'Actions and review', 'Who will do what, by when and how the plan will be reviewed.'),
+          textarea('child_views', 'Child views', 'What the child says, shows or wants adults to understand.'),
+          select('severity', 'Severity', ['low', 'medium', 'high', 'critical']),
+          { name: 'review_date', label: 'Review date', type: 'date' }
+        ]
+      }
+    ]
+  },
+  'support-plan': {
+    id: 'support-plan',
+    routeSegment: 'support-plan',
+    eyebrow: 'Support Plan',
+    title: 'Add Support Plan',
+    description: 'Translate child voice, formulation, risk and strengths into day-to-day adult practice.',
+    quickActionLabel: 'Support Plan',
+    tone: 'What adults do every day to help this child feel safe and make progress.',
+    primaryField: 'summary',
+    regulatoryBadges: ['SCCIF experiences and progress', 'SCCIF help and protection', 'Quality Standards'],
+    lifecycle: standardRecordLifecycle,
+    scope: ['child', 'home', 'staff'],
+    sourceRecordType: 'support_plan',
+    sccifAreas: ['SCCIF experiences and progress', 'SCCIF help and protection', 'SCCIF leadership and management'],
+    qualityStandards: ['Reg 7', 'Reg 9', 'Reg 12'],
+    linkage: coreLinkage,
+    sections: [
+      {
+        title: 'Plan and practice',
+        badge: 'Plan',
+        fields: [
+          select('plan_type', 'Plan type', ['support_plan', 'care_plan', 'behaviour_support_plan', 'missing_plan', 'health_plan', 'education_plan', 'family_time_plan']),
+          { name: 'title', label: 'Plan title', type: 'text', required: true },
+          textarea('presenting_need', 'What need is this plan responding to?', 'Use child-centred language and link to lived experience.'),
+          textarea('summary', 'What should adults understand?', 'Short practical summary of the plan.', undefined, true),
+          textarea('child_voice', 'Child voice', 'What the child says, shows or wants adults to know.'),
+          textarea('proactive_strategies', 'What helps before things escalate?', 'Routines, relationships, sensory needs, choices and connection.'),
+          textarea('pace_guidance', 'PACE / therapeutic guidance', 'Acceptance, curiosity, empathy and warmth in practice.'),
+          textarea('triggers', 'Triggers / things to avoid', 'What can unsettle the child and how adults reduce this.'),
+          textarea('protective_factors', 'Strengths and protective factors', 'Relationships, interests, routines, achievements and safe places.'),
+          textarea('staff_guidance', 'Guidance for staff', 'What the next adult should do clearly and consistently.'),
+          { name: 'review_date', label: 'Review date', type: 'date' }
+        ]
+      }
+    ]
+  },
   'shift-handover': {
     id: 'shift-handover',
     routeSegment: 'shift-handover',
@@ -634,6 +800,12 @@ export const recordingWorkflows: Record<RecordingWorkflowId, RecordingWorkflow> 
     tone: 'Professional advice and action link.',
     primaryField: 'appointment_outcome',
     regulatoryBadges: ['Reg 10', 'Reg 9', 'Professional evidence'],
+    lifecycle: standardRecordLifecycle,
+    scope: ['child', 'home', 'staff'],
+    sourceRecordType: 'health_record',
+    sccifAreas: ['SCCIF experiences and progress', 'Health and wellbeing', 'Education'],
+    qualityStandards: ['Reg 9', 'Reg 10'],
+    linkage: coreLinkage,
     sections: [
       {
         title: 'Appointment outcome',
@@ -658,14 +830,87 @@ export const recordingWorkflows: Record<RecordingWorkflowId, RecordingWorkflow> 
     tone: 'Evidence-linked and report-ready.',
     primaryField: 'document_summary',
     regulatoryBadges: ['Evidence trail', 'Audit', 'Inspection readiness'],
+    lifecycle: ['Draft', 'Submitted', 'Reviewed', 'Signed off', 'Review due', 'Archived'],
+    scope: ['child', 'home', 'staff'],
+    sourceRecordType: 'document',
+    sccifAreas: ['SCCIF experiences and progress', 'SCCIF help and protection', 'SCCIF leadership and management'],
+    qualityStandards: ['Reg 7', 'Reg 9', 'Reg 12', 'Reg 13'],
+    linkage: coreLinkage,
     sections: [
       {
         title: 'Evidence details',
         fields: [
           { name: 'document_title', label: 'Document title', type: 'text', required: true },
-          select('document_type', 'Document type', ['Care plan', 'Risk assessment', 'Education', 'Health', 'Family time', 'LAC review', 'Reg 44', 'Reg 45', 'Other']),
+          select('document_type', 'Document type', ['About Me', 'My Voice', 'My Relationships', 'My Routines', 'My Sensory Needs', 'My Communication', 'My Education', 'My Health', 'My Family Time', 'My Plans', 'My Safety', 'My Achievements', 'My Journey', 'Statutory Documents', 'Manager Review', 'Reg 44', 'Reg 45', 'Other']),
           textarea('document_summary', 'What does this evidence show?', 'Explain relevance without duplicating the whole document.', undefined, true),
+          { name: 'review_date', label: 'Review date', type: 'date' },
+          { name: 'owner', label: 'Owner', type: 'text' },
+          textarea('impact_for_child', 'Impact for child', 'What does this document change, clarify or evidence for the child?'),
+          textarea('linked_chronology', 'Linked chronology', 'Chronology event, date or source record this belongs with.'),
           textarea('follow_up', 'Follow-up / gaps', 'Any action or review needed.')
+        ]
+      }
+    ]
+  },
+  'reg44-action': {
+    id: 'reg44-action',
+    routeSegment: 'reg44-action',
+    eyebrow: 'Reg 44',
+    title: 'Add Reg 44 Action Evidence',
+    description: 'Record visitor findings, provider response, actions and impact using the evidence link route.',
+    quickActionLabel: 'Reg 44 Action',
+    tone: 'Independent visit action, owner, response and impact for children.',
+    primaryField: 'action_response',
+    regulatoryBadges: ['Reg 44', 'Leadership and management', 'Inspection evidence'],
+    lifecycle: ['Scheduled', 'Visit completed', 'Report received', 'Actions created', 'Provider response', 'Closed'],
+    scope: ['home', 'staff'],
+    sourceRecordType: 'reg44',
+    sccifAreas: leadershipTags,
+    qualityStandards: ['Reg 44', 'Leadership and Management'],
+    linkage: coreLinkage,
+    sections: [
+      {
+        title: 'Reg 44 action',
+        badge: 'Oversight',
+        fields: [
+          { name: 'visit_date', label: 'Visit date', type: 'date' },
+          { name: 'visitor', label: 'Visitor', type: 'text' },
+          textarea('finding', 'Finding / recommendation', 'What was found and why does it matter for children?', undefined, true),
+          textarea('action_response', 'Provider response / action', 'What adults will do, owner and timescale.'),
+          textarea('impact_for_children', 'Impact for children', 'How will this improve safety, care, progress or voice?'),
+          textarea('evidence_reviewed', 'Evidence reviewed', 'Records, child voice, staff feedback, documents or chronology reviewed.')
+        ]
+      }
+    ]
+  },
+  'reg45-evidence': {
+    id: 'reg45-evidence',
+    routeSegment: 'reg45-evidence',
+    eyebrow: 'Reg 45',
+    title: 'Add Reg 45 Evidence',
+    description: 'Record quality of care evidence, gaps and improvement actions for the Reg 45 review.',
+    quickActionLabel: 'Reg 45 Evidence',
+    tone: 'Quality of care evidence, child outcomes, workforce and improvement actions.',
+    primaryField: 'evidence_reviewed',
+    regulatoryBadges: ['Reg 45', 'Quality of care review', 'Inspection evidence'],
+    lifecycle: ['Draft', 'Evidence gathering', 'Manager review', 'RI review', 'Signed off', 'Improvement plan'],
+    scope: ['home', 'staff'],
+    sourceRecordType: 'reg45',
+    sccifAreas: ['SCCIF experiences and progress', 'SCCIF help and protection', 'SCCIF leadership and management'],
+    qualityStandards: ['Reg 45', 'Quality of Care', 'Leadership and Management'],
+    linkage: coreLinkage,
+    sections: [
+      {
+        title: 'Reg 45 evidence',
+        badge: 'Review',
+        fields: [
+          { name: 'review_period', label: 'Review period', type: 'text' },
+          textarea('evidence_reviewed', 'Evidence reviewed', 'Live records, reports, child voice, staff evidence and documents reviewed.', undefined, true),
+          textarea('child_outcomes', 'Child outcomes', 'What changed for children and what helped?'),
+          textarea('safeguarding', 'Safeguarding', 'Help and protection evidence, gaps and actions.'),
+          textarea('workforce', 'Workforce', 'Training, supervision, recording quality and staffing evidence.'),
+          textarea('leadership', 'Leadership', 'Management oversight, audit, actions and learning.'),
+          textarea('improvement_actions', 'Improvement actions', 'What remains open, by whom and by when?')
         ]
       }
     ]
@@ -684,12 +929,17 @@ export const quickActionOrder: RecordingWorkflowId[] = [
   'body-map',
   'keywork',
   'family-contact',
+  'education-update',
   'health',
   'medication-record',
   'physical-intervention',
+  'risk-assessment',
+  'support-plan',
   'shift-handover',
   'appointment-outcome',
-  'documents'
+  'documents',
+  'reg44-action',
+  'reg45-evidence'
 ]
 
 export type ChildQuickActionItem =
@@ -718,10 +968,13 @@ const childOperationalWorkflowIds: RecordingWorkflowId[] = [
   'safeguarding',
   'missing',
   'keywork',
+  'education-update',
   'health',
   'family-contact',
   'medication-record',
   'physical-intervention',
+  'risk-assessment',
+  'support-plan',
   'shift-handover'
 ]
 
@@ -850,7 +1103,7 @@ const suggestionRules: Array<{
     suggestion: {
       label: 'Medication follow-up',
       actionLabel: 'Create linked record',
-      workflowId: 'health',
+      workflowId: 'medication-record',
       reason: 'Medication wording was found. A health record/action can keep administration follow-up clear.',
       tone: 'amber',
       tags: ['medication', 'health']

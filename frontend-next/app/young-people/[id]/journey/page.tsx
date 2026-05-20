@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import { ArrowRight, CalendarDays, CheckCircle2, ClipboardPlus, FileText, Sparkles } from 'lucide-react'
 
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
-import { Card, RiskBadge, SectionHeader, StatusBadge } from '@/components/indicare/ui'
+import { Card, EmptyState, RiskBadge, SectionHeader, StatusBadge } from '@/components/indicare/ui'
 import { NarrativeContinuityPanel } from '@/components/narrative/narrative-continuity-panel'
 import { WorkflowSaveIndicator } from '@/components/system-feedback/workflow-save-indicator'
 import { getChildJourneyData, todayLong } from '@/lib/child-journey/data'
@@ -91,18 +91,24 @@ export default async function ChildJourneyPage({
     ['Safeguarding concern', `/young-people/${encodeURIComponent(id)}/safeguarding/new`, 'Record concern and safety actions without conclusions.'],
     ['Missing episode', `/young-people/${encodeURIComponent(id)}/missing/new`, 'Record missing actions, return and risk review.'],
     ['Medication', `/young-people/${encodeURIComponent(id)}/medication-record/new`, 'Record medication administration, refusal, missed dose or error.'],
+    ['Education', `/young-people/${encodeURIComponent(id)}/education-update/new`, 'Record school, learning, attendance, achievement and support.'],
+    ['Health', `/young-people/${encodeURIComponent(id)}/health/new`, 'Record health presentation, advice, appointments and follow-up.'],
+    ['Family Time', `/young-people/${encodeURIComponent(id)}/family-contact/new`, 'Record contact, presentation, child voice and relationship support.'],
+    ['Keywork', `/young-people/${encodeURIComponent(id)}/keywork/new`, 'Record direct work, strengths, worries and what adults will do next.'],
     ['Physical intervention', `/young-people/${encodeURIComponent(id)}/physical-intervention/new`, 'Record intervention, de-escalation, debrief and repair.'],
     ['Chronology', `/young-people/${encodeURIComponent(id)}/chronology`, 'Review source-linked events for this child only.'],
     ['Actions', `/actions?young_person_id=${encodeURIComponent(id)}`, 'Open unresolved follow-up in the action workflow.'],
     ['Evidence', `/evidence?young_person_id=${encodeURIComponent(id)}`, 'Review linked evidence and gaps.'],
     ['Documents', `/documents?young_person_id=${encodeURIComponent(id)}`, 'Open child-scoped documents and versions.'],
-    ['Plans', `/documents?young_person_id=${encodeURIComponent(id)}&scope=plans`, 'Open care, placement, education and health plan documents.'],
-    ['Risk assessments', `/risk-assessments?young_person_id=${encodeURIComponent(id)}`, 'Review child risk assessments.'],
+    ['Plans & Risk', `/young-people/${encodeURIComponent(id)}/support-plan/new`, 'Write support plans and link them to risk and chronology.'],
+    ['Risk assessments', `/young-people/${encodeURIComponent(id)}/risk-assessment/new`, 'Review or record dynamic risk assessment evidence.'],
     ['Locality risk', `/young-people/${encodeURIComponent(id)}/locality`, 'Review local places and possible indicators.'],
     ['Missing risk', `/young-people/${encodeURIComponent(id)}/missing-risk`, 'Review missing patterns and return interview gaps.'],
     ['Exploitation risk', `/young-people/${encodeURIComponent(id)}/exploitation-risk`, 'Review possible indicators and protective factors.'],
     ['Reports', `/reports?young_person_id=${encodeURIComponent(id)}`, 'Build report evidence from linked records.'],
     ['Handover', `/handover/current?young_person_id=${encodeURIComponent(id)}`, 'Prepare next-shift guidance for this child.'],
+    ['Reg 44 Action', `/young-people/${encodeURIComponent(id)}/reg44-action/new`, 'Link independent visit actions to child-centred evidence.'],
+    ['Reg 45 Evidence', `/young-people/${encodeURIComponent(id)}/reg45-evidence/new`, 'Link quality of care evidence to child outcomes.'],
     ['Orb', `/assistant?youngPersonId=${encodeURIComponent(id)}`, 'Ask Orb for draft suggestions only.']
   ]
 
@@ -165,6 +171,23 @@ export default async function ChildJourneyPage({
       <NarrativeContinuityPanel childName={childName} continuity={narrativeContinuity} />
 
       <Card>
+        <SectionHeader eyebrow="ORB child insight" title="What this tells us about lived experience" description="Calm prompts for staff and managers, grounded in the live child journey rather than a predicted Ofsted grade." />
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {[
+            ['What changed for the child?', data.story.whatChanged],
+            ['What helped them feel safe?', data.story.relationshipMarkers[0] || 'No relationship evidence has been returned yet.'],
+            ['What did adults do?', lastDailyNote?.summary || 'No daily note has been recorded yet today.'],
+            ['What does this tell us about their lived experience?', data.story.todayMatteredBecause]
+          ].map(([label, detail]) => (
+            <div key={label} className="rounded-[22px] border border-blue-100 bg-blue-50 p-4">
+              <p className="text-[11px] font-black uppercase tracking-[0.16em] text-blue-700">{label}</p>
+              <p className="mt-2 text-sm font-bold leading-6 text-blue-950">{detail}</p>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      <Card>
         <SectionHeader eyebrow="Connected OS hub" title={`${childName}'s linked workspaces`} description="Every route opens with this child in scope, or shows a controlled limitation in the target workspace." />
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {workspaceLinks.map(([label, href, description]) => (
@@ -207,7 +230,7 @@ export default async function ChildJourneyPage({
           <Card>
             <SectionHeader eyebrow="2. What changed" title="Recent chronology" description="Five high-signal events. Open the full chronology for deeper review." />
             <div className="space-y-3">
-              {data.timeline.slice(0, 5).map((event) => (
+              {data.timeline.length ? data.timeline.slice(0, 5).map((event) => (
                 <Link key={event.id} href={event.href} className="group block rounded-[24px] border border-slate-100 bg-slate-50 p-5 transition hover:border-blue-100 hover:bg-white hover:shadow-lg">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-black uppercase tracking-[0.12em] text-slate-600">{event.category}</span>
@@ -222,7 +245,9 @@ export default async function ChildJourneyPage({
                     <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-slate-400 transition group-hover:translate-x-1 group-hover:text-blue-700" aria-hidden />
                   </div>
                 </Link>
-              ))}
+              )) : (
+                <EmptyState title="No chronology yet" description="Live evidence is not yet available for this area. Add a daily note or linked record to start the child chronology." />
+              )}
             </div>
             <div className="mt-5 flex flex-wrap gap-2">
               <ActionLink href={`/young-people/${encodeURIComponent(id)}/chronology`} tone="light">Open full chronology</ActionLink>
@@ -273,7 +298,7 @@ export default async function ChildJourneyPage({
             <ActionLink href={`/young-people/${encodeURIComponent(id)}/chronology`} tone="light" testId="chronology-link">Open full chronology</ActionLink>
           </div>
           <div className="space-y-4">
-            {data.timeline.slice(0, 8).map((event) => (
+            {data.timeline.length ? data.timeline.slice(0, 8).map((event) => (
               <Link key={event.id} href={event.href} className="block rounded-[24px] border border-slate-100 bg-slate-50 p-5 transition hover:border-blue-100 hover:bg-white hover:shadow-lg">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-black uppercase tracking-[0.12em] text-slate-600">{event.category}</span>
@@ -284,7 +309,9 @@ export default async function ChildJourneyPage({
                 <p className="mt-2 text-sm leading-6 text-slate-600">{event.summary}</p>
                 <span className="mt-3 inline-flex text-xs font-black uppercase tracking-[0.14em] text-blue-700">Open source record</span>
               </Link>
-            ))}
+            )) : (
+              <EmptyState title="No source-linked events" description="Live evidence is not yet available for this area. Submitted records will appear here with chronology, evidence and review state when the backend projection returns them." />
+            )}
           </div>
         </Card>
 
@@ -351,7 +378,7 @@ export default async function ChildJourneyPage({
             ))}
           </div>
           <div className="mt-5 space-y-3">
-            {data.evidence.slice(0, 4).map((item) => (
+            {data.evidence.length ? data.evidence.slice(0, 4).map((item) => (
               <Link key={item.id} href={`/evidence/${encodeURIComponent(item.id)}`} className="flex items-start gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-4 transition hover:bg-white">
                 <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-600" aria-hidden />
                 <span>
@@ -359,7 +386,9 @@ export default async function ChildJourneyPage({
                   <span className="mt-1 block text-xs leading-5 text-slate-500">{item.description || item.linkedRegulation || 'Evidence item'}</span>
                 </span>
               </Link>
-            ))}
+            )) : (
+              <EmptyState title="No linked evidence yet" description="Live evidence is not yet available for this area. Documents, reports and submitted records will appear when linked by the backend." />
+            )}
           </div>
         </Card>
       </section>

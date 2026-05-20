@@ -151,7 +151,7 @@ export default async function UnifiedCommandCentrePage() {
         <StatCard label="Governance risk" value={text(governanceSummary.governance_risk, 'Review')} detail={`Score ${text(governanceSummary.governance_score, 'not returned')}`} href="/governance/command-centre" />
         <StatCard label="Safeguarding" value={platformData.safeguarding.length} detail="Open and recent safeguarding records" href="/safeguarding" />
         <StatCard label="Relational stability" value={text(governanceSummary.relational_stability, 'Review')} detail="Backend relationship signal" href="/staff/relationships" />
-        <StatCard label="Inspection" value={text(governanceSummary.inspection_readiness, 'Review')} detail="Readiness forecast" href="/ofsted-readiness" />
+        <StatCard label="Inspection" value={text(governanceSummary.inspection_readiness, 'Review')} detail="Evidence gaps and review signals" href="/ofsted-readiness" />
         <StatCard label="Alerts" value={operationalAlerts.length} detail="Consolidated actionable queue" href="/notifications" />
       </section>
 
