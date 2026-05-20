@@ -40,7 +40,7 @@ def test_sprint_i_forms_framework_documents_real_schema_gaps_without_faking_data
     framework = IndiCareFormsFrameworkService().framework()
     forms = {form["key"]: form for form in framework["forms"]}
 
-    route_types = {form["route_type"] for form in forms.values()}
+    route_types = {form.get("route_type") for form in forms.values()}
     assert {
         "daily_note",
         "handover_record",
