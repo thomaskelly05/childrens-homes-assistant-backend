@@ -25,11 +25,11 @@ const applyAccessibility = file('lib/orb/accessibility/apply-accessibility.ts')
 const chronology = file('components/indicare/chronology-foundation.tsx')
 const ui = file('components/indicare/ui.tsx')
 
-for (const route of ['app/command-centre/page.tsx', 'app/young-people/page.tsx', 'app/staff/page.tsx', 'app/governance/command-centre/page.tsx', 'app/ofsted-readiness/page.tsx', 'app/documents/page.tsx', 'app/reports/page.tsx', 'app/assistant/page.tsx', 'app/settings/page.tsx']) {
+for (const route of ['app/command-centre/page.tsx', 'app/young-people/page.tsx', 'app/daily-logs/page.tsx', 'app/chronology/page.tsx', 'app/documents/page.tsx', 'app/staff/page.tsx', 'app/governance/command-centre/page.tsx', 'app/reports/page.tsx', 'app/orb/page.tsx', 'app/settings/page.tsx']) {
   check(`route exists: ${route}`, existsSync(join(root, route)))
 }
 
-for (const label of ['Command Centre', 'Children', 'Workforce', 'Governance', 'Inspection', 'Documents', 'Reports', 'ORB', 'Admin']) {
+for (const label of ['Care Hub', 'Young People', 'Daily Care', 'Chronology', 'Documents', 'Workforce', 'Governance', 'Reports', 'ORB', 'Admin']) {
   check(`domain navigation includes ${label}`, nav.includes(label))
 }
 
