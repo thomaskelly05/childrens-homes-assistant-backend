@@ -40,6 +40,8 @@ const publicAssetPaths = new Set([
   '/sitemap.xml'
 ])
 const publicAssetPrefixes = ['/_next/', '/static/', '/images/', '/icons/']
+const AUTH_CACHE_KEY = 'indicare.auth.identity.v1'
+const AUTH_CACHE_TTL_MS = 60_000
 const e2eAuthEnabled = process.env.NEXT_PUBLIC_E2E_TEST_MODE === '1' && process.env.NODE_ENV !== 'production'
 const e2eEmail = process.env.NEXT_PUBLIC_E2E_USER_EMAIL || 'e2e.manager@indicare.local'
 const e2ePassword = process.env.NEXT_PUBLIC_E2E_USER_PASSWORD || 'ChangeMeForE2E123!'
@@ -81,6 +83,32 @@ function hasUserPayload(response: AuthMeResponse): response is AuthMeResponse & 
   return Boolean(response?.user && typeof response.user === 'object')
 }
 
+function readCachedUser(): StaffUser | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = window.sessionStorage.getItem(AUTH_CACHE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as { at?: number; user?: StaffUser }
+    if (!parsed.at || Date.now() - parsed.at > AUTH_CACHE_TTL_MS || !parsed.user) return null
+    return normaliseUser(parsed.user)
+  } catch {
+    return null
+  }
+}
+
+function writeCachedUser(user: StaffUser | null) {
+  if (typeof window === 'undefined') return
+  try {
+    if (!user) {
+      window.sessionStorage.removeItem(AUTH_CACHE_KEY)
+      return
+    }
+    window.sessionStorage.setItem(AUTH_CACHE_KEY, JSON.stringify({ at: Date.now(), user }))
+  } catch {
+    // Ignore storage failures; auth still works through the API.
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
@@ -90,42 +118,72 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [sessionExpired, setSessionExpired] = useState(false)
   const [csrfReady, setCsrfReady] = useState(false)
   const logoutRedirecting = useRef(false)
+  const refreshInFlight = useRef<Promise<void> | null>(null)
 
   const refreshSession = useCallback(async () => {
-    setStatus('loading')
-    setError(null)
-    if (e2eAuthEnabled) {
-      setUser(e2eUser)
-      setStatus('authenticated')
-      setSessionExpired(false)
-      setCsrfReady(true)
-      logoutRedirecting.current = false
-      return
-    }
-    try {
-      const response = await authFetch<AuthMeResponse>('/auth/me')
-      if (!hasUserPayload(response)) {
-        throw new AuthApiError(401, 'Your session could not be loaded')
+    if (refreshInFlight.current) return refreshInFlight.current
+
+    const run = async () => {
+      setError(null)
+      if (e2eAuthEnabled) {
+        setUser(e2eUser)
+        setStatus('authenticated')
+        setSessionExpired(false)
+        setCsrfReady(true)
+        logoutRedirecting.current = false
+        return
       }
-      setUser(normaliseUser(response.user))
-      setStatus('authenticated')
-      setSessionExpired(false)
-      setCsrfReady(Boolean(getCsrfToken()))
-      logoutRedirecting.current = false
-    } catch (caught) {
-      const authError = caught instanceof AuthApiError ? caught : null
-      setUser(null)
-      setStatus('unauthenticated')
-      setError(authError?.message || 'Your session could not be loaded')
-      setSessionExpired(authError?.status === 401)
-      setCsrfReady(false)
+
+      const cached = readCachedUser()
+      if (cached) {
+        setUser(cached)
+        setStatus('authenticated')
+        setSessionExpired(false)
+        setCsrfReady(Boolean(getCsrfToken()))
+        logoutRedirecting.current = false
+        return
+      }
+
+      setStatus('loading')
+      try {
+        const response = await authFetch<AuthMeResponse>('/auth/me')
+        if (!hasUserPayload(response)) {
+          throw new AuthApiError(401, 'Your session could not be loaded')
+        }
+        const nextUser = normaliseUser(response.user)
+        writeCachedUser(nextUser)
+        setUser(nextUser)
+        setStatus('authenticated')
+        setSessionExpired(false)
+        setCsrfReady(Boolean(getCsrfToken()))
+        logoutRedirecting.current = false
+      } catch (caught) {
+        const authError = caught instanceof AuthApiError ? caught : null
+        writeCachedUser(null)
+        setUser(null)
+        setStatus('unauthenticated')
+        setError(authError?.message || 'Your session could not be loaded')
+        setSessionExpired(authError?.status === 401)
+        setCsrfReady(false)
+      }
     }
+
+    refreshInFlight.current = run().finally(() => {
+      refreshInFlight.current = null
+    })
+    return refreshInFlight.current
   }, [])
 
   useEffect(() => {
     suppressProductionConsole()
+    if (isPublicPath(pathname)) {
+      setStatus('unauthenticated')
+      setSessionExpired(false)
+      setCsrfReady(Boolean(getCsrfToken()))
+      return
+    }
     void refreshSession()
-  }, [refreshSession])
+  }, [pathname, refreshSession])
 
   useEffect(() => {
     if (status !== 'unauthenticated' || isPublicPath(pathname) || logoutRedirecting.current) return
@@ -150,6 +208,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSessionExpired(false)
       setCsrfReady(true)
       logoutRedirecting.current = false
+      writeCachedUser(e2eUser)
       return {
         ok: true,
         authenticated: true,
@@ -162,8 +221,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       body: JSON.stringify(input)
     })
 
+    if (response.user) {
+      const nextUser = normaliseUser(response.user)
+      writeCachedUser(nextUser)
+      setUser(nextUser)
+    }
+
     if (response.user && response.authenticated) {
-      setUser(normaliseUser(response.user))
       setStatus('authenticated')
       setSessionExpired(false)
       setCsrfReady(Boolean(getCsrfToken()))
@@ -181,6 +245,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       logoutRedirecting.current = true
       clearSensitiveBrowserState()
+      writeCachedUser(null)
       setUser(null)
       setStatus('unauthenticated')
       setCsrfReady(false)
