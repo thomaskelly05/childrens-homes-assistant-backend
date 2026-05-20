@@ -23,6 +23,8 @@ const SAFE_USER_FIELDS = [
   "allowedHomeIds",
 ];
 
+const NEXT_AUTH_CACHE_KEY = "indicare.auth.identity.v1";
+
 function sanitiseStoredUser(user = {}) {
   const safe = {};
   for (const key of SAFE_USER_FIELDS) {
@@ -31,9 +33,20 @@ function sanitiseStoredUser(user = {}) {
   return safe;
 }
 
+function setNextAuthCache(user) {
+  try {
+    if (!user) {
+      sessionStorage.removeItem(NEXT_AUTH_CACHE_KEY);
+      return;
+    }
+    sessionStorage.setItem(NEXT_AUTH_CACHE_KEY, JSON.stringify({ at: Date.now(), user: sanitiseStoredUser(user) }));
+  } catch (_) {}
+}
+
 function setStoredUser(user, remember = false) {
   if (!user) return;
-  const raw = JSON.stringify(sanitiseStoredUser(user));
+  const safeUser = sanitiseStoredUser(user);
+  const raw = JSON.stringify(safeUser);
   if (remember) {
     localStorage.setItem("current_user", raw);
     sessionStorage.removeItem("current_user");
@@ -43,6 +56,7 @@ function setStoredUser(user, remember = false) {
     localStorage.removeItem("current_user");
     localStorage.removeItem("indicare_remember_me");
   }
+  setNextAuthCache(safeUser);
 }
 
 function getStoredUser() {
@@ -61,6 +75,7 @@ function clearStoredUser() {
   sessionStorage.removeItem("indicare_recovery_codes");
   localStorage.removeItem("indicare_recovery_codes");
   localStorage.removeItem("indicare_remember_me");
+  setNextAuthCache(null);
 }
 
 async function apiFetchJson(path, options = {}) {
@@ -216,6 +231,7 @@ async function validateSession() {
       mfa_enabled: !!data.mfa_enabled,
       mfa_verified: !!data.mfa_verified,
       mfa_pending: false,
+      has_passkeys: typeof data.has_passkeys === "boolean" ? data.has_passkeys : !!existing.has_passkeys,
     });
     setStoredUser(merged, remember);
     return { ...merged, authenticated: true, mfa_pending: false };
@@ -290,6 +306,7 @@ async function beginPasskeyLogin(email) {
   if (!window.PublicKeyCredential) throw new Error("Passkeys are not supported on this device or browser.");
   const cleanedEmail = String(email || "").trim().toLowerCase();
   if (!cleanedEmail) throw new Error("Enter your work email address to use passkey sign-in.");
+  setNextAuthCache(null);
   const data = await apiFetchJson("/auth/passkeys/authenticate/options", { method: "POST", body: JSON.stringify({ email: cleanedEmail }) });
   if (!data?.ok || !data?.options) throw new Error("Could not start passkey sign-in");
   const jsonOptions = typeof data.options === "string" ? JSON.parse(data.options) : data.options;
@@ -304,6 +321,7 @@ async function beginPasskeyLogin(email) {
 
 async function registerPasskey(nickname = "") {
   if (!window.PublicKeyCredential) throw new Error("Passkeys are not supported on this device or browser.");
+  setNextAuthCache(null);
   const data = await apiFetchJson("/auth/passkeys/register/options", { method: "POST" });
   if (!data?.ok || !data?.options) throw new Error("Could not start passkey registration");
   const jsonOptions = typeof data.options === "string" ? JSON.parse(data.options) : data.options;
