@@ -1,181 +1,152 @@
+from __future__ import annotations
+
 import importlib
 import logging
 from dataclasses import dataclass, field
+from typing import Iterable
 
 from fastapi import FastAPI
 
 logger = logging.getLogger(__name__)
 
-EXTRA_ROUTER_ATTRS = ("compat_router", "ui_router")
-
 
 @dataclass(frozen=True)
 class RouterGroup:
-    """A domain registry that keeps public paths unchanged while making startup reviewable."""
-
     name: str
     routers: tuple[str, ...]
-    required_routers: tuple[str, ...] = ()
-    classification: str = "optional"
+    classification: str = "canonical"
     notes: str = ""
+    required_routers: tuple[str, ...] = ()
 
 
 ROUTER_GROUPS: tuple[RouterGroup, ...] = (
     RouterGroup(
-        "auth",
+        "core",
         (
             "routers.auth_routes",
             "routers.mfa_routes",
             "routers.passkey_routes",
             "routers.session_security_routes",
-            "routers.legal_acceptance_routes",
-            "routers.debug_health_routes",
-            "routers.security_routes",
-        ),
-        required_routers=(
-            "routers.auth_routes",
-            "routers.mfa_routes",
-            "routers.session_security_routes",
-            "routers.debug_health_routes",
-            "routers.security_routes",
-        ),
-        classification="required",
-        notes="Authentication, MFA, session safety, health and security surfaces.",
-    ),
-    RouterGroup(
-        "operational",
-        (
-            "routers.notifications_routes",
-            "routers.connect_routes",
-            "routers.shift_routes",
-            "routers.frontend_compat",
-            "routers.young_people_shell_item_compat_routes",
-            "routers.home_selector_routes",
-            "routers.staff_evidence_routes",
-            "routers.workforce_journey_routes",
-            "staff.routes",
-        ),
-        required_routers=("routers.frontend_compat",),
-        classification="mixed",
-        notes="Core shell compatibility, homes, staff and shift operations.",
-    ),
-    RouterGroup(
-        "academy",
-        (
-            "routers.academy_routes",
-            "routers.academy_intelligence_routes",
-        ),
-        classification="primary",
-        notes="Academy, training, competencies and workforce compliance intelligence.",
-    ),
-    RouterGroup(
-        "provider",
-        (
             "routers.account_routes",
             "routers.admin_routes",
-            "routers.founder_ai_routes",
-            "routers.admin_user_routes",
+            "routers.profile_routes",
             "routers.billing_routes",
-            "routers.indicare_mail_routes",
-            "routers.provider_oversight_routes",
-            "routers.referral_matching_routes",
-            "routers.referral_decision_routes",
-            "routers.referral_portal_page_routes",
-            "routers.referral_upload_routes",
-            "routers.referral_risk_review_routes",
-            "routers.referral_final_hardening_routes",
+            "routers.legal_acceptance_routes",
+            "routers.feature_flags_routes",
+            "routers.frontend_compat",
         ),
-        notes="Account, admin, billing, provider administration and referral matching.",
+        notes="Identity, session security, account state and platform admin.",
+        required_routers=("routers.auth_routes",),
     ),
     RouterGroup(
-        "assistant",
+        "assistant_orb",
         (
-            "routers.ai_notes_routes",
-            "routers.ai_note_templates_routes",
-            "routers.ai_note_export_routes",
-            "routers.assistant_general_routes",
-            "routers.assistant_conversation_routes",
-            "routers.assistant_realtime_voice_routes",
-            "routers.assistant_realtime_proxy_routes",
+            "routers.ai_routes",
+            "routers.assistant_routes",
+            "routers.assistant_stream_routes",
+            "routers.assistant_memory_routes",
+            "routers.assistant_mode_routes",
+            "routers.assistant_realtime_routes",
+            "routers.assistant_realtime_compat_routes",
+            "routers.assistant_upload_routes",
+            "routers.assistant_legacy_redirect_routes",
             "routers.orb_routes",
-            "routers.assistant_general_safe_routes",
-            "routers.assistant_web_routes",
-            "routers.assistant_query_routes",
-            "routers.indicare_ai_orchestrator_routes",
-            "routers.indicare_ai_memory_routes",
-            "routers.standalone_assistant_library_routes",
-            "routers.standalone_intelligence_routes",
-            "routers.standalone_enterprise_intelligence_routes",
-            "routers.standalone_timeline_routes",
-            "routers.standalone_tier_routes",
-            "routers.standalone_workflow_routes",
-            "routers.standalone_search_routes",
-            "routers.assistant_os_routes",
-            "routers.assistant_os_knowledge_routes",
-            "routers.assistant_intelligence_routes",
-            "routers.governance_intelligence_routes",
-            "routers.manager_intelligence_routes",
-            "routers.proactive_intelligence_routes",
-            "routers.provider_intelligence_routes",
-            "routers.predictive_risk_routes",
-            "routers.realtime_alerts_routes",
-            "routers.realtime_replay_routes",
+            "routers.orb_voice_routes",
+            "routers.orb_voice_session_routes",
+            "routers.orb_voice_control_routes",
+            "routers.orb_proactive_routes",
+            "routers.orb_assistant_routes",
+            "routers.voice_routes",
+            "routers.voice_agent_routes",
+            "routers.voice_session_routes",
+            "routers.ai_memory_routes",
+            "routers.ai_sccif_routes",
         ),
-        notes="Standalone assistant, embedded OS assistant, Orb and AI suite routes.",
+        classification="mixed",
+        notes="Canonical ORB plus legacy assistant and realtime compatibility surfaces.",
     ),
     RouterGroup(
-        "children",
+        "os_command",
         (
-            "routers.workspace_records_routes",
-            "routers.child_workspace_context_routes",
-            "routers.child_documents_routes",
-            "routers.operational_memory_routes",
-            "routers.operational_health_routes",
-            "routers.young_people_assistant_routes",
-        ),
-        notes="Child workspace context, child documents, operational memory and health.",
-    ),
-    RouterGroup(
-        "inspection",
-        (
-            "routers.operational_intelligence_routes",
-            "routers.inspection_os_routes",
-            "routers.inspection_readiness_routes",
-            "routers.rm_dashboard_routes",
-            "routers.live_alerts_routes",
-            "routers.os_modules_routes",
+            "backend.os_command_routes",
             "routers.os_shell_api_routes",
+            "routers.os_magic_notes_routes",
+            "routers.os_command_api_routes",
+            "routers.os_safeguarding_runtime_routes",
+            "routers.os_provider_routes",
+            "routers.os_workforce_routes",
+            "routers.os_contextual_safeguarding_routes",
+            "routers.os_placement_routes",
+            "routers.os_inspection_routes",
+            "routers.os_young_person_routes",
+            "routers.os_operational_data_routes",
+            "backend.os_production_diagnostics_router",
+            "backend.os_enterprise_compat_router",
         ),
-        notes="Inspection readiness, shell APIs, OS modules and live alerts.",
+        notes="Operating system command surfaces and compatibility gateways.",
     ),
     RouterGroup(
-        "assistant-compatibility",
+        "governance",
         (
-            "routers.assistant_partner_api",
-            "routers.chat_routes",
+            "routers.governance_routes",
+            "routers.governance_os_routes",
+            "routers.governance_reg44_routes",
+            "routers.governance_reg45_routes",
+            "routers.inspection_os_routes",
+            "routers.regulation_mapping_routes",
+            "routers.sccif_routes",
+            "routers.sccif_quality_routes",
+            "routers.sccif_regulation_routes",
+            "routers.quality_standards_routes",
+            "routers.ofsted_readiness_routes",
         ),
-        classification="legacy_compatibility",
-        notes="Partner and chat compatibility routes that remain mounted for existing clients.",
+        notes="Inspection readiness, governance and regulatory intelligence.",
+    ),
+    RouterGroup(
+        "workforce",
+        (
+            "routers.workforce_routes",
+            "routers.workforce_os_routes",
+            "routers.workforce_journey_routes",
+            "routers.staff_routes",
+            "routers.staff_profile_routes",
+            "routers.staff_today_routes",
+            "routers.training_routes",
+            "routers.supervision_lifecycle_routes",
+            "routers.probation_routes",
+            "routers.recruitment_routes",
+            "routers.academy_routes",
+            "routers.academy_intelligence_routes",
+            "routers.academy_manager_routes",
+            "routers.academy_manager_compliance_routes",
+        ),
+        classification="mixed",
+        notes="Workforce OS, legacy staff routes and academy surfaces.",
     ),
     RouterGroup(
         "documents",
         (
-            "routers.document_library_routes",
-            "routers.document_engine_routes",
-            "routers.dashboard_routes",
             "routers.documents_routes",
-            "routers.document_template_routes",
-            "routers.document_upload_extraction_routes",
-            "routers.document_signoff_routes",
-            "routers.child_friendly_output_routes",
-            "routers.meetings_routes",
-            "routers.external_collaboration_routes",
+            "routers.document_system_routes",
+            "routers.document_instance_routes",
+            "routers.document_editor_routes",
+            "routers.document_export_routes",
+            "routers.document_templates_routes",
+            "routers.document_versions_routes",
+            "routers.document_ai_routes",
+            "routers.document_generation_routes",
+            "routers.child_documents_routes",
+            "routers.statutory_documents_routes",
+            "routers.upload_routes",
+            "routers.export_routes",
         ),
-        notes="Document library, document engine, Documents OS and document helper endpoints.",
+        classification="mixed",
+        notes="Document stores, templates, exports and compatibility document surfaces.",
     ),
     RouterGroup(
-        "reporting",
+        "reports",
         (
+            "routers.daily_notes_routes",
             "routers.handover_routes",
             "routers.monthly_reviews_routes",
             "routers.ofsted_ai_report_routes",
@@ -245,9 +216,10 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
             "routers.schema_live_routes",
             "routers.os_workflow_wiring_audit_routes",
             "backend.os_schema_audit_router",
+            "backend.os_single_source_audit_router",
             "backend.os_live_data_router",
         ),
-        notes="Compliance, workflow review, schema-live, OS schema/workflow wiring audit and OS live data gateways.",
+        notes="Compliance, workflow review, schema-live, OS source-of-truth/schema/workflow wiring audits and OS live data gateways.",
     ),
 )
 
@@ -273,91 +245,40 @@ def _route_key(route) -> str | None:
     return f"{','.join(sorted(methods))} {path}"
 
 
-def include_router(app: FastAPI, module_name: str) -> list[str]:
-    """Include a single router module and any declared compatibility routers."""
-    module = importlib.import_module(module_name)
-    mounted: list[str] = []
-    candidates = [("router", getattr(module, "router", None))]
-    candidates.extend((attr, getattr(module, attr, None)) for attr in EXTRA_ROUTER_ATTRS)
-    for attr, router in candidates:
-        if router is None:
-            continue
-        app.include_router(router)
-        mounted.append(attr)
-    if not mounted:
-        raise RuntimeError("module has no router")
-    return mounted
-
-
-def _split_route_conflicts(conflicts: list[dict]) -> tuple[list[dict], list[dict]]:
-    intentional = [item for item in conflicts if item.get("classification") == "legacy_compatibility"]
-    accidental = [item for item in conflicts if item.get("classification") != "legacy_compatibility"]
-    return accidental, intentional
-
-
-def get_router_registry_summary() -> dict:
-    groups = [
-        {
-            "name": "operational-backend" if group.name == "operational" else group.name,
-            "router_count": len(group.routers),
-            "required_router_count": len(group.required_routers),
-            "classification": group.classification,
-            "notes": group.notes,
-        }
-        for group in ROUTER_GROUPS
-    ]
-    legacy_count = sum(len(group.routers) for group in ROUTER_GROUPS if group.classification == "legacy_compatibility")
-    return {
-        "router_count": len(ROUTERS),
-        "required_router_count": len(REQUIRED_ROUTERS),
-        "legacy_compatibility_router_count": legacy_count,
-        "groups": groups,
-        "accidental_conflicts": [],
-        "intentional_conflicts": [],
-    }
-
-
-def include_router_groups(app: FastAPI) -> RouterLoadReport:
-    report = RouterLoadReport()
-    seen: dict[str, str] = {}
-
-    for group in ROUTER_GROUPS:
-        for module_name in group.routers:
-            try:
-                module = importlib.import_module(module_name)
-                routers = [getattr(module, "router", None)]
-                routers.extend(getattr(module, attr, None) for attr in EXTRA_ROUTER_ATTRS)
-                routers = [router for router in routers if router is not None]
-                if not routers:
-                    raise RuntimeError("module has no router")
-                for router in routers:
-                    app.include_router(router)
-                    for route in getattr(router, "routes", []):
-                        key = _route_key(route)
-                        if not key:
-                            continue
-                        if key in seen:
-                            if group.classification == "legacy_compatibility" or "compat" in module_name:
-                                report.compatibility_shadows.append(f"{key} via {module_name} shadows {seen[key]}")
-                            else:
-                                report.duplicate_routes.append(f"{key} via {module_name} duplicates {seen[key]}")
-                        else:
-                            seen[key] = module_name
-                report.loaded.append(module_name)
-            except Exception as exc:
-                report.failed.append((module_name, str(exc)))
-                if module_name in group.required_routers:
-                    raise
-                logger.warning("Optional router failed to load: %s (%s)", module_name, exc)
-
-    if report.duplicate_routes:
-        logger.warning("Detected %s accidental duplicate route method/path registrations", len(report.duplicate_routes))
-    if report.compatibility_shadows:
-        logger.info("Detected %s intentional compatibility route shadows", len(report.compatibility_shadows))
-    logger.info("Router startup loaded %s routers across %s domains (%s failed, %s conflicts)", len(report.loaded), len(ROUTER_GROUPS), len(report.failed), len(report.duplicate_routes))
-    return report
+def _iter_routes(app: FastAPI) -> Iterable[str]:
+    for route in app.routes:
+        key = _route_key(route)
+        if key:
+            yield key
 
 
 def include_routers(app: FastAPI) -> RouterLoadReport:
-    """Backwards-compatible entrypoint used by core.app_factory."""
-    return include_router_groups(app)
+    report = RouterLoadReport()
+    seen = set(_iter_routes(app))
+
+    for router_path in ROUTERS:
+        try:
+            module = importlib.import_module(router_path)
+            router = getattr(module, "router")
+            before = set(_iter_routes(app))
+            app.include_router(router)
+            after = set(_iter_routes(app))
+            duplicates = sorted(before.intersection(after - seen))
+            if duplicates:
+                report.duplicate_routes.extend(duplicates)
+            seen = after
+            report.loaded.append(router_path)
+        except Exception as error:
+            report.failed.append((router_path, str(error)))
+            if router_path in REQUIRED_ROUTERS:
+                raise
+            logger.warning("Router %s failed to load: %s", router_path, error)
+
+    logger.info(
+        "Router startup loaded %s routers across %s domains (%s failed, %s conflicts)",
+        len(report.loaded),
+        len(ROUTER_GROUPS),
+        len(report.failed),
+        len(report.duplicate_routes),
+    )
+    return report
