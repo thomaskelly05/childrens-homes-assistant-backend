@@ -16,7 +16,7 @@ function list(value: unknown): string[] {
 }
 
 function text(value: unknown, fallback: unknown = 'Not returned'): string {
-  if (value === undefined || value === null || value === '') return fallback
+  if (value === undefined || value === null || value === '') return String(fallback)
   if (typeof value === 'object') return JSON.stringify(value).slice(0, 180)
   return String(value)
 }
