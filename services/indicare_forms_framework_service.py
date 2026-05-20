@@ -13,23 +13,39 @@ class IndiCareFormsFrameworkService:
     """
 
     def framework(self) -> dict[str, Any]:
+        forms = [
+            self.daily_home_view(),
+            self.shift_handover(),
+            self.child_profile_about_me(),
+            self.child_voice_form(),
+            self.wellbeing_check(),
+            self.relationship_record(),
+            self.daily_life_diary(),
+            self.conversation_record(),
+            self.incident_record(),
+            self.missing_episode(),
+            self.medication_record(),
+            self.physical_intervention_record(),
+            self.risk_assessment(),
+            self.care_plan(),
+            self.child_document_form(),
+            self.template_generator(),
+            self.safeguarding_concern(),
+            self.impact_assessment(),
+            self.admission_record(),
+            self.exit_summary(),
+            self.staff_supervision(),
+            self.training_matrix(),
+            self.practice_observation(),
+            self.reg44_workflow(),
+            self.reg45_workflow(),
+            self.manager_oversight(),
+        ]
         return {
             "generated_at": datetime.utcnow().isoformat() + "Z",
             "principles": self.principles(),
             "common_sections": self.common_sections(),
-            "forms": [
-                self.daily_life_diary(),
-                self.conversation_record(),
-                self.incident_record(),
-                self.risk_assessment(),
-                self.care_plan(),
-                self.safeguarding_concern(),
-                self.impact_assessment(),
-                self.admission_record(),
-                self.exit_summary(),
-                self.staff_supervision(),
-                self.manager_oversight(),
-            ],
+            "forms": [self._with_defaults(form) for form in forms],
         }
 
     def principles(self) -> list[dict[str, str]]:
@@ -60,6 +76,165 @@ class IndiCareFormsFrameworkService:
                 "description": "Use diary-style, humane language. Avoid institutional phrases such as service user, absconded, refused to comply, attention seeking or challenging behaviour unless quoting external documents.",
             },
         ]
+
+    def _lifecycle(self, *steps: str, escalation: bool = False) -> dict[str, Any]:
+        base = list(steps) or ["DRAFT", "SUBMITTED", "REVIEWED", "APPROVED / RETURNED", "ARCHIVED"]
+        return {"states": base, "escalation_states": ["ESCALATED", "SIGNED OFF", "ACTIONED", "CLOSED"] if escalation else []}
+
+    def _common_metadata(self, *, scope: list[str], chronology: bool = True, evidence: bool = True, orb: bool = True) -> dict[str, Any]:
+        return {
+            "scope": scope,
+            "required_metadata": [
+                "date_time",
+                "created_by",
+                "last_updated_by",
+                "status",
+                "manager_review_state",
+                "audit_trail",
+                "actions_follow_ups",
+            ],
+            "links": {
+                "chronology": chronology,
+                "evidence": evidence,
+                "orb_context": orb,
+                "sccif_regulation_tags": True,
+            },
+        }
+
+    def _with_defaults(self, form: dict[str, Any]) -> dict[str, Any]:
+        form.setdefault("lifecycle", self._lifecycle())
+        form.setdefault("metadata", self._common_metadata(scope=["child", "home", "staff"]))
+        form.setdefault("sccif", ["Experiences and Progress", "Help and Protection", "Leadership and Management"])
+        form.setdefault("quality_standards", ["Quality of Care", "Protection of Children", "Leadership and Management"])
+        return form
+
+    def daily_home_view(self) -> dict[str, Any]:
+        return {
+            "key": "daily_home_view",
+            "title": "Daily Home View",
+            "purpose": "Auto-generate the daily operational snapshot from existing appointments, incidents, actions, missing episodes, medication or health alerts and staffing.",
+            "route_type": "care_hub_daily_home_view",
+            "lifecycle": self._lifecycle("AUTO-GENERATED", "REVIEWED BY SENIOR", "HANDED OVER", "CLOSED"),
+            "metadata": self._common_metadata(scope=["home", "staff"], chronology=True, evidence=True, orb=True),
+            "sections": [
+                self._field("date", "Date", "date", "Snapshot date."),
+                self._field("home", "Home", "text", "Home in scope."),
+                self._field("staff_on_shift", "Staff on shift", "textarea", "Pulled from shift and workforce data."),
+                self._field("children_in_home", "Children in home", "textarea", "Children currently in the home."),
+                self._field("children_away_from_home", "Children away from home", "textarea", "Planned away time or missing/unauthorised absence."),
+                self._field("appointments_today", "Appointments today", "textarea", "Appointments and professional meetings."),
+                self._field("medication_alerts", "Medication alerts", "textarea", "Medication, health or checking alerts."),
+                self._field("incidents_last_24h", "Incidents last 24h", "textarea", "Recent incidents and linked review state."),
+                self._field("safeguarding_alerts", "Safeguarding alerts", "textarea", "Open safeguarding signals."),
+                self._field("outstanding_actions", "Outstanding actions", "textarea", "Actions due or overdue."),
+                self._field("handover_summary", "Handover summary", "textarea", "What the next shift needs to know."),
+                self._field("orb_daily_briefing", "ORB daily briefing", "textarea", "ORB summary from operational context."),
+            ],
+        }
+
+    def shift_handover(self) -> dict[str, Any]:
+        return {
+            "key": "shift_handover",
+            "title": "Shift Handover",
+            "purpose": "Support emotional safety and continuity between adults using existing handover records.",
+            "route_type": "handover_record",
+            "lifecycle": self._lifecycle("DRAFT", "SUBMITTED", "ACCEPTED BY NEXT SHIFT", "MANAGER REVIEWED", "ARCHIVED"),
+            "metadata": self._common_metadata(scope=["child", "home", "staff"]),
+            "sections": [
+                self._field("shift_type", "Shift type", "select", "Day, late, night or handover."),
+                self._field("staff_handing_over", "Staff handing over", "text", "Adults handing over."),
+                self._field("staff_receiving", "Staff receiving", "text", "Adults receiving handover."),
+                self._field("children_summary", "Children summary", "textarea", "Child-centred summary."),
+                self._field("risks_to_know", "Risks to know", "textarea", "Risks and protective responses."),
+                self._field("emotional_atmosphere", "Emotional atmosphere", "textarea", "What helped children feel settled?"),
+                self._field("key_messages", "Key messages", "textarea", "What the next shift needs to know to support emotional safety."),
+                self._field("actions_outstanding", "Actions outstanding", "textarea", "Actions, owner and review point."),
+            ],
+        }
+
+    def child_profile_about_me(self) -> dict[str, Any]:
+        return {
+            "key": "child_profile_about_me",
+            "title": "Child Profile / About Me",
+            "purpose": "Keep one child-centred profile for identity, routines, communication, sensory needs, networks, child voice and current plans.",
+            "route_type": "young_person_profile",
+            "lifecycle": self._lifecycle("DRAFT", "CHILD/ADULT INPUT ADDED", "MANAGER REVIEW", "APPROVED", "REVIEW DUE"),
+            "metadata": self._common_metadata(scope=["child", "home", "staff"]),
+            "sccif": ["Experiences and Progress", "Child Voice", "Positive Relationships"],
+            "sections": [
+                self._field("identity", "Identity", "textarea", "Identity, preferred name, pronouns and what matters."),
+                self._field("communication_style", "Communication style", "textarea", "How the child communicates."),
+                self._field("sensory_needs", "Sensory needs", "textarea", "Sensory profile and helpful adjustments."),
+                self._field("routines", "Routines", "textarea", "Daily routines and predictability."),
+                self._field("trusted_adults", "Trusted adults", "textarea", "Adults the child trusts."),
+                self._field("family_network", "Family network", "textarea", "Important family relationships."),
+                self._field("professional_network", "Professional network", "textarea", "Professionals involved."),
+                self._field("triggers", "Triggers", "textarea", "Known triggers and early signs."),
+                self._field("calming_strategies", "Calming strategies", "textarea", "What helps the child feel safe."),
+                self._field("child_voice", "Child voice", "textarea", "What the child wants adults to understand."),
+                self._field("current_plans", "Current plans", "textarea", "Plans currently in force."),
+            ],
+        }
+
+    def child_voice_form(self) -> dict[str, Any]:
+        return {
+            "key": "child_voice_form",
+            "title": "Child Voice Form",
+            "purpose": "Record what the child communicated, how adults listened and what changed.",
+            "route_type": "keywork_session",
+            "lifecycle": self._lifecycle("DRAFT", "SUBMITTED", "REVIEWED", "ACTIONED", "CLOSED"),
+            "metadata": self._common_metadata(scope=["child", "home", "staff"]),
+            "prompt": "How do we know the child was listened to?",
+            "sections": [
+                self._field("what_child_said", "What the child said or wanted", "textarea", "Use the child's own words where possible."),
+                self._field("how_communicated", "How they communicated this", "textarea", "Words, behaviour, play, silence, drawings or choices."),
+                self._field("adult_response", "Adult response", "textarea", "How adults responded."),
+                self._field("what_changed", "What changed as a result", "textarea", "Change in care, routine, plan or action."),
+                self._field("follow_up_needed", "Follow-up needed", "textarea", "Who will do what next."),
+                self._field("you_said_we_did", "You said, we did", "textarea", "Plain feedback to the child."),
+            ],
+        }
+
+    def wellbeing_check(self) -> dict[str, Any]:
+        return {
+            "key": "wellbeing_check",
+            "title": "Wellbeing Check",
+            "purpose": "Update wellbeing trajectory, ORB context and chronology from emotional safety signals.",
+            "route_type": "health_record",
+            "lifecycle": self._lifecycle("DRAFT", "SUBMITTED", "REVIEWED", "LINKED TO CARE PLAN"),
+            "metadata": self._common_metadata(scope=["child", "home", "staff"]),
+            "sections": [self._field(key, label, "textarea", help_text) for key, label, help_text in [
+                ("mood_presentation", "Mood / presentation", "How the child presented emotionally."),
+                ("sleep", "Sleep", "Sleep, settling or tiredness."),
+                ("appetite", "Appetite", "Food, hydration and appetite changes."),
+                ("emotional_regulation", "Emotional regulation", "What helped the child regulate."),
+                ("relationships", "Relationships", "Trusted adults, peers and family."),
+                ("education_engagement", "Education engagement", "Education attendance and engagement."),
+                ("sensory_needs", "Sensory needs", "Sensory support or triggers."),
+                ("worries", "Worries", "Worries the child said or showed."),
+                ("what_helped", "What helped", "Support that worked."),
+                ("what_needs_follow_up", "What needs follow-up", "Plan, action or review needed."),
+            ]],
+        }
+
+    def relationship_record(self) -> dict[str, Any]:
+        return {
+            "key": "relationship_record",
+            "title": "Relationship Record",
+            "purpose": "Make relationships, repair and impact visible in the child journey.",
+            "route_type": "family_contact",
+            "lifecycle": self._lifecycle("DRAFT", "SUBMITTED", "REVIEWED", "CHRONOLOGY LINKED"),
+            "metadata": self._common_metadata(scope=["child", "home", "staff"]),
+            "sections": [
+                self._field("trusted_adult", "Trusted adult", "text", "Trusted adult involved."),
+                self._field("family_contact", "Family contact", "text", "Family relationship involved."),
+                self._field("peer_relationship", "Peer relationship", "text", "Peer relationship involved."),
+                self._field("repair_conversation", "Repair conversation", "textarea", "Repair or relational conversation."),
+                self._field("positive_interaction", "Positive interaction", "textarea", "What went well."),
+                self._field("worries_concerns", "Worries / concerns", "textarea", "Concerns and adult response."),
+                self._field("impact_for_child", "Impact for child", "textarea", "What this meant for the child."),
+            ],
+        }
 
     def common_sections(self) -> list[dict[str, Any]]:
         return [
@@ -200,6 +375,143 @@ class IndiCareFormsFrameworkService:
 
     def manager_oversight(self) -> dict[str, Any]:
         return {"key": "manager_oversight", "title": "Manager Oversight", "purpose": "Evidence leadership review, action and learning.", "sections": [self._field("review_area", "Area reviewed", "textarea", "Record, incident, child, staff, safeguarding or audit."), self._field("findings", "Findings", "textarea", "Quality, risk, strengths and gaps."), self._field("actions", "Actions", "textarea", "What needs to happen, by whom and by when?"), self._field("impact", "Expected impact", "textarea", "How will this improve safety, care or progress?")]}
+
+    def missing_episode(self) -> dict[str, Any]:
+        return {
+            "key": "missing_episode",
+            "title": "Missing Episode",
+            "purpose": "Record the live episode, safe return, return conversation, learning and plan updates.",
+            "route_type": "missing_episode",
+            "lifecycle": self._lifecycle("DRAFT", "LIVE EPISODE", "RETURNED", "RETURN INTERVIEW", "MANAGER REVIEW", "CLOSED", escalation=True),
+            "metadata": self._common_metadata(scope=["child", "home", "staff"]),
+            "automation": ["chronology", "safeguarding signal", "Reg 40 prompt if required"],
+            "sections": [self._field(key, label, "textarea", help_text) for key, label, help_text in [
+                ("time_missing", "Time missing", "Start and return times."),
+                ("last_seen", "Last seen", "Where and with whom the child was last seen."),
+                ("known_risks", "Known risks", "Risk context and protective factors."),
+                ("action_taken", "Action taken", "Search, contact and care actions."),
+                ("police_la_notified", "Police / LA notified", "Notifications made or considered."),
+                ("return_details", "Return details", "How the child returned."),
+                ("return_conversation", "Return conversation", "What the child said after return."),
+                ("triggers", "Triggers", "Possible triggers or patterns."),
+                ("learning", "Learning", "Learning for adults and plans."),
+                ("plan_update_needed", "Plan update needed", "Risk/care plan updates."),
+            ]],
+        }
+
+    def medication_record(self) -> dict[str, Any]:
+        return {
+            "key": "medication_record",
+            "title": "Medication Record",
+            "purpose": "Record administration, refusal, missed doses, side effects and action taken.",
+            "route_type": "medication_record",
+            "lifecycle": self._lifecycle("DRAFT", "RECORDED", "CHECKED", "MANAGER REVIEW IF ERROR", escalation=True),
+            "metadata": self._common_metadata(scope=["child", "home", "staff"]),
+            "sections": [self._field(key, label, "textarea" if key in {"reason", "side_effects", "action_taken"} else "text", help_text) for key, label, help_text in [
+                ("medication", "Medication", "Medication name."),
+                ("dose", "Dose", "Dose recorded."),
+                ("time", "Time", "Scheduled/administered time."),
+                ("administered_by", "Administered by", "Adult recording/administering."),
+                ("refused_missed", "Refused / missed", "Whether medication was refused or missed."),
+                ("reason", "Reason", "Reason for refusal, omission or error."),
+                ("side_effects", "Side effects", "Side effects or nil return."),
+                ("action_taken", "Action taken", "Follow-up, advice or manager review."),
+            ]],
+        }
+
+    def physical_intervention_record(self) -> dict[str, Any]:
+        return {
+            "key": "physical_intervention_record",
+            "title": "Physical Intervention / Restraint",
+            "purpose": "Record necessity, de-escalation, duration, debrief, repair and plan learning.",
+            "route_type": "incident",
+            "lifecycle": self._lifecycle("DRAFT", "SUBMITTED", "MANAGER REVIEW", "CHILD DEBRIEF", "STAFF DEBRIEF", "CLOSED", escalation=True),
+            "metadata": self._common_metadata(scope=["child", "home", "staff"]),
+            "sections": [self._field(key, label, "textarea", help_text) for key, label, help_text in [
+                ("reason", "Reason", "Why intervention was necessary."),
+                ("de_escalation_attempted", "De-escalation attempted", "Support tried first."),
+                ("duration", "Duration", "How long intervention lasted."),
+                ("holds_used", "Holds used", "Holds or restrictions used."),
+                ("injury", "Injury", "Injury checks or nil return."),
+                ("child_view", "Child view", "What the child said or showed."),
+                ("staff_debrief", "Staff debrief", "Staff reflection and learning."),
+                ("manager_review", "Manager review", "Quality, proportionality and notifications."),
+                ("repair_work", "Repair work", "Repair with the child."),
+                ("plan_update", "Plan update", "Plan updates needed."),
+            ]],
+        }
+
+    def child_document_form(self) -> dict[str, Any]:
+        return {
+            "key": "child_document_form",
+            "title": "Child Document Form",
+            "purpose": "Create child-centred documents with voice, purpose, review, evidence, chronology, SCCIF tags and ORB summary.",
+            "route_type": "document",
+            "categories": ["About Me", "My Voice", "My Relationships", "My Routines", "My Sensory Needs", "My Communication", "My Education", "My Health", "My Family Time", "My Plans", "My Safety", "My Achievements", "My Journey", "Statutory Documents", "Manager Review"],
+            "lifecycle": self._lifecycle("DRAFT", "SUBMITTED", "REVIEWED", "SIGNED OFF", "REVIEW DUE", "ARCHIVED"),
+            "metadata": self._common_metadata(scope=["child", "home", "staff"]),
+            "sections": [self._field(key, label, "textarea" if key not in {"document_title", "category", "review_date", "owner"} else "text", help_text) for key, label, help_text in [
+                ("document_title", "Document title", "Child-centred title."),
+                ("category", "Category", "Document category."),
+                ("purpose", "Purpose", "Why this document matters."),
+                ("child_voice_included", "Child voice included?", "How the child voice is included."),
+                ("meaning_for_child", "What this means for the child", "Impact and practical meaning."),
+                ("review_date", "Review date", "When review is due."),
+                ("owner", "Owner", "Document owner."),
+                ("sign_off_required", "Sign-off required", "Sign-off role or reason."),
+                ("linked_evidence", "Linked evidence", "Evidence references."),
+                ("linked_chronology", "Linked chronology", "Chronology references."),
+                ("orb_summary", "ORB summary", "ORB summary for context."),
+            ]],
+        }
+
+    def template_generator(self) -> dict[str, Any]:
+        return {
+            "key": "template_generator",
+            "title": "Template Generator",
+            "purpose": "Generate templates from existing records and keep editing, review and sign-off in the document workflow.",
+            "route_type": "document_template",
+            "templates": ["Placement Plan", "Risk Assessment", "Behaviour Support Plan", "Missing From Care Plan", "Health Plan", "Education Plan", "Contact Plan", "Child Voice Summary", "Reg 40 Notification", "Reg 44 Action Response", "Reg 45 Evidence Summary"],
+            "lifecycle": self._lifecycle("TEMPLATE", "GENERATED", "EDITED", "REVIEWED", "SIGNED OFF"),
+            "metadata": self._common_metadata(scope=["child", "home", "staff"]),
+            "sections": [self._field("template", "Template", "select", "Template to generate."), self._field("source_records", "Sources used", "textarea", "Existing records used."), self._field("evidence_gaps", "Evidence gaps", "textarea", "Gaps to resolve before sign-off.")],
+        }
+
+    def training_matrix(self) -> dict[str, Any]:
+        return {
+            "key": "training_matrix",
+            "title": "Training Matrix",
+            "purpose": "Track mandatory learning by role, completion, expiry and evidence.",
+            "route_type": "training_matrix",
+            "lifecycle": self._lifecycle("REQUIRED", "BOOKED", "COMPLETED", "EXPIRED / RENEWED"),
+            "metadata": self._common_metadata(scope=["staff", "home"], chronology=False),
+            "sections": [self._field("training_type", "Training type", "text", "Training name."), self._field("required_by_role", "Required by role", "text", "Role requirement."), self._field("completed_date", "Completed date", "date", "Completion date."), self._field("expiry", "Expiry", "date", "Expiry date."), self._field("evidence", "Evidence", "text", "Evidence link."), self._field("status", "Status", "text", "Training status.")],
+        }
+
+    def practice_observation(self) -> dict[str, Any]:
+        return {
+            "key": "practice_observation",
+            "title": "Practice Observation",
+            "purpose": "Observe child-centred practice, relationship quality, communication, safeguarding awareness and development needs.",
+            "route_type": "practice_observation",
+            "lifecycle": self._lifecycle("DRAFT", "REVIEWED WITH STAFF", "ACTIONS SET", "CLOSED"),
+            "metadata": self._common_metadata(scope=["staff", "home"], chronology=False),
+            "sections": [self._field(key, label, "textarea", help_text) for key, label, help_text in [
+                ("observed_practice", "Observed practice", "What was observed."),
+                ("child_centred_care", "Child-centred care", "How the child was understood."),
+                ("relationship_quality", "Relationship quality", "Warmth, boundaries and repair."),
+                ("communication", "Communication", "Communication strengths and needs."),
+                ("safeguarding_awareness", "Safeguarding awareness", "Safeguarding awareness shown."),
+                ("strengths", "Strengths", "Strengths observed."),
+                ("development_needs", "Development needs", "Actions or support needed."),
+            ]],
+        }
+
+    def reg44_workflow(self) -> dict[str, Any]:
+        return {"key": "reg44_workflow", "title": "Reg 44 Workflow", "purpose": "Track visit, findings, actions, provider response and impact.", "route_type": "reg44", "lifecycle": self._lifecycle("SCHEDULED", "VISIT COMPLETED", "REPORT RECEIVED", "ACTIONS CREATED", "PROVIDER RESPONSE", "CLOSED"), "metadata": self._common_metadata(scope=["home", "staff"], chronology=True), "sections": [self._field("visit_date", "Visit date", "date", "Visit date."), self._field("visitor", "Visitor", "text", "Visitor name."), self._field("children_spoken_to", "Children spoken to", "textarea", "Child voice evidence."), self._field("records_reviewed", "Records reviewed", "textarea", "Records reviewed."), self._field("findings", "Findings", "textarea", "Findings."), self._field("actions", "Actions", "textarea", "Actions created."), self._field("provider_response", "Provider response", "textarea", "Provider response."), self._field("impact", "Impact", "textarea", "Impact for children.")]}
+
+    def reg45_workflow(self) -> dict[str, Any]:
+        return {"key": "reg45_workflow", "title": "Reg 45 Workflow", "purpose": "Review quality of care, outcomes, safeguarding, workforce, leadership, feedback and improvement actions.", "route_type": "reg45", "lifecycle": self._lifecycle("DRAFT", "EVIDENCE GATHERING", "MANAGER REVIEW", "RI REVIEW", "SIGNED OFF", "IMPROVEMENT PLAN"), "metadata": self._common_metadata(scope=["home", "staff"], chronology=True), "sections": [self._field("review_period", "Review period", "text", "Review period."), self._field("evidence_reviewed", "Evidence reviewed", "textarea", "Evidence sources."), self._field("child_outcomes", "Child outcomes", "textarea", "Outcomes for children."), self._field("safeguarding", "Safeguarding", "textarea", "Safeguarding analysis."), self._field("workforce", "Workforce", "textarea", "Workforce evidence."), self._field("leadership", "Leadership", "textarea", "Leadership evidence."), self._field("feedback", "Feedback", "textarea", "Feedback from children, staff and professionals."), self._field("improvement_actions", "Improvement actions", "textarea", "Improvement actions."), self._field("impact_evidence", "Impact evidence", "textarea", "Impact evidence.")]}
 
     def _field(self, key: str, label: str, field_type: str, help_text: str) -> dict[str, str]:
         return {"key": key, "label": label, "type": field_type, "help_text": help_text}

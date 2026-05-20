@@ -1,4 +1,8 @@
 export type RecordingWorkflowId =
+  | 'child-profile'
+  | 'child-voice'
+  | 'wellbeing-check'
+  | 'relationship-record'
   | 'daily-note'
   | 'incidents'
   | 'safeguarding'
@@ -7,6 +11,9 @@ export type RecordingWorkflowId =
   | 'keywork'
   | 'family-contact'
   | 'health'
+  | 'medication-record'
+  | 'physical-intervention'
+  | 'shift-handover'
   | 'appointment-outcome'
   | 'documents'
 
@@ -38,6 +45,13 @@ export type RecordingWorkflow = {
   tone: string
   primaryField?: string
   regulatoryBadges: string[]
+  lifecycle?: string[]
+  escalationLifecycle?: string[]
+  scope?: Array<'child' | 'home' | 'staff'>
+  sourceRecordType?: string
+  sccifAreas?: string[]
+  qualityStandards?: string[]
+  linkage?: string[]
   sections: RecordingSection[]
 }
 
@@ -69,6 +83,14 @@ function select(name: string, label: string, options: string[], helper?: string)
 function checkbox(name: string, label: string, helper?: string): RecordingField {
   return { name, label, type: 'checkbox', helper }
 }
+
+export const standardRecordLifecycle = ['Draft', 'Submitted', 'Reviewed', 'Approved / Returned', 'Archived']
+export const extendedRecordLifecycle = ['Escalated', 'Signed off', 'Actioned', 'Closed']
+
+const coreLinkage = ['chronology', 'evidence', 'actions', 'audit trail', 'ORB context', 'reports', 'governance']
+const childProgressTags = ['SCCIF experiences and progress', 'Child voice', 'Positive relationships']
+const protectionTags = ['SCCIF help and protection', 'Reg 12', 'Reg 13']
+const leadershipTags = ['SCCIF leadership and management', 'Quality Standards', 'manager review']
 
 const dailyNoteSections: RecordingSection[] = [
   {
@@ -128,6 +150,161 @@ const dailyNoteSections: RecordingSection[] = [
 ]
 
 export const recordingWorkflows: Record<RecordingWorkflowId, RecordingWorkflow> = {
+  'child-profile': {
+    id: 'child-profile',
+    routeSegment: 'about-me',
+    eyebrow: 'About Me',
+    title: 'Update About Me',
+    description: 'Maintain one child-centred profile using existing identity, communication and formulation sections.',
+    quickActionLabel: 'About Me',
+    tone: 'Identity, routines, trusted adults and what helps, in the child’s own context.',
+    primaryField: 'child_voice_summary',
+    regulatoryBadges: ['SCCIF experiences and progress', 'Child voice', 'Positive relationships'],
+    lifecycle: ['Draft', 'Child / adult input added', 'Manager review', 'Approved', 'Review due'],
+    scope: ['child', 'home', 'staff'],
+    sourceRecordType: 'young_person_profile',
+    sccifAreas: childProgressTags,
+    qualityStandards: ['Reg 7', 'Reg 9', 'Reg 11'],
+    linkage: coreLinkage,
+    sections: [
+      {
+        title: 'Identity and voice',
+        badge: 'About me',
+        description: 'Use the child’s preferred language wherever possible.',
+        fields: [
+          { name: 'preferred_name', label: 'Preferred name', type: 'text' },
+          { name: 'pronouns', label: 'Pronouns', type: 'text' },
+          textarea('child_voice_summary', 'Child voice', 'What does the child want adults to know about them?', undefined, true),
+          textarea('cultural_identity', 'Cultural / religious identity', 'Culture, faith, language, food, community and identity needs.'),
+          textarea('important_dates', 'Important dates', 'Birthdays, anniversaries, review dates or dates that may affect feelings.')
+        ]
+      },
+      {
+        title: 'Communication, sensory needs and routines',
+        badge: 'Day to day',
+        fields: [
+          textarea('communication_style', 'Communication style', 'How does the child communicate comfort, worry, choice or distress?'),
+          textarea('sensory_profile', 'Sensory needs', 'Sensory preferences, sensitivities and helpful adjustments.'),
+          textarea('routines_and_predictability', 'Routines', 'Morning, evening, sleep, meals, school and transitions.'),
+          textarea('known_triggers', 'Triggers / early signs', 'What might unsettle the child and what adults notice first.'),
+          textarea('what_helps', 'Calming strategies', 'What helps the child feel safe, settled or listened to.')
+        ]
+      },
+      {
+        title: 'People and current plans',
+        badge: 'Network',
+        fields: [
+          textarea('trusted_adults', 'Trusted adults', 'Adults the child seeks out or finds helpful.'),
+          textarea('family_network', 'Family network', 'Important family relationships, contact hopes and worries.'),
+          textarea('professional_network', 'Professional network', 'Social worker, school, health, therapist, advocate or IRO.'),
+          textarea('likes_dislikes', 'Likes and dislikes', 'Interests, strengths, dislikes and things adults should avoid.'),
+          textarea('current_plans', 'Current plans', 'Care, risk, health, education, family time or safety plans to keep in view.'),
+          { name: 'review_date', label: 'Review date', type: 'date' }
+        ]
+      }
+    ]
+  },
+  'child-voice': {
+    id: 'child-voice',
+    routeSegment: 'child-voice',
+    eyebrow: 'Child Voice',
+    title: 'Add Child Voice',
+    description: 'Record what the child communicated, how adults responded and what changed as a result.',
+    quickActionLabel: 'Child Voice',
+    tone: 'You said, we did, with clear follow-up.',
+    primaryField: 'what_child_said',
+    regulatoryBadges: ['SCCIF child voice', 'Reg 7', 'Advocacy / complaints'],
+    lifecycle: ['Draft', 'Submitted', 'Reviewed', 'Actioned', 'Closed'],
+    scope: ['child', 'home', 'staff'],
+    sourceRecordType: 'keywork_session',
+    sccifAreas: ['SCCIF experiences and progress', 'Child voice'],
+    qualityStandards: ['Reg 7', 'Reg 9'],
+    linkage: coreLinkage,
+    sections: [
+      {
+        title: 'What the child communicated',
+        badge: 'Voice',
+        fields: [
+          textarea('what_child_said', 'What the child said or wanted', 'Use the child’s own words where possible.', undefined, true),
+          textarea('how_communicated', 'How they communicated this', 'Words, behaviour, play, silence, drawings, choices or body language.'),
+          textarea('adult_response', 'Adult response', 'What did adults do to show the child was listened to?'),
+          textarea('what_changed', 'What changed as a result', 'What changed in care, routine, planning or adult response?'),
+          textarea('follow_up_needed', 'Follow-up needed', 'Who will do what next and by when?'),
+          textarea('advocacy_complaint_link', 'Advocacy / complaint link', 'Advocate, complaint, IRO, social worker or independent visitor.'),
+          textarea('you_said_we_did', 'You said, we did', 'Plain words that can be shared back with the child.'),
+          textarea('listened_to_evidence', 'How do we know the child was listened to?', 'Evidence of response, change or feedback from the child.')
+        ]
+      }
+    ]
+  },
+  'wellbeing-check': {
+    id: 'wellbeing-check',
+    routeSegment: 'wellbeing-check',
+    eyebrow: 'Wellbeing',
+    title: 'Add Wellbeing Check',
+    description: 'Record presentation, regulation, relationships and follow-up so wellbeing trajectory and ORB context stay current.',
+    quickActionLabel: 'Wellbeing Check',
+    tone: 'Mood, sleep, appetite, relationships and what helped.',
+    primaryField: 'mood_presentation',
+    regulatoryBadges: ['SCCIF experiences and progress', 'Reg 10', 'Emotional safety'],
+    lifecycle: ['Draft', 'Submitted', 'Reviewed', 'Linked to care plan'],
+    scope: ['child', 'home', 'staff'],
+    sourceRecordType: 'health_record',
+    sccifAreas: ['SCCIF experiences and progress', 'SCCIF help and protection'],
+    qualityStandards: ['Reg 10', 'Reg 7'],
+    linkage: coreLinkage,
+    sections: [
+      {
+        title: 'Wellbeing picture',
+        badge: 'Emotional safety',
+        fields: [
+          textarea('mood_presentation', 'Mood / presentation', 'How did the child seem and how did this change?', undefined, true),
+          textarea('sleep', 'Sleep', 'Settling, waking, nightmares, tiredness or change from usual.'),
+          textarea('appetite', 'Appetite', 'Meals, snacks, hydration, appetite changes or worries.'),
+          textarea('emotional_regulation', 'Emotional regulation', 'How did the child manage feelings and what support helped?'),
+          textarea('relationships', 'Relationships', 'Trusted adults, peers, family and repair moments.'),
+          textarea('education_engagement', 'Education engagement', 'Attendance, engagement, refusal, anxiety or achievement.'),
+          textarea('sensory_needs', 'Sensory needs', 'Sensory factors that helped or unsettled the child.'),
+          textarea('worries', 'Worries', 'Anything the child said, showed or avoided.'),
+          textarea('what_helped', 'What helped', 'Adult response, routine, connection, sensory support or choices.'),
+          textarea('what_needs_follow_up', 'What needs follow-up', 'Care plan, health, education, family time, action or manager review.')
+        ]
+      }
+    ]
+  },
+  'relationship-record': {
+    id: 'relationship-record',
+    routeSegment: 'relationship-record',
+    eyebrow: 'Relationships',
+    title: 'Add Relationship Record',
+    description: 'Record relational moments, repair conversations, family or peer context and the impact for the child.',
+    quickActionLabel: 'Relationship Record',
+    tone: 'Relationships, repair and impact for the child.',
+    primaryField: 'impact_for_child',
+    regulatoryBadges: ['SCCIF positive relationships', 'Reg 11', 'Child voice'],
+    lifecycle: ['Draft', 'Submitted', 'Reviewed', 'Chronology linked'],
+    scope: ['child', 'home', 'staff'],
+    sourceRecordType: 'family_contact_record',
+    sccifAreas: ['SCCIF experiences and progress', 'Positive relationships'],
+    qualityStandards: ['Reg 11', 'Reg 7'],
+    linkage: coreLinkage,
+    sections: [
+      {
+        title: 'Relationship and repair',
+        badge: 'Relational',
+        fields: [
+          { name: 'trusted_adult', label: 'Trusted adult', type: 'text' },
+          { name: 'family_contact', label: 'Family contact', type: 'text' },
+          { name: 'peer_relationship', label: 'Peer relationship', type: 'text' },
+          textarea('repair_conversation', 'Repair conversation', 'What was repaired, revisited or understood?'),
+          textarea('positive_interaction', 'Positive interaction', 'What went well and what did adults notice?'),
+          textarea('worries_concerns', 'Worries / concerns', 'Pressure, conflict, confusion, rejection, loss or safety worries.'),
+          textarea('adult_response', 'Adult response', 'How did adults support connection, boundaries or repair?'),
+          textarea('impact_for_child', 'Impact for child', 'What changed for the child or what needs to happen next?', undefined, true)
+        ]
+      }
+    ]
+  },
   'daily-note': {
     id: 'daily-note',
     routeSegment: 'daily-note',
@@ -335,6 +512,118 @@ export const recordingWorkflows: Record<RecordingWorkflowId, RecordingWorkflow> 
       }
     ]
   },
+  'medication-record': {
+    id: 'medication-record',
+    routeSegment: 'medication-record',
+    eyebrow: 'Medication',
+    title: 'Add Medication Record',
+    description: 'Record administration, refusal, missed doses, side effects and action taken using the medication record route.',
+    quickActionLabel: 'Medication',
+    tone: 'Medication facts, checks and manager review if something went wrong.',
+    primaryField: 'medication_name',
+    regulatoryBadges: ['Reg 10', 'Medication safety', 'Manager review if error'],
+    lifecycle: ['Draft', 'Recorded', 'Checked', 'Manager review if error'],
+    escalationLifecycle: extendedRecordLifecycle,
+    scope: ['child', 'home', 'staff'],
+    sourceRecordType: 'medication_record',
+    sccifAreas: ['SCCIF help and protection', 'Health and wellbeing'],
+    qualityStandards: ['Reg 10', 'Reg 12'],
+    linkage: coreLinkage,
+    sections: [
+      {
+        title: 'Medication administration',
+        badge: 'Health',
+        fields: [
+          { name: 'medication_name', label: 'Medication', type: 'text', required: true },
+          { name: 'dose', label: 'Dose', type: 'text' },
+          { name: 'administered_time', label: 'Time', type: 'datetime-local' },
+          { name: 'administered_by_name', label: 'Administered by', type: 'text' },
+          select('administration_status', 'Recorded status', ['administered', 'refused', 'missed', 'error', 'not required']),
+          textarea('reason', 'Reason if refused / missed', 'Child explanation, practical issue or clinical advice.'),
+          textarea('side_effects', 'Side effects', 'Any side effects, concerns or nil return if relevant.'),
+          textarea('action_taken', 'Action taken', 'Monitoring, advice, manager review, pharmacy, GP or social worker update.'),
+          checkbox('medication_error', 'Medication error?', 'This prompts manager review.')
+        ]
+      }
+    ]
+  },
+  'physical-intervention': {
+    id: 'physical-intervention',
+    routeSegment: 'physical-intervention',
+    eyebrow: 'Physical Intervention',
+    title: 'Add Physical Intervention / Restraint',
+    description: 'Record why intervention was necessary, de-escalation, holds, injury, child and staff debrief and repair work.',
+    quickActionLabel: 'Physical Intervention',
+    tone: 'Least restrictive, factual and repair-focused.',
+    primaryField: 'reason',
+    regulatoryBadges: ['Reg 13', 'Reg 35', 'SCCIF protection'],
+    lifecycle: ['Draft', 'Submitted', 'Manager review', 'Child debrief', 'Staff debrief', 'Closed'],
+    escalationLifecycle: extendedRecordLifecycle,
+    scope: ['child', 'home', 'staff'],
+    sourceRecordType: 'incident',
+    sccifAreas: protectionTags,
+    qualityStandards: ['Reg 12', 'Reg 13', 'Reg 35'],
+    linkage: coreLinkage,
+    sections: [
+      {
+        title: 'Intervention and debrief',
+        badge: 'Safeguarding',
+        fields: [
+          textarea('reason', 'Reason', 'What immediate risk made physical intervention necessary?', undefined, true),
+          textarea('de_escalation_attempted', 'De-escalation attempted', 'What was tried before intervention and how did the child respond?'),
+          { name: 'duration_minutes', label: 'Duration in minutes', type: 'text' },
+          textarea('holds_used', 'Holds used', 'Describe holds factually, including least restrictive approach.'),
+          textarea('injury', 'Injury', 'Child or staff injury, checks, body map or nil return.'),
+          textarea('child_view', 'Child view', 'What did the child say, show or want adults to know?'),
+          textarea('staff_debrief', 'Staff debrief', 'Reflection, emotional impact and learning.'),
+          textarea('manager_review', 'Manager review', 'Quality, proportionality, notifications, learning and actions.'),
+          textarea('repair_work', 'Repair work', 'How adults repaired with the child afterwards.'),
+          textarea('plan_update', 'Plan update', 'Risk, behaviour support, health or care plan updates needed.'),
+          checkbox('manager_review_required', 'Manager review required?', 'Physical intervention records require manager oversight.')
+        ]
+      }
+    ]
+  },
+  'shift-handover': {
+    id: 'shift-handover',
+    routeSegment: 'shift-handover',
+    eyebrow: 'Shift Handover',
+    title: 'Add Shift Handover',
+    description: 'Prepare calm continuity for the next adults using existing handover records, chronology, actions and ORB context.',
+    quickActionLabel: 'Shift Handover',
+    tone: 'Emotional safety, risks, appointments, medication and key messages for the next shift.',
+    primaryField: 'children_summary',
+    regulatoryBadges: ['Leadership and management', 'Operational continuity', 'ORB briefing'],
+    lifecycle: ['Draft', 'Submitted', 'Accepted by next shift', 'Manager reviewed', 'Archived'],
+    escalationLifecycle: extendedRecordLifecycle,
+    scope: ['child', 'home', 'staff'],
+    sourceRecordType: 'handover_record',
+    sccifAreas: ['SCCIF leadership and management', 'SCCIF help and protection'],
+    qualityStandards: ['Reg 12', 'Reg 13'],
+    linkage: coreLinkage,
+    sections: [
+      {
+        title: 'Handover details',
+        badge: 'Continuity',
+        fields: [
+          select('shift_type', 'Shift type', ['day', 'late', 'night', 'handover']),
+          { name: 'handover_datetime', label: 'Date / time', type: 'datetime-local' },
+          { name: 'staff_handing_over', label: 'Staff handing over', type: 'text' },
+          { name: 'staff_receiving', label: 'Staff receiving', type: 'text' },
+          textarea('children_summary', 'Children summary', 'Brief child-centred summary for the next shift.', undefined, true),
+          textarea('risks_to_know', 'Risks to know', 'Risks, triggers, safeguarding signals and what helps.'),
+          textarea('emotional_atmosphere', 'Emotional atmosphere', 'What helped children feel settled? Any mood, routine or relationship changes?'),
+          textarea('incidents', 'Incidents', 'Incidents or near misses since last handover.'),
+          textarea('missing_away', 'Missing / away from home', 'Missing episode, planned away time or return conversation.'),
+          textarea('appointments', 'Appointments', 'Appointments due, outcomes to chase or transport.'),
+          textarea('medication', 'Medication', 'Medication alerts, refusals, missed doses or checks.'),
+          textarea('key_messages', 'Key messages', 'What does the next shift need to know to support emotional safety?'),
+          textarea('actions_outstanding', 'Actions outstanding', 'Actions, owner and review point.'),
+          textarea('manager_notes', 'Manager notes', 'Senior or manager oversight notes.')
+        ]
+      }
+    ]
+  },
   'appointment-outcome': {
     id: 'appointment-outcome',
     routeSegment: 'appointment-outcome',
@@ -384,6 +673,10 @@ export const recordingWorkflows: Record<RecordingWorkflowId, RecordingWorkflow> 
 }
 
 export const quickActionOrder: RecordingWorkflowId[] = [
+  'child-profile',
+  'child-voice',
+  'wellbeing-check',
+  'relationship-record',
   'daily-note',
   'incidents',
   'safeguarding',
@@ -392,6 +685,9 @@ export const quickActionOrder: RecordingWorkflowId[] = [
   'keywork',
   'family-contact',
   'health',
+  'medication-record',
+  'physical-intervention',
+  'shift-handover',
   'appointment-outcome',
   'documents'
 ]
@@ -413,13 +709,20 @@ export type ChildQuickActionItem =
     }
 
 const childOperationalWorkflowIds: RecordingWorkflowId[] = [
+  'child-profile',
+  'child-voice',
+  'wellbeing-check',
+  'relationship-record',
   'daily-note',
   'incidents',
   'safeguarding',
   'missing',
   'keywork',
   'health',
-  'family-contact'
+  'family-contact',
+  'medication-record',
+  'physical-intervention',
+  'shift-handover'
 ]
 
 export const childOperationalQuickActions: ChildQuickActionItem[] = [
