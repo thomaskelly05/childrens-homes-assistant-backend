@@ -2,8 +2,9 @@
 
 import { FormEvent, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import { Activity, BadgeCheck, Mic2, Send, ShieldCheck, Sparkles } from 'lucide-react'
+import { BadgeCheck, Mic2, Send, ShieldCheck, Sparkles } from 'lucide-react'
 
+import { OrbCognitionPanels } from '@/components/orb-operational/orb-cognition-panels'
 import { queryOrbConversation, type OrbConversationResponse, type OrbScope } from '@/lib/os-api/orb'
 import type { OsPersonSummary } from '@/lib/os-api/workspaces'
 
@@ -48,6 +49,18 @@ function childName(person: OsPersonSummary) {
 
 function scopePrompt(scope: OrbScope) {
   return scopeOptions.find((item) => item.value === scope)?.prompt || scopeOptions[0].prompt
+}
+
+function fieldText(value: unknown, key: string) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return ''
+  const field = (value as Record<string, unknown>)[key]
+  return typeof field === 'string' ? field : ''
+}
+
+function cognitionSummary(response: OrbConversationResponse) {
+  return fieldText(response.operational_atmosphere, 'manager_summary') ||
+    fieldText(response.operational_cognition, 'cognition_summary') ||
+    'ORB returned atmosphere, trajectory, impact and reflection blocks for review.'
 }
 
 export function OrbConversationExperience({ childrenOptions }: { childrenOptions: OsPersonSummary[] }) {
@@ -185,6 +198,14 @@ export function OrbConversationExperience({ childrenOptions }: { childrenOptions
                     </div>
                   </div>
                 ) : null}
+                {message.response?.operational_atmosphere || message.response?.operational_cognition ? (
+                  <div className="mt-4 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
+                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Converged cognition surfaced</p>
+                    <p className="mt-1 text-sm font-semibold leading-6 text-slate-600">
+                      {cognitionSummary(message.response)}
+                    </p>
+                  </div>
+                ) : null}
             </article>
           ))}
           {pending ? <div className="rounded-[24px] bg-white p-4 text-sm font-black text-blue-700 ring-1 ring-blue-100">ORB is checking live records...</div> : null}
@@ -219,22 +240,7 @@ export function OrbConversationExperience({ childrenOptions }: { childrenOptions
           </ul>
         </section>
 
-        <section className="rounded-[32px] bg-white p-5 shadow-lg shadow-slate-200/60 ring-1 ring-white">
-          <div className="flex items-center gap-2">
-            <Activity className="h-5 w-5 text-blue-600" aria-hidden />
-            <h2 className="text-lg font-black text-slate-950">Operational intelligence</h2>
-          </div>
-          <div className="mt-4 flex flex-wrap gap-2">
-            {(latestIntelligence?.care_journey?.emotional_themes?.length ? latestIntelligence.care_journey.emotional_themes : ['Themes appear after ORB checks records']).map((item) => (
-              <span key={item} className="rounded-full bg-blue-50 px-3 py-1 text-[11px] font-black text-blue-800">{item}</span>
-            ))}
-          </div>
-          <ul className="mt-4 space-y-2 text-xs font-semibold leading-5 text-slate-600">
-            {(latestIntelligence?.therapeutic_reasoning?.therapeutic_observations || []).slice(0, 2).map((item) => <li key={item}>- {item}</li>)}
-            {(latestIntelligence?.regulatory_reasoning?.management_considerations || []).slice(0, 2).map((item) => <li key={item}>- {item}</li>)}
-            {!latestIntelligence?.therapeutic_reasoning?.therapeutic_observations?.length && !latestIntelligence?.regulatory_reasoning?.management_considerations?.length ? <li>RM review prompts appear here after the first response.</li> : null}
-          </ul>
-        </section>
+        <OrbCognitionPanels response={latestResponse} />
 
         <section className="rounded-[32px] bg-white p-5 shadow-lg shadow-slate-200/60 ring-1 ring-white">
           <h2 className="text-lg font-black text-slate-950">Cognition timeline</h2>

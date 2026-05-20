@@ -75,6 +75,26 @@ export default async function UnifiedCommandCentrePage() {
     ['Safeguarding alerts', platformData.safeguarding.length],
     ['Outstanding actions', openActions.length]
   ]
+  const positiveMoments = platformData.chronology.filter((event) => /settled|calm|positive|progress|achiev|trusted|enjoy|engaged/i.test(`${event.title} ${event.summary}`)).slice(0, 4)
+  const relationshipSignals = platformData.chronology.filter((event) => /relationship|family|contact|keywork|trusted|repair|voice/i.test(`${event.title} ${event.summary}`)).slice(0, 4)
+  const childrenNeedingAttention = platformData.children.filter((child) => /high|critical|attention|risk|concern/i.test(JSON.stringify(child))).length
+  const unresolvedConcerns = count(governanceData.unresolved_concerns) + openActions.length + platformData.safeguarding.length
+  const pulseRows = [
+    ['Home atmosphere', recentIncidents.length || workforceData.alerts.length ? 'Pressure visible; review calmly' : 'No visible high-pressure signal returned'],
+    ['Emotional stability', positiveMoments[0]?.summary || 'No positive or stabilising chronology returned yet'],
+    ['Safeguarding pressure', platformData.safeguarding.length ? `${platformData.safeguarding.length} safeguarding signal(s)` : 'No open safeguarding signal returned'],
+    ['Staffing pressure', workforceData.alerts.length ? `${workforceData.alerts.length} workforce alert(s)` : 'No workforce alert returned'],
+    ['Positive progress', positiveMoments.length ? positiveMoments.map((event) => event.title).join(', ') : 'No positive progress markers returned'],
+    ['Relationship stability', relationshipSignals.length ? relationshipSignals.map((event) => event.title).join(', ') : 'No relationship chronology returned'],
+    ['Children needing attention', childrenNeedingAttention],
+    ['Unresolved concerns', unresolvedConcerns]
+  ]
+  const pulseQuestions = [
+    ['What changed today?', platformData.chronology[0]?.summary || 'No chronology event has been returned for today yet.'],
+    ['What may need review?', operationalAlerts[0]?.evidence || 'No consolidated review alert returned.'],
+    ['What support appears effective?', positiveMoments[0]?.summary || 'Look for daily notes showing calm, engagement, repair or progress.'],
+    ['What should the next shift understand?', handoverSignals[0]?.summary || openActions[0]?.title || 'No handover-specific signal returned yet.']
+  ]
 
   return (
     <div className="space-y-6">
@@ -125,6 +145,29 @@ export default async function UnifiedCommandCentrePage() {
       </section>
 
       <OperationalSignalGrid signals={signals} />
+
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,1.05fr)_minmax(340px,0.95fr)]" data-testid="care-hub-operational-pulse">
+        <Card>
+          <SectionHeader eyebrow="Care Hub operational pulse" title="Atmosphere, pressure and stabilising signals" description="One visible atmosphere model assembled from existing chronology, safeguarding, actions, governance and workforce feeds." />
+          <DataTable
+            headers={['Signal', 'Existing source summary']}
+            rows={pulseRows}
+            empty={<EmptyState title="No operational pulse returned" description="Existing operational feeds did not return enough data to describe the pulse." />}
+          />
+        </Card>
+
+        <Card>
+          <SectionHeader eyebrow="Next shift intelligence" title="Reflective handover questions" description="Care Hub surfaces what changed, what needs review and what appears to help without creating a separate dashboard engine." />
+          <div className="space-y-3">
+            {pulseQuestions.map(([question, answer]) => (
+              <div key={question} className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3">
+                <p className="text-[11px] font-black uppercase tracking-[0.16em] text-blue-700">{question}</p>
+                <p className="mt-1 text-sm font-bold leading-6 text-blue-950">{answer}</p>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </section>
 
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
         <OperationalTrendChart title="Child wellbeing and chronology trajectory" description="Monthly live chronology volume with high-concern events overlaid as the secondary signal." data={chronologyTrend} />

@@ -39,6 +39,13 @@ export default async function GovernanceCommandCentrePage() {
     { label: 'Reg 44', value: reg44Visits.length },
     { label: 'Flags', value: Object.keys(data.feature_flags || {}).length }
   ]
+  const oversightRows = [
+    ['What themes are emerging?', label(summary.safeguarding_posture || summary.governance_risk || valueFromRecord(data.safeguarding_drift || {}, ['summary', 'status'], 'Review safeguarding, workforce and evidence themes'))],
+    ['Where is oversight strongest?', matrixEntries.length ? `${matrixEntries.length} SCCIF evidence entries visible` : label(summary.inspection_readiness, 'Evidence matrix not returned')],
+    ['Where may evidence need strengthening?', label(summary.evidence_gaps, valueFromRecord(data.evidence_matrix?.summary || {}, ['gaps', 'evidence_gaps'], 'Review evidence matrix gaps'))],
+    ['Where is child voice visible?', label(summary.child_voice_visibility || valueFromRecord(data.child_journey_health || {}, ['child_voice_visibility', 'summary'], 'Review child journey health'))],
+    ['What operational pressures exist?', actions.length || data.unresolved_concerns.length ? `${actions.length} governance action(s), ${data.unresolved_concerns.length} unresolved concern(s)` : 'No governance action pressure returned']
+  ]
 
   return (
     <div className="space-y-6">
@@ -100,6 +107,15 @@ export default async function GovernanceCommandCentrePage() {
           action={<Link href="/orb?scope=governance" className="rounded-2xl bg-white px-4 py-3 text-sm font-black text-slate-950">Ask ORB</Link>}
         />
       </section>
+
+      <Card data-testid="governance-meaningful-oversight">
+        <SectionHeader eyebrow="Meaningful oversight" title="Themes, visibility and leadership response" description="Governance surfaces safeguarding themes, child impact, emotional atmosphere, evidence quality and operational drift from the existing command-centre payload." />
+        <DataTable
+          headers={['Reflective question', 'Existing intelligence surfaced']}
+          rows={oversightRows}
+          empty={<EmptyState title="No governance oversight summary" description="Governance OS did not return reflective oversight signals." />}
+        />
+      </Card>
 
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.8fr)]">
         <Card>
