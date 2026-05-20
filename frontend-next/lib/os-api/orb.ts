@@ -34,16 +34,33 @@ export type OrbConversationResponse = {
   answer: string
   summary: string
   sources: OrbSource[]
+  citations?: OrbSource[]
   actions: OrbAction[]
   confidence: OrbConfidence
   guardrails: string[]
+  care_journey?: Record<string, unknown>
+  regulatory_reasoning?: Record<string, unknown>
+  therapeutic_reasoning?: Record<string, unknown>
+  operational_cognition?: Record<string, unknown>
+  trajectory_reasoning?: Record<string, unknown>
+  operational_atmosphere?: Record<string, unknown>
+  rm_reflection?: Record<string, unknown>
+  risk_intelligence?: Record<string, unknown>
   context_used: {
     scope?: string
     intent?: string
     projection_keys?: string[]
     live_tables?: string[]
     snapshot_hit?: boolean
+    degraded?: boolean
+    pool_saturation_pct?: number
+    metadata_strategy?: Record<string, unknown>
+    child_voice_status?: string
   }
+  projection_keys?: string[]
+  snapshot_status?: Record<string, unknown>
+  live_status?: Record<string, unknown>
+  metadata_used?: Record<string, unknown>
   conversation_id?: string
 }
 
