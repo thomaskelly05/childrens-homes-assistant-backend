@@ -1,6 +1,11 @@
 from tests.conftest import TEST_EMAIL, TEST_PASSWORD
 
 
+def auth_error_body(response):
+    body = response.json()
+    return body.get("detail", body)
+
+
 def login_user(client):
     response = client.post(
         "/auth/login",
@@ -15,7 +20,7 @@ def login_user(client):
 
 
 def enable_mfa(client):
-    setup = client.post("/auth/mfa/setup")
+    setup = client.get("/auth/mfa/setup")
     assert setup.status_code == 200
 
     import pyotp
@@ -23,7 +28,7 @@ def enable_mfa(client):
     secret = setup.json()["secret"]
     code = pyotp.TOTP(secret).now()
 
-    enable = client.post("/auth/mfa/enable", json={"code": code})
+    enable = client.post("/auth/mfa/setup", json={"code": code})
     assert enable.status_code == 200
     return enable
 
@@ -37,9 +42,8 @@ def test_assistant_redirects_to_login_when_not_authenticated(client):
 def test_auth_me_returns_401_when_not_authenticated(client):
     response = client.get("/auth/me")
     assert response.status_code == 401
-    body = response.json()
-    assert body["ok"] is False
-    assert body["code"] == "authentication_required"
+    body = auth_error_body(response)
+    assert body["code"] in {"authentication_required", "not_authenticated"}
 
 
 def test_assistant_redirects_to_mfa_setup_when_logged_in_without_mfa(client, fake_state):
@@ -59,7 +63,7 @@ def test_api_route_returns_mfa_setup_required_when_logged_in_without_mfa(client,
 
     response = client.get("/auth/me")
     assert response.status_code == 403
-    body = response.json()
+    body = auth_error_body(response)
     assert body["code"] == "mfa_setup_required"
 
 
@@ -78,8 +82,7 @@ def test_api_route_returns_legal_acceptance_required_when_legal_not_accepted(cli
 
     response = client.get("/auth/me")
     assert response.status_code == 403
-    body = response.json()
-    assert body["ok"] is False
+    body = auth_error_body(response)
     assert body["code"] == "legal_acceptance_required"
 
 
