@@ -82,10 +82,16 @@ export default async function ChildJourneyPage({
   ]
 
   const workspaceLinks = [
+    ['About Me', `/young-people/${encodeURIComponent(id)}/about-me/new`, 'Update identity, voice, routines, sensory needs and trusted adults.'],
+    ['Child Voice', `/young-people/${encodeURIComponent(id)}/child-voice/new`, 'Record you said, we did and how adults listened.'],
+    ['Wellbeing check', `/young-people/${encodeURIComponent(id)}/wellbeing-check/new`, 'Record mood, sleep, appetite, relationships and what helped.'],
+    ['Relationship record', `/young-people/${encodeURIComponent(id)}/relationship-record/new`, 'Record trusted adults, family, peers, repair and impact.'],
     ['Daily note', `/young-people/${encodeURIComponent(id)}/daily-note/new`, 'Record today, child voice, positives and follow-up.'],
     ['Incident', `/young-people/${encodeURIComponent(id)}/incidents/new`, 'Capture facts, staff response, outcome and review.'],
     ['Safeguarding concern', `/young-people/${encodeURIComponent(id)}/safeguarding/new`, 'Record concern and safety actions without conclusions.'],
     ['Missing episode', `/young-people/${encodeURIComponent(id)}/missing/new`, 'Record missing actions, return and risk review.'],
+    ['Medication', `/young-people/${encodeURIComponent(id)}/medication-record/new`, 'Record medication administration, refusal, missed dose or error.'],
+    ['Physical intervention', `/young-people/${encodeURIComponent(id)}/physical-intervention/new`, 'Record intervention, de-escalation, debrief and repair.'],
     ['Chronology', `/young-people/${encodeURIComponent(id)}/chronology`, 'Review source-linked events for this child only.'],
     ['Actions', `/actions?young_person_id=${encodeURIComponent(id)}`, 'Open unresolved follow-up in the action workflow.'],
     ['Evidence', `/evidence?young_person_id=${encodeURIComponent(id)}`, 'Review linked evidence and gaps.'],
@@ -115,9 +121,9 @@ export default async function ChildJourneyPage({
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               {savedIndicator ? <WorkflowSaveIndicator snapshot={savedIndicator} compact /> : null}
-              <p className={`text-[11px] font-black uppercase tracking-[0.2em] ${query.status === 'draft' ? 'text-amber-700' : 'text-emerald-700'}`}>{query.status === 'draft' ? 'Draft saved locally' : 'Saved'}</p>
-              <h2 className="mt-1 text-xl font-black">{query.status === 'draft' ? "Draft saved locally. It has not yet been added to the child's record." : `Record linked to ${childName}'s journey`}</h2>
-              <p className={`mt-2 text-sm leading-6 ${query.status === 'draft' ? 'text-amber-800' : 'text-emerald-800'}`}>{query.status === 'draft' ? 'Please return to this workflow and save again when the live backend is available.' : 'The timeline and actions panel will show the record from the live backend when the linked projection is available.'}</p>
+              <p className={`text-[11px] font-black uppercase tracking-[0.2em] ${query.status === 'draft' ? 'text-amber-700' : 'text-emerald-700'}`}>{query.status === 'draft' ? 'Draft saved' : query.status === 'submitted' ? 'Submitted' : 'Saved'}</p>
+              <h2 className="mt-1 text-xl font-black">{query.status === 'draft' ? `Draft linked to ${childName}'s journey` : query.status === 'submitted' ? `Record submitted for review` : `Record linked to ${childName}'s journey`}</h2>
+              <p className={`mt-2 text-sm leading-6 ${query.status === 'draft' ? 'text-amber-800' : 'text-emerald-800'}`}>{query.status === 'draft' ? 'The live source record is saved and can be edited before submission.' : 'The timeline and actions panel will show the record from the live backend when the linked projection is available.'}</p>
               {query.limitation ? <p className="mt-2 text-sm font-bold leading-6 text-amber-800">Limitation: {query.limitation}</p> : null}
             </div>
             <div className="flex flex-wrap gap-2">

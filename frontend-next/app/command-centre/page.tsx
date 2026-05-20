@@ -58,6 +58,23 @@ export default async function UnifiedCommandCentrePage() {
       href: String(action.route || '/governance/command-centre')
     }))
   ]
+  const recentIncidents = platformData.chronology.filter((event) => /incident|safeguarding|missing|restraint/i.test(`${event.category} ${event.title} ${event.summary}`)).slice(0, 6)
+  const appointmentSignals = platformData.chronology.filter((event) => /appointment|meeting|review|health|school|professional/i.test(`${event.category} ${event.title} ${event.summary}`)).slice(0, 6)
+  const medicationSignals = platformData.chronology.filter((event) => /medication|medicine|dose|health/i.test(`${event.category} ${event.title} ${event.summary}`)).slice(0, 6)
+  const handoverSignals = platformData.chronology.filter((event) => /handover|shift|next shift/i.test(`${event.category} ${event.title} ${event.summary}`)).slice(0, 6)
+  const openActions = platformData.actions.filter((action) => action.status !== 'completed')
+  const dailyHomeRows = [
+    ['Date', new Date().toLocaleDateString('en-GB')],
+    ['Home', platformData.homes[0]?.title || 'No home returned'],
+    ['Staff on shift', workforceData.alerts.length ? `${workforceData.alerts.length} workforce signal(s)` : 'No staff shift feed returned'],
+    ['Children in home', platformData.children.length],
+    ['Children away from home', recentIncidents.filter((event) => /missing|away/i.test(`${event.title} ${event.summary}`)).length],
+    ['Appointments today', appointmentSignals.length],
+    ['Medication alerts', medicationSignals.length],
+    ['Incidents last 24h', recentIncidents.length],
+    ['Safeguarding alerts', platformData.safeguarding.length],
+    ['Outstanding actions', openActions.length]
+  ]
 
   return (
     <div className="space-y-6">
@@ -72,6 +89,39 @@ export default async function UnifiedCommandCentrePage() {
         <LiveDataStatus result={platform} />
         <LiveDataStatus result={governance} />
         <LiveDataStatus result={workforce} />
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(340px,0.9fr)]">
+        <Card>
+          <SectionHeader eyebrow="Care Hub daily home view" title="Today’s operational snapshot" description="Auto-composed from existing chronology, actions, safeguarding, evidence, workforce and governance feeds. No separate daily system is created." />
+          <DataTable
+            headers={['Field', 'Live value']}
+            rows={dailyHomeRows}
+            empty={<EmptyState title="No daily home view" description="Live operating data was not returned for this role." />}
+          />
+          <div className="mt-5 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-bold leading-6 text-blue-900">
+            ORB daily briefing uses this same operational context: recent incidents, actions, missing or away-from-home signals, medication and health alerts, staffing, chronology and governance gaps.
+          </div>
+        </Card>
+
+        <Card>
+          <SectionHeader eyebrow="Shift handover" title="Continuity for the next adults" description="Handover remains linked to source child records, chronology, actions, safeguarding and reports." />
+          <DataTable
+            headers={['Signal', 'Summary']}
+            rows={[
+              ['Handover records', handoverSignals.length],
+              ['Emotional atmosphere', reflectivePrompts[0] || 'No reflective prompt returned'],
+              ['Risks to know', recentIncidents[0]?.summary || 'No recent risk chronology returned'],
+              ['Actions outstanding', openActions[0]?.title || 'No open action returned'],
+              ['Manager notes', governanceData.governance_actions[0]?.action || governanceData.governance_actions[0]?.title || 'No manager action returned']
+            ]}
+            empty={<EmptyState title="No handover data" description="No chronology, action or governance records are available for handover yet." />}
+          />
+          <div className="mt-5 flex flex-wrap gap-2">
+            <Link href="/young-people" className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white">Choose child for handover</Link>
+            <Link href="/handover/current" className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700">Open current handover</Link>
+          </div>
+        </Card>
       </section>
 
       <OperationalSignalGrid signals={signals} />

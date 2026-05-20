@@ -199,9 +199,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   const primaryNav = visibleNavItems.filter((item) => selectedId || !item.requiresChild)
   const secondaryNav = selectedId ? childWorkspaceNavigation.map((item) => ({ label: item.label, href: item.href(selectedId) })) : []
   const navigationGroups = [
-    { label: 'Home', domains: ['command-centre', 'children', 'daily-care', 'chronology', 'plans', 'wellbeing'] },
-    { label: 'Care operations', domains: ['incidents', 'education', 'health', 'calendar', 'documents', 'reports'] },
-    { label: 'Leadership', domains: ['workforce', 'governance', 'inspection', 'tasks', 'notifications', 'orb', 'admin'] }
+    { label: 'Care journey', domains: ['command-centre', 'children', 'daily-care', 'chronology', 'documents'] },
+    { label: 'Leadership', domains: ['workforce', 'governance', 'reports', 'orb'] },
+    { label: 'System', domains: ['admin'] }
   ].map((group) => ({
     ...group,
     items: primaryNav.filter((item) => group.domains.includes(item.domain))

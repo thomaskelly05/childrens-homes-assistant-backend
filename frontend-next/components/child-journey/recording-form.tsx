@@ -21,7 +21,7 @@ import {
 
 type SaveResponse = {
   ok: boolean
-  status?: 'saved' | 'draft'
+  status?: 'saved' | 'draft' | 'submitted'
   recordId?: string
   sourceType?: string
   routeType?: string
@@ -388,6 +388,8 @@ export function RecordingForm({
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (submitting) return
+    const submitter = (event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null
+    const intent = submitter?.dataset.intent === 'submit' ? 'submit' : 'draft'
     setSubmitting(true)
     setSaveSnapshot(saveStateFromStatus('saving'))
     setError(null)
@@ -406,7 +408,8 @@ export function RecordingForm({
           childId,
           workflowId: workflow.id,
           values,
-          suggestions
+          suggestions,
+          intent
         })
       })
       if (!payload.ok) {
@@ -448,8 +451,11 @@ export function RecordingForm({
             <button type="button" disabled={activeSectionIndex >= workflow.sections.length - 1} onClick={() => setActiveSectionIndex((index) => Math.min(index + 1, workflow.sections.length - 1))} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-700 disabled:cursor-not-allowed disabled:opacity-50">
               {activeSectionHasText ? 'Continue next section' : 'Resume section'}
             </button>
-            <button type="submit" disabled={submitting || !readyState.ready} className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-60">
-              {submitting ? 'Saving once...' : readyState.ready ? 'Save' : 'Preparing child'}
+            <button type="submit" formNoValidate data-intent="draft" disabled={submitting || !readyState.ready} className="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-3 text-sm font-black text-slate-700 disabled:cursor-not-allowed disabled:opacity-60">
+              {submitting ? 'Saving once...' : readyState.ready ? 'Save draft' : 'Preparing child'}
+            </button>
+            <button type="submit" data-intent="submit" disabled={submitting || !readyState.ready} className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-60">
+              {submitting ? 'Submitting...' : readyState.ready ? 'Submit for review' : 'Preparing child'}
             </button>
           </div>
         </div>
@@ -503,6 +509,30 @@ export function RecordingForm({
               {prompt}
             </button>
           ))}
+        </div>
+      </section>
+
+      <section className="rounded-[28px] border border-emerald-100 bg-emerald-50 p-5">
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(280px,0.8fr)]">
+          <div>
+            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700">Lifecycle and links</p>
+            <h2 className="mt-1 text-xl font-black text-emerald-950">One source record, reviewed through the existing workflow.</h2>
+            <p className="mt-2 text-sm font-bold leading-6 text-emerald-900">
+              Scope: {(workflow.scope || ['child', 'home', 'staff']).join(' / ')}. Source: {workflow.sourceRecordType || workflow.id}. Drafts can be saved incomplete; submitted records enter manager review where the source workflow supports review, approve, return and archive.
+            </p>
+          </div>
+          <div className="space-y-3">
+            <div className="flex flex-wrap gap-2">
+              {(workflow.lifecycle || ['Draft', 'Submitted', 'Reviewed', 'Approved / Returned', 'Archived']).map((step) => (
+                <span key={step} className="rounded-full border border-emerald-200 bg-white/80 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.12em] text-emerald-800">{step}</span>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {(workflow.linkage || ['chronology', 'evidence', 'actions', 'audit trail', 'ORB context']).map((link) => (
+                <span key={link} className="rounded-full border border-white/80 bg-emerald-100 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.12em] text-emerald-900">{link}</span>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
@@ -670,9 +700,12 @@ export function RecordingForm({
               Chronology writeback is explicit and immutable in the backend projection. Suggestions do not create duplicate actions or chronology entries by themselves.
             </div>
             <div className="mt-5 grid gap-2">
-              <button type="submit" data-testid="save-daily-note-button" disabled={submitting || !readyState.ready} className="inline-flex items-center justify-center rounded-2xl bg-white px-5 py-4 text-sm font-black text-slate-950 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60">
+              <button type="submit" formNoValidate data-intent="draft" data-testid="save-daily-note-button" disabled={submitting || !readyState.ready} className="inline-flex items-center justify-center rounded-2xl bg-white px-5 py-4 text-sm font-black text-slate-950 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60">
                 <Save className="mr-2 h-4 w-4" aria-hidden />
-                {submitting ? 'Saving...' : readyState.ready ? 'Save record' : 'Preparing child'}
+                {submitting ? 'Saving...' : readyState.ready ? 'Save draft' : 'Preparing child'}
+              </button>
+              <button type="submit" data-intent="submit" data-testid="submit-record-button" disabled={submitting || !readyState.ready} className="inline-flex items-center justify-center rounded-2xl bg-blue-500 px-5 py-4 text-sm font-black text-white transition hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-60">
+                Submit for review
               </button>
               <button type="button" onClick={cancel} className="rounded-2xl border border-white/15 px-5 py-3 text-sm font-black text-white transition hover:bg-white/10">
                 Cancel
