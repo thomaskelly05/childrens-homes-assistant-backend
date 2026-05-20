@@ -29,4 +29,6 @@ def schema_live_overview() -> dict:
             "assistant": "active",
         },
         "source_of_truth": "postgres_operational_schema",
+        "live_schema_audit": "/api/os-command/schema-audit",
+        "workflow_wiring_audit": "/api/admin/os-wiring",
     }
