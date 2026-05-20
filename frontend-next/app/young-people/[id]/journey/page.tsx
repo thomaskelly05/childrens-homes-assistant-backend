@@ -62,6 +62,26 @@ export default async function ChildJourneyPage({
   const narrativeContinuity = buildNarrativeContinuity(data)
   const quickActions = contextualChildQuickActions({ workflow: 'journey', unresolvedActions: actionsDueToday.length })
   const focus = query.focus || ''
+  const supportSignals = [...data.timeline, ...data.dailyNotes].filter((item) => /settled|calm|helped|support|routine|keywork|trusted|positive|progress|achiev/i.test(`${item.title} ${item.summary}`)).slice(0, 4)
+  const relationshipSignals = [...data.timeline, ...data.dailyNotes].filter((item) => /trusted|relationship|family|contact|repair|key worker|staff|friend|peer/i.test(`${item.title} ${item.summary}`)).slice(0, 4)
+  const difficultySignals = [...data.timeline, ...data.dailyNotes].filter((item) => /upset|distress|incident|missing|safeguarding|risk|anxious|review/i.test(`${item.title} ${item.summary}`)).slice(0, 4)
+  const childVoiceSignals = [...data.timeline, ...data.dailyNotes].filter((item) => /voice|said|told staff|wishes|feelings|choice|preferred|about me/i.test(`${item.title} ${item.summary}`)).slice(0, 4)
+  const livedExperienceRows = [
+    ['What is helping?', supportSignals[0]?.summary || data.story.progressHighlights[0] || 'No stabilising support marker returned yet.'],
+    ['What has changed?', narrativeContinuity.whatChanged],
+    ['What remains difficult?', difficultySignals[0]?.summary || narrativeContinuity.unresolvedThemes[0] || 'No active difficulty marker returned in the visible story.'],
+    ['What support appears calming?', supportSignals.find((item) => /calm|settled|routine|trusted/i.test(`${item.title} ${item.summary}`))?.summary || 'Review daily notes for calm, routine, trusted adult and repair evidence.'],
+    ['Where is child voice strongest?', childVoiceSignals[0]?.title || narrativeContinuity.childVoiceContinuity],
+    ['Where may emotional safety need review?', difficultySignals[0]?.title || actionsDueToday[0]?.title || 'No emotional safety review signal returned yet.']
+  ]
+  const relationshipRows = [
+    ['Trusted adult visibility', relationshipSignals.find((item) => /trusted|key worker|staff/i.test(`${item.title} ${item.summary}`))?.title || 'No trusted adult marker returned yet'],
+    ['Relationship consistency', relationshipSignals.length ? `${relationshipSignals.length} relationship marker(s) in visible records` : 'No relationship continuity marker returned'],
+    ['Family relationship quality', relationshipSignals.find((item) => /family|contact/i.test(`${item.title} ${item.summary}`))?.summary || 'No family contact marker returned'],
+    ['Repair after incidents', relationshipSignals.find((item) => /repair|debrief|restorative/i.test(`${item.title} ${item.summary}`))?.summary || 'No repair marker returned'],
+    ['Positive interactions', supportSignals.find((item) => /positive|enjoy|achiev|progress/i.test(`${item.title} ${item.summary}`))?.title || 'No positive interaction marker returned'],
+    ['Child emotional safety indicators', narrativeContinuity.emotionalContinuity]
+  ]
 
   const plans = [
     ['Care plan', `/documents?young_person_id=${encodeURIComponent(id)}&type=care_plan`],
@@ -169,6 +189,32 @@ export default async function ChildJourneyPage({
       </header>
 
       <NarrativeContinuityPanel childName={childName} continuity={narrativeContinuity} />
+
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,1.05fr)_minmax(340px,0.95fr)]" data-testid="child-lived-experience-view">
+        <Card>
+          <SectionHeader eyebrow="Child impact synthesis" title="What is changing for the child?" description="A lived-experience view assembled from existing chronology, daily notes, child voice, actions and narrative continuity." />
+          <div className="grid gap-3 md:grid-cols-2">
+            {livedExperienceRows.map(([label, detail]) => (
+              <div key={label} className="rounded-[22px] border border-blue-100 bg-blue-50 p-4">
+                <p className="text-[11px] font-black uppercase tracking-[0.16em] text-blue-700">{label}</p>
+                <p className="mt-2 text-sm font-bold leading-6 text-blue-950">{detail}</p>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        <Card>
+          <SectionHeader eyebrow="Relationship intelligence" title="Emotional safety through relationships" description="Trusted adults, family contact, repair, positive interactions and child voice are surfaced from the child story already returned." />
+          <div className="space-y-3">
+            {relationshipRows.map(([label, detail]) => (
+              <div key={label} className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
+                <p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">{label}</p>
+                <p className="mt-1 text-sm font-bold leading-6 text-slate-700">{detail}</p>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </section>
 
       <Card>
         <SectionHeader eyebrow="ORB child insight" title="What this tells us about lived experience" description="Calm prompts for staff and managers, grounded in the live child journey rather than a predicted Ofsted grade." />

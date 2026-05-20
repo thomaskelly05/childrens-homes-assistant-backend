@@ -22,6 +22,14 @@ export default async function WorkforceCommandCentrePage() {
     { label: 'Wellbeing', value: centre.wellbeing_alerts.length },
     { label: 'Recognition', value: centre.recognition.length }
   ]
+  const practiceRows = [
+    ['Reflective culture', centre.practice_concerns.length ? `${centre.practice_concerns.length} practice concern(s) need reflective follow-up` : 'No practice concern signal returned'],
+    ['Safeguarding confidence', String(centre.inspection_readiness?.summary || centre.role_scope || 'Review supervision, recording quality and safeguarding evidence')],
+    ['Support needs', centre.wellbeing_alerts.length ? `${centre.wellbeing_alerts.length} wellbeing support prompt(s)` : 'No wellbeing support prompt returned'],
+    ['Workforce consistency', String(staffingLevel)],
+    ['Emotional pressure', centre.alerts.length || centre.wellbeing_alerts.length ? `${centre.alerts.length + centre.wellbeing_alerts.length} pressure signal(s)` : 'No workforce pressure signal returned'],
+    ['Positive practice visibility', centre.recognition.length ? `${centre.recognition.length} recognition record(s)` : 'No recognition record returned']
+  ]
 
   return (
     <div className="space-y-6">
@@ -56,6 +64,14 @@ export default async function WorkforceCommandCentrePage() {
         ]}
         action={<Link href="/orb?scope=workforce" className="rounded-2xl bg-white px-4 py-3 text-sm font-black text-slate-950">Ask ORB</Link>}
       />
+      <Card data-testid="workforce-practice-wellbeing">
+        <SectionHeader eyebrow="Practice quality and wellbeing" title="Workforce intelligence linked to care quality" description="Reflective practice, safeguarding confidence, staff support needs, consistency and positive practice are surfaced from the existing Workforce OS payload." />
+        <DataTable
+          headers={['Signal', 'Existing workforce intelligence']}
+          rows={practiceRows}
+          empty={<EmptyState title="No workforce practice summary" description="Workforce OS did not return practice or wellbeing intelligence." />}
+        />
+      </Card>
       <Card>
         <SectionHeader eyebrow="Live alerts" title="Operational workforce alerts" description="Combines workforce risk, recording quality, wellbeing and practice concern signals." />
         <DataTable
