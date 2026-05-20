@@ -93,7 +93,9 @@ export default async function UnifiedCommandCentrePage() {
     ['What changed today?', platformData.chronology[0]?.summary || 'No chronology event has been returned for today yet.'],
     ['What may need review?', operationalAlerts[0]?.evidence || 'No consolidated review alert returned.'],
     ['What support appears effective?', positiveMoments[0]?.summary || 'Look for daily notes showing calm, engagement, repair or progress.'],
-    ['What should the next shift understand?', handoverSignals[0]?.summary || openActions[0]?.title || 'No handover-specific signal returned yet.']
+    ['What should the next shift understand?', handoverSignals[0]?.summary || openActions[0]?.title || 'No handover-specific signal returned yet.'],
+    ['What may Ofsted ask about?', text(governanceSummary.inspection_readiness || orbSummary.inspection_readiness || governanceData.evidence_matrix.entries[0]?.gap, 'No inspection readiness question returned.')],
+    ['What remains unresolved?', operationalAlerts[0]?.title || openActions[0]?.title || (unresolvedConcerns ? `${unresolvedConcerns} concern(s) need review` : 'No unresolved concern returned.')]
   ]
 
   return (

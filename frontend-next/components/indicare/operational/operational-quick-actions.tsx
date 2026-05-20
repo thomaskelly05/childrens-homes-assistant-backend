@@ -14,12 +14,12 @@ export function OperationalQuickActions({
   const actions = childId ? [
     { label: 'Daily note', href: `/young-people/${childId}/daily-note/new`, icon: ClipboardPlus },
     { label: 'New record', href: `/young-people/${childId}/records/new`, icon: FilePlus2 },
-    { label: 'Ask ORB', href: `/assistant?q=${encodeURIComponent(`Summarise ${selectedYoungPersonName || 'this child'} and the current operational risks`)}`, icon: Mic2 },
+    { label: 'Ask ORB', href: `/orb?scope=child&young_person_id=${childId}&q=${encodeURIComponent(`Summarise ${selectedYoungPersonName || 'this child'} and the current operational risks`)}`, icon: Mic2 },
     { label: 'Evidence', href: `/evidence?young_person_id=${childId}`, icon: SearchCheck }
   ] : [
     { label: 'Command centre', href: '/command-centre', icon: SearchCheck },
     { label: 'Choose child', href: '/young-people', icon: ClipboardPlus },
-    { label: 'Ask ORB', href: '/assistant', icon: Mic2 }
+    { label: 'Ask ORB', href: '/orb', icon: Mic2 }
   ]
 
   return (

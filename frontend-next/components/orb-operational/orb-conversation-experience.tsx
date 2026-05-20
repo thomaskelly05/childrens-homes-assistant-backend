@@ -43,6 +43,10 @@ const scopeOptions: Array<{ value: OrbScope; label: string; prompt: string }> = 
   { value: 'provider', label: 'Provider', prompt: 'What should the registered manager look at first?' }
 ]
 
+function normaliseInitialScope(scope?: string): OrbScope {
+  return scopeOptions.some((item) => item.value === scope) ? scope as OrbScope : 'home'
+}
+
 function childName(person: OsPersonSummary) {
   return String(person.preferredName || person.displayName || person.firstName || `Young person ${person.id}`)
 }
@@ -63,11 +67,22 @@ function cognitionSummary(response: OrbConversationResponse) {
     'ORB returned atmosphere, trajectory, impact and reflection blocks for review.'
 }
 
-export function OrbConversationExperience({ childrenOptions }: { childrenOptions: OsPersonSummary[] }) {
-  const [scope, setScope] = useState<OrbScope>('home')
-  const [youngPersonId, setYoungPersonId] = useState<string>('')
+export function OrbConversationExperience({
+  childrenOptions,
+  initialScope,
+  initialYoungPersonId,
+  initialPrompt
+}: {
+  childrenOptions: OsPersonSummary[]
+  initialScope?: string
+  initialYoungPersonId?: string
+  initialPrompt?: string
+}) {
+  const startingScope = normaliseInitialScope(initialScope)
+  const [scope, setScope] = useState<OrbScope>(startingScope)
+  const [youngPersonId, setYoungPersonId] = useState<string>(startingScope === 'child' ? initialYoungPersonId || '' : '')
   const [conversationId] = useState(() => `orb-${Date.now().toString(36)}`)
-  const [input, setInput] = useState(scopePrompt('home'))
+  const [input, setInput] = useState(initialPrompt || scopePrompt(startingScope))
   const [messages, setMessages] = useState<Message[]>([])
   const [pending, setPending] = useState(false)
   const [warning, setWarning] = useState<string | null>(null)

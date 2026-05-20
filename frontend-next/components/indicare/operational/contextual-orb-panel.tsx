@@ -50,7 +50,7 @@ export function ContextualOrbPanel() {
           </div>
         ))}
       </dl>
-      <Link href={`/assistant?context=${encodeURIComponent(assistantContext.current_workspace_type || 'dashboard')}`} className="mt-4 inline-flex w-full justify-center rounded-2xl bg-cyan-200 px-4 py-3 text-sm font-black text-slate-950">
+      <Link href={`/orb?context=${encodeURIComponent(assistantContext.current_workspace_type || 'dashboard')}`} className="mt-4 inline-flex w-full justify-center rounded-2xl bg-cyan-200 px-4 py-3 text-sm font-black text-slate-950">
         Open ORB with this context
       </Link>
     </section>
