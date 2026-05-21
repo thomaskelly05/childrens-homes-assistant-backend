@@ -1,5 +1,7 @@
 import Link from 'next/link'
 
+import { LifeEchoClient } from '@/components/life-echo/life-echo-client'
+
 export default function ChildLifeEchoPage({
   params,
 }: {
@@ -40,6 +42,8 @@ export default function ChildLifeEchoPage({
           </div>
         </div>
       </section>
+
+      <LifeEchoClient childId={params.id} />
 
       <section className="grid gap-6 lg:grid-cols-3">
         <article className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
