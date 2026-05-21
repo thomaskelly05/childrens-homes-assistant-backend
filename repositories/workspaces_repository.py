@@ -13,7 +13,7 @@ from repositories.documents_repository import list_documents
 from repositories.evidence_repository import list_evidence
 from repositories.os_repository_utils import build_scope_where, current_home_id, is_admin, quote_ident, safe_int, table_columns, table_exists
 from repositories.reports_repository import list_reports
-from services.os_chronology_service import list_chronology
+from services.os_chronology_service import list_chronology, list_chronology_for_connection
 
 logger = logging.getLogger(__name__)
 
@@ -150,7 +150,7 @@ def young_person_workspace(conn: Any, *, young_person_id: int, current_user: dic
     if not person:
         raise HTTPException(status_code=404, detail="Young person not found.")
     filters = {"young_person_id": young_person_id}
-    chronology = list_chronology(current_user=current_user, filters=filters, page=1, page_size=50)
+    chronology = list_chronology_for_connection(conn, current_user=current_user, filters=filters, page=1, page_size=50)
     return {
         "young_person": person,
         "chronology": chronology["items"],
@@ -227,7 +227,7 @@ def adult_workspace(conn: Any, *, adult_id: int, current_user: dict[str, Any]) -
     return {
         "adult": adult,
         "actions": list_actions(conn, current_user=current_user, filters=filters, limit=100),
-        "records_authored": list_chronology(current_user=current_user, filters={"staff_id": adult_id}, page=1, page_size=50)["items"],
+        "records_authored": list_chronology_for_connection(conn, current_user=current_user, filters={"staff_id": adult_id}, page=1, page_size=50)["items"],
         "lifecycle": {
             "entity_type": "staff",
             "entity_id": str(adult_id),
@@ -236,4 +236,3 @@ def adult_workspace(conn: Any, *, adult_id: int, current_user: dict[str, Any]) -
             "next_steps": ["Review actions, supervision and training links where available."],
         },
     }
-
