@@ -77,6 +77,61 @@ def test_orb_conversation_route_returns_structured_answer(monkeypatch, fake_stat
     assert response["confidence"] == "medium"
     assert response["guardrails"]
     assert response["context_used"]["live_tables"] == ["daily_notes"]
+    assert response["context_used"]["brain"] == "care_brain"
+
+
+def test_orb_conversation_routes_general_question_without_care_retrieval(monkeypatch, fake_state):
+    async def fake_answer(message: str, **_kwargs: Any):
+        assert message == "Tell me a quick joke."
+        return {"answer": "A tiny joke.", "sources": [], "tools_used": ["general_qna"], "internal_data_access": False}
+
+    monkeypatch.setattr(
+        "routers.orb_routes.build_orb_context",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("care context should not be loaded")),
+    )
+    monkeypatch.setattr(orb_routes.orb_general_assistant_service, "answer", fake_answer)
+
+    response = asyncio.run(
+        orb_routes.api_orb_conversation(
+            orb_routes.OrbConversationRequest(message="Tell me a quick joke.", scope="home"),
+            conn=FakeConn(),
+            current_user=fake_state["user"],
+        )
+    )
+
+    assert response["answer"] == "A tiny joke."
+    assert response["sources"] == []
+    assert response["context_used"]["brain"] == "general_assistant_brain"
+    assert response["context_used"]["care_retrieval"] is False
+
+
+def test_orb_conversation_routes_current_questions_to_web_tools(monkeypatch, fake_state):
+    async def fake_answer(message: str, **_kwargs: Any):
+        assert "weather" in message.lower()
+        return {
+            "answer": "Weather tool is unavailable in the test.",
+            "sources": [],
+            "tools_used": ["weather"],
+            "tool_status": "unavailable",
+        }
+
+    monkeypatch.setattr(
+        "routers.orb_routes.build_orb_context",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("care context should not be loaded")),
+    )
+    monkeypatch.setattr(orb_routes.orb_web_search_service, "answer", fake_answer)
+
+    response = asyncio.run(
+        orb_routes.api_orb_conversation(
+            orb_routes.OrbConversationRequest(message="What's the weather today?", scope="home"),
+            conn=FakeConn(),
+            current_user=fake_state["user"],
+        )
+    )
+
+    assert response["context_used"]["brain"] == "web_research_brain"
+    assert response["context_used"]["care_retrieval"] is False
+    assert response["context_used"]["tools_used"] == ["weather"]
 
 
 def test_orb_context_gracefully_handles_no_live_data(fake_state):

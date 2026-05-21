@@ -89,7 +89,7 @@ function checkbox(name: string, label: string, helper?: string): RecordingField 
   return { name, label, type: 'checkbox', helper }
 }
 
-export const standardRecordLifecycle = ['Draft', 'Submitted', 'Reviewed', 'Approved / Returned', 'Archived']
+export const standardRecordLifecycle = ['Draft', 'Submit for review', 'Manager review', 'Sign off', 'Return for amendments', 'Archived / closed']
 export const extendedRecordLifecycle = ['Escalated', 'Signed off', 'Actioned', 'Closed']
 
 const coreLinkage = ['chronology', 'evidence', 'actions', 'audit trail', 'ORB context', 'reports', 'governance']

@@ -50,6 +50,24 @@ CARE_RECORD_TERMS = {
     "records",
     "recording",
     "what should i record",
+    "what changed",
+    "what has changed",
+    "needs attention",
+    "what needs attention",
+    "manager review",
+    "evidence missing",
+    "evidence gaps",
+    "child voice",
+    "daily care",
+    "home today",
+    "home picture",
+    "summarise shift",
+    "summarize shift",
+    "shift summary",
+    "actions outstanding",
+    "inspection readiness",
+    "workforce",
+    "governance",
 }
 
 VOICE_RECORDING_TERMS = {
@@ -98,6 +116,36 @@ CURRENT_TERMS = {
     "current",
     "today's",
     "today",
+    "latest",
+    "price",
+    "prices",
+    "stock",
+    "schedule",
+    "timetable",
+    "cinema",
+    "movie",
+    "movies",
+    "film",
+    "films",
+    "showtime",
+    "showtimes",
+    "what's on",
+    "what is on",
+    "events near",
+    "near me",
+}
+
+EXTERNAL_CURRENT_TERMS = {
+    "weather",
+    "forecast",
+    "temperature",
+    "sport",
+    "sports",
+    "score",
+    "fixture",
+    "played last week",
+    "newcastle",
+    "news",
     "latest",
     "price",
     "prices",
@@ -273,6 +321,7 @@ def route_orb_intent(
     has_child_context = False if standalone_context else _has_child_context(context)
     asks_inspection = _contains_any(lower, INSPECTION_TERMS)
     asks_current = _contains_any(lower, CURRENT_TERMS)
+    asks_external_current = _contains_any(lower, EXTERNAL_CURRENT_TERMS)
     asks_productivity = _contains_any(lower, PRODUCTIVITY_TERMS)
     asks_report = _contains_any(lower, REPORT_TERMS)
     asks_voice_recording = _contains_any(lower, VOICE_RECORDING_TERMS)
@@ -309,7 +358,7 @@ def route_orb_intent(
     elif asks_report and asks_care:
         brain = "report_writer_brain"
         reason = "The turn asks for a care/report draft and must use citable IndiCare evidence."
-    elif asks_current:
+    elif asks_current and (asks_external_current or not asks_care):
         brain = "web_research_brain"
         reason = "The turn asks for current, local or live information, so Orb must use configured external tools/search."
     elif asks_productivity:

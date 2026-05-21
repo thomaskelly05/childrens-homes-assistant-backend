@@ -139,6 +139,13 @@ const chronologyAwarePrompts = [
   'Write why today mattered before moving to linked records.'
 ]
 
+const therapeuticWordingPrompts = [
+  'Instead of "refused to comply", describe what the child found difficult, what staff reduced or adjusted, and what helped.',
+  'Instead of "kicked off", describe distress, emotional overwhelm, observable behaviour and the adult response.',
+  'Use non-blaming wording: what happened, what the child may have been communicating, what staff did, what changed.',
+  'Record safeguarding clarity separately from opinion: facts, immediate safety actions, escalation and review.'
+]
+
 function recordText(values: Record<string, string>) {
   return Object.values(values).join('\n').trim()
 }
@@ -148,10 +155,10 @@ function qualityFlags(values: Record<string, string>, primaryField: string | und
   const primary = primaryField ? values[primaryField] || '' : text
   const flags: QualityFlag[] = []
 
-  if (/\b(attention seeking|manipulative|naughty|deliberately|kicked off|played up|non[- ]?compliant)\b/i.test(text)) {
+  if (/\b(attention seeking|manipulative|naughty|deliberately|kicked off|played up|non[- ]?compliant|refused to comply)\b/i.test(text)) {
     flags.push({
       label: 'Reduce opinionated language',
-      detail: 'Replace labels with observable behaviour, direct words and staff response.',
+      detail: 'Replace labels with observable behaviour, the child’s communication, staff support and what helped.',
       tone: 'red'
     })
   }
@@ -352,7 +359,7 @@ export function RecordingForm({
       setNotice('Add some wording first, then use Improve wording.')
       return
     }
-    updateField(primaryField, `${values[primaryField]}\n\nChild-centred check: describe what ${childName} experienced, what ${childName} said or showed, and how staff responded.`)
+    updateField(primaryField, `${values[primaryField]}\n\nChild-centred check: describe what ${childName} experienced, what ${childName} said or showed, and how staff responded. For example, replace "refused to comply" with "${childName} found the request difficult at that moment. Staff offered reassurance, reduced demands and gave ${childName} time and space."`)
     setNotice('Child-centred wording prompt added. Review before saving.')
   }
 
@@ -518,12 +525,12 @@ export function RecordingForm({
             <p className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700">Lifecycle and links</p>
             <h2 className="mt-1 text-xl font-black text-emerald-950">One source record, reviewed through the existing workflow.</h2>
             <p className="mt-2 text-sm font-bold leading-6 text-emerald-900">
-              Scope: {(workflow.scope || ['child', 'home', 'staff']).join(' / ')}. Source: {workflow.sourceRecordType || workflow.id}. Drafts can be saved incomplete; submitted records enter manager review where the source workflow supports review, approve, return and archive.
+              Scope: {(workflow.scope || ['child', 'home', 'staff']).join(' / ')}. Source: {workflow.sourceRecordType || workflow.id}. Drafts can be saved incomplete; submitted records enter manager review, sign-off, return-for-amendments or archive through the existing lifecycle.
             </p>
           </div>
           <div className="space-y-3">
             <div className="flex flex-wrap gap-2">
-              {(workflow.lifecycle || ['Draft', 'Submitted', 'Reviewed', 'Approved / Returned', 'Archived']).map((step) => (
+              {(workflow.lifecycle || ['Draft', 'Submit for review', 'Manager review', 'Sign off', 'Return for amendments', 'Archived / closed']).map((step) => (
                 <span key={step} className="rounded-full border border-emerald-200 bg-white/80 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.12em] text-emerald-800">{step}</span>
               ))}
             </div>
@@ -569,6 +576,13 @@ export function RecordingForm({
             <div className="mt-4 grid gap-2 md:grid-cols-2">
               {chronologyAwarePrompts.map((prompt) => (
                 <button key={prompt} type="button" onClick={() => setNotice(prompt)} className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-left text-sm font-bold text-blue-800">
+                  {prompt}
+                </button>
+              ))}
+            </div>
+            <div className="mt-4 grid gap-2 md:grid-cols-2">
+              {therapeuticWordingPrompts.map((prompt) => (
+                <button key={prompt} type="button" onClick={() => setNotice(prompt)} className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-left text-sm font-bold text-emerald-800">
                   {prompt}
                 </button>
               ))}

@@ -78,8 +78,12 @@ class IndiCareFormsFrameworkService:
         ]
 
     def _lifecycle(self, *steps: str, escalation: bool = False) -> dict[str, Any]:
-        base = list(steps) or ["DRAFT", "SUBMITTED", "REVIEWED", "APPROVED / RETURNED", "ARCHIVED"]
-        return {"states": base, "escalation_states": ["ESCALATED", "SIGNED OFF", "ACTIONED", "CLOSED"] if escalation else []}
+        base = list(steps) or ["DRAFT", "SUBMIT FOR REVIEW", "MANAGER REVIEW", "SIGN OFF", "RETURN FOR AMENDMENTS", "ARCHIVED / CLOSED"]
+        return {
+            "states": base,
+            "canonical_states": ["DRAFT", "SUBMIT FOR REVIEW", "MANAGER REVIEW", "SIGN OFF", "RETURN FOR AMENDMENTS", "ARCHIVED / CLOSED"],
+            "escalation_states": ["ESCALATED", "SIGNED OFF", "ACTIONED", "CLOSED"] if escalation else [],
+        }
 
     def _common_metadata(self, *, scope: list[str], chronology: bool = True, evidence: bool = True, orb: bool = True) -> dict[str, Any]:
         return {
@@ -96,8 +100,12 @@ class IndiCareFormsFrameworkService:
             "links": {
                 "chronology": chronology,
                 "evidence": evidence,
+                "audit": True,
                 "orb_context": orb,
                 "sccif_regulation_tags": True,
+                "child_profile": "child" in scope,
+                "governance": True,
+                "reports": True,
             },
         }
 
