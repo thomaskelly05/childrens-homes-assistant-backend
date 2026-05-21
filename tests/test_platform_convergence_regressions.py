@@ -6,6 +6,7 @@ from backend.db.schema_doctor import SUPERSEDED_MIGRATIONS
 from backend import os_live_validation_router
 from core.router_loader import include_routers
 from routers import operational_feed_routes, orb_routes, os_workflow_wiring_audit_routes
+from services.home_operational_intelligence_service import home_operational_intelligence_service
 from services.inspection_intelligence_service import inspection_intelligence_service
 from services.manager_operational_queue_service import manager_operational_queue_service
 from services.operational_event_intelligence_service import operational_event_intelligence_service
@@ -114,6 +115,15 @@ def test_operational_intelligence_services_generate_expected_signals() -> None:
     inspection = inspection_intelligence_service.analyse(events=[event], manager_queue=queue)
     assert inspection["overall_readiness"] in {"good", "watching", "requires_immediate_attention"}
     assert inspection["ofsted_challenge_questions"]
+
+    home = home_operational_intelligence_service.analyse(
+        events=[event],
+        manager_queue=queue,
+        inspection=inspection,
+    )
+    assert home["home_climate"]["emotional_climate"]["state"] in {"settled", "mixed", "unsettled"}
+    assert "risk_heatmap" in home
+    assert "summary" in home
 
 
 def test_missing_optional_routers_do_not_fail_startup() -> None:
