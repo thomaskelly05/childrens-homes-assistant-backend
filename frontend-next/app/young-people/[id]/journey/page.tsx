@@ -181,7 +181,7 @@ export default async function ChildJourneyPage({ params, searchParams }: { param
           {[
             ['What is helping?', supportSignals[0]?.summary || 'No support pattern has been returned yet.'],
             ['What remains difficult?', difficultySignals[0]?.summary || 'No active difficulty pattern has been returned yet.'],
-            ['Where is child voice strongest?', experienceIntelligence?.child_voice_summary || 'Child voice evidence has not been synthesised yet.'],
+            ['Where is child voice strongest?', experienceIntelligence?.signals?.child_voice_visible ? (experienceIntelligence.summary || 'Child voice is visible in returned intelligence.') : 'Child voice evidence has not been synthesised yet.'],
             ['Relationship intelligence', relationshipSignals[0]?.summary || 'No relationship pattern has been returned yet.']
           ].map(([label, value]) => (
             <div key={label} className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
