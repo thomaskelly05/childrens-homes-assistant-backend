@@ -250,6 +250,7 @@ _LAST_LOAD_REPORT: "RouterLoadReport | None" = None
 class RouterLoadReport:
     loaded: list[str] = field(default_factory=list)
     failed: list[tuple[str, str]] = field(default_factory=list)
+    skipped_optional: list[tuple[str, str]] = field(default_factory=list)
     duplicate_routes: list[str] = field(default_factory=list)
     compatibility_shadows: list[str] = field(default_factory=list)
 
@@ -276,6 +277,13 @@ def _router_classification(router_path: str) -> str:
         if router_path in group.routers:
             return group.classification
     return "canonical"
+
+
+def _is_missing_router_module(error: Exception, router_path: str) -> bool:
+    if not isinstance(error, ModuleNotFoundError):
+        return False
+    missing_name = getattr(error, "name", None)
+    return missing_name == router_path
 
 
 def _split_route_conflicts(conflicts: list[dict]) -> tuple[list[dict], list[dict]]:
@@ -325,6 +333,7 @@ def get_router_registry_summary() -> dict:
         ],
         "accidental_conflicts": accidental_conflicts,
         "intentional_conflicts": intentional_conflicts,
+        "skipped_optional_router_count": len(_LAST_LOAD_REPORT.skipped_optional) if _LAST_LOAD_REPORT else 0,
     }
 
 
@@ -332,6 +341,12 @@ def get_failed_routers() -> list[dict[str, str]]:
     if _LAST_LOAD_REPORT is None:
         return []
     return [{"router": router, "error": error} for router, error in _LAST_LOAD_REPORT.failed]
+
+
+def get_skipped_optional_routers() -> list[dict[str, str]]:
+    if _LAST_LOAD_REPORT is None:
+        return []
+    return [{"router": router, "reason": reason} for router, reason in _LAST_LOAD_REPORT.skipped_optional]
 
 
 def get_route_conflicts() -> list[dict]:
@@ -373,16 +388,21 @@ def include_routers(app: FastAPI) -> RouterLoadReport:
             seen = after
             report.loaded.append(router_path)
         except Exception as error:
-            report.failed.append((router_path, str(error)))
             if router_path in REQUIRED_ROUTERS:
                 raise
+            if _is_missing_router_module(error, router_path):
+                report.skipped_optional.append((router_path, "module_not_present"))
+                logger.info("Optional router %s not present; treated as compatibility-only", router_path)
+                continue
+            report.failed.append((router_path, str(error)))
             logger.warning("Router %s failed to load: %s", router_path, error)
 
     logger.info(
-        "Router startup loaded %s routers across %s domains (%s failed, %s conflicts)",
+        "Router startup loaded %s routers across %s domains (%s failed, %s optional skipped, %s conflicts)",
         len(report.loaded),
         len(ROUTER_GROUPS),
         len(report.failed),
+        len(report.skipped_optional),
         len(report.duplicate_routes),
     )
     _LAST_LOAD_REPORT = report
