@@ -127,7 +127,7 @@ export default async function UnifiedCommandCentrePage() {
                 key={signal.label}
                 label={signal.label}
                 value={signal.value}
-                detail={signal.description}
+                detail={signal.detail}
               />
             ))}
           </div>
@@ -156,7 +156,7 @@ export default async function UnifiedCommandCentrePage() {
 
         <OperationalQuickActions
           selectedYoungPersonId={selectedChild?.id ? String(selectedChild.id) : undefined}
-          selectedYoungPersonName={selectedChild?.name || selectedChild?.full_name}
+          selectedYoungPersonName={selectedChild ? childName(selectedChild) : undefined}
         />
       </div>
 
