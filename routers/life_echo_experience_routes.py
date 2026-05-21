@@ -15,6 +15,9 @@ from life_echo.frontend.wellbeing_trajectory.builder import (
 from life_echo.playback.emotional_playback_engine import LifeEchoEmotionalPlaybackEngine
 from life_echo.playback.memory_sequence_builder import LifeEchoMemorySequenceBuilder
 from life_echo.services import life_echo_service
+from life_echo.services.life_echo_experience_service import (
+    life_echo_experience_service,
+)
 
 router = APIRouter(prefix="/api/life-echo/experience", tags=["LifeEcho Experience"])
 
@@ -22,6 +25,7 @@ router = APIRouter(prefix="/api/life-echo/experience", tags=["LifeEcho Experienc
 @router.get("/{child_id}")
 def get_life_echo_experience(child_id: str):
     events = life_echo_service.get_timeline(child_id)
+    unified_experience = life_echo_experience_service.build(child_id)
 
     return {
         "child_id": child_id,
@@ -33,6 +37,7 @@ def get_life_echo_experience(child_id: str):
         "child_memory_mode": LifeEchoChildMemoryModeBuilder.build(events),
         "playback": LifeEchoEmotionalPlaybackEngine.build(events),
         "memory_chapters": LifeEchoMemorySequenceBuilder.build(events),
+        "runtime": unified_experience,
     }
 
 
