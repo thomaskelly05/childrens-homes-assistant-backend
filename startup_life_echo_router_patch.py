@@ -9,19 +9,23 @@ from __future__ import annotations
 
 from core import router_loader
 
-LIFE_ECHO_ROUTER = "routers.life_echo_routes"
+LIFE_ECHO_ROUTERS = (
+    "routers.life_echo_routes",
+    "routers.life_echo_experience_routes",
+    "routers.life_echo_page_routes",
+)
 
 
 def _install_life_echo_router() -> None:
-    if LIFE_ECHO_ROUTER in router_loader.ROUTERS:
+    if all(router in router_loader.ROUTERS for router in LIFE_ECHO_ROUTERS):
         return
 
     life_echo_group = router_loader.RouterGroup(
         "life_echo",
-        (LIFE_ECHO_ROUTER,),
+        LIFE_ECHO_ROUTERS,
         classification="primary",
-        notes="Standalone emotional continuity and therapeutic intelligence engine.",
-        required_routers=(LIFE_ECHO_ROUTER,),
+        notes="Standalone emotional continuity, virtual memory box and therapeutic intelligence engine.",
+        required_routers=LIFE_ECHO_ROUTERS,
     )
 
     router_loader.ROUTER_GROUPS = (
