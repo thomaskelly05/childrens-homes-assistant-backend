@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, Query
 
 from auth.current_user import get_current_user
 from db.connection import get_db
+from services.home_operational_intelligence_service import home_operational_intelligence_service
 from services.inspection_intelligence_service import inspection_intelligence_service
 from services.manager_operational_queue_service import manager_operational_queue_service
 from services.operational_event_intelligence_service import operational_event_intelligence_service
@@ -90,7 +91,12 @@ def _build_feed(conn: Any, *, young_person_id: int | None = None, limit: int = 5
 
     with conn.cursor() as cur:
         for table in SOURCE_TABLES:
-            records = _latest_records(cur, table, limit=max(1, limit // len(SOURCE_TABLES)), young_person_id=young_person_id)
+            records = _latest_records(
+                cur,
+                table,
+                limit=max(1, limit // len(SOURCE_TABLES)),
+                young_person_id=young_person_id,
+            )
             for record in records:
                 event = operational_event_intelligence_service.build_event(
                     source_table=table,
@@ -102,18 +108,27 @@ def _build_feed(conn: Any, *, young_person_id: int | None = None, limit: int = 5
     events = events[:limit]
 
     manager_queue = manager_operational_queue_service.build_from_events(events)
+
     inspection = inspection_intelligence_service.analyse(
         events=events,
         manager_queue=manager_queue,
     )
+
     projection = operational_projection_engine.project(
         events,
         subject_type="young_person" if young_person_id else "home",
         subject_id=str(young_person_id) if young_person_id else None,
     ).model_dump()
+
     orb_memory = orb_operational_memory_service.build_memory(
         events,
         young_person_id=young_person_id,
+    )
+
+    home_intelligence = home_operational_intelligence_service.analyse(
+        events=events,
+        manager_queue=manager_queue,
+        inspection=inspection,
     )
 
     return {
@@ -125,6 +140,7 @@ def _build_feed(conn: Any, *, young_person_id: int | None = None, limit: int = 5
         "inspection_intelligence": inspection,
         "projection": projection,
         "orb_operational_memory": orb_memory,
+        "home_operational_intelligence": home_intelligence,
     }
 
 
