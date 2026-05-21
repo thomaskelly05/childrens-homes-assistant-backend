@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, Query
 
 from auth.dependencies import get_current_user
 from schemas.isn_contracts import ISNSignalCreateRequest
+from services.isn_contextual_safeguarding_service import isn_contextual_safeguarding_service
 from services.isn_escalation_service import isn_escalation_service
 from services.isn_relationship_service import isn_relationship_service
 from services.isn_service import isn_service
@@ -137,5 +138,96 @@ def generate_escalation_alerts(
         conn,
         current_user=current_user,
         days=days,
+        limit=limit,
+    )
+
+
+@router.get("/contextual/overview")
+def contextual_overview(
+    limit: int = Query(default=1000, ge=1, le=5000),
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn: Any = Depends(_db),
+) -> dict[str, Any]:
+    return isn_contextual_safeguarding_service.overview(
+        conn,
+        current_user=current_user,
+        limit=limit,
+    )
+
+
+@router.get("/contextual/routes")
+def contextual_routes(
+    limit: int = Query(default=1000, ge=1, le=5000),
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn: Any = Depends(_db),
+) -> dict[str, Any]:
+    return isn_contextual_safeguarding_service.routes(
+        conn,
+        current_user=current_user,
+        limit=limit,
+    )
+
+
+@router.get("/contextual/places")
+def contextual_places(
+    limit: int = Query(default=1000, ge=1, le=5000),
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn: Any = Depends(_db),
+) -> dict[str, Any]:
+    return isn_contextual_safeguarding_service.places(
+        conn,
+        current_user=current_user,
+        limit=limit,
+    )
+
+
+@router.get("/contextual/digital")
+def contextual_digital(
+    limit: int = Query(default=1000, ge=1, le=5000),
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn: Any = Depends(_db),
+) -> dict[str, Any]:
+    return isn_contextual_safeguarding_service.digital(
+        conn,
+        current_user=current_user,
+        limit=limit,
+    )
+
+
+@router.get("/contextual/vulnerabilities")
+def contextual_vulnerabilities(
+    limit: int = Query(default=1000, ge=1, le=5000),
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn: Any = Depends(_db),
+) -> dict[str, Any]:
+    return isn_contextual_safeguarding_service.vulnerabilities(
+        conn,
+        current_user=current_user,
+        limit=limit,
+    )
+
+
+@router.get("/contextual/cross-boundary")
+def contextual_cross_boundary(
+    limit: int = Query(default=1000, ge=1, le=5000),
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn: Any = Depends(_db),
+) -> dict[str, Any]:
+    return isn_contextual_safeguarding_service.cross_boundary(
+        conn,
+        current_user=current_user,
+        limit=limit,
+    )
+
+
+@router.get("/contextual/escalation-map")
+def contextual_escalation_map(
+    limit: int = Query(default=1000, ge=1, le=5000),
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn: Any = Depends(_db),
+) -> dict[str, Any]:
+    return isn_contextual_safeguarding_service.escalation_map(
+        conn,
+        current_user=current_user,
         limit=limit,
     )
