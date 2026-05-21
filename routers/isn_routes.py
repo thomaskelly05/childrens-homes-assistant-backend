@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, Query
 
 from auth.dependencies import get_current_user
 from schemas.isn_contracts import ISNSignalCreateRequest
+from services.isn_escalation_service import isn_escalation_service
 from services.isn_relationship_service import isn_relationship_service
 from services.isn_service import isn_service
 from services.isn_uk_transport_service import isn_uk_transport_service
@@ -108,3 +109,33 @@ def transport_corridors(
     conn: Any = Depends(_db),
 ) -> dict[str, Any]:
     return isn_uk_transport_service.corridors(conn, current_user=current_user, limit=limit)
+
+
+@router.get("/escalations")
+def escalations(
+    days: int = Query(default=30, ge=1, le=365),
+    limit: int = Query(default=1000, ge=1, le=5000),
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn: Any = Depends(_db),
+) -> dict[str, Any]:
+    return isn_escalation_service.escalations(
+        conn,
+        current_user=current_user,
+        days=days,
+        limit=limit,
+    )
+
+
+@router.post("/escalations/generate-alerts")
+def generate_escalation_alerts(
+    days: int = Query(default=30, ge=1, le=365),
+    limit: int = Query(default=1000, ge=1, le=5000),
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn: Any = Depends(_db),
+) -> dict[str, Any]:
+    return isn_escalation_service.create_alerts_from_escalations(
+        conn,
+        current_user=current_user,
+        days=days,
+        limit=limit,
+    )
