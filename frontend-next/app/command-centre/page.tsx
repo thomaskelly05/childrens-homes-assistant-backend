@@ -187,8 +187,15 @@ export default async function UnifiedCommandCentrePage() {
           <p className="text-[11px] font-black uppercase tracking-[0.24em] text-blue-300">ORB cognition panel</p>
           <h2 className="mt-2 text-2xl font-black tracking-[-0.04em] text-white">Attention, atmosphere and evidence</h2>
           <p className="mt-2 text-sm font-semibold leading-6 text-slate-300">
-            ORB can help with IndiCare work and everyday questions. Care questions use scoped records, citations and review guardrails; everyday questions do not retrieve care records.
+            ORB summary: ORB can help with IndiCare work and everyday questions. Care questions use scoped records, citations and review guardrails; everyday questions do not retrieve care records.
           </p>
+          <div data-testid="care-hub-operational-pulse" className="mt-4 grid gap-2 sm:grid-cols-2">
+            {['What changed today?', 'What may need review?', 'What support appears effective?', 'What should the next shift understand?'].map((prompt) => (
+              <Link key={prompt} href={`/orb?context=care-hub&q=${encodeURIComponent(prompt)}`} className="rounded-2xl bg-blue-500/15 px-4 py-3 text-xs font-black text-blue-100">
+                {prompt}
+              </Link>
+            ))}
+          </div>
           <div className="mt-5 space-y-3">
             {cognitionItems.map((item) => (
               <Link key={item.label} href={item.href} className="block rounded-2xl bg-white/10 p-4 transition hover:bg-white/15">
