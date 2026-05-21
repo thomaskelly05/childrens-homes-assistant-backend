@@ -249,14 +249,17 @@ CREATE TABLE IF NOT EXISTS public.operational_projection_snapshots (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE OR REPLACE VIEW public.vw_os_young_person_profile AS
+DROP VIEW IF EXISTS public.vw_os_chronology_pullthrough CASCADE;
+DROP VIEW IF EXISTS public.vw_os_young_person_profile CASCADE;
+
+CREATE VIEW public.vw_os_young_person_profile AS
 SELECT yp.*,
        yp.id AS young_person_id,
        COALESCE(NULLIF(yp.preferred_name, ''), yp.first_name) AS os_preferred_name,
-       COALESCE(trim(concat_ws(' ', yp.first_name, yp.last_name)), 'Young person ' || yp.id::text) AS os_display_name
+       COALESCE(NULLIF(trim(concat_ws(' ', yp.first_name, yp.last_name)), ''), 'Young person ' || yp.id::text) AS os_display_name
 FROM public.young_people yp;
 
-CREATE OR REPLACE VIEW public.vw_os_chronology_pullthrough AS
+CREATE VIEW public.vw_os_chronology_pullthrough AS
 SELECT id,
        source_table,
        source_id::text AS source_id,
