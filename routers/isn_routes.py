@@ -9,6 +9,7 @@ from auth.dependencies import get_current_user
 from schemas.isn_contracts import ISNSignalCreateRequest
 from services.isn_contextual_safeguarding_service import isn_contextual_safeguarding_service
 from services.isn_escalation_service import isn_escalation_service
+from services.isn_multi_agency_service import isn_multi_agency_service
 from services.isn_relationship_service import isn_relationship_service
 from services.isn_service import isn_service
 from services.isn_timeline_service import isn_timeline_service
@@ -260,5 +261,37 @@ def timeline_grouped_by_child(
     return isn_timeline_service.grouped_by_child(
         conn,
         current_user=current_user,
+        limit=limit,
+    )
+
+
+@router.get("/multi-agency/pack")
+def multi_agency_pack(
+    young_person_id: int | None = Query(default=None),
+    days: int = Query(default=30, ge=1, le=365),
+    limit: int = Query(default=1000, ge=1, le=5000),
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn: Any = Depends(_db),
+) -> dict[str, Any]:
+    return isn_multi_agency_service.safeguarding_pack(
+        conn,
+        current_user=current_user,
+        young_person_id=young_person_id,
+        days=days,
+        limit=limit,
+    )
+
+
+@router.get("/multi-agency/police-export")
+def police_export(
+    days: int = Query(default=30, ge=1, le=365),
+    limit: int = Query(default=1000, ge=1, le=5000),
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn: Any = Depends(_db),
+) -> dict[str, Any]:
+    return isn_multi_agency_service.police_intelligence_export(
+        conn,
+        current_user=current_user,
+        days=days,
         limit=limit,
     )
