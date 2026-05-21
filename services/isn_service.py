@@ -10,6 +10,7 @@ from schemas.isn_contracts import (
     ISNListResponse,
     ISNSignalCreateRequest,
 )
+from services.isn_uk_location_service import isn_uk_location_service
 
 
 class ISNService:
@@ -19,9 +20,23 @@ class ISNService:
         self.repository = repository
 
     def create_signal(self, conn: Any, *, payload: ISNSignalCreateRequest, current_user: dict[str, Any]):
+        data = payload.model_dump(mode="json")
+
+        uk_location = isn_uk_location_service.normalise_location(
+            location_text=data.get("location_text"),
+            postcode_prefix=data.get("postcode_prefix"),
+        )
+
+        metadata = data.get("metadata") or {}
+        metadata["uk_location"] = uk_location
+        data["metadata"] = metadata
+
+        if uk_location.get("postcode_prefix") and not data.get("postcode_prefix"):
+            data["postcode_prefix"] = uk_location["postcode_prefix"]
+
         signal = self.repository.create_signal(
             conn,
-            payload=payload.model_dump(mode="json"),
+            payload=data,
             current_user=current_user,
         )
         self._analyse_signal(conn, signal=signal)
@@ -77,6 +92,7 @@ class ISNService:
                     "key": postcode,
                     "signal_count": count,
                     "risk": "high" if count >= 5 else "medium",
+                    "country": "UK",
                 }
             )
 
@@ -87,6 +103,7 @@ class ISNService:
                     "key": route,
                     "signal_count": count,
                     "risk": "high" if count >= 4 else "medium",
+                    "country": "UK",
                 }
             )
 
@@ -98,6 +115,7 @@ class ISNService:
                         "key": alias,
                         "signal_count": count,
                         "risk": "high",
+                        "country": "UK",
                     }
                 )
 
@@ -136,6 +154,7 @@ class ISNService:
                         "pattern": {
                             "match_count": len(matches),
                             "signal_types": list(sorted(set(item.signal_type for item in matches))),
+                            "country": "UK",
                         },
                         "recommended_action": "Review linked safeguarding intelligence and consider contextual safeguarding escalation.",
                     },
