@@ -20,6 +20,7 @@ from schemas.isn_contracts import ISNAlertRecord, ISNSignalRecord
 
 ISN_SIGNAL_TABLE = "isn_safeguarding_signals"
 ISN_ALERT_TABLE = "isn_safeguarding_alerts"
+ISN_RELATIONSHIP_TABLE = "isn_relationship_links"
 
 
 def _json_list(value: Any) -> list[str]:
@@ -83,6 +84,7 @@ class ISNRepository:
 
     signal_table = ISN_SIGNAL_TABLE
     alert_table = ISN_ALERT_TABLE
+    relationship_table = ISN_RELATIONSHIP_TABLE
 
     def ensure_storage(self, conn: Any) -> None:
         if not table_exists(conn, self.signal_table):
@@ -91,6 +93,10 @@ class ISNRepository:
     def ensure_alert_storage(self, conn: Any) -> None:
         if not table_exists(conn, self.alert_table):
             raise HTTPException(status_code=400, detail="ISN safeguarding alert storage is not available in this schema.")
+
+    def ensure_relationship_storage(self, conn: Any) -> None:
+        if not table_exists(conn, self.relationship_table):
+            raise HTTPException(status_code=400, detail="ISN relationship storage is not available in this schema.")
 
     def create_signal(self, conn: Any, *, payload: dict[str, Any], current_user: dict[str, Any]) -> ISNSignalRecord:
         self.ensure_storage(conn)
@@ -162,7 +168,7 @@ class ISNRepository:
         if filters.get("risk_level"):
             where.append("risk_level = %s")
             params.append(filters["risk_level"])
-        params.append(max(1, min(int(limit or 100), 500)))
+        params.append(max(1, min(int(limit or 100), 1000)))
         where_sql = "WHERE " + " AND ".join(where) if where else ""
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
@@ -177,6 +183,71 @@ class ISNRepository:
             )
             rows = cur.fetchall() or []
         return [_signal_row(dict(row)) for row in rows]
+
+    def create_relationship_link(self, conn: Any, *, signal_id: str, relationship_type: str, relationship_key: str, confidence_score: float = 0.75) -> dict[str, Any]:
+        self.ensure_relationship_storage(conn)
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                f"""
+                INSERT INTO public.{quote_ident(self.relationship_table)} (
+                    source_signal_id, relationship_type, relationship_key, confidence_score, created_at
+                )
+                VALUES (%s, %s, %s, %s, NOW())
+                ON CONFLICT DO NOTHING
+                RETURNING *
+                """,
+                (signal_id, relationship_type, relationship_key, confidence_score),
+            )
+            row = cur.fetchone()
+        return dict(row) if row else {}
+
+    def relationship_graph(self, conn: Any, *, relationship_key: str | None = None, limit: int = 250) -> list[dict[str, Any]]:
+        self.ensure_relationship_storage(conn)
+        params: list[Any] = []
+        where = ""
+        if relationship_key:
+            where = "WHERE relationship_key = %s"
+            params.append(relationship_key.lower())
+        params.append(max(1, min(int(limit or 250), 1000)))
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                f"""
+                SELECT relationship_type, relationship_key, COUNT(*) AS signal_count,
+                       jsonb_agg(source_signal_id::text) AS linked_signal_ids,
+                       MAX(created_at) AS latest_seen_at
+                FROM public.{quote_ident(self.relationship_table)}
+                {where}
+                GROUP BY relationship_type, relationship_key
+                HAVING COUNT(*) >= 1
+                ORDER BY signal_count DESC, latest_seen_at DESC
+                LIMIT %s
+                """,
+                tuple(params),
+            )
+            rows = cur.fetchall() or []
+        return [dict(row) for row in rows]
+
+    def heatmap(self, conn: Any, *, current_user: dict[str, Any], limit: int = 1000) -> list[dict[str, Any]]:
+        records = self.list_signals(conn, current_user=current_user, limit=limit)
+        buckets: dict[str, dict[str, Any]] = {}
+        for record in records:
+            key = (record.postcode_prefix or record.location_text or "unknown").strip().upper()
+            if not key or key == "UNKNOWN":
+                continue
+            bucket = buckets.setdefault(key, {"key": key, "signal_count": 0, "risk_levels": [], "signal_types": set()})
+            bucket["signal_count"] += 1
+            bucket["risk_levels"].append(record.risk_level)
+            bucket["signal_types"].add(record.signal_type)
+        heatmap = []
+        for bucket in buckets.values():
+            risk = "critical" if "critical" in bucket["risk_levels"] else "high" if bucket["signal_count"] >= 5 or "high" in bucket["risk_levels"] else "medium"
+            heatmap.append({
+                "key": bucket["key"],
+                "signal_count": bucket["signal_count"],
+                "risk_level": risk,
+                "signal_types": sorted(bucket["signal_types"]),
+            })
+        return sorted(heatmap, key=lambda item: item["signal_count"], reverse=True)
 
     def create_alert(self, conn: Any, *, payload: dict[str, Any]) -> ISNAlertRecord:
         self.ensure_alert_storage(conn)
