@@ -11,6 +11,7 @@ from services.isn_contextual_safeguarding_service import isn_contextual_safeguar
 from services.isn_escalation_service import isn_escalation_service
 from services.isn_relationship_service import isn_relationship_service
 from services.isn_service import isn_service
+from services.isn_timeline_service import isn_timeline_service
 from services.isn_uk_transport_service import isn_uk_transport_service
 
 router = APIRouter(prefix="/api/isn", tags=["isn"])
@@ -227,6 +228,36 @@ def contextual_escalation_map(
     conn: Any = Depends(_db),
 ) -> dict[str, Any]:
     return isn_contextual_safeguarding_service.escalation_map(
+        conn,
+        current_user=current_user,
+        limit=limit,
+    )
+
+
+@router.get("/timeline")
+def timeline(
+    young_person_id: int | None = Query(default=None),
+    days: int | None = Query(default=None, ge=1, le=365),
+    limit: int = Query(default=1000, ge=1, le=5000),
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn: Any = Depends(_db),
+) -> dict[str, Any]:
+    return isn_timeline_service.timeline(
+        conn,
+        current_user=current_user,
+        young_person_id=young_person_id,
+        days=days,
+        limit=limit,
+    )
+
+
+@router.get("/timeline/grouped-by-child")
+def timeline_grouped_by_child(
+    limit: int = Query(default=2000, ge=1, le=10000),
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn: Any = Depends(_db),
+) -> dict[str, Any]:
+    return isn_timeline_service.grouped_by_child(
         conn,
         current_user=current_user,
         limit=limit,
