@@ -56,8 +56,9 @@ def test_workflow_wiring_exposes_admin_and_os_command_aliases() -> None:
     assert "/workflow-wiring-audit/integrity" in compat_paths
 
 
-def test_live_os_validation_router_is_present() -> None:
+def test_live_os_validation_router_and_alias_are_present() -> None:
     assert "/live" in _paths(os_live_validation_router.router)
+    assert "/live-validation" in _paths(os_live_validation_router.compat_router)
 
 
 def test_missing_optional_routers_do_not_fail_startup() -> None:
