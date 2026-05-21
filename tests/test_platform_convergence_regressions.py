@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 
 from backend.db.schema_doctor import SUPERSEDED_MIGRATIONS
+from backend import os_live_validation_router
 from core.router_loader import include_routers
 from routers import orb_routes, os_workflow_wiring_audit_routes
 
@@ -55,6 +56,10 @@ def test_workflow_wiring_exposes_admin_and_os_command_aliases() -> None:
     assert "/workflow-wiring-audit/integrity" in compat_paths
 
 
+def test_live_os_validation_router_is_present() -> None:
+    assert "/live" in _paths(os_live_validation_router.router)
+
+
 def test_missing_optional_routers_do_not_fail_startup() -> None:
     app = FastAPI()
     report = include_routers(app)
@@ -62,4 +67,5 @@ def test_missing_optional_routers_do_not_fail_startup() -> None:
     assert "routers.auth_routes" in report.loaded
     assert "routers.orb_routes" in report.loaded
     assert "routers.os_workflow_wiring_audit_routes" in report.loaded
+    assert "backend.os_live_validation_router" in report.loaded
     assert all(router != "routers.auth_routes" for router, _reason in report.skipped_optional)
