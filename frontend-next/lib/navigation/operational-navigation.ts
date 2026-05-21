@@ -80,7 +80,7 @@ export const operationalNavigation: OperationalNavItem[] = [
     icon: UserRound,
     permissions: ['records:read'],
     roleScopes: ['rm', 'ri', 'staff', 'provider', 'admin'],
-    activeRoots: ['home', 'dashboard', 'workspace', 'young-people', 'children']
+    activeRoots: ['home', 'dashboard', 'workspace', 'young-people', 'children', 'life_echo']
   },
   {
     domain: 'daily-care',
@@ -172,6 +172,7 @@ export const operationalUtilities: OperationalUtilityItem[] = [
 
 export const childWorkspaceNavigation = [
   { label: 'Journey', href: (id: string) => `/young-people/${encodeURIComponent(id)}/journey` },
+  { label: 'LifeEcho', href: (id: string) => `/young-people/${encodeURIComponent(id)}/life_echo` },
   { label: 'About Me', href: (id: string) => `/young-people/${encodeURIComponent(id)}/about-me/new` },
   { label: 'Child Voice', href: (id: string) => `/young-people/${encodeURIComponent(id)}/child-voice/new` },
   { label: 'Wellbeing', href: (id: string) => `/young-people/${encodeURIComponent(id)}/wellbeing-check/new` },
