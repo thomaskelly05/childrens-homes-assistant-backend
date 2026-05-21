@@ -8,6 +8,7 @@ from auth.current_user import get_current_user
 from db.connection import get_db
 
 router = APIRouter(prefix="/os/validation", tags=["OS Live Validation"])
+compat_router = APIRouter(prefix="/api/os-command", tags=["OS Live Validation Compatibility"])
 
 CORE_TABLES = [
     "young_people",
@@ -72,8 +73,7 @@ def _safe_view_count(cur: Any, view: str) -> int | None:
     return int(row[0]) if row else 0
 
 
-@router.get("/live")
-def live_os_validation(current_user=Depends(get_current_user), conn=Depends(get_db)) -> dict[str, Any]:
+def _build_live_validation(current_user: dict[str, Any], conn: Any) -> dict[str, Any]:
     with conn.cursor() as cur:
         table_report = []
         missing_tables = []
@@ -121,3 +121,13 @@ def live_os_validation(current_user=Depends(get_current_user), conn=Depends(get_
             "Ask ORB a care-scoped question and confirm care_retrieval=true.",
         ],
     }
+
+
+@router.get("/live")
+def live_os_validation(current_user=Depends(get_current_user), conn=Depends(get_db)) -> dict[str, Any]:
+    return _build_live_validation(current_user=current_user, conn=conn)
+
+
+@compat_router.get("/live-validation")
+def live_os_validation_command_alias(current_user=Depends(get_current_user), conn=Depends(get_db)) -> dict[str, Any]:
+    return _build_live_validation(current_user=current_user, conn=conn)
