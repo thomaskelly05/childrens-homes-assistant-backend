@@ -98,6 +98,7 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
         "governance",
         (
             "routers.governance_routes",
+            "routers.governance_intelligence_routes",
             "routers.governance_os_routes",
             "routers.governance_reg44_routes",
             "routers.governance_reg45_routes",
