@@ -184,6 +184,194 @@ async def api_orb_conversation(
     return await _conversation_response(payload, conn=conn, current_user=current_user)
 
 
+@router.post("/session/start")
+async def start_orb_session(
+    payload: OrbSessionStartRequest,
+    current_user=Depends(require_assistant_access),
+):
+    try:
+        response = await orb_voice_session_service.start_session(request=payload, current_user=current_user)
+        return {"success": True, "data": response.model_dump()}
+    except HTTPException:
+        raise
+    except Exception:
+        return _error_response(503, "orb_session_start_failed", "Orb session could not be started. Please try again.", {"retryable": True})
+
+
+@router.post("/realtime/session")
+async def create_orb_realtime_session(
+    payload: OrbSessionStartRequest,
+    current_user=Depends(require_assistant_access),
+):
+    return await start_orb_session(payload=payload, current_user=current_user)
+
+
+@router.post("/session/{session_id}/event")
+async def orb_session_event(
+    session_id: str,
+    payload: OrbSessionEventRequest,
+    conn=Depends(get_db),
+    current_user=Depends(require_assistant_access),
+):
+    try:
+        response = await orb_voice_session_service.handle_event(
+            session_id=session_id,
+            event=payload,
+            conn=conn,
+            current_user=current_user,
+        )
+        return {"success": True, "data": response.model_dump()}
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Orb session not found.")
+    except HTTPException:
+        raise
+    except Exception:
+        return _error_response(503, "orb_session_event_failed", "Orb event could not be processed. Please try again.", {"retryable": True})
+
+
+@router.post("/session/{session_id}/interrupt")
+async def interrupt_orb_session(
+    session_id: str,
+    current_user=Depends(require_assistant_access),
+):
+    try:
+        response = await orb_voice_session_service.interrupt(session_id=session_id, current_user=current_user)
+        return {"success": True, "data": response.model_dump()}
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Orb session not found.")
+
+
+@router.post("/realtime/session/{session_id}/interrupt")
+async def interrupt_orb_realtime_session(
+    session_id: str,
+    current_user=Depends(require_assistant_access),
+):
+    return await interrupt_orb_session(session_id=session_id, current_user=current_user)
+
+
+@router.post("/session/{session_id}/end")
+async def end_orb_session(
+    session_id: str,
+    current_user=Depends(require_assistant_access),
+):
+    try:
+        response = await orb_voice_session_service.end(session_id=session_id, current_user=current_user)
+        return {"success": True, "data": response.model_dump()}
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Orb session not found.")
+
+
+@router.post("/realtime/session/{session_id}/end")
+async def end_orb_realtime_session(
+    session_id: str,
+    current_user=Depends(require_assistant_access),
+):
+    return await end_orb_session(session_id=session_id, current_user=current_user)
+
+
+@router.get("/session/{session_id}/transcript")
+async def orb_session_transcript(
+    session_id: str,
+    current_user=Depends(require_assistant_access),
+):
+    try:
+        response = orb_voice_session_service.transcript(session_id, current_user=current_user)
+        return {"success": True, "data": response.model_dump()}
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Orb session not found.")
+
+
+@router.get("/realtime/session/{session_id}/transcript")
+async def orb_realtime_session_transcript(
+    session_id: str,
+    current_user=Depends(require_assistant_access),
+):
+    return await orb_session_transcript(session_id=session_id, current_user=current_user)
+
+
+@router.get("/session/{session_id}/summary")
+async def orb_session_summary(
+    session_id: str,
+    current_user=Depends(require_assistant_access),
+):
+    try:
+        response = orb_voice_session_service.summary(session_id, current_user=current_user)
+        return {"success": True, "data": response.model_dump()}
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Orb session not found.")
+
+
+@router.get("/config")
+async def orb_config(current_user=Depends(require_assistant_access)):
+    wake_word = orb_wake_word_service.capability()
+    event_subscriptions = orb_operational_events_service.subscriptions_for(current_user=current_user, context={})
+    return {
+        "success": True,
+        "data": {
+            "name": "Orb powered by IndiCare",
+            "wake_phrase": "Hey IndiCare",
+            "wake_phrase_status": "optional_disabled_by_default",
+            "wake_word": wake_word,
+            "brains": [
+                "care_brain",
+                "inspector_brain",
+                "general_assistant_brain",
+                "web_research_brain",
+                "productivity_brain",
+                "report_writer_brain",
+                "voice_recording_brain",
+            ],
+            "default_voice_profile": {
+                "name": "IndiCare British Female",
+                "accent": "British",
+                "tone": "calm, warm, professional",
+                "speed": "medium",
+                "expressiveness": "natural but not theatrical",
+                "use_case": "children's home operational support",
+            },
+            "states": [
+                "passive_listening",
+                "listening",
+                "thinking",
+                "speaking",
+                "interrupted",
+                "muted",
+                "unavailable",
+                "private",
+                "recording",
+                "dictation",
+                "safeguarding_sensitive",
+                "inspection",
+            ],
+            "provider_abstraction": ["openai_realtime", "mock_voice", "future_provider_interface"],
+            "required_env": [
+                "OPENAI_API_KEY",
+                "ORB_VOICE_PROVIDER=openai|mock",
+                "ORB_DEFAULT_VOICE=shimmer",
+                "ORB_REALTIME_ENABLED=true|false",
+                "ORB_WEB_SEARCH_ENDPOINT",
+                "ORB_WEB_SEARCH_API_KEY",
+                "OPENWEATHER_API_KEY",
+            ],
+            "raw_audio_stored": False,
+            "secret_keys_exposed_to_client": False,
+            "identity_contract": orb_identity_service.contract().model_dump(),
+            "realtime_conversation": {
+                "microphone_streaming": "OpenAI Realtime WebRTC when configured.",
+                "turn_taking": "Server VAD with client-side silence and backend turn-state coordination.",
+                "barge_in": "Realtime spoken interruption when provider transport is active; click/tap interrupt fallback is always available.",
+                "direct_writes": False,
+            },
+            "operational_event_subscriptions": event_subscriptions,
+        },
+    }
+
+
+@router.get("/realtime/health")
+async def orb_realtime_health(current_user=Depends(require_assistant_access)):
+    return {"success": True, "data": orb_realtime_provider_service.health_metrics()}
+
+
 @router.get("/health")
 async def orb_health(current_user=Depends(require_assistant_access)):
     return _orb_health_payload()
@@ -192,3 +380,32 @@ async def orb_health(current_user=Depends(require_assistant_access)):
 @compat_router.get("/health")
 async def api_orb_health(current_user=Depends(require_assistant_access)):
     return _orb_health_payload()
+
+
+@router.get("/realtime/metrics")
+async def orb_realtime_metrics(current_user=Depends(require_assistant_access)):
+    return {"success": True, "data": orb_observability_service.metrics()}
+
+
+@router.get("/provider/status")
+async def orb_provider_status(current_user=Depends(require_assistant_access)):
+    return {
+        "success": True,
+        "data": {
+            "openai_realtime": orb_realtime_provider_service.provider_status(),
+            "observed": orb_observability_service.provider_status(),
+        },
+    }
+
+
+@router.websocket("/realtime/ws")
+async def orb_realtime_websocket(websocket: WebSocket):
+    await orb_websocket_gateway.handle(websocket)
+
+
+@router.get("/events/subscriptions")
+async def orb_event_subscriptions(current_user=Depends(require_assistant_access)):
+    return {
+        "success": True,
+        "data": orb_operational_events_service.subscriptions_for(current_user=current_user, context={}),
+    }
