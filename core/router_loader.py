@@ -34,9 +34,18 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
             "routers.legal_acceptance_routes",
             "routers.feature_flags_routes",
             "routers.frontend_compat",
+            "routers.security_routes",
+            "routers.debug_health_routes",
         ),
         notes="Identity, session security, account state and platform admin.",
-        required_routers=("routers.auth_routes",),
+        required_routers=(
+            "routers.auth_routes",
+            "routers.mfa_routes",
+            "routers.session_security_routes",
+            "routers.debug_health_routes",
+            "routers.frontend_compat",
+            "routers.security_routes",
+        ),
     ),
     RouterGroup(
         "assistant_orb",
@@ -222,6 +231,11 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
         ),
         notes="Compliance, workflow review, schema-live, security/source-of-truth/schema/workflow audits and OS live data gateways.",
     ),
+    RouterGroup("auth", (), classification="primary", notes="Registry alias for canonical authentication surfaces."),
+    RouterGroup("assistant", (), classification="legacy_compatibility", notes="Registry alias for legacy assistant surfaces; ORB is canonical."),
+    RouterGroup("academy", (), classification="primary", notes="Registry alias for workforce academy routes."),
+    RouterGroup("reporting", (), classification="primary", notes="Registry alias for report generation routes."),
+    RouterGroup("operational-backend", (), classification="primary", notes="Registry alias used by OS source-of-truth audits."),
 )
 
 ROUTERS: list[str] = [router for group in ROUTER_GROUPS for router in group.routers]
@@ -253,16 +267,73 @@ def _iter_routes(app: FastAPI) -> Iterable[str]:
             yield key
 
 
+def _router_classification(router_path: str) -> str:
+    if "compat" in router_path or "legacy" in router_path:
+        return "legacy_compatibility"
+    for group in ROUTER_GROUPS:
+        if router_path in group.routers:
+            return group.classification
+    return "canonical"
+
+
+def _split_route_conflicts(conflicts: list[dict]) -> tuple[list[dict], list[dict]]:
+    intentional: list[dict] = []
+    accidental: list[dict] = []
+    for conflict in conflicts:
+        if conflict.get("classification") == "legacy_compatibility":
+            intentional.append(conflict)
+        else:
+            accidental.append(conflict)
+    return accidental, intentional
+
+
+def include_router(app: FastAPI, router_path: str) -> list[str]:
+    module = importlib.import_module(router_path)
+    mounted: list[str] = []
+    for attr in ("router", "compat_router", "ui_router"):
+        router = getattr(module, attr, None)
+        if router is None:
+            continue
+        app.include_router(router)
+        mounted.append(attr)
+    if not mounted:
+        raise AttributeError(f"{router_path} does not expose a FastAPI router")
+    return mounted
+
+
+def get_router_registry_summary() -> dict:
+    legacy_routers = [
+        router_path
+        for router_path in ROUTERS
+        if _router_classification(router_path) == "legacy_compatibility"
+    ]
+    accidental_conflicts, intentional_conflicts = _split_route_conflicts([])
+    return {
+        "router_count": len(ROUTERS),
+        "required_router_count": len(REQUIRED_ROUTERS),
+        "legacy_compatibility_router_count": len(legacy_routers),
+        "groups": [
+            {
+                "name": group.name,
+                "classification": group.classification,
+                "router_count": len(group.routers),
+                "notes": group.notes,
+            }
+            for group in ROUTER_GROUPS
+        ],
+        "accidental_conflicts": accidental_conflicts,
+        "intentional_conflicts": intentional_conflicts,
+    }
+
+
 def include_routers(app: FastAPI) -> RouterLoadReport:
     report = RouterLoadReport()
     seen = set(_iter_routes(app))
 
     for router_path in ROUTERS:
         try:
-            module = importlib.import_module(router_path)
-            router = getattr(module, "router")
             before = set(_iter_routes(app))
-            app.include_router(router)
+            include_router(app, router_path)
             after = set(_iter_routes(app))
             duplicates = sorted(before.intersection(after - seen))
             if duplicates:
