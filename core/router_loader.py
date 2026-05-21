@@ -243,6 +243,7 @@ ROUTERS: list[str] = [router for group in ROUTER_GROUPS for router in group.rout
 REQUIRED_ROUTERS: frozenset[str] = frozenset(
     router for group in ROUTER_GROUPS for router in group.required_routers
 )
+_LAST_LOAD_REPORT: "RouterLoadReport | None" = None
 
 
 @dataclass
@@ -327,7 +328,37 @@ def get_router_registry_summary() -> dict:
     }
 
 
+def get_failed_routers() -> list[dict[str, str]]:
+    if _LAST_LOAD_REPORT is None:
+        return []
+    return [{"router": router, "error": error} for router, error in _LAST_LOAD_REPORT.failed]
+
+
+def get_route_conflicts() -> list[dict]:
+    if _LAST_LOAD_REPORT is None:
+        return []
+    conflicts = []
+    for route in _LAST_LOAD_REPORT.duplicate_routes:
+        method, _, path = route.partition(" ")
+        conflicts.append({"method": method, "path": path, "classification": "accidental"})
+    for route in _LAST_LOAD_REPORT.compatibility_shadows:
+        method, _, path = route.partition(" ")
+        conflicts.append({"method": method, "path": path, "classification": "legacy_compatibility"})
+    return conflicts
+
+
+def get_accidental_route_conflicts() -> list[dict]:
+    accidental, _intentional = _split_route_conflicts(get_route_conflicts())
+    return accidental
+
+
+def get_intentional_route_conflicts() -> list[dict]:
+    _accidental, intentional = _split_route_conflicts(get_route_conflicts())
+    return intentional
+
+
 def include_routers(app: FastAPI) -> RouterLoadReport:
+    global _LAST_LOAD_REPORT
     report = RouterLoadReport()
     seen = set(_iter_routes(app))
 
@@ -354,4 +385,5 @@ def include_routers(app: FastAPI) -> RouterLoadReport:
         len(report.failed),
         len(report.duplicate_routes),
     )
+    _LAST_LOAD_REPORT = report
     return report
