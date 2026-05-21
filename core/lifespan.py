@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from backend.db.migration_runner import run_pending
+from backend.db.schema_doctor import run_schema_doctor
 from db.connection import close_db_pool, get_db_connection, init_db_pool, release_db_connection
 from db.legal_acceptance_db import init_legal_acceptance_table
 from db.mfa_db import init_mfa_tables
@@ -19,6 +20,20 @@ def run_startup_migrations() -> None:
     conn = None
     try:
         conn = get_db_connection()
+
+        try:
+            repair_summary = run_schema_doctor(conn)
+            conn.commit()
+            logger.info(
+                "Schema doctor completed tables=%s columns=%s",
+                repair_summary.get("tables_checked"),
+                repair_summary.get("columns_ensured"),
+            )
+        except Exception:
+            conn.rollback()
+            logger.exception("Schema doctor failed during startup")
+            raise
+
         applied = run_pending(conn)
         conn.commit()
         logger.info("Migration check complete (%s applied)", sum(1 for item in applied if item.applied))
