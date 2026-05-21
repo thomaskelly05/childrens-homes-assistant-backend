@@ -56,6 +56,10 @@ export type OrbConversationResponse = {
     pool_saturation_pct?: number
     metadata_strategy?: Record<string, unknown>
     child_voice_status?: string
+    brain?: string
+    care_retrieval?: boolean
+    tools_used?: string[]
+    tool_status?: string
   }
   projection_keys?: string[]
   snapshot_status?: Record<string, unknown>

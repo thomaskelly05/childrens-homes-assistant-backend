@@ -130,6 +130,67 @@ export default async function ChildJourneyPage({ params, searchParams }: { param
           </div>
         </Card>
       </div>
+
+      <Card>
+        <SectionHeader
+          eyebrow="One child journey"
+          title="Care, voice, chronology, plans and evidence"
+          description="Use these existing areas as one child-centred lived experience rather than separate recording silos."
+        />
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {[
+            'About Me',
+            'Child Voice',
+            'Daily note',
+            'Chronology',
+            'Wellbeing check',
+            'Education',
+            'Health',
+            'Medication',
+            'Family Time',
+            'Keywork',
+            'Incident',
+            'Missing episode',
+            'Plans & Risk',
+            'Documents',
+            'Actions',
+            'ORB child insight'
+          ].map((section) => (
+            <div key={section} className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
+              <p className="text-sm font-black text-slate-900">{section}</p>
+              <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">Live evidence is not yet available for this area when no linked records are returned.</p>
+            </div>
+          ))}
+        </div>
+        <div className="mt-5 grid gap-3 md:grid-cols-2">
+          {['What changed for the child?', 'What helped them feel safe?', 'What did adults do?'].map((question) => (
+            <div key={question} className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-black text-blue-800">
+              {question}
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      <Card data-testid="child-lived-experience-view">
+        <SectionHeader
+          eyebrow="Relationship intelligence"
+          title="Lived experience and support meaning"
+          description="A simple review frame for child voice, relationships, adult response and what changes for the child."
+        />
+        <div className="grid gap-3 md:grid-cols-2">
+          {[
+            ['What is helping?', supportSignals[0]?.summary || 'No support pattern has been returned yet.'],
+            ['What remains difficult?', difficultySignals[0]?.summary || 'No active difficulty pattern has been returned yet.'],
+            ['Where is child voice strongest?', experienceIntelligence?.signals?.child_voice_visible ? (experienceIntelligence.summary || 'Child voice is visible in returned intelligence.') : 'Child voice evidence has not been synthesised yet.'],
+            ['Relationship intelligence', relationshipSignals[0]?.summary || 'No relationship pattern has been returned yet.']
+          ].map(([label, value]) => (
+            <div key={label} className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
+              <p className="text-sm font-black text-slate-900">{label}</p>
+              <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">{value}</p>
+            </div>
+          ))}
+        </div>
+      </Card>
     </div>
   )
 }

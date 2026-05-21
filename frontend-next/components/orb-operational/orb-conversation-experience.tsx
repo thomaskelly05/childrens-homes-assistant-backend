@@ -91,7 +91,9 @@ export function OrbConversationExperience({
   const latestIntelligence = latestResponse as OrbIntelligenceResponse | undefined
   const latestContext = latestIntelligence?.context_used
   const isDegraded = Boolean(latestContext?.degraded)
-  const statusLabel = isDegraded ? 'Partial context' : latestContext?.snapshot_hit ? 'Snapshot + live' : 'Live DB backed'
+  const statusLabel = latestContext?.care_retrieval === false
+    ? `${latestContext.brain || 'general'} - no care retrieval`
+    : isDegraded ? 'Partial context' : latestContext?.snapshot_hit ? 'Snapshot + live' : 'Live DB backed'
   const cognitionTimeline = messages.filter((message) => message.role === 'assistant' && message.response)
   const voiceHref = `/orb?voice=1&scope=${encodeURIComponent(scope)}${youngPersonId ? `&young_person_id=${encodeURIComponent(youngPersonId)}` : ''}`
 
@@ -140,7 +142,7 @@ export function OrbConversationExperience({
           <div>
             <p className="text-[11px] font-black uppercase tracking-[0.24em] text-blue-700">Operational ORB</p>
             <h1 className="mt-3 text-4xl font-black tracking-[-0.07em] text-slate-950 md:text-6xl">Reflective operational cognition</h1>
-            <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-600">ORB retrieves live permitted records, cites sources where available, and presents reasoning as reviewable operational cognition for registered managers and safeguarding leads.</p>
+            <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-600">ORB can help with IndiCare work and everyday questions. Care questions use scoped records and citations; everyday questions use general, web or productivity support without care retrieval.</p>
           </div>
           <div className={`rounded-2xl px-4 py-3 text-xs font-black uppercase tracking-[0.16em] ${isDegraded ? 'bg-amber-50 text-amber-800' : 'bg-blue-50 text-blue-700'}`}>
             {statusLabel}
@@ -165,9 +167,9 @@ export function OrbConversationExperience({
 
         <div className="mt-4 grid gap-3 md:grid-cols-3">
           {[
-            ['Voice state', 'Voice ORB now stays inside this same ORB workspace'],
+            ['Voice state', 'Voice ORB stays inside this same ORB workspace'],
             ['RM review', 'Themes support review, not final decisions'],
-            ['Inspection context', latestIntelligence?.regulatory_reasoning?.inspection_relevance?.[0]?.label || 'SCCIF-aware evidence view']
+            ['Current brain', latestContext?.brain || latestIntelligence?.regulatory_reasoning?.inspection_relevance?.[0]?.label || 'Auto-routed']
           ].map(([label, value]) => (
             <div key={label} className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
               <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">{label}</p>
@@ -189,8 +191,8 @@ export function OrbConversationExperience({
             <div className="flex h-72 items-center justify-center rounded-[24px] border border-dashed border-slate-200 bg-white text-center">
               <div>
                 <Sparkles className="mx-auto h-8 w-8 text-blue-500" aria-hidden />
-                <p className="mt-3 text-sm font-black text-slate-800">Ask about children, workforce, governance, documents, reports, actions or inspection evidence.</p>
-                <p className="mt-2 text-xs font-bold text-slate-500">If live records are missing, ORB will say so.</p>
+                <p className="mt-3 text-sm font-black text-slate-800">Ask about children, workforce, governance, documents, reports, actions, inspection evidence or everyday questions.</p>
+                <p className="mt-2 text-xs font-bold text-slate-500">Care answers cite scoped records. General answers will say no care records were retrieved.</p>
               </div>
             </div>
           ) : null}
@@ -202,7 +204,7 @@ export function OrbConversationExperience({
                   <div className="mt-4 grid gap-3 md:grid-cols-3">
                     <div className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-blue-950">
                       <p className="text-[10px] font-black uppercase tracking-[0.18em] text-blue-600">Evidence</p>
-                      <p className="mt-1 text-sm font-black">{message.response.sources?.length || 0} source{message.response.sources?.length === 1 ? '' : 's'}</p>
+                      <p className="mt-1 text-sm font-black">{message.response.context_used?.care_retrieval === false ? 'No care retrieval' : `${message.response.sources?.length || 0} source${message.response.sources?.length === 1 ? '' : 's'}`}</p>
                     </div>
                     <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-emerald-950">
                       <p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-600">Actions</p>
@@ -309,16 +311,18 @@ export function OrbConversationExperience({
           </div>
           <p className="mt-3 text-sm font-semibold leading-6 text-slate-300">Scope: {latestResponse?.context_used?.scope || scope}</p>
           <p className="text-sm font-semibold leading-6 text-slate-300">Confidence: {latestResponse?.confidence || 'not run yet'}</p>
+          <p className="text-sm font-semibold leading-6 text-slate-300">Brain: {latestResponse?.context_used?.brain || 'not routed yet'}</p>
+          <p className="text-sm font-semibold leading-6 text-slate-300">Care retrieval: {latestResponse?.context_used?.care_retrieval === false ? 'no' : latestResponse ? 'yes' : 'not run yet'}</p>
           <p className="text-sm font-semibold leading-6 text-slate-300">Live tables: {latestResponse?.context_used?.live_tables?.length || 0}</p>
           <p className="text-sm font-semibold leading-6 text-slate-300">Projection keys: {latestResponse?.context_used?.projection_keys?.length || 0}</p>
           <p className="text-sm font-semibold leading-6 text-slate-300">Pool saturation: {latestContext?.pool_saturation_pct ?? 0}%</p>
           <Link href={voiceHref} className="mt-4 flex items-center gap-2 rounded-2xl bg-white/10 px-4 py-3 text-sm font-black text-white">
             <Mic2 className="h-4 w-4" aria-hidden />
-            Voice ORB uses this same scope
+            Voice ORB uses this same ORB identity
           </Link>
           <div className="mt-3 flex items-start gap-2 rounded-2xl bg-white/10 p-3 text-xs font-semibold leading-5 text-slate-200">
             <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" aria-hidden />
-            Voice and typed ORB now share the same operational cognition route and review guardrails.
+            Typed and voice ORB now share one routing identity: scoped care questions use guardrails and general questions stay out of care records.
           </div>
         </section>
       </aside>

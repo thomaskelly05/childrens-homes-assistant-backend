@@ -27,7 +27,7 @@ export default async function OrbPage({
                   One operational cognition system
                 </h1>
                 <p className="mt-3 max-w-3xl text-sm font-semibold leading-7 text-blue-100">
-                  Typed ORB, Voice ORB, safeguarding reasoning, inspection support and operational intelligence now converge through the same scoped runtime and evidence-aware cognition pathway.
+                  ORB can help with IndiCare work and everyday questions. Care questions use scoped records, citations and review guardrails; general, web and productivity questions do not pretend to use care records.
                 </p>
               </div>
 
