@@ -5,6 +5,10 @@ from typing import Any
 
 logger = logging.getLogger("indicare.db.schema_doctor")
 
+SUPERSEDED_MIGRATIONS = {
+    "999": "superseded_operational_postgres_convergence",
+}
+
 TABLE_FIELDS: dict[str, list[tuple[str, str]]] = {
     "young_people": [
         ("display_name", "TEXT"), ("preferred_name", "TEXT"), ("first_name", "TEXT"), ("last_name", "TEXT"),
@@ -69,10 +73,28 @@ def _q(identifier: str) -> str:
     return '"' + identifier.replace('"', '""') + '"'
 
 
+def _ensure_migration_tracking(cur: Any) -> None:
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS schema_migrations (
+            version TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+        """
+    )
+    for version, name in SUPERSEDED_MIGRATIONS.items():
+        cur.execute(
+            "INSERT INTO schema_migrations (version, name) VALUES (%s, %s) ON CONFLICT (version) DO NOTHING",
+            (version, name),
+        )
+
+
 def run_schema_doctor(conn: Any) -> dict[str, Any]:
     added: list[str] = []
     with conn.cursor() as cur:
         cur.execute("CREATE EXTENSION IF NOT EXISTS pgcrypto")
+        _ensure_migration_tracking(cur)
         for table, fields in TABLE_FIELDS.items():
             cur.execute(f"CREATE TABLE IF NOT EXISTS public.{_q(table)} (id BIGSERIAL PRIMARY KEY)")
             for column, definition in fields:
@@ -172,4 +194,4 @@ def run_schema_doctor(conn: Any) -> dict[str, Any]:
             """
         )
     logger.info("Schema doctor completed field drift repair for %s tables", len(TABLE_FIELDS))
-    return {"tables_checked": len(TABLE_FIELDS), "columns_ensured": len(added)}
+    return {"tables_checked": len(TABLE_FIELDS), "columns_ensured": len(added), "superseded_migrations": sorted(SUPERSEDED_MIGRATIONS)}
