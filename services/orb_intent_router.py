@@ -104,6 +104,17 @@ CURRENT_TERMS = {
     "stock",
     "schedule",
     "timetable",
+    "cinema",
+    "movie",
+    "movies",
+    "film",
+    "films",
+    "showtime",
+    "showtimes",
+    "what's on",
+    "what is on",
+    "events near",
+    "near me",
 }
 
 PRODUCTIVITY_TERMS = {
@@ -115,6 +126,7 @@ PRODUCTIVITY_TERMS = {
     "todo",
     "agenda",
     "summarise this",
+    "summarize this",
     "rewrite",
     "professional",
     "calculate",
@@ -162,7 +174,8 @@ def _role(current_user: dict[str, Any]) -> str:
 def _workspace(context: OrbContext | None) -> str:
     if not context:
         return ""
-    return _norm(context.workspace or context.assistant_context.get("current_workspace_type") or context.route)
+    assistant_context = context.assistant_context if isinstance(context.assistant_context, dict) else {}
+    return _norm(context.workspace or assistant_context.get("current_workspace_type") or context.route)
 
 
 def _contains_any(message: str, terms: set[str]) -> bool:
@@ -298,7 +311,7 @@ def route_orb_intent(
         reason = "The turn asks for a care/report draft and must use citable IndiCare evidence."
     elif asks_current:
         brain = "web_research_brain"
-        reason = "The turn asks for current or live information, so Orb must use configured external tools/search."
+        reason = "The turn asks for current, local or live information, so Orb must use configured external tools/search."
     elif asks_productivity:
         brain = "productivity_brain"
         reason = "The turn asks for writing, planning, summarising or calculation support."
@@ -321,7 +334,7 @@ def route_orb_intent(
         "inspector_brain": ["care_records", "citations", "sccif", "quality_standards", "inspection_challenge"],
         "report_writer_brain": ["care_records", "citations", "report_writer", "pending_draft"],
         "voice_recording_brain": ["care_records", "voice_recording", "pending_draft", "citations"],
-        "web_research_brain": ["web_search", "weather", "sports", "news"],
+        "web_research_brain": ["web_search", "weather", "sports", "news", "local_events", "cinema"],
         "productivity_brain": ["writing", "planning", "summarising", "calculations"],
         "general_assistant_brain": ["general_qna"],
     }
@@ -354,4 +367,3 @@ def route_orb_intent(
 
 def can_use_inspector_brain(current_user: dict[str, Any]) -> bool:
     return _role(current_user) in INSPECTOR_ROLES
-
