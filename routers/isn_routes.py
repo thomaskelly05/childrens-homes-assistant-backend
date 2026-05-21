@@ -9,6 +9,7 @@ from auth.dependencies import get_current_user
 from schemas.isn_contracts import ISNSignalCreateRequest
 from services.isn_relationship_service import isn_relationship_service
 from services.isn_service import isn_service
+from services.isn_uk_transport_service import isn_uk_transport_service
 
 router = APIRouter(prefix="/api/isn", tags=["isn"])
 
@@ -98,3 +99,12 @@ def routes(
     conn: Any = Depends(_db),
 ) -> dict[str, Any]:
     return isn_relationship_service.routes(conn, current_user=current_user, limit=limit)
+
+
+@router.get("/transport/corridors")
+def transport_corridors(
+    limit: int = Query(default=1000, ge=1, le=5000),
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn: Any = Depends(_db),
+) -> dict[str, Any]:
+    return isn_uk_transport_service.corridors(conn, current_user=current_user, limit=limit)
