@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, Query
 
 from auth.dependencies import get_current_user
 from schemas.isn_contracts import ISNSignalCreateRequest
+from services.isn_relationship_service import isn_relationship_service
 from services.isn_service import isn_service
 
 router = APIRouter(prefix="/api/isn", tags=["isn"])
@@ -70,3 +71,30 @@ def alerts(
 ) -> dict[str, Any]:
     response = isn_service.alerts(conn, status=status, limit=limit)
     return response.model_dump(mode="json")
+
+
+@router.get("/graph")
+def graph(
+    limit: int = Query(default=500, ge=1, le=2000),
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn: Any = Depends(_db),
+) -> dict[str, Any]:
+    return isn_relationship_service.graph(conn, current_user=current_user, limit=limit)
+
+
+@router.get("/heatmap")
+def heatmap(
+    limit: int = Query(default=500, ge=1, le=2000),
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn: Any = Depends(_db),
+) -> dict[str, Any]:
+    return isn_relationship_service.heatmap(conn, current_user=current_user, limit=limit)
+
+
+@router.get("/routes")
+def routes(
+    limit: int = Query(default=500, ge=1, le=2000),
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn: Any = Depends(_db),
+) -> dict[str, Any]:
+    return isn_relationship_service.routes(conn, current_user=current_user, limit=limit)
