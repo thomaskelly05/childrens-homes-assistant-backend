@@ -181,63 +181,11 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
             "routers.safeguarding_flowchart_routes",
             "routers.safeguarding_domain_routes",
             "routers.missing_episode_routes",
+            "routers.isn_routes",
         ),
         classification="mixed",
-        notes="Risk, actions, visibility, supervision, manager review and document governance.",
+        notes="Risk, contextual safeguarding, ISN intelligence, missing episodes and governance.",
     ),
-    RouterGroup(
-        "chronology",
-        (
-            "routers.chronology_intelligence_routes",
-            "routers.child_journey_routes",
-            "routers.smart_search_routes",
-            "routers.outcomes_routes",
-            "routers.young_people_profile_routes",
-            "routers.child_experience_intelligence_routes",
-            "routers.young_people_daily_notes_routes",
-            "routers.young_people_incidents_routes",
-            "routers.young_people_health_routes",
-            "routers.young_people_education_routes",
-            "routers.young_people_family_routes",
-            "routers.young_people_keywork_routes",
-            "routers.young_people_plans_routes",
-            "routers.young_people_risk_routes",
-            "routers.young_people_chronology_routes",
-            "routers.young_people_calendar_routes",
-            "routers.young_people_appointments_routes",
-            "routers.young_people_compliance_routes",
-            "routers.young_people_standards_routes",
-            "routers.young_people_handover_routes",
-            "routers.young_people_reports_routes",
-            "routers.young_people_photo_routes",
-            "routers.young_people_statutory_documents_routes",
-            "routers.young_people_missing_episodes_compat_routes",
-            "routers.young_people_documents_compat_routes",
-            "routers.young_people_safeguarding_compat_routes",
-            "routers.young_people_remaining_lifecycle_compat_routes",
-        ),
-        notes="Young person records that feed chronology, reports and evidence retrieval.",
-    ),
-    RouterGroup(
-        "compliance",
-        (
-            "routers.compliance_routes",
-            "routers.workflow_review_routes",
-            "routers.schema_live_routes",
-            "routers.os_workflow_wiring_audit_routes",
-            "backend.os_schema_audit_router",
-            "backend.os_single_source_audit_router",
-            "backend.os_security_convergence_router",
-            "backend.os_live_data_router",
-            "backend.os_live_validation_router",
-        ),
-        notes="Compliance, workflow review, schema-live, security/source-of-truth/schema/workflow audits and OS live data gateways.",
-    ),
-    RouterGroup("auth", (), classification="primary", notes="Registry alias for canonical authentication surfaces."),
-    RouterGroup("assistant", (), classification="legacy_compatibility", notes="Registry alias for legacy assistant surfaces; ORB is canonical."),
-    RouterGroup("academy", (), classification="primary", notes="Registry alias for workforce academy routes."),
-    RouterGroup("reporting", (), classification="primary", notes="Registry alias for report generation routes."),
-    RouterGroup("operational-backend", (), classification="primary", notes="Registry alias used by OS source-of-truth audits."),
 )
 
 ROUTERS: list[str] = [router for group in ROUTER_GROUPS for router in group.routers]
@@ -287,17 +235,6 @@ def _is_missing_router_module(error: Exception, router_path: str) -> bool:
     return missing_name == router_path
 
 
-def _split_route_conflicts(conflicts: list[dict]) -> tuple[list[dict], list[dict]]:
-    intentional: list[dict] = []
-    accidental: list[dict] = []
-    for conflict in conflicts:
-        if conflict.get("classification") == "legacy_compatibility":
-            intentional.append(conflict)
-        else:
-            accidental.append(conflict)
-    return accidental, intentional
-
-
 def include_router(app: FastAPI, router_path: str) -> list[str]:
     module = importlib.import_module(router_path)
     mounted: list[str] = []
@@ -310,67 +247,6 @@ def include_router(app: FastAPI, router_path: str) -> list[str]:
     if not mounted:
         raise AttributeError(f"{router_path} does not expose a FastAPI router")
     return mounted
-
-
-def get_router_registry_summary() -> dict:
-    legacy_routers = [
-        router_path
-        for router_path in ROUTERS
-        if _router_classification(router_path) == "legacy_compatibility"
-    ]
-    accidental_conflicts, intentional_conflicts = _split_route_conflicts([])
-    return {
-        "router_count": len(ROUTERS),
-        "required_router_count": len(REQUIRED_ROUTERS),
-        "legacy_compatibility_router_count": len(legacy_routers),
-        "groups": [
-            {
-                "name": group.name,
-                "classification": group.classification,
-                "router_count": len(group.routers),
-                "notes": group.notes,
-            }
-            for group in ROUTER_GROUPS
-        ],
-        "accidental_conflicts": accidental_conflicts,
-        "intentional_conflicts": intentional_conflicts,
-        "skipped_optional_router_count": len(_LAST_LOAD_REPORT.skipped_optional) if _LAST_LOAD_REPORT else 0,
-    }
-
-
-def get_failed_routers() -> list[dict[str, str]]:
-    if _LAST_LOAD_REPORT is None:
-        return []
-    return [{"router": router, "error": error} for router, error in _LAST_LOAD_REPORT.failed]
-
-
-def get_skipped_optional_routers() -> list[dict[str, str]]:
-    if _LAST_LOAD_REPORT is None:
-        return []
-    return [{"router": router, "reason": reason} for router, reason in _LAST_LOAD_REPORT.skipped_optional]
-
-
-def get_route_conflicts() -> list[dict]:
-    if _LAST_LOAD_REPORT is None:
-        return []
-    conflicts = []
-    for route in _LAST_LOAD_REPORT.duplicate_routes:
-        method, _, path = route.partition(" ")
-        conflicts.append({"method": method, "path": path, "classification": "accidental"})
-    for route in _LAST_LOAD_REPORT.compatibility_shadows:
-        method, _, path = route.partition(" ")
-        conflicts.append({"method": method, "path": path, "classification": "legacy_compatibility"})
-    return conflicts
-
-
-def get_accidental_route_conflicts() -> list[dict]:
-    accidental, _intentional = _split_route_conflicts(get_route_conflicts())
-    return accidental
-
-
-def get_intentional_route_conflicts() -> list[dict]:
-    _accidental, intentional = _split_route_conflicts(get_route_conflicts())
-    return intentional
 
 
 def include_routers(app: FastAPI) -> RouterLoadReport:
@@ -398,13 +274,5 @@ def include_routers(app: FastAPI) -> RouterLoadReport:
             report.failed.append((router_path, str(error)))
             logger.warning("Router %s failed to load: %s", router_path, error)
 
-    logger.info(
-        "Router startup loaded %s routers across %s domains (%s failed, %s optional skipped, %s conflicts)",
-        len(report.loaded),
-        len(ROUTER_GROUPS),
-        len(report.failed),
-        len(report.skipped_optional),
-        len(report.duplicate_routes),
-    )
     _LAST_LOAD_REPORT = report
     return report
