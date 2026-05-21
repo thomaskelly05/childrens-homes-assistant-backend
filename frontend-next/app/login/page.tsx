@@ -17,8 +17,15 @@ function LoginPanel() {
   const [notice, setNotice] = useState<string | null>(searchParams.get('expired') ? 'Your session expired. Please sign in again.' : null)
   const [submitting, setSubmitting] = useState(false)
 
+  function postLoginReturnUrl() {
+    const returnUrl = searchParams.get('returnUrl') || '/command-centre'
+    return returnUrl === '/' || returnUrl === '/home' || returnUrl === '/dashboard' || returnUrl === '/workspace'
+      ? '/command-centre'
+      : returnUrl
+  }
+
   function redirectToMfa(response: Awaited<ReturnType<typeof login>>) {
-    const returnUrl = searchParams.get('returnUrl') || '/home'
+    const returnUrl = postLoginReturnUrl()
     const target = response.mfa_setup_required || response.mfa_enabled === false ? '/mfa-setup' : '/mfa'
     router.replace(`${target}?next=${encodeURIComponent(returnUrl)}`)
   }
@@ -32,8 +39,7 @@ function LoginPanel() {
       const response = await login({ email, password, remember })
 
       if (response.authenticated) {
-        const returnUrl = searchParams.get('returnUrl') || '/home'
-        router.replace(returnUrl)
+        router.replace(postLoginReturnUrl())
         return
       }
 
