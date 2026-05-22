@@ -37,7 +37,7 @@ class LifeEchoEventModel(Base):
     staff_ids = Column(JSON, nullable=False, default=list)
     relationship_ids = Column(JSON, nullable=False, default=list)
     tags = Column(JSON, nullable=False, default=list)
-    metadata = Column(JSON, nullable=False, default=dict)
+    event_metadata = Column("metadata", JSON, nullable=False, default=dict)
 
     occurred_at = Column(DateTime, nullable=False, index=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)

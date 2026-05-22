@@ -11,6 +11,7 @@ type LifeEchoPayload = {
   wellbeing_trajectory?: any
   relationship_map?: any
   trigger_heatmap?: any
+  runtime?: any
   message?: string
 }
 
@@ -27,7 +28,7 @@ export function LifeEchoClient({ childId }: { childId?: string }) {
     async function loadLifeEcho() {
       try {
         setLoading(true)
-        const response = await fetch(`/api/life-echo/experience/${encodeURIComponent(childId)}`, {
+        const response = await fetch(`/api/life-echo/experience/${encodeURIComponent(childId as string)}`, {
           credentials: 'include',
           headers: { Accept: 'application/json' }
         })
