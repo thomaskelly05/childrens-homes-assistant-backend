@@ -61,6 +61,8 @@ export type StandaloneOrbConversationResponse = {
     care_record_access?: boolean
   }
   guardrails?: string[]
+  image_understanding_available?: boolean
+  error_detail?: string
 }
 
 function withTimeout(signal?: AbortSignal): AbortSignal {
@@ -74,6 +76,28 @@ function withTimeout(signal?: AbortSignal): AbortSignal {
   }
   controller.signal.addEventListener('abort', () => clearTimeout(timeout))
   return controller.signal
+}
+
+function isDevEnvironment() {
+  return process.env.NODE_ENV === 'development'
+}
+
+function logStandaloneDebug(event: string, detail: Record<string, unknown>) {
+  if (!isDevEnvironment()) return
+  console.debug('[standalone-orb]', event, detail)
+}
+
+function extractAnswer(payload: unknown): string | null {
+  if (!payload || typeof payload !== 'object') return null
+  const record = payload as Record<string, unknown>
+  const direct = record.answer
+  if (typeof direct === 'string' && direct.trim()) return direct.trim()
+  const nested = record.data
+  if (nested && typeof nested === 'object') {
+    const answer = (nested as Record<string, unknown>).answer
+    if (typeof answer === 'string' && answer.trim()) return answer.trim()
+  }
+  return null
 }
 
 export async function fetchStandaloneOrbConfig(signal?: AbortSignal): Promise<StandaloneOrbConfig> {
@@ -90,27 +114,80 @@ export async function queryStandaloneOrbConversation(
   request: StandaloneOrbConversationRequest,
   signal?: AbortSignal
 ): Promise<StandaloneOrbConversationResponse> {
-  const payload = await authFetch<StandaloneOrbConversationResponse>('/orb/standalone/conversation', {
-    method: 'POST',
-    signal: withTimeout(signal),
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      message: request.message,
-      mode: request.mode,
-      conversation_id: request.conversation_id,
-      history: request.history ?? [],
-      ...(request.detail ? { detail: request.detail } : {}),
-      ...(request.images?.length ? { images: request.images } : {})
+  const endpoint = '/orb/standalone/conversation'
+  const requestSignal = withTimeout(signal)
+
+  try {
+    const payload = await authFetch<StandaloneOrbConversationResponse & { success?: boolean; data?: { answer?: string } }>(
+      endpoint,
+      {
+        method: 'POST',
+        signal: requestSignal,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: request.message,
+          mode: request.mode,
+          conversation_id: request.conversation_id,
+          history: request.history ?? [],
+          ...(request.detail ? { detail: request.detail } : {}),
+          ...(request.images?.length ? { images: request.images } : {})
+        })
+      }
+    )
+
+    const answer = extractAnswer(payload)
+    logStandaloneDebug('conversation_response', {
+      endpoint,
+      hasAnswer: Boolean(answer),
+      keys: payload && typeof payload === 'object' ? Object.keys(payload as object) : []
     })
-  })
-  if (!payload?.answer) throw new AuthApiError(503, 'ORB could not complete that request.')
-  return payload
+
+    if (!answer) {
+      throw new AuthApiError(503, 'ORB could not finish that response. Please try again.')
+    }
+
+    return {
+      ok: Boolean((payload as StandaloneOrbConversationResponse).ok ?? true),
+      answer,
+      summary: (payload as StandaloneOrbConversationResponse).summary,
+      conversation_id: (payload as StandaloneOrbConversationResponse).conversation_id ?? request.conversation_id,
+      confidence: (payload as StandaloneOrbConversationResponse).confidence,
+      context_used: (payload as StandaloneOrbConversationResponse).context_used,
+      guardrails: (payload as StandaloneOrbConversationResponse).guardrails,
+      image_understanding_available: (payload as StandaloneOrbConversationResponse).image_understanding_available,
+      error_detail: (payload as StandaloneOrbConversationResponse).error_detail
+    }
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      logStandaloneDebug('conversation_timeout', { endpoint, timeoutMs: STANDALONE_REQUEST_TIMEOUT_MS })
+      throw new AuthApiError(504, 'ORB could not finish that response. Please try again.')
+    }
+    if (error instanceof AuthApiError) {
+      logStandaloneDebug('conversation_error', { endpoint, status: error.status, type: error.name })
+      throw error
+    }
+    logStandaloneDebug('conversation_error', {
+      endpoint,
+      type: error instanceof Error ? error.name : 'unknown'
+    })
+    throw error
+  }
 }
 
 export const sendStandaloneOrbMessage = queryStandaloneOrbConversation
 
 export function standaloneOrbErrorMessage(error: unknown) {
-  if (error instanceof AuthApiError) return error.message
+  if (error instanceof AuthApiError) {
+    if (error.status === 504) return 'ORB could not finish that response. Please try again.'
+    if (error.status === 503) {
+      return error.message || 'ORB is temporarily unavailable. You can still keep drafting here.'
+    }
+    if (error.status >= 500) return 'ORB is temporarily unavailable. You can still keep drafting here.'
+    return error.message
+  }
+  if (error instanceof Error && error.name === 'AbortError') {
+    return 'ORB could not finish that response. Please try again.'
+  }
   if (error instanceof Error) return error.message
   return 'ORB could not respond just now. Try again in a moment.'
 }

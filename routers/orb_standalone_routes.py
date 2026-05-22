@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+import time
 from typing import Any
 
 from fastapi import APIRouter, Depends
@@ -7,6 +9,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from auth.permissions import require_assistant_access
 from services.orb_general_assistant_service import orb_general_assistant_service
+
+logger = logging.getLogger("indicare.orb_standalone")
 
 router = APIRouter(prefix="/orb/standalone", tags=["ORB Standalone Assistant"])
 
@@ -181,6 +185,41 @@ async def standalone_orb_config(current_user=Depends(require_assistant_access)):
     }
 
 
+def _standalone_conversation_response(
+    *,
+    answer: str,
+    mode: str,
+    conversation_id: str | None,
+    tools_used: list[str] | None = None,
+    confidence: str = "medium",
+    image_understanding_available: bool | None = None,
+    error_detail: str | None = None,
+) -> dict[str, Any]:
+    return {
+        "ok": True,
+        "success": True,
+        "answer": answer,
+        "summary": answer.split("\n", 1)[0][:220],
+        "sources": [],
+        "actions": [],
+        "confidence": confidence,
+        "conversation_id": conversation_id,
+        "image_understanding_available": image_understanding_available,
+        "error_detail": error_detail,
+        "context_used": {
+            "surface": "standalone_orb_ai",
+            "mode": mode,
+            "care_record_access": False,
+            "os_linked": False,
+            "tools_used": tools_used or ["standalone_orb_general_assistant"],
+        },
+        "guardrails": [
+            "Standalone ORB did not retrieve IndiCare OS records.",
+            "Use professional judgement and follow safeguarding procedures where risk is present.",
+        ],
+    }
+
+
 @router.post("/conversation")
 async def standalone_orb_conversation(
     payload: OrbStandaloneConversationRequest,
@@ -190,32 +229,65 @@ async def standalone_orb_conversation(
     detail = _resolve_detail(mode, payload.detail)
     framed_message = _build_framed_message(mode=mode, user_message=payload.message, detail=detail)
     history = payload.history[-20:] if payload.history else []
-    image_urls = [item.data_url for item in (payload.images or []) if str(item.data_url or "").startswith("data:image/")]
-    assistant_data = await orb_general_assistant_service.answer(
-        framed_message,
-        history=history,
-        detail=detail,
-        image_data_urls=image_urls[:4],
-    )
-    answer = str(assistant_data.get("answer") or "I can help with that, but I could not form a response just now.")
-    return {
-        "ok": True,
-        "success": True,
-        "answer": answer,
-        "summary": answer.split("\n", 1)[0][:220],
-        "sources": [],
-        "actions": [],
-        "confidence": "medium",
-        "conversation_id": payload.conversation_id,
-        "context_used": {
-            "surface": "standalone_orb_ai",
-            "mode": mode,
-            "care_record_access": False,
-            "os_linked": False,
-            "tools_used": assistant_data.get("tools_used") or ["standalone_orb_general_assistant"],
-        },
-        "guardrails": [
-            "Standalone ORB did not retrieve IndiCare OS records.",
-            "Use professional judgement and follow safeguarding procedures where risk is present.",
-        ],
-    }
+    image_urls = [
+        item.data_url
+        for item in (payload.images or [])
+        if str(item.data_url or "").startswith("data:image/")
+    ]
+
+    started = time.perf_counter()
+    try:
+        assistant_data = await orb_general_assistant_service.answer(
+            framed_message,
+            history=history,
+            detail=detail,
+            image_data_urls=image_urls[:4],
+        )
+        elapsed_ms = int((time.perf_counter() - started) * 1000)
+        logger.info(
+            "standalone_orb_conversation ok mode=%s detail=%s images=%s elapsed_ms=%s",
+            mode,
+            detail,
+            len(image_urls),
+            elapsed_ms,
+        )
+        answer = str(
+            assistant_data.get("answer") or "I can help with that, but I could not form a response just now."
+        )
+        return _standalone_conversation_response(
+            answer=answer,
+            mode=mode,
+            conversation_id=payload.conversation_id,
+            tools_used=assistant_data.get("tools_used"),
+            confidence=str(assistant_data.get("confidence") or "medium"),
+            image_understanding_available=assistant_data.get("image_understanding_available"),
+            error_detail=assistant_data.get("error_detail"),
+        )
+    except Exception as exc:
+        elapsed_ms = int((time.perf_counter() - started) * 1000)
+        logger.warning(
+            "standalone_orb_conversation failed mode=%s detail=%s images=%s elapsed_ms=%s error_type=%s",
+            mode,
+            detail,
+            len(image_urls),
+            elapsed_ms,
+            type(exc).__name__,
+        )
+        if image_urls:
+            fallback = (
+                "I can see you attached an image, but image understanding is not available right now. "
+                "I can still help with your text — try describing what you need."
+            )
+        else:
+            fallback = (
+                "ORB is temporarily unavailable. You can still keep drafting here, then try again in a moment."
+            )
+        return _standalone_conversation_response(
+            answer=fallback,
+            mode=mode,
+            conversation_id=payload.conversation_id,
+            tools_used=["standalone_orb_general_assistant"],
+            confidence="low",
+            image_understanding_available=False if image_urls else None,
+            error_detail="provider_unavailable",
+        )

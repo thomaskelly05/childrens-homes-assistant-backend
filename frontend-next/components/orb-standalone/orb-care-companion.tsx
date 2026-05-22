@@ -141,8 +141,18 @@ function voiceStatusLine(options: {
   pending: boolean
 }): string {
   const { voice, pending } = options
-  if (voice.error && voice.wakeStatus === 'unsupported') {
+  if (voice.speechPlaybackError) return voice.speechPlaybackError
+  if (!voice.speechInputAvailable && !voice.speechOutputAvailable) {
     return 'Voice is unavailable in this browser. You can still type.'
+  }
+  if (!voice.speechInputAvailable && voice.speechOutputAvailable) {
+    return 'Voice replies may work. Microphone dictation may require Chrome or Edge.'
+  }
+  if (!voice.speechOutputAvailable && voice.speechInputAvailable) {
+    return 'Microphone input is available. Voice replies are not supported here.'
+  }
+  if (voice.error && voice.wakeStatus === 'unsupported') {
+    return voice.error
   }
   if (voice.voiceSessionPaused) return 'Voice session paused. Tap Continue conversation or type.'
   if (voice.phase === 'wake_listening') return `Say "${voice.wakePhraseText}"…`
@@ -232,6 +242,8 @@ export function OrbCareCompanion() {
   const [input, setInput] = useState(initialQuery)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [retryPayload, setRetryPayload] = useState<{ text: string; chatId: string } | null>(null)
+  const [imageUnderstandingNote, setImageUnderstandingNote] = useState<string | null>(null)
   const [attachments, setAttachments] = useState<PendingImageAttachment[]>([])
   const [voicePanelOpen, setVoicePanelOpen] = useState(false)
   const [orbDockExpanded, setOrbDockExpanded] = useState(false)
@@ -249,6 +261,8 @@ export function OrbCareCompanion() {
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
   const autoSendTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const hydratedRef = useRef(false)
+  const sendInFlightRef = useRef(false)
+  const submitGuardRef = useRef(false)
 
   const voice = useStandaloneOrbVoice()
   const { settings: voiceSettings, updateSettings: updateVoiceSettings } = voice
@@ -345,11 +359,12 @@ export function OrbCareCompanion() {
   })
 
   const sendMessage = useCallback(
-    async (text: string) => {
+    async (text: string, options?: { retry?: boolean; chatId?: string }) => {
       const trimmed = text.trim()
       const hasImages = attachments.length > 0
-      if ((!trimmed && !hasImages) || pending) return
+      if ((!trimmed && !hasImages) || pending || sendInFlightRef.current) return
 
+      sendInFlightRef.current = true
       if (voice.speaking) voice.cancelSpeaking()
 
       const imagePayload = attachments.map((a) => ({ data_url: a.dataUrl, name: a.name }))
@@ -367,39 +382,55 @@ export function OrbCareCompanion() {
       voice.markIdle()
       setPending(true)
       setError(null)
+      setRetryPayload(null)
+      setImageUnderstandingNote(null)
 
-      let chatSnapshot: StandaloneChat | null = null
-      let historyForRequest: Array<{ role: string; content: string }> = []
-      let sessionConversationId = conversationId
+      const userMessage: StandaloneChatMessage = {
+        id: `u-${Date.now()}`,
+        role: 'user',
+        content: trimmed || '[Image attachment]',
+        imageDataUrls: imagePayload.map((i) => i.data_url),
+        createdAt: Date.now()
+      }
 
-      setWorkspace((current) => {
-        let chat = current.activeChatId ? current.chats.find((c) => c.id === current.activeChatId) ?? null : null
-        if (!chat) {
-          chat = createStandaloneChat(current.activeProjectId, mode)
-          current = {
-            ...current,
-            activeChatId: chat.id,
-            chats: [chat, ...current.chats]
-          }
+      let targetChatId = options?.chatId || workspace.activeChatId
+      let targetChat = targetChatId ? workspace.chats.find((c) => c.id === targetChatId) ?? null : null
+
+      const priorMessages = options?.retry
+        ? targetChat?.messages ?? []
+        : [...(targetChat?.messages ?? []), userMessage]
+      const nextTitle = !targetChat || targetChat.title === 'New conversation'
+        ? titleFromFirstMessage(trimmed || 'Image conversation')
+        : targetChat.title
+
+      if (!targetChat) {
+        const created = createStandaloneChat(workspace.activeProjectId, mode)
+        targetChatId = created.id
+        targetChat = {
+          ...created,
+          messages: options?.retry ? created.messages : priorMessages,
+          title: nextTitle,
+          mode,
+          updatedAt: Date.now()
         }
-        const userMessage: StandaloneChatMessage = {
-          id: `u-${Date.now()}`,
-          role: 'user',
-          content: trimmed || '[Image attachment]',
-          imageDataUrls: imagePayload.map((i) => i.data_url),
-          createdAt: Date.now()
-        }
-        const nextMessages = [...chat.messages, userMessage]
-        historyForRequest = trimConversationHistory(nextMessages)
-        sessionConversationId = chat.conversationId
-        const title =
-          chat.title === 'New conversation' ? titleFromFirstMessage(trimmed || 'Image conversation') : chat.title
-        chatSnapshot = { ...chat, messages: nextMessages, title, mode, updatedAt: Date.now() }
-        return patchActiveChat(current, chat.id, { messages: nextMessages, title, mode })
-      })
+        setWorkspace((current) => ({
+          ...current,
+          activeChatId: created.id,
+          chats: [targetChat!, ...current.chats]
+        }))
+      } else if (!options?.retry) {
+        targetChat = { ...targetChat, messages: priorMessages, title: nextTitle, mode, updatedAt: Date.now() }
+        setWorkspace((current) =>
+          patchActiveChat(current, targetChatId!, {
+            messages: priorMessages,
+            title: nextTitle,
+            mode
+          })
+        )
+      }
 
-      if (!chatSnapshot) return
-
+      const historyForRequest = trimConversationHistory(priorMessages)
+      const sessionConversationId = targetChat.conversationId
       const styleLabel = ANSWER_STYLE_LABELS[voiceSettings.answerStyle]
       const framedMessage =
         voiceSettings.answerStyle !== 'balanced' ? `${messageBody}\n\nAnswer style: ${styleLabel}.` : messageBody
@@ -416,9 +447,14 @@ export function OrbCareCompanion() {
 
         const newConversationId = response.conversation_id || sessionConversationId
         const answer = response.answer || 'I could not form a response just now.'
+        if (response.image_understanding_available === false) {
+          setImageUnderstandingNote(
+            'Image understanding is not available in this environment. ORB answered using your text only.'
+          )
+        }
         const assistantId = `a-${Date.now()}`
         setWorkspace((current) => {
-          const chat = current.chats.find((c) => c.id === chatSnapshot?.id)
+          const chat = current.chats.find((c) => c.id === targetChatId)
           if (!chat) return current
           const withAssistant: StandaloneChatMessage[] = [
             ...chat.messages,
@@ -435,12 +471,38 @@ export function OrbCareCompanion() {
           voice.speak(answer, () => setSpeakingMessageId(null))
         }
       } catch (caught) {
-        setError(standaloneOrbErrorMessage(caught))
+        const message = standaloneOrbErrorMessage(caught)
+        setError(message)
+        setRetryPayload({ text: trimmed || messageBody, chatId: targetChatId! })
       } finally {
         setPending(false)
+        sendInFlightRef.current = false
       }
     },
-    [attachments, attachedProfiles, conversationId, mode, pending, voice, voiceSettings.answerStyle, voiceSettings.voiceReplies]
+    [
+      attachments,
+      attachedProfiles,
+      mode,
+      pending,
+      voice,
+      voiceSettings.answerStyle,
+      voiceSettings.voiceReplies,
+      workspace.activeChatId,
+      workspace.activeProjectId,
+      workspace.chats
+    ]
+  )
+
+  const handleComposerSubmit = useCallback(
+    (event?: { preventDefault?: () => void }) => {
+      event?.preventDefault?.()
+      if (submitGuardRef.current || pending || sendInFlightRef.current) return
+      submitGuardRef.current = true
+      void sendMessage(input).finally(() => {
+        submitGuardRef.current = false
+      })
+    },
+    [input, pending, sendMessage]
   )
 
   useEffect(() => {
@@ -605,7 +667,7 @@ export function OrbCareCompanion() {
       displayTranscript={voice.displayTranscript}
       autoSend={voiceSettings.autoSend}
       onInputChange={setInput}
-      onSubmit={() => void sendMessage(input)}
+      onSubmit={handleComposerSubmit}
       onMicClick={handleOrbActivate}
       onCancelListening={voice.cancelListening}
       onStopSpeaking={voice.cancelSpeaking}
@@ -689,6 +751,13 @@ export function OrbCareCompanion() {
               No OS records accessed
             </span>
             <div className="flex shrink-0 gap-0.5">
+              <button
+                type="button"
+                onClick={() => setProfilePickerOpen((o) => !o)}
+                className="hidden rounded-lg px-2 py-1.5 text-xs font-medium text-slate-500 hover:bg-white/[0.06] hover:text-slate-300 sm:inline-flex"
+              >
+                Profiles
+              </button>
               <button type="button" onClick={() => void exportConversation()} disabled={messages.length === 0} className="hidden rounded-lg p-2 text-slate-500 hover:bg-white/[0.06] hover:text-slate-300 disabled:opacity-40 sm:inline-flex" aria-label="Copy chat">
                 <Copy className="h-4 w-4" />
               </button>
@@ -741,13 +810,7 @@ export function OrbCareCompanion() {
                 Attach profile
               </button>
             </div>
-          ) : (
-            <div className="mx-3 mt-2 md:mx-5">
-              <button type="button" onClick={() => setProfilePickerOpen((o) => !o)} className="text-xs font-bold text-slate-500 hover:text-slate-300">
-                Attach standalone profile to this chat
-              </button>
-            </div>
-          )}
+          ) : null}
 
           {profilePickerOpen ? (
             <div className="mx-3 mt-2 rounded-2xl border border-white/10 bg-white/[0.03] p-3 md:mx-5">
@@ -836,6 +899,11 @@ export function OrbCareCompanion() {
                   </div>
                 ) : (
                   <div className="space-y-8 pb-4">
+                    {imageUnderstandingNote ? (
+                      <p className="rounded-xl border border-slate-500/30 bg-slate-500/10 px-4 py-2 text-xs text-slate-300" role="status">
+                        {imageUnderstandingNote}
+                      </p>
+                    ) : null}
                     {messages.map((entry, index) => (
                       <div key={entry.id}>
                         {entry.role === 'assistant' ? (
@@ -869,19 +937,28 @@ export function OrbCareCompanion() {
                         )}
                       </div>
                     ))}
+                    {pending ? (
+                      <p className="text-sm text-slate-400" role="status">
+                        Thinking that through…
+                      </p>
+                    ) : null}
+                    {error ? (
+                      <div className="rounded-xl border border-amber-300/25 bg-amber-400/10 px-4 py-3 text-sm text-amber-50" role="alert">
+                        <p>{error}</p>
+                        {retryPayload ? (
+                          <button
+                            type="button"
+                            onClick={() => void sendMessage(retryPayload.text, { retry: true, chatId: retryPayload.chatId })}
+                            disabled={pending}
+                            className="mt-3 inline-flex h-9 items-center rounded-full border border-amber-200/40 px-4 text-xs font-semibold text-amber-50 hover:bg-amber-400/15 disabled:opacity-40"
+                          >
+                            Retry
+                          </button>
+                        ) : null}
+                      </div>
+                    ) : null}
                   </div>
                 )}
-
-                {pending ? (
-                  <p className="mt-6 text-sm text-slate-400" role="status">
-                    Thinking that through…
-                  </p>
-                ) : null}
-                {error ? (
-                  <p className="mt-4 rounded-xl border border-amber-300/25 bg-amber-400/10 px-4 py-3 text-sm text-amber-50" role="alert">
-                    {error}
-                  </p>
-                ) : null}
                 <div ref={messagesEndRef} />
               </div>
             </div>
@@ -1288,13 +1365,40 @@ function VoiceSettingsPanel({
         </select>
       </div>
 
-      <p className="mt-4 text-xs leading-5 text-slate-400">Preferred voice: British female</p>
-      <p className="mt-1 text-xs leading-5 text-slate-300">Actual voice: {voice.preferredVoiceName || 'browser default'}</p>
-      {!voice.preferredVoiceIsBritishFemale && voice.preferredVoiceName ? (
+      <div className="mt-4 space-y-1 rounded-xl border border-white/10 bg-white/[0.02] p-3 text-xs">
+        <p className="font-semibold text-slate-400">Browser voice support</p>
+        <p className="text-slate-300">
+          Voice replies: {voice.speechOutputAvailable ? 'available' : 'unavailable'}
+        </p>
+        <p className="text-slate-300">
+          Microphone input: {voice.speechInputAvailable ? 'available' : 'unavailable'}
+        </p>
+        <p className="text-slate-300">Wake phrase: {voice.wakePhraseAvailable ? 'available' : 'unavailable'}</p>
+        <p className="text-slate-300">
+          Continuous conversation: {voice.continuousConversationAvailable}
+        </p>
+        {!voice.speechInputAvailable && voice.speechOutputAvailable ? (
+          <p className="text-amber-200/90">
+            Voice replies may work. Microphone dictation may require Chrome or Edge.
+          </p>
+        ) : null}
+      </div>
+
+      <p className="mt-4 text-xs leading-5 text-slate-400">Actual voice: {voice.preferredVoiceName || 'browser default'}</p>
+      {!voice.preferredVoiceIsBritishFemale ? (
         <p className="mt-1 text-xs text-amber-200/90">
-          Your browser may not expose a British female voice. Pick one manually above if available.
+          Your browser did not provide a British female voice. Choose another voice in settings or install additional system
+          voices.
         </p>
       ) : null}
+      <button
+        type="button"
+        disabled={!voice.synthesisAvailable}
+        onClick={() => voice.testSelectedVoice()}
+        className="mt-3 inline-flex h-9 items-center rounded-full border border-white/15 px-4 text-xs font-semibold text-slate-200 hover:bg-white/[0.06] disabled:opacity-40"
+      >
+        Test voice
+      </button>
       <p className="mt-2 text-xs text-slate-500">Long replies use chunked speech for Safari and Chrome reliability.</p>
       <p className="mt-3 text-[10px] uppercase tracking-[0.1em] text-slate-500">
         GET /orb/standalone/config · POST /orb/standalone/conversation

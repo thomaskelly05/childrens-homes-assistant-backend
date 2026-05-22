@@ -54,7 +54,7 @@ export function OrbStandaloneComposer({
   displayTranscript: string
   autoSend: boolean
   onInputChange: (value: string) => void
-  onSubmit: (event?: FormEvent) => void
+  onSubmit: (event?: FormEvent | { preventDefault?: () => void }) => void
   onMicClick: () => void
   onCancelListening: () => void
   onStopSpeaking: () => void
@@ -172,7 +172,7 @@ export function OrbStandaloneComposer({
                 onKeyDown={(event) => {
                   if (event.key === 'Enter' && !event.shiftKey) {
                     event.preventDefault()
-                    onSubmit()
+                    onSubmit(event)
                   }
                 }}
                 rows={1}
