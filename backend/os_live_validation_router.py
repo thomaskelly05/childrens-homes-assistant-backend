@@ -32,6 +32,29 @@ CORE_VIEWS = [
     "vw_os_chronology_pullthrough",
 ]
 
+PERFORMANCE_INDEXES = [
+    "idx_young_people_home_status",
+    "idx_young_people_provider_home",
+    "idx_os_chronology_young_person_event_at",
+    "idx_os_chronology_home_event_at",
+    "idx_os_chronology_source_lookup",
+    "idx_evidence_links_young_person",
+    "idx_evidence_links_source_lookup",
+    "idx_os_evidence_links_young_person",
+    "idx_os_evidence_links_source_lookup",
+    "idx_daily_notes_young_person_recent",
+    "idx_daily_notes_home_recent",
+    "idx_incidents_young_person_recent",
+    "idx_incidents_home_recent",
+    "idx_missing_episodes_young_person_recent",
+    "idx_missing_episodes_home_recent",
+    "idx_education_records_young_person_recent",
+    "idx_health_records_young_person_recent",
+    "idx_family_contact_records_young_person_recent",
+    "idx_keywork_sessions_young_person_recent",
+    "idx_operational_projection_subject",
+]
+
 REQUIRED_COLUMNS = {
     "young_people": ["id", "first_name", "last_name", "display_name", "age", "home_id", "provider_id"],
     "daily_notes": ["id", "young_person_id", "note_date", "mood", "presentation", "young_person_voice", "workflow_status"],
@@ -42,41 +65,13 @@ REQUIRED_COLUMNS = {
 }
 
 PROOF_WORKFLOWS = {
-    "daily_note": {
-        "table": "daily_notes",
-        "date_columns": ["note_date", "created_at", "updated_at"],
-        "summary_columns": ["presentation", "mood", "activities", "young_person_voice", "actions_required"],
-    },
-    "incident": {
-        "table": "incidents",
-        "date_columns": ["incident_datetime", "created_at", "updated_at"],
-        "summary_columns": ["incident_type", "description", "presentation", "child_voice", "actions_taken"],
-    },
-    "missing_episode": {
-        "table": "missing_episodes",
-        "date_columns": ["start_datetime", "reported_datetime", "return_datetime", "created_at"],
-        "summary_columns": ["police_reference", "trigger_factors", "push_pull_factors", "child_voice", "outcome"],
-    },
-    "education": {
-        "table": "education_records",
-        "date_columns": ["record_date", "created_at", "updated_at"],
-        "summary_columns": ["attendance_status", "provision_name", "learning_engagement", "child_voice", "support_action"],
-    },
-    "health": {
-        "table": "health_records",
-        "date_columns": ["event_datetime", "created_at", "updated_at"],
-        "summary_columns": ["record_type", "title", "summary", "child_voice", "outcome"],
-    },
-    "family_contact": {
-        "table": "family_contact_records",
-        "date_columns": ["contact_datetime", "created_at", "updated_at"],
-        "summary_columns": ["contact_type", "contact_person", "post_contact_presentation", "child_voice"],
-    },
-    "keywork": {
-        "table": "keywork_sessions",
-        "date_columns": ["session_date", "created_at", "updated_at"],
-        "summary_columns": ["topic", "purpose", "summary", "child_voice", "reflective_analysis"],
-    },
+    "daily_note": {"table": "daily_notes", "date_columns": ["note_date", "created_at", "updated_at"], "summary_columns": ["presentation", "mood", "activities", "young_person_voice", "actions_required"]},
+    "incident": {"table": "incidents", "date_columns": ["incident_datetime", "created_at", "updated_at"], "summary_columns": ["incident_type", "description", "presentation", "child_voice", "actions_taken"]},
+    "missing_episode": {"table": "missing_episodes", "date_columns": ["start_datetime", "reported_datetime", "return_datetime", "created_at"], "summary_columns": ["police_reference", "trigger_factors", "push_pull_factors", "child_voice", "outcome"]},
+    "education": {"table": "education_records", "date_columns": ["record_date", "created_at", "updated_at"], "summary_columns": ["attendance_status", "provision_name", "learning_engagement", "child_voice", "support_action"]},
+    "health": {"table": "health_records", "date_columns": ["event_datetime", "created_at", "updated_at"], "summary_columns": ["record_type", "title", "summary", "child_voice", "outcome"]},
+    "family_contact": {"table": "family_contact_records", "date_columns": ["contact_datetime", "created_at", "updated_at"], "summary_columns": ["contact_type", "contact_person", "post_contact_presentation", "child_voice"]},
+    "keywork": {"table": "keywork_sessions", "date_columns": ["session_date", "created_at", "updated_at"], "summary_columns": ["topic", "purpose", "summary", "child_voice", "reflective_analysis"]},
 }
 
 
@@ -97,6 +92,11 @@ def _view_exists(cur: Any, name: str) -> bool:
 def _columns(cur: Any, table: str) -> set[str]:
     cur.execute("SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name=%s", (table,))
     return {str(row[0]) for row in cur.fetchall() or []}
+
+
+def _index_exists(cur: Any, index_name: str) -> bool:
+    cur.execute("SELECT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = 'public' AND indexname = %s)", (index_name,))
+    return bool(cur.fetchone()[0])
 
 
 def _count(cur: Any, table: str) -> int | None:
@@ -153,22 +153,12 @@ def _build_live_validation(current_user: dict[str, Any], conn: Any) -> dict[str,
     return {
         "ok": len(critical_failures) == 0,
         "status": "ready" if len(critical_failures) == 0 else "needs_attention",
-        "current_user": {
-            "id": current_user.get("id") or current_user.get("user_id"),
-            "role": current_user.get("role"),
-            "home_id": current_user.get("home_id"),
-            "provider_id": current_user.get("provider_id"),
-        },
+        "current_user": {"id": current_user.get("id") or current_user.get("user_id"), "role": current_user.get("role"), "home_id": current_user.get("home_id"), "provider_id": current_user.get("provider_id")},
         "protected_route_status": protected_route_status,
         "tables": table_report,
         "views": view_report,
         "critical_failures": critical_failures,
-        "next_checks": [
-            "Create or open a young person record.",
-            "Create a daily note and confirm os_chronology_events count increases.",
-            "Confirm evidence_links contains the saved record.",
-            "Ask ORB a care-scoped question and confirm care_retrieval=true.",
-        ],
+        "next_checks": ["Create or open a young person record.", "Create a daily note and confirm os_chronology_events count increases.", "Confirm evidence_links contains the saved record.", "Ask ORB a care-scoped question and confirm care_retrieval=true."],
     }
 
 
@@ -197,10 +187,7 @@ def _link_count(cur: Any, table: str, record_id: Any, link_table: str) -> int | 
     cols = _columns(cur, link_table)
     if not {"source_table", "source_id"}.issubset(cols):
         return None
-    cur.execute(
-        f"SELECT COUNT(*) FROM public.{_q(link_table)} WHERE source_table = %s AND source_id = %s",
-        (table, str(record_id)),
-    )
+    cur.execute(f"SELECT COUNT(*) FROM public.{_q(link_table)} WHERE source_table = %s AND source_id = %s", (table, str(record_id)))
     row = cur.fetchone()
     return int(row[0]) if row else 0
 
@@ -214,10 +201,7 @@ def _workflow_count(cur: Any, table: str, record_id: Any) -> int | None:
         return None
     cols = _columns(cur, "record_workflow_events")
     if "source_table" in cols and "source_id" in cols:
-        cur.execute(
-            "SELECT COUNT(*) FROM public.record_workflow_events WHERE source_table = %s AND source_id = %s",
-            (table, str(record_id)),
-        )
+        cur.execute("SELECT COUNT(*) FROM public.record_workflow_events WHERE source_table = %s AND source_id = %s", (table, str(record_id)))
     elif "record_id" in cols:
         cur.execute("SELECT COUNT(*) FROM public.record_workflow_events WHERE record_id = %s", (str(record_id),))
     else:
@@ -246,39 +230,30 @@ def _build_workflow_proof(current_user: dict[str, Any], conn: Any, young_person_
             cols = set(record.keys())
             summary_fields_present = [column for column in config["summary_columns"] if column in cols and record.get(column) not in (None, "")]
             status = "ready" if (chronology_links or 0) > 0 and ((evidence_links or 0) > 0 or (os_evidence_links or 0) > 0) else "needs_linking"
-            proofs.append(
-                {
-                    "workflow": workflow,
-                    "table": table,
-                    "record_id": str(record_id),
-                    "young_person_id": record.get("young_person_id"),
-                    "status": status,
-                    "ready": status == "ready",
-                    "chronology_links": chronology_links,
-                    "evidence_links": evidence_links,
-                    "os_evidence_links": os_evidence_links,
-                    "workflow_events": workflow_events,
-                    "therapeutic_fields_present": summary_fields_present,
-                    "workflow_status": record.get("workflow_status") or record.get("status"),
-                }
-            )
+            proofs.append({"workflow": workflow, "table": table, "record_id": str(record_id), "young_person_id": record.get("young_person_id"), "status": status, "ready": status == "ready", "chronology_links": chronology_links, "evidence_links": evidence_links, "os_evidence_links": os_evidence_links, "workflow_events": workflow_events, "therapeutic_fields_present": summary_fields_present, "workflow_status": record.get("workflow_status") or record.get("status")})
     ready_count = sum(1 for item in proofs if item.get("ready"))
     return {
         "ok": ready_count == len([item for item in proofs if item.get("status") != "missing_table"]),
         "status": "ready" if ready_count and all(item.get("ready") or item.get("status") in {"missing_table", "no_records_yet"} for item in proofs) else "needs_attention",
-        "current_user": {
-            "id": current_user.get("id") or current_user.get("user_id"),
-            "role": current_user.get("role"),
-            "home_id": current_user.get("home_id"),
-            "provider_id": current_user.get("provider_id"),
-        },
+        "current_user": {"id": current_user.get("id") or current_user.get("user_id"), "role": current_user.get("role"), "home_id": current_user.get("home_id"), "provider_id": current_user.get("provider_id")},
         "young_person_id": young_person_id,
         "proofs": proofs,
-        "next_actions": [
-            "If a workflow shows no_records_yet, create one real record through the UI.",
-            "If a workflow shows needs_linking, run or fix the pull-through process for chronology/evidence.",
-            "If chronology_links and evidence_links are present, ORB and reports have a usable evidence trail.",
-        ],
+        "next_actions": ["If a workflow shows no_records_yet, create one real record through the UI.", "If a workflow shows needs_linking, run or fix the pull-through process for chronology/evidence.", "If chronology_links and evidence_links are present, ORB and reports have a usable evidence trail."],
+    }
+
+
+def _build_performance_validation(current_user: dict[str, Any], conn: Any) -> dict[str, Any]:
+    with conn.cursor() as cur:
+        index_report = [{"index": index_name, "exists": _index_exists(cur, index_name)} for index_name in PERFORMANCE_INDEXES]
+    missing = [item["index"] for item in index_report if not item["exists"]]
+    return {
+        "ok": not missing,
+        "status": "ready" if not missing else "needs_attention",
+        "current_user": {"id": current_user.get("id") or current_user.get("user_id"), "role": current_user.get("role"), "home_id": current_user.get("home_id"), "provider_id": current_user.get("provider_id")},
+        "indexes": index_report,
+        "missing_indexes": missing,
+        "migration": "1001_operational_performance_indexes.sql",
+        "next_checks": ["Open /young-people/[id] and confirm response time improves.", "Open /command-centre and confirm Care Hub widgets load without long waits.", "Run /api/os-command/care-hub and /api/os-command/operational-feed while authenticated."],
     }
 
 
@@ -293,33 +268,26 @@ def live_os_validation_command_alias(current_user=Depends(get_current_user), con
 
 
 @router.get("/workflow-proof")
-def workflow_proof(
-    young_person_id: int | None = Query(default=None),
-    current_user=Depends(get_current_user),
-    conn=Depends(get_db),
-) -> dict[str, Any]:
+def workflow_proof(young_person_id: int | None = Query(default=None), current_user=Depends(get_current_user), conn=Depends(get_db)) -> dict[str, Any]:
     return _build_workflow_proof(current_user=current_user, conn=conn, young_person_id=young_person_id)
 
 
 @compat_router.get("/workflow-proof")
-def workflow_proof_command_alias(
-    young_person_id: int | None = Query(default=None),
-    current_user=Depends(get_current_user),
-    conn=Depends(get_db),
-) -> dict[str, Any]:
+def workflow_proof_command_alias(young_person_id: int | None = Query(default=None), current_user=Depends(get_current_user), conn=Depends(get_db)) -> dict[str, Any]:
     return _build_workflow_proof(current_user=current_user, conn=conn, young_person_id=young_person_id)
 
 
-CARE_HUB_ENDPOINTS = (
-    "/os/care-hub",
-    "/os/care-hub/live",
-    "/os/care-hub/alerts",
-    "/os/care-hub/inspection",
-    "/os/care-hub/workforce",
-    "/os/care-hub/safeguarding",
-    "/os/care-hub/safeguarding-queues",
-    "/os/care-hub/provider",
-)
+@router.get("/performance")
+def performance_validation(current_user=Depends(get_current_user), conn=Depends(get_db)) -> dict[str, Any]:
+    return _build_performance_validation(current_user=current_user, conn=conn)
+
+
+@compat_router.get("/performance-validation")
+def performance_validation_command_alias(current_user=Depends(get_current_user), conn=Depends(get_db)) -> dict[str, Any]:
+    return _build_performance_validation(current_user=current_user, conn=conn)
+
+
+CARE_HUB_ENDPOINTS = ("/os/care-hub", "/os/care-hub/live", "/os/care-hub/alerts", "/os/care-hub/inspection", "/os/care-hub/workforce", "/os/care-hub/safeguarding", "/os/care-hub/safeguarding-queues", "/os/care-hub/provider")
 
 
 def _build_care_hub_validation(current_user: dict[str, Any], conn: Any) -> dict[str, Any]:
@@ -333,33 +301,19 @@ def _build_care_hub_validation(current_user: dict[str, Any], conn: Any) -> dict[
             from services.care_hub_intelligence_service import care_hub_intelligence_service
 
             payload = care_hub_intelligence_service.build(conn, limit=5, use_cache=False)
-            probe = {
-                "attempted": True,
-                "ok": bool(payload.get("ok")),
-                "event_count": (payload.get("operational_feed") or {}).get("event_count"),
-                "alert_total": (payload.get("alerts") or {}).get("total"),
-            }
+            probe = {"attempted": True, "ok": bool(payload.get("ok")), "event_count": (payload.get("operational_feed") or {}).get("event_count"), "alert_total": (payload.get("alerts") or {}).get("total")}
         except Exception as error:
             probe = {"attempted": True, "ok": False, "detail": str(error)}
 
     return {
         "ok": not missing_paths and probe.get("ok", False),
         "status": "ready" if not missing_paths and probe.get("ok") else "needs_attention",
-        "current_user": {
-            "id": current_user.get("id") or current_user.get("user_id"),
-            "role": current_user.get("role"),
-            "home_id": current_user.get("home_id"),
-            "provider_id": current_user.get("provider_id"),
-        },
+        "current_user": {"id": current_user.get("id") or current_user.get("user_id"), "role": current_user.get("role"), "home_id": current_user.get("home_id"), "provider_id": current_user.get("provider_id")},
         "protected_route_status": "authenticated" if current_user else "unknown",
         "expected_paths": list(CARE_HUB_ENDPOINTS),
         "missing_paths": missing_paths,
         "service_probe": probe,
-        "next_checks": [
-            "Open /command-centre and confirm Care Hub widgets render from /os/care-hub.",
-            "Save a daily note and confirm care_hub_live cache invalidation fires.",
-            "Review split safeguarding queues for missing, Reg 40, restraint, allegation and medication risk.",
-        ],
+        "next_checks": ["Open /command-centre and confirm Care Hub widgets render from /os/care-hub.", "Save a daily note and confirm care_hub_live cache invalidation fires.", "Review split safeguarding queues for missing, Reg 40, restraint, allegation and medication risk."],
     }
 
 
