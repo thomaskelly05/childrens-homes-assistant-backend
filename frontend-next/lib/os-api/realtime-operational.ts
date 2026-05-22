@@ -16,8 +16,24 @@ export type OperationalStreamSnapshot = {
   generated_at?: string
 }
 
+function normaliseWsOrigin(origin: string) {
+  if (!origin) return ''
+  return origin.replace(/^https:/, 'wss:').replace(/^http:/, 'ws:').replace(/\/$/, '')
+}
+
+export function operationalWebsocketEnabled() {
+  return process.env.NEXT_PUBLIC_ENABLE_OPERATIONAL_WS === 'true'
+}
+
 function wsBaseUrl() {
   if (typeof window === 'undefined') return ''
+
+  const configured = process.env.NEXT_PUBLIC_OPERATIONAL_WS_URL || process.env.NEXT_PUBLIC_API_URL || ''
+  if (configured) return normaliseWsOrigin(configured)
+
+  const apiOrigin = process.env.NEXT_PUBLIC_API_ORIGIN || ''
+  if (apiOrigin) return normaliseWsOrigin(apiOrigin)
+
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
   return `${protocol}//${window.location.host}`
 }
