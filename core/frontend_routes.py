@@ -27,7 +27,8 @@ ASSISTANT_REQUIRED_ASSETS = [
     "assistant-runtime.js",
     "orb.html",
     "orb-care-companion.css",
-    "orb-care-companion-runtime.js",
+    "orb-care-companion-config.js",
+    "orb-care-companion-runtime-v2.js",
     "realtime/openai-realtime-voice.js",
     "realtime/runtime-orchestrator.js",
     "realtime/openai-voice-runtime-bootstrap.js",
@@ -37,6 +38,16 @@ ASSISTANT_REQUIRED_ASSETS = [
     "realtime/conversation-memory-store.js",
     "realtime/reconnect-orchestrator.js",
     "realtime/speech-synthesis-stream.js",
+]
+
+STANDALONE_ORB_REQUIRED_ASSETS = [
+    "orb.html",
+    "orb-care-companion.css",
+    "orb-care-companion-config.js",
+    "orb-care-companion-runtime-v2.js",
+    "realtime/openai-voice-runtime-bootstrap.js",
+    "realtime/openai-realtime-voice.js",
+    "realtime/runtime-orchestrator.js",
 ]
 
 
@@ -125,17 +136,31 @@ def _ai_asset(filename: str, media_type: str | None = None) -> FileResponse:
     return FileResponse(path, media_type=media_type or _media_type_for_ai_asset(filename))
 
 
-def _assistant_asset_audit() -> dict:
+def _asset_audit(asset_names: list[str]) -> dict:
     root = Path(INDICARE_AI_DIR)
     assets = {}
     missing = []
-    for name in ASSISTANT_REQUIRED_ASSETS:
+    for name in asset_names:
         path = root / name
         exists = path.exists()
         assets[name] = {"exists": exists, "size": path.stat().st_size if exists else 0}
         if not exists:
             missing.append(name)
     return {"ok": not missing, "missing": missing, "assets": assets}
+
+
+def _assistant_asset_audit() -> dict:
+    return _asset_audit(ASSISTANT_REQUIRED_ASSETS)
+
+
+def _standalone_orb_asset_audit() -> dict:
+    audit = _asset_audit(STANDALONE_ORB_REQUIRED_ASSETS)
+    audit["surface"] = "orb_standalone"
+    audit["route"] = "/orb"
+    audit["api"] = ["/orb/standalone/config", "/orb/standalone/conversation"]
+    audit["os_linked"] = False
+    audit["care_record_access"] = False
+    return audit
 
 
 def register_frontend_routes(app: FastAPI) -> None:
@@ -160,6 +185,10 @@ def register_frontend_routes(app: FastAPI) -> None:
     @app.get("/assistant/assets/audit")
     async def assistant_asset_audit():
         return JSONResponse(_assistant_asset_audit())
+
+    @app.get("/orb/assets/audit")
+    async def standalone_orb_asset_audit():
+        return JSONResponse(_standalone_orb_asset_audit())
 
     @app.get("/login")
     @app.get("/login.html")
