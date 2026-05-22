@@ -106,6 +106,8 @@ def test_live_os_validation_router_and_alias_are_present() -> None:
     assert any("live-validation" in path for path in compat)
     assert "/os/validation/workflow-proof" in canonical
     assert any("workflow-proof" in path for path in compat)
+    assert "/os/validation/care-hub" in canonical
+    assert any("care-hub-validation" in path for path in compat)
 
 
 def test_operational_feed_routes_are_present() -> None:
@@ -124,6 +126,7 @@ def test_care_hub_routes_are_present() -> None:
     assert "/os/care-hub/workforce" in canonical
     assert "/os/care-hub/safeguarding" in canonical
     assert "/os/care-hub/provider" in canonical
+    assert "/os/care-hub/safeguarding-queues" in canonical
     assert "/api/os-command/care-hub" in compat
 
 

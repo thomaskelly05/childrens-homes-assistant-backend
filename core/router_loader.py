@@ -183,6 +183,14 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
         notes="Risk, actions, visibility, supervision, manager review and document governance.",
     ),
     RouterGroup(
+        "experience_bundles",
+        (
+            "routers.workspace_routes",
+            "routers.connect_routes",
+        ),
+        notes="Schema-backed experience bundles for home, child profile and adult workspace surfaces.",
+    ),
+    RouterGroup(
         "chronology",
         (
             "routers.chronology_intelligence_routes",

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from services.care_hub_safeguarding_queues_service import care_hub_safeguarding_queues_service
 from services.chronology_pattern_service import chronology_pattern_service
 from services.intelligence_cache_service import intelligence_cache_service
 from services.live_home_status_service import live_home_status_service
@@ -82,6 +83,8 @@ class CareHubIntelligenceService:
             question=question,
         )
 
+        safeguarding_queues = care_hub_safeguarding_queues_service.build_from_feed(feed)
+
         payload = {
             "ok": True,
             "scope": {
@@ -95,6 +98,7 @@ class CareHubIntelligenceService:
             "workflow_completion": workflow,
             "chronology_patterns": chronology_patterns,
             "alerts": alerts,
+            "safeguarding_queues": safeguarding_queues,
             "orb_reasoning": orb_reasoning,
             "summary": live_status.get("summary"),
         }

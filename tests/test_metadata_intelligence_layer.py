@@ -123,6 +123,30 @@ def test_intelligence_cache_invalidation_is_scoped_to_event_and_child():
     assert intelligence_cache_service.get(other_key) is not None
 
 
+def test_care_hub_live_cache_invalidates_with_daily_note_saved() -> None:
+    intelligence_cache_service.clear()
+    key = intelligence_cache_service.build_cache_key(
+        cache_type="care_hub_live",
+        provider_id=1,
+        home_id=2,
+        young_person_id=3,
+    )
+    intelligence_cache_service.set(
+        key=key,
+        value={"ok": True},
+        cache_type="care_hub_live",
+        provider_id=1,
+        home_id=2,
+        young_person_id=3,
+    )
+    result = intelligence_cache_service.invalidate_for_event(
+        "daily_note_saved",
+        scope={"provider_id": 1, "home_id": 2, "young_person_id": 3},
+    )
+    assert "care_hub_live" in result["affected_cache_types"]
+    assert key in result["invalidated_keys"]
+
+
 def test_ai_cost_controls_prefer_cache_rules_and_block_external_ai_by_default():
     assert provider_data_intelligence_settings_service.defaults().external_ai_enabled is False
     cached = ai_cost_control_service.plan_request(feature="reg45_narrative", cache_hit=True)

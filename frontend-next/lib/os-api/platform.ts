@@ -267,41 +267,9 @@ function buildAttentionCards(data: Omit<CommandCentreData, 'attention'>): Attent
 }
 
 export async function getCommandCentre(): Promise<OsApiResult<CommandCentreData>> {
-  const [context, people, chronology, safeguarding, actions, documents, evidence] = await Promise.all([
-    osGet<UnknownRecord>('/api/os/context', {}),
-    getOsYoungPeople(),
-    getOsChronology(),
-    osGet<unknown>('/api/safeguarding', {}),
-    getOsActions(),
-    getOsDocuments(),
-    getOsEvidence()
-  ])
-  const contextObject = asObject(context.data)
-  const safeguardingRecords = asArray(safeguarding.data, ['items', 'safeguarding']).map((row) => mapOperationalRecord(row, 'safeguarding'))
-  const workforce = asArray(contextObject.workforce).map((row) => mapOperationalRecord(row, 'staff'))
-  const homes = asArray(contextObject.homes).map((row) => mapOperationalRecord(row, 'home'))
-  const base = {
-    children: people.data,
-    chronology: chronology.data,
-    safeguarding: safeguardingRecords,
-    actions: actions.data,
-    documents: documents.data,
-    evidence: evidence.data,
-    workforce,
-    homes,
-    lifecycle: [
-      ...safeguardingRecords.map((record) => record.lifecycle),
-      ...workforce.map((record) => record.lifecycle),
-      ...homes.map((record) => record.lifecycle),
-      ...actions.data.map((action) => deriveLifecycleState(action as UnknownRecord, 'action')),
-      ...documents.data.map((document) => deriveLifecycleState(document as UnknownRecord, 'document')),
-      ...evidence.data.map((item) => deriveLifecycleState(item as UnknownRecord, 'evidence'))
-    ]
-  }
-  return mergeResult([context, people, chronology, safeguarding, actions, documents, evidence], {
-    ...base,
-    attention: buildAttentionCards(base)
-  })
+  const { getCareHub, mapCareHubToCommandCentre } = await import('./care-hub')
+  const [careHub, people] = await Promise.all([getCareHub({ limit: 50 }), getOsYoungPeople()])
+  return mapCareHubToCommandCentre(careHub, people)
 }
 
 export async function getYoungPeople() {

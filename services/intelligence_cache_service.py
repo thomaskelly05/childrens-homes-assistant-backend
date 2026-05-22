@@ -8,6 +8,8 @@ from typing import Any
 from schemas.data_intelligence import CacheEntry
 
 
+_CARE_HUB_INVALIDATION = {"care_hub_live"}
+
 CACHE_EVENTS: dict[str, set[str]] = {
     "daily_note_saved": {
         "child_daily_summary",
@@ -18,6 +20,7 @@ CACHE_EVENTS: dict[str, set[str]] = {
         "manager_daily_digest",
         "home_inspection_readiness",
         "orb_answer_template",
+        *_CARE_HUB_INVALIDATION,
     },
     "incident_saved": {
         "chronology_cluster_summary",
@@ -25,14 +28,27 @@ CACHE_EVENTS: dict[str, set[str]] = {
         "reg45_evidence_pack",
         "safeguarding_digest",
         "home_inspection_readiness",
+        *_CARE_HUB_INVALIDATION,
     },
     "safeguarding_record_saved": {
         "chronology_cluster_summary",
         "safeguarding_digest",
         "reg45_evidence_pack",
         "home_inspection_readiness",
+        *_CARE_HUB_INVALIDATION,
     },
-    "action_completed": {"reg44_action_plan", "reg45_evidence_pack", "manager_daily_digest", "home_inspection_readiness"},
+    "missing_episode_saved": {
+        "safeguarding_digest",
+        "home_inspection_readiness",
+        *_CARE_HUB_INVALIDATION,
+    },
+    "action_completed": {
+        "reg44_action_plan",
+        "reg45_evidence_pack",
+        "manager_daily_digest",
+        "home_inspection_readiness",
+        *_CARE_HUB_INVALIDATION,
+    },
     "document_uploaded": {"sccif_evidence_coverage", "reg45_evidence_pack", "lac_review_pack"},
     "report_generated": {"reg45_evidence_pack", "lac_review_pack", "orb_answer_template"},
     "manager_review_completed": {
@@ -40,7 +56,9 @@ CACHE_EVENTS: dict[str, set[str]] = {
         "home_inspection_readiness",
         "reg44_action_plan",
         "reg45_evidence_pack",
+        *_CARE_HUB_INVALIDATION,
     },
+    "operational_feed_changed": _CARE_HUB_INVALIDATION,
 }
 
 
