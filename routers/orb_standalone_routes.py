@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from auth.permissions import require_assistant_access
 from services.orb_citation_service import orb_citation_service
+from services.ai_provider_registry import ai_provider_registry
 from services.orb_general_assistant_service import orb_general_assistant_service
 from services.orb_knowledge_retrieval_service import orb_knowledge_retrieval_service
 from services.orb_standalone_sources import (
@@ -161,12 +162,15 @@ def _standalone_contract() -> dict[str, Any]:
             "knowledge_ingest": "/orb/standalone/knowledge/ingest",
             "knowledge_search": "/orb/standalone/knowledge/search",
             "knowledge_summary": "/orb/standalone/knowledge/summary",
+            "model_router_health": "/orb/standalone/model-router/health",
         },
     }
 
 
 def _resolve_detail(mode: str, requested: str | None) -> str:
-    if requested in {"voice_concise", "concise"}:
+    if requested == "voice_concise":
+        return "voice_concise"
+    if requested in {"concise"}:
         return "concise"
     if requested == "detailed":
         return "detailed"
@@ -180,11 +184,13 @@ def _resolve_detail(mode: str, requested: str | None) -> str:
 def _build_framed_message(*, mode: str, user_message: str, detail: str) -> str:
     mode_hint = MODE_BEHAVIOUR.get(mode, "")
     detail_hint = ""
-    if detail == "concise":
+    if detail == "voice_concise":
         detail_hint = (
             "Answer style: Voice concise — keep the first answer short and speakable (about 3–6 sentences), "
             "then offer to go deeper."
         )
+    elif detail == "concise":
+        detail_hint = "Answer style: Concise — keep answers clear and reasonably brief unless the user asks for detail."
     elif detail == "detailed":
         detail_hint = "Answer style: Detailed — provide fuller structured guidance with practical next steps."
 
@@ -211,8 +217,17 @@ async def standalone_orb_health(current_user=Depends(require_assistant_access)):
             **_standalone_contract(),
             "status": "ready",
             "isolation_verified": True,
+            "model_router": ai_provider_registry.health_payload(),
             "runtime_note": "Standalone ORB uses general assistant guidance services only. It must not call OS-linked ORB care-context endpoints.",
         },
+    }
+
+
+@router.get("/model-router/health")
+async def standalone_model_router_health(current_user=Depends(require_assistant_access)):
+    return {
+        "success": True,
+        "data": ai_provider_registry.health_payload(),
     }
 
 
