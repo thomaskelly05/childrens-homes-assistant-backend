@@ -48,12 +48,26 @@ export type StandaloneOrbConversationRequest = {
   images?: StandaloneOrbImageAttachment[]
 }
 
+export type StandaloneOrbSourceType =
+  | 'product_context'
+  | 'regulatory_framework'
+  | 'general_knowledge'
+  | 'user_provided'
+  | 'safety_boundary'
+
+export type StandaloneOrbSource = {
+  label: string
+  type: StandaloneOrbSourceType
+  note?: string
+}
+
 export type StandaloneOrbConversationResponse = {
   ok: boolean
   answer: string
   summary?: string
   conversation_id?: string | null
   confidence?: string
+  sources?: StandaloneOrbSource[]
   context_used?: {
     surface?: string
     mode?: string
@@ -146,16 +160,24 @@ export async function queryStandaloneOrbConversation(
       throw new AuthApiError(503, 'ORB could not finish that response. Please try again.')
     }
 
+    const typed = payload as StandaloneOrbConversationResponse & {
+      data?: { sources?: StandaloneOrbSource[] }
+    }
+    const nestedSources =
+      typed.sources ??
+      (typed.data && typeof typed.data === 'object' ? typed.data.sources : undefined)
+
     return {
-      ok: Boolean((payload as StandaloneOrbConversationResponse).ok ?? true),
+      ok: Boolean(typed.ok ?? true),
       answer,
-      summary: (payload as StandaloneOrbConversationResponse).summary,
-      conversation_id: (payload as StandaloneOrbConversationResponse).conversation_id ?? request.conversation_id,
-      confidence: (payload as StandaloneOrbConversationResponse).confidence,
-      context_used: (payload as StandaloneOrbConversationResponse).context_used,
-      guardrails: (payload as StandaloneOrbConversationResponse).guardrails,
-      image_understanding_available: (payload as StandaloneOrbConversationResponse).image_understanding_available,
-      error_detail: (payload as StandaloneOrbConversationResponse).error_detail
+      summary: typed.summary,
+      conversation_id: typed.conversation_id ?? request.conversation_id,
+      confidence: typed.confidence,
+      sources: nestedSources,
+      context_used: typed.context_used,
+      guardrails: typed.guardrails,
+      image_understanding_available: typed.image_understanding_available,
+      error_detail: typed.error_detail
     }
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') {

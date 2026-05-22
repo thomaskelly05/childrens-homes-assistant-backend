@@ -8,6 +8,11 @@ import time
 from typing import Any
 
 from assistant.llm_provider import ChatStreamRequest, get_llm_provider
+from services.orb_standalone_sources import (
+    INDICARE_PRODUCT_FALLBACK,
+    append_sources_basis_section,
+    build_standalone_sources,
+)
 from services.standalone_sector_knowledge_service import search_sector_knowledge
 
 logger = logging.getLogger("indicare.orb_general_assistant")
@@ -20,20 +25,53 @@ def _text(value: Any) -> str:
 
 
 GENERAL_ORB_SYSTEM_PROMPT = """
-You are ORB Care Companion, a standalone voice-first AI assistant for residential children's homes in England and general knowledge.
+You are ORB Care Companion, IndiCare's standalone ChatGPT-class AI companion for residential children's homes and general knowledge.
 
-You should feel as capable and flexible as a leading voice assistant for everyday questions, while your specialist strength is residential children's homes, Ofsted/SCCIF thinking, safeguarding reflection, therapeutic practice, recording quality and leadership.
+You can answer:
+- general knowledge questions
+- writing and planning requests
+- education and technology questions
+- business and product questions about IndiCare
+- residential children's homes practice questions
+- Ofsted/SCCIF/Quality Standards questions
+- safeguarding reflection questions
+- recording-quality questions
+- therapeutic practice and behaviour support questions
+- leadership, supervision and governance reflection questions
 
-Specialist residential care intelligence:
-- Children's Homes Regulations and Quality Standards, SCCIF, Ofsted expectations and what evidence may demonstrate impact.
-- Safeguarding reflection without deciding thresholds; remind escalation where risk may be immediate.
-- Trauma-informed, behaviour-as-communication, restorative repair and staff supervision reflection.
-- Recording quality: factual, child-centred, non-punitive wording; avoid judgemental labels.
-- Leadership lens: patterns, professional curiosity, drift, oversight and whether actions made a difference.
+You are specialist in:
+- residential children's homes
+- Ofsted and SCCIF
+- Children's Homes Regulations and Quality Standards
+- safeguarding reflection
+- child-centred recording
+- trauma-informed and therapeutic practice
+- operational leadership in care
 
-You are standalone. You do not access or imply access to IndiCare OS records, CareHub, young person records, staff records, chronology, dashboards or live operational data. If the user needs record-aware support, tell them to use IndiCare OS Assistant inside the OS unless they paste text here.
+You are not limited to care questions. Behave like a general-purpose assistant with IndiCare specialist intelligence.
 
-You give guidance and reflection, not statutory, legal, medical or final safeguarding decisions. No emergency response replacement.
+IndiCare product knowledge (answer confidently when asked; do not refuse):
+- IndiCare is a residential children's homes operating system and intelligence platform for staff and managers.
+- It supports care recording, safeguarding, Ofsted/SCCIF readiness, Quality Standards, governance, workforce support and reflective practice.
+- It aims to simplify recording and oversight and make records more child-centred, evidence-led and easier to review.
+- Platform areas include Care Hub (command centre), Record, Young People, Chronology, Documents, Actions, Intelligence Spine, Ofsted readiness, workforce/staff support, governance, Reports and ORB.
+- ORB Care Companion is standalone /orb — ChatGPT-style, voice-enabled; general and specialist questions; no live OS records.
+- IndiCare OS ORB is /assistant/orb — operational OS-connected assistant with permissioned OS/Care Hub context where available.
+
+Boundaries:
+- In standalone /orb you cannot access live IndiCare OS records, Care Hub, child files, staff records, chronology, dashboards or actions.
+- You can explain IndiCare as a product and its design vision using product knowledge and general knowledge.
+- If the user needs live records, direct them to IndiCare OS ORB at /assistant/orb.
+- Do not refuse product-level questions about IndiCare.
+- Do not claim access to live records or live browsing unless actually performed.
+- Do not make final safeguarding, legal or inspection decisions.
+
+Citations / basis:
+- End substantive answers with a short "Sources / basis" section listing honest source labels (no fabricated URLs or quotes).
+- For IndiCare product answers cite IndiCare product context and Standalone ORB product boundary.
+- For Ofsted/SCCIF cite Ofsted SCCIF framework knowledge and Children's Homes Regulations / Quality Standards where relevant.
+- For safeguarding cite safeguarding practice principles and remind users to follow local policy.
+- For general knowledge cite general model knowledge unless the user provided context.
 
 British English. Calm, warm, concise when speaking, reflective and practical. For voice-style answers, lead with 3–6 speakable sentences, use "I'd think about it like this…" where helpful, and offer to go deeper.
 """.strip()
@@ -86,20 +124,25 @@ class OrbGeneralAssistantService:
                     exc_info=True,
                 )
         if images:
+            sources = build_standalone_sources(message, has_images=True)
+            answer = append_sources_basis_section(
+                "I can see you attached an image, but image understanding is not configured in this environment. "
+                "I can still help using the text you provide.",
+                sources,
+            )
             return {
-                "answer": (
-                    "I can see you attached an image, but image understanding is not configured in this environment. "
-                    "I can still help with your text if you describe what you need."
-                ),
-                "sources": [],
+                "answer": answer,
+                "sources": sources,
                 "tools_used": ["standalone_orb_general_assistant"],
                 "internal_data_access": False,
                 "image_understanding_available": False,
                 "error_detail": "vision_unavailable",
             }
+        fallback = self._fallback_answer(message)
+        sources = build_standalone_sources(message)
         return {
-            "answer": self._fallback_answer(message),
-            "sources": [],
+            "answer": append_sources_basis_section(fallback, sources),
+            "sources": sources,
             "tools_used": ["general_qna"],
             "internal_data_access": False,
         }
@@ -130,9 +173,11 @@ class OrbGeneralAssistantService:
                 history=history,
                 image_data_urls=image_data_urls,
             )
+            sources = build_standalone_sources(message, has_images=True)
+            resolved = append_sources_basis_section(answer or self._fallback_answer(message), sources)
             return {
-                "answer": answer or self._fallback_answer(message),
-                "sources": [],
+                "answer": resolved,
+                "sources": sources,
                 "tools_used": ["standalone_orb_general_assistant", "vision"],
                 "internal_data_access": False,
                 "image_understanding_available": bool(answer),
@@ -153,9 +198,13 @@ class OrbGeneralAssistantService:
             if isinstance(item, str):
                 parts.append(item)
         answer = "".join(parts).strip() or self._fallback_answer(message)
+        sources = build_standalone_sources(
+            message,
+            profile_context="standalone context profiles" in message.lower(),
+        )
         return {
-            "answer": answer,
-            "sources": [],
+            "answer": append_sources_basis_section(answer, sources),
+            "sources": sources,
             "tools_used": ["standalone_orb_general_assistant"],
             "internal_data_access": False,
             "image_understanding_available": False,
@@ -213,12 +262,18 @@ class OrbGeneralAssistantService:
             }[operator]
             readable = int(result) if result.is_integer() else round(result, 4)
             return f"{readable}."
-        if "indicare" in lower:
-            return (
-                "IndiCare OS is the operational platform. I am ORB Care Companion, the standalone assistant. "
-                "I can give general guidance and Ofsted-style reflection, but I do not access CareHub, records, chronology or dashboards. "
-                "For record-aware support, use the IndiCare OS Assistant inside the OS."
+        if any(
+            phrase in lower
+            for phrase in (
+                "indicare",
+                "what is indicare",
+                "tell me about indicare",
+                "about orb",
+                "care companion",
+                "what is orb",
             )
+        ):
+            return INDICARE_PRODUCT_FALLBACK
         if any(term in lower for term in ("reg ", "regulation", "sccif", "ofsted", "children's homes", "childrens homes", "trauma-informed", "trauma informed", "supervision")):
             sources = search_sector_knowledge(message, limit=2)
             if "ofsted" in lower or "sccif" in lower:
@@ -236,7 +291,10 @@ class OrbGeneralAssistantService:
             return "Paste the text you want summarised, and I will pull out the key points, actions and any uncertainties."
         if any(term in lower for term in ("weather", "news", "score", "played last week", "price", "schedule")):
             return "I cannot check live information right now, but I can still help from general knowledge or work with details you paste in."
-        return "I can help with that. Ask me to explain, draft, plan, summarise, calculate, reflect, or look at something through a children’s homes and Ofsted lens."
+        return (
+            "ORB could not complete the live AI response, but I can still help you try again. "
+            "Ask me to explain, draft, plan, summarise, calculate, reflect, or look at something through a children's homes and Ofsted lens."
+        )
 
 
 orb_general_assistant_service = OrbGeneralAssistantService()

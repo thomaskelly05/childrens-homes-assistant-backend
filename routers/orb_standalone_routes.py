@@ -9,6 +9,11 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from auth.permissions import require_assistant_access
 from services.orb_general_assistant_service import orb_general_assistant_service
+from services.orb_standalone_sources import (
+    INDICARE_PRODUCT_FALLBACK,
+    append_sources_basis_section,
+    build_standalone_sources,
+)
 
 logger = logging.getLogger("indicare.orb_standalone")
 
@@ -30,12 +35,13 @@ STANDALONE_ORB_GUARDRAILS = [
 ]
 
 STANDALONE_ORB_IDENTITY = (
-    "You are ORB Care Companion, a standalone voice-first AI assistant for residential children's homes and general knowledge."
+    "You are ORB Care Companion, IndiCare's standalone ChatGPT-class AI companion."
 )
 
 STANDALONE_ORB_CAPABILITIES = """
 Capabilities:
-- Answer general knowledge questions clearly and honestly.
+- Answer general knowledge, writing, planning, education, technology and business questions.
+- Explain IndiCare as a product, ORB as a companion, and the OS architecture and platform vision.
 - Support residential children's homes practice, leadership reflection and staff supervision thinking.
 - Apply an Ofsted and SCCIF lens without predicting grades.
 - Explain Children's Homes Regulations and Quality Standards in practical terms.
@@ -43,15 +49,39 @@ Capabilities:
 - Improve recording quality with factual, child-centred, non-punitive wording.
 - Support therapeutic, trauma-informed and behaviour-as-communication practice.
 - Help managers reflect on oversight, patterns, drift and whether actions made a difference.
+- Behave like a broad ChatGPT-style assistant, not a narrow care FAQ.
+""".strip()
+
+STANDALONE_ORB_PRODUCT_KNOWLEDGE = """
+IndiCare product knowledge:
+- IndiCare is a residential children's homes operating system and intelligence platform for staff and managers.
+- Built around care recording, safeguarding, Ofsted/SCCIF readiness, Quality Standards, governance, workforce support and reflective practice.
+- Aims to simplify recording and oversight and make records more child-centred, evidence-led and easier to review.
+- Areas include Care Hub (command centre), Record, Young People, Chronology, Documents, Actions, Intelligence Spine, Ofsted readiness, workforce support, governance, Reports and ORB.
+- ORB Care Companion is standalone /orb — ChatGPT-style, voice-enabled; no live OS records.
+- IndiCare OS ORB is /assistant/orb — operational OS-connected assistant with permissioned context where available.
+- If asked "tell me about IndiCare", answer confidently and helpfully with product-level information.
 """.strip()
 
 STANDALONE_ORB_BOUNDARIES = """
 Boundaries:
-- No access to IndiCare OS records, child files, dashboards, chronology, staff records or live home data.
+- In standalone /orb, no access to live IndiCare OS records, Care Hub, child files, staff records, chronology, dashboards or actions.
+- You can explain IndiCare as a product and answer using general knowledge and built-in product knowledge.
+- Do not refuse product-level questions about IndiCare.
+- Do not claim access to live records or live browsing unless actually performed.
 - No direct writes to care records.
 - No final safeguarding threshold decisions and no legal advice.
 - No emergency response replacement — escalate through local procedures when risk is immediate.
-- If the user needs record-aware support, tell them to use IndiCare OS Assistant inside the OS.
+- If the user needs live records, tell them to use IndiCare OS ORB at /assistant/orb.
+""".strip()
+
+STANDALONE_ORB_CITATIONS = """
+Sources / basis:
+- Include honest source labels where relevant; do not fabricate URLs or exact quotes.
+- Product questions: IndiCare product context; Standalone ORB product boundary.
+- Ofsted/SCCIF: Ofsted SCCIF framework knowledge; Children's Homes Regulations / Quality Standards.
+- Safeguarding: safeguarding practice principles; local policy reminder.
+- General knowledge: general model knowledge unless user provided context.
 """.strip()
 
 STANDALONE_ORB_TONE = """
@@ -154,7 +184,9 @@ def _build_framed_message(*, mode: str, user_message: str, detail: str) -> str:
     parts = [
         STANDALONE_ORB_IDENTITY,
         STANDALONE_ORB_CAPABILITIES,
+        STANDALONE_ORB_PRODUCT_KNOWLEDGE,
         STANDALONE_ORB_BOUNDARIES,
+        STANDALONE_ORB_CITATIONS,
         STANDALONE_ORB_TONE,
         mode_hint,
         detail_hint,
@@ -194,13 +226,14 @@ def _standalone_conversation_response(
     confidence: str = "medium",
     image_understanding_available: bool | None = None,
     error_detail: str | None = None,
+    sources: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     return {
         "ok": True,
         "success": True,
         "answer": answer,
         "summary": answer.split("\n", 1)[0][:220],
-        "sources": [],
+        "sources": sources or [],
         "actions": [],
         "confidence": confidence,
         "conversation_id": conversation_id,
@@ -254,6 +287,13 @@ async def standalone_orb_conversation(
         answer = str(
             assistant_data.get("answer") or "I can help with that, but I could not form a response just now."
         )
+        response_sources = list(assistant_data.get("sources") or [])
+        if not response_sources:
+            response_sources = build_standalone_sources(
+                payload.message,
+                has_images=bool(image_urls),
+                mode=mode,
+            )
         return _standalone_conversation_response(
             answer=answer,
             mode=mode,
@@ -262,6 +302,7 @@ async def standalone_orb_conversation(
             confidence=str(assistant_data.get("confidence") or "medium"),
             image_understanding_available=assistant_data.get("image_understanding_available"),
             error_detail=assistant_data.get("error_detail"),
+            sources=response_sources,
         )
     except Exception as exc:
         elapsed_ms = int((time.perf_counter() - started) * 1000)
@@ -273,15 +314,23 @@ async def standalone_orb_conversation(
             elapsed_ms,
             type(exc).__name__,
         )
+        lower = payload.message.lower()
         if image_urls:
             fallback = (
-                "I can see you attached an image, but image understanding is not available right now. "
-                "I can still help with your text — try describing what you need."
+                "I can see you attached an image, but image understanding is not configured in this environment. "
+                "I can still help using the text you provide."
             )
+            sources = build_standalone_sources(payload.message, has_images=True, mode=mode)
+            fallback = append_sources_basis_section(fallback, sources)
+        elif any(term in lower for term in ("indicare", "what is indicare", "tell me about indicare", "orb", "care companion")):
+            fallback = INDICARE_PRODUCT_FALLBACK
+            sources = build_standalone_sources(payload.message, mode=mode)
         else:
             fallback = (
-                "ORB is temporarily unavailable. You can still keep drafting here, then try again in a moment."
+                "ORB could not complete the live AI response, but I can still help you try again."
             )
+            sources = build_standalone_sources(payload.message, mode=mode)
+            fallback = append_sources_basis_section(fallback, sources)
         return _standalone_conversation_response(
             answer=fallback,
             mode=mode,
@@ -290,4 +339,5 @@ async def standalone_orb_conversation(
             confidence="low",
             image_understanding_available=False if image_urls else None,
             error_detail="provider_unavailable",
+            sources=sources,
         )

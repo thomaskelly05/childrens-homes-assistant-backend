@@ -212,7 +212,21 @@ SPECIALIST_PROMPT_MARKERS = [
     "Quality Standards",
     "safeguarding",
     "IndiCare OS records",
-    "voice-first",
+    "ChatGPT-class",
+    "general knowledge",
+]
+
+DEDUPE_AND_SOURCES_MARKERS = [
+    "dedupeOrbMessages",
+    "repairOrbWorkspace",
+    "visibleMessages",
+    "Sources / basis",
+    "SourcesBasis",
+    "lastSubmitRef",
+    "SUBMIT_GUARD_MS",
+    "product_context",
+    "STANDALONE_ORB_PRODUCT_KNOWLEDGE",
+    "build_standalone_sources",
 ]
 
 OS_ORB_LINK_FILES = [
@@ -397,6 +411,17 @@ def test_standalone_orb_specialist_prompt():
     service = _read(REPO_ROOT / "services" / "orb_general_assistant_service.py")
     for marker in SPECIALIST_PROMPT_MARKERS:
         assert marker in routes or marker in service, f"specialist prompt marker missing: {marker}"
+
+
+def test_standalone_orb_dedupe_and_sources_markers():
+    sources = (
+        _read(ORB_LOCAL_STORE)
+        + _read(ORB_COMPANION)
+        + _read(STANDALONE_ROUTES)
+        + _read(REPO_ROOT / "services" / "orb_standalone_sources.py")
+    )
+    for marker in DEDUPE_AND_SOURCES_MARKERS:
+        assert marker in sources, f"dedupe/sources marker missing: {marker}"
 
 
 def test_standalone_orb_glow_component_exists():

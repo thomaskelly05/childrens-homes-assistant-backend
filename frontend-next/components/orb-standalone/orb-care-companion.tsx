@@ -26,11 +26,14 @@ import { useStandaloneOrbVoice, type StandaloneOrbAnswerStyle } from '@/componen
 import {
   buildProfileContextBlock,
   createStandaloneChat,
+  dedupeOrbMessages,
   readStandaloneWorkspace,
+  repairOrbWorkspace,
   titleFromFirstMessage,
   writeStandaloneWorkspace,
   type StandaloneChat,
   type StandaloneChatMessage,
+  type StandaloneOrbSource,
   type StandaloneWorkspace
 } from '@/lib/orb/standalone-local-store'
 import {
@@ -61,6 +64,7 @@ const HIGH_RISK_TERMS = [
 
 const MAX_HISTORY_TURNS = 20
 const MAX_IMAGE_ATTACHMENTS = 4
+const SUBMIT_GUARD_MS = 1500
 
 const ANSWER_STYLE_LABELS: Record<StandaloneOrbAnswerStyle, string> = {
   voice_concise: 'Voice concise',
@@ -263,6 +267,7 @@ export function OrbCareCompanion() {
   const hydratedRef = useRef(false)
   const sendInFlightRef = useRef(false)
   const submitGuardRef = useRef(false)
+  const lastSubmitRef = useRef<{ chatId: string; content: string; at: number } | null>(null)
 
   const voice = useStandaloneOrbVoice()
   const { settings: voiceSettings, updateSettings: updateVoiceSettings } = voice
@@ -273,6 +278,7 @@ export function OrbCareCompanion() {
   }, [workspace.activeChatId, workspace.chats])
 
   const messages = activeChat?.messages ?? []
+  const visibleMessages = useMemo(() => dedupeOrbMessages(messages), [messages])
   const mode = (activeChat?.mode as StandaloneOrbMode) || queryMode || (recordingContext ? 'Record This Properly' : 'Ask ORB')
   const conversationId = activeChat?.conversationId ?? `standalone-${Date.now().toString(36)}`
 
@@ -281,10 +287,10 @@ export function OrbCareCompanion() {
     [workspace.profiles, activeChat?.profileIds]
   )
 
-  const showEmptyState = messages.length === 0 && !pending
+  const showEmptyState = visibleMessages.length === 0 && !pending
 
   useEffect(() => {
-    if (hydratedRef.current) writeStandaloneWorkspace(workspace)
+    if (hydratedRef.current) writeStandaloneWorkspace(repairOrbWorkspace(workspace))
   }, [workspace])
 
   useEffect(() => {
@@ -321,7 +327,7 @@ export function OrbCareCompanion() {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
-  }, [messages, pending])
+  }, [visibleMessages, pending])
 
   useEffect(() => {
     return () => {
@@ -339,7 +345,13 @@ export function OrbCareCompanion() {
   }, [voice, voiceSettings.continuousConversation])
 
   const persistChat = useCallback((chatId: string, patch: Partial<StandaloneChat>) => {
-    setWorkspace((current) => patchActiveChat(current, chatId, patch))
+    setWorkspace((current) => {
+      const nextPatch = { ...patch }
+      if (patch.messages) {
+        nextPatch.messages = dedupeOrbMessages(patch.messages)
+      }
+      return patchActiveChat(current, chatId, nextPatch)
+    })
   }, [])
 
   const showSafeguardingEscalation =
@@ -362,9 +374,25 @@ export function OrbCareCompanion() {
     async (text: string, options?: { retry?: boolean; chatId?: string }) => {
       const trimmed = text.trim()
       const hasImages = attachments.length > 0
-      if ((!trimmed && !hasImages) || pending || sendInFlightRef.current) return
+      if ((!trimmed && !hasImages) || pending || sendInFlightRef.current || submitGuardRef.current) return
+
+      const contentKey = (trimmed || '[Image attachment]').trim().toLowerCase()
+      const guardChatId = options?.chatId || workspace.activeChatId || 'new'
+      const now = Date.now()
+      if (
+        !options?.retry &&
+        lastSubmitRef.current &&
+        lastSubmitRef.current.content === contentKey &&
+        lastSubmitRef.current.chatId === guardChatId &&
+        now - lastSubmitRef.current.at < SUBMIT_GUARD_MS
+      ) {
+        return
+      }
 
       sendInFlightRef.current = true
+      if (!options?.retry) {
+        lastSubmitRef.current = { chatId: guardChatId, content: contentKey, at: now }
+      }
       if (voice.speaking) voice.cancelSpeaking()
 
       const imagePayload = attachments.map((a) => ({ data_url: a.dataUrl, name: a.name }))
@@ -396,9 +424,18 @@ export function OrbCareCompanion() {
       let targetChatId = options?.chatId || workspace.activeChatId
       let targetChat = targetChatId ? workspace.chats.find((c) => c.id === targetChatId) ?? null : null
 
-      const priorMessages = options?.retry
-        ? targetChat?.messages ?? []
-        : [...(targetChat?.messages ?? []), userMessage]
+      const existingMessages = dedupeOrbMessages(targetChat?.messages ?? [])
+      let priorMessages = existingMessages
+      if (!options?.retry) {
+        const lastMessage = existingMessages[existingMessages.length - 1]
+        const isRapidDuplicate =
+          lastMessage?.role === 'user' &&
+          lastMessage.content.trim().toLowerCase() === contentKey &&
+          typeof lastMessage.createdAt === 'number' &&
+          now - lastMessage.createdAt < SUBMIT_GUARD_MS
+        priorMessages = isRapidDuplicate ? existingMessages : [...existingMessages, userMessage]
+      }
+      priorMessages = dedupeOrbMessages(priorMessages)
       const nextTitle = !targetChat || targetChat.title === 'New conversation'
         ? titleFromFirstMessage(trimmed || 'Image conversation')
         : targetChat.title
@@ -422,14 +459,14 @@ export function OrbCareCompanion() {
         targetChat = { ...targetChat, messages: priorMessages, title: nextTitle, mode, updatedAt: Date.now() }
         setWorkspace((current) =>
           patchActiveChat(current, targetChatId!, {
-            messages: priorMessages,
+            messages: dedupeOrbMessages(priorMessages),
             title: nextTitle,
             mode
           })
         )
       }
 
-      const historyForRequest = trimConversationHistory(priorMessages)
+      const historyForRequest = trimConversationHistory(dedupeOrbMessages(priorMessages))
       const sessionConversationId = targetChat.conversationId
       const styleLabel = ANSWER_STYLE_LABELS[voiceSettings.answerStyle]
       const framedMessage =
@@ -453,13 +490,20 @@ export function OrbCareCompanion() {
           )
         }
         const assistantId = `a-${Date.now()}`
+        const responseSources = (response.sources ?? []) as StandaloneOrbSource[]
         setWorkspace((current) => {
           const chat = current.chats.find((c) => c.id === targetChatId)
           if (!chat) return current
-          const withAssistant: StandaloneChatMessage[] = [
+          const withAssistant: StandaloneChatMessage[] = dedupeOrbMessages([
             ...chat.messages,
-            { id: assistantId, role: 'assistant', content: answer, createdAt: Date.now() }
-          ]
+            {
+              id: assistantId,
+              role: 'assistant',
+              content: answer,
+              createdAt: Date.now(),
+              sources: responseSources.length ? responseSources : undefined
+            }
+          ])
           return patchActiveChat(current, chat.id, {
             messages: withAssistant,
             conversationId: newConversationId
@@ -580,8 +624,8 @@ export function OrbCareCompanion() {
   }
 
   async function exportConversation() {
-    if (messages.length === 0) return
-    const body = messages.map((m) => `${m.role === 'user' ? 'You' : 'ORB'}: ${m.content}`).join('\n\n')
+    if (visibleMessages.length === 0) return
+    const body = visibleMessages.map((m) => `${m.role === 'user' ? 'You' : 'ORB'}: ${m.content}`).join('\n\n')
     await copyToClipboard(body)
     setDraftNotice('Conversation copied to clipboard.')
     setTimeout(() => setDraftNotice(null), 4000)
@@ -758,7 +802,7 @@ export function OrbCareCompanion() {
               >
                 Profiles
               </button>
-              <button type="button" onClick={() => void exportConversation()} disabled={messages.length === 0} className="hidden rounded-lg p-2 text-slate-500 hover:bg-white/[0.06] hover:text-slate-300 disabled:opacity-40 sm:inline-flex" aria-label="Copy chat">
+              <button type="button" onClick={() => void exportConversation()} disabled={visibleMessages.length === 0} className="hidden rounded-lg p-2 text-slate-500 hover:bg-white/[0.06] hover:text-slate-300 disabled:opacity-40 sm:inline-flex" aria-label="Copy chat">
                 <Copy className="h-4 w-4" />
               </button>
               <button type="button" onClick={() => startNewChat()} className="hidden rounded-lg p-2 text-slate-500 hover:bg-white/[0.06] hover:text-slate-300 sm:inline-flex" aria-label="New chat">
@@ -904,13 +948,14 @@ export function OrbCareCompanion() {
                         {imageUnderstandingNote}
                       </p>
                     ) : null}
-                    {messages.map((entry, index) => (
+                    {visibleMessages.map((entry, index) => (
                       <div key={entry.id}>
                         {entry.role === 'assistant' ? (
                           <article className="orb-message-assistant group">
                             <p className="mb-2 text-xs font-medium text-slate-500">ORB</p>
                             <div className="whitespace-pre-wrap text-[15px] leading-7 text-slate-100">{entry.content}</div>
-                            {index === messages.length - 1 ? (
+                            <SourcesBasis sources={entry.sources} />
+                            {index === visibleMessages.length - 1 ? (
                               <ResponseActions
                                 content={entry.content}
                                 speaking={speakingMessageId === entry.id}
@@ -1182,6 +1227,39 @@ function OrbFloatingVoiceDock({
         <div className="border-t border-white/[0.06] p-4">
           <VoiceSettingsPanel voice={voice} voiceSettings={voiceSettings} updateVoiceSettings={updateVoiceSettings} onClose={onCloseVoicePanel} />
         </div>
+      ) : null}
+    </div>
+  )
+}
+
+function SourcesBasis({ sources }: { sources?: StandaloneOrbSource[] }) {
+  const [open, setOpen] = useState(false)
+  if (!sources?.length) return null
+  return (
+    <div className="mt-3">
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        className="text-[11px] font-medium text-slate-500 underline-offset-2 hover:text-slate-400 hover:underline"
+      >
+        {open ? 'Hide sources / basis' : 'Sources / basis'}
+      </button>
+      {open ? (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {sources.map((source, index) => (
+            <span
+              key={`${source.type}-${source.label}-${index}`}
+              title={source.note}
+              className="inline-flex max-w-full flex-col rounded-full border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 text-[10px] text-slate-400"
+            >
+              <span className="font-medium text-slate-300">{source.label}</span>
+              {source.note ? <span className="text-slate-500">{source.note}</span> : null}
+            </span>
+          ))}
+        </div>
+      ) : null}
+      {open ? (
+        <p className="mt-1 text-[10px] text-slate-600">Standalone mode — no OS records accessed</p>
       ) : null}
     </div>
   )
