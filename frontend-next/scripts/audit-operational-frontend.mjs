@@ -38,7 +38,7 @@ for (const route of ['app/command-centre/page.tsx', 'app/young-people/page.tsx',
   check(`route exists: ${route}`, existsSync(join(root, route)))
 }
 
-for (const label of ['Care Hub', 'Young People', 'Daily Care', 'Chronology', 'Documents', 'Workforce', 'Governance', 'Reports', 'ORB', 'Admin']) {
+for (const label of ['Care Hub', 'Children', 'Record', 'Chronology', 'Actions', 'Documents', 'Workforce', 'Governance', 'Reports', 'ORB', 'Admin']) {
   check(`domain navigation includes ${label}`, nav.includes(label))
 }
 
