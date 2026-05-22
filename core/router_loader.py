@@ -56,6 +56,7 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
             "routers.assistant_realtime_compat_routes",
             "routers.assistant_upload_routes",
             "routers.assistant_legacy_redirect_routes",
+            "routers.orb_standalone_routes",
             "routers.orb_routes",
             "routers.orb_voice_routes",
             "routers.orb_voice_session_routes",
@@ -69,7 +70,7 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
             "routers.ai_sccif_routes",
         ),
         classification="mixed",
-        notes="Canonical ORB plus legacy assistant/realtime compatibility surfaces.",
+        notes="Standalone ORB Care Companion plus OS-linked ORB and legacy assistant/realtime compatibility surfaces.",
     ),
     RouterGroup(
         "os_command",
