@@ -107,8 +107,12 @@ def test_standalone_route_response_includes_citations_and_retrieval(fake_state, 
     assert response["context_used"]["retrieval"]["strategy"] in {
         "built_in_source_pack",
         "source_pack_plus_document_rag",
+        "hybrid_semantic_keyword",
+        "keyword_plus_synonyms",
+        "keyword_only",
     }
     assert "document_result_count" in response["context_used"]["retrieval"]
+    assert "semantic_available" in response["context_used"]["retrieval"]
 
 
 def test_standalone_general_service_uses_model_router_module():

@@ -70,3 +70,39 @@ def test_ingest_unsupported_raises():
     with pytest.raises(ValueError) as exc:
         orb_document_ingestion_service.ingest_file("file.bin", b"\x00\x01", "application/octet-stream")
     assert "Unsupported" in str(exc.value) or UNSUPPORTED_FILE_MESSAGE in str(exc.value)
+
+
+def test_chunks_get_canonical_terms():
+    chunks = orb_document_ingestion_service.chunk_text(
+        "A child absconded from the home. Staff followed missing from care procedure.",
+        source_title="Missing guidance",
+        source_type="policy",
+    )
+    assert chunks[0].get("canonical_terms")
+    assert "missing from care" in chunks[0]["canonical_terms"]
+
+
+def test_chunks_get_semantic_keywords():
+    chunks = orb_document_ingestion_service.chunk_text(
+        "Daily note should capture child voice and wishes.",
+        source_title="Recording",
+        source_type="recording_quality",
+    )
+    assert chunks[0].get("semantic_keywords")
+
+
+def test_embedding_failure_does_not_fail_ingestion(monkeypatch):
+    monkeypatch.setattr(
+        "services.orb_document_ingestion_service.orb_embedding_service.is_available",
+        lambda: True,
+    )
+    monkeypatch.setattr(
+        "services.orb_document_ingestion_service.orb_embedding_service.embed_text",
+        lambda text: {"available": False, "embedding": None, "error": "fail"},
+    )
+    result = orb_document_ingestion_service.ingest_text(
+        "Resilience note",
+        "Short guidance about recording quality and daily notes.",
+        "recording_quality",
+    )
+    assert result["chunk_count"] >= 1

@@ -23,6 +23,16 @@ OrbKnowledgeSourceStatus = Literal["draft", "indexed", "failed", "archived"]
 
 OrbKnowledgeSourceOrigin = Literal["built_in", "user_uploaded", "admin_added", "seeded"]
 
+OrbKnowledgeConfidenceLevel = Literal["low", "medium", "high", "official"]
+
+OrbKnowledgeGovernanceStatus = Literal[
+    "draft",
+    "approved",
+    "needs_review",
+    "expired",
+    "archived",
+]
+
 
 class OrbKnowledgeSourceCreate(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -35,6 +45,18 @@ class OrbKnowledgeSourceCreate(BaseModel):
     file_type: str | None = Field(default=None, max_length=80)
     reliability: str | None = Field(default=None, max_length=120)
     metadata: dict[str, Any] = Field(default_factory=dict)
+    source_version: str | None = Field(default=None, max_length=120)
+    official_source: bool = False
+    source_url: str | None = Field(default=None, max_length=2000)
+    publisher: str | None = Field(default=None, max_length=300)
+    published_at: str | None = None
+    review_due_at: str | None = None
+    expires_at: str | None = None
+    confidence_level: OrbKnowledgeConfidenceLevel = "medium"
+    governance_status: OrbKnowledgeGovernanceStatus = "approved"
+    approved_by: str | None = Field(default=None, max_length=200)
+    approved_at: str | None = None
+    notes: str | None = Field(default=None, max_length=4000)
 
 
 class OrbKnowledgeSourceUpdate(BaseModel):
@@ -46,6 +68,18 @@ class OrbKnowledgeSourceUpdate(BaseModel):
     status: OrbKnowledgeSourceStatus | None = None
     source_label: str | None = Field(default=None, max_length=300)
     metadata: dict[str, Any] | None = None
+    source_version: str | None = None
+    official_source: bool | None = None
+    source_url: str | None = None
+    publisher: str | None = None
+    published_at: str | None = None
+    review_due_at: str | None = None
+    expires_at: str | None = None
+    confidence_level: OrbKnowledgeConfidenceLevel | None = None
+    governance_status: OrbKnowledgeGovernanceStatus | None = None
+    approved_by: str | None = None
+    approved_at: str | None = None
+    notes: str | None = None
 
 
 class OrbKnowledgeSourceRecord(BaseModel):
@@ -68,6 +102,18 @@ class OrbKnowledgeSourceRecord(BaseModel):
     created_at: datetime | None = None
     updated_at: datetime | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
+    source_version: str | None = None
+    official_source: bool = False
+    source_url: str | None = None
+    publisher: str | None = None
+    published_at: str | None = None
+    review_due_at: str | None = None
+    expires_at: str | None = None
+    confidence_level: OrbKnowledgeConfidenceLevel = "medium"
+    governance_status: OrbKnowledgeGovernanceStatus = "approved"
+    approved_by: str | None = None
+    approved_at: str | None = None
+    notes: str | None = None
 
 
 class OrbKnowledgeDocumentIngestRequest(BaseModel):
@@ -96,6 +142,12 @@ class OrbKnowledgeChunkRecord(BaseModel):
     source_type: OrbKnowledgeSourceType | None = None
     keywords: list[str] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
+    embedding: list[float] | None = None
+    embedding_model: str | None = None
+    embedding_created_at: str | None = None
+    semantic_keywords: list[str] = Field(default_factory=list)
+    canonical_terms: list[str] = Field(default_factory=list)
+    confidence_score: float | None = None
 
 
 class OrbKnowledgeSearchRequest(BaseModel):
@@ -121,6 +173,14 @@ class OrbKnowledgeSearchResult(BaseModel):
     match_reason: str
     live_retrieved: bool = False
     metadata: dict[str, Any] = Field(default_factory=dict)
+    keyword_score: float | None = None
+    semantic_score: float | None = None
+    hybrid_score: float | None = None
+    confidence_score: float | None = None
+    source_confidence: OrbKnowledgeConfidenceLevel | None = None
+    governance_status: OrbKnowledgeGovernanceStatus | None = None
+    official_source: bool = False
+    warning: str | None = None
 
 
 class OrbKnowledgeSearchResponse(BaseModel):
@@ -145,6 +205,14 @@ class OrbKnowledgeCitation(BaseModel):
     chunk_index: int | None = None
     origin: str | None = None
     live_retrieved: bool = False
+    official_source: bool = False
+    confidence_level: OrbKnowledgeConfidenceLevel | None = None
+    governance_status: OrbKnowledgeGovernanceStatus | None = None
+    source_version: str | None = None
+    warning: str | None = None
+    retrieval_strategy: str | None = None
+    semantic_score: float | None = None
+    hybrid_score: float | None = None
 
 
 class OrbKnowledgeHealth(BaseModel):

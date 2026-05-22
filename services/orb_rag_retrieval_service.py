@@ -1,13 +1,15 @@
-"""RAG retrieval for standalone ORB — document chunks + built-in source packs."""
+"""RAG retrieval for standalone ORB — hybrid semantic + keyword + source packs."""
 
 from __future__ import annotations
 
 import re
 from typing import Any
 
+from services.orb_care_synonym_service import orb_care_synonym_service
 from services.orb_citation_service import orb_citation_service
 from services.orb_knowledge_library_service import orb_knowledge_library_service
 from services.orb_knowledge_retrieval_service import orb_knowledge_retrieval_service
+from services.orb_semantic_retrieval_service import orb_semantic_retrieval_service
 
 TYPE_BASIS_MAP = {
     "product_context": "ORB Knowledge Library — product context",
@@ -31,7 +33,7 @@ def _lower(value: str) -> str:
 
 
 class OrbRagRetrievalService:
-    """Keyword/hybrid retrieval across knowledge library chunks and source packs."""
+    """Hybrid retrieval across knowledge library chunks and source packs."""
 
     def search(
         self,
@@ -47,15 +49,34 @@ class OrbRagRetrievalService:
         if boosted_type and "source_type" not in filters:
             filters["source_type"] = boosted_type
 
-        results = orb_knowledge_library_service.search_chunks_keyword(
+        expansion = orb_care_synonym_service.expand_query(query)
+        keyword_results = orb_knowledge_library_service.search_chunks_keyword(
             query,
             filters=filters,
+            limit=limit * 2,
+            expanded_query=expansion.get("expanded_query"),
+        )
+
+        candidates = orb_knowledge_library_service.get_candidate_chunks_for_semantic_search(filters)
+        hybrid_results, strategy = orb_semantic_retrieval_service.hybrid_search(
+            query,
+            keyword_results,
+            candidates,
             limit=limit,
         )
-        for result in results:
-            result["score"] = self.score_chunk(query, result, mode=mode, classification=classification)
-        results.sort(key=lambda item: -float(item.get("score") or 0))
-        return results[:limit]
+
+        for result in hybrid_results:
+            result["score"] = self.score_chunk(
+                query,
+                result,
+                mode=mode,
+                classification=classification,
+                base_score=float(result.get("hybrid_score") or result.get("score") or 0),
+            )
+            result["retrieval_strategy"] = strategy
+
+        hybrid_results.sort(key=lambda item: -float(item.get("score") or 0))
+        return hybrid_results[:limit]
 
     def retrieve_for_conversation(
         self,
@@ -84,13 +105,28 @@ class OrbRagRetrievalService:
             has_images=bool(attachments),
         )
 
+        expansion = orb_care_synonym_service.expand_query(message)
         document_results: list[dict[str, Any]] = []
+        retrieval_strategy = "built_in_source_pack"
+        semantic_available = orb_semantic_retrieval_service.semantic_available()
+        warnings: list[str] = []
+        official_source_count = 0
+
         try:
             document_results = self.search(message, mode=mode, limit=8)
+            if document_results:
+                retrieval_strategy = _text(document_results[0].get("retrieval_strategy")) or "keyword_only"
+            official_source_count = sum(1 for r in document_results if r.get("official_source"))
+            for r in document_results:
+                if r.get("warning"):
+                    warnings.append(_text(r.get("warning")))
         except Exception:
             document_results = []
 
-        document_citations = self.build_rag_citations(document_results)
+        document_citations = self.build_rag_citations(
+            document_results,
+            retrieval_strategy=retrieval_strategy,
+        )
         merged_citations = self.merge_with_source_pack_citations(pack_citations, document_results)
 
         return {
@@ -108,6 +144,15 @@ class OrbRagRetrievalService:
                 mode=mode,
             ),
             "top_source_titles": self._top_titles(packs, document_results),
+            "retrieval_meta": {
+                "strategy": retrieval_strategy if document_results else "built_in_source_pack",
+                "semantic_available": semantic_available,
+                "synonym_expansion_used": bool(expansion.get("synonym_expansion_used")),
+                "document_result_count": len(document_results),
+                "official_source_count": official_source_count,
+                "warnings": list(dict.fromkeys(warnings)),
+                "expanded_concepts": expansion.get("concepts") or [],
+            },
         }
 
     def score_chunk(
@@ -117,8 +162,9 @@ class OrbRagRetrievalService:
         *,
         mode: str | None = None,
         classification: dict[str, Any] | None = None,
+        base_score: float | None = None,
     ) -> float:
-        base = float(chunk.get("score") or 0)
+        base = float(base_score if base_score is not None else (chunk.get("hybrid_score") or chunk.get("score") or 0))
         lower = _lower(query)
         source_type = _text(chunk.get("source_type"))
         classification = classification or orb_knowledge_retrieval_service.classify_query(query, mode=mode)
@@ -154,6 +200,9 @@ class OrbRagRetrievalService:
         if "safeguarding" in lower and source_type == "safeguarding_principles":
             base += 2.5
 
+        if chunk.get("official_source"):
+            base += 1.5
+
         return round(base, 3)
 
     def build_grounded_context(
@@ -182,7 +231,9 @@ class OrbRagRetrievalService:
                 label = _text(result.get("citation_label"))
                 section = _text(result.get("section"))
                 section_note = f" ({section})" if section else ""
-                lines.append(f"- {label}{section_note}: {excerpt}")
+                warn = _text(result.get("warning"))
+                warn_note = f" [warning: {warn}]" if warn else ""
+                lines.append(f"- {label}{section_note}{warn_note}: {excerpt}")
         else:
             lines.append("No matching document passages; use source packs and general knowledge.")
         lines.append(
@@ -190,12 +241,19 @@ class OrbRagRetrievalService:
         )
         return "\n".join(lines)
 
-    def build_rag_citations(self, results: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    def build_rag_citations(
+        self,
+        results: list[dict[str, Any]],
+        *,
+        retrieval_strategy: str | None = None,
+    ) -> list[dict[str, Any]]:
         citations: list[dict[str, Any]] = []
         for result in results:
             source_type = _text(result.get("source_type")) or "user_uploaded"
             origin = (result.get("metadata") or {}).get("origin", "built_in")
             basis = TYPE_BASIS_MAP.get(source_type, "ORB Knowledge Library — reference document")
+            if result.get("official_source"):
+                basis = f"Official source summary — {basis}"
             section = _text(result.get("section"))
             page = _text(result.get("page"))
             note_parts = [_text(result.get("text"))[:220]]
@@ -203,6 +261,8 @@ class OrbRagRetrievalService:
                 note_parts.insert(0, f"Section: {section}")
             if page:
                 note_parts.insert(0, f"Page: {page}")
+            if result.get("match_reason"):
+                note_parts.append(f"Match: {result.get('match_reason')}")
             citations.append(
                 {
                     "id": f"doc-{result.get('source_id')}-{result.get('chunk_index')}",
@@ -217,6 +277,15 @@ class OrbRagRetrievalService:
                     "origin": origin,
                     "live_retrieved": False,
                     "document_chunk": True,
+                    "official_source": bool(result.get("official_source")),
+                    "confidence_level": result.get("source_confidence"),
+                    "governance_status": result.get("governance_status"),
+                    "source_version": (result.get("metadata") or {}).get("source_version"),
+                    "warning": result.get("warning"),
+                    "retrieval_strategy": retrieval_strategy or result.get("retrieval_strategy"),
+                    "semantic_score": result.get("semantic_score"),
+                    "hybrid_score": result.get("hybrid_score"),
+                    "keyword_score": result.get("keyword_score"),
                 }
             )
         return citations

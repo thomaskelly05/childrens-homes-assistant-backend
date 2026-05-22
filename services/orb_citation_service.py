@@ -38,14 +38,24 @@ class OrbCitationService:
         citations: list[dict[str, Any]] = []
         for pack in source_packs:
             source_type = _text(pack.get("source_type")) or "general_knowledge"
+            official = bool(pack.get("official_source"))
+            basis = TYPE_BASIS_MAP.get(source_type, "Built-in knowledge")
+            if official:
+                basis = f"Official source summary — {basis}"
             citations.append(
                 {
                     "id": _text(pack.get("id")) or _text(pack.get("pack_key")),
                     "label": _text(pack.get("short_citation_label") or pack.get("source_label")),
                     "type": source_type,
-                    "basis": TYPE_BASIS_MAP.get(source_type, "Built-in knowledge"),
+                    "basis": basis,
                     "note": _text(pack.get("guidance_notes") or pack.get("description")),
                     "live_retrieved": bool(pack.get("live_retrieved")),
+                    "official_source": official,
+                    "confidence_level": pack.get("confidence_level"),
+                    "governance_status": pack.get("governance_status"),
+                    "source_version": pack.get("source_version"),
+                    "warning": pack.get("governance_warning"),
+                    "retrieval_strategy": pack.get("retrieval_strategy"),
                 }
             )
         if has_images:
@@ -121,6 +131,19 @@ class OrbCitationService:
                 entry["page"] = citation.get("page")
                 entry["source_id"] = citation.get("source_id")
                 entry["chunk_index"] = citation.get("chunk_index")
+            for field in (
+                "official_source",
+                "confidence_level",
+                "governance_status",
+                "source_version",
+                "warning",
+                "retrieval_strategy",
+                "semantic_score",
+                "hybrid_score",
+                "keyword_score",
+            ):
+                if citation.get(field) is not None:
+                    entry[field] = citation.get(field)
             payload.append(entry)
         return payload
 

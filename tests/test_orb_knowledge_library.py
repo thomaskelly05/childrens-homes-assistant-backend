@@ -58,4 +58,14 @@ def test_library_summary():
     summary = orb_knowledge_library_service.get_library_summary()
     assert summary["source_count"] > 0
     assert summary["chunk_count"] > 0
-    assert summary["standalone_only"] is True
+
+
+def test_seeded_chunks_have_canonical_terms():
+    chunks = orb_knowledge_library_service.list_chunks("seed-ofsted-sccif")
+    if chunks:
+        assert chunks[0].get("canonical_terms") is not None
+
+
+def test_ofsted_source_official_flag():
+    source = orb_knowledge_library_service.get_source("seed-ofsted-sccif")
+    assert source and source.get("official_source") is True

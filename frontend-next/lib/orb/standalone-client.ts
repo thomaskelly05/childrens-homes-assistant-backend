@@ -93,6 +93,15 @@ export type StandaloneOrbSource = {
   page?: string | null
   source_id?: string
   chunk_index?: number
+  official_source?: boolean
+  confidence_level?: string
+  governance_status?: string
+  source_version?: string
+  warning?: string | null
+  retrieval_strategy?: string
+  semantic_score?: number | null
+  hybrid_score?: number | null
+  keyword_score?: number | null
 }
 
 export type StandaloneOrbCitation = StandaloneOrbSource
@@ -105,6 +114,10 @@ export type StandaloneOrbRetrievalContext = {
   top_source_titles?: string[]
   routing_hint?: string
   research_intent?: boolean
+  semantic_available?: boolean
+  synonym_expansion_used?: boolean
+  official_source_count?: number
+  warnings?: string[]
 }
 
 export type StandaloneOrbModelRouting = {
@@ -278,6 +291,15 @@ export type OrbKnowledgeSourceType =
   | 'general_knowledge'
   | 'user_uploaded'
 
+export type OrbKnowledgeConfidenceLevel = 'low' | 'medium' | 'high' | 'official'
+
+export type OrbKnowledgeGovernanceStatus =
+  | 'draft'
+  | 'approved'
+  | 'needs_review'
+  | 'expired'
+  | 'archived'
+
 export type OrbKnowledgeSource = {
   id: string
   title: string
@@ -291,6 +313,14 @@ export type OrbKnowledgeSource = {
   os_linked?: boolean
   care_record_access?: boolean
   live_retrieved?: boolean
+  source_version?: string | null
+  official_source?: boolean
+  publisher?: string | null
+  confidence_level?: OrbKnowledgeConfidenceLevel
+  governance_status?: OrbKnowledgeGovernanceStatus
+  review_due_at?: string | null
+  expires_at?: string | null
+  notes?: string | null
 }
 
 export type OrbKnowledgeSearchResult = {
@@ -305,6 +335,13 @@ export type OrbKnowledgeSearchResult = {
   score: number
   match_reason: string
   live_retrieved?: boolean
+  keyword_score?: number | null
+  semantic_score?: number | null
+  hybrid_score?: number | null
+  official_source?: boolean
+  source_confidence?: OrbKnowledgeConfidenceLevel
+  governance_status?: OrbKnowledgeGovernanceStatus
+  warning?: string | null
 }
 
 export type OrbKnowledgeLibrarySummary = {
@@ -331,8 +368,11 @@ export async function fetchOrbKnowledgeSummary() {
   return unwrapKnowledgeData<OrbKnowledgeLibrarySummary>(payload)
 }
 
-export async function fetchOrbKnowledgeSources(sourceType?: string) {
-  const query = sourceType ? `?source_type=${encodeURIComponent(sourceType)}` : ''
+export async function fetchOrbKnowledgeSources(sourceType?: string, governanceStatus?: string) {
+  const params = new URLSearchParams()
+  if (sourceType) params.set('source_type', sourceType)
+  if (governanceStatus) params.set('governance_status', governanceStatus)
+  const query = params.toString() ? `?${params.toString()}` : ''
   const payload = await authFetch(`/orb/standalone/knowledge/sources${query}`)
   return unwrapKnowledgeData<OrbKnowledgeSource[]>(payload)
 }

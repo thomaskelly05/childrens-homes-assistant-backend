@@ -53,13 +53,28 @@ async def knowledge_summary(current_user=Depends(require_assistant_access)):
     return _success(orb_knowledge_library_service.get_library_summary())
 
 
+@router.get("/sources/needing-review")
+async def sources_needing_review(current_user=Depends(require_assistant_access)):
+    return _success(orb_knowledge_library_service.list_sources_needing_review())
+
+
+@router.get("/sources/expired")
+async def sources_expired(current_user=Depends(require_assistant_access)):
+    return _success(orb_knowledge_library_service.list_expired_sources())
+
+
 @router.get("/sources")
 async def list_sources(
     source_type: str | None = None,
     status: str | None = None,
+    governance_status: str | None = None,
     current_user=Depends(require_assistant_access),
 ):
-    sources = orb_knowledge_library_service.list_sources(source_type=source_type, status=status)
+    sources = orb_knowledge_library_service.list_sources(
+        source_type=source_type,
+        status=status,
+        governance_status=governance_status,
+    )
     return _success(sources)
 
 

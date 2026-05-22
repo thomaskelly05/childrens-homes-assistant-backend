@@ -238,7 +238,8 @@ class OrbGeneralAssistantService:
         packs = retrieval.get("source_packs") or []
         document_results = retrieval.get("document_results") or []
         live = any(bool(p.get("live_retrieved")) for p in packs)
-        strategy = (
+        meta = retrieval.get("retrieval_meta") or {}
+        strategy = meta.get("strategy") or (
             "source_pack_plus_document_rag"
             if document_results
             else "built_in_source_pack"
@@ -255,6 +256,10 @@ class OrbGeneralAssistantService:
                 "top_source_titles": retrieval.get("top_source_titles") or [],
                 "routing_hint": retrieval.get("routing_hint"),
                 "research_intent": bool((retrieval.get("classification") or {}).get("research_intent")),
+                "semantic_available": meta.get("semantic_available", False),
+                "synonym_expansion_used": meta.get("synonym_expansion_used", False),
+                "official_source_count": meta.get("official_source_count", 0),
+                "warnings": meta.get("warnings") or [],
             },
         }
         if model_routing:

@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from db.connection import DatabaseUnavailableError, get_db_connection, release_db_connection
+from services.orb_care_synonym_service import orb_care_synonym_service
 from psycopg2.extras import RealDictCursor, Json
 
 logger = logging.getLogger("indicare.orb_knowledge_library")
@@ -77,6 +78,67 @@ SEED_FILE_MAP: dict[str, dict[str, str]] = {
         "reliability": "built_in_therapeutic_practice",
     },
 }
+
+GOVERNANCE_SEED_META: dict[str, dict[str, Any]] = {
+    "seed-ofsted-sccif": {
+        "official_source": True,
+        "publisher": "Ofsted",
+        "confidence_level": "official",
+        "governance_status": "approved",
+        "source_version": "built-in-summary-v1",
+        "notes": "Built-in summary only, not full official text. Upload official documents for exact source retrieval.",
+    },
+    "seed-quality-standards": {
+        "official_source": True,
+        "publisher": "Department for Education",
+        "confidence_level": "official",
+        "governance_status": "approved",
+        "source_version": "built-in-summary-v1",
+        "notes": "Built-in summary only, not full official text. Upload official documents for exact source retrieval.",
+    },
+    "seed-safeguarding": {
+        "official_source": False,
+        "publisher": "IndiCare ORB",
+        "confidence_level": "high",
+        "governance_status": "approved",
+        "source_version": "built-in-summary-v1",
+        "notes": "Built-in safeguarding practice summary.",
+    },
+    "seed-indicare-product": {
+        "official_source": False,
+        "confidence_level": "high",
+        "governance_status": "approved",
+        "source_type_note": "product_context",
+        "notes": "IndiCare product context — not a regulatory official source.",
+    },
+    "seed-recording-quality": {
+        "official_source": False,
+        "confidence_level": "high",
+        "governance_status": "approved",
+        "source_version": "built-in-summary-v1",
+    },
+    "seed-residential-practice": {
+        "official_source": False,
+        "confidence_level": "high",
+        "governance_status": "approved",
+        "source_version": "built-in-summary-v1",
+    },
+    "seed-therapeutic": {
+        "official_source": False,
+        "confidence_level": "high",
+        "governance_status": "approved",
+        "source_version": "built-in-summary-v1",
+    },
+    "seed-standalone-boundary": {
+        "official_source": False,
+        "confidence_level": "high",
+        "governance_status": "approved",
+    },
+}
+
+BUILTIN_GOVERNANCE_WARNING = (
+    "These are built-in summaries. Upload official documents for exact source retrieval."
+)
 
 
 def _utc_now() -> datetime:
@@ -146,6 +208,17 @@ class OrbKnowledgeLibraryService:
         except Exception:
             logger.warning("Could not persist ORB knowledge JSON cache", exc_info=True)
 
+    def _parse_json_list(self, value: Any) -> list:
+        if isinstance(value, list):
+            return value
+        if isinstance(value, str):
+            try:
+                parsed = json.loads(value)
+                return parsed if isinstance(parsed, list) else []
+            except json.JSONDecodeError:
+                return []
+        return []
+
     def _row_to_source(self, row: dict[str, Any]) -> dict[str, Any]:
         return {
             "id": row["id"],
@@ -165,15 +238,28 @@ class OrbKnowledgeLibraryService:
             "created_at": row.get("created_at"),
             "updated_at": row.get("updated_at"),
             "metadata": row.get("metadata") or {},
+            "source_version": row.get("source_version"),
+            "official_source": bool(row.get("official_source", False)),
+            "source_url": row.get("source_url"),
+            "publisher": row.get("publisher"),
+            "published_at": row.get("published_at"),
+            "review_due_at": row.get("review_due_at"),
+            "expires_at": row.get("expires_at"),
+            "confidence_level": row.get("confidence_level") or "medium",
+            "governance_status": row.get("governance_status") or "approved",
+            "approved_by": row.get("approved_by"),
+            "approved_at": row.get("approved_at"),
+            "notes": row.get("notes"),
         }
 
     def _row_to_chunk(self, row: dict[str, Any]) -> dict[str, Any]:
-        keywords = row.get("keywords") or []
-        if isinstance(keywords, str):
+        keywords = self._parse_json_list(row.get("keywords"))
+        embedding = row.get("embedding")
+        if isinstance(embedding, str):
             try:
-                keywords = json.loads(keywords)
+                embedding = json.loads(embedding)
             except json.JSONDecodeError:
-                keywords = []
+                embedding = None
         return {
             "id": row["id"],
             "source_id": row["source_id"],
@@ -185,8 +271,14 @@ class OrbKnowledgeLibraryService:
             "token_estimate": row.get("token_estimate"),
             "citation_label": row.get("citation_label"),
             "source_type": row.get("source_type"),
-            "keywords": keywords if isinstance(keywords, list) else [],
+            "keywords": keywords,
             "metadata": row.get("metadata") or {},
+            "embedding": embedding if isinstance(embedding, list) else None,
+            "embedding_model": row.get("embedding_model"),
+            "embedding_created_at": row.get("embedding_created_at"),
+            "semantic_keywords": self._parse_json_list(row.get("semantic_keywords")),
+            "canonical_terms": self._parse_json_list(row.get("canonical_terms")),
+            "confidence_score": row.get("confidence_score"),
         }
 
     def seed_builtin_sources(self) -> list[dict[str, Any]]:
@@ -221,6 +313,7 @@ class OrbKnowledgeLibraryService:
                 source_title=meta["title"],
                 source_type=meta["source_type"],
             )
+            governance = GOVERNANCE_SEED_META.get(source_id, {})
             source = {
                 "id": source_id,
                 "title": meta["title"],
@@ -236,7 +329,16 @@ class OrbKnowledgeLibraryService:
                 "standalone_only": True,
                 "os_linked": False,
                 "care_record_access": False,
-                "metadata": {"seed_file": filename},
+                "metadata": {
+                    "seed_file": filename,
+                    "governance_warning": BUILTIN_GOVERNANCE_WARNING,
+                },
+                "source_version": governance.get("source_version", "built-in-summary-v1"),
+                "official_source": bool(governance.get("official_source", False)),
+                "publisher": governance.get("publisher"),
+                "confidence_level": governance.get("confidence_level", "medium"),
+                "governance_status": governance.get("governance_status", "approved"),
+                "notes": governance.get("notes"),
             }
             self._persist_source(source)
             chunk_records = []
@@ -255,6 +357,12 @@ class OrbKnowledgeLibraryService:
                         "citation_label": chunk.get("citation_label"),
                         "source_type": meta["source_type"],
                         "keywords": chunk.get("keywords") or [],
+                        "semantic_keywords": chunk.get("semantic_keywords") or [],
+                        "canonical_terms": chunk.get("canonical_terms") or [],
+                        "confidence_score": chunk.get("confidence_score"),
+                        "embedding": chunk.get("embedding"),
+                        "embedding_model": chunk.get("embedding_model"),
+                        "embedding_created_at": chunk.get("embedding_created_at"),
                         "metadata": chunk.get("metadata") or {},
                     }
                 )
@@ -277,12 +385,18 @@ class OrbKnowledgeLibraryService:
                                 id, title, description, source_type, status, origin,
                                 file_name, file_type, source_label, reliability,
                                 live_retrieved, standalone_only, os_linked, care_record_access,
-                                metadata, created_at, updated_at
+                                metadata, created_at, updated_at,
+                                source_version, official_source, source_url, publisher,
+                                published_at, review_due_at, expires_at,
+                                confidence_level, governance_status, approved_by, approved_at, notes
                             ) VALUES (
                                 %(id)s, %(title)s, %(description)s, %(source_type)s, %(status)s, %(origin)s,
                                 %(file_name)s, %(file_type)s, %(source_label)s, %(reliability)s,
                                 %(live_retrieved)s, %(standalone_only)s, %(os_linked)s, %(care_record_access)s,
-                                %(metadata)s, %(created_at)s, %(updated_at)s
+                                %(metadata)s, %(created_at)s, %(updated_at)s,
+                                %(source_version)s, %(official_source)s, %(source_url)s, %(publisher)s,
+                                %(published_at)s, %(review_due_at)s, %(expires_at)s,
+                                %(confidence_level)s, %(governance_status)s, %(approved_by)s, %(approved_at)s, %(notes)s
                             )
                             ON CONFLICT (id) DO UPDATE SET
                                 title = EXCLUDED.title,
@@ -292,6 +406,12 @@ class OrbKnowledgeLibraryService:
                                 source_label = EXCLUDED.source_label,
                                 reliability = EXCLUDED.reliability,
                                 metadata = EXCLUDED.metadata,
+                                source_version = EXCLUDED.source_version,
+                                official_source = EXCLUDED.official_source,
+                                publisher = EXCLUDED.publisher,
+                                confidence_level = EXCLUDED.confidence_level,
+                                governance_status = EXCLUDED.governance_status,
+                                notes = EXCLUDED.notes,
                                 updated_at = EXCLUDED.updated_at
                             """,
                             {
@@ -319,6 +439,7 @@ class OrbKnowledgeLibraryService:
         *,
         source_type: str | None = None,
         status: str | None = None,
+        governance_status: str | None = None,
     ) -> list[dict[str, Any]]:
         self._ensure_seeded()
         if self._use_db():
@@ -333,6 +454,9 @@ class OrbKnowledgeLibraryService:
                     if status:
                         clauses.append("status = %(status)s")
                         params["status"] = status
+                    if governance_status:
+                        clauses.append("governance_status = %(governance_status)s")
+                        params["governance_status"] = governance_status
                     with conn.cursor(cursor_factory=RealDictCursor) as cur:
                         cur.execute(
                             f"""
@@ -356,6 +480,8 @@ class OrbKnowledgeLibraryService:
             sources = [s for s in sources if s.get("source_type") == source_type]
         if status:
             sources = [s for s in sources if s.get("status") == status]
+        if governance_status:
+            sources = [s for s in sources if s.get("governance_status") == governance_status]
         return sorted(sources, key=lambda s: (s.get("origin", ""), s.get("title", "")))
 
     def get_source(self, source_id: str) -> dict[str, Any] | None:
@@ -396,6 +522,18 @@ class OrbKnowledgeLibraryService:
             "os_linked": False,
             "care_record_access": False,
             "metadata": payload.get("metadata") or {},
+            "source_version": payload.get("source_version"),
+            "official_source": bool(payload.get("official_source", False)),
+            "source_url": payload.get("source_url"),
+            "publisher": payload.get("publisher"),
+            "published_at": payload.get("published_at"),
+            "review_due_at": payload.get("review_due_at"),
+            "expires_at": payload.get("expires_at"),
+            "confidence_level": payload.get("confidence_level") or "medium",
+            "governance_status": payload.get("governance_status") or "approved",
+            "approved_by": payload.get("approved_by"),
+            "approved_at": payload.get("approved_at"),
+            "notes": payload.get("notes"),
         }
         return self._persist_source(source)
 
@@ -403,10 +541,33 @@ class OrbKnowledgeLibraryService:
         existing = self.get_source(source_id)
         if not existing:
             return None
-        for key in ("title", "description", "source_type", "status", "source_label", "metadata"):
+        update_keys = (
+            "title",
+            "description",
+            "source_type",
+            "status",
+            "source_label",
+            "metadata",
+            "source_version",
+            "official_source",
+            "source_url",
+            "publisher",
+            "published_at",
+            "review_due_at",
+            "expires_at",
+            "confidence_level",
+            "governance_status",
+            "approved_by",
+            "approved_at",
+            "notes",
+        )
+        for key in update_keys:
             if key in payload and payload[key] is not None:
                 existing[key] = payload[key]
         return self._persist_source(existing)
+
+    def update_source_governance(self, source_id: str, payload: dict[str, Any]) -> dict[str, Any] | None:
+        return self.update_source(source_id, payload)
 
     def delete_or_archive_source(self, source_id: str) -> bool:
         existing = self.get_source(source_id)
@@ -447,17 +608,26 @@ class OrbKnowledgeLibraryService:
                                 """
                                 INSERT INTO orb_knowledge_chunks (
                                     id, source_id, chunk_index, title, text, section, page,
-                                    token_estimate, citation_label, source_type, keywords, metadata
+                                    token_estimate, citation_label, source_type, keywords, metadata,
+                                    embedding, embedding_model, embedding_created_at,
+                                    semantic_keywords, canonical_terms, confidence_score
                                 ) VALUES (
                                     %(id)s, %(source_id)s, %(chunk_index)s, %(title)s, %(text)s,
                                     %(section)s, %(page)s, %(token_estimate)s, %(citation_label)s,
-                                    %(source_type)s, %(keywords)s, %(metadata)s
+                                    %(source_type)s, %(keywords)s, %(metadata)s,
+                                    %(embedding)s, %(embedding_model)s, %(embedding_created_at)s,
+                                    %(semantic_keywords)s, %(canonical_terms)s, %(confidence_score)s
                                 )
                                 """,
                                 {
                                     **chunk,
                                     "keywords": Json(chunk.get("keywords") or []),
                                     "metadata": Json(chunk.get("metadata") or {}),
+                                    "embedding": Json(chunk.get("embedding"))
+                                    if chunk.get("embedding") is not None
+                                    else None,
+                                    "semantic_keywords": Json(chunk.get("semantic_keywords") or []),
+                                    "canonical_terms": Json(chunk.get("canonical_terms") or []),
                                 },
                             )
                         cur.execute(
@@ -531,22 +701,173 @@ class OrbKnowledgeLibraryService:
             "storage": self._storage_mode,
         }
 
+    def _governance_warning(self, source: dict[str, Any]) -> str | None:
+        now = _utc_now()
+        status = _text(source.get("governance_status"))
+        if status == "needs_review":
+            return "This source may need review."
+        if status == "expired":
+            return "This source has expired and may need review."
+        expires_at = source.get("expires_at")
+        if expires_at:
+            try:
+                exp = expires_at if isinstance(expires_at, datetime) else datetime.fromisoformat(
+                    str(expires_at).replace("Z", "+00:00")
+                )
+                if exp.tzinfo is None:
+                    exp = exp.replace(tzinfo=timezone.utc)
+                if exp < now:
+                    return "This source may need review."
+            except (TypeError, ValueError):
+                pass
+        review_due = source.get("review_due_at")
+        if review_due:
+            try:
+                due = review_due if isinstance(review_due, datetime) else datetime.fromisoformat(
+                    str(review_due).replace("Z", "+00:00")
+                )
+                if due.tzinfo is None:
+                    due = due.replace(tzinfo=timezone.utc)
+                if due < now:
+                    return "This source may need review."
+            except (TypeError, ValueError):
+                pass
+        return None
+
+    def _confidence_boost(self, source: dict[str, Any]) -> float:
+        boost = 0.0
+        if source.get("official_source"):
+            boost += 2.0
+        level = _text(source.get("confidence_level"))
+        if level == "official":
+            boost += 2.5
+        elif level == "high":
+            boost += 1.5
+        elif level == "medium":
+            boost += 0.5
+        warning = self._governance_warning(source)
+        if warning:
+            boost -= 0.75
+        return boost
+
+    def list_sources_needing_review(self) -> list[dict[str, Any]]:
+        sources = self.list_sources()
+        return [
+            s
+            for s in sources
+            if s.get("governance_status") == "needs_review"
+            or self._governance_warning(s) is not None
+        ]
+
+    def list_expired_sources(self) -> list[dict[str, Any]]:
+        return [s for s in self.list_sources() if s.get("governance_status") == "expired"]
+
+    def get_candidate_chunks_for_semantic_search(
+        self,
+        filters: dict[str, Any] | None = None,
+    ) -> list[dict[str, Any]]:
+        filters = filters or {}
+        chunks = self.list_chunks()
+        source_by_id = {s["id"]: s for s in self.list_sources()}
+        candidates: list[dict[str, Any]] = []
+        for chunk in chunks:
+            source = source_by_id.get(chunk["source_id"])
+            if not source or source.get("status") == "archived":
+                continue
+            if filters.get("source_type") and source.get("source_type") != filters["source_type"]:
+                continue
+            candidates.append(
+                {
+                    **chunk,
+                    "source_title": source.get("title"),
+                    "source_type": source.get("source_type"),
+                    "citation_label": chunk.get("citation_label") or source.get("source_label"),
+                    "official_source": source.get("official_source"),
+                    "source_confidence": source.get("confidence_level"),
+                    "governance_status": source.get("governance_status"),
+                    "chunk_confidence_score": chunk.get("confidence_score"),
+                }
+            )
+        return candidates
+
+    def update_chunk_embedding(
+        self,
+        chunk_id: str,
+        embedding: list[float],
+        model: str,
+    ) -> bool:
+        chunk = self._memory_chunks.get(chunk_id)
+        if chunk:
+            chunk["embedding"] = embedding
+            chunk["embedding_model"] = model
+            chunk["embedding_created_at"] = _utc_now().isoformat()
+            self._save_json_cache()
+            return True
+        if self._use_db():
+            try:
+                conn = get_db_connection()
+                try:
+                    rowcount = 0
+                    with conn.cursor() as cur:
+                        cur.execute(
+                            """
+                            UPDATE orb_knowledge_chunks
+                            SET embedding = %s, embedding_model = %s, embedding_created_at = NOW()
+                            WHERE id = %s
+                            """,
+                            (Json(embedding), model, chunk_id),
+                        )
+                        rowcount = cur.rowcount
+                    conn.commit()
+                    return rowcount > 0
+                finally:
+                    release_db_connection(conn)
+            except Exception:
+                logger.debug("update_chunk_embedding failed", exc_info=True)
+        return False
+
+    def embed_missing_chunks(self, limit: int = 32) -> dict[str, Any]:
+        from services.orb_embedding_service import orb_embedding_service
+
+        if not orb_embedding_service.is_available():
+            return {"embedded": 0, "available": False, "reason": "embeddings_unavailable"}
+
+        chunks = self.list_chunks()
+        missing = [c for c in chunks if not c.get("embedding")][:limit]
+        if not missing:
+            return {"embedded": 0, "available": True}
+
+        texts = [_text(c.get("text")) for c in missing]
+        result = orb_embedding_service.embed_many(texts)
+        if not result.get("available"):
+            return {"embedded": 0, "available": False, "reason": result.get("error")}
+
+        model = result.get("model") or orb_embedding_service.embedding_model()
+        embedded = 0
+        for chunk, vector in zip(missing, result.get("embeddings") or []):
+            if vector and self.update_chunk_embedding(chunk["id"], vector, model):
+                embedded += 1
+        return {"embedded": embedded, "available": True, "model": model}
+
     def search_chunks_keyword(
         self,
         query: str,
         *,
         filters: dict[str, Any] | None = None,
         limit: int = 8,
+        expanded_query: str | None = None,
     ) -> list[dict[str, Any]]:
         self._ensure_seeded()
         filters = filters or {}
-        query_lower = _text(query).lower()
+        expansion = orb_care_synonym_service.expand_query(query)
+        query_lower = _text(expanded_query or expansion.get("expanded_query") or query).lower()
         if not query_lower:
             return []
 
         tokens = [t for t in re.findall(r"[a-z0-9']+", query_lower) if len(t) > 2]
         if not tokens:
             tokens = query_lower.split()
+        expanded_terms = [_text(t).lower() for t in expansion.get("expanded_terms") or []]
 
         chunks = self.list_chunks()
         source_by_id = {s["id"]: s for s in self.list_sources()}
@@ -556,12 +877,16 @@ class OrbKnowledgeLibraryService:
             source = source_by_id.get(chunk["source_id"])
             if not source or source.get("status") == "archived":
                 continue
+            if filters.get("governance_status") and source.get("governance_status") != filters["governance_status"]:
+                continue
             if filters.get("source_type") and source.get("source_type") != filters["source_type"]:
                 continue
             text_lower = _text(chunk.get("text")).lower()
             title_lower = _text(chunk.get("title")).lower()
             keywords_lower = " ".join(chunk.get("keywords") or []).lower()
-            haystack = f"{title_lower} {text_lower} {keywords_lower}"
+            semantic_kw = " ".join(chunk.get("semantic_keywords") or []).lower()
+            canonical = " ".join(chunk.get("canonical_terms") or []).lower()
+            haystack = f"{title_lower} {text_lower} {keywords_lower} {semantic_kw} {canonical}"
 
             score = 0.0
             reasons: list[str] = []
@@ -569,15 +894,27 @@ class OrbKnowledgeLibraryService:
                 if token in haystack:
                     score += 2.0
                     reasons.append(f"keyword:{token}")
+            for term in expanded_terms:
+                if term and term in haystack:
+                    score += 2.5
+                    reasons.append(f"synonym:{term[:24]}")
+            for concept in expansion.get("concepts") or []:
+                if concept.replace("_", " ") in canonical or concept in canonical:
+                    score += 3.0
+                    reasons.append(f"concept:{concept}")
             if query_lower in text_lower:
                 score += 5.0
                 reasons.append("phrase_match")
             if filters.get("source_type") and source.get("source_type") == filters["source_type"]:
                 score += 1.5
 
+            score += self._confidence_boost(source)
+
             if score <= 0:
                 continue
 
+            keyword_score = round(score, 3)
+            warning = self._governance_warning(source)
             result = {
                 "source_id": chunk["source_id"],
                 "source_title": source.get("title"),
@@ -587,13 +924,22 @@ class OrbKnowledgeLibraryService:
                 "page": chunk.get("page"),
                 "chunk_index": chunk.get("chunk_index"),
                 "text": chunk.get("text"),
-                "score": round(score, 3),
-                "match_reason": ", ".join(reasons[:4]) or "keyword_overlap",
+                "score": keyword_score,
+                "keyword_score": keyword_score,
+                "semantic_score": None,
+                "hybrid_score": keyword_score,
+                "confidence_score": chunk.get("confidence_score"),
+                "source_confidence": source.get("confidence_level"),
+                "governance_status": source.get("governance_status"),
+                "official_source": source.get("official_source"),
+                "warning": warning,
+                "match_reason": ", ".join(reasons[:5]) or "keyword_overlap",
                 "live_retrieved": False,
                 "metadata": {
                     **(chunk.get("metadata") or {}),
                     "origin": source.get("origin"),
                     "source_label": source.get("source_label"),
+                    "source_version": source.get("source_version"),
                 },
             }
             scored.append((score, result, chunk["id"]))
