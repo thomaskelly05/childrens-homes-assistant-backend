@@ -6,6 +6,8 @@ import { Card, PageHeader, StatCard, StatusBadge } from '@/components/indicare/u
 import { getGovernanceCommandCentre } from '@/lib/os-api/governance'
 import { getCommandCentre } from '@/lib/os-api/platform'
 import { getWorkforceCommandCentre } from '@/lib/os-api/workforce'
+import { CareHubIntelligenceWidgets } from '@/components/indicare/care-hub/care-hub-widgets'
+import { getCareHub } from '@/lib/os-api/care-hub'
 import { buildCommandCentreSignals, buildReflectivePrompts } from '@/lib/operational/cognition-metrics'
 
 type FeedItem = {
@@ -78,9 +80,12 @@ function buildCognitionItems(
 }
 
 export default async function UnifiedCommandCentrePage() {
-  const platform = await getCommandCentre()
-  const governance = await getGovernanceCommandCentre()
-  const workforce = await getWorkforceCommandCentre()
+  const [platform, governance, workforce, careHub] = await Promise.all([
+    getCommandCentre(),
+    getGovernanceCommandCentre(),
+    getWorkforceCommandCentre(),
+    getCareHub({ limit: 50 })
+  ])
 
   const platformData = platform.data
   const governanceData = governance.data
@@ -206,6 +211,10 @@ export default async function UnifiedCommandCentrePage() {
           </div>
         </Card>
       </div>
+
+      <section data-testid="care-hub-live-intelligence">
+        <CareHubIntelligenceWidgets payload={careHub.source === 'live' && careHub.data?.ok ? careHub.data : null} />
+      </section>
 
       <Card>
         <p className="text-[11px] font-black uppercase tracking-[0.24em] text-blue-700">Children in view</p>
