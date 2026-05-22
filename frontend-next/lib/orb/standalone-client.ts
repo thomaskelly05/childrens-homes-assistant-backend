@@ -1,5 +1,7 @@
 import { authFetch, AuthApiError } from '@/lib/auth/api'
 
+const STANDALONE_REQUEST_TIMEOUT_MS = 45_000
+
 export const STANDALONE_ORB_MODES = [
   'Ask ORB',
   'Safeguarding',
@@ -41,6 +43,7 @@ export type StandaloneOrbConversationResponse = {
   answer: string
   summary?: string
   conversation_id?: string | null
+  confidence?: string
   context_used?: {
     surface?: string
     mode?: string
@@ -50,11 +53,28 @@ export type StandaloneOrbConversationResponse = {
   guardrails?: string[]
 }
 
+function withTimeout(signal?: AbortSignal): AbortSignal {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), STANDALONE_REQUEST_TIMEOUT_MS)
+  if (signal) {
+    signal.addEventListener('abort', () => {
+      clearTimeout(timeout)
+      controller.abort()
+    })
+  }
+  controller.signal.addEventListener('abort', () => clearTimeout(timeout))
+  return controller.signal
+}
+
 export async function fetchStandaloneOrbConfig(signal?: AbortSignal): Promise<StandaloneOrbConfig> {
-  const payload = await authFetch<{ success?: boolean; data?: StandaloneOrbConfig }>('/orb/standalone/config', { signal })
+  const payload = await authFetch<{ success?: boolean; data?: StandaloneOrbConfig }>('/orb/standalone/config', {
+    signal: withTimeout(signal)
+  })
   if (!payload?.data) throw new AuthApiError(503, 'Could not load ORB Care Companion configuration.')
   return payload.data
 }
+
+export const getStandaloneOrbConfig = fetchStandaloneOrbConfig
 
 export async function queryStandaloneOrbConversation(
   request: StandaloneOrbConversationRequest,
@@ -62,7 +82,7 @@ export async function queryStandaloneOrbConversation(
 ): Promise<StandaloneOrbConversationResponse> {
   const payload = await authFetch<StandaloneOrbConversationResponse>('/orb/standalone/conversation', {
     method: 'POST',
-    signal,
+    signal: withTimeout(signal),
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       message: request.message,
@@ -74,6 +94,8 @@ export async function queryStandaloneOrbConversation(
   if (!payload?.answer) throw new AuthApiError(503, 'ORB could not complete that request.')
   return payload
 }
+
+export const sendStandaloneOrbMessage = queryStandaloneOrbConversation
 
 export function standaloneOrbErrorMessage(error: unknown) {
   if (error instanceof AuthApiError) return error.message
