@@ -15,15 +15,6 @@ import {
 import { getOsYoungPeople } from '@/lib/os-api/workspaces'
 import { buildCommandCentreSignals, buildReflectivePrompts } from '@/lib/operational/cognition-metrics'
 
-type FeedItem = {
-  id: string
-  title: string
-  body: string
-  type: string
-  href: string
-  date?: string
-}
-
 function childName(child: { preferredName?: string; displayName?: string; firstName?: string; name?: string; full_name?: string; id?: string | number }) {
   return child.preferredName || child.displayName || child.firstName || child.name || child.full_name || `Young person ${child.id}`
 }

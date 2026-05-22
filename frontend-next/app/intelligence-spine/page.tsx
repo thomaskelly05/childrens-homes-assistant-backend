@@ -3,12 +3,21 @@ import Link from 'next/link'
 import { IntelligenceSpineActionsPanel } from '@/components/indicare/intelligence/intelligence-spine-actions-panel'
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
 import { Card, DataTable, EmptyState, PageHeader, SectionHeader, StatCard, StatusBadge } from '@/components/indicare/ui'
-import { postIntelligenceSpine } from '@/lib/os-api/intelligence-spine'
+import { postIntelligenceSpine, type IntelligenceSpinePayload } from '@/lib/os-api/intelligence-spine'
 
 const DECISION_NOTICE =
   'This is decision support only. It does not replace professional judgement, safeguarding procedures or manager review. Do not treat outputs as a final decision.'
 
-const demoSpine = {
+const demoSpine: IntelligenceSpinePayload = {
+  metadata: {
+    live_records_requested: false,
+    live_records_found: 0,
+    supplied_records_found: 0,
+    total_records_analysed: 0,
+    collector_warnings: [],
+    mode: 'manager_daily_brief'
+  },
+  decision_support_notice: DECISION_NOTICE,
   summary: {
     headline: 'records indicate 4 intelligence themes for structured review; manager oversight suggested',
     evidence_status: 'mixed',
@@ -124,10 +133,17 @@ export default async function IntelligenceSpinePage({ searchParams }: PageProps)
   })
 
   const usingDemo = live.source !== 'live'
-  const spine = usingDemo ? demoSpine : live.data
+  const spine: IntelligenceSpinePayload = usingDemo ? demoSpine : live.data
   const brief = spine.manager_daily_brief
   const metadata = spine.metadata
-  const summary = spine.summary || demoSpine.summary
+  const summary = spine.summary ??
+    demoSpine.summary ?? {
+      headline: '',
+      evidence_status: 'limited',
+      pattern_count: 0,
+      priority_action_count: 0,
+      manager_oversight_count: 0
+    }
 
   return (
     <div className="space-y-6 pb-10">
