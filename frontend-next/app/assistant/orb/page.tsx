@@ -1,6 +1,3 @@
-import { redirect } from 'next/navigation'
+import OperationalOrbPage from './operational-orb-page'
 
-export default function AssistantOrbPage() {
-  redirect('/orb')
-}
-
+export default OperationalOrbPage
