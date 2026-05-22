@@ -22,7 +22,6 @@ import {
   searchChats,
   STANDALONE_GENERAL_PROJECT_ID,
   type StandaloneChat,
-  type StandaloneProfile,
   type StandaloneProject,
   type StandaloneWorkspace
 } from '@/lib/orb/standalone-local-store'

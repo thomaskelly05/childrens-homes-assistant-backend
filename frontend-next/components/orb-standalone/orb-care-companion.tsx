@@ -23,11 +23,7 @@ import {
   type PendingImageAttachment
 } from '@/components/orb-standalone/orb-standalone-composer'
 import { OrbStandaloneSidebar } from '@/components/orb-standalone/orb-standalone-sidebar'
-import {
-  splitTextForSpeechChunks,
-  useStandaloneOrbVoice,
-  type StandaloneOrbAnswerStyle
-} from '@/components/orb-standalone/use-standalone-orb-voice'
+import { useStandaloneOrbVoice, type StandaloneOrbAnswerStyle } from '@/components/orb-standalone/use-standalone-orb-voice'
 import {
   buildProfileContextBlock,
   createStandaloneChat,
