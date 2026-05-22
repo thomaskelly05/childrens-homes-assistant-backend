@@ -178,9 +178,10 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
             "routers.safeguarding_flowchart_routes",
             "routers.safeguarding_domain_routes",
             "routers.missing_episode_routes",
+            "routers.isn_routes",
         ),
         classification="mixed",
-        notes="Risk, actions, visibility, supervision, manager review and document governance.",
+        notes="Risk, contextual safeguarding, ISN intelligence, missing episodes and governance.",
     ),
     RouterGroup(
         "experience_bundles",
@@ -291,17 +292,6 @@ def _is_missing_router_module(error: Exception, router_path: str) -> bool:
     return isinstance(error, ModuleNotFoundError) and getattr(error, "name", None) == router_path
 
 
-def _split_route_conflicts(conflicts: list[dict]) -> tuple[list[dict], list[dict]]:
-    intentional: list[dict] = []
-    accidental: list[dict] = []
-    for conflict in conflicts:
-        if conflict.get("classification") == "legacy_compatibility":
-            intentional.append(conflict)
-        else:
-            accidental.append(conflict)
-    return accidental, intentional
-
-
 def include_router(app: FastAPI, router_path: str) -> list[str]:
     module = importlib.import_module(router_path)
     mounted: list[str] = []
@@ -398,13 +388,5 @@ def include_routers(app: FastAPI) -> RouterLoadReport:
             report.failed.append((router_path, str(error)))
             logger.warning("Router %s failed to load: %s", router_path, error)
 
-    logger.info(
-        "Router startup loaded %s routers across %s domains (%s failed, %s optional skipped, %s conflicts)",
-        len(report.loaded),
-        len(ROUTER_GROUPS),
-        len(report.failed),
-        len(report.skipped_optional),
-        len(report.duplicate_routes),
-    )
     _LAST_LOAD_REPORT = report
     return report
