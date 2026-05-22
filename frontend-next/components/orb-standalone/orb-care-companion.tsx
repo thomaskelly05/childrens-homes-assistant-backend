@@ -8,7 +8,6 @@ import {
   Menu,
   MessageSquarePlus,
   PanelRightClose,
-  PanelRightOpen,
   RotateCcw,
   Settings2,
   Square,
@@ -71,12 +70,18 @@ const ANSWER_STYLE_LABELS: Record<StandaloneOrbAnswerStyle, string> = {
 
 type PromptEntry = { text: string; mode?: StandaloneOrbMode }
 
-const EMPTY_STATE_STARTERS: PromptEntry[] = [
+const PRIMARY_EMPTY_STARTERS: PromptEntry[] = [
   { text: 'Help me write a daily note', mode: 'Record This Properly' },
   { text: 'Explain Ofsted expectations', mode: 'Ofsted Lens' },
   { text: 'Think through a safeguarding concern', mode: 'Safeguarding' },
+  { text: 'Make wording more child-centred', mode: 'Record This Properly' }
+]
+
+const MORE_EMPTY_STARTERS: PromptEntry[] = [
   { text: 'Reflect after a difficult shift', mode: 'Reflect' },
-  { text: 'Make wording more child-centred', mode: 'Record This Properly' },
+  { text: 'Help me record an incident calmly.', mode: 'Record This Properly' },
+  { text: 'What would Ofsted expect to see here?', mode: 'Ofsted Lens' },
+  { text: 'Help me understand behaviour as communication.', mode: 'Behaviour Support' },
   { text: 'General question' }
 ]
 
@@ -229,10 +234,12 @@ export function OrbCareCompanion() {
   const [error, setError] = useState<string | null>(null)
   const [attachments, setAttachments] = useState<PendingImageAttachment[]>([])
   const [voicePanelOpen, setVoicePanelOpen] = useState(false)
-  const [orbDockExpanded, setOrbDockExpanded] = useState(true)
+  const [orbDockExpanded, setOrbDockExpanded] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [mobileOrbOpen, setMobileOrbOpen] = useState(false)
   const [startersExpanded, setStartersExpanded] = useState(false)
+  const [moreExamplesExpanded, setMoreExamplesExpanded] = useState(false)
+  const [composerPromptsExpanded, setComposerPromptsExpanded] = useState(false)
   const [chatSearch, setChatSearch] = useState('')
   const [draftNotice, setDraftNotice] = useState<string | null>(null)
   const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null)
@@ -612,118 +619,35 @@ export function OrbCareCompanion() {
       onRemoveAttachment={(id) => setAttachments((current) => current.filter((a) => a.id !== id))}
       onPaste={handlePaste}
       onDrop={handleDrop}
+      inputRef={inputRef}
     />
   )
 
-  const orbDockPanel = (
-    <div className={`orb-voice-dock flex flex-col ${orbDockExpanded ? 'orb-voice-dock--expanded' : 'orb-voice-dock--collapsed'}`}>
-      <div className="flex items-center justify-between gap-2 border-b border-white/10 px-3 py-2">
-        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Voice ORB</p>
-        <button
-          type="button"
-          onClick={() => setOrbDockExpanded((open) => !open)}
-          className="rounded-lg border border-white/10 p-1.5 text-slate-400 hover:text-white"
-          aria-label={orbDockExpanded ? 'Collapse ORB dock' : 'Expand ORB dock'}
-        >
-          {orbDockExpanded ? <PanelRightClose className="h-4 w-4" /> : <PanelRightOpen className="h-4 w-4" />}
-        </button>
-      </div>
-      {orbDockExpanded ? (
-        <>
-          <div className="flex flex-1 flex-col items-center justify-center px-3 py-4">
-            <OrbGlow
-              state={glowState}
-              mode={mode}
-              voiceEnabled={voiceSettings.voiceReplies && voice.synthesisAvailable}
-              onOrbActivate={handleOrbActivate}
-              interactive={voice.recognitionAvailable}
-              size="dock"
-              compactLabels
-            />
-            {voice.interimTranscript && voice.listening ? (
-              <p className="mt-2 max-w-[12rem] text-center text-xs italic text-slate-400">
-                &ldquo;{voice.interimTranscript}&rdquo;
-              </p>
-            ) : null}
-          </div>
-          <div className="space-y-2 border-t border-white/10 p-3">
-            <SettingToggle
-              label="Wake phrase (Hey ORB)"
-              checked={voiceSettings.wakePhrase}
-              disabled={!voice.continuousRecognitionSupported}
-              onChange={(on) => {
-                if (!on) voice.stopWakeListening()
-                updateVoiceSettings({ wakePhrase: on })
-              }}
-            />
-            <SettingToggle
-              label="Continuous conversation"
-              checked={voiceSettings.continuousConversation}
-              disabled={!voice.recognitionAvailable}
-              onChange={(on) => updateVoiceSettings({ continuousConversation: on })}
-            />
-            <SettingToggle
-              label="Voice replies"
-              checked={voiceSettings.voiceReplies}
-              disabled={!voice.synthesisAvailable}
-              onChange={(on) => {
-                if (!on) voice.cancelSpeaking()
-                updateVoiceSettings({ voiceReplies: on })
-              }}
-              iconOn={<Volume2 className="h-3.5 w-3.5" />}
-              iconOff={<VolumeX className="h-3.5 w-3.5" />}
-            />
-            <button
-              type="button"
-              onClick={() => setVoicePanelOpen((open) => !open)}
-              className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs font-bold text-slate-300"
-            >
-              <Settings2 className="h-3.5 w-3.5" />
-              Voice settings
-            </button>
-            {voice.recognitionAvailable ? (
-              <div className="flex gap-2">
-                {voice.voiceSessionPaused ? (
-                  <button type="button" onClick={voice.resumeVoiceSession} className="flex-1 rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-2 py-2 text-[10px] font-bold text-cyan-100">
-                    Continue conversation
-                  </button>
-                ) : (
-                  <button type="button" onClick={voice.pauseVoiceSession} className="flex-1 rounded-xl border border-white/10 px-2 py-2 text-[10px] font-bold text-slate-300">
-                    Pause conversation
-                  </button>
-                )}
-                <button type="button" onClick={voice.endVoiceSession} className="flex-1 rounded-xl border border-white/10 px-2 py-2 text-[10px] font-bold text-slate-300">
-                  End voice session
-                </button>
-              </div>
-            ) : null}
-          </div>
-          {voicePanelOpen ? (
-            <div className="border-t border-white/10 p-3">
-              <VoiceSettingsPanel voice={voice} voiceSettings={voiceSettings} updateVoiceSettings={updateVoiceSettings} onClose={() => setVoicePanelOpen(false)} />
-            </div>
-          ) : null}
-        </>
-      ) : (
-        <div className="flex flex-col items-center py-4">
-          <button type="button" onClick={handleOrbActivate} className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
-            <OrbGlow
-              state={glowState}
-              voiceEnabled={voiceSettings.voiceReplies && voice.synthesisAvailable}
-              onOrbActivate={handleOrbActivate}
-              interactive={voice.recognitionAvailable}
-              size="compact"
-              compactLabels
-            />
-          </button>
-        </div>
-      )}
-    </div>
+  const orbVoiceDock = (
+    <OrbFloatingVoiceDock
+      expanded={orbDockExpanded}
+      glowState={glowState}
+      mode={mode}
+      voice={voice}
+      voiceSettings={voiceSettings}
+      updateVoiceSettings={updateVoiceSettings}
+      voicePanelOpen={voicePanelOpen}
+      onToggleExpanded={() => setOrbDockExpanded((open) => !open)}
+      onOrbActivate={handleOrbActivate}
+      onToggleVoicePanel={() => setVoicePanelOpen((open) => !open)}
+      onCloseVoicePanel={() => setVoicePanelOpen(false)}
+    />
   )
 
+  function openVoiceSettings() {
+    setOrbDockExpanded(true)
+    setVoicePanelOpen(true)
+    setSidebarOpen(false)
+  }
+
   return (
-    <main className="orb-chat-layout relative flex min-h-[100dvh] flex-col overflow-hidden bg-[#05070d] text-white">
-      <div className="pointer-events-none fixed inset-0 orb-cinematic-light-field opacity-60" aria-hidden />
+    <main className="orb-chat-layout relative flex flex-col overflow-hidden bg-[#05070d] text-white">
+      <div className="pointer-events-none fixed inset-0 orb-cinematic-light-field opacity-50" aria-hidden />
 
       {sidebarOpen ? (
         <button type="button" className="fixed inset-0 z-40 bg-black/60 lg:hidden" aria-label="Close sidebar" onClick={() => setSidebarOpen(false)} />
@@ -731,14 +655,12 @@ export function OrbCareCompanion() {
 
       <div className="relative flex min-h-0 flex-1">
         <aside
-          className={`orb-chat-sidebar fixed inset-y-0 left-0 z-50 flex w-[min(100%,280px)] flex-col border-r border-white/10 bg-[#070b12] transition-transform lg:static lg:z-auto lg:translate-x-0 ${
+          className={`orb-chat-sidebar fixed inset-y-0 left-0 z-50 flex flex-col border-r border-white/[0.06] bg-[#0d1117] transition-transform lg:static lg:z-auto lg:translate-x-0 ${
             sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
           }`}
         >
           <OrbStandaloneSidebar
             workspace={workspace}
-            modes={modes}
-            currentMode={mode}
             chatSearch={chatSearch}
             startersExpanded={startersExpanded}
             suggestedPromptGroups={SUGGESTED_PROMPT_GROUPS}
@@ -749,37 +671,38 @@ export function OrbCareCompanion() {
             onNewChat={startNewChat}
             onSelectProject={(projectId) => setWorkspace((c) => ({ ...c, activeProjectId: projectId }))}
             onWorkspaceChange={setWorkspace}
-            onModeChange={handleModeChange}
+            onOpenSettings={openVoiceSettings}
             onClose={() => setSidebarOpen(false)}
           />
         </aside>
 
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <header className="orb-chat-header flex shrink-0 items-center gap-3 border-b border-white/10 bg-[#070b12]/90 px-3 py-3 backdrop-blur-md md:px-5">
-            <button type="button" className="rounded-lg border border-white/10 p-2 text-slate-300 lg:hidden" onClick={() => setSidebarOpen(true)} aria-label="Open sidebar">
+        <div className="orb-chat-main flex min-h-0 min-w-0 flex-1 flex-col">
+          <header className="orb-chat-header flex shrink-0 items-center gap-2 border-b border-white/[0.06] bg-[#05070d]/80 px-3 py-2.5 backdrop-blur-md md:px-5">
+            <button type="button" className="rounded-lg p-2 text-slate-400 hover:bg-white/[0.06] lg:hidden" onClick={() => setSidebarOpen(true)} aria-label="Open sidebar">
               <Menu className="h-5 w-5" />
             </button>
             <div className="min-w-0 flex-1">
-              <h1 className="truncate text-base font-black tracking-tight text-white md:text-lg">ORB Care Companion</h1>
-              <p className="truncate text-xs text-slate-400">Standalone residential care assistant</p>
+              <h1 className="truncate text-sm font-semibold text-white md:text-base">{activeChat?.title || 'ORB Care Companion'}</h1>
+              <p className="truncate text-xs text-slate-500">Standalone residential care assistant</p>
             </div>
-            <span className="hidden shrink-0 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.1em] text-emerald-100 sm:inline">
+            <span className="hidden shrink-0 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[10px] font-medium text-emerald-200/90 sm:inline">
               No OS records accessed
             </span>
-            <div className="flex shrink-0 gap-1">
-              <button type="button" onClick={() => void exportConversation()} disabled={messages.length === 0} className="hidden rounded-lg border border-white/10 p-2 text-slate-400 disabled:opacity-40 sm:inline-flex" aria-label="Copy chat">
+            <div className="flex shrink-0 gap-0.5">
+              <button type="button" onClick={() => void exportConversation()} disabled={messages.length === 0} className="hidden rounded-lg p-2 text-slate-500 hover:bg-white/[0.06] hover:text-slate-300 disabled:opacity-40 sm:inline-flex" aria-label="Copy chat">
                 <Copy className="h-4 w-4" />
               </button>
-              <button type="button" onClick={() => startNewChat()} className="hidden rounded-lg border border-white/10 p-2 text-slate-400 sm:inline-flex" aria-label="New chat">
+              <button type="button" onClick={() => startNewChat()} className="hidden rounded-lg p-2 text-slate-500 hover:bg-white/[0.06] hover:text-slate-300 sm:inline-flex" aria-label="New chat">
                 <MessageSquarePlus className="h-4 w-4" />
-              </button>
-              <button type="button" className="rounded-lg border border-white/10 p-2 text-slate-300 xl:hidden" onClick={() => setMobileOrbOpen((o) => !o)} aria-label="Toggle voice ORB">
-                {mobileOrbOpen ? <PanelRightClose className="h-5 w-5" /> : <PanelRightOpen className="h-5 w-5" />}
               </button>
             </div>
           </header>
 
-          <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-white/5 px-3 py-2 md:px-5" role="tablist" aria-label="ORB mode">
+          <div
+            className="orb-mode-chips flex shrink-0 gap-2 overflow-x-auto border-b border-white/[0.04] px-3 py-2.5 md:px-5"
+            role="tablist"
+            aria-label="ORB mode"
+          >
             {modes.map((item) => (
               <button
                 key={item}
@@ -787,8 +710,10 @@ export function OrbCareCompanion() {
                 role="tab"
                 aria-selected={mode === item}
                 onClick={() => handleModeChange(item as StandaloneOrbMode)}
-                className={`rounded-full border px-3 py-1.5 text-xs font-bold transition ${
-                  mode === item ? 'border-cyan-300/45 bg-cyan-300/15 text-white' : 'border-white/10 bg-white/[0.03] text-slate-400 hover:border-cyan-300/25'
+                className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium transition ${
+                  mode === item
+                    ? 'bg-white text-slate-950 shadow-sm'
+                    : 'bg-white/[0.05] text-slate-400 ring-1 ring-white/[0.08] hover:bg-white/[0.08] hover:text-slate-200'
                 }`}
               >
                 {item}
@@ -865,141 +790,345 @@ export function OrbCareCompanion() {
             <p className="mx-3 mt-2 text-[11px] leading-5 text-slate-500 md:mx-5">{modeSafety}</p>
           ) : null}
 
-          <div className="flex min-h-0 flex-1" onDragOver={(e) => e.preventDefault()} onDrop={handleDrop}>
-            <section className="flex min-h-0 min-w-0 flex-1 flex-col">
-              <div className="flex-1 overflow-y-auto px-3 py-4 md:px-6 md:py-6" role="log" aria-label="ORB conversation">
-                <div className="mx-auto max-w-3xl">
-                  {showEmptyState ? (
-                    <div className="flex flex-col items-center py-8 text-center md:py-16">
-                      <p className="text-[10px] font-black uppercase tracking-[0.24em] text-cyan-200/80">ORB Care Companion</p>
-                      <h2 className="mt-4 text-3xl font-black tracking-tight text-white md:text-4xl">How can I help today?</h2>
-                      <p className="mt-3 max-w-md text-sm leading-6 text-slate-400">
-                        Specialist residential children&apos;s homes intelligence — reflection, safeguarding thinking, Ofsted lens and recording quality. No IndiCare OS records or Care Hub.
-                      </p>
-                      <div className="mt-10 grid w-full max-w-2xl gap-3 sm:grid-cols-2">
-                        {EMPTY_STATE_STARTERS.map((starter) => (
+          <section className="flex min-h-0 flex-1 flex-col" onDragOver={(e) => e.preventDefault()} onDrop={handleDrop}>
+            <div className="orb-chat-thread flex-1 overflow-y-auto overflow-x-hidden px-3 py-4 md:px-6" role="log" aria-label="ORB conversation">
+              <div className="mx-auto w-full max-w-[var(--orb-chat-column-max,52.5rem)]">
+                {showEmptyState ? (
+                  <div className="flex min-h-[min(70vh,32rem)] flex-col items-center justify-center py-6 text-center md:py-10">
+                    <p className="text-xs font-medium text-slate-500">ORB Care Companion</p>
+                    <h2 className="mt-3 text-2xl font-semibold tracking-tight text-white md:text-[1.75rem]">How can I help today?</h2>
+                    <p className="mt-3 max-w-lg text-sm leading-relaxed text-slate-400">
+                      Specialist residential children&apos;s homes intelligence — recording, Ofsted, safeguarding, reflection and general questions.
+                    </p>
+                    <div className="mt-8 grid w-full max-w-2xl gap-3 sm:grid-cols-2">
+                      {PRIMARY_EMPTY_STARTERS.map((starter) => (
+                        <button
+                          key={starter.text}
+                          type="button"
+                          onClick={() => applyPrompt(starter)}
+                          className="orb-starter-card orb-starter-card--primary rounded-2xl border border-white/[0.08] bg-white/[0.04] px-5 py-5 text-left text-[15px] font-medium leading-snug text-slate-200 hover:border-white/15 hover:bg-white/[0.07]"
+                        >
+                          {starter.text}
+                        </button>
+                      ))}
+                    </div>
+                    {moreExamplesExpanded ? (
+                      <div className="mt-3 grid w-full max-w-2xl gap-2 sm:grid-cols-2">
+                        {MORE_EMPTY_STARTERS.map((starter) => (
                           <button
                             key={starter.text}
                             type="button"
                             onClick={() => applyPrompt(starter)}
-                            className="orb-starter-card rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-4 text-left text-sm font-semibold leading-6 text-slate-200 transition hover:border-cyan-300/30 hover:bg-cyan-300/8"
+                            className="orb-starter-card rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3 text-left text-sm text-slate-400 hover:border-white/12 hover:bg-white/[0.05] hover:text-slate-200"
                           >
                             {starter.text}
                           </button>
                         ))}
                       </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-6">
-                      {messages.map((entry, index) => (
-                        <div key={entry.id}>
-                          {entry.role === 'assistant' ? (
-                            <article className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-4 leading-7 md:px-5">
-                              <p className="mb-2 text-[10px] font-black uppercase tracking-[0.16em] text-violet-200/80">ORB</p>
-                              <p className="whitespace-pre-wrap text-slate-50">{entry.content}</p>
-                              {index === messages.length - 1 ? (
-                                <ResponseActions
-                                  content={entry.content}
-                                  speaking={speakingMessageId === entry.id}
-                                  synthesisAvailable={voice.synthesisAvailable}
-                                  onSpeak={() => {
-                                    setSpeakingMessageId(entry.id)
-                                    voice.speak(entry.content, () => setSpeakingMessageId(null))
-                                  }}
-                                  onStop={voice.cancelSpeaking}
-                                  onNewQuestion={() => {
-                                    setInput('')
-                                    inputRef.current?.focus()
-                                  }}
-                                  onDraft={() => void handleDraftWording(entry.content)}
-                                />
-                              ) : null}
-                            </article>
-                          ) : (
-                            <MessageBubble entry={entry} />
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {pending ? (
-                    <p className="mt-6 text-sm font-semibold text-violet-200" role="status">
-                      Thinking that through…
-                    </p>
-                  ) : null}
-                  {error ? (
-                    <p className="mt-4 rounded-2xl border border-amber-300/30 bg-amber-300/10 px-4 py-3 text-sm text-amber-50" role="alert">
-                      {error}
-                    </p>
-                  ) : null}
-                  <div ref={messagesEndRef} />
-                </div>
-              </div>
-
-              {!showEmptyState ? (
-                <div className="hidden shrink-0 border-t border-white/5 px-3 py-2 md:block md:px-6">
-                  <div className="mx-auto flex max-w-3xl flex-wrap gap-2">
-                    {EMPTY_STATE_STARTERS.slice(0, 4).map((starter) => (
-                      <button
-                        key={starter.text}
-                        type="button"
-                        onClick={() => applyPrompt(starter)}
-                        className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-semibold text-slate-400 hover:border-cyan-300/25 hover:text-slate-200"
-                      >
-                        {starter.text}
-                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={() => setMoreExamplesExpanded((o) => !o)}
+                      className="mt-5 text-sm font-medium text-slate-500 underline-offset-4 hover:text-slate-300 hover:underline"
+                    >
+                      {moreExamplesExpanded ? 'Fewer examples' : 'More examples'}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-8 pb-4">
+                    {messages.map((entry, index) => (
+                      <div key={entry.id}>
+                        {entry.role === 'assistant' ? (
+                          <article className="orb-message-assistant group">
+                            <p className="mb-2 text-xs font-medium text-slate-500">ORB</p>
+                            <div className="whitespace-pre-wrap text-[15px] leading-7 text-slate-100">{entry.content}</div>
+                            {index === messages.length - 1 ? (
+                              <ResponseActions
+                                content={entry.content}
+                                speaking={speakingMessageId === entry.id}
+                                synthesisAvailable={voice.synthesisAvailable}
+                                onSpeak={() => {
+                                  setSpeakingMessageId(entry.id)
+                                  voice.speak(entry.content, () => setSpeakingMessageId(null))
+                                }}
+                                onStop={voice.cancelSpeaking}
+                                onNewQuestion={() => {
+                                  setInput('')
+                                  inputRef.current?.focus()
+                                }}
+                                onDraft={() => void handleDraftWording(entry.content)}
+                              />
+                            ) : (
+                              <div className="mt-2 flex flex-wrap gap-2 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
+                                <ActionChip icon={<Copy className="h-3 w-3" />} label="Copy" onClick={() => void copyToClipboard(entry.content)} />
+                              </div>
+                            )}
+                          </article>
+                        ) : (
+                          <MessageBubble entry={entry} />
+                        )}
+                      </div>
                     ))}
                   </div>
+                )}
+
+                {pending ? (
+                  <p className="mt-6 text-sm text-slate-400" role="status">
+                    Thinking that through…
+                  </p>
+                ) : null}
+                {error ? (
+                  <p className="mt-4 rounded-xl border border-amber-300/25 bg-amber-400/10 px-4 py-3 text-sm text-amber-50" role="alert">
+                    {error}
+                  </p>
+                ) : null}
+                <div ref={messagesEndRef} />
+              </div>
+            </div>
+
+            {!showEmptyState && composerPromptsExpanded ? (
+              <div className="shrink-0 border-t border-white/[0.04] px-3 py-2 md:px-6">
+                <div className="mx-auto flex max-w-[var(--orb-composer-max,53.125rem)] flex-wrap gap-2">
+                  {SUGGESTED_PROMPT_GROUPS.flatMap((g) => g.prompts.slice(0, 1)).map((starter) => (
+                    <button
+                      key={starter.text}
+                      type="button"
+                      onClick={() => applyPrompt(starter)}
+                      className="rounded-full bg-white/[0.04] px-3 py-1.5 text-xs text-slate-400 ring-1 ring-white/[0.06] hover:text-slate-200"
+                    >
+                      {starter.text}
+                    </button>
+                  ))}
                 </div>
-              ) : null}
+              </div>
+            ) : null}
 
-              <div className="hidden xl:block">{composer}</div>
-            </section>
+            {!showEmptyState ? (
+              <div className="mx-auto w-full max-w-[var(--orb-composer-max,53.125rem)] px-3 pb-1 md:px-6">
+                <button
+                  type="button"
+                  onClick={() => setComposerPromptsExpanded((o) => !o)}
+                  className="text-xs text-slate-500 hover:text-slate-400"
+                >
+                  {composerPromptsExpanded ? 'Hide prompt ideas' : 'Show prompt ideas'}
+                </button>
+              </div>
+            ) : null}
 
-            <aside className="orb-voice-dock-column hidden w-[220px] shrink-0 border-l border-white/10 xl:flex">{orbDockPanel}</aside>
-          </div>
-
-          <div className="xl:hidden">{composer}</div>
+            {composer}
+          </section>
         </div>
       </div>
 
+      <div className={`orb-floating-dock hidden xl:block ${orbDockExpanded ? 'orb-floating-dock--expanded' : 'orb-floating-dock--collapsed'}`}>
+        {orbVoiceDock}
+      </div>
+
       {mobileOrbOpen ? (
-        <div className="fixed inset-x-0 bottom-0 z-50 max-h-[70dvh] overflow-y-auto rounded-t-[24px] border border-white/10 bg-[#0a0e16] shadow-2xl xl:hidden">
-          <div className="flex justify-center py-2">
-            <button type="button" onClick={() => setMobileOrbOpen(false)} className="rounded-full border border-white/10 px-4 py-1 text-xs font-bold text-slate-400">
+        <div className="orb-voice-dock fixed inset-x-0 bottom-0 z-50 max-h-[75dvh] overflow-y-auto rounded-t-2xl border border-white/10 bg-[#0a0e16]/95 shadow-2xl backdrop-blur-xl xl:hidden">
+          <div className="sticky top-0 flex justify-center bg-[#0a0e16]/95 py-2">
+            <button type="button" onClick={() => setMobileOrbOpen(false)} className="rounded-full px-4 py-1.5 text-xs font-medium text-slate-400 ring-1 ring-white/10">
               Close voice ORB
             </button>
           </div>
-          {orbDockPanel}
+          <OrbFloatingVoiceDock
+            expanded
+            glowState={glowState}
+            mode={mode}
+            voice={voice}
+            voiceSettings={voiceSettings}
+            updateVoiceSettings={updateVoiceSettings}
+            voicePanelOpen={voicePanelOpen}
+            onToggleExpanded={() => setMobileOrbOpen(false)}
+            onOrbActivate={handleOrbActivate}
+            onToggleVoicePanel={() => setVoicePanelOpen((open) => !open)}
+            onCloseVoicePanel={() => setVoicePanelOpen(false)}
+            mobile
+          />
         </div>
       ) : (
         <button
           type="button"
           onClick={() => setMobileOrbOpen(true)}
-          className="orb-mobile-orb-fab fixed bottom-24 right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full border border-cyan-300/40 bg-slate-950/90 shadow-lg shadow-cyan-900/30 backdrop-blur xl:hidden"
-          aria-label="Open voice ORB"
+          className="orb-mobile-orb-fab fixed right-4 z-30 flex flex-col items-center gap-1 rounded-full border border-cyan-300/30 bg-[#0a0e16]/95 p-1.5 shadow-lg backdrop-blur xl:hidden"
+          aria-label="Open voice ORB — Tap to speak"
         >
           <OrbGlow state={glowState} onOrbActivate={() => { setMobileOrbOpen(true); handleOrbActivate() }} interactive={voice.recognitionAvailable} size="compact" compactLabels />
+          <span className="px-1 text-[9px] font-medium text-slate-500">Tap to speak</span>
         </button>
       )}
     </main>
   )
 }
 
-function MessageBubble({ entry }: { entry: StandaloneChatMessage }) {
+function OrbFloatingVoiceDock({
+  expanded,
+  glowState,
+  mode,
+  voice,
+  voiceSettings,
+  updateVoiceSettings,
+  voicePanelOpen,
+  onToggleExpanded,
+  onOrbActivate,
+  onToggleVoicePanel,
+  onCloseVoicePanel,
+  mobile = false
+}: {
+  expanded: boolean
+  glowState: StandaloneOrbGlowState
+  mode: StandaloneOrbMode
+  voice: ReturnType<typeof useStandaloneOrbVoice>
+  voiceSettings: ReturnType<typeof useStandaloneOrbVoice>['settings']
+  updateVoiceSettings: ReturnType<typeof useStandaloneOrbVoice>['updateSettings']
+  voicePanelOpen: boolean
+  onToggleExpanded: () => void
+  onOrbActivate: () => void
+  onToggleVoicePanel: () => void
+  onCloseVoicePanel: () => void
+  mobile?: boolean
+}) {
+  if (!expanded && !mobile) {
+    return (
+      <div className="orb-floating-dock-trigger">
+        <button type="button" onClick={onToggleExpanded} className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60" aria-label="Expand voice ORB">
+          <OrbGlow
+            state={glowState}
+            voiceEnabled={voiceSettings.voiceReplies && voice.synthesisAvailable}
+            onOrbActivate={() => {
+              onToggleExpanded()
+              onOrbActivate()
+            }}
+            interactive={voice.recognitionAvailable}
+            size="compact"
+            compactLabels
+          />
+        </button>
+        <span className="max-w-[5.5rem] text-center text-[10px] font-medium leading-tight text-slate-500">Tap to speak</span>
+      </div>
+    )
+  }
+
   return (
-    <article className="ml-auto max-w-[85%] rounded-2xl border border-cyan-300/25 bg-cyan-300/10 px-4 py-3 leading-7 text-cyan-50 md:max-w-[75%]">
-      <p className="mb-1 text-[10px] font-black uppercase tracking-[0.14em] text-cyan-200/70">You</p>
+    <div className={`orb-voice-dock orb-floating-dock-drawer flex flex-col ${mobile ? 'mx-3 mb-4' : ''}`}>
+      <div className="flex items-center justify-between gap-2 border-b border-white/[0.06] px-4 py-3">
+        <p className="text-xs font-semibold text-slate-300">Voice ORB</p>
+        {!mobile ? (
+          <button
+            type="button"
+            onClick={onToggleExpanded}
+            className="rounded-lg p-1.5 text-slate-500 hover:bg-white/[0.06] hover:text-slate-300"
+            aria-label="Collapse ORB dock"
+          >
+            <PanelRightClose className="h-4 w-4" />
+          </button>
+        ) : null}
+      </div>
+      <div className="flex flex-col items-center px-4 py-5">
+        <OrbGlow
+          state={glowState}
+          mode={mode}
+          voiceEnabled={voiceSettings.voiceReplies && voice.synthesisAvailable}
+          onOrbActivate={onOrbActivate}
+          interactive={voice.recognitionAvailable}
+          size="dock"
+          compactLabels
+        />
+        <p className="mt-2 text-center text-xs text-slate-500">Tap to speak</p>
+        {voice.interimTranscript && voice.listening ? (
+          <p className="mt-2 max-w-[14rem] text-center text-xs italic text-slate-400">&ldquo;{voice.interimTranscript}&rdquo;</p>
+        ) : null}
+      </div>
+      <div className="space-y-2 border-t border-white/[0.06] px-4 py-3">
+        <SettingToggle
+          label="Wake phrase (Hey ORB)"
+          checked={voiceSettings.wakePhrase}
+          disabled={!voice.continuousRecognitionSupported}
+          onChange={(on) => {
+            if (!on) voice.stopWakeListening()
+            updateVoiceSettings({ wakePhrase: on })
+          }}
+        />
+        <SettingToggle
+          label="Continuous conversation"
+          checked={voiceSettings.continuousConversation}
+          disabled={!voice.recognitionAvailable}
+          onChange={(on) => updateVoiceSettings({ continuousConversation: on })}
+        />
+        <SettingToggle
+          label="Voice replies"
+          checked={voiceSettings.voiceReplies}
+          disabled={!voice.synthesisAvailable}
+          onChange={(on) => {
+            if (!on) voice.cancelSpeaking()
+            updateVoiceSettings({ voiceReplies: on })
+          }}
+          iconOn={<Volume2 className="h-3.5 w-3.5" />}
+          iconOff={<VolumeX className="h-3.5 w-3.5" />}
+        />
+        <button
+          type="button"
+          onClick={onToggleVoicePanel}
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-white/[0.04] px-3 py-2.5 text-xs font-medium text-slate-300 ring-1 ring-white/[0.06] hover:bg-white/[0.06]"
+        >
+          <Settings2 className="h-3.5 w-3.5" />
+          Voice settings
+        </button>
+        {voice.speaking ? (
+          <button
+            type="button"
+            onClick={voice.cancelSpeaking}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-300/30 bg-amber-400/10 px-3 py-2 text-xs font-semibold text-amber-50"
+          >
+            <Square className="h-3 w-3 fill-current" />
+            Stop speaking
+          </button>
+        ) : null}
+        {voice.recognitionAvailable ? (
+          <div className="flex gap-2">
+            {voice.voiceSessionPaused ? (
+              <button type="button" onClick={voice.resumeVoiceSession} className="flex-1 rounded-xl bg-cyan-400/10 px-2 py-2 text-[10px] font-semibold text-cyan-100 ring-1 ring-cyan-300/25">
+                Continue conversation
+              </button>
+            ) : (
+              <button type="button" onClick={voice.pauseVoiceSession} className="flex-1 rounded-xl bg-white/[0.04] px-2 py-2 text-[10px] font-medium text-slate-400 ring-1 ring-white/[0.06]">
+                Pause conversation
+              </button>
+            )}
+            <button type="button" onClick={voice.endVoiceSession} className="flex-1 rounded-xl bg-white/[0.04] px-2 py-2 text-[10px] font-medium text-slate-400 ring-1 ring-white/[0.06]">
+              End voice session
+            </button>
+          </div>
+        ) : null}
+      </div>
+      {voicePanelOpen ? (
+        <div className="border-t border-white/[0.06] p-4">
+          <VoiceSettingsPanel voice={voice} voiceSettings={voiceSettings} updateVoiceSettings={updateVoiceSettings} onClose={onCloseVoicePanel} />
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+function MessageBubble({ entry }: { entry: StandaloneChatMessage }) {
+  const created = entry.createdAt ? new Date(entry.createdAt) : null
+  const timeLabel =
+    created && !Number.isNaN(created.getTime())
+      ? created.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+      : null
+
+  return (
+    <article className="orb-message-user rounded-2xl bg-white/[0.06] px-4 py-3 ring-1 ring-white/[0.06]">
       {entry.imageDataUrls?.length ? (
         <div className="mb-2 flex flex-wrap gap-2">
           {entry.imageDataUrls.map((url, index) => (
             // eslint-disable-next-line @next/next/no-img-element
-            <img key={`${entry.id}-img-${index}`} src={url} alt="" className="h-20 w-20 rounded-lg border border-white/15 object-cover" />
+            <img key={`${entry.id}-img-${index}`} src={url} alt="" className="h-16 w-16 rounded-lg border border-white/10 object-cover" />
           ))}
         </div>
       ) : null}
-      <p className="whitespace-pre-wrap text-sm md:text-base">{entry.content}</p>
+      <p className="whitespace-pre-wrap text-[15px] leading-7 text-slate-100">{entry.content}</p>
+      {timeLabel ? <p className="mt-1.5 text-right text-[10px] text-slate-600">{timeLabel}</p> : null}
     </article>
   )
 }
@@ -1022,7 +1151,7 @@ function ResponseActions({
   onDraft: () => void
 }) {
   return (
-    <div className="mt-4 flex flex-wrap gap-2">
+    <div className="mt-3 flex flex-wrap gap-1 border-t border-white/[0.04] pt-3">
       <ActionChip icon={<Copy className="h-3 w-3" />} label="Copy" onClick={() => void copyToClipboard(content)} />
       {synthesisAvailable ? (
         speaking ? (
@@ -1039,7 +1168,11 @@ function ResponseActions({
 
 function ActionChip({ icon, label, onClick }: { icon: ReactNode; label: string; onClick: () => void }) {
   return (
-    <button type="button" onClick={onClick} className="inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-white/[0.04] px-3 py-1.5 text-[11px] font-bold text-slate-300 transition hover:border-cyan-300/30 hover:text-white">
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-500 transition hover:bg-white/[0.06] hover:text-slate-300"
+    >
       {icon}
       {label}
     </button>

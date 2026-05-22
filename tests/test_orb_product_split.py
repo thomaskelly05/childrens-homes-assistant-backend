@@ -49,12 +49,28 @@ CHATGPT_STYLE_MARKERS = [
     "Search chats",
     "Projects",
     "Profiles",
+    "Recent chats",
     "How can I help today?",
+    "More examples",
     "Standalone residential care assistant",
     "No OS records accessed",
     "orb-chat-layout",
     "orb-chat-sidebar",
+    "orb-chat-main",
+    "orb-floating-dock",
     "orb-voice-dock",
+]
+
+ORB_FLOATING_DOCK_MARKERS = [
+    "orb-floating-dock",
+    "Tap to speak",
+    "Wake phrase",
+    "Continuous conversation",
+    "Voice replies",
+    "Stop speaking",
+    "British female",
+    "Actual voice:",
+    "Voice picker",
 ]
 
 IMAGE_UPLOAD_MARKERS = [
@@ -148,7 +164,7 @@ MEMORY_MARKERS = [
     "trimConversationHistory",
     "MAX_HISTORY_TURNS",
     "New chat",
-    "remembers this chat",
+    "standalone-local-store",
 ]
 
 SPECIALIST_PROMPT_MARKERS = [
@@ -216,6 +232,13 @@ def test_orb_page_chatgpt_style_layout():
     for marker in CHATGPT_STYLE_MARKERS:
         assert marker in sources, f"/orb ChatGPT-style layout must include {marker}"
     assert "AppShell" not in sources
+    assert "orb-voice-dock-column" not in sources, "/orb must not use a fixed full-height right strip"
+
+
+def test_orb_floating_voice_dock_markers():
+    sources = _read(ORB_COMPANION) + _read(GLOBALS_CSS) + _read(ORB_COMPOSER)
+    for marker in ORB_FLOATING_DOCK_MARKERS:
+        assert marker in sources, f"/orb floating voice dock must include {marker}"
 
 
 def test_standalone_orb_image_upload_support():
