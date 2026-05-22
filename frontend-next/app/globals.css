@@ -860,12 +860,59 @@ textarea:focus-visible {
   100% { transform: scale(1.08); opacity: 0; border-color: rgba(34, 211, 238, 0.1); }
 }
 
-.orb-cinematic-scene {
+.orb-cinematic-scene,
+.orb-chat-layout {
   background:
     radial-gradient(ellipse 80% 50% at 50% -10%, rgba(56, 189, 248, 0.18), transparent 55%),
     radial-gradient(ellipse 60% 40% at 8% 92%, rgba(129, 140, 248, 0.14), transparent 50%),
     radial-gradient(ellipse 50% 35% at 92% 85%, rgba(251, 191, 36, 0.08), transparent 48%),
     linear-gradient(165deg, #02040a 0%, #061018 42%, #0a0618 100%);
+}
+
+.orb-chat-layout {
+  --orb-sidebar-width: 280px;
+}
+
+.orb-chat-sidebar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.25) transparent;
+}
+
+.orb-chat-composer {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+}
+
+.orb-voice-dock {
+  background: rgba(7, 11, 18, 0.92);
+  backdrop-filter: blur(12px);
+}
+
+.orb-voice-dock--collapsed {
+  width: 5rem;
+}
+
+.orb-voice-dock-column {
+  min-height: 0;
+}
+
+.orb-starter-card {
+  transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.15s ease;
+}
+
+.orb-starter-card:hover {
+  transform: translateY(-1px);
+}
+
+.orb-mobile-orb-fab {
+  animation: orb-standalone-breathe 4.5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orb-mobile-orb-fab {
+    animation: none;
+  }
 }
 
 .orb-cinematic-light-field {
