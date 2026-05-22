@@ -10,6 +10,21 @@ from services.orb_general_assistant_service import orb_general_assistant_service
 
 router = APIRouter(prefix="/orb/standalone", tags=["ORB Standalone Assistant"])
 
+STANDALONE_ORB_MODES = [
+    "Ask ORB",
+    "Safeguarding",
+    "Reflect",
+    "Ofsted Lens",
+    "Behaviour Support",
+    "Record This Properly",
+]
+
+STANDALONE_ORB_GUARDRAILS = [
+    "ORB Care Companion is standalone and does not retrieve IndiCare OS care records.",
+    "It gives guidance and reflective support, not statutory, medical or legal decisions.",
+    "For immediate safeguarding risk, follow local procedures and escalate to the relevant safeguarding lead or emergency service.",
+]
+
 
 class OrbStandaloneConversationRequest(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -20,35 +35,48 @@ class OrbStandaloneConversationRequest(BaseModel):
     history: list[dict[str, Any]] = Field(default_factory=list)
 
 
+def _standalone_contract() -> dict[str, Any]:
+    return {
+        "name": "ORB Care Companion",
+        "surface": "standalone_orb_ai",
+        "public_route": "/orb",
+        "os_assistant_route": "/assistant",
+        "os_linked": False,
+        "care_record_access": False,
+        "staff_record_access": False,
+        "young_person_record_access": False,
+        "chronology_access": False,
+        "dashboard_access": False,
+        "direct_writes": False,
+        "purpose": "Advice, guidance, reflection and residential care practice support.",
+        "modes": STANDALONE_ORB_MODES,
+        "guardrails": STANDALONE_ORB_GUARDRAILS,
+        "endpoints": {
+            "health": "/orb/standalone/health",
+            "conversation": "/orb/standalone/conversation",
+            "config": "/orb/standalone/config",
+        },
+    }
+
+
+@router.get("/health")
+async def standalone_orb_health(current_user=Depends(require_assistant_access)):
+    return {
+        "success": True,
+        "data": {
+            **_standalone_contract(),
+            "status": "ready",
+            "isolation_verified": True,
+            "runtime_note": "Standalone ORB uses general assistant guidance services only. It must not call OS-linked ORB care-context endpoints.",
+        },
+    }
+
+
 @router.get("/config")
 async def standalone_orb_config(current_user=Depends(require_assistant_access)):
     return {
         "success": True,
-        "data": {
-            "name": "ORB Care Companion",
-            "surface": "standalone_orb_ai",
-            "os_linked": False,
-            "care_record_access": False,
-            "direct_writes": False,
-            "purpose": "Advice, guidance, reflection and residential care practice support.",
-            "modes": [
-                "Ask ORB",
-                "Safeguarding",
-                "Reflect",
-                "Ofsted Lens",
-                "Behaviour Support",
-                "Record This Properly",
-            ],
-            "guardrails": [
-                "ORB Care Companion is standalone and does not retrieve IndiCare OS care records.",
-                "It gives guidance and reflective support, not statutory, medical or legal decisions.",
-                "For immediate safeguarding risk, follow local procedures and escalate to the relevant safeguarding lead or emergency service.",
-            ],
-            "endpoints": {
-                "conversation": "/orb/standalone/conversation",
-                "config": "/orb/standalone/config",
-            },
-        },
+        "data": _standalone_contract(),
     }
 
 
