@@ -104,7 +104,7 @@ export default async function GovernanceCommandCentrePage() {
             'What governance action would create the clearest leadership grip today?',
             'Which workforce or chronology signal should the registered manager evidence next?'
           ]}
-          action={<Link href="/orb?scope=governance" className="rounded-2xl bg-white px-4 py-3 text-sm font-black text-slate-950">Ask ORB</Link>}
+          action={<Link href="/assistant/orb?scope=governance" className="rounded-2xl bg-white px-4 py-3 text-sm font-black text-slate-950">Ask ORB</Link>}
         />
       </section>
 

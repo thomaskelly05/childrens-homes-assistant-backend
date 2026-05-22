@@ -444,9 +444,6 @@ export function recordCardHref(card: RecordCardDefinition, childId?: string): st
   if (card.id === 'ask-orb') {
     const base = '/orb?context=recording'
     const q = encodeURIComponent(card.orbQuery)
-    if (childId) {
-      return `${base}&young_person_id=${encodeURIComponent(childId)}&q=${q}`
-    }
     return `${base}&q=${q}`
   }
 
@@ -466,17 +463,15 @@ export function recordCardHref(card: RecordCardDefinition, childId?: string): st
   return card.generalHref
 }
 
-export function recordCardOrbHref(card: RecordCardDefinition, childId?: string) {
+export function recordCardOrbHref(card: RecordCardDefinition, _childId?: string) {
   const base = '/orb?context=recording'
   const q = encodeURIComponent(card.orbQuery)
-  if (childId) return `${base}&young_person_id=${encodeURIComponent(childId)}&q=${q}`
   return `${base}&q=${q}`
 }
 
-export function recordOrbPromptHref(query: string, childId?: string) {
+export function recordOrbPromptHref(query: string, _childId?: string) {
   const base = '/orb?context=recording'
   const q = encodeURIComponent(query)
-  if (childId) return `${base}&young_person_id=${encodeURIComponent(childId)}&q=${q}`
   return `${base}&q=${q}`
 }
 

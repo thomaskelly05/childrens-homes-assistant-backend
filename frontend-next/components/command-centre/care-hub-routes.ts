@@ -48,7 +48,7 @@ export const CARE_HUB_HERO_ACTIONS = (options: {
     {
       label: 'Ask ORB',
       description: 'Get help with wording, risk or what to do next.',
-      href: '/orb?context=care-hub&q=What should I focus on at the start of this shift?',
+      href: '/assistant/orb?context=care-hub&q=What should I focus on at the start of this shift?',
       ariaLabel: 'Ask ORB for shift guidance'
     }
   ]
@@ -113,5 +113,5 @@ export const CARE_HUB_ORB_PROMPTS = [
 ] as const
 
 export function orbPromptHref(query: string, context = 'care-hub') {
-  return `/orb?context=${encodeURIComponent(context)}&q=${encodeURIComponent(query)}`
+  return `/assistant/orb?context=${encodeURIComponent(context)}&q=${encodeURIComponent(query)}`
 }

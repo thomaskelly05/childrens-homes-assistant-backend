@@ -76,7 +76,7 @@ export function ContextualOrbPanel() {
       )}
 
       <Link
-        href={`/orb?context=${encodeURIComponent(isCareHub ? 'care-hub' : assistantContext.current_workspace_type || 'dashboard')}`}
+        href={`/assistant/orb?context=${encodeURIComponent(isCareHub ? 'care-hub' : assistantContext.current_workspace_type || 'dashboard')}`}
         className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-2xl bg-cyan-200 px-4 py-3 text-sm font-black text-slate-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-100"
       >
         Open ORB with this context

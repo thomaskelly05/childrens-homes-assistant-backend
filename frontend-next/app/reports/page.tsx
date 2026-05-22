@@ -43,7 +43,7 @@ export default async function ReportsPage() {
           'Where does the report need clearer child voice, family context or relationship impact?',
           'What manager review should happen before this report is relied on externally?'
         ]}
-        action={<Link href="/orb?scope=inspection" className="rounded-2xl bg-white px-4 py-3 text-sm font-black text-slate-950">Ask ORB</Link>}
+        action={<Link href="/assistant/orb?scope=inspection" className="rounded-2xl bg-white px-4 py-3 text-sm font-black text-slate-950">Ask ORB</Link>}
       />
       <Card>
         <SectionHeader eyebrow="Register" title="Generated and draft reports" />

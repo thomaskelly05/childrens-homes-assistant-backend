@@ -36,7 +36,7 @@ export function OperationalQuickActions({
         { label: 'Record incident', helper: 'Log what happened, adult response and repair.', href: `/young-people/${childId}/incidents/new`, icon: ShieldAlert, cta: 'Record' },
         { label: 'Add child voice', helper: 'Record wishes, feelings and “you said, we did”.', href: `/young-people/${childId}/child-voice/new`, icon: UsersRound, cta: 'Add' },
         { label: 'Review actions', helper: 'See follow-up actions that still need attention.', href: '/actions', icon: ListChecks, cta: 'Review' },
-        { label: 'Ask ORB', helper: 'Get help with wording, risk, guidance or what to do next.', href: `/orb?scope=child&young_person_id=${childId}&q=${encodeURIComponent(`What should adults focus on for ${childName} today?`)}`, icon: Mic2, cta: 'Ask' }
+        { label: 'Ask ORB', helper: 'Get help with wording, risk, guidance or what to do next.', href: `/assistant/orb?scope=child&young_person_id=${childId}&q=${encodeURIComponent(`What should adults focus on for ${childName} today?`)}`, icon: Mic2, cta: 'Ask' }
       ]
     : [
         { label: 'Record something', helper: 'Choose what to record — notes, incidents, safeguarding and more.', href: recordHubHref, icon: ClipboardPlus, cta: 'Open' },
@@ -45,7 +45,7 @@ export function OperationalQuickActions({
         { label: 'Record incident', helper: 'Log what happened, adult response and repair.', href: '/record?type=incidents', icon: ShieldAlert, cta: 'Record' },
         { label: 'Add child voice', helper: 'Choose a child, then record voice and wishes.', href: '/record?type=child-voice', icon: UsersRound, cta: 'Choose' },
         { label: 'Review actions', helper: 'See follow-up actions that still need attention.', href: '/actions', icon: ListChecks, cta: 'Review' },
-        { label: 'Ask ORB', helper: 'Get help with wording, risk, guidance or what to do next.', href: '/orb?context=care-hub&q=What do I need to do next on shift?', icon: Mic2, cta: 'Ask' }
+        { label: 'Ask ORB', helper: 'Get help with wording, risk, guidance or what to do next.', href: '/assistant/orb?context=care-hub&q=What do I need to do next on shift?', icon: Mic2, cta: 'Ask' }
       ]
 
   const defaultActions = childId
@@ -55,7 +55,7 @@ export function OperationalQuickActions({
         { label: 'Wellbeing check', helper: 'Capture mood, routine, relationships and support.', href: `/young-people/${childId}/wellbeing-check/new`, icon: HeartPulse, cta: 'Open' },
         { label: 'Record incident', helper: 'Log what happened, adult response and repair.', href: `/young-people/${childId}/incidents/new`, icon: ShieldAlert, cta: 'Open' },
         { label: 'Child voice', helper: 'Record wishes, feelings and “you said, we did”.', href: `/young-people/${childId}/child-voice/new`, icon: UsersRound, cta: 'Open' },
-        { label: 'Ask ORB', helper: 'Summarise journey, risks and next support.', href: `/orb?scope=child&young_person_id=${childId}&q=${encodeURIComponent(`Summarise ${childName} and what adults need to understand next`)}`, icon: Mic2, cta: 'Open' },
+        { label: 'Ask ORB', helper: 'Summarise journey, risks and next support.', href: `/assistant/orb?scope=child&young_person_id=${childId}&q=${encodeURIComponent(`Summarise ${childName} and what adults need to understand next`)}`, icon: Mic2, cta: 'Open' },
         { label: 'Evidence', helper: 'Open linked evidence and documents.', href: `/evidence?young_person_id=${childId}`, icon: SearchCheck, cta: 'Open' }
       ]
     : [
@@ -63,7 +63,7 @@ export function OperationalQuickActions({
         { label: 'Care Hub', helper: 'Start with what needs attention now.', href: '/command-centre', icon: SearchCheck, cta: 'Open' },
         { label: 'Choose young person', helper: 'Open the child journey before recording.', href: '/young-people', icon: ClipboardPlus, cta: 'Open' },
         { label: 'Shift handover', helper: 'Prepare what the next adults need to know.', href: '/handover/current', icon: ClipboardCheck, cta: 'Open' },
-        { label: 'Ask ORB', helper: 'Ask what changed, what needs review or what to do next.', href: '/orb?context=care-hub&q=What needs attention now?', icon: Mic2, cta: 'Open' }
+        { label: 'Ask ORB', helper: 'Ask what changed, what needs review or what to do next.', href: '/assistant/orb?context=care-hub&q=What needs attention now?', icon: Mic2, cta: 'Open' }
       ]
 
   const actions = variant === 'care-hub' ? careHubActions : defaultActions

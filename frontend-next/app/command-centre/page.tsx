@@ -237,7 +237,7 @@ export default async function UnifiedCommandCentrePage() {
             ))}
           </div>
           <Link
-            href="/orb?context=care-hub"
+            href="/assistant/orb?context=care-hub"
             className="mt-5 inline-flex min-h-11 w-full items-center justify-center rounded-2xl bg-cyan-200 px-4 py-3 text-sm font-black text-slate-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-100"
           >
             Open ORB

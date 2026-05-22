@@ -161,7 +161,7 @@ export function CareHubIntelligenceWidgets({
             {payload.orb_reasoning?.conversation_summary || payload.orb_reasoning?.operational_summary || 'ORB operational reasoning available from live feed.'}
           </p>
           <Link
-            href="/orb?context=care-hub&q=What%20patterns%20exist%20before%20incidents%3F"
+            href="/assistant/orb?context=care-hub&q=What%20patterns%20exist%20before%20incidents%3F"
             className="mt-4 inline-flex min-h-11 items-center rounded-2xl bg-blue-500/20 px-4 py-3 text-xs font-black text-blue-100"
           >
             Ask ORB about patterns

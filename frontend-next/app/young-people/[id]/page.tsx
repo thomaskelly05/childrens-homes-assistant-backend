@@ -137,7 +137,7 @@ export default async function YoungPersonDetailPage({ params, searchParams }: { 
             'What helped routines, regulation, belonging or trust?',
             'What should the registered manager review next in the child journey?'
           ]}
-          action={<Link href={`/orb?scope=child&young_person_id=${encodeURIComponent(id)}`} className="rounded-2xl bg-white px-4 py-3 text-sm font-black text-slate-950">Ask ORB</Link>}
+          action={<Link href={`/assistant/orb?scope=child&young_person_id=${encodeURIComponent(id)}`} className="rounded-2xl bg-white px-4 py-3 text-sm font-black text-slate-950">Ask ORB</Link>}
         />
       </section>
 
