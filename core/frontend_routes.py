@@ -157,7 +157,11 @@ def _standalone_orb_asset_audit() -> dict:
     audit = _asset_audit(STANDALONE_ORB_REQUIRED_ASSETS)
     audit["surface"] = "orb_standalone"
     audit["route"] = "/orb"
-    audit["api"] = ["/orb/standalone/config", "/orb/standalone/conversation"]
+    audit["api"] = [
+        "/orb/standalone/config",
+        "/orb/standalone/conversation",
+        "/orb/standalone/health",
+    ]
     audit["os_linked"] = False
     audit["care_record_access"] = False
     return audit

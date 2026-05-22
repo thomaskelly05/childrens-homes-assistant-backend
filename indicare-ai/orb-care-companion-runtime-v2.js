@@ -85,7 +85,11 @@ async function handleTypedMessage(event) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ message: `[${state.mode}] ${message}`, scope: 'home', conversation_id: window.__ORB_CONVERSATION_ID || null })
+      body: JSON.stringify({
+        message,
+        mode: state.mode,
+        conversation_id: window.__ORB_CONVERSATION_ID || null
+      })
     })
     const payload = await response.json()
     if (!response.ok) throw new Error(payload?.detail || payload?.error?.message || 'ORB request failed')
