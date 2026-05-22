@@ -257,12 +257,18 @@ export function ActiveChildProvider({ children }: { children: ReactNode }) {
     const controller = new AbortController()
     setPreloadStatus('loading')
     setPreloadSummary(null)
-    void authFetchResponse(`/api/child-workspace/context?childId=${encodeURIComponent(activeChild.id)}`, {
+    void authFetchResponse(`/os/young-people/${encodeURIComponent(activeChild.id)}/workspace`, {
       signal: controller.signal
     }).then(async (response) => {
       if (!response.ok) throw new Error('Child workspace could not be verified.')
       const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>
-      setPreloadSummary(payload)
+      const workspace = (payload.data ?? payload) as Record<string, unknown>
+      setPreloadSummary({
+        ok: true,
+        source: 'os-young-person-workspace',
+        canonicalRoute: `/os/young-people/${activeChild.id}/workspace`,
+        workspace
+      })
       setPreloadStatus('ready')
       markChildWorkspaceReady(activeChild.id, lockVersion)
     }).catch((error) => {

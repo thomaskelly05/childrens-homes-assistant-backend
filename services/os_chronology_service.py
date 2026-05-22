@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+import time
 from typing import Any
 
 from db.connection import get_db_connection, release_db_connection
@@ -17,6 +19,10 @@ from repositories.os_repository_utils import (
     timestamptz_expr,
 )
 
+
+logger = logging.getLogger(__name__)
+
+CHRONOLOGY_PRIORITY_TYPES = {"chronology", "os_chronology"}
 
 SOURCE_TABLES: list[dict[str, Any]] = [
     {"table": "daily_notes", "source_type": "daily_log", "category": "Daily recording", "sccif": "experiences_and_progress"},
@@ -38,8 +44,15 @@ SOURCE_TABLES: list[dict[str, Any]] = [
     {"table": "record_workflow_events", "source_type": "workflow_event", "category": "Lifecycle workflow", "sccif": "leadership_management"},
     {"table": "record_ai_reviews", "source_type": "ai_review", "category": "AI review", "sccif": "leadership_management"},
     {"table": "os_young_person_care_records", "source_type": "care_record", "category": "Care recording", "sccif": "experiences_and_progress"},
-    {"table": "os_chronology_events", "source_type": "os_chronology", "category": "OS chronology", "sccif": None},
     {"table": "chronology_events", "source_type": "chronology", "category": "Chronology", "sccif": None},
+    {"table": "os_chronology_events", "source_type": "os_chronology", "category": "OS chronology", "sccif": None},
+]
+
+PRIORITY_CHRONOLOGY_SOURCES = [
+    source for source in SOURCE_TABLES if source["source_type"] in CHRONOLOGY_PRIORITY_TYPES
+]
+SUPPLEMENTAL_CHRONOLOGY_SOURCES = [
+    source for source in SOURCE_TABLES if source["source_type"] not in CHRONOLOGY_PRIORITY_TYPES
 ]
 
 
@@ -307,6 +320,13 @@ def list_chronology(
         release_db_connection(conn)
 
 
+def _chronology_sources_for_filters(filters: dict[str, Any]) -> list[dict[str, Any]]:
+    requested = str(filters.get("source_type") or filters.get("type") or "").strip().lower()
+    if requested:
+        return [source for source in SOURCE_TABLES if source["source_type"] == requested]
+    return SOURCE_TABLES
+
+
 def list_chronology_for_connection(
     conn: Any,
     *,
@@ -315,24 +335,60 @@ def list_chronology_for_connection(
     page: int = 1,
     page_size: int = 50,
 ) -> dict[str, Any]:
+    started = time.perf_counter()
     filters = filters or {}
     page = max(1, int(page or 1))
     page_size = max(1, min(int(page_size or 50), 200))
     source_limit = max(page * page_size + page_size, 250)
+    requested_source = str(filters.get("source_type") or filters.get("type") or "").strip().lower()
 
     items: list[dict[str, Any]] = []
-    for source in SOURCE_TABLES:
-        items.extend(
-            _query_source(
-                conn,
-                source,
-                current_user=current_user,
-                filters=filters,
-                source_limit=source_limit,
-            )
-        )
+    query_started = time.perf_counter()
 
-    items = _dedupe_chronology_items(items)
+    if not requested_source:
+        for source in PRIORITY_CHRONOLOGY_SOURCES:
+            items.extend(
+                _query_source(
+                    conn,
+                    source,
+                    current_user=current_user,
+                    filters=filters,
+                    source_limit=source_limit,
+                )
+            )
+        items = _dedupe_chronology_items(items)
+        if len(items) >= source_limit:
+            sources = PRIORITY_CHRONOLOGY_SOURCES
+        else:
+            for source in SUPPLEMENTAL_CHRONOLOGY_SOURCES:
+                items.extend(
+                    _query_source(
+                        conn,
+                        source,
+                        current_user=current_user,
+                        filters=filters,
+                        source_limit=source_limit,
+                    )
+                )
+                if len(items) >= source_limit * 2:
+                    break
+            items = _dedupe_chronology_items(items)
+            sources = PRIORITY_CHRONOLOGY_SOURCES + SUPPLEMENTAL_CHRONOLOGY_SOURCES
+    else:
+        for source in _chronology_sources_for_filters(filters):
+            items.extend(
+                _query_source(
+                    conn,
+                    source,
+                    current_user=current_user,
+                    filters=filters,
+                    source_limit=source_limit,
+                )
+            )
+        items = _dedupe_chronology_items(items)
+        sources = _chronology_sources_for_filters(filters)
+
+    query_ms = round((time.perf_counter() - query_started) * 1000, 2)
 
     if filters.get("category"):
         category = str(filters["category"]).lower()
@@ -353,6 +409,16 @@ def list_chronology_for_connection(
     total = len(items)
     start = (page - 1) * page_size
     end = start + page_size
+    total_ms = round((time.perf_counter() - started) * 1000, 2)
+    logger.info(
+        "chronology_query young_person_id=%s source_type=%s items=%s query_ms=%s total_ms=%s sources=%s",
+        filters.get("young_person_id"),
+        requested_source or "all",
+        total,
+        query_ms,
+        total_ms,
+        len(sources),
+    )
     return {
         "items": items[start:end],
         "page": page,
@@ -381,15 +447,25 @@ def _dedupe_chronology_items(items: list[dict[str, Any]]) -> list[dict[str, Any]
 
 
 def get_chronology_event(*, event_id: str, current_user: dict[str, Any]) -> dict[str, Any] | None:
-    source_type, _, source_id = event_id.partition(":")
+    from repositories.os_repository_utils import normalise_federated_id, parse_federated_id
+
+    decoded_id = normalise_federated_id(event_id)
+    source_type, source_id = parse_federated_id(decoded_id)
     page = list_chronology(
         current_user=current_user,
-        filters={"source_type": source_type} if source_id else {},
+        filters={"source_type": source_type} if source_type else {},
         page=1,
         page_size=500,
     )
+    lookup_ids = {decoded_id, event_id}
+    if source_id:
+        lookup_ids.add(source_id)
+        if source_type:
+            lookup_ids.add(f"{source_type}:{source_id}")
     for item in page["items"]:
-        if item["id"] == event_id or (not source_id and item["source_id"] == event_id):
+        item_id = str(item.get("id") or "")
+        item_source_id = str(item.get("source_id") or "")
+        if item_id in lookup_ids or item_source_id in lookup_ids:
             return item
     return None
 

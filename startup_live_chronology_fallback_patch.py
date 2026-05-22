@@ -2,13 +2,15 @@ from __future__ import annotations
 
 import logging
 import sys
+import time
 from typing import Any
 
 from db.connection import get_db_connection, release_db_connection
 from repositories.actions_repository import list_actions
 from repositories.documents_repository import list_documents
 from repositories.evidence_repository import list_evidence
-from repositories.os_repository_utils import array_text, isoformat, normalise_severity
+from repositories.os_repository_utils import array_text, isoformat, normalise_severity, table_exists
+from services.os_chronology_service import PRIORITY_CHRONOLOGY_SOURCES, _query_source
 
 logger = logging.getLogger(__name__)
 
@@ -128,6 +130,22 @@ def _event_from_evidence(evidence: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _dedicated_chronology_has_rows(conn: Any, *, current_user: dict[str, Any], filters: dict[str, Any]) -> bool:
+    for source in PRIORITY_CHRONOLOGY_SOURCES:
+        if not table_exists(conn, source["table"]):
+            continue
+        rows = _query_source(
+            conn,
+            source,
+            current_user=current_user,
+            filters=filters,
+            source_limit=1,
+        )
+        if rows:
+            return True
+    return False
+
+
 def apply() -> None:
     try:
         import services.os_chronology_service as chronology_service
@@ -140,18 +158,45 @@ def apply() -> None:
         return
 
     def patched_list_chronology(*, current_user: dict[str, Any], filters: dict[str, Any] | None = None, page: int = 1, page_size: int = 50) -> dict[str, Any]:
+        started = time.perf_counter()
         result = original(current_user=current_user, filters=filters, page=page, page_size=page_size)
+        primary_ms = round((time.perf_counter() - started) * 1000, 2)
         if result.get("items"):
+            logger.info(
+                "chronology_primary_hit young_person_id=%s items=%s primary_ms=%s",
+                (filters or {}).get("young_person_id"),
+                len(result.get("items") or []),
+                primary_ms,
+            )
             return result
 
         filters_in = filters or {}
         conn = get_db_connection()
         try:
+            probe_started = time.perf_counter()
+            if _dedicated_chronology_has_rows(conn, current_user=current_user, filters=filters_in):
+                probe_ms = round((time.perf_counter() - probe_started) * 1000, 2)
+                logger.info(
+                    "chronology_fallback_skipped dedicated_rows_exist young_person_id=%s primary_ms=%s probe_ms=%s",
+                    filters_in.get("young_person_id"),
+                    primary_ms,
+                    probe_ms,
+                )
+                return result
+
+            fallback_started = time.perf_counter()
             fallback_items = []
             docs = list_documents(conn, current_user=current_user, filters=filters_in, limit=200)
+            docs_ms = round((time.perf_counter() - fallback_started) * 1000, 2)
             fallback_items.extend(_event_from_document(item) for item in docs)
+
+            actions_started = time.perf_counter()
             fallback_items.extend(_event_from_action(item) for item in list_actions(conn, current_user=current_user, filters=filters_in, limit=200))
+            actions_ms = round((time.perf_counter() - actions_started) * 1000, 2)
+
+            evidence_started = time.perf_counter()
             fallback_items.extend(_event_from_evidence(item) for item in list_evidence(conn, current_user=current_user, filters=filters_in, limit=200))
+            evidence_ms = round((time.perf_counter() - evidence_started) * 1000, 2)
         finally:
             release_db_connection(conn)
 
@@ -160,12 +205,17 @@ def apply() -> None:
         page_size = max(1, min(int(page_size or 50), 200))
         start = (page - 1) * page_size
         end = start + page_size
+        total_ms = round((time.perf_counter() - started) * 1000, 2)
         if fallback_items:
             logger.info(
-                "live chronology recovered from linked records user_id=%s young_person_id=%s count=%s",
-                current_user.get("id") or current_user.get("user_id"),
+                "chronology_fallback_recovery young_person_id=%s count=%s primary_ms=%s docs_ms=%s actions_ms=%s evidence_ms=%s total_ms=%s",
                 filters_in.get("young_person_id"),
                 len(fallback_items),
+                primary_ms,
+                docs_ms,
+                actions_ms,
+                evidence_ms,
+                total_ms,
             )
         return {
             "items": fallback_items[start:end],

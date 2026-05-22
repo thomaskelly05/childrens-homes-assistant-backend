@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+import time
 from pathlib import Path
 from typing import Any
 
@@ -24,6 +26,7 @@ from services.operational_lifecycle_service import operational_lifecycle_service
 
 
 router = APIRouter(prefix="/os", tags=["OS Live Data"])
+logger = logging.getLogger(__name__)
 
 
 class FlexiblePayload(BaseModel):
@@ -100,6 +103,7 @@ def os_chronology(
     page_size: int = Query(default=50, ge=1, le=200),
     current_user=Depends(get_current_user),
 ):
+    started = time.perf_counter()
     page_data = list_chronology(
         current_user=current_user,
         filters=_filters(
@@ -124,6 +128,13 @@ def os_chronology(
         page_size=page_size,
     )
     meta = {key: page_data[key] for key in ["page", "page_size", "total", "has_more"]}
+    meta["duration_ms"] = round((time.perf_counter() - started) * 1000, 2)
+    logger.info(
+        "os_chronology_route young_person_id=%s items=%s duration_ms=%s",
+        young_person_id,
+        len(page_data.get("items") or []),
+        meta["duration_ms"],
+    )
     return ok(page_data["items"], meta=meta)
 
 
@@ -390,7 +401,9 @@ def os_reg44_extract_text(payload: FlexiblePayload, current_user=Depends(get_cur
 
 @router.get("/documents/{document_id}")
 def os_document_detail(document_id: str, current_user=Depends(get_current_user), conn=Depends(get_db)):
-    document = get_document(conn, document_id=document_id, current_user=current_user)
+    from repositories.os_repository_utils import normalise_federated_id
+
+    document = get_document(conn, document_id=normalise_federated_id(document_id), current_user=current_user)
     if not document:
         raise HTTPException(status_code=404, detail="Document not found.")
     return ok(document)
