@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from services.risk_intelligence_language import SAFE_DECISION_SUPPORT_NOTICE
 
+IntelligenceMode = Literal["home", "child", "staff", "inspection", "manager_daily_brief"]
 Severity = Literal["low", "medium", "high", "critical"]
 EvidenceStrength = Literal["limited", "emerging", "moderate", "strong"]
 RecordQuality = Literal["weak", "developing", "good", "strong"]
@@ -18,14 +19,21 @@ class IntelligenceRequest(BaseModel):
 
     home_id: int | str | None = None
     child_id: int | str | None = None
+    staff_id: int | str | None = None
+    date_from: str | None = None
+    date_to: str | None = None
+    mode: IntelligenceMode | None = None
     scope: Literal["home", "child", "manager_brief", "inspection"] = "home"
     records: list[dict[str, Any]] = Field(default_factory=list)
     context: dict[str, Any] = Field(default_factory=dict)
     days: int = Field(default=30, ge=1, le=365)
+    include_live_records: bool = True
+    include_demo_fallback: bool = False
     include_evidence_graph: bool = True
     include_patterns: bool = True
     include_ofsted_simulation: bool = True
     include_record_quality: bool = True
+    use_snapshot_cache: bool = True
 
 
 class IntelligenceSummary(BaseModel):
@@ -124,6 +132,32 @@ class OfstedJudgementSimulation(BaseModel):
     )
 
 
+class ManagerDailyBrief(BaseModel):
+    headline: str = "records indicate areas may need calm manager review today"
+    urgent_review: list[str] = Field(default_factory=list)
+    safeguarding_signals: list[str] = Field(default_factory=list)
+    children_to_review: list[str] = Field(default_factory=list)
+    staff_support_signals: list[str] = Field(default_factory=list)
+    records_needing_signoff: list[str] = Field(default_factory=list)
+    overdue_actions: list[str] = Field(default_factory=list)
+    ofsted_evidence_risks: list[str] = Field(default_factory=list)
+    quality_of_recording: list[str] = Field(default_factory=list)
+    positive_progress: list[str] = Field(default_factory=list)
+    suggested_manager_actions: list[str] = Field(default_factory=list)
+    decision_support_notice: str = SAFE_DECISION_SUPPORT_NOTICE
+
+
+class IntelligenceMetadata(BaseModel):
+    live_records_requested: bool = False
+    live_records_found: int = 0
+    supplied_records_found: int = 0
+    total_records_analysed: int = 0
+    collector_warnings: list[str] = Field(default_factory=list)
+    generated_at: str = ""
+    mode: str = "home"
+    snapshot: dict[str, Any] = Field(default_factory=dict)
+
+
 class RecordQualityReview(BaseModel):
     record_id: str
     record_type: str
@@ -138,6 +172,8 @@ class RecordQualityReview(BaseModel):
 
 
 class IntelligenceSpineResponse(BaseModel):
+    metadata: IntelligenceMetadata = Field(default_factory=IntelligenceMetadata)
+    manager_daily_brief: ManagerDailyBrief | None = None
     summary: IntelligenceSummary = Field(default_factory=IntelligenceSummary)
     child_intelligence: list[IntelligenceFinding] = Field(default_factory=list)
     safeguarding_intelligence: list[IntelligenceFinding] = Field(default_factory=list)
