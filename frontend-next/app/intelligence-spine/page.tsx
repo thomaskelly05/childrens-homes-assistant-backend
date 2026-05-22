@@ -1,6 +1,8 @@
 import Link from 'next/link'
 
+import { LiveDataStatus } from '@/components/indicare/live-data-status'
 import { Card, DataTable, EmptyState, PageHeader, SectionHeader, StatCard, StatusBadge } from '@/components/indicare/ui'
+import { postIntelligenceSpine } from '@/lib/os-api/intelligence-spine'
 
 const DECISION_NOTICE =
   'This is decision support only. It does not replace professional judgement, safeguarding procedures or manager review. Do not treat outputs as a final decision.'
@@ -12,6 +14,13 @@ const demoSpine = {
     pattern_count: 4,
     priority_action_count: 3,
     manager_oversight_count: 2
+  },
+  manager_daily_brief: {
+    headline: 'Records indicate 2 areas may need manager review today.',
+    urgent_review: ['records indicate manager review may not be visible on significant events; manager oversight required'],
+    safeguarding_signals: ['evidence suggests safeguarding themes may need source review'],
+    children_to_review: ['evidence suggests child voice may be limited across recent care records; review recommended'],
+    suggested_manager_actions: ['confirm manager review in source records']
   },
   patterns: [
     {
@@ -29,8 +38,7 @@ const demoSpine = {
     {
       judgement_area: 'overall_experiences_and_progress',
       evidence_strength: 'emerging',
-      likely_strengths: ['Records indicate daily note evidence is present for review.'],
-      inspection_questions: ['Inspectors may ask how children\'s daily experiences show progress from starting points.']
+      inspection_questions: ["Inspectors may ask how children's daily experiences show progress from starting points."]
     },
     {
       judgement_area: 'help_and_protection',
@@ -52,7 +60,7 @@ const demoSpine = {
       record_id: 'dn-1',
       record_type: 'daily_note',
       overall_quality: 'developing',
-      therapeutic_language_flags: ['\\bchallenging behaviour\\b'],
+      therapeutic_language_flags: ['challenging behaviour'],
       manager_review_required: false
     }
   ],
@@ -64,6 +72,7 @@ const demoSpine = {
     }
   ],
   what_has_improved: ['records indicate no major deterioration patterns in supplied evidence; source review still required.'],
+  what_has_deteriorated: [],
   manager_review_required: ['records indicate manager review may not be visible on significant events; manager oversight required.']
 }
 
@@ -74,8 +83,28 @@ function severityTone(value: string) {
   return 'available'
 }
 
-export default function IntelligenceSpinePage() {
-  const spine = demoSpine
+type PageProps = {
+  searchParams?: Promise<{ home_id?: string; child_id?: string }>
+}
+
+export default async function IntelligenceSpinePage({ searchParams }: PageProps) {
+  const params = (await searchParams) || {}
+  const homeId = params.home_id || undefined
+  const childId = params.child_id || undefined
+
+  const live = await postIntelligenceSpine({
+    mode: 'manager_daily_brief',
+    home_id: homeId,
+    child_id: childId,
+    days: 1,
+    include_live_records: true
+  })
+
+  const usingDemo = live.source !== 'live'
+  const spine = usingDemo ? demoSpine : live.data
+  const brief = spine.manager_daily_brief
+  const metadata = spine.metadata
+  const summary = spine.summary || demoSpine.summary
 
   return (
     <div className="space-y-6 pb-10">
@@ -94,37 +123,117 @@ export default function IntelligenceSpinePage() {
         }
       />
 
+      <LiveDataStatus result={live} />
+
+      {usingDemo ? (
+        <Card className="border border-amber-200 bg-amber-50/80">
+          <p className="text-sm font-bold text-amber-900">
+            Demo intelligence shown because live intelligence could not be loaded. Source review required before operational use.
+          </p>
+          {live.warning ? <p className="mt-2 text-sm text-amber-800">{live.warning}</p> : null}
+        </Card>
+      ) : null}
+
       <Card className="border border-amber-100 bg-amber-50/60">
-        <p className="text-sm font-bold leading-7 text-amber-900">{DECISION_NOTICE}</p>
+        <p className="text-sm font-bold leading-7 text-amber-900">{spine.decision_support_notice || DECISION_NOTICE}</p>
         <p className="mt-2 text-sm text-amber-800/90">
-          API endpoints: POST /intelligence/spine, /patterns, /ofsted-simulation, /record-quality, /evidence-graph
+          Live records analysed: {metadata?.total_records_analysed ?? '—'} ({metadata?.live_records_found ?? 0} from database,{' '}
+          {metadata?.supplied_records_found ?? 0} supplied)
         </p>
       </Card>
 
+      {metadata?.collector_warnings?.length ? (
+        <Card>
+          <SectionHeader eyebrow="Collector" title="Collector warnings" description="Source review required where live data was limited." />
+          <ul className="space-y-2">
+            {metadata.collector_warnings.map((warning) => (
+              <li key={warning} className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-600">
+                {warning}
+              </li>
+            ))}
+          </ul>
+        </Card>
+      ) : null}
+
       <section className="grid gap-4 md:grid-cols-4">
-        <StatCard label="Review themes" value={spine.summary.pattern_count} detail="Pattern signals in demo view" />
-        <StatCard label="Priority actions" value={spine.summary.priority_action_count} detail="Manager oversight suggested" />
-        <StatCard label="Evidence status" value={spine.summary.evidence_status} detail="Mixed — needs source review" />
-        <StatCard label="Oversight prompts" value={spine.summary.manager_oversight_count} detail="Human-in-the-loop required" />
+        <StatCard label="Review themes" value={summary.pattern_count ?? 0} detail="Pattern signals for manager review" />
+        <StatCard label="Priority actions" value={summary.priority_action_count ?? 0} detail="Manager oversight suggested" />
+        <StatCard label="Evidence status" value={summary.evidence_status || 'mixed'} detail="Needs source review" />
+        <StatCard label="Records analysed" value={metadata?.total_records_analysed ?? 0} detail="Live + supplied payloads" />
       </section>
 
       <Card>
-        <SectionHeader
-          eyebrow="Overview"
-          title="Intelligence Spine Overview"
-          description={spine.summary.headline}
-        />
+        <SectionHeader eyebrow="Overview" title="Intelligence Spine Overview" description={summary.headline || 'review recommended'} />
         <p className="text-sm leading-7 text-slate-600">
-          The spine orchestrates regulatory ontology, document readiness, pattern detection, evidence graph intelligence,
-          record quality review and Ofsted evidence-strength simulation. Connect live records via POST /intelligence/spine.
+          The spine orchestrates regulatory ontology, document readiness, pattern detection, evidence graph intelligence, record quality
+          review and Ofsted evidence-strength simulation. Mode: {metadata?.mode || 'manager_daily_brief'}.
         </p>
+      </Card>
+
+      <Card>
+        <SectionHeader
+          eyebrow="Registered Manager"
+          title="Registered Manager Daily Brief"
+          description={brief?.headline || 'Calm oversight themes for today — review recommended.'}
+        />
+        <div className="grid gap-6 xl:grid-cols-2">
+          <div>
+            <p className="mb-3 text-xs font-black uppercase tracking-[0.2em] text-slate-400">Urgent review</p>
+            <ul className="space-y-2">
+              {(brief?.urgent_review || []).map((item) => (
+                <li key={item} className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-800">
+                  {item}
+                </li>
+              ))}
+              {!brief?.urgent_review?.length ? (
+                <li className="text-sm text-slate-500">No urgent themes returned; source review still recommended.</li>
+              ) : null}
+            </ul>
+          </div>
+          <div>
+            <p className="mb-3 text-xs font-black uppercase tracking-[0.2em] text-slate-400">Suggested manager actions</p>
+            <ul className="space-y-2">
+              {(brief?.suggested_manager_actions || []).map((item) => (
+                <li key={item} className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-bold text-blue-800">
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+        <div className="mt-6 grid gap-4 md:grid-cols-3">
+          <div>
+            <p className="mb-2 text-xs font-black uppercase tracking-[0.2em] text-slate-400">Children to review</p>
+            <ul className="space-y-2 text-sm font-bold text-slate-600">
+              {(brief?.children_to_review || []).slice(0, 5).map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <p className="mb-2 text-xs font-black uppercase tracking-[0.2em] text-slate-400">Positive progress</p>
+            <ul className="space-y-2 text-sm font-bold text-emerald-700">
+              {(brief?.positive_progress || []).slice(0, 5).map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <p className="mb-2 text-xs font-black uppercase tracking-[0.2em] text-slate-400">Overdue actions</p>
+            <ul className="space-y-2 text-sm font-bold text-amber-800">
+              {(brief?.overdue_actions || []).slice(0, 5).map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
       </Card>
 
       <section className="grid gap-6 xl:grid-cols-2">
         <Card>
-          <SectionHeader eyebrow="Leadership" title="Manager Daily Brief" description="Calm oversight themes for today — review recommended." />
+          <SectionHeader eyebrow="Leadership" title="Manager oversight prompts" description="Calm oversight themes — not final decisions." />
           <ul className="space-y-3">
-            {spine.manager_review_required.map((item) => (
+            {(spine.manager_review_required || []).map((item) => (
               <li key={item} className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-600">
                 {item}
               </li>
@@ -135,15 +244,24 @@ export default function IntelligenceSpinePage() {
           <SectionHeader eyebrow="Safeguarding" title="Safeguarding Signals" description="Evidence suggests themes only — this may need escalation to professional review." />
           <DataTable
             headers={['Pattern', 'Severity', 'Summary']}
-            rows={spine.patterns
+            rows={(spine.patterns || [])
               .filter((p) => /safeguarding|missing|incident|manager_review/.test(p.pattern_type))
               .map((p) => [
                 p.pattern_type.replaceAll('_', ' '),
                 <StatusBadge key={p.pattern_type} value={p.severity} />,
                 p.summary
               ])}
-            empty={<EmptyState title="No safeguarding patterns in demo" description="Pass safeguarding records to POST /intelligence/patterns." />}
+            empty={<EmptyState title="No safeguarding patterns returned" description="Safeguarding records may be limited in the current window." />}
           />
+          {(brief?.safeguarding_signals || []).length ? (
+            <ul className="mt-4 space-y-2">
+              {brief!.safeguarding_signals!.map((line) => (
+                <li key={line} className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900">
+                  {line}
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </Card>
       </section>
 
@@ -155,7 +273,7 @@ export default function IntelligenceSpinePage() {
         />
         <DataTable
           headers={['Area', 'Evidence strength', 'Prompt']}
-          rows={spine.ofsted_simulation.map((area) => [
+          rows={(spine.ofsted_simulation || []).map((area) => [
             area.judgement_area.replaceAll('_', ' '),
             <StatusBadge key={area.judgement_area} value={area.evidence_strength} />,
             area.inspection_questions?.[0] || area.likely_challenges?.[0] || area.likely_strengths?.[0] || 'review recommended'
@@ -166,9 +284,9 @@ export default function IntelligenceSpinePage() {
 
       <section className="grid gap-6 xl:grid-cols-2">
         <Card>
-          <SectionHeader eyebrow="Chronology" title="Evidence Graph Summary" description={spine.evidence_graph.graph_summary} />
+          <SectionHeader eyebrow="Chronology" title="Evidence Graph Summary" description={spine.evidence_graph?.graph_summary || 'review recommended'} />
           <ul className="space-y-2 text-sm font-bold text-slate-600">
-            {spine.evidence_graph.evidence_gaps.map((gap) => (
+            {(spine.evidence_graph?.evidence_gaps || []).map((gap) => (
               <li key={gap} className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
                 {gap}
               </li>
@@ -179,13 +297,20 @@ export default function IntelligenceSpinePage() {
           <SectionHeader eyebrow="Recording" title="Recording Quality" description="Supportive guidance only — not automatic rewriting." />
           <DataTable
             headers={['Record', 'Quality', 'Flags']}
-            rows={spine.record_quality.map((r) => [
+            rows={(spine.record_quality || []).map((r) => [
               `${r.record_type} ${r.record_id}`,
               <StatusBadge key={r.record_id} value={r.overall_quality} />,
               r.therapeutic_language_flags?.length ? 'therapeutic language review recommended' : 'none flagged'
             ])}
-            empty={<EmptyState title="No record reviews" description="POST /intelligence/record-quality with narrative records." />}
+            empty={<EmptyState title="No record reviews" description="Record quality reviews appear when narrative records are available." />}
           />
+          {(brief?.quality_of_recording || []).length ? (
+            <ul className="mt-4 space-y-2 text-sm font-bold text-slate-600">
+              {brief!.quality_of_recording!.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          ) : null}
         </Card>
       </section>
 
@@ -194,7 +319,7 @@ export default function IntelligenceSpinePage() {
           <SectionHeader eyebrow="Actions" title="Priority Actions" />
           <DataTable
             headers={['Action', 'Priority', 'Next step']}
-            rows={spine.priority_actions.map((a) => [
+            rows={(spine.priority_actions || []).map((a) => [
               a.title,
               <StatusBadge key={a.title} value={severityTone(a.priority)} />,
               a.suggested_next_step
@@ -205,7 +330,7 @@ export default function IntelligenceSpinePage() {
         <Card>
           <SectionHeader eyebrow="Trends" title="What Has Improved" />
           <ul className="space-y-2">
-            {spine.what_has_improved.map((line) => (
+            {(spine.what_has_improved || []).map((line) => (
               <li key={line} className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800">
                 {line}
               </li>
@@ -214,11 +339,15 @@ export default function IntelligenceSpinePage() {
           <div className="mt-6">
             <SectionHeader eyebrow="Oversight" title="What Needs Oversight" />
             <ul className="space-y-2">
-              {spine.patterns.map((p) => (
-                <li key={p.pattern_type} className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900">
-                  {p.summary}
-                </li>
-              ))}
+              {(spine.what_has_deteriorated || spine.patterns || []).map((p) => {
+                const text = typeof p === 'string' ? p : p.summary
+                const key = typeof p === 'string' ? p : p.pattern_type
+                return (
+                  <li key={key} className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900">
+                    {text}
+                  </li>
+                )
+              })}
             </ul>
           </div>
         </Card>

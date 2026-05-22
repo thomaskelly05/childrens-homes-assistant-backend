@@ -6,7 +6,9 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, ConfigDict, Field
 
 from auth.dependencies import get_current_user
+from db.connection import get_db
 from schemas.indicare_intelligence import IntelligenceRequest
+from services.registered_manager_daily_brief_service import registered_manager_daily_brief_service
 from services.evidence_graph_intelligence_service import evidence_graph_intelligence_service
 from services.indicare_intelligence_spine_service import indicare_intelligence_spine_service
 from services.ofsted_judgement_simulation_service import ofsted_judgement_simulation_service
@@ -38,6 +40,7 @@ def intelligence_health(current_user: dict[str, Any] = Depends(get_current_user)
             "decision_support_notice": SAFE_DECISION_SUPPORT_NOTICE,
             "endpoints": {
                 "spine": "POST /intelligence/spine",
+                "manager_daily_brief": "POST /intelligence/manager-daily-brief",
                 "patterns": "POST /intelligence/patterns",
                 "ofsted_simulation": "POST /intelligence/ofsted-simulation",
                 "record_quality": "POST /intelligence/record-quality",
@@ -60,10 +63,53 @@ def intelligence_health(current_user: dict[str, Any] = Depends(get_current_user)
 def intelligence_spine(
     payload: IntelligenceRequest,
     current_user: dict[str, Any] = Depends(get_current_user),
+    conn=Depends(get_db),
 ):
-    _ = current_user
-    data = indicare_intelligence_spine_service.build_response(payload)
+    data = indicare_intelligence_spine_service.build_response(
+        payload,
+        conn=conn,
+        current_user=current_user,
+    )
     return {"success": True, "data": data.model_dump(mode="json")}
+
+
+@router.post("/manager-daily-brief")
+def intelligence_manager_daily_brief(
+    payload: IntelligenceRequest,
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    request = payload.model_copy(
+        update={
+            "mode": "manager_daily_brief",
+            "days": max(1, min(payload.days, 7)),
+        }
+    )
+    spine = indicare_intelligence_spine_service.build_response(
+        request,
+        conn=conn,
+        current_user=current_user,
+    )
+    brief = (
+        spine.manager_daily_brief.model_dump(mode="json")
+        if spine.manager_daily_brief
+        else registered_manager_daily_brief_service.build_daily_brief(
+            [],
+            home_id=request.home_id,
+            date_from=request.date_from,
+            date_to=request.date_to,
+            days=request.days,
+        )
+    )
+    return {
+        "success": True,
+        "data": {
+            "brief": brief,
+            "metadata": spine.metadata.model_dump(mode="json"),
+            "patterns": [p.model_dump(mode="json") for p in spine.patterns[:20]],
+            "decision_support_notice": spine.decision_support_notice,
+        },
+    }
 
 
 @router.post("/patterns")

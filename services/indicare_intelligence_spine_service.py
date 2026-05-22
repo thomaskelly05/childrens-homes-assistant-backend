@@ -5,16 +5,25 @@ from typing import Any
 from schemas.indicare_intelligence import (
     IntelligenceAction,
     IntelligenceFinding,
+    IntelligenceMetadata,
     IntelligenceRequest,
     IntelligenceSpineResponse,
     IntelligenceSummary,
+    ManagerDailyBrief,
     PatternFinding,
 )
 from services.evidence_graph_intelligence_service import evidence_graph_intelligence_service
+from services.intelligence_snapshot_service import intelligence_snapshot_service
 from services.ofsted_judgement_simulation_service import ofsted_judgement_simulation_service
 from services.pattern_detection_service import pattern_detection_service
 from services.record_quality_intelligence_service import record_quality_intelligence_service
-from services.risk_intelligence_language import SAFE_DECISION_SUPPORT_NOTICE, safe_payload
+from services.registered_manager_daily_brief_service import registered_manager_daily_brief_service
+from services.risk_intelligence_language import SAFE_DECISION_SUPPORT_NOTICE, now_iso, safe_payload
+
+try:
+    from services.intelligence_record_collector_service import intelligence_record_collector_service
+except Exception:  # pragma: no cover
+    intelligence_record_collector_service = None  # type: ignore[assignment]
 
 try:
     from services.regulatory_ontology_service import regulatory_ontology_service
@@ -104,11 +113,137 @@ class IndiCareIntelligenceSpineService:
         )
         return response
 
-    def build_response(self, request: IntelligenceRequest) -> IntelligenceSpineResponse:
-        return self._build(scope=request.scope, request=request)
+    def build_response(
+        self,
+        request: IntelligenceRequest,
+        *,
+        conn: Any = None,
+        current_user: dict[str, Any] | None = None,
+    ) -> IntelligenceSpineResponse:
+        scope = self._resolve_scope(request)
+        return self._build(scope=scope, request=request, conn=conn, current_user=current_user)
 
-    def _build(self, *, scope: str, request: IntelligenceRequest) -> IntelligenceSpineResponse:
-        records = list(request.records or [])
+    def _resolve_scope(self, request: IntelligenceRequest) -> str:
+        if request.mode:
+            mapping = {
+                "home": "home",
+                "child": "child",
+                "staff": "home",
+                "inspection": "inspection",
+                "manager_daily_brief": "manager_brief",
+            }
+            return mapping.get(request.mode, "home")
+        return request.scope
+
+    def _resolve_mode(self, request: IntelligenceRequest) -> str:
+        if request.mode:
+            return request.mode
+        scope_to_mode = {
+            "home": "home",
+            "child": "child",
+            "manager_brief": "manager_daily_brief",
+            "inspection": "inspection",
+        }
+        return scope_to_mode.get(request.scope, "home")
+
+    def _gather_records(
+        self,
+        request: IntelligenceRequest,
+        *,
+        conn: Any = None,
+    ) -> tuple[list[dict[str, Any]], IntelligenceMetadata]:
+        supplied = list(request.records or [])
+        live: list[dict[str, Any]] = []
+        warnings: list[str] = []
+        if request.include_live_records and intelligence_record_collector_service:
+            try:
+                if request.child_id is not None:
+                    live, warnings = intelligence_record_collector_service.collect_child_records(
+                        request.child_id,
+                        home_id=request.home_id,
+                        conn=conn,
+                        date_from=request.date_from,
+                        date_to=request.date_to,
+                    )
+                elif request.staff_id is not None:
+                    live, warnings = intelligence_record_collector_service.collect_staff_records(
+                        request.staff_id,
+                        home_id=request.home_id,
+                        conn=conn,
+                        date_from=request.date_from,
+                        date_to=request.date_to,
+                    )
+                elif request.home_id is not None:
+                    live, warnings = intelligence_record_collector_service.collect_home_records(
+                        request.home_id,
+                        conn=conn,
+                        child_id=request.child_id,
+                        staff_id=request.staff_id,
+                        date_from=request.date_from,
+                        date_to=request.date_to,
+                    )
+                else:
+                    warnings.append("No home_id, child_id or staff_id provided for live record collection.")
+            except Exception as exc:
+                warnings.append(f"Live record collection failed: {exc.__class__.__name__}")
+        merged = self._dedupe_records(supplied + live)
+        metadata = IntelligenceMetadata(
+            live_records_requested=request.include_live_records,
+            live_records_found=len(live),
+            supplied_records_found=len(supplied),
+            total_records_analysed=len(merged),
+            collector_warnings=warnings,
+            generated_at=now_iso(),
+            mode=self._resolve_mode(request),
+        )
+        return merged, metadata
+
+    def _dedupe_records(self, records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        seen: set[str] = set()
+        merged: list[dict[str, Any]] = []
+        for record in records:
+            key = f"{record.get('source', 'supplied')}:{record.get('id', hash(str(record)))}"
+            if key in seen:
+                continue
+            seen.add(key)
+            merged.append(record)
+        return merged
+
+    def _build(
+        self,
+        *,
+        scope: str,
+        request: IntelligenceRequest,
+        conn: Any = None,
+        current_user: dict[str, Any] | None = None,
+    ) -> IntelligenceSpineResponse:
+        mode = self._resolve_mode(request)
+        snapshot_key = intelligence_snapshot_service.build_snapshot_key(
+            home_id=request.home_id,
+            child_id=request.child_id,
+            staff_id=request.staff_id,
+            mode=mode,
+            date_from=request.date_from,
+            date_to=request.date_to,
+        )
+        snapshot_meta: dict[str, Any] = {"hit": False}
+        if request.use_snapshot_cache:
+            cached = intelligence_snapshot_service.get_latest_snapshot(snapshot_key)
+            if cached and isinstance(cached.get("payload"), dict):
+                try:
+                    payload = cached["payload"]
+                    payload.setdefault("metadata", {}).setdefault("snapshot", {})
+                    payload["metadata"]["snapshot"] = {
+                        "hit": True,
+                        "projection_key": snapshot_key,
+                        "version": cached.get("version"),
+                        "generated_at": cached.get("generated_at"),
+                    }
+                    return IntelligenceSpineResponse.model_validate(safe_payload(payload))
+                except Exception:
+                    snapshot_meta = {"hit": False, "invalid_cache": True}
+
+        records, metadata = self._gather_records(request, conn=conn)
         patterns: list[PatternFinding] = []
         record_quality = []
         evidence_graph = None
@@ -150,7 +285,20 @@ class IndiCareIntelligenceSpineService:
             priority_action_count=len(actions),
         )
 
+        daily_brief = None
+        if mode == "manager_daily_brief":
+            brief_data = registered_manager_daily_brief_service.build_daily_brief(
+                records,
+                home_id=request.home_id,
+                date_from=request.date_from,
+                date_to=request.date_to,
+                days=request.days,
+            )
+            daily_brief = ManagerDailyBrief.model_validate(brief_data)
+
         payload = IntelligenceSpineResponse(
+            metadata=metadata,
+            manager_daily_brief=daily_brief,
             summary=summary,
             child_intelligence=child_intel,
             safeguarding_intelligence=safeguarding,
@@ -172,7 +320,21 @@ class IndiCareIntelligenceSpineService:
         )
         dumped = payload.model_dump(mode="json")
         safe = safe_payload(dumped)
-        return IntelligenceSpineResponse.model_validate(safe)
+        response = IntelligenceSpineResponse.model_validate(safe)
+        if request.use_snapshot_cache:
+            save_result = intelligence_snapshot_service.save_snapshot(
+                key=snapshot_key,
+                payload=response.model_dump(mode="json"),
+                home_id=request.home_id,
+                child_id=request.child_id,
+                staff_id=request.staff_id,
+                mode=mode,
+                metadata={"user_id": (current_user or {}).get("id")},
+            )
+            response.metadata.snapshot = {"hit": False, "stored": True, **save_result}
+        else:
+            response.metadata.snapshot = snapshot_meta
+        return response
 
     def _regulatory_context(self) -> dict[str, Any]:
         if not regulatory_ontology_service:
