@@ -38,6 +38,7 @@ class OrbOperationalReasoningService:
         inspection_summary = self._inspection_summary(feed)
         answer = self._answer_question(
             question=question,
+            feed=feed,
             chronology_patterns=chronology_patterns,
             orb_memory=orb_memory,
             events=events,
@@ -83,6 +84,7 @@ class OrbOperationalReasoningService:
         self,
         *,
         question: str | None,
+        feed: dict[str, Any],
         chronology_patterns: dict[str, Any],
         orb_memory: dict[str, Any],
         events: list[dict[str, Any]],
@@ -106,6 +108,29 @@ class OrbOperationalReasoningService:
             return (
                 f"Provider-level reasoning can be generated from {len(events)} operational event(s) "
                 "using the provider intelligence convergence layer."
+            )
+        if "safeguarding risk" in lowered or "emerging" in lowered:
+            forecasts = chronology_patterns.get("repeat_safeguarding_themes") or []
+            if forecasts:
+                themes = ", ".join(str(item.get("theme", "")) for item in forecasts[:3])
+                return f"Emerging safeguarding themes in operational scope: {themes}."
+            return chronology_patterns.get("summary") or "Review predictive safeguarding forecasts from the operational feed."
+        if "escalat" in lowered or "pattern" in lowered:
+            return chronology_patterns.get("summary") or orb_questions.get("patterns_before_incidents", "No escalating patterns summary available.")
+        if "intervention" in lowered and "risk" in lowered:
+            return orb_questions.get(
+                "interventions_reduce_dysregulation",
+                "Review prior restorative interventions linked in chronology before significant events.",
+            )
+        if "ofsted" in lowered or "challenge" in lowered or ("evidence" in lowered and "weak" in lowered):
+            weak = (feed.get("inspection_intelligence") or {}).get("weak_areas") or []
+            if weak:
+                return f"Inspection intelligence flags weak areas: {', '.join(str(item) for item in weak[:4])}."
+            return self._inspection_summary(feed)
+        if "highest risk" in lowered and "home" in lowered:
+            return (
+                "Use provider command centre home comparison scoring to identify highest-risk homes "
+                "from cross-home safeguarding and workforce pressure."
             )
 
         return (orb_memory.get("conversation_summary") or "Review operational feed signals for context.").strip()

@@ -114,8 +114,18 @@ export function CareHubIntelligenceWidgets({
     { label: 'Inspection', value: live.inspection_readiness_pct ?? 0 }
   ]
 
+  const liveStream = (payload as { live_stream?: { status?: string; websocket_path?: string } }).live_stream
+
   return (
     <div className="space-y-6" data-testid="care-hub-widgets-ready">
+      {liveStream ? (
+        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-emerald-100 bg-emerald-50/70 px-4 py-3">
+          <StatusBadge value={liveStream.status === 'live' ? 'Live stream' : 'Stream ready'} />
+          <p className="text-xs font-bold text-emerald-900">
+            Operational websocket {liveStream.websocket_path || '/os/realtime/ws'} with polling fallback to Care Hub live.
+          </p>
+        </div>
+      ) : null}
       <OperationalSignalGrid signals={signals} />
 
       <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
