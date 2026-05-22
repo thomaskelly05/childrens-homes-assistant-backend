@@ -25,7 +25,12 @@ def table_exists(cur: Any, table: str) -> bool:
         "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name=%s)",
         (table,),
     )
-    return bool(cur.fetchone()[0])
+    row = cur.fetchone()
+    if not row:
+        return False
+    if isinstance(row, dict):
+        return bool(row.get("exists"))
+    return bool(row[0])
 
 
 def table_columns(cur: Any, table: str) -> set[str]:
@@ -33,7 +38,10 @@ def table_columns(cur: Any, table: str) -> set[str]:
         "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name=%s",
         (table,),
     )
-    return {str(row[0]) for row in cur.fetchall() or []}
+    return {
+        str(row.get("column_name") if isinstance(row, dict) else row[0])
+        for row in cur.fetchall() or []
+    }
 
 
 def latest_records(
@@ -85,6 +93,10 @@ def latest_records(
     )
 
     rows = cur.fetchall() or []
+    if not rows:
+        return []
+    if isinstance(rows[0], dict):
+        return [dict(row) for row in rows]
     keys = [desc[0] for desc in cur.description]
     return [dict(zip(keys, row)) for row in rows]
 
