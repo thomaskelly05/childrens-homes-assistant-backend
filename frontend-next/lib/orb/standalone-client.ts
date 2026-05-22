@@ -33,12 +33,19 @@ export type StandaloneOrbConfig = {
 
 export type StandaloneOrbAnswerDetail = 'voice_concise' | 'balanced' | 'detailed' | 'concise'
 
+export type StandaloneOrbImageAttachment = {
+  /** data:image/...;base64,... */
+  data_url: string
+  name?: string
+}
+
 export type StandaloneOrbConversationRequest = {
   message: string
   mode: StandaloneOrbMode | string
   conversation_id?: string | null
   history?: Array<{ role: string; content: string }>
   detail?: StandaloneOrbAnswerDetail | string
+  images?: StandaloneOrbImageAttachment[]
 }
 
 export type StandaloneOrbConversationResponse = {
@@ -92,7 +99,8 @@ export async function queryStandaloneOrbConversation(
       mode: request.mode,
       conversation_id: request.conversation_id,
       history: request.history ?? [],
-      ...(request.detail ? { detail: request.detail } : {})
+      ...(request.detail ? { detail: request.detail } : {}),
+      ...(request.images?.length ? { images: request.images } : {})
     })
   })
   if (!payload?.answer) throw new AuthApiError(503, 'ORB could not complete that request.')

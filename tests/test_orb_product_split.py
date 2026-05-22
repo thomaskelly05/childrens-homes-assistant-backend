@@ -8,6 +8,9 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[1]
 ORB_PAGE = REPO_ROOT / "frontend-next" / "app" / "orb" / "page.tsx"
 ORB_COMPANION = REPO_ROOT / "frontend-next" / "components" / "orb-standalone" / "orb-care-companion.tsx"
+ORB_SIDEBAR = REPO_ROOT / "frontend-next" / "components" / "orb-standalone" / "orb-standalone-sidebar.tsx"
+ORB_COMPOSER = REPO_ROOT / "frontend-next" / "components" / "orb-standalone" / "orb-standalone-composer.tsx"
+ORB_LOCAL_STORE = REPO_ROOT / "frontend-next" / "lib" / "orb" / "standalone-local-store.ts"
 ORB_GLOW = REPO_ROOT / "frontend-next" / "components" / "orb-standalone" / "orb-glow.tsx"
 ORB_VOICE_HOOK = REPO_ROOT / "frontend-next" / "components" / "orb-standalone" / "use-standalone-orb-voice.ts"
 STANDALONE_CLIENT = REPO_ROOT / "frontend-next" / "lib" / "orb" / "standalone-client.ts"
@@ -43,12 +46,47 @@ STANDALONE_UI_MARKERS = [
 
 CHATGPT_STYLE_MARKERS = [
     "New chat",
+    "Search chats",
+    "Projects",
+    "Profiles",
     "How can I help today?",
     "Standalone residential care assistant",
     "No OS records accessed",
     "orb-chat-layout",
     "orb-chat-sidebar",
     "orb-voice-dock",
+]
+
+IMAGE_UPLOAD_MARKERS = [
+    "ImagePlus",
+    "onPaste",
+    "onDrop",
+    "addImageFiles",
+    "images:",
+    "data_url",
+    "imageDataUrls",
+]
+
+PROJECTS_MARKERS = [
+    "createStandaloneProject",
+    "standalone-local-store",
+    "Create project",
+    "activeProjectId",
+]
+
+PROFILES_MARKERS = [
+    "createStandaloneProfile",
+    "buildProfileContextBlock",
+    "Attach standalone profile",
+    "does not access IndiCare OS records",
+]
+
+VOICE_PICKER_MARKERS = [
+    "Voice picker",
+    "selectedVoiceUri",
+    "splitTextForSpeechChunks",
+    "Actual voice:",
+    "British female",
 ]
 
 CINEMATIC_VOICE_MARKERS = [
@@ -168,14 +206,45 @@ def test_orb_page_uses_standalone_contract():
 
 
 def test_orb_page_chatgpt_style_layout():
-    sources = _read(ORB_PAGE) + _read(ORB_COMPANION) + _read(GLOBALS_CSS)
+    sources = (
+        _read(ORB_PAGE)
+        + _read(ORB_COMPANION)
+        + _read(ORB_SIDEBAR)
+        + _read(ORB_COMPOSER)
+        + _read(GLOBALS_CSS)
+    )
     for marker in CHATGPT_STYLE_MARKERS:
         assert marker in sources, f"/orb ChatGPT-style layout must include {marker}"
     assert "AppShell" not in sources
 
 
+def test_standalone_orb_image_upload_support():
+    sources = _read(ORB_COMPANION) + _read(ORB_COMPOSER) + _read(STANDALONE_CLIENT)
+    routes = _read(STANDALONE_ROUTES)
+    for marker in IMAGE_UPLOAD_MARKERS:
+        assert marker in sources or marker in routes, f"image upload marker missing: {marker}"
+
+
+def test_standalone_orb_projects_local_storage():
+    sources = _read(ORB_SIDEBAR) + _read(ORB_LOCAL_STORE) + _read(ORB_COMPANION)
+    for marker in PROJECTS_MARKERS:
+        assert marker in sources, f"projects marker missing: {marker}"
+
+
+def test_standalone_orb_profiles_local_storage():
+    sources = _read(ORB_SIDEBAR) + _read(ORB_LOCAL_STORE) + _read(ORB_COMPANION)
+    for marker in PROFILES_MARKERS:
+        assert marker in sources, f"profiles marker missing: {marker}"
+
+
+def test_standalone_orb_voice_picker_and_chunked_speech():
+    sources = _read(ORB_VOICE_HOOK) + _read(ORB_COMPANION)
+    for marker in VOICE_PICKER_MARKERS:
+        assert marker in sources, f"voice picker/chunk marker missing: {marker}"
+
+
 def test_standalone_orb_cinematic_voice_components():
-    companion = _read(ORB_COMPANION)
+    companion = _read(ORB_COMPANION) + _read(ORB_COMPOSER)
     glow = _read(ORB_GLOW)
     hook = _read(ORB_VOICE_HOOK)
     for marker in CINEMATIC_VOICE_MARKERS:
@@ -209,7 +278,7 @@ def test_standalone_orb_continuous_conversation_implementation():
 
 
 def test_standalone_orb_interruptibility():
-    sources = _read(ORB_COMPANION) + _read(ORB_VOICE_HOOK) + _read(ORB_GLOW)
+    sources = _read(ORB_COMPANION) + _read(ORB_COMPOSER) + _read(ORB_VOICE_HOOK) + _read(ORB_GLOW)
     for marker in INTERRUPT_MARKERS:
         assert marker in sources, f"interruptibility marker missing: {marker}"
 
@@ -229,7 +298,7 @@ def test_standalone_orb_answer_style_controls():
 
 
 def test_standalone_orb_conversation_memory():
-    companion = _read(ORB_COMPANION)
+    companion = _read(ORB_COMPANION) + _read(ORB_COMPOSER) + _read(ORB_LOCAL_STORE)
     hook = _read(ORB_VOICE_HOOK)
     routes = _read(STANDALONE_ROUTES)
     for marker in MEMORY_MARKERS:
