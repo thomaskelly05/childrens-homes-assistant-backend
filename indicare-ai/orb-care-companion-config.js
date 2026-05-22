@@ -1,6 +1,9 @@
 export const ORB_CARE_COMPANION_CONFIG = {
   product: 'ORB Care Companion',
   surface: 'standalone_orb_ai',
+  osLinked: false,
+  careRecordAccess: false,
+  directWrites: false,
   defaultMode: 'Ask ORB',
   modes: [
     'Ask ORB',
@@ -11,18 +14,16 @@ export const ORB_CARE_COMPANION_CONFIG = {
     'Record This Properly'
   ],
   endpoints: {
-    config: '/orb/config',
-    conversation: '/orb/conversation',
-    sessionStart: '/orb/session/start',
-    realtimeSocket: '/orb/realtime/ws'
+    config: '/orb/standalone/config',
+    conversation: '/orb/standalone/conversation'
   },
   modeDetails: {
-    'Ask ORB': 'Voice-first guidance for residential care practice. ORB supports reflection, safeguarding thinking and Ofsted-ready practice.',
-    Safeguarding: 'Start with immediate safety, escalation, professional curiosity and clear recording.',
-    Reflect: 'Slow the situation down and turn practice moments into learning.',
-    'Ofsted Lens': 'Think through evidence, impact, leadership oversight and care quality.',
+    'Ask ORB': 'Standalone voice-first guidance for residential care practice. ORB supports reflection, safeguarding thinking and Ofsted-ready practice without accessing OS records.',
+    Safeguarding: 'Start with immediate safety, escalation, professional curiosity and clear recording. ORB gives guidance only and does not replace safeguarding procedures.',
+    Reflect: 'Slow the situation down and turn practice moments into learning without pulling from operational records.',
+    'Ofsted Lens': 'Think through evidence, impact, leadership oversight and care quality from a standalone guidance perspective.',
     'Behaviour Support': 'Consider what the behaviour may communicate and what support should follow.',
-    'Record This Properly': 'Shape the event into clear, factual, child-centred recording prompts.'
+    'Record This Properly': 'Shape the event into clear, factual, child-centred recording prompts without writing to the OS.'
   }
 }
 
