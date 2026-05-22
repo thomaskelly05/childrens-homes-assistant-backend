@@ -2,12 +2,27 @@
 
 import type { StandaloneOrbMode } from '@/lib/orb/standalone-client'
 
+export type StandaloneOrbSourceType =
+  | 'product_context'
+  | 'regulatory_framework'
+  | 'general_knowledge'
+  | 'user_provided'
+  | 'safety_boundary'
+
+export type StandaloneOrbSource = {
+  label: string
+  type: StandaloneOrbSourceType
+  note?: string
+}
+
 export type StandaloneChatMessage = {
   id: string
   role: 'user' | 'assistant'
   content: string
   imageDataUrls?: string[]
   createdAt?: number
+  status?: 'failed' | 'pending'
+  sources?: StandaloneOrbSource[]
 }
 
 export type StandaloneProject = {
@@ -48,7 +63,7 @@ export type StandaloneChat = {
 }
 
 export type StandaloneWorkspace = {
-  version: 1
+  version: 2
   activeChatId: string | null
   activeProjectId: string
   projects: StandaloneProject[]
@@ -107,6 +122,8 @@ export const DEFAULT_STANDALONE_PROJECTS: StandaloneProject[] = [
 ]
 
 const WORKSPACE_STORAGE_KEY = 'orb-standalone-workspace-v1'
+const WORKSPACE_SCHEMA_VERSION = 2
+const DEDUPE_WINDOW_MS = 10 * 60 * 1000
 
 function now() {
   return Date.now()
@@ -124,12 +141,140 @@ export function defaultWorkspace(): StandaloneWorkspace {
     updatedAt: stamp
   }))
   return {
-    version: 1,
+    version: WORKSPACE_SCHEMA_VERSION,
     activeChatId: null,
     activeProjectId: STANDALONE_GENERAL_PROJECT_ID,
     projects,
     profiles: [],
     chats: []
+  }
+}
+
+function normalizeMessageContent(content: string): string {
+  return content.trim().toLowerCase()
+}
+
+function messageTimestamp(message: StandaloneChatMessage): number {
+  return typeof message.createdAt === 'number' ? message.createdAt : 0
+}
+
+function withinDedupeWindow(a: StandaloneChatMessage, b: StandaloneChatMessage): boolean {
+  const ta = messageTimestamp(a)
+  const tb = messageTimestamp(b)
+  if (!ta || !tb) return true
+  return Math.abs(tb - ta) <= DEDUPE_WINDOW_MS
+}
+
+function sameMessageContent(a: StandaloneChatMessage, b: StandaloneChatMessage): boolean {
+  return normalizeMessageContent(a.content) === normalizeMessageContent(b.content)
+}
+
+function isExactAdjacentDuplicate(a: StandaloneChatMessage, b: StandaloneChatMessage): boolean {
+  if (a.role !== b.role) return false
+  if (!sameMessageContent(a, b)) return false
+  if (!withinDedupeWindow(a, b)) return false
+  if (a.status === 'failed' || b.status === 'failed') return false
+  return true
+}
+
+export function ensureStandaloneMessage(message: Partial<StandaloneChatMessage> & { role: 'user' | 'assistant'; content: string }): StandaloneChatMessage {
+  const stamp = typeof message.createdAt === 'number' ? message.createdAt : now()
+  return {
+    id: message.id || newId(message.role === 'user' ? 'u' : 'a'),
+    role: message.role,
+    content: message.content,
+    imageDataUrls: message.imageDataUrls,
+    createdAt: stamp,
+    status: message.status,
+    sources: message.sources
+  }
+}
+
+/** Remove duplicate adjacent and repeated user bubbles within the dedupe window. */
+export function dedupeOrbMessages(messages: StandaloneChatMessage[]): StandaloneChatMessage[] {
+  const items = messages.map((entry) => ensureStandaloneMessage(entry))
+  if (items.length <= 1) return items
+
+  const adjacentPass: StandaloneChatMessage[] = []
+  for (const message of items) {
+    const previous = adjacentPass[adjacentPass.length - 1]
+    if (previous && isExactAdjacentDuplicate(previous, message)) {
+      if (message.role === 'assistant') {
+        adjacentPass[adjacentPass.length - 1] = { ...message, imageDataUrls: message.imageDataUrls ?? previous.imageDataUrls }
+      }
+      continue
+    }
+    adjacentPass.push(message)
+  }
+
+  const result: StandaloneChatMessage[] = []
+  for (let index = 0; index < adjacentPass.length; index += 1) {
+    const message = adjacentPass[index]
+    if (message.role !== 'user') {
+      result.push(message)
+      continue
+    }
+
+    let skip = false
+    for (let priorIndex = result.length - 1; priorIndex >= 0; priorIndex -= 1) {
+      const prior = result[priorIndex]
+      if (prior.role === 'assistant') break
+      if (
+        prior.role === 'user' &&
+        sameMessageContent(prior, message) &&
+        withinDedupeWindow(prior, message)
+      ) {
+        skip = true
+        break
+      }
+    }
+
+    if (!skip) {
+      for (let priorIndex = 0; priorIndex < result.length; priorIndex += 1) {
+        const prior = result[priorIndex]
+        if (prior.role !== 'user' || !sameMessageContent(prior, message) || !withinDedupeWindow(prior, message)) {
+          continue
+        }
+        let assistantBetween = false
+        for (let between = priorIndex + 1; between < result.length; between += 1) {
+          if (result[between].role === 'assistant') {
+            assistantBetween = true
+            break
+          }
+        }
+        if (!assistantBetween) {
+          skip = true
+          break
+        }
+      }
+    }
+
+    if (!skip) result.push(message)
+  }
+
+  return result
+}
+
+export function repairOrbChat(chat: StandaloneChat): StandaloneChat {
+  const messages = dedupeOrbMessages(chat.messages ?? [])
+  return {
+    ...chat,
+    messages,
+    updatedAt: Math.max(chat.updatedAt ?? 0, messages[messages.length - 1]?.createdAt ?? 0)
+  }
+}
+
+export function repairOrbWorkspace(workspace: StandaloneWorkspace): StandaloneWorkspace {
+  const chats = (workspace.chats ?? []).map((chat) => repairOrbChat(chat))
+  let activeChatId = workspace.activeChatId
+  if (activeChatId && !chats.some((chat) => chat.id === activeChatId)) {
+    activeChatId = chats[0]?.id ?? null
+  }
+  return {
+    ...workspace,
+    version: WORKSPACE_SCHEMA_VERSION,
+    activeChatId,
+    chats
   }
 }
 
@@ -145,14 +290,21 @@ export function readStandaloneWorkspace(): StandaloneWorkspace {
         ? parsed.projects
         : base.projects
     const hasGeneral = projects.some((p) => p.id === STANDALONE_GENERAL_PROJECT_ID)
-    return {
-      version: 1,
+    const loaded: StandaloneWorkspace = {
+      version: (parsed.version as StandaloneWorkspace['version']) ?? 1,
       activeChatId: parsed.activeChatId ?? null,
       activeProjectId: parsed.activeProjectId ?? STANDALONE_GENERAL_PROJECT_ID,
       projects: hasGeneral ? projects : [...base.projects, ...projects],
       profiles: Array.isArray(parsed.profiles) ? parsed.profiles : [],
       chats: Array.isArray(parsed.chats) ? parsed.chats : []
     }
+    const repaired = repairOrbWorkspace(loaded)
+    const messagesBefore = loaded.chats.reduce((count, chat) => count + (chat.messages?.length ?? 0), 0)
+    const messagesAfter = repaired.chats.reduce((count, chat) => count + chat.messages.length, 0)
+    if ((loaded.version ?? 1) < WORKSPACE_SCHEMA_VERSION || messagesBefore !== messagesAfter) {
+      writeStandaloneWorkspace(repaired)
+    }
+    return repaired
   } catch {
     return defaultWorkspace()
   }
@@ -161,7 +313,8 @@ export function readStandaloneWorkspace(): StandaloneWorkspace {
 export function writeStandaloneWorkspace(workspace: StandaloneWorkspace) {
   if (typeof window === 'undefined') return
   try {
-    window.localStorage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify(workspace))
+    const repaired = repairOrbWorkspace(workspace)
+    window.localStorage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify(repaired))
   } catch {
     /* quota */
   }

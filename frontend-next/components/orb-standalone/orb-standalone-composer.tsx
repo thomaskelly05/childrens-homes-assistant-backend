@@ -182,9 +182,10 @@ export function OrbStandaloneComposer({
                 aria-describedby="orb-standalone-status"
               />
               <button
-                type="submit"
+                type="button"
                 disabled={pending || (!input.trim() && attachments.length === 0)}
                 aria-label="Send message"
+                onClick={() => onSubmit()}
                 className="inline-flex h-11 min-w-11 shrink-0 items-center justify-center rounded-full bg-white text-slate-950 transition hover:bg-slate-100 disabled:opacity-35"
               >
                 <Send className="h-5 w-5" />
