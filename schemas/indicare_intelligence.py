@@ -34,6 +34,7 @@ class IntelligenceRequest(BaseModel):
     include_ofsted_simulation: bool = True
     include_record_quality: bool = True
     use_snapshot_cache: bool = True
+    create_actions: bool = False
 
 
 class IntelligenceSummary(BaseModel):
@@ -192,3 +193,8 @@ class IntelligenceSpineResponse(BaseModel):
     regulatory_ontology: dict[str, Any] = Field(default_factory=dict)
     ofsted_readiness: dict[str, Any] = Field(default_factory=dict)
     decision_support_notice: str = SAFE_DECISION_SUPPORT_NOTICE
+    proposed_actions: list[Any] = Field(default_factory=list)
+    action_summary: dict[str, Any] = Field(default_factory=dict)
+    action_notice: str = (
+        "Actions are proposed for manager review and are not automatically accepted."
+    )

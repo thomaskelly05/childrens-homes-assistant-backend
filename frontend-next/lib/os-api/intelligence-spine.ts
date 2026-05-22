@@ -62,6 +62,28 @@ export type IntelligenceSpinePayload = {
     manager_review_required?: boolean
   }>
   priority_actions?: Array<{ title: string; priority: string; suggested_next_step: string }>
+  proposed_actions?: Array<{
+    id?: string
+    action_type?: string
+    title: string
+    summary?: string
+    priority: string
+    status?: string
+    reason?: string
+    suggested_next_step?: string
+    regulatory_links?: string[]
+    sccif_links?: string[]
+    manager_decision?: string | null
+  }>
+  action_summary?: {
+    total?: number
+    by_status?: Record<string, number>
+    by_priority?: Record<string, number>
+    by_type?: Record<string, number>
+    urgent_count?: number
+    proposed_count?: number
+  }
+  action_notice?: string
   what_has_improved?: string[]
   what_has_deteriorated?: string[]
   manager_review_required?: string[]

@@ -79,6 +79,62 @@ Query params: `?home_id=` and `?child_id=`
 - No Ofsted grades or inspection outcomes
 - No safeguarding substantiation language
 
+## Stage 3 — Intelligence action loop
+
+Stage 3 adds a **human-in-the-loop** action and oversight layer. IndiCare may suggest; the manager decides; the audit trail records the decision.
+
+| Component | Role |
+|-----------|------|
+| `schemas/intelligence_actions.py` | Pydantic models for actions and oversight reviews |
+| `services/intelligence_action_service.py` | Propose, persist, decide, summarise actions |
+| `routers/intelligence_action_routes.py` | HTTP API for actions and oversight |
+| `sql/072_intelligence_actions.sql` | Optional persistence tables |
+
+### Proposed actions on spine
+
+For `mode` in `manager_daily_brief`, `inspection`, or `home`, spine responses include:
+
+- `proposed_actions` — structured actions (status `proposed` by default)
+- `action_summary` — counts by status, priority and type
+- `action_notice` — reminds that actions are not auto-accepted
+
+Persistence is **off by default**. Pass `create_actions: true` on `IntelligenceRequest` to store proposed actions.
+
+### Action endpoints
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/intelligence/actions/health` | Action service health |
+| POST | `/intelligence/actions/propose` | Propose from spine payload |
+| GET | `/intelligence/actions` | List persisted actions |
+| POST | `/intelligence/actions` | Create action |
+| PATCH | `/intelligence/actions/{id}` | Update action |
+| POST | `/intelligence/actions/{id}/decision` | accept / dismiss / in_progress / complete / supersede |
+| POST | `/intelligence/actions/{id}/complete` | Complete with notes |
+| GET | `/intelligence/actions/summary` | Summary by status and priority |
+| POST | `/intelligence/oversight-reviews` | Manager oversight review record |
+
+### Action statuses
+
+`proposed` → `accepted` | `dismissed` | `in_progress` → `completed` | `superseded`
+
+### Safety model
+
+- Review recommended / manager oversight suggested language only
+- No safeguarding decisions, no inspection grades
+- `decision_support_notice` on every action record
+- Audit trail appended on create, update, decision and complete
+
+### Persistence / fallback
+
+If PostgreSQL tables are unavailable, actions are held in an in-memory store for the process lifetime. The service does not crash when the DB is missing.
+
+### Frontend action cards
+
+`/intelligence-spine` shows proposed actions, urgent review, evidence gap, record quality and Ofsted strengthening sections. Manager decision buttons are displayed disabled until the next UI pass wires `POST /intelligence/actions/{id}/decision`.
+
+See also: [intelligence-action-loop.md](./intelligence-action-loop.md)
+
 ## Known limits
 
 - Collector uses table-existence checks; schema varies by deployment
@@ -90,7 +146,7 @@ Query params: `?home_id=` and `?child_id=`
 
 ```bash
 source .venv/bin/activate
-python -m pytest tests/test_indicare_intelligence_spine.py -q
+python -m pytest tests/test_indicare_intelligence_spine.py tests/test_intelligence_action_loop.py -q
 ```
 
 ## Next steps
