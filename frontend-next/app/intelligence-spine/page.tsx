@@ -1,5 +1,6 @@
 import Link from 'next/link'
 
+import { IntelligenceSpineActionsPanel } from '@/components/indicare/intelligence/intelligence-spine-actions-panel'
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
 import { Card, DataTable, EmptyState, PageHeader, SectionHeader, StatCard, StatusBadge } from '@/components/indicare/ui'
 import { postIntelligenceSpine } from '@/lib/os-api/intelligence-spine'
@@ -96,71 +97,6 @@ const demoSpine = {
   what_has_improved: ['records indicate no major deterioration patterns in supplied evidence; source review still required.'],
   what_has_deteriorated: [],
   manager_review_required: ['records indicate manager review may not be visible on significant events; manager oversight required.']
-}
-
-type ProposedAction = {
-  id?: string
-  action_type?: string
-  title: string
-  summary?: string
-  priority: string
-  status?: string
-  reason?: string
-  suggested_next_step?: string
-  regulatory_links?: string[]
-  sccif_links?: string[]
-}
-
-function ActionCardList({ actions, empty }: { actions: ProposedAction[]; empty: string }) {
-  if (!actions.length) {
-    return <p className="text-sm text-slate-500">{empty}</p>
-  }
-  return (
-    <ul className="space-y-3">
-      {actions.map((action) => (
-        <li
-          key={action.id || action.title}
-          className="rounded-2xl border border-slate-100 bg-white px-4 py-4 shadow-sm"
-        >
-          <div className="flex flex-wrap items-center gap-2">
-            <StatusBadge value={severityTone(action.priority)} />
-            {action.action_type ? (
-              <span className="text-xs font-black uppercase tracking-wider text-slate-400">
-                {action.action_type.replaceAll('_', ' ')}
-              </span>
-            ) : null}
-            {action.status ? (
-              <span className="text-xs font-bold text-slate-500">{action.status}</span>
-            ) : null}
-          </div>
-          <p className="mt-2 text-sm font-black text-slate-800">{action.title}</p>
-          {action.summary ? <p className="mt-1 text-sm text-slate-600">{action.summary}</p> : null}
-          {action.reason ? <p className="mt-2 text-xs font-bold text-amber-800">Reason: {action.reason}</p> : null}
-          {action.suggested_next_step ? (
-            <p className="mt-1 text-xs font-bold text-blue-800">Next step: {action.suggested_next_step}</p>
-          ) : null}
-          {(action.regulatory_links?.length || action.sccif_links?.length) ? (
-            <p className="mt-2 text-xs text-slate-500">
-              {[...(action.regulatory_links || []), ...(action.sccif_links || [])].join(' · ')}
-            </p>
-          ) : null}
-          <div className="mt-3 flex flex-wrap gap-2 opacity-60" aria-disabled>
-            {['Accept', 'Dismiss', 'Complete'].map((label) => (
-              <button
-                key={label}
-                type="button"
-                disabled
-                className="cursor-not-allowed rounded-xl border border-slate-200 px-3 py-1 text-xs font-black text-slate-500"
-                title="Action decision API ready — connect interaction in next UI pass."
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </li>
-      ))}
-    </ul>
-  )
 }
 
 function severityTone(value: string) {
@@ -432,45 +368,25 @@ export default async function IntelligenceSpinePage({ searchParams }: PageProps)
           </div>
         ) : null}
 
-        <div className="space-y-8">
+        <IntelligenceSpineActionsPanel
+          proposedActions={spine.proposed_actions || []}
+          homeId={homeId}
+          childId={childId}
+        />
+        <div className="mt-8 space-y-6">
           <div>
-            <p className="mb-3 text-xs font-black uppercase tracking-[0.2em] text-slate-400">Proposed Actions</p>
-            <ActionCardList
-              actions={(spine.proposed_actions || []).filter((a) => a.status === 'proposed' || !a.status)}
-              empty="No proposed actions returned."
-            />
-          </div>
-          <div>
-            <p className="mb-3 text-xs font-black uppercase tracking-[0.2em] text-red-500">Urgent Manager Review</p>
-            <ActionCardList
-              actions={(spine.proposed_actions || []).filter((a) => a.priority === 'urgent')}
-              empty="No urgent manager review actions in this window."
-            />
-          </div>
-          <div>
-            <p className="mb-3 text-xs font-black uppercase tracking-[0.2em] text-slate-400">Evidence Gap Actions</p>
-            <ActionCardList
-              actions={(spine.proposed_actions || []).filter((a) => a.action_type === 'evidence_gap_review')}
-              empty="No evidence gap actions proposed."
-            />
-          </div>
-          <div>
-            <p className="mb-3 text-xs font-black uppercase tracking-[0.2em] text-slate-400">Record Quality Actions</p>
-            <ActionCardList
-              actions={(spine.proposed_actions || []).filter((a) => a.action_type === 'record_quality_review')}
-              empty="No record quality actions proposed."
-            />
-          </div>
-          <div>
-            <p className="mb-3 text-xs font-black uppercase tracking-[0.2em] text-slate-400">Ofsted Evidence Strengthening</p>
-            <ActionCardList
-              actions={(spine.proposed_actions || []).filter((a) => a.action_type === 'ofsted_evidence_strengthening')}
-              empty="No Ofsted evidence strengthening actions proposed."
-            />
+            <p className="mb-3 text-xs font-black uppercase tracking-[0.2em] text-red-500">Urgent manager review</p>
+            {(spine.proposed_actions || []).filter((a) => a.priority === 'urgent').length ? (
+              <p className="text-sm text-slate-600">
+                {(spine.proposed_actions || []).filter((a) => a.priority === 'urgent').length} urgent proposed action(s) — use Action Board for decisions.
+              </p>
+            ) : (
+              <p className="text-sm text-slate-500">No urgent manager review actions in this window.</p>
+            )}
           </div>
         </div>
         <p className="mt-6 text-xs font-bold text-slate-500">
-          Action decision API ready — connect interaction in next UI pass. Use POST /intelligence/actions/&#123;id&#125;/decision.
+          Save proposed actions explicitly before recording accept, dismiss or complete on the audit trail.
         </p>
       </Card>
 
@@ -517,6 +433,8 @@ export default async function IntelligenceSpinePage({ searchParams }: PageProps)
         <SectionHeader eyebrow="Connected surfaces" title="Existing IndiCare intelligence" />
         <div className="flex flex-wrap gap-3">
           {[
+            ['/intelligence-actions', 'Action Board'],
+            ['/intelligence-oversight', 'Oversight review'],
             ['/command-centre', 'Command centre'],
             ['/ofsted-readiness', 'Ofsted readiness'],
             ['/regulatory', 'Regulatory framework'],

@@ -46,9 +46,51 @@ Use: review recommended, manager oversight suggested, action proposed, source re
 
 Never use: confirmed breach, substantiated allegation, failed Ofsted, guaranteed compliance, safeguarding decision made, Ofsted grade predicted.
 
+## Stage 4 — Action board, manager UI, command centre
+
+### Frontend pages
+
+| Page | Purpose |
+|------|---------|
+| `/intelligence-actions` | Intelligence Action Board — filters, summary cards, accept/dismiss/in progress/complete |
+| `/intelligence-oversight` | Record manager oversight reviews with follow-up |
+| `/intelligence-spine` | Save proposed actions explicitly; links to board and oversight |
+
+### API additions (Stage 4)
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| POST | `/intelligence/actions/bulk-create` | Persist multiple proposed actions; skips open duplicates |
+| GET | `/intelligence/actions/attention-feed` | Urgent/high/awaiting decision/follow-up attention summary |
+
+### Bulk create
+
+Managers click **Save proposed actions for manager review** on the spine (or POST bulk-create). Duplicate detection: same `source_finding_id`, `action_type`, home/child while status is not completed/dismissed/superseded. Audit event: `intelligence_spine_bulk_create`.
+
+### Attention feed
+
+Safe labels only: Needs review, Awaiting manager decision, Follow-up due, Source review recommended. Surfaced on `/command-centre` via the intelligence actions card.
+
+### Command centre
+
+`IntelligenceActionsCard` on `/command-centre` links to the action board, spine, and oversight pages.
+
+### Safety copy (UI)
+
+- proposed action
+- review recommended
+- manager decision required
+- decision support only
+- Mark complete only after source review
+
+Never imply AI completed work or automatic safeguarding escalation.
+
+### Manual migration
+
+Apply `sql/072_intelligence_actions.sql` on PostgreSQL before relying on cross-session persistence.
+
 ## Known gaps
 
-- Frontend decision buttons not yet wired to API
-- No email/notification dispatch on urgent actions
-- OS command centre action board not merged with intelligence actions table
+- No email/notification dispatch on urgent actions (attention feed only)
+- Legacy OS `actions` table not merged with `intelligence_actions`
 - Child/staff scoped action ownership assignment is manual

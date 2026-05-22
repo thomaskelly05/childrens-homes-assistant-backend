@@ -112,6 +112,8 @@ Persistence is **off by default**. Pass `create_actions: true` on `IntelligenceR
 | POST | `/intelligence/actions/{id}/decision` | accept / dismiss / in_progress / complete / supersede |
 | POST | `/intelligence/actions/{id}/complete` | Complete with notes |
 | GET | `/intelligence/actions/summary` | Summary by status and priority |
+| POST | `/intelligence/actions/bulk-create` | Bulk persist proposed actions (manager-initiated) |
+| GET | `/intelligence/actions/attention-feed` | Attention feed for command centre |
 | POST | `/intelligence/oversight-reviews` | Manager oversight review record |
 
 ### Action statuses
@@ -129,9 +131,12 @@ Persistence is **off by default**. Pass `create_actions: true` on `IntelligenceR
 
 If PostgreSQL tables are unavailable, actions are held in an in-memory store for the process lifetime. The service does not crash when the DB is missing.
 
-### Frontend action cards
+### Frontend (Stage 4)
 
-`/intelligence-spine` shows proposed actions, urgent review, evidence gap, record quality and Ofsted strengthening sections. Manager decision buttons are displayed disabled until the next UI pass wires `POST /intelligence/actions/{id}/decision`.
+- `/intelligence-spine` — proposed actions with **Save proposed actions for manager review** and links to the board
+- `/intelligence-actions` — Intelligence Action Board with working accept/dismiss/in progress/complete controls
+- `/intelligence-oversight` — manager oversight review form
+- `/command-centre` — intelligence actions attention card
 
 See also: [intelligence-action-loop.md](./intelligence-action-loop.md)
 

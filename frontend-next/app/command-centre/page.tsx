@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
 import { OperationalQuickActions } from '@/components/indicare/operational/operational-quick-actions'
 import { Card, PageHeader, StatCard, StatusBadge } from '@/components/indicare/ui'
+import { IntelligenceActionsCard } from '@/components/command-centre/intelligence-actions-card'
 import { CareHubIntelligenceWidgets } from '@/components/indicare/care-hub/care-hub-widgets'
 import { CareHubLiveStreamBar } from '@/components/indicare/care-hub/care-hub-live-stream'
 import {
@@ -241,6 +242,10 @@ export default async function UnifiedCommandCentrePage() {
       <section data-testid="care-hub-live-intelligence" className="min-w-0">
         <CareHubIntelligenceWidgets result={careHub} payload={careHub.data?.ok ? careHub.data : null} />
       </section>
+
+      <IntelligenceActionsCard
+        homeId={careHub.data?.scope?.home_id != null ? String(careHub.data.scope.home_id) : undefined}
+      />
 
       <Card className="min-w-0">
         <p className="text-[11px] font-black uppercase tracking-[0.24em] text-blue-700">Children in view</p>

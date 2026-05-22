@@ -7,11 +7,14 @@ from typing import Any
 
 from schemas.indicare_intelligence import IntelligenceSpineResponse, ManagerDailyBrief
 from schemas.intelligence_actions import (
+    IntelligenceActionBulkCreateResult,
     IntelligenceActionCreate,
     IntelligenceActionDecision,
     IntelligenceActionRecord,
     IntelligenceActionSummary,
     IntelligenceActionUpdate,
+    IntelligenceAttentionFeed,
+    IntelligenceAttentionFeedItem,
     IntelligenceOversightReviewCreate,
     IntelligenceOversightReviewRecord,
 )
@@ -589,6 +592,201 @@ class IntelligenceActionService:
             stored.append(self._persist_action(copy, current_user=current_user, conn=conn))
         return stored
 
+    def _find_open_duplicate(
+        self,
+        *,
+        action_type: str,
+        source_finding_id: str | None,
+        home_id: str | None,
+        child_id: str | None,
+        conn: Any = None,
+    ) -> IntelligenceActionRecord | None:
+        if not source_finding_id:
+            return None
+        for existing in self.list_actions(home_id=home_id, child_id=child_id, limit=200, conn=conn):
+            if existing.action_type != action_type:
+                continue
+            if existing.source_finding_id != source_finding_id:
+                continue
+            if existing.status in {"completed", "dismissed", "superseded"}:
+                continue
+            return existing
+        return None
+
+    def bulk_create_actions(
+        self,
+        payloads: list[IntelligenceActionCreate],
+        *,
+        home_id: int | str | None = None,
+        child_id: int | str | None = None,
+        staff_id: int | str | None = None,
+        current_user: dict[str, Any] | None = None,
+        conn: Any = None,
+    ) -> IntelligenceActionBulkCreateResult:
+        created: list[IntelligenceActionRecord] = []
+        failed: list[dict[str, Any]] = []
+        hid = _str_id(home_id)
+        cid = _str_id(child_id)
+        sid = _str_id(staff_id)
+        for payload in payloads:
+            data = payload.model_dump()
+            if hid and not data.get("home_id"):
+                data["home_id"] = hid
+            if cid and not data.get("child_id"):
+                data["child_id"] = cid
+            if sid and not data.get("staff_id"):
+                data["staff_id"] = sid
+            item = IntelligenceActionCreate.model_validate(data)
+            duplicate = self._find_open_duplicate(
+                action_type=item.action_type,
+                source_finding_id=item.source_finding_id,
+                home_id=_str_id(item.home_id) or hid,
+                child_id=_str_id(item.child_id) or cid,
+                conn=conn,
+            )
+            if duplicate:
+                failed.append(
+                    {
+                        "title": item.title,
+                        "action_type": item.action_type,
+                        "source_finding_id": item.source_finding_id,
+                        "reason": "duplicate open action exists",
+                        "existing_id": duplicate.id,
+                    }
+                )
+                continue
+            try:
+                record = self.create_action(item, current_user=current_user, conn=conn)
+                record.audit_trail.append(
+                    self._audit_entry(
+                        "bulk_created",
+                        current_user,
+                        reason="intelligence_spine_bulk_create",
+                    )
+                )
+                created.append(self._persist_action(record, current_user=current_user, conn=conn, replace=True))
+            except Exception as exc:
+                failed.append(
+                    {
+                        "title": item.title,
+                        "action_type": item.action_type,
+                        "reason": str(exc),
+                    }
+                )
+        summary = self.build_action_summary(created)
+        return IntelligenceActionBulkCreateResult(created=created, failed=failed, summary=summary)
+
+    def list_oversight_reviews(
+        self,
+        *,
+        home_id: int | str | None = None,
+        child_id: int | str | None = None,
+        staff_id: int | str | None = None,
+        limit: int = 50,
+        conn: Any = None,
+    ) -> list[IntelligenceOversightReviewRecord]:
+        hid = _str_id(home_id)
+        cid = _str_id(child_id)
+        sid = _str_id(staff_id)
+        if self._ensure_tables(conn=conn):
+            rows = self._list_oversight_from_db(
+                home_id=hid, child_id=cid, staff_id=sid, limit=limit, conn=conn
+            )
+            if rows is not None:
+                return rows
+        items = list(self._memory_reviews.values())
+        if hid:
+            items = [r for r in items if r.home_id == hid]
+        if cid:
+            items = [r for r in items if r.child_id == cid]
+        if sid:
+            items = [r for r in items if r.staff_id == sid]
+        return items[:limit]
+
+    def build_attention_feed(
+        self,
+        *,
+        home_id: int | str | None = None,
+        child_id: int | str | None = None,
+        staff_id: int | str | None = None,
+        conn: Any = None,
+    ) -> IntelligenceAttentionFeed:
+        actions = self.list_actions(
+            home_id=home_id, child_id=child_id, staff_id=staff_id, limit=200, conn=conn
+        )
+        reviews = self.list_oversight_reviews(
+            home_id=home_id, child_id=child_id, staff_id=staff_id, limit=50, conn=conn
+        )
+        now = now_iso()[:10]
+
+        def feed_item(action: IntelligenceActionRecord, label: str) -> IntelligenceAttentionFeedItem:
+            return IntelligenceAttentionFeedItem(
+                id=action.id,
+                label=label,
+                title=action.title,
+                priority=action.priority,
+                status=action.status,
+                action_type=action.action_type,
+                href=f"/intelligence-actions?action_id={action.id}",
+                summary=action.summary,
+            )
+
+        urgent = [
+            feed_item(a, "Needs review")
+            for a in actions
+            if a.priority == "urgent" and a.status in {"proposed", "accepted", "in_progress"}
+        ][:10]
+        high_priority = [
+            feed_item(a, "Source review recommended")
+            for a in actions
+            if a.priority == "high" and a.status in {"proposed", "accepted", "in_progress"}
+        ][:10]
+        awaiting_decision = [
+            feed_item(a, "Awaiting manager decision")
+            for a in actions
+            if a.status == "proposed"
+        ][:15]
+        in_progress_due = [
+            feed_item(a, "Manager follow-up recommended")
+            for a in actions
+            if a.status == "in_progress"
+        ][:10]
+        follow_ups_due: list[IntelligenceAttentionFeedItem] = []
+        for review in reviews:
+            if not review.follow_up_required:
+                continue
+            due = (review.follow_up_date or "")[:10]
+            if due and due > now:
+                continue
+            follow_ups_due.append(
+                IntelligenceAttentionFeedItem(
+                    id=review.id,
+                    label="Follow-up due",
+                    title=f"{review.review_type.replace('_', ' ')} — manager oversight suggested",
+                    priority=None,
+                    status=review.decision,
+                    action_type=review.review_type,
+                    href="/intelligence-oversight",
+                    summary=review.manager_notes or review.decision_reason,
+                )
+            )
+        follow_ups_due = follow_ups_due[:10]
+        return IntelligenceAttentionFeed(
+            urgent=urgent,
+            high_priority=high_priority,
+            awaiting_decision=awaiting_decision,
+            follow_ups_due=follow_ups_due,
+            in_progress_due=in_progress_due,
+            summary={
+                "urgent": len(urgent),
+                "high_priority": len(high_priority),
+                "awaiting_decision": len(awaiting_decision),
+                "follow_ups_due": len(follow_ups_due),
+                "in_progress": len(in_progress_due),
+            },
+            action_notice=ACTION_NOTICE,
+        )
+
     def _actions_from_pattern(
         self,
         pattern: dict[str, Any],
@@ -1027,6 +1225,71 @@ class IntelligenceActionService:
                 rows = cur.fetchall()
                 cols = [d[0] for d in cur.description]
             return [self._row_to_action(dict(zip(cols, row))) for row in rows]
+        except Exception:
+            return None
+        finally:
+            if own_conn and db is not None and release_db_connection:
+                release_db_connection(db)
+
+    def _list_oversight_from_db(
+        self,
+        *,
+        home_id: str | None,
+        child_id: str | None,
+        staff_id: str | None,
+        limit: int,
+        conn: Any = None,
+    ) -> list[IntelligenceOversightReviewRecord] | None:
+        own_conn = conn is None
+        db = conn
+        try:
+            if own_conn:
+                db = get_db_connection()
+            clauses = []
+            params: list[Any] = []
+            if home_id:
+                clauses.append("home_id=%s")
+                params.append(home_id)
+            if child_id:
+                clauses.append("child_id=%s")
+                params.append(child_id)
+            if staff_id:
+                clauses.append("staff_id=%s")
+                params.append(staff_id)
+            where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+            params.append(limit)
+            with db.cursor() as cur:
+                cur.execute(
+                    f"SELECT * FROM intelligence_oversight_reviews {where} ORDER BY created_at DESC LIMIT %s",
+                    tuple(params),
+                )
+                rows = cur.fetchall()
+                cols = [d[0] for d in cur.description]
+            results: list[IntelligenceOversightReviewRecord] = []
+            for row in rows:
+                data = dict(zip(cols, row))
+                results.append(
+                    IntelligenceOversightReviewRecord(
+                        id=str(data["id"]),
+                        home_id=data.get("home_id"),
+                        child_id=data.get("child_id"),
+                        staff_id=data.get("staff_id"),
+                        review_type=data.get("review_type"),
+                        source=data.get("source"),
+                        finding_ids=_json_list(data.get("finding_ids")),
+                        action_ids=_json_list(data.get("action_ids")),
+                        decision=data.get("decision"),
+                        decision_reason=data.get("decision_reason"),
+                        manager_notes=data.get("manager_notes"),
+                        follow_up_required=bool(data.get("follow_up_required")),
+                        follow_up_date=data.get("follow_up_date").isoformat()
+                        if data.get("follow_up_date")
+                        else None,
+                        created_by=data.get("created_by"),
+                        created_at=data.get("created_at").isoformat() if data.get("created_at") else now_iso(),
+                    )
+                )
+            return results
         except Exception:
             return None
         finally:

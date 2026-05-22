@@ -103,6 +103,28 @@ const emptySpine: IntelligenceSpinePayload = {
   metadata: { collector_warnings: [] }
 }
 
+export type {
+  IntelligenceActionRecord,
+  IntelligenceActionSummary,
+  IntelligenceActionsListData,
+  IntelligenceActionCreatePayload,
+  IntelligenceActionDecisionPayload,
+  IntelligenceOversightReviewCreatePayload,
+  IntelligenceAttentionFeed
+} from './intelligence-actions-types'
+
+export {
+  bulkCreateIntelligenceActions,
+  completeIntelligenceAction,
+  createIntelligenceAction,
+  createOversightReview,
+  decideIntelligenceAction,
+  fetchIntelligenceActions,
+  fetchIntelligenceActionSummary,
+  fetchIntelligenceAttentionFeed,
+  proposeIntelligenceActions
+} from './intelligence-actions'
+
 export function postIntelligenceSpine(body: IntelligenceSpineRequest) {
   return osServerPost<IntelligenceSpinePayload>(
     '/intelligence/spine',
