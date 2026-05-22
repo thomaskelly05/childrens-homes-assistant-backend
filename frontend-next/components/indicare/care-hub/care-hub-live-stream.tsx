@@ -27,7 +27,7 @@ export function CareHubLiveStreamBar({
   const [status, setStatus] = useState<OperationalStreamStatus>({ status: 'polling' })
   const socketRef = useRef<WebSocket | null>(null)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const reconnectRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const reconnectRef = useRef<number | null>(null)
   const cursorRef = useRef<number | undefined>(undefined)
   const retryRef = useRef(0)
 
@@ -54,7 +54,7 @@ export function CareHubLiveStreamBar({
 
     const clearReconnect = () => {
       if (reconnectRef.current) {
-        clearTimeout(reconnectRef.current)
+        window.clearTimeout(reconnectRef.current)
         reconnectRef.current = null
       }
     }
