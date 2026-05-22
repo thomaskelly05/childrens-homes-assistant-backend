@@ -60,7 +60,7 @@ class SqlAlchemyLifeEchoRepository:
             staff_ids=event.staff_ids,
             relationship_ids=event.relationship_ids,
             tags=event.tags,
-            metadata=event.metadata,
+            event_metadata=event.metadata,
             occurred_at=event.occurred_at,
             created_at=event.created_at,
             updated_at=event.updated_at,
@@ -100,7 +100,7 @@ def _row_to_event(row: LifeEchoEventModel) -> LifeEchoEvent:
         tags=row.tags or [],
         visibility=row.visibility,
         child_voice=row.child_voice,
-        metadata=row.metadata or {},
+        metadata=row.event_metadata or {},
         created_at=_as_aware(row.created_at),
         updated_at=_as_aware(row.updated_at),
     )

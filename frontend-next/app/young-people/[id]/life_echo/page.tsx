@@ -2,11 +2,13 @@ import Link from 'next/link'
 
 import { LifeEchoClient } from '@/components/life-echo/life-echo-client'
 
-export default function ChildLifeEchoPage({
+export default async function ChildLifeEchoPage({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
+  const { id } = await params
+
   return (
     <main className="space-y-6 px-6 py-8 text-slate-950">
       <section className="rounded-[36px] border border-white/70 bg-slate-950 p-8 text-white shadow-[0_24px_90px_rgba(15,23,42,0.16)]">
@@ -27,7 +29,7 @@ export default function ChildLifeEchoPage({
 
           <div className="flex flex-wrap gap-3">
             <Link
-              href={`/young-people/${params.id}`}
+              href={`/young-people/${id}`}
               className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-sm font-black text-white"
             >
               Open child record
@@ -43,7 +45,7 @@ export default function ChildLifeEchoPage({
         </div>
       </section>
 
-      <LifeEchoClient childId={params.id} />
+      <LifeEchoClient childId={id} />
 
       <section className="grid gap-6 lg:grid-cols-3">
         <article className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
