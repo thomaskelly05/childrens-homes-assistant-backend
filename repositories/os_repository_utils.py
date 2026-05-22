@@ -8,6 +8,45 @@ from psycopg2.extras import RealDictCursor
 
 from core.policy_engine import context_from_user, policy_engine
 
+
+def row_scalar(row: Any, *, index: int = 0, key: str | None = None) -> Any:
+    """Read a scalar from RealDictCursor rows or tuple rows."""
+    if row is None:
+        return None
+    if isinstance(row, dict):
+        if key is not None:
+            return row.get(key)
+        values = list(row.values())
+        return values[index] if len(values) > index else None
+    try:
+        return row[index]
+    except (TypeError, IndexError, KeyError):
+        return None
+
+
+def row_bool(row: Any, *, index: int = 0, key: str = "exists") -> bool:
+    return bool(row_scalar(row, index=index, key=key))
+
+
+def row_dict(row: Any, *, description: Any = None) -> dict[str, Any]:
+    if row is None:
+        return {}
+    if isinstance(row, dict):
+        return dict(row)
+    if description:
+        keys = [desc[0] for desc in description]
+        return dict(zip(keys, row))
+    return {}
+
+
+def row_column_name(row: Any) -> str:
+    if isinstance(row, dict):
+        return str(row.get("column_name") or "")
+    try:
+        return str(row[0])
+    except (TypeError, IndexError, KeyError):
+        return ""
+
 ADMIN_ROLES = {"admin", "provider_admin", "super_admin", "superadmin", "founder", "owner"}
 MANAGER_ROLES = ADMIN_ROLES | {"manager", "registered_manager", "deputy_manager", "responsible_individual", "ri"}
 WRITER_ROLES = MANAGER_ROLES | {"staff", "support_worker", "senior_support_worker", "key_worker"}
@@ -79,13 +118,22 @@ def can_write_records(current_user: dict[str, Any]) -> bool:
     return policy_engine.has_permission(current_user, "records:write") or current_role(current_user) in WRITER_ROLES
 
 
-def table_exists(conn: Any, table_name: str) -> bool:
+def _table_exists_live(conn: Any, table_name: str) -> bool:
     with conn.cursor() as cur:
         cur.execute("SELECT to_regclass(%s) IS NOT NULL AS exists", (f"public.{table_name}",))
-        row = cur.fetchone()
-    if isinstance(row, dict):
-        return bool(row.get("exists"))
-    return bool(row and row[0])
+        return row_bool(cur.fetchone(), key="exists")
+
+
+_TABLE_EXISTS_CACHE: dict[str, bool] = {}
+_TABLE_COLUMNS_CACHE: dict[str, set[str]] = {}
+
+
+def table_exists(conn: Any, table_name: str) -> bool:
+    if table_name in _TABLE_EXISTS_CACHE:
+        return _TABLE_EXISTS_CACHE[table_name]
+    exists = _table_exists_live(conn, table_name)
+    _TABLE_EXISTS_CACHE[table_name] = exists
+    return exists
 
 
 def first_existing_table(conn: Any, candidates: list[str]) -> str | None:
@@ -96,6 +144,8 @@ def first_existing_table(conn: Any, candidates: list[str]) -> str | None:
 
 
 def table_columns(conn: Any, table_name: str) -> set[str]:
+    if table_name in _TABLE_COLUMNS_CACHE:
+        return _TABLE_COLUMNS_CACHE[table_name]
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
             """
@@ -106,7 +156,9 @@ def table_columns(conn: Any, table_name: str) -> set[str]:
             (table_name,),
         )
         rows = cur.fetchall() or []
-    return {str(row.get("column_name")) for row in rows if row.get("column_name")}
+    cols = {name for name in (row_column_name(row) for row in rows) if name}
+    _TABLE_COLUMNS_CACHE[table_name] = cols
+    return cols
 
 
 def quote_ident(name: str) -> str:

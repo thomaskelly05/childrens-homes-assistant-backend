@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends
 
 from auth.current_user import get_current_user
 from db.connection import get_db
+from repositories.os_repository_utils import row_scalar
 
 router = APIRouter(prefix="/os/event-bus", tags=["OS Operational Event Bus"])
 compat_router = APIRouter(prefix="/api/os-command", tags=["OS Operational Event Bus Compatibility"])
@@ -118,17 +119,17 @@ def operational_event_bus_status(current_user=Depends(get_current_user), conn=De
 
             if _table_exists(cur, "os_chronology_events"):
                 cur.execute(
-                    "SELECT COUNT(*) FROM public.os_chronology_events WHERE source_table = %s",
+                    "SELECT COUNT(*) AS count FROM public.os_chronology_events WHERE source_table = %s",
                     (table,),
                 )
-                chronology_connected = int(cur.fetchone()[0]) > 0
+                chronology_connected = int(row_scalar(cur.fetchone(), key="count") or 0) > 0
 
             if _table_exists(cur, "evidence_links"):
                 cur.execute(
-                    "SELECT COUNT(*) FROM public.evidence_links WHERE source_table = %s",
+                    "SELECT COUNT(*) AS count FROM public.evidence_links WHERE source_table = %s",
                     (table,),
                 )
-                evidence_connected = int(cur.fetchone()[0]) > 0
+                evidence_connected = int(row_scalar(cur.fetchone(), key="count") or 0) > 0
 
             event_ready = (
                 len(missing_required) == 0
