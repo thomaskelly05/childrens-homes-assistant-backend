@@ -1,5 +1,4 @@
 import { osGet } from './client'
-import type { OsApiResult } from './types'
 
 export type CareHubLiveStatus = {
   status?: string
@@ -21,9 +20,24 @@ export type CareHubAlert = {
   message: string
 }
 
+export type CareHubSafeguardingQueues = {
+  ok?: boolean
+  summary?: Record<string, number>
+  total?: number
+  queues?: {
+    missing_episode_queue?: unknown[]
+    reg_40_queue?: unknown[]
+    restraint_physical_intervention_queue?: unknown[]
+    allegation_queue?: unknown[]
+    medication_risk_queue?: unknown[]
+  }
+}
+
 export type CareHubPayload = {
   ok?: boolean
   scope?: Record<string, unknown>
+  operational_feed?: Record<string, unknown>
+  safeguarding_queues?: CareHubSafeguardingQueues
   live_status?: CareHubLiveStatus
   risk_matrix?: {
     matrix_state?: string
@@ -68,7 +82,16 @@ export function getCareHub(params?: { youngPersonId?: string; homeId?: string; l
   if (params?.homeId) query.set('home_id', params.homeId)
   if (params?.limit) query.set('limit', String(params.limit))
   const suffix = query.toString() ? `?${query.toString()}` : ''
-  return osGet<CareHubPayload>(`/api/os-command/care-hub${suffix}`, EMPTY_CARE_HUB)
+  return osGet<CareHubPayload>(`/os/care-hub${suffix}`, EMPTY_CARE_HUB)
+}
+
+export function getCareHubSafeguardingQueues(params?: { youngPersonId?: string; homeId?: string; limit?: number }) {
+  const query = new URLSearchParams()
+  if (params?.youngPersonId) query.set('young_person_id', params.youngPersonId)
+  if (params?.homeId) query.set('home_id', params.homeId)
+  if (params?.limit) query.set('limit', String(params.limit))
+  const suffix = query.toString() ? `?${query.toString()}` : ''
+  return osGet<CareHubSafeguardingQueues>(`/os/care-hub/safeguarding-queues${suffix}`, { ok: false, queues: {} })
 }
 
 export function getCareHubLive(params?: { youngPersonId?: string; homeId?: string }) {
@@ -77,7 +100,7 @@ export function getCareHubLive(params?: { youngPersonId?: string; homeId?: strin
   if (params?.homeId) query.set('home_id', params.homeId)
   const suffix = query.toString() ? `?${query.toString()}` : ''
   return osGet<{ live_status?: CareHubLiveStatus; risk_matrix?: CareHubPayload['risk_matrix']; alerts?: CareHubPayload['alerts'] }>(
-    `/api/os-command/care-hub/live${suffix}`,
+    `/os/care-hub/live${suffix}`,
     { live_status: {}, alerts: { alerts: [] } }
   )
 }

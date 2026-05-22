@@ -308,3 +308,66 @@ def workflow_proof_command_alias(
     conn=Depends(get_db),
 ) -> dict[str, Any]:
     return _build_workflow_proof(current_user=current_user, conn=conn, young_person_id=young_person_id)
+
+
+CARE_HUB_ENDPOINTS = (
+    "/os/care-hub",
+    "/os/care-hub/live",
+    "/os/care-hub/alerts",
+    "/os/care-hub/inspection",
+    "/os/care-hub/workforce",
+    "/os/care-hub/safeguarding",
+    "/os/care-hub/safeguarding-queues",
+    "/os/care-hub/provider",
+)
+
+
+def _build_care_hub_validation(current_user: dict[str, Any], conn: Any) -> dict[str, Any]:
+    from routers import care_hub_routes
+
+    canonical_paths = {getattr(route, "path", "") for route in care_hub_routes.router.routes}
+    missing_paths = [path for path in CARE_HUB_ENDPOINTS if path not in canonical_paths]
+    probe: dict[str, Any] = {"attempted": False, "ok": False, "detail": "not_run"}
+    if not missing_paths:
+        try:
+            from services.care_hub_intelligence_service import care_hub_intelligence_service
+
+            payload = care_hub_intelligence_service.build(conn, limit=5, use_cache=False)
+            probe = {
+                "attempted": True,
+                "ok": bool(payload.get("ok")),
+                "event_count": (payload.get("operational_feed") or {}).get("event_count"),
+                "alert_total": (payload.get("alerts") or {}).get("total"),
+            }
+        except Exception as error:
+            probe = {"attempted": True, "ok": False, "detail": str(error)}
+
+    return {
+        "ok": not missing_paths and probe.get("ok", False),
+        "status": "ready" if not missing_paths and probe.get("ok") else "needs_attention",
+        "current_user": {
+            "id": current_user.get("id") or current_user.get("user_id"),
+            "role": current_user.get("role"),
+            "home_id": current_user.get("home_id"),
+            "provider_id": current_user.get("provider_id"),
+        },
+        "protected_route_status": "authenticated" if current_user else "unknown",
+        "expected_paths": list(CARE_HUB_ENDPOINTS),
+        "missing_paths": missing_paths,
+        "service_probe": probe,
+        "next_checks": [
+            "Open /command-centre and confirm Care Hub widgets render from /os/care-hub.",
+            "Save a daily note and confirm care_hub_live cache invalidation fires.",
+            "Review split safeguarding queues for missing, Reg 40, restraint, allegation and medication risk.",
+        ],
+    }
+
+
+@router.get("/care-hub")
+def care_hub_validation(current_user=Depends(get_current_user), conn=Depends(get_db)) -> dict[str, Any]:
+    return _build_care_hub_validation(current_user=current_user, conn=conn)
+
+
+@compat_router.get("/care-hub-validation")
+def care_hub_validation_command_alias(current_user=Depends(get_current_user), conn=Depends(get_db)) -> dict[str, Any]:
+    return _build_care_hub_validation(current_user=current_user, conn=conn)

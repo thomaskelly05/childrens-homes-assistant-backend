@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
 from db.connection import get_db_connection, release_db_connection
@@ -65,35 +66,58 @@ class ProviderIntelligenceService:
             "homes": sorted(results, key=lambda item: self._risk_score(item.get("risk")), reverse=True),
         }
 
+    def _home_snapshot_from_feed(self, home: dict[str, Any], feed: dict[str, Any]) -> dict[str, Any]:
+        home_id = self._safe_int(home.get("id"))
+        climate = (feed.get("home_operational_intelligence") or {}).get("home_climate") or {}
+        inspection = feed.get("inspection_intelligence") or {}
+        queue = feed.get("manager_queue") or {}
+        return {
+            "home_id": home_id,
+            "home_name": home.get("name") or f"Home {home_id}",
+            "safeguarding_pressure": climate.get("safeguarding_pressure"),
+            "emotional_climate": climate.get("emotional_climate"),
+            "workforce_pressure": climate.get("workforce_pressure"),
+            "inspection_readiness": inspection.get("overall_readiness"),
+            "manager_queue_total": queue.get("total"),
+            "event_count": feed.get("event_count"),
+        }
+
+    def _build_home_feed_snapshot(self, conn: Any, home: dict[str, Any], *, limit: int) -> dict[str, Any] | None:
+        home_id = self._safe_int(home.get("id"))
+        if not home_id:
+            return None
+        feed = build_operational_feed(conn, home_id=home_id, limit=limit)
+        return self._home_snapshot_from_feed(home, feed)
+
     def build_operational_convergence(
         self,
         conn: Any,
         *,
         current_user: dict[str, Any],
         limit: int = 30,
+        max_workers: int = 4,
     ) -> dict[str, Any]:
         """Cross-home operational convergence from live operational feed intelligence."""
         homes = self._homes_for_user(current_user)
         home_snapshots: list[dict[str, Any]] = []
+        eligible = [home for home in homes if self._safe_int(home.get("id"))]
 
-        for home in homes:
-            home_id = self._safe_int(home.get("id"))
-            if not home_id:
-                continue
-            feed = build_operational_feed(conn, home_id=home_id, limit=limit)
-            climate = (feed.get("home_operational_intelligence") or {}).get("home_climate") or {}
-            inspection = feed.get("inspection_intelligence") or {}
-            queue = feed.get("manager_queue") or {}
-            home_snapshots.append({
-                "home_id": home_id,
-                "home_name": home.get("name") or f"Home {home_id}",
-                "safeguarding_pressure": climate.get("safeguarding_pressure"),
-                "emotional_climate": climate.get("emotional_climate"),
-                "workforce_pressure": climate.get("workforce_pressure"),
-                "inspection_readiness": inspection.get("overall_readiness"),
-                "manager_queue_total": queue.get("total"),
-                "event_count": feed.get("event_count"),
-            })
+        if len(eligible) <= 1:
+            for home in eligible:
+                snapshot = self._build_home_feed_snapshot(conn, home, limit=limit)
+                if snapshot:
+                    home_snapshots.append(snapshot)
+        else:
+            workers = min(max_workers, len(eligible))
+            with ThreadPoolExecutor(max_workers=workers) as executor:
+                futures = {
+                    executor.submit(self._build_home_feed_snapshot, conn, home, limit=limit): home
+                    for home in eligible
+                }
+                for future in as_completed(futures):
+                    snapshot = future.result()
+                    if snapshot:
+                        home_snapshots.append(snapshot)
 
         safeguarding_scores = [
             int((snap.get("safeguarding_pressure") or {}).get("pressure_score") or 0)

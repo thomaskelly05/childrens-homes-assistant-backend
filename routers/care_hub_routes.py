@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, Query
 from auth.current_user import get_current_user
 from db.connection import get_db
 from services.care_hub_intelligence_service import care_hub_intelligence_service
+from services.care_hub_safeguarding_queues_service import care_hub_safeguarding_queues_service
 
 router = APIRouter(prefix="/os/care-hub", tags=["Care Hub"])
 compat_router = APIRouter(prefix="/api/os-command", tags=["Care Hub Compatibility"])
@@ -103,14 +104,27 @@ def care_hub_safeguarding(
 ) -> dict[str, Any]:
     payload = care_hub_intelligence_service.build(conn, **params)
     feed = payload.get("operational_feed") or {}
+    queues = care_hub_safeguarding_queues_service.build_from_feed(feed)
     return {
         "ok": True,
         "safeguarding_pressure": (feed.get("home_operational_intelligence") or {}).get("home_climate", {}).get(
             "safeguarding_pressure"
         ),
         "chronology_patterns": payload.get("chronology_patterns"),
+        "safeguarding_queues": queues,
         "alerts": [alert for alert in (payload.get("alerts") or {}).get("alerts") or [] if alert.get("type", "").startswith("safeguarding") or "missing" in str(alert.get("type", ""))],
     }
+
+
+@router.get("/safeguarding-queues")
+def care_hub_safeguarding_queues(
+    params: dict[str, Any] = Depends(_scope_params),
+    _current_user=Depends(get_current_user),
+    conn=Depends(get_db),
+) -> dict[str, Any]:
+    payload = care_hub_intelligence_service.build(conn, **params)
+    feed = payload.get("operational_feed") or {}
+    return care_hub_safeguarding_queues_service.build_from_feed(feed)
 
 
 @router.get("/provider")
