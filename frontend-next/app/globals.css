@@ -799,3 +799,35 @@ textarea:focus-visible {
     width: calc(100vw - 1.5rem);
   }
 }
+
+@keyframes orb-standalone-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.92; }
+  50% { transform: scale(1.04); opacity: 1; }
+}
+
+@keyframes orb-standalone-breathe {
+  0%, 100% { transform: scale(0.98); opacity: 0.88; }
+  50% { transform: scale(1.02); opacity: 1; }
+}
+
+@keyframes orb-standalone-ring {
+  0%, 100% { transform: scale(1); }
+  35% { transform: scale(1.03); }
+  70% { transform: scale(0.99); }
+}
+
+@keyframes orb-standalone-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes orb-standalone-bar {
+  from { transform: scaleY(0.45); opacity: 0.45; }
+  to { transform: scaleY(1); opacity: 0.95; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-standalone-orb-state] {
+    animation: none !important;
+  }
+}
