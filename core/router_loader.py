@@ -223,6 +223,7 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
             "routers.schema_live_routes",
             "routers.os_workflow_wiring_audit_routes",
             "routers.operational_feed_routes",
+            "routers.care_hub_routes",
             "backend.os_schema_audit_router",
             "backend.os_single_source_audit_router",
             "backend.os_security_convergence_router",
