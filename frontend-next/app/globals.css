@@ -871,22 +871,37 @@ textarea:focus-visible {
 
 .orb-chat-layout {
   --orb-sidebar-width: 280px;
+  --orb-dock-width: 220px;
+  height: 100dvh;
+  max-height: 100dvh;
 }
 
 .orb-chat-sidebar {
+  width: var(--orb-sidebar-width);
+  max-width: min(100%, var(--orb-sidebar-width));
   scrollbar-width: thin;
   scrollbar-color: rgba(148, 163, 184, 0.25) transparent;
+}
+
+.orb-chat-header {
+  min-height: 3.25rem;
 }
 
 .orb-chat-composer {
   position: sticky;
   bottom: 0;
   z-index: 20;
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
 }
 
 .orb-voice-dock {
   background: rgba(7, 11, 18, 0.92);
   backdrop-filter: blur(12px);
+  min-height: 0;
+}
+
+.orb-voice-dock--expanded {
+  width: var(--orb-dock-width);
 }
 
 .orb-voice-dock--collapsed {
@@ -895,6 +910,13 @@ textarea:focus-visible {
 
 .orb-voice-dock-column {
   min-height: 0;
+  max-height: 100%;
+}
+
+@media (max-width: 1279px) {
+  .orb-mobile-orb-fab {
+    bottom: calc(5.5rem + env(safe-area-inset-bottom));
+  }
 }
 
 .orb-starter-card {

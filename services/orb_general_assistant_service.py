@@ -35,21 +35,70 @@ British English. Calm, warm, concise when speaking, reflective and practical. Fo
 class OrbGeneralAssistantService:
     """Standalone general assistant mode with no IndiCare OS or care-record access."""
 
-    async def answer(self, message: str, *, history: list[dict[str, Any]] | None = None, detail: str = "concise") -> dict[str, Any]:
+    async def answer(
+        self,
+        message: str,
+        *,
+        history: list[dict[str, Any]] | None = None,
+        detail: str = "concise",
+        image_data_urls: list[str] | None = None,
+    ) -> dict[str, Any]:
         if os.getenv("OPENAI_API_KEY"):
             try:
-                return await self._llm_answer(message, history=history or [], detail=detail)
+                return await self._llm_answer(
+                    message,
+                    history=history or [],
+                    detail=detail,
+                    image_data_urls=image_data_urls or [],
+                )
             except Exception:
                 pass
+        if image_data_urls:
+            return {
+                "answer": (
+                    "I can see you shared an image, but image understanding needs the live assistant connection. "
+                    "Describe what you want me to focus on in text, or try again shortly."
+                ),
+                "sources": [],
+                "tools_used": ["standalone_orb_general_assistant"],
+                "internal_data_access": False,
+            }
         return {"answer": self._fallback_answer(message), "sources": [], "tools_used": ["general_qna"], "internal_data_access": False}
 
-    async def _llm_answer(self, message: str, *, history: list[dict[str, Any]], detail: str) -> dict[str, Any]:
-        provider = get_llm_provider()
+    async def _llm_answer(
+        self,
+        message: str,
+        *,
+        history: list[dict[str, Any]],
+        detail: str,
+        image_data_urls: list[str],
+    ) -> dict[str, Any]:
         system = GENERAL_ORB_SYSTEM_PROMPT
         if detail == "concise":
             system += "\n\nKeep everyday answers clear and concise unless the user asks for detail."
         elif detail == "detailed":
             system += "\n\nThe user asked for a care, safeguarding, Ofsted or recording mode; provide a fuller, structured answer with practical next steps and an inspection-quality lens."
+        if image_data_urls:
+            system += (
+                "\n\nThe user attached standalone image(s) for context only (not IndiCare OS records). "
+                "Describe what you observe carefully and relate it to residential care practice when relevant."
+            )
+
+        if image_data_urls:
+            answer = await self._vision_answer(
+                system=system,
+                message=message,
+                history=history,
+                image_data_urls=image_data_urls,
+            )
+            return {
+                "answer": answer or self._fallback_answer(message),
+                "sources": [],
+                "tools_used": ["standalone_orb_general_assistant", "vision"],
+                "internal_data_access": False,
+            }
+
+        provider = get_llm_provider()
         messages = [{"role": "system", "content": system}, *history[-16:], {"role": "user", "content": message}]
         parts: list[str] = []
         async for item in provider.stream_chat(
@@ -63,6 +112,41 @@ class OrbGeneralAssistantService:
             "tools_used": ["standalone_orb_general_assistant"],
             "internal_data_access": False,
         }
+
+    async def _vision_answer(
+        self,
+        *,
+        system: str,
+        message: str,
+        history: list[dict[str, Any]],
+        image_data_urls: list[str],
+    ) -> str:
+        from openai import AsyncOpenAI
+
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            return ""
+
+        client = AsyncOpenAI(api_key=api_key)
+        user_content: list[dict[str, Any]] = [{"type": "text", "text": message}]
+        for url in image_data_urls[:4]:
+            user_content.append({"type": "image_url", "image_url": {"url": url}})
+
+        chat_messages: list[dict[str, Any]] = [{"role": "system", "content": system}]
+        for item in history[-8:]:
+            role = str(item.get("role") or "").strip().lower()
+            content = _text(item.get("content"))
+            if role in {"user", "assistant"} and content:
+                chat_messages.append({"role": role, "content": content})
+        chat_messages.append({"role": "user", "content": user_content})
+
+        response = await client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=chat_messages,
+            temperature=0.2,
+            max_tokens=1200,
+        )
+        return _text(response.choices[0].message.content if response.choices else "")
 
     def _fallback_answer(self, message: str) -> str:
         lower = message.lower()

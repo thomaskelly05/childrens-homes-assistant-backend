@@ -82,6 +82,13 @@ MODE_BEHAVIOUR = {
 }
 
 
+class OrbStandaloneImageAttachment(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    data_url: str = Field(..., min_length=32, max_length=2_500_000)
+    name: str | None = Field(default=None, max_length=200)
+
+
 class OrbStandaloneConversationRequest(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
@@ -90,6 +97,7 @@ class OrbStandaloneConversationRequest(BaseModel):
     conversation_id: str | None = None
     history: list[dict[str, Any]] = Field(default_factory=list)
     detail: str | None = Field(default=None, max_length=40)
+    images: list[OrbStandaloneImageAttachment] = Field(default_factory=list)
 
 
 def _standalone_contract() -> dict[str, Any]:
@@ -182,10 +190,12 @@ async def standalone_orb_conversation(
     detail = _resolve_detail(mode, payload.detail)
     framed_message = _build_framed_message(mode=mode, user_message=payload.message, detail=detail)
     history = payload.history[-20:] if payload.history else []
+    image_urls = [item.data_url for item in (payload.images or []) if str(item.data_url or "").startswith("data:image/")]
     assistant_data = await orb_general_assistant_service.answer(
         framed_message,
         history=history,
         detail=detail,
+        image_data_urls=image_urls[:4],
     )
     answer = str(assistant_data.get("answer") or "I can help with that, but I could not form a response just now.")
     return {
