@@ -25,6 +25,9 @@ ASSISTANT_REQUIRED_ASSETS = [
     "assistant-pro.css",
     "voice-presence.css",
     "assistant-runtime.js",
+    "orb.html",
+    "orb-care-companion.css",
+    "orb-care-companion-runtime.js",
     "realtime/openai-realtime-voice.js",
     "realtime/runtime-orchestrator.js",
     "realtime/openai-voice-runtime-bootstrap.js",
@@ -95,14 +98,31 @@ def _assert_single_os_shell(html: str) -> None:
     # Strict shell marker enforcement temporarily disabled during shell stabilisation.
 
 
-def _ai_asset(filename: str, media_type: str) -> FileResponse:
+def _media_type_for_ai_asset(filename: str) -> str:
+    suffix = Path(filename).suffix.lower()
+    if suffix == ".css":
+        return "text/css"
+    if suffix == ".js":
+        return "text/javascript"
+    if suffix == ".html":
+        return "text/html"
+    if suffix == ".svg":
+        return "image/svg+xml"
+    if suffix == ".png":
+        return "image/png"
+    if suffix in {".jpg", ".jpeg"}:
+        return "image/jpeg"
+    return "application/octet-stream"
+
+
+def _ai_asset(filename: str, media_type: str | None = None) -> FileResponse:
     root = Path(INDICARE_AI_DIR).resolve()
     path = (root / filename).resolve()
     if root not in path.parents and path != root:
         return JSONResponse({"ok": False, "error": "Invalid asset path", "asset": filename}, status_code=404)
     if not path.exists() or not path.is_file():
         return JSONResponse({"ok": False, "error": "Asset not found", "asset": filename}, status_code=404)
-    return FileResponse(path, media_type=media_type)
+    return FileResponse(path, media_type=media_type or _media_type_for_ai_asset(filename))
 
 
 def _assistant_asset_audit() -> dict:
@@ -122,6 +142,24 @@ def register_frontend_routes(app: FastAPI) -> None:
     @app.get("/")
     async def root_redirect():
         return RedirectResponse(url="/login")
+
+    @app.get("/indicare-ai/{filename:path}")
+    async def indicare_ai_asset(filename: str):
+        return _ai_asset(filename)
+
+    @app.get("/assistant")
+    @app.get("/assistant.html")
+    async def assistant_page():
+        return HTMLResponse(_load_required_html(INDICARE_AI_DIR, "assistant.html"), headers=NO_STORE_HEADERS)
+
+    @app.get("/orb")
+    @app.get("/orb.html")
+    async def orb_page():
+        return HTMLResponse(_load_required_html(INDICARE_AI_DIR, "orb.html"), headers=NO_STORE_HEADERS)
+
+    @app.get("/assistant/assets/audit")
+    async def assistant_asset_audit():
+        return JSONResponse(_assistant_asset_audit())
 
     @app.get("/login")
     @app.get("/login.html")
