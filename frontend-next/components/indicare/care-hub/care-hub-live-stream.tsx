@@ -7,11 +7,15 @@ import {
   buildOperationalWsUrl,
   fetchCareHubLive,
   fetchOperationalStreamSnapshot,
+  operationalWebsocketEnabled,
   type OperationalStreamStatus
 } from '@/lib/os-api/realtime-operational'
 import { emitOperationalEvent } from '@/lib/os-api/events'
 
 const POLL_FALLBACK_MS = 30000
+const MAX_WS_RETRIES = 3
+const INITIAL_RETRY_MS = 2500
+const MAX_RETRY_MS = 30000
 
 export function CareHubLiveStreamBar({
   homeId,
@@ -20,22 +24,24 @@ export function CareHubLiveStreamBar({
   homeId?: string
   youngPersonId?: string
 }) {
-  const [status, setStatus] = useState<OperationalStreamStatus>({ status: 'connecting' })
+  const [status, setStatus] = useState<OperationalStreamStatus>({ status: 'polling' })
   const socketRef = useRef<WebSocket | null>(null)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const reconnectRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const cursorRef = useRef<number | undefined>(undefined)
+  const retryRef = useRef(0)
 
   const refreshSnapshot = useCallback(async () => {
     const started = performance.now()
     const snapshot = await fetchOperationalStreamSnapshot({ homeId, youngPersonId, limit: 50 })
     const latencyMs = snapshot.data?.latency_ms ?? Math.round(performance.now() - started)
-    setStatus({
-      status: status.status === 'offline' ? 'polling' : status.status,
+    setStatus((prev) => ({
+      status: prev.status === 'live' ? 'live' : 'polling',
       latencyMs,
       lastUpdateAt: snapshot.data?.generated_at || new Date().toISOString()
-    })
+    }))
     emitOperationalEvent('command-centre:refresh')
-  }, [homeId, youngPersonId, status.status])
+  }, [homeId, youngPersonId])
 
   const pollFallback = useCallback(async () => {
     setStatus((prev) => ({ ...prev, status: 'polling' }))
@@ -46,14 +52,37 @@ export function CareHubLiveStreamBar({
   useEffect(() => {
     let cancelled = false
 
+    const clearReconnect = () => {
+      if (reconnectRef.current) {
+        clearTimeout(reconnectRef.current)
+        reconnectRef.current = null
+      }
+    }
+
+    const scheduleReconnect = (connect: () => void) => {
+      if (cancelled || !operationalWebsocketEnabled()) return
+      if (retryRef.current >= MAX_WS_RETRIES) {
+        setStatus((prev) => ({ ...prev, status: 'polling' }))
+        return
+      }
+      const delay = Math.min(INITIAL_RETRY_MS * 2 ** retryRef.current, MAX_RETRY_MS)
+      retryRef.current += 1
+      setStatus((prev) => ({ ...prev, status: 'reconnecting' }))
+      clearReconnect()
+      reconnectRef.current = window.setTimeout(connect, delay)
+    }
+
     const connect = () => {
-      if (cancelled) return
+      if (cancelled || !operationalWebsocketEnabled()) return
+      if (socketRef.current && socketRef.current.readyState <= WebSocket.OPEN) return
+
       setStatus((prev) => ({ ...prev, status: 'connecting' }))
       const socket = new WebSocket(buildOperationalWsUrl({ homeId, youngPersonId, afterCursor: cursorRef.current }))
       socketRef.current = socket
 
       socket.onopen = () => {
         if (cancelled) return
+        retryRef.current = 0
         setStatus((prev) => ({ ...prev, status: 'live' }))
       }
 
@@ -74,7 +103,7 @@ export function CareHubLiveStreamBar({
             const next = payload.replay?.next_cursor
             if (typeof next === 'number') cursorRef.current = next
           }
-          if (payload.type === 'ping') {
+          if (payload.type === 'ping' && socket.readyState === WebSocket.OPEN) {
             socket.send(JSON.stringify({ type: 'pong' }))
           }
         } catch {
@@ -84,27 +113,33 @@ export function CareHubLiveStreamBar({
 
       socket.onclose = () => {
         if (cancelled) return
-        setStatus((prev) => ({ ...prev, status: 'reconnecting' }))
-        window.setTimeout(connect, 2500)
+        socketRef.current = null
+        scheduleReconnect(connect)
       }
 
       socket.onerror = () => {
         if (cancelled) return
-        setStatus({ status: 'polling' })
+        socket.close()
+        setStatus((prev) => ({ ...prev, status: 'polling' }))
         pollFallback()
       }
     }
 
-    connect()
+    pollFallback()
     pollRef.current = setInterval(pollFallback, POLL_FALLBACK_MS)
-    refreshSnapshot()
+
+    if (operationalWebsocketEnabled()) {
+      connect()
+    }
 
     return () => {
       cancelled = true
+      clearReconnect()
       socketRef.current?.close()
+      socketRef.current = null
       if (pollRef.current) clearInterval(pollRef.current)
     }
-  }, [homeId, youngPersonId, pollFallback, refreshSnapshot])
+  }, [homeId, youngPersonId, pollFallback])
 
   const badgeValue =
     status.status === 'live'
@@ -130,9 +165,11 @@ export function CareHubLiveStreamBar({
       </span>
       <button
         type="button"
-        className="ml-auto rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-black text-slate-700"
+        className="ml-auto min-h-11 rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-black text-slate-700"
         onClick={() => {
-          socketRef.current?.send(JSON.stringify({ type: 'refresh' }))
+          if (socketRef.current?.readyState === WebSocket.OPEN) {
+            socketRef.current.send(JSON.stringify({ type: 'refresh' }))
+          }
           refreshSnapshot()
         }}
       >
