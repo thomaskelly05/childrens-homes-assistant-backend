@@ -132,9 +132,11 @@ export function CareHubIntelligenceWidgets({
         <Card>
           <p className="text-[11px] font-black uppercase tracking-[0.24em] text-blue-700">Live operational dashboard</p>
           <h2 className="mt-2 text-2xl font-black tracking-[-0.04em] text-slate-950 sm:text-3xl">Safeguarding, climate and workforce pressure</h2>
-          <div className="mt-5 grid gap-4 grid-cols-1 xs:grid-cols-2 sm:grid-cols-3">
+          <div className="mt-5 grid min-w-0 gap-4 grid-cols-1 xs:grid-cols-2 sm:grid-cols-3">
             {rings.map((ring) => (
-              <WellbeingRing key={ring.label} label={ring.label} value={ring.value} />
+              <div key={ring.label} className="min-h-[11rem] min-w-[8rem]">
+                <WellbeingRing label={ring.label} value={ring.value} />
+              </div>
             ))}
           </div>
           <div className="mt-5 grid gap-3 sm:grid-cols-2">

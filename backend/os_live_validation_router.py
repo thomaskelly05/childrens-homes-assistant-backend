@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+import logging
+import time
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query
 
 from auth.current_user import get_current_user
 from db.connection import get_db
+from repositories.os_repository_utils import row_bool, row_column_name, row_dict, row_scalar
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/os/validation", tags=["OS Live Validation"])
 compat_router = APIRouter(prefix="/api/os-command", tags=["OS Live Validation Compatibility"])
@@ -55,6 +60,9 @@ PERFORMANCE_INDEXES = [
     "idx_operational_projection_subject",
 ]
 
+SLOW_ENDPOINT_MS = 400
+CARE_HUB_TARGET_MS = 300
+
 REQUIRED_COLUMNS = {
     "young_people": ["id", "first_name", "last_name", "display_name", "age", "home_id", "provider_id"],
     "daily_notes": ["id", "young_person_id", "note_date", "mood", "presentation", "young_person_voice", "workflow_status"],
@@ -80,39 +88,61 @@ def _q(identifier: str) -> str:
 
 
 def _table_exists(cur: Any, name: str) -> bool:
-    cur.execute("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name=%s)", (name,))
-    return bool(cur.fetchone()[0])
+    cur.execute(
+        "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name=%s) AS exists",
+        (name,),
+    )
+    return row_bool(cur.fetchone(), key="exists")
 
 
 def _view_exists(cur: Any, name: str) -> bool:
-    cur.execute("SELECT EXISTS (SELECT 1 FROM information_schema.views WHERE table_schema='public' AND table_name=%s)", (name,))
-    return bool(cur.fetchone()[0])
+    cur.execute(
+        "SELECT EXISTS (SELECT 1 FROM information_schema.views WHERE table_schema='public' AND table_name=%s) AS exists",
+        (name,),
+    )
+    return row_bool(cur.fetchone(), key="exists")
 
 
 def _columns(cur: Any, table: str) -> set[str]:
-    cur.execute("SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name=%s", (table,))
-    return {str(row[0]) for row in cur.fetchall() or []}
+    cur.execute(
+        "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name=%s",
+        (table,),
+    )
+    return {row_column_name(row) for row in cur.fetchall() or [] if row_column_name(row)}
 
 
 def _index_exists(cur: Any, index_name: str) -> bool:
-    cur.execute("SELECT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = 'public' AND indexname = %s)", (index_name,))
-    return bool(cur.fetchone()[0])
+    cur.execute(
+        "SELECT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = 'public' AND indexname = %s) AS exists",
+        (index_name,),
+    )
+    return row_bool(cur.fetchone(), key="exists")
 
 
 def _count(cur: Any, table: str) -> int | None:
     if not _table_exists(cur, table):
         return None
-    cur.execute(f'SELECT COUNT(*) FROM public.{_q(table)}')
-    row = cur.fetchone()
-    return int(row[0]) if row else 0
+    try:
+        cur.execute(f"SELECT COUNT(*) AS count FROM public.{_q(table)}")
+        row = cur.fetchone()
+        value = row_scalar(row, key="count")
+        return int(value) if value is not None else 0
+    except Exception as error:
+        logger.warning("validation_count_failed table=%s error=%s", table, error)
+        return None
 
 
 def _safe_view_count(cur: Any, view: str) -> int | None:
     if not _view_exists(cur, view):
         return None
-    cur.execute(f'SELECT COUNT(*) FROM public.{_q(view)}')
-    row = cur.fetchone()
-    return int(row[0]) if row else 0
+    try:
+        cur.execute(f"SELECT COUNT(*) AS count FROM public.{_q(view)}")
+        row = cur.fetchone()
+        value = row_scalar(row, key="count")
+        return int(value) if value is not None else 0
+    except Exception as error:
+        logger.warning("validation_view_count_failed view=%s error=%s", view, error)
+        return None
 
 
 def _existing_column(cols: set[str], candidates: list[str]) -> str | None:
@@ -177,8 +207,7 @@ def _latest_record(cur: Any, table: str, young_person_id: int | None = None) -> 
     row = cur.fetchone()
     if not row:
         return None
-    keys = [desc[0] for desc in cur.description]
-    return dict(zip(keys, row))
+    return row_dict(row, description=getattr(cur, "description", None))
 
 
 def _link_count(cur: Any, table: str, record_id: Any, link_table: str) -> int | None:
@@ -187,9 +216,17 @@ def _link_count(cur: Any, table: str, record_id: Any, link_table: str) -> int | 
     cols = _columns(cur, link_table)
     if not {"source_table", "source_id"}.issubset(cols):
         return None
-    cur.execute(f"SELECT COUNT(*) FROM public.{_q(link_table)} WHERE source_table = %s AND source_id = %s", (table, str(record_id)))
-    row = cur.fetchone()
-    return int(row[0]) if row else 0
+    try:
+        cur.execute(
+            f"SELECT COUNT(*) AS count FROM public.{_q(link_table)} WHERE source_table = %s AND source_id = %s",
+            (table, str(record_id)),
+        )
+        row = cur.fetchone()
+        value = row_scalar(row, key="count")
+        return int(value) if value is not None else 0
+    except Exception as error:
+        logger.warning("validation_link_count_failed table=%s link_table=%s error=%s", table, link_table, error)
+        return None
 
 
 def _chronology_count(cur: Any, table: str, record_id: Any) -> int | None:
@@ -200,14 +237,25 @@ def _workflow_count(cur: Any, table: str, record_id: Any) -> int | None:
     if not _table_exists(cur, "record_workflow_events"):
         return None
     cols = _columns(cur, "record_workflow_events")
-    if "source_table" in cols and "source_id" in cols:
-        cur.execute("SELECT COUNT(*) FROM public.record_workflow_events WHERE source_table = %s AND source_id = %s", (table, str(record_id)))
-    elif "record_id" in cols:
-        cur.execute("SELECT COUNT(*) FROM public.record_workflow_events WHERE record_id = %s", (str(record_id),))
-    else:
+    try:
+        if "source_table" in cols and "source_id" in cols:
+            cur.execute(
+                "SELECT COUNT(*) AS count FROM public.record_workflow_events WHERE source_table = %s AND source_id = %s",
+                (table, str(record_id)),
+            )
+        elif "record_id" in cols:
+            cur.execute(
+                "SELECT COUNT(*) AS count FROM public.record_workflow_events WHERE record_id = %s",
+                (str(record_id),),
+            )
+        else:
+            return None
+        row = cur.fetchone()
+        value = row_scalar(row, key="count")
+        return int(value) if value is not None else 0
+    except Exception as error:
+        logger.warning("validation_workflow_count_failed table=%s error=%s", table, error)
         return None
-    row = cur.fetchone()
-    return int(row[0]) if row else 0
 
 
 def _build_workflow_proof(current_user: dict[str, Any], conn: Any, young_person_id: int | None = None) -> dict[str, Any]:
@@ -242,16 +290,164 @@ def _build_workflow_proof(current_user: dict[str, Any], conn: Any, young_person_
     }
 
 
-def _build_performance_validation(current_user: dict[str, Any], conn: Any) -> dict[str, Any]:
-    with conn.cursor() as cur:
-        index_report = [{"index": index_name, "exists": _index_exists(cur, index_name)} for index_name in PERFORMANCE_INDEXES]
-    missing = [item["index"] for item in index_report if not item["exists"]]
+def _probe_chronology_performance(conn: Any, current_user: dict[str, Any]) -> dict[str, Any]:
+    started = time.perf_counter()
+    try:
+        from services.os_chronology_service import list_chronology_for_connection
+
+        payload = list_chronology_for_connection(
+            conn,
+            current_user=current_user,
+            filters={},
+            page=1,
+            page_size=25,
+        )
+        duration_ms = round((time.perf_counter() - started) * 1000, 2)
+        timing = payload.get("timing") or {}
+        return {
+            "ok": duration_ms <= SLOW_ENDPOINT_MS,
+            "duration_ms": duration_ms,
+            "item_count": payload.get("total"),
+            "timing": timing,
+            "slow": duration_ms > SLOW_ENDPOINT_MS,
+        }
+    except Exception as error:
+        logger.warning("chronology_performance_probe_failed error=%s", error, exc_info=True)
+        return {"ok": False, "duration_ms": None, "error": str(error), "slow": True}
+
+
+def _probe_care_hub_performance(conn: Any) -> dict[str, Any]:
+    started = time.perf_counter()
+    try:
+        from services.care_hub_intelligence_service import care_hub_intelligence_service
+
+        payload = care_hub_intelligence_service.build(conn, limit=10, use_cache=False)
+        duration_ms = round((time.perf_counter() - started) * 1000, 2)
+        timing = payload.get("timing") or {}
+        cache_hit = timing.get("cache_hit", False)
+        return {
+            "ok": duration_ms <= CARE_HUB_TARGET_MS,
+            "duration_ms": duration_ms,
+            "event_count": (payload.get("operational_feed") or {}).get("event_count"),
+            "timing": timing,
+            "cache_hit": cache_hit,
+            "slow": duration_ms > CARE_HUB_TARGET_MS,
+        }
+    except Exception as error:
+        logger.warning("care_hub_performance_probe_failed error=%s", error, exc_info=True)
+        return {"ok": False, "duration_ms": None, "error": str(error), "slow": True}
+
+
+def _probe_operational_feed_performance(conn: Any) -> dict[str, Any]:
+    started = time.perf_counter()
+    try:
+        from services.operational_feed_service import build_operational_feed
+
+        payload = build_operational_feed(conn, limit=20)
+        duration_ms = round((time.perf_counter() - started) * 1000, 2)
+        timing = payload.get("timing") or {}
+        return {
+            "ok": duration_ms <= CARE_HUB_TARGET_MS,
+            "duration_ms": duration_ms,
+            "event_count": payload.get("event_count"),
+            "timing": timing,
+            "slow": duration_ms > CARE_HUB_TARGET_MS,
+        }
+    except Exception as error:
+        logger.warning("operational_feed_performance_probe_failed error=%s", error, exc_info=True)
+        return {"ok": False, "duration_ms": None, "error": str(error), "slow": True}
+
+
+def _probe_cache_health() -> dict[str, Any]:
+    from services.intelligence_cache_service import intelligence_cache_service
+
+    health = intelligence_cache_service.invalidation_health()
     return {
-        "ok": not missing,
-        "status": "ready" if not missing else "needs_attention",
+        "ok": True,
+        "tracked_entries": health.get("tracked_entries"),
+        "known_events": len(health.get("known_events") or []),
+        "recent_invalidations": len(health.get("recent_invalidations") or []),
+    }
+
+
+def _probe_provider_aggregation(conn: Any, current_user: dict[str, Any]) -> dict[str, Any]:
+    started = time.perf_counter()
+    try:
+        from services.provider_intelligence_service import provider_intelligence_service
+
+        payload = provider_intelligence_service.build_operational_convergence(
+            conn,
+            current_user=current_user,
+            limit=10,
+        )
+        duration_ms = round((time.perf_counter() - started) * 1000, 2)
+        return {
+            "ok": True,
+            "duration_ms": duration_ms,
+            "homes": len(payload.get("homes") or []),
+            "slow": duration_ms > SLOW_ENDPOINT_MS,
+        }
+    except Exception as error:
+        logger.warning("provider_aggregation_probe_failed error=%s", error, exc_info=True)
+        return {"ok": False, "duration_ms": None, "error": str(error), "slow": True}
+
+
+def _build_performance_validation(current_user: dict[str, Any], conn: Any) -> dict[str, Any]:
+    validation_errors: list[str] = []
+    index_report: list[dict[str, Any]] = []
+
+    with conn.cursor() as cur:
+        for index_name in PERFORMANCE_INDEXES:
+            try:
+                exists = _index_exists(cur, index_name)
+                index_report.append({"index": index_name, "exists": exists})
+            except Exception as error:
+                logger.warning("performance_index_check_failed index=%s error=%s", index_name, error)
+                index_report.append({"index": index_name, "exists": False, "error": str(error)})
+                validation_errors.append(f"index_check_failed:{index_name}")
+
+    missing = [item["index"] for item in index_report if not item.get("exists")]
+
+    chronology_probe = _probe_chronology_performance(conn, current_user)
+    care_hub_probe = _probe_care_hub_performance(conn)
+    feed_probe = _probe_operational_feed_performance(conn)
+    cache_probe = _probe_cache_health()
+    provider_probe = _probe_provider_aggregation(conn, current_user)
+
+    slow_warnings: list[str] = []
+    if chronology_probe.get("slow"):
+        slow_warnings.append(f"chronology:{chronology_probe.get('duration_ms')}ms")
+    if care_hub_probe.get("slow"):
+        slow_warnings.append(f"care_hub:{care_hub_probe.get('duration_ms')}ms")
+    if feed_probe.get("slow"):
+        slow_warnings.append(f"operational_feed:{feed_probe.get('duration_ms')}ms")
+    if provider_probe.get("slow"):
+        slow_warnings.append(f"provider_aggregation:{provider_probe.get('duration_ms')}ms")
+
+    performance_summaries = {
+        "chronology": chronology_probe,
+        "care_hub": care_hub_probe,
+        "operational_feed": feed_probe,
+        "cache": cache_probe,
+        "provider_aggregation": provider_probe,
+    }
+
+    probes_ok = all(
+        probe.get("ok", False)
+        for probe in (chronology_probe, care_hub_probe, feed_probe, cache_probe, provider_probe)
+        if "error" not in probe
+    )
+    ok = not missing and not validation_errors and probes_ok and not slow_warnings
+
+    return {
+        "ok": ok,
+        "status": "ready" if ok else "needs_attention",
         "current_user": {"id": current_user.get("id") or current_user.get("user_id"), "role": current_user.get("role"), "home_id": current_user.get("home_id"), "provider_id": current_user.get("provider_id")},
         "indexes": index_report,
         "missing_indexes": missing,
+        "validation_errors": validation_errors,
+        "performance_summaries": performance_summaries,
+        "slow_endpoint_warnings": slow_warnings,
         "migration": "1001_operational_performance_indexes.sql",
         "next_checks": ["Open /young-people/[id] and confirm response time improves.", "Open /command-centre and confirm Care Hub widgets load without long waits.", "Run /api/os-command/care-hub and /api/os-command/operational-feed while authenticated."],
     }
@@ -301,7 +497,7 @@ def _build_care_hub_validation(current_user: dict[str, Any], conn: Any) -> dict[
             from services.care_hub_intelligence_service import care_hub_intelligence_service
 
             payload = care_hub_intelligence_service.build(conn, limit=5, use_cache=False)
-            probe = {"attempted": True, "ok": bool(payload.get("ok")), "event_count": (payload.get("operational_feed") or {}).get("event_count"), "alert_total": (payload.get("alerts") or {}).get("total")}
+            probe = {"attempted": True, "ok": bool(payload.get("ok")), "event_count": (payload.get("operational_feed") or {}).get("event_count"), "alert_total": (payload.get("alerts") or {}).get("total"), "timing": payload.get("timing")}
         except Exception as error:
             probe = {"attempted": True, "ok": False, "detail": str(error)}
 

@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import logging
+import time
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 from services.care_hub_safeguarding_queues_service import care_hub_safeguarding_queues_service
 from services.chronology_pattern_service import chronology_pattern_service
@@ -29,7 +33,9 @@ class CareHubIntelligenceService:
         use_cache: bool = True,
         current_user: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
+        started = time.perf_counter()
         cache_key = None
+        cache_hit = False
         if use_cache:
             cache_key = intelligence_cache_service.build_cache_key(
                 cache_type="care_hub_live",
@@ -39,7 +45,12 @@ class CareHubIntelligenceService:
             )
             cached = intelligence_cache_service.get(cache_key)
             if cached is not None:
+                cache_hit = True
                 payload = dict(cached.value)
+                payload["timing"] = {
+                    "total_ms": round((time.perf_counter() - started) * 1000, 2),
+                    "cache_hit": True,
+                }
                 if question:
                     payload["orb_reasoning"] = orb_operational_reasoning_service.reason(
                         feed=payload.get("operational_feed") or {},
@@ -48,20 +59,31 @@ class CareHubIntelligenceService:
                         alerts=payload.get("alerts"),
                         question=question,
                     )
+                logger.info(
+                    "care_hub_build cache_hit=true home_id=%s young_person_id=%s total_ms=%s",
+                    home_id,
+                    young_person_id,
+                    payload["timing"]["total_ms"],
+                )
                 return payload
 
+        feed_started = time.perf_counter()
         feed = build_operational_feed(
             conn,
             young_person_id=young_person_id,
             home_id=home_id,
             limit=limit,
         )
+        feed_ms = round((time.perf_counter() - feed_started) * 1000, 2)
+        workflow_started = time.perf_counter()
         workflow = workflow_completion_service.analyse(
             events=feed.get("events") or [],
             manager_queue=feed.get("manager_queue"),
             inspection=feed.get("inspection_intelligence"),
         )
+        workflow_ms = round((time.perf_counter() - workflow_started) * 1000, 2)
         chronology_patterns = chronology_pattern_service.analyse(feed.get("events") or [])
+        risk_started = time.perf_counter()
         risk_matrix = operational_risk_matrix_service.build(
             feed=feed,
             workflow=workflow,
@@ -86,6 +108,7 @@ class CareHubIntelligenceService:
             question=question,
         )
 
+        risk_ms = round((time.perf_counter() - risk_started) * 1000, 2)
         safeguarding_queues = care_hub_safeguarding_queues_service.build_from_feed(feed)
         predictive_safeguarding = predictive_safeguarding_service.analyse(
             conn,
@@ -101,6 +124,21 @@ class CareHubIntelligenceService:
             current_user=actor,
             home_id=home_id,
             limit=limit,
+        total_ms = round((time.perf_counter() - started) * 1000, 2)
+        timing = {
+            "total_ms": total_ms,
+            "feed_ms": feed_ms,
+            "workflow_ms": workflow_ms,
+            "risk_ms": risk_ms,
+            "cache_hit": cache_hit,
+            **((feed.get("timing") or {}) if isinstance(feed.get("timing"), dict) else {}),
+        }
+        logger.info(
+            "care_hub_build cache_hit=false home_id=%s young_person_id=%s total_ms=%s feed_ms=%s",
+            home_id,
+            young_person_id,
+            total_ms,
+            feed_ms,
         )
 
         payload = {
@@ -127,6 +165,7 @@ class CareHubIntelligenceService:
                 "replay_path": "/os/realtime/replay",
             },
             "summary": live_status.get("summary"),
+            "timing": timing,
         }
 
         if cache_key:

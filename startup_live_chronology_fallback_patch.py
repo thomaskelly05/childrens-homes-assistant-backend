@@ -161,11 +161,12 @@ def apply() -> None:
         started = time.perf_counter()
         result = original(current_user=current_user, filters=filters, page=page, page_size=page_size)
         primary_ms = round((time.perf_counter() - started) * 1000, 2)
-        if result.get("items"):
+        if (result.get("total") or 0) > 0 or result.get("items"):
             logger.info(
-                "chronology_primary_hit young_person_id=%s items=%s primary_ms=%s",
+                "chronology_primary_hit young_person_id=%s items=%s total=%s primary_ms=%s",
                 (filters or {}).get("young_person_id"),
                 len(result.get("items") or []),
+                result.get("total"),
                 primary_ms,
             )
             return result

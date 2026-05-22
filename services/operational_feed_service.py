@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import logging
+import time
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 from services.home_operational_intelligence_service import home_operational_intelligence_service
 from services.inspection_intelligence_service import inspection_intelligence_service
@@ -139,13 +143,17 @@ def build_operational_feed(
     home_id: int | None = None,
     limit: int = 50,
 ) -> dict[str, Any]:
+    started = time.perf_counter()
+    events_started = time.perf_counter()
     events = build_events_from_conn(
         conn,
         young_person_id=young_person_id,
         home_id=home_id,
         limit=limit,
     )
+    events_ms = round((time.perf_counter() - events_started) * 1000, 2)
 
+    queue_started = time.perf_counter()
     manager_queue = manager_operational_queue_service.build_from_events(events)
     inspection = inspection_intelligence_service.analyse(events=events, manager_queue=manager_queue)
     projection = operational_projection_engine.project(
@@ -159,6 +167,22 @@ def build_operational_feed(
         manager_queue=manager_queue,
         inspection=inspection,
     )
+    total_ms = round((time.perf_counter() - started) * 1000, 2)
+    queue_ms = round((time.perf_counter() - queue_started) * 1000, 2)
+    timing = {
+        "total_ms": total_ms,
+        "events_ms": events_ms,
+        "aggregation_ms": max(0, total_ms - events_ms),
+        "queue_ms": queue_ms,
+    }
+    logger.info(
+        "operational_feed_build young_person_id=%s home_id=%s events=%s total_ms=%s events_ms=%s",
+        young_person_id,
+        home_id,
+        len(events),
+        total_ms,
+        events_ms,
+    )
 
     return {
         "ok": True,
@@ -171,4 +195,5 @@ def build_operational_feed(
         "projection": projection,
         "orb_operational_memory": orb_memory,
         "home_operational_intelligence": home_intelligence,
+        "timing": timing,
     }
