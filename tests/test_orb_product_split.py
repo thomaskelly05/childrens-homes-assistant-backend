@@ -11,6 +11,7 @@ ORB_COMPANION = REPO_ROOT / "frontend-next" / "components" / "orb-standalone" / 
 ORB_GLOW = REPO_ROOT / "frontend-next" / "components" / "orb-standalone" / "orb-glow.tsx"
 ORB_VOICE_HOOK = REPO_ROOT / "frontend-next" / "components" / "orb-standalone" / "use-standalone-orb-voice.ts"
 STANDALONE_CLIENT = REPO_ROOT / "frontend-next" / "lib" / "orb" / "standalone-client.ts"
+GLOBALS_CSS = REPO_ROOT / "frontend-next" / "app" / "globals.css"
 ASSISTANT_ORB_PAGE = REPO_ROOT / "frontend-next" / "app" / "assistant" / "orb" / "page.tsx"
 ASSISTANT_ORB_IMPL = REPO_ROOT / "frontend-next" / "app" / "assistant" / "orb" / "operational-orb-page.tsx"
 ASSISTANT_PAGE = REPO_ROOT / "frontend-next" / "app" / "assistant" / "page.tsx"
@@ -26,6 +27,7 @@ FORBIDDEN_ORB_PAGE_MARKERS = [
     "Canonical ORB Runtime",
     "One operational cognition system",
     "Operational cognition",
+    "CareHub",
 ]
 
 REQUIRED_STANDALONE_MARKERS = [
@@ -39,11 +41,25 @@ STANDALONE_UI_MARKERS = [
     "No OS records",
 ]
 
-VOICE_MARKERS = [
+CINEMATIC_VOICE_MARKERS = [
+    "orb-glow",
+    "use-standalone-orb-voice",
     "speechSynthesis",
     "webkitSpeechRecognition",
-    "en-GB",
+    "Voice replies",
+    "autoSend",
+    "Stop speaking",
     "British female",
+]
+
+VOICE_HOOK_MARKERS = [
+    "speechSynthesis",
+    "webkitSpeechRecognition",
+    "SpeechRecognition",
+    "en-GB",
+    "pickBritishFemaleVoice",
+    "autoSend",
+    "britishFemalePreference",
 ]
 
 OS_ORB_LINK_FILES = [
@@ -62,6 +78,8 @@ FORBIDDEN_RECORD_ORB_QUERY_KEYS = [
     "child_id=",
     "home_id=",
     "staff_id=",
+    "record_id=",
+    "chronology_id=",
 ]
 
 OPERATIONAL_ORB_MARKERS = [
@@ -81,30 +99,47 @@ def test_orb_page_has_no_operational_coupling():
 
 
 def test_orb_page_uses_standalone_contract():
-    sources = (
-        _read(ORB_PAGE)
-        + _read(ORB_COMPANION)
-        + _read(STANDALONE_CLIENT)
-    )
+    sources = _read(ORB_PAGE) + _read(ORB_COMPANION) + _read(STANDALONE_CLIENT)
     for marker in REQUIRED_STANDALONE_MARKERS:
         assert marker in sources, f"/orb standalone surface must reference {marker}"
     for marker in STANDALONE_UI_MARKERS:
         assert marker in sources, f"/orb standalone UI must include {marker}"
 
 
+def test_standalone_orb_cinematic_voice_components():
+    companion = _read(ORB_COMPANION)
+    glow = _read(ORB_GLOW)
+    hook = _read(ORB_VOICE_HOOK)
+    for marker in CINEMATIC_VOICE_MARKERS:
+        assert marker in companion or marker in glow or marker in hook, (
+            f"standalone cinematic voice marker missing: {marker}"
+        )
+
+
 def test_standalone_orb_voice_hook_uses_browser_speech_apis():
     text = _read(ORB_VOICE_HOOK)
-    assert "speechSynthesis" in text
-    assert "webkitSpeechRecognition" in text or "SpeechRecognition" in text
-    assert "en-GB" in text
-    assert "British female" in text or "pickBritishFemaleVoice" in text
+    for marker in VOICE_HOOK_MARKERS:
+        assert marker in text, f"voice hook must include {marker}"
 
 
 def test_standalone_orb_glow_component_exists():
     text = _read(ORB_GLOW)
     assert "OrbGlow" in text
-    assert "safeguarding" in text
-    assert "listening" in text
+    for state in ("safeguarding", "listening", "transcript_ready", "thinking", "speaking"):
+        assert state in text, f"orb-glow must support state {state}"
+
+
+def test_standalone_orb_cinematic_styles_in_globals():
+    text = _read(GLOBALS_CSS)
+    for marker in ("orb-cinematic-scene", "orb-standalone-listen-ring", "orb-standalone-halo"):
+        assert marker in text, f"globals.css must define cinematic ORB style {marker}"
+
+
+def test_standalone_orb_only_uses_standalone_api_paths():
+    sources = _read(ORB_COMPANION) + _read(STANDALONE_CLIENT)
+    forbidden = ["/api/orb/conversation", "/orb/conversation", "/api/os/", "/os/"]
+    for marker in forbidden:
+        assert marker not in sources, f"standalone ORB must not use {marker}"
 
 
 def test_assistant_orb_page_does_not_redirect_to_standalone_orb():

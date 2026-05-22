@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 
 import { OrbSphere } from '@/components/orb-core/orb-sphere'
 import type { OrbRenderState } from '@/components/orb-core/orb-sphere'
@@ -8,6 +8,7 @@ import type { OrbRenderState } from '@/components/orb-core/orb-sphere'
 export type StandaloneOrbGlowState =
   | 'idle'
   | 'listening'
+  | 'transcript_ready'
   | 'thinking'
   | 'speaking'
   | 'recording'
@@ -15,11 +16,12 @@ export type StandaloneOrbGlowState =
   | 'error'
 
 const STATE_LABELS: Record<StandaloneOrbGlowState, string> = {
-  idle: 'ORB is ready',
+  idle: 'Ready',
   listening: 'Listening…',
+  transcript_ready: 'Ready to send',
   thinking: 'Thinking…',
   speaking: 'Speaking…',
-  recording: 'Helping with recording',
+  recording: 'Recording support',
   safeguarding: 'Safeguarding reflection',
   error: 'Voice unavailable — type instead'
 }
@@ -27,6 +29,7 @@ const STATE_LABELS: Record<StandaloneOrbGlowState, string> = {
 const STATE_TO_RENDER: Record<StandaloneOrbGlowState, OrbRenderState> = {
   idle: 'idle',
   listening: 'listening',
+  transcript_ready: 'idle',
   thinking: 'thinking',
   speaking: 'speaking',
   recording: 'handover',
@@ -34,26 +37,63 @@ const STATE_TO_RENDER: Record<StandaloneOrbGlowState, OrbRenderState> = {
   error: 'permission_denied'
 }
 
-const STATE_HUES: Record<StandaloneOrbGlowState, { ring: string; glow: string }> = {
-  idle: { ring: 'from-cyan-400/40 via-sky-500/20 to-indigo-500/10', glow: 'shadow-cyan-500/30' },
-  listening: { ring: 'from-cyan-300/70 via-sky-400/40 to-blue-500/20', glow: 'shadow-cyan-400/50' },
-  thinking: { ring: 'from-violet-400/60 via-indigo-500/35 to-purple-600/20', glow: 'shadow-violet-500/40' },
-  speaking: { ring: 'from-amber-300/70 via-orange-400/40 to-yellow-500/25', glow: 'shadow-amber-400/45' },
-  recording: { ring: 'from-emerald-300/60 via-teal-400/35 to-cyan-500/20', glow: 'shadow-emerald-400/40' },
-  safeguarding: { ring: 'from-rose-300/55 via-amber-400/35 to-orange-500/20', glow: 'shadow-rose-400/35' },
-  error: { ring: 'from-red-400/35 via-slate-500/25 to-slate-700/15', glow: 'shadow-red-900/25' }
+const STATE_HUES: Record<StandaloneOrbGlowState, { ring: string; glow: string; core: string }> = {
+  idle: {
+    ring: 'from-cyan-400/45 via-sky-500/25 to-indigo-500/12',
+    glow: 'shadow-cyan-500/35',
+    core: 'rgba(34,211,238,0.18)'
+  },
+  listening: {
+    ring: 'from-cyan-200/80 via-sky-300/50 to-blue-400/25',
+    glow: 'shadow-cyan-300/55',
+    core: 'rgba(56,189,248,0.28)'
+  },
+  transcript_ready: {
+    ring: 'from-teal-300/55 via-cyan-400/35 to-emerald-500/18',
+    glow: 'shadow-teal-400/40',
+    core: 'rgba(45,212,191,0.22)'
+  },
+  thinking: {
+    ring: 'from-violet-400/65 via-indigo-500/40 to-purple-700/22',
+    glow: 'shadow-violet-500/45',
+    core: 'rgba(139,92,246,0.24)'
+  },
+  speaking: {
+    ring: 'from-amber-200/75 via-orange-300/45 to-yellow-400/28',
+    glow: 'shadow-amber-300/50',
+    core: 'rgba(251,191,36,0.26)'
+  },
+  recording: {
+    ring: 'from-emerald-300/60 via-teal-400/38 to-cyan-500/22',
+    glow: 'shadow-emerald-400/42',
+    core: 'rgba(52,211,153,0.22)'
+  },
+  safeguarding: {
+    ring: 'from-rose-300/50 via-amber-400/38 to-orange-500/22',
+    glow: 'shadow-rose-400/38',
+    core: 'rgba(251,113,133,0.2)'
+  },
+  error: {
+    ring: 'from-red-400/30 via-slate-500/22 to-slate-700/14',
+    glow: 'shadow-red-900/28',
+    core: 'rgba(248,113,113,0.12)'
+  }
 }
 
 export function OrbGlow({
   state,
   mode,
   voiceEnabled,
-  label
+  label,
+  onOrbActivate,
+  interactive = true
 }: {
   state: StandaloneOrbGlowState
   mode?: string
   voiceEnabled?: boolean
   label?: string
+  onOrbActivate?: () => void
+  interactive?: boolean
 }) {
   const [reducedMotion, setReducedMotion] = useState(false)
   const renderState = STATE_TO_RENDER[state]
@@ -72,47 +112,86 @@ export function OrbGlow({
   const pulseClass = reducedMotion
     ? ''
     : state === 'listening'
-      ? 'animate-[orb-standalone-pulse_1.4s_ease-in-out_infinite]'
-      : state === 'thinking'
-        ? 'animate-[orb-standalone-breathe_3.2s_ease-in-out_infinite]'
-        : state === 'speaking'
-          ? 'animate-[orb-standalone-ring_2s_ease-in-out_infinite]'
-          : ''
+      ? 'animate-[orb-standalone-pulse_1.2s_ease-in-out_infinite]'
+      : state === 'transcript_ready'
+        ? 'animate-[orb-standalone-breathe_2.4s_ease-in-out_infinite]'
+        : state === 'thinking'
+          ? 'animate-[orb-standalone-breathe_3.2s_ease-in-out_infinite]'
+          : state === 'speaking'
+            ? 'animate-[orb-standalone-ring_1.8s_ease-in-out_infinite]'
+            : state === 'idle'
+              ? 'animate-[orb-standalone-breathe_4.5s_ease-in-out_infinite]'
+              : ''
+
+  const orbButton = (
+    <div
+      className={`relative mx-auto flex h-52 w-52 items-center justify-center md:h-64 md:w-64 lg:h-72 lg:w-72 ${pulseClass}`}
+      data-standalone-orb-state={state}
+      data-orb-state={renderState}
+      style={{ '--orb-core-glow': hues.core } as CSSProperties}
+    >
+      <div
+        className={`pointer-events-none absolute inset-[-22%] rounded-full bg-gradient-to-br ${hues.ring} blur-3xl ${hues.glow} orb-standalone-halo`}
+        aria-hidden
+      />
+      {state === 'listening' && !reducedMotion ? (
+        <>
+          <div className="pointer-events-none absolute inset-[-14%] rounded-full border border-cyan-300/25 orb-standalone-listen-ring" aria-hidden />
+          <div
+            className="pointer-events-none absolute inset-[-20%] rounded-full border border-cyan-200/15 orb-standalone-listen-ring"
+            style={{ animationDelay: '0.6s' }}
+            aria-hidden
+          />
+        </>
+      ) : null}
+      <div
+        className={`pointer-events-none absolute inset-[-10%] rounded-full border border-white/20 bg-white/[0.03] backdrop-blur-sm ${reducedMotion ? '' : 'animate-[orb-standalone-spin_14s_linear_infinite]'}`}
+        aria-hidden
+      />
+      <div className="pointer-events-none absolute inset-[12%] rounded-full bg-gradient-to-br from-white/25 via-white/5 to-transparent opacity-80" aria-hidden />
+      <OrbSphere state={renderState} size="xlarge" />
+
+      {(state === 'listening' || state === 'speaking') && !reducedMotion ? (
+        <div className="pointer-events-none absolute bottom-3 flex items-end gap-1.5" aria-hidden>
+          {[0, 1, 2, 3, 4, 5].map((bar) => (
+            <span
+              key={bar}
+              className="inline-block w-1 rounded-full bg-white/75 orb-standalone-wave-bar"
+              style={{
+                height: state === 'listening' ? `${12 + (bar % 3) * 7}px` : `${10 + (bar % 4) * 6}px`,
+                animationDelay: `${bar * 0.08}s`
+              }}
+            />
+          ))}
+        </div>
+      ) : null}
+      {state === 'thinking' && !reducedMotion ? (
+        <div className="pointer-events-none absolute inset-[-6%] rounded-full border border-violet-300/20 orb-standalone-orbit" aria-hidden />
+      ) : null}
+    </div>
+  )
 
   return (
     <div className="flex flex-col items-center text-center" aria-live="polite" aria-atomic="true">
-      <div
-        className={`relative mx-auto flex h-56 w-56 items-center justify-center md:h-72 md:w-72 ${pulseClass}`}
-        data-standalone-orb-state={state}
-        data-orb-state={renderState}
-      >
-        <div
-          className={`pointer-events-none absolute inset-[-18%] rounded-full bg-gradient-to-br ${hues.ring} blur-2xl ${hues.glow}`}
-          aria-hidden
-        />
-        <div
-          className={`pointer-events-none absolute inset-[-8%] rounded-full border border-white/15 ${reducedMotion ? '' : 'animate-[orb-standalone-spin_12s_linear_infinite]'}`}
-          aria-hidden
-        />
-        <OrbSphere state={renderState} size="xlarge" />
+      {interactive && onOrbActivate ? (
+        <button
+          type="button"
+          onClick={onOrbActivate}
+          className="group rounded-full outline-none transition focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-4 focus-visible:ring-offset-slate-950"
+          aria-label={
+            state === 'listening' ? 'Stop listening' : state === 'speaking' ? 'Interrupt and listen' : 'Tap to speak'
+          }
+        >
+          {orbButton}
+          <p className="mt-3 text-[11px] font-semibold text-slate-500 opacity-0 transition group-hover:opacity-100 group-focus-visible:opacity-100">
+            {state === 'listening' ? 'Tap again to stop' : state === 'speaking' ? 'Tap to interrupt' : 'Tap ORB to speak'}
+          </p>
+        </button>
+      ) : (
+        orbButton
+      )}
 
-        {(state === 'listening' || state === 'speaking') && !reducedMotion ? (
-          <div className="pointer-events-none absolute bottom-2 flex gap-1" aria-hidden>
-            {[0, 1, 2, 3, 4].map((bar) => (
-              <span
-                key={bar}
-                className="inline-block w-1 rounded-full bg-white/70"
-                style={{
-                  height: state === 'listening' ? `${10 + (bar % 3) * 6}px` : `${8 + (bar % 4) * 5}px`,
-                  animation: `orb-standalone-bar 0.${9 + bar}s ease-in-out infinite alternate`
-                }}
-              />
-            ))}
-          </div>
-        ) : null}
-      </div>
-
-      <p className="mt-6 text-sm font-black uppercase tracking-[0.2em] text-cyan-100/90">{statusText}</p>
+      <p className="mt-5 text-sm font-black uppercase tracking-[0.2em] text-cyan-100/90">{statusText}</p>
       {mode ? (
         <p className="mt-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">{mode}</p>
       ) : null}
