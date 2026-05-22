@@ -259,7 +259,7 @@ export function OrbGlow({
               ? 'Stop listening'
               : state === 'speaking'
                 ? 'Interrupt and listen'
-                : 'Tap to speak'
+                : 'Tap to speak — start voice input'
           }
         >
           {orbButton}
@@ -268,7 +268,7 @@ export function OrbGlow({
               ? 'Tap again to stop'
               : state === 'speaking'
                 ? 'Tap to interrupt'
-                : 'Tap ORB to speak'}
+                : 'Tap to speak'}
           </p>
         </button>
       ) : (
