@@ -156,6 +156,11 @@ def _standalone_contract() -> dict[str, Any]:
             "health": "/orb/standalone/health",
             "conversation": "/orb/standalone/conversation",
             "config": "/orb/standalone/config",
+            "knowledge_health": "/orb/standalone/knowledge/health",
+            "knowledge_sources": "/orb/standalone/knowledge/sources",
+            "knowledge_ingest": "/orb/standalone/knowledge/ingest",
+            "knowledge_search": "/orb/standalone/knowledge/search",
+            "knowledge_summary": "/orb/standalone/knowledge/summary",
         },
     }
 
@@ -247,9 +252,10 @@ def _standalone_conversation_response(
         base_context.update(context_used)
     if "retrieval" not in base_context:
         base_context["retrieval"] = {
-            "strategy": "built_in_source_pack",
+            "strategy": "source_pack_plus_document_rag",
             "live_retrieved": False,
             "source_count": len(resolved_sources),
+            "document_result_count": 0,
         }
     return {
         "ok": True,
@@ -327,9 +333,10 @@ async def standalone_orb_conversation(
         context_used = dict(assistant_data.get("context_used") or {})
         if not context_used.get("retrieval"):
             context_used["retrieval"] = {
-                "strategy": "built_in_source_pack",
+                "strategy": "source_pack_plus_document_rag",
                 "live_retrieved": False,
                 "source_count": len(retrieval_preview),
+                "document_result_count": 0,
             }
         return _standalone_conversation_response(
             answer=answer,
@@ -385,9 +392,10 @@ async def standalone_orb_conversation(
             "care_record_access": False,
             "os_linked": False,
             "retrieval": {
-                "strategy": "built_in_source_pack",
+                "strategy": "source_pack_plus_document_rag",
                 "live_retrieved": False,
                 "source_count": len(sources),
+                "document_result_count": 0,
                 "research_intent": classification.get("research_intent", False),
             },
         }

@@ -62,10 +62,16 @@ export type StandaloneOrbSourceType =
 export type StandaloneOrbSource = {
   id?: string
   label: string
-  type: StandaloneOrbSourceType
+  type: StandaloneOrbSourceType | string
   basis?: string
   note?: string
   live_retrieved?: boolean
+  document_chunk?: boolean
+  origin?: string
+  section?: string | null
+  page?: string | null
+  source_id?: string
+  chunk_index?: number
 }
 
 export type StandaloneOrbCitation = StandaloneOrbSource
@@ -74,6 +80,8 @@ export type StandaloneOrbRetrievalContext = {
   strategy?: string
   live_retrieved?: boolean
   source_count?: number
+  document_result_count?: number
+  top_source_titles?: string[]
   routing_hint?: string
   research_intent?: boolean
 }
@@ -220,6 +228,100 @@ export async function queryStandaloneOrbConversation(
 }
 
 export const sendStandaloneOrbMessage = queryStandaloneOrbConversation
+
+export type OrbKnowledgeSourceType =
+  | 'product_context'
+  | 'regulatory_framework'
+  | 'policy'
+  | 'practice_guidance'
+  | 'therapeutic_practice'
+  | 'recording_quality'
+  | 'safeguarding_principles'
+  | 'general_knowledge'
+  | 'user_uploaded'
+
+export type OrbKnowledgeSource = {
+  id: string
+  title: string
+  description?: string | null
+  source_type: OrbKnowledgeSourceType
+  status: string
+  origin: string
+  file_name?: string | null
+  source_label?: string | null
+  standalone_only?: boolean
+  os_linked?: boolean
+  care_record_access?: boolean
+  live_retrieved?: boolean
+}
+
+export type OrbKnowledgeSearchResult = {
+  source_id: string
+  source_title: string
+  source_type: OrbKnowledgeSourceType
+  citation_label: string
+  section?: string | null
+  page?: string | null
+  chunk_index: number
+  text: string
+  score: number
+  match_reason: string
+  live_retrieved?: boolean
+}
+
+export type OrbKnowledgeLibrarySummary = {
+  source_count: number
+  chunk_count: number
+  by_type: Record<string, number>
+  by_status: Record<string, number>
+  standalone_only: boolean
+  os_linked: boolean
+  care_record_access: boolean
+}
+
+function unwrapKnowledgeData<T>(payload: unknown): T {
+  if (!payload || typeof payload !== 'object') {
+    throw new AuthApiError(503, 'Unexpected knowledge API response')
+  }
+  const record = payload as Record<string, unknown>
+  if (record.data !== undefined) return record.data as T
+  return payload as T
+}
+
+export async function fetchOrbKnowledgeSummary() {
+  const payload = await authFetch('/orb/standalone/knowledge/summary')
+  return unwrapKnowledgeData<OrbKnowledgeLibrarySummary>(payload)
+}
+
+export async function fetchOrbKnowledgeSources(sourceType?: string) {
+  const query = sourceType ? `?source_type=${encodeURIComponent(sourceType)}` : ''
+  const payload = await authFetch(`/orb/standalone/knowledge/sources${query}`)
+  return unwrapKnowledgeData<OrbKnowledgeSource[]>(payload)
+}
+
+export async function ingestOrbKnowledgeText(body: {
+  title: string
+  text: string
+  source_type?: OrbKnowledgeSourceType
+  source_label?: string
+  description?: string
+}) {
+  const payload = await authFetch('/orb/standalone/knowledge/ingest', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  })
+  return unwrapKnowledgeData<{ source: OrbKnowledgeSource; chunk_count: number }>(payload)
+}
+
+export async function searchOrbKnowledge(query: string, limit = 8) {
+  const payload = await authFetch('/orb/standalone/knowledge/search', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query, limit })
+  })
+  return unwrapKnowledgeData<{ query: string; results: OrbKnowledgeSearchResult[]; total: number }>(payload)
+}
 
 export function standaloneOrbErrorMessage(error: unknown) {
   if (error instanceof AuthApiError) {

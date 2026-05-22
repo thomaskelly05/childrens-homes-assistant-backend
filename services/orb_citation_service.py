@@ -105,16 +105,23 @@ class OrbCitationService:
         """Legacy-compatible `sources` array for the standalone frontend."""
         payload: list[dict[str, Any]] = []
         for citation in citations:
-            payload.append(
-                {
-                    "id": citation.get("id"),
-                    "label": citation.get("label"),
-                    "type": citation.get("type"),
-                    "basis": citation.get("basis"),
-                    "note": citation.get("note") or citation.get("basis"),
-                    "live_retrieved": bool(citation.get("live_retrieved")),
-                }
-            )
+            source_type = _text(citation.get("type"))
+            entry: dict[str, Any] = {
+                "id": citation.get("id"),
+                "label": citation.get("label"),
+                "type": source_type,
+                "basis": citation.get("basis"),
+                "note": citation.get("note") or citation.get("basis"),
+                "live_retrieved": bool(citation.get("live_retrieved")),
+            }
+            if citation.get("document_chunk"):
+                entry["document_chunk"] = True
+                entry["origin"] = citation.get("origin")
+                entry["section"] = citation.get("section")
+                entry["page"] = citation.get("page")
+                entry["source_id"] = citation.get("source_id")
+                entry["chunk_index"] = citation.get("chunk_index")
+            payload.append(entry)
         return payload
 
     def citations_from_legacy_sources(self, sources: list[dict[str, Any]]) -> list[dict[str, Any]]:

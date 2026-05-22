@@ -10,6 +10,7 @@ from typing import Any
 from assistant.llm_provider import ChatStreamRequest, get_llm_provider
 from services.orb_citation_service import orb_citation_service
 from services.orb_knowledge_retrieval_service import orb_knowledge_retrieval_service
+from services.orb_rag_retrieval_service import orb_rag_retrieval_service
 from services.orb_standalone_sources import (
     INDICARE_PRODUCT_FALLBACK,
     append_sources_basis_section,
@@ -90,38 +91,62 @@ class OrbGeneralAssistantService:
         profile_context: bool = False,
         has_images: bool = False,
     ) -> dict[str, Any]:
-        classification = orb_knowledge_retrieval_service.classify_query(
-            message,
-            mode=mode,
-            profile_context=profile_context,
-            attachments=["image"] if has_images else None,
-        )
-        packs = orb_knowledge_retrieval_service.retrieve_sources(
-            message,
-            mode=mode,
-            profile_context=profile_context,
-            attachments=["image"] if has_images else None,
-        )
-        citations = orb_citation_service.build_citations(
-            packs,
-            message=message,
-            mode=mode,
-            has_images=has_images,
-        )
-        sources = orb_citation_service.frontend_sources_payload(citations)
-        return {
-            "classification": classification,
-            "source_packs": packs,
-            "citations": citations,
-            "sources": sources,
-            "grounding_context": orb_knowledge_retrieval_service.build_grounding_context(
+        try:
+            rag = orb_rag_retrieval_service.retrieve_for_conversation(
                 message,
                 mode=mode,
                 profile_context=profile_context,
                 attachments=["image"] if has_images else None,
-            ),
+            )
+        except Exception:
+            logger.debug("document RAG retrieval failed; using source packs only", exc_info=True)
+            classification = orb_knowledge_retrieval_service.classify_query(
+                message,
+                mode=mode,
+                profile_context=profile_context,
+                attachments=["image"] if has_images else None,
+            )
+            packs = orb_knowledge_retrieval_service.retrieve_sources(
+                message,
+                mode=mode,
+                profile_context=profile_context,
+                attachments=["image"] if has_images else None,
+            )
+            citations = orb_citation_service.build_citations(
+                packs,
+                message=message,
+                mode=mode,
+                has_images=has_images,
+            )
+            sources = orb_citation_service.frontend_sources_payload(citations)
+            return {
+                "classification": classification,
+                "source_packs": packs,
+                "document_results": [],
+                "citations": citations,
+                "sources": sources,
+                "grounding_context": orb_knowledge_retrieval_service.build_grounding_context(
+                    message,
+                    mode=mode,
+                    profile_context=profile_context,
+                    attachments=["image"] if has_images else None,
+                ),
+                "research_note": classification.get("research_note"),
+                "routing_hint": classification.get("routing_hint"),
+                "top_source_titles": [p.get("title") for p in packs if p.get("title")],
+            }
+
+        classification = rag["classification"]
+        return {
+            "classification": classification,
+            "source_packs": rag["source_packs"],
+            "document_results": rag.get("document_results") or [],
+            "citations": rag["citations"],
+            "sources": rag["sources"],
+            "grounding_context": rag["grounding_context"],
             "research_note": classification.get("research_note"),
             "routing_hint": classification.get("routing_hint"),
+            "top_source_titles": rag.get("top_source_titles") or [],
         }
 
     async def answer(
@@ -209,15 +234,23 @@ class OrbGeneralAssistantService:
 
     def _retrieval_context_used(self, retrieval: dict[str, Any]) -> dict[str, Any]:
         packs = retrieval.get("source_packs") or []
+        document_results = retrieval.get("document_results") or []
         live = any(bool(p.get("live_retrieved")) for p in packs)
+        strategy = (
+            "source_pack_plus_document_rag"
+            if document_results
+            else "built_in_source_pack"
+        )
         return {
             "surface": "standalone_orb_ai",
             "os_linked": False,
             "care_record_access": False,
             "retrieval": {
-                "strategy": "built_in_source_pack",
+                "strategy": strategy,
                 "live_retrieved": live,
                 "source_count": len(packs),
+                "document_result_count": len(document_results),
+                "top_source_titles": retrieval.get("top_source_titles") or [],
                 "routing_hint": retrieval.get("routing_hint"),
                 "research_intent": bool((retrieval.get("classification") or {}).get("research_intent")),
             },

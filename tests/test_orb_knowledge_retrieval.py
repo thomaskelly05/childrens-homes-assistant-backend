@@ -89,3 +89,9 @@ def test_build_grounding_context_is_honest_about_live_retrieval(retrieval):
 def test_routing_hint_for_research(retrieval):
     classification = retrieval.classify_query("find sources on regulation says")
     assert classification["routing_hint"] == "deep_research_foundation"
+
+
+def test_rag_retrieval_service_importable():
+    from services.orb_rag_retrieval_service import orb_rag_retrieval_service
+
+    assert orb_rag_retrieval_service is not None

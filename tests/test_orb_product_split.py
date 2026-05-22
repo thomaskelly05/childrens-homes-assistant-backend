@@ -230,6 +230,19 @@ DEDUPE_AND_SOURCES_MARKERS = [
     "orb_knowledge_retrieval_service",
     "orb_citation_service",
     "live_retrieved",
+    "Retrieved from ORB Knowledge Library",
+    "document_chunk",
+]
+
+KNOWLEDGE_LIBRARY_MARKERS = [
+    "Knowledge Library",
+    "Add source",
+    "orb-knowledge-library",
+    "fetchOrbKnowledgeSources",
+    "ingestOrbKnowledgeText",
+    "/orb/standalone/knowledge/sources",
+    "/orb/standalone/knowledge/ingest",
+    "/orb/standalone/knowledge/search",
 ]
 
 OS_ORB_LINK_FILES = [
@@ -425,6 +438,20 @@ def test_standalone_orb_dedupe_and_sources_markers():
     )
     for marker in DEDUPE_AND_SOURCES_MARKERS:
         assert marker in sources, f"dedupe/sources marker missing: {marker}"
+
+
+def test_standalone_orb_knowledge_library_ui():
+    sources = (
+        _read(ORB_COMPANION)
+        + _read(ORB_SIDEBAR)
+        + _read(STANDALONE_CLIENT)
+        + _read(REPO_ROOT / "frontend-next" / "components" / "orb-standalone" / "orb-knowledge-library.tsx")
+    )
+    forbidden = ["/api/os/", "/os/", "/api/orb/conversation", "getServerOsYoungPeople"]
+    for marker in forbidden:
+        assert marker not in sources, f"knowledge UI must not use {marker}"
+    for marker in KNOWLEDGE_LIBRARY_MARKERS:
+        assert marker in sources, f"knowledge library marker missing: {marker}"
 
 
 def test_standalone_orb_glow_component_exists():
