@@ -124,6 +124,7 @@ class CareHubIntelligenceService:
             current_user=actor,
             home_id=home_id,
             limit=limit,
+        )
         total_ms = round((time.perf_counter() - started) * 1000, 2)
         timing = {
             "total_ms": total_ms,
