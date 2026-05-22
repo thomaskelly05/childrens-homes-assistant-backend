@@ -16,6 +16,7 @@ The backend expects PostgreSQL and environment variables from `.env`.
 Important variables:
 
 - `DATABASE_URL`: local example `postgresql://indicare:indicare123@localhost:5432/childrens_homes`.
+- Database pool resilience (Render/production): see [render-db-startup-resilience.md](./render-db-startup-resilience.md) for `DB_CONNECT_TIMEOUT_SECONDS`, `DB_INIT_RETRIES`, `DB_INIT_RETRY_DELAY_SECONDS`, `DB_REQUIRED_ON_STARTUP`, `DB_POOL_MIN`, and `DB_POOL_MAX`.
 - Auth/session/CSRF secret values.
 - AI provider keys where assistant model calls are enabled.
 - File storage settings where document upload/export is enabled.
@@ -77,6 +78,7 @@ Playwright tests that touch APIs need the FastAPI backend running on `8000`.
 The app should:
 
 - Fail fast if required auth/session/security routers cannot load.
+- Start in degraded mode when PostgreSQL is temporarily unreachable at boot unless `DB_REQUIRED_ON_STARTUP=true` (see [render-db-startup-resilience.md](./render-db-startup-resilience.md)).
 - Log optional router failures clearly.
 - Expose router status through OS diagnostics.
 - Keep compatibility routes mounted unless a migration plan exists.
