@@ -98,6 +98,14 @@ def test_get_db_connection_fails_quickly_when_pool_slot_unavailable(monkeypatch)
     connection._db_pool_slots.acquire.assert_called_once()
 
 
+def test_pool_status_reflects_configured_min_and_max(monkeypatch):
+    monkeypatch.setattr(connection, "DB_POOL_MIN", 3)
+    monkeypatch.setattr(connection, "DB_POOL_MAX", 11)
+    pool = connection.pool_status()
+    assert pool["min"] == 3
+    assert pool["max"] == 11
+
+
 def test_db_connection_context_manager_releases_connection(monkeypatch):
     mock_conn = MagicMock()
     mock_conn.closed = False

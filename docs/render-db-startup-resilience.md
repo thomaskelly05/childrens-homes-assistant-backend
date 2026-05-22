@@ -15,8 +15,8 @@ Render may restart a service repeatedly if Uvicorn exits before binding a port. 
 | `DB_INIT_RETRIES` | `3` | Pool creation attempts at startup. |
 | `DB_INIT_RETRY_DELAY_SECONDS` | `2` | Sleep between pool init retries. |
 | `DB_REQUIRED_ON_STARTUP` | `false` | If `true`, startup fails when the pool cannot be created. |
-| `DB_POOL_MIN` | `5` | Minimum pooled connections. |
-| `DB_POOL_MAX` | `25` | Maximum pooled connections. |
+| `DB_POOL_MIN` | `5` | Minimum pooled connections (code default). On Render production, set `1`. |
+| `DB_POOL_MAX` | `25` | Maximum pooled connections (code default). On Render production, set `10`. |
 
 Worst-case startup wait is roughly: `DB_INIT_RETRIES × (DB_CONNECT_TIMEOUT_SECONDS + DB_INIT_RETRY_DELAY_SECONDS)` — not 30+ seconds on a single attempt.
 
@@ -32,7 +32,8 @@ Worst-case startup wait is roughly: `DB_INIT_RETRIES × (DB_CONNECT_TIMEOUT_SECO
 1. Confirm `DATABASE_URL` is correct (dashboard → Postgres → Connections).
 2. Place backend and Postgres in a compatible region; prefer Render **internal** database URL when both services share account/region.
 3. Set `DB_CONNECT_TIMEOUT_SECONDS=5`, `DB_INIT_RETRIES=3`, `DB_REQUIRED_ON_STARTUP=false` for resilient boot.
-4. Set `DB_REQUIRED_ON_STARTUP=true` only if you explicitly want the process to exit when Postgres is unreachable at boot.
+4. Set `DB_POOL_MIN=1` and `DB_POOL_MAX=10` on Render so concurrent dashboard loads do not exhaust the pool against Postgres connection limits.
+5. Set `DB_REQUIRED_ON_STARTUP=true` only if you explicitly want the process to exit when Postgres is unreachable at boot.
 
 ## Security
 
