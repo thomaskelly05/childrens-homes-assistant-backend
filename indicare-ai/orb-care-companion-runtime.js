@@ -1,3 +1,7 @@
+/**
+ * @deprecated Use orb-care-companion-runtime-v2.js with orb-care-companion-config.js.
+ * This legacy runtime called OS-linked POST /orb/conversation. Do not load from /orb or any production surface.
+ */
 import { bootstrapOpenAIVoiceRuntime } from './realtime/openai-voice-runtime-bootstrap.js'
 
 const root = document.getElementById('orbAiRoot')

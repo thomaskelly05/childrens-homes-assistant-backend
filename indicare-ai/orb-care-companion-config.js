@@ -15,7 +15,8 @@ export const ORB_CARE_COMPANION_CONFIG = {
   ],
   endpoints: {
     config: '/orb/standalone/config',
-    conversation: '/orb/standalone/conversation'
+    conversation: '/orb/standalone/conversation',
+    health: '/orb/standalone/health'
   },
   modeDetails: {
     'Ask ORB': 'Standalone voice-first guidance for residential care practice. ORB supports reflection, safeguarding thinking and Ofsted-ready practice without accessing OS records.',
