@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import Counter
 from typing import Any
 
 from services.evidence_quality_service import evidence_quality_service
@@ -18,232 +19,156 @@ class InspectionIntelligenceService:
         ]
         return {
             "status": "review_recommended" if quality["review_required"] or weak_sections else "monitor",
-            "confidence": quality["confidence"],
-            "context": quality["context"],
-            "supportive_summary": self._supportive_summary(evidence=evidence, weak_sections=weak_sections),
-            "questions_answered": [pattern["question"] for pattern in patterns],
-            "quality_patterns": patterns,
-            "weakly_evidenced_standards": weak_sections,
-            "recommendations": self._recommendations(patterns, weak_sections),
-            "chronology_quality_indicators": self._chronology_quality_indicators(evidence=evidence, patterns=patterns),
-            "evidence_sufficiency_indicators": self._evidence_sufficiency_indicators(evidence=evidence, weak_sections=weak_sections),
-            "operational_inspection_signals": self._operational_inspection_signals(evidence=evidence),
-            "annex_a_readiness": (workspace or {}).get("annex_a", {}),
-            "document_completeness": (workspace or {}).get("document_gaps", {}),
-            "calm_readiness_language": [
-                "review recommended",
-                "limited evidence found",
-                "ready for manager review",
-                "consider strengthening evidence",
-                "no evidence found",
-            ],
-            "inspection_narrative_builder": self._narrative_builder(patterns=patterns, weak_sections=weak_sections),
-            "what_inspectors_may_ask": self._what_inspectors_may_ask(patterns=patterns, weak_sections=weak_sections),
-            "what_has_improved": self._what_has_improved(evidence=evidence),
-            "what_still_needs_oversight": self._what_still_needs_oversight(evidence=evidence, weak_sections=weak_sections),
-            "practical_improvement_prompts": self._practical_improvement_prompts(evidence=evidence, weak_sections=weak_sections),
-            "guardrails": [
-                "No definitive safeguarding conclusions are generated.",
-                "All outputs require professional review against source records.",
-                "Claims are limited to visible workspace evidence and gaps.",
-            ],
+            "review_required": quality["review_required"],
+            "patterns": patterns,
+            "weak_sections": weak_sections,
+            "summary": quality["summary"],
         }
 
-    def _recommendations(self, patterns: list[dict[str, Any]], weak_sections: list[dict[str, Any]]) -> list[dict[str, str]]:
-        recommendations = [
-            {
-                "priority": "review" if pattern.get("severity") == "review" else "monitor",
-                "action": pattern.get("recommendation") or "Review visible evidence.",
-                "reason": pattern.get("reasoning") or "Pattern identified in evidence quality analysis.",
-            }
-            for pattern in patterns
-        ]
-        for section in weak_sections:
-            recommendations.append({
-                "priority": "review",
-                "action": f"Strengthen evidence for {section.get('title')}.",
-                "reason": "No visible evidence cards were found for this judgement area.",
-            })
-        return recommendations or [{
-            "priority": "monitor",
-            "action": "Continue sampling records for child-centred impact and manager oversight.",
-            "reason": "In the visible sample, evidence does not currently show priority gaps.",
-        }]
+    def analyse(
+        self,
+        *,
+        events: list[dict[str, Any]],
+        manager_queue: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        manager_queue = manager_queue or {}
+        queue_items = manager_queue.get("items") or []
 
-    def _chronology_quality_indicators(self, *, evidence: dict[str, Any], patterns: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        cards = evidence.get("cards") or []
-        source_linked = [
-            card for card in cards
-            if card.get("href") or card.get("record_id") or card.get("source_record_id")
-        ]
-        weak_follow_up = [
-            pattern for pattern in patterns
-            if "follow" in str(pattern.get("question", "")).lower() or "follow" in str(pattern.get("recommendation", "")).lower()
-        ]
-        return [
-            {
-                "key": "source_links",
-                "status": "visible" if source_linked else "needs_review",
-                "reason": "Inspection claims should open back to chronology or source evidence.",
-                "evidence_links": self._links(source_linked),
-            },
-            {
-                "key": "follow_up_detail",
-                "status": "needs_review" if weak_follow_up else "monitor",
-                "reason": "Several incidents may need clearer follow-up, outcome or manager oversight detail." if weak_follow_up else "No priority follow-up gap is visible in current patterns.",
-                "evidence_links": self._links([link for pattern in weak_follow_up for link in pattern.get("evidence_links", [])]),
-            },
-        ]
+        safeguarding_events = [event for event in events if event.get("safeguarding")]
+        child_voice_gaps = [item for item in queue_items if item.get("child_voice_gap")]
+        evidence_gaps = [item for item in queue_items if item.get("evidence_gap")]
+        workflow_gaps = [item for item in queue_items if item.get("category") == "workflow"]
+        review_gaps = [item for item in queue_items if item.get("category") == "manager_review"]
 
-    def _evidence_sufficiency_indicators(self, *, evidence: dict[str, Any], weak_sections: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        cards = evidence.get("cards") or []
-        gaps = evidence.get("gaps") or []
-        return [
-            {
-                "key": "lived_experience",
-                "status": "needs_review" if any("child voice" in str(gap).lower() for gap in gaps) else "monitor",
-                "reason": "This child has limited lived experience evidence." if gaps else "Visible evidence should still be sampled for child voice and impact.",
-            },
-            {
-                "key": "judgement_coverage",
-                "status": "needs_review" if weak_sections else "visible",
-                "reason": f"{len(weak_sections)} judgement area(s) have weak visible coverage." if weak_sections else "Judgement areas have visible cards in the current evidence set.",
-            },
-            {
-                "key": "record_volume",
-                "status": "visible" if len(cards) >= 3 else "needs_review",
-                "reason": "Evidence volume is low; strengthen with chronology, direct work and manager review links." if len(cards) < 3 else "Evidence volume is sufficient for a manager sampling pass.",
-            },
-        ]
+        emotional_counter: Counter[str] = Counter()
+        risk_counter: Counter[str] = Counter()
+        for event in events:
+            emotional_counter.update(event.get("emotional_tags") or [])
+            risk_counter.update(event.get("risk_tags") or [])
 
-    def _narrative_builder(self, *, patterns: list[dict[str, Any]], weak_sections: list[dict[str, Any]]) -> dict[str, Any]:
+        overall_readiness = self._overall_readiness(
+            safeguarding_events=safeguarding_events,
+            child_voice_gaps=child_voice_gaps,
+            evidence_gaps=evidence_gaps,
+            workflow_gaps=workflow_gaps,
+            review_gaps=review_gaps,
+        )
+
+        concerns: list[str] = []
+        if safeguarding_events:
+            concerns.append(f"{len(safeguarding_events)} safeguarding-linked operational event(s) require oversight.")
+        if child_voice_gaps:
+            concerns.append(f"{len(child_voice_gaps)} record(s) appear to have weak or missing child voice.")
+        if evidence_gaps:
+            concerns.append(f"{len(evidence_gaps)} inspection-relevant record(s) have no linked evidence.")
+        if workflow_gaps:
+            concerns.append(f"{len(workflow_gaps)} workflow item(s) are incomplete or awaiting progression.")
+        if review_gaps:
+            concerns.append(f"{len(review_gaps)} record(s) are awaiting management review or oversight.")
+
+        missing_evidence = [
+            "Manager sign-off",
+            "Restorative follow-up",
+            "Child voice",
+            "Linked chronology evidence",
+        ] if evidence_gaps else []
+
+        weak_areas: list[str] = []
+        if child_voice_gaps:
+            weak_areas.append("Child voice consistency")
+        if evidence_gaps:
+            weak_areas.append("Evidence linkage")
+        if review_gaps:
+            weak_areas.append("Management oversight")
+        if workflow_gaps:
+            weak_areas.append("Workflow completion")
+
+        sccif_domains = {
+            "children_experiences": self._domain_score(total=len(events), penalties=len(child_voice_gaps) + len(evidence_gaps)),
+            "help_and_protection": self._domain_score(total=max(1, len(events)), penalties=len(safeguarding_events)),
+            "leadership_and_management": self._domain_score(total=max(1, len(queue_items)), penalties=len(review_gaps) + len(workflow_gaps)),
+            "workforce_practice": self._domain_score(total=max(1, len(events)), penalties=len(child_voice_gaps)),
+        }
+
         return {
-            "opening": "Start with what children experience, then show the evidence trail.",
-            "evidence_prompts": [
-                "Which chronology entries show change over time?",
-                "Where is child voice visible?",
-                "What follow-up changed the outcome?",
-                "Which manager review confirms oversight?",
-            ],
-            "priority_gaps": [pattern.get("question") for pattern in patterns[:5]] + [section.get("title") for section in weak_sections[:3]],
-            "unsupported_conclusion_guard": "Use 'visible evidence suggests' or 'records show' only when source links are present.",
-            "tone": "supportive, practical and evidence-led; avoid fear-based scoring.",
+            "ok": True,
+            "overall_readiness": overall_readiness,
+            "concerns": concerns,
+            "missing_evidence": missing_evidence,
+            "weak_areas": weak_areas,
+            "sccif_domains": sccif_domains,
+            "ofsted_challenge_questions": self._challenge_questions(
+                child_voice_gaps=child_voice_gaps,
+                evidence_gaps=evidence_gaps,
+                safeguarding_events=safeguarding_events,
+                review_gaps=review_gaps,
+                risk_counter=risk_counter,
+                emotional_counter=emotional_counter,
+            ),
+            "operational_summary": self._summary(overall_readiness, concerns),
         }
 
-    def _what_inspectors_may_ask(self, *, patterns: list[dict[str, Any]], weak_sections: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        questions = [
-            {
-                "question": "How do you know the child felt heard?",
-                "reason": "Inspectors often test lived experience, child voice and direct work evidence.",
-                "evidence_links": [],
-            },
-            {
-                "question": "What changed after the incident or concern?",
-                "reason": "Follow-up detail must show impact, not only activity.",
-                "evidence_links": [],
-            },
-        ]
-        for pattern in patterns[:4]:
-            questions.append({
-                "question": pattern.get("question") or "What evidence supports this judgement?",
-                "reason": pattern.get("reasoning") or "Visible evidence pattern requires manager sampling.",
-                "evidence_links": pattern.get("evidence_links") or [],
-            })
-        for section in weak_sections[:3]:
-            questions.append({
-                "question": f"What evidence supports {section.get('title')}?",
-                "reason": "This judgement area currently has weak visible coverage.",
-                "evidence_links": [],
-            })
-        return questions[:8]
+    def _overall_readiness(
+        self,
+        *,
+        safeguarding_events: list[dict[str, Any]],
+        child_voice_gaps: list[dict[str, Any]],
+        evidence_gaps: list[dict[str, Any]],
+        workflow_gaps: list[dict[str, Any]],
+        review_gaps: list[dict[str, Any]],
+    ) -> str:
+        pressure = (
+            len(safeguarding_events)
+            + len(child_voice_gaps)
+            + len(evidence_gaps)
+            + len(workflow_gaps)
+            + len(review_gaps)
+        )
+        if pressure >= 12:
+            return "requires_immediate_attention"
+        if pressure >= 6:
+            return "watching"
+        return "good"
 
-    def _operational_inspection_signals(self, *, evidence: dict[str, Any]) -> list[dict[str, Any]]:
-        cards = evidence.get("cards") or []
-        gaps = evidence.get("gaps") or []
-        text = " ".join(str(card.get(key, "")) for card in cards for key in ("title", "summary", "description", "outcome", "theme")).lower()
-        gap_text = " ".join(str(gap) for gap in gaps).lower()
-        checks = [
-            ("weak_child_voice", any(term in gap_text for term in ("child voice", "wishes", "feelings")) or "child said" not in text, "Limited evidence found for the child's wishes, feelings or direct work."),
-            ("weak_oversight_evidence", "manager" not in text and "oversight" not in text and "reviewed" not in text, "Review may be helpful where leadership oversight is not visible."),
-            ("incomplete_follow_up", any(term in text for term in ("follow-up", "follow up", "outstanding", "open")) and "completed" not in text, "Follow-up appears incomplete; consider adding owner, date and outcome."),
-            ("sparse_lived_experience", len(cards) < 3 or "felt" not in text, "Consider expanding lived experience evidence from daily notes, direct work or chronology."),
-            ("weak_progress_evidence", any(term in text for term in ("improved", "settled", "progress")) and not any(term in text for term in ("because", "shown by", "evidenced", "recorded")), "Progress language may need clearer source evidence."),
-            ("unresolved_safeguarding_themes", any(term in text for term in ("safeguarding", "missing", "police", "strategy")) and any(term in text for term in ("ongoing", "open", "monitor")), "Safeguarding themes appear unresolved; manager review may be helpful."),
-            ("chronology_continuity_gaps", "chronology" not in text and not any(card.get("href") or card.get("record_id") for card in cards), "Chronology continuity could be strengthened with source links."),
-            ("missing_leadership_review", "registered manager" not in text and "leadership" not in text, "Leadership review evidence appears limited in the current sample."),
-            ("weak_action_outcome_tracking", "action" in text and "outcome" not in text, "Action outcome tracking may need clearer impact detail."),
-        ]
-        return [
-            {"key": key, "status": "needs_review", "summary": summary, "evidence_links": self._links(cards)}
-            for key, condition, summary in checks
-            if condition
-        ]
+    def _domain_score(self, *, total: int, penalties: int) -> dict[str, Any]:
+        score = max(0, min(100, int(100 - ((penalties / max(1, total)) * 35))))
+        grade = "strong" if score >= 80 else "developing" if score >= 55 else "weak"
+        return {"score": score, "grade": grade}
 
-    def _what_has_improved(self, *, evidence: dict[str, Any]) -> list[dict[str, Any]]:
-        cards = evidence.get("cards") or []
-        improved = [
-            card for card in cards
-            if any(term in str(card).lower() for term in ("improved", "settled", "progress", "achieved", "positive", "repaired"))
-        ]
-        return [
-            {
-                "summary": card.get("summary") or card.get("title") or "Visible progress evidence found.",
-                "evidence_links": self._links([card]),
-                "language": "records show visible progress language; source review remains required.",
-            }
-            for card in improved[:5]
-        ]
+    def _challenge_questions(
+        self,
+        *,
+        child_voice_gaps: list[dict[str, Any]],
+        evidence_gaps: list[dict[str, Any]],
+        safeguarding_events: list[dict[str, Any]],
+        review_gaps: list[dict[str, Any]],
+        risk_counter: Counter[str],
+        emotional_counter: Counter[str],
+    ) -> list[str]:
+        questions: list[str] = []
 
-    def _what_still_needs_oversight(self, *, evidence: dict[str, Any], weak_sections: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        cards = evidence.get("cards") or []
-        unresolved = [
-            card for card in cards
-            if any(term in str(card).lower() for term in ("open", "overdue", "follow-up", "follow up", "monitor", "ongoing"))
-        ]
-        items = [
-            {
-                "summary": card.get("summary") or card.get("title") or "Follow-up may need oversight.",
-                "evidence_links": self._links([card]),
-                "language": "follow-up appears incomplete; review may be helpful.",
-            }
-            for card in unresolved[:5]
-        ]
-        items.extend({
-            "summary": f"Limited evidence found for {section.get('title')}.",
-            "evidence_links": [],
-            "language": "consider expanding source evidence before inspection sampling.",
-        } for section in weak_sections[:3])
-        return items[:8]
+        if child_voice_gaps:
+            questions.append("How do leaders ensure children's wishes and feelings are consistently reflected in records?")
+        if evidence_gaps:
+            questions.append("Can leaders demonstrate clear evidence linkage and oversight for significant events?")
+        if safeguarding_events:
+            questions.append("How are safeguarding patterns identified, escalated and reviewed by leaders?")
+        if review_gaps:
+            questions.append("How do managers maintain effective oversight of operational records and decision making?")
+        if risk_counter:
+            top_risk = risk_counter.most_common(1)[0][0]
+            questions.append(f"What action is being taken to reduce repeated {top_risk} indicators?")
+        if emotional_counter:
+            top_emotion = emotional_counter.most_common(1)[0][0]
+            questions.append(f"How are staff responding to repeated emotional presentation themes such as {top_emotion}?")
+        if not questions:
+            questions.append("What evidence best demonstrates positive experiences and progress for children?")
+        return questions
 
-    def _supportive_summary(self, *, evidence: dict[str, Any], weak_sections: list[dict[str, Any]]) -> str:
-        cards = evidence.get("cards") or []
-        if weak_sections:
-            return "In the visible sample, some evidence areas would benefit from clearer source links, child voice or oversight."
-        if cards:
-            return "In the visible sample, inspection evidence is available for calm manager review."
-        return "No visible evidence sample has been provided yet; start with chronology, child voice and oversight links."
-
-    def _practical_improvement_prompts(self, *, evidence: dict[str, Any], weak_sections: list[dict[str, Any]]) -> list[str]:
-        prompts = [
-            "Open the source chronology before changing any conclusion.",
-            "Add what changed for the child after the action or support.",
-            "Name child voice where it is known, or explain why it is not available.",
-        ]
-        if weak_sections:
-            prompts.append("Choose one weak judgement area and add two source-linked examples.")
-        if len(evidence.get("cards") or []) < 3:
-            prompts.append("Increase the sample before relying on readiness language.")
-        return prompts[:5]
-
-    def _links(self, items: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        return [
-            {
-                "id": item.get("id") or item.get("record_id") or item.get("source_record_id"),
-                "title": item.get("title") or item.get("summary") or "Source record",
-                "href": item.get("href") or item.get("url"),
-            }
-            for item in items[:8]
-        ]
+    def _summary(self, readiness: str, concerns: list[str]) -> str:
+        if not concerns:
+            return "Inspection intelligence found no immediate operational concerns from the supplied evidence."
+        return f"Inspection readiness is currently '{readiness}' with {len(concerns)} identified operational concern(s)."
 
 
 inspection_intelligence_service = InspectionIntelligenceService()

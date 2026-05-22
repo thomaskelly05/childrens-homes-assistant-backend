@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
 from db.connection import get_db_connection, release_db_connection
 from services.manager_intelligence_service import ManagerIntelligenceService
 from services.document_os_core import evidence_ref, matching_records, NO_EVIDENCE_FOUND
+from services.operational_feed_service import build_operational_feed
 
 
 class ProviderIntelligenceService:
@@ -62,6 +64,114 @@ class ProviderIntelligenceService:
             "days": days,
             "summary": self._summary(results),
             "homes": sorted(results, key=lambda item: self._risk_score(item.get("risk")), reverse=True),
+        }
+
+    def _home_snapshot_from_feed(self, home: dict[str, Any], feed: dict[str, Any]) -> dict[str, Any]:
+        home_id = self._safe_int(home.get("id"))
+        climate = (feed.get("home_operational_intelligence") or {}).get("home_climate") or {}
+        inspection = feed.get("inspection_intelligence") or {}
+        queue = feed.get("manager_queue") or {}
+        return {
+            "home_id": home_id,
+            "home_name": home.get("name") or f"Home {home_id}",
+            "safeguarding_pressure": climate.get("safeguarding_pressure"),
+            "emotional_climate": climate.get("emotional_climate"),
+            "workforce_pressure": climate.get("workforce_pressure"),
+            "inspection_readiness": inspection.get("overall_readiness"),
+            "manager_queue_total": queue.get("total"),
+            "event_count": feed.get("event_count"),
+        }
+
+    def _build_home_feed_snapshot(self, conn: Any, home: dict[str, Any], *, limit: int) -> dict[str, Any] | None:
+        home_id = self._safe_int(home.get("id"))
+        if not home_id:
+            return None
+        feed = build_operational_feed(conn, home_id=home_id, limit=limit)
+        return self._home_snapshot_from_feed(home, feed)
+
+    def build_operational_convergence(
+        self,
+        conn: Any,
+        *,
+        current_user: dict[str, Any],
+        limit: int = 30,
+        max_workers: int = 4,
+    ) -> dict[str, Any]:
+        """Cross-home operational convergence from live operational feed intelligence."""
+        homes = self._homes_for_user(current_user)
+        home_snapshots: list[dict[str, Any]] = []
+        eligible = [home for home in homes if self._safe_int(home.get("id"))]
+
+        if len(eligible) <= 1:
+            for home in eligible:
+                snapshot = self._build_home_feed_snapshot(conn, home, limit=limit)
+                if snapshot:
+                    home_snapshots.append(snapshot)
+        else:
+            workers = min(max_workers, len(eligible))
+            with ThreadPoolExecutor(max_workers=workers) as executor:
+                futures = {
+                    executor.submit(self._build_home_feed_snapshot, conn, home, limit=limit): home
+                    for home in eligible
+                }
+                for future in as_completed(futures):
+                    snapshot = future.result()
+                    if snapshot:
+                        home_snapshots.append(snapshot)
+
+        safeguarding_scores = [
+            int((snap.get("safeguarding_pressure") or {}).get("pressure_score") or 0)
+            for snap in home_snapshots
+        ]
+        emotional_unsettled = sum(
+            1 for snap in home_snapshots if (snap.get("emotional_climate") or {}).get("state") == "unsettled"
+        )
+        inspection_risk = sum(
+            1 for snap in home_snapshots if snap.get("inspection_readiness") == "requires_immediate_attention"
+        )
+        workforce_pressure = sum(
+            int((snap.get("workforce_pressure") or {}).get("queue_items") or 0) for snap in home_snapshots
+        )
+        placement_pressure = sum(
+            1 for snap in home_snapshots if (snap.get("safeguarding_pressure") or {}).get("state") != "stable"
+        )
+
+        escalation_score = min(
+            100,
+            sum(safeguarding_scores) + (emotional_unsettled * 5) + (inspection_risk * 10) + min(workforce_pressure, 30),
+        )
+
+        return {
+            "ok": True,
+            "cross_home_safeguarding_pressure": {
+                "total_pressure_score": sum(safeguarding_scores),
+                "homes_under_pressure": sum(
+                    1 for snap in home_snapshots
+                    if (snap.get("safeguarding_pressure") or {}).get("state") != "stable"
+                ),
+            },
+            "cross_home_emotional_climate": {
+                "unsettled_homes": emotional_unsettled,
+                "homes": [
+                    {"home_id": snap["home_id"], "state": (snap.get("emotional_climate") or {}).get("state")}
+                    for snap in home_snapshots
+                ],
+            },
+            "provider_inspection_risk": {
+                "homes_requiring_attention": inspection_risk,
+                "readiness_breakdown": [snap.get("inspection_readiness") for snap in home_snapshots],
+            },
+            "workforce_pressure": {"total_queue_items": workforce_pressure},
+            "placement_stability_indicators": {"homes_with_pressure": placement_pressure},
+            "home_comparison": sorted(
+                home_snapshots,
+                key=lambda item: int((item.get("safeguarding_pressure") or {}).get("pressure_score") or 0),
+                reverse=True,
+            ),
+            "operational_escalation_score": escalation_score,
+            "summary": (
+                f"Provider intelligence across {len(home_snapshots)} home(s) with escalation score {escalation_score}."
+            ),
         }
 
     def build_os_snapshot(self, *, records: list[dict[str, Any]], current_user: dict[str, Any] | None = None) -> dict[str, Any]:

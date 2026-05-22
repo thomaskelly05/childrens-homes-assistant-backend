@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from datetime import timezone, datetime
+from datetime import datetime, timezone
 
 from life_echo.schemas import (
     EmotionalTone,

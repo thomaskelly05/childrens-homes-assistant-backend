@@ -3,9 +3,14 @@ import Link from 'next/link'
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
 import { OperationalQuickActions } from '@/components/indicare/operational/operational-quick-actions'
 import { Card, PageHeader, StatCard, StatusBadge } from '@/components/indicare/ui'
-import { getGovernanceCommandCentre } from '@/lib/os-api/governance'
-import { getCommandCentre } from '@/lib/os-api/platform'
-import { getWorkforceCommandCentre } from '@/lib/os-api/workforce'
+import { CareHubIntelligenceWidgets } from '@/components/indicare/care-hub/care-hub-widgets'
+import {
+  getCareHub,
+  mapCareHubGovernanceSlice,
+  mapCareHubToCommandCentre,
+  mapCareHubWorkforceSlice
+} from '@/lib/os-api/care-hub'
+import { getOsYoungPeople } from '@/lib/os-api/workspaces'
 import { buildCommandCentreSignals, buildReflectivePrompts } from '@/lib/operational/cognition-metrics'
 
 type FeedItem = {
@@ -36,7 +41,20 @@ function shortDate(value?: string) {
   return date.toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
 }
 
-function buildLiveFeed(platformData: Awaited<ReturnType<typeof getCommandCentre>>['data']): FeedItem[] {
+function buildLiveFeed(platformData: {
+  chronology: Array<{
+    id: string
+    title: string
+    summary?: string
+    fullText?: string
+    eventType: string
+    sourceType: string
+    sourceId?: string
+    dateTime?: string
+    createdAt?: string
+  }>
+  actions: Array<{ id: string; title: string; description?: string; status: string; priority?: string; dueDate?: string; createdAt?: string }>
+}) {
   const chronology = platformData.chronology.slice(0, 8).map((event) => ({
     id: `chronology-${event.id}`,
     title: event.title || event.eventType.replaceAll('_', ' '),
@@ -60,12 +78,12 @@ function buildLiveFeed(platformData: Awaited<ReturnType<typeof getCommandCentre>
 }
 
 function buildCognitionItems(
-  platformData: Awaited<ReturnType<typeof getCommandCentre>>['data'],
-  governanceData: Awaited<ReturnType<typeof getGovernanceCommandCentre>>['data'],
-  workforceData: Awaited<ReturnType<typeof getWorkforceCommandCentre>>['data']
+  platformData: ReturnType<typeof mapCareHubToCommandCentre>['data'],
+  governanceData: ReturnType<typeof mapCareHubGovernanceSlice>,
+  workforceData: ReturnType<typeof mapCareHubWorkforceSlice>
 ) {
   const prompts = buildReflectivePrompts(platformData, governanceData, workforceData)
-  const evidenceGaps = Number(governanceData.summary?.evidence_gaps || 0) || platformData.evidence.filter((item) => ['draft', 'partial', 'review_required'].includes(item.quality)).length
+  const evidenceGaps = Number(governanceData.summary?.evidence_gaps || 0)
   return [
     { label: 'What changed today', value: `${platformData.chronology.length} live records visible`, href: '/chronology' },
     { label: 'What needs attention', value: platformData.attention[0]?.title || 'No urgent care hub alerts returned', href: platformData.attention[0]?.href || '/command-centre' },
@@ -78,13 +96,11 @@ function buildCognitionItems(
 }
 
 export default async function UnifiedCommandCentrePage() {
-  const platform = await getCommandCentre()
-  const governance = await getGovernanceCommandCentre()
-  const workforce = await getWorkforceCommandCentre()
-
+  const [careHub, people] = await Promise.all([getCareHub({ limit: 50 }), getOsYoungPeople()])
+  const platform = mapCareHubToCommandCentre(careHub, people)
   const platformData = platform.data
-  const governanceData = governance.data
-  const workforceData = workforce.data
+  const governanceData = mapCareHubGovernanceSlice(careHub.data)
+  const workforceData = mapCareHubWorkforceSlice(careHub.data)
   const signals = buildCommandCentreSignals(platformData, governanceData, workforceData)
   const selectedChild = platformData.children?.[0]
   const recentIncidents = countEvents(platformData.chronology, /incident|restraint|physical intervention|distress|harm/)
@@ -99,43 +115,45 @@ export default async function UnifiedCommandCentrePage() {
   const cognitionItems = buildCognitionItems(platformData, governanceData, workforceData)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-8">
       <PageHeader
         eyebrow="Care Hub"
         title="Today in the home"
         description="One calm starting point for the shift: children, staff, live records, evidence, actions and ORB cognition in the same operational picture."
-        action={<Link prefetch={false} href="/orb?context=care-hub&q=What needs attention now?" className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg shadow-slate-950/20">Ask ORB</Link>}
+        action={
+          <Link
+            prefetch={false}
+            href="/orb?context=care-hub&q=What needs attention now?"
+            className="inline-flex min-h-11 items-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg shadow-slate-950/20"
+          >
+            Ask ORB
+          </Link>
+        }
       />
 
-      <section className="grid gap-3 md:grid-cols-3">
+      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         <LiveDataStatus result={platform} />
-        <LiveDataStatus result={governance} />
-        <LiveDataStatus result={workforce} />
+        <LiveDataStatus result={careHub} />
       </section>
 
-      <div className="grid gap-6 xl:grid-cols-[1.4fr_0.9fr]">
-        <Card>
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,0.9fr)]">
+        <Card className="min-w-0">
           <p className="text-[11px] font-black uppercase tracking-[0.24em] text-blue-700">Today&apos;s home picture</p>
-          <h2 className="mt-2 text-2xl font-black tracking-[-0.04em] text-slate-950">What adults need to know before recording or handing over</h2>
+          <h2 className="mt-2 text-2xl font-black tracking-[-0.04em] text-slate-950 sm:text-3xl">What adults need to know before recording or handing over</h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-            Pulled from existing children, workforce, chronology, evidence and action records. No separate dashboard data is created here.
+            Pulled from the live Care Hub operational feed. Legacy parallel dashboard fan-out has been retired for this page.
           </p>
 
-          <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {signals.slice(0, 4).map((signal) => (
-              <StatCard
-                key={signal.label}
-                label={signal.label}
-                value={signal.value}
-                detail={signal.detail}
-              />
+              <StatCard key={signal.label} label={signal.label} value={signal.value} detail={signal.detail} />
             ))}
           </div>
 
-          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {[
               ['Children in home', platformData.children.length, 'Visible child records'],
-              ['Staff on shift', platformData.workforce.length || workforceData.alerts.length, 'Workforce records and alerts'],
+              ['Staff on shift', platformData.workforce.length || Number(workforceData.summary?.queue_total || 0), 'Workforce queue from Care Hub'],
               ['Recent incidents', recentIncidents, 'Incident and distress markers'],
               ['Missing episodes', missingEpisodes, 'Missing or away-from-home markers'],
               ['Appointments', appointments, 'Health, education and meeting markers'],
@@ -160,13 +178,17 @@ export default async function UnifiedCommandCentrePage() {
         />
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-        <Card>
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+        <Card className="min-w-0">
           <p className="text-[11px] font-black uppercase tracking-[0.24em] text-blue-700">Live operational feed</p>
-          <h2 className="mt-2 text-2xl font-black tracking-[-0.04em] text-slate-950">Daily care, incidents, handover, medication, appointments and actions</h2>
+          <h2 className="mt-2 text-2xl font-black tracking-[-0.04em] text-slate-950 sm:text-3xl">Daily care, incidents, handover, medication, appointments and actions</h2>
           <div className="mt-5 space-y-3">
             {feed.map((item) => (
-              <Link key={item.id} href={item.href} className="block rounded-2xl border border-slate-100 bg-slate-50 p-4 transition hover:border-blue-100 hover:bg-blue-50/50">
+              <Link
+                key={item.id}
+                href={item.href}
+                className="block rounded-2xl border border-slate-100 bg-slate-50 p-4 transition hover:border-blue-100 hover:bg-blue-50/50 active:scale-[0.99]"
+              >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-sm font-black text-slate-950">{item.title}</p>
                   <StatusBadge value={item.type.replaceAll('_', ' ')} />
@@ -183,22 +205,26 @@ export default async function UnifiedCommandCentrePage() {
           </div>
         </Card>
 
-        <Card className="bg-slate-950 text-white ring-slate-800">
+        <Card className="min-w-0 bg-slate-950 text-white ring-slate-800">
           <p className="text-[11px] font-black uppercase tracking-[0.24em] text-blue-300">ORB cognition panel</p>
-          <h2 className="mt-2 text-2xl font-black tracking-[-0.04em] text-white">Attention, atmosphere and evidence</h2>
+          <h2 className="mt-2 text-2xl font-black tracking-[-0.04em] text-white sm:text-3xl">Attention, atmosphere and evidence</h2>
           <p className="mt-2 text-sm font-semibold leading-6 text-slate-300">
             ORB summary: ORB can help with IndiCare work and everyday questions. Care questions use scoped records, citations and review guardrails; everyday questions do not retrieve care records.
           </p>
           <div data-testid="care-hub-operational-pulse" className="mt-4 grid gap-2 sm:grid-cols-2">
             {['What changed today?', 'What may need review?', 'What support appears effective?', 'What should the next shift understand?'].map((prompt) => (
-              <Link key={prompt} href={`/orb?context=care-hub&q=${encodeURIComponent(prompt)}`} className="rounded-2xl bg-blue-500/15 px-4 py-3 text-xs font-black text-blue-100">
+              <Link
+                key={prompt}
+                href={`/orb?context=care-hub&q=${encodeURIComponent(prompt)}`}
+                className="inline-flex min-h-11 items-center rounded-2xl bg-blue-500/15 px-4 py-3 text-xs font-black text-blue-100"
+              >
                 {prompt}
               </Link>
             ))}
           </div>
           <div className="mt-5 space-y-3">
             {cognitionItems.map((item) => (
-              <Link key={item.label} href={item.href} className="block rounded-2xl bg-white/10 p-4 transition hover:bg-white/15">
+              <Link key={item.label} href={item.href} className="block rounded-2xl bg-white/10 p-4 transition hover:bg-white/15 active:scale-[0.99]">
                 <p className="text-[10px] font-black uppercase tracking-[0.18em] text-blue-200">{item.label}</p>
                 <p className="mt-1 text-sm font-semibold leading-6 text-white">{item.value}</p>
               </Link>
@@ -207,23 +233,33 @@ export default async function UnifiedCommandCentrePage() {
         </Card>
       </div>
 
-      <Card>
+      <section data-testid="care-hub-live-intelligence" className="min-w-0">
+        <CareHubIntelligenceWidgets result={careHub} payload={careHub.data?.ok ? careHub.data : null} />
+      </section>
+
+      <Card className="min-w-0">
         <p className="text-[11px] font-black uppercase tracking-[0.24em] text-blue-700">Children in view</p>
-        <h2 className="mt-2 text-2xl font-black tracking-[-0.04em] text-slate-950">Young people and immediate recording routes</h2>
-        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <h2 className="mt-2 text-2xl font-black tracking-[-0.04em] text-slate-950 sm:text-3xl">Young people and immediate recording routes</h2>
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {platformData.children.slice(0, 6).map((child) => (
             <article key={child.id} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
               <p className="text-lg font-black text-slate-950">{childName(child)}</p>
               <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">{child.placementStatus || child.riskLevel || 'Care record visible'}</p>
               <div className="mt-4 flex flex-wrap gap-2">
-                <Link href={`/young-people/${encodeURIComponent(String(child.id))}/daily-note/new`} className="rounded-full bg-blue-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-blue-700">Daily note</Link>
-                <Link href={`/young-people/${encodeURIComponent(String(child.id))}/incidents/new`} className="rounded-full bg-amber-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-amber-800">Incident</Link>
-                <Link href={`/young-people/${encodeURIComponent(String(child.id))}/shift-handover/new`} className="rounded-full bg-emerald-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-emerald-700">Handover</Link>
+                <Link href={`/young-people/${encodeURIComponent(String(child.id))}/daily-note/new`} className="inline-flex min-h-9 items-center rounded-full bg-blue-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-blue-700">
+                  Daily note
+                </Link>
+                <Link href={`/young-people/${encodeURIComponent(String(child.id))}/incidents/new`} className="inline-flex min-h-9 items-center rounded-full bg-amber-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-amber-800">
+                  Incident
+                </Link>
+                <Link href={`/young-people/${encodeURIComponent(String(child.id))}/shift-handover/new`} className="inline-flex min-h-9 items-center rounded-full bg-emerald-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-emerald-700">
+                  Handover
+                </Link>
               </div>
             </article>
           ))}
           {!platformData.children.length ? (
-            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-5 text-sm font-semibold leading-6 text-slate-500">
+            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-5 text-sm font-semibold leading-6 text-slate-500 sm:col-span-2 xl:col-span-3">
               No young people were returned by the live context. The Care Hub remains connected to chronology, evidence, governance and ORB.
             </div>
           ) : null}
