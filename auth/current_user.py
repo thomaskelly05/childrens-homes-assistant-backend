@@ -11,7 +11,7 @@ from auth.errors import forbidden, service_unavailable, unauthorised
 from auth.rbac import normalise_role, permissions_for_role
 from auth.tokens import decode_session_token
 from db.billing_db import get_user_billing_by_user_id
-from db.connection import get_db
+from db.connection import DatabaseUnavailableError, db_connection
 from db.mfa_db import get_user_mfa  # Backwards-compat export for test monkeypatches
 from services.session_security_service import is_session_revoked, touch_session
 
@@ -266,7 +266,6 @@ def _extract_billing_state(
 def get_current_user(
     request: Request,
     bearer_token: str | None = Depends(get_bearer_token),
-    conn=Depends(get_db),
 ):
     token = _get_request_token(request, bearer_token)
     if not token:
@@ -274,38 +273,52 @@ def get_current_user(
 
     payload = _decode_session_payload(token)
     user_id = _decode_user_id_from_payload(payload)
-    _enforce_session_state(payload, conn)
-    user = _load_active_user(conn, user_id)
 
-    role = _normalise_role(user.get("role"))
+    role = ""
     request_path = request.url.path
-    is_exempt = _is_billing_exempt_path(request_path) or _is_billing_exempt_role(role)
+    is_exempt = False
+    subscription_active = False
+    subscription_status = "inactive"
+    plan_name = None
+    home_id = None
+    provider_id = None
+    allowed_home_ids: list[int] = []
+    user: dict[str, Any]
 
-    subscription_active, subscription_status, plan_name = _extract_billing_state(
-        conn,
-        user_id,
-        is_exempt=is_exempt,
-        request_path=request_path,
-    )
+    try:
+        with db_connection() as conn:
+            _enforce_session_state(payload, conn)
+            user = _load_active_user(conn, user_id)
+
+            role = _normalise_role(user.get("role"))
+            is_exempt = _is_billing_exempt_path(request_path) or _is_billing_exempt_role(role)
+
+            subscription_active, subscription_status, plan_name = _extract_billing_state(
+                conn,
+                user_id,
+                is_exempt=is_exempt,
+                request_path=request_path,
+            )
+
+            home_id = user.get("home_id")
+            provider_id = user.get("provider_id")
+
+            if home_id is not None:
+                try:
+                    allowed_home_ids = [int(home_id)]
+                except (TypeError, ValueError):
+                    allowed_home_ids = []
+
+            if provider_id is not None and role in PROVIDER_HOME_ROLES:
+                provider_home_ids = _provider_home_ids(conn, provider_id)
+                allowed_home_ids = sorted(set(allowed_home_ids).union(provider_home_ids))
+                if allowed_home_ids and home_id is None:
+                    home_id = allowed_home_ids[0]
+    except DatabaseUnavailableError as exc:
+        raise _service_unavailable("Authentication database unavailable") from exc
 
     if not is_exempt and not subscription_active:
         raise forbidden("subscription_required", "Subscription required")
-
-    home_id = user.get("home_id")
-    provider_id = user.get("provider_id")
-
-    allowed_home_ids = []
-    if home_id is not None:
-        try:
-            allowed_home_ids = [int(home_id)]
-        except (TypeError, ValueError):
-            allowed_home_ids = []
-
-    if provider_id is not None and role in PROVIDER_HOME_ROLES:
-        provider_home_ids = _provider_home_ids(conn, provider_id)
-        allowed_home_ids = sorted(set(allowed_home_ids).union(provider_home_ids))
-        if allowed_home_ids and home_id is None:
-            home_id = allowed_home_ids[0]
 
     return {
         **user,

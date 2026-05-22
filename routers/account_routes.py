@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 from psycopg2.extras import Json, RealDictCursor
 
 from auth.session_user import get_current_user
-from db.connection import get_db
+from db.connection import db_connection, get_db
 
 router = APIRouter(
     prefix="/account",
@@ -402,11 +402,9 @@ def _normalise_dashboard_payload(payload: DashboardPreferencesPayload | ProfileU
 
 
 @router.get("/me")
-def get_account(
-    conn=Depends(get_db),
-    current_user=Depends(get_current_user),
-):
-    return _profile_payload(conn, _user_id(current_user))
+def get_account(current_user=Depends(get_current_user)):
+    with db_connection() as conn:
+        return _profile_payload(conn, _user_id(current_user))
 
 
 @router.get("/profile")
