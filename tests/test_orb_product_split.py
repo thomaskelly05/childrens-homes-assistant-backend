@@ -62,6 +62,57 @@ VOICE_HOOK_MARKERS = [
     "britishFemalePreference",
 ]
 
+WAKE_WORD_MARKERS = [
+    "Hey ORB",
+    "wakePhrase",
+    "wake_listening",
+    "wake_detected",
+    "transcriptContainsWakePhrase",
+    "WAKE_PHRASE_TEXT",
+]
+
+CONTINUOUS_CONVERSATION_MARKERS = [
+    "continuousConversation",
+    "continuous_listening",
+    "startContinuousListening",
+    "registerAfterSpeakListener",
+    "Pause conversation",
+    "End voice session",
+]
+
+INTERRUPT_MARKERS = [
+    "interruptForListen",
+    "cancelSpeaking",
+    "interrupted",
+    "barge-in",
+    "Stop speaking",
+]
+
+ANSWER_STYLE_MARKERS = [
+    "voice_concise",
+    "Voice concise",
+    "answerStyle",
+    "Balanced",
+    "Detailed",
+]
+
+MEMORY_MARKERS = [
+    "trimConversationHistory",
+    "MAX_HISTORY_TURNS",
+    "New chat",
+    "remembers this chat",
+]
+
+SPECIALIST_PROMPT_MARKERS = [
+    "residential children",
+    "Ofsted",
+    "SCCIF",
+    "Quality Standards",
+    "safeguarding",
+    "IndiCare OS records",
+    "voice-first",
+]
+
 OS_ORB_LINK_FILES = [
     REPO_ROOT / "frontend-next" / "components" / "indicare" / "app-shell.tsx",
     REPO_ROOT / "frontend-next" / "lib" / "navigation" / "operational-navigation.ts",
@@ -122,17 +173,28 @@ def test_standalone_orb_voice_hook_uses_browser_speech_apis():
         assert marker in text, f"voice hook must include {marker}"
 
 
-def test_standalone_orb_glow_component_exists():
-    text = _read(ORB_GLOW)
-    assert "OrbGlow" in text
-    for state in ("safeguarding", "listening", "transcript_ready", "thinking", "speaking"):
-        assert state in text, f"orb-glow must support state {state}"
+def test_standalone_orb_wake_phrase_implementation():
+    hook = _read(ORB_VOICE_HOOK)
+    companion = _read(ORB_COMPANION)
+    glow = _read(ORB_GLOW)
+    for marker in WAKE_WORD_MARKERS:
+        assert marker in hook or marker in companion, f"wake phrase marker missing: {marker}"
+    for state in ("wake_listening", "wake_detected"):
+        assert state in glow, f"orb-glow must support state {state}"
 
 
-def test_standalone_orb_cinematic_styles_in_globals():
-    text = _read(GLOBALS_CSS)
-    for marker in ("orb-cinematic-scene", "orb-standalone-listen-ring", "orb-standalone-halo"):
-        assert marker in text, f"globals.css must define cinematic ORB style {marker}"
+def test_standalone_orb_continuous_conversation_implementation():
+    hook = _read(ORB_VOICE_HOOK)
+    companion = _read(ORB_COMPANION)
+    for marker in CONTINUOUS_CONVERSATION_MARKERS:
+        assert marker in hook or marker in companion, f"continuous conversation marker missing: {marker}"
+    assert "continuous_listening" in _read(ORB_GLOW)
+
+
+def test_standalone_orb_interruptibility():
+    sources = _read(ORB_COMPANION) + _read(ORB_VOICE_HOOK) + _read(ORB_GLOW)
+    for marker in INTERRUPT_MARKERS:
+        assert marker in sources, f"interruptibility marker missing: {marker}"
 
 
 def test_standalone_orb_only_uses_standalone_api_paths():
@@ -140,6 +202,59 @@ def test_standalone_orb_only_uses_standalone_api_paths():
     forbidden = ["/api/orb/conversation", "/orb/conversation", "/api/os/", "/os/"]
     for marker in forbidden:
         assert marker not in sources, f"standalone ORB must not use {marker}"
+    assert "/orb/standalone/conversation" in sources
+
+
+def test_standalone_orb_answer_style_controls():
+    sources = _read(ORB_COMPANION) + _read(ORB_VOICE_HOOK) + _read(STANDALONE_CLIENT)
+    for marker in ANSWER_STYLE_MARKERS:
+        assert marker in sources, f"answer style marker missing: {marker}"
+
+
+def test_standalone_orb_conversation_memory():
+    companion = _read(ORB_COMPANION)
+    hook = _read(ORB_VOICE_HOOK)
+    routes = _read(STANDALONE_ROUTES)
+    for marker in MEMORY_MARKERS:
+        assert marker in companion or marker in hook or marker in routes, (
+            f"conversation memory marker missing: {marker}"
+        )
+
+
+def test_standalone_orb_specialist_prompt():
+    routes = _read(STANDALONE_ROUTES)
+    service = _read(REPO_ROOT / "services" / "orb_general_assistant_service.py")
+    for marker in SPECIALIST_PROMPT_MARKERS:
+        assert marker in routes or marker in service, f"specialist prompt marker missing: {marker}"
+
+
+def test_standalone_orb_glow_component_exists():
+    text = _read(ORB_GLOW)
+    assert "OrbGlow" in text
+    for state in (
+        "safeguarding",
+        "listening",
+        "transcript_ready",
+        "thinking",
+        "speaking",
+        "wake_listening",
+        "wake_detected",
+        "continuous_listening",
+        "interrupted",
+    ):
+        assert state in text, f"orb-glow must support state {state}"
+
+
+def test_standalone_orb_cinematic_styles_in_globals():
+    text = _read(GLOBALS_CSS)
+    for marker in (
+        "orb-cinematic-scene",
+        "orb-standalone-listen-ring",
+        "orb-standalone-halo",
+        "orb-standalone-wake-pulse",
+        "orb-standalone-interrupt-ring",
+    ):
+        assert marker in text, f"globals.css must define cinematic ORB style {marker}"
 
 
 def test_assistant_orb_page_does_not_redirect_to_standalone_orb():

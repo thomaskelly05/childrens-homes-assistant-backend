@@ -7,20 +7,28 @@ import type { OrbRenderState } from '@/components/orb-core/orb-sphere'
 
 export type StandaloneOrbGlowState =
   | 'idle'
+  | 'wake_listening'
+  | 'wake_detected'
   | 'listening'
+  | 'continuous_listening'
   | 'transcript_ready'
   | 'thinking'
   | 'speaking'
+  | 'interrupted'
   | 'recording'
   | 'safeguarding'
   | 'error'
 
 const STATE_LABELS: Record<StandaloneOrbGlowState, string> = {
   idle: 'Ready',
-  listening: 'Listening…',
+  wake_listening: "Say 'Hey ORB'",
+  wake_detected: "Hey, I'm here.",
+  listening: "I'm listening…",
+  continuous_listening: 'Listening for your reply…',
   transcript_ready: 'Ready to send',
-  thinking: 'Thinking…',
-  speaking: 'Speaking…',
+  thinking: 'Thinking that through…',
+  speaking: "Here's how I'd think about it…",
+  interrupted: "Stopped — I'm listening.",
   recording: 'Recording support',
   safeguarding: 'Safeguarding reflection',
   error: 'Voice unavailable — type instead'
@@ -28,10 +36,14 @@ const STATE_LABELS: Record<StandaloneOrbGlowState, string> = {
 
 const STATE_TO_RENDER: Record<StandaloneOrbGlowState, OrbRenderState> = {
   idle: 'idle',
+  wake_listening: 'listening',
+  wake_detected: 'listening',
   listening: 'listening',
+  continuous_listening: 'listening',
   transcript_ready: 'idle',
   thinking: 'thinking',
   speaking: 'speaking',
+  interrupted: 'listening',
   recording: 'handover',
   safeguarding: 'safeguarding_cautious',
   error: 'permission_denied'
@@ -43,10 +55,25 @@ const STATE_HUES: Record<StandaloneOrbGlowState, { ring: string; glow: string; c
     glow: 'shadow-cyan-500/35',
     core: 'rgba(34,211,238,0.18)'
   },
+  wake_listening: {
+    ring: 'from-sky-400/40 via-blue-500/22 to-indigo-600/14',
+    glow: 'shadow-sky-500/28',
+    core: 'rgba(56,189,248,0.14)'
+  },
+  wake_detected: {
+    ring: 'from-cyan-200/90 via-sky-300/60 to-blue-400/35',
+    glow: 'shadow-cyan-300/65',
+    core: 'rgba(34,211,238,0.38)'
+  },
   listening: {
     ring: 'from-cyan-200/80 via-sky-300/50 to-blue-400/25',
     glow: 'shadow-cyan-300/55',
     core: 'rgba(56,189,248,0.28)'
+  },
+  continuous_listening: {
+    ring: 'from-cyan-200/75 via-teal-300/48 to-blue-400/28',
+    glow: 'shadow-cyan-300/50',
+    core: 'rgba(45,212,191,0.26)'
   },
   transcript_ready: {
     ring: 'from-teal-300/55 via-cyan-400/35 to-emerald-500/18',
@@ -62,6 +89,11 @@ const STATE_HUES: Record<StandaloneOrbGlowState, { ring: string; glow: string; c
     ring: 'from-amber-200/75 via-orange-300/45 to-yellow-400/28',
     glow: 'shadow-amber-300/50',
     core: 'rgba(251,191,36,0.26)'
+  },
+  interrupted: {
+    ring: 'from-amber-300/55 via-cyan-400/40 to-sky-500/28',
+    glow: 'shadow-amber-300/38',
+    core: 'rgba(251,191,36,0.22)'
   },
   recording: {
     ring: 'from-emerald-300/60 via-teal-400/38 to-cyan-500/22',
@@ -111,17 +143,28 @@ export function OrbGlow({
 
   const pulseClass = reducedMotion
     ? ''
-    : state === 'listening'
-      ? 'animate-[orb-standalone-pulse_1.2s_ease-in-out_infinite]'
-      : state === 'transcript_ready'
-        ? 'animate-[orb-standalone-breathe_2.4s_ease-in-out_infinite]'
-        : state === 'thinking'
-          ? 'animate-[orb-standalone-breathe_3.2s_ease-in-out_infinite]'
-          : state === 'speaking'
-            ? 'animate-[orb-standalone-ring_1.8s_ease-in-out_infinite]'
-            : state === 'idle'
-              ? 'animate-[orb-standalone-breathe_4.5s_ease-in-out_infinite]'
-              : ''
+    : state === 'wake_listening'
+      ? 'animate-[orb-standalone-wake-pulse_3.2s_ease-in-out_infinite]'
+      : state === 'wake_detected'
+        ? 'animate-[orb-standalone-wake-flare_0.9s_ease-out_forwards]'
+        : state === 'listening' || state === 'continuous_listening' || state === 'interrupted'
+          ? 'animate-[orb-standalone-pulse_1.2s_ease-in-out_infinite]'
+          : state === 'transcript_ready'
+            ? 'animate-[orb-standalone-breathe_2.4s_ease-in-out_infinite]'
+            : state === 'thinking'
+              ? 'animate-[orb-standalone-breathe_3.2s_ease-in-out_infinite]'
+              : state === 'speaking'
+                ? 'animate-[orb-standalone-ring_1.8s_ease-in-out_infinite]'
+                : state === 'idle'
+                  ? 'animate-[orb-standalone-breathe_4.5s_ease-in-out_infinite]'
+                  : ''
+
+  const showWaveform =
+    state === 'listening' ||
+    state === 'continuous_listening' ||
+    state === 'speaking' ||
+    state === 'interrupted' ||
+    state === 'wake_detected'
 
   const orbButton = (
     <div
@@ -134,7 +177,11 @@ export function OrbGlow({
         className={`pointer-events-none absolute inset-[-22%] rounded-full bg-gradient-to-br ${hues.ring} blur-3xl ${hues.glow} orb-standalone-halo`}
         aria-hidden
       />
-      {state === 'listening' && !reducedMotion ? (
+      {(state === 'listening' ||
+        state === 'continuous_listening' ||
+        state === 'wake_listening' ||
+        state === 'wake_detected') &&
+      !reducedMotion ? (
         <>
           <div className="pointer-events-none absolute inset-[-14%] rounded-full border border-cyan-300/25 orb-standalone-listen-ring" aria-hidden />
           <div
@@ -144,6 +191,9 @@ export function OrbGlow({
           />
         </>
       ) : null}
+      {state === 'interrupted' && !reducedMotion ? (
+        <div className="pointer-events-none absolute inset-[-12%] rounded-full border border-amber-300/35 orb-standalone-interrupt-ring" aria-hidden />
+      ) : null}
       <div
         className={`pointer-events-none absolute inset-[-10%] rounded-full border border-white/20 bg-white/[0.03] backdrop-blur-sm ${reducedMotion ? '' : 'animate-[orb-standalone-spin_14s_linear_infinite]'}`}
         aria-hidden
@@ -151,14 +201,19 @@ export function OrbGlow({
       <div className="pointer-events-none absolute inset-[12%] rounded-full bg-gradient-to-br from-white/25 via-white/5 to-transparent opacity-80" aria-hidden />
       <OrbSphere state={renderState} size="xlarge" />
 
-      {(state === 'listening' || state === 'speaking') && !reducedMotion ? (
+      {showWaveform && !reducedMotion ? (
         <div className="pointer-events-none absolute bottom-3 flex items-end gap-1.5" aria-hidden>
           {[0, 1, 2, 3, 4, 5].map((bar) => (
             <span
               key={bar}
               className="inline-block w-1 rounded-full bg-white/75 orb-standalone-wave-bar"
               style={{
-                height: state === 'listening' ? `${12 + (bar % 3) * 7}px` : `${10 + (bar % 4) * 6}px`,
+                height:
+                  state === 'speaking'
+                    ? `${10 + (bar % 4) * 6}px`
+                    : state === 'wake_detected'
+                      ? `${14 + (bar % 2) * 8}px`
+                      : `${12 + (bar % 3) * 7}px`,
                 animationDelay: `${bar * 0.08}s`
               }}
             />
@@ -179,12 +234,20 @@ export function OrbGlow({
           onClick={onOrbActivate}
           className="group rounded-full outline-none transition focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-4 focus-visible:ring-offset-slate-950"
           aria-label={
-            state === 'listening' ? 'Stop listening' : state === 'speaking' ? 'Interrupt and listen' : 'Tap to speak'
+            state === 'listening' || state === 'continuous_listening'
+              ? 'Stop listening'
+              : state === 'speaking'
+                ? 'Interrupt and listen'
+                : 'Tap to speak'
           }
         >
           {orbButton}
           <p className="mt-3 text-[11px] font-semibold text-slate-500 opacity-0 transition group-hover:opacity-100 group-focus-visible:opacity-100">
-            {state === 'listening' ? 'Tap again to stop' : state === 'speaking' ? 'Tap to interrupt' : 'Tap ORB to speak'}
+            {state === 'listening' || state === 'continuous_listening'
+              ? 'Tap again to stop'
+              : state === 'speaking'
+                ? 'Tap to interrupt'
+                : 'Tap ORB to speak'}
           </p>
         </button>
       ) : (
@@ -197,6 +260,9 @@ export function OrbGlow({
       ) : null}
       {voiceEnabled === false ? (
         <p className="mt-2 text-xs text-slate-500">Voice replies off — typing always available</p>
+      ) : null}
+      {state === 'speaking' ? (
+        <p className="mt-2 text-xs text-slate-500">You can interrupt me any time.</p>
       ) : null}
     </div>
   )

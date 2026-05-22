@@ -21,7 +21,10 @@ import {
 } from 'lucide-react'
 
 import { OrbGlow, type StandaloneOrbGlowState } from '@/components/orb-standalone/orb-glow'
-import { useStandaloneOrbVoice } from '@/components/orb-standalone/use-standalone-orb-voice'
+import {
+  useStandaloneOrbVoice,
+  type StandaloneOrbAnswerStyle
+} from '@/components/orb-standalone/use-standalone-orb-voice'
 import {
   fetchStandaloneOrbConfig,
   queryStandaloneOrbConversation,
@@ -41,6 +44,58 @@ const MODE_SAFETY: Partial<Record<StandaloneOrbMode, string>> = {
   'Record This Properly':
     'Review wording before adding it to a record. ORB cannot see the record unless you paste text here.',
   'Ofsted Lens': 'Guidance support only. ORB does not make inspection judgements.'
+}
+
+const HIGH_RISK_TERMS = [
+  'immediate danger',
+  'suicide',
+  'self-harm',
+  'self harm',
+  'abuse',
+  'missing',
+  'assault',
+  'emergency'
+] as const
+
+const MAX_HISTORY_TURNS = 20
+
+const ANSWER_STYLE_LABELS: Record<StandaloneOrbAnswerStyle, string> = {
+  voice_concise: 'Voice concise',
+  balanced: 'Balanced',
+  detailed: 'Detailed'
+}
+
+function trimConversationHistory(messages: ChatMessage[]): Array<{ role: string; content: string }> {
+  const pairs = messages.map((entry) => ({ role: entry.role, content: entry.content }))
+  if (pairs.length <= MAX_HISTORY_TURNS) return pairs
+  return pairs.slice(-MAX_HISTORY_TURNS)
+}
+
+function transcriptHasHighRiskTerms(text: string): boolean {
+  const lower = text.toLowerCase()
+  return HIGH_RISK_TERMS.some((term) => lower.includes(term))
+}
+
+function voiceStatusLine(options: {
+  voice: ReturnType<typeof useStandaloneOrbVoice>
+  pending: boolean
+}): string {
+  const { voice, pending } = options
+  if (voice.error && voice.wakeStatus === 'unsupported') return voice.error
+  if (voice.voiceSessionPaused) return 'Voice session paused. Tap Continue conversation or type.'
+  if (voice.phase === 'wake_listening') return `Listening for "${voice.wakePhraseText}"…`
+  if (voice.phase === 'wake_detected') return "Hey, I'm here. Go ahead…"
+  if (voice.phase === 'continuous_listening') return 'Listening for your reply…'
+  if (voice.listening) return "I'm listening… speak naturally. Tap ORB or mic again to stop."
+  if (voice.phase === 'transcript_ready' && voice.displayTranscript) {
+    return `I heard you say… review below, then Send or Try again.`
+  }
+  if (voice.speaking) return "Here's how I'd think about it… You can interrupt me any time."
+  if (pending) return 'Thinking that through…'
+  if (voice.settings.wakePhrase && voice.wakeStatus === 'listening') {
+    return `Wake phrase on — say "${voice.wakePhraseText}" or tap the ORB.`
+  }
+  return 'Go ahead… Keyboard always works. Microphone is optional.'
 }
 
 type PromptEntry = { text: string; mode?: StandaloneOrbMode }
@@ -98,7 +153,11 @@ function glowStateForContext(options: {
   mode: StandaloneOrbMode
   recordingContext: boolean
 }): StandaloneOrbGlowState {
-  if (options.voiceError && !options.pending && !options.listening) return 'error'
+  if (options.voicePhase === 'interrupted') return 'interrupted'
+  if (options.voicePhase === 'wake_listening') return 'wake_listening'
+  if (options.voicePhase === 'wake_detected') return 'wake_detected'
+  if (options.voicePhase === 'continuous_listening') return 'continuous_listening'
+  if (options.voiceError && !options.pending && !options.listening && options.voicePhase === 'error') return 'error'
   if (options.listening) return 'listening'
   if (options.voicePhase === 'transcript_ready') return 'transcript_ready'
   if (options.pending) return 'thinking'
@@ -186,10 +245,11 @@ export function OrbCareCompanion() {
     }
   }, [])
 
-  const history = useMemo(
-    () => messages.map((entry) => ({ role: entry.role, content: entry.content })),
-    [messages]
-  )
+  const showSafeguardingEscalation =
+    mode === 'Safeguarding' ||
+    transcriptHasHighRiskTerms(input) ||
+    transcriptHasHighRiskTerms(voice.transcript) ||
+    messages.some((m) => m.role === 'user' && transcriptHasHighRiskTerms(m.content))
 
   const latestExchange = useMemo(() => {
     if (messages.length === 0) return { earlier: [] as ChatMessage[], user: null as ChatMessage | null, assistant: null as ChatMessage | null }
@@ -212,6 +272,15 @@ export function OrbCareCompanion() {
     recordingContext
   })
 
+  useEffect(() => {
+    return voice.registerAfterSpeakListener(() => {
+      if (voice.voiceSessionPaused) return
+      if (!voiceSettings.continuousConversation) return
+      if (!voice.recognitionAvailable) return
+      voice.startContinuousListening()
+    })
+  }, [voice, voiceSettings.continuousConversation])
+
   const sendMessage = useCallback(
     async (text: string) => {
       const trimmed = text.trim()
@@ -226,14 +295,22 @@ export function OrbCareCompanion() {
       setError(null)
 
       const userMessage: ChatMessage = { id: `u-${Date.now()}`, role: 'user', content: trimmed }
+      const historyForRequest = trimConversationHistory([...messages, userMessage])
       setMessages((current) => [...current, userMessage])
+
+      const styleLabel = ANSWER_STYLE_LABELS[voiceSettings.answerStyle]
+      const framedMessage =
+        voiceSettings.answerStyle !== 'balanced'
+          ? `${trimmed}\n\nAnswer style: ${styleLabel}.`
+          : trimmed
 
       try {
         const response = await queryStandaloneOrbConversation({
-          message: trimmed,
+          message: framedMessage,
           mode,
           conversation_id: conversationId,
-          history
+          history: historyForRequest.slice(0, -1),
+          detail: voiceSettings.answerStyle
         })
 
         if (response.conversation_id) setConversationId(response.conversation_id)
@@ -252,7 +329,7 @@ export function OrbCareCompanion() {
         setPending(false)
       }
     },
-    [conversationId, history, mode, pending, voice, voiceSettings.voiceReplies]
+    [conversationId, messages, mode, pending, voice, voiceSettings.answerStyle, voiceSettings.voiceReplies]
   )
 
   useEffect(() => {
@@ -276,6 +353,7 @@ export function OrbCareCompanion() {
     await sendMessage(input)
   }
 
+  /** barge-in: tap ORB or mic while speaking stops speech and starts listening */
   function handleOrbActivate() {
     if (voice.speaking) {
       voice.interruptForListen()
@@ -301,11 +379,20 @@ export function OrbCareCompanion() {
   function startNewChat() {
     if (voice.speaking) voice.cancelSpeaking()
     if (voice.listening) voice.cancelListening()
+    voice.pauseVoiceSession()
     setMessages([])
     setConversationId(`standalone-${Date.now().toString(36)}`)
     setInput('')
     setError(null)
     voice.clearTranscript()
+  }
+
+  async function exportConversation() {
+    if (messages.length === 0) return
+    const body = messages.map((m) => `${m.role === 'user' ? 'You' : 'ORB'}: ${m.content}`).join('\n\n')
+    await copyToClipboard(body)
+    setDraftNotice('Conversation copied to clipboard.')
+    setTimeout(() => setDraftNotice(null), 4000)
   }
 
   function clearConversation() {
@@ -386,6 +473,20 @@ export function OrbCareCompanion() {
             {draftNotice}
           </p>
         ) : null}
+
+        {showSafeguardingEscalation ? (
+          <div
+            className="mt-4 rounded-2xl border border-rose-300/30 bg-rose-950/40 px-4 py-3 text-sm leading-6 text-rose-50"
+            role="status"
+          >
+            Follow your safeguarding procedure immediately if there is current risk. ORB can help you think, but it
+            does not replace escalation.
+          </div>
+        ) : null}
+
+        <p className="mt-3 text-xs leading-5 text-slate-500" role="note">
+          ORB remembers this chat while the page is open. It does not access IndiCare records.
+        </p>
 
         <div className="mt-4 grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(280px,360px)_minmax(0,1fr)_minmax(260px,320px)] lg:grid-rows-1">
           <section className="order-1 flex flex-col items-center justify-start rounded-[28px] border border-white/10 bg-slate-950/40 p-5 backdrop-blur-xl lg:order-1">
@@ -475,8 +576,34 @@ export function OrbCareCompanion() {
             </div>
 
             <div className="shrink-0 border-t border-white/10 bg-slate-950/70 p-4">
-              {voice.phase === 'transcript_ready' && voiceSettings.showTranscriptBeforeSend && !voiceSettings.autoSend ? (
-                <p className="mb-2 text-xs font-semibold text-teal-200">Transcript ready — review and send when you are ready.</p>
+              {voice.phase === 'transcript_ready' && voice.displayTranscript ? (
+                <div className="mb-3 rounded-2xl border border-teal-300/25 bg-teal-300/8 px-4 py-3">
+                  <p className="text-xs font-black uppercase tracking-[0.14em] text-teal-200/90">I heard…</p>
+                  <p className="mt-1 text-sm italic text-slate-100">&ldquo;{voice.displayTranscript}&rdquo;</p>
+                  {!voiceSettings.autoSend ? (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => void sendMessage(voice.transcript || voice.displayTranscript)}
+                        disabled={pending}
+                        className="inline-flex h-9 items-center gap-1.5 rounded-full bg-cyan-300/20 px-4 text-xs font-black text-cyan-50"
+                      >
+                        <Send className="h-3.5 w-3.5" aria-hidden />
+                        Send
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          voice.clearTranscript()
+                          voice.startListening()
+                        }}
+                        className="inline-flex h-9 items-center rounded-full border border-white/15 px-4 text-xs font-bold text-slate-300"
+                      >
+                        Try again
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
               ) : null}
               <form className="grid gap-3" onSubmit={(event) => void submit(event)}>
                 <label htmlFor="orb-standalone-input" className="sr-only">
@@ -552,22 +679,14 @@ export function OrbCareCompanion() {
                   </button>
                 </div>
                 <p id="orb-standalone-status" className="text-xs leading-5 text-slate-400" role="status">
-                  {voice.error && !voice.recognitionAvailable
-                    ? voice.error
-                    : voice.listening
-                      ? 'Listening… speak naturally. Tap ORB or mic again to stop.'
-                      : voice.speaking
-                        ? 'Speaking response… tap Stop speaking or mic to interrupt.'
-                        : pending
-                          ? 'ORB is thinking.'
-                          : 'Keyboard always works. Microphone is optional.'}
+                  {voiceStatusLine({ voice, pending })}
                 </p>
               </form>
             </div>
           </section>
 
           <aside className="order-3 flex min-h-0 flex-col gap-3 overflow-hidden">
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <button
                 type="button"
                 onClick={startNewChat}
@@ -585,7 +704,45 @@ export function OrbCareCompanion() {
                 <Trash2 className="h-3.5 w-3.5" aria-hidden />
                 Clear
               </button>
+              <button
+                type="button"
+                onClick={() => void exportConversation()}
+                disabled={messages.length === 0}
+                className="inline-flex w-full items-center justify-center gap-1.5 rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-bold text-slate-200 disabled:opacity-40"
+              >
+                <Copy className="h-3.5 w-3.5" aria-hidden />
+                Copy chat
+              </button>
             </div>
+
+            {voice.recognitionAvailable ? (
+              <div className="flex flex-wrap gap-2">
+                {voice.voiceSessionPaused ? (
+                  <button
+                    type="button"
+                    onClick={voice.resumeVoiceSession}
+                    className="inline-flex flex-1 items-center justify-center rounded-2xl border border-cyan-300/30 bg-cyan-300/10 px-3 py-2 text-xs font-bold text-cyan-100"
+                  >
+                    Continue conversation
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={voice.pauseVoiceSession}
+                    className="inline-flex flex-1 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-bold text-slate-200"
+                  >
+                    Pause conversation
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={voice.endVoiceSession}
+                  className="inline-flex flex-1 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-bold text-slate-200"
+                >
+                  End voice session
+                </button>
+              </div>
+            ) : null}
 
             {voicePanelOpen ? (
               <VoiceSettingsPanel
@@ -763,6 +920,46 @@ function VoiceSettingsPanel({
         disabled={!voice.recognitionAvailable}
         onChange={(on) => updateVoiceSettings({ showTranscriptBeforeSend: on })}
       />
+      <SettingToggle
+        label={`Wake phrase (“${voice.wakePhraseText}”)`}
+        checked={voiceSettings.wakePhrase}
+        disabled={!voice.continuousRecognitionSupported}
+        onChange={(on) => {
+          if (!on) voice.stopWakeListening()
+          updateVoiceSettings({ wakePhrase: on })
+        }}
+      />
+      {!voice.continuousRecognitionSupported ? (
+        <p className="mt-1 text-xs text-amber-200/90">
+          Wake word is unavailable in this browser. Tap the ORB or microphone instead.
+        </p>
+      ) : null}
+      <SettingToggle
+        label="Continuous conversation"
+        checked={voiceSettings.continuousConversation}
+        disabled={!voice.recognitionAvailable}
+        onChange={(on) => updateVoiceSettings({ continuousConversation: on })}
+      />
+
+      <div className="mt-4">
+        <p className="text-xs font-semibold text-slate-400">Answer style</p>
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {(['voice_concise', 'balanced', 'detailed'] as StandaloneOrbAnswerStyle[]).map((style) => (
+            <button
+              key={style}
+              type="button"
+              onClick={() => updateVoiceSettings({ answerStyle: style })}
+              className={`rounded-full border px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.08em] ${
+                voiceSettings.answerStyle === style
+                  ? 'border-cyan-300/45 bg-cyan-300/15 text-cyan-50'
+                  : 'border-white/12 text-slate-400'
+              }`}
+            >
+              {ANSWER_STYLE_LABELS[style]}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <p className="mt-4 text-xs leading-5 text-slate-400">Preferred voice: British female when available</p>
       <p className="mt-1 text-xs leading-5 text-slate-300">
