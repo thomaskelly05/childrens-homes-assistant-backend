@@ -28,6 +28,8 @@ export type RecordCardId =
 
 export type RecordCardSectionId = 'everyday-care' | 'when-something-happens' | 'progress-evidence'
 
+export type RecordAboutContext = 'child' | 'home-shift' | 'staff' | 'not-sure'
+
 export type RecordCardDefinition = {
   id: RecordCardId
   section: RecordCardSectionId
@@ -205,6 +207,30 @@ export const RECORD_HUB_CARDS: RecordCardDefinition[] = [
   }
 ]
 
+/** Cards that should link to a child journey when recording about a specific child. */
+export const RECORD_CHILD_REQUIRED_CARD_IDS: RecordCardId[] = [
+  'daily-note',
+  'child-voice',
+  'keywork',
+  'incidents',
+  'safeguarding',
+  'missing',
+  'medication-health',
+  'education-update',
+  'family-contact'
+]
+
+export type RecordRecommendedItem =
+  | { kind: 'card'; cardId: RecordCardId }
+  | { kind: 'link'; title: string; description: string; href: string; buttonText: string }
+
+export const RECORD_ABOUT_OPTIONS: Array<{ id: RecordAboutContext; label: string; description: string }> = [
+  { id: 'child', label: 'A child', description: 'Daily notes, incidents, child voice and journey-linked records.' },
+  { id: 'home-shift', label: 'The home / shift', description: 'Handover, evidence, chronology and home-wide follow-up.' },
+  { id: 'staff', label: 'Staff / workforce', description: 'Supervision, training and workforce records.' },
+  { id: 'not-sure', label: 'Not sure — ask ORB', description: 'ORB can help you choose the right record type.' }
+]
+
 export const RECORD_ORB_PROMPTS = [
   { label: 'Help me choose the right record', query: 'Help me choose the right record type for what happened today.' },
   { label: 'Help me write a daily note', query: 'Help me write a calm, child-centred daily note.' },
@@ -222,12 +248,23 @@ export function resolveRecordChildId(params: {
   return raw.trim()
 }
 
+export function resolveRecordAboutContext(value?: string | null): RecordAboutContext {
+  const raw = value?.trim()
+  if (raw === 'home-shift' || raw === 'home' || raw === 'shift') return 'home-shift'
+  if (raw === 'staff' || raw === 'workforce') return 'staff'
+  if (raw === 'not-sure' || raw === 'unsure' || raw === 'orb') return 'not-sure'
+  if (raw === 'child') return 'child'
+  return 'child'
+}
+
 export function recordHubQueryString(options: {
   childId?: string
   childName?: string
   type?: string
+  about?: RecordAboutContext
 }): string {
   const params = new URLSearchParams()
+  if (options.about) params.set('about', options.about)
   if (options.childId) params.set('child_id', options.childId)
   if (options.childName) params.set('child_name', options.childName)
   if (options.type) params.set('type', options.type)
@@ -237,6 +274,170 @@ export function recordHubQueryString(options: {
 
 export function childWorkflowHref(childId: string, workflowSegment: string, mode: 'new' | 'upload' = 'new') {
   return `/young-people/${encodeURIComponent(childId)}/${workflowSegment}/${mode}`
+}
+
+export function recordCardNeedsChild(card: RecordCardDefinition): boolean {
+  return RECORD_CHILD_REQUIRED_CARD_IDS.includes(card.id)
+}
+
+export function recordCardAvailableForContext(card: RecordCardDefinition, about: RecordAboutContext): boolean {
+  if (about === 'staff') return card.id === 'ask-orb'
+  if (about === 'not-sure' || about === 'child') return true
+  if (about === 'home-shift') {
+    if (card.id === 'shift-handover' || card.id === 'documents' || card.id === 'ask-orb') return true
+    return !recordCardNeedsChild(card)
+  }
+  return true
+}
+
+export function recordCardDeemphasised(card: RecordCardDefinition, about: RecordAboutContext): boolean {
+  if (about !== 'home-shift') return false
+  return recordCardNeedsChild(card)
+}
+
+export function recordRecommendedForContext(
+  about: RecordAboutContext,
+  childId?: string,
+  childLabel?: string
+): RecordRecommendedItem[] {
+  const childName = childLabel || (childId ? `Young person ${childId}` : undefined)
+
+  if (about === 'child') {
+    return [
+      { kind: 'card', cardId: 'daily-note' },
+      { kind: 'card', cardId: 'child-voice' },
+      { kind: 'card', cardId: 'incidents' },
+      { kind: 'card', cardId: 'keywork' }
+    ]
+  }
+
+  if (about === 'home-shift') {
+    return [
+      { kind: 'card', cardId: 'shift-handover' },
+      { kind: 'card', cardId: 'documents' },
+      { kind: 'card', cardId: 'ask-orb' },
+      {
+        kind: 'link',
+        title: 'Chronology',
+        description: 'Review and add home-wide timeline entries.',
+        href: '/chronology',
+        buttonText: 'Open chronology'
+      },
+      {
+        kind: 'link',
+        title: 'Actions',
+        description: 'Follow-up tasks and operational actions for the home.',
+        href: '/actions',
+        buttonText: 'Open actions'
+      }
+    ]
+  }
+
+  if (about === 'staff') {
+    return [
+      {
+        kind: 'link',
+        title: 'Workforce',
+        description: 'Staff records are managed through Workforce.',
+        href: '/staff',
+        buttonText: 'Open Workforce'
+      },
+      {
+        kind: 'link',
+        title: 'Staff supervision',
+        description: 'Record or review supervision sessions.',
+        href: '/staff/supervision',
+        buttonText: 'Supervision'
+      },
+      {
+        kind: 'link',
+        title: 'Training / competency',
+        description: 'Mandatory training matrix and competency tracking.',
+        href: '/staff/training-matrix',
+        buttonText: 'Training matrix'
+      },
+      {
+        kind: 'card',
+        cardId: 'ask-orb'
+      }
+    ]
+  }
+
+  return [
+    {
+      kind: 'link',
+      title: 'Ask ORB to help choose',
+      description: 'ORB can suggest the right record type before you commit.',
+      href: recordOrbPromptHref('Help me choose the right record type for what I need to document.', childId),
+      buttonText: 'Ask ORB'
+    },
+    {
+      kind: 'link',
+      title: 'Open Care Hub',
+      description: 'Shift priorities, signals and quick recording from the hub.',
+      href: '/command-centre',
+      buttonText: 'Care Hub'
+    },
+    {
+      kind: 'link',
+      title: 'Choose a child',
+      description: childName ? `Currently: ${childName}` : 'Pick who this record is about.',
+      href: recordHubQueryString({ about: 'child', type: 'daily-note' }) + '#choose-child',
+      buttonText: 'Choose child'
+    }
+  ]
+}
+
+export function recordOrbPromptsForContext(
+  about: RecordAboutContext,
+  childId?: string,
+  childLabel?: string
+): Array<{ label: string; query: string }> {
+  const name = childLabel || (childId ? `this young person` : undefined)
+
+  if (about === 'home-shift') {
+    return [
+      { label: 'Help me write a handover', query: 'Help me write a clear shift handover for the next adults.' },
+      { label: 'What should staff know before shift?', query: 'What should staff know before the next shift starts?' }
+    ]
+  }
+
+  if (about === 'staff') {
+    return [
+      { label: 'Ask ORB about staff support', query: 'What staff support or workforce record should I use in this situation?' },
+      { label: 'Help me prepare for supervision', query: 'Help me prepare calmly for a staff supervision session.' },
+      { label: 'What training evidence is needed?', query: 'What training or competency evidence should be recorded for staff?' }
+    ]
+  }
+
+  if (childId && name) {
+    return [
+      {
+        label: `Help me choose the right record for ${name}`,
+        query: `Help me choose the right record type for ${name} based on what happened today.`
+      },
+      {
+        label: `Help me write a daily note for ${name}`,
+        query: `Help me write a calm, child-centred daily note for ${name}.`
+      },
+      {
+        label: `What needs manager review for ${name}?`,
+        query: `What in the situation for ${name} may need manager review or sign-off?`
+      }
+    ]
+  }
+
+  return [
+    { label: 'Help me choose the right record', query: 'Help me choose the right record type for what I need to document.' },
+    {
+      label: 'Should this be an incident or a daily note?',
+      query: 'Should this situation be recorded as an incident or a daily note? Help me decide calmly.'
+    },
+    {
+      label: 'What should be recorded after a difficult moment?',
+      query: 'What should be recorded after a difficult moment with a child in care?'
+    }
+  ]
 }
 
 export function recordCardHref(card: RecordCardDefinition, childId?: string): string {
@@ -285,4 +486,32 @@ export function cardsForSection(sectionId: RecordCardSectionId) {
 
 export function recordCardById(id: string) {
   return RECORD_HUB_CARDS.find((card) => card.id === id)
+}
+
+export function youngPersonDisplayName(person: {
+  id: string
+  preferredName?: string
+  displayName?: string
+  firstName?: string
+}): string {
+  return (
+    person.preferredName?.trim() ||
+    person.displayName?.trim() ||
+    person.firstName?.trim() ||
+    `Young Person ${person.id}`
+  )
+}
+
+export function youngPersonStatusLine(person: {
+  placementStatus?: string
+  status?: string
+  riskLevel?: string
+  age?: number | string
+}): string {
+  const parts: string[] = []
+  const placement = person.placementStatus || person.status
+  if (placement) parts.push(String(placement))
+  if (person.riskLevel) parts.push(`Risk: ${person.riskLevel}`)
+  if (person.age !== undefined && person.age !== '') parts.push(`Age ${person.age}`)
+  return parts.join(' · ') || 'Profile available'
 }
