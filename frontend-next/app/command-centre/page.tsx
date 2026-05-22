@@ -4,6 +4,7 @@ import { LiveDataStatus } from '@/components/indicare/live-data-status'
 import { OperationalQuickActions } from '@/components/indicare/operational/operational-quick-actions'
 import { Card, PageHeader, StatCard, StatusBadge } from '@/components/indicare/ui'
 import { CareHubIntelligenceWidgets } from '@/components/indicare/care-hub/care-hub-widgets'
+import { CareHubLiveStreamBar } from '@/components/indicare/care-hub/care-hub-live-stream'
 import {
   getCareHub,
   mapCareHubGovernanceSlice,
@@ -135,6 +136,10 @@ export default async function UnifiedCommandCentrePage() {
         <LiveDataStatus result={platform} />
         <LiveDataStatus result={careHub} />
       </section>
+
+      <CareHubLiveStreamBar
+        homeId={careHub.data?.scope?.home_id != null ? String(careHub.data.scope.home_id) : undefined}
+      />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,0.9fr)]">
         <Card className="min-w-0">

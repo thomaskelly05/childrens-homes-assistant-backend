@@ -10,6 +10,8 @@ from services.operational_alert_engine import operational_alert_engine
 from services.operational_feed_service import build_operational_feed
 from services.operational_risk_matrix_service import operational_risk_matrix_service
 from services.orb_operational_reasoning_service import orb_operational_reasoning_service
+from services.predictive_safeguarding_service import predictive_safeguarding_service
+from services.workforce_pressure_service import workforce_pressure_service
 from services.workflow_completion_service import workflow_completion_service
 
 
@@ -25,6 +27,7 @@ class CareHubIntelligenceService:
         limit: int = 50,
         question: str | None = None,
         use_cache: bool = True,
+        current_user: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         cache_key = None
         if use_cache:
@@ -84,6 +87,21 @@ class CareHubIntelligenceService:
         )
 
         safeguarding_queues = care_hub_safeguarding_queues_service.build_from_feed(feed)
+        predictive_safeguarding = predictive_safeguarding_service.analyse(
+            conn,
+            young_person_id=young_person_id,
+            home_id=home_id,
+            limit=limit,
+        )
+        actor = current_user or {"home_id": home_id}
+        if home_id and not actor.get("home_id"):
+            actor = {**actor, "home_id": home_id}
+        workforce_pressure = workforce_pressure_service.build(
+            conn,
+            current_user=actor,
+            home_id=home_id,
+            limit=limit,
+        )
 
         payload = {
             "ok": True,
@@ -99,7 +117,15 @@ class CareHubIntelligenceService:
             "chronology_patterns": chronology_patterns,
             "alerts": alerts,
             "safeguarding_queues": safeguarding_queues,
+            "predictive_safeguarding": predictive_safeguarding,
+            "workforce_pressure": workforce_pressure,
             "orb_reasoning": orb_reasoning,
+            "live_stream": {
+                "status": "live",
+                "websocket_path": "/os/realtime/ws",
+                "poll_fallback_path": "/os/care-hub/live",
+                "replay_path": "/os/realtime/replay",
+            },
             "summary": live_status.get("summary"),
         }
 

@@ -60,6 +60,14 @@ def test_schema_doctor_marks_generic_convergence_migration_superseded() -> None:
     assert SUPERSEDED_MIGRATIONS.get("999") == "superseded_operational_postgres_convergence"
 
 
+def test_realtime_operational_routes_mounted_in_registry() -> None:
+    from routers import realtime_operational_routes, platform_observability_routes
+
+    assert "/os/realtime/ws" in _paths(realtime_operational_routes.router)
+    assert "/os/realtime/stream" in _paths(realtime_operational_routes.router)
+    assert "/os/platform-health" in _paths(platform_observability_routes.router)
+
+
 def test_orb_router_keeps_voice_realtime_and_api_health_aliases() -> None:
     canonical_paths = _paths(orb_routes.router)
     api_paths = _paths(orb_routes.compat_router)

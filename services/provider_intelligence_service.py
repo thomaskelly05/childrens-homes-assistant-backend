@@ -272,3 +272,6 @@ class ProviderIntelligenceService:
         with conn.cursor() as cur:
             cur.execute("SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = %s", (table_name,))
             return {str(row["column_name"] if isinstance(row, dict) else row[0]) for row in cur.fetchall()}
+
+
+provider_intelligence_service = ProviderIntelligenceService()
