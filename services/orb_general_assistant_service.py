@@ -1,11 +1,18 @@
 from __future__ import annotations
 
+import asyncio
+import logging
 import os
 import re
+import time
 from typing import Any
 
 from assistant.llm_provider import ChatStreamRequest, get_llm_provider
 from services.standalone_sector_knowledge_service import search_sector_knowledge
+
+logger = logging.getLogger("indicare.orb_general_assistant")
+
+STANDALONE_LLM_TIMEOUT_SECONDS = 40.0
 
 
 def _text(value: Any) -> str:
@@ -43,27 +50,59 @@ class OrbGeneralAssistantService:
         detail: str = "concise",
         image_data_urls: list[str] | None = None,
     ) -> dict[str, Any]:
+        started = time.perf_counter()
+        images = image_data_urls or []
         if os.getenv("OPENAI_API_KEY"):
             try:
-                return await self._llm_answer(
-                    message,
-                    history=history or [],
-                    detail=detail,
-                    image_data_urls=image_data_urls or [],
+                result = await asyncio.wait_for(
+                    self._llm_answer(
+                        message,
+                        history=history or [],
+                        detail=detail,
+                        image_data_urls=images,
+                    ),
+                    timeout=STANDALONE_LLM_TIMEOUT_SECONDS,
+                )
+                logger.info(
+                    "standalone_orb_answer llm ok detail=%s images=%s elapsed_ms=%s",
+                    detail,
+                    len(images),
+                    int((time.perf_counter() - started) * 1000),
+                )
+                return result
+            except asyncio.TimeoutError:
+                logger.warning(
+                    "standalone_orb_answer llm timeout detail=%s images=%s elapsed_ms=%s",
+                    detail,
+                    len(images),
+                    int((time.perf_counter() - started) * 1000),
                 )
             except Exception:
-                pass
-        if image_data_urls:
+                logger.warning(
+                    "standalone_orb_answer llm failed detail=%s images=%s elapsed_ms=%s",
+                    detail,
+                    len(images),
+                    int((time.perf_counter() - started) * 1000),
+                    exc_info=True,
+                )
+        if images:
             return {
                 "answer": (
-                    "I can see you shared an image, but image understanding needs the live assistant connection. "
-                    "Describe what you want me to focus on in text, or try again shortly."
+                    "I can see you attached an image, but image understanding is not configured in this environment. "
+                    "I can still help with your text if you describe what you need."
                 ),
                 "sources": [],
                 "tools_used": ["standalone_orb_general_assistant"],
                 "internal_data_access": False,
+                "image_understanding_available": False,
+                "error_detail": "vision_unavailable",
             }
-        return {"answer": self._fallback_answer(message), "sources": [], "tools_used": ["general_qna"], "internal_data_access": False}
+        return {
+            "answer": self._fallback_answer(message),
+            "sources": [],
+            "tools_used": ["general_qna"],
+            "internal_data_access": False,
+        }
 
     async def _llm_answer(
         self,
@@ -96,21 +135,30 @@ class OrbGeneralAssistantService:
                 "sources": [],
                 "tools_used": ["standalone_orb_general_assistant", "vision"],
                 "internal_data_access": False,
+                "image_understanding_available": bool(answer),
             }
 
         provider = get_llm_provider()
         messages = [{"role": "system", "content": system}, *history[-16:], {"role": "user", "content": message}]
         parts: list[str] = []
         async for item in provider.stream_chat(
-            ChatStreamRequest(messages=messages, model="gpt-4o-mini", temperature=0.2, max_tokens=1200, metadata={"structured_output": False})
+            ChatStreamRequest(
+                messages=messages,
+                model="gpt-4o-mini",
+                temperature=0.2,
+                max_tokens=1200,
+                metadata={"structured_output": False},
+            )
         ):
             if isinstance(item, str):
                 parts.append(item)
+        answer = "".join(parts).strip() or self._fallback_answer(message)
         return {
-            "answer": "".join(parts).strip() or self._fallback_answer(message),
+            "answer": answer,
             "sources": [],
             "tools_used": ["standalone_orb_general_assistant"],
             "internal_data_access": False,
+            "image_understanding_available": False,
         }
 
     async def _vision_answer(
@@ -127,7 +175,7 @@ class OrbGeneralAssistantService:
         if not api_key:
             return ""
 
-        client = AsyncOpenAI(api_key=api_key)
+        client = AsyncOpenAI(api_key=api_key, timeout=STANDALONE_LLM_TIMEOUT_SECONDS)
         user_content: list[dict[str, Any]] = [{"type": "text", "text": message}]
         for url in image_data_urls[:4]:
             user_content.append({"type": "image_url", "image_url": {"url": url}})

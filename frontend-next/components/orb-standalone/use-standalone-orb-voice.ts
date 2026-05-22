@@ -102,8 +102,10 @@ const GB_FEMALE_HINTS = [
 /** Tier 3: English female hints */
 const EN_FEMALE_HINTS = ['samantha', 'victoria', 'female', 'zira', 'jenny', 'aria', 'libby', 'sonia', 'natural'] as const
 
-const SPEECH_CHUNK_MAX_CHARS = 180
-const SPEECH_CHUNK_PAUSE_MS = 40
+const SPEECH_CHUNK_MAX_CHARS = 170
+const SPEECH_CHUNK_PAUSE_MS = 80
+const SPEECH_TEST_PHRASE = "Hello, I'm ORB. I'll use this voice when available."
+const SAFARI_KEEPALIVE_MS = 140
 
 function readStoredSettings(): StandaloneOrbVoiceSettings {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS
@@ -251,13 +253,57 @@ export function useStandaloneOrbVoice() {
   const continuousListenTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const onSpeakEndRef = useRef<(() => void) | null>(null)
+  const mediaStreamRef = useRef<MediaStream | null>(null)
+  const safariKeepAliveRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [speechPlaybackError, setSpeechPlaybackError] = useState<string | null>(null)
+
+  const stopMediaStream = useCallback(() => {
+    const stream = mediaStreamRef.current
+    if (!stream) return
+    stream.getTracks().forEach((track) => {
+      try {
+        track.stop()
+      } catch {
+        /* ignore */
+      }
+    })
+    mediaStreamRef.current = null
+  }, [])
+
+  const stopSafariKeepAlive = useCallback(() => {
+    if (safariKeepAliveRef.current) {
+      clearInterval(safariKeepAliveRef.current)
+      safariKeepAliveRef.current = null
+    }
+  }, [])
+
+  const startSafariKeepAlive = useCallback(() => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) return
+    const ua = navigator.userAgent.toLowerCase()
+    const isSafari = ua.includes('safari') && !ua.includes('chrome') && !ua.includes('chromium')
+    if (!isSafari) return
+    stopSafariKeepAlive()
+    safariKeepAliveRef.current = setInterval(() => {
+      const synth = window.speechSynthesis
+      if (synth.speaking && synth.paused) synth.resume()
+    }, SAFARI_KEEPALIVE_MS)
+  }, [stopSafariKeepAlive])
 
   settingsRef.current = settings
   transcriptRef.current = transcript
   phaseRef.current = phase
   voiceSessionPausedRef.current = voiceSessionPaused
 
-  const voiceAvailable = recognitionAvailable || synthesisAvailable
+  const speechOutputAvailable = synthesisAvailable
+  const speechInputAvailable = recognitionAvailable
+  const wakePhraseAvailable = continuousRecognitionSupported
+  const continuousConversationAvailable = continuousRecognitionSupported
+    ? 'available'
+    : synthesisAvailable
+      ? 'experimental'
+      : 'unavailable'
+
+  const voiceAvailable = speechOutputAvailable || speechInputAvailable
 
   const clearTimers = useCallback(() => {
     if (wakeRestartTimerRef.current) clearTimeout(wakeRestartTimerRef.current)
@@ -319,9 +365,11 @@ export function useStandaloneOrbVoice() {
       recognitionRef.current?.abort()
       recognitionRef.current = null
       window.speechSynthesis?.cancel()
+      stopMediaStream()
+      stopSafariKeepAlive()
       clearTimers()
     }
-  }, [clearTimers, refreshVoices])
+  }, [clearTimers, refreshVoices, stopMediaStream, stopSafariKeepAlive])
 
   const updateSettings = useCallback((patch: Partial<StandaloneOrbVoiceSettings>) => {
     setSettings((current) => ({ ...current, ...patch }))
@@ -337,7 +385,8 @@ export function useStandaloneOrbVoice() {
     recognitionRef.current = null
     recognitionModeRef.current = null
     setListening(false)
-  }, [])
+    stopMediaStream()
+  }, [stopMediaStream])
 
   const cancelListening = useCallback(() => {
     clearTimers()
@@ -358,9 +407,11 @@ export function useStandaloneOrbVoice() {
     speakGenerationRef.current += 1
     speakChunksRef.current = []
     speakChunkIndexRef.current = 0
+    stopSafariKeepAlive()
     window.speechSynthesis.cancel()
     utteranceRef.current = null
     setSpeaking(false)
+    setSpeechPlaybackError(null)
     if (listening) {
       setPhase(recognitionModeRef.current === 'continuous' ? 'continuous_listening' : 'listening')
     } else if (transcript.trim()) {
@@ -370,7 +421,7 @@ export function useStandaloneOrbVoice() {
     } else {
       setPhase(error ? 'error' : 'idle')
     }
-  }, [error, listening, transcript])
+  }, [error, listening, transcript, stopSafariKeepAlive])
 
   const scheduleContinuousListen = useCallback(() => {
     if (continuousListenTimerRef.current) clearTimeout(continuousListenTimerRef.current)
@@ -406,9 +457,12 @@ export function useStandaloneOrbVoice() {
 
       const generation = speakGenerationRef.current + 1
       speakGenerationRef.current = generation
+      stopSafariKeepAlive()
       window.speechSynthesis.cancel()
       utteranceRef.current = null
+      setSpeechPlaybackError(null)
       refreshVoices()
+      startSafariKeepAlive()
 
       const chunks = splitTextForSpeechChunks(trimmed)
       speakChunksRef.current = chunks
@@ -418,6 +472,7 @@ export function useStandaloneOrbVoice() {
 
       const finishSpeaking = () => {
         if (speakGenerationRef.current !== generation) return
+        stopSafariKeepAlive()
         setSpeaking(false)
         utteranceRef.current = null
         speakChunksRef.current = []
@@ -462,6 +517,7 @@ export function useStandaloneOrbVoice() {
 
         utterance.onerror = () => {
           if (speakGenerationRef.current !== generation) return
+          setSpeechPlaybackError('Voice playback stopped. You can still read the response.')
           speakChunkIndexRef.current = index + 1
           if (speakChunkIndexRef.current < speakChunksRef.current.length) {
             window.setTimeout(() => speakNextChunk(), SPEECH_CHUNK_PAUSE_MS)
@@ -480,8 +536,12 @@ export function useStandaloneOrbVoice() {
 
       speakNextChunk()
     },
-    [error, refreshVoices, scheduleContinuousListen]
+    [error, refreshVoices, scheduleContinuousListen, startSafariKeepAlive, stopSafariKeepAlive]
   )
+
+  const testSelectedVoice = useCallback(() => {
+    speak(SPEECH_TEST_PHRASE)
+  }, [speak])
 
   const registerAfterSpeakListener = useCallback((listener: () => void) => {
     onSpeakEndRef.current = listener
@@ -720,8 +780,23 @@ export function useStandaloneOrbVoice() {
 
   const endVoiceSession = useCallback(() => {
     pauseVoiceSession()
+    stopMediaStream()
     setWakeStatus('off')
-  }, [pauseVoiceSession])
+  }, [pauseVoiceSession, stopMediaStream])
+
+  const requestMicrophonePermission = useCallback(async (): Promise<boolean> => {
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) return true
+    stopMediaStream()
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      mediaStreamRef.current = stream
+      stream.getTracks().forEach((track) => track.stop())
+      mediaStreamRef.current = null
+      return true
+    } catch {
+      return false
+    }
+  }, [stopMediaStream])
 
   const markIdle = useCallback(() => {
     if (!listening && !speaking) setPhase(error ? 'error' : 'idle')
@@ -730,29 +805,45 @@ export function useStandaloneOrbVoice() {
   useEffect(() => {
     if (!settings.wakePhrase) {
       stopWakeListening()
+      stopMediaStream()
       return
     }
     if (voiceSessionPaused) return
-    if (typeof navigator !== 'undefined' && navigator.mediaDevices?.getUserMedia) {
-      void navigator.mediaDevices.getUserMedia({ audio: true }).then(
-        () => startWakeListening(),
-        () => {
-          setWakeStatus('unsupported')
-          setError('Wake word is unavailable in this browser. Tap the ORB or microphone instead.')
-        }
-      )
-      return
+    let cancelled = false
+    void requestMicrophonePermission().then((granted) => {
+      if (cancelled) return
+      if (!granted) {
+        setWakeStatus('unsupported')
+        setError('Wake phrase needs microphone permission. Tap the ORB or microphone instead.')
+        return
+      }
+      startWakeListening()
+    })
+    return () => {
+      cancelled = true
+      stopWakeListening()
+      stopMediaStream()
     }
-    startWakeListening()
-    return () => stopWakeListening()
-  }, [settings.wakePhrase, voiceSessionPaused, startWakeListening, stopWakeListening])
+  }, [
+    settings.wakePhrase,
+    voiceSessionPaused,
+    startWakeListening,
+    stopWakeListening,
+    requestMicrophonePermission,
+    stopMediaStream
+  ])
 
   return {
     phase,
     voiceAvailable,
+    speechOutputAvailable,
+    speechInputAvailable,
+    wakePhraseAvailable,
+    continuousConversationAvailable,
     recognitionAvailable,
     continuousRecognitionSupported,
     synthesisAvailable,
+    speechPlaybackError,
     listening,
     speaking,
     transcript,
@@ -781,7 +872,9 @@ export function useStandaloneOrbVoice() {
     resumeVoiceSession,
     endVoiceSession,
     registerAfterSpeakListener,
+    testSelectedVoice,
     stripWakePhraseFromTranscript,
+    stopMediaStream,
     setSelectedVoiceUri: (uri: string | null) => updateSettings({ selectedVoiceUri: uri }),
     preferredVoiceIsBritishFemale: preferredVoiceName
       ? voiceLooksFemale(preferredVoiceName.toLowerCase()) && (preferredVoiceName.toLowerCase().includes('uk') || preferredVoiceName.toLowerCase().includes('gb') || preferredVoiceName.toLowerCase().includes('sonia') || preferredVoiceName.toLowerCase().includes('libby'))

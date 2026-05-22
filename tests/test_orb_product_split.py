@@ -93,7 +93,8 @@ PROJECTS_MARKERS = [
 PROFILES_MARKERS = [
     "createStandaloneProfile",
     "buildProfileContextBlock",
-    "Attach standalone profile",
+    "Attach profile",
+    "user-provided context only",
     "does not access IndiCare OS records",
 ]
 
@@ -103,6 +104,7 @@ VOICE_PICKER_MARKERS = [
     "splitTextForSpeechChunks",
     "Actual voice:",
     "British female",
+    "Test voice",
 ]
 
 CINEMATIC_VOICE_MARKERS = [
@@ -124,6 +126,42 @@ VOICE_HOOK_MARKERS = [
     "pickBritishFemaleVoice",
     "autoSend",
     "britishFemalePreference",
+]
+
+RELIABILITY_MARKERS = [
+    "STANDALONE_REQUEST_TIMEOUT_MS",
+    "setPending(false)",
+    "sendInFlightRef",
+    "submitGuardRef",
+    "Retry",
+    "retryPayload",
+    "standaloneOrbErrorMessage",
+    "ORB could not finish that response",
+]
+
+MEDIA_STREAM_CLEANUP_MARKERS = [
+    "mediaStreamRef",
+    "getTracks",
+    "track.stop",
+    "stopMediaStream",
+    "endVoiceSession",
+]
+
+BROWSER_VOICE_STATUS_MARKERS = [
+    "speechOutputAvailable",
+    "speechInputAvailable",
+    "wakePhraseAvailable",
+    "continuousConversationAvailable",
+    "Voice replies may work. Microphone dictation may require Chrome or Edge.",
+    "Browser voice support",
+]
+
+SPEECH_RELIABILITY_MARKERS = [
+    "splitTextForSpeechChunks",
+    "speakGenerationRef",
+    "speakChunksRef",
+    "Test voice",
+    "testSelectedVoice",
 ]
 
 WAKE_WORD_MARKERS = [
@@ -282,6 +320,30 @@ def test_standalone_orb_voice_hook_uses_browser_speech_apis():
         assert marker in text, f"voice hook must include {marker}"
 
 
+def test_standalone_orb_send_flow_has_timeout_and_retry():
+    sources = _read(ORB_COMPANION) + _read(STANDALONE_CLIENT)
+    for marker in RELIABILITY_MARKERS:
+        assert marker in sources, f"standalone send reliability marker missing: {marker}"
+
+
+def test_standalone_orb_media_stream_cleanup():
+    text = _read(ORB_VOICE_HOOK)
+    for marker in MEDIA_STREAM_CLEANUP_MARKERS:
+        assert marker in text, f"media stream cleanup marker missing: {marker}"
+
+
+def test_standalone_orb_browser_voice_status_messaging():
+    sources = _read(ORB_VOICE_HOOK) + _read(ORB_COMPANION)
+    for marker in BROWSER_VOICE_STATUS_MARKERS:
+        assert marker in sources, f"browser voice status marker missing: {marker}"
+
+
+def test_standalone_orb_speech_reliability_and_test_voice():
+    sources = _read(ORB_VOICE_HOOK) + _read(ORB_COMPANION)
+    for marker in SPEECH_RELIABILITY_MARKERS:
+        assert marker in sources, f"speech reliability marker missing: {marker}"
+
+
 def test_standalone_orb_wake_phrase_implementation():
     hook = _read(ORB_VOICE_HOOK)
     companion = _read(ORB_COMPANION)
@@ -428,6 +490,16 @@ def test_orb_standalone_backend_contract_flags():
     text = _read(STANDALONE_ROUTES)
     for flag in ("os_linked", "care_record_access", "chronology_access", "dashboard_access", "direct_writes"):
         assert f'"{flag}": False' in text or f'"{flag}": false' in text
+
+
+def test_orb_standalone_backend_conversation_hardening():
+    routes = _read(STANDALONE_ROUTES)
+    service = _read(REPO_ROOT / "services" / "orb_general_assistant_service.py")
+    assert "standalone_orb_conversation" in routes
+    assert "_standalone_conversation_response" in routes
+    assert "STANDALONE_LLM_TIMEOUT_SECONDS" in service
+    assert "asyncio.wait_for" in service
+    assert '"answer"' in routes
 
 
 def test_assistants_map_differentiates_products():
