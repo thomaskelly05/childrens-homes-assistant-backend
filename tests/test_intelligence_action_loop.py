@@ -117,3 +117,58 @@ def test_existing_intelligence_spine_tests_still_importable():
     import tests.test_indicare_intelligence_spine as spine_tests
 
     assert hasattr(spine_tests, "test_spine_response_includes_decision_support_notice")
+
+
+def test_bulk_create_avoids_duplicate_proposed_actions():
+    payload = IntelligenceActionCreate(
+        action_type="manager_signoff",
+        title="Duplicate test action",
+        source_finding_id="dup-finding-1",
+        priority="high",
+    )
+    first = intelligence_action_service.create_action(payload, current_user={"id": "mgr-1"})
+    result = intelligence_action_service.bulk_create_actions(
+        [payload],
+        current_user={"id": "mgr-1"},
+    )
+    assert len(result.created) == 0
+    assert len(result.failed) == 1
+    assert result.failed[0].get("existing_id") == first.id
+
+
+def test_attention_feed_returns_urgent_and_proposed():
+    intelligence_action_service.create_action(
+        IntelligenceActionCreate(
+            action_type="safeguarding_review",
+            title="Urgent feed action",
+            priority="urgent",
+            source_finding_id="feed-urgent-1",
+        )
+    )
+    intelligence_action_service.create_action(
+        IntelligenceActionCreate(
+            action_type="record_quality_review",
+            title="Proposed feed action",
+            priority="medium",
+            source_finding_id="feed-proposed-1",
+        )
+    )
+    feed = intelligence_action_service.build_attention_feed()
+    assert feed.summary.get("urgent", 0) >= 1 or len(feed.urgent) >= 1
+    assert feed.summary.get("awaiting_decision", 0) >= 1 or len(feed.awaiting_decision) >= 1
+    assert feed.decision_support_notice
+
+
+def test_oversight_review_includes_decision_support_notice():
+    from schemas.intelligence_actions import IntelligenceOversightReviewCreate
+
+    review = intelligence_action_service.create_oversight_review(
+        IntelligenceOversightReviewCreate(
+            review_type="daily_brief_review",
+            decision="accepted",
+            manager_notes="Reviewed brief — no automatic escalation.",
+        ),
+        current_user={"id": "mgr-1"},
+    )
+    assert review.decision_support_notice
+    assert "not" in review.decision_support_notice.lower() or "decision" in review.decision_support_notice.lower()

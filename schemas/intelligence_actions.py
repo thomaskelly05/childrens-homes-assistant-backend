@@ -173,3 +173,41 @@ class IntelligenceActionSummary(BaseModel):
     urgent_count: int = 0
     proposed_count: int = 0
     decision_support_notice: str = SAFE_DECISION_SUPPORT_NOTICE
+
+
+class IntelligenceActionBulkCreate(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    actions: list[IntelligenceActionCreate] = Field(default_factory=list)
+    home_id: str | None = None
+    child_id: str | None = None
+    staff_id: str | None = None
+
+
+class IntelligenceActionBulkCreateResult(BaseModel):
+    created: list[IntelligenceActionRecord] = Field(default_factory=list)
+    failed: list[dict[str, Any]] = Field(default_factory=list)
+    summary: IntelligenceActionSummary = Field(default_factory=IntelligenceActionSummary)
+    decision_support_notice: str = SAFE_DECISION_SUPPORT_NOTICE
+
+
+class IntelligenceAttentionFeedItem(BaseModel):
+    id: str
+    label: str
+    title: str
+    priority: str | None = None
+    status: str | None = None
+    action_type: str | None = None
+    href: str | None = None
+    summary: str | None = None
+
+
+class IntelligenceAttentionFeed(BaseModel):
+    urgent: list[IntelligenceAttentionFeedItem] = Field(default_factory=list)
+    high_priority: list[IntelligenceAttentionFeedItem] = Field(default_factory=list)
+    awaiting_decision: list[IntelligenceAttentionFeedItem] = Field(default_factory=list)
+    follow_ups_due: list[IntelligenceAttentionFeedItem] = Field(default_factory=list)
+    in_progress_due: list[IntelligenceAttentionFeedItem] = Field(default_factory=list)
+    summary: dict[str, int] = Field(default_factory=dict)
+    decision_support_notice: str = SAFE_DECISION_SUPPORT_NOTICE
+    action_notice: str | None = None

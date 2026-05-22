@@ -9,6 +9,7 @@ from auth.dependencies import get_current_user
 from db.connection import get_db
 from schemas.indicare_intelligence import IntelligenceRequest
 from schemas.intelligence_actions import (
+    IntelligenceActionBulkCreate,
     IntelligenceActionCreate,
     IntelligenceActionDecision,
     IntelligenceActionUpdate,
@@ -131,6 +132,50 @@ def create_intelligence_action(
 ):
     action = intelligence_action_service.create_action(payload, current_user=current_user, conn=conn)
     return {"success": True, "data": action.model_dump(mode="json")}
+
+
+@router.post("/actions/bulk-create")
+def bulk_create_intelligence_actions(
+    payload: IntelligenceActionBulkCreate,
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    result = intelligence_action_service.bulk_create_actions(
+        payload.actions,
+        home_id=payload.home_id,
+        child_id=payload.child_id,
+        staff_id=payload.staff_id,
+        current_user=current_user,
+        conn=conn,
+    )
+    return {
+        "success": True,
+        "data": {
+            "created": [a.model_dump(mode="json") for a in result.created],
+            "failed": result.failed,
+            "summary": result.summary.model_dump(mode="json"),
+            "action_notice": ACTION_NOTICE,
+            "decision_support_notice": SAFE_DECISION_SUPPORT_NOTICE,
+        },
+    }
+
+
+@router.get("/actions/attention-feed")
+def intelligence_actions_attention_feed(
+    home_id: int | str | None = None,
+    child_id: int | str | None = None,
+    staff_id: int | str | None = None,
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    _ = current_user
+    feed = intelligence_action_service.build_attention_feed(
+        home_id=home_id,
+        child_id=child_id,
+        staff_id=staff_id,
+        conn=conn,
+    )
+    return {"success": True, "data": feed.model_dump(mode="json")}
 
 
 @router.patch("/actions/{action_id}")
