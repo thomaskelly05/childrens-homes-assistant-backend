@@ -3,21 +3,24 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from services.orb_citation_service import orb_citation_service
+from services.orb_knowledge_retrieval_service import orb_knowledge_retrieval_service
+
 SOURCE_TYPES = (
     "product_context",
     "regulatory_framework",
     "general_knowledge",
     "user_provided",
     "safety_boundary",
+    "recording_quality",
+    "therapeutic_practice",
+    "safeguarding_principles",
+    "image_context",
 )
 
 
 def _text(value: Any) -> str:
     return str(value or "").strip()
-
-
-def _lower(message: str) -> str:
-    return _text(message).lower()
 
 
 def build_standalone_sources(
@@ -27,125 +30,25 @@ def build_standalone_sources(
     profile_context: bool = False,
     mode: str | None = None,
 ) -> list[dict[str, Any]]:
-    lower = _lower(message)
-    sources: list[dict[str, Any]] = [
-        {
-            "label": "Standalone ORB product boundary",
-            "type": "product_context",
-            "note": "No live IndiCare OS records, Care Hub, chronology or dashboards are accessed in standalone /orb.",
-        }
-    ]
-
-    if profile_context or "standalone context profiles" in lower or "profile:" in lower:
-        sources.append(
-            {
-                "label": "Standalone profile/context you provided",
-                "type": "user_provided",
-                "note": "Based on user-provided standalone profiles or project notes, not OS records.",
-            }
-        )
-
-    if has_images:
-        sources.append(
-            {
-                "label": "User-uploaded image",
-                "type": "user_provided",
-                "note": "Image supplied in the conversation prompt.",
-            }
-        )
-
-    indicare_terms = ("indicare", "orb care companion", "care companion", "/orb", "intelligence spine", "care hub")
-    if any(term in lower for term in indicare_terms):
-        sources.append(
-            {
-                "label": "IndiCare product context",
-                "type": "product_context",
-                "note": "Product-level description of IndiCare OS and ORB Care Companion.",
-            }
-        )
-
-    regulatory_terms = (
-        "ofsted",
-        "sccif",
-        "quality standard",
-        "children's homes regulation",
-        "childrens homes regulation",
-        "reg 44",
-        "reg 45",
-        "inspection",
+    """Build legacy-compatible source list using knowledge retrieval and citations."""
+    packs = orb_knowledge_retrieval_service.retrieve_sources(
+        message,
+        mode=mode,
+        profile_context=profile_context,
+        attachments=["image"] if has_images else None,
     )
-    if any(term in lower for term in regulatory_terms) or (mode or "").strip() == "Ofsted Lens":
-        sources.append(
-            {
-                "label": "Ofsted SCCIF framework knowledge",
-                "type": "regulatory_framework",
-                "note": "Guidance framing from known inspection frameworks; not a live Ofsted lookup.",
-            }
-        )
-        sources.append(
-            {
-                "label": "Children's Homes Regulations / Quality Standards",
-                "type": "regulatory_framework",
-                "note": "Statutory and regulatory framing for registered children's homes in England.",
-            }
-        )
-
-    safeguarding_terms = ("safeguarding", "abuse", "exploitation", "missing", "self-harm", "self harm")
-    if any(term in lower for term in safeguarding_terms) or (mode or "").strip() == "Safeguarding":
-        sources.append(
-            {
-                "label": "Safeguarding practice principles",
-                "type": "safety_boundary",
-                "note": "Reflective support only; follow local policy and escalate immediate risk through proper channels.",
-            }
-        )
-        sources.append(
-            {
-                "label": "Working Together / statutory safeguarding principles",
-                "type": "regulatory_framework",
-                "note": "General statutory safeguarding framing; not a quote or live policy retrieval.",
-            }
-        )
-
-    if not any(item["type"] == "general_knowledge" for item in sources):
-        sources.append(
-            {
-                "label": "General model knowledge",
-                "type": "general_knowledge",
-                "note": "Unless external browsing is added, answers draw on model training and built-in product context.",
-            }
-        )
-
-    return _dedupe_sources(sources)
-
-
-def _dedupe_sources(sources: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    seen: set[str] = set()
-    deduped: list[dict[str, Any]] = []
-    for item in sources:
-        key = f"{item.get('type')}|{item.get('label')}"
-        if key in seen:
-            continue
-        seen.add(key)
-        deduped.append(item)
-    return deduped
+    citations = orb_citation_service.build_citations(
+        packs,
+        message=message,
+        mode=mode,
+        has_images=has_images,
+    )
+    return orb_citation_service.frontend_sources_payload(citations)
 
 
 def append_sources_basis_section(answer: str, sources: list[dict[str, Any]]) -> str:
-    text = _text(answer)
-    if not text or not sources:
-        return text
-    if re.search(r"(?i)sources\s*/\s*basis", text):
-        return text
-    lines = ["", "Sources / basis"]
-    for item in sources[:6]:
-        label = _text(item.get("label"))
-        note = _text(item.get("note"))
-        if note:
-            lines.append(f"- {label}: {note}")
-        elif label:
-            lines.append(f"- {label}")
-    return text + "\n".join(lines)
+    citations = orb_citation_service.normalise_sources(sources)
+    return orb_citation_service.append_sources_basis(answer, citations)
 
 
 INDICARE_PRODUCT_FALLBACK = """IndiCare is a residential children's homes operating system and intelligence platform built to support staff and managers in registered homes.

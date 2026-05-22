@@ -8,11 +8,18 @@ export type StandaloneOrbSourceType =
   | 'general_knowledge'
   | 'user_provided'
   | 'safety_boundary'
+  | 'recording_quality'
+  | 'therapeutic_practice'
+  | 'safeguarding_principles'
+  | 'image_context'
 
 export type StandaloneOrbSource = {
+  id?: string
   label: string
   type: StandaloneOrbSourceType
+  basis?: string
   note?: string
+  live_retrieved?: boolean
 }
 
 export type StandaloneChatMessage = {

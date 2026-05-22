@@ -490,7 +490,9 @@ export function OrbCareCompanion() {
           )
         }
         const assistantId = `a-${Date.now()}`
-        const responseSources = (response.sources ?? []) as StandaloneOrbSource[]
+        const responseSources = (
+          (response.citations?.length ? response.citations : response.sources) ?? []
+        ) as StandaloneOrbSource[]
         setWorkspace((current) => {
           const chat = current.chats.find((c) => c.id === targetChatId)
           if (!chat) return current
@@ -1245,16 +1247,30 @@ function SourcesBasis({ sources }: { sources?: StandaloneOrbSource[] }) {
         {open ? 'Hide sources / basis' : 'Sources / basis'}
       </button>
       {open ? (
-        <div className="mt-2 flex flex-wrap gap-1.5">
+        <div className="mt-2 flex flex-col gap-1.5">
           {sources.map((source, index) => (
-            <span
-              key={`${source.type}-${source.label}-${index}`}
-              title={source.note}
-              className="inline-flex max-w-full flex-col rounded-full border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 text-[10px] text-slate-400"
+            <div
+              key={`${source.id ?? source.type}-${source.label}-${index}`}
+              className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-2.5 py-1.5 text-[10px] text-slate-400"
             >
-              <span className="font-medium text-slate-300">{source.label}</span>
-              {source.note ? <span className="text-slate-500">{source.note}</span> : null}
-            </span>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="font-medium text-slate-300">{source.label}</span>
+                {source.type ? (
+                  <span className="rounded-full bg-white/[0.04] px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-slate-500">
+                    {source.type.replace(/_/g, ' ')}
+                  </span>
+                ) : null}
+                {source.live_retrieved === true ? (
+                  <span className="text-[9px] text-emerald-600/80">Live retrieved</span>
+                ) : source.live_retrieved === false ? (
+                  <span className="text-[9px] text-slate-600">Built-in</span>
+                ) : null}
+              </div>
+              {source.basis ? <p className="mt-0.5 text-slate-500">{source.basis}</p> : null}
+              {source.note && source.note !== source.basis ? (
+                <p className="mt-0.5 text-slate-600">{source.note}</p>
+              ) : null}
+            </div>
           ))}
         </div>
       ) : null}

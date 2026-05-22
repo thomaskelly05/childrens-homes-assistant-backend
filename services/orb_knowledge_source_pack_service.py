@@ -1,0 +1,209 @@
+"""Trusted built-in knowledge source packs for standalone ORB Care Companion."""
+
+from __future__ import annotations
+
+from typing import Any
+
+SOURCE_PACK_IDS = (
+    "indicare_product",
+    "residential_childrens_homes",
+    "ofsted_sccif",
+    "childrens_homes_regulations",
+    "quality_standards",
+    "safeguarding_principles",
+    "recording_quality",
+    "therapeutic_practice",
+    "general_knowledge",
+    "user_provided_context",
+    "standalone_boundary",
+)
+
+ORB_KNOWLEDGE_SOURCE_PACKS: tuple[dict[str, Any], ...] = (
+    {
+        "id": "indicare_product_context",
+        "pack_key": "indicare_product",
+        "title": "IndiCare product context",
+        "source_type": "product_context",
+        "description": "Product-level knowledge about IndiCare, ORB, Care Hub, Record, Intelligence Spine, Actions and OS boundaries.",
+        "source_label": "IndiCare product knowledge",
+        "reliability": "built_in_product_context",
+        "applies_to_modes": ["Ask ORB", "Ofsted Lens", "Record This Properly"],
+        "short_citation_label": "IndiCare product context",
+        "guidance_notes": "Explain the platform, ORB split, and what standalone /orb can and cannot do.",
+        "live_retrieved": False,
+        "category": "product_context",
+    },
+    {
+        "id": "residential_childrens_homes_practice",
+        "pack_key": "residential_childrens_homes",
+        "title": "Residential children's homes practice",
+        "source_type": "regulatory_framework",
+        "description": "Child-centred practice framing for registered children's homes in England.",
+        "source_label": "Residential children's homes practice knowledge",
+        "reliability": "built_in_sector_practice",
+        "applies_to_modes": ["Ask ORB", "Reflect", "Behaviour Support", "Record This Properly"],
+        "short_citation_label": "Residential children's homes practice",
+        "guidance_notes": "Focus on lived experience, staff practice, and evidence without inventing case facts.",
+        "live_retrieved": False,
+        "category": "regulatory",
+    },
+    {
+        "id": "ofsted_sccif_framework",
+        "pack_key": "ofsted_sccif",
+        "title": "Ofsted SCCIF framework knowledge",
+        "source_type": "regulatory_framework",
+        "description": "Inspection framing for children's homes: experiences, help and protection, leadership, effectiveness.",
+        "source_label": "Ofsted SCCIF framework knowledge",
+        "reliability": "built_in_regulatory_framework",
+        "applies_to_modes": ["Ask ORB", "Ofsted Lens"],
+        "short_citation_label": "Ofsted SCCIF framework knowledge",
+        "guidance_notes": "Do not predict grades or quote live Ofsted publications.",
+        "live_retrieved": False,
+        "category": "regulatory",
+    },
+    {
+        "id": "childrens_homes_regulations",
+        "pack_key": "childrens_homes_regulations",
+        "title": "Children's Homes Regulations",
+        "source_type": "regulatory_framework",
+        "description": "Statutory framing from the Children's Homes (England) Regulations 2015.",
+        "source_label": "Children's Homes Regulations knowledge",
+        "reliability": "built_in_regulatory_framework",
+        "applies_to_modes": ["Ask ORB", "Ofsted Lens", "Record This Properly"],
+        "short_citation_label": "Children's Homes Regulations",
+        "guidance_notes": "Practical explanation only; not legal advice.",
+        "live_retrieved": False,
+        "category": "regulatory",
+    },
+    {
+        "id": "quality_standards",
+        "pack_key": "quality_standards",
+        "title": "Quality Standards",
+        "source_type": "regulatory_framework",
+        "description": "Quality Standards that sit under the Children's Homes Regulations.",
+        "source_label": "Children's Homes Quality Standards knowledge",
+        "reliability": "built_in_regulatory_framework",
+        "applies_to_modes": ["Ask ORB", "Ofsted Lens"],
+        "short_citation_label": "Quality Standards",
+        "guidance_notes": "Link practice answers to standards such as protection, care planning, and leadership.",
+        "live_retrieved": False,
+        "category": "regulatory",
+    },
+    {
+        "id": "safeguarding_principles",
+        "pack_key": "safeguarding_principles",
+        "title": "Safeguarding practice principles",
+        "source_type": "safeguarding_principles",
+        "description": "Reflective safeguarding support aligned with Working Together principles; not threshold decisions.",
+        "source_label": "Safeguarding practice principles",
+        "reliability": "built_in_safeguarding_principles",
+        "applies_to_modes": ["Safeguarding", "Ask ORB"],
+        "short_citation_label": "Safeguarding practice principles",
+        "guidance_notes": "Escalate immediate risk; remind users to follow local policy.",
+        "live_retrieved": False,
+        "category": "safeguarding",
+    },
+    {
+        "id": "recording_quality",
+        "pack_key": "recording_quality",
+        "title": "Recording quality",
+        "source_type": "recording_quality",
+        "description": "Factual, child-centred, non-punitive recording guidance and evidence suggestions.",
+        "source_label": "Recording quality guidance",
+        "reliability": "built_in_recording_quality",
+        "applies_to_modes": ["Record This Properly", "Ask ORB"],
+        "short_citation_label": "Recording quality",
+        "guidance_notes": "Avoid judgemental labels; suggest what evidence to include.",
+        "live_retrieved": False,
+        "category": "recording",
+    },
+    {
+        "id": "therapeutic_practice",
+        "pack_key": "therapeutic_practice",
+        "title": "Therapeutic and trauma-informed practice",
+        "source_type": "therapeutic_practice",
+        "description": "Behaviour as communication, trauma-informed response, repair and restorative thinking.",
+        "source_label": "Therapeutic practice knowledge",
+        "reliability": "built_in_therapeutic_practice",
+        "applies_to_modes": ["Behaviour Support", "Reflect", "Ask ORB"],
+        "short_citation_label": "Therapeutic practice",
+        "guidance_notes": "Emotionally containing language; no clinical diagnosis.",
+        "live_retrieved": False,
+        "category": "therapeutic",
+    },
+    {
+        "id": "general_knowledge",
+        "pack_key": "general_knowledge",
+        "title": "General model knowledge",
+        "source_type": "general_knowledge",
+        "description": "Broad ChatGPT-style general knowledge when no specialist pack dominates.",
+        "source_label": "General model knowledge",
+        "reliability": "model_training",
+        "applies_to_modes": ["Ask ORB"],
+        "short_citation_label": "General model knowledge",
+        "guidance_notes": "Do not claim live web retrieval unless explicitly enabled.",
+        "live_retrieved": False,
+        "category": "general",
+    },
+    {
+        "id": "user_provided_context",
+        "pack_key": "user_provided_context",
+        "title": "User-provided context",
+        "source_type": "user_provided",
+        "description": "Standalone profiles, project notes, chat history and uploaded images supplied by the user.",
+        "source_label": "User-provided context",
+        "reliability": "user_supplied",
+        "applies_to_modes": list(
+            [
+                "Ask ORB",
+                "Safeguarding",
+                "Reflect",
+                "Ofsted Lens",
+                "Behaviour Support",
+                "Record This Properly",
+            ]
+        ),
+        "short_citation_label": "User-provided context",
+        "guidance_notes": "Not IndiCare OS records; treat as user narrative only.",
+        "live_retrieved": False,
+        "category": "user_provided",
+    },
+    {
+        "id": "standalone_boundary",
+        "pack_key": "standalone_boundary",
+        "title": "Standalone ORB product boundary",
+        "source_type": "safety_boundary",
+        "description": "Standalone /orb does not access live OS records, Care Hub, chronology, dashboards or operational APIs.",
+        "source_label": "Standalone ORB product boundary",
+        "reliability": "built_in_product_boundary",
+        "applies_to_modes": list(
+            [
+                "Ask ORB",
+                "Safeguarding",
+                "Reflect",
+                "Ofsted Lens",
+                "Behaviour Support",
+                "Record This Properly",
+            ]
+        ),
+        "short_citation_label": "Standalone ORB product boundary",
+        "guidance_notes": "Direct operational questions to /assistant/orb.",
+        "live_retrieved": False,
+        "category": "safety_boundary",
+    },
+)
+
+_PACK_BY_KEY: dict[str, dict[str, Any]] = {pack["pack_key"]: pack for pack in ORB_KNOWLEDGE_SOURCE_PACKS}
+_PACK_BY_ID: dict[str, dict[str, Any]] = {pack["id"]: pack for pack in ORB_KNOWLEDGE_SOURCE_PACKS}
+
+
+def get_source_pack(pack_key: str) -> dict[str, Any] | None:
+    return _PACK_BY_KEY.get(pack_key)
+
+
+def get_source_pack_by_id(pack_id: str) -> dict[str, Any] | None:
+    return _PACK_BY_ID.get(pack_id)
+
+
+def list_source_packs() -> list[dict[str, Any]]:
+    return list(ORB_KNOWLEDGE_SOURCE_PACKS)
