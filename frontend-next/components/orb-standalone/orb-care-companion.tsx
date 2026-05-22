@@ -4,17 +4,21 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState, type Reac
 import { useSearchParams } from 'next/navigation'
 import {
   ChevronDown,
+  ChevronRight,
   ChevronUp,
   Copy,
   FileText,
+  Menu,
   MessageSquarePlus,
   Mic,
   MicOff,
+  PanelRightClose,
+  PanelRightOpen,
   RotateCcw,
   Send,
   Settings2,
+  Shield,
   Square,
-  Trash2,
   Volume2,
   VolumeX,
   X
@@ -36,13 +40,13 @@ import {
 type ChatMessage = { id: string; role: 'user' | 'assistant'; content: string }
 
 const PRIVACY_STRIP =
-  'Standalone ORB does not access IndiCare records, Care Hub, child files or dashboards. It supports reflection, recording and guidance only.'
+  'Standalone ORB does not access IndiCare records, Care Hub, child files or dashboards.'
 
 const MODE_SAFETY: Partial<Record<StandaloneOrbMode, string>> = {
   Safeguarding:
-    'Follow your safeguarding policy and escalate immediate risk. ORB supports thinking; it does not make decisions.',
+    'Follow safeguarding procedures and escalate immediate risk. ORB supports thinking; it does not make decisions.',
   'Record This Properly':
-    'Review wording before adding it to a record. ORB cannot see the record unless you paste text here.',
+    'ORB can help with wording, but review before adding to records.',
   'Ofsted Lens': 'Guidance support only. ORB does not make inspection judgements.'
 }
 
@@ -65,6 +69,22 @@ const ANSWER_STYLE_LABELS: Record<StandaloneOrbAnswerStyle, string> = {
   detailed: 'Detailed'
 }
 
+const EMPTY_STATE_STARTERS: PromptEntry[] = [
+  { text: 'Help me write a daily note', mode: 'Record This Properly' },
+  { text: 'Explain Ofsted expectations', mode: 'Ofsted Lens' },
+  { text: 'Think through a safeguarding concern', mode: 'Safeguarding' },
+  { text: 'Reflect after a difficult shift', mode: 'Reflect' },
+  { text: 'Make wording more child-centred', mode: 'Record This Properly' },
+  { text: 'General question' }
+]
+
+const SIDEBAR_SESSION_PLACEHOLDERS = [
+  'This session',
+  'Recording support',
+  'Safeguarding reflection',
+  'Ofsted lens'
+] as const
+
 function trimConversationHistory(messages: ChatMessage[]): Array<{ role: string; content: string }> {
   const pairs = messages.map((entry) => ({ role: entry.role, content: entry.content }))
   if (pairs.length <= MAX_HISTORY_TURNS) return pairs
@@ -81,21 +101,24 @@ function voiceStatusLine(options: {
   pending: boolean
 }): string {
   const { voice, pending } = options
-  if (voice.error && voice.wakeStatus === 'unsupported') return voice.error
-  if (voice.voiceSessionPaused) return 'Voice session paused. Tap Continue conversation or type.'
-  if (voice.phase === 'wake_listening') return `Listening for "${voice.wakePhraseText}"…`
-  if (voice.phase === 'wake_detected') return "Hey, I'm here. Go ahead…"
-  if (voice.phase === 'continuous_listening') return 'Listening for your reply…'
-  if (voice.listening) return "I'm listening… speak naturally. Tap ORB or mic again to stop."
-  if (voice.phase === 'transcript_ready' && voice.displayTranscript) {
-    return `I heard you say… review below, then Send or Try again.`
+  if (voice.error && voice.wakeStatus === 'unsupported') {
+    return 'Voice is unavailable in this browser. You can still type.'
   }
-  if (voice.speaking) return "Here's how I'd think about it… You can interrupt me any time."
+  if (voice.voiceSessionPaused) return 'Voice session paused. Tap Continue conversation or type.'
+  if (voice.phase === 'wake_listening') return `Say "${voice.wakePhraseText}"…`
+  if (voice.phase === 'wake_detected') return "Hey, I'm here. Go ahead…"
+  if (voice.phase === 'continuous_listening') return "I'm listening…"
+  if (voice.listening) return "I'm listening…"
+  if (voice.phase === 'transcript_ready' && voice.displayTranscript) {
+    return 'I heard you say… review below, then Send or Try again.'
+  }
+  if (voice.speaking) return 'You can interrupt me any time.'
   if (pending) return 'Thinking that through…'
+  if (voice.phase === 'interrupted') return "Stopped — I'm listening."
   if (voice.settings.wakePhrase && voice.wakeStatus === 'listening') {
     return `Wake phrase on — say "${voice.wakePhraseText}" or tap the ORB.`
   }
-  return 'Go ahead… Keyboard always works. Microphone is optional.'
+  return 'Ask me anything, or say Hey ORB.'
 }
 
 type PromptEntry = { text: string; mode?: StandaloneOrbMode }
@@ -186,6 +209,13 @@ async function copyToClipboard(text: string) {
   document.body.removeChild(area)
 }
 
+function conversationTitle(messages: ChatMessage[]): string {
+  const firstUser = messages.find((m) => m.role === 'user')
+  if (!firstUser) return 'New conversation'
+  const snippet = firstUser.content.trim().slice(0, 42)
+  return snippet.length < firstUser.content.trim().length ? `${snippet}…` : snippet
+}
+
 export function OrbCareCompanion() {
   const searchParams = useSearchParams()
   const initialQuery = searchParams.get('q')?.trim() || ''
@@ -199,7 +229,10 @@ export function OrbCareCompanion() {
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [voicePanelOpen, setVoicePanelOpen] = useState(false)
-  const [historyOpen, setHistoryOpen] = useState(false)
+  const [orbDockExpanded, setOrbDockExpanded] = useState(true)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [mobileOrbOpen, setMobileOrbOpen] = useState(false)
+  const [startersExpanded, setStartersExpanded] = useState(true)
   const [draftNotice, setDraftNotice] = useState<string | null>(null)
   const [conversationId, setConversationId] = useState(() => `standalone-${Date.now().toString(36)}`)
   const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null)
@@ -210,6 +243,8 @@ export function OrbCareCompanion() {
 
   const voice = useStandaloneOrbVoice()
   const { settings: voiceSettings, updateSettings: updateVoiceSettings } = voice
+
+  const showEmptyState = messages.length === 0 && !pending
 
   useEffect(() => {
     let cancelled = false
@@ -251,17 +286,6 @@ export function OrbCareCompanion() {
     transcriptHasHighRiskTerms(voice.transcript) ||
     messages.some((m) => m.role === 'user' && transcriptHasHighRiskTerms(m.content))
 
-  const latestExchange = useMemo(() => {
-    if (messages.length === 0) return { earlier: [] as ChatMessage[], user: null as ChatMessage | null, assistant: null as ChatMessage | null }
-    const last = messages[messages.length - 1]
-    if (last.role === 'assistant') {
-      const prev = messages[messages.length - 2]
-      const user = prev?.role === 'user' ? prev : null
-      return { earlier: messages.slice(0, user ? -2 : -1), user, assistant: last }
-    }
-    return { earlier: messages.slice(0, -1), user: last, assistant: null }
-  }, [messages])
-
   const glowState = glowStateForContext({
     pending,
     voicePhase: voice.phase,
@@ -271,6 +295,8 @@ export function OrbCareCompanion() {
     mode,
     recordingContext
   })
+
+  const chatTitle = useMemo(() => conversationTitle(messages), [messages])
 
   useEffect(() => {
     return voice.registerAfterSpeakListener(() => {
@@ -395,14 +421,11 @@ export function OrbCareCompanion() {
     setTimeout(() => setDraftNotice(null), 4000)
   }
 
-  function clearConversation() {
-    startNewChat()
-  }
-
   function applyPrompt(entry: PromptEntry) {
     setInput(entry.text)
     if (entry.mode) setMode(entry.mode)
     inputRef.current?.focus()
+    setSidebarOpen(false)
   }
 
   async function handleDraftWording(text: string) {
@@ -413,315 +436,209 @@ export function OrbCareCompanion() {
 
   const modeSafety = MODE_SAFETY[mode]
 
-  return (
-    <main className="orb-cinematic-scene relative min-h-[100dvh] overflow-hidden text-white">
-      <div className="pointer-events-none fixed inset-0 orb-cinematic-light-field" aria-hidden />
-      <div
-        className="pointer-events-none fixed inset-0 opacity-[0.18] [background-image:linear-gradient(rgba(255,255,255,.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.025)_1px,transparent_1px)] [background-size:80px_80px]"
-        aria-hidden
-      />
-
-      <div className="relative mx-auto flex min-h-[100dvh] max-w-[1680px] flex-col px-4 py-4 md:px-6 md:py-5">
-        <header className="shrink-0 border-b border-white/10 pb-4">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-cyan-200/90">ORB Care Companion</p>
-              <h1 className="mt-1 text-2xl font-black tracking-[-0.04em] md:text-4xl">Standalone residential care assistant</h1>
-            </div>
-            <div className="flex flex-col items-end gap-2">
-              <span className="rounded-full border border-emerald-400/25 bg-emerald-400/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-emerald-100">
-                No OS records · no Care Hub access
-              </span>
-              <span className="rounded-full border border-cyan-300/20 bg-cyan-300/8 px-3 py-1.5 text-[10px] font-semibold text-cyan-100/90">
-                Standalone ORB Care Companion
-              </span>
-            </div>
-          </div>
-
-          <div className="mt-4 flex flex-wrap gap-2" role="tablist" aria-label="ORB mode">
-            {modes.map((item) => (
+  const composer = (
+    <div className="orb-chat-composer shrink-0 border-t border-white/10 bg-[#0a0e16]/95 p-3 backdrop-blur-xl md:p-4">
+      {voice.phase === 'transcript_ready' && voice.displayTranscript ? (
+        <div className="mb-3 rounded-2xl border border-teal-300/25 bg-teal-300/8 px-4 py-3">
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-teal-200/90">I heard you say…</p>
+          <p className="mt-1 text-sm italic text-slate-100">&ldquo;{voice.displayTranscript}&rdquo;</p>
+          {!voiceSettings.autoSend ? (
+            <div className="mt-3 flex flex-wrap gap-2">
               <button
-                key={item}
                 type="button"
-                role="tab"
-                aria-selected={mode === item}
-                onClick={() => handleModeChange(item as StandaloneOrbMode)}
-                className={`rounded-full border px-4 py-2 text-xs font-bold transition focus-visible:ring-2 focus-visible:ring-cyan-300 ${
-                  mode === item
-                    ? 'border-cyan-300/45 bg-cyan-300/15 text-white shadow-lg shadow-cyan-900/20'
-                    : 'border-white/10 bg-white/[0.04] text-slate-300 hover:border-cyan-300/25'
-                }`}
+                onClick={() => void sendMessage(voice.transcript || voice.displayTranscript)}
+                disabled={pending}
+                className="inline-flex h-9 items-center gap-1.5 rounded-full bg-cyan-300/20 px-4 text-xs font-black text-cyan-50"
               >
-                {item}
+                <Send className="h-3.5 w-3.5" aria-hidden />
+                Send
               </button>
-            ))}
-          </div>
-        </header>
-
-        {recordingContext ? (
-          <div
-            className="mt-4 rounded-2xl border border-teal-300/25 bg-teal-300/10 px-4 py-3 text-sm leading-6 text-teal-50"
-            role="status"
+              <button
+                type="button"
+                onClick={() => {
+                  voice.clearTranscript()
+                  voice.startListening()
+                }}
+                className="inline-flex h-9 items-center rounded-full border border-white/15 px-4 text-xs font-bold text-slate-300"
+              >
+                Try again
+              </button>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+      <form className="mx-auto max-w-3xl" onSubmit={(event) => void submit(event)}>
+        <label htmlFor="orb-standalone-input" className="sr-only">
+          Message ORB
+        </label>
+        <div className="flex items-end gap-2 rounded-[28px] border border-white/12 bg-slate-950/90 p-2 shadow-lg shadow-black/20 focus-within:border-cyan-300/35 focus-within:ring-2 focus-within:ring-cyan-300/25">
+          <button
+            type="button"
+            onClick={handleMicClick}
+            disabled={!voice.recognitionAvailable}
+            aria-label={voice.listening ? 'Stop listening' : 'Start voice input'}
+            className={`inline-flex h-11 min-w-11 shrink-0 items-center justify-center rounded-full border transition focus-visible:ring-2 focus-visible:ring-cyan-300 disabled:opacity-40 ${
+              voice.listening
+                ? 'border-cyan-300/60 bg-cyan-300/20 text-cyan-50'
+                : 'border-white/15 bg-white/5 text-slate-200 hover:border-cyan-300/40'
+            }`}
           >
-            <strong className="font-black">Recording support:</strong> ORB can help with wording and reflection, but it
-            cannot see the record.
-          </div>
-        ) : null}
-
-        {draftNotice ? (
-          <p className="mt-3 rounded-2xl border border-amber-300/30 bg-amber-300/10 px-4 py-2 text-sm text-amber-50" role="status">
-            {draftNotice}
+            {voice.listening ? <MicOff className="h-5 w-5" aria-hidden /> : <Mic className="h-5 w-5" aria-hidden />}
+          </button>
+          <textarea
+            id="orb-standalone-input"
+            ref={inputRef}
+            value={input}
+            onChange={(event) => setInput(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault()
+                void submit()
+              }
+            }}
+            rows={1}
+            className="max-h-40 min-h-[2.75rem] flex-1 resize-none bg-transparent px-1 py-2.5 text-base text-white outline-none placeholder:text-slate-500"
+            placeholder="Message ORB Care Companion…"
+            disabled={pending}
+            aria-describedby="orb-standalone-status"
+          />
+          <button
+            type="submit"
+            disabled={pending || !input.trim()}
+            aria-label="Send message"
+            className="inline-flex h-11 min-w-11 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,#67e8f9,#a78bfa)] text-slate-950 disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-amber-200"
+          >
+            <Send className="h-5 w-5" aria-hidden />
+          </button>
+        </div>
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-2 px-1">
+          <p id="orb-standalone-status" className="text-xs leading-5 text-slate-400" role="status">
+            {voiceStatusLine({ voice, pending })}
           </p>
-        ) : null}
-
-        {showSafeguardingEscalation ? (
-          <div
-            className="mt-4 rounded-2xl border border-rose-300/30 bg-rose-950/40 px-4 py-3 text-sm leading-6 text-rose-50"
-            role="status"
-          >
-            Follow your safeguarding procedure immediately if there is current risk. ORB can help you think, but it
-            does not replace escalation.
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] font-bold text-slate-400">
+              {mode}
+            </span>
+            <button
+              type="button"
+              onClick={() => updateVoiceSettings({ voiceReplies: !voiceSettings.voiceReplies })}
+              disabled={!voice.synthesisAvailable}
+              className="rounded-full border border-white/10 px-2.5 py-1 text-[10px] font-bold text-slate-400 disabled:opacity-40"
+            >
+              Voice replies: {voiceSettings.voiceReplies ? 'On' : 'Off'}
+            </button>
+          </div>
+        </div>
+        {voice.listening || voice.speaking ? (
+          <div className="mt-2 flex flex-wrap gap-2 px-1">
+            {voice.listening ? (
+              <button
+                type="button"
+                onClick={voice.cancelListening}
+                className="inline-flex h-8 items-center rounded-full border border-white/15 px-3 text-xs font-bold text-slate-300"
+              >
+                Cancel listening
+              </button>
+            ) : null}
+            {voice.speaking ? (
+              <button
+                type="button"
+                onClick={voice.cancelSpeaking}
+                className="inline-flex h-8 items-center gap-1.5 rounded-full border border-amber-300/40 bg-amber-300/15 px-3 text-xs font-black text-amber-50"
+              >
+                <Square className="h-3 w-3 fill-current" aria-hidden />
+                Stop speaking
+              </button>
+            ) : null}
           </div>
         ) : null}
+      </form>
+      <p className="mx-auto mt-3 max-w-3xl px-1 text-[11px] leading-5 text-slate-500" role="note">
+        {PRIVACY_STRIP} ORB remembers this chat while the page is open.
+      </p>
+      {modeSafety ? (
+        <p className="mx-auto mt-2 max-w-3xl px-1 text-[11px] leading-5 text-slate-400">{modeSafety}</p>
+      ) : null}
+    </div>
+  )
 
-        <p className="mt-3 text-xs leading-5 text-slate-500" role="note">
-          ORB remembers this chat while the page is open. It does not access IndiCare records.
-        </p>
-
-        <div className="mt-4 grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(280px,360px)_minmax(0,1fr)_minmax(260px,320px)] lg:grid-rows-1">
-          <section className="order-1 flex flex-col items-center justify-start rounded-[28px] border border-white/10 bg-slate-950/40 p-5 backdrop-blur-xl lg:order-1">
+  const orbDockPanel = (
+    <div
+      className={`orb-voice-dock flex flex-col ${orbDockExpanded ? 'orb-voice-dock--expanded' : 'orb-voice-dock--collapsed'}`}
+    >
+      <div className="flex items-center justify-between gap-2 border-b border-white/10 px-3 py-2">
+        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Voice ORB</p>
+        <button
+          type="button"
+          onClick={() => setOrbDockExpanded((open) => !open)}
+          className="rounded-lg border border-white/10 p-1.5 text-slate-400 hover:text-white"
+          aria-label={orbDockExpanded ? 'Collapse ORB dock' : 'Expand ORB dock'}
+        >
+          {orbDockExpanded ? <ChevronRight className="h-4 w-4" /> : <PanelRightOpen className="h-4 w-4" />}
+        </button>
+      </div>
+      {orbDockExpanded ? (
+        <>
+          <div className="flex flex-1 flex-col items-center justify-center px-3 py-4">
             <OrbGlow
               state={glowState}
               mode={mode}
               voiceEnabled={voiceSettings.voiceReplies && voice.synthesisAvailable}
               onOrbActivate={handleOrbActivate}
               interactive={voice.recognitionAvailable}
+              size="dock"
+              compactLabels
             />
-            {voice.listening ? (
-              <p className="mt-2 text-xs text-cyan-200">Tap again to stop · or cancel below</p>
-            ) : null}
             {voice.interimTranscript && voice.listening ? (
-              <p className="mt-3 max-w-xs text-center text-sm italic text-slate-300">&ldquo;{voice.interimTranscript}&rdquo;</p>
+              <p className="mt-2 max-w-[12rem] text-center text-xs italic text-slate-400">
+                &ldquo;{voice.interimTranscript}&rdquo;
+              </p>
             ) : null}
-          </section>
-
-          <section className="order-2 flex min-h-0 flex-col overflow-hidden rounded-[28px] border border-white/10 bg-slate-950/50 shadow-2xl shadow-black/30 backdrop-blur-xl">
-            <div className="flex-1 overflow-y-auto px-4 py-5 md:px-6" role="log" aria-label="ORB conversation">
-              {messages.length === 0 ? (
-                <article className="max-w-2xl rounded-3xl border border-white/10 bg-white/[0.04] p-5 leading-7 text-slate-200">
-                  <p className="mb-2 text-xs font-black uppercase tracking-[0.18em] text-slate-400">ORB</p>
-                  I help with practice reflection, safeguarding thinking, Ofsted/SCCIF lens, behaviour support and
-                  recording quality — without opening IndiCare OS child records or Care Hub.
-                </article>
-              ) : (
-                <>
-                  {latestExchange.earlier.length > 0 ? (
-                    <div className="mb-4">
-                      <button
-                        type="button"
-                        onClick={() => setHistoryOpen((open) => !open)}
-                        className="flex w-full items-center justify-between rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-2 text-xs font-bold text-slate-400"
-                      >
-                        <span>Earlier messages ({latestExchange.earlier.length})</span>
-                        {historyOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                      </button>
-                      {historyOpen ? (
-                        <div className="mt-3 space-y-3">
-                          {latestExchange.earlier.map((entry) => (
-                            <MessageBubble key={entry.id} entry={entry} compact />
-                          ))}
-                        </div>
-                      ) : null}
-                    </div>
-                  ) : null}
-
-                  {latestExchange.user ? <MessageBubble entry={latestExchange.user} /> : null}
-
-                  {latestExchange.assistant ? (
-                    <article className="max-w-3xl rounded-3xl border border-white/12 bg-white/[0.06] p-5 leading-7 shadow-lg shadow-violet-950/20">
-                      <p className="mb-2 text-xs font-black uppercase tracking-[0.18em] text-violet-200/80">ORB · latest</p>
-                      <p className="whitespace-pre-wrap text-slate-50">{latestExchange.assistant.content}</p>
-                      <ResponseActions
-                        messageId={latestExchange.assistant.id}
-                        content={latestExchange.assistant.content}
-                        speaking={speakingMessageId === latestExchange.assistant.id}
-                        synthesisAvailable={voice.synthesisAvailable}
-                        onSpeak={() => {
-                          setSpeakingMessageId(latestExchange.assistant!.id)
-                          voice.speak(latestExchange.assistant!.content, () => setSpeakingMessageId(null))
-                        }}
-                        onStop={voice.cancelSpeaking}
-                        onNewQuestion={() => {
-                          setInput('')
-                          inputRef.current?.focus()
-                        }}
-                        onDraft={() => void handleDraftWording(latestExchange.assistant!.content)}
-                      />
-                    </article>
-                  ) : null}
-                </>
-              )}
-
-              {pending ? (
-                <p className="mt-4 text-sm font-semibold text-violet-200" role="status">
-                  Thinking…
-                </p>
-              ) : null}
-              {error ? (
-                <p className="mt-4 rounded-2xl border border-amber-300/30 bg-amber-300/10 px-4 py-3 text-sm text-amber-50" role="alert">
-                  {error}
-                </p>
-              ) : null}
-              <div ref={messagesEndRef} />
-            </div>
-
-            <div className="shrink-0 border-t border-white/10 bg-slate-950/70 p-4">
-              {voice.phase === 'transcript_ready' && voice.displayTranscript ? (
-                <div className="mb-3 rounded-2xl border border-teal-300/25 bg-teal-300/8 px-4 py-3">
-                  <p className="text-xs font-black uppercase tracking-[0.14em] text-teal-200/90">I heard…</p>
-                  <p className="mt-1 text-sm italic text-slate-100">&ldquo;{voice.displayTranscript}&rdquo;</p>
-                  {!voiceSettings.autoSend ? (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={() => void sendMessage(voice.transcript || voice.displayTranscript)}
-                        disabled={pending}
-                        className="inline-flex h-9 items-center gap-1.5 rounded-full bg-cyan-300/20 px-4 text-xs font-black text-cyan-50"
-                      >
-                        <Send className="h-3.5 w-3.5" aria-hidden />
-                        Send
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          voice.clearTranscript()
-                          voice.startListening()
-                        }}
-                        className="inline-flex h-9 items-center rounded-full border border-white/15 px-4 text-xs font-bold text-slate-300"
-                      >
-                        Try again
-                      </button>
-                    </div>
-                  ) : null}
-                </div>
-              ) : null}
-              <form className="grid gap-3" onSubmit={(event) => void submit(event)}>
-                <label htmlFor="orb-standalone-input" className="sr-only">
-                  Message ORB
-                </label>
-                <textarea
-                  id="orb-standalone-input"
-                  ref={inputRef}
-                  value={input}
-                  onChange={(event) => setInput(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' && !event.shiftKey) {
-                      event.preventDefault()
-                      void submit()
-                    }
-                  }}
-                  rows={2}
-                  className="min-h-[3.25rem] w-full resize-y rounded-2xl border border-white/10 bg-slate-950/90 px-4 py-3 text-base text-white outline-none ring-cyan-300/40 placeholder:text-slate-500 focus-visible:ring-2"
-                  placeholder="Type your question — voice is optional"
-                  disabled={pending}
-                  aria-describedby="orb-standalone-status"
-                />
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={handleMicClick}
-                    disabled={!voice.recognitionAvailable}
-                    aria-label={voice.listening ? 'Stop listening' : 'Start voice input'}
-                    className={`inline-flex h-11 min-w-11 items-center justify-center rounded-full border px-3 text-sm font-black transition focus-visible:ring-2 focus-visible:ring-cyan-300 disabled:opacity-40 ${
-                      voice.listening
-                        ? 'border-cyan-300/60 bg-cyan-300/20 text-cyan-50'
-                        : 'border-white/15 bg-white/5 text-slate-200 hover:border-cyan-300/40'
-                    }`}
-                  >
-                    {voice.listening ? <MicOff className="h-5 w-5" aria-hidden /> : <Mic className="h-5 w-5" aria-hidden />}
-                  </button>
-                  {voice.listening ? (
-                    <button
-                      type="button"
-                      onClick={voice.cancelListening}
-                      className="inline-flex h-11 items-center rounded-full border border-white/15 px-4 text-xs font-bold text-slate-300"
-                    >
-                      Cancel listening
-                    </button>
-                  ) : null}
-                  {voice.speaking ? (
-                    <button
-                      type="button"
-                      onClick={voice.cancelSpeaking}
-                      className="inline-flex h-11 items-center gap-1.5 rounded-full border border-amber-300/40 bg-amber-300/15 px-4 text-xs font-black text-amber-50"
-                    >
-                      <Square className="h-3.5 w-3.5 fill-current" aria-hidden />
-                      Stop speaking
-                    </button>
-                  ) : null}
-                  <button
-                    type="submit"
-                    disabled={pending || !input.trim()}
-                    className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-[linear-gradient(135deg,#67e8f9,#a78bfa,#fbbf24)] px-5 text-sm font-black text-slate-950 disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-amber-200 md:flex-none md:min-w-[7rem]"
-                  >
-                    <Send className="h-4 w-4" aria-hidden />
-                    {pending ? 'Thinking…' : 'Send'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setVoicePanelOpen((open) => !open)}
-                    className="inline-flex h-11 items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 text-sm font-bold text-slate-200"
-                    aria-expanded={voicePanelOpen}
-                    aria-controls="orb-voice-settings"
-                  >
-                    <Settings2 className="h-4 w-4" aria-hidden />
-                    Voice
-                  </button>
-                </div>
-                <p id="orb-standalone-status" className="text-xs leading-5 text-slate-400" role="status">
-                  {voiceStatusLine({ voice, pending })}
-                </p>
-              </form>
-            </div>
-          </section>
-
-          <aside className="order-3 flex min-h-0 flex-col gap-3 overflow-hidden">
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={startNewChat}
-                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-bold text-slate-200"
-              >
-                <MessageSquarePlus className="h-3.5 w-3.5" aria-hidden />
-                New chat
-              </button>
-              <button
-                type="button"
-                onClick={clearConversation}
-                disabled={messages.length === 0}
-                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-bold text-slate-200 disabled:opacity-40"
-              >
-                <Trash2 className="h-3.5 w-3.5" aria-hidden />
-                Clear
-              </button>
-              <button
-                type="button"
-                onClick={() => void exportConversation()}
-                disabled={messages.length === 0}
-                className="inline-flex w-full items-center justify-center gap-1.5 rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-bold text-slate-200 disabled:opacity-40"
-              >
-                <Copy className="h-3.5 w-3.5" aria-hidden />
-                Copy chat
-              </button>
-            </div>
-
+          </div>
+          <div className="space-y-2 border-t border-white/10 p-3">
+            <SettingToggle
+              label="Wake phrase (Hey ORB)"
+              checked={voiceSettings.wakePhrase}
+              disabled={!voice.continuousRecognitionSupported}
+              onChange={(on) => {
+                if (!on) voice.stopWakeListening()
+                updateVoiceSettings({ wakePhrase: on })
+              }}
+            />
+            <SettingToggle
+              label="Continuous conversation"
+              checked={voiceSettings.continuousConversation}
+              disabled={!voice.recognitionAvailable}
+              onChange={(on) => updateVoiceSettings({ continuousConversation: on })}
+            />
+            <SettingToggle
+              label="Voice replies"
+              checked={voiceSettings.voiceReplies}
+              disabled={!voice.synthesisAvailable}
+              onChange={(on) => {
+                if (!on) voice.cancelSpeaking()
+                updateVoiceSettings({ voiceReplies: on })
+              }}
+              iconOn={<Volume2 className="h-3.5 w-3.5" />}
+              iconOff={<VolumeX className="h-3.5 w-3.5" />}
+            />
+            <button
+              type="button"
+              onClick={() => setVoicePanelOpen((open) => !open)}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs font-bold text-slate-300"
+              aria-expanded={voicePanelOpen}
+              aria-controls="orb-voice-settings"
+            >
+              <Settings2 className="h-3.5 w-3.5" aria-hidden />
+              Voice settings
+            </button>
             {voice.recognitionAvailable ? (
-              <div className="flex flex-wrap gap-2">
+              <div className="flex gap-2">
                 {voice.voiceSessionPaused ? (
                   <button
                     type="button"
                     onClick={voice.resumeVoiceSession}
-                    className="inline-flex flex-1 items-center justify-center rounded-2xl border border-cyan-300/30 bg-cyan-300/10 px-3 py-2 text-xs font-bold text-cyan-100"
+                    className="flex-1 rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-2 py-2 text-[10px] font-bold text-cyan-100"
                   >
                     Continue conversation
                   </button>
@@ -729,7 +646,7 @@ export function OrbCareCompanion() {
                   <button
                     type="button"
                     onClick={voice.pauseVoiceSession}
-                    className="inline-flex flex-1 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-bold text-slate-200"
+                    className="flex-1 rounded-xl border border-white/10 px-2 py-2 text-[10px] font-bold text-slate-300"
                   >
                     Pause conversation
                   </button>
@@ -737,74 +654,394 @@ export function OrbCareCompanion() {
                 <button
                   type="button"
                   onClick={voice.endVoiceSession}
-                  className="inline-flex flex-1 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-bold text-slate-200"
+                  className="flex-1 rounded-xl border border-white/10 px-2 py-2 text-[10px] font-bold text-slate-300"
                 >
                   End voice session
                 </button>
               </div>
             ) : null}
-
-            {voicePanelOpen ? (
+          </div>
+          {voicePanelOpen ? (
+            <div className="border-t border-white/10 p-3">
               <VoiceSettingsPanel
                 voice={voice}
                 voiceSettings={voiceSettings}
                 updateVoiceSettings={updateVoiceSettings}
                 onClose={() => setVoicePanelOpen(false)}
               />
-            ) : null}
+            </div>
+          ) : null}
+        </>
+      ) : (
+        <div className="flex flex-col items-center py-4">
+          <button type="button" onClick={handleOrbActivate} className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
+            <OrbGlow
+              state={glowState}
+              voiceEnabled={voiceSettings.voiceReplies && voice.synthesisAvailable}
+              onOrbActivate={handleOrbActivate}
+              interactive={voice.recognitionAvailable}
+              size="compact"
+              compactLabels
+            />
+          </button>
+        </div>
+      )}
+    </div>
+  )
 
-            <div className="min-h-0 flex-1 overflow-y-auto rounded-[24px] border border-white/10 bg-slate-950/45 p-4">
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Suggested prompts</p>
-              <div className="mt-3 space-y-4">
-                {SUGGESTED_PROMPT_GROUPS.map((group) => (
-                  <div key={group.title}>
-                    <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">{group.title}</p>
-                    <div className="mt-2 flex flex-col gap-1.5">
-                      {group.prompts.map((prompt) => (
-                        <button
-                          key={prompt.text}
-                          type="button"
-                          onClick={() => applyPrompt(prompt)}
-                          className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-2 text-left text-xs font-semibold leading-5 text-slate-200 transition hover:border-cyan-300/30 hover:bg-cyan-300/8"
-                        >
-                          {prompt.text}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+  return (
+    <main className="orb-chat-layout relative flex min-h-[100dvh] flex-col overflow-hidden bg-[#05070d] text-white">
+      <div className="pointer-events-none fixed inset-0 orb-cinematic-light-field opacity-60" aria-hidden />
+
+      {sidebarOpen ? (
+        <button
+          type="button"
+          className="fixed inset-0 z-40 bg-black/60 lg:hidden"
+          aria-label="Close sidebar"
+          onClick={() => setSidebarOpen(false)}
+        />
+      ) : null}
+
+      <div className="relative flex min-h-0 flex-1">
+        <aside
+          className={`orb-chat-sidebar fixed inset-y-0 left-0 z-50 flex w-[min(100%,280px)] flex-col border-r border-white/10 bg-[#070b12] transition-transform lg:static lg:z-auto lg:translate-x-0 ${
+            sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+          }`}
+        >
+          <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-200/90">ORB Care Companion</p>
+            <button
+              type="button"
+              className="rounded-lg p-1 text-slate-400 lg:hidden"
+              onClick={() => setSidebarOpen(false)}
+              aria-label="Close sidebar"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-3">
+            <button
+              type="button"
+              onClick={() => {
+                startNewChat()
+                setSidebarOpen(false)
+              }}
+              className="flex w-full items-center gap-2 rounded-xl border border-white/12 bg-white/[0.05] px-4 py-3 text-sm font-bold text-white transition hover:border-cyan-300/30"
+            >
+              <MessageSquarePlus className="h-4 w-4" aria-hidden />
+              New chat
+            </button>
+
+            <div className="mt-4">
+              <p className="px-2 text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Current chat</p>
+              <p className="mt-1 truncate rounded-lg px-2 py-1.5 text-sm font-semibold text-slate-200">{chatTitle}</p>
+            </div>
+
+            <div className="mt-5">
+              <p className="px-2 text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Recent chats</p>
+              <ul className="mt-2 space-y-0.5">
+                {SIDEBAR_SESSION_PLACEHOLDERS.map((label, index) => (
+                  <li key={label}>
+                    <button
+                      type="button"
+                      disabled={index > 0}
+                      className="w-full rounded-lg px-2 py-2 text-left text-sm text-slate-400 transition hover:bg-white/[0.04] hover:text-slate-200 disabled:cursor-default disabled:text-slate-300 disabled:hover:bg-transparent"
+                    >
+                      {label}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="mt-5">
+              <p className="px-2 text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Mode</p>
+              <div className="mt-2 space-y-1">
+                {modes.map((item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => handleModeChange(item as StandaloneOrbMode)}
+                    className={`w-full rounded-lg px-2 py-2 text-left text-sm font-semibold transition ${
+                      mode === item
+                        ? 'bg-cyan-300/12 text-cyan-50'
+                        : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-200'
+                    }`}
+                  >
+                    {item}
+                  </button>
                 ))}
               </div>
             </div>
 
-            <div className="shrink-0 space-y-2 rounded-[24px] border border-white/10 bg-slate-950/50 p-4 text-xs leading-6 text-slate-400">
-              <p>{PRIVACY_STRIP}</p>
-              {modeSafety ? <p className="text-slate-300">{modeSafety}</p> : null}
-              <p className="text-[10px] uppercase tracking-[0.1em] text-slate-500">
-                GET /orb/standalone/config · POST /orb/standalone/conversation
-              </p>
+            <div className="mt-5">
+              <button
+                type="button"
+                onClick={() => setStartersExpanded((open) => !open)}
+                className="flex w-full items-center justify-between px-2 text-[10px] font-black uppercase tracking-[0.14em] text-slate-500"
+              >
+                Starters
+                {startersExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+              </button>
+              {startersExpanded ? (
+                <div className="mt-2 space-y-1">
+                  {SUGGESTED_PROMPT_GROUPS.flatMap((group) => group.prompts.slice(0, 2)).map((prompt) => (
+                    <button
+                      key={prompt.text}
+                      type="button"
+                      onClick={() => applyPrompt(prompt)}
+                      className="w-full rounded-lg px-2 py-2 text-left text-xs font-semibold leading-5 text-slate-400 hover:bg-white/[0.04] hover:text-slate-200"
+                    >
+                      {prompt.text}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
             </div>
-          </aside>
+          </div>
+
+          <div className="border-t border-white/10 p-3">
+            <div className="flex items-start gap-2 rounded-xl border border-emerald-400/20 bg-emerald-400/8 px-3 py-2.5">
+              <Shield className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" aria-hidden />
+              <p className="text-[11px] font-bold leading-5 text-emerald-100/90">Standalone — no OS records</p>
+            </div>
+          </div>
+        </aside>
+
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <header className="orb-chat-header flex shrink-0 items-center gap-3 border-b border-white/10 bg-[#070b12]/90 px-3 py-3 backdrop-blur-md md:px-5">
+            <button
+              type="button"
+              className="rounded-lg border border-white/10 p-2 text-slate-300 lg:hidden"
+              onClick={() => setSidebarOpen(true)}
+              aria-label="Open sidebar"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+            <div className="min-w-0 flex-1">
+              <h1 className="truncate text-base font-black tracking-tight text-white md:text-lg">ORB Care Companion</h1>
+              <p className="truncate text-xs text-slate-400">Standalone residential care assistant</p>
+            </div>
+            <span className="hidden shrink-0 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.1em] text-emerald-100 sm:inline">
+              No OS records accessed
+            </span>
+            <div className="flex shrink-0 gap-1">
+              <button
+                type="button"
+                onClick={() => void exportConversation()}
+                disabled={messages.length === 0}
+                className="hidden rounded-lg border border-white/10 p-2 text-slate-400 disabled:opacity-40 sm:inline-flex"
+                aria-label="Copy chat"
+              >
+                <Copy className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={startNewChat}
+                className="hidden rounded-lg border border-white/10 p-2 text-slate-400 sm:inline-flex"
+                aria-label="New chat"
+              >
+                <MessageSquarePlus className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                className="rounded-lg border border-white/10 p-2 text-slate-300 xl:hidden"
+                onClick={() => setMobileOrbOpen((open) => !open)}
+                aria-label="Toggle voice ORB"
+              >
+                {mobileOrbOpen ? <PanelRightClose className="h-5 w-5" /> : <PanelRightOpen className="h-5 w-5" />}
+              </button>
+            </div>
+          </header>
+
+          <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-white/5 px-3 py-2 md:px-5" role="tablist" aria-label="ORB mode">
+            {modes.map((item) => (
+              <button
+                key={item}
+                type="button"
+                role="tab"
+                aria-selected={mode === item}
+                onClick={() => handleModeChange(item as StandaloneOrbMode)}
+                className={`rounded-full border px-3 py-1.5 text-xs font-bold transition focus-visible:ring-2 focus-visible:ring-cyan-300 ${
+                  mode === item
+                    ? 'border-cyan-300/45 bg-cyan-300/15 text-white'
+                    : 'border-white/10 bg-white/[0.03] text-slate-400 hover:border-cyan-300/25'
+                }`}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+
+          {recordingContext ? (
+            <div
+              className="mx-3 mt-3 rounded-2xl border border-teal-300/25 bg-teal-300/10 px-4 py-3 text-sm leading-6 text-teal-50 md:mx-5"
+              role="status"
+            >
+              <strong className="font-black">Recording support:</strong> ORB can help with wording and reflection, but it
+              cannot see the record.
+            </div>
+          ) : null}
+
+          {draftNotice ? (
+            <p className="mx-3 mt-3 rounded-2xl border border-amber-300/30 bg-amber-300/10 px-4 py-2 text-sm text-amber-50 md:mx-5" role="status">
+              {draftNotice}
+            </p>
+          ) : null}
+
+          {showSafeguardingEscalation ? (
+            <div
+              className="mx-3 mt-3 rounded-2xl border border-rose-300/30 bg-rose-950/40 px-4 py-3 text-sm leading-6 text-rose-50 md:mx-5"
+              role="status"
+            >
+              Follow your safeguarding procedure immediately if there is current risk. ORB can help you think, but it
+              does not replace escalation.
+            </div>
+          ) : null}
+
+          <div className="flex min-h-0 flex-1">
+            <section className="flex min-h-0 min-w-0 flex-1 flex-col">
+              <div className="flex-1 overflow-y-auto px-3 py-4 md:px-6 md:py-6" role="log" aria-label="ORB conversation">
+                <div className="mx-auto max-w-3xl">
+                  {showEmptyState ? (
+                    <div className="flex flex-col items-center py-8 text-center md:py-16">
+                      <p className="text-[10px] font-black uppercase tracking-[0.24em] text-cyan-200/80">ORB Care Companion</p>
+                      <h2 className="mt-4 text-3xl font-black tracking-tight text-white md:text-4xl">How can I help today?</h2>
+                      <p className="mt-3 max-w-md text-sm leading-6 text-slate-400">
+                        Specialist residential children&apos;s homes intelligence — reflection, safeguarding thinking,
+                        Ofsted lens and recording quality. No IndiCare OS records or Care Hub.
+                      </p>
+                      <div className="mt-10 grid w-full max-w-2xl gap-3 sm:grid-cols-2">
+                        {EMPTY_STATE_STARTERS.map((starter) => (
+                          <button
+                            key={starter.text}
+                            type="button"
+                            onClick={() => applyPrompt(starter)}
+                            className="orb-starter-card rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-4 text-left text-sm font-semibold leading-6 text-slate-200 transition hover:border-cyan-300/30 hover:bg-cyan-300/8"
+                          >
+                            {starter.text}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {messages.map((entry, index) => (
+                        <div key={entry.id}>
+                          {entry.role === 'assistant' ? (
+                            <article className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-4 leading-7 md:px-5">
+                              <p className="mb-2 text-[10px] font-black uppercase tracking-[0.16em] text-violet-200/80">ORB</p>
+                              <p className="whitespace-pre-wrap text-slate-50">{entry.content}</p>
+                              {index === messages.length - 1 ? (
+                                <ResponseActions
+                                  messageId={entry.id}
+                                  content={entry.content}
+                                  speaking={speakingMessageId === entry.id}
+                                  synthesisAvailable={voice.synthesisAvailable}
+                                  onSpeak={() => {
+                                    setSpeakingMessageId(entry.id)
+                                    voice.speak(entry.content, () => setSpeakingMessageId(null))
+                                  }}
+                                  onStop={voice.cancelSpeaking}
+                                  onNewQuestion={() => {
+                                    setInput('')
+                                    inputRef.current?.focus()
+                                  }}
+                                  onDraft={() => void handleDraftWording(entry.content)}
+                                />
+                              ) : null}
+                            </article>
+                          ) : (
+                            <MessageBubble entry={entry} />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {pending ? (
+                    <p className="mt-6 text-sm font-semibold text-violet-200" role="status">
+                      Thinking that through…
+                    </p>
+                  ) : null}
+                  {error ? (
+                    <p className="mt-4 rounded-2xl border border-amber-300/30 bg-amber-300/10 px-4 py-3 text-sm text-amber-50" role="alert">
+                      {error}
+                    </p>
+                  ) : null}
+                  <div ref={messagesEndRef} />
+                </div>
+              </div>
+
+              {!showEmptyState && (
+                <div className="hidden shrink-0 border-t border-white/5 px-3 py-2 md:block md:px-6">
+                  <div className="mx-auto flex max-w-3xl flex-wrap gap-2">
+                    {EMPTY_STATE_STARTERS.slice(0, 4).map((starter) => (
+                      <button
+                        key={starter.text}
+                        type="button"
+                        onClick={() => applyPrompt(starter)}
+                        className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-semibold text-slate-400 hover:border-cyan-300/25 hover:text-slate-200"
+                      >
+                        {starter.text}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="hidden xl:block">{composer}</div>
+            </section>
+
+            <aside className="orb-voice-dock-column hidden w-[220px] shrink-0 border-l border-white/10 xl:flex">{orbDockPanel}</aside>
+          </div>
+
+          <div className="xl:hidden">{composer}</div>
         </div>
       </div>
+
+      {mobileOrbOpen ? (
+        <div className="fixed inset-x-0 bottom-0 z-50 max-h-[70dvh] overflow-y-auto rounded-t-[24px] border border-white/10 bg-[#0a0e16] shadow-2xl xl:hidden">
+          <div className="flex justify-center py-2">
+            <button
+              type="button"
+              onClick={() => setMobileOrbOpen(false)}
+              className="rounded-full border border-white/10 px-4 py-1 text-xs font-bold text-slate-400"
+            >
+              Close voice ORB
+            </button>
+          </div>
+          {orbDockPanel}
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setMobileOrbOpen(true)}
+          className="orb-mobile-orb-fab fixed bottom-24 right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full border border-cyan-300/40 bg-slate-950/90 shadow-lg shadow-cyan-900/30 backdrop-blur xl:hidden"
+          aria-label="Open voice ORB"
+        >
+          <OrbGlow
+            state={glowState}
+            onOrbActivate={() => {
+              setMobileOrbOpen(true)
+              handleOrbActivate()
+            }}
+            interactive={voice.recognitionAvailable}
+            size="compact"
+            compactLabels
+          />
+        </button>
+      )}
     </main>
   )
 }
 
-function MessageBubble({ entry, compact }: { entry: ChatMessage; compact?: boolean }) {
+function MessageBubble({ entry }: { entry: ChatMessage }) {
   return (
-    <article
-      className={`max-w-3xl rounded-3xl border p-4 leading-7 ${
-        compact ? 'text-sm' : ''
-      } ${
-        entry.role === 'user'
-          ? 'ml-auto border-cyan-300/25 bg-cyan-300/8 text-cyan-50'
-          : 'border-white/10 bg-white/[0.04] text-slate-100'
-      }`}
-    >
-      <p className="mb-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
-        {entry.role === 'user' ? 'You' : 'ORB'}
-      </p>
-      <p className="whitespace-pre-wrap">{entry.content}</p>
+    <article className="ml-auto max-w-[85%] rounded-2xl border border-cyan-300/25 bg-cyan-300/10 px-4 py-3 leading-7 text-cyan-50 md:max-w-[75%]">
+      <p className="mb-1 text-[10px] font-black uppercase tracking-[0.14em] text-cyan-200/70">You</p>
+      <p className="whitespace-pre-wrap text-sm md:text-base">{entry.content}</p>
     </article>
   )
 }
@@ -829,11 +1066,7 @@ function ResponseActions({
 }) {
   return (
     <div className="mt-4 flex flex-wrap gap-2">
-      <ActionChip
-        icon={<Copy className="h-3 w-3" />}
-        label="Copy"
-        onClick={() => void copyToClipboard(content)}
-      />
+      <ActionChip icon={<Copy className="h-3 w-3" />} label="Copy" onClick={() => void copyToClipboard(content)} />
       {synthesisAvailable ? (
         speaking ? (
           <ActionChip icon={<Square className="h-3 w-3" />} label="Stop" onClick={onStop} />
@@ -880,11 +1113,8 @@ function VoiceSettingsPanel({
   onClose: () => void
 }) {
   return (
-    <div
-      id="orb-voice-settings"
-      className="rounded-[24px] border border-white/10 bg-slate-950/65 p-4 text-sm text-slate-300"
-    >
-      <div className="flex items-center justify-between gap-2">
+    <div id="orb-voice-settings" className="text-sm text-slate-300">
+      <div className="mb-3 flex items-center justify-between gap-2">
         <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Voice settings</p>
         <button type="button" onClick={onClose} aria-label="Close voice settings">
           <X className="h-4 w-4" aria-hidden />
@@ -972,6 +1202,9 @@ function VoiceSettingsPanel({
       {!voice.synthesisAvailable ? (
         <p className="mt-1 text-xs text-amber-200/90">Speech synthesis unavailable — voice replies disabled.</p>
       ) : null}
+      <p className="mt-3 text-[10px] uppercase tracking-[0.1em] text-slate-500">
+        GET /orb/standalone/config · POST /orb/standalone/conversation
+      </p>
     </div>
   )
 }
@@ -992,13 +1225,13 @@ function SettingToggle({
   iconOff?: ReactNode
 }) {
   return (
-    <label className="mt-3 flex items-center justify-between gap-3">
-      <span className="text-xs font-semibold">{label}</span>
+    <label className="flex items-center justify-between gap-3 py-1.5">
+      <span className="text-xs font-semibold text-slate-300">{label}</span>
       <button
         type="button"
         disabled={disabled}
         onClick={() => onChange(!checked)}
-        className="inline-flex items-center gap-2 rounded-full border border-white/15 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.1em] disabled:opacity-40"
+        className="inline-flex items-center gap-2 rounded-full border border-white/15 px-3 py-1 text-[10px] font-black uppercase tracking-[0.1em] disabled:opacity-40"
       >
         {checked ? iconOn : iconOff}
         {checked ? 'On' : 'Off'}

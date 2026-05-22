@@ -37,8 +37,18 @@ REQUIRED_STANDALONE_MARKERS = [
 
 STANDALONE_UI_MARKERS = [
     "ORB Care Companion",
-    "Standalone ORB Care Companion",
+    "Standalone residential care assistant",
     "No OS records",
+]
+
+CHATGPT_STYLE_MARKERS = [
+    "New chat",
+    "How can I help today?",
+    "Standalone residential care assistant",
+    "No OS records accessed",
+    "orb-chat-layout",
+    "orb-chat-sidebar",
+    "orb-voice-dock",
 ]
 
 CINEMATIC_VOICE_MARKERS = [
@@ -157,6 +167,13 @@ def test_orb_page_uses_standalone_contract():
         assert marker in sources, f"/orb standalone UI must include {marker}"
 
 
+def test_orb_page_chatgpt_style_layout():
+    sources = _read(ORB_PAGE) + _read(ORB_COMPANION) + _read(GLOBALS_CSS)
+    for marker in CHATGPT_STYLE_MARKERS:
+        assert marker in sources, f"/orb ChatGPT-style layout must include {marker}"
+    assert "AppShell" not in sources
+
+
 def test_standalone_orb_cinematic_voice_components():
     companion = _read(ORB_COMPANION)
     glow = _read(ORB_GLOW)
@@ -249,12 +266,19 @@ def test_standalone_orb_cinematic_styles_in_globals():
     text = _read(GLOBALS_CSS)
     for marker in (
         "orb-cinematic-scene",
+        "orb-chat-layout",
         "orb-standalone-listen-ring",
         "orb-standalone-halo",
         "orb-standalone-wake-pulse",
         "orb-standalone-interrupt-ring",
     ):
         assert marker in text, f"globals.css must define cinematic ORB style {marker}"
+
+
+def test_standalone_orb_glow_supports_dock_sizes():
+    text = _read(ORB_GLOW)
+    for marker in ("hero", "dock", "compact", "OrbGlowSize"):
+        assert marker in text, f"orb-glow must support size variant {marker}"
 
 
 def test_assistant_orb_page_does_not_redirect_to_standalone_orb():

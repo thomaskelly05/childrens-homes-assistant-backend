@@ -112,13 +112,29 @@ const STATE_HUES: Record<StandaloneOrbGlowState, { ring: string; glow: string; c
   }
 }
 
+const ORB_SIZE_CLASSES = {
+  hero: 'h-52 w-52 md:h-64 md:w-64 lg:h-72 lg:w-72',
+  dock: 'h-28 w-28 md:h-32 md:w-32',
+  compact: 'h-20 w-20'
+} as const
+
+const ORB_SPHERE_SIZE = {
+  hero: 'xlarge' as const,
+  dock: 'large' as const,
+  compact: 'medium' as const
+}
+
+export type OrbGlowSize = keyof typeof ORB_SIZE_CLASSES
+
 export function OrbGlow({
   state,
   mode,
   voiceEnabled,
   label,
   onOrbActivate,
-  interactive = true
+  interactive = true,
+  size = 'hero',
+  compactLabels = false
 }: {
   state: StandaloneOrbGlowState
   mode?: string
@@ -126,6 +142,8 @@ export function OrbGlow({
   label?: string
   onOrbActivate?: () => void
   interactive?: boolean
+  size?: OrbGlowSize
+  compactLabels?: boolean
 }) {
   const [reducedMotion, setReducedMotion] = useState(false)
   const renderState = STATE_TO_RENDER[state]
@@ -166,9 +184,12 @@ export function OrbGlow({
     state === 'interrupted' ||
     state === 'wake_detected'
 
+  const sizeClass = ORB_SIZE_CLASSES[size]
+  const sphereSize = ORB_SPHERE_SIZE[size]
+
   const orbButton = (
     <div
-      className={`relative mx-auto flex h-52 w-52 items-center justify-center md:h-64 md:w-64 lg:h-72 lg:w-72 ${pulseClass}`}
+      className={`relative mx-auto flex items-center justify-center ${sizeClass} ${pulseClass}`}
       data-standalone-orb-state={state}
       data-orb-state={renderState}
       style={{ '--orb-core-glow': hues.core } as CSSProperties}
@@ -199,7 +220,7 @@ export function OrbGlow({
         aria-hidden
       />
       <div className="pointer-events-none absolute inset-[12%] rounded-full bg-gradient-to-br from-white/25 via-white/5 to-transparent opacity-80" aria-hidden />
-      <OrbSphere state={renderState} size="xlarge" />
+      <OrbSphere state={renderState} size={sphereSize} />
 
       {showWaveform && !reducedMotion ? (
         <div className="pointer-events-none absolute bottom-3 flex items-end gap-1.5" aria-hidden>
@@ -254,14 +275,20 @@ export function OrbGlow({
         orbButton
       )}
 
-      <p className="mt-5 text-sm font-black uppercase tracking-[0.2em] text-cyan-100/90">{statusText}</p>
-      {mode ? (
+      <p
+        className={`font-black uppercase text-cyan-100/90 ${
+          compactLabels ? 'mt-2 text-[10px] tracking-[0.14em]' : 'mt-5 text-sm tracking-[0.2em]'
+        }`}
+      >
+        {statusText}
+      </p>
+      {mode && !compactLabels ? (
         <p className="mt-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">{mode}</p>
       ) : null}
-      {voiceEnabled === false ? (
+      {voiceEnabled === false && !compactLabels ? (
         <p className="mt-2 text-xs text-slate-500">Voice replies off — typing always available</p>
       ) : null}
-      {state === 'speaking' ? (
+      {state === 'speaking' && !compactLabels ? (
         <p className="mt-2 text-xs text-slate-500">You can interrupt me any time.</p>
       ) : null}
     </div>
