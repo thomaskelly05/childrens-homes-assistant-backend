@@ -85,13 +85,13 @@ export const operationalNavigation: OperationalNavItem[] = [
   },
   {
     domain: 'daily-care',
-    href: '/daily-logs',
+    href: '/record',
     label: 'Record',
-    description: 'Daily notes, handovers, keywork, routines and reflective recording.',
+    description: 'Choose what to record — daily notes, incidents, safeguarding, handover and more.',
     icon: ClipboardList,
     permissions: ['records:read'],
     roleScopes: ['rm', 'ri', 'staff', 'provider', 'admin'],
-    activeRoots: ['daily-logs', 'handover', 'keywork', 'shifts']
+    activeRoots: ['record', 'daily-logs', 'handover', 'keywork', 'shifts']
   },
   {
     domain: 'chronology',

@@ -19,23 +19,30 @@ export const CARE_HUB_HERO_ACTIONS = (options: {
   selectedYoungPersonId?: string
 }): CareHubHeroAction[] => {
   const childId = options.selectedYoungPersonId ? encodeURIComponent(options.selectedYoungPersonId) : null
+  const recordHubHref = childId ? `/record?child_id=${childId}` : '/record'
   return [
+    {
+      label: 'Record something',
+      description: 'Choose daily note, incident, safeguarding and more.',
+      href: recordHubHref,
+      ariaLabel: 'Open record something hub'
+    },
     {
       label: 'Start shift handover',
       description: 'Prepare what the next adults need to know.',
-      href: '/handover/current',
+      href: childId ? `/young-people/${childId}/shift-handover/new` : '/handover/current',
       ariaLabel: 'Start shift handover'
     },
     {
       label: 'Record daily note',
       description: 'Capture the day and what changed.',
-      href: childId ? `/young-people/${childId}/daily-note/new` : '/daily-logs',
+      href: childId ? `/young-people/${childId}/daily-note/new` : '/record?type=daily-note',
       ariaLabel: 'Record daily note'
     },
     {
       label: 'Record incident',
       description: 'Log what happened and adult response.',
-      href: childId ? `/young-people/${childId}/incidents/new` : '/incidents',
+      href: childId ? `/young-people/${childId}/incidents/new` : '/record?type=incidents',
       ariaLabel: 'Record incident'
     },
     {
