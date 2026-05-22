@@ -10,6 +10,7 @@ from core.frontend_routes import register_frontend_routes
 from core.lifespan import lifespan
 from core.middleware import add_middlewares
 from core.router_loader import include_routers
+from db.connection import DatabaseUnavailableError, get_db_status
 from routers.ai_governance_routes import router as ai_governance_router
 
 logging.basicConfig(level=logging.INFO)
@@ -46,13 +47,26 @@ def create_app() -> FastAPI:
     app.include_router(ai_governance_router)
     mount_core_static_assets(app)
 
+    @app.exception_handler(DatabaseUnavailableError)
+    async def database_unavailable_handler(_request, _exc: DatabaseUnavailableError):
+        return JSONResponse(
+            status_code=503,
+            content={"detail": "Database temporarily unavailable"},
+        )
+
     def health_payload(check: str = "health") -> dict:
+        database = get_db_status()
+        service_status = "ok" if database.get("available") else "degraded"
         return {
             "ok": True,
-            "status": "ok",
+            "status": service_status,
             "service": "indicare-os",
             "check": check,
             "timestamp": datetime.now(timezone.utc).isoformat(),
+            "database": {
+                "available": bool(database.get("available")),
+                "pool_initialised": bool(database.get("pool_initialised")),
+            },
             "routes": {
                 "assistant": "/assistant",
                 "health": "/health",

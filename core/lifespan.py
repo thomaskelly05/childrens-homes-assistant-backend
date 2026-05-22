@@ -1,12 +1,20 @@
 import asyncio
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
 from backend.db.migration_runner import run_pending
 from backend.db.schema_doctor import run_schema_doctor
-from db.connection import close_db_pool, get_db_connection, init_db_pool, release_db_connection
+from db.connection import (
+    DB_REQUIRED_ON_STARTUP,
+    close_db_pool,
+    get_db_connection,
+    init_db_pool,
+    is_db_available,
+    release_db_connection,
+)
 from db.legal_acceptance_db import init_legal_acceptance_table
 from db.mfa_db import init_mfa_tables
 from db.partner_assistant_db import init_partner_assistant_tables
@@ -14,6 +22,14 @@ from db.passkeys_db import init_passkeys_table
 from services.ai_runtime.monthly_usage_report import monthly_usage_report_loop
 
 logger = logging.getLogger("indicare.app")
+
+
+def _safe_startup_error(exc: Exception) -> str:
+    message = str(exc) or exc.__class__.__name__
+    database_url = os.getenv("DATABASE_URL", "")
+    if database_url and database_url in message:
+        message = message.replace(database_url, "<redacted>")
+    return message[:500]
 
 
 def run_startup_migrations() -> None:
@@ -47,14 +63,35 @@ def run_startup_migrations() -> None:
             release_db_connection(conn)
 
 
-@asynccontextmanager
-async def lifespan(_: FastAPI):
-    init_db_pool()
+def _run_database_startup_tasks() -> None:
     run_startup_migrations()
     init_legal_acceptance_table()
     init_mfa_tables()
     init_passkeys_table()
     init_partner_assistant_tables()
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    try:
+        init_db_pool()
+    except Exception as exc:
+        if DB_REQUIRED_ON_STARTUP:
+            raise
+        logger.warning(
+            "Database unavailable during startup; app starting in degraded mode: %s",
+            _safe_startup_error(exc),
+        )
+
+    if is_db_available():
+        try:
+            _run_database_startup_tasks()
+        except Exception:
+            if DB_REQUIRED_ON_STARTUP:
+                raise
+            logger.exception("Database startup tasks failed; continuing in degraded mode")
+    else:
+        logger.warning("Database unavailable; skipping migrations and auth table initialisation during startup")
 
     usage_report_task = asyncio.create_task(monthly_usage_report_loop())
 
