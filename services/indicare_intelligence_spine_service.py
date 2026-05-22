@@ -35,6 +35,21 @@ try:
 except Exception:  # pragma: no cover
     ofsted_document_readiness_service = None  # type: ignore[assignment]
 
+try:
+    from services.intelligence_action_service import (
+        ACTION_NOTICE,
+        intelligence_action_service,
+        propose_missing_episode_without_rhi,
+        propose_safeguarding_without_manager_review,
+    )
+except Exception:  # pragma: no cover
+    intelligence_action_service = None  # type: ignore[assignment]
+    ACTION_NOTICE = (
+        "Actions are proposed for manager review and are not automatically accepted."
+    )
+    propose_safeguarding_without_manager_review = None  # type: ignore[assignment]
+    propose_missing_episode_without_rhi = None  # type: ignore[assignment]
+
 
 class IndiCareIntelligenceSpineService:
     """Central intelligence orchestrator connecting existing IndiCare evidence surfaces."""
@@ -334,7 +349,61 @@ class IndiCareIntelligenceSpineService:
             response.metadata.snapshot = {"hit": False, "stored": True, **save_result}
         else:
             response.metadata.snapshot = snapshot_meta
+        if intelligence_action_service and mode in {"manager_daily_brief", "inspection", "home"}:
+            response = self._attach_action_layer(
+                response,
+                request=request,
+                records=records,
+                conn=conn,
+                current_user=current_user,
+            )
         return response
+
+    def _attach_action_layer(
+        self,
+        response: IntelligenceSpineResponse,
+        *,
+        request: IntelligenceRequest,
+        records: list[dict[str, Any]],
+        conn: Any = None,
+        current_user: dict[str, Any] | None = None,
+    ) -> IntelligenceSpineResponse:
+        proposed = intelligence_action_service.propose_actions_from_spine(
+            response,
+            home_id=request.home_id,
+            child_id=request.child_id,
+            staff_id=request.staff_id,
+        )
+        if propose_safeguarding_without_manager_review:
+            extra = propose_safeguarding_without_manager_review(
+                records,
+                home_id=str(request.home_id) if request.home_id is not None else None,
+                child_id=str(request.child_id) if request.child_id is not None else None,
+            )
+            if extra:
+                proposed.append(extra)
+        if propose_missing_episode_without_rhi:
+            extra = propose_missing_episode_without_rhi(
+                records,
+                home_id=str(request.home_id) if request.home_id is not None else None,
+                child_id=str(request.child_id) if request.child_id is not None else None,
+            )
+            if extra:
+                proposed.append(extra)
+        proposed = intelligence_action_service._dedupe_actions(proposed)
+        if request.create_actions and proposed:
+            proposed = intelligence_action_service.persist_proposed_actions(
+                proposed,
+                current_user=current_user,
+                conn=conn,
+            )
+        summary = intelligence_action_service.build_action_summary(proposed)
+        data = response.model_dump(mode="json")
+        data["proposed_actions"] = [a.model_dump(mode="json") for a in proposed]
+        data["action_summary"] = summary.model_dump(mode="json")
+        data["action_notice"] = ACTION_NOTICE
+        data["summary"]["priority_action_count"] = len(proposed)
+        return IntelligenceSpineResponse.model_validate(safe_payload(data))
 
     def _regulatory_context(self) -> dict[str, Any]:
         if not regulatory_ontology_service:
