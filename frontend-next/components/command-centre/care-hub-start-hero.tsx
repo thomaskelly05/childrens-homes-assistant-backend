@@ -1,9 +1,10 @@
 import Link from 'next/link'
-import { ClipboardCheck, ClipboardPlus, Mic2, ShieldAlert } from 'lucide-react'
+import { ClipboardCheck, ClipboardList, ClipboardPlus, Mic2, ShieldAlert } from 'lucide-react'
 
 import { CARE_HUB_HERO_ACTIONS } from '@/components/command-centre/care-hub-routes'
 
 const iconByLabel = {
+  'Record something': ClipboardList,
   'Start shift handover': ClipboardCheck,
   'Record daily note': ClipboardPlus,
   'Record incident': ShieldAlert,
@@ -23,7 +24,7 @@ export function CareHubStartHero({ selectedYoungPersonId }: { selectedYoungPerso
       <p className="mt-3 max-w-2xl text-sm font-semibold leading-7 text-slate-300">
         Start with the live picture, then record what matters. ORB can help at any point.
       </p>
-      <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {actions.map((action) => {
           const Icon = iconByLabel[action.label as keyof typeof iconByLabel]
           return (

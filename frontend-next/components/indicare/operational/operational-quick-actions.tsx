@@ -26,8 +26,11 @@ export function OperationalQuickActions({
   const childId = selectedYoungPersonId ? encodeURIComponent(selectedYoungPersonId) : null
   const childName = selectedYoungPersonName || 'this child'
 
+  const recordHubHref = childId ? `/record?child_id=${childId}` : '/record'
+
   const careHubActions = childId
     ? [
+        { label: 'Record something', helper: 'Choose daily note, incident, safeguarding and more.', href: recordHubHref, icon: ClipboardPlus, cta: 'Open' },
         { label: 'Write daily note', helper: 'Record the child’s day and what changed.', href: `/young-people/${childId}/daily-note/new`, icon: ClipboardPlus, cta: 'Start' },
         { label: 'Complete handover', helper: 'Prepare what the next adults need to understand.', href: `/young-people/${childId}/shift-handover/new`, icon: ClipboardCheck, cta: 'Start' },
         { label: 'Record incident', helper: 'Log what happened, adult response and repair.', href: `/young-people/${childId}/incidents/new`, icon: ShieldAlert, cta: 'Record' },
@@ -36,16 +39,18 @@ export function OperationalQuickActions({
         { label: 'Ask ORB', helper: 'Get help with wording, risk, guidance or what to do next.', href: `/orb?scope=child&young_person_id=${childId}&q=${encodeURIComponent(`What should adults focus on for ${childName} today?`)}`, icon: Mic2, cta: 'Ask' }
       ]
     : [
-        { label: 'Write daily note', helper: 'Record the child’s day and what changed.', href: '/daily-logs', icon: ClipboardPlus, cta: 'Start' },
-        { label: 'Complete handover', helper: 'Prepare what the next adults need to understand.', href: '/handover/current', icon: ClipboardCheck, cta: 'Start' },
-        { label: 'Record incident', helper: 'Log what happened, adult response and repair.', href: '/incidents', icon: ShieldAlert, cta: 'Record' },
-        { label: 'Add child voice', helper: 'Choose a child, then record voice and wishes.', href: '/young-people', icon: UsersRound, cta: 'Choose' },
+        { label: 'Record something', helper: 'Choose what to record — notes, incidents, safeguarding and more.', href: recordHubHref, icon: ClipboardPlus, cta: 'Open' },
+        { label: 'Write daily note', helper: 'Record the child’s day and what changed.', href: '/record?type=daily-note', icon: ClipboardPlus, cta: 'Start' },
+        { label: 'Complete handover', helper: 'Prepare what the next adults need to understand.', href: '/record?type=shift-handover', icon: ClipboardCheck, cta: 'Start' },
+        { label: 'Record incident', helper: 'Log what happened, adult response and repair.', href: '/record?type=incidents', icon: ShieldAlert, cta: 'Record' },
+        { label: 'Add child voice', helper: 'Choose a child, then record voice and wishes.', href: '/record?type=child-voice', icon: UsersRound, cta: 'Choose' },
         { label: 'Review actions', helper: 'See follow-up actions that still need attention.', href: '/actions', icon: ListChecks, cta: 'Review' },
         { label: 'Ask ORB', helper: 'Get help with wording, risk, guidance or what to do next.', href: '/orb?context=care-hub&q=What do I need to do next on shift?', icon: Mic2, cta: 'Ask' }
       ]
 
   const defaultActions = childId
     ? [
+        { label: 'Record something', helper: 'Choose daily note, incident, safeguarding and more.', href: recordHubHref, icon: ClipboardPlus, cta: 'Open' },
         { label: 'Write daily note', helper: 'Record the child’s day and what changed.', href: `/young-people/${childId}/daily-note/new`, icon: ClipboardPlus, cta: 'Open' },
         { label: 'Wellbeing check', helper: 'Capture mood, routine, relationships and support.', href: `/young-people/${childId}/wellbeing-check/new`, icon: HeartPulse, cta: 'Open' },
         { label: 'Record incident', helper: 'Log what happened, adult response and repair.', href: `/young-people/${childId}/incidents/new`, icon: ShieldAlert, cta: 'Open' },
@@ -54,6 +59,7 @@ export function OperationalQuickActions({
         { label: 'Evidence', helper: 'Open linked evidence and documents.', href: `/evidence?young_person_id=${childId}`, icon: SearchCheck, cta: 'Open' }
       ]
     : [
+        { label: 'Record something', helper: 'Choose what to record — notes, incidents, safeguarding and more.', href: recordHubHref, icon: ClipboardPlus, cta: 'Open' },
         { label: 'Care Hub', helper: 'Start with what needs attention now.', href: '/command-centre', icon: SearchCheck, cta: 'Open' },
         { label: 'Choose young person', helper: 'Open the child journey before recording.', href: '/young-people', icon: ClipboardPlus, cta: 'Open' },
         { label: 'Shift handover', helper: 'Prepare what the next adults need to know.', href: '/handover/current', icon: ClipboardCheck, cta: 'Open' },
