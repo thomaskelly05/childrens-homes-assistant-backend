@@ -23,6 +23,7 @@ export type OperationalDomain =
   | 'children'
   | 'daily-care'
   | 'chronology'
+  | 'actions'
   | 'workforce'
   | 'governance'
   | 'documents'
@@ -75,7 +76,7 @@ export const operationalNavigation: OperationalNavItem[] = [
   {
     domain: 'children',
     href: '/young-people',
-    label: 'Young People',
+    label: 'Children',
     description: 'One child-centred journey for profile, voice, wellbeing, relationships, plans and records.',
     icon: UserRound,
     permissions: ['records:read'],
@@ -85,7 +86,7 @@ export const operationalNavigation: OperationalNavItem[] = [
   {
     domain: 'daily-care',
     href: '/daily-logs',
-    label: 'Daily Care',
+    label: 'Record',
     description: 'Daily notes, handovers, keywork, routines and reflective recording.',
     icon: ClipboardList,
     permissions: ['records:read'],
@@ -101,6 +102,16 @@ export const operationalNavigation: OperationalNavItem[] = [
     permissions: ['records:read'],
     roleScopes: ['rm', 'ri', 'staff', 'provider', 'admin'],
     activeRoots: ['chronology']
+  },
+  {
+    domain: 'actions',
+    href: '/actions',
+    label: 'Actions',
+    description: 'Open actions and follow-up from daily care, incidents and reviews.',
+    icon: ClipboardCheck,
+    permissions: ['records:read'],
+    roleScopes: ['rm', 'ri', 'staff', 'provider', 'admin'],
+    activeRoots: ['actions', 'intelligence-actions']
   },
   {
     domain: 'documents',
