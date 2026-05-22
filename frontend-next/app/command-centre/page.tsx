@@ -4,13 +4,13 @@ import { LiveDataStatus } from '@/components/indicare/live-data-status'
 import { OperationalQuickActions } from '@/components/indicare/operational/operational-quick-actions'
 import { Card, PageHeader, StatCard, StatusBadge } from '@/components/indicare/ui'
 import { CareHubIntelligenceWidgets } from '@/components/indicare/care-hub/care-hub-widgets'
-import { getCareHub } from '@/lib/os-api/care-hub'
-import { getOsYoungPeople } from '@/lib/os-api/workspaces'
 import {
+  getCareHub,
   mapCareHubGovernanceSlice,
   mapCareHubToCommandCentre,
   mapCareHubWorkforceSlice
-} from '@/lib/operational/care-hub-command-centre'
+} from '@/lib/os-api/care-hub'
+import { getOsYoungPeople } from '@/lib/os-api/workspaces'
 import { buildCommandCentreSignals, buildReflectivePrompts } from '@/lib/operational/cognition-metrics'
 
 type FeedItem = {

@@ -267,8 +267,7 @@ function buildAttentionCards(data: Omit<CommandCentreData, 'attention'>): Attent
 }
 
 export async function getCommandCentre(): Promise<OsApiResult<CommandCentreData>> {
-  const { getCareHub } = await import('./care-hub')
-  const { mapCareHubToCommandCentre } = await import('@/lib/operational/care-hub-command-centre')
+  const { getCareHub, mapCareHubToCommandCentre } = await import('./care-hub')
   const [careHub, people] = await Promise.all([getCareHub({ limit: 50 }), getOsYoungPeople()])
   return mapCareHubToCommandCentre(careHub, people)
 }
