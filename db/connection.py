@@ -3,6 +3,7 @@ import os
 import re
 import threading
 import time
+import traceback
 from contextlib import contextmanager
 from datetime import datetime, timezone
 
@@ -39,6 +40,7 @@ DB_POOL_ACQUIRE_RETRIES = int(
 )
 DB_CONNECT_RETRIES = DB_POOL_ACQUIRE_RETRIES
 DB_POOL_EXHAUSTION_WARN_INTERVAL = int(os.getenv("DB_POOL_EXHAUSTION_WARN_INTERVAL", "10"))
+DB_POOL_DEBUG_HOLD_SECONDS = float(os.getenv("DB_POOL_DEBUG_HOLD_SECONDS", "0") or "0")
 
 DB_CONNECT_TIMEOUT_SECONDS = int(
     os.getenv(
@@ -145,6 +147,36 @@ def _log_pool_state(level: int, message: str, *, exc_info: bool = False) -> None
     logger.log(level, "%s pool=%s", message, pool_status(), exc_info=exc_info)
 
 
+def _connection_acquire_caller() -> str:
+    for frame in reversed(traceback.extract_stack(limit=12)[:-2]):
+        if "db/connection.py" not in (frame.filename or ""):
+            return f"{frame.filename}:{frame.lineno}:{frame.name}"
+    return "unknown"
+
+
+def _note_connection_acquired(conn) -> None:
+    if DB_POOL_DEBUG_HOLD_SECONDS <= 0 or conn is None:
+        return
+    conn._indicare_acquired_at = time.perf_counter()  # type: ignore[attr-defined]
+    conn._indicare_acquire_caller = _connection_acquire_caller()  # type: ignore[attr-defined]
+
+
+def _log_connection_hold_if_slow(conn) -> None:
+    if DB_POOL_DEBUG_HOLD_SECONDS <= 0 or conn is None:
+        return
+    acquired_at = getattr(conn, "_indicare_acquired_at", None)
+    if acquired_at is None:
+        return
+    hold_seconds = time.perf_counter() - acquired_at
+    if hold_seconds < DB_POOL_DEBUG_HOLD_SECONDS:
+        return
+    logger.warning(
+        "DB connection held for %.0fms caller=%s",
+        hold_seconds * 1000,
+        getattr(conn, "_indicare_acquire_caller", "unknown"),
+    )
+
+
 def _try_acquire_pool_slot() -> bool:
     global _db_pool_waiting_count
     with _db_pool_waiting_lock:
@@ -201,7 +233,12 @@ def init_db_pool(*, max_retries: int | None = None) -> ThreadedConnectionPool | 
             try:
                 db_pool = _create_db_pool()
                 _touch_db_status(error=None)
-                _log_pool_state(logging.INFO, "Database pool initialised")
+                _log_pool_state(
+                    logging.INFO,
+                    "Database pool initialised "
+                    f"(DB_POOL_MIN={DB_POOL_MIN} DB_POOL_MAX={DB_POOL_MAX} "
+                    f"wait_timeout_seconds={DB_POOL_WAIT_TIMEOUT_SECONDS})",
+                )
                 return db_pool
             except Exception as exc:
                 last_error = exc
@@ -290,6 +327,7 @@ def get_db_connection():
 
             conn = db_pool.getconn()
             _prepare_connection(conn)
+            _note_connection_acquired(conn)
             return conn
         except PoolError as exc:
             _db_pool_exhaustion_count += 1
@@ -336,6 +374,7 @@ def release_db_connection(conn, *, close: bool = False):
     global db_pool
 
     try:
+        _log_connection_hold_if_slow(conn)
         if conn is None or db_pool is None:
             return
 

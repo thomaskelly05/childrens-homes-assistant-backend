@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+import logging
+import time
 from typing import Any
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
 
 from auth.dependencies import get_current_user
-from db.connection import db_connection, get_db
+from db.connection import DatabaseUnavailableError, db_connection
 from services.governance_intelligence_service import (
     governance_feature_flags,
     governance_intelligence_service,
@@ -18,6 +20,7 @@ from services.intelligence.projection_snapshot_service import (
     projection_snapshot_service,
 )
 
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/governance-os", tags=["Governance OS"])
 
@@ -55,20 +58,58 @@ def _governance_snapshot_key(current_user: dict[str, Any], *, days: int, home_id
 
 
 def _build_governance_command_centre(*, current_user: dict[str, Any], days: int, home_id: int | None) -> dict[str, Any]:
+    started = time.perf_counter()
     key = _governance_snapshot_key(current_user, days=days, home_id=home_id)
+
+    cache_started = time.perf_counter()
     cached = projection_snapshot_service.get(key)
+    cache_ms = round((time.perf_counter() - cache_started) * 1000, 2)
     if cached and not cached.get("stale") and isinstance(cached.get("payload"), dict):
-        payload = cached["payload"]
-        payload["snapshot"] = {"hit": True, "projection_key": key, "version": cached.get("version"), "generated_at": cached.get("generated_at")}
+        payload = dict(cached["payload"])
+        payload["snapshot"] = {
+            "hit": True,
+            "projection_key": key,
+            "version": cached.get("version"),
+            "generated_at": cached.get("generated_at"),
+        }
+        logger.info(
+            "governance_command_centre cache_hit=true cache_ms=%s total_ms=%s",
+            cache_ms,
+            round((time.perf_counter() - started) * 1000, 2),
+        )
         return payload
 
-    with db_connection() as conn:
+    build_started = time.perf_counter()
+    try:
         payload = governance_intelligence_service.build_command_centre(
-            conn,
             current_user=current_user,
             days=days,
             home_id=home_id,
         )
+    except DatabaseUnavailableError as exc:
+        build_ms = round((time.perf_counter() - build_started) * 1000, 2)
+        logger.warning(
+            "governance_command_centre db_unavailable cache_ms=%s build_ms=%s error=%s",
+            cache_ms,
+            build_ms,
+            exc,
+        )
+        if cached and isinstance(cached.get("payload"), dict):
+            payload = dict(cached["payload"])
+            payload["degraded"] = True
+            payload["message"] = "Governance command centre served from stale snapshot while database is busy."
+            payload["snapshot"] = {
+                "hit": True,
+                "stale": True,
+                "projection_key": key,
+                "version": cached.get("version"),
+                "generated_at": cached.get("generated_at"),
+            }
+            return payload
+        raise HTTPException(status_code=503, detail="Governance command centre temporarily unavailable") from exc
+    build_ms = round((time.perf_counter() - build_started) * 1000, 2)
+
+    save_started = time.perf_counter()
     projection_snapshot_service.put(
         ProjectionSnapshot(
             projection_key=key,
@@ -80,7 +121,15 @@ def _build_governance_command_centre(*, current_user: dict[str, Any], days: int,
             metadata={"days": days, "source": "governance_intelligence_service.build_command_centre"},
         )
     )
+    save_ms = round((time.perf_counter() - save_started) * 1000, 2)
     payload["snapshot"] = {"hit": False, "projection_key": key, "stored": True}
+    logger.info(
+        "governance_command_centre cache_hit=false cache_ms=%s build_ms=%s save_ms=%s total_ms=%s",
+        cache_ms,
+        build_ms,
+        save_ms,
+        round((time.perf_counter() - started) * 1000, 2),
+    )
     return payload
 
 
@@ -96,7 +145,7 @@ def governance_audit(current_user: dict[str, Any] = Depends(get_current_user)):
 
 @router.get("/command-centre")
 def governance_command_centre(
-    days: int = Query(30, ge=1, le=365),
+    days: int = Query(14, ge=1, le=365),
     home_id: int | None = None,
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
@@ -118,7 +167,7 @@ def governance_evidence_matrix(payload: EvidenceMatrixPayload, current_user: dic
 
 @router.get("/risk")
 def governance_risk(
-    days: int = Query(30, ge=1, le=365),
+    days: int = Query(14, ge=1, le=365),
     home_id: int | None = None,
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
@@ -129,10 +178,11 @@ def governance_risk(
 @router.get("/reg44")
 def governance_reg44(
     home_id: int | None = None,
-    conn=Depends(get_db),
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
-    return {"ok": True, "data": governance_intelligence_service.build_reg44_workflow(conn, current_user=current_user, home_id=home_id)}
+    with db_connection() as conn:
+        data = governance_intelligence_service.build_reg44_workflow(conn, current_user=current_user, home_id=home_id)
+    return {"ok": True, "data": data}
 
 
 @router.post("/reg44/transition/validate")
@@ -153,7 +203,7 @@ def governance_reg45(payload: EvidenceMatrixPayload, current_user: dict[str, Any
 
 @router.get("/provider-oversight")
 def governance_provider_oversight(
-    days: int = Query(30, ge=1, le=365),
+    days: int = Query(14, ge=1, le=365),
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
     centre = _build_governance_command_centre(current_user=current_user, days=days, home_id=None)
@@ -162,7 +212,7 @@ def governance_provider_oversight(
 
 @router.get("/orb-context")
 def governance_orb_context(
-    days: int = Query(30, ge=1, le=365),
+    days: int = Query(14, ge=1, le=365),
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
     centre = _build_governance_command_centre(current_user=current_user, days=days, home_id=None)
@@ -171,7 +221,7 @@ def governance_orb_context(
 
 @router.get("/inspection-forecast")
 def governance_inspection_forecast(
-    days: int = Query(30, ge=1, le=365),
+    days: int = Query(14, ge=1, le=365),
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
     centre = _build_governance_command_centre(current_user=current_user, days=days, home_id=None)

@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from assistant.inspection_readiness import build_inspection_readiness, serialise_inspection_readiness
+from db.connection import db_connection
 from assistant.reg45_builder import build_reg45_review_context, serialise_reg45_review_context
 from repositories.os_repository_utils import quote_ident, safe_int, table_columns, table_exists
 from services.manager_intelligence_service import ManagerIntelligenceService
@@ -125,7 +126,7 @@ class GovernanceIntelligenceService:
 
     def build_command_centre(
         self,
-        conn: Any,
+        conn: Any | None = None,
         *,
         current_user: dict[str, Any],
         days: int = 30,
@@ -141,15 +142,26 @@ class GovernanceIntelligenceService:
             {},
         )
         evidence = self._safe(lambda: self.evidence.build_home_evidence(workspace), {"cards": [], "gaps": [], "judgement_sections": {}})
-        workforce_command = self._safe(lambda: self.workforce.command_centre(conn, current_user=current_user), {})
-        workforce_orb = self._safe(lambda: self.workforce.orb_context(conn, current_user=current_user), {})
+        provider = self._safe(lambda: self.provider.build_dashboard(current_user=current_user, days=days), {"homes": [], "summary": {}})
+
+        def _load_db_backed_sections(db_conn: Any) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+            workforce_command = self._safe(lambda: self.workforce.command_centre(db_conn, current_user=current_user), {})
+            workforce_orb = self._safe(lambda: self.workforce.orb_context(db_conn, current_user=current_user), {})
+            reg44 = self._safe(lambda: self.build_reg44_workflow(db_conn, current_user=current_user, home_id=resolved_home_id), {})
+            return workforce_command, workforce_orb, reg44
+
+        if conn is not None:
+            workforce_command, workforce_orb, reg44 = _load_db_backed_sections(conn)
+        else:
+            with db_connection() as db_conn:
+                workforce_command, workforce_orb, reg44 = _load_db_backed_sections(db_conn)
+
         evidence_index = self.evidence_index_from_payloads(
             workspace=workspace,
             evidence=evidence,
             workforce_context=workforce_orb,
         )
         matrix = self.build_evidence_matrix(evidence_index=evidence_index)
-        reg44 = self.build_reg44_workflow(conn, current_user=current_user, home_id=resolved_home_id)
         reg45 = self.build_reg45_review(evidence_index=evidence_index)
         risk = self.build_governance_risk(
             manager_dashboard=manager,
@@ -159,7 +171,6 @@ class GovernanceIntelligenceService:
         )
         forecast = self.build_inspection_forecast(risk=risk, evidence_matrix=matrix, reg45=reg45)
         actions = self._governance_actions(manager, risk, matrix, reg44, reg45)
-        provider = self._safe(lambda: self.provider.build_dashboard(current_user=current_user, days=days), {"homes": [], "summary": {}})
         return {
             "ok": True,
             "generated_at": self._now(),

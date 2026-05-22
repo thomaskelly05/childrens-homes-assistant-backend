@@ -6,6 +6,7 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+from db.connection import db_connection
 from services.care_hub_safeguarding_queues_service import care_hub_safeguarding_queues_service
 from services.chronology_pattern_service import chronology_pattern_service
 from services.intelligence_cache_service import intelligence_cache_service
@@ -24,7 +25,7 @@ class CareHubIntelligenceService:
 
     def build(
         self,
-        conn: Any,
+        conn: Any | None = None,
         *,
         young_person_id: int | None = None,
         home_id: int | None = None,
@@ -68,13 +69,23 @@ class CareHubIntelligenceService:
                 return payload
 
         feed_started = time.perf_counter()
-        feed = build_operational_feed(
-            conn,
-            young_person_id=young_person_id,
-            home_id=home_id,
-            limit=limit,
-        )
+        if conn is not None:
+            feed = build_operational_feed(
+                conn,
+                young_person_id=young_person_id,
+                home_id=home_id,
+                limit=limit,
+            )
+        else:
+            with db_connection() as feed_conn:
+                feed = build_operational_feed(
+                    feed_conn,
+                    young_person_id=young_person_id,
+                    home_id=home_id,
+                    limit=limit,
+                )
         feed_ms = round((time.perf_counter() - feed_started) * 1000, 2)
+
         workflow_started = time.perf_counter()
         workflow = workflow_completion_service.analyse(
             events=feed.get("events") or [],
@@ -110,27 +121,46 @@ class CareHubIntelligenceService:
 
         risk_ms = round((time.perf_counter() - risk_started) * 1000, 2)
         safeguarding_queues = care_hub_safeguarding_queues_service.build_from_feed(feed)
-        predictive_safeguarding = predictive_safeguarding_service.analyse(
-            conn,
-            young_person_id=young_person_id,
-            home_id=home_id,
-            limit=limit,
-        )
         actor = current_user or {"home_id": home_id}
         if home_id and not actor.get("home_id"):
             actor = {**actor, "home_id": home_id}
-        workforce_pressure = workforce_pressure_service.build(
-            conn,
-            current_user=actor,
-            home_id=home_id,
-            limit=limit,
-        )
+
+        secondary_started = time.perf_counter()
+        if conn is not None:
+            predictive_safeguarding = predictive_safeguarding_service.analyse(
+                conn,
+                young_person_id=young_person_id,
+                home_id=home_id,
+                limit=limit,
+            )
+            workforce_pressure = workforce_pressure_service.build(
+                conn,
+                current_user=actor,
+                home_id=home_id,
+                limit=limit,
+            )
+        else:
+            with db_connection() as secondary_conn:
+                predictive_safeguarding = predictive_safeguarding_service.analyse(
+                    secondary_conn,
+                    young_person_id=young_person_id,
+                    home_id=home_id,
+                    limit=limit,
+                )
+                workforce_pressure = workforce_pressure_service.build(
+                    secondary_conn,
+                    current_user=actor,
+                    home_id=home_id,
+                    limit=limit,
+                )
+        secondary_ms = round((time.perf_counter() - secondary_started) * 1000, 2)
         total_ms = round((time.perf_counter() - started) * 1000, 2)
         timing = {
             "total_ms": total_ms,
             "feed_ms": feed_ms,
             "workflow_ms": workflow_ms,
             "risk_ms": risk_ms,
+            "secondary_db_ms": secondary_ms,
             "cache_hit": cache_hit,
             **((feed.get("timing") or {}) if isinstance(feed.get("timing"), dict) else {}),
         }

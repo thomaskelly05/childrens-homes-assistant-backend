@@ -5,7 +5,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, Query
 
 from auth.current_user import get_current_user
-from db.connection import get_db
+from db.connection import db_connection
 from services.care_hub_intelligence_service import care_hub_intelligence_service
 from services.care_hub_safeguarding_queues_service import care_hub_safeguarding_queues_service
 
@@ -25,19 +25,17 @@ def _scope_params(
 def care_hub_dashboard(
     params: dict[str, Any] = Depends(_scope_params),
     current_user=Depends(get_current_user),
-    conn=Depends(get_db),
 ) -> dict[str, Any]:
     user = current_user if isinstance(current_user, dict) else dict(current_user or {})
-    return care_hub_intelligence_service.build(conn, current_user=user, **params)
+    return care_hub_intelligence_service.build(current_user=user, **params)
 
 
 @router.get("/live")
 def care_hub_live(
     params: dict[str, Any] = Depends(_scope_params),
     _current_user=Depends(get_current_user),
-    conn=Depends(get_db),
 ) -> dict[str, Any]:
-    payload = care_hub_intelligence_service.build(conn, **params)
+    payload = care_hub_intelligence_service.build(**params)
     return {
         "ok": True,
         "live_status": payload.get("live_status"),
@@ -57,9 +55,8 @@ def care_hub_live(
 def care_hub_alerts(
     params: dict[str, Any] = Depends(_scope_params),
     _current_user=Depends(get_current_user),
-    conn=Depends(get_db),
 ) -> dict[str, Any]:
-    payload = care_hub_intelligence_service.build(conn, **params)
+    payload = care_hub_intelligence_service.build(**params)
     return payload.get("alerts") or {"ok": True, "alerts": [], "total": 0}
 
 
@@ -67,9 +64,8 @@ def care_hub_alerts(
 def care_hub_inspection(
     params: dict[str, Any] = Depends(_scope_params),
     _current_user=Depends(get_current_user),
-    conn=Depends(get_db),
 ) -> dict[str, Any]:
-    payload = care_hub_intelligence_service.build(conn, **params)
+    payload = care_hub_intelligence_service.build(**params)
     feed = payload.get("operational_feed") or {}
     return {
         "ok": True,
@@ -83,21 +79,24 @@ def care_hub_inspection(
 def care_hub_workforce(
     params: dict[str, Any] = Depends(_scope_params),
     current_user=Depends(get_current_user),
-    conn=Depends(get_db),
 ) -> dict[str, Any]:
     from services.staff_wellbeing_service import staff_wellbeing_service
     from services.workforce_pressure_service import workforce_pressure_service
 
-    payload = care_hub_intelligence_service.build(conn, **params)
+    payload = care_hub_intelligence_service.build(**params)
     feed = payload.get("operational_feed") or {}
     user = current_user if isinstance(current_user, dict) else dict(current_user or {})
+    with db_connection() as conn:
+        workforce_pressure = payload.get("workforce_pressure") or workforce_pressure_service.build(
+            conn, current_user=user, home_id=params.get("home_id"), limit=params.get("limit", 50)
+        )
+        staff_wellbeing = staff_wellbeing_service.build(conn, current_user=user)
     return {
         "ok": True,
         "manager_queue": feed.get("manager_queue"),
         "live_status": payload.get("live_status"),
-        "workforce_pressure": payload.get("workforce_pressure")
-        or workforce_pressure_service.build(conn, current_user=user, home_id=params.get("home_id"), limit=params.get("limit", 50)),
-        "staff_wellbeing": staff_wellbeing_service.build(conn, current_user=user),
+        "workforce_pressure": workforce_pressure,
+        "staff_wellbeing": staff_wellbeing,
     }
 
 
@@ -105,21 +104,23 @@ def care_hub_workforce(
 def care_hub_safeguarding(
     params: dict[str, Any] = Depends(_scope_params),
     _current_user=Depends(get_current_user),
-    conn=Depends(get_db),
 ) -> dict[str, Any]:
     from services.predictive_safeguarding_service import predictive_safeguarding_service
 
-    payload = care_hub_intelligence_service.build(conn, **params)
+    payload = care_hub_intelligence_service.build(**params)
     feed = payload.get("operational_feed") or {}
     queues = care_hub_safeguarding_queues_service.build_from_feed(feed)
+    predictive = payload.get("predictive_safeguarding")
+    if predictive is None:
+        with db_connection() as conn:
+            predictive = predictive_safeguarding_service.analyse(conn, **params)
     return {
         "ok": True,
         "safeguarding_pressure": (feed.get("home_operational_intelligence") or {}).get("home_climate", {}).get(
             "safeguarding_pressure"
         ),
         "chronology_patterns": payload.get("chronology_patterns"),
-        "predictive_safeguarding": payload.get("predictive_safeguarding")
-        or predictive_safeguarding_service.analyse(conn, **params),
+        "predictive_safeguarding": predictive,
         "safeguarding_queues": queues,
         "alerts": [alert for alert in (payload.get("alerts") or {}).get("alerts") or [] if alert.get("type", "").startswith("safeguarding") or "missing" in str(alert.get("type", ""))],
     }
@@ -129,9 +130,8 @@ def care_hub_safeguarding(
 def care_hub_safeguarding_queues(
     params: dict[str, Any] = Depends(_scope_params),
     _current_user=Depends(get_current_user),
-    conn=Depends(get_db),
 ) -> dict[str, Any]:
-    payload = care_hub_intelligence_service.build(conn, **params)
+    payload = care_hub_intelligence_service.build(**params)
     feed = payload.get("operational_feed") or {}
     return care_hub_safeguarding_queues_service.build_from_feed(feed)
 
@@ -140,36 +140,35 @@ def care_hub_safeguarding_queues(
 def care_hub_provider(
     limit: int = Query(default=30, ge=1, le=100),
     current_user=Depends(get_current_user),
-    conn=Depends(get_db),
 ) -> dict[str, Any]:
     from services.provider_command_centre_service import provider_command_centre_service
 
     user = current_user if isinstance(current_user, dict) else dict(current_user or {})
-    return provider_command_centre_service.build(conn, current_user=user, limit=limit)
+    with db_connection() as conn:
+        return provider_command_centre_service.build(conn, current_user=user, limit=limit)
 
 
 @router.get("/inspection-readiness")
 def care_hub_inspection_readiness(
     params: dict[str, Any] = Depends(_scope_params),
     _current_user=Depends(get_current_user),
-    conn=Depends(get_db),
 ) -> dict[str, Any]:
     from services.inspection_evidence_pack_service import inspection_evidence_pack_service
     from services.reg44_intelligence_service import reg44_intelligence_service
 
-    return {
-        "ok": True,
-        "reg44": reg44_intelligence_service.build(conn, home_id=params.get("home_id"), limit=params.get("limit", 50)),
-        "evidence_pack": inspection_evidence_pack_service.build(
-            conn, home_id=params.get("home_id"), limit=params.get("limit", 50)
-        ),
-    }
+    with db_connection() as conn:
+        return {
+            "ok": True,
+            "reg44": reg44_intelligence_service.build(conn, home_id=params.get("home_id"), limit=params.get("limit", 50)),
+            "evidence_pack": inspection_evidence_pack_service.build(
+                conn, home_id=params.get("home_id"), limit=params.get("limit", 50)
+            ),
+        }
 
 
 @compat_router.get("/care-hub")
 def care_hub_compat(
     params: dict[str, Any] = Depends(_scope_params),
     _current_user=Depends(get_current_user),
-    conn=Depends(get_db),
 ) -> dict[str, Any]:
-    return care_hub_intelligence_service.build(conn, **params)
+    return care_hub_intelligence_service.build(**params)

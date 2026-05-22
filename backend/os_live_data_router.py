@@ -10,7 +10,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict
 
 from auth.current_user import get_current_user
-from db.connection import get_db
+from db.connection import db_connection, get_db
 from repositories.actions_repository import create_action, get_action, list_actions, update_action
 from repositories.documents_repository import create_document_metadata, create_reg44_metadata, get_document, list_documents
 from repositories.evidence_repository import build_coverage, create_evidence_link, get_evidence, list_evidence
@@ -21,7 +21,7 @@ from repositories.workspaces_repository import adult_workspace, get_adult, get_y
 from services.document_extraction_pipeline import extraction_pipeline
 from services.document_security_service import document_security_service
 from services.file_storage import storage_from_env
-from services.os_chronology_service import get_chronology_event, list_chronology
+from services.os_chronology_service import get_chronology_event, list_chronology, list_chronology_for_connection
 from services.operational_lifecycle_service import operational_lifecycle_service
 
 
@@ -421,39 +421,57 @@ def os_reports(
     report_type: str | None = None,
     limit: int = Query(default=250, ge=1, le=600),
     current_user=Depends(get_current_user),
-    conn=Depends(get_db),
 ):
-    reports = list_reports(conn, current_user=current_user, filters=_filters(home_id=home_id, young_person_id=young_person_id, report_type=report_type), limit=limit)
+    with db_connection() as conn:
+        reports = list_reports(
+            conn,
+            current_user=current_user,
+            filters=_filters(home_id=home_id, young_person_id=young_person_id, report_type=report_type),
+            limit=limit,
+        )
     return ok(reports, meta={"total": len(reports)})
 
 
 @router.post("/reports/generate")
-def os_report_generate(payload: FlexiblePayload, current_user=Depends(get_current_user), conn=Depends(get_db)):
+def os_report_generate(payload: FlexiblePayload, current_user=Depends(get_current_user)):
     data = payload.model_dump(exclude_unset=True)
-    chronology = list_chronology(
-        current_user=current_user,
-        filters=_filters(home_id=data.get("home_id"), young_person_id=data.get("young_person_id"), date_from=data.get("date_from"), date_to=data.get("date_to")),
-        page=1,
-        page_size=100,
-    )["items"]
-    evidence = list_evidence(conn, current_user=current_user, filters=_filters(home_id=data.get("home_id"), young_person_id=data.get("young_person_id")), limit=100)
-    draft = generate_report_draft(payload=data, chronology_items=chronology, evidence=evidence)
-    saved = save_report_draft(
-        conn,
-        report_id="generated",
-        payload={
-            **data,
-            **draft,
-            "status": "draft",
-            "metadata": {
-                **(data.get("metadata") or {}),
-                "generated_from": "os_reports_generate",
-                "chronology_event_ids": [item.get("id") for item in chronology],
-                "evidence_ids": [item.get("id") for item in evidence],
-            },
-        },
-        current_user=current_user,
+    filters = _filters(
+        home_id=data.get("home_id"),
+        young_person_id=data.get("young_person_id"),
+        date_from=data.get("date_from"),
+        date_to=data.get("date_to"),
     )
+    with db_connection() as conn:
+        chronology = list_chronology_for_connection(
+            conn,
+            current_user=current_user,
+            filters=filters,
+            page=1,
+            page_size=100,
+        )["items"]
+        evidence = list_evidence(
+            conn,
+            current_user=current_user,
+            filters=_filters(home_id=data.get("home_id"), young_person_id=data.get("young_person_id")),
+            limit=100,
+        )
+        draft = generate_report_draft(payload=data, chronology_items=chronology, evidence=evidence)
+        saved = save_report_draft(
+            conn,
+            report_id="generated",
+            payload={
+                **data,
+                **draft,
+                "status": "draft",
+                "metadata": {
+                    **(data.get("metadata") or {}),
+                    "generated_from": "os_reports_generate",
+                    "chronology_event_ids": [item.get("id") for item in chronology],
+                    "evidence_ids": [item.get("id") for item in evidence],
+                },
+            },
+            current_user=current_user,
+        )
     return ok({**draft, "persisted_report": saved, "id": saved.get("id", draft["id"])})
 
 
@@ -676,8 +694,10 @@ def os_young_person(young_person_id: int, current_user=Depends(get_current_user)
 
 
 @router.get("/young-people/{young_person_id}/workspace")
-def os_young_person_workspace(young_person_id: int, current_user=Depends(get_current_user), conn=Depends(get_db)):
-    return ok(young_person_workspace(conn, young_person_id=young_person_id, current_user=current_user))
+def os_young_person_workspace(young_person_id: int, current_user=Depends(get_current_user)):
+    with db_connection() as conn:
+        workspace = young_person_workspace(conn, young_person_id=young_person_id, current_user=current_user)
+    return ok(workspace)
 
 
 @router.get("/adults")
