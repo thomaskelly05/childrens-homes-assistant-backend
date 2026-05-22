@@ -28,7 +28,28 @@ export type StandaloneOrbConfig = {
     health: string
     conversation: string
     config: string
+    model_router_health?: string
   }
+}
+
+export type StandaloneOrbModelRouterHealth = {
+  available: boolean
+  default_provider: string
+  providers: Array<{
+    name: string
+    available: boolean
+    models_configured: boolean
+  }>
+  strict: boolean
+}
+
+export async function fetchStandaloneOrbModelRouterHealth(signal?: AbortSignal) {
+  const payload = await authFetch<{ success?: boolean; data?: StandaloneOrbModelRouterHealth }>(
+    '/orb/standalone/model-router/health',
+    { signal: withTimeout(signal) }
+  )
+  if (!payload?.data) throw new AuthApiError(503, 'Could not load ORB model router health.')
+  return payload.data
 }
 
 export type StandaloneOrbAnswerDetail = 'voice_concise' | 'balanced' | 'detailed' | 'concise'
@@ -86,6 +107,22 @@ export type StandaloneOrbRetrievalContext = {
   research_intent?: boolean
 }
 
+export type StandaloneOrbModelRouting = {
+  provider?: string
+  model?: string
+  task_type?: string
+  quality_tier?: string
+  cost_tier?: string
+  reason?: string
+  fallback_used?: boolean
+  latency_ms?: number | null
+  risk_level?: string
+  requires_citations?: boolean
+  requires_rag?: boolean
+  requires_vision?: boolean
+  error?: string | null
+}
+
 export type StandaloneOrbConversationResponse = {
   ok: boolean
   answer: string
@@ -100,6 +137,7 @@ export type StandaloneOrbConversationResponse = {
     os_linked?: boolean
     care_record_access?: boolean
     retrieval?: StandaloneOrbRetrievalContext
+    model_routing?: StandaloneOrbModelRouting
   }
   guardrails?: string[]
   image_understanding_available?: boolean

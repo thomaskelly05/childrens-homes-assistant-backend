@@ -1,6 +1,6 @@
 'use client'
 
-import type { StandaloneOrbMode } from '@/lib/orb/standalone-client'
+import type { StandaloneOrbMode, StandaloneOrbModelRouting } from '@/lib/orb/standalone-client'
 
 export type StandaloneOrbSourceType =
   | 'product_context'
@@ -30,6 +30,7 @@ export type StandaloneChatMessage = {
   createdAt?: number
   status?: 'failed' | 'pending'
   sources?: StandaloneOrbSource[]
+  modelRouting?: StandaloneOrbModelRouting
 }
 
 export type StandaloneProject = {

@@ -495,6 +495,7 @@ export function OrbCareCompanion() {
         const responseSources = (
           (response.citations?.length ? response.citations : response.sources) ?? []
         ) as StandaloneOrbSource[]
+        const modelRouting = response.context_used?.model_routing
         setWorkspace((current) => {
           const chat = current.chats.find((c) => c.id === targetChatId)
           if (!chat) return current
@@ -505,7 +506,8 @@ export function OrbCareCompanion() {
               role: 'assistant',
               content: answer,
               createdAt: Date.now(),
-              sources: responseSources.length ? responseSources : undefined
+              sources: responseSources.length ? responseSources : undefined,
+              modelRouting: modelRouting ?? undefined
             }
           ])
           return patchActiveChat(current, chat.id, {
@@ -964,7 +966,7 @@ export function OrbCareCompanion() {
                           <article className="orb-message-assistant group">
                             <p className="mb-2 text-xs font-medium text-slate-500">ORB</p>
                             <div className="whitespace-pre-wrap text-[15px] leading-7 text-slate-100">{entry.content}</div>
-                            <SourcesBasis sources={entry.sources} />
+                            <SourcesBasis sources={entry.sources} modelRouting={entry.modelRouting} />
                             {index === visibleMessages.length - 1 ? (
                               <ResponseActions
                                 content={entry.content}
@@ -1242,10 +1244,29 @@ function OrbFloatingVoiceDock({
   )
 }
 
-function SourcesBasis({ sources }: { sources?: StandaloneOrbSource[] }) {
+function modelRouteSummary(modelRouting?: import('@/lib/orb/standalone-client').StandaloneOrbModelRouting) {
+  if (!modelRouting?.task_type) return null
+  const quality = modelRouting.quality_tier || 'balanced'
+  const task = modelRouting.task_type.replace(/_/g, ' ')
+  const retrieval =
+    modelRouting.requires_rag || modelRouting.requires_citations
+      ? ' with built-in ORB knowledge retrieval'
+      : ''
+  const fallback = modelRouting.fallback_used ? ' (fallback route used)' : ''
+  return `Answered using a ${quality} model route for ${task}${retrieval}.${fallback}`
+}
+
+function SourcesBasis({
+  sources,
+  modelRouting
+}: {
+  sources?: StandaloneOrbSource[]
+  modelRouting?: import('@/lib/orb/standalone-client').StandaloneOrbModelRouting
+}) {
   const [open, setOpen] = useState(false)
-  if (!sources?.length) return null
-  const hasDocumentChunks = sources.some(
+  const routeSummary = modelRouteSummary(modelRouting)
+  if (!sources?.length && !routeSummary) return null
+  const hasDocumentChunks = (sources ?? []).some(
     (source) =>
       Boolean((source as { document_chunk?: boolean }).document_chunk) ||
       String(source.type || '').startsWith('document_chunk:')
@@ -1262,12 +1283,27 @@ function SourcesBasis({ sources }: { sources?: StandaloneOrbSource[] }) {
       {hasDocumentChunks && !open ? (
         <p className="mt-1 text-[10px] text-cyan-200/70">Retrieved from ORB Knowledge Library</p>
       ) : null}
+      {!open && routeSummary ? (
+        <p className="mt-1 text-[10px] text-slate-600">{routeSummary}</p>
+      ) : null}
       {open ? (
         <div className="mt-2 flex flex-col gap-1.5">
+          {routeSummary ? (
+            <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-2.5 py-1.5 text-[10px] text-slate-500">
+              <p className="font-medium text-slate-400">Model route</p>
+              <p className="mt-0.5 text-slate-500">{routeSummary}</p>
+              {modelRouting?.cost_tier ? (
+                <p className="mt-1 text-[9px] text-slate-600">
+                  Cost tier: {modelRouting.cost_tier.replace(/_/g, ' ')}
+                  {modelRouting.fallback_used ? ' · Fallback used' : ''}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
           {hasDocumentChunks ? (
             <p className="text-[10px] font-medium text-cyan-200/80">Retrieved from ORB Knowledge Library</p>
           ) : null}
-          {sources.map((source, index) => {
+          {sources?.map((source, index) => {
             const extended = source as StandaloneOrbSource & {
               document_chunk?: boolean
               section?: string

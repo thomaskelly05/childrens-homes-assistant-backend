@@ -2,12 +2,11 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import os
 import re
 import time
 from typing import Any
 
-from assistant.llm_provider import ChatStreamRequest, get_llm_provider
+from services.ai_model_router_service import STANDALONE_LLM_TIMEOUT_SECONDS, ai_model_router_service
 from services.orb_citation_service import orb_citation_service
 from services.orb_knowledge_retrieval_service import orb_knowledge_retrieval_service
 from services.orb_rag_retrieval_service import orb_rag_retrieval_service
@@ -19,9 +18,6 @@ from services.orb_standalone_sources import (
 from services.standalone_sector_knowledge_service import search_sector_knowledge
 
 logger = logging.getLogger("indicare.orb_general_assistant")
-
-STANDALONE_LLM_TIMEOUT_SECONDS = 40.0
-
 
 def _text(value: Any) -> str:
     return str(value or "").strip()
@@ -167,19 +163,19 @@ class OrbGeneralAssistantService:
             profile_context=profile_context or "standalone context profiles" in message.lower(),
             has_images=bool(images),
         )
-        if os.getenv("OPENAI_API_KEY"):
-            try:
-                result = await asyncio.wait_for(
-                    self._llm_answer(
-                        message,
-                        history=history or [],
-                        detail=detail,
-                        image_data_urls=images,
-                        retrieval=retrieval,
-                        mode=mode,
-                    ),
-                    timeout=STANDALONE_LLM_TIMEOUT_SECONDS,
-                )
+        try:
+            result = await asyncio.wait_for(
+                self._llm_answer(
+                    message,
+                    history=history or [],
+                    detail=detail,
+                    image_data_urls=images,
+                    retrieval=retrieval,
+                    mode=mode,
+                ),
+                timeout=STANDALONE_LLM_TIMEOUT_SECONDS,
+            )
+            if result.get("answer"):
                 logger.info(
                     "standalone_orb_answer llm ok detail=%s images=%s elapsed_ms=%s",
                     detail,
@@ -187,21 +183,21 @@ class OrbGeneralAssistantService:
                     int((time.perf_counter() - started) * 1000),
                 )
                 return result
-            except asyncio.TimeoutError:
-                logger.warning(
-                    "standalone_orb_answer llm timeout detail=%s images=%s elapsed_ms=%s",
-                    detail,
-                    len(images),
-                    int((time.perf_counter() - started) * 1000),
-                )
-            except Exception:
-                logger.warning(
-                    "standalone_orb_answer llm failed detail=%s images=%s elapsed_ms=%s",
-                    detail,
-                    len(images),
-                    int((time.perf_counter() - started) * 1000),
-                    exc_info=True,
-                )
+        except asyncio.TimeoutError:
+            logger.warning(
+                "standalone_orb_answer llm timeout detail=%s images=%s elapsed_ms=%s",
+                detail,
+                len(images),
+                int((time.perf_counter() - started) * 1000),
+            )
+        except Exception:
+            logger.warning(
+                "standalone_orb_answer llm failed detail=%s images=%s elapsed_ms=%s",
+                detail,
+                len(images),
+                int((time.perf_counter() - started) * 1000),
+                exc_info=True,
+            )
         if images:
             sources = retrieval["sources"]
             citations = retrieval["citations"]
@@ -210,11 +206,12 @@ class OrbGeneralAssistantService:
                 "I can still help using the text you provide.",
                 sources,
             )
+            ctx = self._retrieval_context_used(retrieval)
             return {
                 "answer": answer,
                 "sources": sources,
                 "citations": citations,
-                "context_used": self._retrieval_context_used(retrieval),
+                "context_used": ctx,
                 "tools_used": ["standalone_orb_general_assistant"],
                 "internal_data_access": False,
                 "image_understanding_available": False,
@@ -232,7 +229,12 @@ class OrbGeneralAssistantService:
             "internal_data_access": False,
         }
 
-    def _retrieval_context_used(self, retrieval: dict[str, Any]) -> dict[str, Any]:
+    def _retrieval_context_used(
+        self,
+        retrieval: dict[str, Any],
+        *,
+        model_routing: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         packs = retrieval.get("source_packs") or []
         document_results = retrieval.get("document_results") or []
         live = any(bool(p.get("live_retrieved")) for p in packs)
@@ -241,7 +243,7 @@ class OrbGeneralAssistantService:
             if document_results
             else "built_in_source_pack"
         )
-        return {
+        context: dict[str, Any] = {
             "surface": "standalone_orb_ai",
             "os_linked": False,
             "care_record_access": False,
@@ -255,6 +257,9 @@ class OrbGeneralAssistantService:
                 "research_intent": bool((retrieval.get("classification") or {}).get("research_intent")),
             },
         }
+        if model_routing:
+            context["model_routing"] = model_routing
+        return context
 
     def _mode_behaviour_hint(self, mode: str | None) -> str:
         mode_name = _text(mode) or "Ask ORB"
@@ -278,6 +283,33 @@ class OrbGeneralAssistantService:
         }
         return hints.get(mode_name, "Mode — Ask ORB: broad ChatGPT-like assistant with specialist care knowledge.")
 
+    def _build_llm_system_prompt(
+        self,
+        *,
+        retrieval: dict[str, Any],
+        mode: str | None,
+        detail: str,
+        has_images: bool,
+    ) -> str:
+        system = GENERAL_ORB_SYSTEM_PROMPT
+        system += f"\n\n{self._mode_behaviour_hint(mode)}"
+        system += f"\n\n{retrieval['grounding_context']}"
+        if retrieval.get("research_note"):
+            system += f"\n\nIf relevant, briefly note: {retrieval['research_note']}"
+        if detail == "concise":
+            system += "\n\nKeep everyday answers clear and concise unless the user asks for detail."
+        elif detail == "detailed":
+            system += (
+                "\n\nThe user asked for a care, safeguarding, Ofsted or recording mode; "
+                "provide a fuller, structured answer with practical next steps and an inspection-quality lens."
+            )
+        if has_images:
+            system += (
+                "\n\nThe user attached standalone image(s) for context only (not IndiCare OS records). "
+                "Describe what you observe carefully and relate it to residential care practice when relevant."
+            )
+        return system
+
     async def _llm_answer(
         self,
         message: str,
@@ -289,105 +321,57 @@ class OrbGeneralAssistantService:
         mode: str | None = None,
     ) -> dict[str, Any]:
         retrieval = retrieval or self.prepare_retrieval(message, mode=mode, has_images=bool(image_data_urls))
-        system = GENERAL_ORB_SYSTEM_PROMPT
-        system += f"\n\n{self._mode_behaviour_hint(mode)}"
-        system += f"\n\n{retrieval['grounding_context']}"
-        if retrieval.get("research_note"):
-            system += f"\n\nIf relevant, briefly note: {retrieval['research_note']}"
-        if detail == "concise":
-            system += "\n\nKeep everyday answers clear and concise unless the user asks for detail."
-        elif detail == "detailed":
-            system += "\n\nThe user asked for a care, safeguarding, Ofsted or recording mode; provide a fuller, structured answer with practical next steps and an inspection-quality lens."
-        if image_data_urls:
-            system += (
-                "\n\nThe user attached standalone image(s) for context only (not IndiCare OS records). "
-                "Describe what you observe carefully and relate it to residential care practice when relevant."
-            )
+        system = self._build_llm_system_prompt(
+            retrieval=retrieval,
+            mode=mode,
+            detail=detail,
+            has_images=bool(image_data_urls),
+        )
+        classification = retrieval.get("classification") or {}
+        research_intent = bool(classification.get("research_intent"))
+        voice_mode = detail == "voice_concise"
 
-        if image_data_urls:
-            answer = await self._vision_answer(
-                system=system,
-                message=message,
-                history=history,
-                image_data_urls=image_data_urls,
-            )
-            sources = retrieval["sources"]
-            citations = retrieval["citations"]
-            resolved = append_sources_basis_section(
-                answer or self._fallback_answer(message, retrieval=retrieval),
-                sources,
-            )
-            return {
-                "answer": resolved,
-                "sources": sources,
-                "citations": citations,
-                "context_used": self._retrieval_context_used(retrieval),
-                "tools_used": ["standalone_orb_general_assistant", "vision"],
-                "internal_data_access": False,
-                "image_understanding_available": bool(answer),
-            }
+        response, decision, trace = await ai_model_router_service.complete_with_routing(
+            message=message,
+            system_prompt=system,
+            history=history,
+            images=image_data_urls,
+            mode=mode,
+            retrieval_context=retrieval,
+            detail_level=detail,
+            research_intent=research_intent,
+            voice_mode=voice_mode,
+        )
 
-        provider = get_llm_provider()
-        messages = [{"role": "system", "content": system}, *history[-16:], {"role": "user", "content": message}]
-        parts: list[str] = []
-        async for item in provider.stream_chat(
-            ChatStreamRequest(
-                messages=messages,
-                model="gpt-4o-mini",
-                temperature=0.2,
-                max_tokens=1200,
-                metadata={"structured_output": False},
-            )
-        ):
-            if isinstance(item, str):
-                parts.append(item)
-        answer = "".join(parts).strip() or self._fallback_answer(message, retrieval=retrieval)
+        model_routing = ai_model_router_service.routing_metadata_for_context(
+            decision,
+            trace,
+            response=response,
+        )
         sources = retrieval["sources"]
         citations = retrieval["citations"]
+        tools = ["standalone_orb_general_assistant", "ai_model_router"]
+        if image_data_urls:
+            tools.append("vision")
+
+        answer_text = _text(response.text)
+        image_available = bool(image_data_urls) and bool(answer_text) and not response.error
+        if not answer_text:
+            return {}
+
+        resolved = append_sources_basis_section(
+            answer_text or self._fallback_answer(message, retrieval=retrieval),
+            sources,
+        )
         return {
-            "answer": append_sources_basis_section(answer, sources),
+            "answer": resolved,
             "sources": sources,
             "citations": citations,
-            "context_used": self._retrieval_context_used(retrieval),
-            "tools_used": ["standalone_orb_general_assistant"],
+            "context_used": self._retrieval_context_used(retrieval, model_routing=model_routing),
+            "tools_used": tools,
             "internal_data_access": False,
-            "image_understanding_available": False,
+            "image_understanding_available": image_available,
         }
-
-    async def _vision_answer(
-        self,
-        *,
-        system: str,
-        message: str,
-        history: list[dict[str, Any]],
-        image_data_urls: list[str],
-    ) -> str:
-        from openai import AsyncOpenAI
-
-        api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key:
-            return ""
-
-        client = AsyncOpenAI(api_key=api_key, timeout=STANDALONE_LLM_TIMEOUT_SECONDS)
-        user_content: list[dict[str, Any]] = [{"type": "text", "text": message}]
-        for url in image_data_urls[:4]:
-            user_content.append({"type": "image_url", "image_url": {"url": url}})
-
-        chat_messages: list[dict[str, Any]] = [{"role": "system", "content": system}]
-        for item in history[-8:]:
-            role = str(item.get("role") or "").strip().lower()
-            content = _text(item.get("content"))
-            if role in {"user", "assistant"} and content:
-                chat_messages.append({"role": role, "content": content})
-        chat_messages.append({"role": "user", "content": user_content})
-
-        response = await client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=chat_messages,
-            temperature=0.2,
-            max_tokens=1200,
-        )
-        return _text(response.choices[0].message.content if response.choices else "")
 
     def _fallback_answer(self, message: str, *, retrieval: dict[str, Any] | None = None) -> str:
         lower = message.lower()

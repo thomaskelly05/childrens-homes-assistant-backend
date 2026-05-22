@@ -111,6 +111,12 @@ def test_standalone_route_response_includes_citations_and_retrieval(fake_state, 
     assert "document_result_count" in response["context_used"]["retrieval"]
 
 
+def test_standalone_general_service_uses_model_router_module():
+    text = _read(GENERAL_SERVICE)
+    assert "ai_model_router_service" in text
+    assert "model_routing" in text
+
+
 def test_knowledge_services_exist():
     from services.orb_knowledge_source_pack_service import list_source_packs
     from services.orb_knowledge_library_service import orb_knowledge_library_service

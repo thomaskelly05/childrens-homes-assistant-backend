@@ -36,6 +36,7 @@ FORBIDDEN_ORB_PAGE_MARKERS = [
 REQUIRED_STANDALONE_MARKERS = [
     "/orb/standalone/conversation",
     "/orb/standalone/config",
+    "/orb/standalone/model-router/health",
 ]
 
 STANDALONE_UI_MARKERS = [
