@@ -77,7 +77,10 @@ export function AppShell({ children }: { children: ReactNode }) {
     .filter((item) => pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href)))
     .sort((a, b) => b.href.length - a.href.length)[0]
   const hasRouteAccess = !matchedRoute || userHasAnyPermission(user, matchedRoute.permissions)
-  const isStandaloneAssistant = pathname === '/assistant' || pathname.startsWith('/assistant/')
+  const isStandaloneOrb = pathname === '/orb'
+  const isStandaloneAssistantRoute =
+    pathname === '/assistant/voice' ||
+    pathname.startsWith('/assistant/settings/')
   const isChildRecordingWorkspace = pathParts[0] === 'young-people' && pathParts.length === 4 && ['new', 'upload'].includes(pathParts[3])
   const isRecordWorkspace = pathParts.length >= 2 && recordWorkspaceRoots.includes(pathParts[0]) && !['new', 'current'].includes(pathParts[pathParts.length - 1])
   const routeRequiresChildContext = pathParts.length === 1 && childContextRequiredRoots.includes(pathParts[0] || '')
@@ -185,7 +188,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     assistant_context: assistantContext
   }
 
-  if (isStandaloneAssistant) return <>{children}</>
+  if (isStandaloneOrb || isStandaloneAssistantRoute) return <>{children}</>
 
   if (isChildRecordingWorkspace || isRecordWorkspace) {
     return (
@@ -256,9 +259,9 @@ export function AppShell({ children }: { children: ReactNode }) {
               </div>
             ))}
           </nav>
-          <Link prefetch={false} href="/orb" className="mt-4 rounded-[24px] border border-blue-300/20 bg-[radial-gradient(circle_at_top,#38bdf833,transparent_55%),rgba(255,255,255,0.08)] p-4 shadow-[0_0_46px_rgba(56,189,248,0.14)]">
-            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-blue-200">ORB live</p>
-            <p className="mt-2 text-sm font-black text-white">Reflective intelligence stays available on every route.</p>
+          <Link prefetch={false} href="/assistant/orb" className="mt-4 rounded-[24px] border border-blue-300/20 bg-[radial-gradient(circle_at_top,#38bdf833,transparent_55%),rgba(255,255,255,0.08)] p-4 shadow-[0_0_46px_rgba(56,189,248,0.14)]">
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-blue-200">IndiCare OS ORB</p>
+            <p className="mt-2 text-sm font-black text-white">Operational cognition with permissioned CareHub context.</p>
           </Link>
         </aside>
 

@@ -13,7 +13,7 @@ export function OrbStandaloneHome() {
         <p className="mt-4 text-sm leading-7 text-slate-300">{orbProductCopy.standaloneSubprompt}</p>
         <div className="mt-8 grid gap-3">
           {standaloneOrbPrompts.map((prompt) => (
-            <Link key={prompt} href={`/assistant?prompt=${encodeURIComponent(prompt)}`} className="orb-prompt-card rounded-3xl px-5 py-4 text-left text-sm font-bold leading-6 text-slate-100">
+            <Link key={prompt} href={`/orb?q=${encodeURIComponent(prompt)}`} className="orb-prompt-card rounded-3xl px-5 py-4 text-left text-sm font-bold leading-6 text-slate-100">
               {prompt}
             </Link>
           ))}

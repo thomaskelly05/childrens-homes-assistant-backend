@@ -95,7 +95,7 @@ export function OrbConversationExperience({
     ? `${latestContext.brain || 'general'} - no care retrieval`
     : isDegraded ? 'Partial context' : latestContext?.snapshot_hit ? 'Snapshot + live' : 'Live DB backed'
   const cognitionTimeline = messages.filter((message) => message.role === 'assistant' && message.response)
-  const voiceHref = `/orb?voice=1&scope=${encodeURIComponent(scope)}${youngPersonId ? `&young_person_id=${encodeURIComponent(youngPersonId)}` : ''}`
+  const voiceHref = `/assistant/orb?voice=1&scope=${encodeURIComponent(scope)}${youngPersonId ? `&young_person_id=${encodeURIComponent(youngPersonId)}` : ''}`
 
   async function submit(event?: FormEvent<HTMLFormElement>, override?: string, overrideScope?: OrbScope) {
     event?.preventDefault()

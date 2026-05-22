@@ -19,15 +19,19 @@ export default async function OperationalOrbPage({
         <section className="overflow-hidden rounded-[32px] border border-blue-100 bg-white shadow-xl shadow-blue-100/40">
           <div className="bg-[linear-gradient(135deg,#0f172a,#1e3a8a,#2563eb)] px-6 py-6 text-white md:px-8">
             <p className="text-[11px] font-black uppercase tracking-[0.24em] text-blue-200">
-              OS ORB Runtime
+              IndiCare OS ORB
             </p>
             <div className="mt-3 flex flex-wrap items-center justify-between gap-4">
               <div>
                 <h1 className="text-3xl font-black tracking-[-0.06em] md:text-5xl">
-                  One operational cognition system
+                  Operational cognition
                 </h1>
                 <p className="mt-3 max-w-3xl text-sm font-semibold leading-7 text-blue-100">
-                  ORB can help with IndiCare OS work and everyday questions. Care questions use scoped records, citations and review guardrails; general, web and productivity questions do not pretend to use care records.
+                  Uses permissioned OS and CareHub context — records, chronology, dashboards and young person scope when authorised. For standalone recording help without OS records, use{' '}
+                  <a href="/orb" className="underline decoration-blue-200/80 underline-offset-4">
+                    ORB Care Companion
+                  </a>
+                  .
                 </p>
               </div>
 

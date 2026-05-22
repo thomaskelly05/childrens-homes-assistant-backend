@@ -37,7 +37,7 @@ export default async function WellbeingPage() {
         eyebrow="Wellbeing"
         title="Child and workforce wellbeing posture"
         description="A live wellbeing hub using chronology, actions, safeguarding, evidence and Workforce OS alerts to make emotional safety visible without creating another data system."
-        action={<Link href="/orb?context=wellbeing" className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg shadow-slate-950/20">Ask ORB</Link>}
+        action={<Link href="/assistant/orb?context=wellbeing" className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg shadow-slate-950/20">Ask ORB</Link>}
       />
       <section className="grid gap-3 md:grid-cols-2">
         <LiveDataStatus result={platform} />

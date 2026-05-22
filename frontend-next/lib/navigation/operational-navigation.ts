@@ -155,13 +155,13 @@ export const operationalNavigation: OperationalNavItem[] = [
   },
   {
     domain: 'orb',
-    href: '/orb',
+    href: '/assistant/orb',
     label: 'ORB',
     description: 'Live operational intelligence with role, scope, record context and evidence citations.',
     icon: Sparkles,
     permissions: ['assistant:access'],
     roleScopes: ['rm', 'ri', 'staff', 'provider', 'admin'],
-    activeRoots: ['orb']
+    activeRoots: ['assistant']
   },
   {
     domain: 'admin',

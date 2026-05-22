@@ -79,7 +79,7 @@ export default async function ChildJourneyPage({ params, searchParams }: { param
               <ClipboardPlus className="mr-2 h-4 w-4" aria-hidden />
               Add Daily Note
             </ActionLink>
-            <ActionLink href={`/orb?scope=child&young_person_id=${encodeURIComponent(id)}`} tone="light">
+            <ActionLink href={`/assistant/orb?scope=child&young_person_id=${encodeURIComponent(id)}`} tone="light">
               <Sparkles className="mr-2 h-4 w-4" aria-hidden />
               Ask ORB
             </ActionLink>

@@ -116,7 +116,7 @@ export function CommandSearch() {
       {query.trim() ? (
         <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-40 rounded-[24px] border border-slate-200 bg-white p-3 shadow-2xl shadow-slate-900/15">
           <Link
-            href={`/orb?q=${encodeURIComponent(query)}`}
+            href={`/assistant/orb?q=${encodeURIComponent(query)}`}
             className="mb-2 flex items-center gap-3 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-black text-blue-700 transition hover:bg-blue-100"
             onClick={() => setQuery('')}
           >

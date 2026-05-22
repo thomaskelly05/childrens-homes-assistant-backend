@@ -62,7 +62,7 @@ export default async function WorkforceCommandCentrePage() {
           'What should leadership notice about recognition, wellbeing and recording quality?',
           'Which workforce evidence would strengthen SCCIF leadership visibility?'
         ]}
-        action={<Link href="/orb?scope=workforce" className="rounded-2xl bg-white px-4 py-3 text-sm font-black text-slate-950">Ask ORB</Link>}
+        action={<Link href="/assistant/orb?scope=workforce" className="rounded-2xl bg-white px-4 py-3 text-sm font-black text-slate-950">Ask ORB</Link>}
       />
       <Card data-testid="workforce-practice-wellbeing">
         <SectionHeader eyebrow="Practice quality and wellbeing" title="Workforce intelligence linked to care quality" description="Reflective practice, safeguarding confidence, staff support needs, consistency and positive practice are surfaced from the existing Workforce OS payload." />
