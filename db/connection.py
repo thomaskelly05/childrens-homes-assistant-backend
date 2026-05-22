@@ -27,10 +27,17 @@ if DB_POOL_MAX < DB_POOL_MIN:
     logger.warning("DB_POOL_MAX=%s is lower than DB_POOL_MIN=%s; raising max to min", DB_POOL_MAX, DB_POOL_MIN)
     DB_POOL_MAX = DB_POOL_MIN
 
-DB_POOL_WAIT_TIMEOUT_SECONDS = float(os.getenv("DB_POOL_WAIT_TIMEOUT_SECONDS", "10"))
+DB_POOL_WAIT_TIMEOUT_SECONDS = float(os.getenv("DB_POOL_WAIT_TIMEOUT_SECONDS", "2"))
 DB_STATEMENT_TIMEOUT_MS = int(os.getenv("DB_STATEMENT_TIMEOUT_MS", "15000"))
 DB_IDLE_TX_TIMEOUT_MS = int(os.getenv("DB_IDLE_TX_TIMEOUT_MS", "15000"))
-DB_CONNECT_RETRIES = int(os.getenv("DB_CONNECT_RETRIES", "2"))
+# Total acquisition attempts (1 = single try). DB_CONNECT_RETRIES kept as legacy alias.
+DB_POOL_ACQUIRE_RETRIES = int(
+    os.getenv(
+        "DB_POOL_ACQUIRE_RETRIES",
+        os.getenv("DB_CONNECT_RETRIES", "1"),
+    )
+)
+DB_CONNECT_RETRIES = DB_POOL_ACQUIRE_RETRIES
 DB_POOL_EXHAUSTION_WARN_INTERVAL = int(os.getenv("DB_POOL_EXHAUSTION_WARN_INTERVAL", "10"))
 
 DB_CONNECT_TIMEOUT_SECONDS = int(
@@ -97,12 +104,15 @@ def is_db_available() -> bool:
     return db_pool is not None
 
 
-def get_db_status() -> dict[str, str | bool | None]:
+def get_db_status() -> dict[str, str | bool | int | float | None]:
+    pool = pool_status()
     return {
         "available": is_db_available(),
         "pool_initialised": db_pool is not None,
         "last_error": _last_db_error,
         "last_checked_at": _last_checked_at,
+        "pool": pool,
+        "pool_pressure": bool(pool.get("used", 0) >= pool.get("max", 0) and pool.get("max", 0) > 0),
     }
 
 
@@ -262,7 +272,7 @@ def get_db_connection():
     _ensure_db_pool(lazy=True)
 
     last_error: Exception | None = None
-    attempts = max(1, DB_CONNECT_RETRIES + 1)
+    attempts = max(1, DB_POOL_ACQUIRE_RETRIES)
 
     for attempt in range(1, attempts + 1):
         conn = None
@@ -347,6 +357,34 @@ def release_db_connection(conn, *, close: bool = False):
     finally:
         if conn is not None:
             _release_pool_slot()
+
+
+@contextmanager
+def db_connection(*, commit: bool = False):
+    """Acquire and always release a pooled connection."""
+    conn = None
+    try:
+        conn = get_db_connection()
+        yield conn
+        if commit and conn is not None and not conn.closed:
+            conn.commit()
+    except Exception:
+        if conn is not None and not conn.closed:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+        raise
+    finally:
+        release_db_connection(conn)
+
+
+@contextmanager
+def db_cursor(*, commit: bool = False):
+    """Acquire a connection, yield a cursor, then release."""
+    with db_connection(commit=commit) as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            yield cur
 
 
 @contextmanager

@@ -51,12 +51,14 @@ def create_app() -> FastAPI:
     async def database_unavailable_handler(_request, _exc: DatabaseUnavailableError):
         return JSONResponse(
             status_code=503,
-            content={"detail": "Database temporarily unavailable"},
+            content={"detail": "Database busy; please retry shortly."},
         )
 
     def health_payload(check: str = "health") -> dict:
         database = get_db_status()
-        service_status = "ok" if database.get("available") else "degraded"
+        pool = database.get("pool") or {}
+        pool_pressure = bool(database.get("pool_pressure"))
+        service_status = "ok" if database.get("available") and not pool_pressure else "degraded"
         return {
             "ok": True,
             "status": service_status,
@@ -66,6 +68,17 @@ def create_app() -> FastAPI:
             "database": {
                 "available": bool(database.get("available")),
                 "pool_initialised": bool(database.get("pool_initialised")),
+                "pool": {
+                    "min": pool.get("min"),
+                    "max": pool.get("max"),
+                    "used": pool.get("used"),
+                    "available": pool.get("available"),
+                    "waiting": pool.get("waiting"),
+                    "acquisition_failures": pool.get("acquisition_failures"),
+                    "wait_timeout_seconds": pool.get("wait_timeout_seconds"),
+                },
+                "pool_pressure": pool_pressure,
+                "last_error": database.get("last_error"),
             },
             "routes": {
                 "assistant": "/assistant",

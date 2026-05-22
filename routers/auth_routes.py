@@ -20,7 +20,7 @@ from auth.passwords import burn_dummy_password_check, verify_password
 from auth.rbac import normalise_role, permissions_for_role
 from auth.tokens import create_session_token, decode_session_token
 from db.billing_db import get_user_billing_by_user_id
-from db.connection import get_db
+from db.connection import db_connection, get_db
 from db.mfa_db import get_user_mfa, log_auth_event
 from db.passkeys_db import user_has_passkeys
 from services.session_security_service import create_session_record, revoke_session
@@ -453,17 +453,18 @@ def check_auth(request: Request, authorization: str | None = Header(default=None
     return {"authenticated": True, "user_id": user["id"], "email": user["email"], **user_payload, "mfa_enabled": mfa_enabled, "mfa_verified": mfa_verified, "mfa_mandatory": _mfa_required_for_role(user.get("role")), "mfa_pending": False}
 
 @router.get("/me")
-def get_me(request: Request, response: Response, authorization: str | None = Header(default=None), conn=Depends(get_db)):
-    user, user_id = _get_session_user_from_request(request, conn, authorization, raise_on_missing=True)
-    if user_id is None:
-        raise unauthorised("session_invalid", "Invalid session")
-    user = _validate_active_user(user)
+def get_me(request: Request, response: Response, authorization: str | None = Header(default=None)):
+    with db_connection() as conn:
+        user, user_id = _get_session_user_from_request(request, conn, authorization, raise_on_missing=True)
+        if user_id is None:
+            raise unauthorised("session_invalid", "Invalid session")
+        user = _validate_active_user(user)
+        billing = _get_billing_safe(conn, user_id)
+        mfa_row = _get_mfa_safe(user_id, conn)
+        mfa_enabled = bool(mfa_row and bool(mfa_row.get("is_enabled")))
+        has_passkeys = _user_has_passkeys_safe(user_id, conn)
     _ensure_csrf_cookie(request, response)
-    billing = _get_billing_safe(conn, user_id)
-    mfa_row = _get_mfa_safe(user_id, conn)
-    mfa_enabled = bool(mfa_row and bool(mfa_row.get("is_enabled")))
     mfa_verified = request.session.get(SESSION_MFA_VERIFIED_KEY) is True
-    has_passkeys = _user_has_passkeys_safe(user_id, conn)
     return {"ok": True, "user": _full_user_payload(user, billing, mfa_enabled=mfa_enabled, mfa_verified=mfa_verified, has_passkeys=has_passkeys), "mfa_mandatory": _mfa_required_for_role(user.get("role"))}
 
 @router.get("/auth-policy")

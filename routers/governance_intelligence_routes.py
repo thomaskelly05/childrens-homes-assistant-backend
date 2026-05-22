@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, ConfigDict, Field
 
 from auth.dependencies import get_current_user
-from db.connection import get_db
+from db.connection import db_connection, get_db
 from services.governance_intelligence_service import (
     governance_feature_flags,
     governance_intelligence_service,
@@ -54,7 +54,7 @@ def _governance_snapshot_key(current_user: dict[str, Any], *, days: int, home_id
     return projection_snapshot_key("governance", "command-centre", "home", _home_id(current_user, home_id), "provider", _provider_id(current_user), "days", days)
 
 
-def _build_governance_command_centre(conn: Any, *, current_user: dict[str, Any], days: int, home_id: int | None) -> dict[str, Any]:
+def _build_governance_command_centre(*, current_user: dict[str, Any], days: int, home_id: int | None) -> dict[str, Any]:
     key = _governance_snapshot_key(current_user, days=days, home_id=home_id)
     cached = projection_snapshot_service.get(key)
     if cached and not cached.get("stale") and isinstance(cached.get("payload"), dict):
@@ -62,12 +62,13 @@ def _build_governance_command_centre(conn: Any, *, current_user: dict[str, Any],
         payload["snapshot"] = {"hit": True, "projection_key": key, "version": cached.get("version"), "generated_at": cached.get("generated_at")}
         return payload
 
-    payload = governance_intelligence_service.build_command_centre(
-        conn,
-        current_user=current_user,
-        days=days,
-        home_id=home_id,
-    )
+    with db_connection() as conn:
+        payload = governance_intelligence_service.build_command_centre(
+            conn,
+            current_user=current_user,
+            days=days,
+            home_id=home_id,
+        )
     projection_snapshot_service.put(
         ProjectionSnapshot(
             projection_key=key,
@@ -97,13 +98,11 @@ def governance_audit(current_user: dict[str, Any] = Depends(get_current_user)):
 def governance_command_centre(
     days: int = Query(30, ge=1, le=365),
     home_id: int | None = None,
-    conn=Depends(get_db),
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
     return {
         "ok": True,
         "data": _build_governance_command_centre(
-            conn,
             current_user=current_user,
             days=days,
             home_id=home_id,
@@ -121,10 +120,9 @@ def governance_evidence_matrix(payload: EvidenceMatrixPayload, current_user: dic
 def governance_risk(
     days: int = Query(30, ge=1, le=365),
     home_id: int | None = None,
-    conn=Depends(get_db),
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
-    centre = _build_governance_command_centre(conn, current_user=current_user, days=days, home_id=home_id)
+    centre = _build_governance_command_centre(current_user=current_user, days=days, home_id=home_id)
     return {"ok": True, "data": centre.get("governance_risk", {})}
 
 
@@ -156,28 +154,25 @@ def governance_reg45(payload: EvidenceMatrixPayload, current_user: dict[str, Any
 @router.get("/provider-oversight")
 def governance_provider_oversight(
     days: int = Query(30, ge=1, le=365),
-    conn=Depends(get_db),
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
-    centre = _build_governance_command_centre(conn, current_user=current_user, days=days, home_id=None)
+    centre = _build_governance_command_centre(current_user=current_user, days=days, home_id=None)
     return {"ok": True, "data": centre.get("provider_oversight", {})}
 
 
 @router.get("/orb-context")
 def governance_orb_context(
     days: int = Query(30, ge=1, le=365),
-    conn=Depends(get_db),
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
-    centre = _build_governance_command_centre(conn, current_user=current_user, days=days, home_id=None)
+    centre = _build_governance_command_centre(current_user=current_user, days=days, home_id=None)
     return {"ok": True, "data": centre.get("orb_governance_summary", {})}
 
 
 @router.get("/inspection-forecast")
 def governance_inspection_forecast(
     days: int = Query(30, ge=1, le=365),
-    conn=Depends(get_db),
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
-    centre = _build_governance_command_centre(conn, current_user=current_user, days=days, home_id=None)
+    centre = _build_governance_command_centre(current_user=current_user, days=days, home_id=None)
     return {"ok": True, "data": centre.get("inspection_readiness", {})}

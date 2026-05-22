@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import time
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -67,3 +68,44 @@ def test_get_db_connection_maps_operational_error_to_unavailable():
 
     with pytest.raises(connection.DatabaseUnavailableError):
         connection.get_db_connection()
+
+
+def test_get_db_status_exposes_pool_pressure(monkeypatch):
+    max_conn = connection.DB_POOL_MAX
+    used = {index: object() for index in range(max_conn)}
+    monkeypatch.setattr(connection, "db_pool", MagicMock(_used=used, _pool=[]))
+    status = connection.get_db_status()
+    pool = status["pool"]
+    assert pool["used"] == max_conn
+    assert pool["max"] == max_conn
+    assert "acquisition_failures" in pool
+    assert status["pool_pressure"] is True
+
+
+def test_get_db_connection_fails_quickly_when_pool_slot_unavailable(monkeypatch):
+    monkeypatch.setattr(connection, "DB_POOL_WAIT_TIMEOUT_SECONDS", 0.05)
+    monkeypatch.setattr(connection, "DB_POOL_ACQUIRE_RETRIES", 1)
+    connection.db_pool = MagicMock()
+    connection._db_pool_slots = MagicMock()
+    connection._db_pool_slots.acquire.return_value = False
+
+    start = time.perf_counter()
+    with pytest.raises(connection.DatabaseUnavailableError):
+        connection.get_db_connection()
+    elapsed = time.perf_counter() - start
+
+    assert elapsed < 1.0
+    connection._db_pool_slots.acquire.assert_called_once()
+
+
+def test_db_connection_context_manager_releases_connection(monkeypatch):
+    mock_conn = MagicMock()
+    mock_conn.closed = False
+    release = MagicMock()
+    monkeypatch.setattr(connection, "get_db_connection", MagicMock(return_value=mock_conn))
+    monkeypatch.setattr(connection, "release_db_connection", release)
+
+    with connection.db_connection() as conn:
+        assert conn is mock_conn
+
+    release.assert_called_once_with(mock_conn)

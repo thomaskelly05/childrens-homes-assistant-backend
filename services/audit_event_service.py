@@ -8,7 +8,7 @@ from typing import Any
 
 from fastapi import Request
 
-from db.connection import get_db_connection, release_db_connection
+from db.connection import DatabaseUnavailableError, get_db_connection, release_db_connection
 
 logger = logging.getLogger("indicare.audit")
 
@@ -62,10 +62,21 @@ _HIGH_VALUE_EVENT_TYPES = {
 }
 
 
-def ensure_audit_table() -> None:
+def _is_db_busy_error(exc: BaseException) -> bool:
+    if isinstance(exc, DatabaseUnavailableError):
+        return True
+    if isinstance(exc, RuntimeError) and "busy" in str(exc).lower():
+        return True
+    message = str(getattr(exc, "__cause__", "") or exc).lower()
+    return "busy" in message or "unavailable" in message
+
+
+def ensure_audit_table() -> bool:
     global _TABLE_READY, _TABLE_INIT_ATTEMPTED
-    if _TABLE_READY or _TABLE_INIT_ATTEMPTED:
-        return
+    if _TABLE_READY:
+        return True
+    if _TABLE_INIT_ATTEMPTED:
+        return _TABLE_READY
     _TABLE_INIT_ATTEMPTED = True
     conn = None
     try:
@@ -74,10 +85,23 @@ def ensure_audit_table() -> None:
             cur.execute(CREATE_AUDIT_TABLE_SQL)
         conn.commit()
         _TABLE_READY = True
+        return True
+    except DatabaseUnavailableError:
+        logger.warning("Could not initialise audit_events table: database busy")
+        return False
+    except RuntimeError as exc:
+        if _is_db_busy_error(exc):
+            logger.warning("Could not initialise audit_events table: database busy")
+            return False
+        if conn and not conn.closed:
+            conn.rollback()
+        logger.warning("Could not initialise audit_events table", exc_info=True)
+        return False
     except Exception:
         if conn and not conn.closed:
             conn.rollback()
         logger.warning("Could not initialise audit_events table", exc_info=True)
+        return False
     finally:
         if conn is not None:
             release_db_connection(conn)
@@ -122,12 +146,19 @@ def _should_write_audit(event_type: str, action: str, outcome: str, metadata: di
     return True
 
 
-def _log_audit_failure(event_type: str, action: str) -> None:
+def _log_audit_failure(event_type: str, action: str, *, busy: bool = False) -> None:
     global _LAST_AUDIT_FAILURE_LOG_AT
     now = time.time()
     if now - _LAST_AUDIT_FAILURE_LOG_AT < _AUDIT_FAILURE_LOG_THROTTLE_SECONDS:
         return
     _LAST_AUDIT_FAILURE_LOG_AT = now
+    if busy:
+        logger.warning(
+            "Skipped audit event while database pool is busy type=%s action=%s",
+            event_type,
+            action,
+        )
+        return
     logger.warning("Failed to record audit event type=%s action=%s", event_type, action, exc_info=True)
 
 
@@ -141,7 +172,7 @@ def record_audit_event(
     resource_type: str | None = None,
     resource_id: str | int | None = None,
     metadata: dict[str, Any] | None = None,
-) -> None:
+) -> bool:
     """Best-effort append-only audit logging.
 
     High-value auth, security, workflow, safeguarding, governance and document
@@ -149,13 +180,14 @@ def record_audit_event(
     default so normal page hydration cannot exhaust the shared database pool.
     """
     if not _should_write_audit(event_type, action, outcome, metadata):
-        return
-
-    ensure_audit_table()
+        return True
 
     actor = actor or {}
     conn = None
     try:
+        if not ensure_audit_table():
+            _log_audit_failure(event_type, action, busy=True)
+            return False
         conn = get_db_connection()
         with conn.cursor() as cur:
             cur.execute(
@@ -190,10 +222,23 @@ def record_audit_event(
                 ),
             )
         conn.commit()
+        return True
+    except DatabaseUnavailableError as exc:
+        _log_audit_failure(event_type, action, busy=_is_db_busy_error(exc))
+        return False
+    except RuntimeError as exc:
+        if _is_db_busy_error(exc):
+            _log_audit_failure(event_type, action, busy=True)
+            return False
+        if conn and not conn.closed:
+            conn.rollback()
+        _log_audit_failure(event_type, action)
+        return False
     except Exception:
         if conn and not conn.closed:
             conn.rollback()
         _log_audit_failure(event_type, action)
+        return False
     finally:
         if conn is not None:
             release_db_connection(conn)
