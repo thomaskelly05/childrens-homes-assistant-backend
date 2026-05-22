@@ -296,8 +296,18 @@ def _query_source(
     with conn.cursor() as cur:
         cur.execute(query, tuple(params))
         rows = cur.fetchall() or []
+        description = getattr(cur, "description", None)
 
-    return [_normalise_row(dict(row), source) for row in rows]
+    normalised: list[dict[str, Any]] = []
+    for row in rows:
+        if isinstance(row, dict):
+            payload = dict(row)
+        elif description:
+            payload = dict(zip([desc[0] for desc in description], row))
+        else:
+            payload = {}
+        normalised.append(_normalise_row(payload, source))
+    return normalised
 
 
 def list_chronology(
@@ -339,13 +349,17 @@ def list_chronology_for_connection(
     filters = filters or {}
     page = max(1, int(page or 1))
     page_size = max(1, min(int(page_size or 50), 200))
-    source_limit = max(page * page_size + page_size, 250)
+    needed_count = page * page_size
+    source_limit = min(max(needed_count + page_size, 50), 120)
     requested_source = str(filters.get("source_type") or filters.get("type") or "").strip().lower()
 
     items: list[dict[str, Any]] = []
     query_started = time.perf_counter()
+    stage_ms: dict[str, float] = {}
+    supplemental_skipped = False
 
     if not requested_source:
+        priority_started = time.perf_counter()
         for source in PRIORITY_CHRONOLOGY_SOURCES:
             items.extend(
                 _query_source(
@@ -356,10 +370,16 @@ def list_chronology_for_connection(
                     source_limit=source_limit,
                 )
             )
+            if len(items) >= needed_count:
+                break
         items = _dedupe_chronology_items(items)
-        if len(items) >= source_limit:
+        stage_ms["priority_query_ms"] = round((time.perf_counter() - priority_started) * 1000, 2)
+
+        if len(items) >= needed_count:
             sources = PRIORITY_CHRONOLOGY_SOURCES
+            supplemental_skipped = True
         else:
+            supplemental_started = time.perf_counter()
             for source in SUPPLEMENTAL_CHRONOLOGY_SOURCES:
                 items.extend(
                     _query_source(
@@ -370,11 +390,13 @@ def list_chronology_for_connection(
                         source_limit=source_limit,
                     )
                 )
-                if len(items) >= source_limit * 2:
+                items = _dedupe_chronology_items(items)
+                if len(items) >= needed_count:
                     break
-            items = _dedupe_chronology_items(items)
+            stage_ms["supplemental_query_ms"] = round((time.perf_counter() - supplemental_started) * 1000, 2)
             sources = PRIORITY_CHRONOLOGY_SOURCES + SUPPLEMENTAL_CHRONOLOGY_SOURCES
     else:
+        filtered_started = time.perf_counter()
         for source in _chronology_sources_for_filters(filters):
             items.extend(
                 _query_source(
@@ -386,9 +408,11 @@ def list_chronology_for_connection(
                 )
             )
         items = _dedupe_chronology_items(items)
+        stage_ms["filtered_query_ms"] = round((time.perf_counter() - filtered_started) * 1000, 2)
         sources = _chronology_sources_for_filters(filters)
 
     query_ms = round((time.perf_counter() - query_started) * 1000, 2)
+    filter_started = time.perf_counter()
 
     if filters.get("category"):
         category = str(filters["category"]).lower()
@@ -410,14 +434,26 @@ def list_chronology_for_connection(
     start = (page - 1) * page_size
     end = start + page_size
     total_ms = round((time.perf_counter() - started) * 1000, 2)
+    filter_ms = round((time.perf_counter() - filter_started) * 1000, 2)
+    timing = {
+        "query_ms": query_ms,
+        "filter_ms": filter_ms,
+        "total_ms": total_ms,
+        "source_limit": source_limit,
+        "needed_count": needed_count,
+        "supplemental_skipped": supplemental_skipped,
+        "sources_queried": len(sources),
+        **stage_ms,
+    }
     logger.info(
-        "chronology_query young_person_id=%s source_type=%s items=%s query_ms=%s total_ms=%s sources=%s",
+        "chronology_query young_person_id=%s source_type=%s items=%s query_ms=%s total_ms=%s sources=%s supplemental_skipped=%s",
         filters.get("young_person_id"),
         requested_source or "all",
         total,
         query_ms,
         total_ms,
         len(sources),
+        supplemental_skipped,
     )
     return {
         "items": items[start:end],
@@ -425,6 +461,7 @@ def list_chronology_for_connection(
         "page_size": page_size,
         "total": total,
         "has_more": end < total,
+        "timing": timing,
     }
 
 

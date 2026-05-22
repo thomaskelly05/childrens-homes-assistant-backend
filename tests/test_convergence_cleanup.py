@@ -41,6 +41,22 @@ def test_chronology_source_order_prioritises_projection_tables() -> None:
     assert all(source["table"] not in priority_tables for source in SUPPLEMENTAL_CHRONOLOGY_SOURCES)
 
 
+def test_table_exists_cache_helpers_support_dict_and_tuple_rows() -> None:
+    from repositories.os_repository_utils import row_bool, row_scalar
+
+    assert row_bool({"exists": True}, key="exists") is True
+    assert row_scalar((3,), index=0) == 3
+
+
+def test_performance_validation_router_exports_compat_paths() -> None:
+    from backend.os_live_validation_router import compat_router, router
+
+    perf_paths = {getattr(route, "path", "") for route in router.routes if "performance" in getattr(route, "path", "")}
+    compat_paths = {getattr(route, "path", "") for route in compat_router.routes if "performance" in getattr(route, "path", "")}
+    assert "/os/validation/performance" in perf_paths
+    assert "/api/os-command/performance-validation" in compat_paths
+
+
 def test_child_experience_intelligence_route_is_sync() -> None:
     from routers.child_experience_intelligence_routes import get_child_experience_intelligence
 

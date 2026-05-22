@@ -160,10 +160,14 @@ class IntelligenceCacheService:
         return result
 
     def invalidation_health(self) -> dict[str, Any]:
+        cache_types: dict[str, int] = {}
+        for entry in self._entries.values():
+            cache_types[entry.cache_type] = cache_types.get(entry.cache_type, 0) + 1
         return {
             "known_events": sorted(CACHE_EVENTS),
             "recent_invalidations": self._invalidation_log[-20:],
             "tracked_entries": len(self._entries),
+            "cache_types": cache_types,
         }
 
     def clear(self) -> None:
