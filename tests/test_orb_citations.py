@@ -86,3 +86,23 @@ def test_normalise_sources_preserves_basis(citation_service):
     raw = [{"label": "Test", "type": "general_knowledge", "basis": "General model knowledge"}]
     normalised = citation_service.normalise_sources(raw)
     assert normalised[0]["basis"] == "General model knowledge"
+
+
+def test_frontend_sources_payload_includes_document_fields(citation_service):
+    citations = [
+        {
+            "id": "doc-1",
+            "label": "Recording quality — Section 1",
+            "type": "document_chunk:recording_quality",
+            "basis": "ORB Knowledge Library",
+            "note": "Excerpt",
+            "document_chunk": True,
+            "section": "Section 1",
+            "page": "2",
+            "origin": "seeded",
+            "live_retrieved": False,
+        }
+    ]
+    sources = citation_service.frontend_sources_payload(citations)
+    assert sources[0].get("document_chunk") is True
+    assert sources[0].get("section") == "Section 1"

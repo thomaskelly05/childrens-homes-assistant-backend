@@ -104,15 +104,48 @@ def test_standalone_route_response_includes_citations_and_retrieval(fake_state, 
     assert response["context_used"]["os_linked"] is False
     assert response["context_used"]["care_record_access"] is False
     assert response["context_used"]["retrieval"]["live_retrieved"] is False
-    assert response["context_used"]["retrieval"]["strategy"] == "built_in_source_pack"
+    assert response["context_used"]["retrieval"]["strategy"] in {
+        "built_in_source_pack",
+        "source_pack_plus_document_rag",
+    }
+    assert "document_result_count" in response["context_used"]["retrieval"]
 
 
 def test_knowledge_services_exist():
     from services.orb_knowledge_source_pack_service import list_source_packs
+    from services.orb_knowledge_library_service import orb_knowledge_library_service
+    from services.orb_rag_retrieval_service import orb_rag_retrieval_service
 
     assert list_source_packs()
     assert orb_knowledge_retrieval_service
     assert orb_citation_service
+    assert orb_knowledge_library_service
+    assert orb_rag_retrieval_service
+
+
+def test_prepare_retrieval_uses_document_rag(monkeypatch):
+    from services.orb_knowledge_library_service import orb_knowledge_library_service
+
+    svc = orb_knowledge_library_service
+    svc._memory_sources = {}
+    svc._memory_chunks = {}
+    svc._seeded = False
+    monkeypatch.setattr(svc, "_use_db", lambda: False)
+    svc.seed_builtin_sources()
+
+    retrieval = orb_general_assistant_service.prepare_retrieval(
+        "tell me about IndiCare and daily notes",
+        mode="Ask ORB",
+    )
+    assert retrieval["source_packs"]
+    assert retrieval["citations"]
+    ctx = orb_general_assistant_service._retrieval_context_used(retrieval)
+    assert ctx["os_linked"] is False
+    assert ctx["retrieval"]["strategy"] in {
+        "source_pack_plus_document_rag",
+        "built_in_source_pack",
+    }
+    assert "document_result_count" in ctx["retrieval"]
 
 
 def test_standalone_route_exception_fallback_for_indicare(fake_state, monkeypatch):

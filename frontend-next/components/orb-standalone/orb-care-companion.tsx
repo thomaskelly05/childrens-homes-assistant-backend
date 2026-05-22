@@ -21,6 +21,7 @@ import {
   OrbStandaloneComposer,
   type PendingImageAttachment
 } from '@/components/orb-standalone/orb-standalone-composer'
+import { OrbKnowledgeLibraryPanel } from '@/components/orb-standalone/orb-knowledge-library'
 import { OrbStandaloneSidebar } from '@/components/orb-standalone/orb-standalone-sidebar'
 import { useStandaloneOrbVoice, type StandaloneOrbAnswerStyle } from '@/components/orb-standalone/use-standalone-orb-voice'
 import {
@@ -260,6 +261,7 @@ export function OrbCareCompanion() {
   const [draftNotice, setDraftNotice] = useState<string | null>(null)
   const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null)
   const [profilePickerOpen, setProfilePickerOpen] = useState(false)
+  const [knowledgeLibraryOpen, setKnowledgeLibraryOpen] = useState(false)
 
   const inputRef = useRef<HTMLTextAreaElement | null>(null)
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
@@ -757,6 +759,8 @@ export function OrbCareCompanion() {
     <main className="orb-chat-layout relative flex flex-col overflow-hidden bg-[#05070d] text-white">
       <div className="pointer-events-none fixed inset-0 orb-cinematic-light-field opacity-50" aria-hidden />
 
+      <OrbKnowledgeLibraryPanel open={knowledgeLibraryOpen} onClose={() => setKnowledgeLibraryOpen(false)} />
+
       {sidebarOpen ? (
         <button type="button" className="fixed inset-0 z-40 bg-black/60 lg:hidden" aria-label="Close sidebar" onClick={() => setSidebarOpen(false)} />
       ) : null}
@@ -780,6 +784,10 @@ export function OrbCareCompanion() {
             onSelectProject={(projectId) => setWorkspace((c) => ({ ...c, activeProjectId: projectId }))}
             onWorkspaceChange={setWorkspace}
             onOpenSettings={openVoiceSettings}
+            onOpenKnowledgeLibrary={() => {
+              setKnowledgeLibraryOpen(true)
+              setSidebarOpen(false)
+            }}
             onClose={() => setSidebarOpen(false)}
           />
         </aside>
@@ -1237,6 +1245,11 @@ function OrbFloatingVoiceDock({
 function SourcesBasis({ sources }: { sources?: StandaloneOrbSource[] }) {
   const [open, setOpen] = useState(false)
   if (!sources?.length) return null
+  const hasDocumentChunks = sources.some(
+    (source) =>
+      Boolean((source as { document_chunk?: boolean }).document_chunk) ||
+      String(source.type || '').startsWith('document_chunk:')
+  )
   return (
     <div className="mt-3">
       <button
@@ -1246,32 +1259,64 @@ function SourcesBasis({ sources }: { sources?: StandaloneOrbSource[] }) {
       >
         {open ? 'Hide sources / basis' : 'Sources / basis'}
       </button>
+      {hasDocumentChunks && !open ? (
+        <p className="mt-1 text-[10px] text-cyan-200/70">Retrieved from ORB Knowledge Library</p>
+      ) : null}
       {open ? (
         <div className="mt-2 flex flex-col gap-1.5">
-          {sources.map((source, index) => (
-            <div
-              key={`${source.id ?? source.type}-${source.label}-${index}`}
-              className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-2.5 py-1.5 text-[10px] text-slate-400"
-            >
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="font-medium text-slate-300">{source.label}</span>
-                {source.type ? (
-                  <span className="rounded-full bg-white/[0.04] px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-slate-500">
-                    {source.type.replace(/_/g, ' ')}
-                  </span>
+          {hasDocumentChunks ? (
+            <p className="text-[10px] font-medium text-cyan-200/80">Retrieved from ORB Knowledge Library</p>
+          ) : null}
+          {sources.map((source, index) => {
+            const extended = source as StandaloneOrbSource & {
+              document_chunk?: boolean
+              section?: string
+              page?: string
+              origin?: string
+            }
+            const isDocument =
+              extended.document_chunk || String(extended.type || '').startsWith('document_chunk:')
+            const typeLabel = String(extended.type || '')
+              .replace(/^document_chunk:/, '')
+              .replace(/_/g, ' ')
+            const originLabel =
+              extended.origin === 'seeded' || extended.origin === 'built_in'
+                ? 'Built-in'
+                : extended.origin === 'user_uploaded'
+                  ? 'Uploaded'
+                  : isDocument
+                    ? 'Knowledge library'
+                    : 'Built-in'
+            return (
+              <div
+                key={`${source.id ?? source.type}-${source.label}-${index}`}
+                className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-2.5 py-1.5 text-[10px] text-slate-400"
+              >
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="font-medium text-slate-300">{source.label}</span>
+                  {typeLabel ? (
+                    <span className="rounded-full bg-white/[0.04] px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-slate-500">
+                      {typeLabel}
+                    </span>
+                  ) : null}
+                  <span className="text-[9px] text-slate-600">{originLabel}</span>
+                  {source.live_retrieved === true ? (
+                    <span className="text-[9px] text-emerald-600/80">Live retrieved</span>
+                  ) : source.live_retrieved === false ? (
+                    <span className="text-[9px] text-slate-600">Not live</span>
+                  ) : null}
+                </div>
+                {extended.section ? (
+                  <p className="mt-0.5 text-slate-500">Section: {extended.section}</p>
                 ) : null}
-                {source.live_retrieved === true ? (
-                  <span className="text-[9px] text-emerald-600/80">Live retrieved</span>
-                ) : source.live_retrieved === false ? (
-                  <span className="text-[9px] text-slate-600">Built-in</span>
+                {extended.page ? <p className="mt-0.5 text-slate-500">Page: {extended.page}</p> : null}
+                {source.basis ? <p className="mt-0.5 text-slate-500">{source.basis}</p> : null}
+                {source.note && source.note !== source.basis ? (
+                  <p className="mt-0.5 text-slate-600">{source.note}</p>
                 ) : null}
               </div>
-              {source.basis ? <p className="mt-0.5 text-slate-500">{source.basis}</p> : null}
-              {source.note && source.note !== source.basis ? (
-                <p className="mt-0.5 text-slate-600">{source.note}</p>
-              ) : null}
-            </div>
-          ))}
+            )
+          })}
         </div>
       ) : null}
       {open ? (
