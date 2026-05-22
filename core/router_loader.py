@@ -107,6 +107,7 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
             "routers.sccif_regulation_routes",
             "routers.quality_standards_routes",
             "routers.ofsted_readiness_routes",
+            "routers.indicare_intelligence_routes",
         ),
         notes="Inspection readiness, governance and regulatory intelligence.",
     ),
