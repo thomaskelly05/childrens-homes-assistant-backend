@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from typing import Any
+from urllib.parse import unquote
 
 from psycopg2.extras import RealDictCursor
 
@@ -19,6 +20,27 @@ def safe_int(value: Any) -> int | None:
         return int(value)
     except Exception:
         return None
+
+
+def normalise_federated_id(value: str) -> str:
+    """Decode URL-encoded federated ids such as child_document%253A25 -> child_document:25."""
+    raw = str(value or "").strip()
+    if not raw:
+        return raw
+    decoded = unquote(raw)
+    while decoded != raw and "%" in decoded:
+        raw = decoded
+        decoded = unquote(raw)
+    return decoded
+
+
+def parse_federated_id(value: str) -> tuple[str | None, str]:
+    """Split source_type:source_id after decoding; returns (source_type, source_id)."""
+    decoded = normalise_federated_id(value)
+    if ":" in decoded:
+        source_type, source_id = decoded.split(":", 1)
+        return source_type.strip() or None, source_id.strip()
+    return None, decoded
 
 
 def normalise_token(value: Any) -> str:

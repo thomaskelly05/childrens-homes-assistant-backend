@@ -24,6 +24,7 @@ from services.document_rendering_service import document_rendering_service
 from services.document_review_service import document_review_service
 from services.document_signature_service import document_signature_service
 from services.document_template_service import document_template_service
+from repositories.os_repository_utils import normalise_federated_id
 from services.document_version_service import document_version_service
 
 
@@ -98,8 +99,9 @@ def _normalise(row: dict[str, Any]) -> dict[str, Any]:
 
 def _load_document(conn: Any, document_id: str, current_user: dict[str, Any]) -> dict[str, Any]:
     ensure_schema(conn)
+    decoded_id = normalise_federated_id(document_id)
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
-        cur.execute("SELECT * FROM document_instances WHERE id = %s", (document_id,))
+        cur.execute("SELECT * FROM document_instances WHERE id = %s", (decoded_id,))
         row = cur.fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Document not found")

@@ -12,6 +12,8 @@ from repositories.os_repository_utils import (
     current_user_id,
     first_col,
     isoformat,
+    normalise_federated_id,
+    parse_federated_id,
     quote_ident,
     safe_int,
     table_columns,
@@ -178,8 +180,18 @@ def list_documents(
 
 
 def get_document(conn: Any, *, document_id: str, current_user: dict[str, Any]) -> dict[str, Any] | None:
+    decoded_id = normalise_federated_id(document_id)
+    source_type, source_id = parse_federated_id(decoded_id)
+    lookup_ids = {decoded_id, document_id}
+    if source_id:
+        lookup_ids.add(source_id)
+        if source_type:
+            lookup_ids.add(f"{source_type}:{source_id}")
+
     for document in list_documents(conn, current_user=current_user, limit=600):
-        if document["id"] == document_id or document["original_id"] == document_id:
+        doc_id = str(document.get("id") or "")
+        original_id = str(document.get("original_id") or "")
+        if doc_id in lookup_ids or original_id in lookup_ids:
             return document
     return None
 

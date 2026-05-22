@@ -4,12 +4,13 @@ import logging
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
+from psycopg2.extras import RealDictCursor
 
 from auth.dependencies import get_current_user
-from db.connection import get_db_connection, release_db_connection
-from services.child_experience_intelligence_service import (
-    build_child_experience_intelligence,
-)
+from db.connection import get_db
+from repositories.os_repository_utils import table_columns, table_exists
+from repositories.workspaces_repository import get_young_person
+from services.child_experience_intelligence_service import build_child_experience_intelligence
 
 logger = logging.getLogger("indicare.child_experience_intelligence")
 
@@ -18,10 +19,6 @@ router = APIRouter(
     tags=["child-experience-intelligence"],
 )
 
-
-# ============================================================
-# SAFE TABLE CONFIG
-# ============================================================
 
 RECORD_SOURCES: tuple[dict[str, Any], ...] = (
     {
@@ -101,16 +98,12 @@ RECORD_SOURCES: tuple[dict[str, Any], ...] = (
     {
         "context_key": "chronology",
         "fallback_type": "chronology",
-        "tables": ("young_people_chronology", "young_person_chronology"),
+        "tables": ("young_people_chronology", "young_person_chronology", "chronology_events"),
         "date_columns": ("event_at", "created_at", "updated_at"),
         "limit": 160,
     },
 )
 
-
-# ============================================================
-# HELPERS
-# ============================================================
 
 def _safe_int(value: Any) -> int | None:
     try:
@@ -193,69 +186,29 @@ def _rows_to_list(rows: Any) -> list[dict[str, Any]]:
     return [dict(row) for row in rows or []]
 
 
-async def _table_exists(conn: Any, table: str) -> bool:
-    row = await conn.fetchrow(
-        """
-        SELECT EXISTS (
-            SELECT 1
-            FROM information_schema.tables
-            WHERE table_schema = 'public'
-              AND table_name = $1
-        ) AS exists
-        """,
-        table,
-    )
-
-    return bool(row and row["exists"])
-
-
-async def _column_exists(conn: Any, table: str, column: str) -> bool:
-    row = await conn.fetchrow(
-        """
-        SELECT EXISTS (
-            SELECT 1
-            FROM information_schema.columns
-            WHERE table_schema = 'public'
-              AND table_name = $1
-              AND column_name = $2
-        ) AS exists
-        """,
-        table,
-        column,
-    )
-
-    return bool(row and row["exists"])
-
-
-async def _first_existing_column(
-    conn: Any,
-    table: str,
-    candidates: tuple[str, ...],
-) -> str | None:
+def _first_existing_column(conn: Any, table: str, candidates: tuple[str, ...]) -> str | None:
+    cols = table_columns(conn, table)
     for column in candidates:
-        if await _column_exists(conn, table, column):
+        if column in cols:
             return column
-
     return None
 
 
-async def _get_young_person(young_person_id: int) -> dict[str, Any]:
-    conn = await get_db_connection()
-    try:
-        row = await conn.fetchrow(
-            """
-            SELECT *
-            FROM young_people
-            WHERE id = $1
-            """,
-            young_person_id,
-        )
-        return _row_to_dict(row)
-    finally:
-        await release_db_connection(conn)
+def _get_young_person(
+    conn: Any,
+    young_person_id: int,
+    *,
+    current_user: dict[str, Any],
+) -> dict[str, Any]:
+    return get_young_person(
+        conn,
+        young_person_id=young_person_id,
+        current_user=current_user,
+    ) or {}
 
 
-async def _fetch_source_records(
+def _fetch_source_records(
+    conn: Any,
     *,
     source: dict[str, Any],
     young_person_id: int,
@@ -268,35 +221,36 @@ async def _fetch_source_records(
 
     attempted_tables: list[str] = []
 
-    conn = await get_db_connection()
     try:
         for table in tables:
             attempted_tables.append(table)
 
-            if not await _table_exists(conn, table):
+            if not table_exists(conn, table):
                 continue
 
-            if not await _column_exists(conn, table, "young_person_id"):
+            cols = table_columns(conn, table)
+            if "young_person_id" not in cols:
                 continue
 
-            date_column = await _first_existing_column(conn, table, date_columns)
+            date_column = _first_existing_column(conn, table, date_columns)
             order_clause = (
-                f"ORDER BY {date_column} DESC NULLS LAST"
+                f'ORDER BY "{date_column}" DESC NULLS LAST'
                 if date_column
                 else "ORDER BY id DESC"
             )
 
-            rows = await conn.fetch(
-                f"""
-                SELECT *
-                FROM {table}
-                WHERE young_person_id = $1
-                {order_clause}
-                LIMIT $2
-                """,
-                young_person_id,
-                limit,
-            )
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    f"""
+                    SELECT *
+                    FROM public."{table}"
+                    WHERE young_person_id = %s
+                    {order_clause}
+                    LIMIT %s
+                    """,
+                    (young_person_id, limit),
+                )
+                rows = cur.fetchall() or []
 
             records = _rows_to_list(rows)
 
@@ -339,15 +293,15 @@ async def _fetch_source_records(
             "loaded": False,
             "error": exc.__class__.__name__,
         }
-    finally:
-        await release_db_connection(conn)
 
 
-async def _build_child_experience_context(
+def _build_child_experience_context(
+    conn: Any,
     *,
     young_person_id: int,
+    current_user: dict[str, Any],
 ) -> tuple[dict[str, Any], dict[str, Any]]:
-    young_person = await _get_young_person(young_person_id)
+    young_person = _get_young_person(conn, young_person_id, current_user=current_user)
 
     if not young_person:
         raise HTTPException(status_code=404, detail="Young person not found.")
@@ -363,7 +317,8 @@ async def _build_child_experience_context(
     }
 
     for source in RECORD_SOURCES:
-        records, source_coverage = await _fetch_source_records(
+        records, source_coverage = _fetch_source_records(
+            conn,
             source=source,
             young_person_id=young_person_id,
         )
@@ -375,16 +330,13 @@ async def _build_child_experience_context(
     return context, coverage
 
 
-# ============================================================
-# ROUTE
-# ============================================================
-
 @router.get("/{young_person_id}/experience-intelligence")
-async def get_child_experience_intelligence(
+def get_child_experience_intelligence(
     young_person_id: int,
     current_user: dict[str, Any] = Depends(get_current_user),
+    conn=Depends(get_db),
 ):
-    young_person = await _get_young_person(young_person_id)
+    young_person = _get_young_person(conn, young_person_id, current_user=current_user)
 
     if not young_person:
         raise HTTPException(status_code=404, detail="Young person not found.")
@@ -401,8 +353,10 @@ async def get_child_experience_intelligence(
             detail="You do not have access to this young person's Child Experience Intelligence.",
         )
 
-    context, coverage = await _build_child_experience_context(
+    context, coverage = _build_child_experience_context(
+        conn,
         young_person_id=young_person_id,
+        current_user=current_user,
     )
 
     intelligence = build_child_experience_intelligence(

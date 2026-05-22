@@ -23,23 +23,65 @@ export async function GET(request: Request) {
 
   const cookieHeader = (await cookies()).toString()
   const headers = cookieHeader ? { cookie: cookieHeader } : undefined
-  const response = await fetch(`${BACKEND_ORIGIN}/child-workspace/context/${encodeURIComponent(childId)}`, {
-    cache: 'no-store',
-    headers
-  }).catch(() => undefined)
-  const fallbackResponse = response?.ok ? response : await fetch(`${BACKEND_ORIGIN}/os/young-people/${encodeURIComponent(childId)}/workspace`, {
-    cache: 'no-store',
-    headers
-  }).catch(() => undefined)
+  const workspaceResponse = await fetch(
+    `${BACKEND_ORIGIN}/os/young-people/${encodeURIComponent(childId)}/workspace`,
+    {
+      cache: 'no-store',
+      headers
+    }
+  ).catch(() => undefined)
 
-  if (!fallbackResponse) {
+  if (!workspaceResponse) {
     return NextResponse.json({ ok: false, error: 'This child workspace is not available just now.' }, { status: 503 })
   }
 
-  const payload = (await fallbackResponse.json().catch(() => ({}))) as Record<string, unknown>
-  if (!fallbackResponse.ok) {
-    return NextResponse.json({ ok: false, error: calmError(fallbackResponse.status) }, { status: fallbackResponse.status })
+  const payload = (await workspaceResponse.json().catch(() => ({}))) as Record<string, unknown>
+  if (!workspaceResponse.ok) {
+    return NextResponse.json({ ok: false, error: calmError(workspaceResponse.status) }, { status: workspaceResponse.status })
   }
 
-  return NextResponse.json({ ok: true, childId, source: response?.ok ? 'child-workspace' : 'os-young-person-workspace', data: payload })
+  const workspace = (payload.data ?? payload) as Record<string, unknown>
+  const youngPerson = (workspace.young_person ?? workspace.youngPerson ?? {}) as Record<string, unknown>
+  const displayName =
+    youngPerson.display_name ||
+    youngPerson.displayName ||
+    [youngPerson.first_name || youngPerson.firstName, youngPerson.last_name || youngPerson.lastName].filter(Boolean).join(' ') ||
+    `Young person ${childId}`
+
+  return NextResponse.json({
+    ok: true,
+    childId,
+    source: 'os-young-person-workspace',
+    canonicalRoute: `/os/young-people/${childId}/workspace`,
+    data: {
+      ok: true,
+      context_ready: true,
+      scope: {
+        type: 'child',
+        young_person_id: Number(childId),
+        home_id: youngPerson.home_id ?? youngPerson.homeId,
+        retrieval_scope: 'selected_child_only',
+        allow_global_search: false
+      },
+      child: {
+        id: Number(childId),
+        display_name: displayName,
+        preferred_name: youngPerson.preferred_name || youngPerson.preferredName || youngPerson.first_name || youngPerson.firstName,
+        status: youngPerson.placement_status || youngPerson.placementStatus || youngPerson.status,
+        risk_level: youngPerson.risk_level || youngPerson.summary_risk_level || youngPerson.riskLevel
+      },
+      summary: {
+        counts: {
+          chronology: Array.isArray(workspace.chronology) ? workspace.chronology.length : 0,
+          actions: Array.isArray(workspace.actions) ? workspace.actions.length : 0,
+          evidence: Array.isArray(workspace.evidence) ? workspace.evidence.length : 0,
+          documents: Array.isArray(workspace.documents) ? workspace.documents.length : 0,
+          reports: Array.isArray(workspace.reports) ? workspace.reports.length : 0
+        },
+        recent_activity: Array.isArray(workspace.chronology) ? workspace.chronology.slice(0, 10) : [],
+        alerts: []
+      },
+      workspace
+    }
+  })
 }

@@ -162,9 +162,27 @@ export async function getOsChronology(params: { sourceType?: ChronologySourceTyp
   return { ...result, data: rows }
 }
 
+function normaliseChronologyEventId(id: string): string {
+  let decoded = id
+  try {
+    decoded = decodeURIComponent(id)
+    if (decoded.includes('%')) {
+      decoded = decodeURIComponent(decoded)
+    }
+  } catch {
+    decoded = id
+  }
+  return decoded
+}
+
 export async function getOsChronologyEvent(id: string): Promise<OsApiResult<ChronologyEvent | null>> {
-  const result = await osGet<any>(`/os/chronology/${encodeURIComponent(id)}`, null)
+  const normalisedId = normaliseChronologyEventId(id)
+  const result = await osGet<any>(`/os/chronology/${encodeURIComponent(normalisedId)}`, null)
   const rows = extractRows(result.data)
-  const row = rows.find((item) => String(item.id || item.feed_id || item.chronology_event_id) === id) || (result.data && !Array.isArray(result.data) ? result.data : null)
+  const row =
+    rows.find((item) => {
+      const itemId = String(item.id || item.feed_id || item.chronology_event_id)
+      return itemId === normalisedId || itemId === id
+    }) || (result.data && !Array.isArray(result.data) ? result.data : null)
   return { ...result, data: row ? mapOsChronology(row as Record<string, any>) : null }
 }

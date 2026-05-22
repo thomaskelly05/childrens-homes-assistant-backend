@@ -187,6 +187,7 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
         "experience_bundles",
         (
             "routers.workspace_routes",
+            "routers.child_workspace_context_routes",
             "routers.connect_routes",
         ),
         notes="Schema-backed experience bundles for home, child profile and adult workspace surfaces.",
