@@ -8,7 +8,9 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, ConfigDict, Field
 
 from auth.permissions import require_assistant_access
+from services.orb_citation_service import orb_citation_service
 from services.orb_general_assistant_service import orb_general_assistant_service
+from services.orb_knowledge_retrieval_service import orb_knowledge_retrieval_service
 from services.orb_standalone_sources import (
     INDICARE_PRODUCT_FALLBACK,
     append_sources_basis_section,
@@ -227,25 +229,41 @@ def _standalone_conversation_response(
     image_understanding_available: bool | None = None,
     error_detail: str | None = None,
     sources: list[dict[str, Any]] | None = None,
+    citations: list[dict[str, Any]] | None = None,
+    context_used: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    resolved_sources = sources or []
+    resolved_citations = citations or orb_citation_service.normalise_sources(resolved_sources)
+    if not resolved_sources and resolved_citations:
+        resolved_sources = orb_citation_service.frontend_sources_payload(resolved_citations)
+    base_context = {
+        "surface": "standalone_orb_ai",
+        "mode": mode,
+        "care_record_access": False,
+        "os_linked": False,
+        "tools_used": tools_used or ["standalone_orb_general_assistant"],
+    }
+    if context_used:
+        base_context.update(context_used)
+    if "retrieval" not in base_context:
+        base_context["retrieval"] = {
+            "strategy": "built_in_source_pack",
+            "live_retrieved": False,
+            "source_count": len(resolved_sources),
+        }
     return {
         "ok": True,
         "success": True,
         "answer": answer,
         "summary": answer.split("\n", 1)[0][:220],
-        "sources": sources or [],
+        "sources": resolved_sources,
+        "citations": resolved_citations,
         "actions": [],
         "confidence": confidence,
         "conversation_id": conversation_id,
         "image_understanding_available": image_understanding_available,
         "error_detail": error_detail,
-        "context_used": {
-            "surface": "standalone_orb_ai",
-            "mode": mode,
-            "care_record_access": False,
-            "os_linked": False,
-            "tools_used": tools_used or ["standalone_orb_general_assistant"],
-        },
+        "context_used": base_context,
         "guardrails": [
             "Standalone ORB did not retrieve IndiCare OS records.",
             "Use professional judgement and follow safeguarding procedures where risk is present.",
@@ -267,6 +285,13 @@ async def standalone_orb_conversation(
         for item in (payload.images or [])
         if str(item.data_url or "").startswith("data:image/")
     ]
+    profile_context = "standalone context profiles" in framed_message.lower() or "profile:" in framed_message.lower()
+    retrieval_preview = orb_knowledge_retrieval_service.retrieve_sources(
+        payload.message,
+        mode=mode,
+        profile_context=profile_context,
+        attachments=image_urls[:4] or None,
+    )
 
     started = time.perf_counter()
     try:
@@ -275,6 +300,8 @@ async def standalone_orb_conversation(
             history=history,
             detail=detail,
             image_data_urls=image_urls[:4],
+            mode=mode,
+            profile_context=profile_context,
         )
         elapsed_ms = int((time.perf_counter() - started) * 1000)
         logger.info(
@@ -288,12 +315,22 @@ async def standalone_orb_conversation(
             assistant_data.get("answer") or "I can help with that, but I could not form a response just now."
         )
         response_sources = list(assistant_data.get("sources") or [])
+        response_citations = list(assistant_data.get("citations") or [])
         if not response_sources:
-            response_sources = build_standalone_sources(
-                payload.message,
-                has_images=bool(image_urls),
+            response_citations = orb_citation_service.build_citations(
+                retrieval_preview,
+                message=payload.message,
                 mode=mode,
+                has_images=bool(image_urls),
             )
+            response_sources = orb_citation_service.frontend_sources_payload(response_citations)
+        context_used = dict(assistant_data.get("context_used") or {})
+        if not context_used.get("retrieval"):
+            context_used["retrieval"] = {
+                "strategy": "built_in_source_pack",
+                "live_retrieved": False,
+                "source_count": len(retrieval_preview),
+            }
         return _standalone_conversation_response(
             answer=answer,
             mode=mode,
@@ -303,6 +340,8 @@ async def standalone_orb_conversation(
             image_understanding_available=assistant_data.get("image_understanding_available"),
             error_detail=assistant_data.get("error_detail"),
             sources=response_sources,
+            citations=response_citations,
+            context_used=context_used,
         )
     except Exception as exc:
         elapsed_ms = int((time.perf_counter() - started) * 1000)
@@ -321,16 +360,39 @@ async def standalone_orb_conversation(
                 "I can still help using the text you provide."
             )
             sources = build_standalone_sources(payload.message, has_images=True, mode=mode)
+            citations = orb_citation_service.normalise_sources(sources)
             fallback = append_sources_basis_section(fallback, sources)
         elif any(term in lower for term in ("indicare", "what is indicare", "tell me about indicare", "orb", "care companion")):
             fallback = INDICARE_PRODUCT_FALLBACK
             sources = build_standalone_sources(payload.message, mode=mode)
+            citations = orb_citation_service.normalise_sources(sources)
         else:
             fallback = (
                 "ORB could not complete the live AI response, but I can still help you try again."
             )
             sources = build_standalone_sources(payload.message, mode=mode)
+            citations = orb_citation_service.normalise_sources(sources)
             fallback = append_sources_basis_section(fallback, sources)
+        classification = orb_knowledge_retrieval_service.classify_query(
+            payload.message,
+            mode=mode,
+            profile_context=profile_context,
+            attachments=image_urls[:4] or None,
+        )
+        context_used = {
+            "surface": "standalone_orb_ai",
+            "mode": mode,
+            "care_record_access": False,
+            "os_linked": False,
+            "retrieval": {
+                "strategy": "built_in_source_pack",
+                "live_retrieved": False,
+                "source_count": len(sources),
+                "research_intent": classification.get("research_intent", False),
+            },
+        }
+        if classification.get("research_note") and "live web" not in fallback.lower():
+            fallback = f"{fallback}\n\n{classification['research_note']}"
         return _standalone_conversation_response(
             answer=fallback,
             mode=mode,
@@ -340,4 +402,6 @@ async def standalone_orb_conversation(
             image_understanding_available=False if image_urls else None,
             error_detail="provider_unavailable",
             sources=sources,
+            citations=citations,
+            context_used=context_used,
         )

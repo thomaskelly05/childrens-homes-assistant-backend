@@ -54,11 +54,28 @@ export type StandaloneOrbSourceType =
   | 'general_knowledge'
   | 'user_provided'
   | 'safety_boundary'
+  | 'recording_quality'
+  | 'therapeutic_practice'
+  | 'safeguarding_principles'
+  | 'image_context'
 
 export type StandaloneOrbSource = {
+  id?: string
   label: string
   type: StandaloneOrbSourceType
+  basis?: string
   note?: string
+  live_retrieved?: boolean
+}
+
+export type StandaloneOrbCitation = StandaloneOrbSource
+
+export type StandaloneOrbRetrievalContext = {
+  strategy?: string
+  live_retrieved?: boolean
+  source_count?: number
+  routing_hint?: string
+  research_intent?: boolean
 }
 
 export type StandaloneOrbConversationResponse = {
@@ -68,11 +85,13 @@ export type StandaloneOrbConversationResponse = {
   conversation_id?: string | null
   confidence?: string
   sources?: StandaloneOrbSource[]
+  citations?: StandaloneOrbCitation[]
   context_used?: {
     surface?: string
     mode?: string
     os_linked?: boolean
     care_record_access?: boolean
+    retrieval?: StandaloneOrbRetrievalContext
   }
   guardrails?: string[]
   image_understanding_available?: boolean
@@ -161,11 +180,14 @@ export async function queryStandaloneOrbConversation(
     }
 
     const typed = payload as StandaloneOrbConversationResponse & {
-      data?: { sources?: StandaloneOrbSource[] }
+      data?: { sources?: StandaloneOrbSource[]; citations?: StandaloneOrbCitation[] }
     }
-    const nestedSources =
-      typed.sources ??
-      (typed.data && typeof typed.data === 'object' ? typed.data.sources : undefined)
+    const nestedData =
+      typed.data && typeof typed.data === 'object' ? (typed.data as Record<string, unknown>) : undefined
+    const nestedSources = nestedData?.sources as StandaloneOrbSource[] | undefined
+    const nestedCitations = nestedData?.citations as StandaloneOrbCitation[] | undefined
+    const resolvedSources = typed.sources ?? nestedSources
+    const resolvedCitations = typed.citations ?? nestedCitations ?? resolvedSources
 
     return {
       ok: Boolean(typed.ok ?? true),
@@ -173,7 +195,8 @@ export async function queryStandaloneOrbConversation(
       summary: typed.summary,
       conversation_id: typed.conversation_id ?? request.conversation_id,
       confidence: typed.confidence,
-      sources: nestedSources,
+      sources: resolvedSources,
+      citations: resolvedCitations,
       context_used: typed.context_used,
       guardrails: typed.guardrails,
       image_understanding_available: typed.image_understanding_available,

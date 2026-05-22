@@ -227,6 +227,9 @@ DEDUPE_AND_SOURCES_MARKERS = [
     "product_context",
     "STANDALONE_ORB_PRODUCT_KNOWLEDGE",
     "build_standalone_sources",
+    "orb_knowledge_retrieval_service",
+    "orb_citation_service",
+    "live_retrieved",
 ]
 
 OS_ORB_LINK_FILES = [
@@ -525,6 +528,25 @@ def test_orb_standalone_backend_conversation_hardening():
     assert "STANDALONE_LLM_TIMEOUT_SECONDS" in service
     assert "asyncio.wait_for" in service
     assert '"answer"' in routes
+    assert '"citations"' in routes
+    assert "orb_knowledge_retrieval_service" in routes
+
+
+def test_standalone_knowledge_services_do_not_import_os_intelligence():
+    forbidden = (
+        "intelligence_spine_service",
+        "getServerOsYoungPeople",
+        "CareHub",
+        "chronology_repository",
+    )
+    for rel in (
+        "services/orb_knowledge_retrieval_service.py",
+        "services/orb_citation_service.py",
+        "services/orb_knowledge_source_pack_service.py",
+    ):
+        text = _read(REPO_ROOT / rel)
+        for marker in forbidden:
+            assert marker not in text, f"{rel} must not reference {marker}"
 
 
 def test_assistants_map_differentiates_products():

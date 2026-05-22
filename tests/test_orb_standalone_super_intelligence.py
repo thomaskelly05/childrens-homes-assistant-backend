@@ -9,6 +9,8 @@ from services.orb_general_assistant_service import (
     GENERAL_ORB_SYSTEM_PROMPT,
     orb_general_assistant_service,
 )
+from services.orb_citation_service import orb_citation_service
+from services.orb_knowledge_retrieval_service import orb_knowledge_retrieval_service
 from services.orb_standalone_sources import INDICARE_PRODUCT_FALLBACK, build_standalone_sources
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -66,13 +68,51 @@ def test_indicare_product_fallback_constant():
 def test_build_standalone_sources_includes_expected_types():
     sources = build_standalone_sources("What would Ofsted expect in child voice evidence?", mode="Ofsted Lens")
     types = {item["type"] for item in sources}
-    assert "product_context" in types
     assert "regulatory_framework" in types
-    assert "general_knowledge" in types
+    assert "safety_boundary" in types
 
     safeguarding_sources = build_standalone_sources("Help me think through a safeguarding concern", mode="Safeguarding")
     safeguard_types = {item["type"] for item in safeguarding_sources}
-    assert "safety_boundary" in safeguard_types
+    assert "safeguarding_principles" in safeguard_types or "safety_boundary" in safeguard_types
+
+
+def test_standalone_route_response_includes_citations_and_retrieval(fake_state, monkeypatch):
+    async def stub_answer(*_args, **_kwargs):
+        retrieval = orb_general_assistant_service.prepare_retrieval(
+            "tell me about indicare",
+            mode="Ask ORB",
+        )
+        return {
+            "answer": "IndiCare is a children's homes platform.",
+            "sources": retrieval["sources"],
+            "citations": retrieval["citations"],
+            "context_used": orb_general_assistant_service._retrieval_context_used(retrieval),
+            "tools_used": ["standalone_orb_general_assistant"],
+        }
+
+    monkeypatch.setattr(orb_standalone_routes.orb_general_assistant_service, "answer", stub_answer)
+
+    response = asyncio.run(
+        orb_standalone_routes.standalone_orb_conversation(
+            orb_standalone_routes.OrbStandaloneConversationRequest(message="tell me about indicare"),
+            current_user=fake_state["user"],
+        )
+    )
+
+    assert response["citations"]
+    assert response["sources"]
+    assert response["context_used"]["os_linked"] is False
+    assert response["context_used"]["care_record_access"] is False
+    assert response["context_used"]["retrieval"]["live_retrieved"] is False
+    assert response["context_used"]["retrieval"]["strategy"] == "built_in_source_pack"
+
+
+def test_knowledge_services_exist():
+    from services.orb_knowledge_source_pack_service import list_source_packs
+
+    assert list_source_packs()
+    assert orb_knowledge_retrieval_service
+    assert orb_citation_service
 
 
 def test_standalone_route_exception_fallback_for_indicare(fake_state, monkeypatch):

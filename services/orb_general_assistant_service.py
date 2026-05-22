@@ -8,6 +8,8 @@ import time
 from typing import Any
 
 from assistant.llm_provider import ChatStreamRequest, get_llm_provider
+from services.orb_citation_service import orb_citation_service
+from services.orb_knowledge_retrieval_service import orb_knowledge_retrieval_service
 from services.orb_standalone_sources import (
     INDICARE_PRODUCT_FALLBACK,
     append_sources_basis_section,
@@ -80,6 +82,48 @@ British English. Calm, warm, concise when speaking, reflective and practical. Fo
 class OrbGeneralAssistantService:
     """Standalone general assistant mode with no IndiCare OS or care-record access."""
 
+    def prepare_retrieval(
+        self,
+        message: str,
+        *,
+        mode: str | None = None,
+        profile_context: bool = False,
+        has_images: bool = False,
+    ) -> dict[str, Any]:
+        classification = orb_knowledge_retrieval_service.classify_query(
+            message,
+            mode=mode,
+            profile_context=profile_context,
+            attachments=["image"] if has_images else None,
+        )
+        packs = orb_knowledge_retrieval_service.retrieve_sources(
+            message,
+            mode=mode,
+            profile_context=profile_context,
+            attachments=["image"] if has_images else None,
+        )
+        citations = orb_citation_service.build_citations(
+            packs,
+            message=message,
+            mode=mode,
+            has_images=has_images,
+        )
+        sources = orb_citation_service.frontend_sources_payload(citations)
+        return {
+            "classification": classification,
+            "source_packs": packs,
+            "citations": citations,
+            "sources": sources,
+            "grounding_context": orb_knowledge_retrieval_service.build_grounding_context(
+                message,
+                mode=mode,
+                profile_context=profile_context,
+                attachments=["image"] if has_images else None,
+            ),
+            "research_note": classification.get("research_note"),
+            "routing_hint": classification.get("routing_hint"),
+        }
+
     async def answer(
         self,
         message: str,
@@ -87,9 +131,17 @@ class OrbGeneralAssistantService:
         history: list[dict[str, Any]] | None = None,
         detail: str = "concise",
         image_data_urls: list[str] | None = None,
+        mode: str | None = None,
+        profile_context: bool = False,
     ) -> dict[str, Any]:
         started = time.perf_counter()
         images = image_data_urls or []
+        retrieval = self.prepare_retrieval(
+            message,
+            mode=mode,
+            profile_context=profile_context or "standalone context profiles" in message.lower(),
+            has_images=bool(images),
+        )
         if os.getenv("OPENAI_API_KEY"):
             try:
                 result = await asyncio.wait_for(
@@ -98,6 +150,8 @@ class OrbGeneralAssistantService:
                         history=history or [],
                         detail=detail,
                         image_data_urls=images,
+                        retrieval=retrieval,
+                        mode=mode,
                     ),
                     timeout=STANDALONE_LLM_TIMEOUT_SECONDS,
                 )
@@ -124,7 +178,8 @@ class OrbGeneralAssistantService:
                     exc_info=True,
                 )
         if images:
-            sources = build_standalone_sources(message, has_images=True)
+            sources = retrieval["sources"]
+            citations = retrieval["citations"]
             answer = append_sources_basis_section(
                 "I can see you attached an image, but image understanding is not configured in this environment. "
                 "I can still help using the text you provide.",
@@ -133,19 +188,62 @@ class OrbGeneralAssistantService:
             return {
                 "answer": answer,
                 "sources": sources,
+                "citations": citations,
+                "context_used": self._retrieval_context_used(retrieval),
                 "tools_used": ["standalone_orb_general_assistant"],
                 "internal_data_access": False,
                 "image_understanding_available": False,
                 "error_detail": "vision_unavailable",
             }
-        fallback = self._fallback_answer(message)
-        sources = build_standalone_sources(message)
+        fallback = self._fallback_answer(message, retrieval=retrieval)
+        sources = retrieval["sources"]
+        citations = retrieval["citations"]
         return {
             "answer": append_sources_basis_section(fallback, sources),
             "sources": sources,
+            "citations": citations,
+            "context_used": self._retrieval_context_used(retrieval),
             "tools_used": ["general_qna"],
             "internal_data_access": False,
         }
+
+    def _retrieval_context_used(self, retrieval: dict[str, Any]) -> dict[str, Any]:
+        packs = retrieval.get("source_packs") or []
+        live = any(bool(p.get("live_retrieved")) for p in packs)
+        return {
+            "surface": "standalone_orb_ai",
+            "os_linked": False,
+            "care_record_access": False,
+            "retrieval": {
+                "strategy": "built_in_source_pack",
+                "live_retrieved": live,
+                "source_count": len(packs),
+                "routing_hint": retrieval.get("routing_hint"),
+                "research_intent": bool((retrieval.get("classification") or {}).get("research_intent")),
+            },
+        }
+
+    def _mode_behaviour_hint(self, mode: str | None) -> str:
+        mode_name = _text(mode) or "Ask ORB"
+        hints = {
+            "Safeguarding": (
+                "Mode — Safeguarding: safe reflection; escalate immediate risk; remind local policy; "
+                "no threshold decision."
+            ),
+            "Reflect": (
+                "Mode — Reflect: emotionally containing; reflective practice; supervision-style thinking."
+            ),
+            "Ofsted Lens": (
+                "Mode — Ofsted Lens: evidence-focused; SCCIF/Quality Standards aware; no grades or predictions."
+            ),
+            "Behaviour Support": (
+                "Mode — Behaviour Support: behaviour as communication; trauma-informed; repair/restorative thinking."
+            ),
+            "Record This Properly": (
+                "Mode — Record This Properly: factual, child-centred, non-punitive; suggest evidence to include."
+            ),
+        }
+        return hints.get(mode_name, "Mode — Ask ORB: broad ChatGPT-like assistant with specialist care knowledge.")
 
     async def _llm_answer(
         self,
@@ -154,8 +252,15 @@ class OrbGeneralAssistantService:
         history: list[dict[str, Any]],
         detail: str,
         image_data_urls: list[str],
+        retrieval: dict[str, Any] | None = None,
+        mode: str | None = None,
     ) -> dict[str, Any]:
+        retrieval = retrieval or self.prepare_retrieval(message, mode=mode, has_images=bool(image_data_urls))
         system = GENERAL_ORB_SYSTEM_PROMPT
+        system += f"\n\n{self._mode_behaviour_hint(mode)}"
+        system += f"\n\n{retrieval['grounding_context']}"
+        if retrieval.get("research_note"):
+            system += f"\n\nIf relevant, briefly note: {retrieval['research_note']}"
         if detail == "concise":
             system += "\n\nKeep everyday answers clear and concise unless the user asks for detail."
         elif detail == "detailed":
@@ -173,11 +278,17 @@ class OrbGeneralAssistantService:
                 history=history,
                 image_data_urls=image_data_urls,
             )
-            sources = build_standalone_sources(message, has_images=True)
-            resolved = append_sources_basis_section(answer or self._fallback_answer(message), sources)
+            sources = retrieval["sources"]
+            citations = retrieval["citations"]
+            resolved = append_sources_basis_section(
+                answer or self._fallback_answer(message, retrieval=retrieval),
+                sources,
+            )
             return {
                 "answer": resolved,
                 "sources": sources,
+                "citations": citations,
+                "context_used": self._retrieval_context_used(retrieval),
                 "tools_used": ["standalone_orb_general_assistant", "vision"],
                 "internal_data_access": False,
                 "image_understanding_available": bool(answer),
@@ -197,14 +308,14 @@ class OrbGeneralAssistantService:
         ):
             if isinstance(item, str):
                 parts.append(item)
-        answer = "".join(parts).strip() or self._fallback_answer(message)
-        sources = build_standalone_sources(
-            message,
-            profile_context="standalone context profiles" in message.lower(),
-        )
+        answer = "".join(parts).strip() or self._fallback_answer(message, retrieval=retrieval)
+        sources = retrieval["sources"]
+        citations = retrieval["citations"]
         return {
             "answer": append_sources_basis_section(answer, sources),
             "sources": sources,
+            "citations": citations,
+            "context_used": self._retrieval_context_used(retrieval),
             "tools_used": ["standalone_orb_general_assistant"],
             "internal_data_access": False,
             "image_understanding_available": False,
@@ -245,8 +356,9 @@ class OrbGeneralAssistantService:
         )
         return _text(response.choices[0].message.content if response.choices else "")
 
-    def _fallback_answer(self, message: str) -> str:
+    def _fallback_answer(self, message: str, *, retrieval: dict[str, Any] | None = None) -> str:
         lower = message.lower()
+        research_note = (retrieval or {}).get("research_note")
         arithmetic = re.fullmatch(r"\s*(?:what\s+is\s+)?(-?\d+(?:\.\d+)?)\s*([+\-*/])\s*(-?\d+(?:\.\d+)?)\s*\??\s*", lower)
         if arithmetic:
             left = float(arithmetic.group(1))
@@ -273,7 +385,10 @@ class OrbGeneralAssistantService:
                 "what is orb",
             )
         ):
-            return INDICARE_PRODUCT_FALLBACK
+            answer = INDICARE_PRODUCT_FALLBACK
+            if research_note:
+                answer += f"\n\n{research_note}"
+            return answer
         if any(term in lower for term in ("reg ", "regulation", "sccif", "ofsted", "children's homes", "childrens homes", "trauma-informed", "trauma informed", "supervision")):
             sources = search_sector_knowledge(message, limit=2)
             if "ofsted" in lower or "sccif" in lower:
@@ -291,10 +406,13 @@ class OrbGeneralAssistantService:
             return "Paste the text you want summarised, and I will pull out the key points, actions and any uncertainties."
         if any(term in lower for term in ("weather", "news", "score", "played last week", "price", "schedule")):
             return "I cannot check live information right now, but I can still help from general knowledge or work with details you paste in."
-        return (
+        answer = (
             "ORB could not complete the live AI response, but I can still help you try again. "
             "Ask me to explain, draft, plan, summarise, calculate, reflect, or look at something through a children's homes and Ofsted lens."
         )
+        if research_note:
+            answer += f" {research_note}"
+        return answer
 
 
 orb_general_assistant_service = OrbGeneralAssistantService()
