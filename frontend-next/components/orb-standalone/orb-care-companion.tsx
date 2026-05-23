@@ -13,6 +13,7 @@ import {
   Square,
   Volume2,
   VolumeX,
+  Wrench,
   X
 } from 'lucide-react'
 
@@ -25,7 +26,18 @@ import { OrbAgentPanel } from '@/components/orb-standalone/orb-agent-panel'
 import { OrbDocumentPanel } from '@/components/orb-standalone/orb-document-panel'
 import { OrbSavedOutputsPanel } from '@/components/orb-standalone/orb-saved-outputs-panel'
 import { OrbKnowledgeLibraryPanel } from '@/components/orb-standalone/orb-knowledge-library'
+import { OrbStandaloneAccessibilityPanel } from '@/components/orb-standalone/orb-accessibility-panel'
+import { OrbIntelligenceMapPanel } from '@/components/orb-standalone/orb-intelligence-map-panel'
+import { OrbMemoryPanel } from '@/components/orb-standalone/orb-memory-panel'
+import { OrbPermissionsPanel } from '@/components/orb-standalone/orb-permissions-panel'
+import { OrbToolsPanel } from '@/components/orb-standalone/orb-tools-panel'
 import { OrbStandaloneSidebar } from '@/components/orb-standalone/orb-standalone-sidebar'
+import {
+  loadStandaloneOrbAccessibility,
+  standaloneOrbAccessibilityClassNames,
+  type StandaloneOrbAccessibilityPreferences
+} from '@/lib/orb/standalone-accessibility'
+import { standaloneOsBoundaryReply } from '@/lib/orb/standalone-os-boundary'
 import { useStandaloneOrbVoice, type StandaloneOrbAnswerStyle } from '@/components/orb-standalone/use-standalone-orb-voice'
 import {
   buildProfileContextBlock,
@@ -272,6 +284,14 @@ export function OrbCareCompanion() {
   const [agentsPanelOpen, setAgentsPanelOpen] = useState(false)
   const [savedOutputsPanelOpen, setSavedOutputsPanelOpen] = useState(false)
   const [savedOutputsCount, setSavedOutputsCount] = useState(0)
+  const [toolsPanelOpen, setToolsPanelOpen] = useState(false)
+  const [memoryPanelOpen, setMemoryPanelOpen] = useState(false)
+  const [accessibilityPanelOpen, setAccessibilityPanelOpen] = useState(false)
+  const [permissionsPanelOpen, setPermissionsPanelOpen] = useState(false)
+  const [intelligenceMapOpen, setIntelligenceMapOpen] = useState(false)
+  const [a11yPrefs, setA11yPrefs] = useState<StandaloneOrbAccessibilityPreferences>(() =>
+    typeof window === 'undefined' ? loadStandaloneOrbAccessibility() : loadStandaloneOrbAccessibility()
+  )
   const [agentPanelPrompt, setAgentPanelPrompt] = useState('')
   const [agentPanelType, setAgentPanelType] = useState<string | undefined>()
   const [pendingDocument, setPendingDocument] = useState<{
@@ -301,6 +321,10 @@ export function OrbCareCompanion() {
       .then((summary) => setSavedOutputsCount(summary.total || 0))
       .catch(() => setSavedOutputsCount(0))
   }, [savedOutputsPanelOpen])
+
+  useEffect(() => {
+    setA11yPrefs(loadStandaloneOrbAccessibility())
+  }, [])
 
   const activeChat = useMemo(() => {
     if (!workspace.activeChatId) return null
@@ -494,6 +518,31 @@ export function OrbCareCompanion() {
             mode
           })
         )
+      }
+
+      const osBoundary = standaloneOsBoundaryReply(trimmed || messageBody)
+      if (osBoundary && !options?.retry) {
+        const boundaryMessage: StandaloneChatMessage = {
+          id: `a-boundary-${Date.now()}`,
+          role: 'assistant',
+          content: osBoundary,
+          createdAt: Date.now(),
+          sources: [
+            {
+              label: 'IndiCare OS boundary',
+              type: 'safety_boundary',
+              basis: 'Child or live record context requires permissioned OS ORB.'
+            }
+          ]
+        }
+        persistChat(targetChatId!, {
+          messages: dedupeOrbMessages([...priorMessages, boundaryMessage])
+        })
+        setInput('')
+        setAttachments([])
+        setPending(false)
+        sendInFlightRef.current = false
+        return
       }
 
       const historyForRequest = trimConversationHistory(dedupeOrbMessages(priorMessages))
@@ -844,8 +893,12 @@ export function OrbCareCompanion() {
     setSidebarOpen(false)
   }
 
+  const layoutA11yClass = standaloneOrbAccessibilityClassNames(a11yPrefs)
+
   return (
-    <main className="orb-chat-layout relative flex flex-col overflow-hidden bg-[#05070d] text-white">
+    <main
+      className={`orb-chat-layout relative flex flex-col overflow-hidden bg-[#05070d] text-white ${layoutA11yClass}`}
+    >
       <div className="pointer-events-none fixed inset-0 orb-cinematic-light-field opacity-50" aria-hidden />
 
       <OrbKnowledgeLibraryPanel open={knowledgeLibraryOpen} onClose={() => setKnowledgeLibraryOpen(false)} />
@@ -890,6 +943,38 @@ export function OrbCareCompanion() {
           setAgentsPanelOpen(true)
         }}
       />
+      <OrbToolsPanel
+        open={toolsPanelOpen}
+        onClose={() => setToolsPanelOpen(false)}
+        onOpenKnowledge={() => setKnowledgeLibraryOpen(true)}
+        onOpenDocuments={() => setDocumentsPanelOpen(true)}
+        onOpenAgents={() => setAgentsPanelOpen(true)}
+        onOpenSavedOutputs={() => setSavedOutputsPanelOpen(true)}
+        onOpenMemory={() => setMemoryPanelOpen(true)}
+        onOpenIntelligenceMap={() => setIntelligenceMapOpen(true)}
+        onOpenAccessibility={() => setAccessibilityPanelOpen(true)}
+        onOpenPermissions={() => setPermissionsPanelOpen(true)}
+        onAskOrb={() => inputRef.current?.focus()}
+      />
+      <OrbMemoryPanel
+        open={memoryPanelOpen}
+        onClose={() => setMemoryPanelOpen(false)}
+        workspace={workspace}
+        savedOutputsCount={savedOutputsCount}
+        onWorkspaceCleared={() => setWorkspace(readStandaloneWorkspace())}
+      />
+      <OrbStandaloneAccessibilityPanel
+        open={accessibilityPanelOpen}
+        onClose={() => setAccessibilityPanelOpen(false)}
+        onChange={setA11yPrefs}
+      />
+      <OrbPermissionsPanel
+        open={permissionsPanelOpen}
+        onClose={() => setPermissionsPanelOpen(false)}
+        voiceInputAvailable={voice.recognitionAvailable}
+        voiceOutputAvailable={voice.synthesisAvailable}
+      />
+      <OrbIntelligenceMapPanel open={intelligenceMapOpen} onClose={() => setIntelligenceMapOpen(false)} />
       <OrbAgentPanel
         open={agentsPanelOpen}
         onClose={() => {
@@ -950,6 +1035,10 @@ export function OrbCareCompanion() {
               setSavedOutputsPanelOpen(true)
               setSidebarOpen(false)
             }}
+            onOpenTools={() => {
+              setToolsPanelOpen(true)
+              setSidebarOpen(false)
+            }}
             savedOutputsCount={savedOutputsCount}
             onClose={() => setSidebarOpen(false)}
           />
@@ -968,6 +1057,15 @@ export function OrbCareCompanion() {
               No OS records accessed
             </span>
             <div className="flex shrink-0 gap-0.5">
+              <button
+                type="button"
+                onClick={() => setToolsPanelOpen(true)}
+                className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-slate-500 hover:bg-white/[0.06] hover:text-cyan-200"
+                aria-label="IndiCare Tools"
+              >
+                <Wrench className="h-4 w-4" />
+                <span className="hidden sm:inline">Tools</span>
+              </button>
               <button
                 type="button"
                 onClick={() => setProfilePickerOpen((o) => !o)}

@@ -421,6 +421,42 @@ export function searchChats(
     })
 }
 
+export function clearStandaloneLocalState(): StandaloneWorkspace {
+  const empty = repairOrbWorkspace({
+    version: 2,
+    activeChatId: null,
+    activeProjectId: STANDALONE_GENERAL_PROJECT_ID,
+    projects: [...DEFAULT_STANDALONE_PROJECTS],
+    profiles: [],
+    chats: []
+  })
+  writeStandaloneWorkspace(empty)
+  return empty
+}
+
+export function exportStandaloneWorkspaceJson(workspace: StandaloneWorkspace): string {
+  return JSON.stringify(repairOrbWorkspace(workspace), null, 2)
+}
+
+export function clearStandaloneProfiles(workspace: StandaloneWorkspace): StandaloneWorkspace {
+  const next = repairOrbWorkspace({ ...workspace, profiles: [] })
+  writeStandaloneWorkspace(next)
+  return next
+}
+
+export function clearStandaloneCustomProjects(workspace: StandaloneWorkspace): StandaloneWorkspace {
+  const general = workspace.projects.filter((p) => p.id === STANDALONE_GENERAL_PROJECT_ID)
+  const projects = general.length ? general : DEFAULT_STANDALONE_PROJECTS
+  const next = repairOrbWorkspace({
+    ...workspace,
+    projects: [...projects],
+    activeProjectId: STANDALONE_GENERAL_PROJECT_ID,
+    chats: workspace.chats.map((c) => ({ ...c, projectId: STANDALONE_GENERAL_PROJECT_ID }))
+  })
+  writeStandaloneWorkspace(next)
+  return next
+}
+
 export function buildProfileContextBlock(profiles: StandaloneProfile[]): string {
   if (!profiles.length) return ''
   const blocks = profiles.map((profile) => {

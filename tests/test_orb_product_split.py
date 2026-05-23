@@ -43,6 +43,20 @@ REQUIRED_STANDALONE_MARKERS = [
     "/orb/standalone/agents",
     "/orb/standalone/outputs/health",
     "/orb/standalone/outputs",
+    "/orb/standalone/capabilities",
+    "/orb/standalone/capabilities/summary",
+    "/orb/standalone/surface-route",
+]
+
+INTELLIGENCE_PRODUCT_LAYER_MARKERS = [
+    "OrbToolsPanel",
+    "IndiCare Tools",
+    "OrbMemoryPanel",
+    "Standalone ORB remembers only what you save locally",
+    "OrbStandaloneAccessibilityPanel",
+    "orb-dyslexia-mode",
+    "standaloneOsBoundaryReply",
+    "permissioned IndiCare OS context",
 ]
 
 STANDALONE_UI_MARKERS = [
@@ -342,6 +356,14 @@ def test_orb_page_uses_standalone_contract():
         assert marker in sources, f"/orb standalone surface must reference {marker}"
     for marker in STANDALONE_UI_MARKERS:
         assert marker in sources, f"/orb standalone UI must include {marker}"
+
+
+def test_orb_intelligence_product_layer_markers():
+    memory_panel = REPO_ROOT / "frontend-next" / "components" / "orb-standalone" / "orb-memory-panel.tsx"
+    boundary_lib = REPO_ROOT / "frontend-next" / "lib" / "orb" / "standalone-os-boundary.ts"
+    sources = _read(ORB_COMPANION) + _read(STANDALONE_CLIENT) + _read(GLOBALS_CSS) + _read(memory_panel) + _read(boundary_lib)
+    for marker in INTELLIGENCE_PRODUCT_LAYER_MARKERS:
+        assert marker in sources, f"intelligence product layer marker missing: {marker}"
 
 
 def test_orb_page_chatgpt_style_layout():

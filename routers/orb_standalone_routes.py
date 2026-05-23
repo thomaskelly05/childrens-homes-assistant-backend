@@ -12,6 +12,13 @@ from services.orb_citation_service import orb_citation_service
 from services.ai_provider_registry import ai_provider_registry
 from services.orb_general_assistant_service import orb_general_assistant_service
 from services.orb_knowledge_retrieval_service import orb_knowledge_retrieval_service
+from services.indicare_intelligence_capability_service import (
+    indicare_intelligence_capability_service,
+)
+from services.indicare_intelligence_surface_router import (
+    indicare_intelligence_surface_router,
+    standalone_os_boundary_message,
+)
 from services.orb_standalone_sources import (
     INDICARE_PRODUCT_FALLBACK,
     append_sources_basis_section,
@@ -174,6 +181,9 @@ def _standalone_contract() -> dict[str, Any]:
             "agents_list": "/orb/standalone/agents",
             "agents_run": "/orb/standalone/agents/run",
             "agents_deep_research": "/orb/standalone/agents/deep-research",
+            "capabilities": "/orb/standalone/capabilities",
+            "capabilities_summary": "/orb/standalone/capabilities/summary",
+            "surface_route": "/orb/standalone/surface-route",
         },
     }
 
@@ -247,6 +257,46 @@ async def standalone_orb_config(current_user=Depends(require_assistant_access)):
     return {
         "success": True,
         "data": _standalone_contract(),
+    }
+
+
+class OrbStandaloneSurfaceRouteRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    intent: str = Field(..., min_length=1, max_length=8000)
+    mode: str | None = Field(default=None, max_length=80)
+    has_document_upload: bool = False
+
+
+@router.get("/capabilities")
+async def standalone_orb_capabilities(current_user=Depends(require_assistant_access)):
+    payload = indicare_intelligence_capability_service.list_capabilities()
+    return {"success": True, "data": payload.model_dump()}
+
+
+@router.get("/capabilities/summary")
+async def standalone_orb_capabilities_summary(current_user=Depends(require_assistant_access)):
+    summary = indicare_intelligence_capability_service.summarize()
+    return {"success": True, "data": summary.model_dump()}
+
+
+@router.post("/surface-route")
+async def standalone_orb_surface_route(
+    body: OrbStandaloneSurfaceRouteRequest,
+    current_user=Depends(require_assistant_access),
+):
+    decision = indicare_intelligence_surface_router.route(
+        body.intent,
+        has_document_upload=body.has_document_upload,
+        mode=body.mode,
+    )
+    boundary = standalone_os_boundary_message(body.intent)
+    return {
+        "success": True,
+        "data": {
+            **decision.model_dump(),
+            "standalone_boundary_message": boundary,
+        },
     }
 
 
