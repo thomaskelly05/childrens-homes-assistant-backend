@@ -87,6 +87,13 @@ class OrbAgentRunRequest(BaseModel):
     depth: OrbAgentDepth = "standard"
     require_citations: bool = True
     max_sources: int = Field(default=8, ge=1, le=20)
+    save_output: bool = False
+    project_id: str | None = Field(default=None, max_length=120)
+    project_name: str | None = Field(default=None, max_length=500)
+    profile_ids: list[str] = Field(default_factory=list)
+    tags: list[str] = Field(default_factory=list)
+    save_title: str | None = Field(default=None, max_length=500)
+    save_output_type: str | None = Field(default=None, max_length=80)
 
 
 class OrbAgentSourceUse(BaseModel):
@@ -162,6 +169,13 @@ class OrbDeepResearchRequest(BaseModel):
     document_title: str | None = Field(default=None, max_length=500)
     require_citations: bool = True
     max_sources: int = Field(default=8, ge=1, le=20)
+    save_output: bool = False
+    project_id: str | None = Field(default=None, max_length=120)
+    project_name: str | None = Field(default=None, max_length=500)
+    profile_ids: list[str] = Field(default_factory=list)
+    tags: list[str] = Field(default_factory=list)
+    save_title: str | None = Field(default=None, max_length=500)
+    save_output_type: str | None = Field(default=None, max_length=80)
 
 
 class OrbDeepResearchResponse(BaseModel):

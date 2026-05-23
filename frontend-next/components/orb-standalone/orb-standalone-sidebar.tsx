@@ -6,6 +6,7 @@ import {
   Bot,
   BookOpen,
   FileText,
+  Bookmark,
   ChevronDown,
   ChevronUp,
   FolderPlus,
@@ -48,6 +49,8 @@ export function OrbStandaloneSidebar({
   onOpenKnowledgeLibrary,
   onOpenDocuments,
   onOpenAgents,
+  onOpenSavedOutputs,
+  savedOutputsCount,
   onClose
 }: {
   workspace: StandaloneWorkspace
@@ -65,6 +68,8 @@ export function OrbStandaloneSidebar({
   onOpenKnowledgeLibrary?: () => void
   onOpenDocuments?: () => void
   onOpenAgents?: () => void
+  onOpenSavedOutputs?: () => void
+  savedOutputsCount?: number
   onClose?: () => void
 }) {
   const [projectsOpen, setProjectsOpen] = useState(true)
@@ -403,6 +408,17 @@ export function OrbStandaloneSidebar({
         >
           <Bot className="h-4 w-4" aria-hidden />
           Agents
+        </button>
+        <button
+          type="button"
+          onClick={onOpenSavedOutputs}
+          className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-slate-400 transition hover:bg-white/[0.04] hover:text-slate-200"
+        >
+          <Bookmark className="h-4 w-4" aria-hidden />
+          <span className="flex-1 text-left">Saved outputs</span>
+          {typeof savedOutputsCount === 'number' && savedOutputsCount > 0 ? (
+            <span className="rounded-full bg-white/[0.08] px-2 py-0.5 text-[10px] text-slate-400">{savedOutputsCount}</span>
+          ) : null}
         </button>
         <button
           type="button"

@@ -41,6 +41,8 @@ REQUIRED_STANDALONE_MARKERS = [
     "/orb/standalone/evaluation/health",
     "/orb/standalone/agents/health",
     "/orb/standalone/agents",
+    "/orb/standalone/outputs/health",
+    "/orb/standalone/outputs",
 ]
 
 STANDALONE_UI_MARKERS = [
@@ -284,6 +286,20 @@ DOCUMENT_UNDERSTANDING_MARKERS = [
     "uploadOrbStandaloneDocument",
 ]
 
+ORB_SAVED_OUTPUTS_PANEL = REPO_ROOT / "frontend-next" / "components" / "orb-standalone" / "orb-saved-outputs-panel.tsx"
+
+SAVED_OUTPUTS_MARKERS = [
+    "Saved outputs",
+    "Save to project",
+    "Reuse in chat",
+    "Export markdown",
+    "standalone ORB artefacts",
+    "orb-saved-outputs-panel",
+    "listOrbSavedOutputs",
+    "createOrbSavedOutput",
+    "/orb/standalone/outputs",
+]
+
 OS_ORB_LINK_FILES = [
     REPO_ROOT / "frontend-next" / "components" / "indicare" / "app-shell.tsx",
     REPO_ROOT / "frontend-next" / "lib" / "navigation" / "operational-navigation.ts",
@@ -503,6 +519,21 @@ def test_standalone_document_understanding_ui_markers():
         assert marker in sources, f"document understanding marker missing: {marker}"
     assert "/api/os/" not in client
     assert "/os/" not in client.replace("/orb/standalone", "")
+
+
+def test_standalone_saved_outputs_ui_markers():
+    sources = (
+        _read(ORB_COMPANION)
+        + _read(ORB_SIDEBAR)
+        + _read(STANDALONE_CLIENT)
+        + _read(ORB_SAVED_OUTPUTS_PANEL)
+        + _read(REPO_ROOT / "frontend-next" / "components" / "orb-standalone" / "orb-output-save-actions.tsx")
+    )
+    forbidden = ["/api/os/", "/os/", "/api/orb/conversation", "child_id", "record_id"]
+    for marker in forbidden:
+        assert marker not in sources.replace("/orb/standalone", ""), f"saved outputs UI must not use {marker}"
+    for marker in SAVED_OUTPUTS_MARKERS:
+        assert marker in sources, f"saved outputs marker missing: {marker}"
 
 
 def test_standalone_orb_glow_component_exists():

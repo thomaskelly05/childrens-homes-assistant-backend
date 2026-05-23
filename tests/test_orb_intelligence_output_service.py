@@ -74,3 +74,29 @@ def test_build_copy_markdown():
     md = orb_intelligence_output_service.build_copy_markdown(output)
     assert "# T" in md
     assert "Summary line" in md
+
+
+def test_build_save_envelope_hints():
+    output = orb_intelligence_output_service.from_document_analysis(
+        OrbDocumentUnderstanding(
+            title="Policy review",
+            plain_english_summary="Summary",
+            analysis_mode="manager_briefing",
+        )
+    )
+    envelope = orb_intelligence_output_service.build_save_envelope(
+        output,
+        analysis_mode="manager_briefing",
+    )
+    assert envelope["save_hints"]["save_available"] is True
+    assert envelope["save_hints"]["suggested_output_type"] == "manager_briefing"
+    assert envelope["saved_output"]["saved"] is False
+
+    saved = orb_intelligence_output_service.build_save_envelope(
+        output,
+        save_output=True,
+        project_id="project-1",
+        tags=["briefing"],
+    )
+    assert saved["saved_output"]["saved"] is True
+    assert saved["saved_output"]["output_id"]

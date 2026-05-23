@@ -193,6 +193,32 @@ class OrbDeepResearchService:
             evaluation = eval_result.model_dump()
         context_used["evaluation"] = evaluation
 
+        intel = orb_intelligence_output_service.from_deep_research(
+            {
+                "success": agent_response.success,
+                "query": request.query,
+                "output": {
+                    "title": f"Deep research: {request.query[:80]}",
+                    "format": request.preferred_output,
+                    "body": briefing_body,
+                    "structured_sections": agent_response.output.structured_sections,
+                },
+                "findings": [f.model_dump() for f in findings],
+                "sources": sources,
+                "citations": citations,
+                "context_used": context_used,
+                "warnings": warnings,
+                "source_gaps": gaps,
+                "safety_notice": agent_response.safety_notice,
+            }
+        )
+        save_envelope = orb_intelligence_output_service.build_save_envelope(
+            intel,
+            request,
+            created_from="deep_research",
+        )
+        context_used.update(save_envelope)
+
         return OrbDeepResearchResponse(
             success=agent_response.success,
             query=request.query,

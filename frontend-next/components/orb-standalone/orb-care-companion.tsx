@@ -23,6 +23,7 @@ import {
 } from '@/components/orb-standalone/orb-standalone-composer'
 import { OrbAgentPanel } from '@/components/orb-standalone/orb-agent-panel'
 import { OrbDocumentPanel } from '@/components/orb-standalone/orb-document-panel'
+import { OrbSavedOutputsPanel } from '@/components/orb-standalone/orb-saved-outputs-panel'
 import { OrbKnowledgeLibraryPanel } from '@/components/orb-standalone/orb-knowledge-library'
 import { OrbStandaloneSidebar } from '@/components/orb-standalone/orb-standalone-sidebar'
 import { useStandaloneOrbVoice, type StandaloneOrbAnswerStyle } from '@/components/orb-standalone/use-standalone-orb-voice'
@@ -40,6 +41,8 @@ import {
   type StandaloneWorkspace
 } from '@/lib/orb/standalone-local-store'
 import {
+  createOrbSavedOutput,
+  fetchOrbSavedOutputsSummary,
   fetchStandaloneOrbConfig,
   queryStandaloneOrbConversation,
   STANDALONE_ORB_MODES,
@@ -267,6 +270,8 @@ export function OrbCareCompanion() {
   const [knowledgeLibraryOpen, setKnowledgeLibraryOpen] = useState(false)
   const [documentsPanelOpen, setDocumentsPanelOpen] = useState(false)
   const [agentsPanelOpen, setAgentsPanelOpen] = useState(false)
+  const [savedOutputsPanelOpen, setSavedOutputsPanelOpen] = useState(false)
+  const [savedOutputsCount, setSavedOutputsCount] = useState(0)
   const [agentPanelPrompt, setAgentPanelPrompt] = useState('')
   const [agentPanelType, setAgentPanelType] = useState<string | undefined>()
   const [pendingDocument, setPendingDocument] = useState<{
@@ -285,6 +290,17 @@ export function OrbCareCompanion() {
 
   const voice = useStandaloneOrbVoice()
   const { settings: voiceSettings, updateSettings: updateVoiceSettings } = voice
+
+  const activeProject = useMemo(
+    () => workspace.projects.find((p) => p.id === workspace.activeProjectId),
+    [workspace.projects, workspace.activeProjectId]
+  )
+
+  useEffect(() => {
+    void fetchOrbSavedOutputsSummary()
+      .then((summary) => setSavedOutputsCount(summary.total || 0))
+      .catch(() => setSavedOutputsCount(0))
+  }, [savedOutputsPanelOpen])
 
   const activeChat = useMemo(() => {
     if (!workspace.activeChatId) return null
@@ -675,6 +691,36 @@ export function OrbCareCompanion() {
     setTimeout(() => setDraftNotice(null), 5000)
   }
 
+  async function saveChatNote(entry: StandaloneChatMessage) {
+    try {
+      await createOrbSavedOutput({
+        title: titleFromFirstMessage(entry.content) || 'ORB chat note',
+        type: 'intelligence_note',
+        project_id: workspace.activeProjectId,
+        project_name: activeProject?.name,
+        summary: entry.content.slice(0, 800),
+        content_markdown: entry.content,
+        intelligence_output: {
+          title: titleFromFirstMessage(entry.content) || 'ORB chat note',
+          summary: entry.content.slice(0, 2000),
+          type: 'answer',
+          standalone_only: true,
+          os_linked: false,
+          care_record_access: false
+        },
+        sources: entry.sources,
+        created_from: 'chat',
+        created_from_id: entry.id
+      })
+      setDraftNotice('Saved output — standalone ORB artefact (not an OS record).')
+      const summary = await fetchOrbSavedOutputsSummary()
+      setSavedOutputsCount(summary.total || 0)
+    } catch {
+      await copyToClipboard(entry.content)
+      setDraftNotice('Could not save to server — copied to clipboard instead.')
+    }
+  }
+
   async function addImageFiles(files: FileList | File[]) {
     const list = Array.from(files).filter((f) => f.type.startsWith('image/'))
     if (!list.length) return
@@ -803,9 +849,25 @@ export function OrbCareCompanion() {
       <div className="pointer-events-none fixed inset-0 orb-cinematic-light-field opacity-50" aria-hidden />
 
       <OrbKnowledgeLibraryPanel open={knowledgeLibraryOpen} onClose={() => setKnowledgeLibraryOpen(false)} />
+      <OrbSavedOutputsPanel
+        open={savedOutputsPanelOpen}
+        onClose={() => setSavedOutputsPanelOpen(false)}
+        workspace={workspace}
+        onReuseInChat={(prompt) => {
+          setInput(prompt)
+          setSavedOutputsPanelOpen(false)
+        }}
+      />
       <OrbDocumentPanel
         open={documentsPanelOpen}
         onClose={() => setDocumentsPanelOpen(false)}
+        projects={workspace.projects}
+        activeProjectId={workspace.activeProjectId}
+        activeProjectName={activeProject?.name}
+        onReuseInChat={(prompt) => {
+          setInput(prompt)
+          setDocumentsPanelOpen(false)
+        }}
         onInsertIntoChat={(text) => {
           setInput(text)
           setDocumentsPanelOpen(false)
@@ -840,6 +902,13 @@ export function OrbCareCompanion() {
         initialDocumentText={pendingDocument?.text}
         initialDocumentSourceId={pendingDocument?.sourceId}
         initialDocumentTitle={pendingDocument?.title}
+        projects={workspace.projects}
+        activeProjectId={workspace.activeProjectId}
+        activeProjectName={activeProject?.name}
+        onReuseInChat={(prompt) => {
+          setInput(prompt)
+          setAgentsPanelOpen(false)
+        }}
       />
 
       {sidebarOpen ? (
@@ -877,6 +946,11 @@ export function OrbCareCompanion() {
               setAgentsPanelOpen(true)
               setSidebarOpen(false)
             }}
+            onOpenSavedOutputs={() => {
+              setSavedOutputsPanelOpen(true)
+              setSidebarOpen(false)
+            }}
+            savedOutputsCount={savedOutputsCount}
             onClose={() => setSidebarOpen(false)}
           />
         </aside>
@@ -1124,6 +1198,11 @@ export function OrbCareCompanion() {
                                   inputRef.current?.focus()
                                 }}
                                 onDraft={() => void handleDraftWording(entry.content)}
+                                onSave={
+                                  entry.content.trim().length > 300
+                                    ? () => void saveChatNote(entry)
+                                    : undefined
+                                }
                               />
                             ) : (
                               <div className="mt-2 flex flex-wrap gap-2 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
@@ -1555,7 +1634,8 @@ function ResponseActions({
   onSpeak,
   onStop,
   onNewQuestion,
-  onDraft
+  onDraft,
+  onSave
 }: {
   content: string
   speaking: boolean
@@ -1564,10 +1644,14 @@ function ResponseActions({
   onStop: () => void
   onNewQuestion: () => void
   onDraft: () => void
+  onSave?: () => void
 }) {
   return (
     <div className="mt-3 flex flex-wrap gap-1 border-t border-white/[0.04] pt-3">
       <ActionChip icon={<Copy className="h-3 w-3" />} label="Copy" onClick={() => void copyToClipboard(content)} />
+      {onSave ? (
+        <ActionChip icon={<FileText className="h-3 w-3" />} label="Save output" onClick={onSave} />
+      ) : null}
       {synthesisAvailable ? (
         speaking ? (
           <ActionChip icon={<Square className="h-3 w-3" />} label="Stop" onClick={onStop} />

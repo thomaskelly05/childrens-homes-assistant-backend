@@ -7,6 +7,8 @@ import {
   OrbIntelligenceOutput,
   understandingToIntelligenceOutput
 } from '@/components/orb-standalone/orb-intelligence-output'
+import { OrbOutputSaveActions } from '@/components/orb-standalone/orb-output-save-actions'
+import type { StandaloneProject } from '@/lib/orb/standalone-local-store'
 // Action plans: orb-action-plan (via orb-intelligence-output)
 import {
   analyseOrbStandaloneDocument,
@@ -24,7 +26,11 @@ export function OrbDocumentPanel({
   onDocumentContext,
   onRunDeepResearch,
   onRunDocumentAnalysisAgent,
-  initialText
+  initialText,
+  projects,
+  activeProjectId,
+  activeProjectName,
+  onReuseInChat
 }: {
   open: boolean
   onClose: () => void
@@ -33,6 +39,10 @@ export function OrbDocumentPanel({
   onRunDeepResearch?: (ctx: { text: string; title: string; sourceId: string | null }) => void
   onRunDocumentAnalysisAgent?: (ctx: { text: string; title: string; sourceId: string | null }) => void
   initialText?: string
+  projects?: StandaloneProject[]
+  activeProjectId?: string
+  activeProjectName?: string
+  onReuseInChat?: (prompt: string) => void
 }) {
   const [title, setTitle] = useState('Uploaded document')
   const [sourceType, setSourceType] = useState('user_uploaded')
@@ -244,6 +254,28 @@ export function OrbDocumentPanel({
                 output={understandingToIntelligenceOutput(understanding)}
                 onCopy={() => setCopyNote('Copied markdown to clipboard.')}
               />
+              {projects?.length ? (
+                <OrbOutputSaveActions
+                  output={understandingToIntelligenceOutput(understanding)}
+                  suggestedType={
+                    mode === 'action_plan'
+                      ? 'action_plan'
+                      : mode === 'manager_briefing'
+                        ? 'manager_briefing'
+                        : mode === 'staff_briefing'
+                          ? 'staff_briefing'
+                          : 'document_review'
+                  }
+                  suggestedTitle={understanding.title}
+                  projects={projects}
+                  activeProjectId={activeProjectId}
+                  activeProjectName={activeProjectName}
+                  createdFrom="document_analysis"
+                  createdFromId={understanding.source_id || undefined}
+                  onReuseInChat={onReuseInChat}
+                  onNotice={setCopyNote}
+                />
+              ) : null}
               <div className="flex flex-wrap gap-2">
                 {onRunDeepResearch ? (
                   <button

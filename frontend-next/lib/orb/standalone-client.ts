@@ -14,7 +14,10 @@ export const STANDALONE_ORB_API_PATHS = {
   agentsHealth: '/orb/standalone/agents/health',
   agentsList: '/orb/standalone/agents',
   agentsRun: '/orb/standalone/agents/run',
-  agentsDeepResearch: '/orb/standalone/agents/deep-research'
+  agentsDeepResearch: '/orb/standalone/agents/deep-research',
+  outputsHealth: '/orb/standalone/outputs/health',
+  outputs: '/orb/standalone/outputs',
+  outputsSummary: '/orb/standalone/outputs/summary'
 } as const
 
 export const STANDALONE_ORB_MODES = [
@@ -653,6 +656,204 @@ export async function runStandaloneOrbDeepResearch(body: {
   })
   return unwrapAgentData<OrbAgentRunResponse & { live_web_note?: string; source_gaps?: string[] }>(payload)
 }
+
+export type OrbSavedOutputType =
+  | 'action_plan'
+  | 'document_review'
+  | 'manager_briefing'
+  | 'staff_briefing'
+  | 'deep_research'
+  | 'policy_comparison'
+  | 'ofsted_evidence_map'
+  | 'recording_rewrite'
+  | 'safeguarding_reflection'
+  | 'therapeutic_practice'
+  | 'general_research'
+  | 'checklist'
+  | 'supervision_guide'
+  | 'intelligence_note'
+
+export type OrbSavedOutputStatus = 'draft' | 'saved' | 'archived' | 'pinned'
+
+export type OrbSavedOutputSummary = {
+  id: string
+  title: string
+  type: OrbSavedOutputType
+  status: OrbSavedOutputStatus
+  project_id?: string | null
+  project_name?: string | null
+  tags?: string[]
+  summary?: string | null
+  source_count?: number
+  quality_score?: number | null
+  created_at: string
+  updated_at: string
+  standalone_only?: boolean
+  os_linked?: boolean
+  care_record_access?: boolean
+}
+
+export type OrbSavedOutputRecord = OrbSavedOutputSummary & {
+  content_markdown?: string | null
+  content_json?: Record<string, unknown>
+  intelligence_output?: Record<string, unknown>
+  sources?: StandaloneOrbSource[]
+  citations?: StandaloneOrbCitation[]
+  quality?: Record<string, unknown>
+  model_routing?: StandaloneOrbModelRouting
+  retrieval_context?: StandaloneOrbRetrievalContext
+  created_from?: string
+  created_from_id?: string | null
+  metadata?: Record<string, unknown>
+  archived_at?: string | null
+}
+
+export type OrbIntelligenceSaveHints = {
+  save_available: boolean
+  suggested_output_type: OrbSavedOutputType
+  suggested_title: string
+  suggested_tags?: string[]
+}
+
+export type OrbIntelligenceSaveContext = {
+  available: boolean
+  saved: boolean
+  output_id?: string | null
+  project_id?: string | null
+  type?: OrbSavedOutputType | null
+}
+
+function unwrapOutputsData<T>(payload: unknown): T {
+  if (!payload || typeof payload !== 'object') {
+    throw new AuthApiError(503, 'Unexpected saved outputs API response')
+  }
+  const record = payload as Record<string, unknown>
+  if (record.data !== undefined) return record.data as T
+  return payload as T
+}
+
+export async function fetchOrbSavedOutputsSummary(signal?: AbortSignal) {
+  const payload = await authFetch(STANDALONE_ORB_API_PATHS.outputsSummary, { signal: withTimeout(signal) })
+  return unwrapOutputsData<{ total: number; by_type: Record<string, number>; storage_mode?: string }>(payload)
+}
+
+export async function listOrbSavedOutputs(params?: {
+  project_id?: string
+  output_type?: string
+  status?: string
+  tag?: string
+  search?: string
+  include_archived?: boolean
+  limit?: number
+  offset?: number
+}) {
+  const qs = new URLSearchParams()
+  if (params?.project_id) qs.set('project_id', params.project_id)
+  if (params?.output_type) qs.set('output_type', params.output_type)
+  if (params?.status) qs.set('status', params.status)
+  if (params?.tag) qs.set('tag', params.tag)
+  if (params?.search) qs.set('search', params.search)
+  if (params?.include_archived) qs.set('include_archived', 'true')
+  if (params?.limit) qs.set('limit', String(params.limit))
+  if (params?.offset) qs.set('offset', String(params.offset))
+  const query = qs.toString() ? `?${qs.toString()}` : ''
+  const payload = await authFetch(`${STANDALONE_ORB_API_PATHS.outputs}${query}`)
+  return unwrapOutputsData<{ items: OrbSavedOutputSummary[]; total: number }>(payload)
+}
+
+export async function createOrbSavedOutput(body: {
+  title: string
+  type: OrbSavedOutputType
+  project_id?: string
+  project_name?: string
+  profile_ids?: string[]
+  tags?: string[]
+  summary?: string
+  content_markdown?: string
+  intelligence_output?: Record<string, unknown>
+  sources?: StandaloneOrbSource[]
+  citations?: StandaloneOrbCitation[]
+  quality?: Record<string, unknown>
+  created_from?: string
+  created_from_id?: string
+}) {
+  const payload = await authFetch(STANDALONE_ORB_API_PATHS.outputs, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  })
+  return unwrapOutputsData<OrbSavedOutputRecord>(payload)
+}
+
+export async function getOrbSavedOutput(outputId: string) {
+  const payload = await authFetch(`${STANDALONE_ORB_API_PATHS.outputs}/${outputId}`)
+  return unwrapOutputsData<OrbSavedOutputRecord>(payload)
+}
+
+export async function updateOrbSavedOutput(
+  outputId: string,
+  body: Partial<{
+    title: string
+    type: OrbSavedOutputType
+    status: OrbSavedOutputStatus
+    project_id: string
+    project_name: string
+    tags: string[]
+    summary: string
+  }>
+) {
+  const payload = await authFetch(`${STANDALONE_ORB_API_PATHS.outputs}/${outputId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  })
+  return unwrapOutputsData<OrbSavedOutputRecord>(payload)
+}
+
+export async function archiveOrbSavedOutput(outputId: string) {
+  const payload = await authFetch(`${STANDALONE_ORB_API_PATHS.outputs}/${outputId}/archive`, {
+    method: 'POST'
+  })
+  return unwrapOutputsData<OrbSavedOutputRecord>(payload)
+}
+
+export async function deleteOrbSavedOutput(outputId: string) {
+  const payload = await authFetch(`${STANDALONE_ORB_API_PATHS.outputs}/${outputId}`, { method: 'DELETE' })
+  return unwrapOutputsData<{ deleted: boolean; output_id: string }>(payload)
+}
+
+export async function exportOrbSavedOutput(outputId: string, format: 'markdown' | 'plain_text' | 'json' = 'markdown') {
+  const payload = await authFetch(`${STANDALONE_ORB_API_PATHS.outputs}/${outputId}/export`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ format })
+  })
+  return unwrapOutputsData<{
+    output_id: string
+    format: string
+    content: string
+    filename: string
+    standalone_notice: string
+  }>(payload)
+}
+
+export async function reuseOrbSavedOutput(outputId: string, instruction?: string) {
+  const payload = await authFetch(`${STANDALONE_ORB_API_PATHS.outputs}/${outputId}/reuse`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ instruction })
+  })
+  return unwrapOutputsData<{
+    output_id: string
+    suggested_prompt: string
+    output_summary: string
+    source_count: number
+    safety_notice: string
+  }>(payload)
+}
+
+export const STANDALONE_ARTEFACT_NOTICE =
+  'Saved outputs are standalone ORB artefacts. They are not added to IndiCare OS records.'
 
 export function standaloneOrbErrorMessage(error: unknown) {
   if (error instanceof AuthApiError) {

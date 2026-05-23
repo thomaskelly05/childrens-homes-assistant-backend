@@ -1,0 +1,159 @@
+"""Standalone ORB saved outputs API — project artefacts only; no OS records."""
+
+from __future__ import annotations
+
+from typing import Any
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+
+from auth.permissions import require_assistant_access
+from schemas.orb_saved_outputs import (
+    OrbSavedOutputCreate,
+    OrbSavedOutputExportRequest,
+    OrbSavedOutputListRequest,
+    OrbSavedOutputReuseRequest,
+    OrbSavedOutputUpdate,
+)
+from services.orb_saved_output_service import orb_saved_output_service
+
+router = APIRouter(prefix="/orb/standalone/outputs", tags=["ORB Standalone Saved Outputs"])
+
+
+def _success(data: Any) -> dict[str, Any]:
+    return {"success": True, "data": data}
+
+
+def _reject_os_ids(payload: dict[str, Any]) -> None:
+    forbidden_keys = (
+        "child_id",
+        "young_person_id",
+        "staff_id",
+        "home_id",
+        "record_id",
+        "chronology_id",
+    )
+    scopes = [payload, payload.get("metadata") or {}]
+    for scope in scopes:
+        if not isinstance(scope, dict):
+            continue
+        for key in forbidden_keys:
+            if scope.get(key) is not None:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Standalone ORB saved outputs must not include {key}.",
+                )
+
+
+@router.get("/health")
+async def outputs_health(current_user=Depends(require_assistant_access)):
+    return _success(orb_saved_output_service.health().model_dump())
+
+
+@router.get("/summary")
+async def outputs_summary(current_user=Depends(require_assistant_access)):
+    return _success(orb_saved_output_service.get_summary())
+
+
+@router.get("")
+async def list_outputs(
+    project_id: str | None = None,
+    output_type: str | None = None,
+    status: str | None = None,
+    tag: str | None = None,
+    search: str | None = None,
+    include_archived: bool = False,
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    current_user=Depends(require_assistant_access),
+):
+    request = OrbSavedOutputListRequest(
+        project_id=project_id,
+        output_type=output_type,  # type: ignore[arg-type]
+        status=status,  # type: ignore[arg-type]
+        tag=tag,
+        search=search,
+        include_archived=include_archived,
+        limit=limit,
+        offset=offset,
+    )
+    result = orb_saved_output_service.list_outputs(request)
+    return _success(result.model_dump())
+
+
+@router.post("")
+async def create_output(
+    payload: OrbSavedOutputCreate,
+    current_user=Depends(require_assistant_access),
+):
+    _reject_os_ids(payload.model_dump())
+    record = orb_saved_output_service.create_output(payload)
+    return _success(record.model_dump())
+
+
+@router.get("/{output_id}")
+async def get_output(
+    output_id: str,
+    current_user=Depends(require_assistant_access),
+):
+    record = orb_saved_output_service.get_output(output_id)
+    if not record:
+        raise HTTPException(status_code=404, detail="Saved output not found.")
+    return _success(record.model_dump())
+
+
+@router.patch("/{output_id}")
+async def update_output(
+    output_id: str,
+    payload: OrbSavedOutputUpdate,
+    current_user=Depends(require_assistant_access),
+):
+    _reject_os_ids(payload.model_dump())
+    record = orb_saved_output_service.update_output(output_id, payload)
+    if not record:
+        raise HTTPException(status_code=404, detail="Saved output not found.")
+    return _success(record.model_dump())
+
+
+@router.delete("/{output_id}")
+async def delete_output(
+    output_id: str,
+    current_user=Depends(require_assistant_access),
+):
+    if not orb_saved_output_service.delete_output(output_id):
+        raise HTTPException(status_code=404, detail="Saved output not found.")
+    return _success({"deleted": True, "output_id": output_id})
+
+
+@router.post("/{output_id}/archive")
+async def archive_output(
+    output_id: str,
+    current_user=Depends(require_assistant_access),
+):
+    record = orb_saved_output_service.archive_output(output_id)
+    if not record:
+        raise HTTPException(status_code=404, detail="Saved output not found.")
+    return _success(record.model_dump())
+
+
+@router.post("/{output_id}/export")
+async def export_output(
+    output_id: str,
+    payload: OrbSavedOutputExportRequest,
+    current_user=Depends(require_assistant_access),
+):
+    result = orb_saved_output_service.export_output(output_id, payload.format)
+    if not result:
+        raise HTTPException(status_code=404, detail="Saved output not found.")
+    return _success(result)
+
+
+@router.post("/{output_id}/reuse")
+async def reuse_output(
+    output_id: str,
+    payload: OrbSavedOutputReuseRequest,
+    current_user=Depends(require_assistant_access),
+):
+    result = orb_saved_output_service.build_reuse_prompt(output_id, payload.instruction)
+    if not result:
+        raise HTTPException(status_code=404, detail="Saved output not found.")
+    return _success(result.model_dump())

@@ -7,6 +7,7 @@ from typing import Any
 from schemas.orb_agents import OrbAgentRunResponse
 from schemas.orb_documents import OrbDocumentAnalysisResponse, OrbDocumentUnderstanding
 from schemas.orb_evaluation import OrbEvaluationResult
+from schemas.orb_saved_outputs import OrbSavedOutputSaveOptions, OrbSavedOutputType
 from schemas.orb_intelligence_output import (
     OrbIntelligenceAction,
     OrbIntelligenceBoundary,
@@ -369,6 +370,60 @@ class OrbIntelligenceOutputService:
             requires_human_review=bool(data.get("requires_human_review")),
             safety_notes=list(data.get("safety_notes") or []),
         )
+
+    def save_options_from_request(self, request: Any) -> OrbSavedOutputSaveOptions | None:
+        if not getattr(request, "save_output", False):
+            return None
+        output_type = getattr(request, "save_output_type", None)
+        return OrbSavedOutputSaveOptions(
+            save_output=True,
+            project_id=getattr(request, "project_id", None),
+            project_name=getattr(request, "project_name", None),
+            profile_ids=list(getattr(request, "profile_ids", None) or []),
+            tags=list(getattr(request, "tags", None) or []),
+            title=getattr(request, "save_title", None),
+            output_type=output_type if output_type else None,  # type: ignore[arg-type]
+        )
+
+    def build_save_envelope(
+        self,
+        output: OrbIntelligenceOutput,
+        request: Any | None = None,
+        *,
+        created_from: str = "manual",
+        created_from_id: str | None = None,
+        analysis_mode: str | None = None,
+        save_output: bool | None = None,
+        project_id: str | None = None,
+        project_name: str | None = None,
+        tags: list[str] | None = None,
+        save_title: str | None = None,
+        save_output_type: OrbSavedOutputType | None = None,
+    ) -> dict[str, Any]:
+        from services.orb_saved_output_service import orb_saved_output_service
+
+        options = self.save_options_from_request(request) if request is not None else None
+        if options is None and save_output:
+            options = OrbSavedOutputSaveOptions(
+                save_output=True,
+                project_id=project_id,
+                project_name=project_name,
+                tags=list(tags or []),
+                title=save_title,
+                output_type=save_output_type,
+            )
+        hints, saved = orb_saved_output_service.maybe_save_intelligence(
+            output,
+            options,
+            created_from=created_from,
+            created_from_id=created_from_id,
+            analysis_mode=analysis_mode,
+        )
+        return {
+            "intelligence_output": output.model_dump(),
+            "save_hints": hints.model_dump(),
+            "saved_output": saved.model_dump(),
+        }
 
 
 orb_intelligence_output_service = OrbIntelligenceOutputService()
