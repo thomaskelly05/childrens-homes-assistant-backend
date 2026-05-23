@@ -20,6 +20,9 @@ RECORD_FILES = [
     FRONTEND / "components" / "indicare" / "record" / "recording-autosave-indicator.tsx",
     FRONTEND / "components" / "indicare" / "record" / "recording-context-panel.tsx",
     FRONTEND / "lib" / "record" / "recording-draft-store.ts",
+    FRONTEND / "lib" / "os-api" / "recording-drafts.ts",
+    FRONTEND / "components" / "indicare" / "record" / "recording-draft-list.tsx",
+    FRONTEND / "components" / "indicare" / "record" / "recording-draft-recovery-banner.tsx",
     FRONTEND / "lib" / "record" / "recording-quality-coach.ts",
     FRONTEND / "lib" / "record" / "recording-types.ts",
 ]
@@ -55,6 +58,13 @@ def test_recording_workspace_markers():
         "safeguarding-concern",
         "physical-intervention",
         "Draft workspace",
+        "My drafts",
+        "Saved securely",
+        "Saved in this browser",
+        "Submit draft",
+        "Mark ready for review",
+        "Formal record submission integration",
+        "unsaved browser draft",
     ):
         assert marker in combined, f"Missing workspace marker: {marker}"
 

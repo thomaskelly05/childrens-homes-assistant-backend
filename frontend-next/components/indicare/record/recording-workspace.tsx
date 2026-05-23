@@ -24,13 +24,17 @@ export function RecordingWorkspace({
   childId,
   childDisplayName,
   initialRecordingType,
-  highlightType
+  highlightType,
+  draftIdFromUrl,
+  onDraftListRefresh
 }: {
   about: RecordAboutContext
   childId?: string
   childDisplayName?: string
   initialRecordingType?: RecordingWorkspaceType
   highlightType?: string
+  draftIdFromUrl?: string
+  onDraftListRefresh?: () => void
 }) {
   const defaultType =
     initialRecordingType ||
@@ -95,8 +99,10 @@ export function RecordingWorkspace({
             about={about}
             childId={childId}
             childName={childDisplayName}
+            draftIdFromUrl={draftIdFromUrl}
             onTitleChange={setTitle}
             onBodyChange={setBody}
+            onDraftListRefresh={onDraftListRefresh}
           />
           <RecordingTherapeuticPrompts recordingType={recordingType} />
           <RecordingContextPanel body={body} title={title} />
@@ -116,7 +122,7 @@ export function RecordingWorkspace({
       >
         <p className="text-sm font-black text-slate-950">Review before saving</p>
         <p className="mt-1 text-xs font-semibold leading-5 text-slate-600">
-          Submit through the correct formal workflow when ready. This workspace draft stays in your browser until then.
+          Submit through the correct formal workflow when ready. Secure drafts are stored on the server when available; local browser autosave remains as fallback.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           <Link

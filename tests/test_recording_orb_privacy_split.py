@@ -49,3 +49,13 @@ def test_no_draft_body_in_orb_urls():
         assert "draft=" not in lower
         assert "body=" not in lower
         assert "title=" not in lower
+
+
+def test_recording_drafts_are_operational_only():
+    routes = _read(REPO_ROOT / "routers" / "recording_draft_routes.py")
+    assert "operational_only" in routes
+    assert "standalone_access" in routes
+    assert "/recording-drafts" in routes
+    standalone = _read(REPO_ROOT / "routers" / "orb_standalone_routes.py")
+    assert "recording_drafts" not in standalone
+    assert "recording-drafts" not in standalone

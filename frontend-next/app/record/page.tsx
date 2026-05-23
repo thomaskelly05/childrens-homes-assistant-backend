@@ -14,6 +14,7 @@ export default async function RecordPage({
     child_name?: string
     type?: string
     about?: string
+    draft_id?: string
   }>
 }) {
   const query = await searchParams

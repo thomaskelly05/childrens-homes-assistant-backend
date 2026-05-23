@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import { RecordingAutosaveIndicator } from '@/components/indicare/record/recording-autosave-indicator'
+import { RecordingAutosaveIndicator, type RecordingSaveMode } from '@/components/indicare/record/recording-autosave-indicator'
+import { RecordingDraftRecoveryBanner } from '@/components/indicare/record/recording-draft-recovery-banner'
 import {
   RECORDING_DRAFT_PRIVACY_NOTICE,
   clearRecordingDraft,
@@ -10,7 +11,23 @@ import {
   loadRecordingDraft,
   saveRecordingDraft
 } from '@/lib/record/recording-draft-store'
+import {
+  autosaveRecordingDraft,
+  createRecordingDraft,
+  getRecordingDraft,
+  getRecordingDraftHealth,
+  markRecordingDraftReadyForReview,
+  submitRecordingDraft,
+  type RecordingDraftRecord
+} from '@/lib/os-api/recording-drafts'
 import type { RecordAboutContext } from '@/lib/record/recording-hub'
+import { recordingFormByWorkspaceType } from '@/lib/record/recording-form-registry'
+import {
+  analyseRecordingQuality,
+  buildReviewChecklist,
+  detectPrivacyIdentifiers,
+  detectSafeguardingReviewTerms
+} from '@/lib/record/recording-quality-coach'
 import { RECORDING_BODY_PLACEHOLDERS, type RecordingWorkspaceType } from '@/lib/record/recording-types'
 
 type RecordingEditorProps = {
@@ -18,8 +35,15 @@ type RecordingEditorProps = {
   about: RecordAboutContext
   childId?: string
   childName?: string
+  draftIdFromUrl?: string
   onTitleChange?: (title: string) => void
   onBodyChange?: (body: string) => void
+  onBackendDraftChange?: (draft: RecordingDraftRecord | null) => void
+  onDraftListRefresh?: () => void
+}
+
+function hasMeaningfulContent(title: string, body: string) {
+  return Boolean(title.trim() || body.trim())
 }
 
 export function RecordingEditor({
@@ -27,53 +51,214 @@ export function RecordingEditor({
   about,
   childId,
   childName,
+  draftIdFromUrl,
   onTitleChange,
-  onBodyChange
+  onBodyChange,
+  onBackendDraftChange,
+  onDraftListRefresh
 }: RecordingEditorProps) {
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
   const [lastSavedAt, setLastSavedAt] = useState<string | undefined>()
   const [isSaving, setIsSaving] = useState(false)
+  const [saveMode, setSaveMode] = useState<RecordingSaveMode>('idle')
+  const [backendDraftId, setBackendDraftId] = useState<string | undefined>(draftIdFromUrl)
+  const [backendDraft, setBackendDraft] = useState<RecordingDraftRecord | null>(null)
+  const [backendAvailable, setBackendAvailable] = useState(false)
+  const [showRecoveryBanner, setShowRecoveryBanner] = useState(false)
+  const [submitWarning, setSubmitWarning] = useState<string | undefined>()
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const lastPersisted = useRef({ title: '', body: '' })
 
+  const form = useMemo(() => recordingFormByWorkspaceType(recordingType), [recordingType])
   const placeholder = RECORDING_BODY_PLACEHOLDERS[recordingType]
   const wordCount = useMemo(() => countWords(body), [body])
 
-  useEffect(() => {
-    const draft = loadRecordingDraft({
-      recording_type: recordingType,
-      context_type: about,
-      child_id: childId
-    })
-    if (!draft) return
-    setTitle(draft.title)
-    setBody(draft.body)
-    setLastSavedAt(draft.updated_at)
-    onTitleChange?.(draft.title)
-    onBodyChange?.(draft.body)
-  }, [about, childId, onBodyChange, onTitleChange, recordingType])
-
-  const persistDraft = useCallback(
+  const draftMetadata = useCallback(
     (nextTitle: string, nextBody: string) => {
-      setIsSaving(true)
+      const quality = analyseRecordingQuality(nextBody, nextTitle, recordingType)
+      const checklist = buildReviewChecklist(nextBody, nextTitle, recordingType)
+      const privacyHits = detectPrivacyIdentifiers(`${nextTitle}\n${nextBody}`)
+      const safeguardingTerms = detectSafeguardingReviewTerms(`${nextTitle}\n${nextBody}`)
+      return {
+        manager_review_required: form?.requiresManagerReview ?? false,
+        safeguarding_review_required:
+          (form?.safeguardingSensitive ?? false) || safeguardingTerms.length > 0,
+        privacy_sensitive: (form?.privacySensitive ?? false) || privacyHits.length > 0,
+        safeguarding_sensitive: form?.safeguardingSensitive ?? false,
+        quality_flags: quality.suggestions,
+        language_flags: quality.flaggedPhrases,
+        privacy_flags: privacyHits.map((hit) => hit.label),
+        checklist_status: Object.fromEntries(checklist.map((item) => [item.id, item.status]))
+      }
+    },
+    [form, recordingType]
+  )
+
+  const applyDraftToEditor = useCallback(
+    (nextTitle: string, nextBody: string, updatedAt?: string) => {
+      setTitle(nextTitle)
+      setBody(nextBody)
+      setLastSavedAt(updatedAt)
+      lastPersisted.current = { title: nextTitle, body: nextBody }
+      onTitleChange?.(nextTitle)
+      onBodyChange?.(nextBody)
+    },
+    [onBodyChange, onTitleChange]
+  )
+
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      const health = await getRecordingDraftHealth()
+      if (cancelled) return
+      setBackendAvailable(health.ok && health.data.persistence_available)
+
+      if (draftIdFromUrl) {
+        const loaded = await getRecordingDraft(draftIdFromUrl)
+        if (!cancelled && loaded.ok && loaded.data?.id) {
+          setBackendDraftId(loaded.data.id)
+          setBackendDraft(loaded.data)
+          onBackendDraftChange?.(loaded.data)
+          applyDraftToEditor(loaded.data.title, loaded.data.body, loaded.data.updated_at)
+          setSaveMode('secure')
+          return
+        }
+      }
+
+      const local = loadRecordingDraft({
+        recording_type: recordingType,
+        context_type: about,
+        child_id: childId
+      })
+      if (local) {
+        applyDraftToEditor(local.title, local.body, local.updated_at)
+        if (!draftIdFromUrl && !backendDraftId) {
+          setShowRecoveryBanner(true)
+          setSaveMode('local')
+        }
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [
+    about,
+    applyDraftToEditor,
+    backendDraftId,
+    childId,
+    draftIdFromUrl,
+    onBackendDraftChange,
+    recordingType
+  ])
+
+  const persistLocal = useCallback(
+    (nextTitle: string, nextBody: string) => {
       const saved = saveRecordingDraft({
         recording_type: recordingType,
         context_type: about,
         child_id: childId,
         child_name: childName,
         title: nextTitle,
-        body: nextBody
+        body: nextBody,
+        metadata: backendDraftId ? { backend_draft_id: backendDraftId } : undefined
       })
       setLastSavedAt(saved?.updated_at)
-      setIsSaving(false)
+      return saved
     },
-    [about, childId, childName, recordingType]
+    [about, backendDraftId, childId, childName, recordingType]
+  )
+
+  const persistBackend = useCallback(
+    async (nextTitle: string, nextBody: string, forceCreate = false) => {
+      if (!backendAvailable) return null
+      const meta = draftMetadata(nextTitle, nextBody)
+      const payload = {
+        title: nextTitle,
+        body: nextBody,
+        recording_type: recordingType,
+        form_id: form?.id,
+        category: form?.category,
+        context_type: about,
+        child_id: childId ? Number(childId) : undefined,
+        child_name: childName,
+        ...meta
+      }
+
+      if (!backendDraftId || forceCreate) {
+        if (!hasMeaningfulContent(nextTitle, nextBody) && !forceCreate) return null
+        const created = await createRecordingDraft(payload)
+        if (!created.ok || !created.data.id) return null
+        setBackendDraftId(created.data.id)
+        setBackendDraft(created.data)
+        onBackendDraftChange?.(created.data)
+        onDraftListRefresh?.()
+        return created.data
+      }
+
+      const updated = await autosaveRecordingDraft(backendDraftId, payload)
+      if (!updated.ok) return null
+      setBackendDraft(updated.data)
+      onBackendDraftChange?.(updated.data)
+      return updated.data
+    },
+    [
+      about,
+      backendAvailable,
+      backendDraftId,
+      childId,
+      childName,
+      draftMetadata,
+      form?.category,
+      form?.id,
+      onBackendDraftChange,
+      onDraftListRefresh,
+      recordingType
+    ]
+  )
+
+  const persistDraft = useCallback(
+    async (nextTitle: string, nextBody: string, options?: { forceCreate?: boolean }) => {
+      if (
+        !options?.forceCreate &&
+        nextTitle === lastPersisted.current.title &&
+        nextBody === lastPersisted.current.body
+      ) {
+        return backendDraftId
+      }
+
+      setIsSaving(true)
+      persistLocal(nextTitle, nextBody)
+
+      let secure = false
+      let resolvedId = backendDraftId
+      if (backendAvailable && (hasMeaningfulContent(nextTitle, nextBody) || options?.forceCreate)) {
+        const saved = await persistBackend(nextTitle, nextBody, options?.forceCreate)
+        secure = Boolean(saved?.id)
+        if (saved) {
+          resolvedId = saved.id
+          setLastSavedAt(saved.updated_at)
+          lastPersisted.current = { title: nextTitle, body: nextBody }
+        }
+      } else {
+        lastPersisted.current = { title: nextTitle, body: nextBody }
+      }
+
+      setSaveMode(secure ? 'secure' : 'local')
+      setIsSaving(false)
+      setShowRecoveryBanner(false)
+      return resolvedId
+    },
+    [backendAvailable, backendDraftId, persistBackend, persistLocal]
   )
 
   const scheduleSave = useCallback(
     (nextTitle: string, nextBody: string) => {
+      if (!hasMeaningfulContent(nextTitle, nextBody)) return
       if (saveTimer.current) clearTimeout(saveTimer.current)
-      saveTimer.current = setTimeout(() => persistDraft(nextTitle, nextBody), 600)
+      saveTimer.current = setTimeout(() => {
+        void persistDraft(nextTitle, nextBody)
+      }, 1200)
     },
     [persistDraft]
   )
@@ -95,8 +280,14 @@ export function RecordingEditor({
     setTitle('')
     setBody('')
     setLastSavedAt(undefined)
+    setBackendDraftId(undefined)
+    setBackendDraft(null)
+    setSaveMode('idle')
+    setSubmitWarning(undefined)
+    lastPersisted.current = { title: '', body: '' }
     onTitleChange?.('')
     onBodyChange?.('')
+    onBackendDraftChange?.(null)
   }
 
   const handleCopy = async () => {
@@ -105,9 +296,61 @@ export function RecordingEditor({
     await navigator.clipboard.writeText(text)
   }
 
+  const handleReadyForReview = async () => {
+    const draftId = await persistDraft(title, body, { forceCreate: true })
+    if (!draftId) return
+    const result = await markRecordingDraftReadyForReview(draftId)
+    if (result.ok) {
+      setBackendDraft(result.data)
+      onBackendDraftChange?.(result.data)
+      onDraftListRefresh?.()
+    }
+  }
+
+  const handleSubmit = async () => {
+    const draftId = await persistDraft(title, body, { forceCreate: true })
+    if (!draftId) return
+    const result = await submitRecordingDraft(draftId, { submitted_to: 'draft_workspace' })
+    if (!result.ok) return
+    setBackendDraft(result.data.draft)
+    onBackendDraftChange?.(result.data.draft)
+    setSubmitWarning(result.data.warning)
+    onDraftListRefresh?.()
+  }
+
+  const handleRestoreLocal = () => {
+    const local = loadRecordingDraft({
+      recording_type: recordingType,
+      context_type: about,
+      child_id: childId
+    })
+    if (!local) return
+    applyDraftToEditor(local.title, local.body, local.updated_at)
+    setShowRecoveryBanner(false)
+    setSaveMode('local')
+  }
+
+  const managerReviewNotice =
+    backendDraft?.manager_review_required || form?.requiresManagerReview
+      ? 'Manager review required before formal submission.'
+      : undefined
+
   return (
     <section data-testid="recording-editor" className="rounded-[28px] border border-slate-100 bg-white p-5 shadow-sm ring-1 ring-slate-100/80">
       <div className="space-y-4">
+        {showRecoveryBanner ? (
+          <RecordingDraftRecoveryBanner
+            onRestore={handleRestoreLocal}
+            onDismiss={() => setShowRecoveryBanner(false)}
+          />
+        ) : null}
+
+        {managerReviewNotice ? (
+          <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-black text-amber-950">
+            {managerReviewNotice}
+          </p>
+        ) : null}
+
         <label className="block">
           <span className="text-sm font-black text-slate-950">Title / summary</span>
           <input
@@ -141,16 +384,36 @@ export function RecordingEditor({
         <RecordingAutosaveIndicator
           lastSavedAt={lastSavedAt}
           isSaving={isSaving}
+          saveMode={saveMode}
+          draftStatus={backendDraft?.status}
           privacyNotice={RECORDING_DRAFT_PRIVACY_NOTICE}
+          submitWarning={submitWarning}
         />
 
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={() => persistDraft(title, body)}
+            data-testid="recording-save-draft"
+            onClick={() => void persistDraft(title, body, { forceCreate: true })}
             className="inline-flex min-h-10 items-center rounded-2xl bg-blue-600 px-4 py-2 text-xs font-black text-white"
           >
             Save draft
+          </button>
+          <button
+            type="button"
+            data-testid="recording-ready-for-review"
+            onClick={() => void handleReadyForReview()}
+            className="inline-flex min-h-10 items-center rounded-2xl border border-violet-200 bg-violet-50 px-4 py-2 text-xs font-black text-violet-950"
+          >
+            Mark ready for review
+          </button>
+          <button
+            type="button"
+            data-testid="recording-submit-draft"
+            onClick={() => void handleSubmit()}
+            className="inline-flex min-h-10 items-center rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-black text-emerald-950"
+          >
+            Submit draft
           </button>
           <button
             type="button"
