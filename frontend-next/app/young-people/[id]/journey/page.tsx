@@ -42,10 +42,11 @@ export default async function ChildJourneyPage({
 
       {query.saved ? (
         <WorkflowSaveIndicator
-          state={saveStateFromStatus(query.status)}
-          label={`Saved ${query.saved.replaceAll('-', ' ')}`}
-          recordId={query.recordId}
-          limitation={query.limitation}
+          snapshot={{
+            ...saveStateFromStatus(query.status),
+            label: `Saved ${query.saved.replaceAll('-', ' ')}`,
+            message: query.limitation || saveStateFromStatus(query.status).message
+          }}
         />
       ) : null}
 

@@ -34,8 +34,11 @@ def test_young_people_list_orb_uses_assistant():
 
 def test_young_person_journey_ask_orb_mode():
     header = _read(FRONTEND / "components" / "child-journey" / "child-journey-header.tsx")
-    assert "/assistant/orb" in header
-    assert "child_journey_summary" in _read(FRONTEND / "lib" / "child-journey" / "child-journey-routes.ts")
+    routes = _read(FRONTEND / "lib" / "child-journey" / "child-journey-routes.ts")
+    assert "childJourneySummaryHref" in header
+    assert "Ask OS ORB" in header
+    assert "/assistant/orb" in routes
+    assert "child_journey_summary" in routes
 
 
 def test_no_standalone_orb_child_ids_in_young_person_surfaces():
