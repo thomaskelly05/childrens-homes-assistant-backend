@@ -8,11 +8,55 @@ from services.orb_intelligence_bridge_service import orb_intelligence_bridge_ser
 
 
 @pytest.mark.asyncio
-async def test_operational_path_stubbed_async():
+async def test_operational_path_requires_user():
     result = await orb_intelligence_bridge_service.run_operational_intelligence({})
     assert result["success"] is False
-    assert result["error"] == "not_wired"
-    assert "not wired" in result["message"].lower()
+    assert result["error"] == "unauthorised"
+
+
+@pytest.mark.asyncio
+async def test_operational_path_with_user(monkeypatch):
+    from schemas.orb_operational import OrbOperationalContextSummary, OrbOperationalPermissionSummary, OrbOperationalResponse, OrbOperationalSafetyBoundary
+
+    async def fake_answer(*_args, **_kwargs):
+        return OrbOperationalResponse(
+            answer="Operational summary.",
+            context_summary=OrbOperationalContextSummary(headline="Ready"),
+            permissions=OrbOperationalPermissionSummary(role="manager"),
+            boundaries=OrbOperationalSafetyBoundary(),
+            os_linked=True,
+            care_record_access=True,
+            standalone_only=False,
+            permissioned_context=True,
+        )
+
+    monkeypatch.setattr(
+        "services.orb_operational_assistant_service.orb_operational_assistant_service.answer",
+        fake_answer,
+    )
+    async def fake_context(*_args, **_kwargs):
+        return {"raw_available": True, "summary": {}}
+
+    monkeypatch.setattr(
+        orb_intelligence_bridge_service,
+        "collect_safe_operational_context",
+        fake_context,
+    )
+    monkeypatch.setattr(
+        orb_intelligence_bridge_service,
+        "audit_operational_intelligence_use",
+        lambda *_args, **_kwargs: "audit-test",
+    )
+
+    result = await orb_intelligence_bridge_service.run_operational_intelligence(
+        {"message": "What needs attention?", "mode": "manager_daily_brief"},
+        current_user={"id": 1, "role": "manager"},
+        conn=None,
+    )
+    assert result["success"] is True
+    assert result["os_linked"] is True
+    assert result["standalone_only"] is False
+    assert result["permissioned_context"] is True
 
 
 @pytest.mark.asyncio

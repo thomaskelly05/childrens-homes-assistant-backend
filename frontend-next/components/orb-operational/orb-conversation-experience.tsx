@@ -5,6 +5,12 @@ import Link from 'next/link'
 import { BadgeCheck, Mic2, Send, ShieldCheck, Sparkles } from 'lucide-react'
 
 import { OrbCognitionPanels } from '@/components/orb-operational/orb-cognition-panels'
+import {
+  sendOperationalOrbMessage,
+  type OrbOperationalMode,
+  type OrbOperationalResponse,
+  type OrbOperationalScope
+} from '@/lib/orb/operational-client'
 import { queryOrbConversation, type OrbConversationResponse, type OrbScope } from '@/lib/os-api/orb'
 import type { OsPersonSummary } from '@/lib/os-api/workspaces'
 
@@ -34,14 +40,59 @@ type OrbIntelligenceResponse = OrbConversationResponse & {
   }
 }
 
-const scopeOptions: Array<{ value: OrbScope; label: string; prompt: string }> = [
-  { value: 'home', label: 'Home', prompt: 'What has changed in the home today?' },
-  { value: 'child', label: 'Child', prompt: "Summarise this young person's recent care journey." },
-  { value: 'workforce', label: 'Workforce', prompt: 'What workforce issues are emerging?' },
-  { value: 'governance', label: 'Governance', prompt: 'What risks need manager review?' },
-  { value: 'inspection', label: 'Inspection', prompt: 'What is missing for inspection readiness?' },
-  { value: 'provider', label: 'Provider', prompt: 'What should the registered manager look at first?' }
+const scopeOptions: Array<{ value: OrbScope; label: string; prompt: string; operationalScope: OrbOperationalScope }> = [
+  { value: 'home', label: 'Home', prompt: 'What has changed in the home today?', operationalScope: 'home' },
+  { value: 'child', label: 'Child', prompt: "Summarise this young person's recent care journey.", operationalScope: 'child' },
+  { value: 'workforce', label: 'Workforce', prompt: 'What workforce issues are emerging?', operationalScope: 'staff' },
+  { value: 'governance', label: 'Governance', prompt: 'What risks need manager review?', operationalScope: 'provider' },
+  { value: 'inspection', label: 'Inspection', prompt: 'What is missing for inspection readiness?', operationalScope: 'home' },
+  { value: 'provider', label: 'Provider', prompt: 'What should the registered manager look at first?', operationalScope: 'provider' }
 ]
+
+const operationalModes: Array<{ mode: OrbOperationalMode; label: string; prompt: string }> = [
+  { mode: 'general_operational_question', label: 'Ask OS ORB', prompt: 'What should I focus on in my role today?' },
+  { mode: 'manager_daily_brief', label: 'Manager Daily Brief', prompt: 'What needs my attention today?' },
+  { mode: 'record_quality_review', label: 'Record Quality', prompt: 'Which records may need recording review?' },
+  { mode: 'safeguarding_themes', label: 'Safeguarding Themes', prompt: 'What safeguarding themes are emerging?' },
+  { mode: 'ofsted_evidence_review', label: 'Ofsted Evidence', prompt: 'What would Ofsted ask about this home?' },
+  { mode: 'action_priority', label: 'Actions', prompt: 'What actions should I prioritise this week?' },
+  { mode: 'staff_support', label: 'Staff Support', prompt: 'Prepare supervision points for this staff member.' },
+  { mode: 'child_journey_summary', label: 'Child Journey', prompt: "Summarise this child's last 7 days." },
+  { mode: 'governance_briefing', label: 'Governance', prompt: 'Create a Reg 45 improvement briefing outline.' }
+]
+
+function mapOperationalResponse(response: OrbOperationalResponse): OrbConversationResponse {
+  const sources = (response.sources || []).map((source, index) => ({
+    title: source.label,
+    record_type: source.source_type,
+    record_id: `${source.source_type}-${index}`,
+    route: source.route,
+    citation_ref: `[${index + 1}]`,
+    summary: source.basis || ''
+  }))
+  return {
+    ok: true,
+    answer: response.answer,
+    summary: response.context_summary?.headline || response.answer.split('\n', 1)[0].slice(0, 220),
+    sources,
+    citations: sources,
+    actions: (response.context_summary?.attention_items || []).slice(0, 5).map((label) => ({
+      label,
+      type: 'review' as const,
+      route: '/intelligence-actions'
+    })),
+    confidence: response.context_summary?.degraded || response.context_summary?.unavailable ? 'low' : 'medium',
+    guardrails: response.boundaries?.notices || [
+      'OS ORB can use permissioned IndiCare context. It only sees information available to your role.'
+    ],
+    context_used: {
+      scope: response.permissions?.scope_resolved || undefined,
+      care_retrieval: response.care_record_access,
+      degraded: response.context_summary?.degraded,
+      snapshot_hit: !response.context_summary?.unavailable
+    }
+  }
+}
 
 function normaliseInitialScope(scope?: string): OrbScope {
   return scopeOptions.some((item) => item.value === scope) ? scope as OrbScope : 'home'
@@ -80,6 +131,7 @@ export function OrbConversationExperience({
 }) {
   const startingScope = normaliseInitialScope(initialScope)
   const [scope, setScope] = useState<OrbScope>(startingScope)
+  const [operationalMode, setOperationalMode] = useState<OrbOperationalMode>('general_operational_question')
   const [youngPersonId, setYoungPersonId] = useState<string>(startingScope === 'child' ? initialYoungPersonId || '' : '')
   const [conversationId] = useState(() => `orb-${Date.now().toString(36)}`)
   const [input, setInput] = useState(initialPrompt || scopePrompt(startingScope))
@@ -111,20 +163,43 @@ export function OrbConversationExperience({
     abortRef.current?.abort()
     const controller = new AbortController()
     abortRef.current = controller
-    const result = await queryOrbConversation({
-      message,
-      scope: activeScope,
-      young_person_id: activeScope === 'child' ? selectedChildId : null,
-      conversation_id: conversationId
-    }, controller.signal)
-    setWarning(result.warning || null)
+    const scopeMeta = scopeOptions.find((item) => item.value === activeScope) || scopeOptions[0]
+    const operationalResult = await sendOperationalOrbMessage(
+      {
+        message,
+        mode: operationalMode,
+        scope: scopeMeta.operationalScope,
+        child_id: activeScope === 'child' ? selectedChildId : null,
+        staff_id: activeScope === 'workforce' ? null : null,
+        days: 7
+      },
+      controller.signal
+    )
+    let responseData: OrbConversationResponse
+    if (operationalResult.source === 'live' && operationalResult.data.answer) {
+      responseData = mapOperationalResponse(operationalResult.data)
+      const evalWarnings = operationalResult.data.warnings || []
+      setWarning([operationalResult.warning, ...evalWarnings].filter(Boolean).join(' ') || null)
+    } else {
+      const legacy = await queryOrbConversation(
+        {
+          message,
+          scope: activeScope,
+          young_person_id: activeScope === 'child' ? selectedChildId : null,
+          conversation_id: conversationId
+        },
+        controller.signal
+      )
+      responseData = legacy.data
+      setWarning(legacy.warning || operationalResult.warning || null)
+    }
     setMessages((current) => [
       ...current,
       {
         id: `a-${Date.now()}`,
         role: 'assistant',
-        text: result.data.answer,
-        response: result.data
+        text: responseData.answer,
+        response: responseData
       }
     ])
     setPending(false)
@@ -142,7 +217,9 @@ export function OrbConversationExperience({
           <div>
             <p className="text-[11px] font-black uppercase tracking-[0.24em] text-blue-700">Operational ORB</p>
             <h1 className="mt-3 text-4xl font-black tracking-[-0.07em] text-slate-950 md:text-6xl">Reflective operational cognition</h1>
-            <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-600">ORB can help with IndiCare work and everyday questions. Care questions use scoped records and citations; everyday questions use general, web or productivity support without care retrieval.</p>
+            <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-600">
+              OS ORB can use permissioned IndiCare context. It only sees information available to your role. Care questions use scoped summary context and source labels; everyday questions may use general support without care retrieval.
+            </p>
           </div>
           <div className={`rounded-2xl px-4 py-3 text-xs font-black uppercase tracking-[0.16em] ${isDegraded ? 'bg-amber-50 text-amber-800' : 'bg-blue-50 text-blue-700'}`}>
             {statusLabel}
@@ -178,10 +255,34 @@ export function OrbConversationExperience({
           ))}
         </div>
 
-        <div className="mt-6 flex flex-wrap gap-2">
+        <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50/80 px-4 py-3 text-xs font-semibold leading-6 text-blue-900">
+          OS ORB can use permissioned IndiCare context. It only sees information available to your role. ORB does not make final safeguarding or inspection decisions.
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          {operationalModes.map((item) => (
+            <button
+              key={item.mode}
+              type="button"
+              onClick={() => {
+                setOperationalMode(item.mode)
+                void submit(undefined, item.prompt, scope)
+              }}
+              className={`rounded-full border px-4 py-2 text-xs font-black transition ${
+                operationalMode === item.mode
+                  ? 'border-slate-900 bg-slate-950 text-white'
+                  : 'border-blue-100 bg-white text-blue-800 hover:bg-blue-50'
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-3 flex flex-wrap gap-2">
           {scopeOptions.map((item) => (
-            <button key={item.value} type="button" onClick={() => { applyScope(item.value); void submit(undefined, item.prompt, item.value) }} className="rounded-full border border-blue-100 bg-blue-50 px-4 py-2 text-xs font-black text-blue-800 transition hover:bg-blue-100">
-              {item.prompt}
+            <button key={item.value} type="button" onClick={() => { applyScope(item.value); void submit(undefined, item.prompt, item.value) }} className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-black text-slate-700 transition hover:bg-slate-100">
+              {item.label}
             </button>
           ))}
         </div>

@@ -282,6 +282,7 @@ class AiModelRouterService:
         detail_level: str = "concise",
         research_intent: bool = False,
         voice_mode: bool = False,
+        surface: str = "standalone_orb_ai",
     ) -> tuple[AiProviderResponse, AiRoutingDecision, AiModelRouterTrace]:
         routing_request = AiRoutingRequest(
             message=message,
@@ -293,6 +294,7 @@ class AiModelRouterService:
             research_intent=research_intent,
             retrieval_context=retrieval_context,
             voice_mode=voice_mode,
+            surface=surface,
         )
         decision = self.route(routing_request)
         provider_request = AiProviderRequest(

@@ -466,3 +466,581 @@ def build_orb_response(context: dict[str, Any]) -> dict[str, Any]:
         },
         "metadata_used": context.get("metadata_used") or {},
     }
+
+
+OPERATIONAL_BOUNDARY_NOTICES = [
+    "Permissioned context only — ORB only sees information available to your role.",
+    "ORB does not make final safeguarding, legal or inspection decisions.",
+    "ORB does not predict Ofsted grades.",
+    "Draft actions and wording require registered manager or designated safeguarding review.",
+    "Responses are evidence-focused and child-centred, not punitive.",
+]
+
+SCOPE_TO_LEGACY = {
+    "home": "home",
+    "child": "child",
+    "staff": "workforce",
+    "provider": "provider",
+    "current_user": "home",
+}
+
+
+def _summary_count(items: list[Any]) -> int:
+    return len(items or [])
+
+
+def _strip_raw_records(bundle: dict[str, Any]) -> dict[str, Any]:
+    """Keep summary-level fields only — no raw chronology/document bodies by default."""
+    metadata = bundle.get("metadata_first") or {}
+    return {
+        "scope": bundle.get("scope"),
+        "intent": bundle.get("intent"),
+        "home_id": bundle.get("home_id"),
+        "young_person_id": bundle.get("young_person_id"),
+        "staff_id": bundle.get("staff_id"),
+        "degraded": bool(bundle.get("degraded")),
+        "errors": list(bundle.get("errors") or [])[:6],
+        "guardrails": list(bundle.get("guardrails") or GUARDRAILS)[:6],
+        "projection_keys": list(bundle.get("projection_keys") or [])[:12],
+        "snapshot_hit": bool(bundle.get("snapshot_hit")),
+        "counts": {
+            "chronology": _summary_count(bundle.get("chronology")),
+            "documents": _summary_count(bundle.get("documents")),
+            "actions": _summary_count(bundle.get("actions")),
+            "evidence": _summary_count(bundle.get("evidence")),
+            "reports": _summary_count(bundle.get("reports")),
+        },
+        "metadata_summary": {
+            "themes": (metadata.get("themes") or [])[:8],
+            "pressure_signals": (metadata.get("pressure_signals") or [])[:6],
+            "evidence_gaps": (metadata.get("evidence_gaps") or [])[:6],
+        },
+        "child_voice": bundle.get("child_voice") or {},
+        "operational_cognition": (bundle.get("operational_cognition") or {}).get("cognition_summary"),
+        "sources": [
+            {
+                "label": _text(s.get("title"), "Source"),
+                "source_type": _text(s.get("source_type"), "summary"),
+                "basis": _text(s.get("summary"), "")[:240],
+                "route": s.get("route"),
+            }
+            for s in (bundle.get("sources") or [])[:12]
+        ],
+    }
+
+
+class OrbOperationalContextBridge:
+    """Safe permissioned operational summaries for OS ORB intelligence bridge."""
+
+    def build_context(
+        self,
+        request: Any,
+        current_user: dict[str, Any],
+        conn: Any | None = None,
+    ) -> dict[str, Any]:
+        from schemas.orb_operational import OrbOperationalContextSummary, OrbOperationalRequest
+
+        req = request if isinstance(request, OrbOperationalRequest) else OrbOperationalRequest.model_validate(request)
+        scope = req.scope if req.scope in SCOPE_TO_LEGACY else "current_user"
+        home_id = req.home_id or current_home_id(current_user)
+        child_id = req.child_id
+        staff_id = req.staff_id
+        days = max(1, min(int(req.days or 7), 90))
+
+        if scope == "child" and child_id is None:
+            return {
+                "summary": OrbOperationalContextSummary(
+                    headline="Child context required",
+                    permission_warnings=["Select a child or provide child_id for child-scoped questions."],
+                ).model_dump(),
+                "permissions": self._permission_summary(current_user, scope=scope, home_id=home_id),
+                "sources": [],
+                "raw_available": False,
+            }
+
+        builder = {
+            "home": self.build_home_context,
+            "child": self.build_child_context,
+            "staff": self.build_staff_context,
+            "provider": self.build_governance_context,
+            "current_user": self.build_manager_context,
+        }.get(scope, self.build_manager_context)
+
+        if scope == "child":
+            payload = builder(child_id, days, current_user, conn=conn, home_id=home_id, request=req)
+        elif scope == "staff":
+            payload = builder(staff_id, days, current_user, conn=conn, home_id=home_id, request=req)
+        else:
+            payload = builder(home_id, days, current_user, conn=conn, request=req)
+
+        payload["permissions"] = self._permission_summary(
+            current_user,
+            scope=scope,
+            home_id=home_id,
+            child_id=child_id,
+            staff_id=staff_id,
+            care_access=bool(payload.get("raw_available")),
+        )
+        return payload
+
+    def build_home_context(
+        self,
+        home_id: int | None,
+        days: int,
+        current_user: dict[str, Any],
+        *,
+        conn: Any | None = None,
+        request: Any | None = None,
+    ) -> dict[str, Any]:
+        return self._build_scoped_context(
+            scope="home",
+            message=_text(getattr(request, "message", None), "Operational home summary"),
+            current_user=current_user,
+            conn=conn,
+            home_id=home_id,
+            days=days,
+            request=request,
+        )
+
+    def build_child_context(
+        self,
+        child_id: int | None,
+        days: int,
+        current_user: dict[str, Any],
+        *,
+        conn: Any | None = None,
+        home_id: int | None = None,
+        request: Any | None = None,
+    ) -> dict[str, Any]:
+        return self._build_scoped_context(
+            scope="child",
+            message=_text(getattr(request, "message", None), "Child journey summary"),
+            current_user=current_user,
+            conn=conn,
+            home_id=home_id,
+            young_person_id=child_id,
+            days=days,
+            request=request,
+        )
+
+    def build_staff_context(
+        self,
+        staff_id: int | None,
+        days: int,
+        current_user: dict[str, Any],
+        *,
+        conn: Any | None = None,
+        home_id: int | None = None,
+        request: Any | None = None,
+    ) -> dict[str, Any]:
+        return self._build_scoped_context(
+            scope="staff",
+            message=_text(getattr(request, "message", None), "Staff support summary"),
+            current_user=current_user,
+            conn=conn,
+            home_id=home_id,
+            staff_id=staff_id,
+            days=days,
+            request=request,
+        )
+
+    def build_manager_context(
+        self,
+        home_id: int | None,
+        days: int,
+        current_user: dict[str, Any],
+        *,
+        conn: Any | None = None,
+        request: Any | None = None,
+    ) -> dict[str, Any]:
+        return self._build_scoped_context(
+            scope="current_user",
+            message=_text(getattr(request, "message", None), "What needs my attention today?"),
+            current_user=current_user,
+            conn=conn,
+            home_id=home_id,
+            days=days,
+            request=request,
+            include_brief=True,
+        )
+
+    def build_governance_context(
+        self,
+        home_id: int | None,
+        days: int,
+        current_user: dict[str, Any],
+        *,
+        conn: Any | None = None,
+        request: Any | None = None,
+    ) -> dict[str, Any]:
+        return self._build_scoped_context(
+            scope="provider",
+            message=_text(getattr(request, "message", None), "Governance briefing"),
+            current_user=current_user,
+            conn=conn,
+            home_id=home_id,
+            days=days,
+            request=request,
+            governance=True,
+        )
+
+    def summarise_context(self, context: dict[str, Any]) -> dict[str, Any]:
+        from schemas.orb_operational import OrbOperationalContextSummary
+
+        summary = context.get("summary")
+        if isinstance(summary, dict):
+            return summary
+        if hasattr(summary, "model_dump"):
+            return summary.model_dump()
+        return OrbOperationalContextSummary().model_dump()
+
+    def safe_context_sources(self, context: dict[str, Any]) -> list[dict[str, Any]]:
+        return list(context.get("sources") or [])
+
+    def _permission_summary(
+        self,
+        current_user: dict[str, Any],
+        *,
+        scope: str,
+        home_id: int | None,
+        child_id: int | None = None,
+        staff_id: int | None = None,
+        care_access: bool = False,
+    ) -> dict[str, Any]:
+        from schemas.orb_operational import OrbOperationalPermissionSummary
+
+        return OrbOperationalPermissionSummary(
+            role=_text(current_user.get("role")),
+            allowed_home_ids=current_allowed_home_ids(current_user),
+            home_id=home_id,
+            provider_id=current_provider_id(current_user),
+            care_record_access=care_access,
+            scope_resolved=scope,
+        ).model_dump()
+
+    def _build_scoped_context(
+        self,
+        *,
+        scope: str,
+        message: str,
+        current_user: dict[str, Any],
+        conn: Any | None,
+        home_id: int | None,
+        days: int,
+        request: Any | None = None,
+        young_person_id: int | None = None,
+        staff_id: int | None = None,
+        include_brief: bool = False,
+        governance: bool = False,
+    ) -> dict[str, Any]:
+        from schemas.orb_operational import OrbOperationalContextSummary
+
+        warnings: list[str] = []
+        sources: list[dict[str, Any]] = []
+        summary = OrbOperationalContextSummary()
+        raw_available = False
+        mode = _text(getattr(request, "mode", None), "general_operational_question")
+
+        if conn is None:
+            summary.unavailable = True
+            summary.degraded = True
+            summary.headline = "Operational context is temporarily unavailable"
+            summary.permission_warnings.append(
+                "Database connection was not available; answer uses general operational guidance only."
+            )
+            return {
+                "summary": summary,
+                "sources": sources,
+                "raw_available": False,
+                "mode": mode,
+                "scope": scope,
+            }
+
+        try:
+            legacy_scope = SCOPE_TO_LEGACY.get(scope, "home")
+            if governance:
+                legacy_scope = "governance"
+            bundle = build_orb_context(
+                conn,
+                current_user=current_user,
+                scope=legacy_scope,
+                message=message,
+                young_person_id=young_person_id,
+                staff_id=staff_id,
+                home_id=home_id,
+                limit=40,
+            )
+            raw_available = not bool(bundle.get("degraded"))
+            if bundle.get("degraded"):
+                summary.degraded = True
+                warnings.append("Operational context is partially available due to database load.")
+
+            stripped = _strip_raw_records(bundle)
+            summary.headline = _text(
+                (bundle.get("operational_cognition") or {}).get("cognition_summary"),
+                "Permissioned operational summary prepared for your role.",
+            )[:280]
+            meta = stripped.get("metadata_summary") or {}
+            summary.themes = list(meta.get("themes") or [])[:8]
+            summary.summary_lines = [
+                f"Chronology items in window: {stripped['counts']['chronology']}",
+                f"Open actions in window: {stripped['counts']['actions']}",
+                f"Evidence items in window: {stripped['counts']['evidence']}",
+            ]
+            if bundle.get("child_voice"):
+                summary.child_journey_notes.append(
+                    _text((bundle.get("child_voice") or {}).get("status"), "Child voice status unavailable.")
+                )
+
+            sources.extend(stripped.get("sources") or [])
+
+            req = request
+            if req and getattr(req, "include_patterns", True):
+                self._attach_pattern_summaries(summary, bundle, sources, days=days, home_id=home_id)
+
+            if req and getattr(req, "include_record_quality", True):
+                self._attach_record_quality(summary, bundle, sources)
+
+            if include_brief or mode == "manager_daily_brief":
+                self._attach_manager_brief(summary, bundle, sources, days=days, home_id=home_id)
+
+            if mode in {"safeguarding_themes", "action_priority"} and req and getattr(req, "include_actions", True):
+                self._attach_action_attention(summary, sources, home_id=home_id, child_id=young_person_id, staff_id=staff_id, conn=conn)
+
+            if mode == "ofsted_evidence_review":
+                self._attach_ofsted_notes(summary, bundle, sources)
+
+            if mode == "governance_briefing" or governance:
+                gov = bundle.get("governance") or {}
+                orb_summary = (gov.get("orb_governance_summary") or {}) if isinstance(gov, dict) else {}
+                for line in (orb_summary.get("headline_lines") or orb_summary.get("themes") or [])[:6]:
+                    summary.governance_notes.append(_text(line))
+                if orb_summary:
+                    sources.append(
+                        {
+                            "label": "Governance intelligence",
+                            "source_type": "governance_intelligence",
+                            "basis": _text(orb_summary.get("summary"), "Governance summary")[:240],
+                            "route": "/governance",
+                        }
+                    )
+
+            if mode == "staff_support" or scope == "staff":
+                workforce = bundle.get("workforce") or {}
+                for line in (workforce.get("support_themes") or workforce.get("themes") or [])[:6]:
+                    summary.staff_support_notes.append(_text(line))
+                if workforce:
+                    sources.append(
+                        {
+                            "label": "Workforce intelligence",
+                            "source_type": "workforce_intelligence",
+                            "basis": _text(workforce.get("summary"), "Workforce summary")[:240],
+                            "route": "/staff",
+                        }
+                    )
+
+            summary.permission_warnings.extend(warnings)
+        except Exception as exc:
+            summary.unavailable = True
+            summary.degraded = True
+            summary.headline = "Operational context is temporarily unavailable"
+            summary.permission_warnings.append(f"Context collection failed softly: {exc}")
+
+        return {
+            "summary": summary,
+            "sources": sources,
+            "raw_available": raw_available,
+            "mode": mode,
+            "scope": scope,
+        }
+
+    def _attach_pattern_summaries(
+        self,
+        summary: Any,
+        bundle: dict[str, Any],
+        sources: list[dict[str, Any]],
+        *,
+        days: int,
+        home_id: int | None,
+    ) -> None:
+        try:
+            from services.pattern_detection_service import pattern_detection_service
+
+            records = []
+            for item in (bundle.get("chronology") or [])[:40]:
+                records.append(
+                    {
+                        "record_id": item.get("id") or item.get("record_id"),
+                        "record_type": item.get("source_type") or "chronology",
+                        "summary": _text(item.get("summary") or item.get("title")),
+                    }
+                )
+            patterns = pattern_detection_service.detect(records=records, home_id=home_id, days=days)
+            for pattern in patterns[:8]:
+                summary.safeguarding_signals.append(_text(pattern.summary))
+            if patterns:
+                sources.append(
+                    {
+                        "label": "Pattern detection",
+                        "source_type": "pattern_detection",
+                        "basis": f"{len(patterns)} pattern(s) in the review window",
+                        "route": "/intelligence-spine",
+                    }
+                )
+        except Exception:
+            return
+
+    def _attach_record_quality(
+        self,
+        summary: Any,
+        bundle: dict[str, Any],
+        sources: list[dict[str, Any]],
+    ) -> None:
+        try:
+            from services.record_quality_intelligence_service import record_quality_intelligence_service
+
+            records = []
+            for item in (bundle.get("chronology") or [])[:30]:
+                records.append(
+                    {
+                        "record_id": item.get("id") or item.get("record_id"),
+                        "record_type": item.get("source_type") or "chronology",
+                        "body": _text(item.get("summary") or item.get("title")),
+                    }
+                )
+            reviews = record_quality_intelligence_service.review_records(records)
+            for review in reviews[:6]:
+                if review.manager_review_required or review.weak_recording_quality:
+                    summary.record_quality_notes.append(
+                        f"Record {review.record_id}: review may be helpful ({review.overall_quality})."
+                    )
+            if reviews:
+                sources.append(
+                    {
+                        "label": "Record quality intelligence",
+                        "source_type": "record_quality_intelligence",
+                        "basis": f"{len(reviews)} record(s) reviewed at summary level",
+                        "route": "/intelligence-spine",
+                    }
+                )
+        except Exception:
+            return
+
+    def _attach_manager_brief(
+        self,
+        summary: Any,
+        bundle: dict[str, Any],
+        sources: list[dict[str, Any]],
+        *,
+        days: int,
+        home_id: int | None,
+    ) -> None:
+        try:
+            from services.registered_manager_daily_brief_service import registered_manager_daily_brief_service
+
+            records = []
+            for item in (bundle.get("chronology") or [])[:50]:
+                records.append(
+                    {
+                        "record_id": item.get("id") or item.get("record_id"),
+                        "record_type": item.get("source_type") or "chronology",
+                        "summary": _text(item.get("summary") or item.get("title")),
+                    }
+                )
+            brief = registered_manager_daily_brief_service.build_daily_brief(
+                records,
+                home_id=home_id,
+                days=max(1, days),
+            )
+            summary.headline = _text(brief.get("headline"), summary.headline)
+            for key, target in (
+                ("urgent_review", summary.attention_items),
+                ("safeguarding_signals", summary.safeguarding_signals),
+                ("children_to_review", summary.child_journey_notes),
+                ("staff_support_signals", summary.staff_support_notes),
+                ("ofsted_evidence_risks", summary.ofsted_evidence_notes),
+                ("quality_of_recording", summary.record_quality_notes),
+            ):
+                for line in (brief.get(key) or [])[:6]:
+                    target.append(_text(line))
+            sources.append(
+                {
+                    "label": "Manager daily brief",
+                    "source_type": "registered_manager_daily_brief",
+                    "basis": _text(brief.get("headline")),
+                    "route": "/command-centre",
+                }
+            )
+        except Exception:
+            return
+
+    def _attach_ofsted_notes(
+        self,
+        summary: Any,
+        bundle: dict[str, Any],
+        sources: list[dict[str, Any]],
+    ) -> None:
+        try:
+            from services.ofsted_judgement_simulation_service import ofsted_judgement_simulation_service
+
+            records = []
+            for item in (bundle.get("evidence") or bundle.get("chronology") or [])[:40]:
+                records.append(
+                    {
+                        "record_id": item.get("id") or item.get("record_id"),
+                        "record_type": item.get("source_type") or "evidence",
+                        "summary": _text(item.get("summary") or item.get("title")),
+                    }
+                )
+            simulation = ofsted_judgement_simulation_service.simulate(records)
+            for item in simulation[:6]:
+                summary.ofsted_evidence_notes.append(
+                    f"{item.judgement_area.replace('_', ' ')}: evidence appears {item.evidence_strength}; manager review recommended."
+                )
+            if simulation:
+                sources.append(
+                    {
+                        "label": "Ofsted evidence simulation",
+                        "source_type": "ofsted_judgement_simulation",
+                        "basis": "Evidence strength summary only — not a grade prediction",
+                        "route": "/governance",
+                    }
+                )
+        except Exception:
+            return
+
+    def _attach_action_attention(
+        self,
+        summary: Any,
+        sources: list[dict[str, Any]],
+        *,
+        home_id: int | None,
+        child_id: int | None,
+        staff_id: int | None,
+        conn: Any,
+    ) -> None:
+        try:
+            from services.intelligence_action_service import intelligence_action_service
+
+            feed = intelligence_action_service.build_attention_feed(
+                home_id=home_id,
+                child_id=child_id,
+                staff_id=staff_id,
+                conn=conn,
+            )
+            for bucket in (feed.urgent, feed.high_priority, feed.awaiting_decision):
+                for item in bucket[:4]:
+                    summary.attention_items.append(_text(item.title, item.label))
+            sources.append(
+                {
+                    "label": "Action attention feed",
+                    "source_type": "intelligence_action",
+                    "basis": "Summary-level action attention items",
+                    "route": "/intelligence-actions",
+                }
+            )
+        except Exception:
+            return
+
+
+orb_operational_context_bridge = OrbOperationalContextBridge()

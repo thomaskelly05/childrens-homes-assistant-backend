@@ -116,6 +116,41 @@ class OrbIntelligenceOutputService:
             care_record_access=False,
         )
 
+    def from_operational_answer(
+        self,
+        *,
+        title: str,
+        summary: str,
+        answer_text: str,
+        sources: list[dict[str, Any]] | None = None,
+        citations: list[dict[str, Any]] | None = None,
+    ) -> OrbIntelligenceOutput:
+        return OrbIntelligenceOutput(
+            type="answer",
+            title=title,
+            summary=summary,
+            sections=[
+                OrbIntelligenceSection(
+                    id="answer",
+                    title="Answer",
+                    body=answer_text,
+                    order=0,
+                )
+            ],
+            sources=list(sources or []),
+            citations=list(citations or []),
+            boundaries=OrbIntelligenceBoundary(
+                surface="operational_os_orb",
+                standalone_only=False,
+                os_linked=True,
+                care_record_access=True,
+                notice="Permissioned operational context summary only.",
+            ),
+            standalone_only=False,
+            os_linked=True,
+            care_record_access=True,
+        )
+
     def from_agent_run(self, response: OrbAgentRunResponse) -> OrbIntelligenceOutput:
         output_type: OrbIntelligenceOutputType = "answer"
         if response.agent_type == "document_analysis":
