@@ -40,6 +40,12 @@ export function AiGovernanceDashboard({ data, warning }: { data: AiGovernanceDas
             <Link href="/intelligence-actions" className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-black text-slate-700">
               Action Board
             </Link>
+            <Link
+              href="/intelligence/governance/privacy"
+              className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-black text-slate-700"
+            >
+              Privacy governance
+            </Link>
             <Link href="/assistant/orb" className="rounded-2xl bg-blue-600 px-4 py-2 text-sm font-black text-white">
               Operational ORB
             </Link>
@@ -60,6 +66,37 @@ export function AiGovernanceDashboard({ data, warning }: { data: AiGovernanceDas
           <AiGovernanceCard title="Deep research" value={summary.deep_research_runs} />
         </div>
       </section>
+
+      {data.privacy ? (
+        <section className="space-y-4" data-testid="ai-governance-privacy-metrics">
+          <div>
+            <h2 className="text-lg font-black text-slate-950">Privacy guard</h2>
+            <p className="text-sm font-medium text-slate-600">Permission checks, redaction and blocked model sends.</p>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <AiGovernanceCard
+              title="Privacy guard decisions"
+              value={data.privacy.privacy_guard_decisions}
+              testId="ai-gov-privacy-guard-decisions"
+            />
+            <AiGovernanceCard
+              title="Denied attempts"
+              value={data.privacy.denied_attempts}
+              testId="ai-gov-privacy-denied"
+            />
+            <AiGovernanceCard
+              title="Redaction applied"
+              value={data.privacy.redaction_applied_count}
+              testId="ai-gov-privacy-redaction"
+            />
+            <AiGovernanceCard
+              title="Model send blocked"
+              value={data.privacy.model_send_blocked}
+              testId="ai-gov-privacy-model-blocked"
+            />
+          </div>
+        </section>
+      ) : null}
 
       <section className="space-y-4" data-testid="ai-governance-safety">
         <div>

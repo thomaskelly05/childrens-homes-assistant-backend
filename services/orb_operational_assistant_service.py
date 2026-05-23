@@ -85,30 +85,68 @@ class OrbOperationalAssistantService:
         sources = self.build_sources(context_bundle)
         citations = self.build_citations(sources)
 
-        try:
-            prompt = self.build_operational_prompt(request, context_bundle)
-            model_request = self.build_model_request(request, prompt, context_bundle)
-            response, decision, trace = await ai_model_router_service.complete_with_routing(
-                message=request.message,
-                system_prompt=model_request["system_prompt"],
-                mode=self._mode_label(request.mode),
-                retrieval_context={
-                    "operational_context": orb_operational_context_bridge.summarise_context(context_bundle),
-                    "sources": [s.model_dump() for s in sources],
-                },
-                detail_level="balanced",
-                surface="operational_os",
+        from services.ai_privacy_guard_service import ai_privacy_guard_service
+
+        privacy_guard = ai_privacy_guard_service.guard_operational_context(
+            context_bundle,
+            action="send_to_model",
+            mode=request.mode,
+            home_id=request.home_id,
+            child_id=request.child_id,
+            staff_id=request.staff_id,
+            message=request.message,
+            current_user=current_user,
+            conn=conn,
+        )
+        privacy_summary = ai_privacy_guard_service.to_operational_summary(privacy_guard)
+
+        if not privacy_guard.allowed or not privacy_guard.model_send_allowed:
+            denial = (
+                "This request needs permissioned OS context that is not available for your role or current scope."
             )
-            routing_meta = ai_model_router_service.routing_metadata_for_context(
-                decision, trace, response=response
-            )
-            answer = _text(response.text)
-            if not answer:
-                answer = self.fallback_answer(request, response.error or "empty_response")
-        except Exception as exc:
-            logger.warning("Operational ORB model routing failed: %s", exc)
-            routing_meta = {"error": str(exc)}
-            answer = self.fallback_answer(request, str(exc))
+            answer = denial
+            routing_meta = {"privacy_guard": "denied", "audit_event_id": privacy_guard.audit_event_id}
+            warnings = list(warnings) + list(privacy_guard.warnings) + ["Privacy guard applied — model call skipped."]
+        else:
+            try:
+                safe_bundle = dict(context_bundle)
+                safe_bundle["privacy_safe_context"] = privacy_guard.safe_context
+                prompt = self.build_operational_prompt(request, safe_bundle)
+                model_request = self.build_model_request(request, prompt, safe_bundle)
+                response, decision, trace = await ai_model_router_service.complete_with_routing(
+                    message=request.message,
+                    system_prompt=model_request["system_prompt"],
+                    mode=self._mode_label(request.mode),
+                    retrieval_context={
+                        "operational_context": privacy_guard.safe_context,
+                        "sources": [s.model_dump() for s in sources],
+                        "summary_level_only": True,
+                    },
+                    detail_level="balanced",
+                    surface="operational_os",
+                )
+                routing_meta = ai_model_router_service.routing_metadata_for_context(
+                    decision, trace, response=response
+                )
+                routing_meta["privacy_guard"] = privacy_summary.model_dump()
+                answer = _text(response.text)
+                if not answer:
+                    answer = self.fallback_answer(request, response.error or "empty_response")
+            except Exception as exc:
+                logger.warning("Operational ORB model routing failed: %s", exc)
+                routing_meta = {"error": str(exc), "privacy_guard": privacy_summary.model_dump()}
+                answer = self.fallback_answer(request, str(exc))
+
+            guard_notes: list[str] = []
+            if privacy_guard.redaction_applied:
+                guard_notes.append("Redaction applied")
+            if privacy_guard.minimisation_applied:
+                guard_notes.append("Summary-level context")
+            guard_notes.append("Privacy guard applied")
+            warnings = list(warnings) + guard_notes + list(privacy_guard.warnings)
+            if privacy_guard.manager_review_required:
+                boundaries.manager_review_required = True
+                warnings.append("Manager review required before acting on safeguarding-related content.")
 
         answer = self.apply_safety_boundaries(answer, request, context_bundle)
         evaluation = self.evaluate_answer(answer, request, context_bundle)
@@ -192,6 +230,7 @@ class OrbOperationalAssistantService:
             else None,
             save_available=bool(enriched.get("save_available")),
             action_creation_available=bool(enriched.get("action_creation_available", True)),
+            privacy_guard=privacy_summary,
         )
 
         from services.orb_operational_output_service import orb_operational_output_service
@@ -248,7 +287,10 @@ class OrbOperationalAssistantService:
         return draft_response
 
     def build_operational_prompt(self, request: OrbOperationalRequest, context: dict[str, Any]) -> str:
-        summary = orb_operational_context_bridge.summarise_context(context)
+        if context.get("privacy_safe_context"):
+            summary = dict(context.get("privacy_safe_context") or {})
+        else:
+            summary = orb_operational_context_bridge.summarise_context(context)
         lines = [
             f"Mode: {request.mode}",
             f"Scope: {request.scope}",

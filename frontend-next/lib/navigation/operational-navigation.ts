@@ -154,6 +154,16 @@ export const operationalNavigation: OperationalNavItem[] = [
     activeRoots: ['intelligence']
   },
   {
+    domain: 'governance',
+    href: '/intelligence/governance/privacy',
+    label: 'AI Privacy',
+    description: 'Privacy guard decisions, redaction metrics and export governance.',
+    icon: ShieldCheck,
+    permissions: ['reports:read'],
+    roleScopes: ['rm', 'ri', 'provider', 'admin'],
+    activeRoots: ['intelligence']
+  },
+  {
     domain: 'reports',
     href: '/reports',
     label: 'Reports',

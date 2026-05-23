@@ -365,6 +365,13 @@ class OrbSavedOutputService:
         record = self.get_output(output_id)
         if not record:
             return None
+        from services.ai_privacy_guard_service import ai_privacy_guard_service
+
+        export_decision = ai_privacy_guard_service.guard_export(
+            surface="saved_outputs",
+            output={"standalone_only": True, "output_id": output_id},
+            current_user={"role": "staff", "permissions": ["assistant:access"]},
+        )
         content = self._format_export(record, fmt)
         safe_title = re.sub(r"[^\w\s-]", "", record.title).strip().replace(" ", "-")[:80]
         ext = {"markdown": "md", "plain_text": "txt", "json": "json", "html": "html"}.get(
@@ -376,6 +383,11 @@ class OrbSavedOutputService:
             "content": content,
             "filename": f"orb-{safe_title or 'output'}.{ext}",
             "standalone_notice": STANDALONE_ARTEFACT_NOTICE,
+            "privacy_notice": export_decision.privacy_notice,
+            "privacy_warnings": list(export_decision.warnings)
+            + [
+                "Check all names, identifiers and sensitive details before saving or sharing."
+            ],
         }
 
     def build_reuse_prompt(

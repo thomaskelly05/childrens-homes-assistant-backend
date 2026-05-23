@@ -6,6 +6,7 @@ import logging
 from typing import Any
 
 from db.connection import DatabaseUnavailableError, get_db_status
+from schemas.ai_privacy import AiPrivacyFilter
 from schemas.indicare_ai_governance import (
     AiGovernanceActionMetric,
     AiGovernanceAlert,
@@ -16,11 +17,13 @@ from schemas.indicare_ai_governance import (
     AiGovernanceFilter,
     AiGovernanceHealth,
     AiGovernanceOutputMetric,
+    AiGovernancePrivacyMetric,
     AiGovernanceQualityMetric,
     AiGovernanceSafetyMetric,
     AiGovernanceSourceMetric,
     AiGovernanceUsageMetric,
 )
+from services.ai_privacy_audit_service import ai_privacy_audit_service
 from services.indicare_ai_governance_event_service import indicare_ai_governance_event_service
 
 logger = logging.getLogger("indicare.ai_governance_dashboard")
@@ -58,6 +61,7 @@ class IndicareAiGovernanceDashboardService:
             sources = self.build_source_metrics(filters, current_user, conn=conn)
             outputs = self.build_output_metrics(filters, current_user, conn=conn)
             actions = self.build_action_metrics(filters, current_user, conn=conn)
+            privacy = self.build_privacy_metrics(filters, current_user, conn=conn)
             alerts = self.build_alerts(filters, current_user, conn=conn)
             recommendations = self.build_recommendations(filters, current_user, conn=conn)
             recent_events = indicare_ai_governance_event_service.get_recent_events(
@@ -86,9 +90,14 @@ class IndicareAiGovernanceDashboardService:
                 boundary_warning_count=safety.boundary_warning_count,
                 estimated_cost_tier_summary=cost.estimated_cost_tier_summary,
                 average_latency_ms=usage.average_latency_ms,
+                privacy_guard_decisions=privacy.privacy_guard_decisions,
+                privacy_denied_attempts=privacy.denied_attempts,
+                privacy_redaction_applied=privacy.redaction_applied_count,
+                privacy_minimisation_applied=privacy.minimisation_applied_count,
             )
             return AiGovernanceDashboardResponse(
                 summary=summary,
+                privacy=privacy,
                 usage=usage,
                 quality=quality,
                 cost=cost,
@@ -125,8 +134,10 @@ class IndicareAiGovernanceDashboardService:
         empty_sources = AiGovernanceSourceMetric()
         empty_outputs = AiGovernanceOutputMetric()
         empty_actions = AiGovernanceActionMetric()
+        empty_privacy = AiGovernancePrivacyMetric()
         return AiGovernanceDashboardResponse(
             summary=empty_summary,
+            privacy=empty_privacy,
             usage=empty_usage,
             quality=empty_quality,
             cost=empty_cost,
@@ -304,6 +315,31 @@ class IndicareAiGovernanceDashboardService:
             boundary_warning_count=int(summary.get("boundary_warning_count") or 0),
             high_risk_event_count=high_risk_events,
             safety_flags_by_type=flags_by_type,
+        )
+
+    def build_privacy_metrics(
+        self,
+        filters: AiGovernanceFilter,
+        current_user: dict[str, Any],
+        *,
+        conn: Any | None = None,
+    ) -> AiGovernancePrivacyMetric:
+        _ = current_user
+        privacy_filters = AiPrivacyFilter(period=filters.period, home_id=filters.home_id, limit=500)
+        summary = ai_privacy_audit_service.get_privacy_summary(privacy_filters, conn=conn)
+        export_attempts = summary.exports_allowed + summary.exports_blocked
+        return AiGovernancePrivacyMetric(
+            privacy_guard_decisions=summary.total_events,
+            denied_attempts=summary.denied_attempts,
+            redaction_applied_count=summary.redaction_applied_count,
+            minimisation_applied_count=summary.minimisation_applied_count,
+            standalone_os_context_blocked=summary.standalone_os_context_blocked,
+            raw_record_blocked=summary.raw_record_blocked,
+            child_scoped_attempts=summary.child_scoped_attempts,
+            safeguarding_review_required=summary.safeguarding_review_required,
+            manager_review_required=summary.manager_review_required,
+            export_attempts=export_attempts,
+            model_send_blocked=summary.model_send_blocked,
         )
 
     def build_citation_metrics(

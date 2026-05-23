@@ -448,6 +448,22 @@ class OrbOperationalOutputService:
         record = self.get_output(output_id, current_user, conn=conn)
         if not record:
             return None
+        from services.ai_privacy_guard_service import ai_privacy_guard_service
+
+        export_decision = ai_privacy_guard_service.guard_export(
+            surface="operational_outputs",
+            output={"output_id": output_id, "type": record.type, "standalone_only": False},
+            current_user=current_user,
+            conn=conn,
+        )
+        if not export_decision.allowed:
+            return {
+                "output_id": output_id,
+                "format": fmt,
+                "denied": True,
+                "privacy_notice": export_decision.privacy_notice,
+                "warnings": export_decision.warnings,
+            }
         content = self._format_export(record, fmt)
         safe_title = re.sub(r"[^\w\s-]", "", record.title).strip().replace(" ", "-")[:80]
         ext = {"markdown": "md", "plain_text": "txt", "json": "json", "html": "html"}.get(fmt, "md")
@@ -457,6 +473,9 @@ class OrbOperationalOutputService:
             "content": content,
             "filename": f"os-orb-{safe_title or 'output'}.{ext}",
             "os_linked_notice": OPERATIONAL_ARTEFACT_NOTICE,
+            "privacy_notice": export_decision.privacy_notice,
+            "privacy_warnings": export_decision.warnings,
+            "audit_event_id": export_decision.audit_event_id,
         }
 
     def mark_for_review(

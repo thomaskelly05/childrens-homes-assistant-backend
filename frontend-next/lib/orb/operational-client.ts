@@ -221,6 +221,20 @@ export type OrbOperationalOutputRecord = OrbOperationalOutputSummary & {
 export const OPERATIONAL_ARTEFACT_NOTICE =
   'Saved operational outputs are OS-linked artefacts. They are not standalone ORB saved outputs.'
 
+export type OrbOperationalPrivacyGuardSummary = {
+  decision: string
+  allowed: boolean
+  redaction_applied?: boolean
+  minimisation_applied?: boolean
+  manager_review_required?: boolean
+  safeguarding_review_required?: boolean
+  model_send_allowed?: boolean
+  blocked_fields?: string[]
+  warnings?: string[]
+  privacy_notice?: string
+  audit_event_id?: string | null
+}
+
 export type OrbOperationalResponse = {
   answer: string
   intelligence_output?: OrbOperationalIntelligenceOutput | null
@@ -254,6 +268,7 @@ export type OrbOperationalResponse = {
   suggested_output_type?: OrbOperationalOutputType | null
   suggested_title?: string | null
   suggested_tags?: string[]
+  privacy_guard?: OrbOperationalPrivacyGuardSummary | null
   operational_output?: {
     available?: boolean
     saved?: boolean
