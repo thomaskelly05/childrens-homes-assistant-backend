@@ -61,6 +61,7 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
             "routers.orb_knowledge_routes",
             "routers.orb_document_routes",
             "routers.orb_evaluation_routes",
+            "routers.orb_saved_output_routes",
             "routers.assistant_product_map_routes",
             "routers.orb_routes",
             "routers.orb_voice_routes",

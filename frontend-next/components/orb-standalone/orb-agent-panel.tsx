@@ -7,6 +7,8 @@ import {
   OrbIntelligenceOutput,
   agentResponseToIntelligenceOutput
 } from '@/components/orb-standalone/orb-intelligence-output'
+import { OrbOutputSaveActions } from '@/components/orb-standalone/orb-output-save-actions'
+import type { StandaloneProject } from '@/lib/orb/standalone-local-store'
 import {
   fetchStandaloneOrbAgents,
   runStandaloneOrbAgent,
@@ -36,7 +38,11 @@ export function OrbAgentPanel({
   initialDocumentText,
   initialDocumentSourceId,
   initialDocumentTitle,
-  onApplyToChat
+  onApplyToChat,
+  projects,
+  activeProjectId,
+  activeProjectName,
+  onReuseInChat
 }: {
   open: boolean
   onClose: () => void
@@ -46,6 +52,10 @@ export function OrbAgentPanel({
   initialDocumentSourceId?: string | null
   initialDocumentTitle?: string
   onApplyToChat?: (text: string, response: OrbAgentRunResponse) => void
+  projects?: StandaloneProject[]
+  activeProjectId?: string
+  activeProjectName?: string
+  onReuseInChat?: (prompt: string) => void
 }) {
   const [agents, setAgents] = useState<OrbAgentDefinition[]>([])
   const [loading, setLoading] = useState(false)
@@ -325,6 +335,28 @@ export function OrbAgentPanel({
           {result ? (
             <div className="mt-4 rounded-lg border border-white/[0.06] bg-white/[0.02] p-3">
               <OrbIntelligenceOutput output={agentResponseToIntelligenceOutput(result)} />
+              {projects?.length ? (
+                <div className="mt-4 border-t border-white/[0.06] pt-4">
+                  <OrbOutputSaveActions
+                    output={agentResponseToIntelligenceOutput(result)}
+                    suggestedType={
+                      deepResearchMode
+                        ? 'deep_research'
+                        : outputFormat === 'action_plan'
+                          ? 'action_plan'
+                          : outputFormat === 'briefing'
+                            ? 'manager_briefing'
+                            : 'general_research'
+                    }
+                    suggestedTitle={result.output.title}
+                    projects={projects}
+                    activeProjectId={activeProjectId}
+                    activeProjectName={activeProjectName}
+                    createdFrom={deepResearchMode ? 'deep_research' : 'agent'}
+                    onReuseInChat={onReuseInChat}
+                  />
+                </div>
+              ) : null}
               {result.model_routing ? (
                 <p className="mt-3 text-[10px] text-slate-600">
                   Model: {result.model_routing.provider}/{result.model_routing.model} ({result.model_routing.task_type})

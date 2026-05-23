@@ -226,6 +226,17 @@ def test_intelligence_output_modules_exist():
     assert (repo / "frontend-next" / "components" / "orb-standalone" / "orb-intelligence-output.tsx").is_file()
 
 
+def test_saved_outputs_modules_exist():
+    from pathlib import Path
+
+    repo = Path(__file__).resolve().parents[1]
+    assert (repo / "schemas" / "orb_saved_outputs.py").is_file()
+    assert (repo / "services" / "orb_saved_output_service.py").is_file()
+    assert (repo / "routers" / "orb_saved_output_routes.py").is_file()
+    assert (repo / "sql" / "075_orb_saved_outputs.sql").is_file()
+    assert (repo / "frontend-next" / "components" / "orb-standalone" / "orb-saved-outputs-panel.tsx").is_file()
+
+
 def test_frontend_document_panel_deep_research_button():
     companion = _read(REPO_ROOT / "frontend-next" / "components" / "orb-standalone" / "orb-document-panel.tsx")
     assert "Run Deep Research from this document" in companion

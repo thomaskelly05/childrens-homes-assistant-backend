@@ -18,6 +18,7 @@ from services.orb_document_ingestion_service import (
     orb_document_ingestion_service,
 )
 from services.orb_document_understanding_service import orb_document_understanding_service
+from services.orb_intelligence_output_service import orb_intelligence_output_service
 
 logger = logging.getLogger("indicare.orb_document_routes")
 
@@ -110,12 +111,21 @@ async def analyse_document(
     _reject_os_ids(payload.model_dump())
     try:
         understanding = await orb_document_understanding_service.analyse_document(payload)
+        intel = orb_intelligence_output_service.from_document_analysis(understanding)
+        envelope = orb_intelligence_output_service.build_save_envelope(
+            intel,
+            payload,
+            created_from="document_analysis",
+            created_from_id=understanding.source_id,
+            analysis_mode=understanding.analysis_mode,
+        )
         return _success(
             {
                 "understanding": understanding.model_dump(),
                 "standalone_only": True,
                 "os_linked": False,
                 "care_record_access": False,
+                **envelope,
             }
         )
     except ValueError as exc:

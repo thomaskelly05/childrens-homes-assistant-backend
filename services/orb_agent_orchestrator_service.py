@@ -25,6 +25,7 @@ from services.orb_agent_registry_service import LIVE_WEB_NOTE, orb_agent_registr
 from services.orb_citation_service import orb_citation_service
 from services.orb_document_understanding_service import orb_document_understanding_service
 from services.orb_evaluation_service import orb_evaluation_service
+from schemas.orb_intelligence_output import OrbIntelligenceOutput
 from services.orb_intelligence_output_service import orb_intelligence_output_service
 from services.orb_rag_retrieval_service import orb_rag_retrieval_service
 from services.orb_standalone_sources import append_sources_basis_section
@@ -179,7 +180,7 @@ class OrbAgentOrchestratorService:
             intel_warnings = self._evaluation_warnings(evaluation)
             warnings = list(dict.fromkeys(warnings + intel_warnings))
 
-            return OrbAgentRunResponse(
+            response = OrbAgentRunResponse(
                 success=True,
                 agent_type=agent_type,
                 status="completed",
@@ -193,6 +194,7 @@ class OrbAgentOrchestratorService:
                 warnings=warnings,
                 safety_notice=self.build_safety_notice(agent, request),
             )
+            return self._attach_save_metadata(response, request)
         except Exception as exc:
             logger.warning("agent run failed type=%s error=%s", agent_type, type(exc).__name__, exc_info=True)
             return self.fallback_agent_response(exc, request, agent, steps=steps)
@@ -381,7 +383,7 @@ class OrbAgentOrchestratorService:
 
         warnings = self._evaluation_warnings_from_dict(evaluation)
 
-        return OrbAgentRunResponse(
+        response = OrbAgentRunResponse(
             success=True,
             agent_type="document_analysis",
             status="completed",
@@ -418,6 +420,39 @@ class OrbAgentOrchestratorService:
             warnings=list(dict.fromkeys(warnings + [STANDALONE_BOUNDARY_SHORT])),
             safety_notice=understanding.safety_notice or self.build_safety_notice(agent, request),
         )
+        return self._attach_save_metadata(
+            response,
+            request,
+            created_from="agent",
+            analysis_mode=analysis_mode,
+        )
+
+    def _attach_save_metadata(
+        self,
+        response: OrbAgentRunResponse,
+        request: OrbAgentRunRequest,
+        *,
+        created_from: str = "agent",
+        analysis_mode: str | None = None,
+    ) -> OrbAgentRunResponse:
+        intel_data = (response.context_used or {}).get("intelligence_output")
+        if intel_data:
+            intel = OrbIntelligenceOutput.model_validate(intel_data)
+        else:
+            intel = orb_intelligence_output_service.from_agent_run(response)
+        mode = analysis_mode
+        if not mode:
+            doc_ctx = (response.context_used or {}).get("document_analysis") or {}
+            mode = doc_ctx.get("analysis_mode")
+        envelope = orb_intelligence_output_service.build_save_envelope(
+            intel,
+            request,
+            created_from=created_from,
+            analysis_mode=mode,
+        )
+        ctx = dict(response.context_used or {})
+        ctx.update(envelope)
+        return response.model_copy(update={"context_used": ctx})
 
     def _evaluate_agent_output(
         self,

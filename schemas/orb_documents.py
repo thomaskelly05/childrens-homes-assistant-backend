@@ -130,6 +130,13 @@ class OrbDocumentAnalysisRequest(OrbStandaloneBoundaryMixin):
     text: str | None = Field(default=None, max_length=500_000)
     question: str | None = Field(default=None, max_length=4000)
     include_evaluation: bool = True
+    save_output: bool = False
+    project_id: str | None = Field(default=None, max_length=120)
+    project_name: str | None = Field(default=None, max_length=500)
+    profile_ids: list[str] = Field(default_factory=list)
+    tags: list[str] = Field(default_factory=list)
+    save_title: str | None = Field(default=None, max_length=500)
+    save_output_type: str | None = Field(default=None, max_length=80)
 
 
 class OrbDocumentUnderstanding(OrbStandaloneBoundaryMixin):
