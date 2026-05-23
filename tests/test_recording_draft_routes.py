@@ -16,6 +16,13 @@ def memory_drafts(monkeypatch):
     monkeypatch.setattr(svc, "_detect_storage_mode", lambda: "memory")
 
 
+def test_submission_targets_route(fake_state):
+    result = asyncio.run(draft_routes.list_submission_targets(current_user=fake_state["user"]))
+    assert result["success"] is True
+    assert isinstance(result["data"], list)
+    assert len(result["data"]) >= 1
+
+
 def test_recording_drafts_health_requires_auth_shape(fake_state):
     health = asyncio.run(draft_routes.recording_drafts_health(current_user=fake_state["user"]))
     assert health["success"] is True
@@ -70,8 +77,11 @@ def test_recording_draft_route_lifecycle(fake_state):
             conn=None,
         )
     )
-    assert submitted["data"]["formal_record_created"] is False
-    assert "not fully wired" in submitted["data"]["warning"].lower()
+    data = submitted["data"]
+    assert data["submitted"] is True
+    assert data["formal_record_created"] is False
+    warnings = [w.lower() for w in data.get("warnings", [])]
+    assert any("not wired" in w or "database" in w or "child" in w for w in warnings)
 
     archived = asyncio.run(
         draft_routes.archive_recording_draft(draft_id, current_user=user, conn=None)

@@ -96,6 +96,50 @@ export type RecordingDraftSubmitPayload = {
   submitted_to?: string
   target_workflow?: string
   metadata?: Record<string, unknown>
+  confirm_reviewed?: boolean
+  force_submit?: boolean
+  create_chronology_link?: boolean
+}
+
+export type RecordingSubmissionTargetStatus =
+  | 'supported_now'
+  | 'submit_as_draft_only'
+  | 'route_to_existing_workflow'
+  | 'review_required_before_submit'
+  | 'unsupported'
+
+export type RecordingSubmissionTarget = {
+  recording_type: string
+  form_id?: string | null
+  target_status: RecordingSubmissionTargetStatus
+  target_record_type?: string | null
+  backend_route?: string | null
+  frontend_route?: string | null
+  service_name?: string | null
+  requires_child?: boolean
+  requires_manager_review?: boolean
+  safeguarding_sensitive?: boolean
+  privacy_sensitive?: boolean
+  chronology_link_supported?: boolean
+  notes?: string | null
+}
+
+export type RecordingSubmissionResult = {
+  success: boolean
+  draft_id: string
+  submitted: boolean
+  formal_record_created: boolean
+  formal_record_type?: string | null
+  linked_record_id?: string | null
+  linked_chronology_id?: string | null
+  target_status: RecordingSubmissionTargetStatus
+  review_required: boolean
+  safeguarding_review_required: boolean
+  warnings: string[]
+  next_steps: string[]
+  route_hint?: string | null
+  frontend_route?: string | null
+  draft?: RecordingDraftRecord | null
 }
 
 export type RecordingDraftSubmitData = {
@@ -103,6 +147,8 @@ export type RecordingDraftSubmitData = {
   warning: string
   formal_record_created: boolean
   linked_record_id?: string | null
+  linked_chronology_id?: string | null
+  submission?: RecordingSubmissionResult
 }
 
 type ApiEnvelope<T> = { success?: boolean; data?: T; error?: string }
@@ -289,6 +335,40 @@ export async function markRecordingDraftReadyForReview(draftId: string) {
   })
 }
 
+function emptySubmissionResult(draftId: string): RecordingSubmissionResult {
+  return {
+    success: false,
+    draft_id: draftId,
+    submitted: false,
+    formal_record_created: false,
+    target_status: 'unsupported',
+    review_required: false,
+    safeguarding_review_required: false,
+    warnings: ['Formal route is not fully wired yet.'],
+    next_steps: []
+  }
+}
+
+export async function listRecordingSubmissionTargets() {
+  const response = await fetch('/recording-drafts/submission-targets', {
+    credentials: 'include',
+    cache: 'no-store'
+  })
+  return parseEnvelope<RecordingSubmissionTarget[]>(response, [])
+}
+
+export async function getRecordingSubmissionTarget(draftId: string) {
+  const response = await fetch(
+    `/recording-drafts/${encodeURIComponent(draftId)}/submission-target`,
+    { credentials: 'include', cache: 'no-store' }
+  )
+  return parseEnvelope<{
+    target: RecordingSubmissionTarget
+    route_hint: string
+    frontend_route?: string | null
+  } | null>(response, null)
+}
+
 export async function submitRecordingDraft(draftId: string, payload?: RecordingDraftSubmitPayload) {
   const response = await fetch(`/recording-drafts/${encodeURIComponent(draftId)}/submit`, {
     method: 'POST',
@@ -296,32 +376,76 @@ export async function submitRecordingDraft(draftId: string, payload?: RecordingD
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload || {})
   })
-  return parseEnvelope<RecordingDraftSubmitData>(response, {
-    draft: {
-      id: draftId,
-      title: '',
-      body: '',
-      recording_type: 'daily-note',
-      status: 'submitted',
-      review_status: 'awaiting_review',
-      manager_review_required: false,
-      safeguarding_review_required: false,
-      privacy_sensitive: false,
-      safeguarding_sensitive: false,
-      quality_flags: [],
-      language_flags: [],
-      privacy_flags: [],
-      checklist_status: {},
-      privacy_guard: {},
-      redaction_summary: {},
-      minimisation_summary: {},
-      created_at: '',
-      updated_at: '',
-      metadata: {}
-    },
-    warning: 'Formal record submission integration is not fully wired yet.',
+  const fallbackDraft: RecordingDraftRecord = {
+    id: draftId,
+    title: '',
+    body: '',
+    recording_type: 'daily-note',
+    status: 'submitted',
+    review_status: 'awaiting_review',
+    manager_review_required: false,
+    safeguarding_review_required: false,
+    privacy_sensitive: false,
+    safeguarding_sensitive: false,
+    quality_flags: [],
+    language_flags: [],
+    privacy_flags: [],
+    checklist_status: {},
+    privacy_guard: {},
+    redaction_summary: {},
+    minimisation_summary: {},
+    created_at: '',
+    updated_at: '',
+    metadata: {}
+  }
+  const parsed = await parseEnvelope<RecordingSubmissionResult & RecordingDraftSubmitData>(response, {
+    ...emptySubmissionResult(draftId),
+    draft: fallbackDraft,
+    warning: 'Formal route is not fully wired yet.',
     formal_record_created: false
-  })
+  } as RecordingSubmissionResult & RecordingDraftSubmitData)
+
+  const raw = parsed.data
+  const submission: RecordingSubmissionResult = {
+    success: raw.success ?? true,
+    draft_id: raw.draft_id || draftId,
+    submitted: raw.submitted ?? true,
+    formal_record_created: raw.formal_record_created ?? false,
+    formal_record_type: raw.formal_record_type,
+    linked_record_id: raw.linked_record_id,
+    linked_chronology_id: raw.linked_chronology_id,
+    target_status: raw.target_status || 'unsupported',
+    review_required: raw.review_required ?? false,
+    safeguarding_review_required: raw.safeguarding_review_required ?? false,
+    warnings: raw.warnings?.length
+      ? raw.warnings
+      : raw.warning
+        ? [raw.warning]
+        : ['Formal route is not fully wired yet.'],
+    next_steps: raw.next_steps || [],
+    route_hint: raw.route_hint,
+    frontend_route: (raw as { frontend_route?: string }).frontend_route,
+    draft: raw.draft || fallbackDraft
+  }
+
+  const warning =
+    submission.warnings[0] ||
+    (submission.formal_record_created
+      ? 'Formal record created successfully.'
+      : 'Formal route is not fully wired yet.')
+
+  return {
+    ok: parsed.ok,
+    error: parsed.error,
+    data: {
+      draft: submission.draft || fallbackDraft,
+      warning,
+      formal_record_created: submission.formal_record_created,
+      linked_record_id: submission.linked_record_id,
+      linked_chronology_id: submission.linked_chronology_id,
+      submission
+    } satisfies RecordingDraftSubmitData
+  }
 }
 
 export async function archiveRecordingDraft(draftId: string) {
