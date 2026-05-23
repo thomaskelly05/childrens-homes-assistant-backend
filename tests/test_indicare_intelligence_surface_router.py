@@ -57,6 +57,19 @@ def test_standalone_boundary_message_for_child():
     message = standalone_os_boundary_message("Tell me about Jamie as a child in placement")
     assert message is not None
     assert "/assistant/orb" in message
+    assert "child_journey" in message
+
+
+def test_operational_intents_include_mode_hints():
+    child = indicare_intelligence_surface_router.route("Tell me about this child's chronology")
+    assert "mode=child_journey" in (child.suggested_route or "")
+    manager = indicare_intelligence_surface_router.route("What needs manager review today?")
+    assert "/assistant/orb" in (manager.suggested_route or "")
+    assert "mode=" in (manager.suggested_route or "")
+    ofsted = indicare_intelligence_surface_router.route(
+        "What does Ofsted expect about our records in this home?"
+    )
+    assert "ofsted_evidence" in (ofsted.suggested_route or "")
 
 
 def test_surface_route_api(fake_state):

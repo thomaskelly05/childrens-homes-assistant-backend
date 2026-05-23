@@ -121,7 +121,7 @@ def route_intelligence_surface(
             reason="Child-specific live records, chronology or placement context require permissioned IndiCare OS.",
             allowed_in_standalone=False,
             requires_os_context=True,
-            suggested_route="/assistant/orb",
+            suggested_route="/assistant/orb?mode=child_journey_summary",
             intent_category="child_live_context",
             safety_notice=(
                 "Standalone ORB cannot access live child records. Use IndiCare OS ORB at /assistant/orb "
@@ -137,7 +137,7 @@ def route_intelligence_surface(
             reason="Live staff records and workforce intelligence require OS context.",
             allowed_in_standalone=False,
             requires_os_context=True,
-            suggested_route="/assistant/orb",
+            suggested_route="/assistant/orb?mode=staff_support",
             intent_category="staff_live_context",
             safety_notice="Use operational ORB or workforce areas for live staff context.",
         )
@@ -153,7 +153,15 @@ def route_intelligence_surface(
             reason="Manager oversight, patterns and live evidence need Intelligence Spine or operational ORB.",
             allowed_in_standalone=False,
             requires_os_context=True,
-            suggested_route="/care-hub" if "care hub" in lower else "/assistant/orb",
+            suggested_route=(
+                "/care-hub"
+                if "care hub" in lower
+                else "/assistant/orb?mode=manager_daily_brief"
+                if any(t in lower for t in ("attention today", "manager review", "daily brief"))
+                else "/assistant/orb?mode=safeguarding_themes"
+                if "safeguarding" in lower
+                else "/assistant/orb?mode=action_priority"
+            ),
             intent_category="manager_oversight",
             safety_notice="Do not infer live actions from standalone chat; review in OS dashboards.",
         )
@@ -177,7 +185,7 @@ def route_intelligence_surface(
                 reason="Ofsted questions about your home's live evidence need OS inspection readiness.",
                 allowed_in_standalone=False,
                 requires_os_context=True,
-                suggested_route="/assistant/orb",
+                suggested_route="/assistant/orb?mode=ofsted_evidence_review",
                 intent_category="ofsted_live_evidence",
             )
         return SurfaceRoutingDecision(
@@ -257,11 +265,26 @@ def standalone_os_boundary_message(intent: str) -> str | None:
     decision = route_intelligence_surface(intent)
     if decision.allowed_in_standalone:
         return None
-    route_hint = decision.suggested_route or "/assistant/orb"
+    route_hint = decision.suggested_route or "/assistant/orb?mode=operational_summary"
     return (
         f"This needs permissioned IndiCare OS context. Use OS ORB ({route_hint}). "
         f"{decision.safety_notice or ''}"
     ).strip()
+
+
+def operational_orb_mode_hint(intent: str) -> str | None:
+    """Map intent text to operational ORB mode query parameter."""
+    decision = route_intelligence_surface(intent)
+    route = decision.suggested_route or ""
+    if "mode=" in route:
+        return route.split("mode=", 1)[-1].split("&", 1)[0]
+    if decision.intent_category == "child_live_context":
+        return "child_journey_summary"
+    if decision.intent_category == "ofsted_live_evidence":
+        return "ofsted_evidence_review"
+    if decision.intent_category == "manager_oversight":
+        return "manager_daily_brief"
+    return None
 
 
 class IndicareIntelligenceSurfaceRouterService:
