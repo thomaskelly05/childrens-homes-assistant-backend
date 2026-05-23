@@ -870,8 +870,8 @@ textarea:focus-visible {
 }
 
 .orb-chat-layout {
-  --orb-sidebar-width: 280px;
-  --orb-chat-column-max: 52.5rem;
+  --orb-sidebar-width: 260px;
+  --orb-chat-column-max: 56.25rem;
   --orb-composer-max: 53.125rem;
   height: 100dvh;
   max-height: 100dvh;
@@ -915,63 +915,63 @@ textarea:focus-visible {
   display: none;
 }
 
+.orb-mode-chips--quiet button {
+  font-size: 0.6875rem;
+  padding: 0.25rem 0.625rem;
+}
+
 .orb-voice-dock {
   min-height: 0;
 }
 
-.orb-floating-dock {
+.orb-companion-float {
   position: fixed;
-  z-index: 45;
+  z-index: 40;
+  right: clamp(0.75rem, 2vw, 1.25rem);
+  bottom: calc(5.75rem + env(safe-area-inset-bottom));
   pointer-events: none;
+  max-width: min(18rem, calc(100vw - 1.5rem));
 }
 
-.orb-floating-dock > * {
+.orb-companion-float > * {
   pointer-events: auto;
 }
 
-.orb-floating-dock--collapsed {
-  right: 1.25rem;
-  bottom: calc(6.5rem + env(safe-area-inset-bottom));
-}
-
-.orb-floating-dock--expanded {
-  right: 1rem;
-  bottom: calc(5.5rem + env(safe-area-inset-bottom));
-  top: 4.5rem;
-  max-height: calc(100dvh - 6rem - env(safe-area-inset-bottom));
-}
-
-.orb-floating-dock-drawer {
-  width: min(20rem, calc(100vw - 2rem));
-  max-height: min(32rem, calc(100dvh - 8rem - env(safe-area-inset-bottom)));
-  overflow-y: auto;
-  border-radius: 1.25rem;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(10, 14, 22, 0.88);
-  backdrop-filter: blur(20px);
-  box-shadow:
-    0 24px 48px rgba(0, 0, 0, 0.45),
-    0 0 0 1px rgba(34, 211, 238, 0.08) inset;
-  scrollbar-width: thin;
-}
-
-.orb-floating-dock-trigger {
+.orb-companion-fab {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.35rem;
+  gap: 0.25rem;
+  padding: 0.25rem;
   border-radius: 9999px;
-  border: 1px solid rgba(34, 211, 238, 0.35);
-  background: rgba(7, 11, 18, 0.92);
+  border: 1px solid rgba(34, 211, 238, 0.28);
+  background: rgba(7, 11, 18, 0.94);
   backdrop-filter: blur(12px);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.38);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.orb-floating-dock-trigger:hover {
-  border-color: rgba(34, 211, 238, 0.55);
-  box-shadow: 0 16px 40px rgba(34, 211, 238, 0.15);
+.orb-companion-fab:hover {
+  border-color: rgba(34, 211, 238, 0.5);
+}
+
+.orb-companion-popover {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 0.5rem);
+  width: min(18rem, calc(100vw - 2rem));
+  max-height: min(24rem, calc(100dvh - 10rem - env(safe-area-inset-bottom)));
+  overflow-y: auto;
+  border-radius: 1.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(10, 14, 22, 0.94);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
+  scrollbar-width: thin;
+}
+
+.orb-companion-expanded-voice {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .orb-starter-card {
@@ -999,20 +999,18 @@ textarea:focus-visible {
   animation: orb-standalone-breathe 4.5s ease-in-out infinite;
 }
 
-@media (max-width: 1279px) {
-  .orb-floating-dock {
-    display: none;
-  }
-
-  .orb-mobile-orb-fab {
-    bottom: calc(5.5rem + env(safe-area-inset-bottom));
+@media (max-width: 767px) {
+  .orb-companion-float {
+    bottom: calc(5.25rem + env(safe-area-inset-bottom));
   }
 }
 
-@media (min-width: 1280px) {
-  .orb-chat-composer {
-    padding-right: 1rem;
-  }
+.orb-panel-overlay {
+  overscroll-behavior: contain;
+}
+
+.orb-panel-drawer {
+  max-height: 100dvh;
 }
 
 @media (prefers-reduced-motion: reduce) {

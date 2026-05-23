@@ -3,9 +3,6 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import {
   Archive,
-  Bot,
-  BookOpen,
-  FileText,
   Bookmark,
   ChevronDown,
   ChevronUp,
@@ -21,7 +18,6 @@ import {
   X
 } from 'lucide-react'
 
-import type { StandaloneOrbMode } from '@/lib/orb/standalone-client'
 import {
   createStandaloneProfile,
   createStandaloneProject,
@@ -32,24 +28,15 @@ import {
   type StandaloneWorkspace
 } from '@/lib/orb/standalone-local-store'
 
-type PromptEntry = { text: string; mode?: StandaloneOrbMode }
-
 export function OrbStandaloneSidebar({
   workspace,
   chatSearch,
-  startersExpanded,
-  suggestedPromptGroups,
   onChatSearchChange,
-  onToggleStarters,
-  onApplyPrompt,
   onSelectChat,
   onNewChat,
   onSelectProject,
   onWorkspaceChange,
   onOpenSettings,
-  onOpenKnowledgeLibrary,
-  onOpenDocuments,
-  onOpenAgents,
   onOpenSavedOutputs,
   onOpenTools,
   savedOutputsCount,
@@ -57,26 +44,19 @@ export function OrbStandaloneSidebar({
 }: {
   workspace: StandaloneWorkspace
   chatSearch: string
-  startersExpanded: boolean
-  suggestedPromptGroups: Array<{ title: string; prompts: PromptEntry[] }>
   onChatSearchChange: (value: string) => void
-  onToggleStarters: () => void
-  onApplyPrompt: (entry: PromptEntry) => void
   onSelectChat: (chatId: string) => void
   onNewChat: (projectId?: string) => void
   onSelectProject: (projectId: string) => void
   onWorkspaceChange: (next: StandaloneWorkspace) => void
   onOpenSettings?: () => void
-  onOpenKnowledgeLibrary?: () => void
-  onOpenDocuments?: () => void
-  onOpenAgents?: () => void
   onOpenSavedOutputs?: () => void
   onOpenTools?: () => void
   savedOutputsCount?: number
   onClose?: () => void
 }) {
-  const [projectsOpen, setProjectsOpen] = useState(true)
-  const [profilesOpen, setProfilesOpen] = useState(() => workspace.profiles.length > 0)
+  const [projectsOpen, setProjectsOpen] = useState(false)
+  const [profilesOpen, setProfilesOpen] = useState(false)
   const [recentOpen, setRecentOpen] = useState(true)
   const [profileEditorOpen, setProfileEditorOpen] = useState(false)
   const [projectEditorOpen, setProjectEditorOpen] = useState(false)
@@ -173,7 +153,7 @@ export function OrbStandaloneSidebar({
 
   return (
     <>
-      <div className="flex items-center gap-2 border-b border-white/[0.06] px-4 py-3.5">
+      <div className="flex items-center gap-2 border-b border-white/[0.06] px-4 py-3">
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-400/25 to-violet-500/20 text-sm font-black text-cyan-100">
           O
         </span>
@@ -193,6 +173,7 @@ export function OrbStandaloneSidebar({
           type="button"
           onClick={() => onNewChat(workspace.activeProjectId)}
           className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-white transition hover:bg-white/[0.06]"
+          data-orb-sidebar-new-chat
         >
           <MessageSquarePlus className="h-4 w-4 text-slate-400" aria-hidden />
           New chat
@@ -207,6 +188,7 @@ export function OrbStandaloneSidebar({
               onChange={(e) => onChatSearchChange(e.target.value)}
               placeholder="Search chats"
               className="w-full bg-transparent text-sm text-slate-200 outline-none placeholder:text-slate-500"
+              data-orb-sidebar-search
             />
           </label>
         </div>
@@ -264,24 +246,13 @@ export function OrbStandaloneSidebar({
           </ul>
         </SectionToggle>
 
-        <SectionToggle label="Profiles" open={profilesOpen} onToggle={() => setProfilesOpen((o) => !o)}>
-          {profilesOpen ? (
-            <p className="mx-1 mb-1 px-2 text-[10px] leading-4 text-slate-500">
-              User-provided context only — does not access IndiCare OS records.
-            </p>
-          ) : null}
-          {workspace.profiles.length === 0 && !profileEditorOpen ? (
-            <button
-              type="button"
-              onClick={() => {
-                setProfileEditorOpen(true)
-                setProfilesOpen(true)
-              }}
-              className="mx-1 block w-[calc(100%-0.5rem)] rounded-lg px-3 py-2 text-left text-xs text-slate-500 hover:bg-white/[0.04] hover:text-slate-300"
-            >
-              Create standalone profile
-            </button>
-          ) : (
+        {workspace.profiles.length > 0 ? (
+          <SectionToggle label="Profiles" open={profilesOpen} onToggle={() => setProfilesOpen((o) => !o)}>
+            {profilesOpen ? (
+              <p className="mx-1 mb-1 px-2 text-[10px] leading-4 text-slate-500">
+                User-provided context only — does not access IndiCare OS records.
+              </p>
+            ) : null}
             <ul className="space-y-0.5">
               {workspace.profiles.map((profile) => (
                 <li key={profile.id} className="group flex items-center gap-2 px-1">
@@ -299,51 +270,53 @@ export function OrbStandaloneSidebar({
                   </button>
                 </li>
               ))}
-              {profileEditorOpen ? (
-                <li className="mx-1 mt-1 space-y-2 rounded-lg border border-white/10 p-2">
-                  <input
-                    value={profileDraft.name}
-                    onChange={(e) => setProfileDraft((d) => ({ ...d, name: e.target.value }))}
-                    placeholder="Name"
-                    className="w-full rounded-lg border border-white/10 bg-transparent px-2 py-1.5 text-xs text-white"
-                  />
-                  <input
-                    value={profileDraft.label}
-                    onChange={(e) => setProfileDraft((d) => ({ ...d, label: e.target.value }))}
-                    placeholder="Type (e.g. Child context)"
-                    className="w-full rounded-lg border border-white/10 bg-transparent px-2 py-1.5 text-xs text-white"
-                  />
-                  <textarea
-                    value={profileDraft.notes}
-                    onChange={(e) => setProfileDraft((d) => ({ ...d, notes: e.target.value }))}
-                    placeholder="Notes / context"
-                    rows={2}
-                    className="w-full rounded-lg border border-white/10 bg-transparent px-2 py-1.5 text-xs text-white"
-                  />
-                  <div className="flex gap-2">
-                    <button type="button" onClick={saveProfile} className="flex-1 rounded-lg bg-white/[0.08] py-1 text-xs font-semibold text-white">
-                      Save profile
-                    </button>
-                    <button type="button" onClick={() => setProfileEditorOpen(false)} className="flex-1 rounded-lg py-1 text-xs text-slate-500">
-                      Cancel
-                    </button>
-                  </div>
-                </li>
-              ) : (
-                <li>
-                  <button
-                    type="button"
-                    onClick={() => setProfileEditorOpen(true)}
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-slate-500 hover:bg-white/[0.04]"
-                  >
-                    <UserPlus className="h-3.5 w-3.5" />
-                    Create profile
-                  </button>
-                </li>
-              )}
             </ul>
-          )}
-        </SectionToggle>
+          </SectionToggle>
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              setProfileEditorOpen(true)
+              setProfilesOpen(true)
+            }}
+            className="mt-3 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-slate-500 hover:bg-white/[0.04] hover:text-slate-300"
+          >
+            <UserPlus className="h-3.5 w-3.5" />
+            Create standalone profile
+          </button>
+        )}
+
+        {profileEditorOpen ? (
+          <div className="mx-1 mt-2 space-y-2 rounded-lg border border-white/10 p-2">
+            <input
+              value={profileDraft.name}
+              onChange={(e) => setProfileDraft((d) => ({ ...d, name: e.target.value }))}
+              placeholder="Name"
+              className="w-full rounded-lg border border-white/10 bg-transparent px-2 py-1.5 text-xs text-white"
+            />
+            <input
+              value={profileDraft.label}
+              onChange={(e) => setProfileDraft((d) => ({ ...d, label: e.target.value }))}
+              placeholder="Type (e.g. Child context)"
+              className="w-full rounded-lg border border-white/10 bg-transparent px-2 py-1.5 text-xs text-white"
+            />
+            <textarea
+              value={profileDraft.notes}
+              onChange={(e) => setProfileDraft((d) => ({ ...d, notes: e.target.value }))}
+              placeholder="Notes / context"
+              rows={2}
+              className="w-full rounded-lg border border-white/10 bg-transparent px-2 py-1.5 text-xs text-white"
+            />
+            <div className="flex gap-2">
+              <button type="button" onClick={saveProfile} className="flex-1 rounded-lg bg-white/[0.08] py-1 text-xs font-semibold text-white">
+                Save profile
+              </button>
+              <button type="button" onClick={() => setProfileEditorOpen(false)} className="flex-1 rounded-lg py-1 text-xs text-slate-500">
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : null}
 
         <SectionToggle label="Recent chats" open={recentOpen} onToggle={() => setRecentOpen((o) => !o)}>
           <ul className="space-y-0.5">
@@ -378,52 +351,14 @@ export function OrbStandaloneSidebar({
             )}
           </ul>
         </SectionToggle>
-
-        <SectionToggle label="Starters" open={startersExpanded} onToggle={onToggleStarters}>
-          <div className="space-y-0.5">
-            {suggestedPromptGroups.flatMap((group) => group.prompts.slice(0, 2)).map((prompt) => (
-              <button
-                key={prompt.text}
-                type="button"
-                onClick={() => onApplyPrompt(prompt)}
-                className="w-full rounded-lg px-3 py-2 text-left text-xs leading-5 text-slate-400 hover:bg-white/[0.04] hover:text-slate-200"
-              >
-                {prompt.text}
-              </button>
-            ))}
-          </div>
-        </SectionToggle>
       </div>
 
-      <div className="shrink-0 space-y-2 border-t border-white/[0.06] p-3">
-        <button
-          type="button"
-          onClick={onOpenTools}
-          className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-slate-400 transition hover:bg-white/[0.04] hover:text-slate-200"
-        >
-          <Wrench className="h-4 w-4" aria-hidden />
-          IndiCare Tools
-        </button>
-        <button
-          type="button"
-          onClick={onOpenDocuments}
-          className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-slate-400 transition hover:bg-white/[0.04] hover:text-slate-200"
-        >
-          <FileText className="h-4 w-4" aria-hidden />
-          Documents
-        </button>
-        <button
-          type="button"
-          onClick={onOpenAgents}
-          className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-slate-400 transition hover:bg-white/[0.04] hover:text-slate-200"
-        >
-          <Bot className="h-4 w-4" aria-hidden />
-          Agents
-        </button>
+      <div className="shrink-0 space-y-1 border-t border-white/[0.06] p-3">
         <button
           type="button"
           onClick={onOpenSavedOutputs}
           className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-slate-400 transition hover:bg-white/[0.04] hover:text-slate-200"
+          data-orb-sidebar-saved-outputs
         >
           <Bookmark className="h-4 w-4" aria-hidden />
           <span className="flex-1 text-left">Saved outputs</span>
@@ -433,23 +368,25 @@ export function OrbStandaloneSidebar({
         </button>
         <button
           type="button"
-          onClick={onOpenKnowledgeLibrary}
+          onClick={onOpenTools}
           className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-slate-400 transition hover:bg-white/[0.04] hover:text-slate-200"
+          data-orb-sidebar-tools
         >
-          <BookOpen className="h-4 w-4" aria-hidden />
-          Knowledge Library
+          <Wrench className="h-4 w-4" aria-hidden />
+          Tools
         </button>
         <button
           type="button"
           onClick={onOpenSettings}
           className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-slate-400 transition hover:bg-white/[0.04] hover:text-slate-200"
+          data-orb-sidebar-settings
         >
           <Settings className="h-4 w-4" aria-hidden />
           Settings
         </button>
-        <div className="rounded-lg bg-emerald-500/[0.08] px-3 py-2 ring-1 ring-emerald-400/15">
-          <p className="text-[11px] font-medium leading-5 text-emerald-100/90">Standalone — no OS records accessed</p>
-        </div>
+        <p className="px-3 py-2 text-[10px] leading-4 text-emerald-200/70" data-orb-privacy-badge>
+          No OS records accessed
+        </p>
       </div>
     </>
   )
@@ -467,7 +404,7 @@ function SectionToggle({
   children: ReactNode
 }) {
   return (
-    <div className="mt-4">
+    <div className="mt-3">
       <button
         type="button"
         onClick={onToggle}

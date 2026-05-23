@@ -31,7 +31,9 @@ import { OrbIntelligenceMapPanel } from '@/components/orb-standalone/orb-intelli
 import { OrbMemoryPanel } from '@/components/orb-standalone/orb-memory-panel'
 import { OrbPermissionsPanel } from '@/components/orb-standalone/orb-permissions-panel'
 import { OrbToolsPanel } from '@/components/orb-standalone/orb-tools-panel'
+import { OrbStandaloneSettingsPanel } from '@/components/orb-standalone/orb-standalone-settings-panel'
 import { OrbStandaloneSidebar } from '@/components/orb-standalone/orb-standalone-sidebar'
+import { modeChipLabel } from '@/components/orb-standalone/orb-mode-labels'
 import {
   loadStandaloneOrbAccessibility,
   standaloneOrbAccessibilityClassNames,
@@ -164,34 +166,15 @@ function voiceStatusLine(options: {
   pending: boolean
 }): string {
   const { voice, pending } = options
-  if (voice.speechPlaybackError) return voice.speechPlaybackError
   if (!voice.speechInputAvailable && !voice.speechOutputAvailable) {
-    return 'Voice is unavailable in this browser. You can still type.'
+    return 'Voice unavailable — type instead'
   }
-  if (!voice.speechInputAvailable && voice.speechOutputAvailable) {
-    return 'Voice replies may work. Microphone dictation may require Chrome or Edge.'
+  if (voice.listening || voice.phase === 'continuous_listening' || voice.phase === 'wake_listening') {
+    return 'Listening…'
   }
-  if (!voice.speechOutputAvailable && voice.speechInputAvailable) {
-    return 'Microphone input is available. Voice replies are not supported here.'
-  }
-  if (voice.error && voice.wakeStatus === 'unsupported') {
-    return voice.error
-  }
-  if (voice.voiceSessionPaused) return 'Voice session paused. Tap Continue conversation or type.'
-  if (voice.phase === 'wake_listening') return `Say "${voice.wakePhraseText}"…`
-  if (voice.phase === 'wake_detected') return "Hey, I'm here. Go ahead…"
-  if (voice.phase === 'continuous_listening') return "I'm listening…"
-  if (voice.listening) return "I'm listening…"
-  if (voice.phase === 'transcript_ready' && voice.displayTranscript) {
-    return 'I heard you say… review below, then Send or Try again.'
-  }
-  if (voice.speaking) return 'You can interrupt me any time.'
-  if (pending) return 'Thinking that through…'
-  if (voice.phase === 'interrupted') return "Stopped — I'm listening."
-  if (voice.settings.wakePhrase && voice.wakeStatus === 'listening') {
-    return `Wake phrase on — say "${voice.wakePhraseText}" or tap the ORB.`
-  }
-  return 'Ask me anything, or say Hey ORB.'
+  if (pending) return 'Thinking…'
+  if (voice.speaking) return 'Speaking…'
+  return 'Voice ready'
 }
 
 function glowStateForContext(options: {
@@ -269,12 +252,12 @@ export function OrbCareCompanion() {
   const [imageUnderstandingNote, setImageUnderstandingNote] = useState<string | null>(null)
   const [attachments, setAttachments] = useState<PendingImageAttachment[]>([])
   const [voicePanelOpen, setVoicePanelOpen] = useState(false)
-  const [orbDockExpanded, setOrbDockExpanded] = useState(false)
+  const [orbCompanionExpanded, setOrbCompanionExpanded] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [mobileOrbOpen, setMobileOrbOpen] = useState(false)
-  const [startersExpanded, setStartersExpanded] = useState(false)
+  const [settingsPanelOpen, setSettingsPanelOpen] = useState(false)
+  const [modesBarOpen, setModesBarOpen] = useState(false)
+  const [promptDrawerOpen, setPromptDrawerOpen] = useState(false)
   const [moreExamplesExpanded, setMoreExamplesExpanded] = useState(false)
-  const [composerPromptsExpanded, setComposerPromptsExpanded] = useState(false)
   const [chatSearch, setChatSearch] = useState('')
   const [draftNotice, setDraftNotice] = useState<string | null>(null)
   const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null)
@@ -342,6 +325,69 @@ export function OrbCareCompanion() {
   )
 
   const showEmptyState = visibleMessages.length === 0 && !pending
+
+  const closeAllPanels = useCallback(() => {
+    setToolsPanelOpen(false)
+    setSettingsPanelOpen(false)
+    setKnowledgeLibraryOpen(false)
+    setDocumentsPanelOpen(false)
+    setAgentsPanelOpen(false)
+    setSavedOutputsPanelOpen(false)
+    setMemoryPanelOpen(false)
+    setAccessibilityPanelOpen(false)
+    setPermissionsPanelOpen(false)
+    setIntelligenceMapOpen(false)
+  }, [])
+
+  const openToolsPanel = useCallback(() => {
+    closeAllPanels()
+    setToolsPanelOpen(true)
+  }, [closeAllPanels])
+
+  const openSettingsPanel = useCallback(() => {
+    closeAllPanels()
+    setSettingsPanelOpen(true)
+  }, [closeAllPanels])
+
+  const openDocumentsPanel = useCallback(() => {
+    closeAllPanels()
+    setDocumentsPanelOpen(true)
+  }, [closeAllPanels])
+
+  const openAgentsPanel = useCallback(() => {
+    closeAllPanels()
+    setAgentsPanelOpen(true)
+  }, [closeAllPanels])
+
+  const openKnowledgeLibrary = useCallback(() => {
+    closeAllPanels()
+    setKnowledgeLibraryOpen(true)
+  }, [closeAllPanels])
+
+  const openSavedOutputsPanel = useCallback(() => {
+    closeAllPanels()
+    setSavedOutputsPanelOpen(true)
+  }, [closeAllPanels])
+
+  const openMemoryPanel = useCallback(() => {
+    closeAllPanels()
+    setMemoryPanelOpen(true)
+  }, [closeAllPanels])
+
+  const openAccessibilityPanel = useCallback(() => {
+    closeAllPanels()
+    setAccessibilityPanelOpen(true)
+  }, [closeAllPanels])
+
+  const openPermissionsPanel = useCallback(() => {
+    closeAllPanels()
+    setPermissionsPanelOpen(true)
+  }, [closeAllPanels])
+
+  const openIntelligenceMap = useCallback(() => {
+    closeAllPanels()
+    setIntelligenceMapOpen(true)
+  }, [closeAllPanels])
 
   useEffect(() => {
     if (hydratedRef.current) writeStandaloneWorkspace(repairOrbWorkspace(workspace))
@@ -831,8 +877,6 @@ export function OrbCareCompanion() {
       voiceSpeaking={voice.speaking}
       voiceRecognitionAvailable={voice.recognitionAvailable}
       voiceStatusText={voiceStatusLine({ voice, pending })}
-      voiceReplies={voiceSettings.voiceReplies}
-      synthesisAvailable={voice.synthesisAvailable}
       transcriptReady={voice.phase === 'transcript_ready'}
       displayTranscript={voice.displayTranscript}
       autoSend={voiceSettings.autoSend}
@@ -841,7 +885,6 @@ export function OrbCareCompanion() {
       onMicClick={handleOrbActivate}
       onCancelListening={voice.cancelListening}
       onStopSpeaking={voice.cancelSpeaking}
-      onToggleVoiceReplies={() => updateVoiceSettings({ voiceReplies: !voiceSettings.voiceReplies })}
       onSendTranscript={() => void sendMessage(voice.transcript || voice.displayTranscript)}
       onRetryTranscript={() => {
         voice.clearTranscript()
@@ -854,41 +897,25 @@ export function OrbCareCompanion() {
       inputRef={inputRef}
       documentAttached={Boolean(pendingDocument?.text)}
       documentTitle={pendingDocument?.title}
-      onAttachDocumentClick={() => setDocumentsPanelOpen(true)}
+      onAttachDocumentClick={() => openDocumentsPanel()}
       onAnalyseDocument={() => {
-        setDocumentsPanelOpen(true)
+        openDocumentsPanel()
         setInput((current) => current || 'Analyse this document')
       }}
       onDocumentActionPlan={() => {
-        setDocumentsPanelOpen(true)
+        openDocumentsPanel()
         setInput('Create an action plan from this document')
       }}
       onSummariseDocument={() => {
-        setDocumentsPanelOpen(true)
+        openDocumentsPanel()
         setInput('Summarise the uploaded document')
       }}
-      onAddDocumentToLibrary={() => setKnowledgeLibraryOpen(true)}
-    />
-  )
-
-  const orbVoiceDock = (
-    <OrbFloatingVoiceDock
-      expanded={orbDockExpanded}
-      glowState={glowState}
-      mode={mode}
-      voice={voice}
-      voiceSettings={voiceSettings}
-      updateVoiceSettings={updateVoiceSettings}
-      voicePanelOpen={voicePanelOpen}
-      onToggleExpanded={() => setOrbDockExpanded((open) => !open)}
-      onOrbActivate={handleOrbActivate}
-      onToggleVoicePanel={() => setVoicePanelOpen((open) => !open)}
-      onCloseVoicePanel={() => setVoicePanelOpen(false)}
+      onAddDocumentToLibrary={() => openKnowledgeLibrary()}
     />
   )
 
   function openVoiceSettings() {
-    setOrbDockExpanded(true)
+    setOrbCompanionExpanded(true)
     setVoicePanelOpen(true)
     setSidebarOpen(false)
   }
@@ -932,28 +959,39 @@ export function OrbCareCompanion() {
           setAgentPanelPrompt(
             `Deep research on this document: ${ctx.title}. What does guidance say and what should we do next?`
           )
-          setDocumentsPanelOpen(false)
-          setAgentsPanelOpen(true)
+          openAgentsPanel()
         }}
         onRunDocumentAnalysisAgent={(ctx) => {
           setPendingDocument(ctx)
           setAgentPanelType('document_analysis')
           setAgentPanelPrompt(`Analyse this document and create a manager briefing: ${ctx.title}`)
-          setDocumentsPanelOpen(false)
-          setAgentsPanelOpen(true)
+          openAgentsPanel()
         }}
+      />
+      <OrbStandaloneSettingsPanel
+        open={settingsPanelOpen}
+        onClose={() => setSettingsPanelOpen(false)}
+        onOpenMemory={openMemoryPanel}
+        onOpenAccessibility={openAccessibilityPanel}
+        onOpenPermissions={openPermissionsPanel}
+        onOpenVoiceSettings={openVoiceSettings}
       />
       <OrbToolsPanel
         open={toolsPanelOpen}
         onClose={() => setToolsPanelOpen(false)}
-        onOpenKnowledge={() => setKnowledgeLibraryOpen(true)}
-        onOpenDocuments={() => setDocumentsPanelOpen(true)}
-        onOpenAgents={() => setAgentsPanelOpen(true)}
-        onOpenSavedOutputs={() => setSavedOutputsPanelOpen(true)}
-        onOpenMemory={() => setMemoryPanelOpen(true)}
-        onOpenIntelligenceMap={() => setIntelligenceMapOpen(true)}
-        onOpenAccessibility={() => setAccessibilityPanelOpen(true)}
-        onOpenPermissions={() => setPermissionsPanelOpen(true)}
+        onOpenKnowledge={openKnowledgeLibrary}
+        onOpenDocuments={openDocumentsPanel}
+        onOpenAgents={openAgentsPanel}
+        onOpenSavedOutputs={openSavedOutputsPanel}
+        onOpenMemory={openMemoryPanel}
+        onOpenIntelligenceMap={openIntelligenceMap}
+        onOpenAccessibility={openAccessibilityPanel}
+        onOpenPermissions={openPermissionsPanel}
+        onRunDeepResearch={() => {
+          setAgentPanelType('deep_research')
+          setAgentPanelPrompt('Run deep research on this topic')
+          openAgentsPanel()
+        }}
         onAskOrb={() => inputRef.current?.focus()}
       />
       <OrbMemoryPanel
@@ -1009,34 +1047,21 @@ export function OrbCareCompanion() {
           <OrbStandaloneSidebar
             workspace={workspace}
             chatSearch={chatSearch}
-            startersExpanded={startersExpanded}
-            suggestedPromptGroups={SUGGESTED_PROMPT_GROUPS}
             onChatSearchChange={setChatSearch}
-            onToggleStarters={() => setStartersExpanded((o) => !o)}
-            onApplyPrompt={applyPrompt}
             onSelectChat={selectChat}
             onNewChat={startNewChat}
             onSelectProject={(projectId) => setWorkspace((c) => ({ ...c, activeProjectId: projectId }))}
             onWorkspaceChange={setWorkspace}
-            onOpenSettings={openVoiceSettings}
-            onOpenDocuments={() => {
-              setDocumentsPanelOpen(true)
-              setSidebarOpen(false)
-            }}
-            onOpenKnowledgeLibrary={() => {
-              setKnowledgeLibraryOpen(true)
-              setSidebarOpen(false)
-            }}
-            onOpenAgents={() => {
-              setAgentsPanelOpen(true)
+            onOpenSettings={() => {
+              openSettingsPanel()
               setSidebarOpen(false)
             }}
             onOpenSavedOutputs={() => {
-              setSavedOutputsPanelOpen(true)
+              openSavedOutputsPanel()
               setSidebarOpen(false)
             }}
             onOpenTools={() => {
-              setToolsPanelOpen(true)
+              openToolsPanel()
               setSidebarOpen(false)
             }}
             savedOutputsCount={savedOutputsCount}
@@ -1053,18 +1078,32 @@ export function OrbCareCompanion() {
               <h1 className="truncate text-sm font-semibold text-white md:text-base">{activeChat?.title || 'ORB Care Companion'}</h1>
               <p className="truncate text-xs text-slate-500">Standalone residential care assistant</p>
             </div>
-            <span className="hidden shrink-0 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[10px] font-medium text-emerald-200/90 sm:inline">
+            <span
+              className="hidden shrink-0 rounded-full bg-emerald-500/[0.08] px-2 py-0.5 text-[10px] font-medium text-emerald-200/75 sm:inline"
+              data-orb-header-privacy
+            >
               No OS records accessed
             </span>
             <div className="flex shrink-0 gap-0.5">
               <button
                 type="button"
-                onClick={() => setToolsPanelOpen(true)}
+                onClick={openToolsPanel}
                 className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-slate-500 hover:bg-white/[0.06] hover:text-cyan-200"
                 aria-label="IndiCare Tools"
+                data-orb-header-tools
               >
                 <Wrench className="h-4 w-4" />
                 <span className="hidden sm:inline">Tools</span>
+              </button>
+              <button
+                type="button"
+                onClick={openSettingsPanel}
+                className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-slate-500 hover:bg-white/[0.06] hover:text-slate-300"
+                aria-label="Settings"
+                data-orb-header-settings
+              >
+                <Settings2 className="h-4 w-4" />
+                <span className="hidden sm:inline">Settings</span>
               </button>
               <button
                 type="button"
@@ -1082,27 +1121,40 @@ export function OrbCareCompanion() {
             </div>
           </header>
 
-          <div
-            className="orb-mode-chips flex shrink-0 gap-2 overflow-x-auto border-b border-white/[0.04] px-3 py-2.5 md:px-5"
-            role="tablist"
-            aria-label="ORB mode"
-          >
-            {modes.map((item) => (
-              <button
-                key={item}
-                type="button"
-                role="tab"
-                aria-selected={mode === item}
-                onClick={() => handleModeChange(item as StandaloneOrbMode)}
-                className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium transition ${
-                  mode === item
-                    ? 'bg-white text-slate-950 shadow-sm'
-                    : 'bg-white/[0.05] text-slate-400 ring-1 ring-white/[0.08] hover:bg-white/[0.08] hover:text-slate-200'
-                }`}
-              >
-                {item}
-              </button>
-            ))}
+          <div className="flex shrink-0 items-center gap-2 border-b border-white/[0.04] px-3 py-2 md:px-5">
+            <button
+              type="button"
+              className="shrink-0 rounded-full bg-white/[0.05] px-2.5 py-1 text-[11px] font-medium text-slate-400 ring-1 ring-white/[0.08] md:hidden"
+              onClick={() => setModesBarOpen((open) => !open)}
+              aria-expanded={modesBarOpen}
+            >
+              Modes
+            </button>
+            <div
+              className={`orb-mode-chips orb-mode-chips--quiet flex min-w-0 flex-1 gap-1.5 overflow-x-auto ${
+                modesBarOpen ? '' : 'max-md:hidden'
+              }`}
+              role="tablist"
+              aria-label="ORB mode"
+              data-orb-mode-chips
+            >
+              {modes.map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  role="tab"
+                  aria-selected={mode === item}
+                  onClick={() => handleModeChange(item as StandaloneOrbMode)}
+                  className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium transition ${
+                    mode === item
+                      ? 'bg-white text-slate-950'
+                      : 'bg-white/[0.04] text-slate-500 ring-1 ring-white/[0.06] hover:text-slate-300'
+                  }`}
+                >
+                  {modeChipLabel(item)}
+                </button>
+              ))}
+            </div>
           </div>
 
           {recordingContext ? (
@@ -1172,44 +1224,35 @@ export function OrbCareCompanion() {
             <div className="orb-chat-thread flex-1 overflow-y-auto overflow-x-hidden px-3 py-4 md:px-6" role="log" aria-label="ORB conversation">
               <div className="mx-auto w-full max-w-[var(--orb-chat-column-max,52.5rem)]">
                 {showEmptyState ? (
-                  <div className="flex min-h-[min(70vh,32rem)] flex-col items-center justify-center py-6 text-center md:py-10">
+                  <div
+                    className="flex min-h-[min(60vh,28rem)] flex-col items-center justify-center py-6 text-center md:py-8"
+                    data-orb-empty-state
+                  >
                     <p className="text-xs font-medium text-slate-500">ORB Care Companion</p>
-                    <h2 className="mt-3 text-2xl font-semibold tracking-tight text-white md:text-[1.75rem]">How can I help today?</h2>
-                    <p className="mt-3 max-w-lg text-sm leading-relaxed text-slate-400">
-                      Specialist residential children&apos;s homes intelligence — recording, Ofsted, safeguarding, reflection and general questions.
-                    </p>
-                    <div className="mt-8 grid w-full max-w-2xl gap-3 sm:grid-cols-2">
+                    <h2 className="mt-2 text-xl font-semibold tracking-tight text-white md:text-2xl" data-orb-empty-heading>
+                      How can I help today?
+                    </h2>
+                    <p className="mt-2 max-w-md text-sm text-slate-500">Ask, upload, speak, or open Tools.</p>
+                    <div className="mt-6 grid w-full max-w-xl gap-2.5 sm:grid-cols-2" data-orb-starter-cards>
                       {PRIMARY_EMPTY_STARTERS.map((starter) => (
                         <button
                           key={starter.text}
                           type="button"
                           onClick={() => applyPrompt(starter)}
-                          className="orb-starter-card orb-starter-card--primary rounded-2xl border border-white/[0.08] bg-white/[0.04] px-5 py-5 text-left text-[15px] font-medium leading-snug text-slate-200 hover:border-white/15 hover:bg-white/[0.07]"
+                          className="orb-starter-card rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-4 text-left text-sm font-medium text-slate-200 hover:border-white/12 hover:bg-white/[0.06]"
+                          data-orb-starter-card
                         >
                           {starter.text}
                         </button>
                       ))}
                     </div>
-                    {moreExamplesExpanded ? (
-                      <div className="mt-3 grid w-full max-w-2xl gap-2 sm:grid-cols-2">
-                        {MORE_EMPTY_STARTERS.map((starter) => (
-                          <button
-                            key={starter.text}
-                            type="button"
-                            onClick={() => applyPrompt(starter)}
-                            className="orb-starter-card rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3 text-left text-sm text-slate-400 hover:border-white/12 hover:bg-white/[0.05] hover:text-slate-200"
-                          >
-                            {starter.text}
-                          </button>
-                        ))}
-                      </div>
-                    ) : null}
                     <button
                       type="button"
-                      onClick={() => setMoreExamplesExpanded((o) => !o)}
-                      className="mt-5 text-sm font-medium text-slate-500 underline-offset-4 hover:text-slate-300 hover:underline"
+                      onClick={() => setPromptDrawerOpen(true)}
+                      className="mt-4 text-xs font-medium text-slate-500 underline-offset-4 hover:text-slate-300 hover:underline"
+                      data-orb-more-examples
                     >
-                      {moreExamplesExpanded ? 'Fewer examples' : 'More examples'}
+                      More examples
                     </button>
                   </div>
                 ) : (
@@ -1231,7 +1274,7 @@ export function OrbCareCompanion() {
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    setDocumentsPanelOpen(true)
+                                    openDocumentsPanel()
                                     setSidebarOpen(false)
                                   }}
                                   className="rounded-full bg-violet-500/15 px-3 py-1 text-xs font-medium text-violet-200 ring-1 ring-violet-400/25"
@@ -1243,7 +1286,7 @@ export function OrbCareCompanion() {
                                   onClick={() => {
                                     setAgentPanelType('document_analysis')
                                     setAgentPanelPrompt(input || entry.content.slice(0, 200))
-                                    setAgentsPanelOpen(true)
+                                    openAgentsPanel()
                                   }}
                                   className="rounded-full bg-cyan-500/15 px-3 py-1 text-xs font-medium text-cyan-200 ring-1 ring-cyan-400/25"
                                 >
@@ -1254,7 +1297,7 @@ export function OrbCareCompanion() {
                                   onClick={() => {
                                     setAgentPanelType('deep_research')
                                     setAgentPanelPrompt(input || entry.content.slice(0, 200))
-                                    setAgentsPanelOpen(true)
+                                    openAgentsPanel()
                                   }}
                                   className="rounded-full bg-white/[0.06] px-3 py-1 text-xs font-medium text-slate-300 ring-1 ring-white/10"
                                 >
@@ -1270,7 +1313,7 @@ export function OrbCareCompanion() {
                                     const type = entry.agentSuggestion?.agent_type
                                     setAgentPanelType(type)
                                     setAgentPanelPrompt(input || entry.content.slice(0, 200))
-                                    setAgentsPanelOpen(true)
+                                    openAgentsPanel()
                                   }}
                                   className="rounded-full bg-cyan-500/15 px-3 py-1 text-xs font-medium text-cyan-200 ring-1 ring-cyan-400/25 hover:bg-cyan-500/25"
                                 >
@@ -1339,82 +1382,43 @@ export function OrbCareCompanion() {
               </div>
             </div>
 
-            {!showEmptyState && composerPromptsExpanded ? (
-              <div className="shrink-0 border-t border-white/[0.04] px-3 py-2 md:px-6">
-                <div className="mx-auto flex max-w-[var(--orb-composer-max,53.125rem)] flex-wrap gap-2">
-                  {SUGGESTED_PROMPT_GROUPS.flatMap((g) => g.prompts.slice(0, 1)).map((starter) => (
-                    <button
-                      key={starter.text}
-                      type="button"
-                      onClick={() => applyPrompt(starter)}
-                      className="rounded-full bg-white/[0.04] px-3 py-1.5 text-xs text-slate-400 ring-1 ring-white/[0.06] hover:text-slate-200"
-                    >
-                      {starter.text}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-
-            {!showEmptyState ? (
-              <div className="mx-auto w-full max-w-[var(--orb-composer-max,53.125rem)] px-3 pb-1 md:px-6">
-                <button
-                  type="button"
-                  onClick={() => setComposerPromptsExpanded((o) => !o)}
-                  className="text-xs text-slate-500 hover:text-slate-400"
-                >
-                  {composerPromptsExpanded ? 'Hide prompt ideas' : 'Show prompt ideas'}
-                </button>
-              </div>
-            ) : null}
-
             {composer}
           </section>
         </div>
       </div>
 
-      <div className={`orb-floating-dock hidden xl:block ${orbDockExpanded ? 'orb-floating-dock--expanded' : 'orb-floating-dock--collapsed'}`}>
-        {orbVoiceDock}
-      </div>
+      <OrbCompactCompanion
+        expanded={orbCompanionExpanded}
+        glowState={glowState}
+        mode={mode}
+        voice={voice}
+        voiceSettings={voiceSettings}
+        updateVoiceSettings={updateVoiceSettings}
+        voicePanelOpen={voicePanelOpen}
+        onToggleExpanded={() => setOrbCompanionExpanded((open) => !open)}
+        onOrbActivate={handleOrbActivate}
+        onToggleVoicePanel={() => setVoicePanelOpen((open) => !open)}
+        onCloseVoicePanel={() => setVoicePanelOpen(false)}
+      />
 
-      {mobileOrbOpen ? (
-        <div className="orb-voice-dock fixed inset-x-0 bottom-0 z-50 max-h-[75dvh] overflow-y-auto rounded-t-2xl border border-white/10 bg-[#0a0e16]/95 shadow-2xl backdrop-blur-xl xl:hidden">
-          <div className="sticky top-0 flex justify-center bg-[#0a0e16]/95 py-2">
-            <button type="button" onClick={() => setMobileOrbOpen(false)} className="rounded-full px-4 py-1.5 text-xs font-medium text-slate-400 ring-1 ring-white/10">
-              Close voice ORB
-            </button>
-          </div>
-          <OrbFloatingVoiceDock
-            expanded
-            glowState={glowState}
-            mode={mode}
-            voice={voice}
-            voiceSettings={voiceSettings}
-            updateVoiceSettings={updateVoiceSettings}
-            voicePanelOpen={voicePanelOpen}
-            onToggleExpanded={() => setMobileOrbOpen(false)}
-            onOrbActivate={handleOrbActivate}
-            onToggleVoicePanel={() => setVoicePanelOpen((open) => !open)}
-            onCloseVoicePanel={() => setVoicePanelOpen(false)}
-            mobile
-          />
-        </div>
-      ) : (
-        <button
-          type="button"
-          onClick={() => setMobileOrbOpen(true)}
-          className="orb-mobile-orb-fab fixed right-4 z-30 flex flex-col items-center gap-1 rounded-full border border-cyan-300/30 bg-[#0a0e16]/95 p-1.5 shadow-lg backdrop-blur xl:hidden"
-          aria-label="Open voice ORB — Tap to speak"
-        >
-          <OrbGlow state={glowState} onOrbActivate={() => { setMobileOrbOpen(true); handleOrbActivate() }} interactive={voice.recognitionAvailable} size="compact" compactLabels />
-          <span className="px-1 text-[9px] font-medium text-slate-500">Tap to speak</span>
-        </button>
-      )}
+      {promptDrawerOpen ? (
+        <OrbPromptDrawer
+          groups={SUGGESTED_PROMPT_GROUPS}
+          moreStarters={MORE_EMPTY_STARTERS}
+          moreExpanded={moreExamplesExpanded}
+          onToggleMore={() => setMoreExamplesExpanded((o) => !o)}
+          onApply={(entry) => {
+            applyPrompt(entry)
+            setPromptDrawerOpen(false)
+          }}
+          onClose={() => setPromptDrawerOpen(false)}
+        />
+      ) : null}
     </main>
   )
 }
 
-function OrbFloatingVoiceDock({
+function OrbCompactCompanion({
   expanded,
   glowState,
   mode,
@@ -1425,8 +1429,7 @@ function OrbFloatingVoiceDock({
   onToggleExpanded,
   onOrbActivate,
   onToggleVoicePanel,
-  onCloseVoicePanel,
-  mobile = false
+  onCloseVoicePanel
 }: {
   expanded: boolean
   glowState: StandaloneOrbGlowState
@@ -1439,126 +1442,213 @@ function OrbFloatingVoiceDock({
   onOrbActivate: () => void
   onToggleVoicePanel: () => void
   onCloseVoicePanel: () => void
-  mobile?: boolean
 }) {
-  if (!expanded && !mobile) {
-    return (
-      <div className="orb-floating-dock-trigger">
-        <button type="button" onClick={onToggleExpanded} className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60" aria-label="Expand voice ORB">
+  const collapsedLabel =
+    voice.settings.wakePhrase && voice.wakeStatus === 'listening' ? 'Say Hey ORB' : 'Tap to speak'
+
+  return (
+    <div className="orb-companion-float" data-orb-companion-float>
+      {expanded ? (
+        <div className="orb-voice-dock orb-companion-popover" data-orb-companion-expanded>
+          <div className="flex items-center justify-between gap-2 border-b border-white/[0.06] px-3 py-2">
+            <p className="text-xs font-medium text-slate-300">ORB voice</p>
+            <button
+              type="button"
+              onClick={onToggleExpanded}
+              className="rounded-lg p-1 text-slate-500 hover:bg-white/[0.06]"
+              aria-label="Collapse ORB companion"
+            >
+              <PanelRightClose className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="flex flex-col items-center px-3 py-4">
+            <OrbGlow
+              state={glowState}
+              mode={mode}
+              voiceEnabled={voiceSettings.voiceReplies && voice.synthesisAvailable}
+              onOrbActivate={onOrbActivate}
+              interactive={voice.recognitionAvailable}
+              size="compact"
+              compactLabels
+            />
+          </div>
+          <div className="orb-companion-expanded-voice space-y-2 px-3 py-3" data-orb-expanded-voice-settings>
+            <SettingToggle
+              label="Wake phrase (Hey ORB)"
+              checked={voiceSettings.wakePhrase}
+              disabled={!voice.continuousRecognitionSupported}
+              onChange={(on) => {
+                if (!on) voice.stopWakeListening()
+                updateVoiceSettings({ wakePhrase: on })
+              }}
+            />
+            <SettingToggle
+              label="Continuous conversation"
+              checked={voiceSettings.continuousConversation}
+              disabled={!voice.recognitionAvailable}
+              onChange={(on) => updateVoiceSettings({ continuousConversation: on })}
+            />
+            <SettingToggle
+              label="Voice replies"
+              checked={voiceSettings.voiceReplies}
+              disabled={!voice.synthesisAvailable}
+              onChange={(on) => {
+                if (!on) voice.cancelSpeaking()
+                updateVoiceSettings({ voiceReplies: on })
+              }}
+              iconOn={<Volume2 className="h-3.5 w-3.5" />}
+              iconOff={<VolumeX className="h-3.5 w-3.5" />}
+            />
+            <button
+              type="button"
+              onClick={onToggleVoicePanel}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-white/[0.04] px-3 py-2 text-xs font-medium text-slate-300 ring-1 ring-white/[0.06] hover:bg-white/[0.06]"
+            >
+              <Settings2 className="h-3.5 w-3.5" />
+              Voice settings
+            </button>
+            {voice.speaking ? (
+              <button
+                type="button"
+                onClick={voice.cancelSpeaking}
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-300/30 bg-amber-400/10 px-3 py-2 text-xs font-semibold text-amber-50"
+              >
+                <Square className="h-3 w-3 fill-current" />
+                Stop speaking
+              </button>
+            ) : null}
+            {voice.recognitionAvailable ? (
+              <div className="flex gap-2">
+                {voice.voiceSessionPaused ? (
+                  <button
+                    type="button"
+                    onClick={voice.resumeVoiceSession}
+                    className="flex-1 rounded-xl bg-cyan-400/10 px-2 py-2 text-[10px] font-semibold text-cyan-100 ring-1 ring-cyan-300/25"
+                  >
+                    Continue conversation
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={voice.pauseVoiceSession}
+                    className="flex-1 rounded-xl bg-white/[0.04] px-2 py-2 text-[10px] font-medium text-slate-400 ring-1 ring-white/[0.06]"
+                  >
+                    Pause conversation
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={voice.endVoiceSession}
+                  className="flex-1 rounded-xl bg-white/[0.04] px-2 py-2 text-[10px] font-medium text-slate-400 ring-1 ring-white/[0.06]"
+                >
+                  End voice session
+                </button>
+              </div>
+            ) : null}
+          </div>
+          {voicePanelOpen ? (
+            <div className="border-t border-white/[0.06] p-3">
+              <VoiceSettingsPanel
+                voice={voice}
+                voiceSettings={voiceSettings}
+                updateVoiceSettings={updateVoiceSettings}
+                onClose={onCloseVoicePanel}
+              />
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      <div className="orb-companion-fab" data-orb-companion-fab>
+        <button
+          type="button"
+          onClick={() => {
+            if (!expanded) onToggleExpanded()
+            onOrbActivate()
+          }}
+          className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60"
+          aria-label={expanded ? 'Tap to speak' : 'Expand ORB companion'}
+          data-orb-say-hey-orb
+        >
           <OrbGlow
             state={glowState}
             voiceEnabled={voiceSettings.voiceReplies && voice.synthesisAvailable}
-            onOrbActivate={() => {
-              onToggleExpanded()
-              onOrbActivate()
-            }}
+            onOrbActivate={onOrbActivate}
             interactive={voice.recognitionAvailable}
-            size="compact"
+            size="fab"
             compactLabels
+            label={collapsedLabel}
           />
         </button>
-        <span className="max-w-[5.5rem] text-center text-[10px] font-medium leading-tight text-slate-500">Tap to speak</span>
+        {!expanded ? (
+          <span className="max-w-[5rem] text-center text-[9px] font-medium leading-tight text-slate-500">{collapsedLabel}</span>
+        ) : null}
       </div>
-    )
-  }
+    </div>
+  )
+}
 
+function OrbPromptDrawer({
+  groups,
+  moreStarters,
+  moreExpanded,
+  onToggleMore,
+  onApply,
+  onClose
+}: {
+  groups: Array<{ title: string; prompts: PromptEntry[] }>
+  moreStarters: PromptEntry[]
+  moreExpanded: boolean
+  onToggleMore: () => void
+  onApply: (entry: PromptEntry) => void
+  onClose: () => void
+}) {
   return (
-    <div className={`orb-voice-dock orb-floating-dock-drawer flex flex-col ${mobile ? 'mx-3 mb-4' : ''}`}>
-      <div className="flex items-center justify-between gap-2 border-b border-white/[0.06] px-4 py-3">
-        <p className="text-xs font-semibold text-slate-300">Voice ORB</p>
-        {!mobile ? (
-          <button
-            type="button"
-            onClick={onToggleExpanded}
-            className="rounded-lg p-1.5 text-slate-500 hover:bg-white/[0.06] hover:text-slate-300"
-            aria-label="Collapse ORB dock"
-          >
-            <PanelRightClose className="h-4 w-4" />
+    <div className="fixed inset-0 z-[68] flex items-end justify-center bg-black/60 p-4 sm:items-center" role="dialog" aria-label="Example prompts">
+      <div className="max-h-[85dvh] w-full max-w-lg overflow-y-auto rounded-2xl border border-white/10 bg-[#0d1117] p-4 shadow-2xl">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-white">Example prompts</h2>
+          <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-slate-400 hover:bg-white/[0.06]" aria-label="Close">
+            <X className="h-5 w-5" />
           </button>
-        ) : null}
-      </div>
-      <div className="flex flex-col items-center px-4 py-5">
-        <OrbGlow
-          state={glowState}
-          mode={mode}
-          voiceEnabled={voiceSettings.voiceReplies && voice.synthesisAvailable}
-          onOrbActivate={onOrbActivate}
-          interactive={voice.recognitionAvailable}
-          size="dock"
-          compactLabels
-        />
-        <p className="mt-2 text-center text-xs text-slate-500">Tap to speak</p>
-        {voice.interimTranscript && voice.listening ? (
-          <p className="mt-2 max-w-[14rem] text-center text-xs italic text-slate-400">&ldquo;{voice.interimTranscript}&rdquo;</p>
-        ) : null}
-      </div>
-      <div className="space-y-2 border-t border-white/[0.06] px-4 py-3">
-        <SettingToggle
-          label="Wake phrase (Hey ORB)"
-          checked={voiceSettings.wakePhrase}
-          disabled={!voice.continuousRecognitionSupported}
-          onChange={(on) => {
-            if (!on) voice.stopWakeListening()
-            updateVoiceSettings({ wakePhrase: on })
-          }}
-        />
-        <SettingToggle
-          label="Continuous conversation"
-          checked={voiceSettings.continuousConversation}
-          disabled={!voice.recognitionAvailable}
-          onChange={(on) => updateVoiceSettings({ continuousConversation: on })}
-        />
-        <SettingToggle
-          label="Voice replies"
-          checked={voiceSettings.voiceReplies}
-          disabled={!voice.synthesisAvailable}
-          onChange={(on) => {
-            if (!on) voice.cancelSpeaking()
-            updateVoiceSettings({ voiceReplies: on })
-          }}
-          iconOn={<Volume2 className="h-3.5 w-3.5" />}
-          iconOff={<VolumeX className="h-3.5 w-3.5" />}
-        />
-        <button
-          type="button"
-          onClick={onToggleVoicePanel}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-white/[0.04] px-3 py-2.5 text-xs font-medium text-slate-300 ring-1 ring-white/[0.06] hover:bg-white/[0.06]"
-        >
-          <Settings2 className="h-3.5 w-3.5" />
-          Voice settings
-        </button>
-        {voice.speaking ? (
-          <button
-            type="button"
-            onClick={voice.cancelSpeaking}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-300/30 bg-amber-400/10 px-3 py-2 text-xs font-semibold text-amber-50"
-          >
-            <Square className="h-3 w-3 fill-current" />
-            Stop speaking
-          </button>
-        ) : null}
-        {voice.recognitionAvailable ? (
-          <div className="flex gap-2">
-            {voice.voiceSessionPaused ? (
-              <button type="button" onClick={voice.resumeVoiceSession} className="flex-1 rounded-xl bg-cyan-400/10 px-2 py-2 text-[10px] font-semibold text-cyan-100 ring-1 ring-cyan-300/25">
-                Continue conversation
-              </button>
-            ) : (
-              <button type="button" onClick={voice.pauseVoiceSession} className="flex-1 rounded-xl bg-white/[0.04] px-2 py-2 text-[10px] font-medium text-slate-400 ring-1 ring-white/[0.06]">
-                Pause conversation
-              </button>
-            )}
-            <button type="button" onClick={voice.endVoiceSession} className="flex-1 rounded-xl bg-white/[0.04] px-2 py-2 text-[10px] font-medium text-slate-400 ring-1 ring-white/[0.06]">
-              End voice session
-            </button>
-          </div>
-        ) : null}
-      </div>
-      {voicePanelOpen ? (
-        <div className="border-t border-white/[0.06] p-4">
-          <VoiceSettingsPanel voice={voice} voiceSettings={voiceSettings} updateVoiceSettings={updateVoiceSettings} onClose={onCloseVoicePanel} />
         </div>
-      ) : null}
+        {groups.map((group) => (
+          <div key={group.title} className="mb-4">
+            <p className="mb-1 text-[10px] font-medium uppercase tracking-wide text-slate-500">{group.title}</p>
+            <ul className="space-y-1">
+              {group.prompts.map((prompt) => (
+                <li key={prompt.text}>
+                  <button
+                    type="button"
+                    onClick={() => onApply(prompt)}
+                    className="w-full rounded-lg px-3 py-2 text-left text-sm text-slate-300 hover:bg-white/[0.04]"
+                  >
+                    {prompt.text}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+        {moreExpanded ? (
+          <ul className="mb-3 space-y-1">
+            {moreStarters.map((prompt) => (
+              <li key={prompt.text}>
+                <button
+                  type="button"
+                  onClick={() => onApply(prompt)}
+                  className="w-full rounded-lg px-3 py-2 text-left text-sm text-slate-400 hover:bg-white/[0.04]"
+                >
+                  {prompt.text}
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        <button type="button" onClick={onToggleMore} className="text-xs text-slate-500 hover:text-slate-300">
+          {moreExpanded ? 'Fewer examples' : 'More examples'}
+        </button>
+      </div>
     </div>
   )
 }

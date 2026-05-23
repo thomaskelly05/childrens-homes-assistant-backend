@@ -33,7 +33,7 @@ def test_tools_panel_contains_expected_tools():
     ):
         assert marker in text
     assert "/api/os/" not in text
-    assert "requires IndiCare OS context" in text
+    assert "Requires IndiCare OS context" in text
 
 
 def test_memory_panel_standalone_wording():
@@ -84,9 +84,15 @@ def test_permissions_panel_readiness():
 
 def test_companion_integrates_panels():
     text = _read(COMPANION)
-    for marker in ("OrbToolsPanel", "OrbMemoryPanel", "OrbStandaloneAccessibilityPanel", "OrbPermissionsPanel"):
+    for marker in (
+        "OrbToolsPanel",
+        "OrbStandaloneSettingsPanel",
+        "OrbMemoryPanel",
+        "OrbStandaloneAccessibilityPanel",
+        "OrbPermissionsPanel",
+    ):
         assert marker in text
-    assert "IndiCare Tools" in text or "setToolsPanelOpen" in text
+    assert "openToolsPanel" in text or "setToolsPanelOpen" in text
 
 
 def test_camera_capture_in_composer():
