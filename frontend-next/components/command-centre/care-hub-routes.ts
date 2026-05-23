@@ -17,10 +17,6 @@ export const CARE_HUB_HERO_ORB_HINTS: Record<string, CareHubHeroOrbHint> = {
     label: 'ORB can help decide what to record',
     href: '/assistant/orb?context=care-hub&q=What should I record next on shift?'
   },
-  'Start shift handover': {
-    label: 'ORB can summarise handover',
-    href: '/assistant/orb?context=care-hub&q=Help me summarise shift handover for the next team.'
-  },
   'Record daily note': {
     label: 'ORB can help with wording',
     href: '/assistant/orb?context=care-hub&q=Help me write a calm, child-centred daily note.'
@@ -28,6 +24,14 @@ export const CARE_HUB_HERO_ORB_HINTS: Record<string, CareHubHeroOrbHint> = {
   'Record incident': {
     label: 'ORB can check recording quality',
     href: '/assistant/orb?mode=record_quality_review&context=care-hub'
+  },
+  'Safeguarding concern': {
+    label: 'ORB can help with safeguarding wording',
+    href: '/assistant/orb?mode=record_quality_review&context=care-hub&q=What must be escalated to a manager in a safeguarding concern?'
+  },
+  'Start shift handover': {
+    label: 'ORB can summarise handover',
+    href: '/assistant/orb?context=care-hub&q=Help me summarise shift handover for the next team.'
   },
   'Ask ORB': {
     label: 'Open operational ORB',
@@ -138,6 +142,9 @@ export const CARE_HUB_HERO_ACTIONS = (options: {
 }): CareHubHeroAction[] => {
   const childId = options.selectedYoungPersonId ? encodeURIComponent(options.selectedYoungPersonId) : null
   const recordHubHref = childId ? `/record?child_id=${childId}` : '/record'
+  const recordType = (type: string) =>
+    childId ? `/record?child_id=${childId}&about=child&type=${encodeURIComponent(type)}` : `/record?type=${encodeURIComponent(type)}`
+
   return [
     {
       label: 'Record something',
@@ -146,22 +153,28 @@ export const CARE_HUB_HERO_ACTIONS = (options: {
       ariaLabel: 'Open record something hub'
     },
     {
-      label: 'Start shift handover',
-      description: 'Prepare what the next adults need to know.',
-      href: childId ? `/young-people/${childId}/shift-handover/new` : '/handover/current',
-      ariaLabel: 'Start shift handover'
-    },
-    {
       label: 'Record daily note',
       description: 'Capture the day and what changed.',
-      href: childId ? `/young-people/${childId}/daily-note/new` : '/record?type=daily-note',
+      href: childId ? `/young-people/${childId}/daily-note/new` : recordType('daily-note'),
       ariaLabel: 'Record daily note'
     },
     {
       label: 'Record incident',
       description: 'Log what happened and adult response.',
-      href: childId ? `/young-people/${childId}/incidents/new` : '/record?type=incidents',
+      href: childId ? `/young-people/${childId}/incidents/new` : recordType('incident'),
       ariaLabel: 'Record incident'
+    },
+    {
+      label: 'Safeguarding concern',
+      description: 'Record concern, safety action and escalation.',
+      href: childId ? `/young-people/${childId}/safeguarding/new` : recordType('safeguarding-concern'),
+      ariaLabel: 'Record safeguarding concern'
+    },
+    {
+      label: 'Start shift handover',
+      description: 'Prepare what the next adults need to know.',
+      href: childId ? `/young-people/${childId}/shift-handover/new` : '/handover/current',
+      ariaLabel: 'Start shift handover'
     },
     {
       label: 'Ask ORB',

@@ -3,6 +3,7 @@
 import { useMemo } from 'react'
 
 import { analyseRecordingQuality, type QualityCoachSeverity } from '@/lib/record/recording-quality-coach'
+import type { RecordingWorkspaceType } from '@/lib/record/recording-types'
 
 function statusLabel(severity: QualityCoachSeverity) {
   if (severity === 'review') return 'Consider review'
@@ -16,8 +17,16 @@ function statusClass(severity: QualityCoachSeverity) {
   return 'bg-emerald-100 text-emerald-900'
 }
 
-export function RecordingQualityCoach({ body, title = '' }: { body: string; title?: string }) {
-  const result = useMemo(() => analyseRecordingQuality(body, title), [body, title])
+export function RecordingQualityCoach({
+  body,
+  title = '',
+  recordingType
+}: {
+  body: string
+  title?: string
+  recordingType?: RecordingWorkspaceType
+}) {
+  const result = useMemo(() => analyseRecordingQuality(body, title, recordingType), [body, title, recordingType])
 
   return (
     <section data-testid="recording-quality-coach" className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">

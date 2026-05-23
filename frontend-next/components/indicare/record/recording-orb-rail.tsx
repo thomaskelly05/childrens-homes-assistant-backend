@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import { Mic2, Sparkles } from 'lucide-react'
 
 import {
@@ -9,8 +9,10 @@ import {
   RECORDING_OS_ORB_HREF,
   RECORDING_STANDALONE_ORB_HREF
 } from '@/lib/record/recording-quality-coach'
+import { recordingFormByWorkspaceType } from '@/lib/record/recording-form-registry'
+import type { RecordingWorkspaceType } from '@/lib/record/recording-types'
 
-const SUGGESTED_PROMPTS = [
+const DEFAULT_PROMPTS = [
   'What should I include in this record?',
   'Make this wording more child-centred.',
   'Does this need manager review?',
@@ -19,11 +21,25 @@ const SUGGESTED_PROMPTS = [
   'What follow-up should be recorded?'
 ] as const
 
-export function RecordingOrbRail() {
+function operationalOrbHrefForPrompt(query: string) {
+  const q = encodeURIComponent(query)
+  return `/assistant/orb?mode=record_quality_review&context=recording&q=${q}`
+}
+
+export function RecordingOrbRail({ recordingType }: { recordingType?: RecordingWorkspaceType }) {
   const copyOrbPrompt = useCallback(async () => {
     if (typeof navigator === 'undefined' || !navigator.clipboard) return
     await navigator.clipboard.writeText(RECORDING_ORB_COPY_PROMPT)
   }, [])
+
+  const suggestedPrompts = useMemo(() => {
+    if (!recordingType) return [...DEFAULT_PROMPTS]
+    const form = recordingFormByWorkspaceType(recordingType)
+    if (form?.orbSuggestedPrompts.length) return form.orbSuggestedPrompts
+    return [...DEFAULT_PROMPTS]
+  }, [recordingType])
+
+  const form = recordingType ? recordingFormByWorkspaceType(recordingType) : undefined
 
   return (
     <aside data-testid="recording-orb-rail" className="space-y-4">
@@ -33,14 +49,25 @@ export function RecordingOrbRail() {
         <p className="mt-2 text-xs font-semibold leading-5 text-slate-500">
           ORB supports recording quality. Adults remain responsible for the final record.
         </p>
+        {form?.requiresManagerReview ? (
+          <p className="mt-2 text-xs font-black text-amber-900">Manager review likely required for this record type.</p>
+        ) : null}
+        {form?.safeguardingSensitive ? (
+          <p className="mt-1 text-xs font-black text-rose-900">Safeguarding sensitive — avoid unnecessary third-party identifiers.</p>
+        ) : null}
       </section>
 
       <section className="rounded-2xl border border-slate-100 bg-white p-4">
         <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">Suggested prompts</p>
         <ul className="mt-2 space-y-2">
-          {SUGGESTED_PROMPTS.map((prompt) => (
-            <li key={prompt} className="text-sm font-semibold leading-5 text-slate-700">
-              {prompt}
+          {suggestedPrompts.map((prompt) => (
+            <li key={prompt}>
+              <Link
+                href={operationalOrbHrefForPrompt(prompt)}
+                className="text-sm font-semibold leading-5 text-blue-800 underline decoration-blue-200 underline-offset-2 hover:text-blue-950"
+              >
+                {prompt}
+              </Link>
             </li>
           ))}
         </ul>

@@ -42,22 +42,37 @@ export function RecordingWorkspace({
   const [body, setBody] = useState('')
 
   const continueHref = useMemo(() => {
-    const card = recordCardById(
-      recordingType === 'incident'
-        ? 'incidents'
-        : recordingType === 'family-time'
-          ? 'family-contact'
-          : recordingType === 'health-medication'
-            ? 'medication-health'
-            : recordingType === 'handover'
-              ? 'shift-handover'
-              : recordingType === 'evidence-document'
-                ? 'documents'
-                : recordingType === 'staff-reflection'
-                  ? 'ask-orb'
-                  : recordingType
-    )
-    if (!card) return '/record'
+    const cardIdMap: Partial<Record<RecordingWorkspaceType, string>> = {
+      incident: 'incidents',
+      'family-time': 'family-contact',
+      'health-medication': 'medication-health',
+      'medication-note-error': 'medication-health',
+      handover: 'shift-handover',
+      'evidence-document': 'documents',
+      'staff-reflection': 'ask-orb',
+      'safeguarding-concern': 'safeguarding',
+      missing: 'missing',
+      'return-conversation': 'return-conversation',
+      'physical-intervention': 'physical-intervention',
+      'injury-body-map': 'injury-body-map',
+      'education-note': 'education-update',
+      'reg44-evidence': 'reg44-evidence',
+      'reg45-evidence': 'reg45-evidence',
+      'manager-review': 'manager-review',
+      'daily-note': 'daily-note',
+      'child-voice': 'child-voice',
+      keywork: 'keywork'
+    }
+    const cardId = cardIdMap[recordingType] || recordingType
+    const card = recordCardById(cardId)
+    if (!card) {
+      const params = new URLSearchParams({ type: recordingType })
+      if (childId) {
+        params.set('child_id', childId)
+        params.set('about', 'child')
+      }
+      return `/record?${params.toString()}`
+    }
     return recordCardHref(card, childId)
   }, [childId, recordingType])
 
@@ -88,10 +103,10 @@ export function RecordingWorkspace({
         </div>
 
         <div className="space-y-4">
-          <RecordingOrbRail />
-          <RecordingQualityCoach body={body} title={title} />
+          <RecordingOrbRail recordingType={recordingType} />
+          <RecordingQualityCoach body={body} title={title} recordingType={recordingType} />
           <RecordingLanguageSuggestions body={body} title={title} />
-          <RecordingReviewChecklist body={body} title={title} />
+          <RecordingReviewChecklist body={body} title={title} recordingType={recordingType} />
         </div>
       </div>
 

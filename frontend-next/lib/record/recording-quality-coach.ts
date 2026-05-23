@@ -1,3 +1,5 @@
+import { recordingFormByWorkspaceType, type RecordingWorkspaceType } from '@/lib/record/recording-form-registry'
+
 export type QualityCoachSeverity = 'ok' | 'attention' | 'review'
 
 export type QualityCoachCheck = {
@@ -125,11 +127,33 @@ export function detectPrivacyIdentifiers(text: string): Array<{ id: string; labe
   }))
 }
 
-export function analyseRecordingQuality(body: string, title = ''): QualityCoachResult {
+const DE_ESCALATION_MARKERS = /\b(de[\s-]?escalat|calm|space|choice|reassur|co[\s-]?regulat)\b/i
+const MEDICATION_MARKERS = /\b(medication|dose|administer|refus|missed|pharmacy|GP|NHS)\b/i
+const GOVERNANCE_MARKERS = /\b(evidence|decision|action|owner|timescale|review date|oversight)\b/i
+const INFORMED_MARKERS = /\b(informed|notified|contacted|escalat|manager|safeguarding lead|police|social worker)\b/i
+
+function formRequiresManagerReview(type?: RecordingWorkspaceType): boolean {
+  if (!type) return false
+  return recordingFormByWorkspaceType(type)?.requiresManagerReview ?? false
+}
+
+function formIsSafeguardingSensitive(type?: RecordingWorkspaceType): boolean {
+  if (!type) return false
+  return recordingFormByWorkspaceType(type)?.safeguardingSensitive ?? false
+}
+
+export function analyseRecordingQuality(
+  body: string,
+  title = '',
+  recordingType?: RecordingWorkspaceType
+): QualityCoachResult {
   const combined = `${title}\n${body}`.trim()
   const wordCount = combined ? combined.split(/\s+/).filter(Boolean).length : 0
   const judgemental = findJudgementalPhrases(combined)
   const suggestions: string[] = []
+  const safeguardingTerms = detectSafeguardingReviewTerms(combined)
+  const managerReviewRequired = formRequiresManagerReview(recordingType)
+  const safeguardingForm = formIsSafeguardingSensitive(recordingType)
 
   const checks: QualityCoachCheck[] = [
     {
@@ -169,10 +193,34 @@ export function analyseRecordingQuality(body: string, title = ''): QualityCoachR
     },
     {
       id: 'safeguarding-considered',
-      label: 'Safeguarding/manager review considered where relevant',
-      passed: detectSafeguardingReviewTerms(combined).length > 0 || wordCount < 40,
-      severity: 'ok',
-      suggestion: 'Consider whether manager or safeguarding review is needed.'
+      label: safeguardingForm
+        ? 'Safeguarding concern and escalation considered'
+        : 'Safeguarding/manager review considered where relevant',
+      passed:
+        safeguardingTerms.length > 0 ||
+        INFORMED_MARKERS.test(combined) ||
+        (!safeguardingForm && !managerReviewRequired && wordCount < 40),
+      severity: safeguardingForm
+        ? safeguardingTerms.length > 0 && INFORMED_MARKERS.test(combined)
+          ? 'ok'
+          : 'review'
+        : 'ok',
+      suggestion: safeguardingForm
+        ? 'Record who was informed and immediate safety actions.'
+        : 'Consider whether manager or safeguarding review is needed.'
+    },
+    {
+      id: 'manager-review-required',
+      label: managerReviewRequired ? 'Manager review required for this record type' : 'Manager review if threshold met',
+      passed: managerReviewRequired
+        ? /\b(manager|review|oversight|sign[\s-]?off|escalat)\b/i.test(combined)
+        : true,
+      severity: managerReviewRequired
+        ? /\b(manager|review|oversight|sign[\s-]?off|escalat)\b/i.test(combined)
+          ? 'ok'
+          : 'review'
+        : 'ok',
+      suggestion: managerReviewRequired ? 'Note manager review, safeguarding lead or sign-off.' : undefined
     },
     {
       id: 'length',
@@ -204,6 +252,32 @@ export function analyseRecordingQuality(body: string, title = ''): QualityCoachR
     suggestions.push('Add any repair or follow-up.')
   }
 
+  if (recordingType === 'physical-intervention' && !DE_ESCALATION_MARKERS.test(combined)) {
+    suggestions.push('Record de-escalation attempted before intervention.')
+  }
+  if (recordingType === 'missing' || recordingType === 'return-conversation') {
+    if (!CHILD_VOICE_MARKERS.test(combined)) {
+      suggestions.push('Include the young person’s voice on return where possible.')
+    }
+    if (!INFORMED_MARKERS.test(combined)) {
+      suggestions.push('Record who was informed (manager, police, social worker as needed).')
+    }
+  }
+  if (recordingType === 'medication-note-error' || recordingType === 'health-medication') {
+    suggestions.push('Do not rely on AI for medication decisions — follow policy and seek advice.')
+    if (!MEDICATION_MARKERS.test(combined)) {
+      suggestions.push('Add factual medication or health detail.')
+    }
+  }
+  if (recordingType === 'manager-review' || recordingType === 'reg44-evidence' || recordingType === 'reg45-evidence') {
+    if (!GOVERNANCE_MARKERS.test(combined)) {
+      suggestions.push('Add evidence basis, action owner and timescale.')
+    }
+  }
+  if (managerReviewRequired && !/\b(manager|review|oversight)\b/i.test(combined)) {
+    suggestions.push('This record type usually needs manager review — note oversight.')
+  }
+
   const severities = checks.map((check) => check.severity)
   let overall: QualityCoachSeverity = 'ok'
   if (severities.includes('review')) overall = 'review'
@@ -223,13 +297,26 @@ export type ReviewChecklistItem = {
   status: QualityCoachSeverity
 }
 
-export function buildReviewChecklist(body: string, title = ''): ReviewChecklistItem[] {
+export function buildReviewChecklist(
+  body: string,
+  title = '',
+  recordingType?: RecordingWorkspaceType
+): ReviewChecklistItem[] {
   const combined = `${title}\n${body}`.trim()
-  const quality = analyseRecordingQuality(body, title)
+  const quality = analyseRecordingQuality(body, title, recordingType)
   const privacyHits = detectPrivacyIdentifiers(combined)
   const safeguarding = detectSafeguardingReviewTerms(combined)
+  const form = recordingType ? recordingFormByWorkspaceType(recordingType) : undefined
+  const managerRequired = form?.requiresManagerReview ?? false
 
   const byId = Object.fromEntries(quality.checks.map((check) => [check.id, check]))
+
+  const formChecklistItems: ReviewChecklistItem[] =
+    form?.qualityChecklist.map((label, index) => ({
+      id: `form-check-${index}`,
+      label,
+      status: combined.length > 30 ? 'ok' : 'attention'
+    })) ?? []
 
   return [
     {
@@ -264,8 +351,8 @@ export function buildReviewChecklist(body: string, title = ''): ReviewChecklistI
     },
     {
       id: 'manager-checklist',
-      label: 'Manager review considered',
-      status: safeguarding.length ? 'review' : 'ok'
+      label: managerRequired ? 'Manager review required' : 'Manager review considered',
+      status: managerRequired || safeguarding.length ? 'review' : 'ok'
     },
     {
       id: 'identifiers',
@@ -276,7 +363,8 @@ export function buildReviewChecklist(body: string, title = ''): ReviewChecklistI
       id: 'spelling',
       label: 'Spelling/grammar reviewed',
       status: combined.length > 20 ? 'ok' : 'attention'
-    }
+    },
+    ...formChecklistItems.slice(0, 4)
   ]
 }
 

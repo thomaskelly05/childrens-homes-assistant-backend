@@ -56,8 +56,12 @@ def test_child_journey_routes_use_assistant_orb_with_child_context():
 
 def test_child_journey_recording_cards_include_orb_hints():
     recording = _read(FRONTEND / "components" / "child-journey" / "child-journey-recording-actions.tsx")
-    assert "ORB can help make this child-centred" in _read(FRONTEND / "lib" / "child-journey" / "child-journey-routes.ts")
+    routes = _read(FRONTEND / "lib" / "child-journey" / "child-journey-routes.ts")
+    assert "ORB can help make this child-centred" in routes
     assert "OrbInlineHint" in recording
+    assert "safeguarding" in routes
+    assert "physical-intervention" in routes
+    assert "More recording types" in routes
 
 
 def test_child_journey_page_composes_workspace_sections():
