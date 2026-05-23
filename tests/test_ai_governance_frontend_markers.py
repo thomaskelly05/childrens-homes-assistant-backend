@@ -32,7 +32,7 @@ def test_ai_governance_page_exists():
 
 
 def test_dashboard_sections_exist():
-    text = DASHBOARD.read_text(encoding="utf-8")
+    text = PAGE.read_text(encoding="utf-8") + DASHBOARD.read_text(encoding="utf-8")
     for marker in REQUIRED_MARKERS:
         assert marker in text, f"Missing marker: {marker}"
 

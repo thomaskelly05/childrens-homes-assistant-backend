@@ -38,7 +38,7 @@ export default async function AiGovernancePage({ searchParams }: PageProps) {
           </div>
         }
       />
-      <LiveDataStatus source={result.source} warning={result.warning} />
+      <LiveDataStatus result={result} />
       <AiGovernanceDashboard data={data} warning={result.warning || data.warning || undefined} />
     </div>
   )

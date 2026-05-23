@@ -26,6 +26,8 @@ def test_health_route(fake_state):
 
 def test_dashboard_route(fake_state):
     response = governance_routes.ai_governance_dashboard(
+        period="7d",
+        limit=25,
         current_user=fake_state["user"],
         conn=None,
     )
@@ -35,6 +37,8 @@ def test_dashboard_route(fake_state):
 
 def test_events_route(fake_state):
     response = governance_routes.ai_governance_events(
+        period="7d",
+        limit=50,
         current_user=fake_state["user"],
         conn=None,
     )
@@ -44,6 +48,7 @@ def test_events_route(fake_state):
 
 def test_alerts_route(fake_state):
     response = governance_routes.ai_governance_alerts(
+        period="7d",
         current_user=fake_state["user"],
         conn=None,
     )
@@ -57,7 +62,10 @@ def test_sources_outputs_costs_quality_routes(fake_state):
         governance_routes.ai_governance_costs,
         governance_routes.ai_governance_quality,
     ):
-        payload = handler(current_user=fake_state["user"], conn=None)
+        kwargs = {"current_user": fake_state["user"], "conn": None}
+        if handler in (governance_routes.ai_governance_costs, governance_routes.ai_governance_quality):
+            kwargs["period"] = "7d"
+        payload = handler(**kwargs)
         assert payload["success"] is True
 
 
