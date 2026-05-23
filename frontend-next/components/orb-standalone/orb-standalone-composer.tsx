@@ -1,7 +1,7 @@
 'use client'
 
 import { FormEvent, useRef, type DragEvent } from 'react'
-import { Camera, FileText, ImagePlus, Mic, MicOff, Send, Square, X } from 'lucide-react'
+import { Camera, FileText, Mic, MicOff, Plus, Send, Square, X } from 'lucide-react'
 
 import type { StandaloneOrbMode } from '@/lib/orb/standalone-client'
 
@@ -21,8 +21,6 @@ export function OrbStandaloneComposer({
   voiceSpeaking,
   voiceRecognitionAvailable,
   voiceStatusText,
-  voiceReplies,
-  synthesisAvailable,
   transcriptReady,
   displayTranscript,
   autoSend,
@@ -31,7 +29,6 @@ export function OrbStandaloneComposer({
   onMicClick,
   onCancelListening,
   onStopSpeaking,
-  onToggleVoiceReplies,
   onSendTranscript,
   onRetryTranscript,
   onAddFiles,
@@ -55,8 +52,6 @@ export function OrbStandaloneComposer({
   voiceSpeaking: boolean
   voiceRecognitionAvailable: boolean
   voiceStatusText: string
-  voiceReplies: boolean
-  synthesisAvailable: boolean
   transcriptReady: boolean
   displayTranscript: string
   autoSend: boolean
@@ -65,7 +60,6 @@ export function OrbStandaloneComposer({
   onMicClick: () => void
   onCancelListening: () => void
   onStopSpeaking: () => void
-  onToggleVoiceReplies: () => void
   onSendTranscript: () => void
   onRetryTranscript: () => void
   onAddFiles: (files: FileList | File[]) => void
@@ -91,9 +85,10 @@ export function OrbStandaloneComposer({
 
   return (
     <div
-      className="orb-chat-composer shrink-0 border-t border-white/[0.06] bg-gradient-to-t from-[#05070d] via-[#05070d]/98 to-transparent px-3 pt-3 md:px-6 md:pt-4"
+      className="orb-chat-composer shrink-0 border-t border-white/[0.06] bg-gradient-to-t from-[#05070d] via-[#05070d]/98 to-transparent px-3 pt-2 md:px-4 md:pt-3"
       onDragOver={handleDragOver}
       onDrop={onDrop}
+      data-orb-composer
     >
       <div className="mx-auto w-full max-w-[var(--orb-composer-max,53.125rem)]">
         {transcriptReady && displayTranscript ? (
@@ -176,7 +171,7 @@ export function OrbStandaloneComposer({
               </div>
             ) : null}
 
-            <div className="flex items-end gap-1.5">
+            <div className="flex items-end gap-1">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -202,39 +197,30 @@ export function OrbStandaloneComposer({
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="inline-flex h-11 min-w-11 shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-white/[0.06] hover:text-slate-200"
-                aria-label="Upload image"
+                className="inline-flex h-10 min-w-10 shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-white/[0.06] hover:text-slate-200"
+                aria-label="Attach image"
+                data-orb-composer-attach
               >
-                <ImagePlus className="h-5 w-5" aria-hidden />
-              </button>
-              <button
-                type="button"
-                onClick={() => cameraInputRef.current?.click()}
-                className="inline-flex h-11 min-w-11 shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-white/[0.06] hover:text-slate-200 md:hidden"
-                aria-label="Use camera"
-              >
-                <Camera className="h-5 w-5" aria-hidden />
+                <Plus className="h-5 w-5" aria-hidden />
               </button>
               {onAttachDocumentClick ? (
                 <button
                   type="button"
                   onClick={onAttachDocumentClick}
-                  className="inline-flex h-11 min-w-11 shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-white/[0.06] hover:text-slate-200"
+                  className="inline-flex h-10 min-w-10 shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-white/[0.06] hover:text-slate-200"
                   aria-label="Attach document"
+                  data-orb-composer-document
                 >
                   <FileText className="h-5 w-5" aria-hidden />
                 </button>
               ) : null}
               <button
                 type="button"
-                onClick={onMicClick}
-                disabled={!voiceRecognitionAvailable}
-                aria-label={voiceListening ? 'Stop listening' : 'Start voice input'}
-                className={`inline-flex h-11 min-w-11 shrink-0 items-center justify-center rounded-full transition disabled:opacity-40 ${
-                  voiceListening ? 'bg-cyan-400/15 text-cyan-100' : 'text-slate-400 hover:bg-white/[0.06] hover:text-slate-200'
-                }`}
+                onClick={() => cameraInputRef.current?.click()}
+                className="inline-flex h-10 min-w-10 shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-white/[0.06] hover:text-slate-200 md:hidden"
+                aria-label="Use camera"
               >
-                {voiceListening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+                <Camera className="h-5 w-5" aria-hidden />
               </button>
               <textarea
                 ref={inputRef}
@@ -249,66 +235,70 @@ export function OrbStandaloneComposer({
                   }
                 }}
                 rows={1}
-                className="max-h-44 min-h-[3rem] flex-1 resize-none bg-transparent px-1 py-3 text-base leading-6 text-white outline-none placeholder:text-slate-500"
-                placeholder="Message ORB Care Companion…"
+                className="max-h-40 min-h-[2.75rem] flex-1 resize-none bg-transparent px-1 py-2.5 text-base leading-6 text-white outline-none placeholder:text-slate-500"
+                placeholder="Message ORB…"
                 disabled={pending}
                 aria-describedby="orb-standalone-status"
+                data-orb-composer-input
               />
+              <button
+                type="button"
+                onClick={onMicClick}
+                disabled={!voiceRecognitionAvailable}
+                aria-label={voiceListening ? 'Stop listening' : 'Start voice input'}
+                className={`inline-flex h-10 min-w-10 shrink-0 items-center justify-center rounded-full transition disabled:opacity-40 ${
+                  voiceListening ? 'bg-cyan-400/15 text-cyan-100' : 'text-slate-400 hover:bg-white/[0.06] hover:text-slate-200'
+                }`}
+                data-orb-composer-mic
+              >
+                {voiceListening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+              </button>
               <button
                 type="button"
                 disabled={pending || (!input.trim() && attachments.length === 0)}
                 aria-label="Send message"
                 onClick={() => onSubmit()}
-                className="inline-flex h-11 min-w-11 shrink-0 items-center justify-center rounded-full bg-white text-slate-950 transition hover:bg-slate-100 disabled:opacity-35"
+                className="inline-flex h-10 min-w-10 shrink-0 items-center justify-center rounded-full bg-white text-slate-950 transition hover:bg-slate-100 disabled:opacity-35"
+                data-orb-composer-send
               >
                 <Send className="h-5 w-5" />
               </button>
             </div>
           </div>
 
-          <div className="mt-2 flex flex-wrap items-center justify-between gap-2 px-2">
-            <p id="orb-standalone-status" className="text-xs leading-5 text-slate-500" role="status">
+          <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2 px-2">
+            <p id="orb-standalone-status" className="text-[11px] leading-5 text-slate-500" role="status" data-orb-voice-status>
               {voiceStatusText}
             </p>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-white/[0.04] px-2.5 py-0.5 text-[10px] font-medium text-slate-500">{mode}</span>
-              <button
-                type="button"
-                onClick={onToggleVoiceReplies}
-                disabled={!synthesisAvailable}
-                className="rounded-full bg-white/[0.04] px-2.5 py-0.5 text-[10px] font-medium text-slate-500 disabled:opacity-40"
-              >
-                Voice replies: {voiceReplies ? 'On' : 'Off'}
-              </button>
-            </div>
+            <span className="sr-only">Mode: {mode}</span>
           </div>
 
-          {voiceListening || voiceSpeaking ? (
-            <div className="mt-2 flex flex-wrap gap-2 px-2">
-              {voiceListening ? (
-                <button
-                  type="button"
-                  onClick={onCancelListening}
-                  className="inline-flex h-8 items-center rounded-full border border-white/10 px-3 text-xs font-medium text-slate-400"
-                >
-                  Cancel listening
-                </button>
-              ) : null}
-              {voiceSpeaking ? (
-                <button
-                  type="button"
-                  onClick={onStopSpeaking}
-                  className="inline-flex h-8 items-center gap-1.5 rounded-full border border-amber-300/30 bg-amber-400/10 px-3 text-xs font-semibold text-amber-50"
-                >
-                  <Square className="h-3 w-3 fill-current" />
-                  Stop speaking
-                </button>
-              ) : null}
+          {voiceListening ? (
+            <div className="mt-1.5 px-2">
+              <button
+                type="button"
+                onClick={onCancelListening}
+                className="inline-flex h-7 items-center rounded-full border border-white/10 px-3 text-[11px] font-medium text-slate-400"
+              >
+                Cancel listening
+              </button>
+            </div>
+          ) : null}
+          {voiceSpeaking ? (
+            <div className="mt-1.5 px-2">
+              <button
+                type="button"
+                onClick={onStopSpeaking}
+                className="inline-flex h-7 items-center gap-1.5 rounded-full border border-amber-300/30 bg-amber-400/10 px-3 text-[11px] font-semibold text-amber-50"
+              >
+                <Square className="h-3 w-3 fill-current" />
+                Stop speaking
+              </button>
             </div>
           ) : null}
         </form>
 
-        <p className="mt-3 px-2 text-center text-[11px] leading-5 text-slate-500">
+        <p className="mt-2 px-2 text-center text-[10px] leading-4 text-slate-600" data-orb-composer-disclaimer>
           Standalone ORB can make mistakes. It does not access IndiCare OS records.
         </p>
       </div>

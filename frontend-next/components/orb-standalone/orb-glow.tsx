@@ -21,17 +21,17 @@ export type StandaloneOrbGlowState =
 
 const STATE_LABELS: Record<StandaloneOrbGlowState, string> = {
   idle: 'Ready',
-  wake_listening: "Say 'Hey ORB'",
-  wake_detected: "Hey, I'm here.",
-  listening: "I'm listening…",
-  continuous_listening: 'Listening for your reply…',
-  transcript_ready: 'Ready to send',
-  thinking: 'Thinking that through…',
-  speaking: "Here's how I'd think about it…",
-  interrupted: "Stopped — I'm listening.",
-  recording: 'Recording support',
-  safeguarding: 'Safeguarding reflection',
-  error: 'Voice unavailable — type instead'
+  wake_listening: 'Say Hey ORB',
+  wake_detected: 'Ready',
+  listening: 'Listening',
+  continuous_listening: 'Listening',
+  transcript_ready: 'Ready',
+  thinking: 'Thinking',
+  speaking: 'Speaking',
+  interrupted: 'Listening',
+  recording: 'Ready',
+  safeguarding: 'Privacy',
+  error: 'Error'
 }
 
 const STATE_TO_RENDER: Record<StandaloneOrbGlowState, OrbRenderState> = {
@@ -114,14 +114,16 @@ const STATE_HUES: Record<StandaloneOrbGlowState, { ring: string; glow: string; c
 
 const ORB_SIZE_CLASSES = {
   hero: 'h-52 w-52 md:h-64 md:w-64 lg:h-72 lg:w-72',
-  dock: 'h-28 w-28 md:h-32 md:w-32',
-  compact: 'h-20 w-20'
+  dock: 'h-24 w-24 md:h-28 md:w-28',
+  compact: 'h-16 w-16',
+  fab: 'h-14 w-14'
 } as const
 
 const ORB_SPHERE_SIZE = {
   hero: 'xlarge' as const,
   dock: 'large' as const,
-  compact: 'medium' as const
+  compact: 'medium' as const,
+  fab: 'small' as const
 }
 
 export type OrbGlowSize = keyof typeof ORB_SIZE_CLASSES
@@ -275,21 +277,15 @@ export function OrbGlow({
         orbButton
       )}
 
-      <p
-        className={`font-black uppercase text-cyan-100/90 ${
-          compactLabels ? 'mt-2 text-[10px] tracking-[0.14em]' : 'mt-5 text-sm tracking-[0.2em]'
-        }`}
-      >
-        {statusText}
-      </p>
+      {compactLabels ? (
+        <p className="mt-1.5 max-w-[6.5rem] text-center text-[9px] font-medium leading-tight text-slate-500" data-orb-companion-label>
+          {statusText}
+        </p>
+      ) : (
+        <p className="mt-4 text-sm font-medium text-cyan-100/90">{statusText}</p>
+      )}
       {mode && !compactLabels ? (
-        <p className="mt-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">{mode}</p>
-      ) : null}
-      {voiceEnabled === false && !compactLabels ? (
-        <p className="mt-2 text-xs text-slate-500">Voice replies off — typing always available</p>
-      ) : null}
-      {state === 'speaking' && !compactLabels ? (
-        <p className="mt-2 text-xs text-slate-500">You can interrupt me any time.</p>
+        <p className="mt-2 text-xs font-medium text-slate-400">{mode}</p>
       ) : null}
     </div>
   )

@@ -69,7 +69,6 @@ CHATGPT_STYLE_MARKERS = [
     "New chat",
     "Search chats",
     "Projects",
-    "Profiles",
     "Recent chats",
     "How can I help today?",
     "More examples",
@@ -78,12 +77,14 @@ CHATGPT_STYLE_MARKERS = [
     "orb-chat-layout",
     "orb-chat-sidebar",
     "orb-chat-main",
-    "orb-floating-dock",
+    "orb-companion-float",
     "orb-voice-dock",
 ]
 
-ORB_FLOATING_DOCK_MARKERS = [
-    "orb-floating-dock",
+ORB_COMPANION_VOICE_MARKERS = [
+    "orb-companion-float",
+    "orb-companion-fab",
+    "Say Hey ORB",
     "Tap to speak",
     "Wake phrase",
     "Continuous conversation",
@@ -95,7 +96,7 @@ ORB_FLOATING_DOCK_MARKERS = [
 ]
 
 IMAGE_UPLOAD_MARKERS = [
-    "ImagePlus",
+    "Plus",
     "onPaste",
     "onDrop",
     "addImageFiles",
@@ -392,10 +393,10 @@ def test_orb_page_chatgpt_style_layout():
     assert "orb-voice-dock-column" not in sources, "/orb must not use a fixed full-height right strip"
 
 
-def test_orb_floating_voice_dock_markers():
-    sources = _read(ORB_COMPANION) + _read(GLOBALS_CSS) + _read(ORB_COMPOSER)
-    for marker in ORB_FLOATING_DOCK_MARKERS:
-        assert marker in sources, f"/orb floating voice dock must include {marker}"
+def test_orb_compact_companion_voice_markers():
+    sources = _read(ORB_COMPANION) + _read(GLOBALS_CSS) + _read(ORB_COMPOSER) + _read(ORB_VOICE_HOOK)
+    for marker in ORB_COMPANION_VOICE_MARKERS:
+        assert marker in sources, f"/orb compact companion must include {marker}"
 
 
 def test_standalone_orb_image_upload_support():
