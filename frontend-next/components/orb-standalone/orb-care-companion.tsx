@@ -32,6 +32,10 @@ import { OrbMemoryPanel } from '@/components/orb-standalone/orb-memory-panel'
 import { OrbPermissionsPanel } from '@/components/orb-standalone/orb-permissions-panel'
 import { OrbToolsPanel } from '@/components/orb-standalone/orb-tools-panel'
 import { OrbStandaloneSettingsPanel } from '@/components/orb-standalone/orb-standalone-settings-panel'
+import {
+  ORB_TOOL_TO_PANEL,
+  type OrbStandalonePanel
+} from '@/components/orb-standalone/orb-standalone-panel-types'
 import { OrbStandaloneSidebar } from '@/components/orb-standalone/orb-standalone-sidebar'
 import { modeChipLabel } from '@/components/orb-standalone/orb-mode-labels'
 import {
@@ -254,7 +258,7 @@ export function OrbCareCompanion() {
   const [voicePanelOpen, setVoicePanelOpen] = useState(false)
   const [orbCompanionExpanded, setOrbCompanionExpanded] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [settingsPanelOpen, setSettingsPanelOpen] = useState(false)
+  const [activePanel, setActivePanel] = useState<OrbStandalonePanel>(null)
   const [modesBarOpen, setModesBarOpen] = useState(false)
   const [promptDrawerOpen, setPromptDrawerOpen] = useState(false)
   const [moreExamplesExpanded, setMoreExamplesExpanded] = useState(false)
@@ -262,16 +266,7 @@ export function OrbCareCompanion() {
   const [draftNotice, setDraftNotice] = useState<string | null>(null)
   const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null)
   const [profilePickerOpen, setProfilePickerOpen] = useState(false)
-  const [knowledgeLibraryOpen, setKnowledgeLibraryOpen] = useState(false)
-  const [documentsPanelOpen, setDocumentsPanelOpen] = useState(false)
-  const [agentsPanelOpen, setAgentsPanelOpen] = useState(false)
-  const [savedOutputsPanelOpen, setSavedOutputsPanelOpen] = useState(false)
   const [savedOutputsCount, setSavedOutputsCount] = useState(0)
-  const [toolsPanelOpen, setToolsPanelOpen] = useState(false)
-  const [memoryPanelOpen, setMemoryPanelOpen] = useState(false)
-  const [accessibilityPanelOpen, setAccessibilityPanelOpen] = useState(false)
-  const [permissionsPanelOpen, setPermissionsPanelOpen] = useState(false)
-  const [intelligenceMapOpen, setIntelligenceMapOpen] = useState(false)
   const [a11yPrefs, setA11yPrefs] = useState<StandaloneOrbAccessibilityPreferences>(() =>
     typeof window === 'undefined' ? loadStandaloneOrbAccessibility() : loadStandaloneOrbAccessibility()
   )
@@ -303,7 +298,7 @@ export function OrbCareCompanion() {
     void fetchOrbSavedOutputsSummary()
       .then((summary) => setSavedOutputsCount(summary.total || 0))
       .catch(() => setSavedOutputsCount(0))
-  }, [savedOutputsPanelOpen])
+  }, [activePanel])
 
   useEffect(() => {
     setA11yPrefs(loadStandaloneOrbAccessibility())
@@ -327,67 +322,32 @@ export function OrbCareCompanion() {
   const showEmptyState = visibleMessages.length === 0 && !pending
 
   const closeAllPanels = useCallback(() => {
-    setToolsPanelOpen(false)
-    setSettingsPanelOpen(false)
-    setKnowledgeLibraryOpen(false)
-    setDocumentsPanelOpen(false)
-    setAgentsPanelOpen(false)
-    setSavedOutputsPanelOpen(false)
-    setMemoryPanelOpen(false)
-    setAccessibilityPanelOpen(false)
-    setPermissionsPanelOpen(false)
-    setIntelligenceMapOpen(false)
+    setActivePanel(null)
   }, [])
 
-  const openToolsPanel = useCallback(() => {
-    closeAllPanels()
-    setToolsPanelOpen(true)
-  }, [closeAllPanels])
+  const closePanel = closeAllPanels
 
-  const openSettingsPanel = useCallback(() => {
-    closeAllPanels()
-    setSettingsPanelOpen(true)
-  }, [closeAllPanels])
+  const openPanel = useCallback((panel: Exclude<OrbStandalonePanel, null>) => {
+    setActivePanel(panel)
+  }, [])
 
-  const openDocumentsPanel = useCallback(() => {
-    closeAllPanels()
-    setDocumentsPanelOpen(true)
-  }, [closeAllPanels])
-
-  const openAgentsPanel = useCallback(() => {
-    closeAllPanels()
-    setAgentsPanelOpen(true)
-  }, [closeAllPanels])
-
-  const openKnowledgeLibrary = useCallback(() => {
-    closeAllPanels()
-    setKnowledgeLibraryOpen(true)
-  }, [closeAllPanels])
-
-  const openSavedOutputsPanel = useCallback(() => {
-    closeAllPanels()
-    setSavedOutputsPanelOpen(true)
-  }, [closeAllPanels])
-
-  const openMemoryPanel = useCallback(() => {
-    closeAllPanels()
-    setMemoryPanelOpen(true)
-  }, [closeAllPanels])
-
-  const openAccessibilityPanel = useCallback(() => {
-    closeAllPanels()
-    setAccessibilityPanelOpen(true)
-  }, [closeAllPanels])
-
-  const openPermissionsPanel = useCallback(() => {
-    closeAllPanels()
-    setPermissionsPanelOpen(true)
-  }, [closeAllPanels])
-
-  const openIntelligenceMap = useCallback(() => {
-    closeAllPanels()
-    setIntelligenceMapOpen(true)
-  }, [closeAllPanels])
+  const openTool = useCallback(
+    (toolId: string) => {
+      const panel = ORB_TOOL_TO_PANEL[toolId]
+      if (panel) openPanel(panel)
+    },
+    [openPanel]
+  )
+  const openToolsPanel = useCallback(() => openPanel('tools'), [openPanel])
+  const openSettingsPanel = useCallback(() => openPanel('settings'), [openPanel])
+  const openDocumentsPanel = useCallback(() => openPanel('documents'), [openPanel])
+  const openAgentsPanel = useCallback(() => openPanel('agents'), [openPanel])
+  const openKnowledgeLibrary = useCallback(() => openPanel('knowledge'), [openPanel])
+  const openSavedOutputsPanel = useCallback(() => openPanel('saved_outputs'), [openPanel])
+  const openMemoryPanel = useCallback(() => openPanel('memory'), [openPanel])
+  const openAccessibilityPanel = useCallback(() => openPanel('accessibility'), [openPanel])
+  const openPermissionsPanel = useCallback(() => openPanel('permissions'), [openPanel])
+  const openIntelligenceMap = useCallback(() => openPanel('intelligence_map'), [openPanel])
 
   useEffect(() => {
     if (hydratedRef.current) writeStandaloneWorkspace(repairOrbWorkspace(workspace))
@@ -925,33 +885,36 @@ export function OrbCareCompanion() {
   return (
     <main
       className={`orb-chat-layout relative flex flex-col overflow-hidden bg-[#05070d] text-white ${layoutA11yClass}`}
+      data-orb-active-panel={activePanel || 'none'}
+      data-orb-close-all-panels
     >
       <div className="pointer-events-none fixed inset-0 orb-cinematic-light-field opacity-50" aria-hidden />
 
-      <OrbKnowledgeLibraryPanel open={knowledgeLibraryOpen} onClose={() => setKnowledgeLibraryOpen(false)} />
+      <OrbKnowledgeLibraryPanel open={activePanel === 'knowledge'} onClose={closePanel} />
       <OrbSavedOutputsPanel
-        open={savedOutputsPanelOpen}
-        onClose={() => setSavedOutputsPanelOpen(false)}
+        open={activePanel === 'saved_outputs'}
+        onClose={closePanel}
         workspace={workspace}
         onReuseInChat={(prompt) => {
           setInput(prompt)
-          setSavedOutputsPanelOpen(false)
+          closePanel()
         }}
       />
       <OrbDocumentPanel
-        open={documentsPanelOpen}
-        onClose={() => setDocumentsPanelOpen(false)}
+        open={activePanel === 'documents'}
+        onClose={closePanel}
         projects={workspace.projects}
         activeProjectId={workspace.activeProjectId}
         activeProjectName={activeProject?.name}
         onReuseInChat={(prompt) => {
           setInput(prompt)
-          setDocumentsPanelOpen(false)
+          closePanel()
         }}
         onInsertIntoChat={(text) => {
           setInput(text)
-          setDocumentsPanelOpen(false)
+          closePanel()
         }}
+        onOpenSavedOutputs={openSavedOutputsPanel}
         onDocumentContext={(ctx) => setPendingDocument(ctx)}
         onRunDeepResearch={(ctx) => {
           setPendingDocument(ctx)
@@ -969,16 +932,17 @@ export function OrbCareCompanion() {
         }}
       />
       <OrbStandaloneSettingsPanel
-        open={settingsPanelOpen}
-        onClose={() => setSettingsPanelOpen(false)}
+        open={activePanel === 'settings'}
+        onClose={closePanel}
         onOpenMemory={openMemoryPanel}
         onOpenAccessibility={openAccessibilityPanel}
         onOpenPermissions={openPermissionsPanel}
         onOpenVoiceSettings={openVoiceSettings}
+        onOpenIntelligenceMap={openIntelligenceMap}
       />
       <OrbToolsPanel
-        open={toolsPanelOpen}
-        onClose={() => setToolsPanelOpen(false)}
+        open={activePanel === 'tools'}
+        onClose={closePanel}
         onOpenKnowledge={openKnowledgeLibrary}
         onOpenDocuments={openDocumentsPanel}
         onOpenAgents={openAgentsPanel}
@@ -992,31 +956,30 @@ export function OrbCareCompanion() {
           setAgentPanelPrompt('Run deep research on this topic')
           openAgentsPanel()
         }}
-        onAskOrb={() => inputRef.current?.focus()}
+        onAskOrb={() => {
+          closePanel()
+          inputRef.current?.focus()
+        }}
       />
       <OrbMemoryPanel
-        open={memoryPanelOpen}
-        onClose={() => setMemoryPanelOpen(false)}
+        open={activePanel === 'memory'}
+        onClose={closePanel}
         workspace={workspace}
         savedOutputsCount={savedOutputsCount}
         onWorkspaceCleared={() => setWorkspace(readStandaloneWorkspace())}
       />
-      <OrbStandaloneAccessibilityPanel
-        open={accessibilityPanelOpen}
-        onClose={() => setAccessibilityPanelOpen(false)}
-        onChange={setA11yPrefs}
-      />
+      <OrbStandaloneAccessibilityPanel open={activePanel === 'accessibility'} onClose={closePanel} onChange={setA11yPrefs} />
       <OrbPermissionsPanel
-        open={permissionsPanelOpen}
-        onClose={() => setPermissionsPanelOpen(false)}
+        open={activePanel === 'permissions'}
+        onClose={closePanel}
         voiceInputAvailable={voice.recognitionAvailable}
         voiceOutputAvailable={voice.synthesisAvailable}
       />
-      <OrbIntelligenceMapPanel open={intelligenceMapOpen} onClose={() => setIntelligenceMapOpen(false)} />
+      <OrbIntelligenceMapPanel open={activePanel === 'intelligence_map'} onClose={closePanel} />
       <OrbAgentPanel
-        open={agentsPanelOpen}
+        open={activePanel === 'agents'}
         onClose={() => {
-          setAgentsPanelOpen(false)
+          closePanel()
           setAgentPanelPrompt('')
           setAgentPanelType(undefined)
         }}
@@ -1028,9 +991,10 @@ export function OrbCareCompanion() {
         projects={workspace.projects}
         activeProjectId={workspace.activeProjectId}
         activeProjectName={activeProject?.name}
+        onOpenSavedOutputs={openSavedOutputsPanel}
         onReuseInChat={(prompt) => {
           setInput(prompt)
-          setAgentsPanelOpen(false)
+          closePanel()
         }}
       />
 

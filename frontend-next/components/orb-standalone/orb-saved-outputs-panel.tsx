@@ -1,12 +1,13 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Archive, Download, Loader2, MessageSquarePlus, Search, Trash2, X } from 'lucide-react'
+import { Archive, Download, Loader2, MessageSquarePlus, Search, Trash2 } from 'lucide-react'
 
 import {
   OrbIntelligenceOutput,
   type OrbIntelligenceOutputView
 } from '@/components/orb-standalone/orb-intelligence-output'
+import { OrbStandalonePanelShell } from '@/components/orb-standalone/orb-standalone-panel-shell'
 import {
   archiveOrbSavedOutput,
   deleteOrbSavedOutput,
@@ -39,6 +40,16 @@ const TYPE_LABELS: Record<string, string> = {
   supervision_guide: 'Supervision'
 }
 
+const FILTER_CHIPS: Array<{ id: string; label: string; type: string }> = [
+  { id: 'all', label: 'All', type: '' },
+  { id: 'briefings', label: 'Briefings', type: 'manager_briefing' },
+  { id: 'action_plans', label: 'Action plans', type: 'action_plan' },
+  { id: 'document_reviews', label: 'Document reviews', type: 'document_review' },
+  { id: 'research', label: 'Research', type: 'deep_research' },
+  { id: 'safeguarding', label: 'Safeguarding', type: 'safeguarding_reflection' },
+  { id: 'ofsted', label: 'Ofsted', type: 'ofsted_evidence_map' }
+]
+
 function recordToView(record: OrbSavedOutputRecord): OrbIntelligenceOutputView {
   const intel = record.intelligence_output as OrbIntelligenceOutputView | undefined
   if (intel?.title) return intel
@@ -67,6 +78,7 @@ export function OrbSavedOutputsPanel({
   const [items, setItems] = useState<OrbSavedOutputSummary[]>([])
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState<string>('')
+  const [chipFilter, setChipFilter] = useState('all')
   const [projectFilter, setProjectFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [includeArchived, setIncludeArchived] = useState(false)
@@ -122,8 +134,6 @@ export function OrbSavedOutputsPanel({
     return Array.from(map.entries())
   }, [items])
 
-  if (!open) return null
-
   async function handleArchive(id: string) {
     await archiveOrbSavedOutput(id)
     setNotice('Output archived.')
@@ -164,94 +174,90 @@ export function OrbSavedOutputsPanel({
   }
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-stretch justify-end bg-black/60 backdrop-blur-sm">
-      <div className="flex h-full w-full max-w-4xl flex-col border-l border-white/[0.08] bg-[#0a0e16] shadow-2xl">
-        <header className="flex shrink-0 items-center gap-2 border-b border-white/[0.06] px-4 py-3">
-          <h2 className="flex-1 text-sm font-semibold text-white">Saved outputs</h2>
-          <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-slate-400 hover:bg-white/[0.06]" aria-label="Close">
-            <X className="h-5 w-5" />
-          </button>
-        </header>
-
-        <div className="flex min-h-0 flex-1">
-          <div className="flex w-full max-w-md shrink-0 flex-col border-r border-white/[0.06]">
-            <div className="space-y-2 border-b border-white/[0.06] p-3">
-              <label className="flex items-center gap-2 rounded-lg bg-white/[0.04] px-3 py-2 ring-1 ring-white/[0.06]">
-                <Search className="h-4 w-4 text-slate-500" aria-hidden />
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search saved outputs"
-                  className="w-full bg-transparent text-sm text-white outline-none placeholder:text-slate-500"
-                />
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                <select
-                  value={typeFilter}
-                  onChange={(e) => setTypeFilter(e.target.value)}
-                  className="rounded-lg border border-white/10 bg-black/30 px-2 py-1.5 text-xs text-white"
-                >
-                  <option value="">All types</option>
-                  {Object.entries(TYPE_LABELS).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={projectFilter}
-                  onChange={(e) => setProjectFilter(e.target.value)}
-                  className="rounded-lg border border-white/10 bg-black/30 px-2 py-1.5 text-xs text-white"
-                >
-                  <option value="">All projects</option>
-                  {workspace.projects.map((p: StandaloneProject) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex flex-wrap gap-2 text-xs">
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="rounded-lg border border-white/10 bg-black/30 px-2 py-1 text-white"
-                >
-                  <option value="">Active</option>
-                  <option value="pinned">Pinned</option>
-                  <option value="saved">Saved</option>
-                  <option value="draft">Draft</option>
-                </select>
-                <label className="flex items-center gap-1 text-slate-400">
-                  <input
-                    type="checkbox"
-                    checked={includeArchived}
-                    onChange={(e) => setIncludeArchived(e.target.checked)}
-                  />
-                  Archived
-                </label>
+    <OrbStandalonePanelShell
+      open={open}
+      title="Saved outputs"
+      subtitle="Your standalone ORB library"
+      onClose={onClose}
+      panelId="saved_outputs"
+      wide
+      ariaLabel="ORB saved outputs"
+      footer="Saved outputs are standalone ORB artefacts."
+    >
+      <div className="flex min-h-0 flex-col md:flex-row" data-orb-saved-outputs-panel>
+        <div className="flex w-full shrink-0 flex-col border-b border-white/[0.06] md:max-w-md md:border-b-0 md:border-r">
+          <div className="space-y-2 p-3">
+            <label className="flex items-center gap-2 rounded-lg bg-white/[0.04] px-3 py-2 ring-1 ring-white/[0.06]">
+              <Search className="h-4 w-4 text-slate-500" aria-hidden />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search saved outputs"
+                className="w-full bg-transparent text-sm text-white outline-none placeholder:text-slate-500"
+                data-orb-saved-outputs-search
+              />
+            </label>
+            <div className="flex flex-wrap gap-1.5" data-orb-saved-outputs-filters>
+              {FILTER_CHIPS.map((chip) => (
                 <button
+                  key={chip.id}
                   type="button"
-                  onClick={() => void refresh()}
-                  className="ml-auto rounded-lg border border-white/10 px-2 py-1 text-slate-300"
+                  onClick={() => {
+                    setChipFilter(chip.id)
+                    setTypeFilter(chip.type)
+                  }}
+                  className={`rounded-full px-2.5 py-1 text-[10px] font-medium ${
+                    chipFilter === chip.id ? 'bg-white/[0.1] text-white' : 'bg-white/[0.03] text-slate-500'
+                  }`}
                 >
-                  Refresh
+                  {chip.label}
                 </button>
-              </div>
-              <p className="text-[11px] text-slate-500">{STANDALONE_ARTEFACT_NOTICE}</p>
+              ))}
             </div>
+            <select
+              value={projectFilter}
+              onChange={(e) => setProjectFilter(e.target.value)}
+              className="w-full rounded-lg border border-white/10 bg-black/30 px-2 py-1.5 text-xs text-white"
+            >
+              <option value="">All projects</option>
+              {workspace.projects.map((p: StandaloneProject) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <label className="flex items-center gap-1 text-slate-400">
+                <input
+                  type="checkbox"
+                  checked={includeArchived}
+                  onChange={(e) => setIncludeArchived(e.target.checked)}
+                />
+                Archived
+              </label>
+              <button
+                type="button"
+                onClick={() => void refresh()}
+                className="ml-auto rounded-lg border border-white/10 px-2 py-1 text-slate-300"
+              >
+                Refresh
+              </button>
+            </div>
+          </div>
 
-            <div className="flex-1 overflow-y-auto p-2">
-              {loading ? (
-                <p className="flex items-center gap-2 px-2 py-4 text-xs text-slate-400">
-                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                  Loading…
-                </p>
-              ) : error ? (
-                <p className="px-2 py-4 text-xs text-red-300">{error}</p>
-              ) : items.length === 0 ? (
-                <p className="px-2 py-4 text-xs text-slate-500">No saved outputs yet. Save from Documents, Agents or chat.</p>
-              ) : (
+          <div className="max-h-[40vh] flex-1 overflow-y-auto p-2 md:max-h-none">
+            {loading ? (
+              <p className="flex items-center gap-2 px-2 py-4 text-xs text-slate-400">
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                Loading…
+              </p>
+            ) : error ? (
+              <p className="px-2 py-4 text-xs text-red-300">{error}</p>
+            ) : items.length === 0 ? (
+              <p className="px-2 py-4 text-xs leading-5 text-slate-500" data-orb-saved-outputs-empty>
+                No saved outputs yet. Run a document review, agent or deep research and save the result.
+              </p>
+            ) : (
                 grouped.map(([projectName, groupItems]) => (
                   <div key={projectName} className="mb-4">
                     <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500">{projectName}</p>
@@ -261,8 +267,10 @@ export function OrbSavedOutputsPanel({
                           <button
                             type="button"
                             onClick={() => setSelectedId(item.id)}
-                            className={`w-full rounded-lg px-3 py-2 text-left transition ${
-                              selectedId === item.id ? 'bg-white/[0.08]' : 'hover:bg-white/[0.04]'
+                            className={`orb-panel-card w-full rounded-xl border px-3 py-2 text-left transition ${
+                              selectedId === item.id
+                                ? 'border-cyan-300/25 bg-white/[0.08]'
+                                : 'border-white/[0.06] hover:bg-white/[0.04]'
                             }`}
                           >
                             <div className="flex items-start justify-between gap-2">
@@ -285,10 +293,10 @@ export function OrbSavedOutputsPanel({
                   </div>
                 ))
               )}
-            </div>
           </div>
+        </div>
 
-          <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-h-[12rem] min-w-0 flex-1 flex-col">
             {detail ? (
               <>
                 <div className="flex flex-wrap items-center gap-2 border-b border-white/[0.06] px-4 py-2">
@@ -343,10 +351,9 @@ export function OrbSavedOutputsPanel({
                 Select a saved output to open, export, or reuse in chat.
               </div>
             )}
-            {notice ? <p className="shrink-0 border-t border-white/[0.06] px-4 py-2 text-xs text-emerald-300/90">{notice}</p> : null}
-          </div>
+          {notice ? <p className="shrink-0 border-t border-white/[0.06] px-4 py-2 text-xs text-emerald-300/90">{notice}</p> : null}
         </div>
       </div>
-    </div>
+    </OrbStandalonePanelShell>
   )
 }

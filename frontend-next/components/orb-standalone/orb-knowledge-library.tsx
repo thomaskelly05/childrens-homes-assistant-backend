@@ -1,8 +1,9 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { BookOpen, Loader2, Plus, Search, X } from 'lucide-react'
+import { Loader2, Plus, Search } from 'lucide-react'
 
+import { OrbStandalonePanelShell } from '@/components/orb-standalone/orb-standalone-panel-shell'
 import {
   OrbCitationHealthSummary,
   OrbSourceGovernanceActions,
@@ -221,36 +222,21 @@ export function OrbKnowledgeLibraryPanel({ open, onClose }: { open: boolean; onC
     }
   }
 
-  if (!open) return null
-
   return (
-    <div className="fixed inset-0 z-[60] flex items-stretch justify-end bg-black/55 p-0 sm:p-4">
-      <div
-        role="dialog"
-        aria-label="ORB Knowledge Library"
-        className="flex h-full w-full max-w-lg flex-col border-l border-white/[0.08] bg-[#0d1117] shadow-2xl sm:max-h-[calc(100vh-2rem)] sm:rounded-2xl sm:border"
-      >
-        <header className="flex items-center gap-2 border-b border-white/[0.06] px-4 py-3">
-          <BookOpen className="h-5 w-5 text-cyan-300" aria-hidden />
-          <div className="min-w-0 flex-1">
-            <h2 className="text-sm font-semibold text-white">Knowledge Library</h2>
-            <p className="text-[11px] text-slate-500">Source governance · exact citations · no OS records</p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-white/[0.06]"
-            aria-label="Close Knowledge Library"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </header>
-
-        <div className="flex-1 overflow-y-auto px-4 py-3">
+    <OrbStandalonePanelShell
+      open={open}
+      title="Knowledge Library"
+      subtitle="Sources support ORB answers. Check official status and review dates."
+      onClose={onClose}
+      panelId="knowledge"
+      ariaLabel="ORB Knowledge Library"
+      footer="Standalone ORB does not access IndiCare OS records."
+    >
+      <div className="px-4 py-3" data-orb-knowledge-library>
           {summary ? <p className="mb-3 text-[11px] text-slate-500">{summary}</p> : null}
           {error ? <p className="mb-3 rounded-lg bg-rose-500/10 px-3 py-2 text-xs text-rose-200">{error}</p> : null}
 
-          <div className="mb-3 flex flex-wrap gap-1">
+          <div className="mb-3 flex flex-wrap gap-1" data-orb-knowledge-sections>
             {(['all', 'official', 'needs_review'] as GovernanceTab[]).map((t) => (
               <button
                 key={t}
@@ -260,16 +246,34 @@ export function OrbKnowledgeLibraryPanel({ open, onClose }: { open: boolean; onC
                   tab === t ? 'bg-cyan-500/20 text-cyan-100' : 'text-slate-500 hover:bg-white/[0.04]'
                 }`}
               >
-                {t === 'all' ? 'All sources' : t === 'official' ? 'Official' : 'Needs review'}
+                {t === 'all' ? 'Imported sources' : t === 'official' ? 'Official sources' : 'Needs review'}
               </button>
             ))}
+            <span className="rounded-lg px-2 py-1 text-[10px] text-slate-600">Citation health</span>
           </div>
 
-          <form onSubmit={handleSearch} className="mb-4 flex gap-2">
+          <div className="mb-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setImportOpen((v) => !v)
+                setAddOpen(false)
+              }}
+              className="inline-flex items-center gap-1 rounded-lg border border-amber-400/20 bg-amber-500/10 px-2 py-1 text-[11px] font-medium text-amber-100"
+            >
+              <Plus className="h-3.5 w-3.5" aria-hidden />
+              Import official source
+            </button>
+            <span className="inline-flex items-center rounded-lg border border-white/10 px-2 py-1 text-[11px] text-slate-500">
+              Source governance
+            </span>
+          </div>
+
+          <form onSubmit={handleSearch} className="mb-4 flex gap-2" data-orb-knowledge-search>
             <input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search exact passages…"
+              placeholder="Search knowledge…"
               className="min-w-0 flex-1 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-white outline-none focus:border-cyan-300/40"
             />
             <button
@@ -283,8 +287,8 @@ export function OrbKnowledgeLibraryPanel({ open, onClose }: { open: boolean; onC
           </form>
 
           {searchResults.length > 0 ? (
-            <div className="mb-4 space-y-2">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Search results</p>
+            <div className="mb-4 space-y-2" data-orb-knowledge-search-results>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Search</p>
               {searchResults.map((result) => (
                 <article
                   key={`${result.source_id}-${result.chunk_index}`}
@@ -507,8 +511,7 @@ export function OrbKnowledgeLibraryPanel({ open, onClose }: { open: boolean; onC
               ))}
             </ul>
           )}
-        </div>
       </div>
-    </div>
+    </OrbStandalonePanelShell>
   )
 }
