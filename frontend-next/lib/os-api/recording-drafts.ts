@@ -108,6 +108,26 @@ export type RecordingSubmissionTargetStatus =
   | 'review_required_before_submit'
   | 'unsupported'
 
+/** User-facing hint for submission target registry status (matches backend route_hint tone). */
+export function submissionTargetStatusCopy(
+  status: RecordingSubmissionTargetStatus,
+  recordTypeLabel?: string | null
+): string {
+  const label = (recordTypeLabel || 'formal').replace(/_/g, ' ')
+  switch (status) {
+    case 'supported_now':
+      return `This draft can be submitted into the formal ${label} workflow.`
+    case 'route_to_existing_workflow':
+      return 'This draft can be used with an existing workflow, but automatic creation is not wired yet.'
+    case 'submit_as_draft_only':
+      return 'This will save the draft as submitted, but no formal record will be created yet.'
+    case 'review_required_before_submit':
+      return 'Manager or safeguarding review is required before this can be treated as a completed formal record.'
+    default:
+      return 'Formal route is not fully wired yet for this recording type.'
+  }
+}
+
 export type RecordingSubmissionTarget = {
   recording_type: string
   form_id?: string | null

@@ -19,6 +19,7 @@ import {
   getRecordingDraftHealth,
   getRecordingSubmissionTarget,
   markRecordingDraftReadyForReview,
+  submissionTargetStatusCopy,
   submitRecordingDraft,
   type RecordingDraftRecord,
   type RecordingSubmissionResult
@@ -350,15 +351,21 @@ export function RecordingEditor({
         const status = form?.requiresManagerReview
           ? 'Manager review is required before formal submission.'
           : form?.routeKind === 'existing_workflow'
-            ? `This will submit the draft; complete the formal ${form?.title || 'record'} workflow when ready.`
-            : 'Formal route may not be fully wired yet for this recording type.'
+            ? submissionTargetStatusCopy('route_to_existing_workflow', form?.title)
+            : submissionTargetStatusCopy('unsupported')
         if (!cancelled) setSubmissionTargetHint(status)
         return
       }
       const target = await getRecordingSubmissionTarget(backendDraftId)
       if (cancelled) return
-      if (target.ok && target.data?.route_hint) {
-        setSubmissionTargetHint(target.data.route_hint)
+      if (target.ok && target.data) {
+        const hint =
+          target.data.route_hint ||
+          submissionTargetStatusCopy(
+            target.data.target.target_status,
+            target.data.target.target_record_type
+          )
+        setSubmissionTargetHint(hint)
       }
     })()
     return () => {
@@ -367,7 +374,9 @@ export function RecordingEditor({
   }, [backendDraftId, form])
 
   const managerReviewNotice =
-    backendDraft?.manager_review_required || form?.requiresManagerReview
+    backendDraft?.manager_review_required ||
+    backendDraft?.safeguarding_review_required ||
+    form?.requiresManagerReview
       ? 'Manager review is required before formal submission.'
       : undefined
 

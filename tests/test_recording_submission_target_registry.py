@@ -36,3 +36,37 @@ def test_target_route_hints():
 
 def test_requires_review_for_physical_intervention():
     assert recording_submission_target_registry.requires_review("physical-intervention") is True
+
+
+def test_keywork_family_education_health_supported():
+    for recording_type, record_type in (
+        ("keywork", "keywork"),
+        ("family-time", "family_contact"),
+        ("education-note", "education"),
+        ("health-appointment", "health_appointment"),
+    ):
+        target = recording_submission_target_registry.get_target(recording_type)
+        assert target.target_status == "supported_now", recording_type
+        assert target.target_record_type == record_type
+
+
+def test_missing_supported_with_review():
+    target = recording_submission_target_registry.get_target("missing")
+    assert target.target_status == "supported_now"
+    assert target.requires_manager_review is True
+    assert recording_submission_target_registry.requires_review("missing") is True
+
+
+def test_handover_routes_to_existing_workflow():
+    target = recording_submission_target_registry.get_target("handover")
+    assert target.target_status == "route_to_existing_workflow"
+
+
+def test_medication_stays_review_required():
+    target = recording_submission_target_registry.get_target("medication-note-error")
+    assert target.target_status == "review_required_before_submit"
+
+
+def test_supported_now_route_hint_copy():
+    hint = recording_submission_target_registry.route_hint("keywork")
+    assert "submitted into the formal" in hint.lower()

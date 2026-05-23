@@ -29,3 +29,16 @@ def test_workflow_map_mentions_daily_note_and_incident():
     assert "daily-note" in text
     assert "incident" in text
     assert "SUPPORTED_NOW" in text or "supported_now" in text
+
+
+def test_workflow_map_documents_expanded_priority_types():
+    text = DOC.read_text(encoding="utf-8")
+    for term in (
+        "keywork",
+        "family-time",
+        "education-note",
+        "health-appointment",
+        "YoungPersonKeyworkService",
+        "REVIEW_REQUIRED_BEFORE_SUBMIT",
+    ):
+        assert term in text, f"Missing workflow map term: {term}"
