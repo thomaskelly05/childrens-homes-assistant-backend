@@ -1,7 +1,7 @@
 'use client'
 
 import { FormEvent, useRef, type DragEvent } from 'react'
-import { ImagePlus, Mic, MicOff, Send, Square, X } from 'lucide-react'
+import { FileText, ImagePlus, Mic, MicOff, Send, Square, X } from 'lucide-react'
 
 import type { StandaloneOrbMode } from '@/lib/orb/standalone-client'
 
@@ -38,7 +38,14 @@ export function OrbStandaloneComposer({
   onRemoveAttachment,
   onPaste,
   onDrop,
-  inputRef
+  inputRef,
+  documentAttached,
+  documentTitle,
+  onAttachDocumentClick,
+  onAnalyseDocument,
+  onDocumentActionPlan,
+  onSummariseDocument,
+  onAddDocumentToLibrary
 }: {
   input: string
   pending: boolean
@@ -66,6 +73,13 @@ export function OrbStandaloneComposer({
   onPaste: (event: React.ClipboardEvent) => void
   onDrop: (event: DragEvent) => void
   inputRef?: React.RefObject<HTMLTextAreaElement | null>
+  documentAttached?: boolean
+  documentTitle?: string | null
+  onAttachDocumentClick?: () => void
+  onAnalyseDocument?: () => void
+  onDocumentActionPlan?: () => void
+  onSummariseDocument?: () => void
+  onAddDocumentToLibrary?: () => void
 }) {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
@@ -132,6 +146,35 @@ export function OrbStandaloneComposer({
               </div>
             ) : null}
 
+            {documentAttached ? (
+              <div className="mb-2 flex flex-wrap items-center gap-2 px-1 pt-1">
+                <span className="inline-flex items-center gap-1 rounded-full border border-cyan-400/25 bg-cyan-500/10 px-2.5 py-1 text-[11px] text-cyan-100">
+                  <FileText className="h-3.5 w-3.5" aria-hidden />
+                  {documentTitle || 'Document attached'}
+                </span>
+                {onAnalyseDocument ? (
+                  <button type="button" onClick={onAnalyseDocument} className="rounded-full border border-white/10 px-2 py-0.5 text-[10px] text-slate-300 hover:bg-white/[0.06]">
+                    Analyse document
+                  </button>
+                ) : null}
+                {onDocumentActionPlan ? (
+                  <button type="button" onClick={onDocumentActionPlan} className="rounded-full border border-white/10 px-2 py-0.5 text-[10px] text-slate-300 hover:bg-white/[0.06]">
+                    Create action plan
+                  </button>
+                ) : null}
+                {onSummariseDocument ? (
+                  <button type="button" onClick={onSummariseDocument} className="rounded-full border border-white/10 px-2 py-0.5 text-[10px] text-slate-300 hover:bg-white/[0.06]">
+                    Summarise
+                  </button>
+                ) : null}
+                {onAddDocumentToLibrary ? (
+                  <button type="button" onClick={onAddDocumentToLibrary} className="rounded-full border border-white/10 px-2 py-0.5 text-[10px] text-slate-300 hover:bg-white/[0.06]">
+                    Add to Knowledge Library
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+
             <div className="flex items-end gap-1.5">
               <input
                 ref={fileInputRef}
@@ -152,6 +195,16 @@ export function OrbStandaloneComposer({
               >
                 <ImagePlus className="h-5 w-5" aria-hidden />
               </button>
+              {onAttachDocumentClick ? (
+                <button
+                  type="button"
+                  onClick={onAttachDocumentClick}
+                  className="inline-flex h-11 min-w-11 shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-white/[0.06] hover:text-slate-200"
+                  aria-label="Attach document"
+                >
+                  <FileText className="h-5 w-5" aria-hidden />
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={onMicClick}

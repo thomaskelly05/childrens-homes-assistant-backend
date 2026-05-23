@@ -196,3 +196,15 @@ def test_general_service_module_has_product_knowledge():
     text = _read(GENERAL_SERVICE)
     assert "ChatGPT-class" in text
     assert "IndiCare product context" in text or "product knowledge" in text.lower()
+
+
+def test_general_service_document_intent_detection():
+    text = _read(GENERAL_SERVICE)
+    assert "detect_document_intent" in text
+    assert "document_analysis" in text
+    intent = orb_general_assistant_service.detect_document_intent(
+        "create an action plan from this document",
+        has_document=False,
+    )
+    assert intent["suggested"] is True
+    assert intent.get("needs_document") is True

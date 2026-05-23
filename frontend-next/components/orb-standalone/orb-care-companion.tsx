@@ -21,6 +21,8 @@ import {
   OrbStandaloneComposer,
   type PendingImageAttachment
 } from '@/components/orb-standalone/orb-standalone-composer'
+import { OrbAgentPanel } from '@/components/orb-standalone/orb-agent-panel'
+import { OrbDocumentPanel } from '@/components/orb-standalone/orb-document-panel'
 import { OrbKnowledgeLibraryPanel } from '@/components/orb-standalone/orb-knowledge-library'
 import { OrbStandaloneSidebar } from '@/components/orb-standalone/orb-standalone-sidebar'
 import { useStandaloneOrbVoice, type StandaloneOrbAnswerStyle } from '@/components/orb-standalone/use-standalone-orb-voice'
@@ -262,6 +264,13 @@ export function OrbCareCompanion() {
   const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null)
   const [profilePickerOpen, setProfilePickerOpen] = useState(false)
   const [knowledgeLibraryOpen, setKnowledgeLibraryOpen] = useState(false)
+  const [documentsPanelOpen, setDocumentsPanelOpen] = useState(false)
+  const [agentsPanelOpen, setAgentsPanelOpen] = useState(false)
+  const [pendingDocument, setPendingDocument] = useState<{
+    text: string
+    title: string
+    sourceId: string | null
+  } | null>(null)
 
   const inputRef = useRef<HTMLTextAreaElement | null>(null)
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
@@ -481,7 +490,10 @@ export function OrbCareCompanion() {
           conversation_id: sessionConversationId,
           history: historyForRequest.slice(0, -1),
           detail: voiceSettings.answerStyle,
-          images: imagePayload.length ? imagePayload : undefined
+          images: imagePayload.length ? imagePayload : undefined,
+          document_text: pendingDocument?.text,
+          document_source_id: pendingDocument?.sourceId || undefined,
+          document_title: pendingDocument?.title
         })
 
         const newConversationId = response.conversation_id || sessionConversationId
@@ -732,6 +744,22 @@ export function OrbCareCompanion() {
       onPaste={handlePaste}
       onDrop={handleDrop}
       inputRef={inputRef}
+      documentAttached={Boolean(pendingDocument?.text)}
+      documentTitle={pendingDocument?.title}
+      onAttachDocumentClick={() => setDocumentsPanelOpen(true)}
+      onAnalyseDocument={() => {
+        setDocumentsPanelOpen(true)
+        setInput((current) => current || 'Analyse this document')
+      }}
+      onDocumentActionPlan={() => {
+        setDocumentsPanelOpen(true)
+        setInput('Create an action plan from this document')
+      }}
+      onSummariseDocument={() => {
+        setDocumentsPanelOpen(true)
+        setInput('Summarise the uploaded document')
+      }}
+      onAddDocumentToLibrary={() => setKnowledgeLibraryOpen(true)}
     />
   )
 
@@ -762,6 +790,22 @@ export function OrbCareCompanion() {
       <div className="pointer-events-none fixed inset-0 orb-cinematic-light-field opacity-50" aria-hidden />
 
       <OrbKnowledgeLibraryPanel open={knowledgeLibraryOpen} onClose={() => setKnowledgeLibraryOpen(false)} />
+      <OrbDocumentPanel
+        open={documentsPanelOpen}
+        onClose={() => setDocumentsPanelOpen(false)}
+        onInsertIntoChat={(text) => {
+          setInput(text)
+          setDocumentsPanelOpen(false)
+        }}
+        onDocumentContext={(ctx) => setPendingDocument(ctx)}
+      />
+      <OrbAgentPanel
+        open={agentsPanelOpen}
+        onClose={() => setAgentsPanelOpen(false)}
+        documentSourceId={pendingDocument?.sourceId}
+        documentText={pendingDocument?.text}
+        documentTitle={pendingDocument?.title}
+      />
 
       {sidebarOpen ? (
         <button type="button" className="fixed inset-0 z-40 bg-black/60 lg:hidden" aria-label="Close sidebar" onClick={() => setSidebarOpen(false)} />
@@ -786,6 +830,10 @@ export function OrbCareCompanion() {
             onSelectProject={(projectId) => setWorkspace((c) => ({ ...c, activeProjectId: projectId }))}
             onWorkspaceChange={setWorkspace}
             onOpenSettings={openVoiceSettings}
+            onOpenDocuments={() => {
+              setDocumentsPanelOpen(true)
+              setSidebarOpen(false)
+            }}
             onOpenKnowledgeLibrary={() => {
               setKnowledgeLibraryOpen(true)
               setSidebarOpen(false)
