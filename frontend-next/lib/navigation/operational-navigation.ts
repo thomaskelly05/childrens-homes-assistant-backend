@@ -144,6 +144,16 @@ export const operationalNavigation: OperationalNavItem[] = [
     activeRoots: ['governance', 'management', 'reg44']
   },
   {
+    domain: 'governance',
+    href: '/intelligence/governance/ai',
+    label: 'AI Governance',
+    description: 'IndiCare Intelligence usage, quality, cost, safety and source observability.',
+    icon: Sparkles,
+    permissions: ['reports:read'],
+    roleScopes: ['rm', 'ri', 'provider', 'admin'],
+    activeRoots: ['intelligence']
+  },
+  {
     domain: 'reports',
     href: '/reports',
     label: 'Reports',

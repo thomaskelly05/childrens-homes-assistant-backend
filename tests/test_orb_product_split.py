@@ -334,6 +334,13 @@ FORBIDDEN_RECORD_ORB_QUERY_KEYS = [
     "chronology_id=",
 ]
 
+FORBIDDEN_STANDALONE_GOVERNANCE_MARKERS = [
+    "/intelligence/governance/ai",
+    "/intelligence/governance",
+    "fetchAiGovernanceDashboard",
+    "ai-governance.ts",
+]
+
 OPERATIONAL_ORB_MARKERS = [
     "OrbConversationExperience",
     "Operational cognition",
@@ -667,6 +674,20 @@ def test_record_orb_prompts_use_standalone_orb_without_operational_ids():
         assert "/orb?" in combined or "recordOrbPromptHref" in text, f"{path.name} should define standalone /orb links"
         for key in FORBIDDEN_RECORD_ORB_QUERY_KEYS:
             assert key not in combined, f"{path.name} must not pass {key} into standalone /orb URLs"
+
+
+def test_standalone_orb_does_not_call_ai_governance_routes():
+    sources = _read(STANDALONE_CLIENT) + _read(ORB_COMPANION) + _read(ORB_PAGE)
+    for marker in FORBIDDEN_STANDALONE_GOVERNANCE_MARKERS:
+        assert marker not in sources, f"standalone /orb must not reference governance route: {marker}"
+
+
+def test_ai_governance_dashboard_is_os_leadership_surface():
+    page = REPO_ROOT / "frontend-next" / "app" / "intelligence" / "governance" / "ai" / "page.tsx"
+    assert page.is_file()
+    text = _read(page)
+    assert "fetchAiGovernanceDashboard" in text
+    assert "/intelligence/governance/ai" not in _read(STANDALONE_CLIENT)
 
 
 def test_orb_standalone_backend_contract_flags():

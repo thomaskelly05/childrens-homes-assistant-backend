@@ -301,6 +301,12 @@ class OrbSavedOutputService:
             self._insert_db(row)
         else:
             self._memory[record.id] = row
+        try:
+            from services.indicare_ai_governance_event_service import indicare_ai_governance_event_service
+
+            indicare_ai_governance_event_service.record_from_saved_output(record)
+        except Exception:
+            pass
         return record
 
     def list_outputs(self, request: OrbSavedOutputListRequest) -> OrbSavedOutputListResponse:

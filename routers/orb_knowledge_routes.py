@@ -116,6 +116,16 @@ async def approve_source(source_id: str, current_user=Depends(require_assistant_
     updated = orb_knowledge_library_service.approve_source(source_id, current_user=current_user)
     if not updated:
         raise HTTPException(status_code=404, detail="Knowledge source not found")
+    try:
+        from services.indicare_ai_governance_event_service import indicare_ai_governance_event_service
+
+        indicare_ai_governance_event_service.record_from_source_event(
+            updated,
+            "source_approved",
+            current_user=current_user,
+        )
+    except Exception:
+        pass
     return _success(updated)
 
 
@@ -128,6 +138,16 @@ async def needs_review_source(
     updated = orb_knowledge_library_service.mark_needs_review(source_id, reason)
     if not updated:
         raise HTTPException(status_code=404, detail="Knowledge source not found")
+    try:
+        from services.indicare_ai_governance_event_service import indicare_ai_governance_event_service
+
+        indicare_ai_governance_event_service.record_from_source_event(
+            updated,
+            "source_needs_review",
+            current_user=current_user,
+        )
+    except Exception:
+        pass
     return _success(updated)
 
 
@@ -136,6 +156,16 @@ async def archive_source(source_id: str, current_user=Depends(require_assistant_
     updated = orb_knowledge_library_service.archive_source(source_id)
     if not updated:
         raise HTTPException(status_code=404, detail="Knowledge source not found")
+    try:
+        from services.indicare_ai_governance_event_service import indicare_ai_governance_event_service
+
+        indicare_ai_governance_event_service.record_from_source_event(
+            updated,
+            "source_archived",
+            current_user=current_user,
+        )
+    except Exception:
+        pass
     return _success(updated)
 
 

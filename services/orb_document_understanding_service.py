@@ -204,6 +204,25 @@ class OrbDocumentUnderstandingService:
                 analysis_mode=mode,
             )
             understanding.evaluation = eval_result.model_dump()
+        try:
+            from services.indicare_ai_governance_event_service import indicare_ai_governance_event_service
+
+            indicare_ai_governance_event_service.record_from_standalone_response(
+                {
+                    "answer": understanding.plain_english_summary,
+                    "sources": understanding.sources,
+                    "citations": understanding.citations,
+                    "context_used": {
+                        "model_routing": understanding.model_routing,
+                        "surface": "standalone_orb_ai",
+                    },
+                    "evaluation": understanding.evaluation,
+                },
+                event_type="document_analysis",
+                message=question or title,
+            )
+        except Exception:
+            pass
         return understanding
 
     def build_document_context(

@@ -147,3 +147,15 @@ def test_orb_standalone_module_has_no_os_context_imports():
     assert "build_orb_response" not in source
     assert "get_db" not in source
     assert "orb_operational_context" not in source
+
+
+def test_ai_governance_routes_registered_on_os_app():
+    _route("/intelligence/governance/ai/health", "GET")
+    _route("/intelligence/governance/ai/dashboard", "GET")
+
+
+def test_ai_governance_is_separate_from_standalone_orb():
+    standalone = Path(__file__).resolve().parents[1].joinpath(
+        "frontend-next", "lib", "orb", "standalone-client.ts"
+    ).read_text(encoding="utf-8")
+    assert "/intelligence/governance" not in standalone

@@ -219,7 +219,7 @@ class OrbDeepResearchService:
         )
         context_used.update(save_envelope)
 
-        return OrbDeepResearchResponse(
+        response = OrbDeepResearchResponse(
             success=agent_response.success,
             query=request.query,
             depth=request.depth,
@@ -241,6 +241,23 @@ class OrbDeepResearchService:
             safety_notice=agent_response.safety_notice or LIVE_WEB_NOTE,
             live_web_note=LIVE_WEB_NOTE,
         )
+        try:
+            from services.indicare_ai_governance_event_service import indicare_ai_governance_event_service
+
+            indicare_ai_governance_event_service.record_from_standalone_response(
+                {
+                    "answer": briefing_body,
+                    "sources": [s.model_dump() if hasattr(s, "model_dump") else s for s in sources],
+                    "citations": [c.model_dump() if hasattr(c, "model_dump") else c for c in citations],
+                    "context_used": context_used,
+                    "model_routing": agent_response.model_routing,
+                },
+                event_type="deep_research",
+                message=request.query,
+            )
+        except Exception:
+            pass
+        return response
 
     def plan_research(
         self,

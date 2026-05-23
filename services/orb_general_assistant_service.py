@@ -20,6 +20,27 @@ from services.standalone_sector_knowledge_service import search_sector_knowledge
 
 logger = logging.getLogger("indicare.orb_general_assistant")
 
+
+def _track_standalone_governance(
+    result: dict[str, Any],
+    *,
+    message: str | None = None,
+    event_type: str = "standalone_conversation",
+    user: dict[str, Any] | None = None,
+) -> None:
+    try:
+        from services.indicare_ai_governance_event_service import indicare_ai_governance_event_service
+
+        indicare_ai_governance_event_service.record_from_standalone_response(
+            result,
+            user=user,
+            event_type=event_type,
+            message=message,
+        )
+    except Exception:
+        pass
+
+
 def _text(value: Any) -> str:
     return str(value or "").strip()
 
@@ -236,7 +257,7 @@ class OrbGeneralAssistantService:
         has_document = bool(_text(document_text) or document_source_id)
         doc_intent = self.detect_document_intent(user_message, has_document=has_document)
         if doc_intent.get("suggested") and doc_intent.get("needs_document"):
-            return {
+            result = {
                 "answer": (
                     "I can analyse that document for you — please upload or paste the document "
                     "in the Documents panel (Open Documents in the sidebar), or attach it here, then ask again. "
@@ -253,6 +274,8 @@ class OrbGeneralAssistantService:
                 "tools_used": ["document_analysis_prompt"],
                 "internal_data_access": False,
             }
+            _track_standalone_governance(result, message=user_message, event_type="standalone_conversation")
+            return result
         if doc_intent.get("suggested") and has_document:
             return await self._answer_with_document_analysis(
                 user_message,
@@ -278,7 +301,7 @@ class OrbGeneralAssistantService:
                     (agent_result.get("context_used") or {}).get("agent", {}).get("agent_type"),
                     int((time.perf_counter() - started) * 1000),
                 )
-                return {
+                result = {
                     "answer": agent_result["answer"],
                     "sources": agent_result.get("sources") or [],
                     "citations": agent_result.get("citations") or [],
@@ -286,6 +309,12 @@ class OrbGeneralAssistantService:
                     "tools_used": agent_result.get("tools_used") or ["standalone_agent"],
                     "internal_data_access": False,
                 }
+                _track_standalone_governance(
+                    result,
+                    message=user_message,
+                    event_type="agent_run",
+                )
+                return result
 
         retrieval = self.prepare_retrieval(
             message,
@@ -312,6 +341,7 @@ class OrbGeneralAssistantService:
                     len(images),
                     int((time.perf_counter() - started) * 1000),
                 )
+                _track_standalone_governance(result, message=user_message)
                 return result
         except asyncio.TimeoutError:
             logger.warning(
@@ -337,7 +367,7 @@ class OrbGeneralAssistantService:
                 sources,
             )
             ctx = self._retrieval_context_used(retrieval)
-            return {
+            result = {
                 "answer": answer,
                 "sources": sources,
                 "citations": citations,
@@ -347,10 +377,12 @@ class OrbGeneralAssistantService:
                 "image_understanding_available": False,
                 "error_detail": "vision_unavailable",
             }
+            _track_standalone_governance(result, message=user_message)
+            return result
         fallback = self._fallback_answer(message, retrieval=retrieval)
         sources = retrieval["sources"]
         citations = retrieval["citations"]
-        return {
+        result = {
             "answer": append_sources_basis_section(fallback, sources),
             "sources": sources,
             "citations": citations,
@@ -358,6 +390,8 @@ class OrbGeneralAssistantService:
             "tools_used": ["general_qna"],
             "internal_data_access": False,
         }
+        _track_standalone_governance(result, message=user_message)
+        return result
 
     async def _answer_with_document_analysis(
         self,
@@ -412,14 +446,21 @@ class OrbGeneralAssistantService:
             },
             "agent": "document_analysis",
         }
-        return {
+        result = {
             "answer": answer,
             "sources": understanding.sources,
             "citations": understanding.citations,
-            "context_used": ctx,
+            "context_used": {**ctx, "model_routing": understanding.model_routing},
             "tools_used": ["document_analysis_agent", "standalone_orb_general_assistant"],
             "internal_data_access": False,
+            "evaluation": understanding.evaluation,
         }
+        _track_standalone_governance(
+            result,
+            message=message,
+            event_type="document_analysis",
+        )
+        return result
 
     def _retrieval_context_used(
         self,

@@ -194,7 +194,25 @@ class OrbAgentOrchestratorService:
                 warnings=warnings,
                 safety_notice=self.build_safety_notice(agent, request),
             )
-            return self._attach_save_metadata(response, request)
+            attached = self._attach_save_metadata(response, request)
+            try:
+                from services.indicare_ai_governance_event_service import indicare_ai_governance_event_service
+
+                indicare_ai_governance_event_service.record_from_standalone_response(
+                    {
+                        "answer": _text(output.body) if output else "",
+                        "sources": [s.model_dump() if hasattr(s, "model_dump") else s for s in sources],
+                        "citations": [c.model_dump() if hasattr(c, "model_dump") else c for c in citations],
+                        "context_used": context_used,
+                        "model_routing": llm_result.get("model_routing"),
+                        "evaluation": context_used.get("evaluation"),
+                    },
+                    event_type="agent_run",
+                    message=request.query,
+                )
+            except Exception:
+                pass
+            return attached
         except Exception as exc:
             logger.warning("agent run failed type=%s error=%s", agent_type, type(exc).__name__, exc_info=True)
             return self.fallback_agent_response(exc, request, agent, steps=steps)

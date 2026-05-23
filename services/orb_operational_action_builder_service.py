@@ -290,12 +290,37 @@ class OrbOperationalActionBuilderService:
             except Exception as exc:
                 errors.append(f"{draft.title}: {exc}")
 
-        return {
+        result = {
             "created_ids": created_ids,
             "errors": errors,
             "persistence_available": intelligence_action_service.persistence_available(),
             "notice": "Actions are proposed for manager review — not automatically accepted.",
         }
+        if created_ids:
+            try:
+                from services.indicare_ai_governance_event_service import indicare_ai_governance_event_service
+
+                user_fields: dict[str, Any] = {}
+                if current_user:
+                    user_fields = {
+                        "user_id": str(current_user.get("id") or current_user.get("user_id") or ""),
+                        "user_role": str(current_user.get("role") or ""),
+                        "home_id": current_user.get("home_id"),
+                    }
+                indicare_ai_governance_event_service.record_event(
+                    {
+                        "surface": "intelligence_actions",
+                        "event_type": "actions_created_from_operational_orb",
+                        "action_id": created_ids[0],
+                        "message_summary": f"{len(created_ids)} action(s) created from operational ORB drafts",
+                        "metadata": {"created_ids": created_ids[:10], "error_count": len(errors)},
+                        **user_fields,
+                    },
+                    conn=conn,
+                )
+            except Exception:
+                pass
+        return result
 
     def draft_only_from_request(
         self,
