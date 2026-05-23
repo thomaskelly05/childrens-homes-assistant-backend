@@ -151,6 +151,7 @@ export type StandaloneOrbConversationResponse = {
     care_record_access?: boolean
     retrieval?: StandaloneOrbRetrievalContext
     model_routing?: StandaloneOrbModelRouting
+    agent?: StandaloneOrbAgentSuggestion
   }
   guardrails?: string[]
   image_understanding_available?: boolean
@@ -399,6 +400,125 @@ export async function searchOrbKnowledge(query: string, limit = 8) {
     body: JSON.stringify({ query, limit })
   })
   return unwrapKnowledgeData<{ query: string; results: OrbKnowledgeSearchResult[]; total: number }>(payload)
+}
+
+export type OrbAgentType =
+  | 'deep_research'
+  | 'ofsted_research'
+  | 'recording_quality'
+  | 'safeguarding_reflection'
+  | 'policy_comparison'
+  | 'manager_briefing'
+  | 'therapeutic_practice'
+  | 'general_research'
+  | 'document_analysis'
+
+export type OrbAgentDepth = 'quick' | 'standard' | 'deep'
+
+export type OrbAgentOutputFormat =
+  | 'answer'
+  | 'briefing'
+  | 'checklist'
+  | 'comparison'
+  | 'action_plan'
+  | 'supervision_guide'
+  | 'evidence_map'
+
+export type OrbAgentDefinition = {
+  id: string
+  name: string
+  type: OrbAgentType
+  description: string
+  risk_level: string
+  requires_citations: boolean
+  standalone_only: boolean
+  os_linked: boolean
+  care_record_access: boolean
+  output_formats: OrbAgentOutputFormat[]
+  safety_notice?: string | null
+}
+
+export type OrbAgentFinding = {
+  title: string
+  summary: string
+  evidence?: string | null
+  confidence?: string
+  suggested_actions?: string[]
+}
+
+export type OrbAgentRunResponse = {
+  success: boolean
+  agent_type: OrbAgentType
+  status: string
+  output: { title: string; format: string; body: string }
+  findings?: OrbAgentFinding[]
+  sources?: StandaloneOrbSource[]
+  citations?: StandaloneOrbCitation[]
+  steps?: Array<{ id: string; label: string; status: string }>
+  context_used?: Record<string, unknown>
+  model_routing?: StandaloneOrbModelRouting
+  warnings?: string[]
+  safety_notice?: string | null
+}
+
+export type StandaloneOrbAgentSuggestion = {
+  suggested: boolean
+  agent_type: OrbAgentType
+  reason?: string
+  auto_run?: boolean
+  preferred_output?: OrbAgentOutputFormat
+  depth?: OrbAgentDepth
+}
+
+function unwrapAgentData<T>(payload: unknown): T {
+  if (!payload || typeof payload !== 'object') {
+    throw new AuthApiError(503, 'Unexpected agent API response')
+  }
+  const record = payload as Record<string, unknown>
+  if (record.data !== undefined) return record.data as T
+  return payload as T
+}
+
+export async function fetchStandaloneOrbAgents(signal?: AbortSignal) {
+  const payload = await authFetch('/orb/standalone/agents', { signal: withTimeout(signal) })
+  return unwrapAgentData<OrbAgentDefinition[]>(payload)
+}
+
+export async function runStandaloneOrbAgent(body: {
+  agent_type?: string
+  prompt: string
+  mode?: string
+  project_context?: string
+  profile_context?: string
+  preferred_output?: OrbAgentOutputFormat
+  depth?: OrbAgentDepth
+  require_citations?: boolean
+  max_sources?: number
+}) {
+  const payload = await authFetch('/orb/standalone/agents/run', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+    signal: withTimeout()
+  })
+  return unwrapAgentData<OrbAgentRunResponse>(payload)
+}
+
+export async function runStandaloneOrbDeepResearch(body: {
+  query: string
+  mode?: string
+  depth?: OrbAgentDepth
+  preferred_output?: OrbAgentOutputFormat
+  require_citations?: boolean
+  max_sources?: number
+}) {
+  const payload = await authFetch('/orb/standalone/agents/deep-research', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+    signal: withTimeout()
+  })
+  return unwrapAgentData<OrbAgentRunResponse & { live_web_note?: string; source_gaps?: string[] }>(payload)
 }
 
 export function standaloneOrbErrorMessage(error: unknown) {

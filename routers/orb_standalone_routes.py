@@ -163,6 +163,10 @@ def _standalone_contract() -> dict[str, Any]:
             "knowledge_search": "/orb/standalone/knowledge/search",
             "knowledge_summary": "/orb/standalone/knowledge/summary",
             "model_router_health": "/orb/standalone/model-router/health",
+            "agents_health": "/orb/standalone/agents/health",
+            "agents_list": "/orb/standalone/agents",
+            "agents_run": "/orb/standalone/agents/run",
+            "agents_deep_research": "/orb/standalone/agents/deep-research",
         },
     }
 
@@ -323,6 +327,7 @@ async def standalone_orb_conversation(
             image_data_urls=image_urls[:4],
             mode=mode,
             profile_context=profile_context,
+            raw_user_message=payload.message,
         )
         elapsed_ms = int((time.perf_counter() - started) * 1000)
         logger.info(

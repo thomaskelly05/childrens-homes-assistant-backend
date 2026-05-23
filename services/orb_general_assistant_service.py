@@ -15,6 +15,7 @@ from services.orb_standalone_sources import (
     append_sources_basis_section,
     build_standalone_sources,
 )
+from services.orb_agent_conversation_bridge import detect_agent_intent, maybe_run_agent_for_conversation
 from services.standalone_sector_knowledge_service import search_sector_knowledge
 
 logger = logging.getLogger("indicare.orb_general_assistant")
@@ -154,9 +155,34 @@ class OrbGeneralAssistantService:
         image_data_urls: list[str] | None = None,
         mode: str | None = None,
         profile_context: bool = False,
+        raw_user_message: str | None = None,
     ) -> dict[str, Any]:
         started = time.perf_counter()
         images = image_data_urls or []
+        user_message = _text(raw_user_message) or message
+        profile_block = "standalone context profiles" in message.lower() or profile_context
+
+        if not images:
+            agent_result = await maybe_run_agent_for_conversation(
+                user_message,
+                mode=mode,
+                profile_context="Profile context" if profile_block else None,
+            )
+            if agent_result and agent_result.get("answer"):
+                logger.info(
+                    "standalone_orb_answer agent_auto_run type=%s elapsed_ms=%s",
+                    (agent_result.get("context_used") or {}).get("agent", {}).get("agent_type"),
+                    int((time.perf_counter() - started) * 1000),
+                )
+                return {
+                    "answer": agent_result["answer"],
+                    "sources": agent_result.get("sources") or [],
+                    "citations": agent_result.get("citations") or [],
+                    "context_used": agent_result.get("context_used") or {},
+                    "tools_used": agent_result.get("tools_used") or ["standalone_agent"],
+                    "internal_data_access": False,
+                }
+
         retrieval = self.prepare_retrieval(
             message,
             mode=mode,
@@ -234,6 +260,8 @@ class OrbGeneralAssistantService:
         retrieval: dict[str, Any],
         *,
         model_routing: dict[str, Any] | None = None,
+        user_message: str | None = None,
+        mode: str | None = None,
     ) -> dict[str, Any]:
         packs = retrieval.get("source_packs") or []
         document_results = retrieval.get("document_results") or []
@@ -264,6 +292,10 @@ class OrbGeneralAssistantService:
         }
         if model_routing:
             context["model_routing"] = model_routing
+        if user_message:
+            agent_hint = detect_agent_intent(user_message, mode=mode)
+            if agent_hint and "agent" not in context:
+                context["agent"] = {**agent_hint, "auto_run": False}
         return context
 
     def _mode_behaviour_hint(self, mode: str | None) -> str:
@@ -372,7 +404,12 @@ class OrbGeneralAssistantService:
             "answer": resolved,
             "sources": sources,
             "citations": citations,
-            "context_used": self._retrieval_context_used(retrieval, model_routing=model_routing),
+            "context_used": self._retrieval_context_used(
+                retrieval,
+                model_routing=model_routing,
+                user_message=message,
+                mode=mode,
+            ),
             "tools_used": tools,
             "internal_data_access": False,
             "image_understanding_available": image_available,
