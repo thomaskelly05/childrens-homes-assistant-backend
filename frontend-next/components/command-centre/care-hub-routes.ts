@@ -7,6 +7,124 @@ export type CareHubHeroAction = {
   ariaLabel: string
 }
 
+export type CareHubHeroOrbHint = {
+  label: string
+  href: string
+}
+
+export const CARE_HUB_HERO_ORB_HINTS: Record<string, CareHubHeroOrbHint> = {
+  'Record something': {
+    label: 'ORB can help decide what to record',
+    href: '/assistant/orb?context=care-hub&q=What should I record next on shift?'
+  },
+  'Start shift handover': {
+    label: 'ORB can summarise handover',
+    href: '/assistant/orb?context=care-hub&q=Help me summarise shift handover for the next team.'
+  },
+  'Record daily note': {
+    label: 'ORB can help with wording',
+    href: '/assistant/orb?context=care-hub&q=Help me write a calm, child-centred daily note.'
+  },
+  'Record incident': {
+    label: 'ORB can check recording quality',
+    href: '/assistant/orb?mode=record_quality_review&context=care-hub'
+  },
+  'Ask ORB': {
+    label: 'Open operational ORB',
+    href: '/assistant/orb?context=care-hub'
+  }
+}
+
+export type CareHubAttentionItem = {
+  label: string
+  count: number | string
+  status: string
+  statusTone: string
+  reason: string
+  href: string
+  orbHint: string
+  orbHref: string
+}
+
+export function buildCareHubAttentionItems(params: {
+  reviewQueue: number
+  safeguarding: number
+  recordQualityMarkers: number
+  actionsOutstanding: number
+  missingEpisodes: number
+  recentIncidents: number
+}): CareHubAttentionItem[] {
+  const reviewStatus = params.reviewQueue > 0 ? 'Review' : 'Clear'
+  const safeguardingStatus = params.safeguarding > 0 ? 'Active' : 'Clear'
+  const recordStatus = params.recordQualityMarkers > 0 ? 'Check' : 'OK'
+  const actionsStatus = params.actionsOutstanding > 0 ? 'Open' : 'Clear'
+  const missingStatus = params.missingEpisodes > 0 ? 'Alert' : 'Clear'
+  const incidentStatus = params.recentIncidents > 0 ? 'Visible' : 'None'
+
+  return [
+    {
+      label: 'Manager review',
+      count: params.reviewQueue,
+      status: reviewStatus,
+      statusTone: params.reviewQueue > 0 ? 'bg-purple-100 text-purple-800' : 'bg-emerald-50 text-emerald-700',
+      reason: params.reviewQueue > 0 ? 'Items in the review queue need manager attention' : 'No open review queue items found',
+      href: '/intelligence-actions',
+      orbHint: 'Ask ORB to summarise',
+      orbHref: '/assistant/orb?context=care-hub&q=Summarise what needs manager review today.'
+    },
+    {
+      label: 'Safeguarding signals',
+      count: params.safeguarding,
+      status: safeguardingStatus,
+      statusTone: params.safeguarding > 0 ? 'bg-amber-100 text-amber-900' : 'bg-emerald-50 text-emerald-700',
+      reason: params.safeguarding > 0 ? 'Safeguarding records visible in this scope' : 'No safeguarding alerts visible',
+      href: '/safeguarding',
+      orbHint: 'Review with ORB',
+      orbHref: '/assistant/orb?context=care-hub&q=What safeguarding themes need calm review?'
+    },
+    {
+      label: 'Record quality',
+      count: params.recordQualityMarkers,
+      status: recordStatus,
+      statusTone: params.recordQualityMarkers > 0 ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-600',
+      reason: params.recordQualityMarkers > 0 ? 'Chronology markers may need recording follow-up' : 'No record-quality markers flagged today',
+      href: '/chronology',
+      orbHint: 'ORB can check recording quality',
+      orbHref: '/assistant/orb?mode=record_quality_review&context=care-hub'
+    },
+    {
+      label: 'Actions outstanding',
+      count: params.actionsOutstanding,
+      status: actionsStatus,
+      statusTone: params.actionsOutstanding > 0 ? 'bg-blue-100 text-blue-800' : 'bg-emerald-50 text-emerald-700',
+      reason: params.actionsOutstanding > 0 ? 'Follow-up actions still open' : 'No open actions found',
+      href: '/actions',
+      orbHint: 'Ask ORB what to prioritise',
+      orbHref: '/assistant/orb?mode=action_priority&context=care-hub'
+    },
+    {
+      label: 'Missing episodes',
+      count: params.missingEpisodes,
+      status: missingStatus,
+      statusTone: params.missingEpisodes > 0 ? 'bg-amber-100 text-amber-900' : 'bg-emerald-50 text-emerald-700',
+      reason: params.missingEpisodes > 0 ? 'Missing or away-from-home markers in chronology' : 'No missing markers visible',
+      href: '/chronology',
+      orbHint: 'Ask ORB to summarise',
+      orbHref: '/assistant/orb?context=care-hub&q=Summarise missing episode markers from today.'
+    },
+    {
+      label: 'Incidents',
+      count: params.recentIncidents,
+      status: incidentStatus,
+      statusTone: params.recentIncidents > 0 ? 'bg-amber-100 text-amber-900' : 'bg-slate-100 text-slate-600',
+      reason: params.recentIncidents > 0 ? 'Incident or distress markers in recent chronology' : 'No incident markers visible today',
+      href: '/incidents',
+      orbHint: 'Create action',
+      orbHref: '/assistant/orb?context=care-hub&q=What follow-up actions might be needed after recent incidents?'
+    }
+  ]
+}
+
 export type CareHubMetricDefinition = {
   key: string
   label: string

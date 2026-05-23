@@ -259,9 +259,15 @@ export function AppShell({ children }: { children: ReactNode }) {
               </div>
             ))}
           </nav>
-          <Link prefetch={false} href="/assistant/orb" className="mt-4 rounded-[24px] border border-blue-300/20 bg-[radial-gradient(circle_at_top,#38bdf833,transparent_55%),rgba(255,255,255,0.08)] p-4 shadow-[0_0_46px_rgba(56,189,248,0.14)]">
-            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-blue-200">IndiCare OS ORB</p>
-            <p className="mt-2 text-sm font-black text-white">Operational cognition with permissioned CareHub context.</p>
+          <Link
+            prefetch={false}
+            href="/assistant/orb"
+            data-testid="sidebar-orb-link"
+            className="mt-4 block rounded-[24px] border border-blue-300/20 bg-[radial-gradient(circle_at_top,#38bdf833,transparent_55%),rgba(255,255,255,0.08)] p-4 shadow-[0_0_32px_rgba(56,189,248,0.12)] transition hover:border-cyan-300/30 hover:bg-white/10"
+          >
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-cyan-200">ORB</p>
+            <p className="mt-1.5 text-sm font-black text-white">ORB supports this route</p>
+            <p className="mt-1 text-xs font-semibold leading-5 text-slate-400">Connected to your workspace — same as command search and Ask ORB.</p>
           </Link>
         </aside>
 
@@ -318,14 +324,16 @@ export function AppShell({ children }: { children: ReactNode }) {
             </nav>
           </header>
 
-          <div data-testid="operational-shell-workspace" className="grid min-w-0 gap-6 px-4 py-6 pb-32 md:px-8 md:py-8 2xl:grid-cols-[minmax(0,1fr)_320px]">
+          <div data-testid="operational-shell-workspace" className="grid min-w-0 gap-5 px-4 py-5 pb-28 md:px-8 md:py-6 md:pb-32 2xl:grid-cols-[minmax(0,1fr)_300px]">
             <main className="min-w-0" aria-label="Operational workspace">
               {children}
             </main>
-            <aside className="hidden space-y-4 2xl:block" aria-label="Operational intelligence panel">
+            <aside className="hidden min-w-0 space-y-3 2xl:block" aria-label="Operational intelligence panel">
               <ContextualOrbPanel />
               <OperationalAlertsPanel />
-              <OperationalQuickActions selectedYoungPersonId={selectedId} selectedYoungPersonName={activeChildName} />
+              {pathname !== '/command-centre' && !pathname.startsWith('/command-centre/') ? (
+                <OperationalQuickActions selectedYoungPersonId={selectedId} selectedYoungPersonName={activeChildName} />
+              ) : null}
             </aside>
           </div>
         </div>

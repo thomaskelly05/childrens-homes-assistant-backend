@@ -1132,3 +1132,58 @@ textarea:focus-visible {
 .orb-chat-layout.orb-compact-mode .orb-mode-chips {
   display: none;
 }
+
+/* IndiCare OS operational workspace patterns */
+.os-page {
+  min-width: 0;
+}
+
+.os-hero {
+  position: relative;
+  overflow: hidden;
+}
+
+.os-section-heading {
+  min-width: 0;
+}
+
+.os-action-card {
+  cursor: pointer;
+}
+
+.os-action-card:hover {
+  transform: translateY(-1px);
+}
+
+.os-review-card {
+  min-width: 0;
+}
+
+.os-context-rail {
+  min-width: 0;
+}
+
+.os-status-pill {
+  display: inline-flex;
+  align-items: center;
+}
+
+.os-primary-action {
+  text-align: center;
+}
+
+.os-orb-hint {
+  max-width: 100%;
+}
+
+@media (max-width: 1279px) {
+  .os-page {
+    overflow-x: hidden;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .os-action-card:hover {
+    transform: none;
+  }
+}

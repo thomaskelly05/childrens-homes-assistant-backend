@@ -1,5 +1,6 @@
 import Link from 'next/link'
 
+import { OrbInlineHint } from '@/components/indicare/operational/orb-inline-hint'
 import { Card, SectionHeader, StatusBadge } from '@/components/indicare/ui'
 import { fetchIntelligenceAttentionFeed } from '@/lib/os-api/intelligence-actions'
 
@@ -31,10 +32,15 @@ export async function IntelligenceActionsCard({
         {feed.action_notice ||
           'Actions are proposed for manager review. Human decision required — not a safeguarding decision.'}
       </p>
-      <div className="mb-4 flex flex-wrap gap-2">
+      <div className="mb-4 flex flex-wrap items-center gap-2">
         <Link href="/intelligence-actions" className="rounded-2xl bg-blue-600 px-4 py-2 text-sm font-black text-white">
           Action Board
         </Link>
+        <OrbInlineHint
+          label="Ask ORB what to prioritise"
+          href="/assistant/orb?mode=action_priority&context=care-hub"
+          tone="blue"
+        />
         <Link
           href="/intelligence-spine"
           className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-black text-slate-700"
