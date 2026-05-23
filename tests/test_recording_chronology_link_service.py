@@ -37,3 +37,18 @@ def test_extracts_chronology_from_workflow():
         {"id": "1"},
     )
     assert chronology_id == "555"
+
+
+def test_chronology_supported_for_keywork_and_health():
+    assert recording_chronology_link_service.chronology_supported_for_type("keywork") is True
+    assert recording_chronology_link_service.chronology_supported_for_type("health-appointment") is True
+
+
+def test_no_fake_chronology_when_workflow_empty():
+    chronology_id, warnings = recording_chronology_link_service.create_or_prepare_link(
+        _draft("keywork"),
+        {"id": 10, "workflow": {}},
+        {"id": "1"},
+    )
+    assert chronology_id is None
+    assert warnings

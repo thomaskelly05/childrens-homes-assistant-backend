@@ -7,7 +7,17 @@ from typing import Any
 from schemas.recording_drafts import RecordingDraftRecord
 from services.recording_submission_target_registry import recording_submission_target_registry
 
-CHRONOLOGY_SUPPORTED_TYPES = frozenset({"daily-note", "incident", "keywork", "family-time", "education-note"})
+CHRONOLOGY_SUPPORTED_TYPES = frozenset(
+    {
+        "daily-note",
+        "incident",
+        "keywork",
+        "family-time",
+        "education-note",
+        "health-appointment",
+        "missing",
+    }
+)
 
 
 class RecordingChronologyLinkService:
@@ -73,8 +83,7 @@ class RecordingChronologyLinkService:
             return str(nested["chronology_event_id"]), warnings
 
         warnings.append(
-            "Formal record saved; chronology may sync asynchronously. "
-            "Review chronology linking when the formal record route is wired."
+            "Review chronology linking from the formal record."
         )
         return None, warnings
 

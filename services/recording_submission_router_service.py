@@ -18,9 +18,16 @@ from services.recording_chronology_link_service import recording_chronology_link
 from services.recording_draft_service import recording_draft_service
 from services.recording_formal_payload_builder import recording_formal_payload_builder
 from services.recording_submission_target_registry import recording_submission_target_registry
+from schemas.missing_episode_contracts import MissingEpisodeCreateRequest
+from services.missing_episode_service import MissingEpisodeService
 from services.young_people_linking_service import YoungPeopleLinkingService
+from services.young_person_appointments_service import YoungPersonAppointmentsService
 from services.young_person_daily_notes_service import YoungPersonDailyNotesService
+from services.young_person_education_service import YoungPersonEducationService
+from services.young_person_family_service import YoungPersonFamilyService
+from services.young_person_health_service import YoungPersonHealthService
 from services.young_person_incidents_service import YoungPersonIncidentsService
+from services.young_person_keywork_service import YoungPersonKeyworkService
 
 logger = logging.getLogger("indicare.recording_submission")
 
@@ -165,6 +172,10 @@ class RecordingSubmissionRouterService:
             warnings.append("Draft has no title or body; consider adding content before submit.")
         if target.requires_child and draft.child_id is None:
             warnings.append("A young person must be linked before a formal record can be created.")
+        if target.target_record_type == "missing_episode" and draft.home_id is None:
+            meta_home = (draft.metadata or {}).get("home_id")
+            if meta_home is None:
+                warnings.append("home_id is required to create a missing episode formal record.")
         return warnings
 
     def ensure_review_requirements(
@@ -221,25 +232,106 @@ class RecordingSubmissionRouterService:
         author_id = _user_int_id(current_user)
 
         try:
-            if target.target_record_type == "daily_note":
+            record_type = target.target_record_type
+            linking = YoungPeopleLinkingService
+
+            if record_type == "daily_note":
                 result = YoungPersonDailyNotesService.create_daily_note(
                     conn,
                     young_person_id=young_person_id,
                     payload=payload,
                     author_id=author_id,
-                    linking_service=YoungPeopleLinkingService,
+                    linking_service=linking,
                 )
                 return {"id": result.get("id"), "workflow": result.get("workflow"), **result}, warnings
 
-            if target.target_record_type == "incident":
+            if record_type == "incident":
                 result = YoungPersonIncidentsService.create_incident(
                     conn,
                     young_person_id=young_person_id,
                     payload=payload,
                     actor_user_id=author_id,
-                    linking_service=YoungPeopleLinkingService,
+                    linking_service=linking,
                 )
                 return {"id": result.get("id"), "workflow": result.get("workflow"), **result}, warnings
+
+            if record_type == "keywork":
+                result = YoungPersonKeyworkService.create_keywork(
+                    conn,
+                    young_person_id=young_person_id,
+                    payload=payload,
+                    actor_user_id=author_id,
+                    linking_service=linking,
+                )
+                return {"id": result.get("id"), "workflow": result.get("workflow"), **result}, warnings
+
+            if record_type == "family_contact":
+                result = YoungPersonFamilyService.create_family_contact_record(
+                    conn,
+                    young_person_id=young_person_id,
+                    payload=payload,
+                    actor_user_id=author_id,
+                    linking_service=linking,
+                )
+                return {"id": result.get("id"), "workflow": result.get("workflow"), **result}, warnings
+
+            if record_type == "education":
+                result = YoungPersonEducationService.create_education_record(
+                    conn,
+                    young_person_id=young_person_id,
+                    payload=payload,
+                    actor_user_id=author_id,
+                    linking_service=linking,
+                )
+                return {"id": result.get("id"), "workflow": result.get("workflow"), **result}, warnings
+
+            if record_type == "health_appointment":
+                result = YoungPersonAppointmentsService.create_appointment(
+                    conn,
+                    young_person_id=young_person_id,
+                    payload=payload,
+                    actor_user_id=author_id,
+                    linking_service=linking,
+                )
+                appointment = result.get("appointment") if isinstance(result, dict) else None
+                record_id = None
+                if isinstance(appointment, dict):
+                    record_id = appointment.get("id")
+                elif appointment is not None and hasattr(appointment, "get"):
+                    record_id = appointment.get("id")
+                if record_id is None:
+                    warnings.append("Appointment created but no record ID returned.")
+                    return None, warnings
+                return {"id": record_id, "workflow": result.get("workflow"), **result}, warnings
+
+            if record_type == "health":
+                result = YoungPersonHealthService.create_health_record(
+                    conn,
+                    young_person_id=young_person_id,
+                    payload=payload,
+                    actor_user_id=author_id,
+                    linking_service=linking,
+                )
+                return {"id": result.get("id"), "workflow": result.get("workflow"), **result}, warnings
+
+            if record_type == "missing_episode":
+                home_id = payload.get("home_id") or draft.home_id
+                if home_id is None:
+                    warnings.append("home_id is required to create a missing episode formal record.")
+                    return None, warnings
+                create_payload = MissingEpisodeCreateRequest(
+                    home_id=int(home_id),
+                    young_person_id=young_person_id,
+                    missing_from=str(payload.get("missing_from") or "Home"),
+                    last_seen_location=payload.get("last_seen_location"),
+                    circumstances=str(payload.get("circumstances") or _text(draft.body) or "Reported"),
+                    risk_level=payload.get("risk_level") or "high",
+                    metadata=payload.get("metadata") or {},
+                )
+                record = MissingEpisodeService().create(
+                    conn, payload=create_payload, current_user=current_user
+                )
+                return {"id": record.id, "workflow": {}, "record": record.model_dump()}, warnings
 
             warnings.append(FORMAL_NOT_WIRED)
             return None, warnings

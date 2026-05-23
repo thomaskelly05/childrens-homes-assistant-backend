@@ -1,6 +1,6 @@
 # Recording draft submission workflow map
 
-**Pass:** Recording draft submission router + formal record workflow mapping + chronology link foundation  
+**Pass:** Expand formal record submission coverage + safer route wiring  
 **Date:** May 2026  
 **Scope:** Maps `/record` workspace drafts to formal backend routes. Does not claim legal completeness.
 
@@ -23,30 +23,44 @@
 
 ---
 
+## Priority types — audit summary
+
+| Recording type | Service / route inspected | Auto-submit | Payload mapping | Warnings / gaps |
+|----------------|---------------------------|-------------|-----------------|-----------------|
+| daily-note | `YoungPersonDailyNotesService.create_daily_note` | **SUPPORTED_NOW** | title, narrative, note_date, metadata | Enrich structured draft fields |
+| incident | `YoungPersonIncidentsService.create_incident` | **SUPPORTED_NOW** | description, incident_type, metadata | Manager review gate; PI subtypes via incident_type |
+| keywork | `YoungPersonKeyworkService.create_keywork` | **SUPPORTED_NOW** | session_date, topic, summary, metadata | topic defaults from title |
+| family-time | `YoungPersonFamilyService.create_family_contact_record` | **SUPPORTED_NOW** | contact_datetime, contact_type, post_contact_presentation | contact_person defaults from title |
+| education-note | `YoungPersonEducationService.create_education_record` | **SUPPORTED_NOW** | record_date, behaviour_summary, achievement_note | attendance defaults to present |
+| health-appointment | `YoungPersonAppointmentsService.create_appointment` | **SUPPORTED_NOW** | title, start_datetime, notes | Requires start_datetime (defaults to now) |
+| missing | `MissingEpisodeService.create` | **SUPPORTED_NOW** | home_id, circumstances, missing_from | Review gate; home_id required |
+| handover | `HandoverService.prepare_handover` / shift repo | **ROUTE_TO_EXISTING_WORKFLOW** | title, details | Active shift required — not auto-wired |
+| safeguarding-concern | `SafeguardingDomainService.create` | **REVIEW_REQUIRED_BEFORE_SUBMIT** | title, concern_summary (builder only) | No auto-create — dedicated workflow |
+| medication-note-error | `YoungPersonHealthService.create_health_record` | **REVIEW_REQUIRED_BEFORE_SUBMIT** | health record fields (builder only) | No auto-create — review gate |
+
+---
+
 ## Workflow table
 
 | Recording type | Registry form id | Category | Draft support | Formal backend? | Frontend formal route? | Auto submit now? | Chronology link? | Manager review? | Behaviour after pass | Gap / next action |
 |----------------|------------------|----------|---------------|-----------------|------------------------|------------------|------------------|-----------------|----------------------|-------------------|
 | daily-note | daily-note | daily_life | Yes | Yes — `YoungPersonDailyNotesService` | `/daily-logs` | Yes if child_id + DB | Yes (via linking) | No | Creates `daily_notes` row; returns `linked_record_id` | Enrich field mapping from structured draft |
-| incident | incident | safeguarding_incident | Yes | Yes — `YoungPersonIncidentsService` | `/incidents` | Yes if child_id + review OK | Yes | Yes | Creates `incidents` row or draft-only if review blocked | PI/restraint subtypes via incident_type |
-| safeguarding-concern | safeguarding | safeguarding_incident | Yes | Partial routes | `/safeguarding` | Draft-only | Pending | Yes | Draft submitted; review required | Wire safeguarding create service |
-| missing | missing | safeguarding_incident | Yes | Partial | Child journey | Draft-only | No | Yes | Review required message | Wire missing episode create |
-| physical-intervention | physical-intervention | safeguarding_incident | Yes | Via incident | `/incidents` | Draft-only unless review OK + incident | Via incident | Yes | Review gate | Dedicated PI workflow link |
+| incident | incident | safeguarding_incident | Yes | Yes — `YoungPersonIncidentsService` | `/incidents` | Yes if child_id + review OK | Yes | Yes | Creates `incidents` row or blocked if review | PI/restraint subtypes via incident_type |
+| keywork | keywork | daily_life | Yes | Yes — `YoungPersonKeyworkService` | `/keywork` | Yes if child_id + DB | Yes | No | Creates `keywork_sessions` row | Structured session fields from draft metadata |
+| family-time | family-contact | education_family | Yes | Yes — `YoungPersonFamilyService` | Child journey | Yes if child_id + DB | Yes | No | Creates `family_contact_records` row | Supervision/location from metadata |
+| education-note | education-update | education_family | Yes | Yes — `YoungPersonEducationService` | `/education` | Yes if child_id + DB | Yes | No | Creates `education_records` row | Attendance/provision from metadata |
+| health-appointment | health | health_medication | Yes | Yes — `YoungPersonAppointmentsService` | `/appointments` | Yes if child_id + DB | Yes | No | Creates `appointments` row | End time/location from metadata |
+| missing | missing | safeguarding_incident | Yes | Yes — `MissingEpisodeService` | Child journey | Yes if child_id + home_id + review OK | Yes (service projection) | Yes | Creates missing episode or blocked | Structured missing_from / RHI fields |
+| safeguarding-concern | safeguarding | safeguarding_incident | Yes | `SafeguardingDomainService` (not auto-called) | `/safeguarding` | No — review required | Pending | Yes | Draft submitted; review required | Wire manager-confirmed create when policy allows |
+| physical-intervention | physical-intervention | safeguarding_incident | Yes | Via incident | `/incidents` | Draft-only unless incident path | Via incident | Yes | Review gate | Dedicated PI workflow link |
 | injury-body-map | body-map | safeguarding_incident | Yes | Via incident | `/incidents` | Draft-only | Via incident | Yes | Review gate | Body map JSON fields |
-| medication-note-error | medication-record | health_medication | Yes | Partial health routes | `/medication` | Draft-only | No | Yes | Review gate | Medication error service wiring |
-| keywork | keywork | daily_life | Yes | `create_keywork` exists | `/keywork` | Route hint only | Supported when wired | No | Open formal route | Auto-create from draft |
-| family-time | family-contact | education_family | Yes | Family contact services | Child journey | Route hint | When wired | No | Open workflow | Auto-create from draft |
-| education-note | education-update | education_family | Yes | Education service | `/education` | Route hint | When wired | No | Open workflow | Auto-create from draft |
-| health-appointment | health | health_medication | Yes | Health service | `/appointments` | Route hint | When wired | No | Open workflow | Auto-create from draft |
-| handover | shift-handover | daily_life | Yes | handover routes | `/handover/current` | Route hint | No | No | Open handover module | Handover payload mapping |
+| medication-note-error | medication-record | health_medication | Yes | Health routes (not auto-called) | `/medication` | No — review required | No | Yes | Draft-only formal | Dedicated medication error workflow |
+| handover | shift-handover | daily_life | Yes | Shift handover repo | `/handover/current` | Route hint only | No | No | Open handover module | Requires active shift session |
 | child-voice | child-voice | daily_life | Yes | Partial | Child journey | Route hint | When wired | No | Open workflow | Standalone child voice record |
 | manager-review | manager-review | manager_governance | Yes | Intelligence actions | `/intelligence-actions` | Draft-only | No | Yes | Review required | Formal manager review API |
 | room-search | room-search | safeguarding_incident | Yes | No | Workspace only | Draft-only | No | Planned | Honest unsupported | Build safeguarding subtype |
 | complaint-concern | complaint-concern | manager_governance | Yes | No | Workspace | Draft-only | No | No | Honest unsupported | Complaints module |
 | behaviour-support | behaviour-support | safeguarding_incident | Yes | No | Workspace | Draft-only | No | No | Honest unsupported | Incident or dedicated form |
-| evidence-document | documents | documents_evidence | Yes | Documents routes | `/documents` | Route hint | When wired | No | Open documents | Upload integration |
-| reg44-evidence | reg44-action | planning_review | Yes | Statutory routes | Child journey | Route hint | When wired | Yes | Open workflow | Reg 44 create wiring |
-| reg45-evidence | reg45-evidence | planning_review | Yes | Statutory routes | Child journey | Route hint | When wired | Yes | Open workflow | Reg 45 create wiring |
 
 ---
 

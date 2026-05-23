@@ -48,6 +48,18 @@ export function RecordingSubmissionResultCard({ result, childId }: RecordingSubm
         ) : null}
       </dl>
 
+      {result.formal_record_created === false &&
+      (result.target_status === 'route_to_existing_workflow' ||
+        result.target_status === 'submit_as_draft_only' ||
+        result.target_status === 'unsupported') ? (
+        <p
+          className="mt-3 text-xs font-semibold text-amber-950"
+          data-testid="recording-submission-not-wired"
+        >
+          Formal route is not fully wired yet for this recording type.
+        </p>
+      ) : null}
+
       {result.warnings.length > 0 ? (
         <ul className="mt-3 space-y-1 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950">
           {result.warnings.map((warning) => (
@@ -88,6 +100,15 @@ export function RecordingSubmissionResultCard({ result, childId }: RecordingSubm
             className="inline-flex min-h-9 items-center rounded-xl border border-slate-200 bg-white px-3 py-1 text-xs font-black text-slate-800"
           >
             Open child journey
+          </Link>
+        ) : null}
+        {result.draft_id ? (
+          <Link
+            href={`/record?draft=${encodeURIComponent(result.draft_id)}`}
+            data-testid="recording-resume-draft"
+            className="inline-flex min-h-9 items-center rounded-xl border border-slate-200 bg-white px-3 py-1 text-xs font-black text-slate-800"
+          >
+            Resume draft
           </Link>
         ) : null}
       </div>

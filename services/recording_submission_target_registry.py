@@ -23,15 +23,21 @@ REVIEW_REQUIRED_TYPES = frozenset(
 )
 
 # Workspace types with clear backend create services (conservative).
-SUPPORTED_CREATE_TYPES = frozenset({"daily-note", "incident"})
-
-# Types with frontend formal routes but unclear draft→service wiring.
-ROUTE_TO_WORKFLOW_TYPES = frozenset(
+SUPPORTED_CREATE_TYPES = frozenset(
     {
+        "daily-note",
+        "incident",
         "keywork",
         "family-time",
         "education-note",
         "health-appointment",
+        "missing",
+    }
+)
+
+# Types with frontend formal routes but unclear or environment-dependent draft→service wiring.
+ROUTE_TO_WORKFLOW_TYPES = frozenset(
+    {
         "handover",
         "child-voice",
         "health-medication",
@@ -85,15 +91,16 @@ _TARGET_DEFINITIONS: list[dict] = [
     {
         "recording_type": "missing",
         "form_id": "missing",
-        "target_status": "review_required_before_submit",
+        "target_status": "supported_now",
         "target_record_type": "missing_episode",
         "backend_route": "/young-people/{young_person_id}/missing-episodes",
         "frontend_route": "/young-people",
+        "service_name": "MissingEpisodeService.create",
         "requires_child": True,
         "requires_manager_review": True,
         "safeguarding_sensitive": True,
-        "chronology_link_supported": False,
-        "notes": "Missing episode formal route exists; draft auto-create not wired.",
+        "chronology_link_supported": True,
+        "notes": "Creates missing episode when child_id, home_id, and review confirmed.",
     },
     {
         "recording_type": "physical-intervention",
@@ -130,44 +137,50 @@ _TARGET_DEFINITIONS: list[dict] = [
     {
         "recording_type": "keywork",
         "form_id": "keywork",
-        "target_status": "route_to_existing_workflow",
+        "target_status": "supported_now",
         "target_record_type": "keywork",
         "backend_route": "/young-people/{young_person_id}/keywork",
         "frontend_route": "/keywork",
         "service_name": "YoungPersonKeyworkService.create_keywork",
         "requires_child": True,
         "chronology_link_supported": True,
-        "notes": "Open child journey keywork workflow to complete formal record.",
+        "notes": "Creates keywork_sessions row when child_id present.",
     },
     {
         "recording_type": "family-time",
         "form_id": "family-contact",
-        "target_status": "route_to_existing_workflow",
+        "target_status": "supported_now",
         "target_record_type": "family_contact",
+        "backend_route": "/young-people/{young_person_id}/family-contact-records",
         "frontend_route": "/young-people",
+        "service_name": "YoungPersonFamilyService.create_family_contact_record",
         "requires_child": True,
         "chronology_link_supported": True,
-        "notes": "Use family contact workflow.",
+        "notes": "Creates family_contact_records row when child_id present.",
     },
     {
         "recording_type": "education-note",
         "form_id": "education-update",
-        "target_status": "route_to_existing_workflow",
+        "target_status": "supported_now",
         "target_record_type": "education",
+        "backend_route": "/young-people/{young_person_id}/education-records",
         "frontend_route": "/education",
+        "service_name": "YoungPersonEducationService.create_education_record",
         "requires_child": True,
         "chronology_link_supported": True,
-        "notes": "Use education record workflow.",
+        "notes": "Creates education_records row when child_id present.",
     },
     {
         "recording_type": "health-appointment",
         "form_id": "health",
-        "target_status": "route_to_existing_workflow",
-        "target_record_type": "health",
+        "target_status": "supported_now",
+        "target_record_type": "health_appointment",
+        "backend_route": "/young-people/{young_person_id}/appointments",
         "frontend_route": "/appointments",
+        "service_name": "YoungPersonAppointmentsService.create_appointment",
         "requires_child": True,
         "chronology_link_supported": True,
-        "notes": "Use health/appointment workflow.",
+        "notes": "Creates appointments row when child_id present.",
     },
     {
         "recording_type": "handover",
@@ -303,19 +316,21 @@ class RecordingSubmissionTargetRegistry:
     ) -> str:
         target = self.get_target(recording_type, form_id=draft.form_id if draft else None)
         if target.target_status == "supported_now":
-            return f"This will create a {target.target_record_type or 'formal'} record when submitted."
+            label = (target.target_record_type or "formal").replace("_", " ")
+            return f"This draft can be submitted into the formal {label} workflow."
         if target.target_status == "review_required_before_submit":
             return (
                 "Manager or safeguarding review is required before this can be treated "
                 "as a completed formal record."
             )
         if target.target_status == "route_to_existing_workflow":
-            route = self.frontend_route_for(recording_type, draft)
-            if route:
-                return f"Complete the formal record in {route} after submitting the draft."
-            return "Open the existing formal workflow for this recording type."
+            return (
+                "This draft can be used with an existing workflow, but automatic creation is not wired yet."
+            )
         if target.target_status == "submit_as_draft_only":
-            return "Formal route not wired yet for this recording type."
+            return (
+                "This will save the draft as submitted, but no formal record will be created yet."
+            )
         return "Formal route not wired yet for this recording type."
 
     def frontend_route_for(
