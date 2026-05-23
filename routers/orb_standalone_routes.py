@@ -171,7 +171,9 @@ def _standalone_contract() -> dict[str, Any]:
             "documents_analyse": "/orb/standalone/documents/analyse",
             "evaluation_health": "/orb/standalone/evaluation/health",
             "agents_health": "/orb/standalone/agents/health",
+            "agents_list": "/orb/standalone/agents",
             "agents_run": "/orb/standalone/agents/run",
+            "agents_deep_research": "/orb/standalone/agents/deep-research",
         },
     }
 
@@ -335,6 +337,7 @@ async def standalone_orb_conversation(
             document_text=payload.document_text,
             document_source_id=payload.document_source_id,
             document_title=payload.document_title,
+            raw_user_message=payload.message,
         )
         elapsed_ms = int((time.perf_counter() - started) * 1000)
         logger.info(

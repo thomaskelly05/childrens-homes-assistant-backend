@@ -40,6 +40,7 @@ REQUIRED_STANDALONE_MARKERS = [
     "/orb/standalone/documents/health",
     "/orb/standalone/evaluation/health",
     "/orb/standalone/agents/health",
+    "/orb/standalone/agents",
 ]
 
 STANDALONE_UI_MARKERS = [
@@ -236,6 +237,25 @@ DEDUPE_AND_SOURCES_MARKERS = [
     "live_retrieved",
     "Retrieved from ORB Knowledge Library",
     "document_chunk",
+]
+
+AGENT_FRAMEWORK_MARKERS = [
+    "Agents",
+    "orb-agent-panel",
+    "Deep Research",
+    "Run agent",
+    "fetchStandaloneOrbAgents",
+    "runStandaloneOrbAgent",
+    "runStandaloneOrbDeepResearch",
+    "/orb/standalone/agents/run",
+    "/orb/standalone/agents/deep-research",
+]
+
+AGENT_BACKEND_MARKERS = [
+    "orb_agent_registry_service",
+    "orb_agent_orchestrator_service",
+    "orb_deep_research_service",
+    "routers.orb_agent_routes",
 ]
 
 KNOWLEDGE_LIBRARY_MARKERS = [
@@ -588,6 +608,37 @@ def test_orb_standalone_backend_conversation_hardening():
     assert '"answer"' in routes
     assert '"citations"' in routes
     assert "orb_knowledge_retrieval_service" in routes
+
+
+def test_orb_agents_ui_markers():
+    companion = _read(ORB_COMPANION)
+    sidebar = _read(ORB_SIDEBAR)
+    client = _read(STANDALONE_CLIENT)
+    panel = _read(REPO_ROOT / "frontend-next" / "components" / "orb-standalone" / "orb-agent-panel.tsx")
+    sources = companion + sidebar + client + panel
+    for marker in AGENT_FRAMEWORK_MARKERS:
+        assert marker in sources, f"agent UI must include {marker}"
+
+
+def test_orb_agent_backend_isolated():
+    routes = _read(REPO_ROOT / "routers" / "orb_agent_routes.py")
+    for marker in AGENT_BACKEND_MARKERS:
+        assert marker.replace("routers.", "") in routes or marker in _read(REPO_ROOT / "core" / "router_loader.py")
+    forbidden = (
+        "intelligence_spine",
+        "indicare_intelligence_spine",
+        "getServerOsYoungPeople",
+        "child_id",
+        "young_person_id",
+    )
+    for rel in (
+        "services/orb_agent_orchestrator_service.py",
+        "services/orb_deep_research_service.py",
+        "routers/orb_agent_routes.py",
+    ):
+        text = _read(REPO_ROOT / rel)
+        for marker in ("intelligence_spine", "indicare_intelligence_spine", "getServerOsYoungPeople"):
+            assert marker not in text, f"{rel} must not reference {marker}"
 
 
 def test_standalone_knowledge_services_do_not_import_os_intelligence():

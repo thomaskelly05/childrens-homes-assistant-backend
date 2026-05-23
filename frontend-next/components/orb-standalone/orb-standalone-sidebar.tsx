@@ -3,6 +3,7 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import {
   Archive,
+  Bot,
   BookOpen,
   FileText,
   ChevronDown,
@@ -46,6 +47,7 @@ export function OrbStandaloneSidebar({
   onOpenSettings,
   onOpenKnowledgeLibrary,
   onOpenDocuments,
+  onOpenAgents,
   onClose
 }: {
   workspace: StandaloneWorkspace
@@ -62,6 +64,7 @@ export function OrbStandaloneSidebar({
   onOpenSettings?: () => void
   onOpenKnowledgeLibrary?: () => void
   onOpenDocuments?: () => void
+  onOpenAgents?: () => void
   onClose?: () => void
 }) {
   const [projectsOpen, setProjectsOpen] = useState(true)
@@ -392,6 +395,14 @@ export function OrbStandaloneSidebar({
         >
           <FileText className="h-4 w-4" aria-hidden />
           Documents
+        </button>
+        <button
+          type="button"
+          onClick={onOpenAgents}
+          className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-slate-400 transition hover:bg-white/[0.04] hover:text-slate-200"
+        >
+          <Bot className="h-4 w-4" aria-hidden />
+          Agents
         </button>
         <button
           type="button"
