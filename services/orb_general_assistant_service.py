@@ -27,15 +27,21 @@ def _text(value: Any) -> str:
 DOCUMENT_INTENT_PHRASES = (
     "analyse this document",
     "analyze this document",
+    "summarise this document",
+    "summarize this document",
     "summarise the uploaded document",
     "summarize the uploaded document",
     "create an action plan from this",
     "action plan from this document",
     "what does this document mean",
     "what should we do next",
+    "what should we do next based on this",
     "compare this policy",
     "explain this document",
     "briefing from this document",
+    "make a manager briefing",
+    "turn this into staff guidance",
+    "what would ofsted care about",
 )
 
 
@@ -131,12 +137,15 @@ class OrbGeneralAssistantService:
                 "mode": mode,
                 "reason": reason,
                 "needs_document": True,
+                "open_documents_panel": True,
+                "auto_run": False,
             }
         return {
             "suggested": True,
             "mode": mode,
             "reason": reason,
             "needs_document": False,
+            "auto_run": True,
         }
 
     def prepare_retrieval(
@@ -230,7 +239,7 @@ class OrbGeneralAssistantService:
             return {
                 "answer": (
                     "I can analyse that document for you — please upload or paste the document "
-                    "in the Documents panel, or attach it here, then ask again. "
+                    "in the Documents panel (Open Documents in the sidebar), or attach it here, then ask again. "
                     "I can explain it, summarise it, create an action plan, or compare it to Knowledge Library guidance."
                 ),
                 "sources": build_standalone_sources(user_message, mode=mode),
@@ -259,6 +268,9 @@ class OrbGeneralAssistantService:
                 user_message,
                 mode=mode,
                 profile_context="Profile context" if profile_block else None,
+                document_text=document_text,
+                document_source_id=document_source_id,
+                document_title=document_title,
             )
             if agent_result and agent_result.get("answer"):
                 logger.info(
@@ -394,6 +406,7 @@ class OrbGeneralAssistantService:
             "care_record_access": False,
             "document_analysis": {
                 **doc_intent,
+                "auto_run": True,
                 "completed": True,
                 "source_id": document_source_id,
             },

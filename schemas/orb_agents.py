@@ -79,6 +79,10 @@ class OrbAgentRunRequest(BaseModel):
     project_context: str | None = Field(default=None, max_length=8000)
     profile_context: str | None = Field(default=None, max_length=8000)
     attachments: list[OrbAgentAttachment] = Field(default_factory=list)
+    document_text: str | None = Field(default=None, max_length=500_000)
+    document_source_id: str | None = Field(default=None, max_length=120)
+    source_id: str | None = Field(default=None, max_length=120)
+    document_title: str | None = Field(default=None, max_length=500)
     preferred_output: OrbAgentOutputFormat = "answer"
     depth: OrbAgentDepth = "standard"
     require_citations: bool = True
@@ -152,6 +156,10 @@ class OrbDeepResearchRequest(BaseModel):
     preferred_output: OrbAgentOutputFormat = "briefing"
     project_context: str | None = Field(default=None, max_length=8000)
     profile_context: str | None = Field(default=None, max_length=8000)
+    document_text: str | None = Field(default=None, max_length=500_000)
+    document_source_id: str | None = Field(default=None, max_length=120)
+    source_id: str | None = Field(default=None, max_length=120)
+    document_title: str | None = Field(default=None, max_length=500)
     require_citations: bool = True
     max_sources: int = Field(default=8, ge=1, le=20)
 

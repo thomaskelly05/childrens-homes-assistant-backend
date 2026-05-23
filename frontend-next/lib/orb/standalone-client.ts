@@ -615,6 +615,10 @@ export async function runStandaloneOrbAgent(body: {
   mode?: string
   project_context?: string
   profile_context?: string
+  document_text?: string
+  document_source_id?: string
+  source_id?: string
+  document_title?: string
   preferred_output?: OrbAgentOutputFormat
   depth?: OrbAgentDepth
   require_citations?: boolean
@@ -634,6 +638,10 @@ export async function runStandaloneOrbDeepResearch(body: {
   mode?: string
   depth?: OrbAgentDepth
   preferred_output?: OrbAgentOutputFormat
+  document_text?: string
+  document_source_id?: string
+  source_id?: string
+  document_title?: string
   require_citations?: boolean
   max_sources?: number
 }) {

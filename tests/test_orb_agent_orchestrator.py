@@ -87,6 +87,50 @@ async def test_run_agent_returns_sources_citations_steps(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_document_analysis_agent_without_document_prompts_upload():
+    request = OrbAgentRunRequest(
+        agent_type="document_analysis",
+        prompt="Analyse this policy document",
+        preferred_output="briefing",
+    )
+    response = await orb_agent_orchestrator_service.run_agent(request)
+    assert response.agent_type == "document_analysis"
+    assert "upload" in response.output.body.lower() or "paste" in response.output.body.lower()
+    assert response.context_used.get("os_linked") is False
+    assert response.context_used.get("standalone_only") is True
+
+
+@pytest.mark.asyncio
+async def test_document_analysis_agent_with_text_uses_understanding_service(monkeypatch):
+    from schemas.orb_documents import OrbDocumentUnderstanding
+
+    async def stub_analyse(_request):
+        return OrbDocumentUnderstanding(
+            title="Policy",
+            plain_english_summary="Structured analysis.",
+            sources=[{"label": "User document", "type": "user_provided"}],
+            evaluation={"overall_score": 0.82, "passed": True},
+        )
+
+    monkeypatch.setattr(
+        "services.orb_agent_orchestrator_service.orb_document_understanding_service.analyse_document",
+        stub_analyse,
+    )
+
+    request = OrbAgentRunRequest(
+        agent_type="document_analysis",
+        prompt="Create a manager briefing",
+        document_text="Sample safeguarding policy text for homes.",
+        preferred_output="briefing",
+    )
+    response = await orb_agent_orchestrator_service.run_agent(request)
+    assert response.success is True
+    assert response.context_used.get("document_analysis", {}).get("document_understanding_service")
+    assert response.context_used.get("evaluation")
+    assert "Structured analysis" in response.output.body
+
+
+@pytest.mark.asyncio
 async def test_run_agent_includes_live_web_note_in_warnings():
     request = OrbAgentRunRequest(
         agent_type="general_research",

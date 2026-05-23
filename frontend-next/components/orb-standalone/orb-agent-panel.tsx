@@ -4,6 +4,10 @@ import { useCallback, useEffect, useState } from 'react'
 import { Bot, Loader2, Search, X } from 'lucide-react'
 
 import {
+  OrbIntelligenceOutput,
+  agentResponseToIntelligenceOutput
+} from '@/components/orb-standalone/orb-intelligence-output'
+import {
   fetchStandaloneOrbAgents,
   runStandaloneOrbAgent,
   runStandaloneOrbDeepResearch,
@@ -29,12 +33,18 @@ export function OrbAgentPanel({
   onClose,
   initialAgentType,
   initialPrompt,
+  initialDocumentText,
+  initialDocumentSourceId,
+  initialDocumentTitle,
   onApplyToChat
 }: {
   open: boolean
   onClose: () => void
   initialAgentType?: string
   initialPrompt?: string
+  initialDocumentText?: string
+  initialDocumentSourceId?: string | null
+  initialDocumentTitle?: string
   onApplyToChat?: (text: string, response: OrbAgentRunResponse) => void
 }) {
   const [agents, setAgents] = useState<OrbAgentDefinition[]>([])
@@ -48,6 +58,9 @@ export function OrbAgentPanel({
   const [requireCitations, setRequireCitations] = useState(true)
   const [deepResearchMode, setDeepResearchMode] = useState(initialAgentType === 'deep_research')
   const [result, setResult] = useState<OrbAgentRunResponse | null>(null)
+  const [documentText, setDocumentText] = useState(initialDocumentText || '')
+  const [documentSourceId, setDocumentSourceId] = useState(initialDocumentSourceId || '')
+  const [documentTitle, setDocumentTitle] = useState(initialDocumentTitle || '')
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -72,7 +85,17 @@ export function OrbAgentPanel({
     if (initialAgentType) setSelectedType(initialAgentType)
     if (initialPrompt) setPrompt(initialPrompt)
     if (initialAgentType === 'deep_research') setDeepResearchMode(true)
-  }, [open, initialAgentType, initialPrompt])
+    if (initialDocumentText) setDocumentText(initialDocumentText)
+    if (initialDocumentSourceId) setDocumentSourceId(initialDocumentSourceId)
+    if (initialDocumentTitle) setDocumentTitle(initialDocumentTitle)
+  }, [
+    open,
+    initialAgentType,
+    initialPrompt,
+    initialDocumentText,
+    initialDocumentSourceId,
+    initialDocumentTitle
+  ])
 
   async function handleRun(event: React.FormEvent) {
     event.preventDefault()
@@ -82,12 +105,18 @@ export function OrbAgentPanel({
     setError(null)
     setResult(null)
     try {
+      const docPayload = {
+        document_text: documentText.trim() || undefined,
+        document_source_id: documentSourceId.trim() || undefined,
+        document_title: documentTitle.trim() || undefined
+      }
       if (deepResearchMode || selectedType === 'deep_research') {
         const deep = await runStandaloneOrbDeepResearch({
           query: text,
           depth,
           preferred_output: outputFormat,
-          require_citations: requireCitations
+          require_citations: requireCitations,
+          ...docPayload
         })
         const mapped: OrbAgentRunResponse = {
           success: deep.success,
@@ -111,7 +140,8 @@ export function OrbAgentPanel({
           prompt: text,
           depth,
           preferred_output: outputFormat,
-          require_citations: requireCitations
+          require_citations: requireCitations,
+          ...docPayload
         })
         setResult(response)
         onApplyToChat?.(response.output.body, response)
@@ -186,7 +216,48 @@ export function OrbAgentPanel({
             <p className="mb-3 text-xs leading-5 text-slate-400">{selectedAgent.description}</p>
           ) : null}
 
+          {selectedType === 'document_analysis' ? (
+            <p className="mb-3 rounded-lg border border-cyan-400/20 bg-cyan-500/5 px-3 py-2 text-[11px] text-cyan-100/90">
+              Uses the dedicated Document Understanding Service (not generic RAG-only analysis).
+            </p>
+          ) : null}
+
           <form onSubmit={handleRun} className="space-y-3">
+            {selectedType === 'document_analysis' || deepResearchMode ? (
+              <div className="space-y-2 rounded-lg border border-white/[0.06] bg-white/[0.02] p-3">
+                <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
+                  Standalone document context
+                </p>
+                <label className="block text-xs text-slate-400">
+                  Paste document text
+                  <textarea
+                    value={documentText}
+                    onChange={(e) => setDocumentText(e.target.value)}
+                    rows={3}
+                    placeholder="Or use latest uploaded document from Documents panel…"
+                    className="mt-1 w-full rounded-lg border border-white/[0.08] bg-black/30 px-3 py-2 text-sm text-white"
+                  />
+                </label>
+                <label className="block text-xs text-slate-400">
+                  Knowledge Library source ID (optional)
+                  <input
+                    value={documentSourceId}
+                    onChange={(e) => setDocumentSourceId(e.target.value)}
+                    placeholder="From Documents upload"
+                    className="mt-1 w-full rounded-lg border border-white/[0.08] bg-black/30 px-3 py-2 text-sm text-white"
+                  />
+                </label>
+                {initialDocumentText && !documentText ? (
+                  <button
+                    type="button"
+                    onClick={() => setDocumentText(initialDocumentText)}
+                    className="text-xs text-cyan-300 hover:underline"
+                  >
+                    Use latest uploaded document
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
             <label className="block text-xs font-medium text-slate-400">
               Prompt
               <textarea
@@ -252,31 +323,10 @@ export function OrbAgentPanel({
           {error ? <p className="mt-3 text-xs text-rose-400">{error}</p> : null}
 
           {result ? (
-            <div className="mt-4 space-y-3 rounded-lg border border-white/[0.06] bg-white/[0.02] p-3">
-              <h3 className="text-sm font-semibold text-white">{result.output.title}</h3>
-              {result.safety_notice ? (
-                <p className="rounded-md bg-amber-500/10 px-2 py-1.5 text-[10px] text-amber-100/90">{result.safety_notice}</p>
-              ) : null}
-              <div className="prose prose-invert max-w-none text-xs leading-relaxed text-slate-300 whitespace-pre-wrap">
-                {result.output.body}
-              </div>
-              {result.findings?.length ? (
-                <div>
-                  <p className="text-[10px] font-medium text-slate-500">Findings</p>
-                  <ul className="mt-1 space-y-1">
-                    {result.findings.slice(0, 5).map((f, i) => (
-                      <li key={i} className="text-xs text-slate-400">
-                        <span className="font-medium text-slate-300">{f.title}:</span> {f.summary}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-              {result.warnings?.length ? (
-                <p className="text-[10px] text-slate-500">{result.warnings.join(' ')}</p>
-              ) : null}
+            <div className="mt-4 rounded-lg border border-white/[0.06] bg-white/[0.02] p-3">
+              <OrbIntelligenceOutput output={agentResponseToIntelligenceOutput(result)} />
               {result.model_routing ? (
-                <p className="text-[10px] text-slate-600">
+                <p className="mt-3 text-[10px] text-slate-600">
                   Model: {result.model_routing.provider}/{result.model_routing.model} ({result.model_routing.task_type})
                 </p>
               ) : null}

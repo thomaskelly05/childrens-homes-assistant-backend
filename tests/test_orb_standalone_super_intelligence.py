@@ -216,6 +216,27 @@ def test_general_service_agent_bridge():
     assert "detect_agent_intent" in text
 
 
+def test_intelligence_output_modules_exist():
+    from pathlib import Path
+
+    repo = Path(__file__).resolve().parents[1]
+    assert (repo / "schemas" / "orb_intelligence_output.py").is_file()
+    assert (repo / "services" / "orb_intelligence_output_service.py").is_file()
+    assert (repo / "services" / "orb_intelligence_bridge_service.py").is_file()
+    assert (repo / "frontend-next" / "components" / "orb-standalone" / "orb-intelligence-output.tsx").is_file()
+
+
+def test_frontend_document_panel_deep_research_button():
+    companion = _read(REPO_ROOT / "frontend-next" / "components" / "orb-standalone" / "orb-document-panel.tsx")
+    assert "Run Deep Research from this document" in companion
+    agent_panel = _read(REPO_ROOT / "frontend-next" / "components" / "orb-standalone" / "orb-agent-panel.tsx")
+    assert "Document Understanding Service" in agent_panel
+    assert "Paste document text" in agent_panel
+    care = _read(ORB_COMPANION)
+    assert "Open Documents" in care
+    assert "Run Document Analysis" in care
+
+
 def test_agent_registry_module_exists():
     from services.orb_agent_registry_service import orb_agent_registry_service
 
