@@ -91,6 +91,173 @@ class OrbOperationalPermissionSummary(BaseModel):
     scope_resolved: str | None = None
 
 
+OrbOperationalContextCardType = Literal[
+    "manager_daily_brief",
+    "safeguarding_theme",
+    "record_quality",
+    "action_attention",
+    "ofsted_evidence",
+    "workforce",
+    "child_journey",
+    "governance",
+    "context_health",
+]
+
+OrbOperationalSeverity = Literal["info", "low", "medium", "high", "urgent"]
+
+OrbOperationalPriority = Literal["low", "medium", "high", "urgent"]
+
+
+class OrbOperationalContextCard(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    id: str
+    title: str
+    type: OrbOperationalContextCardType
+    summary: str
+    severity: OrbOperationalSeverity = "info"
+    source_label: str | None = None
+    route_hint: str | None = None
+    count: int | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class OrbOperationalEvidenceItem(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    id: str
+    label: str
+    source_type: str
+    basis: str | None = None
+    route: str | None = None
+    severity: OrbOperationalSeverity = "info"
+
+
+class OrbOperationalRecommendation(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    id: str
+    title: str
+    summary: str
+    priority: OrbOperationalPriority = "medium"
+    rationale: str | None = None
+    source_labels: list[str] = Field(default_factory=list)
+    suggested_action: str | None = None
+    review_required: bool = False
+    manager_review_reason: str | None = None
+    route_hint: str | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class OrbOperationalDraftAction(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    title: str
+    description: str
+    priority: OrbOperationalPriority = "medium"
+    source: str | None = None
+    due_label: str | None = None
+    owner_label: str | None = None
+    review_required: bool = True
+    evidence_basis: str | None = None
+    standalone_only: bool = False
+    os_linked: bool = True
+
+
+class OrbOperationalBriefing(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    title: str
+    summary: str
+    key_points: list[str] = Field(default_factory=list)
+    risks: list[str] = Field(default_factory=list)
+    actions: list[str] = Field(default_factory=list)
+    sources: list[str] = Field(default_factory=list)
+    citations: list[dict[str, Any]] = Field(default_factory=list)
+    evaluation: dict[str, Any] | None = None
+    created_from_mode: str | None = None
+    context_scope: str | None = None
+    saved_as_output_id: str | None = None
+
+
+class OrbOperationalReviewPrompt(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    id: str
+    title: str
+    reason: str
+    priority: OrbOperationalPriority = "medium"
+    route_hint: str | None = None
+
+
+class OrbOperationalAuditSummary(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    audit_reference: str | None = None
+    role: str | None = None
+    scope: str | None = None
+    permissioned_context: bool = True
+    care_record_access: bool = False
+    boundary_notice: str | None = None
+
+
+class OrbOperationalContextStatus(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    available: bool = True
+    degraded: bool = False
+    unavailable: bool = False
+    care_record_access: bool = False
+    homes_accessible: int | None = None
+    message: str | None = None
+    permission_warnings: list[str] = Field(default_factory=list)
+
+
+class OrbOperationalFollowUpAction(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    label: str
+    route: str | None = None
+    action_type: str = "review"
+
+
+class OrbOperationalActionsDraftRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    message: str = Field(..., min_length=1, max_length=12000)
+    mode: OrbOperationalMode = "action_priority"
+    scope: OrbOperationalScope = "current_user"
+    home_id: int | None = None
+    child_id: int | None = None
+    staff_id: int | None = None
+    days: int = Field(default=7, ge=1, le=90)
+    answer: str | None = None
+
+
+class OrbOperationalActionsCreateRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    drafts: list[OrbOperationalDraftAction] = Field(default_factory=list)
+    home_id: int | None = None
+    child_id: int | None = None
+    staff_id: int | None = None
+    require_manager_review: bool = True
+
+
+class OrbOperationalBriefingRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    message: str = Field(..., min_length=1, max_length=12000)
+    mode: OrbOperationalMode = "manager_daily_brief"
+    scope: OrbOperationalScope = "current_user"
+    home_id: int | None = None
+    child_id: int | None = None
+    staff_id: int | None = None
+    days: int = Field(default=7, ge=1, le=90)
+    answer: str | None = None
+    save: bool = False
+
+
 class OrbOperationalResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
@@ -109,6 +276,17 @@ class OrbOperationalResponse(BaseModel):
     care_record_access: bool = False
     standalone_only: bool = False
     permissioned_context: bool = True
+    context_cards: list[OrbOperationalContextCard] = Field(default_factory=list)
+    evidence_items: list[OrbOperationalEvidenceItem] = Field(default_factory=list)
+    recommendations: list[OrbOperationalRecommendation] = Field(default_factory=list)
+    draft_actions: list[OrbOperationalDraftAction] = Field(default_factory=list)
+    review_prompts: list[OrbOperationalReviewPrompt] = Field(default_factory=list)
+    audit_summary: OrbOperationalAuditSummary | None = None
+    context_status: OrbOperationalContextStatus | None = None
+    follow_up_actions: list[OrbOperationalFollowUpAction] = Field(default_factory=list)
+    briefing: OrbOperationalBriefing | None = None
+    save_available: bool = False
+    action_creation_available: bool = True
 
 
 class OrbOperationalHealth(BaseModel):

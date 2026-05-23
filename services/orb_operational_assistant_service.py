@@ -19,6 +19,7 @@ from schemas.orb_operational import (
 from services.ai_model_router_service import ai_model_router_service
 from services.orb_evaluation_service import orb_evaluation_service
 from services.orb_intelligence_output_service import orb_intelligence_output_service
+from services.orb_operational_action_builder_service import orb_operational_action_builder_service
 from services.orb_operational_context_service import (
     OPERATIONAL_BOUNDARY_NOTICES,
     orb_operational_context_bridge,
@@ -136,6 +137,27 @@ class OrbOperationalAssistantService:
 
         audit_reference = f"orb-operational-{uuid.uuid4().hex[:12]}"
 
+        enriched = orb_operational_action_builder_service.enrich_response_fields(
+            context=context_bundle,
+            answer=answer,
+            request=request,
+            audit_reference=audit_reference,
+            evaluation=evaluation,
+            current_user=current_user,
+        )
+
+        from schemas.orb_operational import (
+            OrbOperationalAuditSummary,
+            OrbOperationalBriefing,
+            OrbOperationalContextCard,
+            OrbOperationalContextStatus,
+            OrbOperationalDraftAction,
+            OrbOperationalEvidenceItem,
+            OrbOperationalFollowUpAction,
+            OrbOperationalRecommendation,
+            OrbOperationalReviewPrompt,
+        )
+
         return OrbOperationalResponse(
             answer=answer,
             intelligence_output=intelligence_output,
@@ -152,6 +174,23 @@ class OrbOperationalAssistantService:
             care_record_access=bool(permissions_model.care_record_access),
             standalone_only=False,
             permissioned_context=True,
+            context_cards=[OrbOperationalContextCard.model_validate(c) for c in enriched["context_cards"]],
+            evidence_items=[OrbOperationalEvidenceItem.model_validate(e) for e in enriched["evidence_items"]],
+            recommendations=[
+                OrbOperationalRecommendation.model_validate(r) for r in enriched["recommendations"]
+            ],
+            draft_actions=[OrbOperationalDraftAction.model_validate(d) for d in enriched["draft_actions"]],
+            review_prompts=[OrbOperationalReviewPrompt.model_validate(p) for p in enriched["review_prompts"]],
+            audit_summary=OrbOperationalAuditSummary.model_validate(enriched["audit_summary"]),
+            context_status=OrbOperationalContextStatus.model_validate(enriched["context_status"]),
+            follow_up_actions=[
+                OrbOperationalFollowUpAction.model_validate(f) for f in enriched["follow_up_actions"]
+            ],
+            briefing=OrbOperationalBriefing.model_validate(enriched["briefing"])
+            if enriched.get("briefing")
+            else None,
+            save_available=bool(enriched.get("save_available")),
+            action_creation_available=bool(enriched.get("action_creation_available", True)),
         )
 
     def build_operational_prompt(self, request: OrbOperationalRequest, context: dict[str, Any]) -> str:

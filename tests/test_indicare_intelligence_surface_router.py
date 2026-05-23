@@ -31,6 +31,13 @@ def test_manager_review_routes_to_spine_or_operational():
     decision = indicare_intelligence_surface_router.route("What needs manager review today?")
     assert decision.recommended_surface in {"intelligence_spine", "operational_orb"}
     assert decision.requires_os_context is True
+    assert "mode=manager_daily_brief" in (decision.suggested_route or "")
+
+
+def test_record_quality_routes_to_operational_mode():
+    decision = indicare_intelligence_surface_router.route("What is our record quality picture?")
+    assert decision.requires_os_context is True
+    assert "record_quality_review" in (decision.suggested_route or "")
 
 
 def test_daily_note_can_use_record_hub():

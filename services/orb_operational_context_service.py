@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import uuid
 from datetime import date
 from typing import Any
 
@@ -1041,6 +1042,347 @@ class OrbOperationalContextBridge:
             )
         except Exception:
             return
+
+    def build_context_cards(self, context: dict[str, Any], request: Any) -> list[dict[str, Any]]:
+        from schemas.orb_operational import OrbOperationalContextCard
+
+        summary = context.get("summary")
+        if hasattr(summary, "model_dump"):
+            summary_data = summary.model_dump()
+        elif isinstance(summary, dict):
+            summary_data = summary
+        else:
+            summary_data = {}
+
+        cards: list[dict[str, Any]] = []
+        unavailable = bool(summary_data.get("unavailable"))
+        degraded = bool(summary_data.get("degraded"))
+
+        if unavailable or degraded:
+            cards.append(
+                OrbOperationalContextCard(
+                    id=f"ctx-health-{uuid.uuid4().hex[:8]}",
+                    title="Operational context temporarily unavailable"
+                    if unavailable
+                    else "Operational context partially available",
+                    type="context_health",
+                    summary=_text(
+                        (summary_data.get("permission_warnings") or ["Database or permission context limited."])[0],
+                        "Summary-level guidance only until context is restored.",
+                    ),
+                    severity="high" if unavailable else "medium",
+                    source_label="Context health",
+                    route_hint="/assistant/orb",
+                    metadata={"degraded": degraded, "unavailable": unavailable},
+                ).model_dump()
+            )
+
+        if summary_data.get("headline") and not unavailable:
+            cards.append(
+                OrbOperationalContextCard(
+                    id=f"manager-brief-{uuid.uuid4().hex[:8]}",
+                    title="Manager daily brief",
+                    type="manager_daily_brief",
+                    summary=_text(summary_data.get("headline"))[:280],
+                    severity="medium" if summary_data.get("attention_items") else "info",
+                    source_label="Registered manager daily brief",
+                    route_hint="/command-centre",
+                    count=len(summary_data.get("attention_items") or []),
+                ).model_dump()
+            )
+
+        safeguarding = summary_data.get("safeguarding_signals") or []
+        if safeguarding:
+            cards.append(
+                OrbOperationalContextCard(
+                    id=f"safeguarding-{uuid.uuid4().hex[:8]}",
+                    title="Safeguarding themes",
+                    type="safeguarding_theme",
+                    summary=_text(safeguarding[0])[:280],
+                    severity="high",
+                    source_label="Pattern detection",
+                    route_hint="/intelligence-spine",
+                    count=len(safeguarding),
+                ).model_dump()
+            )
+
+        quality_notes = summary_data.get("record_quality_notes") or []
+        if quality_notes:
+            cards.append(
+                OrbOperationalContextCard(
+                    id=f"record-quality-{uuid.uuid4().hex[:8]}",
+                    title="Record quality",
+                    type="record_quality",
+                    summary=_text(quality_notes[0])[:280],
+                    severity="medium",
+                    source_label="Record quality intelligence",
+                    route_hint="/intelligence-spine",
+                    count=len(quality_notes),
+                ).model_dump()
+            )
+
+        attention = summary_data.get("attention_items") or []
+        if attention:
+            cards.append(
+                OrbOperationalContextCard(
+                    id=f"actions-{uuid.uuid4().hex[:8]}",
+                    title="Action attention",
+                    type="action_attention",
+                    summary=_text(attention[0])[:280],
+                    severity="high" if len(attention) > 2 else "medium",
+                    source_label="Intelligence actions",
+                    route_hint="/intelligence-actions",
+                    count=len(attention),
+                ).model_dump()
+            )
+
+        ofsted = summary_data.get("ofsted_evidence_notes") or []
+        if ofsted:
+            cards.append(
+                OrbOperationalContextCard(
+                    id=f"ofsted-{uuid.uuid4().hex[:8]}",
+                    title="Ofsted evidence strength",
+                    type="ofsted_evidence",
+                    summary=_text(ofsted[0])[:280],
+                    severity="medium",
+                    source_label="Ofsted evidence simulation",
+                    route_hint="/governance",
+                    count=len(ofsted),
+                    metadata={"not_a_grade_prediction": True},
+                ).model_dump()
+            )
+
+        workforce = summary_data.get("staff_support_notes") or []
+        if workforce:
+            cards.append(
+                OrbOperationalContextCard(
+                    id=f"workforce-{uuid.uuid4().hex[:8]}",
+                    title="Workforce support",
+                    type="workforce",
+                    summary=_text(workforce[0])[:280],
+                    severity="medium",
+                    source_label="Workforce intelligence",
+                    route_hint="/staff",
+                    count=len(workforce),
+                ).model_dump()
+            )
+
+        child_notes = summary_data.get("child_journey_notes") or []
+        if child_notes and getattr(request, "scope", None) in {"child", "current_user"}:
+            cards.append(
+                OrbOperationalContextCard(
+                    id=f"child-journey-{uuid.uuid4().hex[:8]}",
+                    title="Child journey",
+                    type="child_journey",
+                    summary=_text(child_notes[0])[:280],
+                    severity="medium",
+                    source_label="Care journey summary",
+                    route_hint="/young-people",
+                    count=len(child_notes),
+                ).model_dump()
+            )
+
+        governance = summary_data.get("governance_notes") or []
+        if governance:
+            cards.append(
+                OrbOperationalContextCard(
+                    id=f"governance-{uuid.uuid4().hex[:8]}",
+                    title="Governance",
+                    type="governance",
+                    summary=_text(governance[0])[:280],
+                    severity="medium",
+                    source_label="Governance intelligence",
+                    route_hint="/governance",
+                    count=len(governance),
+                ).model_dump()
+            )
+
+        return cards[:12]
+
+    def build_evidence_items(self, context: dict[str, Any], request: Any) -> list[dict[str, Any]]:
+        from schemas.orb_operational import OrbOperationalEvidenceItem
+
+        _ = request
+        items: list[dict[str, Any]] = []
+        for index, raw in enumerate(self.safe_context_sources(context)[:12]):
+            basis = _text(raw.get("basis"), "")[:240]
+            items.append(
+                OrbOperationalEvidenceItem(
+                    id=f"evidence-{index + 1}",
+                    label=_text(raw.get("label"), "Operational source"),
+                    source_type=_text(raw.get("source_type"), "summary"),
+                    basis=basis or None,
+                    route=raw.get("route"),
+                    severity="info",
+                ).model_dump()
+            )
+        return items
+
+    def build_recommendations(self, context: dict[str, Any], request: Any) -> list[dict[str, Any]]:
+        from schemas.orb_operational import OrbOperationalRecommendation
+
+        summary = context.get("summary")
+        if hasattr(summary, "model_dump"):
+            summary_data = summary.model_dump()
+        elif isinstance(summary, dict):
+            summary_data = summary
+        else:
+            summary_data = {}
+
+        recommendations: list[dict[str, Any]] = []
+        source_labels = [_text(s.get("label")) for s in self.safe_context_sources(context)[:6] if s.get("label")]
+
+        for index, item in enumerate((summary_data.get("attention_items") or [])[:4]):
+            recommendations.append(
+                OrbOperationalRecommendation(
+                    id=f"rec-attention-{index}",
+                    title=_text(item, "Review attention item")[:120],
+                    summary="Listed in the operational attention feed for your scope.",
+                    priority="high",
+                    rationale="Action attention feed",
+                    source_labels=source_labels[:3] or ["Intelligence actions"],
+                    suggested_action="Review and accept or dismiss in Intelligence Actions.",
+                    review_required=True,
+                    manager_review_reason="Attention items require manager oversight.",
+                    route_hint="/intelligence-actions",
+                ).model_dump()
+            )
+
+        for index, signal in enumerate((summary_data.get("safeguarding_signals") or [])[:3]):
+            recommendations.append(
+                OrbOperationalRecommendation(
+                    id=f"rec-safeguarding-{index}",
+                    title="Review safeguarding theme",
+                    summary=_text(signal)[:240],
+                    priority="urgent",
+                    rationale="Emerging safeguarding pattern",
+                    source_labels=source_labels[:3] or ["Pattern detection"],
+                    suggested_action="Follow local safeguarding procedure and manager review.",
+                    review_required=True,
+                    manager_review_reason="Safeguarding themes are not threshold decisions.",
+                    route_hint="/intelligence-spine",
+                ).model_dump()
+            )
+
+        for index, note in enumerate((summary_data.get("record_quality_notes") or [])[:3]):
+            recommendations.append(
+                OrbOperationalRecommendation(
+                    id=f"rec-quality-{index}",
+                    title="Record quality review",
+                    summary=_text(note)[:240],
+                    priority="medium",
+                    rationale="Recording may need strengthening",
+                    source_labels=["Record quality intelligence"],
+                    suggested_action="Review recording with the author or manager.",
+                    review_required=True,
+                    manager_review_reason="Recording quality supports inspection readiness.",
+                    route_hint="/intelligence-spine",
+                ).model_dump()
+            )
+
+        mode = _text(getattr(request, "mode", None), "")
+        if mode == "action_priority" and not recommendations:
+            recommendations.append(
+                OrbOperationalRecommendation(
+                    id="rec-prioritise",
+                    title="Prioritise open actions",
+                    summary="Review Intelligence Actions and Care Hub action board for your scope.",
+                    priority="medium",
+                    source_labels=source_labels[:2] or ["Operational ORB"],
+                    suggested_action="Open Intelligence Actions to accept or defer proposed items.",
+                    review_required=True,
+                    route_hint="/intelligence-actions",
+                ).model_dump()
+            )
+
+        return recommendations[:10]
+
+    def build_review_prompts(self, context: dict[str, Any], request: Any) -> list[dict[str, Any]]:
+        from schemas.orb_operational import OrbOperationalReviewPrompt
+
+        prompts: list[dict[str, Any]] = []
+        for rec in self.build_recommendations(context, request):
+            if not rec.get("review_required"):
+                continue
+            prompts.append(
+                OrbOperationalReviewPrompt(
+                    id=f"review-{rec['id']}",
+                    title=rec["title"],
+                    reason=_text(rec.get("manager_review_reason"), "Manager review recommended."),
+                    priority=rec.get("priority") or "medium",
+                    route_hint=rec.get("route_hint"),
+                ).model_dump()
+            )
+        if getattr(request, "mode", None) == "safeguarding_themes":
+            prompts.append(
+                OrbOperationalReviewPrompt(
+                    id="review-safeguarding-policy",
+                    title="Apply local safeguarding procedure",
+                    reason="ORB surfaces themes only — not threshold or statutory decisions.",
+                    priority="urgent",
+                    route_hint="/intelligence-oversight",
+                ).model_dump()
+            )
+        return prompts[:8]
+
+    def build_context_status(self, context: dict[str, Any], request: Any) -> dict[str, Any]:
+        from schemas.orb_operational import OrbOperationalContextStatus
+
+        _ = request
+        summary = context.get("summary")
+        permissions = context.get("permissions") or {}
+        if hasattr(summary, "model_dump"):
+            summary_data = summary.model_dump()
+        elif isinstance(summary, dict):
+            summary_data = summary
+        else:
+            summary_data = {}
+        if hasattr(permissions, "model_dump"):
+            perm_data = permissions.model_dump()
+        elif isinstance(permissions, dict):
+            perm_data = permissions
+        else:
+            perm_data = {}
+
+        unavailable = bool(summary_data.get("unavailable"))
+        degraded = bool(summary_data.get("degraded"))
+        allowed = perm_data.get("allowed_home_ids") or []
+        message = None
+        if unavailable:
+            message = "Operational context temporarily unavailable — general guidance only."
+        elif degraded:
+            message = "Operational context is partially available."
+
+        return OrbOperationalContextStatus(
+            available=not unavailable,
+            degraded=degraded,
+            unavailable=unavailable,
+            care_record_access=bool(context.get("raw_available") or perm_data.get("care_record_access")),
+            homes_accessible=len(allowed) if allowed else None,
+            message=message,
+            permission_warnings=list(summary_data.get("permission_warnings") or [])[:6],
+        ).model_dump()
+
+    def build_audit_summary(
+        self,
+        context: dict[str, Any],
+        request: Any,
+        *,
+        audit_reference: str | None = None,
+        current_user: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        from schemas.orb_operational import OrbOperationalAuditSummary
+
+        role = _text((current_user or {}).get("role"))
+        scope = _text(getattr(request, "scope", None))
+        return OrbOperationalAuditSummary(
+            audit_reference=audit_reference,
+            role=role or None,
+            scope=scope or None,
+            permissioned_context=True,
+            care_record_access=bool(context.get("raw_available")),
+            boundary_notice=OPERATIONAL_BOUNDARY_NOTICES[0],
+        ).model_dump()
 
 
 orb_operational_context_bridge = OrbOperationalContextBridge()

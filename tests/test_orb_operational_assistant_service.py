@@ -63,6 +63,9 @@ async def test_operational_assistant_uses_model_router(monkeypatch):
     assert result.model_routing is not None
     assert result.boundaries.no_ofsted_grade_predictions is True
     assert "manager review" in result.answer.lower() or "Review" in result.answer
+    assert result.context_cards is not None
+    assert result.audit_summary is not None
+    assert result.context_status is not None
 
 
 @pytest.mark.asyncio
@@ -89,3 +92,53 @@ async def test_operational_assistant_fallback_when_router_fails(monkeypatch):
 
     assert "temporarily unavailable" in result.answer.lower() or "manager" in result.answer.lower()
     assert result.warnings
+
+
+@pytest.mark.asyncio
+async def test_operational_assistant_includes_draft_actions_for_action_prompt(monkeypatch):
+    decision = AiRoutingDecision(
+        provider=AiProviderName.MOCK,
+        model="mock-text",
+        task_type=AiTaskType.OPERATIONAL_OS_CONTEXT,
+        risk_level=AiRiskLevel.MEDIUM,
+        quality_tier=AiQualityTier.BALANCED,
+        cost_tier=AiCostTier.STANDARD,
+        reason="test",
+    )
+    trace = AiModelRouterTrace(
+        task_type=AiTaskType.OPERATIONAL_OS_CONTEXT,
+        risk_level=AiRiskLevel.MEDIUM,
+        quality_tier=AiQualityTier.BALANCED,
+        cost_tier=AiCostTier.STANDARD,
+        provider=AiProviderName.MOCK,
+        model="mock-text",
+        reason="test",
+    )
+    response = AiProviderResponse(text="Prioritise safeguarding follow-up.", provider=AiProviderName.MOCK, model="mock-text")
+
+    monkeypatch.setattr(
+        "services.orb_operational_assistant_service.ai_model_router_service.complete_with_routing",
+        AsyncMock(return_value=(response, decision, trace)),
+    )
+    monkeypatch.setattr(
+        "services.orb_operational_assistant_service.orb_operational_context_bridge.build_context",
+        lambda *_args, **_kwargs: {
+            "summary": {
+                "headline": "Actions",
+                "attention_items": ["Review plan"],
+                "degraded": False,
+                "unavailable": False,
+            },
+            "sources": [],
+            "permissions": {"role": "manager", "care_record_access": True},
+            "raw_available": True,
+        },
+    )
+
+    result = await orb_operational_assistant_service.answer(
+        OrbOperationalRequest(message="What actions should I prioritise?", mode="action_priority"),
+        {"id": 1, "role": "manager"},
+        conn=MagicMock(),
+    )
+    assert result.draft_actions
+    assert result.recommendations
