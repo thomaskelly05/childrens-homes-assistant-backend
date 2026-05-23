@@ -25,17 +25,18 @@ import {
   type RecordingSubmissionResult
 } from '@/lib/os-api/recording-drafts'
 import type { RecordAboutContext } from '@/lib/record/recording-hub'
-import { recordingFormByWorkspaceType } from '@/lib/record/recording-form-registry'
+import { resolveActiveRecordingForm } from '@/lib/record/recording-form-registry'
 import {
   analyseRecordingQuality,
   buildReviewChecklist,
   detectPrivacyIdentifiers,
   detectSafeguardingReviewTerms
 } from '@/lib/record/recording-quality-coach'
-import { RECORDING_BODY_PLACEHOLDERS, type RecordingWorkspaceType } from '@/lib/record/recording-types'
+import { recordingBodyPlaceholder, type RecordingWorkspaceType } from '@/lib/record/recording-types'
 
 type RecordingEditorProps = {
   recordingType: RecordingWorkspaceType
+  formId?: string
   about: RecordAboutContext
   childId?: string
   childName?: string
@@ -52,6 +53,7 @@ function hasMeaningfulContent(title: string, body: string) {
 
 export function RecordingEditor({
   recordingType,
+  formId,
   about,
   childId,
   childName,
@@ -77,8 +79,8 @@ export function RecordingEditor({
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastPersisted = useRef({ title: '', body: '' })
 
-  const form = useMemo(() => recordingFormByWorkspaceType(recordingType), [recordingType])
-  const placeholder = RECORDING_BODY_PLACEHOLDERS[recordingType]
+  const form = useMemo(() => resolveActiveRecordingForm(recordingType, formId), [recordingType, formId])
+  const placeholder = recordingBodyPlaceholder(recordingType, form)
   const wordCount = useMemo(() => countWords(body), [body])
 
   const draftMetadata = useCallback(

@@ -9,6 +9,7 @@ import { OrbInlineHint } from '@/components/indicare/operational/orb-inline-hint
 import { Card, PageHeader, SectionHeader } from '@/components/indicare/ui'
 import { RecordChildPicker, mapYoungPeopleToPickerOptions, type RecordChildPickerOption } from '@/components/indicare/record/record-child-picker'
 import { RecordingDraftList } from '@/components/indicare/record/recording-draft-list'
+import { RecordingCataloguePanel } from '@/components/indicare/record/recording-catalogue-panel'
 import { RecordingWorkspace } from '@/components/indicare/record/recording-workspace'
 import {
   RECORDING_OS_ORB_HREF,
@@ -351,8 +352,12 @@ export function RecordHub({
 
   const showChildPicker = about === 'child'
   const showStaffPanel = about === 'staff'
-  const initialRecordingType = resolveRecordingTypeFromQuery(highlightType || searchParams.get('type'))
+  const initialRecordingType = resolveRecordingTypeFromQuery(
+    highlightType || searchParams.get('type'),
+    searchParams.get('form')
+  )
   const draftIdFromUrl = searchParams.get('draft_id') || undefined
+  const formIdFromUrl = searchParams.get('form') || undefined
 
   return (
     <div className="space-y-6 pb-8">
@@ -440,6 +445,8 @@ export function RecordHub({
 
       <RecordingDraftList refreshKey={draftListRefreshKey} />
 
+      <RecordingCataloguePanel about={about} childId={childId} />
+
       <RecordingWorkspace
         about={about}
         childId={childId}
@@ -447,6 +454,7 @@ export function RecordHub({
         initialRecordingType={initialRecordingType}
         highlightType={highlightType}
         draftIdFromUrl={draftIdFromUrl}
+        formIdFromUrl={formIdFromUrl}
         onDraftListRefresh={() => setDraftListRefreshKey((value) => value + 1)}
       />
 

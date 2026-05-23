@@ -257,6 +257,115 @@ _TARGET_DEFINITIONS: list[dict] = [
     },
 ]
 
+# Extended catalogue forms — explicit targets so no recording type is unrecognised.
+_CATALOGUE_FORM_TARGETS: list[dict] = [
+    {"recording_type": "general-draft", "form_id": "general-draft", "target_status": "submit_as_draft_only", "notes": "Catalogue draft workspace."},
+    {"recording_type": "return-conversation", "form_id": "return-conversation", "target_status": "review_required_before_submit", "requires_manager_review": True, "safeguarding_sensitive": True},
+    {"recording_type": "staff-debrief", "form_id": "staff-debrief", "target_status": "submit_as_draft_only"},
+    {"recording_type": "damage-repair", "form_id": "damage-repair", "target_status": "submit_as_draft_only"},
+    {"recording_type": "professional-visit", "form_id": "professional-visit", "target_status": "submit_as_draft_only"},
+    {"recording_type": "health-medication", "form_id": "health-medication", "target_status": "route_to_existing_workflow", "frontend_route": "/medication"},
+    {"recording_type": "staff-reflection", "form_id": "staff-reflection", "target_status": "submit_as_draft_only"},
+    {"recording_type": "disclosure", "form_id": "disclosure", "target_status": "review_required_before_submit", "requires_manager_review": True, "safeguarding_sensitive": True},
+    {"recording_type": "allegation", "form_id": "allegation", "target_status": "review_required_before_submit", "requires_manager_review": True, "safeguarding_sensitive": True},
+    {"recording_type": "body-map", "form_id": "body-map", "target_status": "review_required_before_submit", "requires_manager_review": True, "safeguarding_sensitive": True},
+    {"recording_type": "medication-error", "form_id": "medication-error", "target_status": "review_required_before_submit", "requires_manager_review": True},
+    {"recording_type": "police-involvement", "form_id": "police-involvement", "target_status": "review_required_before_submit", "safeguarding_sensitive": True},
+    {"recording_type": "hospital-emergency", "form_id": "hospital-emergency", "target_status": "review_required_before_submit", "safeguarding_sensitive": True},
+]
+
+_CATALOGUE_DRAFT_ONLY_FORM_IDS = (
+    "night-check-sleep",
+    "meals-food-routine",
+    "activity-note",
+    "independence-life-skills",
+    "cultural-identity-religion",
+    "wishes-and-feelings",
+    "advocate-visit",
+    "child-on-child-concern",
+    "bullying-peer-conflict",
+    "exploitation-concern",
+    "compliment",
+    "unauthorised-absence",
+    "missing-follow-up-plan",
+    "health-note",
+    "sleep-wellbeing",
+    "school-contact",
+    "social-worker-visit",
+    "iro-visit",
+    "lac-review-meeting",
+    "multi-agency-meeting",
+    "care-plan-update",
+    "placement-plan-update",
+    "risk-assessment-update",
+    "behaviour-support-plan-update",
+    "pathway-independence-plan",
+    "review-meeting-note",
+    "management-oversight",
+    "ofsted-evidence",
+    "policy-acknowledgement",
+    "staff-wellbeing-check-in",
+    "team-meeting",
+    "shift-leadership",
+    "safer-recruitment-note",
+    "medication-audit",
+    "health-safety-check",
+    "fire-drill-evacuation",
+    "maintenance-environment",
+)
+
+_CATALOGUE_REVIEW_FORM_IDS = (
+    "disclosure",
+    "allegation",
+    "child-on-child-concern",
+    "exploitation-concern",
+    "police-involvement",
+    "hospital-emergency",
+    "unauthorised-absence",
+    "missing-follow-up-plan",
+    "medication-error",
+    "body-map",
+    "risk-assessment-update",
+    "management-oversight",
+    "medication-audit",
+)
+
+for _form_id in _CATALOGUE_DRAFT_ONLY_FORM_IDS:
+    _CATALOGUE_FORM_TARGETS.append(
+        {
+            "recording_type": _form_id,
+            "form_id": _form_id,
+            "target_status": "submit_as_draft_only",
+            "notes": "Catalogue form — draft workspace until dedicated workflow wired.",
+        }
+    )
+
+for _form_id in _CATALOGUE_REVIEW_FORM_IDS:
+    if _form_id in _CATALOGUE_DRAFT_ONLY_FORM_IDS:
+        continue
+    _CATALOGUE_FORM_TARGETS.append(
+        {
+            "recording_type": _form_id,
+            "form_id": _form_id,
+            "target_status": "review_required_before_submit",
+            "requires_manager_review": True,
+            "safeguarding_sensitive": _form_id
+            not in ("medication-error", "medication-audit", "risk-assessment-update", "management-oversight"),
+            "notes": "High-risk catalogue form — manager/safeguarding review before formal completion.",
+        }
+    )
+
+# Alias targets for workspace types
+_CATALOGUE_FORM_TARGETS.extend(
+    [
+        {"recording_type": "injury-body-map", "form_id": "injury-body-map", "target_status": "review_required_before_submit", "requires_manager_review": True, "safeguarding_sensitive": True},
+        {"recording_type": "staff-supervision", "form_id": "staff-supervision", "target_status": "route_to_existing_workflow", "frontend_route": "/staff/supervision"},
+        {"recording_type": "action-plan-note", "form_id": "action-plan-note", "target_status": "route_to_existing_workflow", "frontend_route": "/actions"},
+    ]
+)
+
+_TARGET_DEFINITIONS.extend(_CATALOGUE_FORM_TARGETS)
+
 
 def _normalise_type(value: str | None) -> str:
     return (value or "").strip().lower().replace("_", "-")
@@ -267,7 +376,12 @@ class RecordingSubmissionTargetRegistry:
         self._targets: dict[str, RecordingSubmissionTarget] = {}
         for entry in _TARGET_DEFINITIONS:
             key = _normalise_type(entry["recording_type"])
+            if key in self._targets:
+                continue
             self._targets[key] = RecordingSubmissionTarget(**entry)
+            form_key = _normalise_type(entry.get("form_id") or "")
+            if form_key and form_key not in self._targets:
+                self._targets[form_key] = self._targets[key]
 
     def list_targets(self) -> list[RecordingSubmissionTarget]:
         return sorted(self._targets.values(), key=lambda t: t.recording_type)
@@ -285,15 +399,18 @@ class RecordingSubmissionTargetRegistry:
             for candidate in self._targets.values():
                 if candidate.form_id == form_id:
                     return candidate
-        status: RecordingSubmissionTargetStatus = "unsupported"
+        status: RecordingSubmissionTargetStatus = "submit_as_draft_only"
         if key in REVIEW_REQUIRED_TYPES:
+            status = "review_required_before_submit"
+        lookup_id = form_id or recording_type
+        if lookup_id and _normalise_type(lookup_id) in { _normalise_type(x) for x in _CATALOGUE_REVIEW_FORM_IDS }:
             status = "review_required_before_submit"
         return RecordingSubmissionTarget(
             recording_type=recording_type,
-            form_id=form_id,
+            form_id=form_id or recording_type,
             target_status=status,
             target_record_type=None,
-            notes="No mapping for this recording type; draft-only submit.",
+            notes="Catalogue form — draft-only or review-gated; no automatic formal record creation.",
         )
 
     def is_supported(self, recording_type: str) -> bool:

@@ -29,6 +29,9 @@ def test_care_hub_hero_subtitle_and_orb_hints():
     assert "ORB can summarise handover" in routes
     assert "Safeguarding concern" in routes
     assert "safeguarding-concern" in routes or "safeguarding/new" in routes
+    recording = _read(FRONTEND / "components" / "command-centre" / "care-hub-recording-section.tsx")
+    assert "All recording forms" in recording
+    assert 'data-testid="care-hub-all-recording-forms"' in recording
 
 
 def test_care_hub_attention_strip_cards():

@@ -25,6 +25,15 @@ export function CareHubRecordingSection({ selectedYoungPersonId }: { selectedYou
           Choose a record type. Each opens the right workflow — ORB can help with wording and quality.
         </p>
       </div>
+      <div className="mt-3">
+        <Link
+          href={selectedYoungPersonId ? `/record?child_id=${encodeURIComponent(selectedYoungPersonId)}&about=child` : '/record'}
+          data-testid="care-hub-all-recording-forms"
+          className="inline-flex min-h-10 items-center rounded-2xl border border-blue-200 bg-blue-50 px-4 py-2 text-xs font-black text-blue-900"
+        >
+          All recording forms
+        </Link>
+      </div>
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {actions.map((action) => {
           const Icon = iconByLabel[action.label as keyof typeof iconByLabel]

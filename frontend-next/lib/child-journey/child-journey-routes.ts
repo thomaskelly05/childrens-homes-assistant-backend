@@ -119,9 +119,9 @@ export function buildChildJourneyRecordingActions(childId: string): ChildJourney
       orbHint: operationalOrbHint(childId, 'ORB restraint help', 'What should I include after a physical intervention?')
     },
     {
-      id: 'more-recording',
-      label: 'More recording types',
-      description: 'Medication, injury, return conversation, keywork and Reg evidence.',
+      id: 'all-recording-forms',
+      label: 'All child recording forms',
+      description: 'Search the full catalogue — safeguarding, health, missing, Reg 44 and more.',
       href: childRecordHubHref(childId),
       orbHint: operationalOrbHint(childId, 'ORB recording coach', 'Help me choose the right record type for this child.')
     }

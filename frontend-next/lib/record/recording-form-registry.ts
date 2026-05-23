@@ -1,5 +1,14 @@
 import type { RecordCardId } from '@/lib/record/recording-hub'
 import { childWorkflowHref } from '@/lib/record/recording-hub'
+import { RECORDING_CATALOGUE_EXTRA_FORMS } from '@/lib/record/recording-form-catalogue-entries'
+import type { RecordingWorkflowStatus } from '@/lib/record/recording-form-catalogue-helpers'
+
+export type { RecordingWorkflowStatus } from '@/lib/record/recording-form-catalogue-helpers'
+export {
+  workflowStatusBadgeClass,
+  workflowStatusLabel,
+  workflowStatusMicrocopy
+} from '@/lib/record/recording-form-catalogue-helpers'
 
 export type RecordingWorkspaceType =
   | 'daily-note'
@@ -28,10 +37,13 @@ export type RecordingWorkspaceType =
   | 'staff-debrief'
   | 'reg44-evidence'
   | 'reg45-evidence'
+  | 'general-draft'
 
 export type RecordingFormCategory =
   | 'daily_life'
+  | 'voice_direct_work'
   | 'safeguarding_incident'
+  | 'missing_return'
   | 'health_medication'
   | 'education_family'
   | 'planning_review'
@@ -66,6 +78,7 @@ export type RecordingFormDefinition = {
   status: RecordingFormStatus
   priority: RecordingFormPriority
   routeKind: RecordingFormRouteKind
+  workflowStatus: RecordingWorkflowStatus
   relatedQualityStandards: string[]
   relatedEvidenceAreas: string[]
   gap?: string
@@ -74,18 +87,97 @@ export type RecordingFormDefinition = {
 
 export const RECORDING_FORM_CATEGORIES: Array<{ id: RecordingFormCategory; label: string }> = [
   { id: 'daily_life', label: 'Child daily life' },
-  { id: 'safeguarding_incident', label: 'Safeguarding and incidents' },
+  { id: 'voice_direct_work', label: 'Voice, wishes and feelings' },
+  { id: 'safeguarding_incident', label: 'Safeguarding and protection' },
+  { id: 'missing_return', label: 'Missing and return home' },
   { id: 'health_medication', label: 'Health and medication' },
   { id: 'education_family', label: 'Education and family' },
   { id: 'planning_review', label: 'Plans and reviews' },
   { id: 'manager_governance', label: 'Manager oversight and governance' },
-  { id: 'workforce', label: 'Workforce' },
-  { id: 'environment', label: 'Environment and health/safety' },
+  { id: 'workforce', label: 'Workforce and staff support' },
+  { id: 'environment', label: 'Environment and maintenance' },
   { id: 'documents_evidence', label: 'Documents and evidence' }
 ]
 
-function recordWorkspaceRoute(type: RecordingWorkspaceType, childId?: string) {
+/** UI filter chips for workflow / sensitivity (cross-cutting). */
+export const RECORDING_STATUS_FILTERS: Array<{ id: string; label: string; match: (form: RecordingFormDefinition) => boolean }> = [
+  {
+    id: 'formal_submit',
+    label: 'Formal submit supported',
+    match: (form) => form.workflowStatus === 'formal_submit_supported'
+  },
+  {
+    id: 'draft_workspace',
+    label: 'Draft workspace',
+    match: (form) => form.workflowStatus === 'draft_workspace' || form.routeKind === 'draft_workspace'
+  },
+  {
+    id: 'manager_review',
+    label: 'Manager review required',
+    match: (form) => form.requiresManagerReview || form.workflowStatus === 'manager_review_required'
+  },
+  {
+    id: 'safeguarding_sensitive',
+    label: 'Safeguarding sensitive',
+    match: (form) => form.safeguardingSensitive || form.workflowStatus === 'safeguarding_sensitive'
+  }
+]
+
+const FORMAL_SUBMIT_FORM_IDS = new Set([
+  'daily-note',
+  'incident',
+  'keywork',
+  'keywork-direct-work',
+  'family-time',
+  'education-note',
+  'health-appointment',
+  'missing-episode'
+])
+
+function inferWorkflowStatus(form: Omit<RecordingFormDefinition, 'workflowStatus'>): RecordingWorkflowStatus {
+  if (form.safeguardingSensitive && (form.requiresManagerReview || form.id.includes('disclosure') || form.id.includes('allegation'))) {
+    return 'safeguarding_sensitive'
+  }
+  if (FORMAL_SUBMIT_FORM_IDS.has(form.id)) {
+    return 'formal_submit_supported'
+  }
+  if (form.requiresManagerReview && form.safeguardingSensitive) {
+    return 'safeguarding_sensitive'
+  }
+  if (form.requiresManagerReview) {
+    return 'manager_review_required'
+  }
+  if (form.routeKind === 'existing_workflow' && form.status === 'built') {
+    return 'opens_existing_workflow'
+  }
+  if (form.routeKind === 'draft_workspace' || form.status === 'planned') {
+    return 'draft_workspace'
+  }
+  if (form.routeKind === 'existing_workflow') {
+    return 'opens_existing_workflow'
+  }
+  return 'draft_workspace'
+}
+
+function enrichRecordingForm(form: Omit<RecordingFormDefinition, 'workflowStatus'>): RecordingFormDefinition {
+  const workflowStatus = 'workflowStatus' in form && form.workflowStatus ? form.workflowStatus : inferWorkflowStatus(form)
+  const qualityChecklist =
+    form.qualityChecklist.length >= 5
+      ? form.qualityChecklist
+      : [
+          ...form.qualityChecklist,
+          'Facts described clearly',
+          'Adult response and follow-up recorded',
+          'Child voice included where appropriate',
+          'Next steps clear',
+          'Adult remains responsible for the record'
+        ].slice(0, 5)
+  return { ...form, workflowStatus, qualityChecklist } as RecordingFormDefinition
+}
+
+function recordWorkspaceRoute(type: RecordingWorkspaceType, childId?: string, formId?: string) {
   const params = new URLSearchParams({ type })
+  if (formId) params.set('form', formId)
   if (childId) {
     params.set('child_id', childId)
     params.set('about', 'child')
@@ -93,8 +185,8 @@ function recordWorkspaceRoute(type: RecordingWorkspaceType, childId?: string) {
   return `/record?${params.toString()}`
 }
 
-/** Canonical registry aligned to children’s homes operational and inspection evidence practice. */
-export const RECORDING_FORM_REGISTRY: RecordingFormDefinition[] = [
+/** Canonical core entries aligned to children’s homes operational and inspection evidence practice. */
+const RECORDING_FORM_REGISTRY_CORE: Array<Omit<RecordingFormDefinition, 'workflowStatus'>> = [
   // —— P0 daily life ——
   {
     id: 'daily-note',
@@ -253,7 +345,7 @@ export const RECORDING_FORM_REGISTRY: RecordingFormDefinition[] = [
   {
     id: 'missing-episode',
     title: 'Missing episode',
-    category: 'safeguarding_incident',
+    category: 'missing_return',
     description: 'Missing from care, actions, return and welfare.',
     route: '/chronology',
     workspaceType: 'missing',
@@ -283,7 +375,7 @@ export const RECORDING_FORM_REGISTRY: RecordingFormDefinition[] = [
   {
     id: 'return-conversation',
     title: 'Return conversation / RHI note',
-    category: 'safeguarding_incident',
+    category: 'missing_return',
     description: 'Return interview or return conversation after missing.',
     route: recordWorkspaceRoute('return-conversation'),
     workspaceType: 'return-conversation',
@@ -735,6 +827,22 @@ export const RECORDING_FORM_REGISTRY: RecordingFormDefinition[] = [
   }
 ]
 
+function mergeRecordingRegistry(): RecordingFormDefinition[] {
+  const byId = new Map<string, RecordingFormDefinition>()
+  for (const form of RECORDING_FORM_REGISTRY_CORE) {
+    byId.set(form.id, enrichRecordingForm(form))
+  }
+  for (const form of RECORDING_CATALOGUE_EXTRA_FORMS) {
+    if (!byId.has(form.id)) {
+      byId.set(form.id, enrichRecordingForm(form))
+    }
+  }
+  return Array.from(byId.values())
+}
+
+/** Full catalogue — core wired forms plus extended draft/workspace forms. */
+export const RECORDING_FORM_REGISTRY: RecordingFormDefinition[] = mergeRecordingRegistry()
+
 export function recordingFormById(id: string): RecordingFormDefinition | undefined {
   return RECORDING_FORM_REGISTRY.find((form) => form.id === id)
 }
@@ -756,7 +864,38 @@ export function p0RecordingForms(): RecordingFormDefinition[] {
 }
 
 export function workspaceRecordingForms(): RecordingFormDefinition[] {
-  return RECORDING_FORM_REGISTRY.filter((form) => form.workspaceType)
+  const seen = new Set<RecordingWorkspaceType>()
+  const forms: RecordingFormDefinition[] = []
+  const priorityOrder = { P0: 0, P1: 1, P2: 2 } as const
+  const sorted = [...RECORDING_FORM_REGISTRY].sort(
+    (a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]
+  )
+  for (const form of sorted) {
+    if (!form.workspaceType || seen.has(form.workspaceType)) continue
+    seen.add(form.workspaceType)
+    forms.push(form)
+  }
+  return forms
+}
+
+export function catalogueRecordingForms(): RecordingFormDefinition[] {
+  const priorityOrder = { P0: 0, P1: 1, P2: 2 } as const
+  return [...RECORDING_FORM_REGISTRY].sort((a, b) => {
+    const p = priorityOrder[a.priority] - priorityOrder[b.priority]
+    if (p !== 0) return p
+    return a.title.localeCompare(b.title)
+  })
+}
+
+export function resolveActiveRecordingForm(
+  workspaceType: RecordingWorkspaceType,
+  formId?: string | null
+): RecordingFormDefinition | undefined {
+  if (formId) {
+    const byId = recordingFormById(formId)
+    if (byId) return byId
+  }
+  return recordingFormByWorkspaceType(workspaceType)
 }
 
 export function resolveFormRoute(form: RecordingFormDefinition, childId?: string): string {
@@ -765,7 +904,8 @@ export function resolveFormRoute(form: RecordingFormDefinition, childId?: string
     return childWorkflowHref(childId, form.workflowSegment, mode)
   }
   if (form.workspaceType) {
-    return recordWorkspaceRoute(form.workspaceType, childId)
+    const formParam = form.workspaceType === 'general-draft' ? form.id : undefined
+    return recordWorkspaceRoute(form.workspaceType, childId, formParam)
   }
   if (childId && form.requiresChild) {
     const params = new URLSearchParams({ child_id: childId, about: 'child' })

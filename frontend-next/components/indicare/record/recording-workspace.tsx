@@ -17,7 +17,12 @@ import {
 } from '@/lib/record/recording-quality-coach'
 import type { RecordAboutContext } from '@/lib/record/recording-hub'
 import { recordCardById, recordCardHref } from '@/lib/record/recording-hub'
-import { resolveRecordingTypeFromQuery, type RecordingWorkspaceType } from '@/lib/record/recording-types'
+import {
+  resolveActiveRecordingForm,
+  workflowStatusLabel,
+  workflowStatusMicrocopy
+} from '@/lib/record/recording-form-registry'
+import { resolveRecordingFormFromQuery, resolveRecordingTypeFromQuery, type RecordingWorkspaceType } from '@/lib/record/recording-types'
 
 export function RecordingWorkspace({
   about,
@@ -26,6 +31,7 @@ export function RecordingWorkspace({
   initialRecordingType,
   highlightType,
   draftIdFromUrl,
+  formIdFromUrl,
   onDraftListRefresh
 }: {
   about: RecordAboutContext
@@ -34,14 +40,16 @@ export function RecordingWorkspace({
   initialRecordingType?: RecordingWorkspaceType
   highlightType?: string
   draftIdFromUrl?: string
+  formIdFromUrl?: string
   onDraftListRefresh?: () => void
 }) {
   const defaultType =
     initialRecordingType ||
-    resolveRecordingTypeFromQuery(highlightType) ||
+    resolveRecordingTypeFromQuery(highlightType, formIdFromUrl) ||
     (about === 'home-shift' ? 'handover' : about === 'staff' ? 'staff-reflection' : 'daily-note')
 
   const [recordingType, setRecordingType] = useState<RecordingWorkspaceType>(defaultType)
+  const activeForm = resolveRecordingFormFromQuery(recordingType, formIdFromUrl) || resolveActiveRecordingForm(recordingType, formIdFromUrl)
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
 
@@ -92,10 +100,36 @@ export function RecordingWorkspace({
 
       <RecordingTypeSelector value={recordingType} onChange={setRecordingType} about={about} />
 
+      {activeForm ? (
+        <section
+          data-testid="recording-workflow-status"
+          className="rounded-2xl border border-blue-100 bg-blue-50/60 px-4 py-3"
+        >
+          <p className="text-xs font-black text-slate-950">
+            {activeForm.title} · {workflowStatusLabel(activeForm.workflowStatus)}
+          </p>
+          <p className="mt-1 text-xs font-semibold leading-5 text-slate-600">
+            {workflowStatusMicrocopy(activeForm.workflowStatus, activeForm.routeKind)}
+          </p>
+          {activeForm.requiresManagerReview ? (
+            <p className="mt-2 text-xs font-black text-amber-900" data-testid="recording-manager-review-copy">
+              Manager/safeguarding review likely required before this is treated as a completed formal record. Follow local
+              safeguarding procedures.
+            </p>
+          ) : null}
+          {activeForm.workflowStatus === 'formal_submit_supported' ? (
+            <p className="mt-1 text-xs font-semibold text-emerald-900">
+              Formal submit supported when a child is selected and review rules are met.
+            </p>
+          ) : null}
+        </section>
+      ) : null}
+
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-4">
           <RecordingEditor
             recordingType={recordingType}
+            formId={formIdFromUrl || activeForm?.id}
             about={about}
             childId={childId}
             childName={childDisplayName}
@@ -104,7 +138,7 @@ export function RecordingWorkspace({
             onBodyChange={setBody}
             onDraftListRefresh={onDraftListRefresh}
           />
-          <RecordingTherapeuticPrompts recordingType={recordingType} />
+          <RecordingTherapeuticPrompts recordingType={recordingType} formId={formIdFromUrl || activeForm?.id} />
           <RecordingContextPanel body={body} title={title} />
         </div>
 
