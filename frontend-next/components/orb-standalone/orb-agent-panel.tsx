@@ -1,13 +1,14 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Bot, Loader2, Search, X } from 'lucide-react'
+import { Bot, Loader2, Search } from 'lucide-react'
 
 import {
   OrbIntelligenceOutput,
   agentResponseToIntelligenceOutput
 } from '@/components/orb-standalone/orb-intelligence-output'
 import { OrbOutputSaveActions } from '@/components/orb-standalone/orb-output-save-actions'
+import { OrbStandalonePanelShell } from '@/components/orb-standalone/orb-standalone-panel-shell'
 import type { StandaloneProject } from '@/lib/orb/standalone-local-store'
 import {
   fetchStandaloneOrbAgents,
@@ -30,6 +31,42 @@ const OUTPUT_OPTIONS: OrbAgentOutputFormat[] = [
   'evidence_map'
 ]
 
+const FEATURED_AGENTS: Array<{
+  type: string
+  title: string
+  useCase: string
+  risk: string
+}> = [
+  { type: 'deep_research', title: 'Deep Research', useCase: 'Multi-step research with citations', risk: 'Privacy safe' },
+  {
+    type: 'document_analysis',
+    title: 'Document Analysis',
+    useCase: 'Structured review of uploaded documents',
+    risk: 'Adult review required'
+  },
+  { type: 'ofsted_research', title: 'Ofsted Research', useCase: 'Inspection and evidence thinking', risk: 'Adult review required' },
+  {
+    type: 'recording_quality',
+    title: 'Recording Quality',
+    useCase: 'Wording and record-quality support',
+    risk: 'Privacy safe'
+  },
+  {
+    type: 'safeguarding_reflection',
+    title: 'Safeguarding Reflection',
+    useCase: 'Reflect on concerns without deciding outcomes',
+    risk: 'Escalate live risk'
+  },
+  { type: 'policy_comparison', title: 'Policy Comparison', useCase: 'Compare policies and gaps', risk: 'Adult review required' },
+  { type: 'manager_briefing', title: 'Manager Briefing', useCase: 'Manager-ready draft briefings', risk: 'Adult review required' },
+  {
+    type: 'therapeutic_practice',
+    title: 'Therapeutic Practice',
+    useCase: 'Trauma-informed practice reflection',
+    risk: 'Privacy safe'
+  }
+]
+
 export function OrbAgentPanel({
   open,
   onClose,
@@ -42,7 +79,8 @@ export function OrbAgentPanel({
   projects,
   activeProjectId,
   activeProjectName,
-  onReuseInChat
+  onReuseInChat,
+  onOpenSavedOutputs
 }: {
   open: boolean
   onClose: () => void
@@ -56,6 +94,7 @@ export function OrbAgentPanel({
   activeProjectId?: string
   activeProjectName?: string
   onReuseInChat?: (prompt: string) => void
+  onOpenSavedOutputs?: () => void
 }) {
   const [agents, setAgents] = useState<OrbAgentDefinition[]>([])
   const [loading, setLoading] = useState(false)
@@ -163,68 +202,77 @@ export function OrbAgentPanel({
     }
   }
 
-  if (!open) return null
-
   const selectedAgent = agents.find((a) => a.type === selectedType)
+  const featured = FEATURED_AGENTS.find((a) => a.type === selectedType) || FEATURED_AGENTS[0]
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-stretch justify-end bg-black/50 backdrop-blur-sm">
-      <div className="flex h-full w-full max-w-lg flex-col border-l border-white/[0.08] bg-[#0d1117] shadow-2xl">
-        <header className="flex shrink-0 items-center justify-between border-b border-white/[0.06] px-4 py-3">
-          <div className="flex items-center gap-2">
-            <Bot className="h-5 w-5 text-cyan-400" aria-hidden />
-            <div>
-              <h2 className="text-sm font-semibold text-white">Agents</h2>
-              <p className="text-[10px] text-slate-500">Standalone — Knowledge Library only</p>
-            </div>
-          </div>
-          <button type="button" onClick={onClose} className="rounded-lg p-2 text-slate-400 hover:bg-white/[0.06]" aria-label="Close agents">
-            <X className="h-4 w-4" />
-          </button>
-        </header>
+    <OrbStandalonePanelShell
+      open={open}
+      title="Agents"
+      subtitle="Run specialist ORB agents for research, recording, safeguarding and Ofsted thinking."
+      onClose={onClose}
+      panelId="agents"
+      ariaLabel="ORB agents"
+      footer="Agents create draft support outputs for adult review."
+    >
+      <div className="space-y-4 p-4" data-orb-agent-panel data-orb-specialist-agents>
+        <p className="text-[11px] leading-5 text-slate-500">
+          Specialist ORB agents use standalone Knowledge Library context only.
+        </p>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-4">
-          {loading ? (
-            <p className="flex items-center gap-2 text-sm text-slate-400">
-              <Loader2 className="h-4 w-4 animate-spin" /> Loading agents…
-            </p>
-          ) : null}
+        {loading ? (
+          <p className="flex items-center gap-2 text-sm text-slate-400">
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> Loading agents…
+          </p>
+        ) : null}
 
-          <div className="mb-4 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setDeepResearchMode(true)
-                setSelectedType('deep_research')
-              }}
-              className={`rounded-full px-3 py-1 text-xs font-medium ${
-                deepResearchMode ? 'bg-cyan-500/20 text-cyan-200 ring-1 ring-cyan-400/30' : 'bg-white/[0.04] text-slate-400'
-              }`}
-            >
-              Deep Research
-            </button>
-            {agents.map((agent) => (
-              <button
-                key={agent.type}
-                type="button"
-                onClick={() => {
-                  setDeepResearchMode(false)
-                  setSelectedType(agent.type)
-                }}
-                className={`rounded-full px-3 py-1 text-xs font-medium ${
-                  !deepResearchMode && selectedType === agent.type
-                    ? 'bg-white/[0.08] text-white ring-1 ring-white/10'
-                    : 'bg-white/[0.04] text-slate-400 hover:text-slate-200'
+        <ul className="grid gap-2 sm:grid-cols-2">
+          {FEATURED_AGENTS.map((agent) => (
+            <li key={agent.type}>
+              <article
+                className={`orb-panel-card rounded-xl border px-3 py-3 transition ${
+                  selectedType === agent.type
+                    ? 'border-cyan-300/30 bg-cyan-500/[0.06]'
+                    : 'border-white/[0.08] bg-white/[0.03] hover:border-white/12'
                 }`}
+                data-orb-agent-card={agent.type}
               >
-                {agent.name.replace(' Agent', '')}
-              </button>
-            ))}
-          </div>
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <h3 className="text-sm font-medium text-slate-100">{agent.title}</h3>
+                    <p className="mt-0.5 text-xs leading-5 text-slate-500">{agent.useCase}</p>
+                  </div>
+                  <span className="shrink-0 rounded-full bg-white/[0.04] px-1.5 py-0.5 text-[9px] text-slate-400 ring-1 ring-white/[0.08]">
+                    {agent.risk}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDeepResearchMode(agent.type === 'deep_research')
+                    setSelectedType(agent.type)
+                    if (!prompt.trim()) {
+                      setPrompt(
+                        agent.type === 'deep_research'
+                          ? 'Run deep research on this topic'
+                          : `Run ${agent.title.toLowerCase()} on this topic`
+                      )
+                    }
+                  }}
+                  className="mt-2 w-full rounded-lg bg-white/[0.06] py-1.5 text-xs font-medium text-slate-200 ring-1 ring-white/[0.08] hover:bg-white/[0.08]"
+                >
+                  Run
+                </button>
+              </article>
+            </li>
+          ))}
+        </ul>
 
-          {selectedAgent ? (
-            <p className="mb-3 text-xs leading-5 text-slate-400">{selectedAgent.description}</p>
-          ) : null}
+        {selectedAgent ? (
+          <p className="text-xs leading-5 text-slate-400">{selectedAgent.description}</p>
+        ) : (
+          <p className="text-xs leading-5 text-slate-400">{featured.useCase}</p>
+        )}
 
           {selectedType === 'document_analysis' ? (
             <p className="mb-3 rounded-lg border border-cyan-400/20 bg-cyan-500/5 px-3 py-2 text-[11px] text-cyan-100/90">
@@ -332,40 +380,57 @@ export function OrbAgentPanel({
 
           {error ? <p className="mt-3 text-xs text-rose-400">{error}</p> : null}
 
-          {result ? (
-            <div className="mt-4 rounded-lg border border-white/[0.06] bg-white/[0.02] p-3">
-              <OrbIntelligenceOutput output={agentResponseToIntelligenceOutput(result)} />
-              {projects?.length ? (
-                <div className="mt-4 border-t border-white/[0.06] pt-4">
-                  <OrbOutputSaveActions
-                    output={agentResponseToIntelligenceOutput(result)}
-                    suggestedType={
-                      deepResearchMode
-                        ? 'deep_research'
-                        : outputFormat === 'action_plan'
-                          ? 'action_plan'
-                          : outputFormat === 'briefing'
-                            ? 'manager_briefing'
-                            : 'general_research'
-                    }
-                    suggestedTitle={result.output.title}
-                    projects={projects}
-                    activeProjectId={activeProjectId}
-                    activeProjectName={activeProjectName}
-                    createdFrom={deepResearchMode ? 'deep_research' : 'agent'}
-                    onReuseInChat={onReuseInChat}
-                  />
-                </div>
-              ) : null}
-              {result.model_routing ? (
-                <p className="mt-3 text-[10px] text-slate-600">
-                  Model: {result.model_routing.provider}/{result.model_routing.model} ({result.model_routing.task_type})
-                </p>
+        {result ? (
+          <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3">
+            <OrbIntelligenceOutput output={agentResponseToIntelligenceOutput(result)} />
+            {projects?.length ? (
+              <div className="mt-4 border-t border-white/[0.06] pt-4">
+                <OrbOutputSaveActions
+                  output={agentResponseToIntelligenceOutput(result)}
+                  suggestedType={
+                    deepResearchMode
+                      ? 'deep_research'
+                      : outputFormat === 'action_plan'
+                        ? 'action_plan'
+                        : outputFormat === 'briefing'
+                          ? 'manager_briefing'
+                          : 'general_research'
+                  }
+                  suggestedTitle={result.output.title}
+                  projects={projects}
+                  activeProjectId={activeProjectId}
+                  activeProjectName={activeProjectName}
+                  createdFrom={deepResearchMode ? 'deep_research' : 'agent'}
+                  onReuseInChat={onReuseInChat}
+                />
+              </div>
+            ) : null}
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => void navigator.clipboard.writeText(result.output.body)}
+                className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-slate-300"
+              >
+                Copy
+              </button>
+              {onOpenSavedOutputs ? (
+                <button
+                  type="button"
+                  onClick={onOpenSavedOutputs}
+                  className="rounded-lg border border-cyan-400/30 bg-cyan-500/10 px-3 py-1.5 text-xs text-cyan-100"
+                >
+                  Open Saved Outputs
+                </button>
               ) : null}
             </div>
-          ) : null}
-        </div>
+            {result.model_routing ? (
+              <p className="mt-3 text-[10px] text-slate-600">
+                Model: {result.model_routing.provider}/{result.model_routing.model} ({result.model_routing.task_type})
+              </p>
+            ) : null}
+          </div>
+        ) : null}
       </div>
-    </div>
+    </OrbStandalonePanelShell>
   )
 }

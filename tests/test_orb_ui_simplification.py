@@ -84,6 +84,14 @@ def test_composer_controls_markers():
         assert marker in composer
 
 
+def test_single_active_panel_state():
+    companion = _read(ORB_COMPANION)
+    assert "activePanel" in companion
+    assert "closeAllPanels" in companion
+    assert "data-orb-active-panel" in companion
+    assert "toolsPanelOpen" not in companion
+
+
 def test_product_split_standalone_client():
     client = _read(STANDALONE_CLIENT)
     companion = _read(ORB_COMPANION)
@@ -92,7 +100,7 @@ def test_product_split_standalone_client():
     assert 'operational-orb' not in client.lower() or '/assistant/orb' not in client
     tools = _read(ORB_TOOLS)
     assert 'href=' in tools
-    assert 'fetch(' not in re.sub(r'<Link[^>]*href=', '', tools.split('Operational links')[1][:800])
+    assert 'fetch(' not in re.sub(r'<Link[^>]*href=', '', tools.split('Operational OS links')[1][:800])
 
 
 def test_accessibility_classes_preserved():

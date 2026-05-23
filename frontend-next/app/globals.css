@@ -1013,6 +1013,36 @@ textarea:focus-visible {
   max-height: 100dvh;
 }
 
+.orb-panel-body {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.2) transparent;
+}
+
+.orb-panel-card {
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.orb-panel-card:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+@media (max-width: 767px) {
+  .orb-panel-overlay {
+    padding: 0;
+  }
+
+  .orb-panel-drawer {
+    max-width: 100%;
+    border-left: none;
+  }
+
+  .orb-chat-layout[data-orb-active-panel]:not([data-orb-active-panel='none']) .orb-chat-composer {
+    z-index: 10;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .orb-mobile-orb-fab {
     animation: none;

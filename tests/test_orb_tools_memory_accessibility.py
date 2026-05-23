@@ -24,12 +24,15 @@ def test_tools_panel_contains_expected_tools():
     text = _read(TOOLS_PANEL)
     for marker in (
         "IndiCare Tools",
+        "Search tools",
         "Knowledge Library",
         "Deep Research",
         "Agents",
         "Saved Outputs",
         "Documents",
         "Ask ORB",
+        "Privacy Governance",
+        "AI Governance",
     ):
         assert marker in text
     assert "/api/os/" not in text
