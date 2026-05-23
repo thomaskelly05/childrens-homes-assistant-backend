@@ -75,6 +75,93 @@ export type OrbOperationalIntelligenceOutput = {
   standalone_only?: boolean
 }
 
+export type OrbOperationalContextCard = {
+  id: string
+  title: string
+  type: string
+  summary: string
+  severity?: string
+  source_label?: string | null
+  route_hint?: string | null
+  count?: number | null
+  metadata?: Record<string, unknown>
+}
+
+export type OrbOperationalEvidenceItem = {
+  id: string
+  label: string
+  source_type: string
+  basis?: string | null
+  route?: string | null
+  severity?: string
+}
+
+export type OrbOperationalRecommendation = {
+  id: string
+  title: string
+  summary: string
+  priority?: string
+  rationale?: string | null
+  source_labels?: string[]
+  suggested_action?: string | null
+  review_required?: boolean
+  manager_review_reason?: string | null
+  route_hint?: string | null
+}
+
+export type OrbOperationalDraftAction = {
+  title: string
+  description: string
+  priority?: string
+  source?: string | null
+  due_label?: string | null
+  owner_label?: string | null
+  review_required?: boolean
+  evidence_basis?: string | null
+  standalone_only?: boolean
+  os_linked?: boolean
+}
+
+export type OrbOperationalBriefing = {
+  title: string
+  summary: string
+  key_points?: string[]
+  risks?: string[]
+  actions?: string[]
+  sources?: string[]
+  citations?: Array<Record<string, unknown>>
+  created_from_mode?: string | null
+  context_scope?: string | null
+  saved_as_output_id?: string | null
+}
+
+export type OrbOperationalReviewPrompt = {
+  id: string
+  title: string
+  reason: string
+  priority?: string
+  route_hint?: string | null
+}
+
+export type OrbOperationalAuditSummary = {
+  audit_reference?: string | null
+  role?: string | null
+  scope?: string | null
+  permissioned_context?: boolean
+  care_record_access?: boolean
+  boundary_notice?: string | null
+}
+
+export type OrbOperationalContextStatus = {
+  available?: boolean
+  degraded?: boolean
+  unavailable?: boolean
+  care_record_access?: boolean
+  homes_accessible?: number | null
+  message?: string | null
+  permission_warnings?: string[]
+}
+
 export type OrbOperationalResponse = {
   answer: string
   intelligence_output?: OrbOperationalIntelligenceOutput | null
@@ -95,6 +182,17 @@ export type OrbOperationalResponse = {
   care_record_access: boolean
   standalone_only: boolean
   permissioned_context: boolean
+  context_cards?: OrbOperationalContextCard[]
+  evidence_items?: OrbOperationalEvidenceItem[]
+  recommendations?: OrbOperationalRecommendation[]
+  draft_actions?: OrbOperationalDraftAction[]
+  review_prompts?: OrbOperationalReviewPrompt[]
+  audit_summary?: OrbOperationalAuditSummary | null
+  context_status?: OrbOperationalContextStatus | null
+  follow_up_actions?: Array<{ label: string; route?: string | null; action_type?: string }>
+  briefing?: OrbOperationalBriefing | null
+  save_available?: boolean
+  action_creation_available?: boolean
 }
 
 export type OrbOperationalHealth = {
@@ -200,6 +298,59 @@ export async function getOperationalContextSummary(
   signal?: AbortSignal
 ): Promise<OsApiResult<{ context_summary: OrbOperationalContextSummary; sources: OrbOperationalSource[] }>> {
   return postOperational('/api/assistant/orb/context-summary', request, signal)
+}
+
+export async function draftOperationalActions(
+  request: OrbOperationalRequest & { answer?: string | null },
+  signal?: AbortSignal
+): Promise<OsApiResult<{ draft_actions: OrbOperationalDraftAction[] }>> {
+  return postOperational('/api/assistant/orb/actions/draft', request, signal)
+}
+
+export async function createOperationalActions(
+  drafts: OrbOperationalDraftAction[],
+  scope?: { home_id?: number | null; child_id?: number | null; staff_id?: number | null },
+  signal?: AbortSignal
+): Promise<OsApiResult<{ created_ids: string[]; errors?: string[]; notice?: string }>> {
+  return postOperational(
+    '/api/assistant/orb/actions/create',
+    { drafts, require_manager_review: true, ...scope },
+    signal
+  )
+}
+
+export async function createOperationalBriefing(
+  request: OrbOperationalRequest & { answer?: string | null },
+  signal?: AbortSignal
+): Promise<OsApiResult<{ briefing: OrbOperationalBriefing | null }>> {
+  return postOperational('/api/assistant/orb/briefings/create', request, signal)
+}
+
+export async function saveOperationalBriefing(
+  request: OrbOperationalRequest & { answer?: string | null; save?: boolean },
+  signal?: AbortSignal
+): Promise<OsApiResult<{ briefing: OrbOperationalBriefing | null; export_payload?: OrbOperationalBriefing; warning?: string }>> {
+  return postOperational('/api/assistant/orb/briefings/save', { ...request, save: true }, signal)
+}
+
+export async function getOperationalContextCards(
+  params: { scope?: OrbOperationalScope; mode?: OrbOperationalMode; home_id?: number | null },
+  signal?: AbortSignal
+): Promise<OsApiResult<{ context_cards: OrbOperationalContextCard[]; context_status?: OrbOperationalContextStatus }>> {
+  const query = new URLSearchParams()
+  if (params.scope) query.set('scope', params.scope)
+  if (params.mode) query.set('mode', params.mode)
+  if (params.home_id != null) query.set('home_id', String(params.home_id))
+  try {
+    const envelope = await authFetch<{ success?: boolean; data: { context_cards: OrbOperationalContextCard[] } }>(
+      `/api/assistant/orb/context-cards?${query.toString()}`,
+      { signal }
+    )
+    const data = (envelope as { data?: { context_cards: OrbOperationalContextCard[] } }).data ?? (envelope as unknown as { context_cards: OrbOperationalContextCard[] })
+    return { data: data as { context_cards: OrbOperationalContextCard[] }, source: 'live' }
+  } catch (error) {
+    return unavailable(error instanceof Error ? error.message : 'Context cards unavailable') as OsApiResult<{ context_cards: OrbOperationalContextCard[] }>
+  }
 }
 
 export async function getOperationalCapabilities(signal?: AbortSignal): Promise<OsApiResult<Record<string, unknown>>> {

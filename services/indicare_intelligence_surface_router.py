@@ -44,6 +44,8 @@ _CHILD_LIVE_PATTERNS: tuple[re.Pattern[str], ...] = (
 )
 
 _MANAGER_OS_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(r"\brecord quality\b", re.I),
+    re.compile(r"\brecording quality\b", re.I),
     re.compile(r"\bmanager review\b.+\btoday\b", re.I),
     re.compile(r"\bwhat needs\b.+\b(manager|oversight)\b.+\btoday\b", re.I),
     re.compile(r"\baction board\b", re.I),
@@ -92,6 +94,27 @@ _STAFF_PROFILE_PATTERNS: tuple[re.Pattern[str], ...] = (
 
 def _matches_any(text: str, patterns: tuple[re.Pattern[str], ...]) -> bool:
     return any(pattern.search(text) for pattern in patterns)
+
+
+def _manager_operational_route(lower: str) -> str:
+    """Suggest operational ORB mode for manager oversight intents."""
+    if "care hub" in lower:
+        return "/care-hub"
+    if any(t in lower for t in ("record quality", "recording quality", "weak record")):
+        return "/assistant/orb?mode=record_quality_review"
+    if "ofsted" in lower or "inspection readiness" in lower or "inspection evidence" in lower:
+        return "/assistant/orb?mode=ofsted_evidence_review"
+    if any(t in lower for t in ("prioritise", "prioritize", "action board", "what actions")):
+        return "/assistant/orb?mode=action_priority"
+    if "safeguarding" in lower:
+        return "/assistant/orb?mode=safeguarding_themes"
+    if any(t in lower for t in ("staff support", "supervision", "workforce")):
+        return "/assistant/orb?mode=staff_support"
+    if any(t in lower for t in ("child journey", "young person", "handover")):
+        return "/assistant/orb?mode=child_journey_summary"
+    if any(t in lower for t in ("attention today", "manager review", "daily brief", "needs my attention")):
+        return "/assistant/orb?mode=manager_daily_brief"
+    return "/assistant/orb?mode=manager_daily_brief"
 
 
 def route_intelligence_surface(
@@ -153,15 +176,7 @@ def route_intelligence_surface(
             reason="Manager oversight, patterns and live evidence need Intelligence Spine or operational ORB.",
             allowed_in_standalone=False,
             requires_os_context=True,
-            suggested_route=(
-                "/care-hub"
-                if "care hub" in lower
-                else "/assistant/orb?mode=manager_daily_brief"
-                if any(t in lower for t in ("attention today", "manager review", "daily brief"))
-                else "/assistant/orb?mode=safeguarding_themes"
-                if "safeguarding" in lower
-                else "/assistant/orb?mode=action_priority"
-            ),
+            suggested_route=_manager_operational_route(lower),
             intent_category="manager_oversight",
             safety_notice="Do not infer live actions from standalone chat; review in OS dashboards.",
         )
@@ -283,7 +298,12 @@ def operational_orb_mode_hint(intent: str) -> str | None:
     if decision.intent_category == "ofsted_live_evidence":
         return "ofsted_evidence_review"
     if decision.intent_category == "manager_oversight":
+        route = decision.suggested_route or ""
+        if "mode=" in route:
+            return route.split("mode=", 1)[-1].split("&", 1)[0]
         return "manager_daily_brief"
+    if decision.intent_category == "staff_live_context":
+        return "staff_support"
     return None
 
 

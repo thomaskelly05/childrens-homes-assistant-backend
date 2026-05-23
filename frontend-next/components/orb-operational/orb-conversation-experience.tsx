@@ -5,9 +5,14 @@ import Link from 'next/link'
 import { BadgeCheck, Mic2, Send, ShieldCheck, Sparkles } from 'lucide-react'
 
 import { OrbCognitionPanels } from '@/components/orb-operational/orb-cognition-panels'
+import { OrbOperationalActionsPanel } from '@/components/orb-operational/orb-operational-actions-panel'
+import { OrbOperationalBriefingCard } from '@/components/orb-operational/orb-operational-briefing-card'
+import { OrbOperationalContextPanel } from '@/components/orb-operational/orb-operational-context-panel'
+import { OrbOperationalSourcePanel } from '@/components/orb-operational/orb-operational-source-panel'
 import {
   sendOperationalOrbMessage,
   type OrbOperationalMode,
+  type OrbOperationalRequest,
   type OrbOperationalResponse,
   type OrbOperationalScope
 } from '@/lib/orb/operational-client'
@@ -138,6 +143,8 @@ export function OrbConversationExperience({
   const [messages, setMessages] = useState<Message[]>([])
   const [pending, setPending] = useState(false)
   const [warning, setWarning] = useState<string | null>(null)
+  const [latestOperational, setLatestOperational] = useState<OrbOperationalResponse | null>(null)
+  const [lastRequest, setLastRequest] = useState<OrbOperationalRequest | null>(null)
   const abortRef = useRef<AbortController | null>(null)
   const latestResponse = useMemo(() => [...messages].reverse().find((message) => message.response)?.response, [messages])
   const latestIntelligence = latestResponse as OrbIntelligenceResponse | undefined
@@ -164,23 +171,24 @@ export function OrbConversationExperience({
     const controller = new AbortController()
     abortRef.current = controller
     const scopeMeta = scopeOptions.find((item) => item.value === activeScope) || scopeOptions[0]
-    const operationalResult = await sendOperationalOrbMessage(
-      {
-        message,
-        mode: operationalMode,
-        scope: scopeMeta.operationalScope,
-        child_id: activeScope === 'child' ? selectedChildId : null,
-        staff_id: activeScope === 'workforce' ? null : null,
-        days: 7
-      },
-      controller.signal
-    )
+    const operationalPayload: OrbOperationalRequest = {
+      message,
+      mode: operationalMode,
+      scope: scopeMeta.operationalScope,
+      child_id: activeScope === 'child' ? selectedChildId : null,
+      staff_id: activeScope === 'workforce' ? null : null,
+      days: 7
+    }
+    setLastRequest(operationalPayload)
+    const operationalResult = await sendOperationalOrbMessage(operationalPayload, controller.signal)
     let responseData: OrbConversationResponse
     if (operationalResult.source === 'live' && operationalResult.data.answer) {
+      setLatestOperational(operationalResult.data)
       responseData = mapOperationalResponse(operationalResult.data)
       const evalWarnings = operationalResult.data.warnings || []
       setWarning([operationalResult.warning, ...evalWarnings].filter(Boolean).join(' ') || null)
     } else {
+      setLatestOperational(null)
       const legacy = await queryOrbConversation(
         {
           message,
@@ -255,8 +263,26 @@ export function OrbConversationExperience({
           ))}
         </div>
 
+        <div className="mt-4 flex flex-wrap gap-2" data-testid="orb-operational-permission-badges">
+          <span className="rounded-full bg-blue-100 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-blue-800">
+            Permissioned OS context
+          </span>
+          <span className="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-slate-700">
+            Summary-level evidence
+          </span>
+          <span className="rounded-full bg-amber-100 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-amber-900">
+            Manager review where indicated
+          </span>
+        </div>
+
         <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50/80 px-4 py-3 text-xs font-semibold leading-6 text-blue-900">
           OS ORB can use permissioned IndiCare context. It only sees information available to your role. ORB does not make final safeguarding or inspection decisions.
+          {latestOperational?.audit_summary?.audit_reference ? (
+            <span className="mt-2 block text-[11px] font-bold opacity-80">
+              Audit ref: {latestOperational.audit_summary.audit_reference}
+              {latestOperational.permissions?.role ? ` · Role: ${latestOperational.permissions.role}` : ''}
+            </span>
+          ) : null}
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
@@ -349,6 +375,35 @@ export function OrbConversationExperience({
       </section>
 
       <aside className="space-y-4">
+        {latestOperational?.briefing ? (
+          <OrbOperationalBriefingCard
+            briefing={latestOperational.briefing}
+            request={lastRequest || undefined}
+            answer={latestOperational.answer}
+          />
+        ) : null}
+
+        <OrbOperationalContextPanel
+          cards={latestOperational?.context_cards || []}
+          contextStatus={latestOperational?.context_status}
+        />
+
+        <OrbOperationalSourcePanel
+          sources={latestOperational?.sources || []}
+          evidenceItems={latestOperational?.evidence_items}
+        />
+
+        <OrbOperationalActionsPanel
+          recommendations={latestOperational?.recommendations || []}
+          draftActions={latestOperational?.draft_actions || []}
+          reviewPrompts={latestOperational?.review_prompts || []}
+          scope={{
+            child_id: lastRequest?.child_id,
+            home_id: lastRequest?.home_id,
+            staff_id: lastRequest?.staff_id
+          }}
+        />
+
         <section className="rounded-[32px] bg-white p-5 shadow-lg shadow-slate-200/60 ring-1 ring-white">
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-5 w-5 text-blue-600" aria-hidden />
@@ -372,34 +427,6 @@ export function OrbConversationExperience({
               </article>
             ))}
             {!cognitionTimeline.length ? <p className="text-sm font-semibold leading-6 text-slate-500">Timeline appears after ORB checks live context.</p> : null}
-          </div>
-        </section>
-
-        <section className="rounded-[32px] bg-white p-5 shadow-lg shadow-slate-200/60 ring-1 ring-white">
-          <h2 className="text-lg font-black text-slate-950">Sources</h2>
-          <div className="mt-4 space-y-3">
-            {latestResponse?.sources?.map((source) => (
-              <article key={`${source.record_type}-${source.record_id}`} className="rounded-2xl border border-slate-100 bg-slate-50 p-3">
-                <p className="text-[11px] font-black uppercase tracking-[0.16em] text-blue-700">{source.citation_ref} {source.record_type.replaceAll('_', ' ')}</p>
-                <h3 className="mt-1 text-sm font-black text-slate-900">{source.title}</h3>
-                {source.date ? <p className="mt-1 text-[11px] font-bold text-slate-400">{source.date}</p> : null}
-                <p className="mt-1 line-clamp-3 text-xs font-semibold leading-5 text-slate-500">{source.summary || 'Record available for review.'}</p>
-                {source.route ? <Link href={source.route} className="mt-2 inline-block text-xs font-black text-blue-700">Open source</Link> : null}
-              </article>
-            ))}
-            {!latestResponse?.sources?.length ? <p className="text-sm font-semibold leading-6 text-slate-500">Citations appear here when live records are returned.</p> : null}
-          </div>
-        </section>
-
-        <section className="rounded-[32px] bg-white p-5 shadow-lg shadow-slate-200/60 ring-1 ring-white">
-          <h2 className="text-lg font-black text-slate-950">Suggested actions</h2>
-          <div className="mt-4 space-y-2">
-            {latestResponse?.actions?.map((action) => (
-              <Link key={`${action.type}-${action.label}`} href={action.route || '/command-centre'} className="block rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-black text-blue-800">
-                {action.label}
-              </Link>
-            ))}
-            {!latestResponse?.actions?.length ? <p className="text-sm font-semibold leading-6 text-slate-500">Actions appear after ORB checks the live context.</p> : null}
           </div>
         </section>
 
