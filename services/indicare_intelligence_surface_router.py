@@ -255,6 +255,27 @@ def route_intelligence_surface(
             intent_category="governance",
         )
 
+    if any(
+        phrase in lower
+        for phrase in (
+            "saved briefing",
+            "previous operational output",
+            "manager review artefact",
+            "saved action plan",
+            "operational output",
+            "operational briefing",
+        )
+    ):
+        return SurfaceRoutingDecision(
+            recommended_surface="operational_orb",
+            reason="Saved operational briefings and OS-linked outputs live in operational ORB.",
+            allowed_in_standalone=False,
+            requires_os_context=True,
+            suggested_route="/assistant/orb?panel=outputs",
+            intent_category="operational_outputs",
+            safety_notice="Standalone saved outputs are not used for OS operational data.",
+        )
+
     if "saved output" in lower:
         return SurfaceRoutingDecision(
             recommended_surface="saved_outputs",

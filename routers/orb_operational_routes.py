@@ -13,15 +13,19 @@ from schemas.orb_operational import (
     OrbOperationalActionsCreateRequest,
     OrbOperationalActionsDraftRequest,
     OrbOperationalBriefingRequest,
+    OrbOperationalContextSummary,
     OrbOperationalDraftAction,
     OrbOperationalHealth,
+    OrbOperationalPermissionSummary,
     OrbOperationalRequest,
     OrbOperationalResponse,
+    OrbOperationalSafetyBoundary,
 )
 from services.orb_intelligence_bridge_service import orb_intelligence_bridge_service
 from services.orb_operational_action_builder_service import orb_operational_action_builder_service
 from services.orb_operational_assistant_service import orb_operational_assistant_service
 from services.orb_operational_context_service import orb_operational_context_bridge
+from services.orb_operational_output_service import orb_operational_output_service
 
 router = APIRouter(prefix="/assistant/orb", tags=["Operational OS ORB"])
 compat_router = APIRouter(prefix="/api/assistant/orb", tags=["Operational OS ORB API"])
@@ -285,6 +289,17 @@ async def operational_orb_actions_create(
         child_id=payload.child_id,
         staff_id=payload.staff_id,
     )
+    linked_output_id = payload.output_id
+    if linked_output_id and result.get("created_ids"):
+        linked = orb_operational_output_service.link_actions(
+            linked_output_id,
+            list(result["created_ids"]),
+            current_user if isinstance(current_user, dict) else dict(current_user),
+            conn=conn,
+        )
+        if linked:
+            result["linked_output_id"] = linked_output_id
+            result["linked_action_ids"] = linked.linked_action_ids
     return {
         "success": True,
         "data": {
@@ -382,16 +397,55 @@ async def operational_orb_briefings_save(
             },
         }
     export_payload = briefing.model_dump()
-    warning = (
-        "OS operational briefing store is not yet wired; use copy/export payload below. "
-        "Standalone saved outputs are not used for OS operational data."
-    )
     saved_id = None
+    warning = None
+    user_dict = current_user if isinstance(current_user, dict) else dict(current_user)
     if payload.save:
-        warning = (
-            "Persistence to a dedicated OS operational output store is not available in this pass. "
-            "Briefing returned as export payload only."
+        summary_raw = context.get("summary")
+        if isinstance(summary_raw, OrbOperationalContextSummary):
+            context_summary = summary_raw
+        elif isinstance(summary_raw, dict):
+            context_summary = OrbOperationalContextSummary.model_validate(summary_raw)
+        else:
+            context_summary = OrbOperationalContextSummary()
+        permissions_raw = orb_operational_context_bridge._permission_summary(
+            user_dict,
+            scope=payload.scope,
+            home_id=payload.home_id,
+            child_id=payload.child_id,
+            staff_id=payload.staff_id,
+            care_access=bool(context.get("raw_available")),
         )
+        permissions = (
+            permissions_raw
+            if isinstance(permissions_raw, OrbOperationalPermissionSummary)
+            else OrbOperationalPermissionSummary.model_validate(permissions_raw)
+        )
+        op_response = OrbOperationalResponse(
+            answer=payload.answer or briefing.summary,
+            context_summary=context_summary,
+            permissions=permissions,
+            boundaries=OrbOperationalSafetyBoundary(),
+            briefing=briefing,
+            os_linked=True,
+            care_record_access=bool(context.get("raw_available")),
+        )
+        try:
+            record = orb_operational_output_service.save_from_operational_response(
+                op_response,
+                request,
+                user_dict,
+                output_type=payload.output_type,
+                visibility=payload.visibility,
+                tags=payload.tags,
+                title=payload.title,
+                conn=conn,
+            )
+            saved_id = record.id
+            briefing.saved_as_output_id = saved_id
+            export_payload = briefing.model_dump()
+        except Exception as exc:
+            warning = f"Could not persist operational briefing: {exc}"
     return {
         "success": True,
         "data": {
@@ -401,6 +455,12 @@ async def operational_orb_briefings_save(
             "saved_as_output_id": saved_id,
             "os_linked": True,
             "standalone_only": False,
+            "notice": (
+                "Saved to OS operational output store. "
+                "Standalone saved outputs are not used for OS operational data."
+            )
+            if saved_id
+            else None,
         },
     }
 

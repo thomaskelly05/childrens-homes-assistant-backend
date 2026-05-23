@@ -107,7 +107,8 @@ def test_briefings_save_route(fake_state):
     )
     assert response["success"] is True
     assert response["data"]["export_payload"]
-    assert "standalone" in response["data"]["warning"].lower() or "export" in response["data"]["warning"].lower()
+    assert response["data"]["saved_as_output_id"] is not None
+    assert response["data"]["notice"] and "standalone" in response["data"]["notice"].lower()
 
 
 def test_context_cards_paths_registered():

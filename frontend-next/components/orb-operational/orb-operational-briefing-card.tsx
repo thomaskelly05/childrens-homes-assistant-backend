@@ -2,18 +2,25 @@
 
 import { useState } from 'react'
 
-import { saveOperationalBriefing, type OrbOperationalBriefing, type OrbOperationalRequest } from '@/lib/orb/operational-client'
+import {
+  saveOperationalBriefing,
+  type OrbOperationalBriefing,
+  type OrbOperationalRequest
+} from '@/lib/orb/operational-client'
 
 export function OrbOperationalBriefingCard({
   briefing,
   request,
-  answer
+  answer,
+  onSaved
 }: {
   briefing: OrbOperationalBriefing
   request?: OrbOperationalRequest
   answer?: string
+  onSaved?: (outputId: string) => void
 }) {
   const [notice, setNotice] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
 
   function copyBriefing() {
     const lines = [
@@ -42,8 +49,22 @@ export function OrbOperationalBriefingCard({
       copyBriefing()
       return
     }
-    const result = await saveOperationalBriefing({ ...request, answer, save: true })
-    setNotice(result.data?.warning || result.warning || 'Briefing export ready — copy if save is unavailable.')
+    setSaving(true)
+    const result = await saveOperationalBriefing({
+      ...request,
+      answer,
+      save: true,
+      output_type: 'manager_briefing',
+      title: briefing.title
+    })
+    const savedId = result.data?.saved_as_output_id
+    if (savedId) {
+      setNotice(`Briefing saved (ref ${savedId.slice(0, 8)}).`)
+      onSaved?.(savedId)
+    } else {
+      setNotice(result.data?.warning || result.warning || 'Briefing export ready — copy if save is unavailable.')
+    }
+    setSaving(false)
   }
 
   return (
@@ -100,10 +121,11 @@ export function OrbOperationalBriefingCard({
         <button
           type="button"
           onClick={() => void handleSave()}
-          className="rounded-full bg-blue-500 px-4 py-2 text-xs font-black text-white"
+          disabled={saving}
+          className="rounded-full bg-blue-500 px-4 py-2 text-xs font-black text-white disabled:opacity-50"
           data-testid="orb-save-briefing"
         >
-          Save / export
+          Save briefing
         </button>
       </div>
       {notice ? <p className="mt-3 text-xs font-semibold text-slate-300">{notice}</p> : null}

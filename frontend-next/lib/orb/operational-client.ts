@@ -27,6 +27,11 @@ export type OrbOperationalRequest = {
   include_record_quality?: boolean
   include_patterns?: boolean
   require_manager_review?: boolean
+  save_output?: boolean
+  output_type?: OrbOperationalOutputType | null
+  visibility?: string
+  tags?: string[]
+  output_title?: string | null
 }
 
 export type OrbOperationalSource = {
@@ -162,6 +167,60 @@ export type OrbOperationalContextStatus = {
   permission_warnings?: string[]
 }
 
+export type OrbOperationalOutputType =
+  | 'manager_briefing'
+  | 'safeguarding_theme_review'
+  | 'record_quality_review'
+  | 'ofsted_evidence_briefing'
+  | 'action_priority_plan'
+  | 'staff_support_briefing'
+  | 'child_journey_summary'
+  | 'governance_briefing'
+  | 'handover_intelligence'
+  | 'inspection_preparation'
+  | 'operational_note'
+
+export type OrbOperationalOutputSummary = {
+  id: string
+  title: string
+  type: OrbOperationalOutputType
+  status: string
+  review_status: string
+  visibility: string
+  home_id?: number | null
+  child_id?: number | null
+  scope_label?: string | null
+  summary?: string | null
+  tags?: string[]
+  linked_action_count?: number
+  created_by_name?: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type OrbOperationalOutputRecord = OrbOperationalOutputSummary & {
+  staff_id?: number | null
+  content_markdown?: string | null
+  content_json?: Record<string, unknown>
+  intelligence_output?: Record<string, unknown>
+  context_cards?: Array<Record<string, unknown>>
+  evidence_items?: Array<Record<string, unknown>>
+  recommendations?: Array<Record<string, unknown>>
+  draft_actions?: Array<Record<string, unknown>>
+  review_prompts?: Array<Record<string, unknown>>
+  sources?: Array<Record<string, unknown>>
+  citations?: Array<Record<string, unknown>>
+  evaluation?: Record<string, unknown>
+  model_routing?: Record<string, unknown>
+  audit_reference?: string | null
+  linked_action_ids?: string[]
+  linked_review_ids?: string[]
+  metadata?: Record<string, unknown>
+}
+
+export const OPERATIONAL_ARTEFACT_NOTICE =
+  'Saved operational outputs are OS-linked artefacts. They are not standalone ORB saved outputs.'
+
 export type OrbOperationalResponse = {
   answer: string
   intelligence_output?: OrbOperationalIntelligenceOutput | null
@@ -192,6 +251,17 @@ export type OrbOperationalResponse = {
   follow_up_actions?: Array<{ label: string; route?: string | null; action_type?: string }>
   briefing?: OrbOperationalBriefing | null
   save_available?: boolean
+  suggested_output_type?: OrbOperationalOutputType | null
+  suggested_title?: string | null
+  suggested_tags?: string[]
+  operational_output?: {
+    available?: boolean
+    saved?: boolean
+    output_id?: string | null
+    type?: string | null
+    review_status?: string | null
+    visibility?: string | null
+  } | null
   action_creation_available?: boolean
 }
 
@@ -309,9 +379,14 @@ export async function draftOperationalActions(
 
 export async function createOperationalActions(
   drafts: OrbOperationalDraftAction[],
-  scope?: { home_id?: number | null; child_id?: number | null; staff_id?: number | null },
+  scope?: {
+    home_id?: number | null
+    child_id?: number | null
+    staff_id?: number | null
+    output_id?: string | null
+  },
   signal?: AbortSignal
-): Promise<OsApiResult<{ created_ids: string[]; errors?: string[]; notice?: string }>> {
+): Promise<OsApiResult<{ created_ids: string[]; errors?: string[]; notice?: string; linked_output_id?: string }>> {
   return postOperational(
     '/api/assistant/orb/actions/create',
     { drafts, require_manager_review: true, ...scope },
@@ -327,10 +402,82 @@ export async function createOperationalBriefing(
 }
 
 export async function saveOperationalBriefing(
-  request: OrbOperationalRequest & { answer?: string | null; save?: boolean },
+  request: OrbOperationalRequest & {
+    answer?: string | null
+    save?: boolean
+    title?: string | null
+    output_type?: OrbOperationalOutputType | null
+  },
   signal?: AbortSignal
-): Promise<OsApiResult<{ briefing: OrbOperationalBriefing | null; export_payload?: OrbOperationalBriefing; warning?: string }>> {
+): Promise<OsApiResult<{ briefing: OrbOperationalBriefing | null; export_payload?: OrbOperationalBriefing; warning?: string; saved_as_output_id?: string | null }>> {
   return postOperational('/api/assistant/orb/briefings/save', { ...request, save: true }, signal)
+}
+
+async function fetchOperational<T>(path: string, init?: RequestInit): Promise<T> {
+  const envelope = await authFetch<{ success?: boolean; data: T }>(path, init)
+  return (envelope as { data?: T }).data ?? (envelope as unknown as T)
+}
+
+export async function listOperationalOutputs(params: {
+  search?: string
+  output_type?: string
+  status?: string
+  review_status?: string
+  awaiting_review_only?: boolean
+  limit?: number
+}): Promise<{ items: OrbOperationalOutputSummary[]; total: number }> {
+  const query = new URLSearchParams()
+  if (params.search) query.set('search', params.search)
+  if (params.output_type) query.set('output_type', params.output_type)
+  if (params.status) query.set('status', params.status)
+  if (params.review_status) query.set('review_status', params.review_status)
+  if (params.awaiting_review_only) query.set('awaiting_review_only', 'true')
+  if (params.limit) query.set('limit', String(params.limit))
+  const data = await fetchOperational<{ items: OrbOperationalOutputSummary[]; total: number }>(
+    `/api/assistant/orb/outputs?${query.toString()}`
+  )
+  return data
+}
+
+export async function getOperationalOutput(outputId: string): Promise<OrbOperationalOutputRecord | null> {
+  try {
+    return await fetchOperational<OrbOperationalOutputRecord>(`/api/assistant/orb/outputs/${outputId}`)
+  } catch {
+    return null
+  }
+}
+
+export async function exportOperationalOutput(
+  outputId: string,
+  format: 'markdown' | 'plain_text' | 'json' | 'html' = 'markdown'
+): Promise<{ content: string; filename: string } | null> {
+  try {
+    return await fetchOperational<{ content: string; filename: string }>(
+      `/api/assistant/orb/outputs/${outputId}/export`,
+      { method: 'POST', body: JSON.stringify({ format }) }
+    )
+  } catch {
+    return null
+  }
+}
+
+export async function markOperationalOutputForReview(outputId: string): Promise<OrbOperationalOutputRecord | null> {
+  try {
+    return await fetchOperational<OrbOperationalOutputRecord>(
+      `/api/assistant/orb/outputs/${outputId}/review`,
+      { method: 'POST', body: JSON.stringify({ visibility: 'manager_review' }) }
+    )
+  } catch {
+    return null
+  }
+}
+
+export async function archiveOperationalOutput(outputId: string): Promise<void> {
+  await fetchOperational(`/api/assistant/orb/outputs/${outputId}/archive`, { method: 'POST', body: '{}' })
+}
+
+export async function deleteOperationalOutput(outputId: string): Promise<void> {
+  await authFetch(`/api/assistant/orb/outputs/${outputId}`, { method: 'DELETE' })
 }
 
 export async function getOperationalContextCards(

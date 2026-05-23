@@ -8,6 +8,7 @@ import { OrbCognitionPanels } from '@/components/orb-operational/orb-cognition-p
 import { OrbOperationalActionsPanel } from '@/components/orb-operational/orb-operational-actions-panel'
 import { OrbOperationalBriefingCard } from '@/components/orb-operational/orb-operational-briefing-card'
 import { OrbOperationalContextPanel } from '@/components/orb-operational/orb-operational-context-panel'
+import { OrbOperationalOutputsPanel } from '@/components/orb-operational/orb-operational-outputs-panel'
 import { OrbOperationalSourcePanel } from '@/components/orb-operational/orb-operational-source-panel'
 import {
   sendOperationalOrbMessage,
@@ -145,6 +146,9 @@ export function OrbConversationExperience({
   const [warning, setWarning] = useState<string | null>(null)
   const [latestOperational, setLatestOperational] = useState<OrbOperationalResponse | null>(null)
   const [lastRequest, setLastRequest] = useState<OrbOperationalRequest | null>(null)
+  const [savedOutputId, setSavedOutputId] = useState<string | null>(null)
+  const [outputsPanelOpen, setOutputsPanelOpen] = useState(false)
+  const [outputsRefresh, setOutputsRefresh] = useState(0)
   const abortRef = useRef<AbortController | null>(null)
   const latestResponse = useMemo(() => [...messages].reverse().find((message) => message.response)?.response, [messages])
   const latestIntelligence = latestResponse as OrbIntelligenceResponse | undefined
@@ -184,6 +188,10 @@ export function OrbConversationExperience({
     let responseData: OrbConversationResponse
     if (operationalResult.source === 'live' && operationalResult.data.answer) {
       setLatestOperational(operationalResult.data)
+      if (operationalResult.data.operational_output?.saved && operationalResult.data.operational_output.output_id) {
+        setSavedOutputId(operationalResult.data.operational_output.output_id)
+        setOutputsRefresh((n) => n + 1)
+      }
       responseData = mapOperationalResponse(operationalResult.data)
       const evalWarnings = operationalResult.data.warnings || []
       setWarning([operationalResult.warning, ...evalWarnings].filter(Boolean).join(' ') || null)
@@ -261,6 +269,22 @@ export function OrbConversationExperience({
               <p className="mt-1 text-xs font-black text-slate-800">{value}</p>
             </div>
           ))}
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setOutputsPanelOpen(true)}
+            className="rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-xs font-black text-blue-900"
+            data-testid="orb-open-operational-outputs"
+          >
+            Operational outputs
+          </button>
+          {savedOutputId ? (
+            <span className="rounded-full bg-emerald-100 px-3 py-1 text-[10px] font-black text-emerald-900">
+              Saved ref {savedOutputId.slice(0, 8)}
+            </span>
+          ) : null}
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2" data-testid="orb-operational-permission-badges">
@@ -380,6 +404,10 @@ export function OrbConversationExperience({
             briefing={latestOperational.briefing}
             request={lastRequest || undefined}
             answer={latestOperational.answer}
+            onSaved={(id) => {
+              setSavedOutputId(id)
+              setOutputsRefresh((n) => n + 1)
+            }}
           />
         ) : null}
 
@@ -400,8 +428,10 @@ export function OrbConversationExperience({
           scope={{
             child_id: lastRequest?.child_id,
             home_id: lastRequest?.home_id,
-            staff_id: lastRequest?.staff_id
+            staff_id: lastRequest?.staff_id,
+            output_id: savedOutputId
           }}
+          onActionsCreated={() => setOutputsRefresh((n) => n + 1)}
         />
 
         <section className="rounded-[32px] bg-white p-5 shadow-lg shadow-slate-200/60 ring-1 ring-white">
@@ -454,6 +484,12 @@ export function OrbConversationExperience({
           </div>
         </section>
       </aside>
+
+      <OrbOperationalOutputsPanel
+        open={outputsPanelOpen}
+        onClose={() => setOutputsPanelOpen(false)}
+        refreshToken={outputsRefresh}
+      />
     </div>
   )
 }

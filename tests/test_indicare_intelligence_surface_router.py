@@ -79,6 +79,13 @@ def test_operational_intents_include_mode_hints():
     assert "ofsted_evidence" in (ofsted.suggested_route or "")
 
 
+def test_saved_operational_briefing_routes_to_outputs_panel():
+    decision = indicare_intelligence_surface_router.route("Open my saved briefing from last week")
+    assert decision.recommended_surface == "operational_orb"
+    assert decision.allowed_in_standalone is False
+    assert "panel=outputs" in (decision.suggested_route or "")
+
+
 def test_surface_route_api(fake_state):
     response = asyncio.run(
         orb_standalone_routes.standalone_orb_surface_route(
