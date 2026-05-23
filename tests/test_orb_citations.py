@@ -106,3 +106,37 @@ def test_frontend_sources_payload_includes_document_fields(citation_service):
     sources = citation_service.frontend_sources_payload(citations)
     assert sources[0].get("document_chunk") is True
     assert sources[0].get("section") == "Section 1"
+
+
+def test_ofsted_citations_include_official_metadata(citation_service):
+    packs = _packs_for("Ofsted child voice inspection")
+    ofsted = next(p for p in packs if p.get("pack_key") == "ofsted_sccif")
+    citations = citation_service.build_citations([ofsted])
+    assert citations[0].get("official_source") is True
+    assert citations[0].get("confidence_level") == "official"
+
+
+def test_rag_citation_governance_fields(citation_service):
+    from services.orb_rag_retrieval_service import orb_rag_retrieval_service
+
+    results = [
+        {
+            "source_id": "x",
+            "chunk_index": 0,
+            "source_type": "regulatory_framework",
+            "citation_label": "Test",
+            "source_title": "Test",
+            "text": "text",
+            "official_source": True,
+            "source_confidence": "official",
+            "governance_status": "approved",
+            "metadata": {"source_version": "v1"},
+        }
+    ]
+    citations = orb_rag_retrieval_service.build_rag_citations(
+        results,
+        retrieval_strategy="hybrid_semantic_keyword",
+    )
+    payload = citation_service.frontend_sources_payload(citations)
+    assert payload[0].get("official_source") is True
+    assert payload[0].get("retrieval_strategy") == "hybrid_semantic_keyword"

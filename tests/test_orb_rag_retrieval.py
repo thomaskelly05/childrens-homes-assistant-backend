@@ -61,3 +61,28 @@ def test_document_citations_not_live():
     citations = orb_rag_retrieval_service.build_rag_citations(results)
     for citation in citations:
         assert citation["live_retrieved"] is False
+
+
+def test_absconded_synonym_search_finds_missing_theme():
+    results = orb_rag_retrieval_service.search("child absconded", limit=8)
+    haystack = " ".join(
+        (r.get("text") or "") + " " + (r.get("match_reason") or "") for r in results
+    ).lower()
+    assert results
+    assert (
+        "missing" in haystack
+        or "abscond" in haystack
+        or "synonym" in haystack
+        or "concept" in haystack
+    )
+
+
+def test_retrieve_for_conversation_includes_retrieval_meta():
+    rag = orb_rag_retrieval_service.retrieve_for_conversation(
+        "What would Ofsted expect around child voice?",
+        mode="Ofsted Lens",
+    )
+    meta = rag.get("retrieval_meta") or {}
+    assert "strategy" in meta
+    assert "semantic_available" in meta
+    assert "synonym_expansion_used" in meta

@@ -1309,14 +1309,20 @@ function SourcesBasis({
               section?: string
               page?: string
               origin?: string
+              official_source?: boolean
+              confidence_level?: string
+              governance_status?: string
+              warning?: string
+              retrieval_strategy?: string
             }
             const isDocument =
               extended.document_chunk || String(extended.type || '').startsWith('document_chunk:')
             const typeLabel = String(extended.type || '')
               .replace(/^document_chunk:/, '')
               .replace(/_/g, ' ')
-            const originLabel =
-              extended.origin === 'seeded' || extended.origin === 'built_in'
+            const originLabel = extended.official_source
+              ? 'Official summary'
+              : extended.origin === 'seeded' || extended.origin === 'built_in'
                 ? 'Built-in'
                 : extended.origin === 'user_uploaded'
                   ? 'Uploaded'
@@ -1346,6 +1352,21 @@ function SourcesBasis({
                   <p className="mt-0.5 text-slate-500">Section: {extended.section}</p>
                 ) : null}
                 {extended.page ? <p className="mt-0.5 text-slate-500">Page: {extended.page}</p> : null}
+                {extended.retrieval_strategy ? (
+                  <p className="mt-0.5 text-[9px] text-slate-600">
+                    Retrieval:{' '}
+                    {extended.retrieval_strategy === 'hybrid_semantic_keyword'
+                      ? 'Hybrid semantic + keyword'
+                      : extended.retrieval_strategy === 'keyword_plus_synonyms'
+                        ? 'Keyword + synonyms'
+                        : extended.retrieval_strategy === 'keyword_only'
+                          ? 'Keyword only'
+                          : extended.retrieval_strategy.replace(/_/g, ' ')}
+                  </p>
+                ) : null}
+                {extended.warning ? (
+                  <p className="mt-0.5 text-[9px] text-amber-200/90">{extended.warning}</p>
+                ) : null}
                 {source.basis ? <p className="mt-0.5 text-slate-500">{source.basis}</p> : null}
                 {source.note && source.note !== source.basis ? (
                   <p className="mt-0.5 text-slate-600">{source.note}</p>

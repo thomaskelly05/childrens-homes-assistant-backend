@@ -33,6 +33,7 @@ export function OrbKnowledgeLibraryPanel({ open, onClose }: { open: boolean; onC
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<OrbKnowledgeSearchResult[]>([])
   const [searching, setSearching] = useState(false)
+  const [needsReviewOnly, setNeedsReviewOnly] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
   const [ingesting, setIngesting] = useState(false)
   const [draft, setDraft] = useState({
@@ -47,7 +48,7 @@ export function OrbKnowledgeLibraryPanel({ open, onClose }: { open: boolean; onC
     setError(null)
     try {
       const [sourceList, libSummary] = await Promise.all([
-        fetchOrbKnowledgeSources(),
+        fetchOrbKnowledgeSources(undefined, needsReviewOnly ? 'needs_review' : undefined),
         fetchOrbKnowledgeSummary()
       ])
       setSources(sourceList)
@@ -59,7 +60,7 @@ export function OrbKnowledgeLibraryPanel({ open, onClose }: { open: boolean; onC
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [needsReviewOnly])
 
   useEffect(() => {
     if (!open) return
@@ -163,15 +164,31 @@ export function OrbKnowledgeLibraryPanel({ open, onClose }: { open: boolean; onC
                     {result.source_title}
                     {result.section ? ` · ${result.section}` : ''}
                     {result.page ? ` · p. ${result.page}` : ''}
+                    {result.hybrid_score != null ? ` · match ${Math.round(result.hybrid_score * 10) / 10}` : ''}
                   </p>
+                  {result.match_reason ? (
+                    <p className="text-[9px] text-slate-600">{result.match_reason}</p>
+                  ) : null}
+                  {result.warning ? (
+                    <p className="text-[9px] text-amber-200/90">{result.warning}</p>
+                  ) : null}
                   <p className="mt-1 line-clamp-4 leading-5">{result.text}</p>
                 </article>
               ))}
             </div>
           ) : null}
 
-          <div className="mb-2 flex items-center justify-between">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
             <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Sources</p>
+            <label className="flex items-center gap-1.5 text-[10px] text-slate-500">
+              <input
+                type="checkbox"
+                checked={needsReviewOnly}
+                onChange={(e) => setNeedsReviewOnly(e.target.checked)}
+                className="rounded border-white/20"
+              />
+              Needs review
+            </label>
             <button
               type="button"
               onClick={() => setAddOpen((v) => !v)}
@@ -242,14 +259,35 @@ export function OrbKnowledgeLibraryPanel({ open, onClose }: { open: boolean; onC
                 >
                   <div className="flex flex-wrap items-center gap-1.5">
                     <span className="font-medium text-slate-200">{source.title}</span>
+                    {source.official_source ? (
+                      <span className="rounded-full bg-cyan-500/15 px-1.5 py-0.5 text-[9px] font-medium text-cyan-100">
+                        Official summary
+                      </span>
+                    ) : source.origin === 'seeded' || source.origin === 'built_in' ? (
+                      <span className="rounded-full bg-white/[0.06] px-1.5 py-0.5 text-[9px] text-slate-400">
+                        Built-in
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-white/[0.06] px-1.5 py-0.5 text-[9px] text-slate-400">
+                        Uploaded
+                      </span>
+                    )}
                     <span className="rounded-full bg-white/[0.04] px-1.5 py-0.5 text-[9px] uppercase text-slate-500">
                       {source.source_type.replace(/_/g, ' ')}
                     </span>
-                    <span className="text-[9px] text-slate-600">{source.status}</span>
+                    {source.confidence_level ? (
+                      <span className="text-[9px] text-slate-600">{source.confidence_level}</span>
+                    ) : null}
                   </div>
                   <p className="mt-0.5 text-slate-500">
-                    {source.origin === 'seeded' || source.origin === 'built_in' ? 'Built-in' : 'User-uploaded'}
+                    {source.governance_status?.replace(/_/g, ' ') ?? source.status}
+                    {source.source_version ? ` · ${source.source_version}` : ''}
+                    {source.publisher ? ` · ${source.publisher}` : ''}
                   </p>
+                  {source.governance_status === 'needs_review' ||
+                  source.governance_status === 'expired' ? (
+                    <p className="mt-0.5 text-[9px] text-amber-200/90">May need review</p>
+                  ) : null}
                 </li>
               ))}
             </ul>

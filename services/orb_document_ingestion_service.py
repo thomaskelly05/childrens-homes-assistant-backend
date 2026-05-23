@@ -9,6 +9,8 @@ from io import BytesIO
 from pathlib import Path
 from typing import Any
 
+from services.orb_care_synonym_service import orb_care_synonym_service
+from services.orb_embedding_service import orb_embedding_service
 from services.orb_knowledge_library_service import orb_knowledge_library_service
 
 logger = logging.getLogger("indicare.orb_document_ingestion")
@@ -58,6 +60,7 @@ class OrbDocumentIngestionService:
         chunks = self.chunk_text(normalised, source_title=title, source_type=detected_type)
         chunk_records = []
         for chunk in chunks:
+            enriched = self._enrich_chunk(chunk, source_type=detected_type)
             chunk_records.append(
                 {
                     "id": f"{source['id']}-chunk-{chunk['chunk_index']}",
@@ -70,8 +73,14 @@ class OrbDocumentIngestionService:
                     "token_estimate": chunk.get("token_estimate"),
                     "citation_label": chunk.get("citation_label"),
                     "source_type": detected_type,
-                    "keywords": chunk.get("keywords") or [],
-                    "metadata": chunk.get("metadata") or {},
+                    "keywords": enriched.get("keywords") or [],
+                    "semantic_keywords": enriched.get("semantic_keywords") or [],
+                    "canonical_terms": enriched.get("canonical_terms") or [],
+                    "confidence_score": enriched.get("confidence_score"),
+                    "embedding": enriched.get("embedding"),
+                    "embedding_model": enriched.get("embedding_model"),
+                    "embedding_created_at": enriched.get("embedding_created_at"),
+                    "metadata": enriched.get("metadata") or {},
                 }
             )
         orb_knowledge_library_service.upsert_chunks(source["id"], chunk_records)
@@ -203,19 +212,18 @@ class OrbDocumentIngestionService:
                 return
             section = current_section
             citation = self.build_citation_label(source_title, section=section)
-            chunks.append(
-                {
-                    "chunk_index": chunk_index,
-                    "title": section or source_title,
-                    "text": buffer.strip(),
-                    "section": section,
-                    "page": None,
-                    "token_estimate": self.estimate_tokens(buffer),
-                    "citation_label": citation,
-                    "keywords": self.build_keywords(buffer),
-                    "metadata": {"source_type": source_type},
-                }
-            )
+            chunk_body = {
+                "chunk_index": chunk_index,
+                "title": section or source_title,
+                "text": buffer.strip(),
+                "section": section,
+                "page": None,
+                "token_estimate": self.estimate_tokens(buffer),
+                "citation_label": citation,
+                "keywords": self.build_keywords(buffer),
+                "metadata": {"source_type": source_type},
+            }
+            chunks.append(self._enrich_chunk(chunk_body, source_type=source_type))
             chunk_index += 1
             overlap = buffer[-CHUNK_OVERLAP_CHARS:] if len(buffer) > CHUNK_OVERLAP_CHARS else buffer
             buffer = overlap
@@ -241,20 +249,60 @@ class OrbDocumentIngestionService:
             flush_buffer()
 
         if not chunks:
-            chunks.append(
-                {
-                    "chunk_index": 0,
-                    "title": source_title,
-                    "text": normalised[:CHUNK_TARGET_CHARS],
-                    "section": None,
-                    "page": None,
-                    "token_estimate": self.estimate_tokens(normalised),
-                    "citation_label": self.build_citation_label(source_title),
-                    "keywords": self.build_keywords(normalised),
-                    "metadata": {"source_type": source_type},
-                }
-            )
+            fallback = {
+                "chunk_index": 0,
+                "title": source_title,
+                "text": normalised[:CHUNK_TARGET_CHARS],
+                "section": None,
+                "page": None,
+                "token_estimate": self.estimate_tokens(normalised),
+                "citation_label": self.build_citation_label(source_title),
+                "keywords": self.build_keywords(normalised),
+                "metadata": {"source_type": source_type},
+            }
+            chunks.append(self._enrich_chunk(fallback, source_type=source_type))
         return chunks
+
+    def _enrich_chunk(self, chunk: dict[str, Any], *, source_type: str | None) -> dict[str, Any]:
+        text = _text(chunk.get("text"))
+        canonical = orb_care_synonym_service.canonical_terms_for_text(text)
+        semantic_keywords = orb_care_synonym_service.semantic_keywords_for_text(text)
+        keywords = list(chunk.get("keywords") or [])
+        for kw in semantic_keywords:
+            if kw not in keywords:
+                keywords.append(kw)
+        metadata = dict(chunk.get("metadata") or {})
+        metadata["canonical_terms"] = canonical
+        confidence = 0.7
+        if source_type in {"regulatory_framework", "safeguarding_principles"}:
+            confidence = 0.85
+        if source_type == "product_context":
+            confidence = 0.75
+
+        embedding = None
+        embedding_model = None
+        embedding_created_at = None
+        if orb_embedding_service.is_available():
+            try:
+                embed_result = orb_embedding_service.embed_text(text[:8000])
+                if embed_result.get("available") and embed_result.get("embedding"):
+                    embedding = embed_result["embedding"]
+                    embedding_model = embed_result.get("model")
+                    embedding_created_at = None
+            except Exception:
+                logger.debug("chunk embedding skipped", exc_info=True)
+
+        return {
+            **chunk,
+            "keywords": keywords[:32],
+            "semantic_keywords": semantic_keywords,
+            "canonical_terms": canonical,
+            "confidence_score": confidence,
+            "embedding": embedding,
+            "embedding_model": embedding_model,
+            "embedding_created_at": embedding_created_at,
+            "metadata": metadata,
+        }
 
     def _split_sections(self, text: str) -> list[tuple[str | None, str]]:
         lines = text.split("\n")
