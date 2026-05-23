@@ -25,6 +25,10 @@ export type AiGovernanceDashboardSummary = {
   boundary_warning_count: number
   estimated_cost_tier_summary: Record<string, number>
   average_latency_ms: number | null
+  privacy_guard_decisions?: number
+  privacy_denied_attempts?: number
+  privacy_redaction_applied?: number
+  privacy_minimisation_applied?: number
 }
 
 export type AiGovernanceEventRecord = {
@@ -53,8 +57,23 @@ export type AiGovernanceAlert = {
   surface?: string | null
 }
 
+export type AiGovernancePrivacyMetric = {
+  privacy_guard_decisions: number
+  denied_attempts: number
+  redaction_applied_count: number
+  minimisation_applied_count: number
+  standalone_os_context_blocked: number
+  raw_record_blocked: number
+  child_scoped_attempts: number
+  safeguarding_review_required: number
+  manager_review_required: number
+  export_attempts: number
+  model_send_blocked: number
+}
+
 export type AiGovernanceDashboardData = {
   summary: AiGovernanceDashboardSummary
+  privacy?: AiGovernancePrivacyMetric
   usage: {
     total_events: number
     events_by_surface: Record<string, number>

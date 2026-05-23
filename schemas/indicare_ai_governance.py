@@ -119,6 +119,22 @@ class AiGovernanceAlert(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
+class AiGovernancePrivacyMetric(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    privacy_guard_decisions: int = 0
+    denied_attempts: int = 0
+    redaction_applied_count: int = 0
+    minimisation_applied_count: int = 0
+    standalone_os_context_blocked: int = 0
+    raw_record_blocked: int = 0
+    child_scoped_attempts: int = 0
+    safeguarding_review_required: int = 0
+    manager_review_required: int = 0
+    export_attempts: int = 0
+    model_send_blocked: int = 0
+
+
 class AiGovernanceDashboardSummary(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
@@ -143,6 +159,10 @@ class AiGovernanceDashboardSummary(BaseModel):
     boundary_warning_count: int = 0
     estimated_cost_tier_summary: dict[str, int] = Field(default_factory=dict)
     average_latency_ms: float | None = None
+    privacy_guard_decisions: int = 0
+    privacy_denied_attempts: int = 0
+    privacy_redaction_applied: int = 0
+    privacy_minimisation_applied: int = 0
 
 
 class AiGovernanceHealth(BaseModel):
@@ -213,6 +233,7 @@ class AiGovernanceDashboardResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     summary: AiGovernanceDashboardSummary
+    privacy: AiGovernancePrivacyMetric = Field(default_factory=AiGovernancePrivacyMetric)
     usage: AiGovernanceUsageMetric
     quality: AiGovernanceQualityMetric
     cost: AiGovernanceCostMetric

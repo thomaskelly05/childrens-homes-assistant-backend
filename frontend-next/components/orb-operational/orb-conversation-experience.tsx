@@ -378,6 +378,23 @@ export function OrbConversationExperience({
             </article>
           ))}
           {pending ? <div className="rounded-[24px] bg-white p-4 text-sm font-black text-blue-700 ring-1 ring-blue-100">ORB is checking live records...</div> : null}
+          {latestOperational?.privacy_guard ? (
+            <div
+              className="rounded-[24px] border border-blue-100 bg-blue-50/80 p-4 text-sm font-medium text-blue-950"
+              data-testid="operational-privacy-guard-badge"
+            >
+              <span className="font-black">Privacy guard applied</span>
+              {latestOperational.privacy_guard.minimisation_applied ? (
+                <span className="ml-2 text-xs font-bold">· Summary-level context</span>
+              ) : null}
+              {latestOperational.privacy_guard.redaction_applied ? (
+                <span className="ml-2 text-xs font-bold">· Redaction applied</span>
+              ) : null}
+              {latestOperational.privacy_guard.manager_review_required ? (
+                <span className="ml-2 text-xs font-bold text-amber-800">· Manager review required</span>
+              ) : null}
+            </div>
+          ) : null}
           {warning ? <div className="rounded-[24px] bg-amber-50 p-4 text-sm font-bold text-amber-800 ring-1 ring-amber-100">{warning}</div> : null}
         </div>
 

@@ -6,6 +6,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from schemas.ai_privacy import OrbOperationalPrivacyGuardSummary
 from schemas.orb_intelligence_output import OrbIntelligenceBoundary, OrbIntelligenceOutput
 from schemas.orb_operational_outputs import (
     OrbOperationalOutputSaveContext,
@@ -307,6 +308,7 @@ class OrbOperationalResponse(BaseModel):
     suggested_tags: list[str] = Field(default_factory=list)
     operational_output: OrbOperationalOutputSaveContext | None = None
     action_creation_available: bool = True
+    privacy_guard: OrbOperationalPrivacyGuardSummary | None = None
 
 
 class OrbOperationalHealth(BaseModel):
