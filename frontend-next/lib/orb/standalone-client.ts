@@ -107,21 +107,31 @@ export type StandaloneOrbSourceType =
 export type StandaloneOrbSource = {
   id?: string
   label: string
+  exact_citation?: string | null
+  citation_anchor?: string | null
   type: StandaloneOrbSourceType | string
   basis?: string
   note?: string
+  excerpt?: string | null
   live_retrieved?: boolean
   document_chunk?: boolean
   origin?: string
+  heading_path?: string[]
+  heading?: string | null
   section?: string | null
+  subsection?: string | null
   page?: string | null
+  paragraph_number?: string | null
   source_id?: string
   chunk_index?: number
   official_source?: boolean
+  source_integrity?: string | null
+  source_url?: string | null
   confidence_level?: string
   governance_status?: string
   source_version?: string
   warning?: string | null
+  quote_allowed?: boolean
   retrieval_strategy?: string
   semantic_score?: number | null
   hybrid_score?: number | null
@@ -335,6 +345,23 @@ export type OrbKnowledgeGovernanceStatus =
   | 'expired'
   | 'archived'
 
+export type OrbKnowledgeDocumentFamily =
+  | 'ofsted'
+  | 'dfe'
+  | 'legislation'
+  | 'safeguarding'
+  | 'provider_policy'
+  | 'indicare_product'
+  | 'internal_guidance'
+  | 'other'
+
+export type OrbKnowledgeSourceIntegrity =
+  | 'summary_only'
+  | 'full_document'
+  | 'excerpt_only'
+  | 'user_pasted'
+  | 'unknown'
+
 export type OrbKnowledgeSource = {
   id: string
   title: string
@@ -349,13 +376,33 @@ export type OrbKnowledgeSource = {
   care_record_access?: boolean
   live_retrieved?: boolean
   source_version?: string | null
+  document_version_label?: string | null
   official_source?: boolean
   publisher?: string | null
+  document_family?: OrbKnowledgeDocumentFamily | string | null
+  source_url?: string | null
   confidence_level?: OrbKnowledgeConfidenceLevel
   governance_status?: OrbKnowledgeGovernanceStatus
+  source_integrity?: OrbKnowledgeSourceIntegrity | string | null
   review_due_at?: string | null
   expires_at?: string | null
   notes?: string | null
+}
+
+export type OrbKnowledgeCitationHealth = {
+  source_id: string
+  chunk_count: number
+  chunks_with_section: number
+  chunks_with_page: number
+  chunks_with_heading: number
+  chunks_with_anchor: number
+  chunks_with_exact_excerpt: number
+  summary_only: boolean
+  governance_status?: string | null
+  official_source: boolean
+  source_integrity?: string | null
+  warnings: string[]
+  health_status: string
 }
 
 export type OrbKnowledgeSearchResult = {
@@ -363,8 +410,15 @@ export type OrbKnowledgeSearchResult = {
   source_title: string
   source_type: OrbKnowledgeSourceType
   citation_label: string
+  exact_citation?: string | null
+  citation_anchor?: string | null
+  heading_path?: string[]
+  heading?: string | null
   section?: string | null
+  subsection?: string | null
   page?: string | null
+  paragraph_number?: string | null
+  excerpt?: string | null
   chunk_index: number
   text: string
   score: number
@@ -374,9 +428,13 @@ export type OrbKnowledgeSearchResult = {
   semantic_score?: number | null
   hybrid_score?: number | null
   official_source?: boolean
+  source_integrity?: string | null
+  source_url?: string | null
+  source_version?: string | null
   source_confidence?: OrbKnowledgeConfidenceLevel
   governance_status?: OrbKnowledgeGovernanceStatus
   warning?: string | null
+  quote_allowed?: boolean
 }
 
 export type OrbKnowledgeLibrarySummary = {
@@ -434,6 +492,80 @@ export async function searchOrbKnowledge(query: string, limit = 8) {
     body: JSON.stringify({ query, limit })
   })
   return unwrapKnowledgeData<{ query: string; results: OrbKnowledgeSearchResult[]; total: number }>(payload)
+}
+
+export async function fetchOrbOfficialSources() {
+  const payload = await authFetch('/orb/standalone/knowledge/official-sources')
+  return unwrapKnowledgeData<OrbKnowledgeSource[]>(payload)
+}
+
+export async function fetchOrbSourcesNeedingReview() {
+  const payload = await authFetch('/orb/standalone/knowledge/sources/needing-review')
+  return unwrapKnowledgeData<OrbKnowledgeSource[]>(payload)
+}
+
+export async function fetchOrbSourceCitationHealth(sourceId: string) {
+  const payload = await authFetch(`/orb/standalone/knowledge/sources/${encodeURIComponent(sourceId)}/citation-health`)
+  return unwrapKnowledgeData<OrbKnowledgeCitationHealth>(payload)
+}
+
+export async function approveOrbKnowledgeSource(sourceId: string) {
+  const payload = await authFetch(
+    `/orb/standalone/knowledge/sources/${encodeURIComponent(sourceId)}/approve`,
+    { method: 'POST' }
+  )
+  return unwrapKnowledgeData<OrbKnowledgeSource>(payload)
+}
+
+export async function markOrbKnowledgeNeedsReview(sourceId: string, reason?: string) {
+  const params = reason ? `?reason=${encodeURIComponent(reason)}` : ''
+  const payload = await authFetch(
+    `/orb/standalone/knowledge/sources/${encodeURIComponent(sourceId)}/needs-review${params}`,
+    { method: 'POST' }
+  )
+  return unwrapKnowledgeData<OrbKnowledgeSource>(payload)
+}
+
+export async function archiveOrbKnowledgeSource(sourceId: string) {
+  const payload = await authFetch(
+    `/orb/standalone/knowledge/sources/${encodeURIComponent(sourceId)}/archive`,
+    { method: 'POST' }
+  )
+  return unwrapKnowledgeData<OrbKnowledgeSource>(payload)
+}
+
+export async function rebuildOrbKnowledgeCitations(sourceId: string) {
+  const payload = await authFetch(
+    `/orb/standalone/knowledge/sources/${encodeURIComponent(sourceId)}/rebuild-citations`,
+    { method: 'POST' }
+  )
+  return unwrapKnowledgeData<{ rebuilt: number; citation_health: OrbKnowledgeCitationHealth }>(payload)
+}
+
+export async function importOrbOfficialSource(body: {
+  title: string
+  text: string
+  family_key?: string
+  document_family?: OrbKnowledgeDocumentFamily | string
+  source_type?: OrbKnowledgeSourceType
+  publisher?: string
+  source_url?: string
+  document_version_label?: string
+  source_version?: string
+  review_due_at?: string
+  source_integrity?: OrbKnowledgeSourceIntegrity
+  approve_now?: boolean
+}) {
+  const payload = await authFetch('/orb/standalone/knowledge/import-official', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  })
+  return unwrapKnowledgeData<{
+    source: OrbKnowledgeSource
+    chunk_count: number
+    citation_health: OrbKnowledgeCitationHealth
+  }>(payload)
 }
 
 export type OrbDocumentAnalysisMode =

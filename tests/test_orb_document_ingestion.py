@@ -48,6 +48,41 @@ def test_chunk_text_creates_citation_labels():
     assert all(c.get("citation_label") for c in chunks)
 
 
+def test_heading_extraction_and_citation_anchors():
+    chunks = orb_document_ingestion_service.chunk_text(
+        "# Recording Quality Guidance\n\n## Child voice\n\nInclude views and wishes.\n\n## Child-centred language\n\nBe factual.",
+        source_title="Recording Quality Guidance",
+        source_type="recording_quality",
+        source_id="test-src-1",
+    )
+    assert chunks
+    paths = [c.get("heading_path") or [] for c in chunks]
+    sections = [c.get("section") for c in chunks]
+    assert any("Child voice" in p for p in paths) or "Child voice" in sections or any(
+        "Child voice" in (c.get("citation_label") or "") for c in chunks
+    )
+    voice_chunk = next(
+        (c for c in chunks if "Child voice" in (c.get("heading_path") or []) or c.get("section") == "Child voice"),
+        chunks[0],
+    )
+    assert voice_chunk.get("citation_anchor")
+    assert voice_chunk.get("paragraph_number")
+    assert voice_chunk.get("exact_excerpt") is None or voice_chunk.get("text")
+
+
+def test_ingest_official_source_family_detection():
+    result = orb_document_ingestion_service.ingest_official_source(
+        {
+            "title": "SCCIF excerpt",
+            "text": "Social Care Common Inspection Framework for children's homes.",
+            "family_key": "sccif_childrens_homes",
+            "approve_now": True,
+        }
+    )
+    assert result["chunk_count"] >= 1
+    assert result["source"].get("official_source") is True
+
+
 def test_unsupported_file_type_error():
     text, method = orb_document_ingestion_service.extract_text_from_file(
         "image.png",
