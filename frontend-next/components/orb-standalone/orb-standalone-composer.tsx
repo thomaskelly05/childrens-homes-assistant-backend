@@ -1,7 +1,7 @@
 'use client'
 
 import { FormEvent, useRef, type DragEvent } from 'react'
-import { FileText, ImagePlus, Mic, MicOff, Send, Square, X } from 'lucide-react'
+import { Camera, FileText, ImagePlus, Mic, MicOff, Send, Square, X } from 'lucide-react'
 
 import type { StandaloneOrbMode } from '@/lib/orb/standalone-client'
 
@@ -82,6 +82,7 @@ export function OrbStandaloneComposer({
   onAddDocumentToLibrary?: () => void
 }) {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const cameraInputRef = useRef<HTMLInputElement | null>(null)
 
   function handleDragOver(event: DragEvent) {
     event.preventDefault()
@@ -179,8 +180,19 @@ export function OrbStandaloneComposer({
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/png,image/jpeg,image/webp,image/gif"
+                accept="image/png,image/jpeg,image/webp,image/gif,image/*"
                 multiple
+                className="hidden"
+                onChange={(event) => {
+                  if (event.target.files?.length) onAddFiles(event.target.files)
+                  event.target.value = ''
+                }}
+              />
+              <input
+                ref={cameraInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
                 className="hidden"
                 onChange={(event) => {
                   if (event.target.files?.length) onAddFiles(event.target.files)
@@ -194,6 +206,14 @@ export function OrbStandaloneComposer({
                 aria-label="Upload image"
               >
                 <ImagePlus className="h-5 w-5" aria-hidden />
+              </button>
+              <button
+                type="button"
+                onClick={() => cameraInputRef.current?.click()}
+                className="inline-flex h-11 min-w-11 shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-white/[0.06] hover:text-slate-200 md:hidden"
+                aria-label="Use camera"
+              >
+                <Camera className="h-5 w-5" aria-hidden />
               </button>
               {onAttachDocumentClick ? (
                 <button

@@ -17,7 +17,10 @@ export const STANDALONE_ORB_API_PATHS = {
   agentsDeepResearch: '/orb/standalone/agents/deep-research',
   outputsHealth: '/orb/standalone/outputs/health',
   outputs: '/orb/standalone/outputs',
-  outputsSummary: '/orb/standalone/outputs/summary'
+  outputsSummary: '/orb/standalone/outputs/summary',
+  capabilities: '/orb/standalone/capabilities',
+  capabilitiesSummary: '/orb/standalone/capabilities/summary',
+  surfaceRoute: '/orb/standalone/surface-route'
 } as const
 
 export const STANDALONE_ORB_MODES = [
@@ -854,6 +857,65 @@ export async function reuseOrbSavedOutput(outputId: string, instruction?: string
 
 export const STANDALONE_ARTEFACT_NOTICE =
   'Saved outputs are standalone ORB artefacts. They are not added to IndiCare OS records.'
+
+export type StandaloneOrbCapability = {
+  id: string
+  title: string
+  description: string
+  category: string
+  status: 'built' | 'partial' | 'planned' | 'blocked'
+  surface: string
+  routes?: string[]
+  safety_notes?: string[]
+}
+
+export type StandaloneOrbSurfaceRoute = {
+  recommended_surface: string
+  reason: string
+  allowed_in_standalone: boolean
+  requires_os_context: boolean
+  safety_notice?: string | null
+  suggested_route?: string | null
+  standalone_boundary_message?: string | null
+}
+
+export async function fetchStandaloneOrbCapabilities(signal?: AbortSignal) {
+  const payload = await authFetch<{ success?: boolean; data?: { capabilities: StandaloneOrbCapability[] } }>(
+    STANDALONE_ORB_API_PATHS.capabilities,
+    { signal: withTimeout(signal) }
+  )
+  return payload?.data?.capabilities ?? []
+}
+
+export async function fetchStandaloneOrbCapabilitiesSummary(signal?: AbortSignal) {
+  const payload = await authFetch<{ success?: boolean; data?: Record<string, unknown> }>(
+    STANDALONE_ORB_API_PATHS.capabilitiesSummary,
+    { signal: withTimeout(signal) }
+  )
+  return payload?.data ?? {}
+}
+
+export async function fetchStandaloneOrbSurfaceRoute(
+  intent: string,
+  options?: { mode?: string; hasDocumentUpload?: boolean },
+  signal?: AbortSignal
+) {
+  const payload = await authFetch<{ success?: boolean; data?: StandaloneOrbSurfaceRoute }>(
+    STANDALONE_ORB_API_PATHS.surfaceRoute,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        intent,
+        mode: options?.mode,
+        has_document_upload: options?.hasDocumentUpload ?? false
+      }),
+      signal: withTimeout(signal)
+    }
+  )
+  if (!payload?.data) throw new AuthApiError(503, 'Could not route intent.')
+  return payload.data
+}
 
 export function standaloneOrbErrorMessage(error: unknown) {
   if (error instanceof AuthApiError) {

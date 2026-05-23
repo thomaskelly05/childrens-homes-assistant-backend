@@ -1058,3 +1058,49 @@ textarea:focus-visible {
     animation: none !important;
   }
 }
+
+/* Standalone ORB accessibility classes (localStorage-driven) */
+.orb-chat-layout.orb-dyslexia-mode {
+  letter-spacing: 0.04em;
+  word-spacing: 0.12em;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
+
+.orb-chat-layout.orb-large-text {
+  font-size: 1.125rem;
+}
+
+.orb-chat-layout.orb-large-text .text-xs {
+  font-size: 0.875rem;
+}
+
+.orb-chat-layout.orb-high-contrast {
+  filter: contrast(1.12);
+}
+
+.orb-chat-layout.orb-low-sensory {
+  --orb-glow-intensity: 0.35;
+}
+
+.orb-chat-layout.orb-low-sensory .orb-cinematic-light-field {
+  opacity: 0.15 !important;
+}
+
+.orb-chat-layout.orb-reduced-motion .orb-cinematic-light-field,
+.orb-chat-layout.orb-reduced-motion [data-standalone-orb-state] {
+  animation: none !important;
+}
+
+.orb-chat-layout.orb-simplified-reading .orb-message-user,
+.orb-chat-layout.orb-simplified-reading article {
+  max-width: 42rem;
+  line-height: 1.75;
+}
+
+.orb-chat-layout.orb-compact-mode .orb-chat-composer {
+  padding-top: 0.5rem;
+}
+
+.orb-chat-layout.orb-compact-mode .orb-mode-chips {
+  display: none;
+}
