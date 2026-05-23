@@ -14,6 +14,8 @@ OPERATIONAL_ENTRY_FILES = [
     FRONTEND / "components" / "indicare" / "operational" / "operational-quick-actions.tsx",
     FRONTEND / "components" / "indicare" / "command-search.tsx",
     FRONTEND / "components" / "command-centre" / "care-hub-routes.ts",
+    FRONTEND / "lib" / "child-journey" / "child-journey-routes.ts",
+    FRONTEND / "components" / "child-journey" / "child-journey-orb-rail.tsx",
 ]
 
 RECORD_HUB = FRONTEND / "lib" / "record" / "recording-hub.ts"
