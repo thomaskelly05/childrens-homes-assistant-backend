@@ -135,6 +135,9 @@ class OrbStandaloneConversationRequest(BaseModel):
     history: list[dict[str, Any]] = Field(default_factory=list)
     detail: str | None = Field(default=None, max_length=40)
     images: list[OrbStandaloneImageAttachment] = Field(default_factory=list)
+    document_text: str | None = Field(default=None, max_length=500_000)
+    document_source_id: str | None = Field(default=None, max_length=120)
+    document_title: str | None = Field(default=None, max_length=500)
 
 
 def _standalone_contract() -> dict[str, Any]:
@@ -163,6 +166,10 @@ def _standalone_contract() -> dict[str, Any]:
             "knowledge_search": "/orb/standalone/knowledge/search",
             "knowledge_summary": "/orb/standalone/knowledge/summary",
             "model_router_health": "/orb/standalone/model-router/health",
+            "documents_health": "/orb/standalone/documents/health",
+            "documents_upload": "/orb/standalone/documents/upload",
+            "documents_analyse": "/orb/standalone/documents/analyse",
+            "evaluation_health": "/orb/standalone/evaluation/health",
             "agents_health": "/orb/standalone/agents/health",
             "agents_list": "/orb/standalone/agents",
             "agents_run": "/orb/standalone/agents/run",
@@ -327,6 +334,9 @@ async def standalone_orb_conversation(
             image_data_urls=image_urls[:4],
             mode=mode,
             profile_context=profile_context,
+            document_text=payload.document_text,
+            document_source_id=payload.document_source_id,
+            document_title=payload.document_title,
             raw_user_message=payload.message,
         )
         elapsed_ms = int((time.perf_counter() - started) * 1000)

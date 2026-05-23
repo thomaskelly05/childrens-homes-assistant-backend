@@ -37,6 +37,9 @@ REQUIRED_STANDALONE_MARKERS = [
     "/orb/standalone/conversation",
     "/orb/standalone/config",
     "/orb/standalone/model-router/health",
+    "/orb/standalone/documents/health",
+    "/orb/standalone/evaluation/health",
+    "/orb/standalone/agents/health",
     "/orb/standalone/agents",
 ]
 
@@ -266,6 +269,21 @@ KNOWLEDGE_LIBRARY_MARKERS = [
     "/orb/standalone/knowledge/search",
 ]
 
+ORB_DOCUMENT_PANEL = REPO_ROOT / "frontend-next" / "components" / "orb-standalone" / "orb-document-panel.tsx"
+
+DOCUMENT_UNDERSTANDING_MARKERS = [
+    "Documents",
+    "orb-document-panel",
+    "Analyse document",
+    "Add to Knowledge Library",
+    "orb-action-plan",
+    "Create action plan",
+    "/orb/standalone/documents/analyse",
+    "/orb/standalone/documents/upload",
+    "analyseOrbStandaloneDocument",
+    "uploadOrbStandaloneDocument",
+]
+
 OS_ORB_LINK_FILES = [
     REPO_ROOT / "frontend-next" / "components" / "indicare" / "app-shell.tsx",
     REPO_ROOT / "frontend-next" / "lib" / "navigation" / "operational-navigation.ts",
@@ -473,6 +491,18 @@ def test_standalone_orb_knowledge_library_ui():
         assert marker not in sources, f"knowledge UI must not use {marker}"
     for marker in KNOWLEDGE_LIBRARY_MARKERS:
         assert marker in sources, f"knowledge library marker missing: {marker}"
+
+
+def test_standalone_document_understanding_ui_markers():
+    companion = _read(ORB_COMPANION)
+    client = _read(STANDALONE_CLIENT)
+    panel = _read(ORB_DOCUMENT_PANEL)
+    composer = _read(ORB_COMPOSER)
+    sources = companion + client + panel + composer
+    for marker in DOCUMENT_UNDERSTANDING_MARKERS:
+        assert marker in sources, f"document understanding marker missing: {marker}"
+    assert "/api/os/" not in client
+    assert "/os/" not in client.replace("/orb/standalone", "")
 
 
 def test_standalone_orb_glow_component_exists():

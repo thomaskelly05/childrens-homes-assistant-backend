@@ -24,6 +24,21 @@ def _text(value: Any) -> str:
     return str(value or "").strip()
 
 
+DOCUMENT_INTENT_PHRASES = (
+    "analyse this document",
+    "analyze this document",
+    "summarise the uploaded document",
+    "summarize the uploaded document",
+    "create an action plan from this",
+    "action plan from this document",
+    "what does this document mean",
+    "what should we do next",
+    "compare this policy",
+    "explain this document",
+    "briefing from this document",
+)
+
+
 GENERAL_ORB_SYSTEM_PROMPT = """
 You are ORB Care Companion, IndiCare's standalone ChatGPT-class AI companion for residential children's homes and general knowledge.
 
@@ -79,6 +94,50 @@ British English. Calm, warm, concise when speaking, reflective and practical. Fo
 
 class OrbGeneralAssistantService:
     """Standalone general assistant mode with no IndiCare OS or care-record access."""
+
+    def detect_document_intent(
+        self,
+        message: str,
+        *,
+        has_document: bool = False,
+    ) -> dict[str, Any]:
+        lower = _text(message).lower()
+        matched = any(phrase in lower for phrase in DOCUMENT_INTENT_PHRASES)
+        if not matched and not (
+            has_document and any(term in lower for term in ("document", "uploaded", "policy", "report"))
+        ):
+            return {"suggested": False}
+
+        mode = "explain"
+        if "action plan" in lower or "what should we do" in lower:
+            mode = "action_plan"
+        elif "summar" in lower:
+            mode = "summarise"
+        elif "ofsted" in lower:
+            mode = "ofsted_lens"
+        elif "safeguard" in lower:
+            mode = "safeguarding_lens"
+        elif "compare" in lower and "policy" in lower:
+            mode = "policy_comparison"
+        elif "briefing" in lower:
+            mode = "manager_briefing"
+
+        reason = "User asked for document analysis"
+        if mode == "action_plan":
+            reason = "User asked for an action plan from a document"
+        if not has_document:
+            return {
+                "suggested": True,
+                "mode": mode,
+                "reason": reason,
+                "needs_document": True,
+            }
+        return {
+            "suggested": True,
+            "mode": mode,
+            "reason": reason,
+            "needs_document": False,
+        }
 
     def prepare_retrieval(
         self,
@@ -155,12 +214,45 @@ class OrbGeneralAssistantService:
         image_data_urls: list[str] | None = None,
         mode: str | None = None,
         profile_context: bool = False,
+        document_text: str | None = None,
+        document_source_id: str | None = None,
+        document_title: str | None = None,
         raw_user_message: str | None = None,
     ) -> dict[str, Any]:
         started = time.perf_counter()
         images = image_data_urls or []
         user_message = _text(raw_user_message) or message
         profile_block = "standalone context profiles" in message.lower() or profile_context
+
+        has_document = bool(_text(document_text) or document_source_id)
+        doc_intent = self.detect_document_intent(user_message, has_document=has_document)
+        if doc_intent.get("suggested") and doc_intent.get("needs_document"):
+            return {
+                "answer": (
+                    "I can analyse that document for you — please upload or paste the document "
+                    "in the Documents panel, or attach it here, then ask again. "
+                    "I can explain it, summarise it, create an action plan, or compare it to Knowledge Library guidance."
+                ),
+                "sources": build_standalone_sources(user_message, mode=mode),
+                "citations": [],
+                "context_used": {
+                    "surface": "standalone_orb_ai",
+                    "os_linked": False,
+                    "care_record_access": False,
+                    "document_analysis": doc_intent,
+                },
+                "tools_used": ["document_analysis_prompt"],
+                "internal_data_access": False,
+            }
+        if doc_intent.get("suggested") and has_document:
+            return await self._answer_with_document_analysis(
+                user_message,
+                doc_intent=doc_intent,
+                document_text=document_text,
+                document_source_id=document_source_id,
+                document_title=document_title,
+                mode=mode,
+            )
 
         if not images:
             agent_result = await maybe_run_agent_for_conversation(
@@ -255,11 +347,73 @@ class OrbGeneralAssistantService:
             "internal_data_access": False,
         }
 
+    async def _answer_with_document_analysis(
+        self,
+        message: str,
+        *,
+        doc_intent: dict[str, Any],
+        document_text: str | None,
+        document_source_id: str | None,
+        document_title: str | None,
+        mode: str | None,
+    ) -> dict[str, Any]:
+        from schemas.orb_documents import OrbDocumentAnalysisRequest
+        from services.orb_document_understanding_service import orb_document_understanding_service
+
+        analysis_mode = doc_intent.get("mode") or "explain"
+        request = OrbDocumentAnalysisRequest(
+            mode=analysis_mode,  # type: ignore[arg-type]
+            source_id=document_source_id,
+            text=document_text,
+            title=document_title,
+            question=message,
+        )
+        understanding = await orb_document_understanding_service.analyse_document(request)
+        lines = [
+            understanding.plain_english_summary,
+            "",
+            "**Key themes:** " + ", ".join(understanding.key_themes[:6])
+            if understanding.key_themes
+            else "",
+        ]
+        if understanding.action_plan and understanding.action_plan.actions:
+            lines.append("\n**Draft actions:**")
+            for action in understanding.action_plan.actions[:6]:
+                lines.append(
+                    f"- [{action.priority}] {action.action} ({action.suggested_owner_label or 'team'})"
+                )
+        if understanding.safety_notice:
+            lines.append(f"\n**Safety:** {understanding.safety_notice}")
+        answer = append_sources_basis_section(
+            "\n".join(line for line in lines if line).strip(),
+            understanding.sources,
+        )
+        ctx = {
+            "surface": "standalone_orb_ai",
+            "os_linked": False,
+            "care_record_access": False,
+            "document_analysis": {
+                **doc_intent,
+                "completed": True,
+                "source_id": document_source_id,
+            },
+            "agent": "document_analysis",
+        }
+        return {
+            "answer": answer,
+            "sources": understanding.sources,
+            "citations": understanding.citations,
+            "context_used": ctx,
+            "tools_used": ["document_analysis_agent", "standalone_orb_general_assistant"],
+            "internal_data_access": False,
+        }
+
     def _retrieval_context_used(
         self,
         retrieval: dict[str, Any],
         *,
         model_routing: dict[str, Any] | None = None,
+        document_analysis: dict[str, Any] | None = None,
         user_message: str | None = None,
         mode: str | None = None,
     ) -> dict[str, Any]:
@@ -292,6 +446,8 @@ class OrbGeneralAssistantService:
         }
         if model_routing:
             context["model_routing"] = model_routing
+        if document_analysis:
+            context["document_analysis"] = document_analysis
         if user_message:
             agent_hint = detect_agent_intent(user_message, mode=mode)
             if agent_hint and "agent" not in context:

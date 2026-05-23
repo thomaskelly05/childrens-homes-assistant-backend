@@ -2,6 +2,21 @@ import { authFetch, AuthApiError } from '@/lib/auth/api'
 
 const STANDALONE_REQUEST_TIMEOUT_MS = 45_000
 
+/** Standalone-only API paths (no OS / Care Hub). */
+export const STANDALONE_ORB_API_PATHS = {
+  conversation: '/orb/standalone/conversation',
+  config: '/orb/standalone/config',
+  modelRouterHealth: '/orb/standalone/model-router/health',
+  documentsHealth: '/orb/standalone/documents/health',
+  documentsUpload: '/orb/standalone/documents/upload',
+  documentsAnalyse: '/orb/standalone/documents/analyse',
+  evaluationHealth: '/orb/standalone/evaluation/health',
+  agentsHealth: '/orb/standalone/agents/health',
+  agentsList: '/orb/standalone/agents',
+  agentsRun: '/orb/standalone/agents/run',
+  agentsDeepResearch: '/orb/standalone/agents/deep-research'
+} as const
+
 export const STANDALONE_ORB_MODES = [
   'Ask ORB',
   'Safeguarding',
@@ -67,6 +82,9 @@ export type StandaloneOrbConversationRequest = {
   history?: Array<{ role: string; content: string }>
   detail?: StandaloneOrbAnswerDetail | string
   images?: StandaloneOrbImageAttachment[]
+  document_text?: string
+  document_source_id?: string
+  document_title?: string
 }
 
 export type StandaloneOrbSourceType =
@@ -151,6 +169,13 @@ export type StandaloneOrbConversationResponse = {
     care_record_access?: boolean
     retrieval?: StandaloneOrbRetrievalContext
     model_routing?: StandaloneOrbModelRouting
+    document_analysis?: {
+      suggested?: boolean
+      mode?: string
+      reason?: string
+      needs_document?: boolean
+      completed?: boolean
+    }
     agent?: StandaloneOrbAgentSuggestion
   }
   guardrails?: string[]
@@ -223,7 +248,10 @@ export async function queryStandaloneOrbConversation(
           conversation_id: request.conversation_id,
           history: request.history ?? [],
           ...(request.detail ? { detail: request.detail } : {}),
-          ...(request.images?.length ? { images: request.images } : {})
+          ...(request.images?.length ? { images: request.images } : {}),
+          ...(request.document_text ? { document_text: request.document_text } : {}),
+          ...(request.document_source_id ? { document_source_id: request.document_source_id } : {}),
+          ...(request.document_title ? { document_title: request.document_title } : {})
         })
       }
     )
@@ -400,6 +428,103 @@ export async function searchOrbKnowledge(query: string, limit = 8) {
     body: JSON.stringify({ query, limit })
   })
   return unwrapKnowledgeData<{ query: string; results: OrbKnowledgeSearchResult[]; total: number }>(payload)
+}
+
+export type OrbDocumentAnalysisMode =
+  | 'explain'
+  | 'summarise'
+  | 'action_plan'
+  | 'ofsted_lens'
+  | 'safeguarding_lens'
+  | 'recording_lens'
+  | 'therapeutic_lens'
+  | 'policy_comparison'
+  | 'manager_briefing'
+  | 'staff_briefing'
+  | 'full_review'
+
+export const ORB_DOCUMENT_ANALYSIS_MODES: { value: OrbDocumentAnalysisMode; label: string }[] = [
+  { value: 'explain', label: 'Explain' },
+  { value: 'summarise', label: 'Summarise' },
+  { value: 'action_plan', label: 'Action plan' },
+  { value: 'ofsted_lens', label: 'Ofsted lens' },
+  { value: 'safeguarding_lens', label: 'Safeguarding lens' },
+  { value: 'recording_lens', label: 'Recording lens' },
+  { value: 'therapeutic_lens', label: 'Therapeutic lens' },
+  { value: 'policy_comparison', label: 'Policy comparison' },
+  { value: 'manager_briefing', label: 'Manager briefing' },
+  { value: 'staff_briefing', label: 'Staff briefing' },
+  { value: 'full_review', label: 'Full review' }
+]
+
+export type OrbDocumentAction = {
+  action: string
+  why_it_matters?: string | null
+  priority?: 'low' | 'medium' | 'high' | 'urgent'
+  suggested_owner_label?: string | null
+  timescale?: string | null
+  source_basis?: string | null
+  review_needed?: boolean
+}
+
+export type OrbDocumentUnderstanding = {
+  title: string
+  plain_english_summary: string
+  document_type?: string | null
+  key_themes?: string[]
+  important_points?: Array<{ point: string; detail?: string | null }>
+  practice_implications?: Array<{ implication: string; for_role?: string | null }>
+  risks_or_concerns?: Array<{ risk: string; severity?: string | null }>
+  gaps_or_missing_information?: Array<{ gap: string; why_it_matters?: string | null }>
+  suggested_questions?: Array<{ question: string }>
+  action_plan?: { summary?: string | null; actions?: OrbDocumentAction[]; review_note?: string | null }
+  citations?: StandaloneOrbSource[]
+  sources?: StandaloneOrbSource[]
+  safety_notice?: string | null
+  limitations?: string[]
+  evaluation?: Record<string, unknown>
+  source_id?: string | null
+  analysis_mode?: OrbDocumentAnalysisMode
+  standalone_only?: boolean
+  os_linked?: boolean
+  care_record_access?: boolean
+}
+
+export async function uploadOrbStandaloneDocument(body: {
+  title: string
+  text?: string
+  content_base64?: string
+  file_name?: string
+  content_type?: string
+  source_type?: string
+}) {
+  const payload = await authFetch('/orb/standalone/documents/upload', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  })
+  return unwrapKnowledgeData<{
+    source_id: string
+    title: string
+    chunk_count: number
+    source_type?: string
+    status: string
+  }>(payload)
+}
+
+export async function analyseOrbStandaloneDocument(body: {
+  mode: OrbDocumentAnalysisMode
+  source_id?: string
+  title?: string
+  text?: string
+  question?: string
+}) {
+  const payload = await authFetch('/orb/standalone/documents/analyse', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...body, include_evaluation: true })
+  })
+  return unwrapKnowledgeData<{ understanding: OrbDocumentUnderstanding }>(payload)
 }
 
 export type OrbAgentType =

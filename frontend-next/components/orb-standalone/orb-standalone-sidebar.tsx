@@ -5,6 +5,7 @@ import {
   Archive,
   Bot,
   BookOpen,
+  FileText,
   ChevronDown,
   ChevronUp,
   FolderPlus,
@@ -45,6 +46,7 @@ export function OrbStandaloneSidebar({
   onWorkspaceChange,
   onOpenSettings,
   onOpenKnowledgeLibrary,
+  onOpenDocuments,
   onOpenAgents,
   onClose
 }: {
@@ -61,6 +63,7 @@ export function OrbStandaloneSidebar({
   onWorkspaceChange: (next: StandaloneWorkspace) => void
   onOpenSettings?: () => void
   onOpenKnowledgeLibrary?: () => void
+  onOpenDocuments?: () => void
   onOpenAgents?: () => void
   onClose?: () => void
 }) {
@@ -385,6 +388,14 @@ export function OrbStandaloneSidebar({
       </div>
 
       <div className="shrink-0 space-y-2 border-t border-white/[0.06] p-3">
+        <button
+          type="button"
+          onClick={onOpenDocuments}
+          className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-slate-400 transition hover:bg-white/[0.04] hover:text-slate-200"
+        >
+          <FileText className="h-4 w-4" aria-hidden />
+          Documents
+        </button>
         <button
           type="button"
           onClick={onOpenAgents}
