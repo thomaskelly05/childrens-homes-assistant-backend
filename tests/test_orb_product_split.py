@@ -319,8 +319,13 @@ OS_ORB_LINK_FILES = [
     REPO_ROOT / "frontend-next" / "components" / "indicare" / "app-shell.tsx",
     REPO_ROOT / "frontend-next" / "lib" / "navigation" / "operational-navigation.ts",
     REPO_ROOT / "frontend-next" / "components" / "indicare" / "operational" / "contextual-orb-panel.tsx",
+    REPO_ROOT / "frontend-next" / "components" / "indicare" / "operational" / "orb-companion-panel.tsx",
     REPO_ROOT / "frontend-next" / "components" / "indicare" / "operational" / "operational-quick-actions.tsx",
     REPO_ROOT / "frontend-next" / "components" / "command-centre" / "care-hub-routes.ts",
+    REPO_ROOT / "frontend-next" / "components" / "command-centre" / "care-hub-attention-strip.tsx",
+    REPO_ROOT / "frontend-next" / "components" / "command-centre" / "care-hub-recording-section.tsx",
+    REPO_ROOT / "frontend-next" / "components" / "command-centre" / "care-hub-start-hero.tsx",
+    REPO_ROOT / "frontend-next" / "components" / "command-centre" / "intelligence-actions-card.tsx",
 ]
 
 RECORD_HUB = REPO_ROOT / "frontend-next" / "lib" / "record" / "recording-hub.ts"

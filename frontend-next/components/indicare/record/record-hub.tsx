@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Mic2, Sparkles } from 'lucide-react'
 
+import { OrbInlineHint } from '@/components/indicare/operational/orb-inline-hint'
 import { Card, PageHeader, SectionHeader } from '@/components/indicare/ui'
 import { RecordChildPicker, mapYoungPeopleToPickerOptions, type RecordChildPickerOption } from '@/components/indicare/record/record-child-picker'
 import { useActiveChild } from '@/lib/context/active-child-context'
@@ -22,8 +23,10 @@ import {
   recordCardDeemphasised,
   recordCardHref,
   recordCardNeedsChild,
+  recordCardOperationalOrbHref,
   recordCardOrbHref,
   recordHubQueryString,
+  recordOperationalOrbPromptHref,
   recordOrbPromptHref,
   recordOrbPromptsForContext,
   recordRecommendedForContext,
@@ -140,6 +143,7 @@ function RecordCard({
   const deemphasised = recordCardDeemphasised(card, about)
   const href = needsChild ? undefined : recordCardHref(card, childId)
   const orbHref = recordCardOrbHref(card, childId)
+  const operationalOrbHref = recordCardOperationalOrbHref(card)
 
   return (
     <article
@@ -189,16 +193,28 @@ function RecordCard({
           </Link>
         )}
         {card.id !== 'ask-orb' ? (
-          <Link
-            href={orbHref}
-            className="inline-flex min-h-11 items-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-black text-slate-700 transition hover:border-blue-100 hover:text-blue-700"
-            aria-label={`Ask ORB about ${card.title}`}
-          >
-            <Mic2 className="h-3.5 w-3.5 text-blue-600" aria-hidden />
-            Ask ORB about this
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href={operationalOrbHref}
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-2.5 text-xs font-black text-blue-800 transition hover:bg-blue-100"
+              aria-label={`Ask operational ORB about ${card.title}`}
+            >
+              <Mic2 className="h-3.5 w-3.5 text-blue-600" aria-hidden />
+              Ask ORB before recording
+            </Link>
+          </div>
         ) : null}
       </div>
+      {card.id !== 'ask-orb' ? (
+        <div className="mt-3 flex flex-wrap gap-2">
+          <OrbInlineHint
+            label="ORB can help draft child-centred wording"
+            href={orbHref}
+            tone="muted"
+          />
+          <OrbInlineHint label="Check recording quality" href={operationalOrbHref} tone="cyan" />
+        </div>
+      ) : null}
     </article>
   )
 }
@@ -350,6 +366,33 @@ export function RecordHub({
         }
       />
 
+      <section
+        data-testid="record-orb-recording-support"
+        className="rounded-[24px] border border-cyan-100 bg-gradient-to-r from-cyan-50/90 via-white to-blue-50/80 p-4 shadow-sm ring-1 ring-cyan-100/60"
+      >
+        <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-800">ORB recording support</p>
+        <p className="mt-1 max-w-2xl text-sm font-semibold leading-6 text-slate-700">
+          Connected to Care Hub and operational ORB. ORB can help with wording and recording quality — it does not replace safeguarding or manager decisions.
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Link
+            href={recordOperationalOrbPromptHref('Help me choose the right record type and check quality before I save.')}
+            className="inline-flex min-h-10 items-center rounded-2xl bg-slate-950 px-4 py-2.5 text-xs font-black text-white"
+          >
+            Open operational ORB
+          </Link>
+          <Link
+            href={recordOrbPromptHref('Help me with calm, child-centred wording for this record.', childId)}
+            className="inline-flex min-h-10 items-center rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-black text-slate-700"
+          >
+            ORB wording help (standalone)
+          </Link>
+          <Link href="/command-centre" className="inline-flex min-h-10 items-center rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-black text-slate-600">
+            Back to Care Hub
+          </Link>
+        </div>
+      </section>
+
       <RecordAboutSelector value={about} onChange={handleAboutChange} />
 
       {showChildPicker ? (
@@ -394,7 +437,7 @@ export function RecordHub({
         </div>
       </Card>
 
-      <Card className="bg-slate-950 text-white ring-slate-800">
+      <Card className="bg-slate-950 text-white ring-slate-800" data-testid="record-orb-prompts-panel">
         <p className="text-[11px] font-black uppercase tracking-[0.24em] text-blue-300">Not sure what to record?</p>
         <h2 className="mt-2 text-2xl font-black tracking-[-0.04em] text-white">ORB recording help</h2>
         <p className="mt-2 text-sm font-semibold leading-6 text-slate-300">
@@ -412,13 +455,21 @@ export function RecordHub({
             </Link>
           ))}
         </div>
-        <Link
-          href={recordOrbPromptHref('Help me choose the right record type for what I need to document.', childId)}
-          className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl bg-cyan-200 px-4 py-3 text-sm font-black text-slate-950"
-        >
-          <Sparkles className="h-4 w-4" aria-hidden />
-          Open ORB
-        </Link>
+        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+          <Link
+            href={recordOperationalOrbPromptHref('Help me choose the right record type for what I need to document.')}
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-cyan-200 px-4 py-3 text-sm font-black text-slate-950"
+          >
+            <Sparkles className="h-4 w-4" aria-hidden />
+            Open operational ORB
+          </Link>
+          <Link
+            href={recordOrbPromptHref('Help me choose the right record type for what I need to document.', childId)}
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-sm font-black text-white"
+          >
+            Standalone wording help
+          </Link>
+        </div>
       </Card>
 
       {about === 'home-shift' ? (

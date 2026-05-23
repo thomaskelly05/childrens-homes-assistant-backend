@@ -469,10 +469,21 @@ export function recordCardOrbHref(card: RecordCardDefinition, _childId?: string)
   return `${base}&q=${q}`
 }
 
+/** Operational OS ORB for record-quality review — never passes child identifiers in the URL. */
+export function recordCardOperationalOrbHref(card: RecordCardDefinition) {
+  const q = encodeURIComponent(card.orbQuery)
+  return `/assistant/orb?mode=record_quality_review&context=recording&q=${q}`
+}
+
 export function recordOrbPromptHref(query: string, _childId?: string) {
   const base = '/orb?context=recording'
   const q = encodeURIComponent(query)
   return `${base}&q=${q}`
+}
+
+export function recordOperationalOrbPromptHref(query: string) {
+  const q = encodeURIComponent(query)
+  return `/assistant/orb?mode=record_quality_review&context=recording&q=${q}`
 }
 
 export function cardsForSection(sectionId: RecordCardSectionId) {

@@ -1,18 +1,20 @@
 import Link from 'next/link'
 
+import { CareHubAttentionStrip } from '@/components/command-centre/care-hub-attention-strip'
 import { CareHubMetricCard } from '@/components/command-centre/care-hub-metric-card'
+import { CareHubRecordingSection } from '@/components/command-centre/care-hub-recording-section'
 import { CareHubStartHero } from '@/components/command-centre/care-hub-start-hero'
 import { IntelligenceActionsCard } from '@/components/command-centre/intelligence-actions-card'
 import { CareHubIntelligenceWidgets } from '@/components/indicare/care-hub/care-hub-widgets'
 import { CareHubLiveStreamBar } from '@/components/indicare/care-hub/care-hub-live-stream'
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
-import { OperationalQuickActions } from '@/components/indicare/operational/operational-quick-actions'
+import { OrbCompanionPanel } from '@/components/indicare/operational/orb-companion-panel'
+import { OrbInlineHint } from '@/components/indicare/operational/orb-inline-hint'
 import { Card, StatusBadge } from '@/components/indicare/ui'
+import { osDesign } from '@/components/indicare/os-design-tokens'
 import {
   CARE_HUB_HOME_METRICS,
-  CARE_HUB_ORB_PROMPTS,
   homeMetricDetail,
-  orbPromptHref,
   signalDisplayDetail,
   signalHref
 } from '@/components/command-centre/care-hub-routes'
@@ -95,7 +97,10 @@ export default async function UnifiedCommandCentrePage() {
   const medicationAttention = countEvents(platformData.chronology, /medication|medicine|missed dose|refused medication|health/)
   const familyTime = countEvents(platformData.chronology, /family|contact|phone call|visit/)
   const educationConcerns = countEvents(platformData.chronology, /education|school|attendance|exclusion|learning/)
+  const recordQualityMarkers = countEvents(platformData.chronology, /recording|record quality|incomplete|unsigned|draft/)
   const outstandingActions = platformData.actions.filter((action) => action.status !== 'completed').length
+  const reviewQueue = Number(signals.find((s) => s.label === 'Review queue')?.value ?? 0)
+  const safeguardingCount = Number(signals.find((s) => s.label === 'Safeguarding')?.value ?? 0)
   const handoverStatus = countEvents(platformData.chronology, /handover|shift summary/) ? 'Ready' : 'Check'
   const feed = buildLiveFeed(platformData)
   const dataUnavailable = platform.source !== 'live' || Boolean(platform.warning || platform.error || careHub.warning || careHub.error)
@@ -115,39 +120,52 @@ export default async function UnifiedCommandCentrePage() {
   }
 
   return (
-    <div className="space-y-6 pb-8">
-      <CareHubStartHero selectedYoungPersonId={selectedChildId} />
+    <div className={osDesign.page}>
+      <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)] 2xl:grid-cols-1">
+        <CareHubStartHero selectedYoungPersonId={selectedChildId} />
 
-      {isLoadingPicture ? (
-        <p className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-600" role="status">
-          Loading today&apos;s home picture…
-        </p>
-      ) : null}
+        <div className="2xl:hidden">
+          <OrbCompanionPanel />
+        </div>
 
-      {dataUnavailable ? (
-        <section className="rounded-2xl border border-amber-100 bg-amber-50/80 px-4 py-3 text-sm font-semibold leading-6 text-amber-950">
-          Some live information could not be loaded. You can still record and ask ORB.
-        </section>
-      ) : (
-        <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          <LiveDataStatus result={platform} />
-          <LiveDataStatus result={careHub} />
-        </section>
-      )}
+        <CareHubAttentionStrip
+          reviewQueue={reviewQueue}
+          safeguarding={safeguardingCount}
+          recordQualityMarkers={recordQualityMarkers}
+          actionsOutstanding={outstandingActions}
+          missingEpisodes={missingEpisodes}
+          recentIncidents={recentIncidents}
+        />
 
-      <CareHubLiveStreamBar
-        homeId={careHub.data?.scope?.home_id != null ? String(careHub.data.scope.home_id) : undefined}
-      />
+        <CareHubRecordingSection selectedYoungPersonId={selectedChildId} />
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,0.9fr)]">
-        <Card className="min-w-0">
-          <p className="text-[11px] font-black uppercase tracking-[0.24em] text-blue-700">Where you are</p>
-          <h2 className="mt-2 text-2xl font-black tracking-[-0.04em] text-slate-950 sm:text-3xl">Today&apos;s home picture</h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-            Tap a card to open the right place. Numbers are a guide — your next action matters most.
+        {isLoadingPicture ? (
+          <p className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-600" role="status">
+            Loading today&apos;s home picture…
           </p>
+        ) : null}
 
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {dataUnavailable ? (
+          <section className="rounded-2xl border border-amber-100 bg-amber-50/80 px-4 py-3 text-sm font-semibold leading-6 text-amber-950">
+            Some live information could not be loaded. You can still record and ask ORB.
+          </section>
+        ) : (
+          <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            <LiveDataStatus result={platform} />
+            <LiveDataStatus result={careHub} />
+          </section>
+        )}
+
+        <Card className="min-w-0">
+          <div className="os-section-heading">
+            <p className="text-[11px] font-black uppercase tracking-[0.24em] text-blue-700">Home picture</p>
+            <h2 className="mt-1 text-xl font-black tracking-[-0.04em] text-slate-950 sm:text-2xl">Today&apos;s home picture</h2>
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-500">
+              Tap a card to open the right place. Numbers guide you — your next action matters most.
+            </p>
+          </div>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {signals.map((signal) => (
               <CareHubMetricCard
                 key={signal.label}
@@ -155,11 +173,18 @@ export default async function UnifiedCommandCentrePage() {
                 value={signal.value}
                 detail={signalDisplayDetail(signal)}
                 href={signalHref(signal)}
+                orbHint={
+                  signal.label === 'Review queue'
+                    ? { label: 'Ask ORB what to prioritise', href: '/assistant/orb?mode=action_priority&context=care-hub' }
+                    : signal.label === 'Safeguarding'
+                      ? { label: 'Review with ORB', href: '/assistant/orb?context=care-hub&q=What safeguarding themes need review?' }
+                      : undefined
+                }
               />
             ))}
           </div>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {CARE_HUB_HOME_METRICS.map((definition) => (
               <CareHubMetricCard
                 key={definition.key}
@@ -171,79 +196,48 @@ export default async function UnifiedCommandCentrePage() {
             ))}
           </div>
         </Card>
-
-        <OperationalQuickActions
-          variant="care-hub"
-          selectedYoungPersonId={selectedChildId}
-          selectedYoungPersonName={selectedChild ? childName(selectedChild) : undefined}
-        />
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-        <Card className="min-w-0">
-          <p className="text-[11px] font-black uppercase tracking-[0.24em] text-blue-700">What to know</p>
-          <h2 className="mt-2 text-2xl font-black tracking-[-0.04em] text-slate-950 sm:text-3xl">Live records from today</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-500">Daily care, incidents, handover, medication, appointments and actions — newest first.</p>
-          <div className="mt-5 space-y-3">
-            {feed.map((item) => (
-              <Link
-                key={item.id}
-                href={item.href}
-                aria-label={`Open ${item.title}`}
-                className="block rounded-2xl border border-slate-100 bg-slate-50 p-4 transition hover:border-blue-100 hover:bg-blue-50/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 active:scale-[0.99]"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-sm font-black text-slate-950">{item.title}</p>
-                  <StatusBadge value={item.type.replaceAll('_', ' ')} />
-                </div>
-                <p className="mt-2 line-clamp-2 text-sm font-semibold leading-6 text-slate-500">{item.body}</p>
-                <p className="mt-2 text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">{shortDate(item.date)}</p>
-              </Link>
-            ))}
-            {!feed.length ? (
-              <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-5 text-sm font-semibold leading-6 text-slate-500">
-                No live records in the feed yet. Use the actions above to write a daily note, record an incident or complete handover.
+      <CareHubLiveStreamBar
+        homeId={careHub.data?.scope?.home_id != null ? String(careHub.data.scope.home_id) : undefined}
+      />
+
+      <Card className="min-w-0" data-testid="care-hub-review-evidence">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="os-section-heading min-w-0">
+            <p className="text-[11px] font-black uppercase tracking-[0.24em] text-blue-700">Review and evidence</p>
+            <h2 className="mt-1 text-xl font-black tracking-[-0.04em] text-slate-950 sm:text-2xl">Live records from today</h2>
+            <p className="mt-1 text-sm leading-6 text-slate-500">Daily care, incidents, handover and actions — newest first.</p>
+          </div>
+          <OrbInlineHint
+            label="Ask ORB to summarise"
+            href="/assistant/orb?context=care-hub&q=Summarise live records from today for handover."
+            tone="blue"
+          />
+        </div>
+        <div className="mt-4 space-y-3">
+          {feed.map((item) => (
+            <Link
+              key={item.id}
+              href={item.href}
+              aria-label={`Open ${item.title}`}
+              className="block rounded-2xl border border-slate-100 bg-slate-50 p-4 transition hover:border-blue-100 hover:bg-blue-50/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 active:scale-[0.99]"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-black text-slate-950">{item.title}</p>
+                <StatusBadge value={item.type.replaceAll('_', ' ')} />
               </div>
-            ) : null}
-          </div>
-        </Card>
-
-        <Card className="min-w-0 bg-slate-950 text-white ring-slate-800">
-          <p className="text-[11px] font-black uppercase tracking-[0.24em] text-blue-300">How ORB can help</p>
-          <h2 className="mt-2 text-2xl font-black tracking-[-0.04em] text-white sm:text-3xl">Ask ORB on this shift</h2>
-          <p className="mt-2 text-sm font-semibold leading-6 text-slate-300">
-            ORB summary: ORB can help with IndiCare work and everyday questions. Care questions use scoped records, citations and review guardrails; everyday questions do not retrieve care records. ORB does not replace manager or safeguarding decisions.
-          </p>
-          <div data-testid="care-hub-operational-pulse" className="mt-4 grid gap-2 sm:grid-cols-2">
-            {['What changed today?', 'What may need review?', 'What support appears effective?', 'What should the next shift understand?'].map((prompt) => (
-              <Link
-                key={prompt}
-                href={orbPromptHref(prompt)}
-                className="inline-flex min-h-11 items-center rounded-2xl bg-blue-500/15 px-4 py-3 text-xs font-black text-blue-100 transition hover:bg-blue-500/25 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-200"
-              >
-                {prompt}
-              </Link>
-            ))}
-          </div>
-          <div className="mt-4 grid gap-2">
-            {CARE_HUB_ORB_PROMPTS.map((prompt) => (
-              <Link
-                key={prompt.label}
-                href={orbPromptHref(prompt.query)}
-                className="block min-h-11 rounded-2xl bg-white/10 px-4 py-3 text-xs font-black text-white transition hover:bg-white/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-200"
-              >
-                {prompt.label}
-              </Link>
-            ))}
-          </div>
-          <Link
-            href="/assistant/orb?context=care-hub"
-            className="mt-5 inline-flex min-h-11 w-full items-center justify-center rounded-2xl bg-cyan-200 px-4 py-3 text-sm font-black text-slate-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-100"
-          >
-            Open ORB
-          </Link>
-        </Card>
-      </div>
+              <p className="mt-2 line-clamp-2 text-sm font-semibold leading-6 text-slate-500">{item.body}</p>
+              <p className="mt-2 text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">{shortDate(item.date)}</p>
+            </Link>
+          ))}
+          {!feed.length ? (
+            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-5 text-sm font-semibold leading-6 text-slate-500">
+              No live records in the feed yet. Use the recording actions above to write a daily note, record an incident or complete handover.
+            </div>
+          ) : null}
+        </div>
+      </Card>
 
       <section data-testid="care-hub-live-intelligence" className="min-w-0">
         <CareHubIntelligenceWidgets result={careHub} payload={careHub.data?.ok ? careHub.data : null} />
@@ -254,10 +248,10 @@ export default async function UnifiedCommandCentrePage() {
       />
 
       <Card className="min-w-0">
-        <p className="text-[11px] font-black uppercase tracking-[0.24em] text-blue-700">Where to click</p>
-        <h2 className="mt-2 text-2xl font-black tracking-[-0.04em] text-slate-950 sm:text-3xl">Children in view</h2>
-        <p className="mt-2 text-sm leading-6 text-slate-500">Open a child to record daily notes, incidents or handover.</p>
-        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <p className="text-[11px] font-black uppercase tracking-[0.24em] text-blue-700">Children in view</p>
+        <h2 className="mt-1 text-xl font-black tracking-[-0.04em] text-slate-950 sm:text-2xl">Open a child journey</h2>
+        <p className="mt-1 text-sm leading-6 text-slate-500">Record daily notes, incidents or handover on the child journey.</p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {platformData.children.slice(0, 6).map((child) => (
             <article key={child.id} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
               <Link
@@ -267,7 +261,7 @@ export default async function UnifiedCommandCentrePage() {
                 <p className="text-lg font-black text-slate-950">{childName(child)}</p>
                 <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">{child.placementStatus || child.riskLevel || 'Care record visible'}</p>
               </Link>
-              <div className="mt-4 flex flex-wrap gap-2">
+              <div className="mt-3 flex flex-wrap gap-2">
                 <Link href={`/young-people/${encodeURIComponent(String(child.id))}/daily-note/new`} className="inline-flex min-h-9 items-center rounded-full bg-blue-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-blue-700">
                   Daily note
                 </Link>
