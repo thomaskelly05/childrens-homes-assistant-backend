@@ -138,9 +138,37 @@ export function OrbIntelligenceOutput({
       {output.sources?.length ? (
         <section>
           <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Sources / basis</h4>
-          <ul className="mt-2 space-y-1 text-xs text-slate-400">
+          <ul className="mt-2 space-y-2 text-xs text-slate-400">
             {output.sources.slice(0, 8).map((s, i) => (
-              <li key={`${s.id || s.label}-${i}`}>{s.label}</li>
+              <li key={`${s.id || s.label}-${i}`} className="rounded-lg border border-white/[0.04] px-2 py-1.5">
+                <p className="font-medium text-slate-200" data-orb-exact-citation>
+                  {s.exact_citation || s.label}
+                </p>
+                {(s.section || s.page || s.paragraph_number) && (
+                  <p className="text-[10px] text-slate-500">
+                    {[s.section, s.page ? `p. ${s.page}` : null, s.paragraph_number ? `para. ${s.paragraph_number}` : null]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </p>
+                )}
+                {s.official_source ? (
+                  <span data-orb-official-source className="text-[9px] text-cyan-200/90">
+                    Official source
+                  </span>
+                ) : null}
+                {s.source_integrity === 'summary_only' ? (
+                  <p data-orb-summary-only-warning className="text-[9px] text-amber-200/80">
+                    Summary only — not full official document
+                  </p>
+                ) : null}
+                {s.warning ? <p className="text-[9px] text-amber-200/80">{s.warning}</p> : null}
+                {s.excerpt ? <p className="mt-0.5 line-clamp-2 text-[10px]">{s.excerpt}</p> : null}
+                {s.source_url ? (
+                  <a href={s.source_url} className="text-[9px] text-cyan-300/80 underline" target="_blank" rel="noreferrer">
+                    Source link
+                  </a>
+                ) : null}
+              </li>
             ))}
           </ul>
         </section>

@@ -7,6 +7,7 @@ from typing import Any
 
 from services.orb_care_synonym_service import orb_care_synonym_service
 from services.orb_citation_service import orb_citation_service
+from services.orb_exact_citation_service import orb_exact_citation_service
 from services.orb_knowledge_library_service import orb_knowledge_library_service
 from services.orb_knowledge_retrieval_service import orb_knowledge_retrieval_service
 from services.orb_semantic_retrieval_service import orb_semantic_retrieval_service
@@ -202,6 +203,10 @@ class OrbRagRetrievalService:
 
         if chunk.get("official_source"):
             base += 1.5
+        if _text(chunk.get("source_integrity")) == "full_document":
+            base += 1.25
+        if _text(chunk.get("source_integrity")) == "summary_only":
+            base -= 0.25
 
         return round(base, 3)
 
@@ -237,7 +242,8 @@ class OrbRagRetrievalService:
         else:
             lines.append("No matching document passages; use source packs and general knowledge.")
         lines.append(
-            "Cite honest source labels. Document passages are from the ORB Knowledge Library (built-in or user-uploaded), not live web or OS records."
+            "Use exact citation labels from retrieved passages. Do not invent page or section numbers. "
+            "If a source is summary-only, say so. Document passages are from the ORB Knowledge Library, not live web or OS records."
         )
         return "\n".join(lines)
 
@@ -247,47 +253,39 @@ class OrbRagRetrievalService:
         *,
         retrieval_strategy: str | None = None,
     ) -> list[dict[str, Any]]:
-        citations: list[dict[str, Any]] = []
-        for result in results:
-            source_type = _text(result.get("source_type")) or "user_uploaded"
-            origin = (result.get("metadata") or {}).get("origin", "built_in")
+        source_by_id = {
+            s["id"]: s
+            for s in orb_knowledge_library_service.list_sources()
+        }
+        citations = orb_exact_citation_service.citations_for_search_results(
+            results, source_by_id=source_by_id
+        )
+        for citation in citations:
+            source_type = _text(
+                next((r.get("source_type") for r in results if r.get("source_id") == citation.get("source_id")), "")
+            ) or "user_uploaded"
+            origin = "built_in"
+            for r in results:
+                if r.get("source_id") == citation.get("source_id"):
+                    origin = (r.get("metadata") or {}).get("origin", "built_in")
+                    break
             basis = TYPE_BASIS_MAP.get(source_type, "ORB Knowledge Library — reference document")
-            if result.get("official_source"):
-                basis = f"Official source summary — {basis}"
-            section = _text(result.get("section"))
-            page = _text(result.get("page"))
-            note_parts = [_text(result.get("text"))[:220]]
-            if section:
-                note_parts.insert(0, f"Section: {section}")
-            if page:
-                note_parts.insert(0, f"Page: {page}")
-            if result.get("match_reason"):
-                note_parts.append(f"Match: {result.get('match_reason')}")
-            citations.append(
-                {
-                    "id": f"doc-{result.get('source_id')}-{result.get('chunk_index')}",
-                    "label": _text(result.get("citation_label")) or _text(result.get("source_title")),
-                    "type": f"document_chunk:{source_type}",
-                    "basis": basis,
-                    "note": " — ".join(p for p in note_parts if p),
-                    "source_id": result.get("source_id"),
-                    "section": section or None,
-                    "page": page or None,
-                    "chunk_index": result.get("chunk_index"),
-                    "origin": origin,
-                    "live_retrieved": False,
-                    "document_chunk": True,
-                    "official_source": bool(result.get("official_source")),
-                    "confidence_level": result.get("source_confidence"),
-                    "governance_status": result.get("governance_status"),
-                    "source_version": (result.get("metadata") or {}).get("source_version"),
-                    "warning": result.get("warning"),
-                    "retrieval_strategy": retrieval_strategy or result.get("retrieval_strategy"),
-                    "semantic_score": result.get("semantic_score"),
-                    "hybrid_score": result.get("hybrid_score"),
-                    "keyword_score": result.get("keyword_score"),
-                }
-            )
+            if citation.get("official_source"):
+                if citation.get("source_integrity") == "summary_only":
+                    basis = f"Official source summary — {basis}"
+                else:
+                    basis = f"Official source — {basis}"
+            citation["type"] = f"document_chunk:{source_type}"
+            citation["basis"] = _text(citation.get("exact_citation")) or basis
+            citation["origin"] = origin
+            citation["retrieval_strategy"] = retrieval_strategy or citation.get("retrieval_strategy")
+            if result_match := next(
+                (r for r in results if r.get("source_id") == citation.get("source_id") and r.get("chunk_index") == citation.get("chunk_index")),
+                None,
+            ):
+                citation["semantic_score"] = result_match.get("semantic_score")
+                citation["hybrid_score"] = result_match.get("hybrid_score")
+                citation["keyword_score"] = result_match.get("keyword_score")
         return citations
 
     def merge_with_source_pack_citations(
