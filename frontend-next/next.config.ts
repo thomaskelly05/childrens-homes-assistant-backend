@@ -48,6 +48,10 @@ const nextConfig: NextConfig = {
         destination: `${backendOrigin}/intelligence/:path*`
       },
       {
+        source: '/recording-drafts/:path*',
+        destination: `${backendOrigin}/recording-drafts/:path*`
+      },
+      {
         source: '/staff/evidence',
         destination: `${backendOrigin}/staff/evidence`
       },

@@ -342,12 +342,14 @@ export function recordHubQueryString(options: {
   childName?: string
   type?: string
   about?: RecordAboutContext
+  draftId?: string
 }): string {
   const params = new URLSearchParams()
   if (options.about) params.set('about', options.about)
   if (options.childId) params.set('child_id', options.childId)
   if (options.childName) params.set('child_name', options.childName)
   if (options.type) params.set('type', options.type)
+  if (options.draftId) params.set('draft_id', options.draftId)
   const value = params.toString()
   return value ? `?${value}` : ''
 }

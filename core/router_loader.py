@@ -172,6 +172,7 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
             "routers.ofsted_ai_report_routes",
             "routers.ofsted_pack_routes",
             "routers.reports_routes",
+            "routers.recording_draft_routes",
         ),
         notes="Handovers, monthly reviews, Ofsted packs and report generation.",
     ),

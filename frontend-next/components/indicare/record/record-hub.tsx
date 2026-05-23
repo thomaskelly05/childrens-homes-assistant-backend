@@ -8,6 +8,7 @@ import { Mic2, Sparkles } from 'lucide-react'
 import { OrbInlineHint } from '@/components/indicare/operational/orb-inline-hint'
 import { Card, PageHeader, SectionHeader } from '@/components/indicare/ui'
 import { RecordChildPicker, mapYoungPeopleToPickerOptions, type RecordChildPickerOption } from '@/components/indicare/record/record-child-picker'
+import { RecordingDraftList } from '@/components/indicare/record/recording-draft-list'
 import { RecordingWorkspace } from '@/components/indicare/record/recording-workspace'
 import {
   RECORDING_OS_ORB_HREF,
@@ -251,6 +252,7 @@ export function RecordHub({
   const [childrenLoading, setChildrenLoading] = useState(!initialYoungPeople?.length)
   const [childrenLoadFailed, setChildrenLoadFailed] = useState(false)
   const [childrenWarning, setChildrenWarning] = useState<string | undefined>()
+  const [draftListRefreshKey, setDraftListRefreshKey] = useState(0)
 
   const syncFromUrl = useCallback(() => {
     const urlChildId = searchParams.get('child_id') || searchParams.get('young_person_id') || undefined
@@ -350,6 +352,7 @@ export function RecordHub({
   const showChildPicker = about === 'child'
   const showStaffPanel = about === 'staff'
   const initialRecordingType = resolveRecordingTypeFromQuery(highlightType || searchParams.get('type'))
+  const draftIdFromUrl = searchParams.get('draft_id') || undefined
 
   return (
     <div className="space-y-6 pb-8">
@@ -435,12 +438,16 @@ export function RecordHub({
         </section>
       ) : null}
 
+      <RecordingDraftList refreshKey={draftListRefreshKey} />
+
       <RecordingWorkspace
         about={about}
         childId={childId}
         childDisplayName={effectiveChildLabel}
         initialRecordingType={initialRecordingType}
         highlightType={highlightType}
+        draftIdFromUrl={draftIdFromUrl}
+        onDraftListRefresh={() => setDraftListRefreshKey((value) => value + 1)}
       />
 
       <Card data-testid="record-recommended">
