@@ -14,6 +14,10 @@ OS_UI_MARKERS = [
     "Ask ORB to summarise",
     "Open ORB with this context",
     "ORB supports practice",
+    "ORB on this journey",
+    "What adults need to know today",
+    "Journey picture",
+    "Evidence and review",
 ]
 
 OS_UI_FILES = [
@@ -25,6 +29,12 @@ OS_UI_FILES = [
     FRONTEND / "app" / "command-centre" / "page.tsx",
     FRONTEND / "components" / "indicare" / "app-shell.tsx",
     FRONTEND / "app" / "globals.css",
+    FRONTEND / "components" / "child-journey" / "child-journey-orb-rail.tsx",
+    FRONTEND / "components" / "child-journey" / "child-journey-today-section.tsx",
+    FRONTEND / "components" / "child-journey" / "child-journey-attention-strip.tsx",
+    FRONTEND / "components" / "child-journey" / "child-journey-recording-actions.tsx",
+    FRONTEND / "components" / "child-journey" / "child-journey-journey-picture.tsx",
+    FRONTEND / "components" / "child-journey" / "child-journey-evidence-card.tsx",
 ]
 
 
