@@ -1,14 +1,15 @@
 import Link from 'next/link'
-import { ClipboardCheck, ClipboardList, ClipboardPlus, Mic2, ShieldAlert } from 'lucide-react'
+import { ClipboardCheck, ClipboardList, ClipboardPlus, Mic2, ShieldAlert, Shield } from 'lucide-react'
 
 import { CARE_HUB_HERO_ACTIONS, CARE_HUB_HERO_ORB_HINTS } from '@/components/command-centre/care-hub-routes'
 import { OrbInlineHint } from '@/components/indicare/operational/orb-inline-hint'
 
 const iconByLabel = {
   'Record something': ClipboardList,
-  'Start shift handover': ClipboardCheck,
   'Record daily note': ClipboardPlus,
   'Record incident': ShieldAlert,
+  'Safeguarding concern': Shield,
+  'Start shift handover': ClipboardCheck,
   'Ask ORB': Mic2
 } as const
 

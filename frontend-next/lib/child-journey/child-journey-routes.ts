@@ -74,12 +74,13 @@ function operationalOrbHint(childId: string, label: string, query: string) {
 
 export function buildChildJourneyRecordingActions(childId: string): ChildJourneyRecordingAction[] {
   const base = encodeURIComponent(childId)
+  const record = (type: string) => `/record?child_id=${base}&about=child&type=${encodeURIComponent(type)}`
   return [
     {
       id: 'daily-note',
       label: 'Record daily note',
       description: 'Calm record of the day — what happened, what helped and what changed.',
-      href: `/record?child_id=${base}&type=daily-note`,
+      href: record('daily-note'),
       orbHint: operationalOrbHint(childId, 'ORB can help make this child-centred', 'Help me write a calm, child-centred daily note.')
     },
     {
@@ -90,6 +91,20 @@ export function buildChildJourneyRecordingActions(childId: string): ChildJourney
       orbHint: operationalOrbHint(childId, 'ORB can help record calmly', 'Help me record an incident calmly with clear facts.')
     },
     {
+      id: 'safeguarding',
+      label: 'Safeguarding concern',
+      description: 'Concern, safety action and who was informed.',
+      href: `/young-people/${base}/safeguarding/new`,
+      orbHint: operationalOrbHint(childId, 'ORB safeguarding help', 'What should be included in a safeguarding concern record?')
+    },
+    {
+      id: 'missing',
+      label: 'Missing episode',
+      description: 'Missing from care, actions taken and return.',
+      href: `/young-people/${base}/missing/new`,
+      orbHint: operationalOrbHint(childId, 'ORB can help review', 'What should be recorded about a missing episode?')
+    },
+    {
       id: 'child-voice',
       label: 'Record child voice',
       description: 'Wishes, feelings and communication in the child’s words.',
@@ -97,11 +112,18 @@ export function buildChildJourneyRecordingActions(childId: string): ChildJourney
       orbHint: operationalOrbHint(childId, 'ORB can help make this child-centred', 'Help me record child voice clearly and respectfully.')
     },
     {
-      id: 'keywork',
-      label: 'Record keywork',
-      description: 'Direct work, goals and progress from the session.',
-      href: `/young-people/${base}/keywork/new`,
-      orbHint: operationalOrbHint(childId, 'ORB can help with wording', 'Help me record keywork with clear outcomes.')
+      id: 'physical-intervention',
+      label: 'Physical intervention',
+      description: 'De-escalation, restraint, debrief and manager review.',
+      href: `/young-people/${base}/physical-intervention/new`,
+      orbHint: operationalOrbHint(childId, 'ORB restraint help', 'What should I include after a physical intervention?')
+    },
+    {
+      id: 'more-recording',
+      label: 'More recording types',
+      description: 'Medication, injury, return conversation, keywork and Reg evidence.',
+      href: childRecordHubHref(childId),
+      orbHint: operationalOrbHint(childId, 'ORB recording coach', 'Help me choose the right record type for this child.')
     }
   ]
 }

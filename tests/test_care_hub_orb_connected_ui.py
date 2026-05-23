@@ -27,6 +27,8 @@ def test_care_hub_hero_subtitle_and_orb_hints():
     assert "CARE_HUB_HERO_ORB_HINTS" in routes
     assert "ORB can help with wording" in routes
     assert "ORB can summarise handover" in routes
+    assert "Safeguarding concern" in routes
+    assert "safeguarding-concern" in routes or "safeguarding/new" in routes
 
 
 def test_care_hub_attention_strip_cards():

@@ -3,6 +3,7 @@
 import { useMemo } from 'react'
 
 import { buildReviewChecklist, reviewChecklistOverall, type QualityCoachSeverity } from '@/lib/record/recording-quality-coach'
+import type { RecordingWorkspaceType } from '@/lib/record/recording-types'
 
 function itemStatusLabel(status: QualityCoachSeverity) {
   if (status === 'review') return 'Consider review'
@@ -10,8 +11,16 @@ function itemStatusLabel(status: QualityCoachSeverity) {
   return 'Looks okay'
 }
 
-export function RecordingReviewChecklist({ body, title = '' }: { body: string; title?: string }) {
-  const items = useMemo(() => buildReviewChecklist(body, title), [body, title])
+export function RecordingReviewChecklist({
+  body,
+  title = '',
+  recordingType
+}: {
+  body: string
+  title?: string
+  recordingType?: RecordingWorkspaceType
+}) {
+  const items = useMemo(() => buildReviewChecklist(body, title, recordingType), [body, title, recordingType])
   const overall = useMemo(() => reviewChecklistOverall(items), [items])
 
   return (

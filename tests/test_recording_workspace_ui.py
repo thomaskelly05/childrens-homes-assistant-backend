@@ -7,6 +7,7 @@ FRONTEND = REPO_ROOT / "frontend-next"
 
 RECORD_FILES = [
     FRONTEND / "app" / "record" / "page.tsx",
+    FRONTEND / "lib" / "record" / "recording-form-registry.ts",
     FRONTEND / "components" / "indicare" / "record" / "record-hub.tsx",
     FRONTEND / "components" / "indicare" / "record" / "recording-workspace.tsx",
     FRONTEND / "components" / "indicare" / "record" / "recording-editor.tsx",
@@ -51,6 +52,9 @@ def test_recording_workspace_markers():
         "recording-editor",
         "More recording routes",
         "RecordingWorkspace",
+        "safeguarding-concern",
+        "physical-intervention",
+        "Draft workspace",
     ):
         assert marker in combined, f"Missing workspace marker: {marker}"
 

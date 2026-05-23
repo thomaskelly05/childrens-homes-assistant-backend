@@ -19,11 +19,17 @@ export type RecordCardId =
   | 'child-voice'
   | 'safeguarding'
   | 'missing'
+  | 'return-conversation'
+  | 'physical-intervention'
+  | 'injury-body-map'
   | 'medication-health'
+  | 'manager-review'
   | 'education-update'
   | 'family-contact'
   | 'documents'
   | 'keywork'
+  | 'reg44-evidence'
+  | 'reg45-evidence'
   | 'ask-orb'
 
 export type RecordCardSectionId = 'everyday-care' | 'when-something-happens' | 'progress-evidence'
@@ -147,6 +153,42 @@ export const RECORD_HUB_CARDS: RecordCardDefinition[] = [
     orbQuery: 'Help me record a missing episode and return welfare check clearly.'
   },
   {
+    id: 'return-conversation',
+    section: 'when-something-happens',
+    title: 'Return conversation / RHI',
+    description: 'Return interview or return conversation after a missing episode — child voice and welfare.',
+    whenToUse: 'After return, when offering or completing a return home interview or return conversation.',
+    buttonText: 'Record return conversation',
+    icon: ShieldAlert,
+    workflowSegment: 'missing',
+    generalHref: '/record?type=return-conversation',
+    orbQuery: 'Help me record a return conversation and the child’s voice after missing.'
+  },
+  {
+    id: 'physical-intervention',
+    section: 'when-something-happens',
+    title: 'Physical intervention / restraint',
+    description: 'De-escalation, intervention, injury checks, debrief and manager review.',
+    whenToUse: 'After any physical intervention or restraint — factual, least restrictive, repair-focused.',
+    buttonText: 'Record intervention',
+    icon: ShieldAlert,
+    workflowSegment: 'physical-intervention',
+    generalHref: '/record?type=physical-intervention',
+    orbQuery: 'Help me record de-escalation, intervention and repair after restraint.'
+  },
+  {
+    id: 'injury-body-map',
+    section: 'when-something-happens',
+    title: 'Injury / body map note',
+    description: 'Injury observations, child explanation, medical advice and follow-up.',
+    whenToUse: 'When documenting injuries, body map observations or health concerns needing a clear record.',
+    buttonText: 'Record injury / body map',
+    icon: Pill,
+    workflowSegment: 'body-map',
+    generalHref: '/record?type=injury-body-map',
+    orbQuery: 'Help me record an injury observation factually with child voice.'
+  },
+  {
     id: 'medication-health',
     section: 'when-something-happens',
     title: 'Medication / health',
@@ -183,6 +225,41 @@ export const RECORD_HUB_CARDS: RecordCardDefinition[] = [
     orbQuery: 'Help me record family time and contact in a child-centred way.'
   },
   {
+    id: 'manager-review',
+    section: 'progress-evidence',
+    title: 'Manager review',
+    description: 'Manager oversight of a record, threshold decision or quality review.',
+    whenToUse: 'When signing off, escalating or reviewing safeguarding, restraint, medication error or serious events.',
+    buttonText: 'Record manager review',
+    icon: ClipboardCheck,
+    generalHref: '/intelligence-actions',
+    orbQuery: 'What should a manager review note include for this situation?'
+  },
+  {
+    id: 'reg44-evidence',
+    section: 'progress-evidence',
+    title: 'Reg 44 evidence',
+    description: 'Independent visitor findings, provider response and impact for children.',
+    whenToUse: 'After Reg 44 visits or when logging oversight evidence for inspection readiness.',
+    buttonText: 'Add Reg 44 evidence',
+    icon: FileText,
+    workflowSegment: 'reg44-action',
+    generalHref: '/record?type=reg44-evidence',
+    orbQuery: 'What makes strong Reg 44 evidence for quality of care?'
+  },
+  {
+    id: 'reg45-evidence',
+    section: 'progress-evidence',
+    title: 'Reg 45 evidence',
+    description: 'Quality of care review evidence, gaps and improvement actions.',
+    whenToUse: 'When gathering or recording Reg 45 quality of care review evidence.',
+    buttonText: 'Add Reg 45 evidence',
+    icon: FileText,
+    workflowSegment: 'reg45-evidence',
+    generalHref: '/record?type=reg45-evidence',
+    orbQuery: 'What should Reg 45 evidence demonstrate about quality of care?'
+  },
+  {
     id: 'documents',
     section: 'progress-evidence',
     title: 'Evidence / document',
@@ -215,6 +292,9 @@ export const RECORD_CHILD_REQUIRED_CARD_IDS: RecordCardId[] = [
   'incidents',
   'safeguarding',
   'missing',
+  'return-conversation',
+  'physical-intervention',
+  'injury-body-map',
   'medication-health',
   'education-update',
   'family-contact'
@@ -307,7 +387,16 @@ export function recordRecommendedForContext(
       { kind: 'card', cardId: 'daily-note' },
       { kind: 'card', cardId: 'child-voice' },
       { kind: 'card', cardId: 'incidents' },
-      { kind: 'card', cardId: 'keywork' }
+      { kind: 'card', cardId: 'safeguarding' },
+      { kind: 'card', cardId: 'missing' },
+      { kind: 'card', cardId: 'physical-intervention' },
+      {
+        kind: 'link',
+        title: 'More recording types',
+        description: 'Handover, medication, Reg 44/45, manager review and more.',
+        href: childId ? `/record?child_id=${encodeURIComponent(childId)}&about=child` : '/record?about=child',
+        buttonText: 'Open Record hub'
+      }
     ]
   }
 
@@ -445,6 +534,16 @@ export function recordCardHref(card: RecordCardDefinition, childId?: string): st
     const base = '/orb?context=recording'
     const q = encodeURIComponent(card.orbQuery)
     return `${base}&q=${q}`
+  }
+
+  if (card.generalHref.startsWith('/record?')) {
+    if (childId) {
+      const url = new URL(card.generalHref, 'https://local.invalid')
+      url.searchParams.set('child_id', childId)
+      url.searchParams.set('about', 'child')
+      return `${url.pathname}${url.search}`
+    }
+    return card.generalHref
   }
 
   if (childId && card.workflowSegment) {

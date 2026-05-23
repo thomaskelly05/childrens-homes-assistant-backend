@@ -85,8 +85,16 @@ def test_quality_coach_library_markers():
         "findJudgementalPhrases",
         "RECORDING_OS_ORB_HREF",
         "RECORDING_STANDALONE_ORB_HREF",
+        "manager-review-required",
+        "recordingType",
     ):
         assert marker in text, f"Missing quality coach marker: {marker}"
+
+
+def test_manager_review_required_for_restraint_type():
+    text = _read()
+    assert "formRequiresManagerReview" in text
+    assert "physical-intervention" in text or "requiresManagerReview" in text
 
 
 def test_judgemental_phrase_detection():

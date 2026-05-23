@@ -1,11 +1,13 @@
 'use client'
 
+import { recordingFormByWorkspaceType } from '@/lib/record/recording-form-registry'
 import type { RecordingWorkspaceType } from '@/lib/record/recording-types'
 
-const PROMPTS_BY_TYPE: Record<RecordingWorkspaceType, string[]> = {
+const EXTRA_PROMPTS: Partial<Record<RecordingWorkspaceType, string[]>> = {
   'daily-note': [
     'What did the young person experience today?',
     'What support did adults offer?',
+    'What strengths or progress can be noted?',
     'What changed by the end of the day?'
   ],
   incident: [
@@ -13,22 +15,56 @@ const PROMPTS_BY_TYPE: Record<RecordingWorkspaceType, string[]> = {
     'How did adults respond and support regulation?',
     'What repair or follow-up is needed?'
   ],
+  'safeguarding-concern': [
+    'What was noticed, said, seen or disclosed?',
+    'Who was informed?',
+    'What immediate safety action was taken?'
+  ],
+  'physical-intervention': [
+    'What de-escalation was attempted?',
+    'How long did the intervention last?',
+    'Was debrief and repair offered?'
+  ],
+  missing: [
+    'When was the concern first noticed?',
+    'Who was informed?',
+    'What happened on return?'
+  ],
+  'return-conversation': [
+    'Was return interview/conversation offered?',
+    'What did the young person say about return?',
+    'What support was agreed?'
+  ],
   'child-voice': [
     'What did they say, show or communicate?',
     'How were wishes and feelings understood?',
     'What should adults do next?'
   ],
-  keywork: ['What was the goal of the session?', 'What progress was observed?', 'What happens next?'],
-  missing: ['When was the concern noticed?', 'Who was informed?', 'What happened on return?'],
-  'family-time': ['What contact took place?', 'How did the young person respond?', 'What matters for continuity?'],
-  'health-medication': ['What was observed?', 'What action was taken?', 'What follow-up is required?'],
-  handover: ['What should the next adults know?', 'Any risks or routines to hold?', 'Unfinished follow-up?'],
-  'evidence-document': ['What evidence are you noting?', 'Why does it matter?', 'Who needs to see it?'],
-  'staff-reflection': ['What are you reflecting on?', 'What learning emerged?', 'What follow-up is needed?']
+  'medication-note-error': [
+    'What medication activity took place?',
+    'Any error, refusal or missed dose?',
+    'Who was informed and what follow-up?'
+  ],
+  'manager-review': [
+    'What record or event was reviewed?',
+    'What evidence was considered?',
+    'What decision or action is needed?'
+  ],
+  'reg44-evidence': [
+    'Which quality theme does this support?',
+    'What improvement action is needed?',
+    'What is the impact for children?'
+  ],
+  'reg45-evidence': [
+    'What evidence does this provide about quality of care?',
+    'Which standard does it support?',
+    'What improvement action is needed?'
+  ]
 }
 
 export function RecordingTherapeuticPrompts({ recordingType }: { recordingType: RecordingWorkspaceType }) {
-  const prompts = PROMPTS_BY_TYPE[recordingType] || PROMPTS_BY_TYPE['daily-note']
+  const form = recordingFormByWorkspaceType(recordingType)
+  const prompts = EXTRA_PROMPTS[recordingType] || form?.qualityChecklist.slice(0, 4) || EXTRA_PROMPTS['daily-note']!
 
   return (
     <section data-testid="recording-therapeutic-prompts" className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4">
