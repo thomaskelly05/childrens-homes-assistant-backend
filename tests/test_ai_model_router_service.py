@@ -20,6 +20,13 @@ def test_classify_task_examples(message: str, expected: AiTaskType):
     assert ai_model_router_service.classify_task(message) == expected
 
 
+def test_classify_task_deep_research():
+    assert (
+        ai_model_router_service.classify_task("deep research what Ofsted expects")
+        == AiTaskType.DEEP_RESEARCH
+    )
+
+
 def test_classify_task_image():
     assert (
         ai_model_router_service.classify_task("describe this", has_images=True)

@@ -196,3 +196,17 @@ def test_general_service_module_has_product_knowledge():
     text = _read(GENERAL_SERVICE)
     assert "ChatGPT-class" in text
     assert "IndiCare product context" in text or "product knowledge" in text.lower()
+
+
+def test_general_service_agent_bridge():
+    text = _read(GENERAL_SERVICE)
+    assert "maybe_run_agent_for_conversation" in text
+    assert "detect_agent_intent" in text
+
+
+def test_agent_registry_module_exists():
+    from services.orb_agent_registry_service import orb_agent_registry_service
+
+    agents = orb_agent_registry_service.list_agents()
+    assert len(agents) >= 8
+    assert all(a.standalone_only for a in agents)

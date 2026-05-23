@@ -21,6 +21,7 @@ import {
   OrbStandaloneComposer,
   type PendingImageAttachment
 } from '@/components/orb-standalone/orb-standalone-composer'
+import { OrbAgentPanel } from '@/components/orb-standalone/orb-agent-panel'
 import { OrbKnowledgeLibraryPanel } from '@/components/orb-standalone/orb-knowledge-library'
 import { OrbStandaloneSidebar } from '@/components/orb-standalone/orb-standalone-sidebar'
 import { useStandaloneOrbVoice, type StandaloneOrbAnswerStyle } from '@/components/orb-standalone/use-standalone-orb-voice'
@@ -42,6 +43,7 @@ import {
   queryStandaloneOrbConversation,
   STANDALONE_ORB_MODES,
   standaloneOrbErrorMessage,
+  type StandaloneOrbAgentSuggestion,
   type StandaloneOrbMode
 } from '@/lib/orb/standalone-client'
 
@@ -262,6 +264,9 @@ export function OrbCareCompanion() {
   const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null)
   const [profilePickerOpen, setProfilePickerOpen] = useState(false)
   const [knowledgeLibraryOpen, setKnowledgeLibraryOpen] = useState(false)
+  const [agentsPanelOpen, setAgentsPanelOpen] = useState(false)
+  const [agentPanelPrompt, setAgentPanelPrompt] = useState('')
+  const [agentPanelType, setAgentPanelType] = useState<string | undefined>()
 
   const inputRef = useRef<HTMLTextAreaElement | null>(null)
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
@@ -496,6 +501,9 @@ export function OrbCareCompanion() {
           (response.citations?.length ? response.citations : response.sources) ?? []
         ) as StandaloneOrbSource[]
         const modelRouting = response.context_used?.model_routing
+        const agentRaw = response.context_used?.agent as StandaloneOrbAgentSuggestion | undefined
+        const agentSuggestion =
+          agentRaw?.suggested && !agentRaw?.auto_run ? agentRaw : undefined
         setWorkspace((current) => {
           const chat = current.chats.find((c) => c.id === targetChatId)
           if (!chat) return current
@@ -507,7 +515,8 @@ export function OrbCareCompanion() {
               content: answer,
               createdAt: Date.now(),
               sources: responseSources.length ? responseSources : undefined,
-              modelRouting: modelRouting ?? undefined
+              modelRouting: modelRouting ?? undefined,
+              agentSuggestion
             }
           ])
           return patchActiveChat(current, chat.id, {
@@ -762,6 +771,16 @@ export function OrbCareCompanion() {
       <div className="pointer-events-none fixed inset-0 orb-cinematic-light-field opacity-50" aria-hidden />
 
       <OrbKnowledgeLibraryPanel open={knowledgeLibraryOpen} onClose={() => setKnowledgeLibraryOpen(false)} />
+      <OrbAgentPanel
+        open={agentsPanelOpen}
+        onClose={() => {
+          setAgentsPanelOpen(false)
+          setAgentPanelPrompt('')
+          setAgentPanelType(undefined)
+        }}
+        initialAgentType={agentPanelType}
+        initialPrompt={agentPanelPrompt}
+      />
 
       {sidebarOpen ? (
         <button type="button" className="fixed inset-0 z-40 bg-black/60 lg:hidden" aria-label="Close sidebar" onClick={() => setSidebarOpen(false)} />
@@ -788,6 +807,10 @@ export function OrbCareCompanion() {
             onOpenSettings={openVoiceSettings}
             onOpenKnowledgeLibrary={() => {
               setKnowledgeLibraryOpen(true)
+              setSidebarOpen(false)
+            }}
+            onOpenAgents={() => {
+              setAgentsPanelOpen(true)
               setSidebarOpen(false)
             }}
             onClose={() => setSidebarOpen(false)}
@@ -967,6 +990,25 @@ export function OrbCareCompanion() {
                             <p className="mb-2 text-xs font-medium text-slate-500">ORB</p>
                             <div className="whitespace-pre-wrap text-[15px] leading-7 text-slate-100">{entry.content}</div>
                             <SourcesBasis sources={entry.sources} modelRouting={entry.modelRouting} />
+                            {entry.agentSuggestion?.suggested && entry.agentSuggestion.agent_type ? (
+                              <div className="mt-3 flex flex-wrap gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const type = entry.agentSuggestion?.agent_type
+                                    setAgentPanelType(type)
+                                    setAgentPanelPrompt(input || entry.content.slice(0, 200))
+                                    setAgentsPanelOpen(true)
+                                  }}
+                                  className="rounded-full bg-cyan-500/15 px-3 py-1 text-xs font-medium text-cyan-200 ring-1 ring-cyan-400/25 hover:bg-cyan-500/25"
+                                >
+                                  Run{' '}
+                                  {entry.agentSuggestion.agent_type === 'deep_research'
+                                    ? 'Deep Research'
+                                    : `${String(entry.agentSuggestion.agent_type).replace(/_/g, ' ')} agent`}
+                                </button>
+                              </div>
+                            ) : null}
                             {index === visibleMessages.length - 1 ? (
                               <ResponseActions
                                 content={entry.content}
