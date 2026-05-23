@@ -31,6 +31,11 @@ export type StandaloneChatMessage = {
   status?: 'failed' | 'pending'
   sources?: StandaloneOrbSource[]
   modelRouting?: StandaloneOrbModelRouting
+  documentSuggestion?: {
+    suggested?: boolean
+    needs_document?: boolean
+    open_documents_panel?: boolean
+  }
   agentSuggestion?: {
     suggested?: boolean
     agent_type?: string

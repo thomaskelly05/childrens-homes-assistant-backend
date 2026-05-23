@@ -512,8 +512,13 @@ export function OrbCareCompanion() {
         ) as StandaloneOrbSource[]
         const modelRouting = response.context_used?.model_routing
         const agentRaw = response.context_used?.agent as StandaloneOrbAgentSuggestion | undefined
+        const docAnalysisRaw = response.context_used?.document_analysis as
+          | { suggested?: boolean; needs_document?: boolean; open_documents_panel?: boolean }
+          | undefined
         const agentSuggestion =
           agentRaw?.suggested && !agentRaw?.auto_run ? agentRaw : undefined
+        const documentSuggestion =
+          docAnalysisRaw?.suggested && docAnalysisRaw?.needs_document ? docAnalysisRaw : undefined
         setWorkspace((current) => {
           const chat = current.chats.find((c) => c.id === targetChatId)
           if (!chat) return current
@@ -526,7 +531,8 @@ export function OrbCareCompanion() {
               createdAt: Date.now(),
               sources: responseSources.length ? responseSources : undefined,
               modelRouting: modelRouting ?? undefined,
-              agentSuggestion
+              agentSuggestion,
+              documentSuggestion
             }
           ])
           return patchActiveChat(current, chat.id, {
@@ -805,6 +811,22 @@ export function OrbCareCompanion() {
           setDocumentsPanelOpen(false)
         }}
         onDocumentContext={(ctx) => setPendingDocument(ctx)}
+        onRunDeepResearch={(ctx) => {
+          setPendingDocument(ctx)
+          setAgentPanelType('deep_research')
+          setAgentPanelPrompt(
+            `Deep research on this document: ${ctx.title}. What does guidance say and what should we do next?`
+          )
+          setDocumentsPanelOpen(false)
+          setAgentsPanelOpen(true)
+        }}
+        onRunDocumentAnalysisAgent={(ctx) => {
+          setPendingDocument(ctx)
+          setAgentPanelType('document_analysis')
+          setAgentPanelPrompt(`Analyse this document and create a manager briefing: ${ctx.title}`)
+          setDocumentsPanelOpen(false)
+          setAgentsPanelOpen(true)
+        }}
       />
       <OrbAgentPanel
         open={agentsPanelOpen}
@@ -815,6 +837,9 @@ export function OrbCareCompanion() {
         }}
         initialAgentType={agentPanelType}
         initialPrompt={agentPanelPrompt}
+        initialDocumentText={pendingDocument?.text}
+        initialDocumentSourceId={pendingDocument?.sourceId}
+        initialDocumentTitle={pendingDocument?.title}
       />
 
       {sidebarOpen ? (
@@ -1029,6 +1054,42 @@ export function OrbCareCompanion() {
                             <p className="mb-2 text-xs font-medium text-slate-500">ORB</p>
                             <div className="whitespace-pre-wrap text-[15px] leading-7 text-slate-100">{entry.content}</div>
                             <SourcesBasis sources={entry.sources} modelRouting={entry.modelRouting} />
+                            {entry.documentSuggestion?.needs_document ? (
+                              <div className="mt-3 flex flex-wrap gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setDocumentsPanelOpen(true)
+                                    setSidebarOpen(false)
+                                  }}
+                                  className="rounded-full bg-violet-500/15 px-3 py-1 text-xs font-medium text-violet-200 ring-1 ring-violet-400/25"
+                                >
+                                  Open Documents
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setAgentPanelType('document_analysis')
+                                    setAgentPanelPrompt(input || entry.content.slice(0, 200))
+                                    setAgentsPanelOpen(true)
+                                  }}
+                                  className="rounded-full bg-cyan-500/15 px-3 py-1 text-xs font-medium text-cyan-200 ring-1 ring-cyan-400/25"
+                                >
+                                  Run Document Analysis
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setAgentPanelType('deep_research')
+                                    setAgentPanelPrompt(input || entry.content.slice(0, 200))
+                                    setAgentsPanelOpen(true)
+                                  }}
+                                  className="rounded-full bg-white/[0.06] px-3 py-1 text-xs font-medium text-slate-300 ring-1 ring-white/10"
+                                >
+                                  Run Deep Research
+                                </button>
+                              </div>
+                            ) : null}
                             {entry.agentSuggestion?.suggested && entry.agentSuggestion.agent_type ? (
                               <div className="mt-3 flex flex-wrap gap-2">
                                 <button

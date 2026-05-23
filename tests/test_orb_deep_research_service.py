@@ -40,6 +40,33 @@ async def test_deep_research_clusters_and_citations():
     assert result.steps
 
 
+@pytest.mark.asyncio
+async def test_deep_research_with_document_includes_understanding_warning(monkeypatch):
+    from schemas.orb_documents import OrbDocumentUnderstanding
+
+    async def stub_analyse(_request):
+        return OrbDocumentUnderstanding(
+            title="Uploaded",
+            plain_english_summary="Document summary for research.",
+        )
+
+    monkeypatch.setattr(
+        "services.orb_deep_research_service.orb_document_understanding_service.analyse_document",
+        stub_analyse,
+    )
+
+    request = OrbDeepResearchRequest(
+        query="What should we do about this policy?",
+        document_text="Policy body text here.",
+        depth="standard",
+    )
+    result = await orb_deep_research_service.run_deep_research(request)
+    assert any("standalone document" in w.lower() for w in result.warnings)
+    assert result.context_used.get("document_understanding", {}).get("included") is True
+    assert result.context_used.get("evaluation")
+    assert result.context_used.get("os_linked") is False
+
+
 def test_identify_gaps_includes_live_web_note():
     gaps = orb_deep_research_service.identify_gaps([], "safeguarding escalation")
     assert any("live web" in g.lower() for g in gaps)

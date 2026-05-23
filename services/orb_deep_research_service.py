@@ -13,13 +13,22 @@ from schemas.orb_agents import (
     OrbDeepResearchRequest,
     OrbDeepResearchResponse,
 )
+from schemas.orb_documents import OrbDocumentAnalysisRequest
 from services.orb_agent_orchestrator_service import orb_agent_orchestrator_service
 from services.orb_agent_registry_service import LIVE_WEB_NOTE, orb_agent_registry_service
+from services.orb_document_understanding_service import orb_document_understanding_service
+from services.orb_evaluation_service import orb_evaluation_service
+from services.orb_intelligence_output_service import orb_intelligence_output_service
 from services.orb_rag_retrieval_service import orb_rag_retrieval_service
 
 logger = logging.getLogger("indicare.orb_deep_research")
 
 DEPTH_LIMITS = {"quick": 5, "standard": 8, "deep": 12}
+
+DOCUMENT_RESEARCH_WARNING = (
+    "This research includes a user-provided standalone document and ORB Knowledge Library sources. "
+    "It does not access live IndiCare OS records."
+)
 
 
 def _text(value: Any) -> str:
@@ -29,13 +38,70 @@ def _text(value: Any) -> str:
 class OrbDeepResearchService:
     """Dedicated deep research with source clustering and gap analysis."""
 
+    def _has_document(self, request: OrbDeepResearchRequest) -> bool:
+        return bool(
+            _text(request.document_text)
+            or _text(request.document_source_id)
+            or _text(request.source_id)
+        )
+
+    async def _analyse_document_for_research(
+        self,
+        request: OrbDeepResearchRequest,
+    ) -> dict[str, Any] | None:
+        if not self._has_document(request):
+            return None
+        source_id = _text(request.document_source_id or request.source_id) or None
+        doc_text = _text(request.document_text) or None
+        mode = "full_review" if request.depth == "deep" else "manager_briefing"
+        doc_request = OrbDocumentAnalysisRequest(
+            mode=mode,
+            source_id=source_id,
+            text=doc_text if not source_id else None,
+            title=_text(request.document_title) or None,
+            question=request.query,
+            include_evaluation=True,
+        )
+        understanding = await orb_document_understanding_service.analyse_document(doc_request)
+        intel = orb_intelligence_output_service.from_document_analysis(understanding)
+        return {
+            "understanding": understanding.model_dump(),
+            "summary": understanding.plain_english_summary,
+            "key_points": intel.key_points,
+            "risks": intel.risks,
+            "actions": [a.model_dump() for a in intel.actions],
+            "analysis_mode": mode,
+        }
+
     async def run_deep_research(self, request: OrbDeepResearchRequest) -> OrbDeepResearchResponse:
         plan = self.plan_research(request.query, mode=request.mode, depth=request.depth)
         max_sources = min(DEPTH_LIMITS.get(request.depth, 8), request.max_sources)
 
-        primary = self.retrieve_primary_sources(request.query, mode=request.mode, limit=max_sources)
+        document_context: dict[str, Any] | None = None
+        doc_steps: list[OrbAgentStep] = []
+        if self._has_document(request):
+            doc_steps.append(
+                OrbAgentStep(id="document", label="Analyse standalone document", status="running")
+            )
+            document_context = await self._analyse_document_for_research(request)
+            doc_steps[0] = OrbAgentStep(
+                id="document",
+                label="Analyse standalone document",
+                status="completed",
+                detail=(document_context or {}).get("analysis_mode"),
+            )
+
+        research_query = request.query
+        if document_context:
+            research_query = (
+                f"{request.query}\n\nDocument context:\n"
+                f"{document_context.get('summary', '')}\n"
+                f"Key points: {', '.join(document_context.get('key_points') or [])}"
+            )
+
+        primary = self.retrieve_primary_sources(research_query, mode=request.mode, limit=max_sources)
         supporting = self.retrieve_supporting_sources(
-            request.query,
+            research_query,
             mode=request.mode,
             limit=max(3, max_sources // 2),
             exclude=primary,
@@ -44,11 +110,24 @@ class OrbDeepResearchService:
         clusters = self.cluster_sources(combined)
         gaps = self.identify_gaps(combined, request.query)
 
+        project_context = request.project_context
+        if document_context:
+            doc_block = (
+                "## User-provided standalone document\n\n"
+                f"{document_context.get('summary', '')}\n\n"
+            )
+            actions = document_context.get("actions") or []
+            if actions:
+                doc_block += "### Suggested actions from document\n"
+                for action in actions[:6]:
+                    doc_block += f"- {_text(action.get('action'))}\n"
+            project_context = "\n\n".join(filter(None, [project_context, doc_block]))
+
         agent_request = OrbAgentRunRequest(
             agent_type="deep_research",
             prompt=request.query,
             mode=request.mode,
-            project_context=request.project_context,
+            project_context=project_context,
             profile_context=request.profile_context,
             preferred_output=request.preferred_output,
             depth=request.depth,
@@ -62,6 +141,7 @@ class OrbDeepResearchService:
             clusters,
             gaps,
             fallback=agent_response.output.body,
+            document_context=document_context,
         )
         citations = self.build_research_citations(combined) or agent_response.citations
         sources = agent_response.sources
@@ -69,17 +149,49 @@ class OrbDeepResearchService:
         findings = agent_response.findings or self._findings_from_clusters(clusters)
         steps = [
             OrbAgentStep(id="plan", label="Plan research", status="completed", detail=plan.get("summary")),
+            *doc_steps,
             OrbAgentStep(id="primary", label="Retrieve primary sources", status="completed"),
             OrbAgentStep(id="supporting", label="Retrieve supporting sources", status="completed"),
             OrbAgentStep(id="cluster", label="Cluster sources", status="completed"),
             OrbAgentStep(id="gaps", label="Identify source gaps", status="completed"),
             OrbAgentStep(id="briefing", label="Generate research briefing", status="completed"),
+            OrbAgentStep(id="evaluate", label="Evaluate output", status="completed"),
             *(agent_response.steps or []),
         ]
 
         warnings = list(agent_response.warnings or [])
         if gaps:
             warnings.extend(gaps[:3])
+        if document_context:
+            warnings.insert(0, DOCUMENT_RESEARCH_WARNING)
+
+        context_used = {
+            **(agent_response.context_used or {}),
+            "deep_research": True,
+            "depth": request.depth,
+            "source_count": len(combined),
+            "standalone_only": True,
+            "os_linked": False,
+            "care_record_access": False,
+        }
+        if document_context:
+            context_used["document_understanding"] = {
+                "included": True,
+                "analysis_mode": document_context.get("analysis_mode"),
+                "summary": document_context.get("summary"),
+                "auto_run": True,
+            }
+
+        evaluation = (agent_response.context_used or {}).get("evaluation")
+        if not evaluation:
+            eval_result = orb_evaluation_service.evaluate_agent_output(
+                answer=briefing_body[:8000],
+                sources=sources,
+                citations=citations,
+                agent_type="deep_research",
+            )
+            evaluation = eval_result.model_dump()
+        context_used["evaluation"] = evaluation
 
         return OrbDeepResearchResponse(
             success=agent_response.success,
@@ -97,12 +209,7 @@ class OrbDeepResearchService:
             source_clusters=clusters,
             source_gaps=gaps,
             steps=steps,
-            context_used={
-                **(agent_response.context_used or {}),
-                "deep_research": True,
-                "depth": request.depth,
-                "source_count": len(combined),
-            },
+            context_used=context_used,
             model_routing=agent_response.model_routing,
             warnings=list(dict.fromkeys(warnings)),
             safety_notice=agent_response.safety_notice or LIVE_WEB_NOTE,
@@ -213,9 +320,25 @@ class OrbDeepResearchService:
         gaps: list[str],
         *,
         fallback: str,
+        document_context: dict[str, Any] | None = None,
     ) -> str:
+        doc_section = ""
+        if document_context:
+            doc_section = (
+                "## Document understanding (standalone user document)\n\n"
+                f"{_text(document_context.get('summary'))}\n\n"
+            )
+            key_points = document_context.get("key_points") or []
+            if key_points:
+                doc_section += "### Key points\n" + "\n".join(f"- {p}" for p in key_points[:8]) + "\n\n"
+            risks = document_context.get("risks") or []
+            if risks:
+                doc_section += "### Risks noted\n" + "\n".join(f"- {r}" for r in risks[:5]) + "\n\n"
+
         if fallback and len(fallback) > 200:
             body = fallback
+            if doc_section and doc_section not in body:
+                body = f"{doc_section}\n{body}"
         else:
             cluster_lines = []
             for cluster in clusters:
@@ -228,6 +351,8 @@ class OrbDeepResearchService:
                 f"## Key themes\n\n" + ("\n".join(cluster_lines) if cluster_lines else "- See attached sources") + "\n\n"
                 f"## Limits / gaps\n\n" + "\n".join(f"- {g}" for g in gaps)
             )
+        if document_context and DOCUMENT_RESEARCH_WARNING not in body:
+            body = f"{body}\n\n{DOCUMENT_RESEARCH_WARNING}"
         if LIVE_WEB_NOTE not in body:
             body = f"{body}\n\n{LIVE_WEB_NOTE}"
         return body

@@ -3,7 +3,11 @@
 import { useCallback, useState } from 'react'
 import { Copy, FileText, Loader2, X } from 'lucide-react'
 
-import { OrbActionPlanDisplay } from '@/components/orb-standalone/orb-action-plan'
+import {
+  OrbIntelligenceOutput,
+  understandingToIntelligenceOutput
+} from '@/components/orb-standalone/orb-intelligence-output'
+// Action plans: orb-action-plan (via orb-intelligence-output)
 import {
   analyseOrbStandaloneDocument,
   ingestOrbKnowledgeText,
@@ -18,12 +22,16 @@ export function OrbDocumentPanel({
   onClose,
   onInsertIntoChat,
   onDocumentContext,
+  onRunDeepResearch,
+  onRunDocumentAnalysisAgent,
   initialText
 }: {
   open: boolean
   onClose: () => void
   onInsertIntoChat?: (text: string) => void
   onDocumentContext?: (ctx: { text: string; title: string; sourceId: string | null }) => void
+  onRunDeepResearch?: (ctx: { text: string; title: string; sourceId: string | null }) => void
+  onRunDocumentAnalysisAgent?: (ctx: { text: string; title: string; sourceId: string | null }) => void
   initialText?: string
 }) {
   const [title, setTitle] = useState('Uploaded document')
@@ -232,48 +240,69 @@ export function OrbDocumentPanel({
 
           {understanding ? (
             <div className="space-y-4 border-t border-white/[0.06] pt-4">
-              <section>
-                <h3 className="text-sm font-semibold text-white">Summary</h3>
-                <p className="mt-2 text-sm text-slate-300">{understanding.plain_english_summary}</p>
-              </section>
-              {understanding.key_themes?.length ? (
-                <section>
-                  <h3 className="text-sm font-semibold text-white">Key themes</h3>
-                  <ul className="mt-2 list-disc pl-5 text-sm text-slate-300">
-                    {understanding.key_themes.map((t) => (
-                      <li key={t}>{t}</li>
-                    ))}
-                  </ul>
-                </section>
-              ) : null}
-              {understanding.important_points?.length ? (
-                <section>
-                  <h3 className="text-sm font-semibold text-white">Key points</h3>
-                  <ul className="mt-2 space-y-1 text-sm text-slate-300">
-                    {understanding.important_points.map((p) => (
-                      <li key={p.point}>• {p.point}</li>
-                    ))}
-                  </ul>
-                </section>
-              ) : null}
-              {understanding.action_plan?.actions?.length ? (
-                <OrbActionPlanDisplay
-                  summary={understanding.action_plan.summary}
-                  actions={understanding.action_plan.actions}
-                  reviewNote={understanding.action_plan.review_note}
-                />
-              ) : null}
-              {understanding.safety_notice ? (
-                <p className="rounded-lg border border-cyan-400/20 bg-cyan-500/5 px-3 py-2 text-xs text-cyan-100/90">
-                  {understanding.safety_notice}
-                </p>
-              ) : null}
-              {understanding.evaluation?.summary ? (
-                <p className="text-[11px] text-slate-500">
-                  Quality: {(understanding.evaluation as { summary?: { headline?: string } }).summary?.headline}
-                </p>
-              ) : null}
+              <OrbIntelligenceOutput
+                output={understandingToIntelligenceOutput(understanding)}
+                onCopy={() => setCopyNote('Copied markdown to clipboard.')}
+              />
               <div className="flex flex-wrap gap-2">
+                {onRunDeepResearch ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onRunDeepResearch({
+                        text: text.trim(),
+                        title: title.trim() || understanding.title,
+                        sourceId: sourceId || understanding.source_id || null
+                      })
+                    }
+                    className="rounded-lg border border-violet-400/30 bg-violet-500/10 px-3 py-1.5 text-xs text-violet-100"
+                  >
+                    Run Deep Research from this document
+                  </button>
+                ) : null}
+                {onRunDocumentAnalysisAgent ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onRunDocumentAnalysisAgent({
+                        text: text.trim(),
+                        title: title.trim() || understanding.title,
+                        sourceId: sourceId || understanding.source_id || null
+                      })
+                    }
+                    className="rounded-lg border border-cyan-400/30 bg-cyan-500/10 px-3 py-1.5 text-xs text-cyan-100"
+                  >
+                    Run Document Analysis Agent
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const next = await analyseOrbStandaloneDocument({
+                      mode: 'manager_briefing',
+                      source_id: sourceId || understanding.source_id || undefined,
+                      title: title.trim() || understanding.title,
+                      text: sourceId ? undefined : text.trim()
+                    })
+                    setUnderstanding(next.understanding)
+                  }}
+                  disabled={loading}
+                  className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-slate-300 disabled:opacity-40"
+                >
+                  Create manager briefing
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const plan = understanding.action_plan?.actions || []
+                    const lines = plan.map((a) => `- [${a.priority}] ${a.action}`)
+                    void navigator.clipboard.writeText(lines.join('\n'))
+                    setCopyNote('Action plan copied.')
+                  }}
+                  className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-slate-300"
+                >
+                  Copy action plan
+                </button>
                 <button
                   type="button"
                   onClick={() => {
@@ -291,7 +320,7 @@ export function OrbDocumentPanel({
                     onClick={() => onInsertIntoChat(formatForChat())}
                     className="rounded-lg border border-cyan-400/30 bg-cyan-500/10 px-3 py-1.5 text-xs text-cyan-100"
                   >
-                    Insert into chat
+                    Insert summary into chat
                   </button>
                 ) : null}
               </div>

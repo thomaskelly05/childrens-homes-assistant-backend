@@ -18,9 +18,14 @@ from schemas.orb_agents import (
     OrbAgentStep,
     OrbAgentType,
 )
+from schemas.orb_documents import OrbDocumentAnalysisMode, OrbDocumentAnalysisRequest
+from schemas.orb_evaluation import OrbEvaluationResult
 from services.ai_model_router_service import STANDALONE_LLM_TIMEOUT_SECONDS, ai_model_router_service
 from services.orb_agent_registry_service import LIVE_WEB_NOTE, orb_agent_registry_service
 from services.orb_citation_service import orb_citation_service
+from services.orb_document_understanding_service import orb_document_understanding_service
+from services.orb_evaluation_service import orb_evaluation_service
+from services.orb_intelligence_output_service import orb_intelligence_output_service
 from services.orb_rag_retrieval_service import orb_rag_retrieval_service
 from services.orb_standalone_sources import append_sources_basis_section
 
@@ -94,6 +99,11 @@ class OrbAgentOrchestratorService:
                 orb_agent_registry_service.get_agent("general_research"),
             )
 
+        if agent_type == "document_analysis":
+            doc_response = await self._run_document_analysis_agent(request, agent, classify_reason)
+            if doc_response is not None:
+                return doc_response
+
         steps: list[OrbAgentStep] = [
             OrbAgentStep(id="classify", label="Classify request", status="completed", detail=classify_reason),
         ]
@@ -150,6 +160,7 @@ class OrbAgentOrchestratorService:
                 "surface": "standalone_orb_ai",
                 "os_linked": False,
                 "care_record_access": False,
+                "standalone_only": True,
                 "agent": {
                     "type": agent_type,
                     "name": agent.name,
@@ -158,6 +169,15 @@ class OrbAgentOrchestratorService:
                 },
                 "retrieval": self._retrieval_summary(retrieval),
             }
+            evaluation = self._evaluate_agent_output(
+                body,
+                sources=sources,
+                citations=citations,
+                agent_type=agent_type,
+            )
+            context_used["evaluation"] = evaluation.model_dump()
+            intel_warnings = self._evaluation_warnings(evaluation)
+            warnings = list(dict.fromkeys(warnings + intel_warnings))
 
             return OrbAgentRunResponse(
                 success=True,
@@ -170,12 +190,265 @@ class OrbAgentOrchestratorService:
                 steps=steps,
                 context_used=context_used,
                 model_routing=llm_result.get("model_routing"),
-                warnings=list(dict.fromkeys(warnings)),
+                warnings=warnings,
                 safety_notice=self.build_safety_notice(agent, request),
             )
         except Exception as exc:
             logger.warning("agent run failed type=%s error=%s", agent_type, type(exc).__name__, exc_info=True)
             return self.fallback_agent_response(exc, request, agent, steps=steps)
+
+    def _extract_document_payload(self, request: OrbAgentRunRequest) -> tuple[str | None, str | None, str | None]:
+        """Return document_text, source_id, title from request and attachments."""
+        doc_text = _text(request.document_text)
+        source_id = _text(request.document_source_id or request.source_id) or None
+        title = _text(request.document_title) or None
+        if not doc_text:
+            for att in request.attachments:
+                content = _text(getattr(att, "content", None))
+                if content:
+                    doc_text = content
+                    if not title:
+                        title = _text(getattr(att, "name", None)) or "Attached document"
+                    break
+        return doc_text or None, source_id, title
+
+    def _preferred_output_to_analysis_mode(
+        self,
+        preferred: OrbAgentOutputFormat,
+        prompt: str,
+    ) -> OrbDocumentAnalysisMode:
+        lower = prompt.lower()
+        if preferred == "action_plan" or "action plan" in lower:
+            return "action_plan"
+        if preferred == "briefing" or "manager briefing" in lower:
+            return "manager_briefing"
+        if preferred == "comparison" or "compare" in lower:
+            return "policy_comparison"
+        if preferred in {"checklist", "evidence_map"}:
+            if "ofsted" in lower:
+                return "ofsted_lens"
+            return "full_review"
+        if preferred == "supervision_guide" or "staff guidance" in lower:
+            return "staff_briefing"
+        return "explain"
+
+    async def _run_document_analysis_agent(
+        self,
+        request: OrbAgentRunRequest,
+        agent: OrbAgentDefinition,
+        classify_reason: str,
+    ) -> OrbAgentRunResponse | None:
+        doc_text, source_id, title = self._extract_document_payload(request)
+        if not doc_text and not source_id:
+            body = (
+                "Upload or paste a document first, then I can analyse it. "
+                "Open the Documents panel to upload a file or paste text, "
+                "or attach document content when running this agent."
+            )
+            return OrbAgentRunResponse(
+                success=True,
+                agent_type="document_analysis",
+                status="completed",
+                output=OrbAgentOutput(
+                    title="Document Analysis Agent",
+                    format=request.preferred_output,
+                    body=body,
+                ),
+                steps=[
+                    OrbAgentStep(
+                        id="identify",
+                        label="Identify document analysis request",
+                        status="completed",
+                    ),
+                    OrbAgentStep(
+                        id="missing_document",
+                        label="Awaiting standalone document",
+                        status="completed",
+                        detail="No document_text or source_id provided",
+                    ),
+                ],
+                context_used={
+                    "surface": "standalone_orb_ai",
+                    "os_linked": False,
+                    "care_record_access": False,
+                    "standalone_only": True,
+                    "document_analysis": {
+                        "needs_document": True,
+                        "document_understanding_service": True,
+                    },
+                    "agent": {
+                        "type": "document_analysis",
+                        "name": agent.name,
+                        "classify_reason": classify_reason,
+                    },
+                },
+                warnings=[STANDALONE_BOUNDARY_SHORT],
+                safety_notice=self.build_safety_notice(agent, request),
+            )
+
+        analysis_mode = self._preferred_output_to_analysis_mode(request.preferred_output, request.prompt)
+        steps: list[OrbAgentStep] = [
+            OrbAgentStep(
+                id="identify",
+                label="Identify document analysis request",
+                status="completed",
+                detail=classify_reason,
+            ),
+            OrbAgentStep(
+                id="analyse_document",
+                label="Analyse standalone document",
+                status="running",
+            ),
+        ]
+
+        doc_request = OrbDocumentAnalysisRequest(
+            mode=analysis_mode,
+            source_id=source_id,
+            text=doc_text if not source_id else None,
+            title=title,
+            question=request.prompt,
+            include_evaluation=True,
+        )
+        understanding = await orb_document_understanding_service.analyse_document(doc_request)
+        steps[-1] = OrbAgentStep(
+            id="analyse_document",
+            label="Analyse standalone document",
+            status="completed",
+            detail=analysis_mode,
+        )
+
+        retrieval = orb_rag_retrieval_service.retrieve_for_conversation(
+            request.prompt,
+            mode=request.mode,
+            attachments=["document"] if doc_text or source_id else None,
+        )
+        steps.append(
+            OrbAgentStep(
+                id="retrieve",
+                label="Retrieve related guidance",
+                status="completed",
+                detail=f"{len(retrieval.get('document_results') or [])} library passages",
+            )
+        )
+
+        intel = orb_intelligence_output_service.from_document_analysis(understanding)
+        body = orb_intelligence_output_service.build_copy_markdown(intel)
+        body = append_sources_basis_section(body, understanding.sources)
+
+        steps.append(
+            OrbAgentStep(id="generate", label="Generate structured output", status="completed")
+        )
+
+        evaluation = understanding.evaluation
+        if not evaluation:
+            eval_result = orb_evaluation_service.evaluate_document_output(
+                understanding.model_dump(),
+                analysis_mode=analysis_mode,
+            )
+            evaluation = eval_result.model_dump()
+        steps.append(OrbAgentStep(id="evaluate", label="Evaluate output", status="completed"))
+        steps.append(
+            OrbAgentStep(id="sources", label="Attach sources and citations", status="completed")
+        )
+        steps.append(
+            OrbAgentStep(id="safety", label="Apply safety boundaries", status="completed")
+        )
+
+        findings = [
+            OrbAgentFinding(
+                title=point[:120],
+                summary=point,
+                source_ids=[_text(understanding.source_id)] if understanding.source_id else [],
+                confidence="medium",
+            )
+            for point in intel.key_points[:6]
+        ]
+        if not findings and understanding.key_themes:
+            findings = [
+                OrbAgentFinding(title=theme[:120], summary=theme, confidence="medium")
+                for theme in understanding.key_themes[:4]
+            ]
+
+        if not evaluation:
+            eval_result = orb_evaluation_service.evaluate_agent_output(
+                answer=body[:8000],
+                sources=understanding.sources,
+                citations=understanding.citations,
+                agent_type="document_analysis",
+                analysis_mode=analysis_mode,
+            )
+            evaluation = eval_result.model_dump()
+
+        warnings = self._evaluation_warnings_from_dict(evaluation)
+
+        return OrbAgentRunResponse(
+            success=True,
+            agent_type="document_analysis",
+            status="completed",
+            output=OrbAgentOutput(
+                title=understanding.title or agent.name,
+                format=request.preferred_output,
+                body=body,
+                structured_sections={"analysis_mode": analysis_mode},
+            ),
+            findings=findings,
+            sources=understanding.sources,
+            citations=understanding.citations,
+            steps=steps,
+            context_used={
+                "surface": "standalone_orb_ai",
+                "os_linked": False,
+                "care_record_access": False,
+                "standalone_only": True,
+                "document_analysis": {
+                    "document_understanding_service": True,
+                    "analysis_mode": analysis_mode,
+                    "source_id": understanding.source_id,
+                },
+                "agent": {
+                    "type": "document_analysis",
+                    "name": agent.name,
+                    "classify_reason": classify_reason,
+                },
+                "retrieval": self._retrieval_summary(retrieval),
+                "evaluation": evaluation,
+                "intelligence_output": intel.model_dump(),
+            },
+            model_routing=understanding.model_routing,
+            warnings=list(dict.fromkeys(warnings + [STANDALONE_BOUNDARY_SHORT])),
+            safety_notice=understanding.safety_notice or self.build_safety_notice(agent, request),
+        )
+
+    def _evaluate_agent_output(
+        self,
+        answer: str,
+        *,
+        sources: list[dict[str, Any]],
+        citations: list[dict[str, Any]],
+        agent_type: str,
+        analysis_mode: str | None = None,
+    ):
+        return orb_evaluation_service.evaluate_agent_output(
+            answer=answer,
+            sources=sources,
+            citations=citations,
+            agent_type=agent_type,
+            analysis_mode=analysis_mode,
+        )
+
+    def _evaluation_warnings(self, evaluation: OrbEvaluationResult) -> list[str]:
+        return self._evaluation_warnings_from_dict(evaluation.model_dump())
+
+    def _evaluation_warnings_from_dict(self, evaluation: dict[str, Any] | None) -> list[str]:
+        if not evaluation:
+            return []
+        warnings: list[str] = []
+        for flag in evaluation.get("flags") or []:
+            if flag.get("severity") == "critical":
+                warnings.append(_text(flag.get("message")) or "Critical quality flag raised.")
+        if evaluation.get("requires_human_review"):
+            warnings.append("Human review recommended before relying on this output.")
+        return warnings
 
     def _resolve_agent_type(self, request: OrbAgentRunRequest) -> tuple[OrbAgentType, str]:
         if request.agent_type and orb_agent_registry_service.agent_available(request.agent_type):
