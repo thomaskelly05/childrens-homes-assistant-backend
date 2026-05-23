@@ -10,6 +10,7 @@ from schemas.ai_models import AiRoutingRequest
 from schemas.orb_evaluation import OrbEvaluationRequest
 from schemas.orb_operational import (
     OrbOperationalContextSummary,
+    OrbOperationalOutputSaveContext,
     OrbOperationalPermissionSummary,
     OrbOperationalRequest,
     OrbOperationalResponse,
@@ -158,7 +159,7 @@ class OrbOperationalAssistantService:
             OrbOperationalReviewPrompt,
         )
 
-        return OrbOperationalResponse(
+        draft_response = OrbOperationalResponse(
             answer=answer,
             intelligence_output=intelligence_output,
             context_summary=context_summary,
@@ -192,6 +193,48 @@ class OrbOperationalAssistantService:
             save_available=bool(enriched.get("save_available")),
             action_creation_available=bool(enriched.get("action_creation_available", True)),
         )
+
+        from services.orb_operational_output_service import orb_operational_output_service
+
+        save_hints = orb_operational_output_service.build_save_hints(draft_response, request)
+        draft_response.save_available = save_hints.save_available
+        draft_response.suggested_output_type = save_hints.suggested_output_type
+        draft_response.suggested_title = save_hints.suggested_title
+        draft_response.suggested_tags = save_hints.suggested_tags
+
+        if request.save_output:
+            try:
+                record = orb_operational_output_service.save_from_operational_response(
+                    draft_response,
+                    request,
+                    current_user,
+                    output_type=request.output_type,
+                    visibility=request.visibility,
+                    tags=request.tags or save_hints.suggested_tags,
+                    title=request.output_title,
+                    conn=conn,
+                )
+                draft_response.operational_output = OrbOperationalOutputSaveContext(
+                    available=True,
+                    saved=True,
+                    output_id=record.id,
+                    type=record.type,
+                    review_status=record.review_status,
+                    visibility=record.visibility,
+                )
+                if draft_response.briefing:
+                    draft_response.briefing.saved_as_output_id = record.id
+            except Exception as exc:
+                logger.warning("Operational output save failed: %s", exc)
+                draft_response.operational_output = OrbOperationalOutputSaveContext(
+                    available=True,
+                    saved=False,
+                )
+                draft_response.warnings = list(draft_response.warnings or []) + [
+                    "Could not persist operational output; try Save briefing again."
+                ]
+
+        return draft_response
 
     def build_operational_prompt(self, request: OrbOperationalRequest, context: dict[str, Any]) -> str:
         summary = orb_operational_context_bridge.summarise_context(context)

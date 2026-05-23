@@ -235,7 +235,12 @@ class OrbOperationalActionBuilderService:
             "context_status": orb_operational_context_bridge.build_context_status(context, request),
             "follow_up_actions": self.build_follow_up_actions(context, request),
             "briefing": briefing.model_dump() if briefing else None,
-            "save_available": briefing is not None,
+            "save_available": bool(
+                briefing
+                or draft_actions
+                or recommendations
+                or answer
+            ),
             "action_creation_available": True,
         }
 

@@ -14,12 +14,19 @@ export function OrbOperationalActionsPanel({
   recommendations,
   draftActions,
   reviewPrompts,
-  scope
+  scope,
+  onActionsCreated
 }: {
   recommendations: OrbOperationalRecommendation[]
   draftActions: OrbOperationalDraftAction[]
   reviewPrompts: OrbOperationalReviewPrompt[]
-  scope?: { home_id?: number | null; child_id?: number | null; staff_id?: number | null }
+  scope?: {
+    home_id?: number | null
+    child_id?: number | null
+    staff_id?: number | null
+    output_id?: string | null
+  }
+  onActionsCreated?: (actionIds: string[]) => void
 }) {
   const [creating, setCreating] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
@@ -31,6 +38,7 @@ export function OrbOperationalActionsPanel({
     const result = await createOperationalActions(draftActions, scope)
     if (result.source === 'live' && result.data.created_ids?.length) {
       setNotice(`Created ${result.data.created_ids.length} proposed action(s) for manager review.`)
+      onActionsCreated?.(result.data.created_ids)
     } else {
       setNotice(result.warning || result.data?.notice || 'Could not persist actions — copy drafts instead.')
     }

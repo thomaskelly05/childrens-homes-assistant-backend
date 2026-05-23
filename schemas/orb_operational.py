@@ -7,6 +7,12 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from schemas.orb_intelligence_output import OrbIntelligenceBoundary, OrbIntelligenceOutput
+from schemas.orb_operational_outputs import (
+    OrbOperationalOutputSaveContext,
+    OrbOperationalOutputSaveHints,
+    OrbOperationalOutputType,
+    OrbOperationalOutputVisibility,
+)
 
 OrbOperationalMode = Literal[
     "operational_summary",
@@ -38,6 +44,11 @@ class OrbOperationalRequest(BaseModel):
     include_record_quality: bool = True
     include_patterns: bool = True
     require_manager_review: bool = False
+    save_output: bool = False
+    output_type: OrbOperationalOutputType | None = None
+    visibility: OrbOperationalOutputVisibility = "operational_private"
+    tags: list[str] = Field(default_factory=list)
+    output_title: str | None = Field(default=None, max_length=500)
 
 
 class OrbOperationalContextSummary(BaseModel):
@@ -242,6 +253,7 @@ class OrbOperationalActionsCreateRequest(BaseModel):
     child_id: int | None = None
     staff_id: int | None = None
     require_manager_review: bool = True
+    output_id: str | None = Field(default=None, max_length=120)
 
 
 class OrbOperationalBriefingRequest(BaseModel):
@@ -256,6 +268,10 @@ class OrbOperationalBriefingRequest(BaseModel):
     days: int = Field(default=7, ge=1, le=90)
     answer: str | None = None
     save: bool = False
+    output_type: OrbOperationalOutputType | None = None
+    visibility: OrbOperationalOutputVisibility = "operational_private"
+    tags: list[str] = Field(default_factory=list)
+    title: str | None = Field(default=None, max_length=500)
 
 
 class OrbOperationalResponse(BaseModel):
@@ -286,6 +302,10 @@ class OrbOperationalResponse(BaseModel):
     follow_up_actions: list[OrbOperationalFollowUpAction] = Field(default_factory=list)
     briefing: OrbOperationalBriefing | None = None
     save_available: bool = False
+    suggested_output_type: OrbOperationalOutputType | None = None
+    suggested_title: str | None = None
+    suggested_tags: list[str] = Field(default_factory=list)
+    operational_output: OrbOperationalOutputSaveContext | None = None
     action_creation_available: bool = True
 
 

@@ -339,6 +339,11 @@ OPERATIONAL_ORB_MARKERS = [
     "Operational cognition",
 ]
 
+OPERATIONAL_OUTPUTS_MARKERS = [
+    "OrbOperationalOutputsPanel",
+    "/api/assistant/orb/outputs",
+]
+
 
 def _read(path: Path) -> str:
     return path.read_text(encoding="utf-8")
@@ -477,10 +482,18 @@ def test_standalone_orb_interruptibility():
 
 def test_standalone_orb_only_uses_standalone_api_paths():
     sources = _read(ORB_COMPANION) + _read(STANDALONE_CLIENT)
-    forbidden = ["/api/orb/conversation", "/orb/conversation", "/api/os/", "/os/"]
+    forbidden = [
+        "/api/orb/conversation",
+        "/orb/conversation",
+        "/api/os/",
+        "/os/",
+        "/api/assistant/orb/outputs",
+        "/assistant/orb/outputs",
+    ]
     for marker in forbidden:
         assert marker not in sources, f"standalone ORB must not use {marker}"
     assert "/orb/standalone/conversation" in sources
+    assert "/orb/standalone/outputs" in sources
 
 
 def test_standalone_orb_answer_style_controls():
@@ -605,6 +618,17 @@ def test_assistant_orb_page_keeps_operational_markers():
     for marker in OPERATIONAL_ORB_MARKERS:
         assert marker in text, f"/assistant/orb must keep operational marker: {marker}"
     assert "LiveDataStatus" in text or "getServerOsYoungPeople" in text
+
+
+def test_assistant_orb_operational_outputs_wired():
+    conversation = _read(
+        REPO_ROOT / "frontend-next" / "components" / "orb-operational" / "orb-conversation-experience.tsx"
+    )
+    client = _read(REPO_ROOT / "frontend-next" / "lib" / "orb" / "operational-client.ts")
+    for marker in OPERATIONAL_OUTPUTS_MARKERS:
+        assert marker in conversation or marker in client, (
+            f"operational outputs marker missing: {marker}"
+        )
 
 
 def test_assistant_page_does_not_redirect_to_orb():
