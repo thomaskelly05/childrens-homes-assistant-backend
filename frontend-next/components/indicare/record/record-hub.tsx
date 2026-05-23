@@ -8,6 +8,12 @@ import { Mic2, Sparkles } from 'lucide-react'
 import { OrbInlineHint } from '@/components/indicare/operational/orb-inline-hint'
 import { Card, PageHeader, SectionHeader } from '@/components/indicare/ui'
 import { RecordChildPicker, mapYoungPeopleToPickerOptions, type RecordChildPickerOption } from '@/components/indicare/record/record-child-picker'
+import { RecordingWorkspace } from '@/components/indicare/record/recording-workspace'
+import {
+  RECORDING_OS_ORB_HREF,
+  RECORDING_STANDALONE_ORB_HREF
+} from '@/lib/record/recording-quality-coach'
+import { resolveRecordingTypeFromQuery } from '@/lib/record/recording-types'
 import { useActiveChild } from '@/lib/context/active-child-context'
 import { getOsYoungPeople } from '@/lib/os-api/workspaces'
 import type { OsPersonSummary } from '@/lib/os-api/workspaces'
@@ -343,13 +349,14 @@ export function RecordHub({
 
   const showChildPicker = about === 'child'
   const showStaffPanel = about === 'staff'
+  const initialRecordingType = resolveRecordingTypeFromQuery(highlightType || searchParams.get('type'))
 
   return (
     <div className="space-y-6 pb-8">
       <PageHeader
         eyebrow="Recording"
-        title="Record something"
-        description="Choose who or what this is about, then pick the record type. ORB can help you write clearly and calmly."
+        title="Record with care"
+        description="Write clear, child-centred records. ORB can help with wording, reflection and review."
         action={
           childId ? (
             <Link
@@ -376,13 +383,13 @@ export function RecordHub({
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
           <Link
-            href={recordOperationalOrbPromptHref('Help me choose the right record type and check quality before I save.')}
+            href={RECORDING_OS_ORB_HREF}
             className="inline-flex min-h-10 items-center rounded-2xl bg-slate-950 px-4 py-2.5 text-xs font-black text-white"
           >
             Open operational ORB
           </Link>
           <Link
-            href={recordOrbPromptHref('Help me with calm, child-centred wording for this record.', childId)}
+            href={RECORDING_STANDALONE_ORB_HREF}
             className="inline-flex min-h-10 items-center rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-black text-slate-700"
           >
             ORB wording help (standalone)
@@ -427,6 +434,14 @@ export function RecordHub({
           </Link>
         </section>
       ) : null}
+
+      <RecordingWorkspace
+        about={about}
+        childId={childId}
+        childDisplayName={effectiveChildLabel}
+        initialRecordingType={initialRecordingType}
+        highlightType={highlightType}
+      />
 
       <Card data-testid="record-recommended">
         <SectionHeader eyebrow="Suggested" title="Recommended records" description="Based on who or what you selected above." />
@@ -475,6 +490,14 @@ export function RecordHub({
       {about === 'home-shift' ? (
         <p className="text-sm font-semibold text-slate-600">Home and shift records are shown prominently. Child-specific cards remain below if you need them later.</p>
       ) : null}
+
+      <Card data-testid="record-more-routes">
+        <SectionHeader
+          eyebrow="Routes"
+          title="More recording routes"
+          description="Open the formal workflow when you are ready to submit a record to the system."
+        />
+      </Card>
 
       {RECORD_CARD_SECTIONS.map((section) => {
         const sectionCards = cardsForSection(section.id).filter((card) => {

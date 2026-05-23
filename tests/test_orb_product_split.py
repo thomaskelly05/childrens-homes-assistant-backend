@@ -330,6 +330,11 @@ OS_ORB_LINK_FILES = [
 
 RECORD_HUB = REPO_ROOT / "frontend-next" / "lib" / "record" / "recording-hub.ts"
 RECORD_HUB_COMPONENT = REPO_ROOT / "frontend-next" / "components" / "indicare" / "record" / "record-hub.tsx"
+RECORD_WORKSPACE_ORB_FILES = [
+    REPO_ROOT / "frontend-next" / "components" / "indicare" / "record" / "recording-orb-rail.tsx",
+    REPO_ROOT / "frontend-next" / "components" / "indicare" / "record" / "recording-workspace.tsx",
+    REPO_ROOT / "frontend-next" / "lib" / "record" / "recording-quality-coach.ts",
+]
 
 FORBIDDEN_RECORD_ORB_QUERY_KEYS = [
     "young_person_id=",
@@ -680,6 +685,11 @@ def test_record_orb_prompts_use_standalone_orb_without_operational_ids():
         assert "/orb?" in combined or "recordOrbPromptHref" in text, f"{path.name} should define standalone /orb links"
         for key in FORBIDDEN_RECORD_ORB_QUERY_KEYS:
             assert key not in combined, f"{path.name} must not pass {key} into standalone /orb URLs"
+
+    workspace_sources = "\n".join(_read(path) for path in RECORD_WORKSPACE_ORB_FILES)
+    assert "/orb?context=recording" in workspace_sources
+    for key in FORBIDDEN_RECORD_ORB_QUERY_KEYS:
+        assert key not in workspace_sources, f"recording workspace must not pass {key} into standalone /orb URLs"
 
 
 def test_standalone_orb_does_not_call_ai_governance_routes():
