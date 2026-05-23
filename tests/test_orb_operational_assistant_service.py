@@ -142,3 +142,64 @@ async def test_operational_assistant_includes_draft_actions_for_action_prompt(mo
     )
     assert result.draft_actions
     assert result.recommendations
+
+
+@pytest.mark.asyncio
+async def test_operational_assistant_records_governance_event(monkeypatch):
+    from services.indicare_ai_governance_event_service import indicare_ai_governance_event_service
+
+    indicare_ai_governance_event_service.reset_for_tests()
+    recorded: list = []
+
+    def _capture(*args, **kwargs):
+        recorded.append(kwargs.get("current_user") or args[0] if args else kwargs)
+        return None
+
+    monkeypatch.setattr(
+        indicare_ai_governance_event_service,
+        "record_from_operational_response",
+        _capture,
+    )
+    monkeypatch.setattr(
+        "services.orb_operational_assistant_service.ai_model_router_service.complete_with_routing",
+        AsyncMock(
+            return_value=(
+                AiProviderResponse(text="Brief ready.", provider=AiProviderName.MOCK, model="mock"),
+                AiRoutingDecision(
+                    provider=AiProviderName.MOCK,
+                    model="mock",
+                    task_type=AiTaskType.OPERATIONAL_OS_CONTEXT,
+                    risk_level=AiRiskLevel.LOW,
+                    quality_tier=AiQualityTier.BALANCED,
+                    cost_tier=AiCostTier.STANDARD,
+                    reason="test",
+                ),
+                AiModelRouterTrace(
+                    task_type=AiTaskType.OPERATIONAL_OS_CONTEXT,
+                    risk_level=AiRiskLevel.LOW,
+                    quality_tier=AiQualityTier.BALANCED,
+                    cost_tier=AiCostTier.STANDARD,
+                    provider=AiProviderName.MOCK,
+                    model="mock",
+                    reason="test",
+                ),
+            )
+        ),
+    )
+    monkeypatch.setattr(
+        "services.orb_operational_assistant_service.orb_operational_context_bridge.build_context",
+        lambda *_a, **_k: {
+            "summary": {"headline": "OK", "degraded": False, "unavailable": False},
+            "sources": [],
+            "permissions": {"role": "manager", "care_record_access": True},
+            "raw_available": True,
+        },
+    )
+
+    await orb_operational_assistant_service.answer(
+        OrbOperationalRequest(message="Daily brief"),
+        {"id": 1, "role": "manager"},
+        conn=MagicMock(),
+    )
+    assert recorded
+    indicare_ai_governance_event_service.reset_for_tests()

@@ -83,17 +83,21 @@ GOVERNANCE_SEED_META: dict[str, dict[str, Any]] = {
     "seed-ofsted-sccif": {
         "official_source": True,
         "publisher": "Ofsted",
+        "document_family": "ofsted",
         "confidence_level": "official",
         "governance_status": "approved",
         "source_version": "built-in-summary-v1",
+        "source_integrity": "summary_only",
         "notes": "Built-in summary only, not full official text. Upload official documents for exact source retrieval.",
     },
     "seed-quality-standards": {
         "official_source": True,
         "publisher": "Department for Education",
+        "document_family": "dfe",
         "confidence_level": "official",
         "governance_status": "approved",
         "source_version": "built-in-summary-v1",
+        "source_integrity": "summary_only",
         "notes": "Built-in summary only, not full official text. Upload official documents for exact source retrieval.",
     },
     "seed-safeguarding": {
@@ -116,6 +120,7 @@ GOVERNANCE_SEED_META: dict[str, dict[str, Any]] = {
         "confidence_level": "high",
         "governance_status": "approved",
         "source_version": "built-in-summary-v1",
+        "source_integrity": "summary_only",
     },
     "seed-residential-practice": {
         "official_source": False,
@@ -250,6 +255,15 @@ class OrbKnowledgeLibraryService:
             "approved_by": row.get("approved_by"),
             "approved_at": row.get("approved_at"),
             "notes": row.get("notes"),
+            "canonical_url": row.get("canonical_url"),
+            "jurisdiction": row.get("jurisdiction"),
+            "document_family": row.get("document_family"),
+            "document_version_label": row.get("document_version_label"),
+            "uploaded_by_user_id": row.get("uploaded_by_user_id"),
+            "approved_by_user_id": row.get("approved_by_user_id"),
+            "source_integrity": row.get("source_integrity") or "summary_only",
+            "copyright_note": row.get("copyright_note"),
+            "citation_style": row.get("citation_style"),
         }
 
     def _row_to_chunk(self, row: dict[str, Any]) -> dict[str, Any]:
@@ -279,6 +293,21 @@ class OrbKnowledgeLibraryService:
             "semantic_keywords": self._parse_json_list(row.get("semantic_keywords")),
             "canonical_terms": self._parse_json_list(row.get("canonical_terms")),
             "confidence_score": row.get("confidence_score"),
+            "heading_path": self._parse_json_list(row.get("heading_path")),
+            "heading": row.get("heading"),
+            "subsection": row.get("subsection"),
+            "paragraph_number": row.get("paragraph_number"),
+            "line_start": row.get("line_start"),
+            "line_end": row.get("line_end"),
+            "exact_excerpt": row.get("exact_excerpt"),
+            "normalized_excerpt": row.get("normalized_excerpt"),
+            "citation_anchor": row.get("citation_anchor"),
+            "source_url": row.get("source_url"),
+            "source_version": row.get("source_version"),
+            "official_source": bool(row.get("official_source", False)),
+            "source_integrity": row.get("source_integrity"),
+            "governance_status": row.get("governance_status"),
+            "confidence_level": row.get("confidence_level"),
         }
 
     def seed_builtin_sources(self) -> list[dict[str, Any]]:
@@ -308,11 +337,6 @@ class OrbKnowledgeLibraryService:
                         release_db_connection(conn)
                 except Exception:
                     pass
-            chunks = orb_document_ingestion_service.chunk_text(
-                text,
-                source_title=meta["title"],
-                source_type=meta["source_type"],
-            )
             governance = GOVERNANCE_SEED_META.get(source_id, {})
             source = {
                 "id": source_id,
@@ -339,32 +363,25 @@ class OrbKnowledgeLibraryService:
                 "confidence_level": governance.get("confidence_level", "medium"),
                 "governance_status": governance.get("governance_status", "approved"),
                 "notes": governance.get("notes"),
+                "document_family": governance.get("document_family"),
+                "source_integrity": governance.get("source_integrity", "summary_only"),
             }
             self._persist_source(source)
+            chunks = orb_document_ingestion_service.chunk_text(
+                text,
+                source_title=meta["title"],
+                source_type=meta["source_type"],
+                source_id=source_id,
+            )
             chunk_records = []
             for chunk in chunks:
-                chunk_id = f"{source_id}-chunk-{chunk['chunk_index']}"
+                enriched = orb_document_ingestion_service._enrich_chunk(
+                    chunk, source_type=meta["source_type"], source=source
+                )
                 chunk_records.append(
-                    {
-                        "id": chunk_id,
-                        "source_id": source_id,
-                        "chunk_index": chunk["chunk_index"],
-                        "title": chunk.get("title"),
-                        "text": chunk["text"],
-                        "section": chunk.get("section"),
-                        "page": chunk.get("page"),
-                        "token_estimate": chunk.get("token_estimate"),
-                        "citation_label": chunk.get("citation_label"),
-                        "source_type": meta["source_type"],
-                        "keywords": chunk.get("keywords") or [],
-                        "semantic_keywords": chunk.get("semantic_keywords") or [],
-                        "canonical_terms": chunk.get("canonical_terms") or [],
-                        "confidence_score": chunk.get("confidence_score"),
-                        "embedding": chunk.get("embedding"),
-                        "embedding_model": chunk.get("embedding_model"),
-                        "embedding_created_at": chunk.get("embedding_created_at"),
-                        "metadata": chunk.get("metadata") or {},
-                    }
+                    orb_document_ingestion_service._chunk_record_from_enriched(
+                        source_id, meta["source_type"], enriched
+                    )
                 )
             self.upsert_chunks(source_id, chunk_records)
             created.append(source)
@@ -388,7 +405,10 @@ class OrbKnowledgeLibraryService:
                                 metadata, created_at, updated_at,
                                 source_version, official_source, source_url, publisher,
                                 published_at, review_due_at, expires_at,
-                                confidence_level, governance_status, approved_by, approved_at, notes
+                                confidence_level, governance_status, approved_by, approved_at, notes,
+                                canonical_url, jurisdiction, document_family, document_version_label,
+                                uploaded_by_user_id, approved_by_user_id, source_integrity,
+                                copyright_note, citation_style
                             ) VALUES (
                                 %(id)s, %(title)s, %(description)s, %(source_type)s, %(status)s, %(origin)s,
                                 %(file_name)s, %(file_type)s, %(source_label)s, %(reliability)s,
@@ -396,7 +416,10 @@ class OrbKnowledgeLibraryService:
                                 %(metadata)s, %(created_at)s, %(updated_at)s,
                                 %(source_version)s, %(official_source)s, %(source_url)s, %(publisher)s,
                                 %(published_at)s, %(review_due_at)s, %(expires_at)s,
-                                %(confidence_level)s, %(governance_status)s, %(approved_by)s, %(approved_at)s, %(notes)s
+                                %(confidence_level)s, %(governance_status)s, %(approved_by)s, %(approved_at)s, %(notes)s,
+                                %(canonical_url)s, %(jurisdiction)s, %(document_family)s, %(document_version_label)s,
+                                %(uploaded_by_user_id)s, %(approved_by_user_id)s, %(source_integrity)s,
+                                %(copyright_note)s, %(citation_style)s
                             )
                             ON CONFLICT (id) DO UPDATE SET
                                 title = EXCLUDED.title,
@@ -412,6 +435,13 @@ class OrbKnowledgeLibraryService:
                                 confidence_level = EXCLUDED.confidence_level,
                                 governance_status = EXCLUDED.governance_status,
                                 notes = EXCLUDED.notes,
+                                canonical_url = EXCLUDED.canonical_url,
+                                jurisdiction = EXCLUDED.jurisdiction,
+                                document_family = EXCLUDED.document_family,
+                                document_version_label = EXCLUDED.document_version_label,
+                                source_integrity = EXCLUDED.source_integrity,
+                                copyright_note = EXCLUDED.copyright_note,
+                                citation_style = EXCLUDED.citation_style,
                                 updated_at = EXCLUDED.updated_at
                             """,
                             {
@@ -534,6 +564,15 @@ class OrbKnowledgeLibraryService:
             "approved_by": payload.get("approved_by"),
             "approved_at": payload.get("approved_at"),
             "notes": payload.get("notes"),
+            "canonical_url": payload.get("canonical_url"),
+            "jurisdiction": payload.get("jurisdiction"),
+            "document_family": payload.get("document_family"),
+            "document_version_label": payload.get("document_version_label"),
+            "uploaded_by_user_id": payload.get("uploaded_by_user_id"),
+            "approved_by_user_id": payload.get("approved_by_user_id"),
+            "source_integrity": payload.get("source_integrity") or "unknown",
+            "copyright_note": payload.get("copyright_note"),
+            "citation_style": payload.get("citation_style"),
         }
         return self._persist_source(source)
 
@@ -560,6 +599,14 @@ class OrbKnowledgeLibraryService:
             "approved_by",
             "approved_at",
             "notes",
+            "canonical_url",
+            "jurisdiction",
+            "document_family",
+            "document_version_label",
+            "source_integrity",
+            "copyright_note",
+            "citation_style",
+            "approved_by_user_id",
         )
         for key in update_keys:
             if key in payload and payload[key] is not None:
@@ -610,13 +657,21 @@ class OrbKnowledgeLibraryService:
                                     id, source_id, chunk_index, title, text, section, page,
                                     token_estimate, citation_label, source_type, keywords, metadata,
                                     embedding, embedding_model, embedding_created_at,
-                                    semantic_keywords, canonical_terms, confidence_score
+                                    semantic_keywords, canonical_terms, confidence_score,
+                                    heading_path, heading, subsection, paragraph_number,
+                                    line_start, line_end, exact_excerpt, normalized_excerpt,
+                                    citation_anchor, source_url, source_version, official_source,
+                                    source_integrity, governance_status, confidence_level
                                 ) VALUES (
                                     %(id)s, %(source_id)s, %(chunk_index)s, %(title)s, %(text)s,
                                     %(section)s, %(page)s, %(token_estimate)s, %(citation_label)s,
                                     %(source_type)s, %(keywords)s, %(metadata)s,
                                     %(embedding)s, %(embedding_model)s, %(embedding_created_at)s,
-                                    %(semantic_keywords)s, %(canonical_terms)s, %(confidence_score)s
+                                    %(semantic_keywords)s, %(canonical_terms)s, %(confidence_score)s,
+                                    %(heading_path)s, %(heading)s, %(subsection)s, %(paragraph_number)s,
+                                    %(line_start)s, %(line_end)s, %(exact_excerpt)s, %(normalized_excerpt)s,
+                                    %(citation_anchor)s, %(source_url)s, %(source_version)s, %(official_source)s,
+                                    %(source_integrity)s, %(governance_status)s, %(confidence_level)s
                                 )
                                 """,
                                 {
@@ -628,6 +683,8 @@ class OrbKnowledgeLibraryService:
                                     else None,
                                     "semantic_keywords": Json(chunk.get("semantic_keywords") or []),
                                     "canonical_terms": Json(chunk.get("canonical_terms") or []),
+                                    "heading_path": Json(chunk.get("heading_path") or []),
+                                    "official_source": bool(chunk.get("official_source", False)),
                                 },
                             )
                         cur.execute(
@@ -915,15 +972,30 @@ class OrbKnowledgeLibraryService:
 
             keyword_score = round(score, 3)
             warning = self._governance_warning(source)
+            integrity = _text(source.get("source_integrity"))
+            if integrity == "summary_only" and not warning:
+                warning = (
+                    "This is a built-in summary, not the full official document."
+                )
+            from services.orb_exact_citation_service import orb_exact_citation_service
+
+            exact_label = orb_exact_citation_service.build_exact_citation_label(source, chunk)
             result = {
                 "source_id": chunk["source_id"],
                 "source_title": source.get("title"),
                 "source_type": source.get("source_type"),
-                "citation_label": chunk.get("citation_label") or source.get("source_label"),
+                "citation_label": chunk.get("citation_label") or exact_label,
+                "exact_citation": exact_label,
+                "citation_anchor": chunk.get("citation_anchor"),
+                "heading_path": chunk.get("heading_path") or [],
+                "heading": chunk.get("heading"),
                 "section": chunk.get("section"),
+                "subsection": chunk.get("subsection"),
                 "page": chunk.get("page"),
+                "paragraph_number": chunk.get("paragraph_number"),
                 "chunk_index": chunk.get("chunk_index"),
                 "text": chunk.get("text"),
+                "excerpt": _text(chunk.get("exact_excerpt")) or chunk.get("text", "")[:500],
                 "score": keyword_score,
                 "keyword_score": keyword_score,
                 "semantic_score": None,
@@ -932,7 +1004,11 @@ class OrbKnowledgeLibraryService:
                 "source_confidence": source.get("confidence_level"),
                 "governance_status": source.get("governance_status"),
                 "official_source": source.get("official_source"),
+                "source_integrity": integrity or None,
+                "source_url": source.get("source_url"),
+                "source_version": source.get("source_version"),
                 "warning": warning,
+                "quote_allowed": integrity not in {"summary_only", "unknown"},
                 "match_reason": ", ".join(reasons[:5]) or "keyword_overlap",
                 "live_retrieved": False,
                 "metadata": {
@@ -940,6 +1016,7 @@ class OrbKnowledgeLibraryService:
                     "origin": source.get("origin"),
                     "source_label": source.get("source_label"),
                     "source_version": source.get("source_version"),
+                    "source_integrity": integrity,
                 },
             }
             scored.append((score, result, chunk["id"]))
@@ -957,6 +1034,116 @@ class OrbKnowledgeLibraryService:
             "standalone_only": True,
             "os_linked": False,
             "care_record_access": False,
+        }
+
+    def list_official_sources(self) -> list[dict[str, Any]]:
+        return [s for s in self.list_sources() if s.get("official_source")]
+
+    def approve_source(
+        self,
+        source_id: str,
+        *,
+        current_user: dict[str, Any] | None = None,
+    ) -> dict[str, Any] | None:
+        user_id = _text((current_user or {}).get("id") or (current_user or {}).get("user_id"))
+        return self.update_source(
+            source_id,
+            {
+                "governance_status": "approved",
+                "approved_at": _utc_now().isoformat(),
+                "approved_by": user_id or "admin",
+                "approved_by_user_id": user_id or None,
+            },
+        )
+
+    def mark_needs_review(self, source_id: str, reason: str | None = None) -> dict[str, Any] | None:
+        payload: dict[str, Any] = {"governance_status": "needs_review"}
+        if reason:
+            existing = self.get_source(source_id)
+            notes = _text((existing or {}).get("notes"))
+            payload["notes"] = f"{notes}\n{reason}".strip() if notes else reason
+        return self.update_source(source_id, payload)
+
+    def archive_source(self, source_id: str) -> dict[str, Any] | None:
+        return self.update_source(source_id, {"governance_status": "archived", "status": "archived"})
+
+    def update_source_metadata(self, source_id: str, metadata: dict[str, Any]) -> dict[str, Any] | None:
+        return self.update_source(source_id, metadata)
+
+    def get_source_citation_health(self, source_id: str) -> dict[str, Any]:
+        from services.orb_exact_citation_service import orb_exact_citation_service
+        from services.orb_official_source_registry_service import orb_official_source_registry_service
+
+        source = self.get_source(source_id)
+        if not source:
+            return {"source_id": source_id, "health_status": "not_found", "chunk_count": 0, "warnings": []}
+
+        chunks = self.list_chunks(source_id)
+        warnings: list[str] = []
+        integrity_warn = orb_official_source_registry_service.source_warning_for_integrity(source)
+        if integrity_warn:
+            warnings.append(integrity_warn)
+        gov_warn = orb_exact_citation_service.source_warning(source)
+        if gov_warn:
+            warnings.append(gov_warn)
+
+        with_section = sum(1 for c in chunks if _text(c.get("section")))
+        with_page = sum(1 for c in chunks if _text(c.get("page")))
+        with_heading = sum(1 for c in chunks if c.get("heading_path") or _text(c.get("heading")))
+        with_anchor = sum(1 for c in chunks if _text(c.get("citation_anchor")))
+        with_excerpt = sum(1 for c in chunks if _text(c.get("exact_excerpt")))
+
+        health_status = "ok"
+        if not chunks:
+            health_status = "no_chunks"
+        elif _text(source.get("source_integrity")) == "summary_only":
+            health_status = "summary_only"
+        elif with_section == 0 and with_heading == 0:
+            health_status = "weak_structure"
+
+        return {
+            "source_id": source_id,
+            "chunk_count": len(chunks),
+            "chunks_with_section": with_section,
+            "chunks_with_page": with_page,
+            "chunks_with_heading": with_heading,
+            "chunks_with_anchor": with_anchor,
+            "chunks_with_exact_excerpt": with_excerpt,
+            "summary_only": _text(source.get("source_integrity")) == "summary_only",
+            "governance_status": source.get("governance_status"),
+            "official_source": bool(source.get("official_source")),
+            "source_integrity": source.get("source_integrity"),
+            "warnings": list(dict.fromkeys(warnings)),
+            "health_status": health_status,
+        }
+
+    def rebuild_citations_for_source(self, source_id: str) -> dict[str, Any]:
+        from services.orb_document_ingestion_service import orb_document_ingestion_service
+        from services.orb_exact_citation_service import orb_exact_citation_service
+
+        source = self.get_source(source_id)
+        if not source:
+            return {"rebuilt": 0, "error": "not_found"}
+        chunks = self.list_chunks(source_id)
+        rebuilt: list[dict[str, Any]] = []
+        for chunk in chunks:
+            chunk["citation_label"] = orb_exact_citation_service.build_exact_citation_label(source, chunk)
+            chunk["citation_anchor"] = orb_exact_citation_service.build_citation_anchor(
+                source_id,
+                int(chunk.get("chunk_index") or 0),
+                page=_text(chunk.get("page")) or None,
+                section=_text(chunk.get("section")) or None,
+                paragraph=_text(chunk.get("paragraph_number")) or None,
+            )
+            text_body = _text(chunk.get("text"))
+            chunk["exact_excerpt"] = text_body[:500]
+            chunk["normalized_excerpt"] = re.sub(r"\s+", " ", chunk["exact_excerpt"]).strip()
+            rebuilt.append(chunk)
+        if rebuilt:
+            self.upsert_chunks(source_id, rebuilt)
+        return {
+            "rebuilt": len(rebuilt),
+            "citation_health": self.get_source_citation_health(source_id),
         }
 
 

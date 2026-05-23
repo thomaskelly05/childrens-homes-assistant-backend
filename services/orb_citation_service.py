@@ -132,6 +132,16 @@ class OrbCitationService:
                 entry["source_id"] = citation.get("source_id")
                 entry["chunk_index"] = citation.get("chunk_index")
             for field in (
+                "exact_citation",
+                "citation_anchor",
+                "heading_path",
+                "heading",
+                "subsection",
+                "paragraph_number",
+                "excerpt",
+                "source_url",
+                "source_integrity",
+                "quote_allowed",
                 "official_source",
                 "confidence_level",
                 "governance_status",

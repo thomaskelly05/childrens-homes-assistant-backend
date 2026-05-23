@@ -338,6 +338,16 @@ class OrbOperationalOutputService:
             {"type": record.type, "review_status": record.review_status},
             home_id=record.home_id,
         )
+        try:
+            from services.indicare_ai_governance_event_service import indicare_ai_governance_event_service
+
+            indicare_ai_governance_event_service.record_from_operational_output(
+                record,
+                current_user=current_user,
+                conn=conn,
+            )
+        except Exception:
+            pass
         return record
 
     def list_outputs(

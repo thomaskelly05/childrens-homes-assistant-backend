@@ -234,6 +234,17 @@ class OrbOperationalAssistantService:
                     "Could not persist operational output; try Save briefing again."
                 ]
 
+        try:
+            from services.indicare_ai_governance_event_service import indicare_ai_governance_event_service
+
+            indicare_ai_governance_event_service.record_from_operational_response(
+                draft_response,
+                current_user=current_user,
+                conn=conn,
+            )
+        except Exception:
+            pass
+
         return draft_response
 
     def build_operational_prompt(self, request: OrbOperationalRequest, context: dict[str, Any]) -> str:

@@ -12,8 +12,10 @@ from pydantic import BaseModel, ConfigDict, Field
 from auth.permissions import require_assistant_access
 from schemas.orb_knowledge import (
     OrbKnowledgeDocumentIngestRequest,
+    OrbKnowledgeOfficialImportRequest,
     OrbKnowledgeSearchRequest,
     OrbKnowledgeSourceCreate,
+    OrbKnowledgeSourceMetadataPatch,
     OrbKnowledgeSourceUpdate,
 )
 from services.orb_document_ingestion_service import (
@@ -51,6 +53,11 @@ async def knowledge_health(current_user=Depends(require_assistant_access)):
 @router.get("/summary")
 async def knowledge_summary(current_user=Depends(require_assistant_access)):
     return _success(orb_knowledge_library_service.get_library_summary())
+
+
+@router.get("/official-sources")
+async def official_sources(current_user=Depends(require_assistant_access)):
+    return _success(orb_knowledge_library_service.list_official_sources())
 
 
 @router.get("/sources/needing-review")
@@ -94,6 +101,109 @@ async def get_source(source_id: str, current_user=Depends(require_assistant_acce
         raise HTTPException(status_code=404, detail="Knowledge source not found")
     chunks = orb_knowledge_library_service.list_chunks(source_id)
     return _success({"source": source, "chunks": chunks})
+
+
+@router.get("/sources/{source_id}/citation-health")
+async def source_citation_health(source_id: str, current_user=Depends(require_assistant_access)):
+    health = orb_knowledge_library_service.get_source_citation_health(source_id)
+    if health.get("health_status") == "not_found":
+        raise HTTPException(status_code=404, detail="Knowledge source not found")
+    return _success(health)
+
+
+@router.post("/sources/{source_id}/approve")
+async def approve_source(source_id: str, current_user=Depends(require_assistant_access)):
+    updated = orb_knowledge_library_service.approve_source(source_id, current_user=current_user)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Knowledge source not found")
+    try:
+        from services.indicare_ai_governance_event_service import indicare_ai_governance_event_service
+
+        indicare_ai_governance_event_service.record_from_source_event(
+            updated,
+            "source_approved",
+            current_user=current_user,
+        )
+    except Exception:
+        pass
+    return _success(updated)
+
+
+@router.post("/sources/{source_id}/needs-review")
+async def needs_review_source(
+    source_id: str,
+    reason: str | None = None,
+    current_user=Depends(require_assistant_access),
+):
+    updated = orb_knowledge_library_service.mark_needs_review(source_id, reason)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Knowledge source not found")
+    try:
+        from services.indicare_ai_governance_event_service import indicare_ai_governance_event_service
+
+        indicare_ai_governance_event_service.record_from_source_event(
+            updated,
+            "source_needs_review",
+            current_user=current_user,
+        )
+    except Exception:
+        pass
+    return _success(updated)
+
+
+@router.post("/sources/{source_id}/archive")
+async def archive_source(source_id: str, current_user=Depends(require_assistant_access)):
+    updated = orb_knowledge_library_service.archive_source(source_id)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Knowledge source not found")
+    try:
+        from services.indicare_ai_governance_event_service import indicare_ai_governance_event_service
+
+        indicare_ai_governance_event_service.record_from_source_event(
+            updated,
+            "source_archived",
+            current_user=current_user,
+        )
+    except Exception:
+        pass
+    return _success(updated)
+
+
+@router.patch("/sources/{source_id}/metadata")
+async def patch_source_metadata(
+    source_id: str,
+    payload: OrbKnowledgeSourceMetadataPatch,
+    current_user=Depends(require_assistant_access),
+):
+    updated = orb_knowledge_library_service.update_source_metadata(
+        source_id, payload.model_dump(exclude_none=True)
+    )
+    if not updated:
+        raise HTTPException(status_code=404, detail="Knowledge source not found")
+    return _success(updated)
+
+
+@router.post("/sources/{source_id}/rebuild-citations")
+async def rebuild_citations(source_id: str, current_user=Depends(require_assistant_access)):
+    result = orb_knowledge_library_service.rebuild_citations_for_source(source_id)
+    if result.get("error") == "not_found":
+        raise HTTPException(status_code=404, detail="Knowledge source not found")
+    return _success(result)
+
+
+@router.post("/import-official")
+async def import_official_source(
+    payload: OrbKnowledgeOfficialImportRequest,
+    current_user=Depends(require_assistant_access),
+):
+    try:
+        result = orb_document_ingestion_service.ingest_official_source(payload.model_dump())
+        return _success(result)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.warning("official source import failed", exc_info=True)
+        raise HTTPException(status_code=500, detail="Could not import official source") from exc
 
 
 @router.delete("/sources/{source_id}")

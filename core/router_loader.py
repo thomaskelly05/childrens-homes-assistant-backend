@@ -117,6 +117,7 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
             "routers.ofsted_readiness_routes",
             "routers.indicare_intelligence_routes",
             "routers.intelligence_action_routes",
+            "routers.indicare_ai_governance_routes",
         ),
         notes="Inspection readiness, governance and regulatory intelligence.",
     ),
