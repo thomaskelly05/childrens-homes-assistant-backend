@@ -14,7 +14,10 @@ from schemas.recording_drafts import (
     RecordingDraftSubmitRequest,
     RecordingDraftUpdate,
 )
+from schemas.recording_submission import RecordingSubmissionRequest
 from services.recording_draft_service import recording_draft_service
+from services.recording_submission_router_service import recording_submission_router_service
+from services.recording_submission_target_registry import recording_submission_target_registry
 
 router = APIRouter(prefix="/recording-drafts", tags=["Recording Drafts"])
 compat_router = APIRouter(prefix="/api/recording-drafts", tags=["Recording Drafts API"])
@@ -33,6 +36,47 @@ def _user_dict(current_user: Any) -> dict[str, Any]:
     if isinstance(current_user, dict):
         return current_user
     return dict(current_user)
+
+
+@router.get("/submission-targets")
+async def list_submission_targets(current_user: dict[str, Any] = Depends(get_current_user)):
+    _ = current_user
+    return _success([t.model_dump() for t in recording_submission_target_registry.list_targets()])
+
+
+@compat_router.get("/submission-targets")
+async def api_list_submission_targets(current_user: dict[str, Any] = Depends(get_current_user)):
+    return await list_submission_targets(current_user=current_user)
+
+
+@router.get("/{draft_id}/submission-target")
+async def get_draft_submission_target(
+    draft_id: str,
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    record = recording_draft_service.get_draft(draft_id, _user_dict(current_user), conn=conn)
+    if not record:
+        raise HTTPException(status_code=404, detail="Recording draft not found or access denied.")
+    target = recording_submission_target_registry.get_target(record.recording_type, form_id=record.form_id)
+    return _success(
+        {
+            "target": target.model_dump(),
+            "route_hint": recording_submission_target_registry.route_hint(record.recording_type, record),
+            "frontend_route": recording_submission_target_registry.frontend_route_for(
+                record.recording_type, record
+            ),
+        }
+    )
+
+
+@compat_router.get("/{draft_id}/submission-target")
+async def api_get_draft_submission_target(
+    draft_id: str,
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    return await get_draft_submission_target(draft_id=draft_id, current_user=current_user, conn=conn)
 
 
 @router.get("/health")
@@ -220,12 +264,28 @@ async def api_ready_for_review_recording_draft(
 @router.post("/{draft_id}/submit")
 async def submit_recording_draft(
     draft_id: str,
-    payload: RecordingDraftSubmitRequest,
+    payload: RecordingSubmissionRequest | RecordingDraftSubmitRequest | None = None,
     current_user: dict[str, Any] = Depends(get_current_user),
     conn=Depends(get_db),
 ):
-    result = recording_draft_service.submit_draft(
-        draft_id, payload, _user_dict(current_user), conn=conn
+    user = _user_dict(current_user)
+    if isinstance(payload, RecordingSubmissionRequest):
+        submission_payload = payload
+    elif payload is not None:
+        submission_payload = RecordingSubmissionRequest(
+            draft_id=draft_id,
+            submitted_to=payload.submitted_to,
+            target_workflow=payload.target_workflow,
+            metadata=payload.metadata,
+            confirm_reviewed=bool((payload.metadata or {}).get("confirm_reviewed")),
+            force_submit=bool((payload.metadata or {}).get("force_submit")),
+            create_chronology_link=bool((payload.metadata or {}).get("create_chronology_link", True)),
+        )
+    else:
+        submission_payload = RecordingSubmissionRequest(draft_id=draft_id)
+
+    result = recording_submission_router_service.submit_draft(
+        draft_id, submission_payload, user, conn=conn
     )
     if not result:
         raise HTTPException(status_code=404, detail="Recording draft not found or access denied.")

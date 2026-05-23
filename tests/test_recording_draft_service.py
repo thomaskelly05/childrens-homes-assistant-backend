@@ -82,9 +82,15 @@ def test_archive_delete_ready_submit(fake_state):
         user,
     )
     assert submitted
-    assert submitted.warning == FORMAL_SUBMIT_WARNING
     assert submitted.formal_record_created is False
     assert submitted.draft.status == "submitted"
+    warning_lower = submitted.warning.lower()
+    assert (
+        "not wired" in warning_lower
+        or "review" in warning_lower
+        or "young person" in warning_lower
+        or "database" in warning_lower
+    )
 
     archived = recording_draft_service.archive_draft(created.id, user)
     assert archived

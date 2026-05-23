@@ -63,7 +63,8 @@ def test_recording_workspace_markers():
         "Saved in this browser",
         "Submit draft",
         "Mark ready for review",
-        "Formal record submission integration",
+        "Formal record created",
+        "Formal route is not fully wired yet",
         "unsaved browser draft",
     ):
         assert marker in combined, f"Missing workspace marker: {marker}"

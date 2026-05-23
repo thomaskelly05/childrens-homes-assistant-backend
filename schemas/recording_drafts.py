@@ -166,6 +166,8 @@ class RecordingDraftSubmitResponse(BaseModel):
     warning: str
     formal_record_created: bool = False
     linked_record_id: str | None = None
+    linked_chronology_id: str | None = None
+    submission: dict[str, Any] | None = None
 
 
 class RecordingDraftHealth(BaseModel):

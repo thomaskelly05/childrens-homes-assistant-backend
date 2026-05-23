@@ -11,14 +11,17 @@ import {
   loadRecordingDraft,
   saveRecordingDraft
 } from '@/lib/record/recording-draft-store'
+import { RecordingSubmissionResultCard } from '@/components/indicare/record/recording-submission-result'
 import {
   autosaveRecordingDraft,
   createRecordingDraft,
   getRecordingDraft,
   getRecordingDraftHealth,
+  getRecordingSubmissionTarget,
   markRecordingDraftReadyForReview,
   submitRecordingDraft,
-  type RecordingDraftRecord
+  type RecordingDraftRecord,
+  type RecordingSubmissionResult
 } from '@/lib/os-api/recording-drafts'
 import type { RecordAboutContext } from '@/lib/record/recording-hub'
 import { recordingFormByWorkspaceType } from '@/lib/record/recording-form-registry'
@@ -67,6 +70,9 @@ export function RecordingEditor({
   const [backendAvailable, setBackendAvailable] = useState(false)
   const [showRecoveryBanner, setShowRecoveryBanner] = useState(false)
   const [submitWarning, setSubmitWarning] = useState<string | undefined>()
+  const [submissionTargetHint, setSubmissionTargetHint] = useState<string | undefined>()
+  const [submissionResult, setSubmissionResult] = useState<RecordingSubmissionResult | null>(null)
+  const [confirmReviewed, setConfirmReviewed] = useState(false)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastPersisted = useRef({ title: '', body: '' })
 
@@ -310,11 +316,18 @@ export function RecordingEditor({
   const handleSubmit = async () => {
     const draftId = await persistDraft(title, body, { forceCreate: true })
     if (!draftId) return
-    const result = await submitRecordingDraft(draftId, { submitted_to: 'draft_workspace' })
+    const result = await submitRecordingDraft(draftId, {
+      submitted_to: 'formal_record',
+      confirm_reviewed: confirmReviewed,
+      create_chronology_link: true
+    })
     if (!result.ok) return
     setBackendDraft(result.data.draft)
     onBackendDraftChange?.(result.data.draft)
     setSubmitWarning(result.data.warning)
+    if (result.data.submission) {
+      setSubmissionResult(result.data.submission)
+    }
     onDraftListRefresh?.()
   }
 
@@ -330,9 +343,32 @@ export function RecordingEditor({
     setSaveMode('local')
   }
 
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      if (!backendDraftId) {
+        const status = form?.requiresManagerReview
+          ? 'Manager review is required before formal submission.'
+          : form?.routeKind === 'existing_workflow'
+            ? `This will submit the draft; complete the formal ${form?.title || 'record'} workflow when ready.`
+            : 'Formal route may not be fully wired yet for this recording type.'
+        if (!cancelled) setSubmissionTargetHint(status)
+        return
+      }
+      const target = await getRecordingSubmissionTarget(backendDraftId)
+      if (cancelled) return
+      if (target.ok && target.data?.route_hint) {
+        setSubmissionTargetHint(target.data.route_hint)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [backendDraftId, form])
+
   const managerReviewNotice =
     backendDraft?.manager_review_required || form?.requiresManagerReview
-      ? 'Manager review required before formal submission.'
+      ? 'Manager review is required before formal submission.'
       : undefined
 
   return (
@@ -349,6 +385,27 @@ export function RecordingEditor({
           <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-black text-amber-950">
             {managerReviewNotice}
           </p>
+        ) : null}
+
+        {submissionTargetHint ? (
+          <p
+            className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-xs font-semibold text-blue-950"
+            data-testid="recording-submission-target-hint"
+          >
+            {submissionTargetHint}
+          </p>
+        ) : null}
+
+        {managerReviewNotice ? (
+          <label className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+            <input
+              type="checkbox"
+              checked={confirmReviewed}
+              onChange={(event) => setConfirmReviewed(event.target.checked)}
+              data-testid="recording-confirm-reviewed"
+            />
+            I confirm manager or safeguarding review is complete
+          </label>
         ) : null}
 
         <label className="block">
@@ -389,6 +446,10 @@ export function RecordingEditor({
           privacyNotice={RECORDING_DRAFT_PRIVACY_NOTICE}
           submitWarning={submitWarning}
         />
+
+        {submissionResult ? (
+          <RecordingSubmissionResultCard result={submissionResult} childId={childId} />
+        ) : null}
 
         <div className="flex flex-wrap gap-2">
           <button

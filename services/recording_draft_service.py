@@ -26,6 +26,7 @@ from schemas.recording_drafts import (
     RecordingDraftSubmitResponse,
     RecordingDraftUpdate,
 )
+from schemas.recording_submission import RecordingSubmissionRequest, RecordingSubmissionResponse
 from services.ai_context_minimisation_service import ai_context_minimisation_service
 from services.ai_privacy_guard_service import ai_privacy_guard_service
 from services.ai_redaction_service import ai_redaction_service
@@ -609,6 +610,64 @@ class RecordingDraftService:
         payload: RecordingDraftSubmitRequest,
         current_user: dict[str, Any],
         conn: Any | None = None,
+    ) -> RecordingDraftSubmitResponse | RecordingSubmissionResponse | None:
+        from services.recording_submission_router_service import recording_submission_router_service
+
+        submission_request = RecordingSubmissionRequest(
+            draft_id=draft_id,
+            submitted_to=payload.submitted_to,
+            target_workflow=payload.target_workflow,
+            metadata=payload.metadata,
+            confirm_reviewed=bool(payload.metadata.get("confirm_reviewed")),
+            force_submit=bool(payload.metadata.get("force_submit")),
+            create_chronology_link=bool(payload.metadata.get("create_chronology_link", True)),
+        )
+        try:
+            result = recording_submission_router_service.submit_draft(
+                draft_id,
+                submission_request,
+                current_user,
+                conn=conn,
+            )
+            if not result:
+                return None
+            if isinstance(result, RecordingSubmissionResponse):
+                warning = (
+                    result.warnings[0]
+                    if result.warnings
+                    else (
+                        FORMAL_SUBMIT_WARNING
+                        if not result.formal_record_created
+                        else "Formal record created successfully."
+                    )
+                )
+                draft_data = result.draft or {}
+                draft_record = (
+                    self._row_to_record(draft_data)
+                    if draft_data.get("id")
+                    else self.get_draft(draft_id, current_user, conn=conn)
+                )
+                if not draft_record:
+                    return None
+                return RecordingDraftSubmitResponse(
+                    draft=draft_record,
+                    warning=warning,
+                    formal_record_created=result.formal_record_created,
+                    linked_record_id=result.linked_record_id,
+                    linked_chronology_id=result.linked_chronology_id,
+                    submission=result.model_dump(),
+                )
+            return result
+        except Exception:
+            logger.exception("Recording submission router failed; falling back to draft-only submit")
+            return self._submit_draft_only_fallback(draft_id, payload, current_user, conn=conn)
+
+    def _submit_draft_only_fallback(
+        self,
+        draft_id: str,
+        payload: RecordingDraftSubmitRequest,
+        current_user: dict[str, Any],
+        conn: Any | None = None,
     ) -> RecordingDraftSubmitResponse | None:
         existing = self.get_draft(draft_id, current_user, conn=conn)
         if not existing:
@@ -617,10 +676,6 @@ class RecordingDraftService:
         submitted_to = _text(payload.submitted_to, "draft_workspace")
         if submitted_to not in SUBMIT_TARGETS:
             submitted_to = "draft_workspace"
-
-        linked_record_id: str | None = None
-        formal_created = False
-        warning = FORMAL_SUBMIT_WARNING
 
         updated = self.update_draft(
             draft_id,
@@ -640,7 +695,7 @@ class RecordingDraftService:
         patch = {
             "submitted_to": submitted_to,
             "submitted_at": _now_iso(),
-            "linked_record_id": linked_record_id,
+            "linked_record_id": None,
         }
         if self._detect_storage_mode() == "postgresql" and conn is not None:
             self._patch_db(conn, draft_id, patch)
@@ -656,14 +711,14 @@ class RecordingDraftService:
             "submitted",
             updated,
             current_user,
-            metadata={"submitted_to": submitted_to, "formal_record_created": formal_created},
+            metadata={"submitted_to": submitted_to, "formal_record_created": False},
         )
 
         return RecordingDraftSubmitResponse(
             draft=updated,
-            warning=warning,
-            formal_record_created=formal_created,
-            linked_record_id=linked_record_id,
+            warning=FORMAL_SUBMIT_WARNING,
+            formal_record_created=False,
+            linked_record_id=None,
         )
 
     def _set_status(
