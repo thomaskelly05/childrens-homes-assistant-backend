@@ -124,6 +124,13 @@ export function buildChildJourneyRecordingActions(childId: string): ChildJourney
       description: 'Search the full catalogue — safeguarding, health, missing, Reg 44 and more.',
       href: childRecordHubHref(childId),
       orbHint: operationalOrbHint(childId, 'ORB recording coach', 'Help me choose the right record type for this child.')
+    },
+    {
+      id: 'recording-reviews',
+      label: 'Recording reviews for this child',
+      description: 'Manager or safeguarding review drafts linked to this young person.',
+      href: `/record/reviews?child_id=${base}`,
+      orbHint: operationalOrbHint(childId, 'ORB review support', 'What needs manager follow-up in recording reviews?')
     }
   ]
 }

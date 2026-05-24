@@ -477,7 +477,7 @@ export function RecordingEditor({
             onClick={() => void handleReadyForReview()}
             className="inline-flex min-h-10 items-center rounded-2xl border border-violet-200 bg-violet-50 px-4 py-2 text-xs font-black text-violet-950"
           >
-            Mark ready for review
+            Send to review queue
           </button>
           <button
             type="button"

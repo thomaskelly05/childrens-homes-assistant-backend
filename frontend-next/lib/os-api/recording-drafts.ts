@@ -7,7 +7,12 @@ export type RecordingDraftReviewStatus =
   | 'manager_review_required'
   | 'safeguarding_review_required'
   | 'awaiting_review'
+  | 'changes_requested'
+  | 'approved'
+  | 'safeguarding_escalation_required'
   | 'reviewed'
+  | 'submitted'
+  | 'archived'
 
 export type RecordingDraftRecord = {
   id: string

@@ -13,7 +13,12 @@ RecordingDraftReviewStatus = Literal[
     "manager_review_required",
     "safeguarding_review_required",
     "awaiting_review",
+    "changes_requested",
+    "approved",
+    "safeguarding_escalation_required",
     "reviewed",
+    "submitted",
+    "archived",
 ]
 
 
@@ -122,6 +127,14 @@ class RecordingDraftRecord(BaseModel):
     submitted_to: str | None = None
     submitted_at: str | None = None
     reviewed_at: str | None = None
+    review_comments: str | None = None
+    reviewed_by_user_id: str | None = None
+    reviewed_by_name: str | None = None
+    reviewed_by_role: str | None = None
+    review_priority: str = "medium"
+    changes_requested_at: str | None = None
+    approved_at: str | None = None
+    safeguarding_escalation_at: str | None = None
     archived_at: str | None = None
     created_at: str
     updated_at: str

@@ -19,6 +19,10 @@ function statusBadge(status: RecordingDraftRecord['status']) {
 }
 
 function reviewBadge(draft: RecordingDraftRecord) {
+  if (draft.review_status === 'changes_requested') return 'Changes requested'
+  if (draft.review_status === 'approved') return 'Approved'
+  if (draft.review_status === 'safeguarding_escalation_required') return 'Safeguarding escalation'
+  if (draft.review_status === 'awaiting_review' || draft.status === 'ready_for_review') return 'Awaiting review'
   if (draft.safeguarding_review_required || draft.review_status === 'safeguarding_review_required') {
     return 'Safeguarding review'
   }
