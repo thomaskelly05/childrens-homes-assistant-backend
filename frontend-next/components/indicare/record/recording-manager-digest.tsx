@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import {
   getRecordingAlertDigest,
@@ -57,8 +57,11 @@ export function RecordingManagerDigest({
   const [runMessage, setRunMessage] = useState<string | undefined>()
   const [unavailable, setUnavailable] = useState(false)
 
-  const params =
-    childId != null ? { child_id: childId } : homeId != null ? { home_id: homeId } : undefined
+  const params = useMemo(
+    () =>
+      childId != null ? { child_id: childId } : homeId != null ? { home_id: homeId } : undefined,
+    [childId, homeId]
+  )
 
   const load = useCallback(async () => {
     setLoading(true)
