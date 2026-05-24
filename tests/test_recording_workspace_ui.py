@@ -12,6 +12,7 @@ RECORD_FILES = [
     FRONTEND / "components" / "indicare" / "record" / "recording-workspace.tsx",
     FRONTEND / "components" / "indicare" / "record" / "recording-editor.tsx",
     FRONTEND / "components" / "indicare" / "record" / "recording-type-selector.tsx",
+    FRONTEND / "components" / "indicare" / "record" / "recording-catalogue-panel.tsx",
     FRONTEND / "components" / "indicare" / "record" / "recording-quality-coach.tsx",
     FRONTEND / "components" / "indicare" / "record" / "recording-language-suggestions.tsx",
     FRONTEND / "components" / "indicare" / "record" / "recording-review-checklist.tsx",
@@ -66,6 +67,8 @@ def test_recording_workspace_markers():
         "Formal record created",
         "Formal route is not fully wired yet",
         "unsaved browser draft",
+        "recording-catalogue-panel",
+        "recording-workflow-status",
     ):
         assert marker in combined, f"Missing workspace marker: {marker}"
 

@@ -1,6 +1,8 @@
 import type { RecordAboutContext, RecordCardId } from '@/lib/record/recording-hub'
 import {
+  recordingFormById,
   recordingFormByWorkspaceType,
+  resolveActiveRecordingForm,
   workspaceRecordingForms,
   type RecordingFormDefinition,
   type RecordingWorkspaceType
@@ -38,14 +40,61 @@ const PLACEHOLDER_FALLBACKS: Partial<Record<RecordingWorkspaceType, string>> = {
   'staff-reflection': 'What are you reflecting on? What learning or follow-up is needed for practice?'
 }
 
+const WORKSPACE_TYPE_IDS: RecordingWorkspaceType[] = [
+  'daily-note',
+  'incident',
+  'child-voice',
+  'keywork',
+  'missing',
+  'family-time',
+  'health-medication',
+  'handover',
+  'evidence-document',
+  'staff-reflection',
+  'safeguarding-concern',
+  'return-conversation',
+  'physical-intervention',
+  'injury-body-map',
+  'medication-note-error',
+  'manager-review',
+  'education-note',
+  'health-appointment',
+  'behaviour-support',
+  'complaint-concern',
+  'room-search',
+  'damage-repair',
+  'professional-visit',
+  'staff-debrief',
+  'reg44-evidence',
+  'reg45-evidence',
+  'general-draft'
+]
+
 export const RECORDING_BODY_PLACEHOLDERS: Record<RecordingWorkspaceType, string> = Object.fromEntries(
-  RECORDING_WORKSPACE_TYPES.map((option) => {
-    const prompt = option.form?.therapeuticPrompt || PLACEHOLDER_FALLBACKS[option.id] || option.description
-    return [option.id, prompt]
+  WORKSPACE_TYPE_IDS.map((id) => {
+    const form = recordingFormByWorkspaceType(id)
+    const prompt = form?.therapeuticPrompt || PLACEHOLDER_FALLBACKS[id] || form?.description || 'Record clearly and factually.'
+    return [id, prompt]
   })
 ) as Record<RecordingWorkspaceType, string>
 
-export function resolveRecordingTypeFromQuery(type?: string | null): RecordingWorkspaceType | undefined {
+export function recordingBodyPlaceholder(
+  recordingType: RecordingWorkspaceType,
+  form?: RecordingFormDefinition | null
+): string {
+  if (form?.therapeuticPrompt) return form.therapeuticPrompt
+  return RECORDING_BODY_PLACEHOLDERS[recordingType] || 'Record clearly and factually.'
+}
+
+export function resolveRecordingTypeFromQuery(
+  type?: string | null,
+  formId?: string | null
+): RecordingWorkspaceType | undefined {
+  if (formId?.trim()) {
+    const form = recordingFormById(formId.trim())
+    if (form?.workspaceType) return form.workspaceType
+    return 'general-draft'
+  }
   if (!type?.trim()) return undefined
   const raw = type.trim().toLowerCase()
 
@@ -92,13 +141,26 @@ export function resolveRecordingTypeFromQuery(type?: string | null): RecordingWo
     'staff-debrief': 'staff-debrief',
     'reg44-evidence': 'reg44-evidence',
     'reg44-action': 'reg44-evidence',
-    'reg45-evidence': 'reg45-evidence'
+    'reg45-evidence': 'reg45-evidence',
+    'general-draft': 'general-draft'
   }
 
   if (aliases[raw]) return aliases[raw]
 
+  const byFormId = recordingFormById(raw)
+  if (byFormId?.workspaceType) return byFormId.workspaceType
+
   const byForm = recordingFormByWorkspaceType(raw as RecordingWorkspaceType)
   return byForm?.workspaceType
+}
+
+export function resolveRecordingFormFromQuery(
+  type?: string | null,
+  formId?: string | null
+): RecordingFormDefinition | undefined {
+  const workspaceType = resolveRecordingTypeFromQuery(type, formId)
+  if (!workspaceType) return undefined
+  return resolveActiveRecordingForm(workspaceType, formId)
 }
 
 const STAFF_ONLY_TYPES: RecordingWorkspaceType[] = ['staff-reflection', 'staff-debrief', 'reg44-evidence', 'reg45-evidence']
@@ -110,10 +172,12 @@ const HOME_SHIFT_TYPES: RecordingWorkspaceType[] = [
   'reg44-evidence',
   'reg45-evidence',
   'manager-review',
-  'complaint-concern'
+  'complaint-concern',
+  'general-draft'
 ]
 
 export function recordingTypeVisibleForAbout(type: RecordingWorkspaceType, about: RecordAboutContext): boolean {
+  if (type === 'general-draft') return true
   if (about === 'staff') {
     return (
       STAFF_ONLY_TYPES.includes(type) ||

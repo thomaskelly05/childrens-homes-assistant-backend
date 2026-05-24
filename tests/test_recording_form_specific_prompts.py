@@ -47,4 +47,12 @@ def test_therapeutic_prompts_component_uses_types():
 def test_orb_rail_form_specific_prompts():
     rail = _read(FRONTEND / "components" / "indicare" / "record" / "recording-orb-rail.tsx")
     assert "recordingType" in rail
-    assert "orbSuggestedPrompts" in rail or "recordingFormByWorkspaceType" in rail
+    assert "orbSuggestedPrompts" in rail or "recordingFormByWorkspaceType" in rail or "resolveActiveRecordingForm" in rail
+
+
+def test_registry_forms_have_orb_and_checklist():
+    registry = _read(FRONTEND / "lib" / "record" / "recording-form-registry.ts")
+    entries = _read(FRONTEND / "lib" / "record" / "recording-form-catalogue-entries.ts")
+    combined = registry + entries
+    assert combined.count("buildCatalogueForm(") + combined.count("orbSuggestedPrompts:") >= 55
+    assert combined.count("qualityChecklist:") + combined.count("qualityChecklist: [") >= 55

@@ -61,7 +61,7 @@ def test_child_journey_recording_cards_include_orb_hints():
     assert "OrbInlineHint" in recording
     assert "safeguarding" in routes
     assert "physical-intervention" in routes
-    assert "More recording types" in routes
+    assert "All child recording forms" in routes
 
 
 def test_child_journey_page_composes_workspace_sections():

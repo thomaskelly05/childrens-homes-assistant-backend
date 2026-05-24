@@ -1,6 +1,6 @@
 'use client'
 
-import { recordingFormByWorkspaceType } from '@/lib/record/recording-form-registry'
+import { resolveActiveRecordingForm } from '@/lib/record/recording-form-registry'
 import type { RecordingWorkspaceType } from '@/lib/record/recording-types'
 
 const EXTRA_PROMPTS: Partial<Record<RecordingWorkspaceType, string[]>> = {
@@ -62,8 +62,14 @@ const EXTRA_PROMPTS: Partial<Record<RecordingWorkspaceType, string[]>> = {
   ]
 }
 
-export function RecordingTherapeuticPrompts({ recordingType }: { recordingType: RecordingWorkspaceType }) {
-  const form = recordingFormByWorkspaceType(recordingType)
+export function RecordingTherapeuticPrompts({
+  recordingType,
+  formId
+}: {
+  recordingType: RecordingWorkspaceType
+  formId?: string
+}) {
+  const form = resolveActiveRecordingForm(recordingType, formId)
   const prompts = EXTRA_PROMPTS[recordingType] || form?.qualityChecklist.slice(0, 4) || EXTRA_PROMPTS['daily-note']!
 
   return (

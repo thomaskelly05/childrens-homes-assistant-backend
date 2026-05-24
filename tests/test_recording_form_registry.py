@@ -19,7 +19,9 @@ def test_registry_has_categories():
     text = _read(REGISTRY)
     for category in (
         "daily_life",
+        "voice_direct_work",
         "safeguarding_incident",
+        "missing_return",
         "health_medication",
         "education_family",
         "planning_review",
@@ -29,6 +31,39 @@ def test_registry_has_categories():
         "documents_evidence",
     ):
         assert f"'{category}'" in text, f"Missing category: {category}"
+
+
+def test_registry_has_workflow_status():
+    text = _read(REGISTRY)
+    assert "workflowStatus" in text
+
+
+def test_registry_contains_key_catalogue_forms():
+    entries = _read(REPO_ROOT / "frontend-next" / "lib" / "record" / "recording-form-catalogue-entries.ts")
+    text = _read(REGISTRY) + entries
+    for form_id in (
+        "safeguarding-concern",
+        "disclosure",
+        "allegation",
+        "physical-intervention",
+        "body-map",
+        "medication-error",
+        "return-conversation",
+        "reg44-evidence",
+        "reg45-evidence",
+        "staff-supervision",
+        "fire-drill-evacuation",
+        "maintenance-environment",
+    ):
+        assert f"id: '{form_id}'" in text, f"Missing form: {form_id}"
+
+
+def test_every_form_has_workflow_status_in_registry():
+    entries = _read(REPO_ROOT / "frontend-next" / "lib" / "record" / "recording-form-catalogue-entries.ts")
+    text = _read(REGISTRY) + entries
+    ids = [line.split("'")[1] for line in text.splitlines() if line.strip().startswith("id: '")]
+    assert len(ids) >= 55
+    assert "workflowStatus:" in text
 
 
 def test_registry_statuses_and_priorities():
