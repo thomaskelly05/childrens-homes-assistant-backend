@@ -95,7 +95,11 @@ export function RecordingGovernanceDashboard({ childIdFilter }: { childIdFilter?
         </div>
       </section>
 
-      <RecordingGovernanceAlerts alerts={dashboard.alerts} recommendations={dashboard.recommendations} />
+      <RecordingGovernanceAlerts
+        alerts={dashboard.alerts}
+        recommendations={dashboard.recommendations}
+        childIdFilter={childIdFilter}
+      />
 
       <RecordingGovernanceActions dashboard={dashboard} childIdFilter={childIdFilter} />
 

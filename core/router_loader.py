@@ -175,9 +175,10 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
             "routers.recording_draft_routes",
             "routers.recording_review_routes",
             "routers.recording_governance_routes",
+            "routers.recording_alert_routes",
             "routers.recording_structured_template_routes",
         ),
-        notes="Handovers, monthly reviews, Ofsted packs, recording drafts and manager review queue.",
+        notes="Handovers, monthly reviews, Ofsted packs, recording drafts, alerts and manager review queue.",
     ),
     RouterGroup(
         "safeguarding",

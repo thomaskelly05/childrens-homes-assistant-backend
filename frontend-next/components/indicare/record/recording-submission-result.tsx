@@ -71,13 +71,24 @@ export function RecordingSubmissionResultCard({ result, childId }: RecordingSubm
       ) : null}
 
       {result.review_required && !result.formal_record_created ? (
-        <div className="mt-3">
+        <div className="mt-3 flex flex-wrap gap-2">
           <Link
             href="/record/reviews"
             data-testid="recording-submission-open-review-queue"
             className="inline-flex min-h-9 items-center rounded-xl bg-purple-600 px-3 py-1 text-xs font-black text-white"
           >
             Open review queue
+          </Link>
+          <Link
+            href={
+              result.draft_id
+                ? `/record/alerts?draft_id=${encodeURIComponent(result.draft_id)}`
+                : '/record/alerts'
+            }
+            data-testid="recording-submission-open-alerts"
+            className="inline-flex min-h-9 items-center rounded-xl border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-black text-rose-950"
+          >
+            Open alerts
           </Link>
         </div>
       ) : null}

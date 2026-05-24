@@ -187,13 +187,24 @@ export function RecordingReviewDetailPanel({
           </Link>
           {childId ? (
             <Link
-              href={`/young-people/${encodeURIComponent(childId)}`}
+              href={`/young-people/${encodeURIComponent(childId)}/journey`}
               data-testid="recording-review-open-child-journey"
               className="inline-flex min-h-9 items-center rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-black text-blue-950"
             >
               Open child journey
             </Link>
           ) : null}
+          <Link
+            href={
+              childId
+                ? `/record/alerts?child_id=${encodeURIComponent(childId)}&draft_id=${encodeURIComponent(draft.id)}`
+                : `/record/alerts?draft_id=${encodeURIComponent(draft.id)}`
+            }
+            data-testid="recording-review-open-alerts"
+            className="inline-flex min-h-9 items-center rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-black text-rose-950"
+          >
+            Open alerts
+          </Link>
         </div>
       </div>
 

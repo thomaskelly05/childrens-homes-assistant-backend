@@ -19,6 +19,7 @@ export function RecordingGovernanceActions({
 }) {
   const [copied, setCopied] = useState(false)
   const reviewHref = childIdFilter != null ? `/record/reviews?child_id=${childIdFilter}` : '/record/reviews'
+  const alertsHref = childIdFilter != null ? `/record/alerts?child_id=${childIdFilter}` : '/record/alerts'
   const recordHref = childIdFilter != null ? `/record?child_id=${childIdFilter}&about=child` : '/record'
   const careHubHref = '/command-centre'
 
@@ -49,6 +50,13 @@ export function RecordingGovernanceActions({
           className="inline-flex min-h-10 items-center rounded-2xl bg-purple-600 px-4 py-2 text-xs font-black text-white"
         >
           Open review queue
+        </Link>
+        <Link
+          href={alertsHref}
+          data-testid="recording-governance-open-alerts"
+          className="inline-flex min-h-10 items-center rounded-2xl border border-rose-200 bg-rose-50 px-4 py-2 text-xs font-black text-rose-950"
+        >
+          Recording alerts
         </Link>
         <Link
           href={recordHref}

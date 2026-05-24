@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 
 import { RecordingReviewDetailPanel } from '@/components/indicare/record/recording-review-detail'
@@ -84,6 +85,13 @@ export function RecordingReviewQueue({ childIdFilter }: { childIdFilter?: number
         <p className="text-xs font-semibold text-slate-600" data-testid="recording-review-manager-judgement-queue">
           {MANAGER_JUDGEMENT_NOTICE}
         </p>
+        <Link
+          href={childIdFilter != null ? `/record/alerts?child_id=${childIdFilter}` : '/record/alerts'}
+          data-testid="recording-review-alerts-link"
+          className="inline-flex min-h-9 items-center rounded-2xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-black text-rose-950"
+        >
+          Recording alerts
+        </Link>
 
         {summary ? (
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
