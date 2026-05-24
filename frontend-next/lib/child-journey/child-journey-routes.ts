@@ -131,6 +131,17 @@ export function buildChildJourneyRecordingActions(childId: string): ChildJourney
       description: 'Manager or safeguarding review drafts linked to this young person.',
       href: `/record/reviews?child_id=${base}`,
       orbHint: operationalOrbHint(childId, 'ORB review support', 'What needs manager follow-up in recording reviews?')
+    },
+    {
+      id: 'recording-governance',
+      label: 'Recording governance for this child',
+      description: 'Summary-level oversight of drafts, review backlog and quality flags for this young person.',
+      href: `/record/governance?child_id=${base}`,
+      orbHint: operationalOrbHint(
+        childId,
+        'ORB governance summary',
+        'Summarise recording governance themes for this child.'
+      )
     }
   ]
 }

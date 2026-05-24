@@ -412,6 +412,13 @@ export function RecordHub({
           >
             Recording review queue
           </Link>
+          <Link
+            href="/record/governance"
+            data-testid="record-hub-governance-link"
+            className="inline-flex min-h-10 items-center rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-xs font-black text-indigo-950"
+          >
+            Recording governance
+          </Link>
         </div>
       </section>
 
