@@ -142,6 +142,17 @@ export function buildChildJourneyRecordingActions(childId: string): ChildJourney
         'ORB governance summary',
         'Summarise recording governance themes for this child.'
       )
+    },
+    {
+      id: 'recording-alerts',
+      label: 'Recording alerts for this child',
+      description: 'Follow-up alerts for review needs, privacy flags and recording gaps for this young person.',
+      href: `/record/alerts?child_id=${base}`,
+      orbHint: operationalOrbHint(
+        childId,
+        'ORB alert prioritisation',
+        'How should I prioritise recording follow-up for this child?'
+      )
     }
   ]
 }

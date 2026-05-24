@@ -75,6 +75,8 @@ def test_record_and_care_hub_governance_links():
     combined = "\n".join(_read(path) for path in INTEGRATION_FILES)
     assert "/record/governance" in combined
     assert "Recording governance" in combined
+    assert "/record/alerts" in combined
+    assert "Recording alerts" in combined
 
 
 def test_child_journey_scoped_governance_link():

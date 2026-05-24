@@ -4,6 +4,10 @@ import Link from 'next/link'
 
 import type { RecordingGovernanceAlert } from '@/lib/os-api/recording-governance'
 
+function alertsPageHref(childIdFilter?: number) {
+  return childIdFilter != null ? `/record/alerts?child_id=${childIdFilter}` : '/record/alerts'
+}
+
 const RISK_TONE: Record<string, string> = {
   urgent: 'border-rose-200 bg-rose-50',
   high: 'border-amber-200 bg-amber-50',
@@ -13,16 +17,27 @@ const RISK_TONE: Record<string, string> = {
 
 export function RecordingGovernanceAlerts({
   alerts,
-  recommendations
+  recommendations,
+  childIdFilter
 }: {
   alerts: RecordingGovernanceAlert[]
   recommendations: string[]
+  childIdFilter?: number
 }) {
   return (
     <section data-testid="recording-governance-alerts" className="space-y-4">
-      <div>
-        <h2 className="text-lg font-black text-slate-950">Alerts and recommendations</h2>
-        <p className="text-sm font-semibold text-slate-600">Decision-support only — manager judgement remains required.</p>
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <h2 className="text-lg font-black text-slate-950">Alerts and recommendations</h2>
+          <p className="text-sm font-semibold text-slate-600">Decision-support only — manager judgement remains required.</p>
+        </div>
+        <Link
+          href={alertsPageHref(childIdFilter)}
+          data-testid="recording-governance-alerts-page-link"
+          className="inline-flex min-h-9 items-center rounded-2xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-black text-rose-950"
+        >
+          Open recording alerts
+        </Link>
       </div>
       <ul className="space-y-2">
         {alerts.map((alert) => (

@@ -44,9 +44,20 @@ export function CareHubRecordingSection({ selectedYoungPersonId }: { selectedYou
         >
           Recording governance
         </Link>
+        <Link
+          href={
+            selectedYoungPersonId
+              ? `/record/alerts?child_id=${encodeURIComponent(selectedYoungPersonId)}`
+              : '/record/alerts'
+          }
+          data-testid="care-hub-recording-alerts"
+          className="inline-flex min-h-10 items-center rounded-2xl border border-rose-200 bg-rose-50 px-4 py-2 text-xs font-black text-rose-950"
+        >
+          Recording alerts
+        </Link>
       </div>
       <p className="mt-2 max-w-2xl text-xs font-semibold text-slate-500" data-testid="care-hub-recording-governance-hint">
-        Review high-risk drafts and recording quality — metadata only, no raw record bodies in summary cards.
+        Follow up review needs, privacy flags and high-risk recording gaps — metadata only, no raw record bodies.
       </p>
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {actions.map((action) => {
