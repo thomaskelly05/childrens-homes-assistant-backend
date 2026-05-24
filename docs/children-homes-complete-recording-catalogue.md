@@ -7,6 +7,8 @@
 
 This catalogue is aligned to children’s homes practice and inspection evidence, including SCCIF / Quality Standards themes. It supports evidence gathering — **not a legal completeness guarantee**.
 
+**Structured high-risk templates:** P0 safeguarding and incident forms include structured field templates in `/record` (see `docs/high-risk-recording-templates.md`). Free-text narrative remains available.
+
 ---
 
 ## 1. Child daily life

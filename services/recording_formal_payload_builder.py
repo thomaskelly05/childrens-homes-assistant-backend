@@ -18,7 +18,7 @@ def _now_iso() -> str:
 
 
 def _base_metadata(draft: RecordingDraftRecord) -> dict[str, Any]:
-    return {
+    meta = {
         "source": "record_workspace",
         "draft_id": draft.id,
         "recording_type": draft.recording_type,
@@ -31,6 +31,14 @@ def _base_metadata(draft: RecordingDraftRecord) -> dict[str, Any]:
         "safeguarding_sensitive": draft.safeguarding_sensitive,
         **(draft.metadata or {}),
     }
+    if draft.structured_template_id:
+        meta["structured_template_id"] = draft.structured_template_id
+        meta["structured_template_version"] = draft.structured_template_version
+        meta["structured_data"] = draft.structured_data or {}
+        meta["structured_summary"] = draft.structured_summary or {}
+        meta["structured_review_triggers"] = list(draft.structured_review_triggers or [])
+        meta["structured_completion"] = draft.structured_completion or {}
+    return meta
 
 
 class RecordingFormalPayloadBuilder:

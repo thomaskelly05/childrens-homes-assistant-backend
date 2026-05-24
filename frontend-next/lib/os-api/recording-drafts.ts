@@ -51,6 +51,12 @@ export type RecordingDraftRecord = {
   created_at: string
   updated_at: string
   metadata: Record<string, unknown>
+  structured_template_id?: string | null
+  structured_template_version?: string | null
+  structured_data?: Record<string, unknown>
+  structured_summary?: Record<string, unknown> & { lines?: string[]; text?: string }
+  structured_completion?: Record<string, unknown>
+  structured_review_triggers?: string[]
 }
 
 export type RecordingDraftListData = {
@@ -90,11 +96,13 @@ export type RecordingDraftCreatePayload = {
   privacy_flags?: string[]
   checklist_status?: Record<string, unknown>
   metadata?: Record<string, unknown>
+  structured_data?: Record<string, unknown>
 }
 
 export type RecordingDraftUpdatePayload = Partial<RecordingDraftCreatePayload> & {
   status?: RecordingDraftStatus
   review_status?: RecordingDraftReviewStatus
+  structured_data?: Record<string, unknown>
 }
 
 export type RecordingDraftSubmitPayload = {

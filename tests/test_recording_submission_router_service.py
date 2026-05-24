@@ -7,7 +7,9 @@ import pytest
 from schemas.recording_drafts import RecordingDraftCreate, RecordingDraftSubmitRequest
 from schemas.recording_submission import RecordingSubmissionRequest
 from services.recording_draft_service import recording_draft_service
+from services.recording_formal_payload_builder import recording_formal_payload_builder
 from services.recording_submission_router_service import recording_submission_router_service
+from services.recording_submission_target_registry import recording_submission_target_registry
 
 
 @pytest.fixture(autouse=True)
@@ -248,3 +250,41 @@ def test_incident_without_child_no_formal(fake_state, monkeypatch):
         conn=MagicMock(),
     )
     assert result.formal_record_created is False
+
+
+def test_structured_metadata_in_formal_payload(fake_state):
+    user = fake_state["user"]
+    draft = recording_draft_service.create_draft(
+        RecordingDraftCreate(
+            title="Safeguarding",
+            body="Narrative body",
+            recording_type="safeguarding-concern",
+            form_id="safeguarding-concern",
+            child_id=7,
+            structured_data={
+                "values": {
+                    "what_was_noticed_or_said": "Marks observed",
+                    "date_time": "2026-05-24",
+                    "immediate_actions_taken": "Stayed with child",
+                    "child_current_safety": "Safe",
+                    "who_was_informed": "Manager",
+                }
+            },
+        ),
+        user,
+    )
+    target = recording_submission_target_registry.get_target(draft.recording_type, form_id=draft.form_id)
+    payload = recording_formal_payload_builder.build_payload(draft, target)
+    meta = payload.get("metadata") or {}
+    assert meta.get("structured_template_id") == "safeguarding-concern"
+    assert meta.get("structured_data")
+    assert meta.get("structured_review_triggers") is not None
+    result = recording_submission_router_service.submit_draft(
+        draft.id,
+        RecordingSubmissionRequest(draft_id=draft.id),
+        user,
+        conn=None,
+    )
+    assert result
+    assert result.formal_record_created is False
+    assert result.review_required or result.safeguarding_review_required

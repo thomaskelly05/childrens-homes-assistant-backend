@@ -31,8 +31,13 @@ from services.ai_context_minimisation_service import ai_context_minimisation_ser
 from services.ai_privacy_guard_service import ai_privacy_guard_service
 from services.ai_redaction_service import ai_redaction_service
 from services.audit_event_service import record_audit_event
+from services.recording_structured_template_registry import recording_structured_template_registry
 
 logger = logging.getLogger("indicare.recording_drafts")
+
+STRUCTURED_PRIVACY_NOTICE = (
+    "Review structured fields for unnecessary identifiers before submission."
+)
 
 FORMAL_SUBMIT_WARNING = (
     "Formal record submission integration is not fully wired yet. "
@@ -170,6 +175,73 @@ class RecordingDraftService:
                 release_db_connection(conn)
         except Exception:
             return len(self._memory)
+
+
+    def _extract_structured_values(self, structured_data: Any) -> dict[str, Any]:
+        if not structured_data:
+            return {}
+        if isinstance(structured_data, dict):
+            values = structured_data.get("values")
+            if isinstance(values, dict):
+                return values
+            if "template_id" not in structured_data and "values" not in structured_data:
+                return structured_data
+        return {}
+
+    def apply_structured_payload(
+        self,
+        payload: dict[str, Any],
+        *,
+        form_id: str | None = None,
+        recording_type: str | None = None,
+    ) -> dict[str, Any]:
+        structured_raw = payload.get("structured_data")
+        if structured_raw is None:
+            return {}
+        values = self._extract_structured_values(structured_raw)
+        template = recording_structured_template_registry.get_template(
+            form_id=form_id or payload.get("form_id"),
+            recording_type=recording_type or payload.get("recording_type"),
+        )
+        if not template:
+            return {"structured_data": structured_raw if isinstance(structured_raw, dict) else {}}
+        context = recording_structured_template_registry.build_template_context_for_draft(template, values)
+        completion = recording_structured_template_registry.validate_template_data(template, values)
+        summary_lines = completion.completion_summary
+        structured_summary = {
+            "lines": summary_lines,
+            "text": "\n".join(summary_lines),
+            "required_missing": completion.required_missing,
+        }
+        patch: dict[str, Any] = {
+            "structured_template_id": template.form_id,
+            "structured_template_version": template.version,
+            "structured_data": context,
+            "structured_summary": structured_summary,
+            "structured_completion": completion.model_dump(),
+            "structured_review_triggers": completion.review_triggers,
+            "manager_review_required": True,
+            "safeguarding_review_required": template.safeguarding_sensitive,
+            "privacy_sensitive": template.privacy_sensitive or bool(completion.privacy_field_ids),
+            "safeguarding_sensitive": template.safeguarding_sensitive,
+        }
+        privacy_flags = list(payload.get("privacy_flags") or [])
+        for field_id in completion.privacy_field_ids:
+            flag = f"structured:{field_id}"
+            if flag not in privacy_flags:
+                privacy_flags.append(flag)
+        if completion.privacy_field_ids and STRUCTURED_PRIVACY_NOTICE not in privacy_flags:
+            privacy_flags.append(STRUCTURED_PRIVACY_NOTICE)
+        patch["privacy_flags"] = privacy_flags
+        meta = dict(payload.get("metadata") or {})
+        meta["structured_template"] = {
+            "form_id": template.form_id,
+            "version": template.version,
+            "required_missing": completion.required_missing,
+            "review_triggers": completion.review_triggers,
+        }
+        patch["metadata"] = meta
+        return patch
 
     def build_quality_metadata(self, payload: RecordingDraftCreate | RecordingDraftUpdate | dict[str, Any]) -> RecordingDraftQualityMetadata:
         data = payload.model_dump() if hasattr(payload, "model_dump") else dict(payload)
@@ -335,6 +407,12 @@ class RecordingDraftService:
             created_at=_iso_dt(row.get("created_at")) or _now_iso(),
             updated_at=_iso_dt(row.get("updated_at")) or _now_iso(),
             metadata=_parse_json(row.get("metadata"), {}),
+            structured_template_id=row.get("structured_template_id"),
+            structured_template_version=row.get("structured_template_version"),
+            structured_data=_parse_json(row.get("structured_data"), {}),
+            structured_summary=_parse_json(row.get("structured_summary"), {}),
+            structured_completion=_parse_json(row.get("structured_completion"), {}),
+            structured_review_triggers=_parse_json(row.get("structured_review_triggers"), []),
         )
 
     def _memory_to_record(self, data: dict[str, Any]) -> RecordingDraftRecord:
@@ -391,9 +469,20 @@ class RecordingDraftService:
             "redaction_summary": redaction_summary,
             "minimisation_summary": minimisation_summary,
             "metadata": payload.metadata,
+            "structured_data": payload.structured_data,
             "created_at": now,
             "updated_at": now,
         }
+        structured_patch = self.apply_structured_payload(
+            row,
+            form_id=payload.form_id,
+            recording_type=payload.recording_type,
+        )
+        row = {**row, **structured_patch}
+        row["review_status"] = _resolve_review_status(
+            manager_review_required=bool(row.get("manager_review_required")),
+            safeguarding_review_required=bool(row.get("safeguarding_review_required")),
+        )
 
         if self._detect_storage_mode() == "postgresql" and conn is not None:
             self._insert_db(conn, row)
@@ -415,7 +504,9 @@ class RecordingDraftService:
                     manager_review_required, safeguarding_review_required,
                     privacy_sensitive, safeguarding_sensitive,
                     quality_flags, language_flags, privacy_flags, checklist_status,
-                    privacy_guard, redaction_summary, minimisation_summary, metadata
+                    privacy_guard, redaction_summary, minimisation_summary, metadata,
+                    structured_template_id, structured_template_version,
+                    structured_data, structured_summary, structured_completion, structured_review_triggers
                 ) VALUES (
                     %(id)s, %(title)s, %(body)s, %(recording_type)s, %(form_id)s, %(category)s,
                     %(status)s, %(review_status)s, %(child_id)s, %(child_name)s, %(home_id)s,
@@ -423,7 +514,10 @@ class RecordingDraftService:
                     %(created_by_role)s, %(manager_review_required)s, %(safeguarding_review_required)s,
                     %(privacy_sensitive)s, %(safeguarding_sensitive)s,
                     %(quality_flags)s, %(language_flags)s, %(privacy_flags)s, %(checklist_status)s,
-                    %(privacy_guard)s, %(redaction_summary)s, %(minimisation_summary)s, %(metadata)s
+                    %(privacy_guard)s, %(redaction_summary)s, %(minimisation_summary)s, %(metadata)s,
+                    %(structured_template_id)s, %(structured_template_version)s,
+                    %(structured_data)s, %(structured_summary)s, %(structured_completion)s,
+                    %(structured_review_triggers)s
                 )
                 """,
                 {
@@ -436,6 +530,12 @@ class RecordingDraftService:
                     "redaction_summary": Json(row["redaction_summary"]),
                     "minimisation_summary": Json(row["minimisation_summary"]),
                     "metadata": Json(row["metadata"]),
+                    "structured_template_id": row.get("structured_template_id"),
+                    "structured_template_version": row.get("structured_template_version"),
+                    "structured_data": Json(row.get("structured_data") or {}),
+                    "structured_summary": Json(row.get("structured_summary") or {}),
+                    "structured_completion": Json(row.get("structured_completion") or {}),
+                    "structured_review_triggers": Json(row.get("structured_review_triggers") or []),
                 },
             )
 
@@ -453,6 +553,19 @@ class RecordingDraftService:
         updates = payload.model_dump(exclude_unset=True)
         if not updates:
             return existing
+
+        if "structured_data" in updates:
+            structured_patch = self.apply_structured_payload(
+                {**existing.model_dump(), **updates},
+                form_id=updates.get("form_id") or existing.form_id,
+                recording_type=updates.get("recording_type") or existing.recording_type,
+            )
+            updates.update(structured_patch)
+            if structured_patch.get("manager_review_required") or structured_patch.get("safeguarding_review_required"):
+                updates["review_status"] = _resolve_review_status(
+                    manager_review_required=bool(updates.get("manager_review_required", existing.manager_review_required)),
+                    safeguarding_review_required=bool(updates.get("safeguarding_review_required", existing.safeguarding_review_required)),
+                )
 
         privacy_guard, redaction_summary, minimisation_summary = self.build_privacy_metadata(
             {**existing.model_dump(), **updates},
@@ -784,6 +897,10 @@ class RecordingDraftService:
             "redaction_summary",
             "minimisation_summary",
             "metadata",
+            "structured_data",
+            "structured_summary",
+            "structured_completion",
+            "structured_review_triggers",
         }
         sets: list[str] = []
         params: dict[str, Any] = {"id": draft_id}

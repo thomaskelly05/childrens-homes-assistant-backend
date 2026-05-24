@@ -14,13 +14,27 @@ function itemStatusLabel(status: QualityCoachSeverity) {
 export function RecordingReviewChecklist({
   body,
   title = '',
-  recordingType
+  recordingType,
+  structuredRequiredMissing
 }: {
   body: string
   title?: string
   recordingType?: RecordingWorkspaceType
+  structuredRequiredMissing?: string[]
 }) {
-  const items = useMemo(() => buildReviewChecklist(body, title, recordingType), [body, title, recordingType])
+  const items = useMemo(() => {
+    const base = buildReviewChecklist(body, title, recordingType)
+    if (!structuredRequiredMissing?.length) return base
+    return [
+      ...base,
+      {
+        id: 'structured-required',
+        label: 'Structured required fields complete',
+        status: 'review' as const,
+        passed: false
+      }
+    ]
+  }, [body, title, recordingType, structuredRequiredMissing])
   const overall = useMemo(() => reviewChecklistOverall(items), [items])
 
   return (

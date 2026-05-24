@@ -39,6 +39,8 @@ def test_review_ui_markers():
     assert "Manager judgement remains required" in combined
     assert "Open child journey" in combined
     assert "Open draft" in combined or "Open draft in /record" in combined
+    assert "recording-review-structured-summary" in combined
+    assert "Structured summary" in combined
 
 
 def test_orb_prompts_use_operational_orb_only():

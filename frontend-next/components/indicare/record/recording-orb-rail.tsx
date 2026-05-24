@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Mic2, Sparkles } from 'lucide-react'
 
 import {
@@ -9,8 +9,9 @@ import {
   RECORDING_OS_ORB_HREF,
   RECORDING_STANDALONE_ORB_HREF
 } from '@/lib/record/recording-quality-coach'
-import { recordingFormByWorkspaceType } from '@/lib/record/recording-form-registry'
+import { recordingFormByWorkspaceType, resolveActiveRecordingForm } from '@/lib/record/recording-form-registry'
 import type { RecordingWorkspaceType } from '@/lib/record/recording-types'
+import { getRecordingTemplate } from '@/lib/os-api/recording-templates'
 
 const DEFAULT_PROMPTS = [
   'What should I include in this record?',
@@ -21,25 +22,62 @@ const DEFAULT_PROMPTS = [
   'What follow-up should be recorded?'
 ] as const
 
+const HIGH_RISK_ORB_PROMPTS = [
+  'Help me check whether this record is factual and complete.',
+  'What follow-up should a manager review?',
+  'Have I separated fact from interpretation?',
+  'What should I avoid including unnecessarily?',
+  'Help me prepare questions for manager review.'
+] as const
+
 function operationalOrbHrefForPrompt(query: string) {
   const q = encodeURIComponent(query)
   return `/assistant/orb?mode=record_quality_review&context=recording&q=${q}`
 }
 
-export function RecordingOrbRail({ recordingType }: { recordingType?: RecordingWorkspaceType }) {
+export function RecordingOrbRail({
+  recordingType,
+  formId
+}: {
+  recordingType?: RecordingWorkspaceType
+  formId?: string
+}) {
+  const [templateOrbPrompts, setTemplateOrbPrompts] = useState<string[]>([])
+
   const copyOrbPrompt = useCallback(async () => {
     if (typeof navigator === 'undefined' || !navigator.clipboard) return
     await navigator.clipboard.writeText(RECORDING_ORB_COPY_PROMPT)
   }, [])
 
-  const suggestedPrompts = useMemo(() => {
-    if (!recordingType) return [...DEFAULT_PROMPTS]
-    const form = recordingFormByWorkspaceType(recordingType)
-    if (form?.orbSuggestedPrompts.length) return form.orbSuggestedPrompts
-    return [...DEFAULT_PROMPTS]
-  }, [recordingType])
+  useEffect(() => {
+    let cancelled = false
+    const candidate = formId || recordingType
+    if (!candidate) return
+    void (async () => {
+      const loaded = await getRecordingTemplate(candidate)
+      if (cancelled) return
+      if (loaded.ok && loaded.data?.template?.orb_prompts?.length) {
+        setTemplateOrbPrompts(loaded.data.template.orb_prompts)
+      } else {
+        setTemplateOrbPrompts([])
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [formId, recordingType])
 
-  const form = recordingType ? recordingFormByWorkspaceType(recordingType) : undefined
+  const form = recordingType
+    ? resolveActiveRecordingForm(recordingType, formId) || recordingFormByWorkspaceType(recordingType)
+    : undefined
+
+  const suggestedPrompts = useMemo(() => {
+    if (templateOrbPrompts.length) return templateOrbPrompts
+    if (!recordingType) return [...DEFAULT_PROMPTS]
+    if (form?.orbSuggestedPrompts.length) return form.orbSuggestedPrompts
+    if (form?.requiresManagerReview || form?.safeguardingSensitive) return [...HIGH_RISK_ORB_PROMPTS]
+    return [...DEFAULT_PROMPTS]
+  }, [form, recordingType, templateOrbPrompts])
 
   return (
     <aside data-testid="recording-orb-rail" className="space-y-4">

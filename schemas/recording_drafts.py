@@ -63,6 +63,7 @@ class RecordingDraftCreate(BaseModel):
     language_flags: list[str] = Field(default_factory=list)
     privacy_flags: list[str] = Field(default_factory=list)
     checklist_status: dict[str, Any] = Field(default_factory=dict)
+    structured_data: dict[str, Any] = Field(default_factory=dict)
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -89,6 +90,7 @@ class RecordingDraftUpdate(BaseModel):
     language_flags: list[str] | None = None
     privacy_flags: list[str] | None = None
     checklist_status: dict[str, Any] | None = None
+    structured_data: dict[str, Any] | None = None
     metadata: dict[str, Any] | None = None
 
 
@@ -119,6 +121,12 @@ class RecordingDraftRecord(BaseModel):
     language_flags: list[str] = Field(default_factory=list)
     privacy_flags: list[str] = Field(default_factory=list)
     checklist_status: dict[str, Any] = Field(default_factory=dict)
+    structured_template_id: str | None = None
+    structured_template_version: str | None = None
+    structured_data: dict[str, Any] = Field(default_factory=dict)
+    structured_summary: dict[str, Any] = Field(default_factory=dict)
+    structured_completion: dict[str, Any] = Field(default_factory=dict)
+    structured_review_triggers: list[str] = Field(default_factory=list)
     privacy_guard: dict[str, Any] = Field(default_factory=dict)
     redaction_summary: dict[str, Any] = Field(default_factory=dict)
     minimisation_summary: dict[str, Any] = Field(default_factory=dict)

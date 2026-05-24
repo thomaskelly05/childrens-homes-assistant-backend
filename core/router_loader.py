@@ -174,6 +174,7 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
             "routers.reports_routes",
             "routers.recording_draft_routes",
             "routers.recording_review_routes",
+            "routers.recording_structured_template_routes",
         ),
         notes="Handovers, monthly reviews, Ofsted packs, recording drafts and manager review queue.",
     ),
