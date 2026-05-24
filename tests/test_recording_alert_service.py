@@ -191,3 +191,21 @@ def test_access_control_conservative_for_staff(monkeypatch, fake_state):
     if gen.alerts:
         got = recording_alert_service.get_alert(gen.alerts[0].id, staff, conn=None)
         assert got is None or listed_staff.total == 0
+
+
+def test_build_digest_and_badge_summary(fake_state):
+    user = fake_state["user"]
+    recording_draft_service.create_draft(
+        RecordingDraftCreate(
+            title="Summary",
+            body="SECRET",
+            recording_type="safeguarding-concern",
+            safeguarding_review_required=True,
+        ),
+        user,
+    )
+    recording_alert_service.generate_alerts(user, conn=None)
+    digest = recording_alert_service.build_digest(user, conn=None)
+    badge = recording_alert_service.build_badge_summary(user, conn=None)
+    assert digest.total_open == badge.total_open
+    assert digest.urgent == badge.urgent

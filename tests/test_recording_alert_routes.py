@@ -84,10 +84,50 @@ def test_staff_forbidden(fake_state):
     with pytest.raises(HTTPException) as exc:
         asyncio.run(
             alert_routes.list_recording_alerts(
-                limit=100,
+                limit=50,
                 offset=0,
                 current_user=staff,
                 conn=None,
             )
         )
     assert exc.value.status_code == 403
+
+
+def test_digest_badge_run_checks_last_check_routes(fake_state):
+    user = fake_state["user"]
+    recording_draft_service.create_draft(
+        RecordingDraftCreate(
+            title="Route digest",
+            body="hidden",
+            recording_type="safeguarding-concern",
+            safeguarding_review_required=True,
+        ),
+        user,
+    )
+
+    digest = asyncio.run(
+        alert_routes.recording_alerts_digest(current_user=user, conn=None)
+    )
+    assert digest["success"] is True
+    assert digest["metadata_only"] is True
+    assert "total_open" in digest["data"]
+    assert "hidden" not in str(digest["data"])
+
+    badge = asyncio.run(
+        alert_routes.recording_alerts_badge_summary(current_user=user, conn=None)
+    )
+    assert badge["success"] is True
+    assert "total_open" in badge["data"]
+
+    run = asyncio.run(
+        alert_routes.run_recording_alert_checks(current_user=user, conn=None)
+    )
+    assert run["success"] is True
+    assert "run_id" in run["data"]
+    assert "generated" in run["data"]
+
+    last = asyncio.run(
+        alert_routes.recording_alerts_last_check(current_user=user, conn=None)
+    )
+    assert last["success"] is True
+    assert last["data"] is not None

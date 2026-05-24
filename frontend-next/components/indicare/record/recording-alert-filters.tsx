@@ -8,6 +8,8 @@ export type AlertFilterKey =
   | 'missing_rhi'
   | 'medication'
   | 'changes_requested'
+  | 'due_today'
+  | 'overdue'
   | 'resolved'
 
 const FILTERS: { key: AlertFilterKey; label: string }[] = [
@@ -18,6 +20,8 @@ const FILTERS: { key: AlertFilterKey; label: string }[] = [
   { key: 'missing_rhi', label: 'Missing/RHI' },
   { key: 'medication', label: 'Medication' },
   { key: 'changes_requested', label: 'Changes requested' },
+  { key: 'due_today', label: 'Due today' },
+  { key: 'overdue', label: 'Overdue' },
   { key: 'resolved', label: 'Resolved' }
 ]
 

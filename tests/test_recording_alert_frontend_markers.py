@@ -13,13 +13,18 @@ ALERT_FILES = [
     FRONTEND / "components" / "indicare" / "record" / "recording-alert-summary.tsx",
     FRONTEND / "components" / "indicare" / "record" / "recording-alert-actions.tsx",
     FRONTEND / "components" / "indicare" / "record" / "recording-alert-filters.tsx",
+    FRONTEND / "components" / "indicare" / "record" / "recording-manager-digest.tsx",
+    FRONTEND / "components" / "indicare" / "record" / "recording-alert-nav-badge.tsx",
     FRONTEND / "lib" / "os-api" / "recording-alerts.ts",
 ]
 
 INTEGRATION_FILES = [
     FRONTEND / "components" / "indicare" / "record" / "record-hub.tsx",
     FRONTEND / "components" / "indicare" / "record" / "recording-governance-alerts.tsx",
+    FRONTEND / "components" / "indicare" / "record" / "recording-governance-dashboard.tsx",
     FRONTEND / "components" / "command-centre" / "care-hub-recording-section.tsx",
+    FRONTEND / "components" / "command-centre" / "care-hub-recording-digest.tsx",
+    FRONTEND / "components" / "indicare" / "app-shell.tsx",
     FRONTEND / "lib" / "child-journey" / "child-journey-routes.ts",
 ]
 
@@ -41,6 +46,9 @@ def test_alerts_ui_markers():
     combined = "\n".join(_read(path) for path in ALERT_FILES)
     assert "Recording alerts" in combined
     assert "Follow up recording risks" in combined
+    assert "Run checks now" in combined
+    assert "recording-alerts-digest-panel" in combined
+    assert "recording-alerts-last-check" in combined
     assert "Open review" in combined
     assert "Open draft" in combined
     assert "Open child journey" in combined
@@ -49,6 +57,13 @@ def test_alerts_ui_markers():
     assert "recording-alert-safe-summary" in combined
     assert "draft.body" not in combined
     assert "raw draft body" not in combined.lower() or "not raw" in combined.lower()
+
+
+def test_recording_alert_nav_badge_marker():
+    shell = _read(FRONTEND / "components" / "indicare" / "app-shell.tsx")
+    badge = _read(FRONTEND / "components" / "indicare" / "record" / "recording-alert-nav-badge.tsx")
+    assert "recording-alert-nav-badge" in badge
+    assert "RecordingAlertNavBadge" in shell
 
 
 def test_orb_links_use_operational_orb_only():

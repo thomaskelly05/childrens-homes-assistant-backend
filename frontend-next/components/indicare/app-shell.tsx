@@ -17,6 +17,7 @@ import { MobileNav } from '@/components/mobile-nav'
 import { ContextualOrbPanel } from '@/components/indicare/operational/contextual-orb-panel'
 import { OperationalAlertsPanel } from '@/components/indicare/operational/operational-alerts-panel'
 import { OperationalQuickActions } from '@/components/indicare/operational/operational-quick-actions'
+import { RecordingAlertNavBadge, RecordingAlertTopPill } from '@/components/indicare/record/recording-alert-nav-badge'
 import { useAuth } from '@/contexts/auth-context'
 import { buildAssistantContext } from '@/lib/assistant-core/context'
 import { displayName, roleLabels, userHasAnyPermission } from '@/lib/auth/permissions'
@@ -252,6 +253,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                       >
                         <Icon className={`h-4 w-4 ${active ? 'text-blue-600' : 'text-blue-200/70 group-hover:text-blue-200'}`} aria-hidden />
                         <span className="truncate">{item.label}</span>
+                        {item.domain === 'daily-care' ? <RecordingAlertNavBadge role={user.role} /> : null}
                       </Link>
                     )
                   })}
@@ -281,6 +283,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               </div>
               <div className="ml-auto flex items-center gap-2">
                 <CommandSearch />
+                <RecordingAlertTopPill role={user.role} />
                 <Link prefetch={false} href="/young-people" className="hidden rounded-2xl border border-blue-100 bg-blue-50 px-3 py-2 text-sm font-black text-blue-800 shadow-sm transition hover:bg-blue-100 md:inline-flex">
                   <ShieldCheck className="mr-2 h-4 w-4" aria-hidden />
                   {activeChildName ? 'Switch child' : 'Choose child'}

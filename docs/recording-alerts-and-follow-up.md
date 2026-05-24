@@ -61,14 +61,45 @@ All lifecycle changes are written to the audit trail (`recording_alert` events).
 
 Alerts support oversight; they do not replace professional judgement or formal safeguarding processes.
 
+## Digest and badge summary
+
+Managers can fetch metadata-only oversight surfaces without opening `/record/alerts`:
+
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /recording-alerts/digest` | Full manager digest: counts, recommendations, top alerts (metadata), routes |
+| `GET /recording-alerts/badge-summary` | Lightweight nav badge counts for AppShell |
+| `POST /recording-alerts/run-checks` | Manual check run wrapping `generate_alerts` + last-run metadata |
+| `GET /recording-alerts/last-check` | Most recent check run (in-memory or `recording_alert_check_runs`) |
+
+Digest and badge responses never include raw draft bodies. Top alerts expose title, safe summary, severity and routes only.
+
+## Manual run checks
+
+There is **no background scheduler** in this pass. Managers run checks from:
+
+- `/record/alerts` — Run checks now
+- Care Hub — Recording oversight digest
+- `/record/governance` — Alert digest card
+
+Check runs record `generated`, `created`, `updated`, `skipped` and `completed_at`. Optional persistence: `sql/084_recording_alert_check_runs.sql`.
+
+## AppShell and Care Hub visibility
+
+- AppShell Record nav shows a subtle badge when open/urgent alerts exist (manager roles).
+- Care Hub includes a **Recording oversight** digest card with counts, last check, Run checks, Open alerts/governance, Ask OS ORB.
+
 ## ORB support
 
-Operational ORB prompt chips on `/record/alerts`:
+Operational ORB prompt chips on `/record/alerts`, Care Hub digest and manager digest:
 
-- What recording alerts mean
-- What needs manager review
-- How to prioritise follow-up
-- Safeguarding-sensitive alerts
+- Recording oversight summary (`manager_daily_brief`)
+- What needs manager review (`action_priority`)
+- How to prioritise recording alerts (`action_priority`)
+- Safeguarding-sensitive recording (`safeguarding_themes`)
+- Recording quality themes (`record_quality_review`)
+
+Links use `/assistant/orb` with mode/query only — never draft, child or alert IDs in URL.
 
 ## Intelligence actions
 
@@ -77,6 +108,7 @@ When `create_intelligence_action` is used, the service attempts `intelligence_ac
 ## Limitations
 
 - In-memory fallback when `recording_alerts` table is not migrated.
+- Check-run history in-memory until migration 084 is applied.
 - No push notifications or email in this pass.
 - Dashboard governance alerts remain separate lightweight recommendations; persistent alerts live in `recording_alerts`.
 - Formal record creation is not implied by resolving an alert.
@@ -84,11 +116,14 @@ When `create_intelligence_action` is used, the service attempts `intelligence_ac
 ## Future work
 
 - Scheduled generation after draft save/review events
-- Push notifications for urgent safeguarding alerts
+- Push notifications for urgent safeguarding alerts (requires Connect/notification infrastructure)
 - Per-home alert assignment rules
+
+See also: `docs/recording-alert-automation-roadmap.md`
 
 ## Manual migration
 
 ```bash
 psql $DATABASE_URL -f sql/083_recording_alerts.sql
+psql $DATABASE_URL -f sql/084_recording_alert_check_runs.sql
 ```

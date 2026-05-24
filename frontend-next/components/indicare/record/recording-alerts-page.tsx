@@ -8,12 +8,15 @@ import { RecordingAlertActions } from '@/components/indicare/record/recording-al
 import { RecordingAlertCard } from '@/components/indicare/record/recording-alert-card'
 import { RecordingAlertFilters, type AlertFilterKey } from '@/components/indicare/record/recording-alert-filters'
 import { RecordingAlertSummaryCards } from '@/components/indicare/record/recording-alert-summary'
+import { RecordingManagerDigest } from '@/components/indicare/record/recording-manager-digest'
 import {
-  generateRecordingAlerts,
+  getRecordingAlertLastCheck,
   getRecordingAlertSummary,
   listRecordingAlerts,
   operationalOrbAlertHref,
   RECORDING_ALERT_ORB_PROMPTS,
+  runRecordingAlertChecks,
+  type RecordingAlertCheckRun,
   type RecordingAlertRecord,
   type RecordingAlertSummary
 } from '@/lib/os-api/recording-alerts'
@@ -23,6 +26,33 @@ const SAFEGUARDING_TYPES = new Set([
   'safeguarding_escalation_required',
   'high_risk_review_due'
 ])
+
+function isDueToday(alert: RecordingAlertRecord) {
+  if (!alert.due_at) return false
+  const due = new Date(alert.due_at)
+  if (Number.isNaN(due.getTime())) return false
+  const now = new Date()
+  return due.toDateString() === now.toDateString()
+}
+
+function isOverdue(alert: RecordingAlertRecord) {
+  if (!alert.due_at) return false
+  const due = new Date(alert.due_at)
+  if (Number.isNaN(due.getTime())) return false
+  return due.getTime() < Date.now()
+}
+
+function formatWhen(value?: string | null) {
+  if (!value) return 'Not run yet'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
 
 function matchesFilter(alert: RecordingAlertRecord, filter: AlertFilterKey): boolean {
   if (filter === 'all') return alert.status !== 'archived'
@@ -34,6 +64,8 @@ function matchesFilter(alert: RecordingAlertRecord, filter: AlertFilterKey): boo
     return alert.alert_type === 'missing_episode_follow_up_due' || alert.alert_type === 'rhi_follow_up_due'
   if (filter === 'medication') return alert.alert_type === 'medication_error_review_due'
   if (filter === 'changes_requested') return alert.alert_type === 'changes_requested_pending'
+  if (filter === 'due_today') return isDueToday(alert) && alert.status !== 'resolved'
+  if (filter === 'overdue') return isOverdue(alert) && alert.status !== 'resolved'
   return true
 }
 
@@ -46,24 +78,27 @@ export function RecordingAlertsPage() {
 
   const [alerts, setAlerts] = useState<RecordingAlertRecord[]>([])
   const [summary, setSummary] = useState<RecordingAlertSummary | null>(null)
+  const [lastCheck, setLastCheck] = useState<RecordingAlertCheckRun | null>(null)
   const [filter, setFilter] = useState<AlertFilterKey>('all')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const [generating, setGenerating] = useState(false)
+  const [runningChecks, setRunningChecks] = useState(false)
   const [error, setError] = useState<string | undefined>()
-  const [genMessage, setGenMessage] = useState<string | undefined>()
+  const [runMessage, setRunMessage] = useState<string | undefined>()
 
   const load = useCallback(async () => {
     setLoading(true)
     const params: { child_id?: number; draft_id?: string } = {}
     if (childFilter != null) params.child_id = childFilter
     if (draftIdFilter) params.draft_id = draftIdFilter
-    const [listResult, summaryResult] = await Promise.all([
+    const [listResult, summaryResult, lastResult] = await Promise.all([
       listRecordingAlerts({ ...params, limit: 200 }),
-      getRecordingAlertSummary(childFilter != null ? { child_id: childFilter } : undefined)
+      getRecordingAlertSummary(childFilter != null ? { child_id: childFilter } : undefined),
+      getRecordingAlertLastCheck()
     ])
     setAlerts(listResult.ok ? listResult.data.items : [])
     setSummary(summaryResult.ok ? summaryResult.data : null)
+    setLastCheck(lastResult.ok ? lastResult.data : null)
     setError(listResult.ok ? undefined : listResult.error)
     setLoading(false)
   }, [childFilter, draftIdFilter])
@@ -79,21 +114,22 @@ export function RecordingAlertsPage() {
 
   const selected = filtered.find((a) => a.id === selectedId) ?? filtered[0] ?? null
 
-  async function handleGenerate() {
-    setGenerating(true)
-    setGenMessage(undefined)
-    const result = await generateRecordingAlerts({
+  async function handleRunChecks() {
+    setRunningChecks(true)
+    setRunMessage(undefined)
+    const result = await runRecordingAlertChecks({
       child_id: childFilter,
       force: false
     })
-    setGenerating(false)
+    setRunningChecks(false)
     if (result.ok) {
-      setGenMessage(
-        `Generated ${result.data.generated} alert(s): ${result.data.created} created, ${result.data.updated} updated, ${result.data.skipped} skipped.`
+      setRunMessage(
+        `Checks complete: ${result.data.generated} generated, ${result.data.created} created, ${result.data.updated} updated, ${result.data.skipped} skipped.`
       )
+      setLastCheck(result.data)
       await load()
     } else {
-      setGenMessage(result.error)
+      setRunMessage(result.error || 'Check run failed.')
     }
   }
 
@@ -109,7 +145,7 @@ export function RecordingAlertsPage() {
         {childFilter != null ? (
           <p className="text-xs font-semibold text-slate-500">Filtered to young person ID {childFilter}</p>
         ) : null}
-        <div className="flex flex-wrap gap-2 pt-1">
+        <div className="flex flex-wrap items-center gap-2 pt-1">
           <Link
             href="/record/governance"
             className="inline-flex min-h-10 items-center rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-xs font-black text-indigo-950"
@@ -124,20 +160,30 @@ export function RecordingAlertsPage() {
           </Link>
           <button
             type="button"
-            data-testid="recording-alerts-generate"
-            disabled={generating}
-            onClick={() => void handleGenerate()}
+            data-testid="recording-alerts-run-checks"
+            disabled={runningChecks}
+            onClick={() => void handleRunChecks()}
             className="inline-flex min-h-10 items-center rounded-2xl bg-slate-950 px-4 py-2 text-xs font-black text-white disabled:opacity-60"
           >
-            {generating ? 'Generating…' : 'Generate alerts'}
+            {runningChecks ? 'Running checks…' : 'Run checks now'}
           </button>
         </div>
-        {genMessage ? (
-          <p className="text-xs font-semibold text-slate-600" data-testid="recording-alerts-generate-message">
-            {genMessage}
+        <p
+          className="text-xs font-semibold text-slate-500"
+          data-testid="recording-alerts-last-check"
+        >
+          Last check: {formatWhen(lastCheck?.completed_at)}
+        </p>
+        {runMessage ? (
+          <p className="text-xs font-semibold text-slate-600" data-testid="recording-alerts-run-message">
+            {runMessage}
           </p>
         ) : null}
       </header>
+
+      <section data-testid="recording-alerts-digest-panel">
+        <RecordingManagerDigest compact childId={childFilter} onChecksComplete={() => void load()} />
+      </section>
 
       {summary ? <RecordingAlertSummaryCards summary={summary} /> : null}
 
@@ -153,8 +199,11 @@ export function RecordingAlertsPage() {
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)]">
           <ul className="space-y-2" data-testid="recording-alert-list">
             {filtered.length === 0 ? (
-              <li className="rounded-2xl border border-dashed border-slate-200 px-4 py-8 text-center text-sm font-semibold text-slate-500">
-                No alerts in this filter. Try Generate alerts or adjust filters.
+              <li
+                className="rounded-2xl border border-dashed border-slate-200 px-4 py-8 text-center text-sm font-semibold text-slate-500"
+                data-testid="recording-alerts-empty-state"
+              >
+                No open recording alerts. Run checks to refresh.
               </li>
             ) : (
               filtered.map((alert) => (
@@ -188,7 +237,7 @@ export function RecordingAlertsPage() {
                 {RECORDING_ALERT_ORB_PROMPTS.map((prompt) => (
                   <li key={prompt.label}>
                     <Link
-                      href={operationalOrbAlertHref('action_priority', prompt.query)}
+                      href={operationalOrbAlertHref(prompt.mode, prompt.query)}
                       className="text-xs font-black text-indigo-800 underline"
                     >
                       {prompt.label}
