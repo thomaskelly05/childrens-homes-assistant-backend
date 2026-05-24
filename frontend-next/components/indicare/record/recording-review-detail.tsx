@@ -55,6 +55,40 @@ export function RecordingReviewDetailPanel({
           {draft.body?.trim() || '(No body yet)'}
         </div>
 
+        {draft.structured_template_id ? (
+          <div className="mt-4 space-y-3" data-testid="recording-review-structured-summary">
+            <p className="text-xs font-black text-slate-800">
+              Structured template: {draft.structured_template_id}
+            </p>
+            {(draft.structured_summary as { lines?: string[] })?.lines?.length ? (
+              <div className="rounded-xl border border-rose-100 bg-rose-50/50 p-3">
+                <p className="text-xs font-black text-rose-950">Structured summary</p>
+                <ul className="mt-2 list-disc space-y-1 pl-4 text-xs font-semibold leading-5 text-slate-700">
+                  {((draft.structured_summary as { lines?: string[] }).lines || []).map((line) => (
+                    <li key={line}>{line}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            {draft.structured_review_triggers?.length ? (
+              <div className="rounded-xl border border-amber-100 bg-amber-50/60 p-3" data-testid="recording-review-structured-triggers">
+                <p className="text-xs font-black text-amber-950">Structured review triggers</p>
+                <ul className="mt-2 list-disc space-y-1 pl-4 text-xs font-semibold text-amber-900">
+                  {draft.structured_review_triggers.map((trigger) => (
+                    <li key={trigger}>{trigger}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            {(draft.structured_completion as { required_missing?: string[] })?.required_missing?.length ? (
+              <p className="text-xs font-black text-rose-800" data-testid="recording-review-structured-missing">
+                Required structured fields missing:{' '}
+                {(draft.structured_completion as { required_missing?: string[] }).required_missing?.join(', ')}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
         {(draft.quality_flags?.length || draft.language_flags?.length) ? (
           <div className="mt-3">
             <p className="text-xs font-black text-slate-800">Quality flags</p>

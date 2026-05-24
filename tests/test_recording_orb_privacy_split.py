@@ -11,6 +11,7 @@ RECORD_ORB_FILES = [
     FRONTEND / "components" / "indicare" / "record" / "recording-workspace.tsx",
     FRONTEND / "components" / "indicare" / "record" / "record-hub.tsx",
     FRONTEND / "lib" / "record" / "recording-quality-coach.ts",
+    FRONTEND / "components" / "indicare" / "record" / "structured-recording-form.tsx",
 ]
 
 FORBIDDEN_STANDALONE_QUERY_KEYS = [

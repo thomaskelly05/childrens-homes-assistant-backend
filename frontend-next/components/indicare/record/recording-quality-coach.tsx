@@ -20,13 +20,27 @@ function statusClass(severity: QualityCoachSeverity) {
 export function RecordingQualityCoach({
   body,
   title = '',
-  recordingType
+  recordingType,
+  structuredRequiredMissing,
+  structuredReviewTriggers
 }: {
   body: string
   title?: string
   recordingType?: RecordingWorkspaceType
+  structuredRequiredMissing?: string[]
+  structuredReviewTriggers?: string[]
 }) {
   const result = useMemo(() => analyseRecordingQuality(body, title, recordingType), [body, title, recordingType])
+  const extraSuggestions = useMemo(() => {
+    const items: string[] = []
+    if (structuredRequiredMissing?.length) {
+      items.push(`Structured form: ${structuredRequiredMissing.length} required field(s) still missing.`)
+    }
+    if (structuredReviewTriggers?.length) {
+      items.push(...structuredReviewTriggers.slice(0, 3))
+    }
+    return items
+  }, [structuredRequiredMissing, structuredReviewTriggers])
 
   return (
     <section data-testid="recording-quality-coach" className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">

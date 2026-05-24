@@ -45,6 +45,11 @@ type RecordingEditorProps = {
   onBodyChange?: (body: string) => void
   onBackendDraftChange?: (draft: RecordingDraftRecord | null) => void
   onDraftListRefresh?: () => void
+  onStructuredCompletionChange?: (payload: {
+    requiredMissing: string[]
+    reviewTriggers: string[]
+    completionSummary: string[]
+  } | null) => void
 }
 
 function hasMeaningfulContent(title: string, body: string) {
@@ -61,7 +66,8 @@ export function RecordingEditor({
   onTitleChange,
   onBodyChange,
   onBackendDraftChange,
-  onDraftListRefresh
+  onDraftListRefresh,
+  onStructuredCompletionChange
 }: RecordingEditorProps) {
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
@@ -227,7 +233,7 @@ export function RecordingEditor({
   )
 
   const persistDraft = useCallback(
-    async (nextTitle: string, nextBody: string, options?: { forceCreate?: boolean }) => {
+    async (nextTitle: string, nextBody: string, options?: { forceCreate?: boolean; structured?: Record<string, unknown> }) => {
       if (
         !options?.forceCreate &&
         nextTitle === lastPersisted.current.title &&
@@ -262,11 +268,11 @@ export function RecordingEditor({
   )
 
   const scheduleSave = useCallback(
-    (nextTitle: string, nextBody: string) => {
-      if (!hasMeaningfulContent(nextTitle, nextBody)) return
+    (nextTitle: string, nextBody: string, structured?: Record<string, unknown>) => {
+      if (!hasMeaningfulContent(nextTitle, nextBody) && !(structured && Object.keys(structured).length)) return
       if (saveTimer.current) clearTimeout(saveTimer.current)
       saveTimer.current = setTimeout(() => {
-        void persistDraft(nextTitle, nextBody)
+        void persistDraft(nextTitle, nextBody, { structured })
       }, 1200)
     },
     [persistDraft]

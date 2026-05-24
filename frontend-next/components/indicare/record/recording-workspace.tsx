@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 
 import { RecordingContextPanel } from '@/components/indicare/record/recording-context-panel'
 import { RecordingEditor } from '@/components/indicare/record/recording-editor'
@@ -52,6 +52,18 @@ export function RecordingWorkspace({
   const activeForm = resolveRecordingFormFromQuery(recordingType, formIdFromUrl) || resolveActiveRecordingForm(recordingType, formIdFromUrl)
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
+  const [structuredCompletion, setStructuredCompletion] = useState<{
+    requiredMissing: string[]
+    reviewTriggers: string[]
+    completionSummary: string[]
+  } | null>(null)
+
+  const handleStructuredCompletionChange = useCallback(
+    (payload: { requiredMissing: string[]; reviewTriggers: string[]; completionSummary: string[] } | null) => {
+      setStructuredCompletion(payload)
+    },
+    []
+  )
 
   const continueHref = useMemo(() => {
     const cardIdMap: Partial<Record<RecordingWorkspaceType, string>> = {
@@ -117,6 +129,12 @@ export function RecordingWorkspace({
               safeguarding procedures.
             </p>
           ) : null}
+          {activeForm.safeguardingSensitive || activeForm.requiresManagerReview ? (
+            <p className="mt-2 text-xs font-black text-rose-900" data-testid="recording-high-risk-safety-banner">
+              High-risk record — use structured fields where shown. Follow your home&apos;s safeguarding, medication and
+              manager notification procedures. Manager judgement remains required.
+            </p>
+          ) : null}
           {activeForm.workflowStatus === 'formal_submit_supported' ? (
             <p className="mt-1 text-xs font-semibold text-emerald-900">
               Formal submit supported when a child is selected and review rules are met.
@@ -137,16 +155,17 @@ export function RecordingWorkspace({
             onTitleChange={setTitle}
             onBodyChange={setBody}
             onDraftListRefresh={onDraftListRefresh}
+            onStructuredCompletionChange={handleStructuredCompletionChange}
           />
           <RecordingTherapeuticPrompts recordingType={recordingType} formId={formIdFromUrl || activeForm?.id} />
           <RecordingContextPanel body={body} title={title} />
         </div>
 
         <div className="space-y-4">
-          <RecordingOrbRail recordingType={recordingType} />
-          <RecordingQualityCoach body={body} title={title} recordingType={recordingType} />
+          <RecordingOrbRail recordingType={recordingType} formId={formIdFromUrl || activeForm?.id} />
+          <RecordingQualityCoach body={body} title={title} recordingType={recordingType} structuredRequiredMissing={structuredCompletion?.requiredMissing} structuredReviewTriggers={structuredCompletion?.reviewTriggers} />
           <RecordingLanguageSuggestions body={body} title={title} />
-          <RecordingReviewChecklist body={body} title={title} recordingType={recordingType} />
+          <RecordingReviewChecklist body={body} title={title} recordingType={recordingType} structuredRequiredMissing={structuredCompletion?.requiredMissing} />
         </div>
       </div>
 
