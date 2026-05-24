@@ -189,7 +189,7 @@ export const CARE_HUB_SIGNAL_ROUTES: Record<string, string> = {
   Children: '/young-people',
   Chronology: '/chronology',
   Safeguarding: '/safeguarding',
-  'Review queue': '/intelligence-actions'
+  'Review queue': '/record/reviews'
 }
 
 export function signalHref(signal: OperationalSignalMetric): string {

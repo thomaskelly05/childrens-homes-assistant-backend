@@ -75,6 +75,8 @@ def test_archive_delete_ready_submit(fake_state):
     ready = recording_draft_service.mark_ready_for_review(created.id, user)
     assert ready
     assert ready.status == "ready_for_review"
+    assert ready.review_status in {"awaiting_review", "safeguarding_review_required"}
+    assert (ready.metadata or {}).get("review_priority")
 
     submitted = recording_draft_service.submit_draft(
         created.id,

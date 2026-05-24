@@ -69,6 +69,38 @@ def test_draft_only_when_unsupported(fake_state):
     assert any("not wired" in w.lower() for w in result.warnings)
 
 
+def test_approved_draft_can_submit_when_supported(fake_state, monkeypatch):
+    user = fake_state["user"]
+    draft = recording_draft_service.create_draft(
+        RecordingDraftCreate(
+            title="Daily",
+            body="Calm",
+            recording_type="daily-note",
+            child_id=7,
+            manager_review_required=True,
+        ),
+        user,
+    )
+    from schemas.recording_drafts import RecordingDraftUpdate
+
+    recording_draft_service.update_draft(
+        draft.id,
+        RecordingDraftUpdate(review_status="approved"),
+        user,
+    )
+    monkeypatch.setattr(
+        "services.recording_submission_router_service.YoungPersonDailyNotesService.create_daily_note",
+        lambda conn, **kwargs: {"id": 77, "workflow": {}},
+    )
+    result = recording_submission_router_service.submit_draft(
+        draft.id,
+        RecordingSubmissionRequest(draft_id=draft.id, confirm_reviewed=True),
+        user,
+        conn=MagicMock(),
+    )
+    assert result.formal_record_created is True
+
+
 def test_review_required_blocks_high_risk_formal_creation(fake_state, monkeypatch):
     user = fake_state["user"]
     draft = recording_draft_service.create_draft(

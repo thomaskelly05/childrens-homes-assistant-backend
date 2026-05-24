@@ -371,13 +371,17 @@ class RecordingSubmissionRouterService:
                 "warnings": response.warnings[:20],
             },
         }
+        post_review_status = draft.review_status
+        if response.formal_record_created and draft.review_status in {"approved", "reviewed"}:
+            post_review_status = "submitted"
+        elif draft.review_status == "not_required":
+            post_review_status = "awaiting_review"
+
         updated = recording_draft_service.update_draft(
             draft.id,
             RecordingDraftUpdate(
                 status="submitted",
-                review_status=draft.review_status
-                if draft.review_status != "not_required"
-                else "awaiting_review",
+                review_status=post_review_status,  # type: ignore[arg-type]
                 metadata=meta,
             ),
             current_user,

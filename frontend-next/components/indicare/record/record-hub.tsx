@@ -405,6 +405,13 @@ export function RecordHub({
           <Link href="/command-centre" className="inline-flex min-h-10 items-center rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-black text-slate-600">
             Back to Care Hub
           </Link>
+          <Link
+            href="/record/reviews"
+            data-testid="record-hub-review-queue-link"
+            className="inline-flex min-h-10 items-center rounded-2xl border border-purple-200 bg-purple-50 px-4 py-2.5 text-xs font-black text-purple-950"
+          >
+            Recording review queue
+          </Link>
         </div>
       </section>
 

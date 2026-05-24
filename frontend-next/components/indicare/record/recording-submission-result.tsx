@@ -70,6 +70,18 @@ export function RecordingSubmissionResultCard({ result, childId }: RecordingSubm
         </ul>
       ) : null}
 
+      {result.review_required && !result.formal_record_created ? (
+        <div className="mt-3">
+          <Link
+            href="/record/reviews"
+            data-testid="recording-submission-open-review-queue"
+            className="inline-flex min-h-9 items-center rounded-xl bg-purple-600 px-3 py-1 text-xs font-black text-white"
+          >
+            Open review queue
+          </Link>
+        </div>
+      ) : null}
+
       {result.next_steps.length > 0 ? (
         <div className="mt-3">
           <p className="text-xs font-black text-slate-800">Next steps</p>

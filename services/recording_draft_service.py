@@ -586,6 +586,8 @@ class RecordingDraftService:
         current_user: dict[str, Any],
         conn: Any | None = None,
     ) -> RecordingDraftRecord | None:
+        from services.recording_review_service import recording_review_service
+
         existing = self.get_draft(draft_id, current_user, conn=conn)
         if not existing:
             return None
@@ -594,14 +596,37 @@ class RecordingDraftService:
             review_status = "safeguarding_review_required"
         elif existing.manager_review_required:
             review_status = "manager_review_required"
+        priority = recording_review_service.build_review_priority(existing)
+        meta = {
+            **(existing.metadata or {}),
+            "review_priority": priority,
+            "sent_to_review_queue_at": _now_iso(),
+        }
         updated = self.update_draft(
             draft_id,
-            RecordingDraftUpdate(status="ready_for_review", review_status=review_status),
+            RecordingDraftUpdate(
+                status="ready_for_review",
+                review_status=review_status,
+                metadata=meta,
+            ),
             current_user,
             conn=conn,
         )
         if updated:
-            self.record_audit("ready_for_review", updated, current_user)
+            recording_review_service._patch_review_fields(
+                draft_id,
+                {"review_priority": priority},
+                conn=conn,
+            )
+            refreshed = self.get_draft(draft_id, current_user, conn=conn)
+            if refreshed:
+                updated = refreshed
+            self.record_audit(
+                "ready_for_review",
+                updated,
+                current_user,
+                metadata={"review_priority": priority, "review_status": review_status},
+            )
         return updated
 
     def submit_draft(

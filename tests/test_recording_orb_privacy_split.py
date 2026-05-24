@@ -59,3 +59,13 @@ def test_recording_drafts_are_operational_only():
     standalone = _read(REPO_ROOT / "routers" / "orb_standalone_routes.py")
     assert "recording_drafts" not in standalone
     assert "recording-drafts" not in standalone
+
+
+def test_recording_reviews_are_operational_only():
+    routes = _read(REPO_ROOT / "routers" / "recording_review_routes.py")
+    assert "operational_only" in routes
+    assert "standalone_access" in routes
+    assert "/recording-reviews" in routes
+    standalone = _read(REPO_ROOT / "routers" / "orb_standalone_routes.py")
+    assert "recording_reviews" not in standalone
+    assert "recording-reviews" not in standalone
