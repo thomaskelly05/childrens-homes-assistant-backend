@@ -25,7 +25,7 @@ export function CareHubRecordingSection({ selectedYoungPersonId }: { selectedYou
           Choose a record type. Each opens the right workflow — ORB can help with wording and quality.
         </p>
       </div>
-      <div className="mt-3">
+      <div className="mt-3 flex flex-wrap gap-2">
         <Link
           href={selectedYoungPersonId ? `/record?child_id=${encodeURIComponent(selectedYoungPersonId)}&about=child` : '/record'}
           data-testid="care-hub-all-recording-forms"
@@ -33,7 +33,21 @@ export function CareHubRecordingSection({ selectedYoungPersonId }: { selectedYou
         >
           All recording forms
         </Link>
+        <Link
+          href={
+            selectedYoungPersonId
+              ? `/record/governance?child_id=${encodeURIComponent(selectedYoungPersonId)}`
+              : '/record/governance'
+          }
+          data-testid="care-hub-recording-governance"
+          className="inline-flex min-h-10 items-center rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-xs font-black text-indigo-950"
+        >
+          Recording governance
+        </Link>
       </div>
+      <p className="mt-2 max-w-2xl text-xs font-semibold text-slate-500" data-testid="care-hub-recording-governance-hint">
+        Review high-risk drafts and recording quality — metadata only, no raw record bodies in summary cards.
+      </p>
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {actions.map((action) => {
           const Icon = iconByLabel[action.label as keyof typeof iconByLabel]

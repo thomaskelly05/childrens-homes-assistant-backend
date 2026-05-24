@@ -46,6 +46,13 @@ export function AiGovernanceDashboard({ data, warning }: { data: AiGovernanceDas
             >
               Privacy governance
             </Link>
+            <Link
+              href="/record/governance"
+              data-testid="ai-governance-recording-governance-link"
+              className="rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-black text-indigo-950"
+            >
+              Recording governance
+            </Link>
             <Link href="/assistant/orb" className="rounded-2xl bg-blue-600 px-4 py-2 text-sm font-black text-white">
               Operational ORB
             </Link>
