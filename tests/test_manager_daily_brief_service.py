@@ -60,6 +60,11 @@ def test_build_brief_metadata_only(fake_state):
     sccif = next(s for s in brief.sections if s.id == "sccif_quality_standards")
     assert sccif.route == "/intelligence/sccif"
     assert "compliance" not in sccif.summary.lower() or "not a compliance" in sccif.summary.lower()
+    assert any(s.id == "inspection_readiness" for s in brief.sections)
+    assert brief.inspection_readiness_summary
+    inspection = next(s for s in brief.sections if s.id == "inspection_readiness")
+    assert inspection.route == "/intelligence/inspection-readiness"
+    assert "grade" not in inspection.summary.lower() or "not a grade" in inspection.summary.lower()
 
 
 def test_notification_oversight_section(fake_state):

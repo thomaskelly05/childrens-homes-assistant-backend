@@ -62,8 +62,12 @@ Mirrored under `/api/sccif-alignment/*`. Auth required. Metadata only.
 
 Modes: `ofsted_evidence_review`, `manager_daily_brief`, `safeguarding_themes`, `record_quality_review`. Queries are generic — no child/staff/draft IDs in URLs.
 
+## Inspection readiness workspace
+
+Reg 44 / Reg 45 evidence support packs are available at `/intelligence/inspection-readiness`. The SCCIF dashboard cross-links to generate Reg 44 and Reg 45 packs from aligned metadata. See `docs/reg44-reg45-evidence-pack-builder.md`.
+
 ## Future work
 
 - Exact citation integration via Knowledge Library import
 - Per-child journey synthesis hooks (metadata only)
-- Reg 44/45 visit evidence threads (separate governance surfaces)
+- Deeper Reg 44 document ingestion (metadata only)

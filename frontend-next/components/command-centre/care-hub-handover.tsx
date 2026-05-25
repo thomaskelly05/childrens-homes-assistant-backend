@@ -73,6 +73,13 @@ export function CareHubHandover() {
           Open current handover
         </Link>
         <Link
+          href="/intelligence/inspection-readiness"
+          data-testid="care-hub-handover-inspection-readiness"
+          className="rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-xs font-black text-blue-900"
+        >
+          Inspection readiness
+        </Link>
+        <Link
           href={handoverOrbHref('manager_daily_brief', 'Help me prepare shift handover for the next team.')}
           data-testid="care-hub-handover-ask-orb"
           className="rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-xs font-black text-blue-900"

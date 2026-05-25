@@ -214,6 +214,7 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
             "routers.workforce_context_routes",
             "routers.staff_profile_os_routes",
             "routers.sccif_alignment_routes",
+            "routers.inspection_readiness_routes",
         ),
         notes="Schema-backed experience bundles for home, child profile and adult workspace surfaces.",
     ),
@@ -325,7 +326,7 @@ def _is_missing_router_module(error: Exception, router_path: str) -> bool:
 def include_router(app: FastAPI, router_path: str) -> list[str]:
     module = importlib.import_module(router_path)
     mounted: list[str] = []
-    for attr in ("router", "compat_router", "ui_router"):
+    for attr in ("router", "compat_router", "ui_router", "legacy_router"):
         router = getattr(module, attr, None)
         if router is None:
             continue

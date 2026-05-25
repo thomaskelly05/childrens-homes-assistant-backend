@@ -43,7 +43,12 @@ def test_recording_governance_page_exists():
 def test_recording_governance_sccif_link():
     page = _read(FRONTEND / "app" / "record" / "governance" / "page.tsx")
     assert "recording-governance-sccif-link" in page
-    assert "/intelligence/sccif" in page
+
+
+def test_recording_governance_inspection_readiness_link():
+    actions = _read(FRONTEND / "components" / "indicare" / "record" / "recording-governance-actions.tsx")
+    assert "recording-governance-inspection-readiness" in actions
+    assert "/intelligence/inspection-readiness" in actions
 
 
 def test_governance_ui_markers():

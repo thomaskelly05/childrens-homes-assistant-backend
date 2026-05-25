@@ -59,6 +59,15 @@ def test_orb_links_operational_only():
         assert href.startswith("/assistant/orb"), f"Must use operational ORB: {href}"
 
 
+def test_sccif_inspection_readiness_cross_links():
+    page = _read(FRONTEND / "app" / "intelligence" / "sccif" / "page.tsx")
+    assert "sccif-open-inspection-readiness" in page
+    assert "/intelligence/inspection-readiness" in page
+    assert "sccif-generate-reg44" in page
+    assert "sccif-generate-reg45" in page
+    assert "sccif-evidence-pack-note" in page
+
+
 def test_standalone_orb_does_not_import_sccif_client():
     if not STANDALONE_ORB.exists():
         return

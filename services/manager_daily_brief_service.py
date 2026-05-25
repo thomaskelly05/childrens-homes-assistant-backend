@@ -778,6 +778,90 @@ class ManagerDailyBriefService:
             metadata={"user_id": _user_id(current_user)},
         )
 
+    def build_inspection_readiness_section(
+        self, current_user: dict[str, Any], conn: Any | None = None
+    ) -> ManagerDailyBriefSection:
+        items: list[ManagerDailyBriefItem] = []
+        summary = "Inspection readiness workspace unavailable in current scope."
+        tone = "neutral"
+        gap_count = 0
+        draft_only = 0
+        review_required = 0
+        try:
+            from services.inspection_readiness_service import inspection_readiness_service
+
+            reg44_pack = inspection_readiness_service.generate_reg44_pack(current_user, conn=conn)
+            reg45_pack = inspection_readiness_service.generate_reg45_pack(current_user, conn=conn)
+            gap_count = reg44_pack.gap_count + reg45_pack.gap_count
+            review_required = reg44_pack.review_required_count + reg45_pack.review_required_count
+            draft_only = reg44_pack.draft_only_count + reg45_pack.draft_only_count
+            urgent = reg44_pack.urgent_gap_count + reg45_pack.urgent_gap_count
+            summary = (
+                f"Reg 44: {reg44_pack.evidence_count} evidence, {reg44_pack.gap_count} gaps, "
+                f"{reg44_pack.draft_only_count} draft-only. "
+                f"Reg 45: {reg45_pack.evidence_count} evidence, {reg45_pack.gap_count} gaps. "
+                "Open inspection readiness — not a grade prediction."
+            )
+            tone = "urgent" if urgent > 0 else ("attention" if gap_count else "neutral")
+            key_gaps: list = []
+            for section in reg44_pack.sections + reg45_pack.sections:
+                key_gaps.extend(section.gaps)
+            for gap in key_gaps[:3]:
+                items.append(
+                    ManagerDailyBriefItem(
+                        id=f"inspection-gap:{gap.id}",
+                        title=gap.title,
+                        safe_summary=gap.description,
+                        priority=gap.risk if gap.risk in {"low", "medium", "high", "urgent"} else "medium",
+                        route=gap.route,
+                        action_label=gap.action_label or "Review gap",
+                        source="inspection_readiness",
+                        metadata={"no_raw_body": True, "gap": True},
+                    )
+                )
+            items.append(
+                ManagerDailyBriefItem(
+                    id="inspection:reg44-pack",
+                    title="Reg 44 evidence support",
+                    safe_summary="Generate monthly visit evidence support pack — manager review needed.",
+                    priority="medium",
+                    route="/intelligence/inspection-readiness?pack=reg44",
+                    action_label="Generate Reg 44 pack",
+                    source="inspection_readiness",
+                )
+            )
+            items.append(
+                ManagerDailyBriefItem(
+                    id="inspection:reg45-pack",
+                    title="Reg 45 evidence support",
+                    safe_summary="Generate quality of care review evidence support — not a final judgement.",
+                    priority="medium",
+                    route="/intelligence/inspection-readiness?pack=reg45",
+                    action_label="Generate Reg 45 pack",
+                    source="inspection_readiness",
+                )
+            )
+        except Exception as exc:
+            logger.debug("brief_inspection_readiness_skipped: %s", exc)
+            summary = "Inspection readiness section could not load — open workspace manually."
+
+        return ManagerDailyBriefSection(
+            id="inspection_readiness",
+            title="Inspection readiness",
+            summary=summary,
+            items=items,
+            route="/intelligence/inspection-readiness",
+            action_label="Open inspection readiness",
+            tone=tone,
+            metadata={
+                "gap_count": gap_count,
+                "draft_only_count": draft_only,
+                "review_required_count": review_required,
+                "no_raw_body": True,
+                "evidence_support_only": True,
+            },
+        )
+
     def build_sccif_section(
         self, current_user: dict[str, Any], conn: Any | None = None
     ) -> ManagerDailyBriefSection:
@@ -879,6 +963,10 @@ class ManagerDailyBriefService:
             recs.append("Review workforce and shift context before handover.")
         if brief.sccif_summary and "unavailable" not in brief.sccif_summary.lower():
             recs.append("Review SCCIF alignment gaps before inspection preparation — not a grade prediction.")
+        if brief.inspection_readiness_summary and "unavailable" not in brief.inspection_readiness_summary.lower():
+            recs.append(
+                "Review Reg 44 / Reg 45 evidence support packs in inspection readiness — not a compliance decision."
+            )
         for section in brief.sections:
             if section.id == "notification_oversight" and section.tone in ("urgent", "attention"):
                 recs.append(
@@ -918,6 +1006,7 @@ class ManagerDailyBriefService:
         notification_oversight = self.build_notification_oversight_section(current_user, conn=conn)
         child_journey = self.build_child_journey_section(current_user, conn=conn)
         sccif_section = self.build_sccif_section(current_user, conn=conn)
+        inspection_section = self.build_inspection_readiness_section(current_user, conn=conn)
 
         try:
             gov = recording_governance_service.build_dashboard(current_user, conn=conn)
@@ -931,6 +1020,7 @@ class ManagerDailyBriefService:
             safeguarding,
             isn_section,
             sccif_section,
+            inspection_section,
             notification_oversight,
             workforce,
             actions,
@@ -961,6 +1051,7 @@ class ManagerDailyBriefService:
             handover_summary=handover.summary,
             workforce_summary=workforce.summary,
             sccif_summary=sccif_section.summary,
+            inspection_readiness_summary=inspection_section.summary,
             sections=sections,
             routes=ManagerDailyBriefRoutes(),
             limitations=limitations[:8],

@@ -26,7 +26,12 @@ def _read(path: Path) -> str:
 def test_handover_sccif_alignment_link():
     workspace = _read(FRONTEND / "components" / "handover" / "handover-workspace.tsx")
     assert "handover-sccif-alignment-link" in workspace
-    assert "/intelligence/sccif" in workspace
+
+
+def test_care_hub_handover_inspection_readiness_link():
+    card = _read(FRONTEND / "components" / "command-centre" / "care-hub-handover.tsx")
+    assert "care-hub-handover-inspection-readiness" in card
+    assert "/intelligence/inspection-readiness" in card
 
 
 def test_handover_page_markers():

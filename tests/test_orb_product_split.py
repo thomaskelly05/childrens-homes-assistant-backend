@@ -836,3 +836,22 @@ def test_standalone_orb_does_not_import_sccif_alignment():
         text = _read(STANDALONE_CLIENT)
         for marker in forbidden:
             assert marker not in text
+
+
+def test_standalone_orb_does_not_import_inspection_readiness():
+    forbidden = (
+        "inspection-readiness",
+        "/api/inspection-readiness",
+        "getInspectionReadinessDashboard",
+        "generateInspectionPack",
+    )
+    orb_dir = REPO_ROOT / "frontend-next" / "app" / "orb"
+    if orb_dir.exists():
+        for path in list(orb_dir.rglob("*.tsx")) + list(orb_dir.rglob("*.ts")):
+            text = _read(path)
+            for marker in forbidden:
+                assert marker not in text, path
+    if STANDALONE_CLIENT.exists():
+        text = _read(STANDALONE_CLIENT)
+        for marker in forbidden:
+            assert marker not in text
