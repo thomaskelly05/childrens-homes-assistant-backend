@@ -5,8 +5,8 @@ import { LiveDataStatus } from '@/components/indicare/live-data-status'
 import { SectionHeader, StatusBadge } from '@/components/indicare/ui'
 import { getHomeOperationalBundle } from '@/lib/os-api/bundles'
 
-export default async function HomeWorkspacePage({ params }: { params: Promise<{ home_id: string }> }) {
-  const { home_id: homeId } = await params
+export default async function HomeWorkspacePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id: homeId } = await params
   const result = await getHomeOperationalBundle(homeId)
   const bundle = result.data
   const home = bundle.home || {}
