@@ -40,6 +40,12 @@ def test_recording_governance_page_exists():
     assert "recording-governance-page" in text
 
 
+def test_recording_governance_sccif_link():
+    page = _read(FRONTEND / "app" / "record" / "governance" / "page.tsx")
+    assert "recording-governance-sccif-link" in page
+    assert "/intelligence/sccif" in page
+
+
 def test_governance_ui_markers():
     combined = "\n".join(_read(path) for path in GOVERNANCE_FILES)
     assert "Review backlog" in combined

@@ -95,6 +95,17 @@ def test_care_hub_shift_handover_card():
     assert "Handover reviews" in card or "care-hub-handover-reviews" in card
 
 
+def test_care_hub_inspection_readiness_card():
+    page = _read(FRONTEND / "app" / "command-centre" / "page.tsx")
+    card = _read(FRONTEND / "components" / "command-centre" / "care-hub-inspection-readiness.tsx")
+    assert "CareHubInspectionReadiness" in page
+    assert "care-hub-inspection-readiness" in card
+    assert "Inspection readiness" in card
+    assert "/intelligence/sccif" in card
+    assert "Ask OS ORB" in card
+    assert "care-hub-open-sccif-alignment" in card
+
+
 def test_care_hub_manager_daily_brief_marker():
     page = _read(FRONTEND / "app" / "command-centre" / "page.tsx")
     assert "CareHubManagerDailyBrief" in page

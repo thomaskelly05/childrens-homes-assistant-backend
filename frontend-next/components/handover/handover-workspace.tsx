@@ -87,6 +87,13 @@ export function HandoverWorkspace({ childId, draftId: initialDraftId }: Props) {
           >
             Open current handover
           </Link>
+          <Link
+            href="/intelligence/sccif"
+            data-testid="handover-sccif-alignment-link"
+            className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 text-blue-900"
+          >
+            SCCIF alignment
+          </Link>
         </div>
       </header>
 

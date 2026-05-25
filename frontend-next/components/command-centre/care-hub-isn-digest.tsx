@@ -38,6 +38,13 @@ export function CareHubIsnDigest() {
         </div>
         <div className="flex flex-wrap gap-2">
           <Link
+            href="/intelligence/sccif?judgement=helped_and_protected"
+            data-testid="care-hub-isn-sccif-alignment"
+            className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-blue-800"
+          >
+            Helped / protected alignment
+          </Link>
+          <Link
             href="/safeguarding"
             data-testid="care-hub-open-isn-safeguarding"
             className="rounded-2xl bg-slate-950 px-4 py-2 text-xs font-black text-white shadow-lg"

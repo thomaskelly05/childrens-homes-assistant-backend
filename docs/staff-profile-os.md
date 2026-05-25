@@ -72,6 +72,11 @@ Example prompts:
 - Manager prompts only for manager roles
 - Notification workforce indicators unchanged (avoid duplication)
 
+## SCCIF alignment cross-link
+
+- Staff Profile OS dashboard links to `/intelligence/sccif?staff_id={id}` for leadership/workforce evidence (metadata only)
+- Supervision and training indicators may map to Quality Standard leadership and management and positive relationships
+
 ## Future redesign
 
 - Per-staff shift assignment from rota

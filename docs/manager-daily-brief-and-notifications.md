@@ -80,6 +80,14 @@ Operational bell items support read/acknowledge/assign/resolve/archive via `POST
 - Bell: low-noise workforce indicators (supervision/training/gap/action counts) from `os_notification_adapter_service._workforce_indicator_items`
 - API: `/api/workforce/context/dashboard` — metadata only
 
+## SCCIF / Quality Standards alignment (integration pass)
+
+- Brief section **SCCIF / Quality Standards evidence** (`sccif_quality_standards`) via `build_sccif_section`
+- Field `sccif_summary` on `ManagerDailyBrief`
+- Route `/intelligence/sccif` on `ManagerDailyBriefRoutes`
+- Aggregates `sccif_alignment_service.build_dashboard` — counts and gaps only, no grades
+- See `docs/sccif-quality-standards-alignment-layer.md`
+
 ## Future roadmap
 
 1. ~~Persist brief “reviewed” state per user/home in SQL.~~ **Done** (`sql/086_manager_daily_brief_reviews.sql`).

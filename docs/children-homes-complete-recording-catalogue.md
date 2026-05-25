@@ -158,3 +158,7 @@ Draft workspace or review-gated until formal `create_*` services are wired:
 - Manager review (intelligence-actions queue)  
 
 **Product rules:** No false “formal record created”; no child IDs or draft bodies in standalone `/orb`; operational ORB at `/assistant/orb`.
+
+## SCCIF / Quality Standards mapping (alignment layer)
+
+Recording types are mapped in `sccif_alignment_registry_service` (e.g. safeguarding-concern → helped_and_protected + protection_children; daily-note → experiences/progress + quality_purpose + child voice). Governance dashboard links to `/intelligence/sccif`. See `docs/sccif-quality-standards-alignment-map.md`.
