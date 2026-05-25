@@ -2,6 +2,7 @@ import Link from 'next/link'
 
 import { CareHubAttentionStrip } from '@/components/command-centre/care-hub-attention-strip'
 import { CareHubMetricCard } from '@/components/command-centre/care-hub-metric-card'
+import { CareHubRecordingDigest } from '@/components/command-centre/care-hub-recording-digest'
 import { CareHubRecordingSection } from '@/components/command-centre/care-hub-recording-section'
 import { CareHubStartHero } from '@/components/command-centre/care-hub-start-hero'
 import { IntelligenceActionsCard } from '@/components/command-centre/intelligence-actions-card'
@@ -138,6 +139,8 @@ export default async function UnifiedCommandCentrePage() {
         />
 
         <CareHubRecordingSection selectedYoungPersonId={selectedChildId} />
+
+        <CareHubRecordingDigest selectedYoungPersonId={selectedChildId} />
 
         {isLoadingPicture ? (
           <p className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-600" role="status">

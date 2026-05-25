@@ -12,6 +12,7 @@ CARE_HUB_FILES = [
     FRONTEND / "components" / "command-centre" / "care-hub-routes.ts",
     FRONTEND / "components" / "command-centre" / "care-hub-attention-strip.tsx",
     FRONTEND / "components" / "command-centre" / "care-hub-recording-section.tsx",
+    FRONTEND / "components" / "command-centre" / "care-hub-recording-digest.tsx",
     FRONTEND / "components" / "command-centre" / "intelligence-actions-card.tsx",
 ]
 
@@ -61,3 +62,16 @@ def test_care_hub_operational_orb_links_only():
 def test_care_hub_ask_orb_action_targets_assistant():
     routes = _read(FRONTEND / "components" / "command-centre" / "care-hub-routes.ts")
     assert "/assistant/orb?context=care-hub" in routes
+
+
+def test_care_hub_recording_oversight_digest():
+    page = _read(FRONTEND / "app" / "command-centre" / "page.tsx")
+    digest = _read(FRONTEND / "components" / "command-centre" / "care-hub-recording-digest.tsx")
+    manager = _read(FRONTEND / "components" / "indicare" / "record" / "recording-manager-digest.tsx")
+    assert "CareHubRecordingDigest" in page
+    assert "care-hub-recording-digest" in digest
+    assert "Recording oversight" in manager
+    assert "Run checks now" in manager
+    assert "/record/alerts" in manager
+    assert "operationalOrbAlertHref" in manager
+    assert "Ask OS ORB" in manager

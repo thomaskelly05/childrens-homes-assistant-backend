@@ -70,6 +70,112 @@ export type RecordingAlertGenerationResponse = {
   warnings: string[]
 }
 
+export type RecordingAlertDigestTopItem = {
+  id: string
+  alert_type: string
+  severity: RecordingAlertSeverity
+  status: RecordingAlertStatus
+  title: string
+  safe_summary?: string
+  action_label?: string | null
+  route?: string | null
+  due_at?: string | null
+  child_name?: string | null
+}
+
+export type RecordingAlertDigest = {
+  generated_at: string
+  scope: 'user' | 'home' | 'provider'
+  total_open: number
+  urgent: number
+  high: number
+  safeguarding: number
+  privacy: number
+  changes_requested: number
+  stale_drafts: number
+  structured_missing: number
+  formal_submission_gaps: number
+  due_today: number
+  overdue: number
+  last_check_at?: string | null
+  recommendations: string[]
+  top_alerts: RecordingAlertDigestTopItem[]
+  routes: {
+    alerts: string
+    governance: string
+    reviews: string
+    orb: string
+  }
+  privacy_notice: string
+  limitations: string[]
+  metadata?: Record<string, unknown>
+}
+
+export type RecordingAlertBadgeSummary = {
+  total_open: number
+  urgent: number
+  safeguarding: number
+  review_due: number
+  changes_requested: number
+  privacy_flags: number
+  route: string
+  label: string
+  tone: 'neutral' | 'attention' | 'urgent'
+  last_check_at?: string | null
+}
+
+export type RecordingAlertCheckRun = {
+  run_id: string
+  started_at: string
+  completed_at?: string | null
+  generated: number
+  created: number
+  updated: number
+  skipped: number
+  warnings: string[]
+  triggered_by?: string | null
+  dry_run: boolean
+  metadata?: Record<string, unknown>
+}
+
+const EMPTY_DIGEST: RecordingAlertDigest = {
+  generated_at: '',
+  scope: 'provider',
+  total_open: 0,
+  urgent: 0,
+  high: 0,
+  safeguarding: 0,
+  privacy: 0,
+  changes_requested: 0,
+  stale_drafts: 0,
+  structured_missing: 0,
+  formal_submission_gaps: 0,
+  due_today: 0,
+  overdue: 0,
+  recommendations: [],
+  top_alerts: [],
+  routes: {
+    alerts: '/record/alerts',
+    governance: '/record/governance',
+    reviews: '/record/reviews',
+    orb: '/assistant/orb?mode=manager_daily_brief'
+  },
+  privacy_notice: 'This digest uses recording metadata and flags, not full record bodies.',
+  limitations: []
+}
+
+const EMPTY_BADGE: RecordingAlertBadgeSummary = {
+  total_open: 0,
+  urgent: 0,
+  safeguarding: 0,
+  review_due: 0,
+  changes_requested: 0,
+  privacy_flags: 0,
+  route: '/record/alerts',
+  label: 'Recording alerts',
+  tone: 'neutral'
+}
+
 type ApiEnvelope<T> = { success?: boolean; data?: T; error?: string }
 
 async function parseEnvelope<T>(response: Response, fallback: T): Promise<{ data: T; ok: boolean; error?: string }> {
@@ -162,6 +268,64 @@ export async function generateRecordingAlerts(body?: {
   })
 }
 
+export async function getRecordingAlertDigest(params?: {
+  child_id?: number
+  home_id?: number
+  scope?: string
+}) {
+  const qs = queryString(params || {})
+  const response = await fetch(`/recording-alerts/digest${qs}`, {
+    credentials: 'include',
+    cache: 'no-store'
+  })
+  return parseEnvelope<RecordingAlertDigest>(response, EMPTY_DIGEST)
+}
+
+export async function getRecordingAlertBadgeSummary(params?: {
+  child_id?: number
+  home_id?: number
+}) {
+  const qs = queryString(params || {})
+  const response = await fetch(`/recording-alerts/badge-summary${qs}`, {
+    credentials: 'include',
+    cache: 'no-store'
+  })
+  return parseEnvelope<RecordingAlertBadgeSummary>(response, EMPTY_BADGE)
+}
+
+export async function runRecordingAlertChecks(body?: {
+  force?: boolean
+  dry_run?: boolean
+  child_id?: number
+  home_id?: number
+  scope?: string
+}) {
+  const response = await fetch('/recording-alerts/run-checks', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body || {})
+  })
+  return parseEnvelope<RecordingAlertCheckRun>(response, {
+    run_id: '',
+    started_at: '',
+    generated: 0,
+    created: 0,
+    updated: 0,
+    skipped: 0,
+    warnings: [],
+    dry_run: false
+  })
+}
+
+export async function getRecordingAlertLastCheck() {
+  const response = await fetch('/recording-alerts/last-check', {
+    credentials: 'include',
+    cache: 'no-store'
+  })
+  return parseEnvelope<RecordingAlertCheckRun | null>(response, null)
+}
+
 export async function getRecordingAlert(alertId: string) {
   const response = await fetch(`/recording-alerts/${encodeURIComponent(alertId)}`, {
     credentials: 'include',
@@ -197,7 +361,11 @@ export async function applyRecordingAlertAction(
 
 /** Operational ORB modes for recording alerts — never pass draft/child IDs in URL. */
 export function operationalOrbAlertHref(
-  mode: 'record_quality_review' | 'safeguarding_themes' | 'action_priority',
+  mode:
+    | 'record_quality_review'
+    | 'safeguarding_themes'
+    | 'action_priority'
+    | 'manager_daily_brief',
   query?: string
 ) {
   const params = new URLSearchParams({ mode })
@@ -206,8 +374,29 @@ export function operationalOrbAlertHref(
 }
 
 export const RECORDING_ALERT_ORB_PROMPTS = [
-  { label: 'Ask ORB what recording alerts mean', query: 'What do recording alerts mean for manager oversight?' },
-  { label: 'Ask ORB what needs manager review', query: 'What recording items may need manager review?' },
-  { label: 'Ask ORB how to prioritise recording follow-up', query: 'How should I prioritise recording follow-up?' },
-  { label: 'Ask ORB about safeguarding-sensitive alerts', query: 'How should I handle safeguarding-sensitive recording alerts?' }
+  {
+    label: 'Ask ORB for a recording oversight summary',
+    mode: 'manager_daily_brief' as const,
+    query: 'Give me a recording oversight summary for manager review today.'
+  },
+  {
+    label: 'Ask ORB what needs manager review',
+    mode: 'action_priority' as const,
+    query: 'What recording items may need manager review?'
+  },
+  {
+    label: 'Ask ORB how to prioritise recording alerts',
+    mode: 'action_priority' as const,
+    query: 'How should I prioritise recording follow-up and alerts?'
+  },
+  {
+    label: 'Ask ORB about safeguarding-sensitive recording',
+    mode: 'safeguarding_themes' as const,
+    query: 'How should I handle safeguarding-sensitive recording alerts?'
+  },
+  {
+    label: 'Ask ORB for recording quality themes',
+    mode: 'record_quality_review' as const,
+    query: 'What recording quality themes should I check before shift end?'
+  }
 ] as const

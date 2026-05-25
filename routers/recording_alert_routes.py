@@ -10,6 +10,7 @@ from auth.dependencies import get_current_user
 from db.connection import get_db
 from schemas.recording_alerts import (
     RecordingAlertActionRequest,
+    RecordingAlertCheckRequest,
     RecordingAlertGenerationRequest,
     RecordingAlertListFilters,
 )
@@ -146,6 +147,102 @@ async def api_recording_alerts_summary(
     return await recording_alerts_summary(
         child_id=child_id, home_id=home_id, current_user=current_user, conn=conn
     )
+
+
+@router.get("/digest")
+async def recording_alerts_digest(
+    child_id: int | None = None,
+    home_id: int | None = None,
+    scope: str | None = None,
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    user = _user_dict(current_user)
+    _require_alert_view(user)
+    filters = RecordingAlertListFilters(child_id=child_id, home_id=home_id, limit=500)
+    digest = recording_alert_service.build_digest(
+        user, filters, conn=conn, scope=scope  # type: ignore[arg-type]
+    )
+    return _success(digest.model_dump())
+
+
+@compat_router.get("/digest")
+async def api_recording_alerts_digest(
+    child_id: int | None = None,
+    home_id: int | None = None,
+    scope: str | None = None,
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    return await recording_alerts_digest(
+        child_id=child_id, home_id=home_id, scope=scope, current_user=current_user, conn=conn
+    )
+
+
+@router.get("/badge-summary")
+async def recording_alerts_badge_summary(
+    child_id: int | None = None,
+    home_id: int | None = None,
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    user = _user_dict(current_user)
+    _require_alert_view(user)
+    filters = RecordingAlertListFilters(child_id=child_id, home_id=home_id, limit=500)
+    badge = recording_alert_service.build_badge_summary(user, filters, conn=conn)
+    return _success(badge.model_dump())
+
+
+@compat_router.get("/badge-summary")
+async def api_recording_alerts_badge_summary(
+    child_id: int | None = None,
+    home_id: int | None = None,
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    return await recording_alerts_badge_summary(
+        child_id=child_id, home_id=home_id, current_user=current_user, conn=conn
+    )
+
+
+@router.post("/run-checks")
+async def run_recording_alert_checks(
+    body: RecordingAlertCheckRequest | None = None,
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    user = _user_dict(current_user)
+    _require_alert_view(user)
+    run = recording_alert_service.run_alert_checks(user, body, conn=conn)
+    return _success(run.model_dump())
+
+
+@compat_router.post("/run-checks")
+async def api_run_recording_alert_checks(
+    body: RecordingAlertCheckRequest | None = None,
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    return await run_recording_alert_checks(body=body, current_user=current_user, conn=conn)
+
+
+@router.get("/last-check")
+async def recording_alerts_last_check(
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    user = _user_dict(current_user)
+    _require_alert_view(user)
+    last = recording_alert_service.get_last_check(user, conn=conn)
+    return _success(last.model_dump() if last else None)
+
+
+@compat_router.get("/last-check")
+async def api_recording_alerts_last_check(
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    return await recording_alerts_last_check(current_user=current_user, conn=conn)
 
 
 @router.post("/generate")

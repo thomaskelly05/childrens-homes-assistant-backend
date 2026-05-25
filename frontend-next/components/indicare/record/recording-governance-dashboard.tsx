@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { RecordingGovernanceActions } from '@/components/indicare/record/recording-governance-actions'
 import { RecordingGovernanceAlerts } from '@/components/indicare/record/recording-governance-alerts'
+import { RecordingManagerDigest } from '@/components/indicare/record/recording-manager-digest'
 import { RecordingGovernanceBacklog } from '@/components/indicare/record/recording-governance-backlog'
 import { RecordingGovernanceCard } from '@/components/indicare/record/recording-governance-card'
 import { RecordingGovernanceFormUsageTable } from '@/components/indicare/record/recording-governance-form-usage'
@@ -67,6 +68,10 @@ export function RecordingGovernanceDashboard({ childIdFilter }: { childIdFilter?
       </section>
 
       <RecordingGovernanceBacklog backlog={dashboard.backlog} />
+
+      <section data-testid="recording-governance-alert-digest">
+        <RecordingManagerDigest compact childId={childIdFilter} />
+      </section>
 
       <section data-testid="recording-governance-high-risk" className="space-y-3">
         <h2 className="text-lg font-black text-slate-950">High-risk and safeguarding</h2>

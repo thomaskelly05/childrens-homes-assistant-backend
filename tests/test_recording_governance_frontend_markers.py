@@ -15,6 +15,7 @@ GOVERNANCE_FILES = [
     FRONTEND / "components" / "indicare" / "record" / "recording-governance-form-usage.tsx",
     FRONTEND / "components" / "indicare" / "record" / "recording-governance-alerts.tsx",
     FRONTEND / "components" / "indicare" / "record" / "recording-governance-actions.tsx",
+    FRONTEND / "components" / "indicare" / "record" / "recording-manager-digest.tsx",
     FRONTEND / "lib" / "os-api" / "recording-governance.ts",
 ]
 
@@ -82,3 +83,9 @@ def test_record_and_care_hub_governance_links():
 def test_child_journey_scoped_governance_link():
     routes = _read(FRONTEND / "lib" / "child-journey" / "child-journey-routes.ts")
     assert "/record/governance?child_id=" in routes
+
+
+def test_governance_alert_digest_integration():
+    dashboard = _read(FRONTEND / "components" / "indicare" / "record" / "recording-governance-dashboard.tsx")
+    assert "recording-governance-alert-digest" in dashboard
+    assert "RecordingManagerDigest" in dashboard

@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import logging
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import Any, Literal
 from uuid import uuid4
 
 from db.connection import DatabaseUnavailableError, get_db_connection, release_db_connection
@@ -16,7 +16,15 @@ from schemas.intelligence_actions import IntelligenceActionCreate
 from schemas.recording_alerts import (
     RecordingAlertActionRequest,
     RecordingAlertActionResponse,
+    RecordingAlertBadgeSummary,
+    RecordingAlertCheckRequest,
+    RecordingAlertCheckRun,
     RecordingAlertCreate,
+    RecordingAlertDigest,
+    RecordingAlertDigestHealth,
+    RecordingAlertDigestRoutes,
+    RecordingAlertDigestScope,
+    RecordingAlertDigestTopItem,
     RecordingAlertGenerationRequest,
     RecordingAlertGenerationResponse,
     RecordingAlertHealth,
@@ -172,6 +180,8 @@ class RecordingAlertService:
     def __init__(self) -> None:
         self._memory: dict[str, dict[str, Any]] = {}
         self._storage_mode: str = "memory"
+        self._last_check_run: RecordingAlertCheckRun | None = None
+        self._check_runs: list[RecordingAlertCheckRun] = []
 
     def _use_db(self) -> bool:
         try:
@@ -1252,6 +1262,395 @@ class RecordingAlertService:
             linked_action_id=linked_id,
             warning=warning,
             message=MANAGER_JUDGEMENT_NOTICE,
+        )
+
+    def _resolve_digest_scope(
+        self,
+        current_user: dict[str, Any],
+        filters: RecordingAlertListFilters | None = None,
+        explicit_scope: RecordingAlertDigestScope | None = None,
+    ) -> RecordingAlertDigestScope:
+        if explicit_scope:
+            return explicit_scope
+        filters = filters or RecordingAlertListFilters()
+        if filters.child_id is not None:
+            return "user"
+        if filters.home_id is not None:
+            return "home"
+        if _is_manager_role(current_user):
+            return "provider"
+        return "user"
+
+    def _open_alerts(
+        self,
+        current_user: dict[str, Any],
+        filters: RecordingAlertListFilters | None = None,
+        conn: Any | None = None,
+    ) -> list[RecordingAlertRecord]:
+        filters = filters or RecordingAlertListFilters(limit=500)
+        listed = self.list_alerts(current_user, filters, conn=conn)
+        open_statuses = {"open", "acknowledged", "assigned"}
+        return [a for a in listed.items if a.status in open_statuses]
+
+    def _is_due_today(self, alert: RecordingAlertRecord) -> bool:
+        due = _parse_dt(alert.due_at)
+        if not due:
+            return False
+        now = datetime.now(timezone.utc)
+        return due.date() == now.date()
+
+    def _is_overdue(self, alert: RecordingAlertRecord) -> bool:
+        due = _parse_dt(alert.due_at)
+        if not due:
+            return False
+        return due < datetime.now(timezone.utc)
+
+    def top_alerts_for_digest(
+        self, alerts: list[RecordingAlertRecord], limit: int = 5
+    ) -> list[RecordingAlertDigestTopItem]:
+        open_statuses = {"open", "acknowledged", "assigned"}
+        open_alerts = [a for a in alerts if a.status in open_statuses]
+        open_alerts.sort(
+            key=lambda a: (
+                {"urgent": 0, "high": 1, "medium": 2, "low": 3}.get(a.severity, 4),
+                a.updated_at,
+            )
+        )
+        items: list[RecordingAlertDigestTopItem] = []
+        for alert in open_alerts[:limit]:
+            items.append(
+                RecordingAlertDigestTopItem(
+                    id=alert.id,
+                    alert_type=alert.alert_type,
+                    severity=alert.severity,
+                    status=alert.status,
+                    title=alert.title,
+                    safe_summary=alert.safe_summary or alert.description,
+                    action_label=alert.action_label,
+                    route=alert.route,
+                    due_at=alert.due_at,
+                    child_name=alert.child_name,
+                )
+            )
+        return items
+
+    def build_digest_recommendations(
+        self, alerts: list[RecordingAlertRecord], summary: RecordingAlertSummary
+    ) -> list[str]:
+        recs: list[str] = []
+        if summary.urgent_count > 0 or summary.safeguarding_count > 0:
+            recs.append("Review urgent safeguarding alerts first.")
+        if summary.open_count > 0 and any(
+            a.alert_type in ("high_risk_review_due", "manager_review_required") for a in alerts
+        ):
+            recs.append("Open recording reviews for high-risk drafts.")
+        if any(a.alert_type == "structured_fields_missing" for a in alerts):
+            recs.append("Check structured fields missing before approval.")
+        if summary.privacy_count > 0:
+            recs.append("Resolve privacy flags before formal submission.")
+        if summary.changes_requested_count > 0:
+            recs.append("Follow up drafts where manager requested changes.")
+        if summary.stale_count > 0:
+            recs.append("Review stale drafts that have not been updated recently.")
+        if summary.overdue_count > 0:
+            recs.append("Prioritise overdue follow-up items before shift end.")
+        recs.append(
+            "Use ORB for recording quality themes, but manager judgement remains required."
+        )
+        return recs
+
+    def build_digest(
+        self,
+        current_user: dict[str, Any],
+        filters: RecordingAlertListFilters | None = None,
+        conn: Any | None = None,
+        *,
+        scope: RecordingAlertDigestScope | None = None,
+    ) -> RecordingAlertDigest:
+        filters = filters or RecordingAlertListFilters(limit=500)
+        open_alerts = self._open_alerts(current_user, filters, conn=conn)
+        summary = self.build_alert_summary(open_alerts)
+        resolved_scope = self._resolve_digest_scope(current_user, filters, scope)
+        last_check = self.get_last_check(current_user, conn=conn)
+
+        routes = RecordingAlertDigestRoutes()
+        if filters.child_id is not None:
+            cid = filters.child_id
+            routes = RecordingAlertDigestRoutes(
+                alerts=f"/record/alerts?child_id={cid}",
+                governance=f"/record/governance?child_id={cid}",
+                reviews=f"/record/reviews?child_id={cid}",
+            )
+        elif filters.home_id is not None:
+            hid = filters.home_id
+            routes = RecordingAlertDigestRoutes(
+                alerts=f"/record/alerts?home_id={hid}",
+                governance=f"/record/governance?home_id={hid}",
+            )
+
+        limitations: list[str] = []
+        mode = self._detect_storage_mode()
+        if mode == "memory":
+            limitations.append("Alerts using in-memory fallback until migration is applied.")
+        if not self._check_run_table_available(conn):
+            limitations.append("Check-run history is in-memory only until migration 084 is applied.")
+        limitations.append("No background scheduler — run checks manually or on page load.")
+
+        return RecordingAlertDigest(
+            generated_at=_now_iso(),
+            scope=resolved_scope,
+            total_open=summary.open_count,
+            urgent=summary.urgent_count,
+            high=summary.by_severity.get("high", 0),
+            safeguarding=summary.safeguarding_count,
+            privacy=summary.privacy_count,
+            changes_requested=summary.changes_requested_count,
+            stale_drafts=summary.stale_count,
+            structured_missing=sum(
+                1 for a in open_alerts if a.alert_type == "structured_fields_missing"
+            ),
+            formal_submission_gaps=sum(
+                1
+                for a in open_alerts
+                if a.alert_type in ("formal_submission_not_wired", "formal_submission_failed")
+            ),
+            due_today=sum(1 for a in open_alerts if self._is_due_today(a)),
+            overdue=summary.overdue_count,
+            last_check_at=last_check.completed_at if last_check else None,
+            recommendations=self.build_digest_recommendations(open_alerts, summary),
+            top_alerts=self.top_alerts_for_digest(open_alerts),
+            routes=routes,
+            limitations=limitations,
+            metadata={
+                "storage_mode": mode,
+                "no_raw_body": True,
+                "triggered_by_role": _user_role(current_user),
+            },
+        )
+
+    def build_badge_summary(
+        self,
+        current_user: dict[str, Any],
+        filters: RecordingAlertListFilters | None = None,
+        conn: Any | None = None,
+    ) -> RecordingAlertBadgeSummary:
+        filters = filters or RecordingAlertListFilters(limit=500)
+        open_alerts = self._open_alerts(current_user, filters, conn=conn)
+        summary = self.build_alert_summary(open_alerts)
+        last_check = self.get_last_check(current_user, conn=conn)
+
+        review_due = sum(
+            1
+            for a in open_alerts
+            if a.alert_type
+            in (
+                "high_risk_review_due",
+                "manager_review_required",
+                "safeguarding_review_due",
+            )
+        )
+
+        tone: Literal["neutral", "attention", "urgent"] = "neutral"
+        if summary.urgent_count > 0 or summary.safeguarding_count > 0:
+            tone = "urgent"
+        elif summary.open_count > 0:
+            tone = "attention"
+
+        route = "/record/alerts"
+        if filters.child_id is not None:
+            route = f"/record/alerts?child_id={filters.child_id}"
+
+        label = "Recording alerts"
+        if summary.urgent_count > 0:
+            label = f"{summary.urgent_count} urgent recording alert(s)"
+        elif summary.open_count > 0:
+            label = f"{summary.open_count} open recording alert(s)"
+
+        return RecordingAlertBadgeSummary(
+            total_open=summary.open_count,
+            urgent=summary.urgent_count,
+            safeguarding=summary.safeguarding_count,
+            review_due=review_due,
+            changes_requested=summary.changes_requested_count,
+            privacy_flags=summary.privacy_count,
+            route=route,
+            label=label,
+            tone=tone,
+            last_check_at=last_check.completed_at if last_check else None,
+        )
+
+    def _check_run_table_available(self, conn: Any | None) -> bool:
+        if self._detect_storage_mode() != "postgresql":
+            return False
+        if conn is None:
+            try:
+                conn = get_db_connection()
+                own = True
+            except Exception:
+                return False
+        else:
+            own = False
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT 1 FROM information_schema.tables
+                    WHERE table_schema = 'public' AND table_name = 'recording_alert_check_runs'
+                    """
+                )
+                return cur.fetchone() is not None
+        except Exception:
+            return False
+        finally:
+            if own:
+                release_db_connection(conn)
+
+    def record_check_run(
+        self,
+        result: RecordingAlertCheckRun,
+        current_user: dict[str, Any],
+        conn: Any | None = None,
+    ) -> RecordingAlertCheckRun:
+        result.triggered_by = _user_id(current_user) or result.triggered_by
+        self._last_check_run = result
+        self._check_runs.append(result)
+        if len(self._check_runs) > 50:
+            self._check_runs = self._check_runs[-50:]
+
+        if self._check_run_table_available(conn) and conn is not None:
+            try:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """
+                        INSERT INTO recording_alert_check_runs (
+                            id, triggered_by_user_id, triggered_by_name, home_id, scope,
+                            dry_run, generated, created, updated, skipped,
+                            warnings, metadata, started_at, completed_at
+                        ) VALUES (
+                            %(id)s, %(triggered_by_user_id)s, %(triggered_by_name)s,
+                            %(home_id)s, %(scope)s, %(dry_run)s, %(generated)s,
+                            %(created)s, %(updated)s, %(skipped)s,
+                            %(warnings)s, %(metadata)s, %(started_at)s, %(completed_at)s
+                        )
+                        """,
+                        {
+                            "id": result.run_id,
+                            "triggered_by_user_id": _user_id(current_user),
+                            "triggered_by_name": _user_display_name(current_user),
+                            "home_id": result.metadata.get("home_id"),
+                            "scope": result.metadata.get("scope", "provider"),
+                            "dry_run": result.dry_run,
+                            "generated": result.generated,
+                            "created": result.created,
+                            "updated": result.updated,
+                            "skipped": result.skipped,
+                            "warnings": Json(result.warnings),
+                            "metadata": Json(result.metadata),
+                            "started_at": result.started_at,
+                            "completed_at": result.completed_at,
+                        },
+                    )
+                    conn.commit()
+            except Exception:
+                logger.debug("Check run persist failed; using memory", exc_info=True)
+
+        return result
+
+    def get_last_check(
+        self, current_user: dict[str, Any], conn: Any | None = None
+    ) -> RecordingAlertCheckRun | None:
+        _ = current_user
+        if self._check_run_table_available(conn) and conn is not None:
+            try:
+                with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                    cur.execute(
+                        """
+                        SELECT * FROM recording_alert_check_runs
+                        ORDER BY completed_at DESC NULLS LAST, started_at DESC
+                        LIMIT 1
+                        """
+                    )
+                    row = cur.fetchone()
+                    if row:
+                        data = dict(row)
+                        return RecordingAlertCheckRun(
+                            run_id=_text(data.get("id")),
+                            started_at=_iso_dt(data.get("started_at")) or _now_iso(),
+                            completed_at=_iso_dt(data.get("completed_at")),
+                            generated=int(data.get("generated") or 0),
+                            created=int(data.get("created") or 0),
+                            updated=int(data.get("updated") or 0),
+                            skipped=int(data.get("skipped") or 0),
+                            warnings=_parse_json(data.get("warnings"), []),
+                            triggered_by=_text(data.get("triggered_by_user_id")),
+                            dry_run=bool(data.get("dry_run")),
+                            metadata=_parse_json(data.get("metadata"), {}),
+                        )
+            except Exception:
+                logger.debug("Last check lookup failed", exc_info=True)
+        return self._last_check_run
+
+    def run_alert_checks(
+        self,
+        current_user: dict[str, Any],
+        request: RecordingAlertCheckRequest | None = None,
+        conn: Any | None = None,
+    ) -> RecordingAlertCheckRun:
+        request = request or RecordingAlertCheckRequest()
+        started_at = _now_iso()
+        run_id = f"racr-{uuid4().hex[:12]}"
+
+        gen_request = RecordingAlertGenerationRequest(
+            child_id=request.child_id,
+            home_id=request.home_id,
+            force=request.force,
+            dry_run=request.dry_run,
+        )
+        generation = self.generate_alerts(current_user, gen_request, conn=conn)
+
+        completed_at = _now_iso()
+        scope = request.scope or self._resolve_digest_scope(
+            current_user,
+            RecordingAlertListFilters(child_id=request.child_id, home_id=request.home_id),
+        )
+        run = RecordingAlertCheckRun(
+            run_id=run_id,
+            started_at=started_at,
+            completed_at=completed_at,
+            generated=generation.generated,
+            created=generation.created,
+            updated=generation.updated,
+            skipped=generation.skipped,
+            warnings=list(generation.warnings),
+            dry_run=request.dry_run,
+            metadata={
+                "scope": scope,
+                "child_id": request.child_id,
+                "home_id": request.home_id,
+                "force": request.force,
+                "no_raw_body": True,
+            },
+        )
+        return self.record_check_run(run, current_user, conn=conn)
+
+    def get_digest_health(
+        self, current_user: dict[str, Any], conn: Any | None = None
+    ) -> RecordingAlertDigestHealth:
+        base = self.get_health(conn=conn)
+        last = self.get_last_check(current_user, conn=conn)
+        return RecordingAlertDigestHealth(
+            status=base.status,
+            service=base.service,
+            storage_mode=base.storage_mode,
+            alert_count=base.alert_count,
+            persistence_available=base.persistence_available,
+            operational_only=base.operational_only,
+            standalone_access=base.standalone_access,
+            degraded=base.degraded,
+            last_check_at=last.completed_at if last else None,
+            last_check_run_id=last.run_id if last else None,
+            check_run_persistence=self._check_run_table_available(conn),
+            warnings=list(base.warnings),
         )
 
 

@@ -153,6 +153,17 @@ export function buildChildJourneyRecordingActions(childId: string): ChildJourney
         'ORB alert prioritisation',
         'How should I prioritise recording follow-up for this child?'
       )
+    },
+    {
+      id: 'recording-follow-up',
+      label: 'Review recording follow-up',
+      description: 'Open recording alerts and review queue for outstanding follow-up on this young person.',
+      href: `/record/alerts?child_id=${base}`,
+      orbHint: operationalOrbHint(
+        childId,
+        'ORB follow-up review',
+        'What recording follow-up needs manager attention for this child?'
+      )
     }
   ]
 }

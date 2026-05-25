@@ -202,3 +202,115 @@ class RecordingAlertListFilters(BaseModel):
     safeguarding_only: bool = False
     limit: int = Field(default=100, ge=1, le=500)
     offset: int = Field(default=0, ge=0)
+
+
+RecordingAlertDigestScope = Literal["user", "home", "provider"]
+
+
+class RecordingAlertDigestTopItem(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    id: str
+    alert_type: RecordingAlertType
+    severity: RecordingAlertSeverity
+    status: RecordingAlertStatus
+    title: str
+    safe_summary: str = ""
+    action_label: str | None = None
+    route: str | None = None
+    due_at: str | None = None
+    child_name: str | None = None
+
+
+class RecordingAlertDigestRoutes(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    alerts: str = "/record/alerts"
+    governance: str = "/record/governance"
+    reviews: str = "/record/reviews"
+    orb: str = "/assistant/orb?mode=manager_daily_brief"
+
+
+class RecordingAlertDigest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    generated_at: str
+    scope: RecordingAlertDigestScope = "provider"
+    total_open: int = 0
+    urgent: int = 0
+    high: int = 0
+    safeguarding: int = 0
+    privacy: int = 0
+    changes_requested: int = 0
+    stale_drafts: int = 0
+    structured_missing: int = 0
+    formal_submission_gaps: int = 0
+    due_today: int = 0
+    overdue: int = 0
+    last_check_at: str | None = None
+    recommendations: list[str] = Field(default_factory=list)
+    top_alerts: list[RecordingAlertDigestTopItem] = Field(default_factory=list)
+    routes: RecordingAlertDigestRoutes = Field(default_factory=RecordingAlertDigestRoutes)
+    privacy_notice: str = (
+        "This digest uses recording metadata and flags, not full record bodies."
+    )
+    limitations: list[str] = Field(default_factory=list)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class RecordingAlertBadgeSummary(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    total_open: int = 0
+    urgent: int = 0
+    safeguarding: int = 0
+    review_due: int = 0
+    changes_requested: int = 0
+    privacy_flags: int = 0
+    route: str = "/record/alerts"
+    label: str = "Recording alerts"
+    tone: Literal["neutral", "attention", "urgent"] = "neutral"
+    last_check_at: str | None = None
+
+
+class RecordingAlertCheckRun(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    run_id: str
+    started_at: str
+    completed_at: str | None = None
+    generated: int = 0
+    created: int = 0
+    updated: int = 0
+    skipped: int = 0
+    warnings: list[str] = Field(default_factory=list)
+    triggered_by: str | None = None
+    dry_run: bool = False
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class RecordingAlertCheckRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    force: bool = False
+    dry_run: bool = False
+    child_id: int | None = None
+    home_id: int | None = None
+    scope: RecordingAlertDigestScope | None = None
+
+
+class RecordingAlertDigestHealth(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    status: str = "ready"
+    service: str = "recording_alert_service"
+    storage_mode: str = "memory"
+    alert_count: int = 0
+    persistence_available: bool = False
+    operational_only: bool = True
+    standalone_access: bool = False
+    degraded: bool = False
+    last_check_at: str | None = None
+    last_check_run_id: str | None = None
+    check_run_persistence: bool = False
+    warnings: list[str] = Field(default_factory=list)
