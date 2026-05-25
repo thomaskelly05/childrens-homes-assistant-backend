@@ -8,7 +8,7 @@ from typing import Any
 
 from fastapi import Request
 
-from db.connection import DatabaseUnavailableError, get_db_connection, release_db_connection
+from db.connection import DatabaseUnavailableError, get_db_connection, is_pool_under_pressure, release_db_connection
 
 logger = logging.getLogger("indicare.audit")
 
@@ -77,6 +77,8 @@ def ensure_audit_table() -> bool:
         return True
     if _TABLE_INIT_ATTEMPTED:
         return _TABLE_READY
+    if is_pool_under_pressure():
+        return False
     _TABLE_INIT_ATTEMPTED = True
     conn = None
     try:
@@ -181,6 +183,10 @@ def record_audit_event(
     """
     if not _should_write_audit(event_type, action, outcome, metadata):
         return True
+
+    if is_pool_under_pressure():
+        _log_audit_failure(event_type, action, busy=True)
+        return False
 
     actor = actor or {}
     conn = None

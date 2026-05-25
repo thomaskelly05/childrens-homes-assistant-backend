@@ -186,11 +186,72 @@ async def recording_alerts_badge_summary(
     current_user: dict[str, Any] = Depends(get_current_user),
     conn=Depends(get_db),
 ):
+    import logging
+    import time
+
+    from db.connection import DatabaseUnavailableError, is_pool_under_pressure
+    from services.os_cache_service import os_cache_service
+
+    logger = logging.getLogger("indicare.recording_alerts")
+    started = time.perf_counter()
     user = _user_dict(current_user)
     _require_alert_view(user)
-    filters = RecordingAlertListFilters(child_id=child_id, home_id=home_id, limit=500)
-    badge = recording_alert_service.build_badge_summary(user, filters, conn=conn)
-    return _success(badge.model_dump())
+    user_id = user.get("id") or user.get("user_id") or "anon"
+    cache_key = f"recording:badge:user:{user_id}:child:{child_id}:home:{home_id}"
+    lookup = os_cache_service.get(cache_key)
+    if lookup.hit and isinstance(lookup.value, dict):
+        payload = dict(lookup.value)
+        payload["cache_status"] = lookup.status
+        logger.info(
+            "recording_alerts_badge_summary endpoint=/recording-alerts/badge-summary total_ms=%s cache_status=%s degraded=%s",
+            round((time.perf_counter() - started) * 1000, 2),
+            lookup.status,
+            payload.get("degraded"),
+        )
+        return _success(payload)
+
+    if is_pool_under_pressure() and lookup.stale and isinstance(lookup.value, dict):
+        payload = dict(lookup.value)
+        payload["degraded"] = True
+        payload["cache_status"] = "stale"
+        payload.setdefault("warnings", []).append("Badge served from cache while database pool is busy.")
+        return _success(payload)
+
+    filters = RecordingAlertListFilters(child_id=child_id, home_id=home_id, limit=80)
+    try:
+        badge = recording_alert_service.build_badge_summary(user, filters, conn=conn)
+        payload = badge.model_dump()
+        payload["cache_status"] = "miss"
+        payload["degraded"] = False
+        os_cache_service.set(cache_key, payload, ttl_seconds=20, stale_ttl_seconds=45)
+    except DatabaseUnavailableError:
+        if lookup.stale and isinstance(lookup.value, dict):
+            payload = dict(lookup.value)
+            payload["degraded"] = True
+            payload["cache_status"] = "stale"
+            return _success(payload)
+        payload = {
+            "total_open": 0,
+            "urgent": 0,
+            "safeguarding": 0,
+            "review_due": 0,
+            "changes_requested": 0,
+            "privacy_flags": 0,
+            "route": "/record/alerts",
+            "label": "Recording alerts",
+            "tone": "neutral",
+            "degraded": True,
+            "cache_status": "miss",
+            "warnings": ["Recording alert badge unavailable while database is busy."],
+        }
+        return _success(payload)
+    logger.info(
+        "recording_alerts_badge_summary endpoint=/recording-alerts/badge-summary total_ms=%s cache_status=%s degraded=%s",
+        round((time.perf_counter() - started) * 1000, 2),
+        payload.get("cache_status"),
+        payload.get("degraded"),
+    )
+    return _success(payload)
 
 
 @compat_router.get("/badge-summary")

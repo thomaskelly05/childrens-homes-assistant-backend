@@ -4,6 +4,12 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
 import { getRecordingAlertBadgeSummary, type RecordingAlertBadgeSummary } from '@/lib/os-api/recording-alerts'
+import {
+  APPSHELL_RECORDING_BADGE_DEDUPE,
+  badgeFromShellCounts,
+  getOperationalShellCounts
+} from '@/lib/os-operational-counts'
+import { fetchWithOsCache, osRequestCacheKey } from '@/lib/os-request-cache'
 
 const MANAGER_ROLES = new Set([
   'manager',
@@ -36,7 +42,16 @@ export function RecordingAlertNavBadge({ role }: { role?: string }) {
   useEffect(() => {
     if (!isManagerRole(role)) return
     let cancelled = false
-    void getRecordingAlertBadgeSummary().then((result) => {
+    const shellBadge = badgeFromShellCounts(role)
+    if (shellBadge && Date.now() - getOperationalShellCounts().updatedAt < 20000) {
+      setBadge(shellBadge)
+      return
+    }
+    if (APPSHELL_RECORDING_BADGE_DEDUPE && getOperationalShellCounts().updatedAt > 0) {
+      return
+    }
+    const key = osRequestCacheKey({ badge: 'recording', role })
+    void fetchWithOsCache(key, () => getRecordingAlertBadgeSummary(), 20000).then((result) => {
       if (cancelled) return
       if (result.ok && (result.data.total_open > 0 || result.data.urgent > 0)) {
         setBadge(result.data)
@@ -71,7 +86,16 @@ export function RecordingAlertTopPill({ role }: { role?: string }) {
   useEffect(() => {
     if (!isManagerRole(role)) return
     let cancelled = false
-    void getRecordingAlertBadgeSummary().then((result) => {
+    const shellBadge = badgeFromShellCounts(role)
+    if (shellBadge && shellBadge.total_open > 0 && Date.now() - getOperationalShellCounts().updatedAt < 20000) {
+      setBadge(shellBadge)
+      return
+    }
+    if (APPSHELL_RECORDING_BADGE_DEDUPE && getOperationalShellCounts().updatedAt > 0) {
+      return
+    }
+    const key = osRequestCacheKey({ badge: 'recording-top', role })
+    void fetchWithOsCache(key, () => getRecordingAlertBadgeSummary(), 20000).then((result) => {
       if (cancelled) return
       if (result.ok && result.data.total_open > 0) setBadge(result.data)
     })

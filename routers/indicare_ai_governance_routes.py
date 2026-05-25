@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+import time
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query
@@ -48,16 +50,24 @@ def ai_governance_dashboard(
         risk_level=risk_level,  # type: ignore[arg-type]
         limit=limit,
     )
+    started = time.perf_counter()
     dashboard = indicare_ai_governance_dashboard_service.build_dashboard(
         filters,
         current_user,
         conn=conn,
+    )
+    logging.getLogger("indicare.ai_governance_dashboard").info(
+        "ai_governance_dashboard endpoint=/intelligence/governance/ai/dashboard total_ms=%s degraded=%s warning_count=%s",
+        round((time.perf_counter() - started) * 1000, 2),
+        dashboard.degraded,
+        len(dashboard.health.warnings or []),
     )
     return {
         "success": True,
         "data": dashboard.model_dump(mode="json"),
         "degraded": dashboard.degraded,
         "warning": dashboard.warning,
+        "cache_status": "hit" if not dashboard.degraded else "degraded",
     }
 
 

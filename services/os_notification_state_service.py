@@ -22,6 +22,7 @@ from schemas.os_notifications import (
 from schemas.recording_alerts import RecordingAlertActionRequest
 from services.audit_event_service import record_audit_event
 from services.manager_daily_brief_service import manager_daily_brief_service
+from services.os_cache_service import os_cache_service
 from services.recording_alert_service import NO_AUTO_RESOLVE_TYPES, recording_alert_service
 
 logger = logging.getLogger("indicare.os_notification_state")
@@ -47,6 +48,12 @@ def _text(value: Any, fallback: str = "") -> str:
 
 def _user_id(current_user: dict[str, Any]) -> str:
     return str(current_user.get("id") or current_user.get("user_id") or "")
+
+
+def _invalidate_notification_feed_cache(current_user: dict[str, Any]) -> None:
+    user_id = _user_id(current_user) or "anon"
+    os_cache_service.invalidate_prefix(f"notification:feed:user:{user_id}:")
+    os_cache_service.invalidate_prefix(f"notification:summary:user:{user_id}:")
 
 
 def _user_name(current_user: dict[str, Any]) -> str:
@@ -499,6 +506,7 @@ class OsNotificationStateService:
             created_at=_now_iso(),
         )
         self.record_audit(dummy_item, action.action, current_user, conn=conn)
+        _invalidate_notification_feed_cache(current_user)
 
         return OsNotificationActionResponse(
             success=True,
@@ -591,6 +599,7 @@ class OsNotificationStateService:
                 updated += 1
             if result.warning:
                 warnings.append(result.warning)
+        _invalidate_notification_feed_cache(current_user)
         return {"ok": True, "updated": updated, "warnings": warnings[:5]}
 
 

@@ -5,7 +5,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from db.connection import DatabaseUnavailableError, get_db_status
+from db.connection import DatabaseUnavailableError, get_db_status, is_pool_under_pressure
+from services.os_cache_service import os_cache_service
 from schemas.ai_privacy import AiPrivacyFilter
 from schemas.indicare_ai_governance import (
     AiGovernanceActionMetric,
@@ -49,9 +50,23 @@ class IndicareAiGovernanceDashboardService:
         conn: Any | None = None,
     ) -> AiGovernanceDashboardResponse:
         filters = filters or AiGovernanceFilter()
+        cache_key = (
+            f"ai_governance:dashboard:period:{filters.period}:home:{filters.home_id}:"
+            f"surface:{filters.surface}:limit:{filters.limit}"
+        )
+        lookup = os_cache_service.get(cache_key)
+        if lookup.hit and isinstance(lookup.value, AiGovernanceDashboardResponse):
+            return lookup.value
+
         health = self.build_health(conn=conn)
         degraded = health.status != "ready"
         warning = health.warnings[0] if health.warnings else None
+        if is_pool_under_pressure():
+            if lookup.stale and isinstance(lookup.value, AiGovernanceDashboardResponse):
+                return lookup.value
+            degraded = True
+            warning = warning or "Database pool under pressure; dashboard aggregates deferred."
+            return self._degraded_dashboard(filters, health, warning)
         try:
             usage = self.build_usage_metrics(filters, current_user, conn=conn)
             quality = self.build_quality_metrics(filters, current_user, conn=conn)
@@ -95,7 +110,7 @@ class IndicareAiGovernanceDashboardService:
                 privacy_redaction_applied=privacy.redaction_applied_count,
                 privacy_minimisation_applied=privacy.minimisation_applied_count,
             )
-            return AiGovernanceDashboardResponse(
+            response = AiGovernanceDashboardResponse(
                 summary=summary,
                 privacy=privacy,
                 usage=usage,
@@ -113,6 +128,8 @@ class IndicareAiGovernanceDashboardService:
                 degraded=degraded,
                 warning=warning,
             )
+            os_cache_service.set(cache_key, response, ttl_seconds=60, stale_ttl_seconds=120)
+            return response
         except Exception as exc:
             logger.warning("AI governance dashboard degraded: %s", exc)
             return self._degraded_dashboard(filters, health, str(exc))
@@ -177,7 +194,7 @@ class IndicareAiGovernanceDashboardService:
             status = "degraded"
             warnings.append("Database pool under pressure; some aggregates may be delayed.")
         events_table = db_available
-        if db_available:
+        if db_available and not pool_pressure:
             try:
                 from db.connection import get_db_connection, release_db_connection
 

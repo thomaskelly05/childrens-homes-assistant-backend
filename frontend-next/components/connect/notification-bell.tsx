@@ -12,6 +12,8 @@ import {
   type OsNotificationFeed,
   type OsNotificationItem
 } from '@/lib/os-api/notifications'
+import { setOperationalShellCounts } from '@/lib/os-operational-counts'
+import { fetchWithOsCache, invalidateOsRequestCache, osRequestCacheKey } from '@/lib/os-request-cache'
 
 const e2eUiMode = process.env.NEXT_PUBLIC_E2E_TEST_MODE === '1' && process.env.NODE_ENV !== 'production'
 
@@ -40,15 +42,27 @@ export function NotificationBell() {
       return
     }
     try {
+      const feedKey = osRequestCacheKey({ feed: 'operational', unread: true, limit: 20 })
       const [connectResponse, schemaResponse, operational] = await Promise.all([
-        fetch('/api/connect/unread', { credentials: 'include' }),
-        fetch('/api/notifications?unread_only=true&limit=20', { credentials: 'include' }),
-        getOperationalNotificationFeed({ unread_only: true, limit: 20 })
+        fetchWithOsCache('connect:unread', async () => {
+          const response = await fetch('/api/connect/unread', { credentials: 'include' })
+          return response.ok ? response.json() : { count: 0 }
+        }, 20000),
+        fetchWithOsCache('notifications:schema-unread', async () => {
+          const response = await fetch('/api/notifications?unread_only=true&limit=20', { credentials: 'include' })
+          return response.ok ? response.json() : { unread: 0 }
+        }, 20000),
+        fetchWithOsCache(feedKey, () => getOperationalNotificationFeed({ unread_only: true, limit: 20 }), 15000)
       ])
-      const connect = connectResponse.ok ? await connectResponse.json() : { count: 0 }
-      const notifications = schemaResponse.ok ? await schemaResponse.json() : { unread: 0 }
+      const connect = connectResponse ?? { count: 0 }
+      const notifications = schemaResponse ?? { unread: 0 }
       const operationalUnread = operational.data.unread_count ?? operational.data.unread ?? 0
       setFeed(operational.data)
+      setOperationalShellCounts({
+        recordingOpen: operational.data.recording_count ?? operational.data.recording_alert_count ?? 0,
+        recordingUrgent: operational.data.urgent_count ?? operational.data.urgent ?? 0,
+        feedUnread: operationalUnread
+      })
       setConnectCount(Number(connect.count || 0) + Number(notifications.unread || 0) + operationalUnread)
     } catch {
       setConnectCount(0)
@@ -64,9 +78,14 @@ export function NotificationBell() {
     }
     void load()
     const interval = setInterval(() => void load(), 60000)
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void load()
+    }
+    document.addEventListener('visibilitychange', onVisible)
     return () => {
       active = false
       clearInterval(interval)
+      document.removeEventListener('visibilitychange', onVisible)
     }
   }, [loadFeed])
 
@@ -89,6 +108,8 @@ export function NotificationBell() {
         action,
         metadata: { item_type: item.type, category: item.category }
       })
+      invalidateOsRequestCache('feed:operational')
+      invalidateOsRequestCache('notification:')
       await loadFeed()
     } finally {
       setBusyKey(null)

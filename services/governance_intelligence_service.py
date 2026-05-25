@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+import logging
 import os
 from collections import Counter
 from datetime import datetime, timezone
 from typing import Any
 
 from assistant.inspection_readiness import build_inspection_readiness, serialise_inspection_readiness
-from db.connection import db_connection
+from db.connection import db_connection, is_pool_under_pressure
+from services.os_time_budget_service import TimeBudgetReport, os_time_budget_service
 from assistant.reg45_builder import build_reg45_review_context, serialise_reg45_review_context
 from repositories.os_repository_utils import quote_ident, safe_int, table_columns, table_exists
 from services.manager_intelligence_service import ManagerIntelligenceService
@@ -27,6 +29,18 @@ REG44_TRANSITIONS = {
     "closed": (),
 }
 RISK_LEVEL_SCORE = {"low": 10, "medium": 35, "high": 65, "critical": 90, "unknown": 25}
+
+logger = logging.getLogger("indicare.governance_intelligence")
+
+SECTION_TIMEOUT_MS = {
+    "manager": 700,
+    "workspace": 600,
+    "evidence": 500,
+    "provider": 500,
+    "workforce": 600,
+    "workforce_orb": 400,
+    "reg44": 500,
+}
 
 
 def governance_feature_flags() -> dict[str, bool]:
@@ -133,28 +147,80 @@ class GovernanceIntelligenceService:
         home_id: int | None = None,
     ) -> dict[str, Any]:
         resolved_home_id = home_id or self._home_id(current_user)
-        manager = self._safe(
+        budget = TimeBudgetReport()
+        degraded = is_pool_under_pressure()
+
+        manager_fallback = {"ok": False, "summary": {}, "risks": {}, "evidence_gaps": [], "recommended_actions": []}
+        manager = os_time_budget_service.run_section(
+            "manager",
+            SECTION_TIMEOUT_MS["manager"],
             lambda: self.manager.build_dashboard(current_user=current_user, days=days, home_id=resolved_home_id),
-            {"ok": False, "summary": {}, "risks": {}, "evidence_gaps": [], "recommended_actions": []},
-        )
-        workspace = self._safe(
-            lambda: self.workspace.home_workspace(home_id=resolved_home_id, current_user=current_user, days=days) if resolved_home_id else {},
-            {},
-        )
-        evidence = self._safe(lambda: self.evidence.build_home_evidence(workspace), {"cards": [], "gaps": [], "judgement_sections": {}})
-        provider = self._safe(lambda: self.provider.build_dashboard(current_user=current_user, days=days), {"homes": [], "summary": {}})
+            fallback=manager_fallback,
+            report=budget,
+        ).value
+        workspace = os_time_budget_service.run_section(
+            "workspace",
+            SECTION_TIMEOUT_MS["workspace"],
+            lambda: self.workspace.home_workspace(home_id=resolved_home_id, current_user=current_user, days=days)
+            if resolved_home_id
+            else {},
+            fallback={},
+            report=budget,
+        ).value
+        evidence = os_time_budget_service.run_section(
+            "evidence",
+            SECTION_TIMEOUT_MS["evidence"],
+            lambda: self.evidence.build_home_evidence(workspace),
+            fallback={"cards": [], "gaps": [], "judgement_sections": {}},
+            report=budget,
+        ).value
+        provider = os_time_budget_service.run_section(
+            "provider",
+            SECTION_TIMEOUT_MS["provider"],
+            lambda: self.provider.build_dashboard(current_user=current_user, days=days),
+            fallback={"homes": [], "summary": {}},
+            report=budget,
+        ).value
 
-        def _load_db_backed_sections(db_conn: Any) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
-            workforce_command = self._safe(lambda: self.workforce.command_centre(db_conn, current_user=current_user), {})
-            workforce_orb = self._safe(lambda: self.workforce.orb_context(db_conn, current_user=current_user), {})
-            reg44 = self._safe(lambda: self.build_reg44_workflow(db_conn, current_user=current_user, home_id=resolved_home_id), {})
-            return workforce_command, workforce_orb, reg44
+        workforce_command: dict[str, Any] = {}
+        workforce_orb: dict[str, Any] = {}
+        reg44: dict[str, Any] = {}
 
-        if conn is not None:
-            workforce_command, workforce_orb, reg44 = _load_db_backed_sections(conn)
+        def _load_db_backed_sections(db_conn: Any) -> None:
+            nonlocal workforce_command, workforce_orb, reg44
+            workforce_command = os_time_budget_service.run_section(
+                "workforce",
+                SECTION_TIMEOUT_MS["workforce"],
+                lambda: self.workforce.command_centre(db_conn, current_user=current_user),
+                fallback={},
+                report=budget,
+            ).value
+            workforce_orb = os_time_budget_service.run_section(
+                "workforce_orb",
+                SECTION_TIMEOUT_MS["workforce_orb"],
+                lambda: self.workforce.orb_context(db_conn, current_user=current_user),
+                fallback={},
+                report=budget,
+            ).value
+            reg44 = os_time_budget_service.run_section(
+                "reg44",
+                SECTION_TIMEOUT_MS["reg44"],
+                lambda: self.build_reg44_workflow(db_conn, current_user=current_user, home_id=resolved_home_id),
+                fallback={},
+                report=budget,
+            ).value
+
+        if degraded:
+            budget.add_warning("Database pool under pressure; workforce and Reg 44 sections skipped.")
+        elif conn is not None:
+            _load_db_backed_sections(conn)
         else:
-            with db_connection() as db_conn:
-                workforce_command, workforce_orb, reg44 = _load_db_backed_sections(db_conn)
+            try:
+                with db_connection() as db_conn:
+                    _load_db_backed_sections(db_conn)
+            except Exception as exc:
+                budget.add_warning(f"Database-backed governance sections unavailable: {type(exc).__name__}")
+                degraded = True
 
         evidence_index = self.evidence_index_from_payloads(
             workspace=workspace,
@@ -171,9 +237,24 @@ class GovernanceIntelligenceService:
         )
         forecast = self.build_inspection_forecast(risk=risk, evidence_matrix=matrix, reg45=reg45)
         actions = self._governance_actions(manager, risk, matrix, reg44, reg45)
+        section_status = {
+            section.name: {
+                "timed_out": section.timed_out,
+                "elapsed_ms": section.elapsed_ms,
+                "warning": section.warning,
+            }
+            for section in budget.sections
+        }
+        if budget.warnings or budget.timeout_count:
+            degraded = True
+        budget.total_ms = sum(section.elapsed_ms for section in budget.sections)
         return {
             "ok": True,
             "generated_at": self._now(),
+            "degraded": degraded,
+            "warnings": budget.warnings[:12],
+            "section_status": section_status,
+            "build_ms": budget.total_ms,
             "home_id": resolved_home_id,
             "days": days,
             "summary": {

@@ -22,8 +22,14 @@ from services.os_notification_state_service import os_notification_state_service
 from services.recording_alert_service import recording_alert_service
 from services.recording_governance_service import recording_governance_service
 from services.recording_review_service import recording_review_service
+from db.connection import DatabaseUnavailableError, is_pool_under_pressure
+from services.os_cache_service import OsCacheLookup, os_cache_service
+from services.os_time_budget_service import TimeBudgetReport, os_time_budget_service
 
 logger = logging.getLogger("indicare.os_notifications")
+
+NOTIFICATION_FEED_CACHE_TTL_SECONDS = 15
+NOTIFICATION_FEED_STALE_SECONDS = 30
 
 ALERT_TYPE_TO_OS_TYPE: dict[str, str] = {
     "high_risk_review_due": "recording_alert_urgent",
@@ -575,6 +581,58 @@ class OsNotificationAdapterService:
     def _count_by_category(self, items: list[OsNotificationItem], category: str) -> int:
         return sum(1 for i in items if i.unread and _text(i.category) == category)
 
+    def _feed_cache_key(
+        self,
+        current_user: dict[str, Any],
+        *,
+        limit: int,
+        unread_only: bool,
+    ) -> str:
+        user_id = current_user.get("id") or current_user.get("user_id") or "anon"
+        role = _user_role(current_user)
+        return f"notification:feed:user:{user_id}:role:{role}:unread:{int(unread_only)}:limit:{limit}"
+
+    def build_feed_cached(
+        self,
+        current_user: dict[str, Any],
+        *,
+        limit: int = 30,
+        unread_only: bool = False,
+        conn: Any | None = None,
+        skip_preference_filter: bool = False,
+    ) -> tuple[OsNotificationFeedResponse, OsCacheLookup]:
+        key = self._feed_cache_key(current_user, limit=limit, unread_only=unread_only)
+        lookup = os_cache_service.get(key)
+        if lookup.hit and isinstance(lookup.value, OsNotificationFeedResponse):
+            return lookup.value, lookup
+
+        if is_pool_under_pressure() and lookup.stale and isinstance(lookup.value, OsNotificationFeedResponse):
+            feed = lookup.value.model_copy(
+                update={
+                    "limitations": list(lookup.value.limitations or [])
+                    + ["Operational feed served from cache while database pool is busy."],
+                    "metadata": {**(lookup.value.metadata or {}), "degraded": True, "cache_status": "stale"},
+                }
+            )
+            return feed, lookup
+
+        def _build() -> OsNotificationFeedResponse:
+            return self.build_feed(
+                current_user,
+                limit=limit,
+                unread_only=unread_only,
+                conn=conn,
+                skip_preference_filter=skip_preference_filter,
+            )
+
+        feed, cache_lookup = os_cache_service.get_or_build(
+            key,
+            _build,
+            ttl_seconds=NOTIFICATION_FEED_CACHE_TTL_SECONDS,
+            stale_ttl_seconds=NOTIFICATION_FEED_STALE_SECONDS,
+        )
+        return feed, cache_lookup
+
     def build_feed(
         self,
         current_user: dict[str, Any],
@@ -586,10 +644,12 @@ class OsNotificationAdapterService:
     ) -> OsNotificationFeedResponse:
         limitations: list[str] = []
         items: list[OsNotificationItem] = []
+        budget = TimeBudgetReport()
+        include_optional_sources = limit > 15 and not is_pool_under_pressure()
 
         if _is_manager_view(current_user):
             try:
-                filters = RecordingAlertListFilters(limit=min(limit, 50))
+                filters = RecordingAlertListFilters(limit=min(limit, 25))
                 alerts = recording_alert_service.list_alerts(current_user, filters, conn=conn)
                 open_alerts = [a for a in alerts.items if a.status in ("open", "assigned", "acknowledged")]
                 open_alerts.sort(
@@ -603,17 +663,27 @@ class OsNotificationAdapterService:
                     if unread_only and not item.unread:
                         continue
                     items.append(item)
+            except DatabaseUnavailableError as exc:
+                logger.warning("recording_alerts_feed_unavailable: %s", exc)
+                limitations.append("Recording alerts could not be loaded for the notification feed.")
             except Exception as exc:
                 logger.warning("recording_alerts_feed_unavailable: %s", exc)
                 limitations.append("Recording alerts could not be loaded for the notification feed.")
 
-            brief_item = self._daily_brief_item(current_user, conn)
+            brief_result = os_time_budget_service.run_section(
+                "daily_brief",
+                400,
+                lambda: self._daily_brief_item(current_user, conn),
+                fallback=None,
+                report=budget,
+            )
+            brief_item = brief_result.value
             if brief_item and (not unread_only or brief_item.unread):
                 items.insert(0, brief_item)
 
             try:
                 isn_items = isn_notification_adapter_service.build_os_items(
-                    current_user, limit=min(limit, 20), conn=conn
+                    current_user, limit=min(limit, 12), conn=conn
                 )
                 for isn_item in isn_items:
                     isn_item = isn_item.model_copy(
@@ -630,18 +700,29 @@ class OsNotificationAdapterService:
                 logger.warning("isn_feed_unavailable: %s", exc)
                 limitations.append("Safeguarding network notifications could not be loaded.")
 
-            for extra in (
-                self._review_queue_items(current_user, conn, limit=3),
-                self._intelligence_action_items(current_user, conn, limit=2),
-                self._governance_items(current_user, conn, limit=2),
-                self._workforce_indicator_items(current_user, conn, limit=2),
-                self._handover_draft_items(current_user, conn, limit=2),
-                self._reg45_review_items(current_user, conn, limit=2),
-            ):
-                for item in extra:
-                    if unread_only and not item.unread:
-                        continue
-                    items.append(item)
+            if include_optional_sources:
+                optional_sections = [
+                    ("review_queue", 350, lambda: self._review_queue_items(current_user, conn, limit=2)),
+                    ("intelligence_actions", 350, lambda: self._intelligence_action_items(current_user, conn, limit=2)),
+                    ("governance", 400, lambda: self._governance_items(current_user, conn, limit=1)),
+                    ("workforce", 400, lambda: self._workforce_indicator_items(current_user, conn, limit=1)),
+                    ("handover", 400, lambda: self._handover_draft_items(current_user, conn, limit=1)),
+                    ("reg45", 400, lambda: self._reg45_review_items(current_user, conn, limit=1)),
+                ]
+                for name, timeout_ms, fn in optional_sections:
+                    section = os_time_budget_service.run_section(
+                        name,
+                        timeout_ms,
+                        fn,
+                        fallback=[],
+                        report=budget,
+                    )
+                    for item in section.value or []:
+                        if unread_only and not item.unread:
+                            continue
+                        items.append(item)
+            else:
+                limitations.append("Optional notification sources skipped to protect database pool.")
         else:
             limitations.append("Recording alert notifications require manager or senior oversight role.")
 
@@ -685,6 +766,8 @@ class OsNotificationAdapterService:
         )
 
         generated_at = _now_iso()
+        if budget.warnings:
+            limitations.extend(budget.warnings[:5])
         return OsNotificationFeedResponse(
             items=items[:limit],
             unread_count=unread_count,
@@ -704,6 +787,8 @@ class OsNotificationAdapterService:
                 "no_raw_body": True,
                 "hidden_by_preferences": hidden_by_preferences,
                 "urgent_safeguarding_always_on": True,
+                "degraded": bool(budget.timeout_count or is_pool_under_pressure()),
+                "cache_status": "miss",
             },
             unread=unread_count,
             urgent=urgent_count,

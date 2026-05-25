@@ -106,6 +106,16 @@ def is_db_available() -> bool:
     return db_pool is not None
 
 
+def is_pool_under_pressure() -> bool:
+    """True when all pool connections are in use (dashboard/badge load may block auth)."""
+    if db_pool is None:
+        return False
+    pool = pool_status()
+    max_conn = int(pool.get("max") or 0)
+    used = int(pool.get("used") or 0)
+    return max_conn > 0 and used >= max_conn
+
+
 def get_db_status() -> dict[str, str | bool | int | float | None]:
     pool = pool_status()
     return {
