@@ -40,6 +40,8 @@ Bell items use `source: isn`, `category: Safeguarding network`, and metadata-onl
 
 ISN urgent/high unacknowledged items are candidates for `os_notification_escalation_service` default rules (60 min / 240 min → registered manager). ISN digest includes `escalation_pending` and `escalation_rules_active`. Escalations do not auto-resolve ISN items or make threshold decisions. See `docs/notification-preferences-and-escalations.md`.
 
+Escalation check runs record ISN counts in run history (`sql/088`) and analytics governance summary — metadata only, no narratives.
+
 ## Manager daily brief
 
 Section id: `isn_safeguarding_network`, title: **Safeguarding network**.

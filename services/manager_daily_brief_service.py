@@ -76,6 +76,16 @@ ORB_PROMPTS = [
         "mode": "safeguarding_themes",
         "query": "Help me prepare safeguarding network review questions for manager oversight.",
     },
+    {
+        "label": "Ask ORB to help prioritise unresolved notifications.",
+        "mode": "action_priority",
+        "query": "Help me prioritise unresolved operational notifications for manager review today.",
+    },
+    {
+        "label": "Ask ORB what needs manager review today.",
+        "mode": "manager_daily_brief",
+        "query": "What operational notifications may need manager review today?",
+    },
 ]
 
 
@@ -469,6 +479,69 @@ class ManagerDailyBriefService:
             },
         )
 
+    def build_notification_oversight_section(
+        self, current_user: dict[str, Any], conn: Any | None = None
+    ) -> ManagerDailyBriefSection:
+        """Metadata-only notification and escalation oversight for managers."""
+        items: list[ManagerDailyBriefItem] = []
+        summary = "Notification oversight metrics unavailable."
+        tone: str = "neutral"
+        meta: dict[str, Any] = {"metadata_only": True, "no_raw_body": True}
+        try:
+            from services.os_notification_analytics_service import os_notification_analytics_service
+
+            gov = os_notification_analytics_service.build_governance_summary(current_user, conn=conn)
+            m = gov.response_metrics
+            last = gov.last_escalation_check
+            summary = (
+                f"{m.urgent_unacknowledged} urgent and {m.safeguarding_unacknowledged} safeguarding "
+                f"notification(s) not yet acknowledged."
+            )
+            if m.urgent_unacknowledged or m.safeguarding_unacknowledged:
+                tone = "urgent" if m.urgent_unacknowledged else "attention"
+            else:
+                summary = "No urgent or safeguarding notifications awaiting acknowledgement in scope."
+            if last:
+                summary += f" Last escalation check: {last.started_at[:16]}."
+            else:
+                summary += " No escalation check recorded yet — run one from notification settings."
+            if gov.unresolved_escalation_candidates:
+                summary += f" {len(gov.unresolved_escalation_candidates)} escalation candidate(s) from last check."
+            for rec in gov.recommendations[:3]:
+                items.append(
+                    ManagerDailyBriefItem(
+                        id=f"notif_rec:{hash(rec) % 10**8}",
+                        title="Notification oversight",
+                        safe_summary=rec,
+                        priority="medium",
+                        route="/notifications/settings",
+                        action_label="Notification settings",
+                        source="os_notifications",
+                    )
+                )
+            meta.update(
+                {
+                    "urgent_unacknowledged": m.urgent_unacknowledged,
+                    "safeguarding_unacknowledged": m.safeguarding_unacknowledged,
+                    "last_escalation_check": last.started_at if last else None,
+                    "candidates": len(gov.unresolved_escalation_candidates),
+                }
+            )
+        except Exception as exc:
+            logger.debug("notification_oversight_section_degraded: %s", exc)
+            summary = "Notification oversight summary temporarily unavailable. Use notification settings."
+            meta["degraded"] = True
+        return ManagerDailyBriefSection(
+            id="notification_oversight",
+            title="Notification and escalation oversight",
+            summary=summary,
+            items=items,
+            route="/notifications/settings",
+            action_label="Open notification settings",
+            tone=tone,
+            metadata=meta,
+        )
+
     def build_handover_section(
         self, current_user: dict[str, Any], conn: Any | None = None
     ) -> ManagerDailyBriefSection:
@@ -550,6 +623,14 @@ class ManagerDailyBriefService:
             recs.append("Include recording and safeguarding themes in handover.")
         if brief.isn_summary and "No open" not in brief.isn_summary:
             recs.append("Review safeguarding network (ISN) items before handover.")
+        for section in brief.sections:
+            if section.id == "notification_oversight" and section.tone in ("urgent", "attention"):
+                recs.append(
+                    "Review urgent and safeguarding notifications in the notification centre before handover."
+                )
+                if "No escalation check" in section.summary:
+                    recs.append("Run an escalation check from notification settings if checks are stale.")
+                break
         recs.append(MANAGER_JUDGEMENT_NOTICE)
         return recs[:10]
 
@@ -577,6 +658,7 @@ class ManagerDailyBriefService:
         isn_section = self.build_isn_section(current_user, conn=conn)
         actions = self.build_actions_section(current_user, conn=conn)
         handover = self.build_handover_section(current_user, conn=conn)
+        notification_oversight = self.build_notification_oversight_section(current_user, conn=conn)
         child_journey = self.build_child_journey_section(current_user, conn=conn)
 
         try:
@@ -585,7 +667,7 @@ class ManagerDailyBriefService:
         except Exception:
             gov_cards = 0
 
-        sections = [recording, review, safeguarding, isn_section, actions, handover]
+        sections = [recording, review, safeguarding, isn_section, notification_oversight, actions, handover]
         opening = (
             f"Today: {recording.summary} {review.summary}"
             if recording.tone != "neutral" or review.tone != "neutral"

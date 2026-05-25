@@ -46,6 +46,8 @@ def test_full_brief_page_markers():
     assert "manager-daily-brief-ask-orb" in combined
     assert "manager-daily-brief-privacy" in combined
     assert "manager-daily-brief-isn-summary" in combined
+    assert "manager-daily-brief-notification-settings" in combined
+    assert "manager-daily-brief-section-" in combined
     assert "Safeguarding network" in combined
     assert "manager-daily-brief-safe-summary" in combined
     assert "Ask OS ORB" in combined

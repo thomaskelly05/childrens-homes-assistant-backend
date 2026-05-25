@@ -139,3 +139,76 @@ def test_escalation_rules_route(fake_state):
     )
     assert result["success"] is True
     assert len(result["data"]) >= 1
+
+
+def test_escalation_runs_route(fake_state):
+    user = fake_state["user"]
+    asyncio.run(
+        os_notification_routes.run_notification_escalation_check(
+            payload=None,
+            current_user=user,
+            conn=None,
+        )
+    )
+    result = asyncio.run(
+        os_notification_routes.list_notification_escalation_runs(
+            home_id=None,
+            limit=10,
+            current_user=user,
+            conn=None,
+        )
+    )
+    assert result["success"] is True
+    assert result["metadata_only"] is True
+
+
+def test_last_escalation_run_route(fake_state):
+    user = fake_state["user"]
+    result = asyncio.run(
+        os_notification_routes.get_last_notification_escalation_run(
+            current_user=user,
+            conn=None,
+        )
+    )
+    assert result["success"] is True
+
+
+def test_analytics_routes(fake_state):
+    user = fake_state["user"]
+    health = asyncio.run(
+        os_notification_routes.notification_analytics_health(current_user=user, conn=None)
+    )
+    assert health["success"] is True
+    metrics = asyncio.run(
+        os_notification_routes.notification_response_metrics(
+            home_id=None,
+            source=None,
+            category=None,
+            current_user=user,
+            conn=None,
+        )
+    )
+    assert metrics["success"] is True
+    assert "urgent_unacknowledged" in metrics["data"]
+    gov = asyncio.run(
+        os_notification_routes.notification_governance_summary(
+            home_id=None,
+            current_user=user,
+            conn=None,
+        )
+    )
+    assert gov["success"] is True
+    auto = asyncio.run(
+        os_notification_routes.notification_automation_health(current_user=user, conn=None)
+    )
+    assert auto["success"] is True
+    assert auto["data"]["scheduler_configured"] is False
+
+
+def test_new_routes_registered():
+    paths = [getattr(r, "path", "") for r in os_notification_routes.router.routes]
+    assert any("escalations/runs" in p for p in paths)
+    assert any("escalations/last-run" in p for p in paths)
+    assert any("analytics/health" in p for p in paths)
+    assert any("analytics/governance-summary" in p for p in paths)
+    assert any("automation/health" in p for p in paths)

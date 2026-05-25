@@ -154,8 +154,16 @@ class NotificationEscalationCheckResponse(BaseModel):
 
     generated_at: str
     dry_run: bool = True
+    run_id: str | None = None
     candidates: list[NotificationEscalationCandidate] = Field(default_factory=list)
     created_notifications: list[str] = Field(default_factory=list)
+    candidate_count: int = 0
+    event_count: int = 0
+    urgent_count: int = 0
+    safeguarding_count: int = 0
+    recording_count: int = 0
+    isn_count: int = 0
+    daily_brief_count: int = 0
     warnings: list[str] = Field(default_factory=list)
     recommendations: list[str] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)

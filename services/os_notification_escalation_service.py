@@ -11,6 +11,11 @@ from uuid import uuid4
 from psycopg2.extras import Json, RealDictCursor
 
 from repositories.os_repository_utils import table_exists
+from schemas.os_notification_analytics import (
+    NotificationAnalyticsFilters,
+    NotificationAutomationHealth,
+    NotificationEscalationRunRecord,
+)
 from schemas.os_notification_preferences import (
     SEVERITY_ORDER,
     NotificationEscalationCandidate,
@@ -56,6 +61,14 @@ def _parse_json(value: Any, default: Any) -> Any:
     return default
 
 
+def _iso_dt(value: Any) -> str | None:
+    if value is None:
+        return None
+    if hasattr(value, "isoformat"):
+        return value.isoformat()
+    return str(value)
+
+
 def _parse_dt(value: str | None) -> datetime | None:
     if not value:
         return None
@@ -74,6 +87,7 @@ class OsNotificationEscalationService:
     def __init__(self) -> None:
         self._memory_rules: list[dict[str, Any]] = []
         self._memory_events: list[dict[str, Any]] = []
+        self._memory_runs: list[dict[str, Any]] = []
         self._seed_defaults()
 
     def _seed_defaults(self) -> None:
@@ -101,6 +115,219 @@ class OsNotificationEscalationService:
         except Exception:
             pass
         return "memory"
+
+    def _detect_runs_mode(self, conn: Any | None = None) -> str:
+        if conn is None:
+            return "memory"
+        try:
+            if table_exists(conn, "os_notification_escalation_check_runs"):
+                return "postgresql"
+        except Exception:
+            pass
+        return "memory"
+
+    def _user_name(self, current_user: dict[str, Any]) -> str:
+        first = _text(current_user.get("first_name"))
+        last = _text(current_user.get("last_name"))
+        return " ".join(part for part in (first, last) if part).strip() or _text(current_user.get("email"), "User")
+
+    def _row_to_run(self, row: dict[str, Any]) -> NotificationEscalationRunRecord:
+        return NotificationEscalationRunRecord(
+            id=_text(row.get("id")),
+            triggered_by_user_id=row.get("triggered_by_user_id"),
+            triggered_by_name=row.get("triggered_by_name"),
+            home_id=row.get("home_id"),
+            dry_run=bool(row.get("dry_run", True)),
+            started_at=_iso_dt(row.get("started_at")) or _now_iso(),
+            completed_at=_iso_dt(row.get("completed_at")),
+            candidate_count=int(row.get("candidate_count") or 0),
+            event_count=int(row.get("event_count") or 0),
+            urgent_count=int(row.get("urgent_count") or 0),
+            safeguarding_count=int(row.get("safeguarding_count") or 0),
+            recording_count=int(row.get("recording_count") or 0),
+            isn_count=int(row.get("isn_count") or 0),
+            daily_brief_count=int(row.get("daily_brief_count") or 0),
+            warnings=_parse_json(row.get("warnings"), []),
+            recommendations=_parse_json(row.get("recommendations"), []),
+            metadata=_parse_json(row.get("metadata"), {}),
+        )
+
+    def _count_categories(self, candidates: list[NotificationEscalationCandidate]) -> dict[str, int]:
+        urgent = safeguarding = recording = isn = daily_brief = 0
+        for c in candidates:
+            sev = _text(c.severity).lower()
+            src = _text(c.source)
+            cat = _text(c.category)
+            if sev == "urgent":
+                urgent += 1
+            if cat == "safeguarding_network" or src == "isn":
+                safeguarding += 1
+            if src in ("recording_alert", "recording_alerts") or cat == "recording":
+                recording += 1
+            if src == "isn":
+                isn += 1
+            if src == "manager_daily_brief" or cat == "daily_brief":
+                daily_brief += 1
+        return {
+            "urgent_count": urgent,
+            "safeguarding_count": safeguarding,
+            "recording_count": recording,
+            "isn_count": isn,
+            "daily_brief_count": daily_brief,
+        }
+
+    def build_run_record(
+        self,
+        response: NotificationEscalationCheckResponse,
+        current_user: dict[str, Any],
+        started_at: str,
+        *,
+        home_id: int | None = None,
+        completed_at: str | None = None,
+    ) -> NotificationEscalationRunRecord:
+        run_id = response.run_id or f"esc_run:{uuid4().hex[:12]}"
+        counts = {
+            "candidate_count": response.candidate_count or len(response.candidates),
+            "event_count": response.event_count or len(response.created_notifications),
+            "urgent_count": response.urgent_count,
+            "safeguarding_count": response.safeguarding_count,
+            "recording_count": response.recording_count,
+            "isn_count": response.isn_count,
+            "daily_brief_count": response.daily_brief_count,
+        }
+        return NotificationEscalationRunRecord(
+            id=run_id,
+            triggered_by_user_id=_user_id(current_user) or None,
+            triggered_by_name=self._user_name(current_user),
+            home_id=home_id,
+            dry_run=response.dry_run,
+            started_at=started_at,
+            completed_at=completed_at or _now_iso(),
+            warnings=list(response.warnings),
+            recommendations=list(response.recommendations),
+            metadata={
+                **(response.metadata or {}),
+                "no_raw_body": True,
+                "metadata_only": True,
+            },
+            **counts,
+        )
+
+    def record_check_run(
+        self,
+        current_user: dict[str, Any],
+        response: NotificationEscalationCheckResponse,
+        started_at: str,
+        conn: Any | None = None,
+        *,
+        home_id: int | None = None,
+    ) -> NotificationEscalationRunRecord:
+        record = self.build_run_record(
+            response,
+            current_user,
+            started_at,
+            home_id=home_id,
+            completed_at=_now_iso(),
+        )
+        row = record.model_dump()
+        mode = self._detect_runs_mode(conn)
+        if mode == "postgresql" and conn is not None:
+            try:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """
+                        INSERT INTO os_notification_escalation_check_runs (
+                            id, triggered_by_user_id, triggered_by_name, home_id, dry_run,
+                            candidate_count, event_count, urgent_count, safeguarding_count,
+                            recording_count, isn_count, daily_brief_count,
+                            warnings, recommendations, metadata, started_at, completed_at
+                        ) VALUES (
+                            %(id)s, %(triggered_by_user_id)s, %(triggered_by_name)s, %(home_id)s, %(dry_run)s,
+                            %(candidate_count)s, %(event_count)s, %(urgent_count)s, %(safeguarding_count)s,
+                            %(recording_count)s, %(isn_count)s, %(daily_brief_count)s,
+                            %(warnings)s, %(recommendations)s, %(metadata)s, %(started_at)s, %(completed_at)s
+                        )
+                        """,
+                        {
+                            **row,
+                            "warnings": Json(row.get("warnings") or []),
+                            "recommendations": Json(row.get("recommendations") or []),
+                            "metadata": Json(row.get("metadata") or {}),
+                        },
+                    )
+                conn.commit()
+            except Exception as exc:
+                logger.warning("escalation_run_persist_failed: %s", exc)
+        self._memory_runs.insert(0, row)
+        return record
+
+    def list_check_runs(
+        self,
+        current_user: dict[str, Any],
+        filters: NotificationAnalyticsFilters | None = None,
+        conn: Any | None = None,
+        *,
+        limit: int = 20,
+    ) -> list[NotificationEscalationRunRecord]:
+        _ = current_user
+        mode = self._detect_runs_mode(conn)
+        if mode == "postgresql" and conn is not None:
+            try:
+                clauses = ["1=1"]
+                params: dict[str, Any] = {"limit": limit}
+                if filters and filters.home_id is not None:
+                    clauses.append("home_id = %(home_id)s")
+                    params["home_id"] = filters.home_id
+                if filters and filters.user_id:
+                    clauses.append("triggered_by_user_id = %(user_id)s")
+                    params["user_id"] = filters.user_id
+                with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                    cur.execute(
+                        f"""
+                        SELECT * FROM os_notification_escalation_check_runs
+                        WHERE {' AND '.join(clauses)}
+                        ORDER BY started_at DESC
+                        LIMIT %(limit)s
+                        """,
+                        params,
+                    )
+                    rows = cur.fetchall()
+                    if rows:
+                        return [self._row_to_run(dict(r)) for r in rows]
+            except Exception as exc:
+                logger.warning("escalation_runs_load_failed: %s", exc)
+        runs = list(self._memory_runs[:limit])
+        return [NotificationEscalationRunRecord.model_validate(r) for r in runs]
+
+    def get_last_check_run(
+        self,
+        current_user: dict[str, Any],
+        conn: Any | None = None,
+    ) -> NotificationEscalationRunRecord | None:
+        runs = self.list_check_runs(current_user, conn=conn, limit=1)
+        return runs[0] if runs else None
+
+    def build_automation_health(
+        self,
+        current_user: dict[str, Any],
+        conn: Any | None = None,
+    ) -> NotificationAutomationHealth:
+        last = self.get_last_check_run(current_user, conn=conn)
+        warnings: list[str] = []
+        if not last:
+            warnings.append("No escalation check recorded yet.")
+        warnings.append("Background scheduler not configured yet.")
+        warnings.append("Push and email are not configured yet.")
+        return NotificationAutomationHealth(
+            status="ok",
+            manual_checks_available=True,
+            scheduler_configured=False,
+            push_configured=False,
+            email_configured=False,
+            last_check_at=last.started_at if last else None,
+            warnings=warnings,
+            metadata={"no_raw_body": True},
+        )
 
     def get_health(self, conn: Any | None = None) -> NotificationEscalationHealth:
         rules_mode = self._detect_rules_mode(conn)
@@ -527,6 +754,7 @@ class OsNotificationEscalationService:
         request: NotificationEscalationCheckRequest | None = None,
         conn: Any | None = None,
     ) -> NotificationEscalationCheckResponse:
+        started_at = _now_iso()
         req = request or NotificationEscalationCheckRequest(dry_run=True)
         feed = os_notification_adapter_service.build_feed(
             current_user,
@@ -577,11 +805,16 @@ class OsNotificationEscalationService:
             except Exception:
                 pass
 
-        return NotificationEscalationCheckResponse(
+        cat_counts = self._count_categories(candidates)
+        run_id = f"esc_run:{uuid4().hex[:12]}"
+        response = NotificationEscalationCheckResponse(
             generated_at=_now_iso(),
             dry_run=req.dry_run,
+            run_id=run_id,
             candidates=candidates,
             created_notifications=created,
+            candidate_count=len(candidates),
+            event_count=len(created),
             warnings=warnings,
             recommendations=self.build_recommendations(candidates),
             metadata={
@@ -589,7 +822,21 @@ class OsNotificationEscalationService:
                 "metadata_only": True,
                 "rules_evaluated": len(rules),
             },
+            **cat_counts,
         )
+        try:
+            self.record_check_run(
+                current_user,
+                response,
+                started_at,
+                conn=conn,
+                home_id=req.home_id,
+            )
+        except Exception as exc:
+            logger.warning("escalation_run_record_failed: %s", exc)
+            warnings.append("Escalation check completed but run history could not be saved.")
+            response.warnings = warnings
+        return response
 
 
 os_notification_escalation_service = OsNotificationEscalationService()

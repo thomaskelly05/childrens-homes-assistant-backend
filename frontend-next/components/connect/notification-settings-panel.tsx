@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react'
 
+import { NotificationAutomationStatus } from '@/components/connect/notification-automation-status'
 import { NotificationEscalationCheck } from '@/components/connect/notification-escalation-check'
+import { NotificationEscalationRunHistory } from '@/components/connect/notification-escalation-run-history'
 import { NotificationEscalationRulesPanel } from '@/components/connect/notification-escalation-rules-panel'
 import { NotificationPreferenceRuleCard } from '@/components/connect/notification-preference-rule-card'
 import {
@@ -97,7 +99,13 @@ export function NotificationSettingsPanel() {
         <NotificationEscalationRulesPanel rules={escalationRules} />
       </section>
 
-      <NotificationEscalationCheck />
+      <NotificationAutomationStatus />
+
+      <div id="escalation">
+        <NotificationEscalationCheck />
+      </div>
+
+      <NotificationEscalationRunHistory />
 
       {limitations.length ? (
         <ul className="list-disc space-y-1 pl-5 text-xs text-slate-500">

@@ -24,6 +24,8 @@ def test_notifications_page_operational_section():
     assert "/notifications/settings" in page
     assert "notifications-urgent-override-copy" in page
     assert "operational-notifications-urgent-override" in section
+    assert "NotificationGovernanceStrip" in page
+    assert "notification-governance-strip" in _read(FRONTEND / "components" / "connect" / "notification-governance-strip.tsx")
 
 
 def test_no_standalone_orb_in_notifications_client():

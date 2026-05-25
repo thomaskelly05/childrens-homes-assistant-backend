@@ -69,6 +69,14 @@ Escalations create `os_notification_escalation_events` records with metadata-onl
 | GET | `/api/notifications/escalations/rules` |
 | POST | `/api/notifications/escalations/rules` |
 | POST | `/api/notifications/escalations/check` |
+| GET | `/api/notifications/escalations/runs` |
+| GET | `/api/notifications/escalations/last-run` |
+| GET | `/api/notifications/analytics/health` |
+| GET | `/api/notifications/analytics/response-metrics` |
+| GET | `/api/notifications/analytics/governance-summary` |
+| GET | `/api/notifications/automation/health` |
+
+Each escalation check records a run in `os_notification_escalation_check_runs` (migration `088`) with category counts only.
 
 Operational feed applies preferences after lifecycle state. Metadata includes `hidden_by_preferences`.
 
@@ -81,8 +89,9 @@ Operational feed applies preferences after lifecycle state. Metadata includes `h
 
 ## UI
 
-- `/notifications/settings` — preferences, escalation rules, run escalation check
-- Notification centre links to settings and shows hidden-by-preferences count when applicable
+- `/notifications/settings` — preferences, escalation rules, automation status, run history, run escalation check
+- Notification centre governance strip — urgent/safeguarding unacknowledged, last check, settings link
+- Care Hub notification oversight card
 
 ## Limitations
 
@@ -96,4 +105,4 @@ Operational feed applies preferences after lifecycle state. Metadata includes `h
 - Push/email when job infrastructure exists
 - Home/provider scoped preferences UI
 - Assign escalation targets to specific users from directory
-- Scheduled escalation check job
+- Scheduled escalation check job (manual checks + run history are ready)

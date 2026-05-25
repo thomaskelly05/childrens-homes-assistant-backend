@@ -1,5 +1,6 @@
 import Link from 'next/link'
 
+import { NotificationGovernanceStrip } from '@/components/connect/notification-governance-strip'
 import { OperationalNotificationsSection } from '@/components/connect/operational-notifications-section'
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
 import { Card, EmptyState, PageHeader, SectionHeader, StatCard, StatusBadge } from '@/components/indicare/ui'
@@ -55,6 +56,9 @@ export default async function NotificationsPage() {
         Urgent safeguarding and high-risk ISN notifications always remain visible, even if categories are muted.
       </p>
       <LiveDataStatus result={result} />
+      <NotificationGovernanceStrip
+        hiddenByPreferences={Number(operational.data.metadata?.hidden_by_preferences || 0)}
+      />
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Unread" value={unread} detail="Connect + operational unread" href="/notifications" entity={{ entity_type: 'notification' }} />
         <StatCard label="Operational" value={operationalItems.length} detail="Recording, ISN, brief, review, actions" href="/notifications" entity={{ entity_type: 'notification' }} />

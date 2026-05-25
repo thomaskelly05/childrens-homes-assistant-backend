@@ -43,8 +43,19 @@ def test_build_brief_metadata_only(fake_state):
     assert any(s.id == "reviews" for s in brief.sections)
     assert any(s.id == "handover" for s in brief.sections)
     assert any(s.id == "isn_safeguarding_network" for s in brief.sections)
+    assert any(s.id == "notification_oversight" for s in brief.sections)
     assert brief.isn_summary is not None
     assert brief.metadata.get("no_raw_body") is True
+
+
+def test_notification_oversight_section(fake_state):
+    user = fake_state["user"]
+    section = manager_daily_brief_service.build_notification_oversight_section(user, conn=None)
+    dumped = section.model_dump_json()
+    assert "RAW" not in dumped.upper() or "raw" not in section.summary.lower()
+    assert section.id == "notification_oversight"
+    assert section.metadata.get("no_raw_body") is True
+    assert "/notifications/settings" in section.route
 
 
 def test_isn_section_metadata_only(fake_state):
