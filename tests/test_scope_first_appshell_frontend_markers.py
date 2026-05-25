@@ -32,10 +32,11 @@ def test_appshell_child_scope_menu_markers():
     child_nav = nav.split("export function childScopeNavigation")[1].split("export function")[0]
     for marker in (
         "childScopeNavigation",
-        "Child overview",
+        "Overview",
         "Chronology",
-        "ORB for this child",
+        "ORB",
         "/assistant/orb?context=child",
+        "child_id=",
     ):
         assert marker in nav
     assert "childWorkspaceHref" in child_nav
