@@ -68,21 +68,23 @@ export function childScopeNavigation(childId: string | number): ScopeNavItem[] {
   const cid = String(childId)
   const q = encodeURIComponent(cid)
   return [
-    { label: 'Child overview', href: childWorkspaceHref(cid), icon: UserRound, prefetch: false },
-    { label: 'Record', href: `/record?child_id=${q}&about=child`, icon: ClipboardList, prefetch: false },
-    { label: 'Daily note', href: childHref(cid, 'daily-note/new'), icon: ClipboardList, prefetch: false },
-    { label: 'Incident', href: `/incidents?young_person_id=${q}`, icon: ShieldCheck, prefetch: false },
-    { label: 'Safeguarding', href: `/safeguarding?young_person_id=${q}`, icon: ShieldCheck, prefetch: false },
-    { label: 'Health / medication', href: `/health?young_person_id=${q}`, icon: HeartPulse, prefetch: false },
-    { label: 'Education', href: `/education?young_person_id=${q}`, icon: FileText, prefetch: false },
-    { label: 'Family time', href: childHref(cid, 'family-time/new'), icon: UserRound, prefetch: false },
-    { label: 'Keywork', href: `/keywork?young_person_id=${q}`, icon: ClipboardCheck, prefetch: false },
+    { label: 'Overview', href: childWorkspaceHref(cid), icon: UserRound, prefetch: false, testId: 'scope-nav-child-overview' },
+    { label: 'Record', href: `/record?child_id=${q}`, icon: ClipboardList, prefetch: false },
+    { label: 'Daily note', href: `/record?child_id=${q}&type=daily-note`, icon: ClipboardList, prefetch: false },
+    { label: 'Incident', href: `/record?child_id=${q}&type=incident`, icon: ShieldCheck, prefetch: false },
+    { label: 'Safeguarding', href: `/record?child_id=${q}&type=safeguarding-concern`, icon: ShieldCheck, prefetch: false },
+    { label: 'Health / medication', href: `/record?child_id=${q}&type=health-appointment`, icon: HeartPulse, prefetch: false },
+    { label: 'Education', href: `/record?child_id=${q}&type=education-note`, icon: FileText, prefetch: false },
+    { label: 'Family time', href: `/record?child_id=${q}&type=family-time`, icon: UserRound, prefetch: false },
+    { label: 'Keywork', href: `/record?child_id=${q}&type=keywork`, icon: ClipboardCheck, prefetch: false },
     { label: 'Chronology', href: childHref(cid, 'chronology'), icon: CalendarDays, prefetch: false },
-    { label: 'Actions', href: `/actions?young_person_id=${q}`, icon: ClipboardCheck, prefetch: false },
+    { label: 'Actions', href: `/actions?child_id=${q}`, icon: ClipboardCheck, prefetch: false },
+    { label: 'Documents', href: `/documents?child_id=${q}`, icon: FolderOpen, prefetch: false },
     { label: 'Handover', href: childHref(cid, 'shift-handover/new'), icon: ClipboardCheck, prefetch: false },
-    { label: 'Documents', href: `/documents?young_person_id=${q}`, icon: FolderOpen, prefetch: false },
-    { label: 'Child journey', href: childHref(cid, 'journey'), icon: Gauge, prefetch: false },
-    { label: 'ORB for this child', href: `/assistant/orb?context=child&young_person_id=${q}`, icon: Sparkles, prefetch: false }
+    { label: 'Reviews', href: '/record/reviews', icon: ClipboardCheck, prefetch: false },
+    { label: 'Child voice', href: childHref(cid, 'child-voice/new'), icon: UserRound, prefetch: false },
+    { label: 'Care planning', href: childHref(cid, 'plans'), icon: FileText, prefetch: false },
+    { label: 'ORB', href: `/assistant/orb?context=child&young_person_id=${q}`, icon: Sparkles, prefetch: false }
   ]
 }
 

@@ -65,7 +65,9 @@ def test_canonical_next_page_exists():
     assert CANONICAL_PAGE.is_file()
     page = CANONICAL_PAGE.read_text(encoding="utf-8")
     assert "SyncChildScope" in page
-    assert "getOsYoungPersonWorkspace" in page
+    assert "getServerOsYoungPersonWorkspace" in page
+    assert "ChildWorkspaceOverview" in page
+    assert "RecordWorkspacePage" not in page
     assert "redirect(" not in page
 
 

@@ -33,6 +33,15 @@ export type OsPersonSummary = {
   [key: string]: unknown
 }
 
+export type OsWorkspaceDocument = {
+  id: string
+  title: string
+  status?: string
+  documentType?: string
+  category?: string
+  [key: string]: unknown
+}
+
 export type OsWorkspace = {
   youngPerson?: OsPersonSummary
   adult?: OsPersonSummary
@@ -40,6 +49,8 @@ export type OsWorkspace = {
   recordsAuthored?: ReturnType<typeof mapOsChronology>[]
   actions: ReturnType<typeof mapOsAction>[]
   evidence: ReturnType<typeof mapOsEvidence>[]
+  documents?: OsWorkspaceDocument[]
+  lifecycle?: Record<string, unknown>
 }
 
 function ageFromDateOfBirth(value: unknown) {
@@ -89,6 +100,17 @@ export function mapPerson(row: Record<string, any>): OsPersonSummary {
   }
 }
 
+function mapOsDocument(row: Record<string, any>): OsWorkspaceDocument {
+  return {
+    ...row,
+    id: String(row.id || row.document_id || ''),
+    title: String(row.title || row.name || row.document_type || 'Document'),
+    status: row.status ? String(row.status) : undefined,
+    documentType: row.document_type || row.documentType ? String(row.document_type || row.documentType) : undefined,
+    category: row.category ? String(row.category) : undefined
+  }
+}
+
 export function mapWorkspaceData(result: OsApiResult<Record<string, any>>, fallback: OsWorkspace): OsApiResult<OsWorkspace> {
   if (result.source === 'unavailable') return { ...result, data: fallback }
   return {
@@ -97,7 +119,9 @@ export function mapWorkspaceData(result: OsApiResult<Record<string, any>>, fallb
       youngPerson: result.data.young_person ? mapPerson(result.data.young_person) : result.data.youngPerson ? mapPerson(result.data.youngPerson) : undefined,
       chronology: Array.isArray(result.data.chronology) ? result.data.chronology.map(mapOsChronology) : [],
       actions: Array.isArray(result.data.actions) ? result.data.actions.map(mapOsAction) : [],
-      evidence: Array.isArray(result.data.evidence) ? result.data.evidence.map(mapOsEvidence) : []
+      evidence: Array.isArray(result.data.evidence) ? result.data.evidence.map(mapOsEvidence) : [],
+      documents: Array.isArray(result.data.documents) ? result.data.documents.map(mapOsDocument) : [],
+      lifecycle: result.data.lifecycle && typeof result.data.lifecycle === 'object' ? result.data.lifecycle : undefined
     }
   }
 }
