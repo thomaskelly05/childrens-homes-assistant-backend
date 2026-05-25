@@ -45,6 +45,7 @@ def test_build_brief_metadata_only(fake_state):
     handover_section = next(s for s in brief.sections if s.id == "handover")
     assert handover_section.route == "/handover"
     assert any(i.route == "/handover" for i in handover_section.items)
+    assert handover_section.metadata.get("handover_reviews_route") == "/handover/reviews"
     assert any(s.id == "isn_safeguarding_network" for s in brief.sections)
     assert any(s.id == "notification_oversight" for s in brief.sections)
     assert brief.isn_summary is not None

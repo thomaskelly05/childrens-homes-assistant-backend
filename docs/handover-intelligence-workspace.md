@@ -22,15 +22,20 @@ The handover intelligence workspace (`/handover`) helps staff and managers prepa
 - Metadata-only items with `no_raw_body` flags
 - Standalone `/orb` cannot access handover APIs
 - Operational ORB links use `/assistant/orb` only — no handover payload in URLs
-- Completing a workspace draft does **not** create a formal `handover_records` entry
+- Completing a workspace draft does **not** automatically create a formal `handover_records` entry unless formal mapping succeeds for a child-scoped draft (see `docs/handover-review-formal-mapping.md`)
+- Manager review required when safeguarding/ISN/high-risk flags are present in `source_context`
 
 ## Handover drafts
 
-Table: `handover_drafts` (migration `sql/089_handover_drafts.sql`)
+Table: `handover_drafts` (migration `sql/089_handover_drafts.sql`; review fields `sql/090_handover_review_formal_mapping.sql`)
 
 Statuses: `draft`, `ready_for_review`, `completed`, `archived`
 
-Formal per-child handover remains on young-person routes (`handover_records`).
+Review statuses: `draft`, `awaiting_review`, `changes_requested`, `approved`, `safeguarding_review_required`, `completed`, `archived`
+
+Manager review queue: `/handover/reviews`
+
+Formal per-child handover remains on young-person routes (`handover_records`); workspace may map to formal record when safe.
 
 ## ORB support
 
@@ -43,8 +48,12 @@ Handover UI exposes operational ORB prompts (manager brief, action priority, saf
 - No automated safeguarding threshold decisions
 - Notification feed includes at most two “ready for review” handover draft reminders to avoid noise
 
+## Review and formal mapping (this pass)
+
+See `docs/handover-review-formal-mapping.md` and `docs/handover-workflow-map.md`.
+
 ## Future
 
-- Deeper integration with formal `handover_records` approval workflow
+- Home/shift formal handover from workspace when shift contract is clear
 - Shift-aware auto-reminders when shift sessions are fully wired
 - Child-level handover export templates

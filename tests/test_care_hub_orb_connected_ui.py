@@ -91,6 +91,7 @@ def test_care_hub_shift_handover_card():
     assert "Open current handover" in card
     assert "Ask OS ORB" in card
     assert "/handover" in card
+    assert "Handover reviews" in card or "care-hub-handover-reviews" in card
 
 
 def test_care_hub_manager_daily_brief_marker():

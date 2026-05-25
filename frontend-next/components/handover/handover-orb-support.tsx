@@ -8,8 +8,10 @@ export function HandoverOrbSupport({ dashboard }: { dashboard: HandoverIntellige
   const prompts = dashboard?.orb_prompts?.length
     ? dashboard.orb_prompts
     : [
-        { label: 'Help me prepare today’s handover.', mode: 'manager_daily_brief', query: 'Help me prepare today’s handover.' },
-        { label: 'What needs to be carried into the next shift?', mode: 'action_priority', query: 'What needs to be carried into the next shift?' }
+        { label: 'Help me review this handover for clarity.', mode: 'manager_daily_brief', query: 'Help me review this handover for clarity.' },
+        { label: 'What should be carried into next shift?', mode: 'action_priority', query: 'What should be carried into the next shift?' },
+        { label: 'Are there safeguarding-sensitive items to consider?', mode: 'safeguarding_themes', query: 'Are there safeguarding-sensitive items to consider?' },
+        { label: 'Help me prepare a manager review of this handover.', mode: 'manager_daily_brief', query: 'Help me prepare a manager review of this handover.' }
       ]
 
   return (

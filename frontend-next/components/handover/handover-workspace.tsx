@@ -74,6 +74,13 @@ export function HandoverWorkspace({ childId, draftId: initialDraftId }: Props) {
             Manager brief
           </Link>
           <Link
+            href="/handover/reviews"
+            data-testid="handover-workspace-review-link"
+            className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-amber-900"
+          >
+            Handover reviews
+          </Link>
+          <Link
             href="/handover/current"
             data-testid="handover-prepare-current"
             className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 text-blue-900"
@@ -110,6 +117,8 @@ export function HandoverWorkspace({ childId, draftId: initialDraftId }: Props) {
               initialBody={activeDraft?.body}
               initialSections={activeDraft?.sections}
               initialStatus={activeDraft?.status}
+              initialReviewStatus={activeDraft?.review_status}
+              initialDraft={activeDraft}
               onSaved={(id) => {
                 setActiveDraftId(id)
                 void refresh()

@@ -52,6 +52,8 @@ def test_child_journey_routes_use_assistant_orb_with_child_context():
     assert "/assistant/orb" in routes
     assert "mode=child_journey_summary" in routes or "child_journey_summary" in routes
     assert "young_person_id" in routes
+    assert "/handover/reviews?child_id=" in routes
+    assert "/handover?child_id=" in routes
 
 
 def test_child_journey_recording_cards_include_orb_hints():

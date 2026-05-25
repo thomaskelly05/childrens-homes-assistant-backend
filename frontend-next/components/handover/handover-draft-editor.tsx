@@ -2,6 +2,8 @@
 
 import { useCallback, useState } from 'react'
 
+import Link from 'next/link'
+
 import { HandoverCompletionPanel } from '@/components/handover/handover-completion-panel'
 import { DEFAULT_HANDOVER_SECTIONS } from '@/lib/handover/handover-sections'
 import type { HandoverDraftSection, HandoverIntelligenceItem } from '@/lib/os-api/handover-intelligence'
@@ -19,6 +21,8 @@ type Props = {
   initialBody?: string
   initialSections?: HandoverDraftSection[]
   initialStatus?: string
+  initialReviewStatus?: string
+  initialDraft?: import('@/lib/os-api/handover-intelligence').HandoverDraftRecord | null
   onSaved: (draftId: string) => void
 }
 
@@ -29,6 +33,8 @@ export function HandoverDraftEditor({
   initialBody,
   initialSections,
   initialStatus = 'draft',
+  initialReviewStatus = 'draft',
+  initialDraft = null,
   onSaved
 }: Props) {
   const [draftId, setDraftId] = useState(initialDraftId || '')
@@ -38,6 +44,8 @@ export function HandoverDraftEditor({
     initialSections?.length ? initialSections : DEFAULT_HANDOVER_SECTIONS
   )
   const [status, setStatus] = useState(initialStatus)
+  const [reviewStatus, setReviewStatus] = useState(initialReviewStatus)
+  const [draftMeta, setDraftMeta] = useState(initialDraft)
   const [warnings, setWarnings] = useState<string[]>([])
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
@@ -62,6 +70,8 @@ export function HandoverDraftEditor({
     }
     setWarnings(result.data.warnings || [])
     setStatus(result.data.status || status)
+    setReviewStatus(result.data.review_status || reviewStatus)
+    if (result.data.draft) setDraftMeta(result.data.draft)
     setMessage(result.ok ? 'Draft saved securely in workspace.' : 'Could not save draft.')
   }, [body, childId, draftId, onSaved, sections, status, title])
 
@@ -81,7 +91,7 @@ export function HandoverDraftEditor({
 
   return (
     <div data-testid="handover-draft-editor" className="space-y-4">
-      <HandoverCompletionPanel status={status} warnings={warnings} />
+      <HandoverCompletionPanel draft={draftMeta} status={status} warnings={warnings} />
 
       <label className="block">
         <span className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Title</span>
@@ -145,27 +155,48 @@ export function HandoverDraftEditor({
             const result = await markHandoverReadyForReview(draftId)
             setBusy(false)
             setStatus(result.data.status)
+            setReviewStatus(result.data.review_status || 'awaiting_review')
+            if (result.data.draft) setDraftMeta(result.data.draft)
             setWarnings(result.data.warnings || [])
-            setMessage('Marked ready for review.')
+            setMessage('Sent to review queue.')
           }}
           className="rounded-full border border-amber-200 bg-amber-50 px-5 py-2.5 text-xs font-black text-amber-900"
         >
-          Mark ready for review
+          Send to review
         </button>
+        <Link
+          href="/handover/reviews"
+          data-testid="handover-open-review-queue"
+          className="rounded-full border border-blue-200 bg-blue-50 px-5 py-2.5 text-xs font-black text-blue-900"
+        >
+          Open review queue
+        </Link>
         <button
           type="button"
-          disabled={busy || !draftId}
+          disabled={
+            busy ||
+            !draftId ||
+            (Boolean(draftMeta?.manager_review_required) &&
+              reviewStatus !== 'approved' &&
+              reviewStatus !== 'completed')
+          }
           onClick={async () => {
             if (!draftId) return
             setBusy(true)
             const result = await completeHandoverDraft(draftId)
             setBusy(false)
             setStatus(result.data.status)
-            setWarnings(result.data.warnings || [])
-            setMessage('Handover draft completed in workspace.')
+            setReviewStatus(result.data.review_status || reviewStatus)
+            if (result.data.draft) setDraftMeta(result.data.draft)
+            setWarnings(result.data.warnings || result.data.completion_warnings || [])
+            setMessage(
+              result.ok
+                ? 'Handover draft completed in workspace.'
+                : result.data.warnings?.[0] || 'Complete blocked — review required.'
+            )
           }}
           data-testid="handover-complete"
-          className="rounded-full border border-emerald-200 bg-emerald-50 px-5 py-2.5 text-xs font-black text-emerald-900"
+          className="rounded-full border border-emerald-200 bg-emerald-50 px-5 py-2.5 text-xs font-black text-emerald-900 disabled:opacity-50"
         >
           Complete handover
         </button>

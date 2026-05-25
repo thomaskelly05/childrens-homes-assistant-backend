@@ -177,6 +177,17 @@ export function buildChildJourneyRecordingActions(childId: string): ChildJourney
       )
     },
     {
+      id: 'handover-reviews',
+      label: 'Handover reviews for this child',
+      description: 'Manager review queue for child-scoped handover drafts.',
+      href: `/handover/reviews?child_id=${base}`,
+      orbHint: operationalOrbHint(
+        childId,
+        'ORB manager review',
+        'Help me prepare a manager review of this handover.'
+      )
+    },
+    {
       id: 'handover-intelligence',
       label: 'Handover intelligence for this child',
       description: 'Metadata-only alerts, reviews and safeguarding themes for handover.',

@@ -558,6 +558,27 @@ class ManagerDailyBriefService:
                 source="handover",
             ),
         ]
+        try:
+            from services.handover_review_service import handover_review_service
+
+            queue = handover_review_service.list_review_queue(current_user, conn=conn)
+            awaiting = int(queue.counts.get("awaiting_review") or 0)
+            if awaiting:
+                items.insert(
+                    0,
+                    ManagerDailyBriefItem(
+                        id="handover:reviews",
+                        title="Handover reviews awaiting action",
+                        safe_summary=f"{awaiting} handover draft(s) awaiting manager review.",
+                        priority="high" if awaiting > 2 else "medium",
+                        route="/handover/reviews",
+                        action_label="Open review queue",
+                        source="handover_review",
+                        metadata={"awaiting_review": awaiting, "no_raw_body": True},
+                    ),
+                )
+        except Exception as exc:
+            logger.debug("brief_handover_review_skipped: %s", exc)
         tone = "attention"
         summary = "Review recording alerts, safeguarding network and reviews before handover."
         try:
@@ -620,6 +641,7 @@ class ManagerDailyBriefService:
             route="/handover",
             action_label="Prepare handover",
             tone=tone,
+            metadata={"handover_reviews_route": "/handover/reviews"},
         )
 
     def build_child_journey_section(
