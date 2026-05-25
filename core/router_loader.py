@@ -215,6 +215,7 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
             "routers.staff_profile_os_routes",
             "routers.sccif_alignment_routes",
             "routers.inspection_readiness_routes",
+            "routers.reg45_quality_review_routes",
         ),
         notes="Schema-backed experience bundles for home, child profile and adult workspace surfaces.",
     ),

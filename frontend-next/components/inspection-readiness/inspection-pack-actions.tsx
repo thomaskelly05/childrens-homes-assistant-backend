@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useState } from 'react'
 
 import {
@@ -73,6 +74,24 @@ export function InspectionPackActions({ pack, packType, onSaved }: Props) {
       >
         Save & create actions from gaps
       </button>
+      {packType === 'reg45' && pack?.id ? (
+        <Link
+          href={`/intelligence/reg45?pack_id=${encodeURIComponent(pack.id)}`}
+          data-testid="inspection-generate-reg45-review"
+          className="rounded-2xl border border-indigo-200 bg-indigo-600 px-4 py-2.5 text-xs font-black text-white"
+        >
+          Generate Reg 45 review from pack
+        </Link>
+      ) : null}
+      {packType === 'reg45' ? (
+        <Link
+          href="/intelligence/reg45"
+          data-testid="inspection-open-reg45-review"
+          className="rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-xs font-black text-indigo-900"
+        >
+          Open Reg 45 review builder
+        </Link>
+      ) : null}
       {status ? <p className="w-full text-xs font-semibold text-slate-600">{status}</p> : null}
     </div>
   )

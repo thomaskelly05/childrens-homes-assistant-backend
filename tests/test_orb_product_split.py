@@ -855,3 +855,22 @@ def test_standalone_orb_does_not_import_inspection_readiness():
         text = _read(STANDALONE_CLIENT)
         for marker in forbidden:
             assert marker not in text
+
+
+def test_standalone_orb_does_not_import_reg45_quality_review():
+    forbidden = (
+        "reg45-quality-review",
+        "/api/reg45",
+        "getReg45Dashboard",
+        "generateReg45Review",
+    )
+    orb_dir = REPO_ROOT / "frontend-next" / "app" / "orb"
+    if orb_dir.exists():
+        for path in list(orb_dir.rglob("*.tsx")) + list(orb_dir.rglob("*.ts")):
+            text = _read(path)
+            for marker in forbidden:
+                assert marker not in text, path
+    if STANDALONE_CLIENT.exists():
+        text = _read(STANDALONE_CLIENT)
+        for marker in forbidden:
+            assert marker not in text

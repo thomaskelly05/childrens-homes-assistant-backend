@@ -77,7 +77,24 @@ export function InspectionReadinessWorkspace() {
         >
           Open SCCIF alignment
         </Link>
+        <Link
+          href="/intelligence/reg45"
+          data-testid="inspection-open-reg45-builder"
+          className="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-[10px] font-black uppercase text-indigo-800"
+        >
+          Open Reg 45 review builder
+        </Link>
       </div>
+
+      {packType === 'reg45' ? (
+        <p
+          data-testid="inspection-reg45-workflow-note"
+          className="rounded-2xl border border-indigo-100 bg-indigo-50/50 px-4 py-3 text-xs font-semibold leading-6 text-indigo-950"
+        >
+          Reg 45 evidence support packs can feed the structured Quality of Care Review workflow. Generate a pack,
+          then open the review builder — use pack_id only when saving; no raw evidence in URLs.
+        </p>
+      ) : null}
 
       <InspectionPackSelector
         selected={packType}

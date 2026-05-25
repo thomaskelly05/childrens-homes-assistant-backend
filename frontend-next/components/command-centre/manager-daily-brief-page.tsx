@@ -125,6 +125,25 @@ export function ManagerDailyBriefPage() {
             Open inspection readiness
           </Link>
         </article>
+        <article
+          className="rounded-2xl border border-violet-100 bg-violet-50/50 p-4 md:col-span-2"
+          data-testid="manager-daily-brief-reg45-review"
+        >
+          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-violet-700">
+            Reg 45 quality of care review
+          </p>
+          <p className="mt-2 text-sm font-semibold text-slate-700">
+            {(brief as { reg45_quality_review_summary?: string }).reg45_quality_review_summary ||
+              'Draft Reg 45 review workflow — manager review needed.'}
+          </p>
+          <Link
+            href="/intelligence/reg45"
+            data-testid="manager-daily-brief-reg45-link"
+            className="mt-3 inline-flex text-[10px] font-black uppercase tracking-[0.12em] text-violet-800 underline"
+          >
+            Open Reg 45 review
+          </Link>
+        </article>
       </section>
 
       <div className="space-y-4">

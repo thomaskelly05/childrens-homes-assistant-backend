@@ -75,6 +75,9 @@ TYPE_CATEGORY: dict[str, str] = {
     "recording_review_due": "review",
     "intelligence_action_due": "action",
     "governance_notice": "governance",
+    "reg45_review_manager_due": "governance",
+    "reg45_review_ri_required": "governance",
+    "reg45_improvement_actions_pending": "action",
 }
 
 
@@ -409,6 +412,91 @@ class OsNotificationAdapterService:
             logger.debug("workforce_notification_skipped: %s", exc)
         return items[:limit]
 
+    def _reg45_review_items(
+        self, current_user: dict[str, Any], conn: Any | None, *, limit: int
+    ) -> list[OsNotificationItem]:
+        """Low-noise Reg 45 review status — no raw review bodies."""
+        items: list[OsNotificationItem] = []
+        if not _is_manager_view(current_user):
+            return items
+        try:
+            from services.reg45_quality_review_service import reg45_quality_review_service
+
+            reviews = reg45_quality_review_service.list_reviews(current_user, limit=10, conn=conn)
+            ready = [r for r in reviews if r.get("status") == "ready_for_manager_review"]
+            ri_required = [r for r in reviews if r.get("status") == "ri_review_required"]
+            pending_actions = sum(int(r.get("improvement_action_count") or 0) for r in reviews[:3])
+            if ready and not ri_required:
+                items.append(
+                    OsNotificationItem(
+                        id="reg45:manager_review",
+                        notification_key="reg45:manager_review",
+                        type="reg45_review_manager_due",
+                        title="Reg 45 review ready for manager review",
+                        safe_summary=(
+                            f"{len(ready)} draft quality of care review(s) may be ready for manager review. "
+                            "Not a compliance decision."
+                        ),
+                        severity="medium",
+                        status="unread",
+                        unread=True,
+                        route="/intelligence/reg45",
+                        action_label="Open Reg 45 review",
+                        source="reg45_quality_review",
+                        category="governance",
+                        related_type="reg45_review",
+                        created_at=_now_iso(),
+                        metadata={"count": len(ready), "no_raw_body": True},
+                    )
+                )
+            elif ri_required:
+                items.append(
+                    OsNotificationItem(
+                        id="reg45:ri_review",
+                        notification_key="reg45:ri_review",
+                        type="reg45_review_ri_required",
+                        title="Reg 45 review requires RI review",
+                        safe_summary=(
+                            f"{len(ri_required)} draft review(s) flagged for Responsible Individual review."
+                        ),
+                        severity="high",
+                        status="unread",
+                        unread=True,
+                        route="/intelligence/reg45",
+                        action_label="Open RI review",
+                        source="reg45_quality_review",
+                        category="governance",
+                        related_type="reg45_review",
+                        created_at=_now_iso(),
+                        metadata={"count": len(ri_required), "no_raw_body": True},
+                    )
+                )
+            elif pending_actions > 0 and not ready and not ri_required:
+                items.append(
+                    OsNotificationItem(
+                        id="reg45:improvement_actions",
+                        notification_key="reg45:improvement_actions",
+                        type="reg45_improvement_actions_pending",
+                        title="Reg 45 improvement actions pending",
+                        safe_summary=(
+                            f"{pending_actions} improvement action draft(s) may need manager follow-up."
+                        ),
+                        severity="medium",
+                        status="unread",
+                        unread=True,
+                        route="/actions",
+                        action_label="Open actions",
+                        source="reg45_quality_review",
+                        category="action",
+                        related_type="reg45_improvement",
+                        created_at=_now_iso(),
+                        metadata={"count": pending_actions, "no_raw_body": True},
+                    )
+                )
+        except Exception as exc:
+            logger.debug("reg45_notification_skipped: %s", exc)
+        return items[:limit]
+
     def _handover_draft_items(
         self, current_user: dict[str, Any], conn: Any | None, *, limit: int
     ) -> list[OsNotificationItem]:
@@ -548,6 +636,7 @@ class OsNotificationAdapterService:
                 self._governance_items(current_user, conn, limit=2),
                 self._workforce_indicator_items(current_user, conn, limit=2),
                 self._handover_draft_items(current_user, conn, limit=2),
+                self._reg45_review_items(current_user, conn, limit=2),
             ):
                 for item in extra:
                     if unread_only and not item.unread:

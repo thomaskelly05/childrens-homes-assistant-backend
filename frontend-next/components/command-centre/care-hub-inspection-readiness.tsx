@@ -7,6 +7,7 @@ import {
   getInspectionReadinessDashboard,
   inspectionReadinessOrbHref
 } from '@/lib/os-api/inspection-readiness'
+import { getReg45Dashboard } from '@/lib/os-api/reg45-quality-review'
 import { sccifAlignmentOrbHref, getSccifAlignmentDashboard } from '@/lib/os-api/sccif-alignment'
 
 export function CareHubInspectionReadiness() {
@@ -15,6 +16,7 @@ export function CareHubInspectionReadiness() {
   const [helpedCount, setHelpedCount] = useState<number | null>(null)
   const [leadershipCount, setLeadershipCount] = useState<number | null>(null)
   const [inspectionGaps, setInspectionGaps] = useState<number | null>(null)
+  const [reg45ReviewCount, setReg45ReviewCount] = useState<number | null>(null)
 
   useEffect(() => {
     void getSccifAlignmentDashboard({ limit: 50 }).then((result) => {
@@ -30,6 +32,14 @@ export function CareHubInspectionReadiness() {
       const meta = result.data.metadata || {}
       setInspectionGaps(
         Number(meta.reg44_gaps ?? 0) + Number(meta.reg45_gaps ?? 0) || result.data.key_gaps.length
+      )
+    })
+    void getReg45Dashboard().then((result) => {
+      if (!result.ok || !result.data) return
+      setReg45ReviewCount(
+        (result.data.draft_review_count || 0) +
+          (result.data.ready_for_manager_count || 0) +
+          (result.data.ri_review_required_count || 0)
       )
     })
   }, [])
@@ -95,6 +105,20 @@ export function CareHubInspectionReadiness() {
           className="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-indigo-800"
         >
           Generate Reg 45 pack
+        </Link>
+        <Link
+          href="/intelligence/reg45"
+          data-testid="care-hub-open-reg45-review"
+          className="rounded-full border border-indigo-300 bg-indigo-600 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-white"
+        >
+          Open Reg 45 review{reg45ReviewCount != null ? ` (${reg45ReviewCount})` : ''}
+        </Link>
+        <Link
+          href="/intelligence/reg45"
+          data-testid="care-hub-draft-reg45-review"
+          className="rounded-full border border-indigo-200 bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-indigo-800"
+        >
+          Draft Reg 45 review
         </Link>
         <Link
           href="/intelligence/sccif"

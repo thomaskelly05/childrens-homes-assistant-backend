@@ -64,3 +64,11 @@ def test_care_hub_inspection_links():
     assert "/intelligence/inspection-readiness" in card
     assert "care-hub-open-inspection-readiness" in card
     assert "Generate Reg 44" in card or "care-hub-generate-reg44" in card
+
+
+def test_inspection_readiness_links_reg45():
+    workspace = _read(FRONTEND / "components" / "inspection-readiness" / "inspection-readiness-workspace.tsx")
+    actions = _read(FRONTEND / "components" / "inspection-readiness" / "inspection-pack-actions.tsx")
+    assert "/intelligence/reg45" in workspace
+    assert "inspection-open-reg45-builder" in workspace
+    assert "inspection-generate-reg45-review" in actions or "inspection-open-reg45-review" in actions
