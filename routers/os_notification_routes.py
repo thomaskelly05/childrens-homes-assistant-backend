@@ -11,12 +11,14 @@ from pydantic import BaseModel, ConfigDict, Field
 from auth.dependencies import get_current_user
 from db.connection import get_db
 from schemas.os_notifications import OsNotificationActionRequest
+from schemas.os_notification_analytics import NotificationAnalyticsFilters
 from schemas.os_notification_preferences import (
     NotificationEscalationCheckRequest,
     NotificationEscalationRule,
     NotificationPreferenceUpdateRequest,
 )
 from services.os_notification_adapter_service import os_notification_adapter_service
+from services.os_notification_analytics_service import os_notification_analytics_service
 from services.os_notification_escalation_service import os_notification_escalation_service
 from services.os_notification_preference_service import os_notification_preference_service
 from services.os_notification_state_service import os_notification_state_service
@@ -112,6 +114,75 @@ async def run_notification_escalation_check(
         conn=conn,
     )
     return _success(result.model_dump())
+
+
+@router.get("/escalations/runs")
+async def list_notification_escalation_runs(
+    home_id: int | None = None,
+    limit: int = Query(20, ge=1, le=100),
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    filters = NotificationAnalyticsFilters(home_id=home_id) if home_id else None
+    runs = os_notification_escalation_service.list_check_runs(
+        current_user, filters=filters, conn=conn, limit=limit
+    )
+    return _success([r.model_dump() for r in runs])
+
+
+@router.get("/escalations/last-run")
+async def get_last_notification_escalation_run(
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    run = os_notification_escalation_service.get_last_check_run(current_user, conn=conn)
+    return _success(run.model_dump() if run else None)
+
+
+@router.get("/analytics/health")
+async def notification_analytics_health(
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    _ = current_user
+    return _success(os_notification_analytics_service.get_health(conn=conn))
+
+
+@router.get("/analytics/response-metrics")
+async def notification_response_metrics(
+    home_id: int | None = None,
+    source: str | None = None,
+    category: str | None = None,
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    filters = NotificationAnalyticsFilters(home_id=home_id, source=source, category=category)
+    metrics = os_notification_analytics_service.build_response_metrics(
+        current_user, filters=filters, conn=conn
+    )
+    return _success(metrics.model_dump())
+
+
+@router.get("/analytics/governance-summary")
+async def notification_governance_summary(
+    home_id: int | None = None,
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    filters = NotificationAnalyticsFilters(home_id=home_id) if home_id else None
+    summary = os_notification_analytics_service.build_governance_summary(
+        current_user, filters=filters, conn=conn
+    )
+    return _success(summary.model_dump())
+
+
+@router.get("/automation/health")
+async def notification_automation_health(
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    health = os_notification_analytics_service.build_automation_health(current_user, conn=conn)
+    return _success(health.model_dump())
 
 
 @router.get("/operational-feed")

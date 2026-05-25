@@ -79,15 +79,29 @@ When reviewed, the daily brief bell item is hidden and OS state is resolved.
 
 ## Preferences and escalations
 
-See `docs/notification-preferences-and-escalations.md`.
+See `docs/notification-preferences-and-escalations.md` and `docs/notification-finalisation-summary.md`.
 
 - Preferences: `GET/PATCH /api/notifications/preferences`
 - Escalations: `GET /api/notifications/escalations/rules`, `POST /api/notifications/escalations/check`
+- Run history: `GET /api/notifications/escalations/runs`, `GET /api/notifications/escalations/last-run`
+- Analytics: `GET /api/notifications/analytics/response-metrics`, `GET /api/notifications/analytics/governance-summary`
+- Automation health: `GET /api/notifications/automation/health`
 - Settings UI: `/notifications/settings`
 - Operational feed metadata: `hidden_by_preferences`, `urgent_safeguarding_always_on`
 
-## Future
+## Escalation run history
 
+Migration `sql/088_os_notification_escalation_run_history.sql` stores metadata counts per manual check (no raw bodies). Memory fallback when table unavailable.
+
+## Governance and analytics
+
+`services/os_notification_analytics_service.py` provides response-time metrics, urgent/safeguarding unacknowledged counts, and a governance summary for managers. Care Hub and the manager daily brief surface condensed oversight.
+
+## Future (explicitly not in this pass)
+
+- Background scheduler for periodic escalation checks
+- Push and email delivery
 - Event-driven feed refresh (WebSocket / SSE)
 - Optional metadata rows in `notifications` table for push enqueue
 - Per-home notification scope filters
+- Named-user escalation chains in UI

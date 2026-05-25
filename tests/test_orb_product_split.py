@@ -782,6 +782,26 @@ def test_standalone_orb_no_isn_notification_client():
         assert "isn_id=" not in text.lower(), path
 
 
+def test_standalone_orb_no_notification_analytics_client():
+    orb_dir = REPO_ROOT / "frontend-next" / "components" / "orb-standalone"
+    standalone_page = REPO_ROOT / "frontend-next" / "app" / "orb" / "page.tsx"
+    forbidden = (
+        "getNotificationGovernanceSummary",
+        "getNotificationResponseMetrics",
+        "listNotificationEscalationRuns",
+        "/api/notifications/analytics",
+    )
+    if standalone_page.exists():
+        text = _read(standalone_page)
+        for marker in forbidden:
+            assert marker not in text
+    if orb_dir.exists():
+        for path in list(orb_dir.rglob("*.tsx")) + list(orb_dir.rglob("*.ts")):
+            text = _read(path)
+            for marker in forbidden:
+                assert marker not in text, path
+
+
 def test_assistants_map_differentiates_products():
     text = _read(PRODUCT_MAP)
     assert '"/orb"' in text

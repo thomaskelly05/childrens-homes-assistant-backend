@@ -1,22 +1,38 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import {
+  getLastNotificationEscalationRun,
   runNotificationEscalationCheck,
-  type NotificationEscalationCheckResult
+  type NotificationEscalationCheckResult,
+  type NotificationEscalationRunRecord
 } from '@/lib/os-api/notifications'
+
+function formatWhen(iso?: string | null) {
+  if (!iso) return 'Never'
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  return d.toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+}
 
 export function NotificationEscalationCheck() {
   const [dryRun, setDryRun] = useState(true)
   const [busy, setBusy] = useState(false)
   const [result, setResult] = useState<NotificationEscalationCheckResult | null>(null)
+  const [lastRun, setLastRun] = useState<NotificationEscalationRunRecord | null>(null)
+
+  useEffect(() => {
+    void getLastNotificationEscalationRun().then((r) => setLastRun(r.data))
+  }, [])
 
   async function runCheck() {
     setBusy(true)
     try {
       const response = await runNotificationEscalationCheck({ dry_run: dryRun })
       setResult(response.data)
+      const last = await getLastNotificationEscalationRun()
+      setLastRun(last.data)
     } finally {
       setBusy(false)
     }
@@ -27,6 +43,10 @@ export function NotificationEscalationCheck() {
       <h2 className="text-lg font-black text-slate-950">Run escalation check</h2>
       <p className="mt-1 text-sm text-slate-600">
         Scan operational notifications for overdue acknowledgement. Dry run does not create escalation records.
+      </p>
+      <p className="mt-2 text-xs font-semibold text-slate-500" data-testid="notification-escalation-last-check">
+        Last escalation check: {formatWhen(lastRun?.started_at)}
+        {lastRun ? ` · ${lastRun.candidate_count} candidates` : ''}
       </p>
       <div className="mt-4 flex flex-wrap items-center gap-4">
         <label className="flex items-center gap-2 text-xs font-black uppercase text-slate-600">

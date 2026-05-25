@@ -4,6 +4,7 @@ import { CareHubAttentionStrip } from '@/components/command-centre/care-hub-atte
 import { CareHubMetricCard } from '@/components/command-centre/care-hub-metric-card'
 import { CareHubIsnDigest } from '@/components/command-centre/care-hub-isn-digest'
 import { CareHubManagerDailyBrief } from '@/components/command-centre/care-hub-manager-daily-brief'
+import { CareHubNotificationOversight } from '@/components/command-centre/care-hub-notification-oversight'
 import { CareHubRecordingDigest } from '@/components/command-centre/care-hub-recording-digest'
 import { CareHubRecordingSection } from '@/components/command-centre/care-hub-recording-section'
 import { CareHubStartHero } from '@/components/command-centre/care-hub-start-hero'
@@ -143,6 +144,8 @@ export default async function UnifiedCommandCentrePage() {
         <CareHubRecordingSection selectedYoungPersonId={selectedChildId} />
 
         <CareHubManagerDailyBrief />
+
+        <CareHubNotificationOversight />
 
         <CareHubIsnDigest />
 

@@ -26,6 +26,8 @@ Bell items are **metadata-only**:
 
 Managers can configure preferences and run escalation checks at `/notifications/settings`. The daily brief page links to notification settings and notes that escalation rules protect urgent safeguarding items. Unreviewed daily brief items may appear as escalation candidates after midday. See `docs/notification-preferences-and-escalations.md`.
 
+The daily brief includes a **Notification and escalation oversight** section (metadata-only): urgent/safeguarding unacknowledged counts, last escalation check, and links to notification settings. See `docs/notification-finalisation-summary.md`.
+
 ## Manager daily brief
 
 - **Schemas**: `schemas/manager_daily_brief.py`

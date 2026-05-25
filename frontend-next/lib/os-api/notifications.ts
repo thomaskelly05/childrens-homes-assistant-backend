@@ -295,10 +295,80 @@ export type NotificationEscalationCandidate = {
 export type NotificationEscalationCheckResult = {
   generated_at: string
   dry_run: boolean
+  run_id?: string | null
   candidates: NotificationEscalationCandidate[]
   created_notifications: string[]
+  candidate_count?: number
+  event_count?: number
+  urgent_count?: number
+  safeguarding_count?: number
+  recording_count?: number
+  isn_count?: number
+  daily_brief_count?: number
   warnings: string[]
   recommendations: string[]
+  metadata?: Record<string, unknown>
+}
+
+export type NotificationEscalationRunRecord = {
+  id: string
+  triggered_by_user_id?: string | null
+  triggered_by_name?: string | null
+  home_id?: number | null
+  dry_run: boolean
+  started_at: string
+  completed_at?: string | null
+  candidate_count: number
+  event_count: number
+  urgent_count: number
+  safeguarding_count: number
+  recording_count: number
+  isn_count: number
+  daily_brief_count: number
+  warnings: string[]
+  recommendations: string[]
+  metadata?: Record<string, unknown>
+}
+
+export type NotificationResponseMetric = {
+  total_notifications: number
+  unread: number
+  acknowledged: number
+  resolved: number
+  archived: number
+  urgent_unacknowledged: number
+  safeguarding_unacknowledged: number
+  average_minutes_to_read?: number | null
+  average_minutes_to_acknowledge?: number | null
+  average_minutes_to_resolve?: number | null
+  oldest_unacknowledged_minutes?: number | null
+  metadata?: Record<string, unknown>
+}
+
+export type NotificationGovernanceSummary = {
+  generated_at: string
+  feed_health: string
+  preference_health: string
+  escalation_health: string
+  urgent_override_active: boolean
+  push_configured: boolean
+  email_configured: boolean
+  last_escalation_check?: NotificationEscalationRunRecord | null
+  response_metrics: NotificationResponseMetric
+  unresolved_escalation_candidates: NotificationEscalationCandidate[]
+  recommendations: string[]
+  limitations: string[]
+  metadata?: Record<string, unknown>
+}
+
+export type NotificationAutomationHealth = {
+  status: string
+  manual_checks_available: boolean
+  scheduler_configured: boolean
+  push_configured: boolean
+  email_configured: boolean
+  last_check_at?: string | null
+  warnings: string[]
   metadata?: Record<string, unknown>
 }
 
@@ -392,6 +462,104 @@ export async function createOrUpdateNotificationEscalationRule(rule: Notificatio
     body: JSON.stringify(rule)
   })
   return parseEnvelope(response, rule)
+}
+
+export async function listNotificationEscalationRuns(params?: { home_id?: number; limit?: number }) {
+  const qs = new URLSearchParams()
+  if (params?.home_id) qs.set('home_id', String(params.home_id))
+  if (params?.limit) qs.set('limit', String(params.limit))
+  const suffix = qs.toString() ? `?${qs.toString()}` : ''
+  const response = await fetch(`/api/notifications/escalations/runs${suffix}`, {
+    credentials: 'include',
+    cache: 'no-store'
+  })
+  return parseEnvelope(response, [] as NotificationEscalationRunRecord[])
+}
+
+export async function getLastNotificationEscalationRun() {
+  const response = await fetch('/api/notifications/escalations/last-run', {
+    credentials: 'include',
+    cache: 'no-store'
+  })
+  return parseEnvelope(response, null as NotificationEscalationRunRecord | null)
+}
+
+export async function getNotificationAnalyticsHealth() {
+  const response = await fetch('/api/notifications/analytics/health', {
+    credentials: 'include',
+    cache: 'no-store'
+  })
+  return parseEnvelope(response, { status: 'unavailable', service: 'os_notification_analytics_service' })
+}
+
+export async function getNotificationResponseMetrics(params?: { home_id?: number; source?: string; category?: string }) {
+  const qs = new URLSearchParams()
+  if (params?.home_id) qs.set('home_id', String(params.home_id))
+  if (params?.source) qs.set('source', params.source)
+  if (params?.category) qs.set('category', params.category)
+  const suffix = qs.toString() ? `?${qs.toString()}` : ''
+  const response = await fetch(`/api/notifications/analytics/response-metrics${suffix}`, {
+    credentials: 'include',
+    cache: 'no-store'
+  })
+  const fallback: NotificationResponseMetric = {
+    total_notifications: 0,
+    unread: 0,
+    acknowledged: 0,
+    resolved: 0,
+    archived: 0,
+    urgent_unacknowledged: 0,
+    safeguarding_unacknowledged: 0
+  }
+  return parseEnvelope(response, fallback)
+}
+
+export async function getNotificationGovernanceSummary(params?: { home_id?: number }) {
+  const qs = new URLSearchParams()
+  if (params?.home_id) qs.set('home_id', String(params.home_id))
+  const suffix = qs.toString() ? `?${qs.toString()}` : ''
+  const response = await fetch(`/api/notifications/analytics/governance-summary${suffix}`, {
+    credentials: 'include',
+    cache: 'no-store'
+  })
+  const fallback: NotificationGovernanceSummary = {
+    generated_at: '',
+    feed_health: 'degraded',
+    preference_health: 'degraded',
+    escalation_health: 'degraded',
+    urgent_override_active: true,
+    push_configured: false,
+    email_configured: false,
+    response_metrics: {
+      total_notifications: 0,
+      unread: 0,
+      acknowledged: 0,
+      resolved: 0,
+      archived: 0,
+      urgent_unacknowledged: 0,
+      safeguarding_unacknowledged: 0
+    },
+    unresolved_escalation_candidates: [],
+    recommendations: [],
+    limitations: ['Governance summary unavailable.']
+  }
+  return parseEnvelope(response, fallback)
+}
+
+export async function getNotificationAutomationHealth() {
+  const response = await fetch('/api/notifications/automation/health', {
+    credentials: 'include',
+    cache: 'no-store'
+  })
+  const fallback: NotificationAutomationHealth = {
+    status: 'degraded',
+    manual_checks_available: true,
+    scheduler_configured: false,
+    push_configured: false,
+    email_configured: false,
+    warnings: []
+  }
+  return parseEnvelope(response, fallback)
 }
 
 export function categoryLabel(category?: string | null): string {
