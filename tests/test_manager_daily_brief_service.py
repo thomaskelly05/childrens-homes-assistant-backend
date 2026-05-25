@@ -65,6 +65,11 @@ def test_build_brief_metadata_only(fake_state):
     inspection = next(s for s in brief.sections if s.id == "inspection_readiness")
     assert inspection.route == "/intelligence/inspection-readiness"
     assert "grade" not in inspection.summary.lower() or "not a grade" in inspection.summary.lower()
+    assert any(s.id == "reg45_quality_review" for s in brief.sections)
+    assert brief.reg45_quality_review_summary
+    reg45 = next(s for s in brief.sections if s.id == "reg45_quality_review")
+    assert reg45.route == "/intelligence/reg45"
+    assert reg45.metadata.get("no_raw_body") is True
 
 
 def test_notification_oversight_section(fake_state):

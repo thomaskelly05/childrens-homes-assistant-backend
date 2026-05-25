@@ -862,6 +862,91 @@ class ManagerDailyBriefService:
             },
         )
 
+    def build_reg45_quality_review_section(
+        self, current_user: dict[str, Any], conn: Any | None = None
+    ) -> ManagerDailyBriefSection:
+        items: list[ManagerDailyBriefItem] = []
+        summary = "Reg 45 quality of care review builder unavailable in current scope."
+        tone = "neutral"
+        draft_count = 0
+        ready_count = 0
+        ri_count = 0
+        improvement_count = 0
+        try:
+            from services.reg45_quality_review_service import reg45_quality_review_service
+
+            dashboard = reg45_quality_review_service.build_dashboard(current_user, conn=conn)
+            draft_count = dashboard.draft_review_count
+            ready_count = dashboard.ready_for_manager_count
+            ri_count = dashboard.ri_review_required_count
+            recent = dashboard.recent_reviews[:1]
+            if recent:
+                improvement_count = int(recent[0].get("improvement_action_count") or 0)
+            summary = (
+                f"{draft_count} draft review(s); {ready_count} ready for manager review; "
+                f"{ri_count} RI review required. "
+                f"{improvement_count} improvement draft(s) in latest review. "
+                "Draft only — not a compliance decision."
+            )
+            tone = "urgent" if ri_count else ("attention" if ready_count else "neutral")
+            if ready_count:
+                items.append(
+                    ManagerDailyBriefItem(
+                        id="reg45:ready-manager",
+                        title="Reg 45 review ready for manager",
+                        safe_summary="A draft quality of care review may be ready for manager review.",
+                        priority="high",
+                        route="/intelligence/reg45",
+                        action_label="Open Reg 45 review",
+                        source="reg45_quality_review",
+                        metadata={"no_raw_body": True},
+                    )
+                )
+            if ri_count:
+                items.append(
+                    ManagerDailyBriefItem(
+                        id="reg45:ri-required",
+                        title="Reg 45 RI review required",
+                        safe_summary="Responsible Individual or provider review needed for draft review.",
+                        priority="high",
+                        route="/intelligence/reg45",
+                        action_label="Open RI review",
+                        source="reg45_quality_review",
+                        metadata={"no_raw_body": True, "ri_review": True},
+                    )
+                )
+            items.append(
+                ManagerDailyBriefItem(
+                    id="reg45:draft-review",
+                    title="Draft Reg 45 quality of care review",
+                    safe_summary="Generate structured draft review from inspection readiness evidence — manager review needed.",
+                    priority="medium",
+                    route="/intelligence/reg45",
+                    action_label="Draft Reg 45 review",
+                    source="reg45_quality_review",
+                )
+            )
+        except Exception as exc:
+            logger.debug("brief_reg45_review_skipped: %s", exc)
+            summary = "Reg 45 review section could not load — open workspace manually."
+
+        return ManagerDailyBriefSection(
+            id="reg45_quality_review",
+            title="Reg 45 quality of care review",
+            summary=summary,
+            items=items,
+            route="/intelligence/reg45",
+            action_label="Open Reg 45 review",
+            tone=tone,
+            metadata={
+                "draft_review_count": draft_count,
+                "ready_for_manager_count": ready_count,
+                "ri_review_required_count": ri_count,
+                "improvement_action_count": improvement_count,
+                "no_raw_body": True,
+            },
+        )
+
     def build_sccif_section(
         self, current_user: dict[str, Any], conn: Any | None = None
     ) -> ManagerDailyBriefSection:
@@ -1007,6 +1092,7 @@ class ManagerDailyBriefService:
         child_journey = self.build_child_journey_section(current_user, conn=conn)
         sccif_section = self.build_sccif_section(current_user, conn=conn)
         inspection_section = self.build_inspection_readiness_section(current_user, conn=conn)
+        reg45_section = self.build_reg45_quality_review_section(current_user, conn=conn)
 
         try:
             gov = recording_governance_service.build_dashboard(current_user, conn=conn)
@@ -1021,6 +1107,7 @@ class ManagerDailyBriefService:
             isn_section,
             sccif_section,
             inspection_section,
+            reg45_section,
             notification_oversight,
             workforce,
             actions,
@@ -1052,6 +1139,7 @@ class ManagerDailyBriefService:
             workforce_summary=workforce.summary,
             sccif_summary=sccif_section.summary,
             inspection_readiness_summary=inspection_section.summary,
+            reg45_quality_review_summary=reg45_section.summary,
             sections=sections,
             routes=ManagerDailyBriefRoutes(),
             limitations=limitations[:8],

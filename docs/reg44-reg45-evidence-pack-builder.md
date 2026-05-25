@@ -22,6 +22,8 @@ Language: *evidence aligned to*, *may support*, *manager review needed*, *requir
 
 ## Reg 45 support
 
+Structured **Quality of Care Review** workflow: `/intelligence/reg45` (draft review builder connecting Reg 45 packs to sections, gaps, improvement actions, and manager/RI lifecycle).
+
 Quality of care review (Reg 45) evidence support sections:
 
 - Quality of care review summary

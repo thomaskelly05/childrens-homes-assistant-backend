@@ -48,6 +48,7 @@ ROUTES = {
     "workspace": "/intelligence/inspection-readiness",
     "reg44_pack": "/intelligence/inspection-readiness?pack=reg44",
     "reg45_pack": "/intelligence/inspection-readiness?pack=reg45",
+    "reg45_review": "/intelligence/reg45",
     "sccif": "/intelligence/sccif",
     "pack_history": "/intelligence/inspection-readiness#history",
     "governance": "/record/governance",

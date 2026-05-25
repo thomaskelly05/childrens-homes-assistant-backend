@@ -52,9 +52,21 @@ def test_adapter_feed_metadata_only(fake_state):
         assert item.metadata.get("no_raw_body") is True
 
 
-def test_daily_brief_item_in_feed(fake_state):
+def test_daily_brief_item_in_feed(fake_state, monkeypatch):
+    import services.reg45_quality_review_service as reg45_mod
+    from services.manager_daily_brief_service import manager_daily_brief_service
+    from services.os_notification_state_service import os_notification_state_service
+
+    reg45_mod._memory_reviews.clear()
+    manager_daily_brief_service._reviewed.clear()
+    os_notification_state_service._memory = {
+        k: v
+        for k, v in os_notification_state_service._memory.items()
+        if not k.startswith("manager_daily_brief:")
+    }
+    monkeypatch.setattr(manager_daily_brief_service, "is_reviewed_today", lambda *a, **k: False)
     user = fake_state["user"]
-    feed = os_notification_adapter_service.build_feed(user, conn=None)
+    feed = os_notification_adapter_service.build_feed(user, conn=None, skip_preference_filter=True)
     types = {item.type for item in feed.items}
     assert "manager_daily_brief_reminder" in types
 

@@ -107,6 +107,9 @@ def test_care_hub_inspection_readiness_card():
     assert "care-hub-open-inspection-readiness" in card
     assert "care-hub-generate-reg44" in card
     assert "care-hub-generate-reg45" in card
+    assert "/intelligence/reg45" in card
+    assert "care-hub-open-reg45-review" in card
+    assert "care-hub-draft-reg45-review" in card
 
 
 def test_care_hub_manager_daily_brief_marker():

@@ -62,7 +62,9 @@ The daily brief includes a **Notification and escalation oversight** section (me
 4. Brief and notifications support oversight — they do not replace manager judgement.
 5. Daily brief does not claim inspection compliance.
 6. **Inspection readiness** section (`inspection_readiness`) links to `/intelligence/inspection-readiness` with Reg 44 / Reg 45 pack routes — not a grade prediction.
-7. Standalone `/orb` must not import notification, manager brief, ISN notification or inspection-readiness clients.
+7. **Reg 45 quality of care review** section (`reg45_quality_review`) links to `/intelligence/reg45` with draft review status counts — no raw review bodies in notifications.
+8. Low-noise Reg 45 notifications: ready for manager review, RI review required, improvement actions pending (`reg45_review_*` types).
+9. Standalone `/orb` must not import notification, manager brief, ISN notification, inspection-readiness or Reg 45 review clients.
 7. ISN items in the bell use safe summaries only — see `docs/isn-notification-integration.md`.
 
 ## Push / email
