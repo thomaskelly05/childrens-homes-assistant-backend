@@ -7,7 +7,11 @@ import {
   childBehaviourSupportHref,
   childBodyMapHref,
   childCarePlanningHref,
+  childArchiveHref,
   childChronologyHref,
+  childChronologyStoryHref,
+  childLifeEchoHref,
+  childPlanImpactsHref,
   childComplaintHref,
   childDailyNoteHref,
   childDocumentsHref,
@@ -120,6 +124,10 @@ export type ChildWorkspaceOverviewViewModel = {
     recordEducation: string
     recordFamilyTime: string
     chronology: string
+    chronologyStory: string
+    archive: string
+    lifeecho: string
+    planImpacts: string
     actions: string
     documents: string
     journey: string
@@ -309,7 +317,11 @@ export function normaliseChildWorkspaceOverview(input: ChildWorkspaceNormaliserI
     recordHealth: `/record?child_id=${encodeURIComponent(childId)}&type=health-appointment`,
     recordEducation: `/record?child_id=${encodeURIComponent(childId)}&type=education-note`,
     recordFamilyTime: `/record?child_id=${encodeURIComponent(childId)}&type=family-time`,
-    chronology: `/young-people/${encodeURIComponent(childId)}/chronology`,
+    chronology: childChronologyHref(childId),
+    chronologyStory: childChronologyStoryHref(childId),
+    archive: childArchiveHref(childId),
+    lifeecho: childLifeEchoHref(childId),
+    planImpacts: childPlanImpactsHref(childId),
     actions: `/actions?child_id=${encodeURIComponent(childId)}`,
     documents: `/documents?child_id=${encodeURIComponent(childId)}`,
     journey: `/young-people/${encodeURIComponent(childId)}/journey`,
@@ -433,6 +445,9 @@ export function normaliseChildWorkspaceOverview(input: ChildWorkspaceNormaliserI
       { label: 'Behaviour support', href: childBehaviourSupportHref(childId), testId: 'child-quick-behaviour' },
       { label: 'Missing episode', href: childMissingEpisodeHref(childId), testId: 'child-quick-missing' },
       { label: 'Chronology', href: routes.chronology, testId: 'child-quick-chronology' },
+      { label: 'Archive', href: routes.archive, testId: 'child-quick-archive' },
+      { label: 'LifeEcho', href: routes.lifeecho, testId: 'child-quick-lifeecho' },
+      { label: 'Plan impacts', href: routes.planImpacts, testId: 'child-quick-plan-impacts' },
       { label: 'Actions', href: routes.actions, testId: 'child-quick-actions' },
       { label: 'Documents / plans', href: routes.documents, testId: 'child-quick-documents' },
       { label: 'Handover', href: childHandoverHref(childId), testId: 'child-quick-handover' },

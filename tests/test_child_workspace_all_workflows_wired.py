@@ -5,6 +5,18 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 NORMALISER = REPO_ROOT / "frontend-next" / "lib" / "young-people" / "child-workspace-normaliser.ts"
 OVERVIEW = REPO_ROOT / "frontend-next" / "components" / "young-people" / "workspace" / "child-workspace-overview.tsx"
+LIFECYCLE_CARD = REPO_ROOT / "frontend-next" / "components" / "young-people" / "workspace" / "child-lifecycle-card.tsx"
+
+LIFECYCLE_MARKERS = [
+    "child-lifecycle-card",
+    "child-lifecycle-archive",
+    "child-lifecycle-chronology-story",
+    "child-lifecycle-lifeecho",
+    "child-lifecycle-plan-impacts",
+    "child-quick-archive",
+    "child-quick-lifeecho",
+    "child-quick-plan-impacts",
+]
 
 REQUIRED_QUICK_ACTIONS = [
     "child-quick-record",
@@ -46,6 +58,16 @@ def test_quick_actions_cover_primary_workflows():
     text = NORMALISER.read_text(encoding="utf-8")
     for test_id in REQUIRED_QUICK_ACTIONS:
         assert test_id in text, f"Missing quick action {test_id}"
+
+
+def test_lifecycle_workspace_markers():
+    overview = OVERVIEW.read_text(encoding="utf-8")
+    normaliser = NORMALISER.read_text(encoding="utf-8")
+    lifecycle = LIFECYCLE_CARD.read_text(encoding="utf-8")
+    for marker in LIFECYCLE_MARKERS:
+        assert marker in overview or marker in normaliser or marker in lifecycle, (
+            f"Missing lifecycle marker {marker}"
+        )
 
 
 def test_evidence_section_markers():

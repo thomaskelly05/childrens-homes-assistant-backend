@@ -15,6 +15,7 @@ from schemas.recording_submission import (
     RecordingSubmissionTargetStatus,
 )
 from services.recording_chronology_link_service import recording_chronology_link_service
+from services.signed_off_lifecycle_service import signed_off_lifecycle_service
 from services.recording_draft_service import recording_draft_service
 from services.recording_formal_payload_builder import recording_formal_payload_builder
 from services.recording_submission_target_registry import recording_submission_target_registry
@@ -137,14 +138,26 @@ class RecordingSubmissionRouterService:
         draft_only_warnings = self.submit_as_draft_only(draft, target, current_user, conn=conn)
         response.warnings.extend(draft_only_warnings)
 
-        if request.create_chronology_link and response.formal_record_created:
+        if response.formal_record_created and formal_record:
+            lifecycle = signed_off_lifecycle_service.process_formal_record(
+                draft, formal_record, current_user, conn=conn
+            )
+            response.linked_archive_record_id = lifecycle.get("archive_record_id")
+            response.linked_plan_impact_ids = list(lifecycle.get("plan_impact_ids") or [])
+            response.lifeecho_suggestion_ids = list(lifecycle.get("lifeecho_suggestion_ids") or [])
+            if lifecycle.get("chronology_event_id"):
+                response.linked_chronology_id = str(lifecycle["chronology_event_id"])
+            response.warnings.extend(list(lifecycle.get("warnings") or [])[:5])
+
+        if request.create_chronology_link and response.formal_record_created and not response.linked_chronology_id:
             chronology_id, chrono_warnings = recording_chronology_link_service.create_or_prepare_link(
                 draft,
                 formal_record,
                 current_user,
                 conn=conn,
             )
-            response.linked_chronology_id = chronology_id
+            if chronology_id:
+                response.linked_chronology_id = chronology_id
             response.warnings.extend(chrono_warnings)
         elif request.create_chronology_link and not response.formal_record_created:
             response.warnings.append(

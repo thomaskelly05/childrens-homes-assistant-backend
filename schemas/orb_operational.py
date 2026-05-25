@@ -26,6 +26,11 @@ OrbOperationalMode = Literal[
     "child_journey_summary",
     "governance_briefing",
     "general_operational_question",
+    "chronology_story_review",
+    "archive_summary",
+    "lifeecho_memory_support",
+    "plan_impact_review",
+    "document_target_extraction",
 ]
 
 OrbOperationalScope = Literal["home", "child", "staff", "provider", "current_user"]

@@ -224,6 +224,10 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
     RouterGroup(
         "chronology",
         (
+            "routers.child_archive_routes",
+            "routers.child_chronology_story_routes",
+            "routers.plan_impact_routes",
+            "routers.lifeecho_memory_routes",
             "routers.chronology_intelligence_routes",
             "routers.child_journey_routes",
             "routers.smart_search_routes",

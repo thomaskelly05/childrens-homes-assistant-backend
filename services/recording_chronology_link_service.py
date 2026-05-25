@@ -5,6 +5,8 @@ from __future__ import annotations
 from typing import Any
 
 from schemas.recording_drafts import RecordingDraftRecord
+from services.child_archive_service import child_archive_service
+from services.child_chronology_story_service import child_chronology_story_service
 from services.recording_submission_target_registry import recording_submission_target_registry
 
 CHRONOLOGY_SUPPORTED_TYPES = frozenset(
@@ -81,6 +83,16 @@ class RecordingChronologyLinkService:
         nested = formal_record.get("workflow_result")
         if isinstance(nested, dict) and nested.get("chronology_event_id") is not None:
             return str(nested["chronology_event_id"]), warnings
+
+        archive = child_archive_service.create_from_signed_off_record(
+            draft, formal_record, current_user, conn=conn
+        )
+        if archive:
+            event = child_chronology_story_service.create_event_from_archive(
+                archive, current_user, conn=conn
+            )
+            child_archive_service.link_chronology(archive.id, event.id, current_user, conn=conn)
+            return event.id, warnings
 
         warnings.append(
             "Review chronology linking from the formal record."

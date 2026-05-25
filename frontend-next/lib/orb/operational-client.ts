@@ -2,6 +2,11 @@ import { authFetch, AuthApiError } from '@/lib/auth/api'
 import type { OsApiResult } from '@/lib/os-api/types'
 
 export type OrbOperationalMode =
+  | 'chronology_story_review'
+  | 'archive_summary'
+  | 'lifeecho_memory_support'
+  | 'plan_impact_review'
+  | 'document_target_extraction'
   | 'operational_summary'
   | 'manager_daily_brief'
   | 'record_quality_review'

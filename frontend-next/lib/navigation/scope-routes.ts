@@ -15,6 +15,11 @@ export type ScopeOrbMode =
   | 'governance_briefing'
   | 'staff_support'
   | 'general_operational_question'
+  | 'chronology_story_review'
+  | 'archive_summary'
+  | 'lifeecho_memory_support'
+  | 'plan_impact_review'
+  | 'document_target_extraction'
 
 function enc(id: string | number) {
   return encodeURIComponent(String(id))
@@ -117,6 +122,22 @@ export function childComplaintHref(childId: string | number) {
 
 export function childChronologyHref(childId: string | number) {
   return childPath(childId, 'chronology')
+}
+
+export function childArchiveHref(childId: string | number) {
+  return childPath(childId, 'archive')
+}
+
+export function childChronologyStoryHref(childId: string | number) {
+  return childPath(childId, 'chronology')
+}
+
+export function childLifeEchoHref(childId: string | number) {
+  return childPath(childId, 'lifeecho')
+}
+
+export function childPlanImpactsHref(childId: string | number) {
+  return childPath(childId, 'plan-impacts')
 }
 
 export function childActionsHref(childId: string | number) {
@@ -234,6 +255,18 @@ export function homeOrbHref(homeId: string | number, mode: ScopeOrbMode = 'manag
   return assistantOrbHref({ scope: 'home', mode })
 }
 
+export function homeArchiveSummaryHref(homeId: string | number) {
+  return assistantOrbHref({ scope: 'home', mode: 'archive_summary', query: `home_id=${enc(homeId)}` })
+}
+
+export function homePlanImpactReviewHref(homeId: string | number) {
+  return `/record/reviews?home_id=${enc(homeId)}&focus=plan_impacts`
+}
+
+export function homeLifeEchoPendingHref(homeId: string | number) {
+  return `/young-people?home_id=${enc(homeId)}&focus=lifeecho_suggestions`
+}
+
 export function homeHandoverReviewsHref(homeId: string | number) {
   return `/handover/reviews?home_id=${enc(homeId)}`
 }
@@ -261,6 +294,9 @@ export const CHILD_WORKSPACE_WORKFLOW_HREFS = (childId: string | number) => ({
   roomSearch: childRoomSearchHref(childId),
   complaint: childComplaintHref(childId),
   chronology: childChronologyHref(childId),
+  archive: childArchiveHref(childId),
+  lifeecho: childLifeEchoHref(childId),
+  planImpacts: childPlanImpactsHref(childId),
   actions: childActionsHref(childId),
   documents: childDocumentsHref(childId),
   handover: childHandoverHref(childId),
@@ -292,6 +328,9 @@ export const HOME_WORKSPACE_WORKFLOW_HREFS = (homeId: string | number) => ({
   reg44: homeReg44Href(homeId),
   reg45: homeReg45Href(homeId),
   reports: homeReportsHref(homeId),
+  archiveSummary: homeArchiveSummaryHref(homeId),
+  planImpactReview: homePlanImpactReviewHref(homeId),
+  lifeechoPending: homeLifeEchoPendingHref(homeId),
   orb: homeOrbHref(homeId),
   handoverReviews: homeHandoverReviewsHref(homeId),
   children: homeChildrenHref(homeId)
