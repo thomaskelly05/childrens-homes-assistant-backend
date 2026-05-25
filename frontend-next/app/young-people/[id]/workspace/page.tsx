@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 
+import { SyncChildScope } from '@/components/indicare/scope/sync-child-scope'
 import { RecordWorkspacePage } from '@/components/indicare/workspaces/record-workspace-page'
 import { getOsYoungPersonWorkspace } from '@/lib/os-api/workspaces'
 
@@ -10,7 +11,13 @@ export default async function YoungPersonWorkspacePage({ params }: { params: Pro
   if (!person && workspace.source === 'live') notFound()
 
   return (
-    <RecordWorkspacePage
+    <>
+      <SyncChildScope
+        childId={id}
+        childName={person?.displayName}
+        homeId={person?.homeId}
+      />
+      <RecordWorkspacePage
       entityType="young_person"
       backHref="/young-people"
       record={{
@@ -24,6 +31,7 @@ export default async function YoungPersonWorkspacePage({ params }: { params: Pro
       actions={workspace.data.actions || []}
       evidence={workspace.data.evidence || []}
     />
+    </>
   )
 }
 

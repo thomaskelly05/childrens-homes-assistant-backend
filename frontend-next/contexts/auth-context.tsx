@@ -3,7 +3,7 @@
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 
-import { authFetch, AuthApiError, getCsrfToken } from '@/lib/auth/api'
+import { authFetch, AuthApiError, getCsrfToken, isAuthFailureStatus, isTemporaryUnavailableStatus } from '@/lib/auth/api'
 import { normaliseRole, permissionsForRole } from '@/lib/auth/permissions'
 import { clearSensitiveBrowserState, suppressProductionConsole } from '@/lib/security/privacy'
 import type { AuthMeResponse, LoginResponse, StaffUser } from '@/lib/auth/types'
@@ -132,11 +132,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logoutRedirecting.current = false
       } catch (caught) {
         const authError = caught instanceof AuthApiError ? caught : null
+        if (authError && isTemporaryUnavailableStatus(authError.status)) {
+          setError(authError.message || 'Service temporarily unavailable. Please retry.')
+          setUser((current) => {
+            if (current) {
+              setStatus('authenticated')
+              setSessionExpired(false)
+              setCsrfReady(Boolean(getCsrfToken()))
+              return current
+            }
+            setStatus('loading')
+            return null
+          })
+          return
+        }
+        if (authError && isAuthFailureStatus(authError.status)) {
+          clearCachedIdentity()
+          setUser(null)
+          setStatus('unauthenticated')
+          setError(authError.message || 'Your session could not be loaded')
+          setSessionExpired(true)
+          setCsrfReady(false)
+          return
+        }
         clearCachedIdentity()
         setUser(null)
         setStatus('unauthenticated')
         setError(authError?.message || 'Your session could not be loaded')
-        setSessionExpired(authError?.status === 401)
+        setSessionExpired(false)
         setCsrfReady(false)
       }
     }

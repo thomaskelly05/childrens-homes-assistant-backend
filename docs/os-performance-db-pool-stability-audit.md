@@ -69,3 +69,15 @@ Structured logs (no raw bodies) on:
 - Manager/workspace intelligence sections still perform full builds when the pool is healthy (by design).
 - `os_time_budget` threaded sections may still run briefly after timeout until the worker finishes; fast path avoids starting them under pressure.
 - Legacy `/os/young-people/{id}/workspace` preload still needs one connection when the pool is free.
+
+## Scope-first workspace pass (May 2026)
+
+| Surface | Before | After |
+|---------|--------|-------|
+| Post-login landing | `/command-centre` | `/select-scope` |
+| AppShell menu | Global operational nav + badges | Scoped nav only; badges via `GET /api/os/menu-summary` |
+| Session scope | Implicit from URL only | `GET/POST /api/os/scope/*` + local storage fallback |
+| Auth on 503 | Could clear session | Preserves cookie/session; shows temporary unavailable |
+| Heavy prefetch | Default Next.js prefetch on some links | `prefetch={false}` on scope menu heavy routes |
+
+See [scope-first-home-child-workspace-flow.md](./scope-first-home-child-workspace-flow.md).
