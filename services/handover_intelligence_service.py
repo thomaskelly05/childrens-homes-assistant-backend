@@ -704,6 +704,11 @@ class HandoverIntelligenceService:
             dashboard = workforce_context_service.build_dashboard(current_user, filters, conn=conn)
             shift = dashboard.shift
             if shift.shift_lead_name or shift.shift_lead_id:
+                lead_route = (
+                    f"/staff/{shift.shift_lead_id}"
+                    if shift.shift_lead_id
+                    else (shift.route or dashboard.routes.current_shift)
+                )
                 items.append(
                     self.metadata_only_item(
                         item_id="workforce:shift_lead",
@@ -713,8 +718,10 @@ class HandoverIntelligenceService:
                         ),
                         section_type="staff_shift",
                         source="workforce_context",
-                        route=shift.route or dashboard.routes.current_shift,
-                        action_label="Open current shift",
+                        route=lead_route,
+                        action_label="Open staff profile" if shift.shift_lead_id else "Open current shift",
+                        staff_id=shift.shift_lead_id,
+                        staff_name=shift.shift_lead_name,
                         metadata={"shift_id": shift.shift_id, "shift_lead_id": shift.shift_lead_id},
                     )
                 )
@@ -750,6 +757,11 @@ class HandoverIntelligenceService:
                 + dashboard.staffing_risks[:2]
             ):
                 priority = wf_item.priority if wf_item.priority in ("low", "medium", "high", "urgent") else "medium"
+                item_route = wf_item.route
+                if wf_item.staff_id and wf_item.related_type == "intelligence_action":
+                    item_route = f"/staff/{wf_item.staff_id}"
+                elif wf_item.staff_id and "staff" not in (wf_item.route or ""):
+                    item_route = f"/staff/{wf_item.staff_id}"
                 items.append(
                     self.metadata_only_item(
                         item_id=f"workforce:{wf_item.id}",
@@ -758,8 +770,9 @@ class HandoverIntelligenceService:
                         section_type="staff_shift",
                         priority=priority,
                         source=wf_item.source,
-                        route=wf_item.route,
-                        action_label=wf_item.action_label,
+                        route=item_route,
+                        action_label=wf_item.action_label
+                        or ("Open staff profile" if wf_item.staff_id else None),
                         staff_id=wf_item.staff_id,
                         staff_name=wf_item.staff_name,
                         metadata=wf_item.metadata,

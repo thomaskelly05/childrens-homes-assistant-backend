@@ -21,7 +21,7 @@ export default async function StaffPage() {
       <PageHeader
         eyebrow="Adults / Staff"
         title="Workforce dashboard"
-        description="Manager-facing Reg 13 view of supervision, training, probation, safer recruitment, wellbeing, staffing sufficiency, recording quality and inspection evidence."
+        description="Manager-facing Reg 13 view of supervision, training, probation, safer recruitment, wellbeing, staffing sufficiency, recording quality and inspection evidence. Open a staff member for their adult working-life profile."
         action={<Link href="/staff/all" className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">All staff</Link>}
       />
       <LiveDataStatus result={dashboardResult} />
@@ -63,7 +63,7 @@ export default async function StaffPage() {
         </div>
       </Card>
       <Card>
-        <SectionHeader eyebrow="Dashboard detail" title="Staff team" description="Central staff profiles link employment, safer recruitment, training, supervision, probation, wellbeing, documents, evidence and recording history." />
+        <SectionHeader eyebrow="Dashboard detail" title="Staff team" description="Each staff profile opens the adult working-life dashboard (shift, actions, training, supervision, probation, handover, wellbeing and workforce journey) with safe summaries only." />
         <DataTable
           headers={['Name', 'Role', 'Status', 'Open profile', 'Inspection evidence']}
           rows={staff.map((member) => [
@@ -71,7 +71,7 @@ export default async function StaffPage() {
             member.role || member.raw?.role || 'Role not returned',
             <StatusBadge key="status" value={member.status || 'active'} />,
             <div key="queues" className="flex flex-wrap gap-2">
-              <Link href={`/staff/${encodeURIComponent(member.id)}`} className="font-bold text-blue-700">Profile hub</Link>
+              <Link href={`/staff/${encodeURIComponent(member.id)}`} className="font-bold text-blue-700">Adult working-life profile</Link>
               <Link href={`/staff/${encodeURIComponent(member.id)}/workspace`} className="font-bold text-blue-700">Workspace</Link>
             </div>,
             'Reg 13 and SCCIF leadership and management'

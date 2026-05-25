@@ -48,6 +48,7 @@ The daily brief includes a **Notification and escalation oversight** section (me
 | Handover reviews | `handover_review_service` + `/handover/reviews` (see `docs/handover-review-formal-mapping.md`) |
 | Safeguarding network (ISN) | `isn_digest_service.build_digest` (metadata only) |
 | Governance context | `recording_governance_service.build_dashboard` (counts only) |
+| Workforce / shift | `workforce_context_service` + Staff Profile OS route hints (`/staff`, `/staff/{id}`) |
 
 ### Mark reviewed
 
