@@ -20,6 +20,7 @@ ISN does **not** replace professional judgement, statutory referral workflows, o
 | ISN core | `services/isn_service.py`, `repositories/isn_repository.py`, `routers/isn_routes.py` |
 | Digest | `services/isn_digest_service.py` |
 | Bell adapter | `services/isn_notification_adapter_service.py` → `services/os_notification_adapter_service.py` |
+| Lifecycle | `services/isn_notification_lifecycle_service.py` + `services/os_notification_state_service.py` |
 | Schemas | `schemas/isn_notifications.py` |
 | API | `routers/isn_notification_routes.py` — `/api/isn/notifications/*` |
 | Frontend client | `frontend-next/lib/os-api/isn-notifications.ts` |
@@ -50,10 +51,19 @@ Includes urgent/review/follow-up counts, top metadata items, linked recording al
 5. **Standalone `/orb`** must not import `isn-notifications.ts` or receive ISN payloads in URLs.
 6. **ORB links** use `/assistant/orb?mode=safeguarding_themes` (or related operational modes) only.
 
+## Lifecycle actions
+
+`POST /api/isn/notifications/{item_id}/action` (or `POST /api/isn/notifications/action` with `metadata.item_id`):
+
+- acknowledge, assign, resolve, archive, reopen, create_intelligence_action
+
+OS state is persisted in `os_notification_state`. ISN source rows update when memory/DB storage is available. Safeguarding escalation types cannot be auto-resolved from the bell.
+
+Unified actions also work via `POST /api/notifications/isn:{id}/action`.
+
 ## What is not included
 
 - Push notifications / email digests (future scheduler)
-- Persisted “acknowledged” state for ISN bell items
 - Wiring `os-command/safeguarding-network` graph API into the bell (separate schema; ISN tables used instead)
 - Automated MASH/LADO/police referral decisions
 

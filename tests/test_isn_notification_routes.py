@@ -39,3 +39,23 @@ def test_isn_routes_registered():
     assert any("digest" in p for p in paths)
     assert any("badge-summary" in p for p in paths)
     assert any("items" in p for p in paths)
+    assert any("action" in p for p in paths)
+
+
+def test_isn_action_metadata_only(fake_state):
+    from schemas.isn_notifications import IsnNotificationActionRequest
+    from services.isn_notification_lifecycle_service import isn_notification_lifecycle_service
+
+    isn_digest_service.seed_memory_alert(risk_level="critical")
+    alert_id = next(iter(isn_digest_service._memory_alerts))
+    raw = "RAW SAFEGUARDING NARRATIVE LEAK"
+    isn_digest_service._memory_alerts[alert_id]["summary"] = raw
+    result = isn_notification_lifecycle_service.apply_action(
+        alert_id,
+        IsnNotificationActionRequest(action="acknowledge"),
+        fake_state["user"],
+        conn=None,
+    )
+    dumped = result.model_dump_json()
+    assert raw not in dumped
+    assert result.metadata.get("no_raw_body") is True

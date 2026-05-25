@@ -5,8 +5,11 @@ from __future__ import annotations
 import logging
 from datetime import date, datetime, timezone
 from typing import Any
+from uuid import uuid4
 
-from repositories.os_repository_utils import MANAGER_ROLES
+from psycopg2.extras import Json, RealDictCursor
+
+from repositories.os_repository_utils import MANAGER_ROLES, table_exists
 from schemas.manager_daily_brief import (
     ManagerDailyBrief,
     ManagerDailyBriefHealth,
@@ -107,8 +110,20 @@ class ManagerDailyBriefService:
     def __init__(self) -> None:
         self._reviewed: dict[str, dict[str, str]] = {}
 
+    def _brief_reviews_storage_mode(self, conn: Any | None = None) -> str:
+        if conn is None:
+            return "memory"
+        try:
+            if table_exists(conn, "manager_daily_brief_reviews"):
+                return "postgresql"
+        except Exception:
+            pass
+        return "memory"
+
     def get_health(self, conn: Any | None = None) -> ManagerDailyBriefHealth:
-        mode = recording_alert_service._detect_storage_mode()
+        mode = self._brief_reviews_storage_mode(conn)
+        if mode == "memory":
+            mode = recording_alert_service._detect_storage_mode()
         return ManagerDailyBriefHealth(
             status="ok",
             storage_mode=mode,
@@ -132,8 +147,34 @@ class ManagerDailyBriefService:
         return f"{_user_id(current_user)}:{day or _today_iso()}"
 
     def is_reviewed_today(self, current_user: dict[str, Any], conn: Any | None = None) -> bool:
-        _ = conn
-        return self._review_key(current_user) in self._reviewed
+        day = _today_iso()
+        key = self._review_key(current_user, day)
+        if key in self._reviewed:
+            return True
+        home_id = current_user.get("home_id")
+        mode = self._brief_reviews_storage_mode(conn)
+        if mode != "postgresql" or conn is None:
+            return False
+        try:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    """
+                    SELECT 1
+                    FROM manager_daily_brief_reviews
+                    WHERE user_id = %s AND brief_date = %s
+                      AND (home_id = %s OR (%s IS NULL AND home_id IS NULL))
+                    LIMIT 1
+                    """,
+                    (_user_id(current_user), day, home_id, home_id),
+                )
+                return cur.fetchone() is not None
+        except Exception as exc:
+            logger.debug("brief_review_lookup_failed: %s", exc)
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+        return False
 
     def mark_reviewed(
         self,
@@ -141,13 +182,68 @@ class ManagerDailyBriefService:
         request: ManagerDailyBriefReviewRequest | None = None,
         conn: Any | None = None,
     ) -> ManagerDailyBriefReviewResponse:
-        _ = conn
         day = (request.date if request else None) or _today_iso()
         reviewed_at = _now_iso()
-        self._reviewed[self._review_key(current_user, day)] = {
-            "reviewed_at": reviewed_at,
-            "note": _text(request.note if request else None),
-        }
+        note = _text(request.note if request else None)
+        key = self._review_key(current_user, day)
+        self._reviewed[key] = {"reviewed_at": reviewed_at, "note": note}
+
+        home_id = current_user.get("home_id")
+        mode = self._brief_reviews_storage_mode(conn)
+        if mode == "postgresql" and conn is not None:
+            try:
+                user_name = " ".join(
+                    part
+                    for part in (
+                        _text(current_user.get("first_name")),
+                        _text(current_user.get("last_name")),
+                    )
+                    if part
+                ).strip()
+                with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                    cur.execute(
+                        """
+                        INSERT INTO manager_daily_brief_reviews (
+                            id, user_id, user_name, home_id, brief_date,
+                            reviewed_at, review_note, summary_snapshot, metadata
+                        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        ON CONFLICT DO NOTHING
+                        """,
+                        (
+                            str(uuid4()),
+                            _user_id(current_user),
+                            user_name or None,
+                            int(home_id) if home_id is not None else None,
+                            day,
+                            reviewed_at,
+                            note or None,
+                            Json({}),
+                            Json({"source": "manager_daily_brief_service"}),
+                        ),
+                    )
+                    conn.commit()
+            except Exception as exc:
+                logger.warning("brief_review_persist_failed: %s", exc)
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+
+        from schemas.os_notifications import OsNotificationActionRequest
+        from services.os_notification_state_service import os_notification_state_service
+
+        try:
+            os_notification_state_service.set_state(
+                "manager_daily_brief:today",
+                OsNotificationActionRequest(action="resolve", note=note),
+                current_user,
+                source="manager_daily_brief",
+                category="daily_brief",
+                conn=conn,
+            )
+        except Exception as exc:
+            logger.debug("brief_notification_resolve_skipped: %s", exc)
+
         return ManagerDailyBriefReviewResponse(
             ok=True,
             reviewed=True,
