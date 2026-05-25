@@ -265,7 +265,11 @@ export function RecordingAlertsPage() {
               data-testid="recording-alerts-safety-note"
             >
               Alerts use metadata and safe summaries only — not raw draft bodies. They do not make safeguarding
-              threshold decisions or auto-resolve high-risk items.
+              threshold decisions or auto-resolve high-risk items. Safeguarding-sensitive alerts may require{' '}
+              <Link href="/safeguarding" className="font-black text-violet-800 underline" data-testid="recording-alerts-isn-link">
+                safeguarding network review
+              </Link>
+              .
             </p>
           </div>
         </div>

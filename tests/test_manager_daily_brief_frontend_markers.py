@@ -45,6 +45,8 @@ def test_full_brief_page_markers():
     assert "manager-daily-brief-mark-reviewed" in combined
     assert "manager-daily-brief-ask-orb" in combined
     assert "manager-daily-brief-privacy" in combined
+    assert "manager-daily-brief-isn-summary" in combined
+    assert "Safeguarding network" in combined
     assert "manager-daily-brief-safe-summary" in combined
     assert "Ask OS ORB" in combined
     assert "draft.body" not in combined
@@ -65,3 +67,4 @@ def test_standalone_orb_no_manager_brief_import():
         text = _read(path)
         assert "manager-daily-brief" not in text, path
         assert "os-api/notifications" not in text, path
+        assert "isn-notifications" not in text, path

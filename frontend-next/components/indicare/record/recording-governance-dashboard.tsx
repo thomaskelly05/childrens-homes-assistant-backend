@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 
 import { RecordingGovernanceActions } from '@/components/indicare/record/recording-governance-actions'
@@ -80,6 +81,14 @@ export function RecordingGovernanceDashboard({ childIdFilter }: { childIdFilter?
           {dashboard.backlog.urgent} urgent priority item(s) in scope. Open the review queue for detail — not raw
           bodies.
         </p>
+        {dashboard.backlog.safeguarding_review > 0 ? (
+          <p className="text-sm font-semibold text-violet-800" data-testid="recording-governance-isn-cross-link">
+            May require safeguarding network review.{' '}
+            <Link href="/safeguarding" className="font-black underline">
+              Open safeguarding network
+            </Link>
+          </p>
+        ) : null}
       </section>
 
       <RecordingGovernanceQuality quality={dashboard.quality} />

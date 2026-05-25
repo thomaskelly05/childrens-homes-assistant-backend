@@ -14,6 +14,7 @@ CARE_HUB_FILES = [
     FRONTEND / "components" / "command-centre" / "care-hub-recording-section.tsx",
     FRONTEND / "components" / "command-centre" / "care-hub-recording-digest.tsx",
     FRONTEND / "components" / "command-centre" / "care-hub-manager-daily-brief.tsx",
+    FRONTEND / "components" / "command-centre" / "care-hub-isn-digest.tsx",
     FRONTEND / "components" / "command-centre" / "intelligence-actions-card.tsx",
 ]
 
@@ -63,6 +64,19 @@ def test_care_hub_operational_orb_links_only():
 def test_care_hub_ask_orb_action_targets_assistant():
     routes = _read(FRONTEND / "components" / "command-centre" / "care-hub-routes.ts")
     assert "/assistant/orb?context=care-hub" in routes
+
+
+def test_care_hub_isn_digest_marker():
+    page = _read(FRONTEND / "app" / "command-centre" / "page.tsx")
+    digest = _read(FRONTEND / "components" / "command-centre" / "care-hub-isn-digest.tsx")
+    assert "CareHubIsnDigest" in page
+    assert "care-hub-isn-digest" in digest
+    assert "Safeguarding network" in digest
+    assert "care-hub-ask-orb-isn" in digest
+    assert "/safeguarding" in digest
+    assert "isnOrbHref" in digest
+    isn_client = _read(FRONTEND / "lib" / "os-api" / "isn-notifications.ts")
+    assert "/assistant/orb" in isn_client
 
 
 def test_care_hub_manager_daily_brief_marker():

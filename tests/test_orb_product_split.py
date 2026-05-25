@@ -772,6 +772,16 @@ def test_standalone_knowledge_services_do_not_import_os_intelligence():
             assert marker not in text, f"{rel} must not reference {marker}"
 
 
+def test_standalone_orb_no_isn_notification_client():
+    orb_dir = REPO_ROOT / "frontend-next" / "app" / "orb"
+    if not orb_dir.exists():
+        return
+    for path in list(orb_dir.rglob("*.tsx")) + list(orb_dir.rglob("*.ts")):
+        text = _read(path)
+        assert "isn-notifications" not in text, path
+        assert "isn_id=" not in text.lower(), path
+
+
 def test_assistants_map_differentiates_products():
     text = _read(PRODUCT_MAP)
     assert '"/orb"' in text

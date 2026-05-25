@@ -11,6 +11,7 @@ OsNotificationSource = Literal[
     "notifications_table",
     "recording_alerts",
     "manager_daily_brief",
+    "isn",
     "connect",
 ]
 
@@ -26,6 +27,14 @@ OsNotificationType = Literal[
     "recording_alert_medication_review",
     "recording_alert_structured_missing",
     "manager_daily_brief_reminder",
+    "isn_safeguarding_alert",
+    "isn_review_required",
+    "isn_escalation_required",
+    "isn_network_update",
+    "isn_follow_up_due",
+    "isn_professional_update",
+    "isn_recording_linked_alert",
+    "isn_manager_action_required",
     "generic",
 ]
 
@@ -56,6 +65,7 @@ class OsNotificationFeedHealth(BaseModel):
     persistence_available: bool = False
     recording_alerts_available: bool = True
     manager_daily_brief_available: bool = True
+    isn_available: bool = True
 
 
 class OsNotificationFeed(BaseModel):
@@ -65,6 +75,7 @@ class OsNotificationFeed(BaseModel):
     unread: int = 0
     urgent: int = 0
     recording_alert_count: int = 0
+    isn_count: int = 0
     daily_brief_unread: bool = False
     categories: dict[str, int] = Field(default_factory=dict)
     privacy_notice: str = (

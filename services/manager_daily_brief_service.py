@@ -19,6 +19,7 @@ from schemas.manager_daily_brief import (
 )
 from schemas.recording_alerts import RecordingAlertListFilters
 from services.intelligence_action_service import intelligence_action_service
+from services.isn_digest_service import isn_digest_service
 from services.recording_alert_service import MANAGER_JUDGEMENT_NOTICE, recording_alert_service
 from services.recording_governance_service import recording_governance_service
 from services.recording_review_service import recording_review_service
@@ -51,6 +52,26 @@ ORB_PROMPTS = [
         "label": "Ask ORB about safeguarding-sensitive themes.",
         "mode": "safeguarding_themes",
         "query": "What safeguarding-sensitive recording themes need oversight?",
+    },
+    {
+        "label": "Ask ORB about safeguarding network priorities.",
+        "mode": "safeguarding_themes",
+        "query": "What safeguarding network priorities need manager review today?",
+    },
+    {
+        "label": "Ask ORB what safeguarding follow-up needs manager review.",
+        "mode": "safeguarding_themes",
+        "query": "What ISN safeguarding follow-up may need manager review?",
+    },
+    {
+        "label": "Ask ORB what should go into handover.",
+        "mode": "manager_daily_brief",
+        "query": "What safeguarding network themes should go into handover?",
+    },
+    {
+        "label": "Ask ORB to help prepare safeguarding review questions.",
+        "mode": "safeguarding_themes",
+        "query": "Help me prepare safeguarding network review questions for manager oversight.",
     },
 ]
 
@@ -306,6 +327,52 @@ class ManagerDailyBriefService:
             tone="attention" if open_count else "neutral",
         )
 
+    def build_isn_section(
+        self, current_user: dict[str, Any], conn: Any | None = None
+    ) -> ManagerDailyBriefSection:
+        digest = isn_digest_service.build_digest(current_user, conn=conn)
+        items: list[ManagerDailyBriefItem] = []
+        for top in digest.top_items[:6]:
+            items.append(
+                ManagerDailyBriefItem(
+                    id=f"isn:{top.id}",
+                    title=top.title,
+                    safe_summary=top.safe_summary,
+                    priority=top.severity,
+                    route=top.route,
+                    action_label=top.action_label or "Open safeguarding network",
+                    source="isn",
+                    metadata={"type": top.type, "no_raw_body": True, "metadata_only": True},
+                )
+            )
+        summary = (
+            f"{digest.total_open} open safeguarding network item(s); "
+            f"{digest.urgent} urgent; {digest.review_required} review required."
+            if digest.total_open
+            else "No open ISN safeguarding network items in scope."
+        )
+        if digest.linked_recording_alerts:
+            summary += f" {digest.linked_recording_alerts} linked safeguarding-sensitive recording alert(s)."
+        tone = "urgent" if digest.urgent else ("attention" if digest.total_open else "neutral")
+        limitations = list(digest.limitations or [])
+        return ManagerDailyBriefSection(
+            id="isn_safeguarding_network",
+            title="Safeguarding network",
+            summary=summary,
+            items=items,
+            route=digest.routes.safeguarding,
+            action_label="Open ISN / safeguarding",
+            tone=tone,
+            metadata={
+                "urgent": digest.urgent,
+                "review_required": digest.review_required,
+                "follow_up_due": digest.follow_up_due,
+                "linked_recording_alerts": digest.linked_recording_alerts,
+                "limitations": limitations,
+                "metadata_only": True,
+            },
+        )
+
     def build_handover_section(
         self, current_user: dict[str, Any], conn: Any | None = None
     ) -> ManagerDailyBriefSection:
@@ -385,6 +452,8 @@ class ManagerDailyBriefService:
             recs.append("Work through the manager review queue in priority order.")
         if brief.handover_summary:
             recs.append("Include recording and safeguarding themes in handover.")
+        if brief.isn_summary and "No open" not in brief.isn_summary:
+            recs.append("Review safeguarding network (ISN) items before handover.")
         recs.append(MANAGER_JUDGEMENT_NOTICE)
         return recs[:10]
 
@@ -409,6 +478,7 @@ class ManagerDailyBriefService:
         recording = self.build_recording_section(current_user, conn=conn)
         review = self.build_review_section(current_user, conn=conn)
         safeguarding = self.build_safeguarding_section(current_user, conn=conn)
+        isn_section = self.build_isn_section(current_user, conn=conn)
         actions = self.build_actions_section(current_user, conn=conn)
         handover = self.build_handover_section(current_user, conn=conn)
         child_journey = self.build_child_journey_section(current_user, conn=conn)
@@ -419,7 +489,7 @@ class ManagerDailyBriefService:
         except Exception:
             gov_cards = 0
 
-        sections = [recording, review, safeguarding, actions, handover]
+        sections = [recording, review, safeguarding, isn_section, actions, handover]
         opening = (
             f"Today: {recording.summary} {review.summary}"
             if recording.tone != "neutral" or review.tone != "neutral"
@@ -427,6 +497,7 @@ class ManagerDailyBriefService:
         )
 
         limitations = list(recording_alert_service.build_digest(current_user, conn=conn).limitations or [])
+        limitations.extend(isn_section.metadata.get("limitations") or [])
         if gov_cards == 0:
             limitations.append("Governance metrics may be limited until drafts exist in scope.")
 
@@ -438,6 +509,7 @@ class ManagerDailyBriefService:
             recording_summary=recording.summary,
             review_summary=review.summary,
             safeguarding_summary=safeguarding.summary,
+            isn_summary=isn_section.summary,
             action_summary=actions.summary,
             child_journey_summary=child_journey.summary,
             handover_summary=handover.summary,

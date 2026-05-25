@@ -244,6 +244,19 @@ export function buildChildJourneyAttentionItems(childId: string, data: ChildJour
       statusTone: cardStatusTone(safeguardingCount),
       count: safeguardingCount,
       orbHint: operationalOrbHint(childId, 'ORB can help think', 'What safeguarding follow-up may be needed?')
+    },
+    {
+      key: 'isn-network',
+      label: 'Safeguarding network for this child',
+      summary: 'Open ISN safeguarding network context for this young person.',
+      href: `/safeguarding?young_person_id=${encodeURIComponent(childId)}`,
+      status: 'ISN',
+      statusTone: 'bg-violet-100 text-violet-900',
+      orbHint: operationalOrbHint(
+        childId,
+        'ORB safeguarding network',
+        'What safeguarding network follow-up may need manager review for this child?'
+      )
     }
   ]
 }

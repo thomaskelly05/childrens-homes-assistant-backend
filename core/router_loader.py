@@ -197,6 +197,7 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
             "routers.safeguarding_domain_routes",
             "routers.missing_episode_routes",
             "routers.isn_routes",
+            "routers.isn_notification_routes",
         ),
         classification="mixed",
         notes="Risk, contextual safeguarding, ISN intelligence, missing episodes and governance.",
