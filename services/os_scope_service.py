@@ -12,6 +12,7 @@ from db.connection import (
     is_pool_under_pressure,
     release_db_connection,
 )
+from core.policy_engine import context_from_user
 from schemas.os_scope import (
     OsScopeChildOption,
     OsScopeHomeOption,
@@ -117,87 +118,104 @@ def _scope_from_session(session: dict[str, Any]) -> tuple[OsScopeType, int | Non
     return scope_type, home_id, child_id, str(home_name) if home_name else None, str(child_name) if child_name else None  # type: ignore[return-value]
 
 
-def _fallback_homes(user: dict[str, Any]) -> list[OsScopeHomeOption]:
+def _permitted_home_ids(user: dict[str, Any]) -> list[int]:
+    context = context_from_user(user)
+    if context.home_ids:
+        return list(context.home_ids)
     home_id = _user_home_id(user)
-    if not home_id:
-        return []
-    name = str(user.get("home_name") or user.get("selected_home_name") or "Current home")
-    return [OsScopeHomeOption(id=home_id, name=name, status="active")]
+    return [home_id] if home_id else []
+
+
+def _fallback_homes(user: dict[str, Any]) -> list[OsScopeHomeOption]:
+    homes: list[OsScopeHomeOption] = []
+    for home_id in _permitted_home_ids(user):
+        name = str(user.get("home_name") or user.get("selected_home_name") or f"Home {home_id}")
+        homes.append(OsScopeHomeOption(id=home_id, name=name, status="active"))
+    return homes
 
 
 def _list_homes_lightweight(user: dict[str, Any]) -> tuple[list[OsScopeHomeOption], list[str], bool]:
     warnings: list[str] = []
     degraded = False
+    permitted_ids = _permitted_home_ids(user)
     if is_pool_under_pressure():
-        return _fallback_homes(user), ["Database busy — showing your current home only."], True
+        fallback = _fallback_homes(user)
+        if fallback:
+            return fallback, ["Database busy — showing permitted homes from your profile."], True
+        return [], ["Home and child list unavailable. Retry shortly."], True
 
-    conn = acquire_optional_dashboard_connection(timeout=0.15)
-    if conn is None:
-        return _fallback_homes(user), ["Database busy — home list deferred."], True
+    with acquire_optional_dashboard_connection(timeout=0.15) as conn:
+        if conn is None:
+            fallback = _fallback_homes(user)
+            if fallback:
+                return fallback, ["Database busy — home list deferred."], True
+            return [], ["Home and child list unavailable. Retry shortly."], True
 
-    role = _role(user)
-    provider_id = _user_provider_id(user)
-    home_id = _user_home_id(user)
-    rows: list[OsScopeHomeOption] = []
-    try:
-        with conn.cursor() as cur:
-            for table in ("homes", "care_homes", "children_homes"):
-                cur.execute(
-                    "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = %s) AS exists",
-                    (table,),
-                )
-                exists_row = cur.fetchone()
-                exists = bool(exists_row.get("exists") if isinstance(exists_row, dict) else exists_row and exists_row[0])
-                if not exists:
-                    continue
-                cur.execute(
-                    "SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = %s",
-                    (table,),
-                )
-                cols = {str(r["column_name"] if isinstance(r, dict) else r[0]) for r in cur.fetchall()}
-                id_col = "id" if "id" in cols else "home_id" if "home_id" in cols else None
-                name_col = "name" if "name" in cols else "home_name" if "home_name" in cols else "title" if "title" in cols else None
-                if not id_col or not name_col:
-                    continue
-                where: list[str] = []
-                params: list[Any] = []
-                if not _is_wide_access(role) and home_id:
-                    where.append(f'"{id_col}" = %s')
-                    params.append(home_id)
-                elif provider_id and "provider_id" in cols:
-                    where.append("provider_id = %s")
-                    params.append(provider_id)
-                where_sql = "WHERE " + " AND ".join(where) if where else ""
-                status_sql = ", status" if "status" in cols else ""
-                cur.execute(
-                    f'SELECT "{id_col}" AS id, "{name_col}" AS name{status_sql} FROM public."{table}" {where_sql} ORDER BY "{name_col}" ASC LIMIT 50',
-                    tuple(params),
-                )
-                for row in cur.fetchall():
-                    data = dict(row)
-                    hid = _safe_int(data.get("id"))
-                    if not hid:
-                        continue
-                    rows.append(
-                        OsScopeHomeOption(
-                            id=hid,
-                            name=str(data.get("name") or f"Home {hid}"),
-                            status=str(data.get("status")) if data.get("status") else None,
-                        )
+        role = _role(user)
+        provider_id = _user_provider_id(user)
+        rows: list[OsScopeHomeOption] = []
+        try:
+            with conn.cursor() as cur:
+                for table in ("homes", "care_homes", "children_homes"):
+                    cur.execute(
+                        "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = %s) AS exists",
+                        (table,),
                     )
-                if rows:
-                    break
-    except DatabaseUnavailableError:
-        degraded = True
-        warnings.append("Database busy — home list unavailable.")
-        rows = _fallback_homes(user)
-    except Exception as exc:
-        logger.warning("os_scope_homes_failed error=%s", exc)
-        warnings.append("Home list could not be loaded.")
-        rows = _fallback_homes(user)
-        degraded = True
-    finally:
-        release_db_connection(conn)
+                    exists_row = cur.fetchone()
+                    exists = bool(exists_row.get("exists") if isinstance(exists_row, dict) else exists_row and exists_row[0])
+                    if not exists:
+                        continue
+                    cur.execute(
+                        "SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = %s",
+                        (table,),
+                    )
+                    cols = {str(r["column_name"] if isinstance(r, dict) else r[0]) for r in cur.fetchall()}
+                    id_col = "id" if "id" in cols else "home_id" if "home_id" in cols else None
+                    name_col = "name" if "name" in cols else "home_name" if "home_name" in cols else "title" if "title" in cols else None
+                    if not id_col or not name_col:
+                        continue
+                    where: list[str] = []
+                    params: list[Any] = []
+                    if not _is_wide_access(role) and permitted_ids:
+                        placeholders = ", ".join(["%s"] * len(permitted_ids))
+                        where.append(f'"{id_col}" IN ({placeholders})')
+                        params.extend(permitted_ids)
+                    elif provider_id and "provider_id" in cols:
+                        where.append("provider_id = %s")
+                        params.append(provider_id)
+                    where_sql = "WHERE " + " AND ".join(where) if where else ""
+                    status_sql = ", status" if "status" in cols else ""
+                    cur.execute(
+                        f'SELECT "{id_col}" AS id, "{name_col}" AS name{status_sql} FROM public."{table}" {where_sql} ORDER BY "{name_col}" ASC LIMIT 50',
+                        tuple(params),
+                    )
+                    for row in cur.fetchall():
+                        data = dict(row)
+                        hid = _safe_int(data.get("id"))
+                        if not hid:
+                            continue
+                        if permitted_ids and hid not in permitted_ids and not _is_wide_access(role):
+                            continue
+                        rows.append(
+                            OsScopeHomeOption(
+                                id=hid,
+                                name=str(data.get("name") or f"Home {hid}"),
+                                status=str(data.get("status")) if data.get("status") else None,
+                            )
+                        )
+                    if rows:
+                        break
+        except DatabaseUnavailableError:
+            degraded = True
+            warnings.append("Home and child list unavailable. Retry shortly.")
+            rows = _fallback_homes(user)
+        except Exception as exc:
+            logger.warning("os_scope_homes_failed error=%s", exc)
+            warnings.append("Home list could not be loaded.")
+            rows = _fallback_homes(user)
+            degraded = True
+        finally:
+            release_db_connection(conn)
 
     if not rows:
         rows = _fallback_homes(user)
@@ -219,41 +237,46 @@ def _list_children_for_home(user: dict[str, Any], home_id: int | None) -> tuple[
     degraded = False
     if not home_id:
         return [], [], False
+
+    permitted_ids = _permitted_home_ids(user)
+    if permitted_ids and home_id not in permitted_ids and not _is_wide_access(_role(user)):
+        return [], ["You do not have access to children in that home."], False
+
     if is_pool_under_pressure():
         return [], ["Database busy — child list deferred."], True
 
-    conn = acquire_optional_dashboard_connection(timeout=0.15)
-    if conn is None:
-        return [], ["Database busy — child list deferred."], True
+    with acquire_optional_dashboard_connection(timeout=0.15) as conn:
+        if conn is None:
+            return [], ["Database busy — child list deferred."], True
 
-    children: list[OsScopeChildOption] = []
-    try:
-        from services import young_people_service as yp
+        children: list[OsScopeChildOption] = []
+        try:
+            from services import young_people_service as yp
 
-        rows = yp.list_young_people(conn, home_id=home_id, provider_id=_user_provider_id(user), limit=80)
-        for row in rows:
-            cid = _safe_int(row.get("id"))
-            if not cid:
-                continue
-            children.append(
-                OsScopeChildOption(
-                    id=cid,
-                    name=_child_name(row),
-                    home_id=_safe_int(row.get("home_id")) or home_id,
-                    placement_status=str(row.get("placement_status") or row.get("status") or "") or None,
+            rows = yp.list_young_people(conn, home_id=home_id, provider_id=_user_provider_id(user), limit=80)
+            for row in rows:
+                cid = _safe_int(row.get("id"))
+                if not cid:
+                    continue
+                children.append(
+                    OsScopeChildOption(
+                        id=cid,
+                        name=_child_name(row),
+                        home_id=_safe_int(row.get("home_id")) or home_id,
+                        placement_status=str(row.get("placement_status") or row.get("status") or "") or None,
+                    )
                 )
-            )
-    except DatabaseUnavailableError:
-        degraded = True
-        warnings.append("Database busy — children unavailable.")
-    except Exception as exc:
-        logger.warning("os_scope_children_failed home_id=%s error=%s", home_id, exc)
-        warnings.append("Child list could not be loaded.")
-        degraded = True
-    finally:
-        release_db_connection(conn)
+        except DatabaseUnavailableError:
+            degraded = True
+            warnings.append("Database busy — children unavailable.")
+        except Exception as exc:
+            logger.warning("os_scope_children_failed home_id=%s error=%s", home_id, exc)
+            warnings.append("Child list could not be loaded.")
+            degraded = True
+        finally:
+            release_db_connection(conn)
 
-    return children, warnings, degraded
+        return children, warnings, degraded
 
 
 class OsScopeService:
@@ -265,8 +288,12 @@ class OsScopeService:
 
         scope_type, sel_home, sel_child, sel_home_name, sel_child_name = _scope_from_session(session)
         homes, home_warnings, home_degraded = _list_homes_lightweight(user)
-        target_home = home_id or sel_home or _user_home_id(user)
-        children, child_warnings, child_degraded = _list_children_for_home(user, target_home)
+        target_home = home_id or sel_home
+        children: list[OsScopeChildOption] = []
+        child_warnings: list[str] = []
+        child_degraded = False
+        if target_home:
+            children, child_warnings, child_degraded = _list_children_for_home(user, target_home)
 
         recent_homes = [
             OsScopeHomeOption.model_validate(item)
@@ -288,6 +315,7 @@ class OsScopeService:
             recent_homes=recent_homes,
             recent_children=recent_children,
             available_homes=homes,
+            available_children=children,
             available_children_for_home=children,
             routes=_routes_for(scope_type, sel_home, sel_child),
             warnings=[*home_warnings, *child_warnings],
@@ -327,6 +355,7 @@ class OsScopeService:
             recent_homes=recent_homes,
             recent_children=recent_children,
             available_homes=[],
+            available_children=children if scope_type in {"home", "child"} else [],
             available_children_for_home=children if scope_type in {"home", "child"} else [],
             routes=_routes_for(scope_type, home_id, child_id),
             warnings=warnings,
@@ -420,24 +449,24 @@ class OsScopeService:
         if degraded:
             warnings.append("Database busy — menu counts deferred.")
         else:
-            conn = acquire_optional_dashboard_connection(timeout=0.12)
-            if conn is None:
-                degraded = True
-                warnings.append("Database busy — menu counts deferred.")
-            else:
-                try:
-                    recording_count, action_count, notification_count, handover_count = self._scoped_counts_light(
-                        conn, user, home_id=home_id, child_id=child_id
-                    )
-                except DatabaseUnavailableError:
+            with acquire_optional_dashboard_connection(timeout=0.12) as conn:
+                if conn is None:
                     degraded = True
-                    warnings.append("Database busy — menu counts unavailable.")
-                except Exception as exc:
-                    logger.warning("os_scope_menu_summary_failed error=%s", exc)
-                    degraded = True
-                    warnings.append("Scoped menu counts could not be loaded.")
-                finally:
-                    release_db_connection(conn)
+                    warnings.append("Database busy — menu counts deferred.")
+                else:
+                    try:
+                        recording_count, action_count, notification_count, handover_count = self._scoped_counts_light(
+                            conn, user, home_id=home_id, child_id=child_id
+                        )
+                    except DatabaseUnavailableError:
+                        degraded = True
+                        warnings.append("Database busy — menu counts unavailable.")
+                    except Exception as exc:
+                        logger.warning("os_scope_menu_summary_failed error=%s", exc)
+                        degraded = True
+                        warnings.append("Scoped menu counts could not be loaded.")
+                    finally:
+                        release_db_connection(conn)
 
         elapsed_ms = (time.perf_counter() - started) * 1000
         if elapsed_ms > 200:

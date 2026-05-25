@@ -6,6 +6,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 AUTH_CONTEXT = REPO_ROOT / "frontend-next" / "contexts" / "auth-context.tsx"
 AUTH_API = REPO_ROOT / "frontend-next" / "lib" / "auth" / "api.ts"
 SCOPE_PROVIDER = REPO_ROOT / "frontend-next" / "components" / "indicare" / "scope" / "os-scope-provider.tsx"
+OS_SCOPE = REPO_ROOT / "frontend-next" / "lib" / "os-scope.ts"
 
 
 def test_auth_api_distinguishes_temporary_unavailable():
@@ -26,3 +27,10 @@ def test_scope_provider_preserves_scope_on_503():
     assert "503" in text
     assert "degraded" in text
     assert "hydrateScopeFromStorage" in text
+
+
+def test_fetch_scope_options_uses_auth_fetch_with_credentials():
+    text = OS_SCOPE.read_text(encoding="utf-8")
+    assert "authFetch" in text
+    assert "fetchScopeOptions" in text
+    assert "normaliseScopeState" in text

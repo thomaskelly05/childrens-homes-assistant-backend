@@ -32,11 +32,13 @@ export type OsScopeState = {
   recent_homes: OsScopeHomeOption[]
   recent_children: OsScopeChildOption[]
   available_homes: OsScopeHomeOption[]
-  available_children_for_home: OsScopeChildOption[]
+  available_children: OsScopeChildOption[]
+  available_children_for_home?: OsScopeChildOption[]
   routes: OsScopeRoutes
   warnings: string[]
   degraded: boolean
   cache_status?: string
+  metadata?: Record<string, unknown>
 }
 
 export type OsScopeMenuSummary = {
@@ -142,15 +144,34 @@ export function workspaceHrefForScope(scope: Pick<OsScopeState, 'scope_type' | '
   return '/select-scope'
 }
 
+function normaliseScopeState(data: OsScopeState): OsScopeState {
+  const children = Array.isArray(data.available_children)
+    ? data.available_children
+    : Array.isArray(data.available_children_for_home)
+      ? data.available_children_for_home
+      : []
+  return {
+    ...data,
+    available_homes: Array.isArray(data.available_homes) ? data.available_homes : [],
+    available_children: children,
+    available_children_for_home: children,
+    recent_homes: Array.isArray(data.recent_homes) ? data.recent_homes : [],
+    recent_children: Array.isArray(data.recent_children) ? data.recent_children : [],
+    warnings: Array.isArray(data.warnings) ? data.warnings : [],
+    degraded: Boolean(data.degraded),
+    routes: data.routes || { select_scope: '/select-scope', settings: '/settings', logout: '/login' }
+  }
+}
+
 export async function fetchScopeOptions(homeId?: number) {
   const query = homeId ? `?home_id=${encodeURIComponent(String(homeId))}` : ''
   const payload = await authFetch<{ ok: boolean; data: OsScopeState }>(`/api/os/scope/options${query}`)
-  return payload.data
+  return normaliseScopeState(payload.data)
 }
 
 export async function fetchCurrentScope() {
   const payload = await authFetch<{ ok: boolean; data: OsScopeState }>('/api/os/scope/current')
-  return payload.data
+  return normaliseScopeState(payload.data)
 }
 
 export async function selectScope(input: {
@@ -164,7 +185,7 @@ export async function selectScope(input: {
     method: 'POST',
     body: JSON.stringify(input)
   })
-  const state = payload.data
+  const state = normaliseScopeState(payload.data)
   persistScopeLocally({
     scope_type: state.scope_type,
     home_id: state.selected_home_id ?? undefined,
@@ -178,7 +199,7 @@ export async function selectScope(input: {
 export async function clearScope() {
   const payload = await authFetch<{ ok: boolean; data: OsScopeState }>('/api/os/scope/clear', { method: 'POST' })
   clearScopeLocally()
-  return payload.data
+  return normaliseScopeState(payload.data)
 }
 
 export async function fetchScopeMenuSummary(params: {

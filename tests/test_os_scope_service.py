@@ -57,6 +57,12 @@ def test_select_child_scope(service, user, session):
     assert state.scope_type == "child"
     assert state.selected_child_id == 9
     assert state.routes.child_workspace == "/young-people/9/workspace"
+    assert state.selected_home_id == 3
+
+
+def test_select_home_requires_home_id(service, user, session):
+    with pytest.raises(ValueError, match="home_id"):
+        service.select_scope(user, session, OsScopeSelectRequest(scope_type="home"))
 
 
 def test_clear_scope(service, user, session):

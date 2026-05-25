@@ -40,6 +40,7 @@ const defaultScope: OsScopeState = {
   recent_homes: [],
   recent_children: [],
   available_homes: [],
+  available_children: [],
   available_children_for_home: [],
   routes: { select_scope: '/select-scope', settings: '/settings', logout: '/login' },
   warnings: [],
