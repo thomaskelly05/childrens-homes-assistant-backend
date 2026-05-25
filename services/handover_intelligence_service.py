@@ -76,6 +76,21 @@ ORB_PROMPTS = [
         "mode": "record_quality_review",
         "query": "What recording alert themes should the next shift know about?",
     },
+    {
+        "label": "Help me prepare staff handover.",
+        "mode": "manager_daily_brief",
+        "query": "Help me prepare staff handover using safe shift and workforce summaries.",
+    },
+    {
+        "label": "What staffing issues need manager review?",
+        "mode": "manager_daily_brief",
+        "query": "What staffing issues need manager review before shift end?",
+    },
+    {
+        "label": "What actions are assigned to staff today?",
+        "mode": "action_priority",
+        "query": "What actions are assigned to staff that need follow-up today?",
+    },
 ]
 
 _RAW_BODY_PATTERN = re.compile(
@@ -672,6 +687,120 @@ class HandoverIntelligenceService:
             action_label="Open medication",
         )
 
+    def build_staff_shift_section(
+        self,
+        current_user: dict[str, Any],
+        filters: dict[str, Any] | None = None,
+        conn: Any | None = None,
+    ) -> HandoverIntelligenceSection:
+        from services.workforce_context_service import workforce_context_service
+
+        _, _, child_id, home_id = self._list_filters(current_user, filters)
+        routes = self._routes_for_scope(child_id, home_id)
+        warnings: list[str] = []
+        items: list[HandoverIntelligenceItem] = []
+        summary = "Staff and shift context for handover."
+        try:
+            dashboard = workforce_context_service.build_dashboard(current_user, filters, conn=conn)
+            shift = dashboard.shift
+            if shift.shift_lead_name or shift.shift_lead_id:
+                items.append(
+                    self.metadata_only_item(
+                        item_id="workforce:shift_lead",
+                        title="Shift lead",
+                        safe_summary=_sanitize_summary(
+                            f"{shift.shift_lead_name or 'Shift lead'} for {shift.shift_label}."
+                        ),
+                        section_type="staff_shift",
+                        source="workforce_context",
+                        route=shift.route or dashboard.routes.current_shift,
+                        action_label="Open current shift",
+                        metadata={"shift_id": shift.shift_id, "shift_lead_id": shift.shift_lead_id},
+                    )
+                )
+            if shift.staff_count:
+                items.append(
+                    self.metadata_only_item(
+                        item_id="workforce:staff_count",
+                        title="Staff on shift",
+                        safe_summary=f"{shift.staff_count} staff member(s) on shift.",
+                        section_type="staff_shift",
+                        source="workforce_context",
+                        route=dashboard.routes.shifts,
+                        action_label="Open shifts",
+                    )
+                )
+            for gap in shift.gaps[:2]:
+                items.append(
+                    self.metadata_only_item(
+                        item_id=f"workforce:gap:{hash(gap) % 10**6}",
+                        title="Staffing gap",
+                        safe_summary=gap,
+                        section_type="staff_shift",
+                        priority="high",
+                        source="workforce_context",
+                        route=dashboard.routes.rota,
+                        action_label="Check rota",
+                    )
+                )
+            for wf_item in (
+                dashboard.actions[:3]
+                + dashboard.training[:2]
+                + dashboard.supervision[:2]
+                + dashboard.staffing_risks[:2]
+            ):
+                priority = wf_item.priority if wf_item.priority in ("low", "medium", "high", "urgent") else "medium"
+                items.append(
+                    self.metadata_only_item(
+                        item_id=f"workforce:{wf_item.id}",
+                        title=wf_item.title,
+                        safe_summary=wf_item.safe_summary,
+                        section_type="staff_shift",
+                        priority=priority,
+                        source=wf_item.source,
+                        route=wf_item.route,
+                        action_label=wf_item.action_label,
+                        staff_id=wf_item.staff_id,
+                        staff_name=wf_item.staff_name,
+                        metadata=wf_item.metadata,
+                    )
+                )
+            summary = (
+                f"{shift.staff_count} on shift"
+                + (f"; lead: {shift.shift_lead_name}" if shift.shift_lead_name else "")
+                + "."
+                if shift.staff_count or shift.shift_lead_name
+                else "Workforce summary may be limited — open staff or rota area to verify."
+            )
+            if dashboard.limitations:
+                warnings.extend(dashboard.limitations[:2])
+        except Exception as exc:
+            logger.debug("handover_staff_shift_section_failed: %s", exc)
+            warnings.append("Workforce context temporarily unavailable.")
+            summary = "Workforce summary is unavailable. Open staff or rota area to check manually."
+            items.append(
+                self.metadata_only_item(
+                    item_id="workforce:route_hint",
+                    title="Staff and rota",
+                    safe_summary=summary,
+                    section_type="staff_shift",
+                    source="route_hint",
+                    route="/staff",
+                    action_label="Open staff area",
+                )
+            )
+        return HandoverIntelligenceSection(
+            id="staff_shift",
+            title="Staff and shift context",
+            section_type="staff_shift",
+            summary=summary,
+            items=items[:12],
+            warnings=warnings,
+            route=routes.handover,
+            action_label="Open staff area",
+            metadata={"metadata_only": True, "no_raw_body": True},
+        )
+
     def build_environment_section(
         self,
         current_user: dict[str, Any],
@@ -791,6 +920,8 @@ class HandoverIntelligenceService:
                 recs.append("Include safeguarding network themes in handover without raw narratives.")
             if section.section_type == "reviews" and section.metadata.get("awaiting_review"):
                 recs.append("Carry open review queue items into handover.")
+            if section.section_type == "staff_shift" and section.items:
+                recs.append("Confirm shift lead and staffing gaps in handover notes.")
         recs.append("Save a handover draft before leaving — completing here is not a formal record.")
         recs.append(MANAGER_JUDGEMENT_NOTICE)
         return recs[:10]
@@ -814,11 +945,13 @@ class HandoverIntelligenceService:
         reviews = self.build_reviews_section(current_user, filters, conn=conn)
         actions = self.build_actions_section(current_user, filters, conn=conn)
         child_updates = self.build_child_updates_section(current_user, filters, conn=conn)
+        staff_shift = self.build_staff_shift_section(current_user, filters, conn=conn)
         health = self.build_health_medication_section(current_user, filters, conn=conn)
         environment = self.build_environment_section(current_user, filters, conn=conn)
 
         sections = [
             overview,
+            staff_shift,
             safeguarding,
             alerts,
             reviews,

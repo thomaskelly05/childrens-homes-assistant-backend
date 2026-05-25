@@ -56,6 +56,9 @@ class ManagerDailyBriefRoutes(BaseModel):
     actions: str = "/actions"
     handover: str = "/handover"
     handover_reviews: str = "/handover/reviews"
+    staff: str = "/staff"
+    shifts: str = "/shifts/current"
+    rota: str = "/rostering"
     briefing: str = "/command-centre/briefing"
     care_hub: str = "/command-centre"
     orb: str = "/assistant/orb?mode=manager_daily_brief"
@@ -78,6 +81,7 @@ class ManagerDailyBrief(BaseModel):
     action_summary: str = ""
     child_journey_summary: str = ""
     handover_summary: str = ""
+    workforce_summary: str = ""
     sections: list[ManagerDailyBriefSection] = Field(default_factory=list)
     recommendations: list[str] = Field(default_factory=list)
     limitations: list[str] = Field(default_factory=list)

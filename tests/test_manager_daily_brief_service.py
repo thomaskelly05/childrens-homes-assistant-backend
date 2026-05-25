@@ -48,6 +48,8 @@ def test_build_brief_metadata_only(fake_state):
     assert handover_section.metadata.get("handover_reviews_route") == "/handover/reviews"
     assert any(s.id == "isn_safeguarding_network" for s in brief.sections)
     assert any(s.id == "notification_oversight" for s in brief.sections)
+    assert any(s.id == "workforce_shift" for s in brief.sections)
+    assert brief.workforce_summary
     assert brief.isn_summary is not None
     assert brief.metadata.get("no_raw_body") is True
 

@@ -35,6 +35,7 @@ export type ManagerDailyBrief = {
   action_summary: string
   child_journey_summary: string
   handover_summary: string
+  workforce_summary?: string
   sections: ManagerDailyBriefSection[]
   recommendations: string[]
   limitations: string[]

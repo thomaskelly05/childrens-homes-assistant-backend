@@ -82,6 +82,21 @@ ORB_PROMPTS = [
         "query": "Help me prioritise unresolved operational notifications for manager review today.",
     },
     {
+        "label": "Help me prepare staff handover.",
+        "mode": "manager_daily_brief",
+        "query": "Help me prepare staff handover using safe workforce summaries.",
+    },
+    {
+        "label": "What staffing issues need manager review?",
+        "mode": "manager_daily_brief",
+        "query": "What staffing issues need manager review today?",
+    },
+    {
+        "label": "What actions are assigned to staff today?",
+        "mode": "action_priority",
+        "query": "What actions are assigned to staff that need manager follow-up?",
+    },
+    {
         "label": "Ask ORB what needs manager review today.",
         "mode": "manager_daily_brief",
         "query": "What operational notifications may need manager review today?",
@@ -542,6 +557,71 @@ class ManagerDailyBriefService:
             metadata=meta,
         )
 
+    def build_workforce_section(
+        self, current_user: dict[str, Any], conn: Any | None = None
+    ) -> ManagerDailyBriefSection:
+        from services.workforce_context_service import workforce_context_service
+
+        items: list[ManagerDailyBriefItem] = []
+        tone: str = "neutral"
+        summary = "Workforce summary is unavailable. Open staff or rota area to check manually."
+        try:
+            dashboard = workforce_context_service.build_dashboard(current_user, conn=conn)
+            shift = dashboard.shift
+            parts: list[str] = []
+            if shift.staff_count:
+                parts.append(f"{shift.staff_count} staff on shift")
+            if shift.shift_lead_name:
+                parts.append(f"lead: {shift.shift_lead_name}")
+            if parts:
+                summary = "; ".join(parts) + "."
+            if shift.gaps:
+                summary += f" {len(shift.gaps)} staffing gap signal(s)."
+                tone = "attention"
+            for wf in (
+                dashboard.staff_on_shift[:2]
+                + dashboard.actions[:2]
+                + dashboard.training[:2]
+                + dashboard.supervision[:2]
+                + dashboard.staffing_risks[:2]
+            ):
+                items.append(
+                    ManagerDailyBriefItem(
+                        id=f"workforce:{wf.id}",
+                        title=wf.title,
+                        safe_summary=wf.safe_summary,
+                        priority=wf.priority if wf.priority in ("low", "medium", "high", "urgent") else "medium",
+                        route=wf.route,
+                        action_label=wf.action_label,
+                        source=wf.source,
+                        metadata={**(wf.metadata or {}), "sensitivity": wf.sensitivity},
+                    )
+                )
+                if wf.priority in ("high", "urgent"):
+                    tone = "urgent" if wf.priority == "urgent" else "attention"
+        except Exception as exc:
+            logger.debug("brief_workforce_section_skipped: %s", exc)
+            items.append(
+                ManagerDailyBriefItem(
+                    id="workforce:route",
+                    title="Staff and rota",
+                    safe_summary=summary,
+                    route="/staff",
+                    action_label="Open staff area",
+                    source="route_hint",
+                )
+            )
+        return ManagerDailyBriefSection(
+            id="workforce_shift",
+            title="Workforce and shift context",
+            summary=summary,
+            items=items[:8],
+            route="/shifts/current",
+            action_label="Open current shift",
+            tone=tone,
+            metadata={"metadata_only": True, "no_raw_body": True},
+        )
+
     def build_handover_section(
         self, current_user: dict[str, Any], conn: Any | None = None
     ) -> ManagerDailyBriefSection:
@@ -682,6 +762,8 @@ class ManagerDailyBriefService:
             recs.append("Include recording and safeguarding themes in handover.")
         if brief.isn_summary and "No open" not in brief.isn_summary:
             recs.append("Review safeguarding network (ISN) items before handover.")
+        if brief.workforce_summary and "unavailable" not in brief.workforce_summary.lower():
+            recs.append("Review workforce and shift context before handover.")
         for section in brief.sections:
             if section.id == "notification_oversight" and section.tone in ("urgent", "attention"):
                 recs.append(
@@ -717,6 +799,7 @@ class ManagerDailyBriefService:
         isn_section = self.build_isn_section(current_user, conn=conn)
         actions = self.build_actions_section(current_user, conn=conn)
         handover = self.build_handover_section(current_user, conn=conn)
+        workforce = self.build_workforce_section(current_user, conn=conn)
         notification_oversight = self.build_notification_oversight_section(current_user, conn=conn)
         child_journey = self.build_child_journey_section(current_user, conn=conn)
 
@@ -726,7 +809,16 @@ class ManagerDailyBriefService:
         except Exception:
             gov_cards = 0
 
-        sections = [recording, review, safeguarding, isn_section, notification_oversight, actions, handover]
+        sections = [
+            recording,
+            review,
+            safeguarding,
+            isn_section,
+            notification_oversight,
+            workforce,
+            actions,
+            handover,
+        ]
         opening = (
             f"Today: {recording.summary} {review.summary}"
             if recording.tone != "neutral" or review.tone != "neutral"
@@ -750,6 +842,7 @@ class ManagerDailyBriefService:
             action_summary=actions.summary,
             child_journey_summary=child_journey.summary,
             handover_summary=handover.summary,
+            workforce_summary=workforce.summary,
             sections=sections,
             routes=ManagerDailyBriefRoutes(),
             limitations=limitations[:8],

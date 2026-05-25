@@ -38,6 +38,18 @@ export const DEFAULT_HANDOVER_SECTIONS: HandoverDraftSection[] = [
     prompts: ['Education updates?', 'Family contact or visits?', 'Professional meetings?']
   },
   {
+    id: 'staff-shift-context',
+    title: 'Staff and shift context',
+    body: '',
+    prompts: [
+      'Who is on shift?',
+      'Who is shift lead?',
+      'Staffing gaps or support needs?',
+      'Actions for named staff?',
+      'Training or supervision due (metadata only)?'
+    ]
+  },
+  {
     id: 'actions-follow-up',
     title: 'Actions and follow-up',
     body: '',

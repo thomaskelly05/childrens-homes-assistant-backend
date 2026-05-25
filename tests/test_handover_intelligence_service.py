@@ -47,6 +47,16 @@ def test_build_dashboard_metadata_only(fake_state):
     assert "reviews" in section_ids
     assert "actions" in section_ids
     assert "next_shift_priorities" in section_ids
+    assert "staff_shift" in section_ids
+
+
+def test_staff_shift_section_metadata_only(fake_state):
+    user = fake_state["user"]
+    section = handover_intelligence_service.build_staff_shift_section(user, conn=None)
+    assert section.id == "staff_shift"
+    assert section.title == "Staff and shift context"
+    for item in section.items:
+        assert item.metadata.get("no_raw_body") is True
 
 
 def test_recording_alerts_section(fake_state):

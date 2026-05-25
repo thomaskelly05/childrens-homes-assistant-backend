@@ -30,8 +30,14 @@ export const CHILD_JOURNEY_AREA_LINKS = [
   { label: 'Care & voice', href: (childId: string) => `/young-people/${encodeURIComponent(childId)}/child-voice/new` },
   { label: 'Chronology', href: (childId: string) => `/young-people/${encodeURIComponent(childId)}/chronology` },
   { label: 'Plans', href: (childId: string) => `/young-people/${encodeURIComponent(childId)}/plans` },
-  { label: 'Evidence', href: (childId: string) => `/young-people/${encodeURIComponent(childId)}/documents/upload` }
+  { label: 'Evidence', href: (childId: string) => `/young-people/${encodeURIComponent(childId)}/documents/upload` },
+  { label: 'Staff actions', href: (_childId: string) => '/actions' }
 ] as const
+
+/** Route hint for assigned staff actions — metadata only, no workforce private info on child page. */
+export function childJourneyStaffActionsHref(_childId: string) {
+  return '/actions'
+}
 
 export function childJourneySummaryHref(childId: string) {
   const params = new URLSearchParams({

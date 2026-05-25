@@ -79,6 +79,10 @@ export function ManagerDailyBriefPage() {
           <p className="text-[10px] font-black uppercase tracking-[0.16em] text-violet-700">Safeguarding network</p>
           <p className="mt-2 text-sm font-semibold text-slate-700">{brief.isn_summary || 'No ISN summary in scope.'}</p>
         </article>
+        <article className="rounded-2xl border border-slate-100 bg-white p-4" data-testid="manager-daily-brief-workforce-summary">
+          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-700">Workforce & shift</p>
+          <p className="mt-2 text-sm font-semibold text-slate-700">{brief.workforce_summary || 'No workforce summary in scope.'}</p>
+        </article>
         <article className="rounded-2xl border border-slate-100 bg-white p-4">
           <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Actions & handover</p>
           <p className="mt-2 text-sm font-semibold text-slate-700">{brief.action_summary}</p>

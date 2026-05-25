@@ -17,6 +17,7 @@ CARE_HUB_FILES = [
     FRONTEND / "components" / "command-centre" / "care-hub-notification-oversight.tsx",
     FRONTEND / "components" / "command-centre" / "care-hub-isn-digest.tsx",
     FRONTEND / "components" / "command-centre" / "care-hub-handover.tsx",
+    FRONTEND / "components" / "command-centre" / "care-hub-workforce-context.tsx",
     FRONTEND / "components" / "command-centre" / "intelligence-actions-card.tsx",
 ]
 
