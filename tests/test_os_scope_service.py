@@ -56,7 +56,7 @@ def test_select_child_scope(service, user, session):
     )
     assert state.scope_type == "child"
     assert state.selected_child_id == 9
-    assert state.routes.child_workspace == "/young-people/9/workspace"
+    assert state.routes.child_workspace == "/os/young-people/9/workspace"
     assert state.selected_home_id == 3
 
 

@@ -35,6 +35,8 @@ import {
   visibleOperationalNavigation
 } from '@/lib/navigation/operational-navigation'
 import { noScopeNavigation, scopeNavigationFor, type ScopeNavItem } from '@/lib/navigation/scope-navigation'
+import { ChildWorkspaceLoadingFallback } from '@/components/indicare/scope/child-workspace-loading-fallback'
+import { childIdFromPath, childWorkspaceHref } from '@/lib/navigation/child-workspace-routes'
 import { routeRequiresScope, workspaceHrefForScope } from '@/lib/os-scope'
 import type { OrbContext } from '@/lib/orb/types'
 
@@ -43,10 +45,7 @@ const childContextRequiredRoots = ['actions', 'reports']
 const e2eWorkspaceHydrationBypass = process.env.NEXT_PUBLIC_E2E_TEST_MODE === '1' && process.env.NODE_ENV !== 'production'
 
 function selectedYoungPersonId(pathname: string) {
-  const parts = pathname.split('/').filter(Boolean)
-  if (parts[0] === 'young-people' && parts[1]) return parts[1]
-  if (parts[0] === 'children' && parts[1]) return parts[1]
-  return undefined
+  return childIdFromPath(pathname)
 }
 
 function titleFromPath(pathname: string) {
@@ -68,13 +67,19 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { scope, menuSummary } = useOsScope()
   const { activeChild, breadcrumbs, childScopedHref, lockVersion, readyState } = useActiveChild()
   const hasOsScope = scope.scope_type === 'home' || scope.scope_type === 'child'
-  const scopeHasValidIds =
-    (scope.scope_type === 'home' && scope.selected_home_id != null) ||
-    (scope.scope_type === 'child' && scope.selected_child_id != null)
-  const scopeFirstShell = hasOsScope || routeRequiresScope(pathname)
-  const isSelectScopeRoute = pathname === '/select-scope' || pathname.startsWith('/select-scope/')
   const pathParts = pathname.split('/').filter(Boolean)
   const routeSelectedId = selectedYoungPersonId(pathname)
+  const childHomeIdFromMeta =
+    scope.scope_type === 'child' && scope.metadata && typeof scope.metadata === 'object'
+      ? (scope.metadata as { home_id?: number }).home_id
+      : undefined
+  const scopeHasValidIds =
+    (scope.scope_type === 'home' && scope.selected_home_id != null) ||
+    (scope.scope_type === 'child' &&
+      scope.selected_child_id != null &&
+      (scope.selected_home_id != null || childHomeIdFromMeta != null || Boolean(routeSelectedId)))
+  const scopeFirstShell = hasOsScope || routeRequiresScope(pathname)
+  const isSelectScopeRoute = pathname === '/select-scope' || pathname.startsWith('/select-scope/')
   const selectedId = routeSelectedId || activeChild?.id
   const selectedEntityContext = entityContextFromPath(pathname)
   const selectedStaffId = pathParts[0] === 'staff' && pathParts[1] && !['all', 'me', 'evidence', 'induction', 'probation', 'supervision', 'training-matrix', 'command-centre', 'risk', 'relationships', 'recording-quality'].includes(pathParts[1])
@@ -165,14 +170,11 @@ export function AppShell({ children }: { children: ReactNode }) {
       )
     }
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f3f6fb] px-6 text-slate-900">
-        <div className="w-full max-w-lg rounded-[32px] border border-blue-100 bg-white p-8 text-center shadow-2xl shadow-slate-950/10">
-          <p className="text-[11px] font-black uppercase tracking-[0.22em] text-blue-700">Preparing child workspace</p>
-          <h1 className="mt-3 text-3xl font-black tracking-[-0.05em] text-slate-950">{readyState.phase === 'blocked' ? 'Live child workspace returned 0 rows.' : 'Opening the selected child journey'}</h1>
-          <p className="mt-4 text-sm leading-6 text-slate-600">{readyState.reason || 'Checking child, session and role context before records load.'}</p>
-          {readyState.phase === 'active_child' ? <Link prefetch={false} href="/young-people" className="mt-6 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg shadow-slate-950/20">Choose child</Link> : null}
-        </div>
-      </div>
+      <ChildWorkspaceLoadingFallback
+        childId={routeSelectedId || activeChild?.id}
+        reason={readyState.reason}
+        phase={readyState.phase}
+      />
     )
   }
 
@@ -263,13 +265,23 @@ export function AppShell({ children }: { children: ReactNode }) {
           items: primaryNav.filter((item) => group.domains.includes(item.domain))
         }))
         .filter((group) => group.items.length)
-  const childDomainActive = pathParts[0] === 'young-people' || pathParts[0] === 'children'
+  const childDomainActive =
+    pathParts[0] === 'young-people' ||
+    pathParts[0] === 'children' ||
+    (pathParts[0] === 'os' && pathParts[1] === 'young-people')
   const displayBreadcrumbs = pathname === '/profile'
     ? [{ label: 'Children', href: '/young-people' }, { label: 'My profile', current: true }]
     : isSelectorRoute
       ? [{ label: 'Children', href: '/young-people', current: true }]
-      : pathParts[0] === 'children' || pathParts[0] === 'young-people'
-        ? [{ label: 'Children', href: '/young-people' }, { label: activeChildName || selectedId || 'Child profile', current: true }]
+      : pathParts[0] === 'children' || pathParts[0] === 'young-people' || (pathParts[0] === 'os' && pathParts[1] === 'young-people')
+        ? [
+            { label: 'Children', href: '/select-scope' },
+            {
+              label: activeChildName || selectedId || 'Child profile',
+              href: selectedId ? childWorkspaceHref(selectedId) : undefined,
+              current: pathParts.includes('workspace')
+            }
+          ]
         : breadcrumbs
 
   return (

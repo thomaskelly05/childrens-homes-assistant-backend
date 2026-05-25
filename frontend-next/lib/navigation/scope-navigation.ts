@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
+import { childWorkspaceHref } from '@/lib/navigation/child-workspace-routes'
 import type { OsScopeType } from '@/lib/os-scope'
 
 export type ScopeNavItem = {
@@ -67,7 +68,7 @@ export function childScopeNavigation(childId: string | number): ScopeNavItem[] {
   const cid = String(childId)
   const q = encodeURIComponent(cid)
   return [
-    { label: 'Child overview', href: `/young-people/${q}`, icon: UserRound, prefetch: false },
+    { label: 'Child overview', href: childWorkspaceHref(cid), icon: UserRound, prefetch: false },
     { label: 'Record', href: `/record?child_id=${q}&about=child`, icon: ClipboardList, prefetch: false },
     { label: 'Daily note', href: childHref(cid, 'daily-note/new'), icon: ClipboardList, prefetch: false },
     { label: 'Incident', href: `/incidents?young_person_id=${q}`, icon: ShieldCheck, prefetch: false },

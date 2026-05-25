@@ -60,5 +60,7 @@ def test_workspace_href_never_uses_undefined_ids():
     text = OS_SCOPE.read_text(encoding="utf-8")
     assert "selected_child_id" in text
     assert "selected_home_id" in text
-    assert "/young-people/${scope.selected_child_id}/workspace" in text
+    assert "childWorkspaceHref" in text
+    routes = (REPO_ROOT / "frontend-next" / "lib" / "navigation" / "child-workspace-routes.ts").read_text(encoding="utf-8")
+    assert "/os/young-people/" in routes
     assert "undefined" not in text.split("workspaceHrefForScope")[1].split("export")[0]

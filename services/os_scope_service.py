@@ -289,7 +289,7 @@ def _routes_for(scope_type: OsScopeType, home_id: int | None, child_id: int | No
     if scope_type == "home" and home_id:
         routes.home_workspace = f"/homes/{home_id}/workspace"
     if scope_type == "child" and child_id:
-        routes.child_workspace = f"/young-people/{child_id}/workspace"
+        routes.child_workspace = f"/os/young-people/{child_id}/workspace"
     return routes
 
 

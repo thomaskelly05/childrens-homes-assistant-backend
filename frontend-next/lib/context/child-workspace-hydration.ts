@@ -35,6 +35,7 @@ type SearchParamsLike = {
 
 export function childIdFromWorkspaceRoute(pathname: string, searchParams?: SearchParamsLike | null) {
   const parts = pathname.split('/').filter(Boolean)
+  if (parts[0] === 'os' && parts[1] === 'young-people' && parts[2]) return decodeURIComponent(parts[2])
   if (parts[0] === 'young-people' && parts[1]) return decodeURIComponent(parts[1])
   return searchParams?.get('young_person_id') || searchParams?.get('youngPersonId') || undefined
 }
@@ -42,6 +43,7 @@ export function childIdFromWorkspaceRoute(pathname: string, searchParams?: Searc
 export function routeRequiresChildWorkspace(pathname: string, searchParams?: SearchParamsLike | null) {
   const parts = pathname.split('/').filter(Boolean)
   const root = parts[0] || 'home'
+  if (root === 'os' && parts[1] === 'young-people' && parts[2]) return true
   if (root === 'young-people' && parts[1]) return true
   if (childWorkspaceRequiredRoots.has(root)) return true
   if (childWorkspaceQueryRoots.has(root) && childIdFromWorkspaceRoute(pathname, searchParams)) return true
