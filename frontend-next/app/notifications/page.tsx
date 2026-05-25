@@ -1,5 +1,6 @@
 import Link from 'next/link'
 
+import { OperationalNotificationsSection } from '@/components/connect/operational-notifications-section'
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
 import { Card, EmptyState, PageHeader, SectionHeader, StatCard, StatusBadge } from '@/components/indicare/ui'
 import { getNotifications } from '@/lib/os-api/connect'
@@ -12,23 +13,54 @@ export default async function NotificationsPage() {
   ])
   const notifications = result.data.items || []
   const operationalItems = operational.data.items || []
-  const unread = notifications.filter((item) => !item.read_at).length + (operational.data.unread || 0)
+  const opUnread = operational.data.unread_count ?? operational.data.unread ?? 0
+  const unread = notifications.filter((item) => !item.read_at).length + opUnread
+
+  const recordingItems = operationalItems.filter(
+    (i) => i.category === 'recording' || String(i.source).includes('recording')
+  )
+  const isnItems = operationalItems.filter((i) => i.category === 'safeguarding_network' || i.source === 'isn')
+  const briefItems = operationalItems.filter((i) => i.category === 'daily_brief' || i.type === 'manager_daily_brief_reminder')
 
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow="Notifications" title="Notification centre" description="Schema-backed alerts and Connect notifications for your current provider/home scope." />
+      <PageHeader
+        eyebrow="Notifications"
+        title="Notification centre"
+        description="Connect notifications and operational OS attention items for your current scope."
+      />
       <LiveDataStatus result={result} />
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Unread" value={unread} detail="Unread notifications returned by the backend" href="/notifications" entity={{ entity_type: 'notification' }} />
-        <StatCard label="Total" value={notifications.length} detail="Visible to this user" href="/notifications" entity={{ entity_type: 'notification' }} />
-        <StatCard label="Connect" value={notifications.filter((item) => item.notification_type === 'connect_message').length} detail="Message notifications" href="/connect" entity={{ entity_type: 'notification' }} />
-        <StatCard label="Handover" value={notifications.filter((item) => item.notification_type.includes('handover')).length} detail="Acknowledgement or shift continuity" href="/handover/current" entity={{ entity_type: 'handover' }} />
+        <StatCard label="Unread" value={unread} detail="Connect + operational unread" href="/notifications" entity={{ entity_type: 'notification' }} />
+        <StatCard label="Operational" value={operationalItems.length} detail="Recording, ISN, brief, review, actions" href="/notifications" entity={{ entity_type: 'notification' }} />
+        <StatCard label="Recording" value={recordingItems.length} detail="Recording alert notifications" href="/record/alerts" entity={{ entity_type: 'notification' }} />
+        <StatCard label="Safeguarding network" value={isnItems.length} detail="ISN metadata notifications" href="/safeguarding" entity={{ entity_type: 'notification' }} />
       </section>
+
+      <OperationalNotificationsSection items={operationalItems} privacyNotice={operational.data.privacy_notice} />
+
+      {briefItems.length ? (
+        <Card>
+          <SectionHeader eyebrow="Briefing" title="Manager daily brief" description="Daily brief reminder in the operational feed." />
+          <div className="space-y-2">
+            {briefItems.map((item) => (
+              <Link key={item.id} href={item.route} className="block rounded-2xl border border-blue-100 bg-blue-50/50 px-4 py-3 text-sm font-semibold text-blue-900">
+                {item.title} — {item.safe_summary}
+              </Link>
+            ))}
+          </div>
+        </Card>
+      ) : null}
+
       <Card>
-        <SectionHeader eyebrow="Queue" title="Notifications" />
+        <SectionHeader eyebrow="Connect" title="Connect & schema notifications" />
         <div className="space-y-3">
           {notifications.map((item) => (
-            <Link key={item.id} href={item.linked_thread_id ? `/connect/${item.linked_thread_id}` : '/notifications'} className="block rounded-[24px] border border-slate-100 bg-slate-50 p-4 transition hover:bg-white hover:shadow-lg">
+            <Link
+              key={item.id}
+              href={item.linked_thread_id ? `/connect/${item.linked_thread_id}` : '/notifications'}
+              className="block rounded-[24px] border border-slate-100 bg-slate-50 p-4 transition hover:bg-white hover:shadow-lg"
+            >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <StatusBadge value={item.notification_type.replaceAll('_', ' ')} />
@@ -39,28 +71,11 @@ export default async function NotificationsPage() {
               </div>
             </Link>
           ))}
-          {!notifications.length ? <EmptyState title="No notifications returned" description="There are no schema-backed notifications for your user at the moment." /> : null}
+          {!notifications.length ? (
+            <EmptyState title="No Connect notifications" description="There are no schema-backed Connect notifications for your user at the moment." />
+          ) : null}
         </div>
       </Card>
-      {operationalItems.length ? (
-        <Card>
-          <SectionHeader eyebrow="Recording & brief" title="Operational notifications" description="Recording alerts and manager daily brief from metadata-only adapters." />
-          <div className="space-y-3">
-            {operationalItems.map((item) => (
-              <Link key={item.id} href={item.route} className="block rounded-[24px] border border-slate-100 bg-slate-50 p-4 transition hover:bg-white hover:shadow-lg">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <StatusBadge value={String(item.type).replaceAll('_', ' ')} />
-                    <h2 className="mt-3 text-lg font-black tracking-[-0.03em] text-slate-950">{item.title}</h2>
-                    <p className="mt-2 text-sm leading-6 text-slate-600">{item.safe_summary}</p>
-                  </div>
-                  <StatusBadge value={item.unread ? 'unread' : 'read'} />
-                </div>
-              </Link>
-            ))}
-          </div>
-        </Card>
-      ) : null}
     </div>
   )
 }

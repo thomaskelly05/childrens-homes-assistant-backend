@@ -44,7 +44,7 @@ Bell items are **metadata-only**:
 
 ### Mark reviewed
 
-`POST /api/manager-daily-brief/mark-reviewed` stores review state in memory per user per day until persistent storage is added. When reviewed, the daily brief bell item is hidden for that day.
+`POST /api/manager-daily-brief/mark-reviewed` persists review state in `manager_daily_brief_reviews` (`sql/086_manager_daily_brief_reviews.sql`) with in-memory fallback when the table is unavailable. When reviewed, the daily brief bell item is hidden for that day and the OS notification state for `manager_daily_brief:today` is resolved.
 
 ## Safety boundaries
 
@@ -60,9 +60,13 @@ Bell items are **metadata-only**:
 
 Not in scope. Existing Connect notification tables remain unchanged. Future work can enqueue rows into `notifications` when job infrastructure exists.
 
+## OS notification lifecycle
+
+Operational bell items support read/acknowledge/assign/resolve/archive via `POST /api/notifications/{notification_key}/action`. See `docs/os-notification-system.md`.
+
 ## Future roadmap
 
-1. Persist brief “reviewed” state per user/home in SQL.
+1. ~~Persist brief “reviewed” state per user/home in SQL.~~ **Done** (`sql/086_manager_daily_brief_reviews.sql`).
 2. Event-driven alert checks after draft save / review decision.
 3. Optional push via existing `notifications` table (metadata rows only).
 4. Handover export snapshot from brief sections.

@@ -38,6 +38,7 @@ class ISNNotificationAdapterService:
         unread = bool(item.metadata.get("unread", item.status in ("new", "reviewing", "open", "assigned")))
         return OsNotificationItem(
             id=item.id,
+            notification_key=item.id,
             type=ISN_TYPE_TO_OS.get(str(item.type), str(item.type)),
             title=item.title,
             safe_summary=item.safe_summary,

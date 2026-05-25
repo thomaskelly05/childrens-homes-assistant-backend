@@ -66,3 +66,10 @@ def test_mark_reviewed_hides_brief_reminder(fake_state):
     assert manager_daily_brief_service.is_reviewed_today(user)
     brief = manager_daily_brief_service.build_brief(user, conn=None)
     assert brief.reviewed is True
+
+
+def test_mark_reviewed_persists_in_memory(fake_state):
+    user = fake_state["user"]
+    manager_daily_brief_service.mark_reviewed(user, conn=None)
+    key = manager_daily_brief_service._review_key(user)
+    assert key in manager_daily_brief_service._reviewed

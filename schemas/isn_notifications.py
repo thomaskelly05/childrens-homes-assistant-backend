@@ -100,3 +100,45 @@ class IsnNotificationHealth(BaseModel):
     service: str = "isn_digest_service"
     persistence_available: bool = False
     storage_mode: str = "unknown"
+
+
+IsnNotificationLifecycleStatus = Literal[
+    "unread",
+    "read",
+    "acknowledged",
+    "assigned",
+    "resolved",
+    "archived",
+]
+
+IsnNotificationActionType = Literal[
+    "acknowledge",
+    "assign",
+    "resolve",
+    "archive",
+    "reopen",
+    "create_intelligence_action",
+]
+
+
+class IsnNotificationActionRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    action: IsnNotificationActionType
+    note: str | None = None
+    owner_user_id: str | None = None
+    owner_name: str | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class IsnNotificationActionResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    success: bool = True
+    item_id: str
+    action: str
+    status: str = "acknowledged"
+    message: str | None = None
+    warning: str | None = None
+    synced_to_os_state: bool = False
+    metadata: dict[str, Any] = Field(default_factory=dict)

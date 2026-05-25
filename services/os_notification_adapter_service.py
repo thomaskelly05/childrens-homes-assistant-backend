@@ -1,4 +1,4 @@
-"""Adapter layer: recording alerts and daily brief into the existing OS notification bell pattern."""
+"""Adapter layer: unified OS operational notification feed for the existing bell."""
 
 from __future__ import annotations
 
@@ -8,15 +8,19 @@ from typing import Any
 
 from repositories.os_repository_utils import MANAGER_ROLES
 from schemas.os_notifications import (
-    OsNotificationFeed,
+    OsNotificationFeedResponse,
     OsNotificationFeedHealth,
     OsNotificationItem,
+    OsNotificationSummary,
 )
 from schemas.recording_alerts import RecordingAlertListFilters, RecordingAlertRecord
+from services.intelligence_action_service import intelligence_action_service
 from services.isn_notification_adapter_service import isn_notification_adapter_service
 from services.manager_daily_brief_service import manager_daily_brief_service
+from services.os_notification_state_service import os_notification_state_service
 from services.recording_alert_service import recording_alert_service
-from services.isn_digest_service import isn_digest_service
+from services.recording_governance_service import recording_governance_service
+from services.recording_review_service import recording_review_service
 
 logger = logging.getLogger("indicare.os_notifications")
 
@@ -38,24 +42,38 @@ ALERT_TYPE_TO_OS_TYPE: dict[str, str] = {
     "formal_submission_failed": "recording_alert_structured_missing",
 }
 
-CATEGORY_FOR_TYPE: dict[str, str] = {
-    "recording_alert_urgent": "Recording",
-    "recording_alert_safeguarding": "Safeguarding",
-    "recording_alert_review_due": "Review",
-    "recording_alert_privacy": "Governance",
-    "recording_alert_changes_requested": "Recording",
-    "recording_alert_missing_follow_up": "Recording",
-    "recording_alert_medication_review": "Recording",
-    "recording_alert_structured_missing": "Governance",
-    "manager_daily_brief_reminder": "Briefing",
-    "isn_safeguarding_alert": "Safeguarding network",
-    "isn_review_required": "Safeguarding network",
-    "isn_escalation_required": "Safeguarding network",
-    "isn_network_update": "Safeguarding network",
-    "isn_follow_up_due": "Safeguarding network",
-    "isn_professional_update": "Safeguarding network",
-    "isn_recording_linked_alert": "Safeguarding network",
-    "isn_manager_action_required": "Safeguarding network",
+CATEGORY_LABELS: dict[str, str] = {
+    "recording": "Recording",
+    "safeguarding_network": "Safeguarding network",
+    "daily_brief": "Daily brief",
+    "review": "Review",
+    "action": "Action",
+    "governance": "Governance",
+    "handover": "Handover",
+    "system": "System",
+}
+
+TYPE_CATEGORY: dict[str, str] = {
+    "recording_alert_urgent": "recording",
+    "recording_alert_safeguarding": "safeguarding_network",
+    "recording_alert_review_due": "review",
+    "recording_alert_privacy": "governance",
+    "recording_alert_changes_requested": "recording",
+    "recording_alert_missing_follow_up": "recording",
+    "recording_alert_medication_review": "recording",
+    "recording_alert_structured_missing": "governance",
+    "manager_daily_brief_reminder": "daily_brief",
+    "isn_safeguarding_alert": "safeguarding_network",
+    "isn_review_required": "safeguarding_network",
+    "isn_escalation_required": "safeguarding_network",
+    "isn_network_update": "safeguarding_network",
+    "isn_follow_up_due": "safeguarding_network",
+    "isn_professional_update": "safeguarding_network",
+    "isn_recording_linked_alert": "safeguarding_network",
+    "isn_manager_action_required": "safeguarding_network",
+    "recording_review_due": "review",
+    "intelligence_action_due": "action",
+    "governance_notice": "governance",
 }
 
 
@@ -79,7 +97,6 @@ def _is_manager_view(current_user: dict[str, Any]) -> bool:
 
 
 def _safe_route_for_alert(alert: RecordingAlertRecord) -> str:
-    """Bell routes avoid draft/alert/child IDs in query strings."""
     atype = alert.alert_type
     if atype in (
         "high_risk_review_due",
@@ -130,38 +147,63 @@ def _title_for_alert(alert: RecordingAlertRecord) -> str:
     return templates.get(alert.alert_type, alert.title or "Recording alert")
 
 
+def _map_alert_status(status: str) -> str:
+    mapping = {
+        "open": "unread",
+        "acknowledged": "acknowledged",
+        "assigned": "assigned",
+        "resolved": "resolved",
+        "archived": "archived",
+    }
+    return mapping.get(status, status)
+
+
 class OsNotificationAdapterService:
     def get_health(self, conn: Any | None = None) -> OsNotificationFeedHealth:
         alert_health = recording_alert_service.get_health(conn=conn)
         brief_health = manager_daily_brief_service.get_health(conn=conn)
+        state_health = os_notification_state_service.get_health(conn=conn)
+        from services.isn_digest_service import isn_digest_service
+
         isn_health = isn_digest_service.get_health(conn=conn)
         return OsNotificationFeedHealth(
             status="ok",
-            persistence_available=alert_health.persistence_available,
+            persistence_available=state_health.persistence_available or alert_health.persistence_available,
             recording_alerts_available=True,
             manager_daily_brief_available=brief_health.status == "ok",
             isn_available=isn_health.status == "ok",
+            storage_mode=state_health.storage_mode,
         )
 
     def _alert_to_item(self, alert: RecordingAlertRecord) -> OsNotificationItem:
         os_type = ALERT_TYPE_TO_OS_TYPE.get(alert.alert_type, "recording_alert_review_due")
+        category = TYPE_CATEGORY.get(os_type, "recording")
         unread = alert.status in ("open", "assigned")
         return OsNotificationItem(
             id=f"recording_alert:{alert.id}",
+            notification_key=f"recording_alert:{alert.id}",
             type=os_type,
             title=_title_for_alert(alert),
             safe_summary=alert.safe_summary or alert.description or "Recording metadata alert.",
             severity=alert.severity,
-            status=alert.status,
+            status=_map_alert_status(alert.status),
             unread=unread,
             route=_safe_route_for_alert(alert),
             action_label=_action_label_for_alert(alert),
-            source="recording_alerts",
+            source="recording_alert",
+            category=category,
+            related_id=alert.id,
+            related_type="recording_alert",
+            child_id=alert.child_id,
+            child_name=alert.child_name,
+            home_id=alert.home_id,
+            owner_user_id=alert.owner_user_id,
+            owner_name=alert.owner_name,
             created_at=alert.created_at,
-            category=CATEGORY_FOR_TYPE.get(os_type, "Recording"),
             metadata={
                 "alert_type": alert.alert_type,
                 "no_raw_body": True,
+                "metadata_only": True,
                 "recording_type": alert.recording_type,
             },
         )
@@ -173,6 +215,7 @@ class OsNotificationAdapterService:
             return None
         return OsNotificationItem(
             id="manager_daily_brief:today",
+            notification_key="manager_daily_brief:today",
             type="manager_daily_brief_reminder",
             title="Manager daily brief ready",
             safe_summary=(
@@ -180,15 +223,127 @@ class OsNotificationAdapterService:
                 "before your shift ends."
             ),
             severity="medium",
-            status="open",
+            status="unread",
             unread=True,
             route="/command-centre/briefing",
             action_label="Open daily brief",
             source="manager_daily_brief",
+            category="daily_brief",
+            related_id="today",
+            related_type="daily_brief",
             created_at=_now_iso(),
-            category="Briefing",
-            metadata={"no_raw_body": True},
+            metadata={"no_raw_body": True, "metadata_only": True},
         )
+
+    def _review_queue_items(
+        self, current_user: dict[str, Any], conn: Any | None, *, limit: int
+    ) -> list[OsNotificationItem]:
+        items: list[OsNotificationItem] = []
+        try:
+            summary = recording_review_service.get_review_summary(current_user, conn=conn)
+            pending = int(summary.awaiting_review or summary.total_in_queue or 0)
+            urgent = int(summary.urgent or 0)
+            if pending <= 0:
+                return items
+            severity = "urgent" if urgent else "medium"
+            items.append(
+                OsNotificationItem(
+                    id="recording_review:queue",
+                    notification_key="recording_review:queue",
+                    type="recording_review_due",
+                    title="Recording review queue needs attention",
+                    safe_summary=f"{pending} draft(s) may need manager review in the recording queue.",
+                    severity=severity,
+                    status="unread",
+                    unread=True,
+                    route="/record/reviews",
+                    action_label="Open review queue",
+                    source="recording_review",
+                    category="review",
+                    related_type="review_queue",
+                    created_at=_now_iso(),
+                    metadata={"pending_review": pending, "no_raw_body": True, "metadata_only": True},
+                )
+            )
+        except Exception as exc:
+            logger.debug("review_queue_notification_skipped: %s", exc)
+        return items[:limit]
+
+    def _intelligence_action_items(
+        self, current_user: dict[str, Any], conn: Any | None, *, limit: int
+    ) -> list[OsNotificationItem]:
+        items: list[OsNotificationItem] = []
+        try:
+            home_id = current_user.get("home_id")
+            summary = intelligence_action_service.build_action_summary(home_id=home_id, conn=conn)
+            proposed = int(summary.proposed_count or 0)
+            urgent = int(summary.urgent_count or 0)
+            if proposed <= 0 and urgent <= 0:
+                return items
+            items.append(
+                OsNotificationItem(
+                    id="intelligence_action:due",
+                    notification_key="intelligence_action:due",
+                    type="intelligence_action_due",
+                    title="Intelligence actions need review",
+                    safe_summary=(
+                        f"{proposed} proposed action(s) and {urgent} urgent item(s) may need manager follow-up."
+                    ),
+                    severity="urgent" if urgent else "medium",
+                    status="unread",
+                    unread=True,
+                    route="/intelligence-actions",
+                    action_label="Open intelligence actions",
+                    source="intelligence_action",
+                    category="action",
+                    related_type="intelligence_action",
+                    created_at=_now_iso(),
+                    metadata={
+                        "proposed_count": proposed,
+                        "urgent_count": urgent,
+                        "no_raw_body": True,
+                        "metadata_only": True,
+                    },
+                )
+            )
+        except Exception as exc:
+            logger.debug("intelligence_action_notification_skipped: %s", exc)
+        return items[:limit]
+
+    def _governance_items(
+        self, current_user: dict[str, Any], conn: Any | None, *, limit: int
+    ) -> list[OsNotificationItem]:
+        items: list[OsNotificationItem] = []
+        try:
+            dashboard = recording_governance_service.build_dashboard(current_user, conn=conn)
+            flags = int(getattr(dashboard.quality, "privacy_flags", 0) or 0)
+            if flags <= 0:
+                return items
+            items.append(
+                OsNotificationItem(
+                    id="governance:privacy_flags",
+                    notification_key="governance:privacy_flags",
+                    type="governance_notice",
+                    title="Recording governance flags open",
+                    safe_summary=f"{flags} privacy or governance flag(s) may need manager review.",
+                    severity="medium",
+                    status="unread",
+                    unread=True,
+                    route="/record/governance",
+                    action_label="Open governance",
+                    source="governance",
+                    category="governance",
+                    related_type="governance",
+                    created_at=_now_iso(),
+                    metadata={"privacy_flags_open": flags, "no_raw_body": True, "metadata_only": True},
+                )
+            )
+        except Exception as exc:
+            logger.debug("governance_notification_skipped: %s", exc)
+        return items[:limit]
+
+    def _count_by_category(self, items: list[OsNotificationItem], category: str) -> int:
+        return sum(1 for i in items if i.unread and _text(i.category) == category)
 
     def build_feed(
         self,
@@ -197,7 +352,7 @@ class OsNotificationAdapterService:
         limit: int = 30,
         unread_only: bool = False,
         conn: Any | None = None,
-    ) -> OsNotificationFeed:
+    ) -> OsNotificationFeedResponse:
         limitations: list[str] = []
         items: list[OsNotificationItem] = []
 
@@ -230,27 +385,56 @@ class OsNotificationAdapterService:
                     current_user, limit=min(limit, 20), conn=conn
                 )
                 for isn_item in isn_items:
+                    isn_item = isn_item.model_copy(
+                        update={
+                            "notification_key": isn_item.notification_key or isn_item.id,
+                            "source": "isn",
+                            "category": "safeguarding_network",
+                        }
+                    )
                     if unread_only and not isn_item.unread:
                         continue
                     items.append(isn_item)
             except Exception as exc:
                 logger.warning("isn_feed_unavailable: %s", exc)
                 limitations.append("Safeguarding network notifications could not be loaded.")
+
+            for extra in (
+                self._review_queue_items(current_user, conn, limit=3),
+                self._intelligence_action_items(current_user, conn, limit=2),
+                self._governance_items(current_user, conn, limit=2),
+            ):
+                for item in extra:
+                    if unread_only and not item.unread:
+                        continue
+                    items.append(item)
         else:
             limitations.append("Recording alert notifications require manager or senior oversight role.")
 
-        urgent = sum(1 for i in items if i.severity in ("urgent", "high") and i.unread)
-        recording_count = sum(1 for i in items if str(i.source) == "recording_alerts" and i.unread)
-        isn_count = sum(1 for i in items if str(i.source) == "isn" and i.unread)
-        daily_brief_unread = any(i.type == "manager_daily_brief_reminder" and i.unread for i in items)
-        unread = sum(1 for i in items if i.unread)
+        items = os_notification_state_service.apply_state(items, current_user, conn=conn)
+
+        if unread_only:
+            items = [i for i in items if i.unread]
+
+        urgent_count = sum(1 for i in items if i.severity in ("urgent", "high") and i.unread)
+        recording_count = self._count_by_category(items, "recording") + sum(
+            1 for i in items if i.unread and _text(i.source) in ("recording_alert", "recording_alerts")
+        )
+        isn_count = self._count_by_category(items, "safeguarding_network")
+        daily_brief_count = self._count_by_category(items, "daily_brief")
+        review_count = self._count_by_category(items, "review")
+        action_count = self._count_by_category(items, "action")
+        governance_count = self._count_by_category(items, "governance")
+        unread_count = sum(1 for i in items if i.unread)
+        daily_brief_unread = daily_brief_count > 0
 
         categories: dict[str, int] = {}
         for item in items:
             if not item.unread:
                 continue
-            cat = item.category or "Other"
-            categories[cat] = categories.get(cat, 0) + 1
+            cat_key = _text(item.category, "other")
+            label = CATEGORY_LABELS.get(cat_key, cat_key.replace("_", " ").title())
+            categories[label] = categories.get(label, 0) + 1
 
         items.sort(
             key=lambda i: (
@@ -260,16 +444,46 @@ class OsNotificationAdapterService:
             )
         )
 
-        return OsNotificationFeed(
+        generated_at = _now_iso()
+        return OsNotificationFeedResponse(
             items=items[:limit],
-            unread=unread,
-            urgent=urgent,
-            recording_alert_count=recording_count,
+            unread_count=unread_count,
+            urgent_count=urgent_count,
+            recording_count=recording_count,
             isn_count=isn_count,
-            daily_brief_unread=daily_brief_unread,
+            daily_brief_count=daily_brief_count,
+            review_count=review_count,
+            action_count=action_count,
+            governance_count=governance_count,
+            generated_at=generated_at,
             categories=categories,
             limitations=limitations,
             available=True,
+            metadata={"metadata_only": True, "no_raw_body": True},
+            unread=unread_count,
+            urgent=urgent_count,
+            recording_alert_count=recording_count,
+            daily_brief_unread=daily_brief_unread,
+        )
+
+    def build_summary(
+        self,
+        current_user: dict[str, Any],
+        conn: Any | None = None,
+    ) -> OsNotificationSummary:
+        feed = self.build_feed(current_user, limit=100, conn=conn)
+        return OsNotificationSummary(
+            unread_count=feed.unread_count,
+            urgent_count=feed.urgent_count,
+            recording_count=feed.recording_count,
+            isn_count=feed.isn_count,
+            daily_brief_count=feed.daily_brief_count,
+            review_count=feed.review_count,
+            action_count=feed.action_count,
+            governance_count=feed.governance_count,
+            generated_at=feed.generated_at,
+            available=feed.available,
+            metadata=feed.metadata,
         )
 
 

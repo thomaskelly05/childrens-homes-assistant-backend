@@ -65,7 +65,7 @@ def test_isn_item_in_feed(fake_state):
     feed = os_notification_adapter_service.build_feed(user, conn=None)
     isn_items = [i for i in feed.items if i.source == "isn"]
     assert isn_items
-    assert any(i.category == "Safeguarding network" for i in isn_items)
+    assert any(i.category == "safeguarding_network" for i in isn_items)
 
 
 def test_notification_bell_ui_markers():
@@ -80,6 +80,11 @@ def test_notification_bell_ui_markers():
     assert "notification-bell-isn-safeguarding-link" in bell
     assert "Safeguarding network" in bell
     assert "getOperationalNotificationFeed" in bell
+    assert "applyOperationalNotificationAction" in bell
+    assert "notification-bell-mark-all-read" in bell
+    assert "notification-bell-acknowledge" in bell
+    assert "notification-bell-resolve" in bell
+    assert "categoryLabel" in bell
     assert "draft_id=" not in bell
     orb_hrefs = re.findall(r'["\']([^"\']*/orb[^"\']*)["\']', bell)
     for href in orb_hrefs:

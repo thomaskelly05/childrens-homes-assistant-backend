@@ -1,10 +1,17 @@
 'use client'
 
 import Link from 'next/link'
-import { Bell } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { Bell, MoreHorizontal } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { getOperationalNotificationFeed, type OsNotificationFeed, type OsNotificationItem } from '@/lib/os-api/notifications'
+import {
+  applyOperationalNotificationAction,
+  categoryLabel,
+  getOperationalNotificationFeed,
+  markAllOperationalNotificationsRead,
+  type OsNotificationFeed,
+  type OsNotificationItem
+} from '@/lib/os-api/notifications'
 
 const e2eUiMode = process.env.NEXT_PUBLIC_E2E_TEST_MODE === '1' && process.env.NODE_ENV !== 'production'
 
@@ -14,41 +21,46 @@ function severityClass(severity: OsNotificationItem['severity']) {
   return 'bg-slate-50 text-slate-700 border-slate-100'
 }
 
+function itemKey(item: OsNotificationItem) {
+  return item.notification_key || item.id
+}
+
 export function NotificationBell() {
   const [connectCount, setConnectCount] = useState(0)
   const [feed, setFeed] = useState<OsNotificationFeed | null>(null)
   const [open, setOpen] = useState(false)
+  const [menuKey, setMenuKey] = useState<string | null>(null)
+  const [busyKey, setBusyKey] = useState<string | null>(null)
   const rootRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
+  const loadFeed = useCallback(async () => {
     if (e2eUiMode) {
       setConnectCount(0)
       setFeed(null)
       return
     }
+    try {
+      const [connectResponse, schemaResponse, operational] = await Promise.all([
+        fetch('/api/connect/unread', { credentials: 'include' }),
+        fetch('/api/notifications?unread_only=true&limit=20', { credentials: 'include' }),
+        getOperationalNotificationFeed({ unread_only: true, limit: 20 })
+      ])
+      const connect = connectResponse.ok ? await connectResponse.json() : { count: 0 }
+      const notifications = schemaResponse.ok ? await schemaResponse.json() : { unread: 0 }
+      const operationalUnread = operational.data.unread_count ?? operational.data.unread ?? 0
+      setFeed(operational.data)
+      setConnectCount(Number(connect.count || 0) + Number(notifications.unread || 0) + operationalUnread)
+    } catch {
+      setConnectCount(0)
+      setFeed(null)
+    }
+  }, [])
+
+  useEffect(() => {
     let active = true
     async function load() {
-      try {
-        const [connectResponse, schemaResponse, operational] = await Promise.all([
-          fetch('/api/connect/unread', { credentials: 'include' }),
-          fetch('/api/notifications?unread_only=true&limit=20', { credentials: 'include' }),
-          getOperationalNotificationFeed({ unread_only: true, limit: 20 })
-        ])
-        const connect = connectResponse.ok ? await connectResponse.json() : { count: 0 }
-        const notifications = schemaResponse.ok ? await schemaResponse.json() : { unread: 0 }
-        const operationalUnread = operational.data.unread || 0
-        if (active) {
-          setFeed(operational.data)
-          setConnectCount(
-            Number(connect.count || 0) + Number(notifications.unread || 0) + operationalUnread
-          )
-        }
-      } catch {
-        if (active) {
-          setConnectCount(0)
-          setFeed(null)
-        }
-      }
+      if (!active) return
+      await loadFeed()
     }
     void load()
     const interval = setInterval(() => void load(), 60000)
@@ -56,18 +68,46 @@ export function NotificationBell() {
       active = false
       clearInterval(interval)
     }
-  }, [])
+  }, [loadFeed])
 
   useEffect(() => {
     function onDocClick(event: MouseEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false)
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setOpen(false)
+        setMenuKey(null)
+      }
     }
     document.addEventListener('click', onDocClick)
     return () => document.removeEventListener('click', onDocClick)
   }, [])
 
+  async function runAction(item: OsNotificationItem, action: 'mark_read' | 'acknowledge' | 'resolve' | 'archive') {
+    const key = itemKey(item)
+    setBusyKey(key)
+    try {
+      await applyOperationalNotificationAction(key, {
+        action,
+        metadata: { item_type: item.type, category: item.category }
+      })
+      await loadFeed()
+    } finally {
+      setBusyKey(null)
+      setMenuKey(null)
+    }
+  }
+
+  async function markAllRead() {
+    setBusyKey('all')
+    try {
+      await markAllOperationalNotificationsRead()
+      await loadFeed()
+    } finally {
+      setBusyKey(null)
+    }
+  }
+
   const totalCount = connectCount
-  const urgentCount = feed?.urgent || 0
+  const urgentCount = feed?.urgent_count ?? feed?.urgent ?? 0
   const items = feed?.items?.slice(0, 8) || []
 
   return (
@@ -102,33 +142,121 @@ export function NotificationBell() {
         >
           <div className="flex items-center justify-between gap-2 px-1 pb-2">
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Notifications</p>
-            <Link
-              href="/notifications"
-              className="text-[10px] font-black uppercase tracking-[0.14em] text-blue-700"
-              onClick={() => setOpen(false)}
-            >
-              Centre
-            </Link>
+            <div className="flex items-center gap-2">
+              {items.some((i) => i.unread) ? (
+                <button
+                  type="button"
+                  data-testid="notification-bell-mark-all-read"
+                  disabled={busyKey === 'all'}
+                  onClick={() => void markAllRead()}
+                  className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500 hover:text-blue-700"
+                >
+                  Mark all read
+                </button>
+              ) : null}
+              <Link
+                href="/notifications"
+                className="text-[10px] font-black uppercase tracking-[0.14em] text-blue-700"
+                onClick={() => setOpen(false)}
+              >
+                Centre
+              </Link>
+            </div>
           </div>
           <div className="max-h-80 space-y-2 overflow-y-auto">
             {items.length ? (
-              items.map((item) => (
-                <Link
-                  key={item.id}
-                  href={item.route}
-                  data-testid={`notification-bell-item-${item.type}`}
-                  className={`block rounded-2xl border px-3 py-2.5 transition hover:shadow-md ${severityClass(item.severity)}`}
-                  onClick={() => setOpen(false)}
-                >
-                  <p className="text-xs font-black">{item.title}</p>
-                  <p className="mt-1 line-clamp-2 text-[11px] font-semibold leading-5 opacity-90" data-testid="notification-bell-safe-summary">
-                    {item.safe_summary}
-                  </p>
-                  {item.action_label ? (
-                    <p className="mt-1 text-[10px] font-black uppercase tracking-[0.12em] opacity-70">{item.action_label}</p>
-                  ) : null}
-                </Link>
-              ))
+              items.map((item) => {
+                const key = itemKey(item)
+                const showMenu = menuKey === key
+                return (
+                  <div
+                    key={key}
+                    className={`relative rounded-2xl border px-3 py-2.5 ${severityClass(item.severity)} ${item.unread ? '' : 'opacity-80'}`}
+                    data-testid={`notification-bell-item-${item.type}`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <Link href={item.route} className="min-w-0 flex-1" onClick={() => setOpen(false)}>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="rounded-full bg-white/70 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.1em]">
+                            {categoryLabel(item.category)}
+                          </span>
+                          {item.unread ? (
+                            <span className="rounded-full bg-blue-600 px-1.5 py-0.5 text-[9px] font-black text-white">
+                              Unread
+                            </span>
+                          ) : null}
+                        </div>
+                        <p className="mt-1 text-xs font-black">{item.title}</p>
+                        <p
+                          className="mt-1 line-clamp-2 text-[11px] font-semibold leading-5 opacity-90"
+                          data-testid="notification-bell-safe-summary"
+                        >
+                          {item.safe_summary}
+                        </p>
+                        {item.action_label ? (
+                          <p className="mt-1 text-[10px] font-black uppercase tracking-[0.12em] opacity-70">
+                            {item.action_label}
+                          </p>
+                        ) : null}
+                      </Link>
+                      <button
+                        type="button"
+                        aria-label="Notification actions"
+                        className="rounded-lg p-1 opacity-70 hover:opacity-100"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          setMenuKey(showMenu ? null : key)
+                        }}
+                      >
+                        <MoreHorizontal className="h-4 w-4" />
+                      </button>
+                    </div>
+                    {showMenu ? (
+                      <div className="mt-2 flex flex-wrap gap-1 border-t border-black/5 pt-2">
+                        {item.unread ? (
+                          <button
+                            type="button"
+                            data-testid="notification-bell-mark-read"
+                            disabled={busyKey === key}
+                            className="rounded-full bg-white/80 px-2 py-1 text-[9px] font-black uppercase"
+                            onClick={() => void runAction(item, 'mark_read')}
+                          >
+                            Mark read
+                          </button>
+                        ) : null}
+                        <button
+                          type="button"
+                          data-testid="notification-bell-acknowledge"
+                          disabled={busyKey === key}
+                          className="rounded-full bg-white/80 px-2 py-1 text-[9px] font-black uppercase"
+                          onClick={() => void runAction(item, 'acknowledge')}
+                        >
+                          Acknowledge
+                        </button>
+                        <button
+                          type="button"
+                          data-testid="notification-bell-resolve"
+                          disabled={busyKey === key}
+                          className="rounded-full bg-white/80 px-2 py-1 text-[9px] font-black uppercase"
+                          onClick={() => void runAction(item, 'resolve')}
+                        >
+                          Resolve
+                        </button>
+                        <button
+                          type="button"
+                          data-testid="notification-bell-archive"
+                          disabled={busyKey === key}
+                          className="rounded-full bg-white/80 px-2 py-1 text-[9px] font-black uppercase"
+                          onClick={() => void runAction(item, 'archive')}
+                        >
+                          Archive
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+                )
+              })
             ) : (
               <p className="rounded-2xl border border-dashed border-slate-200 px-3 py-4 text-xs font-semibold text-slate-500">
                 No operational notifications in scope.
@@ -142,7 +270,7 @@ export function NotificationBell() {
               className="rounded-full bg-red-50 px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-red-800"
               onClick={() => setOpen(false)}
             >
-              Recording alerts
+              Recording
             </Link>
             <Link
               href="/command-centre/briefing"
