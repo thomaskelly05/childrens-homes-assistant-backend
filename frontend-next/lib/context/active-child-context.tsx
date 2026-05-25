@@ -260,6 +260,9 @@ export function ActiveChildProvider({ children }: { children: ReactNode }) {
     void authFetchResponse(`/os/young-people/${encodeURIComponent(activeChild.id)}/workspace`, {
       signal: controller.signal
     }).then(async (response) => {
+      if (response.status === 503) {
+        throw new Error('Database busy; please retry shortly.')
+      }
       if (!response.ok) throw new Error('Child workspace could not be verified.')
       const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>
       const workspace = (payload.data ?? payload) as Record<string, unknown>

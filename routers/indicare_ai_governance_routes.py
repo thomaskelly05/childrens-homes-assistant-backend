@@ -9,7 +9,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, Query
 
 from auth.dependencies import get_current_user
-from db.connection import get_db
+from db.connection import acquire_optional_dashboard_connection, get_db
 from schemas.indicare_ai_governance import AiGovernanceFilter
 from services.indicare_ai_governance_dashboard_service import indicare_ai_governance_dashboard_service
 from services.indicare_ai_governance_event_service import indicare_ai_governance_event_service
@@ -41,7 +41,6 @@ def ai_governance_dashboard(
     risk_level: str | None = None,
     limit: int = Query(default=25, ge=1, le=100),
     current_user: dict[str, Any] = Depends(get_current_user),
-    conn=Depends(get_db),
 ):
     filters = AiGovernanceFilter(
         period=period,  # type: ignore[arg-type]
@@ -51,15 +50,18 @@ def ai_governance_dashboard(
         limit=limit,
     )
     started = time.perf_counter()
-    dashboard = indicare_ai_governance_dashboard_service.build_dashboard(
-        filters,
-        current_user,
-        conn=conn,
-    )
+    with acquire_optional_dashboard_connection(timeout=0.1) as conn:
+        dashboard = indicare_ai_governance_dashboard_service.build_dashboard(
+            filters,
+            current_user,
+            conn=conn,
+        )
+    route_ms = round((time.perf_counter() - started) * 1000, 2)
     logging.getLogger("indicare.ai_governance_dashboard").info(
-        "ai_governance_dashboard endpoint=/intelligence/governance/ai/dashboard total_ms=%s degraded=%s warning_count=%s",
-        round((time.perf_counter() - started) * 1000, 2),
+        "ai_governance_dashboard endpoint=/intelligence/governance/ai/dashboard route_total_ms=%s degraded=%s degraded_response=%s warning_count=%s",
+        route_ms,
         dashboard.degraded,
+        bool(dashboard.degraded),
         len(dashboard.health.warnings or []),
     )
     return {
@@ -67,7 +69,7 @@ def ai_governance_dashboard(
         "data": dashboard.model_dump(mode="json"),
         "degraded": dashboard.degraded,
         "warning": dashboard.warning,
-        "cache_status": "hit" if not dashboard.degraded else "degraded",
+        "cache_status": "degraded" if dashboard.degraded else "hit",
     }
 
 

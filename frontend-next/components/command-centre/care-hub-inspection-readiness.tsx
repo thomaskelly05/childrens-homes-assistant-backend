@@ -9,6 +9,7 @@ import {
 } from '@/lib/os-api/inspection-readiness'
 import { getReg45Dashboard } from '@/lib/os-api/reg45-quality-review'
 import { sccifAlignmentOrbHref, getSccifAlignmentDashboard } from '@/lib/os-api/sccif-alignment'
+import { fetchWithOsCache, osRequestDedupeKey } from '@/lib/os-request-cache'
 
 export function CareHubInspectionReadiness() {
   const [evidenceCount, setEvidenceCount] = useState<number | null>(null)
@@ -19,7 +20,11 @@ export function CareHubInspectionReadiness() {
   const [reg45ReviewCount, setReg45ReviewCount] = useState<number | null>(null)
 
   useEffect(() => {
-    void getSccifAlignmentDashboard({ limit: 50 }).then((result) => {
+    void fetchWithOsCache(
+      osRequestDedupeKey('/intelligence/sccif/dashboard'),
+      () => getSccifAlignmentDashboard({ limit: 50 }),
+      30000
+    ).then((result) => {
       if (!result.ok || !result.data) return
       setEvidenceCount(result.data.evidence_items.length)
       setGapCount(result.data.evidence_gaps.length)
@@ -27,14 +32,22 @@ export function CareHubInspectionReadiness() {
       setHelpedCount(Number(meta.helped_and_protected_count ?? 0))
       setLeadershipCount(Number(meta.leadership_count ?? 0))
     })
-    void getInspectionReadinessDashboard().then((result) => {
+    void fetchWithOsCache(
+      osRequestDedupeKey('/intelligence/inspection-readiness/dashboard'),
+      () => getInspectionReadinessDashboard(),
+      30000
+    ).then((result) => {
       if (!result.ok || !result.data) return
       const meta = result.data.metadata || {}
       setInspectionGaps(
         Number(meta.reg44_gaps ?? 0) + Number(meta.reg45_gaps ?? 0) || result.data.key_gaps.length
       )
     })
-    void getReg45Dashboard().then((result) => {
+    void fetchWithOsCache(
+      osRequestDedupeKey('/intelligence/reg45/dashboard'),
+      () => getReg45Dashboard(),
+      30000
+    ).then((result) => {
       if (!result.ok || !result.data) return
       setReg45ReviewCount(
         (result.data.draft_review_count || 0) +

@@ -1,5 +1,7 @@
 'use client'
 
+import { fetchWithOsCache, osRequestDedupeKey } from '@/lib/os-request-cache'
+
 export type WorkforceContextItem = {
   id: string
   title: string
@@ -74,7 +76,8 @@ export function getWorkforceContextHealth() {
 }
 
 export function getWorkforceDashboard() {
-  return workforceFetch<WorkforceContextDashboard>('/api/workforce/context/dashboard')
+  const key = osRequestDedupeKey('/api/workforce-os/dashboard')
+  return fetchWithOsCache(key, () => workforceFetch<WorkforceContextDashboard>('/api/workforce/context/dashboard'), 20000)
 }
 
 export function getShiftContext() {

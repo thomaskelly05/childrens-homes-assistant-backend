@@ -27,3 +27,45 @@ Structured logs (no raw bodies) on:
 - https://app.indicare.co.uk/notifications
 - https://app.indicare.co.uk/intelligence/governance/ai
 - AppShell menu open/close (notification bell + recording badge)
+
+## Second hardening pass
+
+### React #130 / workspace recovery
+
+- **Root cause:** `CareHubStartHero` rendered Lucide icons from `iconByLabel[action.label]` but `CARE_HUB_HERO_ACTIONS` includes **Safeguarding concern**, which was missing from the map. React error #130 (`Element type is invalid … got: undefined`) surfaced through `app/error.tsx` as “Workspace recovery required”.
+- **Fix:** Shared `care-hub-action-icons.ts` with every hero label, `SafeLucideIcon` fallback, and `WorkspaceRecoveryPanel` for database-busy / recovery states (no undefined component renders).
+
+### Circuit breaker behaviour
+
+- In-memory `services/os_circuit_breaker_service.py` per key (`governance_command_centre`, `ai_governance_dashboard`, notification optional sources, recording badge, inspection/reg45 dashboards).
+- Opens after repeated failures; half-open after cooldown; closes on success.
+- Open circuits return stale cache or lightweight degraded payloads with `circuit_open: true` — no heavy DB builders.
+
+### Auth protection
+
+- `/auth/me` and `/auth/login` unchanged semantically; audit writes still skip when `is_pool_under_pressure()`.
+- Dashboard routes use `acquire_optional_dashboard_connection(timeout=0.1)` so menu/governance calls fail fast instead of waiting the full pool timeout.
+
+### Governance command centre fail-fast
+
+- Pool pressure or open circuit → stale memory/projection cache or `build_fast_degraded_command_centre` in under ~500ms.
+- No projection snapshot writes under pressure; route no longer wraps a threaded 9s build.
+
+### AI governance dashboard fail-fast
+
+- Pool pressure / circuit → stale cache or `_degraded_dashboard` without events-table probe or aggregate queries.
+- Route dropped `Depends(get_db)` hold for the full build; optional fast acquire only when pool has capacity.
+
+### Child workspace fallback
+
+- `UnknownWorkspaceCard` for unmapped workspace section types; AppShell shows `WorkspaceRecoveryPanel` when child preload returns 503/database busy.
+
+### AppShell dedupe
+
+- `APPSHELL_REQUEST_DEDUPE_KEYS` documents high-churn paths; `fetchWithOsCache` / `osRequestDedupeKey` used for workforce dashboard and inspection readiness widgets (no heavy governance fetch from AppShell).
+
+### Remaining limitations
+
+- Manager/workspace intelligence sections still perform full builds when the pool is healthy (by design).
+- `os_time_budget` threaded sections may still run briefly after timeout until the worker finishes; fast path avoids starting them under pressure.
+- Legacy `/os/young-people/{id}/workspace` preload still needs one connection when the pool is free.

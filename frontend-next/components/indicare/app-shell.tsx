@@ -23,6 +23,7 @@ import { buildAssistantContext } from '@/lib/assistant-core/context'
 import { displayName, roleLabels, userHasAnyPermission } from '@/lib/auth/permissions'
 import { useActiveChild } from '@/lib/context/active-child-context'
 import { routeRequiresChildWorkspace } from '@/lib/context/child-workspace-hydration'
+import { WorkspaceRecoveryPanel } from '@/components/indicare/workspaces/workspace-recovery-panel'
 import { entityContextFromPath } from '@/lib/navigation/entity-resolver'
 import {
   childWorkspaceNavigation,
@@ -140,6 +141,19 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   if (requiresWorkspaceHydration && !readyState.ready) {
+    const dbBusy = /database busy|retry shortly/i.test(readyState.reason || '')
+    if (readyState.phase === 'blocked' && dbBusy) {
+      return (
+        <div className="flex min-h-screen items-center justify-center bg-[#f3f6fb] px-6 text-slate-900">
+          <div className="w-full max-w-2xl">
+            <WorkspaceRecoveryPanel
+              message={readyState.reason || 'Database busy; please retry shortly.'}
+              retryHref={pathname}
+            />
+          </div>
+        </div>
+      )
+    }
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#f3f6fb] px-6 text-slate-900">
         <div className="w-full max-w-lg rounded-[32px] border border-blue-100 bg-white p-8 text-center shadow-2xl shadow-slate-950/10">
