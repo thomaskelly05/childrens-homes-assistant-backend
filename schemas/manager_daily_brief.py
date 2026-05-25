@@ -58,6 +58,8 @@ class ManagerDailyBriefRoutes(BaseModel):
     briefing: str = "/command-centre/briefing"
     care_hub: str = "/command-centre"
     orb: str = "/assistant/orb?mode=manager_daily_brief"
+    isn: str = "/safeguarding"
+    isn_orb: str = "/assistant/orb?mode=safeguarding_themes"
 
 
 class ManagerDailyBrief(BaseModel):
@@ -71,6 +73,7 @@ class ManagerDailyBrief(BaseModel):
     recording_summary: str = ""
     review_summary: str = ""
     safeguarding_summary: str = ""
+    isn_summary: str = ""
     action_summary: str = ""
     child_journey_summary: str = ""
     handover_summary: str = ""

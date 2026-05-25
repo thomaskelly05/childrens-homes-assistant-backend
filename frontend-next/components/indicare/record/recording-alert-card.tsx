@@ -5,6 +5,12 @@ import Link from 'next/link'
 import type { RecordingAlertRecord } from '@/lib/os-api/recording-alerts'
 import { operationalOrbAlertHref } from '@/lib/os-api/recording-alerts'
 
+const SAFEGUARDING_ALERT_TYPES = new Set([
+  'safeguarding_review_due',
+  'safeguarding_escalation_required',
+  'high_risk_review_due'
+])
+
 const SEVERITY_TONE: Record<string, string> = {
   urgent: 'border-rose-300 bg-rose-50',
   high: 'border-amber-200 bg-amber-50',
@@ -27,6 +33,9 @@ export function RecordingAlertCard({
     (alert.draft_id ? `/record/reviews?draft_id=${encodeURIComponent(alert.draft_id)}` : null)
   const childHref =
     alert.child_id != null ? `/young-people/${alert.child_id}/journey` : null
+  const isnCrossLink =
+    SAFEGUARDING_ALERT_TYPES.has(alert.alert_type) ||
+    (alert.recording_type || '').toLowerCase().includes('safeguarding')
 
   return (
     <article
@@ -51,6 +60,17 @@ export function RecordingAlertCard({
       <p className="mt-1 text-xs font-semibold leading-5 text-slate-700" data-testid="recording-alert-safe-summary">
         {alert.safe_summary || alert.description}
       </p>
+      {isnCrossLink ? (
+        <p
+          className="mt-2 text-[11px] font-semibold text-violet-800"
+          data-testid="recording-alert-isn-cross-link"
+        >
+          May require safeguarding network review.{' '}
+          <Link href="/safeguarding" className="font-black underline">
+            Open safeguarding network
+          </Link>
+        </p>
+      ) : null}
       <dl className="mt-2 grid gap-1 text-[11px] font-semibold text-slate-600 sm:grid-cols-2">
         {alert.child_name ? (
           <div>

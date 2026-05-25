@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from schemas.recording_drafts import RecordingDraftCreate
+from services.isn_digest_service import isn_digest_service
 from services.manager_daily_brief_service import manager_daily_brief_service
 from services.recording_alert_service import recording_alert_service
 from services.recording_draft_service import recording_draft_service
@@ -12,6 +13,7 @@ from services.recording_draft_service import recording_draft_service
 def memory_mode(monkeypatch):
     recording_alert_service._memory = {}
     recording_draft_service._memory = {}
+    isn_digest_service._memory_alerts = {}
     monkeypatch.setattr(recording_alert_service, "_detect_storage_mode", lambda: "memory")
     monkeypatch.setattr(recording_draft_service, "_detect_storage_mode", lambda: "memory")
 
@@ -40,7 +42,21 @@ def test_build_brief_metadata_only(fake_state):
     assert any(s.id == "recording_alerts" for s in brief.sections)
     assert any(s.id == "reviews" for s in brief.sections)
     assert any(s.id == "handover" for s in brief.sections)
+    assert any(s.id == "isn_safeguarding_network" for s in brief.sections)
+    assert brief.isn_summary is not None
     assert brief.metadata.get("no_raw_body") is True
+
+
+def test_isn_section_metadata_only(fake_state):
+    user = fake_state["user"]
+    secret = "RAW ISN BRIEF NARRATIVE"
+    isn_digest_service.seed_memory_alert(title=secret)
+    section = manager_daily_brief_service.build_isn_section(user, conn=None)
+    dumped = section.model_dump_json()
+    assert secret not in dumped
+    assert section.metadata.get("metadata_only") is True
+    for item in section.items:
+        assert item.metadata.get("no_raw_body") is True
 
 
 def test_mark_reviewed_hides_brief_reminder(fake_state):

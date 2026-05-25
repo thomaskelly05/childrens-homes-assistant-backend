@@ -13,8 +13,10 @@ from schemas.os_notifications import (
     OsNotificationItem,
 )
 from schemas.recording_alerts import RecordingAlertListFilters, RecordingAlertRecord
+from services.isn_notification_adapter_service import isn_notification_adapter_service
 from services.manager_daily_brief_service import manager_daily_brief_service
 from services.recording_alert_service import recording_alert_service
+from services.isn_digest_service import isn_digest_service
 
 logger = logging.getLogger("indicare.os_notifications")
 
@@ -46,6 +48,14 @@ CATEGORY_FOR_TYPE: dict[str, str] = {
     "recording_alert_medication_review": "Recording",
     "recording_alert_structured_missing": "Governance",
     "manager_daily_brief_reminder": "Briefing",
+    "isn_safeguarding_alert": "Safeguarding network",
+    "isn_review_required": "Safeguarding network",
+    "isn_escalation_required": "Safeguarding network",
+    "isn_network_update": "Safeguarding network",
+    "isn_follow_up_due": "Safeguarding network",
+    "isn_professional_update": "Safeguarding network",
+    "isn_recording_linked_alert": "Safeguarding network",
+    "isn_manager_action_required": "Safeguarding network",
 }
 
 
@@ -124,11 +134,13 @@ class OsNotificationAdapterService:
     def get_health(self, conn: Any | None = None) -> OsNotificationFeedHealth:
         alert_health = recording_alert_service.get_health(conn=conn)
         brief_health = manager_daily_brief_service.get_health(conn=conn)
+        isn_health = isn_digest_service.get_health(conn=conn)
         return OsNotificationFeedHealth(
             status="ok",
             persistence_available=alert_health.persistence_available,
             recording_alerts_available=True,
             manager_daily_brief_available=brief_health.status == "ok",
+            isn_available=isn_health.status == "ok",
         )
 
     def _alert_to_item(self, alert: RecordingAlertRecord) -> OsNotificationItem:
@@ -212,11 +224,24 @@ class OsNotificationAdapterService:
             brief_item = self._daily_brief_item(current_user, conn)
             if brief_item and (not unread_only or brief_item.unread):
                 items.insert(0, brief_item)
+
+            try:
+                isn_items = isn_notification_adapter_service.build_os_items(
+                    current_user, limit=min(limit, 20), conn=conn
+                )
+                for isn_item in isn_items:
+                    if unread_only and not isn_item.unread:
+                        continue
+                    items.append(isn_item)
+            except Exception as exc:
+                logger.warning("isn_feed_unavailable: %s", exc)
+                limitations.append("Safeguarding network notifications could not be loaded.")
         else:
             limitations.append("Recording alert notifications require manager or senior oversight role.")
 
         urgent = sum(1 for i in items if i.severity in ("urgent", "high") and i.unread)
         recording_count = sum(1 for i in items if str(i.source) == "recording_alerts" and i.unread)
+        isn_count = sum(1 for i in items if str(i.source) == "isn" and i.unread)
         daily_brief_unread = any(i.type == "manager_daily_brief_reminder" and i.unread for i in items)
         unread = sum(1 for i in items if i.unread)
 
@@ -227,11 +252,20 @@ class OsNotificationAdapterService:
             cat = item.category or "Other"
             categories[cat] = categories.get(cat, 0) + 1
 
+        items.sort(
+            key=lambda i: (
+                {"urgent": 0, "high": 1, "medium": 2, "low": 3}.get(i.severity, 2),
+                0 if i.type == "manager_daily_brief_reminder" else 1,
+                i.created_at,
+            )
+        )
+
         return OsNotificationFeed(
             items=items[:limit],
             unread=unread,
             urgent=urgent,
             recording_alert_count=recording_count,
+            isn_count=isn_count,
             daily_brief_unread=daily_brief_unread,
             categories=categories,
             limitations=limitations,

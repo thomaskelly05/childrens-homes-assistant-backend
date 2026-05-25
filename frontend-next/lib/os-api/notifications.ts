@@ -21,6 +21,7 @@ export type OsNotificationFeed = {
   unread: number
   urgent: number
   recording_alert_count: number
+  isn_count?: number
   daily_brief_unread: boolean
   categories: Record<string, number>
   privacy_notice: string
@@ -35,6 +36,7 @@ const EMPTY_FEED: OsNotificationFeed = {
   unread: 0,
   urgent: 0,
   recording_alert_count: 0,
+  isn_count: 0,
   daily_brief_unread: false,
   categories: {},
   privacy_notice: '',

@@ -55,6 +55,8 @@ def test_alerts_ui_markers():
     assert "Ask OS ORB" in combined
     assert "replace professional judgement" in combined or "do not replace professional" in combined
     assert "recording-alert-safe-summary" in combined
+    assert "recording-alert-isn-cross-link" in combined
+    assert "recording-alerts-isn-link" in combined
     assert "draft.body" not in combined
     assert "raw draft body" not in combined.lower() or "not raw" in combined.lower()
 
@@ -102,3 +104,13 @@ def test_alerts_link_manager_daily_brief():
 def test_child_journey_scoped_alerts_link():
     routes = _read(FRONTEND / "lib" / "child-journey" / "child-journey-routes.ts")
     assert "/record/alerts?child_id=" in routes
+    assert "Safeguarding network for this child" in routes
+    assert "isn-network" in routes
+
+
+def test_standalone_orb_no_isn_client():
+    if not STANDALONE_ORB.exists():
+        return
+    for path in list(STANDALONE_ORB.rglob("*.tsx")) + list(STANDALONE_ORB.rglob("*.ts")):
+        text = _read(path)
+        assert "isn-notifications" not in text, path

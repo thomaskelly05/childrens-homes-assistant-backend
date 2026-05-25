@@ -24,6 +24,7 @@ export function CareHubManagerDailyBrief() {
   const recording = brief?.sections.find((s) => s.id === 'recording_alerts')
   const review = brief?.sections.find((s) => s.id === 'reviews')
   const safeguarding = brief?.sections.find((s) => s.id === 'safeguarding')
+  const isnNetwork = brief?.sections.find((s) => s.id === 'isn_safeguarding_network')
   const actions = brief?.sections.find((s) => s.id === 'actions')
   const handover = brief?.sections.find((s) => s.id === 'handover')
 
@@ -63,7 +64,7 @@ export function CareHubManagerDailyBrief() {
         <>
           <p className="mt-4 text-sm font-semibold leading-6 text-slate-700">{brief?.opening_summary}</p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            {[recording, review, safeguarding, actions, handover].filter(Boolean).map((section) => (
+            {[recording, review, safeguarding, isnNetwork, actions, handover].filter(Boolean).map((section) => (
               <article key={section!.id} className="rounded-2xl border border-slate-100 bg-white/80 p-4">
                 <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">{section!.title}</p>
                 <p className="mt-2 text-sm font-semibold leading-6 text-slate-600">{section!.summary}</p>

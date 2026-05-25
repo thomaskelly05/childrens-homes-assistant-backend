@@ -31,6 +31,7 @@ export type ManagerDailyBrief = {
   recording_summary: string
   review_summary: string
   safeguarding_summary: string
+  isn_summary?: string
   action_summary: string
   child_journey_summary: string
   handover_summary: string
@@ -48,6 +49,8 @@ export type ManagerDailyBrief = {
     briefing: string
     care_hub: string
     orb: string
+    isn?: string
+    isn_orb?: string
   }
   metadata?: Record<string, unknown>
   reviewed?: boolean

@@ -152,6 +152,14 @@ export function NotificationBell() {
             >
               Daily brief
             </Link>
+            <Link
+              href="/safeguarding"
+              data-testid="notification-bell-isn-safeguarding-link"
+              className="rounded-full bg-violet-50 px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-violet-800"
+              onClick={() => setOpen(false)}
+            >
+              Safeguarding network
+            </Link>
           </div>
           {feed?.privacy_notice ? (
             <p className="mt-2 px-1 text-[10px] font-semibold leading-4 text-slate-400">{feed.privacy_notice}</p>

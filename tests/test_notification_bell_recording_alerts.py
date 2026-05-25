@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from schemas.recording_drafts import RecordingDraftCreate
+from services.isn_digest_service import isn_digest_service
 from services.os_notification_adapter_service import os_notification_adapter_service
 from services.recording_alert_service import recording_alert_service
 from services.recording_draft_service import recording_draft_service
@@ -18,6 +19,7 @@ FRONTEND = REPO_ROOT / "frontend-next"
 def memory_alerts(monkeypatch):
     recording_alert_service._memory = {}
     recording_draft_service._memory = {}
+    isn_digest_service._memory_alerts = {}
     monkeypatch.setattr(recording_alert_service, "_detect_storage_mode", lambda: "memory")
     monkeypatch.setattr(recording_draft_service, "_detect_storage_mode", lambda: "memory")
 
@@ -57,6 +59,15 @@ def test_daily_brief_item_in_feed(fake_state):
     assert "manager_daily_brief_reminder" in types
 
 
+def test_isn_item_in_feed(fake_state):
+    user = fake_state["user"]
+    isn_digest_service.seed_memory_alert(risk_level="critical", status="new")
+    feed = os_notification_adapter_service.build_feed(user, conn=None)
+    isn_items = [i for i in feed.items if i.source == "isn"]
+    assert isn_items
+    assert any(i.category == "Safeguarding network" for i in isn_items)
+
+
 def test_notification_bell_ui_markers():
     bell = _read(FRONTEND / "components" / "connect" / "notification-bell.tsx")
     shell = _read(FRONTEND / "components" / "indicare" / "app-shell.tsx")
@@ -66,6 +77,8 @@ def test_notification_bell_ui_markers():
     assert "NotificationBell" in shell
     assert "/command-centre/briefing" in bell
     assert "/record/alerts" in bell
+    assert "notification-bell-isn-safeguarding-link" in bell
+    assert "Safeguarding network" in bell
     assert "getOperationalNotificationFeed" in bell
     assert "draft_id=" not in bell
     orb_hrefs = re.findall(r'["\']([^"\']*/orb[^"\']*)["\']', bell)

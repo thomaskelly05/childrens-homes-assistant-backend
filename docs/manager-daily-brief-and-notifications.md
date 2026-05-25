@@ -14,7 +14,7 @@ This pass wires recording alerts and the manager daily brief into the **existing
 - **Adapter API**: `GET /api/notifications/operational-feed`
 - **Service**: `services/os_notification_adapter_service.py`
 
-The bell continues to count Connect and schema-backed `/api/notifications` unread items, and adds operational items from the adapter (recording alerts + daily brief reminder).
+The bell continues to count Connect and schema-backed `/api/notifications` unread items, and adds operational items from the adapter (recording alerts + daily brief reminder + **ISN safeguarding network** items).
 
 Bell items are **metadata-only**:
 
@@ -39,6 +39,7 @@ Bell items are **metadata-only**:
 | Safeguarding-sensitive | Open alerts filtered by type |
 | Actions | `intelligence_action_service.build_action_summary` |
 | Handover | Route hints to `/handover/current` and recording follow-up |
+| Safeguarding network (ISN) | `isn_digest_service.build_digest` (metadata only) |
 | Governance context | `recording_governance_service.build_dashboard` (counts only) |
 
 ### Mark reviewed
@@ -52,7 +53,8 @@ Bell items are **metadata-only**:
 3. No auto-resolution of high-risk alerts.
 4. Brief and notifications support oversight — they do not replace manager judgement.
 5. Daily brief does not claim inspection compliance.
-6. Standalone `/orb` must not import notification or manager brief clients.
+6. Standalone `/orb` must not import notification, manager brief or ISN notification clients.
+7. ISN items in the bell use safe summaries only — see `docs/isn-notification-integration.md`.
 
 ## Push / email
 

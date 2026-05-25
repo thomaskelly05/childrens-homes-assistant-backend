@@ -54,6 +54,10 @@ export function ManagerDailyBriefPage() {
           <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Safeguarding-sensitive</p>
           <p className="mt-2 text-sm font-semibold text-slate-700">{brief.safeguarding_summary}</p>
         </article>
+        <article className="rounded-2xl border border-violet-100 bg-violet-50/50 p-4" data-testid="manager-daily-brief-isn-summary">
+          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-violet-700">Safeguarding network</p>
+          <p className="mt-2 text-sm font-semibold text-slate-700">{brief.isn_summary || 'No ISN summary in scope.'}</p>
+        </article>
         <article className="rounded-2xl border border-slate-100 bg-white p-4">
           <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Actions & handover</p>
           <p className="mt-2 text-sm font-semibold text-slate-700">{brief.action_summary}</p>
@@ -105,6 +109,13 @@ export function ManagerDailyBriefPage() {
         </Link>
         <Link href={brief.routes.handover} className="rounded-full bg-emerald-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-emerald-800">
           Handover
+        </Link>
+        <Link
+          href={brief.routes.isn || '/safeguarding'}
+          data-testid="manager-daily-brief-open-isn"
+          className="rounded-full bg-violet-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-violet-800"
+        >
+          Safeguarding network
         </Link>
       </section>
 
