@@ -3,9 +3,10 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Building2, ShieldCheck, UserRound } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { useOsScope } from '@/components/indicare/scope/os-scope-provider'
+import { childWorkspaceHref } from '@/lib/navigation/child-workspace-routes'
 import { fetchScopeOptions, workspaceHrefForScope } from '@/lib/os-scope'
 
 function SelectorSkeleton() {
@@ -26,6 +27,9 @@ export function HomeChildSelector() {
   const [busy, setBusy] = useState(false)
   const [optionsLoading, setOptionsLoading] = useState(true)
   const [localError, setLocalError] = useState<string | null>(null)
+  const [openingChildId, setOpeningChildId] = useState<number | null>(null)
+  const [navigateTimedOut, setNavigateTimedOut] = useState(false)
+  const optionsAbortRef = useRef<AbortController | null>(null)
 
   const hasSelectedHome = Boolean(options.selected_home_id)
   const activeHomeId = pickerHomeId ?? options.selected_home_id ?? null
@@ -36,15 +40,20 @@ export function HomeChildSelector() {
     null
 
   const loadOptions = useCallback(async (homeId?: number) => {
+    optionsAbortRef.current?.abort()
+    const controller = new AbortController()
+    optionsAbortRef.current = controller
     setOptionsLoading(true)
     try {
       const data = await fetchScopeOptions(homeId)
+      if (controller.signal.aborted) return
       setOptions(data)
       setLocalError(data.degraded ? data.warnings.join(' ') || 'Home and child list unavailable. Retry shortly.' : null)
     } catch (caught) {
+      if (controller.signal.aborted) return
       setLocalError(caught instanceof Error ? caught.message : 'Could not load homes.')
     } finally {
-      setOptionsLoading(false)
+      if (!controller.signal.aborted) setOptionsLoading(false)
     }
   }, [])
 
@@ -81,12 +90,18 @@ export function HomeChildSelector() {
 
   async function chooseChild(childId: number, childName: string, homeId?: number | null) {
     const resolvedHomeId = homeId ?? activeHomeId
-    if (!childId || !resolvedHomeId) {
+    if (!childId) return
+    if (!resolvedHomeId) {
       setLocalError('Select a home before choosing a child.')
       return
     }
+    if (busy || openingChildId === childId) return
+    setOpeningChildId(childId)
     setBusy(true)
     setLocalError(null)
+    setNavigateTimedOut(false)
+    const href = childWorkspaceHref(childId)
+    const timeout = window.setTimeout(() => setNavigateTimedOut(true), 5000)
     try {
       const next = await applyScopeSelection({
         scope_type: 'child',
@@ -98,14 +113,14 @@ export function HomeChildSelector() {
           options.selected_home_name ??
           undefined
       })
-      const href = workspaceHrefForScope(next)
-      if (href && href !== '/select-scope' && next.selected_child_id) {
-        router.replace(href)
-      }
+      if (!next.selected_child_id) return
+      router.push(href)
     } catch (caught) {
       setLocalError(caught instanceof Error ? caught.message : 'Child selection failed.')
     } finally {
+      window.clearTimeout(timeout)
       setBusy(false)
+      setOpeningChildId(null)
     }
   }
 
@@ -136,6 +151,23 @@ export function HomeChildSelector() {
           <p data-testid="select-scope-current-home-label" className="mt-4 text-sm font-bold text-slate-700">
             Selected home: {options.selected_home_name}
           </p>
+        ) : null}
+        {navigateTimedOut ? (
+          <div
+            data-testid="select-scope-navigate-timeout"
+            className="mt-4 rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900"
+          >
+            <p>Workspace is taking longer than expected. Open child workspace directly.</p>
+            {openingChildId ? (
+              <Link
+                prefetch={false}
+                href={childWorkspaceHref(openingChildId)}
+                className="mt-3 inline-flex rounded-xl bg-amber-900 px-4 py-2 text-xs font-black uppercase tracking-[0.14em] text-white"
+              >
+                Open child workspace directly
+              </Link>
+            ) : null}
+          </div>
         ) : null}
         {showDegradedPanel ? (
           <div
@@ -246,7 +278,8 @@ export function HomeChildSelector() {
               <button
                 key={child.id}
                 type="button"
-                disabled={busy || loading || !activeHomeId}
+                disabled={busy || loading || !activeHomeId || openingChildId === child.id}
+                data-testid={`select-scope-child-${child.id}`}
                 onClick={() => void chooseChild(child.id, child.name, child.home_id ?? activeHomeId)}
                 className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-left transition hover:border-blue-200 hover:bg-blue-50 disabled:opacity-60"
               >

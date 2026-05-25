@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/auth-context'
 import { authFetchResponse } from '@/lib/auth/api'
 import { userHasPermission } from '@/lib/auth/permissions'
 import {
+  childIdFromWorkspaceRoute,
   clearChildWorkspaceReady,
   markChildWorkspaceReady,
   resolveChildWorkspaceHydration,
@@ -80,9 +81,7 @@ function parseRecent(value: string | null): ActiveChildRecord[] {
 }
 
 export function childIdFromRoute(pathname: string, searchParams?: { get: (key: string) => string | null } | null) {
-  const parts = pathname.split('/').filter(Boolean)
-  if (parts[0] === 'young-people' && parts[1]) return decodeURIComponent(parts[1])
-  return searchParams?.get('young_person_id') || searchParams?.get('youngPersonId') || undefined
+  return childIdFromWorkspaceRoute(pathname, searchParams)
 }
 
 function childRecordFromId(id: string, source: ActiveChildRecord['source']): ActiveChildRecord {
@@ -186,10 +185,11 @@ export function ActiveChildProvider({ children }: { children: ReactNode }) {
     setActiveChild((current) => {
       const previousId = current?.id
       const normalised = next ? { ...next, source, selectedAt: new Date().toISOString() } : null
+      const sameChild = Boolean(normalised && previousId && previousId === normalised.id)
       setRecentChildren((currentRecent) => {
         const updatedRecent = normalised ? nextRecent(normalised, currentRecent) : currentRecent
         setLockVersion((version) => {
-          const updatedVersion = version + 1
+          const updatedVersion = sameChild ? version : version + 1
           if (previousId && previousId !== normalised?.id) {
             removeChildScopedStorage(previousId)
             clearChildWorkspaceReady(previousId)
@@ -254,6 +254,10 @@ export function ActiveChildProvider({ children }: { children: ReactNode }) {
       markChildWorkspaceReady(activeChild.id, lockVersion)
       return
     }
+    const routeChildId = childIdFromWorkspaceRoute(pathname, typeof window === 'undefined' ? null : new URLSearchParams(window.location.search))
+    if (routeChildId && routeChildId !== activeChild.id) {
+      return
+    }
     const controller = new AbortController()
     setPreloadStatus('loading')
     setPreloadSummary(null)
@@ -284,7 +288,7 @@ export function ActiveChildProvider({ children }: { children: ReactNode }) {
       }
     })
     return () => controller.abort()
-  }, [activeChild, canReadRecords, csrfReady, lockVersion, status])
+  }, [activeChild?.id, canReadRecords, csrfReady, lockVersion, pathname, status])
 
   const readyState = useMemo(() => resolveChildWorkspaceHydration({
     authStatus: status,

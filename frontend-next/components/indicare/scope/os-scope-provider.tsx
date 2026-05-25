@@ -132,6 +132,11 @@ export function OsScopeProvider({ children }: { children: ReactNode }) {
     void refreshScope()
   }, [refreshScope])
 
+  useEffect(() => {
+    if (loading || status !== 'authenticated') return
+    setScope((current) => syncScopeFromPath(pathname, current))
+  }, [loading, pathname, status])
+
   const applyScopeSelection = useCallback(
     async (input: {
       scope_type: OsScopeType

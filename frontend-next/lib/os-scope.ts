@@ -1,4 +1,5 @@
 import { authFetch } from '@/lib/auth/api'
+import { childIdFromPath, childWorkspaceHref, isChildWorkspacePath } from '@/lib/navigation/child-workspace-routes'
 
 export type OsScopeType = 'none' | 'home' | 'child'
 
@@ -118,12 +119,18 @@ export function clearScopeLocally() {
 }
 
 export function scopeFromRoute(pathname: string): { childId?: string; homeId?: string } {
+  const childId = childIdFromPath(pathname)
+  if (childId) return { childId }
   const parts = pathname.split('/').filter(Boolean)
-  if (parts[0] === 'young-people' && parts[1]) return { childId: decodeURIComponent(parts[1]) }
-  if (parts[0] === 'children' && parts[1]) return { childId: decodeURIComponent(parts[1]) }
   if (parts[0] === 'homes' && parts[1]) return { homeId: decodeURIComponent(parts[1]) }
   return {}
 }
+
+export {
+  childWorkspaceHref,
+  isAlreadyOnScopedChildWorkspace,
+  isChildWorkspacePath
+} from '@/lib/navigation/child-workspace-routes'
 
 export function routeRequiresScope(pathname: string) {
   if (pathname === '/select-scope' || pathname.startsWith('/select-scope/')) return false
@@ -137,9 +144,8 @@ export function routeRequiresScope(pathname: string) {
 }
 
 export function workspaceHrefForScope(scope: Pick<OsScopeState, 'scope_type' | 'routes' | 'selected_child_id' | 'selected_home_id'>) {
-  if (scope.scope_type === 'child' && scope.routes.child_workspace) return scope.routes.child_workspace
+  if (scope.scope_type === 'child' && scope.selected_child_id) return childWorkspaceHref(scope.selected_child_id)
   if (scope.scope_type === 'home' && scope.routes.home_workspace) return scope.routes.home_workspace
-  if (scope.scope_type === 'child' && scope.selected_child_id) return `/young-people/${scope.selected_child_id}/workspace`
   if (scope.scope_type === 'home' && scope.selected_home_id) return `/homes/${scope.selected_home_id}/workspace`
   return '/select-scope'
 }
@@ -231,8 +237,17 @@ export function syncScopeFromPath(pathname: string, state: OsScopeState): OsScop
         selected_child_id: childId,
         routes: {
           ...state.routes,
-          child_workspace: `/young-people/${childId}/workspace`
+          child_workspace: childWorkspaceHref(childId)
         }
+      }
+    }
+  }
+  if (isChildWorkspacePath(pathname) && state.scope_type === 'child' && state.selected_child_id) {
+    return {
+      ...state,
+      routes: {
+        ...state.routes,
+        child_workspace: childWorkspaceHref(state.selected_child_id)
       }
     }
   }

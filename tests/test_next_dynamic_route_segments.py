@@ -44,6 +44,19 @@ def test_no_sibling_dynamic_route_segment_conflicts():
     )
 
 
+def test_child_workspace_route_uses_standard_id_segment():
+    workspace_page = APP_ROOT / "os" / "young-people" / "[id]" / "workspace" / "page.tsx"
+    assert workspace_page.is_file(), "Child workspace must live under os/young-people/[id]/workspace"
+
+    yp_dir = APP_ROOT / "os" / "young-people"
+    dynamic_children = [
+        child.name
+        for child in yp_dir.iterdir()
+        if child.is_dir() and DYNAMIC_DIR_RE.match(child.name)
+    ]
+    assert dynamic_children == ["[id]"], f"os/young-people/ must have only [id] dynamic segment, found: {dynamic_children}"
+
+
 def test_home_workspace_route_uses_standard_id_segment():
     workspace_page = APP_ROOT / "homes" / "[id]" / "workspace" / "page.tsx"
     assert workspace_page.is_file(), "Home workspace must live under homes/[id]/workspace"
