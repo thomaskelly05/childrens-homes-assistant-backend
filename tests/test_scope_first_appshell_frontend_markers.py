@@ -29,6 +29,7 @@ def test_appshell_no_scope_does_not_mount_heavy_dashboard_fetch_markers():
 
 def test_appshell_child_scope_menu_markers():
     nav = SCOPE_NAV.read_text(encoding="utf-8")
+    child_nav = nav.split("export function childScopeNavigation")[1].split("export function")[0]
     for marker in (
         "childScopeNavigation",
         "Child overview",
@@ -37,6 +38,8 @@ def test_appshell_child_scope_menu_markers():
         "/assistant/orb?context=child",
     ):
         assert marker in nav
+    assert "childWorkspaceHref" in child_nav
+    assert "/os/young-people" not in child_nav
 
 
 def test_appshell_home_scope_menu_markers():
