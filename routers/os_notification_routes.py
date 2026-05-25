@@ -192,13 +192,27 @@ async def operational_notification_feed(
     current_user: dict[str, Any] = Depends(get_current_user),
     conn=Depends(get_db),
 ):
-    feed = os_notification_adapter_service.build_feed(
+    import logging
+    import time
+
+    started = time.perf_counter()
+    feed, cache_lookup = os_notification_adapter_service.build_feed_cached(
         current_user,
         limit=limit,
         unread_only=unread_only,
         conn=conn,
     )
-    return _success(feed.model_dump())
+    payload = feed.model_dump()
+    payload["cache_status"] = cache_lookup.status
+    payload["degraded"] = bool((payload.get("metadata") or {}).get("degraded")) or cache_lookup.stale
+    logging.getLogger("indicare.os_notifications").info(
+        "operational_notification_feed endpoint=/api/notifications/operational-feed total_ms=%s cache_status=%s degraded=%s warning_count=%s",
+        round((time.perf_counter() - started) * 1000, 2),
+        cache_lookup.status,
+        payload.get("degraded"),
+        len(payload.get("limitations") or []),
+    )
+    return _success(payload)
 
 
 @router.get("/operational-summary")

@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 import logging
+import os
 import time
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
 
 from auth.dependencies import get_current_user
-from db.connection import DatabaseUnavailableError, db_connection
+from db.connection import DatabaseUnavailableError, db_connection, is_pool_under_pressure
 from services.governance_intelligence_service import (
     governance_feature_flags,
     governance_intelligence_service,
@@ -19,8 +21,13 @@ from services.intelligence.projection_snapshot_service import (
     projection_snapshot_key,
     projection_snapshot_service,
 )
+from services.os_cache_service import os_cache_service
 
 logger = logging.getLogger(__name__)
+
+GOVERNANCE_CC_CACHE_TTL_SECONDS = int(os.getenv("GOVERNANCE_COMMAND_CENTRE_CACHE_TTL_SECONDS", "45"))
+GOVERNANCE_CC_STALE_SECONDS = int(os.getenv("GOVERNANCE_COMMAND_CENTRE_STALE_SECONDS", "120"))
+GOVERNANCE_CC_BUILD_TIMEOUT_MS = int(os.getenv("GOVERNANCE_COMMAND_CENTRE_BUILD_TIMEOUT_MS", "3500"))
 
 router = APIRouter(prefix="/api/governance-os", tags=["Governance OS"])
 
@@ -57,78 +64,141 @@ def _governance_snapshot_key(current_user: dict[str, Any], *, days: int, home_id
     return projection_snapshot_key("governance", "command-centre", "home", _home_id(current_user, home_id), "provider", _provider_id(current_user), "days", days)
 
 
+def _memory_cache_key(current_user: dict[str, Any], *, days: int, home_id: int | None) -> str:
+    user_id = current_user.get("id") or current_user.get("user_id") or "anon"
+    return f"governance:command-centre:user:{user_id}:home:{_home_id(current_user, home_id)}:days:{days}"
+
+
+def _attach_cache_fields(payload: dict[str, Any], *, cache_status: str, degraded: bool, warnings: list[str] | None = None) -> dict[str, Any]:
+    payload = dict(payload)
+    payload["cache_status"] = cache_status
+    payload["degraded"] = bool(payload.get("degraded")) or degraded
+    if warnings:
+        existing = list(payload.get("warnings") or [])
+        payload["warnings"] = (existing + warnings)[:12]
+    return payload
+
+
+def _stale_from_projection(key: str, cached: dict[str, Any] | None) -> dict[str, Any] | None:
+    if not cached or not isinstance(cached.get("payload"), dict):
+        return None
+    payload = dict(cached["payload"])
+    payload = _attach_cache_fields(
+        payload,
+        cache_status="stale",
+        degraded=True,
+        warnings=["Governance command centre served from stale snapshot while database is busy."],
+    )
+    payload["snapshot"] = {
+        "hit": True,
+        "stale": True,
+        "projection_key": key,
+        "version": cached.get("version"),
+        "generated_at": cached.get("generated_at"),
+    }
+    return payload
+
+
 def _build_governance_command_centre(*, current_user: dict[str, Any], days: int, home_id: int | None) -> dict[str, Any]:
     started = time.perf_counter()
-    key = _governance_snapshot_key(current_user, days=days, home_id=home_id)
+    mem_key = _memory_cache_key(current_user, days=days, home_id=home_id)
+    proj_key = _governance_snapshot_key(current_user, days=days, home_id=home_id)
 
-    cache_started = time.perf_counter()
-    cached = projection_snapshot_service.get(key)
-    cache_ms = round((time.perf_counter() - cache_started) * 1000, 2)
-    if cached and not cached.get("stale") and isinstance(cached.get("payload"), dict):
-        payload = dict(cached["payload"])
-        payload["snapshot"] = {
-            "hit": True,
-            "projection_key": key,
-            "version": cached.get("version"),
-            "generated_at": cached.get("generated_at"),
-        }
+    lookup = os_cache_service.get(mem_key)
+    if lookup.hit and isinstance(lookup.value, dict):
+        payload = _attach_cache_fields(dict(lookup.value), cache_status=lookup.status, degraded=lookup.stale)
+        total_ms = round((time.perf_counter() - started) * 1000, 2)
         logger.info(
-            "governance_command_centre cache_hit=true cache_ms=%s total_ms=%s",
-            cache_ms,
-            round((time.perf_counter() - started) * 1000, 2),
+            "governance_command_centre endpoint=/api/governance-os/command-centre total_ms=%s cache_status=%s degraded=%s section_count=%s timeout_count=%s warning_count=%s",
+            total_ms,
+            payload.get("cache_status"),
+            payload.get("degraded"),
+            len(payload.get("section_status") or {}),
+            0,
+            len(payload.get("warnings") or []),
         )
         return payload
 
+    proj_cached = projection_snapshot_service.get(proj_key)
+    if is_pool_under_pressure():
+        stale = lookup.value if lookup.stale and isinstance(lookup.value, dict) else None
+        if stale:
+            return _attach_cache_fields(dict(stale), cache_status="stale", degraded=True)
+        proj_stale = _stale_from_projection(proj_key, proj_cached)
+        if proj_stale:
+            os_cache_service.set(mem_key, proj_stale, ttl_seconds=GOVERNANCE_CC_CACHE_TTL_SECONDS, stale_ttl_seconds=GOVERNANCE_CC_STALE_SECONDS)
+            return proj_stale
+
+    def _build() -> dict[str, Any]:
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            future = pool.submit(
+                governance_intelligence_service.build_command_centre,
+                current_user=current_user,
+                days=days,
+                home_id=home_id,
+            )
+            try:
+                return future.result(timeout=GOVERNANCE_CC_BUILD_TIMEOUT_MS / 1000.0)
+            except FuturesTimeoutError as exc:
+                raise DatabaseUnavailableError("Governance command centre build timed out") from exc
+
     build_started = time.perf_counter()
     try:
-        payload = governance_intelligence_service.build_command_centre(
-            current_user=current_user,
-            days=days,
-            home_id=home_id,
+        payload, cache_lookup = os_cache_service.get_or_build(
+            mem_key,
+            _build,
+            ttl_seconds=GOVERNANCE_CC_CACHE_TTL_SECONDS,
+            stale_ttl_seconds=GOVERNANCE_CC_STALE_SECONDS,
+            coalesce=True,
         )
     except DatabaseUnavailableError as exc:
         build_ms = round((time.perf_counter() - build_started) * 1000, 2)
         logger.warning(
-            "governance_command_centre db_unavailable cache_ms=%s build_ms=%s error=%s",
-            cache_ms,
+            "governance_command_centre db_unavailable build_ms=%s error=%s",
             build_ms,
             exc,
         )
-        if cached and isinstance(cached.get("payload"), dict):
-            payload = dict(cached["payload"])
-            payload["degraded"] = True
-            payload["message"] = "Governance command centre served from stale snapshot while database is busy."
-            payload["snapshot"] = {
-                "hit": True,
-                "stale": True,
-                "projection_key": key,
-                "version": cached.get("version"),
-                "generated_at": cached.get("generated_at"),
-            }
-            return payload
+        stale_lookup = os_cache_service.get(mem_key)
+        if stale_lookup.hit and isinstance(stale_lookup.value, dict):
+            return _attach_cache_fields(dict(stale_lookup.value), cache_status="stale", degraded=True)
+        proj_stale = _stale_from_projection(proj_key, proj_cached)
+        if proj_stale:
+            return proj_stale
         raise HTTPException(status_code=503, detail="Governance command centre temporarily unavailable") from exc
-    build_ms = round((time.perf_counter() - build_started) * 1000, 2)
 
-    save_started = time.perf_counter()
-    projection_snapshot_service.put(
-        ProjectionSnapshot(
-            projection_key=key,
-            projection_type="command_centre",
-            domain="governance",
-            payload=payload,
-            home_id=_home_id(current_user, home_id),
-            provider_id=_provider_id(current_user),
-            metadata={"days": days, "source": "governance_intelligence_service.build_command_centre"},
-        )
+    build_ms = round((time.perf_counter() - build_started) * 1000, 2)
+    payload = _attach_cache_fields(
+        dict(payload),
+        cache_status=cache_lookup.status,
+        degraded=bool(payload.get("degraded")),
     )
-    save_ms = round((time.perf_counter() - save_started) * 1000, 2)
-    payload["snapshot"] = {"hit": False, "projection_key": key, "stored": True}
+
+    try:
+        projection_snapshot_service.put(
+            ProjectionSnapshot(
+                projection_key=proj_key,
+                projection_type="command_centre",
+                domain="governance",
+                payload=payload,
+                home_id=_home_id(current_user, home_id),
+                provider_id=_provider_id(current_user),
+                metadata={"days": days, "source": "governance_intelligence_service.build_command_centre"},
+            )
+        )
+        payload["snapshot"] = {"hit": False, "projection_key": proj_key, "stored": True}
+    except Exception:
+        payload["snapshot"] = {"hit": False, "projection_key": proj_key, "stored": False}
+
+    total_ms = round((time.perf_counter() - started) * 1000, 2)
     logger.info(
-        "governance_command_centre cache_hit=false cache_ms=%s build_ms=%s save_ms=%s total_ms=%s",
-        cache_ms,
+        "governance_command_centre endpoint=/api/governance-os/command-centre total_ms=%s cache_status=%s build_ms=%s degraded=%s section_count=%s timeout_count=%s warning_count=%s",
+        total_ms,
+        payload.get("cache_status"),
         build_ms,
-        save_ms,
-        round((time.perf_counter() - started) * 1000, 2),
+        payload.get("degraded"),
+        len(payload.get("section_status") or {}),
+        sum(1 for s in (payload.get("section_status") or {}).values() if s.get("timed_out")),
+        len(payload.get("warnings") or []),
     )
     return payload
 
