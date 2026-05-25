@@ -13,6 +13,9 @@ class OsScopeHomeOption(BaseModel):
     id: int
     name: str
     status: str | None = None
+    address: str | None = None
+    provider_id: int | None = None
+    route: str | None = None
 
 
 class OsScopeChildOption(BaseModel):
