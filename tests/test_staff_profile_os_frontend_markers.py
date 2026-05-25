@@ -43,6 +43,14 @@ def test_confidential_hr_note():
     assert "Confidential HR" in safety or "confidential" in safety.lower()
 
 
+def test_staff_profile_sccif_link():
+    actions = _read(FRONTEND / "components" / "staff" / "staff-profile-os-actions.tsx")
+    dashboard = _read(FRONTEND / "components" / "staff" / "staff-profile-os-dashboard.tsx")
+    assert "staff-profile-sccif-alignment-link" in actions
+    assert "/intelligence/sccif" in actions
+    assert "StaffProfileOsSccifLink" in dashboard
+
+
 def test_ask_os_orb():
     actions = _read(FRONTEND / "components" / "staff" / "staff-profile-os-actions.tsx")
     client = _read(FRONTEND / "lib" / "os-api" / "staff-profile-os.ts")

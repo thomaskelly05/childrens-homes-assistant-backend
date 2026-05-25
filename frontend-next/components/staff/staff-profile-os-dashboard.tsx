@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import { getStaffProfileOsDashboard, type StaffProfileOsDashboard } from '@/lib/os-api/staff-profile-os'
 
 import { StaffProfileOsHeader } from './staff-profile-os-header'
-import { StaffProfileOsOrbLinks, StaffProfileOsQuickCards } from './staff-profile-os-actions'
+import { StaffProfileOsOrbLinks, StaffProfileOsQuickCards, StaffProfileOsSccifLink } from './staff-profile-os-actions'
 import { StaffProfileOsSafetyNote } from './staff-profile-os-safety-note'
 import { StaffProfileOsSectionBlock } from './staff-profile-os-section'
 
@@ -50,6 +50,7 @@ export function StaffProfileOsDashboard({ staffId }: { staffId: string }) {
   return (
     <div data-testid="staff-profile-os-dashboard" className="space-y-6">
       <StaffProfileOsHeader overview={dashboard.overview} />
+      <StaffProfileOsSccifLink staffId={staffId} />
       <StaffProfileOsSafetyNote notice={dashboard.privacy_notice} />
       <StaffProfileOsQuickCards dashboard={dashboard} />
       {dashboard.recommendations.length ? (

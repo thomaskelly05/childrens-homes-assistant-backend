@@ -55,6 +55,11 @@ def test_build_brief_metadata_only(fake_state):
     assert brief.workforce_summary
     assert brief.isn_summary is not None
     assert brief.metadata.get("no_raw_body") is True
+    assert any(s.id == "sccif_quality_standards" for s in brief.sections)
+    assert brief.sccif_summary
+    sccif = next(s for s in brief.sections if s.id == "sccif_quality_standards")
+    assert sccif.route == "/intelligence/sccif"
+    assert "compliance" not in sccif.summary.lower() or "not a compliance" in sccif.summary.lower()
 
 
 def test_notification_oversight_section(fake_state):

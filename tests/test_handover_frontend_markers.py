@@ -23,6 +23,12 @@ def _read(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
+def test_handover_sccif_alignment_link():
+    workspace = _read(FRONTEND / "components" / "handover" / "handover-workspace.tsx")
+    assert "handover-sccif-alignment-link" in workspace
+    assert "/intelligence/sccif" in workspace
+
+
 def test_handover_page_markers():
     combined = "\n".join(_read(p) for p in HANDOVER_FILES)
     for marker in (

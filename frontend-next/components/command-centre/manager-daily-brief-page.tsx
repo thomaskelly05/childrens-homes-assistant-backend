@@ -88,6 +88,24 @@ export function ManagerDailyBriefPage() {
           <p className="mt-2 text-sm font-semibold text-slate-700">{brief.action_summary}</p>
           <p className="mt-2 text-sm font-semibold text-slate-700">{brief.handover_summary}</p>
         </article>
+        <article
+          className="rounded-2xl border border-blue-100 bg-blue-50/50 p-4 md:col-span-2"
+          data-testid="manager-daily-brief-sccif-summary"
+        >
+          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-blue-700">
+            SCCIF / Quality Standards evidence
+          </p>
+          <p className="mt-2 text-sm font-semibold text-slate-700">
+            {brief.sccif_summary || 'Open SCCIF alignment for safe evidence map.'}
+          </p>
+          <Link
+            href="/intelligence/sccif"
+            data-testid="manager-daily-brief-sccif-link"
+            className="mt-3 inline-flex text-[10px] font-black uppercase tracking-[0.12em] text-blue-800 underline"
+          >
+            Open SCCIF alignment
+          </Link>
+        </article>
       </section>
 
       <div className="space-y-4">
@@ -141,6 +159,13 @@ export function ManagerDailyBriefPage() {
           className="rounded-full bg-violet-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-violet-800"
         >
           Safeguarding network
+        </Link>
+        <Link
+          href="/intelligence/sccif"
+          data-testid="manager-daily-brief-sccif-route"
+          className="rounded-full bg-blue-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-blue-800"
+        >
+          SCCIF alignment
         </Link>
       </section>
 

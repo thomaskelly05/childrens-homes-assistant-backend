@@ -213,6 +213,7 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
             "routers.handover_intelligence_routes",
             "routers.workforce_context_routes",
             "routers.staff_profile_os_routes",
+            "routers.sccif_alignment_routes",
         ),
         notes="Schema-backed experience bundles for home, child profile and adult workspace surfaces.",
     ),

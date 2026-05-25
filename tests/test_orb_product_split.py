@@ -822,3 +822,17 @@ def test_assistants_map_differentiates_products():
     assert "ORB Care Companion" in text
     assert "IndiCare OS ORB" in text
     assert "operational_os_orb" in text
+
+
+def test_standalone_orb_does_not_import_sccif_alignment():
+    forbidden = ("sccif-alignment", "/api/sccif-alignment", "getSccifAlignmentDashboard")
+    orb_dir = REPO_ROOT / "frontend-next" / "app" / "orb"
+    if orb_dir.exists():
+        for path in list(orb_dir.rglob("*.tsx")) + list(orb_dir.rglob("*.ts")):
+            text = _read(path)
+            for marker in forbidden:
+                assert marker not in text, path
+    if STANDALONE_CLIENT.exists():
+        text = _read(STANDALONE_CLIENT)
+        for marker in forbidden:
+            assert marker not in text

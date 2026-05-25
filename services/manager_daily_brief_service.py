@@ -778,6 +778,90 @@ class ManagerDailyBriefService:
             metadata={"user_id": _user_id(current_user)},
         )
 
+    def build_sccif_section(
+        self, current_user: dict[str, Any], conn: Any | None = None
+    ) -> ManagerDailyBriefSection:
+        items: list[ManagerDailyBriefItem] = []
+        summary = "SCCIF alignment unavailable in current scope."
+        tone = "neutral"
+        gap_count = 0
+        evidence_count = 0
+        try:
+            from services.sccif_alignment_service import sccif_alignment_service
+
+            dashboard = sccif_alignment_service.build_dashboard(current_user, conn=conn)
+            evidence_count = len(dashboard.evidence_items)
+            gap_count = len(dashboard.evidence_gaps)
+            helped = int((dashboard.metadata or {}).get("helped_and_protected_count") or 0)
+            leadership = int((dashboard.metadata or {}).get("leadership_count") or 0)
+            summary = (
+                f"{evidence_count} safe evidence item(s); {gap_count} potential gap(s). "
+                f"{helped} may support helped and protected; "
+                f"{leadership} may support leadership oversight. Not a compliance decision."
+            )
+            tone = "urgent" if gap_count > 2 else ("attention" if gap_count else "neutral")
+            for gap in dashboard.evidence_gaps[:3]:
+                items.append(
+                    ManagerDailyBriefItem(
+                        id=f"sccif-gap:{gap.id}",
+                        title=gap.title,
+                        safe_summary=gap.description,
+                        priority=gap.risk if gap.risk in {"low", "medium", "high", "urgent"} else "medium",
+                        route=gap.route,
+                        action_label=gap.action_label or "Review gap",
+                        source="sccif_alignment",
+                        metadata={"no_raw_body": True, "gap": True},
+                    )
+                )
+            if helped:
+                items.append(
+                    ManagerDailyBriefItem(
+                        id="sccif:helped-protected",
+                        title="Helped and protected prompts",
+                        safe_summary=(
+                            f"{helped} item(s) may relate to how well children are helped and protected. "
+                            "Manager review needed where safeguarding is flagged."
+                        ),
+                        priority="high",
+                        route="/intelligence/sccif?judgement=helped_and_protected",
+                        action_label="Open alignment",
+                        source="sccif_alignment",
+                    )
+                )
+            if leadership:
+                items.append(
+                    ManagerDailyBriefItem(
+                        id="sccif:leadership",
+                        title="Leadership oversight prompts",
+                        safe_summary=(
+                            f"{leadership} item(s) may support leadership and management evidence threads."
+                        ),
+                        priority="medium",
+                        route="/intelligence/sccif?judgement=leadership_management",
+                        action_label="Open alignment",
+                        source="sccif_alignment",
+                    )
+                )
+        except Exception as exc:
+            logger.debug("brief_sccif_section_skipped: %s", exc)
+            summary = "SCCIF alignment section could not load — open alignment dashboard manually."
+
+        return ManagerDailyBriefSection(
+            id="sccif_quality_standards",
+            title="SCCIF / Quality Standards evidence",
+            summary=summary,
+            items=items,
+            route="/intelligence/sccif",
+            action_label="Open SCCIF alignment",
+            tone=tone,
+            metadata={
+                "evidence_count": evidence_count,
+                "gap_count": gap_count,
+                "no_raw_body": True,
+                "evidence_support_only": True,
+            },
+        )
+
     def build_recommendations(self, brief: ManagerDailyBrief) -> list[str]:
         recs: list[str] = []
         for section in brief.sections:
@@ -793,6 +877,8 @@ class ManagerDailyBriefService:
             recs.append("Review safeguarding network (ISN) items before handover.")
         if brief.workforce_summary and "unavailable" not in brief.workforce_summary.lower():
             recs.append("Review workforce and shift context before handover.")
+        if brief.sccif_summary and "unavailable" not in brief.sccif_summary.lower():
+            recs.append("Review SCCIF alignment gaps before inspection preparation — not a grade prediction.")
         for section in brief.sections:
             if section.id == "notification_oversight" and section.tone in ("urgent", "attention"):
                 recs.append(
@@ -831,6 +917,7 @@ class ManagerDailyBriefService:
         workforce = self.build_workforce_section(current_user, conn=conn)
         notification_oversight = self.build_notification_oversight_section(current_user, conn=conn)
         child_journey = self.build_child_journey_section(current_user, conn=conn)
+        sccif_section = self.build_sccif_section(current_user, conn=conn)
 
         try:
             gov = recording_governance_service.build_dashboard(current_user, conn=conn)
@@ -843,6 +930,7 @@ class ManagerDailyBriefService:
             review,
             safeguarding,
             isn_section,
+            sccif_section,
             notification_oversight,
             workforce,
             actions,
@@ -872,6 +960,7 @@ class ManagerDailyBriefService:
             child_journey_summary=child_journey.summary,
             handover_summary=handover.summary,
             workforce_summary=workforce.summary,
+            sccif_summary=sccif_section.summary,
             sections=sections,
             routes=ManagerDailyBriefRoutes(),
             limitations=limitations[:8],

@@ -82,6 +82,11 @@ Existing systems reused (not rebuilt):
 - Staff profile landing is `/staff/[id]` — not embedded in Care Hub cards
 - Standalone ORB must not import `workforce-context.ts` client
 
+## SCCIF alignment
+
+- Workforce context feeds `sccif_alignment_service.collect_workforce_evidence`
+- May support leadership and management judgement area (partial evidence)
+
 ## Future staff profile build
 
 When ready: embed permission-scoped staff snapshot in Care Hub using `staff_profile_service` with field allow-list — not in this pass.

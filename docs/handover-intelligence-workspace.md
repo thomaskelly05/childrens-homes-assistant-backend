@@ -63,6 +63,11 @@ Handover UI exposes operational ORB prompts (manager brief, action priority, saf
 
 See `docs/handover-review-formal-mapping.md` and `docs/handover-workflow-map.md`.
 
+## SCCIF alignment cross-link
+
+- Workspace header link to `/intelligence/sccif` (`handover-sccif-alignment-link`)
+- Handover intelligence may support leadership management and quality of care judgement threads (metadata only)
+
 ## Future
 
 - Home/shift formal handover from workspace when shift contract is clear
