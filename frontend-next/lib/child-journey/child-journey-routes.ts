@@ -164,6 +164,28 @@ export function buildChildJourneyRecordingActions(childId: string): ChildJourney
         'ORB follow-up review',
         'What recording follow-up needs manager attention for this child?'
       )
+    },
+    {
+      id: 'handover-notes',
+      label: 'Handover notes for this child',
+      description: 'Prepare shift handover with safe intelligence for this young person.',
+      href: `/handover?child_id=${base}`,
+      orbHint: operationalOrbHint(
+        childId,
+        'ORB handover help',
+        'What should be handed over for this child on the next shift?'
+      )
+    },
+    {
+      id: 'handover-intelligence',
+      label: 'Handover intelligence for this child',
+      description: 'Metadata-only alerts, reviews and safeguarding themes for handover.',
+      href: `/handover?child_id=${base}`,
+      orbHint: operationalOrbHint(
+        childId,
+        'ORB handover themes',
+        'What safeguarding-sensitive handover themes apply to this child?'
+      )
     }
   ]
 }

@@ -173,7 +173,7 @@ export const CARE_HUB_HERO_ACTIONS = (options: {
     {
       label: 'Start shift handover',
       description: 'Prepare what the next adults need to know.',
-      href: childId ? `/young-people/${childId}/shift-handover/new` : '/handover/current',
+      href: childId ? `/handover?child_id=${childId}` : '/handover',
       ariaLabel: 'Start shift handover'
     },
     {
@@ -224,7 +224,7 @@ export const CARE_HUB_HOME_METRICS: CareHubMetricDefinition[] = [
   { key: 'family-time', label: 'Family time', href: '/chronology', defaultDetail: 'Family contact and relationship records', zeroDetail: 'No family contact markers visible' },
   { key: 'education-concerns', label: 'Education concerns', href: '/education', defaultDetail: 'School and learning markers', zeroDetail: 'No education concern markers visible' },
   { key: 'actions-outstanding', label: 'Actions outstanding', href: '/actions', defaultDetail: 'Open operational actions', zeroDetail: 'No open actions found' },
-  { key: 'handover-status', label: 'Handover status', href: '/handover/current', defaultDetail: 'Shift continuity and handover', zeroDetail: 'Handover may still need a check' }
+  { key: 'handover-status', label: 'Handover status', href: '/handover', defaultDetail: 'Shift continuity and handover', zeroDetail: 'Handover may still need a check' }
 ]
 
 export function homeMetricDetail(definition: CareHubMetricDefinition, value: string | number): string {

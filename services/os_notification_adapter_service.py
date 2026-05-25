@@ -311,6 +311,45 @@ class OsNotificationAdapterService:
             logger.debug("intelligence_action_notification_skipped: %s", exc)
         return items[:limit]
 
+    def _handover_draft_items(
+        self, current_user: dict[str, Any], conn: Any | None, *, limit: int
+    ) -> list[OsNotificationItem]:
+        """Low-noise handover reminders — ready-for-review drafts only."""
+        items: list[OsNotificationItem] = []
+        try:
+            from services.handover_draft_service import handover_draft_service
+
+            listed = handover_draft_service.list_drafts(
+                current_user, status="ready_for_review", limit=limit, conn=conn
+            )
+            for draft in listed.items[:limit]:
+                items.append(
+                    OsNotificationItem(
+                        id=f"handover_draft:{draft.id}",
+                        notification_key=f"handover_draft:{draft.id}",
+                        type="recording_review_due",
+                        title="Handover draft ready for review",
+                        safe_summary=f"{draft.title} is ready for manager review in the handover workspace.",
+                        severity="medium",
+                        status="unread",
+                        unread=True,
+                        route=f"/handover?draft_id={draft.id}",
+                        action_label="Open handover",
+                        source="handover",
+                        category="handover",
+                        related_id=draft.id,
+                        related_type="handover_draft",
+                        child_id=draft.child_id,
+                        child_name=draft.child_name,
+                        home_id=draft.home_id,
+                        created_at=draft.updated_at,
+                        metadata={"no_raw_body": True, "metadata_only": True, "workspace_only": True},
+                    )
+                )
+        except Exception as exc:
+            logger.debug("handover_draft_notification_skipped: %s", exc)
+        return items[:limit]
+
     def _governance_items(
         self, current_user: dict[str, Any], conn: Any | None, *, limit: int
     ) -> list[OsNotificationItem]:
@@ -405,6 +444,7 @@ class OsNotificationAdapterService:
                 self._review_queue_items(current_user, conn, limit=3),
                 self._intelligence_action_items(current_user, conn, limit=2),
                 self._governance_items(current_user, conn, limit=2),
+                self._handover_draft_items(current_user, conn, limit=2),
             ):
                 for item in extra:
                     if unread_only and not item.unread:
