@@ -30,13 +30,25 @@ def client(monkeypatch):
 
 
 def test_scope_options_route(client):
-    payload = OsScopeState(scope_type="none", available_homes=[], available_children_for_home=[]).model_dump()
+    payload = OsScopeState(scope_type="none", available_homes=[], available_children=[]).model_dump()
     with patch("routers.os_scope_routes.os_scope_service.get_options", return_value=OsScopeState.model_validate(payload)):
         response = client.get("/api/os/scope/options")
     assert response.status_code == 200
     body = response.json()
     assert body["ok"] is True
     assert "data" in body
+    assert isinstance(body["data"]["available_homes"], list)
+    assert isinstance(body["data"]["available_children"], list)
+
+
+def test_scope_options_route_degraded_on_failure(client):
+    with patch("routers.os_scope_routes.os_scope_service.get_options", side_effect=RuntimeError("db down")):
+        response = client.get("/api/os/scope/options")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["data"]["degraded"] is True
+    assert body["data"]["available_homes"] == []
+    assert body["data"]["available_children"] == []
 
 
 def test_scope_current_route(client):
