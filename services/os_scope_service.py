@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Any
+from dataclasses import dataclass
+from typing import Any, Literal
 
+from auth.rbac import normalise_role
 from db.connection import (
     DatabaseUnavailableError,
     acquire_optional_dashboard_connection,
@@ -37,6 +39,70 @@ SESSION_RECENT_CHILDREN = "os_recent_children"
 OPTIONS_CACHE_TTL = 20.0
 MENU_SUMMARY_CACHE_TTL = 15.0
 
+HomeAccessSource = Literal[
+    "admin_all_homes",
+    "provider_scope",
+    "assigned_home",
+    "allowed_home_ids",
+    "none",
+]
+
+PLATFORM_ROLES = frozenset(
+    {
+        "super_admin",
+        "superadmin",
+        "system_admin",
+        "founder",
+        "owner",
+    }
+)
+
+PROVIDER_SCOPE_ROLES = frozenset(
+    {
+        "admin",
+        "administrator",
+        "provider",
+        "provider_admin",
+        "ri",
+        "responsible_individual",
+        "registered_manager",
+        "operations_manager",
+        "regional_manager",
+    }
+)
+
+MANAGER_ASSIGNED_ROLES = frozenset(
+    {
+        "manager",
+        "deputy_manager",
+        "deputy",
+        "senior",
+        "senior_support_worker",
+    }
+)
+
+STAFF_ASSIGNED_ROLES = frozenset(
+    {
+        "support_worker",
+        "staff",
+        "rsw",
+        "residential_support_worker",
+        "key_worker",
+    }
+)
+
+ADMIN_METADATA_ROLES = PLATFORM_ROLES | frozenset({"admin", "administrator", "provider_admin"})
+
+ACTIVE_CHILD_STATUSES = frozenset({"active", "planned", "emergency", "transition", ""})
+
+
+@dataclass(frozen=True)
+class HomeAccessResolution:
+    source: HomeAccessSource
+    mode: Literal["all_active", "provider", "ids", "none"]
+    home_ids: tuple[int, ...] = ()
+    provider_id: int | None = None
+
 
 def _safe_int(value: Any) -> int | None:
     try:
@@ -48,6 +114,14 @@ def _safe_int(value: Any) -> int | None:
         return None
 
 
+def _int_values(value: Any) -> tuple[int, ...]:
+    if value in (None, ""):
+        return ()
+    values = value if isinstance(value, (list, tuple, set)) else [value]
+    clean = {_safe_int(item) for item in values}
+    return tuple(sorted(item for item in clean if item is not None))
+
+
 def _user_home_id(user: dict[str, Any]) -> int | None:
     return _safe_int(user.get("home_id") or user.get("selected_home_id") or user.get("default_home_id"))
 
@@ -56,20 +130,138 @@ def _user_provider_id(user: dict[str, Any]) -> int | None:
     return _safe_int(user.get("provider_id") or user.get("providerId"))
 
 
+def _raw_role(user: dict[str, Any]) -> str:
+    return str(user.get("role") or "staff").strip().lower().replace("-", "_").replace(" ", "_")
+
+
 def _role(user: dict[str, Any]) -> str:
-    return str(user.get("role") or "staff").lower()
+    return normalise_role(user.get("role")) or _raw_role(user)
 
 
-def _is_wide_access(role: str) -> bool:
-    return role in {
-        "admin",
-        "administrator",
-        "super_admin",
-        "provider",
-        "provider_admin",
-        "ri",
-        "responsible_individual",
-    } or "admin" in role
+def _user_id(user: dict[str, Any]) -> int | None:
+    return _safe_int(user.get("user_id") or user.get("id"))
+
+
+def _can_show_admin_metadata(user: dict[str, Any]) -> bool:
+    raw = _raw_role(user)
+    role = _role(user)
+    return raw in ADMIN_METADATA_ROLES or role in ADMIN_METADATA_ROLES
+
+
+def _resolve_home_access(user: dict[str, Any]) -> HomeAccessResolution:
+    """Determine which homes the scope selector may list for this user."""
+    context = context_from_user(user)
+    raw = _raw_role(user)
+    role = _role(user)
+    provider_id = _user_provider_id(user) or context.provider_id
+    explicit_ids = _int_values(
+        user.get("allowed_home_ids")
+        or user.get("allowedHomeIds")
+        or user.get("home_ids")
+        or user.get("homeIds")
+    )
+    context_ids = tuple(context.home_ids)
+
+    if context.tenancy_scope == "platform" or raw in PLATFORM_ROLES:
+        return HomeAccessResolution("admin_all_homes", "all_active")
+
+    if (
+        context.tenancy_scope == "provider"
+        or (provider_id and (raw in PROVIDER_SCOPE_ROLES or role in PROVIDER_SCOPE_ROLES))
+        or context.provider_oversight_access
+    ) and provider_id:
+        return HomeAccessResolution("provider_scope", "provider", provider_id=provider_id)
+
+    if len(explicit_ids) > 1:
+        return HomeAccessResolution("allowed_home_ids", "ids", home_ids=explicit_ids)
+
+    if context_ids:
+        source: HomeAccessSource = "assigned_home" if len(context_ids) == 1 else "allowed_home_ids"
+        return HomeAccessResolution(source, "ids", home_ids=context_ids)
+
+    if explicit_ids:
+        return HomeAccessResolution("assigned_home", "ids", home_ids=explicit_ids)
+
+    if raw in MANAGER_ASSIGNED_ROLES | STAFF_ASSIGNED_ROLES or role in MANAGER_ASSIGNED_ROLES | STAFF_ASSIGNED_ROLES:
+        primary = _user_home_id(user)
+        if primary:
+            return HomeAccessResolution("assigned_home", "ids", home_ids=(primary,))
+
+    return HomeAccessResolution("none", "none")
+
+
+def _user_can_access_home(user: dict[str, Any], home_id: int | None, access: HomeAccessResolution | None = None) -> bool:
+    if not home_id:
+        return False
+    resolved = access or _resolve_home_access(user)
+    if resolved.mode == "all_active":
+        return True
+    if resolved.mode == "provider":
+        return True
+    if resolved.mode == "ids":
+        return home_id in resolved.home_ids
+    return False
+
+
+def _fetch_assigned_home_ids_from_db(conn: Any, user_id: int) -> tuple[int, ...]:
+    ids: set[int] = set()
+    queries = (
+        (
+            "os_user_home_access",
+            """
+            SELECT home_id
+            FROM os_user_home_access
+            WHERE user_id = %s
+              AND active = TRUE
+              AND (ends_at IS NULL OR ends_at > NOW())
+            """,
+        ),
+        (
+            "staff_home_assignments",
+            """
+            SELECT home_id
+            FROM staff_home_assignments
+            WHERE user_id = %s
+              AND COALESCE(active, TRUE) = TRUE
+            """,
+        ),
+    )
+    with conn.cursor() as cur:
+        for table, sql in queries:
+            cur.execute(
+                "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = %s) AS exists",
+                (table,),
+            )
+            exists_row = cur.fetchone()
+            exists = bool(exists_row.get("exists") if isinstance(exists_row, dict) else exists_row and exists_row[0])
+            if not exists:
+                continue
+            try:
+                cur.execute(sql, (user_id,))
+                for row in cur.fetchall():
+                    data = dict(row) if isinstance(row, dict) else {"home_id": row[0]}
+                    hid = _safe_int(data.get("home_id"))
+                    if hid:
+                        ids.add(hid)
+            except Exception as exc:
+                logger.debug("os_scope_assigned_homes_skip table=%s error=%s", table, exc)
+    return tuple(sorted(ids))
+
+
+def _merge_db_assigned_homes(user: dict[str, Any], access: HomeAccessResolution, conn: Any) -> HomeAccessResolution:
+    if access.mode in {"all_active", "provider", "none"}:
+        return access
+    user_id = _user_id(user)
+    if not user_id:
+        return access
+    db_ids = _fetch_assigned_home_ids_from_db(conn, user_id)
+    if not db_ids:
+        return access
+    merged = tuple(sorted(set(access.home_ids).union(db_ids)))
+    source: HomeAccessSource = access.source
+    if len(merged) > 1 and source == "assigned_home":
+        source = "allowed_home_ids"
+    return HomeAccessResolution(source, "ids", home_ids=merged, provider_id=access.provider_id)
 
 
 def _read_session_list(session: dict[str, Any], key: str) -> list[dict[str, Any]]:
@@ -113,113 +305,179 @@ def _scope_from_session(session: dict[str, Any]) -> tuple[OsScopeType, int | Non
         scope_type = "none"
     if scope_type == "home" and not home_id:
         scope_type = "none"
-    if scope_type == "child" and child_id and not home_id:
-        pass
     return scope_type, home_id, child_id, str(home_name) if home_name else None, str(child_name) if child_name else None  # type: ignore[return-value]
 
 
-def _permitted_home_ids(user: dict[str, Any]) -> list[int]:
-    context = context_from_user(user)
-    if context.home_ids:
-        return list(context.home_ids)
-    home_id = _user_home_id(user)
-    return [home_id] if home_id else []
+def _home_option_from_row(data: dict[str, Any]) -> OsScopeHomeOption | None:
+    hid = _safe_int(data.get("id"))
+    if not hid:
+        return None
+    name = str(data.get("name") or f"Home {hid}")
+    return OsScopeHomeOption(
+        id=hid,
+        name=name,
+        status=str(data.get("status")) if data.get("status") else None,
+        address=str(data.get("address")) if data.get("address") else None,
+        provider_id=_safe_int(data.get("provider_id")),
+        route=f"/homes/{hid}/workspace",
+    )
 
 
-def _fallback_homes(user: dict[str, Any]) -> list[OsScopeHomeOption]:
+def _discover_home_table(cur: Any) -> tuple[str, str, str, set[str]] | None:
+    for table in ("homes", "care_homes", "children_homes"):
+        cur.execute(
+            "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = %s) AS exists",
+            (table,),
+        )
+        exists_row = cur.fetchone()
+        exists = bool(exists_row.get("exists") if isinstance(exists_row, dict) else exists_row and exists_row[0])
+        if not exists:
+            continue
+        cur.execute(
+            "SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = %s",
+            (table,),
+        )
+        cols = {str(r["column_name"] if isinstance(r, dict) else r[0]) for r in cur.fetchall()}
+        id_col = "id" if "id" in cols else "home_id" if "home_id" in cols else None
+        name_col = "name" if "name" in cols else "home_name" if "home_name" in cols else "title" if "title" in cols else None
+        if id_col and name_col:
+            return table, id_col, name_col, cols
+    return None
+
+
+def _query_homes_from_db(cur: Any, access: HomeAccessResolution) -> list[OsScopeHomeOption]:
+    if access.mode == "none":
+        return []
+
+    discovered = _discover_home_table(cur)
+    if not discovered:
+        return []
+
+    table, id_col, name_col, cols = discovered
+    where: list[str] = []
+    params: list[Any] = []
+
+    if "archived" in cols:
+        where.append("COALESCE(archived, FALSE) = FALSE")
+    elif "status" in cols:
+        where.append("(status IS NULL OR LOWER(status) IN ('active', 'open'))")
+
+    if access.mode == "provider" and access.provider_id is not None and "provider_id" in cols:
+        where.append("provider_id = %s")
+        params.append(access.provider_id)
+    elif access.mode == "ids" and access.home_ids:
+        placeholders = ", ".join(["%s"] * len(access.home_ids))
+        where.append(f'"{id_col}" IN ({placeholders})')
+        params.extend(access.home_ids)
+
+    where_sql = "WHERE " + " AND ".join(where) if where else ""
+    extra_cols: list[str] = []
+    if "status" in cols:
+        extra_cols.append("status")
+    if "address" in cols:
+        extra_cols.append("address")
+    elif "address_line_1" in cols:
+        extra_cols.append("address_line_1 AS address")
+    if "provider_id" in cols:
+        extra_cols.append("provider_id")
+    extra_sql = ", " + ", ".join(extra_cols) if extra_cols else ""
+
+    cur.execute(
+        f'SELECT "{id_col}" AS id, "{name_col}" AS name{extra_sql} FROM public."{table}" {where_sql} ORDER BY "{name_col}" ASC LIMIT 200',
+        tuple(params),
+    )
+
+    rows: list[OsScopeHomeOption] = []
+    seen: set[int] = set()
+    for row in cur.fetchall():
+        option = _home_option_from_row(dict(row))
+        if not option or option.id in seen:
+            continue
+        if access.mode == "ids" and option.id not in access.home_ids:
+            continue
+        seen.add(option.id)
+        rows.append(option)
+    return rows
+
+
+def _fallback_homes(user: dict[str, Any], access: HomeAccessResolution) -> list[OsScopeHomeOption]:
+    if access.mode == "none":
+        return []
     homes: list[OsScopeHomeOption] = []
-    for home_id in _permitted_home_ids(user):
+    for home_id in access.home_ids:
         name = str(user.get("home_name") or user.get("selected_home_name") or f"Home {home_id}")
-        homes.append(OsScopeHomeOption(id=home_id, name=name, status="active"))
+        homes.append(
+            OsScopeHomeOption(
+                id=home_id,
+                name=name,
+                status="active",
+                route=f"/homes/{home_id}/workspace",
+            )
+        )
+    if access.mode == "all_active" or access.mode == "provider":
+        return []
+    primary = _user_home_id(user)
+    if primary and not homes:
+        homes.append(
+            OsScopeHomeOption(
+                id=primary,
+                name=str(user.get("home_name") or f"Home {primary}"),
+                status="active",
+                route=f"/homes/{primary}/workspace",
+            )
+        )
     return homes
 
 
-def _list_homes_lightweight(user: dict[str, Any]) -> tuple[list[OsScopeHomeOption], list[str], bool]:
+def _list_homes_lightweight(user: dict[str, Any]) -> tuple[list[OsScopeHomeOption], list[str], bool, HomeAccessResolution]:
     warnings: list[str] = []
     degraded = False
-    permitted_ids = _permitted_home_ids(user)
+    access = _resolve_home_access(user)
+
+    if access.mode == "none":
+        warnings.append("No homes are currently linked to your account.")
+        return [], warnings, False, access
+
     if is_pool_under_pressure():
-        fallback = _fallback_homes(user)
+        fallback = _fallback_homes(user, access)
         if fallback:
-            return fallback, ["Database busy — showing permitted homes from your profile."], True
-        return [], ["Home and child list unavailable. Retry shortly."], True
+            return fallback, ["Database busy — showing permitted homes from your profile."], True, access
+        return [], ["Home and child list unavailable. Retry shortly."], True, access
 
     with acquire_optional_dashboard_connection(timeout=0.15) as conn:
         if conn is None:
-            fallback = _fallback_homes(user)
+            fallback = _fallback_homes(user, access)
             if fallback:
-                return fallback, ["Database busy — home list deferred."], True
-            return [], ["Home and child list unavailable. Retry shortly."], True
+                return fallback, ["Database busy — home list deferred."], True, access
+            return [], ["Home and child list unavailable. Retry shortly."], True, access
 
-        role = _role(user)
-        provider_id = _user_provider_id(user)
+        access = _merge_db_assigned_homes(user, access, conn)
+        if access.mode == "ids" and not access.home_ids:
+            warnings.append("No homes are currently linked to your account.")
+            return [], warnings, False, access
+
         rows: list[OsScopeHomeOption] = []
         try:
             with conn.cursor() as cur:
-                for table in ("homes", "care_homes", "children_homes"):
-                    cur.execute(
-                        "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = %s) AS exists",
-                        (table,),
-                    )
-                    exists_row = cur.fetchone()
-                    exists = bool(exists_row.get("exists") if isinstance(exists_row, dict) else exists_row and exists_row[0])
-                    if not exists:
-                        continue
-                    cur.execute(
-                        "SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = %s",
-                        (table,),
-                    )
-                    cols = {str(r["column_name"] if isinstance(r, dict) else r[0]) for r in cur.fetchall()}
-                    id_col = "id" if "id" in cols else "home_id" if "home_id" in cols else None
-                    name_col = "name" if "name" in cols else "home_name" if "home_name" in cols else "title" if "title" in cols else None
-                    if not id_col or not name_col:
-                        continue
-                    where: list[str] = []
-                    params: list[Any] = []
-                    if not _is_wide_access(role) and permitted_ids:
-                        placeholders = ", ".join(["%s"] * len(permitted_ids))
-                        where.append(f'"{id_col}" IN ({placeholders})')
-                        params.extend(permitted_ids)
-                    elif provider_id and "provider_id" in cols:
-                        where.append("provider_id = %s")
-                        params.append(provider_id)
-                    where_sql = "WHERE " + " AND ".join(where) if where else ""
-                    status_sql = ", status" if "status" in cols else ""
-                    cur.execute(
-                        f'SELECT "{id_col}" AS id, "{name_col}" AS name{status_sql} FROM public."{table}" {where_sql} ORDER BY "{name_col}" ASC LIMIT 50',
-                        tuple(params),
-                    )
-                    for row in cur.fetchall():
-                        data = dict(row)
-                        hid = _safe_int(data.get("id"))
-                        if not hid:
-                            continue
-                        if permitted_ids and hid not in permitted_ids and not _is_wide_access(role):
-                            continue
-                        rows.append(
-                            OsScopeHomeOption(
-                                id=hid,
-                                name=str(data.get("name") or f"Home {hid}"),
-                                status=str(data.get("status")) if data.get("status") else None,
-                            )
-                        )
-                    if rows:
-                        break
+                rows = _query_homes_from_db(cur, access)
         except DatabaseUnavailableError:
             degraded = True
             warnings.append("Home and child list unavailable. Retry shortly.")
-            rows = _fallback_homes(user)
+            rows = _fallback_homes(user, access)
         except Exception as exc:
             logger.warning("os_scope_homes_failed error=%s", exc)
             warnings.append("Home list could not be loaded.")
-            rows = _fallback_homes(user)
+            rows = _fallback_homes(user, access)
             degraded = True
         finally:
             release_db_connection(conn)
 
     if not rows:
-        rows = _fallback_homes(user)
-    return rows, warnings, degraded
+        rows = _fallback_homes(user, access)
+        if not rows and access.mode != "none":
+            warnings.append("No homes are currently linked to your account.")
+
+    return rows, warnings, degraded, access
 
 
 def _child_name(row: dict[str, Any]) -> str:
@@ -232,14 +490,36 @@ def _child_name(row: dict[str, Any]) -> str:
     return combined or str(row.get("name") or row.get("full_name") or "Young person")
 
 
-def _list_children_for_home(user: dict[str, Any], home_id: int | None) -> tuple[list[OsScopeChildOption], list[str], bool]:
+def _is_active_child(row: dict[str, Any]) -> bool:
+    if _normalise_bool(row.get("archived")):
+        return False
+    status = str(row.get("placement_status") or row.get("status") or "active").strip().lower()
+    return status in ACTIVE_CHILD_STATUSES
+
+
+def _normalise_bool(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return False
+    if isinstance(value, str):
+        return value.strip().lower() in {"true", "1", "yes", "y", "on"}
+    return bool(value)
+
+
+def _list_children_for_home(
+    user: dict[str, Any],
+    home_id: int | None,
+    *,
+    access: HomeAccessResolution | None = None,
+) -> tuple[list[OsScopeChildOption], list[str], bool]:
     warnings: list[str] = []
     degraded = False
     if not home_id:
         return [], [], False
 
-    permitted_ids = _permitted_home_ids(user)
-    if permitted_ids and home_id not in permitted_ids and not _is_wide_access(_role(user)):
+    resolved = access or _resolve_home_access(user)
+    if not _user_can_access_home(user, home_id, resolved):
         return [], ["You do not have access to children in that home."], False
 
     if is_pool_under_pressure():
@@ -253,19 +533,31 @@ def _list_children_for_home(user: dict[str, Any], home_id: int | None) -> tuple[
         try:
             from services import young_people_service as yp
 
-            rows = yp.list_young_people(conn, home_id=home_id, provider_id=_user_provider_id(user), limit=80)
+            rows = yp.list_young_people(
+                conn,
+                home_id=home_id,
+                provider_id=_user_provider_id(user) if resolved.mode == "provider" else None,
+                limit=80,
+            )
             for row in rows:
+                if not _is_active_child(row):
+                    continue
                 cid = _safe_int(row.get("id"))
                 if not cid:
+                    continue
+                row_home = _safe_int(row.get("home_id")) or home_id
+                if row_home != home_id:
                     continue
                 children.append(
                     OsScopeChildOption(
                         id=cid,
                         name=_child_name(row),
-                        home_id=_safe_int(row.get("home_id")) or home_id,
+                        home_id=row_home,
                         placement_status=str(row.get("placement_status") or row.get("status") or "") or None,
                     )
                 )
+            if not children:
+                warnings.append("No children are currently available for this home.")
         except DatabaseUnavailableError:
             degraded = True
             warnings.append("Database busy — children unavailable.")
@@ -287,13 +579,13 @@ class OsScopeService:
             return OsScopeState.model_validate(lookup.value)
 
         scope_type, sel_home, sel_child, sel_home_name, sel_child_name = _scope_from_session(session)
-        homes, home_warnings, home_degraded = _list_homes_lightweight(user)
+        homes, home_warnings, home_degraded, access = _list_homes_lightweight(user)
         target_home = home_id or sel_home
         children: list[OsScopeChildOption] = []
         child_warnings: list[str] = []
         child_degraded = False
         if target_home:
-            children, child_warnings, child_degraded = _list_children_for_home(user, target_home)
+            children, child_warnings, child_degraded = _list_children_for_home(user, target_home, access=access)
 
         recent_homes = [
             OsScopeHomeOption.model_validate(item)
@@ -305,6 +597,15 @@ class OsScopeService:
             for item in _read_session_list(session, SESSION_RECENT_CHILDREN)
             if _safe_int(item.get("id"))
         ]
+
+        metadata: dict[str, Any] = {}
+        if _can_show_admin_metadata(user):
+            metadata = {
+                "home_access_source": access.source,
+                "home_count": len(homes),
+                "child_count": len(children),
+                "selected_home_id": target_home,
+            }
 
         state = OsScopeState(
             scope_type=scope_type,
@@ -321,6 +622,7 @@ class OsScopeService:
             warnings=[*home_warnings, *child_warnings],
             degraded=home_degraded or child_degraded,
             cache_status=lookup.status if lookup.hit else "miss",
+            metadata=metadata,
         )
         if not (home_degraded or child_degraded or is_pool_under_pressure()):
             os_cache_service.set(cache_key, state.model_dump(), ttl_seconds=OPTIONS_CACHE_TTL)
@@ -341,8 +643,9 @@ class OsScopeService:
         children: list[OsScopeChildOption] = []
         warnings: list[str] = []
         degraded = False
+        access = _resolve_home_access(user)
         if home_id and scope_type in {"home", "child"}:
-            children, child_warnings, child_degraded = _list_children_for_home(user, home_id)
+            children, child_warnings, child_degraded = _list_children_for_home(user, home_id, access=access)
             warnings.extend(child_warnings)
             degraded = degraded or child_degraded
 
@@ -372,6 +675,8 @@ class OsScopeService:
         if scope_type == "home":
             if not home_id:
                 raise ValueError("home_id is required for home scope")
+            if not _user_can_access_home(user, home_id):
+                raise ValueError("You do not have access to that home.")
             session[SESSION_SCOPE_TYPE] = "home"
             session[SESSION_HOME_ID] = home_id
             session[SESSION_HOME_NAME] = home_name or f"Home {home_id}"
@@ -385,6 +690,8 @@ class OsScopeService:
             session[SESSION_CHILD_ID] = child_id
             session[SESSION_CHILD_NAME] = child_name or f"Young person {child_id}"
             if home_id:
+                if not _user_can_access_home(user, home_id):
+                    raise ValueError("You do not have access to that home.")
                 session[SESSION_HOME_ID] = home_id
                 if home_name:
                     session[SESSION_HOME_NAME] = home_name

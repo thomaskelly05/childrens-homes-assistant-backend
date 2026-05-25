@@ -29,6 +29,11 @@ export function HomeChildSelector() {
 
   const hasSelectedHome = Boolean(options.selected_home_id)
   const activeHomeId = pickerHomeId ?? options.selected_home_id ?? null
+  const previewingHome = pickerHomeId !== null
+  const activeHomeName =
+    options.available_homes.find((home) => home.id === activeHomeId)?.name ??
+    options.selected_home_name ??
+    null
 
   const loadOptions = useCallback(async (homeId?: number) => {
     setOptionsLoading(true)
@@ -44,8 +49,8 @@ export function HomeChildSelector() {
   }, [])
 
   useEffect(() => {
-    void loadOptions(activeHomeId ?? undefined)
-  }, [activeHomeId, loadOptions])
+    void loadOptions(previewingHome ? (activeHomeId ?? undefined) : undefined)
+  }, [activeHomeId, loadOptions, previewingHome])
 
   async function chooseHome(homeId: number, homeName: string) {
     if (!homeId) return
@@ -69,6 +74,11 @@ export function HomeChildSelector() {
     await loadOptions(homeId)
   }
 
+  function chooseAnotherHome() {
+    setPickerHomeId(null)
+    void loadOptions(undefined)
+  }
+
   async function chooseChild(childId: number, childName: string, homeId?: number | null) {
     const resolvedHomeId = homeId ?? activeHomeId
     if (!childId || !resolvedHomeId) {
@@ -83,7 +93,10 @@ export function HomeChildSelector() {
         child_id: childId,
         child_name: childName,
         home_id: resolvedHomeId,
-        home_name: options.available_homes.find((home) => home.id === resolvedHomeId)?.name ?? options.selected_home_name ?? undefined
+        home_name:
+          options.available_homes.find((home) => home.id === resolvedHomeId)?.name ??
+          options.selected_home_name ??
+          undefined
       })
       const href = workspaceHrefForScope(next)
       if (href && href !== '/select-scope' && next.selected_child_id) {
@@ -97,20 +110,18 @@ export function HomeChildSelector() {
   }
 
   const homes = options.available_homes.length ? options.available_homes : options.recent_homes
-  const children = options.available_children.length
-    ? options.available_children
-    : options.available_children_for_home?.length
-      ? options.available_children_for_home
-      : activeHomeId
-        ? []
-        : options.recent_children
+  const children = previewingHome
+    ? options.available_children.length
+      ? options.available_children
+      : options.available_children_for_home ?? []
+    : []
 
   const showDegradedPanel = Boolean(localError || error || options.degraded)
   const emptyHomesMessage =
     options.degraded || showDegradedPanel
       ? null
       : homes.length === 0
-        ? 'No homes are currently linked to your account.'
+        ? 'No homes are linked to your account. Ask an administrator to assign you to a home.'
         : null
 
   return (
@@ -138,7 +149,7 @@ export function HomeChildSelector() {
               className="mt-3 rounded-xl bg-amber-900 px-4 py-2 text-xs font-black uppercase tracking-[0.14em] text-white"
               onClick={() => {
                 setLocalError(null)
-                void loadOptions(activeHomeId ?? undefined)
+                void loadOptions(previewingHome ? (activeHomeId ?? undefined) : undefined)
               }}
             >
               Retry
@@ -150,9 +161,14 @@ export function HomeChildSelector() {
       <section className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-xl shadow-slate-950/5">
         <div className="flex items-center gap-3">
           <Building2 className="h-5 w-5 text-blue-600" aria-hidden />
-          <h2 className="text-lg font-black text-slate-950">Homes</h2>
+          <div>
+            <h2 className="text-lg font-black text-slate-950">Homes</h2>
+            <p data-testid="select-scope-homes-label" className="text-xs font-bold text-slate-500">
+              Homes you can access
+            </p>
+          </div>
         </div>
-        {optionsLoading ? (
+        {optionsLoading && !previewingHome ? (
           <SelectorSkeleton />
         ) : (
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -184,25 +200,45 @@ export function HomeChildSelector() {
             ) : null}
           </div>
         )}
-        {pickerHomeId ? (
-          <button
-            type="button"
-            className="mt-4 text-xs font-black uppercase tracking-[0.16em] text-blue-700"
-            onClick={() => setPickerHomeId(null)}
-          >
-            Show all permitted homes
-          </button>
-        ) : null}
       </section>
+
+      {previewingHome && activeHomeId ? (
+        <section
+          data-testid="select-scope-home-preview"
+          className="rounded-[32px] border border-blue-100 bg-blue-50/40 p-6 shadow-xl shadow-slate-950/5"
+        >
+          <p data-testid="select-scope-preview-home-name" className="text-sm font-black text-slate-950">
+            {activeHomeName ?? `Home ${activeHomeId}`}
+          </p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <button
+              type="button"
+              disabled={busy || loading}
+              onClick={() => void chooseHome(activeHomeId, activeHomeName ?? `Home ${activeHomeId}`)}
+              className="rounded-xl bg-blue-700 px-4 py-2 text-xs font-black uppercase tracking-[0.14em] text-white disabled:opacity-60"
+            >
+              Open home workspace
+            </button>
+            <button
+              type="button"
+              data-testid="select-scope-choose-another-home"
+              className="rounded-xl bg-white px-4 py-2 text-xs font-black uppercase tracking-[0.14em] text-blue-800 ring-1 ring-blue-200"
+              onClick={chooseAnotherHome}
+            >
+              Choose another home
+            </button>
+          </div>
+        </section>
+      ) : null}
 
       <section id="recent-children" className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-xl shadow-slate-950/5">
         <div className="flex items-center gap-3">
           <UserRound className="h-5 w-5 text-blue-600" aria-hidden />
           <h2 className="text-lg font-black text-slate-950">
-            {activeHomeId ? 'Children in this home' : 'Recent children'}
+            {previewingHome ? 'Children in this home' : 'Children'}
           </h2>
         </div>
-        {optionsLoading && activeHomeId ? (
+        {optionsLoading && previewingHome ? (
           <SelectorSkeleton />
         ) : (
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -220,8 +256,8 @@ export function HomeChildSelector() {
             ))}
             {!children.length ? (
               <p data-testid="select-scope-children-hint" className="text-sm font-bold text-slate-500">
-                {activeHomeId
-                  ? 'No children returned for this home yet.'
+                {previewingHome
+                  ? 'No children are currently available for this home.'
                   : 'Select a home to load children.'}
               </p>
             ) : null}

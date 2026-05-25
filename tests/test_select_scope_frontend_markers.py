@@ -32,6 +32,24 @@ def test_children_hint_before_home_selected():
     assert 'data-testid="select-scope-children-hint"' in text
 
 
+def test_homes_you_can_access_label():
+    text = SELECTOR.read_text(encoding="utf-8")
+    assert "Homes you can access" in text
+    assert 'data-testid="select-scope-homes-label"' in text
+
+
+def test_empty_homes_linked_account_message():
+    text = SELECTOR.read_text(encoding="utf-8")
+    assert "No homes are linked to your account" in text
+    assert 'data-testid="select-scope-no-homes"' in text
+
+
+def test_choose_another_home_control():
+    text = SELECTOR.read_text(encoding="utf-8")
+    assert "Choose another home" in text
+    assert 'data-testid="select-scope-choose-another-home"' in text
+
+
 def test_os_scope_normalises_children_arrays():
     text = OS_SCOPE.read_text(encoding="utf-8")
     assert "available_children" in text
