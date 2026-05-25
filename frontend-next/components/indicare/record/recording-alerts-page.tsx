@@ -158,6 +158,20 @@ export function RecordingAlertsPage() {
           >
             Review queue
           </Link>
+          <Link
+            href="/command-centre/briefing"
+            data-testid="recording-alerts-open-manager-daily-brief"
+            className="inline-flex min-h-10 items-center rounded-2xl border border-blue-200 bg-blue-50 px-4 py-2 text-xs font-black text-blue-950"
+          >
+            Open manager daily brief
+          </Link>
+          <Link
+            href={operationalOrbAlertHref('manager_daily_brief', 'Include recording alerts in today manager brief.')}
+            data-testid="recording-alerts-ask-orb-brief"
+            className="inline-flex min-h-10 items-center rounded-2xl border border-cyan-200 bg-cyan-50 px-4 py-2 text-xs font-black text-cyan-950"
+          >
+            Ask ORB for manager brief
+          </Link>
           <button
             type="button"
             data-testid="recording-alerts-run-checks"

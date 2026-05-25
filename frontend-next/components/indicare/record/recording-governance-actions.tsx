@@ -70,6 +70,13 @@ export function RecordingGovernanceActions({
         >
           Open Care Hub
         </Link>
+        <Link
+          href="/command-centre/briefing"
+          data-testid="recording-governance-open-manager-daily-brief"
+          className="inline-flex min-h-10 items-center rounded-2xl border border-blue-200 bg-blue-50 px-4 py-2 text-xs font-black text-blue-950"
+        >
+          Open manager daily brief
+        </Link>
         <button
           type="button"
           onClick={() => void copySummary()}

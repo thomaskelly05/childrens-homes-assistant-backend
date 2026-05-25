@@ -52,6 +52,14 @@ const nextConfig: NextConfig = {
         destination: `${backendOrigin}/recording-drafts/:path*`
       },
       {
+        source: '/recording-alerts/:path*',
+        destination: `${backendOrigin}/recording-alerts/:path*`
+      },
+      {
+        source: '/manager-daily-brief/:path*',
+        destination: `${backendOrigin}/manager-daily-brief/:path*`
+      },
+      {
         source: '/staff/evidence',
         destination: `${backendOrigin}/staff/evidence`
       },

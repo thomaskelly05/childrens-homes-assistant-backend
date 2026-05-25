@@ -13,6 +13,7 @@ CARE_HUB_FILES = [
     FRONTEND / "components" / "command-centre" / "care-hub-attention-strip.tsx",
     FRONTEND / "components" / "command-centre" / "care-hub-recording-section.tsx",
     FRONTEND / "components" / "command-centre" / "care-hub-recording-digest.tsx",
+    FRONTEND / "components" / "command-centre" / "care-hub-manager-daily-brief.tsx",
     FRONTEND / "components" / "command-centre" / "intelligence-actions-card.tsx",
 ]
 
@@ -62,6 +63,14 @@ def test_care_hub_operational_orb_links_only():
 def test_care_hub_ask_orb_action_targets_assistant():
     routes = _read(FRONTEND / "components" / "command-centre" / "care-hub-routes.ts")
     assert "/assistant/orb?context=care-hub" in routes
+
+
+def test_care_hub_manager_daily_brief_marker():
+    page = _read(FRONTEND / "app" / "command-centre" / "page.tsx")
+    assert "CareHubManagerDailyBrief" in page
+    assert "/command-centre/briefing" in _read(
+        FRONTEND / "components" / "command-centre" / "care-hub-manager-daily-brief.tsx"
+    )
 
 
 def test_care_hub_recording_oversight_digest():
