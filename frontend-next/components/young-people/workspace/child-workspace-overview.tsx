@@ -74,9 +74,22 @@ export function ChildWorkspaceOverview({
               title="Evidence and workflow"
               description="Lifecycle, linked evidence and technical workflow tools — for when you need traceability."
             />
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-2">
+              {view.evidenceActions.map((action) => (
+                <Link
+                  key={action.href}
+                  href={action.href}
+                  prefetch={false}
+                  data-testid={action.testId}
+                  className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-700 transition hover:border-sky-200 hover:bg-sky-50"
+                >
+                  {action.label}
+                </Link>
+              ))}
+            </div>
+            <div className="mt-4 flex flex-wrap gap-3">
               <Link href={view.routes.journey} prefetch={false} className="text-sm font-black text-sky-700">
-                Child journey →
+                Advanced / evidence view →
               </Link>
               <Link href={`/young-people/${encodeURIComponent(view.child.id)}`} prefetch={false} className="text-sm font-black text-slate-600">
                 Full care profile →

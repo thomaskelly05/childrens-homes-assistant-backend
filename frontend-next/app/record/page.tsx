@@ -11,6 +11,7 @@ export default async function RecordPage({
   searchParams: Promise<{
     child_id?: string
     young_person_id?: string
+    home_id?: string
     child_name?: string
     type?: string
     about?: string
@@ -19,8 +20,9 @@ export default async function RecordPage({
 }) {
   const query = await searchParams
   const childId = resolveRecordChildId(query)
+  const homeId = query.home_id?.trim() || undefined
   const highlightType = query.type?.trim() || undefined
-  const initialAbout = resolveRecordAboutContext(query.about)
+  const initialAbout = resolveRecordAboutContext(query.about, homeId)
 
   let childDisplayName = query.child_name?.trim()
   if (childId && !childDisplayName) {

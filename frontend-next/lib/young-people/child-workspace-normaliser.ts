@@ -1,6 +1,34 @@
 import { text } from '@/lib/os-api/bundles'
 import type { ChildProfileBundle } from '@/lib/os-api/bundles'
 import type { OsWorkspace } from '@/lib/os-api/workspaces'
+import {
+  childActionsHref,
+  childAlertsHref,
+  childBehaviourSupportHref,
+  childBodyMapHref,
+  childCarePlanningHref,
+  childChronologyHref,
+  childComplaintHref,
+  childDailyNoteHref,
+  childDocumentsHref,
+  childEducationHref,
+  childFamilyTimeHref,
+  childFormalSubmissionHref,
+  childHandoverHref,
+  childHealthMedicationHref,
+  childIncidentHref,
+  childJourneyHref,
+  childKeyworkHref,
+  childMissingEpisodeHref,
+  childOrbHref,
+  childPhysicalInterventionHref,
+  childRecordHref,
+  childReviewsHref,
+  childRoomSearchHref,
+  childSafeguardingHref,
+  childTemplatesHref,
+  childVoiceHref
+} from '@/lib/navigation/scope-routes'
 
 export type ChildWorkspaceOverviewField = {
   label: string
@@ -86,6 +114,7 @@ export type ChildWorkspaceOverviewViewModel = {
     recordDailyNote: string
     recordIncident: string
     recordSafeguarding: string
+    safeguarding: string
     recordKeywork: string
     recordHealth: string
     recordEducation: string
@@ -94,12 +123,14 @@ export type ChildWorkspaceOverviewViewModel = {
     actions: string
     documents: string
     journey: string
+    orb: string
     orbRecordQuality: string
     orbSafeguardingThemes: string
     orbChildJourney: string
     orbOfstedEvidence: string
   }
   quickActions: ChildWorkspaceQuickAction[]
+  evidenceActions: ChildWorkspaceQuickAction[]
 }
 
 const EMPTY = 'Not recorded yet'
@@ -282,10 +313,12 @@ export function normaliseChildWorkspaceOverview(input: ChildWorkspaceNormaliserI
     actions: `/actions?child_id=${encodeURIComponent(childId)}`,
     documents: `/documents?child_id=${encodeURIComponent(childId)}`,
     journey: `/young-people/${encodeURIComponent(childId)}/journey`,
-    orbRecordQuality: `/assistant/orb?mode=record_quality_review&context=child&young_person_id=${encodeURIComponent(childId)}`,
-    orbSafeguardingThemes: `/assistant/orb?mode=safeguarding_themes&context=child&young_person_id=${encodeURIComponent(childId)}`,
-    orbChildJourney: `/assistant/orb?mode=child_journey_summary&context=child&young_person_id=${encodeURIComponent(childId)}`,
-    orbOfstedEvidence: `/assistant/orb?mode=ofsted_evidence_review&context=child&young_person_id=${encodeURIComponent(childId)}`
+    safeguarding: `/record?child_id=${encodeURIComponent(childId)}&type=safeguarding-concern`,
+    orb: childOrbHref(childId),
+    orbRecordQuality: childOrbHref(childId),
+    orbSafeguardingThemes: childOrbHref(childId, 'safeguarding_themes'),
+    orbChildJourney: childOrbHref(childId, 'child_journey_summary'),
+    orbOfstedEvidence: childOrbHref(childId, 'ofsted_evidence_review')
   }
 
   const emptyStates: Record<string, string> = {
@@ -389,17 +422,35 @@ export function normaliseChildWorkspaceOverview(input: ChildWorkspaceNormaliserI
     warnings: [],
     routes,
     quickActions: [
-      { label: 'Record daily note', href: routes.recordDailyNote, testId: 'child-quick-daily-note' },
-      { label: 'Record incident', href: routes.recordIncident, testId: 'child-quick-incident' },
+      { label: 'Record something', href: childRecordHref(childId), testId: 'child-quick-record' },
+      { label: 'Daily note', href: routes.recordDailyNote, testId: 'child-quick-daily-note' },
+      { label: 'Incident', href: routes.recordIncident, testId: 'child-quick-incident' },
       { label: 'Safeguarding concern', href: routes.recordSafeguarding, testId: 'child-quick-safeguarding' },
-      { label: 'Keywork session', href: routes.recordKeywork, testId: 'child-quick-keywork' },
-      { label: 'Health / medication note', href: routes.recordHealth, testId: 'child-quick-health' },
+      { label: 'Keywork', href: routes.recordKeywork, testId: 'child-quick-keywork' },
+      { label: 'Family time', href: routes.recordFamilyTime, testId: 'child-quick-family-time' },
       { label: 'Education note', href: routes.recordEducation, testId: 'child-quick-education' },
-      { label: 'Family time note', href: routes.recordFamilyTime, testId: 'child-quick-family-time' },
-      { label: 'Open chronology', href: routes.chronology, testId: 'child-quick-chronology' },
-      { label: 'Open actions', href: routes.actions, testId: 'child-quick-actions' },
-      { label: 'Open documents', href: routes.documents, testId: 'child-quick-documents' },
+      { label: 'Health / medication', href: routes.recordHealth, testId: 'child-quick-health' },
+      { label: 'Behaviour support', href: childBehaviourSupportHref(childId), testId: 'child-quick-behaviour' },
+      { label: 'Missing episode', href: childMissingEpisodeHref(childId), testId: 'child-quick-missing' },
+      { label: 'Chronology', href: routes.chronology, testId: 'child-quick-chronology' },
+      { label: 'Actions', href: routes.actions, testId: 'child-quick-actions' },
+      { label: 'Documents / plans', href: routes.documents, testId: 'child-quick-documents' },
+      { label: 'Handover', href: childHandoverHref(childId), testId: 'child-quick-handover' },
+      { label: 'Recording review', href: childReviewsHref(childId), testId: 'child-quick-reviews' },
+      { label: 'Alerts', href: childAlertsHref(childId), testId: 'child-quick-alerts' },
+      { label: 'Child voice', href: childVoiceHref(childId), testId: 'child-quick-voice' },
+      { label: 'Care planning', href: childCarePlanningHref(childId), testId: 'child-quick-care-planning' },
       { label: 'Ask ORB', href: routes.orbRecordQuality, testId: 'child-quick-orb' }
+    ],
+    evidenceActions: [
+      { label: 'Physical intervention', href: childPhysicalInterventionHref(childId), testId: 'child-evidence-physical-intervention' },
+      { label: 'Body map / injury', href: childBodyMapHref(childId), testId: 'child-evidence-body-map' },
+      { label: 'Room search', href: childRoomSearchHref(childId), testId: 'child-evidence-room-search' },
+      { label: 'Complaint', href: childComplaintHref(childId), testId: 'child-evidence-complaint' },
+      { label: 'Templates', href: childTemplatesHref(childId), testId: 'child-evidence-templates' },
+      { label: 'Formal submission', href: childFormalSubmissionHref(childId), testId: 'child-evidence-formal-submission' },
+      { label: 'Manager review', href: childReviewsHref(childId), testId: 'child-evidence-manager-review' },
+      { label: 'Child journey', href: childJourneyHref(childId), testId: 'child-evidence-journey' }
     ]
   }
 }

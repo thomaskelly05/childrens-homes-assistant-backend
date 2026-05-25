@@ -31,7 +31,7 @@ export function ChildRiskSafeguardingCard({ view }: { view: ChildWorkspaceOvervi
         ))}
       </dl>
       <Link
-        href={view.routes.recordSafeguarding}
+        href={view.routes.safeguarding}
         prefetch={false}
         className="mt-4 inline-flex rounded-2xl border border-red-100 bg-red-50 px-4 py-2 text-sm font-black text-red-800"
       >

@@ -57,11 +57,11 @@ def test_quick_actions_and_orb_routes():
     normaliser = NORMALISER.read_text(encoding="utf-8")
     orb = ORB_RAIL.read_text(encoding="utf-8")
     assert "child-quick-daily-note" in normaliser
-    assert "/record?child_id=" in normaliser
-    assert "/assistant/orb?mode=record_quality_review" in normaliser
+    assert "childDailyNoteHref" in normaliser or "childRecordHref" in normaliser
+    assert "childOrbHref" in normaliser
     assert "standalone /orb" not in orb.lower()
-    assert "Connected to" in orb
-    assert "Summary-level child context only" in orb
+    assert "ScopeOrbLauncher" in orb
+    assert "scope-orb-context" in orb or "Summary-level child context only" in (REPO_ROOT / "frontend-next" / "lib" / "orb" / "scope-orb-context.ts").read_text()
     assert "/os/young-people" not in normaliser.replace("childWorkspaceApiHref", "")
 
 
@@ -77,6 +77,6 @@ def test_scope_nav_overview_and_child_scoped_record():
     child_nav = nav.split("export function childScopeNavigation")[1].split("export function")[0]
     assert "Overview" in child_nav
     assert "childWorkspaceHref" in child_nav
-    assert "/record?child_id=" in child_nav
+    assert "childRecordHref" in child_nav
     assert "/os/young-people" not in child_nav
-    assert "actions?child_id=" in child_nav.replace(" ", "")
+    assert "childActionsHref" in child_nav

@@ -26,7 +26,13 @@ type FilterKey =
   | 'approved'
   | 'urgent'
 
-export function RecordingReviewQueue({ childIdFilter }: { childIdFilter?: number }) {
+export function RecordingReviewQueue({
+  childIdFilter,
+  homeIdFilter
+}: {
+  childIdFilter?: number
+  homeIdFilter?: number
+}) {
   const [items, setItems] = useState<RecordingReviewQueueItem[]>([])
   const [summary, setSummary] = useState<RecordingReviewSummary | null>(null)
   const [filter, setFilter] = useState<FilterKey>('all')
@@ -38,6 +44,7 @@ export function RecordingReviewQueue({ childIdFilter }: { childIdFilter?: number
     setLoading(true)
     const params: Parameters<typeof listRecordingReviewQueue>[0] = {
       child_id: childIdFilter,
+      home_id: homeIdFilter,
       limit: 100
     }
     if (filter === 'safeguarding') params.safeguarding_only = true
@@ -53,7 +60,7 @@ export function RecordingReviewQueue({ childIdFilter }: { childIdFilter?: number
     setItems(queueResult.ok ? queueResult.data.items : [])
     setSummary(summaryResult.ok ? summaryResult.data : null)
     setLoading(false)
-  }, [filter, childIdFilter])
+  }, [filter, childIdFilter, homeIdFilter])
 
   useEffect(() => {
     void loadQueue()

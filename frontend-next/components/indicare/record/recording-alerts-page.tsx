@@ -72,8 +72,11 @@ function matchesFilter(alert: RecordingAlertRecord, filter: AlertFilterKey): boo
 export function RecordingAlertsPage() {
   const searchParams = useSearchParams()
   const childIdParam = searchParams.get('child_id')
+  const homeIdParam = searchParams.get('home_id')
   const childId = childIdParam ? Number.parseInt(childIdParam, 10) : undefined
+  const homeId = homeIdParam ? Number.parseInt(homeIdParam, 10) : undefined
   const childFilter = Number.isFinite(childId) ? childId : undefined
+  const homeFilter = Number.isFinite(homeId) ? homeId : undefined
   const draftIdFilter = searchParams.get('draft_id') || undefined
 
   const [alerts, setAlerts] = useState<RecordingAlertRecord[]>([])
@@ -119,6 +122,7 @@ export function RecordingAlertsPage() {
     setRunMessage(undefined)
     const result = await runRecordingAlertChecks({
       child_id: childFilter,
+      home_id: homeFilter,
       force: false
     })
     setRunningChecks(false)
