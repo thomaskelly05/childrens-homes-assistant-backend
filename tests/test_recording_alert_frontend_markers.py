@@ -93,6 +93,12 @@ def test_integrations_link_to_alerts():
     assert "Recording alerts" in combined
 
 
+def test_alerts_link_manager_daily_brief():
+    alerts = _read(FRONTEND / "components" / "indicare" / "record" / "recording-alerts-page.tsx")
+    assert "recording-alerts-open-manager-daily-brief" in alerts
+    assert "/command-centre/briefing" in alerts
+
+
 def test_child_journey_scoped_alerts_link():
     routes = _read(FRONTEND / "lib" / "child-journey" / "child-journey-routes.ts")
     assert "/record/alerts?child_id=" in routes
