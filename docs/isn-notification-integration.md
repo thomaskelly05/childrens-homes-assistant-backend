@@ -36,6 +36,10 @@ ISN does **not** replace professional judgement, statutory referral workflows, o
 
 Bell items use `source: isn`, `category: Safeguarding network`, and metadata-only `safe_summary`. No raw safeguarding narrative, child IDs or ISN IDs in routes.
 
+## Escalation routing
+
+ISN urgent/high unacknowledged items are candidates for `os_notification_escalation_service` default rules (60 min / 240 min → registered manager). ISN digest includes `escalation_pending` and `escalation_rules_active`. Escalations do not auto-resolve ISN items or make threshold decisions. See `docs/notification-preferences-and-escalations.md`.
+
 ## Manager daily brief
 
 Section id: `isn_safeguarding_network`, title: **Safeguarding network**.

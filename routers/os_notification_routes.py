@@ -11,7 +11,14 @@ from pydantic import BaseModel, ConfigDict, Field
 from auth.dependencies import get_current_user
 from db.connection import get_db
 from schemas.os_notifications import OsNotificationActionRequest
+from schemas.os_notification_preferences import (
+    NotificationEscalationCheckRequest,
+    NotificationEscalationRule,
+    NotificationPreferenceUpdateRequest,
+)
 from services.os_notification_adapter_service import os_notification_adapter_service
+from services.os_notification_escalation_service import os_notification_escalation_service
+from services.os_notification_preference_service import os_notification_preference_service
 from services.os_notification_state_service import os_notification_state_service
 
 router = APIRouter(prefix="/api/notifications", tags=["OS Notifications"])
@@ -32,6 +39,79 @@ def _success(data: Any) -> dict[str, Any]:
         "standalone_access": False,
         "metadata_only": True,
     }
+
+
+@router.get("/preferences/health")
+async def notification_preferences_health(
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    _ = current_user
+    return _success(os_notification_preference_service.get_health(conn=conn).model_dump())
+
+
+@router.get("/preferences")
+async def get_notification_preferences(
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    return _success(
+        os_notification_preference_service.get_preferences(current_user, conn=conn).model_dump()
+    )
+
+
+@router.patch("/preferences")
+async def update_notification_preferences(
+    payload: NotificationPreferenceUpdateRequest,
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    result = os_notification_preference_service.update_preferences(
+        current_user, payload, conn=conn
+    )
+    return _success(result.model_dump())
+
+
+@router.get("/escalations/health")
+async def notification_escalations_health(
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    _ = current_user
+    return _success(os_notification_escalation_service.get_health(conn=conn).model_dump())
+
+
+@router.get("/escalations/rules")
+async def list_notification_escalation_rules(
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    rules = os_notification_escalation_service.list_escalation_rules(current_user, conn=conn)
+    return _success([r.model_dump() for r in rules])
+
+
+@router.post("/escalations/rules")
+async def create_or_update_notification_escalation_rule(
+    rule: NotificationEscalationRule,
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    saved = os_notification_escalation_service.create_or_update_rule(current_user, rule, conn=conn)
+    return _success(saved.model_dump())
+
+
+@router.post("/escalations/check")
+async def run_notification_escalation_check(
+    payload: NotificationEscalationCheckRequest | None = Body(None),
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    result = os_notification_escalation_service.run_escalation_check(
+        current_user,
+        request=payload or NotificationEscalationCheckRequest(dry_run=True),
+        conn=conn,
+    )
+    return _success(result.model_dump())
 
 
 @router.get("/operational-feed")

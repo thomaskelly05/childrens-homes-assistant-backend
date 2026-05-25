@@ -36,9 +36,30 @@ export function ManagerDailyBriefPage() {
         <p className="text-[10px] font-black uppercase tracking-[0.22em] text-blue-700">Care Hub · Briefing</p>
         <h1 className="mt-2 text-3xl font-black tracking-[-0.05em] text-slate-950">{brief.title}</h1>
         <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600">{brief.opening_summary}</p>
-        <div className="mt-4">
+        <div className="mt-4 flex flex-wrap items-center gap-3">
           <ManagerDailyBriefActions brief={brief} onReviewed={reload} />
+          <Link
+            href="/notifications/settings"
+            data-testid="manager-daily-brief-notification-settings"
+            className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-slate-700"
+          >
+            Notification settings
+          </Link>
+          <Link
+            href="/notifications/settings"
+            data-testid="manager-daily-brief-escalation-prompt"
+            className="rounded-full border border-violet-200 bg-violet-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-violet-800"
+          >
+            Escalation check available
+          </Link>
         </div>
+        <p
+          className="mt-3 text-xs font-semibold text-violet-900"
+          data-testid="manager-daily-brief-escalation-rules-copy"
+        >
+          Escalation rules protect urgent safeguarding items. Escalations support oversight; they do not make
+          safeguarding decisions.
+        </p>
       </header>
 
       <section className="grid gap-4 md:grid-cols-2">

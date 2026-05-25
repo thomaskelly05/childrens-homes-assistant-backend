@@ -29,6 +29,31 @@ export default async function NotificationsPage() {
         title="Notification centre"
         description="Connect notifications and operational OS attention items for your current scope."
       />
+      <div className="flex flex-wrap items-center gap-3">
+        <Link
+          href="/notifications/settings"
+          data-testid="notifications-settings-link"
+          className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black uppercase tracking-[0.12em] text-slate-700 hover:bg-slate-50"
+        >
+          Notification settings
+        </Link>
+        <Link
+          href="/notifications/settings#escalation"
+          data-testid="notifications-escalation-check-link"
+          className="rounded-full border border-violet-200 bg-violet-50 px-4 py-2 text-xs font-black uppercase tracking-[0.12em] text-violet-800 hover:bg-violet-100"
+        >
+          Run escalation check
+        </Link>
+      </div>
+      {Number(operational.data.metadata?.hidden_by_preferences || 0) > 0 ? (
+        <p className="text-sm font-semibold text-slate-600" data-testid="notifications-hidden-by-preferences">
+          {Number(operational.data.metadata?.hidden_by_preferences)} operational item(s) hidden by your notification
+          preferences. Urgent safeguarding items remain visible.
+        </p>
+      ) : null}
+      <p className="text-xs text-amber-800" data-testid="notifications-urgent-override-copy">
+        Urgent safeguarding and high-risk ISN notifications always remain visible, even if categories are muted.
+      </p>
       <LiveDataStatus result={result} />
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Unread" value={unread} detail="Connect + operational unread" href="/notifications" entity={{ entity_type: 'notification' }} />

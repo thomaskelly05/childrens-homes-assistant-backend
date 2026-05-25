@@ -22,6 +22,10 @@ Bell items are **metadata-only**:
 - Routes avoid `draft_id`, `alert_id`, `child_id` or `body` in query strings
 - ORB links use `/assistant/orb` only (never standalone `/orb`)
 
+## Notification preferences and escalations
+
+Managers can configure preferences and run escalation checks at `/notifications/settings`. The daily brief page links to notification settings and notes that escalation rules protect urgent safeguarding items. Unreviewed daily brief items may appear as escalation candidates after midday. See `docs/notification-preferences-and-escalations.md`.
+
 ## Manager daily brief
 
 - **Schemas**: `schemas/manager_daily_brief.py`

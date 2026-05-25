@@ -220,6 +220,180 @@ export async function getOperationalNotificationFeedHealth() {
   return parseEnvelope(response, { status: 'unavailable', service: 'os_notification_adapter_service' })
 }
 
+export type NotificationPreferenceRule = {
+  id: string
+  scope?: string
+  scope_id?: string | null
+  role?: string | null
+  source: string
+  category: string
+  enabled: boolean
+  min_severity: OsNotificationSeverity
+  in_app_enabled: boolean
+  email_enabled: boolean
+  push_enabled: boolean
+  urgent_override: boolean
+  quiet_hours_enabled?: boolean
+  quiet_hours_start?: string | null
+  quiet_hours_end?: string | null
+  metadata?: Record<string, unknown>
+}
+
+export type NotificationPreferenceSet = {
+  scope: string
+  scope_id?: string | null
+  role?: string | null
+  rules: NotificationPreferenceRule[]
+  urgent_safeguarding_always_on: boolean
+  limitations: string[]
+  updated_at?: string | null
+}
+
+export type NotificationPreferenceResponse = {
+  preferences: NotificationPreferenceSet
+  role_defaults: NotificationPreferenceRule[]
+  effective_rules: NotificationPreferenceRule[]
+  limitations: string[]
+  push_email_status: string
+}
+
+export type NotificationEscalationRule = {
+  id: string
+  name: string
+  source: string
+  category: string
+  min_severity: OsNotificationSeverity
+  status: string
+  trigger_after_minutes: number
+  route_to_role?: string | null
+  route_to_user_id?: string | null
+  route_to_user_name?: string | null
+  home_id?: number | null
+  applies_to_safeguarding?: boolean
+  applies_to_isn?: boolean
+  applies_to_recording?: boolean
+  urgent_override?: boolean
+  metadata?: Record<string, unknown>
+}
+
+export type NotificationEscalationCandidate = {
+  notification_key: string
+  source: string
+  category: string
+  severity: OsNotificationSeverity
+  title: string
+  safe_summary: string
+  route: string
+  age_minutes: number
+  current_status: string
+  escalation_rule_id: string
+  route_to_role?: string | null
+  route_to_user_id?: string | null
+  metadata?: Record<string, unknown>
+}
+
+export type NotificationEscalationCheckResult = {
+  generated_at: string
+  dry_run: boolean
+  candidates: NotificationEscalationCandidate[]
+  created_notifications: string[]
+  warnings: string[]
+  recommendations: string[]
+  metadata?: Record<string, unknown>
+}
+
+export async function getNotificationPreferencesHealth() {
+  const response = await fetch('/api/notifications/preferences/health', {
+    credentials: 'include',
+    cache: 'no-store'
+  })
+  return parseEnvelope(response, { status: 'unavailable', service: 'os_notification_preference_service' })
+}
+
+export async function getNotificationPreferences() {
+  const response = await fetch('/api/notifications/preferences', {
+    credentials: 'include',
+    cache: 'no-store'
+  })
+  const fallback: NotificationPreferenceResponse = {
+    preferences: {
+      scope: 'user',
+      rules: [],
+      urgent_safeguarding_always_on: true,
+      limitations: []
+    },
+    role_defaults: [],
+    effective_rules: [],
+    limitations: [],
+    push_email_status: 'not_configured_yet'
+  }
+  return parseEnvelope(response, fallback)
+}
+
+export async function updateNotificationPreferences(payload: {
+  rules: NotificationPreferenceRule[]
+  urgent_safeguarding_always_on?: boolean
+}) {
+  const response = await fetch('/api/notifications/preferences', {
+    method: 'PATCH',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+  const fallback: NotificationPreferenceResponse = {
+    preferences: { scope: 'user', rules: [], urgent_safeguarding_always_on: true, limitations: [] },
+    role_defaults: [],
+    effective_rules: [],
+    limitations: [],
+    push_email_status: 'not_configured_yet'
+  }
+  return parseEnvelope(response, fallback)
+}
+
+export async function getNotificationEscalationHealth() {
+  const response = await fetch('/api/notifications/escalations/health', {
+    credentials: 'include',
+    cache: 'no-store'
+  })
+  return parseEnvelope(response, { status: 'unavailable', service: 'os_notification_escalation_service' })
+}
+
+export async function getNotificationEscalationRules() {
+  const response = await fetch('/api/notifications/escalations/rules', {
+    credentials: 'include',
+    cache: 'no-store'
+  })
+  return parseEnvelope(response, [] as NotificationEscalationRule[])
+}
+
+export async function runNotificationEscalationCheck(params?: { dry_run?: boolean; force?: boolean }) {
+  const response = await fetch('/api/notifications/escalations/check', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ dry_run: params?.dry_run ?? true, force: params?.force ?? false })
+  })
+  const fallback: NotificationEscalationCheckResult = {
+    generated_at: '',
+    dry_run: true,
+    candidates: [],
+    created_notifications: [],
+    warnings: [],
+    recommendations: []
+  }
+  return parseEnvelope(response, fallback)
+}
+
+export async function createOrUpdateNotificationEscalationRule(rule: NotificationEscalationRule) {
+  const response = await fetch('/api/notifications/escalations/rules', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(rule)
+  })
+  return parseEnvelope(response, rule)
+}
+
 export function categoryLabel(category?: string | null): string {
   const labels: Record<string, string> = {
     recording: 'Recording',

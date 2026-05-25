@@ -71,6 +71,9 @@ export function OperationalNotificationsSection({ items, privacyNotice }: Props)
       <p className="mt-2 text-xs leading-5 text-slate-500" data-testid="operational-notifications-safety-note">
         Operational notifications use safe summaries and do not show full care record or safeguarding narratives.
       </p>
+      <p className="mt-1 text-xs text-amber-800" data-testid="operational-notifications-urgent-override">
+        Urgent safeguarding notifications remain visible even when preferences hide lower-priority categories.
+      </p>
       <div className="mt-4 space-y-3">
         {items.map((item) => (
           <article

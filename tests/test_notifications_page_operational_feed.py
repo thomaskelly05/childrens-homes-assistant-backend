@@ -20,6 +20,10 @@ def test_notifications_page_operational_section():
     assert "operational-notification-mark-read" in section
     assert "operational-notification-acknowledge" in section
     assert "Safeguarding network" in page or "safeguarding" in page.lower()
+    assert "notifications-settings-link" in page
+    assert "/notifications/settings" in page
+    assert "notifications-urgent-override-copy" in page
+    assert "operational-notifications-urgent-override" in section
 
 
 def test_no_standalone_orb_in_notifications_client():
