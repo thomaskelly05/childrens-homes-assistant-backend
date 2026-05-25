@@ -124,20 +124,30 @@ function cognitionSummary(response: OrbConversationResponse) {
     'ORB returned atmosphere, trajectory, impact and reflection blocks for review.'
 }
 
+function normaliseInitialMode(mode?: string): OrbOperationalMode {
+  const allowed = new Set(operationalModes.map((entry) => entry.mode))
+  if (mode && allowed.has(mode as OrbOperationalMode)) return mode as OrbOperationalMode
+  return 'general_operational_question'
+}
+
 export function OrbConversationExperience({
   childrenOptions,
   initialScope,
   initialYoungPersonId,
+  initialOperationalMode,
   initialPrompt
 }: {
   childrenOptions: OsPersonSummary[]
   initialScope?: string
   initialYoungPersonId?: string
+  initialOperationalMode?: string
   initialPrompt?: string
 }) {
   const startingScope = normaliseInitialScope(initialScope)
   const [scope, setScope] = useState<OrbScope>(startingScope)
-  const [operationalMode, setOperationalMode] = useState<OrbOperationalMode>('general_operational_question')
+  const [operationalMode, setOperationalMode] = useState<OrbOperationalMode>(
+    normaliseInitialMode(initialOperationalMode)
+  )
   const [youngPersonId, setYoungPersonId] = useState<string>(startingScope === 'child' ? initialYoungPersonId || '' : '')
   const [conversationId] = useState(() => `orb-${Date.now().toString(36)}`)
   const [input, setInput] = useState(initialPrompt || scopePrompt(startingScope))

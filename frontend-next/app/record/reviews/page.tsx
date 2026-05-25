@@ -9,8 +9,11 @@ import { PageHeader } from '@/components/indicare/ui'
 export default function RecordingReviewsPage() {
   const searchParams = useSearchParams()
   const childIdRaw = searchParams.get('child_id')
+  const homeIdRaw = searchParams.get('home_id')
   const childId = childIdRaw ? Number(childIdRaw) : undefined
+  const homeId = homeIdRaw ? Number(homeIdRaw) : undefined
   const childIdFilter = childId != null && Number.isFinite(childId) ? childId : undefined
+  const homeIdFilter = homeId != null && Number.isFinite(homeId) ? homeId : undefined
 
   return (
     <main data-testid="recording-reviews-page" className="mx-auto max-w-6xl space-y-6 px-4 py-8 pb-24">
@@ -36,8 +39,16 @@ export default function RecordingReviewsPage() {
           </Link>
         </p>
       ) : null}
+      {homeIdFilter != null && childIdFilter == null ? (
+        <p className="text-sm font-semibold text-slate-600">
+          Filtered to home ID {homeIdFilter}.{' '}
+          <Link href="/record/reviews" className="font-black text-blue-700 underline">
+            Show all
+          </Link>
+        </p>
+      ) : null}
 
-      <RecordingReviewQueue childIdFilter={childIdFilter} />
+      <RecordingReviewQueue childIdFilter={childIdFilter} homeIdFilter={homeIdFilter} />
     </main>
   )
 }

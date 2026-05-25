@@ -328,12 +328,13 @@ export function resolveRecordChildId(params: {
   return raw.trim()
 }
 
-export function resolveRecordAboutContext(value?: string | null): RecordAboutContext {
+export function resolveRecordAboutContext(value?: string | null, homeId?: string | null): RecordAboutContext {
   const raw = value?.trim()
   if (raw === 'home-shift' || raw === 'home' || raw === 'shift') return 'home-shift'
   if (raw === 'staff' || raw === 'workforce') return 'staff'
   if (raw === 'not-sure' || raw === 'unsure' || raw === 'orb') return 'not-sure'
   if (raw === 'child') return 'child'
+  if (homeId?.trim()) return 'home-shift'
   return 'child'
 }
 

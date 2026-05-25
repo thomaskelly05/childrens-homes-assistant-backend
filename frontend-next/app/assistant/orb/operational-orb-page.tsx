@@ -5,11 +5,21 @@ import { getServerOsYoungPeople } from '@/lib/os-api/server-workspaces'
 export default async function OperationalOrbPage({
   searchParams
 }: {
-  searchParams: Promise<{ scope?: string; young_person_id?: string; q?: string; prompt?: string; context?: string; voice?: string }>
+  searchParams: Promise<{
+    scope?: string
+    young_person_id?: string
+    mode?: string
+    q?: string
+    prompt?: string
+    context?: string
+    voice?: string
+  }>
 }) {
   const query = await searchParams
   const childrenResult = await getServerOsYoungPeople()
   const voiceMode = query.voice === '1'
+  const initialScope =
+    query.scope || (query.context === 'child' ? 'child' : query.context === 'home' ? 'home' : undefined)
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,#dbeafe,transparent_34rem),linear-gradient(180deg,#f8fafc,#eef6ff)] px-5 py-8 text-slate-950 md:px-10">
@@ -49,8 +59,9 @@ export default async function OperationalOrbPage({
 
         <OrbConversationExperience
           childrenOptions={childrenResult.data}
-          initialScope={query.scope}
+          initialScope={initialScope}
           initialYoungPersonId={query.young_person_id}
+          initialOperationalMode={query.mode}
           initialPrompt={query.q || query.prompt || (query.context ? `Review the ${query.context.replaceAll('-', ' ')} context.` : undefined)}
         />
       </div>
