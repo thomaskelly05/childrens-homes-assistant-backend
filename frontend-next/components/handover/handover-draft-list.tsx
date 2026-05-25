@@ -4,6 +4,8 @@ import Link from 'next/link'
 
 import type { HandoverDraftRecord } from '@/lib/os-api/handover-intelligence'
 
+import { HandoverReviewStatusBadge } from '@/components/handover/handover-status-badge'
+
 export function HandoverDraftList({
   drafts,
   activeDraftId,
@@ -35,7 +37,10 @@ export function HandoverDraftList({
             }`}
           >
             {draft.title}
-            <span className="mt-1 block text-[10px] font-semibold uppercase text-slate-500">{draft.status}</span>
+            <span className="mt-1 flex flex-wrap items-center gap-1">
+              <span className="text-[10px] font-semibold uppercase text-slate-500">{draft.status}</span>
+              {draft.review_status ? <HandoverReviewStatusBadge status={draft.review_status} /> : null}
+            </span>
           </button>
         </li>
       ))}

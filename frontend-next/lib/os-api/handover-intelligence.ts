@@ -60,6 +60,17 @@ export type HandoverDraftSection = {
   intelligence_item_ids?: string[]
 }
 
+export type HandoverReviewStatus =
+  | 'draft'
+  | 'awaiting_review'
+  | 'changes_requested'
+  | 'approved'
+  | 'safeguarding_review_required'
+  | 'completed'
+  | 'archived'
+
+export type HandoverFormalStatus = 'not_attempted' | 'created' | 'not_wired' | 'failed'
+
 export type HandoverDraftRecord = {
   id: string
   title: string
@@ -71,9 +82,75 @@ export type HandoverDraftRecord = {
   body: string
   sections: HandoverDraftSection[]
   status: 'draft' | 'ready_for_review' | 'completed' | 'archived'
+  review_status?: HandoverReviewStatus
+  review_comments?: string | null
+  formal_record_created?: boolean
+  formal_record_id?: string | null
+  formal_status?: HandoverFormalStatus
+  timeline_linked?: boolean
+  linked_timeline_id?: string | null
+  safeguarding_review_required?: boolean
+  manager_review_required?: boolean
+  review_required_reason?: string | null
+  completion_warnings?: string[]
+  next_steps?: string[]
   warnings?: string[]
   created_at: string
   updated_at: string
+}
+
+export type HandoverReviewQueueItem = {
+  draft_id: string
+  title: string
+  shift_label?: string | null
+  child_id?: number | null
+  child_name?: string | null
+  home_id?: number | null
+  review_status: HandoverReviewStatus
+  priority: HandoverPriority
+  safe_summary: string
+  flags: string[]
+  manager_review_required?: boolean
+  safeguarding_review_required?: boolean
+  route: string
+  updated_at?: string | null
+}
+
+export type HandoverReviewDetail = {
+  draft: HandoverDraftRecord
+  priority: HandoverPriority
+  review_prompts: string[]
+  formal_target: Record<string, unknown>
+  timeline_status: Record<string, unknown>
+  linked_intelligence: Array<Record<string, unknown>>
+  safety_notice: string
+}
+
+export type HandoverReviewActionResponse = {
+  success: boolean
+  draft_id: string
+  action: string
+  review_status: HandoverReviewStatus
+  status: string
+  warnings: string[]
+  next_steps: string[]
+  formal_record_created?: boolean
+  formal_record_id?: string | null
+  formal_status?: HandoverFormalStatus
+  timeline_linked?: boolean
+  linked_timeline_id?: string | null
+  completion_warnings?: string[]
+  draft?: HandoverDraftRecord
+}
+
+export type HandoverFormalTarget = {
+  draft_id: string
+  can_create_formal_record: boolean
+  formal_status: HandoverFormalStatus
+  formal_record_type?: string | null
+  route_hint?: string | null
+  warnings: string[]
+  next_steps: string[]
 }
 
 type ApiEnvelope<T> = { success?: boolean; data?: T }
@@ -87,6 +164,43 @@ async function parseEnvelope<T>(response: Response, fallback: T): Promise<{ data
     ok: true
   }
 }
+
+export type HandoverDraftApiResponse = {
+  success: boolean
+  draft_id: string
+  status: string
+  review_status?: HandoverReviewStatus
+  title: string
+  body: string
+  sections: HandoverDraftSection[]
+  warnings: string[]
+  next_steps: string[]
+  route: string
+  formal_record_created?: boolean
+  formal_status?: HandoverFormalStatus
+  timeline_linked?: boolean
+  linked_timeline_id?: string | null
+  completion_warnings?: string[]
+  draft?: HandoverDraftRecord | null
+}
+
+const DRAFT_RESPONSE_FALLBACK = (draftId: string, status: string): HandoverDraftApiResponse => ({
+  success: false,
+  draft_id: draftId,
+  status,
+  review_status: 'draft',
+  title: '',
+  body: '',
+  sections: [],
+  warnings: [],
+  next_steps: [],
+  route: '/handover',
+  formal_record_created: false,
+  formal_status: 'not_attempted',
+  timeline_linked: false,
+  completion_warnings: [],
+  draft: null
+})
 
 const EMPTY_DASHBOARD: HandoverIntelligenceDashboard = {
   generated_at: '',
@@ -167,7 +281,7 @@ export async function createHandoverDraft(body: {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
   })
-  return parseEnvelope(response, { success: false, draft_id: '', status: 'draft', title: '', body: '', sections: [], warnings: [], next_steps: [], route: '/handover' })
+  return parseEnvelope(response, DRAFT_RESPONSE_FALLBACK('', 'draft'))
 }
 
 export async function getHandoverDraft(draftId: string) {
@@ -188,7 +302,7 @@ export async function updateHandoverDraft(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
   })
-  return parseEnvelope(response, { success: false, draft_id: draftId, status: 'draft', title: '', body: '', sections: [], warnings: [], next_steps: [], route: '/handover' })
+  return parseEnvelope(response, DRAFT_RESPONSE_FALLBACK(draftId, 'draft'))
 }
 
 export async function markHandoverReadyForReview(draftId: string) {
@@ -196,7 +310,7 @@ export async function markHandoverReadyForReview(draftId: string) {
     method: 'POST',
     credentials: 'include'
   })
-  return parseEnvelope(response, { success: false, draft_id: draftId, status: 'ready_for_review', title: '', body: '', sections: [], warnings: [], next_steps: [], route: '/handover' })
+  return parseEnvelope(response, DRAFT_RESPONSE_FALLBACK(draftId, 'ready_for_review'))
 }
 
 export async function completeHandoverDraft(draftId: string) {
@@ -204,7 +318,7 @@ export async function completeHandoverDraft(draftId: string) {
     method: 'POST',
     credentials: 'include'
   })
-  return parseEnvelope(response, { success: false, draft_id: draftId, status: 'completed', title: '', body: '', sections: [], warnings: [], next_steps: [], route: '/handover' })
+  return parseEnvelope(response, DRAFT_RESPONSE_FALLBACK(draftId, 'completed'))
 }
 
 export async function archiveHandoverDraft(draftId: string) {
@@ -212,7 +326,73 @@ export async function archiveHandoverDraft(draftId: string) {
     method: 'POST',
     credentials: 'include'
   })
-  return parseEnvelope(response, { success: false, draft_id: draftId, status: 'archived', title: '', body: '', sections: [], warnings: [], next_steps: [], route: '/handover' })
+  return parseEnvelope(response, DRAFT_RESPONSE_FALLBACK(draftId, 'archived'))
+}
+
+export async function listHandoverReviewQueue(params?: {
+  review_status?: string
+  child_id?: number
+  home_id?: number
+}) {
+  const search = new URLSearchParams()
+  if (params?.review_status) search.set('review_status', params.review_status)
+  if (params?.child_id != null) search.set('child_id', String(params.child_id))
+  if (params?.home_id != null) search.set('home_id', String(params.home_id))
+  const qs = search.toString()
+  const response = await fetch(`/api/handover/reviews${qs ? `?${qs}` : ''}`, {
+    credentials: 'include',
+    cache: 'no-store'
+  })
+  return parseEnvelope(response, {
+    items: [],
+    total: 0,
+    counts: {} as Record<string, number>,
+    storage_mode: 'memory'
+  })
+}
+
+export async function getHandoverReviewDetail(draftId: string) {
+  const response = await fetch(`/api/handover/reviews/${encodeURIComponent(draftId)}`, {
+    credentials: 'include',
+    cache: 'no-store'
+  })
+  return parseEnvelope(response, null as unknown as HandoverReviewDetail)
+}
+
+export async function applyHandoverReviewAction(
+  draftId: string,
+  action: 'approve' | 'request_changes' | 'mark_safeguarding_review_required' | 'complete_after_approval',
+  comments?: string
+) {
+  const response = await fetch(`/api/handover/reviews/${encodeURIComponent(draftId)}/action`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, comments })
+  })
+  return parseEnvelope(response, {
+    success: false,
+    draft_id: draftId,
+    action,
+    review_status: 'draft',
+    status: 'draft',
+    warnings: [],
+    next_steps: []
+  } as HandoverReviewActionResponse)
+}
+
+export async function getHandoverFormalTarget(draftId: string) {
+  const response = await fetch(`/api/handover/drafts/${encodeURIComponent(draftId)}/formal-target`, {
+    credentials: 'include',
+    cache: 'no-store'
+  })
+  return parseEnvelope(response, {
+    draft_id: draftId,
+    can_create_formal_record: false,
+    formal_status: 'not_wired',
+    warnings: [],
+    next_steps: []
+  } as HandoverFormalTarget)
 }
 
 /** Operational ORB only — never pass handover payload in URL. */

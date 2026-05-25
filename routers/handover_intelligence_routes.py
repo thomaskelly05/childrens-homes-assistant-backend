@@ -8,9 +8,15 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from auth.dependencies import get_current_user
 from db.connection import get_db
-from schemas.handover_drafts import HandoverDraftRequest, HandoverDraftUpdateRequest
+from schemas.handover_drafts import (
+    HandoverDraftRequest,
+    HandoverDraftUpdateRequest,
+    HandoverReviewActionRequest,
+)
 from services.handover_draft_service import handover_draft_service
+from services.handover_formal_mapping_service import handover_formal_mapping_service
 from services.handover_intelligence_service import handover_intelligence_service
+from services.handover_review_service import handover_review_service
 
 router = APIRouter(prefix="/handover", tags=["Handover Intelligence"])
 compat_router = APIRouter(prefix="/api/handover", tags=["Handover Intelligence API"])
@@ -147,6 +153,92 @@ async def handover_draft_complete(
     return _success(result.model_dump())
 
 
+@router.get("/reviews/health")
+async def handover_review_health(
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    _ = current_user
+    health = handover_review_service.get_health(conn=conn)
+    return _success(health.model_dump())
+
+
+@router.get("/reviews")
+async def list_handover_reviews(
+    review_status: str | None = None,
+    child_id: int | None = None,
+    home_id: int | None = None,
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    filters: dict[str, Any] = {}
+    if review_status:
+        filters["review_status"] = review_status
+    if child_id is not None:
+        filters["child_id"] = child_id
+    if home_id is not None:
+        filters["home_id"] = home_id
+    queue = handover_review_service.list_review_queue(
+        current_user, filters or None, conn=conn
+    )
+    return _success(queue.model_dump())
+
+
+@router.get("/reviews/{draft_id}")
+async def get_handover_review(
+    draft_id: str,
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    try:
+        detail = handover_review_service.get_review_detail(
+            draft_id, current_user, conn=conn
+        )
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Handover draft not found") from None
+    return _success(detail.model_dump())
+
+
+@router.post("/reviews/{draft_id}/action")
+async def handover_review_action(
+    draft_id: str,
+    body: HandoverReviewActionRequest,
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    try:
+        result = handover_review_service.apply_review_action(
+            draft_id, body, current_user, conn=conn
+        )
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Handover draft not found") from None
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    if not result.success:
+        raise HTTPException(
+            status_code=400,
+            detail=result.warnings[0] if result.warnings else "Review action failed",
+        )
+    return _success(result.model_dump())
+
+
+@router.get("/drafts/{draft_id}/formal-target")
+async def handover_formal_target(
+    draft_id: str,
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    _ = current_user
+    try:
+        draft = handover_draft_service.get_draft(current_user, draft_id, conn=conn)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Handover draft not found") from None
+    target = handover_formal_mapping_service.get_target(draft)
+    return _success(target.model_dump())
+
+
 @router.post("/drafts/{draft_id}/archive")
 async def handover_draft_archive(
     draft_id: str,
@@ -264,5 +356,64 @@ async def api_handover_draft_archive(
     conn=Depends(get_db),
 ):
     return await handover_draft_archive(
+        draft_id=draft_id, current_user=current_user, conn=conn
+    )
+
+
+@compat_router.get("/reviews/health")
+async def api_handover_review_health(
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    return await handover_review_health(current_user=current_user, conn=conn)
+
+
+@compat_router.get("/reviews")
+async def api_list_handover_reviews(
+    review_status: str | None = None,
+    child_id: int | None = None,
+    home_id: int | None = None,
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    return await list_handover_reviews(
+        review_status=review_status,
+        child_id=child_id,
+        home_id=home_id,
+        current_user=current_user,
+        conn=conn,
+    )
+
+
+@compat_router.get("/reviews/{draft_id}")
+async def api_get_handover_review(
+    draft_id: str,
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    return await get_handover_review(
+        draft_id=draft_id, current_user=current_user, conn=conn
+    )
+
+
+@compat_router.post("/reviews/{draft_id}/action")
+async def api_handover_review_action(
+    draft_id: str,
+    body: HandoverReviewActionRequest,
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    return await handover_review_action(
+        draft_id=draft_id, body=body, current_user=current_user, conn=conn
+    )
+
+
+@compat_router.get("/drafts/{draft_id}/formal-target")
+async def api_handover_formal_target(
+    draft_id: str,
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    return await handover_formal_target(
         draft_id=draft_id, current_user=current_user, conn=conn
     )

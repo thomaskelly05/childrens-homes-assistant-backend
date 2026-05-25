@@ -42,6 +42,16 @@ LIMITATION_NOTICE = (
 
 ORB_PROMPTS = [
     {
+        "label": "Help me review this handover for clarity.",
+        "mode": "manager_daily_brief",
+        "query": "Help me review this handover for clarity.",
+    },
+    {
+        "label": "Help me prepare a manager review of this handover.",
+        "mode": "manager_daily_brief",
+        "query": "Help me prepare a manager review of this handover.",
+    },
+    {
         "label": "Help me prepare today's handover.",
         "mode": "manager_daily_brief",
         "query": "Help me prepare today's shift handover using safe summaries.",

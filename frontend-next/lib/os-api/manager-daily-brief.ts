@@ -46,6 +46,7 @@ export type ManagerDailyBrief = {
     governance: string
     actions: string
     handover: string
+    handover_reviews: string
     briefing: string
     care_hub: string
     orb: string
@@ -81,7 +82,8 @@ const EMPTY_BRIEF: ManagerDailyBrief = {
     reviews: '/record/reviews',
     governance: '/record/governance',
     actions: '/actions',
-    handover: '/handover/current',
+    handover: '/handover',
+    handover_reviews: '/handover/reviews',
     briefing: '/command-centre/briefing',
     care_hub: '/command-centre',
     orb: '/assistant/orb?mode=manager_daily_brief'

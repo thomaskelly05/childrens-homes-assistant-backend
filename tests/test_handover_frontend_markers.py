@@ -11,6 +11,7 @@ HANDOVER_FILES = [
     FRONTEND / "components" / "handover" / "handover-workspace.tsx",
     FRONTEND / "components" / "handover" / "handover-intelligence-panel.tsx",
     FRONTEND / "components" / "handover" / "handover-draft-editor.tsx",
+    FRONTEND / "components" / "handover" / "handover-completion-panel.tsx",
     FRONTEND / "components" / "handover" / "handover-orb-support.tsx",
     FRONTEND / "components" / "command-centre" / "care-hub-handover.tsx",
     FRONTEND / "lib" / "os-api" / "handover-intelligence.ts",
@@ -31,6 +32,10 @@ def test_handover_page_markers():
         "Next shift priorities",
         "Save draft",
         "Complete handover",
+        "Send to review",
+        "Open review queue",
+        "Formal record created",
+        "Timeline linked",
         "Ask OS ORB",
         "metadata and safe summaries",
     ):

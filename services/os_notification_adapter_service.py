@@ -320,21 +320,25 @@ class OsNotificationAdapterService:
             from services.handover_draft_service import handover_draft_service
 
             listed = handover_draft_service.list_drafts(
-                current_user, status="ready_for_review", limit=limit, conn=conn
+                current_user, review_status="awaiting_review", limit=limit, conn=conn
             )
+            if not listed.items:
+                listed = handover_draft_service.list_drafts(
+                    current_user, status="ready_for_review", limit=limit, conn=conn
+                )
             for draft in listed.items[:limit]:
                 items.append(
                     OsNotificationItem(
                         id=f"handover_draft:{draft.id}",
                         notification_key=f"handover_draft:{draft.id}",
                         type="recording_review_due",
-                        title="Handover draft ready for review",
-                        safe_summary=f"{draft.title} is ready for manager review in the handover workspace.",
+                        title="Handover awaiting manager review",
+                        safe_summary=f"{draft.title} is in the handover review queue.",
                         severity="medium",
                         status="unread",
                         unread=True,
-                        route=f"/handover?draft_id={draft.id}",
-                        action_label="Open handover",
+                        route=f"/handover/reviews?draft_id={draft.id}",
+                        action_label="Review handover",
                         source="handover",
                         category="handover",
                         related_id=draft.id,

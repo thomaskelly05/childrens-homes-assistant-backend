@@ -45,6 +45,7 @@ The daily brief includes a **Notification and escalation oversight** section (me
 | Safeguarding-sensitive | Open alerts filtered by type |
 | Actions | `intelligence_action_service.build_action_summary` |
 | Handover | `handover_intelligence_service` + `/handover` workspace (see `docs/handover-intelligence-workspace.md`) |
+| Handover reviews | `handover_review_service` + `/handover/reviews` (see `docs/handover-review-formal-mapping.md`) |
 | Safeguarding network (ISN) | `isn_digest_service.build_digest` (metadata only) |
 | Governance context | `recording_governance_service.build_dashboard` (counts only) |
 
@@ -76,6 +77,6 @@ Operational bell items support read/acknowledge/assign/resolve/archive via `POST
 2. Event-driven alert checks after draft save / review decision.
 3. Optional push via existing `notifications` table (metadata rows only).
 4. ~~Handover workspace from brief sections.~~ **Done** — `/handover` intelligence workspace and drafts (`sql/089_handover_drafts.sql`).
-5. Handover export snapshot from brief + workspace draft.
-6. Per-home duty manager assignment for alerts (was item 5).
-5. Per-home duty manager assignment for alerts.
+5. ~~Handover review queue and formal mapping foundation.~~ **Done** — `/handover/reviews`, `sql/090_handover_review_formal_mapping.sql`.
+6. Handover export snapshot from brief + workspace draft.
+7. Per-home duty manager assignment for alerts.

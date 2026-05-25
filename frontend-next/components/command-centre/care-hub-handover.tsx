@@ -3,12 +3,17 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
-import { handoverOrbHref, getHandoverIntelligence } from '@/lib/os-api/handover-intelligence'
+import {
+  handoverOrbHref,
+  getHandoverIntelligence,
+  listHandoverReviewQueue
+} from '@/lib/os-api/handover-intelligence'
 
 export function CareHubHandover() {
   const [urgent, setUrgent] = useState(0)
   const [safeguarding, setSafeguarding] = useState(0)
   const [alerts, setAlerts] = useState(0)
+  const [reviewCount, setReviewCount] = useState(0)
 
   useEffect(() => {
     void getHandoverIntelligence().then((result) => {
@@ -16,6 +21,11 @@ export function CareHubHandover() {
       setUrgent(result.data.urgent_count)
       setSafeguarding(result.data.safeguarding_count)
       setAlerts(result.data.recording_alert_count)
+    })
+    void listHandoverReviewQueue().then((result) => {
+      if (!result.ok) return
+      const awaiting = result.data.counts?.awaiting_review ?? result.data.items?.length ?? 0
+      setReviewCount(Number(awaiting))
     })
   }, [])
 
@@ -46,6 +56,15 @@ export function CareHubHandover() {
         >
           Prepare handover
         </Link>
+        {reviewCount > 0 ? (
+          <Link
+            href="/handover/reviews"
+            data-testid="care-hub-handover-reviews"
+            className="rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-black text-amber-900"
+          >
+            Handover reviews ({reviewCount})
+          </Link>
+        ) : null}
         <Link
           href="/handover/current"
           data-testid="care-hub-open-current-handover"
