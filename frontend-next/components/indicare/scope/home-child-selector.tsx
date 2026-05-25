@@ -14,16 +14,26 @@ export function HomeChildSelector() {
   const [options, setOptions] = useState(scope)
   const [selectedHomeId, setSelectedHomeId] = useState<number | null>(scope.selected_home_id ?? null)
   const [busy, setBusy] = useState(false)
+  const [optionsLoading, setOptionsLoading] = useState(true)
   const [localError, setLocalError] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
+    setOptionsLoading(true)
     void fetchScopeOptions(selectedHomeId ?? undefined)
       .then((data) => {
-        if (!cancelled) setOptions(data)
+        if (!cancelled) {
+          setOptions(data)
+          setLocalError(null)
+        }
       })
       .catch((caught) => {
-        if (!cancelled) setLocalError(caught instanceof Error ? caught.message : 'Could not load homes.')
+        if (!cancelled) {
+          setLocalError(caught instanceof Error ? caught.message : 'Could not load homes.')
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setOptionsLoading(false)
       })
     return () => {
       cancelled = true
@@ -74,9 +84,34 @@ export function HomeChildSelector() {
           Select one home or one child before operational dashboards, chronology, actions and workforce views load.
         </p>
         {(error || localError || options.warnings.length) ? (
-          <div className="mt-4 rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900">
-            {localError || error || options.warnings.join(' ')}
+          <div
+            data-testid="select-scope-degraded-panel"
+            className="mt-4 rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900"
+          >
+            <p>{localError || error || options.warnings.join(' ')}</p>
+            <button
+              type="button"
+              className="mt-3 rounded-xl bg-amber-900 px-4 py-2 text-xs font-black uppercase tracking-[0.14em] text-white"
+              onClick={() => {
+                setLocalError(null)
+                setOptionsLoading(true)
+                void fetchScopeOptions(selectedHomeId ?? undefined)
+                  .then((data) => {
+                    setOptions(data)
+                    setLocalError(null)
+                  })
+                  .catch((caught) => {
+                    setLocalError(caught instanceof Error ? caught.message : 'Could not load homes.')
+                  })
+                  .finally(() => setOptionsLoading(false))
+              }}
+            >
+              Retry
+            </button>
           </div>
+        ) : null}
+        {optionsLoading ? (
+          <p className="mt-4 text-sm font-bold text-slate-500">Loading scope options…</p>
         ) : null}
       </header>
 

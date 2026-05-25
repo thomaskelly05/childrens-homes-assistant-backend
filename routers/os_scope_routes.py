@@ -51,8 +51,23 @@ async def scope_current(
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
     user = _user_dict(current_user)
-    state = os_scope_service.get_current(user, request.session)
-    return _success(state.model_dump())
+    try:
+        state = os_scope_service.get_current(user, request.session)
+        return _success(state.model_dump())
+    except DatabaseUnavailableError as exc:
+        state = OsScopeState(
+            scope_type="none",
+            warnings=[str(exc) or "Database busy — current scope unavailable."],
+            degraded=True,
+        )
+        return _success(state.model_dump())
+    except Exception as exc:
+        state = OsScopeState(
+            scope_type="none",
+            warnings=[f"Scope session could not be loaded: {exc}"],
+            degraded=True,
+        )
+        return _success(state.model_dump())
 
 
 @router.post("/select")
@@ -95,10 +110,29 @@ async def menu_summary(
         scope_type = current.scope_type
         home_id = home_id or current.selected_home_id
         child_id = child_id or current.selected_child_id
-    summary = os_scope_service.menu_summary(
-        user,
-        scope_type=scope_type,
-        home_id=home_id,
-        child_id=child_id,
-    )
-    return _success(summary.model_dump())
+    try:
+        summary = os_scope_service.menu_summary(
+            user,
+            scope_type=scope_type,
+            home_id=home_id,
+            child_id=child_id,
+        )
+        return _success(summary.model_dump())
+    except DatabaseUnavailableError as exc:
+        summary = OsScopeMenuSummary(
+            scope_type=scope_type if scope_type in {"none", "home", "child"} else "none",
+            home_id=home_id,
+            child_id=child_id,
+            warnings=[str(exc) or "Database busy — menu summary degraded."],
+            degraded=True,
+            cache_status="fast_empty",
+        )
+        return _success(summary.model_dump())
+    except Exception as exc:
+        summary = OsScopeMenuSummary(
+            scope_type="none",
+            warnings=[f"Menu summary unavailable: {exc}"],
+            degraded=True,
+            cache_status="fast_empty",
+        )
+        return _success(summary.model_dump())

@@ -7,6 +7,7 @@ APP_SHELL = REPO_ROOT / "frontend-next" / "components" / "indicare" / "app-shell
 SCOPE_NAV = REPO_ROOT / "frontend-next" / "lib" / "navigation" / "scope-navigation.ts"
 OS_SCOPE = REPO_ROOT / "frontend-next" / "lib" / "os-scope.ts"
 LAYOUT = REPO_ROOT / "frontend-next" / "app" / "layout.tsx"
+OS_APP_PROVIDERS = REPO_ROOT / "frontend-next" / "components" / "indicare" / "scope" / "os-app-providers.tsx"
 
 
 def test_scope_first_files_exist():
@@ -50,6 +51,17 @@ def test_appshell_home_scope_menu_markers():
 
 
 def test_layout_wraps_scope_provider_and_gate():
-    text = LAYOUT.read_text(encoding="utf-8")
-    assert "OsScopeProvider" in text
-    assert "OsScopeGate" in text
+    layout = LAYOUT.read_text(encoding="utf-8")
+    providers = OS_APP_PROVIDERS.read_text(encoding="utf-8")
+    assert "OsAppProviders" in layout
+    assert "OsScopeProvider" in providers
+    assert "OsScopeGate" in providers
+
+
+def test_appshell_no_scope_safety_guards():
+    text = APP_SHELL.read_text(encoding="utf-8")
+    assert "scopeHasValidIds" in text
+    assert "scope_type === 'none'" in text or "scope.scope_type" in text
+    assert "noScopeNavigation" in text
+    assert "undefined" in text
+    assert "isSelectScopeRoute" in text

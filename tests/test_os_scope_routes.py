@@ -49,6 +49,19 @@ def test_scope_current_route(client):
     assert response.json()["data"]["scope_type"] == "home"
 
 
+def test_scope_current_returns_none_scope_on_service_failure(client):
+    with patch(
+        "routers.os_scope_routes.os_scope_service.get_current",
+        side_effect=RuntimeError("session unavailable"),
+    ):
+        response = client.get("/api/os/scope/current")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["ok"] is True
+    assert body["data"]["scope_type"] == "none"
+    assert body["data"]["degraded"] is True
+
+
 def test_scope_select_route(client):
     with patch(
         "routers.os_scope_routes.os_scope_service.select_scope",

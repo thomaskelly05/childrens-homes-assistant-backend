@@ -111,6 +111,15 @@ export function OsScopeProvider({ children }: { children: ReactNode }) {
         }
         setError(apiError.message || 'Service temporarily unavailable.')
       } else {
+        setScope((current) => ({
+          ...defaultScope,
+          degraded: true,
+          warnings: [
+            ...(current.warnings || []),
+            caught instanceof Error ? caught.message : 'Scope could not be loaded.'
+          ]
+        }))
+        setMenuSummary(null)
         setError(caught instanceof Error ? caught.message : 'Scope could not be loaded.')
       }
     } finally {
