@@ -50,13 +50,22 @@ export function StaffProfileOsQuickCards({ dashboard }: { dashboard: StaffProfil
 
 export function StaffProfileOsSccifLink({ staffId }: { staffId: string }) {
   return (
-    <Link
-      href={`/intelligence/sccif?staff_id=${encodeURIComponent(staffId)}`}
-      data-testid="staff-profile-sccif-alignment-link"
-      className="inline-flex rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-xs font-black text-blue-900"
-    >
-      Leadership / workforce evidence (SCCIF)
-    </Link>
+    <div className="flex flex-wrap gap-2">
+      <Link
+        href={`/intelligence/sccif?staff_id=${encodeURIComponent(staffId)}`}
+        data-testid="staff-profile-sccif-alignment-link"
+        className="inline-flex rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-xs font-black text-blue-900"
+      >
+        Leadership / workforce evidence (SCCIF)
+      </Link>
+      <Link
+        href={`/intelligence/inspection-readiness?staff_id=${encodeURIComponent(staffId)}`}
+        data-testid="staff-profile-inspection-readiness-link"
+        className="inline-flex rounded-full border border-indigo-200 bg-indigo-50 px-4 py-2 text-xs font-black text-indigo-900"
+      >
+        Inspection readiness (workforce evidence)
+      </Link>
+    </div>
   )
 }
 

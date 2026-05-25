@@ -146,6 +146,7 @@ See governance table — Reg 44, Reg 45, Ofsted evidence notes.
 - **Reg 44:** Independent visitor findings — `reg44-evidence`  
 - **Reg 45:** Quality of care review — `reg45-evidence`  
 - **Ofsted / SCCIF:** `ofsted-evidence` draft workspace  
+- **Inspection readiness packs:** `/intelligence/inspection-readiness` — evidence support only (see `docs/reg44-reg45-evidence-pack-builder.md`)  
 
 ## 15. Forms still needing dedicated backend workflow
 
@@ -161,4 +162,4 @@ Draft workspace or review-gated until formal `create_*` services are wired:
 
 ## SCCIF / Quality Standards mapping (alignment layer)
 
-Recording types are mapped in `sccif_alignment_registry_service` (e.g. safeguarding-concern → helped_and_protected + protection_children; daily-note → experiences/progress + quality_purpose + child voice). Governance dashboard links to `/intelligence/sccif`. See `docs/sccif-quality-standards-alignment-map.md`.
+Recording types are mapped in `sccif_alignment_registry_service` (e.g. safeguarding-concern → helped_and_protected + protection_children; daily-note → experiences/progress + quality_purpose + child voice). Governance dashboard links to `/intelligence/sccif` and `/intelligence/inspection-readiness`. See `docs/sccif-quality-standards-alignment-map.md` and `docs/reg44-reg45-inspection-readiness-map.md`.

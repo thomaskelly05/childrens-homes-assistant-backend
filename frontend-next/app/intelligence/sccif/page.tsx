@@ -36,9 +36,38 @@ export default function SccifAlignmentPage() {
             >
               Recording governance
             </Link>
+            <Link
+              href="/intelligence/inspection-readiness"
+              data-testid="sccif-open-inspection-readiness"
+              className="inline-flex min-h-10 items-center rounded-2xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-xs font-black text-blue-950"
+            >
+              Inspection readiness
+            </Link>
+            <Link
+              href="/intelligence/inspection-readiness?pack=reg44"
+              data-testid="sccif-generate-reg44"
+              className="inline-flex min-h-10 items-center rounded-2xl border border-blue-200 bg-blue-600 px-4 py-2.5 text-xs font-black text-white"
+            >
+              Generate Reg 44
+            </Link>
+            <Link
+              href="/intelligence/inspection-readiness?pack=reg45"
+              data-testid="sccif-generate-reg45"
+              className="inline-flex min-h-10 items-center rounded-2xl border border-indigo-200 bg-indigo-600 px-4 py-2.5 text-xs font-black text-white"
+            >
+              Generate Reg 45
+            </Link>
           </div>
         }
       />
+
+      <p
+        data-testid="sccif-evidence-pack-note"
+        className="rounded-2xl border border-blue-100 bg-blue-50/50 px-4 py-3 text-xs font-semibold text-blue-950"
+      >
+        Evidence pack support: use inspection readiness to prepare Reg 44 and Reg 45 review packs from safe
+        metadata. Not a compliance decision.
+      </p>
 
       <SccifAlignmentDashboard filters={Object.keys(filters).length ? filters : undefined} />
     </main>

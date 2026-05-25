@@ -65,6 +65,7 @@ class ManagerDailyBriefRoutes(BaseModel):
     isn: str = "/safeguarding"
     isn_orb: str = "/assistant/orb?mode=safeguarding_themes"
     sccif_alignment: str = "/intelligence/sccif"
+    inspection_readiness: str = "/intelligence/inspection-readiness"
 
 
 class ManagerDailyBrief(BaseModel):
@@ -84,6 +85,7 @@ class ManagerDailyBrief(BaseModel):
     handover_summary: str = ""
     workforce_summary: str = ""
     sccif_summary: str = ""
+    inspection_readiness_summary: str = ""
     sections: list[ManagerDailyBriefSection] = Field(default_factory=list)
     recommendations: list[str] = Field(default_factory=list)
     limitations: list[str] = Field(default_factory=list)

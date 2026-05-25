@@ -61,7 +61,8 @@ The daily brief includes a **Notification and escalation oversight** section (me
 3. No auto-resolution of high-risk alerts.
 4. Brief and notifications support oversight — they do not replace manager judgement.
 5. Daily brief does not claim inspection compliance.
-6. Standalone `/orb` must not import notification, manager brief or ISN notification clients.
+6. **Inspection readiness** section (`inspection_readiness`) links to `/intelligence/inspection-readiness` with Reg 44 / Reg 45 pack routes — not a grade prediction.
+7. Standalone `/orb` must not import notification, manager brief, ISN notification or inspection-readiness clients.
 7. ISN items in the bell use safe summaries only — see `docs/isn-notification-integration.md`.
 
 ## Push / email

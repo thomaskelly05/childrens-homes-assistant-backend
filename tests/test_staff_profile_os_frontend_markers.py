@@ -47,6 +47,8 @@ def test_staff_profile_sccif_link():
     actions = _read(FRONTEND / "components" / "staff" / "staff-profile-os-actions.tsx")
     dashboard = _read(FRONTEND / "components" / "staff" / "staff-profile-os-dashboard.tsx")
     assert "staff-profile-sccif-alignment-link" in actions
+    assert "staff-profile-inspection-readiness-link" in actions
+    assert "/intelligence/inspection-readiness" in actions
     assert "/intelligence/sccif" in actions
     assert "StaffProfileOsSccifLink" in dashboard
 

@@ -101,9 +101,12 @@ def test_care_hub_inspection_readiness_card():
     assert "CareHubInspectionReadiness" in page
     assert "care-hub-inspection-readiness" in card
     assert "Inspection readiness" in card
+    assert "/intelligence/inspection-readiness" in card
     assert "/intelligence/sccif" in card
     assert "Ask OS ORB" in card
-    assert "care-hub-open-sccif-alignment" in card
+    assert "care-hub-open-inspection-readiness" in card
+    assert "care-hub-generate-reg44" in card
+    assert "care-hub-generate-reg45" in card
 
 
 def test_care_hub_manager_daily_brief_marker():
