@@ -2,6 +2,8 @@ import './globals.css'
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import { AppShell } from '@/components/indicare/app-shell'
+import { OsScopeGate } from '@/components/indicare/scope/os-scope-gate'
+import { OsScopeProvider } from '@/components/indicare/scope/os-scope-provider'
 import { OrbAccessibilityHydrator } from '@/components/orb-accessibility/orb-accessibility-hydrator'
 import { AuthProvider } from '@/contexts/auth-context'
 import { ActiveChildProvider } from '@/lib/context/active-child-context'
@@ -23,11 +25,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={`${inter.variable} font-sans antialiased`}>
         <OrbAccessibilityHydrator />
         <AuthProvider>
-          <ActiveChildProvider>
-            <OperationalContextProvider>
-              <AppShell>{children}</AppShell>
-            </OperationalContextProvider>
-          </ActiveChildProvider>
+          <OsScopeProvider>
+            <ActiveChildProvider>
+              <OperationalContextProvider>
+                <AppShell>
+                  <OsScopeGate>{children}</OsScopeGate>
+                </AppShell>
+              </OperationalContextProvider>
+            </ActiveChildProvider>
+          </OsScopeProvider>
         </AuthProvider>
       </body>
     </html>

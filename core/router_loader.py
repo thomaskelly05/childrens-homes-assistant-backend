@@ -95,6 +95,8 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
             "routers.os_inspection_routes",
             "routers.os_young_person_routes",
             "routers.os_operational_data_routes",
+            "routers.os_scope_routes",
+            "routers.home_selector_routes",
             "backend.os_production_diagnostics_router",
             "backend.os_enterprise_compat_router",
         ),

@@ -18,10 +18,18 @@ function LoginPanel() {
   const [submitting, setSubmitting] = useState(false)
 
   function postLoginReturnUrl() {
-    const returnUrl = searchParams.get('returnUrl') || '/command-centre'
-    return returnUrl === '/' || returnUrl === '/home' || returnUrl === '/dashboard' || returnUrl === '/workspace'
-      ? '/command-centre'
-      : returnUrl
+    const returnUrl = searchParams.get('returnUrl') || '/select-scope'
+    if (
+      returnUrl === '/' ||
+      returnUrl === '/home' ||
+      returnUrl === '/dashboard' ||
+      returnUrl === '/workspace' ||
+      returnUrl === '/command-centre' ||
+      returnUrl.startsWith('/command-centre/')
+    ) {
+      return '/select-scope'
+    }
+    return returnUrl
   }
 
   function redirectToMfa(response: Awaited<ReturnType<typeof login>>) {

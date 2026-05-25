@@ -53,6 +53,14 @@ export function isAuthFailureError(error: unknown) {
   return error instanceof AuthApiError && isAuthFailureStatus(error.status)
 }
 
+export function isTemporaryUnavailableStatus(status: number) {
+  return status === 503 || status === 502 || status === 504
+}
+
+export function isTemporaryUnavailableError(error: unknown) {
+  return error instanceof AuthApiError && isTemporaryUnavailableStatus(error.status)
+}
+
 export async function authFetchResponse(path: string, init: RequestInit = {}): Promise<Response> {
   assertRelativeApiPath(path)
   const method = (init.method || 'GET').toUpperCase()

@@ -14,6 +14,7 @@ import { NotificationBell } from '@/components/connect/notification-bell'
 import { OrbButton } from '@/components/indicare/orb/orb-button'
 import { QuickActionButton } from '@/components/child-journey/quick-action-button'
 import { MobileNav } from '@/components/mobile-nav'
+import { useOsScope } from '@/components/indicare/scope/os-scope-provider'
 import { ContextualOrbPanel } from '@/components/indicare/operational/contextual-orb-panel'
 import { OperationalAlertsPanel } from '@/components/indicare/operational/operational-alerts-panel'
 import { OperationalQuickActions } from '@/components/indicare/operational/operational-quick-actions'
@@ -33,6 +34,8 @@ import {
   operationalUtilities,
   visibleOperationalNavigation
 } from '@/lib/navigation/operational-navigation'
+import { scopeNavigationFor, type ScopeNavItem } from '@/lib/navigation/scope-navigation'
+import { routeRequiresScope, workspaceHrefForScope } from '@/lib/os-scope'
 import type { OrbContext } from '@/lib/orb/types'
 
 const recordWorkspaceRoots = ['actions', 'reports', 'evidence', 'documents', 'chronology', 'daily-logs', 'incidents', 'safeguarding', 'medication', 'health', 'keywork', 'appointments', 'risk-assessments', 'reg44']
@@ -62,7 +65,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter()
   const pathname = currentPathname || '/young-people'
   const { status, user, logout } = useAuth()
+  const { scope, menuSummary } = useOsScope()
   const { activeChild, breadcrumbs, childScopedHref, lockVersion, readyState } = useActiveChild()
+  const hasOsScope = scope.scope_type === 'home' || scope.scope_type === 'child'
+  const scopeFirstShell = hasOsScope || routeRequiresScope(pathname)
+  const isSelectScopeRoute = pathname === '/select-scope' || pathname.startsWith('/select-scope/')
   const pathParts = pathname.split('/').filter(Boolean)
   const routeSelectedId = selectedYoungPersonId(pathname)
   const selectedId = routeSelectedId || activeChild?.id
@@ -88,7 +95,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const routeRequiresChildContext = pathParts.length === 1 && childContextRequiredRoots.includes(pathParts[0] || '')
   const childContextRedirect = activeChild && routeRequiresChildContext ? childScopedHref(`/${pathParts[0]}`) : null
   const requiresWorkspaceHydration = !e2eWorkspaceHydrationBypass && routeRequiresChildWorkspace(pathname, typeof window === 'undefined' ? null : new URLSearchParams(window.location.search))
-  const isSelectorRoute = pathname === '/' || pathname === '/home' || pathname === '/dashboard' || pathname === '/workspace' || pathname === '/young-people'
+  const isSelectorRoute = isSelectScopeRoute || pathname === '/' || pathname === '/home' || pathname === '/dashboard' || pathname === '/workspace' || (pathname === '/young-people' && !hasOsScope)
 
   useEffect(() => {
     if (childContextRedirect && childContextRedirect !== pathname) {
@@ -214,17 +221,31 @@ export function AppShell({ children }: { children: ReactNode }) {
     )
   }
 
-  const primaryNav = visibleNavItems.filter((item) => selectedId || !item.requiresChild)
-  const secondaryNav = selectedId ? childWorkspaceNavigation.map((item) => ({ label: item.label, href: item.href(selectedId) })) : []
-  const navigationGroups = [
-    { label: 'On shift', domains: ['command-centre', 'children', 'daily-care', 'chronology', 'actions', 'orb'] },
-    { label: 'Records & evidence', domains: ['documents'] },
-    { label: 'Leadership', domains: ['workforce', 'governance', 'reports'] },
-    { label: 'System', domains: ['admin'] }
-  ].map((group) => ({
-    ...group,
-    items: primaryNav.filter((item) => group.domains.includes(item.domain))
-  })).filter((group) => group.items.length)
+  const scopeNavItems = scopeNavigationFor(scope.scope_type, {
+    homeId: scope.selected_home_id,
+    childId: scope.selected_child_id
+  })
+  const useScopeMenu = hasOsScope && scopeFirstShell
+  const primaryNav = useScopeMenu ? [] : visibleNavItems.filter((item) => selectedId || !item.requiresChild)
+  const secondaryNav =
+    scope.scope_type === 'child' && scope.selected_child_id
+      ? childWorkspaceNavigation.map((item) => ({ label: item.label, href: item.href(String(scope.selected_child_id)) }))
+      : selectedId
+        ? childWorkspaceNavigation.map((item) => ({ label: item.label, href: item.href(selectedId) }))
+        : []
+  const navigationGroups: Array<{ label: string; items: ScopeNavItem[] | ReturnType<typeof visibleOperationalNavigation> }> = useScopeMenu
+    ? [{ label: scope.scope_type === 'child' ? 'Child workspace' : 'Home workspace', items: scopeNavItems }]
+    : [
+        { label: 'On shift', domains: ['command-centre', 'children', 'daily-care', 'chronology', 'actions', 'orb'] },
+        { label: 'Records & evidence', domains: ['documents'] },
+        { label: 'Leadership', domains: ['workforce', 'governance', 'reports'] },
+        { label: 'System', domains: ['admin'] }
+      ]
+        .map((group) => ({
+          ...group,
+          items: primaryNav.filter((item) => group.domains.includes(item.domain))
+        }))
+        .filter((group) => group.items.length)
   const childDomainActive = pathParts[0] === 'young-people' || pathParts[0] === 'children'
   const displayBreadcrumbs = pathname === '/profile'
     ? [{ label: 'Children', href: '/young-people' }, { label: 'My profile', current: true }]
@@ -238,7 +259,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="orb-os-shell min-h-screen bg-[#eef4fb] text-slate-900">
       <div className="lg:grid lg:min-h-screen lg:grid-cols-[280px_minmax(0,1fr)]">
         <aside className="sticky top-0 hidden h-screen min-h-0 flex-col border-r border-white/70 bg-slate-950 px-4 py-5 text-white shadow-[24px_0_80px_rgba(15,23,42,0.12)] lg:flex" aria-label="Primary operational navigation">
-          <Link prefetch={false} href="/command-centre" className="flex items-center gap-3 rounded-[26px] bg-white/8 p-3 ring-1 ring-white/10">
+          <Link prefetch={false} href={hasOsScope ? workspaceHrefForScope(scope) : '/select-scope'} data-testid="appshell-scope-home-link" className="flex items-center gap-3 rounded-[26px] bg-white/8 p-3 ring-1 ring-white/10">
             <span className="orb-motion-breathing relative h-12 w-12 rounded-2xl bg-[radial-gradient(circle_at_30%_20%,#fff,transparent_24%),linear-gradient(135deg,#38bdf8,#2563eb_52%,#111827)] shadow-[0_0_42px_rgba(56,189,248,0.36)]" aria-hidden />
             <span>
               <span className="block text-[10px] font-black uppercase tracking-[0.24em] text-blue-200">IndiCare OS</span>
@@ -247,30 +268,50 @@ export function AppShell({ children }: { children: ReactNode }) {
           </Link>
           <div className="mt-4 rounded-[24px] border border-blue-300/10 bg-blue-300/10 p-4">
             <p className="text-[10px] font-black uppercase tracking-[0.22em] text-blue-200">Atmosphere</p>
-            <p className="mt-2 text-sm font-bold leading-6 text-blue-50">{activeChildName ? `${activeChildName}'s workspace is active` : 'Home-wide reflective view active'}</p>
+            <p className="mt-2 text-sm font-bold leading-6 text-blue-50">{scope.scope_type === 'child' ? `${scope.selected_child_name || activeChildName || 'Child'} workspace` : scope.scope_type === 'home' ? `${scope.selected_home_name || 'Home'} workspace` : 'Select a home or child to begin'}</p>
           </div>
-          <nav data-testid="operational-navigation" className="mt-5 min-h-0 flex-1 space-y-5 overflow-y-auto pr-1" aria-label="Operational navigation">
+          <nav
+            data-testid={useScopeMenu ? 'scope-navigation' : 'operational-navigation'}
+            data-scope-type={scope.scope_type}
+            className="mt-5 min-h-0 flex-1 space-y-5 overflow-y-auto pr-1"
+            aria-label={useScopeMenu ? 'Scoped workspace navigation' : 'Operational navigation'}
+          >
             {navigationGroups.map((group) => (
               <div key={group.label}>
                 <p className="px-3 text-[10px] font-black uppercase tracking-[0.22em] text-slate-500">{group.label}</p>
                 <div className="mt-2 space-y-1">
-                  {group.items.map((item) => {
-                    const active = isOperationalNavItemActive(item, pathname)
-                    const Icon = item.icon
-                    const href = hrefForOperationalItem(item, selectedId, childScopedHref)
-                    return (
-                      <Link
-                        prefetch={false}
-                        key={`${item.domain}-${item.href}`}
-                        href={href}
-                        className={`group flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-black transition focus:outline-none focus:ring-2 focus:ring-blue-300 ${active ? 'bg-white text-slate-950 shadow-lg shadow-blue-950/20' : 'text-slate-300 hover:bg-white/10 hover:text-white'}`}
-                      >
-                        <Icon className={`h-4 w-4 ${active ? 'text-blue-600' : 'text-blue-200/70 group-hover:text-blue-200'}`} aria-hidden />
-                        <span className="truncate">{item.label}</span>
-                        {item.domain === 'daily-care' ? <RecordingAlertNavBadge role={user.role} /> : null}
-                      </Link>
-                    )
-                  })}
+                  {useScopeMenu
+                    ? (group.items as ScopeNavItem[]).map((item) => {
+                        const active = pathname === item.href || pathname.startsWith(`${item.href.split('?')[0]}/`)
+                        const Icon = item.icon
+                        return (
+                          <Link
+                            prefetch={'prefetch' in item ? item.prefetch ?? false : false}
+                            key={`${item.label}-${item.href}`}
+                            href={item.href}
+                            data-testid={'testId' in item ? item.testId : undefined}
+                            className={`group flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-black transition focus:outline-none focus:ring-2 focus:ring-blue-300 ${active ? 'bg-white text-slate-950 shadow-lg shadow-blue-950/20' : 'text-slate-300 hover:bg-white/10 hover:text-white'}`}
+                          >
+                            <Icon className={`h-4 w-4 ${active ? 'text-blue-600' : 'text-blue-200/70 group-hover:text-blue-200'}`} aria-hidden />
+                            <span className="truncate">{item.label}</span>
+                            {item.label === 'Recording alerts' && menuSummary?.recording_alert_count ? (
+                              <span className="ml-auto rounded-full bg-rose-500 px-2 py-0.5 text-[10px] font-black text-white">{menuSummary.recording_alert_count}</span>
+                            ) : null}
+                          </Link>
+                        )
+                      })
+                    : (group.items as ReturnType<typeof visibleOperationalNavigation>).map((item) => {
+                        const active = isOperationalNavItemActive(item, pathname)
+                        const Icon = item.icon
+                        const href = hrefForOperationalItem(item, selectedId, childScopedHref)
+                        return (
+                          <Link prefetch={false} key={`${item.domain}-${item.href}`} href={href} className={`group flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-black transition focus:outline-none focus:ring-2 focus:ring-blue-300 ${active ? 'bg-white text-slate-950 shadow-lg shadow-blue-950/20' : 'text-slate-300 hover:bg-white/10 hover:text-white'}`}>
+                            <Icon className={`h-4 w-4 ${active ? 'text-blue-600' : 'text-blue-200/70 group-hover:text-blue-200'}`} aria-hidden />
+                            <span className="truncate">{item.label}</span>
+                            {item.domain === 'daily-care' && hasOsScope ? <RecordingAlertNavBadge role={user.role} /> : null}
+                          </Link>
+                        )
+                      })}
                 </div>
               </div>
             ))}
@@ -290,19 +331,24 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="min-w-0">
           <header className="sticky top-0 z-40 border-b border-white/80 bg-[#f8fafc]/90 px-3 py-3 backdrop-blur-xl md:px-6">
             <div className="flex items-center gap-3">
-              <Link prefetch={false} href="/command-centre" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[radial-gradient(circle_at_30%_20%,#fff,transparent_24%),linear-gradient(135deg,#38bdf8,#2563eb_52%,#0f172a)] shadow-lg shadow-blue-500/20 lg:hidden" aria-label="Open command centre" />
+              <Link
+                prefetch={false}
+                href={hasOsScope ? workspaceHrefForScope(scope) : '/select-scope'}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[radial-gradient(circle_at_30%_20%,#fff,transparent_24%),linear-gradient(135deg,#38bdf8,#2563eb_52%,#0f172a)] shadow-lg shadow-blue-500/20 lg:hidden"
+                aria-label="Open workspace"
+              />
               <div className="min-w-0">
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600">Operational top bar</p>
                 <p className="truncate text-sm font-black text-slate-950">{pageTitle}</p>
               </div>
               <div className="ml-auto flex items-center gap-2">
-                <CommandSearch />
-                <RecordingAlertTopPill role={user.role} />
-                <Link prefetch={false} href="/young-people" className="hidden rounded-2xl border border-blue-100 bg-blue-50 px-3 py-2 text-sm font-black text-blue-800 shadow-sm transition hover:bg-blue-100 md:inline-flex">
+                {hasOsScope ? <CommandSearch /> : null}
+                {hasOsScope ? <RecordingAlertTopPill role={user.role} /> : null}
+                <Link prefetch={false} href="/select-scope" className="hidden rounded-2xl border border-blue-100 bg-blue-50 px-3 py-2 text-sm font-black text-blue-800 shadow-sm transition hover:bg-blue-100 md:inline-flex">
                   <ShieldCheck className="mr-2 h-4 w-4" aria-hidden />
-                  {activeChildName ? 'Switch child' : 'Choose child'}
+                  {hasOsScope ? 'Switch scope' : 'Choose home'}
                 </Link>
-                {selectedId ? <NotificationBell /> : null}
+                {hasOsScope && scope.scope_type === 'child' ? <NotificationBell /> : null}
                 <div className="hidden rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 shadow-sm xl:block">{today}</div>
                 <details className="relative hidden md:block">
                   <summary className="list-none rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-black text-slate-700 shadow-sm marker:hidden">Profile</summary>
@@ -345,18 +391,20 @@ export function AppShell({ children }: { children: ReactNode }) {
             <main className="min-w-0" aria-label="Operational workspace">
               {children}
             </main>
-            <aside className="hidden min-w-0 space-y-3 2xl:block" aria-label="Operational intelligence panel">
-              <ContextualOrbPanel />
-              <OperationalAlertsPanel />
-              {pathname !== '/command-centre' && !pathname.startsWith('/command-centre/') ? (
-                <OperationalQuickActions selectedYoungPersonId={selectedId} selectedYoungPersonName={activeChildName} />
-              ) : null}
-            </aside>
+            {hasOsScope ? (
+              <aside className="hidden min-w-0 space-y-3 2xl:block" aria-label="Operational intelligence panel">
+                <ContextualOrbPanel />
+                <OperationalAlertsPanel />
+                {scope.scope_type === 'child' && pathname !== '/command-centre' && !pathname.startsWith('/command-centre/') ? (
+                  <OperationalQuickActions selectedYoungPersonId={selectedId} selectedYoungPersonName={activeChildName} />
+                ) : null}
+              </aside>
+            ) : null}
           </div>
         </div>
       </div>
       <OrbButton context={orbContext} role={user.role} />
-      <QuickActionButton selectedYoungPersonId={selectedId} selectedYoungPersonName={activeChildName} />
+      {scope.scope_type === 'child' ? <QuickActionButton selectedYoungPersonId={selectedId} selectedYoungPersonName={activeChildName} /> : null}
       <MobileNav />
     </div>
   )
