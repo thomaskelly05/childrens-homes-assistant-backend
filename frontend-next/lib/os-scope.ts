@@ -1,5 +1,5 @@
 import { authFetch } from '@/lib/auth/api'
-import { childIdFromPath, childWorkspaceHref, isChildWorkspacePath } from '@/lib/navigation/child-workspace-routes'
+import { childIdFromPath, childWorkspaceHref, isChildWorkspacePage } from '@/lib/navigation/child-workspace-routes'
 
 export type OsScopeType = 'none' | 'home' | 'child'
 
@@ -127,8 +127,11 @@ export function scopeFromRoute(pathname: string): { childId?: string; homeId?: s
 }
 
 export {
+  childWorkspaceApiHref,
   childWorkspaceHref,
   isAlreadyOnScopedChildWorkspace,
+  isChildWorkspaceApiPath,
+  isChildWorkspacePage,
   isChildWorkspacePath
 } from '@/lib/navigation/child-workspace-routes'
 
@@ -242,7 +245,7 @@ export function syncScopeFromPath(pathname: string, state: OsScopeState): OsScop
       }
     }
   }
-  if (isChildWorkspacePath(pathname) && state.scope_type === 'child' && state.selected_child_id) {
+  if (isChildWorkspacePage(pathname) && state.scope_type === 'child' && state.selected_child_id) {
     return {
       ...state,
       routes: {

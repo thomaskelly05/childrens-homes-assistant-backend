@@ -11,13 +11,19 @@ GATE = FRONTEND / "components" / "indicare" / "scope" / "os-scope-gate.tsx"
 SYNC = FRONTEND / "components" / "indicare" / "scope" / "sync-child-scope.tsx"
 APP_SHELL = FRONTEND / "components" / "indicare" / "app-shell.tsx"
 LOADING = FRONTEND / "components" / "indicare" / "scope" / "child-workspace-loading-fallback.tsx"
-CANONICAL_PAGE = FRONTEND / "app" / "os" / "young-people" / "[id]" / "workspace" / "page.tsx"
+CANONICAL_PAGE = FRONTEND / "app" / "young-people" / "[id]" / "workspace" / "page.tsx"
 OS_SCOPE_SERVICE = REPO_ROOT / "services" / "os_scope_service.py"
 
 
 def test_child_workspace_href_canonical():
     text = ROUTES.read_text(encoding="utf-8")
     assert "childWorkspaceHref" in text
+    assert "/young-people/${encodeURIComponent(String(childId))}/workspace" in text.replace(" ", "")
+
+
+def test_child_workspace_api_href_backend():
+    text = ROUTES.read_text(encoding="utf-8")
+    assert "childWorkspaceApiHref" in text
     assert "/os/young-people/${encodeURIComponent(String(childId))}/workspace" in text.replace(" ", "")
 
 
@@ -28,18 +34,20 @@ def test_selector_navigates_to_canonical_route():
     assert "openingChildId" in text
     assert "navigateTimedOut" in text
     assert "Workspace is taking longer than expected" in text
+    assert "/os/young-people" not in text
 
 
 def test_no_legacy_workspace_href_in_scope_fallback():
     text = OS_SCOPE.read_text(encoding="utf-8")
     assert "childWorkspaceHref" in text
     workspace_fn = text.split("export function workspaceHrefForScope")[1].split("export function")[0]
-    assert "/young-people/${scope.selected_child_id}/workspace" not in workspace_fn
+    assert "/os/young-people/${scope.selected_child_id}/workspace" not in workspace_fn
 
 
 def test_os_scope_gate_skips_redirect_on_canonical_child_workspace():
     text = GATE.read_text(encoding="utf-8")
     assert "isAlreadyOnScopedChildWorkspace" in text
+    assert "isChildWorkspacePage" in text
     assert "lastRedirectRef" in text
     assert "target === pathname" in text
 
@@ -58,12 +66,12 @@ def test_canonical_next_page_exists():
     page = CANONICAL_PAGE.read_text(encoding="utf-8")
     assert "SyncChildScope" in page
     assert "getOsYoungPersonWorkspace" in page
+    assert "redirect(" not in page
 
 
-def test_legacy_young_people_workspace_redirects():
-    legacy = FRONTEND / "app" / "young-people" / "[id]" / "workspace" / "page.tsx"
-    text = legacy.read_text(encoding="utf-8")
-    assert "redirect(childWorkspaceHref" in text.replace(" ", "")
+def test_legacy_os_workspace_page_removed():
+    legacy_os = FRONTEND / "app" / "os" / "young-people" / "[id]" / "workspace" / "page.tsx"
+    assert not legacy_os.is_file()
 
 
 def test_loading_fallback_timeout_and_buttons():

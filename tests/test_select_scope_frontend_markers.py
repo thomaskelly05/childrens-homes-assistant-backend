@@ -62,5 +62,9 @@ def test_workspace_href_never_uses_undefined_ids():
     assert "selected_home_id" in text
     assert "childWorkspaceHref" in text
     routes = (REPO_ROOT / "frontend-next" / "lib" / "navigation" / "child-workspace-routes.ts").read_text(encoding="utf-8")
-    assert "/os/young-people/" in routes
+    href_fn = routes.split("export function childWorkspaceHref")[1].split("export function")[0]
+    assert "/young-people/" in href_fn
+    assert "/os/young-people/" not in href_fn
+    api_fn = routes.split("export function childWorkspaceApiHref")[1].split("export function")[0]
+    assert "/os/young-people/" in api_fn
     assert "undefined" not in text.split("workspaceHrefForScope")[1].split("export")[0]

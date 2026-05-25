@@ -7,7 +7,7 @@ import { HomeChildSelector } from '@/components/indicare/scope/home-child-select
 import { useOsScope } from '@/components/indicare/scope/os-scope-provider'
 import {
   isAlreadyOnScopedChildWorkspace,
-  isChildWorkspacePath,
+  isChildWorkspacePage,
   routeRequiresScope,
   workspaceHrefForScope
 } from '@/lib/os-scope'
@@ -29,7 +29,7 @@ export function OsScopeGate({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (loading || !needsScope) return
-    if (onScopedChildWorkspace || isChildWorkspacePath(pathname)) return
+    if (onScopedChildWorkspace || isChildWorkspacePage(pathname)) return
     if (pathname === '/select-scope' && hasScope) {
       const target = workspaceHrefForScope(scope)
       if (!target || target === '/select-scope' || target === pathname) return
@@ -41,7 +41,7 @@ export function OsScopeGate({ children }: { children: ReactNode }) {
 
   if (!needsScope) return <>{children}</>
 
-  if (loading && !onScopedChildWorkspace && !isChildWorkspacePath(pathname)) {
+  if (loading && !onScopedChildWorkspace && !isChildWorkspacePage(pathname)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#f3f6fb] px-6">
         <p className="text-sm font-black text-slate-600">Loading workspace scope…</p>
@@ -57,7 +57,7 @@ export function OsScopeGate({ children }: { children: ReactNode }) {
     )
   }
 
-  if (childScopeMissingHome && isChildWorkspacePath(pathname)) {
+  if (childScopeMissingHome && isChildWorkspacePage(pathname)) {
     return (
       <div data-testid="os-scope-gate-child-home-warning" className="min-h-screen bg-[#f3f6fb] px-6 py-10">
         <div className="mx-auto max-w-lg rounded-[32px] border border-amber-100 bg-amber-50 p-6 text-center shadow-xl">
