@@ -85,3 +85,57 @@ def test_routes_registered():
     assert any("operational-summary" in p for p in paths)
     assert any("mark-all-read" in p for p in paths)
     assert any("action" in p for p in paths)
+    assert any("preferences" in p for p in paths)
+    assert any("escalations" in p for p in paths)
+
+
+def test_preferences_health_route(fake_state):
+    user = fake_state["user"]
+    result = asyncio.run(
+        os_notification_routes.notification_preferences_health(
+            current_user=user,
+            conn=None,
+        )
+    )
+    assert result["success"] is True
+    assert result["data"]["service"] == "os_notification_preference_service"
+
+
+def test_preferences_get_route(fake_state):
+    user = fake_state["user"]
+    result = asyncio.run(
+        os_notification_routes.get_notification_preferences(
+            current_user=user,
+            conn=None,
+        )
+    )
+    assert result["success"] is True
+    assert "preferences" in result["data"]
+
+
+def test_escalation_check_route(fake_state):
+    user = fake_state["user"]
+    from schemas.os_notification_preferences import NotificationEscalationCheckRequest
+
+    result = asyncio.run(
+        os_notification_routes.run_notification_escalation_check(
+            payload=NotificationEscalationCheckRequest(dry_run=True),
+            current_user=user,
+            conn=None,
+        )
+    )
+    assert result["success"] is True
+    assert "candidates" in result["data"]
+    assert "recommendations" in result["data"]
+
+
+def test_escalation_rules_route(fake_state):
+    user = fake_state["user"]
+    result = asyncio.run(
+        os_notification_routes.list_notification_escalation_rules(
+            current_user=user,
+            conn=None,
+        )
+    )
+    assert result["success"] is True
+    assert len(result["data"]) >= 1

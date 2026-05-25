@@ -267,6 +267,14 @@ class ISNDigestService:
             recs.append("Follow up outstanding safeguarding network actions in handover.")
         if digest.linked_recording_alerts:
             recs.append("Cross-check safeguarding-sensitive recording alerts with ISN context.")
+        if digest.escalation_pending:
+            recs.append(
+                f"{digest.escalation_pending} item(s) may be overdue for manager escalation — run escalation check."
+            )
+        if digest.escalation_rules_active:
+            recs.append("Escalation rules active for urgent safeguarding network items.")
+        else:
+            recs.append("Escalation check available from notification settings.")
         recs.append(LIMITATION_NOTICE)
         return recs[:8]
 
@@ -313,6 +321,12 @@ class ISNDigestService:
         follow_up_due = sum(1 for i in items if i.type == "isn_follow_up_due")
         network_updates = sum(1 for i in items if i.type in ("isn_network_update", "isn_professional_update"))
         linked_recording = self._linked_recording_count(current_user, conn)
+        escalation_pending = sum(
+            1
+            for i in items
+            if i.severity in ("urgent", "high")
+            and _text(i.status, "new") in OPEN_STATUSES
+        )
 
         digest = IsnDigest(
             generated_at=_now_iso(),
@@ -325,6 +339,8 @@ class ISNDigestService:
             follow_up_due=follow_up_due,
             network_updates=network_updates,
             linked_recording_alerts=linked_recording,
+            escalation_pending=escalation_pending,
+            escalation_rules_active=True,
             top_items=self.top_items(items),
             routes=IsnNotificationRoutes(),
             limitations=limitations,

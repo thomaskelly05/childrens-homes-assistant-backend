@@ -77,6 +77,15 @@ When reviewed, the daily brief bell item is hidden and OS state is resolved.
 - ISN DB lifecycle sync is partial when `isn_safeguarding_alerts` table unavailable (memory fallback).
 - Connect notification bodies may still appear in the Connect section of `/notifications` (separate from operational feed).
 
+## Preferences and escalations
+
+See `docs/notification-preferences-and-escalations.md`.
+
+- Preferences: `GET/PATCH /api/notifications/preferences`
+- Escalations: `GET /api/notifications/escalations/rules`, `POST /api/notifications/escalations/check`
+- Settings UI: `/notifications/settings`
+- Operational feed metadata: `hidden_by_preferences`, `urgent_safeguarding_always_on`
+
 ## Future
 
 - Event-driven feed refresh (WebSocket / SSE)

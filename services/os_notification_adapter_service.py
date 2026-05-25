@@ -17,6 +17,7 @@ from schemas.recording_alerts import RecordingAlertListFilters, RecordingAlertRe
 from services.intelligence_action_service import intelligence_action_service
 from services.isn_notification_adapter_service import isn_notification_adapter_service
 from services.manager_daily_brief_service import manager_daily_brief_service
+from services.os_notification_preference_service import os_notification_preference_service
 from services.os_notification_state_service import os_notification_state_service
 from services.recording_alert_service import recording_alert_service
 from services.recording_governance_service import recording_governance_service
@@ -352,6 +353,7 @@ class OsNotificationAdapterService:
         limit: int = 30,
         unread_only: bool = False,
         conn: Any | None = None,
+        skip_preference_filter: bool = False,
     ) -> OsNotificationFeedResponse:
         limitations: list[str] = []
         items: list[OsNotificationItem] = []
@@ -413,6 +415,12 @@ class OsNotificationAdapterService:
 
         items = os_notification_state_service.apply_state(items, current_user, conn=conn)
 
+        hidden_by_preferences = 0
+        if not skip_preference_filter:
+            items, hidden_by_preferences = os_notification_preference_service.apply_preferences(
+                items, current_user, conn=conn
+            )
+
         if unread_only:
             items = [i for i in items if i.unread]
 
@@ -459,7 +467,12 @@ class OsNotificationAdapterService:
             categories=categories,
             limitations=limitations,
             available=True,
-            metadata={"metadata_only": True, "no_raw_body": True},
+            metadata={
+                "metadata_only": True,
+                "no_raw_body": True,
+                "hidden_by_preferences": hidden_by_preferences,
+                "urgent_safeguarding_always_on": True,
+            },
             unread=unread_count,
             urgent=urgent_count,
             recording_alert_count=recording_count,

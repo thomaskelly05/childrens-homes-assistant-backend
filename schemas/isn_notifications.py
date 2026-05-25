@@ -74,6 +74,8 @@ class IsnDigest(BaseModel):
     follow_up_due: int = 0
     network_updates: int = 0
     linked_recording_alerts: int = 0
+    escalation_pending: int = 0
+    escalation_rules_active: bool = True
     top_items: list[IsnDigestTopItem] = Field(default_factory=list)
     recommendations: list[str] = Field(default_factory=list)
     routes: IsnNotificationRoutes = Field(default_factory=IsnNotificationRoutes)
