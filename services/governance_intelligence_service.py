@@ -8,6 +8,7 @@ from typing import Any
 
 from assistant.inspection_readiness import build_inspection_readiness, serialise_inspection_readiness
 from db.connection import db_connection, is_pool_under_pressure
+from services.os_circuit_breaker_service import os_circuit_breaker_service
 from services.os_time_budget_service import TimeBudgetReport, os_time_budget_service
 from assistant.reg45_builder import build_reg45_review_context, serialise_reg45_review_context
 from repositories.os_repository_utils import quote_ident, safe_int, table_columns, table_exists
@@ -138,6 +139,54 @@ class GovernanceIntelligenceService:
             "feature_flags": governance_feature_flags(),
         }
 
+    def build_fast_degraded_command_centre(
+        self,
+        *,
+        current_user: dict[str, Any],
+        days: int = 30,
+        home_id: int | None = None,
+        reason: str = "Database pool under pressure",
+        circuit_open: bool = False,
+    ) -> dict[str, Any]:
+        resolved_home_id = home_id or self._home_id(current_user)
+        warnings = [reason[:200]]
+        if circuit_open:
+            warnings.append("Governance command centre circuit is open; serving lightweight snapshot.")
+        return {
+            "ok": True,
+            "generated_at": self._now(),
+            "degraded": True,
+            "circuit_open": circuit_open,
+            "warnings": warnings[:12],
+            "section_status": {},
+            "build_ms": 0.0,
+            "home_id": resolved_home_id,
+            "days": days,
+            "summary": {
+                "inspection_readiness": "degraded",
+                "governance_risk": "unknown",
+                "governance_score": 0,
+                "evidence_gaps": 0,
+                "unresolved_concerns": 0,
+                "workforce_alerts": 0,
+                "relational_stability": "unavailable",
+            },
+            "inspection_readiness": {"readiness_level": "degraded", "summary": reason[:120]},
+            "governance_risk": {"level": "unknown", "score": 0, "drivers": []},
+            "workforce_health": {},
+            "safeguarding_drift": {},
+            "child_journey_health": {},
+            "governance_actions": [],
+            "unresolved_concerns": [],
+            "relational_stability": "unavailable",
+            "evidence_matrix": {"ok": True, "summary": {"gaps": 0}, "entries": []},
+            "reg44": {},
+            "reg45": {},
+            "provider_oversight": {"homes": [], "summary": {}},
+            "orb_governance_summary": {},
+            "feature_flags": governance_feature_flags(),
+        }
+
     def build_command_centre(
         self,
         conn: Any | None = None,
@@ -145,10 +194,22 @@ class GovernanceIntelligenceService:
         current_user: dict[str, Any],
         days: int = 30,
         home_id: int | None = None,
+        skip_db_sections: bool = False,
     ) -> dict[str, Any]:
         resolved_home_id = home_id or self._home_id(current_user)
+        if skip_db_sections or is_pool_under_pressure() or os_circuit_breaker_service.should_short_circuit(
+            "governance_command_centre"
+        ):
+            return self.build_fast_degraded_command_centre(
+                current_user=current_user,
+                days=days,
+                home_id=resolved_home_id,
+                reason="Governance command centre fast path: pool pressure or open circuit",
+                circuit_open=os_circuit_breaker_service.should_short_circuit("governance_command_centre"),
+            )
+
         budget = TimeBudgetReport()
-        degraded = is_pool_under_pressure()
+        degraded = False
 
         manager_fallback = {"ok": False, "summary": {}, "risks": {}, "evidence_gaps": [], "recommended_actions": []}
         manager = os_time_budget_service.run_section(
@@ -210,7 +271,8 @@ class GovernanceIntelligenceService:
                 report=budget,
             ).value
 
-        if degraded:
+        if is_pool_under_pressure():
+            degraded = True
             budget.add_warning("Database pool under pressure; workforce and Reg 44 sections skipped.")
         elif conn is not None:
             _load_db_backed_sections(conn)

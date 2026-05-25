@@ -1,16 +1,11 @@
+'use client'
+
 import Link from 'next/link'
-import { ClipboardCheck, ClipboardList, ClipboardPlus, Mic2, ShieldAlert } from 'lucide-react'
 
+import { careHubActionIcon } from '@/components/command-centre/care-hub-action-icons'
 import { CARE_HUB_HERO_ACTIONS, CARE_HUB_HERO_ORB_HINTS } from '@/components/command-centre/care-hub-routes'
+import { SafeLucideIcon } from '@/components/indicare/safe-lucide-icon'
 import { OrbInlineHint } from '@/components/indicare/operational/orb-inline-hint'
-
-const iconByLabel = {
-  'Record something': ClipboardList,
-  'Start shift handover': ClipboardCheck,
-  'Record daily note': ClipboardPlus,
-  'Record incident': ShieldAlert,
-  'Ask ORB': Mic2
-} as const
 
 export function CareHubStartHero({ selectedYoungPersonId }: { selectedYoungPersonId?: string }) {
   const actions = CARE_HUB_HERO_ACTIONS({ selectedYoungPersonId })
@@ -27,7 +22,6 @@ export function CareHubStartHero({ selectedYoungPersonId }: { selectedYoungPerso
       </p>
       <div className="mt-4 grid gap-2.5 sm:grid-cols-2 xl:grid-cols-5">
         {actions.map((action) => {
-          const Icon = iconByLabel[action.label as keyof typeof iconByLabel]
           const orbHint = CARE_HUB_HERO_ORB_HINTS[action.label]
           return (
             <article
@@ -40,7 +34,7 @@ export function CareHubStartHero({ selectedYoungPersonId }: { selectedYoungPerso
                 className="flex flex-1 flex-col focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-200"
               >
                 <span className="flex items-center gap-2 text-sm font-black text-white">
-                  <Icon className="h-4 w-4 shrink-0 text-cyan-200" aria-hidden />
+                  <SafeLucideIcon icon={careHubActionIcon(action.label)} className="h-4 w-4 shrink-0 text-cyan-200" />
                   {action.label}
                 </span>
                 <span className="mt-1.5 flex-1 text-xs font-semibold leading-5 text-slate-300">{action.description}</span>

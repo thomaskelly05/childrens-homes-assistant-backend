@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Mic2, Sparkles } from 'lucide-react'
 
+import { SafeLucideIcon } from '@/components/indicare/safe-lucide-icon'
 import { OrbInlineHint } from '@/components/indicare/operational/orb-inline-hint'
 import { Card, PageHeader, SectionHeader } from '@/components/indicare/ui'
 import { RecordChildPicker, mapYoungPeopleToPickerOptions, type RecordChildPickerOption } from '@/components/indicare/record/record-child-picker'
@@ -146,7 +147,6 @@ function RecordCard({
   about: RecordAboutContext
   onNeedsChild: () => void
 }) {
-  const Icon = card.icon
   const needsChild = recordCardNeedsChild(card) && !childId
   const deemphasised = recordCardDeemphasised(card, about)
   const href = needsChild ? undefined : recordCardHref(card, childId)
@@ -161,7 +161,7 @@ function RecordCard({
     >
       <div className="flex items-start gap-3">
         <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-blue-600 shadow-sm ring-1 ring-slate-100">
-          <Icon className="h-5 w-5" aria-hidden />
+          <SafeLucideIcon icon={card.icon} className="h-5 w-5" />
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">

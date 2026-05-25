@@ -29,6 +29,7 @@ if DB_POOL_MAX < DB_POOL_MIN:
     DB_POOL_MAX = DB_POOL_MIN
 
 DB_POOL_WAIT_TIMEOUT_SECONDS = float(os.getenv("DB_POOL_WAIT_TIMEOUT_SECONDS", "2"))
+DASHBOARD_DB_WAIT_TIMEOUT_SECONDS = float(os.getenv("DASHBOARD_DB_WAIT_TIMEOUT_SECONDS", "0.1"))
 DB_STATEMENT_TIMEOUT_MS = int(os.getenv("DB_STATEMENT_TIMEOUT_MS", "15000"))
 DB_IDLE_TX_TIMEOUT_MS = int(os.getenv("DB_IDLE_TX_TIMEOUT_MS", "15000"))
 # Total acquisition attempts (1 = single try). DB_CONNECT_RETRIES kept as legacy alias.
@@ -187,15 +188,55 @@ def _log_connection_hold_if_slow(conn) -> None:
     )
 
 
-def _try_acquire_pool_slot() -> bool:
+def _try_acquire_pool_slot(*, timeout_seconds: float | None = None) -> bool:
     global _db_pool_waiting_count
+    wait_timeout = DB_POOL_WAIT_TIMEOUT_SECONDS if timeout_seconds is None else max(0.0, float(timeout_seconds))
     with _db_pool_waiting_lock:
         _db_pool_waiting_count += 1
     try:
-        return _db_pool_slots.acquire(timeout=DB_POOL_WAIT_TIMEOUT_SECONDS)
+        return _db_pool_slots.acquire(timeout=wait_timeout)
     finally:
         with _db_pool_waiting_lock:
             _db_pool_waiting_count = max(0, _db_pool_waiting_count - 1)
+
+
+@contextmanager
+def acquire_optional_dashboard_connection(*, timeout: float | None = None):
+    """Fast-fail optional connection for dashboard/menu endpoints; yields None when pool is busy."""
+    wait = DASHBOARD_DB_WAIT_TIMEOUT_SECONDS if timeout is None else timeout
+    conn = None
+    slot_acquired = False
+    try:
+        if is_pool_under_pressure():
+            logger.info("pool_pressure_fast_path optional_dashboard_acquire=skipped")
+            yield None
+            return
+        slot_acquired = _try_acquire_pool_slot(timeout_seconds=wait)
+        if not slot_acquired or db_pool is None:
+            yield None
+            return
+        conn = db_pool.getconn()
+        _prepare_connection(conn)
+        _note_connection_acquired(conn)
+        yield conn
+    except (PoolError, OperationalError, InterfaceError, DatabaseUnavailableError):
+        if conn is not None:
+            _discard_connection(conn)
+            conn = None
+        if slot_acquired:
+            _release_pool_slot()
+            slot_acquired = False
+        yield None
+    except Exception:
+        if conn is not None:
+            _discard_connection(conn)
+            conn = None
+        if slot_acquired:
+            _release_pool_slot()
+            slot_acquired = False
+        yield None
+    finally:
+        release_db_connection(conn)
 
 
 def _release_pool_slot() -> None:

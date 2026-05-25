@@ -54,3 +54,10 @@ export function invalidateOsRequestCache(prefix: string) {
   }
 }
 
+/** Stable cache key for high-churn AppShell / menu endpoints. */
+export function osRequestDedupeKey(path: string, params?: Record<string, string | number | boolean | undefined>) {
+  const normalised = path.startsWith('/') ? path : `/${path}`
+  if (!params || !Object.keys(params).length) return `dedupe:${normalised}`
+  return `dedupe:${normalised}?${osRequestCacheKey(params)}`
+}
+

@@ -48,3 +48,13 @@ export function badgeFromShellCounts(role?: string): RecordingAlertBadgeSummary 
 
 /** Dedupe marker: nav badge may use feed counts instead of /recording-alerts/badge-summary. */
 export const APPSHELL_RECORDING_BADGE_DEDUPE = true
+
+/** Request dedupe keys used by AppShell and Care Hub client widgets. */
+export const APPSHELL_REQUEST_DEDUPE_KEYS = [
+  '/api/governance-os/command-centre',
+  '/intelligence/governance/ai/dashboard',
+  '/api/workforce-os/dashboard',
+  '/api/workforce-os/navigation',
+  '/os/actions',
+  '/os/chronology'
+] as const

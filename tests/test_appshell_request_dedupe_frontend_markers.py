@@ -33,3 +33,24 @@ def test_no_standalone_orb_imports_in_appshell():
     shell = _read(FRONTEND / "components" / "indicare" / "app-shell.tsx")
     assert "isStandaloneOrb" in shell or '"/orb"' in shell
     assert "/orb/standalone" not in shell
+
+
+def test_appshell_dedupe_keys_declared():
+    counts = _read(FRONTEND / "lib" / "os-operational-counts.ts")
+    assert "APPSHELL_REQUEST_DEDUPE_KEYS" in counts
+    assert "/api/governance-os/command-centre" in counts
+    assert "/os/actions" in counts
+    assert "/os/chronology" in counts
+
+
+def test_os_request_dedupe_helper():
+    cache = _read(FRONTEND / "lib" / "os-request-cache.ts")
+    assert "osRequestDedupeKey" in cache
+    assert "fetchWithOsCache" in cache
+
+
+def test_appshell_does_not_fetch_heavy_governance_dashboard():
+    shell = _read(FRONTEND / "components" / "indicare" / "app-shell.tsx")
+    assert "getGovernanceCommandCentre" not in shell
+    assert "AiGovernanceDashboard" not in shell
+    assert "getAiGovernance" not in shell

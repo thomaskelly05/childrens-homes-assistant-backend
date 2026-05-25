@@ -7,6 +7,7 @@ from typing import Any
 
 from db.connection import DatabaseUnavailableError, get_db_status, is_pool_under_pressure
 from services.os_cache_service import os_cache_service
+from services.os_circuit_breaker_service import os_circuit_breaker_service
 from schemas.ai_privacy import AiPrivacyFilter
 from schemas.indicare_ai_governance import (
     AiGovernanceActionMetric,
@@ -55,18 +56,35 @@ class IndicareAiGovernanceDashboardService:
             f"surface:{filters.surface}:limit:{filters.limit}"
         )
         lookup = os_cache_service.get(cache_key)
-        if lookup.hit and isinstance(lookup.value, AiGovernanceDashboardResponse):
+        if lookup.hit and isinstance(lookup.value, AiGovernanceDashboardResponse) and not lookup.stale:
             return lookup.value
+
+        circuit_key = "ai_governance_dashboard"
+        circuit_open = os_circuit_breaker_service.should_short_circuit(circuit_key)
+        pool_pressure = is_pool_under_pressure()
+
+        if circuit_open or pool_pressure:
+            if lookup.stale and isinstance(lookup.value, AiGovernanceDashboardResponse):
+                logger.info(
+                    "ai_governance_dashboard pool_pressure_fast_path=true circuit_open=%s cache_status=stale",
+                    circuit_open,
+                )
+                return lookup.value
+            health = self.build_health_fast(conn=None)
+            reason = "Governance circuit open" if circuit_open else "Database pool under pressure"
+            logger.warning(
+                "ai_governance_dashboard pool_pressure_fast_path=true circuit_open=%s degraded_response=true",
+                circuit_open,
+            )
+            response = self._degraded_dashboard(filters, health, reason)
+            response.degraded = True
+            if circuit_open:
+                os_circuit_breaker_service.record_success(circuit_key)
+            return response
 
         health = self.build_health(conn=conn)
         degraded = health.status != "ready"
         warning = health.warnings[0] if health.warnings else None
-        if is_pool_under_pressure():
-            if lookup.stale and isinstance(lookup.value, AiGovernanceDashboardResponse):
-                return lookup.value
-            degraded = True
-            warning = warning or "Database pool under pressure; dashboard aggregates deferred."
-            return self._degraded_dashboard(filters, health, warning)
         try:
             usage = self.build_usage_metrics(filters, current_user, conn=conn)
             quality = self.build_quality_metrics(filters, current_user, conn=conn)
@@ -129,9 +147,11 @@ class IndicareAiGovernanceDashboardService:
                 warning=warning,
             )
             os_cache_service.set(cache_key, response, ttl_seconds=60, stale_ttl_seconds=120)
+            os_circuit_breaker_service.record_success(circuit_key)
             return response
         except Exception as exc:
-            logger.warning("AI governance dashboard degraded: %s", exc)
+            os_circuit_breaker_service.record_failure(circuit_key, type(exc).__name__)
+            logger.warning("AI governance dashboard degraded: %s", type(exc).__name__)
             return self._degraded_dashboard(filters, health, str(exc))
 
     def _degraded_dashboard(
@@ -178,7 +198,29 @@ class IndicareAiGovernanceDashboardService:
             warning=message,
         )
 
+    def build_health_fast(self, *, conn: Any | None = None) -> AiGovernanceHealth:
+        """Health snapshot without events-table probe (safe under pool pressure)."""
+        _ = conn
+        db_status = get_db_status()
+        db_available = bool(db_status.get("available"))
+        pool_pressure = bool(db_status.get("pool_pressure"))
+        warnings: list[str] = []
+        if not db_available:
+            warnings.append("Database unavailable; governance events use in-memory fallback.")
+        elif pool_pressure:
+            warnings.append("Database pool under pressure; aggregates deferred.")
+        status: str = "degraded" if not db_available or pool_pressure else "ready"
+        return AiGovernanceHealth(
+            status=status,  # type: ignore[arg-type]
+            storage_mode="postgresql" if db_available else "memory",
+            events_table_available=db_available and not pool_pressure,
+            database_available=db_available,
+            warnings=warnings,
+        )
+
     def build_health(self, *, conn: Any | None = None) -> AiGovernanceHealth:
+        if is_pool_under_pressure() or os_circuit_breaker_service.should_short_circuit("ai_governance_dashboard"):
+            return self.build_health_fast(conn=conn)
         _ = conn
         db_status = get_db_status()
         db_available = bool(db_status.get("available"))
@@ -196,20 +238,21 @@ class IndicareAiGovernanceDashboardService:
         events_table = db_available
         if db_available and not pool_pressure:
             try:
-                from db.connection import get_db_connection, release_db_connection
+                from db.connection import acquire_optional_dashboard_connection
 
-                c = get_db_connection()
-                try:
-                    with c.cursor() as cur:
-                        cur.execute(
-                            """
-                            SELECT 1 FROM information_schema.tables
-                            WHERE table_schema = 'public' AND table_name = 'indicare_ai_governance_events'
-                            """
-                        )
-                        events_table = cur.fetchone() is not None
-                finally:
-                    release_db_connection(c)
+                with acquire_optional_dashboard_connection(timeout=0.1) as c:
+                    if c is None:
+                        events_table = False
+                        status = "degraded"
+                    else:
+                        with c.cursor() as cur:
+                            cur.execute(
+                                """
+                                SELECT 1 FROM information_schema.tables
+                                WHERE table_schema = 'public' AND table_name = 'indicare_ai_governance_events'
+                                """
+                            )
+                            events_table = cur.fetchone() is not None
             except DatabaseUnavailableError:
                 events_table = False
                 status = "degraded"
