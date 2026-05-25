@@ -26,6 +26,9 @@ def test_care_hub_workforce_card_exists():
     assert 'data-testid="care-hub-workforce-shift"' in card
     assert "Workforce and shift" in card
     assert "CareHubWorkforceContext" in page
+    assert 'data-testid="care-hub-open-staff"' in card
+    assert "/staff/training-matrix" in card
+    assert "/staff/supervision" in card
 
 
 def test_handover_staff_shift_section():

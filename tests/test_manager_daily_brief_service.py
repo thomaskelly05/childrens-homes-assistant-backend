@@ -49,6 +49,9 @@ def test_build_brief_metadata_only(fake_state):
     assert any(s.id == "isn_safeguarding_network" for s in brief.sections)
     assert any(s.id == "notification_oversight" for s in brief.sections)
     assert any(s.id == "workforce_shift" for s in brief.sections)
+    workforce = next(s for s in brief.sections if s.id == "workforce_shift")
+    assert any(i.id == "workforce:staff_profiles" for i in workforce.items)
+    assert workforce.route == "/staff"
     assert brief.workforce_summary
     assert brief.isn_summary is not None
     assert brief.metadata.get("no_raw_body") is True

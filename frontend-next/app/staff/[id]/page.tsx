@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
+import { StaffProfileOsDashboard } from '@/components/staff/staff-profile-os-dashboard'
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
 import { Card, DataTable, EmptyState, PageHeader, RecordTimeline, SectionHeader, StatCard, StatusBadge } from '@/components/indicare/ui'
 import { getWorkforceStaffProfile } from '@/lib/os-api/workforce'
@@ -31,9 +32,10 @@ export default async function StaffDetailPage({ params }: { params: Promise<{ id
       <PageHeader
         eyebrow="Staff profile hub"
         title={member.title}
-        description="One central adult/workforce journey profile for employment, safer recruitment, training, supervision, probation, wellbeing, evidence, documents and practice quality."
+        description="Adult working-life profile with safe operational summaries, plus deeper workforce journey detail below."
         action={<Link href="/staff" className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">Staff dashboard</Link>}
       />
+      <StaffProfileOsDashboard staffId={id} />
       <LiveDataStatus result={profileResult} />
       <section className="grid gap-4 md:grid-cols-4">
         <StatCard label="Training issues" value={(profile.training.summary.due || 0) + (profile.training.summary.expired || 0) + (profile.training.summary.missing || 0)} detail="Due, expired or missing" href={`/staff/training-matrix?staff_id=${encodeURIComponent(id)}`} />

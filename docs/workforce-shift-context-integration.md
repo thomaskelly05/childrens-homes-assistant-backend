@@ -11,6 +11,13 @@ Existing systems reused (not rebuilt):
 - **Intelligence actions:** `intelligence_action_service` for staff-assigned follow-up
 - **Handover:** `handover_intelligence_service`, draft sections, review queue
 
+## Staff Profile OS (adult working-life profile)
+
+- `services/staff_profile_os_service.py` — per-staff dashboard reusing workforce context, journey and actions
+- `/api/staff-profile-os/{staff_id}` and `/staff/[id]` UI (`StaffProfileOsDashboard`)
+- Handover and daily brief link to `/staff/{id}` when `shift_lead_id` or action owner is known
+- See `docs/staff-profile-os.md` and `docs/staff-profile-os-connection-map.md`
+
 ## What was reused
 
 - `services/workforce_context_service.py` — aggregates safe metadata from shift and workforce pressure services

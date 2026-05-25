@@ -11,8 +11,9 @@ The handover intelligence workspace (`/handover`) helps staff and managers prepa
 - Draft editor section `staff-shift-context` in `frontend-next/lib/handover/handover-sections.ts`
 - No raw supervision or HR notes in intelligence cards
 - Routes: `/staff`, `/shifts/current`, `/staff/training-matrix`, `/staff/supervision`
+- When `shift_lead_id` or action `staff_id` is known, links target `/staff/{id}` (Staff Profile OS adult working-life dashboard)
 
-See `docs/workforce-shift-context-integration.md` and `docs/workforce-shift-connection-map.md`.
+See `docs/workforce-shift-context-integration.md`, `docs/workforce-shift-connection-map.md`, and `docs/staff-profile-os.md`.
 
 ## Data sources
 

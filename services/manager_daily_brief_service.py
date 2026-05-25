@@ -565,6 +565,7 @@ class ManagerDailyBriefService:
         items: list[ManagerDailyBriefItem] = []
         tone: str = "neutral"
         summary = "Workforce summary is unavailable. Open staff or rota area to check manually."
+        shift = None
         try:
             dashboard = workforce_context_service.build_dashboard(current_user, conn=conn)
             shift = dashboard.shift
@@ -611,13 +612,41 @@ class ManagerDailyBriefService:
                     source="route_hint",
                 )
             )
+        items.append(
+            ManagerDailyBriefItem(
+                id="workforce:staff_profiles",
+                title="Staff profiles",
+                safe_summary="Open adult working-life staff profiles for shift, training and supervision indicators.",
+                priority="low",
+                route="/staff",
+                action_label="Open staff profiles",
+                source="staff_profile_os",
+            )
+        )
+        if shift and shift.shift_lead_id:
+            items.insert(
+                0,
+                ManagerDailyBriefItem(
+                    id=f"workforce:shift_lead_profile:{shift.shift_lead_id}",
+                    title="Shift lead profile",
+                    safe_summary=(
+                        f"Shift lead {shift.shift_lead_name or shift.shift_lead_id} — "
+                        "open staff profile for safe summary."
+                    ),
+                    priority="medium",
+                    route=f"/staff/{shift.shift_lead_id}",
+                    action_label="Open staff profile",
+                    source="staff_profile_os",
+                    metadata={"shift_lead_id": shift.shift_lead_id, "metadata_only": True},
+                ),
+            )
         return ManagerDailyBriefSection(
             id="workforce_shift",
             title="Workforce and shift context",
             summary=summary,
             items=items[:8],
-            route="/shifts/current",
-            action_label="Open current shift",
+            route="/staff",
+            action_label="Open staff profiles",
             tone=tone,
             metadata={"metadata_only": True, "no_raw_body": True},
         )

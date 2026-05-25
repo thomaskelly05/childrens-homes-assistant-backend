@@ -93,6 +93,29 @@ export function CareHubWorkforceContext() {
         >
           Open staff area
         </Link>
+        {dashboard?.shift?.shift_lead_id ? (
+          <Link
+            href={`/staff/${dashboard.shift.shift_lead_id}`}
+            data-testid="care-hub-open-shift-lead-profile"
+            className="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-black text-emerald-900"
+          >
+            Shift lead profile
+          </Link>
+        ) : null}
+        <Link
+          href="/staff/training-matrix"
+          data-testid="care-hub-open-training"
+          className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-800"
+        >
+          Training matrix
+        </Link>
+        <Link
+          href="/staff/supervision"
+          data-testid="care-hub-open-supervision"
+          className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-800"
+        >
+          Supervision
+        </Link>
         <Link
           href="/shifts/current"
           data-testid="care-hub-open-shifts"
