@@ -34,7 +34,7 @@ import {
   operationalUtilities,
   visibleOperationalNavigation
 } from '@/lib/navigation/operational-navigation'
-import { scopeNavigationFor, type ScopeNavItem } from '@/lib/navigation/scope-navigation'
+import { noScopeNavigation, scopeNavigationFor, type ScopeNavItem } from '@/lib/navigation/scope-navigation'
 import { routeRequiresScope, workspaceHrefForScope } from '@/lib/os-scope'
 import type { OrbContext } from '@/lib/orb/types'
 
@@ -68,6 +68,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { scope, menuSummary } = useOsScope()
   const { activeChild, breadcrumbs, childScopedHref, lockVersion, readyState } = useActiveChild()
   const hasOsScope = scope.scope_type === 'home' || scope.scope_type === 'child'
+  const scopeHasValidIds =
+    (scope.scope_type === 'home' && scope.selected_home_id != null) ||
+    (scope.scope_type === 'child' && scope.selected_child_id != null)
   const scopeFirstShell = hasOsScope || routeRequiresScope(pathname)
   const isSelectScopeRoute = pathname === '/select-scope' || pathname.startsWith('/select-scope/')
   const pathParts = pathname.split('/').filter(Boolean)
@@ -212,6 +215,17 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   if (isStandaloneOrb || isStandaloneAssistantRoute) return <>{children}</>
 
+  if (isSelectScopeRoute) {
+    return (
+      <div className="orb-os-shell min-h-screen bg-[#eef4fb] text-slate-900">
+        <main className="min-w-0" aria-label="Select workspace scope">
+          {children}
+        </main>
+        <MobileNav />
+      </div>
+    )
+  }
+
   if (isChildRecordingWorkspace || isRecordWorkspace) {
     return (
       <div className="orb-os-shell min-h-screen bg-[#eef4fb] text-slate-900">
@@ -225,7 +239,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     homeId: scope.selected_home_id,
     childId: scope.selected_child_id
   })
-  const useScopeMenu = hasOsScope && scopeFirstShell
+  const useScopeMenu = hasOsScope && scopeFirstShell && scopeHasValidIds
   const primaryNav = useScopeMenu ? [] : visibleNavItems.filter((item) => selectedId || !item.requiresChild)
   const secondaryNav =
     scope.scope_type === 'child' && scope.selected_child_id
@@ -233,8 +247,11 @@ export function AppShell({ children }: { children: ReactNode }) {
       : selectedId
         ? childWorkspaceNavigation.map((item) => ({ label: item.label, href: item.href(selectedId) }))
         : []
+  const safeScopeNavItems = useScopeMenu
+    ? scopeNavItems.filter((item) => item.href && !item.href.includes('undefined') && !item.href.includes('null'))
+    : noScopeNavigation()
   const navigationGroups: Array<{ label: string; items: ScopeNavItem[] | ReturnType<typeof visibleOperationalNavigation> }> = useScopeMenu
-    ? [{ label: scope.scope_type === 'child' ? 'Child workspace' : 'Home workspace', items: scopeNavItems }]
+    ? [{ label: scope.scope_type === 'child' ? 'Child workspace' : 'Home workspace', items: safeScopeNavItems }]
     : [
         { label: 'On shift', domains: ['command-centre', 'children', 'daily-care', 'chronology', 'actions', 'orb'] },
         { label: 'Records & evidence', domains: ['documents'] },
