@@ -7,7 +7,7 @@ FILES = [
     REPO_ROOT / "frontend-next" / "lib" / "navigation" / "scope-navigation.ts",
     REPO_ROOT / "frontend-next" / "components" / "indicare" / "app-shell.tsx",
     REPO_ROOT / "frontend-next" / "components" / "mobile-nav.tsx",
-    REPO_ROOT / "frontend-next" / "app" / "homes" / "[home_id]" / "workspace" / "page.tsx",
+    REPO_ROOT / "frontend-next" / "app" / "homes" / "[id]" / "workspace" / "page.tsx",
 ]
 
 
