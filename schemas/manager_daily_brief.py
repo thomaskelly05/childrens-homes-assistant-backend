@@ -54,7 +54,7 @@ class ManagerDailyBriefRoutes(BaseModel):
     reviews: str = "/record/reviews"
     governance: str = "/record/governance"
     actions: str = "/actions"
-    handover: str = "/handover/current"
+    handover: str = "/handover"
     briefing: str = "/command-centre/briefing"
     care_hub: str = "/command-centre"
     orb: str = "/assistant/orb?mode=manager_daily_brief"

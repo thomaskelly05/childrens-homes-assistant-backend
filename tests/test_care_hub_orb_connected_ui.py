@@ -16,6 +16,7 @@ CARE_HUB_FILES = [
     FRONTEND / "components" / "command-centre" / "care-hub-manager-daily-brief.tsx",
     FRONTEND / "components" / "command-centre" / "care-hub-notification-oversight.tsx",
     FRONTEND / "components" / "command-centre" / "care-hub-isn-digest.tsx",
+    FRONTEND / "components" / "command-centre" / "care-hub-handover.tsx",
     FRONTEND / "components" / "command-centre" / "intelligence-actions-card.tsx",
 ]
 
@@ -78,6 +79,18 @@ def test_care_hub_isn_digest_marker():
     assert "isnOrbHref" in digest
     isn_client = _read(FRONTEND / "lib" / "os-api" / "isn-notifications.ts")
     assert "/assistant/orb" in isn_client
+
+
+def test_care_hub_shift_handover_card():
+    page = _read(FRONTEND / "app" / "command-centre" / "page.tsx")
+    card = _read(FRONTEND / "components" / "command-centre" / "care-hub-handover.tsx")
+    assert "CareHubHandover" in page
+    assert "care-hub-shift-handover" in card
+    assert "Shift handover" in card
+    assert "Prepare handover" in card
+    assert "Open current handover" in card
+    assert "Ask OS ORB" in card
+    assert "/handover" in card
 
 
 def test_care_hub_manager_daily_brief_marker():

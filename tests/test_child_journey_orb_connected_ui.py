@@ -62,6 +62,9 @@ def test_child_journey_recording_cards_include_orb_hints():
     assert "safeguarding" in routes
     assert "physical-intervention" in routes
     assert "All child recording forms" in routes
+    assert "Handover notes for this child" in routes
+    assert "Handover intelligence for this child" in routes
+    assert "/handover?child_id=" in routes
 
 
 def test_child_journey_page_composes_workspace_sections():

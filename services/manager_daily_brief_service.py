@@ -545,44 +545,81 @@ class ManagerDailyBriefService:
     def build_handover_section(
         self, current_user: dict[str, Any], conn: Any | None = None
     ) -> ManagerDailyBriefSection:
-        _ = current_user, conn
-        items = [
+        from services.handover_intelligence_service import handover_intelligence_service
+
+        items: list[ManagerDailyBriefItem] = [
             ManagerDailyBriefItem(
                 id="handover:prepare",
                 title="Prepare handover",
-                safe_summary="Complete shift handover with recording and safeguarding context.",
+                safe_summary="Open the shift handover workspace with safe intelligence summaries.",
                 priority="medium",
-                route="/handover/current",
+                route="/handover",
                 action_label="Prepare handover",
                 source="handover",
             ),
-            ManagerDailyBriefItem(
-                id="handover:alerts",
-                title="Review recording alerts before handover",
-                safe_summary="Check open recording alerts before signing off the shift.",
-                priority="high",
-                route="/record/alerts",
-                action_label="Open alerts",
-                source="recording_alerts",
-            ),
-            ManagerDailyBriefItem(
-                id="handover:changes",
-                title="Check changes requested before shift end",
-                safe_summary="Follow up drafts where manager requested changes.",
-                priority="medium",
-                route="/record/reviews",
-                action_label="Open review queue",
-                source="recording_review",
-            ),
         ]
+        tone = "attention"
+        summary = "Review recording alerts, safeguarding network and reviews before handover."
+        try:
+            dashboard = handover_intelligence_service.build_dashboard(current_user, conn=conn)
+            summary = dashboard.summary or summary
+            if dashboard.urgent_count:
+                tone = "urgent"
+            for section in dashboard.sections:
+                for intel in section.items[:3]:
+                    if intel.section_type in (
+                        "recording_alerts",
+                        "reviews",
+                        "safeguarding",
+                        "actions",
+                    ):
+                        items.append(
+                            ManagerDailyBriefItem(
+                                id=f"handover:{intel.id}",
+                                title=intel.title,
+                                safe_summary=intel.safe_summary,
+                                priority=intel.priority,
+                                route=intel.route,
+                                action_label=intel.action_label or "Open",
+                                source=intel.source,
+                                child_id=intel.child_id,
+                                child_name=intel.child_name,
+                                metadata={"no_raw_body": True},
+                            )
+                        )
+            items = items[:10]
+        except Exception as exc:
+            logger.debug("brief_handover_intelligence_skipped: %s", exc)
+            items.extend(
+                [
+                    ManagerDailyBriefItem(
+                        id="handover:alerts",
+                        title="Review recording alerts before handover",
+                        safe_summary="Check open recording alerts before signing off the shift.",
+                        priority="high",
+                        route="/record/alerts",
+                        action_label="Open alerts",
+                        source="recording_alerts",
+                    ),
+                    ManagerDailyBriefItem(
+                        id="handover:changes",
+                        title="Check changes requested before shift end",
+                        safe_summary="Follow up drafts where manager requested changes.",
+                        priority="medium",
+                        route="/record/reviews",
+                        action_label="Open review queue",
+                        source="recording_review",
+                    ),
+                ]
+            )
         return ManagerDailyBriefSection(
             id="handover",
             title="Handover points",
-            summary="Review recording alerts and changes requested before handover.",
+            summary=summary,
             items=items,
-            route="/handover/current",
+            route="/handover",
             action_label="Prepare handover",
-            tone="attention",
+            tone=tone,
         )
 
     def build_child_journey_section(
