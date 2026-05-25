@@ -498,6 +498,12 @@ def test_standalone_orb_interruptibility():
         assert marker in sources, f"interruptibility marker missing: {marker}"
 
 
+def test_standalone_orb_does_not_import_workforce_context():
+    sources = _read(ORB_PAGE) + _read(STANDALONE_CLIENT) + _read(ORB_COMPANION)
+    for marker in ("workforce-context", "/api/workforce/context", "shift_id", "staff_id"):
+        assert marker not in sources, f"standalone ORB must not reference workforce OS context: {marker}"
+
+
 def test_standalone_orb_only_uses_standalone_api_paths():
     sources = _read(ORB_COMPANION) + _read(STANDALONE_CLIENT)
     forbidden = [

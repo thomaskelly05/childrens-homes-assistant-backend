@@ -35,4 +35,8 @@
 - Unified audit export for review events.
 - Notification tuning per home.
 
-See also: `docs/handover-intelligence-workspace.md`, `docs/handover-workflow-map.md`.
+## Workforce context in handover review
+
+Managers preparing or reviewing handover should use the **Staff and shift context** intelligence section (metadata only). Workforce HR detail remains on permissioned staff routes — not in review queue cards.
+
+See also: `docs/handover-intelligence-workspace.md`, `docs/handover-workflow-map.md`, `docs/workforce-shift-context-integration.md`.

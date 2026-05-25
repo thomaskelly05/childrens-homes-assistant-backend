@@ -71,6 +71,14 @@ Not in scope. Existing Connect notification tables remain unchanged. Future work
 
 Operational bell items support read/acknowledge/assign/resolve/archive via `POST /api/notifications/{notification_key}/action`. See `docs/os-notification-system.md`.
 
+## Workforce and shift context (integration pass)
+
+- Brief section **Workforce and shift context** (`workforce_shift`) via `manager_daily_brief_service.build_workforce_section`
+- Field `workforce_summary` on `ManagerDailyBrief`
+- Care Hub card `CareHubWorkforceContext` (`data-testid="care-hub-workforce-shift"`)
+- Bell: low-noise workforce indicators (supervision/training/gap/action counts) from `os_notification_adapter_service._workforce_indicator_items`
+- API: `/api/workforce/context/dashboard` — metadata only
+
 ## Future roadmap
 
 1. ~~Persist brief “reviewed” state per user/home in SQL.~~ **Done** (`sql/086_manager_daily_brief_reviews.sql`).

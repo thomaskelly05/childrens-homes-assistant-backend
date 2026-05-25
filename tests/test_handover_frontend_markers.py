@@ -15,6 +15,7 @@ HANDOVER_FILES = [
     FRONTEND / "components" / "handover" / "handover-orb-support.tsx",
     FRONTEND / "components" / "command-centre" / "care-hub-handover.tsx",
     FRONTEND / "lib" / "os-api" / "handover-intelligence.ts",
+    FRONTEND / "lib" / "handover" / "handover-sections.ts",
 ]
 
 
@@ -38,6 +39,7 @@ def test_handover_page_markers():
         "Timeline linked",
         "Ask OS ORB",
         "metadata and safe summaries",
+        "Staff and shift context",
     ):
         assert marker in combined, f"Missing marker: {marker}"
 

@@ -19,6 +19,7 @@ HandoverSectionType = Literal[
     "missing_risk",
     "environment",
     "staff_wellbeing",
+    "staff_shift",
     "manager_notes",
     "next_shift_priorities",
 ]

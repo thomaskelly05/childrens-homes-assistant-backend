@@ -311,6 +311,104 @@ class OsNotificationAdapterService:
             logger.debug("intelligence_action_notification_skipped: %s", exc)
         return items[:limit]
 
+    def _workforce_indicator_items(
+        self, current_user: dict[str, Any], conn: Any | None, *, limit: int
+    ) -> list[OsNotificationItem]:
+        """Low-noise workforce indicators — counts only, no HR/supervision bodies."""
+        items: list[OsNotificationItem] = []
+        if not _is_manager_view(current_user):
+            return items
+        try:
+            from services.workforce_context_service import workforce_context_service
+
+            dashboard = workforce_context_service.build_dashboard(current_user, conn=conn)
+            for wf in dashboard.supervision[:1]:
+                if "overdue" in wf.id.lower() or wf.priority in ("high", "urgent"):
+                    items.append(
+                        OsNotificationItem(
+                            id="workforce:supervision_overdue",
+                            notification_key="workforce:supervision_overdue",
+                            type="governance_notice",
+                            title="Supervision overdue indicator",
+                            safe_summary=wf.safe_summary,
+                            severity=wf.priority if wf.priority in ("low", "medium", "high", "urgent") else "medium",
+                            status="unread",
+                            unread=True,
+                            route=wf.route,
+                            action_label=wf.action_label or "Open supervision",
+                            source="workforce_context",
+                            category="governance",
+                            related_type="supervision_indicator",
+                            created_at=_now_iso(),
+                            metadata={"no_raw_body": True, "metadata_only": True},
+                        )
+                    )
+            for wf in dashboard.training[:1]:
+                if wf.priority in ("high", "urgent") or "compliance" in wf.title.lower():
+                    items.append(
+                        OsNotificationItem(
+                            id="workforce:training_indicator",
+                            notification_key="workforce:training_indicator",
+                            type="governance_notice",
+                            title="Training compliance indicator",
+                            safe_summary=wf.safe_summary,
+                            severity=wf.priority if wf.priority in ("low", "medium", "high", "urgent") else "medium",
+                            status="unread",
+                            unread=True,
+                            route=wf.route,
+                            action_label=wf.action_label or "Open training matrix",
+                            source="workforce_context",
+                            category="governance",
+                            related_type="training_indicator",
+                            created_at=_now_iso(),
+                            metadata={"no_raw_body": True, "metadata_only": True},
+                        )
+                    )
+            for gap in dashboard.shift.gaps[:1]:
+                items.append(
+                    OsNotificationItem(
+                        id="workforce:staffing_gap",
+                        notification_key="workforce:staffing_gap",
+                        type="governance_notice",
+                        title="Shift staffing gap",
+                        safe_summary=gap,
+                        severity="medium",
+                        status="unread",
+                        unread=True,
+                        route=dashboard.routes.rota,
+                        action_label="Check rota",
+                        source="workforce_context",
+                        category="governance",
+                        related_type="staffing_gap",
+                        created_at=_now_iso(),
+                        metadata={"no_raw_body": True, "metadata_only": True},
+                    )
+                )
+            for wf in dashboard.actions[:1]:
+                if wf.priority in ("high", "urgent"):
+                    items.append(
+                        OsNotificationItem(
+                            id="workforce:staff_action",
+                            notification_key="workforce:staff_action",
+                            type="intelligence_action_due",
+                            title="Staff action follow-up",
+                            safe_summary=wf.safe_summary,
+                            severity=wf.priority,
+                            status="unread",
+                            unread=True,
+                            route=wf.route,
+                            action_label=wf.action_label or "Open actions",
+                            source="workforce_context",
+                            category="action",
+                            related_type="staff_action",
+                            created_at=_now_iso(),
+                            metadata={"no_raw_body": True, "metadata_only": True},
+                        )
+                    )
+        except Exception as exc:
+            logger.debug("workforce_notification_skipped: %s", exc)
+        return items[:limit]
+
     def _handover_draft_items(
         self, current_user: dict[str, Any], conn: Any | None, *, limit: int
     ) -> list[OsNotificationItem]:
@@ -448,6 +546,7 @@ class OsNotificationAdapterService:
                 self._review_queue_items(current_user, conn, limit=3),
                 self._intelligence_action_items(current_user, conn, limit=2),
                 self._governance_items(current_user, conn, limit=2),
+                self._workforce_indicator_items(current_user, conn, limit=2),
                 self._handover_draft_items(current_user, conn, limit=2),
             ):
                 for item in extra:

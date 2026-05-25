@@ -4,6 +4,16 @@
 
 The handover intelligence workspace (`/handover`) helps staff and managers prepare, review and complete shift handovers using **safe metadata summaries** from existing OS surfaces. It does not replace professional judgement or formal young-person handover records.
 
+## Workforce and shift context (integration pass)
+
+- Section **Staff and shift context** (`staff_shift`) from `workforce_context_service`
+- Safe metadata: shift lead, staff on shift count, staffing gaps, action/training/supervision indicators
+- Draft editor section `staff-shift-context` in `frontend-next/lib/handover/handover-sections.ts`
+- No raw supervision or HR notes in intelligence cards
+- Routes: `/staff`, `/shifts/current`, `/staff/training-matrix`, `/staff/supervision`
+
+See `docs/workforce-shift-context-integration.md` and `docs/workforce-shift-connection-map.md`.
+
 ## Data sources
 
 - Recording alerts (`recording_alert_service.build_digest`)

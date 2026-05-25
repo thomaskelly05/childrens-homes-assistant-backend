@@ -211,6 +211,7 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
             "routers.os_notification_routes",
             "routers.manager_daily_brief_routes",
             "routers.handover_intelligence_routes",
+            "routers.workforce_context_routes",
         ),
         notes="Schema-backed experience bundles for home, child profile and adult workspace surfaces.",
     ),

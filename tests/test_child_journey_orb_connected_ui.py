@@ -54,6 +54,8 @@ def test_child_journey_routes_use_assistant_orb_with_child_context():
     assert "young_person_id" in routes
     assert "/handover/reviews?child_id=" in routes
     assert "/handover?child_id=" in routes
+    assert "childJourneyStaffActionsHref" in routes
+    assert "Staff actions" in routes
 
 
 def test_child_journey_recording_cards_include_orb_hints():

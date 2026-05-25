@@ -30,6 +30,7 @@ export function HandoverIntelligencePanel({ dashboard }: { dashboard: HandoverIn
   const routes = dashboard.routes || {}
 
   const sectionOrder = [
+    'staff_shift',
     'safeguarding_isn',
     'recording_alerts',
     'reviews',
