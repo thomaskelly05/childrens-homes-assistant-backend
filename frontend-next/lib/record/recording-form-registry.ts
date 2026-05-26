@@ -2,6 +2,13 @@ import type { RecordCardId } from '@/lib/record/recording-hub'
 import { childWorkflowHref } from '@/lib/record/recording-hub'
 import { RECORDING_CATALOGUE_EXTRA_FORMS } from '@/lib/record/recording-form-catalogue-entries'
 import type { RecordingWorkflowStatus } from '@/lib/record/recording-form-catalogue-helpers'
+import {
+  formalRouteClassificationForForm,
+  type FormalRouteClassification
+} from '@/lib/record/recording-form-metadata'
+import { lifecycleForForm, type RecordingFormLifecycleConfig } from '@/lib/record/recording-form-lifecycle'
+import { sccifAlignmentForForm, type RecordingFormSccifMeta } from '@/lib/record/recording-form-sccif-alignment'
+import { therapeuticPromptsForForm } from '@/lib/record/recording-form-therapeutic-defaults'
 
 export type { RecordingWorkflowStatus } from '@/lib/record/recording-form-catalogue-helpers'
 export {
@@ -83,6 +90,16 @@ export type RecordingFormDefinition = {
   relatedEvidenceAreas: string[]
   gap?: string
   recommendedNextAction?: string
+  /** Derived lifecycle behaviour for archive/chronology/plan/LifeEcho. */
+  lifecycle?: RecordingFormLifecycleConfig
+  /** SCCIF / Quality Standards relevance — evidence support only. */
+  sccifAlignment?: RecordingFormSccifMeta
+  /** Formal backend route classification. */
+  formalRouteClassification?: FormalRouteClassification
+  /** Universal therapeutic prompt list for this form. */
+  universalTherapeuticPrompts?: string[]
+  /** Whether a structured high-risk template exists in backend registry. */
+  hasStructuredTemplate?: boolean
 }
 
 export const RECORDING_FORM_CATEGORIES: Array<{ id: RecordingFormCategory; label: string }> = [
@@ -99,12 +116,34 @@ export const RECORDING_FORM_CATEGORIES: Array<{ id: RecordingFormCategory; label
   { id: 'documents_evidence', label: 'Documents and evidence' }
 ]
 
+const STRUCTURED_TEMPLATE_FORM_IDS = new Set([
+  'safeguarding-concern',
+  'disclosure',
+  'allegation',
+  'physical-intervention',
+  'injury-body-map',
+  'body-map',
+  'medication-error',
+  'medication-note-error',
+  'return-conversation',
+  'room-search',
+  'complaint-concern',
+  'police-involvement',
+  'hospital-emergency',
+  'child-on-child-concern',
+  'exploitation-concern',
+  'damage-repair',
+  'staff-debrief',
+  'incident',
+  'daily-note'
+])
+
 /** UI filter chips for workflow / sensitivity (cross-cutting). */
 export const RECORDING_STATUS_FILTERS: Array<{ id: string; label: string; match: (form: RecordingFormDefinition) => boolean }> = [
   {
     id: 'formal_submit',
     label: 'Formal submit supported',
-    match: (form) => form.workflowStatus === 'formal_submit_supported'
+    match: (form) => form.workflowStatus === 'formal_submit_supported' || form.formalRouteClassification === 'SUPPORTED_NOW'
   },
   {
     id: 'draft_workspace',
@@ -120,6 +159,38 @@ export const RECORDING_STATUS_FILTERS: Array<{ id: string; label: string; match:
     id: 'safeguarding_sensitive',
     label: 'Safeguarding sensitive',
     match: (form) => form.safeguardingSensitive || form.workflowStatus === 'safeguarding_sensitive'
+  },
+  {
+    id: 'structured_template',
+    label: 'Structured template',
+    match: (form) => Boolean(form.hasStructuredTemplate)
+  },
+  {
+    id: 'formal_route',
+    label: 'Formal route',
+    match: (form) => form.formalRouteClassification === 'SUPPORTED_NOW'
+  },
+  {
+    id: 'draft_only',
+    label: 'Draft only',
+    match: (form) => form.formalRouteClassification === 'DRAFT_ONLY'
+  },
+  {
+    id: 'archive_signoff',
+    label: 'Archive after sign-off',
+    match: (form) => form.lifecycle?.archive_behaviour === 'signed_off_only' || form.lifecycle?.archive_behaviour === 'restricted_summary'
+  },
+  {
+    id: 'plan_impact',
+    label: 'Plan impact',
+    match: (form) => form.lifecycle != null && form.lifecycle.plan_impact_behaviour !== 'none'
+  },
+  {
+    id: 'lifeecho',
+    label: 'LifeEcho possible',
+    match: (form) =>
+      form.lifecycle?.lifeecho_behaviour === 'positive_safe_only' ||
+      form.lifecycle?.lifeecho_behaviour === 'review_required'
   }
 ]
 
@@ -172,7 +243,18 @@ function enrichRecordingForm(form: Omit<RecordingFormDefinition, 'workflowStatus
           'Next steps clear',
           'Adult remains responsible for the record'
         ].slice(0, 5)
-  return { ...form, workflowStatus, qualityChecklist } as RecordingFormDefinition
+  const enriched = { ...form, workflowStatus, qualityChecklist } as RecordingFormDefinition
+  enriched.lifecycle = lifecycleForForm(enriched.id, enriched.category)
+  enriched.sccifAlignment = sccifAlignmentForForm(
+    enriched.id,
+    enriched.category,
+    enriched.relatedQualityStandards,
+    enriched.relatedEvidenceAreas
+  )
+  enriched.formalRouteClassification = formalRouteClassificationForForm(enriched)
+  enriched.universalTherapeuticPrompts = therapeuticPromptsForForm(enriched.id, enriched.title)
+  enriched.hasStructuredTemplate = STRUCTURED_TEMPLATE_FORM_IDS.has(enriched.id)
+  return enriched
 }
 
 function recordWorkspaceRoute(type: RecordingWorkspaceType, childId?: string, formId?: string) {

@@ -225,9 +225,35 @@ function CatalogueFormCard({
             Review
           </span>
         ) : null}
-        {form.safeguardingSensitive ? (
-          <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.08em] text-rose-900">
-            Safeguarding
+        {form.hasStructuredTemplate ? (
+          <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.08em] text-indigo-900">
+            Structured
+          </span>
+        ) : null}
+        {form.formalRouteClassification === 'SUPPORTED_NOW' ? (
+          <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.08em] text-emerald-900">
+            Formal route
+          </span>
+        ) : null}
+        {form.formalRouteClassification === 'DRAFT_ONLY' ? (
+          <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.08em] text-slate-700">
+            Draft only
+          </span>
+        ) : null}
+        {form.lifecycle && form.lifecycle.archive_behaviour !== 'not_applicable' ? (
+          <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.08em] text-blue-900">
+            Archive after sign-off
+          </span>
+        ) : null}
+        {form.lifecycle && form.lifecycle.plan_impact_behaviour !== 'none' ? (
+          <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.08em] text-violet-900">
+            Plan impact
+          </span>
+        ) : null}
+        {(form.lifecycle?.lifeecho_behaviour === 'positive_safe_only' ||
+          form.lifecycle?.lifeecho_behaviour === 'review_required') ? (
+          <span className="rounded-full bg-cyan-100 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.08em] text-cyan-900">
+            LifeEcho possible
           </span>
         ) : null}
       </div>

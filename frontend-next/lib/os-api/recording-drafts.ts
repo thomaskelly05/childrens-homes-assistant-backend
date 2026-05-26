@@ -51,6 +51,12 @@ export type RecordingDraftRecord = {
   created_at: string
   updated_at: string
   metadata: Record<string, unknown>
+  record_date?: string | null
+  event_date?: string | null
+  event_time?: string | null
+  signed_off_by_user_id?: string | null
+  signed_off_by_name?: string | null
+  signed_off_at?: string | null
   structured_template_id?: string | null
   structured_template_version?: string | null
   structured_data?: Record<string, unknown>
@@ -97,6 +103,9 @@ export type RecordingDraftCreatePayload = {
   checklist_status?: Record<string, unknown>
   metadata?: Record<string, unknown>
   structured_data?: Record<string, unknown>
+  record_date?: string
+  event_date?: string
+  event_time?: string
 }
 
 export type RecordingDraftUpdatePayload = Partial<RecordingDraftCreatePayload> & {

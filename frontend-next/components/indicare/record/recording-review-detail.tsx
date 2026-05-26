@@ -12,6 +12,10 @@ import {
   operationalOrbReviewHref,
   type RecordingReviewDetail
 } from '@/lib/os-api/recording-reviews'
+import { RecordingFormLifecycleOutcome } from '@/components/indicare/record/recording-form-lifecycle-outcome'
+import { RecordingFormReviewStatus } from '@/components/indicare/record/recording-form-review-status'
+import { parseFormRecordMetadata } from '@/lib/record/recording-form-metadata'
+import { lifecycleForForm } from '@/lib/record/recording-form-lifecycle'
 
 function copyPromptToClipboard(prompt: string) {
   if (typeof navigator !== 'undefined' && navigator.clipboard) {
@@ -29,6 +33,11 @@ export function RecordingReviewDetailPanel({
   const draft = detail.draft
   const childId = draft.child_id != null ? String(draft.child_id) : undefined
   const draftHref = `/record?draft_id=${encodeURIComponent(draft.id)}`
+  const formRecord = parseFormRecordMetadata(draft.metadata)
+  const eventDate = draft.event_date || formRecord?.event_date
+  const writtenBy = draft.created_by_name || formRecord?.written_by_name
+  const lifecycle = lifecycleForForm(draft.form_id || draft.recording_type, draft.category || undefined)
+  const signOffMeta = draft.metadata?.review_signoff as { lifecycle?: { archive_record_id?: string } } | undefined
 
   return (
     <section data-testid="recording-review-detail" className="space-y-4">
@@ -36,15 +45,24 @@ export function RecordingReviewDetailPanel({
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
             <h2 className="text-lg font-black text-slate-950">{draft.title?.trim() || 'Untitled draft'}</h2>
-            <p className="mt-1 text-xs font-semibold text-slate-600">
+            <p className="mt-1 text-xs font-semibold text-slate-600" data-testid="recording-review-form-type">
               {draft.recording_type.replace(/-/g, ' ')}
               {draft.child_name ? ` · ${draft.child_name}` : ''}
             </p>
+            <div className="mt-2 flex flex-wrap gap-3 text-xs font-semibold text-slate-600">
+              {eventDate ? (
+                <span data-testid="recording-review-event-date">Event date: {eventDate}</span>
+              ) : null}
+              {writtenBy ? (
+                <span data-testid="recording-review-written-by">Written by: {writtenBy}</span>
+              ) : null}
+            </div>
           </div>
-          <div className="flex flex-wrap gap-1.5">
-            <RecordingReviewStatusBadge status={draft.review_status} />
-            <RecordingReviewPriorityBadge priority={(draft.metadata?.review_priority as string) || 'medium'} />
-          </div>
+          <RecordingFormReviewStatus
+            reviewStatus={draft.review_status}
+            managerReviewRequired={draft.manager_review_required}
+            safeguardingReviewRequired={draft.safeguarding_review_required}
+          />
         </div>
 
         <p className="mt-3 text-xs font-semibold text-slate-500" data-testid="recording-review-manager-judgement-detail">
@@ -117,6 +135,37 @@ export function RecordingReviewDetailPanel({
             <pre className="mt-1 overflow-x-auto rounded-lg bg-slate-100 p-2 text-[10px]">
               {JSON.stringify(draft.checklist_status, null, 2)}
             </pre>
+          </div>
+        ) : null}
+
+        {(formRecord?.child_voice_present != null || formRecord?.adult_response_present != null) ? (
+          <div className="mt-3 flex flex-wrap gap-2 text-xs font-black" data-testid="recording-review-therapeutic-checklist">
+            <span className={formRecord.child_voice_present ? 'text-emerald-800' : 'text-amber-800'}>
+              Child voice {formRecord.child_voice_present ? 'present' : 'not detected'}
+            </span>
+            <span className={formRecord.adult_response_present ? 'text-emerald-800' : 'text-amber-800'}>
+              Adult response {formRecord.adult_response_present ? 'present' : 'not detected'}
+            </span>
+          </div>
+        ) : null}
+
+        {childId ? (
+          <div className="mt-4" data-testid="recording-review-lifecycle-outcome">
+            <RecordingFormLifecycleOutcome
+              lifecycle={lifecycle}
+              links={{
+                archiveHref: `/young-people/${childId}/archive`,
+                chronologyHref: `/young-people/${childId}/chronology`,
+                planImpactsHref: `/young-people/${childId}/plan-impacts`,
+                lifeechoHref: `/young-people/${childId}/lifeecho`,
+                formalRecordId: draft.linked_record_id || undefined,
+                archiveRecordId: signOffMeta?.lifecycle?.archive_record_id
+              }}
+              signOffSummary={
+                (draft.metadata?.review_signoff as { outcome?: string })?.outcome ||
+                (detail.submission_target as { route_hint?: string })?.route_hint
+              }
+            />
           </div>
         ) : null}
 
@@ -208,11 +257,20 @@ export function RecordingReviewDetailPanel({
           </Link>
           {childId ? (
             <Link
-              href={`/young-people/${encodeURIComponent(childId)}/journey`}
-              data-testid="recording-review-open-child-journey"
+              href={`/young-people/${encodeURIComponent(childId)}/workspace`}
+              data-testid="recording-review-open-child-workspace"
               className="inline-flex min-h-9 items-center rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-black text-blue-950"
             >
-              Open child journey
+              Open child workspace
+            </Link>
+          ) : null}
+          {childId && draft.linked_record_id ? (
+            <Link
+              href={`/young-people/${encodeURIComponent(childId)}/archive`}
+              data-testid="recording-review-open-archive"
+              className="inline-flex min-h-9 items-center rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-black text-sky-950"
+            >
+              Open archive
             </Link>
           ) : null}
           <Link

@@ -26,6 +26,7 @@ from schemas.recording_drafts import (
     RecordingDraftSubmitResponse,
     RecordingDraftUpdate,
 )
+from schemas.recording_form_metadata import default_metadata_for_form, merge_form_metadata
 from schemas.recording_submission import RecordingSubmissionRequest, RecordingSubmissionResponse
 from services.ai_context_minimisation_service import ai_context_minimisation_service
 from services.ai_privacy_guard_service import ai_privacy_guard_service
@@ -94,6 +95,70 @@ def _user_role(current_user: dict[str, Any]) -> str:
 
 def _is_manager_role(current_user: dict[str, Any]) -> bool:
     return _user_role(current_user) in {r.lower() for r in MANAGER_ROLES}
+
+
+def _today_iso_date() -> str:
+    return datetime.now(timezone.utc).date().isoformat()
+
+
+def _build_initial_form_metadata(
+    payload: RecordingDraftCreate,
+    current_user: dict[str, Any],
+    *,
+    home_id: int | None,
+) -> dict[str, Any]:
+    today = _today_iso_date()
+    record_date = payload.record_date or today
+    event_date = payload.event_date or today
+    base = default_metadata_for_form(
+        form_id=payload.form_id or payload.recording_type,
+        form_type=payload.recording_type,
+        category=payload.category,
+        child_id=payload.child_id,
+        home_id=home_id,
+        written_by_user_id=_user_id(current_user),
+        written_by_name=_user_display_name(current_user),
+        written_by_role=_user_role(current_user),
+        manager_review_required=payload.manager_review_required,
+        safeguarding_review_required=payload.safeguarding_review_required,
+        privacy_sensitive=payload.privacy_sensitive,
+    )
+    base["form_record"]["record_date"] = record_date
+    base["form_record"]["event_date"] = event_date
+    if payload.event_time:
+        base["form_record"]["event_time"] = payload.event_time
+    return merge_form_metadata(payload.metadata, base["form_record"])
+
+
+def _patch_form_metadata_on_update(
+    existing_metadata: dict[str, Any],
+    payload: RecordingDraftUpdate,
+    current_user: dict[str, Any],
+) -> dict[str, Any]:
+    patch: dict[str, Any] = {
+        "last_edited_by_user_id": _user_id(current_user),
+        "last_edited_by_name": _user_display_name(current_user),
+        "updated_at": _now_iso(),
+    }
+    if payload.event_date is not None:
+        patch["event_date"] = payload.event_date
+    if payload.record_date is not None:
+        patch["record_date"] = payload.record_date
+    if payload.event_time is not None:
+        patch["event_time"] = payload.event_time
+
+    if payload.metadata:
+        result = merge_form_metadata(existing_metadata, patch)
+        for key, value in payload.metadata.items():
+            if key == "form_record":
+                nested = dict(result.get("form_record") or {})
+                if isinstance(value, dict):
+                    nested.update(value)
+                result["form_record"] = nested
+            else:
+                result[key] = value
+        return result
+    return merge_form_metadata(existing_metadata, patch)
 
 
 def _resolve_review_status(
@@ -404,6 +469,12 @@ class RecordingDraftService:
             submitted_at=_iso_dt(row.get("submitted_at")),
             reviewed_at=_iso_dt(row.get("reviewed_at")),
             archived_at=_iso_dt(row.get("archived_at")),
+            record_date=row.get("record_date") or _parse_json(row.get("metadata"), {}).get("form_record", {}).get("event_date"),
+            event_date=row.get("event_date") or _parse_json(row.get("metadata"), {}).get("form_record", {}).get("event_date"),
+            event_time=row.get("event_time"),
+            signed_off_by_user_id=row.get("signed_off_by_user_id"),
+            signed_off_by_name=row.get("signed_off_by_name"),
+            signed_off_at=_iso_dt(row.get("signed_off_at")),
             created_at=_iso_dt(row.get("created_at")) or _now_iso(),
             updated_at=_iso_dt(row.get("updated_at")) or _now_iso(),
             metadata=_parse_json(row.get("metadata"), {}),
@@ -468,7 +539,10 @@ class RecordingDraftService:
             "privacy_guard": privacy_guard,
             "redaction_summary": redaction_summary,
             "minimisation_summary": minimisation_summary,
-            "metadata": payload.metadata,
+            "metadata": _build_initial_form_metadata(payload, current_user, home_id=home_id),
+            "record_date": payload.record_date or _today_iso_date(),
+            "event_date": payload.event_date or _today_iso_date(),
+            "event_time": payload.event_time,
             "structured_data": payload.structured_data,
             "created_at": now,
             "updated_at": now,
@@ -576,6 +650,14 @@ class RecordingDraftService:
         updates["redaction_summary"] = redaction_summary
         updates["minimisation_summary"] = minimisation_summary
         updates["updated_at"] = _now_iso()
+        existing_meta = _parse_json(existing.metadata, {})
+        updates["metadata"] = _patch_form_metadata_on_update(existing_meta, payload, current_user)
+        if payload.event_date is not None:
+            updates["event_date"] = payload.event_date
+        if payload.record_date is not None:
+            updates["record_date"] = payload.record_date
+        if payload.event_time is not None:
+            updates["event_time"] = payload.event_time
 
         manager_flag = updates.get("manager_review_required", existing.manager_review_required)
         safeguarding_flag = updates.get("safeguarding_review_required", existing.safeguarding_review_required)

@@ -6,6 +6,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from schemas.recording_form_metadata import RecordingFormMetadata, merge_form_metadata
+
 RecordingDraftStatus = Literal["draft", "ready_for_review", "submitted", "archived", "deleted"]
 
 RecordingDraftReviewStatus = Literal[
@@ -65,6 +67,9 @@ class RecordingDraftCreate(BaseModel):
     checklist_status: dict[str, Any] = Field(default_factory=dict)
     structured_data: dict[str, Any] = Field(default_factory=dict)
     metadata: dict[str, Any] = Field(default_factory=dict)
+    record_date: str | None = None
+    event_date: str | None = None
+    event_time: str | None = None
 
 
 class RecordingDraftUpdate(BaseModel):
@@ -92,6 +97,9 @@ class RecordingDraftUpdate(BaseModel):
     checklist_status: dict[str, Any] | None = None
     structured_data: dict[str, Any] | None = None
     metadata: dict[str, Any] | None = None
+    record_date: str | None = None
+    event_date: str | None = None
+    event_time: str | None = None
 
 
 class RecordingDraftRecord(BaseModel):
@@ -144,6 +152,12 @@ class RecordingDraftRecord(BaseModel):
     approved_at: str | None = None
     safeguarding_escalation_at: str | None = None
     archived_at: str | None = None
+    record_date: str | None = None
+    event_date: str | None = None
+    event_time: str | None = None
+    signed_off_by_user_id: str | None = None
+    signed_off_by_name: str | None = None
+    signed_off_at: str | None = None
     created_at: str
     updated_at: str
     metadata: dict[str, Any] = Field(default_factory=dict)
@@ -201,3 +215,53 @@ class RecordingDraftHealth(BaseModel):
     persistence_available: bool = True
     operational_only: bool = True
     standalone_access: bool = False
+
+
+def extract_form_record_metadata(metadata: dict[str, Any] | None) -> dict[str, Any]:
+    if not metadata:
+        return {}
+    form_record = metadata.get("form_record")
+    return form_record if isinstance(form_record, dict) else {}
+
+
+def form_metadata_from_draft(record: RecordingDraftRecord) -> RecordingFormMetadata:
+    """Build typed form metadata from draft record + metadata.form_record."""
+    raw = extract_form_record_metadata(record.metadata)
+    patch: dict[str, Any] = {
+        "written_by_user_id": record.created_by_user_id,
+        "written_by_name": record.created_by_name,
+        "written_by_role": record.created_by_role,
+        "child_id": record.child_id,
+        "home_id": record.home_id,
+        "form_id": record.form_id,
+        "form_type": record.recording_type,
+        "category": record.category,
+        "review_status": record.review_status,
+        "manager_review_required": record.manager_review_required,
+        "safeguarding_review_required": record.safeguarding_review_required,
+        "privacy_sensitive": record.privacy_sensitive,
+        "reviewed_by_user_id": record.reviewed_by_user_id,
+        "reviewed_by_name": record.reviewed_by_name,
+        "reviewed_at": record.reviewed_at,
+        "signed_off_by_user_id": record.signed_off_by_user_id,
+        "signed_off_by_name": record.signed_off_by_name,
+        "signed_off_at": record.signed_off_at,
+        "created_at": record.created_at,
+        "updated_at": record.updated_at,
+        "status": record.status if record.status != "archived" else "archived",
+        "is_signed_off": record.status in ("submitted", "archived") and record.review_status in (
+            "approved",
+            "reviewed",
+            "submitted",
+        ),
+        "is_editable": record.status not in ("submitted", "archived")
+        or record.review_status not in ("approved", "reviewed", "submitted"),
+    }
+    if record.record_date:
+        patch["record_date"] = record.record_date
+    if record.event_date:
+        patch["event_date"] = record.event_date
+    if record.event_time:
+        patch["event_time"] = record.event_time
+    merged = {**raw, **{k: v for k, v in patch.items() if v is not None}}
+    return RecordingFormMetadata.model_validate(merged)
