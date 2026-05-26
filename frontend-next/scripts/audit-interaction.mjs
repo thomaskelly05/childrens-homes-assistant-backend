@@ -227,7 +227,7 @@ check(
     orbCareCompanion.includes('value={message}') &&
     orbCareCompanion.includes('onChange={handleMessageChange}')
 )
-check('/orb has visible send error marker', orbCareCompanion.includes('data-testid="orb-standalone-send-error"'))
+check('/orb has visible send error marker', orbCareCompanion.includes('data-testid="orb-send-error"'))
 
 check(
   '/assistant/orb composer uses form onSubmit',
