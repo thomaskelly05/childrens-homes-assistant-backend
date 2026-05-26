@@ -1,0 +1,93 @@
+/*
+ * Global interaction guard rails.
+ *
+ * These styles intentionally sit after globals.css. They do not redesign the app;
+ * they make sure decorative/ambient layers cannot sit above real controls and
+ * that real controls keep browser-native tap/click behaviour across Safari,
+ * Chrome, Edge, iOS and Android.
+ */
+
+button,
+a[href],
+summary,
+[role='button'],
+input,
+select,
+textarea {
+  touch-action: manipulation;
+}
+
+button:not(:disabled),
+a[href],
+summary,
+[role='button'],
+input,
+select,
+textarea {
+  pointer-events: auto;
+}
+
+/* Decorative ORB/atmosphere/preview layers must never capture navigation or composer clicks. */
+.orb-screen-edge-pulse,
+.orb-atmospheric-diffusion,
+.orb-ambient-frame,
+.orb-ambient-edge,
+.orb-ambient-haze,
+.orb-ambient-diffusion,
+.orb-ambient-side-pulse,
+.orb-cinematic-light-field,
+.orb-neural-haze,
+.orb-overlay-shell,
+.orb-sphere-aura,
+.orb-sphere-edge,
+.orb-sphere-ripple,
+.orb-sphere-liquid,
+.orb-sphere-depth,
+.orb-sphere-glass,
+.orb-sphere-highlight,
+.orb-sphere-caustic,
+.orb-sphere-core,
+[data-orb-floating-dock='true'] {
+  pointer-events: none !important;
+}
+
+/* Only the actual interactive children of ORB/floating/docked surfaces may receive events. */
+.orb-overlay-interactive,
+[data-orb-floating-dock='true'] button,
+[data-orb-floating-dock='true'] a,
+.orb-embedded-dock,
+.orb-companion-float > *,
+.orb-chat-composer,
+.orb-chat-composer *,
+.orb-operational-composer,
+.orb-operational-composer * {
+  pointer-events: auto !important;
+}
+
+/* Hidden or closed mobile layers should never remain as invisible click blockers. */
+[aria-hidden='true'].mobile-menu-overlay,
+[aria-hidden='true'].mobile-menu-backdrop,
+[hidden],
+.invisible {
+  pointer-events: none !important;
+}
+
+/* Bottom navigation should only capture taps inside its visible bar. */
+.mobile-bottom-nav {
+  pointer-events: auto;
+  contain: layout paint;
+}
+
+.mobile-bottom-nav::before,
+.mobile-bottom-nav::after {
+  pointer-events: none;
+}
+
+/* Composer buttons must remain above decorative chat backgrounds. */
+[data-orb-composer-send],
+[data-testid='orb-standalone-send-clickable'],
+[data-testid='orb-operational-send-clickable'] {
+  position: relative;
+  z-index: 5;
+  pointer-events: auto !important;
+}
