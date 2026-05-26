@@ -1,4 +1,5 @@
 import './globals.css'
+import './interaction-guard.css'
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import { OsAppProviders } from '@/components/indicare/scope/os-app-providers'
