@@ -39,6 +39,7 @@ import { ChildWorkspaceLoadingFallback } from '@/components/indicare/scope/child
 import { childIdFromPath, childWorkspaceHref } from '@/lib/navigation/child-workspace-routes'
 import { routeRequiresScope, workspaceHrefForScope } from '@/lib/os-scope'
 import type { OrbContext } from '@/lib/orb/types'
+import { isRecordingEditorPathStrict, shouldShowFloatingOrb, shouldShowShellContextualOrbPanel } from '@/lib/orb/orb-presence-rules'
 
 const recordWorkspaceRoots = ['actions', 'reports', 'evidence', 'documents', 'chronology', 'daily-logs', 'incidents', 'safeguarding', 'medication', 'health', 'keywork', 'appointments', 'risk-assessments', 'reg44']
 const childContextRequiredRoots = ['actions', 'reports']
@@ -228,11 +229,11 @@ export function AppShell({ children }: { children: ReactNode }) {
     )
   }
 
-  if (isChildRecordingWorkspace || isRecordWorkspace) {
+  if (isChildRecordingWorkspace || isRecordWorkspace || isRecordingEditorPathStrict(pathname)) {
     return (
       <div className="orb-os-shell min-h-screen bg-[#eef4fb] text-slate-900">
         {children}
-        <OrbButton context={orbContext} role={user.role} />
+        {shouldShowFloatingOrb(pathname) ? <OrbButton context={orbContext} role={user.role} /> : null}
       </div>
     )
   }
@@ -422,7 +423,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             </main>
             {hasOsScope ? (
               <aside className="hidden min-w-0 space-y-3 2xl:block" aria-label="Operational intelligence panel">
-                <ContextualOrbPanel />
+                {shouldShowShellContextualOrbPanel(pathname) ? <ContextualOrbPanel /> : null}
                 <OperationalAlertsPanel />
                 {scope.scope_type === 'child' && pathname !== '/command-centre' && !pathname.startsWith('/command-centre/') ? (
                   <OperationalQuickActions selectedYoungPersonId={selectedId} selectedYoungPersonName={activeChildName} />
@@ -432,7 +433,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </div>
       </div>
-      <OrbButton context={orbContext} role={user.role} />
+      {shouldShowFloatingOrb(pathname) ? <OrbButton context={orbContext} role={user.role} /> : null}
       {scope.scope_type === 'child' ? <QuickActionButton selectedYoungPersonId={selectedId} selectedYoungPersonName={activeChildName} /> : null}
       <MobileNav />
     </div>

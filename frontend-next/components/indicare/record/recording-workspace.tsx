@@ -8,7 +8,6 @@ import { RecordingContextPanel } from '@/components/indicare/record/recording-co
 import { RecordingEditor } from '@/components/indicare/record/recording-editor'
 import type { RecordingSaveMode } from '@/components/indicare/record/recording-autosave-indicator'
 import { RecordingLanguageSuggestions } from '@/components/indicare/record/recording-language-suggestions'
-import { RecordingOrbRail } from '@/components/indicare/record/recording-orb-rail'
 import { RecordingReviewChecklist } from '@/components/indicare/record/recording-review-checklist'
 import { RecordingTherapeuticPrompts } from '@/components/indicare/record/recording-therapeutic-prompts'
 import { RecordingTypeSelector } from '@/components/indicare/record/recording-type-selector'
@@ -220,7 +219,6 @@ export function RecordingWorkspace({
             onAcceptSuggestion={handleAcceptSuggestion}
             onInsertHeadingPrompt={handleInsertHeading}
           />
-          <RecordingOrbRail recordingType={recordingType} formId={formIdFromUrl || activeForm?.id} />
           <RecordingLanguageSuggestions body={body} title={title} />
           <RecordingReviewChecklist body={body} title={title} recordingType={recordingType} structuredRequiredMissing={structuredCompletion?.requiredMissing} />
         </div>
