@@ -5,11 +5,15 @@ import type { ChildWorkspaceOverviewViewModel } from '@/lib/young-people/child-w
 
 export function ChildLifecycleCard({ view }: { view: ChildWorkspaceOverviewViewModel }) {
   const id = view.child.id
+  const reviewHref = `/record/reviews?child_id=${encodeURIComponent(id)}`
+  const alertsHref = `/record/alerts?child_id=${encodeURIComponent(id)}`
   const items = [
     { label: 'Archive', href: view.routes.archive, testId: 'child-lifecycle-archive' },
     { label: 'Story chronology', href: view.routes.chronologyStory, testId: 'child-lifecycle-chronology-story' },
     { label: 'LifeEcho', href: view.routes.lifeecho, testId: 'child-lifecycle-lifeecho' },
-    { label: 'Plan impacts', href: view.routes.planImpacts, testId: 'child-lifecycle-plan-impacts' }
+    { label: 'Plan impacts', href: view.routes.planImpacts, testId: 'child-lifecycle-plan-impacts' },
+    { label: 'Recording reviews', href: reviewHref, testId: 'child-lifecycle-reviews' },
+    { label: 'Alerts', href: alertsHref, testId: 'child-lifecycle-alerts' }
   ]
 
   return (

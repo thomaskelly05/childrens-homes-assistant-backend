@@ -384,6 +384,35 @@ class ChildArchiveService:
             self._memory[record.id] = payload
         return record
 
+    def _matches_filters(self, rec: ChildArchiveRecord, filters: ChildArchiveFilter) -> bool:
+        if rec.status in {"draft", "awaiting_review"}:
+            return False
+        if filters.child_id is not None and rec.child_id != filters.child_id:
+            return False
+        if filters.home_id is not None and rec.home_id != filters.home_id:
+            return False
+        if filters.record_type and rec.record_type != filters.record_type:
+            return False
+        if filters.source_type and rec.source_type != filters.source_type:
+            return False
+        if filters.author_user_id and rec.author_user_id != filters.author_user_id:
+            return False
+        if filters.signed_off_by_user_id and rec.signed_off_by_user_id != filters.signed_off_by_user_id:
+            return False
+        if filters.search and filters.search.lower() not in f"{rec.title} {rec.safe_summary}".lower():
+            return False
+        if filters.tags:
+            tag_set = {t.lower() for t in filters.tags}
+            record_tags = {t.lower() for t in (rec.tags or [])}
+            if not tag_set.intersection(record_tags):
+                return False
+        compare_date = rec.event_date or rec.signed_off_at or rec.recorded_at or ""
+        if filters.date_from and compare_date and compare_date[:10] < filters.date_from[:10]:
+            return False
+        if filters.date_to and compare_date and compare_date[:10] > filters.date_to[:10]:
+            return False
+        return True
+
     def list_archive(
         self,
         filters: ChildArchiveFilter,
@@ -391,9 +420,13 @@ class ChildArchiveService:
         *,
         conn: Any | None = None,
     ) -> ChildArchiveListResponse:
+        page = max(1, filters.page)
+        page_size = min(max(1, filters.page_size), 200)
+        filters = filters.model_copy(update={"page": page, "page_size": page_size})
+
         records: list[ChildArchiveRecord] = []
         if self._detect_storage_mode() == "postgresql" and conn is not None:
-            clauses = ["1=1"]
+            clauses = ["status NOT IN ('draft', 'awaiting_review')"]
             params: list[Any] = []
             if filters.child_id is not None:
                 clauses.append("child_id = %s")
@@ -413,6 +446,16 @@ class ChildArchiveService:
             if filters.signed_off_by_user_id:
                 clauses.append("signed_off_by_user_id = %s")
                 params.append(filters.signed_off_by_user_id)
+            if filters.date_from:
+                clauses.append(
+                    "COALESCE(event_date::text, signed_off_at::text, recorded_at::text, '') >= %s"
+                )
+                params.append(filters.date_from[:10])
+            if filters.date_to:
+                clauses.append(
+                    "COALESCE(event_date::text, signed_off_at::text, recorded_at::text, '') <= %s"
+                )
+                params.append(filters.date_to[:10])
             if filters.search:
                 clauses.append("(title ILIKE %s OR safe_summary ILIKE %s)")
                 params.extend([f"%{filters.search}%", f"%{filters.search}%"])
@@ -424,22 +467,14 @@ class ChildArchiveService:
                 )
                 for row in cur.fetchall():
                     rec = self._row_to_record(dict(row))
+                    if not self._matches_filters(rec, filters):
+                        continue
                     if self.enforce_access(rec.child_id, rec.home_id, current_user):
                         records.append(rec)
         else:
             for row in self._memory.values():
                 rec = self._row_to_record(row)
-                if filters.child_id and rec.child_id != filters.child_id:
-                    continue
-                if filters.home_id and rec.home_id != filters.home_id:
-                    continue
-                if filters.record_type and rec.record_type != filters.record_type:
-                    continue
-                if filters.source_type and rec.source_type != filters.source_type:
-                    continue
-                if filters.search and filters.search.lower() not in (
-                    f"{rec.title} {rec.safe_summary}".lower()
-                ):
+                if not self._matches_filters(rec, filters):
                     continue
                 if self.enforce_access(rec.child_id, rec.home_id, current_user):
                     records.append(rec)

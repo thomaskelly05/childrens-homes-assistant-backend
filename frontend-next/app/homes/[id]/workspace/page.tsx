@@ -12,7 +12,7 @@ const HOME_SECTIONS: Array<{ title: string; keys: Array<keyof ReturnType<typeof 
   { title: 'Recording', keys: ['recordingAlerts', 'recordingReviews'] },
   { title: 'Safeguarding and workforce', keys: ['safeguarding', 'workforce', 'staffProfiles', 'actions'] },
   { title: 'Inspection and reports', keys: ['inspectionReadiness', 'sccif', 'reg44', 'reg45', 'reports'] },
-  { title: 'Archive and lifecycle', keys: ['archiveSummary', 'planImpactReview', 'lifeechoPending'] }
+  { title: 'Archive and lifecycle', keys: ['archiveSummary', 'chronologyGaps', 'planImpactReview', 'lifeechoPending'] }
 ]
 
 const LINK_LABELS: Record<string, string> = {
@@ -32,6 +32,7 @@ const LINK_LABELS: Record<string, string> = {
   reg45: 'Reg 45',
   reports: 'Reports',
   archiveSummary: 'Archive this month',
+  chronologyGaps: 'Chronology gaps',
   planImpactReview: 'Plan impacts to review',
   lifeechoPending: 'LifeEcho suggestions'
 }

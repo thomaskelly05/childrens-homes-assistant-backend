@@ -27,6 +27,7 @@ def test_home_workspace_links_are_scoped():
         "inspectionReadiness",
         "reg45",
         "archiveSummary",
+        "chronologyGaps",
         "planImpactReview",
         "lifeechoPending",
     ):

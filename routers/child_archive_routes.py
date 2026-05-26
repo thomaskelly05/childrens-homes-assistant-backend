@@ -56,6 +56,7 @@ async def list_archive_records(
     author_user_id: str | None = None,
     signed_off_by_user_id: str | None = None,
     search: str | None = None,
+    tags: str | None = None,
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
     current_user: dict[str, Any] = Depends(get_current_user),
@@ -71,6 +72,7 @@ async def list_archive_records(
         author_user_id=author_user_id,
         signed_off_by_user_id=signed_off_by_user_id,
         search=search,
+        tags=[t.strip() for t in tags.split(",") if t.strip()] if tags else None,
         page=page,
         page_size=page_size,
     )

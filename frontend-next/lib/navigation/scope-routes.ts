@@ -46,12 +46,14 @@ function homePath(homeId: string | number, segment: string) {
 function assistantOrbHref(params: {
   scope?: 'child' | 'home' | 'governance' | 'workforce' | 'inspection' | 'provider'
   childId?: string | number
+  homeId?: string | number
   mode?: ScopeOrbMode | string
   query?: string
 }) {
   const q = new URLSearchParams()
   if (params.scope) q.set('scope', params.scope)
   if (params.childId != null) q.set('young_person_id', String(params.childId))
+  if (params.homeId != null) q.set('home_id', String(params.homeId))
   if (params.mode) q.set('mode', params.mode)
   if (params.query) q.set('q', params.query)
   const qs = q.toString()
@@ -251,12 +253,15 @@ export function homeReportsHref(homeId: string | number) {
 }
 
 export function homeOrbHref(homeId: string | number, mode: ScopeOrbMode = 'manager_daily_brief') {
-  void homeId
-  return assistantOrbHref({ scope: 'home', mode })
+  return assistantOrbHref({ scope: 'home', homeId, mode })
 }
 
 export function homeArchiveSummaryHref(homeId: string | number) {
-  return assistantOrbHref({ scope: 'home', mode: 'archive_summary', query: `home_id=${enc(homeId)}` })
+  return assistantOrbHref({ scope: 'home', homeId, mode: 'archive_summary' })
+}
+
+export function homeChronologyGapsHref(homeId: string | number) {
+  return assistantOrbHref({ scope: 'home', homeId, mode: 'chronology_story_review' })
 }
 
 export function homePlanImpactReviewHref(homeId: string | number) {
@@ -329,6 +334,7 @@ export const HOME_WORKSPACE_WORKFLOW_HREFS = (homeId: string | number) => ({
   reg45: homeReg45Href(homeId),
   reports: homeReportsHref(homeId),
   archiveSummary: homeArchiveSummaryHref(homeId),
+  chronologyGaps: homeChronologyGapsHref(homeId),
   planImpactReview: homePlanImpactReviewHref(homeId),
   lifeechoPending: homeLifeEchoPendingHref(homeId),
   orb: homeOrbHref(homeId),

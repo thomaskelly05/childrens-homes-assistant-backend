@@ -165,6 +165,9 @@ export type RecordingSubmissionResult = {
   formal_record_type?: string | null
   linked_record_id?: string | null
   linked_chronology_id?: string | null
+  linked_archive_record_id?: string | null
+  linked_plan_impact_ids?: string[]
+  lifeecho_suggestion_ids?: string[]
   target_status: RecordingSubmissionTargetStatus
   review_required: boolean
   safeguarding_review_required: boolean
@@ -172,6 +175,7 @@ export type RecordingSubmissionResult = {
   next_steps: string[]
   route_hint?: string | null
   frontend_route?: string | null
+  metadata?: Record<string, unknown>
   draft?: RecordingDraftRecord | null
 }
 
@@ -447,6 +451,9 @@ export async function submitRecordingDraft(draftId: string, payload?: RecordingD
     formal_record_type: raw.formal_record_type,
     linked_record_id: raw.linked_record_id,
     linked_chronology_id: raw.linked_chronology_id,
+    linked_archive_record_id: raw.linked_archive_record_id,
+    linked_plan_impact_ids: raw.linked_plan_impact_ids || [],
+    lifeecho_suggestion_ids: raw.lifeecho_suggestion_ids || [],
     target_status: raw.target_status || 'unsupported',
     review_required: raw.review_required ?? false,
     safeguarding_review_required: raw.safeguarding_review_required ?? false,

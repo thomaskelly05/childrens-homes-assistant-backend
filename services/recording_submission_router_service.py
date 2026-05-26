@@ -15,7 +15,10 @@ from schemas.recording_submission import (
     RecordingSubmissionTargetStatus,
 )
 from services.recording_chronology_link_service import recording_chronology_link_service
-from services.signed_off_lifecycle_service import signed_off_lifecycle_service
+from services.signed_off_lifecycle_service import (
+    MANAGER_REVIEW_ARCHIVE_BLOCK,
+    signed_off_lifecycle_service,
+)
 from services.recording_draft_service import recording_draft_service
 from services.recording_formal_payload_builder import recording_formal_payload_builder
 from services.recording_submission_target_registry import recording_submission_target_registry
@@ -32,7 +35,7 @@ from services.young_person_keywork_service import YoungPersonKeyworkService
 
 logger = logging.getLogger("indicare.recording_submission")
 
-FORMAL_NOT_WIRED = "Formal route not wired yet for this recording type."
+FORMAL_NOT_WIRED = "This draft was submitted but no formal record route is wired yet."
 REVIEW_BLOCK_MESSAGE = (
     "Manager or safeguarding review is required before this can be treated "
     "as a completed formal record."
@@ -139,7 +142,7 @@ class RecordingSubmissionRouterService:
         response.warnings.extend(draft_only_warnings)
 
         if response.formal_record_created and formal_record:
-            lifecycle = signed_off_lifecycle_service.process_formal_record(
+            lifecycle = signed_off_lifecycle_service.run_lifecycle_for_signed_off_record(
                 draft, formal_record, current_user, conn=conn
             )
             response.linked_archive_record_id = lifecycle.get("archive_record_id")
@@ -148,6 +151,21 @@ class RecordingSubmissionRouterService:
             if lifecycle.get("chronology_event_id"):
                 response.linked_chronology_id = str(lifecycle["chronology_event_id"])
             response.warnings.extend(list(lifecycle.get("warnings") or [])[:5])
+            response.next_steps.extend(list(lifecycle.get("next_steps") or [])[:5])
+            response.metadata["lifecycle"] = {
+                k: lifecycle.get(k)
+                for k in (
+                    "archive_record_id",
+                    "chronology_event_id",
+                    "plan_impact_ids",
+                    "lifeecho_suggestion_ids",
+                    "action_ids",
+                    "skipped",
+                )
+            }
+        elif response.submitted and not response.formal_record_created and review_ok is False:
+            if MANAGER_REVIEW_ARCHIVE_BLOCK not in response.warnings:
+                response.warnings.append(MANAGER_REVIEW_ARCHIVE_BLOCK)
 
         if request.create_chronology_link and response.formal_record_created and not response.linked_chronology_id:
             chronology_id, chrono_warnings = recording_chronology_link_service.create_or_prepare_link(
@@ -218,6 +236,7 @@ class RecordingSubmissionRouterService:
             return True, warnings
 
         warnings.append(REVIEW_BLOCK_MESSAGE)
+        warnings.append(MANAGER_REVIEW_ARCHIVE_BLOCK)
         return False, warnings
 
     def build_formal_payload(
@@ -461,6 +480,16 @@ class RecordingSubmissionRouterService:
             steps.append(FORMAL_NOT_WIRED)
         if response.linked_chronology_id:
             steps.append(f"Chronology event linked (ID {response.linked_chronology_id}).")
+        if response.linked_archive_record_id and draft.child_id:
+            steps.append(
+                f"Archive record created (ID {response.linked_archive_record_id}) — view in child archive."
+            )
+        if response.linked_plan_impact_ids:
+            steps.append(
+                f"Review {len(response.linked_plan_impact_ids)} plan impact suggestion(s) before updating plans."
+            )
+        if response.lifeecho_suggestion_ids:
+            steps.append("Review LifeEcho memory suggestion — approve before it becomes part of the life story.")
         return steps
 
     def record_submission_audit(

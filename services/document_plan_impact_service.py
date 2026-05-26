@@ -19,17 +19,26 @@ DOCUMENT_PLAN_MAP: dict[str, list[tuple[str, str]]] = {
     "lac-review": [
         ("care_plan", "Review care plan goals and ambitions from LAC review"),
     ],
+    "lac_review_document": [
+        ("care_plan", "Review care plan goals from LAC review document"),
+    ],
     "pep": [
         ("education_plan", "Review PEP education targets and support"),
+    ],
+    "pep_document": [
+        ("education_plan", "Review PEP education targets from signed-off document"),
     ],
     "reg44": [
         ("other", "Review Reg 44 improvement actions and leadership oversight"),
     ],
     "reg44-report": [
-        ("other", "Review Reg 44 improvement actions"),
+        ("other", "Review Reg 44 improvement actions and inspection readiness"),
     ],
     "reg45": [
-        ("other", "Review Reg 45 quality improvement actions"),
+        ("other", "Review Reg 45 quality of care improvement plan actions"),
+    ],
+    "reg45-review": [
+        ("other", "Review quality of care improvement plan from Reg 45 review"),
     ],
     "care_plan": [
         ("care_plan", "Review care plan following signed-off document"),
