@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { ReactNode, useEffect } from 'react'
 
+import { OperationalTopBarDate } from '@/components/indicare/operational-top-bar-date'
 import { CommandSearch } from '@/components/indicare/command-search'
 import { NotificationBell } from '@/components/connect/notification-bell'
 import { OrbButton } from '@/components/indicare/orb/orb-button'
@@ -47,6 +48,7 @@ import { childIdFromPath, childWorkspaceHref } from '@/lib/navigation/child-work
 import { routeRequiresScope, workspaceHrefForScope } from '@/lib/os-scope'
 import type { OrbContext } from '@/lib/orb/types'
 import { isRecordingEditorPathStrict, shouldShowFloatingOrb, shouldShowShellContextualOrbPanel } from '@/lib/orb/orb-presence-rules'
+import { useStableSearchParams } from '@/hooks/use-stable-search-params'
 
 const recordWorkspaceRoots = ['actions', 'reports', 'evidence', 'documents', 'chronology', 'daily-logs', 'incidents', 'safeguarding', 'medication', 'health', 'keywork', 'appointments', 'risk-assessments', 'reg44']
 const childContextRequiredRoots = ['actions', 'reports']
@@ -95,7 +97,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     : null
   const activeChildName = activeChild?.preferredName || activeChild?.displayName
   const pageTitle = activeChildName ? `${activeChildName}'s journey` : titleFromPath(pathname)
-  const today = new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }).format(new Date())
+  const stableSearchParams = useStableSearchParams()
   const isPublicPage = pathname === '/login' || pathname.startsWith('/login/') || pathname === '/unauthorized'
   const visibleNavItems = visibleOperationalNavigation(user)
   const matchedRoute = [...operationalNavigation, ...operationalUtilities]
@@ -111,7 +113,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const isRecordWorkspace = pathParts.length >= 2 && recordWorkspaceRoots.includes(pathParts[0]) && !['new', 'current'].includes(pathParts[pathParts.length - 1])
   const routeRequiresChildContext = pathParts.length === 1 && childContextRequiredRoots.includes(pathParts[0] || '')
   const childContextRedirect = activeChild && routeRequiresChildContext ? childScopedHref(`/${pathParts[0]}`) : null
-  const requiresWorkspaceHydration = !e2eWorkspaceHydrationBypass && routeRequiresChildWorkspace(pathname, typeof window === 'undefined' ? null : new URLSearchParams(window.location.search))
+  const requiresWorkspaceHydration =
+    !e2eWorkspaceHydrationBypass && routeRequiresChildWorkspace(pathname, stableSearchParams)
   const isSelectorRoute = isSelectScopeRoute || pathname === '/' || pathname === '/home' || pathname === '/dashboard' || pathname === '/workspace' || (pathname === '/young-people' && !hasOsScope)
 
   useEffect(() => {
@@ -392,7 +395,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                     {hasOsScope ? 'Switch scope' : 'Choose home'}
                   </Link>
                   {hasOsScope && scope.scope_type === 'child' ? <NotificationBell /> : null}
-                  <div className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 shadow-sm xl:block">{today}</div>
+                  <OperationalTopBarDate />
                   <details className="relative">
                     <summary className="list-none rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-black text-slate-700 shadow-sm marker:hidden">Profile</summary>
                     <div className="absolute right-0 mt-2 w-64 rounded-[24px] border border-slate-200 bg-white p-4 shadow-2xl shadow-slate-950/15">

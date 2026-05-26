@@ -1,4 +1,5 @@
 import { MobileSafeLink } from '@/components/indicare/mobile/mobile-safe-link'
+import { ChildWorkspaceAvatar } from '@/components/young-people/workspace/child-workspace-avatar'
 import { RiskBadge, StatusBadge } from '@/components/indicare/ui'
 import type { ChildWorkspaceOverviewViewModel } from '@/lib/young-people/child-workspace-normaliser'
 
@@ -28,22 +29,7 @@ export function ChildProfileHero({ view }: { view: ChildWorkspaceOverviewViewMod
     >
       <p className="text-[11px] font-black uppercase tracking-[0.24em] text-sky-700">Child workspace overview</p>
       <div className="mt-4 flex items-start gap-4 md:mt-5 md:gap-6">
-        {photo ? (
-          <div
-            className="h-16 w-16 shrink-0 rounded-2xl bg-cover bg-center shadow-md shadow-sky-200/40 ring-2 ring-white md:h-28 md:w-28 md:rounded-[32px] md:ring-4"
-            style={{ backgroundImage: `url(${photo})` }}
-            role="img"
-            aria-label={`Photo of ${child.displayName}`}
-            data-testid="child-workspace-hero-avatar"
-          />
-        ) : (
-          <div
-            className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-500 to-indigo-500 text-xl font-black text-white shadow-md md:h-28 md:w-28 md:rounded-[32px] md:text-3xl"
-            data-testid="child-workspace-hero-avatar"
-          >
-            {initials}
-          </div>
-        )}
+        <ChildWorkspaceAvatar photo={photo} displayName={child.displayName} initials={initials} />
         <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-black tracking-[-0.05em] text-slate-950 md:text-5xl">{child.displayName}</h1>
           {child.preferredName && child.preferredName !== child.displayName ? (

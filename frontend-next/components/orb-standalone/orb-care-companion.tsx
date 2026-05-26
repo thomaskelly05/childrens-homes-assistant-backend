@@ -39,16 +39,19 @@ import {
 import { OrbStandaloneSidebar } from '@/components/orb-standalone/orb-standalone-sidebar'
 import { modeChipLabel } from '@/components/orb-standalone/orb-mode-labels'
 import {
+  defaultStandaloneOrbAccessibility,
   loadStandaloneOrbAccessibility,
   standaloneOrbAccessibilityClassNames,
   type StandaloneOrbAccessibilityPreferences
 } from '@/lib/orb/standalone-accessibility'
+import { useMounted } from '@/hooks/use-mounted'
 import { standaloneOsBoundaryReply } from '@/lib/orb/standalone-os-boundary'
 import { useStandaloneOrbVoice, type StandaloneOrbAnswerStyle } from '@/components/orb-standalone/use-standalone-orb-voice'
 import {
   buildProfileContextBlock,
   createStandaloneChat,
   dedupeOrbMessages,
+  defaultWorkspace,
   readStandaloneWorkspace,
   repairOrbWorkspace,
   titleFromFirstMessage,
@@ -242,14 +245,15 @@ function patchActiveChat(workspace: StandaloneWorkspace, chatId: string, patch: 
 }
 
 export function OrbCareCompanion() {
+  const mounted = useMounted()
   const searchParams = useSearchParams()
-  const initialQuery = searchParams.get('q')?.trim() || ''
-  const recordingContext = searchParams.get('context') === 'recording'
-  const queryMode = modeFromQuery(searchParams.get('mode'))
+  const initialQuery = mounted ? searchParams.get('q')?.trim() || '' : ''
+  const recordingContext = mounted && searchParams.get('context') === 'recording'
+  const queryMode = mounted ? modeFromQuery(searchParams.get('mode')) : undefined
 
-  const [workspace, setWorkspace] = useState<StandaloneWorkspace>(() => readStandaloneWorkspace())
+  const [workspace, setWorkspace] = useState<StandaloneWorkspace>(() => defaultWorkspace())
   const [modes, setModes] = useState<string[]>([...STANDALONE_ORB_MODES])
-  const [input, setInput] = useState(initialQuery)
+  const [input, setInput] = useState('')
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [retryPayload, setRetryPayload] = useState<{ text: string; chatId: string } | null>(null)
@@ -267,9 +271,8 @@ export function OrbCareCompanion() {
   const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null)
   const [profilePickerOpen, setProfilePickerOpen] = useState(false)
   const [savedOutputsCount, setSavedOutputsCount] = useState(0)
-  const [a11yPrefs, setA11yPrefs] = useState<StandaloneOrbAccessibilityPreferences>(() =>
-    typeof window === 'undefined' ? loadStandaloneOrbAccessibility() : loadStandaloneOrbAccessibility()
-  )
+  const [a11yPrefs, setA11yPrefs] = useState<StandaloneOrbAccessibilityPreferences>(defaultStandaloneOrbAccessibility)
+  const [fallbackConversationId] = useState('standalone-session')
   const [agentPanelPrompt, setAgentPanelPrompt] = useState('')
   const [agentPanelType, setAgentPanelType] = useState<string | undefined>()
   const [pendingDocument, setPendingDocument] = useState<{
@@ -301,8 +304,15 @@ export function OrbCareCompanion() {
   }, [activePanel])
 
   useEffect(() => {
+    setWorkspace(readStandaloneWorkspace())
     setA11yPrefs(loadStandaloneOrbAccessibility())
   }, [])
+
+  useEffect(() => {
+    if (!mounted) return
+    const q = searchParams.get('q')?.trim()
+    if (q) setInput(q)
+  }, [mounted, searchParams])
 
   const activeChat = useMemo(() => {
     if (!workspace.activeChatId) return null
@@ -311,8 +321,11 @@ export function OrbCareCompanion() {
 
   const messages = activeChat?.messages ?? []
   const visibleMessages = useMemo(() => dedupeOrbMessages(messages), [messages])
-  const mode = (activeChat?.mode as StandaloneOrbMode) || queryMode || (recordingContext ? 'Record This Properly' : 'Ask ORB')
-  const conversationId = activeChat?.conversationId ?? `standalone-${Date.now().toString(36)}`
+  const mode =
+    (activeChat?.mode as StandaloneOrbMode) ||
+    queryMode ||
+    (recordingContext ? 'Record This Properly' : 'Ask ORB')
+  const conversationId = activeChat?.conversationId ?? fallbackConversationId
 
   const attachedProfiles = useMemo(
     () => workspace.profiles.filter((p) => activeChat?.profileIds.includes(p.id)),

@@ -13,6 +13,7 @@ import {
   resolveChildWorkspaceHydration,
   type ChildWorkspaceReadyState
 } from '@/lib/context/child-workspace-hydration'
+import { useStableSearchParams } from '@/hooks/use-stable-search-params'
 
 export type ActiveChildRecord = {
   id: string
@@ -172,6 +173,7 @@ function scopedHref(href: string, child: ActiveChildRecord | null) {
 
 export function ActiveChildProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname() || '/home'
+  const stableSearchParams = useStableSearchParams()
   const { status, user, csrfReady } = useAuth()
   const canReadRecords = userHasPermission(user, 'records:read')
   const [activeChild, setActiveChild] = useState<ActiveChildRecord | null>(null)
@@ -226,10 +228,10 @@ export function ActiveChildProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (status !== 'authenticated' || !canReadRecords) return
-    const routeChildId = childIdFromRoute(pathname, typeof window === 'undefined' ? null : new URLSearchParams(window.location.search))
+    const routeChildId = childIdFromRoute(pathname, stableSearchParams)
     if (!routeChildId || routeChildId === activeChild?.id) return
     commitChild(childRecordFromId(routeChildId, 'route'), 'route')
-  }, [activeChild?.id, canReadRecords, commitChild, pathname, status])
+  }, [activeChild?.id, canReadRecords, commitChild, pathname, stableSearchParams, status])
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -254,7 +256,7 @@ export function ActiveChildProvider({ children }: { children: ReactNode }) {
       markChildWorkspaceReady(activeChild.id, lockVersion)
       return
     }
-    const routeChildId = childIdFromWorkspaceRoute(pathname, typeof window === 'undefined' ? null : new URLSearchParams(window.location.search))
+    const routeChildId = childIdFromWorkspaceRoute(pathname, stableSearchParams)
     if (routeChildId && routeChildId !== activeChild.id) {
       return
     }
@@ -288,7 +290,7 @@ export function ActiveChildProvider({ children }: { children: ReactNode }) {
       }
     })
     return () => controller.abort()
-  }, [activeChild?.id, canReadRecords, csrfReady, lockVersion, pathname, status])
+  }, [activeChild?.id, canReadRecords, csrfReady, lockVersion, pathname, stableSearchParams, status])
 
   const readyState = useMemo(() => resolveChildWorkspaceHydration({
     authStatus: status,
@@ -298,8 +300,8 @@ export function ActiveChildProvider({ children }: { children: ReactNode }) {
     activeChild,
     pathname,
     preloadStatus,
-    searchParams: typeof window === 'undefined' ? null : new URLSearchParams(window.location.search)
-  }), [activeChild, canReadRecords, csrfReady, hasHydratedStorage, pathname, preloadStatus, status])
+    searchParams: stableSearchParams
+  }), [activeChild, canReadRecords, csrfReady, hasHydratedStorage, pathname, preloadStatus, stableSearchParams, status])
 
   const value = useMemo<ActiveChildContextValue>(() => ({
     activeChild,
