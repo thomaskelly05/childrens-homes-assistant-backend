@@ -1,6 +1,6 @@
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
+import { MobileSafeLink } from '@/components/indicare/mobile/mobile-safe-link'
 import { OperationalOrbRail } from '@/components/orb-operational/operational-orb-rail'
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
 import { SectionHeader, StatusBadge } from '@/components/indicare/ui'
@@ -82,7 +82,7 @@ export default async function HomeWorkspacePage({ params }: { params: Promise<{ 
               <SectionHeader eyebrow="Home scope" title={section.title} />
               <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {section.keys.map((key) => (
-                  <Link
+                  <MobileSafeLink
                     key={key}
                     prefetch={false}
                     href={routes[key]}
@@ -97,10 +97,11 @@ export default async function HomeWorkspacePage({ params }: { params: Promise<{ 
                               ? 'mobile-home-alerts-button'
                               : `home-workspace-${key}`
                     }
-                    className="rounded-[20px] border border-slate-200 bg-white p-4 text-sm font-black text-slate-950 shadow-sm transition hover:border-blue-200 hover:bg-blue-50"
+                    tapDebugLabel={`home-shortcut-${key}`}
+                    className="min-h-11 rounded-[20px] border border-slate-200 bg-white p-4 text-sm font-black text-slate-950 shadow-sm transition hover:border-blue-200 hover:bg-blue-50"
                   >
                     {LINK_LABELS[key] || key}
-                  </Link>
+                  </MobileSafeLink>
                 ))}
               </div>
             </section>
@@ -113,13 +114,13 @@ export default async function HomeWorkspacePage({ params }: { params: Promise<{ 
                 ? `${bundle.children_needing_attention.length} child record(s) flagged on this home.`
                 : 'No priority children returned for this home right now.'}
             </p>
-            <Link
+            <MobileSafeLink
               href={routes.children}
               prefetch={false}
-              className="mt-4 inline-flex text-sm font-black text-blue-700"
+              className="mt-4 inline-flex min-h-11 text-sm font-black text-blue-700"
             >
               Choose a child in this home →
-            </Link>
+            </MobileSafeLink>
           </section>
         </div>
 

@@ -19,6 +19,7 @@ def test_drawer_and_composer_markers_present():
     assert 'data-testid="mobile-drawer"' in top_bar
     assert 'data-testid="mobile-drawer-backdrop"' in top_bar
     assert 'data-testid="mobile-menu-close"' in top_bar
+    assert 'data-testid="mobile-top-menu-clickable"' in top_bar
     composer = (FRONTEND / "components/orb-standalone/orb-standalone-composer.tsx").read_text(encoding="utf-8")
     assert 'data-testid="orb-standalone-composer"' in composer
-    assert 'data-testid="orb-standalone-send-button"' in composer
+    assert 'data-testid="orb-standalone-send-clickable"' in composer

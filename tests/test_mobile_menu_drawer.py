@@ -7,7 +7,7 @@ FRONTEND = Path(__file__).resolve().parents[1] / "frontend-next"
 
 def test_mobile_drawer_structure():
     text = (FRONTEND / "components/indicare/mobile/mobile-os-top-bar.tsx").read_text(encoding="utf-8")
-    assert 'data-testid="mobile-menu-open"' in text
+    assert 'data-testid="mobile-top-menu-clickable"' in text
     assert 'data-testid="mobile-drawer"' in text
     assert "bg-slate-950" in text
     assert "min(86vw,360px)" in text.replace(" ", "")

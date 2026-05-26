@@ -10,6 +10,8 @@ def test_standalone_send_markers():
     composer = (FRONTEND / "components/orb-standalone/orb-standalone-composer.tsx").read_text(encoding="utf-8")
     companion = (FRONTEND / "components/orb-standalone/orb-care-companion.tsx").read_text(encoding="utf-8")
     assert "data-orb-composer-send" in composer
+    assert 'data-testid="orb-standalone-send-clickable"' in composer
+    assert 'type="submit"' in composer
     assert "data-orb-composer-input" in composer
     assert "sendMessage" in companion
     assert "data-testid=\"orb-standalone-send-error\"" in companion
@@ -18,7 +20,8 @@ def test_standalone_send_markers():
 def test_operational_send_markers():
     text = (FRONTEND / "components/orb-operational/orb-conversation-experience.tsx").read_text(encoding="utf-8")
     assert "data-testid=\"orb-operational-message-form\"" in text
-    assert "data-testid=\"orb-operational-send-button\"" in text
+    assert 'data-testid="orb-operational-send-clickable"' in text
+    assert 'type="submit"' in text
     assert "ORB_SEND_RETRY_MESSAGE" in text
     assert "finally" in text
 

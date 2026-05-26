@@ -508,6 +508,7 @@ textarea:focus-visible {
 }
 
 .orb-atmospheric-diffusion {
+  pointer-events: none;
   position: fixed;
   inset: -10%;
   z-index: 0;
@@ -1055,6 +1056,38 @@ textarea:focus-visible {
   .orb-chat-layout {
     height: 100dvh;
     max-height: 100dvh;
+  }
+
+  .mobile-os-workspace a,
+  .mobile-os-workspace button,
+  .mobile-child-workspace a,
+  .mobile-child-workspace button,
+  .mobile-home-workspace a,
+  .mobile-home-workspace button,
+  .mobile-bottom-nav a,
+  .mobile-os-top-bar a,
+  .mobile-os-top-bar button,
+  .orb-chat-composer button,
+  .orb-chat-composer textarea,
+  .orb-operational-composer button,
+  .orb-operational-composer textarea {
+    touch-action: manipulation;
+  }
+
+  .orb-cinematic-light-field,
+  .orb-screen-edge-pulse,
+  .orb-atmospheric-diffusion,
+  .orb-neural-haze,
+  .orb-overlay-shell {
+    pointer-events: none !important;
+  }
+
+  .orb-overlay-interactive,
+  .orb-floating-dock .orb-embedded-dock,
+  .mobile-bottom-nav,
+  .mobile-menu-drawer,
+  .mobile-menu-backdrop {
+    pointer-events: auto;
   }
 }
 

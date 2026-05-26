@@ -11,15 +11,17 @@ export function EmbeddedOrbDock({ childName }: { childName?: string }) {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="orb-embedded-dock fixed bottom-7 right-7 z-50 rounded-full p-2"
-        data-orb-state={childName ? 'idle' : 'private_mode'}
-        aria-label="Open ORB operational companion"
-      >
-        <OrbSphere state={childName ? 'idle' : 'private_mode'} size="small" />
-      </button>
+      <div className="pointer-events-none fixed bottom-7 right-7 z-50">
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="orb-embedded-dock pointer-events-auto rounded-full p-2"
+          data-orb-state={childName ? 'idle' : 'private_mode'}
+          aria-label="Open ORB operational companion"
+        >
+          <OrbSphere state={childName ? 'idle' : 'private_mode'} size="small" />
+        </button>
+      </div>
       {open ? <EmbeddedOrbPanel childName={childName} onClose={() => setOpen(false)} onImmersive={() => setImmersive(true)} /> : null}
       {immersive ? (
         <div

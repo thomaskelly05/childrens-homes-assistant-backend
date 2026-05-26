@@ -18,6 +18,7 @@ import {
   type OrbOperationalScope
 } from '@/lib/orb/operational-client'
 import { ORB_SEND_RETRY_MESSAGE } from '@/lib/interaction/orb-send-errors'
+import { logTapTarget } from '@/lib/interaction/mobile-tap-debug'
 import { queryOrbConversation, type OrbConversationResponse, type OrbScope } from '@/lib/os-api/orb'
 import type { OsPersonSummary } from '@/lib/os-api/workspaces'
 
@@ -166,6 +167,7 @@ export function OrbConversationExperience({
   const [outputsPanelOpen, setOutputsPanelOpen] = useState(false)
   const [outputsRefresh, setOutputsRefresh] = useState(0)
   const abortRef = useRef<AbortController | null>(null)
+  const submitInFlightRef = useRef(false)
   const latestResponse = useMemo(() => [...messages].reverse().find((message) => message.response)?.response, [messages])
   const latestIntelligence = latestResponse as OrbIntelligenceResponse | undefined
   const latestContext = latestIntelligence?.context_used
@@ -178,8 +180,10 @@ export function OrbConversationExperience({
 
   async function submit(event?: FormEvent<HTMLFormElement>, override?: string, overrideScope?: OrbScope) {
     event?.preventDefault()
+    if (submitInFlightRef.current) return
     const message = (override || input).trim()
     if (!message || pending) return
+    submitInFlightRef.current = true
     const activeScope = overrideScope || scope
     const selectedChildId = youngPersonId ? Number(youngPersonId) : null
     const userMessage: Message = { id: `u-${Date.now()}`, role: 'user', text: message }
@@ -246,6 +250,7 @@ export function OrbConversationExperience({
       }
     } finally {
       setPending(false)
+      submitInFlightRef.current = false
     }
   }
 
@@ -458,7 +463,10 @@ export function OrbConversationExperience({
             {operationalMode ? ` · ${operationalMode}` : ''}
           </p>
           <form
-            onSubmit={submit}
+            onSubmit={(event) => {
+              logTapTarget(event, 'orb-operational-form-submit')
+              void submit(event)
+            }}
             className="flex gap-2 rounded-[24px] border border-slate-200 bg-white p-2 shadow-sm"
             data-testid="orb-operational-message-form"
           >
@@ -474,8 +482,10 @@ export function OrbConversationExperience({
             <button
               type="submit"
               disabled={!input.trim() || pending}
-              data-testid="orb-operational-send-button"
-              className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-[20px] bg-slate-950 px-5 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+              aria-label="Send message to ORB"
+              onClick={(event) => logTapTarget(event, 'orb-operational-send-click')}
+              data-testid="orb-operational-send-clickable"
+              className="pointer-events-auto inline-flex min-h-11 min-w-11 shrink-0 cursor-pointer touch-manipulation items-center justify-center rounded-[20px] bg-slate-950 px-5 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:bg-slate-300"
             >
               <Send className="h-4 w-4" aria-hidden />
               <span className="sr-only">Send</span>

@@ -1,5 +1,6 @@
 import Link from 'next/link'
 
+import { MobileSafeLink } from '@/components/indicare/mobile/mobile-safe-link'
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
 import { Card, SectionHeader } from '@/components/indicare/ui'
 import type { OsApiResult } from '@/lib/os-api/types'
@@ -73,15 +74,16 @@ export function ChildWorkspaceOverview({
             />
             <div className="flex flex-wrap gap-2">
               {view.quickActions.map((action) => (
-                <Link
+                <MobileSafeLink
                   key={action.href}
                   href={action.href}
                   prefetch={false}
                   data-testid={action.testId}
-                  className="rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-black text-slate-800 transition hover:border-sky-200 hover:bg-sky-50"
+                  tapDebugLabel={`child-workspace-${action.label}`}
+                  className="min-h-11 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-black text-slate-800 transition hover:border-sky-200 hover:bg-sky-50"
                 >
                   {action.label}
-                </Link>
+                </MobileSafeLink>
               ))}
             </div>
           </Card>

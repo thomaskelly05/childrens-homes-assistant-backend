@@ -3,6 +3,7 @@
 import { FormEvent, useRef, type DragEvent } from 'react'
 import { Camera, FileText, Mic, MicOff, Plus, Send, Square, X } from 'lucide-react'
 
+import { logTapTarget } from '@/lib/interaction/mobile-tap-debug'
 import type { StandaloneOrbMode } from '@/lib/orb/standalone-client'
 
 export type PendingImageAttachment = {
@@ -77,7 +78,6 @@ export function OrbStandaloneComposer({
 }) {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const cameraInputRef = useRef<HTMLInputElement | null>(null)
-
   function handleDragOver(event: DragEvent) {
     event.preventDefault()
     event.stopPropagation()
@@ -120,7 +120,13 @@ export function OrbStandaloneComposer({
           </div>
         ) : null}
 
-        <form className="w-full" onSubmit={(event) => onSubmit(event)}>
+        <form
+          className="w-full"
+          onSubmit={(event) => {
+            logTapTarget(event, 'orb-standalone-form-submit')
+            onSubmit(event)
+          }}
+        >
           <label htmlFor="orb-standalone-input" className="sr-only">
             Message ORB
           </label>
@@ -256,13 +262,17 @@ export function OrbStandaloneComposer({
                 {voiceListening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
               </button>
               <button
-                type="button"
+                type="submit"
                 disabled={pending || (!input.trim() && attachments.length === 0)}
                 aria-label="Send message"
-                onClick={() => onSubmit()}
-                className="inline-flex h-10 min-w-10 shrink-0 items-center justify-center rounded-full bg-white text-slate-950 transition hover:bg-slate-100 disabled:opacity-35"
+                onClick={(event) => logTapTarget(event, 'orb-standalone-send-click')}
+                onPointerUp={(event) => {
+                  if (event.pointerType !== 'touch') return
+                  logTapTarget(event, 'orb-standalone-send-pointer')
+                }}
+                className="pointer-events-auto inline-flex h-11 min-h-11 min-w-11 shrink-0 cursor-pointer touch-manipulation items-center justify-center rounded-full bg-white text-slate-950 transition hover:bg-slate-100 disabled:opacity-35"
                 data-orb-composer-send
-                data-testid="orb-standalone-send-button"
+                data-testid="orb-standalone-send-clickable"
               >
                 <Send className="h-5 w-5" />
               </button>

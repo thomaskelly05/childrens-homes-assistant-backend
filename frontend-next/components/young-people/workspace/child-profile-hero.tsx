@@ -1,5 +1,4 @@
-import Link from 'next/link'
-
+import { MobileSafeLink } from '@/components/indicare/mobile/mobile-safe-link'
 import { RiskBadge, StatusBadge } from '@/components/indicare/ui'
 import type { ChildWorkspaceOverviewViewModel } from '@/lib/young-people/child-workspace-normaliser'
 
@@ -70,7 +69,7 @@ export function ChildProfileHero({ view }: { view: ChildWorkspaceOverviewViewMod
         data-testid="child-workspace-hero-actions"
       >
         {view.quickActions.slice(0, 4).map((action) => (
-          <Link
+          <MobileSafeLink
             key={action.href}
             href={action.href}
             prefetch={false}
@@ -83,10 +82,11 @@ export function ChildProfileHero({ view }: { view: ChildWorkspaceOverviewViewMod
                     ? 'mobile-child-orb-button'
                     : action.testId
             }
-            className="inline-flex min-h-11 items-center justify-center rounded-2xl bg-sky-600 px-3 py-2.5 text-center text-sm font-black text-white shadow-md shadow-sky-500/25 transition hover:bg-sky-700 md:px-4"
+            tapDebugLabel={`child-shortcut-${action.label}`}
+            className="inline-flex min-h-11 w-full items-center justify-center rounded-2xl bg-sky-600 px-3 py-2.5 text-center text-sm font-black text-white shadow-md shadow-sky-500/25 transition hover:bg-sky-700 md:px-4"
           >
             {action.label}
-          </Link>
+          </MobileSafeLink>
         ))}
       </div>
     </header>

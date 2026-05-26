@@ -23,7 +23,7 @@ export function SlideOverPreview({
 
   return (
     <div
-      className="fixed inset-0 z-[70] bg-slate-950/20 backdrop-blur-sm"
+      className="pointer-events-auto fixed inset-0 z-[70] bg-slate-950/20 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       onClick={onClose}
