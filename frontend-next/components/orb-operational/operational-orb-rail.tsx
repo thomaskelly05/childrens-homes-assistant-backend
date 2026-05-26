@@ -6,6 +6,7 @@ import { Mic2, Sparkles } from 'lucide-react'
 import { MobileSafeLink } from '@/components/indicare/mobile/mobile-safe-link'
 
 import {
+  ORB_QUIET_COPILOT_TAGLINE,
   operationalOrbLabel,
   operationalOrbOpenHref,
   operationalOrbPrivacyText,
@@ -96,10 +97,10 @@ export function OperationalOrbRail({
           <Sparkles className="h-4 w-4 text-cyan-200" aria-hidden />
         </div>
         <div className="min-w-0">
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-200/90">ORB on shift</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-200/90">ORB</p>
           <h2 className="mt-0.5 text-base font-black tracking-[-0.03em] text-white">{connectionLabel}</h2>
-          <p className="mt-1.5 text-xs font-semibold leading-5 text-slate-400">
-            ORB can help you think, record and review — one connected assistant for this page.
+          <p className="mt-1.5 text-xs font-semibold leading-5 text-slate-400" data-testid="orb-quiet-copilot-tagline">
+            {ORB_QUIET_COPILOT_TAGLINE}
           </p>
         </div>
       </div>

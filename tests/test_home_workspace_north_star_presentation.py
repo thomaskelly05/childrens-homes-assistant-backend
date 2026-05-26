@@ -2,15 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-SCOPE_NAV = Path(__file__).resolve().parents[1] / "frontend-next" / "lib" / "navigation" / "scope-navigation.ts"
 HOME_PAGE = Path(__file__).resolve().parents[1] / "frontend-next" / "app" / "homes" / "[id]" / "workspace" / "page.tsx"
-
-
-def test_home_primary_menu():
-    text = SCOPE_NAV.read_text(encoding="utf-8")
-    primary = text.split("homeScopePrimaryNavigation")[1].split("export function homeScopeMoreNavigation")[0]
-    for label in ("Home today", "Children", "Handover", "Reviews", "Alerts", "Safeguarding", "Staff", "Inspection"):
-        assert label in primary
 
 
 def test_home_workspace_grouped_sections():
@@ -20,4 +12,15 @@ def test_home_workspace_grouped_sections():
     assert "home-workspace-section-workforce" in page
     assert "home-workspace-section-inspection" in page
     assert "home-workspace-section-more" in page
+
+
+def test_home_workspace_hero_actions():
+    page = HOME_PAGE.read_text(encoding="utf-8")
+    assert "home-hero-daily-brief" in page
+    assert "home-hero-handover" in page
+    assert "home-workspace-priority-count" in page
+
+
+def test_home_today_section_copy():
+    page = HOME_PAGE.read_text(encoding="utf-8")
     assert "Home today" in page

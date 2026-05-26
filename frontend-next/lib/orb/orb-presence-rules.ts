@@ -3,6 +3,9 @@
  * Standalone /orb is separate; operational OS uses /assistant/orb only.
  */
 
+export const ORB_QUIET_COPILOT_TAGLINE =
+  "The quiet copilot for children's homes — present when needed, invisible when not."
+
 export type OperationalOrbScopeType =
   | 'child'
   | 'home'

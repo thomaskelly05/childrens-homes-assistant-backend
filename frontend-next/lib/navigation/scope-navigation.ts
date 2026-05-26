@@ -75,14 +75,18 @@ export function noScopeNavigation(): ScopeNavItem[] {
   ]
 }
 
-/** Primary home workspace menu — operational priorities first. */
+/** Primary home workspace menu — operational rhythm first. */
 export function homeScopePrimaryNavigation(homeId: string | number): ScopeNavItem[] {
   const hid = String(homeId)
   return [
-    { label: 'Home', href: homeWorkspaceHref(hid), icon: Gauge, prefetch: false, testId: 'scope-nav-home-overview' },
+    { label: 'Home today', href: homeWorkspaceHref(hid), icon: Gauge, prefetch: false, testId: 'scope-nav-home-overview' },
+    { label: 'Children', href: homeChildrenHref(hid), icon: UserRound, prefetch: false, testId: 'scope-nav-home-children' },
     { label: 'Handover', href: homeHandoverHref(hid), icon: ClipboardCheck, prefetch: false, testId: 'scope-nav-home-handover' },
     { label: 'Reviews', href: homeRecordingReviewsHref(hid), icon: ClipboardCheck, prefetch: false, testId: 'scope-nav-home-reviews' },
-    { label: 'Alerts', href: homeRecordingAlertsHref(hid), icon: ClipboardList, prefetch: false, testId: 'scope-nav-home-alerts' }
+    { label: 'Alerts', href: homeRecordingAlertsHref(hid), icon: ClipboardList, prefetch: false, testId: 'scope-nav-home-alerts' },
+    { label: 'Safeguarding', href: homeSafeguardingHref(hid), icon: ShieldCheck, prefetch: false, testId: 'scope-nav-home-safeguarding-primary' },
+    { label: 'Staff', href: homeStaffOnShiftHref(hid), icon: UserRound, prefetch: false, testId: 'scope-nav-home-staff-primary' },
+    { label: 'Inspection', href: homeInspectionReadinessHref(hid), icon: ShieldCheck, prefetch: false, testId: 'scope-nav-home-inspection-primary' }
   ]
 }
 
@@ -90,7 +94,6 @@ export function homeScopePrimaryNavigation(homeId: string | number): ScopeNavIte
 export function homeScopeMoreNavigation(homeId: string | number): ScopeNavItem[] {
   const hid = String(homeId)
   return [
-    { label: 'Children', href: homeChildrenHref(hid), icon: UserRound, prefetch: false, testId: 'scope-nav-home-children' },
     { label: 'Daily brief', href: homeDailyBriefHref(hid), icon: ClipboardCheck, prefetch: false, testId: 'scope-nav-home-daily-brief' },
     { label: 'Safeguarding / ISN', href: homeSafeguardingHref(hid), icon: ShieldCheck, prefetch: false, testId: 'scope-nav-home-safeguarding' },
     { label: 'Staff on shift', href: homeStaffOnShiftHref(hid), icon: UserRound, prefetch: false, testId: 'scope-nav-home-staff-shift' },
@@ -110,7 +113,7 @@ export function homeScopeNavigation(homeId: string | number): ScopeNavItem[] {
   return [...homeScopePrimaryNavigation(homeId), ...homeScopeMoreNavigation(homeId)]
 }
 
-/** Primary child workspace menu — practice journey. */
+/** Primary child workspace menu — practice journey (ORB via hero/rail, not sidebar). */
 export function childScopePrimaryNavigation(childId: string | number): ScopeNavItem[] {
   const cid = String(childId)
   return [
@@ -119,8 +122,7 @@ export function childScopePrimaryNavigation(childId: string | number): ScopeNavI
     { label: 'Chronology', href: childChronologyHref(cid), icon: CalendarDays, prefetch: false, testId: 'scope-nav-child-chronology' },
     { label: 'Plans', href: childCarePlanningHref(cid), icon: FileText, prefetch: false, testId: 'scope-nav-child-plans' },
     { label: 'Reviews', href: childReviewsHref(cid), icon: ClipboardCheck, prefetch: false, testId: 'scope-nav-child-reviews' },
-    { label: 'Alerts', href: childAlertsHref(cid), icon: Bell, prefetch: false, testId: 'scope-nav-child-alerts' },
-    { label: 'ORB', href: childOrbHref(cid), icon: Sparkles, prefetch: false, testId: 'scope-nav-child-orb' }
+    { label: 'Alerts', href: childAlertsHref(cid), icon: Bell, prefetch: false, testId: 'scope-nav-child-alerts' }
   ]
 }
 
@@ -142,7 +144,8 @@ export function childScopeMoreNavigation(childId: string | number): ScopeNavItem
     { label: 'Health / medication', href: childHealthMedicationHref(cid), icon: HeartPulse, prefetch: false, testId: 'scope-nav-child-health' },
     { label: 'Education', href: childEducationHref(cid), icon: FileText, prefetch: false, testId: 'scope-nav-child-education' },
     { label: 'Family time', href: childFamilyTimeHref(cid), icon: UserRound, prefetch: false, testId: 'scope-nav-child-family-time' },
-    { label: 'Keywork', href: childKeyworkHref(cid), icon: ClipboardCheck, prefetch: false, testId: 'scope-nav-child-keywork' }
+    { label: 'Keywork', href: childKeyworkHref(cid), icon: ClipboardCheck, prefetch: false, testId: 'scope-nav-child-keywork' },
+    { label: 'ORB', href: childOrbHref(cid), icon: Sparkles, prefetch: false, testId: 'scope-nav-child-orb' }
   ]
 }
 

@@ -56,15 +56,17 @@ export function Reg45ReviewWorkspace() {
         data-testid="reg45-safety-note"
         className="rounded-2xl border border-indigo-100 bg-indigo-50/60 px-4 py-3 text-xs font-semibold leading-6 text-indigo-950"
       >
-        Draft review — requires manager/provider review. Professional judgement remains required. This does not
-        determine compliance or predict inspection outcomes.
+        Reg 45 quality-of-care review — evidence snapshot and Quality Standards alignment support. Gaps to review are
+        prompts for managers, not guaranteed compliance or predicted grades. Professional judgement remains required.
       </p>
 
       <Reg45ReviewDashboardSummary dashboard={dashboard} />
 
       {dashboard?.key_gaps?.length ? (
         <section className="space-y-3">
-          <h2 className="text-lg font-black text-slate-950">Potential gaps</h2>
+          <h2 className="text-lg font-black text-slate-950" data-testid="reg45-gaps-heading">
+            Gaps to review
+          </h2>
           <div className="grid gap-3 md:grid-cols-2">
             {dashboard.key_gaps.slice(0, 4).map((gap) => (
               <Reg45GapCard key={gap.id} gap={gap} />

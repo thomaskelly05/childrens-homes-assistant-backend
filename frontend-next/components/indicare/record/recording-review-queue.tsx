@@ -20,11 +20,11 @@ import {
 
 type FilterKey =
   | 'all'
-  | 'safeguarding'
   | 'manager'
   | 'changes_requested'
   | 'approved'
-  | 'urgent'
+  | 'escalated'
+  | 'overdue'
 
 export function RecordingReviewQueue({
   childIdFilter,
@@ -47,11 +47,11 @@ export function RecordingReviewQueue({
       home_id: homeIdFilter,
       limit: 100
     }
-    if (filter === 'safeguarding') params.safeguarding_only = true
     if (filter === 'manager') params.manager_review_only = true
     if (filter === 'changes_requested') params.changes_requested_only = true
     if (filter === 'approved') params.approved_only = true
-    if (filter === 'urgent') params.urgent_only = true
+    if (filter === 'escalated') params.safeguarding_only = true
+    if (filter === 'overdue') params.urgent_only = true
 
     const [queueResult, summaryResult] = await Promise.all([
       listRecordingReviewQueue(params),
@@ -77,13 +77,13 @@ export function RecordingReviewQueue({
     })()
   }, [selectedId])
 
-  const filters: { key: FilterKey; label: string }[] = [
-    { key: 'all', label: 'All' },
-    { key: 'safeguarding', label: 'Safeguarding review' },
-    { key: 'manager', label: 'Manager review' },
-    { key: 'changes_requested', label: 'Changes requested' },
-    { key: 'approved', label: 'Approved' },
-    { key: 'urgent', label: 'Urgent' }
+  const filters: { key: FilterKey; label: string; testId: string }[] = [
+    { key: 'all', label: 'All', testId: 'recording-review-filter-all' },
+    { key: 'manager', label: 'Awaiting manager review', testId: 'recording-review-filter-awaiting-manager' },
+    { key: 'changes_requested', label: 'Returned for amendment', testId: 'recording-review-filter-returned' },
+    { key: 'approved', label: 'Signed off', testId: 'recording-review-filter-signed-off' },
+    { key: 'escalated', label: 'Escalated', testId: 'recording-review-filter-escalated' },
+    { key: 'overdue', label: 'Overdue', testId: 'recording-review-filter-overdue' }
   ]
 
   return (
@@ -101,20 +101,24 @@ export function RecordingReviewQueue({
         </Link>
 
         {summary ? (
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            <SummaryCard label="Awaiting review" value={summary.awaiting_review} testId="recording-review-summary-awaiting" />
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3" data-testid="recording-review-queue-status-summary">
             <SummaryCard
-              label="Safeguarding review"
-              value={summary.safeguarding_review}
-              testId="recording-review-summary-safeguarding"
+              label="Awaiting manager review"
+              value={summary.awaiting_review}
+              testId="recording-review-summary-awaiting-manager"
             />
             <SummaryCard
-              label="Changes requested"
+              label="Returned for amendment"
               value={summary.changes_requested}
-              testId="recording-review-summary-changes"
+              testId="recording-review-summary-returned"
             />
-            <SummaryCard label="Approved" value={summary.approved} testId="recording-review-summary-approved" />
-            <SummaryCard label="Urgent" value={summary.urgent} testId="recording-review-summary-urgent" />
+            <SummaryCard label="Signed off" value={summary.approved} testId="recording-review-summary-signed-off" />
+            <SummaryCard
+              label="Escalated"
+              value={summary.safeguarding_review}
+              testId="recording-review-summary-escalated"
+            />
+            <SummaryCard label="Overdue" value={summary.urgent} testId="recording-review-summary-overdue" />
           </div>
         ) : null}
 
@@ -123,6 +127,7 @@ export function RecordingReviewQueue({
             <button
               key={item.key}
               type="button"
+              data-testid={item.testId}
               onClick={() => setFilter(item.key)}
               className={`rounded-xl px-3 py-1.5 text-xs font-black ${
                 filter === item.key ? 'bg-blue-600 text-white' : 'border border-slate-200 bg-white text-slate-700'
