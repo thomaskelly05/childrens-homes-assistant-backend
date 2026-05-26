@@ -22,8 +22,16 @@ export function SlideOverPreview({
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-[70] bg-slate-950/20 backdrop-blur-sm" role="dialog" aria-modal="true">
-      <div className="ml-auto flex h-full w-full max-w-md flex-col border-l border-slate-200 bg-[#f8fafc] p-5 shadow-2xl">
+    <div
+      className="fixed inset-0 z-[70] bg-slate-950/20 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      onClick={onClose}
+    >
+      <div
+        className="ml-auto flex h-full w-full max-w-md flex-col border-l border-slate-200 bg-[#f8fafc] p-5 shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
+      >
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="text-[11px] font-black uppercase tracking-[0.22em] text-blue-600">Quick preview</p>

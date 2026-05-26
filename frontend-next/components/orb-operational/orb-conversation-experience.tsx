@@ -17,6 +17,7 @@ import {
   type OrbOperationalResponse,
   type OrbOperationalScope
 } from '@/lib/orb/operational-client'
+import { ORB_SEND_RETRY_MESSAGE } from '@/lib/interaction/orb-send-errors'
 import { queryOrbConversation, type OrbConversationResponse, type OrbScope } from '@/lib/os-api/orb'
 import type { OsPersonSummary } from '@/lib/os-api/workspaces'
 
@@ -199,41 +200,53 @@ export function OrbConversationExperience({
       days: 7
     }
     setLastRequest(operationalPayload)
-    const operationalResult = await sendOperationalOrbMessage(operationalPayload, controller.signal)
-    let responseData: OrbConversationResponse
-    if (operationalResult.source === 'live' && operationalResult.data.answer) {
-      setLatestOperational(operationalResult.data)
-      if (operationalResult.data.operational_output?.saved && operationalResult.data.operational_output.output_id) {
-        setSavedOutputId(operationalResult.data.operational_output.output_id)
-        setOutputsRefresh((n) => n + 1)
+    try {
+      const operationalResult = await sendOperationalOrbMessage(operationalPayload, controller.signal)
+      let responseData: OrbConversationResponse
+      if (operationalResult.source === 'live' && operationalResult.data.answer) {
+        setLatestOperational(operationalResult.data)
+        if (operationalResult.data.operational_output?.saved && operationalResult.data.operational_output.output_id) {
+          setSavedOutputId(operationalResult.data.operational_output.output_id)
+          setOutputsRefresh((n) => n + 1)
+        }
+        responseData = mapOperationalResponse(operationalResult.data)
+        const evalWarnings = operationalResult.data.warnings || []
+        setWarning([operationalResult.warning, ...evalWarnings].filter(Boolean).join(' ') || null)
+      } else {
+        setLatestOperational(null)
+        const legacy = await queryOrbConversation(
+          {
+            message,
+            scope: activeScope,
+            young_person_id: activeScope === 'child' ? selectedChildId : null,
+            conversation_id: conversationId
+          },
+          controller.signal
+        )
+        responseData = legacy.data
+        const combinedWarning = [legacy.warning, operationalResult.warning].filter(Boolean).join(' ')
+        setWarning(combinedWarning || null)
+        if (legacy.source !== 'live' && operationalResult.source !== 'live') {
+          setWarning(ORB_SEND_RETRY_MESSAGE)
+        }
       }
-      responseData = mapOperationalResponse(operationalResult.data)
-      const evalWarnings = operationalResult.data.warnings || []
-      setWarning([operationalResult.warning, ...evalWarnings].filter(Boolean).join(' ') || null)
-    } else {
-      setLatestOperational(null)
-      const legacy = await queryOrbConversation(
+      setMessages((current) => [
+        ...current,
         {
-          message,
-          scope: activeScope,
-          young_person_id: activeScope === 'child' ? selectedChildId : null,
-          conversation_id: conversationId
-        },
-        controller.signal
-      )
-      responseData = legacy.data
-      setWarning(legacy.warning || operationalResult.warning || null)
-    }
-    setMessages((current) => [
-      ...current,
-      {
-        id: `a-${Date.now()}`,
-        role: 'assistant',
-        text: responseData.answer,
-        response: responseData
+          id: `a-${Date.now()}`,
+          role: 'assistant',
+          text: responseData.answer,
+          response: responseData
+        }
+      ])
+    } catch {
+      setWarning(ORB_SEND_RETRY_MESSAGE)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('[operational-orb] send failed')
       }
-    ])
-    setPending(false)
+    } finally {
+      setPending(false)
+    }
   }
 
   function applyScope(nextScope: OrbScope) {
@@ -410,10 +423,18 @@ export function OrbConversationExperience({
               ) : null}
             </div>
           ) : null}
-          {warning ? <div className="rounded-[24px] bg-amber-50 p-4 text-sm font-bold text-amber-800 ring-1 ring-amber-100">{warning}</div> : null}
+          {warning ? (
+            <div
+              className="rounded-[24px] bg-amber-50 p-4 text-sm font-bold text-amber-800 ring-1 ring-amber-100"
+              data-testid="orb-operational-send-error"
+              role="alert"
+            >
+              {warning}
+            </div>
+          ) : null}
         </div>
 
-        <form onSubmit={submit} className="mt-4 flex gap-2 rounded-[24px] border border-slate-200 bg-white p-2 shadow-sm">
+        <form onSubmit={submit} className="mt-4 flex gap-2 rounded-[24px] border border-slate-200 bg-white p-2 shadow-sm" data-testid="orb-operational-message-form">
           <label htmlFor="orb-message" className="sr-only">Ask ORB</label>
           <textarea
             id="orb-message"
@@ -423,7 +444,12 @@ export function OrbConversationExperience({
             placeholder="Ask ORB what needs review..."
             className="min-h-12 flex-1 resize-none rounded-[18px] px-4 py-3 text-sm font-semibold text-slate-800 outline-none placeholder:text-slate-400"
           />
-          <button type="submit" disabled={!input.trim() || pending} className="rounded-[20px] bg-slate-950 px-5 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:bg-slate-300">
+          <button
+            type="submit"
+            disabled={!input.trim() || pending}
+            data-testid="orb-operational-send-button"
+            className="rounded-[20px] bg-slate-950 px-5 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+          >
             <Send className="h-4 w-4" aria-hidden />
             <span className="sr-only">Send</span>
           </button>

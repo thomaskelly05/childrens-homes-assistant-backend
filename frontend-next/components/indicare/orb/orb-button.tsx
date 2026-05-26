@@ -75,9 +75,21 @@ export function OrbButton({
   return (
     <div className={placement === 'floating' ? 'fixed bottom-[calc(env(safe-area-inset-bottom)+9.5rem)] right-3 z-50 md:bottom-7 md:right-7' : 'relative inline-flex'}>
       {orbReady && active ? (
-        <div className={`${immersiveOpen ? 'orb-standalone-atmosphere fixed inset-0 z-[70] flex items-center justify-center px-4' : 'fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+6rem)] z-[70] md:left-auto md:right-7 md:w-[440px]'} text-white`} data-orb-state={ambientState}>
+        <div
+          className={`orb-overlay-shell ${immersiveOpen ? 'orb-standalone-atmosphere fixed inset-0 z-[70] flex items-center justify-center px-4' : 'fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+6rem)] z-[70] md:left-auto md:right-7 md:w-[440px]'} text-white`}
+          data-orb-state={ambientState}
+          onClick={
+            immersiveOpen
+              ? (event) => {
+                  if (event.target === event.currentTarget) {
+                    setImmersiveOpen(false)
+                  }
+                }
+              : undefined
+          }
+        >
           <div className="orb-screen-edge-pulse" data-orb-state={ambientState} aria-hidden />
-          <section className={`${immersiveOpen ? 'w-full max-w-xl' : 'orb-embedded-panel p-5'} flex flex-col items-center text-center`} data-orb-state={ambientState}>
+          <section className={`orb-overlay-interactive ${immersiveOpen ? 'w-full max-w-xl' : 'orb-embedded-panel p-5'} flex flex-col items-center text-center`} data-orb-state={ambientState}>
             <OrbVisual state={snapshot.state} />
             <p className="orb-kicker mt-8 text-[11px] font-black uppercase tracking-[0.28em]">IndiCare OS Orb</p>
             <h2 className={`orb-title-glow ${immersiveOpen ? 'text-4xl' : 'text-2xl'} mt-3 font-black tracking-[-0.07em]`}>{orbStatus}</h2>

@@ -1049,18 +1049,20 @@ export async function fetchStandaloneOrbSurfaceRoute(
   return payload.data
 }
 
+export const STANDALONE_ORB_SEND_RETRY_MESSAGE = 'ORB could not send that message. Please retry.'
+
 export function standaloneOrbErrorMessage(error: unknown) {
   if (error instanceof AuthApiError) {
-    if (error.status === 504) return 'ORB could not finish that response. Please try again.'
+    if (error.status === 504) return STANDALONE_ORB_SEND_RETRY_MESSAGE
     if (error.status === 503) {
-      return error.message || 'ORB is temporarily unavailable. You can still keep drafting here.'
+      return error.message || STANDALONE_ORB_SEND_RETRY_MESSAGE
     }
-    if (error.status >= 500) return 'ORB is temporarily unavailable. You can still keep drafting here.'
+    if (error.status >= 500) return STANDALONE_ORB_SEND_RETRY_MESSAGE
     return error.message
   }
   if (error instanceof Error && error.name === 'AbortError') {
-    return 'ORB could not finish that response. Please try again.'
+    return STANDALONE_ORB_SEND_RETRY_MESSAGE
   }
   if (error instanceof Error) return error.message
-  return 'ORB could not respond just now. Try again in a moment.'
+  return STANDALONE_ORB_SEND_RETRY_MESSAGE
 }

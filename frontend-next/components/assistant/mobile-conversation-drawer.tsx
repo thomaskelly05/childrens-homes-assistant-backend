@@ -1,3 +1,5 @@
+'use client'
+
 type MobileConversationDrawerProps = {
   conversations: Array<{
     id: string
