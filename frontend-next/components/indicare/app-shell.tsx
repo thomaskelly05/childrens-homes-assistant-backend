@@ -102,7 +102,8 @@ export function AppShell({ children }: { children: ReactNode }) {
     .filter((item) => pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href)))
     .sort((a, b) => b.href.length - a.href.length)[0]
   const hasRouteAccess = !matchedRoute || userHasAnyPermission(user, matchedRoute.permissions)
-  const isStandaloneOrb = pathname === '/orb'
+  const isStandaloneOrb = pathname === '/orb' || pathname.startsWith('/orb/')
+  const isOperationalOrbPage = pathname === '/assistant/orb' || pathname.startsWith('/assistant/orb/')
   const isStandaloneAssistantRoute =
     pathname === '/assistant/voice' ||
     pathname.startsWith('/assistant/settings/')
@@ -223,7 +224,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     assistant_context: assistantContext
   }
 
-  if (isStandaloneOrb || isStandaloneAssistantRoute) return <>{children}</>
+  if (isStandaloneOrb || isOperationalOrbPage || isStandaloneAssistantRoute) return <>{children}</>
 
   if (isSelectScopeRoute) {
     return (

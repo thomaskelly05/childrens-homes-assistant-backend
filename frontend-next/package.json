@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "e2e": "playwright test",
     "route:audit": "node scripts/audit-routes.mjs",
-    "operational:audit": "node scripts/audit-operational-frontend.mjs"
+    "operational:audit": "node scripts/audit-operational-frontend.mjs",
+    "interaction:audit": "node scripts/audit-interaction.mjs"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.2",
