@@ -156,7 +156,7 @@ export function OrbConversationExperience({
     normaliseInitialMode(initialOperationalMode)
   )
   const [youngPersonId, setYoungPersonId] = useState<string>(startingScope === 'child' ? initialYoungPersonId || '' : '')
-  const [conversationId] = useState(() => `orb-${Date.now().toString(36)}`)
+  const [conversationId] = useState('orb-operational-session')
   const [input, setInput] = useState(initialPrompt || scopePrompt(startingScope))
   const [messages, setMessages] = useState<Message[]>([])
   const [pending, setPending] = useState(false)

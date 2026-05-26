@@ -8,7 +8,11 @@ import { OrbFailureState } from '@/components/orb-core/orb-failure-state'
 import { OrbRenderer } from '@/components/orb-core/orb-renderer'
 import type { OrbRenderState } from '@/components/orb-core/orb-sphere'
 import { orbAccessibilityClassNames } from '@/lib/orb/accessibility/apply-accessibility'
-import { loadOrbAccessibilityPreferences } from '@/lib/orb/accessibility/preferences'
+import {
+  defaultOrbAccessibilityPreferences,
+  loadOrbAccessibilityPreferences
+} from '@/lib/orb/accessibility/preferences'
+import { useMounted } from '@/hooks/use-mounted'
 import { useAuth } from '@/contexts/auth-context'
 import { orbProductCopy } from '@/lib/orb/content/copy'
 import { OrbSoundEngine } from '@/lib/orb/audio'
@@ -75,7 +79,11 @@ function failureCodeFor(snapshot: OrbRuntimeSnapshot) {
 
 export function OrbStandaloneExperience({ voiceFirst = true }: { voiceFirst?: boolean }) {
   const { status, user, csrfReady } = useAuth()
-  const hydratedAccessibility = useMemo(() => loadOrbAccessibilityPreferences(), [])
+  const mounted = useMounted()
+  const [hydratedAccessibility, setHydratedAccessibility] = useState(defaultOrbAccessibilityPreferences)
+  useEffect(() => {
+    setHydratedAccessibility(loadOrbAccessibilityPreferences())
+  }, [])
   const voiceFirstRuntime = voiceFirst || hydratedAccessibility.voiceFirstNavigation
   const controller = useMemo(() => {
     const preferences = {
@@ -170,7 +178,7 @@ export function OrbStandaloneExperience({ voiceFirst = true }: { voiceFirst?: bo
   }
 
   return (
-    <div className={`relative mx-auto flex min-h-[calc(100vh-7rem)] w-full flex-col items-center justify-center gap-6 px-2 text-center ${accessibilityClassName}`} data-orb-state={renderState} data-orb-mobile={snapshot.mobile.isMobile ? 'true' : 'false'}>
+    <div className={`relative mx-auto flex min-h-[calc(100vh-7rem)] w-full flex-col items-center justify-center gap-6 px-2 text-center ${accessibilityClassName}`} data-orb-state={renderState} data-orb-mobile={mounted && snapshot.mobile.isMobile ? 'true' : 'false'}>
       <div className="orb-screen-edge-pulse" data-orb-state={renderState} aria-hidden />
       <div className="orb-atmospheric-diffusion" data-orb-state={renderState} aria-hidden />
       <div className="absolute right-0 top-0 z-20 flex flex-wrap justify-end gap-2">
