@@ -11,6 +11,7 @@ REVIEW_FILES = [
     FRONTEND / "components" / "indicare" / "record" / "recording-review-queue.tsx",
     FRONTEND / "components" / "indicare" / "record" / "recording-review-detail.tsx",
     FRONTEND / "components" / "indicare" / "record" / "recording-review-actions.tsx",
+    FRONTEND / "components" / "indicare" / "record" / "recording-review-signoff-result.tsx",
     FRONTEND / "lib" / "os-api" / "recording-reviews.ts",
 ]
 
@@ -43,13 +44,23 @@ def test_review_ui_markers():
     assert "Recording alerts" in combined or "Open alerts" in combined
     assert "recording-review-structured-summary" in combined
     assert "Structured summary" in combined
+    assert "Formal record created" in combined
+    assert "Archive record" in combined
+    assert "Chronology story" in combined
+    assert "Plan impacts" in combined
+    assert "LifeEcho suggestions" in combined
+    assert "recording-review-signoff-result" in combined
 
 
 def test_orb_prompts_use_operational_orb_only():
     combined = "\n".join(_read(path) for path in REVIEW_FILES)
     assert "operationalOrbReviewHref" in combined
     assert "record_quality_review" in combined
+    assert "plan_impact_review" in combined
+    assert "archive_summary" in combined
+    assert "lifeecho_memory_support" in combined
     assert "safeguarding_themes" in combined
+    assert "scope: 'child'" in combined or "scope: \"child\"" in combined
     assert "/assistant/orb" in combined
     orb_hrefs = re.findall(r'["\']([^"\']*/(?:assistant/)?orb[^"\']*)["\']', combined)
     for href in orb_hrefs:

@@ -36,6 +36,17 @@ export function ChildLifecycleCard({ view }: { view: ChildWorkspaceOverviewViewM
           </Link>
         ))}
       </div>
+      {view.today.needsReview.length > 0 ? (
+        <p
+          className="mt-3 text-xs font-semibold text-amber-950"
+          data-testid="child-lifecycle-awaiting-review"
+        >
+          {view.today.needsReview.length} item(s) may need manager review —{' '}
+          <Link href={reviewHref} className="font-black underline">
+            open review queue
+          </Link>
+        </p>
+      ) : null}
       <div className="mt-4 flex flex-wrap gap-2 text-xs font-black">
         <Link href={view.routes.archive} data-testid="child-quick-archive" className="text-sky-700">
           Open archive →

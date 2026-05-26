@@ -134,14 +134,35 @@ export function RecordingReviewDetailPanel({
               </button>
             ))}
             <Link
-              href={operationalOrbReviewHref('record_quality_review')}
+              href={operationalOrbReviewHref('record_quality_review', { childId })}
               data-testid="recording-review-orb-quality"
               className="inline-flex min-h-8 items-center rounded-xl bg-slate-950 px-2 py-1 text-[10px] font-black text-white"
             >
-              Open operational ORB
+              Sign-off readiness
             </Link>
             <Link
-              href={operationalOrbReviewHref('safeguarding_themes')}
+              href={operationalOrbReviewHref('plan_impact_review', { childId })}
+              data-testid="recording-review-orb-plan-impacts"
+              className="inline-flex min-h-8 items-center rounded-xl border border-amber-200 bg-amber-50 px-2 py-1 text-[10px] font-black text-amber-950"
+            >
+              Plan impacts
+            </Link>
+            <Link
+              href={operationalOrbReviewHref('archive_summary', { childId })}
+              data-testid="recording-review-orb-archive"
+              className="inline-flex min-h-8 items-center rounded-xl border border-sky-200 bg-sky-50 px-2 py-1 text-[10px] font-black text-sky-950"
+            >
+              Before archiving
+            </Link>
+            <Link
+              href={operationalOrbReviewHref('lifeecho_memory_support', { childId })}
+              data-testid="recording-review-orb-lifeecho"
+              className="inline-flex min-h-8 items-center rounded-xl border border-fuchsia-200 bg-fuchsia-50 px-2 py-1 text-[10px] font-black text-fuchsia-950"
+            >
+              LifeEcho suitability
+            </Link>
+            <Link
+              href={operationalOrbReviewHref('safeguarding_themes', { childId })}
               data-testid="recording-review-orb-safeguarding"
               className="inline-flex min-h-8 items-center rounded-xl border border-slate-200 bg-white px-2 py-1 text-[10px] font-black text-slate-800"
             >
