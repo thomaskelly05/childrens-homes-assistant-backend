@@ -6,7 +6,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from auth.permissions import require_assistant_access
+from auth.permissions import require_standalone_orb_access
 from schemas.orb_saved_outputs import (
     OrbSavedOutputCreate,
     OrbSavedOutputExportRequest,
@@ -45,12 +45,12 @@ def _reject_os_ids(payload: dict[str, Any]) -> None:
 
 
 @router.get("/health")
-async def outputs_health(current_user=Depends(require_assistant_access)):
+async def outputs_health(current_user=Depends(require_standalone_orb_access)):
     return _success(orb_saved_output_service.health().model_dump())
 
 
 @router.get("/summary")
-async def outputs_summary(current_user=Depends(require_assistant_access)):
+async def outputs_summary(current_user=Depends(require_standalone_orb_access)):
     return _success(orb_saved_output_service.get_summary())
 
 
@@ -64,7 +64,7 @@ async def list_outputs(
     include_archived: bool = False,
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
-    current_user=Depends(require_assistant_access),
+    current_user=Depends(require_standalone_orb_access),
 ):
     request = OrbSavedOutputListRequest(
         project_id=project_id,
@@ -83,7 +83,7 @@ async def list_outputs(
 @router.post("")
 async def create_output(
     payload: OrbSavedOutputCreate,
-    current_user=Depends(require_assistant_access),
+    current_user=Depends(require_standalone_orb_access),
 ):
     _reject_os_ids(payload.model_dump())
     record = orb_saved_output_service.create_output(payload)
@@ -93,7 +93,7 @@ async def create_output(
 @router.get("/{output_id}")
 async def get_output(
     output_id: str,
-    current_user=Depends(require_assistant_access),
+    current_user=Depends(require_standalone_orb_access),
 ):
     record = orb_saved_output_service.get_output(output_id)
     if not record:
@@ -105,7 +105,7 @@ async def get_output(
 async def update_output(
     output_id: str,
     payload: OrbSavedOutputUpdate,
-    current_user=Depends(require_assistant_access),
+    current_user=Depends(require_standalone_orb_access),
 ):
     _reject_os_ids(payload.model_dump())
     record = orb_saved_output_service.update_output(output_id, payload)
@@ -117,7 +117,7 @@ async def update_output(
 @router.delete("/{output_id}")
 async def delete_output(
     output_id: str,
-    current_user=Depends(require_assistant_access),
+    current_user=Depends(require_standalone_orb_access),
 ):
     if not orb_saved_output_service.delete_output(output_id):
         raise HTTPException(status_code=404, detail="Saved output not found.")
@@ -127,7 +127,7 @@ async def delete_output(
 @router.post("/{output_id}/archive")
 async def archive_output(
     output_id: str,
-    current_user=Depends(require_assistant_access),
+    current_user=Depends(require_standalone_orb_access),
 ):
     record = orb_saved_output_service.archive_output(output_id)
     if not record:
@@ -139,7 +139,7 @@ async def archive_output(
 async def export_output(
     output_id: str,
     payload: OrbSavedOutputExportRequest,
-    current_user=Depends(require_assistant_access),
+    current_user=Depends(require_standalone_orb_access),
 ):
     result = orb_saved_output_service.export_output(output_id, payload.format)
     if not result:
@@ -151,7 +151,7 @@ async def export_output(
 async def reuse_output(
     output_id: str,
     payload: OrbSavedOutputReuseRequest,
-    current_user=Depends(require_assistant_access),
+    current_user=Depends(require_standalone_orb_access),
 ):
     result = orb_saved_output_service.build_reuse_prompt(output_id, payload.instruction)
     if not result:

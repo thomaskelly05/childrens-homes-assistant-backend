@@ -219,6 +219,13 @@ for (const path of sourceFiles) {
 
 check('/orb composer uses form onSubmit', orbStandaloneComposer.includes('<form') && orbStandaloneComposer.includes('onSubmit'))
 check('/orb composer send is type="submit"', orbStandaloneComposer.includes('type="submit"') && orbStandaloneComposer.includes('data-testid="orb-standalone-send-clickable"'))
+check(
+  '/orb composer is controlled single-source',
+  orbStandaloneComposer.includes('value={value}') &&
+    orbStandaloneComposer.includes('data-input-source="controlled"') &&
+    orbCareCompanion.includes('value={message}') &&
+    orbCareCompanion.includes('onChange={handleMessageChange}')
+)
 check('/orb has visible send error marker', orbCareCompanion.includes('data-testid="orb-standalone-send-error"'))
 
 check(

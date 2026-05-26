@@ -7,7 +7,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from auth.permissions import require_assistant_access
+from auth.permissions import require_standalone_orb_access
 from schemas.orb_agents import OrbAgentRunRequest, OrbAgentType, OrbDeepResearchRequest
 from services.orb_agent_orchestrator_service import orb_agent_orchestrator_service
 from services.orb_agent_registry_service import orb_agent_registry_service
@@ -28,7 +28,7 @@ def _error(message: str, *, status: int = 400) -> None:
 
 
 @router.get("/health")
-async def agents_health(current_user=Depends(require_assistant_access)):
+async def agents_health(current_user=Depends(require_standalone_orb_access)):
     from schemas.orb_agents import OrbAgentHealth
 
     agents = orb_agent_registry_service.list_agents()
@@ -46,13 +46,13 @@ async def agents_health(current_user=Depends(require_assistant_access)):
 
 
 @router.get("")
-async def list_agents(current_user=Depends(require_assistant_access)):
+async def list_agents(current_user=Depends(require_standalone_orb_access)):
     agents = orb_agent_registry_service.list_agents()
     return _success([agent.model_dump() for agent in agents])
 
 
 @router.get("/{agent_type}")
-async def get_agent(agent_type: OrbAgentType, current_user=Depends(require_assistant_access)):
+async def get_agent(agent_type: OrbAgentType, current_user=Depends(require_standalone_orb_access)):
     agent = orb_agent_registry_service.get_agent(agent_type)
     if not agent:
         _error(f"Unknown agent type: {agent_type}", status=404)
@@ -62,7 +62,7 @@ async def get_agent(agent_type: OrbAgentType, current_user=Depends(require_assis
 @router.post("/run")
 async def run_agent(
     payload: OrbAgentRunRequest,
-    current_user=Depends(require_assistant_access),
+    current_user=Depends(require_standalone_orb_access),
 ):
     if payload.agent_type and not orb_agent_registry_service.agent_available(payload.agent_type):
         _error(f"Agent unavailable: {payload.agent_type}", status=404)
@@ -91,7 +91,7 @@ async def run_agent(
 @router.post("/deep-research")
 async def deep_research(
     payload: OrbDeepResearchRequest,
-    current_user=Depends(require_assistant_access),
+    current_user=Depends(require_standalone_orb_access),
 ):
     try:
         result = await orb_deep_research_service.run_deep_research(payload)

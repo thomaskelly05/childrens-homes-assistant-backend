@@ -7,7 +7,7 @@ from typing import Any
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, ConfigDict, Field
 
-from auth.permissions import require_assistant_access
+from auth.permissions import require_standalone_orb_access
 from schemas.orb_evaluation import OrbEvaluationRequest
 from services.orb_evaluation_service import orb_evaluation_service
 
@@ -36,14 +36,14 @@ class OrbEvaluateAgentOutputRequest(BaseModel):
 
 
 @router.get("/health")
-async def evaluation_health(current_user=Depends(require_assistant_access)):
+async def evaluation_health(current_user=Depends(require_standalone_orb_access)):
     return _success(orb_evaluation_service.health())
 
 
 @router.post("/evaluate-answer")
 async def evaluate_answer(
     payload: OrbEvaluationRequest,
-    current_user=Depends(require_assistant_access),
+    current_user=Depends(require_standalone_orb_access),
 ):
     result = orb_evaluation_service.evaluate_answer(payload)
     return _success(result.model_dump())
@@ -52,7 +52,7 @@ async def evaluate_answer(
 @router.post("/evaluate-document-output")
 async def evaluate_document_output(
     payload: OrbEvaluateDocumentOutputRequest,
-    current_user=Depends(require_assistant_access),
+    current_user=Depends(require_standalone_orb_access),
 ):
     result = orb_evaluation_service.evaluate_document_output(
         payload.understanding,
@@ -64,7 +64,7 @@ async def evaluate_document_output(
 @router.post("/evaluate-agent-output")
 async def evaluate_agent_output(
     payload: OrbEvaluateAgentOutputRequest,
-    current_user=Depends(require_assistant_access),
+    current_user=Depends(require_standalone_orb_access),
 ):
     result = orb_evaluation_service.evaluate_agent_output(
         answer=payload.answer,
