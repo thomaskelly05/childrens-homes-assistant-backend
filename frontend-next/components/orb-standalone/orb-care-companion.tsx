@@ -1,6 +1,15 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type DragEvent,
+  type FormEvent,
+  type ReactNode
+} from 'react'
 import { useSearchParams } from 'next/navigation'
 import {
   Copy,
@@ -282,6 +291,8 @@ export function OrbCareCompanion() {
   } | null>(null)
 
   const inputRef = useRef<HTMLTextAreaElement | null>(null)
+  const composerUserEditedRef = useRef(false)
+  const voiceMayFillComposerRef = useRef(false)
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
   const autoSendTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const hydratedRef = useRef(false)
@@ -394,9 +405,10 @@ export function OrbCareCompanion() {
   }, [initialQuery])
 
   useEffect(() => {
-    const display = voice.displayTranscript
+    const display = voice.displayTranscript.trim()
     const transcriptReady = voice.phase === 'transcript_ready'
     if (!display || (!voice.listening && !transcriptReady)) return
+    if (composerUserEditedRef.current && !voiceMayFillComposerRef.current) return
     setInput(display)
   }, [voice.displayTranscript, voice.listening, voice.phase])
 
@@ -491,6 +503,8 @@ export function OrbCareCompanion() {
 
       setInput('')
       setAttachments([])
+      composerUserEditedRef.current = false
+      voiceMayFillComposerRef.current = false
       voice.clearTranscript()
       voice.markIdle()
       setPending(true)
@@ -665,15 +679,27 @@ export function OrbCareCompanion() {
   )
 
   const handleComposerSubmit = useCallback(
-    (event?: { preventDefault?: () => void }) => {
+    (event?: FormEvent<HTMLFormElement> | { preventDefault?: () => void }) => {
       event?.preventDefault?.()
       if (submitGuardRef.current || pending || sendInFlightRef.current) return
+
+      let formText = ''
+      if (event && 'currentTarget' in event && event.currentTarget) {
+        formText = String(new FormData(event.currentTarget).get('message') || '')
+      }
+      const domText = inputRef.current?.value ?? ''
+      const finalText = (formText || input || domText).trim()
+      if (!finalText && attachments.length === 0) {
+        setError('Type a message to send.')
+        return
+      }
+
       submitGuardRef.current = true
-      void sendMessage(input).finally(() => {
+      void sendMessage(finalText).finally(() => {
         submitGuardRef.current = false
       })
     },
-    [input, pending, sendMessage]
+    [attachments.length, input, pending, sendMessage]
   )
 
   useEffect(() => {
@@ -701,7 +727,17 @@ export function OrbCareCompanion() {
       return
     }
     if (!voice.recognitionAvailable) return
+    if (!input.trim()) {
+      voiceMayFillComposerRef.current = true
+      composerUserEditedRef.current = false
+    }
     voice.startListening()
+  }
+
+  function handleComposerInputChange(value: string) {
+    composerUserEditedRef.current = true
+    voiceMayFillComposerRef.current = false
+    setInput(value)
   }
 
   function handleModeChange(next: StandaloneOrbMode) {
@@ -731,6 +767,8 @@ export function OrbCareCompanion() {
     }))
     setInput('')
     setAttachments([])
+    composerUserEditedRef.current = false
+    voiceMayFillComposerRef.current = false
     setError(null)
     voice.clearTranscript()
     setSidebarOpen(false)
@@ -746,6 +784,8 @@ export function OrbCareCompanion() {
     }))
     setInput('')
     setAttachments([])
+    composerUserEditedRef.current = false
+    voiceMayFillComposerRef.current = false
     setError(null)
     setSidebarOpen(false)
   }
@@ -865,7 +905,7 @@ export function OrbCareCompanion() {
       transcriptReady={voice.phase === 'transcript_ready'}
       displayTranscript={voice.displayTranscript}
       autoSend={voiceSettings.autoSend}
-      onInputChange={setInput}
+      onInputChange={handleComposerInputChange}
       onSubmit={handleComposerSubmit}
       onMicClick={handleOrbActivate}
       onCancelListening={voice.cancelListening}
@@ -901,7 +941,7 @@ export function OrbCareCompanion() {
 
   function openVoiceSettings() {
     setOrbCompanionExpanded(true)
-    setVoicePanelOpen(true)
+    setVoicePanelOpen(false)
     setSidebarOpen(false)
   }
 
@@ -1380,21 +1420,25 @@ export function OrbCareCompanion() {
         </div>
       </div>
 
-      <div className="max-md:hidden" data-orb-floating-voice-orb="desktop-only">
-        <OrbCompactCompanion
-          expanded={orbCompanionExpanded}
-          glowState={glowState}
-          mode={mode}
-          voice={voice}
-          voiceSettings={voiceSettings}
-          updateVoiceSettings={updateVoiceSettings}
-          voicePanelOpen={voicePanelOpen}
-          onToggleExpanded={() => setOrbCompanionExpanded((open) => !open)}
-          onOrbActivate={handleOrbActivate}
-          onToggleVoicePanel={() => setVoicePanelOpen((open) => !open)}
-          onCloseVoicePanel={() => setVoicePanelOpen(false)}
-        />
-      </div>
+      {orbCompanionExpanded ? (
+        <div className="max-md:hidden" data-orb-floating-voice-orb="desktop-only" data-no-navigation-rescue="true">
+          <OrbCompactCompanion
+            glowState={glowState}
+            mode={mode}
+            voice={voice}
+            voiceSettings={voiceSettings}
+            updateVoiceSettings={updateVoiceSettings}
+            voicePanelOpen={voicePanelOpen}
+            onToggleExpanded={() => {
+              setOrbCompanionExpanded(false)
+              setVoicePanelOpen(false)
+            }}
+            onOrbActivate={handleOrbActivate}
+            onToggleVoicePanel={() => setVoicePanelOpen((open) => !open)}
+            onCloseVoicePanel={() => setVoicePanelOpen(false)}
+          />
+        </div>
+      ) : null}
 
       {promptDrawerOpen ? (
         <OrbPromptDrawer
@@ -1414,7 +1458,6 @@ export function OrbCareCompanion() {
 }
 
 function OrbCompactCompanion({
-  expanded,
   glowState,
   mode,
   voice,
@@ -1426,7 +1469,6 @@ function OrbCompactCompanion({
   onToggleVoicePanel,
   onCloseVoicePanel
 }: {
-  expanded: boolean
   glowState: StandaloneOrbGlowState
   mode: StandaloneOrbMode
   voice: ReturnType<typeof useStandaloneOrbVoice>
@@ -1438,31 +1480,28 @@ function OrbCompactCompanion({
   onToggleVoicePanel: () => void
   onCloseVoicePanel: () => void
 }) {
-  const collapsedLabel =
-    voice.settings.wakePhrase && voice.wakeStatus === 'listening' ? 'Say Hey ORB' : 'Tap to speak'
-
   return (
     <div className="orb-companion-float" data-orb-companion-float>
-      {expanded ? (
-        <div className="orb-voice-dock orb-companion-popover" data-orb-companion-expanded>
+      <div className="orb-voice-dock orb-companion-popover" data-orb-companion-expanded>
           <div className="flex items-center justify-between gap-2 border-b border-white/[0.06] px-3 py-2">
             <p className="text-xs font-medium text-slate-300">ORB voice</p>
             <button
               type="button"
               onClick={onToggleExpanded}
               className="rounded-lg p-1 text-slate-500 hover:bg-white/[0.06]"
-              aria-label="Collapse ORB companion"
+              aria-label="Close ORB voice panel"
+              data-no-navigation-rescue="true"
             >
               <PanelRightClose className="h-4 w-4" />
             </button>
           </div>
-          <div className="flex flex-col items-center px-3 py-4">
+          <div className="pointer-events-none flex flex-col items-center px-3 py-4">
             <OrbGlow
               state={glowState}
               mode={mode}
               voiceEnabled={voiceSettings.voiceReplies && voice.synthesisAvailable}
               onOrbActivate={onOrbActivate}
-              interactive={voice.recognitionAvailable}
+              interactive={false}
               size="compact"
               compactLabels
             />
@@ -1552,33 +1591,6 @@ function OrbCompactCompanion({
             </div>
           ) : null}
         </div>
-      ) : null}
-
-      <div className="orb-companion-fab" data-orb-companion-fab>
-        <button
-          type="button"
-          onClick={() => {
-            if (!expanded) onToggleExpanded()
-            onOrbActivate()
-          }}
-          className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60"
-          aria-label={expanded ? 'Tap to speak' : 'Expand ORB companion'}
-          data-orb-say-hey-orb
-        >
-          <OrbGlow
-            state={glowState}
-            voiceEnabled={voiceSettings.voiceReplies && voice.synthesisAvailable}
-            onOrbActivate={onOrbActivate}
-            interactive={voice.recognitionAvailable}
-            size="fab"
-            compactLabels
-            label={collapsedLabel}
-          />
-        </button>
-        {!expanded ? (
-          <span className="max-w-[5rem] text-center text-[9px] font-medium leading-tight text-slate-500">{collapsedLabel}</span>
-        ) : null}
-      </div>
     </div>
   )
 }

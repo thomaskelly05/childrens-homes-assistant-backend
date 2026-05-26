@@ -405,7 +405,7 @@ def test_orb_page_chatgpt_style_layout():
 
 
 def test_orb_compact_companion_voice_markers():
-    sources = _read(ORB_COMPANION) + _read(GLOBALS_CSS) + _read(ORB_COMPOSER) + _read(ORB_VOICE_HOOK)
+    sources = _read(ORB_COMPANION) + _read(GLOBALS_CSS) + _read(ORB_COMPOSER) + _read(ORB_VOICE_HOOK) + _read(ORB_GLOW)
     for marker in ORB_COMPANION_VOICE_MARKERS:
         assert marker in sources, f"/orb compact companion must include {marker}"
 

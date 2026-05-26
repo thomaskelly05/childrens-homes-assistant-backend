@@ -13,6 +13,12 @@ export type PendingImageAttachment = {
   previewUrl: string
 }
 
+function sendDisabledReason(pending: boolean, canSend: boolean): 'pending' | 'empty' | 'ready' {
+  if (pending) return 'pending'
+  if (!canSend) return 'empty'
+  return 'ready'
+}
+
 export function OrbStandaloneComposer({
   input,
   pending,
@@ -78,6 +84,11 @@ export function OrbStandaloneComposer({
 }) {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const cameraInputRef = useRef<HTMLInputElement | null>(null)
+  const trimmedMessage = input.trim()
+  const canSend = trimmedMessage.length > 0 || attachments.length > 0
+  const sendDisabled = pending || !canSend
+  const disabledReason = sendDisabledReason(pending, canSend)
+
   function handleDragOver(event: DragEvent) {
     event.preventDefault()
     event.stopPropagation()
@@ -233,8 +244,10 @@ export function OrbStandaloneComposer({
               <textarea
                 ref={inputRef}
                 id="orb-standalone-input"
+                name="message"
                 value={input}
                 onChange={(event) => onInputChange(event.target.value)}
+                onInput={(event) => onInputChange(event.currentTarget.value)}
                 onPaste={onPaste}
                 onKeyDown={(event) => {
                   if (event.key === 'Enter' && !event.shiftKey) {
@@ -258,12 +271,13 @@ export function OrbStandaloneComposer({
                   voiceListening ? 'bg-cyan-400/15 text-cyan-100' : 'text-slate-400 hover:bg-white/[0.06] hover:text-slate-200'
                 }`}
                 data-orb-composer-mic
+                data-no-navigation-rescue="true"
               >
                 {voiceListening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
               </button>
               <button
                 type="submit"
-                disabled={pending || (!input.trim() && attachments.length === 0)}
+                disabled={sendDisabled}
                 aria-label="Send message"
                 onClick={(event) => logTapTarget(event, 'orb-standalone-send-click')}
                 onPointerUp={(event) => {
@@ -273,6 +287,9 @@ export function OrbStandaloneComposer({
                 className="pointer-events-auto inline-flex h-11 min-h-11 min-w-11 shrink-0 cursor-pointer touch-manipulation items-center justify-center rounded-full bg-white text-slate-950 transition hover:bg-slate-100 disabled:opacity-35"
                 data-orb-composer-send
                 data-testid="orb-standalone-send-clickable"
+                data-send-disabled-reason={disabledReason}
+                data-message-length={trimmedMessage.length}
+                data-no-navigation-rescue="true"
               >
                 <Send className="h-5 w-5" />
               </button>
