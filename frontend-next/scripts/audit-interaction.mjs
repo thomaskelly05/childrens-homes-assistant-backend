@@ -86,6 +86,17 @@ const scopeRoutes = file('lib/navigation/scope-routes.ts')
 
 check('interaction-guard.css is imported from app/layout.tsx', file('app/layout.tsx').includes("import './interaction-guard.css'"))
 
+const navigationRescue = file('components/indicare/navigation/navigation-rescue.tsx')
+const rootLayout = file('app/layout.tsx')
+check(
+  'NavigationRescue is loaded from app/layout.tsx for stalled client-nav fallback',
+  rootLayout.includes('NavigationRescue') &&
+    rootLayout.includes('navigation-rescue') &&
+    navigationRescue.includes('window.location.assign') &&
+    navigationRescue.includes('capture: true') &&
+    navigationRescue.includes('data-no-navigation-rescue')
+)
+
 check(
   'home bottom nav avoids non-existent /homes/:id/recording-* routes',
   !mobileBottomNav.includes('/recording-alerts') && !mobileBottomNav.includes('/recording-reviews')
