@@ -34,14 +34,15 @@ def test_operational_orb_record_quality_review_href():
     assert "/assistant/orb?mode=record_quality_review" in combined
 
 
-def test_standalone_orb_recording_context_without_child_ids():
+def test_recording_wording_orb_uses_assistant_without_child_ids():
     combined = "\n".join(_read(path) for path in RECORD_ORB_FILES)
-    assert "/orb?context=recording" in combined
-    standalone_hrefs = re.findall(r'["\'](/orb[^"\']*)["\']', combined)
-    assert standalone_hrefs, "Expected standalone /orb hrefs in recording workspace"
-    for href in standalone_hrefs:
+    assert "/assistant/orb" in combined
+    orb_hrefs = re.findall(r'["\'](/assistant/orb[^"\']*)["\']', combined)
+    assert orb_hrefs, "Expected /assistant/orb hrefs in recording workspace"
+    for href in orb_hrefs:
         for key in FORBIDDEN_STANDALONE_QUERY_KEYS:
-            assert key not in href, f"Standalone ORB href must not include {key}: {href}"
+            assert key not in href, f"Recording ORB href must not include {key}: {href}"
+    assert "/orb?context=recording" not in combined
 
 
 def test_no_draft_body_in_orb_urls():

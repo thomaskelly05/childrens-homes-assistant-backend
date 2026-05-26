@@ -690,18 +690,20 @@ def _orb_url_builder_sections(text: str) -> str:
     return "\n".join(chunks)
 
 
-def test_record_orb_prompts_use_standalone_orb_without_operational_ids():
+def test_record_orb_prompts_use_assistant_orb_without_operational_ids():
     for path in (RECORD_HUB, RECORD_HUB_COMPONENT):
         text = _read(path)
         combined = _orb_url_builder_sections(text)
-        assert "/orb?" in combined or "recordOrbPromptHref" in text, f"{path.name} should define standalone /orb links"
+        assert "/assistant/orb" in combined or "recordOrbPromptHref" in text, f"{path.name} should define /assistant/orb links"
+        assert "/orb?context=recording" not in combined
         for key in FORBIDDEN_RECORD_ORB_QUERY_KEYS:
-            assert key not in combined, f"{path.name} must not pass {key} into standalone /orb URLs"
+            assert key not in combined, f"{path.name} must not pass {key} into ORB URLs"
 
     workspace_sources = "\n".join(_read(path) for path in RECORD_WORKSPACE_ORB_FILES)
-    assert "/orb?context=recording" in workspace_sources
+    assert "/assistant/orb" in workspace_sources
+    assert "/orb?context=recording" not in workspace_sources
     for key in FORBIDDEN_RECORD_ORB_QUERY_KEYS:
-        assert key not in workspace_sources, f"recording workspace must not pass {key} into standalone /orb URLs"
+        assert key not in workspace_sources, f"recording workspace must not pass {key} into ORB URLs"
 
 
 def test_standalone_orb_does_not_call_ai_governance_routes():

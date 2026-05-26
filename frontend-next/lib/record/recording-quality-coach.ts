@@ -378,4 +378,5 @@ export const RECORDING_ORB_COPY_PROMPT =
   'Please help me review this draft record for child-centred, factual and therapeutic language. I will paste the draft myself.'
 
 export const RECORDING_OS_ORB_HREF = '/assistant/orb?mode=record_quality_review'
-export const RECORDING_STANDALONE_ORB_HREF = '/orb?context=recording'
+/** Wording help without loading OS record bodies — still IndiCare OS assistant, not standalone /orb. */
+export const RECORDING_STANDALONE_ORB_HREF = '/assistant/orb?mode=general_operational_question'

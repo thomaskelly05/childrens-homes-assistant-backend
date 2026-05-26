@@ -111,7 +111,7 @@ export function childPhysicalInterventionHref(childId: string | number) {
 }
 
 export function childBodyMapHref(childId: string | number) {
-  return recordHref({ childId, type: 'body-map' })
+  return recordHref({ childId, type: 'injury-body-map' })
 }
 
 export function childRoomSearchHref(childId: string | number) {
@@ -197,7 +197,7 @@ export function homeDailyBriefHref(homeId: string | number) {
 }
 
 export function homeHandoverHref(homeId: string | number) {
-  return `/handover/current?home_id=${enc(homeId)}`
+  return `/handover?home_id=${enc(homeId)}`
 }
 
 export function homeRecordingAlertsHref(homeId: string | number) {

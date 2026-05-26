@@ -24,10 +24,10 @@ export default function NotFound() {
             Return home
           </Link>
           <Link
-            href="/chronology"
+            href="/select-scope"
             className="rounded-2xl border border-slate-200 bg-white px-6 py-4 text-sm font-black text-slate-700"
           >
-            Open chronology
+            Choose home or child
           </Link>
         </div>
       </section>

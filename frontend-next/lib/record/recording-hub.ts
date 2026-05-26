@@ -279,7 +279,7 @@ export const RECORD_HUB_CARDS: RecordCardDefinition[] = [
     whenToUse: 'When you need reflection, wording help, or are unsure which formal record to use.',
     buttonText: 'Open ORB',
     icon: Sparkles,
-    generalHref: '/orb?context=recording',
+    generalHref: '/assistant/orb?mode=record_quality_review&context=recording',
     orbQuery: 'Help me choose the right record type for what I need to document.'
   }
 ]
@@ -534,9 +534,7 @@ export function recordOrbPromptsForContext(
 
 export function recordCardHref(card: RecordCardDefinition, childId?: string): string {
   if (card.id === 'ask-orb') {
-    const base = '/orb?context=recording'
-    const q = encodeURIComponent(card.orbQuery)
-    return `${base}&q=${q}`
+    return recordCardOperationalOrbHref(card)
   }
 
   if (card.generalHref.startsWith('/record?')) {
@@ -566,9 +564,7 @@ export function recordCardHref(card: RecordCardDefinition, childId?: string): st
 }
 
 export function recordCardOrbHref(card: RecordCardDefinition, _childId?: string) {
-  const base = '/orb?context=recording'
-  const q = encodeURIComponent(card.orbQuery)
-  return `${base}&q=${q}`
+  return recordCardOperationalOrbHref(card)
 }
 
 /** Operational OS ORB for record-quality review — never passes child identifiers in the URL. */
@@ -578,9 +574,7 @@ export function recordCardOperationalOrbHref(card: RecordCardDefinition) {
 }
 
 export function recordOrbPromptHref(query: string, _childId?: string) {
-  const base = '/orb?context=recording'
-  const q = encodeURIComponent(query)
-  return `${base}&q=${q}`
+  return recordOperationalOrbPromptHref(query)
 }
 
 export function recordOperationalOrbPromptHref(query: string) {

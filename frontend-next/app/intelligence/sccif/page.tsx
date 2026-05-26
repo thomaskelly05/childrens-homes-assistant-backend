@@ -5,16 +5,26 @@ import { useSearchParams } from 'next/navigation'
 
 import { SccifAlignmentDashboard } from '@/components/intelligence-sccif/sccif-alignment-dashboard'
 import { PageHeader } from '@/components/indicare/ui'
+import { homeInspectionReadinessHref, homeReg45Href, homeWorkspaceHref } from '@/lib/navigation/scope-routes'
 import type { SccifAlignmentFilters } from '@/lib/os-api/sccif-alignment'
 
 export default function SccifAlignmentPage() {
   const searchParams = useSearchParams()
   const childIdRaw = searchParams.get('child_id')
+  const homeIdRaw = searchParams.get('home_id')
   const staffId = searchParams.get('staff_id') || undefined
   const childId = childIdRaw ? Number(childIdRaw) : undefined
+  const homeId = homeIdRaw && Number.isFinite(Number(homeIdRaw)) ? String(homeIdRaw) : null
   const filters: SccifAlignmentFilters = {}
   if (childId != null && Number.isFinite(childId)) filters.child_id = childId
   if (staffId) filters.staff_id = staffId
+  const inspectionHref = homeId
+    ? homeInspectionReadinessHref(homeId)
+    : '/intelligence/inspection-readiness'
+  const reg44Href = homeId
+    ? `${homeInspectionReadinessHref(homeId)}&pack=reg44`
+    : '/intelligence/inspection-readiness?pack=reg44'
+  const reg45Href = homeId ? homeReg45Href(homeId) : '/intelligence/reg45'
 
   return (
     <main data-testid="sccif-alignment-page" className="mx-auto max-w-6xl space-y-6 px-4 py-8 pb-24">
@@ -25,10 +35,11 @@ export default function SccifAlignmentPage() {
         action={
           <div className="flex flex-wrap gap-2">
             <Link
-              href="/command-centre"
+              prefetch={false}
+              href={homeId ? homeWorkspaceHref(homeId) : '/select-scope'}
               className="inline-flex min-h-10 items-center rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-black text-slate-700"
             >
-              Care Hub
+              {homeId ? 'Home workspace' : 'Choose home'}
             </Link>
             <Link
               href="/record/governance"
@@ -37,21 +48,24 @@ export default function SccifAlignmentPage() {
               Recording governance
             </Link>
             <Link
-              href="/intelligence/inspection-readiness"
+              prefetch={false}
+              href={inspectionHref}
               data-testid="sccif-open-inspection-readiness"
               className="inline-flex min-h-10 items-center rounded-2xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-xs font-black text-blue-950"
             >
               Inspection readiness
             </Link>
             <Link
-              href="/intelligence/inspection-readiness?pack=reg44"
+              prefetch={false}
+              href={reg44Href}
               data-testid="sccif-generate-reg44"
               className="inline-flex min-h-10 items-center rounded-2xl border border-blue-200 bg-blue-600 px-4 py-2.5 text-xs font-black text-white"
             >
               Generate Reg 44
             </Link>
             <Link
-              href="/intelligence/inspection-readiness?pack=reg45"
+              prefetch={false}
+              href={reg45Href}
               data-testid="sccif-generate-reg45"
               className="inline-flex min-h-10 items-center rounded-2xl border border-indigo-200 bg-indigo-600 px-4 py-2.5 text-xs font-black text-white"
             >

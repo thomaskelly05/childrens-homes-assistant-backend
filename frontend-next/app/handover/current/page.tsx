@@ -1,64 +1,84 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
-import { Card, EmptyState, PageHeader, RecordTimeline, SectionHeader, StatCard, StatusBadge } from '@/components/indicare/ui'
+import { Card, EmptyState, PageHeader, RecordTimeline, SectionHeader, StatCard } from '@/components/indicare/ui'
 import { getHandoverToday } from '@/lib/os-api/connect'
-import { getCommandCentre } from '@/lib/os-api/platform'
 
-export default async function CurrentHandoverPage() {
-  const [commandResult, handoverResult] = await Promise.all([getCommandCentre(), getHandoverToday()])
-  const command = commandResult.data
+type SearchParams = Promise<{ home_id?: string; child_id?: string }>
+
+export default async function CurrentHandoverPage({ searchParams }: { searchParams: SearchParams }) {
+  const params = await searchParams
+  const homeId = params.home_id
+  const childId = params.child_id
+
+  if (homeId || childId) {
+    const q = new URLSearchParams()
+    if (homeId) q.set('home_id', homeId)
+    if (childId) q.set('child_id', childId)
+    redirect(`/handover?${q.toString()}`)
+  }
+
+  const handoverResult = await getHandoverToday()
   const handover = handoverResult.data
-  const chronology = command.chronology.slice(0, 12)
-  const openActions = command.actions.filter((action) => action.status !== 'completed')
   const handoverItems = handover.items || []
 
   return (
-    <div className="space-y-6">
+    <div data-testid="handover-current-page" className="space-y-6">
       <PageHeader
         eyebrow="Handover"
         title="Current handover"
-        description="A timeline-led shift handover with linked incidents, safeguarding workflow state, evidence/actions context and management sign-off readiness."
-        action={<Link href="/handover/history" className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700 shadow-sm">History</Link>}
+        description="Shift handover timeline without loading the global command centre. Choose a home or child from scope selection for home-scoped intelligence."
+        action={
+          <Link prefetch={false} href="/handover" className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700 shadow-sm">
+            Open handover workspace
+          </Link>
+        }
       />
-      <LiveDataStatus result={handoverResult.source === 'live' ? handoverResult : commandResult} />
+      <LiveDataStatus result={handoverResult} />
+
+      <p className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-950">
+        For home- or child-scoped handover with recording alerts and ISN, open handover from your home or child workspace — global dashboards are not preloaded here.
+      </p>
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Handover items" value={handover.summary?.total || 0} detail="Schema-backed handover entries" href="/handover/current" entity={{ entity_type: 'handover' }} />
-        <StatCard label="Follow-up required" value={openActions.length} detail="Needs explicit assignment" href="/actions" entity={{ entity_type: 'action' }} />
+        <StatCard label="Follow-up" value={handover.summary?.urgent || 0} detail="Choose scope to see actions" href="/select-scope" entity={{ entity_type: 'action' }} />
         <StatCard label="Urgent handover" value={handover.summary?.urgent || 0} detail="Important before shift starts" href="/handover/current" entity={{ entity_type: 'handover' }} />
-        <StatCard label="Unacknowledged" value={handover.summary?.unacknowledged || 0} detail="Awaiting staff acknowledgement" href="/management" entity={{ entity_type: 'qa_review' }} />
+        <StatCard label="Unacknowledged" value={handover.summary?.unacknowledged || 0} detail="Awaiting acknowledgement" href="/handover/reviews" entity={{ entity_type: 'qa_review' }} />
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
         <Card>
           <SectionHeader eyebrow="Timeline" title="Handover timeline" />
-          <RecordTimeline
-            items={(handoverItems.length ? handoverItems : chronology).map((item: any) => ({
-              id: String(item.id),
-              title: String(item.title || item.linked_record_type || 'Handover note'),
-              date: String(item.created_at || item.dateTime || ''),
-              body: String(item.body || item.summary || 'No summary was returned.'),
-              href: item.linked_record_id ? `/chronology/${item.linked_record_id}` : item.sourceId ? `/chronology/${item.id}` : '/chronology'
-            }))}
-          />
+          {handoverItems.length ? (
+            <RecordTimeline
+              items={handoverItems.map((item: Record<string, unknown>) => ({
+                id: String(item.id),
+                title: String(item.title || item.linked_record_type || 'Handover note'),
+                date: String(item.created_at || item.dateTime || ''),
+                body: String(item.body || item.summary || 'No summary was returned.'),
+                href: item.linked_record_id ? `/chronology/${item.linked_record_id}` : '/select-scope'
+              }))}
+            />
+          ) : (
+            <EmptyState
+              title="No handover items yet"
+              description="Handover entries will appear here when returned by the live service. Use /handover with home_id or child_id for scoped intelligence."
+            />
+          )}
         </Card>
 
         <Card>
-          <SectionHeader eyebrow="Actions" title="Handover actions" description="Unresolved actions, safeguarding alerts, recording gaps and review items stay visible until assigned or signed off." />
-          {openActions.length ? (
-            <div className="space-y-3">
-              {openActions.map((item) => (
-              <Link key={item.id} href={`/actions/${item.id}`} className="block rounded-2xl border border-slate-100 bg-slate-50 p-4 transition hover:bg-white hover:shadow-lg">
-                <div className="flex items-start justify-between gap-3">
-                  <strong className="text-sm font-black text-slate-950">{item.title}</strong>
-                  <StatusBadge value={item.priority} />
-                </div>
-                <p className="mt-2 text-sm leading-6 text-slate-600">{item.description}</p>
-              </Link>
-              ))}
-            </div>
-          ) : <EmptyState title="No open handover actions" description="No open actions were returned by the live OS." />}
+          <SectionHeader eyebrow="Scoped routes" title="Next steps" description="Open handover with scope for alerts, reviews and safeguarding." />
+          <div className="space-y-2 text-sm font-black">
+            <Link prefetch={false} href="/select-scope" className="block rounded-2xl border border-slate-100 bg-slate-50 p-4 text-slate-800 hover:bg-white">
+              Choose home or child
+            </Link>
+            <Link prefetch={false} href="/handover" className="block rounded-2xl border border-slate-100 bg-slate-50 p-4 text-slate-800 hover:bg-white">
+              Handover workspace
+            </Link>
+          </div>
         </Card>
       </section>
     </div>
