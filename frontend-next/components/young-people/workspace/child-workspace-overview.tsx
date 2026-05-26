@@ -38,14 +38,14 @@ export function ChildWorkspaceOverview({
         <LiveDataStatus result={profileResult as OsApiResult<Record<string, unknown>>} />
       ) : null}
 
-      <div className="flex flex-wrap items-center gap-2 xl:hidden" data-testid="child-workspace-mobile-ask-orb">
+      <div className="flex flex-wrap items-center gap-2 xl:hidden" data-testid="child-workspace-mobile-actions">
         <OperationalOrbRail
           scopeType="child"
           childId={childId}
           childName={childName}
           homeName={view.child.homeName}
           compact
-          testId="child-workspace-mobile-orb-button"
+          testId="mobile-child-orb-button"
         />
       </div>
 

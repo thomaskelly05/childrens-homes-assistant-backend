@@ -74,7 +74,15 @@ export function ChildProfileHero({ view }: { view: ChildWorkspaceOverviewViewMod
             key={action.href}
             href={action.href}
             prefetch={false}
-            data-testid={action.testId}
+            data-testid={
+              action.testId === 'child-quick-record'
+                ? 'mobile-child-record-button'
+                : action.testId === 'child-quick-daily-note'
+                  ? 'mobile-child-daily-note-button'
+                  : action.testId === 'child-quick-orb'
+                    ? 'mobile-child-orb-button'
+                    : action.testId
+            }
             className="inline-flex min-h-11 items-center justify-center rounded-2xl bg-sky-600 px-3 py-2.5 text-center text-sm font-black text-white shadow-md shadow-sky-500/25 transition hover:bg-sky-700 md:px-4"
           >
             {action.label}

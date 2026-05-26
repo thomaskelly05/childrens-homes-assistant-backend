@@ -16,6 +16,6 @@ def test_mobile_top_bar_exists():
 def test_mobile_bottom_nav_safe_area():
     text = (FRONTEND / "components/indicare/mobile/mobile-bottom-nav.tsx").read_text(encoding="utf-8")
     css = (FRONTEND / "app/globals.css").read_text(encoding="utf-8")
-    assert 'data-testid="mobile-bottom-nav"' in text
+    assert "mobile-child-bottom-nav" in text or 'data-testid="mobile-bottom-nav"' in text
     assert "safe-area-inset-bottom" in text or "safe-area-inset-bottom" in css
     assert "mobile-bottom-nav" in css

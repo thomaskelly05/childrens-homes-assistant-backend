@@ -1008,6 +1008,21 @@ textarea:focus-visible {
   animation: orb-standalone-breathe 4.5s ease-in-out infinite;
 }
 
+/* Mobile scope drawer — solid panel above dimmed backdrop; closed = not in DOM. */
+.mobile-menu-overlay {
+  pointer-events: auto;
+}
+
+.mobile-menu-backdrop {
+  pointer-events: auto;
+  z-index: 0;
+}
+
+.mobile-menu-drawer {
+  pointer-events: auto;
+  z-index: 1;
+}
+
 @media (max-width: 767px) {
   .orb-companion-float,
   [data-orb-companion-float] {
@@ -1016,12 +1031,30 @@ textarea:focus-visible {
 
   .orb-chat-thread {
     padding-bottom: 0.25rem;
+    overscroll-behavior: contain;
   }
 
   .orb-chat-composer {
     position: sticky;
     bottom: 0;
     z-index: 30;
+    flex-shrink: 0;
+    scroll-margin-bottom: env(safe-area-inset-bottom);
+    touch-action: manipulation;
+  }
+
+  .orb-voice-status-slot {
+    min-height: 1.25rem;
+  }
+
+  .orb-operational-composer {
+    flex-shrink: 0;
+    touch-action: manipulation;
+  }
+
+  .orb-chat-layout {
+    height: 100dvh;
+    max-height: 100dvh;
   }
 }
 

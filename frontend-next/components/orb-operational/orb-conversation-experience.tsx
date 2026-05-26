@@ -447,10 +447,13 @@ export function OrbConversationExperience({
         </div>
 
         <div
-          className="orb-operational-composer sticky bottom-0 z-20 mt-auto border-t border-slate-100 bg-white/95 p-4 backdrop-blur-md md:static md:border-0 md:bg-transparent md:p-0"
+          className="orb-operational-composer sticky bottom-0 z-20 mt-auto shrink-0 border-t border-slate-100 bg-white/95 p-4 backdrop-blur-md md:static md:border-0 md:bg-transparent md:p-0"
           style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+          data-orb-operational-composer
+          data-testid="orb-operational-composer"
         >
-          <p className="mb-2 text-[10px] font-black uppercase tracking-[0.14em] text-slate-500 md:hidden" data-testid="orb-operational-scope-chip">
+          <div className="mb-2 hidden min-h-[1.25rem] md:block" aria-hidden />
+          <p className="mb-2 min-h-[1.25rem] text-[10px] font-black uppercase tracking-[0.14em] text-slate-500 md:hidden" data-testid="orb-operational-scope-chip">
             Scope: {scope}
             {operationalMode ? ` · ${operationalMode}` : ''}
           </p>

@@ -18,5 +18,5 @@ def test_hero_actions_not_overlay_positioned():
     overview = (FRONTEND / "components/young-people/workspace/child-workspace-overview.tsx").read_text(encoding="utf-8")
     assert "absolute" not in hero or "child-workspace-hero-actions" in hero
     assert "position: static" in (FRONTEND / "app/globals.css").read_text(encoding="utf-8") or "static" in hero
-    assert 'data-testid="child-workspace-mobile-ask-orb"' in overview
+    assert 'data-testid="child-workspace-mobile-actions"' in overview
     assert "hidden xl:block" in overview
