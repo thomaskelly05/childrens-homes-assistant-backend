@@ -18,7 +18,9 @@ Standalone `/orb` behaved like a voice prototype:
 | Area | Change |
 |------|--------|
 | Auto listening on mount | Removed — no `startListening` / wake loop on page load |
-| Continuous conversation after TTS | Removed `registerAfterSpeakListener` restart on `/orb` |
+| Wake phrase / passive mic | Disabled in hook — `userInitiatedVoiceRef` + `beginUserVoiceCapture` only |
+| Typed send → realtime | `sendText` uses `ensureTextSession` — no `getUserMedia` / WebRTC |
+| Continuous conversation after TTS | Removed auto-restart; no passive listening after speak |
 | Auto-send voice transcript | Disabled while `STANDALONE_ORB_VOICE_CAPTURE_ENABLED = false` |
 | Transcript → composer sync | Removed while voice capture is off |
 | Default status line | Empty when idle (no **Listening…**, no **Voice ready**) |

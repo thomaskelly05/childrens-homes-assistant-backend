@@ -792,7 +792,7 @@ export function OrbCareCompanion() {
       voiceMayFillComposerRef.current = true
       composerUserEditedRef.current = false
     }
-    voice.startListening()
+    void voice.beginUserVoiceCapture()
   }
 
   function handleMessageChange(value: string) {

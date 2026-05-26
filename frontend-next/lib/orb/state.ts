@@ -98,6 +98,9 @@ export class OrbRuntimeController {
   private browserUtterance: SpeechSynthesisUtterance | null = null
   private hardStateTimer: ReturnType<typeof setTimeout> | null = null
   private authBlocked = false
+  /** Set only when the user explicitly starts voice (mic / ORB tap), never for typed sends. */
+  private voiceRealtimeRequested = false
+  private lastSessionStartData: OrbSessionStartData | null = null
   private audioRecovery = new OrbAudioRecovery({
     onRecovery: (reason, detail) => {
       this.snapshot = {
@@ -242,7 +245,9 @@ export class OrbRuntimeController {
     }
   }
 
-  async start(context: OrbContext, role?: string | null) {
+  /** Text-only backend session — never requests microphone or opens realtime audio. */
+  async ensureTextSession(context: OrbContext, role?: string | null) {
+    if (this.snapshot.sessionId) return
     if (this.snapshot.loading) return
     this.activeContext = context
     this.activeRole = role
@@ -261,6 +266,7 @@ export class OrbRuntimeController {
         workspace_context: { role }
       }, this.abortController.signal)
       const realtimeReady = providerRealtimeReady(data)
+      this.lastSessionStartData = data
       this.snapshot = {
         ...this.snapshot,
         sessionId: data.session_id,
@@ -272,23 +278,37 @@ export class OrbRuntimeController {
         realtimeState: data.realtime_state || {},
         memorySnapshot: data.memory_snapshot || {},
         loading: false,
-        error: realtimeReady ? undefined : 'Voice is unavailable just now. I can continue in text.'
+        error: undefined
       }
       this.armHardStateRecovery()
-      await this.connectRealtimeIfAvailable(data)
     } catch (error) {
       if (this.applyAuthFailure(error)) return
-      this.snapshot = { ...this.snapshot, state: error instanceof DOMException && error.name === 'AbortError' ? 'idle' : 'unavailable', loading: false, connected: false, error: calmOrbError(error, "I couldn't load Orb just now.") }
+      this.snapshot = {
+        ...this.snapshot,
+        state: error instanceof DOMException && error.name === 'AbortError' ? 'idle' : 'unavailable',
+        loading: false,
+        connected: false,
+        error: calmOrbError(error, "I couldn't load Orb just now.")
+      }
     } finally {
       this.emit()
+    }
+  }
+
+  /** Legacy entry — ensures text session only unless voice was explicitly requested via activate(). */
+  async start(context: OrbContext, role?: string | null) {
+    await this.ensureTextSession(context, role)
+    if (this.voiceRealtimeRequested && this.lastSessionStartData) {
+      await this.connectRealtimeIfAvailable(this.lastSessionStartData)
     }
   }
 
   async sendText(text: string, context: OrbContext) {
     const message = text.trim()
     if (!message) return null
+    this.activeContext = context
     if (!this.snapshot.sessionId) {
-      await this.start(context, this.activeRole)
+      await this.ensureTextSession(context, this.activeRole ?? null)
     }
     const sessionId = this.snapshot.sessionId
     if (!sessionId) return null
@@ -359,10 +379,14 @@ export class OrbRuntimeController {
       return
     }
     if (!this.snapshot.sessionId) {
-      await this.start(context, role)
+      await this.ensureTextSession(context, role)
     }
     if (this.authBlocked) return
     triggerOrbHaptic('tap')
+    this.voiceRealtimeRequested = true
+    if (this.lastSessionStartData) {
+      await this.connectRealtimeIfAvailable(this.lastSessionStartData)
+    }
     const micReady = this.snapshot.microphone === 'granted' || await this.requestMicrophone()
     if (!micReady) return
     if (this.snapshot.sessionId) {
@@ -401,6 +425,8 @@ export class OrbRuntimeController {
     this.clearSilenceTimer()
     this.clearHardStateRecovery()
     this.stopBrowserSpeech()
+    this.voiceRealtimeRequested = false
+    this.lastSessionStartData = null
     this.snapshot = { ...this.snapshot, sessionId: null, state: 'idle', connected: false, realtimeAvailable: false, loading: false }
     this.emit()
   }
@@ -454,12 +480,17 @@ export class OrbRuntimeController {
   }
 
   private async connectRealtimeIfAvailable(data: OrbSessionStartData) {
-    const options = await this.realtimeOptionsFromSession(data)
+    if (!this.voiceRealtimeRequested) return
+    const options = await this.realtimeOptionsFromSession(data, { userInitiated: true })
     if (!options) return
     await this.realtimeClient.connect(options)
   }
 
-  private async realtimeOptionsFromSession(data: OrbSessionStartData): Promise<OrbRealtimeConnectOptions | null> {
+  private async realtimeOptionsFromSession(
+    data: OrbSessionStartData,
+    options: { userInitiated?: boolean } = {}
+  ): Promise<OrbRealtimeConnectOptions | null> {
+    if (!options.userInitiated && !this.voiceRealtimeRequested) return null
     const realtime = data.realtime || {}
     const providerSession = data.provider_session as {
       fallback_text_mode?: boolean
@@ -491,6 +522,7 @@ export class OrbRuntimeController {
   }
 
   private async refreshRealtimeCredentials(): Promise<OrbRealtimeConnectOptions | null> {
+    if (!this.voiceRealtimeRequested) return null
     if (this.authBlocked || !this.activeContext || !this.stream) return null
     if (this.snapshot.sessionId) {
       await this.sendEvent(this.snapshot.sessionId, { type: 'reconnect', context: this.activeContext }).catch(() => undefined)
@@ -521,7 +553,7 @@ export class OrbRuntimeController {
       error: realtimeReady ? undefined : 'Voice is unavailable just now. I can continue in text.'
     }
     this.emit()
-    return this.realtimeOptionsFromSession(data)
+    return this.realtimeOptionsFromSession(data, { userInitiated: true })
   }
 
   private applyNetworkState(state: OrbNetworkState, detail?: Record<string, unknown>) {
@@ -732,6 +764,7 @@ export class OrbRuntimeController {
   }
 
   private async recoverMediaAfterWake() {
+    if (!this.voiceRealtimeRequested) return
     if (this.snapshot.microphone !== 'granted') return
     const stream = await this.audioRecovery.recoverMicrophone('browser_wake')
     if (stream && stream !== this.stream) {

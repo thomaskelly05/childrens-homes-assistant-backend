@@ -32,4 +32,4 @@ def test_floating_voice_fab_not_shown_by_default():
 def test_voice_fill_allowed_when_composer_empty_on_mic_activate():
     text = COMPANION.read_text(encoding="utf-8")
     assert "voiceMayFillComposerRef.current = true" in text
-    assert "if (!input.trim())" in text
+    assert "if (!message.trim())" in text
