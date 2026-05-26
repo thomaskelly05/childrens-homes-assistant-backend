@@ -76,3 +76,119 @@ def build_continuous_state(
         force_refresh=payload.force_refresh,
     )
     return {"success": True, "data": data}
+
+
+@router.get("/home/{home_id}")
+def home_state(
+    home_id: int,
+    days: int = Query(default=30, ge=1, le=365),
+    force_refresh: bool = Query(default=False),
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    request = IntelligenceRequest(
+        home_id=home_id,
+        mode="home",
+        scope="home",
+        days=days,
+        include_live_records=True,
+        use_snapshot_cache=True,
+    )
+    data = continuous_intelligence_state_service.build_state(
+        request,
+        conn=conn,
+        current_user=current_user,
+        force_refresh=force_refresh,
+    )
+    return {"success": True, "data": data}
+
+
+@router.get("/child/{child_id}")
+def child_state(
+    child_id: int,
+    home_id: int | None = Query(default=None),
+    days: int = Query(default=30, ge=1, le=365),
+    force_refresh: bool = Query(default=False),
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    request = IntelligenceRequest(
+        home_id=home_id,
+        child_id=child_id,
+        mode="child",
+        scope="child",
+        days=days,
+        include_live_records=True,
+        use_snapshot_cache=True,
+    )
+    data = continuous_intelligence_state_service.build_state(
+        request,
+        conn=conn,
+        current_user=current_user,
+        force_refresh=force_refresh,
+    )
+    return {"success": True, "data": data}
+
+
+@router.get("/staff/{staff_id}")
+def staff_state(
+    staff_id: int,
+    home_id: int | None = Query(default=None),
+    days: int = Query(default=30, ge=1, le=365),
+    force_refresh: bool = Query(default=False),
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    request = IntelligenceRequest(
+        home_id=home_id,
+        staff_id=staff_id,
+        mode="staff",
+        scope="home",
+        days=days,
+        include_live_records=True,
+        use_snapshot_cache=True,
+    )
+    data = continuous_intelligence_state_service.build_state(
+        request,
+        conn=conn,
+        current_user=current_user,
+        force_refresh=force_refresh,
+    )
+    return {"success": True, "data": data}
+
+
+@router.get("/orb-context/home/{home_id}")
+def orb_context_home(
+    home_id: int,
+    days: int = Query(default=30, ge=1, le=365),
+    force_refresh: bool = Query(default=False),
+    current_user: dict[str, Any] = Depends(get_current_user),
+    conn=Depends(get_db),
+):
+    request = IntelligenceRequest(
+        home_id=home_id,
+        mode="home",
+        scope="home",
+        days=days,
+        include_live_records=True,
+        use_snapshot_cache=True,
+    )
+    state = continuous_intelligence_state_service.build_state(
+        request,
+        conn=conn,
+        current_user=current_user,
+        force_refresh=force_refresh,
+    )
+    return {
+        "success": True,
+        "data": {
+            "summary": state.get("summary"),
+            "orb_context": state.get("orb_context"),
+            "home_state": state.get("home_state"),
+            "child_state": state.get("child_state"),
+            "workforce_state": state.get("workforce_state"),
+            "emotional_climate": state.get("emotional_climate"),
+            "evidence_state": state.get("evidence_state"),
+            "safety": state.get("safety"),
+        },
+    }
