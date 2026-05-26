@@ -40,3 +40,11 @@ def test_voice_defaults_text_first():
     assert "continuousConversation: false" in hook
     assert "voiceReplies: false" in hook
     assert "wakePhrase: false" in hook
+
+
+def test_voice_requires_explicit_user_initiation():
+    hook = VOICE_HOOK.read_text(encoding="utf-8")
+    assert "userInitiatedVoiceRef" in hook
+    assert "beginUserVoiceCapture" in hook
+    assert "Wake phrase needs microphone permission" not in hook
+    assert "if (!userInitiatedVoiceRef.current) return" in hook

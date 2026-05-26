@@ -113,7 +113,13 @@ function readStoredSettings(): StandaloneOrbVoiceSettings {
     const raw = window.localStorage.getItem(SETTINGS_STORAGE_KEY)
     if (!raw) return DEFAULT_SETTINGS
     const parsed = JSON.parse(raw) as Partial<StandaloneOrbVoiceSettings>
-    return { ...DEFAULT_SETTINGS, ...parsed }
+    return {
+      ...DEFAULT_SETTINGS,
+      ...parsed,
+      wakePhrase: false,
+      continuousConversation: false,
+      voiceReplies: parsed.voiceReplies ?? DEFAULT_SETTINGS.voiceReplies
+    }
   } catch {
     return DEFAULT_SETTINGS
   }
@@ -238,7 +244,7 @@ export function useStandaloneOrbVoice() {
   const [voiceSessionPaused, setVoiceSessionPaused] = useState(false)
 
   const recognitionRef = useRef<BrowserSpeechRecognition | null>(null)
-  const recognitionModeRef = useRef<'wake' | 'active' | 'continuous' | null>(null)
+  const recognitionModeRef = useRef<'active' | 'continuous' | null>(null)
   const preferredVoiceRef = useRef<SpeechSynthesisVoice | null>(null)
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null)
   const speakGenerationRef = useRef(0)
@@ -255,6 +261,7 @@ export function useStandaloneOrbVoice() {
   const onSpeakEndRef = useRef<(() => void) | null>(null)
   const mediaStreamRef = useRef<MediaStream | null>(null)
   const safariKeepAliveRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const userInitiatedVoiceRef = useRef(false)
   const [speechPlaybackError, setSpeechPlaybackError] = useState<string | null>(null)
 
   const stopMediaStream = useCallback(() => {
@@ -372,7 +379,12 @@ export function useStandaloneOrbVoice() {
   }, [clearTimers, refreshVoices, stopMediaStream, stopSafariKeepAlive])
 
   const updateSettings = useCallback((patch: Partial<StandaloneOrbVoiceSettings>) => {
-    setSettings((current) => ({ ...current, ...patch }))
+    setSettings((current) => ({
+      ...current,
+      ...patch,
+      wakePhrase: false,
+      continuousConversation: false
+    }))
   }, [])
 
   const resetSilenceTimer = useCallback((onTimeout: () => void) => {
@@ -416,8 +428,6 @@ export function useStandaloneOrbVoice() {
       setPhase(recognitionModeRef.current === 'continuous' ? 'continuous_listening' : 'listening')
     } else if (transcript.trim()) {
       setPhase('transcript_ready')
-    } else if (recognitionModeRef.current === 'wake') {
-      setPhase('wake_listening')
     } else {
       setPhase(error ? 'error' : 'idle')
     }
@@ -427,10 +437,7 @@ export function useStandaloneOrbVoice() {
     if (continuousListenTimerRef.current) clearTimeout(continuousListenTimerRef.current)
     continuousListenTimerRef.current = setTimeout(() => {
       if (voiceSessionPausedRef.current) return
-      if (!settingsRef.current.continuousConversation) return
-      if (!settingsRef.current.voiceReplies) return
-      if (phaseRef.current === 'speaking') return
-      onSpeakEndRef.current?.()
+      return
     }, CONTINUOUS_LISTEN_DELAY_MS)
   }, [])
 
@@ -438,9 +445,6 @@ export function useStandaloneOrbVoice() {
     (text: string, onEnd?: () => void) => {
       if (!settingsRef.current.voiceReplies) {
         onEnd?.()
-        if (settingsRef.current.continuousConversation && !voiceSessionPausedRef.current) {
-          scheduleContinuousListen()
-        }
         return
       }
 
@@ -479,9 +483,6 @@ export function useStandaloneOrbVoice() {
         speakChunkIndexRef.current = 0
         setPhase(error ? 'error' : 'idle')
         onEnd?.()
-        if (settingsRef.current.continuousConversation && !voiceSessionPausedRef.current) {
-          scheduleContinuousListen()
-        }
       }
 
       const speakNextChunk = () => {
@@ -553,7 +554,8 @@ export function useStandaloneOrbVoice() {
   const scheduleWakeRestartRef = useRef<() => void>(() => {})
 
   const startRecognitionSession = useCallback(
-    (mode: 'wake' | 'active' | 'continuous') => {
+    (mode: 'active' | 'continuous') => {
+      if (!userInitiatedVoiceRef.current) return
       if (typeof window === 'undefined') {
         setError('Voice is unavailable in this browser. You can still type.')
         setPhase('error')
@@ -579,16 +581,13 @@ export function useStandaloneOrbVoice() {
       const recognition = new Recognition()
       recognition.lang = 'en-GB'
       recognition.interimResults = true
-      recognition.continuous = mode === 'wake' || mode === 'continuous'
+      recognition.continuous = mode === 'continuous'
       recognition.maxAlternatives = 1
       recognitionModeRef.current = mode
 
       recognition.onstart = () => {
         setListening(true)
-        if (mode === 'wake') {
-          setPhase('wake_listening')
-          setWakeStatus('listening')
-        } else if (mode === 'continuous') {
+        if (mode === 'continuous') {
           setPhase('continuous_listening')
         } else {
           setPhase('listening')
@@ -611,19 +610,6 @@ export function useStandaloneOrbVoice() {
 
         const combined = (finalText || interim).trim()
 
-        if (mode === 'wake') {
-          if (transcriptContainsWakePhrase(combined)) {
-            wakeRestartAttemptsRef.current = 0
-            recognition.stop()
-            setPhase('wake_detected')
-            setWakeStatus('heard')
-            setTimeout(() => {
-              if (!voiceSessionPausedRef.current) startRecognitionSession('active')
-            }, 350)
-          }
-          return
-        }
-
         const interimTrimmed = interim.trim()
         const finalTrimmed = stripWakePhraseFromTranscript(finalText.trim())
 
@@ -643,13 +629,8 @@ export function useStandaloneOrbVoice() {
       recognition.onerror = () => {
         setListening(false)
         recognitionRef.current = null
-        if (mode === 'wake') {
-          setWakeStatus('unsupported')
-          setError('Wake phrase is not supported in this browser. Tap the ORB to speak.')
-        } else {
-          setError('Voice is unavailable in this browser. You can still type.')
-          setPhase('error')
-        }
+        setError('Voice is unavailable in this browser. You can still type.')
+        setPhase('error')
       }
 
       recognition.onend = () => {
@@ -657,12 +638,8 @@ export function useStandaloneOrbVoice() {
         recognitionRef.current = null
         setInterimTranscript('')
         setPhase((current) => {
-          if (current === 'wake_detected') return current
           if (current === 'listening' || current === 'continuous_listening') {
-            return transcriptRef.current.trim() ? 'transcript_ready' : current === 'continuous_listening' ? 'idle' : 'idle'
-          }
-          if (current === 'wake_listening' && settingsRef.current.wakePhrase) {
-            scheduleWakeRestartRef.current()
+            return transcriptRef.current.trim() ? 'transcript_ready' : 'idle'
           }
           return current
         })
@@ -673,37 +650,21 @@ export function useStandaloneOrbVoice() {
         recognition.start()
       } catch {
         setListening(false)
-        if (mode === 'wake') {
-          setWakeStatus('unsupported')
-          setError('Wake phrase is not supported in this browser. Tap the ORB to speak.')
-        } else {
-          setError('Voice is unavailable in this browser. You can still type.')
-          setPhase('error')
-        }
+        setError('Voice is unavailable in this browser. You can still type.')
+        setPhase('error')
       }
     },
     [abortRecognition, resetSilenceTimer]
   )
 
   const scheduleWakeRestart = useCallback(() => {
-    if (!settingsRef.current.wakePhrase || voiceSessionPausedRef.current) return
-    if (wakeRestartAttemptsRef.current >= MAX_WAKE_RESTART_ATTEMPTS) {
-      setWakeStatus('unsupported')
-      setError('Wake phrase is not supported in this browser. Tap the ORB to speak.')
-      return
-    }
-    wakeRestartAttemptsRef.current += 1
-    if (wakeRestartTimerRef.current) clearTimeout(wakeRestartTimerRef.current)
-    wakeRestartTimerRef.current = setTimeout(() => {
-      if (!settingsRef.current.wakePhrase || voiceSessionPausedRef.current) return
-      if (phaseRef.current === 'speaking' || phaseRef.current === 'listening') return
-      startRecognitionSession('wake')
-    }, WAKE_RESTART_DELAY_MS)
-  }, [startRecognitionSession])
+    /* Wake phrase disabled — tap-to-talk only. */
+  }, [])
 
   scheduleWakeRestartRef.current = scheduleWakeRestart
 
   const startListening = useCallback(() => {
+    if (!userInitiatedVoiceRef.current) return
     startRecognitionSession('active')
   }, [startRecognitionSession])
 
@@ -716,15 +677,8 @@ export function useStandaloneOrbVoice() {
   }, [continuousRecognitionSupported, startListening, startRecognitionSession])
 
   const startWakeListening = useCallback(() => {
-    if (!continuousRecognitionSupported) {
-      setWakeStatus('unsupported')
-      setError('Wake phrase is not supported in this browser. Tap the ORB to speak.')
-      return
-    }
-    wakeRestartAttemptsRef.current = 0
-    setWakeStatus('listening')
-    startRecognitionSession('wake')
-  }, [continuousRecognitionSupported, startRecognitionSession])
+    /* Passive wake listening removed — use beginUserVoiceCapture from the mic button. */
+  }, [])
 
   const stopWakeListening = useCallback(() => {
     clearTimers()
@@ -752,16 +706,14 @@ export function useStandaloneOrbVoice() {
     utteranceRef.current = null
     setSpeaking(false)
     setPhase('interrupted')
-    if (settingsRef.current.continuousConversation) {
-      startContinuousListening()
-    } else {
-      startListening()
-    }
-  }, [clearTimers, startContinuousListening, startListening])
+    if (!userInitiatedVoiceRef.current) return
+    startListening()
+  }, [clearTimers, startListening])
 
   const pauseVoiceSession = useCallback(() => {
     setVoiceSessionPaused(true)
     voiceSessionPausedRef.current = true
+    userInitiatedVoiceRef.current = false
     clearTimers()
     cancelSpeaking()
     stopWakeListening()
@@ -773,18 +725,17 @@ export function useStandaloneOrbVoice() {
   const resumeVoiceSession = useCallback(() => {
     setVoiceSessionPaused(false)
     voiceSessionPausedRef.current = false
-    if (settingsRef.current.wakePhrase) {
-      startWakeListening()
-    }
-  }, [startWakeListening])
+  }, [])
 
   const endVoiceSession = useCallback(() => {
     pauseVoiceSession()
     stopMediaStream()
+    userInitiatedVoiceRef.current = false
     setWakeStatus('off')
   }, [pauseVoiceSession, stopMediaStream])
 
   const requestMicrophonePermission = useCallback(async (): Promise<boolean> => {
+    if (!userInitiatedVoiceRef.current) return false
     if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) return true
     stopMediaStream()
     try {
@@ -802,36 +753,19 @@ export function useStandaloneOrbVoice() {
     if (!listening && !speaking) setPhase(error ? 'error' : 'idle')
   }, [error, listening, speaking])
 
-  useEffect(() => {
-    if (!settings.wakePhrase) {
-      stopWakeListening()
-      stopMediaStream()
-      return
+  const beginUserVoiceCapture = useCallback(async (): Promise<boolean> => {
+    if (voiceSessionPausedRef.current) return false
+    userInitiatedVoiceRef.current = true
+    setWakeStatus('off')
+    const granted = await requestMicrophonePermission()
+    if (!granted) {
+      userInitiatedVoiceRef.current = false
+      setError('Microphone access is needed for voice input. You can still type.')
+      return false
     }
-    if (voiceSessionPaused) return
-    let cancelled = false
-    void requestMicrophonePermission().then((granted) => {
-      if (cancelled) return
-      if (!granted) {
-        setWakeStatus('unsupported')
-        setError('Wake phrase needs microphone permission. Tap the ORB or microphone instead.')
-        return
-      }
-      startWakeListening()
-    })
-    return () => {
-      cancelled = true
-      stopWakeListening()
-      stopMediaStream()
-    }
-  }, [
-    settings.wakePhrase,
-    voiceSessionPaused,
-    startWakeListening,
-    stopWakeListening,
-    requestMicrophonePermission,
-    stopMediaStream
-  ])
+    startRecognitionSession('active')
+    return true
+  }, [requestMicrophonePermission, startRecognitionSession])
 
   return {
     phase,
@@ -866,6 +800,7 @@ export function useStandaloneOrbVoice() {
     clearTranscript,
     interruptForListen,
     markIdle,
+    beginUserVoiceCapture,
     startWakeListening,
     stopWakeListening,
     pauseVoiceSession,
