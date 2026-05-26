@@ -70,7 +70,7 @@ export function OrbStandaloneComposer({
   displayTranscript: string
   autoSend: boolean
   onChange: (value: string) => void
-  onSubmit: (event?: FormEvent | { preventDefault?: () => void }) => void
+  onSubmit: (event?: FormEvent<HTMLFormElement>) => void | Promise<void>
   composerStateLength?: number
   onMicClick: () => void
   onCancelListening: () => void
@@ -152,7 +152,7 @@ export function OrbStandaloneComposer({
           data-composer-state-length={stateLength}
           onSubmit={(event) => {
             logTapTarget(event, 'orb-standalone-form-submit')
-            onSubmit(event)
+            void onSubmit(event)
           }}
         >
           <label htmlFor="orb-standalone-input" className="sr-only">
@@ -270,7 +270,7 @@ export function OrbStandaloneComposer({
                 onKeyDown={(event) => {
                   if (event.key === 'Enter' && !event.shiftKey) {
                     event.preventDefault()
-                    onSubmit(event)
+                    void onSubmit()
                   }
                 }}
                 rows={1}
