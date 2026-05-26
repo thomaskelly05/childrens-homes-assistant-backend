@@ -13,8 +13,12 @@ def test_standalone_send_markers():
     assert 'data-testid="orb-standalone-send-clickable"' in composer
     assert 'type="submit"' in composer
     assert "data-orb-composer-input" in composer
+    assert 'name="message"' in composer
+    assert "data-message-length={trimmedMessage.length}" in composer
+    assert "data-send-disabled-reason={disabledReason}" in composer
     assert "sendMessage" in companion
     assert "data-testid=\"orb-standalone-send-error\"" in companion
+    assert "new FormData(event.currentTarget).get('message')" in companion
 
 
 def test_operational_send_markers():
