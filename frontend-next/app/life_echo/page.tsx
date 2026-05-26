@@ -17,12 +17,13 @@ export default function LifeEchoPage() {
               LifeEcho brings memories, emotional atmosphere, relationships, voice moments and therapeutic reflection into one protected child-centred space.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link href="/young-people" className="rounded-2xl bg-white px-5 py-3 text-sm font-black text-slate-950 shadow-lg shadow-blue-950/20">
-                Choose child
+              <Link href="/select-scope" className="rounded-2xl bg-white px-5 py-3 text-sm font-black text-slate-950 shadow-lg shadow-blue-950/20">
+                Choose home and child
               </Link>
-              <Link href="/api/life-echo/manifest" className="rounded-2xl border border-white/15 bg-white/10 px-5 py-3 text-sm font-black text-white">
-                View API manifest
-              </Link>
+              <p className="w-full text-sm leading-7 text-blue-50/78">
+                LifeEcho memories open from a child workspace at{' '}
+                <span className="font-mono text-xs text-blue-100">/young-people/&#123;id&#125;/lifeecho</span> — not via a global API URL.
+              </p>
             </div>
           </div>
           <div className="relative mx-auto aspect-square w-full max-w-[420px] rounded-full border border-white/10 bg-white/5 shadow-[0_0_120px_rgba(56,189,248,0.22)]">

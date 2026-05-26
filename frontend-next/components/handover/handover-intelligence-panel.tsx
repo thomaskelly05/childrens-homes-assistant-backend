@@ -18,16 +18,30 @@ function MetricCard({ label, value, href }: { label: string; value: number; href
   )
 }
 
-export function HandoverIntelligencePanel({ dashboard }: { dashboard: HandoverIntelligenceDashboard | null }) {
+export function HandoverIntelligencePanel({
+  dashboard,
+  fallbackRoutes
+}: {
+  dashboard: HandoverIntelligenceDashboard | null
+  fallbackRoutes?: {
+    alerts?: string
+    reviews?: string
+    safeguarding?: string
+    actions?: string
+  }
+}) {
   if (!dashboard) {
     return (
-      <div className="rounded-2xl border border-slate-100 bg-white p-6 text-sm font-semibold text-slate-600">
+      <div
+        data-testid="handover-intelligence-loading"
+        className="rounded-2xl border border-slate-100 bg-white p-6 text-sm font-semibold text-slate-600"
+      >
         Handover intelligence is loading…
       </div>
     )
   }
 
-  const routes = dashboard.routes || {}
+  const routes = { ...fallbackRoutes, ...(dashboard.routes || {}) }
 
   const sectionOrder = [
     'staff_shift',
@@ -50,7 +64,11 @@ export function HandoverIntelligencePanel({ dashboard }: { dashboard: HandoverIn
         <MetricCard label="Urgent" value={dashboard.urgent_count} href={routes.alerts || '/record/alerts'} />
         <MetricCard label="Safeguarding" value={dashboard.safeguarding_count} href={routes.safeguarding || '/safeguarding'} />
         <MetricCard label="Reviews" value={dashboard.review_count} href={routes.reviews || '/record/reviews'} />
-        <MetricCard label="Actions" value={dashboard.action_count} href={routes.actions || '/actions'} />
+        <MetricCard
+          label="Actions"
+          value={dashboard.action_count}
+          href={routes.actions || fallbackRoutes?.actions || '/select-scope'}
+        />
         <MetricCard label="Recording alerts" value={dashboard.recording_alert_count} href={routes.alerts || '/record/alerts'} />
       </section>
 

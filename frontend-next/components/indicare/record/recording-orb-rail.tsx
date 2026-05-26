@@ -130,7 +130,7 @@ export function RecordingOrbRail({
           className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700"
         >
           <Mic2 className="h-4 w-4 text-blue-600" aria-hidden />
-          Standalone wording helper
+          Wording help (no record context)
         </Link>
         <button
           type="button"

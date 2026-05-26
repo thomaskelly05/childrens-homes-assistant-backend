@@ -46,12 +46,14 @@ def test_operational_navigation_orb_domain():
     assert "href: '/assistant/orb'" in text
 
 
-def test_record_hub_keeps_standalone_orb_without_child_ids():
+def test_record_hub_orb_prompts_use_assistant_without_child_ids():
     text = _read(RECORD_HUB)
-    standalone_section = text.split("export function recordOrbPromptHref", 1)[1].split("\nexport function ", 1)[0]
-    assert "/orb?context=recording" in standalone_section
+    assert "recordOperationalOrbPromptHref" in text
+    op_section = text.split("export function recordOperationalOrbPromptHref", 1)[1].split("\nexport function ", 1)[0]
+    assert "/assistant/orb" in op_section
+    assert "/orb?context=recording" not in text
     for key in ("young_person_id=", "child_id=", "home_id=", "staff_id="):
-        assert key not in standalone_section
+        assert key not in op_section
 
 
 def test_record_hub_operational_quality_review_without_child_ids():
