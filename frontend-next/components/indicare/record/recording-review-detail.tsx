@@ -16,6 +16,7 @@ import { RecordingFormLifecycleOutcome } from '@/components/indicare/record/reco
 import { RecordingFormReviewStatus } from '@/components/indicare/record/recording-form-review-status'
 import { parseFormRecordMetadata } from '@/lib/record/recording-form-metadata'
 import { lifecycleForForm } from '@/lib/record/recording-form-lifecycle'
+import { guidanceForForm } from '@/lib/record/recording-form-guidance'
 
 function copyPromptToClipboard(prompt: string) {
   if (typeof navigator !== 'undefined' && navigator.clipboard) {
@@ -38,6 +39,15 @@ export function RecordingReviewDetailPanel({
   const writtenBy = draft.created_by_name || formRecord?.written_by_name
   const lifecycle = lifecycleForForm(draft.form_id || draft.recording_type, draft.category || undefined)
   const signOffMeta = draft.metadata?.review_signoff as { lifecycle?: { archive_record_id?: string } } | undefined
+  const formGuidance = guidanceForForm(draft.form_id || draft.recording_type)
+  const readinessLabel =
+    draft.safeguarding_review_required
+      ? 'Safeguarding review required'
+      : draft.manager_review_required
+        ? 'Ready for manager review'
+        : draft.quality_flags?.length || draft.language_flags?.length
+          ? 'Needs changes'
+          : 'Ready for manager review'
 
   return (
     <section data-testid="recording-review-detail" className="space-y-4">
@@ -148,6 +158,39 @@ export function RecordingReviewDetailPanel({
             </span>
           </div>
         ) : null}
+
+        <section
+          className="mt-4 rounded-xl border border-cyan-100 bg-cyan-50/50 p-4"
+          data-testid="recording-review-quality-summary"
+        >
+          <p className="text-xs font-black text-cyan-950">ORB / live coach quality summary</p>
+          <p className="mt-1 text-xs font-semibold text-cyan-900">{formGuidance.purpose}</p>
+          <div className="mt-3 grid gap-2 text-xs font-semibold text-slate-700 sm:grid-cols-2">
+            <span data-testid="recording-review-readiness-status">Readiness: {readinessLabel}</span>
+            <span data-testid="recording-review-signoff-recommendation">Sign-off: {readinessLabel}</span>
+            {eventDate ? <span>Event date: {eventDate}</span> : <span className="text-amber-800">Event date missing</span>}
+            {writtenBy ? <span>Written by: {writtenBy}</span> : null}
+            <span>
+              Plan impact considered:{' '}
+              {formRecord?.actions_required ? 'Yes' : 'Not flagged'}
+            </span>
+            <span>
+              Therapeutic language flags: {(draft.language_flags || []).length || 'None'}
+            </span>
+            <span>
+              Missing information flags: {(draft.quality_flags || []).length || 'None'}
+            </span>
+          </div>
+          {(draft.quality_flags?.length || draft.language_flags?.length) ? (
+            <ul className="mt-2 list-disc space-y-1 pl-4 text-xs font-semibold text-amber-900">
+              {[...(draft.quality_flags || []), ...(draft.language_flags || [])].slice(0, 6).map((flag) => (
+                <li key={flag}>{flag}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-2 text-xs font-semibold text-emerald-800">No outstanding quality flags from live coach.</p>
+          )}
+        </section>
 
         {childId ? (
           <div className="mt-4" data-testid="recording-review-lifecycle-outcome">

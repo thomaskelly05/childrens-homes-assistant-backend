@@ -30,9 +30,15 @@ const HIGH_RISK_ORB_PROMPTS = [
   'Help me prepare questions for manager review.'
 ] as const
 
-function operationalOrbHrefForPrompt(query: string) {
-  const q = encodeURIComponent(query)
-  return `/assistant/orb?mode=record_quality_review&context=recording&q=${q}`
+function operationalOrbHrefForPrompt(query: string, formId?: string, recordingType?: string) {
+  const params = new URLSearchParams({
+    mode: 'recording_live_coach',
+    context: 'recording',
+    q: query
+  })
+  if (formId) params.set('form_id', formId)
+  if (recordingType) params.set('recording_type', recordingType)
+  return `/assistant/orb?${params.toString()}`
 }
 
 export function RecordingOrbRail({
@@ -101,7 +107,7 @@ export function RecordingOrbRail({
           {suggestedPrompts.map((prompt) => (
             <li key={prompt}>
               <Link
-                href={operationalOrbHrefForPrompt(prompt)}
+                href={operationalOrbHrefForPrompt(prompt, formId || form?.id, recordingType)}
                 className="text-sm font-semibold leading-5 text-blue-800 underline decoration-blue-200 underline-offset-2 hover:text-blue-950"
               >
                 {prompt}

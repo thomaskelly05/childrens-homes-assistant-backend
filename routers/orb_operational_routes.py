@@ -50,6 +50,7 @@ def _capabilities_payload() -> dict[str, Any]:
             "operational_summary",
             "manager_daily_brief",
             "record_quality_review",
+            "recording_live_coach",
             "safeguarding_themes",
             "ofsted_evidence_review",
             "action_priority",

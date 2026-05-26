@@ -17,6 +17,7 @@ SHELL_MARKERS = [
     "recording-child-voice-section",
     "recording-adult-response-section",
     "recording-actions-follow-up-section",
+    "recording-form-heading-guidance",
 ]
 
 
@@ -54,3 +55,14 @@ def test_signed_off_readonly_copy():
     assert "recording-signed-off-readonly" in _read(COMPONENTS / "recording-form-metadata-bar.tsx")
     assert "recording-addendum-hint" in editor
     assert "cannot be edited directly" in editor
+
+
+def test_orb_live_coach_in_workspace():
+    workspace = _read(COMPONENTS / "recording-workspace.tsx")
+    for marker in (
+        "OrbLiveRecordingCoach",
+        "RecordingLanguageSuggestions",
+        "RecordingReviewChecklist",
+        "orb-live-recording-coach",
+    ):
+        assert marker in workspace, f"Missing workspace marker: {marker}"

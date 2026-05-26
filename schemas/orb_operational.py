@@ -19,6 +19,7 @@ OrbOperationalMode = Literal[
     "operational_summary",
     "manager_daily_brief",
     "record_quality_review",
+    "recording_live_coach",
     "safeguarding_themes",
     "ofsted_evidence_review",
     "action_priority",
@@ -55,6 +56,11 @@ class OrbOperationalRequest(BaseModel):
     visibility: OrbOperationalOutputVisibility = "operational_private"
     tags: list[str] = Field(default_factory=list)
     output_title: str | None = Field(default=None, max_length=500)
+    form_id: str | None = Field(default=None, max_length=120)
+    form_title: str | None = Field(default=None, max_length=500)
+    recording_type: str | None = Field(default=None, max_length=120)
+    selected_excerpt: str | None = Field(default=None, max_length=2000)
+    high_level_flags: list[str] = Field(default_factory=list)
 
 
 class OrbOperationalContextSummary(BaseModel):
