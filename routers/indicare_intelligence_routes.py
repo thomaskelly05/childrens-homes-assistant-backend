@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from auth.dependencies import get_current_user
 from db.connection import get_db
+from routers.continuous_intelligence_state_routes import router as continuous_state_router
 from schemas.indicare_intelligence import IntelligenceRequest
 from services.registered_manager_daily_brief_service import registered_manager_daily_brief_service
 from services.evidence_graph_intelligence_service import evidence_graph_intelligence_service
@@ -18,6 +19,7 @@ from services.risk_intelligence_language import SAFE_DECISION_SUPPORT_NOTICE
 
 # Authenticated manager/staff routes — follows manager_intelligence and governance patterns.
 router = APIRouter(prefix="/intelligence", tags=["indicare-intelligence-spine"])
+router.include_router(continuous_state_router, prefix="")
 
 
 class RecordsPayload(BaseModel):
@@ -41,6 +43,8 @@ def intelligence_health(current_user: dict[str, Any] = Depends(get_current_user)
             "endpoints": {
                 "spine": "POST /intelligence/spine",
                 "manager_daily_brief": "POST /intelligence/manager-daily-brief",
+                "continuous_state": "POST /intelligence/state/build",
+                "orb_state_context": "GET /intelligence/state/orb-context/home/{home_id}",
                 "patterns": "POST /intelligence/patterns",
                 "ofsted_simulation": "POST /intelligence/ofsted-simulation",
                 "record_quality": "POST /intelligence/record-quality",
@@ -49,6 +53,7 @@ def intelligence_health(current_user: dict[str, Any] = Depends(get_current_user)
             "connected_services": [
                 "regulatory_ontology_service",
                 "ofsted_document_readiness_service",
+                "continuous_intelligence_state_service",
                 "pattern_detection_service",
                 "evidence_graph_intelligence_service",
                 "ofsted_judgement_simulation_service",
