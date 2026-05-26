@@ -10,11 +10,6 @@ import type { RecordingSaveMode } from '@/components/indicare/record/recording-a
 import { RecordingLanguageSuggestions } from '@/components/indicare/record/recording-language-suggestions'
 import { RecordingReviewChecklist } from '@/components/indicare/record/recording-review-checklist'
 import { RecordingTherapeuticPrompts } from '@/components/indicare/record/recording-therapeutic-prompts'
-import { RecordingTypeSelector } from '@/components/indicare/record/recording-type-selector'
-import {
-  RECORDING_OS_ORB_HREF,
-  RECORDING_STANDALONE_ORB_HREF
-} from '@/lib/record/recording-quality-coach'
 import type { RecordAboutContext } from '@/lib/record/recording-hub'
 import { recordCardById, recordCardHref } from '@/lib/record/recording-hub'
 import {
@@ -149,8 +144,6 @@ export function RecordingWorkspace({
         </p>
       </header>
 
-      <RecordingTypeSelector value={recordingType} onChange={setRecordingType} about={about} />
-
       {activeForm ? (
         <section
           data-testid="recording-workflow-status"
@@ -233,18 +226,6 @@ export function RecordingWorkspace({
           Submit through the correct formal workflow when ready. Secure drafts are stored on the server when available; local browser autosave remains as fallback.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
-          <Link
-            href={RECORDING_OS_ORB_HREF}
-            className="inline-flex min-h-11 items-center rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white"
-          >
-            Open OS ORB
-          </Link>
-          <Link
-            href={RECORDING_STANDALONE_ORB_HREF}
-            className="inline-flex min-h-11 items-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700"
-          >
-            Standalone wording helper
-          </Link>
           <Link
             href={continueHref}
             className="inline-flex min-h-11 items-center rounded-2xl bg-blue-600 px-4 py-3 text-sm font-black text-white"

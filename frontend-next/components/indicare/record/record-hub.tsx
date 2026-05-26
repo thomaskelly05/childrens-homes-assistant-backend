@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Mic2, Sparkles } from 'lucide-react'
+import { Mic2 } from 'lucide-react'
 
 import { SafeLucideIcon } from '@/components/indicare/safe-lucide-icon'
 import { OrbInlineHint } from '@/components/indicare/operational/orb-inline-hint'
@@ -11,11 +11,8 @@ import { Card, PageHeader, SectionHeader } from '@/components/indicare/ui'
 import { RecordChildPicker, mapYoungPeopleToPickerOptions, type RecordChildPickerOption } from '@/components/indicare/record/record-child-picker'
 import { RecordingDraftList } from '@/components/indicare/record/recording-draft-list'
 import { RecordingCataloguePanel } from '@/components/indicare/record/recording-catalogue-panel'
+import { RecordingTypeSelector } from '@/components/indicare/record/recording-type-selector'
 import { RecordingWorkspace } from '@/components/indicare/record/recording-workspace'
-import {
-  RECORDING_OS_ORB_HREF,
-  RECORDING_STANDALONE_ORB_HREF
-} from '@/lib/record/recording-quality-coach'
 import { resolveRecordingTypeFromQuery } from '@/lib/record/recording-types'
 import { useActiveChild } from '@/lib/context/active-child-context'
 import { getOsYoungPeople } from '@/lib/os-api/workspaces'
@@ -37,7 +34,6 @@ import {
   recordHubQueryString,
   recordOperationalOrbPromptHref,
   recordOrbPromptHref,
-  recordOrbPromptsForContext,
   recordRecommendedForContext,
   resolveRecordAboutContext
 } from '@/lib/record/recording-hub'
@@ -254,6 +250,8 @@ export function RecordHub({
   const [childrenLoadFailed, setChildrenLoadFailed] = useState(false)
   const [childrenWarning, setChildrenWarning] = useState<string | undefined>()
   const [draftListRefreshKey, setDraftListRefreshKey] = useState(0)
+  const [browseCatalogue, setBrowseCatalogue] = useState(false)
+  const [browseAllCards, setBrowseAllCards] = useState(false)
 
   const syncFromUrl = useCallback(() => {
     const urlChildId = searchParams.get('child_id') || searchParams.get('young_person_id') || undefined
@@ -269,6 +267,11 @@ export function RecordHub({
   useEffect(() => {
     syncFromUrl()
   }, [syncFromUrl])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (window.location.hash === '#browse-catalogue') setBrowseCatalogue(true)
+  }, [])
 
   useEffect(() => {
     if (!activeChild?.id || childId) return
@@ -341,10 +344,6 @@ export function RecordHub({
   }
 
   const effectiveChildLabel = childDisplayName || (childId ? `Young person ${childId}` : undefined)
-  const orbPrompts = useMemo(
-    () => recordOrbPromptsForContext(about === 'child' ? 'child' : about, childId, effectiveChildLabel),
-    [about, childId, effectiveChildLabel]
-  )
   const recommended = useMemo(
     () => recordRecommendedForContext(about, childId, effectiveChildLabel),
     [about, childId, effectiveChildLabel]
@@ -352,10 +351,11 @@ export function RecordHub({
 
   const showChildPicker = about === 'child'
   const showStaffPanel = about === 'staff'
-  const initialRecordingType = resolveRecordingTypeFromQuery(
-    highlightType || searchParams.get('type'),
-    searchParams.get('form')
-  )
+  const typeFromUrl = highlightType || searchParams.get('type') || undefined
+  const hasTypeSelected = Boolean(typeFromUrl?.trim()) || Boolean(searchParams.get('draft_id')?.trim())
+  const initialRecordingType = hasTypeSelected
+    ? resolveRecordingTypeFromQuery(typeFromUrl, searchParams.get('form'))
+    : undefined
   const draftIdFromUrl = searchParams.get('draft_id') || undefined
   const formIdFromUrl = searchParams.get('form') || undefined
 
@@ -382,58 +382,37 @@ export function RecordHub({
       />
 
       <section
-        data-testid="record-orb-recording-support"
-        className="rounded-[24px] border border-cyan-100 bg-gradient-to-r from-cyan-50/90 via-white to-blue-50/80 p-4 shadow-sm ring-1 ring-cyan-100/60"
+        data-testid="record-hub-quick-links"
+        className="flex flex-wrap gap-2 rounded-2xl border border-slate-100 bg-slate-50/80 px-4 py-3"
       >
-        <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-800">ORB recording support</p>
-        <p className="mt-1 max-w-2xl text-sm font-semibold leading-6 text-slate-700">
-          Connected to Care Hub and operational ORB. ORB can help with wording and recording quality — it does not replace safeguarding or manager decisions.
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <Link
-            href={RECORDING_OS_ORB_HREF}
-            className="inline-flex min-h-10 items-center rounded-2xl bg-slate-950 px-4 py-2.5 text-xs font-black text-white"
-          >
-            Open operational ORB
-          </Link>
-          <Link
-            href={RECORDING_STANDALONE_ORB_HREF}
-            className="inline-flex min-h-10 items-center rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-black text-slate-700"
-          >
-            ORB wording help (standalone)
-          </Link>
-          <Link href="/command-centre" className="inline-flex min-h-10 items-center rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-black text-slate-600">
-            Back to Care Hub
-          </Link>
-          <Link
-            href="/record/reviews"
-            data-testid="record-hub-review-queue-link"
-            className="inline-flex min-h-10 items-center rounded-2xl border border-purple-200 bg-purple-50 px-4 py-2.5 text-xs font-black text-purple-950"
-          >
-            Recording review queue
-          </Link>
-          <Link
-            href="/record/governance"
-            data-testid="record-hub-governance-link"
-            className="inline-flex min-h-10 items-center rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-xs font-black text-indigo-950"
-          >
-            Recording governance
-          </Link>
-          <Link
-            href="/record/alerts"
-            data-testid="record-hub-alerts-link"
-            className="inline-flex min-h-10 items-center rounded-2xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs font-black text-rose-950"
-          >
-            Recording alerts
-          </Link>
-          <Link
-            href="/command-centre/briefing"
-            data-testid="record-hub-manager-daily-brief-link"
-            className="inline-flex min-h-10 items-center rounded-2xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-xs font-black text-blue-950"
-          >
-            Manager daily brief
-          </Link>
-        </div>
+        <Link
+          href="/record/reviews"
+          data-testid="record-hub-review-queue-link"
+          className="inline-flex min-h-10 items-center rounded-2xl border border-purple-200 bg-white px-3 py-2 text-xs font-black text-purple-950"
+        >
+          Review queue
+        </Link>
+        <Link
+          href="/record/alerts"
+          data-testid="record-hub-alerts-link"
+          className="inline-flex min-h-10 items-center rounded-2xl border border-rose-200 bg-white px-3 py-2 text-xs font-black text-rose-950"
+        >
+          Alerts
+        </Link>
+        <Link
+          href="/record/governance"
+          data-testid="record-hub-governance-link"
+          className="inline-flex min-h-10 items-center rounded-2xl border border-indigo-200 bg-white px-3 py-2 text-xs font-black text-indigo-950"
+        >
+          Governance
+        </Link>
+        <Link
+          href={recordOrbPromptHref('Help me choose the right record type for what I need to document.', childId)}
+          data-testid="record-hub-operational-orb-link"
+          className="inline-flex min-h-10 items-center rounded-2xl border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs font-black text-cyan-950"
+        >
+          Ask operational ORB
+        </Link>
       </section>
 
       <RecordAboutSelector value={about} onChange={handleAboutChange} />
@@ -473,18 +452,51 @@ export function RecordHub({
 
       <RecordingDraftList refreshKey={draftListRefreshKey} />
 
-      <RecordingCataloguePanel about={about} childId={childId} />
+      {!hasTypeSelected ? (
+        <RecordingTypeSelector
+          childId={childId}
+          about={about}
+          onChange={(next) => updateRoute({ about, childId, childName: childDisplayName, type: next })}
+        />
+      ) : null}
 
-      <RecordingWorkspace
-        about={about}
-        childId={childId}
-        childDisplayName={effectiveChildLabel}
-        initialRecordingType={initialRecordingType}
-        highlightType={highlightType}
-        draftIdFromUrl={draftIdFromUrl}
-        formIdFromUrl={formIdFromUrl}
-        onDraftListRefresh={() => setDraftListRefreshKey((value) => value + 1)}
-      />
+      {hasTypeSelected ? (
+        <RecordingWorkspace
+          about={about}
+          childId={childId}
+          childDisplayName={effectiveChildLabel}
+          initialRecordingType={initialRecordingType}
+          highlightType={highlightType}
+          draftIdFromUrl={draftIdFromUrl}
+          formIdFromUrl={formIdFromUrl}
+          onDraftListRefresh={() => setDraftListRefreshKey((value) => value + 1)}
+        />
+      ) : null}
+
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          data-testid="record-hub-browse-catalogue-toggle"
+          onClick={() => setBrowseCatalogue((value) => !value)}
+          className="inline-flex min-h-10 items-center rounded-2xl border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-800"
+        >
+          {browseCatalogue ? 'Hide' : 'Browse all recording types'}
+        </button>
+        <button
+          type="button"
+          data-testid="record-hub-browse-cards-toggle"
+          onClick={() => setBrowseAllCards((value) => !value)}
+          className="inline-flex min-h-10 items-center rounded-2xl border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-800"
+        >
+          {browseAllCards ? 'Hide' : 'Show'} legacy record cards
+        </button>
+      </div>
+
+      {browseCatalogue ? (
+        <div id="browse-catalogue">
+          <RecordingCataloguePanel about={about} childId={childId} />
+        </div>
+      ) : null}
 
       <Card data-testid="record-recommended">
         <SectionHeader eyebrow="Suggested" title="Recommended records" description="Based on who or what you selected above." />
@@ -495,54 +507,12 @@ export function RecordHub({
         </div>
       </Card>
 
-      <Card className="bg-slate-950 text-white ring-slate-800" data-testid="record-orb-prompts-panel">
-        <p className="text-[11px] font-black uppercase tracking-[0.24em] text-blue-300">Not sure what to record?</p>
-        <h2 className="mt-2 text-2xl font-black tracking-[-0.04em] text-white">ORB recording help</h2>
-        <p className="mt-2 text-sm font-semibold leading-6 text-slate-300">
-          ORB can help with wording and reflection. It does not replace safeguarding procedures or manager decisions.
-        </p>
-        <div className="mt-4 grid gap-2 sm:grid-cols-2">
-          {orbPrompts.map((prompt) => (
-            <Link
-              key={prompt.label}
-              href={recordOrbPromptHref(prompt.query, childId)}
-              className="inline-flex min-h-11 items-center rounded-2xl bg-white/10 px-4 py-3 text-xs font-black text-white transition hover:bg-white/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-200"
-              aria-label={prompt.label}
-            >
-              {prompt.label}
-            </Link>
-          ))}
-        </div>
-        <div className="mt-4 grid gap-2 sm:grid-cols-2">
-          <Link
-            href={recordOperationalOrbPromptHref('Help me choose the right record type for what I need to document.')}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-cyan-200 px-4 py-3 text-sm font-black text-slate-950"
-          >
-            <Sparkles className="h-4 w-4" aria-hidden />
-            Open operational ORB
-          </Link>
-          <Link
-            href={recordOrbPromptHref('Help me choose the right record type for what I need to document.', childId)}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-sm font-black text-white"
-          >
-            Standalone wording help
-          </Link>
-        </div>
-      </Card>
-
       {about === 'home-shift' ? (
-        <p className="text-sm font-semibold text-slate-600">Home and shift records are shown prominently. Child-specific cards remain below if you need them later.</p>
+        <p className="text-sm font-semibold text-slate-600">Home and shift records are available through the selector and browse-all catalogue.</p>
       ) : null}
 
-      <Card data-testid="record-more-routes">
-        <SectionHeader
-          eyebrow="Routes"
-          title="More recording routes"
-          description="Open the formal workflow when you are ready to submit a record to the system."
-        />
-      </Card>
-
-      {RECORD_CARD_SECTIONS.map((section) => {
+      {browseAllCards
+        ? RECORD_CARD_SECTIONS.map((section) => {
         const sectionCards = cardsForSection(section.id).filter((card) => {
           if (about === 'staff') return card.id === 'ask-orb'
           return true
@@ -570,7 +540,8 @@ export function RecordHub({
             </div>
           </Card>
         )
-      })}
+        })
+        : null}
     </div>
   )
 }

@@ -110,7 +110,12 @@ check(
   'home bottom nav reviews use /record/reviews?home_id=',
   mobileBottomNav.includes('homeRecordingReviewsHref(homeId)') && scopeRoutes.includes("return `/record/reviews?home_id=${enc(homeId)}`")
 )
-check('home bottom nav ORB uses homeOrbHref', mobileBottomNav.includes('homeOrbHref(homeId)'))
+check(
+  'home bottom nav simplified (handover + more, ORB in workspace more section)',
+  mobileBottomNav.includes('homeHandoverHref(homeId)') &&
+    mobileBottomNav.includes('mobile-nav-more') &&
+    !mobileBottomNav.includes('homeOrbHref(homeId)')
+)
 
 check(
   'mobile bottom nav uses explicit height not max-h overlay',

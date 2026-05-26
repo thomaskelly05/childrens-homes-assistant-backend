@@ -119,6 +119,7 @@ export function shouldShowFloatingOrb(pathname: string, scope?: OrbPresenceScope
 export function shouldShowInlineOrbCard(pathname: string, scope?: OrbPresenceScope): boolean {
   void scope
   if (isRecordingEditorPathStrict(pathname)) return false
+  if (hasPageEmbeddedOrbRail(pathname)) return false
   if (shouldShowOrbRail(pathname, scope)) return false
   return true
 }

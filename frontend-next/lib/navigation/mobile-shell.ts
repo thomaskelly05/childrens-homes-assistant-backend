@@ -42,23 +42,19 @@ export function childWorkspaceMobileTabs(childId: string | number): MobileScopeT
     { label: 'Overview', href: childWorkspaceHref(id), testId: 'mobile-tab-child-overview' },
     { label: 'Record', href: childRecordHref(id), testId: 'mobile-tab-child-record' },
     { label: 'Daily note', href: childDailyNoteHref(id), testId: 'mobile-tab-child-daily-note' },
-    { label: 'Chronology', href: childChronologyHref(id), testId: 'mobile-tab-child-chronology' },
-    { label: 'Actions', href: childActionsHref(id), testId: 'mobile-tab-child-actions' },
     { label: 'Reviews', href: childReviewsHref(id), testId: 'mobile-tab-child-reviews' },
-    { label: 'Alerts', href: childAlertsHref(id), testId: 'mobile-tab-child-alerts' },
-    { label: 'ORB', href: childOrbHref(id), testId: 'mobile-tab-child-orb' }
+    { label: 'More', href: `${childWorkspaceHref(id)}#more`, testId: 'mobile-tab-child-more' }
   ]
 }
 
 export function homeWorkspaceMobileTabs(homeId: string | number): MobileScopeTab[] {
   const id = String(homeId)
   return [
-    { label: 'Overview', href: homeWorkspaceHref(id), testId: 'mobile-tab-home-overview' },
-    { label: 'Daily brief', href: homeDailyBriefHref(id), testId: 'mobile-tab-home-daily-brief' },
+    { label: 'Home', href: homeWorkspaceHref(id), testId: 'mobile-tab-home-overview' },
     { label: 'Handover', href: homeHandoverHref(id), testId: 'mobile-tab-home-handover' },
-    { label: 'Alerts', href: homeRecordingAlertsHref(id), testId: 'mobile-tab-home-alerts' },
     { label: 'Reviews', href: homeRecordingReviewsHref(id), testId: 'mobile-tab-home-reviews' },
-    { label: 'ORB', href: homeOrbHref(id), testId: 'mobile-tab-home-orb' }
+    { label: 'Alerts', href: homeRecordingAlertsHref(id), testId: 'mobile-tab-home-alerts' },
+    { label: 'More', href: `${homeWorkspaceHref(id)}#more`, testId: 'mobile-tab-home-more' }
   ]
 }
 

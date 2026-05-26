@@ -42,7 +42,15 @@ import {
   operationalUtilities,
   visibleOperationalNavigation
 } from '@/lib/navigation/operational-navigation'
-import { noScopeNavigation, scopeNavigationFor, type ScopeNavItem } from '@/lib/navigation/scope-navigation'
+import {
+  childScopeMoreNavigation,
+  childScopePrimaryNavigation,
+  homeScopeMoreNavigation,
+  homeScopePrimaryNavigation,
+  noScopeNavigation,
+  scopeNavigationFor,
+  type ScopeNavItem
+} from '@/lib/navigation/scope-navigation'
 import { ChildWorkspaceLoadingFallback } from '@/components/indicare/scope/child-workspace-loading-fallback'
 import { childIdFromPath, childWorkspaceHref } from '@/lib/navigation/child-workspace-routes'
 import { routeRequiresScope, workspaceHrefForScope } from '@/lib/os-scope'
@@ -253,6 +261,18 @@ export function AppShell({ children }: { children: ReactNode }) {
     homeId: scope.selected_home_id,
     childId: scope.selected_child_id
   })
+  const scopePrimaryNavItems =
+    scope.scope_type === 'child' && scope.selected_child_id
+      ? childScopePrimaryNavigation(scope.selected_child_id)
+      : scope.scope_type === 'home' && scope.selected_home_id
+        ? homeScopePrimaryNavigation(scope.selected_home_id)
+        : scopeNavItems
+  const scopeMoreNavItems =
+    scope.scope_type === 'child' && scope.selected_child_id
+      ? childScopeMoreNavigation(scope.selected_child_id)
+      : scope.scope_type === 'home' && scope.selected_home_id
+        ? homeScopeMoreNavigation(scope.selected_home_id)
+        : []
   const useScopeMenu = hasOsScope && scopeFirstShell && scopeHasValidIds
   const primaryNav = useScopeMenu ? [] : visibleNavItems.filter((item) => selectedId || !item.requiresChild)
   const secondaryNav =
@@ -263,11 +283,20 @@ export function AppShell({ children }: { children: ReactNode }) {
         : selectedId
           ? childWorkspaceMobileTabs(selectedId)
           : []
-  const safeScopeNavItems = useScopeMenu
-    ? scopeNavItems.filter((item) => item.href && !item.href.includes('undefined') && !item.href.includes('null'))
-    : noScopeNavigation()
+  const filterScopeItems = (items: ScopeNavItem[]) =>
+    items.filter((item) => item.href && !item.href.includes('undefined') && !item.href.includes('null'))
+  const safeScopePrimaryNavItems = useScopeMenu ? filterScopeItems(scopePrimaryNavItems) : noScopeNavigation()
+  const safeScopeMoreNavItems = useScopeMenu ? filterScopeItems(scopeMoreNavItems) : []
   const navigationGroups: Array<{ label: string; items: ScopeNavItem[] | ReturnType<typeof visibleOperationalNavigation> }> = useScopeMenu
-    ? [{ label: scope.scope_type === 'child' ? 'Child workspace' : 'Home workspace', items: safeScopeNavItems }]
+    ? [
+        {
+          label: scope.scope_type === 'child' ? 'Child — primary' : 'Home — primary',
+          items: safeScopePrimaryNavItems
+        },
+        ...(safeScopeMoreNavItems.length
+          ? [{ label: scope.scope_type === 'child' ? 'Child — more' : 'Home — more', items: safeScopeMoreNavItems }]
+          : [])
+      ]
     : [
         { label: 'On shift', domains: ['command-centre', 'children', 'daily-care', 'chronology', 'actions', 'orb'] },
         { label: 'Records & evidence', domains: ['documents'] },

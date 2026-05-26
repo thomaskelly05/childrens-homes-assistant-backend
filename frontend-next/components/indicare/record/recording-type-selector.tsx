@@ -1,90 +1,201 @@
 'use client'
 
-import {
-  routeStatusLabel,
-  routeStatusMicrocopy,
-  recordingFormByWorkspaceType
-} from '@/lib/record/recording-form-registry'
-import {
-  RECORDING_WORKSPACE_TYPES,
-  type RecordingWorkspaceType,
-  recordingTypeVisibleForAbout
-} from '@/lib/record/recording-types'
-import type { RecordAboutContext } from '@/lib/record/recording-hub'
+import Link from 'next/link'
+import { useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 
-function statusBadgeClass(form: ReturnType<typeof recordingFormByWorkspaceType>) {
-  if (!form) return 'bg-slate-100 text-slate-700'
-  if (form.safeguardingSensitive) return 'bg-rose-100 text-rose-900'
-  if (form.requiresManagerReview) return 'bg-amber-100 text-amber-900'
-  if (form.routeKind === 'draft_workspace') return 'bg-blue-100 text-blue-900'
-  return 'bg-emerald-100 text-emerald-900'
+import {
+  defaultSelectorCategoryId,
+  RECORDING_SELECTOR_CATEGORIES,
+  selectorCategoryById,
+  workspaceFormsForSelectorCategory,
+  type RecordingSelectorCategoryId
+} from '@/lib/record/recording-category-groups'
+import { routeStatusLabel, routeStatusMicrocopy } from '@/lib/record/recording-form-registry'
+import { guidanceForForm } from '@/lib/record/recording-form-guidance'
+import { childRecordHref } from '@/lib/navigation/scope-routes'
+import type { RecordAboutContext } from '@/lib/record/recording-hub'
+import type { RecordingWorkspaceType } from '@/lib/record/recording-form-registry'
+import { recordingTypeVisibleForAbout } from '@/lib/record/recording-types'
+
+function recordStartHref(childId: string | undefined, workspaceType: string, formId?: string) {
+  if (childId) {
+    const base = childRecordHref(childId, workspaceType)
+    if (formId) return `${base}&form=${encodeURIComponent(formId)}`
+    return base
+  }
+  const q = new URLSearchParams({ type: workspaceType })
+  if (formId) q.set('form', formId)
+  return `/record?${q.toString()}`
 }
 
 export function RecordingTypeSelector({
+  childId,
+  about = 'child',
   value,
   onChange,
-  about
+  compact = false,
+  showBrowseAllLink = true
 }: {
-  value: RecordingWorkspaceType
-  onChange: (next: RecordingWorkspaceType) => void
-  about: RecordAboutContext
+  childId?: string
+  about?: RecordAboutContext
+  value?: RecordingWorkspaceType
+  onChange?: (next: RecordingWorkspaceType) => void
+  compact?: boolean
+  showBrowseAllLink?: boolean
 }) {
-  const options = RECORDING_WORKSPACE_TYPES.filter((option) => recordingTypeVisibleForAbout(option.id, about))
-  const selectedForm = recordingFormByWorkspaceType(value)
+  const router = useRouter()
+  const [categoryId, setCategoryId] = useState<RecordingSelectorCategoryId>(defaultSelectorCategoryId())
+  const category = selectorCategoryById(categoryId) || RECORDING_SELECTOR_CATEGORIES[0]
+
+  const typeOptions = useMemo(() => workspaceFormsForSelectorCategory(categoryId, about), [categoryId, about])
+
+  const [selectedType, setSelectedType] = useState<RecordingWorkspaceType | ''>(() => {
+    if (value && recordingTypeVisibleForAbout(value, about)) return value
+    return typeOptions[0]?.workspaceType || ''
+  })
+
+  const effectiveType = value || selectedType
+  const selectedForm = typeOptions.find((f) => f.workspaceType === effectiveType) || typeOptions[0]
+  const guidance = selectedForm ? guidanceForForm(selectedForm.id, selectedForm.category) : null
+
+  const handleCategoryChange = (nextId: RecordingSelectorCategoryId) => {
+    setCategoryId(nextId)
+    const nextForms = workspaceFormsForSelectorCategory(nextId, about)
+    const first = nextForms[0]?.workspaceType || ''
+    setSelectedType(first)
+    if (first && onChange) onChange(first as RecordingWorkspaceType)
+  }
+
+  const handleTypeChange = (nextType: string) => {
+    setSelectedType(nextType as RecordingWorkspaceType)
+    if (onChange) onChange(nextType as RecordingWorkspaceType)
+  }
+
+  const startHref = selectedForm?.workspaceType
+    ? recordStartHref(childId, selectedForm.workspaceType, selectedForm.id)
+    : childId
+      ? childRecordHref(childId)
+      : '/record'
+
+  const handleStart = () => {
+    if (onChange && selectedForm?.workspaceType) {
+      onChange(selectedForm.workspaceType)
+      return
+    }
+    router.push(startHref)
+  }
 
   return (
-    <fieldset data-testid="recording-type-selector" className="rounded-[28px] border border-slate-100 bg-white p-5 shadow-sm ring-1 ring-slate-100/80">
-      <legend className="px-1 text-lg font-black tracking-[-0.03em] text-slate-950">Recording type</legend>
-      {selectedForm ? (
-        <p className="mt-2 text-xs font-semibold leading-5 text-slate-600">
-          <span className={`mr-2 inline-flex rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.12em] ${statusBadgeClass(selectedForm)}`}>
-            {routeStatusLabel(selectedForm.routeKind)}
-          </span>
-          {selectedForm.safeguardingSensitive ? 'Safeguarding sensitive · ' : ''}
-          {selectedForm.requiresManagerReview ? 'Manager review likely · ' : ''}
-          {routeStatusMicrocopy(selectedForm.routeKind) || selectedForm.description}
+    <section
+      data-testid="recording-type-selector"
+      className={`rounded-[28px] border border-slate-100 bg-white shadow-sm ring-1 ring-slate-100/80 ${compact ? 'p-4' : 'p-5'}`}
+    >
+      <header>
+        <p className="text-[11px] font-black uppercase tracking-[0.22em] text-sky-700">Recording</p>
+        <h2 className={`font-black tracking-[-0.03em] text-slate-950 ${compact ? 'mt-1 text-lg' : 'mt-1 text-xl'}`}>
+          What do you want to record?
+        </h2>
+        <p className="mt-2 text-sm font-semibold leading-6 text-slate-600">
+          Choose a category, then the recording type. All forms remain available through browse-all.
         </p>
-      ) : null}
-      <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        {options.map((option) => {
-          const selected = value === option.id
-          const form = option.form || recordingFormByWorkspaceType(option.id)
-          return (
-            <label
-              key={option.id}
-              className={`flex cursor-pointer flex-col rounded-2xl border px-4 py-3 transition focus-within:ring-2 focus-within:ring-blue-200 ${selected ? 'border-blue-300 bg-blue-50/70 ring-1 ring-blue-200' : 'border-slate-100 bg-slate-50/60 hover:border-blue-100'}`}
-            >
-              <span className="flex items-start gap-3">
-                <input
-                  type="radio"
-                  name="recording-type"
-                  value={option.id}
-                  checked={selected}
-                  onChange={() => onChange(option.id)}
-                  className="mt-1 h-4 w-4 border-slate-300 text-blue-600 focus:ring-blue-500"
-                  aria-label={option.label}
-                />
-                <span className="min-w-0 flex-1">
-                  <span className="flex flex-wrap items-center gap-2">
-                    <span className="block text-sm font-black text-slate-950">{option.label}</span>
-                    {form ? (
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.1em] ${statusBadgeClass(form)}`}
-                      >
-                        {form.priority}
-                      </span>
-                    ) : null}
-                  </span>
-                  <span className="mt-1 block text-xs font-semibold leading-5 text-slate-600">{option.description}</span>
-                  {form ? (
-                    <span className="mt-1 block text-[10px] font-bold text-slate-500">{routeStatusLabel(form.routeKind)}</span>
-                  ) : null}
-                </span>
-              </span>
-            </label>
-          )
-        })}
+      </header>
+
+      <div className={`mt-4 grid gap-4 ${compact ? '' : 'md:grid-cols-2'}`}>
+        <label className="block">
+          <span className="text-xs font-black uppercase tracking-[0.14em] text-slate-500">Category</span>
+          <select
+            data-testid="recording-selector-category"
+            value={categoryId}
+            onChange={(event) => handleCategoryChange(event.target.value as RecordingSelectorCategoryId)}
+            className="mt-2 w-full min-h-11 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold text-slate-900 focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-100"
+          >
+            {RECORDING_SELECTOR_CATEGORIES.map((cat) => (
+              <option key={cat.id} value={cat.id}>
+                {cat.label}
+              </option>
+            ))}
+          </select>
+          <p className="mt-2 text-xs font-semibold leading-5 text-slate-500">{category.description}</p>
+        </label>
+
+        <label className="block">
+          <span className="text-xs font-black uppercase tracking-[0.14em] text-slate-500">Recording type</span>
+          <select
+            data-testid="recording-selector-type"
+            value={effectiveType}
+            onChange={(event) => handleTypeChange(event.target.value)}
+            className="mt-2 w-full min-h-11 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold text-slate-900 focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-100"
+          >
+            {typeOptions.length === 0 ? (
+              <option value="">No types in this category</option>
+            ) : (
+              typeOptions.map((form) => (
+                <option key={form.id} value={form.workspaceType || form.id}>
+                  {form.title}
+                </option>
+              ))
+            )}
+          </select>
+        </label>
       </div>
-    </fieldset>
+
+      {selectedForm && guidance ? (
+        <div
+          data-testid="recording-selector-guidance"
+          className="mt-4 rounded-2xl border border-sky-100 bg-sky-50/60 px-4 py-3 text-sm leading-6 text-slate-700"
+        >
+          <p className="font-black text-slate-950">{guidance.purpose}</p>
+          <p className="mt-2 text-xs font-semibold text-slate-600">
+            <span className="font-black text-slate-800">When to use: </span>
+            {selectedForm.description}
+          </p>
+          <p className="mt-2 text-xs font-semibold text-slate-600">
+            <span className="font-black text-slate-800">Include: </span>
+            {guidance.adultGuidanceSections[0]?.goodRecordShouldInclude.join(' · ') || guidance.adultResponseGuidance}
+          </p>
+          <ul className="mt-3 flex flex-wrap gap-2 text-[10px] font-black uppercase tracking-[0.1em]">
+            {selectedForm.requiresManagerReview ? (
+              <li className="rounded-full bg-amber-100 px-2 py-0.5 text-amber-900">Manager review likely</li>
+            ) : (
+              <li className="rounded-full bg-emerald-100 px-2 py-0.5 text-emerald-900">Usually no manager review</li>
+            )}
+            {selectedForm.lifecycle && selectedForm.lifecycle.plan_impact_behaviour !== 'none' ? (
+              <li className="rounded-full bg-violet-100 px-2 py-0.5 text-violet-900">May affect plans</li>
+            ) : null}
+            {selectedForm.safeguardingSensitive ? (
+              <li className="rounded-full bg-rose-100 px-2 py-0.5 text-rose-900">Safeguarding sensitive</li>
+            ) : null}
+            <li className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-700">
+              {routeStatusLabel(selectedForm.routeKind)}
+            </li>
+          </ul>
+          {routeStatusMicrocopy(selectedForm.routeKind) ? (
+            <p className="mt-2 text-xs font-semibold text-slate-500">{routeStatusMicrocopy(selectedForm.routeKind)}</p>
+          ) : null}
+        </div>
+      ) : null}
+
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          data-testid="recording-selector-start"
+          onClick={handleStart}
+          disabled={!selectedForm?.workspaceType}
+          className="inline-flex min-h-11 items-center rounded-2xl bg-sky-600 px-5 py-2.5 text-sm font-black text-white shadow-md shadow-sky-500/20 transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Start this record
+        </button>
+        {showBrowseAllLink ? (
+          <Link
+            href={childId ? `${childRecordHref(childId)}#browse-catalogue` : '/record#browse-catalogue'}
+            data-testid="recording-selector-browse-all"
+            className="inline-flex min-h-11 items-center rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-black text-slate-700"
+          >
+            Browse all recording types
+          </Link>
+        ) : null}
+      </div>
+    </section>
   )
 }
