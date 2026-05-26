@@ -10,6 +10,11 @@ from services.intelligence.projection_coordinator import ProjectionRequest, proj
 from services.intelligence.projection_snapshot_service import projection_snapshot_service
 from services.realtime_event_bus import REALTIME_EVENT_TYPES, realtime_event_bus
 
+try:
+    from services.continuous_intelligence_state_service import continuous_intelligence_state_service
+except Exception:  # pragma: no cover - optional convergence layer
+    continuous_intelligence_state_service = None  # type: ignore[assignment]
+
 
 EVENT_TYPE_BY_TARGET = {
     "chronology": "chronology.update",
@@ -169,6 +174,21 @@ class OperationalEventBus:
                 projection_snapshot_service.mark_stale(prefix=f"{target}::young_person::{event.payload.get('young_person_id')}")
             if event.payload.get("staff_id"):
                 projection_snapshot_service.mark_stale(prefix=f"{target}::staff::{event.payload.get('staff_id')}")
+        if continuous_intelligence_state_service:
+            try:
+                continuous_intelligence_state_service.mark_stale_for_event(
+                    home_id=event.home_id,
+                    child_id=event.payload.get("young_person_id") or event.payload.get("child_id"),
+                    staff_id=event.payload.get("staff_id") or event.payload.get("adult_id"),
+                )
+                self._metrics["continuous_state_stale"] += 1
+            except Exception as exc:
+                self._metrics["continuous_state_stale_failed"] += 1
+                self._dead_letter.append({
+                    "event": event.to_dict(),
+                    "event_type": "continuous_intelligence_state.stale",
+                    "error": exc.__class__.__name__,
+                })
 
     def _dedupe_key(self, event: OperationalEvent) -> str:
         return ":".join([event.domain, event.entity_type, event.entity_id, event.transition_type])
