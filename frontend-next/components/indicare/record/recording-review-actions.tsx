@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 
+import { RecordingReviewSignoffResultCard } from '@/components/indicare/record/recording-review-signoff-result'
 import {
   applyRecordingReviewAction,
   MANAGER_JUDGEMENT_NOTICE,
@@ -21,6 +22,7 @@ export function RecordingReviewActions({
   const [busy, setBusy] = useState(false)
   const [lastResult, setLastResult] = useState<RecordingReviewActionResult | null>(null)
   const draftId = detail.draft.id
+  const childId = detail.draft.child_id != null ? String(detail.draft.child_id) : undefined
   const formalSupported = Boolean(
     (detail.submission_target as { formal_submit_supported?: boolean })?.formal_submit_supported
   )
@@ -112,7 +114,12 @@ export function RecordingReviewActions({
         ) : null}
       </div>
 
-      {lastResult ? (
+      {lastResult &&
+      (lastResult.decision === 'approve' || lastResult.decision === 'submit_after_approval') ? (
+        <div className="mt-4">
+          <RecordingReviewSignoffResultCard result={lastResult} childId={childId} />
+        </div>
+      ) : lastResult ? (
         <div className="mt-4 rounded-xl border border-slate-100 bg-slate-50 p-3 text-xs font-semibold text-slate-700">
           {lastResult.warnings.map((warning) => (
             <p key={warning}>{warning}</p>

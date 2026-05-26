@@ -339,11 +339,12 @@ class RecordingReviewService:
 
     def build_review_prompts(self, draft: RecordingDraftRecord) -> list[str]:
         return [
+            "Help me consider whether this is ready for sign-off.",
+            "What plan impacts might need review after approval?",
+            "What should be checked before archiving this?",
+            "Is this suitable for LifeEcho, or should it remain statutory only?",
             "Help me review this for child-centred language.",
-            "What needs manager follow-up?",
             "Does this suggest safeguarding escalation?",
-            "What should be recorded before approval?",
-            "Are there privacy identifiers to check?",
         ]
 
     def get_review_detail(
@@ -369,6 +370,8 @@ class RecordingReviewService:
         ):
             warnings.append("Manager or safeguarding review is required before formal submission.")
 
+        signoff_meta = (draft.metadata or {}).get("review_signoff") or {}
+        formal_supported = target.target_status == "supported_now"
         return RecordingReviewDetail(
             draft=draft,
             review_history=history,
@@ -378,7 +381,7 @@ class RecordingReviewService:
                 "frontend_route": recording_submission_target_registry.frontend_route_for(
                     draft.recording_type, draft
                 ),
-                "formal_submit_supported": target.target_status == "supported_now",
+                "formal_submit_supported": formal_supported,
             },
             quality_summary={
                 "quality_flags": list(draft.quality_flags or []),
@@ -393,6 +396,10 @@ class RecordingReviewService:
             suggested_review_prompts=self.build_review_prompts(draft),
             warnings=warnings,
             next_steps=self.build_next_steps(draft, None),
+            formal_submit_supported=formal_supported,
+            can_create_formal_record=formal_supported,
+            formal_route_status=target.target_status,
+            last_signoff=dict(signoff_meta),
         )
 
     def build_next_steps(
@@ -443,6 +450,13 @@ class RecordingReviewService:
             )
 
         if action.decision == "approve":
+            from services.recording_review_signoff_service import recording_review_signoff_service
+
+            signoff = recording_review_signoff_service.approve_and_sign_off_review(
+                draft_id, current_user, action=action, conn=conn
+            )
+            if signoff:
+                return signoff
             return self.approve_draft(draft, action, current_user, conn=conn)
         if action.decision == "request_changes":
             return self.request_changes(draft, action, current_user, conn=conn)
@@ -519,6 +533,8 @@ class RecordingReviewService:
             warnings=[MANAGER_JUDGEMENT_NOTICE],
             next_steps=self.build_next_steps(updated or draft, "approve"),
             audit_reference=audit_ref,
+            sign_off_completed=True,
+            sign_off_status="approved",
         )
 
     def request_changes(
@@ -669,7 +685,7 @@ class RecordingReviewService:
         current_user: dict[str, Any],
         conn: Any | None = None,
     ) -> RecordingReviewActionResponse:
-        if draft.review_status not in {"approved", "reviewed"} and not action.confirm_reviewed:
+        if draft.review_status not in {"approved", "reviewed", "signed_off"} and not action.confirm_reviewed:
             return RecordingReviewActionResponse(
                 success=False,
                 draft_id=draft.id,
@@ -678,6 +694,33 @@ class RecordingReviewService:
                 warnings=["Draft must be approved before submit after approval."],
                 next_steps=["Approve the draft first, then submit after approval."],
             )
+
+        from services.recording_review_signoff_service import recording_review_signoff_service
+
+        signoff = recording_review_signoff_service.approve_and_sign_off_review(
+            draft.id,
+            current_user,
+            action=RecordingReviewActionRequest(
+                decision="approve",
+                comments=action.comments,
+                confirm_reviewed=True,
+                metadata={**(action.metadata or {}), "submit_after_manager_review": True},
+            ),
+            conn=conn,
+            skip_approve_step=True,
+        )
+        if signoff:
+            signoff.decision = "submit_after_approval"
+            audit_ref = self.record_review_event(
+                draft,
+                "submit_after_approval",
+                action,
+                current_user,
+                conn=conn,
+            )
+            if not signoff.audit_reference:
+                signoff.audit_reference = audit_ref
+            return signoff
 
         from services.recording_submission_router_service import recording_submission_router_service
 
@@ -701,14 +744,6 @@ class RecordingReviewService:
             )
 
         new_status = "submitted" if submission.formal_record_created else draft.review_status
-        if submission.submitted:
-            recording_draft_service.update_draft(
-                draft.id,
-                RecordingDraftUpdate(review_status="submitted" if submission.formal_record_created else "approved"),
-                current_user,
-                conn=conn,
-            )
-
         audit_ref = self.record_review_event(
             draft,
             "submit_after_approval",
@@ -725,9 +760,18 @@ class RecordingReviewService:
             comments=action.comments,
             submitted=submission.submitted,
             formal_record_created=submission.formal_record_created,
+            formal_record_type=submission.formal_record_type,
             linked_record_id=submission.linked_record_id,
+            linked_archive_record_id=submission.linked_archive_record_id,
+            linked_chronology_id=submission.linked_chronology_id,
+            linked_plan_impact_ids=list(submission.linked_plan_impact_ids or []),
+            lifeecho_suggestion_ids=list(submission.lifeecho_suggestion_ids or []),
+            sign_off_completed=submission.formal_record_created,
+            sign_off_status="signed_off" if submission.formal_record_created else "approved",
             warnings=[MANAGER_JUDGEMENT_NOTICE, *list(submission.warnings or [])[:15]],
+            lifecycle_warnings=list(submission.warnings or [])[:15],
             next_steps=self.build_next_steps(draft, "submit_after_approval", submission),
+            lifecycle_next_steps=list(submission.next_steps or [])[:15],
             audit_reference=audit_ref,
         )
 

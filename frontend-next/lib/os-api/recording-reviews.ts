@@ -107,7 +107,18 @@ export type RecordingReviewActionResult = {
   comments?: string | null
   submitted?: boolean
   formal_record_created?: boolean
+  formal_record_type?: string | null
   linked_record_id?: string | null
+  linked_archive_record_id?: string | null
+  linked_chronology_id?: string | null
+  linked_plan_impact_ids?: string[]
+  lifeecho_suggestion_ids?: string[]
+  lifecycle_warnings?: string[]
+  lifecycle_next_steps?: string[]
+  sign_off_completed?: boolean
+  sign_off_status?: string | null
+  can_create_formal_record?: boolean
+  formal_route_status?: string | null
   warnings: string[]
   next_steps: string[]
   audit_reference?: string | null
@@ -210,9 +221,20 @@ export async function applyRecordingReviewAction(draftId: string, payload: Recor
   })
 }
 
+export type OperationalOrbReviewMode =
+  | 'record_quality_review'
+  | 'safeguarding_themes'
+  | 'plan_impact_review'
+  | 'archive_summary'
+  | 'lifeecho_memory_support'
+
 /** Operational ORB review modes — never pass draft body in URL. */
-export function operationalOrbReviewHref(mode: 'record_quality_review' | 'safeguarding_themes', query?: string) {
-  const params = new URLSearchParams({ mode })
-  if (query) params.set('q', query)
+export function operationalOrbReviewHref(
+  mode: OperationalOrbReviewMode,
+  options?: { query?: string; childId?: string }
+) {
+  const params = new URLSearchParams({ mode, scope: 'child' })
+  if (options?.childId) params.set('young_person_id', options.childId)
+  if (options?.query) params.set('q', options.query)
   return `/assistant/orb?${params.toString()}`
 }

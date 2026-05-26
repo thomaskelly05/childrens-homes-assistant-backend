@@ -99,6 +99,10 @@ class RecordingReviewDetail(BaseModel):
     suggested_review_prompts: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
     next_steps: list[str] = Field(default_factory=list)
+    formal_submit_supported: bool = False
+    can_create_formal_record: bool = False
+    formal_route_status: str | None = None
+    last_signoff: dict[str, Any] = Field(default_factory=dict)
 
 
 class RecordingReviewActionRequest(BaseModel):
@@ -124,7 +128,18 @@ class RecordingReviewActionResponse(BaseModel):
     comments: str | None = None
     submitted: bool = False
     formal_record_created: bool = False
+    formal_record_type: str | None = None
     linked_record_id: str | None = None
+    linked_archive_record_id: str | None = None
+    linked_chronology_id: str | None = None
+    linked_plan_impact_ids: list[str] = Field(default_factory=list)
+    lifeecho_suggestion_ids: list[str] = Field(default_factory=list)
+    lifecycle_warnings: list[str] = Field(default_factory=list)
+    lifecycle_next_steps: list[str] = Field(default_factory=list)
+    sign_off_completed: bool = False
+    sign_off_status: str | None = None
+    can_create_formal_record: bool = False
+    formal_route_status: str | None = None
     warnings: list[str] = Field(default_factory=list)
     next_steps: list[str] = Field(default_factory=list)
     audit_reference: str | None = None
