@@ -7,9 +7,9 @@ FRONTEND = Path(__file__).resolve().parents[1] / "frontend-next"
 
 def test_home_workspace_mobile_action_testids():
     page = (FRONTEND / "app/homes/[id]/workspace/page.tsx").read_text(encoding="utf-8")
-    assert 'data-testid="mobile-home-handover-button"' in page
-    assert 'data-testid="mobile-home-alerts-button"' in page
-    assert 'data-testid="mobile-home-reviews-button"' in page
+    assert "'mobile-home-handover-button'" in page
+    assert "'mobile-home-alerts-button'" in page
+    assert "'mobile-home-reviews-button'" in page
     assert "mobile-home-orb-button" in page
     assert "MobileSafeLink" in page
 

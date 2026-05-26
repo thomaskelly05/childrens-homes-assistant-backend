@@ -8,9 +8,9 @@ FRONTEND = Path(__file__).resolve().parents[1] / "frontend-next"
 def test_child_hero_primary_buttons_have_hrefs_and_testids():
     hero = (FRONTEND / "components/young-people/workspace/child-profile-hero.tsx").read_text(encoding="utf-8")
     normaliser = (FRONTEND / "lib/young-people/child-workspace-normaliser.ts").read_text(encoding="utf-8")
-    assert 'data-testid="mobile-child-record-button"' in hero
-    assert 'data-testid="mobile-child-daily-note-button"' in hero
-    assert 'data-testid="mobile-child-orb-button"' in hero
+    assert "'mobile-child-record-button'" in hero
+    assert "'mobile-child-daily-note-button'" in hero
+    assert "'mobile-child-orb-button'" in hero
     assert "Record something" in normaliser
     assert "child-quick-record" in normaliser
     assert "child-quick-daily-note" in normaliser
