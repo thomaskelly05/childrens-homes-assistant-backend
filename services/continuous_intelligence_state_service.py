@@ -18,13 +18,7 @@ SEVERITY_WEIGHTS = {"low": 1, "medium": 2, "high": 3, "critical": 4}
 
 
 class ContinuousIntelligenceStateService:
-    """Builds cheap, explainable operational state from the Intelligence Spine.
-
-    This service is intentionally deterministic. It does not make safeguarding,
-    legal, medical or inspection decisions. It summarises the current operational
-    picture so ORB and dashboards can reason from evidence-linked state instead
-    of repeatedly re-reading all records or calling an LLM.
-    """
+    """Builds cheap, explainable operational state from the Intelligence Spine."""
 
     projection_type = "continuous_intelligence_state"
 
@@ -98,7 +92,6 @@ class ContinuousIntelligenceStateService:
             "stored": True,
             "memory_type": "continuous_operational_state",
         }
-
         return safe_payload(state)
 
     def state_from_spine(self, spine: IntelligenceSpineResponse, *, request: IntelligenceRequest) -> dict[str, Any]:
@@ -115,8 +108,8 @@ class ContinuousIntelligenceStateService:
         proposed_actions = [self._normalise_action(action) for action in spine.proposed_actions]
         evidence_graph = spine.evidence_graph.model_dump(mode="json") if spine.evidence_graph else {}
 
-        emotional_climate = self._emotional_climate(patterns, findings, record_quality)
-        child_state = self._child_state(patterns, findings, record_quality, evidence_graph)
+        emotional_climate = self._emotional_climate(patterns, record_quality)
+        child_state = self._child_state(patterns, findings, evidence_graph)
         home_state = self._home_state(patterns, findings, emotional_climate, record_quality, proposed_actions)
         workforce_state = self._workforce_state(patterns, findings, record_quality)
         provider_state = self._provider_state(request, home_state=home_state, workforce_state=workforce_state)
@@ -198,3 +191,176 @@ class ContinuousIntelligenceStateService:
         if not results:
             results.append(projection_snapshot_service.mark_stale(prefix=self.projection_type))
         return {"ok": True, "results": results}
+
+    def _child_state(self, patterns: list[dict[str, Any]], findings: dict[str, list[dict[str, Any]]], evidence_graph: dict[str, Any]) -> dict[str, Any]:
+        pattern_types = {p.get("pattern_type") for p in patterns}
+        pressure = self._weighted_score(patterns, include={
+            "missing_episode_increase", "incident_increase", "restraint_increase",
+            "safeguarding_concern_repeated", "education_refusal_pattern",
+            "medication_refusal_pattern", "night_time_incident_pattern",
+        })
+        return {
+            "state": self._level_from_score(pressure),
+            "pressure_score": pressure,
+            "safeguarding_pressure": self._level_from_score(self._weighted_score(patterns, include={"safeguarding_concern_repeated", "missing_episode_increase", "restraint_increase"})),
+            "placement_stability": "fragile" if pressure >= 45 or "missing_episode_increase" in pattern_types else "watch" if pressure >= 20 or "repeated_family_contact_escalation" in pattern_types else "stable",
+            "child_voice_visibility": "limited" if "child_voice_missing" in pattern_types else "visible_or_not_flagged",
+            "education_engagement": "review" if "education_refusal_pattern" in pattern_types else "not_flagged",
+            "health_medication": "review" if "medication_refusal_pattern" in pattern_types else "not_flagged",
+            "relationship_temperature": "pressure" if "repeated_family_contact_escalation" in pattern_types else "not_flagged",
+            "evidence_link_count": len(evidence_graph.get("links") or []) if isinstance(evidence_graph, dict) else 0,
+            "review_prompts": self._finding_summaries(findings.get("child", []))[:6],
+            "manager_review_required": any(f.get("manager_review_required") for f in findings.get("child", [])),
+        }
+
+    def _home_state(self, patterns: list[dict[str, Any]], findings: dict[str, list[dict[str, Any]]], emotional_climate: dict[str, Any], record_quality: list[dict[str, Any]], proposed_actions: list[dict[str, Any]]) -> dict[str, Any]:
+        safeguarding_score = self._weighted_score(patterns, include={"missing_episode_increase", "incident_increase", "restraint_increase", "safeguarding_concern_repeated", "manager_review_missing"})
+        oversight_score = self._weighted_score(patterns, include={"manager_review_missing", "overdue_actions", "staff_debrief_missing", "weak_recording_quality"})
+        return {
+            "state": self._level_from_score(max(safeguarding_score, oversight_score, emotional_climate.get("score", 0))),
+            "safeguarding_pressure": self._level_from_score(safeguarding_score),
+            "management_oversight": "urgent_review" if oversight_score >= 45 else "review" if oversight_score >= 20 else "not_flagged",
+            "recording_quality": self._record_quality_state(record_quality),
+            "emotional_climate": emotional_climate.get("level"),
+            "open_action_pressure": len(proposed_actions),
+            "inspection_readiness": "review" if findings.get("inspection_risks") or findings.get("ofsted") else "not_flagged",
+            "leadership_prompts": self._finding_summaries(findings.get("leadership", []))[:8],
+            "priority_actions": proposed_actions[:8],
+        }
+
+    def _workforce_state(self, patterns: list[dict[str, Any]], findings: dict[str, list[dict[str, Any]]], record_quality: list[dict[str, Any]]) -> dict[str, Any]:
+        staff_score = self._weighted_score(patterns, include={"staff_debrief_missing", "weak_recording_quality"})
+        weak_records = [r for r in record_quality if r.get("manager_review_required") or r.get("overall_quality") in {"weak", "developing"}]
+        return {
+            "state": self._level_from_score(staff_score + min(30, len(weak_records) * 5)),
+            "practice_support_needed": bool(staff_score or weak_records),
+            "recording_support_needed": bool(weak_records),
+            "debrief_culture": "review" if any(p.get("pattern_type") == "staff_debrief_missing" for p in patterns) else "not_flagged",
+            "staff_prompts": self._finding_summaries(findings.get("staff", []))[:8],
+            "record_quality_flags": weak_records[:10],
+        }
+
+    def _provider_state(self, request: IntelligenceRequest, *, home_state: dict[str, Any], workforce_state: dict[str, Any]) -> dict[str, Any]:
+        provider_context = request.context.get("provider") if isinstance(request.context, dict) else None
+        homes = request.context.get("homes") if isinstance(request.context, dict) else None
+        return {
+            "state": "single_home_view" if not homes else "provider_view_ready",
+            "provider_context_present": bool(provider_context),
+            "homes_in_context": len(homes) if isinstance(homes, list) else 0,
+            "cross_home_intelligence": "requires_provider_context" if not homes else "ready_for_comparison",
+            "current_home_signal": home_state.get("state"),
+            "workforce_signal": workforce_state.get("state"),
+        }
+
+    def _emotional_climate(self, patterns: list[dict[str, Any]], record_quality: list[dict[str, Any]]) -> dict[str, Any]:
+        punitive_flags = sum(len(r.get("therapeutic_language_flags") or []) for r in record_quality)
+        weak_quality = sum(1 for r in record_quality if r.get("overall_quality") in {"weak", "developing"})
+        incident_pressure = self._weighted_score(patterns, include={"incident_increase", "restraint_increase", "night_time_incident_pattern"})
+        relationship_pressure = self._weighted_score(patterns, include={"repeated_family_contact_escalation", "child_voice_missing"})
+        score = min(100, incident_pressure + relationship_pressure + punitive_flags * 6 + weak_quality * 4)
+        return {
+            "level": self._level_from_score(score),
+            "score": score,
+            "signals": {
+                "incident_pressure": incident_pressure,
+                "relationship_pressure": relationship_pressure,
+                "punitive_language_flags": punitive_flags,
+                "weak_or_developing_records": weak_quality,
+            },
+            "interpretation": self._climate_interpretation(score),
+            "review_prompts": ["Review whether records show warmth, curiosity, repair and child voice.", "Check whether staff need reflective support before practice drifts into task-only care."] if score >= 20 else ["Continue recording protective factors, repair and positive progress."],
+        }
+
+    def _evidence_state(self, evidence_graph: dict[str, Any], spine: IntelligenceSpineResponse) -> dict[str, Any]:
+        gaps = evidence_graph.get("evidence_gaps") or [] if isinstance(evidence_graph, dict) else []
+        missing = evidence_graph.get("missing_expected_links") or [] if isinstance(evidence_graph, dict) else []
+        return {
+            "evidence_strength": spine.summary.evidence_status,
+            "graph_nodes": len(evidence_graph.get("nodes") or []) if isinstance(evidence_graph, dict) else 0,
+            "graph_links": len(evidence_graph.get("links") or []) if isinstance(evidence_graph, dict) else 0,
+            "evidence_gaps": gaps[:12],
+            "missing_expected_links": missing[:12],
+            "manager_review_prompts": (evidence_graph.get("manager_review_prompts") or [])[:8] if isinstance(evidence_graph, dict) else [],
+        }
+
+    def _orb_context(self, *, child_state: dict[str, Any], home_state: dict[str, Any], workforce_state: dict[str, Any], provider_state: dict[str, Any], evidence_state: dict[str, Any], spine: IntelligenceSpineResponse) -> dict[str, Any]:
+        return {
+            "context_type": "continuous_intelligence_state",
+            "headline": spine.summary.headline,
+            "what_orb_should_notice_first": [home_state.get("management_oversight"), child_state.get("placement_stability"), workforce_state.get("state"), evidence_state.get("evidence_strength")],
+            "suggested_questions": ["What needs calm manager review today?", "Which evidence explains this pattern?", "What should be checked before any decision is made?", "Where could practice drift be developing?"],
+            "must_include": ["evidence basis", "human review required", "no automated safeguarding decision"],
+        }
+
+    def _what_matters_now(self, patterns: list[dict[str, Any]], findings: dict[str, list[dict[str, Any]]], proposed_actions: list[dict[str, Any]]) -> list[str]:
+        items: list[str] = []
+        high_patterns = [p for p in patterns if p.get("severity") in {"high", "critical"}]
+        items.extend(str(p.get("summary")) for p in high_patterns[:4] if p.get("summary"))
+        for section in ("safeguarding", "leadership", "inspection_risks"):
+            items.extend(self._finding_summaries(findings.get(section, []))[:3])
+        items.extend(str(a.get("title") or a.get("reason")) for a in proposed_actions[:3] if a.get("title") or a.get("reason"))
+        return list(dict.fromkeys(items))[:10]
+
+    def _state_headline(self, home_state: dict[str, Any], child_state: dict[str, Any], workforce_state: dict[str, Any]) -> str:
+        if home_state.get("state") in {"high", "critical"} or child_state.get("state") in {"high", "critical"}:
+            return "Continuous state indicates priority review is needed; check source evidence before decisions."
+        if workforce_state.get("practice_support_needed"):
+            return "Continuous state indicates practice support and calm manager review may be helpful."
+        return "Continuous state is stable or watch-level based on current evidence; keep recording protective factors."
+
+    def _weighted_score(self, patterns: list[dict[str, Any]], *, include: set[str]) -> int:
+        total = 0
+        for pattern in patterns:
+            if pattern.get("pattern_type") not in include:
+                continue
+            total += SEVERITY_WEIGHTS.get(str(pattern.get("severity") or "medium"), 2) * 10
+        return min(100, total)
+
+    def _level_from_score(self, score: int | float) -> str:
+        if score >= 75:
+            return "critical"
+        if score >= 45:
+            return "high"
+        if score >= 20:
+            return "watch"
+        return "stable"
+
+    def _record_quality_state(self, record_quality: list[dict[str, Any]]) -> str:
+        if not record_quality:
+            return "not_sampled"
+        counts = Counter(str(item.get("overall_quality") or "developing") for item in record_quality)
+        if counts.get("weak", 0) >= 2:
+            return "manager_review"
+        if counts.get("developing", 0) >= 3:
+            return "developing"
+        return "not_flagged"
+
+    def _climate_interpretation(self, score: int) -> str:
+        if score >= 75:
+            return "Evidence suggests the emotional climate needs urgent reflective leadership review."
+        if score >= 45:
+            return "Evidence suggests elevated emotional pressure; review patterns, language and staff support."
+        if score >= 20:
+            return "Evidence suggests watch-level emotional pressure; continue reflective oversight."
+        return "No significant emotional climate pressure was detected from the current evidence sample."
+
+    def _finding_summaries(self, findings: list[dict[str, Any]]) -> list[str]:
+        return [str(item.get("summary")) for item in findings if item.get("summary")]
+
+    def _normalise_action(self, action: Any) -> dict[str, Any]:
+        if hasattr(action, "model_dump"):
+            return action.model_dump(mode="json")
+        if isinstance(action, dict):
+            return action
+        return {"title": str(action), "priority": "medium"}
+
+    def _safe_int(self, value: Any) -> int | None:
+        try:
+            if value in (None, ""):
+                return None
+            return int(value)
+        except Exception:
+            return None
+
+
+continuous_intelligence_state_service = ContinuousIntelligenceStateService()
