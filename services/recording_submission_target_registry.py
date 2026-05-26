@@ -475,3 +475,18 @@ class RecordingSubmissionTargetRegistry:
 
 
 recording_submission_target_registry = RecordingSubmissionTargetRegistry()
+
+
+FORMAL_ROUTE_CLASSIFICATION_MAP: dict[str, str] = {
+    "supported_now": "SUPPORTED_NOW",
+    "review_required_before_submit": "REVIEW_THEN_SUPPORTED",
+    "submit_as_draft_only": "DRAFT_ONLY",
+    "route_to_existing_workflow": "ROUTE_HINT_ONLY",
+}
+
+
+def formal_route_classification(recording_type: str, form_id: str | None = None) -> str:
+    target = recording_submission_target_registry.get_target(recording_type, form_id=form_id)
+    if target.service_name is None and target.target_status == "review_required_before_submit":
+        return "NEEDS_FORMAL_BACKEND"
+    return FORMAL_ROUTE_CLASSIFICATION_MAP.get(target.target_status, "DRAFT_ONLY")

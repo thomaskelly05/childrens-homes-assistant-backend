@@ -1,6 +1,7 @@
 'use client'
 
 import { resolveActiveRecordingForm } from '@/lib/record/recording-form-registry'
+import { UNIVERSAL_THERAPEUTIC_PROMPTS } from '@/lib/record/recording-form-therapeutic-defaults'
 import type { RecordingWorkspaceType } from '@/lib/record/recording-types'
 
 const EXTRA_PROMPTS: Partial<Record<RecordingWorkspaceType, string[]>> = {
@@ -70,7 +71,11 @@ export function RecordingTherapeuticPrompts({
   formId?: string
 }) {
   const form = resolveActiveRecordingForm(recordingType, formId)
-  const prompts = EXTRA_PROMPTS[recordingType] || form?.qualityChecklist.slice(0, 4) || EXTRA_PROMPTS['daily-note']!
+  const prompts =
+    form?.universalTherapeuticPrompts ||
+    EXTRA_PROMPTS[recordingType] ||
+    form?.qualityChecklist.slice(0, 4) ||
+    UNIVERSAL_THERAPEUTIC_PROMPTS.slice(0, 8)
 
   return (
     <section data-testid="recording-therapeutic-prompts" className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4">
