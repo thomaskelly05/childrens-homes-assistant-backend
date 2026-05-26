@@ -19,9 +19,12 @@ function sendDisabledReason(pending: boolean, canSend: boolean): 'pending' | 'em
   return 'ready'
 }
 
+export type OrbComposerLastSendStatus = 'idle' | 'sending' | 'success' | 'error'
+
 export function OrbStandaloneComposer({
   value,
   pending,
+  lastSendStatus = 'idle',
   mode,
   attachments,
   voiceListening,
@@ -55,6 +58,7 @@ export function OrbStandaloneComposer({
 }: {
   value: string
   pending: boolean
+  lastSendStatus?: OrbComposerLastSendStatus
   mode: StandaloneOrbMode
   attachments: PendingImageAttachment[]
   voiceListening: boolean
@@ -111,6 +115,8 @@ export function OrbStandaloneComposer({
       data-orb-composer
       data-orb-standalone-composer
       data-testid="orb-standalone-composer"
+      data-pending={pending ? 'true' : 'false'}
+      data-last-send-status={lastSendStatus}
     >
       <div className="mx-auto w-full max-w-[var(--orb-composer-max,53.125rem)]">
         {voiceCaptureEnabled && transcriptReady && displayTranscript ? (

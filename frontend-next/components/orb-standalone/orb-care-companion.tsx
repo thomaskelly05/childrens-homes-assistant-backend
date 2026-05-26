@@ -72,10 +72,10 @@ import {
   createOrbSavedOutput,
   fetchOrbSavedOutputsSummary,
   fetchStandaloneOrbConfig,
+  parseStandaloneOrbSendError,
   queryStandaloneOrbConversation,
+  STANDALONE_ORB_EMPTY_ANSWER_MESSAGE,
   STANDALONE_ORB_MODES,
-  STANDALONE_ORB_SEND_RETRY_MESSAGE,
-  standaloneOrbErrorMessage,
   type StandaloneOrbAgentSuggestion,
   type StandaloneOrbMode
 } from '@/lib/orb/standalone-client'
@@ -105,6 +105,51 @@ const HIGH_RISK_TERMS = [
 const MAX_HISTORY_TURNS = 20
 const MAX_IMAGE_ATTACHMENTS = 4
 const SUBMIT_GUARD_MS = 1500
+const ORB_THINKING_LABEL = 'ORB is thinking…'
+
+type LastSendStatus = 'idle' | 'sending' | 'success' | 'error'
+
+function replaceMessageById(
+  messages: StandaloneChatMessage[],
+  messageId: string,
+  next: StandaloneChatMessage
+): StandaloneChatMessage[] {
+  return dedupeOrbMessages(messages.map((entry) => (entry.id === messageId ? next : entry)))
+}
+
+function stripTrailingTurnPlaceholders(messages: StandaloneChatMessage[]): StandaloneChatMessage[] {
+  const copy = [...messages]
+  while (copy.length > 0) {
+    const last = copy[copy.length - 1]
+    if (last.role === 'assistant' && (last.status === 'thinking' || last.status === 'error')) {
+      copy.pop()
+      continue
+    }
+    break
+  }
+  return dedupeOrbMessages(copy)
+}
+
+function createThinkingPlaceholder(id: string): StandaloneChatMessage {
+  return {
+    id,
+    role: 'assistant',
+    content: '',
+    status: 'thinking',
+    thinkingLabel: ORB_THINKING_LABEL,
+    createdAt: Date.now()
+  }
+}
+
+function createErrorPlaceholder(id: string, message: string): StandaloneChatMessage {
+  return {
+    id,
+    role: 'assistant',
+    content: message,
+    status: 'error',
+    createdAt: Date.now()
+  }
+}
 
 const ANSWER_STYLE_LABELS: Record<StandaloneOrbAnswerStyle, string> = {
   voice_concise: 'Voice concise',
@@ -246,6 +291,7 @@ export function OrbCareCompanion() {
   const [modes, setModes] = useState<string[]>([...STANDALONE_ORB_MODES])
   const [message, setMessage] = useState('')
   const [pending, setPending] = useState(false)
+  const [lastSendStatus, setLastSendStatus] = useState<LastSendStatus>('idle')
   const [error, setError] = useState<string | null>(null)
   const [retryPayload, setRetryPayload] = useState<{ text: string; chatId: string } | null>(null)
   const [imageUnderstandingNote, setImageUnderstandingNote] = useState<string | null>(null)
@@ -324,7 +370,7 @@ export function OrbCareCompanion() {
     [workspace.profiles, activeChat?.profileIds]
   )
 
-  const showEmptyState = visibleMessages.length === 0 && !pending
+  const showEmptyState = visibleMessages.length === 0 && !pending && !error
 
   const closeAllPanels = useCallback(() => {
     setActivePanel(null)
@@ -437,6 +483,7 @@ export function OrbCareCompanion() {
       if ((!trimmed && !hasImages) || pending || sendInFlightRef.current || submitGuardRef.current) return
       if (!csrfReady) {
         setError(STANDALONE_ORB_CSRF_REFRESH_MESSAGE)
+        setLastSendStatus('error')
         void refreshSession()
         return
       }
@@ -470,43 +517,67 @@ export function OrbCareCompanion() {
         .join('\n\n')
 
       setPending(true)
+      setLastSendStatus('sending')
       setError(null)
       setRetryPayload(null)
       setImageUnderstandingNote(null)
 
+      const userMessageId = `u-${now}`
+      const thinkingMessageId = `a-thinking-${now}`
       const userMessage: StandaloneChatMessage = {
-        id: `u-${Date.now()}`,
+        id: userMessageId,
         role: 'user',
         content: trimmed || '[Image attachment]',
         imageDataUrls: imagePayload.map((i) => i.data_url),
-        createdAt: Date.now()
+        status: 'sent',
+        createdAt: now
       }
+      const thinkingMessage = createThinkingPlaceholder(thinkingMessageId)
 
       let targetChatId = options?.chatId || workspace.activeChatId
       let targetChat = targetChatId ? workspace.chats.find((c) => c.id === targetChatId) ?? null : null
 
       const existingMessages = dedupeOrbMessages(targetChat?.messages ?? [])
       let priorMessages = existingMessages
-      if (!options?.retry) {
+      if (options?.retry) {
+        priorMessages = stripTrailingTurnPlaceholders(existingMessages)
+      } else {
         const lastMessage = existingMessages[existingMessages.length - 1]
         const isRapidDuplicate =
           lastMessage?.role === 'user' &&
           lastMessage.content.trim().toLowerCase() === contentKey &&
           typeof lastMessage.createdAt === 'number' &&
           now - lastMessage.createdAt < SUBMIT_GUARD_MS
-        priorMessages = isRapidDuplicate ? existingMessages : [...existingMessages, userMessage]
+        priorMessages = isRapidDuplicate
+          ? [...stripTrailingTurnPlaceholders(existingMessages), thinkingMessage]
+          : [...existingMessages, userMessage, thinkingMessage]
       }
       priorMessages = dedupeOrbMessages(priorMessages)
       const nextTitle = !targetChat || targetChat.title === 'New conversation'
         ? titleFromFirstMessage(trimmed || 'Image conversation')
         : targetChat.title
 
+      const commitMessages = (messages: StandaloneChatMessage[]) => {
+        const normalized = dedupeOrbMessages(messages)
+        if (!targetChatId) return
+        setWorkspace((current) =>
+          patchActiveChat(current, targetChatId!, {
+            messages: normalized,
+            title: nextTitle,
+            mode
+          })
+        )
+        targetChat = targetChat
+          ? { ...targetChat, messages: normalized, title: nextTitle, mode, updatedAt: Date.now() }
+          : targetChat
+      }
+
       if (!targetChat) {
         const created = createStandaloneChat(workspace.activeProjectId, mode)
         targetChatId = created.id
         targetChat = {
           ...created,
-          messages: options?.retry ? created.messages : priorMessages,
+          messages: priorMessages,
           title: nextTitle,
           mode,
           updatedAt: Date.now()
@@ -516,15 +587,8 @@ export function OrbCareCompanion() {
           activeChatId: created.id,
           chats: [targetChat!, ...current.chats]
         }))
-      } else if (!options?.retry) {
-        targetChat = { ...targetChat, messages: priorMessages, title: nextTitle, mode, updatedAt: Date.now() }
-        setWorkspace((current) =>
-          patchActiveChat(current, targetChatId!, {
-            messages: dedupeOrbMessages(priorMessages),
-            title: nextTitle,
-            mode
-          })
-        )
+      } else {
+        commitMessages(priorMessages)
       }
 
       setMessage('')
@@ -542,6 +606,7 @@ export function OrbCareCompanion() {
           id: `a-boundary-${Date.now()}`,
           role: 'assistant',
           content: osBoundary,
+          status: 'complete',
           createdAt: Date.now(),
           sources: [
             {
@@ -552,22 +617,26 @@ export function OrbCareCompanion() {
           ]
         }
         persistChat(targetChatId!, {
-          messages: dedupeOrbMessages([...priorMessages, boundaryMessage])
+          messages: dedupeOrbMessages(replaceMessageById(priorMessages, thinkingMessageId, boundaryMessage))
         })
-        setMessage('')
-        setAttachments([])
+        setLastSendStatus('success')
         setPending(false)
         sendInFlightRef.current = false
         return
       }
 
-      const historyForRequest = trimConversationHistory(dedupeOrbMessages(priorMessages))
-      const sessionConversationId = targetChat.conversationId
+      const historyForRequest = trimConversationHistory(
+        dedupeOrbMessages(priorMessages.filter((entry) => entry.status !== 'thinking' && entry.status !== 'error'))
+      )
+      const sessionConversationId = targetChat!.conversationId
       const styleLabel = ANSWER_STYLE_LABELS[voiceSettings.answerStyle]
       const framedMessage =
         voiceSettings.answerStyle !== 'balanced' ? `${messageBody}\n\nAnswer style: ${styleLabel}.` : messageBody
 
       try {
+        if (options?.retry) {
+          await refreshSession()
+        }
         const response = await queryStandaloneOrbConversation({
           message: framedMessage,
           mode,
@@ -581,7 +650,7 @@ export function OrbCareCompanion() {
         })
 
         const newConversationId = response.conversation_id || sessionConversationId
-        const answer = response.answer || 'I could not form a response just now.'
+        const answer = (response.answer || '').trim() || STANDALONE_ORB_EMPTY_ANSWER_MESSAGE
         if (response.image_understanding_available === false) {
           setImageUnderstandingNote(
             'Image understanding is not available in this environment. ORB answered using your text only.'
@@ -600,27 +669,29 @@ export function OrbCareCompanion() {
           agentRaw?.suggested && !agentRaw?.auto_run ? agentRaw : undefined
         const documentSuggestion =
           docAnalysisRaw?.suggested && docAnalysisRaw?.needs_document ? docAnalysisRaw : undefined
+        const assistantMessage: StandaloneChatMessage = {
+          id: assistantId,
+          role: 'assistant',
+          content: answer,
+          status: 'complete',
+          createdAt: Date.now(),
+          sources: responseSources.length ? responseSources : undefined,
+          modelRouting: modelRouting ?? undefined,
+          agentSuggestion,
+          documentSuggestion
+        }
         setWorkspace((current) => {
           const chat = current.chats.find((c) => c.id === targetChatId)
           if (!chat) return current
-          const withAssistant: StandaloneChatMessage[] = dedupeOrbMessages([
-            ...chat.messages,
-            {
-              id: assistantId,
-              role: 'assistant',
-              content: answer,
-              createdAt: Date.now(),
-              sources: responseSources.length ? responseSources : undefined,
-              modelRouting: modelRouting ?? undefined,
-              agentSuggestion,
-              documentSuggestion
-            }
-          ])
+          const withAssistant = replaceMessageById(chat.messages, thinkingMessageId, assistantMessage)
           return patchActiveChat(current, chat.id, {
             messages: withAssistant,
             conversationId: newConversationId
           })
         })
+        setLastSendStatus('success')
+        setError(null)
+        setRetryPayload(null)
 
         if (
           STANDALONE_ORB_VOICE_CAPTURE_ENABLED &&
@@ -631,9 +702,22 @@ export function OrbCareCompanion() {
           voice.speak(answer, () => setSpeakingMessageId(null))
         }
       } catch (caught) {
-        const message = standaloneOrbErrorMessage(caught) || STANDALONE_ORB_SEND_RETRY_MESSAGE
-        setError(message)
+        const parsed = parseStandaloneOrbSendError(caught)
+        if (parsed.csrfFailed) {
+          void refreshSession()
+        }
+        setError(parsed.message)
+        setLastSendStatus('error')
         setRetryPayload({ text: trimmed || messageBody, chatId: targetChatId! })
+        const errorMessage = createErrorPlaceholder(`a-error-${Date.now()}`, parsed.message)
+        setWorkspace((current) => {
+          const chat = current.chats.find((c) => c.id === targetChatId)
+          if (!chat) return current
+          const withError = chat.messages.some((entry) => entry.id === thinkingMessageId)
+            ? replaceMessageById(chat.messages, thinkingMessageId, errorMessage)
+            : dedupeOrbMessages([...chat.messages, errorMessage])
+          return patchActiveChat(current, chat.id, { messages: withError })
+        })
       } finally {
         setPending(false)
         sendInFlightRef.current = false
@@ -747,6 +831,8 @@ export function OrbCareCompanion() {
     composerUserEditedRef.current = false
     voiceMayFillComposerRef.current = false
     setError(null)
+    setRetryPayload(null)
+    setLastSendStatus('idle')
     voice.clearTranscript()
     setSidebarOpen(false)
   }
@@ -874,6 +960,7 @@ export function OrbCareCompanion() {
       value={message}
       composerStateLength={message.trim().length}
       pending={pending}
+      lastSendStatus={lastSendStatus}
       mode={mode}
       attachments={attachments}
       voiceListening={voice.listening}
@@ -1292,7 +1379,42 @@ export function OrbCareCompanion() {
                     {visibleMessages.map((entry, index) => (
                       <div key={entry.id}>
                         {entry.role === 'assistant' ? (
-                          <article className="orb-message-assistant group">
+                          entry.status === 'thinking' ? (
+                            <article
+                              className="orb-message-assistant"
+                              data-testid="orb-message-thinking"
+                              aria-live="polite"
+                            >
+                              <p className="mb-2 text-xs font-medium text-slate-500">ORB</p>
+                              <p className="text-sm text-slate-400">{entry.thinkingLabel || ORB_THINKING_LABEL}</p>
+                            </article>
+                          ) : entry.status === 'error' ? (
+                            <article
+                              className="orb-message-assistant rounded-xl border border-amber-300/25 bg-amber-400/10 px-4 py-3"
+                              data-testid="orb-message-error"
+                              role="alert"
+                            >
+                              <p className="mb-2 text-xs font-medium text-amber-100/90">ORB</p>
+                              <p className="text-sm text-amber-50">{entry.content}</p>
+                              {retryPayload && index === visibleMessages.length - 1 ? (
+                                <button
+                                  type="button"
+                                  data-testid="orb-message-retry"
+                                  onClick={() =>
+                                    void sendMessage(retryPayload.text, {
+                                      retry: true,
+                                      chatId: retryPayload.chatId
+                                    })
+                                  }
+                                  disabled={pending}
+                                  className="mt-3 inline-flex h-9 items-center rounded-full border border-amber-200/40 px-4 text-xs font-semibold text-amber-50 hover:bg-amber-400/15 disabled:opacity-40"
+                                >
+                                  Retry
+                                </button>
+                              ) : null}
+                            </article>
+                          ) : (
+                          <article className="orb-message-assistant group" data-testid="orb-message-assistant">
                             <p className="mb-2 text-xs font-medium text-slate-500">ORB</p>
                             <div className="whitespace-pre-wrap text-[15px] leading-7 text-slate-100">{entry.content}</div>
                             <SourcesBasis sources={entry.sources} modelRouting={entry.modelRouting} />
@@ -1378,26 +1500,23 @@ export function OrbCareCompanion() {
                               </div>
                             )}
                           </article>
+                          )
                         ) : (
                           <MessageBubble entry={entry} />
                         )}
                       </div>
                     ))}
-                    {pending ? (
-                      <p className="text-sm text-slate-400" role="status">
-                        Thinking that through…
-                      </p>
-                    ) : null}
-                    {error ? (
+                    {error && !visibleMessages.some((entry) => entry.status === 'error') ? (
                       <div
                         className="rounded-xl border border-amber-300/25 bg-amber-400/10 px-4 py-3 text-sm text-amber-50"
                         role="alert"
-                        data-testid="orb-standalone-send-error"
+                        data-testid="orb-send-error"
                       >
                         <p>{error}</p>
                         {retryPayload ? (
                           <button
                             type="button"
+                            data-testid="orb-message-retry"
                             onClick={() => void sendMessage(retryPayload.text, { retry: true, chatId: retryPayload.chatId })}
                             disabled={pending}
                             className="mt-3 inline-flex h-9 items-center rounded-full border border-amber-200/40 px-4 text-xs font-semibold text-amber-50 hover:bg-amber-400/15 disabled:opacity-40"
@@ -1647,7 +1766,10 @@ function MessageBubble({ entry }: { entry: StandaloneChatMessage }) {
       : null
 
   return (
-    <article className="orb-message-user rounded-2xl bg-white/[0.06] px-4 py-3 ring-1 ring-white/[0.06]">
+    <article
+      className="orb-message-user rounded-2xl bg-white/[0.06] px-4 py-3 ring-1 ring-white/[0.06]"
+      data-testid="orb-message-user"
+    >
       {entry.imageDataUrls?.length ? (
         <div className="mb-2 flex flex-wrap gap-2">
           {entry.imageDataUrls.map((url, index) => (

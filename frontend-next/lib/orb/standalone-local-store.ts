@@ -22,13 +22,24 @@ export type StandaloneOrbSource = {
   live_retrieved?: boolean
 }
 
+export type StandaloneChatMessageStatus =
+  | 'sent'
+  | 'sending'
+  | 'thinking'
+  | 'complete'
+  | 'error'
+  | 'failed'
+  | 'pending'
+
 export type StandaloneChatMessage = {
   id: string
   role: 'user' | 'assistant'
   content: string
   imageDataUrls?: string[]
   createdAt?: number
-  status?: 'failed' | 'pending'
+  status?: StandaloneChatMessageStatus
+  /** Shown while status is thinking (defaults to ORB is thinking…). */
+  thinkingLabel?: string
   sources?: StandaloneOrbSource[]
   modelRouting?: StandaloneOrbModelRouting
   documentSuggestion?: {
@@ -205,7 +216,11 @@ export function ensureStandaloneMessage(message: Partial<StandaloneChatMessage> 
     imageDataUrls: message.imageDataUrls,
     createdAt: stamp,
     status: message.status,
-    sources: message.sources
+    thinkingLabel: message.thinkingLabel,
+    sources: message.sources,
+    modelRouting: message.modelRouting,
+    agentSuggestion: message.agentSuggestion,
+    documentSuggestion: message.documentSuggestion
   }
 }
 

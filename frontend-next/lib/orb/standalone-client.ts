@@ -1090,6 +1090,18 @@ export async function fetchStandaloneOrbSurfaceRoute(
 }
 
 export const STANDALONE_ORB_SEND_RETRY_MESSAGE = 'ORB could not send that message. Please retry.'
+export const STANDALONE_ORB_SESSION_EXPIRED_MESSAGE = 'Your session has expired. Please sign in again.'
+export const STANDALONE_ORB_NETWORK_ERROR_MESSAGE =
+  'ORB could not connect. Check your connection and try again.'
+export const STANDALONE_ORB_EMPTY_ANSWER_MESSAGE =
+  "I'm here, but I could not generate a full response. Please try again."
+
+export type StandaloneOrbSendErrorInfo = {
+  status: number
+  message: string
+  detail?: string
+  csrfFailed: boolean
+}
 
 export function isStandaloneOrbCsrfError(error: unknown) {
   if (!(error instanceof AuthApiError) || error.status !== 403) return false
@@ -1097,21 +1109,76 @@ export function isStandaloneOrbCsrfError(error: unknown) {
   return code === 'csrf_failed' || code === 'csrf_invalid' || /csrf/i.test(error.message)
 }
 
-export function standaloneOrbErrorMessage(error: unknown) {
+export function parseStandaloneOrbSendError(error: unknown): StandaloneOrbSendErrorInfo {
   if (error instanceof AuthApiError) {
-    if (isStandaloneOrbCsrfError(error)) {
-      return STANDALONE_ORB_CSRF_REFRESH_MESSAGE
+    const csrfFailed = isStandaloneOrbCsrfError(error)
+    if (csrfFailed) {
+      return {
+        status: error.status,
+        detail: error.code || 'csrf_failed',
+        message: error.message || STANDALONE_ORB_CSRF_REFRESH_MESSAGE,
+        csrfFailed: true
+      }
     }
-    if (error.status === 504) return STANDALONE_ORB_SEND_RETRY_MESSAGE
-    if (error.status === 503) {
-      return error.message || STANDALONE_ORB_SEND_RETRY_MESSAGE
+    if (error.status === 401) {
+      return {
+        status: 401,
+        detail: error.code,
+        message: STANDALONE_ORB_SESSION_EXPIRED_MESSAGE,
+        csrfFailed: false
+      }
     }
-    if (error.status >= 500) return STANDALONE_ORB_SEND_RETRY_MESSAGE
-    return error.message
+    if (error.status === 0) {
+      return {
+        status: 0,
+        detail: error.code,
+        message: STANDALONE_ORB_NETWORK_ERROR_MESSAGE,
+        csrfFailed: false
+      }
+    }
+    if (error.status === 504 || error.status >= 500) {
+      return {
+        status: error.status,
+        detail: error.code,
+        message: STANDALONE_ORB_SEND_RETRY_MESSAGE,
+        csrfFailed: false
+      }
+    }
+    return {
+      status: error.status,
+      detail: error.code,
+      message: error.message || STANDALONE_ORB_SEND_RETRY_MESSAGE,
+      csrfFailed: false
+    }
+  }
+  if (error instanceof TypeError) {
+    return {
+      status: 0,
+      message: STANDALONE_ORB_NETWORK_ERROR_MESSAGE,
+      csrfFailed: false
+    }
   }
   if (error instanceof Error && error.name === 'AbortError') {
-    return STANDALONE_ORB_SEND_RETRY_MESSAGE
+    return {
+      status: 504,
+      message: STANDALONE_ORB_SEND_RETRY_MESSAGE,
+      csrfFailed: false
+    }
   }
-  if (error instanceof Error) return error.message
-  return STANDALONE_ORB_SEND_RETRY_MESSAGE
+  if (error instanceof Error) {
+    return {
+      status: 0,
+      message: error.message || STANDALONE_ORB_SEND_RETRY_MESSAGE,
+      csrfFailed: false
+    }
+  }
+  return {
+    status: 0,
+    message: STANDALONE_ORB_SEND_RETRY_MESSAGE,
+    csrfFailed: false
+  }
+}
+
+export function standaloneOrbErrorMessage(error: unknown) {
+  return parseStandaloneOrbSendError(error).message
 }

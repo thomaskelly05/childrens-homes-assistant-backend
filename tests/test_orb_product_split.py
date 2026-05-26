@@ -152,9 +152,16 @@ RELIABILITY_MARKERS = [
     "submitGuardRef",
     "Retry",
     "retryPayload",
-    "standaloneOrbErrorMessage",
+    "parseStandaloneOrbSendError",
+    "createThinkingPlaceholder",
+    "ORB is thinking",
+    "data-testid=\"orb-message-thinking\"",
+    "data-testid=\"orb-message-user\"",
+    "data-testid=\"orb-send-error\"",
+    "lastSendStatus",
     "ORB could not send that message. Please retry.",
     "STANDALONE_ORB_SEND_RETRY_MESSAGE",
+    "os_records_accessed: typed.os_records_accessed ?? false",
 ]
 
 MEDIA_STREAM_CLEANUP_MARKERS = [
