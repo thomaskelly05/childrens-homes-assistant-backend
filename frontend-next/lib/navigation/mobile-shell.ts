@@ -26,12 +26,13 @@ export function shouldShowMobileBottomNav(pathname: string): boolean {
   if (pathname === '/record' || pathname.startsWith('/record/')) return false
   if (/^\/young-people\/[^/]+\/(new|upload)\/?$/.test(pathname)) return false
   if (pathname === '/login' || pathname.startsWith('/login/')) return false
+  if (pathname === '/select-scope' || pathname.startsWith('/select-scope/')) return false
   if (pathname === '/unauthorized') return false
   return true
 }
 
 export const mobileWorkspaceBottomPaddingClass =
-  'pb-[calc(120px+env(safe-area-inset-bottom))]'
+  'pb-[calc(7rem+env(safe-area-inset-bottom))]'
 
 export type MobileScopeTab = { label: string; href: string; testId?: string }
 

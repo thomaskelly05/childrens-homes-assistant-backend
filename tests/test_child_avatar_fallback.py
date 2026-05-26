@@ -10,4 +10,7 @@ def test_child_avatar_fallback_component():
     assert 'data-testid="child-avatar-fallback"' in text
     assert 'data-testid="child-workspace-hero-avatar"' in text
     assert "onError" in text
+    assert "setFailed(true)" in text
+    assert "showPhoto" in text
     assert "<img" in text
+    assert "failed" in text

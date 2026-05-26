@@ -5,6 +5,13 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
 
+import {
+  BROWSER_INTERACTION_AUDIT_SNIPPET,
+  classifyControlViewport,
+  isBottomNavFalsePositive,
+  summariseInteractionCoverage
+} from './interaction-coverage-audit-logic.mjs'
+
 const root = process.cwd()
 const appDir = join(root, 'app')
 const problems = []
@@ -92,6 +99,51 @@ check(
   mobileBottomNav.includes('homeRecordingReviewsHref(homeId)') && scopeRoutes.includes("return `/record/reviews?home_id=${enc(homeId)}`")
 )
 check('home bottom nav ORB uses homeOrbHref', mobileBottomNav.includes('homeOrbHref(homeId)'))
+
+check(
+  'mobile bottom nav uses explicit height not max-h overlay',
+  mobileBottomNav.includes("height: 'calc(4.5rem + env(safe-area-inset-bottom))'") &&
+    !mobileBottomNav.includes('max-h-[') &&
+    mobileBottomNav.includes('z-40')
+)
+check(
+  'mobile bottom nav does not use full viewport fixed inset overlay',
+  !(mobileBottomNav.includes('fixed inset-0') || mobileBottomNav.includes('inset-0 bottom-0 top-0'))
+)
+check(
+  'mobile drawer z-index above bottom nav',
+  file('components/indicare/mobile/mobile-os-top-bar.tsx').includes('z-[70]') &&
+    mobileBottomNav.includes('z-40')
+)
+check(
+  'mobile workspace bottom padding uses 7rem safe area',
+  file('lib/navigation/mobile-shell.ts').includes('pb-[calc(7rem+env(safe-area-inset-bottom))]') &&
+    file('app/globals.css').includes('padding-bottom: calc(7rem + env(safe-area-inset-bottom))')
+)
+check(
+  'bottom nav hidden on select-scope',
+  file('lib/navigation/mobile-shell.ts').includes("pathname === '/select-scope'")
+)
+check(
+  'interaction coverage audit avoids clamping offscreen centres',
+  BROWSER_INTERACTION_AUDIT_SNIPPET.includes('offscreen_not_tested') &&
+    !BROWSER_INTERACTION_AUDIT_SNIPPET.includes('innerHeight - 1')
+)
+check(
+  'interaction coverage logic classifies viewport without clamp',
+  classifyControlViewport({ x: 10, y: 9000 }, { width: 390, height: 844 }) === 'offscreen_not_tested' &&
+    isBottomNavFalsePositive('<nav class="mobile-bottom-nav">', {
+      blocked: true,
+      viewportStatus: 'offscreen_not_tested'
+    }) === true &&
+    summariseInteractionCoverage(
+      [
+        { centre: { x: 10, y: 9000 }, blocked: true, topElement: '<nav class="mobile-bottom-nav">' },
+        { centre: { x: 10, y: 40 }, blocked: false }
+      ],
+      { width: 390, height: 844 }
+    ).blockedOrSuspicious === 0
+)
 
 const childWorkflowSample = {
   workspace: '/young-people/42/workspace',
