@@ -19,8 +19,9 @@ def test_standalone_send_markers():
     assert 'data-input-source="controlled"' in composer
     assert "data-composer-state-length={stateLength}" in composer
     assert "sendMessage" in companion
-    assert 'data-testid="orb-standalone-send-error"' in companion
-    assert "new FormData(event.currentTarget).get('message')" in companion
+    assert 'data-testid="orb-send-error"' in companion
+    assert "const finalText = message.trim()" in companion
+    assert "new FormData(event.currentTarget).get('message')" not in companion
     assert "csrfReady" in companion
     assert "STANDALONE_ORB_CSRF_REFRESH_MESSAGE" in companion
 

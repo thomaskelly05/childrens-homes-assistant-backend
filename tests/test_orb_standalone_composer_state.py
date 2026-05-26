@@ -7,11 +7,11 @@ COMPANION = REPO_ROOT / "frontend-next" / "components" / "orb-standalone" / "orb
 COMPOSER = REPO_ROOT / "frontend-next" / "components" / "orb-standalone" / "orb-standalone-composer.tsx"
 
 
-def test_composer_submit_reads_form_and_dom_fallback():
+def test_composer_submit_uses_react_message_state_only():
     text = COMPANION.read_text(encoding="utf-8")
-    assert "new FormData(event.currentTarget).get('message')" in text
-    assert "inputRef.current?.value" in text
-    assert "const finalText = (formText || message || domText).trim()" in text
+    assert "const finalText = message.trim()" in text
+    assert "new FormData(event.currentTarget).get('message')" not in text
+    assert "inputRef.current?.value" not in text.split("handleComposerSubmit")[1].split("handleMicClick")[0]
 
 
 def test_empty_submit_shows_helper_and_returns_early():

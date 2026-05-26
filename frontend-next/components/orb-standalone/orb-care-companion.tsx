@@ -740,32 +740,42 @@ export function OrbCareCompanion() {
   )
 
   const handleComposerSubmit = useCallback(
-    (event?: FormEvent<HTMLFormElement> | { preventDefault?: () => void }) => {
-      event?.preventDefault?.()
-      if (submitGuardRef.current || pending || sendInFlightRef.current) return
+    async (event?: FormEvent<HTMLFormElement>) => {
+      event?.preventDefault()
+
+      if (submitGuardRef.current || pending || sendInFlightRef.current) {
+        return
+      }
+
       if (!csrfReady) {
         setError(STANDALONE_ORB_CSRF_REFRESH_MESSAGE)
         void refreshSession()
         return
       }
 
-      let formText = ''
-      if (event && 'currentTarget' in event && event.currentTarget) {
-        formText = String(new FormData(event.currentTarget).get('message') || '')
-      }
-      const domText = inputRef.current?.value ?? ''
-      const finalText = (formText || message || domText).trim()
+      const finalText = message.trim()
+
       if (!finalText && attachments.length === 0) {
         setError('Type a message to send.')
         return
       }
 
       submitGuardRef.current = true
-      void sendMessage(finalText).finally(() => {
+
+      try {
+        await sendMessage(finalText)
+      } finally {
         submitGuardRef.current = false
-      })
+      }
     },
-    [attachments.length, csrfReady, message, pending, refreshSession, sendMessage]
+    [
+      attachments.length,
+      csrfReady,
+      message,
+      pending,
+      refreshSession,
+      sendMessage
+    ]
   )
 
   /** Mic is text-first on /orb; barge-in voice controls ship in the future ORB Voice surface. */
