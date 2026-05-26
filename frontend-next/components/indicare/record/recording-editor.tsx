@@ -88,7 +88,7 @@ export function RecordingEditor({
   onDraftListRefresh,
   onStructuredCompletionChange,
   onAutosaveStateChange,
-  onAcceptSuggestion
+  onAcceptSuggestion: _onAcceptSuggestion
 }: RecordingEditorProps) {
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
@@ -174,7 +174,6 @@ export function RecordingEditor({
   }, [backendDraft, childId, eventDate, form, formId, isReadOnly, recordingType])
   const placeholder = recordingBodyPlaceholder(recordingType, form)
   const wordCount = useMemo(() => countWords(body), [body])
-  const structuredJson = useMemo(() => JSON.stringify(structuredData), [structuredData])
 
   useEffect(() => {
     onAutosaveStateChange?.({ isSaving, saveMode, lastSavedAt, saveError, eventDate, planImpactChecked })
