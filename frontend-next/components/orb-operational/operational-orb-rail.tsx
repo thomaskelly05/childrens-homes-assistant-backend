@@ -3,6 +3,8 @@
 import Link from 'next/link'
 import { Mic2, Sparkles } from 'lucide-react'
 
+import { MobileSafeLink } from '@/components/indicare/mobile/mobile-safe-link'
+
 import {
   operationalOrbLabel,
   operationalOrbOpenHref,
@@ -72,14 +74,15 @@ export function OperationalOrbRail({
 
   if (compact) {
     return (
-      <Link
+      <MobileSafeLink
         href={openHref}
         prefetch={false}
         data-testid={testId}
-        className="inline-flex rounded-2xl bg-cyan-600 px-4 py-2.5 text-sm font-black text-white"
+        tapDebugLabel="workspace-ask-orb"
+        className="inline-flex min-h-11 rounded-2xl bg-cyan-600 px-4 py-2.5 text-sm font-black text-white"
       >
         Ask ORB
-      </Link>
+      </MobileSafeLink>
     )
   }
 

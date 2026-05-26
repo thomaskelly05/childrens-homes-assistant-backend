@@ -1,6 +1,5 @@
 'use client'
 
-import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   Bell,
@@ -11,7 +10,9 @@ import {
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
+import { MobileSafeLink } from '@/components/indicare/mobile/mobile-safe-link'
 import { SafeLucideIcon } from '@/components/indicare/safe-lucide-icon'
+import { logTapTarget } from '@/lib/interaction/mobile-tap-debug'
 import { useOsScope } from '@/components/indicare/scope/os-scope-provider'
 import { shouldShowMobileBottomNav } from '@/lib/navigation/mobile-shell'
 import { childWorkspaceHref } from '@/lib/navigation/child-workspace-routes'
@@ -105,18 +106,20 @@ export function MobileBottomNav() {
             pathname === item.href || pathname.startsWith(`${item.href.split('?')[0]}/`)
           const Icon = item.icon
           return (
-            <Link
+            <MobileSafeLink
               prefetch={false}
               key={`${item.label}-${item.href}`}
               href={item.href}
               data-testid={item.testId}
+              tapDebugLabel={`mobile-bottom-nav-${item.label}`}
+              onClick={(event) => logTapTarget(event, `mobile-nav-${item.label}`)}
               className={`flex min-h-11 min-w-0 flex-1 flex-col items-center justify-center rounded-2xl px-1 py-1.5 text-[10px] font-black leading-tight ${
                 active ? 'bg-slate-950 text-white' : 'text-slate-600'
               }`}
             >
-              <SafeLucideIcon icon={Icon} className="h-4 w-4 shrink-0" />
-              <span className="mt-0.5 truncate">{item.label}</span>
-            </Link>
+              <SafeLucideIcon icon={Icon} className="h-4 w-4 shrink-0 pointer-events-none" />
+              <span className="mt-0.5 truncate pointer-events-none">{item.label}</span>
+            </MobileSafeLink>
           )
         })}
       </div>
