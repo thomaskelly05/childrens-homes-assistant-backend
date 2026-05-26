@@ -60,6 +60,15 @@ type RecordingEditorProps = {
     reviewTriggers: string[]
     completionSummary: string[]
   } | null) => void
+  onAutosaveStateChange?: (state: {
+    isSaving: boolean
+    saveMode: RecordingSaveMode
+    lastSavedAt?: string
+    saveError: boolean
+    eventDate?: string
+    planImpactChecked?: boolean
+  }) => void
+  onAcceptSuggestion?: (text: string) => void
 }
 
 function hasMeaningfulContent(title: string, body: string) {
@@ -77,7 +86,9 @@ export function RecordingEditor({
   onBodyChange,
   onBackendDraftChange,
   onDraftListRefresh,
-  onStructuredCompletionChange
+  onStructuredCompletionChange,
+  onAutosaveStateChange,
+  onAcceptSuggestion
 }: RecordingEditorProps) {
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
@@ -95,8 +106,15 @@ export function RecordingEditor({
   const [eventDate, setEventDate] = useState(todayIsoDate())
   const [planImpactChecked, setPlanImpactChecked] = useState(false)
   const [structuredData, setStructuredData] = useState<Record<string, unknown>>({})
+  const [saveError, setSaveError] = useState(false)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const lastPersisted = useRef({ title: '', body: '', eventDate: todayIsoDate() })
+  const lastPersisted = useRef({
+    title: '',
+    body: '',
+    eventDate: todayIsoDate(),
+    structuredJson: ''
+  })
+  const hasUnsavedLocal = useRef(false)
 
   const form = useMemo(() => resolveActiveRecordingForm(recordingType, formId), [recordingType, formId])
   const isReadOnly = backendDraft?.status === 'submitted' || backendDraft?.status === 'archived'
@@ -156,6 +174,21 @@ export function RecordingEditor({
   }, [backendDraft, childId, eventDate, form, formId, isReadOnly, recordingType])
   const placeholder = recordingBodyPlaceholder(recordingType, form)
   const wordCount = useMemo(() => countWords(body), [body])
+  const structuredJson = useMemo(() => JSON.stringify(structuredData), [structuredData])
+
+  useEffect(() => {
+    onAutosaveStateChange?.({ isSaving, saveMode, lastSavedAt, saveError, eventDate, planImpactChecked })
+  }, [eventDate, isSaving, lastSavedAt, onAutosaveStateChange, planImpactChecked, saveError, saveMode])
+
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!hasUnsavedLocal.current) return
+      event.preventDefault()
+      event.returnValue = ''
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [])
 
   const draftMetadata = useCallback(
     (nextTitle: string, nextBody: string) => {
@@ -179,11 +212,24 @@ export function RecordingEditor({
   )
 
   const applyDraftToEditor = useCallback(
-    (nextTitle: string, nextBody: string, updatedAt?: string) => {
+    (nextTitle: string, nextBody: string, updatedAt?: string, nextEventDate?: string, nextStructured?: Record<string, unknown>) => {
       setTitle(nextTitle)
       setBody(nextBody)
       setLastSavedAt(updatedAt)
-      lastPersisted.current = { title: nextTitle, body: nextBody, eventDate }
+      if (nextEventDate) {
+        setEventDate(nextEventDate)
+        lastPersisted.current.eventDate = nextEventDate
+      }
+      if (nextStructured) {
+        setStructuredData(nextStructured)
+        lastPersisted.current.structuredJson = JSON.stringify(nextStructured)
+      }
+      lastPersisted.current = {
+        ...lastPersisted.current,
+        title: nextTitle,
+        body: nextBody
+      }
+      hasUnsavedLocal.current = false
       onTitleChange?.(nextTitle)
       onBodyChange?.(nextBody)
     },
@@ -212,8 +258,14 @@ export function RecordingEditor({
           lastPersisted.current.eventDate = loadedEvent
           if (loaded.data.structured_data) {
             setStructuredData(loaded.data.structured_data)
+            lastPersisted.current.structuredJson = JSON.stringify(loaded.data.structured_data)
+          }
+          const loadedMeta = parseFormRecordMetadata(loaded.data.metadata)
+          if (loadedMeta?.actions_required) {
+            setPlanImpactChecked(true)
           }
           setSaveMode('secure')
+          setSaveError(false)
           return
         }
       }
@@ -224,7 +276,13 @@ export function RecordingEditor({
         child_id: childId
       })
       if (local) {
-        applyDraftToEditor(local.title, local.body, local.updated_at)
+        applyDraftToEditor(
+          local.title,
+          local.body,
+          local.updated_at,
+          local.event_date,
+          local.structured_data
+        )
         if (!draftIdFromUrl && !backendDraftId) {
           setShowRecoveryBanner(true)
           setSaveMode('local')
@@ -245,7 +303,7 @@ export function RecordingEditor({
   ])
 
   const persistLocal = useCallback(
-    (nextTitle: string, nextBody: string) => {
+    (nextTitle: string, nextBody: string, nextStructured?: Record<string, unknown>) => {
       const saved = saveRecordingDraft({
         recording_type: recordingType,
         context_type: about,
@@ -253,12 +311,14 @@ export function RecordingEditor({
         child_name: childName,
         title: nextTitle,
         body: nextBody,
+        event_date: eventDate,
+        structured_data: nextStructured ?? structuredData,
         metadata: backendDraftId ? { backend_draft_id: backendDraftId } : undefined
       })
       setLastSavedAt(saved?.updated_at)
       return saved
     },
-    [about, backendDraftId, childId, childName, recordingType]
+    [about, backendDraftId, childId, childName, eventDate, recordingType, structuredData]
   )
 
   const persistBackend = useCallback(
@@ -330,30 +390,49 @@ export function RecordingEditor({
 
   const persistDraft = useCallback(
     async (nextTitle: string, nextBody: string, options?: { forceCreate?: boolean; structured?: Record<string, unknown> }) => {
+      const nextStructured = options?.structured ?? structuredData
+      const nextStructuredJson = JSON.stringify(nextStructured)
       if (
         !options?.forceCreate &&
         nextTitle === lastPersisted.current.title &&
         nextBody === lastPersisted.current.body &&
-        eventDate === lastPersisted.current.eventDate
+        eventDate === lastPersisted.current.eventDate &&
+        nextStructuredJson === lastPersisted.current.structuredJson
       ) {
         return backendDraftId
       }
 
       setIsSaving(true)
-      persistLocal(nextTitle, nextBody)
+      setSaveError(false)
+      persistLocal(nextTitle, nextBody, nextStructured)
 
       let secure = false
       let resolvedId = backendDraftId
-      if (backendAvailable && (hasMeaningfulContent(nextTitle, nextBody) || options?.forceCreate)) {
-        const saved = await persistBackend(nextTitle, nextBody, options?.forceCreate, options?.structured)
+      if (backendAvailable && (hasMeaningfulContent(nextTitle, nextBody) || options?.forceCreate || Object.keys(nextStructured).length)) {
+        const saved = await persistBackend(nextTitle, nextBody, options?.forceCreate, nextStructured)
         secure = Boolean(saved?.id)
         if (saved) {
           resolvedId = saved.id
           setLastSavedAt(saved.updated_at)
-          lastPersisted.current = { title: nextTitle, body: nextBody, eventDate }
+          lastPersisted.current = {
+            title: nextTitle,
+            body: nextBody,
+            eventDate,
+            structuredJson: nextStructuredJson
+          }
+          hasUnsavedLocal.current = false
+        } else if (backendAvailable) {
+          setSaveError(true)
+          hasUnsavedLocal.current = true
         }
       } else {
-        lastPersisted.current = { title: nextTitle, body: nextBody, eventDate }
+        lastPersisted.current = {
+          title: nextTitle,
+          body: nextBody,
+          eventDate,
+          structuredJson: nextStructuredJson
+        }
+        hasUnsavedLocal.current = true
       }
 
       setSaveMode(secure ? 'secure' : 'local')
@@ -361,7 +440,7 @@ export function RecordingEditor({
       setShowRecoveryBanner(false)
       return resolvedId
     },
-    [backendAvailable, backendDraftId, eventDate, persistBackend, persistLocal]
+    [backendAvailable, backendDraftId, eventDate, persistBackend, persistLocal, structuredData]
   )
 
   const handleEventDateChange = (value: string) => {
@@ -405,11 +484,19 @@ export function RecordingEditor({
     setBackendDraftId(undefined)
     setBackendDraft(null)
     setSaveMode('idle')
+    setSaveError(false)
     setSubmitWarning(undefined)
-    lastPersisted.current = { title: '', body: '', eventDate: todayIsoDate() }
+    setStructuredData({})
+    setEventDate(todayIsoDate())
+    lastPersisted.current = { title: '', body: '', eventDate: todayIsoDate(), structuredJson: '{}' }
+    hasUnsavedLocal.current = false
     onTitleChange?.('')
     onBodyChange?.('')
     onBackendDraftChange?.(null)
+  }
+
+  const handleRetrySave = () => {
+    void persistDraft(title, body, { structured: structuredData })
   }
 
   const handleCopy = async () => {
@@ -592,6 +679,8 @@ export function RecordingEditor({
         draftStatus={backendDraft?.status}
         privacyNotice={RECORDING_DRAFT_PRIVACY_NOTICE}
         submitWarning={submitWarning}
+        saveError={saveError}
+        onRetrySave={handleRetrySave}
       />
 
       {submissionResult ? (

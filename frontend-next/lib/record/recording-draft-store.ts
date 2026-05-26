@@ -15,11 +15,13 @@ export type RecordingDraft = {
   child_name?: string
   title: string
   body: string
+  event_date?: string
+  structured_data?: Record<string, unknown>
+  metadata?: Record<string, string>
   created_at: string
   updated_at: string
   status: RecordingDraftStatus
   privacy_notice: string
-  metadata?: Record<string, string>
 }
 
 export type RecordingDraftMetadata = {
@@ -63,6 +65,8 @@ export function saveRecordingDraft(
     draft_id?: string
     created_at?: string
     updated_at?: string
+    event_date?: string
+    structured_data?: Record<string, unknown>
   }
 ): RecordingDraft | null {
   if (!isBrowser()) return null
@@ -80,6 +84,8 @@ export function saveRecordingDraft(
     child_name: input.child_name,
     title: input.title,
     body: input.body,
+    event_date: input.event_date ?? existing?.event_date,
+    structured_data: input.structured_data ?? existing?.structured_data,
     created_at: input.created_at || existing?.created_at || now,
     updated_at: input.updated_at || now,
     status: 'draft',

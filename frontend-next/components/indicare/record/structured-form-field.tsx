@@ -51,6 +51,7 @@ export function StructuredFormField({
       {field.field_type === 'textarea' ? (
         <textarea
           id={fieldId}
+          spellCheck
           rows={3}
           value={String(value ?? '')}
           placeholder={field.placeholder ?? undefined}
@@ -74,6 +75,7 @@ export function StructuredFormField({
       ) : (
         <input
           id={fieldId}
+          spellCheck={field.field_type === 'text'}
           type={field.field_type === 'datetime' ? 'datetime-local' : field.field_type === 'date' ? 'date' : field.field_type === 'time' ? 'time' : 'text'}
           value={String(value ?? '')}
           placeholder={field.placeholder ?? undefined}

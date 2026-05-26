@@ -295,9 +295,24 @@ class OrbOperationalAssistantService:
             f"Mode: {request.mode}",
             f"Scope: {request.scope}",
             f"User question: {request.message}",
+        ]
+        if request.form_id or request.recording_type:
+            lines.append("")
+            lines.append("Recording workspace context (summary only — no full draft body):")
+            if request.form_id:
+                lines.append(f"- form_id: {request.form_id}")
+            if request.form_title:
+                lines.append(f"- form_title: {request.form_title}")
+            if request.recording_type:
+                lines.append(f"- recording_type: {request.recording_type}")
+            if request.high_level_flags:
+                lines.append(f"- high_level_flags: {', '.join(request.high_level_flags[:8])}")
+            if request.selected_excerpt:
+                lines.append(f"- selected_excerpt (adult-provided): {request.selected_excerpt[:500]}")
+        lines.extend([
             "",
             "Permissioned context summary (do not go beyond this):",
-        ]
+        ])
         for key, value in summary.items():
             if isinstance(value, list) and value:
                 lines.append(f"- {key}: " + "; ".join(_text(v) for v in value[:8]))
@@ -387,6 +402,11 @@ class OrbOperationalAssistantService:
             )
         if request.mode == "safeguarding_themes" and "manager review" not in answer.lower():
             answer += "\n\nEscalate safeguarding concerns through your local policy and manager review."
+        if request.mode == "recording_live_coach":
+            answer += (
+                "\n\nORB supports recording quality only. Adults remain responsible for the final record. "
+                "Do not auto-submit or alter records without explicit adult action."
+            )
         return answer
 
     def evaluate_answer(

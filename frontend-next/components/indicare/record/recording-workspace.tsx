@@ -3,11 +3,12 @@
 import Link from 'next/link'
 import { useCallback, useMemo, useState } from 'react'
 
+import { OrbLiveRecordingCoach } from '@/components/indicare/record/orb-live-recording-coach'
 import { RecordingContextPanel } from '@/components/indicare/record/recording-context-panel'
 import { RecordingEditor } from '@/components/indicare/record/recording-editor'
+import type { RecordingSaveMode } from '@/components/indicare/record/recording-autosave-indicator'
 import { RecordingLanguageSuggestions } from '@/components/indicare/record/recording-language-suggestions'
 import { RecordingOrbRail } from '@/components/indicare/record/recording-orb-rail'
-import { RecordingQualityCoach } from '@/components/indicare/record/recording-quality-coach'
 import { RecordingReviewChecklist } from '@/components/indicare/record/recording-review-checklist'
 import { RecordingTherapeuticPrompts } from '@/components/indicare/record/recording-therapeutic-prompts'
 import { RecordingTypeSelector } from '@/components/indicare/record/recording-type-selector'
@@ -52,11 +53,21 @@ export function RecordingWorkspace({
   const activeForm = resolveRecordingFormFromQuery(recordingType, formIdFromUrl) || resolveActiveRecordingForm(recordingType, formIdFromUrl)
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
+  const [eventDate, setEventDate] = useState('')
+  const [planImpactChecked, setPlanImpactChecked] = useState(false)
   const [structuredCompletion, setStructuredCompletion] = useState<{
     requiredMissing: string[]
     reviewTriggers: string[]
     completionSummary: string[]
   } | null>(null)
+  const [autosaveState, setAutosaveState] = useState<{
+    isSaving: boolean
+    saveMode: RecordingSaveMode
+    lastSavedAt?: string
+    saveError: boolean
+    eventDate?: string
+    planImpactChecked?: boolean
+  }>({ isSaving: false, saveMode: 'idle', saveError: false })
 
   const handleStructuredCompletionChange = useCallback(
     (payload: { requiredMissing: string[]; reviewTriggers: string[]; completionSummary: string[] } | null) => {
@@ -64,6 +75,33 @@ export function RecordingWorkspace({
     },
     []
   )
+
+  const handleAutosaveStateChange = useCallback(
+    (state: {
+      isSaving: boolean
+      saveMode: RecordingSaveMode
+      lastSavedAt?: string
+      saveError: boolean
+      eventDate?: string
+      planImpactChecked?: boolean
+    }) => {
+      setAutosaveState(state)
+      if (state.eventDate) setEventDate(state.eventDate)
+      if (state.planImpactChecked != null) setPlanImpactChecked(state.planImpactChecked)
+    },
+    []
+  )
+
+  const handleAcceptSuggestion = useCallback(
+    (text: string) => {
+      setBody((prev) => (prev.trim() ? `${prev.trim()}\n\n${text}` : text))
+    },
+    []
+  )
+
+  const handleInsertHeading = useCallback((heading: string) => {
+    setBody((prev) => (prev.trim() ? `${prev.trim()}\n\n${heading}\n` : `${heading}\n`))
+  }, [])
 
   const continueHref = useMemo(() => {
     const cardIdMap: Partial<Record<RecordingWorkspaceType, string>> = {
@@ -100,13 +138,15 @@ export function RecordingWorkspace({
     return recordCardHref(card, childId)
   }, [childId, recordingType])
 
+  const activeFormId = formIdFromUrl || activeForm?.id || recordingType
+
   return (
     <section data-testid="recording-workspace" className="space-y-6">
       <header className="rounded-[28px] border border-blue-100 bg-gradient-to-r from-blue-50/90 via-white to-cyan-50/70 p-6 shadow-sm">
         <p className="text-[11px] font-black uppercase tracking-[0.22em] text-blue-700">Recording workspace</p>
         <h2 className="mt-2 text-3xl font-black tracking-[-0.04em] text-slate-950">Record with care</h2>
         <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-slate-600">
-          Write clear, child-centred records. ORB can help with wording, reflection and review.
+          Write clear, child-centred records. ORB supports you live while you write — adults remain responsible for the final record.
         </p>
       </header>
 
@@ -156,14 +196,31 @@ export function RecordingWorkspace({
             onBodyChange={setBody}
             onDraftListRefresh={onDraftListRefresh}
             onStructuredCompletionChange={handleStructuredCompletionChange}
+            onAutosaveStateChange={handleAutosaveStateChange}
+            onAcceptSuggestion={handleAcceptSuggestion}
           />
           <RecordingTherapeuticPrompts recordingType={recordingType} formId={formIdFromUrl || activeForm?.id} />
           <RecordingContextPanel body={body} title={title} />
         </div>
 
         <div className="space-y-4">
+          <OrbLiveRecordingCoach
+            formId={activeFormId}
+            recordingType={recordingType}
+            title={title}
+            body={body}
+            eventDate={autosaveState.eventDate || eventDate || undefined}
+            childId={childId}
+            structuredRequiredMissing={structuredCompletion?.requiredMissing}
+            planImpactChecked={autosaveState.planImpactChecked ?? planImpactChecked}
+            saveMode={autosaveState.saveMode}
+            isSaving={autosaveState.isSaving}
+            lastSavedAt={autosaveState.lastSavedAt}
+            saveError={autosaveState.saveError}
+            onAcceptSuggestion={handleAcceptSuggestion}
+            onInsertHeadingPrompt={handleInsertHeading}
+          />
           <RecordingOrbRail recordingType={recordingType} formId={formIdFromUrl || activeForm?.id} />
-          <RecordingQualityCoach body={body} title={title} recordingType={recordingType} structuredRequiredMissing={structuredCompletion?.requiredMissing} structuredReviewTriggers={structuredCompletion?.reviewTriggers} />
           <RecordingLanguageSuggestions body={body} title={title} />
           <RecordingReviewChecklist body={body} title={title} recordingType={recordingType} structuredRequiredMissing={structuredCompletion?.requiredMissing} />
         </div>

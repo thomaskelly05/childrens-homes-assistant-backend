@@ -12,6 +12,8 @@ RECORD_ORB_FILES = [
     FRONTEND / "components" / "indicare" / "record" / "record-hub.tsx",
     FRONTEND / "lib" / "record" / "recording-quality-coach.ts",
     FRONTEND / "components" / "indicare" / "record" / "structured-recording-form.tsx",
+    FRONTEND / "components" / "indicare" / "record" / "orb-live-recording-coach.tsx",
+    FRONTEND / "lib" / "orb" / "operational-client.ts",
 ]
 
 FORBIDDEN_STANDALONE_QUERY_KEYS = [

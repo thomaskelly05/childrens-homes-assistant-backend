@@ -10,6 +10,7 @@ export type OrbOperationalMode =
   | 'operational_summary'
   | 'manager_daily_brief'
   | 'record_quality_review'
+  | 'recording_live_coach'
   | 'safeguarding_themes'
   | 'ofsted_evidence_review'
   | 'action_priority'
@@ -37,6 +38,12 @@ export type OrbOperationalRequest = {
   visibility?: string
   tags?: string[]
   output_title?: string | null
+  /** Recording workspace context — never includes full draft body. */
+  form_id?: string | null
+  form_title?: string | null
+  recording_type?: string | null
+  selected_excerpt?: string | null
+  high_level_flags?: string[]
 }
 
 export type OrbOperationalSource = {
@@ -531,4 +538,29 @@ export async function getOperationalCapabilities(signal?: AbortSignal): Promise<
   } catch (error) {
     return { source: 'unavailable', data: {}, warning: 'Capabilities unavailable' }
   }
+}
+
+/** Build scoped ORB href for recording workspace — no draft body in URL. */
+export function operationalOrbRecordingHref(params: {
+  mode?: OrbOperationalMode
+  formId?: string
+  formTitle?: string
+  recordingType?: string
+  childId?: number
+  homeId?: number
+  flags?: string[]
+  prompt?: string
+  selectedExcerpt?: string
+}): string {
+  const query = new URLSearchParams()
+  query.set('mode', params.mode || 'recording_live_coach')
+  query.set('context', 'recording')
+  if (params.formId) query.set('form_id', params.formId)
+  if (params.recordingType) query.set('recording_type', params.recordingType)
+  if (params.childId != null) query.set('child_id', String(params.childId))
+  if (params.homeId != null) query.set('home_id', String(params.homeId))
+  if (params.flags?.length) query.set('flags', params.flags.slice(0, 6).join(','))
+  if (params.prompt) query.set('q', params.prompt)
+  if (params.selectedExcerpt) query.set('excerpt', params.selectedExcerpt.slice(0, 500))
+  return `/assistant/orb?${query.toString()}`
 }
