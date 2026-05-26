@@ -34,6 +34,10 @@ POSITIVE_TRIGGERS = frozenset(
         "birthday",
         "hobby",
         "pep",
+        "milestone",
+        "relationship",
+        "event",
+        "education-success",
     }
 )
 

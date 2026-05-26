@@ -6,10 +6,10 @@ import type { ChildWorkspaceOverviewViewModel } from '@/lib/young-people/child-w
 
 const ORB_PROMPTS = [
   'What should I check before recording?',
-  'Help me write a daily note',
-  'What needs manager review?',
-  'What might help feel safer today?',
-  'What evidence is missing from this child’s record?'
+  'Summarise this child’s archive themes',
+  'Help review this child’s chronology story',
+  'What plan impact suggestions need review?',
+  'What LifeEcho memories could be added safely?'
 ]
 
 export function ChildWorkspaceOrbRail({ view }: { view: ChildWorkspaceOverviewViewModel }) {
@@ -66,6 +66,38 @@ export function ChildWorkspaceOrbRail({ view }: { view: ChildWorkspaceOverviewVi
             className="text-center text-xs font-bold text-indigo-700"
           >
             Ofsted evidence review
+          </Link>
+          <Link
+            href={childOrbHref(childId, 'archive_summary')}
+            prefetch={false}
+            data-testid="child-orb-archive-summary"
+            className="text-center text-xs font-bold text-indigo-700"
+          >
+            Archive themes
+          </Link>
+          <Link
+            href={childOrbHref(childId, 'chronology_story_review')}
+            prefetch={false}
+            data-testid="child-orb-chronology-story"
+            className="text-center text-xs font-bold text-indigo-700"
+          >
+            Chronology story
+          </Link>
+          <Link
+            href={childOrbHref(childId, 'plan_impact_review')}
+            prefetch={false}
+            data-testid="child-orb-plan-impact-review"
+            className="text-center text-xs font-bold text-indigo-700"
+          >
+            Plan impacts
+          </Link>
+          <Link
+            href={childOrbHref(childId, 'lifeecho_memory_support')}
+            prefetch={false}
+            data-testid="child-orb-lifeecho-support"
+            className="text-center text-xs font-bold text-indigo-700"
+          >
+            LifeEcho support
           </Link>
         </div>
       </aside>

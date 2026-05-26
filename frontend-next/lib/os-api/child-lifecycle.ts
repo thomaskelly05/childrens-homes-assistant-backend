@@ -8,13 +8,21 @@ export type ChildArchiveRecord = {
   record_type: string
   source_type: string
   source_id?: string | null
+  event_date?: string | null
   signed_off_at?: string | null
   author_name?: string | null
   signed_off_by_name?: string | null
+  safeguarding_sensitive?: boolean
   chronology_event_id?: string | null
   plan_impact_ids?: string[]
   lifeecho_memory_id?: string | null
   tags?: string[]
+}
+
+export type ChronologyStoryGap = {
+  label: string
+  hint: string
+  route_hint?: string | null
 }
 
 const EMPTY_ARCHIVE = { records: [] as ChildArchiveRecord[], total: 0 }
@@ -23,7 +31,8 @@ const EMPTY_STORY = {
   sections: [] as Array<{ label: string; events: Array<Record<string, unknown>> }>,
   themes: [] as string[],
   safe_story_summary: '',
-  total_events: 0
+  total_events: 0,
+  story_gaps: [] as ChronologyStoryGap[]
 }
 const EMPTY_PLAN_IMPACTS = { suggestions: [] as Array<Record<string, unknown>>, total: 0 }
 const EMPTY_LIFEECHO = {

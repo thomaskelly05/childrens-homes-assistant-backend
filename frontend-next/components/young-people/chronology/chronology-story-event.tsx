@@ -15,7 +15,9 @@ export function ChronologyStoryEvent({
     <article data-testid="chronology-story-event" className="relative border-l-2 border-sky-200 pl-6 pb-6">
       <span className="absolute -left-[7px] top-1 h-3 w-3 rounded-full bg-sky-500" />
       <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
-        {String(event.event_date || '').slice(0, 10) || 'Undated'} · {String(event.record_type || 'record')}
+        {String(event.event_date || '').slice(0, 10) || 'Undated'}
+        {event.recorded_at ? ` · recorded ${String(event.recorded_at).slice(0, 10)}` : ''} ·{' '}
+        {String(event.source_type || event.record_type || 'record')}
       </p>
       <h3 className="mt-1 text-base font-black text-slate-950">{title}</h3>
       <p className="mt-2 text-sm leading-7 text-slate-600">{summary}</p>

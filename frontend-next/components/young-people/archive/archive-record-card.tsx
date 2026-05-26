@@ -15,11 +15,20 @@ export function ArchiveRecordCard({ record, childId }: { record: ChildArchiveRec
           </p>
           <h3 className="mt-2 text-lg font-black text-slate-950">{record.title}</h3>
           <p className="mt-2 text-sm leading-7 text-slate-600">{record.safe_summary}</p>
+          {record.safeguarding_sensitive ? (
+            <p
+              data-testid="child-archive-sensitivity-badge"
+              className="mt-2 inline-block rounded-full bg-rose-100 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-rose-900"
+            >
+              Safeguarding — safe summary only
+            </p>
+          ) : null}
         </div>
         <div className="text-right text-xs font-semibold text-slate-500">
+          {record.event_date ? <p>Event {record.event_date.slice(0, 10)}</p> : null}
           {record.signed_off_at ? <p>Signed off {record.signed_off_at.slice(0, 10)}</p> : null}
           {record.author_name ? <p>Author: {record.author_name}</p> : null}
-          {record.signed_off_by_name ? <p>Reviewed: {record.signed_off_by_name}</p> : null}
+          {record.signed_off_by_name ? <p>Signed off by: {record.signed_off_by_name}</p> : null}
         </div>
       </div>
       <div className="mt-4 flex flex-wrap gap-2 text-xs font-black">

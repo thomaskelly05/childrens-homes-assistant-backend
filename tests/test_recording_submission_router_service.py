@@ -68,7 +68,7 @@ def test_draft_only_when_unsupported(fake_state):
     assert result
     assert result.submitted is True
     assert result.formal_record_created is False
-    assert any("not wired" in w.lower() for w in result.warnings)
+    assert any("formal record route" in w.lower() for w in result.warnings)
 
 
 def test_approved_draft_can_submit_when_supported(fake_state, monkeypatch):
@@ -192,7 +192,7 @@ def test_route_to_existing_workflow_no_formal(fake_state):
     )
     assert result.formal_record_created is False
     assert result.target_status == "route_to_existing_workflow"
-    assert any("not wired" in w.lower() for w in result.warnings)
+    assert any("formal record route" in w.lower() for w in result.warnings)
 
 
 def test_missing_blocked_without_review(fake_state, monkeypatch):

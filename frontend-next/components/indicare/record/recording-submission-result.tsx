@@ -46,6 +46,24 @@ export function RecordingSubmissionResultCard({ result, childId }: RecordingSubm
             <dd data-testid="recording-submission-chronology">{result.linked_chronology_id}</dd>
           </div>
         ) : null}
+        {result.linked_archive_record_id ? (
+          <div className="flex justify-between gap-4">
+            <dt>Archive record</dt>
+            <dd data-testid="recording-submission-archive">{result.linked_archive_record_id}</dd>
+          </div>
+        ) : null}
+        {result.linked_plan_impact_ids && result.linked_plan_impact_ids.length > 0 ? (
+          <div className="flex justify-between gap-4">
+            <dt>Plan impacts</dt>
+            <dd data-testid="recording-submission-plan-impacts">{result.linked_plan_impact_ids.join(', ')}</dd>
+          </div>
+        ) : null}
+        {result.lifeecho_suggestion_ids && result.lifeecho_suggestion_ids.length > 0 ? (
+          <div className="flex justify-between gap-4">
+            <dt>LifeEcho suggestions</dt>
+            <dd data-testid="recording-submission-lifeecho">{result.lifeecho_suggestion_ids.join(', ')}</dd>
+          </div>
+        ) : null}
       </dl>
 
       {result.formal_record_created === false &&
@@ -116,13 +134,22 @@ export function RecordingSubmissionResultCard({ result, childId }: RecordingSubm
             Open formal route
           </Link>
         ) : null}
+        {childId && result.linked_archive_record_id ? (
+          <Link
+            href={`/young-people/${encodeURIComponent(childId)}/archive`}
+            data-testid="recording-open-child-archive"
+            className="inline-flex min-h-9 items-center rounded-xl border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-black text-sky-950"
+          >
+            Open archive
+          </Link>
+        ) : null}
         {childId ? (
           <Link
-            href={`/young-people/${encodeURIComponent(childId)}`}
+            href={`/young-people/${encodeURIComponent(childId)}/workspace`}
             data-testid="recording-open-child-journey"
             className="inline-flex min-h-9 items-center rounded-xl border border-slate-200 bg-white px-3 py-1 text-xs font-black text-slate-800"
           >
-            Open child journey
+            Child workspace
           </Link>
         ) : null}
         {result.draft_id ? (

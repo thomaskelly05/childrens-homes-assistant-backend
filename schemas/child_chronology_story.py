@@ -14,9 +14,11 @@ class ChronologyStoryEvent(BaseModel):
 
     id: str
     event_date: str | None = None
+    recorded_at: str | None = None
     title: str
     safe_summary: str = ""
     record_type: str = "recording"
+    source_type: str | None = None
     author_name: str | None = None
     signed_off_by_name: str | None = None
     source_route: str | None = None
@@ -50,6 +52,14 @@ class ChronologyStorySection(BaseModel):
     summary: str | None = None
 
 
+class ChronologyStoryGap(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    label: str
+    hint: str
+    route_hint: str | None = None
+
+
 class ChronologyStoryResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
@@ -58,3 +68,4 @@ class ChronologyStoryResponse(BaseModel):
     themes: list[str] = Field(default_factory=list)
     safe_story_summary: str = ""
     total_events: int = 0
+    story_gaps: list[ChronologyStoryGap] = Field(default_factory=list)

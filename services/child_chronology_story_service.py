@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from schemas.child_archive import ChildArchiveFilter, ChildArchiveRecord
 from schemas.child_chronology_story import (
     ChronologyStoryEvent,
     ChronologyStoryFilter,
+    ChronologyStoryGap,
     ChronologyStoryResponse,
     ChronologyStorySection,
 )
@@ -25,15 +27,19 @@ class ChildChronologyStoryService:
     ) -> ChronologyStoryEvent:
         _ = current_user
         _ = conn
+        event_date = archive_record.event_date or archive_record.signed_off_at
+        recorded_at = archive_record.recorded_at
         return ChronologyStoryEvent(
             id=f"story_{archive_record.id}",
-            event_date=archive_record.event_date or archive_record.signed_off_at,
+            event_date=event_date,
+            recorded_at=recorded_at if recorded_at and recorded_at[:10] != (event_date or "")[:10] else None,
             title=archive_record.title,
             safe_summary=archive_record.safe_summary,
             record_type=archive_record.record_type,
+            source_type=archive_record.source_type,
             author_name=archive_record.author_name,
             signed_off_by_name=archive_record.signed_off_by_name,
-            source_route=archive_record.source_route,
+            source_route=archive_record.source_route or f"/young-people/{archive_record.child_id}/archive",
             archive_record_id=archive_record.id,
             plan_impacts=list(archive_record.plan_impact_ids or []),
             lifeecho_suggestion=archive_record.lifeecho_memory_id,
@@ -73,6 +79,42 @@ class ChildChronologyStoryService:
             if event.record_type:
                 themes.add(event.record_type.replace("_", " "))
         return sorted(themes)[:12]
+
+    def identify_story_gaps(
+        self,
+        events: list[ChronologyStoryEvent],
+        child_id: int,
+    ) -> list[ChronologyStoryGap]:
+        gaps: list[ChronologyStoryGap] = []
+        if not events:
+            gaps.append(
+                ChronologyStoryGap(
+                    label="No signed-off story yet",
+                    hint="Submit and sign off daily notes or key records to build this child's chronology.",
+                    route_hint=f"/young-people/{child_id}/archive",
+                )
+            )
+            gaps.append(
+                ChronologyStoryGap(
+                    label="Start recording",
+                    hint="Create a draft from the child workspace, then submit when ready.",
+                    route_hint=f"/record?child_id={child_id}",
+                )
+            )
+            return gaps
+        recent_dates = [e.event_date[:10] for e in events if e.event_date and len(e.event_date) >= 10]
+        if recent_dates:
+            latest = max(recent_dates)
+            cutoff = (datetime.now(timezone.utc) - timedelta(days=90)).date().isoformat()
+            if latest < cutoff:
+                gaps.append(
+                    ChronologyStoryGap(
+                        label="No recent signed-off records",
+                        hint="No archive-linked story events in the last 90 days — check recording and review queues.",
+                        route_hint=f"/record/reviews?child_id={child_id}",
+                    )
+                )
+        return gaps
 
     def safe_story_summary(self, events: list[ChronologyStoryEvent]) -> str:
         if not events:
@@ -126,6 +168,7 @@ class ChildChronologyStoryService:
             themes=themes,
             safe_story_summary=self.safe_story_summary(events),
             total_events=len(events),
+            story_gaps=self.identify_story_gaps(events, filters.child_id),
         )
 
 
