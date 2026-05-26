@@ -99,11 +99,14 @@ export function MobileBottomNav() {
             : 'mobile-bottom-nav'
       }
       data-mobile-bottom-nav-safe-area="true"
-      className="mobile-bottom-nav pointer-events-auto fixed inset-x-0 bottom-0 z-50 max-h-[calc(4.5rem+env(safe-area-inset-bottom))] border-t border-white/70 bg-white/90 backdrop-blur-xl lg:hidden"
-      style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
+      className="mobile-bottom-nav pointer-events-auto fixed inset-x-0 bottom-0 z-40 overflow-hidden border-t border-white/70 bg-white/90 backdrop-blur-xl lg:hidden"
+      style={{
+        height: 'calc(4.5rem + env(safe-area-inset-bottom))',
+        paddingBottom: 'env(safe-area-inset-bottom)'
+      }}
       aria-label="Primary mobile navigation"
     >
-      <div className="mx-auto flex max-w-lg items-stretch justify-between gap-0.5 px-2 pt-2">
+      <div className="mx-auto flex h-[4.5rem] max-w-lg items-stretch justify-between gap-0.5 px-2 pt-2">
         {items.map((item) => {
           const active =
             pathname === item.href || pathname.startsWith(`${item.href.split('?')[0]}/`)

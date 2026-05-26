@@ -76,6 +76,7 @@ textarea {
 .mobile-bottom-nav {
   pointer-events: auto;
   contain: layout paint;
+  overflow: hidden;
 }
 
 .mobile-bottom-nav::before,

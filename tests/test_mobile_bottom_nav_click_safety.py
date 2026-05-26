@@ -11,7 +11,9 @@ def test_bottom_nav_safe_area_and_scope_testids():
     assert "data-mobile-bottom-nav-safe-area" in nav
     assert "mobile-child-bottom-nav" in nav
     assert "pointer-events-auto" in nav
-    assert "max-h-" in nav
+    assert "height: 'calc(4.5rem + env(safe-area-inset-bottom))'" in nav
+    assert "z-40" in nav
+    assert "max-h-[" not in nav
 
 
 def test_bottom_nav_hidden_on_orb_and_record():
@@ -19,3 +21,4 @@ def test_bottom_nav_hidden_on_orb_and_record():
     assert "pathname === '/orb'" in shell
     assert "pathname === '/record'" in shell
     assert "/assistant/orb" in shell
+    assert "pathname === '/select-scope'" in shell
