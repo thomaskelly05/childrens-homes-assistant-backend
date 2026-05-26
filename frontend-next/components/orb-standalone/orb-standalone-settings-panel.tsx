@@ -51,8 +51,8 @@ export function OrbStandaloneSettingsPanel({
     {
       id: 'voice',
       label: 'Voice',
-      description: 'Wake phrase, replies and test voice',
-      status: 'Browser',
+      description: 'ORB Voice app — coming next (text chat is default on /orb)',
+      status: 'Coming next',
       icon: <Mic className="h-4 w-4 text-slate-400" aria-hidden />,
       onClick: () => onOpenVoiceSettings?.()
     },

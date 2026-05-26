@@ -28,6 +28,7 @@ export function OrbStandaloneComposer({
   voiceSpeaking,
   voiceRecognitionAvailable,
   voiceStatusText,
+  voiceCaptureEnabled = false,
   transcriptReady,
   displayTranscript,
   autoSend,
@@ -59,6 +60,7 @@ export function OrbStandaloneComposer({
   voiceSpeaking: boolean
   voiceRecognitionAvailable: boolean
   voiceStatusText: string
+  voiceCaptureEnabled?: boolean
   transcriptReady: boolean
   displayTranscript: string
   autoSend: boolean
@@ -104,7 +106,7 @@ export function OrbStandaloneComposer({
       data-testid="orb-standalone-composer"
     >
       <div className="mx-auto w-full max-w-[var(--orb-composer-max,53.125rem)]">
-        {transcriptReady && displayTranscript ? (
+        {voiceCaptureEnabled && transcriptReady && displayTranscript ? (
           <div className="mb-3 rounded-2xl border border-teal-300/20 bg-teal-400/[0.06] px-4 py-3">
             <p className="text-xs font-semibold text-teal-200/90">I heard you say…</p>
             <p className="mt-1 text-sm italic text-slate-100">&ldquo;{displayTranscript}&rdquo;</p>
@@ -133,6 +135,7 @@ export function OrbStandaloneComposer({
 
         <form
           className="w-full"
+          data-testid="orb-standalone-message-form"
           onSubmit={(event) => {
             logTapTarget(event, 'orb-standalone-form-submit')
             onSubmit(event)
@@ -261,12 +264,19 @@ export function OrbStandaloneComposer({
                 disabled={pending}
                 aria-describedby="orb-standalone-status"
                 data-orb-composer-input
+                data-testid="orb-standalone-message-input"
               />
               <button
                 type="button"
                 onClick={onMicClick}
-                disabled={!voiceRecognitionAvailable}
-                aria-label={voiceListening ? 'Stop listening' : 'Start voice input'}
+                disabled={voiceCaptureEnabled && !voiceRecognitionAvailable}
+                aria-label={
+                  voiceCaptureEnabled
+                    ? voiceListening
+                      ? 'Stop listening'
+                      : 'Start voice input'
+                    : 'Voice mode coming next'
+                }
                 className={`inline-flex h-10 min-w-10 shrink-0 items-center justify-center rounded-full transition disabled:opacity-40 ${
                   voiceListening ? 'bg-cyan-400/15 text-cyan-100' : 'text-slate-400 hover:bg-white/[0.06] hover:text-slate-200'
                 }`}
@@ -297,13 +307,19 @@ export function OrbStandaloneComposer({
           </div>
 
           <div className="orb-voice-status-slot mt-1.5 flex min-h-[1.25rem] flex-wrap items-center justify-between gap-2 px-2">
-            <p id="orb-standalone-status" className="text-[11px] leading-5 text-slate-500" role="status" data-orb-voice-status>
-              {voiceStatusText || '\u00a0'}
-            </p>
+            {voiceStatusText ? (
+              <p id="orb-standalone-status" className="text-[11px] leading-5 text-slate-500" role="status" data-orb-voice-status>
+                {voiceStatusText}
+              </p>
+            ) : (
+              <span id="orb-standalone-status" className="sr-only" data-orb-voice-status>
+                Ready to type
+              </span>
+            )}
             <span className="sr-only">Mode: {mode}</span>
           </div>
 
-          {voiceListening ? (
+          {voiceCaptureEnabled && voiceListening ? (
             <div className="mt-1.5 px-2">
               <button
                 type="button"
@@ -314,7 +330,7 @@ export function OrbStandaloneComposer({
               </button>
             </div>
           ) : null}
-          {voiceSpeaking ? (
+          {voiceCaptureEnabled && voiceSpeaking ? (
             <div className="mt-1.5 px-2">
               <button
                 type="button"

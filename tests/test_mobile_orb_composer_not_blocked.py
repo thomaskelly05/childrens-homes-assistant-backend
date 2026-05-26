@@ -6,13 +6,11 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 FRONTEND = REPO_ROOT / "frontend-next"
 
 
-def test_floating_companion_hidden_on_mobile():
+def test_no_floating_companion_on_standalone_orb():
     companion = (FRONTEND / "components/orb-standalone/orb-care-companion.tsx").read_text(encoding="utf-8")
-    css = (FRONTEND / "app/globals.css").read_text(encoding="utf-8")
-    assert "max-md:hidden" in companion
-    assert "data-orb-floating-voice-orb" in companion
-    assert "orb-companion-float" in css
-    assert "display: none" in css or "display: none !important" in css
+    assert "data-orb-floating-voice-orb" not in companion
+    assert "orbCompanionExpanded" not in companion
+    assert "data-orb-text-first-chat" in companion
 
 
 def test_mic_in_composer_not_floating_fab():

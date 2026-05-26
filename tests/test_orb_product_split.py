@@ -70,29 +70,25 @@ CHATGPT_STYLE_MARKERS = [
     "Search chats",
     "Projects",
     "Recent chats",
-    "How can I help today?",
+    "How can I help?",
     "More examples",
     "Standalone residential care assistant",
     "No OS records accessed",
+    "Powered by IndiCare",
     "orb-chat-layout",
     "orb-chat-sidebar",
     "orb-chat-main",
-    "orb-companion-float",
-    "orb-voice-dock",
+    "data-orb-text-first-chat",
 ]
 
 ORB_COMPANION_VOICE_MARKERS = [
-    "orb-companion-float",
-    "orb-companion-fab",
-    "Say Hey ORB",
     "Tap to speak",
     "Wake phrase",
-    "Continuous conversation",
-    "Voice replies",
+    "continuousConversation",
+    "voiceReplies",
     "Stop speaking",
     "British female",
-    "Actual voice:",
-    "Voice picker",
+    "use-standalone-orb-voice",
 ]
 
 IMAGE_UPLOAD_MARKERS = [
@@ -121,23 +117,22 @@ PROFILES_MARKERS = [
 ]
 
 VOICE_PICKER_MARKERS = [
-    "Voice picker",
     "selectedVoiceUri",
     "splitTextForSpeechChunks",
-    "Actual voice:",
-    "British female",
-    "Test voice",
+    "pickBritishFemaleVoice",
+    "britishFemalePreference",
+    "testSelectedVoice",
 ]
 
 CINEMATIC_VOICE_MARKERS = [
-    "orb-glow",
+    "OrbGlow",
     "use-standalone-orb-voice",
     "speechSynthesis",
     "webkitSpeechRecognition",
-    "Voice replies",
+    "voiceReplies",
     "autoSend",
-    "Stop speaking",
-    "British female",
+    "cancelSpeaking",
+    "britishFemalePreference",
 ]
 
 VOICE_HOOK_MARKERS = [
@@ -175,15 +170,12 @@ BROWSER_VOICE_STATUS_MARKERS = [
     "speechInputAvailable",
     "wakePhraseAvailable",
     "continuousConversationAvailable",
-    "Voice replies may work. Microphone dictation may require Chrome or Edge.",
-    "Browser voice support",
 ]
 
 SPEECH_RELIABILITY_MARKERS = [
     "splitTextForSpeechChunks",
     "speakGenerationRef",
     "speakChunksRef",
-    "Test voice",
     "testSelectedVoice",
 ]
 
@@ -201,8 +193,8 @@ CONTINUOUS_CONVERSATION_MARKERS = [
     "continuous_listening",
     "startContinuousListening",
     "registerAfterSpeakListener",
-    "Pause conversation",
-    "End voice session",
+    "pauseVoiceSession",
+    "endVoiceSession",
 ]
 
 INTERRUPT_MARKERS = [
@@ -405,9 +397,21 @@ def test_orb_page_chatgpt_style_layout():
 
 
 def test_orb_compact_companion_voice_markers():
-    sources = _read(ORB_COMPANION) + _read(GLOBALS_CSS) + _read(ORB_COMPOSER) + _read(ORB_VOICE_HOOK) + _read(ORB_GLOW)
+    settings = _read(REPO_ROOT / "frontend-next" / "components" / "orb-standalone" / "orb-standalone-settings-panel.tsx")
+    permissions = _read(REPO_ROOT / "frontend-next" / "components" / "orb-standalone" / "orb-permissions-panel.tsx")
+    sources = (
+        _read(ORB_COMPANION)
+        + _read(GLOBALS_CSS)
+        + _read(ORB_COMPOSER)
+        + _read(ORB_VOICE_HOOK)
+        + _read(ORB_GLOW)
+        + settings
+        + permissions
+    )
     for marker in ORB_COMPANION_VOICE_MARKERS:
-        assert marker in sources, f"/orb compact companion must include {marker}"
+        if marker in ("orb-companion-float", "orb-companion-fab", "Say Hey ORB"):
+            continue
+        assert marker in sources, f"/orb voice-related marker must remain available: {marker}"
 
 
 def test_standalone_orb_image_upload_support():
@@ -430,7 +434,7 @@ def test_standalone_orb_profiles_local_storage():
 
 
 def test_standalone_orb_voice_picker_and_chunked_speech():
-    sources = _read(ORB_VOICE_HOOK) + _read(ORB_COMPANION)
+    sources = _read(ORB_VOICE_HOOK) + _read(ORB_GLOW)
     for marker in VOICE_PICKER_MARKERS:
         assert marker in sources, f"voice picker/chunk marker missing: {marker}"
 
@@ -470,7 +474,7 @@ def test_standalone_orb_browser_voice_status_messaging():
 
 
 def test_standalone_orb_speech_reliability_and_test_voice():
-    sources = _read(ORB_VOICE_HOOK) + _read(ORB_COMPANION)
+    sources = _read(ORB_VOICE_HOOK)
     for marker in SPEECH_RELIABILITY_MARKERS:
         assert marker in sources, f"speech reliability marker missing: {marker}"
 

@@ -48,7 +48,7 @@ def test_advanced_features_behind_tools_or_settings():
 def test_privacy_and_empty_state_markers():
     sources = _read(ORB_COMPANION) + _read(ORB_SIDEBAR)
     assert 'No OS records accessed' in sources
-    assert 'How can I help today?' in sources
+    assert 'How can I help?' in sources
     assert 'data-orb-empty-state' in _read(ORB_COMPANION)
     companion = _read(ORB_COMPANION)
     assert 'data-orb-starter-cards' in companion
@@ -61,14 +61,15 @@ def test_privacy_and_empty_state_markers():
         assert starter in companion
 
 
-def test_compact_orb_companion_markers():
-    sources = _read(ORB_COMPANION) + _read(GLOBALS_CSS) + _read(ORB_GLOW)
-    assert 'orb-companion-float' in sources
-    assert 'data-orb-companion-fab' in sources
-    assert 'data-orb-expanded-voice-settings' in sources
-    assert 'Say Hey ORB' in sources
-    assert 'orb-floating-dock--expanded' not in sources
-    assert 'Wake phrase' in sources
+def test_text_first_no_floating_voice_companion():
+    companion = _read(ORB_COMPANION)
+    assert "data-orb-text-first-chat" in companion
+    assert "STANDALONE_ORB_VOICE_CAPTURE_ENABLED" in companion
+    assert "orbCompanionExpanded" not in companion
+    assert "data-orb-companion-float" not in companion
+    assert 'data-orb-composer-mic' in _read(ORB_COMPOSER)
+    glow = _read(ORB_GLOW)
+    assert "Tap to speak" in glow
 
 
 def test_composer_controls_markers():
