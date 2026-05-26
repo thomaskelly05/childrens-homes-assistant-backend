@@ -1,10 +1,14 @@
 'use client'
 
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 
+import { shouldShowInlineOrbCard } from '@/lib/orb/orb-presence-rules'
 import { handoverOrbHref, type HandoverIntelligenceDashboard } from '@/lib/os-api/handover-intelligence'
 
 export function HandoverOrbSupport({ dashboard }: { dashboard: HandoverIntelligenceDashboard | null }) {
+  const pathname = usePathname() || '/'
+  if (!shouldShowInlineOrbCard(pathname)) return null
   const prompts = dashboard?.orb_prompts?.length
     ? dashboard.orb_prompts
     : [

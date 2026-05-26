@@ -1,12 +1,16 @@
 'use client'
 
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 
+import { shouldShowInlineOrbCard } from '@/lib/orb/orb-presence-rules'
 import { reg45ReviewOrbHref, type Reg45QualityReview } from '@/lib/os-api/reg45-quality-review'
 
 type Props = { review?: Reg45QualityReview | null }
 
 export function Reg45OrbSupport({ review }: Props) {
+  const pathname = usePathname() || '/'
+  if (!shouldShowInlineOrbCard(pathname)) return null
   const prompts = review?.orb_prompts?.length
     ? review.orb_prompts
     : [

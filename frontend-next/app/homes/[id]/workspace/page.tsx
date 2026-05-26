@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
-import { ScopeOrbLauncher } from '@/components/orb-operational/scope-orb-launcher'
+import { OperationalOrbRail } from '@/components/orb-operational/operational-orb-rail'
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
 import { SectionHeader, StatusBadge } from '@/components/indicare/ui'
 import { HOME_WORKSPACE_WORKFLOW_HREFS } from '@/lib/navigation/scope-routes'
@@ -100,7 +100,12 @@ export default async function HomeWorkspacePage({ params }: { params: Promise<{ 
           </section>
         </div>
 
-        <ScopeOrbLauncher workspace="home" homeId={homeId} homeName={homeName} testId="home-workspace-scope-orb" />
+        <OperationalOrbRail
+          scopeType="home"
+          homeId={homeId}
+          homeName={homeName}
+          testId="home-workspace-orb-rail"
+        />
       </div>
     </div>
   )

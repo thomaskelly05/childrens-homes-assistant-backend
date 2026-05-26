@@ -60,8 +60,9 @@ def test_quick_actions_and_orb_routes():
     assert "childDailyNoteHref" in normaliser or "childRecordHref" in normaliser
     assert "childOrbHref" in normaliser
     assert "standalone /orb" not in orb.lower()
-    assert "ScopeOrbLauncher" in orb
-    assert "scope-orb-context" in orb or "Summary-level child context only" in (REPO_ROOT / "frontend-next" / "lib" / "orb" / "scope-orb-context.ts").read_text()
+    assert "OperationalOrbRail" in orb
+    assert "ScopeOrbLauncher" not in orb
+    assert "operationalOrbPrivacyText" in (REPO_ROOT / "frontend-next" / "lib" / "orb" / "orb-presence-rules.ts").read_text() or "Summary-level child context" in (REPO_ROOT / "frontend-next" / "lib" / "orb" / "orb-presence-rules.ts").read_text()
     assert "/os/young-people" not in normaliser.replace("childWorkspaceApiHref", "")
 
 

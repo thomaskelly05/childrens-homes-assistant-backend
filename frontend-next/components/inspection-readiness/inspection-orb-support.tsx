@@ -1,12 +1,16 @@
 'use client'
 
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 
+import { shouldShowInlineOrbCard } from '@/lib/orb/orb-presence-rules'
 import { inspectionReadinessOrbHref, type InspectionEvidencePack } from '@/lib/os-api/inspection-readiness'
 
 type Props = { pack?: InspectionEvidencePack | null }
 
 export function InspectionOrbSupport({ pack }: Props) {
+  const pathname = usePathname() || '/'
+  if (!shouldShowInlineOrbCard(pathname)) return null
   const prompts = pack?.orb_prompts?.length
     ? pack.orb_prompts
     : [
