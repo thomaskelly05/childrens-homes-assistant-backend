@@ -20,6 +20,9 @@ import {
   childOrbHref,
   childRecordHref,
   childReviewsHref,
+  homeOrbHref,
+  homeRecordingAlertsHref,
+  homeRecordingReviewsHref,
   homeWorkspaceHref
 } from '@/lib/navigation/scope-routes'
 
@@ -50,19 +53,19 @@ function homeBottomNav(homeId: string): NavItem[] {
     { label: 'Overview', href: homeWorkspaceHref(homeId), icon: Gauge, testId: 'mobile-nav-home-overview' },
     {
       label: 'Alerts',
-      href: `/homes/${encodeURIComponent(homeId)}/recording-alerts`,
+      href: homeRecordingAlertsHref(homeId),
       icon: Bell,
       testId: 'mobile-nav-alerts'
     },
     {
       label: 'Reviews',
-      href: `/homes/${encodeURIComponent(homeId)}/recording-reviews`,
+      href: homeRecordingReviewsHref(homeId),
       icon: ClipboardList,
       testId: 'mobile-nav-home-reviews'
     },
     {
       label: 'ORB',
-      href: `/assistant/orb?scope=home&home_id=${encodeURIComponent(homeId)}`,
+      href: homeOrbHref(homeId),
       icon: Sparkles,
       testId: 'mobile-nav-home-orb'
     },
