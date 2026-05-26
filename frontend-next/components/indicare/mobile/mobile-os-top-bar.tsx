@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { LogOut, Menu, Search, ShieldCheck, X } from 'lucide-react'
 
 import { CommandSearch } from '@/components/indicare/command-search'
@@ -19,6 +19,10 @@ function labelForRole(role: string | undefined) {
   return role && role in roleLabels ? roleLabels[role as keyof typeof roleLabels] : roleLabels.viewer
 }
 
+function safeNavHref(href: string) {
+  return Boolean(href) && !href.includes('undefined') && !href.includes('null')
+}
+
 export function MobileOsTopBar({ scopeTitle }: { scopeTitle: string }) {
   const pathname = usePathname() || '/select-scope'
   const { scope } = useOsScope()
@@ -30,7 +34,7 @@ export function MobileOsTopBar({ scopeTitle }: { scopeTitle: string }) {
   const scopeNavItems = scopeNavigationFor(scope.scope_type, {
     homeId: scope.selected_home_id,
     childId: scope.selected_child_id
-  })
+  }).filter((item) => safeNavHref(item.href))
 
   const workspaceLabel =
     scope.scope_type === 'child'
@@ -38,6 +42,22 @@ export function MobileOsTopBar({ scopeTitle }: { scopeTitle: string }) {
       : scope.scope_type === 'home'
         ? `${scope.selected_home_name || 'Home'} workspace`
         : scopeTitle
+
+  const closeMenu = useCallback(() => setMenuOpen(false), [])
+
+  useEffect(() => {
+    if (!menuOpen) return
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') closeMenu()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', onKeyDown)
+    }
+  }, [menuOpen, closeMenu])
 
   return (
     <div data-testid="mobile-os-top-bar" className="min-w-0 space-y-2">
@@ -47,7 +67,7 @@ export function MobileOsTopBar({ scopeTitle }: { scopeTitle: string }) {
           onClick={() => setMenuOpen(true)}
           className="inline-flex h-11 min-w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-800 shadow-sm"
           aria-label="Open menu"
-          data-testid="mobile-os-menu-button"
+          data-testid="mobile-menu-open"
         >
           <Menu className="h-5 w-5" aria-hidden />
         </button>
@@ -93,28 +113,42 @@ export function MobileOsTopBar({ scopeTitle }: { scopeTitle: string }) {
       ) : null}
 
       {menuOpen ? (
-        <div className="fixed inset-0 z-[60] lg:hidden" role="dialog" aria-modal="true" aria-label="Mobile menu">
+        <div
+          className="mobile-menu-overlay fixed inset-0 z-[70] lg:hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Mobile menu"
+        >
           <button
             type="button"
-            className="absolute inset-0 bg-slate-950/40"
+            className="mobile-menu-backdrop absolute inset-0 bg-slate-950/70"
             aria-label="Close menu"
-            onClick={() => setMenuOpen(false)}
+            data-testid="mobile-drawer-backdrop"
+            onClick={closeMenu}
           />
-          <div className="absolute left-0 top-0 flex h-full w-[min(100%,280px)] flex-col bg-slate-950 p-4 text-white shadow-2xl">
-            <div className="flex items-center justify-between gap-2">
+          <aside
+            data-testid="mobile-drawer"
+            className="mobile-menu-drawer absolute left-0 top-0 flex h-full max-h-[100dvh] w-[min(86vw,360px)] flex-col overflow-y-auto overscroll-contain border-r border-white/10 bg-slate-950 pt-[max(1rem,env(safe-area-inset-top))] text-white shadow-2xl"
+            style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+          >
+            <div className="flex items-center justify-between gap-2 px-4">
               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-200">IndiCare OS</p>
               <button
                 type="button"
-                onClick={() => setMenuOpen(false)}
-                className="inline-flex h-11 min-w-11 items-center justify-center rounded-xl bg-white/10"
+                onClick={closeMenu}
+                className="inline-flex h-11 min-w-11 items-center justify-center rounded-xl bg-white/10 text-white"
                 aria-label="Close menu"
+                data-testid="mobile-menu-close"
               >
                 <X className="h-5 w-5" aria-hidden />
               </button>
             </div>
-            <p className="mt-4 text-sm font-black text-white">{displayName(user)}</p>
-            <p className="text-xs font-semibold text-slate-400">{labelForRole(user?.role)}</p>
-            <nav className="mt-5 min-h-0 flex-1 space-y-1 overflow-y-auto" aria-label="Scope navigation">
+            <div className="px-4">
+              <p className="mt-4 text-sm font-black text-white">{displayName(user)}</p>
+              <p className="text-xs font-semibold text-slate-300">{labelForRole(user?.role)}</p>
+              <p className="mt-2 text-xs font-bold text-blue-200">{workspaceLabel}</p>
+            </div>
+            <nav className="mt-5 min-h-0 flex-1 space-y-1 px-3" aria-label="Scope navigation">
               {scopeNavItems.map((item) => {
                 const active = pathname === item.href || pathname.startsWith(`${item.href.split('?')[0]}/`)
                 return (
@@ -122,9 +156,10 @@ export function MobileOsTopBar({ scopeTitle }: { scopeTitle: string }) {
                     key={`${item.label}-${item.href}`}
                     href={item.href}
                     prefetch={item.prefetch ?? false}
-                    onClick={() => setMenuOpen(false)}
+                    onClick={closeMenu}
+                    data-testid={item.testId}
                     className={`flex min-h-11 items-center gap-3 rounded-2xl px-3 text-sm font-black ${
-                      active ? 'bg-white text-slate-950' : 'text-slate-300 hover:bg-white/10'
+                      active ? 'bg-white text-slate-950' : 'text-slate-100 hover:bg-white/10'
                     }`}
                   >
                     <SafeLucideIcon icon={item.icon} className="h-4 w-4 shrink-0" />
@@ -133,32 +168,42 @@ export function MobileOsTopBar({ scopeTitle }: { scopeTitle: string }) {
                 )
               })}
             </nav>
-            <Link
-              prefetch={false}
-              href={hasOsScope ? workspaceHrefForScope(scope) : '/select-scope'}
-              onClick={() => setMenuOpen(false)}
-              className="mt-3 flex min-h-11 items-center rounded-2xl bg-white/10 px-3 text-sm font-black"
-            >
-              Workspace home
-            </Link>
-            <Link
-              prefetch={false}
-              href="/profile"
-              onClick={() => setMenuOpen(false)}
-              className="mt-2 flex min-h-11 items-center rounded-2xl bg-white/10 px-3 text-sm font-black"
-            >
-              My profile
-            </Link>
-            <button
-              type="button"
-              onClick={() => void logout()}
-              data-testid="mobile-os-logout"
-              className="mt-2 flex min-h-11 w-full items-center gap-2 rounded-2xl border border-white/15 px-3 text-sm font-black"
-            >
-              <LogOut className="h-4 w-4" aria-hidden />
-              Log out
-            </button>
-          </div>
+            <div className="mt-3 space-y-2 px-3 pb-4">
+              <Link
+                prefetch={false}
+                href={hasOsScope ? workspaceHrefForScope(scope) : '/select-scope'}
+                onClick={closeMenu}
+                className="flex min-h-11 items-center rounded-2xl bg-white/10 px-3 text-sm font-black text-white"
+              >
+                Workspace home
+              </Link>
+              <Link
+                prefetch={false}
+                href="/select-scope"
+                onClick={closeMenu}
+                className="flex min-h-11 items-center rounded-2xl bg-white/10 px-3 text-sm font-black text-white"
+              >
+                Switch scope
+              </Link>
+              <Link
+                prefetch={false}
+                href="/profile"
+                onClick={closeMenu}
+                className="flex min-h-11 items-center rounded-2xl bg-white/10 px-3 text-sm font-black text-white"
+              >
+                My profile
+              </Link>
+              <button
+                type="button"
+                onClick={() => void logout()}
+                data-testid="mobile-os-logout"
+                className="flex min-h-11 w-full items-center gap-2 rounded-2xl border border-white/15 px-3 text-sm font-black text-white"
+              >
+                <LogOut className="h-4 w-4" aria-hidden />
+                Log out
+              </button>
+            </div>
+          </aside>
         </div>
       ) : null}
     </div>

@@ -90,6 +90,7 @@ export function OrbStandaloneComposer({
       onDrop={onDrop}
       data-orb-composer
       data-orb-standalone-composer
+      data-testid="orb-standalone-composer"
     >
       <div className="mx-auto w-full max-w-[var(--orb-composer-max,53.125rem)]">
         {transcriptReady && displayTranscript ? (
@@ -236,7 +237,7 @@ export function OrbStandaloneComposer({
                   }
                 }}
                 rows={1}
-                className="max-h-40 min-h-[2.75rem] flex-1 resize-none bg-transparent px-1 py-2.5 text-base leading-6 text-white outline-none placeholder:text-slate-500"
+                className="max-h-40 min-h-[2.75rem] flex-1 resize-none bg-transparent px-1 py-2.5 text-base leading-6 text-white outline-none placeholder:text-slate-500 [touch-action:manipulation]"
                 placeholder="Message ORB…"
                 disabled={pending}
                 aria-describedby="orb-standalone-status"
@@ -261,15 +262,16 @@ export function OrbStandaloneComposer({
                 onClick={() => onSubmit()}
                 className="inline-flex h-10 min-w-10 shrink-0 items-center justify-center rounded-full bg-white text-slate-950 transition hover:bg-slate-100 disabled:opacity-35"
                 data-orb-composer-send
+                data-testid="orb-standalone-send-button"
               >
                 <Send className="h-5 w-5" />
               </button>
             </div>
           </div>
 
-          <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2 px-2">
+          <div className="orb-voice-status-slot mt-1.5 flex min-h-[1.25rem] flex-wrap items-center justify-between gap-2 px-2">
             <p id="orb-standalone-status" className="text-[11px] leading-5 text-slate-500" role="status" data-orb-voice-status>
-              {voiceStatusText}
+              {voiceStatusText || '\u00a0'}
             </p>
             <span className="sr-only">Mode: {mode}</span>
           </div>

@@ -47,7 +47,7 @@ export default async function HomeWorkspacePage({ params }: { params: Promise<{ 
   const routes = HOME_WORKSPACE_WORKFLOW_HREFS(homeId)
 
   return (
-    <div data-testid="home-workspace-page" className="mobile-home-workspace space-y-5 md:space-y-6">
+    <div data-testid="home-workspace-page" className="mobile-home-workspace home-workspace-mobile-actions space-y-5 md:space-y-6">
       <header
         className="home-workspace-hero-mobile-compact rounded-[24px] border border-white/80 bg-white p-5 shadow-lg shadow-slate-950/5 md:rounded-[32px] md:p-8 md:shadow-xl"
         data-testid="home-workspace-hero"
@@ -63,13 +63,13 @@ export default async function HomeWorkspacePage({ params }: { params: Promise<{ 
         </div>
       </header>
 
-      <div className="flex flex-wrap xl:hidden" data-testid="home-workspace-mobile-ask-orb">
+      <div className="flex flex-wrap xl:hidden" data-testid="home-workspace-mobile-actions">
         <OperationalOrbRail
           scopeType="home"
           homeId={homeId}
           homeName={homeName}
           compact
-          testId="home-workspace-mobile-orb-button"
+          testId="mobile-home-orb-button"
         />
       </div>
 
@@ -86,7 +86,17 @@ export default async function HomeWorkspacePage({ params }: { params: Promise<{ 
                     key={key}
                     prefetch={false}
                     href={routes[key]}
-                    data-testid={`home-workspace-${key}`}
+                    data-testid={
+                      key === 'dailyBrief'
+                        ? 'mobile-home-daily-brief-button'
+                        : key === 'handover'
+                          ? 'mobile-home-handover-button'
+                          : key === 'recordingReviews'
+                            ? 'mobile-home-reviews-button'
+                            : key === 'recordingAlerts'
+                              ? 'mobile-home-alerts-button'
+                              : `home-workspace-${key}`
+                    }
                     className="rounded-[20px] border border-slate-200 bg-white p-4 text-sm font-black text-slate-950 shadow-sm transition hover:border-blue-200 hover:bg-blue-50"
                   >
                     {LINK_LABELS[key] || key}

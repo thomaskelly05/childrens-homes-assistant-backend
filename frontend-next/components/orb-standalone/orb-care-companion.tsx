@@ -382,12 +382,24 @@ export function OrbCareCompanion() {
 
   useEffect(() => {
     const display = voice.displayTranscript
-    if (display) setInput(display)
-  }, [voice.displayTranscript])
+    const transcriptReady = voice.phase === 'transcript_ready'
+    if (!display || (!voice.listening && !transcriptReady)) return
+    setInput(display)
+  }, [voice.displayTranscript, voice.listening, voice.phase])
 
+  const scrolledMessageCountRef = useRef(0)
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
-  }, [visibleMessages, pending])
+    const count = visibleMessages.length
+    const shouldScroll = pending || count !== scrolledMessageCountRef.current
+    if (!shouldScroll) return
+    scrolledMessageCountRef.current = count
+    const reducedMotion =
+      typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    messagesEndRef.current?.scrollIntoView({
+      behavior: reducedMotion ? 'auto' : 'smooth',
+      block: 'end'
+    })
+  }, [visibleMessages.length, pending])
 
   useEffect(() => {
     return () => {

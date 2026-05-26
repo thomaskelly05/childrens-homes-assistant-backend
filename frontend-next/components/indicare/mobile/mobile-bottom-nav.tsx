@@ -87,8 +87,15 @@ export function MobileBottomNav() {
 
   return (
     <nav
-      data-testid="mobile-bottom-nav"
-      className="mobile-bottom-nav fixed inset-x-0 bottom-0 z-50 border-t border-white/70 bg-white/90 backdrop-blur-xl lg:hidden"
+      data-testid={
+        scope.scope_type === 'child'
+          ? 'mobile-child-bottom-nav'
+          : scope.scope_type === 'home'
+            ? 'mobile-home-bottom-nav'
+            : 'mobile-bottom-nav'
+      }
+      data-mobile-bottom-nav-safe-area="true"
+      className="mobile-bottom-nav pointer-events-auto fixed inset-x-0 bottom-0 z-50 max-h-[calc(4.5rem+env(safe-area-inset-bottom))] border-t border-white/70 bg-white/90 backdrop-blur-xl lg:hidden"
       style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
       aria-label="Primary mobile navigation"
     >

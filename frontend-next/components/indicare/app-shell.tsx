@@ -16,7 +16,11 @@ import { QuickActionButton } from '@/components/child-journey/quick-action-butto
 import { MobileBottomNav } from '@/components/indicare/mobile/mobile-bottom-nav'
 import { MobileOsTopBar } from '@/components/indicare/mobile/mobile-os-top-bar'
 import { MobileScopeHeader } from '@/components/indicare/mobile/mobile-scope-header'
-import { mobileWorkspaceBottomPaddingClass } from '@/lib/navigation/mobile-shell'
+import {
+  childWorkspaceMobileTabs,
+  homeWorkspaceMobileTabs,
+  mobileWorkspaceBottomPaddingClass
+} from '@/lib/navigation/mobile-shell'
 import { useOsScope } from '@/components/indicare/scope/os-scope-provider'
 import { ContextualOrbPanel } from '@/components/indicare/operational/contextual-orb-panel'
 import { OperationalAlertsPanel } from '@/components/indicare/operational/operational-alerts-panel'
@@ -249,10 +253,12 @@ export function AppShell({ children }: { children: ReactNode }) {
   const primaryNav = useScopeMenu ? [] : visibleNavItems.filter((item) => selectedId || !item.requiresChild)
   const secondaryNav =
     scope.scope_type === 'child' && scope.selected_child_id
-      ? childWorkspaceNavigation.map((item) => ({ label: item.label, href: item.href(String(scope.selected_child_id)) }))
-      : selectedId
-        ? childWorkspaceNavigation.map((item) => ({ label: item.label, href: item.href(selectedId) }))
-        : []
+      ? childWorkspaceMobileTabs(scope.selected_child_id)
+      : scope.scope_type === 'home' && scope.selected_home_id
+        ? homeWorkspaceMobileTabs(scope.selected_home_id)
+        : selectedId
+          ? childWorkspaceMobileTabs(selectedId)
+          : []
   const safeScopeNavItems = useScopeMenu
     ? scopeNavItems.filter((item) => item.href && !item.href.includes('undefined') && !item.href.includes('null'))
     : noScopeNavigation()
@@ -365,7 +371,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <header className="sticky top-0 z-40 border-b border-white/80 bg-[#f8fafc]/90 px-3 py-3 backdrop-blur-xl md:px-6">
             <div className="lg:hidden">
               <MobileOsTopBar scopeTitle={pageTitle} />
-              {activeChild && childDomainActive && secondaryNav.length ? (
+              {hasOsScope && secondaryNav.length ? (
                 <div className="mt-2">
                   <MobileScopeHeader items={secondaryNav} />
                 </div>
