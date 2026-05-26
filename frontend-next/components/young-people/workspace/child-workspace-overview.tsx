@@ -14,6 +14,7 @@ import { ChildSupportCard } from './child-support-card'
 import { ChildTodayCard } from './child-today-card'
 import { ChildVoiceCard } from './child-voice-card'
 import { ChildWhatMattersCard } from './child-what-matters-card'
+import { ChildLifecycleCard } from './child-lifecycle-card'
 import { ChildWorkspaceOrbRail } from './child-workspace-orb-rail'
 
 export function ChildWorkspaceOverview({
@@ -45,6 +46,7 @@ export function ChildWorkspaceOverview({
             <ChildPlansDocumentsCard view={view} />
             <ChildVoiceCard view={view} />
             <ChildActionsReviewCard view={view} />
+            <ChildLifecycleCard view={view} />
           </section>
 
           <Card>

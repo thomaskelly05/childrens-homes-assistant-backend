@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
+import { ChildStoryTimeline } from '@/components/young-people/chronology/child-story-timeline'
 import { ChronologyFoundation } from '@/components/indicare/chronology-foundation'
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
 import { EmptyState, PageHeader, StatCard } from '@/components/indicare/ui'
@@ -36,6 +37,13 @@ export default async function YoungPersonChronologyPage({
         <StatCard label="Safeguarding" value={getSafeguardingChronology(events).length} />
         <StatCard label="Evidence linked" value={events.filter((event) => event.evidenceIds.length).length} />
         <StatCard label="Actions linked" value={events.filter((event) => event.actionIds.length).length} />
+      </section>
+      <section data-testid="child-chronology-story-section" className="rounded-[28px] border border-sky-100 bg-white p-6">
+        <h2 className="text-lg font-black text-slate-950">Story chronology (signed-off)</h2>
+        <p className="mt-2 text-sm text-slate-600">Child-centred timeline from the formal archive — safe summaries only.</p>
+        <div className="mt-4">
+          <ChildStoryTimeline childId={id} />
+        </div>
       </section>
       {events.length ? (
         <ChronologyFoundation events={events} initialYoungPersonId={id} initialView={query.filter || query.source} />

@@ -19,7 +19,17 @@ def test_home_workspace_uses_scope_route_helpers():
 
 def test_home_workspace_links_are_scoped():
     text = HOME_PAGE.read_text(encoding="utf-8")
-    for key in ("dailyBrief", "handover", "recordingAlerts", "recordingReviews", "inspectionReadiness", "reg45"):
+    for key in (
+        "dailyBrief",
+        "handover",
+        "recordingAlerts",
+        "recordingReviews",
+        "inspectionReadiness",
+        "reg45",
+        "archiveSummary",
+        "planImpactReview",
+        "lifeechoPending",
+    ):
         assert key in text, f"Missing section key {key}"
     assert "home-workspace-${key}" in text or 'home-workspace-${key}' in text
     assert "getGovernanceCommandCentre" not in text

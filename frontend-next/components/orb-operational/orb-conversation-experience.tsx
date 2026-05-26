@@ -64,7 +64,12 @@ const operationalModes: Array<{ mode: OrbOperationalMode; label: string; prompt:
   { mode: 'action_priority', label: 'Actions', prompt: 'What actions should I prioritise this week?' },
   { mode: 'staff_support', label: 'Staff Support', prompt: 'Prepare supervision points for this staff member.' },
   { mode: 'child_journey_summary', label: 'Child Journey', prompt: "Summarise this child's last 7 days." },
-  { mode: 'governance_briefing', label: 'Governance', prompt: 'Create a Reg 45 improvement briefing outline.' }
+  { mode: 'governance_briefing', label: 'Governance', prompt: 'Create a Reg 45 improvement briefing outline.' },
+  { mode: 'chronology_story_review', label: 'Chronology story', prompt: 'Help me review this child story timeline safely.' },
+  { mode: 'archive_summary', label: 'Archive summary', prompt: 'Summarise signed-off archive themes for this home.' },
+  { mode: 'lifeecho_memory_support', label: 'LifeEcho', prompt: 'Suggest child-centred memories from positive records.' },
+  { mode: 'plan_impact_review', label: 'Plan impacts', prompt: 'What plan updates need adult review for this child?' },
+  { mode: 'document_target_extraction', label: 'Document targets', prompt: 'What targets should adults review from statutory documents?' }
 ]
 
 function mapOperationalResponse(response: OrbOperationalResponse): OrbConversationResponse {

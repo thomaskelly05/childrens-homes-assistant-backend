@@ -58,6 +58,9 @@ class RecordingSubmissionResponse(BaseModel):
     formal_record_type: str | None = None
     linked_record_id: str | None = None
     linked_chronology_id: str | None = None
+    linked_archive_record_id: str | None = None
+    linked_plan_impact_ids: list[str] = Field(default_factory=list)
+    lifeecho_suggestion_ids: list[str] = Field(default_factory=list)
     target_status: RecordingSubmissionTargetStatus = "unsupported"
     review_required: bool = False
     safeguarding_review_required: bool = False

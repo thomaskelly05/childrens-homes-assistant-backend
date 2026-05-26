@@ -11,7 +11,8 @@ const HOME_SECTIONS: Array<{ title: string; keys: Array<keyof ReturnType<typeof 
   { title: 'Today in the home', keys: ['dailyBrief', 'handover', 'staffOnShift', 'notifications'] },
   { title: 'Recording', keys: ['recordingAlerts', 'recordingReviews'] },
   { title: 'Safeguarding and workforce', keys: ['safeguarding', 'workforce', 'staffProfiles', 'actions'] },
-  { title: 'Inspection and reports', keys: ['inspectionReadiness', 'sccif', 'reg44', 'reg45', 'reports'] }
+  { title: 'Inspection and reports', keys: ['inspectionReadiness', 'sccif', 'reg44', 'reg45', 'reports'] },
+  { title: 'Archive and lifecycle', keys: ['archiveSummary', 'planImpactReview', 'lifeechoPending'] }
 ]
 
 const LINK_LABELS: Record<string, string> = {
@@ -29,7 +30,10 @@ const LINK_LABELS: Record<string, string> = {
   sccif: 'SCCIF alignment',
   reg44: 'Reg 44',
   reg45: 'Reg 45',
-  reports: 'Reports'
+  reports: 'Reports',
+  archiveSummary: 'Archive this month',
+  planImpactReview: 'Plan impacts to review',
+  lifeechoPending: 'LifeEcho suggestions'
 }
 
 export default async function HomeWorkspacePage({ params }: { params: Promise<{ id: string }> }) {
