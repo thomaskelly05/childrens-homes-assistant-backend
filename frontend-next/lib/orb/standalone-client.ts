@@ -1,4 +1,11 @@
-import { authFetch, AuthApiError } from '@/lib/auth/api'
+import {
+  applyCsrfHeaders,
+  authFetch,
+  authFetchResponse,
+  AuthApiError,
+  getCsrfToken,
+  STANDALONE_ORB_CSRF_REFRESH_MESSAGE
+} from '@/lib/auth/api'
 
 const STANDALONE_REQUEST_TIMEOUT_MS = 45_000
 
@@ -254,25 +261,54 @@ export async function queryStandaloneOrbConversation(
   const requestSignal = withTimeout(signal)
 
   try {
-    const payload = await authFetch<StandaloneOrbConversationResponse & { success?: boolean; data?: { answer?: string } }>(
-      endpoint,
-      {
-        method: 'POST',
-        signal: requestSignal,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: request.message,
-          mode: request.mode,
-          conversation_id: request.conversation_id,
-          history: request.history ?? [],
-          ...(request.detail ? { detail: request.detail } : {}),
-          ...(request.images?.length ? { images: request.images } : {}),
-          ...(request.document_text ? { document_text: request.document_text } : {}),
-          ...(request.document_source_id ? { document_source_id: request.document_source_id } : {}),
-          ...(request.document_title ? { document_title: request.document_title } : {})
+    const body = JSON.stringify({
+      message: request.message,
+      mode: request.mode,
+      conversation_id: request.conversation_id,
+      history: request.history ?? [],
+      ...(request.detail ? { detail: request.detail } : {}),
+      ...(request.images?.length ? { images: request.images } : {}),
+      ...(request.document_text ? { document_text: request.document_text } : {}),
+      ...(request.document_source_id ? { document_source_id: request.document_source_id } : {}),
+      ...(request.document_title ? { document_title: request.document_title } : {})
+    })
+    const headers = new Headers({ 'Content-Type': 'application/json' })
+    applyCsrfHeaders(headers, 'POST')
+    if (!headers.has('X-CSRF-Token') && !getCsrfToken()) {
+      throw new AuthApiError(403, {
+        code: 'csrf_failed',
+        message: STANDALONE_ORB_CSRF_REFRESH_MESSAGE
+      })
+    }
+    const response = await authFetchResponse(endpoint, {
+      method: 'POST',
+      signal: requestSignal,
+      headers,
+      body,
+      credentials: 'include'
+    })
+    const payload = (await response.json().catch(() => undefined)) as
+      | (StandaloneOrbConversationResponse & { success?: boolean; data?: { answer?: string } })
+      | undefined
+    if (!response.ok) {
+      const record = payload && typeof payload === 'object' ? (payload as Record<string, unknown>) : null
+      if (record?.detail === 'csrf_failed') {
+        throw new AuthApiError(403, {
+          code: 'csrf_failed',
+          message:
+            typeof record.message === 'string' ? record.message : STANDALONE_ORB_CSRF_REFRESH_MESSAGE
         })
       }
-    )
+      throw new AuthApiError(
+        response.status,
+        typeof record?.message === 'string'
+          ? { code: String(record.code || 'request_failed'), message: record.message }
+          : 'ORB could not finish that response. Please try again.'
+      )
+    }
+    if (!payload) {
+      throw new AuthApiError(503, 'ORB could not finish that response. Please try again.')
+    }
 
     const answer = extractAnswer(payload)
     logStandaloneDebug('conversation_response', {
@@ -1055,8 +1091,17 @@ export async function fetchStandaloneOrbSurfaceRoute(
 
 export const STANDALONE_ORB_SEND_RETRY_MESSAGE = 'ORB could not send that message. Please retry.'
 
+export function isStandaloneOrbCsrfError(error: unknown) {
+  if (!(error instanceof AuthApiError) || error.status !== 403) return false
+  const code = (error.code || '').toLowerCase()
+  return code === 'csrf_failed' || code === 'csrf_invalid' || /csrf/i.test(error.message)
+}
+
 export function standaloneOrbErrorMessage(error: unknown) {
   if (error instanceof AuthApiError) {
+    if (isStandaloneOrbCsrfError(error)) {
+      return STANDALONE_ORB_CSRF_REFRESH_MESSAGE
+    }
     if (error.status === 504) return STANDALONE_ORB_SEND_RETRY_MESSAGE
     if (error.status === 503) {
       return error.message || STANDALONE_ORB_SEND_RETRY_MESSAGE

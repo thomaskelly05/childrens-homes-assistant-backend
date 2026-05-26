@@ -360,6 +360,18 @@ def _read(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
+def test_standalone_orb_surface_route_helper():
+    text = _read(REPO_ROOT / "frontend-next" / "lib" / "orb" / "product-mode.ts")
+    assert "isStandaloneOrbSurfaceRoute" in text
+    assert "pathname === '/orb'" in text
+
+
+def test_os_app_providers_skip_standalone_orb():
+    text = _read(REPO_ROOT / "frontend-next" / "components" / "indicare" / "scope" / "os-app-providers.tsx")
+    assert "isStandaloneOrbSurfaceRoute" in text
+    assert "return <>{children}</>" in text
+
+
 def test_orb_page_has_no_operational_coupling():
     sources = _read(ORB_PAGE) + _read(ORB_COMPANION)
     for marker in FORBIDDEN_ORB_PAGE_MARKERS:

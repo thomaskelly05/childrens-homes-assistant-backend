@@ -27,6 +27,12 @@ export function boundaryForOrbProductMode(productMode: OrbProductMode): OrbProdu
   }
 }
 
+/** Standalone ORB Care Companion surface at `/orb` (no OS scope or records). */
+export function isStandaloneOrbSurfaceRoute(pathname: string | null | undefined) {
+  return Boolean(pathname === '/orb' || pathname?.startsWith('/orb/'))
+}
+
+/** Legacy assistant shell routes (separate from `/orb` standalone surface). */
 export function isStandaloneOrbRoute(pathname: string | null | undefined) {
   return Boolean(pathname === '/assistant' || pathname?.startsWith('/assistant/'))
 }

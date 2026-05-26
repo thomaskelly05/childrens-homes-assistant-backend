@@ -49,7 +49,9 @@ import {
   standaloneOrbAccessibilityClassNames,
   type StandaloneOrbAccessibilityPreferences
 } from '@/lib/orb/standalone-accessibility'
+import { useAuth } from '@/contexts/auth-context'
 import { useMounted } from '@/hooks/use-mounted'
+import { STANDALONE_ORB_CSRF_REFRESH_MESSAGE } from '@/lib/auth/api'
 import { standaloneOsBoundaryReply } from '@/lib/orb/standalone-os-boundary'
 import { useStandaloneOrbVoice, type StandaloneOrbAnswerStyle } from '@/components/orb-standalone/use-standalone-orb-voice'
 import {
@@ -233,6 +235,7 @@ function patchActiveChat(workspace: StandaloneWorkspace, chatId: string, patch: 
 }
 
 export function OrbCareCompanion() {
+  const { csrfReady, refreshSession } = useAuth()
   const mounted = useMounted()
   const searchParams = useSearchParams()
   const initialQuery = mounted ? searchParams.get('q')?.trim() || '' : ''
@@ -432,6 +435,11 @@ export function OrbCareCompanion() {
       const trimmed = text.trim()
       const hasImages = attachments.length > 0
       if ((!trimmed && !hasImages) || pending || sendInFlightRef.current || submitGuardRef.current) return
+      if (!csrfReady) {
+        setError(STANDALONE_ORB_CSRF_REFRESH_MESSAGE)
+        void refreshSession()
+        return
+      }
 
       const contentKey = (trimmed || '[Image attachment]').trim().toLowerCase()
       const guardChatId = options?.chatId || workspace.activeChatId || 'new'
@@ -635,7 +643,9 @@ export function OrbCareCompanion() {
       attachments,
       attachedProfiles,
       mode,
+      csrfReady,
       pending,
+      refreshSession,
       voice,
       voiceSettings.answerStyle,
       voiceSettings.voiceReplies,
@@ -649,6 +659,11 @@ export function OrbCareCompanion() {
     (event?: FormEvent<HTMLFormElement> | { preventDefault?: () => void }) => {
       event?.preventDefault?.()
       if (submitGuardRef.current || pending || sendInFlightRef.current) return
+      if (!csrfReady) {
+        setError(STANDALONE_ORB_CSRF_REFRESH_MESSAGE)
+        void refreshSession()
+        return
+      }
 
       let formText = ''
       if (event && 'currentTarget' in event && event.currentTarget) {
@@ -666,7 +681,7 @@ export function OrbCareCompanion() {
         submitGuardRef.current = false
       })
     },
-    [attachments.length, message, pending, sendMessage]
+    [attachments.length, csrfReady, message, pending, refreshSession, sendMessage]
   )
 
   /** Mic is text-first on /orb; barge-in voice controls ship in the future ORB Voice surface. */

@@ -14,10 +14,25 @@ export class AuthApiError extends Error {
 }
 
 function detailFromPayload(payload: unknown): AuthErrorDetail | string {
-  if (payload && typeof payload === 'object' && 'detail' in payload) {
-    const detail = (payload as { detail?: unknown }).detail
-    if (detail && typeof detail === 'object') return detail as AuthErrorDetail
-    if (typeof detail === 'string') return detail
+  if (payload && typeof payload === 'object') {
+    const record = payload as Record<string, unknown>
+    if (record.detail === 'csrf_failed' && typeof record.message === 'string') {
+      return { code: 'csrf_failed', message: record.message }
+    }
+    if ('detail' in record) {
+      const detail = record.detail
+      if (detail && typeof detail === 'object') {
+        const structured = detail as AuthErrorDetail
+        if (structured.code === 'csrf_invalid') {
+          return {
+            code: 'csrf_invalid',
+            message: structured.message || STANDALONE_ORB_CSRF_REFRESH_MESSAGE
+          }
+        }
+        return structured
+      }
+      if (typeof detail === 'string') return detail
+    }
   }
   if (payload && typeof payload === 'object' && 'error' in payload) {
     const error = (payload as { error?: { code?: string; message?: string } }).error
@@ -36,13 +51,24 @@ function assertRelativeApiPath(path: string) {
   }
 }
 
+const CSRF_COOKIE_PATTERN = /(?:^|;\s*)(?:__Host-indicare_csrf|indicare_csrf)=([^;]*)/
+
+export const STANDALONE_ORB_CSRF_REFRESH_MESSAGE =
+  'Your session security check failed. Please refresh and try again.'
+
 export function getCsrfToken() {
   if (typeof document === 'undefined') return ''
-  const cookie = document.cookie
-    .split(';')
-    .map((part) => part.trim())
-    .find((part) => part.startsWith('indicare_csrf=') || part.startsWith('__Host-indicare_csrf='))
-  return cookie ? decodeURIComponent(cookie.split('=').slice(1).join('=')) : ''
+  const match = document.cookie.match(CSRF_COOKIE_PATTERN)
+  return match?.[1] ? decodeURIComponent(match[1]) : ''
+}
+
+export function applyCsrfHeaders(headers: Headers, method: string) {
+  const normalized = method.toUpperCase()
+  if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(normalized)) return
+  const csrfToken = getCsrfToken()
+  if (csrfToken) {
+    headers.set('X-CSRF-Token', csrfToken)
+  }
 }
 
 export function isAuthFailureStatus(status: number) {
@@ -64,15 +90,12 @@ export function isTemporaryUnavailableError(error: unknown) {
 export async function authFetchResponse(path: string, init: RequestInit = {}): Promise<Response> {
   assertRelativeApiPath(path)
   const method = (init.method || 'GET').toUpperCase()
-  const csrfToken = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method) ? getCsrfToken() : ''
   const headers = new Headers(init.headers)
   const isFormData = typeof FormData !== 'undefined' && init.body instanceof FormData
   if (!isFormData && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json')
   }
-  if (csrfToken) {
-    headers.set('X-CSRF-Token', csrfToken)
-  }
+  applyCsrfHeaders(headers, method)
 
   return fetch(path, {
     ...init,

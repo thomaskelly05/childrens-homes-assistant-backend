@@ -12,6 +12,9 @@ def test_frontend_calls_standalone_conversation_endpoint():
     text = CLIENT.read_text(encoding="utf-8")
     assert "STANDALONE_ORB_API_PATHS.conversation" in text
     assert 'conversation: \'/orb/standalone/conversation\'' in text
+    assert "applyCsrfHeaders" in text
+    assert "authFetchResponse" in text
+    assert "credentials: 'include'" in text
     assert "/api/assistant/orb/operational" not in text
     assert "/api/orb/conversation" not in text
 
