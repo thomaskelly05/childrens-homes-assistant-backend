@@ -43,3 +43,9 @@ def test_operational_prompts_use_assistant_orb():
     text = _read()
     assert "/assistant/orb" in text
     assert "draft" not in text.lower() or "draft bodies" in text.lower()
+
+
+def test_assistant_orb_excludes_floating_orb():
+    text = _read()
+    assert "pathname === '/assistant/orb'" in text or "pathname.startsWith('/assistant/orb')" in text
+    assert "shouldShowFloatingOrb" in text

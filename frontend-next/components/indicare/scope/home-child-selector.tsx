@@ -21,11 +21,12 @@ function SelectorSkeleton() {
 
 export function HomeChildSelector() {
   const router = useRouter()
-  const { scope, applyScopeSelection, loading, error } = useOsScope()
+  const { scope, applyScopeSelection, loading: scopeLoading, error } = useOsScope()
   const [options, setOptions] = useState(scope)
   const [pickerHomeId, setPickerHomeId] = useState<number | null>(null)
   const [busy, setBusy] = useState(false)
   const [optionsLoading, setOptionsLoading] = useState(true)
+  const scopeBusy = scopeLoading && optionsLoading
   const [localError, setLocalError] = useState<string | null>(null)
   const [openingChildId, setOpeningChildId] = useState<number | null>(null)
   const [navigateTimedOut, setNavigateTimedOut] = useState(false)
@@ -208,7 +209,7 @@ export function HomeChildSelector() {
               <div key={home.id} className="flex flex-col gap-2">
                 <button
                   type="button"
-                  disabled={busy || loading}
+                  disabled={busy || scopeBusy}
                   onClick={() => void chooseHome(home.id, home.name)}
                   className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-left transition hover:border-blue-200 hover:bg-blue-50 disabled:opacity-60"
                 >
@@ -218,7 +219,7 @@ export function HomeChildSelector() {
                 <button
                   type="button"
                   className="text-xs font-black uppercase tracking-[0.14em] text-blue-700"
-                  disabled={busy || loading}
+                  disabled={busy || scopeBusy}
                   onClick={() => void previewHomeChildren(home.id)}
                 >
                   Show children in this home
@@ -245,7 +246,7 @@ export function HomeChildSelector() {
           <div className="mt-4 flex flex-wrap gap-3">
             <button
               type="button"
-              disabled={busy || loading}
+              disabled={busy || scopeBusy}
               onClick={() => void chooseHome(activeHomeId, activeHomeName ?? `Home ${activeHomeId}`)}
               className="rounded-xl bg-blue-700 px-4 py-2 text-xs font-black uppercase tracking-[0.14em] text-white disabled:opacity-60"
             >
@@ -278,7 +279,7 @@ export function HomeChildSelector() {
               <button
                 key={child.id}
                 type="button"
-                disabled={busy || loading || !activeHomeId || openingChildId === child.id}
+                disabled={busy || scopeBusy || !activeHomeId || openingChildId === child.id}
                 data-testid={`select-scope-child-${child.id}`}
                 onClick={() => void chooseChild(child.id, child.name, child.home_id ?? activeHomeId)}
                 className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-left transition hover:border-blue-200 hover:bg-blue-50 disabled:opacity-60"

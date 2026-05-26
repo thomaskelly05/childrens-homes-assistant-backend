@@ -108,6 +108,9 @@ export function shouldShowOrbRail(pathname: string, scope?: OrbPresenceScope): b
 export function shouldShowFloatingOrb(pathname: string, scope?: OrbPresenceScope): boolean {
   void scope
   if (pathname === '/orb' || pathname.startsWith('/orb/')) return false
+  if (pathname === '/assistant/orb' || pathname.startsWith('/assistant/orb/')) return false
+  if (pathname === '/select-scope' || pathname.startsWith('/select-scope/')) return false
+  if (pathname === '/login' || pathname.startsWith('/login/')) return false
   if (isRecordingEditorPathStrict(pathname)) return false
   if (shouldShowOrbRail(pathname, scope)) return false
   return true

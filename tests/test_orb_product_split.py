@@ -158,7 +158,8 @@ RELIABILITY_MARKERS = [
     "Retry",
     "retryPayload",
     "standaloneOrbErrorMessage",
-    "ORB could not finish that response",
+    "ORB could not send that message. Please retry.",
+    "STANDALONE_ORB_SEND_RETRY_MESSAGE",
 ]
 
 MEDIA_STREAM_CLEANUP_MARKERS = [

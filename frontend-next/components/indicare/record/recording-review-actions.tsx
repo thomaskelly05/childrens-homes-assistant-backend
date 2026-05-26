@@ -20,6 +20,7 @@ export function RecordingReviewActions({
 }) {
   const [comments, setComments] = useState('')
   const [busy, setBusy] = useState(false)
+  const [actionError, setActionError] = useState<string | null>(null)
   const [lastResult, setLastResult] = useState<RecordingReviewActionResult | null>(null)
   const draftId = detail.draft.id
   const childId = detail.draft.child_id != null ? String(detail.draft.child_id) : undefined
@@ -29,14 +30,25 @@ export function RecordingReviewActions({
 
   const runAction = async (payload: RecordingReviewActionPayload) => {
     setBusy(true)
-    const result = await applyRecordingReviewAction(draftId, {
-      ...payload,
-      comments: comments.trim() || payload.comments
-    })
-    setBusy(false)
-    if (result.ok) {
-      setLastResult(result.data)
-      onActionComplete?.(result.data)
+    setActionError(null)
+    try {
+      const result = await applyRecordingReviewAction(draftId, {
+        ...payload,
+        comments: comments.trim() || payload.comments
+      })
+      if (result.ok) {
+        setLastResult(result.data)
+        onActionComplete?.(result.data)
+      } else {
+        setActionError(result.error || 'Review action could not complete. Please retry.')
+      }
+    } catch (caught) {
+      setActionError(caught instanceof Error ? caught.message : 'Review action could not complete. Please retry.')
+      if (process.env.NODE_ENV === 'development') {
+        console.error('[recording-review]', caught)
+      }
+    } finally {
+      setBusy(false)
     }
   }
 
@@ -57,6 +69,12 @@ export function RecordingReviewActions({
           placeholder="Comments for the creator and audit trail"
         />
       </label>
+
+      {actionError ? (
+        <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-900" role="alert" data-testid="recording-review-action-error">
+          {actionError}
+        </p>
+      ) : null}
 
       <div className="mt-4 flex flex-wrap gap-2">
         <button

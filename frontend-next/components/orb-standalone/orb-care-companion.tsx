@@ -1326,7 +1326,11 @@ export function OrbCareCompanion() {
                       </p>
                     ) : null}
                     {error ? (
-                      <div className="rounded-xl border border-amber-300/25 bg-amber-400/10 px-4 py-3 text-sm text-amber-50" role="alert">
+                      <div
+                        className="rounded-xl border border-amber-300/25 bg-amber-400/10 px-4 py-3 text-sm text-amber-50"
+                        role="alert"
+                        data-testid="orb-standalone-send-error"
+                      >
                         <p>{error}</p>
                         {retryPayload ? (
                           <button

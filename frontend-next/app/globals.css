@@ -484,6 +484,15 @@ textarea:focus-visible {
   animation: orb-side-presence calc(var(--orb-motion-speed) * 1.2) ease-in-out infinite;
 }
 
+/* Decorative full-viewport ORB layers must never capture clicks. */
+.orb-overlay-shell {
+  pointer-events: none;
+}
+
+.orb-overlay-interactive {
+  pointer-events: auto;
+}
+
 .orb-screen-edge-pulse {
   pointer-events: none;
   position: fixed;
