@@ -138,6 +138,10 @@ export type ChildWorkspaceOverviewViewModel = {
     orbOfstedEvidence: string
   }
   quickActions: ChildWorkspaceQuickAction[]
+  storyActions: ChildWorkspaceQuickAction[]
+  planActions: ChildWorkspaceQuickAction[]
+  oversightActions: ChildWorkspaceQuickAction[]
+  moreActions: ChildWorkspaceQuickAction[]
   evidenceActions: ChildWorkspaceQuickAction[]
 }
 
@@ -434,28 +438,47 @@ export function normaliseChildWorkspaceOverview(input: ChildWorkspaceNormaliserI
     warnings: [],
     routes,
     quickActions: [
-      { label: 'Record something', href: childRecordHref(childId), testId: 'child-quick-record' },
-      { label: 'Daily note', href: routes.recordDailyNote, testId: 'child-quick-daily-note' },
-      { label: 'Incident', href: routes.recordIncident, testId: 'child-quick-incident' },
-      { label: 'Safeguarding concern', href: routes.recordSafeguarding, testId: 'child-quick-safeguarding' },
-      { label: 'Keywork', href: routes.recordKeywork, testId: 'child-quick-keywork' },
-      { label: 'Family time', href: routes.recordFamilyTime, testId: 'child-quick-family-time' },
-      { label: 'Education note', href: routes.recordEducation, testId: 'child-quick-education' },
-      { label: 'Health / medication', href: routes.recordHealth, testId: 'child-quick-health' },
-      { label: 'Behaviour support', href: childBehaviourSupportHref(childId), testId: 'child-quick-behaviour' },
-      { label: 'Missing episode', href: childMissingEpisodeHref(childId), testId: 'child-quick-missing' },
-      { label: 'Chronology', href: routes.chronology, testId: 'child-quick-chronology' },
-      { label: 'Archive', href: routes.archive, testId: 'child-quick-archive' },
-      { label: 'LifeEcho', href: routes.lifeecho, testId: 'child-quick-lifeecho' },
-      { label: 'Plan impacts', href: routes.planImpacts, testId: 'child-quick-plan-impacts' },
-      { label: 'Actions', href: routes.actions, testId: 'child-quick-actions' },
-      { label: 'Documents / plans', href: routes.documents, testId: 'child-quick-documents' },
-      { label: 'Handover', href: childHandoverHref(childId), testId: 'child-quick-handover' },
-      { label: 'Recording review', href: childReviewsHref(childId), testId: 'child-quick-reviews' },
-      { label: 'Alerts', href: childAlertsHref(childId), testId: 'child-quick-alerts' },
-      { label: 'Child voice', href: childVoiceHref(childId), testId: 'child-quick-voice' },
-      { label: 'Care planning', href: childCarePlanningHref(childId), testId: 'child-quick-care-planning' },
+      { label: 'Record', href: childRecordHref(childId), testId: 'child-quick-record' },
       { label: 'Ask ORB', href: routes.orbRecordQuality, testId: 'child-quick-orb' }
+    ],
+    storyActions: [
+      { label: 'Chronology', href: routes.chronology, testId: 'child-story-chronology' },
+      { label: 'Archive', href: routes.archive, testId: 'child-story-archive' },
+      { label: 'LifeEcho', href: routes.lifeecho, testId: 'child-story-lifeecho' },
+      { label: 'Child voice', href: childVoiceHref(childId), testId: 'child-story-voice' },
+      { label: 'Documents', href: routes.documents, testId: 'child-story-documents' }
+    ],
+    planActions: [
+      { label: 'Care planning', href: childCarePlanningHref(childId), testId: 'child-plan-care' },
+      { label: 'Plan impacts', href: routes.planImpacts, testId: 'child-plan-impacts' },
+      { label: 'Education', href: routes.recordEducation, testId: 'child-plan-education' },
+      { label: 'Health', href: routes.recordHealth, testId: 'child-plan-health' },
+      { label: 'Family time', href: routes.recordFamilyTime, testId: 'child-plan-family' }
+    ],
+    oversightActions: [
+      { label: 'Reviews', href: childReviewsHref(childId), testId: 'child-oversight-reviews' },
+      { label: 'Alerts', href: childAlertsHref(childId), testId: 'child-oversight-alerts' },
+      { label: 'Safeguarding', href: routes.recordSafeguarding, testId: 'child-oversight-safeguarding' },
+      { label: 'Actions', href: routes.actions, testId: 'child-oversight-actions' },
+      { label: 'Handover', href: childHandoverHref(childId), testId: 'child-oversight-handover' }
+    ],
+    moreActions: [
+      { label: 'Archive', href: routes.archive, testId: 'child-more-archive' },
+      { label: 'LifeEcho', href: routes.lifeecho, testId: 'child-more-lifeecho' },
+      { label: 'Plan impacts', href: routes.planImpacts, testId: 'child-more-plan-impacts' },
+      { label: 'Documents', href: routes.documents, testId: 'child-more-documents' },
+      { label: 'Handover', href: childHandoverHref(childId), testId: 'child-more-handover' },
+      { label: 'Child voice', href: childVoiceHref(childId), testId: 'child-more-voice' },
+      { label: 'Care planning', href: childCarePlanningHref(childId), testId: 'child-more-care-planning' },
+      { label: 'Actions', href: routes.actions, testId: 'child-more-actions' },
+      { label: 'Safeguarding', href: routes.recordSafeguarding, testId: 'child-more-safeguarding' },
+      { label: 'Daily note', href: routes.recordDailyNote, testId: 'child-more-daily-note' },
+      { label: 'Incident', href: routes.recordIncident, testId: 'child-more-incident' },
+      { label: 'Keywork', href: routes.recordKeywork, testId: 'child-more-keywork' },
+      { label: 'Chronology', href: routes.chronology, testId: 'child-more-chronology' },
+      { label: 'Reviews', href: childReviewsHref(childId), testId: 'child-more-reviews' },
+      { label: 'Alerts', href: childAlertsHref(childId), testId: 'child-more-alerts' },
+      { label: 'ORB', href: routes.orb, testId: 'child-more-orb' }
     ],
     evidenceActions: [
       { label: 'Physical intervention', href: childPhysicalInterventionHref(childId), testId: 'child-evidence-physical-intervention' },

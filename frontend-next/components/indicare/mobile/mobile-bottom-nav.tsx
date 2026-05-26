@@ -1,13 +1,7 @@
 'use client'
 
 import { usePathname } from 'next/navigation'
-import {
-  Bell,
-  ClipboardList,
-  Gauge,
-  MoreHorizontal,
-  Sparkles
-} from 'lucide-react'
+import { Bell, ClipboardList, Gauge, MoreHorizontal } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
 import { MobileSafeLink } from '@/components/indicare/mobile/mobile-safe-link'
@@ -17,10 +11,10 @@ import { useOsScope } from '@/components/indicare/scope/os-scope-provider'
 import { shouldShowMobileBottomNav } from '@/lib/navigation/mobile-shell'
 import { childWorkspaceHref } from '@/lib/navigation/child-workspace-routes'
 import {
-  childOrbHref,
+  childDailyNoteHref,
   childRecordHref,
   childReviewsHref,
-  homeOrbHref,
+  homeHandoverHref,
   homeRecordingAlertsHref,
   homeRecordingReviewsHref,
   homeWorkspaceHref
@@ -37,39 +31,19 @@ function childBottomNav(childId: string): NavItem[] {
   return [
     { label: 'Overview', href: childWorkspaceHref(childId), icon: Gauge, testId: 'mobile-nav-overview' },
     { label: 'Record', href: childRecordHref(childId), icon: ClipboardList, testId: 'mobile-nav-record' },
-    {
-      label: 'Daily note',
-      href: `/record?child_id=${encodeURIComponent(childId)}&type=daily-note`,
-      icon: ClipboardList,
-      testId: 'mobile-nav-daily-note'
-    },
+    { label: 'Daily note', href: childDailyNoteHref(childId), icon: ClipboardList, testId: 'mobile-nav-daily-note' },
     { label: 'Reviews', href: childReviewsHref(childId), icon: Bell, testId: 'mobile-nav-reviews' },
-    { label: 'ORB', href: childOrbHref(childId), icon: Sparkles, testId: 'mobile-nav-orb' }
+    { label: 'More', href: `${childWorkspaceHref(childId)}#more`, icon: MoreHorizontal, testId: 'mobile-nav-more' }
   ]
 }
 
 function homeBottomNav(homeId: string): NavItem[] {
   return [
-    { label: 'Overview', href: homeWorkspaceHref(homeId), icon: Gauge, testId: 'mobile-nav-home-overview' },
-    {
-      label: 'Alerts',
-      href: homeRecordingAlertsHref(homeId),
-      icon: Bell,
-      testId: 'mobile-nav-alerts'
-    },
-    {
-      label: 'Reviews',
-      href: homeRecordingReviewsHref(homeId),
-      icon: ClipboardList,
-      testId: 'mobile-nav-home-reviews'
-    },
-    {
-      label: 'ORB',
-      href: homeOrbHref(homeId),
-      icon: Sparkles,
-      testId: 'mobile-nav-home-orb'
-    },
-    { label: 'More', href: '/select-scope', icon: MoreHorizontal, testId: 'mobile-nav-more' }
+    { label: 'Home', href: homeWorkspaceHref(homeId), icon: Gauge, testId: 'mobile-nav-home-overview' },
+    { label: 'Handover', href: homeHandoverHref(homeId), icon: ClipboardList, testId: 'mobile-nav-home-handover' },
+    { label: 'Reviews', href: homeRecordingReviewsHref(homeId), icon: ClipboardList, testId: 'mobile-nav-home-reviews' },
+    { label: 'Alerts', href: homeRecordingAlertsHref(homeId), icon: Bell, testId: 'mobile-nav-alerts' },
+    { label: 'More', href: `${homeWorkspaceHref(homeId)}#more`, icon: MoreHorizontal, testId: 'mobile-nav-more' }
   ]
 }
 

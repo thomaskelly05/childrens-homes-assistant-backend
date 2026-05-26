@@ -10,15 +10,16 @@ import { ChildAboutCard } from './child-about-card'
 import { ChildActionsReviewCard } from './child-actions-review-card'
 import { ChildPlansDocumentsCard } from './child-plans-documents-card'
 import { ChildProfileHero } from './child-profile-hero'
+import { ChildRecordingSelectorCard } from './child-recording-selector-card'
 import { ChildRiskSafeguardingCard } from './child-risk-safeguarding-card'
 import { ChildSupportCard } from './child-support-card'
 import { ChildTodayCard } from './child-today-card'
 import { ChildVoiceCard } from './child-voice-card'
 import { ChildWhatMattersCard } from './child-what-matters-card'
 import { ChildLifecycleCard } from './child-lifecycle-card'
-import { OperationalOrbRail } from '@/components/orb-operational/operational-orb-rail'
-
+import { ChildWorkspaceMoreLinks } from './child-workspace-more-links'
 import { ChildWorkspaceOrbRail } from './child-workspace-orb-rail'
+import { WorkspaceSectionAccordion } from './workspace-section-accordion'
 
 export function ChildWorkspaceOverview({
   view,
@@ -29,7 +30,6 @@ export function ChildWorkspaceOverview({
   workspaceResult?: OsApiResult<unknown>
   profileResult?: OsApiResult<unknown>
 }) {
-  const childName = view.child.preferredName || view.child.displayName
   const childId = view.child.id
 
   return (
@@ -39,74 +39,121 @@ export function ChildWorkspaceOverview({
         <LiveDataStatus result={profileResult as OsApiResult<Record<string, unknown>>} />
       ) : null}
 
-      <div className="flex flex-wrap items-center gap-2 xl:hidden" data-testid="child-workspace-mobile-actions">
-        <OperationalOrbRail
-          scopeType="child"
-          childId={childId}
-          childName={childName}
-          homeName={view.child.homeName}
-          compact
-          testId="mobile-child-orb-button"
-        />
-      </div>
-
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_280px]">
         <div className="space-y-5 md:space-y-6">
           <ChildProfileHero view={view} />
 
-          <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <ChildAboutCard view={view} />
-            <ChildWhatMattersCard view={view} />
-            <ChildSupportCard view={view} />
+          <WorkspaceSectionAccordion
+            testId="child-workspace-section-know-me"
+            eyebrow="Understand"
+            title="Get to know me"
+            description="What matters, communication, routines, strengths and how best to support."
+            defaultOpen
+          >
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <ChildWhatMattersCard view={view} />
+              <ChildSupportCard view={view} />
+              <ChildAboutCard view={view} />
+            </div>
+          </WorkspaceSectionAccordion>
+
+          <WorkspaceSectionAccordion
+            testId="child-workspace-section-today"
+            eyebrow="Today"
+            title="Today’s picture"
+            description="Recent records, open actions, alerts and what needs attention."
+            defaultOpen
+          >
             <ChildTodayCard view={view} />
-            <ChildRiskSafeguardingCard view={view} />
-            <ChildPlansDocumentsCard view={view} />
-            <ChildVoiceCard view={view} />
-            <ChildActionsReviewCard view={view} />
-            <ChildLifecycleCard view={view} />
+          </WorkspaceSectionAccordion>
+
+          <section data-testid="child-workspace-section-recording">
+            <ChildRecordingSelectorCard childId={childId} />
           </section>
 
-          <Card>
-            <SectionHeader
-              eyebrow="Quick actions"
-              title="Record and navigate"
-              description="Child-scoped routes for recording, chronology, actions and documents."
-            />
-            <div className="flex flex-wrap gap-2">
-              {view.quickActions.map((action) => (
+          <WorkspaceSectionAccordion
+            testId="child-workspace-section-story"
+            eyebrow="Story and life"
+            title="Story and life"
+            description="Chronology, archive, LifeEcho, child voice and documents."
+            defaultOpen={false}
+          >
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <ChildVoiceCard view={view} />
+              <ChildLifecycleCard view={view} />
+              <ChildPlansDocumentsCard view={view} />
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {view.storyActions.map((action) => (
                 <MobileSafeLink
                   key={action.href}
                   href={action.href}
                   prefetch={false}
                   data-testid={action.testId}
-                  tapDebugLabel={`child-workspace-${action.label}`}
-                  className="min-h-11 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-black text-slate-800 transition hover:border-sky-200 hover:bg-sky-50"
+                  className="min-h-10 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-800"
                 >
                   {action.label}
                 </MobileSafeLink>
               ))}
             </div>
-          </Card>
+          </WorkspaceSectionAccordion>
 
-          <Card data-testid="child-workspace-evidence-link">
-            <SectionHeader
-              eyebrow="Advanced"
-              title="Evidence and workflow"
-              description="Lifecycle, linked evidence and technical workflow tools — for when you need traceability."
-            />
-            <div className="flex flex-wrap gap-2">
-              {view.evidenceActions.map((action) => (
-                <Link
+          <WorkspaceSectionAccordion
+            testId="child-workspace-section-plans"
+            eyebrow="Plans"
+            title="Plans and impact"
+            description="Care plan, risk, health, education, family time and plan impact suggestions."
+            defaultOpen={false}
+          >
+            <ChildPlansDocumentsCard view={view} />
+            <div className="mt-4 flex flex-wrap gap-2">
+              {view.planActions.map((action) => (
+                <MobileSafeLink
                   key={action.href}
                   href={action.href}
                   prefetch={false}
                   data-testid={action.testId}
-                  className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-700 transition hover:border-sky-200 hover:bg-sky-50"
+                  className="min-h-10 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-800"
                 >
                   {action.label}
-                </Link>
+                </MobileSafeLink>
               ))}
             </div>
+          </WorkspaceSectionAccordion>
+
+          <WorkspaceSectionAccordion
+            testId="child-workspace-section-oversight"
+            eyebrow="Oversight"
+            title="Oversight"
+            description="Reviews, alerts, safeguarding and manager actions."
+            defaultOpen={false}
+          >
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <ChildRiskSafeguardingCard view={view} />
+              <ChildActionsReviewCard view={view} />
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {view.oversightActions.map((action) => (
+                <MobileSafeLink
+                  key={action.href}
+                  href={action.href}
+                  prefetch={false}
+                  data-testid={action.testId}
+                  className="min-h-10 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-800"
+                >
+                  {action.label}
+                </MobileSafeLink>
+              ))}
+            </div>
+          </WorkspaceSectionAccordion>
+
+          <Card id="more" data-testid="child-workspace-more-menu">
+            <SectionHeader
+              eyebrow="More"
+              title="All child workflows"
+              description="Everything remains reachable — secondary routes are grouped here."
+            />
+            <ChildWorkspaceMoreLinks actions={view.moreActions} />
             <div className="mt-4 flex flex-wrap gap-3">
               <Link href={view.routes.journey} prefetch={false} className="text-sm font-black text-sky-700">
                 Advanced / evidence view →
@@ -115,6 +162,15 @@ export function ChildWorkspaceOverview({
                 Full care profile →
               </Link>
             </div>
+          </Card>
+
+          <Card data-testid="child-workspace-evidence-link">
+            <SectionHeader
+              eyebrow="Advanced"
+              title="Evidence and workflow"
+              description="Lifecycle, linked evidence and technical workflow tools."
+            />
+            <ChildWorkspaceMoreLinks actions={view.evidenceActions} />
           </Card>
         </div>
 

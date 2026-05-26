@@ -4,18 +4,49 @@ import { MobileSafeLink } from '@/components/indicare/mobile/mobile-safe-link'
 import { OperationalOrbRail } from '@/components/orb-operational/operational-orb-rail'
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
 import { SectionHeader, StatusBadge } from '@/components/indicare/ui'
-import { HOME_WORKSPACE_WORKFLOW_HREFS } from '@/lib/navigation/scope-routes'
+import { HOME_WORKSPACE_WORKFLOW_HREFS, homeOrbHref, homeReportsHref } from '@/lib/navigation/scope-routes'
 import { getHomeOperationalBundle } from '@/lib/os-api/bundles'
 
-const HOME_SECTIONS: Array<{ title: string; keys: Array<keyof ReturnType<typeof HOME_WORKSPACE_WORKFLOW_HREFS>> }> = [
-  { title: 'Today in the home', keys: ['dailyBrief', 'handover', 'staffOnShift', 'notifications'] },
-  { title: 'Recording', keys: ['recordingAlerts', 'recordingReviews'] },
-  { title: 'Safeguarding and workforce', keys: ['safeguarding', 'workforce', 'staffProfiles', 'actions'] },
-  { title: 'Inspection and reports', keys: ['inspectionReadiness', 'sccif', 'reg44', 'reg45', 'reports'] },
-  { title: 'Archive and lifecycle', keys: ['archiveSummary', 'chronologyGaps', 'planImpactReview', 'lifeechoPending'] }
+const HOME_SECTIONS: Array<{
+  testId: string
+  title: string
+  description: string
+  keys: Array<keyof ReturnType<typeof HOME_WORKSPACE_WORKFLOW_HREFS>>
+}> = [
+  {
+    testId: 'home-workspace-section-today',
+    title: 'Home today',
+    description: 'Children, urgent alerts, recording reviews, handover and daily brief.',
+    keys: ['children', 'recordingAlerts', 'recordingReviews', 'handover', 'dailyBrief']
+  },
+  {
+    testId: 'home-workspace-section-safeguarding',
+    title: 'Safeguarding and oversight',
+    description: 'ISN, alerts, manager actions and notifications.',
+    keys: ['safeguarding', 'recordingAlerts', 'actions', 'notifications']
+  },
+  {
+    testId: 'home-workspace-section-workforce',
+    title: 'Workforce and shift',
+    description: 'Staff on shift, handover and workforce routes.',
+    keys: ['staffOnShift', 'handover', 'workforce', 'staffProfiles']
+  },
+  {
+    testId: 'home-workspace-section-inspection',
+    title: 'Inspection and quality',
+    description: 'SCCIF, inspection readiness, Reg 44 and Reg 45.',
+    keys: ['sccif', 'inspectionReadiness', 'reg44', 'reg45']
+  },
+  {
+    testId: 'home-workspace-section-more',
+    title: 'More',
+    description: 'Archive lifecycle, reports, settings and ORB.',
+    keys: ['archiveSummary', 'chronologyGaps', 'planImpactReview', 'lifeechoPending', 'reports']
+  }
 ]
 
 const LINK_LABELS: Record<string, string> = {
+  children: 'Children in this home',
   dailyBrief: 'Daily brief',
   handover: 'Handover',
   staffOnShift: 'Staff on shift',
@@ -25,7 +56,7 @@ const LINK_LABELS: Record<string, string> = {
   safeguarding: 'Safeguarding / ISN',
   workforce: 'Workforce',
   staffProfiles: 'Staff profiles',
-  actions: 'Actions',
+  actions: 'Manager actions',
   inspectionReadiness: 'Inspection readiness',
   sccif: 'SCCIF alignment',
   reg44: 'Reg 44',
@@ -47,7 +78,7 @@ export default async function HomeWorkspacePage({ params }: { params: Promise<{ 
   const routes = HOME_WORKSPACE_WORKFLOW_HREFS(homeId)
 
   return (
-    <div data-testid="home-workspace-page" className="mobile-home-workspace home-workspace-mobile-actions space-y-5 md:space-y-6">
+    <div data-testid="home-workspace-page" className="mobile-home-workspace space-y-5 md:space-y-6">
       <header
         className="home-workspace-hero-mobile-compact rounded-[24px] border border-white/80 bg-white p-5 shadow-lg shadow-slate-950/5 md:rounded-[32px] md:p-8 md:shadow-xl"
         data-testid="home-workspace-hero"
@@ -55,7 +86,7 @@ export default async function HomeWorkspacePage({ params }: { params: Promise<{ 
         <p className="text-[11px] font-black uppercase tracking-[0.22em] text-blue-700">Home workspace</p>
         <h1 className="mt-2 text-2xl font-black tracking-[-0.05em] text-slate-950 md:mt-3 md:text-4xl">{homeName}</h1>
         <p className="mt-3 hidden max-w-2xl text-sm leading-7 text-slate-600 md:block">
-          Lightweight home operating view. Every link is scoped to this home — global command centre and workforce dashboards do not load automatically.
+          Who is in this home, what needs attention today, and what does ORB need to help the manager with?
         </p>
         <div className="mt-4 flex flex-wrap gap-2 md:mt-6" data-testid="home-workspace-hero-badges">
           <StatusBadge value={`${bundle.operational_pressure?.children_count || 0} children`} />
@@ -63,24 +94,19 @@ export default async function HomeWorkspacePage({ params }: { params: Promise<{ 
         </div>
       </header>
 
-      <div className="flex flex-wrap xl:hidden" data-testid="home-workspace-mobile-actions">
-        <OperationalOrbRail
-          scopeType="home"
-          homeId={homeId}
-          homeName={homeName}
-          compact
-          testId="mobile-home-orb-button"
-        />
-      </div>
-
       <LiveDataStatus result={result} />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_280px]">
         <div className="space-y-6">
           {HOME_SECTIONS.map((section) => (
-            <section key={section.title} className="rounded-[28px] border border-slate-200 bg-white p-6">
-              <SectionHeader eyebrow="Home scope" title={section.title} />
-              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <section
+              key={section.testId}
+              id={section.testId === 'home-workspace-section-more' ? 'more' : undefined}
+              data-testid={section.testId}
+              className="rounded-[28px] border border-slate-200 bg-white p-6"
+            >
+              <SectionHeader eyebrow="Home scope" title={section.title} description={section.description} />
+              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {section.keys.map((key) => (
                   <MobileSafeLink
                     key={key}
@@ -103,12 +129,32 @@ export default async function HomeWorkspacePage({ params }: { params: Promise<{ 
                     {LINK_LABELS[key] || key}
                   </MobileSafeLink>
                 ))}
+                {section.testId === 'home-workspace-section-more' ? (
+                  <>
+                    <MobileSafeLink
+                      href={homeOrbHref(homeId)}
+                      prefetch={false}
+                      data-testid="home-workspace-orb"
+                      className="min-h-11 rounded-[20px] border border-cyan-200 bg-cyan-50 p-4 text-sm font-black text-cyan-950"
+                    >
+                      Ask ORB (operational)
+                    </MobileSafeLink>
+                    <MobileSafeLink
+                      href="/settings"
+                      prefetch={false}
+                      data-testid="home-workspace-settings"
+                      className="min-h-11 rounded-[20px] border border-slate-200 bg-slate-50 p-4 text-sm font-black text-slate-800"
+                    >
+                      Settings
+                    </MobileSafeLink>
+                  </>
+                ) : null}
               </div>
             </section>
           ))}
 
           <section className="rounded-[28px] border border-slate-200 bg-white p-6" data-testid="home-workspace-children">
-            <SectionHeader eyebrow="Children in this home" title="Home-scoped snapshot" />
+            <SectionHeader eyebrow="Children in this home" title="Who is here today" />
             <p className="mt-3 text-sm text-slate-600">
               {(bundle.children_needing_attention || []).length
                 ? `${bundle.children_needing_attention.length} child record(s) flagged on this home.`
@@ -120,6 +166,13 @@ export default async function HomeWorkspacePage({ params }: { params: Promise<{ 
               className="mt-4 inline-flex min-h-11 text-sm font-black text-blue-700"
             >
               Choose a child in this home →
+            </MobileSafeLink>
+            <MobileSafeLink
+              href={homeReportsHref(homeId)}
+              prefetch={false}
+              className="ml-4 inline-flex min-h-11 text-sm font-black text-slate-600"
+            >
+              Home reports →
             </MobileSafeLink>
           </section>
         </div>
