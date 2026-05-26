@@ -1,6 +1,7 @@
 'use client'
 
 import { ReactNode, Suspense } from 'react'
+import { usePathname } from 'next/navigation'
 
 import { HydrationDiagnostic } from '@/components/indicare/debug/hydration-diagnostic'
 import { InteractionHealthMarker } from '@/components/indicare/debug/interaction-health-marker'
@@ -9,6 +10,7 @@ import { OsScopeGate } from '@/components/indicare/scope/os-scope-gate'
 import { OsScopeProvider } from '@/components/indicare/scope/os-scope-provider'
 import { ActiveChildProvider } from '@/lib/context/active-child-context'
 import { OperationalContextProvider } from '@/lib/operational/operational-context'
+import { isStandaloneOrbSurfaceRoute } from '@/lib/orb/product-mode'
 
 function OsProvidersFallback() {
   return (
@@ -20,6 +22,12 @@ function OsProvidersFallback() {
 
 /** Client boundary for scope-first layout — keeps app/layout.tsx a server component. */
 export function OsAppProviders({ children }: { children: ReactNode }) {
+  const pathname = usePathname() || '/'
+
+  if (isStandaloneOrbSurfaceRoute(pathname)) {
+    return <>{children}</>
+  }
+
   return (
     <Suspense fallback={<OsProvidersFallback />}>
       <OsScopeProvider>

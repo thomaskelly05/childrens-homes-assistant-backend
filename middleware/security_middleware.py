@@ -189,7 +189,10 @@ class CsrfProtectionMiddleware(BaseHTTPMiddleware):
         )
         return JSONResponse(
             status_code=403,
-            content={"detail": auth_error_detail("csrf_invalid", "Invalid CSRF token")},
+            content={
+                "detail": "csrf_failed",
+                "message": "Session security check failed. Please refresh and try again.",
+            },
         )
 
 

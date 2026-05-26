@@ -19,21 +19,25 @@ def test_standalone_send_markers():
     assert 'data-input-source="controlled"' in composer
     assert "data-composer-state-length={stateLength}" in composer
     assert "sendMessage" in companion
-    assert "data-testid=\"orb-standalone-send-error\"" in companion
+    assert 'data-testid="orb-standalone-send-error"' in companion
     assert "new FormData(event.currentTarget).get('message')" in companion
+    assert "csrfReady" in companion
+    assert "STANDALONE_ORB_CSRF_REFRESH_MESSAGE" in companion
 
 
 def test_operational_send_markers():
     text = (FRONTEND / "components/orb-operational/orb-conversation-experience.tsx").read_text(encoding="utf-8")
-    assert "data-testid=\"orb-operational-message-form\"" in text
+    assert 'data-testid="orb-operational-message-form"' in text
     assert 'data-testid="orb-operational-send-clickable"' in text
     assert 'type="submit"' in text
     assert "ORB_SEND_RETRY_MESSAGE" in text
     assert "finally" in text
 
 
-def test_retry_error_copy():
-    errors = (FRONTEND / "lib" / "interaction" / "orb-send-errors.ts").read_text(encoding="utf-8")
-    assert "ORB could not send that message. Please retry." in errors
+def test_retry_and_csrf_error_copy():
     standalone = (FRONTEND / "lib" / "orb" / "standalone-client.ts").read_text(encoding="utf-8")
+    auth_api = (FRONTEND / "lib" / "auth" / "api.ts").read_text(encoding="utf-8")
     assert "STANDALONE_ORB_SEND_RETRY_MESSAGE" in standalone
+    assert "ORB could not send that message. Please retry." in standalone
+    assert "STANDALONE_ORB_CSRF_REFRESH_MESSAGE" in auth_api
+    assert "Your session security check failed" in auth_api

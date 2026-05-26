@@ -82,6 +82,7 @@ const orbStandaloneComposer = file('components/orb-standalone/orb-standalone-com
 const orbCareCompanion = file('components/orb-standalone/orb-care-companion.tsx')
 const orbOperational = file('components/orb-operational/orb-conversation-experience.tsx')
 const appShell = file('components/indicare/app-shell.tsx')
+const osAppProviders = file('components/indicare/scope/os-app-providers.tsx')
 const scopeRoutes = file('lib/navigation/scope-routes.ts')
 
 check('interaction-guard.css is imported from app/layout.tsx', file('app/layout.tsx').includes("import './interaction-guard.css'"))
@@ -242,6 +243,26 @@ check(
   '/assistant/orb renders without OS shell wrapper',
   appShell.includes('isOperationalOrbPage') &&
     appShell.includes('if (isStandaloneOrb || isOperationalOrbPage || isStandaloneAssistantRoute)')
+)
+
+check(
+  '/orb bypasses OsAppProviders scope stack',
+  osAppProviders.includes('isStandaloneOrbSurfaceRoute') &&
+    osAppProviders.includes('if (isStandaloneOrbSurfaceRoute(pathname))') &&
+    osAppProviders.includes('return <>{children}</>')
+)
+
+check(
+  '/orb standalone client POST uses CSRF headers',
+  file('lib/orb/standalone-client.ts').includes('applyCsrfHeaders') &&
+    file('lib/orb/standalone-client.ts').includes("credentials: 'include'") &&
+    file('lib/auth/api.ts').includes('X-CSRF-Token')
+)
+
+check(
+  '/orb shows CSRF session security message',
+  orbCareCompanion.includes('STANDALONE_ORB_CSRF_REFRESH_MESSAGE') &&
+    orbCareCompanion.includes('csrfReady')
 )
 
 const decorativeClasses = [
