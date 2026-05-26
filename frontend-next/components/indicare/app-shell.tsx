@@ -13,7 +13,10 @@ import { CommandSearch } from '@/components/indicare/command-search'
 import { NotificationBell } from '@/components/connect/notification-bell'
 import { OrbButton } from '@/components/indicare/orb/orb-button'
 import { QuickActionButton } from '@/components/child-journey/quick-action-button'
-import { MobileNav } from '@/components/mobile-nav'
+import { MobileBottomNav } from '@/components/indicare/mobile/mobile-bottom-nav'
+import { MobileOsTopBar } from '@/components/indicare/mobile/mobile-os-top-bar'
+import { MobileScopeHeader } from '@/components/indicare/mobile/mobile-scope-header'
+import { mobileWorkspaceBottomPaddingClass } from '@/lib/navigation/mobile-shell'
 import { useOsScope } from '@/components/indicare/scope/os-scope-provider'
 import { ContextualOrbPanel } from '@/components/indicare/operational/contextual-orb-panel'
 import { OperationalAlertsPanel } from '@/components/indicare/operational/operational-alerts-panel'
@@ -224,14 +227,14 @@ export function AppShell({ children }: { children: ReactNode }) {
         <main className="min-w-0" aria-label="Select workspace scope">
           {children}
         </main>
-        <MobileNav />
+        <MobileBottomNav />
       </div>
     )
   }
 
   if (isChildRecordingWorkspace || isRecordWorkspace || isRecordingEditorPathStrict(pathname)) {
     return (
-      <div className="orb-os-shell min-h-screen bg-[#eef4fb] text-slate-900">
+      <div className={`orb-os-shell min-h-screen bg-[#eef4fb] text-slate-900 ${mobileWorkspaceBottomPaddingClass}`}>
         {children}
         {shouldShowFloatingOrb(pathname) ? <OrbButton context={orbContext} role={user.role} /> : null}
       </div>
@@ -360,64 +363,71 @@ export function AppShell({ children }: { children: ReactNode }) {
 
         <div className="min-w-0">
           <header className="sticky top-0 z-40 border-b border-white/80 bg-[#f8fafc]/90 px-3 py-3 backdrop-blur-xl md:px-6">
-            <div className="flex items-center gap-3">
-              <Link
-                prefetch={false}
-                href={hasOsScope ? workspaceHrefForScope(scope) : '/select-scope'}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[radial-gradient(circle_at_30%_20%,#fff,transparent_24%),linear-gradient(135deg,#38bdf8,#2563eb_52%,#0f172a)] shadow-lg shadow-blue-500/20 lg:hidden"
-                aria-label="Open workspace"
-              />
-              <div className="min-w-0">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600">Operational top bar</p>
-                <p className="truncate text-sm font-black text-slate-950">{pageTitle}</p>
-              </div>
-              <div className="ml-auto flex items-center gap-2">
-                {hasOsScope ? <CommandSearch /> : null}
-                {hasOsScope ? <RecordingAlertTopPill role={user.role} /> : null}
-                <Link prefetch={false} href="/select-scope" className="hidden rounded-2xl border border-blue-100 bg-blue-50 px-3 py-2 text-sm font-black text-blue-800 shadow-sm transition hover:bg-blue-100 md:inline-flex">
-                  <ShieldCheck className="mr-2 h-4 w-4" aria-hidden />
-                  {hasOsScope ? 'Switch scope' : 'Choose home'}
-                </Link>
-                {hasOsScope && scope.scope_type === 'child' ? <NotificationBell /> : null}
-                <div className="hidden rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 shadow-sm xl:block">{today}</div>
-                <details className="relative hidden md:block">
-                  <summary className="list-none rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-black text-slate-700 shadow-sm marker:hidden">Profile</summary>
-                  <div className="absolute right-0 mt-2 w-64 rounded-[24px] border border-slate-200 bg-white p-4 shadow-2xl shadow-slate-950/15">
-                    <p className="text-sm font-black text-slate-950">{displayName(user)}</p>
-                    <p className="mt-1 text-xs font-bold text-slate-500">{labelForRole(user.role)}</p>
-                    <Link prefetch={false} href="/profile" className="mt-4 flex rounded-2xl bg-slate-50 px-4 py-3 text-sm font-black text-slate-700">My profile</Link>
-                    <Link prefetch={false} href="/settings" className="mt-2 flex rounded-2xl bg-slate-50 px-4 py-3 text-sm font-black text-slate-700">Settings</Link>
-                    <button type="button" onClick={() => void logout()} data-testid="logout-button" className="mt-2 flex w-full items-center justify-center rounded-2xl border border-slate-200 px-4 py-3 text-sm font-black text-slate-700">
-                      <LogOut className="mr-2 h-4 w-4" aria-hidden />
-                      Log out
-                    </button>
-                  </div>
-                </details>
-              </div>
+            <div className="lg:hidden">
+              <MobileOsTopBar scopeTitle={pageTitle} />
+              {activeChild && childDomainActive && secondaryNav.length ? (
+                <div className="mt-2">
+                  <MobileScopeHeader items={secondaryNav} />
+                </div>
+              ) : null}
             </div>
-            {activeChild && childDomainActive && secondaryNav.length ? (
-              <nav className="mt-3 flex gap-2 overflow-x-auto pb-1 text-xs font-black uppercase tracking-[0.12em]" aria-label="Child workspace navigation">
-                {secondaryNav.map((item) => {
-                  const active = pathname === item.href || (item.href !== '/young-people' && pathname.startsWith(item.href.split('?')[0]))
-                  return (
-                    <Link prefetch={false} key={`${item.label}-${item.href}`} href={item.href} className={`shrink-0 rounded-full px-4 py-2 transition ${active ? 'bg-blue-700 text-white' : 'bg-white text-slate-500 ring-1 ring-slate-200 hover:text-slate-950'}`}>
-                      {item.label}
-                    </Link>
-                  )
-                })}
+            <div className="hidden lg:block">
+              <div className="flex items-center gap-3">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600">Operational top bar</p>
+                  <p className="truncate text-sm font-black text-slate-950">{pageTitle}</p>
+                </div>
+                <div className="ml-auto flex items-center gap-2">
+                  {hasOsScope ? <CommandSearch /> : null}
+                  {hasOsScope ? <RecordingAlertTopPill role={user.role} /> : null}
+                  <Link prefetch={false} href="/select-scope" className="rounded-2xl border border-blue-100 bg-blue-50 px-3 py-2 text-sm font-black text-blue-800 shadow-sm transition hover:bg-blue-100">
+                    <ShieldCheck className="mr-2 h-4 w-4" aria-hidden />
+                    {hasOsScope ? 'Switch scope' : 'Choose home'}
+                  </Link>
+                  {hasOsScope && scope.scope_type === 'child' ? <NotificationBell /> : null}
+                  <div className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 shadow-sm xl:block">{today}</div>
+                  <details className="relative">
+                    <summary className="list-none rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-black text-slate-700 shadow-sm marker:hidden">Profile</summary>
+                    <div className="absolute right-0 mt-2 w-64 rounded-[24px] border border-slate-200 bg-white p-4 shadow-2xl shadow-slate-950/15">
+                      <p className="text-sm font-black text-slate-950">{displayName(user)}</p>
+                      <p className="mt-1 text-xs font-bold text-slate-500">{labelForRole(user.role)}</p>
+                      <Link prefetch={false} href="/profile" className="mt-4 flex rounded-2xl bg-slate-50 px-4 py-3 text-sm font-black text-slate-700">My profile</Link>
+                      <Link prefetch={false} href="/settings" className="mt-2 flex rounded-2xl bg-slate-50 px-4 py-3 text-sm font-black text-slate-700">Settings</Link>
+                      <button type="button" onClick={() => void logout()} data-testid="logout-button" className="mt-2 flex w-full items-center justify-center rounded-2xl border border-slate-200 px-4 py-3 text-sm font-black text-slate-700">
+                        <LogOut className="mr-2 h-4 w-4" aria-hidden />
+                        Log out
+                      </button>
+                    </div>
+                  </details>
+                </div>
+              </div>
+              {activeChild && childDomainActive && secondaryNav.length ? (
+                <nav className="mt-3 flex gap-2 overflow-x-auto pb-1 text-xs font-black uppercase tracking-[0.12em]" aria-label="Child workspace navigation">
+                  {secondaryNav.map((item) => {
+                    const active = pathname === item.href || (item.href !== '/young-people' && pathname.startsWith(item.href.split('?')[0]))
+                    return (
+                      <Link prefetch={false} key={`${item.label}-${item.href}`} href={item.href} className={`shrink-0 rounded-full px-4 py-2 transition ${active ? 'bg-blue-700 text-white' : 'bg-white text-slate-500 ring-1 ring-slate-200 hover:text-slate-950'}`}>
+                        {item.label}
+                      </Link>
+                    )
+                  })}
+                </nav>
+              ) : null}
+              <nav className="mt-3 flex flex-wrap items-center gap-1 text-xs font-black uppercase tracking-[0.14em] text-slate-400" aria-label="Context breadcrumb">
+                {displayBreadcrumbs.map((crumb, index) => (
+                  <span key={`${crumb.label}-${index}`} className="inline-flex items-center gap-1">
+                    {index > 0 ? <ChevronRight className="h-3 w-3" aria-hidden /> : null}
+                    {crumb.href && !crumb.current ? <Link prefetch={false} href={crumb.href} className="hover:text-blue-700">{crumb.label}</Link> : <span className={crumb.current ? 'text-slate-800' : undefined}>{crumb.label}</span>}
+                  </span>
+                ))}
               </nav>
-            ) : null}
-            <nav className="mt-3 flex flex-wrap items-center gap-1 text-xs font-black uppercase tracking-[0.14em] text-slate-400" aria-label="Context breadcrumb">
-              {displayBreadcrumbs.map((crumb, index) => (
-                <span key={`${crumb.label}-${index}`} className="inline-flex items-center gap-1">
-                  {index > 0 ? <ChevronRight className="h-3 w-3" aria-hidden /> : null}
-                  {crumb.href && !crumb.current ? <Link prefetch={false} href={crumb.href} className="hover:text-blue-700">{crumb.label}</Link> : <span className={crumb.current ? 'text-slate-800' : undefined}>{crumb.label}</span>}
-                </span>
-              ))}
-            </nav>
+            </div>
           </header>
 
-          <div data-testid="operational-shell-workspace" className="grid min-w-0 gap-5 px-4 py-5 pb-28 md:px-8 md:py-6 md:pb-32 2xl:grid-cols-[minmax(0,1fr)_300px]">
+          <div
+            data-testid="operational-shell-workspace"
+            className={`mobile-os-workspace grid min-w-0 gap-5 overflow-x-hidden px-4 py-5 md:px-8 md:py-6 md:pb-32 2xl:grid-cols-[minmax(0,1fr)_300px] ${mobileWorkspaceBottomPaddingClass}`}
+          >
             <main className="min-w-0" aria-label="Operational workspace">
               {children}
             </main>
@@ -434,8 +444,10 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </div>
       {shouldShowFloatingOrb(pathname) ? <OrbButton context={orbContext} role={user.role} /> : null}
-      {scope.scope_type === 'child' ? <QuickActionButton selectedYoungPersonId={selectedId} selectedYoungPersonName={activeChildName} /> : null}
-      <MobileNav />
+      {scope.scope_type === 'child' ? (
+        <QuickActionButton selectedYoungPersonId={selectedId} selectedYoungPersonName={activeChildName} />
+      ) : null}
+      <MobileBottomNav />
     </div>
   )
 }

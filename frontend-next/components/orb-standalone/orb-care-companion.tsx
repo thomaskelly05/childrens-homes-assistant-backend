@@ -1355,19 +1355,21 @@ export function OrbCareCompanion() {
         </div>
       </div>
 
-      <OrbCompactCompanion
-        expanded={orbCompanionExpanded}
-        glowState={glowState}
-        mode={mode}
-        voice={voice}
-        voiceSettings={voiceSettings}
-        updateVoiceSettings={updateVoiceSettings}
-        voicePanelOpen={voicePanelOpen}
-        onToggleExpanded={() => setOrbCompanionExpanded((open) => !open)}
-        onOrbActivate={handleOrbActivate}
-        onToggleVoicePanel={() => setVoicePanelOpen((open) => !open)}
-        onCloseVoicePanel={() => setVoicePanelOpen(false)}
-      />
+      <div className="max-md:hidden" data-orb-floating-voice-orb="desktop-only">
+        <OrbCompactCompanion
+          expanded={orbCompanionExpanded}
+          glowState={glowState}
+          mode={mode}
+          voice={voice}
+          voiceSettings={voiceSettings}
+          updateVoiceSettings={updateVoiceSettings}
+          voicePanelOpen={voicePanelOpen}
+          onToggleExpanded={() => setOrbCompanionExpanded((open) => !open)}
+          onOrbActivate={handleOrbActivate}
+          onToggleVoicePanel={() => setVoicePanelOpen((open) => !open)}
+          onCloseVoicePanel={() => setVoicePanelOpen(false)}
+        />
+      </div>
 
       {promptDrawerOpen ? (
         <OrbPromptDrawer

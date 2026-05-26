@@ -22,7 +22,10 @@ export default async function OperationalOrbPage({
     query.scope || (query.context === 'child' ? 'child' : query.context === 'home' ? 'home' : undefined)
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,#dbeafe,transparent_34rem),linear-gradient(180deg,#f8fafc,#eef6ff)] px-5 py-8 text-slate-950 md:px-10">
+    <main
+      data-testid="orb-operational-mobile-layout"
+      className="min-h-[100dvh] bg-[radial-gradient(circle_at_top_left,#dbeafe,transparent_34rem),linear-gradient(180deg,#f8fafc,#eef6ff)] px-4 py-5 pb-[calc(120px+env(safe-area-inset-bottom))] text-slate-950 md:px-10 md:py-8 md:pb-10"
+    >
       <div className="mx-auto max-w-7xl space-y-5">
         <LiveDataStatus result={childrenResult} />
 

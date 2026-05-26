@@ -254,13 +254,25 @@ export function OrbConversationExperience({
     setInput(scopePrompt(nextScope))
   }
 
+  const workspaceBackHref =
+    scope === 'child' && youngPersonId
+      ? `/young-people/${encodeURIComponent(youngPersonId)}/workspace`
+      : '/select-scope'
+
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
-      <section className="rounded-[36px] bg-white p-6 shadow-xl shadow-slate-200/70 ring-1 ring-white md:p-8">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-[11px] font-black uppercase tracking-[0.24em] text-blue-700">Operational ORB</p>
-            <h1 className="mt-3 text-4xl font-black tracking-[-0.07em] text-slate-950 md:text-6xl">Reflective operational cognition</h1>
+    <div className="orb-operational-chat grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
+      <section className="flex min-h-0 flex-col rounded-[28px] bg-white shadow-xl shadow-slate-200/70 ring-1 ring-white md:rounded-[36px] md:p-8">
+        <div className="flex flex-wrap items-start justify-between gap-4 p-5 md:p-0">
+          <div className="min-w-0">
+            <Link
+              href={workspaceBackHref}
+              className="inline-flex min-h-11 items-center text-xs font-black text-blue-700"
+              data-testid="orb-operational-back-workspace"
+            >
+              ← Back to workspace
+            </Link>
+            <p className="mt-2 text-[11px] font-black uppercase tracking-[0.24em] text-blue-700">Operational ORB</p>
+            <h1 className="mt-2 text-2xl font-black tracking-[-0.05em] text-slate-950 md:mt-3 md:text-6xl">Reflective operational cognition</h1>
             <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-600">
               OS ORB can use permissioned IndiCare context. It only sees information available to your role. Care questions use scoped summary context and source labels; everyday questions may use general support without care retrieval.
             </p>
@@ -434,26 +446,42 @@ export function OrbConversationExperience({
           ) : null}
         </div>
 
-        <form onSubmit={submit} className="mt-4 flex gap-2 rounded-[24px] border border-slate-200 bg-white p-2 shadow-sm" data-testid="orb-operational-message-form">
-          <label htmlFor="orb-message" className="sr-only">Ask ORB</label>
-          <textarea
-            id="orb-message"
-            value={input}
-            onChange={(event) => setInput(event.target.value)}
-            rows={2}
-            placeholder="Ask ORB what needs review..."
-            className="min-h-12 flex-1 resize-none rounded-[18px] px-4 py-3 text-sm font-semibold text-slate-800 outline-none placeholder:text-slate-400"
-          />
-          <button
-            type="submit"
-            disabled={!input.trim() || pending}
-            data-testid="orb-operational-send-button"
-            className="rounded-[20px] bg-slate-950 px-5 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+        <div
+          className="orb-operational-composer sticky bottom-0 z-20 mt-auto border-t border-slate-100 bg-white/95 p-4 backdrop-blur-md md:static md:border-0 md:bg-transparent md:p-0"
+          style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+        >
+          <p className="mb-2 text-[10px] font-black uppercase tracking-[0.14em] text-slate-500 md:hidden" data-testid="orb-operational-scope-chip">
+            Scope: {scope}
+            {operationalMode ? ` · ${operationalMode}` : ''}
+          </p>
+          <form
+            onSubmit={submit}
+            className="flex gap-2 rounded-[24px] border border-slate-200 bg-white p-2 shadow-sm"
+            data-testid="orb-operational-message-form"
           >
-            <Send className="h-4 w-4" aria-hidden />
-            <span className="sr-only">Send</span>
-          </button>
-        </form>
+            <label htmlFor="orb-message" className="sr-only">Ask ORB</label>
+            <textarea
+              id="orb-message"
+              value={input}
+              onChange={(event) => setInput(event.target.value)}
+              rows={2}
+              placeholder="Ask ORB what needs review..."
+              className="min-h-11 flex-1 resize-none rounded-[18px] px-4 py-3 text-base font-semibold text-slate-800 outline-none placeholder:text-slate-400 md:min-h-12 md:text-sm"
+            />
+            <button
+              type="submit"
+              disabled={!input.trim() || pending}
+              data-testid="orb-operational-send-button"
+              className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-[20px] bg-slate-950 px-5 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+            >
+              <Send className="h-4 w-4" aria-hidden />
+              <span className="sr-only">Send</span>
+            </button>
+          </form>
+          <p className="mt-2 text-[10px] leading-4 text-slate-500 md:mt-3" data-orb-composer-disclaimer>
+            OS ORB supports review; safeguarding and manager judgement remain with your team.
+          </p>
+        </div>
       </section>
 
       <aside className="space-y-4">

@@ -1009,9 +1009,47 @@ textarea:focus-visible {
 }
 
 @media (max-width: 767px) {
-  .orb-companion-float {
-    bottom: calc(5.25rem + env(safe-area-inset-bottom));
+  .orb-companion-float,
+  [data-orb-companion-float] {
+    display: none !important;
   }
+
+  .orb-chat-thread {
+    padding-bottom: 0.25rem;
+  }
+
+  .orb-chat-composer {
+    position: sticky;
+    bottom: 0;
+    z-index: 30;
+  }
+}
+
+.mobile-os-workspace {
+  padding-bottom: calc(120px + env(safe-area-inset-bottom));
+}
+
+@media (min-width: 1024px) {
+  .mobile-os-workspace {
+    padding-bottom: 8rem;
+  }
+}
+
+.mobile-bottom-nav {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+}
+
+.orb-floating-dock {
+  pointer-events: none;
+}
+
+.orb-floating-dock .orb-embedded-dock,
+.orb-floating-dock .orb-overlay-interactive {
+  pointer-events: auto;
+}
+
+.child-workspace-hero-mobile-compact .child-workspace-hero-actions {
+  position: static;
 }
 
 .orb-panel-overlay {

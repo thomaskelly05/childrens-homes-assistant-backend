@@ -137,8 +137,8 @@ export function OrbLiveRecordingCoach({
     prompt: 'Help me improve this record while I write. I will paste any excerpt myself.'
   })
 
-  return (
-    <aside data-testid="orb-live-recording-coach" className="space-y-4">
+  const coachBody = (
+    <>
       <section className="rounded-2xl border border-cyan-100 bg-gradient-to-b from-cyan-50/90 to-white p-4 shadow-sm">
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-cyan-700" aria-hidden />
@@ -233,7 +233,25 @@ export function OrbLiveRecordingCoach({
           Open review checklist
         </Link>
       </div>
-    </aside>
+    </>
+  )
+
+  return (
+    <>
+      <details
+        data-testid="mobile-recording-coach-accordion"
+        className="mobile-recording-coach-accordion rounded-2xl border border-cyan-100 bg-white p-0 xl:hidden"
+      >
+        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-black text-cyan-900 marker:hidden">
+          ORB Coach
+          <span className="text-xs font-semibold text-cyan-700">Tap to expand</span>
+        </summary>
+        <div className="space-y-4 border-t border-cyan-50 p-4">{coachBody}</div>
+      </details>
+      <aside data-testid="orb-live-recording-coach" className="hidden space-y-4 xl:block">
+        {coachBody}
+      </aside>
+    </>
   )
 }
 

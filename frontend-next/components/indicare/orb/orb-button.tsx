@@ -73,7 +73,14 @@ export function OrbButton({
     : 'Orb is waiting for your secure session.'
 
   return (
-    <div className={placement === 'floating' ? 'fixed bottom-[calc(env(safe-area-inset-bottom)+9.5rem)] right-3 z-50 md:bottom-7 md:right-7' : 'relative inline-flex'}>
+    <div
+      data-orb-floating-dock={placement === 'floating' ? 'true' : undefined}
+      className={
+        placement === 'floating'
+          ? 'orb-floating-dock pointer-events-none fixed bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] right-3 z-50 md:bottom-7 md:right-7'
+          : 'relative inline-flex'
+      }
+    >
       {orbReady && active ? (
         <div
           className={`orb-overlay-shell ${immersiveOpen ? 'orb-standalone-atmosphere fixed inset-0 z-[70] flex items-center justify-center px-4' : 'fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+6rem)] z-[70] md:left-auto md:right-7 md:w-[440px]'} text-white`}
@@ -180,8 +187,8 @@ export function OrbButton({
           if (orbReady) void controller.activate(context, effectiveRole)
         }}
         data-testid={placement === 'floating' ? 'orb-button' : 'orb-button-inline'}
-        className={`orb-embedded-dock group relative inline-flex items-center justify-center rounded-full p-1 transition hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-cyan-400 ${
-          placement === 'inline' ? '' : 'min-h-16 min-w-16'
+        className={`orb-embedded-dock pointer-events-auto group relative inline-flex items-center justify-center rounded-full p-1 transition hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-cyan-400 ${
+          placement === 'inline' ? '' : 'min-h-11 min-w-11 md:min-h-16 md:min-w-16'
         }`}
         data-orb-state={ambientState}
         aria-label={orbReady ? (snapshot.state === 'speaking' || snapshot.loading ? 'Pause Orb and start listening' : 'Tap Orb and talk') : authMessage}
