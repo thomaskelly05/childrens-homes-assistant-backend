@@ -89,6 +89,7 @@ export function OrbStandaloneComposer({
       onDragOver={handleDragOver}
       onDrop={onDrop}
       data-orb-composer
+      data-orb-standalone-composer
     >
       <div className="mx-auto w-full max-w-[var(--orb-composer-max,53.125rem)]">
         {transcriptReady && displayTranscript ? (

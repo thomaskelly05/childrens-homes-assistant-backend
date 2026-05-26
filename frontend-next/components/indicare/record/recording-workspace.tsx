@@ -182,7 +182,7 @@ export function RecordingWorkspace({
         </section>
       ) : null}
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="mobile-recording-workspace grid gap-6 pb-[calc(120px+env(safe-area-inset-bottom))] xl:grid-cols-[minmax(0,1fr)_320px] xl:pb-0">
         <div className="space-y-4">
           <RecordingEditor
             recordingType={recordingType}

@@ -47,18 +47,31 @@ export default async function HomeWorkspacePage({ params }: { params: Promise<{ 
   const routes = HOME_WORKSPACE_WORKFLOW_HREFS(homeId)
 
   return (
-    <div data-testid="home-workspace-page" className="space-y-6">
-      <header className="rounded-[32px] border border-white/80 bg-white p-8 shadow-xl shadow-slate-950/5">
+    <div data-testid="home-workspace-page" className="mobile-home-workspace space-y-5 md:space-y-6">
+      <header
+        className="home-workspace-hero-mobile-compact rounded-[24px] border border-white/80 bg-white p-5 shadow-lg shadow-slate-950/5 md:rounded-[32px] md:p-8 md:shadow-xl"
+        data-testid="home-workspace-hero"
+      >
         <p className="text-[11px] font-black uppercase tracking-[0.22em] text-blue-700">Home workspace</p>
-        <h1 className="mt-3 text-4xl font-black tracking-[-0.06em] text-slate-950">{homeName}</h1>
-        <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-600">
+        <h1 className="mt-2 text-2xl font-black tracking-[-0.05em] text-slate-950 md:mt-3 md:text-4xl">{homeName}</h1>
+        <p className="mt-3 hidden max-w-2xl text-sm leading-7 text-slate-600 md:block">
           Lightweight home operating view. Every link is scoped to this home — global command centre and workforce dashboards do not load automatically.
         </p>
-        <div className="mt-6 flex flex-wrap gap-2">
+        <div className="mt-4 flex flex-wrap gap-2 md:mt-6" data-testid="home-workspace-hero-badges">
           <StatusBadge value={`${bundle.operational_pressure?.children_count || 0} children`} />
           <StatusBadge value={`${bundle.operational_pressure?.actions_open || 0} open actions`} />
         </div>
       </header>
+
+      <div className="flex flex-wrap xl:hidden" data-testid="home-workspace-mobile-ask-orb">
+        <OperationalOrbRail
+          scopeType="home"
+          homeId={homeId}
+          homeName={homeName}
+          compact
+          testId="home-workspace-mobile-orb-button"
+        />
+      </div>
 
       <LiveDataStatus result={result} />
 
@@ -67,7 +80,7 @@ export default async function HomeWorkspacePage({ params }: { params: Promise<{ 
           {HOME_SECTIONS.map((section) => (
             <section key={section.title} className="rounded-[28px] border border-slate-200 bg-white p-6">
               <SectionHeader eyebrow="Home scope" title={section.title} />
-              <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {section.keys.map((key) => (
                   <Link
                     key={key}
@@ -100,12 +113,14 @@ export default async function HomeWorkspacePage({ params }: { params: Promise<{ 
           </section>
         </div>
 
-        <OperationalOrbRail
-          scopeType="home"
-          homeId={homeId}
-          homeName={homeName}
-          testId="home-workspace-orb-rail"
-        />
+        <div className="hidden xl:block">
+          <OperationalOrbRail
+            scopeType="home"
+            homeId={homeId}
+            homeName={homeName}
+            testId="home-workspace-orb-rail"
+          />
+        </div>
       </div>
     </div>
   )

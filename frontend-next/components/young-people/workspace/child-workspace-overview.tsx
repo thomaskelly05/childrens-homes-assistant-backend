@@ -15,6 +15,8 @@ import { ChildTodayCard } from './child-today-card'
 import { ChildVoiceCard } from './child-voice-card'
 import { ChildWhatMattersCard } from './child-what-matters-card'
 import { ChildLifecycleCard } from './child-lifecycle-card'
+import { OperationalOrbRail } from '@/components/orb-operational/operational-orb-rail'
+
 import { ChildWorkspaceOrbRail } from './child-workspace-orb-rail'
 
 export function ChildWorkspaceOverview({
@@ -26,18 +28,32 @@ export function ChildWorkspaceOverview({
   workspaceResult?: OsApiResult<unknown>
   profileResult?: OsApiResult<unknown>
 }) {
+  const childName = view.child.preferredName || view.child.displayName
+  const childId = view.child.id
+
   return (
-    <div data-testid="child-workspace-overview-page" className="space-y-6">
+    <div data-testid="child-workspace-overview-page" className="mobile-child-workspace space-y-5 md:space-y-6">
       {workspaceResult ? <LiveDataStatus result={workspaceResult as OsApiResult<Record<string, unknown>>} /> : null}
       {profileResult && profileResult !== workspaceResult ? (
         <LiveDataStatus result={profileResult as OsApiResult<Record<string, unknown>>} />
       ) : null}
 
+      <div className="flex flex-wrap items-center gap-2 xl:hidden" data-testid="child-workspace-mobile-ask-orb">
+        <OperationalOrbRail
+          scopeType="child"
+          childId={childId}
+          childName={childName}
+          homeName={view.child.homeName}
+          compact
+          testId="child-workspace-mobile-orb-button"
+        />
+      </div>
+
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_280px]">
-        <div className="space-y-6">
+        <div className="space-y-5 md:space-y-6">
           <ChildProfileHero view={view} />
 
-          <section className="grid gap-4 md:grid-cols-2">
+          <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <ChildAboutCard view={view} />
             <ChildWhatMattersCard view={view} />
             <ChildSupportCard view={view} />
@@ -100,7 +116,9 @@ export function ChildWorkspaceOverview({
           </Card>
         </div>
 
-        <ChildWorkspaceOrbRail view={view} />
+        <div className="hidden xl:block">
+          <ChildWorkspaceOrbRail view={view} />
+        </div>
       </div>
     </div>
   )

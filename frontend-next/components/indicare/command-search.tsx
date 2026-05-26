@@ -10,7 +10,13 @@ import { useAuth } from '@/contexts/auth-context'
 import { userHasAnyPermission } from '@/lib/auth/permissions'
 import type { SearchResult } from '@/lib/os-api/command-search'
 
-export function CommandSearch() {
+export function CommandSearch({
+  variant = 'full',
+  onNavigate
+}: {
+  variant?: 'full' | 'compact'
+  onNavigate?: () => void
+} = {}) {
   const router = useRouter()
   const [query, setQuery] = useState('')
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
@@ -96,21 +102,25 @@ export function CommandSearch() {
     }
   }
 
+  const inputId = variant === 'compact' ? 'mobile-command-search' : 'global-command-search'
+
   return (
-    <div className="relative w-full max-w-2xl">
-      <label className="sr-only" htmlFor="global-command-search">Search IndiCare OS</label>
-      <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-        <Search className="h-4 w-4 text-slate-400" aria-hidden />
+    <div className={`relative w-full ${variant === 'compact' ? 'max-w-none' : 'max-w-2xl'}`} data-testid={variant === 'compact' ? 'mobile-command-search' : 'command-search'}>
+      <label className="sr-only" htmlFor={inputId}>Search IndiCare OS</label>
+      <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm md:px-4 md:py-3">
+        <Search className="h-4 w-4 shrink-0 text-slate-400" aria-hidden />
         <input
           ref={inputRef}
-          id="global-command-search"
+          id={inputId}
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           onKeyDown={handleInputKeyDown}
-          placeholder="Search child, document, chronology, evidence... Cmd/Ctrl K"
-          className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-slate-800 outline-none placeholder:text-slate-400"
+          placeholder={variant === 'compact' ? 'Search…' : 'Search child, document, chronology, evidence... Cmd/Ctrl K'}
+          className="min-h-11 min-w-0 flex-1 bg-transparent text-sm font-semibold text-slate-800 outline-none placeholder:text-slate-400"
         />
-        <span className="hidden rounded-full bg-slate-100 px-2 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-slate-500 sm:inline">Cmd K</span>
+        {variant === 'full' ? (
+          <span className="hidden rounded-full bg-slate-100 px-2 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-slate-500 sm:inline">Cmd K</span>
+        ) : null}
       </div>
 
       {query.trim() ? (
@@ -118,7 +128,10 @@ export function CommandSearch() {
           <Link
             href={`/assistant/orb?q=${encodeURIComponent(query)}`}
             className="mb-2 flex items-center gap-3 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-black text-blue-700 transition hover:bg-blue-100"
-            onClick={() => setQuery('')}
+            onClick={() => {
+              setQuery('')
+              onNavigate?.()
+            }}
           >
             <Sparkles className="h-4 w-4" aria-hidden />
             Ask IndiCare about &quot;{query}&quot;
@@ -136,7 +149,10 @@ export function CommandSearch() {
                       <Link
                         href={result.href}
                         className="min-w-0 flex-1 focus:outline-none"
-                        onClick={() => setQuery('')}
+                        onClick={() => {
+                          setQuery('')
+                          onNavigate?.()
+                        }}
                       >
                         <strong className="block truncate text-sm font-black text-slate-950">{result.title}</strong>
                         <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">{result.description}</p>
