@@ -9,7 +9,7 @@ FRONTEND = REPO_ROOT / "frontend-next"
 def test_operational_orb_rail_is_shared_component():
     path = FRONTEND / "components" / "orb-operational" / "operational-orb-rail.tsx"
     text = path.read_text(encoding="utf-8")
-    assert "ORB on shift" in text
+    assert "ORB_QUIET_COPILOT_TAGLINE" in text or "quiet copilot" in text.lower()
     assert "Open ORB with this context" in text
     assert "/assistant/orb" in text
     assert text.count("Open ORB with this context") == 1

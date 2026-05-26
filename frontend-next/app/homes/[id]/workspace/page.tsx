@@ -4,7 +4,13 @@ import { MobileSafeLink } from '@/components/indicare/mobile/mobile-safe-link'
 import { OperationalOrbRail } from '@/components/orb-operational/operational-orb-rail'
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
 import { SectionHeader, StatusBadge } from '@/components/indicare/ui'
-import { HOME_WORKSPACE_WORKFLOW_HREFS, homeOrbHref, homeReportsHref } from '@/lib/navigation/scope-routes'
+import {
+  HOME_WORKSPACE_WORKFLOW_HREFS,
+  homeDailyBriefHref,
+  homeHandoverHref,
+  homeOrbHref,
+  homeReportsHref
+} from '@/lib/navigation/scope-routes'
 import { getHomeOperationalBundle } from '@/lib/os-api/bundles'
 
 const HOME_SECTIONS: Array<{
@@ -33,8 +39,8 @@ const HOME_SECTIONS: Array<{
   },
   {
     testId: 'home-workspace-section-inspection',
-    title: 'Inspection and quality',
-    description: 'SCCIF, inspection readiness, Reg 44 and Reg 45.',
+    title: 'Regulation and quality',
+    description: 'Inspection readiness, Quality Standards alignment, Reg 44 and Reg 45 — evidence snapshots, not grade claims.',
     keys: ['sccif', 'inspectionReadiness', 'reg44', 'reg45']
   },
   {
@@ -86,11 +92,33 @@ export default async function HomeWorkspacePage({ params }: { params: Promise<{ 
         <p className="text-[11px] font-black uppercase tracking-[0.22em] text-blue-700">Home workspace</p>
         <h1 className="mt-2 text-2xl font-black tracking-[-0.05em] text-slate-950 md:mt-3 md:text-4xl">{homeName}</h1>
         <p className="mt-3 hidden max-w-2xl text-sm leading-7 text-slate-600 md:block">
-          Who is in this home, what needs attention today, and what does ORB need to help the manager with?
+          Calm home view — today&apos;s priorities, safeguarding, staff and inspection readiness without loading every module at once.
         </p>
         <div className="mt-4 flex flex-wrap gap-2 md:mt-6" data-testid="home-workspace-hero-badges">
           <StatusBadge value={`${bundle.operational_pressure?.children_count || 0} children`} />
-          <StatusBadge value={`${bundle.operational_pressure?.actions_open || 0} open actions`} />
+          <span data-testid="home-workspace-priority-count">
+            <StatusBadge
+              value={`${(bundle.operational_pressure?.actions_open || 0) + (bundle.operational_pressure?.recording_reviews_pending || 0)} today’s priorities`}
+            />
+          </span>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2 md:mt-5" data-testid="home-workspace-hero-actions">
+          <MobileSafeLink
+            href={homeDailyBriefHref(homeId)}
+            prefetch={false}
+            data-testid="home-hero-daily-brief"
+            className="inline-flex min-h-11 items-center rounded-2xl bg-blue-600 px-4 py-2.5 text-sm font-black text-white shadow-md"
+          >
+            Daily brief
+          </MobileSafeLink>
+          <MobileSafeLink
+            href={homeHandoverHref(homeId)}
+            prefetch={false}
+            data-testid="home-hero-handover"
+            className="inline-flex min-h-11 items-center rounded-2xl border border-blue-200 bg-white px-4 py-2.5 text-sm font-black text-blue-900"
+          >
+            Handover
+          </MobileSafeLink>
         </div>
       </header>
 

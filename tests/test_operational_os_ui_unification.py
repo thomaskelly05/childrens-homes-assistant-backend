@@ -6,7 +6,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 FRONTEND = REPO_ROOT / "frontend-next"
 
 OS_UI_MARKERS = [
-    "ORB on shift",
+    "quiet copilot",
     "Connected to this workspace",
     "What needs attention?",
     "What needs recording?",

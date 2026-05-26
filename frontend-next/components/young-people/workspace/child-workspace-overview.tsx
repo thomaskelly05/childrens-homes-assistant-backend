@@ -44,10 +44,10 @@ export function ChildWorkspaceOverview({
           <ChildProfileHero view={view} />
 
           <WorkspaceSectionAccordion
-            testId="child-workspace-section-know-me"
+            testId="child-workspace-section-understand"
             eyebrow="Understand"
-            title="Get to know me"
-            description="What matters, communication, routines, strengths and how best to support."
+            title="Understand this child"
+            description="What matters, communication, strengths, routines, triggers and how best to support."
             defaultOpen
           >
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -60,21 +60,24 @@ export function ChildWorkspaceOverview({
           <WorkspaceSectionAccordion
             testId="child-workspace-section-today"
             eyebrow="Today"
-            title="Today’s picture"
-            description="Recent records, open actions, alerts and what needs attention."
+            title="Today’s priorities"
+            description="Records awaiting completion or sign-off, alerts, handover hints and actions due."
             defaultOpen
           >
             <ChildTodayCard view={view} />
           </WorkspaceSectionAccordion>
 
-          <section data-testid="child-workspace-section-recording">
+          <section data-testid="child-workspace-section-record-once" aria-labelledby="child-record-once-heading">
+            <p id="child-record-once-heading" className="sr-only">
+              Record once
+            </p>
             <ChildRecordingSelectorCard childId={childId} />
           </section>
 
           <WorkspaceSectionAccordion
             testId="child-workspace-section-story"
-            eyebrow="Story and life"
-            title="Story and life"
+            eyebrow="Story"
+            title="Child’s story"
             description="Chronology, archive, LifeEcho, child voice and documents."
             defaultOpen={false}
           >

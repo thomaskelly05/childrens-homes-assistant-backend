@@ -55,7 +55,12 @@ import { ChildWorkspaceLoadingFallback } from '@/components/indicare/scope/child
 import { childIdFromPath, childWorkspaceHref } from '@/lib/navigation/child-workspace-routes'
 import { routeRequiresScope, workspaceHrefForScope } from '@/lib/os-scope'
 import type { OrbContext } from '@/lib/orb/types'
-import { isRecordingEditorPathStrict, shouldShowFloatingOrb, shouldShowShellContextualOrbPanel } from '@/lib/orb/orb-presence-rules'
+import {
+  hasPageEmbeddedOrbRail,
+  isRecordingEditorPathStrict,
+  shouldShowFloatingOrb,
+  shouldShowShellContextualOrbPanel
+} from '@/lib/orb/orb-presence-rules'
 import { useStableSearchParams } from '@/hooks/use-stable-search-params'
 
 const recordWorkspaceRoots = ['actions', 'reports', 'evidence', 'documents', 'chronology', 'daily-logs', 'incidents', 'safeguarding', 'medication', 'health', 'keywork', 'appointments', 'risk-assessments', 'reg44']
@@ -107,7 +112,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pageTitle = activeChildName ? `${activeChildName}'s journey` : titleFromPath(pathname)
   const stableSearchParams = useStableSearchParams()
   const isPublicPage = pathname === '/login' || pathname.startsWith('/login/') || pathname === '/unauthorized'
-  const visibleNavItems = visibleOperationalNavigation(user)
+  const visibleNavItems = visibleOperationalNavigation(user, 'primary')
+  const visibleMoreNavItems = visibleOperationalNavigation(user, 'more')
   const matchedRoute = [...operationalNavigation, ...operationalUtilities]
     .filter((item) => pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href)))
     .sort((a, b) => b.href.length - a.href.length)[0]
@@ -275,6 +281,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         : []
   const useScopeMenu = hasOsScope && scopeFirstShell && scopeHasValidIds
   const primaryNav = useScopeMenu ? [] : visibleNavItems.filter((item) => selectedId || !item.requiresChild)
+  const moreNav = useScopeMenu ? [] : visibleMoreNavItems.filter((item) => selectedId || !item.requiresChild)
   const secondaryNav =
     scope.scope_type === 'child' && scope.selected_child_id
       ? childWorkspaceMobileTabs(scope.selected_child_id)
@@ -298,16 +305,9 @@ export function AppShell({ children }: { children: ReactNode }) {
           : [])
       ]
     : [
-        { label: 'On shift', domains: ['command-centre', 'children', 'daily-care', 'chronology', 'actions', 'orb'] },
-        { label: 'Records & evidence', domains: ['documents'] },
-        { label: 'Leadership', domains: ['workforce', 'governance', 'reports'] },
-        { label: 'System', domains: ['admin'] }
-      ]
-        .map((group) => ({
-          ...group,
-          items: primaryNav.filter((item) => group.domains.includes(item.domain))
-        }))
-        .filter((group) => group.items.length)
+        { label: 'Main menu', items: primaryNav },
+        ...(moreNav.length ? [{ label: 'More', items: moreNav }] : [])
+      ].filter((group) => group.items.length)
   const childDomainActive =
     pathParts[0] === 'young-people' ||
     pathParts[0] === 'children' ||
@@ -335,7 +335,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <span className="orb-motion-breathing relative h-12 w-12 rounded-2xl bg-[radial-gradient(circle_at_30%_20%,#fff,transparent_24%),linear-gradient(135deg,#38bdf8,#2563eb_52%,#111827)] shadow-[0_0_42px_rgba(56,189,248,0.36)]" aria-hidden />
             <span>
               <span className="block text-[10px] font-black uppercase tracking-[0.24em] text-blue-200">IndiCare OS</span>
-              <span className="mt-1 block text-sm font-black text-white">Operational cognition</span>
+              <span className="mt-1 block text-sm font-black text-white">Child-centred OS</span>
             </span>
           </Link>
           <div className="mt-4 rounded-[24px] border border-blue-300/10 bg-blue-300/10 p-4">
@@ -388,16 +388,20 @@ export function AppShell({ children }: { children: ReactNode }) {
               </div>
             ))}
           </nav>
-          <Link
-            prefetch={false}
-            href="/assistant/orb"
-            data-testid="sidebar-orb-link"
-            className="mt-4 block rounded-[24px] border border-blue-300/20 bg-[radial-gradient(circle_at_top,#38bdf833,transparent_55%),rgba(255,255,255,0.08)] p-4 shadow-[0_0_32px_rgba(56,189,248,0.12)] transition hover:border-cyan-300/30 hover:bg-white/10"
-          >
-            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-cyan-200">ORB</p>
-            <p className="mt-1.5 text-sm font-black text-white">ORB supports this route</p>
-            <p className="mt-1 text-xs font-semibold leading-5 text-slate-400">Connected to your workspace — same as command search and Ask ORB.</p>
-          </Link>
+          {!hasPageEmbeddedOrbRail(pathname) && !isRecordingEditorPathStrict(pathname) ? (
+            <Link
+              prefetch={false}
+              href="/assistant/orb"
+              data-testid="sidebar-orb-link"
+              className="mt-4 block rounded-[24px] border border-blue-300/20 bg-[radial-gradient(circle_at_top,#38bdf833,transparent_55%),rgba(255,255,255,0.08)] p-4 shadow-[0_0_32px_rgba(56,189,248,0.12)] transition hover:border-cyan-300/30 hover:bg-white/10"
+            >
+              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-cyan-200">ORB</p>
+              <p className="mt-1.5 text-sm font-black text-white">Quiet copilot</p>
+              <p className="mt-1 text-xs font-semibold leading-5 text-slate-400" data-testid="orb-quiet-copilot-tagline">
+                The quiet copilot for children&apos;s homes — present when needed, invisible when not.
+              </p>
+            </Link>
+          ) : null}
         </aside>
 
         <div className="min-w-0">

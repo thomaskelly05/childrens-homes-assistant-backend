@@ -31,7 +31,7 @@ export default function SccifAlignmentPage() {
       <PageHeader
         eyebrow="Inspection evidence support"
         title="SCCIF and Quality Standards alignment"
-        description="Map safe operational evidence to Ofsted's SCCIF judgement areas and the Children's Homes Quality Standards. This supports preparation and oversight; it does not predict inspection outcomes."
+        description="Quality Standards alignment and SCCIF evidence snapshot — gaps to review for managers. Supports inspection readiness; does not guarantee compliance or predict grades."
         action={
           <div className="flex flex-wrap gap-2">
             <Link

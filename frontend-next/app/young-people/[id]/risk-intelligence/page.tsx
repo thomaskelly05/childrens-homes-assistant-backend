@@ -13,7 +13,7 @@ export default async function YoungPersonRiskIntelligencePage({ params }: { para
       <RiskIntelligenceHeader
         eyebrow="Operational risk support"
         title={`${view.person.preferredName} risk intelligence`}
-        description="Decision support only: records indicate patterns, protective factors and review prompts for adults to check."
+        description="Child-level trends and patterns — improving, repeating, or action needed. Decision support only; adults remain responsible for review."
         youngPersonId={id}
       />
       <RiskIntelligenceShell

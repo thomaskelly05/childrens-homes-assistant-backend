@@ -53,15 +53,18 @@ export function InspectionReadinessWorkspace() {
         data-testid="inspection-safety-note"
         className="rounded-2xl border border-blue-100 bg-blue-50/60 px-4 py-3 text-xs font-semibold leading-6 text-blue-950"
       >
-        This is evidence support only. Manager judgement and statutory responsibilities remain required.
-        Not a compliance decision.
+        <span className="font-black">Inspection readiness</span> — evidence snapshot and Quality Standards alignment for
+        managers to review. Gaps to review are prompts, not guaranteed compliance. We do not claim Ofsted grades or
+        guaranteed outcomes. Manager judgement and statutory duties remain required.
       </p>
 
       <InspectionReadinessSummary dashboard={dashboard} />
 
       {dashboard?.key_gaps?.length ? (
         <section data-testid="inspection-key-gaps" className="space-y-3">
-          <h2 className="text-lg font-black text-slate-950">Evidence gaps</h2>
+          <h2 className="text-lg font-black text-slate-950" data-testid="inspection-gaps-heading">
+            Gaps to review
+          </h2>
           <div className="grid gap-3 md:grid-cols-2">
             {dashboard.key_gaps.slice(0, 6).map((gap) => (
               <InspectionGapCard key={gap.id} gap={gap} />

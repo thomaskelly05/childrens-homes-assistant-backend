@@ -31,7 +31,7 @@ export function ChildProfileHero({ view }: { view: ChildWorkspaceOverviewViewMod
       className="child-workspace-hero-mobile-compact rounded-[28px] border border-white/80 bg-gradient-to-br from-sky-50 via-white to-violet-50/40 p-5 shadow-[0_16px_48px_rgba(15,23,42,0.05)] md:rounded-[36px] md:p-8 md:shadow-[0_24px_70px_rgba(15,23,42,0.06)]"
       data-testid="child-workspace-hero"
     >
-      <p className="text-[11px] font-black uppercase tracking-[0.24em] text-sky-700">Child story</p>
+      <p className="text-[11px] font-black uppercase tracking-[0.24em] text-sky-700">Child workspace</p>
       <div className="mt-4 flex items-start gap-4 md:mt-5 md:gap-6">
         <ChildWorkspaceAvatar photo={photo} displayName={child.displayName} initials={initials} />
         <div className="min-w-0 flex-1">

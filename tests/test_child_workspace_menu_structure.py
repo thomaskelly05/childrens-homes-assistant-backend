@@ -8,14 +8,15 @@ SCOPE_NAV = Path(__file__).resolve().parents[1] / "frontend-next" / "lib" / "nav
 def test_child_primary_menu_items():
     text = SCOPE_NAV.read_text(encoding="utf-8")
     primary = text.split("childScopePrimaryNavigation")[1].split("export function childScopeMoreNavigation")[0]
-    for label in ("Overview", "Record", "Chronology", "Plans", "Reviews", "Alerts", "ORB"):
+    for label in ("Overview", "Record", "Chronology", "Plans", "Reviews", "Alerts"):
         assert label in primary
+    assert "ORB" not in primary
 
 
 def test_child_more_menu_items():
     text = SCOPE_NAV.read_text(encoding="utf-8")
     more = text.split("childScopeMoreNavigation")[1].split("export function childScopeNavigation")[0]
-    for label in ("Archive", "LifeEcho", "Plan impacts", "Handover", "Safeguarding"):
+    for label in ("Archive", "LifeEcho", "Plan impacts", "Handover", "Safeguarding", "ORB"):
         assert label in more
 
 

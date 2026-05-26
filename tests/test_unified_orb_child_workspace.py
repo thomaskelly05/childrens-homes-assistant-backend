@@ -23,9 +23,10 @@ def test_child_workspace_single_operational_rail():
 def test_child_workspace_no_duplicate_scope_launcher_card():
     rail = ORB_RAIL.read_text(encoding="utf-8")
     assert "Open operational ORB" not in rail
-    assert "ORB on shift" in Path(
-        FRONTEND / "components" / "orb-operational" / "operational-orb-rail.tsx"
-    ).read_text(encoding="utf-8")
+    rail_text = (FRONTEND / "components" / "orb-operational" / "operational-orb-rail.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "ORB_QUIET_COPILOT_TAGLINE" in rail_text or "quiet copilot" in rail_text.lower()
 
 
 def test_child_workspace_hides_floating_orb_via_rules():
