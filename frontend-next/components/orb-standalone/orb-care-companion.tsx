@@ -241,7 +241,7 @@ export function OrbCareCompanion() {
 
   const [workspace, setWorkspace] = useState<StandaloneWorkspace>(() => defaultWorkspace())
   const [modes, setModes] = useState<string[]>([...STANDALONE_ORB_MODES])
-  const [input, setInput] = useState('')
+  const [message, setMessage] = useState('')
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [retryPayload, setRetryPayload] = useState<{ text: string; chatId: string } | null>(null)
@@ -300,7 +300,7 @@ export function OrbCareCompanion() {
   useEffect(() => {
     if (!mounted) return
     const q = searchParams.get('q')?.trim()
-    if (q) setInput(q)
+    if (q) setMessage(q)
   }, [mounted, searchParams])
 
   const activeChat = useMemo(() => {
@@ -388,7 +388,7 @@ export function OrbCareCompanion() {
     const transcriptReady = voice.phase === 'transcript_ready'
     if (!display || (!voice.listening && !transcriptReady)) return
     if (composerUserEditedRef.current && !voiceMayFillComposerRef.current) return
-    setInput(display)
+    setMessage(display)
   }, [voice.displayTranscript, voice.listening, voice.phase])
 
   const scrolledMessageCountRef = useRef(0)
@@ -423,7 +423,7 @@ export function OrbCareCompanion() {
 
   const showSafeguardingEscalation =
     mode === 'Safeguarding' ||
-    transcriptHasHighRiskTerms(input) ||
+    transcriptHasHighRiskTerms(message) ||
     transcriptHasHighRiskTerms(voice.transcript) ||
     messages.some((m) => m.role === 'user' && transcriptHasHighRiskTerms(m.content))
 
@@ -519,7 +519,7 @@ export function OrbCareCompanion() {
         )
       }
 
-      setInput('')
+      setMessage('')
       setAttachments([])
       composerUserEditedRef.current = false
       voiceMayFillComposerRef.current = false
@@ -546,7 +546,7 @@ export function OrbCareCompanion() {
         persistChat(targetChatId!, {
           messages: dedupeOrbMessages([...priorMessages, boundaryMessage])
         })
-        setInput('')
+        setMessage('')
         setAttachments([])
         setPending(false)
         sendInFlightRef.current = false
@@ -655,7 +655,7 @@ export function OrbCareCompanion() {
         formText = String(new FormData(event.currentTarget).get('message') || '')
       }
       const domText = inputRef.current?.value ?? ''
-      const finalText = (formText || input || domText).trim()
+      const finalText = (formText || message || domText).trim()
       if (!finalText && attachments.length === 0) {
         setError('Type a message to send.')
         return
@@ -666,7 +666,7 @@ export function OrbCareCompanion() {
         submitGuardRef.current = false
       })
     },
-    [attachments.length, input, pending, sendMessage]
+    [attachments.length, message, pending, sendMessage]
   )
 
   /** Mic is text-first on /orb; barge-in voice controls ship in the future ORB Voice surface. */
@@ -689,17 +689,17 @@ export function OrbCareCompanion() {
       window.setTimeout(() => setMicNotice(null), 5000)
       return
     }
-    if (!input.trim()) {
+    if (!message.trim()) {
       voiceMayFillComposerRef.current = true
       composerUserEditedRef.current = false
     }
     voice.startListening()
   }
 
-  function handleComposerInputChange(value: string) {
+  function handleMessageChange(value: string) {
     composerUserEditedRef.current = true
     voiceMayFillComposerRef.current = false
-    setInput(value)
+    setMessage(value)
   }
 
   function handleModeChange(next: StandaloneOrbMode) {
@@ -727,7 +727,7 @@ export function OrbCareCompanion() {
       activeProjectId: projectId || current.activeProjectId,
       chats: [chat, ...current.chats]
     }))
-    setInput('')
+    setMessage('')
     setAttachments([])
     composerUserEditedRef.current = false
     voiceMayFillComposerRef.current = false
@@ -744,7 +744,7 @@ export function OrbCareCompanion() {
       activeChatId: chatId,
       activeProjectId: chat.projectId
     }))
-    setInput('')
+    setMessage('')
     setAttachments([])
     composerUserEditedRef.current = false
     voiceMayFillComposerRef.current = false
@@ -761,7 +761,7 @@ export function OrbCareCompanion() {
   }
 
   function applyPrompt(entry: PromptEntry) {
-    setInput(entry.text)
+    setMessage(entry.text)
     if (entry.mode) handleModeChange(entry.mode)
     inputRef.current?.focus()
     setSidebarOpen(false)
@@ -856,7 +856,8 @@ export function OrbCareCompanion() {
 
   const composer = (
     <OrbStandaloneComposer
-      input={input}
+      value={message}
+      composerStateLength={message.trim().length}
       pending={pending}
       mode={mode}
       attachments={attachments}
@@ -873,7 +874,7 @@ export function OrbCareCompanion() {
       transcriptReady={STANDALONE_ORB_VOICE_CAPTURE_ENABLED && voice.phase === 'transcript_ready'}
       displayTranscript={voice.displayTranscript}
       autoSend={STANDALONE_ORB_VOICE_CAPTURE_ENABLED && voiceSettings.autoSend}
-      onInputChange={handleComposerInputChange}
+      onChange={handleMessageChange}
       onSubmit={handleComposerSubmit}
       onMicClick={handleMicClick}
       onCancelListening={voice.cancelListening}
@@ -893,15 +894,15 @@ export function OrbCareCompanion() {
       onAttachDocumentClick={() => openDocumentsPanel()}
       onAnalyseDocument={() => {
         openDocumentsPanel()
-        setInput((current) => current || 'Analyse this document')
+        setMessage((current) => current || 'Analyse this document')
       }}
       onDocumentActionPlan={() => {
         openDocumentsPanel()
-        setInput('Create an action plan from this document')
+        setMessage('Create an action plan from this document')
       }}
       onSummariseDocument={() => {
         openDocumentsPanel()
-        setInput('Summarise the uploaded document')
+        setMessage('Summarise the uploaded document')
       }}
       onAddDocumentToLibrary={() => openKnowledgeLibrary()}
     />
@@ -932,7 +933,7 @@ export function OrbCareCompanion() {
         onClose={closePanel}
         workspace={workspace}
         onReuseInChat={(prompt) => {
-          setInput(prompt)
+          setMessage(prompt)
           closePanel()
         }}
       />
@@ -943,11 +944,11 @@ export function OrbCareCompanion() {
         activeProjectId={workspace.activeProjectId}
         activeProjectName={activeProject?.name}
         onReuseInChat={(prompt) => {
-          setInput(prompt)
+          setMessage(prompt)
           closePanel()
         }}
         onInsertIntoChat={(text) => {
-          setInput(text)
+          setMessage(text)
           closePanel()
         }}
         onOpenSavedOutputs={openSavedOutputsPanel}
@@ -1029,7 +1030,7 @@ export function OrbCareCompanion() {
         activeProjectName={activeProject?.name}
         onOpenSavedOutputs={openSavedOutputsPanel}
         onReuseInChat={(prompt) => {
-          setInput(prompt)
+          setMessage(prompt)
           closePanel()
         }}
       />
@@ -1296,7 +1297,7 @@ export function OrbCareCompanion() {
                                   type="button"
                                   onClick={() => {
                                     setAgentPanelType('document_analysis')
-                                    setAgentPanelPrompt(input || entry.content.slice(0, 200))
+                                    setAgentPanelPrompt(message || entry.content.slice(0, 200))
                                     openAgentsPanel()
                                   }}
                                   className="rounded-full bg-cyan-500/15 px-3 py-1 text-xs font-medium text-cyan-200 ring-1 ring-cyan-400/25"
@@ -1307,7 +1308,7 @@ export function OrbCareCompanion() {
                                   type="button"
                                   onClick={() => {
                                     setAgentPanelType('deep_research')
-                                    setAgentPanelPrompt(input || entry.content.slice(0, 200))
+                                    setAgentPanelPrompt(message || entry.content.slice(0, 200))
                                     openAgentsPanel()
                                   }}
                                   className="rounded-full bg-white/[0.06] px-3 py-1 text-xs font-medium text-slate-300 ring-1 ring-white/10"
@@ -1323,7 +1324,7 @@ export function OrbCareCompanion() {
                                   onClick={() => {
                                     const type = entry.agentSuggestion?.agent_type
                                     setAgentPanelType(type)
-                                    setAgentPanelPrompt(input || entry.content.slice(0, 200))
+                                    setAgentPanelPrompt(message || entry.content.slice(0, 200))
                                     openAgentsPanel()
                                   }}
                                   className="rounded-full bg-cyan-500/15 px-3 py-1 text-xs font-medium text-cyan-200 ring-1 ring-cyan-400/25 hover:bg-cyan-500/25"
@@ -1346,7 +1347,7 @@ export function OrbCareCompanion() {
                                 }}
                                 onStop={voice.cancelSpeaking}
                                 onNewQuestion={() => {
-                                  setInput('')
+                                  setMessage('')
                                   inputRef.current?.focus()
                                 }}
                                 onDraft={() => void handleDraftWording(entry.content)}

@@ -8,7 +8,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from auth.permissions import require_assistant_access
+from auth.permissions import require_standalone_orb_access
 from schemas.orb_documents import (
     OrbDocumentAnalysisRequest,
     OrbDocumentUploadRequest,
@@ -51,14 +51,14 @@ def _reject_os_ids(payload: dict[str, Any]) -> None:
 
 
 @router.get("/health")
-async def documents_health(current_user=Depends(require_assistant_access)):
+async def documents_health(current_user=Depends(require_standalone_orb_access)):
     return _success(orb_document_understanding_service.health())
 
 
 @router.post("/upload")
 async def upload_document(
     payload: OrbDocumentUploadRequest,
-    current_user=Depends(require_assistant_access),
+    current_user=Depends(require_standalone_orb_access),
 ):
     _reject_os_ids(payload.model_dump())
     try:
@@ -106,7 +106,7 @@ async def upload_document(
 @router.post("/analyse")
 async def analyse_document(
     payload: OrbDocumentAnalysisRequest,
-    current_user=Depends(require_assistant_access),
+    current_user=Depends(require_standalone_orb_access),
 ):
     _reject_os_ids(payload.model_dump())
     try:
@@ -135,7 +135,7 @@ async def analyse_document(
 @router.post("/action-plan")
 async def document_action_plan(
     payload: OrbDocumentAnalysisRequest,
-    current_user=Depends(require_assistant_access),
+    current_user=Depends(require_standalone_orb_access),
 ):
     payload = payload.model_copy(update={"mode": "action_plan"})
     return await analyse_document(payload, current_user=current_user)
@@ -144,7 +144,7 @@ async def document_action_plan(
 @router.post("/briefing")
 async def document_briefing(
     payload: OrbDocumentAnalysisRequest,
-    current_user=Depends(require_assistant_access),
+    current_user=Depends(require_standalone_orb_access),
 ):
     mode = payload.mode
     if mode not in {"manager_briefing", "staff_briefing"}:
@@ -157,7 +157,7 @@ async def document_briefing(
 @router.post("/compare")
 async def document_compare(
     payload: OrbDocumentAnalysisRequest,
-    current_user=Depends(require_assistant_access),
+    current_user=Depends(require_standalone_orb_access),
 ):
     payload = payload.model_copy(update={"mode": "policy_comparison"})
     return await analyse_document(payload, current_user=current_user)
@@ -166,7 +166,7 @@ async def document_compare(
 @router.get("/{source_id}/summary")
 async def document_summary(
     source_id: str,
-    current_user=Depends(require_assistant_access),
+    current_user=Depends(require_standalone_orb_access),
 ):
     try:
         understanding = await orb_document_understanding_service.analyse_source(

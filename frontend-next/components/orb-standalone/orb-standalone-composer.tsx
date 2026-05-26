@@ -20,7 +20,7 @@ function sendDisabledReason(pending: boolean, canSend: boolean): 'pending' | 'em
 }
 
 export function OrbStandaloneComposer({
-  input,
+  value,
   pending,
   mode,
   attachments,
@@ -32,8 +32,9 @@ export function OrbStandaloneComposer({
   transcriptReady,
   displayTranscript,
   autoSend,
-  onInputChange,
+  onChange,
   onSubmit,
+  composerStateLength,
   onMicClick,
   onCancelListening,
   onStopSpeaking,
@@ -52,7 +53,7 @@ export function OrbStandaloneComposer({
   onSummariseDocument,
   onAddDocumentToLibrary
 }: {
-  input: string
+  value: string
   pending: boolean
   mode: StandaloneOrbMode
   attachments: PendingImageAttachment[]
@@ -64,8 +65,9 @@ export function OrbStandaloneComposer({
   transcriptReady: boolean
   displayTranscript: string
   autoSend: boolean
-  onInputChange: (value: string) => void
+  onChange: (value: string) => void
   onSubmit: (event?: FormEvent | { preventDefault?: () => void }) => void
+  composerStateLength?: number
   onMicClick: () => void
   onCancelListening: () => void
   onStopSpeaking: () => void
@@ -86,10 +88,15 @@ export function OrbStandaloneComposer({
 }) {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const cameraInputRef = useRef<HTMLInputElement | null>(null)
-  const trimmedMessage = input.trim()
+  const trimmedMessage = value.trim()
+  const stateLength = composerStateLength ?? trimmedMessage.length
   const canSend = trimmedMessage.length > 0 || attachments.length > 0
   const sendDisabled = pending || !canSend
   const disabledReason = sendDisabledReason(pending, canSend)
+
+  function syncMessage(next: string) {
+    onChange(next)
+  }
 
   function handleDragOver(event: DragEvent) {
     event.preventDefault()
@@ -136,6 +143,7 @@ export function OrbStandaloneComposer({
         <form
           className="w-full"
           data-testid="orb-standalone-message-form"
+          data-composer-state-length={stateLength}
           onSubmit={(event) => {
             logTapTarget(event, 'orb-standalone-form-submit')
             onSubmit(event)
@@ -248,9 +256,10 @@ export function OrbStandaloneComposer({
                 ref={inputRef}
                 id="orb-standalone-input"
                 name="message"
-                value={input}
-                onChange={(event) => onInputChange(event.target.value)}
-                onInput={(event) => onInputChange(event.currentTarget.value)}
+                value={value}
+                onChange={(event) => syncMessage(event.currentTarget.value)}
+                onInput={(event) => syncMessage(event.currentTarget.value)}
+                onCompositionEnd={(event) => syncMessage(event.currentTarget.value)}
                 onPaste={onPaste}
                 onKeyDown={(event) => {
                   if (event.key === 'Enter' && !event.shiftKey) {
@@ -265,6 +274,7 @@ export function OrbStandaloneComposer({
                 aria-describedby="orb-standalone-status"
                 data-orb-composer-input
                 data-testid="orb-standalone-message-input"
+                data-input-source="controlled"
               />
               <button
                 type="button"

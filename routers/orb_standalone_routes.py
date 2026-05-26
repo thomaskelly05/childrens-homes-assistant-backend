@@ -7,7 +7,7 @@ from typing import Any
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, ConfigDict, Field
 
-from auth.permissions import require_assistant_access
+from auth.permissions import require_standalone_orb_access
 from services.orb_citation_service import orb_citation_service
 from services.ai_provider_registry import ai_provider_registry
 from services.orb_general_assistant_service import orb_general_assistant_service
@@ -231,7 +231,7 @@ def _build_framed_message(*, mode: str, user_message: str, detail: str) -> str:
 
 
 @router.get("/health")
-async def standalone_orb_health(current_user=Depends(require_assistant_access)):
+async def standalone_orb_health(current_user=Depends(require_standalone_orb_access)):
     return {
         "success": True,
         "data": {
@@ -245,7 +245,7 @@ async def standalone_orb_health(current_user=Depends(require_assistant_access)):
 
 
 @router.get("/model-router/health")
-async def standalone_model_router_health(current_user=Depends(require_assistant_access)):
+async def standalone_model_router_health(current_user=Depends(require_standalone_orb_access)):
     return {
         "success": True,
         "data": ai_provider_registry.health_payload(),
@@ -253,7 +253,7 @@ async def standalone_model_router_health(current_user=Depends(require_assistant_
 
 
 @router.get("/config")
-async def standalone_orb_config(current_user=Depends(require_assistant_access)):
+async def standalone_orb_config(current_user=Depends(require_standalone_orb_access)):
     return {
         "success": True,
         "data": _standalone_contract(),
@@ -269,13 +269,13 @@ class OrbStandaloneSurfaceRouteRequest(BaseModel):
 
 
 @router.get("/capabilities")
-async def standalone_orb_capabilities(current_user=Depends(require_assistant_access)):
+async def standalone_orb_capabilities(current_user=Depends(require_standalone_orb_access)):
     payload = indicare_intelligence_capability_service.list_capabilities()
     return {"success": True, "data": payload.model_dump()}
 
 
 @router.get("/capabilities/summary")
-async def standalone_orb_capabilities_summary(current_user=Depends(require_assistant_access)):
+async def standalone_orb_capabilities_summary(current_user=Depends(require_standalone_orb_access)):
     summary = indicare_intelligence_capability_service.summarize()
     return {"success": True, "data": summary.model_dump()}
 
@@ -283,7 +283,7 @@ async def standalone_orb_capabilities_summary(current_user=Depends(require_assis
 @router.post("/surface-route")
 async def standalone_orb_surface_route(
     body: OrbStandaloneSurfaceRouteRequest,
-    current_user=Depends(require_assistant_access),
+    current_user=Depends(require_standalone_orb_access),
 ):
     decision = indicare_intelligence_surface_router.route(
         body.intent,
@@ -336,6 +336,8 @@ def _standalone_conversation_response(
     return {
         "ok": True,
         "success": True,
+        "standalone": True,
+        "os_records_accessed": False,
         "answer": answer,
         "summary": answer.split("\n", 1)[0][:220],
         "sources": resolved_sources,
@@ -356,7 +358,7 @@ def _standalone_conversation_response(
 @router.post("/conversation")
 async def standalone_orb_conversation(
     payload: OrbStandaloneConversationRequest,
-    current_user=Depends(require_assistant_access),
+    current_user=Depends(require_standalone_orb_access),
 ):
     mode = payload.mode or "Ask ORB"
     detail = _resolve_detail(mode, payload.detail)

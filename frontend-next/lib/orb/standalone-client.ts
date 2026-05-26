@@ -172,6 +172,8 @@ export type StandaloneOrbModelRouting = {
 
 export type StandaloneOrbConversationResponse = {
   ok: boolean
+  standalone?: boolean
+  os_records_accessed?: boolean
   answer: string
   summary?: string
   conversation_id?: string | null
@@ -248,7 +250,7 @@ export async function queryStandaloneOrbConversation(
   request: StandaloneOrbConversationRequest,
   signal?: AbortSignal
 ): Promise<StandaloneOrbConversationResponse> {
-  const endpoint = '/orb/standalone/conversation'
+  const endpoint = STANDALONE_ORB_API_PATHS.conversation
   const requestSignal = withTimeout(signal)
 
   try {
@@ -295,6 +297,8 @@ export async function queryStandaloneOrbConversation(
 
     return {
       ok: Boolean(typed.ok ?? true),
+      standalone: typed.standalone ?? true,
+      os_records_accessed: typed.os_records_accessed ?? false,
       answer,
       summary: typed.summary,
       conversation_id: typed.conversation_id ?? request.conversation_id,

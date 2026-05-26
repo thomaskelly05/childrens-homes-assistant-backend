@@ -144,6 +144,19 @@ def require_assistant_access(
     return current_user
 
 
+def require_standalone_orb_access(
+    current_user: dict[str, Any] = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Standalone /orb — any authenticated user; no OS child/home scope required."""
+    if policy_engine.has_permission(current_user, "orb:access"):
+        return current_user
+    if policy_engine.has_permission(current_user, "assistant:access"):
+        return current_user
+    if policy_engine.has_permission(current_user, "records:read"):
+        return current_user
+    raise _forbidden("Sign in to use ORB Care Companion")
+
+
 def require_permission(permission: str):
     def dependency(
         current_user: dict[str, Any] = Depends(get_current_user),
