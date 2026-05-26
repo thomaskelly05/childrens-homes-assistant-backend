@@ -158,8 +158,12 @@ export function OrbStandaloneSidebar({
           O
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-white">ORB Care Companion</p>
-          <p className="truncate text-[11px] text-slate-500">Standalone assistant</p>
+          <p className="truncate text-sm font-semibold text-white" data-orb-sidebar-brand>
+            ORB
+          </p>
+          <p className="truncate text-[11px] text-slate-500" data-orb-sidebar-powered>
+            Powered by IndiCare
+          </p>
         </div>
         {onClose ? (
           <button type="button" className="rounded-lg p-1 text-slate-400 lg:hidden" onClick={onClose} aria-label="Close sidebar">

@@ -23,7 +23,8 @@ def test_voice_listening_does_not_disable_send_button():
 
 def test_floating_voice_fab_not_shown_by_default():
     text = COMPANION.read_text(encoding="utf-8")
-    assert "{orbCompanionExpanded ? (" in text
+    assert "orbCompanionExpanded" not in text
+    assert "data-orb-companion-float" not in text
     assert 'data-orb-companion-fab' not in text
     assert "data-orb-composer-mic" in COMPOSER.read_text(encoding="utf-8")
 

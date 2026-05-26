@@ -16,17 +16,13 @@ import {
   FileText,
   Menu,
   MessageSquarePlus,
-  PanelRightClose,
   RotateCcw,
   Settings2,
   Square,
   Volume2,
-  VolumeX,
   Wrench,
   X
 } from 'lucide-react'
-
-import { OrbGlow, type StandaloneOrbGlowState } from '@/components/orb-standalone/orb-glow'
 import {
   OrbStandaloneComposer,
   type PendingImageAttachment
@@ -76,10 +72,15 @@ import {
   fetchStandaloneOrbConfig,
   queryStandaloneOrbConversation,
   STANDALONE_ORB_MODES,
+  STANDALONE_ORB_SEND_RETRY_MESSAGE,
   standaloneOrbErrorMessage,
   type StandaloneOrbAgentSuggestion,
   type StandaloneOrbMode
 } from '@/lib/orb/standalone-client'
+
+/** Standalone /orb is text-first; voice ships in a future ORB Voice surface. */
+const STANDALONE_ORB_VOICE_CAPTURE_ENABLED = false
+const VOICE_MODE_COMING_SOON = 'Voice mode is coming next — type your message below.'
 
 const MODE_SAFETY: Partial<Record<StandaloneOrbMode, string>> = {
   Safeguarding:
@@ -180,40 +181,18 @@ function transcriptHasHighRiskTerms(text: string): boolean {
 function voiceStatusLine(options: {
   voice: ReturnType<typeof useStandaloneOrbVoice>
   pending: boolean
+  micNotice: string | null
+  voiceCaptureEnabled: boolean
 }): string {
-  const { voice, pending } = options
-  if (!voice.speechInputAvailable && !voice.speechOutputAvailable) {
-    return 'Voice unavailable — type instead'
-  }
+  const { voice, pending, micNotice, voiceCaptureEnabled } = options
+  if (micNotice) return micNotice
+  if (!voiceCaptureEnabled) return ''
   if (voice.listening || voice.phase === 'continuous_listening' || voice.phase === 'wake_listening') {
     return 'Listening…'
   }
   if (pending) return 'Thinking…'
   if (voice.speaking) return 'Speaking…'
-  return 'Voice ready'
-}
-
-function glowStateForContext(options: {
-  pending: boolean
-  voicePhase: string
-  listening: boolean
-  speaking: boolean
-  voiceError: string | null
-  mode: StandaloneOrbMode
-  recordingContext: boolean
-}): StandaloneOrbGlowState {
-  if (options.voicePhase === 'interrupted') return 'interrupted'
-  if (options.voicePhase === 'wake_listening') return 'wake_listening'
-  if (options.voicePhase === 'wake_detected') return 'wake_detected'
-  if (options.voicePhase === 'continuous_listening') return 'continuous_listening'
-  if (options.voiceError && !options.pending && !options.listening && options.voicePhase === 'error') return 'error'
-  if (options.listening) return 'listening'
-  if (options.voicePhase === 'transcript_ready') return 'transcript_ready'
-  if (options.pending) return 'thinking'
-  if (options.speaking) return 'speaking'
-  if (options.recordingContext || options.mode === 'Record This Properly') return 'recording'
-  if (options.mode === 'Safeguarding') return 'safeguarding'
-  return 'idle'
+  return ''
 }
 
 function modeFromQuery(value: string | null): StandaloneOrbMode | null {
@@ -268,8 +247,7 @@ export function OrbCareCompanion() {
   const [retryPayload, setRetryPayload] = useState<{ text: string; chatId: string } | null>(null)
   const [imageUnderstandingNote, setImageUnderstandingNote] = useState<string | null>(null)
   const [attachments, setAttachments] = useState<PendingImageAttachment[]>([])
-  const [voicePanelOpen, setVoicePanelOpen] = useState(false)
-  const [orbCompanionExpanded, setOrbCompanionExpanded] = useState(false)
+  const [micNotice, setMicNotice] = useState<string | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [activePanel, setActivePanel] = useState<OrbStandalonePanel>(null)
   const [modesBarOpen, setModesBarOpen] = useState(false)
@@ -301,7 +279,7 @@ export function OrbCareCompanion() {
   const lastSubmitRef = useRef<{ chatId: string; content: string; at: number } | null>(null)
 
   const voice = useStandaloneOrbVoice()
-  const { settings: voiceSettings, updateSettings: updateVoiceSettings } = voice
+  const { settings: voiceSettings } = voice
 
   const activeProject = useMemo(
     () => workspace.projects.find((p) => p.id === workspace.activeProjectId),
@@ -405,6 +383,7 @@ export function OrbCareCompanion() {
   }, [initialQuery])
 
   useEffect(() => {
+    if (!STANDALONE_ORB_VOICE_CAPTURE_ENABLED) return
     const display = voice.displayTranscript.trim()
     const transcriptReady = voice.phase === 'transcript_ready'
     if (!display || (!voice.listening && !transcriptReady)) return
@@ -432,15 +411,6 @@ export function OrbCareCompanion() {
     }
   }, [])
 
-  useEffect(() => {
-    return voice.registerAfterSpeakListener(() => {
-      if (voice.voiceSessionPaused) return
-      if (!voiceSettings.continuousConversation) return
-      if (!voice.recognitionAvailable) return
-      voice.startContinuousListening()
-    })
-  }, [voice, voiceSettings.continuousConversation])
-
   const persistChat = useCallback((chatId: string, patch: Partial<StandaloneChat>) => {
     setWorkspace((current) => {
       const nextPatch = { ...patch }
@@ -456,16 +426,6 @@ export function OrbCareCompanion() {
     transcriptHasHighRiskTerms(input) ||
     transcriptHasHighRiskTerms(voice.transcript) ||
     messages.some((m) => m.role === 'user' && transcriptHasHighRiskTerms(m.content))
-
-  const glowState = glowStateForContext({
-    pending,
-    voicePhase: voice.phase,
-    listening: voice.listening,
-    speaking: voice.speaking,
-    voiceError: voice.error,
-    mode,
-    recordingContext
-  })
 
   const sendMessage = useCallback(
     async (text: string, options?: { retry?: boolean; chatId?: string }) => {
@@ -501,12 +461,6 @@ export function OrbCareCompanion() {
         .filter(Boolean)
         .join('\n\n')
 
-      setInput('')
-      setAttachments([])
-      composerUserEditedRef.current = false
-      voiceMayFillComposerRef.current = false
-      voice.clearTranscript()
-      voice.markIdle()
       setPending(true)
       setError(null)
       setRetryPayload(null)
@@ -563,6 +517,15 @@ export function OrbCareCompanion() {
             mode
           })
         )
+      }
+
+      setInput('')
+      setAttachments([])
+      composerUserEditedRef.current = false
+      voiceMayFillComposerRef.current = false
+      if (STANDALONE_ORB_VOICE_CAPTURE_ENABLED) {
+        voice.clearTranscript()
+        voice.markIdle()
       }
 
       const osBoundary = standaloneOsBoundaryReply(trimmed || messageBody)
@@ -651,12 +614,16 @@ export function OrbCareCompanion() {
           })
         })
 
-        if (voiceSettings.voiceReplies && voice.synthesisAvailable) {
+        if (
+          STANDALONE_ORB_VOICE_CAPTURE_ENABLED &&
+          voiceSettings.voiceReplies &&
+          voice.synthesisAvailable
+        ) {
           setSpeakingMessageId(assistantId)
           voice.speak(answer, () => setSpeakingMessageId(null))
         }
       } catch (caught) {
-        const message = standaloneOrbErrorMessage(caught)
+        const message = standaloneOrbErrorMessage(caught) || STANDALONE_ORB_SEND_RETRY_MESSAGE
         setError(message)
         setRetryPayload({ text: trimmed || messageBody, chatId: targetChatId! })
       } finally {
@@ -702,22 +669,13 @@ export function OrbCareCompanion() {
     [attachments.length, input, pending, sendMessage]
   )
 
-  useEffect(() => {
-    if (!voiceSettings.autoSend) return
-    if (voice.phase !== 'transcript_ready' || voice.listening || pending) return
-    const trimmed = voice.transcript.trim()
-    if (!trimmed) return
-    if (autoSendTimerRef.current) clearTimeout(autoSendTimerRef.current)
-    autoSendTimerRef.current = setTimeout(() => {
-      void sendMessage(trimmed)
-    }, 600)
-    return () => {
-      if (autoSendTimerRef.current) clearTimeout(autoSendTimerRef.current)
+  /** Mic is text-first on /orb; barge-in voice controls ship in the future ORB Voice surface. */
+  function handleMicClick() {
+    if (!STANDALONE_ORB_VOICE_CAPTURE_ENABLED) {
+      setMicNotice(VOICE_MODE_COMING_SOON)
+      window.setTimeout(() => setMicNotice(null), 5000)
+      return
     }
-  }, [voice.phase, voice.transcript, voice.listening, voiceSettings.autoSend, pending, sendMessage])
-
-  /** barge-in: tap ORB or mic while speaking stops speech and starts listening */
-  function handleOrbActivate() {
     if (voice.speaking) {
       voice.interruptForListen()
       return
@@ -726,7 +684,11 @@ export function OrbCareCompanion() {
       voice.stopListening()
       return
     }
-    if (!voice.recognitionAvailable) return
+    if (!voice.recognitionAvailable) {
+      setMicNotice('Voice unavailable in this browser — type instead.')
+      window.setTimeout(() => setMicNotice(null), 5000)
+      return
+    }
     if (!input.trim()) {
       voiceMayFillComposerRef.current = true
       composerUserEditedRef.current = false
@@ -901,19 +863,25 @@ export function OrbCareCompanion() {
       voiceListening={voice.listening}
       voiceSpeaking={voice.speaking}
       voiceRecognitionAvailable={voice.recognitionAvailable}
-      voiceStatusText={voiceStatusLine({ voice, pending })}
-      transcriptReady={voice.phase === 'transcript_ready'}
+      voiceCaptureEnabled={STANDALONE_ORB_VOICE_CAPTURE_ENABLED}
+      voiceStatusText={voiceStatusLine({
+        voice,
+        pending,
+        micNotice,
+        voiceCaptureEnabled: STANDALONE_ORB_VOICE_CAPTURE_ENABLED
+      })}
+      transcriptReady={STANDALONE_ORB_VOICE_CAPTURE_ENABLED && voice.phase === 'transcript_ready'}
       displayTranscript={voice.displayTranscript}
-      autoSend={voiceSettings.autoSend}
+      autoSend={STANDALONE_ORB_VOICE_CAPTURE_ENABLED && voiceSettings.autoSend}
       onInputChange={handleComposerInputChange}
       onSubmit={handleComposerSubmit}
-      onMicClick={handleOrbActivate}
+      onMicClick={handleMicClick}
       onCancelListening={voice.cancelListening}
       onStopSpeaking={voice.cancelSpeaking}
       onSendTranscript={() => void sendMessage(voice.transcript || voice.displayTranscript)}
       onRetryTranscript={() => {
         voice.clearTranscript()
-        voice.startListening()
+        if (STANDALONE_ORB_VOICE_CAPTURE_ENABLED) voice.startListening()
       }}
       onAddFiles={(files) => void addImageFiles(files)}
       onRemoveAttachment={(id) => setAttachments((current) => current.filter((a) => a.id !== id))}
@@ -940,8 +908,9 @@ export function OrbCareCompanion() {
   )
 
   function openVoiceSettings() {
-    setOrbCompanionExpanded(true)
-    setVoicePanelOpen(false)
+    setMicNotice(VOICE_MODE_COMING_SOON)
+    window.setTimeout(() => setMicNotice(null), 5000)
+    openSettingsPanel()
     setSidebarOpen(false)
   }
 
@@ -952,7 +921,9 @@ export function OrbCareCompanion() {
       className={`orb-chat-layout relative flex flex-col overflow-hidden bg-[#05070d] text-white ${layoutA11yClass}`}
       data-orb-active-panel={activePanel || 'none'}
       data-orb-close-all-panels
+      data-orb-text-first-chat="true"
     >
+      <span className="sr-only">ORB Care Companion — standalone residential care assistant</span>
       <div className="pointer-events-none fixed inset-0 orb-cinematic-light-field opacity-50" aria-hidden />
 
       <OrbKnowledgeLibraryPanel open={activePanel === 'knowledge'} onClose={closePanel} />
@@ -1104,8 +1075,12 @@ export function OrbCareCompanion() {
               <Menu className="h-5 w-5" />
             </button>
             <div className="min-w-0 flex-1">
-              <h1 className="truncate text-sm font-semibold text-white md:text-base">{activeChat?.title || 'ORB Care Companion'}</h1>
-              <p className="truncate text-xs text-slate-500">Standalone residential care assistant</p>
+              <h1 className="truncate text-sm font-semibold text-white md:text-base" data-orb-header-title>
+                {activeChat?.title || 'ORB'}
+              </h1>
+              <p className="truncate text-xs text-slate-500" data-orb-header-subtitle>
+                Standalone residential care assistant · Powered by IndiCare
+              </p>
             </div>
             <span
               className="hidden shrink-0 rounded-full bg-emerald-500/[0.08] px-2 py-0.5 text-[10px] font-medium text-emerald-200/75 sm:inline"
@@ -1257,11 +1232,18 @@ export function OrbCareCompanion() {
                     className="flex min-h-[min(60vh,28rem)] flex-col items-center justify-center py-6 text-center md:py-8"
                     data-orb-empty-state
                   >
-                    <p className="text-xs font-medium text-slate-500">ORB Care Companion</p>
-                    <h2 className="mt-2 text-xl font-semibold tracking-tight text-white md:text-2xl" data-orb-empty-heading>
-                      How can I help today?
+                    <p className="text-xs font-medium uppercase tracking-[0.2em] text-cyan-200/80" data-orb-brand-name>
+                      ORB
+                    </p>
+                    <p className="mt-1 text-[11px] text-slate-500" data-orb-brand-powered>
+                      Powered by IndiCare
+                    </p>
+                    <h2 className="mt-3 text-xl font-semibold tracking-tight text-white md:text-2xl" data-orb-empty-heading>
+                      How can I help?
                     </h2>
-                    <p className="mt-2 max-w-md text-sm text-slate-500">Ask, upload, speak, or open Tools.</p>
+                    <p className="mt-2 max-w-md text-sm text-slate-500" data-orb-empty-subline>
+                      Text-first assistant for residential children&apos;s homes. No OS records accessed.
+                    </p>
                     <div className="mt-6 grid w-full max-w-xl gap-2.5 sm:grid-cols-2" data-orb-starter-cards>
                       {PRIMARY_EMPTY_STARTERS.map((starter) => (
                         <button
@@ -1420,26 +1402,6 @@ export function OrbCareCompanion() {
         </div>
       </div>
 
-      {orbCompanionExpanded ? (
-        <div className="max-md:hidden" data-orb-floating-voice-orb="desktop-only" data-no-navigation-rescue="true">
-          <OrbCompactCompanion
-            glowState={glowState}
-            mode={mode}
-            voice={voice}
-            voiceSettings={voiceSettings}
-            updateVoiceSettings={updateVoiceSettings}
-            voicePanelOpen={voicePanelOpen}
-            onToggleExpanded={() => {
-              setOrbCompanionExpanded(false)
-              setVoicePanelOpen(false)
-            }}
-            onOrbActivate={handleOrbActivate}
-            onToggleVoicePanel={() => setVoicePanelOpen((open) => !open)}
-            onCloseVoicePanel={() => setVoicePanelOpen(false)}
-          />
-        </div>
-      ) : null}
-
       {promptDrawerOpen ? (
         <OrbPromptDrawer
           groups={SUGGESTED_PROMPT_GROUPS}
@@ -1454,144 +1416,6 @@ export function OrbCareCompanion() {
         />
       ) : null}
     </main>
-  )
-}
-
-function OrbCompactCompanion({
-  glowState,
-  mode,
-  voice,
-  voiceSettings,
-  updateVoiceSettings,
-  voicePanelOpen,
-  onToggleExpanded,
-  onOrbActivate,
-  onToggleVoicePanel,
-  onCloseVoicePanel
-}: {
-  glowState: StandaloneOrbGlowState
-  mode: StandaloneOrbMode
-  voice: ReturnType<typeof useStandaloneOrbVoice>
-  voiceSettings: ReturnType<typeof useStandaloneOrbVoice>['settings']
-  updateVoiceSettings: ReturnType<typeof useStandaloneOrbVoice>['updateSettings']
-  voicePanelOpen: boolean
-  onToggleExpanded: () => void
-  onOrbActivate: () => void
-  onToggleVoicePanel: () => void
-  onCloseVoicePanel: () => void
-}) {
-  return (
-    <div className="orb-companion-float" data-orb-companion-float>
-      <div className="orb-voice-dock orb-companion-popover" data-orb-companion-expanded>
-          <div className="flex items-center justify-between gap-2 border-b border-white/[0.06] px-3 py-2">
-            <p className="text-xs font-medium text-slate-300">ORB voice</p>
-            <button
-              type="button"
-              onClick={onToggleExpanded}
-              className="rounded-lg p-1 text-slate-500 hover:bg-white/[0.06]"
-              aria-label="Close ORB voice panel"
-              data-no-navigation-rescue="true"
-            >
-              <PanelRightClose className="h-4 w-4" />
-            </button>
-          </div>
-          <div className="pointer-events-none flex flex-col items-center px-3 py-4">
-            <OrbGlow
-              state={glowState}
-              mode={mode}
-              voiceEnabled={voiceSettings.voiceReplies && voice.synthesisAvailable}
-              onOrbActivate={onOrbActivate}
-              interactive={false}
-              size="compact"
-              compactLabels
-            />
-          </div>
-          <div className="orb-companion-expanded-voice space-y-2 px-3 py-3" data-orb-expanded-voice-settings>
-            <SettingToggle
-              label="Wake phrase (Hey ORB)"
-              checked={voiceSettings.wakePhrase}
-              disabled={!voice.continuousRecognitionSupported}
-              onChange={(on) => {
-                if (!on) voice.stopWakeListening()
-                updateVoiceSettings({ wakePhrase: on })
-              }}
-            />
-            <SettingToggle
-              label="Continuous conversation"
-              checked={voiceSettings.continuousConversation}
-              disabled={!voice.recognitionAvailable}
-              onChange={(on) => updateVoiceSettings({ continuousConversation: on })}
-            />
-            <SettingToggle
-              label="Voice replies"
-              checked={voiceSettings.voiceReplies}
-              disabled={!voice.synthesisAvailable}
-              onChange={(on) => {
-                if (!on) voice.cancelSpeaking()
-                updateVoiceSettings({ voiceReplies: on })
-              }}
-              iconOn={<Volume2 className="h-3.5 w-3.5" />}
-              iconOff={<VolumeX className="h-3.5 w-3.5" />}
-            />
-            <button
-              type="button"
-              onClick={onToggleVoicePanel}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-white/[0.04] px-3 py-2 text-xs font-medium text-slate-300 ring-1 ring-white/[0.06] hover:bg-white/[0.06]"
-            >
-              <Settings2 className="h-3.5 w-3.5" />
-              Voice settings
-            </button>
-            {voice.speaking ? (
-              <button
-                type="button"
-                onClick={voice.cancelSpeaking}
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-300/30 bg-amber-400/10 px-3 py-2 text-xs font-semibold text-amber-50"
-              >
-                <Square className="h-3 w-3 fill-current" />
-                Stop speaking
-              </button>
-            ) : null}
-            {voice.recognitionAvailable ? (
-              <div className="flex gap-2">
-                {voice.voiceSessionPaused ? (
-                  <button
-                    type="button"
-                    onClick={voice.resumeVoiceSession}
-                    className="flex-1 rounded-xl bg-cyan-400/10 px-2 py-2 text-[10px] font-semibold text-cyan-100 ring-1 ring-cyan-300/25"
-                  >
-                    Continue conversation
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={voice.pauseVoiceSession}
-                    className="flex-1 rounded-xl bg-white/[0.04] px-2 py-2 text-[10px] font-medium text-slate-400 ring-1 ring-white/[0.06]"
-                  >
-                    Pause conversation
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={voice.endVoiceSession}
-                  className="flex-1 rounded-xl bg-white/[0.04] px-2 py-2 text-[10px] font-medium text-slate-400 ring-1 ring-white/[0.06]"
-                >
-                  End voice session
-                </button>
-              </div>
-            ) : null}
-          </div>
-          {voicePanelOpen ? (
-            <div className="border-t border-white/[0.06] p-3">
-              <VoiceSettingsPanel
-                voice={voice}
-                voiceSettings={voiceSettings}
-                updateVoiceSettings={updateVoiceSettings}
-                onClose={onCloseVoicePanel}
-              />
-            </div>
-          ) : null}
-        </div>
-    </div>
   )
 }
 
@@ -1870,187 +1694,5 @@ function ActionChip({ icon, label, onClick }: { icon: ReactNode; label: string; 
       {icon}
       {label}
     </button>
-  )
-}
-
-function VoiceSettingsPanel({
-  voice,
-  voiceSettings,
-  updateVoiceSettings,
-  onClose
-}: {
-  voice: ReturnType<typeof useStandaloneOrbVoice>
-  voiceSettings: ReturnType<typeof useStandaloneOrbVoice>['settings']
-  updateVoiceSettings: ReturnType<typeof useStandaloneOrbVoice>['updateSettings']
-  onClose: () => void
-}) {
-  const sortedVoices = useMemo(() => {
-    return [...voice.availableVoices].sort((a, b) => a.name.localeCompare(b.name))
-  }, [voice.availableVoices])
-
-  return (
-    <div id="orb-voice-settings" className="text-sm text-slate-300">
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Voice settings</p>
-        <button type="button" onClick={onClose} aria-label="Close voice settings">
-          <X className="h-4 w-4" />
-        </button>
-      </div>
-
-      <SettingToggle
-        label="Voice replies"
-        checked={voiceSettings.voiceReplies}
-        disabled={!voice.synthesisAvailable}
-        onChange={(on) => {
-          if (!on) voice.cancelSpeaking()
-          updateVoiceSettings({ voiceReplies: on })
-        }}
-        iconOn={<Volume2 className="h-4 w-4" />}
-        iconOff={<VolumeX className="h-4 w-4" />}
-      />
-      <SettingToggle
-        label="Auto-send voice transcript"
-        checked={voiceSettings.autoSend}
-        disabled={!voice.recognitionAvailable}
-        onChange={(on) => updateVoiceSettings({ autoSend: on })}
-      />
-      <SettingToggle
-        label="British female voice preference"
-        checked={voiceSettings.britishFemalePreference}
-        disabled={!voice.synthesisAvailable}
-        onChange={(on) => updateVoiceSettings({ britishFemalePreference: on })}
-      />
-      <SettingToggle
-        label="Show transcript before sending"
-        checked={voiceSettings.showTranscriptBeforeSend}
-        disabled={!voice.recognitionAvailable}
-        onChange={(on) => updateVoiceSettings({ showTranscriptBeforeSend: on })}
-      />
-      <SettingToggle
-        label={`Wake phrase (“${voice.wakePhraseText}”)`}
-        checked={voiceSettings.wakePhrase}
-        disabled={!voice.continuousRecognitionSupported}
-        onChange={(on) => {
-          if (!on) voice.stopWakeListening()
-          updateVoiceSettings({ wakePhrase: on })
-        }}
-      />
-      {!voice.continuousRecognitionSupported ? (
-        <p className="mt-1 text-xs text-amber-200/90">Wake word is unavailable in this browser. Tap the ORB or microphone instead.</p>
-      ) : null}
-      <SettingToggle
-        label="Continuous conversation"
-        checked={voiceSettings.continuousConversation}
-        disabled={!voice.recognitionAvailable}
-        onChange={(on) => updateVoiceSettings({ continuousConversation: on })}
-      />
-
-      <div className="mt-4">
-        <p className="text-xs font-semibold text-slate-400">Answer style</p>
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          {(['voice_concise', 'balanced', 'detailed'] as StandaloneOrbAnswerStyle[]).map((style) => (
-            <button
-              key={style}
-              type="button"
-              onClick={() => updateVoiceSettings({ answerStyle: style })}
-              className={`rounded-full border px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.08em] ${
-                voiceSettings.answerStyle === style ? 'border-cyan-300/45 bg-cyan-300/15 text-cyan-50' : 'border-white/12 text-slate-400'
-              }`}
-            >
-              {ANSWER_STYLE_LABELS[style]}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="mt-4">
-        <label className="text-xs font-semibold text-slate-400" htmlFor="orb-voice-picker">
-          Voice picker
-        </label>
-        <select
-          id="orb-voice-picker"
-          value={voiceSettings.selectedVoiceUri ?? ''}
-          onChange={(event) => voice.setSelectedVoiceUri(event.target.value || null)}
-          className="mt-2 w-full rounded-lg border border-white/10 bg-slate-950 px-2 py-2 text-xs text-slate-200"
-        >
-          <option value="">Auto (prefer British female)</option>
-          {sortedVoices.map((v) => (
-            <option key={v.voiceURI} value={v.voiceURI}>
-              {v.name} ({v.lang})
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="mt-4 space-y-1 rounded-xl border border-white/10 bg-white/[0.02] p-3 text-xs">
-        <p className="font-semibold text-slate-400">Browser voice support</p>
-        <p className="text-slate-300">
-          Voice replies: {voice.speechOutputAvailable ? 'available' : 'unavailable'}
-        </p>
-        <p className="text-slate-300">
-          Microphone input: {voice.speechInputAvailable ? 'available' : 'unavailable'}
-        </p>
-        <p className="text-slate-300">Wake phrase: {voice.wakePhraseAvailable ? 'available' : 'unavailable'}</p>
-        <p className="text-slate-300">
-          Continuous conversation: {voice.continuousConversationAvailable}
-        </p>
-        {!voice.speechInputAvailable && voice.speechOutputAvailable ? (
-          <p className="text-amber-200/90">
-            Voice replies may work. Microphone dictation may require Chrome or Edge.
-          </p>
-        ) : null}
-      </div>
-
-      <p className="mt-4 text-xs leading-5 text-slate-400">Actual voice: {voice.preferredVoiceName || 'browser default'}</p>
-      {!voice.preferredVoiceIsBritishFemale ? (
-        <p className="mt-1 text-xs text-amber-200/90">
-          Your browser did not provide a British female voice. Choose another voice in settings or install additional system
-          voices.
-        </p>
-      ) : null}
-      <button
-        type="button"
-        disabled={!voice.synthesisAvailable}
-        onClick={() => voice.testSelectedVoice()}
-        className="mt-3 inline-flex h-9 items-center rounded-full border border-white/15 px-4 text-xs font-semibold text-slate-200 hover:bg-white/[0.06] disabled:opacity-40"
-      >
-        Test voice
-      </button>
-      <p className="mt-2 text-xs text-slate-500">Long replies use chunked speech for Safari and Chrome reliability.</p>
-      <p className="mt-3 text-[10px] uppercase tracking-[0.1em] text-slate-500">
-        GET /orb/standalone/config · POST /orb/standalone/conversation
-      </p>
-    </div>
-  )
-}
-
-function SettingToggle({
-  label,
-  checked,
-  disabled,
-  onChange,
-  iconOn,
-  iconOff
-}: {
-  label: string
-  checked: boolean
-  disabled?: boolean
-  onChange: (on: boolean) => void
-  iconOn?: ReactNode
-  iconOff?: ReactNode
-}) {
-  return (
-    <label className="flex items-center justify-between gap-3 py-1.5">
-      <span className="text-xs font-semibold text-slate-300">{label}</span>
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={() => onChange(!checked)}
-        className="inline-flex items-center gap-2 rounded-full border border-white/15 px-3 py-1 text-[10px] font-black uppercase tracking-[0.1em] disabled:opacity-40"
-      >
-        {checked ? iconOn : iconOff}
-        {checked ? 'On' : 'Off'}
-      </button>
-    </label>
   )
 }
