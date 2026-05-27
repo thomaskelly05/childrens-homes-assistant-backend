@@ -13,10 +13,10 @@ export function OrbInlineCitation({ source }: { source: StandaloneOrbSource }) {
   const card = citationCardForLabel(anchor)
 
   return (
-    <span className="relative inline-block align-baseline">
+    <span className="orb-citation-inline relative inline align-baseline leading-none">
       <button
         type="button"
-        className="orb-citation-chip-light mx-0.5 inline-flex items-center rounded-md border px-1.5 py-0.5 text-[10px] transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#0284C7]/50"
+        className="orb-citation-chip-light mx-0.5 inline-flex max-w-full items-center rounded-full border px-[0.45rem] py-[0.125rem] text-[0.75rem] leading-none transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#0284C7]/50"
         onMouseEnter={() => setOpen(true)}
         onMouseLeave={() => setOpen(false)}
         onFocus={() => setOpen(true)}
@@ -30,7 +30,7 @@ export function OrbInlineCitation({ source }: { source: StandaloneOrbSource }) {
       {open ? (
         <span
           role="tooltip"
-          className="orb-citation-card absolute bottom-full left-1/2 z-30 mb-2 w-72 -translate-x-1/2 rounded-2xl border border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] p-3.5 text-left shadow-2xl backdrop-blur-xl"
+          className="orb-citation-card absolute bottom-full left-1/2 z-30 mb-2 w-72 -translate-x-1/2 rounded-2xl border border-[#CBD5E1] bg-white p-3.5 text-left shadow-lg"
           data-orb-citation-popover
         >
           <p className="text-sm font-semibold text-[#0F172A]">{card?.title ?? anchor}</p>

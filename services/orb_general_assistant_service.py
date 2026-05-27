@@ -16,9 +16,18 @@ from services.orb_standalone_sources import (
     build_standalone_sources,
 )
 from services.orb_agent_conversation_bridge import detect_agent_intent, maybe_run_agent_for_conversation
+from services.orb_grounded_answer_style_service import orb_grounded_answer_style_service
 from services.standalone_sector_knowledge_service import search_sector_knowledge
 
 logger = logging.getLogger("indicare.orb_general_assistant")
+
+
+def _finalize_standalone_answer(answer: str, *, message: str, mode: str | None = None) -> str:
+    return orb_grounded_answer_style_service.sanitize_high_attention_closer(
+        str(answer or ""),
+        message=message,
+        mode=mode,
+    )
 
 
 def _track_standalone_governance(
@@ -302,7 +311,11 @@ class OrbGeneralAssistantService:
                     int((time.perf_counter() - started) * 1000),
                 )
                 result = {
-                    "answer": agent_result["answer"],
+                    "answer": _finalize_standalone_answer(
+                        agent_result["answer"],
+                        message=user_message,
+                        mode=mode,
+                    ),
                     "sources": agent_result.get("sources") or [],
                     "citations": agent_result.get("citations") or [],
                     "context_used": agent_result.get("context_used") or {},
@@ -606,10 +619,12 @@ class OrbGeneralAssistantService:
         if not answer_text:
             return {}
 
-        resolved = append_sources_basis_section(
+        resolved = _finalize_standalone_answer(
             answer_text or self._fallback_answer(message, retrieval=retrieval),
-            sources,
+            message=message,
+            mode=mode,
         )
+        resolved = append_sources_basis_section(resolved, sources)
         return {
             "answer": resolved,
             "sources": sources,

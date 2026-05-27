@@ -62,6 +62,8 @@ def filter_display_sources(
     )
     topic = orb_professional_curiosity_service.detect_topic(message or "", mode=mode)
     high_attention = topic in orb_professional_curiosity_service.HIGH_ATTENTION_TOPICS if topic else False
+    therapeutic_topic = topic == "therapeutic"
+    medication_topic = topic == "medication"
     regulatory_types = frozenset(
         {"regulatory_framework", "recording_quality", "safeguarding_principles", "therapeutic_practice"}
     )
@@ -77,6 +79,10 @@ def filter_display_sources(
             if "product boundary" in label or "product context" in label:
                 continue
             if source_type == "general_knowledge":
+                continue
+            if medication_topic and (source_type == "therapeutic_practice" or "therapeutic" in label):
+                continue
+            if not therapeutic_topic and source_type == "therapeutic_practice":
                 continue
         filtered.append(item)
     if filtered:

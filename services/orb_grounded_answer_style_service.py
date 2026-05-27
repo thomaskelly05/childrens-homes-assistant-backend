@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from services.orb_professional_curiosity_service import orb_professional_curiosity_service
@@ -175,6 +176,64 @@ class OrbGroundedAnswerStyleService:
         if topic_block:
             sections.extend(["", topic_block])
         return "\n".join(sections)
+
+    HIGH_ATTENTION_CLOSER_TOPICS = frozenset(
+        {
+            "allegations",
+            "missing",
+            "restraint",
+            "medication",
+            "complaints",
+            "cumulative_concern",
+            "supervision",
+        }
+    )
+
+    GENERIC_CLOSER_PATTERNS = (
+        re.compile(r"\n+what specific follow-up actions do you think[^?]*\?\s*$", re.I | re.S),
+        re.compile(r"\n+would you like to explore any specific aspect further\?\s*$", re.I | re.S),
+        re.compile(r"\n+would you like to explore[^?]*further\?\s*$", re.I | re.S),
+        re.compile(r"\n+what would you like to explore next\?\s*$", re.I | re.S),
+    )
+
+    SAFE_BOUNDARY_CLOSER = (
+        "\n\nORB can support your thinking, but the threshold decision should remain human-led and "
+        "local-procedure-led. The immediate priority is to check safety, seek appropriate advice, "
+        "record the rationale, and ensure manager oversight is visible."
+    )
+
+    def sanitize_high_attention_closer(self, answer: str, *, message: str, mode: str | None = None) -> str:
+        text = str(answer or "").strip()
+        if not text:
+            return text
+        topic = orb_professional_curiosity_service.detect_topic(message, mode=mode)
+        high_attention = topic in self.HIGH_ATTENTION_CLOSER_TOPICS or topic in orb_professional_curiosity_service.HIGH_ATTENTION_TOPICS
+        if not high_attention:
+            return text
+        cleaned = text
+        for pattern in self.GENERIC_CLOSER_PATTERNS:
+            cleaned = pattern.sub("", cleaned).rstrip()
+        if cleaned.lower().endswith("?"):
+            tail = cleaned.rsplit("\n", 1)[-1].strip().lower()
+            coaching_markers = (
+                "would you like",
+                "what specific follow-up",
+                "explore any specific",
+                "what would you like to explore",
+                "do you think would be most beneficial",
+            )
+            if any(marker in tail for marker in coaching_markers):
+                cleaned = cleaned.rsplit("\n", 1)[0].rstrip()
+        boundary_markers = (
+            "human-led",
+            "local-procedure",
+            "manager oversight",
+            "immediate priority",
+            "threshold decision",
+        )
+        if not any(marker in cleaned.lower() for marker in boundary_markers):
+            cleaned = f"{cleaned}{self.SAFE_BOUNDARY_CLOSER}"
+        return cleaned
 
     def citation_payload(self, message: str, *, mode: str | None = None) -> list[dict[str, Any]]:
         from services.orb_knowledge_grounding_service import orb_knowledge_grounding_service
