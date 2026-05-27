@@ -15,6 +15,8 @@ from services.orb_knowledge_retrieval_service import orb_knowledge_retrieval_ser
 from services.orb_standalone_brain_service import orb_standalone_brain_service
 from services.orb_grounded_answer_style_service import orb_grounded_answer_style_service
 from services.orb_official_source_anchor_service import orb_official_source_anchor_service
+from services.shared_institutional_cognition_runtime import shared_institutional_cognition_runtime
+from services.orb_explainability_runtime_service import orb_explainability_runtime_service
 from services.indicare_intelligence_capability_service import (
     indicare_intelligence_capability_service,
 )
@@ -235,8 +237,11 @@ def _resolve_detail(mode: str, requested: str | None) -> str:
 def _build_framed_message(*, mode: str, user_message: str, detail: str) -> str:
     resolved_mode = orb_standalone_brain_service.normalise_mode(mode)
     brain_block = orb_standalone_brain_service.build_prompt_block(user_message, mode=resolved_mode)
-    grounded_block = orb_grounded_answer_style_service.prompt_block(user_message, mode=resolved_mode)
-    official_source_block = orb_official_source_anchor_service.source_prompt()
+    shared_runtime_block = shared_institutional_cognition_runtime.prompt_addendum(
+        surface="standalone_orb",
+        message=user_message,
+        mode=resolved_mode,
+    )
     mode_hint = MODE_BEHAVIOUR.get(resolved_mode) or MODE_BEHAVIOUR.get(mode, "")
     detail_hint = ""
     if detail == "voice_concise":
@@ -255,8 +260,7 @@ def _build_framed_message(*, mode: str, user_message: str, detail: str) -> str:
         STANDALONE_ORB_PRODUCT_KNOWLEDGE,
         STANDALONE_ORB_BOUNDARIES,
         STANDALONE_ORB_CITATIONS,
-        official_source_block,
-        grounded_block,
+        shared_runtime_block,
         STANDALONE_ORB_TONE,
         brain_block,
         mode_hint,
@@ -400,6 +404,11 @@ async def standalone_orb_conversation(
 ):
     mode = orb_standalone_brain_service.normalise_mode(payload.mode or "Ask ORB")
     detail = _resolve_detail(mode, payload.detail)
+    shared_cognition = shared_institutional_cognition_runtime.build_context(
+        surface="standalone_orb",
+        message=payload.message,
+        mode=mode,
+    )
     standalone_brain = orb_standalone_brain_service.context_payload(payload.message, mode=mode)
     framed_message = _build_framed_message(mode=mode, user_message=payload.message, detail=detail)
     history = payload.history[-20:] if payload.history else []
@@ -436,18 +445,15 @@ async def standalone_orb_conversation(
             mode,
             detail,
             len(image_urls),
-            ",".join(standalone_brain.get("active_brains") or []),
+            ",".join(shared_cognition.get("active_brains") or standalone_brain.get("active_brains") or []),
             elapsed_ms,
         )
         answer = str(
             assistant_data.get("answer") or "I can help with that, but I could not form a response just now."
         )
-        official_citations = orb_official_source_anchor_service.citation_payload()
-        grounded_citations = orb_grounded_answer_style_service.citation_payload(payload.message, mode=mode)
         response_sources = list(assistant_data.get("sources") or [])
         response_citations = list(assistant_data.get("citations") or [])
-        response_citations.extend(grounded_citations)
-        response_citations.extend(official_citations if grounded_citations else [])
+        response_citations.extend(shared_cognition.get("citations") or [])
         if not response_sources:
             response_citations.extend(
                 orb_citation_service.build_citations(
@@ -460,9 +466,20 @@ async def standalone_orb_conversation(
             response_sources = orb_citation_service.frontend_sources_payload(response_citations)
         elif response_citations:
             response_sources.extend(orb_citation_service.frontend_sources_payload(response_citations))
+        confidence = str(assistant_data.get("confidence") or "medium")
+        explainability = orb_explainability_runtime_service.build(
+            surface="standalone_orb",
+            mode=mode,
+            active_brains=list(shared_cognition.get("active_brains") or []),
+            citations=response_citations,
+            operational_context_used=False,
+            confidence=confidence,
+        )
         context_used = dict(assistant_data.get("context_used") or {})
         context_used["standalone_brain"] = standalone_brain
-        context_used["official_source_grounding"] = bool(grounded_citations)
+        context_used["shared_cognition"] = shared_cognition
+        context_used["explainability"] = explainability
+        context_used["official_source_grounding"] = bool(shared_cognition.get("citations"))
         if not context_used.get("retrieval"):
             context_used["retrieval"] = {
                 "strategy": "source_pack_plus_document_rag",
@@ -475,7 +492,7 @@ async def standalone_orb_conversation(
             mode=mode,
             conversation_id=payload.conversation_id,
             tools_used=assistant_data.get("tools_used"),
-            confidence=str(assistant_data.get("confidence") or "medium"),
+            confidence=confidence,
             image_understanding_available=assistant_data.get("image_understanding_available"),
             error_detail=assistant_data.get("error_detail"),
             sources=response_sources,
@@ -512,9 +529,8 @@ async def standalone_orb_conversation(
             sources = build_standalone_sources(payload.message, mode=mode)
             citations = orb_citation_service.normalise_sources(sources)
             fallback = append_sources_basis_section(fallback, sources)
-        citations.extend(orb_grounded_answer_style_service.citation_payload(payload.message, mode=mode))
+        citations.extend(shared_cognition.get("citations") or [])
         if citations:
-            citations.extend(orb_official_source_anchor_service.citation_payload())
             sources.extend(orb_citation_service.frontend_sources_payload(citations))
         classification = orb_knowledge_retrieval_service.classify_query(
             payload.message,
@@ -522,13 +538,23 @@ async def standalone_orb_conversation(
             profile_context=profile_context,
             attachments=image_urls[:4] or None,
         )
+        explainability = orb_explainability_runtime_service.build(
+            surface="standalone_orb",
+            mode=mode,
+            active_brains=list(shared_cognition.get("active_brains") or []),
+            citations=citations,
+            operational_context_used=False,
+            confidence="low",
+        )
         context_used = {
             "surface": "standalone_orb_ai",
             "mode": mode,
             "care_record_access": False,
             "os_linked": False,
             "standalone_brain": standalone_brain,
-            "official_source_grounding": bool(citations),
+            "shared_cognition": shared_cognition,
+            "explainability": explainability,
+            "official_source_grounding": bool(shared_cognition.get("citations")),
             "retrieval": {
                 "strategy": "source_pack_plus_document_rag",
                 "live_retrieved": False,
