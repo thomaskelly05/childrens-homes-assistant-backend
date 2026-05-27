@@ -130,7 +130,7 @@ export function RecordHub({ initialChildId, initialChildDisplayName, highlightTy
   const syncFromUrl = useCallback(() => {
     const urlChildId = searchParams.get('child_id') || searchParams.get('young_person_id') || undefined
     const urlChildName = searchParams.get('child_name') || undefined
-    const urlAbout = resolveRecordAboutContext(searchParams.get('about') || undefined)
+    const urlAbout = urlChildId ? 'child' : resolveRecordAboutContext(searchParams.get('about') || undefined)
     if (urlChildId) { setChildId(urlChildId.trim()); if (urlChildName) setChildDisplayName(urlChildName.trim()) }
     setAbout(urlAbout)
   }, [searchParams])
@@ -153,13 +153,44 @@ export function RecordHub({ initialChildId, initialChildDisplayName, highlightTy
   const focusChildPicker = () => { setAbout('child'); updateRoute({ about: 'child', childId, childName: childDisplayName, type: highlightType || searchParams.get('type') || undefined }); if (typeof window !== 'undefined') { window.location.hash = 'choose-child'; document.getElementById('choose-child')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); document.querySelector<HTMLSelectElement>('[data-testid="record-child-select"]')?.focus() } }
   const effectiveChildLabel = childDisplayName || (childId ? `Young person ${childId}` : undefined)
   const recommended = useMemo(() => recordRecommendedForContext(about, childId, effectiveChildLabel), [about, childId, effectiveChildLabel])
-  const showChildPicker = about === 'child'
+  const isFastChildRecording = about === 'child' && Boolean(childId)
+  const showChildPicker = about === 'child' && !childId
   const showStaffPanel = about === 'staff'
   const typeFromUrl = highlightType || searchParams.get('type') || undefined
   const hasTypeSelected = Boolean(typeFromUrl?.trim()) || Boolean(searchParams.get('draft_id')?.trim())
   const initialRecordingType = hasTypeSelected ? resolveRecordingTypeFromQuery(typeFromUrl, searchParams.get('form')) : undefined
   const draftIdFromUrl = searchParams.get('draft_id') || undefined
   const formIdFromUrl = searchParams.get('form') || undefined
+
+  if (isFastChildRecording) {
+    return (
+      <div className="space-y-4 pb-8" data-testid="record-fast-child-flow">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-[28px] border border-white/80 bg-white/90 px-5 py-4 shadow-sm">
+          <div>
+            <p className="text-[11px] font-black uppercase tracking-[0.22em] text-blue-700">Record with care</p>
+            <h1 className="mt-1 text-2xl font-black tracking-[-0.05em] text-slate-950 md:text-4xl">
+              Writing for {effectiveChildLabel}
+            </h1>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+              Start writing. ORB stays beside you as a quiet coach for wording, missing detail, evidence and follow-up actions.
+            </p>
+          </div>
+          <Link href={childOverviewHref(childId!)} data-testid="record-fast-back-to-story" className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700 shadow-sm">Back to story</Link>
+        </div>
+        <RecordingWorkspace
+          about="child"
+          childId={childId}
+          childDisplayName={effectiveChildLabel}
+          initialRecordingType={initialRecordingType}
+          highlightType={highlightType}
+          draftIdFromUrl={draftIdFromUrl}
+          formIdFromUrl={formIdFromUrl}
+          onDraftListRefresh={() => setDraftListRefreshKey((value) => value + 1)}
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6 pb-8">
       <PageHeader eyebrow="Record with care" title="What are you recording?" description="Choose the right record, keep the child’s voice visible, and connect what happened to plans, risks, chronology and review." action={childId ? <Link href={childOverviewHref(childId)} data-testid="record-hub-child-workspace-link" className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700 shadow-sm">Back to story</Link> : <Link href="/young-people" className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700 shadow-sm">Choose young person</Link>} />
