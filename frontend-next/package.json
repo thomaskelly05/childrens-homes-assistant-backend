@@ -8,6 +8,7 @@
     "start": "next start -p 3001",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "test:orb": "node --experimental-strip-types --test lib/orb/orb-appearance.test.ts components/orb-standalone/orb-ui-structure.test.ts",
     "e2e": "playwright test",
     "route:audit": "node scripts/audit-routes.mjs",
     "operational:audit": "node scripts/audit-operational-frontend.mjs",

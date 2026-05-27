@@ -1,7 +1,7 @@
 'use client'
 
 import { FormEvent, useRef, type DragEvent } from 'react'
-import { Camera, FileText, Mic, MicOff, Plus, Send, Square, Wrench, X } from 'lucide-react'
+import { Camera, ChevronDown, FileText, Mic, MicOff, Plus, Send, Square, Wrench, X } from 'lucide-react'
 
 import { logTapTarget } from '@/lib/interaction/mobile-tap-debug'
 import { placeholderForMode } from '@/lib/orb/residential-agents'
@@ -57,7 +57,10 @@ export function OrbStandaloneComposer({
   onSummariseDocument,
   onAddDocumentToLibrary,
   onToolsClick,
-  suggestions
+  suggestions,
+  agentLabel,
+  onAgentSelectorClick,
+  answering
 }: {
   value: string
   pending: boolean
@@ -94,6 +97,9 @@ export function OrbStandaloneComposer({
   onAddDocumentToLibrary?: () => void
   onToolsClick?: () => void
   suggestions?: string[]
+  agentLabel?: string
+  onAgentSelectorClick?: () => void
+  answering?: boolean
 }) {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const cameraInputRef = useRef<HTMLInputElement | null>(null)
@@ -114,7 +120,7 @@ export function OrbStandaloneComposer({
 
   return (
     <div
-      className="orb-chat-composer shrink-0 border-t border-[var(--orb-line)] bg-gradient-to-t from-[var(--orb-bg-deep)]/95 via-[var(--orb-bg-mid)]/80 to-transparent px-3 pt-3 md:px-5 md:pt-4"
+      className="orb-chat-composer orb-composer-floating-wrap shrink-0 px-3 md:px-5"
       onDragOver={handleDragOver}
       onDrop={onDrop}
       data-orb-composer
@@ -182,7 +188,9 @@ export function OrbStandaloneComposer({
               ))}
             </div>
           ) : null}
-          <div className="orb-composer-glow orb-composer-glass p-2.5 md:p-3">
+          <div
+            className={`orb-composer-glow orb-composer-glass orb-surface p-2.5 md:p-3 ${answering ? 'orb-answering-pulse' : ''}`}
+          >
             {attachments.length > 0 ? (
               <div className="mb-2 flex flex-wrap gap-2 px-1 pt-1">
                 {attachments.map((file) => (
@@ -231,6 +239,20 @@ export function OrbStandaloneComposer({
               </div>
             ) : null}
 
+            {onAgentSelectorClick ? (
+              <div className="mb-1 flex items-center gap-2 px-1">
+                <button
+                  type="button"
+                  onClick={onAgentSelectorClick}
+                  className="inline-flex max-w-full items-center gap-1 rounded-full border border-[var(--orb-line)] bg-[var(--orb-surface)] px-2.5 py-1 text-[11px] font-medium text-[var(--orb-foreground)] transition hover:bg-[var(--orb-surface-hover)]"
+                  data-orb-composer-agent-selector
+                  aria-label="Choose agent"
+                >
+                  <span className="truncate">{agentLabel || 'Ask ORB'}</span>
+                  <ChevronDown className="h-3 w-3 shrink-0 text-[var(--orb-muted)]" aria-hidden />
+                </button>
+              </div>
+            ) : null}
             <div className="flex items-end gap-1">
               <input
                 ref={fileInputRef}
@@ -257,7 +279,7 @@ export function OrbStandaloneComposer({
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="inline-flex h-10 min-w-10 shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-white/[0.06] hover:text-slate-200"
+                className="inline-flex h-10 min-w-10 shrink-0 items-center justify-center rounded-full text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]"
                 aria-label="Attach image"
                 data-orb-composer-attach
               >
@@ -267,7 +289,7 @@ export function OrbStandaloneComposer({
                 <button
                   type="button"
                   onClick={onAttachDocumentClick}
-                  className="inline-flex h-10 min-w-10 shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-white/[0.06] hover:text-slate-200"
+                  className="inline-flex h-10 min-w-10 shrink-0 items-center justify-center rounded-full text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]"
                   aria-label="Attach document"
                   data-orb-composer-document
                 >
@@ -278,7 +300,7 @@ export function OrbStandaloneComposer({
                 <button
                   type="button"
                   onClick={onToolsClick}
-                  className="inline-flex h-10 min-w-10 shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-white/[0.06] hover:text-slate-200"
+                  className="inline-flex h-10 min-w-10 shrink-0 items-center justify-center rounded-full text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]"
                   aria-label="Tools"
                   data-orb-composer-tools
                 >
@@ -288,7 +310,7 @@ export function OrbStandaloneComposer({
               <button
                 type="button"
                 onClick={() => cameraInputRef.current?.click()}
-                className="inline-flex h-10 min-w-10 shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-white/[0.06] hover:text-slate-200 md:hidden"
+                className="inline-flex h-10 min-w-10 shrink-0 items-center justify-center rounded-full text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)] md:hidden"
                 aria-label="Use camera"
               >
                 <Camera className="h-5 w-5" aria-hidden />
@@ -331,7 +353,9 @@ export function OrbStandaloneComposer({
                     : 'Voice mode coming next'
                 }
                 className={`inline-flex h-10 min-w-10 shrink-0 items-center justify-center rounded-full transition disabled:opacity-40 ${
-                  voiceListening ? 'bg-cyan-400/15 text-cyan-100' : 'text-slate-400 hover:bg-white/[0.06] hover:text-slate-200'
+                  voiceListening
+                    ? 'bg-[#00B8FF]/15 text-[#00B8FF]'
+                    : 'text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]'
                 }`}
                 data-orb-composer-mic
                 data-no-navigation-rescue="true"
@@ -347,7 +371,7 @@ export function OrbStandaloneComposer({
                   if (event.pointerType !== 'touch') return
                   logTapTarget(event, 'orb-standalone-send-pointer')
                 }}
-                className="pointer-events-auto inline-flex h-11 min-h-11 min-w-11 shrink-0 cursor-pointer touch-manipulation items-center justify-center rounded-full bg-white text-slate-950 transition hover:bg-slate-100 disabled:opacity-35"
+                className="pointer-events-auto inline-flex h-11 min-h-11 min-w-11 shrink-0 cursor-pointer touch-manipulation items-center justify-center rounded-full bg-[#111827] text-white transition hover:bg-[#0A0A0A] disabled:opacity-35"
                 data-orb-composer-send
                 data-testid="orb-standalone-send-clickable"
                 data-send-disabled-reason={disabledReason}
@@ -397,7 +421,7 @@ export function OrbStandaloneComposer({
           ) : null}
         </form>
 
-        <p className="mt-2 px-2 text-center text-[10px] leading-4 text-slate-600" data-orb-composer-disclaimer>
+        <p className="mt-2 px-2 text-center text-[10px] leading-4 text-[var(--orb-muted)]" data-orb-composer-disclaimer>
           Standalone ORB can make mistakes. It does not access IndiCare OS records.
         </p>
       </div>

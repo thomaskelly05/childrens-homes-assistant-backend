@@ -6,7 +6,7 @@ export default function OrbStandalonePage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center bg-[#05070d] text-sm text-slate-400">
+        <div className="flex min-h-screen items-center justify-center bg-[#F7F7F8] text-sm text-[#6B7280]">
           Loading ORB…
         </div>
       }
