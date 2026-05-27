@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 from typing import Any, Literal
-from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel
 
-from .os_child_workspace_write_service import table_exists
+from .os_child_workspace_write_service import function_exists, table_exists
 from .os_command_router import CurrentUser, get_current_user, get_pool
 
 router = APIRouter(prefix='/api', tags=['OS Child Workspace Actions'])
@@ -107,8 +106,6 @@ async def _update_source_workflow(
 
     status = _workflow_status_for_action(action)
     review_status = _review_state_for_action(action)
-
-    # Safe column-aware update. It only writes columns that exist on the target table.
     columns = await conn.fetch(
         """
         SELECT column_name
@@ -136,21 +133,17 @@ async def _update_source_workflow(
         assignments.append(f"review_state = ${len(values) + 1}")
         values.append(review_status)
     if action in {'approve', 'sign_off', 'mark_reviewed'}:
-        if 'approved_by' in names:
-            assignments.append(f"approved_by = ${len(values) + 1}")
-            values.append(user_id)
-        if 'approved_at' in names:
-            assignments.append('approved_at = NOW()')
-        if 'signed_off_by' in names:
-            assignments.append(f"signed_off_by = ${len(values) + 1}")
-            values.append(user_id)
-        if 'signed_off_at' in names:
-            assignments.append('signed_off_at = NOW()')
-        if 'reviewed_by' in names:
-            assignments.append(f"reviewed_by = ${len(values) + 1}")
-            values.append(user_id)
-        if 'reviewed_at' in names:
-            assignments.append('reviewed_at = NOW()')
+        for column, value in (
+            ('approved_by', user_id),
+            ('signed_off_by', user_id),
+            ('reviewed_by', user_id),
+        ):
+            if column in names:
+                assignments.append(f"{column} = ${len(values) + 1}")
+                values.append(value)
+        for column in ('approved_at', 'signed_off_at', 'reviewed_at'):
+            if column in names:
+                assignments.append(f'{column} = NOW()')
     if 'updated_at' in names:
         assignments.append('updated_at = NOW()')
     if 'last_edited_at' in names:
@@ -179,18 +172,9 @@ async def _insert_manager_review(
     row = await conn.fetchrow(
         """
         INSERT INTO public.manager_review_queue (
-          provider_id,
-          home_id,
-          young_person_id,
-          source_table,
-          source_id,
-          record_type,
-          workflow_status,
-          priority,
-          review_reason,
-          assigned_to,
-          created_at,
-          updated_at
+          provider_id, home_id, young_person_id, source_table, source_id,
+          record_type, workflow_status, priority, review_reason, assigned_to,
+          created_at, updated_at
         ) VALUES ($1,$2,$3,$4,$5,$6,'pending',$7,$8,NULL,NOW(),NOW())
         RETURNING id
         """,
@@ -220,21 +204,9 @@ async def _insert_command_item(
     row = await conn.fetchrow(
         """
         INSERT INTO public.os_command_items (
-          provider_id,
-          home_id,
-          young_person_id,
-          domain,
-          priority,
-          status,
-          title,
-          summary,
-          recommended_action,
-          source_table,
-          source_id,
-          ai_generated,
-          created_by,
-          created_at,
-          updated_at
+          provider_id, home_id, young_person_id, domain, priority, status, title,
+          summary, recommended_action, source_table, source_id, ai_generated,
+          created_by, created_at, updated_at
         ) VALUES ($1,$2,$3,'operations'::public.os_domain,$4::public.os_priority,'open'::public.os_status,$5,$6,$7,$8,$9,FALSE,$10,NOW(),NOW())
         RETURNING id
         """,
@@ -250,6 +222,78 @@ async def _insert_command_item(
         user_id,
     )
     return dict(row) if row else None
+
+
+@router.get('/os-command/young-person/{young_person_id}/workspace/review-queue')
+async def get_child_workspace_review_queue(
+    young_person_id: int,
+    request: Request,
+    limit: int = Query(default=100, ge=1, le=300),
+    user: CurrentUser = Depends(get_current_user),
+):
+    pool = get_pool(request)
+    async with pool.acquire() as conn:
+        await conn.execute("select set_config('app.user_id', $1, true)", str(user.id))
+        scope = await _child_scope(conn, young_person_id)
+        home_id = scope.get('home_id')
+
+        review_queue: list[dict[str, Any]] = []
+        if await table_exists(conn, 'manager_review_queue'):
+            review_queue = [
+                dict(row)
+                for row in await conn.fetch(
+                    """
+                    SELECT
+                      id,
+                      'Manager review' AS type,
+                      record_type AS title,
+                      review_reason AS summary,
+                      workflow_status AS status,
+                      priority,
+                      source_table,
+                      source_id,
+                      created_at AS occurred_at,
+                      updated_at,
+                      assigned_to,
+                      provider_id,
+                      home_id,
+                      young_person_id
+                    FROM public.manager_review_queue
+                    WHERE young_person_id = $1
+                      AND workflow_status IN ('pending','submitted','changes_requested','open','in_progress','waiting')
+                    ORDER BY
+                      CASE priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'normal' THEN 2 ELSE 3 END,
+                      created_at DESC
+                    LIMIT $2
+                    """,
+                    young_person_id,
+                    limit,
+                )
+            ]
+
+        command_items: list[dict[str, Any]] = []
+        if await table_exists(conn, 'os_command_items') and await function_exists(conn, 'os_command_live_feed'):
+            command_items = [
+                dict(row)
+                for row in await conn.fetch(
+                    'SELECT * FROM public.os_command_live_feed($1, $2, NULL, NULL, $3)',
+                    home_id,
+                    young_person_id,
+                    limit,
+                )
+            ]
+
+    return {
+        'ok': True,
+        'young_person_id': young_person_id,
+        'review_queue': review_queue,
+        'command_items': command_items,
+        'counts': {
+            'review_queue': len(review_queue),
+            'command_items': len(command_items),
+            'total': len(review_queue) + len(command_items),
+        },
+    }
 
 
 @router.post('/os-command/young-person/{young_person_id}/workspace/action')
