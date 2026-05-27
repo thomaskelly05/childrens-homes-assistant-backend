@@ -60,9 +60,10 @@ class OrbGroundedAnswerStyleService:
 
     TOPIC_CLOSERS: dict[str, str] = {
         "medication": (
-            "\n\nORB can support your thinking, but medication decisions should follow the home's policy and "
-            "appropriate medical/pharmacy advice. The key is to check safety, record transparently, notify the "
-            "right people, and review the handover system so the error is not repeated."
+            "\n\nORB can support your thinking, but medication decisions should follow the home's policy. "
+            "Seek pharmacy, GP, NHS 111 or emergency advice where the medication or the child's presentation requires it. "
+            "The key is to check safety, record the MAR transparently, notify the right people, and review whether "
+            "handover, competency or repeated errors need manager action."
         ),
         "missing": (
             "\n\nORB can support your thinking, but missing-from-home decisions should follow local procedures. "
@@ -121,24 +122,34 @@ class OrbGroundedAnswerStyleService:
             "medication": [
                 "Medication / health depth (registered-manager thinking):",
                 "- Structure: ## Immediate safety, ## Recording, ## Manager oversight, ## What to review afterwards, ## Professional boundary.",
-                "- Cover: time-critical medication; what it is for; MAR; pharmacy/GP/111 advice before late dose; monitoring; transparent error record; parent/social worker/placing authority if required; manager notification; handover/second-check; competency/training; repeated vs isolated; policy review; learning action.",
+                "- Immediate safety: what is the medication for; time-critical; PRN/routine/controlled/psychotropic/epilepsy/insulin/asthma/antibiotics/sleep/high-impact.",
+                "- Was pharmacy/GP/NHS 111 or emergency advice required before giving late or omitting; child monitored; symptoms/distress/anxiety/impact; emergency advice?",
+                "- Recording: MAR transparent not backfilled; due/actual time; missed/given late/omitted; advice sought and who gave it; manager notified; child presentation/voice; notifications per policy.",
+                "- Manager oversight: handover failure; double-check missed; unclear responsibility; distraction; competency/training; isolated vs repeated; policy/handover change; supervision/training action.",
+                "- Review: medication audit, MAR audit, handover, competency, repeated errors, provider learning, Reg 12/13 evidence.",
+                "- Professional boundary: seek pharmacy, GP, NHS 111 or emergency advice where required — do not give clinical treatment advice.",
                 "- Use [Reg 12] [Reg 13] [Recording quality] [Medication / health] inline where relevant.",
-                "- Do not over-medicalise or give clinical treatment advice.",
             ],
             "therapeutic": [
                 "Therapeutic reflection depth:",
                 "- Structure: ## What the behaviour may be communicating, ## How staff can respond, ## How to record it, ## What to review if this repeats.",
-                "- Cover: loss, rejection, disappointment, shame, fear of being forgotten; attachment meaning; co-regulation; repair; staff containment; avoid punitive wording; child voice; what helped settle; family-time planning if relevant.",
-                "- End with emotional meaning, repair and child-centred recording — NOT generic safeguarding threshold boundary unless actual risk is indicated.",
+                "- Cover: family time cancellation as loss/rejection; attachment; fear forgotten; shame/sadness/anger; behaviour as communication (e.g. cup smashing = overwhelm).",
+                "- Co-regulation; staff calm; validate without condoning unsafe behaviour; repair; what helped settle; key work; future family-time planning; pattern around contact.",
+                "- Recording: context, child's words, presentation, behaviour, staff response, safety, repair, outcome, follow-up, plan review — without blame.",
+                "- End with: record without blame, hold emotional meaning, show how staff helped them feel safe, heard and supported — NOT threshold boundary unless risk indicated.",
             ],
             "missing": [
-                "Missing episode depth:",
+                "Missing episode depth (contextual safeguarding):",
                 "- Structure: ## Immediate safety, ## Return conversation, ## What to record, ## Patterns to explore, ## Manager oversight and Ofsted lens, ## Next safe steps.",
-                "- Cover immediate welfare, police/local procedure, return conversation, push/pull factors, unknown adults, routes, exploitation indicators, social worker, risk/chronology update, pattern review, manager oversight.",
+                "- Immediate safety: welfare; injury/intoxication/distress; clothing/weather/phone; medical attention; local procedure; police/social worker if required.",
+                "- Return conversation: where; who with; unknown adults; travel; phone/social media; substances/money/gifts; exploitation indicators; felt safe; why leave/return; avoid someone; what helps next time.",
+                "- Patterns: repeated times, routes/locations, peers/adults, family/contact, school, staff/relationship, emotional triggers, push/pull, escalation, contextual safeguarding.",
+                "- Ofsted: home understands why children go missing — learning, prevention, risk reduction, multi-agency impact.",
                 "- Use [Reg 12] [Reg 13] [SCCIF] [Working Together] [Recording quality] inline where relevant.",
             ],
             "restraint": [
                 "Restraint depth:",
+                "- Structure: ## Why this matters, ## Immediate safety, ## What to record, ## Child experience and repair, ## Manager oversight, ## Patterns if repeated.",
                 "- Cover necessity, proportionality, least restrictive practice, before/during/after, alternatives, injury checks, debriefs, manager review, BSP review, patterns, emotional impact, repair and culture lens.",
             ],
             "chronology": [
@@ -149,6 +160,52 @@ class OrbGroundedAnswerStyleService:
                 "RM/RI governance depth:",
                 "- RM: vulnerability today, overnight events, safeguarding/missing, climate, staffing, health/education, wellbeing, overdue actions, weak records, visible leadership, Ofsted-arrival challenge.",
                 "- RI: home safety, manager support, child progress, leadership effectiveness, staff stability, Reg 44 repetition, Reg 45 evaluative quality, triangulation, drift, impact evidence.",
+            ],
+            "self_harm": [
+                "Self-harm depth:",
+                "- Structure: ## Immediate safety, ## What to understand, ## Recording and notifications, ## Manager oversight, ## What to review afterwards.",
+                "- Safety, triggers, child voice, co-regulation, risk/safety plan, CAMHS/GP, social worker, patterns, recording without blame [Reg 12] [Reg 13].",
+            ],
+            "exploitation": [
+                "Exploitation / contextual safeguarding depth:",
+                "- Structure: ## Immediate safety, ## Context to explore, ## Multi-agency and recording, ## Patterns over time, ## Manager and RI oversight.",
+                "- Locations, peers, unknown adults, gifts/money/transport/online; push/pull; do not conclude exploitation without evidence [Working Together] [Reg 12].",
+            ],
+            "behaviour_support": [
+                "Behaviour support depth:",
+                "- Behaviour as communication; BSP/PBS alignment; antecedent, de-escalation, alternatives; repair; recording and plan review [Recording quality] [Reg 13].",
+            ],
+            "family_time": [
+                "Family time depth:",
+                "- Preparation, during/after contact, emotional impact, cancellation meaning, recording child voice, plan review [Therapeutic practice] [Recording quality].",
+            ],
+            "staff_culture": [
+                "Staff culture depth:",
+                "- Normalisation, minimisation, supervision, whistleblowing, leadership visibility, impact on children and safeguarding [Reg 13] [SCCIF].",
+            ],
+            "complaints": [
+                "Complaints depth:",
+                "- Listening culture, factual chronology, child/complainant voice, investigation trail, management oversight, learning, advocacy [Reg 13] [Recording quality].",
+            ],
+            "education_health": [
+                "Education/health depth:",
+                "- Barriers, attendance, PEP/CAMHS, appointments with outcomes, child voice, advocacy, leadership oversight when drift occurs.",
+            ],
+            "supervision": [
+                "Staff supervision depth:",
+                "- Impact on child, practice strengths/worries, support needs, accountability without shame, leadership follow-up [Reg 13].",
+            ],
+            "recording": [
+                "Recording/incident depth:",
+                "- Fact vs interpretation, child voice, antecedent/response/outcome, manager review, inspection relevance; placeholders for missing facts.",
+            ],
+            "inspection": [
+                "Reg 44/45 / inspection depth:",
+                "- Evaluative not descriptive Reg 45; Reg 44 repetition; triangulation; child experience and impact evidence [SCCIF] [Reg 13].",
+            ],
+            "placement_planning": [
+                "Care/placement/risk planning depth:",
+                "- Child wishes, risk changes, plan implementation, stability, transitions, multi-agency, review evidence [Reg 12] [Reg 13].",
             ],
             "cumulative_concern": [
                 "Cumulative safeguarding concern — mandatory depth (not a generic summary):",

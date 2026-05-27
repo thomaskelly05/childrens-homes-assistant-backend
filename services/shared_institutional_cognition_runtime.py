@@ -25,6 +25,7 @@ class SharedInstitutionalCognitionRuntime:
         message: str,
         mode: str | None = None,
         operational_context: dict[str, Any] | None = None,
+        history: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         boundary = self._boundary(surface)
         routing = orb_residential_cognition_router.route(message=message, mode=mode)
@@ -41,10 +42,11 @@ class SharedInstitutionalCognitionRuntime:
         curiosity_prompt = orb_professional_curiosity_service.prompt_block(message, mode=mode)
         guidance_prefix = None
         if surface == "standalone_orb":
-            prefix = standalone_guidance_boundary_prefix(message)
+            prefix = standalone_guidance_boundary_prefix(message, history=history)
             if prefix:
                 guidance_prefix = (
-                    f"Standalone ORB boundary: open with '{prefix.strip()}' when answering this practice/hypothetical question."
+                    f"Standalone ORB boundary: open with '{prefix.strip()}' when answering this practice/hypothetical question. "
+                    "Do not repeat this boundary phrase again in the same conversation unless the user asks about live records."
                 )
         citations = list(grounding.get("citations") or [])
 
@@ -96,12 +98,14 @@ class SharedInstitutionalCognitionRuntime:
         message: str,
         mode: str | None = None,
         operational_context: dict[str, Any] | None = None,
+        history: list[dict[str, Any]] | None = None,
     ) -> str:
         context = self.build_context(
             surface=surface,
             message=message,
             mode=mode,
             operational_context=operational_context,
+            history=history,
         )
         lines = [
             "Shared institutional cognition runtime:",
@@ -133,7 +137,7 @@ class SharedInstitutionalCognitionRuntime:
             "summary": (
                 "Standalone ORB is guidance-first and must not access live OS records. "
                 "Answer hypothetical, practice, recording, Ofsted-expectation and therapeutic questions generally — "
-                "preface with 'I cannot see the actual live child record, but generally…' when useful."
+                "use a standalone boundary phrase only when clarifying limits — at most once per conversation."
             ),
             "can_use_live_records": False,
             "can_write_records": False,
@@ -214,6 +218,11 @@ class SharedInstitutionalCognitionRuntime:
             "therapeutic": ["therapeutic_reflective_cognition", "emotional_climate"],
             "leadership": ["governance_cognition", "provider_cognition", "regulatory_cognition"],
             "workforce": ["workforce_cognition", "governance_cognition", "emotional_climate"],
+            "self_harm": ["safeguarding_cognition", "therapeutic_reflective_cognition", "recording_quality_cognition"],
+            "exploitation": ["safeguarding_cognition", "chronology_cognition", "governance_cognition"],
+            "behaviour": ["therapeutic_reflective_cognition", "recording_quality_cognition"],
+            "family_time": ["therapeutic_reflective_cognition", "child_journey_cognition"],
+            "staff culture": ["workforce_cognition", "governance_cognition"],
             "general residential": ["chronology_cognition"],
         }
         for key, additions in topic_map.items():
@@ -318,9 +327,14 @@ class SharedInstitutionalCognitionRuntime:
             )
         if not boundary["can_use_live_records"]:
             requirements.append("- Do not claim access to live care records or OS context.")
-            requirements.append(
-                "- For hypothetical or practice questions, answer with general professional guidance; "
-                "use 'I cannot see the actual live child record, but generally…' when clarifying the standalone boundary."
+            requirements.extend(
+                [
+                    "- For hypothetical or practice questions, answer with general professional guidance.",
+                    "- Use the long standalone boundary ('I cannot see the actual live child record…') only once per conversation, "
+                    "or when the user asks about live records; otherwise use a shorter opener such as "
+                    "'Generally, I would think about this in five layers…' or begin directly with the structured answer.",
+                    "- Vary openings — do not start every answer the same way.",
+                ]
             )
         return requirements
 

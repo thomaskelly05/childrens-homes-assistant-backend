@@ -354,29 +354,79 @@ def route_intelligence_surface(
     )
 
 
-def standalone_guidance_boundary_prefix(intent: str) -> str | None:
-    """Short prefix when standalone answers generally without live records."""
+BOUNDARY_LONG_PREFIX = "I cannot see the actual live child record in IndiCare OS, but generally — "
+BOUNDARY_SHORT_PREFIX = "Generally, I would think about this in five layers — "
+BOUNDARY_ALREADY_USED_MARKERS = (
+    "cannot see the actual live child record",
+    "generally, i would think about this in five layers",
+    "standalone orb does not access live",
+)
+
+
+def _boundary_already_stated_in_history(history: list[Any] | None) -> bool:
+    if not history:
+        return False
+    for item in history:
+        if isinstance(item, dict):
+            text = str(item.get("content") or item.get("message") or item.get("answer") or "")
+        else:
+            text = str(item)
+        lower = text.lower()
+        if any(marker in lower for marker in BOUNDARY_ALREADY_USED_MARKERS):
+            return True
+    return False
+
+
+def standalone_guidance_boundary_prefix(
+    intent: str,
+    *,
+    history: list[Any] | None = None,
+) -> str | None:
+    """Short prefix when standalone answers generally without live records.
+
+    Use at most once per conversation; follow-up turns should continue without repeating it.
+    """
     if requires_live_os_records(intent):
         return None
+    if _boundary_already_stated_in_history(history):
+        return None
     text = (intent or "").lower()
-    if any(
-        term in text
-        for term in (
-            "chronology",
-            "young person",
-            "child",
-            "ofsted",
-            "record",
-            "therapeutic",
-            "allegation",
-            "missing",
-            "restraint",
-        )
-    ):
-        return (
-            "I cannot see the actual live child record in IndiCare OS, but generally — "
-        )
-    return None
+    residential_terms = (
+        "chronology",
+        "young person",
+        "child",
+        "ofsted",
+        "record",
+        "therapeutic",
+        "allegation",
+        "missing",
+        "restraint",
+        "medication",
+        "medicine",
+        "mar ",
+        "safeguard",
+        "family time",
+        "complaint",
+        "placement",
+        "restraint",
+        "self-harm",
+        "self harm",
+        "exploitation",
+    )
+    if not any(term in text for term in residential_terms):
+        return None
+    practice_markers = (
+        "what should",
+        "help me think",
+        "how should",
+        "how to record",
+        "what would",
+        "what to record",
+        "manager review",
+    )
+    if any(marker in text for marker in practice_markers):
+        return BOUNDARY_SHORT_PREFIX
+    return BOUNDARY_LONG_PREFIX
 
 
 def standalone_os_boundary_message(intent: str) -> str | None:

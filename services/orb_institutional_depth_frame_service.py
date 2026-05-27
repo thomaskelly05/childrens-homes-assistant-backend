@@ -46,6 +46,16 @@ class OrbInstitutionalDepthFrameService:
             return self._complaints_frame()
         if topic == "medication":
             return self._medication_frame()
+        if topic == "self_harm":
+            return self._self_harm_frame()
+        if topic == "exploitation":
+            return self._exploitation_frame()
+        if topic == "behaviour_support":
+            return self._behaviour_support_frame()
+        if topic == "family_time":
+            return self._family_time_frame()
+        if topic == "staff_culture":
+            return self._staff_culture_frame()
         if topic == "education_health":
             return self._education_health_frame()
         if topic == "placement_planning":
@@ -112,10 +122,34 @@ class OrbInstitutionalDepthFrameService:
         )
         return "\n".join(lines)
 
+    _CURIOSITY_TOPIC_PRIORITY = frozenset(
+        {
+            "medication",
+            "missing",
+            "therapeutic",
+            "restraint",
+            "allegations",
+            "self_harm",
+            "exploitation",
+            "behaviour_support",
+            "family_time",
+            "staff_culture",
+            "complaints",
+            "education_health",
+            "supervision",
+            "recording",
+            "inspection",
+            "chronology",
+            "leadership",
+        }
+    )
+
     def _topic(self, *, text: str, mode_text: str) -> str | None:
         curiosity_topic = orb_professional_curiosity_service.detect_topic(text, mode=mode_text)
         if curiosity_topic == "cumulative_concern":
             return "cumulative_concern"
+        if curiosity_topic in self._CURIOSITY_TOPIC_PRIORITY:
+            return curiosity_topic
         if any(term in text for term in ("indicare", "orb", "care companion", "os", "platform", "product")):
             return "indicare_product"
         if any(term in text for term in ("allegation", "allegations", "lado", "grabbed", "conduct concern", "disclosure against")):
@@ -135,8 +169,21 @@ class OrbInstitutionalDepthFrameService:
             return "leadership"
         if any(term in text or term in mode_text for term in ("ofsted", "sccif", "inspection", "reg 44", "reg 45")):
             return "inspection"
-        if any(term in text or term in mode_text for term in ("therapeutic", "trauma", "behaviour", "repair", "emotion", "dysregulated", "family time cancelled", "smashed cup")):
+        if any(term in text or term in mode_text for term in ("therapeutic", "trauma", "repair", "emotion", "dysregulated", "family time cancelled", "smashed cup")):
             return "therapeutic"
+        if any(term in text for term in ("self-harm", "self harm", "self harmed", "suicidal", "cutting", "overdose")):
+            return "self_harm"
+        if any(
+            term in text
+            for term in ("exploitation", "cse", "cce", "county lines", "contextual safeguarding", "criminal exploitation")
+        ):
+            return "exploitation"
+        if any(term in text for term in ("behaviour support", "pbs", "behaviour plan", "bsp", "positive behaviour")):
+            return "behaviour_support"
+        if any(term in text for term in ("family time", "family contact", "contact session")) and "cancelled" not in text and "smashed" not in text:
+            return "family_time"
+        if any(term in text for term in ("staff culture", "team culture", "normalised practice", "toxic team")):
+            return "staff_culture"
         if any(term in text or term in mode_text for term in ("manager", "daily brief")):
             return "leadership"
         if any(term in text or term in mode_text for term in ("staffing", "rota", "agency", "workforce", "training", "safer recruitment")):
@@ -303,7 +350,7 @@ class OrbInstitutionalDepthFrameService:
     def _missing_frame(self) -> dict[str, Any]:
         return {
             "topic": "missing from home / away from placement",
-            "purpose": "Reason through safety, context, return, patterns, exploitation risk and recording quality without making threshold decisions.",
+            "purpose": "Contextual safeguarding and Ofsted-ready cognition — understand why children go missing, not only whether forms are completed.",
             "response_structure": [
                 "## Immediate safety",
                 "## Return conversation",
@@ -313,13 +360,21 @@ class OrbInstitutionalDepthFrameService:
                 "## Next safe steps",
             ],
             "required_lenses": [
-                "Immediate welfare check, police/local missing procedure and timeline [Reg 12].",
-                "Medical/emotional state on return; where they went; who they were with; unknown adults and peer influence.",
-                "Phone/social media contact, transport/location routes, push factors from home and pull factors outside.",
-                "Family/contact triggers; exploitation, substance misuse, criminality or CSE indicators if relevant [Working Together] [SCCIF].",
-                "Return conversation and independent return interview if appropriate; social worker notification.",
-                "Risk assessment update, chronology update, plan review, repeated pattern review [Recording quality].",
-                "Manager oversight and Ofsted impact lens on timeliness, learning and child experience [Reg 13].",
+                "## Immediate safety: welfare check; injury/intoxication/distress; clothing/weather/phone; medical attention; local missing procedure; police/social worker if required [Reg 12].",
+                "## Return conversation: where did they go; who were they with; unknown adults; travel; phone/social media; substances/money/gifts; sexual or criminal exploitation indicators; felt safe; why leave/return; avoid someone in home; what helps next time.",
+                "## Patterns: repeated times; locations/routes; peers/adults; family/contact; school/education; staff/relationship; emotional triggers; push inside home; pull outside; escalation/reduction; contextual safeguarding [Working Together].",
+                "## Recording: chronology; missing report; return conversation; staff actions; agencies informed; risk assessment; safety plan; child voice; manager review; plan changes [Recording quality].",
+                "## Ofsted lens: inspectors ask whether the home understands why children go missing — learning, prevention, risk reduction, multi-agency working and impact [SCCIF] [Reg 13].",
+            ],
+            "patterns_to_explore": [
+                "Repeated missing times, locations/routes, peers/adults, family/contact triggers.",
+                "School/education triggers, staff/relationship triggers, emotional triggers.",
+                "Push factors inside the home and pull factors outside.",
+                "Escalation or reduction over time; links to exploitation/contextual safeguarding.",
+            ],
+            "ofsted_lens": [
+                "Evidence of learning, prevention, risk reduction, multi-agency working and impact — not only form completion.",
+                "Child experience and whether return conversations show professional curiosity.",
             ],
             "evidence_expectations": [
                 "Timeline of absence, actions taken, contacts made and return details.",
@@ -330,6 +385,7 @@ class OrbInstitutionalDepthFrameService:
             "avoid": [
                 "Blaming or shaming the child.",
                 "Treating repeated missing episodes as routine.",
+                "Checklist recording without understanding push/pull factors.",
             ],
         }
 
@@ -418,7 +474,7 @@ class OrbInstitutionalDepthFrameService:
     def _therapeutic_frame(self) -> dict[str, Any]:
         return {
             "topic": "therapeutic and reflective reasoning",
-            "purpose": "Frame behaviour, distress or conflict through emotional meaning, repair and relational safety.",
+            "purpose": "Warm, psychologically informed, practical cognition for distress, rupture and behaviour as communication.",
             "response_structure": [
                 "## What the behaviour may be communicating",
                 "## How staff can respond",
@@ -426,11 +482,11 @@ class OrbInstitutionalDepthFrameService:
                 "## What to review if this repeats",
             ],
             "required_lenses": [
-                "Loss, rejection, disappointment, shame, fear of being forgotten; attachment meaning.",
-                "Behaviour as communication; co-regulation; repair; staff emotional containment.",
-                "Avoid punitive wording; preserve child voice; what helped them settle.",
-                "Follow-up key work; whether family-time planning needs reviewing; pattern around contact changes.",
-                "Record factually without blame; show how staff helped the young person feel safe, heard and supported.",
+                "Family time cancellation as loss/disappointment/rejection; attachment meaning; fear of being forgotten or not mattering.",
+                "Shame, sadness, anger, lack of control — behaviour as communication (e.g. smashing a cup as overwhelm, not 'bad behaviour').",
+                "Co-regulation; staff staying calm; validation without condoning unsafe behaviour; repair after rupture; restoring emotional safety.",
+                "What helped them settle; follow-up key work; planning for future family-time changes; pattern around contact changes.",
+                "Recording: context; child's words; emotional presentation; behaviour observed; staff response; safety actions; repair; outcome; follow-up; plan review if repeated — without blame [Recording quality].",
             ],
             "evidence_expectations": [
                 "What the child may have been communicating.",
@@ -439,9 +495,9 @@ class OrbInstitutionalDepthFrameService:
                 "What adults learned for next time.",
             ],
             "closing_guidance": (
-                "End with therapeutic reflection focus: record the behaviour without blame, hold the emotional meaning "
-                "in mind, and show how staff helped the young person feel safe, heard and supported afterwards. "
-                "Do not add safeguarding threshold/local-procedure boundary unless the scenario indicates actual safeguarding risk."
+                "End exactly with: 'The key is to record the behaviour without blame, hold the emotional meaning in mind, "
+                "and show how staff helped the young person feel safe, heard and supported afterwards.' "
+                "Do not add safeguarding threshold/local-procedure boundary unless actual safeguarding risk is indicated."
             ),
             "avoid": [
                 "Diagnosing children.",
@@ -657,25 +713,125 @@ class OrbInstitutionalDepthFrameService:
                 "## Professional boundary",
             ],
             "required_lenses": [
-                "Was the medication time-critical; what is it for; what does the MAR say [Medication / health]?",
-                "Was pharmacy/GP/111/medical advice needed before giving late; was the child monitored [Reg 12]?",
-                "Was the error recorded transparently; were parents/social worker/placing authority informed if required?",
-                "Was the manager notified promptly; handover or second-checking failure; competency/training issue?",
-                "Is this repeated or isolated; medication policy review; learning action to prevent recurrence [Reg 13] [Recording quality].",
+                "## Immediate safety: what is the medication for; is it time-critical; PRN/routine/controlled/psychotropic/epilepsy/insulin/asthma/antibiotics/sleep/other high-impact?",
+                "Was pharmacy/GP/NHS 111 or emergency advice required before giving late or omitting; was the child monitored after the error?",
+                "Did the child experience symptoms, distress, anxiety or impact; was emergency advice needed? [Reg 12] [Medication / health]",
+                "## Recording: MAR transparent — not misleadingly backfilled; due time, actual time, missed/given late/omitted; advice sought and who gave it; manager notified; child's presentation and voice.",
+                "Parent/social worker/placing authority notification if policy requires; immediate actions and follow-up recorded [Recording quality].",
+                "## Manager oversight: handover failure; missed double-checking; unclear outgoing/incoming responsibility; environmental distraction; staff trained/competent; isolated or repeated?",
+                "Medication policy/handover process change; supervision/training/action required [Reg 13].",
+                "## What to review afterwards: medication audit; MAR audit; handover system; staff competency; repeated errors; provider learning; Reg 12 protection and Reg 13 leadership evidenced?",
             ],
             "evidence_expectations": [
                 "What was administered or missed, who was informed, advice received and follow-up.",
                 "MAR/health record accuracy and management review.",
             ],
             "closing_guidance": (
-                "End with safety, seek appropriate medical/pharmacy advice where needed, record rationale, "
-                "manager oversight, and human-led/local-procedure boundary — not generic coaching questions."
+                "In ## Professional boundary, state: seek pharmacy, GP, NHS 111 or emergency advice where the medication or "
+                "the child's presentation requires it. Do not give clinical treatment advice. End with manager oversight and "
+                "learning focus — not generic coaching questions."
             ),
             "avoid": [
                 "Giving clinical or medical treatment advice beyond professional boundaries.",
                 "Over-medicalising or diagnosing.",
                 "Minimising medication errors or health concerns.",
+                "Backfilled or misleading MAR entries.",
             ],
+        }
+
+    def _self_harm_frame(self) -> dict[str, Any]:
+        return {
+            "topic": "self-harm / emotional crisis",
+            "purpose": "Safety-first, trauma-informed reasoning without sensationalism or blame.",
+            "response_structure": [
+                "## Immediate safety",
+                "## What to understand",
+                "## Recording and notifications",
+                "## Manager oversight",
+                "## What to review afterwards",
+            ],
+            "required_lenses": [
+                "Immediate safety: means removed, supervision, medical assessment if injury, emotional containment [Reg 12].",
+                "Triggers, child's words, shame/protest/trauma response; co-regulation and repair.",
+                "Risk assessment, safety plan, CAMHS/GP, social worker, parent/placing authority as required.",
+                "Pattern over time, online/social factors, placement stress, contact impact [Recording quality].",
+                "Manager review, learning, plan update; Reg 13 oversight without minimising.",
+            ],
+            "avoid": ["Blame-based language.", "Diagnosing.", "Threshold decisions by ORB."],
+        }
+
+    def _exploitation_frame(self) -> dict[str, Any]:
+        return {
+            "topic": "contextual safeguarding / exploitation concerns",
+            "purpose": "Professional curiosity about context, routes, relationships and patterns — without concluding exploitation.",
+            "response_structure": [
+                "## Immediate safety",
+                "## Context to explore",
+                "## Multi-agency and recording",
+                "## Patterns over time",
+                "## Manager and RI oversight",
+            ],
+            "required_lenses": [
+                "Locations, peers, unknown adults, gifts, money, transport, online contact [Working Together].",
+                "Push/pull factors; coercion indicators; links to missing, substances, criminal activity.",
+                "Child voice; trusted adult; safety plan and risk assessment update [Reg 12].",
+                "Chronology patterns; multi-agency routes; manager/RI learning [Reg 13] [SCCIF].",
+            ],
+            "avoid": ["Concluding exploitation without evidence.", "Victim-blaming.", "Threshold decisions."],
+        }
+
+    def _behaviour_support_frame(self) -> dict[str, Any]:
+        return {
+            "topic": "behaviour support / PBS",
+            "purpose": "Behaviour as communication with plan-aligned support, de-escalation and repair.",
+            "response_structure": [
+                "## What the behaviour may be communicating",
+                "## Immediate response",
+                "## Recording expectations",
+                "## Plan review and leadership oversight",
+            ],
+            "required_lenses": [
+                "Unmet need, trauma trigger, sensory/relational factors; BSP/PBS alignment.",
+                "Antecedent, presentation, de-escalation, alternatives before restrictive practice.",
+                "Repair, child voice, staff rationale, outcome; pattern across shifts/staff [Recording quality] [Reg 13].",
+            ],
+            "avoid": ["Deficit labels.", "Punitive framing without understanding."],
+        }
+
+    def _family_time_frame(self) -> dict[str, Any]:
+        return {
+            "topic": "family time / contact",
+            "purpose": "Child-centred contact planning, impact recording and relational follow-up.",
+            "response_structure": [
+                "## Preparation and purpose",
+                "## During and after contact",
+                "## Recording and child voice",
+                "## Review if patterns emerge",
+            ],
+            "required_lenses": [
+                "Child wishes, preparation, emotional readiness; advocate involvement where relevant.",
+                "During: regulation, joy, conflict, boundaries; after: presentation, repair, placement impact.",
+                "Cancellation/disappointment: attachment meaning; record without blame [Therapeutic practice] [Recording quality].",
+            ],
+            "avoid": ["Blaming child or family.", "Activity-only records without emotional impact."],
+        }
+
+    def _staff_culture_frame(self) -> dict[str, Any]:
+        return {
+            "topic": "staff culture and practice climate",
+            "purpose": "Leadership thinking about normalisation, curiosity, fairness and impact on children.",
+            "response_structure": [
+                "## What culture signals matter",
+                "## Leadership visibility",
+                "## Evidence to review",
+                "## Actions and oversight",
+            ],
+            "required_lenses": [
+                "Minimisation, blame, silence, humour at children's expense, restraint normalisation.",
+                "Supervision quality, whistleblowing confidence, fairness when concerns arise [Reg 13].",
+                "Impact on safeguarding responsiveness, recording honesty and child experience [SCCIF].",
+            ],
+            "avoid": ["Individual scapegoating without systemic review.", "Generic culture slogans without evidence."],
         }
 
     def _education_health_frame(self) -> dict[str, Any]:
