@@ -1,43 +1,46 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-const allowedLegacyPrefixes = [
-  '/build-live',
+const publicPrefixes = [
+  '/orb',
   '/login',
-  '/auth',
   '/unauthorized',
+  '/auth',
+  '/api',
   '/mfa',
   '/mfa-setup',
   '/mfa-recovery',
-  '/api',
-  '/_next',
-  '/favicon.ico',
-  '/robots.txt',
-  '/manifest.json',
   '/js',
   '/css',
   '/assets',
-  '/images',
-  '/components'
+  '/components',
+  '/build-live'
 ]
+const sessionCookieNames = ['indicare_session', '__Host-indicare_session']
+const e2eAuthEnabled = process.env.NEXT_PUBLIC_E2E_TEST_MODE === '1' && process.env.NODE_ENV !== 'production'
 
-function isAllowedLegacyPath(pathname: string) {
-  return allowedLegacyPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))
+function isPublicPath(pathname: string) {
+  return publicPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))
+}
+
+function hasSessionCookie(request: NextRequest) {
+  return sessionCookieNames.some((name) => Boolean(request.cookies.get(name)?.value))
 }
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  if (isAllowedLegacyPath(pathname)) {
-    const response = NextResponse.next()
-    response.headers.set('x-indicare-runtime', 'legacy-front-door-marker')
-    return response
+  if (!e2eAuthEnabled && !isPublicPath(pathname) && !hasSessionCookie(request)) {
+    const loginUrl = request.nextUrl.clone()
+    loginUrl.pathname = '/login'
+    loginUrl.searchParams.set('returnUrl', `${pathname}${request.nextUrl.search}`)
+    return NextResponse.redirect(loginUrl)
   }
 
-  const url = request.nextUrl.clone()
-  url.pathname = '/build-live'
-  url.searchParams.set('from', pathname)
-  return NextResponse.redirect(url)
+  const response = NextResponse.next()
+  response.headers.set('x-indicare-runtime', 'operational')
+  response.headers.set('x-indicare-build-location', 'frontend-next')
+  return response
 }
 
 export const config = {
