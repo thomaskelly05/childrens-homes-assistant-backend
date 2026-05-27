@@ -83,6 +83,8 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
     RouterGroup(
         "os_command",
         (
+            "backend.os_command_router",
+            "backend.os_command_young_person_workspace_router",
             "backend.os_command_routes",
             "routers.os_shell_api_routes",
             "routers.os_magic_notes_routes",
@@ -100,7 +102,7 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
             "backend.os_production_diagnostics_router",
             "backend.os_enterprise_compat_router",
         ),
-        notes="Operating system command surfaces and compatibility gateways.",
+        notes="Operating system command surfaces, canonical child workspace and compatibility gateways.",
     ),
     RouterGroup(
         "governance",
@@ -386,6 +388,12 @@ def get_route_conflicts() -> list[dict]:
         method, _, path = route.partition(" ")
         conflicts.append({"method": method, "path": path, "classification": "legacy_compatibility"})
     return conflicts
+
+
+def _split_route_conflicts(conflicts: list[dict]) -> tuple[list[dict], list[dict]]:
+    accidental = [conflict for conflict in conflicts if conflict.get("classification") != "legacy_compatibility"]
+    intentional = [conflict for conflict in conflicts if conflict.get("classification") == "legacy_compatibility"]
+    return accidental, intentional
 
 
 def get_accidental_route_conflicts() -> list[dict]:
