@@ -1123,7 +1123,7 @@ export function OrbCareCompanion() {
     if (voice.speaking) voice.cancelSpeaking()
     if (voice.listening) voice.cancelListening()
     voice.pauseVoiceSession()
-    const chat = createStandaloneChat(projectId || workspace.activeProjectId, mode)
+    const chat = createStandaloneChat(projectId || workspace.activeProjectId, 'Ask ORB')
     setWorkspace((current) => ({
       ...current,
       activeChatId: chat.id,
@@ -1829,6 +1829,7 @@ export function OrbCareCompanion() {
                             ) : null}
                             {index === visibleMessages.length - 1 && entry.status === 'complete' ? (
                               <OrbResponseActionBar
+                                mode={mode}
                                 content={entry.content}
                                 speaking={speakingMessageId === entry.id}
                                 synthesisAvailable={voice.synthesisAvailable}

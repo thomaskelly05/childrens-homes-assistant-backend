@@ -132,11 +132,18 @@ describe('ORB ChatGPT UI structure', () => {
     assert.match(panel, /Test voice/)
   })
 
-  it('response action bar includes regenerate and copy', () => {
+  it('response action bar includes regenerate copy and more menu', () => {
     const assistant = readComponent('components/orb-standalone/orb-assistant-message.tsx')
     assert.match(assistant, /Regenerate/)
     assert.match(assistant, /data-orb-response-actions/)
     assert.match(assistant, /Copy/)
+    assert.match(assistant, /data-orb-action-more-menu/)
+    assert.match(assistant, /label="More"/)
+  })
+
+  it('new chat defaults to Ask ORB for auto-routing', () => {
+    const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
+    assert.match(companion, /createStandaloneChat\([^)]+'Ask ORB'\)/)
   })
 
   it('user message edit flow markers exist', () => {

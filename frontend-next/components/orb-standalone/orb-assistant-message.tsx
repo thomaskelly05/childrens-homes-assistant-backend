@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, type ReactNode } from 'react'
-import { Copy, FileText, RotateCcw, Square, Volume2 } from 'lucide-react'
+import { ChevronDown, Copy, FileText, MoreHorizontal, RotateCcw, Square, Volume2 } from 'lucide-react'
 
 import { OrbHueMark } from '@/components/orb-standalone/orb-hue-logo'
 import { OrbExplainabilityPanel, type OrbExplainabilityView } from '@/components/orb-standalone/orb-explainability-panel'
@@ -13,7 +13,7 @@ import type { StandaloneOrbModelRouting } from '@/lib/orb/standalone-client'
 function CognitionPill({ label }: { label: string }) {
   return (
     <span
-      className="inline-flex items-center rounded-full border border-[var(--orb-line)] bg-[var(--orb-surface)] px-2 py-0.5 text-[10px] font-medium text-[var(--orb-muted)]"
+      className="inline-flex items-center rounded-full border border-[var(--orb-line)] bg-[#F8FAFC] px-2 py-0.5 text-[10px] font-semibold text-[#475569]"
       data-orb-cognition-pill
     >
       Using · {label}
@@ -66,25 +66,28 @@ export function OrbAssistantMessageBody({
     >
       <OrbHueMark pulse={streaming} />
       <div className="min-w-0 flex-1">
-      <OrbCognitionIndicators mode={mode} streaming={streaming} explainability={explainability} />
-      <div className="orb-message-content text-[15px] leading-7 text-[var(--orb-foreground)]">
-        <OrbMarkdownAnswer content={content} sources={sources} />
-      </div>
-      <OrbExplainabilityPanel explainability={explainability} cognitionModeLabel={cognitionLabel} />
-      <OrbSourcesDetail sources={sources} modelRouting={modelRouting} />
+        <OrbCognitionIndicators mode={mode} streaming={streaming} explainability={explainability} />
+        <div className="orb-message-content text-[15px] leading-7 text-[var(--orb-foreground)]">
+          <OrbMarkdownAnswer content={content} sources={sources} />
+        </div>
+        <OrbExplainabilityPanel explainability={explainability} cognitionModeLabel={cognitionLabel} />
+        <OrbSourcesDetail content={content} sources={sources} modelRouting={modelRouting} />
       </div>
     </article>
   )
 }
 
 function OrbSourcesDetail({
+  content,
   sources,
   modelRouting
 }: {
+  content: string
   sources?: StandaloneOrbSource[]
   modelRouting?: StandaloneOrbModelRouting
 }) {
   const [open, setOpen] = useState(false)
+  const hasInlineCitations = /\[[^\]]+\]/.test(content)
   const topicSources =
     sources?.filter((source) => {
       const label = (source.label || '').trim().toLowerCase()
@@ -98,9 +101,16 @@ function OrbSourcesDetail({
         "children's homes regulations",
         'quality standards',
         'residential children',
-        'safeguarding practice principles'
+        'safeguarding practice principles',
+        'therapeutic practice',
+        'built-in therapeutic',
+        'built-in product'
       ]
-      return !generic.some((term) => label.includes(term))
+      if (generic.some((term) => label.includes(term))) return false
+      if (hasInlineCitations && (label.includes('therapeutic') || label.includes('emotionally containing'))) {
+        return false
+      }
+      return true
     }) ?? []
   if (!topicSources.length && !modelRouting) return null
   return (
@@ -108,7 +118,7 @@ function OrbSourcesDetail({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="text-[10px] font-medium text-[var(--orb-muted)] underline-offset-2 hover:text-[var(--orb-foreground)] hover:underline"
+        className="text-[11px] font-medium text-[#64748B] underline-offset-2 hover:text-[#0F172A] hover:underline"
       >
         {open ? 'Hide guidance detail' : 'View guidance detail'}
       </button>
@@ -117,10 +127,10 @@ function OrbSourcesDetail({
           {topicSources.map((source, index) => (
             <li
               key={`${source.label}-${index}`}
-              className="rounded-lg border border-[var(--orb-line)] bg-[var(--orb-surface)] px-2.5 py-1.5 text-[10px] text-[var(--orb-muted)]"
+              className="rounded-lg border border-[#CBD5E1] bg-[#F8FAFC] px-2.5 py-1.5 text-[11px] text-[#475569]"
             >
-              <span className="font-medium text-[var(--orb-foreground)]">{source.label}</span>
-              {source.basis ? <p className="mt-0.5">{source.basis}</p> : null}
+              <span className="font-semibold text-[#0F172A]">{source.label}</span>
+              {source.basis ? <p className="mt-0.5 leading-relaxed">{source.basis}</p> : null}
             </li>
           ))}
         </ul>
@@ -130,6 +140,7 @@ function OrbSourcesDetail({
 }
 
 export function OrbResponseActionBar({
+  mode,
   content,
   speaking,
   synthesisAvailable,
@@ -146,6 +157,7 @@ export function OrbResponseActionBar({
   onExport,
   onInspectionPrep
 }: {
+  mode: string
   content: string
   speaking: boolean
   synthesisAvailable: boolean
@@ -162,28 +174,87 @@ export function OrbResponseActionBar({
   onExport?: () => void
   onInspectionPrep?: () => void
 }) {
+  const [moreOpen, setMoreOpen] = useState(false)
+  const modeKey = mode.trim().toLowerCase()
+  const isRecording = modeKey === 'record this properly'
+  const isStaffCoach = modeKey === 'staff coach'
+  const isInspection =
+    modeKey === 'ofsted lens' || modeKey === 'reg 44 / reg 45 prep' || modeKey.includes('reg 44')
+
+  const primaryActions: ReactNode[] = [
+    <ActionChip key="copy" icon={<Copy className="h-3 w-3" />} label="Copy" onClick={() => void navigator.clipboard?.writeText(content)} />
+  ]
+  if (onRegenerate) {
+    primaryActions.push(
+      <ActionChip key="regen" icon={<RotateCcw className="h-3 w-3" />} label="Regenerate" onClick={onRegenerate} dataAttr="regenerate" />
+    )
+  }
+  if (synthesisAvailable) {
+    primaryActions.push(
+      speaking ? (
+        <ActionChip key="stop" icon={<Square className="h-3 w-3" />} label="Stop" onClick={onStop} />
+      ) : (
+        <ActionChip key="speak" icon={<Volume2 className="h-3 w-3" />} label="Speak" onClick={onSpeak} />
+      )
+    )
+  }
+  if (onSave) {
+    primaryActions.push(<ActionChip key="save" icon={<FileText className="h-3 w-3" />} label="Save" onClick={onSave} />)
+  }
+  if (isRecording) {
+    primaryActions.push(
+      <ActionChip key="draft" icon={<FileText className="h-3 w-3" />} label="Use as draft" onClick={onDraft} dataAttr="use-as-draft" />
+    )
+  }
+  if (isStaffCoach && onSupervision) {
+    primaryActions.push(<ActionChip key="supervision" label="Supervision prompts" onClick={onSupervision} dataAttr="supervision-prompts" />)
+  }
+  if (isInspection && onInspectionPrep) {
+    primaryActions.push(<ActionChip key="inspection" label="Inspection prep" onClick={onInspectionPrep} dataAttr="inspection-prep" />)
+  }
+
+  const moreActions: ReactNode[] = []
+  if (!isRecording) {
+    moreActions.push(<ActionChip key="draft-more" icon={<FileText className="h-3 w-3" />} label="Use as draft" onClick={onDraft} />)
+  }
+  if (onSaveToProject) moreActions.push(<ActionChip key="project" label="Save to project" onClick={onSaveToProject} />)
+  if (onActionPlan) moreActions.push(<ActionChip key="plan" label="Action plan" onClick={onActionPlan} />)
+  if (onReflection) moreActions.push(<ActionChip key="reflection" label="Save reflection" onClick={onReflection} />)
+  if (!isStaffCoach && onSupervision) {
+    moreActions.push(<ActionChip key="supervision-more" label="Supervision prompts" onClick={onSupervision} />)
+  }
+  if (onExport) moreActions.push(<ActionChip key="export" label="Export" onClick={onExport} />)
+  if (!isInspection && onInspectionPrep) {
+    moreActions.push(<ActionChip key="inspection-more" label="Inspection prep" onClick={onInspectionPrep} />)
+  }
+  moreActions.push(<ActionChip key="new-q" icon={<RotateCcw className="h-3 w-3" />} label="New question" onClick={onNewQuestion} />)
+
   return (
-    <div className="mt-3 flex flex-wrap gap-1 border-t border-[var(--orb-line)] pt-3" data-orb-response-actions>
-      <ActionChip icon={<Copy className="h-3 w-3" />} label="Copy" onClick={() => void navigator.clipboard?.writeText(content)} />
-      {onRegenerate ? (
-        <ActionChip icon={<RotateCcw className="h-3 w-3" />} label="Regenerate" onClick={onRegenerate} dataAttr="regenerate" />
+    <div className="mt-3 flex flex-wrap items-center gap-1 border-t border-[var(--orb-line)] pt-3" data-orb-response-actions>
+      {primaryActions}
+      {moreActions.length ? (
+        <div className="relative" data-orb-action-more-menu>
+          <ActionChip
+            icon={<MoreHorizontal className="h-3 w-3" />}
+            label="More"
+            onClick={() => setMoreOpen((v) => !v)}
+            dataAttr="more"
+            trailingIcon={<ChevronDown className={`h-3 w-3 transition ${moreOpen ? 'rotate-180' : ''}`} />}
+          />
+          {moreOpen ? (
+            <div
+              className="orb-action-more-menu absolute left-0 top-full z-20 mt-1 min-w-[11rem] rounded-lg border border-[#CBD5E1] bg-white py-1 shadow-lg"
+              role="menu"
+            >
+              {moreActions.map((action, index) => (
+                <div key={index} className="px-1" role="none">
+                  {action}
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </div>
       ) : null}
-      {onSaveToProject ? <ActionChip icon={<FileText className="h-3 w-3" />} label="Save to project" onClick={onSaveToProject} /> : null}
-      {onActionPlan ? <ActionChip label="Action plan" onClick={onActionPlan} /> : null}
-      {onReflection ? <ActionChip label="Save reflection" onClick={onReflection} /> : null}
-      {onSupervision ? <ActionChip label="Supervision prompts" onClick={onSupervision} /> : null}
-      {onExport ? <ActionChip label="Export" onClick={onExport} /> : null}
-      {onInspectionPrep ? <ActionChip label="Inspection prep" onClick={onInspectionPrep} /> : null}
-      {onSave ? <ActionChip icon={<FileText className="h-3 w-3" />} label="Save output" onClick={onSave} /> : null}
-      {synthesisAvailable ? (
-        speaking ? (
-          <ActionChip icon={<Square className="h-3 w-3" />} label="Stop" onClick={onStop} />
-        ) : (
-          <ActionChip icon={<Volume2 className="h-3 w-3" />} label="Speak" onClick={onSpeak} />
-        )
-      ) : null}
-      <ActionChip icon={<RotateCcw className="h-3 w-3" />} label="New question" onClick={onNewQuestion} />
-      <ActionChip icon={<FileText className="h-3 w-3" />} label="Use as draft" onClick={onDraft} />
     </div>
   )
 }
@@ -192,12 +263,14 @@ function ActionChip({
   icon,
   label,
   onClick,
-  dataAttr
+  dataAttr,
+  trailingIcon
 }: {
   icon?: ReactNode
   label: string
   onClick: () => void
   dataAttr?: string
+  trailingIcon?: ReactNode
 }) {
   return (
     <button
@@ -208,6 +281,7 @@ function ActionChip({
     >
       {icon}
       {label}
+      {trailingIcon}
     </button>
   )
 }

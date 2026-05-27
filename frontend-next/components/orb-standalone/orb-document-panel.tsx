@@ -9,7 +9,6 @@ import {
 } from '@/components/orb-standalone/orb-intelligence-output'
 import { OrbOutputSaveActions } from '@/components/orb-standalone/orb-output-save-actions'
 import { OrbStandalonePanelShell } from '@/components/orb-standalone/orb-standalone-panel-shell'
-/** Action plan rendering: orb-action-plan (via orb-intelligence-output) */
 import type { StandaloneProject } from '@/lib/orb/standalone-local-store'
 import {
   analyseOrbStandaloneDocument,
@@ -19,6 +18,7 @@ import {
 } from '@/lib/orb/standalone-client'
 
 type DocumentTab = 'analyse' | 'action_plan' | 'briefing' | 'compare'
+type InputTab = 'paste' | 'upload'
 
 const TAB_MODES: Record<DocumentTab, OrbDocumentAnalysisMode> = {
   analyse: 'explain',
@@ -64,6 +64,7 @@ export function OrbDocumentPanel({
   const [title, setTitle] = useState('Uploaded document')
   const [sourceType, setSourceType] = useState('user_uploaded')
   const [text, setText] = useState(initialText || '')
+  const [inputTab, setInputTab] = useState<InputTab>('paste')
   const [tab, setTab] = useState<DocumentTab>('analyse')
   const [mode, setMode] = useState<OrbDocumentAnalysisMode>('explain')
   const [loading, setLoading] = useState(false)
@@ -71,6 +72,9 @@ export function OrbDocumentPanel({
   const [sourceId, setSourceId] = useState<string | null>(null)
   const [understanding, setUnderstanding] = useState<OrbDocumentUnderstanding | null>(null)
   const [copyNote, setCopyNote] = useState<string | null>(null)
+  const [closeAfterAnalyse, setCloseAfterAnalyse] = useState(false)
+
+  const hasContent = Boolean(text.trim() || sourceId)
 
   function selectTab(next: DocumentTab) {
     setTab(next)
@@ -79,7 +83,7 @@ export function OrbDocumentPanel({
 
   const runAnalyse = useCallback(async () => {
     const body = text.trim()
-    if (!body) {
+    if (!body && !sourceId) {
       setError('Paste or upload document text first.')
       return
     }
@@ -99,12 +103,13 @@ export function OrbDocumentPanel({
         title: title.trim() || result.understanding.title,
         sourceId: sourceId || result.understanding.source_id || null
       })
+      if (closeAfterAnalyse) onClose()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Analysis failed')
     } finally {
       setLoading(false)
     }
-  }, [mode, onDocumentContext, sourceId, text, title])
+  }, [closeAfterAnalyse, mode, onClose, onDocumentContext, sourceId, text, title])
 
   async function handleFileUpload(file: File) {
     setLoading(true)
@@ -167,14 +172,25 @@ export function OrbDocumentPanel({
       onClose={onClose}
       panelId="documents"
       ariaLabel="ORB documents"
-      footer="Uploaded documents are standalone context unless you choose to save them elsewhere."
+      footer="Standalone context only — not saved to IndiCare OS records."
     >
-      <div className="space-y-4 p-4" data-orb-document-panel>
-        <p className="rounded-xl border border-emerald-400/15 bg-emerald-500/[0.06] px-3 py-2.5 text-[11px] leading-5 text-emerald-100/90">
-          Documents here are standalone context. They are not added to IndiCare OS records.
+      <div className="orb-document-panel space-y-4 p-4" data-orb-document-panel>
+        <p className="rounded-xl border border-[#CBD5E1] bg-[#F8FAFC] px-3 py-2.5 text-[11px] leading-5 text-[#475569]">
+          Standalone context only — not saved to IndiCare OS records.
         </p>
 
-        <div className="flex flex-wrap gap-1 rounded-xl bg-white/[0.03] p-1 ring-1 ring-white/[0.06]" role="tablist" aria-label="Document actions">
+        {!hasContent && !understanding ? (
+          <div
+            className="rounded-xl border border-dashed border-[#CBD5E1] bg-[#F8FAFC] px-4 py-8 text-center"
+            data-orb-document-empty
+          >
+            <FileText className="mx-auto h-8 w-8 text-[#94A3B8]" aria-hidden />
+            <p className="mt-2 text-sm font-semibold text-[#0F172A]">No document yet</p>
+            <p className="mt-1 text-xs text-[#64748B]">Paste text or upload a file to analyse with ORB.</p>
+          </div>
+        ) : null}
+
+        <div className="flex flex-wrap gap-1 rounded-xl border border-[#CBD5E1] bg-[#F8FAFC] p-1" role="tablist" aria-label="Document actions">
           {TABS.map((item) => (
             <button
               key={item.id}
@@ -182,8 +198,10 @@ export function OrbDocumentPanel({
               role="tab"
               aria-selected={tab === item.id}
               onClick={() => selectTab(item.id)}
-              className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
-                tab === item.id ? 'bg-white/[0.08] text-white' : 'text-slate-500 hover:text-slate-300'
+              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                tab === item.id
+                  ? 'border border-[#0284C7] bg-white text-[#0369A1] shadow-sm'
+                  : 'text-[#475569] hover:bg-white hover:text-[#0F172A]'
               }`}
             >
               {item.label}
@@ -191,19 +209,32 @@ export function OrbDocumentPanel({
           ))}
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              const area = document.querySelector<HTMLTextAreaElement>('[data-orb-doc-paste]')
-              area?.focus()
-            }}
-            className="rounded-full border border-white/12 px-3 py-1.5 text-xs text-slate-300 hover:bg-white/[0.06]"
-          >
-            Paste document
-          </button>
-          <label className="inline-flex cursor-pointer items-center rounded-full border border-white/12 px-3 py-1.5 text-xs text-slate-300 hover:bg-white/[0.06]">
-            Upload file
+        <div className="flex gap-1 rounded-lg border border-[#CBD5E1] bg-white p-0.5" role="tablist" aria-label="Input method">
+          {(
+            [
+              { id: 'paste' as const, label: 'Paste' },
+              { id: 'upload' as const, label: 'Upload' }
+            ] as const
+          ).map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              role="tab"
+              aria-selected={inputTab === item.id}
+              onClick={() => setInputTab(item.id)}
+              className={`flex-1 rounded-md px-3 py-1.5 text-xs font-semibold transition ${
+                inputTab === item.id ? 'bg-[#EAF6FF] text-[#0369A1]' : 'text-[#475569] hover:bg-[#F1F5F9]'
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+
+        {inputTab === 'upload' ? (
+          <label className="orb-doc-upload-zone flex cursor-pointer flex-col items-center justify-center rounded-xl border border-[#CBD5E1] bg-white px-4 py-6 text-center hover:bg-[#F8FAFC]">
+            <span className="text-sm font-semibold text-[#0F172A]">Upload file</span>
+            <span className="mt-1 text-xs text-[#64748B]">.txt, .md, .pdf, .docx</span>
             <input
               type="file"
               accept=".txt,.md,.pdf,.docx"
@@ -214,34 +245,46 @@ export function OrbDocumentPanel({
               }}
             />
           </label>
-        </div>
+        ) : null}
 
-        <label className="block text-xs text-slate-400">
+        <label className="block text-xs font-semibold text-[#475569]">
           Title
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white"
+            className="orb-doc-input mt-1 w-full rounded-lg border border-[#CBD5E1] bg-white px-3 py-2 text-sm text-[#0F172A] placeholder:text-[#64748B]"
           />
         </label>
-        <label className="block text-xs text-slate-400">
-          Document text
-          <textarea
-            data-orb-doc-paste
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            rows={6}
-            placeholder="Paste policy, inspection notes, or guidance…"
-            className="mt-1 w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white"
+        {inputTab === 'paste' ? (
+          <label className="block text-xs font-semibold text-[#475569]">
+            Document text
+            <textarea
+              data-orb-doc-paste
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              rows={6}
+              placeholder="Paste policy, inspection notes, or guidance…"
+              className="orb-doc-input mt-1 w-full rounded-lg border border-[#CBD5E1] bg-white px-3 py-2 text-sm text-[#0F172A] placeholder:text-[#64748B]"
+            />
+          </label>
+        ) : null}
+
+        <label className="flex items-center gap-2 text-xs text-[#64748B]">
+          <input
+            type="checkbox"
+            checked={closeAfterAnalyse}
+            onChange={(e) => setCloseAfterAnalyse(e.target.checked)}
+            className="rounded border-[#CBD5E1]"
           />
+          Close panel after analysis
         </label>
 
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            disabled={loading}
+            disabled={loading || !hasContent}
             onClick={() => void runAnalyse()}
-            className="inline-flex flex-1 min-w-[10rem] items-center justify-center gap-2 rounded-xl bg-cyan-500/20 py-2.5 text-sm font-semibold text-cyan-50 disabled:opacity-50"
+            className="orb-doc-primary-btn inline-flex flex-1 min-w-[10rem] items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed"
             data-orb-analyse-document
           >
             {loading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <FileText className="h-4 w-4" aria-hidden />}
@@ -249,45 +292,23 @@ export function OrbDocumentPanel({
           </button>
           <button
             type="button"
-            disabled={loading || !text.trim()}
+            disabled={loading || !hasContent}
             onClick={() => {
               selectTab('action_plan')
               void runAnalyse()
             }}
-            className="rounded-xl border border-white/12 px-3 py-2.5 text-xs font-medium text-slate-300 hover:bg-white/[0.06] disabled:opacity-40"
+            className="orb-doc-secondary-btn rounded-xl border px-3 py-2.5 text-xs font-semibold disabled:cursor-not-allowed"
             data-orb-create-action-plan
           >
             Create action plan
           </button>
-          <button
-            type="button"
-            disabled={loading}
-            onClick={async () => {
-              selectTab('briefing')
-              setMode('manager_briefing')
-              await runAnalyse()
-            }}
-            className="rounded-xl border border-white/12 px-3 py-2.5 text-xs font-medium text-slate-300 hover:bg-white/[0.06] disabled:opacity-40"
-          >
-            Create manager briefing
-          </button>
-          {onRunDeepResearch ? (
-            <button
-              type="button"
-              onClick={() => onRunDeepResearch(docContext())}
-              className="rounded-xl border border-violet-400/30 bg-violet-500/10 px-3 py-2.5 text-xs font-medium text-violet-100"
-              data-orb-run-deep-research
-            >
-              Run Deep Research from this document
-            </button>
-          ) : null}
         </div>
 
-        {error ? <p className="text-xs text-red-300">{error}</p> : null}
-        {copyNote ? <p className="text-xs text-emerald-300/90">{copyNote}</p> : null}
+        {error ? <p className="text-xs font-medium text-red-600">{error}</p> : null}
+        {copyNote ? <p className="text-xs font-medium text-[#0369A1]">{copyNote}</p> : null}
 
         {understanding ? (
-          <div className="space-y-4 border-t border-white/[0.06] pt-4">
+          <div className="space-y-4 border-t border-[#CBD5E1] pt-4">
             <OrbIntelligenceOutput
               output={understandingToIntelligenceOutput(understanding)}
               onCopy={() => setCopyNote('Copied markdown to clipboard.')}
@@ -321,34 +342,16 @@ export function OrbDocumentPanel({
                   void navigator.clipboard.writeText(formatForChat())
                   setCopyNote('Copied markdown.')
                 }}
-                className="inline-flex items-center gap-1 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-slate-300"
+                className="orb-doc-secondary-btn inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-semibold"
               >
                 <Copy className="h-3.5 w-3.5" aria-hidden />
                 Copy markdown
               </button>
-              {onOpenSavedOutputs ? (
-                <button
-                  type="button"
-                  onClick={onOpenSavedOutputs}
-                  className="rounded-lg border border-cyan-400/30 bg-cyan-500/10 px-3 py-1.5 text-xs text-cyan-100"
-                >
-                  Open Saved Outputs
-                </button>
-              ) : null}
-              {onRunDocumentAnalysisAgent ? (
-                <button
-                  type="button"
-                  onClick={() => onRunDocumentAnalysisAgent(docContext())}
-                  className="rounded-lg border border-cyan-400/30 bg-cyan-500/10 px-3 py-1.5 text-xs text-cyan-100"
-                >
-                  Run Document Analysis Agent
-                </button>
-              ) : null}
               {onInsertIntoChat ? (
                 <button
                   type="button"
                   onClick={() => onInsertIntoChat(formatForChat())}
-                  className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-slate-300"
+                  className="orb-doc-secondary-btn rounded-lg border px-3 py-1.5 text-xs font-semibold"
                 >
                   Insert into chat
                 </button>

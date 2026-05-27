@@ -173,6 +173,16 @@ export function cognitionLabelForMode(mode: string): string {
   return agentForMode(mode)?.cognitionLabel ?? 'ORB cognition'
 }
 
+const AUTO_ROUTE_MODES = new Set(['ask orb', 'general cognition', ''])
+
+function filterAutoRouteLabels(labels: string[], mode: string): string[] {
+  const modeLower = mode.trim().toLowerCase()
+  if (modeLower !== 'ask orb') {
+    return labels
+  }
+  return labels.filter((label) => label.trim().toLowerCase() !== 'ofsted lens')
+}
+
 export function cognitionPillLabel(
   mode: string,
   explainability?: {
@@ -180,12 +190,19 @@ export function cognitionPillLabel(
     active_brains?: string[]
   }
 ): string {
-  const autoLabels = explainability?.cognition_display_labels?.filter(Boolean)
-  if (autoLabels?.length) {
+  const modeLower = mode.trim().toLowerCase()
+  const autoLabels = filterAutoRouteLabels(
+    (explainability?.cognition_display_labels ?? []).filter(Boolean) as string[],
+    mode
+  )
+  if (autoLabels.length) {
     return autoLabels.join(' · ')
   }
-  if (mode.trim().toLowerCase() !== 'ask orb') {
+  if (modeLower === 'ofsted lens') {
+    return 'Ofsted Lens'
+  }
+  if (!AUTO_ROUTE_MODES.has(modeLower) && modeLower) {
     return cognitionLabelForMode(mode)
   }
-  return 'General cognition'
+  return 'Automatic routing'
 }

@@ -23,7 +23,7 @@ class OrbResidentialCognitionRouter:
         "governance_cognition": "Leadership oversight",
         "chronology_cognition": "Chronology",
         "workforce_cognition": "Workforce supervision",
-        "health_medication_cognition": "Health / medication",
+        "health_medication_cognition": "Medication / health",
         "education_cognition": "Education",
         "complaints_advocacy_cognition": "Complaints / advocacy",
         "child_journey_cognition": "Child journey",
@@ -177,7 +177,12 @@ class OrbResidentialCognitionRouter:
             brains.append("institutional_depth_frame")
 
         active_brains = list(dict.fromkeys(brains))
-        display_labels = self.cognition_display_labels(active_brains)
+        display_labels = self.cognition_display_labels(
+            active_brains,
+            message=text,
+            mode=mode_lower,
+            topic=topic,
+        )
         depth_level = self._depth_level(topic, residential)
 
         return {
@@ -206,7 +211,14 @@ class OrbResidentialCognitionRouter:
             return "general_residential"
         return None
 
-    def cognition_display_labels(self, active_brains: list[str]) -> list[str]:
+    def cognition_display_labels(
+        self,
+        active_brains: list[str],
+        *,
+        message: str = "",
+        mode: str = "ask orb",
+        topic: str | None = None,
+    ) -> list[str]:
         labels: list[str] = []
         skip = {"general_intelligence", "residential_practice", "institutional_depth_frame"}
         for brain in active_brains:
@@ -215,7 +227,30 @@ class OrbResidentialCognitionRouter:
             label = self.COGNITION_DISPLAY.get(brain)
             if label and label not in labels:
                 labels.append(label)
+        labels = self._filter_display_labels(labels, message=message, mode=mode, topic=topic)
+        if mode == "ofsted lens" and "Ofsted Lens" not in labels:
+            labels.insert(0, "Ofsted Lens")
         return labels[:5]
+
+    def _filter_display_labels(
+        self,
+        labels: list[str],
+        *,
+        message: str,
+        mode: str,
+        topic: str | None,
+    ) -> list[str]:
+        text = str(message or "").lower()
+        inspection_focus = topic == "inspection" or any(
+            term in text or term in mode for term in ("ofsted", "sccif", "inspection", "reg 44", "reg 45", "quality standard")
+        )
+        if mode == "ask orb" and not inspection_focus:
+            labels = [label for label in labels if label != "Ofsted Lens"]
+        if topic == "medication":
+            labels = [label for label in labels if label not in {"Therapeutic reflection", "Child journey"}]
+        if topic == "therapeutic" and "safeguard" not in text:
+            labels = [label for label in labels if label != "Safeguarding"]
+        return labels
 
     def _depth_level(self, topic: str | None, residential: bool) -> str:
         if topic in self.HIGH_ATTENTION_TOPICS:

@@ -21,10 +21,36 @@ describe('ORB markdown and cognition rendering', () => {
     assert.match(markdown, /font-bold text-\[#0F172A\]/)
   })
 
-  it('markdown renderer preserves inline citation chips', () => {
+  it('markdown uses single-pass citation link encoding for inline chips', () => {
     const markdown = readComponent('components/orb-standalone/orb-markdown-answer.tsx')
-    assert.match(markdown, /OrbInlineCitation/)
-    assert.match(markdown, /content\.split/)
+    assert.match(markdown, /#orb-cite:/)
+    assert.match(markdown, /encodeInlineCitations/)
+    assert.doesNotMatch(markdown, /content\.split/)
+  })
+
+  it('markdown defines h2/h3 heading and list structure classes', () => {
+    const markdown = readComponent('components/orb-standalone/orb-markdown-answer.tsx')
+    assert.match(markdown, /orb-md-h2/)
+    assert.match(markdown, /orb-md-h3/)
+    assert.match(markdown, /list-disc/)
+    assert.match(markdown, /list-decimal/)
+    assert.match(markdown, /leading-\[1\.7\]/)
+  })
+
+  it('route CSS ships orb-markdown-answer typography rules', () => {
+    const routeCss = readComponent('app/orb/orb-chatgpt-light.css')
+    assert.match(routeCss, /\.orb-markdown-answer h2/)
+    assert.match(routeCss, /\.orb-markdown-answer strong/)
+    assert.match(routeCss, /list-style: disc/)
+  })
+
+  it('citation chips use high-contrast light styles', () => {
+    const citation = readComponent('components/orb-standalone/orb-inline-citation.tsx')
+    const routeCss = readComponent('app/orb/orb-chatgpt-light.css')
+    assert.match(citation, /orb-citation-chip-light/)
+    assert.match(citation, /rounded-full/)
+    assert.match(routeCss, /#e0f2fe/)
+    assert.match(routeCss, /#075985/)
   })
 
   it('cognition pill uses auto-routed labels from explainability', () => {
@@ -32,6 +58,7 @@ describe('ORB markdown and cognition rendering', () => {
     const assistant = readComponent('components/orb-standalone/orb-assistant-message.tsx')
     assert.match(agents, /cognitionPillLabel/)
     assert.match(agents, /cognition_display_labels/)
+    assert.match(agents, /filterAutoRouteLabels/)
     assert.match(assistant, /data-orb-cognition-pill/)
     assert.match(assistant, /cognitionPillLabel/)
   })
@@ -39,8 +66,25 @@ describe('ORB markdown and cognition rendering', () => {
   it('source detail panel filters generic product sources', () => {
     const assistant = readComponent('components/orb-standalone/orb-assistant-message.tsx')
     assert.match(assistant, /data-orb-sources-detail/)
-    assert.match(assistant, /standalone orb product boundary/)
-    assert.match(assistant, /label\.startsWith\('\['\)/)
+    assert.match(assistant, /View guidance detail/)
+    assert.match(assistant, /therapeutic practice/)
+  })
+
+  it('action row defaults to copy regenerate speak save and more menu', () => {
+    const assistant = readComponent('components/orb-standalone/orb-assistant-message.tsx')
+    assert.match(assistant, /data-orb-action-more-menu/)
+    assert.match(assistant, /label="More"/)
+    assert.match(assistant, /label="Save"/)
+    assert.match(assistant, /Save to project/)
+  })
+
+  it('document panel has readable light inputs and empty state', () => {
+    const panel = readComponent('components/orb-standalone/orb-document-panel.tsx')
+    const routeCss = readComponent('app/orb/orb-chatgpt-light.css')
+    assert.match(panel, /data-orb-document-empty/)
+    assert.match(panel, /orb-doc-input/)
+    assert.match(panel, /Standalone context only/)
+    assert.match(routeCss, /\.orb-document-panel/)
   })
 })
 

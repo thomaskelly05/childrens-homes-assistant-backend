@@ -31,8 +31,37 @@ def test_restraint_receives_restrictive_practice_cognition():
 
 def test_medication_error_receives_health_medication_cognition():
     labels = _labels("Medication was missed this morning — what should the manager review?")
-    assert "Health / medication" in labels
+    assert "Medication / health" in labels
     assert "Safeguarding" in labels
+    assert "Ofsted Lens" not in labels
+
+
+def test_ask_orb_medication_does_not_display_ofsted_lens():
+    labels = _labels("Medication was missed this morning — what should the manager review?", mode="Ask ORB")
+    assert "Ofsted Lens" not in labels
+    assert "Medication / health" in labels
+
+
+def test_ask_orb_missing_displays_missing_and_safeguarding():
+    labels = _labels("A young person went missing overnight — what should we record on return?", mode="Ask ORB")
+    assert "Missing from home" in labels
+    assert "Safeguarding" in labels
+    assert "Ofsted Lens" not in labels
+
+
+def test_ask_orb_therapeutic_displays_therapeutic_and_recording():
+    labels = _labels(
+        "Family time was cancelled and the child smashed a cup — help me think therapeutically",
+        mode="Ask ORB",
+    )
+    assert "Therapeutic reflection" in labels
+    assert "Recording quality" in labels
+    assert "Ofsted Lens" not in labels
+
+
+def test_manual_ofsted_lens_still_shows_ofsted():
+    labels = _labels("What evidence would Ofsted expect for child voice?", mode="Ofsted Lens")
+    assert "Ofsted Lens" in labels
 
 
 def test_recording_rewrite_receives_recording_cognition():
