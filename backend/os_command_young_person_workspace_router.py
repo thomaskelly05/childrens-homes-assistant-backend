@@ -5,7 +5,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel
 
-from .os_child_workspace_write_service import save_child_workspace_item as save_canonical_child_workspace_item
+from .os_child_workspace_write_service import function_exists, save_child_workspace_item as save_canonical_child_workspace_item
 from .os_child_workspace_write_service import table_exists
 from .os_command_router import CurrentUser, get_current_user, get_pool
 
@@ -24,6 +24,9 @@ class YoungPersonWorkspaceResponse(BaseModel):
     alerts: list[dict[str, Any]] = []
     chronology_intelligence: list[dict[str, Any]] = []
     recording_summary: list[dict[str, Any]] = []
+    appointments: list[dict[str, Any]] = []
+    child_voice: list[dict[str, Any]] = []
+    schema_status: dict[str, bool] = {}
 
 
 class SaveWorkspaceItemPayload(BaseModel):
@@ -45,6 +48,30 @@ class OrbWorkspaceQuestionPayload(BaseModel):
     context: dict[str, Any] = {}
 
 
+REQUIRED_WORKSPACE_TABLES = [
+    'vw_os_young_person_profile',
+    'vw_os_young_person_timeline',
+    'vw_os_young_person_care_record_feed',
+    'vw_os_care_plan_review_board',
+    'os_command_items',
+    'child_voice_entries',
+    'young_person_appointments',
+    'daily_notes',
+    'incidents',
+    'missing_episodes',
+    'safeguarding_records',
+    'keywork_sessions',
+    'direct_work_sessions',
+    'health_records',
+    'education_records',
+    'family_contact_records',
+    'life_story_entries',
+    'handover_records',
+    'chronology_events',
+    'manager_review_queue',
+]
+
+
 async def _fetch_if_table(conn, table_name: str, sql: str, *params: Any) -> list[dict[str, Any]]:
     if not await table_exists(conn, table_name):
         return []
@@ -57,6 +84,12 @@ async def _fetchrow_if_table(conn, table_name: str, sql: str, *params: Any) -> d
         return None
     row = await conn.fetchrow(sql, *params)
     return dict(row) if row else None
+
+
+async def _workspace_schema_status(conn) -> dict[str, bool]:
+    status = {name: await table_exists(conn, name) for name in REQUIRED_WORKSPACE_TABLES}
+    status['os_command_live_feed'] = await function_exists(conn, 'os_command_live_feed')
+    return status
 
 
 async def _latest_by_keywords(
@@ -105,6 +138,7 @@ async def get_young_person_workspace(
 
     async with pool.acquire() as conn:
         await conn.execute("select set_config('app.user_id', $1, true)", str(user.id))
+        schema_status = await _workspace_schema_status(conn)
 
         profile = await _fetchrow_if_table(
             conn,
@@ -170,14 +204,11 @@ async def get_young_person_workspace(
         )
 
         command_items = []
-        if await table_exists(conn, 'os_command_items'):
+        if schema_status.get('os_command_items') and schema_status.get('os_command_live_feed'):
             command_items = [
                 dict(row)
                 for row in await conn.fetch(
-                    """
-                    SELECT *
-                    FROM public.os_command_live_feed($1, $2, NULL, NULL, $3)
-                    """,
+                    "SELECT * FROM public.os_command_live_feed($1, $2, NULL, NULL, $3)",
                     home_id,
                     young_person_id,
                     limit,
@@ -290,6 +321,58 @@ async def get_young_person_workspace(
             home_id,
         )
 
+        appointments = await _fetch_if_table(
+            conn,
+            'young_person_appointments',
+            """
+            SELECT
+              id,
+              'Appointment' AS type,
+              title,
+              coalesce(outcome_notes, summary, purpose, follow_up_actions, title) AS summary,
+              status,
+              appointment_type,
+              appointment_date AS occurred_at,
+              professional_name,
+              professional_role,
+              location,
+              child_voice,
+              follow_up_actions AS recommended_action,
+              provider_id
+            FROM public.young_person_appointments
+            WHERE young_person_id = $1
+            ORDER BY appointment_date DESC
+            LIMIT 50
+            """,
+            young_person_id,
+        )
+
+        child_voice = await _fetch_if_table(
+            conn,
+            'child_voice_entries',
+            """
+            SELECT
+              id,
+              'Child voice' AS type,
+              context AS title,
+              voice_text AS summary,
+              status,
+              voice_date AS occurred_at,
+              how_voice_influenced_care AS recommended_action,
+              source_table,
+              source_id,
+              recorded_by,
+              provider_id,
+              home_id
+            FROM public.child_voice_entries
+            WHERE young_person_id = $1
+              AND status <> 'archived'
+            ORDER BY voice_date DESC, created_at DESC
+            LIMIT 50
+            """,
+            young_person_id,
+        )
+
     return {
         'profile': profile,
         'timeline': timeline,
@@ -302,6 +385,9 @@ async def get_young_person_workspace(
         'alerts': alerts,
         'chronology_intelligence': chronology_intelligence,
         'recording_summary': recording_summary,
+        'appointments': appointments,
+        'child_voice': child_voice,
+        'schema_status': schema_status,
     }
 
 
@@ -320,6 +406,7 @@ async def save_young_person_workspace_item(
             conn,
             young_person_id=young_person_id,
             home_id=home_id,
+            provider_id=user.provider_id,
             user_id=user.id,
             item_type=payload.item_type,
             title=payload.title,
@@ -437,7 +524,7 @@ async def ask_young_person_workspace_orb(
             }
 
         command_items = []
-        if await table_exists(conn, 'os_command_items'):
+        if await table_exists(conn, 'os_command_items') and await function_exists(conn, 'os_command_live_feed'):
             command_items = [
                 dict(row)
                 for row in await conn.fetch(
@@ -490,3 +577,14 @@ async def get_os_young_people(
         )
 
     return {'young_people': rows}
+
+
+@router.get('/os-command/schema-status')
+async def get_os_command_schema_status(
+    request: Request,
+    user: CurrentUser = Depends(get_current_user),
+):
+    pool = get_pool(request)
+    async with pool.acquire() as conn:
+        await conn.execute("select set_config('app.user_id', $1, true)", str(user.id))
+        return await _workspace_schema_status(conn)
