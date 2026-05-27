@@ -5,8 +5,9 @@ from typing import Any
 from services.indicare_intelligence_surface_router import standalone_guidance_boundary_prefix
 from services.orb_grounded_answer_style_service import orb_grounded_answer_style_service
 from services.orb_institutional_depth_frame_service import orb_institutional_depth_frame_service
-from services.orb_official_source_anchor_service import orb_official_source_anchor_service
+from services.orb_knowledge_grounding_service import orb_knowledge_grounding_service
 from services.orb_professional_curiosity_service import orb_professional_curiosity_service
+from services.orb_residential_cognition_router import orb_residential_cognition_router
 
 
 class SharedInstitutionalCognitionRuntime:
@@ -26,13 +27,18 @@ class SharedInstitutionalCognitionRuntime:
         operational_context: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         boundary = self._boundary(surface)
-        active_brains = self._active_brains(message=message, mode=mode)
+        routing = orb_residential_cognition_router.route(message=message, mode=mode)
         depth_frame = orb_institutional_depth_frame_service.build_frame(message=message, mode=mode)
+        active_brains = list(routing.get("active_brains") or [])
         active_brains = self._merge_depth_brains(active_brains=active_brains, depth_frame=depth_frame)
-        grounded_prompt = orb_grounded_answer_style_service.prompt_block(message, mode=mode)
+        grounding = orb_knowledge_grounding_service.build_grounding(
+            message=message,
+            mode=mode,
+            routing={**routing, "active_brains": active_brains},
+        )
+        grounded_prompt = grounding.get("prompt_block") or orb_grounded_answer_style_service.prompt_block(message, mode=mode)
         depth_prompt = orb_institutional_depth_frame_service.prompt_block(message=message, mode=mode)
         curiosity_prompt = orb_professional_curiosity_service.prompt_block(message, mode=mode)
-        official_prompt = orb_official_source_anchor_service.source_prompt()
         guidance_prefix = None
         if surface == "standalone_orb":
             prefix = standalone_guidance_boundary_prefix(message)
@@ -40,20 +46,20 @@ class SharedInstitutionalCognitionRuntime:
                 guidance_prefix = (
                     f"Standalone ORB boundary: open with '{prefix.strip()}' when answering this practice/hypothetical question."
                 )
-        citations = []
-        citations.extend(orb_grounded_answer_style_service.citation_payload(message, mode=mode))
-        if citations:
-            citations.extend(orb_official_source_anchor_service.citation_payload())
+        citations = list(grounding.get("citations") or [])
 
         return {
             "surface": surface,
             "mode": mode or "Ask ORB",
             "boundary": boundary,
             "active_brains": active_brains,
+            "cognition_display_labels": routing.get("cognition_display_labels") or [],
+            "routing": routing,
+            "knowledge_grounding": grounding,
             "depth_frame": depth_frame,
             "prompt_blocks": [
                 block
-                for block in (guidance_prefix, official_prompt, grounded_prompt, depth_prompt, curiosity_prompt)
+                for block in (guidance_prefix, grounded_prompt, depth_prompt, curiosity_prompt)
                 if block
             ],
             "guidance_boundary_prefix": guidance_prefix,
@@ -73,8 +79,10 @@ class SharedInstitutionalCognitionRuntime:
                 "official_source_anchors": bool(citations),
                 "data_boundary": boundary["summary"],
                 "depth_topic": depth_frame.get("topic") if depth_frame else None,
-                "reasoning_lenses": depth_frame.get("required_lenses", []) if depth_frame else [],
+                "reasoning_lenses": (depth_frame.get("required_lenses") or routing.get("reasoning_lenses") or [])[:8],
                 "cognition_mode": mode or "Ask ORB",
+                "cognition_display_labels": routing.get("cognition_display_labels") or [],
+                "vault_domains": grounding.get("vault_domains") or [],
                 "safeguarding_boundaries": list(boundary.get("safeguarding_boundaries", []))
                 if isinstance(boundary.get("safeguarding_boundaries"), list)
                 else [],
@@ -237,11 +245,19 @@ class SharedInstitutionalCognitionRuntime:
                 [
                     "- Apply the institutional depth frame rather than giving a generic summary.",
                     "- Show practical professional reasoning, not just definitions.",
+                    "- For high-attention topics, use markdown ## headings that render cleanly (e.g. ## Why this matters, "
+                    "## What patterns to explore, ## Evidence to review, ## What a Registered Manager should ask, "
+                    "## What an RI should ask, ## What Ofsted would look for, ## What not to assume, "
+                    "## Immediate safe next steps). Use **bold** for emphasis inside sections.",
                     "- For high-attention topics, structure the answer through: practical meaning; safeguarding thinking; "
                     "recording expectations; leadership/oversight; therapeutic/emotional meaning; inspection lens; "
                     "professional boundary — only where relevant, not as empty headings.",
                 ]
             )
+            if depth_frame.get("response_structure"):
+                requirements.append(
+                    "- Follow the required response structure from the depth frame using markdown ## section headings."
+                )
         if "chronology_cognition" in active_brains:
             requirements.extend(
                 [

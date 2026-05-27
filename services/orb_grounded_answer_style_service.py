@@ -177,20 +177,11 @@ class OrbGroundedAnswerStyleService:
         return "\n".join(sections)
 
     def citation_payload(self, message: str, *, mode: str | None = None) -> list[dict[str, Any]]:
+        from services.orb_knowledge_grounding_service import orb_knowledge_grounding_service
+
         if not self.prompt_block(message, mode=mode):
             return []
-        return [
-            {
-                "id": anchor["label"].strip("[]").lower().replace(" ", "_"),
-                "label": anchor["label"],
-                "type": "regulatory_framework",
-                "basis": anchor["basis"],
-                "note": anchor["meaning"],
-                "live_retrieved": False,
-                "source_integrity": "built_in_anchor_not_verbatim_quote",
-            }
-            for anchor in self.ANCHORS
-        ]
+        return orb_knowledge_grounding_service.citation_payload(message=message, mode=mode)
 
 
 orb_grounded_answer_style_service = OrbGroundedAnswerStyleService()

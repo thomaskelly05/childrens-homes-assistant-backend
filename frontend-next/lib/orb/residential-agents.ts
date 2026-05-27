@@ -172,3 +172,20 @@ export function atmosphereClassForMode(mode: string): string {
 export function cognitionLabelForMode(mode: string): string {
   return agentForMode(mode)?.cognitionLabel ?? 'ORB cognition'
 }
+
+export function cognitionPillLabel(
+  mode: string,
+  explainability?: {
+    cognition_display_labels?: string[]
+    active_brains?: string[]
+  }
+): string {
+  const autoLabels = explainability?.cognition_display_labels?.filter(Boolean)
+  if (autoLabels?.length) {
+    return autoLabels.join(' · ')
+  }
+  if (mode.trim().toLowerCase() !== 'ask orb') {
+    return cognitionLabelForMode(mode)
+  }
+  return 'General cognition'
+}

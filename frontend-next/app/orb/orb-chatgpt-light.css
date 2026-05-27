@@ -439,3 +439,19 @@ html[data-orb-theme=dark] .orb-chat-layout::before {
 .orb-theme-dark.orb-atmosphere-staff::before {
   background: radial-gradient(circle at 50% 0%, rgba(148, 163, 184, 0.08), transparent 40%);
 }
+
+.orb-markdown-answer .orb-md-h2 + .orb-md-p,
+.orb-markdown-answer .orb-md-h3 + .orb-md-p {
+  margin-top: 0.25rem;
+}
+
+.orb-markdown-answer .orb-md-ul .orb-md-li::marker,
+.orb-markdown-answer .orb-md-ol .orb-md-li::marker {
+  color: #64748b;
+}
+
+.orb-sidebar-nav-item--active {
+  background: #eaf6ff;
+  color: #0077ff;
+  font-weight: 600;
+}

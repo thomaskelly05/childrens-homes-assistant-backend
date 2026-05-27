@@ -13,6 +13,20 @@ GENERIC_DISPLAY_SOURCE_LABELS = frozenset(
         "indicare product context",
         "general model knowledge",
         "built-in product-level knowledge",
+        "ofsted sccif framework knowledge",
+        "children's homes regulations",
+        "quality standards",
+        "residential children's homes practice",
+        "safeguarding practice principles",
+        "recording quality",
+    }
+)
+
+GENERIC_SOURCE_TYPES = frozenset(
+    {
+        "product_context",
+        "safety_boundary",
+        "general_knowledge",
     }
 )
 
@@ -39,32 +53,42 @@ def filter_display_sources(
     message: str | None = None,
     mode: str | None = None,
 ) -> list[dict[str, Any]]:
-    """Drop generic product-boundary chips when the answer is high-attention or framework-grounded."""
+    """Drop generic product-boundary chips unless the question is product-related."""
     if not sources:
         return sources
+    lower = str(message or "").lower()
+    is_product = any(
+        term in lower for term in ("indicare", "what is orb", "care companion", "tell me about indicare", "/orb")
+    )
     topic = orb_professional_curiosity_service.detect_topic(message or "", mode=mode)
     high_attention = topic in orb_professional_curiosity_service.HIGH_ATTENTION_TOPICS if topic else False
     regulatory_types = frozenset(
         {"regulatory_framework", "recording_quality", "safeguarding_principles", "therapeutic_practice"}
     )
-    if not high_attention:
-        return sources
     filtered: list[dict[str, Any]] = []
     for item in sources:
         label = str(item.get("label") or "").strip().lower()
         source_type = str(item.get("type") or "").strip().lower()
-        if label in GENERIC_DISPLAY_SOURCE_LABELS:
-            continue
-        if source_type in {"product_context", "safety_boundary"} and label in GENERIC_DISPLAY_SOURCE_LABELS:
-            continue
-        if source_type == "product_context" and "product boundary" in label:
-            continue
-        if source_type == "safety_boundary" and "standalone orb" in label and not regulatory_types.intersection(
-            {str(s.get("type") or "").lower() for s in sources}
-        ):
-            continue
+        if not is_product:
+            if label in GENERIC_DISPLAY_SOURCE_LABELS:
+                continue
+            if source_type in GENERIC_SOURCE_TYPES:
+                continue
+            if "product boundary" in label or "product context" in label:
+                continue
+            if source_type == "general_knowledge":
+                continue
         filtered.append(item)
-    return filtered or [s for s in sources if str(s.get("type") or "") in regulatory_types] or sources[:3]
+    if filtered:
+        return filtered
+    if is_product:
+        return sources
+    regulatory_only = [s for s in sources if str(s.get("type") or "") in regulatory_types]
+    if regulatory_only:
+        return regulatory_only
+    if high_attention:
+        return []
+    return sources[:3]
 
 
 def build_standalone_sources(

@@ -9,7 +9,7 @@
     "start": "next start -p 3001",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test:orb": "node --experimental-strip-types --test lib/orb/orb-appearance.test.ts components/orb-standalone/orb-ui-structure.test.ts components/orb-standalone/orb-voice-and-profile.test.ts",
+    "test:orb": "node --experimental-strip-types --test lib/orb/orb-appearance.test.ts components/orb-standalone/orb-ui-structure.test.ts components/orb-standalone/orb-voice-and-profile.test.ts components/orb-standalone/orb-markdown-rendering.test.ts",
     "e2e": "playwright test",
     "route:audit": "node scripts/audit-routes.mjs",
     "operational:audit": "node scripts/audit-operational-frontend.mjs",
@@ -29,7 +29,9 @@
     "next": "^15.0.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-markdown": "^10.1.0",
     "recharts": "^3.8.1",
+    "remark-gfm": "^4.0.1",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7"
   },

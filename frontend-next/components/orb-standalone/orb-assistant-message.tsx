@@ -5,23 +5,35 @@ import { Copy, FileText, RotateCcw, Square, Volume2 } from 'lucide-react'
 
 import { OrbHueMark } from '@/components/orb-standalone/orb-hue-logo'
 import { OrbExplainabilityPanel, type OrbExplainabilityView } from '@/components/orb-standalone/orb-explainability-panel'
-import { renderAnswerWithCitations } from '@/components/orb-standalone/orb-inline-citation'
-import { cognitionLabelForMode } from '@/lib/orb/residential-agents'
+import { OrbMarkdownAnswer } from '@/components/orb-standalone/orb-markdown-answer'
+import { cognitionPillLabel } from '@/lib/orb/residential-agents'
 import type { StandaloneOrbSource } from '@/lib/orb/standalone-local-store'
 import type { StandaloneOrbModelRouting } from '@/lib/orb/standalone-client'
 
 function CognitionPill({ label }: { label: string }) {
   return (
-    <span className="inline-flex items-center rounded-full border border-[var(--orb-line)] bg-[var(--orb-surface)] px-2 py-0.5 text-[10px] font-medium text-[var(--orb-muted)]">
+    <span
+      className="inline-flex items-center rounded-full border border-[var(--orb-line)] bg-[var(--orb-surface)] px-2 py-0.5 text-[10px] font-medium text-[var(--orb-muted)]"
+      data-orb-cognition-pill
+    >
       Using · {label}
     </span>
   )
 }
 
-export function OrbCognitionIndicators({ mode, streaming }: { mode: string; streaming?: boolean }) {
+export function OrbCognitionIndicators({
+  mode,
+  streaming,
+  explainability
+}: {
+  mode: string
+  streaming?: boolean
+  explainability?: OrbExplainabilityView
+}) {
+  const label = cognitionPillLabel(mode, explainability)
   return (
     <div className="mb-2 flex flex-wrap items-center gap-1.5">
-      <CognitionPill label={cognitionLabelForMode(mode)} />
+      <CognitionPill label={label} />
       {streaming ? (
         <span className="orb-electric-text text-[10px] orb-streaming-pulse" aria-live="polite">
           composing
@@ -46,6 +58,7 @@ export function OrbAssistantMessageBody({
   explainability?: OrbExplainabilityView
   modelRouting?: StandaloneOrbModelRouting
 }) {
+  const cognitionLabel = cognitionPillLabel(mode, explainability)
   return (
     <article
       className={`orb-message-assistant group flex gap-3.5 ${streaming ? 'orb-message-streaming' : ''}`}
@@ -53,11 +66,11 @@ export function OrbAssistantMessageBody({
     >
       <OrbHueMark pulse={streaming} />
       <div className="min-w-0 flex-1">
-      <OrbCognitionIndicators mode={mode} streaming={streaming} />
+      <OrbCognitionIndicators mode={mode} streaming={streaming} explainability={explainability} />
       <div className="orb-message-content text-[15px] leading-7 text-[var(--orb-foreground)]">
-        {renderAnswerWithCitations(content, sources)}
+        <OrbMarkdownAnswer content={content} sources={sources} />
       </div>
-      <OrbExplainabilityPanel explainability={explainability} cognitionModeLabel={cognitionLabelForMode(mode)} />
+      <OrbExplainabilityPanel explainability={explainability} cognitionModeLabel={cognitionLabel} />
       <OrbSourcesDetail sources={sources} modelRouting={modelRouting} />
       </div>
     </article>
@@ -72,9 +85,26 @@ function OrbSourcesDetail({
   modelRouting?: StandaloneOrbModelRouting
 }) {
   const [open, setOpen] = useState(false)
-  if (!sources?.length && !modelRouting) return null
+  const topicSources =
+    sources?.filter((source) => {
+      const label = (source.label || '').trim().toLowerCase()
+      if (!label) return false
+      if (label.startsWith('[') && label.endsWith(']')) return true
+      const generic = [
+        'standalone orb product boundary',
+        'indicare product context',
+        'general model knowledge',
+        'ofsted sccif framework knowledge',
+        "children's homes regulations",
+        'quality standards',
+        'residential children',
+        'safeguarding practice principles'
+      ]
+      return !generic.some((term) => label.includes(term))
+    }) ?? []
+  if (!topicSources.length && !modelRouting) return null
   return (
-    <div className="mt-2">
+    <div className="mt-2" data-orb-sources-detail>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -84,7 +114,7 @@ function OrbSourcesDetail({
       </button>
       {open ? (
         <ul className="mt-2 space-y-1.5">
-          {sources?.map((source, index) => (
+          {topicSources.map((source, index) => (
             <li
               key={`${source.label}-${index}`}
               className="rounded-lg border border-[var(--orb-line)] bg-[var(--orb-surface)] px-2.5 py-1.5 text-[10px] text-[var(--orb-muted)]"

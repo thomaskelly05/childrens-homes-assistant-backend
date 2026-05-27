@@ -93,6 +93,35 @@ class OrbProfessionalCuriosityService:
             "What would an inspector expect to understand beyond compliance paperwork?",
             "Where is impact visible for children — not only process completion?",
         ],
+        "medication": [
+            "What was administered, missed or refused and what immediate health risk exists?",
+            "Who was informed, what health advice was received and what follow-up is needed?",
+            "Is the MAR record accurate and has management reviewed the error or concern?",
+            "What safeguarding or supervision implications exist if this repeats?",
+        ],
+        "complaints": [
+            "How was the child or complainant heard and kept informed?",
+            "Is the chronology factual and free from defensive minimisation?",
+            "What management oversight, learning and follow-through is evidenced?",
+            "Does advocacy or independent visitor involvement need consideration?",
+        ],
+        "education_health": [
+            "What barriers affect attendance, engagement or progress?",
+            "How is the child's voice and aspiration visible in plans and records?",
+            "What multi-agency advocacy is needed and what leadership oversight applies?",
+            "Are PEP, CAMHS or health plans being followed with impact evidence?",
+        ],
+        "supervision": [
+            "What happened and how did it affect the adult and child?",
+            "What practice strengths, worries and development needs are visible?",
+            "What support, coaching or debrief does the staff member need?",
+            "What leadership follow-up prevents repetition or drift?",
+        ],
+        "staffing": [
+            "How does staffing pressure affect safety, consistency and relationships?",
+            "Are supervision, training and safer recruitment gaps visible?",
+            "What is leadership doing to protect child experience during workforce strain?",
+        ],
     }
 
     HIGH_ATTENTION_TOPICS = frozenset(
@@ -106,6 +135,10 @@ class OrbProfessionalCuriosityService:
             "therapeutic",
             "cumulative_concern",
             "inspection",
+            "medication",
+            "complaints",
+            "supervision",
+            "education_health",
         }
     )
 
@@ -114,25 +147,47 @@ class OrbProfessionalCuriosityService:
         mode_text = str(mode or "").lower()
         if self._is_cumulative_concern(text):
             return "cumulative_concern"
-        if any(term in text for term in ("allegation", "allegations", "lado", "grabbed", "staff member said", "conduct concern")):
+        if any(
+            term in text
+            for term in ("allegation", "allegations", "lado", "grabbed", "conduct concern", "disclosure against")
+        ):
             return "allegations"
-        if any(term in text for term in ("missing", "abscond", "away from home", "return interview")):
+        if any(term in text for term in ("missing", "abscond", "away from home", "return interview", "went missing")):
             return "missing"
-        if any(term in text for term in ("restraint", "physical intervention", "held down", "restrictive")):
+        if any(term in text for term in ("restraint", "physical intervention", "held down", "restrictive", "physical hold")):
             return "restraint"
+        if any(term in text for term in ("medication", "medicine", "mar record", "medication error", "dose missed", "refused medication")):
+            return "medication"
+        if any(term in text for term in ("complaint", "complaints", "advocacy", "independent visitor", "parent complained")):
+            return "complaints"
+        if any(term in text for term in ("school refusal", "exclusion", "pep", "attendance", "education refusal", "camhs")):
+            return "education_health"
+        if any(
+            term in text
+            for term in (
+                "supervision",
+                "staff member was sharp",
+                "staff was sharp",
+                "poor practice",
+                "staff conduct",
+                "capability",
+                "reflective practice after",
+            )
+        ) or mode_text in {"staff coach"}:
+            return "supervision"
         if any(term in text for term in ("chronology", "timeline", "sequence of events")):
             return "chronology"
         if any(term in text for term in ("rewrite", "wording", "poor record", "rough note", "sign off", "sign-off")) or mode_text in {
             "record this properly",
         }:
             return "recording"
-        if any(term in text for term in ("responsible individual", "registered manager", " ri ", "manager daily", "governance")):
+        if any(term in text for term in ("responsible individual", "registered manager", " ri ", "manager daily", "governance", "daily brief")):
             return "leadership"
-        if any(term in text for term in ("therapeutic", "therapeutically", "smashed", "dysregulated", "behaviour as communication")):
+        if any(term in text for term in ("family time cancelled", "smashed cup", "therapeutic", "therapeutically", "dysregulated", "behaviour as communication")):
             return "therapeutic"
         if any(term in text or term in mode_text for term in ("ofsted", "sccif", "inspection", "reg 44", "reg 45")):
             return "inspection"
-        if any(term in text for term in ("safeguard", "risk", "harm")):
+        if any(term in text for term in ("safeguard", "self-harm", "self harm", "exploitation", "radicalisation", "online safety")):
             return "allegations"
         return None
 
