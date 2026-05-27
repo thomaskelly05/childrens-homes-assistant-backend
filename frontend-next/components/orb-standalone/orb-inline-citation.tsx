@@ -16,7 +16,7 @@ export function OrbInlineCitation({ source }: { source: StandaloneOrbSource }) {
     <span className="relative inline-block align-baseline">
       <button
         type="button"
-        className="orb-citation-chip-light mx-0.5 inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00B8FF]/50"
+        className="orb-citation-chip-light mx-0.5 inline-flex items-center rounded-md border px-1.5 py-0.5 text-[10px] transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#0284C7]/50"
         onMouseEnter={() => setOpen(true)}
         onMouseLeave={() => setOpen(false)}
         onFocus={() => setOpen(true)}

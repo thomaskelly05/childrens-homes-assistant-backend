@@ -95,9 +95,17 @@ class OrbGroundedAnswerStyleService:
                 "- RI: home safety, manager support, child progress, leadership effectiveness, staff stability, Reg 44 repetition, Reg 45 evaluative quality, triangulation, drift, impact evidence.",
             ],
             "cumulative_concern": [
-                "Cumulative concern depth:",
-                "- Structure: why concern matters; patterns; evidence to review; RM questions; RI questions; Ofsted scrutiny; avoid assuming; safe next steps; professional boundary.",
-                "- Link allegations, missing episodes, restraints and same staff member where relevant.",
+                "Cumulative safeguarding concern — mandatory depth (not a generic summary):",
+                "- State explicitly: the concern is not one isolated event; it is the convergence of allegations, missing episodes and repeated physical interventions involving the same adult.",
+                "- Explain why cumulative concern matters when no single event looks serious alone; 'nothing individually serious' can be dangerous minimisation.",
+                "- Use inline anchors in reasoning with brief 'because' explanations: [Reg 12] protection/safety; [Reg 13] leadership oversight and learning; [SCCIF] children's experiences and safeguarding effectiveness; [LADO] repeated staff conduct — consultation thinking only; [Working Together] multi-agency; [Recording quality] facts, child voice, rationale, actions, outcome.",
+                "- Patterns: allegation timing; restraint timing/normalisation; missing before/after same staff contact; staff–child dynamic breakdown; avoidance; shift/location/handover patterns; other young people's concerns; records minimising experience.",
+                "- Evidence: full chronology; allegation/restraint/missing records; body maps; debriefs; staff statements; child words; manager reviews; supervision; BSP; risk/placement plans; complaints; Reg 44/45; lawful CCTV/witnesses; social worker/LADO advice.",
+                "- RM questions: child experience; explaining away pattern; interim staffing; LADO/safeguarding consultation; allegation vs disciplinary separation; practice/training review; trusted adult; protective arrangements.",
+                "- RI questions: manager curiosity; drift; minimisation of low-level events; Reg 44/45 pattern visibility; learning vs recording; impact on child safety.",
+                "- Ofsted: patterns beyond incidents; timeliness; leadership; child voice; emotional safety; restraint culture; evidence leaders acted on cumulative concern.",
+                "- Avoid: child lying; adult guilt without process; low-level = low-risk; unrelated incidents; paperwork = oversight.",
+                "- End with calm summary, human-led/local-procedure boundary, and concrete next steps — never 'would you like to explore further?'",
             ],
         }
         if detected in blocks:

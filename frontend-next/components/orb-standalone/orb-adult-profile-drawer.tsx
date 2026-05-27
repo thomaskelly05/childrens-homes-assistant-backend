@@ -171,6 +171,59 @@ export function OrbAdultProfileDrawer({
               className="orb-profile-input w-full resize-none"
             />
           </Field>
+          <section className="rounded-2xl border border-[var(--orb-line)] bg-[var(--orb-surface)] p-4" data-orb-personalisation>
+            <h3 className="text-sm font-semibold text-[var(--orb-foreground)]">Personalisation</h3>
+            <div className="mt-3 space-y-3">
+              <Field label="How would you like ORB to respond?">
+                <textarea
+                  value={draft.customInstructions ?? ''}
+                  onChange={(e) => patch('customInstructions', e.target.value)}
+                  rows={3}
+                  placeholder="e.g. Always structure safeguarding answers with RM and RI lenses."
+                  className="orb-profile-input w-full resize-none"
+                  data-orb-custom-instructions
+                />
+              </Field>
+              <Field label="What should ORB know about your role?">
+                <textarea
+                  value={draft.roleContextNotes ?? ''}
+                  onChange={(e) => patch('roleContextNotes', e.target.value)}
+                  rows={2}
+                  className="orb-profile-input w-full resize-none"
+                />
+              </Field>
+              <Field label="Supervision goals">
+                <input
+                  value={draft.supervisionGoals ?? ''}
+                  onChange={(e) => patch('supervisionGoals', e.target.value)}
+                  className="orb-profile-input w-full"
+                />
+              </Field>
+              <Field label="Current focus areas">
+                <input
+                  value={draft.currentFocusAreas ?? ''}
+                  onChange={(e) => patch('currentFocusAreas', e.target.value)}
+                  className="orb-profile-input w-full"
+                />
+              </Field>
+              <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--orb-muted)]">
+                <input
+                  type="checkbox"
+                  checked={draft.voicePreference?.prefersSpokenResponses ?? false}
+                  onChange={(e) =>
+                    patch('voicePreference', {
+                      ...DEFAULT_ADULT_PROFILE.voicePreference!,
+                      ...draft.voicePreference,
+                      prefersSpokenResponses: e.target.checked,
+                      britishFemale: draft.voicePreference?.britishFemale ?? true
+                    })
+                  }
+                  data-orb-prefers-spoken
+                />
+                Prefer spoken responses (auto-speak when enabled in Voice settings)
+              </label>
+            </div>
+          </section>
           <section className="rounded-2xl border border-[var(--orb-line)] bg-[var(--orb-surface)] p-4" data-orb-cognition-preferences>
             <h3 className="text-sm font-semibold text-[var(--orb-foreground)]">Cognition preferences</h3>
             <div className="mt-3 space-y-3">
