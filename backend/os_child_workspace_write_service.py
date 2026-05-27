@@ -111,6 +111,7 @@ def _needs_review(kind: str, priority: str) -> bool:
         or 'safeguard' in kind
         or 'incident' in kind
         or 'missing' in kind
+        or 'appointment' in kind
     )
 
 
@@ -338,7 +339,39 @@ async def save_child_workspace_item(
     record = None
     table = ''
 
-    if 'daily' in kind and await table_exists(conn, 'daily_notes'):
+    if 'appointment' in kind and await table_exists(conn, 'young_person_appointments'):
+        table = 'young_person_appointments'
+        record = await conn.fetchrow(
+            """
+            INSERT INTO public.young_person_appointments (
+              young_person_id, title, appointment_type, appointment_date, end_datetime,
+              location, professional_name, professional_role, linked_plan_id, summary,
+              purpose, child_voice, preparation_notes, outcome_notes, follow_up_actions,
+              reminder_minutes_before, status, created_by, created_at, updated_at
+            ) VALUES ($1,$2,$3,COALESCE($4::timestamptz,NOW()),$5::timestamptz,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,NOW(),NOW())
+            RETURNING id
+            """,
+            young_person_id,
+            title,
+            payload.get('appointment_type') or 'general',
+            payload.get('appointment_date') or payload.get('date'),
+            payload.get('end_datetime'),
+            payload.get('location'),
+            payload.get('professional_name'),
+            payload.get('professional_role'),
+            payload.get('linked_plan_id'),
+            summary,
+            evidence or payload.get('purpose'),
+            payload.get('child_voice'),
+            payload.get('preparation_notes'),
+            payload.get('outcome_notes'),
+            action or payload.get('follow_up_actions'),
+            payload.get('reminder_minutes_before') or 30,
+            status_value if status_value not in {'draft', 'open'} else 'scheduled',
+            user_id,
+        )
+
+    elif 'daily' in kind and await table_exists(conn, 'daily_notes'):
         table = 'daily_notes'
         missing = await _missing_context(table, home_id=home_id, provider_id=provider_id)
         if missing:
