@@ -284,7 +284,7 @@ export function OrbStandaloneSidebar({
                   onClick={() => onSelectProject(project.id)}
                   className={`min-w-0 flex-1 rounded-lg px-3 py-2 text-left text-[13px] transition ${
                     workspace.activeProjectId === project.id
-                      ? 'bg-[var(--orb-surface-hover)] font-medium text-[var(--orb-foreground)]'
+                      ? 'orb-sidebar-chat-active bg-[#EAF6FF] font-semibold text-[#0077FF]'
                       : 'text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]'
                   }`}
                 >
@@ -298,18 +298,18 @@ export function OrbStandaloneSidebar({
             ))}
             <li>
               {projectEditorOpen ? (
-                <div className="mx-1 mt-1 space-y-2 rounded-lg border border-white/10 p-2">
+                <div className="orb-sidebar-inline-form mx-1 mt-1 space-y-2 rounded-lg border p-2">
                   <input
                     value={newProjectName}
                     onChange={(e) => setNewProjectName(e.target.value)}
                     placeholder="Project name"
-                    className="w-full rounded-lg border border-white/10 bg-transparent px-2 py-1.5 text-xs text-white"
+                    className="w-full rounded-lg border bg-transparent px-2 py-1.5 text-xs"
                   />
                   <div className="flex gap-2">
-                    <button type="button" onClick={saveProject} className="flex-1 rounded-lg bg-white/[0.08] py-1 text-xs font-semibold text-white">
+                    <button type="button" onClick={saveProject} className="flex-1 rounded-lg py-1 text-xs font-semibold">
                       Save
                     </button>
-                    <button type="button" onClick={() => setProjectEditorOpen(false)} className="flex-1 rounded-lg py-1 text-xs text-slate-500">
+                    <button type="button" onClick={() => setProjectEditorOpen(false)} className="flex-1 rounded-lg py-1 text-xs text-[var(--orb-muted)]">
                       Cancel
                     </button>
                   </div>
@@ -318,7 +318,7 @@ export function OrbStandaloneSidebar({
                 <button
                   type="button"
                   onClick={() => setProjectEditorOpen(true)}
-                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-slate-500 hover:bg-white/[0.04] hover:text-slate-300"
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]"
                 >
                   <FolderPlus className="h-3.5 w-3.5" />
                   Create project
@@ -341,7 +341,7 @@ export function OrbStandaloneSidebar({
                   <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-violet-500/20 text-xs font-bold text-violet-100">
                     {profile.avatarInitial}
                   </span>
-                  <span className="min-w-0 flex-1 truncate text-[13px] text-slate-300">{profile.name}</span>
+                  <span className="min-w-0 flex-1 truncate text-[13px] text-[var(--orb-foreground)]">{profile.name}</span>
                   <button
                     type="button"
                     onClick={() => deleteProfile(profile.id)}
@@ -369,31 +369,31 @@ export function OrbStandaloneSidebar({
         )}
 
         {profileEditorOpen ? (
-          <div className="mx-1 mt-2 space-y-2 rounded-lg border border-white/10 p-2">
+          <div className="orb-sidebar-inline-form mx-1 mt-2 space-y-2 rounded-lg border p-2">
             <input
               value={profileDraft.name}
               onChange={(e) => setProfileDraft((d) => ({ ...d, name: e.target.value }))}
               placeholder="Name"
-              className="w-full rounded-lg border border-white/10 bg-transparent px-2 py-1.5 text-xs text-white"
+              className="w-full rounded-lg border bg-transparent px-2 py-1.5 text-xs"
             />
             <input
               value={profileDraft.label}
               onChange={(e) => setProfileDraft((d) => ({ ...d, label: e.target.value }))}
               placeholder="Type (e.g. Child context)"
-              className="w-full rounded-lg border border-white/10 bg-transparent px-2 py-1.5 text-xs text-white"
+              className="w-full rounded-lg border bg-transparent px-2 py-1.5 text-xs"
             />
             <textarea
               value={profileDraft.notes}
               onChange={(e) => setProfileDraft((d) => ({ ...d, notes: e.target.value }))}
               placeholder="Notes / context"
               rows={2}
-              className="w-full rounded-lg border border-white/10 bg-transparent px-2 py-1.5 text-xs text-white"
+              className="w-full rounded-lg border bg-transparent px-2 py-1.5 text-xs"
             />
             <div className="flex gap-2">
-              <button type="button" onClick={saveProfile} className="flex-1 rounded-lg bg-white/[0.08] py-1 text-xs font-semibold text-white">
+              <button type="button" onClick={saveProfile} className="flex-1 rounded-lg py-1 text-xs font-semibold">
                 Save profile
               </button>
-              <button type="button" onClick={() => setProfileEditorOpen(false)} className="flex-1 rounded-lg py-1 text-xs text-slate-500">
+              <button type="button" onClick={() => setProfileEditorOpen(false)} className="flex-1 rounded-lg py-1 text-xs text-[var(--orb-muted)]">
                 Cancel
               </button>
             </div>
@@ -552,7 +552,7 @@ function ChatList({
             onClick={() => onSelectChat(chat.id)}
             className={`min-w-0 flex-1 truncate rounded-lg px-3 py-2 text-left text-[13px] transition ${
               activeChatId === chat.id
-                ? 'bg-[var(--orb-surface-hover)] font-medium text-[var(--orb-foreground)]'
+                ? 'orb-sidebar-chat-active bg-[#EAF6FF] font-semibold text-[#0077FF]'
                 : 'text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]'
             }`}
           >

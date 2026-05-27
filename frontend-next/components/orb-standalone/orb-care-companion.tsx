@@ -15,12 +15,10 @@ import {
   Copy,
   FileText,
   Menu,
-  MessageSquarePlus,
   RotateCcw,
-  Settings2,
   Square,
+  User,
   Volume2,
-  Wrench,
   X
 } from 'lucide-react'
 import {
@@ -1511,19 +1509,16 @@ export function OrbCareCompanion() {
 
         <div className="orb-chat-main flex min-h-0 min-w-0 flex-1 flex-col">
           <header className="orb-chat-header relative z-10 flex shrink-0 items-center gap-2 border-b border-[var(--orb-line)] bg-[var(--orb-bg-deep)]/90 px-3 py-2.5 backdrop-blur-sm md:px-5">
-            <button type="button" className="rounded-lg p-2 text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)] lg:hidden" onClick={() => setSidebarOpen(true)} aria-label="Open sidebar">
+            <button type="button" className="rounded-lg p-2 text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)] lg:hidden" onClick={() => setSidebarOpen(true)} aria-label="Open sidebar">
               <Menu className="h-5 w-5" />
             </button>
             <div className="min-w-0 flex-1">
               <h1 className="truncate text-sm font-semibold text-[var(--orb-foreground)] md:text-base" data-orb-header-title>
-                {activeChat?.title || 'ORB'}
+                {showEmptyState ? 'ORB' : activeChat?.title || 'ORB'}
               </h1>
-              <p className="truncate text-[10px] text-[var(--orb-muted)]" data-orb-header-subtitle>
-                <span className="orb-electric-text text-[10px]">Powered by IndiCare</span>
-              </p>
             </div>
             <span
-              className="hidden shrink-0 rounded-full border border-[var(--orb-line)] bg-[var(--orb-surface)] px-2 py-0.5 text-[10px] font-medium text-[var(--orb-muted)] sm:inline"
+              className="hidden shrink-0 rounded-full border border-[#93C5FD] bg-[#F0F9FF] px-2.5 py-0.5 text-[10px] font-semibold text-[#0369A1] sm:inline"
               data-orb-header-privacy
             >
               No OS records accessed
@@ -1531,51 +1526,25 @@ export function OrbCareCompanion() {
             <div className="flex shrink-0 items-center gap-0.5">
               <button
                 type="button"
-                onClick={openToolsPanel}
-                className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[#00B8FF]"
-                aria-label="IndiCare Tools"
-                data-orb-header-tools
-              >
-                <Wrench className="h-4 w-4 shrink-0" />
-                <span className="hidden md:inline">Tools</span>
-              </button>
-              <button
-                type="button"
-                onClick={openSettingsPanel}
-                className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]"
-                aria-label="Settings"
-                data-orb-header-settings
-              >
-                <Settings2 className="h-4 w-4 shrink-0" />
-                <span className="hidden md:inline">Settings</span>
-              </button>
-              <button
-                type="button"
                 onClick={() => {
                   setProfileDrawerOpen(true)
                   setSidebarOpen(false)
                 }}
-                className="hidden rounded-lg px-2 py-1.5 text-xs font-medium text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)] md:inline-flex"
+                className="rounded-lg p-2 text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[#0077FF] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00B8FF]/50"
                 aria-label="Profile"
+                data-orb-header-profile
               >
-                Profile
+                <User className="h-4 w-4" />
               </button>
               <button
                 type="button"
                 onClick={() => void exportConversation()}
                 disabled={visibleMessages.length === 0}
-                className="rounded-lg p-2 text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)] disabled:opacity-40"
+                className="rounded-lg p-2 text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00B8FF]/50 disabled:opacity-40"
                 aria-label="Copy chat"
+                data-orb-header-export
               >
                 <Copy className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => startNewChat()}
-                className="rounded-lg p-2 text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]"
-                aria-label="New chat"
-              >
-                <MessageSquarePlus className="h-4 w-4" />
               </button>
             </div>
           </header>
@@ -1589,36 +1558,36 @@ export function OrbCareCompanion() {
           {attachedProfiles.length > 0 ? (
             <div className="mx-3 mt-3 flex flex-wrap items-center gap-2 md:mx-5">
               {attachedProfiles.map((profile) => (
-                <span key={profile.id} className="inline-flex items-center gap-1.5 rounded-full border border-violet-300/30 bg-violet-400/10 px-3 py-1 text-xs font-bold text-violet-100">
+                <span key={profile.id} className="inline-flex items-center gap-1.5 rounded-full border border-[#C4B5FD] bg-[#F5F3FF] px-3 py-1 text-xs font-semibold text-[#5B21B6]">
                   {profile.avatarInitial} {profile.name}
-                  <button type="button" onClick={() => toggleProfileOnChat(profile.id)} className="text-violet-200/80 hover:text-white" aria-label={`Remove ${profile.name}`}>
+                  <button type="button" onClick={() => toggleProfileOnChat(profile.id)} className="text-[#7C3AED] hover:text-[#5B21B6]" aria-label={`Remove ${profile.name}`}>
                     <X className="h-3 w-3" />
                   </button>
                 </span>
               ))}
-              <button type="button" onClick={() => setProfilePickerOpen((o) => !o)} className="text-xs font-bold text-slate-400 underline-offset-2 hover:text-slate-200 hover:underline">
+              <button type="button" onClick={() => setProfilePickerOpen((o) => !o)} className="text-xs font-semibold text-[var(--orb-muted)] underline-offset-2 hover:text-[var(--orb-foreground)] hover:underline">
                 Attach profile
               </button>
             </div>
           ) : null}
 
           {profilePickerOpen ? (
-            <div className="mx-3 mt-2 rounded-2xl border border-white/10 bg-white/[0.03] p-3 md:mx-5">
-              <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">Profiles — user-provided context only</p>
+            <div className="mx-3 mt-2 rounded-2xl border border-[var(--orb-line)] bg-[var(--orb-surface)] p-3 md:mx-5">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--orb-muted)]">Profiles — user-provided context only</p>
               {workspace.profiles.length === 0 ? (
-                <p className="mt-2 text-xs text-slate-400">Create a profile in the sidebar first.</p>
+                <p className="mt-2 text-xs text-[var(--orb-muted)]">Create a profile in the sidebar first.</p>
               ) : (
                 <ul className="mt-2 space-y-1">
                   {workspace.profiles.map((profile) => (
                     <li key={profile.id}>
-                      <label className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-white/[0.04]">
+                      <label className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-[var(--orb-surface-hover)]">
                         <input
                           type="checkbox"
                           checked={activeChat?.profileIds.includes(profile.id) ?? false}
                           onChange={() => toggleProfileOnChat(profile.id)}
                         />
-                        <span className="text-sm text-slate-200">{profile.name}</span>
-                        <span className="text-xs text-slate-500">{profile.label}</span>
+                        <span className="text-sm text-[var(--orb-foreground)]">{profile.name}</span>
+                        <span className="text-xs text-[var(--orb-muted)]">{profile.label}</span>
                       </label>
                     </li>
                   ))}

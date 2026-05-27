@@ -35,13 +35,37 @@ describe('ORB ChatGPT UI structure', () => {
     assert.match(layout, /__ORB_LIGHT_UI_BUILD__/)
   })
 
-  it('globals and route CSS ship ChatGPT-light build marker', () => {
+  it('globals and route CSS ship ChatGPT-light build marker and hue pulse classes', () => {
     const globals = readComponent('app/globals.css')
     const routeCss = readComponent('app/orb/orb-chatgpt-light.css')
-    assert.match(globals, /orb-chatgpt-light-build-marker-1337/)
-    assert.match(routeCss, /orb-chatgpt-light-build-marker-1337/)
-    assert.match(globals, /orb-hue-pulse|orb-response-active/)
+    assert.match(globals, /orb-chatgpt-light-build-marker-1338/)
+    assert.match(routeCss, /orb-chatgpt-light-build-marker-1338/)
+    assert.match(globals, /orb-hue-response-pulse|orb-response-active/)
+    assert.match(routeCss, /orb-composer-answering|orb-assistant-thinking-mark/)
     assert.match(routeCss, /orb-hue-text|orb-theme-light|html\[data-orb-theme=light\]/)
+    assert.match(globals, /#009dff[\s\S]*#00b8ff[\s\S]*#38bdf8/)
+  })
+
+  it('citation chips use readable light-mode styling', () => {
+    const citation = readComponent('components/orb-standalone/orb-inline-citation.tsx')
+    const globals = readComponent('app/globals.css')
+    assert.match(citation, /orb-citation-chip-light/)
+    assert.match(globals, /#93c5fd|#075985/)
+  })
+
+  it('empty state hides composer suggestion chips (no duplicate prompt rows)', () => {
+    const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
+    assert.match(companion, /suggestions=\{showEmptyState \? undefined : suggestionsForMode\(mode\)\}/)
+    assert.match(companion, /data-orb-starter-cards/)
+    assert.doesNotMatch(companion, /OrbSmartSuggestions/)
+  })
+
+  it('header does not duplicate full sidebar controls', () => {
+    const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
+    assert.doesNotMatch(companion, /data-orb-header-tools/)
+    assert.doesNotMatch(companion, /data-orb-header-settings/)
+    assert.match(companion, /data-orb-header-privacy/)
+    assert.match(companion, /data-orb-header-profile/)
   })
 
   it('composer keeps send handler and Ask anything placeholder path', () => {
@@ -49,13 +73,20 @@ describe('ORB ChatGPT UI structure', () => {
     assert.match(composer, /data-testid="orb-standalone-send-clickable"/)
     assert.match(composer, /placeholderForMode/)
     assert.match(composer, /type="submit"/)
+    assert.match(composer, /orb-composer-answering/)
+  })
+
+  it('response pulse ties to answering state on layout', () => {
+    const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
+    assert.match(companion, /orb-response-active/)
+    assert.match(companion, /answering=\{isAnswering\}/)
   })
 
   it('hue branding components exist', () => {
     const hue = readComponent('components/orb-standalone/orb-hue-logo.tsx')
     assert.match(hue, /orb-hue-text/)
     assert.match(hue, /orb-electric-text/)
-    assert.match(hue, /orb-hue-pulse/)
+    assert.match(hue, /orb-hue-response-pulse/)
     assert.match(hue, /Powered by IndiCare/)
   })
 

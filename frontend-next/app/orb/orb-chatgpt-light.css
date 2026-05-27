@@ -4,49 +4,95 @@
  * Keep in sync with light tokens in app/globals.css.
  */
 
-.orb-chatgpt-light-build-marker-1337 {
-  --orb-light-build: '1337';
+.orb-chatgpt-light-build-marker-1337,
+.orb-chatgpt-light-build-marker-1338 {
+  --orb-light-build: '1338';
 }
 
 /* Premium ORB identity — keep in sync with app/globals.css */
 .orb-hue-text {
   background: linear-gradient(
     90deg,
-    #00b8ff 0%,
-    #38bdf8 20%,
-    #60a5fa 45%,
-    #818cf8 70%,
-    #a78bfa 92%,
-    #22d3ee 100%
+    #009dff 0%,
+    #00b8ff 18%,
+    #38bdf8 34%,
+    #60a5fa 52%,
+    #818cf8 72%,
+    #a78bfa 100%
   );
   background-size: 200% 100%;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  font-weight: 700;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  filter: saturate(1.12);
 }
 
 .orb-electric-text {
-  color: #00b8ff;
+  color: #009dff;
   font-weight: 600;
+  letter-spacing: 0.18em;
+  opacity: 1;
 }
 
 .orb-hue-pulse,
-.orb-hue-text--pulse {
+.orb-hue-text--pulse,
+.orb-hue-response-pulse {
   animation: orb-hue-sweep 4.2s ease-in-out infinite;
 }
 
+.orb-hue-mark--pulse,
+.orb-assistant-thinking-mark,
+.orb-response-active .orb-hue-mark {
+  animation: orb-hue-mark-breathe 2.8s ease-in-out infinite;
+}
+
+.orb-response-active .orb-hue-text,
+.orb-response-active [data-orb-hue-logo] .orb-hue-text {
+  animation: orb-hue-sweep 4.2s ease-in-out infinite;
+}
+
+.orb-composer-glass.orb-composer-answering,
 .orb-composer-glass.orb-answering-pulse {
   animation: orb-composer-answer-pulse 2.6s ease-in-out infinite;
-  border-color: rgba(0, 184, 255, 0.32) !important;
+  border-color: rgba(0, 184, 255, 0.38) !important;
+}
+
+.orb-assistant-thinking-mark::after,
+.orb-response-active .orb-hue-mark::after {
+  opacity: 0.48;
+  animation: orb-hue-mark-halo 2.8s ease-in-out infinite;
 }
 
 @keyframes orb-hue-sweep {
   0%, 100% {
     background-position: 0% 50%;
+    filter: saturate(1.1) brightness(1);
   }
   50% {
     background-position: 100% 50%;
+    filter: saturate(1.2) brightness(1.08);
+  }
+}
+
+@keyframes orb-hue-mark-halo {
+  0%, 100% {
+    opacity: 0.28;
+    transform: scale(0.96);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes orb-hue-mark-breathe {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.04);
   }
 }
 
@@ -54,18 +100,28 @@
   0%, 100% {
     box-shadow:
       0 1px 2px rgba(15, 23, 42, 0.04),
-      0 8px 24px rgba(15, 23, 42, 0.06);
+      0 8px 24px rgba(15, 23, 42, 0.06),
+      0 0 0 0 rgba(0, 184, 255, 0);
   }
   50% {
     box-shadow:
-      0 0 0 1px rgba(129, 140, 248, 0.22),
-      0 12px 36px rgba(0, 184, 255, 0.14);
+      0 0 0 1px rgba(0, 184, 255, 0.22),
+      0 12px 36px rgba(0, 184, 255, 0.14),
+      0 0 28px rgba(96, 165, 250, 0.12);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .orb-hue-pulse,
   .orb-hue-text--pulse,
+  .orb-hue-response-pulse,
+  .orb-hue-mark--pulse,
+  .orb-assistant-thinking-mark,
+  .orb-hue-mark::after,
+  .orb-response-active .orb-hue-mark,
+  .orb-response-active .orb-hue-mark::after,
+  .orb-response-active .orb-hue-text,
+  .orb-composer-glass.orb-composer-answering,
   .orb-composer-glass.orb-answering-pulse {
     animation: none !important;
   }
@@ -73,17 +129,28 @@
 
 /* Light defaults for standalone /orb layout (safe base before hydration) */
 .orb-chat-layout {
-  --orb-foreground: #111827;
-  --orb-muted: #6b7280;
+  --orb-text-primary: #0f172a;
+  --orb-text-secondary: #475569;
+  --orb-text-muted: #64748b;
+  --orb-text-faint: #94a3b8;
+  --orb-border: #d9dee8;
+  --orb-border-soft: #e5e7eb;
+  --orb-border-strong: #cbd5e1;
+  --orb-hover-bg: #f1f5f9;
+  --orb-active-bg: #eaf6ff;
+  --orb-active-text: #0077ff;
+  --orb-focus-ring: #00b8ff;
+  --orb-foreground: #0f172a;
+  --orb-muted: #475569;
   --orb-bg-deep: #ffffff;
   --orb-bg-mid: #f7f7f8;
   --orb-bg-soft: #f9f9f9;
   --orb-surface-elevated: #f9f9f9;
   --orb-surface: #ffffff;
-  --orb-surface-hover: #f3f4f6;
-  --orb-line: #e5e7eb;
+  --orb-surface-hover: #f1f5f9;
+  --orb-line: #d9dee8;
   --orb-on-accent: #ffffff;
-  --orb-accent: #2563eb;
+  --orb-accent: #0077ff;
   background: var(--orb-bg-deep);
   color: var(--orb-foreground);
 }
@@ -92,17 +159,28 @@ html[data-orb-theme='light'],
 html[data-orb-theme='light'] body,
 html[data-orb-theme=light],
 html[data-orb-theme=light] body {
+  --orb-text-primary: #0f172a;
+  --orb-text-secondary: #475569;
+  --orb-text-muted: #64748b;
+  --orb-text-faint: #94a3b8;
+  --orb-border: #d9dee8;
+  --orb-border-soft: #e5e7eb;
+  --orb-border-strong: #cbd5e1;
+  --orb-hover-bg: #f1f5f9;
+  --orb-active-bg: #eaf6ff;
+  --orb-active-text: #0077ff;
+  --orb-focus-ring: #00b8ff;
   --orb-bg-deep: #ffffff;
   --orb-bg-mid: #f7f7f8;
   --orb-bg-soft: #f9f9f9;
-  --orb-foreground: #111827;
-  --orb-muted: #6b7280;
-  --orb-accent: #2563eb;
+  --orb-foreground: #0f172a;
+  --orb-muted: #475569;
+  --orb-accent: #0077ff;
   --orb-on-accent: #ffffff;
-  --orb-line: #e5e7eb;
+  --orb-line: #d9dee8;
   --orb-surface: #ffffff;
   --orb-surface-elevated: #f9f9f9;
-  --orb-surface-hover: #f3f4f6;
+  --orb-surface-hover: #f1f5f9;
 }
 
 .orb-chat-layout::before {
@@ -115,7 +193,7 @@ html[data-orb-theme=light] body {
 html[data-orb-theme='light'] .orb-chat-layout::before,
 html[data-orb-theme=light] .orb-chat-layout::before {
   opacity: 0.12;
-  background: radial-gradient(circle at 50% 0%, rgba(0, 184, 255, 0.05), transparent 42%);
+  background: radial-gradient(circle at 50% 0%, rgba(0, 157, 255, 0.06), transparent 42%);
 }
 
 .orb-theme-dark.orb-chat-layout::before,
@@ -133,17 +211,117 @@ html[data-orb-theme=dark] .orb-chat-layout::before {
 
 .orb-composer-glass {
   background: #ffffff;
-  color: #111827;
-  border-color: #e5e7eb;
+  color: #0f172a;
+  border-color: #d9dee8;
   box-shadow:
     0 1px 2px rgba(15, 23, 42, 0.04),
     0 8px 24px rgba(15, 23, 42, 0.06);
   backdrop-filter: none;
 }
 
+.orb-composer-glass:focus-within {
+  border-color: rgba(0, 184, 255, 0.4);
+  box-shadow:
+    0 0 0 1px rgba(0, 184, 255, 0.2),
+    0 12px 40px rgba(0, 184, 255, 0.1);
+}
+
+.orb-composer-send {
+  background: linear-gradient(135deg, #009dff 0%, #0077ff 100%);
+  box-shadow: 0 2px 8px rgba(0, 157, 255, 0.35);
+}
+
+.orb-composer-send:not(:disabled):hover {
+  background: linear-gradient(135deg, #00b8ff 0%, #009dff 100%);
+  box-shadow: 0 4px 14px rgba(0, 157, 255, 0.45);
+}
+
+.orb-composer-send:disabled {
+  background: #e2e8f0 !important;
+  color: #94a3b8 !important;
+  box-shadow: none;
+}
+
+.orb-citation-chip-light {
+  border: 1px solid #93c5fd;
+  background: #f8fcff;
+  color: #075985;
+  font-weight: 600;
+}
+
+.orb-citation-chip-light:hover {
+  border-color: #7dd3fc;
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.orb-citation-card {
+  background: #ffffff !important;
+  color: #0f172a;
+  border-color: #d9dee8 !important;
+}
+
+.orb-citation-card p {
+  color: #475569;
+}
+
+.orb-citation-card .orb-citation-section-label {
+  color: #0369a1;
+}
+
+.orb-starter-card {
+  background: #ffffff;
+  border-color: #d9dee8;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.orb-starter-card:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.orb-sidebar-nav-item--active {
+  background: #eaf6ff;
+  color: #0077ff;
+  font-weight: 600;
+}
+
+.orb-sidebar-inline-form {
+  border-color: var(--orb-line);
+  background: var(--orb-surface);
+}
+
+.orb-sidebar-inline-form input,
+.orb-sidebar-inline-form textarea {
+  border-color: var(--orb-border-soft);
+  color: var(--orb-foreground);
+}
+
+.orb-sidebar-inline-form button[type='button']:first-of-type {
+  background: #0f172a;
+  color: #ffffff;
+}
+
+.orb-action-chip {
+  color: #475569;
+  border: 1px solid transparent;
+}
+
+.orb-action-chip:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+  border-color: #e5e7eb;
+}
+
+.orb-agent-card[aria-current='true'] {
+  background: #eaf6ff !important;
+  border-color: #00b8ff !important;
+}
+
 .orb-ambient-cognition__base {
   background:
-    radial-gradient(ellipse 90% 45% at 50% -5%, rgba(76, 201, 240, 0.06), transparent 50%),
+    radial-gradient(ellipse 90% 45% at 50% -5%, rgba(0, 184, 255, 0.05), transparent 50%),
     linear-gradient(165deg, #ffffff 0%, #f7f7f8 55%, #f7f7f8 100%);
 }
 
@@ -178,6 +356,10 @@ html[data-orb-theme=dark] .orb-chat-layout::before {
     0 8px 32px rgba(7, 17, 31, 0.35),
     inset 0 1px 0 rgba(255, 255, 255, 0.04);
   backdrop-filter: blur(24px) saturate(1.12);
+}
+
+[data-orb-theme='dark'] .orb-composer-send {
+  background: linear-gradient(135deg, #111827 0%, #1e293b 100%);
 }
 
 [data-orb-theme='dark'] .orb-ambient-cognition__base,
