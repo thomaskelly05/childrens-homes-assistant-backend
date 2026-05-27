@@ -13,6 +13,7 @@ import { RecordingDraftList } from '@/components/indicare/record/recording-draft
 import { RecordingCataloguePanel } from '@/components/indicare/record/recording-catalogue-panel'
 import { RecordingTypeSelector } from '@/components/indicare/record/recording-type-selector'
 import { RecordingWorkspace } from '@/components/indicare/record/recording-workspace'
+import { childOverviewHref } from '@/lib/navigation/scope-routes'
 import { resolveRecordingTypeFromQuery } from '@/lib/record/recording-types'
 import { useActiveChild } from '@/lib/context/active-child-context'
 import { getOsYoungPeople } from '@/lib/os-api/workspaces'
@@ -368,10 +369,11 @@ export function RecordHub({
         action={
           childId ? (
             <Link
-              href={`/young-people/${encodeURIComponent(childId)}/journey`}
+              href={childOverviewHref(childId)}
+              data-testid="record-hub-child-workspace-link"
               className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700 shadow-sm"
             >
-              Child journey
+              Child workspace
             </Link>
           ) : (
             <Link href="/young-people" className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700 shadow-sm">
@@ -406,13 +408,15 @@ export function RecordHub({
         >
           Governance
         </Link>
-        <Link
-          href={recordOrbPromptHref('Help me choose the right record type for what I need to document.', childId)}
-          data-testid="record-hub-operational-orb-link"
-          className="inline-flex min-h-10 items-center rounded-2xl border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs font-black text-cyan-950"
-        >
-          Ask operational ORB
-        </Link>
+        {!hasTypeSelected ? (
+          <Link
+            href={recordOrbPromptHref('Help me choose the right record type for what I need to document.', childId)}
+            data-testid="record-hub-operational-orb-link"
+            className="inline-flex min-h-10 items-center rounded-2xl border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs font-black text-cyan-950"
+          >
+            Ask operational ORB
+          </Link>
+        ) : null}
       </section>
 
       <RecordAboutSelector value={about} onChange={handleAboutChange} />

@@ -169,7 +169,7 @@ export function RecordingSubmissionResultCard({ result, childId }: RecordingSubm
         {childId ? (
           <Link
             href={`/young-people/${encodeURIComponent(childId)}/workspace`}
-            data-testid="recording-open-child-journey"
+            data-testid="recording-open-child-workspace"
             className="inline-flex min-h-9 items-center rounded-xl border border-slate-200 bg-white px-3 py-1 text-xs font-black text-slate-800"
           >
             Child workspace
@@ -177,7 +177,11 @@ export function RecordingSubmissionResultCard({ result, childId }: RecordingSubm
         ) : null}
         {result.draft_id ? (
           <Link
-            href={`/record?draft=${encodeURIComponent(result.draft_id)}`}
+            href={
+              childId
+                ? `/record?child_id=${encodeURIComponent(childId)}&draft_id=${encodeURIComponent(result.draft_id)}`
+                : `/record?draft_id=${encodeURIComponent(result.draft_id)}`
+            }
             data-testid="recording-resume-draft"
             className="inline-flex min-h-9 items-center rounded-xl border border-slate-200 bg-white px-3 py-1 text-xs font-black text-slate-800"
           >

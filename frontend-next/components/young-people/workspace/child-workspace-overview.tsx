@@ -84,7 +84,6 @@ export function ChildWorkspaceOverview({
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <ChildVoiceCard view={view} />
               <ChildLifecycleCard view={view} />
-              <ChildPlansDocumentsCard view={view} />
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
               {view.storyActions.map((action) => (

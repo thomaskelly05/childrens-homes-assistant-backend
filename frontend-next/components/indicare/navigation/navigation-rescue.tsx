@@ -150,5 +150,5 @@ export function NavigationRescue() {
     }
   }, [])
 
-  return null
+  return <span data-testid="navigation-rescue-marker" aria-hidden className="sr-only" />
 }

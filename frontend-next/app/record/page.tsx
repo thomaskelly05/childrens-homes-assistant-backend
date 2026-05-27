@@ -34,14 +34,16 @@ export default async function RecordPage({
   const peopleResult = await getServerOsYoungPeople()
 
   return (
-    <Suspense fallback={<div className="px-5 py-10 text-sm font-black text-slate-500">Loading record hub…</div>}>
-      <RecordHub
+    <main data-testid="record-page">
+      <Suspense fallback={<div className="px-5 py-10 text-sm font-black text-slate-500">Loading record hub…</div>}>
+        <RecordHub
         initialChildId={childId}
         initialChildDisplayName={childDisplayName}
         highlightType={highlightType}
         initialAbout={initialAbout}
         initialYoungPeople={peopleResult.source === 'live' ? peopleResult.data : undefined}
-      />
-    </Suspense>
+        />
+      </Suspense>
+    </main>
   )
 }

@@ -89,7 +89,11 @@ export function RecordingTypeSelector({
   return (
     <section
       data-testid="recording-type-selector"
-      className={`rounded-[28px] border border-slate-100 bg-white shadow-sm ring-1 ring-slate-100/80 ${compact ? 'p-4' : 'p-5'}`}
+      className={
+        compact
+          ? 'p-4'
+          : 'rounded-[28px] border border-slate-100 bg-white p-5 shadow-sm ring-1 ring-slate-100/80'
+      }
     >
       <header>
         <p className="text-[11px] font-black uppercase tracking-[0.22em] text-sky-700">Recording</p>

@@ -258,6 +258,7 @@ export default async function HomeWorkspacePage({ params }: { params: Promise<{ 
             <MobileSafeLink
               href={routes.children}
               prefetch={false}
+              data-testid="home-workspace-choose-child"
               className="mt-4 inline-flex min-h-11 text-sm font-black text-blue-700"
             >
               Choose a child in this home →
@@ -265,6 +266,7 @@ export default async function HomeWorkspacePage({ params }: { params: Promise<{ 
             <MobileSafeLink
               href={homeReportsHref(homeId)}
               prefetch={false}
+              data-testid="home-workspace-reports"
               className="ml-4 inline-flex min-h-11 text-sm font-black text-slate-600"
             >
               Home reports →
