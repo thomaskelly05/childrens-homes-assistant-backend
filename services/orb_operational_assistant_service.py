@@ -25,6 +25,7 @@ from services.orb_operational_context_service import (
     OPERATIONAL_BOUNDARY_NOTICES,
     orb_operational_context_bridge,
 )
+from services.orb_universal_evidence_service import orb_universal_evidence_service
 
 logger = logging.getLogger("indicare.orb_operational_assistant")
 
@@ -107,6 +108,33 @@ class OrbOperationalAssistantService:
         warnings = list(context_summary.permission_warnings or [])
         if context_summary.unavailable:
             warnings.append("Operational context is temporarily unavailable.")
+
+        if conn is not None:
+            try:
+                universal = orb_universal_evidence_service.collect(
+                    conn,
+                    current_user=current_user,
+                    scope=request.scope,
+                    message=request.message,
+                    young_person_id=request.child_id,
+                    home_id=request.home_id,
+                    provider_id=permissions_model.provider_id,
+                )
+                universal_items = list(universal.get("items") or [])
+                if universal_items:
+                    existing = list(context_bundle.get("sources") or [])
+                    context_bundle["sources"] = [*universal_items, *existing]
+                    context_bundle["universal_evidence"] = universal
+                    context_bundle["raw_available"] = True
+                    if isinstance(context_summary.summary_lines, list):
+                        context_summary.summary_lines.append(
+                            f"ORB universal evidence collector returned {len(universal_items)} source-labelled item(s) across {universal.get('surface_count', 0)} source type(s)."
+                        )
+                if universal.get("errors"):
+                    warnings.append("Some ORB evidence surfaces were unavailable; answer uses the evidence returned.")
+            except Exception as exc:
+                logger.warning("Universal ORB evidence collection failed: %s", exc)
+                warnings.append("Universal ORB evidence collection was partially unavailable.")
 
         boundaries = self._safety_boundaries(request, context_summary)
         sources = self.build_sources(context_bundle)
