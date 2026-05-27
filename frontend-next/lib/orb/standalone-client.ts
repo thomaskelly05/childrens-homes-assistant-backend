@@ -272,6 +272,11 @@ export async function queryStandaloneOrbConversation(
   const requestSignal = withTimeout(signal)
 
   try {
+    logStandaloneDebug('conversation_request_start', {
+      endpoint,
+      hasExternalSignal: Boolean(signal),
+      hasCsrfHeader: Boolean(getCsrfToken())
+    })
     const body = JSON.stringify({
       message: request.message,
       mode: request.mode,
@@ -359,7 +364,11 @@ export async function queryStandaloneOrbConversation(
     }
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') {
-      logStandaloneDebug('conversation_timeout', { endpoint, timeoutMs: STANDALONE_REQUEST_TIMEOUT_MS })
+      logStandaloneDebug('conversation_aborted', {
+        endpoint,
+        externalAbort: Boolean(signal?.aborted),
+        timeoutMs: STANDALONE_REQUEST_TIMEOUT_MS
+      })
       throw new AuthApiError(504, 'ORB could not finish that response. Please try again.')
     }
     if (error instanceof AuthApiError) {
@@ -1118,6 +1127,12 @@ export function isStandaloneOrbCsrfError(error: unknown) {
   if (!(error instanceof AuthApiError) || error.status !== 403) return false
   const code = (error.code || '').toLowerCase()
   return code === 'csrf_failed' || code === 'csrf_invalid' || /csrf/i.test(error.message)
+}
+
+export function isStandaloneOrbRetryableNetworkError(error: unknown): boolean {
+  const parsed = parseStandaloneOrbSendError(error)
+  if (parsed.csrfFailed) return false
+  return parsed.status === 0 || parsed.status === 504
 }
 
 export function parseStandaloneOrbSendError(error: unknown): StandaloneOrbSendErrorInfo {

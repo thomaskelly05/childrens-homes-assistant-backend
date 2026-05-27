@@ -58,7 +58,7 @@ import {
 } from '@/lib/orb/standalone-accessibility'
 import { useAuth } from '@/contexts/auth-context'
 import { useMounted } from '@/hooks/use-mounted'
-import { STANDALONE_ORB_CSRF_REFRESH_MESSAGE } from '@/lib/auth/api'
+import { getCsrfToken, STANDALONE_ORB_CSRF_REFRESH_MESSAGE } from '@/lib/auth/api'
 import { standaloneOsBoundaryReply } from '@/lib/orb/standalone-os-boundary'
 import { useStandaloneOrbVoice, type StandaloneOrbAnswerStyle } from '@/components/orb-standalone/use-standalone-orb-voice'
 import {
@@ -79,6 +79,7 @@ import {
   createOrbSavedOutput,
   fetchOrbSavedOutputsSummary,
   fetchStandaloneOrbConfig,
+  isStandaloneOrbRetryableNetworkError,
   parseStandaloneOrbSendError,
   queryStandaloneOrbConversation,
   STANDALONE_ORB_EMPTY_ANSWER_MESSAGE,
@@ -116,6 +117,21 @@ const SUBMIT_GUARD_MS = 1500
 const ORB_THINKING_LABEL = 'ORB is thinking…'
 
 type LastSendStatus = 'idle' | 'sending' | 'success' | 'error'
+
+type SendMessageOptions = {
+  retry?: boolean
+  chatId?: string
+  /** Internal one-shot network retry after session refresh. */
+  internalRetry?: boolean
+}
+
+function traceOrbSend(event: string, detail?: Record<string, unknown>) {
+  if (detail && Object.keys(detail).length > 0) {
+    console.info(`[orb-send] ${event}`, detail)
+    return
+  }
+  console.info(`[orb-send] ${event}`)
+}
 
 function replaceMessageById(
   messages: StandaloneChatMessage[],
@@ -288,7 +304,8 @@ function patchActiveChat(workspace: StandaloneWorkspace, chatId: string, patch: 
 }
 
 export function OrbCareCompanion() {
-  const { csrfReady, refreshSession } = useAuth()
+  const { status, user, csrfReady, refreshSession } = useAuth()
+  const orbSessionReady = status === 'authenticated' && Boolean(user) && csrfReady
   const mounted = useMounted()
   const searchParams = useSearchParams()
   const initialQuery = mounted ? searchParams.get('q')?.trim() || '' : ''
@@ -334,7 +351,12 @@ export function OrbCareCompanion() {
   const sendInFlightRef = useRef(false)
   const submitGuardRef = useRef(false)
   const lastSubmitRef = useRef<{ chatId: string; content: string; at: number } | null>(null)
+  const sendGenerationRef = useRef(0)
+  const requestAbortRef = useRef<AbortController | null>(null)
   const streamAbortRef = useRef<AbortController | null>(null)
+  const streamGenerationRef = useRef(0)
+  const sessionPrimedRef = useRef(false)
+  const workspaceHydratedRef = useRef(false)
 
   const voice = useStandaloneOrbVoice()
   const { settings: voiceSettings } = voice
@@ -353,6 +375,25 @@ export function OrbCareCompanion() {
   useEffect(() => {
     setWorkspace(readStandaloneWorkspace())
     setA11yPrefs(loadStandaloneOrbAccessibility())
+    workspaceHydratedRef.current = true
+  }, [])
+
+  useEffect(() => {
+    if (status !== 'authenticated' || !user) return
+    if (sessionPrimedRef.current) return
+    sessionPrimedRef.current = true
+    traceOrbSend('session_prime_start')
+    void refreshSession().finally(() => {
+      traceOrbSend('session_prime_end', { csrfReady: Boolean(getCsrfToken()) })
+    })
+  }, [status, user, refreshSession])
+
+  useEffect(() => {
+    return () => {
+      traceOrbSend('request_abort', { reason: 'component_unmount' })
+      requestAbortRef.current?.abort()
+      streamAbortRef.current?.abort()
+    }
   }, [])
 
   useEffect(() => {
@@ -410,6 +451,7 @@ export function OrbCareCompanion() {
   const openIntelligenceMap = useCallback(() => openPanel('intelligence_map'), [openPanel])
 
   useEffect(() => {
+    if (!workspaceHydratedRef.current) return
     if (hydratedRef.current) writeStandaloneWorkspace(repairOrbWorkspace(workspace))
   }, [workspace])
 
@@ -422,6 +464,7 @@ export function OrbCareCompanion() {
   }, []) // eslint-disable-line react-hooks/exhaustive-deps -- bootstrap once
 
   useEffect(() => {
+    if (!orbSessionReady) return
     let cancelled = false
     void fetchStandaloneOrbConfig()
       .then((config) => {
@@ -434,7 +477,7 @@ export function OrbCareCompanion() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [orbSessionReady])
 
   useEffect(() => {
     if (initialQuery) inputRef.current?.focus()
@@ -486,15 +529,36 @@ export function OrbCareCompanion() {
     messages.some((m) => m.role === 'user' && transcriptHasHighRiskTerms(m.content))
 
   const sendMessage = useCallback(
-    async (text: string, options?: { retry?: boolean; chatId?: string }) => {
+    async (text: string, options?: SendMessageOptions) => {
       const trimmed = text.trim()
       const hasImages = attachments.length > 0
-      if ((!trimmed && !hasImages) || pending || sendInFlightRef.current) return
-      if (!csrfReady) {
-        setError(STANDALONE_ORB_CSRF_REFRESH_MESSAGE)
-        setLastSendStatus('error')
-        void refreshSession()
+      if ((!trimmed && !hasImages) || pending || sendInFlightRef.current) {
+        traceOrbSend('submit_blocked', { reason: 'empty_or_in_flight', pending, inFlight: sendInFlightRef.current })
         return
+      }
+
+      const sendGeneration = ++sendGenerationRef.current
+      const isCurrentSend = () => sendGenerationRef.current === sendGeneration
+
+      traceOrbSend('submit', {
+        sendGeneration,
+        hasText: Boolean(trimmed),
+        retry: Boolean(options?.retry),
+        internalRetry: Boolean(options?.internalRetry)
+      })
+
+      if (!orbSessionReady) {
+        traceOrbSend('submit_blocked', { sendGeneration, reason: 'session_not_ready', status, csrfReady })
+        try {
+          await refreshSession()
+        } catch {
+          /* refreshSession surfaces auth errors via context */
+        }
+        if (!getCsrfToken()) {
+          setError(STANDALONE_ORB_CSRF_REFRESH_MESSAGE)
+          setLastSendStatus('error')
+          return
+        }
       }
 
       const contentKey = (trimmed || '[Image attachment]').trim().toLowerCase()
@@ -502,16 +566,18 @@ export function OrbCareCompanion() {
       const now = Date.now()
       if (
         !options?.retry &&
+        !options?.internalRetry &&
         lastSubmitRef.current &&
         lastSubmitRef.current.content === contentKey &&
         lastSubmitRef.current.chatId === guardChatId &&
         now - lastSubmitRef.current.at < SUBMIT_GUARD_MS
       ) {
+        traceOrbSend('submit_blocked', { sendGeneration, reason: 'duplicate_guard' })
         return
       }
 
       sendInFlightRef.current = true
-      if (!options?.retry) {
+      if (!options?.retry && !options?.internalRetry) {
         lastSubmitRef.current = { chatId: guardChatId, content: contentKey, at: now }
       }
       if (voice.speaking) voice.cancelSpeaking()
@@ -530,6 +596,7 @@ export function OrbCareCompanion() {
       setError(null)
       setRetryPayload(null)
       setImageUnderstandingNote(null)
+      traceOrbSend('pending_state', { sendGeneration, pending: true })
 
       const userMessageId = `u-${now}`
       const thinkingMessageId = `a-thinking-${now}`
@@ -629,6 +696,7 @@ export function OrbCareCompanion() {
           messages: dedupeOrbMessages(replaceMessageById(priorMessages, thinkingMessageId, boundaryMessage))
         })
         setLastSendStatus('success')
+        traceOrbSend('pending_state', { sendGeneration, pending: false, reason: 'os_boundary' })
         setPending(false)
         sendInFlightRef.current = false
         return
@@ -642,23 +710,53 @@ export function OrbCareCompanion() {
       const framedMessage =
         voiceSettings.answerStyle !== 'balanced' ? `${messageBody}\n\nAnswer style: ${styleLabel}.` : messageBody
 
+      requestAbortRef.current?.abort()
+      const requestController = new AbortController()
+      requestAbortRef.current = requestController
+
+      const runConversationRequest = async () =>
+        queryStandaloneOrbConversation(
+          {
+            message: framedMessage,
+            mode,
+            conversation_id: sessionConversationId,
+            history: historyForRequest.slice(0, -1),
+            detail: voiceSettings.answerStyle,
+            images: imagePayload.length ? imagePayload : undefined,
+            document_text: pendingDocument?.text,
+            document_source_id: pendingDocument?.sourceId || undefined,
+            document_title: pendingDocument?.title
+          },
+          requestController.signal
+        )
+
       try {
-        console.info('[orb-send] request started')
+        traceOrbSend('request_start', { sendGeneration, conversationId: sessionConversationId })
         if (options?.retry) {
           await refreshSession()
         }
-        const response = await queryStandaloneOrbConversation({
-          message: framedMessage,
-          mode,
-          conversation_id: sessionConversationId,
-          history: historyForRequest.slice(0, -1),
-          detail: voiceSettings.answerStyle,
-          images: imagePayload.length ? imagePayload : undefined,
-          document_text: pendingDocument?.text,
-          document_source_id: pendingDocument?.sourceId || undefined,
-          document_title: pendingDocument?.title
-        })
-        console.info('[orb-send] response received')
+        let response
+        try {
+          response = await runConversationRequest()
+        } catch (firstError) {
+          if (
+            !options?.internalRetry &&
+            isStandaloneOrbRetryableNetworkError(firstError)
+          ) {
+            traceOrbSend('request_retry', { sendGeneration, reason: 'retryable_network' })
+            await refreshSession()
+            response = await runConversationRequest()
+          } else {
+            throw firstError
+          }
+        }
+
+        if (!isCurrentSend()) {
+          traceOrbSend('request_stale', { sendGeneration })
+          return
+        }
+
+        traceOrbSend('request_end', { sendGeneration, hasAnswer: Boolean(response.answer) })
 
         const newConversationId = response.conversation_id || sessionConversationId
         const answer = (response.answer || '').trim() || STANDALONE_ORB_EMPTY_ANSWER_MESSAGE
@@ -695,6 +793,15 @@ export function OrbCareCompanion() {
           documentSuggestion
         }
 
+        if (!isCurrentSend()) return
+
+        traceOrbSend('placeholder_replace', {
+          sendGeneration,
+          from: thinkingMessageId,
+          to: assistantId,
+          status: 'streaming'
+        })
+
         setWorkspace((current) => {
           const chat = current.chats.find((c) => c.id === targetChatId)
           if (!chat) return current
@@ -705,15 +812,18 @@ export function OrbCareCompanion() {
           })
         })
 
+        const streamGeneration = ++streamGenerationRef.current
         streamAbortRef.current?.abort()
-        streamAbortRef.current = new AbortController()
-        const streamSignal = streamAbortRef.current.signal
+        const streamController = new AbortController()
+        streamAbortRef.current = streamController
+        const streamSignal = streamController.signal
 
         try {
           await streamTextIntoView({
             text: answer,
             signal: streamSignal,
             onChunk: (partial) => {
+              if (streamGenerationRef.current !== streamGeneration) return
               setWorkspace((current) => {
                 const chat = current.chats.find((c) => c.id === targetChatId)
                 if (!chat) return current
@@ -727,16 +837,26 @@ export function OrbCareCompanion() {
             }
           })
         } catch (streamError) {
-          if (!(streamError instanceof DOMException && streamError.name === 'AbortError')) {
+          if (streamError instanceof DOMException && streamError.name === 'AbortError') {
+            traceOrbSend('stream_abort', { sendGeneration, streamGeneration })
+            if (streamGenerationRef.current !== streamGeneration) return
+          } else {
             throw streamError
           }
         }
+
+        if (!isCurrentSend() || streamGenerationRef.current !== streamGeneration) return
 
         const assistantMessage: StandaloneChatMessage = {
           ...streamingMessage,
           content: answer,
           status: 'complete'
         }
+        traceOrbSend('placeholder_replace', {
+          sendGeneration,
+          from: assistantId,
+          status: 'complete'
+        })
         setWorkspace((current) => {
           const chat = current.chats.find((c) => c.id === targetChatId)
           if (!chat) return current
@@ -759,13 +879,19 @@ export function OrbCareCompanion() {
           voice.speak(answer, () => setSpeakingMessageId(null))
         }
       } catch (caught) {
+        if (requestController.signal.aborted && !isCurrentSend()) {
+          traceOrbSend('request_abort', { sendGeneration, reason: 'superseded' })
+          return
+        }
         const parsed = parseStandaloneOrbSendError(caught)
-        console.warn('[orb-send] failed', {
+        traceOrbSend('request_failed', {
+          sendGeneration,
           message: parsed.message,
           status: parsed.status,
           detail: parsed.detail,
           csrfFailed: parsed.csrfFailed
         })
+        if (!isCurrentSend()) return
         if (parsed.csrfFailed) {
           void refreshSession()
         }
@@ -773,6 +899,11 @@ export function OrbCareCompanion() {
         setLastSendStatus('error')
         setRetryPayload({ text: trimmed || messageBody, chatId: targetChatId! })
         const errorMessage = createErrorPlaceholder(`a-error-${Date.now()}`, parsed.message)
+        traceOrbSend('placeholder_replace', {
+          sendGeneration,
+          from: thinkingMessageId,
+          status: 'error'
+        })
         setWorkspace((current) => {
           const chat = current.chats.find((c) => c.id === targetChatId)
           if (!chat) return current
@@ -782,17 +913,21 @@ export function OrbCareCompanion() {
           return patchActiveChat(current, chat.id, { messages: withError })
         })
       } finally {
-        setPending(false)
-        sendInFlightRef.current = false
+        if (isCurrentSend()) {
+          setPending(false)
+          sendInFlightRef.current = false
+          traceOrbSend('pending_state', { sendGeneration, pending: false })
+        }
       }
     },
     [
       attachments,
       attachedProfiles,
       mode,
-      csrfReady,
+      orbSessionReady,
       pending,
       refreshSession,
+      status,
       voice,
       voiceSettings.answerStyle,
       voiceSettings.voiceReplies,
@@ -807,11 +942,13 @@ export function OrbCareCompanion() {
       event?.preventDefault()
 
       if (submitGuardRef.current || pending || sendInFlightRef.current) {
+        traceOrbSend('submit_blocked', { reason: 'composer_guard', pending, inFlight: sendInFlightRef.current })
         return
       }
 
-      if (!csrfReady) {
-        setError(STANDALONE_ORB_CSRF_REFRESH_MESSAGE)
+      if (!orbSessionReady) {
+        traceOrbSend('submit_blocked', { reason: 'session_not_ready' })
+        setError('Preparing your secure session…')
         void refreshSession()
         return
       }
@@ -819,7 +956,7 @@ export function OrbCareCompanion() {
       const finalText = message.trim()
       const activeAgentForLog = agentForMode(mode)
 
-      console.info('[orb-send] submit', {
+      traceOrbSend('composer_submit', {
         hasText: Boolean(finalText),
         pending,
         activeAgent: activeAgentForLog?.id ?? null,
@@ -841,9 +978,9 @@ export function OrbCareCompanion() {
     },
     [
       attachments.length,
-      csrfReady,
       message,
       mode,
+      orbSessionReady,
       pending,
       refreshSession,
       sendMessage
@@ -1047,7 +1184,7 @@ export function OrbCareCompanion() {
     <OrbStandaloneComposer
       value={message}
       composerStateLength={message.trim().length}
-      pending={pending}
+      pending={pending || !orbSessionReady}
       lastSendStatus={lastSendStatus}
       mode={mode}
       attachments={attachments}
