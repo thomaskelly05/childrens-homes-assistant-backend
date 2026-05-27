@@ -51,6 +51,29 @@ const HOME_SECTIONS: Array<{
   }
 ]
 
+const HOME_LINK_PURPOSE: Record<string, string> = {
+  children: 'See who is in this home and open a child workspace.',
+  dailyBrief: 'Manager daily brief for this home.',
+  handover: 'Shift handover for this home.',
+  staffOnShift: 'Who is on shift right now.',
+  notifications: 'Home-scoped notifications.',
+  recordingAlerts: 'Recording quality and safeguarding alerts.',
+  recordingReviews: 'Drafts awaiting manager sign-off.',
+  safeguarding: 'ISN and safeguarding oversight for this home.',
+  workforce: 'Roster and workforce management.',
+  staffProfiles: 'Staff profiles linked to this home.',
+  actions: 'Open manager actions for this home.',
+  inspectionReadiness: 'Evidence snapshot — manager judgement required.',
+  sccif: 'Quality Standards alignment — gaps to review.',
+  reg44: 'Reg 44 visit support — not a grade prediction.',
+  reg45: 'Reg 45 quality of care review builder.',
+  reports: 'Home reports and exports.',
+  archiveSummary: 'Archive activity this month.',
+  chronologyGaps: 'Chronology gaps to review.',
+  planImpactReview: 'Plan impact suggestions awaiting review.',
+  lifeechoPending: 'LifeEcho memory suggestions pending approval.'
+}
+
 const LINK_LABELS: Record<string, string> = {
   children: 'Children in this home',
   dailyBrief: 'Daily brief',
@@ -154,9 +177,53 @@ export default async function HomeWorkspacePage({ params }: { params: Promise<{ 
                     tapDebugLabel={`home-shortcut-${key}`}
                     className="min-h-11 rounded-[20px] border border-slate-200 bg-white p-4 text-sm font-black text-slate-950 shadow-sm transition hover:border-blue-200 hover:bg-blue-50"
                   >
-                    {LINK_LABELS[key] || key}
+                    <span className="block">{LINK_LABELS[key] || key}</span>
+                    <span className="mt-1 block text-[10px] font-semibold leading-4 text-slate-500">
+                      {HOME_LINK_PURPOSE[key] || 'Open workflow'}
+                    </span>
                   </MobileSafeLink>
                 ))}
+                {section.testId === 'home-workspace-section-safeguarding' ? (
+                  <>
+                    <MobileSafeLink
+                      href={`/select-scope?home_id=${encodeURIComponent(homeId)}`}
+                      prefetch={false}
+                      data-testid="home-workspace-incidents-hint"
+                      className="min-h-11 rounded-[20px] border border-amber-100 bg-amber-50/50 p-4 text-sm font-black text-amber-950"
+                    >
+                      <span className="block">Incidents (choose child)</span>
+                      <span className="mt-1 block text-[10px] font-semibold text-amber-800">
+                        Record via child scope — /record?child_id=
+                      </span>
+                    </MobileSafeLink>
+                    <MobileSafeLink
+                      href={`/select-scope?home_id=${encodeURIComponent(homeId)}`}
+                      prefetch={false}
+                      data-testid="home-workspace-missing-hint"
+                      className="min-h-11 rounded-[20px] border border-rose-100 bg-rose-50/50 p-4 text-sm font-black text-rose-950"
+                    >
+                      <span className="block">Missing episodes (choose child)</span>
+                      <span className="mt-1 block text-[10px] font-semibold text-rose-800">
+                        Child-scoped missing-episode recording
+                      </span>
+                    </MobileSafeLink>
+                  </>
+                ) : null}
+                {section.testId === 'home-workspace-section-workforce' ? (
+                  <>
+                    <MobileSafeLink
+                      href="/staff"
+                      prefetch={false}
+                      data-testid="home-workspace-supervision-hint"
+                      className="min-h-11 rounded-[20px] border border-slate-200 bg-slate-50 p-4 text-sm font-black text-slate-800"
+                    >
+                      <span className="block">Supervision / training</span>
+                      <span className="mt-1 block text-[10px] font-semibold text-slate-500">
+                        Workforce route — not all flows wired per home yet
+                      </span>
+                    </MobileSafeLink>
+                  </>
+                ) : null}
                 {section.testId === 'home-workspace-section-more' ? (
                   <>
                     <MobileSafeLink

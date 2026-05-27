@@ -58,7 +58,13 @@ export function InspectionReadinessWorkspace() {
         guaranteed outcomes. Manager judgement and statutory duties remain required.
       </p>
 
-      <InspectionReadinessSummary dashboard={dashboard} />
+      <section data-testid="inspection-evidence-snapshot" className="space-y-2">
+        <h2 className="text-lg font-black text-slate-950">Evidence snapshot</h2>
+        <p className="text-xs font-semibold text-slate-600" data-testid="inspection-manager-judgement-required">
+          Manager judgement required — summaries support preparation; they do not guarantee compliance or predict grades.
+        </p>
+        <InspectionReadinessSummary dashboard={dashboard} />
+      </section>
 
       {dashboard?.key_gaps?.length ? (
         <section data-testid="inspection-key-gaps" className="space-y-3">

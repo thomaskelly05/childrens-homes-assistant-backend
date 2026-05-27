@@ -162,9 +162,14 @@ export function RecordingReviewQueue({
                     <p className="mt-1 text-xs font-semibold text-slate-600">
                       {item.recording_type.replace(/-/g, ' ')}
                       {item.child_name ? ` · ${item.child_name}` : ''}
+                      {item.home_id != null ? ` · home ${item.home_id}` : ''}
                     </p>
                     <p className="mt-1 text-[10px] font-semibold text-slate-500">
-                      {item.created_by_name || 'Unknown'} · updated {new Date(item.updated_at).toLocaleString()}
+                      Event / updated {new Date(item.updated_at).toLocaleString()}
+                    </p>
+                    <p className="mt-1 text-[10px] font-semibold text-slate-500">
+                      Written by {item.created_by_name || 'Unknown'}
+                      {item.created_by_role ? ` (${item.created_by_role})` : ''}
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-1">
@@ -173,10 +178,17 @@ export function RecordingReviewQueue({
                   </div>
                 </div>
                 {(item.manager_review_required || item.safeguarding_review_required) && (
-                  <p className="mt-2 text-[10px] font-black uppercase tracking-wide text-amber-800">
-                    {item.safeguarding_review_required ? 'Safeguarding review' : 'Manager review'}
+                  <p
+                    className="mt-2 text-[10px] font-black uppercase tracking-wide text-amber-800"
+                    data-testid="recording-review-queue-reason"
+                  >
+                    {item.safeguarding_review_required ? 'Safeguarding review required' : 'Manager review required'}
+                    {item.review_priority === 'high' || item.review_priority === 'urgent'
+                      ? ` · ${item.review_priority} priority`
+                      : ''}
                   </p>
                 )}
+                <p className="mt-2 text-[10px] font-black uppercase tracking-wide text-blue-700">Open review →</p>
               </button>
             </li>
           ))}

@@ -32,3 +32,18 @@ def test_home_workspace_uses_mobile_safe_link():
 def test_mobile_safe_link_renders_anchor():
     link = MOBILE_SAFE.read_text(encoding="utf-8")
     assert "<a" in link or "Link" in link
+
+
+def test_no_os_young_people_browser_hrefs_in_workspaces():
+    for path in (CHILD_OVERVIEW, HOME_PAGE):
+        text = path.read_text(encoding="utf-8")
+        assert 'href="/os/young-people' not in text
+        assert "href={'/os/young-people" not in text
+
+
+def test_scope_routes_use_app_paths_not_os_browser():
+    scope_routes = (
+        Path(__file__).resolve().parents[1] / "frontend-next" / "lib" / "navigation" / "scope-routes.ts"
+    ).read_text(encoding="utf-8")
+    assert "/young-people/" in scope_routes
+    assert 'href: `/os/young-people' not in scope_routes

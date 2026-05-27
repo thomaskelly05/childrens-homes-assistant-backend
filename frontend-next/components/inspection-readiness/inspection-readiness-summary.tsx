@@ -20,8 +20,8 @@ export function InspectionReadinessSummary({ dashboard }: Props) {
         <p className="text-[10px] font-black uppercase text-violet-700">SCCIF</p>
         <p className="mt-2 text-xs leading-6 text-violet-950">{dashboard.sccif_summary}</p>
       </div>
-      <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-        <p className="text-[10px] font-black uppercase text-slate-600">Quality Standards</p>
+      <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4" data-testid="inspection-quality-standards-alignment">
+        <p className="text-[10px] font-black uppercase text-slate-600">Quality Standards alignment</p>
         <p className="mt-2 text-xs leading-6 text-slate-700">{dashboard.quality_standards_summary}</p>
       </div>
     </section>

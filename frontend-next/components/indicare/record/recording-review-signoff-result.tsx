@@ -109,42 +109,38 @@ export function RecordingReviewSignoffResultCard({
         </div>
       ) : null}
 
-      <div className="mt-4 flex flex-wrap gap-2">
-        {childId && result.linked_archive_record_id ? (
-          <Link
-            href={`/young-people/${encodeURIComponent(childId)}/archive`}
-            data-testid="recording-review-open-archive"
-            className="inline-flex min-h-9 items-center rounded-xl border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-black text-sky-950"
-          >
-            Open archive
-          </Link>
-        ) : null}
-        {childId && result.linked_chronology_id ? (
-          <Link
-            href={`/young-people/${encodeURIComponent(childId)}/chronology`}
-            data-testid="recording-review-open-chronology"
-            className="inline-flex min-h-9 items-center rounded-xl border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-black text-violet-950"
-          >
-            Open chronology
-          </Link>
-        ) : null}
-        {childId && (result.linked_plan_impact_ids?.length ?? 0) > 0 ? (
-          <Link
-            href={`/young-people/${encodeURIComponent(childId)}/plan-impacts`}
-            data-testid="recording-review-open-plan-impacts"
-            className="inline-flex min-h-9 items-center rounded-xl border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-black text-amber-950"
-          >
-            Open plan impacts
-          </Link>
-        ) : null}
-        {childId && (result.lifeecho_suggestion_ids?.length ?? 0) > 0 ? (
-          <Link
-            href={`/young-people/${encodeURIComponent(childId)}/lifeecho`}
-            data-testid="recording-review-open-lifeecho"
-            className="inline-flex min-h-9 items-center rounded-xl border border-fuchsia-200 bg-fuchsia-50 px-3 py-1 text-xs font-black text-fuchsia-950"
-          >
-            Open LifeEcho
-          </Link>
+      <div className="mt-4 flex flex-wrap gap-2" data-testid="recording-review-lifecycle-links">
+        {childId ? (
+          <>
+            <Link
+              href={`/young-people/${encodeURIComponent(childId)}/archive`}
+              data-testid="recording-review-open-archive"
+              className="inline-flex min-h-9 items-center rounded-xl border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-black text-sky-950"
+            >
+              Archive
+            </Link>
+            <Link
+              href={`/young-people/${encodeURIComponent(childId)}/chronology`}
+              data-testid="recording-review-open-chronology"
+              className="inline-flex min-h-9 items-center rounded-xl border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-black text-violet-950"
+            >
+              Chronology
+            </Link>
+            <Link
+              href={`/young-people/${encodeURIComponent(childId)}/plan-impacts`}
+              data-testid="recording-review-open-plan-impacts"
+              className="inline-flex min-h-9 items-center rounded-xl border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-black text-amber-950"
+            >
+              Plan impacts
+            </Link>
+            <Link
+              href={`/young-people/${encodeURIComponent(childId)}/lifeecho`}
+              data-testid="recording-review-open-lifeecho"
+              className="inline-flex min-h-9 items-center rounded-xl border border-fuchsia-200 bg-fuchsia-50 px-3 py-1 text-xs font-black text-fuchsia-950"
+            >
+              LifeEcho
+            </Link>
+          </>
         ) : null}
         {childId ? (
           <Link
