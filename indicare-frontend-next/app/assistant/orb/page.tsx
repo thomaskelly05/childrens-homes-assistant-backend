@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { IndiCareOsShell, SignalCard, StoryCard, SoftRow } from '@/components/os/IndiCareOsShell'
+import { OrbConversationPanel } from '@/components/orb/OrbConversationPanel'
 
 const prompts = [
   'Summarise this child’s last 30 days',
@@ -10,7 +11,11 @@ const prompts = [
   'Help rewrite this record therapeutically'
 ]
 
-export default function OrbPage() {
+export default function OrbPage({ searchParams }: { searchParams?: { scope?: 'child' | 'home' | 'provider' | 'current_user'; child_id?: string; home_id?: string } }) {
+  const scope = searchParams?.scope || 'child'
+  const childId = searchParams?.child_id || '1'
+  const homeId = searchParams?.home_id
+
   return (
     <IndiCareOsShell
       eyebrow="ORB Intelligence"
@@ -36,12 +41,14 @@ export default function OrbPage() {
           </p>
           <div style={{ display: 'grid', gap: '0.7rem', marginTop: '1.2rem' }}>
             {prompts.map((prompt) => (
-              <Link key={prompt} href={`/assistant/orb?prompt=${encodeURIComponent(prompt)}`} className="ic-secondary-action" style={{ justifyContent: 'flex-start', background: 'rgba(255,255,255,0.08)', color: 'white', borderColor: 'rgba(255,255,255,0.18)' }}>
+              <Link key={prompt} href={`/assistant/orb?prompt=${encodeURIComponent(prompt)}&scope=${scope}&child_id=${childId}`} className="ic-secondary-action" style={{ justifyContent: 'flex-start', background: 'rgba(255,255,255,0.08)', color: 'white', borderColor: 'rgba(255,255,255,0.18)' }}>
                 {prompt}
               </Link>
             ))}
           </div>
         </section>
+
+        <OrbConversationPanel scope={scope} childId={childId} homeId={homeId} />
 
         <section className="ic-today-grid">
           <SignalCard label="Mode 1" value="Quiet" detail="Small glowing presence. It does not interrupt the adult’s work." />
@@ -69,9 +76,10 @@ export default function OrbPage() {
         </section>
 
         <section className="ic-live-card">
-          <p className="ic-eyebrow">Build note</p>
-          <h2>Next: wire the real conversation UI</h2>
-          <p className="ic-body-copy">The backend OS ORB route is `/api/assistant/orb/conversation`, with diagnostics at `/api/assistant/orb/evidence-diagnostics`. The next pass should add a client conversation panel that calls those endpoints and shows evidence, limitations and next steps.</p>
+          <p className="ic-eyebrow">Diagnostics</p>
+          <h2>Check what ORB can actually see</h2>
+          <p className="ic-body-copy">Use the diagnostics view before trusting ORB in production. It shows runtime identity, scope, source tables, evidence count and unavailable surfaces.</p>
+          <Link href={`/assistant/orb/diagnostics?scope=${scope}&child_id=${childId}`} className="ic-secondary-action" style={{ marginTop: '1rem' }}>Open ORB diagnostics</Link>
         </section>
       </div>
     </IndiCareOsShell>
