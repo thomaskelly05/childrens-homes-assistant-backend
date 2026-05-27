@@ -85,6 +85,7 @@ export function childFormalSubmissionHref(childId: string | number) { return `/r
 export function homeWorkspaceHref(homeId: string | number) { return homePath(homeId, 'workspace') }
 export function homeDailyBriefHref(homeId: string | number) { return `/command-centre/briefing?home_id=${enc(homeId)}` }
 export function homeHandoverHref(homeId: string | number) { return `/handover?home_id=${enc(homeId)}` }
+export function homeHandoverReviewsHref(homeId: string | number) { return `/handover/reviews?home_id=${enc(homeId)}` }
 export function homeRecordingAlertsHref(homeId: string | number) { return `/record/alerts?home_id=${enc(homeId)}` }
 export function homeRecordingReviewsHref(homeId: string | number) { return `/record/reviews?home_id=${enc(homeId)}` }
 export function homeSafeguardingHref(homeId: string | number) { return `/safeguarding?home_id=${enc(homeId)}` }
@@ -101,3 +102,33 @@ export function homeReportsHref(homeId: string | number) { return `/reports?home
 export function homeOrbHref(homeId: string | number, mode: ScopeOrbMode = 'manager_daily_brief') { return assistantOrbHref({ scope: 'home', homeId, mode }) }
 export function homeArchiveSummaryHref(homeId: string | number) { return assistantOrbHref({ scope: 'home', homeId, mode: 'archive_summary' }) }
 export function homeChildrenHref(homeId: string | number) { return `/homes/${enc(homeId)}/children` }
+
+export function homeRecordHref(homeId: string | number, type?: string) { return recordHref({ homeId, type, about: 'home-shift' }) }
+export function homeDocumentsHref(homeId: string | number) { return `/documents?home_id=${enc(homeId)}` }
+export function homeCalendarHref(homeId: string | number) { return `/calendar?home_id=${enc(homeId)}` }
+
+export function HOME_WORKSPACE_WORKFLOW_HREFS(homeId: string | number) {
+  return {
+    home: homeWorkspaceHref(homeId),
+    dailyBrief: homeDailyBriefHref(homeId),
+    handover: homeHandoverHref(homeId),
+    handoverReviews: homeHandoverReviewsHref(homeId),
+    recordingAlerts: homeRecordingAlertsHref(homeId),
+    recordingReviews: homeRecordingReviewsHref(homeId),
+    safeguarding: homeSafeguardingHref(homeId),
+    notifications: homeNotificationsHref(homeId),
+    staffOnShift: homeStaffOnShiftHref(homeId),
+    workforce: homeWorkforceHref(homeId),
+    staffProfiles: homeStaffProfilesHref(homeId),
+    actions: homeActionsHref(homeId),
+    inspectionReadiness: homeInspectionReadinessHref(homeId),
+    sccif: homeSccifHref(homeId),
+    reg44: homeReg44Href(homeId),
+    reg45: homeReg45Href(homeId),
+    reports: homeReportsHref(homeId),
+    documents: homeDocumentsHref(homeId),
+    calendar: homeCalendarHref(homeId),
+    record: homeRecordHref(homeId),
+    orb: homeOrbHref(homeId)
+  }
+}
