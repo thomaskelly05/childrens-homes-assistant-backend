@@ -7,12 +7,9 @@ import {
   childAlertsHref,
   childChronologyHref,
   childDailyNoteHref,
-  childOrbHref,
   childRecordHref,
   childReviewsHref,
-  homeDailyBriefHref,
   homeHandoverHref,
-  homeOrbHref,
   homeRecordingAlertsHref,
   homeRecordingReviewsHref,
   homeWorkspaceHref
@@ -39,10 +36,12 @@ export type MobileScopeTab = { label: string; href: string; testId?: string }
 export function childWorkspaceMobileTabs(childId: string | number): MobileScopeTab[] {
   const id = String(childId)
   return [
-    { label: 'Overview', href: childWorkspaceHref(id), testId: 'mobile-tab-child-overview' },
+    { label: 'Story', href: childWorkspaceHref(id), testId: 'mobile-tab-child-story' },
+    { label: 'Today', href: childWorkspaceHref(id), testId: 'mobile-tab-child-today' },
     { label: 'Record', href: childRecordHref(id), testId: 'mobile-tab-child-record' },
-    { label: 'Daily note', href: childDailyNoteHref(id), testId: 'mobile-tab-child-daily-note' },
+    { label: 'Chronology', href: childChronologyHref(id), testId: 'mobile-tab-child-chronology' },
     { label: 'Reviews', href: childReviewsHref(id), testId: 'mobile-tab-child-reviews' },
+    { label: 'Evidence', href: childAlertsHref(id), testId: 'mobile-tab-child-evidence' },
     { label: 'More', href: `${childWorkspaceHref(id)}#more`, testId: 'mobile-tab-child-more' }
   ]
 }
@@ -50,10 +49,10 @@ export function childWorkspaceMobileTabs(childId: string | number): MobileScopeT
 export function homeWorkspaceMobileTabs(homeId: string | number): MobileScopeTab[] {
   const id = String(homeId)
   return [
-    { label: 'Home', href: homeWorkspaceHref(id), testId: 'mobile-tab-home-overview' },
+    { label: 'Home today', href: homeWorkspaceHref(id), testId: 'mobile-tab-home-overview' },
     { label: 'Handover', href: homeHandoverHref(id), testId: 'mobile-tab-home-handover' },
-    { label: 'Reviews', href: homeRecordingReviewsHref(id), testId: 'mobile-tab-home-reviews' },
-    { label: 'Alerts', href: homeRecordingAlertsHref(id), testId: 'mobile-tab-home-alerts' },
+    { label: 'Manager review', href: homeRecordingReviewsHref(id), testId: 'mobile-tab-home-reviews' },
+    { label: 'Evidence', href: homeRecordingAlertsHref(id), testId: 'mobile-tab-home-evidence' },
     { label: 'More', href: `${homeWorkspaceHref(id)}#more`, testId: 'mobile-tab-home-more' }
   ]
 }
