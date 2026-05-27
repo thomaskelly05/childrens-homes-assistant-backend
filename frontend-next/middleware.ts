@@ -1,46 +1,37 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-const publicPrefixes = [
-  '/orb',
-  '/login',
-  '/unauthorized',
-  '/auth',
+const allowedLegacyPrefixes = [
+  '/build-live',
   '/api',
-  '/mfa',
-  '/mfa-setup',
-  '/mfa-recovery',
+  '/_next',
+  '/favicon.ico',
+  '/robots.txt',
+  '/manifest.json',
   '/js',
   '/css',
   '/assets',
+  '/images',
   '/components'
 ]
-const sessionCookieNames = ['indicare_session', '__Host-indicare_session']
-const e2eAuthEnabled = process.env.NEXT_PUBLIC_E2E_TEST_MODE === '1' && process.env.NODE_ENV !== 'production'
 
-function isPublicPath(pathname: string) {
-  return publicPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))
-}
-
-function hasSessionCookie(request: NextRequest) {
-  return sessionCookieNames.some((name) => Boolean(request.cookies.get(name)?.value))
+function isAllowedLegacyPath(pathname: string) {
+  return allowedLegacyPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))
 }
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  if (!e2eAuthEnabled && !isPublicPath(pathname) && !hasSessionCookie(request)) {
-    const loginUrl = request.nextUrl.clone()
-    loginUrl.pathname = '/login'
-    loginUrl.searchParams.set('returnUrl', `${pathname}${request.nextUrl.search}`)
-    return NextResponse.redirect(loginUrl)
+  if (isAllowedLegacyPath(pathname)) {
+    const response = NextResponse.next()
+    response.headers.set('x-indicare-runtime', 'legacy-front-door-marker')
+    return response
   }
 
-  const response = NextResponse.next()
-
-  response.headers.set('x-indicare-runtime', 'operational')
-
-  return response
+  const url = request.nextUrl.clone()
+  url.pathname = '/build-live'
+  url.searchParams.set('from', pathname)
+  return NextResponse.redirect(url)
 }
 
 export const config = {
