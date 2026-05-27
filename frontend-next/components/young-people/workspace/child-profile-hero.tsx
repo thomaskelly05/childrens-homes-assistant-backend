@@ -28,21 +28,22 @@ export function ChildProfileHero({ view }: { view: ChildWorkspaceOverviewViewMod
 
   return (
     <header
-      className="child-workspace-hero-mobile-compact rounded-[28px] border border-white/80 bg-gradient-to-br from-sky-50 via-white to-violet-50/40 p-5 shadow-[0_16px_48px_rgba(15,23,42,0.05)] md:rounded-[36px] md:p-8 md:shadow-[0_24px_70px_rgba(15,23,42,0.06)]"
+      className="child-workspace-hero-mobile-compact rounded-[28px] border border-white/80 bg-gradient-to-br from-white via-sky-50/60 to-teal-50/30 p-5 shadow-[0_16px_48px_rgba(15,23,42,0.05)] md:rounded-[36px] md:p-8 md:shadow-[0_24px_70px_rgba(15,23,42,0.06)]"
       data-testid="child-workspace-hero"
     >
-      <p className="text-[11px] font-black uppercase tracking-[0.24em] text-sky-700">Child workspace</p>
+      <p className="text-[11px] font-black uppercase tracking-[0.24em] text-sky-700">Young person profile and story</p>
       <div className="mt-4 flex items-start gap-4 md:mt-5 md:gap-6">
         <ChildWorkspaceAvatar photo={photo} displayName={child.displayName} initials={initials} />
         <div className="min-w-0 flex-1">
-          <h1 className="text-2xl font-black tracking-[-0.05em] text-slate-950 md:text-5xl">{child.displayName}</h1>
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Before you record anything, understand who I am</p>
+          <h1 className="mt-2 text-2xl font-black tracking-[-0.05em] text-slate-950 md:text-5xl">{child.displayName}</h1>
           {child.preferredName && child.preferredName !== child.displayName ? (
             <p className="mt-1 text-sm text-slate-600 md:mt-2 md:text-base">
               Known as <span className="font-bold text-slate-800">{child.preferredName}</span>
             </p>
           ) : null}
           <p className="mt-2 hidden max-w-2xl text-sm leading-7 text-slate-600 md:block">
-            Who is this child, what matters to them, and what does the adult need to know before recording?
+            Start with the young person’s story, strengths, voice and support needs. Recording, chronology, plans, risks and ORB should all build from this understanding.
           </p>
           <div className="mt-3 flex flex-wrap gap-2" data-testid="child-workspace-hero-badges">
             {child.age && child.age !== 'Not recorded yet' ? <StatusBadge value={`Age ${child.age}`} /> : null}
@@ -65,7 +66,7 @@ export function ChildProfileHero({ view }: { view: ChildWorkspaceOverviewViewMod
           tapDebugLabel="child-hero-record"
           className="inline-flex min-h-11 flex-1 items-center justify-center rounded-2xl bg-sky-600 px-4 py-2.5 text-sm font-black text-white shadow-md shadow-sky-500/25 transition hover:bg-sky-700 sm:flex-none"
         >
-          Record
+          Record with care
         </MobileSafeLink>
         <MobileSafeLink
           href={orbHref}
