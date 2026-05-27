@@ -1603,6 +1603,21 @@ textarea:focus-visible {
 }
 
 /* —— ORB ChatGPT-style light theme (default on /orb) —— */
+html[data-orb-theme='light'],
+html[data-orb-theme='light'] body {
+  --orb-bg-deep: #ffffff;
+  --orb-bg-mid: #f7f7f8;
+  --orb-bg-soft: #f9f9f9;
+  --orb-foreground: #111827;
+  --orb-muted: #6b7280;
+  --orb-accent: #2563eb;
+  --orb-on-accent: #ffffff;
+  --orb-line: #e5e7eb;
+  --orb-surface: #ffffff;
+  --orb-surface-elevated: #f9f9f9;
+  --orb-surface-hover: #f3f4f6;
+}
+
 .orb-hue-text {
   background: linear-gradient(90deg, #00b8ff, #4cc9f0, #7dd3fc, #2563eb);
   -webkit-background-clip: text;

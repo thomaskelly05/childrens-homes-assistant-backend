@@ -25,6 +25,12 @@ describe('ORB ChatGPT UI structure', () => {
     assert.match(source, /How can I help\?/)
   })
 
+  it('orb layout bootstraps light theme on html before hydration', () => {
+    const layout = readComponent('app/orb/layout.tsx')
+    assert.match(layout, /ORB_APPEARANCE_BOOTSTRAP_SCRIPT/)
+    assert.match(layout, /orb-appearance-bootstrap/)
+  })
+
   it('composer keeps send handler and Ask anything placeholder path', () => {
     const composer = readComponent('components/orb-standalone/orb-standalone-composer.tsx')
     assert.match(composer, /data-testid="orb-standalone-send-clickable"/)
