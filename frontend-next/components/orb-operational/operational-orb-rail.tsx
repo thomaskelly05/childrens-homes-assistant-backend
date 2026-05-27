@@ -90,7 +90,8 @@ export function OperationalOrbRail({
   return (
     <section
       data-testid={testId}
-      className="os-context-rail rounded-[24px] border border-slate-200/80 bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900 p-4 text-white shadow-[0_12px_40px_rgba(15,23,42,0.12)]"
+      data-orb-quiet="true"
+      className="os-context-rail rounded-2xl border border-white/[0.06] bg-gradient-to-b from-slate-900/95 via-slate-950 to-slate-950 p-3.5 text-white shadow-sm"
     >
       <div className="flex items-start gap-3">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-cyan-400/15 ring-1 ring-cyan-300/25">
@@ -105,26 +106,14 @@ export function OperationalOrbRail({
         </div>
       </div>
 
-      <div className="mt-4 space-y-2">
-        <p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-500">Context</p>
-        <dl className="grid gap-1.5 text-xs">
-          <div className="rounded-xl bg-white/5 px-3 py-2 ring-1 ring-white/8">
-            <dt className="text-[9px] font-black uppercase tracking-[0.14em] text-slate-500">Active workspace</dt>
-            <dd className="mt-0.5 font-black text-slate-100">{WORKSPACE_LABELS[scopeType]}</dd>
-          </div>
-          <div className="rounded-xl bg-white/5 px-3 py-2 ring-1 ring-white/8">
-            <dt className="text-[9px] font-black uppercase tracking-[0.14em] text-slate-500">Child / home</dt>
-            <dd className="mt-0.5 font-black text-slate-100">{contextEntity}</dd>
-          </div>
-          <div className="rounded-xl bg-white/5 px-3 py-2 ring-1 ring-white/8">
-            <dt className="text-[9px] font-black uppercase tracking-[0.14em] text-slate-500">Privacy</dt>
-            <dd className="mt-0.5 font-semibold text-slate-300">{privacy}</dd>
-          </div>
-        </dl>
-      </div>
+      <p className="mt-3 text-[11px] leading-5 text-slate-500">
+        <span className="text-slate-400">{WORKSPACE_LABELS[scopeType]}</span>
+        {' · '}
+        {contextEntity}
+      </p>
 
-      <div className="mt-4 space-y-1.5">
-        <p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-500">Suggested prompts</p>
+      <div className="mt-3 space-y-1.5">
+        <p className="text-[9px] font-medium uppercase tracking-[0.16em] text-slate-600">When helpful</p>
         {prompts.map((prompt) => (
           <Link
             key={prompt.label}

@@ -1,11 +1,17 @@
 import { Suspense } from 'react'
 
-import { OrbMinimalChat } from '@/components/orb-standalone/orb-minimal-chat'
+import { OrbCareCompanion } from '@/components/orb-standalone/orb-care-companion'
 
 export default function OrbStandalonePage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#05070d] px-6 py-10 text-sm font-black text-slate-400">Loading ORB…</div>}>
-      <OrbMinimalChat />
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-[#05070d] text-sm text-slate-400">
+          Loading ORB…
+        </div>
+      }
+    >
+      <OrbCareCompanion />
     </Suspense>
   )
 }

@@ -32,11 +32,13 @@ export const STANDALONE_ORB_API_PATHS = {
 
 export const STANDALONE_ORB_MODES = [
   'Ask ORB',
-  'Safeguarding',
-  'Reflect',
+  'Safeguarding Thinking',
   'Ofsted Lens',
-  'Behaviour Support',
-  'Record This Properly'
+  'Record This Properly',
+  'Therapeutic Reframe',
+  'Manager Copilot',
+  'Staff Coach',
+  'Reg 44 / Reg 45 Prep'
 ] as const
 
 export type StandaloneOrbMode = (typeof STANDALONE_ORB_MODES)[number]
@@ -202,6 +204,15 @@ export type StandaloneOrbConversationResponse = {
       completed?: boolean
     }
     agent?: StandaloneOrbAgentSuggestion
+    explainability?: {
+      active_brains?: string[]
+      frameworks_used?: string[]
+      evidence_focus?: string[]
+      confidence?: string
+      human_review_boundaries?: string[]
+      reasoning_summary?: string
+      operational_context_used?: boolean
+    }
   }
   guardrails?: string[]
   image_understanding_available?: boolean

@@ -27,7 +27,13 @@ import {
   OrbStandaloneComposer,
   type PendingImageAttachment
 } from '@/components/orb-standalone/orb-standalone-composer'
+import {
+  OrbAssistantMessageBody,
+  OrbResponseActionBar
+} from '@/components/orb-standalone/orb-assistant-message'
 import { OrbAgentPanel } from '@/components/orb-standalone/orb-agent-panel'
+import { OrbResidentialAgentsPanel } from '@/components/orb-standalone/orb-residential-agents-panel'
+import { OrbSmartSuggestions } from '@/components/orb-standalone/orb-smart-suggestions'
 import { OrbDocumentPanel } from '@/components/orb-standalone/orb-document-panel'
 import { OrbSavedOutputsPanel } from '@/components/orb-standalone/orb-saved-outputs-panel'
 import { OrbKnowledgeLibraryPanel } from '@/components/orb-standalone/orb-knowledge-library'
@@ -42,7 +48,8 @@ import {
   type OrbStandalonePanel
 } from '@/components/orb-standalone/orb-standalone-panel-types'
 import { OrbStandaloneSidebar } from '@/components/orb-standalone/orb-standalone-sidebar'
-import { modeChipLabel } from '@/components/orb-standalone/orb-mode-labels'
+import { agentForMode, atmosphereClassForMode, type ResidentialAgentDefinition } from '@/lib/orb/residential-agents'
+import { streamTextIntoView } from '@/lib/orb/streaming-text'
 import {
   defaultStandaloneOrbAccessibility,
   loadStandaloneOrbAccessibility,
@@ -80,15 +87,16 @@ import {
   type StandaloneOrbMode
 } from '@/lib/orb/standalone-client'
 
-/** Standalone /orb is text-first; voice ships in a future ORB Voice surface. */
-const STANDALONE_ORB_VOICE_CAPTURE_ENABLED = false
-const VOICE_MODE_COMING_SOON = 'Voice mode is coming next — type your message below.'
+/** Push-to-talk voice with reflective pacing — no passive listening. */
+const STANDALONE_ORB_VOICE_CAPTURE_ENABLED = true
+const VOICE_MODE_COMING_SOON = 'Allow microphone access to use push-to-talk voice.'
 
 const MODE_SAFETY: Partial<Record<StandaloneOrbMode, string>> = {
-  Safeguarding:
+  'Safeguarding Thinking':
     'Follow safeguarding procedures and escalate immediate risk. ORB supports thinking; it does not make decisions.',
   'Record This Properly': 'ORB can help with wording, but review before adding to records.',
-  'Ofsted Lens': 'Guidance support only. ORB does not make inspection judgements.'
+  'Ofsted Lens': 'Guidance support only. ORB does not make inspection judgements.',
+  'Reg 44 / Reg 45 Prep': 'Governance support only — improvement plans and evidence remain provider-led.'
 }
 
 const HIGH_RISK_TERMS = [
@@ -121,7 +129,7 @@ function stripTrailingTurnPlaceholders(messages: StandaloneChatMessage[]): Stand
   const copy = [...messages]
   while (copy.length > 0) {
     const last = copy[copy.length - 1]
-    if (last.role === 'assistant' && (last.status === 'thinking' || last.status === 'error')) {
+    if (last.role === 'assistant' && (last.status === 'thinking' || last.status === 'streaming' || last.status === 'error')) {
       copy.pop()
       continue
     }
@@ -160,17 +168,17 @@ const ANSWER_STYLE_LABELS: Record<StandaloneOrbAnswerStyle, string> = {
 type PromptEntry = { text: string; mode?: StandaloneOrbMode }
 
 const PRIMARY_EMPTY_STARTERS: PromptEntry[] = [
-  { text: 'Help me write a daily note', mode: 'Record This Properly' },
-  { text: 'Explain Ofsted expectations', mode: 'Ofsted Lens' },
-  { text: 'Think through a safeguarding concern', mode: 'Safeguarding' },
-  { text: 'Make wording more child-centred', mode: 'Record This Properly' }
+  { text: 'Help me reflect on a difficult shift', mode: 'Staff Coach' },
+  { text: 'Rewrite this professionally', mode: 'Record This Properly' },
+  { text: 'What evidence would Ofsted expect?', mode: 'Ofsted Lens' },
+  { text: 'Help me prepare for supervision', mode: 'Staff Coach' }
 ]
 
 const MORE_EMPTY_STARTERS: PromptEntry[] = [
-  { text: 'Reflect after a difficult shift', mode: 'Reflect' },
+  { text: 'Explore the behaviour meaning', mode: 'Therapeutic Reframe' },
   { text: 'Help me record an incident calmly.', mode: 'Record This Properly' },
-  { text: 'What would Ofsted expect to see here?', mode: 'Ofsted Lens' },
-  { text: 'Help me understand behaviour as communication.', mode: 'Behaviour Support' },
+  { text: 'Think through a safeguarding concern', mode: 'Safeguarding Thinking' },
+  { text: 'What might leadership need to review?', mode: 'Manager Copilot' },
   { text: 'General question' }
 ]
 
@@ -201,15 +209,15 @@ const SUGGESTED_PROMPT_GROUPS: Array<{ title: string; prompts: PromptEntry[] }> 
   {
     title: 'Safeguarding',
     prompts: [
-      { text: 'Does this need manager review?', mode: 'Safeguarding' },
-      { text: 'Help me think through a safeguarding concern.', mode: 'Safeguarding' }
+      { text: 'Does this need manager review?', mode: 'Safeguarding Thinking' },
+      { text: 'Help me think through a safeguarding concern.', mode: 'Safeguarding Thinking' }
     ]
   },
   {
     title: 'Reflective practice',
     prompts: [
-      { text: 'Help me reflect after a difficult shift.', mode: 'Reflect' },
-      { text: 'Help me understand behaviour as communication.', mode: 'Behaviour Support' }
+      { text: 'Help me reflect after a difficult shift.', mode: 'Staff Coach' },
+      { text: 'Help me understand behaviour as communication.', mode: 'Therapeutic Reframe' }
     ]
   }
 ]
@@ -299,7 +307,7 @@ export function OrbCareCompanion() {
   const [micNotice, setMicNotice] = useState<string | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [activePanel, setActivePanel] = useState<OrbStandalonePanel>(null)
-  const [modesBarOpen, setModesBarOpen] = useState(false)
+  const [agentsPanelOpen, setAgentsPanelOpen] = useState(false)
   const [promptDrawerOpen, setPromptDrawerOpen] = useState(false)
   const [moreExamplesExpanded, setMoreExamplesExpanded] = useState(false)
   const [chatSearch, setChatSearch] = useState('')
@@ -326,6 +334,7 @@ export function OrbCareCompanion() {
   const sendInFlightRef = useRef(false)
   const submitGuardRef = useRef(false)
   const lastSubmitRef = useRef<{ chatId: string; content: string; at: number } | null>(null)
+  const streamAbortRef = useRef<AbortController | null>(null)
 
   const voice = useStandaloneOrbVoice()
   const { settings: voiceSettings } = voice
@@ -471,7 +480,7 @@ export function OrbCareCompanion() {
   }, [])
 
   const showSafeguardingEscalation =
-    mode === 'Safeguarding' ||
+    mode === 'Safeguarding Thinking' ||
     transcriptHasHighRiskTerms(message) ||
     transcriptHasHighRiskTerms(voice.transcript) ||
     messages.some((m) => m.role === 'user' && transcriptHasHighRiskTerms(m.content))
@@ -661,6 +670,7 @@ export function OrbCareCompanion() {
           (response.citations?.length ? response.citations : response.sources) ?? []
         ) as StandaloneOrbSource[]
         const modelRouting = response.context_used?.model_routing
+        const explainabilityRaw = response.context_used?.explainability as StandaloneChatMessage['explainability']
         const agentRaw = response.context_used?.agent as StandaloneOrbAgentSuggestion | undefined
         const docAnalysisRaw = response.context_used?.document_analysis as
           | { suggested?: boolean; needs_document?: boolean; open_documents_panel?: boolean }
@@ -669,21 +679,66 @@ export function OrbCareCompanion() {
           agentRaw?.suggested && !agentRaw?.auto_run ? agentRaw : undefined
         const documentSuggestion =
           docAnalysisRaw?.suggested && docAnalysisRaw?.needs_document ? docAnalysisRaw : undefined
-        const assistantMessage: StandaloneChatMessage = {
+
+        const streamingMessage: StandaloneChatMessage = {
           id: assistantId,
           role: 'assistant',
-          content: answer,
-          status: 'complete',
+          content: '',
+          status: 'streaming',
           createdAt: Date.now(),
           sources: responseSources.length ? responseSources : undefined,
           modelRouting: modelRouting ?? undefined,
+          explainability: explainabilityRaw,
           agentSuggestion,
           documentSuggestion
+        }
+
+        setWorkspace((current) => {
+          const chat = current.chats.find((c) => c.id === targetChatId)
+          if (!chat) return current
+          const withStreaming = replaceMessageById(chat.messages, thinkingMessageId, streamingMessage)
+          return patchActiveChat(current, chat.id, {
+            messages: withStreaming,
+            conversationId: newConversationId
+          })
+        })
+
+        streamAbortRef.current?.abort()
+        streamAbortRef.current = new AbortController()
+        const streamSignal = streamAbortRef.current.signal
+
+        try {
+          await streamTextIntoView({
+            text: answer,
+            signal: streamSignal,
+            onChunk: (partial) => {
+              setWorkspace((current) => {
+                const chat = current.chats.find((c) => c.id === targetChatId)
+                if (!chat) return current
+                const streaming = chat.messages.find((m) => m.id === assistantId)
+                if (!streaming) return current
+                const updated: StandaloneChatMessage = { ...streaming, content: partial, status: 'streaming' }
+                return patchActiveChat(current, chat.id, {
+                  messages: replaceMessageById(chat.messages, assistantId, updated)
+                })
+              })
+            }
+          })
+        } catch (streamError) {
+          if (!(streamError instanceof DOMException && streamError.name === 'AbortError')) {
+            throw streamError
+          }
+        }
+
+        const assistantMessage: StandaloneChatMessage = {
+          ...streamingMessage,
+          content: answer,
+          status: 'complete'
         }
         setWorkspace((current) => {
           const chat = current.chats.find((c) => c.id === targetChatId)
           if (!chat) return current
-          const withAssistant = replaceMessageById(chat.messages, thinkingMessageId, assistantMessage)
+          const withAssistant = replaceMessageById(chat.messages, assistantId, assistantMessage)
           return patchActiveChat(current, chat.id, {
             messages: withAssistant,
             conversationId: newConversationId
@@ -823,6 +878,12 @@ export function OrbCareCompanion() {
       return
     }
     persistChat(activeChat.id, { mode: next })
+  }
+
+  function selectResidentialAgent(agent: ResidentialAgentDefinition) {
+    handleModeChange(agent.mode)
+    setMessage('')
+    inputRef.current?.focus()
   }
 
   function startNewChat(projectId?: string) {
@@ -1029,12 +1090,16 @@ export function OrbCareCompanion() {
 
   const layoutA11yClass = standaloneOrbAccessibilityClassNames(a11yPrefs)
 
+  const atmosphereClass = atmosphereClassForMode(mode)
+  const activeAgent = agentForMode(mode)
+
   return (
     <main
-      className={`orb-chat-layout relative flex flex-col overflow-hidden bg-[#05070d] text-white ${layoutA11yClass}`}
+      className={`orb-chat-layout relative flex flex-col overflow-hidden bg-[#05070d] text-white ${layoutA11yClass} ${atmosphereClass}`}
       data-orb-active-panel={activePanel || 'none'}
       data-orb-close-all-panels
       data-orb-text-first-chat="true"
+      data-orb-agent={activeAgent?.id ?? 'ask_orb'}
     >
       <span className="sr-only">ORB Care Companion — standalone residential care assistant</span>
       <div className="pointer-events-none fixed inset-0 orb-cinematic-light-field opacity-50" aria-hidden />
@@ -1125,6 +1190,12 @@ export function OrbCareCompanion() {
         voiceOutputAvailable={voice.synthesisAvailable}
       />
       <OrbIntelligenceMapPanel open={activePanel === 'intelligence_map'} onClose={closePanel} />
+      <OrbResidentialAgentsPanel
+        open={agentsPanelOpen}
+        activeMode={mode}
+        onSelect={selectResidentialAgent}
+        onClose={() => setAgentsPanelOpen(false)}
+      />
       <OrbAgentPanel
         open={activePanel === 'agents'}
         onClose={() => {
@@ -1175,6 +1246,10 @@ export function OrbCareCompanion() {
             }}
             onOpenTools={() => {
               openToolsPanel()
+              setSidebarOpen(false)
+            }}
+            onOpenAgents={() => {
+              setAgentsPanelOpen(true)
               setSidebarOpen(false)
             }}
             savedOutputsCount={savedOutputsCount}
@@ -1241,37 +1316,15 @@ export function OrbCareCompanion() {
           <div className="flex shrink-0 items-center gap-2 border-b border-white/[0.04] px-3 py-2 md:px-5">
             <button
               type="button"
-              className="shrink-0 rounded-full bg-white/[0.05] px-2.5 py-1 text-[11px] font-medium text-slate-400 ring-1 ring-white/[0.08] md:hidden"
-              onClick={() => setModesBarOpen((open) => !open)}
-              aria-expanded={modesBarOpen}
+              onClick={() => setAgentsPanelOpen(true)}
+              className="inline-flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-left transition hover:border-cyan-300/20 hover:bg-cyan-400/[0.04]"
+              data-orb-active-agent
             >
-              Modes
+              <span className="truncate text-xs font-semibold text-white">{activeAgent?.title ?? 'Ask ORB'}</span>
+              <span className="hidden truncate text-[11px] text-slate-500 sm:inline">
+                {activeAgent?.cognitionLabel ?? 'General cognition'}
+              </span>
             </button>
-            <div
-              className={`orb-mode-chips orb-mode-chips--quiet flex min-w-0 flex-1 gap-1.5 overflow-x-auto ${
-                modesBarOpen ? '' : 'max-md:hidden'
-              }`}
-              role="tablist"
-              aria-label="ORB mode"
-              data-orb-mode-chips
-            >
-              {modes.map((item) => (
-                <button
-                  key={item}
-                  type="button"
-                  role="tab"
-                  aria-selected={mode === item}
-                  onClick={() => handleModeChange(item as StandaloneOrbMode)}
-                  className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium transition ${
-                    mode === item
-                      ? 'bg-white text-slate-950'
-                      : 'bg-white/[0.04] text-slate-500 ring-1 ring-white/[0.06] hover:text-slate-300'
-                  }`}
-                >
-                  {modeChipLabel(item)}
-                </button>
-              ))}
-            </div>
           </div>
 
           {recordingContext ? (
@@ -1355,7 +1408,7 @@ export function OrbCareCompanion() {
                       How can I help?
                     </h2>
                     <p className="mt-2 max-w-md text-sm text-slate-500" data-orb-empty-subline>
-                      Text-first assistant for residential children&apos;s homes. No OS records accessed.
+                      Quiet until needed. Institutional cognition for residential children&apos;s homes — no OS records accessed.
                     </p>
                     <div className="mt-6 grid w-full max-w-xl gap-2.5 sm:grid-cols-2" data-orb-starter-cards>
                       {PRIMARY_EMPTY_STARTERS.map((starter) => (
@@ -1424,10 +1477,15 @@ export function OrbCareCompanion() {
                               ) : null}
                             </article>
                           ) : (
-                          <article className="orb-message-assistant group" data-testid="orb-message-assistant">
-                            <p className="mb-2 text-xs font-medium text-slate-500">ORB</p>
-                            <div className="whitespace-pre-wrap text-[15px] leading-7 text-slate-100">{entry.content}</div>
-                            <SourcesBasis sources={entry.sources} modelRouting={entry.modelRouting} />
+                          <>
+                          <OrbAssistantMessageBody
+                            content={entry.content}
+                            sources={entry.sources}
+                            mode={mode}
+                            streaming={entry.status === 'streaming'}
+                            explainability={entry.explainability}
+                            modelRouting={entry.modelRouting}
+                          />
                             {entry.documentSuggestion?.needs_document ? (
                               <div className="mt-3 flex flex-wrap gap-2">
                                 <button
@@ -1483,8 +1541,8 @@ export function OrbCareCompanion() {
                                 </button>
                               </div>
                             ) : null}
-                            {index === visibleMessages.length - 1 ? (
-                              <ResponseActions
+                            {index === visibleMessages.length - 1 && entry.status === 'complete' ? (
+                              <OrbResponseActionBar
                                 content={entry.content}
                                 speaking={speakingMessageId === entry.id}
                                 synthesisAvailable={voice.synthesisAvailable}
@@ -1503,13 +1561,25 @@ export function OrbCareCompanion() {
                                     ? () => void saveChatNote(entry)
                                     : undefined
                                 }
+                                onSaveToProject={() => void saveChatNote(entry)}
+                                onActionPlan={() => {
+                                  setMessage(`Create an action plan from this:\n\n${entry.content.slice(0, 500)}`)
+                                  inputRef.current?.focus()
+                                }}
+                                onReflection={() => void saveChatNote(entry)}
+                                onSupervision={() => {
+                                  setMessage('Help me prepare supervision prompts from our last exchange.')
+                                  inputRef.current?.focus()
+                                }}
+                                onExport={() => void copyToClipboard(entry.content)}
+                                onInspectionPrep={() => handleModeChange('Ofsted Lens')}
                               />
-                            ) : (
+                            ) : index !== visibleMessages.length - 1 ? (
                               <div className="mt-2 flex flex-wrap gap-2 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
                                 <ActionChip icon={<Copy className="h-3 w-3" />} label="Copy" onClick={() => void copyToClipboard(entry.content)} />
                               </div>
-                            )}
-                          </article>
+                            ) : null}
+                          </>
                           )
                         ) : (
                           <MessageBubble entry={entry} />
@@ -1542,6 +1612,14 @@ export function OrbCareCompanion() {
               </div>
             </div>
 
+            <OrbSmartSuggestions
+              mode={mode}
+              disabled={pending}
+              onSelect={(text) => {
+                setMessage(text)
+                inputRef.current?.focus()
+              }}
+            />
             {composer}
           </section>
         </div>
