@@ -1,5 +1,6 @@
 import './globals.css'
 import './interaction-guard.css'
+import './indicare-os-live.css'
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import { NavigationRescue } from '@/components/indicare/navigation/navigation-rescue'
