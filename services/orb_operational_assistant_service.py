@@ -31,18 +31,45 @@ logger = logging.getLogger("indicare.orb_operational_assistant")
 OPERATIONAL_SYSTEM_PROMPT = """
 You are IndiCare OS ORB, the operational assistant inside IndiCare OS.
 
-You may use permissioned operational context provided by the backend summary only.
-Do not claim access to anything not included in the context summary.
-Do not make final safeguarding, legal or inspection decisions.
-Do not predict Ofsted grades.
-Provide manager-review caveats where safeguarding, incidents or inspection evidence are discussed.
-Use British English. Be clear, practical, child-centred and evidence-focused.
-When context is degraded or unavailable, say so and offer cautious general operational guidance.
+Your job is to answer questions about young people, homes and provider oversight using the permissioned IndiCare OS context supplied by the backend.
+
+Rules:
+- Use only the source-labelled context, evidence snippets, counts and summaries provided in the request.
+- Do not claim you checked records, documents, appointments, plans or chronology unless those sources are present in the context.
+- If the evidence is missing, unclear or unavailable, say exactly what is missing and what source area the adult should check.
+- Prefer a direct answer first, then explain the evidence and any limitations.
+- For questions such as dates, reviews, dentist appointments, medication, contact, missing episodes, school, incidents or sign-off, answer from the latest relevant source label and date when present.
+- Do not make final safeguarding, legal or inspection decisions.
+- Do not predict Ofsted grades.
+- Provide manager-review caveats where safeguarding, incidents, risk or inspection evidence are discussed.
+- Use British English. Be clear, practical, child-centred and evidence-focused.
+- Write for adults in Ofsted-regulated children’s homes: supportive, calm, accountable and not punitive.
 """.strip()
 
 
 def _text(value: Any, fallback: str = "") -> str:
     return str(value or "").strip() or fallback
+
+
+def _compact_source_line(source: Any, index: int) -> str:
+    if hasattr(source, "model_dump"):
+        raw = source.model_dump()
+    elif isinstance(source, dict):
+        raw = source
+    else:
+        return _text(source)[:420]
+    label = _text(raw.get("label") or raw.get("title"), "Operational source")
+    source_type = _text(raw.get("source_type") or raw.get("type"), "summary")
+    date = _text(raw.get("date") or raw.get("created_at") or raw.get("updated_at") or raw.get("occurred_at"))
+    basis = _text(raw.get("basis") or raw.get("summary") or raw.get("excerpt") or raw.get("safe_excerpt"), "Source available")
+    route = _text(raw.get("route") or raw.get("route_hint"))
+    parts = [f"[{index}] {label}", f"type={source_type}"]
+    if date:
+        parts.append(f"date={date}")
+    if route:
+        parts.append(f"route={route}")
+    parts.append(f"evidence={basis[:520]}")
+    return " | ".join(parts)
 
 
 class OrbOperationalAssistantService:
@@ -111,16 +138,18 @@ class OrbOperationalAssistantService:
             try:
                 safe_bundle = dict(context_bundle)
                 safe_bundle["privacy_safe_context"] = privacy_guard.safe_context
+                safe_bundle["orb_sources"] = [s.model_dump() for s in sources]
                 prompt = self.build_operational_prompt(request, safe_bundle)
                 model_request = self.build_model_request(request, prompt, safe_bundle)
                 response, decision, trace = await ai_model_router_service.complete_with_routing(
-                    message=request.message,
+                    message=f"{request.message}\n\nUse the source-labelled IndiCare OS evidence in the system prompt. If the answer is not evidenced, say what is missing.",
                     system_prompt=model_request["system_prompt"],
                     mode=self._mode_label(request.mode),
                     retrieval_context={
                         "operational_context": privacy_guard.safe_context,
                         "sources": [s.model_dump() for s in sources],
                         "summary_level_only": True,
+                        "answer_must_be_source_grounded": True,
                     },
                     detail_level="balanced",
                     surface="operational_os",
@@ -295,6 +324,12 @@ class OrbOperationalAssistantService:
             f"Mode: {request.mode}",
             f"Scope: {request.scope}",
             f"User question: {request.message}",
+            "",
+            "Answer contract:",
+            "- Answer the question directly from the evidence below where possible.",
+            "- Refer to sources by their bracket numbers, for example [1] or [2].",
+            "- If the evidence does not answer the question, say: I cannot evidence that from the available records.",
+            "- Then say which area to check next: records, documents, chronology, appointments, plans, actions, home oversight or provider oversight.",
         ]
         if request.form_id or request.recording_type:
             lines.append("")
@@ -311,15 +346,30 @@ class OrbOperationalAssistantService:
                 lines.append(f"- selected_excerpt (adult-provided): {request.selected_excerpt[:500]}")
         lines.extend([
             "",
-            "Permissioned context summary (do not go beyond this):",
+            "Permissioned context summary:",
         ])
         for key, value in summary.items():
+            if key in {"sources", "citations"}:
+                continue
             if isinstance(value, list) and value:
                 lines.append(f"- {key}: " + "; ".join(_text(v) for v in value[:8]))
             elif value not in (None, "", [], {}):
                 lines.append(f"- {key}: {value}")
+
+        source_payload = context.get("orb_sources") or summary.get("sources") or context.get("sources") or []
+        if source_payload:
+            lines.append("")
+            lines.append("Source-labelled evidence available to ORB:")
+            for index, source in enumerate(source_payload[:12], start=1):
+                line = _compact_source_line(source, index)
+                if line:
+                    lines.append(f"- {line}")
+        else:
+            lines.append("")
+            lines.append("Source-labelled evidence available to ORB: none returned for this scope/question.")
+
         lines.append("")
-        lines.append("Respond with practical next steps, source-labelled reasoning, and manager-review caveats where needed.")
+        lines.append("Respond with: direct answer, evidence used, limitations/missing information, and safe next step where appropriate.")
         return "\n".join(lines)
 
     def build_sources(self, context: dict[str, Any]) -> list[OrbOperationalSource]:
@@ -327,11 +377,11 @@ class OrbOperationalAssistantService:
         for raw in orb_operational_context_bridge.safe_context_sources(context):
             items.append(
                 OrbOperationalSource(
-                    label=_text(raw.get("label"), "Operational source"),
+                    label=_text(raw.get("label") or raw.get("title"), "Operational source"),
                     source_type=_text(raw.get("source_type"), "summary"),
-                    basis=_text(raw.get("basis")) or None,
+                    basis=_text(raw.get("basis") or raw.get("summary")) or None,
                     route=raw.get("route"),
-                    excerpt=None,
+                    excerpt=_text(raw.get("excerpt") or raw.get("safe_excerpt")) or None,
                 )
             )
         if not items:
@@ -366,7 +416,7 @@ class OrbOperationalAssistantService:
     ) -> dict[str, Any]:
         _ = context
         return {
-            "system_prompt": OPERATIONAL_SYSTEM_PROMPT,
+            "system_prompt": f"{OPERATIONAL_SYSTEM_PROMPT}\n\n{prompt}",
             "user_prompt": prompt,
             "surface": "operational_os",
             "mode": request.mode,
