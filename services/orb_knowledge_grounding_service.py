@@ -32,19 +32,39 @@ class OrbKnowledgeGroundingService:
     TOPIC_ANCHOR_LABELS: dict[str, list[str]] = {
         "cumulative_concern": ["[Reg 12]", "[Reg 13]", "[SCCIF]", "[LADO]", "[Working Together]", "[Recording quality]"],
         "allegations": ["[Reg 12]", "[Reg 13]", "[SCCIF]", "[Working Together]", "[LADO]", "[Recording quality]"],
-        "missing": ["[Reg 12]", "[SCCIF]", "[Working Together]", "[Recording quality]"],
+        "missing": ["[Reg 12]", "[Working Together]", "[SCCIF]", "[Recording quality]"],
         "restraint": ["[Reg 12]", "[Reg 13]", "[Recording quality]", "[SCCIF]"],
         "recording": ["[Recording quality]", "[SCCIF]", "[Reg 13]"],
         "chronology": ["[Recording quality]", "[SCCIF]", "[Reg 13]"],
         "leadership": ["[Reg 13]", "[SCCIF]", "[Reg 12]"],
         "inspection": ["[SCCIF]", "[Reg 13]", "[Reg 12]"],
-        "therapeutic": ["[Recording quality]", "[Reg 12]"],
-        "medication": ["[Reg 12]", "[Reg 13]", "[Recording quality]"],
+        "therapeutic": ["[Therapeutic practice]", "[Recording quality]", "[SCCIF]"],
+        "medication": ["[Reg 12]", "[Reg 13]", "[Recording quality]", "[Medication / health]"],
         "supervision": ["[Reg 13]", "[Recording quality]"],
         "staffing": ["[Reg 13]", "[SCCIF]"],
         "complaints": ["[Reg 13]", "[SCCIF]", "[Recording quality]"],
         "education_health": ["[SCCIF]", "[Reg 12]"],
         "placement_planning": ["[Reg 12]", "[SCCIF]", "[Reg 13]"],
+    }
+
+    TOPIC_CITATION_SUMMARIES: dict[str, dict[str, str]] = {
+        "medication": {
+            "[Reg 12]": "Protection and health safety.",
+            "[Reg 13]": "Management oversight and learning.",
+            "[Recording quality]": "MAR/error record and rationale.",
+            "[Medication / health]": "Seek appropriate medical/pharmacy advice.",
+        },
+        "missing": {
+            "[Reg 12]": "Protection and safeguarding.",
+            "[Working Together]": "Multi-agency safeguarding.",
+            "[SCCIF]": "Child experience, safeguarding and leadership impact.",
+            "[Recording quality]": "Return conversation and chronology.",
+        },
+        "therapeutic": {
+            "[Therapeutic practice]": "Emotional meaning and co-regulation.",
+            "[Recording quality]": "Factual, child-centred wording.",
+            "[SCCIF]": "Child experience where relevant.",
+        },
     }
 
     def build_grounding(
@@ -123,18 +143,24 @@ class OrbKnowledgeGroundingService:
             labels = ["[Reg 12]", "[Recording quality]"]
 
         anchor_by_label = {a["label"]: a for a in orb_grounded_answer_style_service.ANCHORS}
+        compact = self.TOPIC_CITATION_SUMMARIES.get(topic or "", {})
         citations: list[dict[str, Any]] = []
         for label in labels:
             anchor = anchor_by_label.get(label)
             if not anchor:
                 continue
+            summary = compact.get(label)
             citations.append(
                 {
                     "id": label.strip("[]").lower().replace(" ", "_"),
                     "label": label,
-                    "type": "regulatory_framework",
-                    "basis": anchor["basis"],
-                    "note": anchor["meaning"],
+                    "type": (
+                        "therapeutic_practice"
+                        if label == "[Therapeutic practice]"
+                        else "regulatory_framework"
+                    ),
+                    "basis": summary or anchor["basis"],
+                    "note": summary or anchor["meaning"],
                     "live_retrieved": False,
                     "source_integrity": "built_in_anchor_not_verbatim_quote",
                 }

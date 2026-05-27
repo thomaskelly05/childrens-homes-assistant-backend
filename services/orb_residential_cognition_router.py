@@ -26,10 +26,28 @@ class OrbResidentialCognitionRouter:
         "health_medication_cognition": "Medication / health",
         "education_cognition": "Education",
         "complaints_advocacy_cognition": "Complaints / advocacy",
-        "child_journey_cognition": "Child journey",
+        "child_journey_cognition": "Child experience",
         "professional_curiosity_cognition": "Professional curiosity",
         "evidence_confidence": "Evidence",
         "institutional_depth_frame": "Institutional depth",
+    }
+
+    # Preferred visible pill order per topic (Ask ORB auto-route).
+    TOPIC_DISPLAY_ORDER: dict[str, list[str]] = {
+        "medication": ["Medication / health", "Recording quality", "Leadership oversight"],
+        "missing": ["Missing from home", "Safeguarding", "Recording quality", "Ofsted evidence"],
+        "therapeutic": ["Therapeutic reflection", "Recording quality", "Child experience"],
+        "cumulative_concern": [
+            "Safeguarding",
+            "Professional curiosity",
+            "Leadership oversight",
+            "Ofsted evidence",
+        ],
+        "allegations": ["Safeguarding", "Recording quality", "Leadership oversight", "Professional curiosity"],
+        "restraint": ["Restrictive practice", "Safeguarding", "Recording quality", "Leadership oversight"],
+        "recording": ["Recording quality", "Therapeutic reflection"],
+        "leadership": ["Leadership oversight", "Professional curiosity"],
+        "inspection": ["Ofsted Lens", "Leadership oversight"],
     }
 
     MODE_BIAS: dict[str, list[str]] = {
@@ -224,13 +242,68 @@ class OrbResidentialCognitionRouter:
         for brain in active_brains:
             if brain in skip:
                 continue
-            label = self.COGNITION_DISPLAY.get(brain)
+            label = self._brain_display_label(brain, topic=topic, mode=mode, message=message)
             if label and label not in labels:
                 labels.append(label)
         labels = self._filter_display_labels(labels, message=message, mode=mode, topic=topic)
+        labels = self._apply_topic_display_order(labels, topic=topic, mode=mode)
         if mode == "ofsted lens" and "Ofsted Lens" not in labels:
             labels.insert(0, "Ofsted Lens")
         return labels[:5]
+
+    def _brain_display_label(
+        self,
+        brain: str,
+        *,
+        topic: str | None,
+        mode: str,
+        message: str,
+    ) -> str | None:
+        if brain == "regulatory_cognition":
+            mode_lower = str(mode or "").lower()
+            text = str(message or "").lower()
+            inspection_focus = topic in {"missing", "cumulative_concern", "restraint", "allegations"} or any(
+                term in text or term in mode_lower
+                for term in ("ofsted", "sccif", "inspection", "reg 44", "reg 45", "quality standard")
+            )
+            if mode_lower == "ask orb" and inspection_focus and topic != "inspection":
+                return "Ofsted evidence"
+            return self.COGNITION_DISPLAY.get(brain)
+        return self.COGNITION_DISPLAY.get(brain)
+
+    def _apply_topic_display_order(
+        self,
+        labels: list[str],
+        *,
+        topic: str | None,
+        mode: str,
+    ) -> list[str]:
+        if not topic:
+            return labels
+        preferred = list(self.TOPIC_DISPLAY_ORDER.get(topic or "", []))
+        if not preferred:
+            return labels
+        mode_lower = str(mode or "").lower()
+        if mode_lower not in {"", "ask orb", "general cognition"} and topic == "inspection":
+            return labels
+        ordered: list[str] = []
+        for label in preferred:
+            if label in labels and label not in ordered:
+                ordered.append(label)
+            elif label not in ordered:
+                ordered.append(label)
+        strict_topics = {
+            "medication",
+            "therapeutic",
+            "missing",
+            "cumulative_concern",
+        }
+        if topic in strict_topics:
+            return ordered[: len(preferred)]
+        for label in labels:
+            if label not in ordered:
+                ordered.append(label)
+        return ordered
 
     def _filter_display_labels(
         self,
@@ -247,9 +320,38 @@ class OrbResidentialCognitionRouter:
         if mode == "ask orb" and not inspection_focus:
             labels = [label for label in labels if label != "Ofsted Lens"]
         if topic == "medication":
-            labels = [label for label in labels if label not in {"Therapeutic reflection", "Child journey"}]
+            labels = [
+                label
+                for label in labels
+                if label
+                not in {
+                    "Therapeutic reflection",
+                    "Child experience",
+                    "Safeguarding",
+                    "Ofsted Lens",
+                    "Professional curiosity",
+                }
+            ]
+        if topic == "missing":
+            labels = [
+                label
+                for label in labels
+                if label not in {"Therapeutic reflection", "Chronology", "Ofsted Lens"}
+            ]
+            if "Ofsted evidence" not in labels:
+                labels.append("Ofsted evidence")
         if topic == "therapeutic" and "safeguard" not in text:
-            labels = [label for label in labels if label != "Safeguarding"]
+            labels = [
+                label
+                for label in labels
+                if label not in {"Safeguarding", "Professional curiosity", "Ofsted Lens", "Ofsted evidence"}
+            ]
+        if topic == "cumulative_concern":
+            labels = [label for label in labels if label not in {"Chronology", "Restrictive practice", "Ofsted Lens"}]
+            if "Missing from home" not in labels:
+                labels.insert(1, "Missing from home")
+            if "Ofsted evidence" not in labels:
+                labels.append("Ofsted evidence")
         return labels
 
     def _depth_level(self, topic: str | None, residential: bool) -> str:

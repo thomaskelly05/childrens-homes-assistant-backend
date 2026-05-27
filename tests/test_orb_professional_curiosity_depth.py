@@ -58,6 +58,42 @@ def test_high_attention_answer_strips_generic_coaching_closer():
     assert "human-led" in cleaned.lower()
 
 
+def test_medication_curiosity_includes_mar_and_time_critical():
+    lenses = orb_professional_curiosity_service.lenses_for(
+        "Medication was missed this morning — what should the manager review?"
+    )
+    joined = " ".join(lenses).lower()
+    assert "mar" in joined
+    assert "time-critical" in joined or "time critical" in joined
+    assert "manager" in joined
+
+
+def test_missing_curiosity_includes_exploitation_and_return():
+    lenses = orb_professional_curiosity_service.lenses_for(
+        "A young person went missing overnight — what should we record on return?"
+    )
+    joined = " ".join(lenses).lower()
+    assert "exploitation" in joined or "contextual" in joined
+    assert "return" in joined
+    assert "push" in joined or "pull" in joined
+
+
+def test_therapeutic_sanitize_uses_therapeutic_closer_not_threshold_boundary():
+    raw = (
+        "## How to record it\n"
+        "Record without blame.\n\n"
+        "What specific follow-up actions do you think would be most beneficial in your setting?"
+    )
+    cleaned = orb_grounded_answer_style_service.sanitize_high_attention_closer(
+        raw,
+        message="Family time was cancelled and the child smashed a cup — help me think therapeutically",
+        mode="Ask ORB",
+    )
+    assert "What specific follow-up actions" not in cleaned
+    assert "without blame" in cleaned.lower()
+    assert "threshold decision" not in cleaned.lower()
+
+
 def test_medication_sources_filter_out_therapeutic_practice_pack():
     sources = [
         {"label": "Therapeutic practice", "type": "therapeutic_practice", "basis": "Emotionally containing language"},

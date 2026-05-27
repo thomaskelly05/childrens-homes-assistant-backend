@@ -175,12 +175,18 @@ export function cognitionLabelForMode(mode: string): string {
 
 const AUTO_ROUTE_MODES = new Set(['ask orb', 'general cognition', ''])
 
+const RESIDENTIAL_COGNITION_HINT =
+  /\b(young person|child|children'?s home|looked after|medication|missing|safeguard|restraint|family time|ofsted|sccif|mar\b|therapeutic)\b/i
+
 function filterAutoRouteLabels(labels: string[], mode: string): string[] {
   const modeLower = mode.trim().toLowerCase()
   if (modeLower !== 'ask orb') {
     return labels
   }
-  return labels.filter((label) => label.trim().toLowerCase() !== 'ofsted lens')
+  return labels.filter((label) => {
+    const lower = label.trim().toLowerCase()
+    return lower !== 'ofsted lens' && lower !== 'automatic routing'
+  })
 }
 
 export function cognitionPillLabel(
@@ -188,7 +194,9 @@ export function cognitionPillLabel(
   explainability?: {
     cognition_display_labels?: string[]
     active_brains?: string[]
-  }
+    depth_topic?: string
+  },
+  messageHint?: string
 ): string {
   const modeLower = mode.trim().toLowerCase()
   const autoLabels = filterAutoRouteLabels(
@@ -204,5 +212,17 @@ export function cognitionPillLabel(
   if (!AUTO_ROUTE_MODES.has(modeLower) && modeLower) {
     return cognitionLabelForMode(mode)
   }
+  const depthTopic = String(explainability?.depth_topic || '').trim()
+  if (depthTopic && depthTopic.toLowerCase() !== 'general intelligence') {
+    return depthTopic.replace(/_/g, ' ')
+  }
+  if (messageHint && RESIDENTIAL_COGNITION_HINT.test(messageHint)) {
+    return 'Residential practice'
+  }
   return 'Automatic routing'
+}
+
+export function isAutomaticRoutingOnlyLabel(label: string): boolean {
+  const trimmed = label.trim().toLowerCase()
+  return trimmed === 'automatic routing' || trimmed === 'using · automatic routing'
 }

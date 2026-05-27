@@ -284,6 +284,29 @@ class SharedInstitutionalCognitionRuntime:
                 "- Apply the Professional Curiosity Engine: explore missing information, minimisation, hidden patterns, "
                 "RM/DSL/RI/Ofsted lenses, evidence needs, follow-up and longitudinal meaning."
             )
+        topic = curiosity.get("topic")
+        if topic == "medication":
+            requirements.extend(
+                [
+                    "- Medication cognition: registered-manager incident thinking — time-critical dose, MAR, health advice, monitoring, transparent recording, notifications, manager review, pattern/policy learning.",
+                    "- Use markdown ## Immediate safety, ## Recording, ## Manager oversight, ## What to review afterwards, ## Professional boundary.",
+                    "- Use [Reg 12] [Reg 13] [Recording quality] [Medication / health] inline; do not give clinical treatment advice.",
+                ]
+            )
+        if topic == "missing":
+            requirements.extend(
+                [
+                    "- Missing cognition: welfare on return, push/pull factors, exploitation/contextual safeguarding, routes, unknown adults, return conversation, chronology and manager/Ofsted lens.",
+                    "- Use markdown ## Immediate safety, ## Return conversation, ## What to record, ## Patterns to explore, ## Manager oversight and Ofsted lens, ## Next safe steps.",
+                ]
+            )
+        if topic == "therapeutic":
+            requirements.extend(
+                [
+                    "- Therapeutic cognition: emotional meaning, co-regulation, repair, child-centred recording — not safeguarding threshold closers unless risk is indicated.",
+                    "- Use markdown ## What the behaviour may be communicating, ## How staff can respond, ## How to record it, ## What to review if this repeats.",
+                ]
+            )
         if curiosity.get("topic") == "cumulative_concern":
             requirements.extend(
                 [
