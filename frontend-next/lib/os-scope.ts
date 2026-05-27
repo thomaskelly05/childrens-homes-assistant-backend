@@ -136,6 +136,7 @@ export {
 } from '@/lib/navigation/child-workspace-routes'
 
 export function routeRequiresScope(pathname: string) {
+  if (pathname === '/' || pathname === '/os' || pathname.startsWith('/os/')) return false
   if (pathname === '/select-scope' || pathname.startsWith('/select-scope/')) return false
   if (pathname === '/login' || pathname.startsWith('/login/')) return false
   if (pathname === '/unauthorized') return false

@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 
 import { SyncChildScope } from '@/components/indicare/scope/sync-child-scope'
-import { ChildWorkspaceOverview } from '@/components/young-people/workspace/child-workspace-overview'
+import { WorkspaceClient } from '@/app/young-people/[id]/workspace/WorkspaceClient'
 import { getServerChildProfileBundle } from '@/lib/os-api/server-bundles'
 import { getServerOsYoungPersonWorkspace } from '@/lib/os-api/server-workspaces'
 import { normaliseChildWorkspaceOverview } from '@/lib/young-people/child-workspace-normaliser'
@@ -49,7 +49,12 @@ export default async function YoungPersonWorkspacePage({ params }: { params: Pro
       {dataDegraded ? (
         <DegradedWorkspacePanel childId={id} message={workspaceResult.warning || profileResult.warning} />
       ) : null}
-      <ChildWorkspaceOverview view={view} workspaceResult={workspaceResult} profileResult={profileResult} />
+      <WorkspaceClient
+        view={view}
+        workspaceResult={workspaceResult}
+        profileResult={profileResult}
+        homeId={person?.homeId != null ? Number(person.homeId) : profileResult.data.identity?.home_id ?? null}
+      />
     </>
   )
 }

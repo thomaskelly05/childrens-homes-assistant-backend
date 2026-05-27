@@ -72,7 +72,8 @@ function selectedYoungPersonId(pathname: string) {
 }
 
 function titleFromPath(pathname: string) {
-  if (pathname === '/' || pathname === '/home' || pathname === '/dashboard' || pathname === '/workspace' || pathname === '/command-centre') return 'Command Centre'
+  if (pathname === '/' || pathname === '/os') return 'IndiCare OS'
+  if (pathname === '/home' || pathname === '/dashboard' || pathname === '/workspace' || pathname === '/command-centre') return 'Command Centre'
   const parts = pathname.split('/').filter(Boolean)
   if (!parts.length) return 'Children'
   return parts[0].split('-').map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`).join(' ')
