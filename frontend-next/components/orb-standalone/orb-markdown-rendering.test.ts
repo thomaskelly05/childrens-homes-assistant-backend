@@ -59,6 +59,8 @@ describe('ORB markdown and cognition rendering', () => {
     assert.match(agents, /cognitionPillLabel/)
     assert.match(agents, /cognition_display_labels/)
     assert.match(agents, /filterAutoRouteLabels/)
+    assert.match(agents, /isAutomaticRoutingOnlyLabel/)
+    assert.match(agents, /automatic routing/)
     assert.match(assistant, /data-orb-cognition-pill/)
     assert.match(assistant, /cognitionPillLabel/)
   })

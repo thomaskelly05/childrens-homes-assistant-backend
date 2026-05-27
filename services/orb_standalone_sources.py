@@ -84,6 +84,11 @@ def filter_display_sources(
                 continue
             if not therapeutic_topic and source_type == "therapeutic_practice":
                 continue
+            if therapeutic_topic and not any(
+                term in lower for term in ("safeguard", "harm", "injury", "abuse", "exploit", "missing", "police")
+            ):
+                if label in {"[reg 12]", "[reg 13]"} or "reg 12" in label or "reg 13" in label:
+                    continue
         filtered.append(item)
     if filtered:
         return filtered

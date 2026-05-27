@@ -82,6 +82,8 @@ class OrbInstitutionalDepthFrameService:
                 lines.append(f"  - {step}")
         if frame.get("opening_anchor"):
             lines.extend(["- Opening requirement:", f"  - {frame['opening_anchor']}"])
+        if frame.get("closing_guidance"):
+            lines.extend(["- Closing requirement:", f"  - {frame['closing_guidance']}"])
         for section_key, heading in (
             ("patterns_to_explore", "Patterns to explore in the answer"),
             ("rm_questions", "Registered manager questions to weave in"),
@@ -302,15 +304,22 @@ class OrbInstitutionalDepthFrameService:
         return {
             "topic": "missing from home / away from placement",
             "purpose": "Reason through safety, context, return, patterns, exploitation risk and recording quality without making threshold decisions.",
-            "response_structure": self._high_attention_markdown_structure(),
+            "response_structure": [
+                "## Immediate safety",
+                "## Return conversation",
+                "## What to record",
+                "## Patterns to explore",
+                "## Manager oversight and Ofsted lens",
+                "## Next safe steps",
+            ],
             "required_lenses": [
-                "Immediate safety, police/local missing procedure and timeline [Reg 12].",
-                "Search actions, who was informed and management oversight [Reg 13].",
-                "Return-home conversation, child's emotional state and what was learned.",
-                "Push/pull factors, peer and adult relationships, location/route patterns.",
-                "Exploitation and contextual safeguarding indicators [Working Together].",
-                "Risk assessment and chronology update; repeated episodes and prevention learning.",
-                "Inspection lens: timeliness, learning, impact and Ofsted scrutiny of patterns [SCCIF].",
+                "Immediate welfare check, police/local missing procedure and timeline [Reg 12].",
+                "Medical/emotional state on return; where they went; who they were with; unknown adults and peer influence.",
+                "Phone/social media contact, transport/location routes, push factors from home and pull factors outside.",
+                "Family/contact triggers; exploitation, substance misuse, criminality or CSE indicators if relevant [Working Together] [SCCIF].",
+                "Return conversation and independent return interview if appropriate; social worker notification.",
+                "Risk assessment update, chronology update, plan review, repeated pattern review [Recording quality].",
+                "Manager oversight and Ofsted impact lens on timeliness, learning and child experience [Reg 13].",
             ],
             "evidence_expectations": [
                 "Timeline of absence, actions taken, contacts made and return details.",
@@ -410,12 +419,18 @@ class OrbInstitutionalDepthFrameService:
         return {
             "topic": "therapeutic and reflective reasoning",
             "purpose": "Frame behaviour, distress or conflict through emotional meaning, repair and relational safety.",
+            "response_structure": [
+                "## What the behaviour may be communicating",
+                "## How staff can respond",
+                "## How to record it",
+                "## What to review if this repeats",
+            ],
             "required_lenses": [
-                "Behaviour as communication; loss, rejection, shame, fear.",
-                "Emotional regulation, co-regulation and staff response.",
-                "Repair after rupture; child voice; do not blame the child.",
-                "What helped; follow-up key work; plan/risk review if repeated.",
-                "How staff should record therapeutically — structure without inventing facts.",
+                "Loss, rejection, disappointment, shame, fear of being forgotten; attachment meaning.",
+                "Behaviour as communication; co-regulation; repair; staff emotional containment.",
+                "Avoid punitive wording; preserve child voice; what helped them settle.",
+                "Follow-up key work; whether family-time planning needs reviewing; pattern around contact changes.",
+                "Record factually without blame; show how staff helped the young person feel safe, heard and supported.",
             ],
             "evidence_expectations": [
                 "What the child may have been communicating.",
@@ -423,9 +438,15 @@ class OrbInstitutionalDepthFrameService:
                 "What repair or follow-up occurred.",
                 "What adults learned for next time.",
             ],
+            "closing_guidance": (
+                "End with therapeutic reflection focus: record the behaviour without blame, hold the emotional meaning "
+                "in mind, and show how staff helped the young person feel safe, heard and supported afterwards. "
+                "Do not add safeguarding threshold/local-procedure boundary unless the scenario indicates actual safeguarding risk."
+            ),
             "avoid": [
                 "Diagnosing children.",
                 "Punitive or blame-based wording.",
+                "Generic safeguarding threshold closers when there is no indicated safeguarding risk.",
                 "Bouncing to OS unless live child record access is explicitly requested.",
             ],
         }
@@ -627,20 +648,32 @@ class OrbInstitutionalDepthFrameService:
     def _medication_frame(self) -> dict[str, Any]:
         return {
             "topic": "health / medication oversight",
-            "purpose": "Reason through safety, recording, health advice, oversight and follow-up.",
-            "response_structure": self._high_attention_markdown_structure(),
+            "purpose": "Registered-manager-level medication incident thinking: safety, recording, advice, oversight and learning — not clinical diagnosis.",
+            "response_structure": [
+                "## Immediate safety",
+                "## Recording",
+                "## Manager oversight",
+                "## What to review afterwards",
+                "## Professional boundary",
+            ],
             "required_lenses": [
-                "Immediate health and safety.",
-                "Medication records, advice and administration accuracy.",
-                "Management oversight and learning.",
-                "Impact on the child and follow-up health support.",
+                "Was the medication time-critical; what is it for; what does the MAR say [Medication / health]?",
+                "Was pharmacy/GP/111/medical advice needed before giving late; was the child monitored [Reg 12]?",
+                "Was the error recorded transparently; were parents/social worker/placing authority informed if required?",
+                "Was the manager notified promptly; handover or second-checking failure; competency/training issue?",
+                "Is this repeated or isolated; medication policy review; learning action to prevent recurrence [Reg 13] [Recording quality].",
             ],
             "evidence_expectations": [
                 "What was administered or missed, who was informed, advice received and follow-up.",
                 "MAR/health record accuracy and management review.",
             ],
+            "closing_guidance": (
+                "End with safety, seek appropriate medical/pharmacy advice where needed, record rationale, "
+                "manager oversight, and human-led/local-procedure boundary — not generic coaching questions."
+            ),
             "avoid": [
-                "Giving medical advice beyond professional boundaries.",
+                "Giving clinical or medical treatment advice beyond professional boundaries.",
+                "Over-medicalising or diagnosing.",
                 "Minimising medication errors or health concerns.",
             ],
         }
