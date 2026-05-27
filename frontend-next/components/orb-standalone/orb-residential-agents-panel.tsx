@@ -92,8 +92,8 @@ export function OrbResidentialAgentsPanel({
                   }}
                   className={`orb-agent-card flex w-full gap-3 rounded-2xl border px-4 py-3.5 text-left transition ${agent.atmosphereClass} ${
                     active
-                      ? 'border-[#00B8FF]/40 bg-[#00B8FF]/[0.07] ring-1 ring-[#00B8FF]/25'
-                      : 'border-[var(--orb-line)] bg-[var(--orb-surface)] hover:border-[#d1d5db] hover:bg-[var(--orb-surface-hover)]'
+                      ? 'border-[#00B8FF] bg-[#EAF6FF] ring-1 ring-[#00B8FF]/30'
+                      : 'border-[var(--orb-line)] bg-[var(--orb-surface)] hover:border-[#CBD5E1] hover:bg-[var(--orb-surface-hover)]'
                   }`}
                   data-orb-agent={agent.id}
                   aria-current={active ? 'true' : undefined}

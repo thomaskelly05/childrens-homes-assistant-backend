@@ -15,7 +15,7 @@ const sizeClass: Record<NonNullable<OrbHueLogoProps['size']>, string> = {
 export function OrbHueLogo({ size = 'md', pulse = false, className = '' }: OrbHueLogoProps) {
   return (
     <span
-      className={`orb-hue-text tracking-tight ${sizeClass[size]} ${pulse ? 'orb-hue-text--pulse orb-hue-pulse' : ''} ${className}`.trim()}
+      className={`orb-hue-text tracking-tight ${sizeClass[size]} ${pulse ? 'orb-hue-text--pulse orb-hue-pulse orb-hue-response-pulse' : ''} ${className}`.trim()}
       data-orb-hue-logo
       aria-hidden
     >
@@ -27,7 +27,7 @@ export function OrbHueLogo({ size = 'md', pulse = false, className = '' }: OrbHu
 export function OrbPoweredByIndicare({ className = '' }: { className?: string }) {
   return (
     <p
-      className={`orb-electric-text text-[11px] uppercase ${className}`.trim()}
+      className={`orb-electric-text text-[11px] font-semibold uppercase tracking-[0.18em] ${className}`.trim()}
       data-orb-powered-indicare
     >
       Powered by IndiCare
@@ -35,10 +35,10 @@ export function OrbPoweredByIndicare({ className = '' }: { className?: string })
   )
 }
 
-export function OrbHueMark({ pulse = false }: { pulse?: boolean }) {
+export function OrbHueMark({ pulse = false, className = '' }: { pulse?: boolean; className?: string }) {
   return (
     <span
-      className={`orb-hue-mark inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#00B8FF]/20 bg-gradient-to-br from-[#00B8FF]/12 via-[#60A5FA]/10 to-[#818CF8]/12 text-sm font-bold shadow-sm ${pulse ? 'orb-hue-mark--pulse' : ''}`}
+      className={`orb-hue-mark inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#00B8FF]/28 bg-gradient-to-br from-[#00B8FF]/16 via-[#60A5FA]/12 to-[#818CF8]/14 text-sm font-bold shadow-sm ${pulse ? 'orb-hue-mark--pulse orb-assistant-thinking-mark' : ''} ${className}`.trim()}
       data-orb-hue-mark
       aria-hidden
     >

@@ -78,7 +78,7 @@ function OrbSourcesDetail({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="text-[10px] font-medium text-slate-600 underline-offset-2 hover:text-slate-500 hover:underline"
+        className="text-[10px] font-medium text-[var(--orb-muted)] underline-offset-2 hover:text-[var(--orb-foreground)] hover:underline"
       >
         {open ? 'Hide guidance detail' : 'View guidance detail'}
       </button>
@@ -87,9 +87,9 @@ function OrbSourcesDetail({
           {sources?.map((source, index) => (
             <li
               key={`${source.label}-${index}`}
-              className="rounded-lg border border-white/[0.05] bg-white/[0.02] px-2.5 py-1.5 text-[10px] text-slate-500"
+              className="rounded-lg border border-[var(--orb-line)] bg-[var(--orb-surface)] px-2.5 py-1.5 text-[10px] text-[var(--orb-muted)]"
             >
-              <span className="font-medium text-slate-300">{source.label}</span>
+              <span className="font-medium text-[var(--orb-foreground)]">{source.label}</span>
               {source.basis ? <p className="mt-0.5">{source.basis}</p> : null}
             </li>
           ))}
@@ -131,7 +131,7 @@ export function OrbResponseActionBar({
   onInspectionPrep?: () => void
 }) {
   return (
-    <div className="mt-3 flex flex-wrap gap-1 border-t border-white/[0.04] pt-3">
+    <div className="mt-3 flex flex-wrap gap-1 border-t border-[var(--orb-line)] pt-3">
       <ActionChip icon={<Copy className="h-3 w-3" />} label="Copy" onClick={() => void navigator.clipboard?.writeText(content)} />
       {onSaveToProject ? <ActionChip icon={<FileText className="h-3 w-3" />} label="Save to project" onClick={onSaveToProject} /> : null}
       {onActionPlan ? <ActionChip label="Action plan" onClick={onActionPlan} /> : null}
@@ -158,7 +158,7 @@ function ActionChip({ icon, label, onClick }: { icon?: ReactNode; label: string;
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-500 transition hover:bg-white/[0.06] hover:text-slate-300"
+      className="orb-action-chip inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00B8FF]/50"
     >
       {icon}
       {label}
