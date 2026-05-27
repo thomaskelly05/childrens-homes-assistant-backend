@@ -3,13 +3,10 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import {
   Archive,
-  Bookmark,
-  BookOpen,
   Bot,
   ChevronDown,
   ChevronUp,
   FolderPlus,
-  Grid3x3,
   HelpCircle,
   Library,
   MessageSquarePlus,
@@ -221,17 +218,15 @@ export function OrbStandaloneSidebar({
           }}
           dataAttr="orb-sidebar-search-nav"
         />
+
+        <p className="orb-sidebar-section-label mt-3" data-orb-sidebar-explore>
+          Explore
+        </p>
         <SidebarNavButton
           icon={<Library className="h-4 w-4" />}
           label="Library"
           onClick={() => onOpenLibrary?.()}
           dataAttr="orb-sidebar-library"
-        />
-        <SidebarNavButton
-          icon={<Grid3x3 className="h-4 w-4" />}
-          label="Apps"
-          onClick={() => onOpenTools?.()}
-          dataAttr="orb-sidebar-apps"
         />
         <SidebarNavButton
           icon={<Bot className="h-4 w-4" />}
@@ -442,20 +437,25 @@ export function OrbStandaloneSidebar({
         </SectionToggle>
       </div>
 
-      <div className="shrink-0 space-y-1 border-t border-[var(--orb-line)] p-2">
-        <SidebarNavButton
-          icon={<Bookmark className="h-4 w-4" />}
-          label="Saved outputs"
-          onClick={() => onOpenSavedOutputs?.()}
-          badge={typeof savedOutputsCount === 'number' && savedOutputsCount > 0 ? String(savedOutputsCount) : undefined}
-          dataAttr="orb-sidebar-saved-outputs"
-        />
-        <SidebarNavButton
-          icon={<BookOpen className="h-4 w-4" />}
-          label="Knowledge library"
-          onClick={() => onOpenLibrary?.()}
-          dataAttr="orb-sidebar-knowledge"
-        />
+      <div className="shrink-0 space-y-1 border-t border-[var(--orb-line)] p-2" data-orb-sidebar-bottom>
+        {adultProfile && onOpenAdultProfile ? (
+          <button
+            type="button"
+            onClick={onOpenAdultProfile}
+            className="orb-adult-profile-card w-full text-left"
+            data-orb-adult-profile-card
+            data-orb-sidebar-profile-greeting
+          >
+            <p className="truncate text-sm font-semibold text-[var(--orb-foreground)]" data-orb-profile-greeting>
+              {adultProfile.name?.trim()
+                ? `${adultProfile.name.trim()} · ${adultProfile.roleLabel}`
+                : adultProfile.roleLabel}
+            </p>
+            {adultProfile.homeName ? (
+              <p className="mt-0.5 truncate text-[11px] text-[var(--orb-muted)]">{adultProfile.homeName}</p>
+            ) : null}
+          </button>
+        ) : null}
         <SidebarNavButton
           icon={<Settings className="h-4 w-4" />}
           label="Settings"
@@ -466,28 +466,8 @@ export function OrbStandaloneSidebar({
           icon={<HelpCircle className="h-4 w-4" />}
           label="Help"
           onClick={() => onOpenHelp?.()}
-          comingSoon
           dataAttr="orb-sidebar-help"
         />
-        {adultProfile && onOpenAdultProfile ? (
-          <button
-            type="button"
-            onClick={onOpenAdultProfile}
-            className="orb-adult-profile-card w-full text-left"
-            data-orb-adult-profile-card
-          >
-            <p className="truncate text-sm font-semibold text-[var(--orb-foreground)]">
-              {adultProfile.name?.trim() || 'Your profile'}
-            </p>
-            <p className="mt-0.5 truncate text-[11px] text-[var(--orb-muted)]">
-              {adultProfile.roleLabel}
-              {adultProfile.homeName ? ` · ${adultProfile.homeName}` : ''}
-            </p>
-            <p className="mt-1.5 text-[10px] text-[var(--orb-muted)]">
-              {cognitionModeLabel ?? 'General cognition'} · Tap to edit
-            </p>
-          </button>
-        ) : null}
       </div>
     </>
   )
@@ -502,27 +482,27 @@ function startOfDay(ts: number) {
 function groupChatsByRecency(chats: StandaloneChat[]) {
   const now = Date.now()
   const todayStart = startOfDay(now)
-  const yesterdayStart = todayStart - 86_400_000
-  const weekStart = todayStart - 6 * 86_400_000
+  const sevenDaysStart = todayStart - 6 * 86_400_000
+  const thirtyDaysStart = todayStart - 29 * 86_400_000
 
   const today: StandaloneChat[] = []
-  const yesterday: StandaloneChat[] = []
-  const thisWeek: StandaloneChat[] = []
+  const previous7: StandaloneChat[] = []
+  const previous30: StandaloneChat[] = []
   const older: StandaloneChat[] = []
 
   for (const chat of chats) {
     const stamp = chat.updatedAt || chat.createdAt
     if (stamp >= todayStart) today.push(chat)
-    else if (stamp >= yesterdayStart) yesterday.push(chat)
-    else if (stamp >= weekStart) thisWeek.push(chat)
+    else if (stamp >= sevenDaysStart) previous7.push(chat)
+    else if (stamp >= thirtyDaysStart) previous30.push(chat)
     else older.push(chat)
   }
 
   const groups: Array<{ label: string; chats: StandaloneChat[] }> = []
   if (today.length) groups.push({ label: 'Today', chats: today })
-  if (yesterday.length) groups.push({ label: 'Yesterday', chats: yesterday })
-  if (thisWeek.length) groups.push({ label: 'This Week', chats: thisWeek })
-  if (older.length) groups.push({ label: 'Earlier', chats: older })
+  if (previous7.length) groups.push({ label: 'Previous 7 days', chats: previous7 })
+  if (previous30.length) groups.push({ label: 'Previous 30 days', chats: previous30 })
+  if (older.length) groups.push({ label: 'Older', chats: older })
   return groups
 }
 

@@ -24,6 +24,10 @@ def test_cumulative_depth_frame_has_required_structure():
     assert "cumulative" in frame["topic"].lower()
     assert frame.get("response_structure")
     assert len(frame["response_structure"]) >= 9
+    assert frame.get("patterns_to_explore")
+    assert frame.get("rm_questions")
+    assert frame.get("ri_questions")
+    assert frame.get("immediate_safe_next_steps")
 
 
 def test_shared_runtime_includes_curiosity_for_high_attention():

@@ -80,6 +80,20 @@ class OrbInstitutionalDepthFrameService:
             lines.extend(["- Required response structure:"])
             for step in frame["response_structure"]:
                 lines.append(f"  - {step}")
+        if frame.get("opening_anchor"):
+            lines.extend(["- Opening requirement:", f"  - {frame['opening_anchor']}"])
+        for section_key, heading in (
+            ("patterns_to_explore", "Patterns to explore in the answer"),
+            ("rm_questions", "Registered manager questions to weave in"),
+            ("ri_questions", "Responsible individual questions to weave in"),
+            ("ofsted_lens", "Ofsted / SCCIF scrutiny lens"),
+            ("immediate_safe_next_steps", "Immediate safe next steps"),
+        ):
+            items = frame.get(section_key)
+            if items:
+                lines.append(f"- {heading}:")
+                for item in items:
+                    lines.append(f"  - {item}")
         curiosity_block = orb_professional_curiosity_service.prompt_block(message, mode=mode)
         if curiosity_block:
             lines.extend(["", curiosity_block])
@@ -428,36 +442,89 @@ class OrbInstitutionalDepthFrameService:
     def _cumulative_concern_frame(self) -> dict[str, Any]:
         return {
             "topic": "cumulative safeguarding concern / pattern recognition",
-            "purpose": "Sector-defining pattern reasoning when separate events feel minor but together signal risk.",
+            "purpose": (
+                "Sector-defining pattern reasoning when separate events feel minor but together signal risk. "
+                "The concern is the convergence of allegations, missing episodes and repeated physical interventions "
+                "involving the same adult — not whether each incident is individually serious."
+            ),
+            "opening_anchor": (
+                "Open by stating clearly that the concern is not one isolated event; it is the convergence of "
+                "allegations, missing episodes and repeated physical interventions involving the same adult."
+            ),
             "required_lenses": [
-                "Cumulative safeguarding concern — why the user's unease matters.",
-                "Repeated staff-child dynamic; allegations, restraints and missing episodes may be linked.",
-                "Possible emotional unsafety, power/control dynamics, normalisation of restraint, staff practice or child distress patterns.",
-                "Possible leadership minimisation; need to review chronology and records together.",
-                "LADO pattern consultation thinking where appropriate — human-led, not automated thresholding.",
-                "Interim safeguarding arrangements, RI oversight, management review, supervision/training review, child support/advocacy.",
-                "Avoid assumptions both ways: child lying or adult guilt without process.",
+                "This is cumulative concern — the pattern matters more than any single low-level incident.",
+                "The young person may be communicating distress through allegation, absence and escalation.",
+                "Repeated restraint by the same adult may indicate relationship breakdown, practice drift, power imbalance or lack of attunement.",
+                "Missing episodes may link to emotional safety, avoidance, shame, fear, conflict or feeling unheard.",
+                "'Nothing individually serious' can be dangerous minimisation if the pattern is escalating.",
+                "Safeguarding, leadership and therapeutic lenses must be considered together [Reg 12] [Reg 13].",
+                "LADO pattern consultation thinking where repeated staff conduct concerns arise — human-led, not automated thresholding [LADO].",
             ],
             "response_structure": [
-                "1. Why your concern matters.",
+                "1. Why your concern matters (name cumulative convergence explicitly).",
                 "2. Patterns to explore.",
                 "3. Evidence to review.",
-                "4. Questions for the registered manager.",
-                "5. Questions for the responsible individual.",
-                "6. What Ofsted would likely scrutinise.",
+                "4. Questions a registered manager should ask.",
+                "5. Questions a responsible individual should ask.",
+                "6. What Ofsted would likely explore.",
                 "7. What to avoid assuming.",
                 "8. Immediate safe next steps.",
-                "9. Professional boundary.",
+                "9. Professional boundary (calm summary — not 'would you like to explore further?').",
+            ],
+            "patterns_to_explore": [
+                "Allegation timing and whether episodes cluster.",
+                "Restraint timing and whether restraint is becoming normalised.",
+                "Missing episodes before/after contact with the same staff member.",
+                "Whether one staff–child dynamic is repeatedly breaking down.",
+                "Whether the child avoids the home or a specific staff member.",
+                "Environmental, shift, team, location and handover-point patterns.",
+                "Whether other young people have concerns about the same adult.",
+                "Whether records minimise the young person's experience.",
             ],
             "evidence_expectations": [
-                "Cross-link allegations, missing episodes, restraints and same staff member patterns.",
-                "Chronology, supervision, debrief quality and management review trails.",
+                "Chronology across all incidents — allegations, missing episodes, restraints.",
+                "Allegation records, restraint records, missing records, body maps/injury checks where relevant.",
+                "Debriefs, staff statements, child's direct words, manager reviews, supervision notes.",
+                "Behaviour support plan, risk assessment, placement plan, complaints/concerns.",
+                "Reg 44 findings and Reg 45 learning where available.",
+                "CCTV/witness material if available and lawful; social worker/LADO advice where relevant.",
+            ],
+            "rm_questions": [
+                "What is the child experiencing?",
+                "Are we explaining away a pattern?",
+                "Is this staff member safe to continue direct work unchanged pending review?",
+                "Have I consulted safeguarding/LADO where appropriate?",
+                "Have I separated allegation management from disciplinary judgement?",
+                "Have I reviewed staff practice and training?",
+                "Has the child got a trusted adult/advocate?",
+                "What immediate protective arrangements are proportionate?",
+            ],
+            "ri_questions": [
+                "Is the manager curious enough?",
+                "Is there drift?",
+                "Are leaders minimising because each event is low level?",
+                "Are Reg 44/45 reviews identifying this pattern?",
+                "Is the provider learning or just recording?",
+                "Are children safer because of leadership action?",
+            ],
+            "ofsted_lens": [
+                "Inspectors look beyond individual incidents to patterns, timeliness, leadership oversight, child voice, emotional safety, staff culture and restraint culture.",
+                "They expect evidence that leaders understood and acted on cumulative concerns [SCCIF].",
+                "Reg 12 protection and Reg 13 leadership should be visible in records and management response.",
             ],
             "avoid": [
-                "Generic safeguarding summaries.",
-                "Deciding truth or falsehood.",
-                "Shallow checklists without pattern reasoning.",
-                "Vague 'explore further' endings.",
+                "Generic safeguarding summaries or 'look for connections' without specifics.",
+                "Deciding truth or falsehood; assuming the child is lying or the adult is unsafe without process.",
+                "Assuming low-level means low-risk; assuming missing/restraint/allegations are unrelated.",
+                "Assuming paperwork equals oversight.",
+                "Ending with vague 'would you like to explore further?' — use calm summary and human-led next steps.",
+            ],
+            "immediate_safe_next_steps": [
+                "Ensure immediate safety; management review today.",
+                "Consider interim staffing/contact arrangements; consult local safeguarding/LADO where pattern creates concern.",
+                "Ensure child support/advocacy; review all incidents together; inform/consult social worker as appropriate.",
+                "Record rationale; RI oversight; supervision/debrief for staff; update risk/behaviour support plans.",
+                "Create action plan and review date.",
             ],
         }
 

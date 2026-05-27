@@ -106,6 +106,7 @@ export function OrbResponseActionBar({
   onSpeak,
   onStop,
   onNewQuestion,
+  onRegenerate,
   onDraft,
   onSave,
   onSaveToProject,
@@ -121,6 +122,7 @@ export function OrbResponseActionBar({
   onSpeak: () => void
   onStop: () => void
   onNewQuestion: () => void
+  onRegenerate?: () => void
   onDraft: () => void
   onSave?: () => void
   onSaveToProject?: () => void
@@ -131,8 +133,11 @@ export function OrbResponseActionBar({
   onInspectionPrep?: () => void
 }) {
   return (
-    <div className="mt-3 flex flex-wrap gap-1 border-t border-[var(--orb-line)] pt-3">
+    <div className="mt-3 flex flex-wrap gap-1 border-t border-[var(--orb-line)] pt-3" data-orb-response-actions>
       <ActionChip icon={<Copy className="h-3 w-3" />} label="Copy" onClick={() => void navigator.clipboard?.writeText(content)} />
+      {onRegenerate ? (
+        <ActionChip icon={<RotateCcw className="h-3 w-3" />} label="Regenerate" onClick={onRegenerate} dataAttr="regenerate" />
+      ) : null}
       {onSaveToProject ? <ActionChip icon={<FileText className="h-3 w-3" />} label="Save to project" onClick={onSaveToProject} /> : null}
       {onActionPlan ? <ActionChip label="Action plan" onClick={onActionPlan} /> : null}
       {onReflection ? <ActionChip label="Save reflection" onClick={onReflection} /> : null}
@@ -153,12 +158,23 @@ export function OrbResponseActionBar({
   )
 }
 
-function ActionChip({ icon, label, onClick }: { icon?: ReactNode; label: string; onClick: () => void }) {
+function ActionChip({
+  icon,
+  label,
+  onClick,
+  dataAttr
+}: {
+  icon?: ReactNode
+  label: string
+  onClick: () => void
+  dataAttr?: string
+}) {
   return (
     <button
       type="button"
       onClick={onClick}
       className="orb-action-chip inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00B8FF]/50"
+      data-orb-action-chip={dataAttr}
     >
       {icon}
       {label}

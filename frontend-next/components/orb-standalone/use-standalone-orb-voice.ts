@@ -47,6 +47,8 @@ export type StandaloneOrbVoiceSettings = {
   answerStyle: StandaloneOrbAnswerStyle
   /** null = auto (prefer British female) */
   selectedVoiceUri: string | null
+  speechRate: number
+  speechPitch: number
 }
 
 export type StandaloneOrbWakeStatus =
@@ -74,7 +76,9 @@ const DEFAULT_SETTINGS: StandaloneOrbVoiceSettings = {
   wakePhrase: false,
   continuousConversation: false,
   answerStyle: 'balanced',
-  selectedVoiceUri: null
+  selectedVoiceUri: null,
+  speechRate: 0.92,
+  speechPitch: 1
 }
 
 /** Explicit preference order for British female voices */
@@ -118,7 +122,9 @@ function readStoredSettings(): StandaloneOrbVoiceSettings {
       ...parsed,
       wakePhrase: false,
       continuousConversation: false,
-      voiceReplies: parsed.voiceReplies ?? DEFAULT_SETTINGS.voiceReplies
+      voiceReplies: parsed.voiceReplies ?? DEFAULT_SETTINGS.voiceReplies,
+      speechRate: typeof parsed.speechRate === 'number' ? parsed.speechRate : DEFAULT_SETTINGS.speechRate,
+      speechPitch: typeof parsed.speechPitch === 'number' ? parsed.speechPitch : DEFAULT_SETTINGS.speechPitch
     }
   } catch {
     return DEFAULT_SETTINGS
@@ -236,6 +242,7 @@ export function useStandaloneOrbVoice() {
   const [interimTranscript, setInterimTranscript] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [preferredVoiceName, setPreferredVoiceName] = useState<string | null>(null)
+  const [voiceSelectionNote, setVoiceSelectionNote] = useState<string | null>(null)
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([])
   const [recognitionAvailable, setRecognitionAvailable] = useState(false)
   const [continuousRecognitionSupported, setContinuousRecognitionSupported] = useState(false)
@@ -332,6 +339,20 @@ export function useStandaloneOrbVoice() {
     )
     preferredVoiceRef.current = picked
     setPreferredVoiceName(picked?.name ?? null)
+    if (settingsRef.current.britishFemalePreference && voices.length) {
+      const hasBritishFemale = voices.some(
+        (v) => v.lang.toLowerCase().startsWith('en-gb') && voiceLooksFemale(v.name.toLowerCase())
+      )
+      if (!hasBritishFemale && picked && !voiceLooksFemale(picked.name.toLowerCase())) {
+        setVoiceSelectionNote(
+          'Your browser does not expose a British female voice. ORB is using the closest available voice.'
+        )
+      } else {
+        setVoiceSelectionNote(null)
+      }
+    } else {
+      setVoiceSelectionNote(null)
+    }
   }, [])
 
   useEffect(() => {
@@ -497,8 +518,8 @@ export function useStandaloneOrbVoice() {
         const utterance = new SpeechSynthesisUtterance(chunk)
         utterance.lang = 'en-GB'
         if (preferredVoiceRef.current) utterance.voice = preferredVoiceRef.current
-        utterance.rate = 0.98
-        utterance.pitch = 1
+        utterance.rate = settingsRef.current.speechRate
+        utterance.pitch = settingsRef.current.speechPitch
 
         utterance.onstart = () => {
           if (speakGenerationRef.current !== generation) return
@@ -811,8 +832,24 @@ export function useStandaloneOrbVoice() {
     stripWakePhraseFromTranscript,
     stopMediaStream,
     setSelectedVoiceUri: (uri: string | null) => updateSettings({ selectedVoiceUri: uri }),
+    setVoiceReplies: (voiceReplies: boolean) => updateSettings({ voiceReplies }),
+    setSpeechRate: (speechRate: number) => updateSettings({ speechRate }),
+    setSpeechPitch: (speechPitch: number) => updateSettings({ speechPitch }),
+    resetVoiceSettings: () => {
+      setSettings(DEFAULT_SETTINGS)
+      settingsRef.current = DEFAULT_SETTINGS
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(DEFAULT_SETTINGS))
+      }
+      refreshVoices()
+    },
+    voiceSelectionNote,
     preferredVoiceIsBritishFemale: preferredVoiceName
-      ? voiceLooksFemale(preferredVoiceName.toLowerCase()) && (preferredVoiceName.toLowerCase().includes('uk') || preferredVoiceName.toLowerCase().includes('gb') || preferredVoiceName.toLowerCase().includes('sonia') || preferredVoiceName.toLowerCase().includes('libby'))
+      ? voiceLooksFemale(preferredVoiceName.toLowerCase()) &&
+        (preferredVoiceName.toLowerCase().includes('uk') ||
+          preferredVoiceName.toLowerCase().includes('gb') ||
+          preferredVoiceName.toLowerCase().includes('sonia') ||
+          preferredVoiceName.toLowerCase().includes('libby'))
       : false
   }
 }

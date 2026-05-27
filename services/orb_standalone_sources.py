@@ -5,6 +5,16 @@ from typing import Any
 
 from services.orb_citation_service import orb_citation_service
 from services.orb_knowledge_retrieval_service import orb_knowledge_retrieval_service
+from services.orb_professional_curiosity_service import orb_professional_curiosity_service
+
+GENERIC_DISPLAY_SOURCE_LABELS = frozenset(
+    {
+        "standalone orb product boundary",
+        "indicare product context",
+        "general model knowledge",
+        "built-in product-level knowledge",
+    }
+)
 
 SOURCE_TYPES = (
     "product_context",
@@ -21,6 +31,40 @@ SOURCE_TYPES = (
 
 def _text(value: Any) -> str:
     return str(value or "").strip()
+
+
+def filter_display_sources(
+    sources: list[dict[str, Any]],
+    *,
+    message: str | None = None,
+    mode: str | None = None,
+) -> list[dict[str, Any]]:
+    """Drop generic product-boundary chips when the answer is high-attention or framework-grounded."""
+    if not sources:
+        return sources
+    topic = orb_professional_curiosity_service.detect_topic(message or "", mode=mode)
+    high_attention = topic in orb_professional_curiosity_service.HIGH_ATTENTION_TOPICS if topic else False
+    regulatory_types = frozenset(
+        {"regulatory_framework", "recording_quality", "safeguarding_principles", "therapeutic_practice"}
+    )
+    if not high_attention:
+        return sources
+    filtered: list[dict[str, Any]] = []
+    for item in sources:
+        label = str(item.get("label") or "").strip().lower()
+        source_type = str(item.get("type") or "").strip().lower()
+        if label in GENERIC_DISPLAY_SOURCE_LABELS:
+            continue
+        if source_type in {"product_context", "safety_boundary"} and label in GENERIC_DISPLAY_SOURCE_LABELS:
+            continue
+        if source_type == "product_context" and "product boundary" in label:
+            continue
+        if source_type == "safety_boundary" and "standalone orb" in label and not regulatory_types.intersection(
+            {str(s.get("type") or "").lower() for s in sources}
+        ):
+            continue
+        filtered.append(item)
+    return filtered or [s for s in sources if str(s.get("type") or "") in regulatory_types] or sources[:3]
 
 
 def build_standalone_sources(
@@ -43,12 +87,26 @@ def build_standalone_sources(
         mode=mode,
         has_images=has_images,
     )
-    return orb_citation_service.frontend_sources_payload(citations)
+    payload = orb_citation_service.frontend_sources_payload(citations)
+    return filter_display_sources(payload, message=message, mode=mode)
 
 
-def append_sources_basis_section(answer: str, sources: list[dict[str, Any]]) -> str:
+def append_sources_basis_section(
+    answer: str,
+    sources: list[dict[str, Any]],
+    *,
+    message: str | None = None,
+    mode: str | None = None,
+) -> str:
     citations = orb_citation_service.normalise_sources(sources)
-    return orb_citation_service.append_sources_basis(answer, citations)
+    topic = orb_professional_curiosity_service.detect_topic(message or "", mode=mode)
+    if topic in orb_professional_curiosity_service.HIGH_ATTENTION_TOPICS:
+        if re.search(r"\[(reg\s*12|reg\s*13|sccif|lado|working together|recording quality)\]", answer, re.I):
+            return answer
+    display_sources = filter_display_sources(citations, message=message, mode=mode)
+    if not display_sources:
+        return answer
+    return orb_citation_service.append_sources_basis(answer, display_sources)
 
 
 INDICARE_PRODUCT_FALLBACK = """IndiCare is a residential children's homes operating system and intelligence platform built to support staff and managers in registered homes.

@@ -243,16 +243,40 @@ html[data-orb-theme=dark] .orb-chat-layout::before {
 }
 
 .orb-citation-chip-light {
-  border: 1px solid #93c5fd;
-  background: #f8fcff;
+  border: 1px solid #0284c7;
+  background: #ffffff;
   color: #075985;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .orb-citation-chip-light:hover {
-  border-color: #7dd3fc;
+  border-color: #0284c7;
+  background: #bae6fd;
+  color: #075985;
+}
+
+.orb-action-chip {
+  color: #0f172a;
+  border-color: #cbd5e1;
+  background: #ffffff;
+}
+
+.orb-action-chip:hover:not(:disabled) {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
+.orb-action-chip:active:not(:disabled) {
   background: #e0f2fe;
   color: #0369a1;
+  border-color: #0284c7;
+}
+
+.orb-action-chip:disabled {
+  background: #e5e7eb;
+  color: #64748b;
+  border-color: #e5e7eb;
 }
 
 .orb-citation-card {

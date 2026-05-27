@@ -16,6 +16,12 @@ describe('ORB ChatGPT UI structure', () => {
     for (const label of ['New chat', 'Search chats', 'Library', 'Agents', 'Deep research', 'Tools']) {
       assert.match(source, new RegExp(label))
     }
+    assert.match(source, /Explore/)
+    assert.match(source, /Previous 7 days/)
+    assert.match(source, /Previous 30 days/)
+    assert.doesNotMatch(source, /label="Apps"/)
+    assert.doesNotMatch(source, /Saved outputs/)
+    assert.doesNotMatch(source, /Knowledge library/)
   })
 
   it('care companion applies light theme markers by default', () => {
@@ -23,7 +29,11 @@ describe('ORB ChatGPT UI structure', () => {
     assert.match(source, /data-orb-theme=\{resolvedTheme\}/)
     assert.match(source, /data-orb-light-ui-build/)
     assert.match(source, /useOrbAppearance/)
-    assert.match(source, /How can I help\?/)
+    assert.match(source, /personalisedEmptyHeading/)
+    assert.match(source, /OrbUserMessageBubble/)
+    assert.match(source, /editMessageId/)
+    assert.match(source, /OrbHelpPanel/)
+    assert.match(source, /OrbVoiceSettingsPanel/)
   })
 
   it('orb layout bootstraps light theme on html before hydration', () => {
@@ -48,9 +58,12 @@ describe('ORB ChatGPT UI structure', () => {
 
   it('citation chips use readable light-mode styling', () => {
     const citation = readComponent('components/orb-standalone/orb-inline-citation.tsx')
-    const globals = readComponent('app/globals.css')
+    const routeCss = readComponent('app/orb/orb-chatgpt-light.css')
     assert.match(citation, /orb-citation-chip-light/)
-    assert.match(globals, /#93c5fd|#075985/)
+    assert.match(routeCss, /#0284c7/)
+    assert.match(routeCss, /#075985/)
+    assert.match(routeCss, /font-weight:\s*700/)
+    assert.match(routeCss, /orb-action-chip/)
   })
 
   it('empty state hides composer suggestion chips (no duplicate prompt rows)', () => {
@@ -94,5 +107,43 @@ describe('ORB ChatGPT UI structure', () => {
     const source = readComponent('components/orb-standalone/orb-care-companion.tsx')
     assert.doesNotMatch(source, /getUserMedia\(\)/)
     assert.match(source, /STANDALONE_ORB_VOICE_CAPTURE_ENABLED/)
+  })
+
+  it('help panel contains safeguarding boundary text', () => {
+    const help = readComponent('components/orb-standalone/orb-help-panel.tsx')
+    assert.match(help, /Using ORB/)
+    assert.match(help, /does not access live child, staff or home records/)
+    assert.match(help, /immediate risk/)
+  })
+
+  it('settings panel has voice and personalisation sections', () => {
+    const settings = readComponent('components/orb-standalone/orb-standalone-settings-panel.tsx')
+    assert.match(settings, /data-orb-settings-section=\{section\.id\}/)
+    assert.match(settings, /id: 'voice'/)
+    assert.match(settings, /id: 'personalisation'/)
+    assert.match(settings, /Memory \/ Personalisation/)
+  })
+
+  it('voice settings support auto-speak and british female preference', () => {
+    const voice = readComponent('components/orb-standalone/use-standalone-orb-voice.ts')
+    const panel = readComponent('components/orb-standalone/orb-voice-settings-panel.tsx')
+    assert.match(voice, /pickBritishFemaleVoice/)
+    assert.match(voice, /speechRate/)
+    assert.match(panel, /data-orb-voice-auto-speak/)
+    assert.match(panel, /Test voice/)
+  })
+
+  it('response action bar includes regenerate and copy', () => {
+    const assistant = readComponent('components/orb-standalone/orb-assistant-message.tsx')
+    assert.match(assistant, /Regenerate/)
+    assert.match(assistant, /data-orb-response-actions/)
+    assert.match(assistant, /Copy/)
+  })
+
+  it('user message edit flow markers exist', () => {
+    const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
+    assert.match(companion, /data-orb-message-edit-button/)
+    assert.match(companion, /Save & submit/)
+    assert.match(companion, /data-orb-edit-save/)
   })
 })

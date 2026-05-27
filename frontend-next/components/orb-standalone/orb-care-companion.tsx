@@ -15,6 +15,7 @@ import {
   Copy,
   FileText,
   Menu,
+  Pencil,
   RotateCcw,
   Square,
   User,
@@ -52,9 +53,13 @@ import { useOrbAppearance } from '@/components/orb-standalone/use-orb-appearance
 import { ORB_LIGHT_UI_BUILD } from '@/lib/orb/orb-light-ui-build'
 import {
   buildAdultProfilePromptBlock,
+  personalisedEmptyHeading,
   readAdultProfile,
+  roleBasedEmptyStarters,
   type AdultProfile
 } from '@/lib/orb/adult-profile-store'
+import { OrbHelpPanel } from '@/components/orb-standalone/orb-help-panel'
+import { OrbVoiceSettingsPanel } from '@/components/orb-standalone/orb-voice-settings-panel'
 import {
   agentForMode,
   atmosphereClassForMode,
@@ -135,6 +140,8 @@ type SendMessageOptions = {
   chatId?: string
   /** Internal one-shot network retry after session refresh. */
   internalRetry?: boolean
+  /** Replace conversation from an edited user message onward. */
+  editMessageId?: string
 }
 
 function traceOrbSend(event: string, detail?: Record<string, unknown>) {
@@ -395,6 +402,12 @@ export function OrbCareCompanion() {
   }, [])
 
   useEffect(() => {
+    if (adultProfile?.voicePreference?.prefersSpokenResponses && !voiceSettings.voiceReplies) {
+      voice.updateSettings({ voiceReplies: true })
+    }
+  }, [adultProfile?.voicePreference?.prefersSpokenResponses, voice, voiceSettings.voiceReplies])
+
+  useEffect(() => {
     if (status !== 'authenticated' || !user) return
     if (sessionPrimedRef.current) return
     sessionPrimedRef.current = true
@@ -649,7 +662,18 @@ export function OrbCareCompanion() {
 
       const existingMessages = dedupeOrbMessages(targetChat?.messages ?? [])
       let priorMessages = existingMessages
-      if (options?.retry) {
+      if (options?.editMessageId) {
+        const editIndex = existingMessages.findIndex((m) => m.id === options.editMessageId)
+        if (editIndex >= 0) {
+          priorMessages = [
+            ...existingMessages.slice(0, editIndex),
+            { ...existingMessages[editIndex], content: trimmed || userMessage.content, createdAt: now },
+            thinkingMessage
+          ]
+        } else {
+          priorMessages = [...existingMessages, userMessage, thinkingMessage]
+        }
+      } else if (options?.retry) {
         priorMessages = stripTrailingTurnPlaceholders(existingMessages)
       } else {
         const lastMessage = existingMessages[existingMessages.length - 1]
@@ -1299,11 +1323,41 @@ export function OrbCareCompanion() {
   )
 
   function openVoiceSettings() {
-    setMicNotice(VOICE_MODE_COMING_SOON)
-    window.setTimeout(() => setMicNotice(null), 5000)
-    openSettingsPanel()
+    openPanel('voice')
     setSidebarOpen(false)
   }
+
+  function openHelpPanel() {
+    openPanel('help')
+    setSidebarOpen(false)
+  }
+
+  const emptyStarters = useMemo(() => {
+    if (adultProfile?.name || adultProfile?.role !== 'practitioner') {
+      return roleBasedEmptyStarters(adultProfile ?? readAdultProfile()).map((text) => ({ text }))
+    }
+    return PRIMARY_EMPTY_STARTERS
+  }, [adultProfile])
+
+  const emptyHeading = useMemo(
+    () => (adultProfile ? personalisedEmptyHeading(adultProfile) : 'How can I help?'),
+    [adultProfile]
+  )
+
+  const handleEditAndResubmit = useCallback(
+    (messageId: string, newContent: string) => {
+      const trimmedEdit = newContent.trim()
+      if (!trimmedEdit || pending || sendInFlightRef.current) return
+      void sendMessage(trimmedEdit, { editMessageId: messageId, chatId: workspace.activeChatId ?? undefined })
+    },
+    [pending, sendMessage, workspace.activeChatId]
+  )
+
+  const handleRegenerate = useCallback(() => {
+    const lastUser = [...visibleMessages].reverse().find((m) => m.role === 'user' && m.status === 'sent')
+    if (!lastUser?.content.trim() || pending) return
+    void sendMessage(lastUser.content, { retry: true, chatId: workspace.activeChatId ?? undefined })
+  }, [pending, sendMessage, visibleMessages, workspace.activeChatId])
 
   const layoutA11yClass = standaloneOrbAccessibilityClassNames(a11yPrefs)
 
@@ -1383,7 +1437,11 @@ export function OrbCareCompanion() {
         onOpenPermissions={openPermissionsPanel}
         onOpenVoiceSettings={openVoiceSettings}
         onOpenIntelligenceMap={openIntelligenceMap}
+        onOpenProfile={() => setProfileDrawerOpen(true)}
+        onOpenHelp={openHelpPanel}
       />
+      <OrbHelpPanel open={activePanel === 'help'} onClose={closePanel} />
+      <OrbVoiceSettingsPanel open={activePanel === 'voice'} onClose={closePanel} />
       <OrbToolsPanel
         open={activePanel === 'tools'}
         onClose={closePanel}
@@ -1493,6 +1551,7 @@ export function OrbCareCompanion() {
               setSidebarOpen(false)
             }}
             onOpenHelp={() => {
+              openHelpPanel()
               setSidebarOpen(false)
             }}
             onOpenAdultProfile={() => {
@@ -1627,13 +1686,13 @@ export function OrbCareCompanion() {
                       <OrbPoweredByIndicare />
                     </div>
                     <h2 className="mt-5 text-xl font-semibold tracking-tight text-[var(--orb-foreground)] md:text-2xl" data-orb-empty-heading>
-                      How can I help?
+                      {emptyHeading}
                     </h2>
                     <p className="mt-1.5 max-w-md text-sm leading-6 text-[var(--orb-muted)]" data-orb-empty-subline>
                       Choose a starter below, pick a residential agent, or type in the composer.
                     </p>
                     <div className="mt-6 grid w-full max-w-xl gap-2 sm:grid-cols-2" data-orb-starter-cards>
-                      {PRIMARY_EMPTY_STARTERS.map((starter) => (
+                      {emptyStarters.map((starter) => (
                         <button
                           key={starter.text}
                           type="button"
@@ -1773,6 +1832,7 @@ export function OrbCareCompanion() {
                                 content={entry.content}
                                 speaking={speakingMessageId === entry.id}
                                 synthesisAvailable={voice.synthesisAvailable}
+                                onRegenerate={handleRegenerate}
                                 onSpeak={() => {
                                   setSpeakingMessageId(entry.id)
                                   voice.speak(entry.content, () => setSpeakingMessageId(null))
@@ -1809,7 +1869,11 @@ export function OrbCareCompanion() {
                           </>
                           )
                         ) : (
-                          <MessageBubble entry={entry} />
+                          <OrbUserMessageBubble
+                            entry={entry}
+                            onEditSubmit={handleEditAndResubmit}
+                            disabled={pending || isAnswering}
+                          />
                         )}
                       </div>
                     ))}
@@ -2075,26 +2139,103 @@ function SourcesBasis({
   )
 }
 
-function MessageBubble({ entry }: { entry: StandaloneChatMessage }) {
+function OrbUserMessageBubble({
+  entry,
+  onEditSubmit,
+  disabled
+}: {
+  entry: StandaloneChatMessage
+  onEditSubmit: (messageId: string, content: string) => void
+  disabled?: boolean
+}) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(entry.content)
   const created = entry.createdAt ? new Date(entry.createdAt) : null
   const timeLabel =
     created && !Number.isNaN(created.getTime())
       ? created.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
       : null
 
+  useEffect(() => {
+    if (!editing) setDraft(entry.content)
+  }, [entry.content, editing])
+
+  function saveEdit() {
+    const next = draft.trim()
+    if (!next || next === entry.content.trim()) {
+      setEditing(false)
+      return
+    }
+    onEditSubmit(entry.id, next)
+    setEditing(false)
+  }
+
   return (
-    <article className="orb-message-user" data-testid="orb-message-user">
+    <article className="orb-message-user group" data-testid="orb-message-user">
       <div className="orb-message-bubble">
-      {entry.imageDataUrls?.length ? (
-        <div className="mb-2 flex flex-wrap gap-2">
-          {entry.imageDataUrls.map((url, index) => (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img key={`${entry.id}-img-${index}`} src={url} alt="" className="h-16 w-16 rounded-lg border border-white/10 object-cover" />
-          ))}
-        </div>
-      ) : null}
-      <p className="whitespace-pre-wrap text-[15px] leading-7 text-[var(--orb-foreground)]">{entry.content}</p>
-      {timeLabel ? <p className="mt-1.5 text-right text-[10px] text-slate-600">{timeLabel}</p> : null}
+        {entry.imageDataUrls?.length ? (
+          <div className="mb-2 flex flex-wrap gap-2">
+            {entry.imageDataUrls.map((url, index) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img key={`${entry.id}-img-${index}`} src={url} alt="" className="h-16 w-16 rounded-lg border border-[var(--orb-line)] object-cover" />
+            ))}
+          </div>
+        ) : null}
+        {editing ? (
+          <div data-orb-message-edit>
+            <textarea
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              rows={4}
+              className="w-full resize-y rounded-lg border border-[var(--orb-line)] bg-[var(--orb-surface)] px-3 py-2 text-[15px] leading-7 text-[var(--orb-foreground)] outline-none focus:border-[#0284C7] focus:ring-1 focus:ring-[#0284C7]/30"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  saveEdit()
+                }
+              }}
+            />
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={saveEdit}
+                disabled={disabled || !draft.trim()}
+                className="rounded-lg bg-[#E0F2FE] px-3 py-1.5 text-xs font-semibold text-[#0369A1] border border-[#0284C7] disabled:opacity-50"
+                data-orb-edit-save
+              >
+                Save & submit
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setDraft(entry.content)
+                  setEditing(false)
+                }}
+                className="rounded-lg border border-[#CBD5E1] px-3 py-1.5 text-xs font-medium text-[#0F172A] hover:bg-[#F1F5F9]"
+                data-orb-edit-cancel
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <p className="whitespace-pre-wrap text-[15px] leading-7 text-[var(--orb-foreground)]">{entry.content}</p>
+            <div className="mt-1.5 flex items-center justify-end gap-2 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
+              <button
+                type="button"
+                onClick={() => setEditing(true)}
+                disabled={disabled}
+                className="orb-action-chip inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[10px] font-semibold"
+                data-orb-message-edit-button
+              >
+                <Pencil className="h-3 w-3" aria-hidden />
+                Edit
+              </button>
+              {timeLabel ? <span className="text-[10px] text-[#64748B]">{timeLabel}</span> : null}
+            </div>
+          </>
+        )}
       </div>
     </article>
   )
@@ -2143,7 +2284,7 @@ function ActionChip({ icon, label, onClick }: { icon: ReactNode; label: string; 
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-500 transition hover:bg-white/[0.06] hover:text-slate-300"
+      className="orb-action-chip inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition"
     >
       {icon}
       {label}

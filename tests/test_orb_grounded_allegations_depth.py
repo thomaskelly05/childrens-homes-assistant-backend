@@ -83,3 +83,37 @@ def test_cumulative_concern_depth_in_runtime_style():
     lower = block.lower()
     assert "cumulative" in lower or "pattern" in lower
     assert "ri" in lower or "registered manager" in lower or "rm questions" in lower
+    assert "convergence" in lower or "not one isolated" in lower
+    assert "[reg 12]" in lower
+    assert "never" in lower and "explore further" in lower
+
+
+def test_cumulative_frame_includes_rm_ri_and_ofsted_sections():
+    from services.orb_institutional_depth_frame_service import orb_institutional_depth_frame_service
+
+    prompt = (
+        "Three allegations, two missing episodes, four restraints same staff — nothing looks serious alone "
+        "but something is not right"
+    )
+    frame = orb_institutional_depth_frame_service.build_frame(message=prompt)
+    assert frame.get("rm_questions")
+    assert frame.get("ri_questions")
+    assert frame.get("ofsted_lens")
+    assert frame.get("patterns_to_explore")
+    prompt_block = orb_institutional_depth_frame_service.prompt_block(message=prompt)
+    assert "registered manager" in prompt_block.lower()
+    assert "responsible individual" in prompt_block.lower()
+
+
+def test_filter_display_sources_drops_generic_product_boundary():
+    from services.orb_standalone_sources import filter_display_sources
+
+    sources = [
+        {"label": "Standalone ORB product boundary", "type": "safety_boundary"},
+        {"label": "[Reg 12]", "type": "regulatory_framework"},
+    ]
+    prompt = "Three allegations, two missing, four restraints same staff — pattern not right"
+    filtered = filter_display_sources(sources, message=prompt, mode="Safeguarding Thinking")
+    labels = {s["label"] for s in filtered}
+    assert "Standalone ORB product boundary" not in labels
+    assert "[Reg 12]" in labels

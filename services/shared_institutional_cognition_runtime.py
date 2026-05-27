@@ -268,6 +268,15 @@ class SharedInstitutionalCognitionRuntime:
                 "- Apply the Professional Curiosity Engine: explore missing information, minimisation, hidden patterns, "
                 "RM/DSL/RI/Ofsted lenses, evidence needs, follow-up and longitudinal meaning."
             )
+        if curiosity.get("topic") == "cumulative_concern":
+            requirements.extend(
+                [
+                    "- This is cumulative safeguarding cognition: name convergence of allegations, missing episodes and restraints (same adult where given).",
+                    "- Use the nine-part structure from the depth frame; weave [Reg 12], [Reg 13], [SCCIF], [LADO], [Working Together] and [Recording quality] inline with brief 'because' explanations.",
+                    "- Include specific patterns, evidence lists, RM questions, RI questions, Ofsted lens, avoid-assuming, and immediate safe next steps.",
+                    "- Do not append a generic Sources/basis list if inline anchors already ground the answer; end with calm summary and human-led boundary — not 'would you like to explore further?'",
+                ]
+            )
         if not boundary["can_use_live_records"]:
             requirements.append("- Do not claim access to live care records or OS context.")
             requirements.append(
