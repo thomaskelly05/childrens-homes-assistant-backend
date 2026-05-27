@@ -4,20 +4,27 @@ import { useMemo, useState, type ReactNode } from 'react'
 import {
   Archive,
   Bookmark,
-  Brain,
+  BookOpen,
+  Bot,
   ChevronDown,
   ChevronUp,
   FolderPlus,
+  Grid3x3,
+  HelpCircle,
+  Library,
   MessageSquarePlus,
   MoreHorizontal,
   Pin,
   Search,
   Settings,
+  Sparkles,
   Trash2,
   UserPlus,
   Wrench,
   X
 } from 'lucide-react'
+
+import { OrbHueMark, OrbHueLogo, OrbPoweredByIndicare } from '@/components/orb-standalone/orb-hue-logo'
 
 import type { AdultProfile } from '@/lib/orb/adult-profile-store'
 
@@ -43,6 +50,9 @@ export function OrbStandaloneSidebar({
   onOpenSavedOutputs,
   onOpenTools,
   onOpenAgents,
+  onOpenLibrary,
+  onOpenDeepResearch,
+  onOpenHelp,
   onOpenAdultProfile,
   adultProfile,
   cognitionStatusLabel,
@@ -61,6 +71,9 @@ export function OrbStandaloneSidebar({
   onOpenSavedOutputs?: () => void
   onOpenTools?: () => void
   onOpenAgents?: () => void
+  onOpenLibrary?: () => void
+  onOpenDeepResearch?: () => void
+  onOpenHelp?: () => void
   onOpenAdultProfile?: () => void
   adultProfile?: AdultProfile | null
   cognitionStatusLabel?: string
@@ -173,18 +186,16 @@ export function OrbStandaloneSidebar({
 
   return (
     <>
-      <div className="border-b border-[var(--orb-line)] px-4 py-4">
+      <div className="border-b border-[var(--orb-line)] px-3 py-3">
         <div className="flex items-center gap-2.5">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-400/30 to-blue-600/25 text-sm font-bold text-sky-50 shadow-[0_0_24px_var(--orb-glow-cyan)]">
-            O
-          </span>
+          <OrbHueMark />
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-[var(--orb-foreground)]" data-orb-sidebar-brand>
-              ORB
+            <p className="truncate" data-orb-sidebar-brand>
+              <OrbHueLogo size="sm" />
             </p>
-            <p className="truncate text-[11px] text-[var(--orb-muted)]" data-orb-sidebar-powered>
-              Institutional cognition
-            </p>
+            <div className="truncate" data-orb-sidebar-powered>
+              <OrbPoweredByIndicare />
+            </div>
           </div>
           {onClose ? (
             <button type="button" className="rounded-lg p-1 text-[var(--orb-muted)] lg:hidden" onClick={onClose} aria-label="Close sidebar">
@@ -192,66 +203,79 @@ export function OrbStandaloneSidebar({
             </button>
           ) : null}
         </div>
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <span className="orb-sidebar-cognition-pill" data-orb-sidebar-cognition-status>
-            {cognitionStatusLabel ?? 'Ready'}
-          </span>
-          {cognitionModeLabel ? (
-            <span className="truncate text-[10px] text-[var(--orb-muted)]" data-orb-sidebar-cognition-mode>
-              {cognitionModeLabel}
-            </span>
-          ) : null}
-        </div>
-        {onOpenAdultProfile ? (
-          <button
-            type="button"
-            onClick={onOpenAdultProfile}
-            className="mt-2 w-full rounded-lg px-2 py-1.5 text-left text-[10px] font-medium text-sky-300/90 hover:bg-[var(--orb-surface-hover)]"
-            data-orb-sidebar-profile-switcher
-          >
-            {adultProfile?.name?.trim() ? `Signed in as ${adultProfile.name}` : 'Set up your profile →'}
-          </button>
-        ) : null}
       </div>
 
-      <div className="flex-1 overflow-y-auto px-2 py-3 orb-sidebar-group">
-        <button
-          type="button"
+      <div className="flex-1 overflow-y-auto px-2 py-2 orb-sidebar-group">
+        <SidebarNavButton
+          icon={<MessageSquarePlus className="h-4 w-4" />}
+          label="New chat"
           onClick={() => onNewChat(workspace.activeProjectId)}
-          className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-white transition hover:bg-white/[0.06]"
-          data-orb-sidebar-new-chat
-        >
-          <MessageSquarePlus className="h-4 w-4 text-slate-400" aria-hidden />
-          New chat
-        </button>
-
-        {onOpenAgents ? (
-          <button
-            type="button"
-            onClick={onOpenAgents}
-            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/[0.06] hover:text-white"
-            data-orb-sidebar-agents
-          >
-            <Brain className="h-4 w-4 text-cyan-300/70" aria-hidden />
-            Residential Agents
-          </button>
-        ) : null}
+          dataAttr="orb-sidebar-new-chat"
+        />
+        <SidebarNavButton
+          icon={<Search className="h-4 w-4" />}
+          label="Search chats"
+          onClick={() => {
+            const el = document.querySelector<HTMLInputElement>('[data-orb-sidebar-search]')
+            el?.focus()
+          }}
+          dataAttr="orb-sidebar-search-nav"
+        />
+        <SidebarNavButton
+          icon={<Library className="h-4 w-4" />}
+          label="Library"
+          onClick={() => onOpenLibrary?.()}
+          dataAttr="orb-sidebar-library"
+        />
+        <SidebarNavButton
+          icon={<Grid3x3 className="h-4 w-4" />}
+          label="Apps"
+          onClick={() => onOpenTools?.()}
+          dataAttr="orb-sidebar-apps"
+        />
+        <SidebarNavButton
+          icon={<Bot className="h-4 w-4" />}
+          label="Agents"
+          onClick={() => onOpenAgents?.()}
+          dataAttr="orb-sidebar-agents"
+        />
+        <SidebarNavButton
+          icon={<Sparkles className="h-4 w-4" />}
+          label="Deep research"
+          onClick={() => onOpenDeepResearch?.()}
+          dataAttr="orb-sidebar-deep-research"
+        />
+        <SidebarNavButton
+          icon={<Wrench className="h-4 w-4" />}
+          label="Tools"
+          onClick={() => onOpenTools?.()}
+          dataAttr="orb-sidebar-tools-nav"
+        />
 
         <div className="mt-2 px-1">
-          <label className="flex items-center gap-2 rounded-lg bg-white/[0.04] px-3 py-2 ring-1 ring-white/[0.06] focus-within:ring-cyan-300/30">
-            <Search className="h-4 w-4 shrink-0 text-slate-500" aria-hidden />
+          <label className="flex items-center gap-2 rounded-lg border border-[var(--orb-line)] bg-[var(--orb-surface)] px-3 py-2 focus-within:ring-1 focus-within:ring-[#00B8FF]/30">
+            <Search className="h-4 w-4 shrink-0 text-[var(--orb-muted)]" aria-hidden />
             <input
               type="search"
               value={chatSearch}
               onChange={(e) => onChatSearchChange(e.target.value)}
               placeholder="Search chats"
-              className="w-full bg-transparent text-sm text-slate-200 outline-none placeholder:text-slate-500"
+              className="w-full bg-transparent text-sm text-[var(--orb-foreground)] outline-none placeholder:text-[var(--orb-muted)]"
               data-orb-sidebar-search
             />
           </label>
         </div>
 
-        <SectionToggle label="Projects" open={projectsOpen} onToggle={() => setProjectsOpen((o) => !o)}>
+        <p className="orb-sidebar-section-label mt-3">Projects</p>
+        <SidebarNavButton
+          icon={<FolderPlus className="h-4 w-4" />}
+          label="New project"
+          onClick={() => setProjectEditorOpen(true)}
+          muted
+          dataAttr="orb-sidebar-new-project"
+        />
+
+        <SectionToggle label="Your projects" open={projectsOpen} onToggle={() => setProjectsOpen((o) => !o)}>
           <ul className="space-y-0.5">
             {workspace.projects.map((project) => (
               <li key={project.id} className="group flex items-center gap-0.5">
@@ -260,8 +284,8 @@ export function OrbStandaloneSidebar({
                   onClick={() => onSelectProject(project.id)}
                   className={`min-w-0 flex-1 rounded-lg px-3 py-2 text-left text-[13px] transition ${
                     workspace.activeProjectId === project.id
-                      ? 'bg-white/[0.08] font-medium text-white'
-                      : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-200'
+                      ? 'bg-[var(--orb-surface-hover)] font-medium text-[var(--orb-foreground)]'
+                      : 'text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]'
                   }`}
                 >
                   <span className="mr-2 opacity-70">{project.icon || '▣'}</span>
@@ -418,37 +442,33 @@ export function OrbStandaloneSidebar({
         </SectionToggle>
       </div>
 
-      <div className="shrink-0 space-y-2 border-t border-[var(--orb-line)] p-3">
-        <button
-          type="button"
-          onClick={onOpenSavedOutputs}
-          className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]"
-          data-orb-sidebar-saved-outputs
-        >
-          <Bookmark className="h-4 w-4" aria-hidden />
-          <span className="flex-1 text-left">Saved outputs</span>
-          {typeof savedOutputsCount === 'number' && savedOutputsCount > 0 ? (
-            <span className="rounded-full bg-[var(--orb-surface)] px-2 py-0.5 text-[10px]">{savedOutputsCount}</span>
-          ) : null}
-        </button>
-        <button
-          type="button"
-          onClick={onOpenTools}
-          className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]"
-          data-orb-sidebar-tools
-        >
-          <Wrench className="h-4 w-4" aria-hidden />
-          Tools
-        </button>
-        <button
-          type="button"
-          onClick={onOpenSettings}
-          className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]"
-          data-orb-sidebar-settings
-        >
-          <Settings className="h-4 w-4" aria-hidden />
-          Settings
-        </button>
+      <div className="shrink-0 space-y-1 border-t border-[var(--orb-line)] p-2">
+        <SidebarNavButton
+          icon={<Bookmark className="h-4 w-4" />}
+          label="Saved outputs"
+          onClick={() => onOpenSavedOutputs?.()}
+          badge={typeof savedOutputsCount === 'number' && savedOutputsCount > 0 ? String(savedOutputsCount) : undefined}
+          dataAttr="orb-sidebar-saved-outputs"
+        />
+        <SidebarNavButton
+          icon={<BookOpen className="h-4 w-4" />}
+          label="Knowledge library"
+          onClick={() => onOpenLibrary?.()}
+          dataAttr="orb-sidebar-knowledge"
+        />
+        <SidebarNavButton
+          icon={<Settings className="h-4 w-4" />}
+          label="Settings"
+          onClick={() => onOpenSettings?.()}
+          dataAttr="orb-sidebar-settings"
+        />
+        <SidebarNavButton
+          icon={<HelpCircle className="h-4 w-4" />}
+          label="Help"
+          onClick={() => onOpenHelp?.()}
+          comingSoon
+          dataAttr="orb-sidebar-help"
+        />
         {adultProfile && onOpenAdultProfile ? (
           <button
             type="button"
@@ -463,14 +483,11 @@ export function OrbStandaloneSidebar({
               {adultProfile.roleLabel}
               {adultProfile.homeName ? ` · ${adultProfile.homeName}` : ''}
             </p>
-            <p className="mt-1.5 text-[10px] text-sky-300/80">
+            <p className="mt-1.5 text-[10px] text-[var(--orb-muted)]">
               {cognitionModeLabel ?? 'General cognition'} · Tap to edit
             </p>
           </button>
         ) : null}
-        <p className="px-2 py-1 text-[10px] leading-4 text-emerald-300/70" data-orb-privacy-badge>
-          No OS records accessed
-        </p>
       </div>
     </>
   )
@@ -535,8 +552,8 @@ function ChatList({
             onClick={() => onSelectChat(chat.id)}
             className={`min-w-0 flex-1 truncate rounded-lg px-3 py-2 text-left text-[13px] transition ${
               activeChatId === chat.id
-                ? 'bg-white/[0.08] font-medium text-slate-100'
-                : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-200'
+                ? 'bg-[var(--orb-surface-hover)] font-medium text-[var(--orb-foreground)]'
+                : 'text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]'
             }`}
           >
             {chat.pinned ? <Pin className="mr-1 inline h-3 w-3 text-amber-300/90" /> : null}
@@ -552,6 +569,45 @@ function ChatList({
         </li>
       ))}
     </ul>
+  )
+}
+
+function SidebarNavButton({
+  icon,
+  label,
+  onClick,
+  muted,
+  comingSoon,
+  badge,
+  dataAttr
+}: {
+  icon: ReactNode
+  label: string
+  onClick: () => void
+  muted?: boolean
+  comingSoon?: boolean
+  badge?: string
+  dataAttr?: string
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`orb-sidebar-nav-item ${muted ? 'orb-sidebar-nav-item--muted' : ''}`}
+      data-orb-sidebar-nav={dataAttr}
+      disabled={comingSoon}
+    >
+      <span className="text-[var(--orb-muted)]">{icon}</span>
+      <span className="flex-1 text-left">{label}</span>
+      {comingSoon ? (
+        <span className="rounded-full bg-[var(--orb-surface-hover)] px-1.5 py-0.5 text-[9px] text-[var(--orb-muted)]">
+          Soon
+        </span>
+      ) : null}
+      {badge ? (
+        <span className="rounded-full bg-[var(--orb-surface-hover)] px-2 py-0.5 text-[10px] text-[var(--orb-muted)]">{badge}</span>
+      ) : null}
+    </button>
   )
 }
 

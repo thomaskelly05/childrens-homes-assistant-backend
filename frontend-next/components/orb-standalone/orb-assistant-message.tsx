@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from 'react'
 import { Copy, FileText, RotateCcw, Square, Volume2 } from 'lucide-react'
 
+import { OrbHueMark } from '@/components/orb-standalone/orb-hue-logo'
 import { OrbExplainabilityPanel, type OrbExplainabilityView } from '@/components/orb-standalone/orb-explainability-panel'
 import { renderAnswerWithCitations } from '@/components/orb-standalone/orb-inline-citation'
 import { cognitionLabelForMode } from '@/lib/orb/residential-agents'
@@ -11,7 +12,7 @@ import type { StandaloneOrbModelRouting } from '@/lib/orb/standalone-client'
 
 function CognitionPill({ label }: { label: string }) {
   return (
-    <span className="inline-flex items-center rounded-full border border-white/[0.08] bg-white/[0.04] px-2 py-0.5 text-[10px] font-medium text-slate-400">
+    <span className="inline-flex items-center rounded-full border border-[var(--orb-line)] bg-[var(--orb-surface)] px-2 py-0.5 text-[10px] font-medium text-[var(--orb-muted)]">
       Using · {label}
     </span>
   )
@@ -22,7 +23,7 @@ export function OrbCognitionIndicators({ mode, streaming }: { mode: string; stre
     <div className="mb-2 flex flex-wrap items-center gap-1.5">
       <CognitionPill label={cognitionLabelForMode(mode)} />
       {streaming ? (
-        <span className="text-[10px] text-cyan-200/60 orb-streaming-pulse" aria-live="polite">
+        <span className="text-[10px] text-[#00B8FF] orb-streaming-pulse" aria-live="polite">
           composing
         </span>
       ) : null}
@@ -47,15 +48,18 @@ export function OrbAssistantMessageBody({
 }) {
   return (
     <article
-      className={`orb-message-assistant group ${streaming ? 'orb-message-streaming' : ''}`}
+      className={`orb-message-assistant group flex gap-3 ${streaming ? 'orb-message-streaming' : ''}`}
       data-testid="orb-message-assistant"
     >
+      <OrbHueMark pulse={streaming} />
+      <div className="min-w-0 flex-1">
       <OrbCognitionIndicators mode={mode} streaming={streaming} />
-      <div className="orb-message-content text-[15px] leading-7 text-slate-100">
+      <div className="orb-message-content text-[15px] leading-7 text-[var(--orb-foreground)]">
         {renderAnswerWithCitations(content, sources)}
       </div>
       <OrbExplainabilityPanel explainability={explainability} cognitionModeLabel={cognitionLabelForMode(mode)} />
       <OrbSourcesDetail sources={sources} modelRouting={modelRouting} />
+      </div>
     </article>
   )
 }

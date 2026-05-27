@@ -50,6 +50,8 @@ import {
 import { OrbAmbientCognition, type OrbCognitionAmbientState } from '@/components/orb-standalone/orb-ambient-cognition'
 import { OrbAdultProfileDrawer } from '@/components/orb-standalone/orb-adult-profile-drawer'
 import { OrbStandaloneSidebar } from '@/components/orb-standalone/orb-standalone-sidebar'
+import { OrbHueLogo, OrbPoweredByIndicare } from '@/components/orb-standalone/orb-hue-logo'
+import { useOrbAppearance } from '@/components/orb-standalone/use-orb-appearance'
 import {
   buildAdultProfilePromptBlock,
   readAdultProfile,
@@ -196,10 +198,10 @@ const ANSWER_STYLE_LABELS: Record<StandaloneOrbAnswerStyle, string> = {
 type PromptEntry = { text: string; mode?: StandaloneOrbMode }
 
 const PRIMARY_EMPTY_STARTERS: PromptEntry[] = [
-  { text: 'Help me reflect on a difficult shift', mode: 'Staff Coach' },
+  { text: 'Help me think through an allegation safely', mode: 'Safeguarding Thinking' },
   { text: 'Rewrite this professionally', mode: 'Record This Properly' },
-  { text: 'What evidence would Ofsted expect?', mode: 'Ofsted Lens' },
-  { text: 'Help me prepare for supervision', mode: 'Staff Coach' }
+  { text: 'What would Ofsted expect?', mode: 'Ofsted Lens' },
+  { text: 'Help me reflect after a difficult shift', mode: 'Staff Coach' }
 ]
 
 const MORE_EMPTY_STARTERS: PromptEntry[] = [
@@ -319,6 +321,7 @@ export function OrbCareCompanion() {
   const { status, user, csrfReady, refreshSession } = useAuth()
   const orbSessionReady = status === 'authenticated' && Boolean(user) && csrfReady
   const mounted = useMounted()
+  const { resolvedTheme, appearanceMode, setAppearanceMode } = useOrbAppearance()
   const searchParams = useSearchParams()
   const initialQuery = mounted ? searchParams.get('q')?.trim() || '' : ''
   const recordingContext = mounted && searchParams.get('context') === 'recording'
@@ -1233,6 +1236,7 @@ export function OrbCareCompanion() {
   }
 
   const modeSafety = MODE_SAFETY[mode]
+  const activeAgent = agentForMode(mode)
 
   const composer = (
     <OrbStandaloneComposer
@@ -1288,6 +1292,9 @@ export function OrbCareCompanion() {
       onAddDocumentToLibrary={() => openKnowledgeLibrary()}
       onToolsClick={openToolsPanel}
       suggestions={suggestionsForMode(mode)}
+      agentLabel={activeAgent?.title ?? 'Ask ORB'}
+      onAgentSelectorClick={() => setAgentsPanelOpen(true)}
+      answering={pending || visibleMessages.some((m) => m.status === 'streaming' || m.status === 'thinking')}
     />
   )
 
@@ -1301,11 +1308,13 @@ export function OrbCareCompanion() {
   const layoutA11yClass = standaloneOrbAccessibilityClassNames(a11yPrefs)
 
   const atmosphereClass = atmosphereClassForMode(mode)
-  const activeAgent = agentForMode(mode)
+  const themeClass = resolvedTheme === 'light' ? 'orb-theme-light' : 'orb-theme-dark'
 
   return (
     <main
-      className={`orb-chat-layout relative flex flex-col overflow-hidden ${layoutA11yClass} ${atmosphereClass}`}
+      className={`orb-chat-layout relative flex flex-col overflow-hidden ${layoutA11yClass} ${atmosphereClass} ${themeClass}`}
+      data-orb-theme={resolvedTheme}
+      data-orb-appearance-mode={appearanceMode}
       data-orb-active-panel={activePanel || 'none'}
       data-orb-close-all-panels
       data-orb-text-first-chat="true"
@@ -1318,7 +1327,9 @@ export function OrbCareCompanion() {
         agentAtmosphere={atmosphereClass}
         reducedMotion={a11yPrefs.reducedMotion}
       />
-      <div className="pointer-events-none fixed inset-0 orb-cinematic-light-field opacity-35" aria-hidden />
+      {resolvedTheme === 'dark' ? (
+        <div className="pointer-events-none fixed inset-0 orb-cinematic-light-field opacity-35" aria-hidden />
+      ) : null}
 
       <OrbKnowledgeLibraryPanel open={activePanel === 'knowledge'} onClose={closePanel} />
       <OrbSavedOutputsPanel
@@ -1364,6 +1375,8 @@ export function OrbCareCompanion() {
       <OrbStandaloneSettingsPanel
         open={activePanel === 'settings'}
         onClose={closePanel}
+        appearanceMode={appearanceMode}
+        onAppearanceChange={setAppearanceMode}
         onOpenMemory={openMemoryPanel}
         onOpenAccessibility={openAccessibilityPanel}
         onOpenPermissions={openPermissionsPanel}
@@ -1468,6 +1481,19 @@ export function OrbCareCompanion() {
               setAgentsPanelOpen(true)
               setSidebarOpen(false)
             }}
+            onOpenLibrary={() => {
+              openKnowledgeLibrary()
+              setSidebarOpen(false)
+            }}
+            onOpenDeepResearch={() => {
+              setAgentPanelType('deep_research')
+              setAgentPanelPrompt('Run deep research on this topic')
+              openAgentsPanel()
+              setSidebarOpen(false)
+            }}
+            onOpenHelp={() => {
+              setSidebarOpen(false)
+            }}
             onOpenAdultProfile={() => {
               setProfileDrawerOpen(true)
               setSidebarOpen(false)
@@ -1481,20 +1507,20 @@ export function OrbCareCompanion() {
         </aside>
 
         <div className="orb-chat-main flex min-h-0 min-w-0 flex-1 flex-col">
-          <header className="orb-chat-header relative z-10 flex shrink-0 items-center gap-2 border-b border-[var(--orb-line)] bg-[var(--orb-bg-mid)]/75 px-3 py-2.5 backdrop-blur-md md:px-5">
-            <button type="button" className="rounded-lg p-2 text-slate-400 hover:bg-white/[0.06] lg:hidden" onClick={() => setSidebarOpen(true)} aria-label="Open sidebar">
+          <header className="orb-chat-header relative z-10 flex shrink-0 items-center gap-2 border-b border-[var(--orb-line)] px-3 py-2 md:px-5">
+            <button type="button" className="rounded-lg p-2 text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)] lg:hidden" onClick={() => setSidebarOpen(true)} aria-label="Open sidebar">
               <Menu className="h-5 w-5" />
             </button>
             <div className="min-w-0 flex-1">
-              <h1 className="truncate text-sm font-semibold text-white md:text-base" data-orb-header-title>
+              <h1 className="truncate text-sm font-semibold text-[var(--orb-foreground)] md:text-base" data-orb-header-title>
                 {activeChat?.title || 'ORB'}
               </h1>
-              <p className="truncate text-xs text-slate-500" data-orb-header-subtitle>
-                Standalone residential care assistant · Powered by IndiCare
+              <p className="truncate text-xs text-[var(--orb-muted)]" data-orb-header-subtitle>
+                <span className="orb-electric-text">Powered by IndiCare</span>
               </p>
             </div>
             <span
-              className="hidden shrink-0 rounded-full bg-emerald-500/[0.08] px-2 py-0.5 text-[10px] font-medium text-emerald-200/75 sm:inline"
+              className="hidden shrink-0 rounded-full border border-[var(--orb-line)] bg-[var(--orb-surface)] px-2 py-0.5 text-[10px] font-medium text-[var(--orb-muted)] sm:inline"
               data-orb-header-privacy
             >
               No OS records accessed
@@ -1503,7 +1529,7 @@ export function OrbCareCompanion() {
               <button
                 type="button"
                 onClick={openToolsPanel}
-                className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-slate-500 hover:bg-white/[0.06] hover:text-cyan-200"
+                className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)] hover:text-[#00B8FF]"
                 aria-label="IndiCare Tools"
                 data-orb-header-tools
               >
@@ -1513,7 +1539,7 @@ export function OrbCareCompanion() {
               <button
                 type="button"
                 onClick={openSettingsPanel}
-                className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-slate-500 hover:bg-white/[0.06] hover:text-slate-300"
+                className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]"
                 aria-label="Settings"
                 data-orb-header-settings
               >
@@ -1535,20 +1561,6 @@ export function OrbCareCompanion() {
               </button>
             </div>
           </header>
-
-          <div className="flex shrink-0 items-center gap-2 border-b border-white/[0.04] px-3 py-2 md:px-5">
-            <button
-              type="button"
-              onClick={() => setAgentsPanelOpen(true)}
-              className="inline-flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-left transition hover:border-cyan-300/20 hover:bg-cyan-400/[0.04]"
-              data-orb-active-agent
-            >
-              <span className="truncate text-xs font-semibold text-white">{activeAgent?.title ?? 'Ask ORB'}</span>
-              <span className="hidden truncate text-[11px] text-slate-500 sm:inline">
-                {activeAgent?.cognitionLabel ?? 'General cognition'}
-              </span>
-            </button>
-          </div>
 
           {recordingContext ? (
             <div className="mx-3 mt-3 rounded-2xl border border-teal-300/25 bg-teal-300/10 px-4 py-3 text-sm leading-6 text-teal-50 md:mx-5" role="status">
@@ -1621,25 +1633,26 @@ export function OrbCareCompanion() {
                     className="flex min-h-[min(60vh,28rem)] flex-col items-center justify-center py-6 text-center md:py-8"
                     data-orb-empty-state
                   >
-                    <p className="text-xs font-medium uppercase tracking-[0.2em] text-cyan-200/80" data-orb-brand-name>
-                      ORB
-                    </p>
-                    <p className="mt-1 text-[11px] text-slate-500" data-orb-brand-powered>
-                      Powered by IndiCare
-                    </p>
-                    <h2 className="mt-3 text-xl font-semibold tracking-tight text-white md:text-2xl" data-orb-empty-heading>
+                    <div data-orb-brand-name>
+                      <OrbHueLogo size="lg" pulse={pending} />
+                    </div>
+                    <div className="mt-2" data-orb-brand-powered>
+                      <OrbPoweredByIndicare />
+                    </div>
+                    <h2 className="mt-6 text-xl font-semibold tracking-tight text-[var(--orb-foreground)] md:text-2xl" data-orb-empty-heading>
                       How can I help?
                     </h2>
-                    <p className="mt-2 max-w-md text-sm text-slate-500" data-orb-empty-subline>
-                      Quiet until needed. Institutional cognition for residential children&apos;s homes — no OS records accessed.
+                    <p className="mt-2 max-w-md text-sm text-[var(--orb-muted)]" data-orb-empty-subline>
+                      Ask anything, or open a residential agent for safeguarding, Ofsted, recording, therapeutic practice or
+                      leadership support.
                     </p>
-                    <div className="mt-6 grid w-full max-w-xl gap-2.5 sm:grid-cols-2" data-orb-starter-cards>
+                    <div className="mt-8 grid w-full max-w-xl gap-2.5 sm:grid-cols-2" data-orb-starter-cards>
                       {PRIMARY_EMPTY_STARTERS.map((starter) => (
                         <button
                           key={starter.text}
                           type="button"
                           onClick={() => applyPrompt(starter)}
-                          className="orb-starter-card rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-4 text-left text-sm font-medium text-slate-200 hover:border-white/12 hover:bg-white/[0.06]"
+                          className="orb-starter-card rounded-2xl border px-4 py-4 text-left text-sm font-medium transition hover:shadow-sm"
                           data-orb-starter-card
                         >
                           {starter.text}
@@ -1649,7 +1662,7 @@ export function OrbCareCompanion() {
                     <button
                       type="button"
                       onClick={() => setPromptDrawerOpen(true)}
-                      className="mt-4 text-xs font-medium text-slate-500 underline-offset-4 hover:text-slate-300 hover:underline"
+                      className="mt-4 text-xs font-medium text-[var(--orb-muted)] underline-offset-4 hover:text-[var(--orb-foreground)] hover:underline"
                       data-orb-more-examples
                     >
                       More examples
@@ -2097,7 +2110,7 @@ function MessageBubble({ entry }: { entry: StandaloneChatMessage }) {
           ))}
         </div>
       ) : null}
-      <p className="whitespace-pre-wrap text-[15px] leading-7 text-slate-100">{entry.content}</p>
+      <p className="whitespace-pre-wrap text-[15px] leading-7 text-[var(--orb-foreground)]">{entry.content}</p>
       {timeLabel ? <p className="mt-1.5 text-right text-[10px] text-slate-600">{timeLabel}</p> : null}
       </div>
     </article>

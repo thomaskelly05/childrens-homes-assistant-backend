@@ -29,7 +29,7 @@ export const RESIDENTIAL_AGENTS: ResidentialAgentDefinition[] = [
     title: 'Ask ORB',
     subtitle: 'General institutional intelligence',
     cognitionLabel: 'General cognition',
-    placeholder: 'Ask ORB anything…',
+    placeholder: 'Ask anything',
     atmosphereClass: 'orb-atmosphere-ask',
     suggestions: [
       'Help me think through a difficult shift',
@@ -43,7 +43,7 @@ export const RESIDENTIAL_AGENTS: ResidentialAgentDefinition[] = [
     title: 'Safeguarding Thinking',
     subtitle: 'Structured reflection · evidence · escalation awareness',
     cognitionLabel: 'Safeguarding reflection',
-    placeholder: 'Describe the concern and what you know so far…',
+    placeholder: 'Describe the concern and ORB will help you think it through',
     atmosphereClass: 'orb-atmosphere-safeguarding',
     suggestions: [
       'Help me separate facts from concerns',
@@ -57,7 +57,7 @@ export const RESIDENTIAL_AGENTS: ResidentialAgentDefinition[] = [
     title: 'Ofsted Lens',
     subtitle: 'SCCIF · Quality Standards · inspection expectations',
     cognitionLabel: 'Ofsted Lens',
-    placeholder: 'Ask about SCCIF, evidence, leadership or inspection preparation…',
+    placeholder: 'Ask about SCCIF, evidence, leadership or inspection',
     atmosphereClass: 'orb-atmosphere-ofsted',
     suggestions: [
       'What evidence would Ofsted expect here?',
@@ -71,7 +71,7 @@ export const RESIDENTIAL_AGENTS: ResidentialAgentDefinition[] = [
     title: 'Record This Properly',
     subtitle: 'Professional recording · child-centred wording',
     cognitionLabel: 'Recording cognition',
-    placeholder: 'Paste rough notes and ORB will help structure them professionally…',
+    placeholder: 'Paste rough notes and ORB will help rewrite them',
     atmosphereClass: 'orb-atmosphere-recording',
     suggestions: [
       'Rewrite this professionally',
@@ -85,7 +85,7 @@ export const RESIDENTIAL_AGENTS: ResidentialAgentDefinition[] = [
     title: 'Therapeutic Reframe',
     subtitle: 'Trauma-informed reflection · behaviour meaning · repair',
     cognitionLabel: 'Therapeutic reflection',
-    placeholder: 'Describe the interaction and ORB will help explore the emotional meaning…',
+    placeholder: 'Describe the situation and ORB will help reframe it',
     atmosphereClass: 'orb-atmosphere-therapeutic',
     suggestions: [
       'Explore the behaviour meaning',
@@ -162,7 +162,7 @@ export function suggestionsForMode(mode: string): string[] {
 }
 
 export function placeholderForMode(mode: string): string {
-  return agentForMode(mode)?.placeholder ?? 'Message ORB…'
+  return agentForMode(mode)?.placeholder ?? 'Ask anything'
 }
 
 export function atmosphereClassForMode(mode: string): string {
