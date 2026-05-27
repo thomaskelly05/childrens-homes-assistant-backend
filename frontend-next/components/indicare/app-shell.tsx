@@ -298,16 +298,16 @@ export function AppShell({ children }: { children: ReactNode }) {
   const navigationGroups: Array<{ label: string; items: ScopeNavItem[] | ReturnType<typeof visibleOperationalNavigation> }> = useScopeMenu
     ? [
         {
-          label: scope.scope_type === 'child' ? 'Child — primary' : 'Home — primary',
+          label: scope.scope_type === 'child' ? 'Child story' : 'Home today',
           items: safeScopePrimaryNavItems
         },
         ...(safeScopeMoreNavItems.length
-          ? [{ label: scope.scope_type === 'child' ? 'Child — more' : 'Home — more', items: safeScopeMoreNavItems }]
+          ? [{ label: scope.scope_type === 'child' ? 'Supporting areas' : 'Home support', items: safeScopeMoreNavItems }]
           : [])
       ]
     : [
-        { label: 'Main menu', items: primaryNav },
-        ...(moreNav.length ? [{ label: 'More', items: moreNav }] : [])
+        { label: 'IndiCare OS', items: primaryNav },
+        ...(moreNav.length ? [{ label: 'More support', items: moreNav }] : [])
       ].filter((group) => group.items.length)
   const childDomainActive =
     pathParts[0] === 'young-people' ||
@@ -336,12 +336,12 @@ export function AppShell({ children }: { children: ReactNode }) {
             <span className="orb-motion-breathing relative h-12 w-12 rounded-2xl bg-[radial-gradient(circle_at_30%_20%,#fff,transparent_24%),linear-gradient(135deg,#38bdf8,#2563eb_52%,#111827)] shadow-[0_0_42px_rgba(56,189,248,0.36)]" aria-hidden />
             <span>
               <span className="block text-[10px] font-black uppercase tracking-[0.24em] text-blue-200">IndiCare OS</span>
-              <span className="mt-1 block text-sm font-black text-white">Child-centred OS</span>
+              <span className="mt-1 block text-sm font-black text-white">Story-first care OS</span>
             </span>
           </Link>
           <div className="mt-4 rounded-[24px] border border-blue-300/10 bg-blue-300/10 p-4">
-            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-blue-200">Atmosphere</p>
-            <p className="mt-2 text-sm font-bold leading-6 text-blue-50">{scope.scope_type === 'child' ? `${scope.selected_child_name || activeChildName || 'Child'} workspace` : scope.scope_type === 'home' ? `${scope.selected_home_name || 'Home'} workspace` : 'Select a home or child to begin'}</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-blue-200">Current workspace</p>
+            <p className="mt-2 text-sm font-bold leading-6 text-blue-50">{scope.scope_type === 'child' ? `${scope.selected_child_name || activeChildName || 'Child'} story and support` : scope.scope_type === 'home' ? `${scope.selected_home_name || 'Home'} today` : 'Choose a home or child to begin'}</p>
           </div>
           <nav
             data-testid={useScopeMenu ? 'scope-navigation' : 'operational-navigation'}
@@ -397,9 +397,9 @@ export function AppShell({ children }: { children: ReactNode }) {
               className="mt-4 block rounded-[24px] border border-blue-300/20 bg-[radial-gradient(circle_at_top,#38bdf833,transparent_55%),rgba(255,255,255,0.08)] p-4 shadow-[0_0_32px_rgba(56,189,248,0.12)] transition hover:border-cyan-300/30 hover:bg-white/10"
             >
               <p className="text-[10px] font-black uppercase tracking-[0.22em] text-cyan-200">ORB</p>
-              <p className="mt-1.5 text-sm font-black text-white">Quiet copilot</p>
+              <p className="mt-1.5 text-sm font-black text-white">OS evidence brain</p>
               <p className="mt-1 text-xs font-semibold leading-5 text-slate-400" data-testid="orb-quiet-copilot-tagline">
-                The quiet copilot for children&apos;s homes — present when needed, invisible when not.
+                Quiet until needed — then clear, evidence-aware support for adults.
               </p>
             </Link>
           ) : null}
@@ -418,7 +418,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <div className="hidden lg:block">
               <div className="flex items-center gap-3">
                 <div className="min-w-0">
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600">Operational top bar</p>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600">IndiCare OS</p>
                   <p className="truncate text-sm font-black text-slate-950">{pageTitle}</p>
                 </div>
                 <div className="ml-auto flex items-center gap-2">
