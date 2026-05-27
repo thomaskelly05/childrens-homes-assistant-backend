@@ -3,6 +3,12 @@ import type { NextRequest } from 'next/server'
 
 const allowedLegacyPrefixes = [
   '/build-live',
+  '/login',
+  '/auth',
+  '/unauthorized',
+  '/mfa',
+  '/mfa-setup',
+  '/mfa-recovery',
   '/api',
   '/_next',
   '/favicon.ico',
