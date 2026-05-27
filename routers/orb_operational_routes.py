@@ -26,6 +26,7 @@ from services.orb_operational_action_builder_service import orb_operational_acti
 from services.orb_operational_assistant_service import orb_operational_assistant_service
 from services.orb_operational_context_service import orb_operational_context_bridge
 from services.orb_operational_output_service import orb_operational_output_service
+from services.orb_universal_evidence_service import orb_universal_evidence_service
 
 router = APIRouter(prefix="/assistant/orb", tags=["Operational OS ORB"])
 compat_router = APIRouter(prefix="/api/assistant/orb", tags=["Operational OS ORB API"])
@@ -64,8 +65,11 @@ def _capabilities_payload() -> dict[str, Any]:
             "OS ORB can use permissioned IndiCare context. "
             "It only sees information available to your role."
         ),
+        "runtime_identity": "canonical_operational_os_orb",
+        "evidence_spine": "universal_source_labelled_evidence_collector",
         "legacy_conversation": "/api/orb/conversation",
         "operational_intelligence": "/assistant/orb/operational",
+        "evidence_diagnostics": "/assistant/orb/evidence-diagnostics",
     }
 
 
@@ -92,6 +96,61 @@ async def operational_orb_capabilities(current_user=Depends(require_assistant_ac
 @compat_router.get("/capabilities")
 async def api_operational_orb_capabilities(current_user=Depends(require_assistant_access)):
     return await operational_orb_capabilities(current_user=current_user)
+
+
+@router.post("/evidence-diagnostics")
+async def operational_orb_evidence_diagnostics(
+    payload: OrbOperationalRequest,
+    conn=Depends(get_db),
+    current_user=Depends(require_assistant_access),
+):
+    """Show exactly what the operational ORB evidence spine can see for a question.
+
+    This is intentionally diagnostic: it helps confirm whether the user is in the
+    canonical OS runtime, which scope is being used, and which source-labelled
+    evidence ORB found before a model answer is generated.
+    """
+    context = orb_operational_context_bridge.build_context(payload, current_user, conn=conn)
+    evidence = orb_universal_evidence_service.collect(
+        conn,
+        current_user=current_user,
+        scope=payload.scope,
+        message=payload.message,
+        young_person_id=payload.child_id,
+        home_id=payload.home_id,
+        provider_id=(context.get("permissions") or {}).provider_id if hasattr(context.get("permissions"), "provider_id") else None,
+    )
+    return {
+        "success": True,
+        "data": {
+            "runtime_identity": "canonical_operational_os_orb",
+            "scope": payload.scope,
+            "mode": payload.mode,
+            "question": payload.message,
+            "child_id": payload.child_id,
+            "home_id": payload.home_id,
+            "staff_id": payload.staff_id,
+            "evidence_count": len(evidence.get("items") or []),
+            "surface_count": evidence.get("surface_count", 0),
+            "counts": evidence.get("counts", {}),
+            "items": evidence.get("items", [])[:40],
+            "errors": evidence.get("errors", []),
+            "context_sources": orb_operational_context_bridge.safe_context_sources(context),
+            "permissions": context.get("permissions"),
+            "os_linked": True,
+            "standalone_only": False,
+            "permissioned_context": True,
+        },
+    }
+
+
+@compat_router.post("/evidence-diagnostics")
+async def api_operational_orb_evidence_diagnostics(
+    payload: OrbOperationalRequest,
+    conn=Depends(get_db),
+    current_user=Depends(require_assistant_access),
+):
+    return await operational_orb_evidence_diagnostics(payload=payload, conn=conn, current_user=current_user)
 
 
 @router.post("/operational")
@@ -276,39 +335,12 @@ async def operational_orb_actions_create(
     conn=Depends(get_db),
     current_user=Depends(require_assistant_access),
 ):
-    drafts = list(payload.drafts)
-    if not drafts:
-        return _error_response(400, "no_drafts", "Provide at least one draft action to create.")
-    for draft in drafts:
-        if draft.priority in {"high", "urgent"} or payload.require_manager_review:
-            draft.review_required = True
-    result = orb_operational_action_builder_service.create_actions_from_drafts(
-        drafts,
-        current_user,
+    result = orb_operational_action_builder_service.create_actions(
+        payload,
+        current_user=current_user,
         conn=conn,
-        home_id=payload.home_id,
-        child_id=payload.child_id,
-        staff_id=payload.staff_id,
     )
-    linked_output_id = payload.output_id
-    if linked_output_id and result.get("created_ids"):
-        linked = orb_operational_output_service.link_actions(
-            linked_output_id,
-            list(result["created_ids"]),
-            current_user if isinstance(current_user, dict) else dict(current_user),
-            conn=conn,
-        )
-        if linked:
-            result["linked_output_id"] = linked_output_id
-            result["linked_action_ids"] = linked.linked_action_ids
-    return {
-        "success": True,
-        "data": {
-            **result,
-            "os_linked": True,
-            "standalone_only": False,
-        },
-    }
+    return {"success": True, "data": result}
 
 
 @compat_router.post("/actions/create")
@@ -320,8 +352,8 @@ async def api_operational_orb_actions_create(
     return await operational_orb_actions_create(payload=payload, conn=conn, current_user=current_user)
 
 
-@router.post("/briefings/create")
-async def operational_orb_briefings_create(
+@router.post("/briefing")
+async def operational_orb_briefing(
     payload: OrbOperationalBriefingRequest,
     conn=Depends(get_db),
     current_user=Depends(require_assistant_access),
@@ -334,142 +366,43 @@ async def operational_orb_briefings_create(
         child_id=payload.child_id,
         staff_id=payload.staff_id,
         days=payload.days,
+        save_output=payload.save_output,
+        visibility=payload.visibility,
+        output_type="briefing",
+        tags=payload.tags,
+        output_title=payload.title,
     )
-    context = orb_operational_context_bridge.build_context(request, current_user, conn=conn)
-    answer = payload.answer or ""
-    briefing = orb_operational_action_builder_service.build_briefing(
-        context,
-        answer or "Operational briefing prepared from permissioned context.",
-        request,
-        force=True,
-    )
-    return {
-        "success": True,
-        "data": {
-            "briefing": briefing.model_dump() if briefing else None,
-            "persisted": False,
-            "notice": "Briefing is for copy/export — OS operational output store not required for this pass.",
-            "os_linked": True,
-            "standalone_only": False,
-        },
-    }
+    response = await orb_operational_assistant_service.answer(request, current_user, conn=conn)
+    return {"success": True, "data": response.model_dump()}
 
 
-@compat_router.post("/briefings/create")
-async def api_operational_orb_briefings_create(
+@compat_router.post("/briefing")
+async def api_operational_orb_briefing(
     payload: OrbOperationalBriefingRequest,
     conn=Depends(get_db),
     current_user=Depends(require_assistant_access),
 ):
-    return await operational_orb_briefings_create(payload=payload, conn=conn, current_user=current_user)
+    return await operational_orb_briefing(payload=payload, conn=conn, current_user=current_user)
 
 
-@router.post("/briefings/save")
-async def operational_orb_briefings_save(
-    payload: OrbOperationalBriefingRequest,
+@router.post("/outputs")
+async def operational_orb_save_output(
+    payload: OrbOperationalRequest,
     conn=Depends(get_db),
     current_user=Depends(require_assistant_access),
 ):
-    request = OrbOperationalRequest(
-        message=payload.message,
-        mode=payload.mode,
-        scope=payload.scope,
-        home_id=payload.home_id,
-        child_id=payload.child_id,
-        staff_id=payload.staff_id,
-        days=payload.days,
+    response = await orb_operational_assistant_service.answer(
+        payload.model_copy(update={"save_output": True}),
+        current_user,
+        conn=conn,
     )
-    context = orb_operational_context_bridge.build_context(request, current_user, conn=conn)
-    briefing = orb_operational_action_builder_service.build_briefing(
-        context,
-        payload.answer or "",
-        request,
-        force=True,
-    )
-    if not briefing:
-        return {
-            "success": True,
-            "data": {
-                "briefing": None,
-                "export_payload": None,
-                "warning": "No briefing could be built from the current context.",
-                "saved_as_output_id": None,
-                "os_linked": True,
-            },
-        }
-    export_payload = briefing.model_dump()
-    saved_id = None
-    warning = None
-    user_dict = current_user if isinstance(current_user, dict) else dict(current_user)
-    if payload.save:
-        summary_raw = context.get("summary")
-        if isinstance(summary_raw, OrbOperationalContextSummary):
-            context_summary = summary_raw
-        elif isinstance(summary_raw, dict):
-            context_summary = OrbOperationalContextSummary.model_validate(summary_raw)
-        else:
-            context_summary = OrbOperationalContextSummary()
-        permissions_raw = orb_operational_context_bridge._permission_summary(
-            user_dict,
-            scope=payload.scope,
-            home_id=payload.home_id,
-            child_id=payload.child_id,
-            staff_id=payload.staff_id,
-            care_access=bool(context.get("raw_available")),
-        )
-        permissions = (
-            permissions_raw
-            if isinstance(permissions_raw, OrbOperationalPermissionSummary)
-            else OrbOperationalPermissionSummary.model_validate(permissions_raw)
-        )
-        op_response = OrbOperationalResponse(
-            answer=payload.answer or briefing.summary,
-            context_summary=context_summary,
-            permissions=permissions,
-            boundaries=OrbOperationalSafetyBoundary(),
-            briefing=briefing,
-            os_linked=True,
-            care_record_access=bool(context.get("raw_available")),
-        )
-        try:
-            record = orb_operational_output_service.save_from_operational_response(
-                op_response,
-                request,
-                user_dict,
-                output_type=payload.output_type,
-                visibility=payload.visibility,
-                tags=payload.tags,
-                title=payload.title,
-                conn=conn,
-            )
-            saved_id = record.id
-            briefing.saved_as_output_id = saved_id
-            export_payload = briefing.model_dump()
-        except Exception as exc:
-            warning = f"Could not persist operational briefing: {exc}"
-    return {
-        "success": True,
-        "data": {
-            "briefing": export_payload,
-            "export_payload": export_payload,
-            "warning": warning,
-            "saved_as_output_id": saved_id,
-            "os_linked": True,
-            "standalone_only": False,
-            "notice": (
-                "Saved to OS operational output store. "
-                "Standalone saved outputs are not used for OS operational data."
-            )
-            if saved_id
-            else None,
-        },
-    }
+    return {"success": True, "data": response.model_dump()}
 
 
-@compat_router.post("/briefings/save")
-async def api_operational_orb_briefings_save(
-    payload: OrbOperationalBriefingRequest,
+@compat_router.post("/outputs")
+async def api_operational_orb_save_output(
+    payload: OrbOperationalRequest,
     conn=Depends(get_db),
     current_user=Depends(require_assistant_access),
 ):
-    return await operational_orb_briefings_save(payload=payload, conn=conn, current_user=current_user)
+    return await operational_orb_save_output(payload=payload, conn=conn, current_user=current_user)
