@@ -29,7 +29,15 @@ export default async function YoungPersonChronologyPage({
         eyebrow="Young person chronology"
         title={`${preferredName}'s connected chronology`}
         description="Filtered chronology for this young person, including source citations, actions, evidence and regulatory links."
-        action={<Link href={`/young-people/${id}`} className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700">Back to record</Link>}
+        action={
+          <Link
+            href={`/young-people/${id}/workspace`}
+            data-testid="child-chronology-back-workspace"
+            className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700"
+          >
+            Child workspace
+          </Link>
+        }
       />
       <LiveDataStatus result={chronology} />
       <section className="grid gap-4 md:grid-cols-4">

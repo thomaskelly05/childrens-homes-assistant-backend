@@ -124,7 +124,7 @@ export function RecordingSubmissionResultCard({ result, childId }: RecordingSubm
         </div>
       ) : null}
 
-      <div className="mt-4 flex flex-wrap gap-2">
+      <div className="mt-4 flex flex-wrap gap-2" data-testid="recording-submission-lifecycle-links">
         {route && result.formal_record_created === false ? (
           <Link
             href={result.frontend_route || route}
@@ -134,14 +134,37 @@ export function RecordingSubmissionResultCard({ result, childId }: RecordingSubm
             Open formal route
           </Link>
         ) : null}
-        {childId && result.linked_archive_record_id ? (
-          <Link
-            href={`/young-people/${encodeURIComponent(childId)}/archive`}
-            data-testid="recording-open-child-archive"
-            className="inline-flex min-h-9 items-center rounded-xl border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-black text-sky-950"
-          >
-            Open archive
-          </Link>
+        {childId ? (
+          <>
+            <Link
+              href={`/young-people/${encodeURIComponent(childId)}/archive`}
+              data-testid="recording-open-child-archive"
+              className="inline-flex min-h-9 items-center rounded-xl border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-black text-sky-950"
+            >
+              Archive
+            </Link>
+            <Link
+              href={`/young-people/${encodeURIComponent(childId)}/chronology`}
+              data-testid="recording-open-child-chronology"
+              className="inline-flex min-h-9 items-center rounded-xl border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-black text-violet-950"
+            >
+              Chronology
+            </Link>
+            <Link
+              href={`/young-people/${encodeURIComponent(childId)}/plan-impacts`}
+              data-testid="recording-open-child-plan-impacts"
+              className="inline-flex min-h-9 items-center rounded-xl border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-black text-amber-950"
+            >
+              Plan impacts
+            </Link>
+            <Link
+              href={`/young-people/${encodeURIComponent(childId)}/lifeecho`}
+              data-testid="recording-open-child-lifeecho"
+              className="inline-flex min-h-9 items-center rounded-xl border border-fuchsia-200 bg-fuchsia-50 px-3 py-1 text-xs font-black text-fuchsia-950"
+            >
+              LifeEcho
+            </Link>
+          </>
         ) : null}
         {childId ? (
           <Link
