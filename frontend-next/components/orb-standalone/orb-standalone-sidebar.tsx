@@ -186,7 +186,7 @@ export function OrbStandaloneSidebar({
 
   return (
     <>
-      <div className="border-b border-[var(--orb-line)] px-3 py-3">
+      <div className="border-b border-[var(--orb-line)] px-3 py-3.5">
         <div className="flex items-center gap-2.5">
           <OrbHueMark />
           <div className="min-w-0 flex-1">
@@ -205,7 +205,7 @@ export function OrbStandaloneSidebar({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-2 py-2 orb-sidebar-group">
+      <div className="orb-sidebar-group flex-1 overflow-y-auto px-2 py-3">
         <SidebarNavButton
           icon={<MessageSquarePlus className="h-4 w-4" />}
           label="New chat"
@@ -627,7 +627,7 @@ function SectionToggle({
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-400"
+        className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-xs font-medium text-[var(--orb-muted)] hover:text-[var(--orb-foreground)]"
       >
         {label}
         {open ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}

@@ -38,7 +38,7 @@ export function OrbExplainabilityPanel({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-2 rounded-lg py-1 text-[11px] font-medium text-[var(--orb-muted)] transition hover:text-slate-300"
+        className="flex w-full items-center gap-2 rounded-lg py-1 text-[11px] font-medium text-[var(--orb-muted)] transition hover:text-[var(--orb-foreground)]"
         aria-expanded={open}
       >
         <Sparkles className="h-3.5 w-3.5 text-sky-400/70" aria-hidden />
@@ -46,9 +46,9 @@ export function OrbExplainabilityPanel({
         <ChevronDown className={`ml-auto h-3.5 w-3.5 transition ${open ? 'rotate-180' : ''}`} aria-hidden />
       </button>
       {open ? (
-        <div className="orb-explainability-fade mt-2 space-y-3 rounded-2xl border border-[var(--orb-line)] bg-[var(--orb-surface)] px-4 py-3.5 text-[11px] leading-5 text-slate-400">
+        <div className="orb-explainability-fade mt-2 space-y-3 rounded-xl border border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] px-4 py-3.5 text-[11px] leading-5 text-[var(--orb-muted)]">
           {explainability.reasoning_summary ? (
-            <p className="text-sm leading-6 text-slate-200">{explainability.reasoning_summary}</p>
+            <p className="text-sm leading-6 text-[var(--orb-foreground)]">{explainability.reasoning_summary}</p>
           ) : null}
           {(cognitionModeLabel || explainability.cognition_mode) && (
             <div className="flex flex-wrap gap-2">

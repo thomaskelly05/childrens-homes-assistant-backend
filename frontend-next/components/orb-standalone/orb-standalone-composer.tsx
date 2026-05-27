@@ -174,14 +174,14 @@ export function OrbStandaloneComposer({
               Slash commands: /agent · /record · /safeguard · /clear — or type your message
             </p>
           ) : null}
-          {suggestions && suggestions.length > 0 && !value.trim() && !pending ? (
+          {suggestions && suggestions.length > 0 && !value.trim() && !pending && !answering ? (
             <div className="mb-2 flex flex-wrap gap-1.5 px-1" data-orb-composer-suggestions>
               {suggestions.slice(0, 3).map((suggestion) => (
                 <button
                   key={suggestion}
                   type="button"
                   onClick={() => syncMessage(suggestion)}
-                  className="rounded-full border border-[var(--orb-line)] bg-[var(--orb-surface)] px-2.5 py-1 text-[10px] text-[var(--orb-muted)] transition hover:border-sky-400/30 hover:text-slate-200"
+                  className="rounded-full border border-[var(--orb-line)] bg-[var(--orb-surface)] px-3 py-1.5 text-xs text-[var(--orb-muted)] transition hover:border-[#00B8FF]/35 hover:bg-[#00B8FF]/[0.06] hover:text-[var(--orb-foreground)]"
                 >
                   {suggestion}
                 </button>
@@ -189,7 +189,8 @@ export function OrbStandaloneComposer({
             </div>
           ) : null}
           <div
-            className={`orb-composer-glow orb-composer-glass orb-surface p-2.5 md:p-3 ${answering ? 'orb-answering-pulse' : ''}`}
+            className={`orb-composer-glow orb-composer-glass orb-surface rounded-[1.35rem] p-2.5 md:p-3 ${answering ? 'orb-answering-pulse' : ''}`}
+            data-orb-composer-answering={answering ? 'true' : 'false'}
           >
             {attachments.length > 0 ? (
               <div className="mb-2 flex flex-wrap gap-2 px-1 pt-1">
@@ -371,7 +372,7 @@ export function OrbStandaloneComposer({
                   if (event.pointerType !== 'touch') return
                   logTapTarget(event, 'orb-standalone-send-pointer')
                 }}
-                className="pointer-events-auto inline-flex h-11 min-h-11 min-w-11 shrink-0 cursor-pointer touch-manipulation items-center justify-center rounded-full bg-[#111827] text-white transition hover:bg-[#0A0A0A] disabled:opacity-35"
+                className="orb-composer-send pointer-events-auto inline-flex h-11 min-h-11 min-w-11 shrink-0 cursor-pointer touch-manipulation items-center justify-center rounded-full text-white transition disabled:opacity-35"
                 data-orb-composer-send
                 data-testid="orb-standalone-send-clickable"
                 data-send-disabled-reason={disabledReason}
