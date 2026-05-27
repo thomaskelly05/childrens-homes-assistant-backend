@@ -54,7 +54,7 @@ export function OrbAssistantMessageBody({
       <div className="orb-message-content text-[15px] leading-7 text-slate-100">
         {renderAnswerWithCitations(content, sources)}
       </div>
-      <OrbExplainabilityPanel explainability={explainability} />
+      <OrbExplainabilityPanel explainability={explainability} cognitionModeLabel={cognitionLabelForMode(mode)} />
       <OrbSourcesDetail sources={sources} modelRouting={modelRouting} />
     </article>
   )

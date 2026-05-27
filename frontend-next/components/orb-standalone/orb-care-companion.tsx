@@ -47,8 +47,20 @@ import {
   ORB_TOOL_TO_PANEL,
   type OrbStandalonePanel
 } from '@/components/orb-standalone/orb-standalone-panel-types'
+import { OrbAmbientCognition, type OrbCognitionAmbientState } from '@/components/orb-standalone/orb-ambient-cognition'
+import { OrbAdultProfileDrawer } from '@/components/orb-standalone/orb-adult-profile-drawer'
 import { OrbStandaloneSidebar } from '@/components/orb-standalone/orb-standalone-sidebar'
-import { agentForMode, atmosphereClassForMode, type ResidentialAgentDefinition } from '@/lib/orb/residential-agents'
+import {
+  buildAdultProfilePromptBlock,
+  readAdultProfile,
+  type AdultProfile
+} from '@/lib/orb/adult-profile-store'
+import {
+  agentForMode,
+  atmosphereClassForMode,
+  suggestionsForMode,
+  type ResidentialAgentDefinition
+} from '@/lib/orb/residential-agents'
 import { streamTextIntoView } from '@/lib/orb/streaming-text'
 import {
   defaultStandaloneOrbAccessibility,
@@ -341,6 +353,8 @@ export function OrbCareCompanion() {
     title: string
     sourceId: string | null
   } | null>(null)
+  const [adultProfile, setAdultProfile] = useState<AdultProfile | null>(null)
+  const [profileDrawerOpen, setProfileDrawerOpen] = useState(false)
 
   const inputRef = useRef<HTMLTextAreaElement | null>(null)
   const composerUserEditedRef = useRef(false)
@@ -375,6 +389,7 @@ export function OrbCareCompanion() {
   useEffect(() => {
     setWorkspace(readStandaloneWorkspace())
     setA11yPrefs(loadStandaloneOrbAccessibility())
+    setAdultProfile(readAdultProfile())
     workspaceHydratedRef.current = true
   }, [])
 
@@ -528,6 +543,22 @@ export function OrbCareCompanion() {
     transcriptHasHighRiskTerms(voice.transcript) ||
     messages.some((m) => m.role === 'user' && transcriptHasHighRiskTerms(m.content))
 
+  const cognitionAmbientState = useMemo((): OrbCognitionAmbientState => {
+    if (pending) return 'thinking'
+    const last = visibleMessages[visibleMessages.length - 1]
+    if (last?.status === 'streaming') return 'streaming'
+    if (last?.status === 'thinking') return 'analysing'
+    if (mode === 'Safeguarding Thinking' || showSafeguardingEscalation) return 'safeguarding'
+    if (mode === 'Therapeutic Reframe' || mode === 'Staff Coach') return 'reflecting'
+    return 'idle'
+  }, [pending, visibleMessages, mode, showSafeguardingEscalation])
+
+  const cognitionStatusLabel = pending
+    ? 'Thinking'
+    : visibleMessages.some((m) => m.status === 'streaming')
+      ? 'Streaming'
+      : 'Ready'
+
   const sendMessage = useCallback(
     async (text: string, options?: SendMessageOptions) => {
       const trimmed = text.trim()
@@ -584,7 +615,9 @@ export function OrbCareCompanion() {
 
       const imagePayload = attachments.map((a) => ({ data_url: a.dataUrl, name: a.name }))
       const profileBlock = buildProfileContextBlock(attachedProfiles)
+      const adultBlock = adultProfile ? buildAdultProfilePromptBlock(adultProfile) : ''
       const messageBody = [
+        adultBlock,
         profileBlock,
         trimmed || (hasImages ? 'Please look at the image(s) I shared and help me with this.' : '')
       ]
@@ -923,6 +956,7 @@ export function OrbCareCompanion() {
     [
       attachments,
       attachedProfiles,
+      adultProfile,
       mode,
       orbSessionReady,
       pending,
@@ -1017,6 +1051,26 @@ export function OrbCareCompanion() {
   function handleMessageChange(value: string) {
     composerUserEditedRef.current = true
     voiceMayFillComposerRef.current = false
+    const slash = value.trim().toLowerCase()
+    if (slash === '/clear') {
+      setMessage('')
+      return
+    }
+    if (slash === '/safeguard' || slash === '/safeguarding') {
+      handleModeChange('Safeguarding Thinking')
+      setMessage('')
+      return
+    }
+    if (slash === '/record') {
+      handleModeChange('Record This Properly')
+      setMessage('')
+      return
+    }
+    if (slash === '/agent') {
+      setAgentsPanelOpen(true)
+      setMessage('')
+      return
+    }
     setMessage(value)
   }
 
@@ -1232,6 +1286,8 @@ export function OrbCareCompanion() {
         setMessage('Summarise the uploaded document')
       }}
       onAddDocumentToLibrary={() => openKnowledgeLibrary()}
+      onToolsClick={openToolsPanel}
+      suggestions={suggestionsForMode(mode)}
     />
   )
 
@@ -1249,14 +1305,20 @@ export function OrbCareCompanion() {
 
   return (
     <main
-      className={`orb-chat-layout relative flex flex-col overflow-hidden bg-[#05070d] text-white ${layoutA11yClass} ${atmosphereClass}`}
+      className={`orb-chat-layout relative flex flex-col overflow-hidden ${layoutA11yClass} ${atmosphereClass}`}
       data-orb-active-panel={activePanel || 'none'}
       data-orb-close-all-panels
       data-orb-text-first-chat="true"
       data-orb-agent={activeAgent?.id ?? 'ask_orb'}
+      data-orb-cognition-state={cognitionAmbientState}
     >
       <span className="sr-only">ORB Care Companion — standalone residential care assistant</span>
-      <div className="pointer-events-none fixed inset-0 orb-cinematic-light-field opacity-50" aria-hidden />
+      <OrbAmbientCognition
+        state={cognitionAmbientState}
+        agentAtmosphere={atmosphereClass}
+        reducedMotion={a11yPrefs.reducedMotion}
+      />
+      <div className="pointer-events-none fixed inset-0 orb-cinematic-light-field opacity-35" aria-hidden />
 
       <OrbKnowledgeLibraryPanel open={activePanel === 'knowledge'} onClose={closePanel} />
       <OrbSavedOutputsPanel
@@ -1378,7 +1440,7 @@ export function OrbCareCompanion() {
 
       <div className="relative flex min-h-0 flex-1">
         <aside
-          className={`orb-chat-sidebar fixed inset-y-0 left-0 z-50 flex flex-col border-r border-white/[0.06] bg-[#0d1117] transition-transform lg:static lg:z-auto lg:translate-x-0 ${
+          className={`orb-chat-sidebar fixed inset-y-0 left-0 z-50 flex flex-col border-r border-[var(--orb-line)] transition-transform lg:static lg:z-auto lg:translate-x-0 ${
             sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
           }`}
         >
@@ -1406,13 +1468,20 @@ export function OrbCareCompanion() {
               setAgentsPanelOpen(true)
               setSidebarOpen(false)
             }}
+            onOpenAdultProfile={() => {
+              setProfileDrawerOpen(true)
+              setSidebarOpen(false)
+            }}
+            adultProfile={adultProfile}
+            cognitionStatusLabel={cognitionStatusLabel}
+            cognitionModeLabel={activeAgent?.cognitionLabel}
             savedOutputsCount={savedOutputsCount}
             onClose={() => setSidebarOpen(false)}
           />
         </aside>
 
         <div className="orb-chat-main flex min-h-0 min-w-0 flex-1 flex-col">
-          <header className="orb-chat-header flex shrink-0 items-center gap-2 border-b border-white/[0.06] bg-[#05070d]/80 px-3 py-2.5 backdrop-blur-md md:px-5">
+          <header className="orb-chat-header relative z-10 flex shrink-0 items-center gap-2 border-b border-[var(--orb-line)] bg-[var(--orb-bg-mid)]/75 px-3 py-2.5 backdrop-blur-md md:px-5">
             <button type="button" className="rounded-lg p-2 text-slate-400 hover:bg-white/[0.06] lg:hidden" onClick={() => setSidebarOpen(true)} aria-label="Open sidebar">
               <Menu className="h-5 w-5" />
             </button>
@@ -1792,6 +1861,16 @@ export function OrbCareCompanion() {
           onClose={() => setPromptDrawerOpen(false)}
         />
       ) : null}
+
+      {adultProfile ? (
+        <OrbAdultProfileDrawer
+          open={profileDrawerOpen}
+          profile={adultProfile}
+          cognitionModeLabel={activeAgent?.cognitionLabel}
+          onClose={() => setProfileDrawerOpen(false)}
+          onSave={setAdultProfile}
+        />
+      ) : null}
     </main>
   )
 }
@@ -2008,10 +2087,8 @@ function MessageBubble({ entry }: { entry: StandaloneChatMessage }) {
       : null
 
   return (
-    <article
-      className="orb-message-user rounded-2xl bg-white/[0.06] px-4 py-3 ring-1 ring-white/[0.06]"
-      data-testid="orb-message-user"
-    >
+    <article className="orb-message-user" data-testid="orb-message-user">
+      <div className="orb-message-bubble">
       {entry.imageDataUrls?.length ? (
         <div className="mb-2 flex flex-wrap gap-2">
           {entry.imageDataUrls.map((url, index) => (
@@ -2022,6 +2099,7 @@ function MessageBubble({ entry }: { entry: StandaloneChatMessage }) {
       ) : null}
       <p className="whitespace-pre-wrap text-[15px] leading-7 text-slate-100">{entry.content}</p>
       {timeLabel ? <p className="mt-1.5 text-right text-[10px] text-slate-600">{timeLabel}</p> : null}
+      </div>
     </article>
   )
 }

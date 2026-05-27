@@ -1,39 +1,76 @@
 'use client'
 
 import { useState } from 'react'
+import { ExternalLink } from 'lucide-react'
 
+import { citationCardForLabel } from '@/lib/orb/citation-cards'
 import type { StandaloneOrbSource } from '@/lib/orb/standalone-local-store'
 
 export function OrbInlineCitation({ source }: { source: StandaloneOrbSource }) {
   const [open, setOpen] = useState(false)
   const anchor = source.label || 'Source'
   const short = anchor.length > 28 ? `${anchor.slice(0, 26)}…` : anchor
+  const card = citationCardForLabel(anchor)
 
   return (
     <span className="relative inline-block align-baseline">
       <button
         type="button"
-        className="mx-0.5 inline-flex items-center rounded-md border border-cyan-400/25 bg-cyan-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-cyan-100/95 transition hover:border-cyan-300/40 hover:bg-cyan-400/15"
+        className="mx-0.5 inline-flex items-center rounded-md border border-sky-400/30 bg-sky-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-sky-100/95 transition hover:border-sky-300/45 hover:bg-sky-400/15"
         onMouseEnter={() => setOpen(true)}
         onMouseLeave={() => setOpen(false)}
         onFocus={() => setOpen(true)}
         onBlur={() => setOpen(false)}
+        onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
+        data-orb-citation-chip
       >
         [{short}]
       </button>
       {open ? (
         <span
           role="tooltip"
-          className="absolute bottom-full left-1/2 z-30 mb-2 w-64 -translate-x-1/2 rounded-xl border border-white/10 bg-[#0c1018] p-3 text-left shadow-xl"
+          className="orb-citation-card absolute bottom-full left-1/2 z-30 mb-2 w-72 -translate-x-1/2 rounded-2xl border border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] p-3.5 text-left shadow-2xl backdrop-blur-xl"
+          data-orb-citation-popover
         >
-          <p className="text-xs font-semibold text-white">{anchor}</p>
-          {source.basis ? <p className="mt-1.5 text-[11px] leading-5 text-slate-400">{source.basis}</p> : null}
-          {source.note && source.note !== source.basis ? (
-            <p className="mt-1 text-[10px] text-slate-500">{source.note}</p>
+          <p className="text-xs font-semibold text-[var(--orb-foreground)]">{card?.title ?? anchor}</p>
+          <p className="mt-2 text-[11px] leading-5 text-[var(--orb-muted)]">
+            {card?.whyItMatters ?? source.basis ?? 'Institutional guidance anchor referenced in this response.'}
+          </p>
+          {card?.practicalApplication ? (
+            <div className="mt-2.5">
+              <p className="text-[9px] font-semibold uppercase tracking-wide text-sky-300/80">In practice</p>
+              <p className="mt-0.5 text-[11px] leading-5 text-slate-300">{card.practicalApplication}</p>
+            </div>
           ) : null}
-          <p className="mt-2 text-[9px] uppercase tracking-wide text-slate-600">
-            {source.type?.replace(/_/g, ' ') || 'institutional guidance'}
+          {card?.inspectionMeaning ? (
+            <div className="mt-2">
+              <p className="text-[9px] font-semibold uppercase tracking-wide text-violet-300/80">Inspection lens</p>
+              <p className="mt-0.5 text-[11px] leading-5 text-slate-400">{card.inspectionMeaning}</p>
+            </div>
+          ) : null}
+          {card?.evidenceExpectations?.length ? (
+            <div className="mt-2">
+              <p className="text-[9px] font-semibold uppercase tracking-wide text-emerald-300/70">Evidence expectations</p>
+              <ul className="mt-0.5 list-disc pl-4 text-[10px] leading-5 text-slate-400">
+                {card.evidenceExpectations.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {source.note && source.note !== source.basis ? (
+            <p className="mt-2 text-[10px] text-slate-500">{source.note}</p>
+          ) : null}
+          <p className="mt-2.5 flex items-center gap-1 text-[9px] uppercase tracking-wide text-slate-600">
+            {card?.sourceHint ? (
+              <>
+                <ExternalLink className="h-3 w-3 opacity-60" aria-hidden />
+                {card.sourceHint}
+              </>
+            ) : (
+              source.type?.replace(/_/g, ' ') || 'institutional guidance'
+            )}
           </p>
         </span>
       ) : null}

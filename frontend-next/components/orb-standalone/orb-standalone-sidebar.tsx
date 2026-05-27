@@ -19,6 +19,8 @@ import {
   X
 } from 'lucide-react'
 
+import type { AdultProfile } from '@/lib/orb/adult-profile-store'
+
 import {
   createStandaloneProfile,
   createStandaloneProject,
@@ -41,6 +43,10 @@ export function OrbStandaloneSidebar({
   onOpenSavedOutputs,
   onOpenTools,
   onOpenAgents,
+  onOpenAdultProfile,
+  adultProfile,
+  cognitionStatusLabel,
+  cognitionModeLabel,
   savedOutputsCount,
   onClose
 }: {
@@ -55,6 +61,10 @@ export function OrbStandaloneSidebar({
   onOpenSavedOutputs?: () => void
   onOpenTools?: () => void
   onOpenAgents?: () => void
+  onOpenAdultProfile?: () => void
+  adultProfile?: AdultProfile | null
+  cognitionStatusLabel?: string
+  cognitionModeLabel?: string
   savedOutputsCount?: number
   onClose?: () => void
 }) {
@@ -163,26 +173,48 @@ export function OrbStandaloneSidebar({
 
   return (
     <>
-      <div className="flex items-center gap-2 border-b border-white/[0.06] px-4 py-3">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-400/25 to-violet-500/20 text-sm font-black text-cyan-100">
-          O
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-white" data-orb-sidebar-brand>
-            ORB
-          </p>
-          <p className="truncate text-[11px] text-slate-500" data-orb-sidebar-powered>
-            Powered by IndiCare
-          </p>
+      <div className="border-b border-[var(--orb-line)] px-4 py-4">
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-400/30 to-blue-600/25 text-sm font-bold text-sky-50 shadow-[0_0_24px_var(--orb-glow-cyan)]">
+            O
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-[var(--orb-foreground)]" data-orb-sidebar-brand>
+              ORB
+            </p>
+            <p className="truncate text-[11px] text-[var(--orb-muted)]" data-orb-sidebar-powered>
+              Institutional cognition
+            </p>
+          </div>
+          {onClose ? (
+            <button type="button" className="rounded-lg p-1 text-[var(--orb-muted)] lg:hidden" onClick={onClose} aria-label="Close sidebar">
+              <X className="h-5 w-5" />
+            </button>
+          ) : null}
         </div>
-        {onClose ? (
-          <button type="button" className="rounded-lg p-1 text-slate-400 lg:hidden" onClick={onClose} aria-label="Close sidebar">
-            <X className="h-5 w-5" />
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <span className="orb-sidebar-cognition-pill" data-orb-sidebar-cognition-status>
+            {cognitionStatusLabel ?? 'Ready'}
+          </span>
+          {cognitionModeLabel ? (
+            <span className="truncate text-[10px] text-[var(--orb-muted)]" data-orb-sidebar-cognition-mode>
+              {cognitionModeLabel}
+            </span>
+          ) : null}
+        </div>
+        {onOpenAdultProfile ? (
+          <button
+            type="button"
+            onClick={onOpenAdultProfile}
+            className="mt-2 w-full rounded-lg px-2 py-1.5 text-left text-[10px] font-medium text-sky-300/90 hover:bg-[var(--orb-surface-hover)]"
+            data-orb-sidebar-profile-switcher
+          >
+            {adultProfile?.name?.trim() ? `Signed in as ${adultProfile.name}` : 'Set up your profile →'}
           </button>
         ) : null}
       </div>
 
-      <div className="flex-1 overflow-y-auto px-2 py-3">
+      <div className="flex-1 overflow-y-auto px-2 py-3 orb-sidebar-group">
         <button
           type="button"
           onClick={() => onNewChat(workspace.activeProjectId)}
@@ -345,7 +377,7 @@ export function OrbStandaloneSidebar({
         ) : null}
 
         {pinnedChats.length > 0 ? (
-          <SectionToggle label="Pinned conversations" open={recentOpen} onToggle={() => setRecentOpen((o) => !o)}>
+          <SectionToggle label="Pinned" open={recentOpen} onToggle={() => setRecentOpen((o) => !o)}>
             <ChatList
               chats={pinnedChats}
               activeChatId={workspace.activeChatId}
@@ -358,7 +390,7 @@ export function OrbStandaloneSidebar({
           </SectionToggle>
         ) : null}
 
-        <SectionToggle label="Recent chats" open={recentOpen} onToggle={() => setRecentOpen((o) => !o)}>
+        <SectionToggle label="Conversations" open={recentOpen} onToggle={() => setRecentOpen((o) => !o)}>
           {filteredChats.length === 0 ? (
             <p className="px-3 py-2 text-xs text-slate-500">
               {chatSearch.trim() ? 'No matching chats.' : 'No chats in this project yet.'}
@@ -386,23 +418,23 @@ export function OrbStandaloneSidebar({
         </SectionToggle>
       </div>
 
-      <div className="shrink-0 space-y-1 border-t border-white/[0.06] p-3">
+      <div className="shrink-0 space-y-2 border-t border-[var(--orb-line)] p-3">
         <button
           type="button"
           onClick={onOpenSavedOutputs}
-          className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-slate-400 transition hover:bg-white/[0.04] hover:text-slate-200"
+          className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]"
           data-orb-sidebar-saved-outputs
         >
           <Bookmark className="h-4 w-4" aria-hidden />
           <span className="flex-1 text-left">Saved outputs</span>
           {typeof savedOutputsCount === 'number' && savedOutputsCount > 0 ? (
-            <span className="rounded-full bg-white/[0.08] px-2 py-0.5 text-[10px] text-slate-400">{savedOutputsCount}</span>
+            <span className="rounded-full bg-[var(--orb-surface)] px-2 py-0.5 text-[10px]">{savedOutputsCount}</span>
           ) : null}
         </button>
         <button
           type="button"
           onClick={onOpenTools}
-          className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-slate-400 transition hover:bg-white/[0.04] hover:text-slate-200"
+          className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]"
           data-orb-sidebar-tools
         >
           <Wrench className="h-4 w-4" aria-hidden />
@@ -411,13 +443,32 @@ export function OrbStandaloneSidebar({
         <button
           type="button"
           onClick={onOpenSettings}
-          className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-slate-400 transition hover:bg-white/[0.04] hover:text-slate-200"
+          className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]"
           data-orb-sidebar-settings
         >
           <Settings className="h-4 w-4" aria-hidden />
           Settings
         </button>
-        <p className="px-3 py-2 text-[10px] leading-4 text-emerald-200/70" data-orb-privacy-badge>
+        {adultProfile && onOpenAdultProfile ? (
+          <button
+            type="button"
+            onClick={onOpenAdultProfile}
+            className="orb-adult-profile-card w-full text-left"
+            data-orb-adult-profile-card
+          >
+            <p className="truncate text-sm font-semibold text-[var(--orb-foreground)]">
+              {adultProfile.name?.trim() || 'Your profile'}
+            </p>
+            <p className="mt-0.5 truncate text-[11px] text-[var(--orb-muted)]">
+              {adultProfile.roleLabel}
+              {adultProfile.homeName ? ` · ${adultProfile.homeName}` : ''}
+            </p>
+            <p className="mt-1.5 text-[10px] text-sky-300/80">
+              {cognitionModeLabel ?? 'General cognition'} · Tap to edit
+            </p>
+          </button>
+        ) : null}
+        <p className="px-2 py-1 text-[10px] leading-4 text-emerald-300/70" data-orb-privacy-badge>
           No OS records accessed
         </p>
       </div>

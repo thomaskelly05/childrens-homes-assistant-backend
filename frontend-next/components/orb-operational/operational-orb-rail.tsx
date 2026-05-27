@@ -91,7 +91,7 @@ export function OperationalOrbRail({
     <section
       data-testid={testId}
       data-orb-quiet="true"
-      className="os-context-rail rounded-2xl border border-white/[0.06] bg-gradient-to-b from-slate-900/95 via-slate-950 to-slate-950 p-3.5 text-white shadow-sm"
+      className="os-context-rail rounded-2xl border border-white/[0.05] bg-[var(--orb-bg-mid,#0b1728)]/88 p-3.5 text-slate-100 shadow-none backdrop-blur-md"
     >
       <div className="flex items-start gap-3">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-cyan-400/15 ring-1 ring-cyan-300/25">

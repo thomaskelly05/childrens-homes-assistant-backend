@@ -1,7 +1,7 @@
 'use client'
 
 import { FormEvent, useRef, type DragEvent } from 'react'
-import { Camera, FileText, Mic, MicOff, Plus, Send, Square, X } from 'lucide-react'
+import { Camera, FileText, Mic, MicOff, Plus, Send, Square, Wrench, X } from 'lucide-react'
 
 import { logTapTarget } from '@/lib/interaction/mobile-tap-debug'
 import { placeholderForMode } from '@/lib/orb/residential-agents'
@@ -55,7 +55,9 @@ export function OrbStandaloneComposer({
   onAnalyseDocument,
   onDocumentActionPlan,
   onSummariseDocument,
-  onAddDocumentToLibrary
+  onAddDocumentToLibrary,
+  onToolsClick,
+  suggestions
 }: {
   value: string
   pending: boolean
@@ -90,6 +92,8 @@ export function OrbStandaloneComposer({
   onDocumentActionPlan?: () => void
   onSummariseDocument?: () => void
   onAddDocumentToLibrary?: () => void
+  onToolsClick?: () => void
+  suggestions?: string[]
 }) {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const cameraInputRef = useRef<HTMLInputElement | null>(null)
@@ -110,7 +114,7 @@ export function OrbStandaloneComposer({
 
   return (
     <div
-      className="orb-chat-composer shrink-0 border-t border-white/[0.06] bg-gradient-to-t from-[#05070d] via-[#05070d]/98 to-transparent px-3 pt-2 md:px-4 md:pt-3"
+      className="orb-chat-composer shrink-0 border-t border-[var(--orb-line)] bg-gradient-to-t from-[var(--orb-bg-deep)]/95 via-[var(--orb-bg-mid)]/80 to-transparent px-3 pt-3 md:px-5 md:pt-4"
       onDragOver={handleDragOver}
       onDrop={onDrop}
       data-orb-composer
@@ -159,7 +163,26 @@ export function OrbStandaloneComposer({
           <label htmlFor="orb-standalone-input" className="sr-only">
             Message ORB
           </label>
-          <div className="orb-composer-glow rounded-[1.75rem] border border-white/10 bg-[#0c1018]/95 p-2 shadow-[0_8px_32px_rgba(0,0,0,0.35)] ring-1 ring-white/[0.04] transition focus-within:border-cyan-300/30 focus-within:ring-cyan-300/20">
+          {value.startsWith('/') ? (
+            <p className="mb-2 px-2 text-[10px] text-sky-300/80" data-orb-composer-slash-hint>
+              Slash commands: /agent · /record · /safeguard · /clear — or type your message
+            </p>
+          ) : null}
+          {suggestions && suggestions.length > 0 && !value.trim() && !pending ? (
+            <div className="mb-2 flex flex-wrap gap-1.5 px-1" data-orb-composer-suggestions>
+              {suggestions.slice(0, 3).map((suggestion) => (
+                <button
+                  key={suggestion}
+                  type="button"
+                  onClick={() => syncMessage(suggestion)}
+                  className="rounded-full border border-[var(--orb-line)] bg-[var(--orb-surface)] px-2.5 py-1 text-[10px] text-[var(--orb-muted)] transition hover:border-sky-400/30 hover:text-slate-200"
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+          ) : null}
+          <div className="orb-composer-glow orb-composer-glass p-2.5 md:p-3">
             {attachments.length > 0 ? (
               <div className="mb-2 flex flex-wrap gap-2 px-1 pt-1">
                 {attachments.map((file) => (
@@ -251,6 +274,17 @@ export function OrbStandaloneComposer({
                   <FileText className="h-5 w-5" aria-hidden />
                 </button>
               ) : null}
+              {onToolsClick ? (
+                <button
+                  type="button"
+                  onClick={onToolsClick}
+                  className="inline-flex h-10 min-w-10 shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-white/[0.06] hover:text-slate-200"
+                  aria-label="Tools"
+                  data-orb-composer-tools
+                >
+                  <Wrench className="h-5 w-5" aria-hidden />
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={() => cameraInputRef.current?.click()}
@@ -277,7 +311,7 @@ export function OrbStandaloneComposer({
                   }
                 }}
                 rows={1}
-                className="max-h-40 min-h-[2.75rem] flex-1 resize-none bg-transparent px-1 py-2.5 text-base leading-6 text-white outline-none placeholder:text-slate-500 [touch-action:manipulation]"
+                className="max-h-44 min-h-[3rem] flex-1 resize-none bg-transparent px-1 py-3 text-base leading-7 text-[var(--orb-foreground)] outline-none placeholder:text-[var(--orb-muted)] [touch-action:manipulation]"
                 placeholder={placeholderForMode(mode)}
                 disabled={pending}
                 aria-describedby="orb-standalone-status"
