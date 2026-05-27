@@ -42,6 +42,11 @@ describe('ORB ChatGPT UI structure', () => {
     assert.match(layout, /orb-chatgpt-light\.css/)
     assert.match(layout, /data-orb-light-ui-build/)
     assert.match(layout, /__ORB_LIGHT_UI_BUILD__/)
+    assert.match(layout, /data-orb-cognition-routing-build/)
+    assert.match(layout, /__ORB_COGNITION_ROUTING_BUILD__/)
+    assert.match(layout, /ORB_COGNITION_ROUTING_BUILD/)
+    const build = readComponent('lib/orb/orb-cognition-routing-build.ts')
+    assert.match(build, /1346/)
   })
 
   it('globals and route CSS ship ChatGPT-light build marker and hue pulse classes', () => {

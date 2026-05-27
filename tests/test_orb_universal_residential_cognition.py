@@ -178,6 +178,66 @@ def test_therapeutic_citations_exclude_reg12_unless_safeguarding():
     assert "[Reg 12]" not in labels
 
 
+def test_standalone_conversation_response_includes_cognition_display_labels(fake_state, monkeypatch):
+    import asyncio
+
+    from routers import orb_standalone_routes
+
+    async def stub_answer(*_args, **_kwargs):
+        return {
+            "answer": "Check MAR and notify the manager.",
+            "sources": [],
+            "citations": [],
+            "context_used": {"surface": "standalone_orb_ai"},
+            "tools_used": ["standalone_orb_general_assistant"],
+        }
+
+    monkeypatch.setattr(orb_standalone_routes.orb_general_assistant_service, "answer", stub_answer)
+
+    response = asyncio.run(
+        orb_standalone_routes.standalone_orb_conversation(
+            orb_standalone_routes.OrbStandaloneConversationRequest(message=MEDICATION_PROMPT),
+            current_user=fake_state["user"],
+        )
+    )
+    labels = response.get("cognition_display_labels") or []
+    ctx = response.get("context_used") or {}
+    assert labels == ["Medication / health", "Recording quality", "Leadership oversight"]
+    assert ctx.get("cognition_display_labels") == labels
+    assert (ctx.get("explainability") or {}).get("cognition_display_labels") == labels
+
+
+def test_therapeutic_conversation_response_has_no_threshold_closer(fake_state, monkeypatch):
+    import asyncio
+
+    from routers import orb_standalone_routes
+
+    async def stub_answer(*_args, **_kwargs):
+        answer = (
+            "## How to record it\n"
+            "Record without blame.\n\n"
+            "ORB can support your thinking, but the threshold decision should remain human-led and "
+            "local-procedure-led."
+        )
+        return {
+            "answer": answer,
+            "sources": [],
+            "citations": [],
+            "context_used": {"surface": "standalone_orb_ai"},
+            "tools_used": ["standalone_orb_general_assistant"],
+        }
+
+    monkeypatch.setattr(orb_standalone_routes.orb_general_assistant_service, "answer", stub_answer)
+
+    response = asyncio.run(
+        orb_standalone_routes.standalone_orb_conversation(
+            orb_standalone_routes.OrbStandaloneConversationRequest(message=THERAPEUTIC_PROMPT),
+            current_user=fake_state["user"],
+        )
+    )
+    assert "threshold decision" not in response["answer"].lower()
+
+
 def test_shared_runtime_includes_auto_routing_metadata():
     context = shared_institutional_cognition_runtime.build_context(
         surface="standalone_orb",

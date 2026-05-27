@@ -56,6 +56,8 @@ export type StandaloneChatMessage = {
   }
   explainability?: {
     active_brains?: string[]
+    cognition_display_labels?: string[]
+    depth_topic?: string
     frameworks_used?: string[]
     evidence_focus?: string[]
     confidence?: string

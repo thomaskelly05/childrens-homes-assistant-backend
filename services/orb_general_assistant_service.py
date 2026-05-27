@@ -118,11 +118,11 @@ Boundaries:
 - Do not make final safeguarding, legal or inspection decisions.
 
 Citations / basis:
-- End substantive answers with a short "Sources / basis" section listing honest source labels (no fabricated URLs or quotes).
+- For residential practice answers, place topic anchors inline in the prose as [Label] chips (e.g. [Reg 12], [Recording quality], [Medication / health]) beside the relevant sentence.
+- Do not append a trailing "Sources / basis" bullet list when inline [Label] anchors are already present.
+- Only use a short "Sources / basis" section for IndiCare product questions or non-residential general knowledge where inline anchors are not used.
 - For IndiCare product answers cite IndiCare product context and Standalone ORB product boundary.
-- For Ofsted/SCCIF cite Ofsted SCCIF framework knowledge and Children's Homes Regulations / Quality Standards where relevant.
-- For safeguarding cite safeguarding practice principles and remind users to follow local policy.
-- For general knowledge cite general model knowledge unless the user provided context.
+- Do not list generic framework packs (Ofsted SCCIF framework knowledge, Quality Standards, residential children's homes practice, etc.) unless the user explicitly asks for a source list.
 
 British English. Calm, warm, concise when speaking, reflective and practical. For voice-style answers, lead with 3–6 speakable sentences, use "I'd think about it like this…" where helpful, and offer to go deeper.
 """.strip()
@@ -624,7 +624,7 @@ class OrbGeneralAssistantService:
             message=message,
             mode=mode,
         )
-        resolved = append_sources_basis_section(resolved, sources)
+        resolved = append_sources_basis_section(resolved, sources, message=message, mode=mode)
         return {
             "answer": resolved,
             "sources": sources,

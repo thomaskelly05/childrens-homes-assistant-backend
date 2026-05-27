@@ -56,13 +56,17 @@ describe('ORB markdown and cognition rendering', () => {
   it('cognition pill uses auto-routed labels from explainability', () => {
     const agents = readComponent('lib/orb/residential-agents.ts')
     const assistant = readComponent('components/orb-standalone/orb-assistant-message.tsx')
+    const client = readComponent('lib/orb/standalone-client.ts')
     assert.match(agents, /cognitionPillLabel/)
+    assert.match(agents, /collectCognitionDisplayLabels/)
     assert.match(agents, /cognition_display_labels/)
     assert.match(agents, /filterAutoRouteLabels/)
     assert.match(agents, /isAutomaticRoutingOnlyLabel/)
     assert.match(agents, /automatic routing/)
+    assert.match(client, /logOrbCognitionDebug/)
     assert.match(assistant, /data-orb-cognition-pill/)
     assert.match(assistant, /cognitionPillLabel/)
+    assert.match(assistant, /stripSourcesBasisSection/)
   })
 
   it('source detail panel filters generic product sources', () => {

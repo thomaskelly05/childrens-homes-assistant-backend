@@ -19,6 +19,7 @@ GENERIC_DISPLAY_SOURCE_LABELS = frozenset(
         "residential children's homes practice",
         "safeguarding practice principles",
         "recording quality",
+        "therapeutic practice",
     }
 )
 
@@ -133,15 +134,24 @@ def append_sources_basis_section(
     message: str | None = None,
     mode: str | None = None,
 ) -> str:
+    text = str(answer or "").strip()
+    if not text:
+        return text
+    if re.search(r"\[[^\]]+\]", text):
+        return text
+    if re.search(r"(?i)sources\s*/\s*basis", text):
+        return text
     citations = orb_citation_service.normalise_sources(sources)
     topic = orb_professional_curiosity_service.detect_topic(message or "", mode=mode)
     if topic in orb_professional_curiosity_service.HIGH_ATTENTION_TOPICS:
-        if re.search(r"\[(reg\s*12|reg\s*13|sccif|lado|working together|recording quality)\]", answer, re.I):
-            return answer
+        if re.search(r"\[(reg\s*12|reg\s*13|sccif|lado|working together|recording quality)\]", text, re.I):
+            return text
+    if topic and topic not in {"indicare_product", "general_residential"}:
+        return text
     display_sources = filter_display_sources(citations, message=message, mode=mode)
     if not display_sources:
-        return answer
-    return orb_citation_service.append_sources_basis(answer, display_sources)
+        return text
+    return orb_citation_service.append_sources_basis(text, display_sources)
 
 
 INDICARE_PRODUCT_FALLBACK = """IndiCare is a residential children's homes operating system and intelligence platform built to support staff and managers in registered homes.

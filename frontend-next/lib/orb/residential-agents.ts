@@ -178,6 +178,101 @@ const AUTO_ROUTE_MODES = new Set(['ask orb', 'general cognition', ''])
 const RESIDENTIAL_COGNITION_HINT =
   /\b(young person|child|children'?s home|looked after|medication|missing|safeguard|restraint|family time|ofsted|sccif|mar\b|therapeutic)\b/i
 
+export type CognitionPillExplainability = {
+  cognition_display_labels?: string[]
+  active_brains?: string[]
+  depth_topic?: string
+  cognition_mode?: string
+}
+
+export type CognitionPillContext = {
+  context_used?: {
+    cognition_display_labels?: string[]
+    active_brains?: string[]
+    depth_topic?: string
+    explainability?: CognitionPillExplainability
+  }
+  cognition_display_labels?: string[]
+}
+
+function labelsFromBrains(activeBrains: string[] | undefined, topicLabels: string[] | null): string[] | null {
+  if (!activeBrains?.length) return topicLabels
+  const brainLabels: string[] = []
+  const map: Record<string, string> = {
+    health_medication_cognition: 'Medication / health',
+    missing_from_home_cognition: 'Missing from home',
+    safeguarding_cognition: 'Safeguarding',
+    recording_quality_cognition: 'Recording quality',
+    governance_cognition: 'Leadership oversight',
+    therapeutic_reflective_cognition: 'Therapeutic reflection',
+    regulatory_cognition: 'Ofsted evidence',
+    professional_curiosity_cognition: 'Professional curiosity',
+    child_journey_cognition: 'Child experience'
+  }
+  for (const brain of activeBrains) {
+    const label = map[brain]
+    if (label && !brainLabels.includes(label)) brainLabels.push(label)
+  }
+  if (!brainLabels.length) return topicLabels
+  if (topicLabels?.length) {
+    const ordered = topicLabels.filter((label) => brainLabels.includes(label))
+    const rest = brainLabels.filter((label) => !ordered.includes(label))
+    return [...ordered, ...rest].slice(0, 5)
+  }
+  return brainLabels.slice(0, 5)
+}
+
+export function inferResidentialCognitionLabels(messageHint?: string): string[] | null {
+  const text = (messageHint || '').trim().toLowerCase()
+  if (!text) return null
+  if (/\b(medication|mar\b|dose|pharmacy|missed)\b/.test(text)) {
+    return ['Medication / health', 'Recording quality', 'Leadership oversight']
+  }
+  if (/\b(missing|abscond|run away|overnight)\b/.test(text)) {
+    return ['Missing from home', 'Safeguarding', 'Recording quality', 'Ofsted evidence']
+  }
+  if (/\b(family time|therapeutic|smashed|cup|reframe|behaviour meaning)\b/.test(text)) {
+    return ['Therapeutic reflection', 'Recording quality', 'Child experience']
+  }
+  if (
+    /\b(three allegations|two missing|four restraint|not right|pattern|cumulative)\b/.test(text) ||
+    (/\ballegation/.test(text) && /\bmissing/.test(text))
+  ) {
+    return ['Safeguarding', 'Professional curiosity', 'Leadership oversight', 'Ofsted evidence']
+  }
+  if (/\b(rewrite|rough note|sign off|record properly)\b/.test(text)) {
+    return ['Recording quality', 'Therapeutic reflection']
+  }
+  if (RESIDENTIAL_COGNITION_HINT.test(text)) {
+    return ['Residential practice']
+  }
+  return null
+}
+
+export function collectCognitionDisplayLabels(
+  explainability?: CognitionPillExplainability,
+  context?: CognitionPillContext,
+  messageHint?: string
+): string[] {
+  const ctx = context?.context_used
+  const fromContext =
+    ctx?.cognition_display_labels ??
+    context?.cognition_display_labels ??
+    ctx?.explainability?.cognition_display_labels ??
+    explainability?.cognition_display_labels ??
+    []
+  if (fromContext.length) {
+    return fromContext.filter(Boolean) as string[]
+  }
+  const inferred = inferResidentialCognitionLabels(messageHint)
+  if (inferred?.length) return inferred
+  const brainDerived = labelsFromBrains(
+    ctx?.active_brains ?? explainability?.active_brains,
+    inferResidentialCognitionLabels(messageHint)
+  )
+  return brainDerived ?? []
+}
+
 function filterAutoRouteLabels(labels: string[], mode: string): string[] {
   const modeLower = mode.trim().toLowerCase()
   if (modeLower !== 'ask orb') {
@@ -191,18 +286,13 @@ function filterAutoRouteLabels(labels: string[], mode: string): string[] {
 
 export function cognitionPillLabel(
   mode: string,
-  explainability?: {
-    cognition_display_labels?: string[]
-    active_brains?: string[]
-    depth_topic?: string
-  },
-  messageHint?: string
+  explainability?: CognitionPillExplainability,
+  messageHint?: string,
+  context?: CognitionPillContext
 ): string {
   const modeLower = mode.trim().toLowerCase()
-  const autoLabels = filterAutoRouteLabels(
-    (explainability?.cognition_display_labels ?? []).filter(Boolean) as string[],
-    mode
-  )
+  const resolvedLabels = collectCognitionDisplayLabels(explainability, context, messageHint)
+  const autoLabels = filterAutoRouteLabels(resolvedLabels, mode)
   if (autoLabels.length) {
     return autoLabels.join(' · ')
   }
@@ -212,9 +302,13 @@ export function cognitionPillLabel(
   if (!AUTO_ROUTE_MODES.has(modeLower) && modeLower) {
     return cognitionLabelForMode(mode)
   }
-  const depthTopic = String(explainability?.depth_topic || '').trim()
+  const depthTopic = String(explainability?.depth_topic || context?.context_used?.depth_topic || '').trim()
   if (depthTopic && depthTopic.toLowerCase() !== 'general intelligence') {
     return depthTopic.replace(/_/g, ' ')
+  }
+  const inferred = inferResidentialCognitionLabels(messageHint)
+  if (inferred?.length) {
+    return filterAutoRouteLabels(inferred, mode).join(' · ') || inferred.join(' · ')
   }
   if (messageHint && RESIDENTIAL_COGNITION_HINT.test(messageHint)) {
     return 'Residential practice'

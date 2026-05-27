@@ -60,21 +60,25 @@ class OrbGroundedAnswerStyleService:
 
     TOPIC_CLOSERS: dict[str, str] = {
         "medication": (
-            "\n\nThe immediate priority is child safety, accurate MAR recording, appropriate medical/pharmacy advice "
-            "where needed, transparent manager oversight, and a learning review if this could recur. Threshold and "
-            "clinical decisions remain human-led and local-procedure-led."
+            "\n\nORB can support your thinking, but medication decisions should follow the home's policy and "
+            "appropriate medical/pharmacy advice. The key is to check safety, record transparently, notify the "
+            "right people, and review the handover system so the error is not repeated."
         ),
         "missing": (
-            "\n\nFocus on immediate safety, a strong return conversation, factual chronology, pattern review, "
-            "manager oversight, and human-led/local safeguarding procedures where indicated."
+            "\n\nORB can support your thinking, but missing-from-home decisions should follow local procedures. "
+            "The priority is welfare, return conversation, risk review, and visible manager oversight."
         ),
         "therapeutic": (
             "\n\nThe key is to record the behaviour without blame, hold the emotional meaning in mind, and show how "
             "staff helped the young person feel safe, heard and supported afterwards."
         ),
         "recording": (
-            "\n\nBefore sign-off, check what facts, child voice, rationale and manager review are still missing — "
-            "do not polish wording alone."
+            "\n\nBefore signing off, add any missing facts, staff response, child voice, outcome and manager review "
+            "if needed."
+        ),
+        "cumulative_concern": (
+            "\n\nDo not make the threshold decision alone. Bring the pattern together, seek appropriate "
+            "safeguarding/LADO advice where indicated, record the rationale, and ensure RI oversight is visible."
         ),
         "leadership": (
             "\n\nLeadership should be able to show oversight, evidence of impact, clear review dates and named action ownership."
@@ -249,6 +253,11 @@ class OrbGroundedAnswerStyleService:
         re.compile(r"\n+what would you like to explore next\?\s*$", re.I | re.S),
     )
 
+    THRESHOLD_BOUNDARY_CLOSER_PATTERN = re.compile(
+        r"\n+ORB can support your thinking, but the threshold decision should remain human-led[\s\S]*?(?=\n\n[A-Z#]|\Z)",
+        re.I,
+    )
+
     SAFE_BOUNDARY_CLOSER = (
         "\n\nORB can support your thinking, but the threshold decision should remain human-led and "
         "local-procedure-led. The immediate priority is to check safety, seek appropriate advice, "
@@ -274,10 +283,17 @@ class OrbGroundedAnswerStyleService:
         if not text:
             return text
         topic = orb_professional_curiosity_service.detect_topic(message, mode=mode)
+        message_lower = str(message or "").lower()
+        therapeutic_risk = topic == "therapeutic" and any(
+            term in message_lower
+            for term in ("safeguard", "harm", "injury", "abuse", "exploit", "missing", "police", "threshold")
+        )
         high_attention = topic in self.HIGH_ATTENTION_CLOSER_TOPICS or topic in orb_professional_curiosity_service.HIGH_ATTENTION_TOPICS
         if not high_attention and topic not in self.THERAPEUTIC_NO_BOUNDARY_TOPICS:
             return text
         cleaned = text
+        if topic == "therapeutic" and not therapeutic_risk:
+            cleaned = self.THRESHOLD_BOUNDARY_CLOSER_PATTERN.sub("", cleaned).rstrip()
         for pattern in self.GENERIC_CLOSER_PATTERNS:
             cleaned = pattern.sub("", cleaned).rstrip()
         if cleaned.lower().endswith("?"):
