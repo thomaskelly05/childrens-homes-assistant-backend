@@ -221,6 +221,8 @@ async def get_young_person_workspace(
             """
             SELECT
               id,
+              'os_safeguarding_patterns'::text AS source_table,
+              id::text AS source_id,
               provider_id,
               home_id,
               young_person_id,
@@ -327,6 +329,8 @@ async def get_young_person_workspace(
             """
             SELECT
               id,
+              'young_person_appointments'::text AS source_table,
+              id::text AS source_id,
               'Appointment' AS type,
               title,
               coalesce(outcome_notes, summary, purpose, follow_up_actions, title) AS summary,
@@ -353,14 +357,16 @@ async def get_young_person_workspace(
             """
             SELECT
               id,
+              COALESCE(source_table, 'child_voice_entries') AS source_table,
+              COALESCE(source_id::text, id::text) AS source_id,
               'Child voice' AS type,
               context AS title,
               voice_text AS summary,
               status,
               voice_date AS occurred_at,
               how_voice_influenced_care AS recommended_action,
-              source_table,
-              source_id,
+              source_table AS linked_source_table,
+              source_id AS linked_source_id,
               recorded_by,
               provider_id,
               home_id
@@ -556,7 +562,6 @@ async def get_os_young_people(
     user: CurrentUser = Depends(get_current_user),
 ):
     pool = get_pool(request)
-
     async with pool.acquire() as conn:
         await conn.execute("select set_config('app.user_id', $1, true)", str(user.id))
         rows = await _fetch_if_table(
