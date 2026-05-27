@@ -2,6 +2,7 @@
 
 import { useMemo, useState, type ReactNode } from 'react'
 import {
+  MessageSquare,
   Archive,
   Bot,
   ChevronDown,
@@ -80,7 +81,7 @@ export function OrbStandaloneSidebar({
 }) {
   const [projectsOpen, setProjectsOpen] = useState(false)
   const [profilesOpen, setProfilesOpen] = useState(false)
-  const [recentOpen, setRecentOpen] = useState(true)
+  const [conversationsOpen, setConversationsOpen] = useState(true)
   const [profileEditorOpen, setProfileEditorOpen] = useState(false)
   const [projectEditorOpen, setProjectEditorOpen] = useState(false)
   const [newProjectName, setNewProjectName] = useState('')
@@ -219,9 +220,16 @@ export function OrbStandaloneSidebar({
           dataAttr="orb-sidebar-search-nav"
         />
 
-        <p className="orb-sidebar-section-label mt-3" data-orb-sidebar-explore>
-          Explore
+        <p className="orb-sidebar-section-label mt-3" data-orb-sidebar-apps>
+          Apps
         </p>
+        <SidebarNavButton
+          icon={<MessageSquare className="h-4 w-4" />}
+          label="Conversations"
+          active={conversationsOpen}
+          onClick={() => setConversationsOpen((open) => !open)}
+          dataAttr="orb-sidebar-conversations"
+        />
         <SidebarNavButton
           icon={<Library className="h-4 w-4" />}
           label="Library"
@@ -246,82 +254,142 @@ export function OrbStandaloneSidebar({
           onClick={() => onOpenTools?.()}
           dataAttr="orb-sidebar-tools-nav"
         />
-
-        <div className="mt-2 px-1">
-          <label className="flex items-center gap-2 rounded-lg border border-[var(--orb-line)] bg-[var(--orb-surface)] px-3 py-2 focus-within:ring-1 focus-within:ring-[#00B8FF]/30">
-            <Search className="h-4 w-4 shrink-0 text-[var(--orb-muted)]" aria-hidden />
-            <input
-              type="search"
-              value={chatSearch}
-              onChange={(e) => onChatSearchChange(e.target.value)}
-              placeholder="Search chats"
-              className="w-full bg-transparent text-sm text-[var(--orb-foreground)] outline-none placeholder:text-[var(--orb-muted)]"
-              data-orb-sidebar-search
-            />
-          </label>
-        </div>
-
-        <p className="orb-sidebar-section-label mt-3">Projects</p>
         <SidebarNavButton
           icon={<FolderPlus className="h-4 w-4" />}
-          label="New project"
-          onClick={() => setProjectEditorOpen(true)}
-          muted
-          dataAttr="orb-sidebar-new-project"
+          label="Projects"
+          active={projectsOpen}
+          onClick={() => setProjectsOpen((open) => !open)}
+          dataAttr="orb-sidebar-projects-nav"
+        />
+        <SidebarNavButton
+          icon={<Archive className="h-4 w-4" />}
+          label={savedOutputsCount ? `Saved outputs (${savedOutputsCount})` : 'Saved outputs'}
+          onClick={() => onOpenSavedOutputs?.()}
+          dataAttr="orb-sidebar-saved-outputs"
         />
 
-        <SectionToggle label="Your projects" open={projectsOpen} onToggle={() => setProjectsOpen((o) => !o)}>
-          <ul className="space-y-0.5">
-            {workspace.projects.map((project) => (
-              <li key={project.id} className="group flex items-center gap-0.5">
-                <button
-                  type="button"
-                  onClick={() => onSelectProject(project.id)}
-                  className={`min-w-0 flex-1 rounded-lg px-3 py-2 text-left text-[13px] transition ${
-                    workspace.activeProjectId === project.id
-                      ? 'orb-sidebar-chat-active bg-[#EAF6FF] font-semibold text-[#0077FF]'
-                      : 'text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]'
-                  }`}
-                >
-                  <span className="mr-2 opacity-70">{project.icon || '▣'}</span>
-                  {project.name}
-                </button>
-                {project.id !== STANDALONE_GENERAL_PROJECT_ID ? (
-                  <ProjectMenu onRename={() => renameProject(project)} onDelete={() => deleteProject(project.id)} />
-                ) : null}
-              </li>
-            ))}
-            <li>
-              {projectEditorOpen ? (
-                <div className="orb-sidebar-inline-form mx-1 mt-1 space-y-2 rounded-lg border p-2">
-                  <input
-                    value={newProjectName}
-                    onChange={(e) => setNewProjectName(e.target.value)}
-                    placeholder="Project name"
-                    className="w-full rounded-lg border bg-transparent px-2 py-1.5 text-xs"
-                  />
-                  <div className="flex gap-2">
-                    <button type="button" onClick={saveProject} className="flex-1 rounded-lg py-1 text-xs font-semibold">
-                      Save
-                    </button>
-                    <button type="button" onClick={() => setProjectEditorOpen(false)} className="flex-1 rounded-lg py-1 text-xs text-[var(--orb-muted)]">
-                      Cancel
-                    </button>
+        {conversationsOpen ? (
+          <>
+            <div className="mt-2 px-1">
+              <label className="flex items-center gap-2 rounded-lg border border-[var(--orb-line)] bg-[var(--orb-surface)] px-3 py-2 focus-within:ring-1 focus-within:ring-[#00B8FF]/30">
+                <Search className="h-4 w-4 shrink-0 text-[var(--orb-muted)]" aria-hidden />
+                <input
+                  type="search"
+                  value={chatSearch}
+                  onChange={(e) => onChatSearchChange(e.target.value)}
+                  placeholder="Search chats"
+                  className="w-full bg-transparent text-sm text-[var(--orb-foreground)] outline-none placeholder:text-[var(--orb-muted)]"
+                  data-orb-sidebar-search
+                />
+              </label>
+            </div>
+
+            {pinnedChats.length > 0 ? (
+              <SectionToggle label="Pinned" open={conversationsOpen} onToggle={() => setConversationsOpen((o) => !o)}>
+                <ChatList
+                  chats={pinnedChats}
+                  activeChatId={workspace.activeChatId}
+                  onSelectChat={onSelectChat}
+                  onRename={renameChat}
+                  onDelete={deleteChat}
+                  onPin={(chat) => updateChat(chat.id, { pinned: !chat.pinned })}
+                  onArchive={(chat) => updateChat(chat.id, { archived: true })}
+                />
+              </SectionToggle>
+            ) : null}
+
+            {filteredChats.length === 0 ? (
+              <p className="px-3 py-2 text-xs text-slate-500">
+                {chatSearch.trim() ? 'No matching chats.' : 'No chats in this project yet.'}
+              </p>
+            ) : (
+              <div className="mt-2 space-y-3">
+                {timeGroupedChats.map((group) => (
+                  <div key={group.label}>
+                    <p className="px-3 pb-1 text-[10px] font-medium uppercase tracking-[0.14em] text-slate-600">
+                      {group.label}
+                    </p>
+                    <ChatList
+                      chats={group.chats}
+                      activeChatId={workspace.activeChatId}
+                      onSelectChat={onSelectChat}
+                      onRename={renameChat}
+                      onDelete={deleteChat}
+                      onPin={(chat) => updateChat(chat.id, { pinned: !chat.pinned })}
+                      onArchive={(chat) => updateChat(chat.id, { archived: true })}
+                    />
                   </div>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setProjectEditorOpen(true)}
-                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]"
-                >
-                  <FolderPlus className="h-3.5 w-3.5" />
-                  Create project
-                </button>
-              )}
-            </li>
-          </ul>
-        </SectionToggle>
+                ))}
+              </div>
+            )}
+          </>
+        ) : null}
+
+        {projectsOpen ? (
+          <div className="mt-2">
+            <SidebarNavButton
+              icon={<FolderPlus className="h-4 w-4" />}
+              label="New project"
+              onClick={() => setProjectEditorOpen(true)}
+              muted
+              dataAttr="orb-sidebar-new-project"
+            />
+            <ul className="mt-1 space-y-0.5">
+              {workspace.projects.map((project) => (
+                <li key={project.id} className="group flex items-center gap-0.5">
+                  <button
+                    type="button"
+                    onClick={() => onSelectProject(project.id)}
+                    className={`min-w-0 flex-1 rounded-lg px-3 py-2 text-left text-[13px] transition ${
+                      workspace.activeProjectId === project.id
+                        ? 'orb-sidebar-chat-active bg-[#EAF6FF] font-semibold text-[#0077FF]'
+                        : 'text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]'
+                    }`}
+                  >
+                    <span className="mr-2 opacity-70">{project.icon || '▣'}</span>
+                    {project.name}
+                  </button>
+                  {project.id !== STANDALONE_GENERAL_PROJECT_ID ? (
+                    <ProjectMenu onRename={() => renameProject(project)} onDelete={() => deleteProject(project.id)} />
+                  ) : null}
+                </li>
+              ))}
+              <li>
+                {projectEditorOpen ? (
+                  <div className="orb-sidebar-inline-form mx-1 mt-1 space-y-2 rounded-lg border p-2">
+                    <input
+                      value={newProjectName}
+                      onChange={(e) => setNewProjectName(e.target.value)}
+                      placeholder="Project name"
+                      className="w-full rounded-lg border bg-transparent px-2 py-1.5 text-xs"
+                    />
+                    <div className="flex gap-2">
+                      <button type="button" onClick={saveProject} className="flex-1 rounded-lg py-1 text-xs font-semibold">
+                        Save
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setProjectEditorOpen(false)}
+                        className="flex-1 rounded-lg py-1 text-xs text-[var(--orb-muted)]"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setProjectEditorOpen(true)}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]"
+                  >
+                    <FolderPlus className="h-3.5 w-3.5" />
+                    Create project
+                  </button>
+                )}
+              </li>
+            </ul>
+          </div>
+        ) : null}
 
         {workspace.profiles.length > 0 ? (
           <SectionToggle label="Profiles" open={profilesOpen} onToggle={() => setProfilesOpen((o) => !o)}>
@@ -394,47 +462,6 @@ export function OrbStandaloneSidebar({
             </div>
           </div>
         ) : null}
-
-        {pinnedChats.length > 0 ? (
-          <SectionToggle label="Pinned" open={recentOpen} onToggle={() => setRecentOpen((o) => !o)}>
-            <ChatList
-              chats={pinnedChats}
-              activeChatId={workspace.activeChatId}
-              onSelectChat={onSelectChat}
-              onRename={renameChat}
-              onDelete={deleteChat}
-              onPin={(chat) => updateChat(chat.id, { pinned: !chat.pinned })}
-              onArchive={(chat) => updateChat(chat.id, { archived: true })}
-            />
-          </SectionToggle>
-        ) : null}
-
-        <SectionToggle label="Conversations" open={recentOpen} onToggle={() => setRecentOpen((o) => !o)}>
-          {filteredChats.length === 0 ? (
-            <p className="px-3 py-2 text-xs text-slate-500">
-              {chatSearch.trim() ? 'No matching chats.' : 'No chats in this project yet.'}
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {timeGroupedChats.map((group) => (
-                <div key={group.label}>
-                  <p className="px-3 pb-1 text-[10px] font-medium uppercase tracking-[0.14em] text-slate-600">
-                    {group.label}
-                  </p>
-                  <ChatList
-                    chats={group.chats}
-                    activeChatId={workspace.activeChatId}
-                    onSelectChat={onSelectChat}
-                    onRename={renameChat}
-                    onDelete={deleteChat}
-                    onPin={(chat) => updateChat(chat.id, { pinned: !chat.pinned })}
-                    onArchive={(chat) => updateChat(chat.id, { archived: true })}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-        </SectionToggle>
       </div>
 
       <div className="shrink-0 space-y-1 border-t border-[var(--orb-line)] p-2" data-orb-sidebar-bottom>
@@ -559,6 +586,7 @@ function SidebarNavButton({
   muted,
   comingSoon,
   badge,
+  active,
   dataAttr
 }: {
   icon: ReactNode
@@ -567,15 +595,17 @@ function SidebarNavButton({
   muted?: boolean
   comingSoon?: boolean
   badge?: string
+  active?: boolean
   dataAttr?: string
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`orb-sidebar-nav-item ${muted ? 'orb-sidebar-nav-item--muted' : ''}`}
+      className={`orb-sidebar-nav-item ${muted ? 'orb-sidebar-nav-item--muted' : ''} ${active ? 'orb-sidebar-nav-item--active' : ''}`}
       data-orb-sidebar-nav={dataAttr}
       disabled={comingSoon}
+      aria-current={active ? 'true' : undefined}
     >
       <span className="text-[var(--orb-muted)]">{icon}</span>
       <span className="flex-1 text-left">{label}</span>

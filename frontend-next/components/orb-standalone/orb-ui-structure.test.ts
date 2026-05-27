@@ -16,11 +16,10 @@ describe('ORB ChatGPT UI structure', () => {
     for (const label of ['New chat', 'Search chats', 'Library', 'Agents', 'Deep research', 'Tools']) {
       assert.match(source, new RegExp(label))
     }
-    assert.match(source, /Explore/)
+    assert.match(source, /Apps/)
+    assert.match(source, /Conversations/)
     assert.match(source, /Previous 7 days/)
-    assert.match(source, /Previous 30 days/)
     assert.doesNotMatch(source, /label="Apps"/)
-    assert.doesNotMatch(source, /Saved outputs/)
     assert.doesNotMatch(source, /Knowledge library/)
   })
 

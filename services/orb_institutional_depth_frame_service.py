@@ -116,7 +116,7 @@ class OrbInstitutionalDepthFrameService:
             return "cumulative_concern"
         if any(term in text for term in ("indicare", "orb", "care companion", "os", "platform", "product")):
             return "indicare_product"
-        if any(term in text for term in ("allegation", "allegations", "lado", "grabbed", "staff member", "conduct concern")):
+        if any(term in text for term in ("allegation", "allegations", "lado", "grabbed", "conduct concern", "disclosure against")):
             return "allegations"
         if any(term in text or term in mode_text for term in ("missing", "abscond", "return interview", "away from home")):
             return "missing"
@@ -133,19 +133,52 @@ class OrbInstitutionalDepthFrameService:
             return "leadership"
         if any(term in text or term in mode_text for term in ("ofsted", "sccif", "inspection", "reg 44", "reg 45")):
             return "inspection"
-        if any(term in text or term in mode_text for term in ("therapeutic", "trauma", "behaviour", "repair", "emotion", "dysregulated")):
+        if any(term in text or term in mode_text for term in ("therapeutic", "trauma", "behaviour", "repair", "emotion", "dysregulated", "family time cancelled", "smashed cup")):
             return "therapeutic"
-        if any(term in text or term in mode_text for term in ("supervision", "debrief", "reflective", "reflection", "staff coach")):
-            return "supervision"
-        if any(term in text or term in mode_text for term in ("manager",)):
+        if any(term in text or term in mode_text for term in ("manager", "daily brief")):
             return "leadership"
         if any(term in text or term in mode_text for term in ("staffing", "rota", "agency", "workforce", "training", "safer recruitment")):
             return "staffing"
-        if any(term in text or term in mode_text for term in ("complaint", "complaints", "concern from parent")):
+        if any(
+            term in text or term in mode_text
+            for term in (
+                "staff member was sharp",
+                "staff was sharp",
+                "poor practice",
+                "staff conduct",
+                "supervision",
+                "debrief",
+                "reflective",
+                "reflection",
+                "staff coach",
+            )
+        ):
+            return "supervision"
+        if any(
+            term in text or term in mode_text
+            for term in ("complaint", "complaints", "concern from parent", "advocacy", "independent visitor")
+        ):
             return "complaints"
-        if any(term in text or term in mode_text for term in ("medication", "medicine", "mars", "health appointment")):
+        if any(
+            term in text or term in mode_text
+            for term in ("medication error", "medication", "medicine", "mars", "dose missed", "health appointment")
+        ):
             return "medication"
-        if any(term in text or term in mode_text for term in ("education", "school", "health", "therapy", "camhs")):
+        if any(
+            term in text or term in mode_text
+            for term in (
+                "school refusal",
+                "exclusion",
+                "pep",
+                "attendance",
+                "education refusal",
+                "education",
+                "school",
+                "health",
+                "therapy",
+                "camhs",
+            )
+        ):
             return "education_health"
         if any(term in text or term in mode_text for term in ("placement", "admission", "move in", "move out", "care plan", "risk assessment")):
             return "placement_planning"
@@ -175,6 +208,18 @@ class OrbInstitutionalDepthFrameService:
             "reg 45",
         )
         return any(term in text for term in residential_terms) or any(term in mode_text for term in specialist_modes)
+
+    def _high_attention_markdown_structure(self) -> list[str]:
+        return [
+            "## Why this matters",
+            "## What patterns to explore",
+            "## Evidence to review",
+            "## What a Registered Manager should ask",
+            "## What an RI should ask",
+            "## What Ofsted would look for",
+            "## What not to assume",
+            "## Immediate safe next steps",
+        ]
 
     def _general_chatgpt_frame(self) -> dict[str, Any]:
         return {
@@ -220,6 +265,7 @@ class OrbInstitutionalDepthFrameService:
         return {
             "topic": "allegations / conduct concerns in residential settings",
             "purpose": "Move beyond a generic safeguarding summary into RM-level, inspection-aware, therapeutic and recording-aware reasoning.",
+            "response_structure": self._high_attention_markdown_structure(),
             "required_lenses": [
                 "Immediate safety and protection lens [Reg 12].",
                 "Child's exact words and what they reported — preserve voice without leading questions.",
@@ -256,6 +302,7 @@ class OrbInstitutionalDepthFrameService:
         return {
             "topic": "missing from home / away from placement",
             "purpose": "Reason through safety, context, return, patterns, exploitation risk and recording quality without making threshold decisions.",
+            "response_structure": self._high_attention_markdown_structure(),
             "required_lenses": [
                 "Immediate safety, police/local missing procedure and timeline [Reg 12].",
                 "Search actions, who was informed and management oversight [Reg 13].",
@@ -281,6 +328,7 @@ class OrbInstitutionalDepthFrameService:
         return {
             "topic": "restraint / physical intervention / restrictive practice",
             "purpose": "Reason through safety, proportionality, recording, child experience, repair and oversight.",
+            "response_structure": self._high_attention_markdown_structure(),
             "required_lenses": [
                 "Necessity, proportionality and least restrictive practice [Reg 12].",
                 "What happened before, during and after; alternatives and de-escalation attempted.",
@@ -307,6 +355,13 @@ class OrbInstitutionalDepthFrameService:
         return {
             "topic": "recording quality",
             "purpose": "Improve records so they are factual, child-centred, chronology-aware and useful for oversight.",
+            "response_structure": [
+                "## Improved record",
+                "## What was wrong",
+                "## What is still missing",
+                "## What to add before sign-off",
+                "## Why this matters for inspection/oversight",
+            ],
             "required_lenses": [
                 "Provide: 1) improved record, 2) what was wrong, 3) what is still missing, 4) what to add before sign-off, 5) why this matters for inspection/oversight.",
                 "Use bracketed placeholders for missing facts — never invent facts.",
@@ -399,6 +454,7 @@ class OrbInstitutionalDepthFrameService:
         return {
             "topic": "leadership / governance / oversight",
             "purpose": "Reason like a strong registered manager or RI: evidence, drift, patterns, actions and impact.",
+            "response_structure": self._high_attention_markdown_structure(),
             "required_lenses": [
                 "RM daily lens: who is most vulnerable today; overnight events; missing/safeguarding; emotional climate; staffing; medication/health; education; staff wellbeing; overdue actions; weak recordings; what could go wrong; visible leadership; what Ofsted would challenge if they arrived today.",
                 "RI lens: is the home safe; is the manager supported; are children progressing; is leadership effective; staff supervised and stable; Reg 44 findings repeated; Reg 45 evaluative not descriptive; governance triangulated; patterns acted on; drift; are children safer because of provider action; what evidence proves impact.",
@@ -572,6 +628,7 @@ class OrbInstitutionalDepthFrameService:
         return {
             "topic": "health / medication oversight",
             "purpose": "Reason through safety, recording, health advice, oversight and follow-up.",
+            "response_structure": self._high_attention_markdown_structure(),
             "required_lenses": [
                 "Immediate health and safety.",
                 "Medication records, advice and administration accuracy.",

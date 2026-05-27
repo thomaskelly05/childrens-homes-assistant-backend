@@ -14,6 +14,8 @@ export type OrbExplainabilityView = {
   depth_topic?: string
   reasoning_lenses?: string[]
   cognition_mode?: string
+  cognition_display_labels?: string[]
+  vault_domains?: string[]
   safeguarding_boundaries?: string[]
 }
 

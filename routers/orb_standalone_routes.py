@@ -28,6 +28,7 @@ from services.orb_standalone_sources import (
     INDICARE_PRODUCT_FALLBACK,
     append_sources_basis_section,
     build_standalone_sources,
+    filter_display_sources,
 )
 
 logger = logging.getLogger("indicare.orb_standalone")
@@ -473,6 +474,7 @@ async def standalone_orb_conversation(
         elif response_citations:
             response_sources.extend(orb_citation_service.frontend_sources_payload(response_citations))
         confidence = str(assistant_data.get("confidence") or "medium")
+        shared_explain = shared_cognition.get("explainability") or {}
         explainability = orb_explainability_runtime_service.build(
             surface="standalone_orb",
             mode=mode,
@@ -480,7 +482,13 @@ async def standalone_orb_conversation(
             citations=response_citations,
             operational_context_used=False,
             confidence=confidence,
+            cognition_display_labels=list(shared_explain.get("cognition_display_labels") or []),
+            depth_topic=shared_explain.get("depth_topic"),
+            reasoning_lenses=list(shared_explain.get("reasoning_lenses") or []),
+            vault_domains=list(shared_explain.get("vault_domains") or []),
         )
+        response_sources = filter_display_sources(response_sources, message=payload.message, mode=mode)
+        response_citations = filter_display_sources(response_citations, message=payload.message, mode=mode)
         context_used = dict(assistant_data.get("context_used") or {})
         context_used["standalone_brain"] = standalone_brain
         context_used["shared_cognition"] = shared_cognition
@@ -544,6 +552,7 @@ async def standalone_orb_conversation(
             profile_context=profile_context,
             attachments=image_urls[:4] or None,
         )
+        shared_explain = shared_cognition.get("explainability") or {}
         explainability = orb_explainability_runtime_service.build(
             surface="standalone_orb",
             mode=mode,
@@ -551,7 +560,13 @@ async def standalone_orb_conversation(
             citations=citations,
             operational_context_used=False,
             confidence="low",
+            cognition_display_labels=list(shared_explain.get("cognition_display_labels") or []),
+            depth_topic=shared_explain.get("depth_topic"),
+            reasoning_lenses=list(shared_explain.get("reasoning_lenses") or []),
+            vault_domains=list(shared_explain.get("vault_domains") or []),
         )
+        sources = filter_display_sources(sources, message=payload.message, mode=mode)
+        citations = filter_display_sources(citations, message=payload.message, mode=mode)
         context_used = {
             "surface": "standalone_orb_ai",
             "mode": mode,

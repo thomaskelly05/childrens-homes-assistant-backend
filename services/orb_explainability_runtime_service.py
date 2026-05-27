@@ -19,6 +19,10 @@ class OrbExplainabilityRuntimeService:
         citations: list[dict[str, Any]] | None = None,
         operational_context_used: bool = False,
         confidence: str = "medium",
+        cognition_display_labels: list[str] | None = None,
+        depth_topic: str | None = None,
+        reasoning_lenses: list[str] | None = None,
+        vault_domains: list[str] | None = None,
     ) -> dict[str, Any]:
         citations = citations or []
 
@@ -35,6 +39,10 @@ class OrbExplainabilityRuntimeService:
             "surface": surface,
             "mode": mode,
             "active_brains": active_brains,
+            "cognition_display_labels": list(cognition_display_labels or []),
+            "depth_topic": depth_topic,
+            "reasoning_lenses": list(reasoning_lenses or []),
+            "vault_domains": list(vault_domains or []),
             "frameworks_used": frameworks,
             "evidence_focus": evidence_focus,
             "confidence": confidence,
@@ -44,6 +52,7 @@ class OrbExplainabilityRuntimeService:
                 active_brains=active_brains,
                 frameworks=frameworks,
                 confidence=confidence,
+                cognition_display_labels=cognition_display_labels,
             ),
         }
 
@@ -96,9 +105,13 @@ class OrbExplainabilityRuntimeService:
         active_brains: list[str],
         frameworks: list[str],
         confidence: str,
+        cognition_display_labels: list[str] | None = None,
     ) -> str:
-        brain_summary = ", ".join(active_brains[:5]) if active_brains else "general reasoning"
-        framework_summary = ", ".join(frameworks[:5]) if frameworks else "general guidance anchors"
+        if cognition_display_labels:
+            brain_summary = ", ".join(cognition_display_labels[:5])
+        else:
+            brain_summary = ", ".join(active_brains[:5]) if active_brains else "general reasoning"
+        framework_summary = ", ".join(frameworks[:5]) if frameworks else "topic-specific guidance anchors"
         return (
             f"This response used {brain_summary} with {framework_summary}. "
             f"Confidence level: {confidence}."
