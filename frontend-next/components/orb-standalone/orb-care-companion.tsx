@@ -52,6 +52,7 @@ import { OrbAdultProfileDrawer } from '@/components/orb-standalone/orb-adult-pro
 import { OrbStandaloneSidebar } from '@/components/orb-standalone/orb-standalone-sidebar'
 import { OrbHueLogo, OrbPoweredByIndicare } from '@/components/orb-standalone/orb-hue-logo'
 import { useOrbAppearance } from '@/components/orb-standalone/use-orb-appearance'
+import { ORB_LIGHT_UI_BUILD } from '@/lib/orb/orb-light-ui-build'
 import {
   buildAdultProfilePromptBlock,
   readAdultProfile,
@@ -1314,6 +1315,7 @@ export function OrbCareCompanion() {
     <main
       className={`orb-chat-layout relative flex flex-col overflow-hidden ${layoutA11yClass} ${atmosphereClass} ${themeClass}`}
       data-orb-theme={resolvedTheme}
+      data-orb-light-ui-build={ORB_LIGHT_UI_BUILD}
       data-orb-appearance-mode={appearanceMode}
       data-orb-active-panel={activePanel || 'none'}
       data-orb-close-all-panels

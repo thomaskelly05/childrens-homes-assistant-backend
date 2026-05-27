@@ -21,6 +21,7 @@ describe('ORB ChatGPT UI structure', () => {
   it('care companion applies light theme markers by default', () => {
     const source = readComponent('components/orb-standalone/orb-care-companion.tsx')
     assert.match(source, /data-orb-theme=\{resolvedTheme\}/)
+    assert.match(source, /data-orb-light-ui-build/)
     assert.match(source, /useOrbAppearance/)
     assert.match(source, /How can I help\?/)
   })
@@ -29,6 +30,17 @@ describe('ORB ChatGPT UI structure', () => {
     const layout = readComponent('app/orb/layout.tsx')
     assert.match(layout, /ORB_APPEARANCE_BOOTSTRAP_SCRIPT/)
     assert.match(layout, /orb-appearance-bootstrap/)
+    assert.match(layout, /orb-chatgpt-light\.css/)
+    assert.match(layout, /data-orb-light-ui-build/)
+    assert.match(layout, /__ORB_LIGHT_UI_BUILD__/)
+  })
+
+  it('globals and route CSS ship ChatGPT-light build marker', () => {
+    const globals = readComponent('app/globals.css')
+    const routeCss = readComponent('app/orb/orb-chatgpt-light.css')
+    assert.match(globals, /orb-chatgpt-light-build-marker-1336/)
+    assert.match(routeCss, /orb-chatgpt-light-build-marker-1336/)
+    assert.match(routeCss, /orb-hue-text|orb-theme-light|html\[data-orb-theme=light\]/)
   })
 
   it('composer keeps send handler and Ask anything placeholder path', () => {

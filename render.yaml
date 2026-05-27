@@ -6,13 +6,15 @@ services:
     region: frankfurt
     branch: main
     rootDir: frontend-next
-    buildCommand: npm ci && npm run build
+    buildCommand: rm -rf .next && npm ci && npm run build
     startCommand: npm run start
     healthCheckPath: /api/health
     autoDeploy: true
     envVars:
       - key: NODE_ENV
         value: production
+      - key: NEXT_PUBLIC_ORB_UI_BUILD
+        value: "1336"
       - key: NEXT_PUBLIC_ENVIRONMENT
         value: production
       - key: NEXT_PUBLIC_API_BASE_URL
