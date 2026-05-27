@@ -1,5 +1,5 @@
 -- IndiCare OS missing schema for canonical child workspace wiring
--- Safe to run multiple times.
+-- TablePlus-ready patch. Safe to run multiple times.
 
 CREATE TABLE IF NOT EXISTS public.child_voice_entries (
     id BIGSERIAL PRIMARY KEY,
@@ -98,7 +98,7 @@ AS $$
       AND (p_young_person_id IS NULL OR young_person_id = p_young_person_id)
       AND (p_domain IS NULL OR domain::text = p_domain)
       AND (p_priority IS NULL OR priority::text = p_priority)
-      AND status::text NOT IN ('completed', 'dismissed', 'void')
+      AND status::text IN ('open', 'in_progress', 'waiting')
     ORDER BY
       CASE priority::text
         WHEN 'critical' THEN 0
@@ -114,4 +114,4 @@ AS $$
 $$;
 
 COMMENT ON FUNCTION public.os_command_live_feed(INTEGER, INTEGER, TEXT, TEXT, INTEGER) IS
-    'Stable OS command feed wrapper used by child workspace and command centre routes. Reads from os_command_items.';
+    'Stable OS command feed wrapper used by child workspace and command centre routes. Reads open/in-progress/waiting rows from os_command_items.';
