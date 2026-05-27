@@ -1,17 +1,18 @@
 import Link from 'next/link'
 import { IndiCareOsShell, SignalCard, StoryCard, SoftRow } from '@/components/os/IndiCareOsShell'
 
-export default function YoungPersonStoryPage({ params }: { params: { id: string } }) {
-  const name = params.id === '1' ? 'Jayden' : 'Young person'
+export default async function YoungPersonStoryPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const name = id === '1' ? 'Jayden' : 'Young person'
   const nav = [
-    { label: 'Story', href: `/young-people/${params.id}`, active: true },
-    { label: 'Today', href: `/young-people/${params.id}/workspace` },
-    { label: 'Record', href: `/young-people/${params.id}/records/new` },
-    { label: 'Chronology', href: `/young-people/${params.id}/chronology` },
-    { label: 'Plans', href: `/young-people/${params.id}/plans` },
-    { label: 'Risks', href: `/young-people/${params.id}/risks` },
-    { label: 'Documents', href: `/young-people/${params.id}/documents` },
-    { label: 'ORB', href: `/assistant/orb?scope=child&child_id=${params.id}` }
+    { label: 'Story', href: `/young-people/${id}`, active: true },
+    { label: 'Today', href: `/young-people/${id}/workspace` },
+    { label: 'Record', href: `/young-people/${id}/records/new` },
+    { label: 'Chronology', href: `/young-people/${id}/chronology` },
+    { label: 'Plans', href: `/young-people/${id}/plans` },
+    { label: 'Risks', href: `/young-people/${id}/risks` },
+    { label: 'Documents', href: `/young-people/${id}/documents` },
+    { label: 'ORB', href: `/assistant/orb?scope=child&child_id=${id}` }
   ]
 
   return (
@@ -20,7 +21,7 @@ export default function YoungPersonStoryPage({ params }: { params: { id: string 
       title={`This is ${name}.`}
       subtitle="Before recording anything, understand who this child is, what matters, and how adults can support them today."
       contextLabel={`${name} · Story first`}
-      orbHref={`/assistant/orb?scope=child&child_id=${params.id}`}
+      orbHref={`/assistant/orb?scope=child&child_id=${id}`}
       nav={nav}
     >
       <div className="ic-story-page">
@@ -80,7 +81,7 @@ export default function YoungPersonStoryPage({ params }: { params: { id: string 
             <h2>Story comes first. Record comes after.</h2>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem', marginTop: '1rem' }}>
               {['Story', 'Today', 'Record', 'Chronology', 'Plans', 'Risks', 'Health', 'Education', 'Family', 'Voice', 'Documents', 'ORB'].map((tab, index) => (
-                <Link key={tab} href={index === 0 ? `/young-people/${params.id}` : '#'} className={index === 0 ? 'ic-primary-action' : 'ic-secondary-action'}>
+                <Link key={tab} href={index === 0 ? `/young-people/${id}` : '#'} className={index === 0 ? 'ic-primary-action' : 'ic-secondary-action'}>
                   {tab}
                 </Link>
               ))}
@@ -90,7 +91,7 @@ export default function YoungPersonStoryPage({ params }: { params: { id: string 
             <p className="ic-eyebrow">ORB support mode</p>
             <h2>Quiet when not needed. Big when it matters.</h2>
             <p>ORB should answer from this child’s records, documents, chronology, plans, risks and actions. If evidence is missing, ORB should say what is missing instead of guessing.</p>
-            <Link href={`/assistant/orb?scope=child&child_id=${params.id}`} className="ic-primary-action" style={{ marginTop: '1rem' }}>Ask ORB about {name}</Link>
+            <Link href={`/assistant/orb?scope=child&child_id=${id}`} className="ic-primary-action" style={{ marginTop: '1rem' }}>Ask ORB about {name}</Link>
           </section>
         </section>
       </div>
