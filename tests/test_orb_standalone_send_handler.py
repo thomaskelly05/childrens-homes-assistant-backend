@@ -25,10 +25,24 @@ def test_handle_composer_submit_calls_send_with_final_text():
 
 def test_orb_send_logging_markers():
     text = COMPANION.read_text(encoding="utf-8")
-    assert "console.info('[orb-send] submit'" in text
-    assert "console.info('[orb-send] request started')" in text
-    assert "console.info('[orb-send] response received')" in text
-    assert "console.warn('[orb-send] failed'" in text
+    assert "function traceOrbSend" in text
+    assert "traceOrbSend('submit'" in text
+    assert "traceOrbSend('request_start'" in text
+    assert "traceOrbSend('request_end'" in text
+    assert "traceOrbSend('request_abort'" in text
+    assert "traceOrbSend('placeholder_replace'" in text
+    assert "traceOrbSend('pending_state'" in text
+    assert "traceOrbSend('request_failed'" in text
+
+
+def test_send_lifecycle_uses_generation_scoped_request_abort():
+    text = COMPANION.read_text(encoding="utf-8")
+    assert "sendGenerationRef" in text
+    assert "requestAbortRef" in text
+    assert "streamGenerationRef" in text
+    assert "isStandaloneOrbRetryableNetworkError" in text
+    assert "orbSessionReady" in text
+    assert "sessionPrimedRef" in text
 
 
 def test_enter_submits_via_request_submit_not_direct_handler():
@@ -46,5 +60,6 @@ def test_shift_enter_does_not_submit():
 
 def test_query_standalone_conversation_used_for_send():
     text = COMPANION.read_text(encoding="utf-8")
-    assert "await queryStandaloneOrbConversation" in text
+    assert "queryStandaloneOrbConversation" in text
+    assert "runConversationRequest" in text
     assert "message: framedMessage" in text

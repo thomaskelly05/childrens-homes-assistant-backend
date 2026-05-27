@@ -122,7 +122,8 @@ MODE_BEHAVIOUR = {
         "remind the user to follow local safeguarding policy; do not decide thresholds."
     ),
     "Safeguarding Thinking": (
-        "Mode behaviour — Safeguarding Thinking: separate facts, concerns, missing information, escalation considerations and evidence needs."
+        "Mode behaviour — Safeguarding Thinking: separate facts, concerns, missing information, escalation considerations and evidence needs. "
+        "Use institutional anchors ([Reg 12], [Reg 13], [SCCIF], [Working Together], [LADO], [Recording quality]) inline — not generic safeguarding summaries."
     ),
     "Record This Properly": (
         "Mode behaviour — Record This Properly: help create factual, child-centred, non-punitive wording; "

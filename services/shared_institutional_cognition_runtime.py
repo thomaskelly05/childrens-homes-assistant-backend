@@ -112,7 +112,13 @@ class SharedInstitutionalCognitionRuntime:
         if "regulatory_cognition" in active_brains:
             requirements.append("- Use inline framework anchors and explain why they matter in practice.")
         if "safeguarding_cognition" in active_brains:
-            requirements.append("- Keep decision-making human-led and local-procedure-led.")
+            requirements.extend(
+                [
+                    "- Keep decision-making human-led and local-procedure-led.",
+                    "- For safeguarding or allegations topics, weave [Reg 12], [Reg 13], [SCCIF], [Working Together], [LADO] and [Recording quality] into the reasoning — not a generic summary list.",
+                    "- Explain management oversight, evidence expectations, recording quality, therapeutic/emotional safety and escalation thinking in practical residential-home terms.",
+                ]
+            )
         if "recording_quality_cognition" in active_brains:
             requirements.append("- Separate fact, interpretation, child voice, adult response and outcome.")
         if not boundary["can_use_live_records"]:

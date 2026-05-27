@@ -13,13 +13,13 @@ def test_user_message_appended_before_api_call():
     assert "[...existingMessages, userMessage, thinkingMessage]" in text
     assert "setMessage('')" in text
     assert "setPending(true)" in text
-    assert "await queryStandaloneOrbConversation" in text
+    assert "queryStandaloneOrbConversation" in text
 
 
 def test_thinking_placeholder_precedes_api():
     text = COMPANION.read_text(encoding="utf-8")
     idx_thinking = text.index("thinkingMessage = createThinkingPlaceholder")
-    idx_api = text.index("await queryStandaloneOrbConversation")
+    idx_api = text.index("runConversationRequest")
     idx_clear = text.index("setMessage('')")
     assert idx_thinking < idx_clear < idx_api
 

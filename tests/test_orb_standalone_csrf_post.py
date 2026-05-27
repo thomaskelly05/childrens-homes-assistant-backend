@@ -36,6 +36,7 @@ def test_standalone_client_csrf_failure_message():
 
 def test_companion_gates_send_on_csrf_ready():
     text = COMPANION.read_text(encoding="utf-8")
+    assert "orbSessionReady" in text
     assert "csrfReady" in text
     assert "STANDALONE_ORB_CSRF_REFRESH_MESSAGE" in text
 
