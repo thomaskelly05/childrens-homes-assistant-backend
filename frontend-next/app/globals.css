@@ -17,20 +17,21 @@
   --orb-primary-blue-deep: #1d4ed8;
   --orb-glow-sky: rgba(96, 165, 250, 0.16);
   --orb-glow-cyan: rgba(76, 201, 240, 0.18);
-  --orb-bg-deep: #07111f;
-  --orb-bg-mid: #0b1728;
-  --orb-bg-soft: #0e2238;
+  /* ORB tokens default to ChatGPT-light; dark cinematic overrides below */
+  --orb-bg-deep: #ffffff;
+  --orb-bg-mid: #f7f7f8;
+  --orb-bg-soft: #f9f9f9;
   --orb-bg-light: #f8fafc;
   --orb-bg-light-mid: #f4f7fb;
   --orb-bg-light-soft: #eef4ff;
-  --orb-foreground: #f1f5f9;
-  --orb-muted: #94a3b8;
-  --orb-accent: #60a5fa;
-  --orb-on-accent: #07111f;
-  --orb-line: rgba(148, 163, 184, 0.12);
-  --orb-surface: rgba(255, 255, 255, 0.04);
-  --orb-surface-elevated: rgba(11, 23, 40, 0.92);
-  --orb-surface-hover: rgba(255, 255, 255, 0.06);
+  --orb-foreground: #111827;
+  --orb-muted: #6b7280;
+  --orb-accent: #2563eb;
+  --orb-on-accent: #ffffff;
+  --orb-line: #e5e7eb;
+  --orb-surface: #ffffff;
+  --orb-surface-elevated: #f9f9f9;
+  --orb-surface-hover: #f3f4f6;
   --orb-sidebar-width: 272px;
   --orb-composer-max: 53.125rem;
   --orb-chat-column-max: 56.25rem;
@@ -1333,26 +1334,41 @@ textarea:focus-visible {
   }
 }
 
-/* Standalone /orb — agent atmosphere (subtle cognition scope) */
+/* Standalone /orb — light-safe base; cinematic haze only when dark theme is active */
 .orb-chat-layout::before {
   content: '';
   pointer-events: none;
   position: fixed;
   inset: 0;
   z-index: 0;
-  opacity: 0.55;
+  opacity: 0;
+  background: none;
   transition: opacity 0.6s ease;
 }
 
-.orb-atmosphere-ask::before {
+.orb-theme-light.orb-chat-layout::before,
+[data-orb-theme='light'] .orb-chat-layout::before {
+  opacity: 0.12;
+  background: radial-gradient(circle at 50% 0%, rgba(0, 184, 255, 0.05), transparent 42%);
+}
+
+.orb-theme-dark.orb-chat-layout::before,
+[data-orb-theme='dark'] .orb-chat-layout::before {
+  opacity: 0.55;
+}
+
+[data-orb-theme='dark'] .orb-atmosphere-ask::before,
+.orb-theme-dark.orb-atmosphere-ask::before {
   background: radial-gradient(circle at 50% 0%, rgba(34, 211, 238, 0.12), transparent 42%);
 }
 
-.orb-atmosphere-safeguarding::before {
+[data-orb-theme='dark'] .orb-atmosphere-safeguarding::before,
+.orb-theme-dark.orb-atmosphere-safeguarding::before {
   background: radial-gradient(circle at 50% 0%, rgba(251, 113, 133, 0.08), transparent 40%);
 }
 
-.orb-atmosphere-ofsted::before {
+[data-orb-theme='dark'] .orb-atmosphere-ofsted::before,
+.orb-theme-dark.orb-atmosphere-ofsted::before {
   background: radial-gradient(circle at 50% 0%, rgba(167, 139, 250, 0.1), transparent 40%);
 }
 
@@ -1360,11 +1376,13 @@ textarea:focus-visible {
   letter-spacing: 0.01em;
 }
 
-.orb-atmosphere-recording::before {
+[data-orb-theme='dark'] .orb-atmosphere-recording::before,
+.orb-theme-dark.orb-atmosphere-recording::before {
   background: radial-gradient(circle at 50% 0%, rgba(52, 211, 153, 0.08), transparent 40%);
 }
 
-.orb-atmosphere-therapeutic::before {
+[data-orb-theme='dark'] .orb-atmosphere-therapeutic::before,
+.orb-theme-dark.orb-atmosphere-therapeutic::before {
   background: radial-gradient(circle at 50% 0%, rgba(251, 191, 36, 0.07), transparent 42%);
 }
 
@@ -1372,12 +1390,15 @@ textarea:focus-visible {
   line-height: 1.75;
 }
 
-.orb-atmosphere-manager::before,
-.orb-atmosphere-governance::before {
+[data-orb-theme='dark'] .orb-atmosphere-manager::before,
+[data-orb-theme='dark'] .orb-atmosphere-governance::before,
+.orb-theme-dark.orb-atmosphere-manager::before,
+.orb-theme-dark.orb-atmosphere-governance::before {
   background: radial-gradient(circle at 50% 0%, rgba(148, 163, 184, 0.1), transparent 40%);
 }
 
-.orb-atmosphere-staff::before {
+[data-orb-theme='dark'] .orb-atmosphere-staff::before,
+.orb-theme-dark.orb-atmosphere-staff::before {
   background: radial-gradient(circle at 50% 0%, rgba(125, 211, 252, 0.09), transparent 40%);
 }
 
@@ -1421,16 +1442,23 @@ textarea:focus-visible {
   position: absolute;
   inset: 0;
   background:
+    radial-gradient(ellipse 90% 45% at 50% -5%, rgba(76, 201, 240, 0.06), transparent 50%),
+    linear-gradient(165deg, #ffffff 0%, #f7f7f8 55%, #f7f7f8 100%);
+  opacity: 1;
+}
+
+[data-orb-theme='dark'] .orb-ambient-cognition__base,
+.orb-theme-dark .orb-ambient-cognition__base {
+  background:
     radial-gradient(ellipse 90% 55% at 50% -8%, var(--orb-glow-cyan), transparent 52%),
     radial-gradient(ellipse 45% 40% at 8% 88%, var(--orb-glow-sky), transparent 48%),
     linear-gradient(165deg, var(--orb-bg-deep) 0%, var(--orb-bg-mid) 45%, var(--orb-bg-soft) 100%);
-  opacity: 1;
 }
 
 .orb-ambient-cognition__edge-hue {
   position: absolute;
   inset: 0;
-  opacity: 0.42;
+  opacity: 0.12;
   background:
     linear-gradient(90deg, rgba(96, 165, 250, 0.08), transparent 14%, transparent 86%, rgba(76, 201, 240, 0.08)),
     linear-gradient(180deg, rgba(76, 201, 240, 0.1), transparent 22%, transparent 78%, rgba(37, 99, 235, 0.08));
@@ -1441,7 +1469,7 @@ textarea:focus-visible {
   position: absolute;
   inset: -5%;
   filter: blur(48px);
-  opacity: 0.35;
+  opacity: 0.12;
   background: radial-gradient(circle at 50% 40%, var(--orb-glow-cyan), transparent 55%);
   animation: orb-ambient-glow-drift 22s ease-in-out infinite;
 }
@@ -1449,7 +1477,7 @@ textarea:focus-visible {
 .orb-ambient-cognition__breathe {
   position: absolute;
   inset: 0;
-  opacity: 0.2;
+  opacity: 0.1;
   background: radial-gradient(circle at 50% 50%, rgba(96, 165, 250, 0.12), transparent 62%);
   animation: orb-ambient-breathe 8s ease-in-out infinite;
 }
@@ -1491,8 +1519,15 @@ textarea:focus-visible {
   animation: none !important;
 }
 
-/* Sidebar — ChatGPT-style memory workspace */
+/* Sidebar — ChatGPT-style memory workspace (light base) */
 .orb-chat-sidebar {
+  background: #f9f9f9;
+  border-color: #e5e7eb;
+  backdrop-filter: none;
+}
+
+[data-orb-theme='dark'] .orb-chat-sidebar,
+.orb-theme-dark .orb-chat-sidebar {
   background: var(--orb-surface-elevated);
   border-color: var(--orb-line);
   backdrop-filter: blur(20px) saturate(1.05);
@@ -1542,15 +1577,16 @@ textarea:focus-visible {
   background: var(--orb-surface-hover);
 }
 
-/* Premium glass composer */
+/* Premium glass composer (ChatGPT-light base) */
 .orb-composer-glass {
   border-radius: 1.75rem;
-  border: 1px solid var(--orb-line);
-  background: rgba(11, 23, 40, 0.72);
-  backdrop-filter: blur(24px) saturate(1.12);
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  color: #111827;
+  backdrop-filter: none;
   box-shadow:
-    0 8px 32px rgba(7, 17, 31, 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 8px 24px rgba(15, 23, 42, 0.06);
   transition:
     border-color 0.25s ease,
     box-shadow 0.35s ease,
@@ -1558,6 +1594,25 @@ textarea:focus-visible {
 }
 
 .orb-composer-glass:focus-within {
+  border-color: rgba(0, 184, 255, 0.35);
+  box-shadow:
+    0 0 0 1px rgba(0, 184, 255, 0.18),
+    0 12px 40px rgba(0, 184, 255, 0.12);
+}
+
+[data-orb-theme='dark'] .orb-composer-glass,
+.orb-theme-dark .orb-composer-glass {
+  border-color: var(--orb-line);
+  background: rgba(11, 23, 40, 0.72);
+  color: var(--orb-foreground);
+  backdrop-filter: blur(24px) saturate(1.12);
+  box-shadow:
+    0 8px 32px rgba(7, 17, 31, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+[data-orb-theme='dark'] .orb-composer-glass:focus-within,
+.orb-theme-dark .orb-composer-glass:focus-within {
   border-color: rgba(96, 165, 250, 0.35);
   box-shadow:
     0 0 0 1px rgba(76, 201, 240, 0.12),
@@ -1591,20 +1646,39 @@ textarea:focus-visible {
 
 .orb-message-assistant .orb-message-content strong {
   font-weight: 600;
+  color: #0a0a0a;
+}
+
+[data-orb-theme='dark'] .orb-message-assistant .orb-message-content strong,
+.orb-theme-dark .orb-message-assistant .orb-message-content strong {
   color: #e2e8f0;
 }
 
 .orb-message-user .orb-message-bubble {
   border-radius: 1.25rem 1.25rem 0.375rem 1.25rem;
-  background: linear-gradient(135deg, rgba(37, 99, 235, 0.35), rgba(29, 78, 216, 0.28));
-  border: 1px solid rgba(96, 165, 250, 0.2);
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  color: #111827;
   padding: 0.875rem 1.125rem;
   line-height: 1.65;
 }
 
+[data-orb-theme='dark'] .orb-message-user .orb-message-bubble,
+.orb-theme-dark .orb-message-user .orb-message-bubble {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.35), rgba(29, 78, 216, 0.28));
+  border: 1px solid rgba(96, 165, 250, 0.2);
+  color: inherit;
+}
+
 /* —— ORB ChatGPT-style light theme (default on /orb) —— */
+.orb-chatgpt-light-build-marker-1336 {
+  --orb-light-build: '1336';
+}
+
 html[data-orb-theme='light'],
-html[data-orb-theme='light'] body {
+html[data-orb-theme='light'] body,
+html[data-orb-theme=light],
+html[data-orb-theme=light] body {
   --orb-bg-deep: #ffffff;
   --orb-bg-mid: #f7f7f8;
   --orb-bg-soft: #f9f9f9;
@@ -1656,6 +1730,23 @@ html[data-orb-theme='light'] body {
   color: var(--orb-foreground);
 }
 
+html[data-orb-theme='dark'],
+html[data-orb-theme='dark'] body,
+html[data-orb-theme=dark],
+html[data-orb-theme=dark] body {
+  --orb-bg-deep: #07111f;
+  --orb-bg-mid: #0b1728;
+  --orb-bg-soft: #0e2238;
+  --orb-foreground: #f1f5f9;
+  --orb-muted: #94a3b8;
+  --orb-accent: #60a5fa;
+  --orb-on-accent: #07111f;
+  --orb-line: rgba(148, 163, 184, 0.12);
+  --orb-surface: rgba(255, 255, 255, 0.04);
+  --orb-surface-elevated: rgba(11, 23, 40, 0.92);
+  --orb-surface-hover: rgba(255, 255, 255, 0.06);
+}
+
 .orb-theme-dark.orb-chat-layout,
 [data-orb-theme='dark'] .orb-chat-layout {
   --orb-foreground: #f1f5f9;
@@ -1667,6 +1758,15 @@ html[data-orb-theme='light'] body {
   --orb-surface: rgba(255, 255, 255, 0.04);
   --orb-surface-hover: rgba(255, 255, 255, 0.06);
   --orb-line: rgba(148, 163, 184, 0.12);
+}
+
+[data-orb-theme='dark'] .orb-ambient-cognition__edge-hue,
+[data-orb-theme='dark'] .orb-ambient-cognition__glow,
+[data-orb-theme='dark'] .orb-ambient-cognition__breathe,
+.orb-theme-dark .orb-ambient-cognition__edge-hue,
+.orb-theme-dark .orb-ambient-cognition__glow,
+.orb-theme-dark .orb-ambient-cognition__breathe {
+  opacity: 0.42;
 }
 
 [data-orb-theme='light'] .orb-chat-layout::before,

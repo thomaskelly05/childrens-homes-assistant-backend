@@ -1,0 +1,172 @@
+/**
+ * Route-scoped ORB ChatGPT-light CSS — imported from app/orb/layout.tsx so /orb
+ * always ships light-theme rules even if the main bundle is cached or split oddly.
+ * Keep in sync with light tokens in app/globals.css.
+ */
+
+.orb-chatgpt-light-build-marker-1336 {
+  --orb-light-build: '1336';
+}
+
+/* Light defaults for standalone /orb layout (safe base before hydration) */
+.orb-chat-layout {
+  --orb-foreground: #111827;
+  --orb-muted: #6b7280;
+  --orb-bg-deep: #ffffff;
+  --orb-bg-mid: #f7f7f8;
+  --orb-bg-soft: #f9f9f9;
+  --orb-surface-elevated: #f9f9f9;
+  --orb-surface: #ffffff;
+  --orb-surface-hover: #f3f4f6;
+  --orb-line: #e5e7eb;
+  --orb-on-accent: #ffffff;
+  --orb-accent: #2563eb;
+  background: var(--orb-bg-deep);
+  color: var(--orb-foreground);
+}
+
+html[data-orb-theme='light'],
+html[data-orb-theme='light'] body,
+html[data-orb-theme=light],
+html[data-orb-theme=light] body {
+  --orb-bg-deep: #ffffff;
+  --orb-bg-mid: #f7f7f8;
+  --orb-bg-soft: #f9f9f9;
+  --orb-foreground: #111827;
+  --orb-muted: #6b7280;
+  --orb-accent: #2563eb;
+  --orb-on-accent: #ffffff;
+  --orb-line: #e5e7eb;
+  --orb-surface: #ffffff;
+  --orb-surface-elevated: #f9f9f9;
+  --orb-surface-hover: #f3f4f6;
+}
+
+.orb-chat-layout::before {
+  opacity: 0;
+  background: none;
+}
+
+.orb-theme-light.orb-chat-layout::before,
+[data-orb-theme='light'] .orb-chat-layout::before,
+html[data-orb-theme='light'] .orb-chat-layout::before,
+html[data-orb-theme=light] .orb-chat-layout::before {
+  opacity: 0.12;
+  background: radial-gradient(circle at 50% 0%, rgba(0, 184, 255, 0.05), transparent 42%);
+}
+
+.orb-theme-dark.orb-chat-layout::before,
+[data-orb-theme='dark'] .orb-chat-layout::before,
+html[data-orb-theme='dark'] .orb-chat-layout::before,
+html[data-orb-theme=dark] .orb-chat-layout::before {
+  opacity: 0.55;
+}
+
+.orb-chat-sidebar {
+  background: #f9f9f9;
+  border-color: #e5e7eb;
+  backdrop-filter: none;
+}
+
+.orb-composer-glass {
+  background: #ffffff;
+  color: #111827;
+  border-color: #e5e7eb;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 8px 24px rgba(15, 23, 42, 0.06);
+  backdrop-filter: none;
+}
+
+.orb-ambient-cognition__base {
+  background:
+    radial-gradient(ellipse 90% 45% at 50% -5%, rgba(76, 201, 240, 0.06), transparent 50%),
+    linear-gradient(165deg, #ffffff 0%, #f7f7f8 55%, #f7f7f8 100%);
+}
+
+.orb-ambient-cognition__edge-hue,
+.orb-ambient-cognition__glow,
+.orb-ambient-cognition__breathe {
+  opacity: 0.12;
+}
+
+.orb-cinematic-light-field {
+  opacity: 0 !important;
+}
+
+[data-orb-theme='dark'] .orb-cinematic-light-field,
+.orb-theme-dark .orb-cinematic-light-field {
+  opacity: 0.35 !important;
+}
+
+[data-orb-theme='dark'] .orb-chat-sidebar,
+.orb-theme-dark .orb-chat-sidebar {
+  background: var(--orb-surface-elevated);
+  border-color: var(--orb-line);
+  backdrop-filter: blur(20px) saturate(1.05);
+}
+
+[data-orb-theme='dark'] .orb-composer-glass,
+.orb-theme-dark .orb-composer-glass {
+  background: rgba(11, 23, 40, 0.72);
+  color: var(--orb-foreground);
+  border-color: var(--orb-line);
+  box-shadow:
+    0 8px 32px rgba(7, 17, 31, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(24px) saturate(1.12);
+}
+
+[data-orb-theme='dark'] .orb-ambient-cognition__base,
+.orb-theme-dark .orb-ambient-cognition__base {
+  background:
+    radial-gradient(ellipse 90% 55% at 50% -8%, var(--orb-glow-cyan), transparent 52%),
+    radial-gradient(ellipse 45% 40% at 8% 88%, var(--orb-glow-sky), transparent 48%),
+    linear-gradient(165deg, var(--orb-bg-deep) 0%, var(--orb-bg-mid) 45%, var(--orb-bg-soft) 100%);
+}
+
+[data-orb-theme='dark'] .orb-ambient-cognition__edge-hue,
+[data-orb-theme='dark'] .orb-ambient-cognition__glow,
+[data-orb-theme='dark'] .orb-ambient-cognition__breathe,
+.orb-theme-dark .orb-ambient-cognition__edge-hue,
+.orb-theme-dark .orb-ambient-cognition__glow,
+.orb-theme-dark .orb-ambient-cognition__breathe {
+  opacity: 0.42;
+}
+
+[data-orb-theme='dark'] .orb-atmosphere-ask::before,
+.orb-theme-dark.orb-atmosphere-ask::before {
+  background: radial-gradient(circle at 50% 0%, rgba(34, 211, 238, 0.12), transparent 42%);
+}
+
+[data-orb-theme='dark'] .orb-atmosphere-safeguarding::before,
+.orb-theme-dark.orb-atmosphere-safeguarding::before {
+  background: radial-gradient(circle at 50% 0%, rgba(251, 113, 133, 0.08), transparent 40%);
+}
+
+[data-orb-theme='dark'] .orb-atmosphere-ofsted::before,
+.orb-theme-dark.orb-atmosphere-ofsted::before {
+  background: radial-gradient(circle at 50% 0%, rgba(167, 139, 250, 0.1), transparent 40%);
+}
+
+[data-orb-theme='dark'] .orb-atmosphere-recording::before,
+.orb-theme-dark.orb-atmosphere-recording::before {
+  background: radial-gradient(circle at 50% 0%, rgba(52, 211, 153, 0.08), transparent 40%);
+}
+
+[data-orb-theme='dark'] .orb-atmosphere-therapeutic::before,
+.orb-theme-dark.orb-atmosphere-therapeutic::before {
+  background: radial-gradient(circle at 50% 0%, rgba(251, 191, 36, 0.07), transparent 42%);
+}
+
+[data-orb-theme='dark'] .orb-atmosphere-manager::before,
+[data-orb-theme='dark'] .orb-atmosphere-governance::before,
+.orb-theme-dark.orb-atmosphere-manager::before,
+.orb-theme-dark.orb-atmosphere-governance::before {
+  background: radial-gradient(circle at 50% 0%, rgba(96, 165, 250, 0.1), transparent 40%);
+}
+
+[data-orb-theme='dark'] .orb-atmosphere-staff::before,
+.orb-theme-dark.orb-atmosphere-staff::before {
+  background: radial-gradient(circle at 50% 0%, rgba(148, 163, 184, 0.08), transparent 40%);
+}
