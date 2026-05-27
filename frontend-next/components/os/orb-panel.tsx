@@ -16,20 +16,20 @@ export function OrbPanel({
   defaultOpen?: boolean
 }) {
   const [open, setOpen] = useState(defaultOpen)
-  const orbHref = `/assistant/orb?child_id=${encodeURIComponent(childId)}&child_name=${encodeURIComponent(childName)}`
+  const orbHref = `/assistant/orb?scope=child&child_id=${encodeURIComponent(childId)}&child_name=${encodeURIComponent(childName)}`
 
   return (
     <aside
       data-testid="workspace-orb-panel"
-      className="rounded-[24px] border border-sky-100 bg-gradient-to-br from-sky-50/80 via-white to-violet-50/40 p-4 shadow-sm"
+      className="rounded-[24px] border border-sky-100 bg-gradient-to-br from-sky-50/80 via-white to-teal-50/30 p-4 shadow-sm"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-2">
           <Sparkles className="mt-0.5 h-5 w-5 text-sky-600" aria-hidden />
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-sky-700">ORB support</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-sky-700">ORB evidence support</p>
             <p className="mt-1 text-sm font-bold leading-6 text-slate-800">
-              Inspector and registered-manager guidance — without hiding {childName}&apos;s record.
+              Quiet until needed. Ask ORB what changed, what is missing, or how to record with care for {childName}.
             </p>
           </div>
         </div>
@@ -38,7 +38,7 @@ export function OrbPanel({
           onClick={() => setOpen((value) => !value)}
           className="rounded-xl border border-sky-200 bg-white p-2 text-sky-800"
           aria-expanded={open}
-          aria-label={open ? 'Collapse ORB panel' : 'Expand ORB panel'}
+          aria-label={open ? 'Collapse ORB evidence support' : 'Open ORB evidence support'}
         >
           {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
         </button>
@@ -55,13 +55,13 @@ export function OrbPanel({
               href={`${orbHref}&mode=therapeutic_rewrite`}
               className="inline-flex min-h-10 items-center rounded-2xl border border-sky-200 bg-white px-3 py-2 text-xs font-black text-sky-900"
             >
-              Rewrite therapeutically
+              Therapeutic wording
             </Link>
             <Link
               href={`${orbHref}&mode=ofsted_lens`}
               className="inline-flex min-h-10 items-center rounded-2xl border border-sky-200 bg-white px-3 py-2 text-xs font-black text-sky-900"
             >
-              Ofsted lens
+              Inspector lens
             </Link>
             <Link
               href={`${orbHref}&mode=what_is_missing`}
