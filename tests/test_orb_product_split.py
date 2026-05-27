@@ -415,6 +415,22 @@ def test_orb_page_chatgpt_style_layout():
     assert "orb-voice-dock-column" not in sources, "/orb must not use a fixed full-height right strip"
 
 
+def test_orb_light_theme_default_and_migration():
+    appearance = _read(REPO_ROOT / "frontend-next" / "lib" / "orb" / "orb-appearance.ts")
+    layout = _read(REPO_ROOT / "frontend-next" / "app" / "orb" / "layout.tsx")
+    hook = _read(REPO_ROOT / "frontend-next" / "components" / "orb-standalone" / "use-orb-appearance.ts")
+    settings = _read(REPO_ROOT / "frontend-next" / "components" / "orb-standalone" / "orb-standalone-settings-panel.tsx")
+    for marker in (
+        "orb-appearance-migrated-chatgpt-light-v1",
+        "ORB_APPEARANCE_BOOTSTRAP_SCRIPT",
+        "data-orb-theme='light'",
+        "OrbAppearanceControl",
+        "applyOrbDocumentTheme",
+    ):
+        blob = appearance + layout + hook + settings + _read(GLOBALS_CSS)
+        assert marker in blob, f"/orb light default marker missing: {marker}"
+
+
 def test_orb_compact_companion_voice_markers():
     settings = _read(REPO_ROOT / "frontend-next" / "components" / "orb-standalone" / "orb-standalone-settings-panel.tsx")
     permissions = _read(REPO_ROOT / "frontend-next" / "components" / "orb-standalone" / "orb-permissions-panel.tsx")

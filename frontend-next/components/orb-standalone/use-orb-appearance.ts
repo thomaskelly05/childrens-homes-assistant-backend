@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from 'react'
 
 import {
   ORB_APPEARANCE_STORAGE_KEY,
+  applyOrbDocumentTheme,
+  clearOrbDocumentTheme,
   readOrbAppearanceMode,
   resolveOrbTheme,
   writeOrbAppearanceMode,
@@ -31,6 +33,11 @@ export function useOrbAppearance() {
     media.addEventListener('change', sync)
     return () => media.removeEventListener('change', sync)
   }, [appearanceMode])
+
+  useEffect(() => {
+    applyOrbDocumentTheme(resolvedTheme)
+    return () => clearOrbDocumentTheme()
+  }, [resolvedTheme])
 
   const setAppearanceMode = useCallback((mode: OrbAppearanceMode) => {
     writeOrbAppearanceMode(mode)
