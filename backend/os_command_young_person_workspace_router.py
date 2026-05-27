@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-import json
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel
 
+from .os_child_workspace_write_service import save_child_workspace_item as save_canonical_child_workspace_item
+from .os_child_workspace_write_service import table_exists
 from .os_command_router import CurrentUser, get_current_user, get_pool
 
 router = APIRouter(prefix='/api', tags=['OS Command Young Person Workspace'])
@@ -44,19 +45,18 @@ class OrbWorkspaceQuestionPayload(BaseModel):
     context: dict[str, Any] = {}
 
 
-async def _table_exists(conn, table_name: str) -> bool:
-    exists = await conn.fetchval(
-        """
-        SELECT EXISTS (
-          SELECT 1
-          FROM information_schema.tables
-          WHERE table_schema = 'public'
-            AND table_name = $1
-        )
-        """,
-        table_name,
-    )
-    return bool(exists)
+async def _fetch_if_table(conn, table_name: str, sql: str, *params: Any) -> list[dict[str, Any]]:
+    if not await table_exists(conn, table_name):
+        return []
+    rows = await conn.fetch(sql, *params)
+    return [dict(row) for row in rows]
+
+
+async def _fetchrow_if_table(conn, table_name: str, sql: str, *params: Any) -> dict[str, Any] | None:
+    if not await table_exists(conn, table_name):
+        return None
+    row = await conn.fetchrow(sql, *params)
+    return dict(row) if row else None
 
 
 async def _latest_by_keywords(
@@ -68,7 +68,7 @@ async def _latest_by_keywords(
     limit: int = 8,
 ) -> list[dict[str, Any]]:
     search_terms = [f"%{keyword.lower()}%" for keyword in keywords]
-    if not search_terms:
+    if not search_terms or not await table_exists(conn, 'vw_os_young_person_timeline'):
         return []
     rows = await conn.fetch(
         """
@@ -106,48 +106,56 @@ async def get_young_person_workspace(
     async with pool.acquire() as conn:
         await conn.execute("select set_config('app.user_id', $1, true)", str(user.id))
 
-        profile = await conn.fetchrow(
-            '''
+        profile = await _fetchrow_if_table(
+            conn,
+            'vw_os_young_person_profile',
+            """
             SELECT *
             FROM public.vw_os_young_person_profile
             WHERE young_person_id = $1
               AND ($2::int4 IS NULL OR home_id = $2)
             LIMIT 1
-            ''',
+            """,
             young_person_id,
             home_id,
         )
 
-        timeline = await conn.fetch(
-            '''
+        timeline = await _fetch_if_table(
+            conn,
+            'vw_os_young_person_timeline',
+            """
             SELECT *
             FROM public.vw_os_young_person_timeline
             WHERE young_person_id = $1
               AND ($2::int4 IS NULL OR home_id = $2)
             ORDER BY occurred_at DESC
             LIMIT $3
-            ''',
+            """,
             young_person_id,
             home_id,
             limit,
         )
 
-        care_records = await conn.fetch(
-            '''
+        care_records = await _fetch_if_table(
+            conn,
+            'vw_os_young_person_care_record_feed',
+            """
             SELECT *
             FROM public.vw_os_young_person_care_record_feed
             WHERE young_person_id = $1
               AND ($2::int4 IS NULL OR home_id = $2)
             ORDER BY occurred_at DESC
             LIMIT $3
-            ''',
+            """,
             young_person_id,
             home_id,
             limit,
         )
 
-        care_plan_reviews = await conn.fetch(
-            '''
+        care_plan_reviews = await _fetch_if_table(
+            conn,
+            'vw_os_care_plan_review_board',
+            """
             SELECT *
             FROM public.vw_os_care_plan_review_board
             WHERE young_person_id = $1
@@ -156,23 +164,30 @@ async def get_young_person_workspace(
               CASE review_state WHEN 'overdue' THEN 0 WHEN 'due_soon' THEN 1 ELSE 2 END,
               next_review_due ASC NULLS LAST
             LIMIT 100
-            ''',
+            """,
             young_person_id,
             home_id,
         )
 
-        command_items = await conn.fetch(
-            '''
-            SELECT *
-            FROM public.os_command_live_feed($2, $1, NULL, NULL, $3)
-            ''',
-            young_person_id,
-            home_id,
-            limit,
-        )
+        command_items = []
+        if await table_exists(conn, 'os_command_items'):
+            command_items = [
+                dict(row)
+                for row in await conn.fetch(
+                    """
+                    SELECT *
+                    FROM public.os_command_live_feed($1, $2, NULL, NULL, $3)
+                    """,
+                    home_id,
+                    young_person_id,
+                    limit,
+                )
+            ]
 
-        safeguarding_patterns = await conn.fetch(
-            '''
+        safeguarding_patterns = await _fetch_if_table(
+            conn,
+            'os_safeguarding_patterns',
+            """
             SELECT
               id,
               provider_id,
@@ -194,25 +209,29 @@ async def get_young_person_workspace(
               CASE severity WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'moderate' THEN 2 ELSE 3 END,
               detected_at DESC
             LIMIT 100
-            ''',
+            """,
             young_person_id,
             home_id,
         )
 
-        placement_stability = await conn.fetchrow(
-            '''
+        placement_stability = await _fetchrow_if_table(
+            conn,
+            'vw_os_placement_stability_board',
+            """
             SELECT *
             FROM public.vw_os_placement_stability_board
             WHERE young_person_id = $1
               AND ($2::int4 IS NULL OR home_id = $2)
             LIMIT 1
-            ''',
+            """,
             young_person_id,
             home_id,
         )
 
-        network = await conn.fetch(
-            '''
+        network = await _fetch_if_table(
+            conn,
+            'vw_os_safeguarding_network',
+            """
             SELECT *
             FROM public.vw_os_safeguarding_network
             WHERE young_person_id = $1
@@ -221,62 +240,68 @@ async def get_young_person_workspace(
               CASE risk_level WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'moderate' THEN 2 ELSE 3 END,
               created_at DESC
             LIMIT 150
-            ''',
+            """,
             young_person_id,
             home_id,
         )
 
-        alerts = await conn.fetch(
-            '''
+        alerts = await _fetch_if_table(
+            conn,
+            'vw_os_network_risk_alert_board',
+            """
             SELECT *
             FROM public.vw_os_network_risk_alert_board
             WHERE young_person_id = $1
               AND ($2::int4 IS NULL OR home_id = $2)
             ORDER BY severity_sort, created_at DESC
             LIMIT 100
-            ''',
+            """,
             young_person_id,
             home_id,
         )
 
-        chronology_intelligence = await conn.fetch(
-            '''
+        chronology_intelligence = await _fetch_if_table(
+            conn,
+            'vw_os_chronology_intelligence',
+            """
             SELECT *
             FROM public.vw_os_chronology_intelligence
             WHERE young_person_id = $1
               AND ($2::int4 IS NULL OR home_id = $2)
             ORDER BY event_at DESC
             LIMIT $3
-            ''',
+            """,
             young_person_id,
             home_id,
             limit,
         )
 
-        recording_summary = await conn.fetch(
-            '''
+        recording_summary = await _fetch_if_table(
+            conn,
+            'vw_os_young_person_recording_summary',
+            """
             SELECT *
             FROM public.vw_os_young_person_recording_summary
             WHERE young_person_id = $1
               AND ($2::int4 IS NULL OR home_id = $2)
             LIMIT 20
-            ''',
+            """,
             young_person_id,
             home_id,
         )
 
     return {
-        'profile': dict(profile) if profile else None,
-        'timeline': [dict(r) for r in timeline],
-        'care_records': [dict(r) for r in care_records],
-        'care_plan_reviews': [dict(r) for r in care_plan_reviews],
-        'command_items': [dict(r) for r in command_items],
-        'safeguarding_patterns': [dict(r) for r in safeguarding_patterns],
-        'placement_stability': dict(placement_stability) if placement_stability else None,
-        'network': [dict(r) for r in network],
-        'alerts': [dict(r) for r in alerts],
-        'chronology_intelligence': [dict(r) for r in chronology_intelligence],
-        'recording_summary': [dict(r) for r in recording_summary],
+        'profile': profile,
+        'timeline': timeline,
+        'care_records': care_records,
+        'care_plan_reviews': care_plan_reviews,
+        'command_items': command_items,
+        'safeguarding_patterns': safeguarding_patterns,
+        'placement_stability': placement_stability,
+        'network': network,
+        'alerts': alerts,
+        'chronology_intelligence': chronology_intelligence,
+        'recording_summary': recording_summary,
     }
 
 
@@ -288,75 +313,25 @@ async def save_young_person_workspace_item(
     home_id: int | None = Query(default=None),
     user: CurrentUser = Depends(get_current_user),
 ):
-    """Save an editable workspace item when the optional OS draft table exists.
-
-    This endpoint is deliberately safe during staged rollout. If the database
-    has not yet received the persistence table, the UI still receives an
-    accepted response and can continue to work locally instead of failing.
-    """
     pool = get_pool(request)
-    record = payload.model_dump()
     async with pool.acquire() as conn:
         await conn.execute("select set_config('app.user_id', $1, true)", str(user.id))
-        if not await _table_exists(conn, 'os_workspace_item_drafts'):
-            return {
-                'ok': True,
-                'saved': False,
-                'mode': 'local_fallback',
-                'message': 'Workspace item accepted. Persistence table not present yet.',
-                'item': record,
-            }
-
-        saved = await conn.fetchrow(
-            """
-            INSERT INTO public.os_workspace_item_drafts (
-              young_person_id,
-              home_id,
-              item_id,
-              item_type,
-              title,
-              summary,
-              status,
-              priority,
-              evidence,
-              action,
-              owner,
-              payload,
-              created_by,
-              updated_by,
-              created_at,
-              updated_at
-            ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::jsonb,$13,$13,NOW(),NOW())
-            ON CONFLICT (young_person_id, item_id) DO UPDATE SET
-              item_type = EXCLUDED.item_type,
-              title = EXCLUDED.title,
-              summary = EXCLUDED.summary,
-              status = EXCLUDED.status,
-              priority = EXCLUDED.priority,
-              evidence = EXCLUDED.evidence,
-              action = EXCLUDED.action,
-              owner = EXCLUDED.owner,
-              payload = EXCLUDED.payload,
-              updated_by = EXCLUDED.updated_by,
-              updated_at = NOW()
-            RETURNING *
-            """,
-            young_person_id,
-            home_id,
-            payload.item_id or f"draft-{young_person_id}",
-            payload.item_type,
-            payload.title,
-            payload.summary,
-            payload.status,
-            payload.priority,
-            payload.evidence,
-            payload.action,
-            payload.owner,
-            json.dumps(payload.payload or {}),
-            user.id,
+        saved = await save_canonical_child_workspace_item(
+            conn,
+            young_person_id=young_person_id,
+            home_id=home_id,
+            user_id=user.id,
+            item_type=payload.item_type,
+            title=payload.title,
+            summary=payload.summary,
+            status=payload.status,
+            priority=payload.priority,
+            evidence=payload.evidence,
+            action=payload.action,
+            owner=payload.owner,
+            payload=payload.payload or {},
         )
-
-    return {'ok': True, 'saved': True, 'item': dict(saved) if saved else record}
+    return saved
 
 
 @router.post('/os-command/young-person/{young_person_id}/workspace/orb')
@@ -373,25 +348,73 @@ async def ask_young_person_workspace_orb(
 
     async with pool.acquire() as conn:
         await conn.execute("select set_config('app.user_id', $1, true)", str(user.id))
-        if 'lac' in lower or 'looked after' in lower or 'statutory review' in lower:
-            matches = await _latest_by_keywords(conn, young_person_id=young_person_id, home_id=home_id, keywords=['lac review', 'looked after review', 'statutory review', 'iro'])
-            if matches:
-                first = matches[0]
+
+        if 'lac' in lower or 'looked after' in lower or 'statutory review' in lower or 'iro' in lower:
+            rows = await _fetch_if_table(
+                conn,
+                'review_meetings',
+                """
+                SELECT id, meeting_type AS type, meeting_date AS occurred_at,
+                       meeting_type AS title,
+                       coalesce(decisions, agenda, actions, child_voice) AS summary,
+                       child_voice,
+                       next_review_date
+                FROM public.review_meetings
+                WHERE young_person_id = $1
+                  AND lower(meeting_type) SIMILAR TO '%(lac|looked after|statutory|iro|review)%'
+                ORDER BY meeting_date DESC
+                LIMIT 5
+                """,
+                young_person_id,
+            )
+            if not rows:
+                rows = await _latest_by_keywords(conn, young_person_id=young_person_id, home_id=home_id, keywords=['lac review', 'looked after review', 'statutory review', 'iro'])
+            if rows:
+                first = rows[0]
                 return {
                     'ok': True,
-                    'answer': f"The latest LAC/statutory review I found is: {first.get('title') or 'Review'} on {first.get('occurred_at') or first.get('created_at')}. Summary: {first.get('summary') or 'No summary recorded.'}",
-                    'evidence': matches,
+                    'answer': f"The latest LAC/statutory review I found is {first.get('title') or first.get('type') or 'review'} on {first.get('occurred_at')}. Summary: {first.get('summary') or 'No summary recorded.'}",
+                    'evidence': rows,
                 }
             return {'ok': True, 'answer': 'I could not find a LAC/statutory review in the workspace data. Check Reviews and Documents, then record this as an evidence gap if missing.', 'evidence': []}
 
         if 'dentist' in lower or 'dental' in lower:
-            matches = await _latest_by_keywords(conn, young_person_id=young_person_id, home_id=home_id, keywords=['dentist', 'dental'])
-            if matches:
-                first = matches[0]
+            rows = await _fetch_if_table(
+                conn,
+                'young_person_appointments',
+                """
+                SELECT id, appointment_type AS type, appointment_date AS occurred_at,
+                       title, coalesce(outcome_notes, summary, purpose, follow_up_actions) AS summary,
+                       status, professional_name, follow_up_actions AS recommended_action
+                FROM public.young_person_appointments
+                WHERE young_person_id = $1
+                  AND (lower(title) LIKE '%dent%' OR lower(appointment_type) LIKE '%dent%')
+                ORDER BY appointment_date DESC
+                LIMIT 5
+                """,
+                young_person_id,
+            )
+            if not rows:
+                rows = await _fetch_if_table(
+                    conn,
+                    'health_records',
+                    """
+                    SELECT id, record_type AS type, event_datetime AS occurred_at,
+                           title, summary, outcome, next_action_date
+                    FROM public.health_records
+                    WHERE young_person_id = $1
+                      AND (lower(title) LIKE '%dent%' OR lower(record_type) LIKE '%dent%' OR lower(coalesce(summary,'')) LIKE '%dent%')
+                    ORDER BY event_datetime DESC
+                    LIMIT 5
+                    """,
+                    young_person_id,
+                )
+            if rows:
+                first = rows[0]
                 return {
                     'ok': True,
-                    'answer': f"The latest dental record I found is: {first.get('title') or 'Dental appointment'} on {first.get('occurred_at') or first.get('created_at')}. Summary: {first.get('summary') or 'No summary recorded.'}",
-                    'evidence': matches,
+                    'answer': f"The latest dental record I found is {first.get('title') or first.get('type') or 'dental appointment'} on {first.get('occurred_at')}. Summary: {first.get('summary') or first.get('outcome') or 'No summary recorded.'}",
+                    'evidence': rows,
                 }
             return {'ok': True, 'answer': 'I could not find a dental appointment in the workspace data. Check Health and Documents before marking this as missing evidence.', 'evidence': []}
 
@@ -413,18 +436,22 @@ async def ask_young_person_workspace_orb(
                 'evidence': [],
             }
 
-        command_items = await conn.fetch(
-            'SELECT * FROM public.os_command_live_feed($1, $2, NULL, NULL, 20)',
-            home_id,
-            young_person_id,
-        )
-        items = [dict(row) for row in command_items]
-        if items:
-            first = items[0]
+        command_items = []
+        if await table_exists(conn, 'os_command_items'):
+            command_items = [
+                dict(row)
+                for row in await conn.fetch(
+                    'SELECT * FROM public.os_command_live_feed($1, $2, NULL, NULL, 20)',
+                    home_id,
+                    young_person_id,
+                )
+            ]
+        if command_items:
+            first = command_items[0]
             return {
                 'ok': True,
                 'answer': f"Start with: {first.get('title')}. {first.get('summary') or first.get('recommended_action') or 'Open the command item and review the linked evidence.'}",
-                'evidence': items[:5],
+                'evidence': command_items[:5],
             }
 
     return {
@@ -445,8 +472,10 @@ async def get_os_young_people(
 
     async with pool.acquire() as conn:
         await conn.execute("select set_config('app.user_id', $1, true)", str(user.id))
-        rows = await conn.fetch(
-            '''
+        rows = await _fetch_if_table(
+            conn,
+            'vw_os_young_person_profile',
+            """
             SELECT *
             FROM public.vw_os_young_person_profile
             WHERE ($1::int4 IS NULL OR home_id = $1)
@@ -455,9 +484,9 @@ async def get_os_young_people(
               CASE os_state WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'monitor' THEN 2 ELSE 3 END,
               display_name ASC
             LIMIT 500
-            ''',
+            """,
             home_id,
             include_archived,
         )
 
-    return {'young_people': [dict(r) for r in rows]}
+    return {'young_people': rows}
