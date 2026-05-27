@@ -34,7 +34,7 @@ export function OperationalQuickActions({
   variant?: OperationalQuickActionsVariant
 }) {
   const childId = selectedYoungPersonId ? String(selectedYoungPersonId) : null
-  void selectedYoungPersonName
+  const childName = selectedYoungPersonName || 'this child'
 
   const recordHubHref = childId ? childRecordHref(childId) : '/record'
   const actionsHref = childId ? childActionsHref(childId) : '/select-scope'
@@ -44,36 +44,36 @@ export function OperationalQuickActions({
 
   const careHubActions = childId
     ? [
-        { label: 'Record something', helper: 'Choose daily note, incident, safeguarding and more.', href: recordHubHref, icon: ClipboardPlus, cta: 'Open' },
-        { label: 'Write daily note', helper: 'Record the child’s day and what changed.', href: childDailyNoteHref(childId), icon: ClipboardPlus, cta: 'Start' },
-        { label: 'Complete handover', helper: 'Prepare what the next adults need to understand.', href: `/handover?child_id=${encodeURIComponent(childId)}`, icon: ClipboardCheck, cta: 'Start' },
-        { label: 'Record incident', helper: 'Log what happened, adult response and repair.', href: childIncidentHref(childId), icon: ShieldAlert, cta: 'Record' },
-        { label: 'Add child voice', helper: 'Record wishes, feelings and “you said, we did”.', href: childVoiceHref(childId), icon: UsersRound, cta: 'Add' },
-        { label: 'Review actions', helper: 'See follow-up actions that still need attention.', href: actionsHref, icon: ListChecks, cta: 'Review' },
-        { label: 'Ask ORB', helper: 'Get help with wording, risk, guidance or what to do next.', href: orbHref, icon: Mic2, cta: 'Ask' }
+        { label: 'Record with care', helper: `Choose the right record for ${childName}.`, href: recordHubHref, icon: ClipboardPlus, cta: 'Open' },
+        { label: 'Write daily note', helper: 'Capture the day, what changed and what helped.', href: childDailyNoteHref(childId), icon: ClipboardPlus, cta: 'Start' },
+        { label: 'Prepare handover', helper: 'Help the next adult understand risks, actions and positives.', href: `/handover?child_id=${encodeURIComponent(childId)}`, icon: ClipboardCheck, cta: 'Start' },
+        { label: 'Record incident', helper: 'Record behaviour as communication, adult response and repair.', href: childIncidentHref(childId), icon: ShieldAlert, cta: 'Record' },
+        { label: 'Add child voice', helper: 'Keep wishes, feelings and “you said, we did” visible.', href: childVoiceHref(childId), icon: UsersRound, cta: 'Add' },
+        { label: 'Review actions', helper: 'Check follow-up items still needing adult attention.', href: actionsHref, icon: ListChecks, cta: 'Review' },
+        { label: 'Ask ORB', helper: 'Ask what changed, what is missing or how to word it.', href: orbHref, icon: Mic2, cta: 'Ask' }
       ]
     : [
-        { label: 'Record something', helper: 'Choose what to record — notes, incidents, safeguarding and more.', href: recordHubHref, icon: ClipboardPlus, cta: 'Open' },
-        { label: 'Write daily note', helper: 'Record the child’s day and what changed.', href: '/record?type=daily-note', icon: ClipboardPlus, cta: 'Start' },
-        { label: 'Complete handover', helper: 'Prepare what the next adults need to understand.', href: '/handover', icon: ClipboardCheck, cta: 'Start' },
-        { label: 'Record incident', helper: 'Log what happened, adult response and repair.', href: '/record?type=incident', icon: ShieldAlert, cta: 'Record' },
-        { label: 'Add child voice', helper: 'Choose a child, then record voice and wishes.', href: '/record?type=child-voice', icon: UsersRound, cta: 'Choose' },
+        { label: 'Record with care', helper: 'Choose what to record — notes, incidents, safeguarding and more.', href: recordHubHref, icon: ClipboardPlus, cta: 'Open' },
+        { label: 'Write daily note', helper: 'Record the day, what changed and what helped.', href: '/record?type=daily-note', icon: ClipboardPlus, cta: 'Start' },
+        { label: 'Prepare handover', helper: 'Help the next adults understand what matters.', href: '/handover', icon: ClipboardCheck, cta: 'Start' },
+        { label: 'Record incident', helper: 'Record what happened, adult response and repair.', href: '/record?type=incident', icon: ShieldAlert, cta: 'Record' },
+        { label: 'Add child voice', helper: 'Choose a child, then record wishes and feelings.', href: '/record?type=child-voice', icon: UsersRound, cta: 'Choose' },
         { label: 'Choose scope', helper: 'Select a home and child before reviewing actions.', href: '/select-scope', icon: ListChecks, cta: 'Open' },
-        { label: 'Ask ORB', helper: 'Get help with wording, risk, guidance or what to do next.', href: orbHref, icon: Mic2, cta: 'Ask' }
+        { label: 'Ask ORB', helper: 'Ask what changed, what is missing or what needs review.', href: orbHref, icon: Mic2, cta: 'Ask' }
       ]
 
   const defaultActions = childId
     ? [
-        { label: 'Record something', helper: 'Choose daily note, incident, safeguarding and more.', href: recordHubHref, icon: ClipboardPlus, cta: 'Open' },
-        { label: 'Write daily note', helper: 'Record the child’s day and what changed.', href: childDailyNoteHref(childId), icon: ClipboardPlus, cta: 'Open' },
-        { label: 'Keywork', helper: 'Record keywork and direct work with the child.', href: childKeyworkHref(childId), icon: HeartPulse, cta: 'Open' },
-        { label: 'Record incident', helper: 'Log what happened, adult response and repair.', href: childIncidentHref(childId), icon: ShieldAlert, cta: 'Open' },
-        { label: 'Child voice', helper: 'Record wishes, feelings and “you said, we did”.', href: childVoiceHref(childId), icon: UsersRound, cta: 'Open' },
-        { label: 'Ask ORB', helper: 'Summarise journey, risks and next support.', href: orbHref, icon: Mic2, cta: 'Open' },
+        { label: 'Record with care', helper: `Choose the right record for ${childName}.`, href: recordHubHref, icon: ClipboardPlus, cta: 'Open' },
+        { label: 'Write daily note', helper: 'Capture today, what changed and what helped.', href: childDailyNoteHref(childId), icon: ClipboardPlus, cta: 'Open' },
+        { label: 'Keywork', helper: 'Record direct work, child voice and agreed actions.', href: childKeyworkHref(childId), icon: HeartPulse, cta: 'Open' },
+        { label: 'Record incident', helper: 'Record behaviour as communication, response and repair.', href: childIncidentHref(childId), icon: ShieldAlert, cta: 'Open' },
+        { label: 'Child voice', helper: 'Keep wishes, feelings and “you said, we did” visible.', href: childVoiceHref(childId), icon: UsersRound, cta: 'Open' },
+        { label: 'Ask ORB', helper: 'Summarise journey, risks, evidence and next support.', href: orbHref, icon: Mic2, cta: 'Open' },
         { label: 'Documents', helper: 'Open linked documents for this child.', href: `/documents?child_id=${encodeURIComponent(childId)}`, icon: SearchCheck, cta: 'Open' }
       ]
     : [
-        { label: 'Record something', helper: 'Choose what to record — notes, incidents, safeguarding and more.', href: recordHubHref, icon: ClipboardPlus, cta: 'Open' },
+        { label: 'Record with care', helper: 'Choose what to record — notes, incidents, safeguarding and more.', href: recordHubHref, icon: ClipboardPlus, cta: 'Open' },
         { label: 'Choose scope', helper: 'Select a home and child before recording.', href: '/select-scope', icon: ClipboardPlus, cta: 'Open' },
         { label: 'Shift handover', helper: 'Prepare what the next adults need to know.', href: '/handover', icon: ClipboardCheck, cta: 'Open' },
         { label: 'Ask ORB', helper: 'Ask what changed, what needs review or what to do next.', href: orbHref, icon: Mic2, cta: 'Open' }
@@ -83,8 +83,8 @@ export function OperationalQuickActions({
 
   return (
     <section data-testid="operational-quick-actions" className="rounded-[28px] border border-white/70 bg-white/90 p-4 shadow-[0_14px_42px_rgba(15,23,42,0.06)]">
-      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">What do I need to do now?</p>
-      <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">Tap an action to start recording, handover or ORB support.</p>
+      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600">Today&apos;s support</p>
+      <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">Start with what helps the child, then record clearly, review safely and ask ORB when needed.</p>
       <div className="mt-3 grid gap-2">
         {actions.map((action) => {
           const Icon = action.icon
