@@ -11,7 +11,7 @@ IndiCare OS is a monolithic Python FastAPI backend that also serves its own lega
 | Service | Command | Port | Notes |
 |---------|---------|------|-------|
 | FastAPI backend | `source .venv/bin/activate && uvicorn app:app --reload --host 127.0.0.1 --port 8000` | 8000 | Load `.env` vars first. Serves API + legacy frontend. |
-| Next.js frontend | `cd frontend-next && npm run dev` | 3001 | Optional modern UI, proxies `/api/*` to backend. |
+| Next.js frontend (canonical) | `cd indicare-frontend-next && npm run dev` | 3001 | Production IndiCare OS UI; proxies `/api/*` to backend. `frontend-next` is a symlink to this folder. |
 | PostgreSQL | `sudo pg_ctlcluster 16 main start` | 5432 | Must be running before backend starts. |
 
 ### Key Gotchas

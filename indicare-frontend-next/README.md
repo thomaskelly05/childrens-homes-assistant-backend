@@ -1,13 +1,37 @@
-# IndiCare Frontend Next
+# IndiCare Frontend Next (canonical)
 
-Canonical frontend for the Render service named `indicare-frontend-next`.
+Production Next.js frontend for the Render service **`indicare-frontend-next`**.
 
-This folder is the home for the brief-led IndiCare OS experience:
+This is the single home for the brief-led IndiCare OS experience:
 
-- story-first young person workspace
-- child-centred operating system shell
-- OS-linked ORB assistant
-- role-aware evidence and review surfaces
-- recording, chronology, documents, plans, actions and oversight UI
+- Story-first young person workspace
+- Child-centred operating system shell (`indicare-os-live.css`)
+- OS-linked ORB at `/assistant/orb` → `/api/assistant/orb/conversation`
+- Typed recording, review queue, manager actions, chronology, documents, plans, handover, LifeEcho, archive
 
-Legacy/staging frontend work may still exist in `frontend-next` or `indicare-app`, but the production frontend should be consolidated here.
+The repository path `frontend-next` is a **symlink** to this folder for backwards-compatible tests and docs.
+
+## Development
+
+```bash
+cd indicare-frontend-next
+npm install
+npm run dev
+```
+
+Runs on port **3001** and rewrites `/api/*` to the FastAPI backend (see `next.config.ts`).
+
+## Build
+
+```bash
+npm run build
+npm run start
+```
+
+## ORB diagnostics (dev)
+
+`/assistant/orb/diagnostics` calls `/api/assistant/orb/evidence-diagnostics`. Hidden in production unless `NEXT_PUBLIC_ENABLE_ORB_DIAGNOSTICS=true`.
+
+## Legacy
+
+See [LEGACY_FRONTENDS.md](./LEGACY_FRONTENDS.md).
