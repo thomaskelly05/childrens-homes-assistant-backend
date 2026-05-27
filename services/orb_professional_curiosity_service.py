@@ -107,7 +107,7 @@ class OrbProfessionalCuriosityService:
             "Was the child monitored after the error; any symptoms, distress, anxiety or impact; was emergency advice needed?",
             "MAR entry transparent and not misleadingly backfilled — due time, actual time, missed/given late/omitted, advice sought and who gave it?",
             "Manager notified; child's presentation and voice recorded; parent/social worker/placing authority informed if policy requires?",
-            "Handover failure, missed double-checking, unclear outgoing/incoming responsibility, environmental distraction?",
+            "Handover failure, missed double-checking/second checker, unclear outgoing/incoming responsibility, environmental distraction?",
             "Staff trained/competent; isolated or repeated; medication policy/handover process change; supervision/training/action?",
             "Review afterwards: medication audit, MAR audit, handover system, competency, repeated errors, provider learning, Reg 12/13 evidence?",
         ],
@@ -289,6 +289,8 @@ class OrbProfessionalCuriosityService:
         lines.extend(
             [
                 "- Do not end high-attention answers with vague 'would you like to explore further?' closers.",
+                "- Do not end with generic coaching questions such as 'What might be...?', 'How can we ensure...?', "
+                "'Would you like...?' or 'What specific follow-up...?' — end with a clear professional conclusion or next step.",
                 "- Give structured professional reasoning like an experienced RM, DSL, RI and inspector working together.",
             ]
         )
@@ -303,12 +305,39 @@ class OrbProfessionalCuriosityService:
         }
 
     def _is_cumulative_concern(self, text: str) -> bool:
-        pattern_terms = ("pattern", "repeated", "three allegations", "nothing appears", "not right", "same staff")
+        has_allegation = "allegation" in text
+        has_missing = "missing" in text
+        has_restraint = "restraint" in text
+        same_adult = any(
+            term in text
+            for term in (
+                "same staff",
+                "same adult",
+                "same worker",
+                "same member of staff",
+                "involving the same",
+            )
+        )
+        pattern_terms = (
+            "pattern",
+            "repeated",
+            "three allegations",
+            "nothing appears",
+            "not right",
+            "same staff",
+            "same adult",
+            "cumulative",
+            "multiple incident",
+        )
         incident_mix = (
             sum(1 for term in ("allegation", "missing", "restraint") if term in text) >= 2
-            or ("allegation" in text and "restraint" in text)
+            or (has_allegation and has_restraint)
         )
-        return incident_mix and any(term in text for term in pattern_terms)
+        strong_cumulative = has_allegation and has_restraint and has_missing and same_adult
+        allegations_restraints_same_adult = has_allegation and has_restraint and same_adult
+        return strong_cumulative or allegations_restraints_same_adult or (
+            incident_mix and any(term in text for term in pattern_terms)
+        )
 
     def _dedupe(self, items: list[str]) -> list[str]:
         seen: set[str] = set()

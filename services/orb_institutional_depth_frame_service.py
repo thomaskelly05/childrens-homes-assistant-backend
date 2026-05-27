@@ -351,6 +351,13 @@ class OrbInstitutionalDepthFrameService:
         return {
             "topic": "missing from home / away from placement",
             "purpose": "Contextual safeguarding and Ofsted-ready cognition — understand why children go missing, not only whether forms are completed.",
+            "opening_anchor": (
+                "Open with: 'The key is to understand both the immediate safety picture and why the young person went missing.'"
+            ),
+            "closing_guidance": (
+                "End with: 'The priority is welfare, return conversation, risk review, chronology update and visible "
+                "manager oversight, following the home's missing-from-care procedure and local safeguarding arrangements.'"
+            ),
             "response_structure": [
                 "## Immediate safety",
                 "## Return conversation",
@@ -420,6 +427,13 @@ class OrbInstitutionalDepthFrameService:
         return {
             "topic": "recording quality",
             "purpose": "Improve records so they are factual, child-centred, chronology-aware and useful for oversight.",
+            "opening_anchor": (
+                "Open with: 'The first task is to separate what happened from interpretation or judgement.'"
+            ),
+            "closing_guidance": (
+                "End with: 'Before sign-off, add any missing facts, child voice, staff response, outcome, follow-up and "
+                "manager review if needed.' Do not add cumulative/LADO threshold boundary unless safeguarding risk is indicated."
+            ),
             "response_structure": [
                 "## Improved record",
                 "## What was wrong",
@@ -475,6 +489,10 @@ class OrbInstitutionalDepthFrameService:
         return {
             "topic": "therapeutic and reflective reasoning",
             "purpose": "Warm, psychologically informed, practical cognition for distress, rupture and behaviour as communication.",
+            "opening_anchor": (
+                "Open with: 'The cup is the visible behaviour; the important question is what the cancelled family time "
+                "meant emotionally.' when family-time cancellation is involved; otherwise open with behaviour-as-communication framing."
+            ),
             "response_structure": [
                 "## What the behaviour may be communicating",
                 "## How staff can respond",
@@ -531,6 +549,13 @@ class OrbInstitutionalDepthFrameService:
         return {
             "topic": "leadership / governance / oversight",
             "purpose": "Reason like a strong registered manager or RI: evidence, drift, patterns, actions and impact.",
+            "opening_anchor": (
+                "Open with governance/impact framing — not the generic five-layer opener."
+            ),
+            "closing_guidance": (
+                "End with: 'The strongest evidence is not that leaders knew about concerns, but that they understood "
+                "the pattern, acted on it, reviewed impact, and could show children were safer as a result.'"
+            ),
             "response_structure": self._high_attention_markdown_structure(),
             "required_lenses": [
                 "RM daily lens: who is most vulnerable today; overnight events; missing/safeguarding; emotional climate; staffing; medication/health; education; staff wellbeing; overdue actions; weak recordings; what could go wrong; visible leadership; what Ofsted would challenge if they arrived today.",
@@ -581,8 +606,14 @@ class OrbInstitutionalDepthFrameService:
                 "involving the same adult — not whether each incident is individually serious."
             ),
             "opening_anchor": (
-                "Open by stating clearly that the concern is not one isolated event; it is the convergence of "
-                "allegations, missing episodes and repeated physical interventions involving the same adult."
+                "Open with: 'The concern here is the convergence, not any single incident.' Then state clearly that "
+                "the concern is not one isolated event; it is the convergence of allegations, missing episodes and "
+                "repeated physical interventions involving the same adult."
+            ),
+            "closing_guidance": (
+                "End with: 'Do not make the threshold decision alone. Bring the pattern together, seek appropriate "
+                "safeguarding/LADO advice where indicated, record the rationale, and ensure Registered Manager and "
+                "RI oversight are visible.' Never end with generic coaching questions."
             ),
             "required_lenses": [
                 "This is cumulative concern — the pattern matters more than any single low-level incident.",
@@ -705,6 +736,10 @@ class OrbInstitutionalDepthFrameService:
         return {
             "topic": "health / medication oversight",
             "purpose": "Registered-manager-level medication incident thinking: safety, recording, advice, oversight and learning — not clinical diagnosis.",
+            "opening_anchor": (
+                "Open with: 'This needs a calm safety-first response, because medication errors are both health events "
+                "and governance events.'"
+            ),
             "response_structure": [
                 "## Immediate safety",
                 "## Recording",
@@ -727,9 +762,9 @@ class OrbInstitutionalDepthFrameService:
                 "MAR/health record accuracy and management review.",
             ],
             "closing_guidance": (
-                "In ## Professional boundary, state: seek pharmacy, GP, NHS 111 or emergency advice where the medication or "
-                "the child's presentation requires it. Do not give clinical treatment advice. End with manager oversight and "
-                "learning focus — not generic coaching questions."
+                "End with: 'The key is to check safety, seek pharmacy/GP/NHS 111 or emergency advice where needed, "
+                "record transparently on the MAR, notify the right people, and review the handover system so the error "
+                "is not repeated.' Do not give clinical treatment advice or generic coaching questions."
             ),
             "avoid": [
                 "Giving clinical or medical treatment advice beyond professional boundaries.",

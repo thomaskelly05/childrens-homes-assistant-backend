@@ -60,34 +60,55 @@ class OrbGroundedAnswerStyleService:
 
     TOPIC_CLOSERS: dict[str, str] = {
         "medication": (
-            "\n\nORB can support your thinking, but medication decisions should follow the home's policy. "
-            "Seek pharmacy, GP, NHS 111 or emergency advice where the medication or the child's presentation requires it. "
-            "The key is to check safety, record the MAR transparently, notify the right people, and review whether "
-            "handover, competency or repeated errors need manager action."
+            "\n\nThe key is to check safety, seek pharmacy/GP/NHS 111 or emergency advice where needed, record "
+            "transparently on the MAR, notify the right people, and review the handover system so the error is "
+            "not repeated."
         ),
         "missing": (
-            "\n\nORB can support your thinking, but missing-from-home decisions should follow local procedures. "
-            "The priority is welfare, return conversation, risk review, and visible manager oversight."
+            "\n\nThe priority is welfare, return conversation, risk review, chronology update and visible manager "
+            "oversight, following the home's missing-from-care procedure and local safeguarding arrangements."
         ),
         "therapeutic": (
             "\n\nThe key is to record the behaviour without blame, hold the emotional meaning in mind, and show how "
             "staff helped the young person feel safe, heard and supported afterwards."
         ),
         "recording": (
-            "\n\nBefore signing off, add any missing facts, staff response, child voice, outcome and manager review "
-            "if needed."
+            "\n\nBefore sign-off, add any missing facts, child voice, staff response, outcome, follow-up and manager "
+            "review if needed."
         ),
         "cumulative_concern": (
             "\n\nDo not make the threshold decision alone. Bring the pattern together, seek appropriate "
-            "safeguarding/LADO advice where indicated, record the rationale, and ensure RI oversight is visible."
+            "safeguarding/LADO advice where indicated, record the rationale, and ensure Registered Manager and "
+            "RI oversight are visible."
         ),
         "leadership": (
-            "\n\nLeadership should be able to show oversight, evidence of impact, clear review dates and named action ownership."
+            "\n\nThe strongest evidence is not that leaders knew about concerns, but that they understood the "
+            "pattern, acted on it, reviewed impact, and could show children were safer as a result."
         ),
         "education_health": (
             "\n\nKeep advocacy, plan review and child progress visible — not only appointments or process lists."
         ),
     }
+
+    SAFEGUARDING_CLOSER_RISK_TERMS = frozenset(
+        {
+            "allegation",
+            "staff conduct concern",
+            "staff conduct",
+            "abuse",
+            "harm",
+            "unsafe adult",
+            "lado",
+            "repeated safeguarding pattern",
+            "threshold",
+            "serious injury",
+            "significant risk",
+            "safeguard",
+            "exploit",
+            "injury",
+            "police",
+        }
+    )
 
     def _allegations_depth_block(self) -> str:
         return "\n".join(
@@ -125,7 +146,7 @@ class OrbGroundedAnswerStyleService:
                 "- Immediate safety: what is the medication for; time-critical; PRN/routine/controlled/psychotropic/epilepsy/insulin/asthma/antibiotics/sleep/high-impact.",
                 "- Was pharmacy/GP/NHS 111 or emergency advice required before giving late or omitting; child monitored; symptoms/distress/anxiety/impact; emergency advice?",
                 "- Recording: MAR transparent not backfilled; due/actual time; missed/given late/omitted; advice sought and who gave it; manager notified; child presentation/voice; notifications per policy.",
-                "- Manager oversight: handover failure; double-check missed; unclear responsibility; distraction; competency/training; isolated vs repeated; policy/handover change; supervision/training action.",
+                "- Manager oversight: handover failure; double-check/second checker missed; unclear responsibility; distraction; competency/training; isolated vs repeated; policy/handover change; supervision/training action.",
                 "- Review: medication audit, MAR audit, handover, competency, repeated errors, provider learning, Reg 12/13 evidence.",
                 "- Professional boundary: seek pharmacy, GP, NHS 111 or emergency advice where required — do not give clinical treatment advice.",
                 "- Use [Reg 12] [Reg 13] [Recording quality] [Medication / health] inline where relevant.",
@@ -142,7 +163,7 @@ class OrbGroundedAnswerStyleService:
                 "Missing episode depth (contextual safeguarding):",
                 "- Structure: ## Immediate safety, ## Return conversation, ## What to record, ## Patterns to explore, ## Manager oversight and Ofsted lens, ## Next safe steps.",
                 "- Immediate safety: welfare; injury/intoxication/distress; clothing/weather/phone; medical attention; local procedure; police/social worker if required.",
-                "- Return conversation: where; who with; unknown adults; travel; phone/social media; substances/money/gifts; exploitation indicators; felt safe; why leave/return; avoid someone; what helps next time.",
+                "- Return conversation: where; who with; unknown adults; travel; phone/social media; substances/money/gifts; exploitation indicators; felt safe; why leave/return; avoid someone; what helps next time; independent return interview if appropriate.",
                 "- Patterns: repeated times, routes/locations, peers/adults, family/contact, school, staff/relationship, emotional triggers, push/pull, escalation, contextual safeguarding.",
                 "- Ofsted: home understands why children go missing — learning, prevention, risk reduction, multi-agency impact.",
                 "- Use [Reg 12] [Reg 13] [SCCIF] [Working Together] [Recording quality] inline where relevant.",
@@ -298,6 +319,10 @@ class OrbGroundedAnswerStyleService:
             "complaints",
             "cumulative_concern",
             "supervision",
+            "leadership",
+            "recording",
+            "inspection",
+            "chronology",
         }
     )
 
@@ -305,15 +330,49 @@ class OrbGroundedAnswerStyleService:
 
     GENERIC_CLOSER_PATTERNS = (
         re.compile(r"\n+what specific follow-up actions do you think[^?]*\?\s*$", re.I | re.S),
+        re.compile(r"\n+what specific[^?]*\?\s*$", re.I | re.S),
+        re.compile(r"\n+what might be[^?]*\?\s*$", re.I | re.S),
+        re.compile(r"\n+how can we ensure[^?]*\?\s*$", re.I | re.S),
         re.compile(r"\n+would you like to explore any specific aspect further\?\s*$", re.I | re.S),
-        re.compile(r"\n+would you like to explore[^?]*further\?\s*$", re.I | re.S),
+        re.compile(r"\n+would you like to explore[^?]*\?\s*$", re.I | re.S),
+        re.compile(r"\n+would you like[^?]*\?\s*$", re.I | re.S),
         re.compile(r"\n+what would you like to explore next\?\s*$", re.I | re.S),
+        re.compile(r"\n+what do you think would be most beneficial[^?]*\?\s*$", re.I | re.S),
     )
 
-    THRESHOLD_BOUNDARY_CLOSER_PATTERN = re.compile(
-        r"\n+ORB can support your thinking, but the threshold decision should remain human-led[\s\S]*?(?=\n\n[A-Z#]|\Z)",
-        re.I,
+    THRESHOLD_BOUNDARY_CLOSER_PATTERNS = (
+        re.compile(
+            r"\n+ORB can support your thinking, but the threshold decision should remain human-led[\s\S]*?(?=\n\n[A-Z#]|\Z)",
+            re.I,
+        ),
+        re.compile(
+            r"\n+Do not make the threshold decision alone[\s\S]*?(?=\n\n[A-Z#]|\Z)",
+            re.I,
+        ),
     )
+
+    GENERIC_QUESTION_LINE_MARKERS = (
+        "would you like",
+        "what specific follow-up",
+        "what specific",
+        "what might be",
+        "how can we ensure",
+        "explore any specific",
+        "what would you like to explore",
+        "do you think would be most beneficial",
+        "what do you think",
+        "how might the young person feel",
+        "how might we ensure",
+    )
+
+    TOPIC_CLOSER_MARKERS: dict[str, tuple[str, ...]] = {
+        "medication": ("transparently on the mar", "handover system", "not repeated"),
+        "missing": ("missing-from-care procedure", "chronology update and visible manager oversight"),
+        "therapeutic": ("hold the emotional meaning", "feel safe, heard and supported"),
+        "recording": ("before sign-off", "child voice, staff response"),
+        "cumulative_concern": ("registered manager and", "ri oversight are visible"),
+        "leadership": ("children were safer", "understood the pattern"),
+    }
 
     SAFE_BOUNDARY_CLOSER = (
         "\n\nORB can support your thinking, but the threshold decision should remain human-led and "
@@ -321,69 +380,75 @@ class OrbGroundedAnswerStyleService:
         "record the rationale, and ensure manager oversight is visible."
     )
 
+    def _safeguarding_closer_indicated(self, message: str) -> bool:
+        text = str(message or "").lower()
+        return any(term in text for term in self.SAFEGUARDING_CLOSER_RISK_TERMS)
+
     def _topic_closer(self, topic: str | None, *, message: str) -> str | None:
         if not topic:
             return None
-        text = str(message or "").lower()
-        if topic == "therapeutic" and any(
-            term in text for term in ("safeguard", "harm", "injury", "abuse", "exploit", "missing", "police")
-        ):
-            return self.SAFE_BOUNDARY_CLOSER
-        if topic in self.THERAPEUTIC_NO_BOUNDARY_TOPICS:
+        if topic in {"therapeutic", "recording", "education_health"} and not self._safeguarding_closer_indicated(message):
             return self.TOPIC_CLOSERS.get(topic)
-        return self.TOPIC_CLOSERS.get(topic) or (
-            self.SAFE_BOUNDARY_CLOSER if topic in self.HIGH_ATTENTION_CLOSER_TOPICS else None
-        )
+        if topic == "leadership":
+            return self.TOPIC_CLOSERS.get("leadership")
+        if topic in self.TOPIC_CLOSERS:
+            return self.TOPIC_CLOSERS.get(topic)
+        if topic in self.HIGH_ATTENTION_CLOSER_TOPICS:
+            return self.SAFE_BOUNDARY_CLOSER if self._safeguarding_closer_indicated(message) else None
+        return None
+
+    def _strip_trailing_coaching_questions(self, text: str) -> str:
+        cleaned = text.rstrip()
+        while cleaned:
+            tail = cleaned.rsplit("\n", 1)[-1].strip()
+            if not tail.endswith("?"):
+                break
+            tail_lower = tail.lower()
+            if not any(marker in tail_lower for marker in self.GENERIC_QUESTION_LINE_MARKERS):
+                break
+            cleaned = cleaned.rsplit("\n", 1)[0].rstrip()
+        return cleaned
 
     def sanitize_high_attention_closer(self, answer: str, *, message: str, mode: str | None = None) -> str:
         text = str(answer or "").strip()
         if not text:
             return text
         topic = orb_professional_curiosity_service.detect_topic(message, mode=mode)
-        message_lower = str(message or "").lower()
-        therapeutic_risk = topic == "therapeutic" and any(
-            term in message_lower
-            for term in ("safeguard", "harm", "injury", "abuse", "exploit", "missing", "police", "threshold")
-        )
+        safeguarding_risk = self._safeguarding_closer_indicated(message)
+        no_boundary_topic = topic in self.THERAPEUTIC_NO_BOUNDARY_TOPICS and not safeguarding_risk
         high_attention = topic in self.HIGH_ATTENTION_CLOSER_TOPICS or topic in orb_professional_curiosity_service.HIGH_ATTENTION_TOPICS
-        if not high_attention and topic not in self.THERAPEUTIC_NO_BOUNDARY_TOPICS:
+        if not high_attention and not no_boundary_topic:
             return text
         cleaned = text
-        if topic == "therapeutic" and not therapeutic_risk:
-            cleaned = self.THRESHOLD_BOUNDARY_CLOSER_PATTERN.sub("", cleaned).rstrip()
+        if no_boundary_topic:
+            for pattern in self.THRESHOLD_BOUNDARY_CLOSER_PATTERNS:
+                cleaned = pattern.sub("", cleaned).rstrip()
+            for term in ("lado", "threshold decision", "ri oversight", "local-procedure-led"):
+                if term in cleaned.lower() and topic == "therapeutic":
+                    cleaned = re.sub(
+                        rf"\n+[^\n]*{re.escape(term)}[^\n]*(?:\n[^\n]*{re.escape(term)}[^\n]*)*",
+                        "",
+                        cleaned,
+                        flags=re.I,
+                    ).rstrip()
         for pattern in self.GENERIC_CLOSER_PATTERNS:
             cleaned = pattern.sub("", cleaned).rstrip()
-        if cleaned.lower().endswith("?"):
-            tail = cleaned.rsplit("\n", 1)[-1].strip().lower()
-            coaching_markers = (
-                "would you like",
-                "what specific follow-up",
-                "explore any specific",
-                "what would you like to explore",
-                "do you think would be most beneficial",
-            )
-            if any(marker in tail for marker in coaching_markers):
-                cleaned = cleaned.rsplit("\n", 1)[0].rstrip()
+        cleaned = self._strip_trailing_coaching_questions(cleaned)
         closer = self._topic_closer(topic, message=message)
         if not closer:
             return cleaned
         closer_norm = closer.strip().lower()
         if closer_norm in cleaned.lower():
             return cleaned
-        boundary_markers = (
-            "human-led",
-            "local-procedure",
-            "manager oversight",
-            "immediate priority",
-            "threshold decision",
-            "without blame",
-            "feel safe, heard",
-            "before sign-off",
-            "review dates",
-        )
-        if not any(marker in cleaned.lower() for marker in boundary_markers):
-            cleaned = f"{cleaned}{closer}"
-        return cleaned
+        topic_markers = self.TOPIC_CLOSER_MARKERS.get(topic or "", ())
+        if any(marker in cleaned.lower() for marker in topic_markers):
+            return cleaned
+        if not topic_markers and any(
+            marker in cleaned.lower()
+            for marker in ("human-led", "local-procedure-led", "threshold decision should remain")
+        ):
+            return cleaned
+        return f"{cleaned}{closer}"
 
     def citation_payload(self, message: str, *, mode: str | None = None) -> list[dict[str, Any]]:
         from services.orb_knowledge_grounding_service import orb_knowledge_grounding_service

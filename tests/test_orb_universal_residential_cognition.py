@@ -284,6 +284,48 @@ def test_grounded_style_medication_depth_block_present():
     assert "backfill" in lower
 
 
+def test_cumulative_user_prompt_exact_pill_labels():
+    prompt = (
+        "A young person has made three allegations in two months, two missing episodes, "
+        "and there have been four restraints involving the same staff member. "
+        "Nothing appears individually serious, but I feel something is not right…"
+    )
+    labels = _labels(prompt, mode="Ask ORB")
+    assert labels == [
+        "Safeguarding",
+        "Professional curiosity",
+        "Leadership oversight",
+        "Ofsted evidence",
+    ]
+    assert "Missing from home" not in labels
+
+
+def test_topic_openers_vary_by_detected_topic():
+    from services.indicare_intelligence_surface_router import topic_practice_opener
+
+    med = (topic_practice_opener(MEDICATION_PROMPT) or "").lower()
+    missing = (topic_practice_opener(MISSING_PROMPT) or "").lower()
+    therapeutic = (topic_practice_opener(THERAPEUTIC_PROMPT) or "").lower()
+    assert "safety-first" in med
+    assert "immediate safety picture" in missing
+    assert "visible behaviour" in therapeutic
+    assert med != missing != therapeutic
+
+
+def test_medication_depth_frame_has_topic_opener():
+    frame = orb_institutional_depth_frame_service.build_frame(message=MEDICATION_PROMPT)
+    assert "safety-first" in (frame.get("opening_anchor") or "").lower()
+
+
+def test_cumulative_depth_frame_has_convergence_opener():
+    prompt = (
+        "A young person has made three allegations in two months, two missing episodes, "
+        "and there have been four restraints involving the same staff member."
+    )
+    frame = orb_institutional_depth_frame_service.build_frame(message=prompt)
+    assert "convergence" in (frame.get("opening_anchor") or "").lower()
+
+
 def test_exploitation_and_self_harm_frames_available():
     exploit = orb_institutional_depth_frame_service.build_frame(
         message="We are worried about county lines and unknown adults near the home"

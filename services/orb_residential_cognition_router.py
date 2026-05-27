@@ -63,11 +63,8 @@ class OrbResidentialCognitionRouter:
     TOPIC_BRAINS: dict[str, list[str]] = {
         "cumulative_concern": [
             "safeguarding_cognition",
-            "chronology_cognition",
             "governance_cognition",
             "professional_curiosity_cognition",
-            "restrictive_practice_cognition",
-            "missing_from_home_cognition",
             "recording_quality_cognition",
         ],
         "allegations": [
@@ -347,9 +344,19 @@ class OrbResidentialCognitionRouter:
                 if label not in {"Safeguarding", "Professional curiosity", "Ofsted Lens", "Ofsted evidence"}
             ]
         if topic == "cumulative_concern":
-            labels = [label for label in labels if label not in {"Chronology", "Restrictive practice", "Ofsted Lens"}]
-            if "Missing from home" not in labels:
-                labels.insert(1, "Missing from home")
+            labels = [
+                label
+                for label in labels
+                if label
+                not in {
+                    "Chronology",
+                    "Restrictive practice",
+                    "Ofsted Lens",
+                    "Missing from home",
+                    "Therapeutic reflection",
+                    "Child experience",
+                }
+            ]
             if "Ofsted evidence" not in labels:
                 labels.append("Ofsted evidence")
         return labels

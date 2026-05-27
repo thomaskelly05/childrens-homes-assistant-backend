@@ -356,6 +356,23 @@ def route_intelligence_surface(
 
 BOUNDARY_LONG_PREFIX = "I cannot see the actual live child record in IndiCare OS, but generally — "
 BOUNDARY_SHORT_PREFIX = "Generally, I would think about this in five layers — "
+TOPIC_PRACTICE_OPENERS: dict[str, str] = {
+    "medication": (
+        "This needs a calm safety-first response, because medication errors are both health events and governance events."
+    ),
+    "missing": (
+        "The key is to understand both the immediate safety picture and why the young person went missing."
+    ),
+    "therapeutic": (
+        "The cup is the visible behaviour; the important question is what the cancelled family time meant emotionally."
+    ),
+    "cumulative_concern": "The concern here is the convergence, not any single incident.",
+    "recording": "The first task is to separate what happened from interpretation or judgement.",
+    "leadership": (
+        "The strongest evidence is not that leaders knew about concerns, but that they understood the pattern, "
+        "acted on it, reviewed impact, and could show children were safer as a result."
+    ),
+}
 BOUNDARY_ALREADY_USED_MARKERS = (
     "cannot see the actual live child record",
     "generally, i would think about this in five layers",
@@ -377,10 +394,24 @@ def _boundary_already_stated_in_history(history: list[Any] | None) -> bool:
     return False
 
 
+def topic_practice_opener(intent: str, *, mode: str | None = None) -> str | None:
+    """Topic-specific standalone opener for residential practice questions."""
+    from services.orb_professional_curiosity_service import orb_professional_curiosity_service
+
+    topic = orb_professional_curiosity_service.detect_topic(intent, mode=mode)
+    if not topic:
+        return None
+    opener = TOPIC_PRACTICE_OPENERS.get(topic)
+    if opener:
+        return f"{opener} "
+    return None
+
+
 def standalone_guidance_boundary_prefix(
     intent: str,
     *,
     history: list[Any] | None = None,
+    mode: str | None = None,
 ) -> str | None:
     """Short prefix when standalone answers generally without live records.
 
@@ -425,6 +456,9 @@ def standalone_guidance_boundary_prefix(
         "manager review",
     )
     if any(marker in text for marker in practice_markers):
+        topic_opener = topic_practice_opener(intent, mode=mode)
+        if topic_opener:
+            return topic_opener
         return BOUNDARY_SHORT_PREFIX
     return BOUNDARY_LONG_PREFIX
 

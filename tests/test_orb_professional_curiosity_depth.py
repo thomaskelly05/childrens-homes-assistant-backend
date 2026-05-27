@@ -131,10 +131,100 @@ def test_boundary_prefix_not_repeated_when_history_already_has_boundary():
     assert standalone_guidance_boundary_prefix(MEDICATION_PROMPT, history=history) is None
 
 
-def test_boundary_prefix_uses_shorter_opener_for_practice_questions():
+def test_boundary_prefix_uses_topic_opener_for_medication():
     prefix = standalone_guidance_boundary_prefix(MEDICATION_PROMPT)
     assert prefix is not None
-    assert "five layers" in prefix.lower() or "live child record" in prefix.lower()
+    assert "safety-first response" in prefix.lower() or "five layers" in prefix.lower()
+
+
+def test_boundary_prefix_uses_topic_opener_for_therapeutic():
+    prefix = standalone_guidance_boundary_prefix(THERAPEUTIC_PROMPT)
+    assert prefix is not None
+    assert "visible behaviour" in prefix.lower() or "five layers" in prefix.lower()
+
+
+def test_therapeutic_sanitize_strips_lado_threshold_and_ri_oversight():
+    raw = (
+        "## How to record it\n"
+        "Record without blame.\n\n"
+        "Do not make the threshold decision alone. Bring the pattern together, seek appropriate "
+        "safeguarding/LADO advice where indicated, record the rationale, and ensure RI oversight is visible."
+    )
+    cleaned = orb_grounded_answer_style_service.sanitize_high_attention_closer(
+        raw,
+        message=THERAPEUTIC_PROMPT,
+        mode="Ask ORB",
+    )
+    assert "lado" not in cleaned.lower()
+    assert "threshold decision" not in cleaned.lower()
+    assert "ri oversight" not in cleaned.lower()
+    assert "without blame" in cleaned.lower()
+    assert "feel safe, heard" in cleaned.lower()
+
+
+def test_therapeutic_sanitize_ends_with_repair_closer():
+    raw = "## How staff can respond\nCo-regulate and repair.\n"
+    cleaned = orb_grounded_answer_style_service.sanitize_high_attention_closer(
+        raw,
+        message=THERAPEUTIC_PROMPT,
+        mode="Ask ORB",
+    )
+    assert "record the behaviour without blame" in cleaned.lower()
+    assert "feel safe, heard and supported" in cleaned.lower()
+
+
+def test_medication_sanitize_ends_with_medication_closer():
+    raw = "## Manager oversight\nReview handover.\n"
+    cleaned = orb_grounded_answer_style_service.sanitize_high_attention_closer(
+        raw,
+        message=MEDICATION_PROMPT,
+        mode="Ask ORB",
+    )
+    lower = cleaned.lower()
+    assert "mar" in lower
+    assert "handover" in lower
+    assert "pharmacy" in lower or "111" in lower
+
+
+def test_missing_sanitize_ends_with_welfare_return_closer():
+    raw = "## Return conversation\nAsk where they went.\n"
+    cleaned = orb_grounded_answer_style_service.sanitize_high_attention_closer(
+        raw,
+        message=MISSING_PROMPT,
+        mode="Ask ORB",
+    )
+    lower = cleaned.lower()
+    assert "welfare" in lower
+    assert "return conversation" in lower
+    assert "manager oversight" in lower
+
+
+def test_high_attention_strips_generic_reflective_question_endings():
+    raw = (
+        "## Next steps\n"
+        "Notify the manager.\n\n"
+        "What might be the young person's feelings about this situation?"
+    )
+    cleaned = orb_grounded_answer_style_service.sanitize_high_attention_closer(
+        raw,
+        message="A young person went missing overnight — what should we record on return?",
+        mode="Ask ORB",
+    )
+    assert "What might be" not in cleaned
+    assert not cleaned.strip().endswith("?")
+
+
+def test_cumulative_prompt_cognition_labels_exclude_missing_from_home_primary():
+    from services.orb_residential_cognition_router import orb_residential_cognition_router
+
+    labels = orb_residential_cognition_router.route(message=CUMULATIVE_PROMPT, mode="Ask ORB").get(
+        "cognition_display_labels"
+    ) or []
+    assert labels[0] == "Safeguarding"
+    assert "Missing from home" not in labels
+    assert "Professional curiosity" in labels
+    assert "Leadership oversight" in labels
+    assert "Ofsted evidence" in labels
 
 
 def test_shared_runtime_omits_boundary_prefix_on_follow_up_turn():
