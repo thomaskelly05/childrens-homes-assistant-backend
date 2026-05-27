@@ -111,7 +111,7 @@ export default async function YoungPeoplePage() {
 
         {!people.length ? (
           <div className="mt-8 rounded-[32px] bg-white p-8 shadow-sm ring-1 ring-slate-100">
-            <EmptyState title="No young people are available" description="The live /os/young-people endpoint returned no rows for your current user scope. Check that your user has a home_id or provider-level access to homes with child records." />
+            <EmptyState title="No young people are available" description="No children are visible for your account yet. Check that your user is linked to a home or has provider-level access to homes with child records." />
           </div>
         ) : null}
       </section>

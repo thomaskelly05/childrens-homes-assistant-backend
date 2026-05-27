@@ -24,7 +24,7 @@ export default async function YoungPersonChronologyPage({
   const preferredName = workspace.data.youngPerson?.preferredName || workspace.data.youngPerson?.displayName || `Young person #${id}`
 
   return (
-    <div className="space-y-6">
+    <div data-testid="child-chronology-page" className="space-y-6">
       <PageHeader
         eyebrow="Young person chronology"
         title={`${preferredName}'s connected chronology`}
@@ -56,7 +56,7 @@ export default async function YoungPersonChronologyPage({
       {events.length ? (
         <ChronologyFoundation events={events} initialYoungPersonId={id} initialView={query.filter || query.source} />
       ) : (
-        <EmptyState title="Live chronology returned 0 rows for this child" description="The /os/chronology endpoint returned no rows for this young_person_id in the current user scope." />
+        <EmptyState title="No chronology entries yet" description="When records and events are signed off for this child, their story timeline will appear here." />
       )}
     </div>
   )

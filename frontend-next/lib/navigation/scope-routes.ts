@@ -163,7 +163,7 @@ export function childAlertsHref(childId: string | number) {
 }
 
 export function childVoiceHref(childId: string | number) {
-  return childPath(childId, 'child-voice/new')
+  return recordHref({ childId, type: 'child-voice' })
 }
 
 export function childCarePlanningHref(childId: string | number) {
@@ -179,7 +179,7 @@ export function childJourneyHref(childId: string | number) {
 }
 
 export function childTemplatesHref(childId: string | number) {
-  return `/record?child_id=${enc(childId)}#templates`
+  return `/documents/templates?child_id=${enc(childId)}`
 }
 
 export function childFormalSubmissionHref(childId: string | number) {
@@ -277,8 +277,7 @@ export function homeHandoverReviewsHref(homeId: string | number) {
 }
 
 export function homeChildrenHref(homeId: string | number) {
-  void homeId
-  return '/select-scope#recent-children'
+  return `/select-scope?home_id=${enc(homeId)}#recent-children`
 }
 
 /** All primary child workflow hrefs for workspace wiring tests. */

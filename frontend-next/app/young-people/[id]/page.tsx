@@ -224,7 +224,7 @@ export default async function YoungPersonDetailPage({ params, searchParams }: { 
           <DataTable
             headers={['Evidence', 'Quality']}
             rows={evidence.slice(0, 5).map((item) => [item.title, item.quality])}
-            empty={<EmptyState title="Live evidence returned 0 rows for this child" description="Evidence linked to this child will appear here when available from /os/evidence." />}
+            empty={<EmptyState title="No linked evidence yet" description="Evidence linked to this child will appear here when available for your account." />}
           />
         </ContextSurface>
         <ContextSurface>
@@ -232,19 +232,19 @@ export default async function YoungPersonDetailPage({ params, searchParams }: { 
           <DataTable
             headers={['Action', 'Status']}
             rows={actions.slice(0, 5).map((action) => [action.title, <StatusBadge key={action.id} value={action.status} />])}
-            empty={<EmptyState title="Live actions returned 0 rows for this child" description="Child-scoped follow-up will appear here when returned by /os/actions." />}
+            empty={<EmptyState title="No open actions yet" description="Child-scoped follow-up will appear here when actions are assigned." />}
           />
         </ContextSurface>
       </section>
 
-      <ChronologySurface description="Recent child chronology from /os/chronology filtered to the selected young person.">
+      <ChronologySurface description="Recent child chronology filtered to the selected young person.">
         {chronology.length ? <RecordTimeline items={chronology.map((event, index) => ({
           id: String(event.id || index),
           title: recordTitle(event as any, 'Chronology event'),
           date: String(event.dateTime || event.createdAt || ''),
           body: event.summary || event.fullText || 'No summary returned.',
           href: event.id ? `/chronology/${encodeURIComponent(String(event.id))}` : undefined
-        }))} /> : <EmptyState title="Live chronology returned 0 rows for this child" description="The /os/chronology endpoint returned no rows for this young_person_id in the current user scope." />}
+        }))} /> : <EmptyState title="No chronology entries yet" description="When records and events are signed off for this child, their timeline will appear here." />}
       </ChronologySurface>
     </WorkspaceStack>
   )

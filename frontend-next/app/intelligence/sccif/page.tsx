@@ -37,6 +37,7 @@ export default function SccifAlignmentPage() {
             <Link
               prefetch={false}
               href={homeId ? homeWorkspaceHref(homeId) : '/select-scope'}
+              data-testid="sccif-back-home-workspace"
               className="inline-flex min-h-10 items-center rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-black text-slate-700"
             >
               {homeId ? 'Home workspace' : 'Choose home'}

@@ -24,6 +24,8 @@ export function Reg45ReviewWorkspace() {
   const searchParams = useSearchParams()
   const packId = searchParams.get('pack_id') || undefined
   const reviewIdParam = searchParams.get('review_id') || undefined
+  const homeId = searchParams.get('home_id')?.trim() || undefined
+  const homeQuery = homeId ? `&home_id=${encodeURIComponent(homeId)}` : ''
 
   const [dashboard, setDashboard] = useState<Reg45ReviewDashboard | null>(null)
   const [review, setReview] = useState<Reg45QualityReview | null>(null)
@@ -77,14 +79,15 @@ export function Reg45ReviewWorkspace() {
 
       <div className="flex flex-wrap gap-2">
         <Link
-          href="/intelligence/inspection-readiness?pack=reg45"
+          href={`/intelligence/inspection-readiness?pack=reg45${homeQuery}`}
           data-testid="reg45-link-inspection-readiness"
           className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 text-[10px] font-black uppercase text-blue-800"
         >
           Open inspection readiness
         </Link>
         <Link
-          href="/intelligence/sccif"
+          href={homeId ? `/intelligence/sccif?home_id=${encodeURIComponent(homeId)}` : '/intelligence/sccif'}
+          data-testid="reg45-link-sccif"
           className="rounded-full border border-violet-200 bg-violet-50 px-3 py-1.5 text-[10px] font-black uppercase text-violet-800"
         >
           Open SCCIF alignment

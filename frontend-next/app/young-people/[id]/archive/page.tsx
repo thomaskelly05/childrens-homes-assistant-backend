@@ -20,7 +20,11 @@ export default async function ChildArchivePage({
         title="Library of this child's life"
         description="Signed-off records only — safe summaries, filters by date, type and author. Drafts never appear here."
         action={
-          <Link href={`/young-people/${id}/workspace`} className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-black text-slate-700">
+          <Link
+            href={`/young-people/${id}/workspace`}
+            data-testid="child-archive-back-workspace"
+            className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-black text-slate-700"
+          >
             Workspace
           </Link>
         }

@@ -13,7 +13,11 @@ export default async function ChildPlanImpactsPage({ params }: { params: Promise
         title="Suggested plan updates"
         description="Review health, education, family, care and risk plan impacts. Accept, reject or create an action — plans are never updated silently."
         action={
-          <Link href={`/young-people/${id}/workspace`} className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-black text-slate-700">
+          <Link
+            href={`/young-people/${id}/workspace`}
+            data-testid="child-plan-impacts-back-workspace"
+            className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-black text-slate-700"
+          >
             Workspace
           </Link>
         }

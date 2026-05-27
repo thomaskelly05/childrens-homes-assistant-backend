@@ -85,7 +85,8 @@ Replace `1` with your seed ids:
 ## Expected screens
 
 - **Child workspace**: sections Understand, Today, Record once (tagline), Story, Plans, Oversight; one ORB rail on desktop.
-- **Record hub**: selector default; legacy cards behind “Show legacy record cards”.
+- **Record hub**: selector default; legacy cards behind “Show legacy record cards”; header returns to child workspace when scoped.
+- **Recording editor**: one ORB live coach — hub “Ask operational ORB” hidden while a type is selected.
 - **Review queue**: tabs + cards with child/home/writer/review reason.
 - **Home workspace**: five sections with purpose line per card; route hints for incidents/missing/supervision.
 - **Inspection**: Evidence snapshot, Gaps to review, Quality Standards alignment; links to home workspace and `/assistant/orb`.
@@ -99,6 +100,9 @@ Replace `1` with your seed ids:
 - Some formal recording routes show honest “not wired yet” warnings.
 - Standalone `/orb` must not receive child context — demo OS ORB only via `/assistant/orb`.
 - Workforce supervision/training link is a route hint; not all flows are home-filtered yet.
+- Legacy `/young-people/{id}/life_echo` redirects to `/young-people/{id}/lifeecho`.
+- Child voice recording opens via `/record?child_id={id}&type=child-voice` (not a separate page).
+- See `docs/live-demo-qa-hardening-report.md` for the latest QA pass checklist and fixes.
 
 ## What to avoid clicking in demo
 
