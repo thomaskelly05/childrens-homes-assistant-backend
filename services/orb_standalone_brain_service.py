@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
+from services.orb_professional_curiosity_service import orb_professional_curiosity_service
+
 
 @dataclass(frozen=True)
 class StandaloneBrainFrame:
@@ -185,6 +187,12 @@ class OrbStandaloneBrainService:
             brains.extend(["placement_stability_brain", "transitions_brain", "care_planning_brain"])
         if self._is_workforce(text, resolved_mode):
             brains.extend(["safer_recruitment_brain", "staff_conduct_brain", "training_competence_brain"])
+        if self._is_chronology(text, resolved_mode):
+            brains.extend(["chronology_brain", "chronology_cognition_brain", "ofsted_brain"])
+        if orb_professional_curiosity_service.detect_topic(text, mode=resolved_mode):
+            brains.append("professional_curiosity_brain")
+        if orb_professional_curiosity_service.detect_topic(text, mode=resolved_mode) == "cumulative_concern":
+            brains.extend(["pattern_recognition_brain", "governance_brain", "safeguarding_brain"])
 
         brains = self._dedupe(brains)
         domains = self._knowledge_domains(brains, route)
@@ -194,7 +202,7 @@ class OrbStandaloneBrainService:
             intent_summary=self._intent_summary(text, resolved_mode, brains, route),
             response_contract=self._response_contract(brains, resolved_mode, route),
             safety_boundaries=self.CORE_BOUNDARIES,
-            reflective_questions=self._reflective_questions(brains, route),
+            reflective_questions=self._reflective_questions(brains, route, text, resolved_mode),
             evidence_prompts=self._evidence_prompts(brains, route),
             knowledge_domains=domains,
             dual_brain_route=route,
@@ -358,7 +366,7 @@ class OrbStandaloneBrainService:
             ])
         return self._dedupe(prompts)
 
-    def _reflective_questions(self, brains: list[str], route: str) -> list[str]:
+    def _reflective_questions(self, brains: list[str], route: str, text: str, mode: str) -> list[str]:
         if route == "general_knowledge":
             return ["Would a concise answer, step-by-step explanation or draft be most useful?"]
         questions = [
@@ -366,6 +374,8 @@ class OrbStandaloneBrainService:
             "What would safe, curious practice look like next?",
             "What could an adult on shift do now that is calm, boundaried and child-centred?",
         ]
+        if "professional_curiosity_brain" in brains:
+            questions.extend(orb_professional_curiosity_service.lenses_for(text, mode=mode)[:8])
         if "therapeutic_brain" in brains:
             questions.append("What need might sit underneath the behaviour?")
         if "manager_copilot_brain" in brains:
@@ -464,6 +474,13 @@ class OrbStandaloneBrainService:
         terms = (
             "safer recruitment", "dbs", "reference", "staff conduct", "probation", "disciplinary", "training matrix",
             "competency", "agency staff", "rota", "staffing levels", "supervision record",
+        )
+        return any(term in text for term in terms)
+
+    def _is_chronology(self, text: str, mode: str) -> bool:
+        terms = (
+            "chronology", "timeline", "sequence of events", "over time", "longitudinal",
+            "what would ofsted expect from a chronology", "one child's chronology",
         )
         return any(term in text for term in terms)
 

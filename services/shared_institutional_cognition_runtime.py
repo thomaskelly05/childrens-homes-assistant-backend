@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from typing import Any
 
+from services.indicare_intelligence_surface_router import standalone_guidance_boundary_prefix
 from services.orb_grounded_answer_style_service import orb_grounded_answer_style_service
 from services.orb_institutional_depth_frame_service import orb_institutional_depth_frame_service
 from services.orb_official_source_anchor_service import orb_official_source_anchor_service
+from services.orb_professional_curiosity_service import orb_professional_curiosity_service
 
 
 class SharedInstitutionalCognitionRuntime:
@@ -29,7 +31,15 @@ class SharedInstitutionalCognitionRuntime:
         active_brains = self._merge_depth_brains(active_brains=active_brains, depth_frame=depth_frame)
         grounded_prompt = orb_grounded_answer_style_service.prompt_block(message, mode=mode)
         depth_prompt = orb_institutional_depth_frame_service.prompt_block(message=message, mode=mode)
+        curiosity_prompt = orb_professional_curiosity_service.prompt_block(message, mode=mode)
         official_prompt = orb_official_source_anchor_service.source_prompt()
+        guidance_prefix = None
+        if surface == "standalone_orb":
+            prefix = standalone_guidance_boundary_prefix(message)
+            if prefix:
+                guidance_prefix = (
+                    f"Standalone ORB boundary: open with '{prefix.strip()}' when answering this practice/hypothetical question."
+                )
         citations = []
         citations.extend(orb_grounded_answer_style_service.citation_payload(message, mode=mode))
         if citations:
@@ -41,11 +51,19 @@ class SharedInstitutionalCognitionRuntime:
             "boundary": boundary,
             "active_brains": active_brains,
             "depth_frame": depth_frame,
-            "prompt_blocks": [block for block in (official_prompt, grounded_prompt, depth_prompt) if block],
+            "prompt_blocks": [
+                block
+                for block in (guidance_prefix, official_prompt, grounded_prompt, depth_prompt, curiosity_prompt)
+                if block
+            ],
+            "guidance_boundary_prefix": guidance_prefix,
+            "professional_curiosity": orb_professional_curiosity_service.context_payload(message, mode=mode),
             "citations": citations,
             "operational_context_available": bool(operational_context),
             "operational_context_used": bool(operational_context and boundary["can_use_live_records"]),
             "response_requirements": self._response_requirements(
+                message=message,
+                mode=mode,
                 active_brains=active_brains,
                 boundary=boundary,
                 depth_frame=depth_frame,
@@ -104,10 +122,18 @@ class SharedInstitutionalCognitionRuntime:
                 "must_not_claim_unseen_context": True,
             }
         return {
-            "summary": "Standalone ORB is guidance-first and must not access live OS records.",
+            "summary": (
+                "Standalone ORB is guidance-first and must not access live OS records. "
+                "Answer hypothetical, practice, recording, Ofsted-expectation and therapeutic questions generally — "
+                "preface with 'I cannot see the actual live child record, but generally…' when useful."
+            ),
             "can_use_live_records": False,
             "can_write_records": False,
             "must_not_claim_unseen_context": True,
+            "safeguarding_boundaries": [
+                "Only block or redirect when the user asks to inspect, summarise, retrieve, analyse or use live IndiCare OS records.",
+                "Do not block general hypotheticals, practice questions, recording advice, Ofsted expectations or therapeutic interpretation.",
+            ],
         }
 
     def _active_brains(self, *, message: str, mode: str | None = None) -> list[str]:
@@ -152,16 +178,34 @@ class SharedInstitutionalCognitionRuntime:
                 "governance_cognition",
                 "recording_quality_cognition",
                 "therapeutic_reflective_cognition",
+                "professional_curiosity_cognition",
             ],
-            "missing": ["safeguarding_cognition", "regulatory_cognition", "governance_cognition", "therapeutic_reflective_cognition"],
-            "restraint": ["safeguarding_cognition", "regulatory_cognition", "recording_quality_cognition", "therapeutic_reflective_cognition"],
+            "cumulative": [
+                "safeguarding_cognition",
+                "chronology_cognition",
+                "governance_cognition",
+                "professional_curiosity_cognition",
+            ],
+            "missing": [
+                "safeguarding_cognition",
+                "regulatory_cognition",
+                "governance_cognition",
+                "therapeutic_reflective_cognition",
+                "chronology_cognition",
+            ],
+            "restraint": [
+                "safeguarding_cognition",
+                "regulatory_cognition",
+                "recording_quality_cognition",
+                "therapeutic_reflective_cognition",
+                "chronology_cognition",
+            ],
             "recording": ["recording_quality_cognition", "therapeutic_reflective_cognition"],
+            "chronology": ["chronology_cognition", "regulatory_cognition", "governance_cognition"],
             "inspection": ["regulatory_cognition", "governance_cognition", "evidence_confidence"],
             "therapeutic": ["therapeutic_reflective_cognition", "emotional_climate"],
             "leadership": ["governance_cognition", "provider_cognition", "regulatory_cognition"],
             "workforce": ["workforce_cognition", "governance_cognition", "emotional_climate"],
-            "missing": ["chronology_cognition", "safeguarding_cognition"],
-            "restraint": ["chronology_cognition", "recording_quality_cognition"],
             "general residential": ["chronology_cognition"],
         }
         for key, additions in topic_map.items():
@@ -174,6 +218,8 @@ class SharedInstitutionalCognitionRuntime:
     def _response_requirements(
         self,
         *,
+        message: str,
+        mode: str | None,
         active_brains: list[str],
         boundary: dict[str, Any],
         depth_frame: dict[str, Any] | None = None,
@@ -216,8 +262,18 @@ class SharedInstitutionalCognitionRuntime:
             )
         if "recording_quality_cognition" in active_brains:
             requirements.append("- Separate fact, interpretation, child voice, adult response and outcome.")
+        curiosity = orb_professional_curiosity_service.context_payload(message, mode=mode)
+        if curiosity.get("high_attention"):
+            requirements.append(
+                "- Apply the Professional Curiosity Engine: explore missing information, minimisation, hidden patterns, "
+                "RM/DSL/RI/Ofsted lenses, evidence needs, follow-up and longitudinal meaning."
+            )
         if not boundary["can_use_live_records"]:
             requirements.append("- Do not claim access to live care records or OS context.")
+            requirements.append(
+                "- For hypothetical or practice questions, answer with general professional guidance; "
+                "use 'I cannot see the actual live child record, but generally…' when clarifying the standalone boundary."
+            )
         return requirements
 
 

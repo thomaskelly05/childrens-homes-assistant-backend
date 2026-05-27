@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from services.orb_professional_curiosity_service import orb_professional_curiosity_service
+
 
 class OrbGroundedAnswerStyleService:
     """Grounded answer style rules for ORB.
@@ -55,10 +57,55 @@ class OrbGroundedAnswerStyleService:
                 "- Use [SCCIF] for what evidence an inspector may expect to see about help, protection and leadership impact.",
                 "- Use [Working Together] and [LADO] for multi-agency and allegations-management considerations without deciding thresholds.",
                 "- Use [Recording quality] for factual chronology, child voice, adult response, outcome and preserved evidence.",
-                "- Cover: LADO referral thinking (human-led), Ofsted/evidence expectations, recording expectations, management oversight, therapeutic/emotional safety, escalation routes, and fairness to adults — concisely.",
+                "- Cover: child's exact words; what contact type may be alleged; injury/body map/CCTV/witnesses; staff account separately; avoid leading questions; interim safety; staff support and fairness; pattern review.",
+                "- Do not decide truth/falsehood, assume the child is lying, or assume the adult is unsafe without process.",
                 "- Do not predict Ofsted outcomes, decide LADO thresholds, or replace local safeguarding procedures.",
             ]
         )
+
+    def _recording_rewrite_depth_block(self) -> str:
+        return "\n".join(
+            [
+                "Recording rewrite depth requirements:",
+                "- Provide: 1) improved record, 2) what was wrong, 3) what is still missing, 4) what to add before sign-off, 5) why this matters for inspection/oversight.",
+                "- Use bracketed placeholders for missing facts, e.g. [Insert what happened immediately before the incident].",
+                "- For restraint notes include antecedent, emotional presentation, de-escalation, risk, necessity, proportionality, duration/type, child response, injury check, debrief, repair, manager review.",
+                "- Do not invent facts.",
+            ]
+        )
+
+    def _topic_depth_block(self, text: str, *, mode: str | None = None) -> str:
+        detected = orb_professional_curiosity_service.detect_topic(text, mode=mode) or ""
+        blocks = {
+            "missing": [
+                "Missing episode depth:",
+                "- Cover immediate safety, police/local procedure, timeline, search, who was informed, return conversation, push/pull factors, exploitation/contextual safeguarding, patterns, chronology update, manager oversight, prevention and Ofsted lens.",
+            ],
+            "restraint": [
+                "Restraint depth:",
+                "- Cover necessity, proportionality, least restrictive practice, before/during/after, alternatives, injury checks, debriefs, manager review, BSP review, patterns, emotional impact, repair and culture lens.",
+            ],
+            "chronology": [
+                "Chronology cognition:",
+                "- Explain what a strong chronology should show: lived experience, progress, setbacks, safeguarding patterns, relationships, missing, restraints, allegations, education, health, identity, family time, emotional themes, risk change, oversight, plans followed, child voice and impact.",
+            ],
+            "leadership": [
+                "RM/RI governance depth:",
+                "- RM: vulnerability today, overnight events, safeguarding/missing, climate, staffing, health/education, wellbeing, overdue actions, weak records, visible leadership, Ofsted-arrival challenge.",
+                "- RI: home safety, manager support, child progress, leadership effectiveness, staff stability, Reg 44 repetition, Reg 45 evaluative quality, triangulation, drift, impact evidence.",
+            ],
+            "cumulative_concern": [
+                "Cumulative concern depth:",
+                "- Structure: why concern matters; patterns; evidence to review; RM questions; RI questions; Ofsted scrutiny; avoid assuming; safe next steps; professional boundary.",
+                "- Link allegations, missing episodes, restraints and same staff member where relevant.",
+            ],
+        }
+        if detected in blocks:
+            return "\n".join(blocks[detected])
+        for key, lines in blocks.items():
+            if key.replace("_", " ") in text or key in text:
+                return "\n".join(lines)
+        return ""
 
     def prompt_block(self, message: str, *, mode: str | None = None) -> str:
         text = str(message or "").lower()
@@ -76,6 +123,10 @@ class OrbGroundedAnswerStyleService:
                 "evidence",
                 "working together",
                 "safeguard",
+                "restraint",
+                "physical intervention",
+                "missing",
+                "chronology",
             )
         ) or str(mode or "").lower() in {
             "ofsted lens",
@@ -110,6 +161,11 @@ class OrbGroundedAnswerStyleService:
         ]
         if allegations_context:
             sections.extend(["", self._allegations_depth_block()])
+        if any(term in text for term in ("rewrite", "poor record", "rough note", "wording", "sign off")):
+            sections.extend(["", self._recording_rewrite_depth_block()])
+        topic_block = self._topic_depth_block(text, mode=mode)
+        if topic_block:
+            sections.extend(["", topic_block])
         return "\n".join(sections)
 
     def citation_payload(self, message: str, *, mode: str | None = None) -> list[dict[str, Any]]:
