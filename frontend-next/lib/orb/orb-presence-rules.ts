@@ -41,6 +41,10 @@ function homeIdFromPath(pathname: string): string | undefined {
   return match?.[1]
 }
 
+export function idsFromPathname(pathname: string): { childId?: string; homeId?: string } {
+  return { childId: childIdFromPath(pathname), homeId: homeIdFromPath(pathname) }
+}
+
 /** Pages that embed their own ORB right rail in page layout. Child story/workspace no longer does this. */
 export function hasPageEmbeddedOrbRail(pathname: string): boolean {
   if (/\/homes\/[^/]+\/workspace\/?$/.test(pathname)) return true
@@ -64,7 +68,6 @@ export function isShellOrbRailRoute(pathname: string): boolean {
   if (hasPageEmbeddedOrbRail(pathname)) return false
   if (pathname === '/orb' || pathname.startsWith('/orb/')) return false
   if (pathname.startsWith('/assistant/orb')) return false
-
   if (/\/young-people\/[^/]+\/archive\/?$/.test(pathname)) return false
   if (/\/young-people\/[^/]+\/plan-impacts\/?$/.test(pathname)) return false
   if (/\/young-people\/[^/]+\/lifeecho\/?$/.test(pathname)) return false
@@ -77,7 +80,6 @@ export function isShellOrbRailRoute(pathname: string): boolean {
   if (pathname === '/intelligence/sccif' || pathname.startsWith('/intelligence/sccif/')) return true
   if (pathname === '/record/reviews' || pathname.startsWith('/record/reviews/')) return true
   if (pathname === '/record/alerts' || pathname.startsWith('/record/alerts/')) return true
-
   return false
 }
 
@@ -126,9 +128,7 @@ export function shouldShowInlineOrbCard(pathname: string, scope?: OrbPresenceSco
   return true
 }
 
-export function shouldShowShellContextualOrbPanel(pathname: string): boolean {
-  return isShellOrbRailRoute(pathname)
-}
+export function shouldShowShellContextualOrbPanel(pathname: string): boolean { return isShellOrbRailRoute(pathname) }
 
 export type OperationalOrbPrompt = { label: string; href: string }
 
@@ -185,6 +185,15 @@ function assistantHref(params: { scope?: string; youngPersonId?: string; homeId?
   if (params.q) q.set('q', params.q)
   const qs = q.toString()
   return qs ? `/assistant/orb?${qs}` : '/assistant/orb'
+}
+
+export function operationalOrbOpenHref(scopeType: OperationalOrbScopeType, ids?: { childId?: string; homeId?: string }, mode?: string) {
+  const childId = ids?.childId
+  const homeId = ids?.homeId
+  if (scopeType === 'child' || childId) return assistantHref({ scope: 'child', youngPersonId: childId, mode })
+  if (scopeType === 'home' || homeId) return assistantHref({ scope: 'home', homeId, mode })
+  if (scopeType === 'inspection' || scopeType === 'reg45' || scopeType === 'sccif') return assistantHref({ scope: 'inspection', homeId, mode })
+  return assistantHref({ mode })
 }
 
 export function operationalOrbPrompts(scopeType: OperationalOrbScopeType, ids?: { childId?: string; homeId?: string }, mode?: string): OperationalOrbPrompt[] {
