@@ -1,0 +1,249 @@
+"""Universal source-labelled evidence collector for OS ORB.
+
+This service deliberately does not create new business logic. It reads from the
+permissioned tables already present in IndiCare OS and converts them into compact,
+source-labelled evidence snippets that ORB can use to answer questions about a
+child, home or provider without pretending it has seen records it has not seen.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Any
+
+from psycopg2.extras import RealDictCursor
+
+from repositories.os_repository_utils import (
+    build_scope_where,
+    current_provider_id,
+    quote_ident,
+    table_columns,
+    table_exists,
+)
+
+
+@dataclass(frozen=True)
+class EvidenceSurface:
+    table: str
+    label: str
+    source_type: str
+    title_columns: tuple[str, ...]
+    summary_columns: tuple[str, ...]
+    date_columns: tuple[str, ...]
+    route: str
+    child_only: bool = False
+    home_provider: bool = True
+
+
+SURFACES: tuple[EvidenceSurface, ...] = (
+    EvidenceSurface("young_people", "Young person profile", "profile", ("preferred_name", "display_name", "first_name", "name"), ("summary", "presentation", "what_matters", "communication", "legal_status"), ("updated_at", "created_at"), "/young-people/{id}", child_only=True),
+    EvidenceSurface("vw_os_young_person_profile", "Young person story", "profile", ("preferred_name", "display_name", "name"), ("current_state", "communication", "what_helps", "legal_status", "placement_status"), ("updated_at", "created_at"), "/young-people/{id}", child_only=True),
+    EvidenceSurface("daily_notes", "Daily notes", "daily_note", ("title", "summary", "context"), ("summary", "narrative", "presentation", "body", "note", "content"), ("occurred_at", "note_date", "created_at", "updated_at"), "/young-people/{young_person_id}/daily-notes"),
+    EvidenceSurface("chronology_events", "Chronology", "chronology", ("title", "event_type", "source_type"), ("summary", "description", "body", "full_text"), ("date_time", "occurred_at", "created_at", "updated_at"), "/young-people/{young_person_id}/chronology"),
+    EvidenceSurface("incidents", "Incidents", "incident", ("title", "incident_type", "category"), ("summary", "description", "narrative", "outcome", "actions_taken"), ("occurred_at", "incident_date", "created_at", "updated_at"), "/young-people/{young_person_id}/incidents"),
+    EvidenceSurface("safeguarding_records", "Safeguarding", "safeguarding", ("title", "concern_type", "category"), ("summary", "description", "concern", "actions_taken", "outcome"), ("occurred_at", "reported_at", "created_at", "updated_at"), "/young-people/{young_person_id}/safeguarding"),
+    EvidenceSurface("missing_episodes", "Missing episodes", "missing_episode", ("title", "episode_type", "status"), ("summary", "circumstances", "return_interview_summary", "actions_taken"), ("missing_from", "started_at", "occurred_at", "created_at", "updated_at"), "/young-people/{young_person_id}/missing"),
+    EvidenceSurface("risk_assessments", "Risk assessments", "risk_assessment", ("title", "risk_type", "category"), ("summary", "risk_summary", "controls", "review_note", "manager_comment"), ("review_due", "next_review_due", "updated_at", "created_at"), "/young-people/{young_person_id}/risk-assessments"),
+    EvidenceSurface("support_plans", "Support plans", "support_plan", ("title", "plan_title", "plan_type"), ("summary", "presenting_need", "staff_guidance", "review_note", "actions"), ("review_date", "next_review_due", "updated_at", "created_at"), "/young-people/{young_person_id}/plans"),
+    EvidenceSurface("care_plans", "Care plans", "care_plan", ("title", "plan_type"), ("summary", "plan_summary", "care_needs", "staff_guidance"), ("review_date", "next_review_due", "updated_at", "created_at"), "/young-people/{young_person_id}/care-planning"),
+    EvidenceSurface("young_person_appointments", "Appointments", "appointment", ("title", "appointment_type", "professional_name"), ("summary", "notes", "outcome", "reason", "location"), ("appointment_date", "appointment_at", "start_time", "created_at", "updated_at"), "/young-people/{young_person_id}/appointments"),
+    EvidenceSurface("health_records", "Health", "health", ("title", "record_type", "health_type"), ("summary", "notes", "outcome", "professional_name"), ("appointment_date", "recorded_at", "created_at", "updated_at"), "/young-people/{young_person_id}/health"),
+    EvidenceSurface("education_records", "Education", "education", ("title", "record_type", "school_status"), ("summary", "notes", "attendance_summary", "progress_summary"), ("recorded_at", "created_at", "updated_at"), "/young-people/{young_person_id}/education"),
+    EvidenceSurface("family_contact_records", "Family contact", "family_contact", ("title", "contact_type", "relationship"), ("summary", "notes", "outcome", "child_wishes"), ("contact_date", "occurred_at", "created_at", "updated_at"), "/young-people/{young_person_id}/family"),
+    EvidenceSurface("child_voice_entries", "Child voice", "child_voice", ("title", "voice_type", "context"), ("summary", "voice_text", "wishes", "feelings", "adult_response"), ("recorded_at", "created_at", "updated_at"), "/young-people/{young_person_id}/child-voice"),
+    EvidenceSurface("keywork_sessions", "Keywork", "keywork", ("title", "topic", "session_type"), ("summary", "notes", "child_views", "actions"), ("session_date", "occurred_at", "created_at", "updated_at"), "/young-people/{young_person_id}/keywork"),
+    EvidenceSurface("handover_records", "Handover", "handover", ("title", "shift_label", "handover_type"), ("summary", "narrative", "actions", "risks", "follow_up"), ("shift_date", "created_at", "updated_at"), "/young-people/{young_person_id}/handover"),
+    EvidenceSurface("child_documents", "Child documents", "document", ("title", "document_type", "name"), ("summary", "description", "extracted_text", "review_summary"), ("uploaded_at", "review_due_date", "created_at", "updated_at"), "/young-people/{young_person_id}/documents"),
+    EvidenceSurface("statutory_documents", "Statutory documents", "statutory_document", ("title", "document_type", "name"), ("summary", "description", "review_summary"), ("review_due_date", "uploaded_at", "created_at", "updated_at"), "/young-people/{young_person_id}/documents"),
+    EvidenceSurface("manager_review_queue", "Manager review queue", "manager_review", ("record_type", "source_table"), ("review_reason", "summary", "manager_comment"), ("created_at", "updated_at"), "/recording-reviews"),
+    EvidenceSurface("os_command_items", "OS command items", "action", ("title", "domain"), ("summary", "recommended_action"), ("due_at", "created_at", "updated_at"), "/actions"),
+    EvidenceSurface("actions", "Actions", "action", ("title", "action_type", "category"), ("summary", "description", "recommended_action", "outcome"), ("due_at", "created_at", "updated_at"), "/actions"),
+    EvidenceSurface("reports", "Reports", "report", ("title", "report_type"), ("summary", "report_text", "findings"), ("report_date", "created_at", "updated_at"), "/reports"),
+    EvidenceSurface("ai_generated_reports", "Generated reports", "report", ("title", "report_type"), ("summary", "report_text", "findings"), ("review_month", "created_at", "updated_at"), "/young-people/{young_person_id}/reports"),
+    EvidenceSurface("governance_reg44_visits", "Reg 44 visits", "governance", ("title", "visit_type", "visitor_name"), ("summary", "findings", "actions", "manager_response"), ("visit_date", "created_at", "updated_at"), "/governance/reg44", home_provider=True),
+    EvidenceSurface("governance_reg45_reviews", "Reg 45 reviews", "governance", ("title", "review_period"), ("summary", "findings", "improvement_actions"), ("review_date", "created_at", "updated_at"), "/governance/reg45", home_provider=True),
+    EvidenceSurface("inspection_evidence_facts", "Inspection evidence", "inspection", ("title", "standard", "area"), ("summary", "evidence", "rationale"), ("created_at", "updated_at"), "/inspection-readiness", home_provider=True),
+    EvidenceSurface("workforce_supervision_records", "Workforce supervision", "workforce", ("title", "supervision_type", "staff_name"), ("summary", "themes", "actions", "support_needs"), ("supervision_date", "created_at", "updated_at"), "/staff", home_provider=True),
+    EvidenceSurface("staff_training_matrix", "Training matrix", "workforce", ("training_name", "course_name", "staff_name"), ("summary", "status", "notes"), ("expiry_date", "completed_at", "created_at", "updated_at"), "/staff/training", home_provider=True),
+)
+
+
+def _text(value: Any, fallback: str = "") -> str:
+    return str(value or "").strip() or fallback
+
+
+def _first(cols: set[str], candidates: tuple[str, ...]) -> str | None:
+    for col in candidates:
+        if col in cols:
+            return col
+    return None
+
+
+def _coalesce(cols: set[str], candidates: tuple[str, ...], default: str) -> str:
+    parts = [f"{quote_ident(col)}::text" for col in candidates if col in cols]
+    if not parts:
+        return "%s"
+    return f"COALESCE({', '.join(parts)}, %s)"
+
+
+def _date_expr(cols: set[str], candidates: tuple[str, ...]) -> str:
+    parts = [f"{quote_ident(col)}::text" for col in candidates if col in cols]
+    if not parts:
+        return "NULL::text"
+    return f"COALESCE({', '.join(parts)}, NULL::text)"
+
+
+def _query_surface(
+    conn: Any,
+    surface: EvidenceSurface,
+    *,
+    current_user: dict[str, Any],
+    scope: str,
+    message: str,
+    young_person_id: int | None,
+    home_id: int | None,
+    provider_id: int | None,
+    limit: int,
+) -> list[dict[str, Any]]:
+    if not table_exists(conn, surface.table):
+        return []
+    cols = table_columns(conn, surface.table)
+    if not cols:
+        return []
+
+    where, params = build_scope_where(
+        cols,
+        current_user,
+        home_id=home_id,
+        young_person_id=young_person_id,
+        provider_id=provider_id,
+    )
+    if surface.child_only and young_person_id is None:
+        return []
+
+    search_terms = [term for term in message.lower().replace("?", " ").split() if len(term) >= 4][:8]
+    searchable = [col for col in (*surface.title_columns, *surface.summary_columns) if col in cols]
+    if search_terms and searchable:
+        search_expr = " || ' ' || ".join(f"COALESCE({quote_ident(col)}::text, '')" for col in searchable)
+        where.append("(" + " OR ".join([f"LOWER({search_expr}) LIKE %s" for _ in search_terms]) + ")")
+        params.extend([f"%{term}%" for term in search_terms])
+
+    id_expr = quote_ident("id") if "id" in cols else "NULL"
+    title_expr = _coalesce(cols, surface.title_columns, surface.label)
+    summary_expr = _coalesce(cols, surface.summary_columns, "Record available for ORB review")
+    status_expr = _coalesce(cols, ("workflow_status", "review_status", "manager_review_status", "status"), "available")
+    date_expr = _date_expr(cols, surface.date_columns)
+    young_person_expr = quote_ident("young_person_id") if "young_person_id" in cols else "NULL"
+    home_expr = quote_ident("home_id") if "home_id" in cols else "NULL"
+    provider_expr = quote_ident("provider_id") if "provider_id" in cols else "NULL"
+
+    sql = f"""
+        SELECT
+          {id_expr} AS id,
+          {title_expr} AS title,
+          {summary_expr} AS summary,
+          {status_expr} AS status,
+          {date_expr} AS date,
+          {young_person_expr} AS young_person_id,
+          {home_expr} AS home_id,
+          {provider_expr} AS provider_id
+        FROM public.{quote_ident(surface.table)}
+        WHERE {' AND '.join(where) if where else 'TRUE'}
+        ORDER BY {date_expr} DESC NULLS LAST
+        LIMIT %s
+    """
+    query_params = [surface.label, "Record available for ORB review", "available", *params, max(1, min(limit, 12))]
+
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute(sql, tuple(query_params))
+        rows = [dict(row) for row in (cur.fetchall() or [])]
+
+    evidence: list[dict[str, Any]] = []
+    for row in rows:
+        record_id = _text(row.get("id"), "unknown")
+        child_id = _text(row.get("young_person_id") or young_person_id)
+        route = surface.route
+        if child_id:
+            route = route.replace("{young_person_id}", child_id).replace("{id}", child_id)
+        elif home_id:
+            route = route.replace("{id}", str(home_id))
+        evidence.append(
+            {
+                "id": f"{surface.table}:{record_id}",
+                "label": surface.label,
+                "title": _text(row.get("title"), surface.label),
+                "source_type": surface.source_type,
+                "source_table": surface.table,
+                "source_id": record_id,
+                "record_type": surface.source_type,
+                "record_id": record_id,
+                "date": _text(row.get("date")),
+                "status": _text(row.get("status"), "available"),
+                "summary": _text(row.get("summary"), "Record available for ORB review")[:700],
+                "basis": _text(row.get("summary"), "Record available for ORB review")[:700],
+                "route": route,
+                "scope": scope,
+            }
+        )
+    return evidence
+
+
+class OrbUniversalEvidenceService:
+    def collect(
+        self,
+        conn: Any,
+        *,
+        current_user: dict[str, Any],
+        scope: str,
+        message: str,
+        young_person_id: int | None = None,
+        home_id: int | None = None,
+        provider_id: int | None = None,
+        limit_per_surface: int = 4,
+    ) -> dict[str, Any]:
+        provider_id = provider_id if provider_id is not None else current_provider_id(current_user)
+        items: list[dict[str, Any]] = []
+        errors: list[str] = []
+        for surface in SURFACES:
+            if scope == "child" and surface.home_provider and not young_person_id and surface.child_only:
+                continue
+            try:
+                items.extend(
+                    _query_surface(
+                        conn,
+                        surface,
+                        current_user=current_user,
+                        scope=scope,
+                        message=message,
+                        young_person_id=young_person_id,
+                        home_id=home_id,
+                        provider_id=provider_id,
+                        limit=limit_per_surface,
+                    )
+                )
+            except Exception as exc:
+                errors.append(f"{surface.table}: {exc}")
+
+        seen: set[tuple[str, str]] = set()
+        deduped: list[dict[str, Any]] = []
+        for item in sorted(items, key=lambda row: _text(row.get("date")), reverse=True):
+            key = (_text(item.get("source_table")), _text(item.get("source_id")))
+            if key in seen:
+                continue
+            seen.add(key)
+            deduped.append(item)
+
+        counts: dict[str, int] = {}
+        for item in deduped:
+            source_type = _text(item.get("source_type"), "unknown")
+            counts[source_type] = counts.get(source_type, 0) + 1
+
+        return {
+            "items": deduped[:80],
+            "counts": counts,
+            "errors": errors[:12],
+            "surface_count": len(counts),
+        }
+
+
+orb_universal_evidence_service = OrbUniversalEvidenceService()
