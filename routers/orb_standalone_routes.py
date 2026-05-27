@@ -349,6 +349,41 @@ async def standalone_orb_surface_route(
     }
 
 
+def _merge_cognition_labels(
+    *,
+    shared_cognition: dict[str, Any],
+    explainability: dict[str, Any],
+) -> list[str]:
+    shared_explain = shared_cognition.get("explainability") or {}
+    return list(
+        shared_cognition.get("cognition_display_labels")
+        or shared_explain.get("cognition_display_labels")
+        or explainability.get("cognition_display_labels")
+        or []
+    )
+
+
+def _apply_cognition_context(
+    context_used: dict[str, Any],
+    *,
+    shared_cognition: dict[str, Any],
+    explainability: dict[str, Any],
+) -> dict[str, Any]:
+    labels = _merge_cognition_labels(shared_cognition=shared_cognition, explainability=explainability)
+    shared_explain = shared_cognition.get("explainability") or {}
+    routing = shared_cognition.get("routing") or {}
+    if labels:
+        context_used["cognition_display_labels"] = labels
+    if shared_explain.get("depth_topic"):
+        context_used["depth_topic"] = shared_explain.get("depth_topic")
+    if routing.get("active_brains"):
+        context_used["active_brains"] = list(routing.get("active_brains") or shared_cognition.get("active_brains") or [])
+    if shared_explain.get("reasoning_lenses"):
+        context_used["reasoning_lenses"] = list(shared_explain.get("reasoning_lenses") or [])
+    context_used["explainability"] = explainability
+    return context_used
+
+
 def _standalone_conversation_response(
     *,
     answer: str,
@@ -361,6 +396,7 @@ def _standalone_conversation_response(
     sources: list[dict[str, Any]] | None = None,
     citations: list[dict[str, Any]] | None = None,
     context_used: dict[str, Any] | None = None,
+    cognition_display_labels: list[str] | None = None,
 ) -> dict[str, Any]:
     resolved_sources = sources or []
     resolved_citations = citations or orb_citation_service.normalise_sources(resolved_sources)
@@ -382,7 +418,15 @@ def _standalone_conversation_response(
             "source_count": len(resolved_sources),
             "document_result_count": 0,
         }
-    return {
+    resolved_labels = list(
+        cognition_display_labels
+        or base_context.get("cognition_display_labels")
+        or (base_context.get("explainability") or {}).get("cognition_display_labels")
+        or []
+    )
+    if resolved_labels:
+        base_context["cognition_display_labels"] = resolved_labels
+    payload: dict[str, Any] = {
         "ok": True,
         "success": True,
         "standalone": True,
@@ -402,6 +446,9 @@ def _standalone_conversation_response(
             "Use professional judgement and follow safeguarding procedures where risk is present.",
         ],
     }
+    if resolved_labels:
+        payload["cognition_display_labels"] = resolved_labels
+    return payload
 
 
 @router.post("/conversation")
@@ -455,8 +502,10 @@ async def standalone_orb_conversation(
             ",".join(shared_cognition.get("active_brains") or standalone_brain.get("active_brains") or []),
             elapsed_ms,
         )
-        answer = str(
-            assistant_data.get("answer") or "I can help with that, but I could not form a response just now."
+        answer = orb_grounded_answer_style_service.sanitize_high_attention_closer(
+            str(assistant_data.get("answer") or "I can help with that, but I could not form a response just now."),
+            message=payload.message,
+            mode=mode,
         )
         response_sources = list(assistant_data.get("sources") or [])
         response_citations = list(assistant_data.get("citations") or [])
@@ -475,6 +524,10 @@ async def standalone_orb_conversation(
             response_sources.extend(orb_citation_service.frontend_sources_payload(response_citations))
         confidence = str(assistant_data.get("confidence") or "medium")
         shared_explain = shared_cognition.get("explainability") or {}
+        cognition_labels = _merge_cognition_labels(
+            shared_cognition=shared_cognition,
+            explainability={"cognition_display_labels": shared_explain.get("cognition_display_labels")},
+        )
         explainability = orb_explainability_runtime_service.build(
             surface="standalone_orb",
             mode=mode,
@@ -482,7 +535,7 @@ async def standalone_orb_conversation(
             citations=response_citations,
             operational_context_used=False,
             confidence=confidence,
-            cognition_display_labels=list(shared_explain.get("cognition_display_labels") or []),
+            cognition_display_labels=cognition_labels,
             depth_topic=shared_explain.get("depth_topic"),
             reasoning_lenses=list(shared_explain.get("reasoning_lenses") or []),
             vault_domains=list(shared_explain.get("vault_domains") or []),
@@ -492,8 +545,12 @@ async def standalone_orb_conversation(
         context_used = dict(assistant_data.get("context_used") or {})
         context_used["standalone_brain"] = standalone_brain
         context_used["shared_cognition"] = shared_cognition
-        context_used["explainability"] = explainability
         context_used["official_source_grounding"] = bool(shared_cognition.get("citations"))
+        context_used = _apply_cognition_context(
+            context_used,
+            shared_cognition=shared_cognition,
+            explainability=explainability,
+        )
         if not context_used.get("retrieval"):
             context_used["retrieval"] = {
                 "strategy": "source_pack_plus_document_rag",
@@ -512,6 +569,7 @@ async def standalone_orb_conversation(
             sources=response_sources,
             citations=response_citations,
             context_used=context_used,
+            cognition_display_labels=cognition_labels,
         )
     except Exception as exc:
         elapsed_ms = int((time.perf_counter() - started) * 1000)
@@ -553,6 +611,10 @@ async def standalone_orb_conversation(
             attachments=image_urls[:4] or None,
         )
         shared_explain = shared_cognition.get("explainability") or {}
+        cognition_labels = _merge_cognition_labels(
+            shared_cognition=shared_cognition,
+            explainability={"cognition_display_labels": shared_explain.get("cognition_display_labels")},
+        )
         explainability = orb_explainability_runtime_service.build(
             surface="standalone_orb",
             mode=mode,
@@ -560,7 +622,7 @@ async def standalone_orb_conversation(
             citations=citations,
             operational_context_used=False,
             confidence="low",
-            cognition_display_labels=list(shared_explain.get("cognition_display_labels") or []),
+            cognition_display_labels=cognition_labels,
             depth_topic=shared_explain.get("depth_topic"),
             reasoning_lenses=list(shared_explain.get("reasoning_lenses") or []),
             vault_domains=list(shared_explain.get("vault_domains") or []),
@@ -574,7 +636,6 @@ async def standalone_orb_conversation(
             "os_linked": False,
             "standalone_brain": standalone_brain,
             "shared_cognition": shared_cognition,
-            "explainability": explainability,
             "official_source_grounding": bool(shared_cognition.get("citations")),
             "retrieval": {
                 "strategy": "source_pack_plus_document_rag",
@@ -584,6 +645,11 @@ async def standalone_orb_conversation(
                 "research_intent": classification.get("research_intent", False),
             },
         }
+        context_used = _apply_cognition_context(
+            context_used,
+            shared_cognition=shared_cognition,
+            explainability=explainability,
+        )
         if classification.get("research_note") and "live web" not in fallback.lower():
             fallback = f"{fallback}\n\n{classification['research_note']}"
         return _standalone_conversation_response(
@@ -597,4 +663,5 @@ async def standalone_orb_conversation(
             sources=sources,
             citations=citations,
             context_used=context_used,
+            cognition_display_labels=cognition_labels,
         )

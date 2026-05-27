@@ -179,6 +179,42 @@ export type StandaloneOrbModelRouting = {
   error?: string | null
 }
 
+export type StandaloneOrbExplainabilityPayload = {
+  active_brains?: string[]
+  cognition_display_labels?: string[]
+  depth_topic?: string
+  reasoning_lenses?: string[]
+  frameworks_used?: string[]
+  evidence_focus?: string[]
+  confidence?: string
+  human_review_boundaries?: string[]
+  reasoning_summary?: string
+  operational_context_used?: boolean
+  cognition_mode?: string
+}
+
+export type StandaloneOrbContextUsed = {
+  surface?: string
+  mode?: string
+  os_linked?: boolean
+  care_record_access?: boolean
+  cognition_display_labels?: string[]
+  active_brains?: string[]
+  depth_topic?: string
+  reasoning_lenses?: string[]
+  retrieval?: StandaloneOrbRetrievalContext
+  model_routing?: StandaloneOrbModelRouting
+  document_analysis?: {
+    suggested?: boolean
+    mode?: string
+    reason?: string
+    needs_document?: boolean
+    completed?: boolean
+  }
+  agent?: StandaloneOrbAgentSuggestion
+  explainability?: StandaloneOrbExplainabilityPayload
+}
+
 export type StandaloneOrbConversationResponse = {
   ok: boolean
   standalone?: boolean
@@ -187,33 +223,10 @@ export type StandaloneOrbConversationResponse = {
   summary?: string
   conversation_id?: string | null
   confidence?: string
+  cognition_display_labels?: string[]
   sources?: StandaloneOrbSource[]
   citations?: StandaloneOrbCitation[]
-  context_used?: {
-    surface?: string
-    mode?: string
-    os_linked?: boolean
-    care_record_access?: boolean
-    retrieval?: StandaloneOrbRetrievalContext
-    model_routing?: StandaloneOrbModelRouting
-    document_analysis?: {
-      suggested?: boolean
-      mode?: string
-      reason?: string
-      needs_document?: boolean
-      completed?: boolean
-    }
-    agent?: StandaloneOrbAgentSuggestion
-    explainability?: {
-      active_brains?: string[]
-      frameworks_used?: string[]
-      evidence_focus?: string[]
-      confidence?: string
-      human_review_boundaries?: string[]
-      reasoning_summary?: string
-      operational_context_used?: boolean
-    }
-  }
+  context_used?: StandaloneOrbContextUsed
   guardrails?: string[]
   image_understanding_available?: boolean
   error_detail?: string
@@ -236,9 +249,28 @@ function isDevEnvironment() {
   return process.env.NODE_ENV === 'development'
 }
 
+function isOrbCognitionDebugEnabled() {
+  if (isDevEnvironment()) return true
+  if (typeof window === 'undefined') return false
+  try {
+    return window.localStorage?.getItem('orb-cognition-debug') === '1'
+  } catch {
+    return false
+  }
+}
+
 function logStandaloneDebug(event: string, detail: Record<string, unknown>) {
   if (!isDevEnvironment()) return
   console.debug('[standalone-orb]', event, detail)
+}
+
+export function logOrbCognitionDebug(
+  event: string,
+  detail: Record<string, unknown>,
+  options?: { force?: boolean }
+) {
+  if (!options?.force && !isOrbCognitionDebugEnabled()) return
+  console.info(`[orb-cognition] ${event}`, detail)
 }
 
 function extractAnswer(payload: unknown): string | null {
@@ -338,29 +370,45 @@ export async function queryStandaloneOrbConversation(
     }
 
     const typed = payload as StandaloneOrbConversationResponse & {
-      data?: { sources?: StandaloneOrbSource[]; citations?: StandaloneOrbCitation[] }
+      data?: StandaloneOrbConversationResponse
     }
     const nestedData =
-      typed.data && typeof typed.data === 'object' ? (typed.data as Record<string, unknown>) : undefined
-    const nestedSources = nestedData?.sources as StandaloneOrbSource[] | undefined
-    const nestedCitations = nestedData?.citations as StandaloneOrbCitation[] | undefined
+      typed.data && typeof typed.data === 'object' ? (typed.data as StandaloneOrbConversationResponse) : undefined
+    const nestedSources = nestedData?.sources
+    const nestedCitations = nestedData?.citations
     const resolvedSources = typed.sources ?? nestedSources
     const resolvedCitations = typed.citations ?? nestedCitations ?? resolvedSources
+    const resolvedContext = typed.context_used ?? nestedData?.context_used
+    const resolvedCognitionLabels =
+      typed.cognition_display_labels ??
+      nestedData?.cognition_display_labels ??
+      resolvedContext?.cognition_display_labels ??
+      resolvedContext?.explainability?.cognition_display_labels
+
+    logOrbCognitionDebug('raw response', {
+      mode: request.mode,
+      context_used: resolvedContext,
+      cognition_display_labels: resolvedCognitionLabels,
+      explainability: resolvedContext?.explainability,
+      sources: resolvedSources?.map((source) => source.label)
+    })
 
     return {
-      ok: Boolean(typed.ok ?? true),
-      standalone: typed.standalone ?? true,
-      os_records_accessed: typed.os_records_accessed ?? false,
+      ok: Boolean(typed.ok ?? nestedData?.ok ?? true),
+      standalone: typed.standalone ?? nestedData?.standalone ?? true,
+      os_records_accessed: typed.os_records_accessed ?? nestedData?.os_records_accessed ?? false,
       answer,
-      summary: typed.summary,
-      conversation_id: typed.conversation_id ?? request.conversation_id,
-      confidence: typed.confidence,
+      summary: typed.summary ?? nestedData?.summary,
+      conversation_id: typed.conversation_id ?? nestedData?.conversation_id ?? request.conversation_id,
+      confidence: typed.confidence ?? nestedData?.confidence,
+      cognition_display_labels: resolvedCognitionLabels,
       sources: resolvedSources,
       citations: resolvedCitations,
-      context_used: typed.context_used,
-      guardrails: typed.guardrails,
-      image_understanding_available: typed.image_understanding_available,
-      error_detail: typed.error_detail
+      context_used: resolvedContext,
+      guardrails: typed.guardrails ?? nestedData?.guardrails,
+      image_understanding_available:
+        typed.image_understanding_available ?? nestedData?.image_understanding_available,
+      error_detail: typed.error_detail ?? nestedData?.error_detail
     }
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') {

@@ -98,12 +98,15 @@ import {
   fetchStandaloneOrbConfig,
   isStandaloneOrbRetryableNetworkError,
   parseStandaloneOrbSendError,
+  logOrbCognitionDebug,
   queryStandaloneOrbConversation,
   STANDALONE_ORB_EMPTY_ANSWER_MESSAGE,
   STANDALONE_ORB_MODES,
   type StandaloneOrbAgentSuggestion,
+  type StandaloneOrbConversationResponse,
   type StandaloneOrbMode
 } from '@/lib/orb/standalone-client'
+import { collectCognitionDisplayLabels } from '@/lib/orb/residential-agents'
 
 /** Push-to-talk voice with reflective pacing — no passive listening. */
 const STANDALONE_ORB_VOICE_CAPTURE_ENABLED = true
@@ -142,6 +145,37 @@ type SendMessageOptions = {
   internalRetry?: boolean
   /** Replace conversation from an edited user message onward. */
   editMessageId?: string
+}
+
+function buildExplainabilityFromResponse(
+  response: StandaloneOrbConversationResponse,
+  messageHint?: string
+): StandaloneChatMessage['explainability'] {
+  const labels = collectCognitionDisplayLabels(
+    response.context_used?.explainability,
+    {
+      context_used: response.context_used,
+      cognition_display_labels: response.cognition_display_labels
+    },
+    messageHint
+  )
+  const base = response.context_used?.explainability
+  return {
+    ...base,
+    cognition_display_labels: labels.length ? labels : base?.cognition_display_labels,
+    depth_topic: base?.depth_topic ?? response.context_used?.depth_topic,
+    active_brains: base?.active_brains ?? response.context_used?.active_brains
+  }
+}
+
+function precedingUserMessageHint(messages: StandaloneChatMessage[], assistantIndex: number): string | undefined {
+  for (let index = assistantIndex - 1; index >= 0; index -= 1) {
+    const entry = messages[index]
+    if (entry?.role === 'user' && entry.content.trim()) {
+      return entry.content
+    }
+  }
+  return undefined
 }
 
 function traceOrbSend(event: string, detail?: Record<string, unknown>) {
@@ -801,6 +835,7 @@ export function OrbCareCompanion() {
             !options?.internalRetry &&
             isStandaloneOrbRetryableNetworkError(firstError)
           ) {
+            console.warn('[orb-send] retryable first-send failure', firstError)
             traceOrbSend('request_retry', { sendGeneration, reason: 'retryable_network' })
             await refreshSession()
             response = await runConversationRequest()
@@ -828,7 +863,12 @@ export function OrbCareCompanion() {
           (response.citations?.length ? response.citations : response.sources) ?? []
         ) as StandaloneOrbSource[]
         const modelRouting = response.context_used?.model_routing
-        const explainabilityRaw = response.context_used?.explainability as StandaloneChatMessage['explainability']
+        const explainabilityRaw = buildExplainabilityFromResponse(response, trimmed || messageBody)
+        logOrbCognitionDebug('message explainability', {
+          mode,
+          cognition_display_labels: explainabilityRaw?.cognition_display_labels,
+          messageHint: trimmed || messageBody
+        })
         const agentRaw = response.context_used?.agent as StandaloneOrbAgentSuggestion | undefined
         const docAnalysisRaw = response.context_used?.document_analysis as
           | { suggested?: boolean; needs_document?: boolean; open_documents_panel?: boolean }
@@ -1771,6 +1811,14 @@ export function OrbCareCompanion() {
                             streaming={entry.status === 'streaming'}
                             explainability={entry.explainability}
                             modelRouting={entry.modelRouting}
+                            messageHint={precedingUserMessageHint(visibleMessages, index)}
+                            cognitionContext={{
+                              context_used: {
+                                cognition_display_labels: entry.explainability?.cognition_display_labels,
+                                active_brains: entry.explainability?.active_brains,
+                                depth_topic: entry.explainability?.depth_topic
+                              }
+                            }}
                           />
                             {entry.documentSuggestion?.needs_document ? (
                               <div className="mt-3 flex flex-wrap gap-2">

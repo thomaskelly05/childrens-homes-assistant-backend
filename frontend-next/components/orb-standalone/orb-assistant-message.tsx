@@ -6,7 +6,8 @@ import { ChevronDown, Copy, FileText, MoreHorizontal, RotateCcw, Square, Volume2
 import { OrbHueMark } from '@/components/orb-standalone/orb-hue-logo'
 import { OrbExplainabilityPanel, type OrbExplainabilityView } from '@/components/orb-standalone/orb-explainability-panel'
 import { OrbMarkdownAnswer } from '@/components/orb-standalone/orb-markdown-answer'
-import { cognitionPillLabel } from '@/lib/orb/residential-agents'
+import { logOrbCognitionDebug } from '@/lib/orb/standalone-client'
+import { cognitionPillLabel, type CognitionPillContext } from '@/lib/orb/residential-agents'
 import type { StandaloneOrbSource } from '@/lib/orb/standalone-local-store'
 import type { StandaloneOrbModelRouting } from '@/lib/orb/standalone-client'
 
@@ -21,16 +22,25 @@ function CognitionPill({ label }: { label: string }) {
   )
 }
 
+function stripSourcesBasisSection(content: string): string {
+  return content.replace(/\n+Sources\s*\/\s*basis[\s\S]*$/i, '').trimEnd()
+}
+
 export function OrbCognitionIndicators({
   mode,
   streaming,
-  explainability
+  explainability,
+  messageHint,
+  cognitionContext
 }: {
   mode: string
   streaming?: boolean
   explainability?: OrbExplainabilityView
+  messageHint?: string
+  cognitionContext?: CognitionPillContext
 }) {
-  const label = cognitionPillLabel(mode, explainability)
+  const label = cognitionPillLabel(mode, explainability, messageHint, cognitionContext)
+  logOrbCognitionDebug('rendered pill', { label, mode, messageHint })
   return (
     <div className="mb-2 flex flex-wrap items-center gap-1.5">
       <CognitionPill label={label} />
@@ -49,7 +59,9 @@ export function OrbAssistantMessageBody({
   mode,
   streaming,
   explainability,
-  modelRouting
+  modelRouting,
+  messageHint,
+  cognitionContext
 }: {
   content: string
   sources?: StandaloneOrbSource[]
@@ -57,8 +69,11 @@ export function OrbAssistantMessageBody({
   streaming?: boolean
   explainability?: OrbExplainabilityView
   modelRouting?: StandaloneOrbModelRouting
+  messageHint?: string
+  cognitionContext?: CognitionPillContext
 }) {
-  const cognitionLabel = cognitionPillLabel(mode, explainability)
+  const cognitionLabel = cognitionPillLabel(mode, explainability, messageHint, cognitionContext)
+  const displayContent = stripSourcesBasisSection(content)
   return (
     <article
       className={`orb-message-assistant group flex gap-3.5 ${streaming ? 'orb-message-streaming' : ''}`}
@@ -66,9 +81,15 @@ export function OrbAssistantMessageBody({
     >
       <OrbHueMark pulse={streaming} />
       <div className="min-w-0 flex-1">
-        <OrbCognitionIndicators mode={mode} streaming={streaming} explainability={explainability} />
+        <OrbCognitionIndicators
+          mode={mode}
+          streaming={streaming}
+          explainability={explainability}
+          messageHint={messageHint}
+          cognitionContext={cognitionContext}
+        />
         <div className="orb-message-content text-[15px] leading-7 text-[var(--orb-foreground)]">
-          <OrbMarkdownAnswer content={content} sources={sources} />
+          <OrbMarkdownAnswer content={displayContent} sources={sources} />
         </div>
         <OrbExplainabilityPanel explainability={explainability} cognitionModeLabel={cognitionLabel} />
         <OrbSourcesDetail content={content} sources={sources} modelRouting={modelRouting} />
@@ -102,6 +123,7 @@ function OrbSourcesDetail({
         'quality standards',
         'residential children',
         'safeguarding practice principles',
+        'recording quality',
         'therapeutic practice',
         'built-in therapeutic',
         'built-in product'

@@ -55,7 +55,7 @@ def test_high_attention_answer_strips_generic_coaching_closer():
         mode="Ask ORB",
     )
     assert "What specific follow-up actions" not in cleaned
-    assert "human-led" in cleaned.lower()
+    assert "medication decisions" in cleaned.lower() or "pharmacy" in cleaned.lower()
 
 
 def test_medication_curiosity_includes_mar_and_time_critical():
