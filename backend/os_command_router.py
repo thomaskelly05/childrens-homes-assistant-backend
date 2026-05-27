@@ -11,8 +11,8 @@ from db.connection import get_db_connection, release_db_connection
 
 router = APIRouter(prefix='/api', tags=['OS Command'])
 
-Priority = Literal['critical', 'high', 'medium', 'low', 'info']
-Status = Literal['open', 'in_progress', 'waiting', 'completed', 'dismissed', 'void']
+Priority = Literal['critical', 'high', 'medium', 'low']
+Status = Literal['open', 'in_progress', 'waiting', 'resolved', 'closed', 'cancelled']
 
 
 @dataclass
@@ -74,8 +74,6 @@ class PsycopgConnectionAdapter:
         self.conn = conn
 
     def _sql(self, sql: str) -> str:
-        # The OS routers were written in asyncpg style. Convert simple positional
-        # placeholders for this repo's existing psycopg2 pool.
         converted = sql
         for index in range(1, 51):
             converted = converted.replace(f'${index}', '%s')
@@ -130,7 +128,7 @@ class CommandItem(BaseModel):
     summary: str | None = None
     recommended_action: str | None = None
     source_table: str | None = None
-    source_id: int | None = None
+    source_id: str | None = None
     due_at: str | None = None
     sccif_area: str | None = None
     regulation_refs: list[str] = []
@@ -241,15 +239,15 @@ async def update_command_item(
             '''
             UPDATE public.os_command_items
             SET status = %s,
-                completed_by = CASE WHEN %s = 'completed' THEN %s ELSE completed_by END,
-                dismissed_by = CASE WHEN %s = 'dismissed' THEN %s ELSE dismissed_by END
+                resolved_by = CASE WHEN %s IN ('resolved','closed','cancelled') THEN %s ELSE resolved_by END,
+                resolved_at = CASE WHEN %s IN ('resolved','closed','cancelled') THEN NOW() ELSE resolved_at END,
+                updated_at = NOW()
             WHERE id = %s
             ''',
             payload.status,
             payload.status,
             user.id,
             payload.status,
-            user.id,
             item_id,
         )
 
