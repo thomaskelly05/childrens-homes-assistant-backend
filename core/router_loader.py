@@ -86,6 +86,7 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
             "backend.os_command_router",
             "backend.os_command_young_person_workspace_router",
             "backend.os_child_workspace_action_router",
+            "backend.os_child_workspace_sources_router",
             "backend.os_command_routes",
             "routers.os_shell_api_routes",
             "routers.os_magic_notes_routes",
@@ -103,7 +104,7 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
             "backend.os_production_diagnostics_router",
             "backend.os_enterprise_compat_router",
         ),
-        notes="Operating system command surfaces, canonical child workspace, action bridge and compatibility gateways.",
+        notes="Operating system command surfaces, canonical child workspace, source map, action bridge and compatibility gateways.",
     ),
     RouterGroup(
         "governance",
