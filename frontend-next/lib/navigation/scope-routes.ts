@@ -102,14 +102,17 @@ export function homeReportsHref(homeId: string | number) { return `/reports?home
 export function homeOrbHref(homeId: string | number, mode: ScopeOrbMode = 'manager_daily_brief') { return assistantOrbHref({ scope: 'home', homeId, mode }) }
 export function homeArchiveSummaryHref(homeId: string | number) { return assistantOrbHref({ scope: 'home', homeId, mode: 'archive_summary' }) }
 export function homeChildrenHref(homeId: string | number) { return `/homes/${enc(homeId)}/children` }
-
 export function homeRecordHref(homeId: string | number, type?: string) { return recordHref({ homeId, type, about: 'home-shift' }) }
 export function homeDocumentsHref(homeId: string | number) { return `/documents?home_id=${enc(homeId)}` }
 export function homeCalendarHref(homeId: string | number) { return `/calendar?home_id=${enc(homeId)}` }
+export function homeChronologyGapsHref(homeId: string | number) { return assistantOrbHref({ scope: 'home', homeId, mode: 'chronology_story_review' }) }
+export function homePlanImpactReviewHref(homeId: string | number) { return assistantOrbHref({ scope: 'home', homeId, mode: 'plan_impact_review' }) }
+export function homeLifeEchoPendingHref(homeId: string | number) { return assistantOrbHref({ scope: 'home', homeId, mode: 'lifeecho_memory_support' }) }
 
 export function HOME_WORKSPACE_WORKFLOW_HREFS(homeId: string | number) {
   return {
     home: homeWorkspaceHref(homeId),
+    children: homeChildrenHref(homeId),
     dailyBrief: homeDailyBriefHref(homeId),
     handover: homeHandoverHref(homeId),
     handoverReviews: homeHandoverReviewsHref(homeId),
@@ -129,6 +132,10 @@ export function HOME_WORKSPACE_WORKFLOW_HREFS(homeId: string | number) {
     documents: homeDocumentsHref(homeId),
     calendar: homeCalendarHref(homeId),
     record: homeRecordHref(homeId),
-    orb: homeOrbHref(homeId)
+    orb: homeOrbHref(homeId),
+    archiveSummary: homeArchiveSummaryHref(homeId),
+    chronologyGaps: homeChronologyGapsHref(homeId),
+    planImpactReview: homePlanImpactReviewHref(homeId),
+    lifeechoPending: homeLifeEchoPendingHref(homeId)
   }
 }
