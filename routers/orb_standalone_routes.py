@@ -12,6 +12,7 @@ from services.orb_citation_service import orb_citation_service
 from services.ai_provider_registry import ai_provider_registry
 from services.orb_general_assistant_service import orb_general_assistant_service
 from services.orb_knowledge_retrieval_service import orb_knowledge_retrieval_service
+from services.orb_standalone_brain_service import orb_standalone_brain_service
 from services.indicare_intelligence_capability_service import (
     indicare_intelligence_capability_service,
 )
@@ -31,11 +32,16 @@ router = APIRouter(prefix="/orb/standalone", tags=["ORB Standalone Assistant"])
 
 STANDALONE_ORB_MODES = [
     "Ask ORB",
-    "Safeguarding",
-    "Reflect",
+    "Safeguarding Thinking",
+    "Reflect with ORB",
     "Ofsted Lens",
     "Behaviour Support",
+    "Therapeutic Reframe",
     "Record This Properly",
+    "Manager Copilot",
+    "Staff Coach",
+    "Policy Explainer",
+    "Scenario Simulator",
 ]
 
 STANDALONE_ORB_GUARDRAILS = [
@@ -45,7 +51,7 @@ STANDALONE_ORB_GUARDRAILS = [
 ]
 
 STANDALONE_ORB_IDENTITY = (
-    "You are ORB Care Companion, IndiCare's standalone ChatGPT-class AI companion."
+    "You are ORB Care Companion, IndiCare's standalone AI copilot for residential children's homes."
 )
 
 STANDALONE_ORB_CAPABILITIES = """
@@ -59,7 +65,7 @@ Capabilities:
 - Improve recording quality with factual, child-centred, non-punitive wording.
 - Support therapeutic, trauma-informed and behaviour-as-communication practice.
 - Help managers reflect on oversight, patterns, drift and whether actions made a difference.
-- Behave like a broad ChatGPT-style assistant, not a narrow care FAQ.
+- Behave like a broad ChatGPT-style assistant with deep children's homes sector intelligence.
 """.strip()
 
 STANDALONE_ORB_PRODUCT_KNOWLEDGE = """
@@ -68,7 +74,7 @@ IndiCare product knowledge:
 - Built around care recording, safeguarding, Ofsted/SCCIF readiness, Quality Standards, governance, workforce support and reflective practice.
 - Aims to simplify recording and oversight and make records more child-centred, evidence-led and easier to review.
 - Areas include Care Hub (command centre), Record, Young People, Chronology, Documents, Actions, Intelligence Spine, Ofsted readiness, workforce support, governance, Reports and ORB.
-- ORB Care Companion is standalone /orb — ChatGPT-style, voice-enabled; no live OS records.
+- ORB Care Companion is standalone /orb — ChatGPT-style guidance, reflection and practice support; no live OS records.
 - IndiCare OS ORB is /assistant/orb — operational OS-connected assistant with permissioned context where available.
 - If asked "tell me about IndiCare", answer confidently and helpfully with product-level information.
 """.strip()
@@ -96,18 +102,20 @@ Sources / basis:
 
 STANDALONE_ORB_TONE = """
 Tone:
-- British English, calm, warm, concise when speaking, reflective, practical, non-judgemental and child-centred.
-Voice response style:
-- Start with shorter spoken answers (about 3–6 sentences when voice-concise).
-- Use phrasing like "I'd think about it like this…" where helpful.
-- Offer to go deeper: "I can go deeper if you want."
-- Ask one useful follow-up question when it would help, not every time.
+- British English, calm, warm, reflective, practical, non-judgemental and child-centred.
+- Sound like an experienced registered manager, therapeutic lead and safeguarding-aware practice supervisor.
+- Avoid generic chatbot phrasing, robotic disclaimers and vague safeguarding summaries.
+- Give the user a helpful answer first, then add boundaries where needed.
+- Ask one useful follow-up question when it would materially improve safety, recording or reflection.
 """.strip()
 
 MODE_BEHAVIOUR = {
     "Safeguarding": (
         "Mode behaviour — Safeguarding: advise immediate escalation where risk appears immediate; "
         "remind the user to follow local safeguarding policy; do not decide thresholds."
+    ),
+    "Safeguarding Thinking": (
+        "Mode behaviour — Safeguarding Thinking: separate facts, concerns, missing information, escalation considerations and evidence needs."
     ),
     "Record This Properly": (
         "Mode behaviour — Record This Properly: help create factual, child-centred, non-punitive wording; "
@@ -120,8 +128,26 @@ MODE_BEHAVIOUR = {
         "Mode behaviour — Behaviour Support: treat behaviour as communication; trauma-informed response; "
         "repair and restorative follow-up."
     ),
+    "Therapeutic Reframe": (
+        "Mode behaviour — Therapeutic Reframe: reframe behaviour through trauma-informed, relational and repair-focused practice."
+    ),
     "Reflect": (
         "Mode behaviour — Reflect: emotionally containing; support staff wellbeing and reflective practice."
+    ),
+    "Reflect with ORB": (
+        "Mode behaviour — Reflect with ORB: supervision-style reflection, emotional containment and practice learning."
+    ),
+    "Manager Copilot": (
+        "Mode behaviour — Manager Copilot: focus on oversight, evidence gaps, actions, learning and inspection readiness."
+    ),
+    "Staff Coach": (
+        "Mode behaviour — Staff Coach: support staff confidence, debrief, practice development and next-time learning."
+    ),
+    "Policy Explainer": (
+        "Mode behaviour — Policy Explainer: explain policy, regulations or guidance in plain English for use on shift."
+    ),
+    "Scenario Simulator": (
+        "Mode behaviour — Scenario Simulator: identify risks, therapeutic lens, evidence needed and safe next steps from user-described scenarios."
     ),
 }
 
@@ -197,13 +223,15 @@ def _resolve_detail(mode: str, requested: str | None) -> str:
         return "detailed"
     if requested == "balanced":
         return "concise"
-    if mode in {"Safeguarding", "Ofsted Lens", "Record This Properly"}:
+    if mode in {"Safeguarding", "Safeguarding Thinking", "Ofsted Lens", "Record This Properly", "Manager Copilot"}:
         return "detailed"
     return "concise"
 
 
 def _build_framed_message(*, mode: str, user_message: str, detail: str) -> str:
-    mode_hint = MODE_BEHAVIOUR.get(mode, "")
+    resolved_mode = orb_standalone_brain_service.normalise_mode(mode)
+    brain_block = orb_standalone_brain_service.build_prompt_block(user_message, mode=resolved_mode)
+    mode_hint = MODE_BEHAVIOUR.get(resolved_mode) or MODE_BEHAVIOUR.get(mode, "")
     detail_hint = ""
     if detail == "voice_concise":
         detail_hint = (
@@ -222,9 +250,10 @@ def _build_framed_message(*, mode: str, user_message: str, detail: str) -> str:
         STANDALONE_ORB_BOUNDARIES,
         STANDALONE_ORB_CITATIONS,
         STANDALONE_ORB_TONE,
+        brain_block,
         mode_hint,
         detail_hint,
-        f"Mode: {mode}",
+        f"Mode: {resolved_mode}",
         f"User message: {user_message}",
     ]
     return "\n\n".join(part for part in parts if part)
@@ -239,7 +268,7 @@ async def standalone_orb_health(current_user=Depends(require_standalone_orb_acce
             "status": "ready",
             "isolation_verified": True,
             "model_router": ai_provider_registry.health_payload(),
-            "runtime_note": "Standalone ORB uses general assistant guidance services only. It must not call OS-linked ORB care-context endpoints.",
+            "runtime_note": "Standalone ORB uses guidance and specialist standalone brain framing only. It must not call OS-linked ORB care-context endpoints.",
         },
     }
 
@@ -296,6 +325,7 @@ async def standalone_orb_surface_route(
         "data": {
             **decision.model_dump(),
             "standalone_boundary_message": boundary,
+            "standalone_brain": orb_standalone_brain_service.context_payload(body.intent, mode=body.mode),
         },
     }
 
@@ -360,8 +390,9 @@ async def standalone_orb_conversation(
     payload: OrbStandaloneConversationRequest,
     current_user=Depends(require_standalone_orb_access),
 ):
-    mode = payload.mode or "Ask ORB"
+    mode = orb_standalone_brain_service.normalise_mode(payload.mode or "Ask ORB")
     detail = _resolve_detail(mode, payload.detail)
+    standalone_brain = orb_standalone_brain_service.context_payload(payload.message, mode=mode)
     framed_message = _build_framed_message(mode=mode, user_message=payload.message, detail=detail)
     history = payload.history[-20:] if payload.history else []
     image_urls = [
@@ -393,10 +424,11 @@ async def standalone_orb_conversation(
         )
         elapsed_ms = int((time.perf_counter() - started) * 1000)
         logger.info(
-            "standalone_orb_conversation ok mode=%s detail=%s images=%s elapsed_ms=%s",
+            "standalone_orb_conversation ok mode=%s detail=%s images=%s brains=%s elapsed_ms=%s",
             mode,
             detail,
             len(image_urls),
+            ",".join(standalone_brain.get("active_brains") or []),
             elapsed_ms,
         )
         answer = str(
@@ -413,6 +445,7 @@ async def standalone_orb_conversation(
             )
             response_sources = orb_citation_service.frontend_sources_payload(response_citations)
         context_used = dict(assistant_data.get("context_used") or {})
+        context_used["standalone_brain"] = standalone_brain
         if not context_used.get("retrieval"):
             context_used["retrieval"] = {
                 "strategy": "source_pack_plus_document_rag",
@@ -473,6 +506,7 @@ async def standalone_orb_conversation(
             "mode": mode,
             "care_record_access": False,
             "os_linked": False,
+            "standalone_brain": standalone_brain,
             "retrieval": {
                 "strategy": "source_pack_plus_document_rag",
                 "live_retrieved": False,
