@@ -5,20 +5,20 @@ services:
     plan: starter
     region: frankfurt
     branch: main
-    rootDir: indicare-frontend-next
+    rootDir: frontend-next
     buildCommand: rm -rf .next && npm ci && npm run build
     startCommand: npm run start
-    healthCheckPath: /api/health
+    healthCheckPath: /
     autoDeploy: true
     envVars:
       - key: NODE_ENV
         value: production
       - key: NEXT_PUBLIC_ORB_UI_BUILD
-        value: "2000"
+        value: "2001"
       - key: NEXT_PUBLIC_ENVIRONMENT
         value: production
       - key: NEXT_PUBLIC_CANONICAL_FRONTEND
-        value: indicare-frontend-next
+        value: frontend-next
       - key: NEXT_PUBLIC_API_BASE_URL
         value: https://childrens-homes-assistant-backend-new.onrender.com
       - key: NEXT_PUBLIC_BACKEND_URL
