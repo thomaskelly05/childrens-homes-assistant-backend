@@ -13,6 +13,8 @@ from services.ai_provider_registry import ai_provider_registry
 from services.orb_general_assistant_service import orb_general_assistant_service
 from services.orb_knowledge_retrieval_service import orb_knowledge_retrieval_service
 from services.orb_standalone_brain_service import orb_standalone_brain_service
+from services.orb_grounded_answer_style_service import orb_grounded_answer_style_service
+from services.orb_official_source_anchor_service import orb_official_source_anchor_service
 from services.indicare_intelligence_capability_service import (
     indicare_intelligence_capability_service,
 )
@@ -93,10 +95,12 @@ Boundaries:
 
 STANDALONE_ORB_CITATIONS = """
 Sources / basis:
-- Include honest source labels where relevant; do not fabricate URLs or exact quotes.
+- Prefer official source anchors over broad source labels where law, statutory guidance or inspection guidance is relevant.
+- Use inline citation anchors beside relevant claims, e.g. [Reg 12], [Reg 13], [SCCIF], [Working Together], [Recording quality].
+- Do not fabricate URLs, paragraph numbers or exact quotations.
+- Exact quotations are only allowed where exact official source text has been retrieved or provided in the conversation.
+- If exact text is unavailable, explain that the answer is based on official-source anchors and built-in guidance summaries.
 - Product questions: IndiCare product context; Standalone ORB product boundary.
-- Ofsted/SCCIF: Ofsted SCCIF framework knowledge; Children's Homes Regulations / Quality Standards.
-- Safeguarding: safeguarding practice principles; local policy reminder.
 - General knowledge: general model knowledge unless user provided context.
 """.strip()
 
@@ -231,6 +235,8 @@ def _resolve_detail(mode: str, requested: str | None) -> str:
 def _build_framed_message(*, mode: str, user_message: str, detail: str) -> str:
     resolved_mode = orb_standalone_brain_service.normalise_mode(mode)
     brain_block = orb_standalone_brain_service.build_prompt_block(user_message, mode=resolved_mode)
+    grounded_block = orb_grounded_answer_style_service.prompt_block(user_message, mode=resolved_mode)
+    official_source_block = orb_official_source_anchor_service.source_prompt()
     mode_hint = MODE_BEHAVIOUR.get(resolved_mode) or MODE_BEHAVIOUR.get(mode, "")
     detail_hint = ""
     if detail == "voice_concise":
@@ -249,6 +255,8 @@ def _build_framed_message(*, mode: str, user_message: str, detail: str) -> str:
         STANDALONE_ORB_PRODUCT_KNOWLEDGE,
         STANDALONE_ORB_BOUNDARIES,
         STANDALONE_ORB_CITATIONS,
+        official_source_block,
+        grounded_block,
         STANDALONE_ORB_TONE,
         brain_block,
         mode_hint,
@@ -434,18 +442,27 @@ async def standalone_orb_conversation(
         answer = str(
             assistant_data.get("answer") or "I can help with that, but I could not form a response just now."
         )
+        official_citations = orb_official_source_anchor_service.citation_payload()
+        grounded_citations = orb_grounded_answer_style_service.citation_payload(payload.message, mode=mode)
         response_sources = list(assistant_data.get("sources") or [])
         response_citations = list(assistant_data.get("citations") or [])
+        response_citations.extend(grounded_citations)
+        response_citations.extend(official_citations if grounded_citations else [])
         if not response_sources:
-            response_citations = orb_citation_service.build_citations(
-                retrieval_preview,
-                message=payload.message,
-                mode=mode,
-                has_images=bool(image_urls),
+            response_citations.extend(
+                orb_citation_service.build_citations(
+                    retrieval_preview,
+                    message=payload.message,
+                    mode=mode,
+                    has_images=bool(image_urls),
+                )
             )
             response_sources = orb_citation_service.frontend_sources_payload(response_citations)
+        elif response_citations:
+            response_sources.extend(orb_citation_service.frontend_sources_payload(response_citations))
         context_used = dict(assistant_data.get("context_used") or {})
         context_used["standalone_brain"] = standalone_brain
+        context_used["official_source_grounding"] = bool(grounded_citations)
         if not context_used.get("retrieval"):
             context_used["retrieval"] = {
                 "strategy": "source_pack_plus_document_rag",
@@ -495,6 +512,10 @@ async def standalone_orb_conversation(
             sources = build_standalone_sources(payload.message, mode=mode)
             citations = orb_citation_service.normalise_sources(sources)
             fallback = append_sources_basis_section(fallback, sources)
+        citations.extend(orb_grounded_answer_style_service.citation_payload(payload.message, mode=mode))
+        if citations:
+            citations.extend(orb_official_source_anchor_service.citation_payload())
+            sources.extend(orb_citation_service.frontend_sources_payload(citations))
         classification = orb_knowledge_retrieval_service.classify_query(
             payload.message,
             mode=mode,
@@ -507,6 +528,7 @@ async def standalone_orb_conversation(
             "care_record_access": False,
             "os_linked": False,
             "standalone_brain": standalone_brain,
+            "official_source_grounding": bool(citations),
             "retrieval": {
                 "strategy": "source_pack_plus_document_rag",
                 "live_retrieved": False,
