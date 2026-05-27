@@ -136,9 +136,10 @@ export function NotificationBell() {
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
-        className="relative rounded-2xl border border-slate-200 bg-white p-3 text-slate-700 shadow-sm"
-        aria-label="Notifications"
+        className="relative min-h-11 min-w-11 rounded-2xl border border-slate-200 bg-white p-3 text-slate-700 shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+        aria-label={totalCount ? `Notifications, ${totalCount} unread${urgentCount ? `, ${urgentCount} urgent` : ''}` : 'Notifications, none unread'}
         aria-expanded={open}
+        aria-haspopup="dialog"
       >
         <Bell className="h-5 w-5" aria-hidden />
         {totalCount ? (
@@ -159,7 +160,9 @@ export function NotificationBell() {
       {open ? (
         <div
           data-testid="notification-bell-panel"
-          className="absolute right-0 z-50 mt-2 w-[min(100vw-2rem,22rem)] rounded-[24px] border border-slate-200 bg-white p-3 shadow-2xl shadow-slate-950/15"
+          className="absolute right-0 z-50 mt-2 max-h-[min(80vh,32rem)] w-[min(100vw-2rem,22rem)] overflow-hidden rounded-[24px] border border-slate-200 bg-white p-3 shadow-2xl shadow-slate-950/15 sm:right-0"
+          role="dialog"
+          aria-label="Notifications panel"
         >
           <div className="flex items-center justify-between gap-2 px-1 pb-2">
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Notifications</p>
