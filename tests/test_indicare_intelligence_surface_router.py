@@ -18,6 +18,16 @@ from services.indicare_intelligence_surface_router import (
         ("Upload a policy document for analysis", "document_understanding", True),
         ("Tell me about child Alex in our home", "operational_orb", False),
         ("Use this child's chronology from last week", "operational_orb", False),
+        (
+            "If Ofsted looked at one child's chronology, what would they expect to understand from it?",
+            "standalone_orb",
+            True,
+        ),
+        (
+            "A young person smashed a cup after family time was cancelled. Help me understand therapeutically.",
+            "standalone_orb",
+            True,
+        ),
     ],
 )
 def test_surface_router_intents(intent, expected_surface, allowed):
@@ -27,17 +37,22 @@ def test_surface_router_intents(intent, expected_surface, allowed):
     assert decision.requires_os_context is (not allowed)
 
 
-def test_manager_review_routes_to_spine_or_operational():
+def test_manager_review_general_question_stays_standalone():
     decision = indicare_intelligence_surface_router.route("What needs manager review today?")
+    assert decision.allowed_in_standalone is True
+    assert decision.requires_os_context is False
+
+
+def test_manager_live_dashboard_routes_to_operational():
+    decision = indicare_intelligence_surface_router.route("What is our record quality picture across the home dashboard?")
+    assert decision.requires_os_context is True
     assert decision.recommended_surface in {"intelligence_spine", "operational_orb"}
-    assert decision.requires_os_context is True
-    assert "mode=manager_daily_brief" in (decision.suggested_route or "")
 
 
-def test_record_quality_routes_to_operational_mode():
-    decision = indicare_intelligence_surface_router.route("What is our record quality picture?")
-    assert decision.requires_os_context is True
-    assert "record_quality_review" in (decision.suggested_route or "")
+def test_record_quality_general_guidance_stays_standalone():
+    decision = indicare_intelligence_surface_router.route("What makes a weak daily record?")
+    assert decision.allowed_in_standalone is True
+    assert decision.requires_os_context is False
 
 
 def test_daily_note_can_use_record_hub():
@@ -68,15 +83,20 @@ def test_standalone_boundary_message_for_child():
 
 
 def test_operational_intents_include_mode_hints():
-    child = indicare_intelligence_surface_router.route("Tell me about this child's chronology")
+    child = indicare_intelligence_surface_router.route("Open this child's chronology from the system")
+    assert child.requires_os_context is True
     assert "mode=child_journey" in (child.suggested_route or "")
-    manager = indicare_intelligence_surface_router.route("What needs manager review today?")
+    manager = indicare_intelligence_surface_router.route("What is our record quality picture across the home dashboard?")
     assert "/assistant/orb" in (manager.suggested_route or "")
     assert "mode=" in (manager.suggested_route or "")
     ofsted = indicare_intelligence_surface_router.route(
         "What does Ofsted expect about our records in this home?"
     )
-    assert "ofsted_evidence" in (ofsted.suggested_route or "")
+    assert ofsted.allowed_in_standalone is True
+    live = indicare_intelligence_surface_router.route(
+        "Does our live evidence meet Ofsted expectations for safeguarding?"
+    )
+    assert "ofsted_evidence" in (live.suggested_route or "")
 
 
 def test_saved_operational_briefing_routes_to_outputs_panel():

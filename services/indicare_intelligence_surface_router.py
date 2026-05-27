@@ -33,28 +33,56 @@ class SurfaceRoutingDecision(BaseModel):
     intent_category: str | None = None
 
 
-_CHILD_LIVE_PATTERNS: tuple[re.Pattern[str], ...] = (
-    re.compile(r"\btell me about\b.+\b(child|young person|yp)\b", re.I),
-    re.compile(r"\b(child|young person|yp)\b.+\b(chronology|timeline|records?)\b", re.I),
-    re.compile(r"\buse\b.+\b(chronology|care record|file)\b", re.I),
-    re.compile(r"\bwhat happened with\b.+\b(last week|yesterday|recently)\b", re.I),
-    re.compile(r"\b(live|current)\b.+\b(record|evidence|placement)\b", re.I),
-    re.compile(r"\bthis child'?s\b", re.I),
-    re.compile(r"\bopen\b.+\b(child|young person)\b.+\b(profile|file)\b", re.I),
+# Hypothetical / practice questions — always answer in standalone with general guidance.
+_GENERAL_PRACTICE_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(r"\bwhat would (ofsted|an inspector|a reviewer)\b", re.I),
+    re.compile(r"\bif ofsted looked at\b", re.I),
+    re.compile(r"\bhow should (staff|we|i|a manager)\b.+\b(record|respond|respond to)\b", re.I),
+    re.compile(r"\bhelp me understand\b", re.I),
+    re.compile(r"\bwhat should a (manager|registered manager|ri|responsible individual)\b", re.I),
+    re.compile(r"\bwhat would (a|an) (strong )?(registered manager|rm|dsl|ri)\b", re.I),
+    re.compile(r"\bwhat does ofsted expect\b", re.I),
+    re.compile(r"\bone child'?s chronology\b", re.I),
+    re.compile(r"\ba young person\b", re.I),
+    re.compile(r"\bscenario\b", re.I),
+    re.compile(r"\bfor example\b", re.I),
+    re.compile(r"\bin general\b", re.I),
+    re.compile(r"\bgenerally\b", re.I),
 )
 
-_MANAGER_OS_PATTERNS: tuple[re.Pattern[str], ...] = (
-    re.compile(r"\brecord quality\b", re.I),
-    re.compile(r"\brecording quality\b", re.I),
-    re.compile(r"\bmanager review\b.+\btoday\b", re.I),
-    re.compile(r"\bwhat needs\b.+\b(manager|oversight)\b.+\btoday\b", re.I),
-    re.compile(r"\baction board\b", re.I),
+# Only block when the user asks to inspect, summarise, retrieve, analyse or use live OS records.
+_LIVE_RECORD_ACCESS_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(
+        r"\b(inspect|summarise|summarize|retrieve|pull up|fetch|analyse|analyze|review)\b.+\b(our|the|this)\b.+\b(care record|chronology|file|placement|records)\b",
+        re.I,
+    ),
+    re.compile(
+        r"\b(use|access|look at|read|open|show me)\b.+\b(this|our)\b.+\b(child|young person)'?s?\b.+\b(chronology|care record|file)\b",
+        re.I,
+    ),
+    re.compile(r"\btell me about\b.+\b(child|young person)\b.+\b(in our home|on placement|in placement)\b", re.I),
+    re.compile(
+        r"\bwhat happened with\b.+\b(child|young person)\b.+\b(last week|yesterday|recently|today)\b",
+        re.I,
+    ),
+    re.compile(r"\b(live|current)\b.+\b(record|evidence|placement|chronology)\b", re.I),
+    re.compile(r"\bthis child'?s\b.+\b(chronology|care record|file|placement|records)\b", re.I),
+    re.compile(r"\bopen\b.+\b(child|young person)\b.+\b(profile|file)\b", re.I),
+    re.compile(r"\bour\b.+\b(live |current )?(records?|chronology|evidence|children'?s? data)\b", re.I),
+    re.compile(r"\bfrom (the )?(system|indicare os|indicare)\b", re.I),
+    re.compile(r"\bin (the )?os\b.+\b(record|chronology|file)\b", re.I),
+)
+
+_MANAGER_LIVE_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(r"\bour\b.+\b(record quality|recording quality)\b", re.I),
+    re.compile(r"\b(record quality|recording quality)\b.+\b(picture|dashboard|across the home)\b", re.I),
     re.compile(r"\bintelligence spine\b", re.I),
-    re.compile(r"\bincident trend\b", re.I),
+    re.compile(r"\bincident trend\b.+\b(across|in) (the |our )?home\b", re.I),
     re.compile(r"\bburnout pattern\b", re.I),
     re.compile(r"\bworkforce intelligence\b", re.I),
-    re.compile(r"\blive evidence\b.+\b(ofsted|inspection)\b", re.I),
     re.compile(r"\bevidence graph\b", re.I),
+    re.compile(r"\blive evidence\b.+\b(ofsted|inspection)\b", re.I),
+    re.compile(r"\baction board\b", re.I),
 )
 
 _DOCUMENT_PATTERNS: tuple[re.Pattern[str], ...] = (
@@ -96,6 +124,20 @@ def _matches_any(text: str, patterns: tuple[re.Pattern[str], ...]) -> bool:
     return any(pattern.search(text) for pattern in patterns)
 
 
+def _is_general_practice_question(text: str) -> bool:
+    return _matches_any(text, _GENERAL_PRACTICE_PATTERNS)
+
+
+def requires_live_os_records(intent: str) -> bool:
+    """True only when the user asks to use actual live IndiCare OS care records."""
+    text = (intent or "").strip()
+    if not text:
+        return False
+    if _is_general_practice_question(text):
+        return False
+    return _matches_any(text, _LIVE_RECORD_ACCESS_PATTERNS)
+
+
 def _manager_operational_route(lower: str) -> str:
     """Suggest operational ORB mode for manager oversight intents."""
     if "care hub" in lower:
@@ -110,9 +152,9 @@ def _manager_operational_route(lower: str) -> str:
         return "/assistant/orb?mode=safeguarding_themes"
     if any(t in lower for t in ("staff support", "supervision", "workforce")):
         return "/assistant/orb?mode=staff_support"
-    if any(t in lower for t in ("child journey", "young person", "handover")):
+    if any(t in lower for t in ("child journey", "handover")) and requires_live_os_records(lower):
         return "/assistant/orb?mode=child_journey_summary"
-    if any(t in lower for t in ("attention today", "manager review", "daily brief", "needs my attention")):
+    if any(t in lower for t in ("attention today", "needs my attention")) and "our" in lower:
         return "/assistant/orb?mode=manager_daily_brief"
     return "/assistant/orb?mode=manager_daily_brief"
 
@@ -138,10 +180,20 @@ def route_intelligence_surface(
             safety_notice="Uploaded content stays in standalone workspace unless you explicitly save outputs.",
         )
 
-    if _matches_any(text, _CHILD_LIVE_PATTERNS):
+    if "live evidence" in lower and any(term in lower for term in ("ofsted", "inspection", "sccif")):
         return SurfaceRoutingDecision(
             recommended_surface="operational_orb",
-            reason="Child-specific live records, chronology or placement context require permissioned IndiCare OS.",
+            reason="Ofsted questions about your home's live evidence need OS inspection readiness.",
+            allowed_in_standalone=False,
+            requires_os_context=True,
+            suggested_route="/assistant/orb?mode=ofsted_evidence_review",
+            intent_category="ofsted_live_evidence",
+        )
+
+    if requires_live_os_records(text):
+        return SurfaceRoutingDecision(
+            recommended_surface="operational_orb",
+            reason="Inspecting or using live child records, chronology or placement data requires permissioned IndiCare OS.",
             allowed_in_standalone=False,
             requires_os_context=True,
             suggested_route="/assistant/orb?mode=child_journey_summary",
@@ -153,7 +205,7 @@ def route_intelligence_surface(
         )
 
     if _matches_any(text, _STAFF_PROFILE_PATTERNS) and (
-        "live" in lower or "record" in lower or "today" in lower
+        "live" in lower or "our record" in lower or "workforce record" in lower
     ):
         return SurfaceRoutingDecision(
             recommended_surface="staff_profile",
@@ -165,7 +217,7 @@ def route_intelligence_surface(
             safety_notice="Use operational ORB or workforce areas for live staff context.",
         )
 
-    if _matches_any(text, _MANAGER_OS_PATTERNS):
+    if _matches_any(text, _MANAGER_LIVE_PATTERNS):
         surface: IntelligenceSurface = (
             "intelligence_spine"
             if "intelligence spine" in lower or "incident trend" in lower or "evidence graph" in lower
@@ -173,7 +225,7 @@ def route_intelligence_surface(
         )
         return SurfaceRoutingDecision(
             recommended_surface=surface,
-            reason="Manager oversight, patterns and live evidence need Intelligence Spine or operational ORB.",
+            reason="Live manager dashboards, patterns and home evidence need Intelligence Spine or operational ORB.",
             allowed_in_standalone=False,
             requires_os_context=True,
             suggested_route=_manager_operational_route(lower),
@@ -193,6 +245,15 @@ def route_intelligence_surface(
         )
 
     if _matches_any(text, _OFSTED_SOURCE_PATTERNS):
+        if _is_general_practice_question(text):
+            return SurfaceRoutingDecision(
+                recommended_surface="standalone_orb",
+                reason="General Ofsted expectation questions can be answered without live OS evidence.",
+                allowed_in_standalone=True,
+                requires_os_context=False,
+                suggested_route="/orb",
+                intent_category="ofsted_sources",
+            )
         live_evidence = "live evidence" in lower or "our evidence" in lower or "our records" in lower
         if live_evidence:
             return SurfaceRoutingDecision(
@@ -223,11 +284,8 @@ def route_intelligence_surface(
         )
 
     if _matches_any(text, _AGENT_PATTERNS):
-        surface: IntelligenceSurface = "agents"
-        if "deep research" in lower:
-            surface = "agents"
         return SurfaceRoutingDecision(
-            recommended_surface=surface,
+            recommended_surface="agents",
             reason="Agents and deep research run in standalone orchestration.",
             allowed_in_standalone=True,
             requires_os_context=False,
@@ -235,7 +293,7 @@ def route_intelligence_surface(
             intent_category="agents",
         )
 
-    if "care hub" in lower or "dashboard" in lower:
+    if "care hub" in lower or ("dashboard" in lower and "our" in lower):
         return SurfaceRoutingDecision(
             recommended_surface="care_hub",
             reason="Care Hub is the OS command centre.",
@@ -294,6 +352,31 @@ def route_intelligence_surface(
         suggested_route="/orb",
         intent_category="general",
     )
+
+
+def standalone_guidance_boundary_prefix(intent: str) -> str | None:
+    """Short prefix when standalone answers generally without live records."""
+    if requires_live_os_records(intent):
+        return None
+    text = (intent or "").lower()
+    if any(
+        term in text
+        for term in (
+            "chronology",
+            "young person",
+            "child",
+            "ofsted",
+            "record",
+            "therapeutic",
+            "allegation",
+            "missing",
+            "restraint",
+        )
+    ):
+        return (
+            "I cannot see the actual live child record in IndiCare OS, but generally — "
+        )
+    return None
 
 
 def standalone_os_boundary_message(intent: str) -> str | None:

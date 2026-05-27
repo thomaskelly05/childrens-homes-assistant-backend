@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from services.orb_professional_curiosity_service import orb_professional_curiosity_service
+
 
 class OrbInstitutionalDepthFrameService:
     """Deep reasoning frames for ORB.
@@ -18,8 +20,12 @@ class OrbInstitutionalDepthFrameService:
         text = str(message or "").lower()
         mode_text = str(mode or "").lower()
         topic = self._topic(text=text, mode_text=mode_text)
+        if topic == "cumulative_concern":
+            return self._cumulative_concern_frame()
         if topic == "allegations":
             return self._allegations_frame()
+        if topic == "chronology":
+            return self._chronology_frame()
         if topic == "recording":
             return self._recording_frame()
         if topic == "inspection":
@@ -70,6 +76,13 @@ class OrbInstitutionalDepthFrameService:
             lines.extend(["- Response must avoid:"])
             for avoid in frame["avoid"]:
                 lines.append(f"  - {avoid}")
+        if frame.get("response_structure"):
+            lines.extend(["- Required response structure:"])
+            for step in frame["response_structure"]:
+                lines.append(f"  - {step}")
+        curiosity_block = orb_professional_curiosity_service.prompt_block(message, mode=mode)
+        if curiosity_block:
+            lines.extend(["", curiosity_block])
         lines.extend(
             [
                 "- Response shape:",
@@ -84,6 +97,9 @@ class OrbInstitutionalDepthFrameService:
         return "\n".join(lines)
 
     def _topic(self, *, text: str, mode_text: str) -> str | None:
+        curiosity_topic = orb_professional_curiosity_service.detect_topic(text, mode=mode_text)
+        if curiosity_topic == "cumulative_concern":
+            return "cumulative_concern"
         if any(term in text for term in ("indicare", "orb", "care companion", "os", "platform", "product")):
             return "indicare_product"
         if any(term in text for term in ("allegation", "allegations", "lado", "grabbed", "staff member", "conduct concern")):
@@ -92,15 +108,22 @@ class OrbInstitutionalDepthFrameService:
             return "missing"
         if any(term in text or term in mode_text for term in ("restraint", "physical intervention", "held", "restrictive")):
             return "restraint"
-        if any(term in text or term in mode_text for term in ("record", "recording", "wording", "chronology", "daily note", "incident")):
+        if any(term in text for term in ("chronology", "timeline", "sequence of events")) and "rewrite" not in text:
+            return "chronology"
+        if any(
+            term in text or term in mode_text
+            for term in ("rewrite", "poor record", "rough note", "record", "recording", "wording", "daily note", "incident")
+        ):
             return "recording"
+        if any(term in text or term in mode_text for term in ("responsible individual", "registered manager", " ri ", "governance", "leadership", "oversight", "audit")):
+            return "leadership"
         if any(term in text or term in mode_text for term in ("ofsted", "sccif", "inspection", "reg 44", "reg 45")):
             return "inspection"
         if any(term in text or term in mode_text for term in ("therapeutic", "trauma", "behaviour", "repair", "emotion", "dysregulated")):
             return "therapeutic"
         if any(term in text or term in mode_text for term in ("supervision", "debrief", "reflective", "reflection", "staff coach")):
             return "supervision"
-        if any(term in text or term in mode_text for term in ("manager", "leadership", "oversight", "governance", "audit", "ri", "responsible individual")):
+        if any(term in text or term in mode_text for term in ("manager",)):
             return "leadership"
         if any(term in text or term in mode_text for term in ("staffing", "rota", "agency", "workforce", "training", "safer recruitment")):
             return "staffing"
@@ -185,12 +208,17 @@ class OrbInstitutionalDepthFrameService:
             "purpose": "Move beyond a generic safeguarding summary into RM-level, inspection-aware, therapeutic and recording-aware reasoning.",
             "required_lenses": [
                 "Immediate safety and protection lens [Reg 12].",
-                "Human-led local procedure and designated officer consultation thinking [Working Together] [LADO].",
-                "Leadership oversight, decision trail, supervision, learning and follow-through [Reg 13].",
-                "Inspection evidence lens: timeliness, professional curiosity, child experience, leadership impact [SCCIF].",
-                "Recording lens: direct account, observed facts, chronology, actions, rationale, outcome [Recording quality].",
-                "Therapeutic lens: child feeling heard, emotionally safe, not blamed, and supported after disclosure or concern.",
-                "Fairness lens: protect children while preserving fair process for the adult and avoiding premature conclusions.",
+                "Child's exact words and what they reported — preserve voice without leading questions.",
+                "Clarify what 'grabbed', 'pushed', 'held' or similar means: restraint, guiding touch, alleged assault, disputed contact or unsafe practice.",
+                "Injury, pain, fear, humiliation and whether medical attention or body mapping is relevant.",
+                "Witness accounts, CCTV and other factual material; staff account taken separately.",
+                "Human-led LADO consultation thinking [Working Together] [LADO] — not threshold decisions.",
+                "Interim safety arrangements, staff support and fairness alongside child protection [Reg 12] [Reg 13].",
+                "Leadership oversight, manager rationale, supervision, learning and follow-through [Reg 13].",
+                "SCCIF evidence expectations: timeliness, professional curiosity, child experience, leadership impact.",
+                "Recording quality: chronology, actions, rationale, outcome; pattern review across episodes.",
+                "Therapeutic lens: child emotionally safe, heard, not blamed; rapport preserved where possible.",
+                "Fairness lens: do not assume the child is lying or the adult is unsafe without process.",
             ],
             "evidence_expectations": [
                 "What exactly was said, seen or reported, using the child's words where appropriate.",
@@ -203,7 +231,8 @@ class OrbInstitutionalDepthFrameService:
             ],
             "avoid": [
                 "Declaring the concern true or false.",
-                "Deciding statutory thresholds.",
+                "Deciding statutory thresholds or LADO outcomes.",
+                "Assuming the child is lying or the adult is guilty without process.",
                 "Minimising language such as only, just, attention seeking, or false allegation before review.",
                 "Generic advice with no regulatory, recording, leadership or therapeutic reasoning.",
             ],
@@ -214,12 +243,13 @@ class OrbInstitutionalDepthFrameService:
             "topic": "missing from home / away from placement",
             "purpose": "Reason through safety, context, return, patterns, exploitation risk and recording quality without making threshold decisions.",
             "required_lenses": [
-                "Immediate safety and location planning [Reg 12].",
-                "Contextual safeguarding and multi-agency information-sharing [Working Together].",
-                "Patterns, repeat episodes, push/pull factors and protective relationships.",
-                "Return conversation and emotional meaning.",
-                "Management oversight and plan review [Reg 13].",
-                "Inspection lens: timeliness, learning and impact [SCCIF].",
+                "Immediate safety, police/local missing procedure and timeline [Reg 12].",
+                "Search actions, who was informed and management oversight [Reg 13].",
+                "Return-home conversation, child's emotional state and what was learned.",
+                "Push/pull factors, peer and adult relationships, location/route patterns.",
+                "Exploitation and contextual safeguarding indicators [Working Together].",
+                "Risk assessment and chronology update; repeated episodes and prevention learning.",
+                "Inspection lens: timeliness, learning, impact and Ofsted scrutiny of patterns [SCCIF].",
             ],
             "evidence_expectations": [
                 "Timeline of absence, actions taken, contacts made and return details.",
@@ -238,12 +268,14 @@ class OrbInstitutionalDepthFrameService:
             "topic": "restraint / physical intervention / restrictive practice",
             "purpose": "Reason through safety, proportionality, recording, child experience, repair and oversight.",
             "required_lenses": [
-                "Protection and immediate safety [Reg 12].",
-                "Least restrictive, proportionate and necessary practice.",
-                "Child's experience, dignity, injury, emotional impact and repair.",
-                "Recording quality: antecedents, intervention, duration, rationale, outcome [Recording quality].",
-                "Leadership review, debrief, learning and plan update [Reg 13].",
-                "Inspection lens: patterns, reduction and culture [SCCIF].",
+                "Necessity, proportionality and least restrictive practice [Reg 12].",
+                "What happened before, during and after; alternatives and de-escalation attempted.",
+                "Type and duration if known; risk of harm that justified intervention.",
+                "Child voice, injury checks, dignity and emotional impact.",
+                "Staff debrief, child debrief, repair and relational follow-up.",
+                "Manager review, behaviour support plan review and pattern/reduction thinking [Reg 13].",
+                "Recording quality: antecedent, presentation, intervention, outcome [Recording quality].",
+                "Inspection culture lens: patterns, normalisation and impact on child experience [SCCIF].",
             ],
             "evidence_expectations": [
                 "What happened before, during and after.",
@@ -262,11 +294,10 @@ class OrbInstitutionalDepthFrameService:
             "topic": "recording quality",
             "purpose": "Improve records so they are factual, child-centred, chronology-aware and useful for oversight.",
             "required_lenses": [
-                "Fact versus interpretation.",
-                "Child voice and lived experience.",
-                "Adult response and rationale.",
-                "Outcome and follow-up.",
-                "Management oversight and evidence quality.",
+                "Provide: 1) improved record, 2) what was wrong, 3) what is still missing, 4) what to add before sign-off, 5) why this matters for inspection/oversight.",
+                "Use bracketed placeholders for missing facts — never invent facts.",
+                "For restraint-related rough notes include: antecedent, emotional presentation, de-escalation, risk, necessity, proportionality, duration/type, child response, injury check, debrief, repair, manager review, plan update.",
+                "Fact versus interpretation; child voice; adult response and rationale; outcome and follow-up.",
             ],
             "evidence_expectations": [
                 "What happened before, during and after.",
@@ -274,11 +305,13 @@ class OrbInstitutionalDepthFrameService:
                 "What adults did and why.",
                 "What changed afterwards.",
                 "What needs follow-up or review.",
+                "Example placeholders: [Insert what happened immediately before], [Insert de-escalation attempted], [Insert manager review outcome].",
             ],
             "avoid": [
                 "Judgemental labels.",
                 "Unsupported conclusions.",
                 "Activity-only records with no impact or outcome.",
+                "Only polishing wording without explaining gaps and oversight implications.",
             ],
         }
 
@@ -309,11 +342,11 @@ class OrbInstitutionalDepthFrameService:
             "topic": "therapeutic and reflective reasoning",
             "purpose": "Frame behaviour, distress or conflict through emotional meaning, repair and relational safety.",
             "required_lenses": [
-                "Behaviour as communication.",
-                "Emotional containment and co-regulation.",
-                "Repair after rupture.",
-                "Shame-sensitive language.",
-                "Adult reflection and learning.",
+                "Behaviour as communication; loss, rejection, shame, fear.",
+                "Emotional regulation, co-regulation and staff response.",
+                "Repair after rupture; child voice; do not blame the child.",
+                "What helped; follow-up key work; plan/risk review if repeated.",
+                "How staff should record therapeutically — structure without inventing facts.",
             ],
             "evidence_expectations": [
                 "What the child may have been communicating.",
@@ -324,6 +357,7 @@ class OrbInstitutionalDepthFrameService:
             "avoid": [
                 "Diagnosing children.",
                 "Punitive or blame-based wording.",
+                "Bouncing to OS unless live child record access is explicitly requested.",
             ],
         }
 
@@ -352,20 +386,78 @@ class OrbInstitutionalDepthFrameService:
             "topic": "leadership / governance / oversight",
             "purpose": "Reason like a strong registered manager or RI: evidence, drift, patterns, actions and impact.",
             "required_lenses": [
+                "RM daily lens: who is most vulnerable today; overnight events; missing/safeguarding; emotional climate; staffing; medication/health; education; staff wellbeing; overdue actions; weak recordings; what could go wrong; visible leadership; what Ofsted would challenge if they arrived today.",
+                "RI lens: is the home safe; is the manager supported; are children progressing; is leadership effective; staff supervised and stable; Reg 44 findings repeated; Reg 45 evaluative not descriptive; governance triangulated; patterns acted on; drift; are children safer because of provider action; what evidence proves impact.",
                 "Leadership visibility and management rationale [Reg 13].",
                 "Patterns, drift, repeated themes and learning.",
-                "Action ownership, follow-through and review.",
-                "Impact on children, staff and safety culture.",
                 "Inspection readiness and provider learning [SCCIF].",
             ],
             "evidence_expectations": [
                 "What leaders knew, when they knew it and what they did.",
                 "Whether actions changed practice or outcomes.",
                 "Whether repeated themes were identified and addressed.",
+                "Reg 44 / Reg 45 evidence quality and triangulation.",
             ],
             "avoid": [
                 "Assuming paperwork equals oversight.",
                 "Describing activity without impact.",
+            ],
+        }
+
+    def _chronology_frame(self) -> dict[str, Any]:
+        return {
+            "topic": "chronology cognition",
+            "purpose": "Explain what a strong chronology should help reviewers understand — without accessing live OS records.",
+            "required_lenses": [
+                "Child's lived experience over time — not only a list of incidents.",
+                "Progress, setbacks, safeguarding patterns, relationships, missing episodes, restraints, allegations.",
+                "Education, health, identity, family time, emotional themes, risk increasing or reducing.",
+                "Management oversight, whether plans were followed, child voice and impact — not just events.",
+                "What Ofsted or a reviewer would expect to understand from a chronology [SCCIF].",
+            ],
+            "evidence_expectations": [
+                "How events link over time and what they show about help, protection and progress.",
+                "Whether repeated themes are visible and acted on.",
+            ],
+            "avoid": [
+                "Treating chronology as incident logging only.",
+                "Directing to OS unless the user asks to inspect actual live records.",
+            ],
+        }
+
+    def _cumulative_concern_frame(self) -> dict[str, Any]:
+        return {
+            "topic": "cumulative safeguarding concern / pattern recognition",
+            "purpose": "Sector-defining pattern reasoning when separate events feel minor but together signal risk.",
+            "required_lenses": [
+                "Cumulative safeguarding concern — why the user's unease matters.",
+                "Repeated staff-child dynamic; allegations, restraints and missing episodes may be linked.",
+                "Possible emotional unsafety, power/control dynamics, normalisation of restraint, staff practice or child distress patterns.",
+                "Possible leadership minimisation; need to review chronology and records together.",
+                "LADO pattern consultation thinking where appropriate — human-led, not automated thresholding.",
+                "Interim safeguarding arrangements, RI oversight, management review, supervision/training review, child support/advocacy.",
+                "Avoid assumptions both ways: child lying or adult guilt without process.",
+            ],
+            "response_structure": [
+                "1. Why your concern matters.",
+                "2. Patterns to explore.",
+                "3. Evidence to review.",
+                "4. Questions for the registered manager.",
+                "5. Questions for the responsible individual.",
+                "6. What Ofsted would likely scrutinise.",
+                "7. What to avoid assuming.",
+                "8. Immediate safe next steps.",
+                "9. Professional boundary.",
+            ],
+            "evidence_expectations": [
+                "Cross-link allegations, missing episodes, restraints and same staff member patterns.",
+                "Chronology, supervision, debrief quality and management review trails.",
+            ],
+            "avoid": [
+                "Generic safeguarding summaries.",
+                "Deciding truth or falsehood.",
+                "Shallow checklists without pattern reasoning.",
+                "Vague 'explore further' endings.",
             ],
         }
 
