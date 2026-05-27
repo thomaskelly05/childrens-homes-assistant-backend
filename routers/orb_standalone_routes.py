@@ -37,13 +37,14 @@ router = APIRouter(prefix="/orb/standalone", tags=["ORB Standalone Assistant"])
 STANDALONE_ORB_MODES = [
     "Ask ORB",
     "Safeguarding Thinking",
-    "Reflect with ORB",
     "Ofsted Lens",
-    "Behaviour Support",
     "Therapeutic Reframe",
     "Record This Properly",
     "Manager Copilot",
     "Staff Coach",
+    "Reg 44 / Reg 45 Prep",
+    "Reflect with ORB",
+    "Behaviour Support",
     "Policy Explainer",
     "Scenario Simulator",
 ]
@@ -148,6 +149,10 @@ MODE_BEHAVIOUR = {
     ),
     "Staff Coach": (
         "Mode behaviour — Staff Coach: support staff confidence, debrief, practice development and next-time learning."
+    ),
+    "Reg 44 / Reg 45 Prep": (
+        "Mode behaviour — Reg 44 / Reg 45 Prep: focus on provider governance visits, evidence sufficiency, "
+        "improvement planning and leadership accountability without predicting inspection outcomes."
     ),
     "Policy Explainer": (
         "Mode behaviour — Policy Explainer: explain policy, regulations or guidance in plain English for use on shift."

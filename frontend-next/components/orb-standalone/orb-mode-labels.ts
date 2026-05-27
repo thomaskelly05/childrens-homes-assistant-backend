@@ -1,21 +1,26 @@
 import type { StandaloneOrbMode } from '@/lib/orb/standalone-client'
 
-/** Short labels for mode chips in the standalone /orb UI. */
+/** Short labels for residential agent surfaces in standalone /orb. */
 export const STANDALONE_MODE_CHIP_LABELS: Record<StandaloneOrbMode, string> = {
   'Ask ORB': 'Ask ORB',
-  Safeguarding: 'Safeguarding',
-  Reflect: 'Reflect',
+  'Safeguarding Thinking': 'Safeguarding',
   'Ofsted Lens': 'Ofsted',
-  'Behaviour Support': 'Behaviour',
-  'Record This Properly': 'Record'
+  'Record This Properly': 'Record',
+  'Therapeutic Reframe': 'Therapeutic',
+  'Manager Copilot': 'Manager',
+  'Staff Coach': 'Staff',
+  'Reg 44 / Reg 45 Prep': 'Reg 44/45'
 }
 
 export const PRIMARY_MODE_CHIP_ORDER: StandaloneOrbMode[] = [
   'Ask ORB',
-  'Record This Properly',
-  'Safeguarding',
+  'Safeguarding Thinking',
   'Ofsted Lens',
-  'Reflect'
+  'Record This Properly',
+  'Therapeutic Reframe',
+  'Manager Copilot',
+  'Staff Coach',
+  'Reg 44 / Reg 45 Prep'
 ]
 
 export function modeChipLabel(mode: string): string {

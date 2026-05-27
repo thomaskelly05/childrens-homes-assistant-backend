@@ -4,6 +4,7 @@ import { FormEvent, useRef, type DragEvent } from 'react'
 import { Camera, FileText, Mic, MicOff, Plus, Send, Square, X } from 'lucide-react'
 
 import { logTapTarget } from '@/lib/interaction/mobile-tap-debug'
+import { placeholderForMode } from '@/lib/orb/residential-agents'
 import type { StandaloneOrbMode } from '@/lib/orb/standalone-client'
 
 export type PendingImageAttachment = {
@@ -158,7 +159,7 @@ export function OrbStandaloneComposer({
           <label htmlFor="orb-standalone-input" className="sr-only">
             Message ORB
           </label>
-          <div className="rounded-[1.75rem] border border-white/10 bg-[#0c1018]/95 p-2 shadow-[0_8px_32px_rgba(0,0,0,0.35)] ring-1 ring-white/[0.04] focus-within:border-cyan-300/30 focus-within:ring-cyan-300/20">
+          <div className="orb-composer-glow rounded-[1.75rem] border border-white/10 bg-[#0c1018]/95 p-2 shadow-[0_8px_32px_rgba(0,0,0,0.35)] ring-1 ring-white/[0.04] transition focus-within:border-cyan-300/30 focus-within:ring-cyan-300/20">
             {attachments.length > 0 ? (
               <div className="mb-2 flex flex-wrap gap-2 px-1 pt-1">
                 {attachments.map((file) => (
@@ -275,7 +276,7 @@ export function OrbStandaloneComposer({
                 }}
                 rows={1}
                 className="max-h-40 min-h-[2.75rem] flex-1 resize-none bg-transparent px-1 py-2.5 text-base leading-6 text-white outline-none placeholder:text-slate-500 [touch-action:manipulation]"
-                placeholder="Message ORB…"
+                placeholder={placeholderForMode(mode)}
                 disabled={pending}
                 aria-describedby="orb-standalone-status"
                 data-orb-composer-input

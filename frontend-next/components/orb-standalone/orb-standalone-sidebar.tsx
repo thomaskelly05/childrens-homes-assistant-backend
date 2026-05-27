@@ -4,6 +4,7 @@ import { useMemo, useState, type ReactNode } from 'react'
 import {
   Archive,
   Bookmark,
+  Brain,
   ChevronDown,
   ChevronUp,
   FolderPlus,
@@ -39,6 +40,7 @@ export function OrbStandaloneSidebar({
   onOpenSettings,
   onOpenSavedOutputs,
   onOpenTools,
+  onOpenAgents,
   savedOutputsCount,
   onClose
 }: {
@@ -52,6 +54,7 @@ export function OrbStandaloneSidebar({
   onOpenSettings?: () => void
   onOpenSavedOutputs?: () => void
   onOpenTools?: () => void
+  onOpenAgents?: () => void
   savedOutputsCount?: number
   onClose?: () => void
 }) {
@@ -71,6 +74,13 @@ export function OrbStandaloneSidebar({
       }),
     [workspace.chats, workspace.activeProjectId, chatSearch]
   )
+
+  const pinnedChats = useMemo(
+    () => filteredChats.filter((chat) => chat.pinned),
+    [filteredChats]
+  )
+
+  const timeGroupedChats = useMemo(() => groupChatsByRecency(filteredChats.filter((c) => !c.pinned)), [filteredChats])
 
   function updateChat(chatId: string, patch: Partial<StandaloneChat>) {
     onWorkspaceChange({
@@ -182,6 +192,18 @@ export function OrbStandaloneSidebar({
           <MessageSquarePlus className="h-4 w-4 text-slate-400" aria-hidden />
           New chat
         </button>
+
+        {onOpenAgents ? (
+          <button
+            type="button"
+            onClick={onOpenAgents}
+            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/[0.06] hover:text-white"
+            data-orb-sidebar-agents
+          >
+            <Brain className="h-4 w-4 text-cyan-300/70" aria-hidden />
+            Residential Agents
+          </button>
+        ) : null}
 
         <div className="mt-2 px-1">
           <label className="flex items-center gap-2 rounded-lg bg-white/[0.04] px-3 py-2 ring-1 ring-white/[0.06] focus-within:ring-cyan-300/30">
@@ -322,38 +344,45 @@ export function OrbStandaloneSidebar({
           </div>
         ) : null}
 
+        {pinnedChats.length > 0 ? (
+          <SectionToggle label="Pinned conversations" open={recentOpen} onToggle={() => setRecentOpen((o) => !o)}>
+            <ChatList
+              chats={pinnedChats}
+              activeChatId={workspace.activeChatId}
+              onSelectChat={onSelectChat}
+              onRename={renameChat}
+              onDelete={deleteChat}
+              onPin={(chat) => updateChat(chat.id, { pinned: !chat.pinned })}
+              onArchive={(chat) => updateChat(chat.id, { archived: true })}
+            />
+          </SectionToggle>
+        ) : null}
+
         <SectionToggle label="Recent chats" open={recentOpen} onToggle={() => setRecentOpen((o) => !o)}>
-          <ul className="space-y-0.5">
-            {filteredChats.length === 0 ? (
-              <li className="px-3 py-2 text-xs text-slate-500">
-                {chatSearch.trim() ? 'No matching chats.' : 'No chats in this project yet.'}
-              </li>
-            ) : (
-              filteredChats.map((chat) => (
-                <li key={chat.id} className="group flex items-center gap-0.5">
-                  <button
-                    type="button"
-                    onClick={() => onSelectChat(chat.id)}
-                    className={`min-w-0 flex-1 truncate rounded-lg px-3 py-2 text-left text-[13px] transition ${
-                      workspace.activeChatId === chat.id
-                        ? 'bg-white/[0.08] font-medium text-slate-100'
-                        : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-200'
-                    }`}
-                  >
-                    {chat.pinned ? <Pin className="mr-1 inline h-3 w-3 text-amber-300/90" /> : null}
-                    {chat.title}
-                  </button>
-                  <ChatMenu
-                    chat={chat}
-                    onRename={() => renameChat(chat.id)}
-                    onDelete={() => deleteChat(chat.id)}
-                    onPin={() => updateChat(chat.id, { pinned: !chat.pinned })}
-                    onArchive={() => updateChat(chat.id, { archived: true })}
+          {filteredChats.length === 0 ? (
+            <p className="px-3 py-2 text-xs text-slate-500">
+              {chatSearch.trim() ? 'No matching chats.' : 'No chats in this project yet.'}
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {timeGroupedChats.map((group) => (
+                <div key={group.label}>
+                  <p className="px-3 pb-1 text-[10px] font-medium uppercase tracking-[0.14em] text-slate-600">
+                    {group.label}
+                  </p>
+                  <ChatList
+                    chats={group.chats}
+                    activeChatId={workspace.activeChatId}
+                    onSelectChat={onSelectChat}
+                    onRename={renameChat}
+                    onDelete={deleteChat}
+                    onPin={(chat) => updateChat(chat.id, { pinned: !chat.pinned })}
+                    onArchive={(chat) => updateChat(chat.id, { archived: true })}
                   />
-                </li>
-              ))
-            )}
-          </ul>
+                </div>
+              ))}
+            </div>
+          )}
         </SectionToggle>
       </div>
 
@@ -393,6 +422,85 @@ export function OrbStandaloneSidebar({
         </p>
       </div>
     </>
+  )
+}
+
+function startOfDay(ts: number) {
+  const d = new Date(ts)
+  d.setHours(0, 0, 0, 0)
+  return d.getTime()
+}
+
+function groupChatsByRecency(chats: StandaloneChat[]) {
+  const now = Date.now()
+  const todayStart = startOfDay(now)
+  const yesterdayStart = todayStart - 86_400_000
+  const weekStart = todayStart - 6 * 86_400_000
+
+  const today: StandaloneChat[] = []
+  const yesterday: StandaloneChat[] = []
+  const thisWeek: StandaloneChat[] = []
+  const older: StandaloneChat[] = []
+
+  for (const chat of chats) {
+    const stamp = chat.updatedAt || chat.createdAt
+    if (stamp >= todayStart) today.push(chat)
+    else if (stamp >= yesterdayStart) yesterday.push(chat)
+    else if (stamp >= weekStart) thisWeek.push(chat)
+    else older.push(chat)
+  }
+
+  const groups: Array<{ label: string; chats: StandaloneChat[] }> = []
+  if (today.length) groups.push({ label: 'Today', chats: today })
+  if (yesterday.length) groups.push({ label: 'Yesterday', chats: yesterday })
+  if (thisWeek.length) groups.push({ label: 'This Week', chats: thisWeek })
+  if (older.length) groups.push({ label: 'Earlier', chats: older })
+  return groups
+}
+
+function ChatList({
+  chats,
+  activeChatId,
+  onSelectChat,
+  onRename,
+  onDelete,
+  onPin,
+  onArchive
+}: {
+  chats: StandaloneChat[]
+  activeChatId: string | null
+  onSelectChat: (chatId: string) => void
+  onRename: (chatId: string) => void
+  onDelete: (chatId: string) => void
+  onPin: (chat: StandaloneChat) => void
+  onArchive: (chat: StandaloneChat) => void
+}) {
+  return (
+    <ul className="space-y-0.5">
+      {chats.map((chat) => (
+        <li key={chat.id} className="group flex items-center gap-0.5">
+          <button
+            type="button"
+            onClick={() => onSelectChat(chat.id)}
+            className={`min-w-0 flex-1 truncate rounded-lg px-3 py-2 text-left text-[13px] transition ${
+              activeChatId === chat.id
+                ? 'bg-white/[0.08] font-medium text-slate-100'
+                : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-200'
+            }`}
+          >
+            {chat.pinned ? <Pin className="mr-1 inline h-3 w-3 text-amber-300/90" /> : null}
+            {chat.title}
+          </button>
+          <ChatMenu
+            chat={chat}
+            onRename={() => onRename(chat.id)}
+            onDelete={() => onDelete(chat.id)}
+            onPin={() => onPin(chat)}
+            onArchive={() => onArchive(chat)}
+          />
+        </li>
+      ))}
+    </ul>
   )
 }
 

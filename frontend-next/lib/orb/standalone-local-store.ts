@@ -26,6 +26,7 @@ export type StandaloneChatMessageStatus =
   | 'sent'
   | 'sending'
   | 'thinking'
+  | 'streaming'
   | 'complete'
   | 'error'
   | 'failed'
@@ -52,6 +53,15 @@ export type StandaloneChatMessage = {
     agent_type?: string
     reason?: string
     auto_run?: boolean
+  }
+  explainability?: {
+    active_brains?: string[]
+    frameworks_used?: string[]
+    evidence_focus?: string[]
+    confidence?: string
+    human_review_boundaries?: string[]
+    reasoning_summary?: string
+    operational_context_used?: boolean
   }
 }
 
@@ -132,20 +142,47 @@ export const DEFAULT_STANDALONE_PROJECTS: StandaloneProject[] = [
     updatedAt: 0
   },
   {
-    id: 'project-ofsted',
-    name: 'Ofsted Prep',
-    description: 'Inspection lens and evidence thinking',
+    id: 'project-inspection',
+    name: 'Inspection Readiness',
+    description: 'Evidence, SCCIF and leadership oversight',
     color: '#a78bfa',
     icon: '◎',
     createdAt: 0,
     updatedAt: 0
   },
   {
-    id: 'project-therapeutic',
-    name: 'Therapeutic Practice',
-    description: 'Trauma-informed and restorative reflection',
+    id: 'project-supervision',
+    name: 'Reflective Supervision',
+    description: 'Staff reflection and supervision preparation',
     color: '#fbbf24',
     icon: '◈',
+    createdAt: 0,
+    updatedAt: 0
+  },
+  {
+    id: 'project-placement',
+    name: 'Placement Stability',
+    description: 'Transitions, relationships and plans',
+    color: '#34d399',
+    icon: '◇',
+    createdAt: 0,
+    updatedAt: 0
+  },
+  {
+    id: 'project-team',
+    name: 'Team Development',
+    description: 'Workforce practice and culture',
+    color: '#22d3ee',
+    icon: '▣',
+    createdAt: 0,
+    updatedAt: 0
+  },
+  {
+    id: 'project-reg45',
+    name: 'Regulation 45 Review',
+    description: 'Improvement planning and governance evidence',
+    color: '#fb7185',
+    icon: '⬡',
     createdAt: 0,
     updatedAt: 0
   }
