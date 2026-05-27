@@ -9,6 +9,31 @@
   --line: rgba(15, 23, 42, 0.08);
   --muted: #64748b;
   --blue: #2563eb;
+
+  /* Premium ORB design system */
+  --orb-primary-cyan: #4cc9f0;
+  --orb-primary-sky: #60a5fa;
+  --orb-primary-blue: #2563eb;
+  --orb-primary-blue-deep: #1d4ed8;
+  --orb-glow-sky: rgba(96, 165, 250, 0.16);
+  --orb-glow-cyan: rgba(76, 201, 240, 0.18);
+  --orb-bg-deep: #07111f;
+  --orb-bg-mid: #0b1728;
+  --orb-bg-soft: #0e2238;
+  --orb-bg-light: #f8fafc;
+  --orb-bg-light-mid: #f4f7fb;
+  --orb-bg-light-soft: #eef4ff;
+  --orb-foreground: #f1f5f9;
+  --orb-muted: #94a3b8;
+  --orb-accent: #60a5fa;
+  --orb-on-accent: #07111f;
+  --orb-line: rgba(148, 163, 184, 0.12);
+  --orb-surface: rgba(255, 255, 255, 0.04);
+  --orb-surface-elevated: rgba(11, 23, 40, 0.92);
+  --orb-surface-hover: rgba(255, 255, 255, 0.06);
+  --orb-sidebar-width: 272px;
+  --orb-composer-max: 53.125rem;
+  --orb-chat-column-max: 56.25rem;
 }
 
 * {
@@ -200,10 +225,10 @@ textarea:focus-visible {
 }
 .orb-standalone-atmosphere {
   background:
-    radial-gradient(circle at 50% 8%, rgba(var(--orb-hue-a, 34, 211, 238), 0.2), transparent 31%),
-    radial-gradient(circle at 16% 78%, rgba(var(--orb-hue-b, 168, 85, 247), 0.16), transparent 30%),
-    radial-gradient(circle at 86% 74%, rgba(var(--orb-warm, 251, 146, 60), 0.1), transparent 26%),
-    linear-gradient(180deg, #02040c, #070b18 48%, #0d1022);
+    radial-gradient(circle at 50% 8%, rgba(var(--orb-hue-a, 76, 201, 240), 0.14), transparent 34%),
+    radial-gradient(circle at 16% 78%, rgba(var(--orb-hue-b, 96, 165, 250), 0.1), transparent 32%),
+    radial-gradient(circle at 86% 74%, rgba(var(--orb-warm, 251, 146, 60), 0.06), transparent 28%),
+    linear-gradient(180deg, var(--orb-bg-deep) 0%, var(--orb-bg-mid) 48%, var(--orb-bg-soft) 100%);
   isolation: isolate;
 }
 
@@ -872,11 +897,8 @@ textarea:focus-visible {
 
 .orb-cinematic-scene,
 .orb-chat-layout {
-  background:
-    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(56, 189, 248, 0.18), transparent 55%),
-    radial-gradient(ellipse 60% 40% at 8% 92%, rgba(129, 140, 248, 0.14), transparent 50%),
-    radial-gradient(ellipse 50% 35% at 92% 85%, rgba(251, 191, 36, 0.08), transparent 48%),
-    linear-gradient(165deg, #02040a 0%, #061018 42%, #0a0618 100%);
+  background: transparent;
+  color: var(--orb-foreground);
 }
 
 .orb-chat-layout {
@@ -1392,4 +1414,213 @@ textarea:focus-visible {
   border-color: rgba(255, 255, 255, 0.06);
   box-shadow: none;
   background: linear-gradient(180deg, rgba(15, 23, 42, 0.92), rgba(2, 6, 23, 0.96));
+}
+
+/* —— Premium ORB ambient cognition engine —— */
+.orb-ambient-cognition__base {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 90% 55% at 50% -8%, var(--orb-glow-cyan), transparent 52%),
+    radial-gradient(ellipse 45% 40% at 8% 88%, var(--orb-glow-sky), transparent 48%),
+    linear-gradient(165deg, var(--orb-bg-deep) 0%, var(--orb-bg-mid) 45%, var(--orb-bg-soft) 100%);
+  opacity: 1;
+}
+
+.orb-ambient-cognition__edge-hue {
+  position: absolute;
+  inset: 0;
+  opacity: 0.42;
+  background:
+    linear-gradient(90deg, rgba(96, 165, 250, 0.08), transparent 14%, transparent 86%, rgba(76, 201, 240, 0.08)),
+    linear-gradient(180deg, rgba(76, 201, 240, 0.1), transparent 22%, transparent 78%, rgba(37, 99, 235, 0.08));
+  animation: orb-ambient-edge-breathe 14s ease-in-out infinite;
+}
+
+.orb-ambient-cognition__glow {
+  position: absolute;
+  inset: -5%;
+  filter: blur(48px);
+  opacity: 0.35;
+  background: radial-gradient(circle at 50% 40%, var(--orb-glow-cyan), transparent 55%);
+  animation: orb-ambient-glow-drift 22s ease-in-out infinite;
+}
+
+.orb-ambient-cognition__breathe {
+  position: absolute;
+  inset: 0;
+  opacity: 0.2;
+  background: radial-gradient(circle at 50% 50%, rgba(96, 165, 250, 0.12), transparent 62%);
+  animation: orb-ambient-breathe 8s ease-in-out infinite;
+}
+
+[data-orb-cognition-state='thinking'] .orb-ambient-cognition__glow,
+[data-orb-cognition-state='analysing'] .orb-ambient-cognition__glow {
+  opacity: 0.52;
+  animation-duration: 10s;
+}
+
+[data-orb-cognition-state='streaming'] .orb-ambient-cognition__edge-hue,
+[data-orb-cognition-state='reflecting'] .orb-ambient-cognition__edge-hue {
+  opacity: 0.58;
+  animation-duration: 6s;
+}
+
+[data-orb-cognition-state='safeguarding'] .orb-ambient-cognition__glow {
+  background: radial-gradient(circle at 50% 30%, rgba(251, 113, 133, 0.12), transparent 55%);
+}
+
+@keyframes orb-ambient-edge-breathe {
+  0%, 100% { opacity: 0.32; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes orb-ambient-glow-drift {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(1.5%, -1%, 0) scale(1.04); }
+}
+
+@keyframes orb-ambient-breathe {
+  0%, 100% { opacity: 0.16; transform: scale(0.98); }
+  50% { opacity: 0.28; transform: scale(1.02); }
+}
+
+.orb-ambient-cognition--still .orb-ambient-cognition__edge-hue,
+.orb-ambient-cognition--still .orb-ambient-cognition__glow,
+.orb-ambient-cognition--still .orb-ambient-cognition__breathe {
+  animation: none !important;
+}
+
+/* Sidebar — ChatGPT-style memory workspace */
+.orb-chat-sidebar {
+  background: var(--orb-surface-elevated);
+  border-color: var(--orb-line);
+  backdrop-filter: blur(20px) saturate(1.05);
+}
+
+.orb-sidebar-group {
+  margin: 0.25rem 0.5rem;
+  padding: 0.25rem 0;
+  border-radius: 0.75rem;
+}
+
+.orb-sidebar-cognition-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  border-radius: 999px;
+  border: 1px solid var(--orb-line);
+  background: var(--orb-surface);
+  padding: 0.25rem 0.625rem;
+  font-size: 0.625rem;
+  font-weight: 600;
+  color: var(--orb-accent);
+}
+
+.orb-sidebar-cognition-pill::before {
+  content: '';
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 999px;
+  background: var(--orb-primary-cyan);
+  box-shadow: 0 0 8px var(--orb-glow-cyan);
+  animation: orb-ambient-breathe 3s ease-in-out infinite;
+}
+
+.orb-adult-profile-card {
+  margin: 0.5rem;
+  padding: 0.75rem;
+  border-radius: 1rem;
+  border: 1px solid var(--orb-line);
+  background: var(--orb-surface);
+  backdrop-filter: blur(12px);
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.orb-adult-profile-card:hover {
+  border-color: rgba(96, 165, 250, 0.22);
+  background: var(--orb-surface-hover);
+}
+
+/* Premium glass composer */
+.orb-composer-glass {
+  border-radius: 1.75rem;
+  border: 1px solid var(--orb-line);
+  background: rgba(11, 23, 40, 0.72);
+  backdrop-filter: blur(24px) saturate(1.12);
+  box-shadow:
+    0 8px 32px rgba(7, 17, 31, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  transition:
+    border-color 0.25s ease,
+    box-shadow 0.35s ease,
+    transform 0.25s ease;
+}
+
+.orb-composer-glass:focus-within {
+  border-color: rgba(96, 165, 250, 0.35);
+  box-shadow:
+    0 0 0 1px rgba(76, 201, 240, 0.12),
+    0 12px 48px var(--orb-glow-sky),
+    0 0 64px var(--orb-glow-cyan);
+}
+
+.orb-profile-input {
+  border-radius: 0.75rem;
+  border: 1px solid var(--orb-line);
+  background: var(--orb-surface);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  color: var(--orb-foreground);
+  outline: none;
+}
+
+.orb-profile-input:focus {
+  border-color: rgba(96, 165, 250, 0.4);
+}
+
+.orb-citation-card {
+  animation: orb-explainability-fade 0.28s ease-out;
+}
+
+.orb-message-assistant .orb-message-content {
+  font-size: 0.9375rem;
+  line-height: 1.75;
+  letter-spacing: 0.01em;
+}
+
+.orb-message-assistant .orb-message-content strong {
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.orb-message-user .orb-message-bubble {
+  border-radius: 1.25rem 1.25rem 0.375rem 1.25rem;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.35), rgba(29, 78, 216, 0.28));
+  border: 1px solid rgba(96, 165, 250, 0.2);
+  padding: 0.875rem 1.125rem;
+  line-height: 1.65;
+}
+
+[data-orb-theme='light'] .orb-chat-layout {
+  --orb-foreground: #0f172a;
+  --orb-muted: #64748b;
+  --orb-bg-deep: #f8fafc;
+  --orb-bg-mid: #f4f7fb;
+  --orb-bg-soft: #eef4ff;
+  --orb-surface-elevated: rgba(255, 255, 255, 0.92);
+  --orb-surface: rgba(255, 255, 255, 0.8);
+  --orb-line: rgba(15, 23, 42, 0.08);
+  --orb-on-accent: #ffffff;
+}
+
+[data-orb-theme='light'] .orb-ambient-cognition__base {
+  background:
+    radial-gradient(ellipse 90% 55% at 50% -8%, rgba(76, 201, 240, 0.12), transparent 52%),
+    linear-gradient(165deg, #f8fafc 0%, #f4f7fb 45%, #eef4ff 100%);
+}
+
+[data-orb-theme='light'] .orb-composer-glass {
+  background: rgba(255, 255, 255, 0.88);
+  color: #0f172a;
 }

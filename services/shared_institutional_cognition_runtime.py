@@ -56,6 +56,10 @@ class SharedInstitutionalCognitionRuntime:
                 "data_boundary": boundary["summary"],
                 "depth_topic": depth_frame.get("topic") if depth_frame else None,
                 "reasoning_lenses": depth_frame.get("required_lenses", []) if depth_frame else [],
+                "cognition_mode": mode or "Ask ORB",
+                "safeguarding_boundaries": list(boundary.get("safeguarding_boundaries", []))
+                if isinstance(boundary.get("safeguarding_boundaries"), list)
+                else [],
             },
         }
 
@@ -120,6 +124,22 @@ class SharedInstitutionalCognitionRuntime:
             brains.append("recording_quality_cognition")
         if any(term in text or term in mode_text for term in ("manager", "oversight", "audit", "reg 44", "reg 45", "leadership")):
             brains.append("governance_cognition")
+        if any(
+            term in text
+            for term in (
+                "pattern",
+                "repeated",
+                "again",
+                "escalat",
+                "chronology",
+                "timeline",
+                "over time",
+                "history of",
+                "drift",
+                "theme",
+            )
+        ):
+            brains.append("chronology_cognition")
         return list(dict.fromkeys(brains))
 
     def _merge_depth_brains(self, *, active_brains: list[str], depth_frame: dict[str, Any]) -> list[str]:
@@ -140,6 +160,9 @@ class SharedInstitutionalCognitionRuntime:
             "therapeutic": ["therapeutic_reflective_cognition", "emotional_climate"],
             "leadership": ["governance_cognition", "provider_cognition", "regulatory_cognition"],
             "workforce": ["workforce_cognition", "governance_cognition", "emotional_climate"],
+            "missing": ["chronology_cognition", "safeguarding_cognition"],
+            "restraint": ["chronology_cognition", "recording_quality_cognition"],
+            "general residential": ["chronology_cognition"],
         }
         for key, additions in topic_map.items():
             if key in topic:
@@ -159,12 +182,26 @@ class SharedInstitutionalCognitionRuntime:
             "- Give a direct useful answer first.",
             "- Use calm British English and child-centred professional wording.",
             "- Explain uncertainty and do not overstate confidence.",
+            "- Apply professional curiosity: ask what may be missing, what an inspector or DSL might explore, "
+            "what patterns matter, what oversight is needed, what emotional meaning exists, and what evidence "
+            "would strengthen confidence — without making threshold decisions.",
         ]
         if depth_frame:
             requirements.extend(
                 [
                     "- Apply the institutional depth frame rather than giving a generic summary.",
                     "- Show practical professional reasoning, not just definitions.",
+                    "- For high-attention topics, structure the answer through: practical meaning; safeguarding thinking; "
+                    "recording expectations; leadership/oversight; therapeutic/emotional meaning; inspection lens; "
+                    "professional boundary — only where relevant, not as empty headings.",
+                ]
+            )
+        if "chronology_cognition" in active_brains:
+            requirements.extend(
+                [
+                    "- Think longitudinally where relevant: patterns, escalation, repeated themes, emotional drift, "
+                    "placement instability, relationship changes, staff culture and repeated oversight gaps.",
+                    "- Be story-aware without inventing facts the user has not provided.",
                 ]
             )
         if "regulatory_cognition" in active_brains:
