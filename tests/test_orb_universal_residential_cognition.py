@@ -247,3 +247,47 @@ def test_shared_runtime_includes_auto_routing_metadata():
     assert context.get("cognition_display_labels")
     assert context.get("routing")
     assert context.get("knowledge_grounding")
+
+
+def test_medication_depth_prompt_block_covers_rm_incident_layers():
+    block = orb_institutional_depth_frame_service.prompt_block(message=MEDICATION_PROMPT)
+    lower = block.lower()
+    assert "immediate safety" in lower
+    assert "mar" in lower
+    assert "handover" in lower
+    assert "pharmacy" in lower or "111" in lower
+    assert "professional boundary" in lower
+
+
+def test_missing_depth_prompt_block_covers_return_and_patterns():
+    block = orb_institutional_depth_frame_service.prompt_block(message=MISSING_PROMPT)
+    lower = block.lower()
+    assert "return conversation" in lower
+    assert "push" in lower and "pull" in lower
+    assert "unknown adult" in lower
+    assert "ofsted" in lower
+
+
+def test_therapeutic_depth_prompt_block_covers_repair_and_recording():
+    block = orb_institutional_depth_frame_service.prompt_block(message=THERAPEUTIC_PROMPT)
+    lower = block.lower()
+    assert "co-regulat" in lower
+    assert "without blame" in lower
+    assert "attachment" in lower or "rejection" in lower
+
+
+def test_grounded_style_medication_depth_block_present():
+    block = orb_grounded_answer_style_service.prompt_block(message=MEDICATION_PROMPT, mode="Ask ORB")
+    lower = block.lower()
+    assert "registered-manager" in lower or "registered manager" in lower
+    assert "nhs 111" in lower or "111" in lower
+    assert "backfill" in lower
+
+
+def test_exploitation_and_self_harm_frames_available():
+    exploit = orb_institutional_depth_frame_service.build_frame(
+        message="We are worried about county lines and unknown adults near the home"
+    )
+    assert "exploitation" in exploit.get("topic", "").lower()
+    harm = orb_institutional_depth_frame_service.build_frame(message="The young person self-harmed last night")
+    assert "self-harm" in harm.get("topic", "").lower() or "self" in harm.get("topic", "").lower()

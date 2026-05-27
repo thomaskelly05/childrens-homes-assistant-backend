@@ -241,13 +241,20 @@ def _resolve_detail(mode: str, requested: str | None) -> str:
     return "concise"
 
 
-def _build_framed_message(*, mode: str, user_message: str, detail: str) -> str:
+def _build_framed_message(
+    *,
+    mode: str,
+    user_message: str,
+    detail: str,
+    history: list[dict] | None = None,
+) -> str:
     resolved_mode = orb_standalone_brain_service.normalise_mode(mode)
     brain_block = orb_standalone_brain_service.build_prompt_block(user_message, mode=resolved_mode)
     shared_runtime_block = shared_institutional_cognition_runtime.prompt_addendum(
         surface="standalone_orb",
         message=user_message,
         mode=resolved_mode,
+        history=history,
     )
     mode_hint = MODE_BEHAVIOUR.get(resolved_mode) or MODE_BEHAVIOUR.get(mode, "")
     detail_hint = ""
@@ -458,14 +465,20 @@ async def standalone_orb_conversation(
 ):
     mode = orb_standalone_brain_service.normalise_mode(payload.mode or "Ask ORB")
     detail = _resolve_detail(mode, payload.detail)
+    history = payload.history[-20:] if payload.history else []
     shared_cognition = shared_institutional_cognition_runtime.build_context(
         surface="standalone_orb",
         message=payload.message,
         mode=mode,
+        history=history,
     )
     standalone_brain = orb_standalone_brain_service.context_payload(payload.message, mode=mode)
-    framed_message = _build_framed_message(mode=mode, user_message=payload.message, detail=detail)
-    history = payload.history[-20:] if payload.history else []
+    framed_message = _build_framed_message(
+        mode=mode,
+        user_message=payload.message,
+        detail=detail,
+        history=history,
+    )
     image_urls = [
         item.data_url
         for item in (payload.images or [])

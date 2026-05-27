@@ -45,13 +45,16 @@ class OrbProfessionalCuriosityService:
             "For restraint-related notes: were necessity, proportionality, alternatives, duration, injury check and repair recorded?",
         ],
         "missing": [
-            "Immediate welfare on return: medical and emotional state, hydration, injury, distress.",
-            "Where did they go, who were they with, unknown adults, peer influence, phone/social media contact?",
-            "Transport routes, locations frequented, push factors from the home and pull factors outside?",
-            "Family/contact triggers, exploitation indicators, substance misuse, criminality or CSE concerns if relevant?",
-            "Return conversation quality, independent return interview if appropriate, police/local missing procedure?",
-            "Social worker notification, risk assessment and chronology update, plan review, repeated pattern review?",
-            "Manager oversight and Ofsted impact lens on timeliness, learning and child experience?",
+            "Immediate welfare on return: injury, intoxication, distress, clothing/weather/phone, medical attention if needed.",
+            "Police/social worker notification and local missing procedure followed?",
+            "Return conversation: where did they go, who were they with, unknown adults, how did they travel?",
+            "Phone/social media contact during absence; substances, money, gifts, sexual or criminal exploitation indicators?",
+            "Did they feel safe; what made them leave; what made them return; did they avoid someone/something in the home?",
+            "What would help them stay safe next time?",
+            "Patterns: repeated times, locations/routes, peers/adults, family/contact, school/education, staff/relationship, emotional triggers.",
+            "Push factors inside the home and pull factors outside; escalation or reduction over time; contextual safeguarding links?",
+            "Recording: chronology, missing report, return conversation, agencies informed, risk update, safety plan, child voice, manager review.",
+            "Ofsted lens: does the home understand why children go missing — learning, prevention, risk reduction, multi-agency impact?",
         ],
         "restraint": [
             "Was intervention necessary, proportionate and least restrictive?",
@@ -73,11 +76,12 @@ class OrbProfessionalCuriosityService:
             "What evidence proves children are safer because of provider action?",
         ],
         "therapeutic": [
-            "What loss, rejection, disappointment, shame or fear of being forgotten may sit underneath?",
-            "Attachment meaning: is the behaviour communicating need, protest or distress after rupture?",
-            "How did staff co-regulate, contain their own emotions, repair and protect dignity — avoid punitive framing?",
-            "What helped the young person settle; what follow-up key work or family-time planning review is needed?",
-            "Does a pattern emerge around contact changes; record factually without blame and preserve child voice?",
+            "Family time cancellation as loss, disappointment or rejection — attachment meaning and fear of being forgotten?",
+            "Shame, sadness, anger, lack of control — is behaviour communicating overwhelm (e.g. smashing a cup) not 'bad behaviour'?",
+            "How did staff stay calm, validate without condoning unsafe behaviour, co-regulate and repair after rupture?",
+            "What helped them settle; what follow-up key work or planning for future family-time changes is needed?",
+            "Does the pattern repeat around family/contact changes; how to record without blame while holding emotional meaning?",
+            "Recording: context, child's words, emotional presentation, behaviour, staff response, safety, repair, outcome, follow-up.",
         ],
         "cumulative_concern": [
             "Why does cumulative concern matter when no single event looks serious alone?",
@@ -98,12 +102,50 @@ class OrbProfessionalCuriosityService:
             "Where is impact visible for children — not only process completion?",
         ],
         "medication": [
-            "Was the medication time-critical; what is it for and what does the MAR say?",
-            "Was medical/pharmacy/GP/111 advice needed before giving a late dose — do not give clinical advice?",
-            "Was the child monitored; was the error recorded transparently with rationale?",
-            "Were parents, social worker or placing authority informed if policy requires; was the manager notified promptly?",
-            "Was there a handover failure, second-checking issue or staff competency/training concern?",
-            "Is this repeated or isolated; does the medication policy need review; what learning prevents recurrence?",
+            "What is the medication for; is it time-critical; PRN, routine, controlled, psychotropic, epilepsy, insulin, asthma, antibiotics, sleep or other high-impact?",
+            "Was pharmacy/GP/NHS 111 or emergency advice required before giving late or omitting — do not give clinical treatment advice?",
+            "Was the child monitored after the error; any symptoms, distress, anxiety or impact; was emergency advice needed?",
+            "MAR entry transparent and not misleadingly backfilled — due time, actual time, missed/given late/omitted, advice sought and who gave it?",
+            "Manager notified; child's presentation and voice recorded; parent/social worker/placing authority informed if policy requires?",
+            "Handover failure, missed double-checking, unclear outgoing/incoming responsibility, environmental distraction?",
+            "Staff trained/competent; isolated or repeated; medication policy/handover process change; supervision/training/action?",
+            "Review afterwards: medication audit, MAR audit, handover system, competency, repeated errors, provider learning, Reg 12/13 evidence?",
+        ],
+        "self_harm": [
+            "Immediate safety: means removed, supervision level, medical assessment if injury, emotional state and triggers?",
+            "What happened before; who was present; what de-escalation or co-regulation was attempted?",
+            "Child's words and presentation; shame, hopelessness, protest, trauma response or communication of distress?",
+            "Risk assessment, safety plan, CAMHS/GP notification, social worker and parent/placing authority if required?",
+            "Pattern over time, online/social factors, placement stress, contact impact, staff consistency?",
+            "Recording without blame or sensationalism; manager review, learning and plan update?",
+        ],
+        "exploitation": [
+            "Contextual safeguarding: locations, peers, unknown adults, gifts, money, transport, hotels, stations, online contact?",
+            "Push/pull factors; fear, secrecy, loyalty, debt, coercion indicators — without concluding exploitation?",
+            "Missing episodes, substance use, criminal activity, sexualised behaviour or new phones linked?",
+            "Multi-agency: social worker, police, MACE/contextual safeguarding routes where indicated?",
+            "Child voice and trusted adult; safety plan and risk assessment update?",
+            "Manager/RI oversight, chronology pattern review and provider learning?",
+        ],
+        "behaviour_support": [
+            "Behaviour as communication — unmet need, trauma trigger, sensory overload, relationship rupture?",
+            "Antecedent, presentation, adult response, de-escalation, alternatives before any restrictive practice?",
+            "BSP/PBS plan alignment; what works; what escalates; repair and relational follow-up?",
+            "Pattern across shifts, staff, locations; normalisation or drift in expectations?",
+            "Recording: facts, child voice, staff rationale, outcome, plan review date?",
+        ],
+        "family_time": [
+            "Purpose of contact; child's wishes; preparation and emotional readiness?",
+            "During contact: regulation, joy, conflict, boundary issues, safeguarding concerns?",
+            "After contact: presentation, repair needs, co-regulation, impact on placement stability?",
+            "Cancellation/disappointment: attachment meaning, recording without blame, plan for next contact?",
+            "Multi-agency and advocate involvement where relevant?",
+        ],
+        "staff_culture": [
+            "What behaviours are normalised in the team — minimisation, blame, humour at children's expense, silence?",
+            "How do leaders model curiosity, challenge and emotional safety for staff?",
+            "Supervision quality, whistleblowing confidence, fairness when concerns arise?",
+            "Impact on child experience, restraint culture, recording honesty and safeguarding responsiveness?",
         ],
         "complaints": [
             "How was the child or complainant heard and kept informed?",
@@ -145,6 +187,11 @@ class OrbProfessionalCuriosityService:
             "complaints",
             "supervision",
             "education_health",
+            "self_harm",
+            "exploitation",
+            "behaviour_support",
+            "family_time",
+            "staff_culture",
         }
     )
 
@@ -191,9 +238,30 @@ class OrbProfessionalCuriosityService:
             return "leadership"
         if any(term in text for term in ("family time cancelled", "smashed cup", "therapeutic", "therapeutically", "dysregulated", "behaviour as communication")):
             return "therapeutic"
+        if any(term in text for term in ("self-harm", "self harm", "self harmed", "suicidal", "cutting", "overdose")):
+            return "self_harm"
+        if any(
+            term in text
+            for term in (
+                "exploitation",
+                "cse",
+                "cce",
+                "county lines",
+                "contextual safeguarding",
+                "unknown adult",
+                "criminal exploitation",
+            )
+        ):
+            return "exploitation"
+        if any(term in text for term in ("behaviour support", "pbs", "behaviour plan", "bsp", "positive behaviour")):
+            return "behaviour_support"
+        if any(term in text for term in ("family time", "contact session", "contact cancelled", "family contact")) and "therapeutic" not in text:
+            return "family_time"
+        if any(term in text for term in ("staff culture", "team culture", "normalised", "minimising culture", "toxic team")):
+            return "staff_culture"
         if any(term in text or term in mode_text for term in ("ofsted", "sccif", "inspection", "reg 44", "reg 45")):
             return "inspection"
-        if any(term in text for term in ("safeguard", "self-harm", "self harm", "exploitation", "radicalisation", "online safety")):
+        if any(term in text for term in ("safeguard", "radicalisation", "online safety")) and "exploitation" not in text:
             return "allegations"
         return None
 
