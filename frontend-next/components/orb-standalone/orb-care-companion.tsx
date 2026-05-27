@@ -489,7 +489,7 @@ export function OrbCareCompanion() {
     async (text: string, options?: { retry?: boolean; chatId?: string }) => {
       const trimmed = text.trim()
       const hasImages = attachments.length > 0
-      if ((!trimmed && !hasImages) || pending || sendInFlightRef.current || submitGuardRef.current) return
+      if ((!trimmed && !hasImages) || pending || sendInFlightRef.current) return
       if (!csrfReady) {
         setError(STANDALONE_ORB_CSRF_REFRESH_MESSAGE)
         setLastSendStatus('error')
@@ -643,6 +643,7 @@ export function OrbCareCompanion() {
         voiceSettings.answerStyle !== 'balanced' ? `${messageBody}\n\nAnswer style: ${styleLabel}.` : messageBody
 
       try {
+        console.info('[orb-send] request started')
         if (options?.retry) {
           await refreshSession()
         }
@@ -657,6 +658,7 @@ export function OrbCareCompanion() {
           document_source_id: pendingDocument?.sourceId || undefined,
           document_title: pendingDocument?.title
         })
+        console.info('[orb-send] response received')
 
         const newConversationId = response.conversation_id || sessionConversationId
         const answer = (response.answer || '').trim() || STANDALONE_ORB_EMPTY_ANSWER_MESSAGE
@@ -758,6 +760,12 @@ export function OrbCareCompanion() {
         }
       } catch (caught) {
         const parsed = parseStandaloneOrbSendError(caught)
+        console.warn('[orb-send] failed', {
+          message: parsed.message,
+          status: parsed.status,
+          detail: parsed.detail,
+          csrfFailed: parsed.csrfFailed
+        })
         if (parsed.csrfFailed) {
           void refreshSession()
         }
@@ -809,6 +817,14 @@ export function OrbCareCompanion() {
       }
 
       const finalText = message.trim()
+      const activeAgentForLog = agentForMode(mode)
+
+      console.info('[orb-send] submit', {
+        hasText: Boolean(finalText),
+        pending,
+        activeAgent: activeAgentForLog?.id ?? null,
+        mode
+      })
 
       if (!finalText && attachments.length === 0) {
         setError('Type a message to send.')
@@ -827,6 +843,7 @@ export function OrbCareCompanion() {
       attachments.length,
       csrfReady,
       message,
+      mode,
       pending,
       refreshSession,
       sendMessage

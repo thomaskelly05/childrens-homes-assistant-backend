@@ -269,9 +269,11 @@ export function OrbStandaloneComposer({
                 onCompositionEnd={(event) => syncMessage(event.currentTarget.value)}
                 onPaste={onPaste}
                 onKeyDown={(event) => {
-                  if (event.key === 'Enter' && !event.shiftKey) {
-                    event.preventDefault()
-                    void onSubmit()
+                  if (event.key !== 'Enter' || event.shiftKey) return
+                  event.preventDefault()
+                  const form = event.currentTarget.form
+                  if (form && !sendDisabled) {
+                    form.requestSubmit()
                   }
                 }}
                 rows={1}
