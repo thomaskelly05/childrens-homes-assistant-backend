@@ -225,20 +225,21 @@ function labelsFromBrains(activeBrains: string[] | undefined, topicLabels: strin
 export function inferResidentialCognitionLabels(messageHint?: string): string[] | null {
   const text = (messageHint || '').trim().toLowerCase()
   if (!text) return null
-  if (/\b(medication|mar\b|dose|pharmacy|missed)\b/.test(text)) {
+  if (/\b(medication|mar\b|dose|pharmacy|missed)\b/.test(text) && !/\b(three allegations|four restraint|same staff)\b/.test(text)) {
     return ['Medication / health', 'Recording quality', 'Leadership oversight']
+  }
+  if (
+    /\b(three allegations|two missing|four restraint|not right|pattern|cumulative|same staff)\b/.test(text) ||
+    (/\ballegation/.test(text) && /\brestraint/.test(text) && /\bmissing/.test(text)) ||
+    (/\ballegation/.test(text) && /\brestraint/.test(text) && /\bsame staff\b/.test(text))
+  ) {
+    return ['Safeguarding', 'Professional curiosity', 'Leadership oversight', 'Ofsted evidence']
   }
   if (/\b(missing|abscond|run away|overnight)\b/.test(text)) {
     return ['Missing from home', 'Safeguarding', 'Recording quality', 'Ofsted evidence']
   }
   if (/\b(family time|therapeutic|smashed|cup|reframe|behaviour meaning)\b/.test(text)) {
     return ['Therapeutic reflection', 'Recording quality', 'Child experience']
-  }
-  if (
-    /\b(three allegations|two missing|four restraint|not right|pattern|cumulative)\b/.test(text) ||
-    (/\ballegation/.test(text) && /\bmissing/.test(text))
-  ) {
-    return ['Safeguarding', 'Professional curiosity', 'Leadership oversight', 'Ofsted evidence']
   }
   if (/\b(rewrite|rough note|sign off|record properly)\b/.test(text)) {
     return ['Recording quality', 'Therapeutic reflection']

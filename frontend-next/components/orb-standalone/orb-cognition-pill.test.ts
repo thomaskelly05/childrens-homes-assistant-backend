@@ -51,6 +51,15 @@ describe('cognitionPillLabel', () => {
     assert.equal(label, 'Medication / health · Recording quality · Leadership oversight')
   })
 
+  it('renders cumulative concern inferred labels before missing-only routing', () => {
+    const prompt =
+      'A young person has made three allegations in two months, two missing episodes, and there have been four restraints involving the same staff member'
+    assert.equal(
+      cognitionPillLabel('Ask ORB', {}, prompt),
+      'Safeguarding · Professional curiosity · Leadership oversight · Ofsted evidence'
+    )
+  })
+
   it('renders missing and therapeutic inferred labels', () => {
     assert.equal(
       cognitionPillLabel('Ask ORB', {}, 'A young person went missing overnight'),

@@ -269,6 +269,7 @@ class OrbStandaloneBrainService:
             "Sound like an experienced registered manager, therapeutic lead and safeguarding-aware supervisor.",
             "Avoid generic AI phrasing, robotic disclaimers and vague safeguarding summaries.",
             "Give the user a usable answer first, then add boundaries where needed.",
+            "End with a clear professional conclusion or next step — not generic reflective coaching questions.",
             "Think about the adult on shift: what do they need to understand, do, record, escalate, reflect on or evidence?",
         ]
         if "safeguarding_brain" in brains:
@@ -369,10 +370,14 @@ class OrbStandaloneBrainService:
     def _reflective_questions(self, brains: list[str], route: str, text: str, mode: str) -> list[str]:
         if route == "general_knowledge":
             return ["Would a concise answer, step-by-step explanation or draft be most useful?"]
+        from services.orb_professional_curiosity_service import orb_professional_curiosity_service
+
+        topic = orb_professional_curiosity_service.detect_topic(text, mode=mode)
+        if topic in orb_professional_curiosity_service.HIGH_ATTENTION_TOPICS:
+            return self._dedupe(orb_professional_curiosity_service.lenses_for(text, mode=mode)[:8])
         questions = [
-            "What might be the child's lived experience of this?",
+            "What might be missing from the account or record?",
             "What would safe, curious practice look like next?",
-            "What could an adult on shift do now that is calm, boundaried and child-centred?",
         ]
         if "professional_curiosity_brain" in brains:
             questions.extend(orb_professional_curiosity_service.lenses_for(text, mode=mode)[:8])

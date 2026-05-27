@@ -42,7 +42,7 @@ class SharedInstitutionalCognitionRuntime:
         curiosity_prompt = orb_professional_curiosity_service.prompt_block(message, mode=mode)
         guidance_prefix = None
         if surface == "standalone_orb":
-            prefix = standalone_guidance_boundary_prefix(message, history=history)
+            prefix = standalone_guidance_boundary_prefix(message, history=history, mode=mode)
             if prefix:
                 guidance_prefix = (
                     f"Standalone ORB boundary: open with '{prefix.strip()}' when answering this practice/hypothetical question. "
@@ -300,6 +300,8 @@ class SharedInstitutionalCognitionRuntime:
                     "- Medication cognition: registered-manager incident thinking — time-critical dose, MAR, health advice, monitoring, transparent recording, notifications, manager review, pattern/policy learning.",
                     "- Use markdown ## Immediate safety, ## Recording, ## Manager oversight, ## What to review afterwards, ## Professional boundary.",
                     "- Use [Reg 12] [Reg 13] [Recording quality] [Medication / health] inline; do not give clinical treatment advice.",
+                    "- Open with: 'This needs a calm safety-first response, because medication errors are both health events and governance events.' when using a standalone opener.",
+                    "- End with medication safety/MAR/handover closer — not generic coaching questions.",
                 ]
             )
         if topic == "missing":
@@ -307,6 +309,8 @@ class SharedInstitutionalCognitionRuntime:
                 [
                     "- Missing cognition: welfare on return, push/pull factors, exploitation/contextual safeguarding, routes, unknown adults, return conversation, chronology and manager/Ofsted lens.",
                     "- Use markdown ## Immediate safety, ## Return conversation, ## What to record, ## Patterns to explore, ## Manager oversight and Ofsted lens, ## Next safe steps.",
+                    "- Open with: 'The key is to understand both the immediate safety picture and why the young person went missing.' when using a standalone opener.",
+                    "- End with welfare/return/risk/chronology/manager oversight closer — not generic coaching questions.",
                 ]
             )
         if topic == "therapeutic":
@@ -314,6 +318,23 @@ class SharedInstitutionalCognitionRuntime:
                 [
                     "- Therapeutic cognition: emotional meaning, co-regulation, repair, child-centred recording — not safeguarding threshold closers unless risk is indicated.",
                     "- Use markdown ## What the behaviour may be communicating, ## How staff can respond, ## How to record it, ## What to review if this repeats.",
+                    "- Open with behaviour-as-communication framing (e.g. family-time cancellation as emotional loss) — not generic five-layer opener.",
+                    "- End with emotional meaning/recording/repair closer — never LADO/threshold/RI boundary unless safeguarding risk language is present.",
+                ]
+            )
+        if topic == "recording":
+            requirements.extend(
+                [
+                    "- Recording cognition: separate fact from interpretation; add child voice, staff response, outcome and manager review before sign-off.",
+                    "- Open with: 'The first task is to separate what happened from interpretation or judgement.' when using a standalone opener.",
+                    "- End with sign-off closer — not cumulative/LADO threshold boundary unless safeguarding risk language is present.",
+                ]
+            )
+        if topic == "leadership":
+            requirements.extend(
+                [
+                    "- Leadership cognition: evidence of impact, drift, triangulation and whether children are safer because of provider action.",
+                    "- End with RI/RM governance closer — not generic coaching questions.",
                 ]
             )
         if curiosity.get("topic") == "cumulative_concern":
@@ -322,8 +343,13 @@ class SharedInstitutionalCognitionRuntime:
                     "- This is cumulative safeguarding cognition: name convergence of allegations, missing episodes and restraints (same adult where given).",
                     "- Use the nine-part structure from the depth frame; weave [Reg 12], [Reg 13], [SCCIF], [LADO], [Working Together] and [Recording quality] inline with brief 'because' explanations.",
                     "- Include specific patterns, evidence lists, RM questions, RI questions, Ofsted lens, avoid-assuming, and immediate safe next steps.",
-                    "- Do not append a generic Sources/basis list if inline anchors already ground the answer; end with calm summary and human-led boundary — not 'would you like to explore further?'",
+                    "- Open with: 'The concern here is the convergence, not any single incident.' when using a standalone opener.",
+                    "- Do not append a generic Sources/basis list if inline anchors already ground the answer; end with cumulative safeguarding closer — not 'would you like to explore further?'",
                 ]
+            )
+        if curiosity.get("high_attention"):
+            requirements.append(
+                "- End with a clear professional conclusion or next step — never generic reflective coaching questions."
             )
         if not boundary["can_use_live_records"]:
             requirements.append("- Do not claim access to live care records or OS context.")
