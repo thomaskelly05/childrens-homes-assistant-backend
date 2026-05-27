@@ -25,7 +25,7 @@ export function OrbSmartSuggestions({
           type="button"
           disabled={disabled}
           onClick={() => onSelect(text)}
-          className="shrink-0 rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-xs font-medium text-slate-400 transition hover:border-cyan-300/20 hover:bg-cyan-400/[0.06] hover:text-slate-200 disabled:opacity-40"
+          className="shrink-0 rounded-full border border-[var(--orb-line)] bg-[var(--orb-surface)] px-3 py-1.5 text-xs font-medium text-[var(--orb-muted)] transition hover:border-[#00B8FF]/30 hover:bg-[#00B8FF]/[0.06] hover:text-[var(--orb-foreground)] disabled:opacity-40"
         >
           {text}
         </button>

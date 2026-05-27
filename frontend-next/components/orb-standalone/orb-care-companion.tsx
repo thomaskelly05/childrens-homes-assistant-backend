@@ -33,7 +33,6 @@ import {
 } from '@/components/orb-standalone/orb-assistant-message'
 import { OrbAgentPanel } from '@/components/orb-standalone/orb-agent-panel'
 import { OrbResidentialAgentsPanel } from '@/components/orb-standalone/orb-residential-agents-panel'
-import { OrbSmartSuggestions } from '@/components/orb-standalone/orb-smart-suggestions'
 import { OrbDocumentPanel } from '@/components/orb-standalone/orb-document-panel'
 import { OrbSavedOutputsPanel } from '@/components/orb-standalone/orb-saved-outputs-panel'
 import { OrbKnowledgeLibraryPanel } from '@/components/orb-standalone/orb-knowledge-library'
@@ -50,7 +49,7 @@ import {
 import { OrbAmbientCognition, type OrbCognitionAmbientState } from '@/components/orb-standalone/orb-ambient-cognition'
 import { OrbAdultProfileDrawer } from '@/components/orb-standalone/orb-adult-profile-drawer'
 import { OrbStandaloneSidebar } from '@/components/orb-standalone/orb-standalone-sidebar'
-import { OrbHueLogo, OrbPoweredByIndicare } from '@/components/orb-standalone/orb-hue-logo'
+import { OrbHueLogo, OrbHueMark, OrbPoweredByIndicare } from '@/components/orb-standalone/orb-hue-logo'
 import { useOrbAppearance } from '@/components/orb-standalone/use-orb-appearance'
 import { ORB_LIGHT_UI_BUILD } from '@/lib/orb/orb-light-ui-build'
 import {
@@ -1238,6 +1237,8 @@ export function OrbCareCompanion() {
 
   const modeSafety = MODE_SAFETY[mode]
   const activeAgent = agentForMode(mode)
+  const isAnswering =
+    pending || visibleMessages.some((m) => m.status === 'streaming' || m.status === 'thinking')
 
   const composer = (
     <OrbStandaloneComposer
@@ -1292,10 +1293,10 @@ export function OrbCareCompanion() {
       }}
       onAddDocumentToLibrary={() => openKnowledgeLibrary()}
       onToolsClick={openToolsPanel}
-      suggestions={suggestionsForMode(mode)}
+      suggestions={showEmptyState ? undefined : suggestionsForMode(mode)}
       agentLabel={activeAgent?.title ?? 'Ask ORB'}
       onAgentSelectorClick={() => setAgentsPanelOpen(true)}
-      answering={pending || visibleMessages.some((m) => m.status === 'streaming' || m.status === 'thinking')}
+      answering={isAnswering}
     />
   )
 
@@ -1313,7 +1314,7 @@ export function OrbCareCompanion() {
 
   return (
     <main
-      className={`orb-chat-layout relative flex flex-col overflow-hidden ${layoutA11yClass} ${atmosphereClass} ${themeClass}`}
+      className={`orb-chat-layout relative flex flex-col overflow-hidden ${layoutA11yClass} ${atmosphereClass} ${themeClass} ${isAnswering ? 'orb-response-active' : ''}`}
       data-orb-theme={resolvedTheme}
       data-orb-light-ui-build={ORB_LIGHT_UI_BUILD}
       data-orb-appearance-mode={appearanceMode}
@@ -1509,7 +1510,7 @@ export function OrbCareCompanion() {
         </aside>
 
         <div className="orb-chat-main flex min-h-0 min-w-0 flex-1 flex-col">
-          <header className="orb-chat-header relative z-10 flex shrink-0 items-center gap-2 border-b border-[var(--orb-line)] px-3 py-2 md:px-5">
+          <header className="orb-chat-header relative z-10 flex shrink-0 items-center gap-2 border-b border-[var(--orb-line)] bg-[var(--orb-bg-deep)]/90 px-3 py-2.5 backdrop-blur-sm md:px-5">
             <button type="button" className="rounded-lg p-2 text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)] lg:hidden" onClick={() => setSidebarOpen(true)} aria-label="Open sidebar">
               <Menu className="h-5 w-5" />
             </button>
@@ -1517,8 +1518,8 @@ export function OrbCareCompanion() {
               <h1 className="truncate text-sm font-semibold text-[var(--orb-foreground)] md:text-base" data-orb-header-title>
                 {activeChat?.title || 'ORB'}
               </h1>
-              <p className="truncate text-xs text-[var(--orb-muted)]" data-orb-header-subtitle>
-                <span className="orb-electric-text">Powered by IndiCare</span>
+              <p className="truncate text-[10px] text-[var(--orb-muted)]" data-orb-header-subtitle>
+                <span className="orb-electric-text text-[10px]">Powered by IndiCare</span>
               </p>
             </div>
             <span
@@ -1527,38 +1528,53 @@ export function OrbCareCompanion() {
             >
               No OS records accessed
             </span>
-            <div className="flex shrink-0 gap-0.5">
+            <div className="flex shrink-0 items-center gap-0.5">
               <button
                 type="button"
                 onClick={openToolsPanel}
-                className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)] hover:text-[#00B8FF]"
+                className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[#00B8FF]"
                 aria-label="IndiCare Tools"
                 data-orb-header-tools
               >
-                <Wrench className="h-4 w-4" />
-                <span className="hidden sm:inline">Tools</span>
+                <Wrench className="h-4 w-4 shrink-0" />
+                <span className="hidden md:inline">Tools</span>
               </button>
               <button
                 type="button"
                 onClick={openSettingsPanel}
-                className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]"
+                className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]"
                 aria-label="Settings"
                 data-orb-header-settings
               >
-                <Settings2 className="h-4 w-4" />
-                <span className="hidden sm:inline">Settings</span>
+                <Settings2 className="h-4 w-4 shrink-0" />
+                <span className="hidden md:inline">Settings</span>
               </button>
               <button
                 type="button"
-                onClick={() => setProfilePickerOpen((o) => !o)}
-                className="hidden rounded-lg px-2 py-1.5 text-xs font-medium text-slate-500 hover:bg-white/[0.06] hover:text-slate-300 sm:inline-flex"
+                onClick={() => {
+                  setProfileDrawerOpen(true)
+                  setSidebarOpen(false)
+                }}
+                className="hidden rounded-lg px-2 py-1.5 text-xs font-medium text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)] md:inline-flex"
+                aria-label="Profile"
               >
-                Profiles
+                Profile
               </button>
-              <button type="button" onClick={() => void exportConversation()} disabled={visibleMessages.length === 0} className="hidden rounded-lg p-2 text-slate-500 hover:bg-white/[0.06] hover:text-slate-300 disabled:opacity-40 sm:inline-flex" aria-label="Copy chat">
+              <button
+                type="button"
+                onClick={() => void exportConversation()}
+                disabled={visibleMessages.length === 0}
+                className="rounded-lg p-2 text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)] disabled:opacity-40"
+                aria-label="Copy chat"
+              >
                 <Copy className="h-4 w-4" />
               </button>
-              <button type="button" onClick={() => startNewChat()} className="hidden rounded-lg p-2 text-slate-500 hover:bg-white/[0.06] hover:text-slate-300 sm:inline-flex" aria-label="New chat">
+              <button
+                type="button"
+                onClick={() => startNewChat()}
+                className="rounded-lg p-2 text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]"
+                aria-label="New chat"
+              >
                 <MessageSquarePlus className="h-4 w-4" />
               </button>
             </div>
@@ -1632,23 +1648,22 @@ export function OrbCareCompanion() {
               <div className="mx-auto w-full max-w-[var(--orb-chat-column-max,52.5rem)]">
                 {showEmptyState ? (
                   <div
-                    className="flex min-h-[min(60vh,28rem)] flex-col items-center justify-center py-6 text-center md:py-8"
+                    className="flex min-h-[min(56vh,26rem)] flex-col items-center justify-center py-4 text-center md:py-6"
                     data-orb-empty-state
                   >
                     <div data-orb-brand-name>
-                      <OrbHueLogo size="lg" pulse={pending} />
+                      <OrbHueLogo size="lg" pulse={isAnswering} />
                     </div>
-                    <div className="mt-2" data-orb-brand-powered>
+                    <div className="mt-1.5" data-orb-brand-powered>
                       <OrbPoweredByIndicare />
                     </div>
-                    <h2 className="mt-6 text-xl font-semibold tracking-tight text-[var(--orb-foreground)] md:text-2xl" data-orb-empty-heading>
+                    <h2 className="mt-5 text-xl font-semibold tracking-tight text-[var(--orb-foreground)] md:text-2xl" data-orb-empty-heading>
                       How can I help?
                     </h2>
-                    <p className="mt-2 max-w-md text-sm text-[var(--orb-muted)]" data-orb-empty-subline>
-                      Ask anything, or open a residential agent for safeguarding, Ofsted, recording, therapeutic practice or
-                      leadership support.
+                    <p className="mt-1.5 max-w-md text-sm leading-6 text-[var(--orb-muted)]" data-orb-empty-subline>
+                      Choose a starter below, pick a residential agent, or type in the composer.
                     </p>
-                    <div className="mt-8 grid w-full max-w-xl gap-2.5 sm:grid-cols-2" data-orb-starter-cards>
+                    <div className="mt-6 grid w-full max-w-xl gap-2 sm:grid-cols-2" data-orb-starter-cards>
                       {PRIMARY_EMPTY_STARTERS.map((starter) => (
                         <button
                           key={starter.text}
@@ -1664,7 +1679,7 @@ export function OrbCareCompanion() {
                     <button
                       type="button"
                       onClick={() => setPromptDrawerOpen(true)}
-                      className="mt-4 text-xs font-medium text-[var(--orb-muted)] underline-offset-4 hover:text-[var(--orb-foreground)] hover:underline"
+                      className="mt-3 text-xs font-medium text-[var(--orb-muted)] underline-offset-4 transition hover:text-[var(--orb-foreground)] hover:underline"
                       data-orb-more-examples
                     >
                       More examples
@@ -1682,12 +1697,17 @@ export function OrbCareCompanion() {
                         {entry.role === 'assistant' ? (
                           entry.status === 'thinking' ? (
                             <article
-                              className="orb-message-assistant"
+                              className="orb-message-assistant flex gap-3"
                               data-testid="orb-message-thinking"
                               aria-live="polite"
                             >
-                              <p className="mb-2 text-xs font-medium text-slate-500">ORB</p>
-                              <p className="text-sm text-slate-400">{entry.thinkingLabel || ORB_THINKING_LABEL}</p>
+                              <OrbHueMark pulse />
+                              <div className="min-w-0 flex-1">
+                                <p className="mb-1 text-xs font-medium text-[var(--orb-muted)]">ORB</p>
+                                <p className="text-sm text-[var(--orb-muted)] orb-streaming-pulse">
+                                  {entry.thinkingLabel || ORB_THINKING_LABEL}
+                                </p>
+                              </div>
                             </article>
                           ) : entry.status === 'error' ? (
                             <article
@@ -1850,14 +1870,6 @@ export function OrbCareCompanion() {
               </div>
             </div>
 
-            <OrbSmartSuggestions
-              mode={mode}
-              disabled={pending}
-              onSelect={(text) => {
-                setMessage(text)
-                inputRef.current?.focus()
-              }}
-            />
             {composer}
           </section>
         </div>

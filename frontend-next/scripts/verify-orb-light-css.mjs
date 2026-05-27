@@ -4,7 +4,8 @@ import { join } from 'node:path'
 
 const cssDir = join(process.cwd(), '.next/static/css')
 const required = [
-  'orb-chatgpt-light-build-marker-1336',
+  'orb-chatgpt-light-build-marker-1337',
+  'orb-hue-pulse',
   'orb-hue-text',
   'orb-theme-light',
   'html[data-orb-theme=light]',
@@ -27,4 +28,4 @@ if (missing.length) {
   process.exit(1)
 }
 
-console.log(`ORB light CSS OK (${files.length} file(s), build marker 1336 present)`)
+console.log(`ORB light CSS OK (${files.length} file(s), build marker 1337 present)`)

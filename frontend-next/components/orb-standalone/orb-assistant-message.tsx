@@ -23,7 +23,7 @@ export function OrbCognitionIndicators({ mode, streaming }: { mode: string; stre
     <div className="mb-2 flex flex-wrap items-center gap-1.5">
       <CognitionPill label={cognitionLabelForMode(mode)} />
       {streaming ? (
-        <span className="text-[10px] text-[#00B8FF] orb-streaming-pulse" aria-live="polite">
+        <span className="orb-electric-text text-[10px] orb-streaming-pulse" aria-live="polite">
           composing
         </span>
       ) : null}
@@ -48,7 +48,7 @@ export function OrbAssistantMessageBody({
 }) {
   return (
     <article
-      className={`orb-message-assistant group flex gap-3 ${streaming ? 'orb-message-streaming' : ''}`}
+      className={`orb-message-assistant group flex gap-3.5 ${streaming ? 'orb-message-streaming' : ''}`}
       data-testid="orb-message-assistant"
     >
       <OrbHueMark pulse={streaming} />

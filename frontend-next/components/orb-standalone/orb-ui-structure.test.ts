@@ -38,8 +38,9 @@ describe('ORB ChatGPT UI structure', () => {
   it('globals and route CSS ship ChatGPT-light build marker', () => {
     const globals = readComponent('app/globals.css')
     const routeCss = readComponent('app/orb/orb-chatgpt-light.css')
-    assert.match(globals, /orb-chatgpt-light-build-marker-1336/)
-    assert.match(routeCss, /orb-chatgpt-light-build-marker-1336/)
+    assert.match(globals, /orb-chatgpt-light-build-marker-1337/)
+    assert.match(routeCss, /orb-chatgpt-light-build-marker-1337/)
+    assert.match(globals, /orb-hue-pulse|orb-response-active/)
     assert.match(routeCss, /orb-hue-text|orb-theme-light|html\[data-orb-theme=light\]/)
   })
 
@@ -54,6 +55,7 @@ describe('ORB ChatGPT UI structure', () => {
     const hue = readComponent('components/orb-standalone/orb-hue-logo.tsx')
     assert.match(hue, /orb-hue-text/)
     assert.match(hue, /orb-electric-text/)
+    assert.match(hue, /orb-hue-pulse/)
     assert.match(hue, /Powered by IndiCare/)
   })
 

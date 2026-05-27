@@ -41,7 +41,7 @@ export function OrbStandaloneSettingsPanel({
     {
       id: 'memory',
       label: 'Memory',
-      description: 'Local workspace counts and export',
+      description: 'Workspace counts and export',
       status: 'On this device',
       icon: <Brain className="h-4 w-4 text-violet-300" aria-hidden />,
       onClick: () => onOpenMemory?.()
@@ -49,7 +49,7 @@ export function OrbStandaloneSettingsPanel({
     {
       id: 'accessibility',
       label: 'Accessibility',
-      description: 'Reading, contrast and sensory options',
+      description: 'Reading, contrast and sensory comfort',
       status: 'localStorage',
       icon: <Accessibility className="h-4 w-4 text-cyan-300" aria-hidden />,
       onClick: () => onOpenAccessibility?.()
@@ -57,7 +57,7 @@ export function OrbStandaloneSettingsPanel({
     {
       id: 'voice',
       label: 'Voice',
-      description: 'ORB Voice app — coming next (text chat is default on /orb)',
+      description: 'Push-to-talk voice — coming next',
       status: 'Coming next',
       icon: <Mic className="h-4 w-4 text-slate-400" aria-hidden />,
       onClick: () => onOpenVoiceSettings?.()
@@ -65,7 +65,7 @@ export function OrbStandaloneSettingsPanel({
     {
       id: 'permissions',
       label: 'Permissions',
-      description: 'Microphone, camera and upload readiness',
+      description: 'Microphone, camera and uploads',
       status: 'Device',
       icon: <Lock className="h-4 w-4 text-slate-400" aria-hidden />,
       onClick: () => onOpenPermissions?.()
@@ -73,7 +73,7 @@ export function OrbStandaloneSettingsPanel({
     {
       id: 'privacy',
       label: 'Privacy',
-      description: 'Standalone boundary — no OS record access',
+      description: 'No IndiCare OS record access',
       status: 'Protected',
       icon: <Shield className="h-4 w-4 text-emerald-300" aria-hidden />,
       onClick: () => {}
@@ -81,7 +81,7 @@ export function OrbStandaloneSettingsPanel({
     {
       id: 'intelligence_map',
       label: 'Intelligence map',
-      description: 'Capability parity and planned surfaces',
+      description: 'Capability overview',
       status: 'Overview',
       icon: <Map className="h-4 w-4 text-cyan-300" aria-hidden />,
       onClick: () => onOpenIntelligenceMap?.()
@@ -130,7 +130,7 @@ export function OrbStandaloneSettingsPanel({
                   item.onClick()
                   onClose()
                 }}
-                className="orb-panel-card flex w-full items-start gap-3 rounded-xl border px-4 py-3 text-left transition hover:bg-[var(--orb-surface-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00B8FF]/40"
+                className="orb-panel-row flex w-full items-start gap-3 rounded-xl border px-4 py-3 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00B8FF]/40"
                 data-orb-settings-card={item.id}
               >
                 <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--orb-surface-hover)]">
@@ -144,14 +144,11 @@ export function OrbStandaloneSettingsPanel({
                     ) : null}
                   </span>
                   <span className="mt-0.5 block text-xs leading-5 text-[var(--orb-muted)]">{item.description}</span>
-                  {item.id === 'privacy' ? (
-                    <span className="mt-2 inline-block text-[10px] font-medium text-emerald-200/80">Open — read above</span>
-                  ) : (
-                    <span className="mt-2 inline-flex items-center gap-1 text-[10px] font-medium text-cyan-200/80">
-                      <Settings className="h-3 w-3" aria-hidden />
+                  {item.id !== 'privacy' && item.id !== 'appearance' ? (
+                    <span className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-medium text-[#00B8FF]">
                       Open
                     </span>
-                  )}
+                  ) : null}
                 </span>
               </button>
             </li>

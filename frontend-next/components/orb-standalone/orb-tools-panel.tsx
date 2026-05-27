@@ -64,20 +64,20 @@ function ToolCardButton({
     <button
       type="button"
       onClick={() => onSelect(tool)}
-      className="orb-panel-card flex w-full items-start gap-3 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-3 text-left transition hover:border-cyan-300/25 hover:bg-cyan-300/[0.04] focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-300/40"
+      className="orb-panel-row flex w-full items-start gap-3 rounded-xl border px-3 py-3 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00B8FF]/40"
       data-orb-tool-card={tool.id}
     >
-      <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/[0.04] text-cyan-300/90">
+      <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--orb-surface-hover)] text-[#00B8FF]">
         {tool.icon}
       </span>
       <span className="min-w-0 flex-1">
         <span className="flex flex-wrap items-center gap-1.5">
-          <span className="text-sm font-medium text-slate-100">{tool.label}</span>
+          <span className="text-sm font-medium text-[var(--orb-foreground)]">{tool.label}</span>
           <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide ring-1 ${badgeClass(tool.badge)}`}>
             {tool.badge}
           </span>
         </span>
-        <span className="mt-0.5 block text-xs leading-5 text-slate-500">{tool.description}</span>
+        <span className="mt-0.5 block text-xs leading-5 text-[var(--orb-muted)]">{tool.description}</span>
       </span>
     </button>
   )
@@ -87,7 +87,7 @@ function ToolSection({ title, tools, onSelect }: { title: string; tools: ToolCar
   if (!tools.length) return null
   return (
     <section>
-      <h3 className="text-xs font-medium uppercase tracking-[0.1em] text-slate-500">{title}</h3>
+      <h3 className="text-xs font-medium uppercase tracking-[0.1em] text-[var(--orb-muted)]">{title}</h3>
       <ul className="mt-2 grid gap-2">
         {tools.map((tool) => (
           <li key={tool.id}>
