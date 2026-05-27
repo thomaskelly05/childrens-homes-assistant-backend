@@ -26,7 +26,8 @@ def test_thinking_placeholder_precedes_api():
 
 def test_success_replaces_thinking_not_appends_duplicate():
     text = COMPANION.read_text(encoding="utf-8")
-    assert "replaceMessageById(chat.messages, thinkingMessageId, assistantMessage)" in text
+    assert "replaceMessageById(chat.messages, thinkingMessageId, streamingMessage)" in text
+    assert "replaceMessageById(chat.messages, assistantId, assistantMessage)" in text
     assert "status: 'complete'" in text
 
 
