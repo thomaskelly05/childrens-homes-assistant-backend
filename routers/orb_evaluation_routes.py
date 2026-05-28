@@ -7,7 +7,9 @@ from typing import Any
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, ConfigDict, Field
 
-from auth.permissions import require_standalone_orb_access
+from auth.orb_standalone_premium_dependency import (
+    require_rich_orb_premium_access as require_standalone_orb_access,
+)
 from schemas.orb_evaluation import OrbEvaluationRequest
 from services.orb_evaluation_service import orb_evaluation_service
 
@@ -54,7 +56,7 @@ async def evaluate_document_output(
     payload: OrbEvaluateDocumentOutputRequest,
     current_user=Depends(require_standalone_orb_access),
 ):
-    result = orb_evaluation_service.evaluate_document_output(
+    result = orb_evaluation_service.evaluate_document_understanding(
         payload.understanding,
         analysis_mode=payload.analysis_mode,
     )
@@ -68,9 +70,9 @@ async def evaluate_agent_output(
 ):
     result = orb_evaluation_service.evaluate_agent_output(
         answer=payload.answer,
-        sources=payload.sources,
-        citations=payload.citations,
         agent_type=payload.agent_type,
         analysis_mode=payload.analysis_mode,
+        sources=payload.sources,
+        citations=payload.citations,
     )
     return _success(result.model_dump())
