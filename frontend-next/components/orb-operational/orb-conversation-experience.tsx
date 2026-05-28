@@ -53,15 +53,15 @@ function mapOperationalResponse(response: OrbOperationalResponse): OrbConversati
     summary: source.basis || ''
   }))
 
-  const actions = [
+  const actions: OrbConversationResponse['actions'] = [
     ...(response.follow_up_actions || []).map((item) => ({
       label: item.label,
-      type: (item.action_type || 'follow_up') as 'review',
+      type: 'open_record' as const,
       route: item.route || undefined
     })),
     ...(response.draft_actions || []).map((item) => ({
       label: item.title,
-      type: 'action' as const,
+      type: 'create_task' as const,
       route: '/actions'
     })),
     ...(response.review_prompts || []).map((item) => ({
