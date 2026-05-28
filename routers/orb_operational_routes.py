@@ -105,12 +105,7 @@ async def operational_orb_evidence_diagnostics(
     conn=Depends(get_db),
     current_user=Depends(require_assistant_access),
 ):
-    """Show exactly what the operational ORB evidence spine can see for a question.
-
-    This is intentionally diagnostic: it helps confirm whether the user is in the
-    canonical OS runtime, which scope is being used, and which source-labelled
-    evidence ORB found before a model answer is generated.
-    """
+    """Show exactly what the operational ORB evidence spine can see for a question."""
     context = orb_operational_context_bridge.build_context(payload, current_user, conn=conn)
     permissions = context.get("permissions")
     provider_id = permissions.provider_id if hasattr(permissions, "provider_id") else None
@@ -347,11 +342,19 @@ async def operational_orb_actions_create(
     conn=Depends(get_db),
     current_user=Depends(require_assistant_access),
 ):
-    result = orb_operational_action_builder_service.create_actions(
-        payload,
+    result = orb_operational_action_builder_service.create_actions_from_drafts(
+        payload.drafts,
         current_user=current_user,
         conn=conn,
+        home_id=payload.home_id,
+        child_id=payload.child_id,
+        staff_id=payload.staff_id,
     )
+    result["os_linked"] = True
+    result["standalone_only"] = False
+    result["permissioned_context"] = True
+    result["output_id"] = payload.output_id
+    result["manager_review_required"] = payload.require_manager_review
     return {"success": True, "data": result}
 
 
