@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import os
 import time
+from collections.abc import AsyncIterator
 from typing import Any
 
 from schemas.ai_models import (
@@ -108,6 +109,39 @@ class OpenAiProvider(AiProviderBase):
         else:
             messages.append({"role": "user", "content": request.message})
         return messages
+
+    async def stream(self, request: AiProviderRequest) -> AsyncIterator[str]:
+        api_key = _text(os.getenv("OPENAI_API_KEY"))
+        if not api_key:
+            return
+
+        timeout = request.timeout_seconds or _default_timeout()
+        try:
+            from openai import AsyncOpenAI
+
+            client = AsyncOpenAI(api_key=api_key, timeout=timeout)
+            messages = self._build_messages(request)
+            stream = await client.chat.completions.create(
+                model=request.model,
+                messages=messages,
+                temperature=max(0.0, min(float(request.temperature), 2.0)),
+                max_tokens=max(64, min(int(request.max_output_tokens), 4096)),
+                stream=True,
+            )
+            async for chunk in stream:
+                if not chunk.choices:
+                    continue
+                delta = chunk.choices[0].delta
+                content = _text(getattr(delta, "content", None))
+                if content:
+                    yield content
+        except Exception as exc:
+            logger.warning(
+                "openai_provider_stream_failed model=%s error_type=%s",
+                request.model,
+                type(exc).__name__,
+            )
+            return
 
 
 openai_provider = OpenAiProvider()

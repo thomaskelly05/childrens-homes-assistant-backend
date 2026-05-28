@@ -4,9 +4,14 @@ import asyncio
 import logging
 import re
 import time
+from collections.abc import AsyncIterator
 from typing import Any
 
-from services.ai_model_router_service import STANDALONE_LLM_TIMEOUT_SECONDS, ai_model_router_service
+from services.ai_model_router_service import (
+    STANDALONE_LLM_TIMEOUT_SECONDS,
+    _chunk_text_for_stream,
+    ai_model_router_service,
+)
 from services.orb_citation_service import orb_citation_service
 from services.orb_knowledge_retrieval_service import orb_knowledge_retrieval_service
 from services.orb_rag_retrieval_service import orb_rag_retrieval_service
@@ -697,6 +702,205 @@ class OrbGeneralAssistantService:
         if research_note:
             answer += f" {research_note}"
         return answer
+
+    async def _yield_answer_chunks(self, answer: str) -> AsyncIterator[str]:
+        for delta in _chunk_text_for_stream(answer):
+            yield delta
+            await asyncio.sleep(0)
+
+    async def stream_answer(
+        self,
+        message: str,
+        *,
+        history: list[dict[str, Any]] | None = None,
+        detail: str = "concise",
+        image_data_urls: list[str] | None = None,
+        mode: str | None = None,
+        profile_context: bool = False,
+        document_text: str | None = None,
+        document_source_id: str | None = None,
+        document_title: str | None = None,
+        raw_user_message: str | None = None,
+        stream_meta: dict[str, Any] | None = None,
+    ) -> AsyncIterator[str]:
+        """Stream answer text deltas. Populates stream_meta with final assistant payload fields."""
+        meta = stream_meta if stream_meta is not None else {}
+        images = image_data_urls or []
+        user_message = _text(raw_user_message) or message
+        profile_block = "standalone context profiles" in message.lower() or profile_context
+        has_document = bool(_text(document_text) or document_source_id)
+        doc_intent = self.detect_document_intent(user_message, has_document=has_document)
+
+        if doc_intent.get("suggested") and doc_intent.get("needs_document"):
+            result = {
+                "answer": (
+                    "I can analyse that document for you — please upload or paste the document "
+                    "in the Documents panel (Open Documents in the sidebar), or attach it here, then ask again. "
+                    "I can explain it, summarise it, create an action plan, or compare it to Knowledge Library guidance."
+                ),
+                "sources": build_standalone_sources(user_message, mode=mode),
+                "citations": [],
+                "context_used": {
+                    "surface": "standalone_orb_ai",
+                    "os_linked": False,
+                    "care_record_access": False,
+                    "document_analysis": doc_intent,
+                },
+                "tools_used": ["document_analysis_prompt"],
+                "internal_data_access": False,
+            }
+            meta.update(result)
+            async for delta in self._yield_answer_chunks(result["answer"]):
+                yield delta
+            return
+
+        if doc_intent.get("suggested") and has_document:
+            result = await self._answer_with_document_analysis(
+                user_message,
+                doc_intent=doc_intent,
+                document_text=document_text,
+                document_source_id=document_source_id,
+                document_title=document_title,
+                mode=mode,
+            )
+            meta.update(result)
+            async for delta in self._yield_answer_chunks(str(result.get("answer") or "")):
+                yield delta
+            return
+
+        if not images:
+            agent_result = await maybe_run_agent_for_conversation(
+                user_message,
+                mode=mode,
+                profile_context="Profile context" if profile_block else None,
+                document_text=document_text,
+                document_source_id=document_source_id,
+                document_title=document_title,
+            )
+            if agent_result and agent_result.get("answer"):
+                result = {
+                    "answer": _finalize_standalone_answer(
+                        agent_result["answer"],
+                        message=user_message,
+                        mode=mode,
+                    ),
+                    "sources": agent_result.get("sources") or [],
+                    "citations": agent_result.get("citations") or [],
+                    "context_used": agent_result.get("context_used") or {},
+                    "tools_used": agent_result.get("tools_used") or ["standalone_agent"],
+                    "internal_data_access": False,
+                }
+                meta.update(result)
+                async for delta in self._yield_answer_chunks(str(result.get("answer") or "")):
+                    yield delta
+                return
+
+        retrieval = self.prepare_retrieval(
+            message,
+            mode=mode,
+            profile_context=profile_context or profile_block,
+            has_images=bool(images),
+        )
+        system = self._build_llm_system_prompt(
+            retrieval=retrieval,
+            mode=mode,
+            detail=detail,
+            has_images=bool(images),
+        )
+        classification = retrieval.get("classification") or {}
+        research_intent = bool(classification.get("research_intent"))
+        voice_mode = detail == "voice_concise"
+        parts: list[str] = []
+        decision = None
+        trace = None
+
+        try:
+            async for delta, routed_decision, routed_trace in ai_model_router_service.stream_with_routing(
+                message=message,
+                system_prompt=system,
+                history=history or [],
+                images=images,
+                mode=mode,
+                retrieval_context=retrieval,
+                detail_level=detail,
+                research_intent=research_intent,
+                voice_mode=voice_mode,
+            ):
+                parts.append(delta)
+                decision = routed_decision
+                trace = routed_trace
+                yield delta
+        except Exception:
+            logger.warning("standalone_orb_stream llm failed", exc_info=True)
+
+        answer_text = _text("".join(parts))
+        if answer_text:
+            model_routing = ai_model_router_service.routing_metadata_for_context(
+                decision,
+                trace,
+            ) if decision and trace else {}
+            resolved = _finalize_standalone_answer(
+                answer_text,
+                message=message,
+                mode=mode,
+            )
+            resolved = append_sources_basis_section(resolved, retrieval["sources"], message=message, mode=mode)
+            meta.update(
+                {
+                    "answer": resolved,
+                    "sources": retrieval["sources"],
+                    "citations": retrieval["citations"],
+                    "context_used": self._retrieval_context_used(
+                        retrieval,
+                        model_routing=model_routing,
+                        user_message=message,
+                        mode=mode,
+                    ),
+                    "tools_used": ["standalone_orb_general_assistant", "ai_model_router"],
+                    "internal_data_access": False,
+                    "image_understanding_available": bool(images) and bool(answer_text),
+                }
+            )
+            return
+
+        if images:
+            sources = retrieval["sources"]
+            answer = append_sources_basis_section(
+                "I can see you attached an image, but image understanding is not configured in this environment. "
+                "I can still help using the text you provide.",
+                sources,
+            )
+            meta.update(
+                {
+                    "answer": answer,
+                    "sources": sources,
+                    "citations": retrieval["citations"],
+                    "context_used": self._retrieval_context_used(retrieval),
+                    "tools_used": ["standalone_orb_general_assistant"],
+                    "internal_data_access": False,
+                    "image_understanding_available": False,
+                    "error_detail": "vision_unavailable",
+                }
+            )
+            async for delta in self._yield_answer_chunks(answer):
+                yield delta
+            return
+
+        fallback = self._fallback_answer(message, retrieval=retrieval)
+        sources = retrieval["sources"]
+        answer = append_sources_basis_section(fallback, sources)
+        meta.update(
+            {
+                "answer": answer,
+                "sources": sources,
+                "citations": retrieval["citations"],
+                "context_used": self._retrieval_context_used(retrieval),
+                "tools_used": ["general_qna"],
+                "internal_data_access": False,
+            }
+        )
+        async for delta in self._yield_answer_chunks(answer):
+            yield delta
 
 
 orb_general_assistant_service = OrbGeneralAssistantService()

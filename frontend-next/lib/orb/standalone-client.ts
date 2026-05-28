@@ -6,12 +6,17 @@ import {
   getCsrfToken,
   STANDALONE_ORB_CSRF_REFRESH_MESSAGE
 } from '@/lib/auth/api'
+import {
+  parseStandaloneOrbSseBlock,
+  type StandaloneOrbStreamEvent as StandaloneOrbStreamEventBase
+} from '@/lib/orb/standalone-sse-parser'
 
 const STANDALONE_REQUEST_TIMEOUT_MS = 45_000
 
 /** Standalone-only API paths (no OS / Care Hub). */
 export const STANDALONE_ORB_API_PATHS = {
   conversation: '/orb/standalone/conversation',
+  conversationStream: '/orb/standalone/conversation/stream',
   config: '/orb/standalone/config',
   modelRouterHealth: '/orb/standalone/model-router/health',
   documentsHealth: '/orb/standalone/documents/health',
@@ -195,9 +200,13 @@ export type StandaloneOrbExplainabilityPayload = {
 
 export type StandaloneOrbTimingMetadata = {
   elapsed_ms?: number
+  request_started?: boolean
+  first_token_ms?: number | null
+  total_elapsed_ms?: number
   retrieval_elapsed_ms?: number
   provider_elapsed_ms?: number | null
   prompt_tier?: string
+  stream_mode?: string
   prompt_char_estimate?: number
   grounding_char_count?: number
   model?: string
@@ -457,6 +466,193 @@ export async function queryStandaloneOrbConversation(
 }
 
 export const sendStandaloneOrbMessage = queryStandaloneOrbConversation
+
+export type StandaloneOrbStreamEvent =
+  | { event: 'token'; delta: string }
+  | { event: 'metadata'; payload: StandaloneOrbConversationResponse }
+  | { event: 'done'; ok: boolean }
+  | { event: 'error'; error: string; detail?: string }
+
+export { parseStandaloneOrbSseBlock }
+export type { StandaloneOrbStreamEventBase }
+
+export type StandaloneOrbStreamCallbacks = {
+  onToken: (delta: string, partial: string) => void
+  onMetadata?: (response: StandaloneOrbConversationResponse) => void
+  onDone?: () => void
+  onError?: (error: string, detail?: string) => void
+}
+
+function buildStandaloneConversationBody(request: StandaloneOrbConversationRequest) {
+  return JSON.stringify({
+    message: request.message,
+    mode: request.mode,
+    conversation_id: request.conversation_id,
+    history: request.history ?? [],
+    ...(request.detail ? { detail: request.detail } : {}),
+    ...(request.images?.length ? { images: request.images } : {}),
+    ...(request.document_text ? { document_text: request.document_text } : {}),
+    ...(request.document_source_id ? { document_source_id: request.document_source_id } : {}),
+    ...(request.document_title ? { document_title: request.document_title } : {})
+  })
+}
+
+function normaliseStreamMetadata(
+  payload: StandaloneOrbConversationResponse,
+  request: StandaloneOrbConversationRequest
+): StandaloneOrbConversationResponse {
+  const answer = extractAnswer(payload)
+  if (!answer) {
+    throw new AuthApiError(503, 'ORB could not finish that response. Please try again.')
+  }
+  const resolvedContext = payload.context_used
+  const resolvedCognitionLabels =
+    payload.cognition_display_labels ??
+    resolvedContext?.cognition_display_labels ??
+    resolvedContext?.explainability?.cognition_display_labels
+  return {
+    ok: Boolean(payload.ok ?? true),
+    standalone: payload.standalone ?? true,
+    os_records_accessed: payload.os_records_accessed ?? false,
+    answer,
+    summary: payload.summary,
+    conversation_id: payload.conversation_id ?? request.conversation_id,
+    confidence: payload.confidence,
+    cognition_display_labels: resolvedCognitionLabels,
+    sources: payload.sources ?? payload.citations,
+    citations: payload.citations ?? payload.sources,
+    context_used: resolvedContext,
+    guardrails: payload.guardrails,
+    image_understanding_available: payload.image_understanding_available,
+    error_detail: payload.error_detail
+  }
+}
+
+/**
+ * True SSE streaming for standalone ORB. Returns final metadata when the stream completes.
+ * Throws on transport failures before any token (caller may fall back to non-streaming POST).
+ */
+export async function sendStandaloneOrbMessageStream(
+  request: StandaloneOrbConversationRequest,
+  callbacks: StandaloneOrbStreamCallbacks,
+  signal?: AbortSignal
+): Promise<StandaloneOrbConversationResponse> {
+  const endpoint = STANDALONE_ORB_API_PATHS.conversationStream
+  const requestSignal = withTimeout(signal)
+  const headers = new Headers({ 'Content-Type': 'application/json', Accept: 'text/event-stream' })
+  applyCsrfHeaders(headers, 'POST')
+  if (!headers.has('X-CSRF-Token') && !getCsrfToken()) {
+    throw new AuthApiError(403, {
+      code: 'csrf_failed',
+      message: STANDALONE_ORB_CSRF_REFRESH_MESSAGE
+    })
+  }
+
+  const response = await authFetchResponse(endpoint, {
+    method: 'POST',
+    signal: requestSignal,
+    headers,
+    body: buildStandaloneConversationBody(request),
+    credentials: 'include'
+  })
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => undefined)) as Record<string, unknown> | undefined
+    if (payload?.detail === 'csrf_failed') {
+      throw new AuthApiError(403, {
+        code: 'csrf_failed',
+        message:
+          typeof payload.message === 'string' ? payload.message : STANDALONE_ORB_CSRF_REFRESH_MESSAGE
+      })
+    }
+    throw new AuthApiError(
+      response.status,
+      typeof payload?.message === 'string'
+        ? { code: String(payload.code || 'request_failed'), message: payload.message }
+        : 'ORB could not finish that response. Please try again.'
+    )
+  }
+
+  const body = response.body
+  if (!body) {
+    throw new AuthApiError(503, 'ORB streaming response was empty.')
+  }
+
+  const reader = body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+  let partial = ''
+  let sawToken = false
+  let metadata: StandaloneOrbConversationResponse | null = null
+  let streamError: string | null = null
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      const blocks = buffer.split(/\n\n/)
+      buffer = blocks.pop() ?? ''
+      for (const block of blocks) {
+        const event = parseStandaloneOrbSseBlock(block)
+        if (!event) continue
+        if (event.event === 'token') {
+          sawToken = true
+          partial += event.delta
+          callbacks.onToken(event.delta, partial)
+        } else if (event.event === 'metadata') {
+          metadata = normaliseStreamMetadata(
+            event.payload as StandaloneOrbConversationResponse,
+            request
+          )
+          callbacks.onMetadata?.(metadata)
+        } else if (event.event === 'done') {
+          callbacks.onDone?.()
+        } else if (event.event === 'error') {
+          streamError = event.error
+          callbacks.onError?.(event.error, event.detail)
+        }
+      }
+    }
+    if (buffer.trim()) {
+      const trailing = parseStandaloneOrbSseBlock(buffer)
+      if (trailing?.event === 'metadata') {
+        metadata = normaliseStreamMetadata(trailing.payload, request)
+        callbacks.onMetadata?.(metadata)
+      } else if (trailing?.event === 'error') {
+        streamError = trailing.error
+        callbacks.onError?.(trailing.error, trailing.detail)
+      }
+    }
+  } finally {
+    reader.releaseLock()
+  }
+
+  if (metadata) {
+    return metadata
+  }
+  if (streamError) {
+    if (sawToken && partial.trim()) {
+      return {
+        ok: true,
+        standalone: true,
+        os_records_accessed: false,
+        answer: partial.trim(),
+        error_detail: streamError
+      }
+    }
+    throw new AuthApiError(503, 'ORB could not finish that response. Please try again.')
+  }
+  if (sawToken && partial.trim()) {
+    return {
+      ok: true,
+      standalone: true,
+      os_records_accessed: false,
+      answer: partial.trim()
+    }
+  }
+  throw new AuthApiError(503, 'ORB could not finish that response. Please try again.')
+}
 
 export type OrbKnowledgeSourceType =
   | 'product_context'

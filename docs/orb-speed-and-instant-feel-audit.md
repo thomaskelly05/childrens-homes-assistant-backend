@@ -1,8 +1,8 @@
 # ORB Speed and Instant-Feel Audit
 
-**Route:** `/orb` (`OrbCareCompanion`) · **Date:** 2026-05-28
+**Route:** `/orb` (`OrbCareCompanion`) · **Date:** 2026-05-28 (updated for true streaming)
 
-This document records the end-to-end request path, bottlenecks found, quick wins shipped in this pass, and recommended next work. Safety is not traded for speed on high-risk residential topics.
+This document records the end-to-end request path, bottlenecks found, quick wins shipped, streaming status, and recommended next work. Safety is not traded for speed on high-risk residential topics.
 
 ---
 
@@ -10,73 +10,75 @@ This document records the end-to-end request path, bottlenecks found, quick wins
 
 ### Frontend (`orb-care-companion.tsx`)
 
-1. User submits → composer clears immediately; user bubble + thinking placeholder appended to local workspace (`standalone-local-store.ts`).
-2. `pending` set after optimistic UI commit (not before).
-3. `queryStandaloneOrbConversation` → `POST /orb/standalone/conversation` with `AbortSignal`.
-4. On response: thinking placeholder → streaming assistant bubble (`streamTextIntoView` — **client-side** reveal of full answer, not SSE).
-5. Optional TTS if voice replies enabled.
-6. Dev timing via `logOrbTiming` when `NODE_ENV=development` or `localStorage orb-cognition-debug=1`.
+1. User submits → composer clears immediately; user bubble + thinking placeholder appended.
+2. Thinking placeholder is replaced with an empty **streaming** assistant bubble before the network call.
+3. Primary transport: `sendStandaloneOrbMessageStream()` → `POST /orb/standalone/conversation/stream` (SSE `event: token`).
+4. Tokens append to the assistant bubble as they arrive; **Stop** aborts via `AbortController`.
+5. On `event: metadata`, citations/explainability/timing are applied; message status becomes `complete`.
+6. **Fallback:** if streaming fails before any token, `POST /orb/standalone/conversation` runs and `streamTextIntoView` reveals the full answer (simulated typing only on fallback).
+7. Dev timing via `logOrbTiming` when `NODE_ENV=development` or `localStorage orb-cognition-debug=1`.
 
 ### Backend (`routers/orb_standalone_routes.py`)
 
-1. Premium auth gate.
-2. **Single** `prepare_request_bundle()` — classify once, tier (`fast` | `residential` | `deep`), packs + grounding.
-3. Tiered `_build_framed_message()` — omits heavy blocks on fast path; skips full shared cognition build on fast path.
-4. `orb_converged_general_assistant_service` (default) or `orb_general_assistant_service` → retrieval + LLM.
-5. Answer sanitise, citations, explainability; `context_used.timing` metadata appended.
+1. Premium auth gate (`require_standalone_orb_access`).
+2. OS ID rejection (`child_id`, `staff_id`, `home_id`, `record_id`, `chronology_id`, …).
+3. Single `prepare_request_bundle()` — classify once, tier (`fast` | `residential` | `deep`), packs + grounding.
+4. Tiered `_build_framed_message()` — same logic as non-streaming route.
+5. `stream_answer()` on converged or general assistant → provider token stream when available.
+6. SSE: `token` → `metadata` → `done` (or `error`).
+7. `context_used.timing` includes `first_token_ms`, `provider_elapsed_ms`, `total_elapsed_ms`, `prompt_tier`, provider/model.
 
 ### Converged runtime (`orb_converged_general_assistant_service.py`)
 
-- Fast tier: minimal convergence prompt block (no full residential spine injection).
-- Residential/deep: full `build_prompt_block` + quality checks.
+- Same tiered prompt behaviour as non-streaming.
+- Fast tier: minimal convergence block.
+- Residential/deep: full spine + quality processing on final answer.
 
 ---
 
-## 2. Likely bottlenecks found
+## 2. Streaming endpoint status
 
-| Bottleneck | Impact | Mitigation in this pass |
-|------------|--------|-------------------------|
-| Duplicate `classify_query` / `retrieve_sources` / `build_grounding_context` per request | High pre-LLM latency | `prepare_request_bundle()` |
-| Full `STANDALONE_ORB_*` prompt blocks on every message | Large prompt, slower TTFT | Tiered `_build_framed_message` |
-| `shared_institutional_cognition_runtime.build_context` on simple chats | Heavy cognition stack | Skipped on `fast` tier |
-| Converged service full spine on all messages | Double prompt weight | Fast-path minimal block |
-| `retrieve_preview` + assistant `prepare_retrieval` | Duplicate retrieval | Route uses bundle packs |
-| Client waits for full HTTP response before any assistant text | Perceived slowness | Instant thinking UI; client stream reveal |
-| No true SSE/token streaming | No first token until complete | Documented as P0 next build |
-
----
-
-## 3. Quick wins implemented (this pass)
-
-- **Tiered prompts:** `fast` | `residential` | `deep` via `resolve_prompt_tier()`.
-- **Request bundle:** one classification/retrieval pass per conversation request.
-- **Timing metadata:** `context_used.timing` (backend) + `logOrbTiming` (frontend dev).
-- **Stop generating:** `AbortController` on fetch + stream; composer Stop button; `stopped` message status.
-- **Instant composer:** clear input/attachments before `pending`; user + thinking messages before network.
-- **Suggested reply chips:** six ORB-native follow-ups under latest completed answer.
-- **Ask about this:** attachment chips after image user messages.
-- **Read aloud:** Speak on last answer; Copy + Read aloud on older answers (hover row).
+| Item | Status |
+|------|--------|
+| `POST /orb/standalone/conversation/stream` | **Implemented** (SSE) |
+| `POST /orb/standalone/conversation` | **Kept** (non-streaming) |
+| Premium ORB dependency | **Same** as conversation |
+| Standalone OS boundary / no live records | **Preserved** |
+| Tiered prompts (fast / residential / deep) | **Shared** `_build_standalone_request_context()` |
+| OpenAI provider token streaming | **Implemented** (`openai_provider.stream`) |
+| Mock provider streaming | **Chunked** mock text |
+| Agent / document paths without live stream | **Chunked** final answer (honest fallback) |
+| Frontend true token UI | **Implemented** |
+| Frontend fallback to POST | **Before first token only** |
 
 ---
 
-## 4. Remaining bottlenecks
+## 3. First-token behaviour
 
-- **No backend streaming** — largest gap for “ChatGPT instant” feel.
-- **LLM latency** — dominates wall-clock after prompt trim.
-- **Client-side stream simulation** — still waits for full JSON body.
-- **Converged + general assistant** may still run RAG/agent paths for some queries.
-- **localStorage workspace write** on every message change (debounce candidate).
+- **Backend:** `first_token_ms` measured from route start to first yielded SSE token.
+- **Frontend:** assistant bubble visible before fetch; first token updates content immediately (no wait for full HTTP body).
+- **High-risk / safeguarding:** `resolve_prompt_tier()` still forces **deep**; streaming does not use a “fast” shortcut for those prompts.
 
 ---
 
-## 5. Streaming status
+## 4. Fallback behaviour
 
-| Layer | Status |
-|-------|--------|
-| Backend SSE / chunked tokens | **Not implemented** |
-| Frontend token renderer | **Not implemented** |
-| Client `streamTextIntoView` after full answer | **Implemented** (perceived typing only) |
-| Stop mid-stream | **Implemented** (abort fetch + partial keep) |
+| Scenario | Behaviour |
+|----------|-----------|
+| Stream HTTP/parse failure, no tokens yet | Non-streaming `POST /conversation` + client `streamTextIntoView` |
+| Stream error after partial tokens | Partial answer kept; subtle note if `error_detail` present |
+| User Stop | Abort fetch; partial kept; `stopped` status |
+| Provider unavailable mid-stream | `event: error` with `provider_unavailable` |
+| OpenAI unavailable | Router may fall back to mock or chunked complete response |
+
+---
+
+## 5. Remaining provider limitations
+
+- **Agent auto-run** and **document analysis** paths still produce the full answer first, then emit **chunked** SSE tokens (not true provider streaming for those branches).
+- **Converged `process_answer`** may adjust the final sanitised text after tokens were shown; metadata `answer` is authoritative at end of stream.
+- **Backend cancel in-flight provider jobs** on client disconnect is not implemented (provider APIs vary).
+- **Deferring citations/explainability** until after first token is only partially realised (metadata still sent in one block at end).
 
 ---
 
@@ -84,11 +86,10 @@ This document records the end-to-end request path, bottlenecks found, quick wins
 
 | Action | Status |
 |--------|--------|
-| Abort in-flight `fetch` | Done — `requestAbortRef` |
-| Abort client stream reveal | Done — `streamAbortRef` |
-| Composer Stop control | Done — `data-orb-composer-stop-generating` |
-| Partial answer preserved | Done — `stopped` status + partial text |
-| Backend cancel provider job | Not implemented (provider APIs vary) |
+| Abort in-flight stream `fetch` | Done — `streamAbortRef` |
+| Composer Stop control | Done |
+| Partial answer preserved | Done — `stopped` or partial + note |
+| Backend cancel provider job | Not implemented |
 
 ---
 
@@ -106,11 +107,11 @@ High-risk topics always resolve to **deep** regardless of length.
 
 ## 8. Recommended next speed work (priority order)
 
-1. **True streaming route** — `POST /orb/standalone/conversation/stream` (SSE), provider streaming, frontend incremental markdown.
-2. **Defer non-critical metadata** — append citations/explainability after first tokens.
-3. **Cache static sections** — operating brain summaries, product boundary strings.
+1. **Stream agent/document paths** with provider streaming where safe, or progressive section emit.
+2. **Defer non-critical metadata** — send citations/explainability in a trailing SSE event after answer text stabilises.
+3. **Cache static prompt sections** — operating brain summaries, product boundary strings.
 4. **Debounce workspace persistence** — reduce main-thread localStorage cost.
-5. **Parallelise** — profile block build while user types (already local).
+5. **Backend disconnect cancellation** — stop provider jobs when the client aborts.
 6. **Provider routing** — fast model for `fast` tier where governance allows.
 
 ---
@@ -126,12 +127,8 @@ High-risk topics always resolve to **deep** regardless of length.
 
 ---
 
-## 10. Exact next recommended PR
+## 10. Canonical routes
 
-**Title:** ORB true streaming + first-token metadata
-
-**Scope:**
-
-- Backend: streaming endpoint wrapping existing tiered prompt + provider stream.
-- Frontend: replace wait-then-`streamTextIntoView` with SSE consumer; keep Stop/abort.
-- Tests: route contract, abort mid-stream, safeguarding tier still `deep`.
+- UI: `/orb` only (no second ORB UI).
+- Standalone conversation: `POST /orb/standalone/conversation`
+- Standalone streaming: `POST /orb/standalone/conversation/stream`

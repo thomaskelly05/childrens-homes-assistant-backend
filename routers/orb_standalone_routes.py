@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import json
 import logging
+import os
 import time
+from collections.abc import AsyncIterator
 from typing import Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from auth.orb_standalone_premium_dependency import (
@@ -12,8 +16,6 @@ from auth.orb_standalone_premium_dependency import (
 )
 from services.orb_citation_service import orb_citation_service
 from services.ai_provider_registry import ai_provider_registry
-import os
-
 from services.orb_converged_general_assistant_service import orb_converged_general_assistant_service
 from services.orb_general_assistant_service import orb_general_assistant_service
 from services.orb_knowledge_retrieval_service import orb_knowledge_retrieval_service
@@ -39,6 +41,127 @@ from services.orb_standalone_sources import (
 logger = logging.getLogger("indicare.orb_standalone")
 
 router = APIRouter(prefix="/orb/standalone", tags=["ORB Standalone Assistant"])
+
+FORBIDDEN_STANDALONE_OS_KEYS = (
+    "child_id",
+    "young_person_id",
+    "staff_id",
+    "home_id",
+    "record_id",
+    "chronology_id",
+)
+
+
+def _reject_standalone_os_ids(payload: dict[str, Any]) -> None:
+    scopes = [payload, payload.get("metadata") or {}]
+    for scope in scopes:
+        if not isinstance(scope, dict):
+            continue
+        for key in FORBIDDEN_STANDALONE_OS_KEYS:
+            if scope.get(key) is not None:
+                raise HTTPException(
+                    status_code=400,
+                    detail={
+                        "error": "standalone_os_boundary",
+                        "message": (
+                            "Standalone ORB cannot accept live IndiCare OS record identifiers. "
+                            "Use IndiCare OS ORB at /assistant/orb for permissioned records."
+                        ),
+                        "field": key,
+                    },
+                )
+
+
+def _sse_event(event: str, payload: Any) -> str:
+    return f"event: {event}\ndata: {json.dumps(payload, ensure_ascii=False, default=str)}\n\n"
+
+
+def _use_converged_runtime() -> bool:
+    return os.getenv("ORB_USE_CONVERGED_RUNTIME", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _select_assistant_runtime():
+    if _use_converged_runtime():
+        return orb_converged_general_assistant_service
+    return orb_general_assistant_service
+
+
+def _build_standalone_request_context(payload: OrbStandaloneConversationRequest) -> dict[str, Any]:
+    mode = orb_standalone_brain_service.normalise_mode(payload.mode or "Ask ORB")
+    detail = _resolve_detail(mode, payload.detail)
+    history = payload.history[-20:] if payload.history else []
+    image_urls = [
+        item.data_url
+        for item in (payload.images or [])
+        if str(item.data_url or "").startswith("data:image/")
+    ]
+    profile_context = (
+        "standalone context profiles" in payload.message.lower() or "profile:" in payload.message.lower()
+    )
+    retrieval_bundle = orb_knowledge_retrieval_service.prepare_request_bundle(
+        payload.message,
+        mode=mode,
+        profile_context=profile_context,
+        attachments=image_urls[:4] or None,
+    )
+    prompt_tier = retrieval_bundle["prompt_tier"]
+    grounding_context = retrieval_bundle["grounding_context"]
+    retrieval_preview = retrieval_bundle["source_packs"]
+
+    if prompt_tier == "fast":
+        shared_cognition = {
+            "surface": "standalone_orb",
+            "mode": mode,
+            "active_brains": ["general_assistant"],
+            "cognition_display_labels": ["General knowledge"],
+            "explainability": {"cognition_display_labels": ["General knowledge"]},
+            "citations": [],
+            "prompt_blocks": [],
+        }
+        shared_runtime_block = ""
+    else:
+        shared_cognition = shared_institutional_cognition_runtime.build_context(
+            surface="standalone_orb",
+            message=payload.message,
+            mode=mode,
+            history=history,
+        )
+        shared_runtime_block = shared_institutional_cognition_runtime.prompt_addendum(
+            surface="standalone_orb",
+            message=payload.message,
+            mode=mode,
+            history=history,
+        )
+
+    standalone_brain = orb_standalone_brain_service.context_payload(payload.message, mode=mode)
+    framed_message = _build_framed_message(
+        mode=mode,
+        user_message=payload.message,
+        detail=detail,
+        history=history,
+        grounding_context=grounding_context,
+        prompt_tier=prompt_tier,
+        shared_runtime_block=shared_runtime_block,
+    )
+    return {
+        "mode": mode,
+        "detail": detail,
+        "history": history,
+        "image_urls": image_urls,
+        "profile_context": profile_context,
+        "retrieval_bundle": retrieval_bundle,
+        "prompt_tier": prompt_tier,
+        "grounding_context": grounding_context,
+        "retrieval_preview": retrieval_preview,
+        "shared_cognition": shared_cognition,
+        "standalone_brain": standalone_brain,
+        "framed_message": framed_message,
+    }
 
 STANDALONE_ORB_MODES = [
     "Ask ORB",
@@ -210,6 +333,7 @@ def _standalone_contract() -> dict[str, Any]:
         "endpoints": {
             "health": "/orb/standalone/health",
             "conversation": "/orb/standalone/conversation",
+            "conversation_stream": "/orb/standalone/conversation/stream",
             "config": "/orb/standalone/config",
             "knowledge_health": "/orb/standalone/knowledge/health",
             "knowledge_sources": "/orb/standalone/knowledge/sources",
@@ -503,76 +627,24 @@ async def standalone_orb_conversation(
     payload: OrbStandaloneConversationRequest,
     current_user=Depends(require_standalone_orb_access),
 ):
-    mode = orb_standalone_brain_service.normalise_mode(payload.mode or "Ask ORB")
-    detail = _resolve_detail(mode, payload.detail)
-    history = payload.history[-20:] if payload.history else []
-    image_urls = [
-        item.data_url
-        for item in (payload.images or [])
-        if str(item.data_url or "").startswith("data:image/")
-    ]
-    profile_context = (
-        "standalone context profiles" in payload.message.lower() or "profile:" in payload.message.lower()
-    )
-    retrieval_bundle = orb_knowledge_retrieval_service.prepare_request_bundle(
-        payload.message,
-        mode=mode,
-        profile_context=profile_context,
-        attachments=image_urls[:4] or None,
-    )
-    prompt_tier = retrieval_bundle["prompt_tier"]
-    grounding_context = retrieval_bundle["grounding_context"]
-    retrieval_preview = retrieval_bundle["source_packs"]
-
-    if prompt_tier == "fast":
-        shared_cognition = {
-            "surface": "standalone_orb",
-            "mode": mode,
-            "active_brains": ["general_assistant"],
-            "cognition_display_labels": ["General knowledge"],
-            "explainability": {"cognition_display_labels": ["General knowledge"]},
-            "citations": [],
-            "prompt_blocks": [],
-        }
-        shared_runtime_block = ""
-    else:
-        shared_cognition = shared_institutional_cognition_runtime.build_context(
-            surface="standalone_orb",
-            message=payload.message,
-            mode=mode,
-            history=history,
-        )
-        shared_runtime_block = shared_institutional_cognition_runtime.prompt_addendum(
-            surface="standalone_orb",
-            message=payload.message,
-            mode=mode,
-            history=history,
-        )
-
-    standalone_brain = orb_standalone_brain_service.context_payload(payload.message, mode=mode)
-    framed_message = _build_framed_message(
-        mode=mode,
-        user_message=payload.message,
-        detail=detail,
-        history=history,
-        grounding_context=grounding_context,
-        prompt_tier=prompt_tier,
-        shared_runtime_block=shared_runtime_block,
-    )
+    _reject_standalone_os_ids(payload.model_dump())
+    ctx = _build_standalone_request_context(payload)
+    mode = ctx["mode"]
+    detail = ctx["detail"]
+    history = ctx["history"]
+    image_urls = ctx["image_urls"]
+    retrieval_bundle = ctx["retrieval_bundle"]
+    prompt_tier = ctx["prompt_tier"]
+    grounding_context = ctx["grounding_context"]
+    retrieval_preview = ctx["retrieval_preview"]
+    shared_cognition = ctx["shared_cognition"]
+    standalone_brain = ctx["standalone_brain"]
+    framed_message = ctx["framed_message"]
+    profile_context = ctx["profile_context"]
 
     route_started = time.perf_counter()
     try:
-        use_converged = os.getenv("ORB_USE_CONVERGED_RUNTIME", "true").strip().lower() in {
-            "1",
-            "true",
-            "yes",
-            "on",
-        }
-        assistant_runtime = (
-            orb_converged_general_assistant_service
-            if use_converged
-            else orb_general_assistant_service
-        )
+        assistant_runtime = _select_assistant_runtime()
         assistant_data = await assistant_runtime.answer(
             framed_message,
             history=history,
@@ -775,3 +847,178 @@ async def standalone_orb_conversation(
             context_used=context_used,
             cognition_display_labels=cognition_labels,
         )
+
+
+@router.post("/conversation/stream")
+async def standalone_orb_conversation_stream(
+    payload: OrbStandaloneConversationRequest,
+    current_user=Depends(require_standalone_orb_access),
+):
+    """SSE stream of ORB answer tokens with final metadata (standalone boundary preserved)."""
+    _reject_standalone_os_ids(payload.model_dump())
+    ctx = _build_standalone_request_context(payload)
+    mode = ctx["mode"]
+    detail = ctx["detail"]
+    history = ctx["history"]
+    image_urls = ctx["image_urls"]
+    retrieval_bundle = ctx["retrieval_bundle"]
+    prompt_tier = ctx["prompt_tier"]
+    grounding_context = ctx["grounding_context"]
+    retrieval_preview = ctx["retrieval_preview"]
+    shared_cognition = ctx["shared_cognition"]
+    standalone_brain = ctx["standalone_brain"]
+    framed_message = ctx["framed_message"]
+    profile_context = ctx["profile_context"]
+
+    async def event_generator() -> AsyncIterator[str]:
+        request_started = time.perf_counter()
+        first_token_ms: int | None = None
+        provider_started: float | None = None
+        stream_meta: dict[str, Any] = {}
+        answer_parts: list[str] = []
+
+        try:
+            assistant_runtime = _select_assistant_runtime()
+            provider_started = time.perf_counter()
+            async for delta in assistant_runtime.stream_answer(
+                framed_message,
+                history=history,
+                detail=detail,
+                image_data_urls=image_urls[:4],
+                mode=mode,
+                profile_context=profile_context,
+                document_text=payload.document_text,
+                document_source_id=payload.document_source_id,
+                document_title=payload.document_title,
+                raw_user_message=payload.message,
+                stream_meta=stream_meta,
+            ):
+                if first_token_ms is None:
+                    first_token_ms = int((time.perf_counter() - request_started) * 1000)
+                answer_parts.append(delta)
+                yield _sse_event("token", {"delta": delta})
+
+            assistant_data = dict(stream_meta)
+            if not assistant_data.get("answer"):
+                assistant_data["answer"] = "".join(answer_parts).strip()
+
+            answer = orb_grounded_answer_style_service.sanitize_high_attention_closer(
+                str(assistant_data.get("answer") or ""),
+                message=payload.message,
+                mode=mode,
+            )
+            response_sources = list(assistant_data.get("sources") or [])
+            response_citations = list(assistant_data.get("citations") or [])
+            response_citations.extend(shared_cognition.get("citations") or [])
+            if not response_sources:
+                response_citations.extend(
+                    orb_citation_service.build_citations(
+                        retrieval_preview,
+                        message=payload.message,
+                        mode=mode,
+                        has_images=bool(image_urls),
+                    )
+                )
+                response_sources = orb_citation_service.frontend_sources_payload(response_citations)
+            elif response_citations:
+                response_sources.extend(orb_citation_service.frontend_sources_payload(response_citations))
+
+            confidence = str(assistant_data.get("confidence") or "medium")
+            shared_explain = shared_cognition.get("explainability") or {}
+            cognition_labels = _merge_cognition_labels(
+                shared_cognition=shared_cognition,
+                explainability={"cognition_display_labels": shared_explain.get("cognition_display_labels")},
+            )
+            explainability = orb_explainability_runtime_service.build(
+                surface="standalone_orb",
+                mode=mode,
+                active_brains=list(shared_cognition.get("active_brains") or []),
+                citations=response_citations,
+                operational_context_used=False,
+                confidence=confidence,
+                cognition_display_labels=cognition_labels,
+                depth_topic=shared_explain.get("depth_topic"),
+                reasoning_lenses=list(shared_explain.get("reasoning_lenses") or []),
+                vault_domains=list(shared_explain.get("vault_domains") or []),
+            )
+            response_sources = filter_display_sources(response_sources, message=payload.message, mode=mode)
+            response_citations = filter_display_sources(response_citations, message=payload.message, mode=mode)
+            context_used = dict(assistant_data.get("context_used") or {})
+            context_used["standalone_brain"] = standalone_brain
+            context_used["shared_cognition"] = shared_cognition
+            context_used["official_source_grounding"] = bool(shared_cognition.get("citations"))
+            context_used["orb_knowledge_grounding_injected"] = True
+            context_used["orb_knowledge_grounding_preview"] = grounding_context[:1200]
+            context_used = _apply_cognition_context(
+                context_used,
+                shared_cognition=shared_cognition,
+                explainability=explainability,
+            )
+            if not context_used.get("retrieval"):
+                context_used["retrieval"] = {
+                    "strategy": "source_pack_plus_document_rag_plus_operating_brain",
+                    "live_retrieved": False,
+                    "source_count": len(retrieval_preview),
+                    "document_result_count": 0,
+                }
+            model_routing = context_used.get("model_routing") or {}
+            total_elapsed_ms = int((time.perf_counter() - request_started) * 1000)
+            provider_elapsed_ms = (
+                int((time.perf_counter() - provider_started) * 1000) if provider_started else None
+            )
+            context_used["timing"] = {
+                "request_started": True,
+                "first_token_ms": first_token_ms,
+                "provider_elapsed_ms": model_routing.get("latency_ms") or provider_elapsed_ms,
+                "total_elapsed_ms": total_elapsed_ms,
+                "elapsed_ms": total_elapsed_ms,
+                "retrieval_elapsed_ms": retrieval_bundle.get("retrieval_elapsed_ms"),
+                "prompt_tier": prompt_tier,
+                "prompt_char_estimate": len(framed_message),
+                "grounding_char_count": retrieval_bundle.get("grounding_char_count"),
+                "model": model_routing.get("model"),
+                "provider": model_routing.get("provider"),
+                "route": "/orb/standalone/conversation/stream",
+                "stream_mode": "provider_tokens",
+            }
+            metadata_payload = {
+                "ok": True,
+                "standalone": True,
+                "os_records_accessed": False,
+                "answer": answer,
+                "summary": answer.split("\n", 1)[0][:220],
+                "confidence": confidence,
+                "conversation_id": payload.conversation_id,
+                "sources": response_sources,
+                "citations": response_citations,
+                "context_used": context_used,
+                "cognition_display_labels": cognition_labels,
+                "image_understanding_available": assistant_data.get("image_understanding_available"),
+                "error_detail": assistant_data.get("error_detail"),
+            }
+            yield _sse_event("metadata", metadata_payload)
+            yield _sse_event("done", {"ok": True})
+            logger.info(
+                "standalone_orb_conversation_stream ok mode=%s tier=%s first_token_ms=%s total_ms=%s",
+                mode,
+                prompt_tier,
+                first_token_ms,
+                total_elapsed_ms,
+            )
+        except Exception as exc:
+            logger.warning(
+                "standalone_orb_conversation_stream failed mode=%s error_type=%s",
+                mode,
+                type(exc).__name__,
+            )
+            yield _sse_event("error", {"error": "provider_unavailable", "detail": type(exc).__name__})
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache, no-transform",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )

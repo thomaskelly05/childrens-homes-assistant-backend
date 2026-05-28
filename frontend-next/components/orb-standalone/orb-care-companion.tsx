@@ -105,6 +105,7 @@ import {
   logOrbCognitionDebug,
   logOrbTiming,
   queryStandaloneOrbConversation,
+  sendStandaloneOrbMessageStream,
   STANDALONE_ORB_EMPTY_ANSWER_MESSAGE,
   STANDALONE_ORB_MODES,
   type StandaloneOrbAgentSuggestion,
@@ -821,52 +822,222 @@ export function OrbCareCompanion() {
 
       const frontendRequestStartedAt = Date.now()
 
+      const conversationRequest = {
+        message: framedMessage,
+        mode,
+        conversation_id: sessionConversationId,
+        history: historyForRequest.slice(0, -1),
+        detail: voiceSettings.answerStyle,
+        images: imagePayload.length ? imagePayload : undefined,
+        document_text: pendingDocument?.text,
+        document_source_id: pendingDocument?.sourceId || undefined,
+        document_title: pendingDocument?.title
+      }
+
       const runConversationRequest = async () =>
-        queryStandaloneOrbConversation(
-          {
-            message: framedMessage,
-            mode,
-            conversation_id: sessionConversationId,
-            history: historyForRequest.slice(0, -1),
-            detail: voiceSettings.answerStyle,
-            images: imagePayload.length ? imagePayload : undefined,
-            document_text: pendingDocument?.text,
-            document_source_id: pendingDocument?.sourceId || undefined,
-            document_title: pendingDocument?.title
-          },
-          requestController.signal
-        )
+        queryStandaloneOrbConversation(conversationRequest, requestController.signal)
+
+      const assistantId = `a-${Date.now()}`
+      const streamingMessage: StandaloneChatMessage = {
+        id: assistantId,
+        role: 'assistant',
+        content: '',
+        status: 'streaming',
+        createdAt: Date.now()
+      }
+
+      traceOrbSend('placeholder_replace', {
+        sendGeneration,
+        from: thinkingMessageId,
+        to: assistantId,
+        status: 'streaming'
+      })
+      setWorkspace((current) => {
+        const chat = current.chats.find((c) => c.id === targetChatId)
+        if (!chat) return current
+        return patchActiveChat(current, chat.id, {
+          messages: replaceMessageById(chat.messages, thinkingMessageId, streamingMessage)
+        })
+      })
+
+      const streamGeneration = ++streamGenerationRef.current
+      streamPartialRef.current = ''
+      streamAbortRef.current?.abort()
+      const streamController = new AbortController()
+      streamAbortRef.current = streamController
+      const streamSignal = streamController.signal
+
+      const applyStreamingPartial = (partial: string, extras?: Partial<StandaloneChatMessage>) => {
+        if (streamGenerationRef.current !== streamGeneration) return
+        streamPartialRef.current = partial
+        setWorkspace((current) => {
+          const chat = current.chats.find((c) => c.id === targetChatId)
+          if (!chat) return current
+          const streaming = chat.messages.find((m) => m.id === assistantId)
+          if (!streaming) return current
+          const updated: StandaloneChatMessage = {
+            ...streaming,
+            ...extras,
+            content: partial,
+            status: 'streaming'
+          }
+          return patchActiveChat(current, chat.id, {
+            messages: replaceMessageById(chat.messages, assistantId, updated)
+          })
+        })
+      }
+
+      const finalizeAssistantFromResponse = (
+        response: StandaloneOrbConversationResponse,
+        options?: { streamErrorNote?: string }
+      ) => {
+        const newConversationId = response.conversation_id || sessionConversationId
+        const answer =
+          (response.answer || '').trim() ||
+          streamPartialRef.current.trim() ||
+          STANDALONE_ORB_EMPTY_ANSWER_MESSAGE
+        const displayAnswer = options?.streamErrorNote
+          ? `${answer}\n\n*(${options.streamErrorNote})*`
+          : answer
+        if (response.image_understanding_available === false) {
+          setImageUnderstandingNote(
+            'Image understanding is not available in this environment. ORB answered using your text only.'
+          )
+        }
+        const responseSources = (
+          (response.citations?.length ? response.citations : response.sources) ?? []
+        ) as StandaloneOrbSource[]
+        const modelRouting = response.context_used?.model_routing
+        const explainabilityRaw = buildExplainabilityFromResponse(response, trimmed || messageBody)
+        const agentRaw = response.context_used?.agent as StandaloneOrbAgentSuggestion | undefined
+        const docAnalysisRaw = response.context_used?.document_analysis as
+          | { suggested?: boolean; needs_document?: boolean; open_documents_panel?: boolean }
+          | undefined
+        const agentSuggestion =
+          agentRaw?.suggested && !agentRaw?.auto_run ? agentRaw : undefined
+        const documentSuggestion =
+          docAnalysisRaw?.suggested && docAnalysisRaw?.needs_document ? docAnalysisRaw : undefined
+        const assistantMessage: StandaloneChatMessage = {
+          id: assistantId,
+          role: 'assistant',
+          content: displayAnswer,
+          status: 'complete',
+          createdAt: streamingMessage.createdAt,
+          sources: responseSources.length ? responseSources : undefined,
+          modelRouting: modelRouting ?? undefined,
+          explainability: explainabilityRaw,
+          agentSuggestion,
+          documentSuggestion
+        }
+        setWorkspace((current) => {
+          const chat = current.chats.find((c) => c.id === targetChatId)
+          if (!chat) return current
+          return patchActiveChat(current, chat.id, {
+            messages: replaceMessageById(chat.messages, assistantId, assistantMessage),
+            conversationId: newConversationId
+          })
+        })
+        setLastSendStatus('success')
+        setError(null)
+        setRetryPayload(null)
+        if (
+          STANDALONE_ORB_VOICE_CAPTURE_ENABLED &&
+          voiceSettings.voiceReplies &&
+          voice.synthesisAvailable
+        ) {
+          setSpeakingMessageId(assistantId)
+          voice.speak(displayAnswer, () => setSpeakingMessageId(null))
+        }
+      }
 
       try {
         traceOrbSend('request_start', { sendGeneration, conversationId: sessionConversationId })
         logOrbTiming('request_start', {
           sendGeneration,
           conversationId: sessionConversationId,
-          frontend_request_started_at: frontendRequestStartedAt
+          frontend_request_started_at: frontendRequestStartedAt,
+          transport: 'sse'
         })
         if (options?.retry) {
           await refreshSession()
         }
-        let response
+
+        let response: StandaloneOrbConversationResponse | null = null
+        let streamFailedBeforeToken = false
+
         try {
-          response = await runConversationRequest()
-        } catch (firstError) {
-          if (
-            !options?.internalRetry &&
-            isStandaloneOrbRetryableNetworkError(firstError)
-          ) {
-            console.warn('[orb-send] retryable first-send failure', firstError)
-            traceOrbSend('request_retry', { sendGeneration, reason: 'retryable_network' })
-            await refreshSession()
-            response = await runConversationRequest()
-          } else {
-            throw firstError
+          response = await sendStandaloneOrbMessageStream(
+            conversationRequest,
+            {
+              onToken: (_delta, partial) => applyStreamingPartial(partial),
+              onMetadata: (meta) => {
+                const responseSources = (
+                  (meta.citations?.length ? meta.citations : meta.sources) ?? []
+                ) as StandaloneOrbSource[]
+                applyStreamingPartial(streamPartialRef.current, {
+                  sources: responseSources.length ? responseSources : undefined,
+                  modelRouting: meta.context_used?.model_routing,
+                  explainability: buildExplainabilityFromResponse(meta, trimmed || messageBody)
+                })
+              }
+            },
+            streamSignal
+          )
+        } catch (streamTransportError) {
+          if (streamTransportError instanceof DOMException && streamTransportError.name === 'AbortError') {
+            throw streamTransportError
           }
+          const hadPartial = Boolean(streamPartialRef.current.trim())
+          if (hadPartial) {
+            streamFailedBeforeToken = false
+            response = {
+              ok: true,
+              standalone: true,
+              os_records_accessed: false,
+              answer: streamPartialRef.current.trim(),
+              error_detail: 'stream_interrupted'
+            }
+          } else {
+            streamFailedBeforeToken = true
+            traceOrbSend('stream_fallback', { sendGeneration, reason: 'no_tokens' })
+            console.warn('[orb-send] streaming unavailable, falling back to POST', streamTransportError)
+          }
+        }
+
+        if (!response && streamFailedBeforeToken) {
+          try {
+            response = await runConversationRequest()
+          } catch (firstError) {
+            if (
+              !options?.internalRetry &&
+              isStandaloneOrbRetryableNetworkError(firstError)
+            ) {
+              traceOrbSend('request_retry', { sendGeneration, reason: 'retryable_network' })
+              await refreshSession()
+              response = await runConversationRequest()
+            } else {
+              throw firstError
+            }
+          }
+          const fallbackAnswer = (response.answer || '').trim() || STANDALONE_ORB_EMPTY_ANSWER_MESSAGE
+          await streamTextIntoView({
+            text: fallbackAnswer,
+            signal: streamSignal,
+            onChunk: (partial) => applyStreamingPartial(partial)
+          })
+        }
+
+        if (!response) {
+          throw new Error('ORB did not return a response.')
         }
 
         if (!isCurrentSend()) {
           traceOrbSend('request_stale', { sendGeneration })
           return
+        }
+
+        if (streamSignal.aborted) {
+          throw new DOMException('Aborted', 'AbortError')
         }
 
         traceOrbSend('request_end', { sendGeneration, hasAnswer: Boolean(response.answer) })
@@ -879,174 +1050,42 @@ export function OrbCareCompanion() {
           ...(response.context_used?.timing ?? {})
         })
 
-        const newConversationId = response.conversation_id || sessionConversationId
-        const answer = (response.answer || '').trim() || STANDALONE_ORB_EMPTY_ANSWER_MESSAGE
-        if (response.image_understanding_available === false) {
-          setImageUnderstandingNote(
-            'Image understanding is not available in this environment. ORB answered using your text only.'
-          )
-        }
-        const assistantId = `a-${Date.now()}`
-        const responseSources = (
-          (response.citations?.length ? response.citations : response.sources) ?? []
-        ) as StandaloneOrbSource[]
-        const modelRouting = response.context_used?.model_routing
-        const explainabilityRaw = buildExplainabilityFromResponse(response, trimmed || messageBody)
-        logOrbCognitionDebug('message explainability', {
-          mode,
-          cognition_display_labels: explainabilityRaw?.cognition_display_labels,
-          messageHint: trimmed || messageBody
-        })
-        const agentRaw = response.context_used?.agent as StandaloneOrbAgentSuggestion | undefined
-        const docAnalysisRaw = response.context_used?.document_analysis as
-          | { suggested?: boolean; needs_document?: boolean; open_documents_panel?: boolean }
-          | undefined
-        const agentSuggestion =
-          agentRaw?.suggested && !agentRaw?.auto_run ? agentRaw : undefined
-        const documentSuggestion =
-          docAnalysisRaw?.suggested && docAnalysisRaw?.needs_document ? docAnalysisRaw : undefined
-
-        const streamingMessage: StandaloneChatMessage = {
-          id: assistantId,
-          role: 'assistant',
-          content: '',
-          status: 'streaming',
-          createdAt: Date.now(),
-          sources: responseSources.length ? responseSources : undefined,
-          modelRouting: modelRouting ?? undefined,
-          explainability: explainabilityRaw,
-          agentSuggestion,
-          documentSuggestion
-        }
-
-        if (!isCurrentSend()) return
-
-        traceOrbSend('placeholder_replace', {
-          sendGeneration,
-          from: thinkingMessageId,
-          to: assistantId,
-          status: 'streaming'
-        })
-
-        setWorkspace((current) => {
-          const chat = current.chats.find((c) => c.id === targetChatId)
-          if (!chat) return current
-          const withStreaming = replaceMessageById(chat.messages, thinkingMessageId, streamingMessage)
-          return patchActiveChat(current, chat.id, {
-            messages: withStreaming,
-            conversationId: newConversationId
-          })
-        })
-
-        const streamGeneration = ++streamGenerationRef.current
-        streamPartialRef.current = ''
-        streamAbortRef.current?.abort()
-        const streamController = new AbortController()
-        streamAbortRef.current = streamController
-        const streamSignal = streamController.signal
-
-        try {
-          await streamTextIntoView({
-            text: answer,
-            signal: streamSignal,
-            onChunk: (partial) => {
-              if (streamGenerationRef.current !== streamGeneration) return
-              streamPartialRef.current = partial
-              setWorkspace((current) => {
-                const chat = current.chats.find((c) => c.id === targetChatId)
-                if (!chat) return current
-                const streaming = chat.messages.find((m) => m.id === assistantId)
-                if (!streaming) return current
-                const updated: StandaloneChatMessage = { ...streaming, content: partial, status: 'streaming' }
-                return patchActiveChat(current, chat.id, {
-                  messages: replaceMessageById(chat.messages, assistantId, updated)
-                })
-              })
-            }
-          })
-        } catch (streamError) {
-          if (streamError instanceof DOMException && streamError.name === 'AbortError') {
-            traceOrbSend('stream_abort', { sendGeneration, streamGeneration })
-            if (streamGenerationRef.current !== streamGeneration) return
-            const partial = streamPartialRef.current.trim()
-            const stoppedMessage: StandaloneChatMessage = {
-              ...streamingMessage,
-              content: partial
-                ? `${partial}\n\n*(Stopped — partial answer kept.)*`
-                : '*(Stopped before ORB finished responding.)*',
-              status: 'stopped'
-            }
-            setWorkspace((current) => {
-              const chat = current.chats.find((c) => c.id === targetChatId)
-              if (!chat) return current
-              return patchActiveChat(current, chat.id, {
-                messages: replaceMessageById(chat.messages, assistantId, stoppedMessage)
-              })
-            })
-            setLastSendStatus('success')
-            return
-          } else {
-            throw streamError
-          }
-        }
-
         if (!isCurrentSend() || streamGenerationRef.current !== streamGeneration) return
 
-        const assistantMessage: StandaloneChatMessage = {
-          ...streamingMessage,
-          content: answer,
-          status: 'complete'
-        }
-        traceOrbSend('placeholder_replace', {
-          sendGeneration,
-          from: assistantId,
-          status: 'complete'
-        })
-        setWorkspace((current) => {
-          const chat = current.chats.find((c) => c.id === targetChatId)
-          if (!chat) return current
-          const withAssistant = replaceMessageById(chat.messages, assistantId, assistantMessage)
-          return patchActiveChat(current, chat.id, {
-            messages: withAssistant,
-            conversationId: newConversationId
-          })
-        })
-        setLastSendStatus('success')
-        setError(null)
-        setRetryPayload(null)
-
-        if (
-          STANDALONE_ORB_VOICE_CAPTURE_ENABLED &&
-          voiceSettings.voiceReplies &&
-          voice.synthesisAvailable
-        ) {
-          setSpeakingMessageId(assistantId)
-          voice.speak(answer, () => setSpeakingMessageId(null))
-        }
+        finalizeAssistantFromResponse(
+          response,
+          response.error_detail
+            ? { streamErrorNote: 'ORB could not finish streaming; partial answer kept.' }
+            : undefined
+        )
       } catch (caught) {
-        if (requestController.signal.aborted) {
-          if (!isCurrentSend()) {
-            traceOrbSend('request_abort', { sendGeneration, reason: 'superseded' })
-            return
-          }
-          traceOrbSend('request_abort', { sendGeneration, reason: 'user_stop' })
+        if (caught instanceof DOMException && caught.name === 'AbortError') {
+          traceOrbSend('stream_abort', { sendGeneration, streamGeneration })
+          if (!isCurrentSend() || streamGenerationRef.current !== streamGeneration) return
+          const partial = streamPartialRef.current.trim()
           const stoppedMessage: StandaloneChatMessage = {
-            id: `a-stopped-${Date.now()}`,
-            role: 'assistant',
-            content: '*(Stopped — ORB did not finish this answer.)*',
-            status: 'stopped',
-            createdAt: Date.now()
+            ...streamingMessage,
+            content: partial
+              ? `${partial}\n\n*(Stopped — partial answer kept.)*`
+              : '*(Stopped before ORB finished responding.)*',
+            status: 'stopped'
           }
           setWorkspace((current) => {
             const chat = current.chats.find((c) => c.id === targetChatId)
             if (!chat) return current
-            const withStopped = chat.messages.some((entry) => entry.id === thinkingMessageId)
-              ? replaceMessageById(chat.messages, thinkingMessageId, stoppedMessage)
-              : dedupeOrbMessages([...chat.messages, stoppedMessage])
-            return patchActiveChat(current, chat.id, { messages: withStopped })
+            return patchActiveChat(current, chat.id, {
+              messages: replaceMessageById(chat.messages, assistantId, stoppedMessage)
+            })
           })
           setLastSendStatus('success')
           setError(null)
+          return
+        }
+        if (requestController.signal.aborted || streamSignal.aborted) {
+          if (!isCurrentSend()) {
+            traceOrbSend('request_abort', { sendGeneration, reason: 'superseded' })
+            return
+          }
           return
         }
         const parsed = parseStandaloneOrbSendError(caught)
