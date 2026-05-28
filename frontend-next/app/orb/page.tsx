@@ -1,17 +1,31 @@
-import { Suspense } from 'react'
+import Link from 'next/link'
 
-import { OrbCareCompanion } from '@/components/orb-standalone/orb-care-companion'
+import { OrbResidentialHome } from '@/components/orb-residential/orb-residential-home'
 
-export default function OrbStandalonePage() {
+export default function OrbPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex min-h-screen items-center justify-center bg-[#F7F7F8] text-sm text-[#6B7280]">
-          Loading ORB…
-        </div>
-      }
-    >
-      <OrbCareCompanion />
-    </Suspense>
+    <div className="space-y-6">
+      <OrbResidentialHome />
+      <nav className="grid gap-2 text-sm text-[#4B5563] sm:grid-cols-2">
+        <Link className="rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 hover:bg-[#F9FAFB]" href="/orb/ask">
+          Ask ORB
+        </Link>
+        <Link className="rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 hover:bg-[#F9FAFB]" href="/orb/shift-builder">
+          Shift Builder
+        </Link>
+        <Link className="rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 hover:bg-[#F9FAFB]" href="/orb/outputs">
+          Saved outputs
+        </Link>
+        <Link className="rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 hover:bg-[#F9FAFB]" href="/orb/projects">
+          Saved projects
+        </Link>
+        <Link className="rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 hover:bg-[#F9FAFB]" href="/orb/onboarding">
+          Personalise ORB
+        </Link>
+        <Link className="rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 hover:bg-[#F9FAFB]" href="/orb/access">
+          Premium access
+        </Link>
+      </nav>
+    </div>
   )
 }
