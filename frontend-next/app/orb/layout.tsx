@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { ReactNode } from 'react'
 
+/* chatgpt-light: tokens, motion, markdown; premium: layout/sidebar/composer (loads last) */
 import './orb-chatgpt-light.css'
 import './orb-premium.css'
 import { ORB_APPEARANCE_BOOTSTRAP_SCRIPT } from '@/lib/orb/orb-appearance'

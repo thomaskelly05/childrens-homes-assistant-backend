@@ -192,10 +192,10 @@ export function OrbStandaloneComposer({
           ) : null}
 
           <div
-            className={`orb-composer-glow orb-composer-glass orb-surface rounded-[1.75rem] p-3 ${answering ? 'orb-composer-answering orb-answering-pulse' : ''}`}
+            className={`orb-composer-glass p-2.5 sm:p-3 ${answering ? 'orb-composer-answering orb-answering-pulse' : ''}`}
             data-orb-composer-answering={answering ? 'true' : 'false'}
           >
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/60 px-1 pb-2">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/70 px-0.5 pb-2">
               {onAgentSelectorClick ? (
                 <button
                   type="button"
@@ -291,7 +291,7 @@ export function OrbStandaloneComposer({
                 }
               }}
               rows={1}
-              className="mt-2 max-h-44 min-h-[4.5rem] w-full resize-none bg-transparent px-1 py-3 text-[1.02rem] leading-7 text-[var(--orb-foreground)] outline-none placeholder:text-slate-400 [touch-action:manipulation]"
+              className="mt-1.5 max-h-40 min-h-[3.25rem] w-full resize-none bg-transparent px-0.5 py-2 text-[0.9375rem] leading-6 text-[var(--orb-foreground)] outline-none focus:outline-none focus-visible:outline-none placeholder:text-slate-500 [touch-action:manipulation]"
               placeholder={placeholderForMode(mode)}
               disabled={pending}
               aria-describedby="orb-standalone-status"
@@ -324,7 +324,7 @@ export function OrbStandaloneComposer({
                 }}
               />
 
-              <div className="flex items-center gap-1.5 rounded-full border border-slate-200/80 bg-white/75 p-1 shadow-sm">
+              <div className="orb-composer-action-rail flex items-center gap-0.5 p-0.5">
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
