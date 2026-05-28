@@ -46,7 +46,10 @@ SURFACES: tuple[EvidenceSurface, ...] = (
     EvidenceSurface("risk_assessments", "Risk assessments", "risk_assessment", ("title", "risk_type", "category"), ("summary", "risk_summary", "controls", "review_note", "manager_comment"), ("review_due", "next_review_due", "updated_at", "created_at"), "/young-people/{young_person_id}/risk-assessments"),
     EvidenceSurface("support_plans", "Support plans", "support_plan", ("title", "plan_title", "plan_type"), ("summary", "presenting_need", "staff_guidance", "review_note", "actions"), ("review_date", "next_review_due", "updated_at", "created_at"), "/young-people/{young_person_id}/plans"),
     EvidenceSurface("care_plans", "Care plans", "care_plan", ("title", "plan_type"), ("summary", "plan_summary", "care_needs", "staff_guidance"), ("review_date", "next_review_due", "updated_at", "created_at"), "/young-people/{young_person_id}/care-planning"),
-    EvidenceSurface("young_person_appointments", "Appointments", "appointment", ("title", "appointment_type", "professional_name"), ("summary", "notes", "outcome", "reason", "location"), ("appointment_date", "appointment_at", "start_time", "created_at", "updated_at"), "/young-people/{young_person_id}/appointments"),
+    EvidenceSurface("appointments", "Appointments", "appointment", ("title", "appointment_type", "professional_name", "professional"), ("summary", "notes", "outcome", "reason", "location"), ("appointment_date", "appointment_at", "start_time", "date", "created_at", "updated_at"), "/young-people/{young_person_id}/appointments"),
+    EvidenceSurface("young_person_appointments", "Young person appointments", "appointment", ("title", "appointment_type", "professional_name"), ("summary", "notes", "outcome", "reason", "location"), ("appointment_date", "appointment_at", "start_time", "created_at", "updated_at"), "/young-people/{young_person_id}/appointments"),
+    EvidenceSurface("health_appointments", "Health appointments", "appointment", ("title", "appointment_type", "professional_name"), ("summary", "notes", "outcome", "reason", "location"), ("appointment_date", "appointment_at", "start_time", "created_at", "updated_at"), "/young-people/{young_person_id}/health"),
+    EvidenceSurface("calendar_events", "Calendar", "calendar", ("title", "event_type", "category"), ("summary", "description", "notes", "location"), ("start_time", "event_date", "date", "created_at", "updated_at"), "/calendar"),
     EvidenceSurface("health_records", "Health", "health", ("title", "record_type", "health_type"), ("summary", "notes", "outcome", "professional_name"), ("appointment_date", "recorded_at", "created_at", "updated_at"), "/young-people/{young_person_id}/health"),
     EvidenceSurface("education_records", "Education", "education", ("title", "record_type", "school_status"), ("summary", "notes", "attendance_summary", "progress_summary"), ("recorded_at", "created_at", "updated_at"), "/young-people/{young_person_id}/education"),
     EvidenceSurface("family_contact_records", "Family contact", "family_contact", ("title", "contact_type", "relationship"), ("summary", "notes", "outcome", "child_wishes"), ("contact_date", "occurred_at", "created_at", "updated_at"), "/young-people/{young_person_id}/family"),
@@ -93,6 +96,20 @@ def _date_expr(cols: set[str], candidates: tuple[str, ...]) -> str:
     return f"COALESCE({', '.join(parts)}, NULL::text)"
 
 
+def _intent_focus(message: str) -> set[str]:
+    msg = message.lower()
+    focus: set[str] = set()
+    if any(term in msg for term in ("appointment", "dentist", "doctor", "gp", "health", "medical", "optician", "hospital")):
+        focus.update({"appointment", "health", "calendar"})
+    if any(term in msg for term in ("daily brief", "today", "handover", "what needs", "attention")):
+        focus.update({"daily_note", "handover", "action", "appointment", "risk_assessment", "chronology"})
+    if any(term in msg for term in ("recent journey", "journey", "summary", "summarise", "what changed", "recent")):
+        focus.update({"chronology", "daily_note", "keywork", "child_voice", "incident", "support_plan", "care_plan", "appointment"})
+    if any(term in msg for term in ("plan", "plans", "review", "update")):
+        focus.update({"support_plan", "care_plan", "risk_assessment", "manager_review", "action"})
+    return focus
+
+
 def _query_surface(
     conn: Any,
     surface: EvidenceSurface,
@@ -104,6 +121,7 @@ def _query_surface(
     home_id: int | None,
     provider_id: int | None,
     limit: int,
+    skip_keyword_filter: bool = False,
 ) -> list[dict[str, Any]]:
     if not table_exists(conn, surface.table):
         return []
@@ -121,7 +139,7 @@ def _query_surface(
     if surface.child_only and young_person_id is None:
         return []
 
-    search_terms = [term for term in message.lower().replace("?", " ").split() if len(term) >= 4][:8]
+    search_terms = [] if skip_keyword_filter else [term for term in message.lower().replace("?", " ").replace("'", " ").split() if len(term) >= 4][:8]
     searchable = [col for col in (*surface.title_columns, *surface.summary_columns) if col in cols]
     if search_terms and searchable:
         search_expr = " || ' ' || ".join(f"COALESCE({quote_ident(col)}::text, '')" for col in searchable)
@@ -204,9 +222,12 @@ class OrbUniversalEvidenceService:
         provider_id = provider_id if provider_id is not None else current_provider_id(current_user)
         items: list[dict[str, Any]] = []
         errors: list[str] = []
-        for surface in SURFACES:
+        focus = _intent_focus(message)
+        ordered_surfaces = sorted(SURFACES, key=lambda surface: 0 if surface.source_type in focus else 1)
+        for surface in ordered_surfaces:
             if scope == "child" and surface.home_provider and not young_person_id and surface.child_only:
                 continue
+            focused = surface.source_type in focus
             try:
                 items.extend(
                     _query_surface(
@@ -218,7 +239,8 @@ class OrbUniversalEvidenceService:
                         young_person_id=young_person_id,
                         home_id=home_id,
                         provider_id=provider_id,
-                        limit=limit_per_surface,
+                        limit=8 if focused else limit_per_surface,
+                        skip_keyword_filter=focused,
                     )
                 )
             except Exception as exc:
