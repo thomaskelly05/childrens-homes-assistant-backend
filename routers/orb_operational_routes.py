@@ -13,20 +13,15 @@ from schemas.orb_operational import (
     OrbOperationalActionsCreateRequest,
     OrbOperationalActionsDraftRequest,
     OrbOperationalBriefingRequest,
-    OrbOperationalContextSummary,
-    OrbOperationalDraftAction,
     OrbOperationalHealth,
-    OrbOperationalPermissionSummary,
     OrbOperationalRequest,
     OrbOperationalResponse,
-    OrbOperationalSafetyBoundary,
 )
 from services.orb_evidence_diagnostic_service import orb_evidence_diagnostic_service
 from services.orb_intelligence_bridge_service import orb_intelligence_bridge_service
 from services.orb_operational_action_builder_service import orb_operational_action_builder_service
 from services.orb_operational_assistant_service import orb_operational_assistant_service
 from services.orb_operational_context_service import orb_operational_context_bridge
-from services.orb_operational_output_service import orb_operational_output_service
 from services.orb_universal_evidence_service import orb_universal_evidence_service
 
 router = APIRouter(prefix="/assistant/orb", tags=["Operational OS ORB"])
@@ -77,10 +72,7 @@ def _capabilities_payload() -> dict[str, Any]:
 @router.get("/health")
 async def operational_orb_health(current_user=Depends(require_assistant_access)):
     _ = current_user
-    return {
-        "success": True,
-        "data": OrbOperationalHealth().model_dump(),
-    }
+    return {"success": True, "data": OrbOperationalHealth().model_dump()}
 
 
 @compat_router.get("/health")
@@ -105,7 +97,6 @@ async def operational_orb_evidence_diagnostics(
     conn=Depends(get_db),
     current_user=Depends(require_assistant_access),
 ):
-    """Show exactly what the operational ORB evidence spine can see for a question."""
     context = orb_operational_context_bridge.build_context(payload, current_user, conn=conn)
     permissions = context.get("permissions")
     provider_id = permissions.provider_id if hasattr(permissions, "provider_id") else None
@@ -191,11 +182,7 @@ async def operational_orb_conversation(
     conn=Depends(get_db),
     current_user=Depends(require_assistant_access),
 ):
-    response: OrbOperationalResponse = await orb_operational_assistant_service.answer(
-        payload,
-        current_user,
-        conn=conn,
-    )
+    response: OrbOperationalResponse = await orb_operational_assistant_service.answer(payload, current_user, conn=conn)
     orb_intelligence_bridge_service.audit_operational_intelligence_use(payload, response, current_user)
     return {"success": True, "data": response.model_dump()}
 
@@ -381,9 +368,9 @@ async def operational_orb_briefing(
         child_id=payload.child_id,
         staff_id=payload.staff_id,
         days=payload.days,
-        save_output=payload.save_output,
+        save_output=payload.save,
         visibility=payload.visibility,
-        output_type="briefing",
+        output_type=payload.output_type or "briefing",
         tags=payload.tags,
         output_title=payload.title,
     )
