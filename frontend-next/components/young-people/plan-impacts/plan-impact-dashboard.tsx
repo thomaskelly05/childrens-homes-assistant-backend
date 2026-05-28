@@ -1,3 +1,5 @@
+import Link from 'next/link'
+
 import { PlanImpactCard } from '@/components/young-people/plan-impacts/plan-impact-card'
 import { PlanImpactReviewActions } from '@/components/young-people/plan-impacts/plan-impact-review-actions'
 import { LiveDataStatus } from '@/components/indicare/live-data-status'
@@ -17,11 +19,11 @@ export async function PlanImpactDashboard({ childId }: { childId: string }) {
         <p className="text-[11px] font-black uppercase tracking-[0.22em] text-blue-700">Get to Know Me</p>
         <h2 className="mt-2 text-2xl font-black tracking-[-0.05em] text-slate-950">Living care plans</h2>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-          Each plan starts as a blank template for the child. Referral information, records and monthly updates should feed the right plan area as suggestions, then wait for manager review before becoming part of the live plan.
+          Each plan starts as a different guided template. Referral information, records and monthly updates should feed the right plan area as suggestions, then wait for manager review before becoming part of the live plan.
         </p>
         <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {GET_TO_KNOW_ME_PLAN_SET.map((plan) => (
-            <article key={plan.id} data-testid={`get-to-know-me-plan-${plan.id}`} className="rounded-2xl border border-white/80 bg-white/90 p-4 shadow-sm">
+            <article id={plan.id} key={plan.id} data-testid={`get-to-know-me-plan-${plan.id}`} className="rounded-2xl border border-white/80 bg-white/90 p-4 shadow-sm">
               <p className="text-sm font-black text-slate-950">{plan.label}</p>
               <p className="mt-1 text-xs font-semibold leading-5 text-slate-600">{plan.description}</p>
               <div className="mt-3 space-y-2">
@@ -32,9 +34,9 @@ export async function PlanImpactDashboard({ childId }: { childId: string }) {
                   </div>
                 ))}
               </div>
-              <button type="button" className="mt-3 inline-flex min-h-10 rounded-2xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-black text-blue-800">
+              <Link href={`/young-people/${encodeURIComponent(childId)}/plan-impacts#${plan.id}`} className="mt-3 inline-flex min-h-10 rounded-2xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-black text-blue-800">
                 Open plan
-              </button>
+              </Link>
             </article>
           ))}
         </div>
@@ -44,7 +46,7 @@ export async function PlanImpactDashboard({ childId }: { childId: string }) {
         <div>
           <p className="text-[11px] font-black uppercase tracking-[0.22em] text-amber-700">Awaiting review</p>
           <h2 className="mt-1 text-xl font-black tracking-[-0.04em] text-slate-950">Suggested updates from records</h2>
-          <p className="mt-1 text-sm leading-6 text-slate-600">Accept, reject or create an action — plans are never updated silently.</p>
+          <p className="mt-1 text-sm leading-6 text-slate-600">Accept, reject or create an action — every suggestion follows the manager review lifecycle before the live plan changes.</p>
         </div>
         {suggestions.length ? (
           suggestions.map((suggestion, index) => (
