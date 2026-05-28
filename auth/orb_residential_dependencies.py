@@ -6,8 +6,8 @@ from typing import Any
 
 from fastapi import Depends, HTTPException, Request, status
 
-from auth.current_user import get_current_user
 from auth.errors import forbidden
+from auth.orb_residential_auth_loader import get_orb_residential_user
 from core.policy_engine import policy_engine
 from db.connection import get_db
 from services.orb_access_service import orb_access_service
@@ -46,7 +46,7 @@ def is_orb_residential_only_user(user: dict[str, Any]) -> bool:
 
 
 def require_orb_residential_auth(
-    current_user: dict[str, Any] = Depends(get_current_user),
+    current_user: dict[str, Any] = Depends(get_orb_residential_user),
 ) -> dict[str, Any]:
     if not current_user.get("user_id"):
         raise _forbidden("Sign in to use ORB Residential")
