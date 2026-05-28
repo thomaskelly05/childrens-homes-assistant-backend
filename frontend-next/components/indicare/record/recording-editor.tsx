@@ -75,6 +75,36 @@ function hasMeaningfulContent(title: string, body: string) {
   return Boolean(title.trim() || body.trim())
 }
 
+function summaryGuidance(recordingType: RecordingWorkspaceType, formTitle?: string) {
+  if (recordingType === 'daily-note') return 'Give the day a short, human heading so this record is easy to find later.'
+  if (recordingType === 'incident') return 'Summarise the event factually. Keep the heading clear and neutral.'
+  if (recordingType === 'education-note') return 'Name the education theme, such as attendance, learning, achievement or follow-up.'
+  if (recordingType === 'health-appointment') return 'Summarise the health update or appointment outcome.'
+  if (recordingType === 'child-voice') return 'Use the child’s words or the main message they communicated.'
+  if (recordingType === 'keywork') return 'Summarise the direct work, theme or goal discussed.'
+  return `Write a short summary for ${formTitle || 'this record'} so adults and managers can review it quickly.`
+}
+
+function bodyGuidance(recordingType: RecordingWorkspaceType, childName?: string, therapeuticPrompt?: string) {
+  const name = childName || 'the young person'
+  if (recordingType === 'daily-note') return `Write what ${name} experienced, what adults noticed, what helped, and anything that needs carrying forward.`
+  if (recordingType === 'incident') return 'Write what happened, what adults saw or heard, how adults responded, what changed afterwards and what follow-up is needed.'
+  if (recordingType === 'education-note') return 'Include attendance, learning, school contact, achievements, concerns and the next education action.'
+  if (recordingType === 'health-appointment') return 'Include advice received, medication or treatment changes, follow-up actions and any calendar dates.'
+  if (recordingType === 'keywork') return 'Include the child’s voice, the work completed, what was agreed and what adults need to do next.'
+  if (recordingType === 'child-voice') return 'Record what was said, shown or communicated, how adults understood it, and what changed because of it.'
+  return therapeuticPrompt || 'Write clearly and kindly. Include what happened, the child’s voice where known, the adult response and next steps.'
+}
+
+function GuidanceBox({ children }: { children: string }) {
+  return (
+    <div className="mt-2 rounded-2xl border border-blue-100 bg-blue-50/70 px-4 py-3">
+      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-blue-700">Guidance while you write</p>
+      <p className="mt-1 text-xs font-semibold leading-5 text-blue-950">{children}</p>
+    </div>
+  )
+}
+
 export function RecordingEditor({
   recordingType,
   formId,
@@ -639,8 +669,9 @@ export function RecordingEditor({
         />
       ) : null}
 
-      <label className="block">
+      <label className="block rounded-[24px] border border-slate-100 bg-white/80 p-4">
         <span className="text-sm font-black text-slate-950">Title / summary</span>
+        <GuidanceBox>{summaryGuidance(recordingType, form?.title)}</GuidanceBox>
         <input
           type="text"
           data-testid="recording-editor-title"
@@ -648,12 +679,13 @@ export function RecordingEditor({
           disabled={isReadOnly}
           onChange={(event) => handleTitleChange(event.target.value)}
           placeholder="Short summary for this record"
-          className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-950 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100 disabled:opacity-70"
+          className="mt-3 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-950 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100 disabled:opacity-70"
         />
       </label>
 
-      <label className="block">
+      <label className="block rounded-[24px] border border-slate-100 bg-white/80 p-4">
         <span className="text-sm font-black text-slate-950">Record body</span>
+        <GuidanceBox>{bodyGuidance(recordingType, childName, form?.therapeuticPrompt)}</GuidanceBox>
         <textarea
           data-testid="recording-editor-body"
           spellCheck
@@ -662,7 +694,7 @@ export function RecordingEditor({
           onChange={(event) => handleBodyChange(event.target.value)}
           placeholder={placeholder}
           rows={14}
-          className="mt-2 w-full resize-y rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold leading-6 text-slate-950 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100 disabled:opacity-70"
+          className="mt-3 w-full resize-y rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold leading-6 text-slate-950 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100 disabled:opacity-70"
         />
       </label>
 
