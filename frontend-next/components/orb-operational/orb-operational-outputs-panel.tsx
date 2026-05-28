@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Archive, Download, Loader2, Search, Send, Trash2, X } from 'lucide-react'
+import { Archive, CheckCircle2, Download, Loader2, Search, Send, Trash2, X } from 'lucide-react'
 
 import {
   archiveOperationalOutput,
@@ -10,6 +10,7 @@ import {
   getOperationalOutput,
   listOperationalOutputs,
   markOperationalOutputForReview,
+  markOperationalOutputReviewed,
   OPERATIONAL_ARTEFACT_NOTICE,
   type OrbOperationalOutputRecord,
   type OrbOperationalOutputSummary
@@ -99,6 +100,16 @@ export function OrbOperationalOutputsPanel({
     if (updated) {
       setDetail(updated)
       setNotice('Sent to manager review.')
+      void refresh()
+    }
+  }
+
+  async function handleReviewed() {
+    if (!selectedId) return
+    const updated = await markOperationalOutputReviewed(selectedId)
+    if (updated) {
+      setDetail(updated)
+      setNotice('Marked as reviewed.')
       void refresh()
     }
   }
@@ -252,6 +263,16 @@ export function OrbOperationalOutputsPanel({
                   >
                     <Send className="mr-1 inline h-3 w-3" />
                     Send to manager review
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleReviewed()}
+                    className="rounded-full bg-emerald-600 px-4 py-2 text-xs font-black text-white disabled:bg-slate-300"
+                    disabled={detail.review_status === 'reviewed'}
+                    data-testid="orb-mark-reviewed"
+                  >
+                    <CheckCircle2 className="mr-1 inline h-3 w-3" />
+                    Mark reviewed
                   </button>
                   <button type="button" onClick={() => void handleArchive()} className="rounded-full border border-slate-200 px-4 py-2 text-xs font-black">
                     <Archive className="mr-1 inline h-3 w-3" />
