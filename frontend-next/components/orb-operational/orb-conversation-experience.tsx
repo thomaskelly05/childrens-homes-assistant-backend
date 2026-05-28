@@ -38,6 +38,8 @@ const quickPrompts: Array<{ mode: OrbOperationalMode; label: string; prompt: str
   { mode: 'record_quality_review', label: 'Record quality', prompt: 'Which records need review or clearer follow-up?' },
   { mode: 'action_priority', label: 'Actions', prompt: 'What actions should adults prioritise?' },
   { mode: 'plan_impact_review', label: 'Plans', prompt: 'What plan updates may need review?' },
+  { mode: 'governance_briefing', label: 'Reg 44 / 45', prompt: 'Prepare a Reg 44 and Reg 45 evidence brief from what ORB can see.' },
+  { mode: 'ofsted_evidence_review', label: 'Ofsted evidence', prompt: 'What would Ofsted, Reg 44 or Reg 45 want to see from this evidence?' },
   { mode: 'manager_daily_brief', label: 'Daily brief', prompt: 'Give me a simple daily brief.' }
 ]
 
@@ -50,17 +52,42 @@ function mapOperationalResponse(response: OrbOperationalResponse): OrbConversati
     citation_ref: `[${index + 1}]`,
     summary: source.basis || ''
   }))
+
+  const actions = [
+    ...(response.follow_up_actions || []).map((item) => ({
+      label: item.label,
+      type: (item.action_type || 'follow_up') as 'review',
+      route: item.route || undefined
+    })),
+    ...(response.draft_actions || []).map((item) => ({
+      label: item.title,
+      type: 'action' as const,
+      route: '/actions'
+    })),
+    ...(response.review_prompts || []).map((item) => ({
+      label: item.title,
+      type: 'review' as const,
+      route: item.route_hint || '/record/reviews'
+    })),
+    ...(response.recommendations || []).map((item) => ({
+      label: item.title,
+      type: 'review' as const,
+      route: item.route_hint || undefined
+    })),
+    ...(response.context_summary?.attention_items || []).map((label) => ({
+      label,
+      type: 'review' as const,
+      route: '/intelligence-actions'
+    }))
+  ].slice(0, 10)
+
   return {
     ok: true,
     answer: response.answer,
     summary: response.context_summary?.headline || response.answer.split('\n', 1)[0].slice(0, 220),
     sources,
     citations: sources,
-    actions: (response.context_summary?.attention_items || []).slice(0, 5).map((label) => ({
-      label,
-      type: 'review' as const,
-      route: '/intelligence-actions'
-    })),
+    actions,
     confidence: response.context_summary?.degraded || response.context_summary?.unavailable ? 'low' : 'medium',
     guardrails: response.boundaries?.notices || [
       'ORB uses permissioned IndiCare context and only sees information available to your role.'
@@ -69,7 +96,9 @@ function mapOperationalResponse(response: OrbOperationalResponse): OrbConversati
       scope: response.permissions?.scope_resolved || undefined,
       care_retrieval: response.care_record_access,
       degraded: response.context_summary?.degraded,
-      snapshot_hit: !response.context_summary?.unavailable
+      snapshot_hit: !response.context_summary?.unavailable,
+      suggested_output_type: response.suggested_output_type || undefined,
+      save_available: response.save_available || undefined
     }
   }
 }
@@ -108,7 +137,7 @@ function MessageSources({ response }: { response?: OrbConversationResponse }) {
           {sources.length ? (
             <div className="space-y-2">
               <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Sources</p>
-              {sources.slice(0, 5).map((source, index) => (
+              {sources.slice(0, 6).map((source, index) => (
                 <div key={`${source.record_id || source.title || index}`} className="rounded-xl bg-white px-3 py-2 text-xs font-semibold leading-5 text-slate-600">
                   <p className="font-black text-slate-900">{source.title || source.record_type || `Source ${index + 1}`}</p>
                   {source.summary ? <p className="mt-1">{source.summary}</p> : null}
@@ -119,9 +148,22 @@ function MessageSources({ response }: { response?: OrbConversationResponse }) {
           {actions.length ? (
             <div className="space-y-2">
               <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Suggested next steps</p>
-              {actions.slice(0, 5).map((action, index) => (
-                <p key={`${action.label}-${index}`} className="rounded-xl bg-white px-3 py-2 text-xs font-black text-slate-700">{action.label}</p>
-              ))}
+              {actions.slice(0, 8).map((action, index) => {
+                const label = action.label || `Action ${index + 1}`
+                const route = action.route
+                return route ? (
+                  <Link key={`${label}-${index}`} href={route} className="block rounded-xl bg-white px-3 py-2 text-xs font-black text-blue-800 ring-1 ring-blue-50">
+                    {label}
+                  </Link>
+                ) : (
+                  <p key={`${label}-${index}`} className="rounded-xl bg-white px-3 py-2 text-xs font-black text-slate-700">{label}</p>
+                )
+              })}
+            </div>
+          ) : null}
+          {response.context_used?.save_available ? (
+            <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2">
+              <p className="text-xs font-black text-emerald-950">This ORB response can be saved as {String(response.context_used.suggested_output_type || 'an operational output').replace(/_/g, ' ')}.</p>
             </div>
           ) : null}
           {response.guardrails?.length ? (
@@ -184,7 +226,10 @@ export function OrbConversationExperience({
       scope: scopeMeta.operationalScope,
       child_id: activeScope === 'child' ? selectedChildId : null,
       staff_id: null,
-      days: 7
+      days: 7,
+      include_actions: true,
+      include_patterns: true,
+      include_record_quality: true
     }
     try {
       const operationalResult = await sendOperationalOrbMessage(operationalPayload, controller.signal)
@@ -241,7 +286,7 @@ export function OrbConversationExperience({
               </div>
             </div>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
-              Ask about records, plans, risks, chronology, reviews, appointments or what needs doing next. ORB uses the same brain as the standalone ORB, with permissioned OS records when authorised.
+              Ask about records, plans, risks, chronology, reviews, appointments, Reg 44, Reg 45, Ofsted evidence or what needs doing next. ORB uses the same brain as standalone ORB, with permissioned OS records when authorised.
             </p>
           </div>
           <div className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-xs font-bold text-slate-600">
@@ -288,7 +333,7 @@ export function OrbConversationExperience({
               <Sparkles className="mx-auto h-9 w-9 text-blue-500" aria-hidden />
               <h2 className="mt-4 text-xl font-black tracking-[-0.04em] text-slate-950">What do you need to know?</h2>
               <p className="mt-2 text-sm leading-6 text-slate-600">
-                Try asking: “When was the last dentist appointment?”, “What changed this week?”, “What plan updates need review?”, or “Help me write this therapeutically.”
+                Try asking: “When was the last dentist appointment?”, “What changed this week?”, “Prepare Reg 45 evidence”, or “What would a Reg 44 visitor want to see?”
               </p>
             </div>
           </div>
