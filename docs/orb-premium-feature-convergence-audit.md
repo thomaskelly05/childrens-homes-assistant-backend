@@ -84,24 +84,112 @@ Standalone ORB must never imply access to live IndiCare OS child, home, staff, c
 | Tasks / reminders | D | Product later |
 | Tables/charts generation | D | Markdown only |
 | Dark mode polish | D | Light primary; dark tokens exist |
-| Stop generating (mid-stream cancel) | B | Partial via pending state; hard cancel API later |
+| Stop generating (mid-stream cancel) | A | AbortController + composer Stop; partial answer kept |
+| Inline suggested replies | A | `OrbSuggestedReplyChips` under last answer |
+| Ask about this (attachments) | B | Image chips; document actions in panel |
+| Tiered backend prompts | A | `prepare_request_bundle`, fast/residential/deep |
 
 ---
 
-## 6. Missing for residential children’s homes (ORB-native value)
+## 6. Residential tools audit (ORB-native)
 
-| Need | Status | ORB equivalent |
-|------|--------|----------------|
-| Daily log / incident / restraint wording | B | Record This Properly + action bar “Recording wording” |
-| Safeguarding facts/concerns/gaps/escalation | A | Safeguarding Thinking mode + lenses |
-| LADO / Working Together prompts | B | Mode + knowledge spine; deepen in agents |
-| Ofsted / SCCIF / Quality Standards | A | Ofsted Lens, Reg 44/45 Prep |
-| Therapeutic / PACE / trauma-informed | A | Therapeutic Reframe mode |
-| Manager oversight / RI governance | B | Manager Copilot; follow-up “Manager oversight” |
-| Shift handover / what am I missing | A | `/shift`, `/whatamimissing`, follow-up actions |
-| Policy card on upload | B | Library + document panel |
-| Chronology suggestion (no OS IDs) | B | Follow-up action; no live chronology write |
-| Reg 44 evidence pack builder | D | Prep mode + saved outputs; pack export later |
+Legend: **Done** · **Partial** · **UI only** · **Backend only** · **Legacy** · **Missing** · **N/A**
+
+### Recording tools
+
+| Tool | Status | Mechanism |
+|------|--------|-----------|
+| Daily log helper | Partial | Record This Properly + starters |
+| Incident wording helper | Partial | Mode + follow-up |
+| Restraint record helper | Partial | Knowledge spine / prompts |
+| Missing episode helper | Partial | Safeguarding mode + terms |
+| Medication error helper | Partial | Deep tier + spine |
+| Key-work / session note | Partial | Record mode |
+| Child voice checker | Partial | Follow-up “Child voice” |
+| Objective language checker | Partial | Recording mode |
+| Therapeutic language rewrite | Done | Therapeutic Reframe |
+| Chronology suggestion | Partial | Follow-up (no OS write) |
+| Manager oversight draft | Done | Follow-up action |
+| Handover summary | Done | `/shift` + Shift Builder follow-up |
+| End-of-shift summary | Partial | Same as handover |
+
+### Safeguarding tools
+
+| Tool | Status |
+|------|--------|
+| Facts / concerns / gaps / escalation splitter | Partial — Safeguarding Thinking mode |
+| Immediate safeguarding thinking | Done — mode + deep tier |
+| LADO consideration prompt | Partial — spine |
+| Working Together prompt | Partial — spine |
+| Missing from care prompt | Partial |
+| Exploitation / CSE / CCE prompt | Partial |
+| Self-harm / mental health crisis | Partial — deep tier |
+| Peer-on-peer harm | Partial |
+| Unknown adult / vehicle risk | Partial |
+| Online harm | Partial |
+| Police / emergency escalation | Partial — boundaries in prompt |
+| Professional boundary wording | Partial |
+
+### Ofsted / regulation
+
+| Tool | Status |
+|------|--------|
+| Ofsted / SCCIF lens | Done |
+| Quality Standards lens | Partial — packs |
+| Children’s Homes Regulations lens | Partial |
+| Reg 44 / Reg 45 prep | Done — mode |
+| Evidence sufficiency check | Partial — follow-up |
+| Leadership / child experience / governance checks | Partial — Manager / Ofsted modes |
+| “What would Ofsted ask?” | Done — Ofsted Lens + follow-up |
+
+### Therapeutic
+
+| Tool | Status |
+|------|--------|
+| Trauma-informed reframe | Done |
+| PACE / attachment lens | Partial |
+| Behaviour as communication | Done — Behaviour Support mode |
+| Repair / restorative follow-up | Partial |
+| Staff emotional containment | Partial — Reflect / Staff Coach |
+| Reflective debrief | Partial |
+| Autism / GDD-aware support | Partial — spine modules |
+| Avoid diagnosis boundary | Done — guardrails |
+
+### Management
+
+| Tool | Status |
+|------|--------|
+| RM oversight mode | Partial — Manager Copilot |
+| RI governance mode | Partial — Reg 44/45 |
+| Supervision prep | Done — `/supervision` |
+| Staff coach | Done — mode |
+| Pattern recognition / drift | Partial — Manager mode |
+| Actions / follow-up loop | Partial — follow-ups |
+| Evidence of impact | Partial |
+| Provider-level risk themes | Partial |
+
+### Shift tools
+
+| Tool | Status |
+|------|--------|
+| Shift Builder | Partial — follow-up + backend draft API |
+| Priority planner | Partial — handover prompts |
+| End-of-shift reflection | Partial |
+| Manager attention / what missing | Done — follow-ups + slash |
+| Outstanding actions summary | Partial |
+
+### Document tools
+
+| Tool | Status |
+|------|--------|
+| Policy card generator | Missing |
+| Document summary | Done — document panel |
+| Document risk review | Partial |
+| Ofsted lens on document | Partial — analyse |
+| Recording quality review | Partial |
+| Safeguarding lens on document | Partial |
+| Action plan from document | Done |
+| Staff / manager / RI briefing from policy | Partial |
 
 ---
 
@@ -117,7 +205,7 @@ Standalone ORB must never imply access to live IndiCare OS child, home, staff, c
 
 ## 8. Recommended next implementation order
 
-1. **Stop generating** — abort in-flight fetch/stream on `/orb/standalone/conversation`.
+1. **True streaming** — SSE backend + frontend token renderer (`docs/orb-speed-and-instant-feel-audit.md`).
 2. **Shift Builder panel** — wire “Shift Builder” action to dedicated workspace (notes exist in `docs/orb-shift-builder-product-notes.md`).
 3. **Regenerate from message** — retry from a specific assistant turn (not only last user).
 4. **Share/export pack** — markdown/PDF export of thread + saved outputs (standalone artefacts only).
@@ -125,6 +213,8 @@ Standalone ORB must never imply access to live IndiCare OS child, home, staff, c
 6. **Voice conversation** — optional; after privacy review.
 7. **Canvas workspace** — editable draft pane for records/oversight (no OS write).
 8. **Backend profile sync** — optional server-side prefs; still no OS records.
+
+See also: `docs/orb-speed-and-instant-feel-audit.md` for performance work completed and streaming roadmap.
 
 ---
 

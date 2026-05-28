@@ -79,6 +79,24 @@ def test_research_intent_flag_and_note(retrieval):
     assert classification["research_note"] == RESEARCH_NOTE
 
 
+def test_prompt_tier_fast_for_short_general_query(retrieval):
+    tier = retrieval.resolve_prompt_tier("hello there")
+    assert tier == "fast"
+
+
+def test_prompt_tier_deep_for_safeguarding_mode(retrieval):
+    tier = retrieval.resolve_prompt_tier("help me think", mode="Safeguarding Thinking")
+    assert tier == "deep"
+
+
+def test_prepare_request_bundle_dedupes_classification(retrieval):
+    bundle = retrieval.prepare_request_bundle("tell me about IndiCare")
+    assert bundle["prompt_tier"] in {"fast", "residential", "deep"}
+    assert bundle["grounding_context"]
+    assert bundle["retrieval_elapsed_ms"] >= 0
+    assert len(bundle["source_packs"]) >= 1
+
+
 def test_build_grounding_context_is_honest_about_live_retrieval(retrieval):
     context = retrieval.build_grounding_context("tell me about IndiCare")
     lower = context.lower()

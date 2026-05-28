@@ -27,8 +27,11 @@ import {
   type PendingImageAttachment
 } from '@/components/orb-standalone/orb-standalone-composer'
 import {
+  OrbAskAboutThisChips,
   OrbAssistantMessageBody,
   OrbResponseActionBar,
+  OrbSuggestedReplyChips,
+  type OrbAttachmentFollowUpAction,
   type OrbResponseFollowUpAction
 } from '@/components/orb-standalone/orb-assistant-message'
 import { OrbAgentPanel } from '@/components/orb-standalone/orb-agent-panel'
@@ -100,6 +103,7 @@ import {
   isStandaloneOrbRetryableNetworkError,
   parseStandaloneOrbSendError,
   logOrbCognitionDebug,
+  logOrbTiming,
   queryStandaloneOrbConversation,
   STANDALONE_ORB_EMPTY_ANSWER_MESSAGE,
   STANDALONE_ORB_MODES,
@@ -199,7 +203,13 @@ function stripTrailingTurnPlaceholders(messages: StandaloneChatMessage[]): Stand
   const copy = [...messages]
   while (copy.length > 0) {
     const last = copy[copy.length - 1]
-    if (last.role === 'assistant' && (last.status === 'thinking' || last.status === 'streaming' || last.status === 'error')) {
+    if (
+      last.role === 'assistant' &&
+      (last.status === 'thinking' ||
+        last.status === 'streaming' ||
+        last.status === 'error' ||
+        last.status === 'stopped')
+    ) {
       copy.pop()
       continue
     }
@@ -412,6 +422,7 @@ export function OrbCareCompanion() {
   const requestAbortRef = useRef<AbortController | null>(null)
   const streamAbortRef = useRef<AbortController | null>(null)
   const streamGenerationRef = useRef(0)
+  const streamPartialRef = useRef('')
   const sessionPrimedRef = useRef(false)
   const workspaceHydratedRef = useRef(false)
 
@@ -677,13 +688,6 @@ export function OrbCareCompanion() {
         .filter(Boolean)
         .join('\n\n')
 
-      setPending(true)
-      setLastSendStatus('sending')
-      setError(null)
-      setRetryPayload(null)
-      setImageUnderstandingNote(null)
-      traceOrbSend('pending_state', { sendGeneration, pending: true })
-
       const userMessageId = `u-${now}`
       const thinkingMessageId = `a-thinking-${now}`
       const userMessage: StandaloneChatMessage = {
@@ -770,6 +774,13 @@ export function OrbCareCompanion() {
         voice.markIdle()
       }
 
+      setPending(true)
+      setLastSendStatus('sending')
+      setError(null)
+      setRetryPayload(null)
+      setImageUnderstandingNote(null)
+      traceOrbSend('pending_state', { sendGeneration, pending: true })
+
       const osBoundary = standaloneOsBoundaryReply(trimmed || messageBody)
       if (osBoundary && !options?.retry) {
         const boundaryMessage: StandaloneChatMessage = {
@@ -808,6 +819,8 @@ export function OrbCareCompanion() {
       const requestController = new AbortController()
       requestAbortRef.current = requestController
 
+      const frontendRequestStartedAt = Date.now()
+
       const runConversationRequest = async () =>
         queryStandaloneOrbConversation(
           {
@@ -826,6 +839,11 @@ export function OrbCareCompanion() {
 
       try {
         traceOrbSend('request_start', { sendGeneration, conversationId: sessionConversationId })
+        logOrbTiming('request_start', {
+          sendGeneration,
+          conversationId: sessionConversationId,
+          frontend_request_started_at: frontendRequestStartedAt
+        })
         if (options?.retry) {
           await refreshSession()
         }
@@ -852,6 +870,14 @@ export function OrbCareCompanion() {
         }
 
         traceOrbSend('request_end', { sendGeneration, hasAnswer: Boolean(response.answer) })
+        const frontendRequestCompletedAt = Date.now()
+        logOrbTiming('request_end', {
+          sendGeneration,
+          frontend_request_started_at: frontendRequestStartedAt,
+          frontend_request_completed_at: frontendRequestCompletedAt,
+          frontend_elapsed_ms: frontendRequestCompletedAt - frontendRequestStartedAt,
+          ...(response.context_used?.timing ?? {})
+        })
 
         const newConversationId = response.conversation_id || sessionConversationId
         const answer = (response.answer || '').trim() || STANDALONE_ORB_EMPTY_ANSWER_MESSAGE
@@ -913,6 +939,7 @@ export function OrbCareCompanion() {
         })
 
         const streamGeneration = ++streamGenerationRef.current
+        streamPartialRef.current = ''
         streamAbortRef.current?.abort()
         const streamController = new AbortController()
         streamAbortRef.current = streamController
@@ -924,6 +951,7 @@ export function OrbCareCompanion() {
             signal: streamSignal,
             onChunk: (partial) => {
               if (streamGenerationRef.current !== streamGeneration) return
+              streamPartialRef.current = partial
               setWorkspace((current) => {
                 const chat = current.chats.find((c) => c.id === targetChatId)
                 if (!chat) return current
@@ -940,6 +968,23 @@ export function OrbCareCompanion() {
           if (streamError instanceof DOMException && streamError.name === 'AbortError') {
             traceOrbSend('stream_abort', { sendGeneration, streamGeneration })
             if (streamGenerationRef.current !== streamGeneration) return
+            const partial = streamPartialRef.current.trim()
+            const stoppedMessage: StandaloneChatMessage = {
+              ...streamingMessage,
+              content: partial
+                ? `${partial}\n\n*(Stopped — partial answer kept.)*`
+                : '*(Stopped before ORB finished responding.)*',
+              status: 'stopped'
+            }
+            setWorkspace((current) => {
+              const chat = current.chats.find((c) => c.id === targetChatId)
+              if (!chat) return current
+              return patchActiveChat(current, chat.id, {
+                messages: replaceMessageById(chat.messages, assistantId, stoppedMessage)
+              })
+            })
+            setLastSendStatus('success')
+            return
           } else {
             throw streamError
           }
@@ -979,8 +1024,29 @@ export function OrbCareCompanion() {
           voice.speak(answer, () => setSpeakingMessageId(null))
         }
       } catch (caught) {
-        if (requestController.signal.aborted && !isCurrentSend()) {
-          traceOrbSend('request_abort', { sendGeneration, reason: 'superseded' })
+        if (requestController.signal.aborted) {
+          if (!isCurrentSend()) {
+            traceOrbSend('request_abort', { sendGeneration, reason: 'superseded' })
+            return
+          }
+          traceOrbSend('request_abort', { sendGeneration, reason: 'user_stop' })
+          const stoppedMessage: StandaloneChatMessage = {
+            id: `a-stopped-${Date.now()}`,
+            role: 'assistant',
+            content: '*(Stopped — ORB did not finish this answer.)*',
+            status: 'stopped',
+            createdAt: Date.now()
+          }
+          setWorkspace((current) => {
+            const chat = current.chats.find((c) => c.id === targetChatId)
+            if (!chat) return current
+            const withStopped = chat.messages.some((entry) => entry.id === thinkingMessageId)
+              ? replaceMessageById(chat.messages, thinkingMessageId, stoppedMessage)
+              : dedupeOrbMessages([...chat.messages, stoppedMessage])
+            return patchActiveChat(current, chat.id, { messages: withStopped })
+          })
+          setLastSendStatus('success')
+          setError(null)
           return
         }
         const parsed = parseStandaloneOrbSendError(caught)
@@ -1260,6 +1326,52 @@ export function OrbCareCompanion() {
     setTimeout(() => setDraftNotice(null), 5000)
   }
 
+  const handleStopGeneration = useCallback(() => {
+    if (!pending && !sendInFlightRef.current) return
+    traceOrbSend('request_abort', { reason: 'user_stop' })
+    requestAbortRef.current?.abort()
+    streamAbortRef.current?.abort()
+    voice.cancelSpeaking()
+    setWorkspace((current) => {
+      const chatId = current.activeChatId
+      if (!chatId) return current
+      const chat = current.chats.find((c) => c.id === chatId)
+      if (!chat) return current
+      const messages = chat.messages.map((entry) => {
+        if (entry.status !== 'thinking' && entry.status !== 'streaming') return entry
+        const partial = entry.content.trim()
+        return {
+          ...entry,
+          status: 'stopped' as const,
+          content: partial
+            ? `${partial}\n\n*(Stopped — partial answer kept.)*`
+            : '*(Stopped before ORB finished responding.)*'
+        }
+      })
+      return patchActiveChat(current, chatId, { messages: dedupeOrbMessages(messages) })
+    })
+    setPending(false)
+    sendInFlightRef.current = false
+    setLastSendStatus('success')
+  }, [pending, voice])
+
+  function handleAttachmentFollowUp(action: OrbAttachmentFollowUpAction) {
+    const prompts: Record<OrbAttachmentFollowUpAction, string> = {
+      summarise: 'Summarise what you can see in the image(s) I shared. Standalone ORB only — no OS records.',
+      safeguarding_lens:
+        'Apply a safeguarding lens to the image(s) or document I shared: facts, concerns, gaps, escalation.',
+      ofsted_lens: 'Apply an Ofsted / SCCIF lens to what I shared. What evidence would an inspector ask for?',
+      recording_quality:
+        'Review recording quality for anything I can log from this attachment. Suggest objective wording.',
+      action_plan: 'Create a practical action plan from this attachment. Standalone draft only.'
+    }
+    if (action === 'safeguarding_lens') handleModeChange('Safeguarding Thinking')
+    if (action === 'ofsted_lens') handleModeChange('Ofsted Lens')
+    if (action === 'recording_quality') handleModeChange('Record This Properly')
+    setMessage(prompts[action])
+    inputRef.current?.focus()
+  }
+
   function handleOrbFollowUp(action: OrbResponseFollowUpAction, sourceContent: string) {
     const excerpt = sourceContent.slice(0, 2400)
     const prompts: Record<OrbResponseFollowUpAction, string> = {
@@ -1424,6 +1536,7 @@ export function OrbCareCompanion() {
       agentLabel={activeAgent?.title ?? 'Ask ORB'}
       onAgentSelectorClick={() => setAgentsPanelOpen(true)}
       answering={isAnswering}
+      onStopGenerating={isAnswering ? handleStopGeneration : undefined}
     />
   )
 
@@ -1961,7 +2074,9 @@ export function OrbCareCompanion() {
                                 </button>
                               </div>
                             ) : null}
-                            {index === visibleMessages.length - 1 && entry.status === 'complete' ? (
+                            {index === visibleMessages.length - 1 &&
+                            (entry.status === 'complete' || entry.status === 'stopped') ? (
+                              <>
                               <OrbResponseActionBar
                                 mode={mode}
                                 content={entry.content}
@@ -1997,19 +2112,46 @@ export function OrbCareCompanion() {
                                 onInspectionPrep={() => handleModeChange('Ofsted Lens')}
                                 onOrbFollowUp={handleOrbFollowUp}
                               />
+                              {entry.status === 'complete' ? (
+                                <OrbSuggestedReplyChips
+                                  onSelect={(action) => handleOrbFollowUp(action, entry.content)}
+                                />
+                              ) : null}
+                              </>
                             ) : index !== visibleMessages.length - 1 ? (
                               <div className="mt-2 flex flex-wrap gap-2 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
                                 <ActionChip icon={<Copy className="h-3 w-3" />} label="Copy" onClick={() => void copyToClipboard(entry.content)} />
+                                {voice.synthesisAvailable ? (
+                                  speakingMessageId === entry.id ? (
+                                    <ActionChip icon={<Square className="h-3 w-3" />} label="Stop" onClick={voice.cancelSpeaking} />
+                                  ) : (
+                                    <ActionChip
+                                      icon={<Volume2 className="h-3 w-3" />}
+                                      label="Read aloud"
+                                      onClick={() => {
+                                        setSpeakingMessageId(entry.id)
+                                        voice.speak(entry.content, () => setSpeakingMessageId(null))
+                                      }}
+                                    />
+                                  )
+                                ) : null}
                               </div>
                             ) : null}
                           </>
                           )
                         ) : (
+                          <>
                           <OrbUserMessageBubble
                             entry={entry}
                             onEditSubmit={handleEditAndResubmit}
                             disabled={pending || isAnswering}
                           />
+                          {(entry.imageDataUrls?.length ?? 0) > 0 &&
+                          index === visibleMessages.length - 1 &&
+                          !pending ? (
+                            <OrbAskAboutThisChips onSelect={handleAttachmentFollowUp} />
+                          ) : null}
+                          </>
                         )}
                       </div>
                     ))}

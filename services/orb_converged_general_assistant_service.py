@@ -20,6 +20,7 @@ This gives us a safe runtime convergence path without breaking /orb.
 from typing import Any
 
 from services.orb_general_assistant_service import orb_general_assistant_service
+from services.orb_knowledge_retrieval_service import orb_knowledge_retrieval_service
 from services.orb_residential_intelligence_service import orb_residential_intelligence_service
 
 
@@ -56,18 +57,33 @@ class OrbConvergedGeneralAssistantService:
             supplied_context_types.append("conversation_history")
 
         surface = "standalone"
+        retrieval_bundle = orb_knowledge_retrieval_service.prepare_request_bundle(
+            user_message,
+            mode=mode,
+            profile_context=profile_context,
+            attachments=["image"] if image_data_urls else None,
+        )
+        prompt_tier = retrieval_bundle["prompt_tier"]
+
         context_packet = orb_residential_intelligence_service.build_context_packet(
             user_message,
             mode=mode,
             surface=surface,
             supplied_context_types=supplied_context_types,
         )
-        prompt_block = orb_residential_intelligence_service.build_prompt_block(
-            user_message,
-            mode=mode,
-            surface=surface,
-            supplied_context_types=supplied_context_types,
-        )
+        if prompt_tier == "fast":
+            prompt_block = (
+                "ORB Residential standalone (fast path): concise, accurate answers. "
+                "No live IndiCare OS records. Add safeguarding or recording boundaries only if the question requires them.\n"
+                f"Mode: {_safe_text(mode) or 'Ask ORB'}"
+            )
+        else:
+            prompt_block = orb_residential_intelligence_service.build_prompt_block(
+                user_message,
+                mode=mode,
+                surface=surface,
+                supplied_context_types=supplied_context_types,
+            )
 
         enriched_message = (
             f"{prompt_block}\n\n"
@@ -109,6 +125,7 @@ class OrbConvergedGeneralAssistantService:
             {
                 "surface": "orb_residential",
                 "premium": True,
+                "prompt_tier": prompt_tier,
                 "orb_residential_convergence": {
                     "enabled": True,
                     "surface": "orb_residential",

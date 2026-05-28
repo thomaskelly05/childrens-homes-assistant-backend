@@ -28,6 +28,7 @@ export type StandaloneChatMessageStatus =
   | 'thinking'
   | 'streaming'
   | 'complete'
+  | 'stopped'
   | 'error'
   | 'failed'
   | 'pending'
