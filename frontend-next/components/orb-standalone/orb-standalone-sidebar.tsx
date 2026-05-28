@@ -22,7 +22,7 @@ import {
   X
 } from 'lucide-react'
 
-import { OrbHueMark, OrbHueLogo, OrbPoweredByIndicare } from '@/components/orb-standalone/orb-hue-logo'
+import { OrbHueMark } from '@/components/orb-standalone/orb-hue-logo'
 
 import type { AdultProfile } from '@/lib/orb/adult-profile-store'
 
@@ -53,8 +53,6 @@ export function OrbStandaloneSidebar({
   onOpenHelp,
   onOpenAdultProfile,
   adultProfile,
-  cognitionStatusLabel,
-  cognitionModeLabel,
   savedOutputsCount,
   onClose
 }: {
@@ -79,6 +77,9 @@ export function OrbStandaloneSidebar({
   savedOutputsCount?: number
   onClose?: () => void
 }) {
+  const [coreOpen, setCoreOpen] = useState(true)
+  const [intelligenceOpen, setIntelligenceOpen] = useState(false)
+  const [workspaceOpen, setWorkspaceOpen] = useState(true)
   const [projectsOpen, setProjectsOpen] = useState(false)
   const [profilesOpen, setProfilesOpen] = useState(false)
   const [conversationsOpen, setConversationsOpen] = useState(true)
@@ -135,6 +136,8 @@ export function OrbStandaloneSidebar({
     })
     setNewProjectName('')
     setProjectEditorOpen(false)
+    setProjectsOpen(true)
+    setWorkspaceOpen(true)
   }
 
   function saveProfile() {
@@ -184,16 +187,16 @@ export function OrbStandaloneSidebar({
 
   return (
     <>
-      <div className="border-b border-[var(--orb-line)] px-3 py-3.5">
-        <div className="flex items-center gap-2.5">
+      <div className="border-b border-[var(--orb-line)] px-3 py-4">
+        <div className="flex items-center gap-3">
           <OrbHueMark />
           <div className="min-w-0 flex-1">
-            <p className="truncate" data-orb-sidebar-brand>
-              <OrbHueLogo size="sm" />
+            <p className="truncate text-[22px] font-black leading-none tracking-[-0.06em] orb-hue-text" data-orb-sidebar-brand>
+              ORB
             </p>
-            <div className="truncate" data-orb-sidebar-powered>
-              <OrbPoweredByIndicare />
-            </div>
+            <p className="mt-1 truncate text-[9px] font-bold uppercase tracking-[0.34em] text-[#0284c7]" data-orb-sidebar-powered>
+              Powered by IndiCare
+            </p>
           </div>
           {onClose ? (
             <button type="button" className="rounded-lg p-1 text-[var(--orb-muted)] lg:hidden" onClick={onClose} aria-label="Close sidebar">
@@ -204,74 +207,35 @@ export function OrbStandaloneSidebar({
       </div>
 
       <div className="orb-sidebar-group flex-1 overflow-y-auto px-2 py-3">
-        <SidebarNavButton
-          icon={<MessageSquarePlus className="h-4 w-4" />}
-          label="New chat"
-          onClick={() => onNewChat(workspace.activeProjectId)}
-          dataAttr="orb-sidebar-new-chat"
-        />
-        <SidebarNavButton
-          icon={<Search className="h-4 w-4" />}
-          label="Search chats"
-          onClick={() => {
-            const el = document.querySelector<HTMLInputElement>('[data-orb-sidebar-search]')
-            el?.focus()
-          }}
-          dataAttr="orb-sidebar-search-nav"
-        />
+        <SidebarSection title="Core" open={coreOpen} onToggle={() => setCoreOpen((open) => !open)}>
+          <SidebarNavButton
+            icon={<MessageSquarePlus className="h-4 w-4" />}
+            label="New chat"
+            onClick={() => onNewChat(workspace.activeProjectId)}
+            dataAttr="orb-sidebar-new-chat"
+          />
+          <SidebarNavButton
+            icon={<Search className="h-4 w-4" />}
+            label="Search chats"
+            onClick={() => {
+              setCoreOpen(true)
+              setConversationsOpen(true)
+              const el = document.querySelector<HTMLInputElement>('[data-orb-sidebar-search]')
+              el?.focus()
+            }}
+            dataAttr="orb-sidebar-search-nav"
+          />
+          <SidebarNavButton
+            icon={<MessageSquare className="h-4 w-4" />}
+            label="Conversations"
+            active={conversationsOpen}
+            onClick={() => setConversationsOpen((open) => !open)}
+            dataAttr="orb-sidebar-conversations"
+          />
 
-        <p className="orb-sidebar-section-label mt-3" data-orb-sidebar-apps>
-          Apps
-        </p>
-        <SidebarNavButton
-          icon={<MessageSquare className="h-4 w-4" />}
-          label="Conversations"
-          active={conversationsOpen}
-          onClick={() => setConversationsOpen((open) => !open)}
-          dataAttr="orb-sidebar-conversations"
-        />
-        <SidebarNavButton
-          icon={<Library className="h-4 w-4" />}
-          label="Library"
-          onClick={() => onOpenLibrary?.()}
-          dataAttr="orb-sidebar-library"
-        />
-        <SidebarNavButton
-          icon={<Bot className="h-4 w-4" />}
-          label="Agents"
-          onClick={() => onOpenAgents?.()}
-          dataAttr="orb-sidebar-agents"
-        />
-        <SidebarNavButton
-          icon={<Sparkles className="h-4 w-4" />}
-          label="Deep research"
-          onClick={() => onOpenDeepResearch?.()}
-          dataAttr="orb-sidebar-deep-research"
-        />
-        <SidebarNavButton
-          icon={<Wrench className="h-4 w-4" />}
-          label="Tools"
-          onClick={() => onOpenTools?.()}
-          dataAttr="orb-sidebar-tools-nav"
-        />
-        <SidebarNavButton
-          icon={<FolderPlus className="h-4 w-4" />}
-          label="Projects"
-          active={projectsOpen}
-          onClick={() => setProjectsOpen((open) => !open)}
-          dataAttr="orb-sidebar-projects-nav"
-        />
-        <SidebarNavButton
-          icon={<Archive className="h-4 w-4" />}
-          label={savedOutputsCount ? `Saved outputs (${savedOutputsCount})` : 'Saved outputs'}
-          onClick={() => onOpenSavedOutputs?.()}
-          dataAttr="orb-sidebar-saved-outputs"
-        />
-
-        {conversationsOpen ? (
-          <>
-            <div className="mt-2 px-1">
-              <label className="flex items-center gap-2 rounded-lg border border-[var(--orb-line)] bg-[var(--orb-surface)] px-3 py-2 focus-within:ring-1 focus-within:ring-[#00B8FF]/30">
+          {conversationsOpen ? (
+            <div className="mt-2 rounded-2xl border border-[var(--orb-line)] bg-white/55 p-2 shadow-sm">
+              <label className="flex items-center gap-2 rounded-xl border border-[var(--orb-line)] bg-white/80 px-3 py-2 focus-within:ring-1 focus-within:ring-[#00B8FF]/30">
                 <Search className="h-4 w-4 shrink-0 text-[var(--orb-muted)]" aria-hidden />
                 <input
                   type="search"
@@ -282,186 +246,206 @@ export function OrbStandaloneSidebar({
                   data-orb-sidebar-search
                 />
               </label>
-            </div>
 
-            {pinnedChats.length > 0 ? (
-              <SectionToggle label="Pinned" open={conversationsOpen} onToggle={() => setConversationsOpen((o) => !o)}>
-                <ChatList
-                  chats={pinnedChats}
-                  activeChatId={workspace.activeChatId}
-                  onSelectChat={onSelectChat}
-                  onRename={renameChat}
-                  onDelete={deleteChat}
-                  onPin={(chat) => updateChat(chat.id, { pinned: !chat.pinned })}
-                  onArchive={(chat) => updateChat(chat.id, { archived: true })}
-                />
-              </SectionToggle>
-            ) : null}
+              {pinnedChats.length > 0 ? (
+                <SectionToggle label="Pinned" open={true} onToggle={() => undefined}>
+                  <ChatList
+                    chats={pinnedChats}
+                    activeChatId={workspace.activeChatId}
+                    onSelectChat={onSelectChat}
+                    onRename={renameChat}
+                    onDelete={deleteChat}
+                    onPin={(chat) => updateChat(chat.id, { pinned: !chat.pinned })}
+                    onArchive={(chat) => updateChat(chat.id, { archived: true })}
+                  />
+                </SectionToggle>
+              ) : null}
 
-            {filteredChats.length === 0 ? (
-              <p className="px-3 py-2 text-xs text-slate-500">
-                {chatSearch.trim() ? 'No matching chats.' : 'No chats in this project yet.'}
-              </p>
-            ) : (
-              <div className="mt-2 space-y-3">
-                {timeGroupedChats.map((group) => (
-                  <div key={group.label}>
-                    <p className="px-3 pb-1 text-[10px] font-medium uppercase tracking-[0.14em] text-slate-600">
-                      {group.label}
-                    </p>
-                    <ChatList
-                      chats={group.chats}
-                      activeChatId={workspace.activeChatId}
-                      onSelectChat={onSelectChat}
-                      onRename={renameChat}
-                      onDelete={deleteChat}
-                      onPin={(chat) => updateChat(chat.id, { pinned: !chat.pinned })}
-                      onArchive={(chat) => updateChat(chat.id, { archived: true })}
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
-          </>
-        ) : null}
-
-        {projectsOpen ? (
-          <div className="mt-2">
-            <SidebarNavButton
-              icon={<FolderPlus className="h-4 w-4" />}
-              label="New project"
-              onClick={() => setProjectEditorOpen(true)}
-              muted
-              dataAttr="orb-sidebar-new-project"
-            />
-            <ul className="mt-1 space-y-0.5">
-              {workspace.projects.map((project) => (
-                <li key={project.id} className="group flex items-center gap-0.5">
-                  <button
-                    type="button"
-                    onClick={() => onSelectProject(project.id)}
-                    className={`min-w-0 flex-1 rounded-lg px-3 py-2 text-left text-[13px] transition ${
-                      workspace.activeProjectId === project.id
-                        ? 'orb-sidebar-chat-active bg-[#EAF6FF] font-semibold text-[#0077FF]'
-                        : 'text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]'
-                    }`}
-                  >
-                    <span className="mr-2 opacity-70">{project.icon || '▣'}</span>
-                    {project.name}
-                  </button>
-                  {project.id !== STANDALONE_GENERAL_PROJECT_ID ? (
-                    <ProjectMenu onRename={() => renameProject(project)} onDelete={() => deleteProject(project.id)} />
-                  ) : null}
-                </li>
-              ))}
-              <li>
-                {projectEditorOpen ? (
-                  <div className="orb-sidebar-inline-form mx-1 mt-1 space-y-2 rounded-lg border p-2">
-                    <input
-                      value={newProjectName}
-                      onChange={(e) => setNewProjectName(e.target.value)}
-                      placeholder="Project name"
-                      className="w-full rounded-lg border bg-transparent px-2 py-1.5 text-xs"
-                    />
-                    <div className="flex gap-2">
-                      <button type="button" onClick={saveProject} className="flex-1 rounded-lg py-1 text-xs font-semibold">
-                        Save
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setProjectEditorOpen(false)}
-                        className="flex-1 rounded-lg py-1 text-xs text-[var(--orb-muted)]"
-                      >
-                        Cancel
-                      </button>
+              {filteredChats.length === 0 ? (
+                <p className="px-3 py-2 text-xs text-slate-500">
+                  {chatSearch.trim() ? 'No matching chats.' : 'No chats in this project yet.'}
+                </p>
+              ) : (
+                <div className="mt-3 space-y-3">
+                  {timeGroupedChats.map((group) => (
+                    <div key={group.label}>
+                      <p className="px-3 pb-1 text-[10px] font-medium uppercase tracking-[0.14em] text-slate-600">
+                        {group.label}
+                      </p>
+                      <ChatList
+                        chats={group.chats}
+                        activeChatId={workspace.activeChatId}
+                        onSelectChat={onSelectChat}
+                        onRename={renameChat}
+                        onDelete={deleteChat}
+                        onPin={(chat) => updateChat(chat.id, { pinned: !chat.pinned })}
+                        onArchive={(chat) => updateChat(chat.id, { archived: true })}
+                      />
                     </div>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setProjectEditorOpen(true)}
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]"
-                  >
-                    <FolderPlus className="h-3.5 w-3.5" />
-                    Create project
-                  </button>
-                )}
-              </li>
-            </ul>
-          </div>
-        ) : null}
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : null}
+        </SidebarSection>
 
-        {workspace.profiles.length > 0 ? (
-          <SectionToggle label="Profiles" open={profilesOpen} onToggle={() => setProfilesOpen((o) => !o)}>
-            {profilesOpen ? (
-              <p className="mx-1 mb-1 px-2 text-[10px] leading-4 text-slate-500">
+        <SidebarSection title="Intelligence" open={intelligenceOpen} onToggle={() => setIntelligenceOpen((open) => !open)}>
+          <SidebarNavButton icon={<Library className="h-4 w-4" />} label="Library" onClick={() => onOpenLibrary?.()} dataAttr="orb-sidebar-library" />
+          <SidebarNavButton icon={<Bot className="h-4 w-4" />} label="Agents" onClick={() => onOpenAgents?.()} dataAttr="orb-sidebar-agents" />
+          <SidebarNavButton icon={<Sparkles className="h-4 w-4" />} label="Deep research" onClick={() => onOpenDeepResearch?.()} dataAttr="orb-sidebar-deep-research" />
+          <SidebarNavButton icon={<Wrench className="h-4 w-4" />} label="Tools" onClick={() => onOpenTools?.()} dataAttr="orb-sidebar-tools-nav" />
+        </SidebarSection>
+
+        <SidebarSection title="Workspace" open={workspaceOpen} onToggle={() => setWorkspaceOpen((open) => !open)}>
+          <SidebarNavButton
+            icon={<FolderPlus className="h-4 w-4" />}
+            label="Projects"
+            active={projectsOpen}
+            onClick={() => setProjectsOpen((open) => !open)}
+            dataAttr="orb-sidebar-projects-nav"
+          />
+          <SidebarNavButton
+            icon={<Archive className="h-4 w-4" />}
+            label={savedOutputsCount ? `Saved outputs (${savedOutputsCount})` : 'Saved outputs'}
+            onClick={() => onOpenSavedOutputs?.()}
+            dataAttr="orb-sidebar-saved-outputs"
+          />
+
+          {projectsOpen ? (
+            <div className="mt-2 rounded-2xl border border-[var(--orb-line)] bg-white/55 p-2 shadow-sm">
+              <SidebarNavButton
+                icon={<FolderPlus className="h-4 w-4" />}
+                label="New project"
+                onClick={() => setProjectEditorOpen(true)}
+                muted
+                dataAttr="orb-sidebar-new-project"
+              />
+              <ul className="mt-1 space-y-0.5">
+                {workspace.projects.map((project) => (
+                  <li key={project.id} className="group flex items-center gap-0.5">
+                    <button
+                      type="button"
+                      onClick={() => onSelectProject(project.id)}
+                      className={`min-w-0 flex-1 rounded-lg px-3 py-2 text-left text-[13px] transition ${
+                        workspace.activeProjectId === project.id
+                          ? 'orb-sidebar-chat-active bg-[#EAF6FF] font-semibold text-[#0077FF]'
+                          : 'text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]'
+                      }`}
+                    >
+                      <span className="mr-2 opacity-70">{project.icon || '▣'}</span>
+                      {project.name}
+                    </button>
+                    {project.id !== STANDALONE_GENERAL_PROJECT_ID ? (
+                      <ProjectMenu onRename={() => renameProject(project)} onDelete={() => deleteProject(project.id)} />
+                    ) : null}
+                  </li>
+                ))}
+                <li>
+                  {projectEditorOpen ? (
+                    <div className="orb-sidebar-inline-form mx-1 mt-1 space-y-2 rounded-lg border p-2">
+                      <input
+                        value={newProjectName}
+                        onChange={(e) => setNewProjectName(e.target.value)}
+                        placeholder="Project name"
+                        className="w-full rounded-lg border bg-transparent px-2 py-1.5 text-xs"
+                      />
+                      <div className="flex gap-2">
+                        <button type="button" onClick={saveProject} className="flex-1 rounded-lg py-1 text-xs font-semibold">
+                          Save
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setProjectEditorOpen(false)}
+                          className="flex-1 rounded-lg py-1 text-xs text-[var(--orb-muted)]"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setProjectEditorOpen(true)}
+                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]"
+                    >
+                      <FolderPlus className="h-3.5 w-3.5" />
+                      Create project
+                    </button>
+                  )}
+                </li>
+              </ul>
+            </div>
+          ) : null}
+        </SidebarSection>
+
+        <SidebarSection title="Profiles" open={profilesOpen} onToggle={() => setProfilesOpen((open) => !open)}>
+          {workspace.profiles.length > 0 ? (
+            <>
+              <p className="mx-1 mb-2 px-2 text-[10px] leading-4 text-slate-500">
                 User-provided context only — does not access IndiCare OS records.
               </p>
-            ) : null}
-            <ul className="space-y-0.5">
-              {workspace.profiles.map((profile) => (
-                <li key={profile.id} className="group flex items-center gap-2 px-1">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-violet-500/20 text-xs font-bold text-violet-100">
-                    {profile.avatarInitial}
-                  </span>
-                  <span className="min-w-0 flex-1 truncate text-[13px] text-[var(--orb-foreground)]">{profile.name}</span>
-                  <button
-                    type="button"
-                    onClick={() => deleteProfile(profile.id)}
-                    className="rounded p-1 text-slate-500 opacity-0 transition group-hover:opacity-100 hover:text-rose-300"
-                    aria-label={`Delete profile ${profile.name}`}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </SectionToggle>
-        ) : (
-          <button
-            type="button"
-            onClick={() => {
-              setProfileEditorOpen(true)
-              setProfilesOpen(true)
-            }}
-            className="mt-3 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-slate-500 hover:bg-white/[0.04] hover:text-slate-300"
-          >
-            <UserPlus className="h-3.5 w-3.5" />
-            Create standalone profile
-          </button>
-        )}
+              <ul className="space-y-0.5">
+                {workspace.profiles.map((profile) => (
+                  <li key={profile.id} className="group flex items-center gap-2 px-1">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-violet-500/20 text-xs font-bold text-violet-700">
+                      {profile.avatarInitial}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-[13px] text-[var(--orb-foreground)]">{profile.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => deleteProfile(profile.id)}
+                      className="rounded p-1 text-slate-500 opacity-0 transition group-hover:opacity-100 hover:text-rose-500"
+                      aria-label={`Delete profile ${profile.name}`}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setProfileEditorOpen(true)}
+              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-slate-500 hover:bg-white/70 hover:text-slate-700"
+            >
+              <UserPlus className="h-3.5 w-3.5" />
+              Create standalone profile
+            </button>
+          )}
 
-        {profileEditorOpen ? (
-          <div className="orb-sidebar-inline-form mx-1 mt-2 space-y-2 rounded-lg border p-2">
-            <input
-              value={profileDraft.name}
-              onChange={(e) => setProfileDraft((d) => ({ ...d, name: e.target.value }))}
-              placeholder="Name"
-              className="w-full rounded-lg border bg-transparent px-2 py-1.5 text-xs"
-            />
-            <input
-              value={profileDraft.label}
-              onChange={(e) => setProfileDraft((d) => ({ ...d, label: e.target.value }))}
-              placeholder="Type (e.g. Child context)"
-              className="w-full rounded-lg border bg-transparent px-2 py-1.5 text-xs"
-            />
-            <textarea
-              value={profileDraft.notes}
-              onChange={(e) => setProfileDraft((d) => ({ ...d, notes: e.target.value }))}
-              placeholder="Notes / context"
-              rows={2}
-              className="w-full rounded-lg border bg-transparent px-2 py-1.5 text-xs"
-            />
-            <div className="flex gap-2">
-              <button type="button" onClick={saveProfile} className="flex-1 rounded-lg py-1 text-xs font-semibold">
-                Save profile
-              </button>
-              <button type="button" onClick={() => setProfileEditorOpen(false)} className="flex-1 rounded-lg py-1 text-xs text-[var(--orb-muted)]">
-                Cancel
-              </button>
+          {profileEditorOpen ? (
+            <div className="orb-sidebar-inline-form mx-1 mt-2 space-y-2 rounded-lg border p-2">
+              <input
+                value={profileDraft.name}
+                onChange={(e) => setProfileDraft((d) => ({ ...d, name: e.target.value }))}
+                placeholder="Name"
+                className="w-full rounded-lg border bg-transparent px-2 py-1.5 text-xs"
+              />
+              <input
+                value={profileDraft.label}
+                onChange={(e) => setProfileDraft((d) => ({ ...d, label: e.target.value }))}
+                placeholder="Type (e.g. Child context)"
+                className="w-full rounded-lg border bg-transparent px-2 py-1.5 text-xs"
+              />
+              <textarea
+                value={profileDraft.notes}
+                onChange={(e) => setProfileDraft((d) => ({ ...d, notes: e.target.value }))}
+                placeholder="Notes / context"
+                rows={2}
+                className="w-full rounded-lg border bg-transparent px-2 py-1.5 text-xs"
+              />
+              <div className="flex gap-2">
+                <button type="button" onClick={saveProfile} className="flex-1 rounded-lg py-1 text-xs font-semibold">
+                  Save profile
+                </button>
+                <button type="button" onClick={() => setProfileEditorOpen(false)} className="flex-1 rounded-lg py-1 text-xs text-[var(--orb-muted)]">
+                  Cancel
+                </button>
+              </div>
             </div>
-          </div>
-        ) : null}
+          ) : null}
+        </SidebarSection>
       </div>
 
       <div className="shrink-0 space-y-1 border-t border-[var(--orb-line)] p-2" data-orb-sidebar-bottom>
@@ -618,6 +602,32 @@ function SidebarNavButton({
         <span className="rounded-full bg-[var(--orb-surface-hover)] px-2 py-0.5 text-[10px] text-[var(--orb-muted)]">{badge}</span>
       ) : null}
     </button>
+  )
+}
+
+function SidebarSection({
+  title,
+  open,
+  onToggle,
+  children
+}: {
+  title: string
+  open: boolean
+  onToggle: () => void
+  children: ReactNode
+}) {
+  return (
+    <div className="orb-sidebar-premium-section mb-2 rounded-2xl border border-white/55 bg-white/42 p-1.5 shadow-sm backdrop-blur">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500 hover:bg-white/60 hover:text-slate-800"
+      >
+        {title}
+        {open ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+      </button>
+      {open ? <div className="mt-1 space-y-0.5">{children}</div> : null}
+    </div>
   )
 }
 
