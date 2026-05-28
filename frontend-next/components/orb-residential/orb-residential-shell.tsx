@@ -5,10 +5,10 @@ import { usePathname } from 'next/navigation'
 import type { ReactNode } from 'react'
 
 const NAV = [
-  { href: '/orb-residential', label: 'Home' },
-  { href: '/orb-residential/ask', label: 'Ask ORB' },
-  { href: '/orb-residential/shift-builder', label: 'Shift Builder' },
-  { href: '/orb-residential/outputs', label: 'Outputs' },
+  { href: '/orb', label: 'Home' },
+  { href: '/orb/ask', label: 'Ask ORB' },
+  { href: '/orb/shift-builder', label: 'Shift Builder' },
+  { href: '/orb/outputs', label: 'Outputs' },
 ]
 
 export function OrbResidentialShell({ children }: { children: ReactNode }) {
