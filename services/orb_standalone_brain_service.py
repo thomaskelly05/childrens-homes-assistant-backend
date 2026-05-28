@@ -4,6 +4,7 @@ from dataclasses import asdict, dataclass, field
 from typing import Any
 
 from services.orb_professional_curiosity_service import orb_professional_curiosity_service
+from services.orb_scenario_playbook_service import orb_scenario_playbook_service
 
 
 @dataclass(frozen=True)
@@ -122,6 +123,14 @@ class OrbStandaloneBrainService:
         else:
             brains.extend(["residential_specialist_brain", "residential_children_homes_practice_brain"])
 
+        if orb_scenario_playbook_service.detect_playbook(text) or orb_scenario_playbook_service.is_live_incident(text):
+            brains.extend([
+                "live_safeguarding_brain",
+                "scenario_playbook_brain",
+                "exploitation_brain",
+                "missing_from_care_brain",
+                "restrictive_practice_brain",
+            ])
         if self._is_safeguarding(text, resolved_mode):
             brains.extend([
                 "safeguarding_brain",

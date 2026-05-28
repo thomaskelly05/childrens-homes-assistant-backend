@@ -27,6 +27,23 @@ class OrbKnowledgeGroundingService:
         "Workforce/Supervision Vault": "Supervision, staff conduct, training and safer recruitment.",
         "Child Journey Vault": "Admission, care planning, education, identity and transitions.",
         "Complaints/Advocacy Vault": "Complaints, advocacy, voice of the child and fair process.",
+        "Immediate Safeguarding Vault": "Live, time-critical safeguarding — urgent practical structure.",
+        "Exploitation / CSE / CCE Vault": "Sexual and criminal exploitation, coercion, contextual safeguarding.",
+        "Unknown Adult / Vehicle Risk Vault": "Unknown adults, vehicles, perimeter risk.",
+        "Physical Intervention / Lawful Restriction Vault": "Lawful, proportionate physical responses.",
+        "Deprivation of Liberty / Movement Restriction Vault": "Locking, blocking exits, confinement lawfulness.",
+        "Age 16–17 Autonomy and Rights Vault": "Near-adult rights and proportionate protection.",
+        "Police / Emergency Escalation Vault": "Police, ambulance, EDT routes.",
+        "Dynamic Risk Assessment Vault": "In-the-moment risk judgement.",
+        "Online Harm / Digital Contact Vault": "Digital exploitation and device restrictions.",
+        "Substance / Intoxication Vault": "Intoxication and health escalation.",
+        "Self-Harm / Mental Health Crisis Vault": "Immediate self-harm crisis.",
+        "Sexual Harm / Pregnancy / Relationship Risk Vault": "Disclosures, pregnancy, relationship safeguarding.",
+        "Violence / Weapons Vault": "Weapons and violent incidents.",
+        "Peer-on-Peer Harm Vault": "Harm between children in placement.",
+        "Visitor / Boundary Management Vault": "Visitors and perimeter security.",
+        "Transport Safety Vault": "Vehicle pickups and transport exploitation.",
+        "Legal Status / Care Order Vault": "Legal authority and care orders.",
     }
 
     TOPIC_ANCHOR_LABELS: dict[str, list[str]] = {
@@ -48,6 +65,19 @@ class OrbKnowledgeGroundingService:
     }
 
     TOPIC_CITATION_SUMMARIES: dict[str, dict[str, str]] = {
+        "live_safeguarding_incident": {
+            "[Reg 12]": "Immediate protection and safeguarding duties.",
+            "[Working Together]": "Multi-agency escalation when risk is present.",
+            "[Recording quality]": "Contemporaneous rationale and chronology.",
+            "[Immediate safeguarding]": "Live incident — least restrictive lawful action.",
+            "[Restrictive practice]": "Physical intervention only if necessary and proportionate.",
+        },
+        "physical_intervention_live": {
+            "[Reg 12]": "Protection when considering physical contact.",
+            "[Reg 13]": "Management oversight and review.",
+            "[Recording quality]": "Antecedent, alternatives, rationale, debrief.",
+            "[Restrictive practice]": "Necessity, proportionality, least restrictiveness.",
+        },
         "medication": {
             "[Reg 12]": "Protection and health safety.",
             "[Reg 13]": "Management oversight and learning.",
@@ -147,7 +177,18 @@ class OrbKnowledgeGroundingService:
         citations: list[dict[str, Any]] = []
         for label in labels:
             anchor = anchor_by_label.get(label)
+            summary = compact.get(label)
             if not anchor:
+                if summary:
+                    citations.append({
+                        "id": label.strip("[]").lower().replace(" ", "_"),
+                        "label": label,
+                        "type": "institutional_practice_anchor",
+                        "basis": summary,
+                        "note": summary,
+                        "live_retrieved": False,
+                        "source_integrity": "built_in_anchor_not_verbatim_quote",
+                    })
                 continue
             summary = compact.get(label)
             citations.append(
