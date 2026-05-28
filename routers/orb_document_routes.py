@@ -8,7 +8,9 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from auth.permissions import require_standalone_orb_access
+from auth.orb_standalone_premium_dependency import (
+    require_rich_orb_premium_access as require_standalone_orb_access,
+)
 from schemas.orb_documents import (
     OrbDocumentAnalysisRequest,
     OrbDocumentUploadRequest,
@@ -68,38 +70,20 @@ async def upload_document(
                 payload.file_name,
                 raw,
                 payload.content_type,
+                title=payload.title,
                 source_type=payload.source_type,
                 metadata=payload.metadata,
             )
-        elif payload.text:
+        else:
             result = orb_document_ingestion_service.ingest_text(
-                payload.title,
-                payload.text,
-                payload.source_type,
+                title=payload.title,
+                text=payload.text or "",
+                source_type=payload.source_type,
                 metadata=payload.metadata,
             )
-        else:
-            raise HTTPException(
-                status_code=400,
-                detail="Provide text or content_base64 with file_name.",
-            )
-        source = result.get("source") or {}
-        return _success(
-            {
-                "source_id": source.get("id"),
-                "title": source.get("title") or payload.title,
-                "chunk_count": result.get("chunk_count", 0),
-                "source_type": source.get("source_type"),
-                "status": source.get("status", "indexed"),
-                "standalone_only": True,
-                "os_linked": False,
-                "care_record_access": False,
-            }
-        )
+        return _success(result)
     except ValueError as exc:
-        detail = str(exc)
-        if "Unsupported" in detail:
-            raise HTTPException(status_code=400, detail=detail or UNSUPPORTED_FILE_MESSAGE) from exc
+        detail = str(exc) or UNSUPPORTED_FILE_MESSAGE
         raise HTTPException(status_code=400, detail=detail) from exc
 
 
@@ -109,70 +93,8 @@ async def analyse_document(
     current_user=Depends(require_standalone_orb_access),
 ):
     _reject_os_ids(payload.model_dump())
-    try:
-        understanding = await orb_document_understanding_service.analyse_document(payload)
-        intel = orb_intelligence_output_service.from_document_analysis(understanding)
-        envelope = orb_intelligence_output_service.build_save_envelope(
-            intel,
-            payload,
-            created_from="document_analysis",
-            created_from_id=understanding.source_id,
-            analysis_mode=understanding.analysis_mode,
-        )
-        return _success(
-            {
-                "understanding": understanding.model_dump(),
-                "standalone_only": True,
-                "os_linked": False,
-                "care_record_access": False,
-                **envelope,
-            }
-        )
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-
-@router.post("/action-plan")
-async def document_action_plan(
-    payload: OrbDocumentAnalysisRequest,
-    current_user=Depends(require_standalone_orb_access),
-):
-    payload = payload.model_copy(update={"mode": "action_plan"})
-    return await analyse_document(payload, current_user=current_user)
-
-
-@router.post("/briefing")
-async def document_briefing(
-    payload: OrbDocumentAnalysisRequest,
-    current_user=Depends(require_standalone_orb_access),
-):
-    mode = payload.mode
-    if mode not in {"manager_briefing", "staff_briefing"}:
-        lower_q = (payload.question or "").lower()
-        mode = "manager_briefing" if "staff" not in lower_q else "staff_briefing"
-    payload = payload.model_copy(update={"mode": mode})
-    return await analyse_document(payload, current_user=current_user)
-
-
-@router.post("/compare")
-async def document_compare(
-    payload: OrbDocumentAnalysisRequest,
-    current_user=Depends(require_standalone_orb_access),
-):
-    payload = payload.model_copy(update={"mode": "policy_comparison"})
-    return await analyse_document(payload, current_user=current_user)
-
-
-@router.get("/{source_id}/summary")
-async def document_summary(
-    source_id: str,
-    current_user=Depends(require_standalone_orb_access),
-):
-    try:
-        understanding = await orb_document_understanding_service.analyse_source(
-            source_id,
-            "summarise",
-        )
-        return _success({"understanding": understanding.model_dump()})
-    except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    understanding = orb_document_understanding_service.analyse(payload)
+    if payload.include_evaluation:
+        output = orb_intelligence_output_service.from_document_understanding(understanding)
+        understanding.evaluation = output.quality.model_dump()
+    return _success({"understanding": understanding.model_dump()})
