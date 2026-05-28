@@ -193,11 +193,27 @@ export type StandaloneOrbExplainabilityPayload = {
   cognition_mode?: string
 }
 
+export type StandaloneOrbTimingMetadata = {
+  elapsed_ms?: number
+  retrieval_elapsed_ms?: number
+  provider_elapsed_ms?: number | null
+  prompt_tier?: string
+  prompt_char_estimate?: number
+  grounding_char_count?: number
+  model?: string
+  provider?: string
+  route?: string
+  frontend_request_started_at?: number
+  frontend_request_completed_at?: number
+  frontend_elapsed_ms?: number
+}
+
 export type StandaloneOrbContextUsed = {
   surface?: string
   mode?: string
   os_linked?: boolean
   care_record_access?: boolean
+  timing?: StandaloneOrbTimingMetadata
   cognition_display_labels?: string[]
   active_brains?: string[]
   depth_topic?: string
@@ -271,6 +287,15 @@ export function logOrbCognitionDebug(
 ) {
   if (!options?.force && !isOrbCognitionDebugEnabled()) return
   console.info(`[orb-cognition] ${event}`, detail)
+}
+
+/** Dev-only timing log for ORB request path audits. */
+export function logOrbTiming(
+  event: string,
+  detail: Record<string, unknown>
+) {
+  if (!isDevEnvironment() && !isOrbCognitionDebugEnabled()) return
+  console.info(`[orb-timing] ${event}`, detail)
 }
 
 function extractAnswer(payload: unknown): string | null {

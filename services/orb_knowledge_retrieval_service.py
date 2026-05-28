@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from typing import Any
 
 from assistant.knowledge_loader import (
@@ -28,6 +29,43 @@ RESEARCH_NOTE = (
     "I can give a source-basis answer from built-in knowledge. "
     "Live web/source retrieval is not enabled in this standalone mode yet."
 )
+
+HIGH_RISK_TERMS = (
+    "immediate danger",
+    "suicide",
+    "self-harm",
+    "self harm",
+    "abuse",
+    "allegation",
+    "exploitation",
+    "missing from care",
+    "restraint",
+    "medication error",
+    "peer-on-peer",
+    "peer on peer",
+    "sexual harm",
+    "weapon",
+    "emergency",
+    "lado",
+)
+
+RESIDENTIAL_PROMPT_MODES = {
+    "Record This Properly",
+    "Ofsted Lens",
+    "Therapeutic Reframe",
+    "Manager Copilot",
+    "Staff Coach",
+    "Reg 44 / Reg 45 Prep",
+    "Behaviour Support",
+    "Policy Explainer",
+    "Scenario Simulator",
+    "Reflect with ORB",
+}
+
+DEEP_SAFETY_MODES = {
+    "Safeguarding Thinking",
+    "Safeguarding",
+}
 
 KNOWLEDGE_SPINE_PACK_TYPE = "orb_knowledge_spine"
 ORB_OPERATING_BRAIN_PACK_TYPE = "orb_operating_brain"
@@ -111,6 +149,124 @@ class OrbKnowledgeRetrievalService:
             },
         }
 
+    def resolve_prompt_tier(
+        self,
+        message: str,
+        *,
+        mode: str | None = None,
+        classification: dict[str, Any] | None = None,
+        profile_context: bool = False,
+        attachments: list[Any] | None = None,
+    ) -> str:
+        """Return fast | residential | deep for tiered standalone prompting."""
+        mode_name = _text(mode) or "Ask ORB"
+        if classification is None:
+            classification = self.classify_query(
+                message,
+                mode=mode,
+                profile_context=profile_context,
+                attachments=attachments,
+            )
+        intents = classification.get("intents") or {}
+        lower = _lower(message)
+
+        if mode_name in DEEP_SAFETY_MODES:
+            return "deep"
+        if any(term in lower for term in HIGH_RISK_TERMS):
+            return "deep"
+        if mode_name in RESIDENTIAL_PROMPT_MODES:
+            return "residential"
+        if intents.get("safeguarding_principles"):
+            return "deep"
+        if intents.get("regulatory_framework") or intents.get("recording_quality"):
+            return "residential"
+        if intents.get("therapeutic_practice") or intents.get("residential_childrens_homes"):
+            return "residential"
+        if profile_context or attachments:
+            return "residential"
+        if intents.get("product_context"):
+            return "residential"
+        if intents.get("general_knowledge") and len(lower.split()) <= 10:
+            return "fast"
+        if len(lower.split()) <= 6 and not any(
+            intents.get(flag)
+            for flag in (
+                "regulatory_framework",
+                "recording_quality",
+                "safeguarding_principles",
+                "therapeutic_practice",
+                "residential_childrens_homes",
+            )
+        ):
+            return "fast"
+        return "residential"
+
+    def prepare_request_bundle(
+        self,
+        message: str,
+        *,
+        mode: str | None = None,
+        profile_context: bool = False,
+        attachments: list[Any] | None = None,
+    ) -> dict[str, Any]:
+        """Single retrieval pass per request (classification, packs, grounding, tier)."""
+        started = time.perf_counter()
+        classification = self.classify_query(
+            message,
+            mode=mode,
+            profile_context=profile_context,
+            attachments=attachments,
+        )
+        prompt_tier = self.resolve_prompt_tier(
+            message,
+            mode=mode,
+            classification=classification,
+            profile_context=profile_context,
+            attachments=attachments,
+        )
+        packs = self.retrieve_sources(
+            message,
+            mode=mode,
+            profile_context=profile_context,
+            attachments=attachments,
+            classification=classification,
+        )
+        max_modules = {"fast": 0, "residential": 3, "deep": 8}.get(prompt_tier, 3)
+        if max_modules:
+            spine = self.retrieve_knowledge_spine(message, mode=mode, max_modules=max_modules)
+        else:
+            spine = {
+                "enabled": False,
+                "version": load_knowledge_version(),
+                "mode": _text(mode) or "Ask ORB",
+                "selected_modules": [],
+                "modules": {},
+                "source_summary": [],
+                "orb_operating_brain": {
+                    "enabled": False,
+                    "selected_sections": [],
+                    "sections": {},
+                    "source_summary": orb_operating_brain_service.source_summary(),
+                },
+            }
+        grounding_context = self._build_grounding_for_tier(
+            classification=classification,
+            packs=packs,
+            spine=spine,
+            message=message,
+            mode=mode,
+            prompt_tier=prompt_tier,
+        )
+        retrieval_elapsed_ms = int((time.perf_counter() - started) * 1000)
+        return {
+            "classification": classification,
+            "prompt_tier": prompt_tier,
+            "source_packs": packs,
+            "grounding_context": grounding_context,
+            "retrieval_elapsed_ms": retrieval_elapsed_ms,
+            "grounding_char_count": len(grounding_context),
+        }
+
     def retrieve_sources(
         self,
         message: str,
@@ -118,13 +274,15 @@ class OrbKnowledgeRetrievalService:
         mode: str | None = None,
         profile_context: bool = False,
         attachments: list[Any] | None = None,
+        classification: dict[str, Any] | None = None,
     ) -> list[dict[str, Any]]:
-        classification = self.classify_query(
-            message,
-            mode=mode,
-            profile_context=profile_context,
-            attachments=attachments,
-        )
+        if classification is None:
+            classification = self.classify_query(
+                message,
+                mode=mode,
+                profile_context=profile_context,
+                attachments=attachments,
+            )
         packs: list[dict[str, Any]] = []
         for key in classification["pack_keys"]:
             pack = get_source_pack(key)
@@ -176,42 +334,82 @@ class OrbKnowledgeRetrievalService:
         mode: str | None = None,
         profile_context: bool = False,
         attachments: list[Any] | None = None,
+        prompt_tier: str | None = None,
     ) -> str:
-        classification = self.classify_query(
+        bundle = self.prepare_request_bundle(
             message,
             mode=mode,
             profile_context=profile_context,
             attachments=attachments,
         )
-        packs = self.retrieve_sources(
-            message,
-            mode=mode,
-            profile_context=profile_context,
-            attachments=attachments,
-        )
-        spine = self.retrieve_knowledge_spine(message, mode=mode)
+        if prompt_tier and prompt_tier != bundle["prompt_tier"]:
+            return self._build_grounding_for_tier(
+                classification=bundle["classification"],
+                packs=bundle["source_packs"],
+                spine=self.retrieve_knowledge_spine(
+                    message,
+                    mode=mode,
+                    max_modules={"fast": 0, "residential": 3, "deep": 8}.get(prompt_tier, 3) or 1,
+                ),
+                message=message,
+                mode=mode,
+                prompt_tier=prompt_tier,
+            )
+        return bundle["grounding_context"]
+
+    def _build_grounding_for_tier(
+        self,
+        *,
+        classification: dict[str, Any],
+        packs: list[dict[str, Any]],
+        spine: dict[str, Any],
+        message: str,
+        mode: str | None,
+        prompt_tier: str,
+    ) -> str:
+        if prompt_tier == "fast":
+            return (
+                "Grounding (fast path): standalone ORB only — no live IndiCare OS records or web browsing. "
+                "Use concise, accurate answers; add residential care boundaries only when the question needs them."
+            )
+
         lines = [
             "Grounding context (unified ORB Knowledge Spine — not live OS records or web browsing):",
         ]
-        for pack in packs:
+        pack_limit = 4 if prompt_tier == "residential" else len(packs)
+        for pack in packs[:pack_limit]:
             lines.append(
                 f"- {pack['source_label']}: {pack['description']} "
                 f"(reliability: {pack['reliability']}; live_retrieved: {pack['live_retrieved']})"
             )
-            if pack.get("guidance_notes"):
+            if pack.get("guidance_notes") and prompt_tier == "deep":
                 lines.append(f"  Guidance: {pack['guidance_notes']}")
+
         operating = spine.get("orb_operating_brain") or {}
         if operating.get("enabled"):
-            lines.append("\nORB Operating Brain selected:")
-            lines.append(orb_operating_brain_service.build_prompt_block(message, mode=mode))
-        if spine["selected_modules"]:
+            if prompt_tier == "deep":
+                lines.append("\nORB Operating Brain selected:")
+                lines.append(orb_operating_brain_service.build_prompt_block(message, mode=mode))
+            else:
+                sections = operating.get("selected_sections") or list(
+                    (operating.get("sections") or {}).keys()
+                )
+                if sections:
+                    lines.append(
+                        f"\nORB Operating Brain sections (summary): {', '.join(sections[:6])}"
+                    )
+
+        modules = spine.get("modules") or {}
+        if modules:
+            clip = 700 if prompt_tier == "residential" else 1600
             lines.append("\nDetailed knowledge modules selected:")
-            for module_name, module_text in spine["modules"].items():
-                lines.append(f"\n[{module_name}]\n{_clip(module_text, 1600)}")
+            for module_name, module_text in modules.items():
+                lines.append(f"\n[{module_name}]\n{_clip(module_text, clip)}")
+
         lines.append(
             "Answer using this source basis. Cite honest labels in structured sources; do not fabricate URLs or exact quotes."
         )
-        if classification.get("research_note"):
+        if classification.get("research_note") and prompt_tier != "fast":
             lines.append(f"Research note for the user: {classification['research_note']}")
         return "\n".join(lines)
 

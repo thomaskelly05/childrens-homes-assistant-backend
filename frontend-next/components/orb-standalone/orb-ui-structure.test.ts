@@ -91,6 +91,16 @@ describe('ORB ChatGPT UI structure', () => {
     assert.match(composer, /placeholderForMode/)
     assert.match(composer, /type="submit"/)
     assert.match(composer, /orb-composer-answering/)
+    assert.match(composer, /data-orb-composer-stop-generating/)
+    assert.match(composer, /onStopGenerating/)
+  })
+
+  it('care companion wires stop generation and suggested reply chips', () => {
+    const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
+    assert.match(companion, /handleStopGeneration/)
+    assert.match(companion, /OrbSuggestedReplyChips/)
+    assert.match(companion, /OrbAskAboutThisChips/)
+    assert.match(companion, /requestAbortRef/)
   })
 
   it('response pulse ties to answering state on layout', () => {

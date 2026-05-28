@@ -175,6 +175,91 @@ export type OrbResponseFollowUpAction =
   | 'ofsted_lens'
   | 'safeguarding_lens'
 
+/** Inline suggested replies shown under the latest completed assistant turn. */
+export const ORB_INLINE_SUGGESTED_REPLIES: Array<{
+  action: OrbResponseFollowUpAction
+  label: string
+}> = [
+  { action: 'more_concise', label: 'Make this more concise' },
+  { action: 'recording_wording', label: 'Convert to recording wording' },
+  { action: 'what_missing', label: 'What am I missing?' },
+  { action: 'ofsted_lens', label: 'Add Ofsted lens' },
+  { action: 'safeguarding_lens', label: 'Add safeguarding lens' },
+  { action: 'manager_oversight', label: 'Create manager oversight note' }
+]
+
+export type OrbAttachmentFollowUpAction =
+  | 'summarise'
+  | 'safeguarding_lens'
+  | 'ofsted_lens'
+  | 'recording_quality'
+  | 'action_plan'
+
+export const ORB_ATTACHMENT_FOLLOW_UPS: Array<{
+  action: OrbAttachmentFollowUpAction
+  label: string
+}> = [
+  { action: 'summarise', label: 'Summarise this' },
+  { action: 'safeguarding_lens', label: 'Safeguarding lens' },
+  { action: 'ofsted_lens', label: 'Ofsted lens' },
+  { action: 'recording_quality', label: 'Recording quality' },
+  { action: 'action_plan', label: 'Action plan' }
+]
+
+export function OrbAskAboutThisChips({
+  onSelect
+}: {
+  onSelect: (action: OrbAttachmentFollowUpAction) => void
+}) {
+  return (
+    <div
+      className="mt-2 flex flex-wrap gap-1.5"
+      data-orb-ask-about-this
+      role="group"
+      aria-label="Ask about this attachment"
+    >
+      {ORB_ATTACHMENT_FOLLOW_UPS.map((item) => (
+        <button
+          key={item.action}
+          type="button"
+          onClick={() => onSelect(item.action)}
+          className="rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-[11px] font-medium text-violet-800 transition hover:bg-violet-100"
+          data-orb-attachment-action={item.action}
+        >
+          {item.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+export function OrbSuggestedReplyChips({
+  onSelect
+}: {
+  onSelect: (action: OrbResponseFollowUpAction) => void
+}) {
+  return (
+    <div
+      className="mt-2 flex flex-wrap gap-1.5"
+      data-orb-suggested-replies
+      role="group"
+      aria-label="Suggested follow-ups"
+    >
+      {ORB_INLINE_SUGGESTED_REPLIES.map((item) => (
+        <button
+          key={item.action}
+          type="button"
+          onClick={() => onSelect(item.action)}
+          className="rounded-full border border-[var(--orb-line)] bg-[#F8FAFC] px-2.5 py-1 text-[11px] font-medium text-[#475569] transition hover:border-[#94A3B8] hover:text-[#0F172A]"
+          data-orb-suggested-reply={item.action}
+        >
+          {item.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 export function OrbResponseActionBar({
   mode,
   content,

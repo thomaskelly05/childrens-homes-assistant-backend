@@ -253,15 +253,10 @@ def _build_framed_message(
     detail: str,
     history: list[dict] | None = None,
     grounding_context: str | None = None,
+    prompt_tier: str = "residential",
+    shared_runtime_block: str | None = None,
 ) -> str:
     resolved_mode = orb_standalone_brain_service.normalise_mode(mode)
-    brain_block = orb_standalone_brain_service.build_prompt_block(user_message, mode=resolved_mode)
-    shared_runtime_block = shared_institutional_cognition_runtime.prompt_addendum(
-        surface="standalone_orb",
-        message=user_message,
-        mode=resolved_mode,
-        history=history,
-    )
     mode_hint = MODE_BEHAVIOUR.get(resolved_mode) or MODE_BEHAVIOUR.get(mode, "")
     detail_hint = ""
     if detail == "voice_concise":
@@ -274,12 +269,50 @@ def _build_framed_message(
     elif detail == "detailed":
         detail_hint = "Answer style: Detailed — provide fuller structured guidance with practical next steps."
 
+    if prompt_tier == "fast":
+        parts = [
+            STANDALONE_ORB_IDENTITY,
+            STANDALONE_ORB_BOUNDARIES,
+            grounding_context or "",
+            mode_hint,
+            detail_hint,
+            f"Mode: {resolved_mode}",
+            f"User message: {user_message}",
+        ]
+        return "\n\n".join(part for part in parts if part)
+
+    brain_block = orb_standalone_brain_service.build_prompt_block(user_message, mode=resolved_mode)
+    if shared_runtime_block is None:
+        shared_runtime_block = shared_institutional_cognition_runtime.prompt_addendum(
+            surface="standalone_orb",
+            message=user_message,
+            mode=resolved_mode,
+            history=history,
+        )
+
+    if prompt_tier == "deep":
+        parts = [
+            STANDALONE_ORB_IDENTITY,
+            STANDALONE_ORB_CAPABILITIES,
+            STANDALONE_ORB_PRODUCT_KNOWLEDGE,
+            STANDALONE_ORB_BOUNDARIES,
+            STANDALONE_ORB_CITATIONS,
+            shared_runtime_block,
+            grounding_context or "",
+            STANDALONE_ORB_TONE,
+            brain_block,
+            mode_hint,
+            detail_hint,
+            f"Mode: {resolved_mode}",
+            f"User message: {user_message}",
+        ]
+        return "\n\n".join(part for part in parts if part)
+
+    # residential standard path — omit full product essay and citation essay unless needed
     parts = [
         STANDALONE_ORB_IDENTITY,
-        STANDALONE_ORB_CAPABILITIES,
-        STANDALONE_ORB_PRODUCT_KNOWLEDGE,
         STANDALONE_ORB_BOUNDARIES,
-        STANDALONE_ORB_CITATIONS,
+        STANDALONE_ORB_CAPABILITIES,
         shared_runtime_block,
         grounding_context or "",
         STANDALONE_ORB_TONE,
@@ -478,49 +511,56 @@ async def standalone_orb_conversation(
         for item in (payload.images or [])
         if str(item.data_url or "").startswith("data:image/")
     ]
-    shared_cognition = shared_institutional_cognition_runtime.build_context(
-        surface="standalone_orb",
-        message=payload.message,
-        mode=mode,
-        history=history,
+    profile_context = (
+        "standalone context profiles" in payload.message.lower() or "profile:" in payload.message.lower()
     )
-    standalone_brain = orb_standalone_brain_service.context_payload(payload.message, mode=mode)
-    grounding_context = orb_knowledge_retrieval_service.build_grounding_context(
+    retrieval_bundle = orb_knowledge_retrieval_service.prepare_request_bundle(
         payload.message,
         mode=mode,
-        profile_context=False,
+        profile_context=profile_context,
         attachments=image_urls[:4] or None,
     )
+    prompt_tier = retrieval_bundle["prompt_tier"]
+    grounding_context = retrieval_bundle["grounding_context"]
+    retrieval_preview = retrieval_bundle["source_packs"]
+
+    if prompt_tier == "fast":
+        shared_cognition = {
+            "surface": "standalone_orb",
+            "mode": mode,
+            "active_brains": ["general_assistant"],
+            "cognition_display_labels": ["General knowledge"],
+            "explainability": {"cognition_display_labels": ["General knowledge"]},
+            "citations": [],
+            "prompt_blocks": [],
+        }
+        shared_runtime_block = ""
+    else:
+        shared_cognition = shared_institutional_cognition_runtime.build_context(
+            surface="standalone_orb",
+            message=payload.message,
+            mode=mode,
+            history=history,
+        )
+        shared_runtime_block = shared_institutional_cognition_runtime.prompt_addendum(
+            surface="standalone_orb",
+            message=payload.message,
+            mode=mode,
+            history=history,
+        )
+
+    standalone_brain = orb_standalone_brain_service.context_payload(payload.message, mode=mode)
     framed_message = _build_framed_message(
         mode=mode,
         user_message=payload.message,
         detail=detail,
         history=history,
         grounding_context=grounding_context,
-    )
-    profile_context = "standalone context profiles" in framed_message.lower() or "profile:" in framed_message.lower()
-    if profile_context:
-        grounding_context = orb_knowledge_retrieval_service.build_grounding_context(
-            payload.message,
-            mode=mode,
-            profile_context=True,
-            attachments=image_urls[:4] or None,
-        )
-        framed_message = _build_framed_message(
-            mode=mode,
-            user_message=payload.message,
-            detail=detail,
-            history=history,
-            grounding_context=grounding_context,
-        )
-    retrieval_preview = orb_knowledge_retrieval_service.retrieve_sources(
-        payload.message,
-        mode=mode,
-        profile_context=profile_context,
-        attachments=image_urls[:4] or None,
+        prompt_tier=prompt_tier,
+        shared_runtime_block=shared_runtime_block,
     )
 
-    started = time.perf_counter()
+    route_started = time.perf_counter()
     try:
         use_converged = os.getenv("ORB_USE_CONVERGED_RUNTIME", "true").strip().lower() in {
             "1",
@@ -545,14 +585,17 @@ async def standalone_orb_conversation(
             document_title=payload.document_title,
             raw_user_message=payload.message,
         )
-        elapsed_ms = int((time.perf_counter() - started) * 1000)
+        elapsed_ms = int((time.perf_counter() - route_started) * 1000)
+        model_routing = (assistant_data.get("context_used") or {}).get("model_routing") or {}
         logger.info(
-            "standalone_orb_conversation ok mode=%s detail=%s images=%s brains=%s elapsed_ms=%s",
+            "standalone_orb_conversation ok mode=%s detail=%s images=%s brains=%s tier=%s elapsed_ms=%s retrieval_ms=%s",
             mode,
             detail,
             len(image_urls),
             ",".join(shared_cognition.get("active_brains") or standalone_brain.get("active_brains") or []),
+            prompt_tier,
             elapsed_ms,
+            retrieval_bundle.get("retrieval_elapsed_ms"),
         )
         answer = orb_grounded_answer_style_service.sanitize_high_attention_closer(
             str(assistant_data.get("answer") or "I can help with that, but I could not form a response just now."),
@@ -612,6 +655,17 @@ async def standalone_orb_conversation(
                 "source_count": len(retrieval_preview),
                 "document_result_count": 0,
             }
+        context_used["timing"] = {
+            "elapsed_ms": elapsed_ms,
+            "retrieval_elapsed_ms": retrieval_bundle.get("retrieval_elapsed_ms"),
+            "provider_elapsed_ms": model_routing.get("latency_ms"),
+            "prompt_tier": prompt_tier,
+            "prompt_char_estimate": len(framed_message),
+            "grounding_char_count": retrieval_bundle.get("grounding_char_count"),
+            "model": model_routing.get("model"),
+            "provider": model_routing.get("provider"),
+            "route": "/orb/standalone/conversation",
+        }
         return _standalone_conversation_response(
             answer=answer,
             mode=mode,
@@ -626,7 +680,7 @@ async def standalone_orb_conversation(
             cognition_display_labels=cognition_labels,
         )
     except Exception as exc:
-        elapsed_ms = int((time.perf_counter() - started) * 1000)
+        elapsed_ms = int((time.perf_counter() - route_started) * 1000)
         logger.warning(
             "standalone_orb_conversation failed mode=%s detail=%s images=%s elapsed_ms=%s error_type=%s",
             mode,

@@ -33,8 +33,155 @@ Status key: **Done** = verified in code · **Partial** = UI or backend incomplet
 | Accessibility | ORB accessibility panel + a11y classes | Done | `standalone-accessibility.ts` | Text scaling | Partial | High | Safe |
 | Keyboard shortcuts | Ctrl+Shift+Space (voice legacy) | Partial | `orb-standalone-experience.tsx` | Composer shortcuts doc | Planned | Medium | Safe |
 | Suggested replies | Empty starters + mode suggestions | Done | `orb-care-companion.tsx` | Inline reply chips | Partial | High | Safe |
-| Stop generating | Pending guard | Partial | `orb-care-companion.tsx` | Abort fetch | Yes | High | Safe |
-| Retry from here | Regenerate last turn | Partial | `orb-care-companion.tsx` | Mid-thread retry | Planned | High | Safe |
+| Stop generating | Abort fetch + composer Stop | Done | `orb-care-companion.tsx`, `orb-standalone-composer.tsx` | Provider job cancel | No | High | Safe |
+| Retry from here | Regenerate last turn | Partial | `orb-care-companion.tsx` | Mid-thread branch | Planned | High | Safe |
+| Delete message | — | Missing | — | Per-message delete | Later | Low | Safe |
+| Suggested replies (inline) | Chips under last answer | Done | `orb-assistant-message.tsx` | — | No | High | Safe |
+| Ask about this | Attachment chips | Done | `orb-assistant-message.tsx` | Document panel parity | Partial | High | Safe |
+
+---
+
+## Extended feature matrix (full audit)
+
+Status: **Done** · **Partial** · **Missing** · **N/A** (not for standalone) · **Later** (OS/provider plan)
+
+### Message features
+
+| Feature | Status | Notes / files |
+|---------|--------|---------------|
+| Copy response | Done | `orb-assistant-message.tsx` |
+| Read aloud | Partial | Last answer + hover on older; `use-standalone-orb-voice.ts` |
+| Regenerate response | Done | Last user message retry — `handleRegenerate` |
+| Edit user message | Done | `OrbUserMessageBubble`, `editMessageId` |
+| Share chat | Partial | Header export = clipboard copy |
+| Delete message | Missing | — |
+| Delete chat | Done | Sidebar |
+| Pin chats | Done | Sidebar |
+| Archive chats | Done | Sidebar |
+| Search chats | Done | Sidebar |
+| Retry from here | Partial | Regenerate last only |
+| Stop generating | Done | AbortController + Stop button |
+| Suggested replies | Done | `OrbSuggestedReplyChips` |
+| Ask about this | Partial | Image attachments; documents via panel |
+
+### Voice / audio
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Voice input | Partial | Push-to-talk — `orb-standalone-composer.tsx` |
+| Voice conversation | Missing | Later |
+| Advanced voice | Later | — |
+| Interruptible voice | Later | — |
+| Voice selection | Partial | `orb-voice-settings-panel.tsx` |
+| Speed controls | Partial | `speechRate` in voice hook |
+| Pause/play read aloud | Partial | Speak / Stop on message |
+
+### Image
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Upload images | Done | Composer attachments |
+| Screenshot analysis | Partial | Same as image upload + vision when configured |
+| OCR / text extraction | Partial | Vision-dependent |
+| Identify situations | Partial | Vision-dependent |
+| Generate images | N/A | Not product goal |
+| Edit images | Missing | — |
+
+### File
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| PDF / DOCX / PPTX / XLSX / CSV / TXT upload | Partial | `orb-document-panel.tsx`, `orb_document_routes.py` |
+| Summarise / extract / compare / Q&A | Partial | Analyse routes |
+| Generated downloads | Partial | Saved outputs markdown |
+| PDF / Word / spreadsheet export | Later | Documented limitation |
+
+### Memory / personalisation
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Memory | Partial | Local profile + workspace |
+| Temporary chat | Done | Skips profile in prompt |
+| Custom instructions | Done | Adult profile drawer |
+| Role profile | Done | `adult-profile-store.ts` |
+| Response style | Done | Voice settings + profile |
+| Accessibility preferences | Done | `standalone-accessibility.ts` |
+| Saved project context | Done | Projects in local store |
+| Server-synced profile | Later | — |
+
+### Search / research
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Knowledge search | Done | Knowledge library |
+| Deep research | Partial | Agent panel |
+| Live web browsing | Later | Not standalone |
+| Citations | Done | Inline + sources detail |
+| Source confidence | Partial | Explainability panel |
+| Source basis | Done | Source packs + spine |
+
+### Productivity
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Canvas / workspace | Partial | Follow-ups + saved outputs |
+| Editable output | Partial | Composer prefill |
+| Tasks / reminders | Later | — |
+| Tables / charts / calculations | Partial | Markdown in answers |
+| Checklist / action plan builder | Partial | Follow-up prompts |
+
+### Coding / data
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Code blocks / syntax highlighting | Partial | `orb-markdown-answer.tsx` |
+| Data analysis / CSV | Partial | Document Q&A |
+
+### Chat management
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Folders / projects | Done | `standalone-local-store.ts` |
+| Project instructions | Partial | Profile/project notes |
+| Saved outputs | Done | `orb_saved_output_routes.py` |
+| Archive / search / pin | Done | Sidebar |
+
+### Mobile
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Camera upload | Done | `capture="environment"` on composer |
+| Voice on mobile | Partial | Browser-dependent |
+| Responsive sidebar | Done | Premium layout |
+
+### Collaboration
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Shared links | Missing | — |
+| Export pack | Partial | Clipboard export |
+| Team workspace | Later / OS only | — |
+
+### GPT / agents
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Residential agents | Done | 8 modes + agents panel |
+| Agent selector | Done | Composer + panel |
+| Mention agents | Later | — |
+| Agent library | Partial | `orb-agent-panel.tsx` |
+| Generic GPT store | N/A | Intentionally not built |
+
+### Accessibility
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Keyboard shortcuts | Partial | Voice legacy shortcut |
+| Dark / light mode | Partial | Appearance control |
+| Text scaling | Partial | Accessibility panel |
+| Reduced motion | Done | `standalone-accessibility.ts` |
+| Screen reader / focus | Partial | SR labels on composer |
+| Read aloud | Partial | See voice section |
 
 ---
 

@@ -60,7 +60,8 @@ export function OrbStandaloneComposer({
   suggestions,
   agentLabel,
   onAgentSelectorClick,
-  answering
+  answering,
+  onStopGenerating
 }: {
   value: string
   pending: boolean
@@ -100,6 +101,7 @@ export function OrbStandaloneComposer({
   agentLabel?: string
   onAgentSelectorClick?: () => void
   answering?: boolean
+  onStopGenerating?: () => void
 }) {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const cameraInputRef = useRef<HTMLInputElement | null>(null)
@@ -368,6 +370,18 @@ export function OrbStandaloneComposer({
               </div>
 
               <div className="flex items-center gap-2">
+                {answering && onStopGenerating ? (
+                  <button
+                    type="button"
+                    onClick={onStopGenerating}
+                    className="inline-flex h-10 min-w-10 shrink-0 items-center justify-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-3 text-rose-800 shadow-sm transition hover:bg-rose-100"
+                    aria-label="Stop generating"
+                    data-orb-composer-stop-generating
+                  >
+                    <Square className="h-4 w-4 fill-current" aria-hidden />
+                    <span className="hidden text-xs font-semibold sm:inline">Stop</span>
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   onClick={onMicClick}
@@ -391,7 +405,7 @@ export function OrbStandaloneComposer({
                 </button>
                 <button
                   type="submit"
-                  disabled={sendDisabled}
+                  disabled={sendDisabled || (answering && Boolean(onStopGenerating))}
                   aria-label="Send message"
                   onClick={(event) => logTapTarget(event, 'orb-standalone-send-click')}
                   onPointerUp={(event) => {
