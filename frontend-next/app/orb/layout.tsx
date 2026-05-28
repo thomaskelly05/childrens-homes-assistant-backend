@@ -2,7 +2,6 @@ import type { Metadata } from 'next'
 import { ReactNode } from 'react'
 
 import './orb-chatgpt-light.css'
-import { OrbResidentialShell } from '@/components/orb-residential/orb-residential-shell'
 import { ORB_APPEARANCE_BOOTSTRAP_SCRIPT } from '@/lib/orb/orb-appearance'
 import {
   ORB_COGNITION_ROUTING_BUILD,
@@ -44,7 +43,7 @@ export default function OrbLayout({ children }: { children: ReactNode }) {
         id="orb-cognition-routing-build"
         dangerouslySetInnerHTML={{ __html: ORB_COGNITION_ROUTING_BUILD_SCRIPT }}
       />
-      <OrbResidentialShell>{children}</OrbResidentialShell>
+      {children}
     </>
   )
 }
