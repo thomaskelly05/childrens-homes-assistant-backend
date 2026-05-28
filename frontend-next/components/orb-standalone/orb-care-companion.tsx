@@ -28,7 +28,8 @@ import {
 } from '@/components/orb-standalone/orb-standalone-composer'
 import {
   OrbAssistantMessageBody,
-  OrbResponseActionBar
+  OrbResponseActionBar,
+  type OrbResponseFollowUpAction
 } from '@/components/orb-standalone/orb-assistant-message'
 import { OrbAgentPanel } from '@/components/orb-standalone/orb-agent-panel'
 import { OrbResidentialAgentsPanel } from '@/components/orb-standalone/orb-residential-agents-panel'
@@ -662,8 +663,12 @@ export function OrbCareCompanion() {
       if (voice.speaking) voice.cancelSpeaking()
 
       const imagePayload = attachments.map((a) => ({ data_url: a.dataUrl, name: a.name }))
-      const profileBlock = buildProfileContextBlock(attachedProfiles)
-      const adultBlock = adultProfile ? buildAdultProfilePromptBlock(adultProfile) : ''
+      let targetChatId = options?.chatId || workspace.activeChatId
+      let targetChat = targetChatId ? workspace.chats.find((c) => c.id === targetChatId) ?? null : null
+      const skipPersonalisation = Boolean(targetChat?.temporary)
+      const profileBlock = skipPersonalisation ? '' : buildProfileContextBlock(attachedProfiles)
+      const adultBlock =
+        skipPersonalisation || !adultProfile ? '' : buildAdultProfilePromptBlock(adultProfile)
       const messageBody = [
         adultBlock,
         profileBlock,
@@ -690,9 +695,6 @@ export function OrbCareCompanion() {
         createdAt: now
       }
       const thinkingMessage = createThinkingPlaceholder(thinkingMessageId)
-
-      let targetChatId = options?.chatId || workspace.activeChatId
-      let targetChat = targetChatId ? workspace.chats.find((c) => c.id === targetChatId) ?? null : null
 
       const existingMessages = dedupeOrbMessages(targetChat?.messages ?? [])
       let priorMessages = existingMessages
@@ -1113,6 +1115,19 @@ export function OrbCareCompanion() {
     void voice.beginUserVoiceCapture()
   }
 
+  const SLASH_MODE_COMMANDS: Record<string, StandaloneOrbMode> = {
+    '/safeguard': 'Safeguarding Thinking',
+    '/safeguarding': 'Safeguarding Thinking',
+    '/record': 'Record This Properly',
+    '/ofsted': 'Ofsted Lens',
+    '/therapeutic': 'Therapeutic Reframe',
+    '/manager': 'Manager Copilot',
+    '/supervision': 'Staff Coach',
+    '/reg44': 'Reg 44 / Reg 45 Prep',
+    '/reg45': 'Reg 44 / Reg 45 Prep',
+    '/shift': 'Ask ORB'
+  }
+
   function handleMessageChange(value: string) {
     composerUserEditedRef.current = true
     voiceMayFillComposerRef.current = false
@@ -1121,19 +1136,30 @@ export function OrbCareCompanion() {
       setMessage('')
       return
     }
-    if (slash === '/safeguard' || slash === '/safeguarding') {
-      handleModeChange('Safeguarding Thinking')
-      setMessage('')
-      return
-    }
-    if (slash === '/record') {
-      handleModeChange('Record This Properly')
-      setMessage('')
-      return
-    }
     if (slash === '/agent') {
       setAgentsPanelOpen(true)
       setMessage('')
+      return
+    }
+    if (slash === '/policy') {
+      openKnowledgeLibrary()
+      setMessage('')
+      return
+    }
+    if (slash === '/whatamimissing') {
+      setMessage('What am I missing in this situation? Help me see gaps in facts, recording, escalation, and follow-up.')
+      return
+    }
+    const modeFromSlash = SLASH_MODE_COMMANDS[slash]
+    if (modeFromSlash) {
+      handleModeChange(modeFromSlash)
+      if (slash === '/shift') {
+        setMessage('Help me build a shift handover: priorities, risks, child experience, and what needs manager attention.')
+      } else if (slash === '/supervision') {
+        setMessage('Help me prepare supervision prompts from what I share next.')
+      } else {
+        setMessage('')
+      }
       return
     }
     setMessage(value)
@@ -1157,6 +1183,22 @@ export function OrbCareCompanion() {
     handleModeChange(agent.mode)
     setMessage('')
     inputRef.current?.focus()
+  }
+
+  function startTemporaryChat() {
+    if (voice.speaking) voice.cancelSpeaking()
+    if (voice.listening) voice.cancelListening()
+    voice.pauseVoiceSession()
+    const chat = createStandaloneChat(workspace.activeProjectId, 'Ask ORB', { temporary: true })
+    setWorkspace((current) => ({
+      ...current,
+      activeChatId: chat.id,
+      chats: [chat, ...current.chats]
+    }))
+    setMessage('')
+    setAttachments([])
+    setError(null)
+    setSidebarOpen(false)
   }
 
   function startNewChat(projectId?: string) {
@@ -1216,6 +1258,29 @@ export function OrbCareCompanion() {
     await copyToClipboard(text)
     setDraftNotice('Copied as draft wording. Review before using in records.')
     setTimeout(() => setDraftNotice(null), 5000)
+  }
+
+  function handleOrbFollowUp(action: OrbResponseFollowUpAction, sourceContent: string) {
+    const excerpt = sourceContent.slice(0, 2400)
+    const prompts: Record<OrbResponseFollowUpAction, string> = {
+      improve_wording: `Improve the professional wording below. Keep facts unchanged; do not invent details.\n\n${excerpt}`,
+      more_concise: `Make this more concise for a busy shift. Keep safeguarding and escalation points.\n\n${excerpt}`,
+      more_detailed: `Expand this with clearer structure, actions, and follow-up. Still standalone — no OS records.\n\n${excerpt}`,
+      recording_wording: `Rewrite as objective, child-centred recording wording I can review before entering a log.\n\n${excerpt}`,
+      child_voice: `Add prompts to capture the child's voice and perspective appropriately for this situation.\n\n${excerpt}`,
+      manager_oversight: `Draft a manager oversight note: facts, risks, actions, and what I need from the RM.\n\n${excerpt}`,
+      chronology: `Suggest chronology entries and sequencing I should record from this (no invented facts).\n\n${excerpt}`,
+      shift_builder: `Turn this into shift handover bullets: priorities, risks, child experience, manager attention.\n\n${excerpt}`,
+      checklist: `Create a practical checklist for staff follow-up from this.\n\n${excerpt}`,
+      what_missing: `What am I missing? Review for facts, concerns, gaps, escalation, recording, and follow-up.\n\n${excerpt}`,
+      ofsted_lens: `Apply an Ofsted / SCCIF lens to this. What would an inspector ask? What evidence is thin?\n\n${excerpt}`,
+      safeguarding_lens: `Apply a safeguarding lens: facts, concerns, gaps, escalation, and immediate safety.\n\n${excerpt}`
+    }
+    if (action === 'ofsted_lens') handleModeChange('Ofsted Lens')
+    if (action === 'safeguarding_lens') handleModeChange('Safeguarding Thinking')
+    if (action === 'recording_wording') handleModeChange('Record This Properly')
+    setMessage(prompts[action])
+    inputRef.current?.focus()
   }
 
   async function saveChatNote(entry: StandaloneChatMessage) {
@@ -1373,7 +1438,7 @@ export function OrbCareCompanion() {
   }
 
   const emptyStarters = useMemo(() => {
-    if (adultProfile?.name || adultProfile?.role !== 'practitioner') {
+    if (adultProfile?.name || adultProfile?.role !== 'residential_support_worker') {
       return roleBasedEmptyStarters(adultProfile ?? readAdultProfile()).map((text) => ({ text }))
     }
     return PRIMARY_EMPTY_STARTERS
@@ -1616,12 +1681,30 @@ export function OrbCareCompanion() {
                 {showEmptyState ? 'ORB' : activeChat?.title || 'ORB'}
               </h1>
             </div>
-            <span
-              className="hidden shrink-0 rounded-full border border-[#93C5FD] bg-[#F0F9FF] px-2.5 py-0.5 text-[10px] font-semibold text-[#0369A1] sm:inline"
-              data-orb-header-privacy
+            {activeChat?.temporary ? (
+              <span
+                className="hidden shrink-0 rounded-full border border-violet-300 bg-violet-50 px-2.5 py-0.5 text-[10px] font-semibold text-violet-800 sm:inline"
+                data-orb-header-temporary-chat
+              >
+                Temporary · no memory
+              </span>
+            ) : (
+              <span
+                className="hidden shrink-0 rounded-full border border-[#93C5FD] bg-[#F0F9FF] px-2.5 py-0.5 text-[10px] font-semibold text-[#0369A1] sm:inline"
+                data-orb-header-privacy
+              >
+                No OS records accessed
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={() => (activeChat?.temporary ? startNewChat() : startTemporaryChat())}
+              className="hidden rounded-lg px-2 py-1 text-[10px] font-semibold text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)] sm:inline"
+              data-orb-header-temporary-toggle
+              title={activeChat?.temporary ? 'Start a normal chat with profile memory' : 'Temporary chat — skips profile memory for this thread'}
             >
-              No OS records accessed
-            </span>
+              {activeChat?.temporary ? 'Normal chat' : 'Temporary'}
+            </button>
             <div className="flex shrink-0 items-center gap-0.5">
               <button
                 type="button"
@@ -1912,6 +1995,7 @@ export function OrbCareCompanion() {
                                 }}
                                 onExport={() => void copyToClipboard(entry.content)}
                                 onInspectionPrep={() => handleModeChange('Ofsted Lens')}
+                                onOrbFollowUp={handleOrbFollowUp}
                               />
                             ) : index !== visibleMessages.length - 1 ? (
                               <div className="mt-2 flex flex-wrap gap-2 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">

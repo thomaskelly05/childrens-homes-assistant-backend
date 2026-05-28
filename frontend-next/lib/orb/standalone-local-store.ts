@@ -100,6 +100,8 @@ export type StandaloneChat = {
   conversationId: string
   pinned?: boolean
   archived?: boolean
+  /** When true, ORB skips profile/memory blocks for this chat only (local UI boundary). */
+  temporary?: boolean
   createdAt: number
   updatedAt: number
 }
@@ -431,16 +433,21 @@ export function createStandaloneProfile(input: {
   }
 }
 
-export function createStandaloneChat(projectId: string, mode: StandaloneOrbMode | string = 'Ask ORB'): StandaloneChat {
+export function createStandaloneChat(
+  projectId: string,
+  mode: StandaloneOrbMode | string = 'Ask ORB',
+  options?: { temporary?: boolean }
+): StandaloneChat {
   const stamp = now()
   return {
     id: newId('chat'),
-    title: 'New conversation',
+    title: options?.temporary ? 'Temporary chat' : 'New conversation',
     projectId,
     profileIds: [],
     messages: [],
     mode,
     conversationId: `standalone-${stamp.toString(36)}`,
+    temporary: options?.temporary,
     createdAt: stamp,
     updatedAt: stamp
   }

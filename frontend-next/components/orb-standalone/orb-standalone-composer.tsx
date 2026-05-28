@@ -172,7 +172,8 @@ export function OrbStandaloneComposer({
 
           {value.startsWith('/') ? (
             <p className="mb-2 px-3 text-[11px] font-medium text-sky-700" data-orb-composer-slash-hint>
-              Slash commands: /agent · /record · /safeguard · /clear — or type your message
+              /record · /safeguard · /ofsted · /shift · /supervision · /whatamimissing · /therapeutic · /manager ·
+              /reg44 · /policy · /agent · /clear
             </p>
           ) : null}
 

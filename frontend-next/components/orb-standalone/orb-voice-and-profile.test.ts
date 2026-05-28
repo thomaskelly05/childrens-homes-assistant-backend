@@ -3,6 +3,7 @@ import { describe, it } from 'node:test'
 
 import { pickBritishFemaleVoice } from './use-standalone-orb-voice.ts'
 import {
+  buildAdultProfilePromptBlock,
   personalisedEmptyHeading,
   roleBasedEmptyStarters,
   DEFAULT_ADULT_PROFILE
@@ -45,5 +46,17 @@ describe('adult profile personalisation', () => {
       roleLabel: 'Registered Manager'
     })
     assert.ok(starters.some((s) => s.toLowerCase().includes('oversight')))
+  })
+
+  it('profile prompt block includes answer length and boundary framing', () => {
+    const block = buildAdultProfilePromptBlock({
+      ...DEFAULT_ADULT_PROFILE,
+      name: 'Alex',
+      preferredAnswerLength: 'brief',
+      defaultLenses: { ofsted: true, safeguarding: true, recording: false }
+    })
+    assert.match(block, /does not access OS records/)
+    assert.match(block, /Answer length/)
+    assert.match(block, /Ofsted/)
   })
 })

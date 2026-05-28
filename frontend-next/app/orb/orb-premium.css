@@ -301,6 +301,19 @@
   color: #0f172a !important;
 }
 
+.orb-action-more-menu {
+  z-index: 50;
+}
+
+.orb-response-action-bar {
+  opacity: 0.72;
+}
+
+.orb-message-assistant:hover .orb-response-action-bar,
+.orb-message-assistant:focus-within .orb-response-action-bar {
+  opacity: 1;
+}
+
 .orb-citation-card,
 .orb-document-panel,
 .orb-sidebar-inline-form {

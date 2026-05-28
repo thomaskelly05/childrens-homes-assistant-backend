@@ -11,16 +11,16 @@ function readComponent(relativePath: string) {
 }
 
 describe('ORB ChatGPT UI structure', () => {
-  it('sidebar exposes ChatGPT-style navigation items', () => {
+  it('sidebar uses premium section structure (Core, Intelligence, Workspace, Profiles)', () => {
     const source = readComponent('components/orb-standalone/orb-standalone-sidebar.tsx')
+    for (const section of ['Core', 'Intelligence', 'Workspace', 'Profiles']) {
+      assert.match(source, new RegExp(`title="${section}"`))
+    }
     for (const label of ['New chat', 'Search chats', 'Library', 'Agents', 'Deep research', 'Tools']) {
       assert.match(source, new RegExp(label))
     }
-    assert.match(source, /Apps/)
     assert.match(source, /Conversations/)
-    assert.match(source, /Previous 7 days/)
-    assert.doesNotMatch(source, /label="Apps"/)
-    assert.doesNotMatch(source, /Knowledge library/)
+    assert.doesNotMatch(source, /title="Apps"/)
   })
 
   it('care companion applies light theme markers by default', () => {
@@ -137,13 +137,45 @@ describe('ORB ChatGPT UI structure', () => {
     assert.match(panel, /Test voice/)
   })
 
-  it('response action bar includes regenerate copy and more menu', () => {
+  it('response action bar includes regenerate copy and ORB follow-up actions', () => {
     const assistant = readComponent('components/orb-standalone/orb-assistant-message.tsx')
+    const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
     assert.match(assistant, /Regenerate/)
+    assert.match(assistant, /data-orb-response-action-bar/)
     assert.match(assistant, /data-orb-response-actions/)
     assert.match(assistant, /Copy/)
+    assert.match(assistant, /What am I missing/)
+    assert.match(assistant, /onOrbFollowUp/)
+    assert.match(companion, /handleOrbFollowUp/)
     assert.match(assistant, /data-orb-action-more-menu/)
     assert.match(assistant, /label="More"/)
+  })
+
+  it('composer documents residential slash commands', () => {
+    const composer = readComponent('components/orb-standalone/orb-standalone-composer.tsx')
+    const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
+    assert.match(composer, /data-orb-composer-slash-hint/)
+    assert.match(composer, /\/whatamimissing/)
+    assert.match(companion, /SLASH_MODE_COMMANDS/)
+    assert.match(companion, /\/reg44/)
+  })
+
+  it('temporary chat boundary is exposed in header', () => {
+    const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
+    assert.match(companion, /data-orb-header-temporary-chat/)
+    assert.match(companion, /startTemporaryChat/)
+    assert.match(companion, /skipPersonalisation/)
+  })
+
+  it('adult profile includes ChatGPT-style personalisation fields', () => {
+    const store = readComponent('lib/orb/adult-profile-store.ts')
+    const drawer = readComponent('components/orb-standalone/orb-adult-profile-drawer.tsx')
+    assert.match(store, /preferredAnswerLength/)
+    assert.match(store, /defaultLenses/)
+    assert.match(store, /STANDALONE_PROFILE_BOUNDARY_NOTE/)
+    assert.match(drawer, /data-orb-profile-boundary-note/)
+    assert.match(drawer, /data-orb-profile-answer-length/)
+    assert.match(drawer, /CANONICAL_ADULT_PROFILE_ROLES/)
   })
 
   it('new chat defaults to Ask ORB for auto-routing', () => {
