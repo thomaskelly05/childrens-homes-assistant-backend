@@ -21,6 +21,7 @@ from schemas.orb_operational import (
     OrbOperationalResponse,
     OrbOperationalSafetyBoundary,
 )
+from services.orb_evidence_diagnostic_service import orb_evidence_diagnostic_service
 from services.orb_intelligence_bridge_service import orb_intelligence_bridge_service
 from services.orb_operational_action_builder_service import orb_operational_action_builder_service
 from services.orb_operational_assistant_service import orb_operational_assistant_service
@@ -111,6 +112,8 @@ async def operational_orb_evidence_diagnostics(
     evidence ORB found before a model answer is generated.
     """
     context = orb_operational_context_bridge.build_context(payload, current_user, conn=conn)
+    permissions = context.get("permissions")
+    provider_id = permissions.provider_id if hasattr(permissions, "provider_id") else None
     evidence = orb_universal_evidence_service.collect(
         conn,
         current_user=current_user,
@@ -118,7 +121,15 @@ async def operational_orb_evidence_diagnostics(
         message=payload.message,
         young_person_id=payload.child_id,
         home_id=payload.home_id,
-        provider_id=(context.get("permissions") or {}).provider_id if hasattr(context.get("permissions"), "provider_id") else None,
+        provider_id=provider_id,
+    )
+    diagnostic = orb_evidence_diagnostic_service.from_universal_result(
+        evidence,
+        scope=payload.scope,
+        child_id=payload.child_id,
+        home_id=payload.home_id,
+        provider_id=provider_id,
+        message=payload.message,
     )
     return {
         "success": True,
@@ -133,6 +144,7 @@ async def operational_orb_evidence_diagnostics(
             "evidence_count": len(evidence.get("items") or []),
             "surface_count": evidence.get("surface_count", 0),
             "counts": evidence.get("counts", {}),
+            "diagnostic": diagnostic,
             "items": evidence.get("items", [])[:40],
             "errors": evidence.get("errors", []),
             "context_sources": orb_operational_context_bridge.safe_context_sources(context),
