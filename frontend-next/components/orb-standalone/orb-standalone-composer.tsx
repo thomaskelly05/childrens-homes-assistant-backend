@@ -131,24 +131,24 @@ export function OrbStandaloneComposer({
     >
       <div className="mx-auto w-full max-w-[var(--orb-composer-max,53.125rem)]">
         {voiceCaptureEnabled && transcriptReady && displayTranscript ? (
-          <div className="mb-3 rounded-2xl border border-teal-300/20 bg-teal-400/[0.06] px-4 py-3">
-            <p className="text-xs font-semibold text-teal-200/90">I heard you say…</p>
-            <p className="mt-1 text-sm italic text-slate-100">&ldquo;{displayTranscript}&rdquo;</p>
+          <div className="mb-3 rounded-3xl border border-teal-300/25 bg-white/80 px-4 py-3 shadow-lg shadow-cyan-100/40 backdrop-blur">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-teal-700">I heard you say</p>
+            <p className="mt-1 text-sm italic text-slate-700">&ldquo;{displayTranscript}&rdquo;</p>
             {!autoSend ? (
               <div className="mt-3 flex flex-wrap gap-2">
                 <button
                   type="button"
                   onClick={onSendTranscript}
                   disabled={pending}
-                  className="inline-flex h-9 items-center gap-1.5 rounded-full bg-cyan-400/20 px-4 text-xs font-semibold text-cyan-50"
+                  className="inline-flex h-9 items-center gap-1.5 rounded-full bg-slate-950 px-4 text-xs font-semibold text-white"
                 >
                   <Send className="h-3.5 w-3.5" aria-hidden />
-                  Send
+                  Send transcript
                 </button>
                 <button
                   type="button"
                   onClick={onRetryTranscript}
-                  className="inline-flex h-9 items-center rounded-full border border-white/12 px-4 text-xs font-medium text-slate-300"
+                  className="inline-flex h-9 items-center rounded-full border border-slate-200 bg-white px-4 text-xs font-medium text-slate-600"
                 >
                   Try again
                 </button>
@@ -169,11 +169,13 @@ export function OrbStandaloneComposer({
           <label htmlFor="orb-standalone-input" className="sr-only">
             Message ORB
           </label>
+
           {value.startsWith('/') ? (
-            <p className="mb-2 px-2 text-[10px] text-sky-300/80" data-orb-composer-slash-hint>
+            <p className="mb-2 px-3 text-[11px] font-medium text-sky-700" data-orb-composer-slash-hint>
               Slash commands: /agent · /record · /safeguard · /clear — or type your message
             </p>
           ) : null}
+
           {suggestions && suggestions.length > 0 && !value.trim() && !pending && !answering ? (
             <div className="mb-2 flex flex-wrap gap-1.5 px-1" data-orb-composer-suggestions>
               {suggestions.slice(0, 3).map((suggestion) => (
@@ -181,27 +183,62 @@ export function OrbStandaloneComposer({
                   key={suggestion}
                   type="button"
                   onClick={() => syncMessage(suggestion)}
-                  className="rounded-full border border-[#93C5FD] bg-[#F8FCFF] px-3 py-1.5 text-xs font-semibold text-[#075985] transition hover:border-[#7DD3FC] hover:bg-[#E0F2FE] hover:text-[#0369A1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00B8FF]/50"
+                  className="rounded-full border border-sky-100 bg-white/75 px-3 py-1.5 text-xs font-semibold text-sky-800 shadow-sm transition hover:border-sky-200 hover:bg-sky-50"
                 >
                   {suggestion}
                 </button>
               ))}
             </div>
           ) : null}
+
           <div
-            className={`orb-composer-glow orb-composer-glass orb-surface rounded-[1.35rem] p-2.5 md:p-3 ${answering ? 'orb-composer-answering orb-answering-pulse' : ''}`}
+            className={`orb-composer-glow orb-composer-glass orb-surface rounded-[1.75rem] p-3 ${answering ? 'orb-composer-answering orb-answering-pulse' : ''}`}
             data-orb-composer-answering={answering ? 'true' : 'false'}
           >
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/60 px-1 pb-2">
+              {onAgentSelectorClick ? (
+                <button
+                  type="button"
+                  onClick={onAgentSelectorClick}
+                  className="inline-flex max-w-full items-center gap-2 rounded-full border border-slate-200 bg-white/85 px-3 py-1.5 text-xs font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50"
+                  data-orb-composer-agent-selector
+                  aria-label="Choose agent"
+                >
+                  <span className="truncate">{agentLabel || mode || 'Ask ORB'}</span>
+                  <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-500" aria-hidden />
+                </button>
+              ) : (
+                <span className="inline-flex rounded-full border border-slate-200 bg-white/85 px-3 py-1.5 text-xs font-semibold text-slate-800 shadow-sm">
+                  {mode}
+                </span>
+              )}
+
+              <div className="flex items-center gap-2 text-[11px] text-slate-500">
+                {documentAttached ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-cyan-50 px-2.5 py-1 font-medium text-cyan-700">
+                    <FileText className="h-3.5 w-3.5" aria-hidden />
+                    {documentTitle || 'Document attached'}
+                  </span>
+                ) : null}
+                {voiceListening ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2.5 py-1 font-medium text-sky-700">
+                    <Mic className="h-3.5 w-3.5" aria-hidden />
+                    Listening
+                  </span>
+                ) : null}
+              </div>
+            </div>
+
             {attachments.length > 0 ? (
-              <div className="mb-2 flex flex-wrap gap-2 px-1 pt-1">
+              <div className="mt-3 flex flex-wrap gap-2 px-1">
                 {attachments.map((file) => (
                   <div key={file.id} className="relative">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={file.previewUrl} alt={file.name} className="h-14 w-14 rounded-xl border border-white/12 object-cover" />
+                    <img src={file.previewUrl} alt={file.name} className="h-16 w-16 rounded-2xl border border-white/80 object-cover shadow-sm" />
                     <button
                       type="button"
                       onClick={() => onRemoveAttachment(file.id)}
-                      className="absolute -right-1 -top-1 rounded-full border border-white/15 bg-slate-950 p-0.5 text-slate-300"
+                      className="absolute -right-1 -top-1 rounded-full border border-white bg-slate-950 p-0.5 text-white shadow-sm"
                       aria-label={`Remove ${file.name}`}
                     >
                       <X className="h-3 w-3" />
@@ -212,49 +249,58 @@ export function OrbStandaloneComposer({
             ) : null}
 
             {documentAttached ? (
-              <div className="mb-2 flex flex-wrap items-center gap-2 px-1 pt-1">
-                <span className="inline-flex items-center gap-1 rounded-full border border-cyan-400/25 bg-cyan-500/10 px-2.5 py-1 text-[11px] text-cyan-100">
-                  <FileText className="h-3.5 w-3.5" aria-hidden />
-                  {documentTitle || 'Document attached'}
-                </span>
+              <div className="mt-3 flex flex-wrap items-center gap-2 px-1">
                 {onAnalyseDocument ? (
-                  <button type="button" onClick={onAnalyseDocument} className="rounded-full border border-white/10 px-2 py-0.5 text-[10px] text-slate-300 hover:bg-white/[0.06]">
-                    Analyse document
+                  <button type="button" onClick={onAnalyseDocument} className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-600 hover:bg-slate-50">
+                    Analyse
                   </button>
                 ) : null}
                 {onDocumentActionPlan ? (
-                  <button type="button" onClick={onDocumentActionPlan} className="rounded-full border border-white/10 px-2 py-0.5 text-[10px] text-slate-300 hover:bg-white/[0.06]">
-                    Create action plan
+                  <button type="button" onClick={onDocumentActionPlan} className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-600 hover:bg-slate-50">
+                    Action plan
                   </button>
                 ) : null}
                 {onSummariseDocument ? (
-                  <button type="button" onClick={onSummariseDocument} className="rounded-full border border-white/10 px-2 py-0.5 text-[10px] text-slate-300 hover:bg-white/[0.06]">
+                  <button type="button" onClick={onSummariseDocument} className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-600 hover:bg-slate-50">
                     Summarise
                   </button>
                 ) : null}
                 {onAddDocumentToLibrary ? (
-                  <button type="button" onClick={onAddDocumentToLibrary} className="rounded-full border border-white/10 px-2 py-0.5 text-[10px] text-slate-300 hover:bg-white/[0.06]">
-                    Add to Knowledge Library
+                  <button type="button" onClick={onAddDocumentToLibrary} className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-600 hover:bg-slate-50">
+                    Add to library
                   </button>
                 ) : null}
               </div>
             ) : null}
 
-            {onAgentSelectorClick ? (
-              <div className="mb-1 flex items-center gap-2 px-1">
-                <button
-                  type="button"
-                  onClick={onAgentSelectorClick}
-                  className="inline-flex max-w-full items-center gap-1 rounded-full border border-[var(--orb-line)] bg-[var(--orb-surface)] px-2.5 py-1 text-[11px] font-medium text-[var(--orb-foreground)] transition hover:bg-[var(--orb-surface-hover)]"
-                  data-orb-composer-agent-selector
-                  aria-label="Choose agent"
-                >
-                  <span className="truncate">{agentLabel || 'Ask ORB'}</span>
-                  <ChevronDown className="h-3 w-3 shrink-0 text-[var(--orb-muted)]" aria-hidden />
-                </button>
-              </div>
-            ) : null}
-            <div className="flex items-end gap-1">
+            <textarea
+              ref={inputRef}
+              id="orb-standalone-input"
+              name="message"
+              value={value}
+              onChange={(event) => syncMessage(event.currentTarget.value)}
+              onInput={(event) => syncMessage(event.currentTarget.value)}
+              onCompositionEnd={(event) => syncMessage(event.currentTarget.value)}
+              onPaste={onPaste}
+              onKeyDown={(event) => {
+                if (event.key !== 'Enter' || event.shiftKey) return
+                event.preventDefault()
+                const form = event.currentTarget.form
+                if (form && !sendDisabled) {
+                  form.requestSubmit()
+                }
+              }}
+              rows={1}
+              className="mt-2 max-h-44 min-h-[4.5rem] w-full resize-none bg-transparent px-1 py-3 text-[1.02rem] leading-7 text-[var(--orb-foreground)] outline-none placeholder:text-slate-400 [touch-action:manipulation]"
+              placeholder={placeholderForMode(mode)}
+              disabled={pending}
+              aria-describedby="orb-standalone-status"
+              data-orb-composer-input
+              data-testid="orb-standalone-message-input"
+              data-input-source="controlled"
+            />
+
+            <div className="mt-1 flex items-center justify-between gap-3 px-1">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -277,114 +323,94 @@ export function OrbStandaloneComposer({
                   event.target.value = ''
                 }}
               />
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="inline-flex h-10 min-w-10 shrink-0 items-center justify-center rounded-full text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]"
-                aria-label="Attach image"
-                data-orb-composer-attach
-              >
-                <Plus className="h-5 w-5" aria-hidden />
-              </button>
-              {onAttachDocumentClick ? (
+
+              <div className="flex items-center gap-1.5 rounded-full border border-slate-200/80 bg-white/75 p-1 shadow-sm">
                 <button
                   type="button"
-                  onClick={onAttachDocumentClick}
-                  className="inline-flex h-10 min-w-10 shrink-0 items-center justify-center rounded-full text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]"
-                  aria-label="Attach document"
-                  data-orb-composer-document
+                  onClick={() => fileInputRef.current?.click()}
+                  className="inline-flex h-8 min-w-8 shrink-0 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+                  aria-label="Attach image"
+                  data-orb-composer-attach
                 >
-                  <FileText className="h-5 w-5" aria-hidden />
+                  <Plus className="h-4.5 w-4.5" aria-hidden />
                 </button>
-              ) : null}
-              {onToolsClick ? (
+                {onAttachDocumentClick ? (
+                  <button
+                    type="button"
+                    onClick={onAttachDocumentClick}
+                    className="inline-flex h-8 min-w-8 shrink-0 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+                    aria-label="Attach document"
+                    data-orb-composer-document
+                  >
+                    <FileText className="h-4.5 w-4.5" aria-hidden />
+                  </button>
+                ) : null}
+                {onToolsClick ? (
+                  <button
+                    type="button"
+                    onClick={onToolsClick}
+                    className="inline-flex h-8 min-w-8 shrink-0 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+                    aria-label="Tools"
+                    data-orb-composer-tools
+                  >
+                    <Wrench className="h-4.5 w-4.5" aria-hidden />
+                  </button>
+                ) : null}
                 <button
                   type="button"
-                  onClick={onToolsClick}
-                  className="inline-flex h-10 min-w-10 shrink-0 items-center justify-center rounded-full text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]"
-                  aria-label="Tools"
-                  data-orb-composer-tools
+                  onClick={() => cameraInputRef.current?.click()}
+                  className="inline-flex h-8 min-w-8 shrink-0 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 md:hidden"
+                  aria-label="Use camera"
                 >
-                  <Wrench className="h-5 w-5" aria-hidden />
+                  <Camera className="h-4.5 w-4.5" aria-hidden />
                 </button>
-              ) : null}
-              <button
-                type="button"
-                onClick={() => cameraInputRef.current?.click()}
-                className="inline-flex h-10 min-w-10 shrink-0 items-center justify-center rounded-full text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)] md:hidden"
-                aria-label="Use camera"
-              >
-                <Camera className="h-5 w-5" aria-hidden />
-              </button>
-              <textarea
-                ref={inputRef}
-                id="orb-standalone-input"
-                name="message"
-                value={value}
-                onChange={(event) => syncMessage(event.currentTarget.value)}
-                onInput={(event) => syncMessage(event.currentTarget.value)}
-                onCompositionEnd={(event) => syncMessage(event.currentTarget.value)}
-                onPaste={onPaste}
-                onKeyDown={(event) => {
-                  if (event.key !== 'Enter' || event.shiftKey) return
-                  event.preventDefault()
-                  const form = event.currentTarget.form
-                  if (form && !sendDisabled) {
-                    form.requestSubmit()
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={onMicClick}
+                  disabled={voiceCaptureEnabled && !voiceRecognitionAvailable}
+                  aria-label={
+                    voiceCaptureEnabled
+                      ? voiceListening
+                        ? 'Stop listening'
+                        : 'Start voice input'
+                      : 'Voice mode coming next'
                   }
-                }}
-                rows={1}
-                className="max-h-44 min-h-[3rem] flex-1 resize-none bg-transparent px-1 py-3 text-base leading-7 text-[var(--orb-foreground)] outline-none placeholder:text-[var(--orb-muted)] [touch-action:manipulation]"
-                placeholder={placeholderForMode(mode)}
-                disabled={pending}
-                aria-describedby="orb-standalone-status"
-                data-orb-composer-input
-                data-testid="orb-standalone-message-input"
-                data-input-source="controlled"
-              />
-              <button
-                type="button"
-                onClick={onMicClick}
-                disabled={voiceCaptureEnabled && !voiceRecognitionAvailable}
-                aria-label={
-                  voiceCaptureEnabled
-                    ? voiceListening
-                      ? 'Stop listening'
-                      : 'Start voice input'
-                    : 'Voice mode coming next'
-                }
-                className={`inline-flex h-10 min-w-10 shrink-0 items-center justify-center rounded-full transition disabled:opacity-40 ${
-                  voiceListening
-                    ? 'bg-[#00B8FF]/15 text-[#00B8FF]'
-                    : 'text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]'
-                }`}
-                data-orb-composer-mic
-                data-no-navigation-rescue="true"
-              >
-                {voiceListening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
-              </button>
-              <button
-                type="submit"
-                disabled={sendDisabled}
-                aria-label="Send message"
-                onClick={(event) => logTapTarget(event, 'orb-standalone-send-click')}
-                onPointerUp={(event) => {
-                  if (event.pointerType !== 'touch') return
-                  logTapTarget(event, 'orb-standalone-send-pointer')
-                }}
-                className="orb-composer-send pointer-events-auto inline-flex h-11 min-h-11 min-w-11 shrink-0 cursor-pointer touch-manipulation items-center justify-center rounded-full text-white transition disabled:opacity-35"
-                data-orb-composer-send
-                data-testid="orb-standalone-send-clickable"
-                data-send-disabled-reason={disabledReason}
-                data-message-length={trimmedMessage.length}
-                data-no-navigation-rescue="true"
-              >
-                <Send className="h-5 w-5" />
-              </button>
+                  className={`inline-flex h-10 min-w-10 shrink-0 items-center justify-center rounded-full transition disabled:opacity-40 ${
+                    voiceListening
+                      ? 'bg-sky-100 text-sky-700 shadow-sm'
+                      : 'bg-white text-slate-500 shadow-sm hover:bg-slate-100 hover:text-slate-900'
+                  }`}
+                  data-orb-composer-mic
+                  data-no-navigation-rescue="true"
+                >
+                  {voiceListening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+                </button>
+                <button
+                  type="submit"
+                  disabled={sendDisabled}
+                  aria-label="Send message"
+                  onClick={(event) => logTapTarget(event, 'orb-standalone-send-click')}
+                  onPointerUp={(event) => {
+                    if (event.pointerType !== 'touch') return
+                    logTapTarget(event, 'orb-standalone-send-pointer')
+                  }}
+                  className="orb-composer-send pointer-events-auto inline-flex h-11 min-h-11 min-w-11 shrink-0 cursor-pointer touch-manipulation items-center justify-center rounded-full text-white transition disabled:opacity-35"
+                  data-orb-composer-send
+                  data-testid="orb-standalone-send-clickable"
+                  data-send-disabled-reason={disabledReason}
+                  data-message-length={trimmedMessage.length}
+                  data-no-navigation-rescue="true"
+                >
+                  <Send className="h-5 w-5" />
+                </button>
+              </div>
             </div>
           </div>
 
-          <div className="orb-voice-status-slot mt-1.5 flex min-h-[1.25rem] flex-wrap items-center justify-between gap-2 px-2">
+          <div className="orb-voice-status-slot mt-2 flex min-h-[1.25rem] flex-wrap items-center justify-between gap-2 px-2">
             {voiceStatusText ? (
               <p id="orb-standalone-status" className="text-[11px] leading-5 text-slate-500" role="status" data-orb-voice-status>
                 {voiceStatusText}
@@ -394,7 +420,7 @@ export function OrbStandaloneComposer({
                 Ready to type
               </span>
             )}
-            <span className="sr-only">Mode: {mode}</span>
+            <span className="text-[10px] text-slate-400">Mode: {mode}</span>
           </div>
 
           {voiceCaptureEnabled && voiceListening ? (
@@ -402,7 +428,7 @@ export function OrbStandaloneComposer({
               <button
                 type="button"
                 onClick={onCancelListening}
-                className="inline-flex h-7 items-center rounded-full border border-white/10 px-3 text-[11px] font-medium text-slate-400"
+                className="inline-flex h-7 items-center rounded-full border border-slate-200 bg-white px-3 text-[11px] font-medium text-slate-500"
               >
                 Cancel listening
               </button>
@@ -413,7 +439,7 @@ export function OrbStandaloneComposer({
               <button
                 type="button"
                 onClick={onStopSpeaking}
-                className="inline-flex h-7 items-center gap-1.5 rounded-full border border-amber-300/30 bg-amber-400/10 px-3 text-[11px] font-semibold text-amber-50"
+                className="inline-flex h-7 items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 text-[11px] font-semibold text-amber-800"
               >
                 <Square className="h-3 w-3 fill-current" />
                 Stop speaking
