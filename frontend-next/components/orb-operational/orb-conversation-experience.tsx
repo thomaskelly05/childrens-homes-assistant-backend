@@ -43,6 +43,27 @@ const quickPrompts: Array<{ mode: OrbOperationalMode; label: string; prompt: str
   { mode: 'manager_daily_brief', label: 'Daily brief', prompt: 'Give me a simple daily brief.' }
 ]
 
+const dailyEvidenceTypes = new Set([
+  'care_record',
+  'daily_summary',
+  'daily_note',
+  'handover',
+  'incident',
+  'missing_episode',
+  'appointment',
+  'calendar',
+  'health',
+  'education',
+  'family_contact',
+  'child_voice',
+  'keywork',
+  'manager_review',
+  'action',
+  'governance',
+  'inspection',
+  'workforce'
+])
+
 function cleanOrbAnswer(answer: string) {
   return answer
     .replace(/^The first task is to separate what happened from interpretation or judgement\.\s*/i, '')
@@ -51,7 +72,15 @@ function cleanOrbAnswer(answer: string) {
 }
 
 function visibleWarnings(values: Array<string | null | undefined>) {
-  const hide = ['redaction applied', 'summary-level context', 'privacy guard applied', 'context minimised', 'context minimized']
+  const hide = [
+    'redaction applied',
+    'automated redaction',
+    'summary-level context',
+    'summary level context',
+    'privacy guard applied',
+    'context minimised',
+    'context minimized'
+  ]
   return values
     .filter(Boolean)
     .map((value) => String(value))
@@ -59,8 +88,50 @@ function visibleWarnings(values: Array<string | null | undefined>) {
     .join(' ')
 }
 
-function mapOperationalResponse(response: OrbOperationalResponse): OrbConversationResponse {
-  const answer = cleanOrbAnswer(response.answer)
+function inferOperationalMode(message: string, scope: OrbScope, requestedMode: OrbOperationalMode): OrbOperationalMode {
+  const text = message.toLowerCase()
+  if (scope === 'home' && (text.includes('today') || text.includes('daily brief') || text.includes('home today') || text.includes('what needs attention') || text.includes('this home'))) {
+    return 'manager_daily_brief'
+  }
+  if (scope === 'child' && (text.includes('journey') || text.includes('what changed') || text.includes('recent'))) {
+    return 'child_journey_summary'
+  }
+  if (text.includes('reg 44') || text.includes('reg44') || text.includes('reg 45') || text.includes('reg45')) {
+    return 'governance_briefing'
+  }
+  if (text.includes('ofsted') || text.includes('inspection')) {
+    return 'ofsted_evidence_review'
+  }
+  if (text.includes('action') || text.includes('what needs doing') || text.includes('next step')) {
+    return 'action_priority'
+  }
+  return requestedMode
+}
+
+function hasDailyOperationalEvidence(response: OrbOperationalResponse) {
+  return (response.sources || []).some((source) => dailyEvidenceTypes.has(String(source.source_type || '')))
+}
+
+function homeDailyBriefFallback(response: OrbOperationalResponse) {
+  const visibleSources = (response.sources || [])
+    .slice(0, 8)
+    .map((source, index) => `${index + 1}. ${source.label}`)
+    .join('\n')
+  return [
+    'I cannot evidence a proper home daily brief from the records returned.',
+    '',
+    'ORB should be looking for today’s operational evidence: handover, daily summaries, care records, incidents, appointments, open actions, manager reviews, safeguarding pressure and recording quality. Those daily/home evidence sources were not returned for this question.',
+    '',
+    visibleSources ? `What ORB did see was mostly baseline or contextual material:\n${visibleSources}` : 'No source-labelled home daily evidence was returned.',
+    '',
+    'Safe next step: check whether today’s handover, daily records, appointments, incidents, actions and manager review items are being saved into the OS tables for this home. Once those are returned, ORB can produce the summary of the day rather than listing baseline documents.'
+  ].join('\n')
+}
+
+function mapOperationalResponse(response: OrbOperationalResponse, mode?: OrbOperationalMode, scope?: OrbScope): OrbConversationResponse {
+  const answer = mode === 'manager_daily_brief' && scope === 'home' && !hasDailyOperationalEvidence(response)
+    ? homeDailyBriefFallback(response)
+    : cleanOrbAnswer(response.answer)
   const sources = (response.sources || []).map((source, index) => ({
     title: source.label,
     record_type: source.source_type,
@@ -220,7 +291,7 @@ export function OrbConversationExperience({
     if (!message || pending) return
     submitInFlightRef.current = true
     const activeScope = overrideScope || scope
-    const activeMode = overrideMode || operationalMode
+    const activeMode = inferOperationalMode(message, activeScope, overrideMode || operationalMode)
     const selectedChildId = youngPersonId ? Number(youngPersonId) : null
     setMessages((current) => [...current, { id: `u-${Date.now()}`, role: 'user', text: message }])
     setInput('')
@@ -236,7 +307,7 @@ export function OrbConversationExperience({
       scope: scopeMeta.operationalScope,
       child_id: activeScope === 'child' ? selectedChildId : null,
       staff_id: null,
-      days: 7,
+      days: 1,
       include_actions: true,
       include_patterns: true,
       include_record_quality: true
@@ -245,7 +316,7 @@ export function OrbConversationExperience({
       const operationalResult = await sendOperationalOrbMessage(operationalPayload, controller.signal)
       let responseData: OrbConversationResponse
       if (operationalResult.source === 'live' && operationalResult.data.answer) {
-        responseData = mapOperationalResponse(operationalResult.data)
+        responseData = mapOperationalResponse(operationalResult.data, activeMode, activeScope)
         setWarning(visibleWarnings([operationalResult.warning, ...(operationalResult.data.warnings || [])]) || null)
       } else {
         const legacy = await queryOrbConversation(
