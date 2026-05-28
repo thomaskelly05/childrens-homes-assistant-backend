@@ -1,0 +1,167 @@
+/**
+ * Premium ORB visual layer.
+ * Route-scoped override for /orb so the rich ORB companion feels more like a
+ * polished AI product than a flat internal tool.
+ */
+
+.orb-chat-layout {
+  background:
+    radial-gradient(circle at 50% 4%, rgba(14, 165, 233, 0.20), transparent 28%),
+    radial-gradient(circle at 88% 12%, rgba(99, 102, 241, 0.16), transparent 26%),
+    radial-gradient(circle at 10% 95%, rgba(16, 185, 129, 0.10), transparent 28%),
+    linear-gradient(145deg, #f8fbff 0%, #eef4fb 46%, #e8edf5 100%) !important;
+  color: #07111f;
+}
+
+.orb-chat-layout::before {
+  opacity: 1 !important;
+  background:
+    linear-gradient(120deg, rgba(255,255,255,0.45), rgba(255,255,255,0)),
+    radial-gradient(circle at 50% 0%, rgba(255,255,255,0.70), transparent 42%) !important;
+  pointer-events: none;
+}
+
+.orb-chat-sidebar {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.88), rgba(245,248,252,0.76)) !important;
+  border-right: 1px solid rgba(148, 163, 184, 0.25) !important;
+  box-shadow: 18px 0 50px rgba(15, 23, 42, 0.05) !important;
+  backdrop-filter: blur(24px) saturate(1.08) !important;
+}
+
+.orb-chat-sidebar::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 10% 0%, rgba(56, 189, 248, 0.10), transparent 34%);
+  pointer-events: none;
+}
+
+.orb-hue-text {
+  font-size: clamp(2.5rem, 5vw, 4.25rem);
+  line-height: 0.9;
+  letter-spacing: -0.055em;
+  text-shadow: 0 18px 50px rgba(14, 165, 233, 0.16);
+}
+
+.orb-electric-text {
+  color: #0284c7;
+  letter-spacing: 0.28em;
+  font-weight: 800;
+  text-shadow: 0 0 18px rgba(14, 165, 233, 0.22);
+}
+
+.orb-starter-card {
+  border: 1px solid rgba(203, 213, 225, 0.72) !important;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.92), rgba(248,250,252,0.88)) !important;
+  color: #0f172a !important;
+  border-radius: 1.25rem !important;
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.95) inset,
+    0 14px 34px rgba(15, 23, 42, 0.055) !important;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease, background 180ms ease;
+}
+
+.orb-starter-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(56, 189, 248, 0.50) !important;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.98), rgba(239,246,255,0.92)) !important;
+  box-shadow:
+    0 1px 0 rgba(255,255,255,1) inset,
+    0 22px 45px rgba(14, 165, 233, 0.12) !important;
+}
+
+.orb-composer-glass {
+  border: 1px solid rgba(148, 163, 184, 0.30) !important;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,252,0.92)) !important;
+  border-radius: 1.75rem !important;
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.98) inset,
+    0 24px 80px rgba(15, 23, 42, 0.12),
+    0 0 0 1px rgba(255,255,255,0.75) !important;
+  backdrop-filter: blur(22px) saturate(1.08) !important;
+}
+
+.orb-composer-glass:focus-within {
+  border-color: rgba(14, 165, 233, 0.62) !important;
+  box-shadow:
+    0 0 0 1px rgba(14, 165, 233, 0.22),
+    0 24px 90px rgba(14, 165, 233, 0.18),
+    0 1px 0 rgba(255,255,255,1) inset !important;
+}
+
+.orb-composer-send {
+  background: linear-gradient(135deg, #0f172a 0%, #1d4ed8 52%, #06b6d4 100%) !important;
+  color: #fff !important;
+  box-shadow:
+    0 10px 22px rgba(37, 99, 235, 0.28),
+    0 0 30px rgba(6, 182, 212, 0.16) !important;
+}
+
+.orb-composer-send:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 14px 30px rgba(37, 99, 235, 0.36),
+    0 0 36px rgba(6, 182, 212, 0.24) !important;
+}
+
+.orb-sidebar-nav-item--active {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.92), rgba(30, 64, 175, 0.86)) !important;
+  color: #ffffff !important;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14) !important;
+}
+
+.orb-action-chip {
+  border-color: rgba(203, 213, 225, 0.75) !important;
+  background: rgba(255,255,255,0.78) !important;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.90) inset;
+}
+
+.orb-action-chip:hover:not(:disabled) {
+  background: rgba(239, 246, 255, 0.92) !important;
+  border-color: rgba(59, 130, 246, 0.38) !important;
+}
+
+.orb-ambient-cognition__base {
+  background:
+    radial-gradient(ellipse 65% 40% at 50% -4%, rgba(14, 165, 233, 0.14), transparent 58%),
+    radial-gradient(ellipse 40% 30% at 80% 18%, rgba(99, 102, 241, 0.10), transparent 55%),
+    linear-gradient(165deg, #f8fbff 0%, #eef4fb 48%, #e8edf5 100%) !important;
+}
+
+.orb-ambient-cognition__edge-hue,
+.orb-ambient-cognition__glow,
+.orb-ambient-cognition__breathe {
+  opacity: 0.22 !important;
+}
+
+.orb-markdown-answer {
+  color: #0f172a;
+}
+
+.orb-citation-card,
+.orb-document-panel,
+.orb-sidebar-inline-form {
+  background: rgba(255,255,255,0.86) !important;
+  border-color: rgba(203, 213, 225, 0.70) !important;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.06) !important;
+  backdrop-filter: blur(16px) saturate(1.04);
+}
+
+@media (max-width: 768px) {
+  .orb-chat-layout {
+    background: linear-gradient(180deg, #f8fbff 0%, #eef4fb 100%) !important;
+  }
+
+  .orb-hue-text {
+    font-size: 3rem;
+  }
+
+  .orb-composer-glass {
+    border-radius: 1.35rem !important;
+    box-shadow: 0 16px 52px rgba(15, 23, 42, 0.14) !important;
+  }
+}
