@@ -84,6 +84,7 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
         "os_command",
         (
             "backend.os_command_router",
+            "backend.os_command_resilient_workspace_router",
             "backend.os_command_young_person_workspace_router",
             "backend.os_child_workspace_action_router",
             "backend.os_child_workspace_sources_router",
