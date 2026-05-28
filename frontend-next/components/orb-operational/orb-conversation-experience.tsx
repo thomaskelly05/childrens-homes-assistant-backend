@@ -61,7 +61,10 @@ const dailyEvidenceTypes = new Set([
   'action',
   'governance',
   'inspection',
-  'workforce'
+  'workforce',
+  'report',
+  'operational_output',
+  'orb_output'
 ])
 
 function cleanOrbAnswer(answer: string) {
@@ -112,25 +115,30 @@ function hasDailyOperationalEvidence(response: OrbOperationalResponse) {
   return (response.sources || []).some((source) => dailyEvidenceTypes.has(String(source.source_type || '')))
 }
 
-function homeDailyBriefFallback(response: OrbOperationalResponse) {
+function homeDailyBriefFallback(response: OrbOperationalResponse, homeId?: number | null) {
   const visibleSources = (response.sources || [])
     .slice(0, 8)
     .map((source, index) => `${index + 1}. ${source.label}`)
     .join('\n')
+  const homeScopeLine = homeId
+    ? `Home scope was sent as home_id ${homeId}.`
+    : 'No home_id was available to send with this home-scope question.'
   return [
     'I cannot evidence a proper home daily brief from the records returned.',
     '',
-    'ORB should be looking for today’s operational evidence: handover, daily summaries, care records, incidents, appointments, open actions, manager reviews, safeguarding pressure and recording quality. Those daily/home evidence sources were not returned for this question.',
+    'ORB should be looking for today’s operational evidence: handover, daily summaries, care records, incidents, appointments, open actions, manager reviews, safeguarding pressure, reports and recording quality. Those daily/home evidence sources were not returned for this question.',
+    '',
+    homeScopeLine,
     '',
     visibleSources ? `What ORB did see was mostly baseline or contextual material:\n${visibleSources}` : 'No source-labelled home daily evidence was returned.',
     '',
-    'Safe next step: check whether today’s handover, daily records, appointments, incidents, actions and manager review items are being saved into the OS tables for this home. Once those are returned, ORB can produce the summary of the day rather than listing baseline documents.'
+    'Safe next step: check whether today’s handover, daily records, appointments, incidents, actions, reports and manager review items are being saved into OS tables for this home. Once those are returned, ORB can produce the summary of the day rather than listing baseline documents.'
   ].join('\n')
 }
 
-function mapOperationalResponse(response: OrbOperationalResponse, mode?: OrbOperationalMode, scope?: OrbScope): OrbConversationResponse {
+function mapOperationalResponse(response: OrbOperationalResponse, mode?: OrbOperationalMode, scope?: OrbScope, homeId?: number | null): OrbConversationResponse {
   const answer = mode === 'manager_daily_brief' && scope === 'home' && !hasDailyOperationalEvidence(response)
-    ? homeDailyBriefFallback(response)
+    ? homeDailyBriefFallback(response, homeId)
     : cleanOrbAnswer(response.answer)
   const sources = (response.sources || []).map((source, index) => ({
     title: source.label,
@@ -199,6 +207,12 @@ function normaliseInitialMode(mode?: string): OrbOperationalMode {
   return 'general_operational_question'
 }
 
+function parseOptionalNumber(value?: string | null) {
+  if (!value) return null
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
 function childName(person: OsPersonSummary) {
   return String(person.preferredName || person.displayName || person.firstName || `Young person ${person.id}`)
 }
@@ -260,12 +274,14 @@ export function OrbConversationExperience({
   childrenOptions,
   initialScope,
   initialYoungPersonId,
+  initialHomeId,
   initialOperationalMode,
   initialPrompt
 }: {
   childrenOptions: OsPersonSummary[]
   initialScope?: string
   initialYoungPersonId?: string
+  initialHomeId?: string
   initialOperationalMode?: string
   initialPrompt?: string
 }) {
@@ -281,6 +297,7 @@ export function OrbConversationExperience({
   const abortRef = useRef<AbortController | null>(null)
   const submitInFlightRef = useRef(false)
   const latestResponse = useMemo(() => [...messages].reverse().find((message) => message.response)?.response, [messages])
+  const homeId = parseOptionalNumber(initialHomeId)
 
   const workspaceBackHref = scope === 'child' && youngPersonId ? `/young-people/${encodeURIComponent(youngPersonId)}/workspace` : '/select-scope'
 
@@ -305,9 +322,10 @@ export function OrbConversationExperience({
       message,
       mode: activeMode,
       scope: scopeMeta.operationalScope,
+      home_id: activeScope === 'home' || activeScope === 'inspection' ? homeId : null,
       child_id: activeScope === 'child' ? selectedChildId : null,
       staff_id: null,
-      days: 1,
+      days: activeMode === 'manager_daily_brief' ? 1 : 7,
       include_actions: true,
       include_patterns: true,
       include_record_quality: true
@@ -316,13 +334,14 @@ export function OrbConversationExperience({
       const operationalResult = await sendOperationalOrbMessage(operationalPayload, controller.signal)
       let responseData: OrbConversationResponse
       if (operationalResult.source === 'live' && operationalResult.data.answer) {
-        responseData = mapOperationalResponse(operationalResult.data, activeMode, activeScope)
+        responseData = mapOperationalResponse(operationalResult.data, activeMode, activeScope, homeId)
         setWarning(visibleWarnings([operationalResult.warning, ...(operationalResult.data.warnings || [])]) || null)
       } else {
         const legacy = await queryOrbConversation(
           {
             message,
             scope: activeScope,
+            home_id: activeScope === 'home' || activeScope === 'inspection' ? homeId : null,
             young_person_id: activeScope === 'child' ? selectedChildId : null,
             conversation_id: conversationId
           },
