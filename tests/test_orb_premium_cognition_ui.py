@@ -30,10 +30,13 @@ def test_ambient_cognition_component():
 def test_sidebar_memory_workspace_markers():
     sidebar = SIDEBAR.read_text(encoding="utf-8")
     for marker in (
-        "data-orb-sidebar-cognition-status",
+        'title="Core"',
+        'title="Intelligence"',
+        'title="Workspace"',
+        'title="Profiles"',
         "data-orb-adult-profile-card",
         "Search chats",
-        "Residential Agents",
+        "Agents",
         "Pinned",
         "Today",
     ):

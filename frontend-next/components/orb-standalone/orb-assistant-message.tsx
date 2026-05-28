@@ -161,6 +161,20 @@ function OrbSourcesDetail({
   )
 }
 
+export type OrbResponseFollowUpAction =
+  | 'improve_wording'
+  | 'more_concise'
+  | 'more_detailed'
+  | 'recording_wording'
+  | 'child_voice'
+  | 'manager_oversight'
+  | 'chronology'
+  | 'shift_builder'
+  | 'checklist'
+  | 'what_missing'
+  | 'ofsted_lens'
+  | 'safeguarding_lens'
+
 export function OrbResponseActionBar({
   mode,
   content,
@@ -177,7 +191,8 @@ export function OrbResponseActionBar({
   onReflection,
   onSupervision,
   onExport,
-  onInspectionPrep
+  onInspectionPrep,
+  onOrbFollowUp
 }: {
   mode: string
   content: string
@@ -195,6 +210,8 @@ export function OrbResponseActionBar({
   onSupervision?: () => void
   onExport?: () => void
   onInspectionPrep?: () => void
+  /** Prefill composer with an ORB-native follow-up (frontend-only; does not imply OS access). */
+  onOrbFollowUp?: (action: OrbResponseFollowUpAction, sourceContent: string) => void
 }) {
   const [moreOpen, setMoreOpen] = useState(false)
   const modeKey = mode.trim().toLowerCase()
@@ -235,9 +252,36 @@ export function OrbResponseActionBar({
     primaryActions.push(<ActionChip key="inspection" label="Inspection prep" onClick={onInspectionPrep} dataAttr="inspection-prep" />)
   }
 
+  const orbFollowUps: Array<{ action: OrbResponseFollowUpAction; label: string }> = onOrbFollowUp
+    ? [
+        { action: 'improve_wording', label: 'Improve wording' },
+        { action: 'more_concise', label: 'More concise' },
+        { action: 'more_detailed', label: 'More detailed' },
+        { action: 'recording_wording', label: 'Recording wording' },
+        { action: 'child_voice', label: 'Child voice prompt' },
+        { action: 'manager_oversight', label: 'Manager oversight' },
+        { action: 'chronology', label: 'Chronology suggestion' },
+        { action: 'shift_builder', label: 'Shift Builder' },
+        { action: 'checklist', label: 'Checklist' },
+        { action: 'what_missing', label: 'What am I missing?' },
+        { action: 'ofsted_lens', label: 'Ofsted lens' },
+        { action: 'safeguarding_lens', label: 'Safeguarding lens' }
+      ]
+    : []
+
   const moreActions: ReactNode[] = []
   if (!isRecording) {
     moreActions.push(<ActionChip key="draft-more" icon={<FileText className="h-3 w-3" />} label="Use as draft" onClick={onDraft} />)
+  }
+  for (const item of orbFollowUps) {
+    moreActions.push(
+      <ActionChip
+        key={item.action}
+        label={item.label}
+        onClick={() => onOrbFollowUp?.(item.action, content)}
+        dataAttr={item.action}
+      />
+    )
   }
   if (onSaveToProject) moreActions.push(<ActionChip key="project" label="Save to project" onClick={onSaveToProject} />)
   if (onActionPlan) moreActions.push(<ActionChip key="plan" label="Action plan" onClick={onActionPlan} />)
@@ -252,7 +296,11 @@ export function OrbResponseActionBar({
   moreActions.push(<ActionChip key="new-q" icon={<RotateCcw className="h-3 w-3" />} label="New question" onClick={onNewQuestion} />)
 
   return (
-    <div className="mt-3 flex flex-wrap items-center gap-1 border-t border-[var(--orb-line)] pt-3" data-orb-response-actions>
+    <div
+      className="orb-response-action-bar mt-3 flex flex-wrap items-center gap-1 border-t border-[var(--orb-line)] pt-3 opacity-90 transition-opacity group-hover:opacity-100"
+      data-orb-response-actions
+      data-orb-response-action-bar
+    >
       {primaryActions}
       {moreActions.length ? (
         <div className="relative" data-orb-action-more-menu>
@@ -298,8 +346,9 @@ function ActionChip({
     <button
       type="button"
       onClick={onClick}
-      className="orb-action-chip inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00B8FF]/50"
+      className="orb-action-chip inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-slate-400/60"
       data-orb-action-chip={dataAttr}
+      title={label}
     >
       {icon}
       {label}

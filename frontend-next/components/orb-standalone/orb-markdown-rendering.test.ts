@@ -94,13 +94,15 @@ describe('ORB markdown and cognition rendering', () => {
   })
 })
 
-describe('ORB Apps sidebar structure', () => {
-  it('sidebar exposes Apps menu with Conversations under Apps', () => {
+describe('ORB premium sidebar structure', () => {
+  it('sidebar exposes Core, Intelligence, Workspace, and Profiles sections', () => {
     const source = readComponent('components/orb-standalone/orb-standalone-sidebar.tsx')
+    for (const section of ['Core', 'Intelligence', 'Workspace', 'Profiles']) {
+      assert.match(source, new RegExp(`title="${section}"`))
+    }
     for (const label of [
       'New chat',
       'Search chats',
-      'Apps',
       'Conversations',
       'Library',
       'Agents',
@@ -111,7 +113,7 @@ describe('ORB Apps sidebar structure', () => {
     ]) {
       assert.match(source, new RegExp(label))
     }
-    assert.match(source, /data-orb-sidebar-apps/)
+    assert.doesNotMatch(source, /title="Apps"/)
     assert.match(source, /orb-sidebar-conversations/)
     assert.doesNotMatch(source, /SectionToggle label="Conversations"/)
     assert.match(source, /Previous 7 days/)

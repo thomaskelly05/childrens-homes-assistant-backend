@@ -4,12 +4,16 @@ import { useEffect, useState } from 'react'
 import { X } from 'lucide-react'
 
 import {
+  CANONICAL_ADULT_PROFILE_ROLES,
   DEFAULT_ADULT_PROFILE,
+  STANDALONE_PROFILE_BOUNDARY_NOTE,
   roleLabelFor,
   writeAdultProfile,
   type AdultProfile,
   type AdultProfileRole,
   type AdultProfileTone,
+  type ConfidencePreference,
+  type PreferredAnswerLength,
   type ReasoningDepth,
   type SafeguardingIntensity,
   type WritingStyle
@@ -71,6 +75,12 @@ export function OrbAdultProfileDrawer({
         </header>
 
         <div className="orb-panel-body flex-1 space-y-5 overflow-y-auto px-5 py-5">
+          <p
+            className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5 text-xs leading-relaxed text-sky-900"
+            data-orb-profile-boundary-note
+          >
+            {STANDALONE_PROFILE_BOUNDARY_NOTE}
+          </p>
           <Field label="Your name">
             <input
               value={draft.name}
@@ -89,32 +99,28 @@ export function OrbAdultProfileDrawer({
               }}
               className="orb-profile-input w-full"
             >
-              {(
-                [
-                  'registered_manager',
-                  'deputy_manager',
-                  'team_leader',
-                  'senior_practitioner',
-                  'practitioner',
-                  'night_staff',
-                  'agency_staff',
-                  'reg_44_visitor',
-                  'provider_rep',
-                  'other'
-                ] as AdultProfileRole[]
-              ).map((role) => (
+              {CANONICAL_ADULT_PROFILE_ROLES.map((role) => (
                 <option key={role} value={role}>
                   {roleLabelFor(role)}
                 </option>
               ))}
             </select>
           </Field>
-          <Field label="Children's home">
+          <Field label="Current setting">
             <input
               value={draft.homeName}
               onChange={(e) => patch('homeName', e.target.value)}
-              placeholder="Home name"
+              placeholder="e.g. Oak House"
               className="orb-profile-input w-full"
+            />
+          </Field>
+          <Field label="Type of service">
+            <input
+              value={draft.serviceType ?? ''}
+              onChange={(e) => patch('serviceType', e.target.value)}
+              placeholder="e.g. Children's residential home"
+              className="orb-profile-input w-full"
+              data-orb-profile-service-type
             />
           </Field>
           <div className="grid grid-cols-2 gap-3">
@@ -138,9 +144,92 @@ export function OrbAdultProfileDrawer({
               ))}
             </select>
           </Field>
-          <Field label="Preferred tone">
+          <Field label="Preferred response style">
             <ToneSelect value={draft.preferredTone} onChange={(v) => patch('preferredTone', v)} />
           </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Answer length">
+              <select
+                value={draft.preferredAnswerLength}
+                onChange={(e) => patch('preferredAnswerLength', e.target.value as PreferredAnswerLength)}
+                className="orb-profile-input w-full"
+                data-orb-profile-answer-length
+              >
+                <option value="brief">Brief</option>
+                <option value="balanced">Balanced</option>
+                <option value="detailed">Detailed</option>
+              </select>
+            </Field>
+            <Field label="Confidence framing">
+              <select
+                value={draft.confidencePreference}
+                onChange={(e) => patch('confidencePreference', e.target.value as ConfidencePreference)}
+                className="orb-profile-input w-full"
+                data-orb-profile-confidence
+              >
+                <option value="cautious">Cautious</option>
+                <option value="balanced">Balanced</option>
+                <option value="direct">Direct</option>
+              </select>
+            </Field>
+          </div>
+          <Field label="Preferred terminology">
+            <input
+              value={draft.preferredTerminology ?? ''}
+              onChange={(e) => patch('preferredTerminology', e.target.value)}
+              placeholder="e.g. young person, not client"
+              className="orb-profile-input w-full"
+              data-orb-profile-terminology
+            />
+          </Field>
+          <section className="rounded-2xl border border-[var(--orb-line)] bg-[var(--orb-surface)] p-4" data-orb-profile-default-lenses>
+            <h3 className="text-sm font-semibold text-[var(--orb-foreground)]">Default lenses</h3>
+            <p className="mt-1 text-xs text-[var(--orb-muted)]">ORB weaves these in when relevant — not live OS data.</p>
+            <div className="mt-3 space-y-2">
+              <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--orb-muted)]">
+                <input
+                  type="checkbox"
+                  checked={draft.defaultLenses.safeguarding}
+                  onChange={(e) =>
+                    setDraft((c) => ({
+                      ...c,
+                      defaultLenses: { ...c.defaultLenses, safeguarding: e.target.checked }
+                    }))
+                  }
+                  data-orb-lens-safeguarding
+                />
+                Include safeguarding lens by default
+              </label>
+              <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--orb-muted)]">
+                <input
+                  type="checkbox"
+                  checked={draft.defaultLenses.ofsted}
+                  onChange={(e) =>
+                    setDraft((c) => ({
+                      ...c,
+                      defaultLenses: { ...c.defaultLenses, ofsted: e.target.checked }
+                    }))
+                  }
+                  data-orb-lens-ofsted
+                />
+                Include Ofsted lens by default
+              </label>
+              <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--orb-muted)]">
+                <input
+                  type="checkbox"
+                  checked={draft.defaultLenses.recording}
+                  onChange={(e) =>
+                    setDraft((c) => ({
+                      ...c,
+                      defaultLenses: { ...c.defaultLenses, recording: e.target.checked }
+                    }))
+                  }
+                  data-orb-lens-recording
+                />
+                Include recording prompts by default
+              </label>
+            </div>
+          </section>
           <Field label="Safeguarding intensity">
             <select
               value={draft.safeguardingIntensity}
