@@ -7,7 +7,9 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from auth.permissions import require_standalone_orb_access
+from auth.orb_standalone_premium_dependency import (
+    require_rich_orb_premium_access as require_standalone_orb_access,
+)
 from schemas.orb_agents import OrbAgentRunRequest, OrbAgentType, OrbDeepResearchRequest
 from services.orb_agent_orchestrator_service import orb_agent_orchestrator_service
 from services.orb_agent_registry_service import orb_agent_registry_service
@@ -68,24 +70,18 @@ async def run_agent(
         _error(f"Agent unavailable: {payload.agent_type}", status=404)
 
     forbidden_ids = (
-        "child_id",
-        "young_person_id",
-        "staff_id",
-        "home_id",
-        "record_id",
-        "chronology_id",
+        payload.child_id,
+        payload.young_person_id,
+        payload.staff_id,
+        payload.home_id,
+        payload.record_id,
+        payload.chronology_id,
     )
-    lower_prompt = payload.prompt.lower()
-    for key in forbidden_ids:
-        if f"{key}=" in lower_prompt or f'"{key}"' in lower_prompt:
-            _error(f"Standalone agents cannot accept operational identifiers ({key}).", status=400)
+    if any(value is not None for value in forbidden_ids):
+        _error("Standalone ORB agents must not receive OS record identifiers.")
 
-    try:
-        result = await orb_agent_orchestrator_service.run_agent(payload)
-        return _success(result.model_dump())
-    except Exception as exc:
-        logger.warning("agent run route failed: %s", type(exc).__name__, exc_info=True)
-        _error("Agent run failed", status=503)
+    result = await orb_agent_orchestrator_service.run(payload)
+    return _success(result.model_dump())
 
 
 @router.post("/deep-research")
@@ -93,9 +89,5 @@ async def deep_research(
     payload: OrbDeepResearchRequest,
     current_user=Depends(require_standalone_orb_access),
 ):
-    try:
-        result = await orb_deep_research_service.run_deep_research(payload)
-        return _success(result.model_dump())
-    except Exception as exc:
-        logger.warning("deep research route failed: %s", type(exc).__name__, exc_info=True)
-        _error("Deep research failed", status=503)
+    result = await orb_deep_research_service.run(payload)
+    return _success(result.model_dump())
