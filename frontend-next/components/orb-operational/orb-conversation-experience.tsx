@@ -96,9 +96,7 @@ function mapOperationalResponse(response: OrbOperationalResponse): OrbConversati
       scope: response.permissions?.scope_resolved || undefined,
       care_retrieval: response.care_record_access,
       degraded: response.context_summary?.degraded,
-      snapshot_hit: !response.context_summary?.unavailable,
-      suggested_output_type: response.suggested_output_type || undefined,
-      save_available: response.save_available || undefined
+      snapshot_hit: !response.context_summary?.unavailable
     }
   }
 }
@@ -159,11 +157,6 @@ function MessageSources({ response }: { response?: OrbConversationResponse }) {
                   <p key={`${label}-${index}`} className="rounded-xl bg-white px-3 py-2 text-xs font-black text-slate-700">{label}</p>
                 )
               })}
-            </div>
-          ) : null}
-          {response.context_used?.save_available ? (
-            <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2">
-              <p className="text-xs font-black text-emerald-950">This ORB response can be saved as {String(response.context_used.suggested_output_type || 'an operational output').replace(/_/g, ' ')}.</p>
             </div>
           ) : null}
           {response.guardrails?.length ? (
