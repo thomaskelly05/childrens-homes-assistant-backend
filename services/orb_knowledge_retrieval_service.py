@@ -1,10 +1,15 @@
-"""Query classification and built-in source-pack retrieval for standalone ORB."""
+"""Query classification and unified knowledge-spine retrieval for standalone ORB."""
 
 from __future__ import annotations
 
 import re
 from typing import Any
 
+from assistant.knowledge_loader import (
+    build_knowledge_source_summary,
+    load_knowledge_version,
+    select_relevant_python_knowledge,
+)
 from services.orb_knowledge_source_pack_service import get_source_pack
 
 RESEARCH_INTENT_TERMS = (
@@ -24,6 +29,8 @@ RESEARCH_NOTE = (
     "Live web/source retrieval is not enabled in this standalone mode yet."
 )
 
+KNOWLEDGE_SPINE_PACK_TYPE = "orb_knowledge_spine"
+
 
 def _text(value: Any) -> str:
     return str(value or "").strip()
@@ -33,8 +40,21 @@ def _lower(message: str) -> str:
     return _text(message).lower()
 
 
+def _clip(text: str, limit: int = 900) -> str:
+    text = _text(text)
+    if len(text) <= limit:
+        return text
+    return f"{text[:limit].rstrip()}..."
+
+
 class OrbKnowledgeRetrievalService:
-    """Classifies standalone queries and selects honest built-in source packs."""
+    """Classifies standalone queries and selects honest built-in knowledge.
+
+    This is now the convergence bridge between the rich /orb experience and the
+    assistant/knowledge spine. Source packs remain as high-level source labels,
+    while assistant.knowledge_loader selects the detailed practice modules that
+    actually inform the answer.
+    """
 
     def classify_query(
         self,
@@ -47,6 +67,8 @@ class OrbKnowledgeRetrievalService:
         lower = _lower(message)
         mode_name = _text(mode) or "Ask ORB"
         has_images = bool(attachments)
+        selected_modules = select_relevant_python_knowledge(message, max_modules=8)
+        module_sources = build_knowledge_source_summary(selected_modules)
 
         intents = {
             "product_context": self.should_use_product_knowledge(message, mode=mode_name),
@@ -62,6 +84,7 @@ class OrbKnowledgeRetrievalService:
             or has_images,
             "standalone_boundary": True,
             "research_intent": self._has_research_intent(lower),
+            "knowledge_spine": bool(selected_modules),
         }
 
         pack_keys = self._pack_keys_from_intents(intents, mode=mode_name)
@@ -72,6 +95,12 @@ class OrbKnowledgeRetrievalService:
             "research_intent": intents["research_intent"],
             "research_note": RESEARCH_NOTE if intents["research_intent"] else None,
             "routing_hint": self._routing_hint(intents, mode=mode_name),
+            "knowledge_spine": {
+                "enabled": True,
+                "version": load_knowledge_version(),
+                "selected_modules": list(selected_modules.keys()),
+                "source_summary": module_sources,
+            },
         }
 
     def retrieve_sources(
@@ -93,10 +122,32 @@ class OrbKnowledgeRetrievalService:
             pack = get_source_pack(key)
             if pack:
                 packs.append(dict(pack))
+
+        spine_pack = self._build_knowledge_spine_pack(message, mode=classification["mode"])
+        if spine_pack:
+            packs.insert(1 if packs and packs[0].get("pack_key") == "standalone_boundary" else 0, spine_pack)
+
         if classification.get("research_intent"):
             for pack in packs:
                 pack["research_intent"] = True
         return packs
+
+    def retrieve_knowledge_spine(
+        self,
+        message: str,
+        *,
+        mode: str | None = None,
+        max_modules: int = 8,
+    ) -> dict[str, Any]:
+        selected_modules = select_relevant_python_knowledge(message, max_modules=max_modules)
+        return {
+            "enabled": True,
+            "version": load_knowledge_version(),
+            "mode": _text(mode) or "Ask ORB",
+            "selected_modules": list(selected_modules.keys()),
+            "modules": selected_modules,
+            "source_summary": build_knowledge_source_summary(selected_modules),
+        }
 
     def build_grounding_context(
         self,
@@ -118,8 +169,9 @@ class OrbKnowledgeRetrievalService:
             profile_context=profile_context,
             attachments=attachments,
         )
+        spine = self.retrieve_knowledge_spine(message, mode=mode)
         lines = [
-            "Grounding context (built-in source packs — not live OS records or web browsing):",
+            "Grounding context (unified ORB Knowledge Spine — not live OS records or web browsing):",
         ]
         for pack in packs:
             lines.append(
@@ -128,6 +180,10 @@ class OrbKnowledgeRetrievalService:
             )
             if pack.get("guidance_notes"):
                 lines.append(f"  Guidance: {pack['guidance_notes']}")
+        if spine["selected_modules"]:
+            lines.append("\nDetailed knowledge modules selected:")
+            for module_name, module_text in spine["modules"].items():
+                lines.append(f"\n[{module_name}]\n{_clip(module_text, 1600)}")
         lines.append(
             "Answer using this source basis. Cite honest labels in structured sources; do not fabricate URLs or exact quotes."
         )
@@ -223,7 +279,7 @@ class OrbKnowledgeRetrievalService:
         return any(marker in lower for marker in general_markers) or len(lower.split()) <= 12
 
     def _should_use_therapeutic(self, message: str, *, mode: str | None = None) -> bool:
-        if (mode or "").strip() in {"Behaviour Support", "Reflect"}:
+        if (mode or "").strip() in {"Behaviour Support", "Reflect", "Therapeutic Reframe"}:
             return True
         lower = _lower(message)
         terms = (
@@ -257,10 +313,38 @@ class OrbKnowledgeRetrievalService:
             "Record This Properly",
             "Ofsted Lens",
             "Behaviour Support",
+            "Therapeutic Reframe",
+            "Manager Copilot",
         }
 
     def _has_research_intent(self, lower: str) -> bool:
         return any(term in lower for term in RESEARCH_INTENT_TERMS)
+
+    def _build_knowledge_spine_pack(self, message: str, *, mode: str | None = None) -> dict[str, Any] | None:
+        spine = self.retrieve_knowledge_spine(message, mode=mode)
+        modules = spine.get("selected_modules") or []
+        if not modules:
+            return None
+        return {
+            "id": "orb_unified_knowledge_spine",
+            "pack_key": "orb_knowledge_spine",
+            "title": "ORB unified knowledge spine",
+            "source_type": KNOWLEDGE_SPINE_PACK_TYPE,
+            "description": "Routed assistant/knowledge modules selected for this ORB answer.",
+            "source_label": "ORB Knowledge Spine",
+            "reliability": "built_in_routed_practice_knowledge",
+            "applies_to_modes": [mode or "Ask ORB"],
+            "short_citation_label": "ORB Knowledge Spine",
+            "guidance_notes": f"Selected modules: {', '.join(modules)}",
+            "live_retrieved": False,
+            "category": "knowledge_spine",
+            "official_source": False,
+            "confidence_level": "high",
+            "governance_status": "approved",
+            "selected_modules": modules,
+            "knowledge_version": spine.get("version"),
+            "source_summary": spine.get("source_summary"),
+        }
 
     def _pack_keys_from_intents(self, intents: dict[str, bool], *, mode: str) -> list[str]:
         keys: list[str] = ["standalone_boundary"]
@@ -288,6 +372,7 @@ class OrbKnowledgeRetrievalService:
                 "recording_quality",
                 "safeguarding_principles",
                 "therapeutic_practice",
+                "knowledge_spine",
             )
         ):
             keys.append("general_knowledge")
@@ -312,6 +397,8 @@ class OrbKnowledgeRetrievalService:
             return "recording_quality_brain"
         if intents.get("product_context"):
             return "product_explanation_brain"
+        if intents.get("knowledge_spine"):
+            return "orb_knowledge_spine_brain"
         if intents.get("general_knowledge"):
             return "general_assistant_brain"
         return "general_assistant_brain"
