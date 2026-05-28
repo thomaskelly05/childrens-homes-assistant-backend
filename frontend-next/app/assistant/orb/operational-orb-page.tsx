@@ -8,6 +8,7 @@ export default async function OperationalOrbPage({
   searchParams: Promise<{
     scope?: string
     young_person_id?: string
+    home_id?: string
     mode?: string
     q?: string
     prompt?: string
@@ -64,6 +65,7 @@ export default async function OperationalOrbPage({
           childrenOptions={childrenResult.data}
           initialScope={initialScope}
           initialYoungPersonId={query.young_person_id}
+          initialHomeId={query.home_id}
           initialOperationalMode={query.mode}
           initialPrompt={query.q || query.prompt || (query.context ? `Review the ${query.context.replaceAll('-', ' ')} context.` : undefined)}
         />
