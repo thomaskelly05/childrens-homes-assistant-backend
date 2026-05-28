@@ -74,12 +74,12 @@ function unavailable(message: string): OsApiResult<OrbConversationResponse> {
     warning: message,
     data: {
       ok: false,
-      answer: "I couldn't reach the live ORB endpoint just now. No operational conclusion has been made.",
-      summary: 'Live ORB unavailable.',
+      answer: "I couldn't reach the live OS ORB endpoint just now. No operational conclusion has been made.",
+      summary: 'Live OS ORB unavailable.',
       sources: [],
       actions: [{ label: 'Open the command centre for manager review', type: 'review', route: '/command-centre' }],
       confidence: 'low',
-      guardrails: ['ORB supports review; it does not replace registered manager or safeguarding judgement.'],
+      guardrails: ['OS ORB supports review; it does not replace registered manager or safeguarding judgement.'],
       context_used: { snapshot_hit: false, live_tables: [] }
     }
   }
@@ -87,10 +87,21 @@ function unavailable(message: string): OsApiResult<OrbConversationResponse> {
 
 export async function queryOrbConversation(request: OrbConversationRequest, signal?: AbortSignal): Promise<OsApiResult<OrbConversationResponse>> {
   try {
-    const payload = await authFetch<OrbConversationResponse>('/api/orb/conversation', {
+    const payload = await authFetch<OrbConversationResponse>('/api/assistant/orb/conversation', {
       method: 'POST',
       signal,
-      body: JSON.stringify(request)
+      body: JSON.stringify({
+        message: request.message,
+        scope: request.scope === 'workforce' ? 'staff' : request.scope,
+        child_id: request.young_person_id ?? null,
+        staff_id: request.staff_id ?? null,
+        home_id: request.home_id ?? null,
+        mode: 'general_operational_question',
+        days: 7,
+        include_actions: true,
+        include_patterns: true,
+        include_record_quality: true
+      })
     })
     return {
       data: {
@@ -104,10 +115,10 @@ export async function queryOrbConversation(request: OrbConversationRequest, sign
     }
   } catch (error) {
     if (error instanceof AuthApiError) {
-      if (error.status === 401) return unavailable('Your session has expired. Please sign in again before using ORB.')
-      if (error.status === 403) return unavailable('You do not have permission to use ORB.')
+      if (error.status === 401) return unavailable('Your session has expired. Please sign in again before using OS ORB.')
+      if (error.status === 403) return unavailable('You do not have permission to use OS ORB.')
       return unavailable(error.message)
     }
-    return unavailable(error instanceof Error ? error.message : 'ORB backend unavailable.')
+    return unavailable(error instanceof Error ? error.message : 'OS ORB backend unavailable.')
   }
 }
