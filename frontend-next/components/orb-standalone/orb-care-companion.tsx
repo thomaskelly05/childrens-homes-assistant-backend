@@ -48,7 +48,7 @@ import {
 import { OrbAmbientCognition, type OrbCognitionAmbientState } from '@/components/orb-standalone/orb-ambient-cognition'
 import { OrbAdultProfileDrawer } from '@/components/orb-standalone/orb-adult-profile-drawer'
 import { OrbStandaloneSidebar } from '@/components/orb-standalone/orb-standalone-sidebar'
-import { OrbHueLogo, OrbHueMark, OrbPoweredByIndicare } from '@/components/orb-standalone/orb-hue-logo'
+import { OrbHueMark } from '@/components/orb-standalone/orb-hue-logo'
 import { useOrbAppearance } from '@/components/orb-standalone/use-orb-appearance'
 import { ORB_LIGHT_UI_BUILD } from '@/lib/orb/orb-light-ui-build'
 import {
@@ -1716,28 +1716,31 @@ export function OrbCareCompanion() {
               <div className="mx-auto w-full max-w-[var(--orb-chat-column-max,52.5rem)]">
                 {showEmptyState ? (
                   <div
-                    className="flex min-h-[min(56vh,26rem)] flex-col items-center justify-center py-4 text-center md:py-6"
+                    className="flex min-h-[min(52vh,24rem)] flex-col items-center justify-center px-2 py-6 text-center md:py-8"
                     data-orb-empty-state
                   >
-                    <div data-orb-brand-name>
-                      <OrbHueLogo size="lg" pulse={isAnswering} />
-                    </div>
-                    <div className="mt-1.5" data-orb-brand-powered>
-                      <OrbPoweredByIndicare />
-                    </div>
-                    <h2 className="mt-5 text-xl font-semibold tracking-tight text-[var(--orb-foreground)] md:text-2xl" data-orb-empty-heading>
+                    <p className="orb-empty-brand-title orb-hue-text" data-orb-brand-name data-orb-empty-title>
+                      ORB
+                    </p>
+                    <p className="orb-empty-brand-powered mt-1.5" data-orb-brand-powered>
+                      Powered by IndiCare
+                    </p>
+                    <h2
+                      className="mt-6 text-xl font-semibold tracking-tight text-slate-900 md:text-[1.35rem]"
+                      data-orb-empty-heading
+                    >
                       {emptyHeading}
                     </h2>
-                    <p className="mt-1.5 max-w-md text-sm leading-6 text-[var(--orb-muted)]" data-orb-empty-subline>
-                      Choose a starter below, pick a residential agent, or type in the composer.
+                    <p className="mt-2 max-w-md text-sm leading-6 text-slate-600" data-orb-empty-subline>
+                      Pick a starter, choose an agent, or type in the composer below.
                     </p>
-                    <div className="mt-6 grid w-full max-w-xl gap-2 sm:grid-cols-2" data-orb-starter-cards>
+                    <div className="mt-6 grid w-full max-w-lg gap-2 sm:grid-cols-2" data-orb-starter-cards>
                       {emptyStarters.map((starter) => (
                         <button
                           key={starter.text}
                           type="button"
                           onClick={() => applyPrompt(starter)}
-                          className="orb-starter-card rounded-2xl border px-4 py-4 text-left text-sm font-medium transition hover:shadow-sm"
+                          className="orb-starter-card px-4 py-3.5 text-left text-sm leading-snug"
                           data-orb-starter-card
                         >
                           {starter.text}
