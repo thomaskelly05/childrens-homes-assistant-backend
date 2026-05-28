@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { ReactNode } from 'react'
 
 import './orb-chatgpt-light.css'
+import { OrbResidentialShell } from '@/components/orb-residential/orb-residential-shell'
 import { ORB_APPEARANCE_BOOTSTRAP_SCRIPT } from '@/lib/orb/orb-appearance'
 import {
   ORB_COGNITION_ROUTING_BUILD,
@@ -13,12 +14,12 @@ const ORB_LIGHT_UI_BUILD_SCRIPT = `window.__ORB_LIGHT_UI_BUILD__=${JSON.stringif
 const ORB_COGNITION_ROUTING_BUILD_SCRIPT = `window.__ORB_COGNITION_ROUTING_BUILD__=${JSON.stringify(ORB_COGNITION_ROUTING_BUILD)};`
 
 export const metadata: Metadata = {
-  title: 'ORB',
+  title: 'ORB Residential',
   description:
-    "Institutional cognition workspace for residential children's homes — standalone, no OS records"
+    "ORB Residential — Powered by IndiCare Intelligence. Standalone premium intelligence for adults working in children's residential care."
 }
 
-export default function OrbStandaloneLayout({ children }: { children: ReactNode }) {
+export default function OrbLayout({ children }: { children: ReactNode }) {
   return (
     <>
       <span
@@ -43,7 +44,7 @@ export default function OrbStandaloneLayout({ children }: { children: ReactNode 
         id="orb-cognition-routing-build"
         dangerouslySetInnerHTML={{ __html: ORB_COGNITION_ROUTING_BUILD_SCRIPT }}
       />
-      {children}
+      <OrbResidentialShell>{children}</OrbResidentialShell>
     </>
   )
 }
