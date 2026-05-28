@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 
-import { fetchOrbResidential } from '@/lib/orb-residential-api'
+import { fetchOrbResidential } from '@/components/orb-residential/orb-residential-api'
 
 export default function OrbResidentialAccessPage() {
   const [access, setAccess] = useState<Record<string, unknown> | null>(null)
