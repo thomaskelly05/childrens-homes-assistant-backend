@@ -7,6 +7,7 @@ import pytest
 REPO = Path(__file__).resolve().parents[1]
 STANDALONE_CLIENT = REPO / "frontend-next" / "lib" / "orb" / "standalone-client.ts"
 OPERATIONAL_CLIENT = REPO / "frontend-next" / "lib" / "orb" / "operational-client.ts"
+OS_ORB_API = REPO / "frontend-next" / "lib" / "os-api" / "orb.ts"
 STANDALONE_ROUTES = REPO / "routers" / "orb_standalone_routes.py"
 OPERATIONAL_ROUTES = REPO / "routers" / "orb_operational_routes.py"
 ORB_COMPANION = REPO / "frontend-next" / "components" / "orb-standalone" / "orb-care-companion.tsx"
@@ -49,3 +50,14 @@ def test_operational_client_uses_assistant_orb_api_only():
     text = OPERATIONAL_CLIENT.read_text(encoding="utf-8")
     assert "/api/assistant/orb/" in text
     assert "/orb/standalone/" not in text
+    assert "/api/orb/conversation" not in text
+    assert "/api/assistant/orb/briefing" in text
+    assert "/api/assistant/orb/briefings/" not in text
+
+
+def test_os_orb_api_helper_stays_inside_assistant_orb_boundary():
+    text = OS_ORB_API.read_text(encoding="utf-8")
+    assert "/api/assistant/orb/conversation" in text
+    assert "/api/orb/conversation" not in text
+    assert "young_person_id" in text
+    assert "child_id" in text
