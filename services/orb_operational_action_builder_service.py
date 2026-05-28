@@ -54,6 +54,54 @@ def _wants_briefing(message: str, mode: str) -> bool:
     return any(phrase in lower for phrase in ("briefing", "manager briefing", "handover brief"))
 
 
+def _child_route(request: Any, suffix: str = "workspace") -> str:
+    child_id = getattr(request, "child_id", None)
+    if child_id:
+        return f"/young-people/{child_id}/{suffix}"
+    return "/young-people"
+
+
+def _home_query_route(request: Any, route: str) -> str:
+    home_id = getattr(request, "home_id", None)
+    if home_id:
+        joiner = "&" if "?" in route else "?"
+        return f"{route}{joiner}home_id={home_id}"
+    return route
+
+
+def _mode_route(mode: str, request: Any) -> str:
+    child_id = getattr(request, "child_id", None)
+    if mode == "child_journey_summary":
+        return _child_route(request, "chronology")
+    if mode == "chronology_story_review":
+        return _child_route(request, "chronology")
+    if mode == "archive_summary":
+        return _child_route(request, "archive")
+    if mode == "lifeecho_memory_support":
+        return _child_route(request, "lifeecho")
+    if mode == "plan_impact_review":
+        return _child_route(request, "plan-impacts")
+    if mode == "document_target_extraction":
+        return f"/documents?child_id={child_id}" if child_id else "/documents"
+    if mode == "record_quality_review":
+        return f"/record/reviews?child_id={child_id}" if child_id else "/record/reviews"
+    if mode == "recording_live_coach":
+        return f"/record?about=child&child_id={child_id}" if child_id else "/record"
+    if mode == "safeguarding_themes":
+        return _home_query_route(request, "/safeguarding")
+    if mode == "ofsted_evidence_review":
+        return _home_query_route(request, "/intelligence/inspection-readiness")
+    if mode == "governance_briefing":
+        return _home_query_route(request, "/intelligence/reg45")
+    if mode == "manager_daily_brief":
+        return _home_query_route(request, "/command-centre/briefing")
+    if mode == "action_priority":
+        return f"/actions?child_id={child_id}" if child_id else _home_query_route(request, "/actions")
+    if mode == "staff_support":
+        return _home_query_route(request, "/staff")
+    return _child_route(request, "workspace") if child_id else "/assistant/orb"
+
+
 class OrbOperationalActionBuilderService:
     """Convert operational answers into draft actions — no auto-persist on chat."""
 
@@ -175,29 +223,49 @@ class OrbOperationalActionBuilderService:
 
         follow_ups: list[dict[str, Any]] = []
         mode = _text(getattr(request, "mode", None))
-        routes = {
-            "manager_daily_brief": "/command-centre",
-            "safeguarding_themes": "/intelligence-spine",
-            "record_quality_review": "/intelligence-spine",
-            "ofsted_evidence_review": "/governance",
-            "action_priority": "/intelligence-actions",
-            "staff_support": "/staff",
-            "child_journey_summary": "/young-people",
-            "governance_briefing": "/governance",
-        }
-        route = routes.get(mode, "/assistant/orb")
+        route = _mode_route(mode, request)
         follow_ups.append(
             OrbOperationalFollowUpAction(
-                label="Open relevant OS area",
+                label="Open the linked OS area",
                 route=route,
                 action_type="navigate",
             ).model_dump()
         )
+        if mode in {"governance_briefing", "ofsted_evidence_review"}:
+            follow_ups.append(
+                OrbOperationalFollowUpAction(
+                    label="Open inspection readiness",
+                    route=_home_query_route(request, "/intelligence/inspection-readiness"),
+                    action_type="review",
+                ).model_dump()
+            )
+            follow_ups.append(
+                OrbOperationalFollowUpAction(
+                    label="Open Reg 45 review",
+                    route=_home_query_route(request, "/intelligence/reg45"),
+                    action_type="review",
+                ).model_dump()
+            )
+            follow_ups.append(
+                OrbOperationalFollowUpAction(
+                    label="Open Reg 44 evidence pack",
+                    route=_home_query_route(request, "/intelligence/inspection-readiness?pack=reg44"),
+                    action_type="review",
+                ).model_dump()
+            )
+        if mode in {"plan_impact_review", "child_journey_summary", "chronology_story_review"} and getattr(request, "child_id", None):
+            follow_ups.append(
+                OrbOperationalFollowUpAction(
+                    label="Open Get to Know Me plans",
+                    route=_child_route(request, "plan-impacts"),
+                    action_type="review",
+                ).model_dump()
+            )
         if context.get("raw_available"):
             follow_ups.append(
                 OrbOperationalFollowUpAction(
                     label="Review Intelligence Actions",
-                    route="/intelligence-actions",
+                    route=_home_query_route(request, "/actions"),
                     action_type="review",
                 ).model_dump()
             )
