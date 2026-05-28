@@ -252,6 +252,7 @@ def _build_framed_message(
     user_message: str,
     detail: str,
     history: list[dict] | None = None,
+    grounding_context: str | None = None,
 ) -> str:
     resolved_mode = orb_standalone_brain_service.normalise_mode(mode)
     brain_block = orb_standalone_brain_service.build_prompt_block(user_message, mode=resolved_mode)
@@ -280,6 +281,7 @@ def _build_framed_message(
         STANDALONE_ORB_BOUNDARIES,
         STANDALONE_ORB_CITATIONS,
         shared_runtime_block,
+        grounding_context or "",
         STANDALONE_ORB_TONE,
         brain_block,
         mode_hint,
@@ -471,6 +473,11 @@ async def standalone_orb_conversation(
     mode = orb_standalone_brain_service.normalise_mode(payload.mode or "Ask ORB")
     detail = _resolve_detail(mode, payload.detail)
     history = payload.history[-20:] if payload.history else []
+    image_urls = [
+        item.data_url
+        for item in (payload.images or [])
+        if str(item.data_url or "").startswith("data:image/")
+    ]
     shared_cognition = shared_institutional_cognition_runtime.build_context(
         surface="standalone_orb",
         message=payload.message,
@@ -478,18 +485,34 @@ async def standalone_orb_conversation(
         history=history,
     )
     standalone_brain = orb_standalone_brain_service.context_payload(payload.message, mode=mode)
+    grounding_context = orb_knowledge_retrieval_service.build_grounding_context(
+        payload.message,
+        mode=mode,
+        profile_context=False,
+        attachments=image_urls[:4] or None,
+    )
     framed_message = _build_framed_message(
         mode=mode,
         user_message=payload.message,
         detail=detail,
         history=history,
+        grounding_context=grounding_context,
     )
-    image_urls = [
-        item.data_url
-        for item in (payload.images or [])
-        if str(item.data_url or "").startswith("data:image/")
-    ]
     profile_context = "standalone context profiles" in framed_message.lower() or "profile:" in framed_message.lower()
+    if profile_context:
+        grounding_context = orb_knowledge_retrieval_service.build_grounding_context(
+            payload.message,
+            mode=mode,
+            profile_context=True,
+            attachments=image_urls[:4] or None,
+        )
+        framed_message = _build_framed_message(
+            mode=mode,
+            user_message=payload.message,
+            detail=detail,
+            history=history,
+            grounding_context=grounding_context,
+        )
     retrieval_preview = orb_knowledge_retrieval_service.retrieve_sources(
         payload.message,
         mode=mode,
@@ -575,6 +598,8 @@ async def standalone_orb_conversation(
         context_used["standalone_brain"] = standalone_brain
         context_used["shared_cognition"] = shared_cognition
         context_used["official_source_grounding"] = bool(shared_cognition.get("citations"))
+        context_used["orb_knowledge_grounding_injected"] = True
+        context_used["orb_knowledge_grounding_preview"] = grounding_context[:1200]
         context_used = _apply_cognition_context(
             context_used,
             shared_cognition=shared_cognition,
@@ -582,7 +607,7 @@ async def standalone_orb_conversation(
         )
         if not context_used.get("retrieval"):
             context_used["retrieval"] = {
-                "strategy": "source_pack_plus_document_rag",
+                "strategy": "source_pack_plus_document_rag_plus_operating_brain",
                 "live_retrieved": False,
                 "source_count": len(retrieval_preview),
                 "document_result_count": 0,
@@ -666,8 +691,10 @@ async def standalone_orb_conversation(
             "standalone_brain": standalone_brain,
             "shared_cognition": shared_cognition,
             "official_source_grounding": bool(shared_cognition.get("citations")),
+            "orb_knowledge_grounding_injected": True,
+            "orb_knowledge_grounding_preview": grounding_context[:1200] if grounding_context else "",
             "retrieval": {
-                "strategy": "source_pack_plus_document_rag",
+                "strategy": "source_pack_plus_document_rag_plus_operating_brain",
                 "live_retrieved": False,
                 "source_count": len(sources),
                 "document_result_count": 0,
