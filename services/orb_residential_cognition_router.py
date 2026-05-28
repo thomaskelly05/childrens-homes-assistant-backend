@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from services.orb_professional_curiosity_service import orb_professional_curiosity_service
+from services.orb_scenario_playbook_service import orb_scenario_playbook_service
 
 
 class OrbResidentialCognitionRouter:
@@ -28,12 +29,28 @@ class OrbResidentialCognitionRouter:
         "complaints_advocacy_cognition": "Complaints / advocacy",
         "child_journey_cognition": "Child experience",
         "professional_curiosity_cognition": "Professional curiosity",
+        "immediate_safeguarding_cognition": "Immediate safeguarding",
+        "exploitation_risk_cognition": "Exploitation risk",
+        "police_escalation_cognition": "Police escalation",
+        "dynamic_risk_cognition": "Dynamic risk",
         "evidence_confidence": "Evidence",
         "institutional_depth_frame": "Institutional depth",
     }
 
     # Preferred visible pill order per topic (Ask ORB auto-route).
     TOPIC_DISPLAY_ORDER: dict[str, list[str]] = {
+        "live_safeguarding_incident": [
+            "Immediate safeguarding",
+            "Exploitation risk",
+            "Missing from home",
+            "Restrictive practice",
+        ],
+        "physical_intervention_live": [
+            "Restrictive practice",
+            "Immediate safeguarding",
+            "Recording quality",
+            "Leadership oversight",
+        ],
         "medication": ["Medication / health", "Recording quality", "Leadership oversight"],
         "missing": ["Missing from home", "Safeguarding", "Recording quality", "Ofsted evidence"],
         "therapeutic": ["Therapeutic reflection", "Recording quality", "Child experience"],
@@ -61,6 +78,47 @@ class OrbResidentialCognitionRouter:
     }
 
     TOPIC_BRAINS: dict[str, list[str]] = {
+        "live_safeguarding_incident": [
+            "immediate_safeguarding_cognition",
+            "safeguarding_cognition",
+            "exploitation_risk_cognition",
+            "missing_from_home_cognition",
+            "restrictive_practice_cognition",
+            "police_escalation_cognition",
+            "dynamic_risk_cognition",
+            "recording_quality_cognition",
+            "governance_cognition",
+            "professional_curiosity_cognition",
+        ],
+        "physical_intervention_live": [
+            "restrictive_practice_cognition",
+            "immediate_safeguarding_cognition",
+            "safeguarding_cognition",
+            "recording_quality_cognition",
+            "governance_cognition",
+            "professional_curiosity_cognition",
+        ],
+        "age_16_17_autonomy": [
+            "immediate_safeguarding_cognition",
+            "exploitation_risk_cognition",
+            "child_journey_cognition",
+            "safeguarding_cognition",
+            "restrictive_practice_cognition",
+            "recording_quality_cognition",
+        ],
+        "exploitation": [
+            "exploitation_risk_cognition",
+            "safeguarding_cognition",
+            "missing_from_home_cognition",
+            "chronology_cognition",
+            "governance_cognition",
+        ],
+        "self_harm": [
+            "immediate_safeguarding_cognition",
+            "safeguarding_cognition",
+            "therapeutic_reflective_cognition",
+            "recording_quality_cognition",
+        ],
         "cumulative_concern": [
             "safeguarding_cognition",
             "governance_cognition",
@@ -152,6 +210,10 @@ class OrbResidentialCognitionRouter:
 
     HIGH_ATTENTION_TOPICS = frozenset(
         {
+            "live_safeguarding_incident",
+            "physical_intervention_live",
+            "exploitation",
+            "self_harm",
             "cumulative_concern",
             "allegations",
             "missing",
@@ -167,10 +229,13 @@ class OrbResidentialCognitionRouter:
         }
     )
 
+    CRITICAL_DEPTH_TOPICS = frozenset({"live_safeguarding_incident", "physical_intervention_live"})
+
     def route(self, *, message: str, mode: str | None = None) -> dict[str, Any]:
         text = str(message or "").lower()
         mode_text = str(mode or "Ask ORB").strip()
         mode_lower = mode_text.lower()
+        playbook = orb_scenario_playbook_service.detect_playbook(message)
         topic = self.detect_topic(text, mode=mode_lower)
         residential = self._is_residential(text, mode_lower)
 
@@ -198,21 +263,39 @@ class OrbResidentialCognitionRouter:
             mode=mode_lower,
             topic=topic,
         )
-        depth_level = self._depth_level(topic, residential)
+        if playbook and playbook.labels:
+            display_labels = self._apply_playbook_labels(display_labels, playbook.labels)
+        depth_level = self._depth_level(topic, residential, playbook=playbook)
+        vault_domains = self._vault_domains(topic, active_brains)
+        if playbook and playbook.recommended_vaults:
+            vault_domains = list(dict.fromkeys(list(playbook.recommended_vaults) + vault_domains))
 
         return {
             "topic": topic,
+            "playbook_id": playbook.id if playbook else None,
             "residential": residential,
             "high_attention": topic in self.HIGH_ATTENTION_TOPICS if topic else False,
             "depth_level": depth_level,
             "active_brains": active_brains,
             "cognition_display_labels": display_labels,
-            "vault_domains": self._vault_domains(topic, active_brains),
+            "vault_domains": vault_domains,
             "reasoning_lenses": self._universal_lenses(topic),
         }
 
     def detect_topic(self, text: str, *, mode: str | None = None) -> str | None:
+        playbook_topic = orb_scenario_playbook_service.detect_topic(text)
+        if playbook_topic in {"live_safeguarding_incident", "physical_intervention_live"}:
+            return playbook_topic
         curiosity = orb_professional_curiosity_service.detect_topic(text, mode=mode)
+        if curiosity in {
+            "live_safeguarding_incident",
+            "physical_intervention_live",
+            "age_16_17_autonomy",
+            "police_escalation",
+        }:
+            return curiosity
+        if playbook_topic:
+            return playbook_topic
         if curiosity:
             return curiosity
         mode_text = str(mode or "").lower()
@@ -359,17 +442,79 @@ class OrbResidentialCognitionRouter:
             ]
             if "Ofsted evidence" not in labels:
                 labels.append("Ofsted evidence")
+        if topic == "live_safeguarding_incident":
+            labels = [
+                label
+                for label in labels
+                if label
+                not in {
+                    "Therapeutic reflection",
+                    "Ofsted Lens",
+                    "Chronology",
+                    "Child experience",
+                    "Workforce supervision",
+                    "Education",
+                }
+            ]
+        if topic == "physical_intervention_live":
+            labels = [label for label in labels if label not in {"Therapeutic reflection", "Ofsted Lens", "Chronology"}]
         return labels
 
-    def _depth_level(self, topic: str | None, residential: bool) -> str:
+    def _depth_level(
+        self,
+        topic: str | None,
+        residential: bool,
+        *,
+        playbook: Any | None = None,
+    ) -> str:
+        if playbook and playbook.depth_level == "critical":
+            return "critical"
+        if topic in self.CRITICAL_DEPTH_TOPICS:
+            return "critical"
         if topic in self.HIGH_ATTENTION_TOPICS:
             return "high"
         if topic == "general_residential" or residential:
             return "standard"
         return "concise"
 
+    def _apply_playbook_labels(
+        self,
+        labels: list[str],
+        playbook_labels: tuple[str, ...] | list[str],
+    ) -> list[str]:
+        ordered = list(playbook_labels)
+        for label in labels:
+            if label not in ordered:
+                ordered.append(label)
+        return ordered[:5]
+
     def _vault_domains(self, topic: str | None, active_brains: list[str]) -> list[str]:
         vault_map = {
+            "live_safeguarding_incident": [
+                "Immediate Safeguarding Vault",
+                "Exploitation / CSE / CCE Vault",
+                "Unknown Adult / Vehicle Risk Vault",
+                "Physical Intervention / Lawful Restriction Vault",
+                "Missing From Home Vault",
+                "Police / Emergency Escalation Vault",
+                "Dynamic Risk Assessment Vault",
+            ],
+            "physical_intervention_live": [
+                "Physical Intervention / Lawful Restriction Vault",
+                "Deprivation of Liberty / Movement Restriction Vault",
+                "Immediate Safeguarding Vault",
+                "Recording Quality Vault",
+            ],
+            "exploitation": [
+                "Exploitation / CSE / CCE Vault",
+                "Missing From Home Vault",
+                "Online Harm / Digital Contact Vault",
+            ],
+            "self_harm": [
+                "Self-Harm / Mental Health Crisis Vault",
+                "Immediate Safeguarding Vault",
+                "Safeguarding Vault",
+            ],
             "cumulative_concern": [
                 "Safeguarding Vault",
                 "Restrictive Practice Vault",
@@ -452,6 +597,8 @@ class OrbResidentialCognitionRouter:
             "childrens home",
             "young person",
             "looked after",
+            "look after",
+            "we look after",
             "residential",
             "staff",
             "home",

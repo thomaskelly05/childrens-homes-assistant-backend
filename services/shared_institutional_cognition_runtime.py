@@ -8,6 +8,7 @@ from services.orb_institutional_depth_frame_service import orb_institutional_dep
 from services.orb_knowledge_grounding_service import orb_knowledge_grounding_service
 from services.orb_professional_curiosity_service import orb_professional_curiosity_service
 from services.orb_residential_cognition_router import orb_residential_cognition_router
+from services.orb_scenario_playbook_service import orb_scenario_playbook_service
 
 
 class SharedInstitutionalCognitionRuntime:
@@ -40,6 +41,7 @@ class SharedInstitutionalCognitionRuntime:
         grounded_prompt = grounding.get("prompt_block") or orb_grounded_answer_style_service.prompt_block(message, mode=mode)
         depth_prompt = orb_institutional_depth_frame_service.prompt_block(message=message, mode=mode)
         curiosity_prompt = orb_professional_curiosity_service.prompt_block(message, mode=mode)
+        playbook_prompt = orb_scenario_playbook_service.prompt_block(message)
         guidance_prefix = None
         if surface == "standalone_orb":
             prefix = standalone_guidance_boundary_prefix(message, history=history, mode=mode)
@@ -61,11 +63,12 @@ class SharedInstitutionalCognitionRuntime:
             "depth_frame": depth_frame,
             "prompt_blocks": [
                 block
-                for block in (guidance_prefix, grounded_prompt, depth_prompt, curiosity_prompt)
+                for block in (guidance_prefix, playbook_prompt, grounded_prompt, depth_prompt, curiosity_prompt)
                 if block
             ],
             "guidance_boundary_prefix": guidance_prefix,
             "professional_curiosity": orb_professional_curiosity_service.context_payload(message, mode=mode),
+            "scenario_playbook": orb_scenario_playbook_service.routing_metadata(message),
             "citations": citations,
             "operational_context_available": bool(operational_context),
             "operational_context_used": bool(operational_context and boundary["can_use_live_records"]),
@@ -294,6 +297,15 @@ class SharedInstitutionalCognitionRuntime:
                 "RM/DSL/RI/Ofsted lenses, evidence needs, follow-up and longitudinal meaning."
             )
         topic = curiosity.get("topic")
+        playbook_meta = orb_scenario_playbook_service.routing_metadata(message)
+        playbook_topic = playbook_meta.get("topic")
+        if playbook_topic == "live_safeguarding_incident" or topic == "live_safeguarding_incident":
+            requirements.extend([
+                "- Live safeguarding cognition: use scenario playbook markdown ## headings.",
+                "- Open with live safeguarding anchor; cover manager/DSL, police if immediate risk, vehicle details.",
+                "- Physical intervention only if immediate risk — lawful, necessary, proportionate, least restrictive.",
+                "- Do not give blanket yes/no; end with professional boundary not coaching questions.",
+            ])
         if topic == "medication":
             requirements.extend(
                 [

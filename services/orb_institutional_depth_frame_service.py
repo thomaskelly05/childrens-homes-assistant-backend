@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from services.orb_professional_curiosity_service import orb_professional_curiosity_service
+from services.orb_scenario_playbook_service import orb_scenario_playbook_service
 
 
 class OrbInstitutionalDepthFrameService:
@@ -20,6 +21,13 @@ class OrbInstitutionalDepthFrameService:
         text = str(message or "").lower()
         mode_text = str(mode or "").lower()
         topic = self._topic(text=text, mode_text=mode_text)
+        playbook = orb_scenario_playbook_service.detect_playbook(message)
+        if playbook and playbook.topic == "live_safeguarding_incident":
+            return self._live_safeguarding_playbook_frame(playbook)
+        if topic == "live_safeguarding_incident":
+            return self._live_safeguarding_incident_frame()
+        if topic == "physical_intervention_live":
+            return self._physical_intervention_live_frame()
         if topic == "cumulative_concern":
             return self._cumulative_concern_frame()
         if topic == "allegations":
@@ -906,6 +914,124 @@ class OrbInstitutionalDepthFrameService:
             "avoid": [
                 "Plan language with no implementation or impact.",
                 "Ignoring transition anxiety or relational stability.",
+            ],
+        }
+
+    def _live_safeguarding_playbook_frame(self, playbook: Any) -> dict[str, Any]:
+        base = self._live_safeguarding_incident_frame()
+        base["playbook_id"] = playbook.id
+        base["response_structure"] = list(playbook.required_sections)
+        base["opening_anchor"] = playbook.opening_anchor
+        base["closing_guidance"] = playbook.professional_boundary
+        base["must_include"] = list(playbook.must_include)
+        base["avoid"] = list(playbook.must_avoid)
+        return base
+
+    def _live_safeguarding_incident_frame(self) -> dict[str, Any]:
+        return {
+            "topic": "live safeguarding incident",
+            "purpose": (
+                "Urgent, practical guidance for a live safeguarding situation — least restrictive, "
+                "lawful, proportionate action with clear escalation and recording."
+            ),
+            "response_structure": [
+                "## Immediate priority",
+                "## Before physical intervention",
+                "## When physical intervention may be considered",
+                "## What to do if she/he/they leave or get into a vehicle",
+                "## What information to capture",
+                "## Who to contact",
+                "## What to record afterwards",
+                "## Professional boundary",
+            ],
+            "opening_anchor": (
+                "This is a live safeguarding situation. The question is not simply whether you can physically stop "
+                "her/him/them; it is whether there is an immediate risk of harm and what the least restrictive, lawful "
+                "and proportionate action is right now."
+            ),
+            "closing_guidance": (
+                "The priority is immediate safety, least-restrictive action, clear escalation, and accurate recording. "
+                "ORB cannot decide the threshold for you; follow the home's safeguarding, missing-from-care and physical "
+                "intervention procedures and seek manager/police/social work advice urgently where risk is present."
+            ),
+            "required_lenses": [
+                "Dynamic risk in the moment; verbal engagement and delay where safe.",
+                "Exploitation/CSE/CCE and missing-from-care indicators.",
+                "Age 16–17 autonomy balanced with safeguarding.",
+                "Police/manager/DSL escalation; vehicle and unknown adult details.",
+                "Physical intervention only if immediate risk — necessary, proportionate, policy-supported.",
+                "Staff safety — do not block moving vehicles.",
+            ],
+            "immediate_safe_next_steps": [
+                "Alert manager/DSL; allocate roles (engage child / call police / record).",
+                "Verbal engagement; ask who, where, why.",
+                "Call police if immediate risk with unknown adult/vehicle/exploitation indicators.",
+                "Trigger missing procedure if child leaves; capture vehicle details.",
+            ],
+            "avoid": [
+                "Blanket yes or no on physical intervention.",
+                "Generic safeguarding bullet lists without practical structure.",
+                "Ignoring autonomy at 16–17 or exploitation risk.",
+            ],
+        }
+
+    def _physical_intervention_live_frame(self) -> dict[str, Any]:
+        return {
+            "topic": "physical intervention — live decision",
+            "purpose": "Lawful, proportionate, least-restrictive thinking about physical contact or movement restriction.",
+            "response_structure": [
+                "## Immediate risk assessment",
+                "## Alternatives before physical contact",
+                "## When physical intervention may be considered",
+                "## Movement restriction / locking / blocking",
+                "## Staff safety and dignity",
+                "## Escalation and recording",
+                "## Professional boundary",
+            ],
+            "opening_anchor": (
+                "This needs immediate professional judgement about risk, lawfulness and the least restrictive action — "
+                "not a simple yes or no about physical contact."
+            ),
+            "closing_guidance": (
+                "Follow policy, training and manager direction; record rationale whether you intervene or not."
+            ),
+            "required_lenses": [
+                "Immediate risk of harm; necessity and proportionality.",
+                "Alternatives first; care plan and risk assessment.",
+                "Training, policy, legal authority; post-incident debrief.",
+            ],
+            "avoid": [
+                "Authorising restraint without risk framing.",
+                "Encouraging unlawful locking or deprivation of liberty.",
+            ],
+        }
+
+    def _age_16_17_autonomy_frame(self) -> dict[str, Any]:
+        return {
+            "topic": "age 16–17 autonomy and safeguarding",
+            "purpose": (
+                "Balance rights, wishes and near-adult independence with safeguarding where exploitation, "
+                "coercion or serious risk may be present."
+            ),
+            "response_structure": [
+                "## Rights and wishes",
+                "## Safeguarding risk that remains at 16–17",
+                "## Proportionate response",
+                "## Multi-agency and recording",
+                "## Professional boundary",
+            ],
+            "opening_anchor": (
+                "Being 16 or 17 does not remove safeguarding responsibility — autonomy and protection must be balanced "
+                "with maturity, legal status and any exploitation or coercion indicators."
+            ),
+            "required_lenses": [
+                "Legal status, care order, restrictions, pathway planning.",
+                "Relationship risks, CSE/CCE indicators, missing patterns.",
+                "Least restrictive lawful options; social worker involvement.",
+            ],
+            "avoid": [
+                "Treating age as automatic permission to leave without risk assessment.",
+                "Dismissing wishes without exploring coercion.",
             ],
         }
 

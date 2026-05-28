@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from services.orb_scenario_playbook_service import orb_scenario_playbook_service
+
 
 class OrbProfessionalCuriosityService:
     """Structured professional curiosity lenses for ORB high-attention topics.
@@ -165,6 +167,15 @@ class OrbProfessionalCuriosityService:
             "What support, coaching or debrief does the staff member need?",
             "What leadership follow-up prevents repetition or drift?",
         ],
+        "live_safeguarding_incident": [
+            "What is happening right now — who, where, immediate risk of harm?",
+            "Can staff engage verbally and delay safely without escalating?",
+            "Is there unknown adult, vehicle, weapon, substance or coercion indicator?",
+            "When might police, ambulance or EDT be needed now?",
+            "If physical intervention is considered: necessity, proportionality, least restrictiveness?",
+            "For 16–17: autonomy, maturity, exploitation risk.",
+            "If child leaves: missing procedure, vehicle details; do not block moving vehicles.",
+        ],
         "staffing": [
             "How does staffing pressure affect safety, consistency and relationships?",
             "Are supervision, training and safer recruitment gaps visible?",
@@ -192,12 +203,42 @@ class OrbProfessionalCuriosityService:
             "behaviour_support",
             "family_time",
             "staff_culture",
+            "live_safeguarding_incident",
+            "physical_intervention_live",
+            "age_16_17_autonomy",
         }
     )
 
     def detect_topic(self, message: str, *, mode: str | None = None) -> str | None:
         text = str(message or "").lower()
         mode_text = str(mode or "").lower()
+        if any(term in text for term in ("taken tablets", "overdose", "swallowed tablets", "self-harmed", "self harm")):
+            return "self_harm"
+        playbook = orb_scenario_playbook_service.detect_playbook(message)
+        if playbook:
+            return playbook.topic
+        if orb_scenario_playbook_service.is_live_incident(message):
+            return "live_safeguarding_incident"
+        playbook_topic = orb_scenario_playbook_service.detect_topic(message)
+        if any(term in text for term in ("17 year old", "17-year-old", "16 year old", "16-year-old")):
+            if any(term in text for term in ("boyfriend", "physically stop", "getting into", "leaving", "car")):
+                return playbook_topic or "age_16_17_autonomy"
+        if any(term in text for term in ("can i physically stop", "can i restrain", "can i grab", "can i block the door", "can i lock the door")):
+            return "physical_intervention_live"
+        if any(term in text for term in ("staff member touched", "touched them inappropriately", "disclosed assault", "disclosed abuse")):
+            return "allegations"
+        if any(term in text for term in ("bullying", "group intimidation", "intimidation on the unit")):
+            return "allegations"
+        if any(term in text for term in ("domestic abuse", "controlling behaviour", "coercive control")):
+            return "exploitation"
+        if any(term in text for term in ("arrived unplanned", "demanding to take the child", "parent turned up")):
+            return "live_safeguarding_incident"
+        if any(term in text for term in ("threatening to stab", "threatening another child")):
+            return "live_safeguarding_incident"
+        if any(term in text for term in ("social worker unhappy", "unhappy with our recording", "poor recording")):
+            return "recording"
+        if any(term in text for term in ("staff was shouting", "staff member was shouting", "shouting at a child")):
+            return "supervision"
         if self._is_cumulative_concern(text):
             return "cumulative_concern"
         if any(
@@ -234,7 +275,7 @@ class OrbProfessionalCuriosityService:
             "record this properly",
         }:
             return "recording"
-        if any(term in text for term in ("responsible individual", "registered manager", " ri ", "manager daily", "governance", "daily brief")):
+        if any(term in text for term in ("responsible individual", "registered manager", " ri ", "ri review", "manager daily", "governance", "daily brief")):
             return "leadership"
         if any(term in text for term in ("family time cancelled", "smashed cup", "therapeutic", "therapeutically", "dysregulated", "behaviour as communication")):
             return "therapeutic"
@@ -322,12 +363,15 @@ class OrbProfessionalCuriosityService:
             "pattern",
             "repeated",
             "three allegations",
+            "three allegations about",
             "nothing appears",
             "not right",
             "same staff",
             "same adult",
             "cumulative",
             "multiple incident",
+            "same staff member and a pattern",
+            "allegations about the same staff",
         )
         incident_mix = (
             sum(1 for term in ("allegation", "missing", "restraint") if term in text) >= 2
