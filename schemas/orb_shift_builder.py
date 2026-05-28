@@ -35,7 +35,7 @@ class OrbShiftBuilderSection(BaseModel):
 
 class OrbShiftBuilderResponse(BaseModel):
     success: bool = True
-    surface: str = "standalone_orb"
+    surface: str = "orb_residential"
     live_record_access: bool = False
     os_linked: bool = False
     mode: str

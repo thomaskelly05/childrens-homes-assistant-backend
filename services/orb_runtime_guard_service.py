@@ -22,6 +22,11 @@ BLOCKED_OPERATIONAL_ROUTE_PATTERNS = (
     "/operational",
     "/management",
     "/safeguarding/live",
+    "/young-people",
+    "/childrens-home-os",
+    "/visibility/young-people",
+    "/assistant/os",
+    "/orb/operational",
 )
 
 

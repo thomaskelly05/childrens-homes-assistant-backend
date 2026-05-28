@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
 from middleware.access_scope_middleware import AccessScopeMiddleware
+from middleware.orb_residential_guard_middleware import OrbResidentialGuardMiddleware
 from middleware.os_read_cache_middleware import OSReadCacheMiddleware
 from middleware.security_middleware import AuditLoggingMiddleware, CsrfProtectionMiddleware, SecurityHeadersMiddleware
 
@@ -67,11 +68,21 @@ def add_middlewares(app: FastAPI) -> None:
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(AuditLoggingMiddleware)
     app.add_middleware(OSReadCacheMiddleware)
+    app.add_middleware(OrbResidentialGuardMiddleware)
     app.add_middleware(AccessScopeMiddleware)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=allowed_origins(),
         allow_credentials=True,
         allow_methods=["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-        allow_headers=["Authorization", "Content-Type", "X-CSRF-Token", "X-Debug-Error", "x-api-key", "x-indicare-cache-bypass", "x-indicare-rsc"],
+        allow_headers=[
+            "Authorization",
+            "Content-Type",
+            "X-CSRF-Token",
+            "X-Debug-Error",
+            "X-ORB-Surface",
+            "x-api-key",
+            "x-indicare-cache-bypass",
+            "x-indicare-rsc",
+        ],
     )
