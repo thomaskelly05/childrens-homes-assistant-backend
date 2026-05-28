@@ -424,8 +424,8 @@ export async function createOperationalActions(
 export async function createOperationalBriefing(
   request: OrbOperationalRequest & { answer?: string | null },
   signal?: AbortSignal
-): Promise<OsApiResult<{ briefing: OrbOperationalBriefing | null }>> {
-  return postOperational('/api/assistant/orb/briefings/create', request, signal)
+): Promise<OsApiResult<OrbOperationalResponse>> {
+  return postOperational('/api/assistant/orb/briefing', request, signal)
 }
 
 export async function saveOperationalBriefing(
@@ -436,8 +436,8 @@ export async function saveOperationalBriefing(
     output_type?: OrbOperationalOutputType | null
   },
   signal?: AbortSignal
-): Promise<OsApiResult<{ briefing: OrbOperationalBriefing | null; export_payload?: OrbOperationalBriefing; warning?: string; saved_as_output_id?: string | null }>> {
-  return postOperational('/api/assistant/orb/briefings/save', { ...request, save: true }, signal)
+): Promise<OsApiResult<OrbOperationalResponse>> {
+  return postOperational('/api/assistant/orb/briefing', { ...request, save: true }, signal)
 }
 
 async function fetchOperational<T>(path: string, init?: RequestInit): Promise<T> {
