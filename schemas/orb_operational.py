@@ -35,6 +35,7 @@ OrbOperationalMode = Literal[
 ]
 
 OrbOperationalScope = Literal["home", "child", "staff", "provider", "current_user"]
+MAX_OPERATIONAL_LOOKBACK_DAYS = 365
 
 
 class OrbOperationalRequest(BaseModel):
@@ -46,7 +47,7 @@ class OrbOperationalRequest(BaseModel):
     home_id: int | None = None
     child_id: int | None = None
     staff_id: int | None = None
-    days: int = Field(default=7, ge=1, le=90)
+    days: int = Field(default=7, ge=1, le=MAX_OPERATIONAL_LOOKBACK_DAYS)
     include_actions: bool = True
     include_record_quality: bool = True
     include_patterns: bool = True
@@ -253,7 +254,7 @@ class OrbOperationalActionsDraftRequest(BaseModel):
     home_id: int | None = None
     child_id: int | None = None
     staff_id: int | None = None
-    days: int = Field(default=7, ge=1, le=90)
+    days: int = Field(default=7, ge=1, le=MAX_OPERATIONAL_LOOKBACK_DAYS)
     answer: str | None = None
 
 
@@ -277,7 +278,7 @@ class OrbOperationalBriefingRequest(BaseModel):
     home_id: int | None = None
     child_id: int | None = None
     staff_id: int | None = None
-    days: int = Field(default=7, ge=1, le=90)
+    days: int = Field(default=7, ge=1, le=MAX_OPERATIONAL_LOOKBACK_DAYS)
     answer: str | None = None
     save: bool = False
     output_type: OrbOperationalOutputType | None = None
