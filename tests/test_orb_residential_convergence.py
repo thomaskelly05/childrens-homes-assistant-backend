@@ -4,8 +4,10 @@ from unittest.mock import MagicMock
 
 import pytest
 from fastapi import HTTPException
+from starlette.responses import PlainTextResponse
 
 from auth.orb_residential_dependencies import is_orb_residential_only_user
+from middleware import orb_residential_guard_middleware as guard_middleware
 from services.orb_access_service import orb_access_service
 from services.orb_runtime_guard_service import orb_runtime_guard_service
 from services.orb_shift_builder_service import orb_shift_builder_service
@@ -116,6 +118,44 @@ def test_residential_only_user_without_records_read():
     if policy_engine.has_permission(user, "records:read"):
         pytest.skip("viewer has records:read in this policy config")
     assert is_orb_residential_only_user(user) is True
+
+
+def test_orb_guard_unknown_role_session_passes_to_os_auth(monkeypatch):
+    from starlette.requests import Request
+
+    monkeypatch.setattr(guard_middleware, "decode_session_token", lambda _token: {"sub": "5"})
+    scope = {
+        "type": "http",
+        "method": "GET",
+        "path": "/workspace",
+        "headers": [(b"cookie", b"session=token")],
+        "query_string": b"",
+    }
+    request = Request(scope)
+    user = guard_middleware._session_user(request)
+    assert user["user_id"] == 5
+    assert user["role"] == ""
+    assert user["permissions"] == []
+
+    has_session_scope_claims = bool(user.get("role") or user.get("permissions"))
+    assert has_session_scope_claims is False
+
+
+def test_orb_guard_admin_role_is_never_residential_only(monkeypatch):
+    from starlette.requests import Request
+
+    monkeypatch.setattr(guard_middleware, "decode_session_token", lambda _token: {"sub": "5", "role": "admin"})
+    scope = {
+        "type": "http",
+        "method": "GET",
+        "path": "/workspace",
+        "headers": [(b"cookie", b"session=token")],
+        "query_string": b"",
+    }
+    request = Request(scope)
+    user = guard_middleware._session_user(request)
+    assert user["role"] == "admin"
+    assert user["role"] in guard_middleware.OS_ADMIN_ROLES
 
 
 def test_premium_locked_http_shape(monkeypatch):
