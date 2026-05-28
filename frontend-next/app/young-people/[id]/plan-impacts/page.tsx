@@ -9,16 +9,16 @@ export default async function ChildPlanImpactsPage({ params }: { params: Promise
   return (
     <div data-testid="child-plan-impacts-page" className="space-y-6">
       <PageHeader
-        eyebrow="Plan impacts"
-        title="Suggested plan updates"
-        description="Review health, education, family, care and risk plan impacts. Accept, reject or create an action — plans are never updated silently."
+        eyebrow="Get to Know Me"
+        title="Living care plans"
+        description="Each plan has its own guidance and should grow from referral, records, reviews and the child’s voice. Suggested updates wait for manager review before becoming part of the live plan."
         action={
           <Link
             href={`/young-people/${id}/workspace`}
             data-testid="child-plan-impacts-back-workspace"
             className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-black text-slate-700"
           >
-            Workspace
+            Back to profile
           </Link>
         }
       />
