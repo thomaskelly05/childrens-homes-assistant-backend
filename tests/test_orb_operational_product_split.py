@@ -12,6 +12,7 @@ STANDALONE_ROUTES = REPO / "routers" / "orb_standalone_routes.py"
 OPERATIONAL_ROUTES = REPO / "routers" / "orb_operational_routes.py"
 ORB_COMPANION = REPO / "frontend-next" / "components" / "orb-standalone" / "orb-care-companion.tsx"
 OPERATIONAL_UI = REPO / "frontend-next" / "components" / "orb-operational" / "orb-conversation-experience.tsx"
+OPERATIONAL_OUTPUTS_PANEL = REPO / "frontend-next" / "components" / "orb-operational" / "orb-operational-outputs-panel.tsx"
 
 
 def test_standalone_client_does_not_import_operational_client():
@@ -53,6 +54,23 @@ def test_operational_client_uses_assistant_orb_api_only():
     assert "/api/orb/conversation" not in text
     assert "/api/assistant/orb/briefing" in text
     assert "/api/assistant/orb/briefings/" not in text
+
+
+def test_operational_client_exposes_output_review_lifecycle():
+    text = OPERATIONAL_CLIENT.read_text(encoding="utf-8")
+    assert "markOperationalOutputForReview" in text
+    assert "markOperationalOutputReviewed" in text
+    assert "/api/assistant/orb/outputs/${outputId}/review" in text
+    assert "/api/assistant/orb/outputs/${outputId}/reviewed" in text
+    assert "/api/assistant/orb/outputs/${outputId}/link-actions" in text
+
+
+def test_operational_outputs_panel_exposes_manager_review_completion():
+    text = OPERATIONAL_OUTPUTS_PANEL.read_text(encoding="utf-8")
+    assert "markOperationalOutputReviewed" in text
+    assert "handleReviewed" in text
+    assert "orb-mark-reviewed" in text
+    assert "Mark reviewed" in text
 
 
 def test_os_orb_api_helper_stays_inside_assistant_orb_boundary():
