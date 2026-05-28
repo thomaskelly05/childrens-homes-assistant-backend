@@ -57,12 +57,12 @@ export function OrbOperationalBriefingCard({
       output_type: 'manager_briefing',
       title: briefing.title
     })
-    const savedId = result.data?.saved_as_output_id
+    const savedId = result.data?.briefing?.saved_as_output_id || result.data?.operational_output?.output_id || null
     if (savedId) {
       setNotice(`Briefing saved (ref ${savedId.slice(0, 8)}).`)
       onSaved?.(savedId)
     } else {
-      setNotice(result.data?.warning || result.warning || 'Briefing export ready — copy if save is unavailable.')
+      setNotice(result.warning || 'Briefing export ready — copy if save is unavailable.')
     }
     setSaving(false)
   }
