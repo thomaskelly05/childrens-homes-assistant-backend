@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { FormEvent, useState } from 'react'
 
 import { fetchOrbResidential } from '@/components/orb-residential/orb-residential-api'
@@ -11,9 +12,16 @@ const QUICK_ACTIONS = [
   'Ofsted lens',
 ]
 
+const HISTORY = [
+  'Evening handover wording',
+  'After-contact reflection',
+  'Safeguarding concern notes',
+]
+
 export default function OrbAskPage() {
   const [message, setMessage] = useState('')
   const [answer, setAnswer] = useState('')
+  const [lastPrompt, setLastPrompt] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -21,6 +29,7 @@ export default function OrbAskPage() {
     event?.preventDefault()
     const text = message.trim()
     if (!text) return
+    setLastPrompt(text)
     setLoading(true)
     setError(null)
     setAnswer('')
@@ -47,26 +56,58 @@ export default function OrbAskPage() {
   }
 
   return (
-    <div className="mx-auto flex min-h-[calc(100vh-9rem)] max-w-4xl flex-col">
-      <div className="mb-5 flex items-center justify-between gap-3">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-[#6B7280]">ORB Residential</p>
-          <h1 className="text-2xl font-semibold tracking-tight text-[#111827]">Ask ORB</h1>
-        </div>
-        <div className="rounded-full border border-[#E5E7EB] bg-white px-3 py-2 text-xs text-[#6B7280] shadow-sm">
-          Powered by IndiCare Intelligence
-        </div>
-      </div>
+    <div className="grid min-h-[calc(100vh-7rem)] gap-4 lg:grid-cols-[17rem_1fr]">
+      <aside className="hidden rounded-[1.75rem] border border-white/70 bg-white/80 p-4 shadow-xl shadow-slate-200/70 backdrop-blur lg:block">
+        <Link href="/orb" className="flex items-center gap-2 rounded-2xl bg-[#111827] px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-slate-300">
+          <span className="text-lg">✦</span>
+          New ORB chat
+        </Link>
 
-      <div className="flex flex-1 flex-col rounded-[2rem] border border-[#E5E7EB] bg-white shadow-xl shadow-slate-200/80">
-        <div className="border-b border-[#EEF2F7] px-5 py-4">
-          <div className="flex flex-wrap gap-2">
+        <div className="mt-5">
+          <p className="px-2 text-xs font-semibold uppercase tracking-wide text-[#9CA3AF]">Today</p>
+          <div className="mt-2 space-y-1">
+            {HISTORY.map((item) => (
+              <button
+                key={item}
+                type="button"
+                className="w-full truncate rounded-xl px-3 py-2 text-left text-sm text-[#4B5563] hover:bg-[#F3F4F6]"
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-6 rounded-2xl bg-gradient-to-br from-indigo-50 to-white p-4 text-sm text-[#4B5563]">
+          <p className="font-semibold text-[#111827]">Standalone mode</p>
+          <p className="mt-2 leading-5">ORB only uses what you type, upload or save here. No OS records or chronology.</p>
+        </div>
+      </aside>
+
+      <section className="flex min-w-0 flex-col overflow-hidden rounded-[2rem] border border-white/70 bg-white/90 shadow-2xl shadow-slate-200/80 backdrop-blur">
+        <div className="flex items-center justify-between border-b border-[#EEF2F7] px-4 py-3 sm:px-5">
+          <div className="min-w-0">
+            <p className="text-xs font-medium uppercase tracking-wide text-[#9CA3AF]">ORB Residential</p>
+            <h1 className="truncate text-lg font-semibold tracking-tight text-[#111827]">Ask ORB</h1>
+          </div>
+          <div className="flex items-center gap-2">
+            <Link href="/orb/shift-builder" className="rounded-full bg-[#F3F4F6] px-3 py-2 text-xs font-medium text-[#4B5563] hover:bg-[#E5E7EB]">
+              Shift Builder
+            </Link>
+            <Link href="/orb/outputs" className="hidden rounded-full bg-[#F3F4F6] px-3 py-2 text-xs font-medium text-[#4B5563] hover:bg-[#E5E7EB] sm:inline-flex">
+              Saved
+            </Link>
+          </div>
+        </div>
+
+        <div className="border-b border-[#EEF2F7] px-4 py-3 sm:px-5">
+          <div className="flex gap-2 overflow-x-auto pb-1">
             {QUICK_ACTIONS.map((action) => (
               <button
                 key={action}
                 type="button"
                 onClick={() => useQuickAction(action)}
-                className="rounded-full border border-[#E5E7EB] bg-[#F8FAFC] px-3 py-1.5 text-xs font-medium text-[#374151] transition hover:bg-[#EEF2FF]"
+                className="shrink-0 rounded-full border border-[#E5E7EB] bg-[#F8FAFC] px-3 py-1.5 text-xs font-medium text-[#374151] transition hover:bg-[#EEF2FF]"
               >
                 {action}
               </button>
@@ -74,23 +115,47 @@ export default function OrbAskPage() {
           </div>
         </div>
 
-        <div className="flex-1 space-y-5 overflow-y-auto px-5 py-6">
-          {!answer && !loading && !error ? (
-            <div className="mx-auto max-w-2xl py-10 text-center">
-              <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-3xl bg-gradient-to-br from-[#111827] to-[#4338CA] text-2xl text-white shadow-lg shadow-indigo-200">
+        <div className="flex-1 space-y-5 overflow-y-auto px-4 py-6 sm:px-6">
+          {!answer && !loading && !error && !lastPrompt ? (
+            <div className="mx-auto max-w-2xl py-12 text-center">
+              <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-[1.5rem] bg-gradient-to-br from-[#111827] to-[#4338CA] text-3xl text-white shadow-lg shadow-indigo-200">
                 ✦
               </div>
-              <h2 className="text-2xl font-semibold tracking-tight text-[#111827]">What do you want to think through?</h2>
+              <h2 className="text-3xl font-semibold tracking-tight text-[#111827]">What do you want to think through?</h2>
               <p className="mt-3 text-sm leading-6 text-[#6B7280]">
-                Ask about recording, safeguarding, therapeutic reflection, shift pressure or Ofsted evidence. ORB only uses
-                what you provide here — no live OS records.
+                Recording, safeguarding, therapeutic reflection, shift pressure, Ofsted evidence or wording support.
               </p>
+              <div className="mt-6 grid gap-2 sm:grid-cols-2">
+                {[
+                  'Help me write this professionally',
+                  'Help me think about this safely',
+                  'Reframe this therapeutically',
+                  'What might Ofsted look for?',
+                ].map((starter) => (
+                  <button
+                    key={starter}
+                    type="button"
+                    onClick={() => setMessage(starter)}
+                    className="rounded-2xl border border-[#E5E7EB] bg-white px-4 py-3 text-left text-sm text-[#4B5563] shadow-sm hover:bg-[#F8FAFC]"
+                  >
+                    {starter}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {lastPrompt ? (
+            <div className="flex justify-end">
+              <div className="max-w-[85%] rounded-3xl bg-[#111827] px-5 py-3 text-sm leading-6 text-white shadow-lg shadow-slate-200">
+                {lastPrompt}
+              </div>
             </div>
           ) : null}
 
           {loading ? (
             <div className="flex items-start gap-3">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#111827] text-white">✦</div>
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#111827] to-[#4338CA] text-white">✦</div>
               <div className="rounded-3xl bg-[#F8FAFC] px-4 py-3 text-sm text-[#6B7280]">
                 ORB is thinking carefully…
               </div>
@@ -103,7 +168,7 @@ export default function OrbAskPage() {
 
           {answer ? (
             <div className="flex items-start gap-3">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#111827] text-white">✦</div>
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#111827] to-[#4338CA] text-white">✦</div>
               <article className="max-w-none flex-1 rounded-3xl bg-[#F8FAFC] px-5 py-4 text-sm leading-7 text-[#111827] whitespace-pre-wrap">
                 {answer}
               </article>
@@ -111,10 +176,10 @@ export default function OrbAskPage() {
           ) : null}
         </div>
 
-        <form onSubmit={onSubmit} className="border-t border-[#EEF2F7] p-4">
-          <div className="rounded-[1.75rem] border border-[#D1D5DB] bg-white p-2 shadow-sm focus-within:border-[#111827]">
+        <form onSubmit={onSubmit} className="border-t border-[#EEF2F7] bg-white/80 p-3 sm:p-4">
+          <div className="rounded-[1.75rem] border border-[#D1D5DB] bg-white p-2 shadow-sm focus-within:border-[#111827] focus-within:shadow-md">
             <textarea
-              className="max-h-40 min-h-[76px] w-full resize-none bg-transparent px-3 py-2 text-sm outline-none placeholder:text-[#9CA3AF]"
+              className="max-h-44 min-h-[76px] w-full resize-none bg-transparent px-3 py-2 text-sm outline-none placeholder:text-[#9CA3AF]"
               placeholder="Message ORB…"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
@@ -141,7 +206,7 @@ export default function OrbAskPage() {
             ORB can make mistakes. Use professional judgement and follow safeguarding procedures.
           </p>
         </form>
-      </div>
+      </section>
     </div>
   )
 }
