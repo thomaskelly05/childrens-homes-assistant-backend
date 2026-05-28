@@ -340,6 +340,21 @@ def create_orb_saved_project(
         return dict(cur.fetchone())
 
 
+def list_orb_saved_projects(conn, *, user_id: int, limit: int = 50) -> list[dict[str, Any]]:
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute(
+            """
+            SELECT id, user_id, title, description, project_type, metadata, created_at, updated_at
+            FROM orb_saved_projects
+            WHERE user_id = %s
+            ORDER BY updated_at DESC, created_at DESC
+            LIMIT %s
+            """,
+            (user_id, max(1, min(int(limit or 50), 100))),
+        )
+        return [dict(row) for row in cur.fetchall()]
+
+
 def save_orb_output(
     conn,
     *,
@@ -374,3 +389,19 @@ def save_orb_output(
             ),
         )
         return dict(cur.fetchone())
+
+
+def list_orb_saved_outputs(conn, *, user_id: int, limit: int = 50) -> list[dict[str, Any]]:
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute(
+            """
+            SELECT id, user_id, project_id, workflow, output_type, title, content,
+                   tags, metadata, created_at, updated_at
+            FROM orb_saved_outputs
+            WHERE user_id = %s
+            ORDER BY updated_at DESC, created_at DESC
+            LIMIT %s
+            """,
+            (user_id, max(1, min(int(limit or 50), 100))),
+        )
+        return [dict(row) for row in cur.fetchall()]
