@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from services.orb_data_vault_registry_service import orb_data_vault_registry_service
 from services.orb_grounded_answer_style_service import orb_grounded_answer_style_service
 from services.orb_official_source_anchor_service import orb_official_source_anchor_service
 from services.orb_residential_cognition_router import orb_residential_cognition_router
@@ -107,11 +108,13 @@ class OrbKnowledgeGroundingService:
         routing = routing or orb_residential_cognition_router.route(message=message, mode=mode)
         topic = routing.get("topic")
         vault_domains = list(routing.get("vault_domains") or [])
+        vault_details = orb_data_vault_registry_service.describe_domains(vault_domains)
         prompt = self.prompt_block(message=message, mode=mode, routing=routing)
         citations = self.citation_payload(message=message, mode=mode, routing=routing)
         return {
             "topic": topic,
             "vault_domains": vault_domains,
+            "vault_details": vault_details,
             "prompt_block": prompt,
             "citations": citations,
             "depth_level": routing.get("depth_level"),
@@ -130,18 +133,26 @@ class OrbKnowledgeGroundingService:
         if not vault_domains and not routing.get("residential"):
             return ""
 
+        vault_details = orb_data_vault_registry_service.describe_domains(list(vault_domains))
         lines = [
-            "Knowledge grounding layer (built-in vaults — not live OS records):",
+            "Knowledge grounding layer (built-in data vaults — not live OS records):",
             f"- Detected topic: {topic or 'general residential'}",
             f"- Depth level: {routing.get('depth_level')}",
-            "- Relevant vault domains for this answer:",
+            "- Relevant data vaults for this answer:",
         ]
-        for domain in vault_domains:
-            desc = self.VAULT_DESCRIPTIONS.get(domain, "Institutional practice guidance.")
-            lines.append(f"  - {domain}: {desc}")
+        for vault in vault_details:
+            desc = vault.get("description") or "Institutional practice guidance."
+            modules = ", ".join(vault.get("typical_modules") or [])
+            anchors = ", ".join(vault.get("typical_anchors") or [])
+            lines.append(f"  - {vault.get('name')}: {desc}")
+            if modules:
+                lines.append(f"    Typical knowledge modules: {modules}")
+            if anchors:
+                lines.append(f"    Typical anchors: {anchors}")
         lines.extend(
             [
                 "- Use only vault guidance relevant to this question; do not list generic product sources.",
+                "- Data vaults in standalone ORB are built-in practice domains, not live IndiCare OS records.",
                 "- Prefer inline citation anchors in the answer body over a generic Sources/basis footer.",
             ]
         )
