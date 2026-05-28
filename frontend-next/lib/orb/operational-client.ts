@@ -499,6 +499,31 @@ export async function markOperationalOutputForReview(outputId: string): Promise<
   }
 }
 
+export async function markOperationalOutputReviewed(outputId: string): Promise<OrbOperationalOutputRecord | null> {
+  try {
+    return await fetchOperational<OrbOperationalOutputRecord>(
+      `/api/assistant/orb/outputs/${outputId}/reviewed`,
+      { method: 'POST', body: '{}' }
+    )
+  } catch {
+    return null
+  }
+}
+
+export async function linkOperationalOutputActions(
+  outputId: string,
+  actionIds: string[]
+): Promise<OrbOperationalOutputRecord | null> {
+  try {
+    return await fetchOperational<OrbOperationalOutputRecord>(
+      `/api/assistant/orb/outputs/${outputId}/link-actions`,
+      { method: 'POST', body: JSON.stringify({ action_ids: actionIds }) }
+    )
+  } catch {
+    return null
+  }
+}
+
 export async function archiveOperationalOutput(outputId: string): Promise<void> {
   await fetchOperational(`/api/assistant/orb/outputs/${outputId}/archive`, { method: 'POST', body: '{}' })
 }
