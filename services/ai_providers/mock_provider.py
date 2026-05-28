@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 import time
+from collections.abc import AsyncIterator
 
 from schemas.ai_models import (
     AiProviderName,
@@ -35,6 +37,14 @@ class MockAiProvider(AiProviderBase):
             finish_reason="mock",
             metadata={"mock": True},
         )
+
+    async def stream(self, request: AiProviderRequest) -> AsyncIterator[str]:
+        response = await self.complete(request)
+        text = response.text or ""
+        chunk_size = 18
+        for index in range(0, len(text), chunk_size):
+            yield text[index : index + chunk_size]
+            await asyncio.sleep(0)
 
 
 mock_provider = MockAiProvider()

@@ -17,6 +17,7 @@ Instead it:
 This gives us a safe runtime convergence path without breaking /orb.
 """
 
+from collections.abc import AsyncIterator
 from typing import Any
 
 from services.orb_general_assistant_service import orb_general_assistant_service
@@ -158,6 +159,121 @@ class OrbConvergedGeneralAssistantService:
         result["safe_to_show"] = processed.get("safe_to_show")
         result["contract_ui_schema"] = context_packet.contract_ui_schema
         return result
+
+    async def stream_answer(
+        self,
+        message: str,
+        *,
+        history: list[dict[str, Any]] | None = None,
+        detail: str = "concise",
+        image_data_urls: list[str] | None = None,
+        mode: str | None = None,
+        profile_context: bool = False,
+        document_text: str | None = None,
+        document_source_id: str | None = None,
+        document_title: str | None = None,
+        raw_user_message: str | None = None,
+        stream_meta: dict[str, Any] | None = None,
+    ) -> AsyncIterator[str]:
+        user_message = _safe_text(raw_user_message) or _safe_text(message)
+        supplied_context_types: list[str] = []
+        if document_text or document_source_id:
+            supplied_context_types.append("uploaded_document")
+        if image_data_urls:
+            supplied_context_types.append("image_attachment")
+        if profile_context:
+            supplied_context_types.append("standalone_profile_context")
+        if history:
+            supplied_context_types.append("conversation_history")
+
+        retrieval_bundle = orb_knowledge_retrieval_service.prepare_request_bundle(
+            user_message,
+            mode=mode,
+            profile_context=profile_context,
+            attachments=["image"] if image_data_urls else None,
+        )
+        prompt_tier = retrieval_bundle["prompt_tier"]
+
+        if prompt_tier == "fast":
+            prompt_block = (
+                "ORB Residential standalone (fast path): concise, accurate answers. "
+                "No live IndiCare OS records. Add safeguarding or recording boundaries only if the question requires them.\n"
+                f"Mode: {_safe_text(mode) or 'Ask ORB'}"
+            )
+        else:
+            prompt_block = orb_residential_intelligence_service.build_prompt_block(
+                user_message,
+                mode=mode,
+                surface="standalone",
+                supplied_context_types=supplied_context_types,
+            )
+
+        enriched_message = (
+            f"{prompt_block}\n\n"
+            "============================================================\n"
+            "USER REQUEST\n"
+            f"{user_message}"
+        )
+
+        inner_meta: dict[str, Any] = {}
+        async for delta in orb_general_assistant_service.stream_answer(
+            enriched_message,
+            history=history,
+            detail=detail,
+            image_data_urls=image_data_urls,
+            mode=mode,
+            profile_context=profile_context,
+            document_text=document_text,
+            document_source_id=document_source_id,
+            document_title=document_title,
+            raw_user_message=user_message,
+            stream_meta=inner_meta,
+        ):
+            yield delta
+
+        answer_text = _safe_text(inner_meta.get("answer"))
+        if not answer_text:
+            return
+
+        processed = orb_residential_intelligence_service.process_answer(
+            answer_text=answer_text,
+            message=user_message,
+            mode=mode,
+            surface="standalone",
+            sources=inner_meta.get("sources") or [],
+            evidence_index=[],
+            runtime={
+                "detail": detail,
+                "supplied_context_types": supplied_context_types,
+                "converged_runtime": True,
+            },
+        )
+
+        context_used = dict(inner_meta.get("context_used") or {})
+        context_used.update(
+            {
+                "surface": "orb_residential",
+                "premium": True,
+                "prompt_tier": prompt_tier,
+                "orb_residential_convergence": {
+                    "enabled": True,
+                    "surface": "orb_residential",
+                    "live_record_access": False,
+                    "os_linked": False,
+                    "care_record_access": False,
+                    "quality": processed.get("quality"),
+                    "safe_to_show": processed.get("safe_to_show"),
+                },
+            }
+        )
+        context_used["care_record_access"] = False
+        context_used["os_linked"] = False
+        inner_meta["answer"] = processed.get("answer") or answer_text
+        inner_meta["context_used"] = context_used
+        inner_meta["quality"] = processed.get("quality")
+        inner_meta["safe_to_show"] = processed.get("safe_to_show")
+        if stream_meta is not None:
+            stream_meta.update(inner_meta)
 
     def build_shift_builder_draft(self, notes: str) -> dict[str, str]:
         """Expose the paid Shift Builder scaffold through the converged runtime."""

@@ -5,6 +5,7 @@ import logging
 import os
 import re
 import time
+from collections.abc import AsyncIterator
 from typing import Any
 
 from schemas.ai_models import (
@@ -341,6 +342,121 @@ class AiModelRouterService:
         )
         return response, decision, trace
 
+    async def stream_with_routing(
+        self,
+        *,
+        message: str,
+        system_prompt: str,
+        history: list[dict[str, Any]] | None = None,
+        images: list[str] | None = None,
+        mode: str | None = None,
+        retrieval_context: dict[str, Any] | None = None,
+        detail_level: str = "concise",
+        research_intent: bool = False,
+        voice_mode: bool = False,
+        surface: str = "standalone_orb_ai",
+    ) -> AsyncIterator[tuple[str, AiRoutingDecision, AiModelRouterTrace]]:
+        """Yield text deltas with routing metadata attached after the first chunk."""
+        routing_request = AiRoutingRequest(
+            message=message,
+            system_prompt=system_prompt,
+            history=history or [],
+            images=images or [],
+            mode=mode,
+            detail_level=detail_level,
+            research_intent=research_intent,
+            retrieval_context=retrieval_context,
+            voice_mode=voice_mode,
+            surface=surface,
+        )
+        decision = self.route(routing_request)
+        provider_request = AiProviderRequest(
+            provider=decision.provider,
+            model=decision.model,
+            system_prompt=system_prompt,
+            message=message,
+            history=history or [],
+            images=images or [],
+            max_output_tokens=decision.max_output_tokens,
+            timeout_seconds=decision.timeout_seconds,
+            metadata={"task_type": decision.task_type.value},
+        )
+
+        started = time.perf_counter()
+        trace: AiModelRouterTrace | None = None
+        fallback_used = False
+        emitted = False
+        strict = _env_bool("AI_PROVIDER_STRICT", False)
+
+        async def _yield_provider_stream(
+            request: AiProviderRequest,
+            routed_decision: AiRoutingDecision,
+        ) -> None:
+            nonlocal trace, emitted, fallback_used
+            provider_impl = self._get_provider(request.provider)
+            if not provider_impl.is_available():
+                return
+            async for delta in provider_impl.stream(request):
+                if not delta:
+                    continue
+                emitted = True
+                if trace is None:
+                    trace = AiModelRouterTrace(
+                        task_type=routed_decision.task_type,
+                        risk_level=routed_decision.risk_level,
+                        quality_tier=routed_decision.quality_tier,
+                        cost_tier=routed_decision.cost_tier,
+                        provider=request.provider,
+                        model=request.model,
+                        reason=routed_decision.reason,
+                        fallback_used=fallback_used,
+                        latency_ms=int((time.perf_counter() - started) * 1000),
+                    )
+                yield delta, routed_decision, trace
+
+        async for item in _yield_provider_stream(provider_request, decision):
+            yield item
+
+        if not emitted and not strict and decision.fallback_provider and decision.fallback_model:
+            fallback_used = True
+            fallback_request = provider_request.model_copy(
+                update={
+                    "provider": decision.fallback_provider,
+                    "model": decision.fallback_model,
+                }
+            )
+            async for item in _yield_provider_stream(fallback_request, decision):
+                yield item
+
+        if not emitted:
+            response = await self.complete(provider_request, decision)
+            if (response.error or not response.text) and not strict:
+                if decision.fallback_provider and decision.fallback_model:
+                    fallback_used = True
+                    fallback_request = provider_request.model_copy(
+                        update={
+                            "provider": decision.fallback_provider,
+                            "model": decision.fallback_model,
+                        }
+                    )
+                    response = await self.complete(fallback_request, decision)
+            if response.text:
+                if trace is None:
+                    trace = AiModelRouterTrace(
+                        task_type=decision.task_type,
+                        risk_level=decision.risk_level,
+                        quality_tier=decision.quality_tier,
+                        cost_tier=decision.cost_tier,
+                        provider=response.provider,
+                        model=response.model,
+                        reason=decision.reason,
+                        fallback_used=fallback_used,
+                        latency_ms=response.latency_ms or int((time.perf_counter() - started) * 1000),
+                        error=response.error,
+                    )
+                for delta in _chunk_text_for_stream(response.text):
+                    yield delta, decision, trace
+
     def fallback_response(
         self,
         error: str | None,
@@ -389,6 +505,13 @@ class AiModelRouterService:
             self.complete_with_routing(**kwargs),
             timeout=STANDALONE_LLM_TIMEOUT_SECONDS,
         )
+
+
+def _chunk_text_for_stream(text: str, *, chunk_size: int = 28) -> list[str]:
+    cleaned = str(text or "")
+    if not cleaned:
+        return []
+    return [cleaned[index : index + chunk_size] for index in range(0, len(cleaned), chunk_size)]
 
 
 ai_model_router_service = AiModelRouterService()
