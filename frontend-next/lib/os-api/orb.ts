@@ -68,6 +68,46 @@ export type OrbConversationResponse = {
   conversation_id?: string
 }
 
+type OperationalSource = {
+  label?: string
+  title?: string
+  source_type?: string
+  record_type?: string
+  record_id?: string
+  source_id?: string
+  route?: string | null
+  date?: string | null
+  basis?: string | null
+  summary?: string | null
+}
+
+type OperationalAction = {
+  label?: string
+  title?: string
+  route?: string | null
+  type?: string
+  action_type?: string
+}
+
+type OperationalConversationPayload = {
+  answer?: string
+  summary?: string
+  context_summary?: { headline?: string; degraded?: boolean; unavailable?: boolean }
+  sources?: OperationalSource[]
+  citations?: OperationalSource[]
+  follow_up_actions?: OperationalAction[]
+  draft_actions?: OperationalAction[]
+  review_prompts?: OperationalAction[]
+  recommendations?: OperationalAction[]
+  actions?: OperationalAction[]
+  warnings?: string[]
+  boundaries?: { notices?: string[] }
+  permissions?: { scope_resolved?: string | null }
+  care_record_access?: boolean
+  os_linked?: boolean
+  standalone_only?: boolean
+}
+
 function unavailable(message: string): OsApiResult<OrbConversationResponse> {
   return {
     source: 'unavailable',
@@ -85,9 +125,63 @@ function unavailable(message: string): OsApiResult<OrbConversationResponse> {
   }
 }
 
+function toOrbSource(source: OperationalSource, index: number): OrbSource {
+  const recordType = source.source_type || source.record_type || 'operational_source'
+  return {
+    title: source.label || source.title || `Source ${index + 1}`,
+    record_type: recordType,
+    record_id: String(source.record_id || source.source_id || `${recordType}-${index}`),
+    route: source.route || null,
+    date: source.date || null,
+    citation_ref: `[${index + 1}]`,
+    summary: source.basis || source.summary || undefined
+  }
+}
+
+function toOrbAction(action: OperationalAction, index: number): OrbAction {
+  const rawType = action.type || action.action_type || 'review'
+  const type: OrbAction['type'] = rawType === 'create_task' || rawType === 'open_record' || rawType === 'draft_report' ? rawType : 'review'
+  return {
+    label: action.label || action.title || `Action ${index + 1}`,
+    type,
+    route: action.route || null
+  }
+}
+
+function normaliseOperationalConversation(payload: OperationalConversationPayload): OrbConversationResponse {
+  const sourceItems = Array.isArray(payload.sources) ? payload.sources : Array.isArray(payload.citations) ? payload.citations : []
+  const sources = sourceItems.map(toOrbSource)
+  const actionItems = [
+    ...(Array.isArray(payload.actions) ? payload.actions : []),
+    ...(Array.isArray(payload.follow_up_actions) ? payload.follow_up_actions : []),
+    ...(Array.isArray(payload.draft_actions) ? payload.draft_actions : []),
+    ...(Array.isArray(payload.review_prompts) ? payload.review_prompts : []),
+    ...(Array.isArray(payload.recommendations) ? payload.recommendations : [])
+  ]
+  const actions = actionItems.slice(0, 10).map(toOrbAction)
+  const answer = payload.answer || 'OS ORB returned no answer.'
+  const degraded = Boolean(payload.context_summary?.degraded || payload.context_summary?.unavailable)
+  return {
+    ok: Boolean(payload.answer && payload.os_linked !== false && payload.standalone_only !== true),
+    answer,
+    summary: payload.context_summary?.headline || payload.summary || answer.split('\n', 1)[0].slice(0, 220),
+    sources,
+    citations: sources,
+    actions,
+    confidence: degraded ? 'low' : 'medium',
+    guardrails: payload.boundaries?.notices || ['OS ORB supports review; it does not replace registered manager or safeguarding judgement.'],
+    context_used: {
+      scope: payload.permissions?.scope_resolved || undefined,
+      care_retrieval: payload.care_record_access,
+      degraded,
+      snapshot_hit: !payload.context_summary?.unavailable
+    }
+  }
+}
+
 export async function queryOrbConversation(request: OrbConversationRequest, signal?: AbortSignal): Promise<OsApiResult<OrbConversationResponse>> {
   try {
-    const payload = await authFetch<OrbConversationResponse>('/api/assistant/orb/conversation', {
+    const envelope = await authFetch<{ success?: boolean; data?: OperationalConversationPayload }>('/api/assistant/orb/conversation', {
       method: 'POST',
       signal,
       body: JSON.stringify({
@@ -103,15 +197,11 @@ export async function queryOrbConversation(request: OrbConversationRequest, sign
         include_record_quality: true
       })
     })
+    const data = normaliseOperationalConversation(envelope.data || {})
     return {
-      data: {
-        ...payload,
-        sources: Array.isArray(payload.sources) ? payload.sources : [],
-        actions: Array.isArray(payload.actions) ? payload.actions : [],
-        guardrails: Array.isArray(payload.guardrails) ? payload.guardrails : []
-      },
-      source: payload.ok ? 'live' : 'unavailable',
-      meta: payload.context_used as Record<string, unknown>
+      data,
+      source: data.ok ? 'live' : 'unavailable',
+      meta: data.context_used as Record<string, unknown>
     }
   } catch (error) {
     if (error instanceof AuthApiError) {
