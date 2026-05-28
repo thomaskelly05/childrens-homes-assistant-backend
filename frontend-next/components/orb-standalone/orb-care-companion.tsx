@@ -86,6 +86,7 @@ import {
   buildProfileContextBlock,
   createStandaloneChat,
   dedupeOrbMessages,
+  ensureStandaloneMessage,
   defaultWorkspace,
   readStandaloneWorkspace,
   repairOrbWorkspace,
@@ -105,6 +106,7 @@ import {
   logOrbCognitionDebug,
   logOrbTiming,
   queryStandaloneOrbConversation,
+  runStandaloneOrbAction,
   sendStandaloneOrbMessageStream,
   STANDALONE_ORB_EMPTY_ANSWER_MESSAGE,
   STANDALONE_ORB_MODES,
@@ -112,6 +114,10 @@ import {
   type StandaloneOrbConversationResponse,
   type StandaloneOrbMode
 } from '@/lib/orb/standalone-client'
+import {
+  backendOrbActionIdForFollowUp,
+  isBackendSupportedOrbResponseAction
+} from '@/lib/orb/orb-response-actions'
 import { collectCognitionDisplayLabels } from '@/lib/orb/residential-agents'
 
 /** Push-to-talk voice with reflective pacing — no passive listening. */
@@ -1411,7 +1417,7 @@ export function OrbCareCompanion() {
     inputRef.current?.focus()
   }
 
-  function handleOrbFollowUp(action: OrbResponseFollowUpAction, sourceContent: string) {
+  function prefillOrbFollowUpComposer(action: OrbResponseFollowUpAction, sourceContent: string) {
     const excerpt = sourceContent.slice(0, 2400)
     const prompts: Record<OrbResponseFollowUpAction, string> = {
       improve_wording: `Improve the professional wording below. Keep facts unchanged; do not invent details.\n\n${excerpt}`,
@@ -1432,6 +1438,100 @@ export function OrbCareCompanion() {
     if (action === 'recording_wording') handleModeChange('Record This Properly')
     setMessage(prompts[action])
     inputRef.current?.focus()
+  }
+
+  async function handleOrbFollowUp(
+    action: OrbResponseFollowUpAction,
+    sourceContent: string,
+    assistantIndex?: number
+  ) {
+    if (action === 'ofsted_lens') handleModeChange('Ofsted Lens')
+    if (action === 'safeguarding_lens') handleModeChange('Safeguarding Thinking')
+    if (action === 'recording_wording') handleModeChange('Record This Properly')
+
+    if (!isBackendSupportedOrbResponseAction(action)) {
+      prefillOrbFollowUpComposer(action, sourceContent)
+      return
+    }
+
+    const backendAction = backendOrbActionIdForFollowUp(action)
+    if (!backendAction || pending || sendInFlightRef.current) {
+      prefillOrbFollowUpComposer(action, sourceContent)
+      return
+    }
+
+    const chatId = workspace.activeChatId
+    if (!chatId) {
+      prefillOrbFollowUpComposer(action, sourceContent)
+      return
+    }
+
+    const sourceMessage =
+      typeof assistantIndex === 'number'
+        ? precedingUserMessageHint(visibleMessages, assistantIndex)
+        : precedingUserMessageHint(visibleMessages, visibleMessages.length - 1)
+
+    const thinkingMessage = ensureStandaloneMessage({
+      role: 'assistant',
+      content: '',
+      status: 'thinking',
+      thinkingLabel: 'Running ORB action…'
+    })
+
+    setPending(true)
+    setWorkspace((current) => {
+      const chat = current.chats.find((c) => c.id === chatId)
+      if (!chat) return current
+      return patchActiveChat(current, chatId, {
+        messages: dedupeOrbMessages([...chat.messages, thinkingMessage])
+      })
+    })
+
+    try {
+      const result = await runStandaloneOrbAction({
+        action: backendAction,
+        source_message: sourceMessage,
+        source_answer: sourceContent.slice(0, 12000),
+        mode,
+        context: { surface: 'standalone_orb_action', frontend_action: action }
+      })
+
+      const actionMessage = ensureStandaloneMessage({
+        id: thinkingMessage.id,
+        role: 'assistant',
+        content: result.answer,
+        status: 'complete',
+        sources: result.sources,
+        explainability: {
+          confidence: result.confidence,
+          human_review_boundaries: [
+            'Standalone ORB action — based only on provided text, not live OS records.'
+          ],
+          reasoning_summary: result.title
+        }
+      })
+
+      setWorkspace((current) => {
+        const chat = current.chats.find((c) => c.id === chatId)
+        if (!chat) return current
+        return patchActiveChat(current, chatId, {
+          messages: replaceMessageById(chat.messages, thinkingMessage.id, actionMessage)
+        })
+      })
+      setDraftNotice(`${result.title} — standalone ORB action (not an OS record).`)
+    } catch {
+      setWorkspace((current) => {
+        const chat = current.chats.find((c) => c.id === chatId)
+        if (!chat) return current
+        return patchActiveChat(current, chatId, {
+          messages: chat.messages.filter((m) => m.id !== thinkingMessage.id)
+        })
+      })
+      setDraftNotice('Action could not run — composer prefill is available instead.')
+      prefillOrbFollowUpComposer(action, sourceContent)
+    } finally {
+      setPending(false)
+    }
   }
 
   async function saveChatNote(entry: StandaloneChatMessage) {
@@ -2153,7 +2253,7 @@ export function OrbCareCompanion() {
                               />
                               {entry.status === 'complete' ? (
                                 <OrbSuggestedReplyChips
-                                  onSelect={(action) => handleOrbFollowUp(action, entry.content)}
+                                  onSelect={(action) => handleOrbFollowUp(action, entry.content, index)}
                                 />
                               ) : null}
                               </>

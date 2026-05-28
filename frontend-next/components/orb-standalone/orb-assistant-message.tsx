@@ -295,8 +295,8 @@ export function OrbResponseActionBar({
   onSupervision?: () => void
   onExport?: () => void
   onInspectionPrep?: () => void
-  /** Prefill composer with an ORB-native follow-up (frontend-only; does not imply OS access). */
-  onOrbFollowUp?: (action: OrbResponseFollowUpAction, sourceContent: string) => void
+  /** Run structured ORB action or composer prefill fallback for unsupported actions. */
+  onOrbFollowUp?: (action: OrbResponseFollowUpAction, sourceContent: string, assistantIndex?: number) => void
 }) {
   const [moreOpen, setMoreOpen] = useState(false)
   const modeKey = mode.trim().toLowerCase()
