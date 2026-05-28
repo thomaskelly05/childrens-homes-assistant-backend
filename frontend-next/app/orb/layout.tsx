@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { ReactNode } from 'react'
 
 import './orb-chatgpt-light.css'
+import './orb-premium.css'
 import { ORB_APPEARANCE_BOOTSTRAP_SCRIPT } from '@/lib/orb/orb-appearance'
 import {
   ORB_COGNITION_ROUTING_BUILD,
