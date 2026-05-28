@@ -55,16 +55,17 @@ class OrbConvergedGeneralAssistantService:
         if history:
             supplied_context_types.append("conversation_history")
 
+        surface = "standalone"
         context_packet = orb_residential_intelligence_service.build_context_packet(
             user_message,
             mode=mode,
-            surface="standalone",
+            surface=surface,
             supplied_context_types=supplied_context_types,
         )
         prompt_block = orb_residential_intelligence_service.build_prompt_block(
             user_message,
             mode=mode,
-            surface="standalone",
+            surface=surface,
             supplied_context_types=supplied_context_types,
         )
 
@@ -93,7 +94,7 @@ class OrbConvergedGeneralAssistantService:
             answer_text=answer_text,
             message=user_message,
             mode=mode,
-            surface="standalone",
+            surface=surface,
             sources=result.get("sources") or [],
             evidence_index=[],
             runtime={
@@ -106,22 +107,32 @@ class OrbConvergedGeneralAssistantService:
         context_used = dict(result.get("context_used") or {})
         context_used.update(
             {
+                "surface": "orb_residential",
+                "premium": True,
                 "orb_residential_convergence": {
                     "enabled": True,
-                    "surface": "standalone",
+                    "surface": "orb_residential",
                     "contract_mode": context_packet.contract_mode,
                     "detected_mode": context_packet.detected_mode,
                     "selected_knowledge_modules": context_packet.selected_knowledge_modules,
                     "required_sections": context_packet.required_sections,
                     "live_record_access": False,
                     "os_linked": False,
+                    "care_record_access": False,
                     "quality": processed.get("quality"),
                     "safe_to_show": processed.get("safe_to_show"),
-                }
+                    "workflow_metadata": {
+                        "converged_runtime": True,
+                        "intelligence_spine": True,
+                    },
+                    "answer_quality_metadata": processed.get("quality"),
+                },
             }
         )
         context_used["care_record_access"] = False
         context_used["os_linked"] = False
+        context_used["live_record_access"] = False
+        context_used["premium"] = True
 
         result["context_used"] = context_used
         result["internal_data_access"] = False

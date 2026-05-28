@@ -124,6 +124,7 @@ class OrbShiftBuilderService:
             )
 
         return OrbShiftBuilderResponse(
+            surface="orb_residential",
             mode=payload.mode,
             sections=sections,
             context_packet=context_packet,

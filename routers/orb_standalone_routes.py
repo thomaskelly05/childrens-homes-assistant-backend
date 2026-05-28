@@ -10,6 +10,9 @@ from pydantic import BaseModel, ConfigDict, Field
 from auth.permissions import require_standalone_orb_access
 from services.orb_citation_service import orb_citation_service
 from services.ai_provider_registry import ai_provider_registry
+import os
+
+from services.orb_converged_general_assistant_service import orb_converged_general_assistant_service
 from services.orb_general_assistant_service import orb_general_assistant_service
 from services.orb_knowledge_retrieval_service import orb_knowledge_retrieval_service
 from services.orb_standalone_brain_service import orb_standalone_brain_service
@@ -494,7 +497,18 @@ async def standalone_orb_conversation(
 
     started = time.perf_counter()
     try:
-        assistant_data = await orb_general_assistant_service.answer(
+        use_converged = os.getenv("ORB_USE_CONVERGED_RUNTIME", "true").strip().lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
+        assistant_runtime = (
+            orb_converged_general_assistant_service
+            if use_converged
+            else orb_general_assistant_service
+        )
+        assistant_data = await assistant_runtime.answer(
             framed_message,
             history=history,
             detail=detail,

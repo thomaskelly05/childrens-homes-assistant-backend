@@ -31,6 +31,9 @@ from assistant.response_contracts import (
     normalise_contract_mode,
 )
 from services.orb_standalone_brain_service import orb_standalone_brain_service
+from services.recording_intelligence_service import recording_intelligence_service
+from services.safeguarding_intelligence_service import safeguarding_intelligence_service
+from services.therapeutic_intelligence_service import therapeutic_intelligence_service
 
 OrbSurface = Literal["standalone", "operational"]
 
@@ -178,6 +181,20 @@ class OrbResidentialIntelligenceService:
         else:
             lines.append("- No specialist knowledge module selected; use general safe practice reasoning.")
 
+        mode_key = (packet.requested_mode or packet.detected_mode or "").lower()
+        if surface == "standalone" and any(
+            term in mode_key for term in ("safeguarding", "safeguard")
+        ):
+            lines.extend(["", safeguarding_intelligence_service.build_prompt_block(message)])
+        if surface == "standalone" and any(
+            term in mode_key for term in ("therapeutic", "reframe")
+        ):
+            lines.extend(["", therapeutic_intelligence_service.build_prompt_block(message)])
+        if surface == "standalone" and any(
+            term in mode_key for term in ("record", "recording", "write up", "daily note")
+        ):
+            lines.extend(["", recording_intelligence_service.build_prompt_block(message)])
+
         return "\n".join(lines).strip()
 
     def process_answer(
@@ -224,8 +241,9 @@ class OrbResidentialIntelligenceService:
         )
         return OrbShiftBuilderDraft(
             daily_note_prompt=(
-                f"{base}\n\nCreate a factual, child-centred daily note from these notes:\n{supplied}\n\n"
-                "Include: what happened, child voice/presentation, staff response, outcome and follow-up."
+                f"{base}\n\n{recording_intelligence_service.build_prompt_block(supplied)}\n\n"
+                "Create a factual, child-centred daily note from these notes:\n"
+                f"{supplied}\n\nInclude: what happened, child voice/presentation, staff response, outcome and follow-up."
             ),
             handover_prompt=(
                 f"{base}\n\nCreate a shift handover from these notes:\n{supplied}\n\n"
@@ -236,7 +254,7 @@ class OrbResidentialIntelligenceService:
                 "Do not decide thresholds. Flag possible incident, missing, restraint, injury, allegation, medication, safeguarding or manager review needs."
             ),
             safeguarding_prompt=(
-                f"{base}\n\nThink through any safeguarding considerations in these notes:\n{supplied}\n\n"
+                f"{base}\n\n{safeguarding_intelligence_service.build_prompt_block(supplied)}\n\n"
                 "Separate known facts, concerns, missing information and possible escalation routes."
             ),
             manager_review_prompt=(
@@ -244,8 +262,8 @@ class OrbResidentialIntelligenceService:
                 "Focus on oversight, evidence gaps, action ownership, plan review and supervision/learning points."
             ),
             therapeutic_reflection_prompt=(
-                f"{base}\n\nCreate a therapeutic reflection from these notes:\n{supplied}\n\n"
-                "Use trauma-informed and behaviour-as-communication thinking without diagnosis or unsupported formulation."
+                f"{base}\n\n{therapeutic_intelligence_service.build_prompt_block(supplied)}\n\n"
+                "Create a therapeutic reflection using trauma-informed and behaviour-as-communication thinking."
             ),
             missing_information_prompt=(
                 f"{base}\n\nIdentify missing information from these notes before they are relied upon:\n{supplied}\n\n"

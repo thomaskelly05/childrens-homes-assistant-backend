@@ -293,3 +293,22 @@ than:
 - operational admin systems
 
 This is a critical product distinction.
+
+---
+
+# Provider configuration (implementation)
+
+| Variable | Purpose |
+|----------|---------|
+| `STRIPE_SECRET_KEY` | Stripe API |
+| `STRIPE_WEBHOOK_SECRET` | Subscription webhooks → `users.subscription_*` |
+| `STRIPE_PRICE_ID` | £9.99/month price (or dedicated `ORB_RESIDENTIAL_STRIPE_PRICE_ID` when added) |
+| `FRONTEND_APP_URL` | Checkout success/cancel redirects |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google OAuth (wire via existing auth when enabled) |
+| `APPLE_CLIENT_ID` / team keys | Sign in with Apple |
+| `MICROSOFT_CLIENT_ID` / secret | Microsoft login |
+| Magic link | Use existing email OTP/magic-link auth routes — no password storage |
+
+Payments: Stripe Checkout supports cards, Apple Pay, Google Pay, and Link when enabled in the Stripe Dashboard.
+
+ORB Residential API: `/orb/residential/access`, `/billing/checkout`, `/billing/portal` (reuse existing billing routes).
