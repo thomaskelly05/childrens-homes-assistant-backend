@@ -43,7 +43,24 @@ const quickPrompts: Array<{ mode: OrbOperationalMode; label: string; prompt: str
   { mode: 'manager_daily_brief', label: 'Daily brief', prompt: 'Give me a simple daily brief.' }
 ]
 
+function cleanOrbAnswer(answer: string) {
+  return answer
+    .replace(/^The first task is to separate what happened from interpretation or judgement\.\s*/i, '')
+    .replace(/^The first task is to separate what happened from interpretation and judgement\.\s*/i, '')
+    .trim()
+}
+
+function visibleWarnings(values: Array<string | null | undefined>) {
+  const hide = ['redaction applied', 'summary-level context', 'privacy guard applied', 'context minimised', 'context minimized']
+  return values
+    .filter(Boolean)
+    .map((value) => String(value))
+    .filter((value) => !hide.some((fragment) => value.toLowerCase().includes(fragment)))
+    .join(' ')
+}
+
 function mapOperationalResponse(response: OrbOperationalResponse): OrbConversationResponse {
+  const answer = cleanOrbAnswer(response.answer)
   const sources = (response.sources || []).map((source, index) => ({
     title: source.label,
     record_type: source.source_type,
@@ -83,8 +100,8 @@ function mapOperationalResponse(response: OrbOperationalResponse): OrbConversati
 
   return {
     ok: true,
-    answer: response.answer,
-    summary: response.context_summary?.headline || response.answer.split('\n', 1)[0].slice(0, 220),
+    answer,
+    summary: response.context_summary?.headline || answer.split('\n', 1)[0].slice(0, 220),
     sources,
     citations: sources,
     actions,
@@ -229,7 +246,7 @@ export function OrbConversationExperience({
       let responseData: OrbConversationResponse
       if (operationalResult.source === 'live' && operationalResult.data.answer) {
         responseData = mapOperationalResponse(operationalResult.data)
-        setWarning([operationalResult.warning, ...(operationalResult.data.warnings || [])].filter(Boolean).join(' ') || null)
+        setWarning(visibleWarnings([operationalResult.warning, ...(operationalResult.data.warnings || [])]) || null)
       } else {
         const legacy = await queryOrbConversation(
           {
@@ -241,7 +258,7 @@ export function OrbConversationExperience({
           controller.signal
         )
         responseData = legacy.data
-        const combinedWarning = [legacy.warning, operationalResult.warning].filter(Boolean).join(' ')
+        const combinedWarning = visibleWarnings([legacy.warning, operationalResult.warning])
         setWarning(combinedWarning || null)
         if (legacy.source !== 'live' && operationalResult.source !== 'live') setWarning(ORB_SEND_RETRY_MESSAGE)
       }
