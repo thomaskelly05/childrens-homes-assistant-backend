@@ -22,6 +22,7 @@ from services.orb_intelligence_bridge_service import orb_intelligence_bridge_ser
 from services.orb_operational_action_builder_service import orb_operational_action_builder_service
 from services.orb_operational_assistant_service import orb_operational_assistant_service
 from services.orb_operational_context_service import orb_operational_context_bridge
+from services.orb_operational_output_service import orb_operational_output_service
 from services.orb_universal_evidence_service import orb_universal_evidence_service
 
 router = APIRouter(prefix="/assistant/orb", tags=["Operational OS ORB"])
@@ -337,10 +338,21 @@ async def operational_orb_actions_create(
         child_id=payload.child_id,
         staff_id=payload.staff_id,
     )
+    created_ids = list(result.get("created_ids") or [])
+    linked_output = None
+    if payload.output_id and created_ids:
+        linked = orb_operational_output_service.link_actions(
+            payload.output_id,
+            created_ids,
+            current_user=current_user,
+            conn=conn,
+        )
+        linked_output = linked.model_dump() if linked else None
     result["os_linked"] = True
     result["standalone_only"] = False
     result["permissioned_context"] = True
     result["output_id"] = payload.output_id
+    result["linked_output"] = linked_output
     result["manager_review_required"] = payload.require_manager_review
     return {"success": True, "data": result}
 
