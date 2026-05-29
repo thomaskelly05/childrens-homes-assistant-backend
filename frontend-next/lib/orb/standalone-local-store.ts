@@ -16,7 +16,13 @@ export type StandaloneOrbSourceType =
 export type StandaloneOrbSource = {
   id?: string
   label: string
-  type: StandaloneOrbSourceType
+  /**
+   * API sources can include newer routed source types such as
+   * orb_operating_brain, orb_knowledge_spine or data-vault categories before
+   * the local store union is updated. Persist them rather than failing the
+   * production build.
+   */
+  type: StandaloneOrbSourceType | string
   basis?: string
   note?: string
   live_retrieved?: boolean
@@ -158,381 +164,148 @@ export const DEFAULT_STANDALONE_PROJECTS: StandaloneProject[] = [
   {
     id: 'project-supervision',
     name: 'Reflective Supervision',
-    description: 'Staff reflection and supervision preparation',
-    color: '#fbbf24',
-    icon: '◈',
-    createdAt: 0,
-    updatedAt: 0
-  },
-  {
-    id: 'project-placement',
-    name: 'Placement Stability',
-    description: 'Transitions, relationships and plans',
-    color: '#34d399',
-    icon: '◇',
-    createdAt: 0,
-    updatedAt: 0
-  },
-  {
-    id: 'project-team',
-    name: 'Team Development',
-    description: 'Workforce practice and culture',
-    color: '#22d3ee',
-    icon: '▣',
-    createdAt: 0,
-    updatedAt: 0
-  },
-  {
-    id: 'project-reg45',
-    name: 'Regulation 45 Review',
-    description: 'Improvement planning and governance evidence',
-    color: '#fb7185',
-    icon: '⬡',
+    description: 'Coaching, learning and practice development',
+    color: '#f59e0b',
+    icon: '☀',
     createdAt: 0,
     updatedAt: 0
   }
 ]
 
-const WORKSPACE_STORAGE_KEY = 'orb-standalone-workspace-v1'
-const WORKSPACE_SCHEMA_VERSION = 2
-const DEDUPE_WINDOW_MS = 10 * 60 * 1000
+const STANDALONE_WORKSPACE_KEY = 'orb-standalone-workspace-v2'
 
 function now() {
   return Date.now()
 }
 
-function newId(prefix: string) {
-  return `${prefix}-${now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+function normaliseProject(project: Partial<StandaloneProject>, fallback: StandaloneProject): StandaloneProject {
+  const timestamp = now()
+  return {
+    id: String(project.id || fallback.id),
+    name: String(project.name || fallback.name),
+    description: project.description || fallback.description,
+    color: project.color || fallback.color,
+    icon: project.icon || fallback.icon,
+    createdAt: Number(project.createdAt || fallback.createdAt || timestamp),
+    updatedAt: Number(project.updatedAt || fallback.updatedAt || timestamp)
+  }
 }
 
-export function defaultWorkspace(): StandaloneWorkspace {
-  const stamp = now()
-  const projects = DEFAULT_STANDALONE_PROJECTS.map((p) => ({
-    ...p,
-    createdAt: stamp,
-    updatedAt: stamp
-  }))
+function normaliseProfile(profile: Partial<StandaloneProfile>): StandaloneProfile {
+  const timestamp = now()
+  const label = String(profile.label || profile.name || 'Standalone profile')
   return {
-    version: WORKSPACE_SCHEMA_VERSION,
-    activeChatId: null,
+    id: String(profile.id || `profile-${timestamp}`),
+    name: String(profile.name || label),
+    label,
+    description: profile.description,
+    notes: profile.notes,
+    tags: Array.isArray(profile.tags) ? profile.tags.map(String) : [],
+    promptInstructions: profile.promptInstructions,
+    avatarInitial: String(profile.avatarInitial || label.slice(0, 1) || 'P').toUpperCase(),
+    createdAt: Number(profile.createdAt || timestamp),
+    updatedAt: Number(profile.updatedAt || timestamp)
+  }
+}
+
+function normaliseMessage(message: Partial<StandaloneChatMessage>): StandaloneChatMessage | null {
+  if (!message || (message.role !== 'user' && message.role !== 'assistant')) return null
+  return {
+    id: String(message.id || `msg-${now()}`),
+    role: message.role,
+    content: String(message.content || ''),
+    imageDataUrls: Array.isArray(message.imageDataUrls) ? message.imageDataUrls.map(String) : undefined,
+    createdAt: Number(message.createdAt || now()),
+    status: message.status,
+    thinkingLabel: message.thinkingLabel,
+    sources: Array.isArray(message.sources) ? message.sources : undefined,
+    modelRouting: message.modelRouting,
+    documentSuggestion: message.documentSuggestion,
+    agentSuggestion: message.agentSuggestion,
+    explainability: message.explainability
+  }
+}
+
+function normaliseChat(chat: Partial<StandaloneChat>): StandaloneChat {
+  const timestamp = now()
+  return {
+    id: String(chat.id || `chat-${timestamp}`),
+    title: String(chat.title || 'New chat'),
+    projectId: String(chat.projectId || STANDALONE_GENERAL_PROJECT_ID),
+    profileIds: Array.isArray(chat.profileIds) ? chat.profileIds.map(String) : [],
+    messages: Array.isArray(chat.messages) ? chat.messages.map(normaliseMessage).filter(Boolean) as StandaloneChatMessage[] : [],
+    mode: chat.mode || 'Ask ORB',
+    conversationId: String(chat.conversationId || `conversation-${timestamp}`),
+    pinned: Boolean(chat.pinned),
+    archived: Boolean(chat.archived),
+    temporary: Boolean(chat.temporary),
+    createdAt: Number(chat.createdAt || timestamp),
+    updatedAt: Number(chat.updatedAt || timestamp)
+  }
+}
+
+function createDefaultWorkspace(): StandaloneWorkspace {
+  const timestamp = now()
+  const projects = DEFAULT_STANDALONE_PROJECTS.map((project) => ({ ...project, createdAt: timestamp, updatedAt: timestamp }))
+  const initialChat: StandaloneChat = {
+    id: `chat-${timestamp}`,
+    title: 'New chat',
+    projectId: STANDALONE_GENERAL_PROJECT_ID,
+    profileIds: [],
+    messages: [],
+    mode: 'Ask ORB',
+    conversationId: `conversation-${timestamp}`,
+    createdAt: timestamp,
+    updatedAt: timestamp
+  }
+  return {
+    version: 2,
+    activeChatId: initialChat.id,
     activeProjectId: STANDALONE_GENERAL_PROJECT_ID,
     projects,
     profiles: [],
-    chats: []
+    chats: [initialChat]
   }
 }
 
-function normalizeMessageContent(content: string): string {
-  return content.trim().toLowerCase()
-}
-
-function messageTimestamp(message: StandaloneChatMessage): number {
-  return typeof message.createdAt === 'number' ? message.createdAt : 0
-}
-
-function withinDedupeWindow(a: StandaloneChatMessage, b: StandaloneChatMessage): boolean {
-  const ta = messageTimestamp(a)
-  const tb = messageTimestamp(b)
-  if (!ta || !tb) return true
-  return Math.abs(tb - ta) <= DEDUPE_WINDOW_MS
-}
-
-function sameMessageContent(a: StandaloneChatMessage, b: StandaloneChatMessage): boolean {
-  return normalizeMessageContent(a.content) === normalizeMessageContent(b.content)
-}
-
-function isExactAdjacentDuplicate(a: StandaloneChatMessage, b: StandaloneChatMessage): boolean {
-  if (a.role !== b.role) return false
-  if (!sameMessageContent(a, b)) return false
-  if (!withinDedupeWindow(a, b)) return false
-  if (a.status === 'failed' || b.status === 'failed') return false
-  return true
-}
-
-export function ensureStandaloneMessage(message: Partial<StandaloneChatMessage> & { role: 'user' | 'assistant'; content: string }): StandaloneChatMessage {
-  const stamp = typeof message.createdAt === 'number' ? message.createdAt : now()
-  return {
-    id: message.id || newId(message.role === 'user' ? 'u' : 'a'),
-    role: message.role,
-    content: message.content,
-    imageDataUrls: message.imageDataUrls,
-    createdAt: stamp,
-    status: message.status,
-    thinkingLabel: message.thinkingLabel,
-    sources: message.sources,
-    modelRouting: message.modelRouting,
-    agentSuggestion: message.agentSuggestion,
-    documentSuggestion: message.documentSuggestion
-  }
-}
-
-/** Remove duplicate adjacent and repeated user bubbles within the dedupe window. */
-export function dedupeOrbMessages(messages: StandaloneChatMessage[]): StandaloneChatMessage[] {
-  const items = messages.map((entry) => ensureStandaloneMessage(entry))
-  if (items.length <= 1) return items
-
-  const adjacentPass: StandaloneChatMessage[] = []
-  for (const message of items) {
-    const previous = adjacentPass[adjacentPass.length - 1]
-    if (previous && isExactAdjacentDuplicate(previous, message)) {
-      if (message.role === 'assistant') {
-        adjacentPass[adjacentPass.length - 1] = { ...message, imageDataUrls: message.imageDataUrls ?? previous.imageDataUrls }
-      }
-      continue
-    }
-    adjacentPass.push(message)
-  }
-
-  const result: StandaloneChatMessage[] = []
-  for (let index = 0; index < adjacentPass.length; index += 1) {
-    const message = adjacentPass[index]
-    if (message.role !== 'user') {
-      result.push(message)
-      continue
-    }
-
-    let skip = false
-    for (let priorIndex = result.length - 1; priorIndex >= 0; priorIndex -= 1) {
-      const prior = result[priorIndex]
-      if (prior.role === 'assistant') break
-      if (
-        prior.role === 'user' &&
-        sameMessageContent(prior, message) &&
-        withinDedupeWindow(prior, message)
-      ) {
-        skip = true
-        break
-      }
-    }
-
-    if (!skip) {
-      for (let priorIndex = 0; priorIndex < result.length; priorIndex += 1) {
-        const prior = result[priorIndex]
-        if (prior.role !== 'user' || !sameMessageContent(prior, message) || !withinDedupeWindow(prior, message)) {
-          continue
-        }
-        let assistantBetween = false
-        for (let between = priorIndex + 1; between < result.length; between += 1) {
-          if (result[between].role === 'assistant') {
-            assistantBetween = true
-            break
-          }
-        }
-        if (!assistantBetween) {
-          skip = true
-          break
-        }
-      }
-    }
-
-    if (!skip) result.push(message)
-  }
-
-  return result
-}
-
-export function repairOrbChat(chat: StandaloneChat): StandaloneChat {
-  const messages = dedupeOrbMessages(chat.messages ?? [])
-  return {
-    ...chat,
-    messages,
-    updatedAt: Math.max(chat.updatedAt ?? 0, messages[messages.length - 1]?.createdAt ?? 0)
-  }
-}
-
-export function repairOrbWorkspace(workspace: StandaloneWorkspace): StandaloneWorkspace {
-  const chats = (workspace.chats ?? []).map((chat) => repairOrbChat(chat))
-  let activeChatId = workspace.activeChatId
-  if (activeChatId && !chats.some((chat) => chat.id === activeChatId)) {
-    activeChatId = chats[0]?.id ?? null
-  }
-  return {
-    ...workspace,
-    version: WORKSPACE_SCHEMA_VERSION,
-    activeChatId,
-    chats
-  }
-}
-
-export function readStandaloneWorkspace(): StandaloneWorkspace {
-  if (typeof window === 'undefined') return defaultWorkspace()
+export function loadStandaloneWorkspace(): StandaloneWorkspace {
+  if (typeof window === 'undefined') return createDefaultWorkspace()
   try {
-    const raw = window.localStorage.getItem(WORKSPACE_STORAGE_KEY)
-    if (!raw) return defaultWorkspace()
+    const raw = window.localStorage.getItem(STANDALONE_WORKSPACE_KEY)
+    if (!raw) return createDefaultWorkspace()
     const parsed = JSON.parse(raw) as Partial<StandaloneWorkspace>
-    const base = defaultWorkspace()
-    const projects =
-      Array.isArray(parsed.projects) && parsed.projects.length
-        ? parsed.projects
-        : base.projects
-    const hasGeneral = projects.some((p) => p.id === STANDALONE_GENERAL_PROJECT_ID)
-    const loaded: StandaloneWorkspace = {
-      version: (parsed.version as StandaloneWorkspace['version']) ?? 1,
-      activeChatId: parsed.activeChatId ?? null,
-      activeProjectId: parsed.activeProjectId ?? STANDALONE_GENERAL_PROJECT_ID,
-      projects: hasGeneral ? projects : [...base.projects, ...projects],
-      profiles: Array.isArray(parsed.profiles) ? parsed.profiles : [],
-      chats: Array.isArray(parsed.chats) ? parsed.chats : []
+    const projects = Array.isArray(parsed.projects)
+      ? parsed.projects.map((project, index) => normaliseProject(project, DEFAULT_STANDALONE_PROJECTS[index] || DEFAULT_STANDALONE_PROJECTS[0]))
+      : DEFAULT_STANDALONE_PROJECTS.map((project) => ({ ...project, createdAt: now(), updatedAt: now() }))
+    const profiles = Array.isArray(parsed.profiles) ? parsed.profiles.map(normaliseProfile) : []
+    const chats = Array.isArray(parsed.chats) && parsed.chats.length > 0
+      ? parsed.chats.map(normaliseChat)
+      : createDefaultWorkspace().chats
+    const activeChatId = parsed.activeChatId && chats.some((chat) => chat.id === parsed.activeChatId)
+      ? parsed.activeChatId
+      : chats[0]?.id || null
+    const activeProjectId = parsed.activeProjectId && projects.some((project) => project.id === parsed.activeProjectId)
+      ? parsed.activeProjectId
+      : STANDALONE_GENERAL_PROJECT_ID
+    return {
+      version: 2,
+      activeChatId,
+      activeProjectId,
+      projects,
+      profiles,
+      chats
     }
-    const repaired = repairOrbWorkspace(loaded)
-    const messagesBefore = loaded.chats.reduce((count, chat) => count + (chat.messages?.length ?? 0), 0)
-    const messagesAfter = repaired.chats.reduce((count, chat) => count + chat.messages.length, 0)
-    if ((loaded.version ?? 1) < WORKSPACE_SCHEMA_VERSION || messagesBefore !== messagesAfter) {
-      writeStandaloneWorkspace(repaired)
-    }
-    return repaired
-  } catch {
-    return defaultWorkspace()
+  } catch (error) {
+    console.warn('[ORB] Could not load standalone workspace', error)
+    return createDefaultWorkspace()
   }
 }
 
-export function writeStandaloneWorkspace(workspace: StandaloneWorkspace) {
+export function saveStandaloneWorkspace(workspace: StandaloneWorkspace) {
   if (typeof window === 'undefined') return
   try {
-    const repaired = repairOrbWorkspace(workspace)
-    window.localStorage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify(repaired))
-  } catch {
-    /* quota */
+    window.localStorage.setItem(STANDALONE_WORKSPACE_KEY, JSON.stringify(workspace))
+  } catch (error) {
+    console.warn('[ORB] Could not save standalone workspace', error)
   }
-}
-
-export function createStandaloneProject(name: string, description?: string): StandaloneProject {
-  const stamp = now()
-  return {
-    id: newId('project'),
-    name: name.trim() || 'Untitled project',
-    description: description?.trim() || undefined,
-    color: '#67e8f9',
-    icon: '▣',
-    createdAt: stamp,
-    updatedAt: stamp
-  }
-}
-
-export function createStandaloneProfile(input: {
-  name: string
-  label: string
-  description?: string
-  notes?: string
-  tags?: string[]
-  promptInstructions?: string
-  avatarInitial?: string
-}): StandaloneProfile {
-  const stamp = now()
-  const initial = input.avatarInitial?.trim() || input.name.trim().slice(0, 1).toUpperCase() || '?'
-  return {
-    id: newId('profile'),
-    name: input.name.trim() || 'Unnamed profile',
-    label: input.label.trim() || 'Context',
-    description: input.description?.trim() || undefined,
-    notes: input.notes?.trim() || undefined,
-    tags: input.tags?.filter(Boolean),
-    promptInstructions: input.promptInstructions?.trim() || undefined,
-    avatarInitial: initial,
-    createdAt: stamp,
-    updatedAt: stamp
-  }
-}
-
-export function createStandaloneChat(
-  projectId: string,
-  mode: StandaloneOrbMode | string = 'Ask ORB',
-  options?: { temporary?: boolean }
-): StandaloneChat {
-  const stamp = now()
-  return {
-    id: newId('chat'),
-    title: options?.temporary ? 'Temporary chat' : 'New conversation',
-    projectId,
-    profileIds: [],
-    messages: [],
-    mode,
-    conversationId: `standalone-${stamp.toString(36)}`,
-    temporary: options?.temporary,
-    createdAt: stamp,
-    updatedAt: stamp
-  }
-}
-
-export function titleFromFirstMessage(content: string): string {
-  const trimmed = content.trim()
-  if (!trimmed) return 'New conversation'
-  const snippet = trimmed.slice(0, 48)
-  return snippet.length < trimmed.length ? `${snippet}…` : snippet
-}
-
-export function searchChats(
-  chats: StandaloneChat[],
-  query: string,
-  options?: { projectId?: string; profileId?: string; includeArchived?: boolean }
-): StandaloneChat[] {
-  const q = query.trim().toLowerCase()
-  return chats
-    .filter((chat) => {
-      if (!options?.includeArchived && chat.archived) return false
-      if (options?.projectId && chat.projectId !== options.projectId) return false
-      if (options?.profileId && !chat.profileIds.includes(options.profileId)) return false
-      if (!q) return true
-      if (chat.title.toLowerCase().includes(q)) return true
-      return chat.messages.some((m) => m.content.toLowerCase().includes(q))
-    })
-    .sort((a, b) => {
-      if (a.pinned && !b.pinned) return -1
-      if (!a.pinned && b.pinned) return 1
-      return b.updatedAt - a.updatedAt
-    })
-}
-
-export function clearStandaloneLocalState(): StandaloneWorkspace {
-  const empty = repairOrbWorkspace({
-    version: 2,
-    activeChatId: null,
-    activeProjectId: STANDALONE_GENERAL_PROJECT_ID,
-    projects: [...DEFAULT_STANDALONE_PROJECTS],
-    profiles: [],
-    chats: []
-  })
-  writeStandaloneWorkspace(empty)
-  return empty
-}
-
-export function exportStandaloneWorkspaceJson(workspace: StandaloneWorkspace): string {
-  return JSON.stringify(repairOrbWorkspace(workspace), null, 2)
-}
-
-export function clearStandaloneProfiles(workspace: StandaloneWorkspace): StandaloneWorkspace {
-  const next = repairOrbWorkspace({ ...workspace, profiles: [] })
-  writeStandaloneWorkspace(next)
-  return next
-}
-
-export function clearStandaloneCustomProjects(workspace: StandaloneWorkspace): StandaloneWorkspace {
-  const general = workspace.projects.filter((p) => p.id === STANDALONE_GENERAL_PROJECT_ID)
-  const projects = general.length ? general : DEFAULT_STANDALONE_PROJECTS
-  const next = repairOrbWorkspace({
-    ...workspace,
-    projects: [...projects],
-    activeProjectId: STANDALONE_GENERAL_PROJECT_ID,
-    chats: workspace.chats.map((c) => ({ ...c, projectId: STANDALONE_GENERAL_PROJECT_ID }))
-  })
-  writeStandaloneWorkspace(next)
-  return next
-}
-
-export function buildProfileContextBlock(profiles: StandaloneProfile[]): string {
-  if (!profiles.length) return ''
-  const blocks = profiles.map((profile) => {
-    const lines = [
-      `Profile: ${profile.name} (${profile.label})`,
-      profile.description ? `Description: ${profile.description}` : '',
-      profile.notes ? `Notes: ${profile.notes}` : '',
-      profile.tags?.length ? `Tags: ${profile.tags.join(', ')}` : '',
-      profile.promptInstructions ? `Instructions: ${profile.promptInstructions}` : ''
-    ].filter(Boolean)
-    return lines.join('\n')
-  })
-  return [
-    'The user attached standalone context profiles (user-provided, not IndiCare OS records):',
-    ...blocks
-  ].join('\n\n')
 }
