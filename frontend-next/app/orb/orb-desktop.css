@@ -1,0 +1,211 @@
+/** Canonical ORB desktop design layer. Keep desktop/tablet styles here only. */
+:root {
+  --orb-brand-blue: #00b8ff;
+  --orb-brand-blue-deep: #0077ff;
+  --orb-brand-cyan: #67e8f9;
+}
+
+.orb-chat-layout,
+.orb-chat-layout * {
+  box-sizing: border-box;
+}
+
+.orb-chat-layout {
+  --orb-sidebar-width: 18.5rem;
+  --orb-chat-column-max: 52.5rem;
+  --orb-composer-max: 52.5rem;
+  --orb-foreground: #0f172a;
+  --orb-muted: #475569;
+  --orb-line: #d9dee8;
+  --orb-surface: #fff;
+  --orb-surface-elevated: #f8fafc;
+  --orb-accent: var(--orb-brand-blue-deep);
+  width: 100%;
+  max-width: 100vw;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  background:
+    radial-gradient(circle at 55% 12%, rgba(0, 184, 255, 0.11), transparent 34rem),
+    linear-gradient(180deg, #f8fbff 0%, #fff 42%, #f8fafc 100%);
+  color: var(--orb-foreground);
+}
+
+html[data-orb-theme='dark'] .orb-chat-layout {
+  --orb-foreground: #f8fafc;
+  --orb-muted: #9ca3af;
+  --orb-line: rgba(255, 255, 255, 0.09);
+  --orb-surface: #111113;
+  --orb-surface-elevated: #17171a;
+  background:
+    radial-gradient(circle at 54% 16%, rgba(0, 184, 255, 0.16), transparent 34rem),
+    #000;
+  color: var(--orb-foreground);
+}
+
+.orb-chat-main,
+.orb-chat-thread,
+.orb-composer-dock {
+  width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+.orb-chat-sidebar {
+  width: var(--orb-sidebar-width);
+  max-width: var(--orb-sidebar-width);
+  flex: 0 0 var(--orb-sidebar-width);
+  background: rgba(255, 255, 255, 0.74);
+  border-color: rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(22px) saturate(145%);
+  -webkit-backdrop-filter: blur(22px) saturate(145%);
+}
+
+html[data-orb-theme='dark'] .orb-chat-sidebar {
+  background: rgba(8, 8, 10, 0.86);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.orb-chat-header {
+  background: rgba(255, 255, 255, 0.78);
+  border-color: rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(22px) saturate(145%);
+  -webkit-backdrop-filter: blur(22px) saturate(145%);
+}
+
+html[data-orb-theme='dark'] .orb-chat-header {
+  background: rgba(0, 0, 0, 0.86);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.orb-hue-text,
+[data-orb-empty-title] {
+  background: linear-gradient(120deg, var(--orb-brand-blue), var(--orb-brand-blue-deep) 50%, var(--orb-brand-cyan));
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  font-weight: 850;
+  letter-spacing: -0.06em;
+  filter: drop-shadow(0 0 18px rgba(0, 184, 255, 0.16));
+}
+
+html[data-orb-theme='dark'] .orb-hue-text,
+html[data-orb-theme='dark'] [data-orb-empty-title] {
+  filter: drop-shadow(0 0 24px rgba(0, 184, 255, 0.32));
+}
+
+[data-orb-brand-powered] {
+  color: rgba(0, 119, 255, 0.58);
+  letter-spacing: 0.34em;
+}
+
+html[data-orb-theme='dark'] [data-orb-brand-powered] {
+  color: rgba(148, 163, 184, 0.74);
+}
+
+.orb-empty-brand-title {
+  line-height: 0.95;
+}
+
+.orb-composer-glass {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(255, 255, 255, 0.86);
+  color: var(--orb-foreground);
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.1);
+  backdrop-filter: blur(24px) saturate(140%);
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+}
+
+html[data-orb-theme='dark'] .orb-composer-glass {
+  border-color: rgba(255, 255, 255, 0.11);
+  background: rgba(18, 18, 20, 0.92);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.44);
+}
+
+.orb-composer-glass:focus-within {
+  border-color: rgba(0, 184, 255, 0.42);
+  box-shadow: 0 0 0 1px rgba(0, 184, 255, 0.16), 0 20px 55px rgba(0, 119, 255, 0.16);
+}
+
+.orb-composer-action-rail,
+.orb-composer-glass button:not(.orb-composer-send) {
+  background: rgba(248, 250, 252, 0.78);
+  border-color: rgba(15, 23, 42, 0.08);
+}
+
+html[data-orb-theme='dark'] .orb-composer-action-rail,
+html[data-orb-theme='dark'] .orb-composer-glass button:not(.orb-composer-send) {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: #d4d4d8;
+}
+
+.orb-composer-send {
+  background: linear-gradient(135deg, var(--orb-brand-blue), var(--orb-brand-blue-deep));
+  color: white;
+  box-shadow: 0 10px 28px rgba(0, 119, 255, 0.3);
+}
+
+.orb-composer-send:disabled {
+  background: rgba(148, 163, 184, 0.24);
+  color: rgba(15, 23, 42, 0.52);
+  box-shadow: none;
+}
+
+html[data-orb-theme='dark'] .orb-composer-send:disabled {
+  background: rgba(255, 255, 255, 0.92);
+  color: #020617;
+  opacity: 0.92;
+}
+
+[data-orb-composer-disclaimer] {
+  display: inline-flex;
+  width: auto;
+  max-width: min(100%, 44rem);
+  margin-left: auto;
+  margin-right: auto;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  color: #94a3b8;
+  opacity: 0.72;
+}
+
+[data-orb-composer-disclaimer]::before {
+  content: 'i';
+  display: inline-flex;
+  width: 0.85rem;
+  height: 0.85rem;
+  margin-right: 0.28rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  font-size: 0.52rem;
+  line-height: 1;
+  opacity: 0.75;
+}
+
+[data-orb-composer-disclaimer]::after {
+  content: ' © 2026 IndiCare.';
+  white-space: nowrap;
+}
+
+.orb-markdown-answer,
+.orb-message-content,
+.orb-message-user,
+.orb-message-assistant {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  [data-orb-empty-title] {
+    animation: orb-wordmark-breathe 5.5s ease-in-out infinite;
+  }
+}
+
+@keyframes orb-wordmark-breathe {
+  0%, 100% { filter: drop-shadow(0 0 16px rgba(0, 184, 255, 0.16)); }
+  50% { filter: drop-shadow(0 0 28px rgba(0, 184, 255, 0.38)); }
+}
