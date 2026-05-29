@@ -264,17 +264,19 @@ function createDefaultWorkspace(): StandaloneWorkspace {
 
 export function createStandaloneChat(
   projectId: string = STANDALONE_GENERAL_PROJECT_ID,
-  mode: StandaloneOrbMode | string = 'Ask ORB'
+  mode: StandaloneOrbMode | string = 'Ask ORB',
+  options: Partial<Pick<StandaloneChat, 'temporary' | 'profileIds' | 'title' | 'messages'>> = {}
 ): StandaloneChat {
   const timestamp = now()
   return {
     id: makeId('chat'),
-    title: 'New conversation',
+    title: options.title || 'New conversation',
     projectId,
-    profileIds: [],
-    messages: [],
+    profileIds: Array.isArray(options.profileIds) ? options.profileIds.map(String) : [],
+    messages: Array.isArray(options.messages) ? dedupeOrbMessages(options.messages.map(ensureStandaloneMessage)) : [],
     mode,
     conversationId: makeId('conversation'),
+    temporary: Boolean(options.temporary),
     createdAt: timestamp,
     updatedAt: timestamp
   }
