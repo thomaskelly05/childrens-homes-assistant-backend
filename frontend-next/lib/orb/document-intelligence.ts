@@ -16,8 +16,14 @@ export type OrbDocumentLens =
   | 'supervision'
   | 'checklist'
   | 'what_is_missing'
-
-export type OrbDocumentKind = 'reg44' | 'policy' | 'incident_record' | 'general'
+  | 'nvq_evidence_map'
+  | 'reflective_account_plan'
+  | 'assessor_feedback'
+  | 'professional_discussion_prompts'
+  | 'witness_testimony_prompt'
+  | 'learning_action_plan'
+  | 'workbook_summary'
+  | 'qualification_criteria_explainer'
 
 export type OrbDocumentContextualAction = {
   lens: OrbDocumentLens
@@ -37,9 +43,29 @@ const POLICY_MARKERS = ['policy', 'procedure', 'guidance', 'staff must', 'escala
 
 const INCIDENT_MARKERS = ['incident', 'daily note', 'recording', 'chronology', 'safeguarding concern']
 
+const NVQ_MARKERS = [
+  'nvq',
+  'diploma',
+  'workbook',
+  'reflective account',
+  'criteria',
+  'assessor',
+  'professional discussion',
+  'witness testimony',
+  'portfolio'
+]
+
+export type OrbDocumentKind =
+  | 'reg44'
+  | 'policy'
+  | 'incident_record'
+  | 'nvq_learning'
+  | 'general'
+
 export function detectDocumentKind(text: string, title = ''): OrbDocumentKind {
   const combined = `${title} ${text}`.toLowerCase()
   if (REG44_MARKERS.some((term) => combined.includes(term))) return 'reg44'
+  if (NVQ_MARKERS.some((term) => combined.includes(term))) return 'nvq_learning'
   if (POLICY_MARKERS.some((term) => combined.includes(term))) return 'policy'
   if (INCIDENT_MARKERS.some((term) => combined.includes(term))) return 'incident_record'
   return 'general'
@@ -74,6 +100,15 @@ const INCIDENT_ACTIONS: OrbDocumentContextualAction[] = [
   { lens: 'what_is_missing', label: 'What is missing?' }
 ]
 
+const NVQ_ACTIONS: OrbDocumentContextualAction[] = [
+  { lens: 'nvq_evidence_map', label: 'NVQ evidence map' },
+  { lens: 'qualification_criteria_explainer', label: 'Explain criteria' },
+  { lens: 'reflective_account_plan', label: 'Reflective account plan' },
+  { lens: 'assessor_feedback', label: 'Assessor feedback' },
+  { lens: 'professional_discussion_prompts', label: 'Professional discussion' },
+  { lens: 'learning_action_plan', label: 'Learning action plan' }
+]
+
 export function contextualDocumentActions(text: string, title = ''): OrbDocumentContextualAction[] {
   const kind = detectDocumentKind(text, title)
   const seen = new Set<OrbDocumentLens>()
@@ -89,6 +124,7 @@ export function contextualDocumentActions(text: string, title = ''): OrbDocument
 
   add(CORE_ACTIONS)
   if (kind === 'reg44') add(REG44_ACTIONS)
+  else if (kind === 'nvq_learning') add(NVQ_ACTIONS)
   else if (kind === 'policy') add(POLICY_ACTIONS)
   else if (kind === 'incident_record') add(INCIDENT_ACTIONS)
   else {

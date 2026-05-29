@@ -22,6 +22,14 @@ OrbDocumentLens = Literal[
     "supervision",
     "checklist",
     "what_is_missing",
+    "nvq_evidence_map",
+    "reflective_account_plan",
+    "assessor_feedback",
+    "professional_discussion_prompts",
+    "witness_testimony_prompt",
+    "learning_action_plan",
+    "workbook_summary",
+    "qualification_criteria_explainer",
 ]
 
 class OrbDocumentIntelligenceSection(BaseModel):

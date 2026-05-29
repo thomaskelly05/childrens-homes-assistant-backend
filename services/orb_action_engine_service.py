@@ -8,6 +8,10 @@ from typing import Any
 
 from services.ai_model_router_service import ai_model_router_service
 from services.orb_data_vault_registry_service import orb_data_vault_registry_service
+from services.orb_human_practice_brain_service import (
+    NVQ_AUTHENTICITY_BOUNDARY,
+    orb_human_practice_brain_service,
+)
 from services.orb_knowledge_retrieval_service import orb_knowledge_retrieval_service
 from services.orb_operating_brain_service import orb_operating_brain_service
 from services.orb_standalone_brain_service import orb_standalone_brain_service
@@ -105,6 +109,8 @@ class OrbActionDefinition:
     standalone_boundary: str
     backend_supported: bool
     frontend_fallback_safe: bool
+    role_suitability: tuple[str, ...] = ()
+    academy_nvq_purpose: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -124,6 +130,37 @@ def _clip(text: str, limit: int = 6000) -> str:
 def _source_suggests_high_risk(source_text: str) -> bool:
     lower = _text(source_text).lower()
     return any(term in lower for term in HIGH_RISK_SOURCE_TERMS)
+
+
+def _academy_action(
+    *,
+    id: str,
+    label: str,
+    description: str,
+    purpose: str,
+    output_type: str,
+    safety_level: str = "medium",
+    prompt_mode: str = "residential",
+    roles: tuple[str, ...],
+    vaults: tuple[str, ...] = ("Academy Learning Vault", "Qualification Evidence Vault"),
+) -> OrbActionDefinition:
+    return OrbActionDefinition(
+        id=id,
+        label=label,
+        description=description,
+        residential_purpose=purpose,
+        required_input="source_message and/or source_answer; criteria text optional in source",
+        output_type=output_type,
+        safety_level=safety_level,
+        prompt_mode=prompt_mode,
+        data_vaults=vaults,
+        knowledge_modules=("reflective_practice", "team_learning_loop"),
+        standalone_boundary=STANDALONE_BOUNDARY_PREFIX,
+        backend_supported=True,
+        frontend_fallback_safe=True,
+        role_suitability=roles,
+        academy_nvq_purpose=purpose,
+    )
 
 
 ORB_ACTION_REGISTRY: dict[str, OrbActionDefinition] = {
@@ -337,6 +374,104 @@ ORB_ACTION_REGISTRY: dict[str, OrbActionDefinition] = {
         backend_supported=True,
         frontend_fallback_safe=True,
     ),
+    "map_to_nvq_evidence": _academy_action(
+        id="map_to_nvq_evidence",
+        label="Map to NVQ evidence",
+        description="Map described practice to possible criteria/themes without inventing events.",
+        purpose="Support assessors and learners to map authentic practice to qualification criteria.",
+        output_type="nvq_evidence_map",
+        roles=("nvq_assessor", "nvq_learner", "diploma_learner", "trainer_consultant", "registered_manager"),
+    ),
+    "explain_nvq_criteria": _academy_action(
+        id="explain_nvq_criteria",
+        label="Explain NVQ criteria",
+        description="Explain criteria in plain English for residential childcare diplomas.",
+        purpose="Help learners understand what assessors look for.",
+        output_type="criteria_explainer",
+        safety_level="low",
+        roles=("nvq_learner", "diploma_learner", "nvq_assessor", "trainer_consultant"),
+    ),
+    "create_reflective_account_plan": _academy_action(
+        id="create_reflective_account_plan",
+        label="Reflective account plan",
+        description="Structure a reflective account plan from described practice only.",
+        purpose="Turn real practice into reflection without fabricating incidents.",
+        output_type="reflective_account_plan",
+        roles=("nvq_learner", "diploma_learner", "nvq_assessor", "residential_support_worker"),
+    ),
+    "review_reflective_account": _academy_action(
+        id="review_reflective_account",
+        label="Review reflective account",
+        description="Review a reflective account draft for structure, gaps and authenticity.",
+        purpose="Assessor/learner support — draft only, not official assessment.",
+        output_type="reflective_review",
+        roles=("nvq_assessor", "nvq_learner", "diploma_learner", "registered_manager"),
+    ),
+    "create_professional_discussion_prompts": _academy_action(
+        id="create_professional_discussion_prompts",
+        label="Professional discussion prompts",
+        description="Generate professional discussion questions from described evidence.",
+        purpose="Prepare PD that tests understanding without inventing practice.",
+        output_type="prompt_list",
+        roles=("nvq_assessor", "trainer_consultant"),
+    ),
+    "create_witness_testimony_prompt": _academy_action(
+        id="create_witness_testimony_prompt",
+        label="Witness testimony prompt",
+        description="Suggest witness testimony focus areas from described practice.",
+        purpose="Help identify suitable witnesses and testimony scope.",
+        output_type="prompt_list",
+        roles=("nvq_assessor", "senior_support_worker", "registered_manager"),
+    ),
+    "identify_learning_evidence_gaps": _academy_action(
+        id="identify_learning_evidence_gaps",
+        label="Evidence gaps",
+        description="Identify gaps in learning evidence from what was described.",
+        purpose="Gap analysis for portfolios — no live learner records.",
+        output_type="gap_analysis",
+        roles=("nvq_assessor", "nvq_learner", "diploma_learner", "registered_manager"),
+    ),
+    "create_learner_action_plan": _academy_action(
+        id="create_learner_action_plan",
+        label="Learner action plan",
+        description="Draft action plan for missing evidence collection.",
+        purpose="Support learners to collect authentic evidence over time.",
+        output_type="action_plan",
+        roles=("nvq_assessor", "nvq_learner", "diploma_learner"),
+    ),
+    "assessor_feedback_draft": _academy_action(
+        id="assessor_feedback_draft",
+        label="Assessor feedback draft",
+        description="Draft assessor feedback: strengths, gaps, PD questions — not official sign-off.",
+        purpose="Draft support for assessor judgement only.",
+        output_type="assessor_feedback",
+        roles=("nvq_assessor",),
+    ),
+    "supervision_to_learning_evidence": _academy_action(
+        id="supervision_to_learning_evidence",
+        label="Supervision to evidence",
+        description="Link supervision themes to possible learning evidence.",
+        purpose="Connect supervision reflection to qualification evidence mapping.",
+        output_type="learning_evidence",
+        roles=("nvq_learner", "diploma_learner", "nvq_assessor", "registered_manager"),
+    ),
+    "incident_to_reflective_learning": _academy_action(
+        id="incident_to_reflective_learning",
+        label="Incident to reflective learning",
+        description="Turn described incident into reflective learning structure.",
+        purpose="Learning from practice without inventing facts.",
+        output_type="reflective_account_plan",
+        roles=("nvq_learner", "diploma_learner", "residential_support_worker", "senior_support_worker"),
+    ),
+    "policy_to_learning_questions": _academy_action(
+        id="policy_to_learning_questions",
+        label="Policy to learning questions",
+        description="Generate learning/knowledge questions from policy or training text supplied.",
+        purpose="Support trainers and learners to connect policy to practice.",
+        output_type="prompt_list",
+        safety_level="low",
+        roles=("trainer_consultant", "nvq_learner", "diploma_learner", "registered_manager"),
+    ),
 }
 
 BACKEND_SUPPORTED_ACTION_IDS = frozenset(
@@ -360,7 +495,36 @@ FRONTEND_TO_BACKEND_ACTION: dict[str, str] = {
     "supervision_prompt": "supervision_prompt",
     "shift_handover": "shift_handover_summary",
     "build_shift_plan": "build_shift_plan",
+    "nvq_evidence_map": "map_to_nvq_evidence",
+    "explain_criteria": "explain_nvq_criteria",
+    "reflective_learning": "create_reflective_account_plan",
+    "review_reflective": "review_reflective_account",
+    "pd_prompts": "create_professional_discussion_prompts",
+    "witness_prompt": "create_witness_testimony_prompt",
+    "evidence_gaps": "identify_learning_evidence_gaps",
+    "learner_action_plan": "create_learner_action_plan",
+    "assessor_feedback": "assessor_feedback_draft",
+    "supervision_evidence": "supervision_to_learning_evidence",
+    "incident_reflective": "incident_to_reflective_learning",
+    "policy_learning": "policy_to_learning_questions",
 }
+
+ACADEMY_NVQ_ACTION_IDS = frozenset(
+    {
+        "map_to_nvq_evidence",
+        "explain_nvq_criteria",
+        "create_reflective_account_plan",
+        "review_reflective_account",
+        "create_professional_discussion_prompts",
+        "create_witness_testimony_prompt",
+        "identify_learning_evidence_gaps",
+        "create_learner_action_plan",
+        "assessor_feedback_draft",
+        "supervision_to_learning_evidence",
+        "incident_to_reflective_learning",
+        "policy_to_learning_questions",
+    }
+)
 
 
 @dataclass
@@ -384,11 +548,26 @@ class WhatMissingGap:
         }
 
 
-def analyse_what_missing_gaps(source_text: str) -> list[WhatMissingGap]:
+def analyse_what_missing_gaps(
+    source_text: str,
+    *,
+    profile_role: str | None = None,
+) -> list[WhatMissingGap]:
     """Heuristic gap detection for What Am I Missing (standalone, no OS access)."""
     text = _text(source_text)
     lower = text.lower()
     gaps: list[WhatMissingGap] = []
+
+    for hint in orb_human_practice_brain_service.role_what_missing_gaps(profile_role):
+        gaps.append(
+            WhatMissingGap(
+                id=hint["id"],
+                title=hint["title"],
+                why_it_matters=hint["why"],
+                what_to_check=hint["check"],
+                what_to_record=hint["record"],
+            )
+        )
 
     if text and not any(marker in lower for marker in CHILD_VOICE_MARKERS):
         gaps.append(
@@ -589,16 +768,22 @@ class OrbActionEngineService:
         operating_block: str,
         mode: str,
         prompt_tier: str,
+        profile_role: str | None = None,
     ) -> str:
         parts = [
             "You are ORB Care Companion running a structured residential children's homes action.",
             f"Action: {definition.label} ({definition.id})",
             f"Purpose: {definition.residential_purpose}",
             STANDALONE_BOUNDARY_PREFIX,
+            orb_human_practice_brain_service.human_voice_block(),
             "Never invent names, dates, chronology entries, notifications, or OS record lookups.",
-            "Never claim you accessed IndiCare OS, chronology, or child records.",
+            "Never claim you accessed IndiCare OS, chronology, child records, or live Academy learner records.",
             f"User mode context: {mode}",
         ]
+        if definition.academy_nvq_purpose or definition.id in ACADEMY_NVQ_ACTION_IDS:
+            parts.append(NVQ_AUTHENTICITY_BOUNDARY)
+        if profile_role:
+            parts.append(orb_human_practice_brain_service.build_role_shaping_block(profile_role))
         if prompt_tier == "deep":
             parts.append(
                 "Use deep safeguarding-aware reasoning: facts vs concerns, gaps, escalation, "
@@ -618,12 +803,20 @@ class OrbActionEngineService:
         *,
         source_text: str,
         gaps: list[WhatMissingGap] | None = None,
+        profile_role: str | None = None,
     ) -> str:
         if action_id == "what_am_i_missing":
             gap_block = ""
             if gaps:
                 gap_block = "\n\nHeuristic gaps already detected (incorporate and do not duplicate blindly):\n"
                 gap_block += "\n".join(f"- {g.title}: {g.why_it_matters}" for g in gaps)
+            role_note = ""
+            if profile_role:
+                profile = orb_human_practice_brain_service.get_profile(profile_role)
+                role_note = (
+                    f"\nShape gaps for a {profile.label}: {profile.needs_from_orb}\n"
+                    f"Prioritise: {profile.priorities}"
+                )
             return (
                 "Review the source material for what may be missing in residential recording and oversight.\n"
                 "Structure your response with these sections (use markdown headings):\n"
@@ -634,8 +827,102 @@ class OrbActionEngineService:
                 "5. What may need manager/safeguarding review\n"
                 "6. Suggested next action\n"
                 "7. Confidence / boundary\n"
-                f"{gap_block}\n\n"
+                f"{role_note}{gap_block}\n\n"
                 f"--- SOURCE MATERIAL ---\n{source_text}"
+            )
+        if action_id == "map_to_nvq_evidence":
+            return (
+                "Map the described practice to possible NVQ/diploma criteria/themes.\n"
+                "Structure with markdown headings:\n"
+                "1. Possible criteria/themes\n"
+                "2. Evidence already described\n"
+                "3. Evidence gaps\n"
+                "4. Questions to ask the learner\n"
+                "5. Suggested evidence types\n"
+                "6. Authenticity warning\n"
+                "7. Next action plan\n"
+                f"{NVQ_AUTHENTICITY_BOUNDARY}\n\n"
+                f"--- SOURCE ---\n{source_text}"
+            )
+        if action_id == "explain_nvq_criteria":
+            return (
+                "Explain the criteria or themes mentioned in plain English for residential childcare "
+                "(Level 3/4/5 diplomas). Include what good evidence looks like and common mistakes.\n"
+                f"{NVQ_AUTHENTICITY_BOUNDARY}\n\n"
+                f"--- SOURCE ---\n{source_text}"
+            )
+        if action_id == "create_reflective_account_plan":
+            return (
+                "Create a reflective account plan from described practice only.\n"
+                "Structure:\n"
+                "1. Situation\n2. What I did\n3. Why I did it\n4. Legislation/policy/theory link\n"
+                "5. Child-centred impact\n6. What I learned\n7. What I would do differently\n"
+                "8. Evidence still needed\n"
+                "Include an authenticity warning — do not invent incidents.\n"
+                f"{NVQ_AUTHENTICITY_BOUNDARY}\n\n"
+                f"--- SOURCE ---\n{source_text}"
+            )
+        if action_id == "review_reflective_account":
+            return (
+                "Review the reflective account draft. Comment on structure, criteria links, gaps, "
+                "and authenticity. Phrase as draft support — not official assessment.\n"
+                f"{NVQ_AUTHENTICITY_BOUNDARY}\n\n"
+                f"--- SOURCE ---\n{source_text}"
+            )
+        if action_id == "create_professional_discussion_prompts":
+            return (
+                "Create professional discussion prompts to test understanding of the described evidence.\n"
+                "Do not invent practice the learner has not described.\n\n"
+                f"--- SOURCE ---\n{source_text}"
+            )
+        if action_id == "create_witness_testimony_prompt":
+            return (
+                "Suggest witness testimony prompts: who might witness, what they could attest, "
+                "and questions to ask. Based only on described practice.\n\n"
+                f"--- SOURCE ---\n{source_text}"
+            )
+        if action_id == "identify_learning_evidence_gaps":
+            return (
+                "Identify learning evidence gaps from what was described.\n"
+                "List missing criteria coverage, weak areas, and suggested next collection steps.\n"
+                f"{NVQ_AUTHENTICITY_BOUNDARY}\n\n"
+                f"--- SOURCE ---\n{source_text}"
+            )
+        if action_id == "create_learner_action_plan":
+            return (
+                "Create a learner action plan for collecting missing authentic evidence over time.\n"
+                "Be specific about evidence types; do not invent completed work.\n"
+                f"{NVQ_AUTHENTICITY_BOUNDARY}\n\n"
+                f"--- SOURCE ---\n{source_text}"
+            )
+        if action_id == "assessor_feedback_draft":
+            return (
+                "Draft assessor feedback (support for assessor judgement only — not official sign-off).\n"
+                "Structure:\n"
+                "1. Strengths\n2. Evidence matched\n3. Gaps\n4. Questions for professional discussion\n"
+                "5. Next steps\n6. Authenticity/boundary note\n"
+                f"{NVQ_AUTHENTICITY_BOUNDARY}\n\n"
+                f"--- SOURCE ---\n{source_text}"
+            )
+        if action_id == "supervision_to_learning_evidence":
+            return (
+                "Link supervision themes in the source to possible qualification learning evidence.\n"
+                "Say what could be used if authentically recorded; flag gaps.\n"
+                f"{NVQ_AUTHENTICITY_BOUNDARY}\n\n"
+                f"--- SOURCE ---\n{source_text}"
+            )
+        if action_id == "incident_to_reflective_learning":
+            return (
+                "Turn the described incident into reflective learning structure (not invented facts).\n"
+                "Use the reflective account plan sections and include safeguarding learning where relevant.\n"
+                f"{NVQ_AUTHENTICITY_BOUNDARY}\n\n"
+                f"--- SOURCE ---\n{source_text}"
+            )
+        if action_id == "policy_to_learning_questions":
+            return (
+                "Generate learning and knowledge-check questions from the supplied policy/training text.\n"
+                "Link to residential practice and safeguarding where relevant.\n\n"
+                f"--- SOURCE ---\n{source_text}"
             )
         if action_id == "convert_to_recording_wording":
             return (
@@ -823,6 +1110,11 @@ class OrbActionEngineService:
             suggested.append({"action": "convert_to_recording_wording", "label": "Convert to recording wording"})
         elif action_id == "supervision_prompt":
             suggested.append({"action": "therapeutic_reframe", "label": "Therapeutic reframe"})
+        elif action_id in ACADEMY_NVQ_ACTION_IDS:
+            suggested.append({"action": "identify_learning_evidence_gaps", "label": "Evidence gaps"})
+            suggested.append({"action": "create_reflective_account_plan", "label": "Reflective account plan"})
+        elif action_id == "incident_to_reflective_learning":
+            suggested.append({"action": "map_to_nvq_evidence", "label": "Map to NVQ evidence"})
         elif action_id == "make_more_concise":
             suggested.append({"action": "make_more_detailed", "label": "More detailed"})
         elif action_id == "make_more_detailed":
@@ -898,7 +1190,13 @@ class OrbActionEngineService:
         if not definition.backend_supported:
             raise ValueError(f"Action not backend-supported yet: {action_id}")
 
+        profile_role: str | None = None
+        if context:
+            profile_role = _text(context.get("profile_role")) or None
+
         mode_name = orb_standalone_brain_service.normalise_mode(mode or "Ask ORB")
+        if action_id in ACADEMY_NVQ_ACTION_IDS:
+            mode_name = "Staff Coach"
         if action_id == "add_safeguarding_lens":
             mode_name = "Safeguarding Thinking"
         elif action_id == "add_ofsted_lens":
@@ -916,7 +1214,7 @@ class OrbActionEngineService:
         )
         gaps: list[WhatMissingGap] | None = None
         if action_id == "what_am_i_missing":
-            gaps = analyse_what_missing_gaps(source_text)
+            gaps = analyse_what_missing_gaps(source_text, profile_role=profile_role)
 
         prompt_tier = self.resolve_prompt_tier(action_id, source_text=source_text, mode=mode_name)
         retrieval = orb_knowledge_retrieval_service.prepare_request_bundle(
@@ -936,8 +1234,14 @@ class OrbActionEngineService:
             operating_block=operating_block,
             mode=mode_name,
             prompt_tier=prompt_tier,
+            profile_role=profile_role,
         )
-        user_prompt = self._action_user_prompt(action_id, source_text=source_text, gaps=gaps)
+        user_prompt = self._action_user_prompt(
+            action_id,
+            source_text=source_text,
+            gaps=gaps,
+            profile_role=profile_role,
+        )
 
         answer = await self._llm_complete(
             user_prompt=user_prompt,

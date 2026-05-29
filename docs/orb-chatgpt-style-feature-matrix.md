@@ -239,4 +239,14 @@ Status: **Done** · **Partial** · **Missing** · **N/A** (not for standalone) �
 | Custom instructions, terminology | Yes |
 | Boundary note | UI only — clarifies no OS access |
 
-Roles: residential support worker, senior support worker, deputy manager, registered manager, RI, provider/director, Reg 44 visitor, social worker, trainer/consultant, other.
+Roles: residential support worker, senior support worker, deputy manager, registered manager, RI, provider/director, Reg 44 visitor, social worker, **NVQ assessor**, **NVQ learner**, **diploma learner**, trainer/consultant, other.
+
+### Academy / NVQ (2026-05-29)
+
+| Feature | Status | Backend |
+|---------|--------|---------|
+| NVQ / Diploma tools menu | Done | `orb-tools-panel.tsx` → `actions/run` |
+| Map evidence, reflective plan, PD prompts | Done | `orb_action_engine_service.py` |
+| Contextual learning chips | Done | `orb-assistant-message.tsx` |
+| NVQ document lenses | Done | `orb_document_intelligence_service.py` |
+| Live Academy enrolments | Not in standalone | OS `/academy/*` future PR |

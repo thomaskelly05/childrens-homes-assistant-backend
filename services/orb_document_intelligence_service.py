@@ -192,6 +192,94 @@ LENS_REGISTRY: dict[str, dict[str, Any]] = {
         "standalone_boundary": STANDALONE_DOCUMENT_SAFETY,
         "understanding_mode": "full_review",
     },
+    "nvq_evidence_map": {
+        "id": "nvq_evidence_map",
+        "label": "NVQ evidence map",
+        "description": "Map supplied text to possible criteria/themes — no invented practice.",
+        "residential_purpose": "Assessor/learner evidence mapping from uploaded text only.",
+        "output_structure": "criteria + gaps + authenticity",
+        "safety_level": "medium",
+        "recommended_vaults": ("NVQ Diploma Support Vault", "Qualification Evidence Vault"),
+        "standalone_boundary": STANDALONE_DOCUMENT_SAFETY,
+        "understanding_mode": "full_review",
+    },
+    "reflective_account_plan": {
+        "id": "reflective_account_plan",
+        "label": "Reflective account plan",
+        "description": "Structure reflective account sections from supplied text only.",
+        "residential_purpose": "Learner reflective writing support.",
+        "output_structure": "reflective sections + authenticity",
+        "safety_level": "medium",
+        "recommended_vaults": ("Reflective Practice Learning Vault",),
+        "standalone_boundary": STANDALONE_DOCUMENT_SAFETY,
+        "understanding_mode": "full_review",
+    },
+    "assessor_feedback": {
+        "id": "assessor_feedback",
+        "label": "Assessor feedback",
+        "description": "Draft assessor feedback — support for assessor judgement only.",
+        "residential_purpose": "NVQ assessor draft feedback from supplied evidence text.",
+        "output_structure": "strengths + gaps + PD questions",
+        "safety_level": "medium",
+        "recommended_vaults": ("NVQ Diploma Support Vault", "Qualification Evidence Vault"),
+        "standalone_boundary": STANDALONE_DOCUMENT_SAFETY,
+        "understanding_mode": "full_review",
+    },
+    "professional_discussion_prompts": {
+        "id": "professional_discussion_prompts",
+        "label": "Professional discussion prompts",
+        "description": "PD prompts from supplied criteria or evidence text.",
+        "residential_purpose": "Prepare professional discussion without inventing practice.",
+        "output_structure": "question list",
+        "safety_level": "medium",
+        "recommended_vaults": ("NVQ Diploma Support Vault",),
+        "standalone_boundary": STANDALONE_DOCUMENT_SAFETY,
+        "understanding_mode": "full_review",
+    },
+    "witness_testimony_prompt": {
+        "id": "witness_testimony_prompt",
+        "label": "Witness testimony prompt",
+        "description": "Witness testimony focus from supplied practice description.",
+        "residential_purpose": "Identify witness scope and questions.",
+        "output_structure": "witness prompts",
+        "safety_level": "low",
+        "recommended_vaults": ("Qualification Evidence Vault",),
+        "standalone_boundary": STANDALONE_DOCUMENT_SAFETY,
+        "understanding_mode": "full_review",
+    },
+    "learning_action_plan": {
+        "id": "learning_action_plan",
+        "label": "Learning action plan",
+        "description": "Action plan for collecting missing authentic evidence.",
+        "residential_purpose": "Learner/assessor evidence collection planning.",
+        "output_structure": "action plan",
+        "safety_level": "low",
+        "recommended_vaults": ("Academy Learning Vault", "Workforce Development Vault"),
+        "standalone_boundary": STANDALONE_DOCUMENT_SAFETY,
+        "understanding_mode": "action_plan",
+    },
+    "workbook_summary": {
+        "id": "workbook_summary",
+        "label": "Workbook summary",
+        "description": "Summarise workbook or assignment text for learning themes.",
+        "residential_purpose": "Orientation on workbook content supplied by user.",
+        "output_structure": "summary + themes",
+        "safety_level": "low",
+        "recommended_vaults": ("Academy Learning Vault",),
+        "standalone_boundary": STANDALONE_DOCUMENT_SAFETY,
+        "understanding_mode": "summarise",
+    },
+    "qualification_criteria_explainer": {
+        "id": "qualification_criteria_explainer",
+        "label": "Criteria explainer",
+        "description": "Plain-English criteria explanation from supplied criteria text.",
+        "residential_purpose": "Help learners understand assessor expectations.",
+        "output_structure": "criteria explanation",
+        "safety_level": "low",
+        "recommended_vaults": ("NVQ Diploma Support Vault",),
+        "standalone_boundary": STANDALONE_DOCUMENT_SAFETY,
+        "understanding_mode": "explain",
+    },
 }
 
 
@@ -332,6 +420,46 @@ class OrbDocumentIntelligenceService:
                     items=understanding.who_needs_to_know[:8],
                 )
             )
+
+        if lens in {
+            "nvq_evidence_map",
+            "reflective_account_plan",
+            "assessor_feedback",
+            "professional_discussion_prompts",
+            "witness_testimony_prompt",
+            "learning_action_plan",
+            "workbook_summary",
+            "qualification_criteria_explainer",
+        }:
+            sections.append(
+                OrbDocumentIntelligenceSection(
+                    heading="Authenticity / boundary",
+                    body=(
+                        "Based only on the supplied document — do not treat as official assessment "
+                        "or live Academy learner records. Draft support for professional judgement only."
+                    ),
+                    items=[
+                        "Do not invent workplace events, observations or signatures.",
+                        "Say when criteria links depend on further evidence from the learner.",
+                    ],
+                )
+            )
+            if lens == "nvq_evidence_map":
+                sections.append(
+                    OrbDocumentIntelligenceSection(
+                        heading="Possible criteria / themes",
+                        body="From supplied text only.",
+                        items=understanding.key_themes[:10] or ["Review unit/criteria referenced in the document."],
+                    )
+                )
+            if lens == "assessor_feedback":
+                sections.append(
+                    OrbDocumentIntelligenceSection(
+                        heading="Draft feedback structure",
+                        body="Strengths, evidence matched, gaps, PD questions, next steps.",
+                        items=[q.question for q in understanding.suggested_questions if q.question][:8],
+                    )
+                )
 
         return OrbDocumentIntelligenceData(
             lens=lens,

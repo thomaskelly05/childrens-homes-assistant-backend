@@ -28,6 +28,14 @@ const SECTIONS = [
     body: 'Agents such as Safeguarding Thinking, Record This Properly, Ofsted Lens and Manager Copilot shape tone and depth. You can switch agents from the composer or sidebar.'
   },
   {
+    title: 'Learning / Academy / NVQ',
+    body: 'Tools and follow-up chips can help with diplomas, reflective accounts, evidence mapping and assessor support. ORB uses only what you type — it does not access live Academy learner records or invent workplace evidence.'
+  },
+  {
+    title: 'Profile roles',
+    body: 'Set your role in Profile (support worker, manager, Reg 44, NVQ assessor, NVQ learner, etc.) so ORB shapes answers and “What am I missing?” for your job — still without live OS records.'
+  },
+  {
     title: 'Actions & follow-ups',
     body: 'Under each answer, use Copy, Regenerate, Save, or suggested chips such as recording wording, safeguarding lens, or manager oversight — only when they fit your question.'
   },

@@ -59,6 +59,23 @@ describe('adult profile personalisation', () => {
     assert.match(welcome.subline, /oversight|Ofsted/i)
   })
 
+  it('welcome message personalises by NVQ assessor role', () => {
+    const welcome = personalisedWelcomeMessage({
+      ...DEFAULT_ADULT_PROFILE,
+      role: 'nvq_assessor',
+      roleLabel: 'NVQ assessor'
+    })
+    assert.match(welcome.subline, /evidence|criteria|portfolio/i)
+  })
+
+  it('welcome message personalises by support worker role', () => {
+    const welcome = personalisedWelcomeMessage({
+      ...DEFAULT_ADULT_PROFILE,
+      role: 'residential_support_worker'
+    })
+    assert.match(welcome.subline, /record|handover|missing/i)
+  })
+
   it('initials from Tom Kelly are TK', () => {
     assert.equal(profileInitialsFromName('Tom Kelly'), 'TK')
   })

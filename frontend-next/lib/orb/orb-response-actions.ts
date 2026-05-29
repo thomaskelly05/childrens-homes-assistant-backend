@@ -13,7 +13,16 @@ export const FRONTEND_TO_BACKEND_ORB_ACTION: Partial<Record<OrbResponseFollowUpA
   more_concise: 'make_more_concise',
   more_detailed: 'make_more_detailed',
   child_voice: 'add_child_voice_prompt',
-  shift_builder: 'build_shift_plan'
+  shift_builder: 'build_shift_plan',
+  nvq_evidence_map: 'map_to_nvq_evidence',
+  reflective_learning: 'create_reflective_account_plan',
+  pd_prompts: 'create_professional_discussion_prompts',
+  evidence_gaps: 'identify_learning_evidence_gaps',
+  learner_action_plan: 'create_learner_action_plan',
+  supervision_reflect: 'supervision_to_learning_evidence',
+  incident_reflective: 'incident_to_reflective_learning',
+  explain_criteria: 'explain_nvq_criteria',
+  assessor_feedback: 'assessor_feedback_draft'
 }
 
 export const BACKEND_SUPPORTED_ORB_RESPONSE_ACTIONS = new Set<OrbResponseFollowUpAction>([
@@ -28,7 +37,16 @@ export const BACKEND_SUPPORTED_ORB_RESPONSE_ACTIONS = new Set<OrbResponseFollowU
   'more_concise',
   'more_detailed',
   'child_voice',
-  'shift_builder'
+  'shift_builder',
+  'nvq_evidence_map',
+  'reflective_learning',
+  'pd_prompts',
+  'evidence_gaps',
+  'learner_action_plan',
+  'supervision_reflect',
+  'incident_reflective',
+  'explain_criteria',
+  'assessor_feedback'
 ])
 
 /** Backend action ids for toolbar shortcuts not exposed as follow-up chips. */

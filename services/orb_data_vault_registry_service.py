@@ -233,6 +233,41 @@ DATA_VAULTS: tuple[OrbDataVault, ...] = (
         typical_modules=("regulatory_framework", "safe_recording", "leadership_management"),
         typical_anchors=("[Reg 12]", "[Reg 13]", "[Recording quality]"),
     ),
+    OrbDataVault(
+        name="Academy Learning Vault",
+        category="academy_learning",
+        description="Generic learning module themes, workbook prompts and workforce development principles — not live learner records.",
+        typical_modules=("reflective_practice", "team_learning_loop", "leadership_management"),
+        typical_anchors=("[Workforce development]", "[Recording quality]"),
+    ),
+    OrbDataVault(
+        name="NVQ Diploma Support Vault",
+        category="nvq_diploma_support",
+        description="Residential childcare diploma evidence mapping, reflective practice and assessor support boundaries.",
+        typical_modules=("reflective_practice", "regulatory_framework", "contextual_safeguarding"),
+        typical_anchors=("[Workforce development]", "[Reg 13]"),
+    ),
+    OrbDataVault(
+        name="Workforce Development Vault",
+        category="workforce_development",
+        description="Staff learning, supervision-to-learning, training and competence themes.",
+        typical_modules=("team_learning_loop", "reflective_practice", "leadership_management"),
+        typical_anchors=("[Reg 13]", "[Workforce development]"),
+    ),
+    OrbDataVault(
+        name="Qualification Evidence Vault",
+        category="qualification_evidence",
+        description="Qualification criteria mapping, naturally occurring evidence and portfolio authenticity.",
+        typical_modules=("reflective_practice", "safe_recording"),
+        typical_anchors=("[Workforce development]", "[Recording quality]"),
+    ),
+    OrbDataVault(
+        name="Reflective Practice Learning Vault",
+        category="reflective_practice_learning",
+        description="Reflective accounts, supervision reflections and incident-to-learning structure.",
+        typical_modules=("reflective_practice", "trauma_informed", "therapeutic_language"),
+        typical_anchors=("[Recording quality]", "[Therapeutic practice]"),
+    ),
 )
 
 _VAULTS_BY_NAME = {vault.name: vault for vault in DATA_VAULTS}
