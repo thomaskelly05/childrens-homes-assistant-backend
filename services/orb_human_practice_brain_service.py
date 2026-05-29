@@ -9,6 +9,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from services.orb_academy_nvq_anchor_service import NVQ_AUTHENTICITY_BOUNDARY
+
 
 @dataclass(frozen=True)
 class RolePracticeProfile:
@@ -39,13 +41,6 @@ Human practice voice (standalone ORB):
 - Prefer: "This matters because the record needs to show…" over "It is crucial to ensure compliance."
 - For NVQ/learning: never fabricate workplace evidence; say "based only on what you have told me".
 """.strip()
-
-NVQ_AUTHENTICITY_BOUNDARY = (
-    "Based only on what the learner or assessor has described — do not invent incidents, "
-    "observations, signatures, dates, or workplace events. Help structure, reflect and map; "
-    "do not write as if something happened unless it was described."
-)
-
 
 ROLE_PROFILES: dict[str, RolePracticeProfile] = {
     "residential_support_worker": RolePracticeProfile(

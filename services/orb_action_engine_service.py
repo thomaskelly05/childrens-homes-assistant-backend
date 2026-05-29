@@ -8,10 +8,11 @@ from typing import Any
 
 from services.ai_model_router_service import ai_model_router_service
 from services.orb_data_vault_registry_service import orb_data_vault_registry_service
-from services.orb_human_practice_brain_service import (
+from services.orb_academy_nvq_anchor_service import (
     NVQ_AUTHENTICITY_BOUNDARY,
-    orb_human_practice_brain_service,
+    orb_academy_nvq_anchor_service,
 )
+from services.orb_human_practice_brain_service import orb_human_practice_brain_service
 from services.orb_knowledge_retrieval_service import orb_knowledge_retrieval_service
 from services.orb_operating_brain_service import orb_operating_brain_service
 from services.orb_standalone_brain_service import orb_standalone_brain_service
@@ -746,10 +747,19 @@ class OrbActionEngineService:
         *,
         source_message: str | None,
         source_answer: str | None,
+        context: dict[str, Any] | None = None,
     ) -> str:
-        parts = [_clip(source_message or ""), _clip(source_answer or "")]
-        combined = "\n\n".join(p for p in parts if p)
-        return combined or "(No source text provided.)"
+        ctx = context or {}
+        chat_history = ctx.get("chat_history") or ctx.get("conversation_history")
+        selected = _text(ctx.get("selected_message")) or None
+        if action_context := ctx.get("incident_context"):
+            selected = selected or _text(action_context)
+        return orb_academy_nvq_anchor_service.combine_source_material(
+            source_message=source_message,
+            source_answer=source_answer,
+            chat_history=list(chat_history) if chat_history else None,
+            selected_message=selected,
+        )
 
     def _vault_block(self, definition: OrbActionDefinition) -> str:
         if not definition.data_vaults:
@@ -782,6 +792,10 @@ class OrbActionEngineService:
         ]
         if definition.academy_nvq_purpose or definition.id in ACADEMY_NVQ_ACTION_IDS:
             parts.append(NVQ_AUTHENTICITY_BOUNDARY)
+            parts.append(
+                "Never substitute a generic example (no Child A, group activity, or invented incident). "
+                "Anchor every section to the supplied source and chat context only."
+            )
         if profile_role:
             parts.append(orb_human_practice_brain_service.build_role_shaping_block(profile_role))
         if prompt_tier == "deep":
@@ -830,100 +844,8 @@ class OrbActionEngineService:
                 f"{role_note}{gap_block}\n\n"
                 f"--- SOURCE MATERIAL ---\n{source_text}"
             )
-        if action_id == "map_to_nvq_evidence":
-            return (
-                "Map the described practice to possible NVQ/diploma criteria/themes.\n"
-                "Structure with markdown headings:\n"
-                "1. Possible criteria/themes\n"
-                "2. Evidence already described\n"
-                "3. Evidence gaps\n"
-                "4. Questions to ask the learner\n"
-                "5. Suggested evidence types\n"
-                "6. Authenticity warning\n"
-                "7. Next action plan\n"
-                f"{NVQ_AUTHENTICITY_BOUNDARY}\n\n"
-                f"--- SOURCE ---\n{source_text}"
-            )
-        if action_id == "explain_nvq_criteria":
-            return (
-                "Explain the criteria or themes mentioned in plain English for residential childcare "
-                "(Level 3/4/5 diplomas). Include what good evidence looks like and common mistakes.\n"
-                f"{NVQ_AUTHENTICITY_BOUNDARY}\n\n"
-                f"--- SOURCE ---\n{source_text}"
-            )
-        if action_id == "create_reflective_account_plan":
-            return (
-                "Create a reflective account plan from described practice only.\n"
-                "Structure:\n"
-                "1. Situation\n2. What I did\n3. Why I did it\n4. Legislation/policy/theory link\n"
-                "5. Child-centred impact\n6. What I learned\n7. What I would do differently\n"
-                "8. Evidence still needed\n"
-                "Include an authenticity warning — do not invent incidents.\n"
-                f"{NVQ_AUTHENTICITY_BOUNDARY}\n\n"
-                f"--- SOURCE ---\n{source_text}"
-            )
-        if action_id == "review_reflective_account":
-            return (
-                "Review the reflective account draft. Comment on structure, criteria links, gaps, "
-                "and authenticity. Phrase as draft support — not official assessment.\n"
-                f"{NVQ_AUTHENTICITY_BOUNDARY}\n\n"
-                f"--- SOURCE ---\n{source_text}"
-            )
-        if action_id == "create_professional_discussion_prompts":
-            return (
-                "Create professional discussion prompts to test understanding of the described evidence.\n"
-                "Do not invent practice the learner has not described.\n\n"
-                f"--- SOURCE ---\n{source_text}"
-            )
-        if action_id == "create_witness_testimony_prompt":
-            return (
-                "Suggest witness testimony prompts: who might witness, what they could attest, "
-                "and questions to ask. Based only on described practice.\n\n"
-                f"--- SOURCE ---\n{source_text}"
-            )
-        if action_id == "identify_learning_evidence_gaps":
-            return (
-                "Identify learning evidence gaps from what was described.\n"
-                "List missing criteria coverage, weak areas, and suggested next collection steps.\n"
-                f"{NVQ_AUTHENTICITY_BOUNDARY}\n\n"
-                f"--- SOURCE ---\n{source_text}"
-            )
-        if action_id == "create_learner_action_plan":
-            return (
-                "Create a learner action plan for collecting missing authentic evidence over time.\n"
-                "Be specific about evidence types; do not invent completed work.\n"
-                f"{NVQ_AUTHENTICITY_BOUNDARY}\n\n"
-                f"--- SOURCE ---\n{source_text}"
-            )
-        if action_id == "assessor_feedback_draft":
-            return (
-                "Draft assessor feedback (support for assessor judgement only — not official sign-off).\n"
-                "Structure:\n"
-                "1. Strengths\n2. Evidence matched\n3. Gaps\n4. Questions for professional discussion\n"
-                "5. Next steps\n6. Authenticity/boundary note\n"
-                f"{NVQ_AUTHENTICITY_BOUNDARY}\n\n"
-                f"--- SOURCE ---\n{source_text}"
-            )
-        if action_id == "supervision_to_learning_evidence":
-            return (
-                "Link supervision themes in the source to possible qualification learning evidence.\n"
-                "Say what could be used if authentically recorded; flag gaps.\n"
-                f"{NVQ_AUTHENTICITY_BOUNDARY}\n\n"
-                f"--- SOURCE ---\n{source_text}"
-            )
-        if action_id == "incident_to_reflective_learning":
-            return (
-                "Turn the described incident into reflective learning structure (not invented facts).\n"
-                "Use the reflective account plan sections and include safeguarding learning where relevant.\n"
-                f"{NVQ_AUTHENTICITY_BOUNDARY}\n\n"
-                f"--- SOURCE ---\n{source_text}"
-            )
-        if action_id == "policy_to_learning_questions":
-            return (
-                "Generate learning and knowledge-check questions from the supplied policy/training text.\n"
-                "Link to residential practice and safeguarding where relevant.\n\n"
-                f"--- SOURCE ---\n{source_text}"
-            )
+        if action_id in ACADEMY_NVQ_ACTION_IDS:
+            return orb_academy_nvq_anchor_service.action_user_prompt(action_id, source_text=source_text)
         if action_id == "convert_to_recording_wording":
             return (
                 "Convert the source into professional residential recording wording.\n"
@@ -1150,12 +1072,13 @@ class OrbActionEngineService:
         mode: str,
         retrieval: dict[str, Any],
         prompt_tier: str,
+        history: list[dict[str, Any]] | None = None,
     ) -> str:
         detail = "detailed" if prompt_tier in {"deep", "residential"} else "concise"
         response, _decision, _trace = await ai_model_router_service.complete_with_routing(
             message=user_prompt,
             system_prompt=system_prompt,
-            history=[],
+            history=history or [],
             images=[],
             mode=mode,
             retrieval_context=retrieval,
@@ -1211,6 +1134,7 @@ class OrbActionEngineService:
         source_text = self._combine_source(
             source_message=source_message,
             source_answer=source_answer,
+            context=context,
         )
         gaps: list[WhatMissingGap] | None = None
         if action_id == "what_am_i_missing":
@@ -1243,13 +1167,26 @@ class OrbActionEngineService:
             profile_role=profile_role,
         )
 
+        llm_history: list[dict[str, Any]] = []
+        if context and action_id in ACADEMY_NVQ_ACTION_IDS:
+            raw_history = context.get("chat_history") or context.get("conversation_history")
+            if raw_history:
+                llm_history = list(raw_history)[-12:]
+
         answer = await self._llm_complete(
             user_prompt=user_prompt,
             system_prompt=system,
             mode=mode_name,
             retrieval=retrieval,
             prompt_tier=prompt_tier,
+            history=llm_history,
         )
+
+        if action_id in ACADEMY_NVQ_ACTION_IDS:
+            answer = orb_academy_nvq_anchor_service.sanitize_nvq_answer(
+                answer,
+                message=source_text,
+            )
 
         return self._build_structured_payload(
             action_id,

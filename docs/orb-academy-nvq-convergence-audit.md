@@ -154,3 +154,19 @@ Tools menu: **Learning / Academy** in `orb-tools-panel.tsx`.
 | Follow-up chips | NVQ/supervision/incident contextual actions |
 
 **Standalone boundary (unchanged):** No live child/home/staff/chronology/Academy learner records. All outputs from user-supplied text and built-in knowledge only.
+
+---
+
+## NVQ/Diploma authenticity and context anchoring (2026-05-29)
+
+| Principle | Implementation |
+|-----------|----------------|
+| ORB helps structure and map evidence | `services/orb_academy_nvq_anchor_service.py`, action engine prompts, Level 3 conversation structure |
+| ORB does not fabricate evidence | No generic “Child A / group activity” examples; “based only on what you have provided” |
+| ORB does not decide competence | Possible evidence **themes** only unless criteria text is supplied; no sufficiency claims |
+| Assessor judgement remains human-led | Authenticity/assessor boundary closer — not safeguarding **threshold** closer for diploma questions |
+| Standalone context only | `chat_history` + `source_message` / `source_answer` from `/orb` chat; no live Academy/OS learner records |
+
+**Level 3 reflective follow-ups:** When a learner asks how an incident supports a reflective account, ORB must use prior chat context (missing from care, restraint, child voice, etc.) and output the eight-part structure (short answer, themes, evidence present/missing, plan, what not to write, supervision questions, authenticity note).
+
+**Context handoff:** `orb-care-companion.tsx` sends `chat_history` and combined prior user turns on `actions/run`. Conversation routes pass `history` into the general assistant for the same anchoring.

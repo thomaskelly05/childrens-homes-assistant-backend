@@ -213,6 +213,33 @@ function precedingUserMessageHint(messages: StandaloneChatMessage[], assistantIn
   return undefined
 }
 
+/** Collect prior user turns so Academy/NVQ actions stay anchored to the described incident. */
+function gatherActionSourceContext(
+  messages: StandaloneChatMessage[],
+  assistantIndex: number
+): { sourceMessage: string; chatHistory: Array<{ role: string; content: string }> } {
+  const endIndex = assistantIndex >= 0 ? assistantIndex : messages.length
+  const historySlice = messages.slice(0, endIndex)
+  const chatHistory = trimConversationHistory(historySlice)
+
+  const userTurns: string[] = []
+  for (let index = historySlice.length - 1; index >= 0 && userTurns.length < 5; index -= 1) {
+    const entry = historySlice[index]
+    if (entry?.role === 'user' && entry.content.trim()) {
+      userTurns.unshift(entry.content.trim())
+    }
+  }
+
+  const currentQuestion = userTurns[userTurns.length - 1] || ''
+  const priorIncident = userTurns.slice(0, -1).join('\n\n')
+  let sourceMessage = currentQuestion
+  if (priorIncident) {
+    sourceMessage = `${priorIncident}\n\n--- Follow-up question ---\n${currentQuestion}`
+  }
+
+  return { sourceMessage, chatHistory }
+}
+
 function traceOrbSend(event: string, detail?: Record<string, unknown>) {
   if (detail && Object.keys(detail).length > 0) {
     console.info(`[orb-send] ${event}`, detail)
@@ -1563,10 +1590,12 @@ export function OrbCareCompanion() {
       return false
     }
 
-    const sourceMessage =
+    const actionContext =
       typeof assistantIndex === 'number'
-        ? precedingUserMessageHint(visibleMessages, assistantIndex)
-        : precedingUserMessageHint(visibleMessages, visibleMessages.length - 1)
+        ? gatherActionSourceContext(visibleMessages, assistantIndex)
+        : gatherActionSourceContext(visibleMessages, visibleMessages.length)
+
+    const sourceMessage = actionContext.sourceMessage || undefined
 
     const thinkingMessage = ensureStandaloneMessage({
       role: 'assistant',
@@ -1595,7 +1624,9 @@ export function OrbCareCompanion() {
           frontend_action: frontendAction ?? backendAction,
           profile_role: adultProfile
             ? normalizeAdultProfileRole(adultProfile.role)
-            : 'residential_support_worker'
+            : 'residential_support_worker',
+          chat_history: actionContext.chatHistory,
+          incident_context: actionContext.sourceMessage || undefined
         }
       })
 
