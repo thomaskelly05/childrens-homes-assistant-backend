@@ -215,3 +215,4 @@ __marimo__/
 
 # Standalone ORB knowledge library runtime cache (seeded on first use)
 data/orb_knowledge_library_cache.json
+.tmp/

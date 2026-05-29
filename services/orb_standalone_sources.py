@@ -3,7 +3,9 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from services.orb_citation_decision_service import orb_citation_decision_service
 from services.orb_citation_service import orb_citation_service
+from services.orb_expert_scenario_bank_service import orb_expert_scenario_bank_service
 from services.orb_knowledge_retrieval_service import orb_knowledge_retrieval_service
 from services.orb_professional_curiosity_service import orb_professional_curiosity_service
 
@@ -124,6 +126,31 @@ def build_standalone_sources(
         has_images=has_images,
     )
     payload = orb_citation_service.frontend_sources_payload(citations)
+    expert_ctx = orb_expert_scenario_bank_service.detect_expert_context(message)
+    family_id = expert_ctx.get("family_id")
+    if family_id:
+        registry_citations = orb_citation_decision_service.select_sources(
+            family_id=family_id,
+            scenario_anchors=expert_ctx.get("source_anchors"),
+            max_sources=4,
+        )
+        existing_labels = {str(p.get("label", "")).lower() for p in payload}
+        for rc in registry_citations:
+            label = str(rc.get("label", "")).lower()
+            if label and label not in existing_labels:
+                payload.append(
+                    {
+                        "label": rc.get("label"),
+                        "type": "regulatory_framework",
+                        "source_id": rc.get("source_id"),
+                        "source_url": rc.get("source_url"),
+                        "why_cited": rc.get("why_cited"),
+                        "exact_text_available": rc.get("exact_text_available"),
+                        "basis_type": rc.get("basis_type"),
+                        "summary_basis": rc.get("summary_basis"),
+                    }
+                )
+                existing_labels.add(label)
     return filter_display_sources(payload, message=message, mode=mode)
 
 

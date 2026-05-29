@@ -11,6 +11,7 @@ from assistant.knowledge_loader import (
     select_relevant_python_knowledge,
 )
 from services.orb_knowledge_source_pack_service import get_source_pack
+from services.orb_expert_scenario_bank_service import orb_expert_scenario_bank_service
 from services.orb_operating_brain_service import orb_operating_brain_service
 
 RESEARCH_INTENT_TERMS = (
@@ -288,6 +289,10 @@ class OrbKnowledgeRetrievalService:
             prompt_tier=prompt_tier,
         )
         retrieval_elapsed_ms = int((time.perf_counter() - started) * 1000)
+        expert_context = orb_expert_scenario_bank_service.detect_expert_context(message)
+        expert_block = orb_expert_scenario_bank_service.expert_prompt_block(message)
+        if expert_block and prompt_tier != "fast":
+            grounding_context = f"{grounding_context}\n\n{expert_block}".strip()
         return {
             "classification": classification,
             "prompt_tier": prompt_tier,
@@ -295,6 +300,7 @@ class OrbKnowledgeRetrievalService:
             "grounding_context": grounding_context,
             "retrieval_elapsed_ms": retrieval_elapsed_ms,
             "grounding_char_count": len(grounding_context),
+            "expert_scenario_context": expert_context,
         }
 
     def retrieve_sources(

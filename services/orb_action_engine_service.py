@@ -16,6 +16,7 @@ from services.orb_human_practice_brain_service import orb_human_practice_brain_s
 from services.orb_knowledge_retrieval_service import orb_knowledge_retrieval_service
 from services.orb_operating_brain_service import orb_operating_brain_service
 from services.orb_standalone_brain_service import orb_standalone_brain_service
+from services.orb_expert_scenario_bank_service import orb_expert_scenario_bank_service
 from services.orb_standalone_sources import build_standalone_sources
 
 STANDALONE_BOUNDARY_PREFIX = (
@@ -559,6 +560,19 @@ def analyse_what_missing_gaps(
     lower = text.lower()
     gaps: list[WhatMissingGap] = []
 
+    expert_ctx = orb_expert_scenario_bank_service.detect_expert_context(text)
+    for marker in (expert_ctx.get("expected_markers") or [])[:6]:
+        marker_id = re.sub(r"[^a-z0-9]+", "_", marker.lower())[:48]
+        gaps.append(
+            WhatMissingGap(
+                id=f"expert_{marker_id}",
+                title=marker[:80],
+                why_it_matters="Expert scenario marker — a skilled RM/RI/Reg 44 visitor would expect this in the response.",
+                what_to_check=f"Does the record or plan address: {marker[:120]}?",
+                what_to_record=f"Factual detail and actions relevant to: {marker[:120]}.",
+            )
+        )
+
     for hint in orb_human_practice_brain_service.role_what_missing_gaps(profile_role):
         gaps.append(
             WhatMissingGap(
@@ -805,6 +819,11 @@ class OrbActionEngineService:
             )
         if self._vault_block(definition):
             parts.append(self._vault_block(definition))
+        expert_block = orb_expert_scenario_bank_service.expert_prompt_block(
+            grounding_context[:2000] if grounding_context else ""
+        )
+        if expert_block:
+            parts.append(expert_block)
         if operating_block:
             parts.append(operating_block)
         if grounding_context:

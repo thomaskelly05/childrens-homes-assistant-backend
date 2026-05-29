@@ -4,6 +4,8 @@
 
 This audit maps existing document, extractor, and action-planner functionality and records what was converged into the standalone ORB Document Intelligence layer.
 
+**Source anchors (2026-05-29):** Document intelligence can align citations with `orb_source_registry_service` / `orb_citation_decision_service` when scenario families are detected (Reg 44/45, safeguarding uploads). See `docs/orb-source-citation-registry.md`.
+
 ---
 
 ## 1. Existing document / extractor services found
