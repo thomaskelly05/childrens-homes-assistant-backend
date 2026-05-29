@@ -10,6 +10,7 @@ import {
 } from '@/lib/orb/orb-output-reuse'
 
 import { OrbHueMark } from '@/components/orb-standalone/orb-hue-logo'
+import { profileInitialsFromName } from '@/lib/orb/orb-profile-initials'
 import { OrbExplainabilityPanel, type OrbExplainabilityView } from '@/components/orb-standalone/orb-explainability-panel'
 import { OrbMarkdownAnswer } from '@/components/orb-standalone/orb-markdown-answer'
 import { logOrbCognitionDebug } from '@/lib/orb/standalone-client'
@@ -30,6 +31,36 @@ function CognitionPill({ label }: { label: string }) {
 
 function stripSourcesBasisSection(content: string): string {
   return content.replace(/\n+Sources\s*\/\s*basis[\s\S]*$/i, '').trimEnd()
+}
+
+export function OrbAssistantSpeakerAvatar({ streaming }: { streaming?: boolean }) {
+  return (
+    <div
+      className="orb-speaker-avatar orb-speaker-avatar--assistant shrink-0"
+      aria-label="ORB"
+      data-orb-speaker-avatar="assistant"
+    >
+      <OrbHueMark pulse={streaming} />
+    </div>
+  )
+}
+
+export function OrbUserSpeakerAvatar({ initials }: { initials: string }) {
+  const label = initials === 'You' ? 'You' : `You (${initials})`
+  return (
+    <div
+      className="orb-speaker-avatar orb-speaker-avatar--user flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#CBD5E1] bg-[#E0F2FE] text-[11px] font-bold tracking-tight text-[#0369A1]"
+      aria-label={label}
+      data-orb-speaker-avatar="user"
+      data-orb-user-initials={initials}
+    >
+      {initials === 'You' ? 'Y' : initials}
+    </div>
+  )
+}
+
+export function userInitialsFromProfileName(name: string | undefined | null): string {
+  return profileInitialsFromName(name)
 }
 
 export function OrbCognitionIndicators({
@@ -89,7 +120,7 @@ export function OrbAssistantMessageBody({
       className={`orb-message-assistant group flex gap-3.5 ${streaming ? 'orb-message-streaming' : ''}`}
       data-testid="orb-message-assistant"
     >
-      <OrbHueMark pulse={streaming} />
+      <OrbAssistantSpeakerAvatar streaming={streaming} />
       <div className="min-w-0 flex-1">
         {heading ? (
           <p className="mb-1 text-xs font-semibold text-[#64748B]" data-orb-message-heading>
@@ -395,7 +426,8 @@ export function OrbResponseActionBar({
   exportEnabled = false,
   onInspectionPrep,
   saveFeedback = 'idle',
-  onOrbFollowUp
+  onOrbFollowUp,
+  isLatest = true
 }: {
   mode: string
   content: string
@@ -417,6 +449,8 @@ export function OrbResponseActionBar({
   saveFeedback?: 'idle' | 'saved' | 'already_saved' | 'failed'
   /** Run structured ORB action or composer prefill fallback for unsupported actions. */
   onOrbFollowUp?: (action: OrbResponseFollowUpAction, sourceContent: string, assistantIndex?: number) => void
+  /** When false, Regenerate is hidden (older messages). */
+  isLatest?: boolean
 }) {
   const [moreOpen, setMoreOpen] = useState(false)
   const [copyFeedback, setCopyFeedback] = useState<'idle' | 'copied' | 'failed'>('idle')
@@ -466,7 +500,7 @@ export function OrbResponseActionBar({
       dataAttr="copy"
     />
   ]
-  if (onRegenerate) {
+  if (onRegenerate && isLatest) {
     primaryActions.push(
       <ActionChip key="regen" icon={<RotateCcw className="h-3 w-3" />} label="Regenerate" onClick={onRegenerate} dataAttr="regenerate" />
     )
@@ -564,9 +598,10 @@ export function OrbResponseActionBar({
 
   return (
     <div
-      className="orb-response-action-bar mt-3 flex flex-wrap items-center gap-1 border-t border-[var(--orb-line)] pt-3 opacity-90 transition-opacity group-hover:opacity-100"
+      className="orb-response-action-bar mt-3 flex flex-wrap items-center gap-1.5 border-t border-[var(--orb-line)] pt-3"
       data-orb-response-actions
       data-orb-response-action-bar
+      data-orb-response-action-bar-persistent
     >
       {primaryActions}
       {moreActions.length ? (

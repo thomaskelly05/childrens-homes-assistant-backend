@@ -83,6 +83,8 @@ describe('ORB markdown and cognition rendering', () => {
     assert.match(assistant, /label="More"/)
     assert.match(assistant, /dataAttr="save"/)
     assert.match(assistant, /Save to project/)
+    assert.match(assistant, /data-orb-response-action-bar-persistent/)
+    assert.match(assistant, /isLatest/)
   })
 
   it('document panel has readable light inputs and empty state', () => {

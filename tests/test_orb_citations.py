@@ -116,6 +116,26 @@ def test_ofsted_citations_include_official_metadata(citation_service):
     assert citations[0].get("confidence_level") == "official"
 
 
+def test_regulation_label_enriches_exact_excerpt_and_url(citation_service):
+    citations = citation_service.build_citations(
+        [{"pack_key": "childrens_homes_regs", "short_citation_label": "Reg 12", "source_type": "regulatory_framework"}]
+    )
+    reg = next(c for c in citations if "12" in c.get("label", ""))
+    assert reg.get("why_cited")
+    assert reg.get("exact_excerpt") or reg.get("excerpt")
+    assert reg.get("source_url", "").startswith("https://")
+    assert reg.get("exact_text_available") is True
+
+
+def test_summary_only_citation_marks_basis_type(citation_service):
+    citations = citation_service.build_citations(
+        [{"pack_key": "general", "short_citation_label": "General model knowledge", "source_type": "general_knowledge"}]
+    )
+    item = citations[0]
+    assert item.get("basis_type") == "summary"
+    assert item.get("exact_text_available") is False
+
+
 def test_rag_citation_governance_fields(citation_service):
     from services.orb_rag_retrieval_service import orb_rag_retrieval_service
 

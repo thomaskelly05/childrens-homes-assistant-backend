@@ -15,6 +15,7 @@ export function stripMarkdownForSpeech(content: string): string {
   text = text.replace(/__([^_]+)__/g, '$1')
   text = text.replace(/_([^_]+)_/g, '$1')
   text = text.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+  text = text.replace(/\[[^\]]+\]/g, ' ')
   text = text.replace(/\n+Sources\s*\/\s*basis[\s\S]*$/i, '')
   text = text.replace(/\n+_{2,}\n[\s\S]*$/i, '')
   text = text.replace(/\s+/g, ' ').trim()

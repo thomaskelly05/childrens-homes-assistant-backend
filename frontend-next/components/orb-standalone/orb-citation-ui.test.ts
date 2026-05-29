@@ -16,6 +16,8 @@ describe('ORB citation UI', () => {
     assert.match(source, /Why cited/)
     assert.match(source, /data-orb-citation-summary-basis/)
     assert.match(source, /Exact excerpt/)
+    assert.match(source, /data-orb-citation-open-source/)
+    assert.match(source, /data-orb-citation-has-url/)
   })
 
   it('care companion gates image unavailable banner to image turns', () => {
