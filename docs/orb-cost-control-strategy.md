@@ -41,6 +41,12 @@ History capped by tier; `ai_cost_policy_service.max_tokens_for_prompt_tier()`; e
 
 **Soft** → warning / shorter answer suggestion. **Hard** → friendly limit message. **Safeguarding** → safety template, not a dead end. Admins/founding plans may bypass via `orb_usage_budget_service.user_can_bypass()`.
 
+## Plan limits (subscription readiness)
+
+`services/orb_plan_limits_service.py` defines fair-use limits per plan (`orb_residential_individual`, `founding_plan`, `admin`, `enterprise`). Env vars override defaults per plan prefix.
+
+User meter: `GET /orb/standalone/billing/meter`. Admin platform usage: `GET /orb/admin/billing/usage`.
+
 ## Future billing
 
 Usage events and tiers are structured for subscription metering; billing enforcement is not required in this pass.

@@ -83,7 +83,17 @@ def list_orb_feedback(
     *,
     days: int | None = None,
     rating: str | None = None,
+    reason: str | None = None,
+    mode: str | None = None,
+    prompt_tier: str | None = None,
+    detected_family: str | None = None,
+    action_id: str | None = None,
+    document_lens: str | None = None,
+    reviewed: bool | None = None,
+    date_from: datetime | None = None,
+    date_to: datetime | None = None,
     limit: int = 5000,
+    offset: int = 0,
 ) -> list[dict[str, Any]]:
     clauses = ["1=1"]
     params: list[Any] = []
@@ -91,10 +101,37 @@ def list_orb_feedback(
         since = datetime.now(timezone.utc) - timedelta(days=max(1, int(days)))
         clauses.append("created_at >= %s")
         params.append(since)
+    if date_from is not None:
+        clauses.append("created_at >= %s")
+        params.append(date_from)
+    if date_to is not None:
+        clauses.append("created_at <= %s")
+        params.append(date_to)
     if rating:
         clauses.append("rating = %s")
         params.append(rating)
-    params.append(max(1, min(int(limit or 5000), 10000)))
+    if reason:
+        clauses.append("reason = %s")
+        params.append(reason)
+    if mode:
+        clauses.append("mode = %s")
+        params.append(mode)
+    if prompt_tier:
+        clauses.append("prompt_tier = %s")
+        params.append(prompt_tier)
+    if detected_family:
+        clauses.append("detected_family = %s")
+        params.append(detected_family)
+    if action_id:
+        clauses.append("action_id = %s")
+        params.append(action_id)
+    if document_lens:
+        clauses.append("document_lens = %s")
+        params.append(document_lens)
+    if reviewed is not None:
+        clauses.append("reviewed = %s")
+        params.append(reviewed)
+    params.extend([max(1, min(int(limit or 5000), 10000)), max(0, int(offset or 0))])
     where = " AND ".join(clauses)
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
@@ -102,11 +139,11 @@ def list_orb_feedback(
             SELECT id, user_id, message_id, conversation_id, rating, reason, comment,
                    answer_snapshot, question_snapshot, mode, profile_role, prompt_tier,
                    detected_family, secondary_families, source_anchors, action_id,
-                   document_lens, metadata, created_at
+                   document_lens, metadata, created_at, reviewed, reviewed_by, reviewed_at, reviewer_note
             FROM orb_feedback
             WHERE {where}
             ORDER BY created_at DESC
-            LIMIT %s
+            LIMIT %s OFFSET %s
             """,
             params,
         )
@@ -115,8 +152,54 @@ def list_orb_feedback(
             item = dict(row)
             if item.get("created_at"):
                 item["created_at"] = item["created_at"].isoformat()
+            if item.get("reviewed_at"):
+                item["reviewed_at"] = item["reviewed_at"].isoformat()
             rows.append(item)
         return rows
+
+
+def mark_orb_feedback_reviewed(
+    conn,
+    *,
+    feedback_id: int,
+    reviewed_by: int | None,
+    reviewer_note: str | None = None,
+) -> dict[str, Any] | None:
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute(
+            """
+            UPDATE orb_feedback
+            SET reviewed = TRUE,
+                reviewed_by = %s,
+                reviewed_at = NOW(),
+                reviewer_note = %s
+            WHERE id = %s
+            RETURNING id, user_id, message_id, conversation_id, rating, reason, comment,
+                      answer_snapshot, question_snapshot, mode, profile_role, prompt_tier,
+                      detected_family, secondary_families, source_anchors, action_id,
+                      document_lens, metadata, created_at, reviewed, reviewed_by, reviewed_at, reviewer_note
+            """,
+            (reviewed_by, reviewer_note, feedback_id),
+        )
+        row = cur.fetchone()
+        if not row:
+            return None
+        item = dict(row)
+        if item.get("created_at"):
+            item["created_at"] = item["created_at"].isoformat()
+        if item.get("reviewed_at"):
+            item["reviewed_at"] = item["reviewed_at"].isoformat()
+        return item
+
+
+def safe_mark_orb_feedback_reviewed(conn, **kwargs: Any) -> dict[str, Any] | None:
+    try:
+        return mark_orb_feedback_reviewed(conn, **kwargs)
+    except Exception as exc:
+        if _has_feedback_table_error(exc):
+            _safe_rollback(conn)
+            return None
+        raise
 
 
 def count_orb_feedback_summary(conn, *, days: int = 30) -> dict[str, Any]:

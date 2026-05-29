@@ -24,6 +24,8 @@ ORB may use trusted AI providers to generate responses. Those providers process 
 
 Stored so adults can reuse them and so ORB quality can improve through **human-reviewed** changes — not automatic care decisions.
 
+Admin quality review (`/admin/orb-quality`) uses feedback metadata only — not raw OS records. Improvement candidates require explicit admin approval before any prompt or scenario changes.
+
 ## UI copy
 
 Help and Settings on `/orb` include **“How ORB protects your data”** — clear, reassuring, and not overpromising (no “100% safe”).

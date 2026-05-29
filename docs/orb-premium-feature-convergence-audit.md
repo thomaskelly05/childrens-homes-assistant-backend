@@ -11,6 +11,8 @@ Standalone ORB must never imply access to live IndiCare OS child, home, staff, c
 
 **Feedback + cost control (2026-05-29):** Thumbs up/down on completed answers (`POST /orb/standalone/feedback`), review-only improvement candidates, data-safety Help/Settings copy, usage budgets and local templates — `docs/orb-feedback-learning-loop.md`, `docs/orb-data-safety-and-privacy.md`, `docs/orb-cost-control-strategy.md`.
 
+**Admin quality review + billing meter (2026-05-29):** Admin feedback/candidate review API, `/admin/orb-quality` UI, persisted improvement candidates, billing meter and plan limits — `docs/orb-admin-quality-review.md`, `docs/orb-billing-meter-readiness.md`.
+
 ---
 
 ## 1. Current ORB features found (working on `/orb`)
