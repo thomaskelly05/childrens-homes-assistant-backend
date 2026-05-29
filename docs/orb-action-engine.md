@@ -44,6 +44,13 @@ The ORB Action Engine turns response-bar follow-ups from composer prefills into 
 
 Role shaping: pass `context.profile_role` (e.g. `nvq_assessor`, `nvq_learner`). Human Practice Brain: `services/orb_human_practice_brain_service.py`.
 
+### NVQ/Diploma authenticity and context anchoring
+
+- Pass `context.chat_history` (recent turns) so follow-up diploma questions stay tied to the incident described earlier.
+- All Academy/NVQ actions use `services/orb_academy_nvq_anchor_service.py` prompts: no invented examples, no competence claims, assessor authenticity boundary.
+- Level 3 reflective account questions in **conversation** (not only actions) use the structured eight-section template when detected.
+- Safeguarding **threshold** closer is suppressed for NVQ/reflective questions unless the user asks about referral/threshold/immediate risk.
+
 Tools menu: **Learning / Academy** in `orb-tools-panel.tsx` calls `actions/run` when chat is active.
 
 Implementation: `services/orb_action_engine_service.py` · Routes: `routers/orb_standalone_routes.py`

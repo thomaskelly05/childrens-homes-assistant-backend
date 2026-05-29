@@ -280,3 +280,10 @@ Tests: `tests/test_orb_standalone_boundary.py`, `tests/test_orb_operating_brain_
 | OS Academy API | — | Remains `/academy/*` — future OS-connected ORB PR |
 
 Full audit: `docs/orb-academy-nvq-convergence-audit.md`
+
+### NVQ/Diploma authenticity and context anchoring
+
+- `services/orb_academy_nvq_anchor_service.py` centralises anchoring rules, Level 3 reflective structure, and authenticity closers.
+- Action engine and `/orb` conversation both require supplied chat/incident context — no generic invented practice examples.
+- ORB maps possible evidence themes only; assessors decide validity, authenticity, sufficiency and currency.
+- Standalone `/orb` never reads live Academy learner records.

@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from services.orb_academy_nvq_anchor_service import orb_academy_nvq_anchor_service
 from services.orb_professional_curiosity_service import orb_professional_curiosity_service
 
 
@@ -413,6 +414,9 @@ class OrbGroundedAnswerStyleService:
         return False
 
     def _topic_closer(self, topic: str | None, *, message: str) -> str | None:
+        if orb_academy_nvq_anchor_service.is_nvq_learning_question(message):
+            if not orb_academy_nvq_anchor_service.is_safeguarding_threshold_question(message):
+                return None
         if not topic:
             return None
         if topic in {"therapeutic", "recording", "education_health"} and not self._safeguarding_closer_indicated(message):
@@ -445,6 +449,20 @@ class OrbGroundedAnswerStyleService:
         text = str(answer or "").strip()
         if not text:
             return text
+        nvq_learning = orb_academy_nvq_anchor_service.is_nvq_learning_question(message)
+        nvq_threshold_ok = orb_academy_nvq_anchor_service.is_safeguarding_threshold_question(message)
+        if nvq_learning and not nvq_threshold_ok:
+            cleaned = text
+            for pattern in self.THRESHOLD_BOUNDARY_CLOSER_PATTERNS:
+                cleaned = pattern.sub("", cleaned).rstrip()
+            if "threshold decision" in cleaned.lower():
+                cleaned = re.sub(
+                    r"\n+ORB can support your thinking[\s\S]*?(?=\n\n|\Z)",
+                    "",
+                    cleaned,
+                    flags=re.I,
+                ).rstrip()
+            return cleaned
         casual = self._is_casual_or_greeting(message)
         topic = orb_professional_curiosity_service.detect_topic(message, mode=mode)
         safeguarding_risk = self._safeguarding_closer_indicated(message)

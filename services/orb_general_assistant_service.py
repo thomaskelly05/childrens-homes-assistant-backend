@@ -21,6 +21,7 @@ from services.orb_standalone_sources import (
     build_standalone_sources,
 )
 from services.orb_agent_conversation_bridge import detect_agent_intent, maybe_run_agent_for_conversation
+from services.orb_academy_nvq_anchor_service import orb_academy_nvq_anchor_service
 from services.orb_grounded_answer_style_service import orb_grounded_answer_style_service
 from services.standalone_sector_knowledge_service import search_sector_knowledge
 
@@ -32,12 +33,30 @@ INSTANT_FAST_GREETING_ANSWER = (
 )
 
 
-def _finalize_standalone_answer(answer: str, *, message: str, mode: str | None = None) -> str:
-    return orb_grounded_answer_style_service.sanitize_high_attention_closer(
+def _finalize_standalone_answer(
+    answer: str,
+    *,
+    message: str,
+    mode: str | None = None,
+    history: list[dict[str, Any]] | None = None,
+) -> str:
+    resolved = orb_grounded_answer_style_service.sanitize_high_attention_closer(
         str(answer or ""),
         message=message,
         mode=mode,
     )
+    return orb_academy_nvq_anchor_service.sanitize_nvq_answer(
+        resolved,
+        message=_nvq_message_for_closer(message, history),
+    )
+
+
+def _nvq_message_for_closer(message: str, history: list[dict[str, Any]] | None) -> str:
+    parts = [_text(message)]
+    context_block = orb_academy_nvq_anchor_service.conversation_context_for_message(message, history)
+    if context_block:
+        parts.append(context_block)
+    return "\n\n".join(p for p in parts if p)
 
 
 def _track_standalone_governance(
@@ -387,6 +406,7 @@ class OrbGeneralAssistantService:
                         agent_result["answer"],
                         message=user_message,
                         mode=mode,
+                        history=history,
                     ),
                     "sources": agent_result.get("sources") or [],
                     "citations": agent_result.get("citations") or [],
@@ -636,9 +656,13 @@ class OrbGeneralAssistantService:
         mode: str | None,
         detail: str,
         has_images: bool,
+        message: str | None = None,
+        history: list[dict[str, Any]] | None = None,
     ) -> str:
         system = GENERAL_ORB_SYSTEM_PROMPT
         system += f"\n\n{self._mode_behaviour_hint(mode)}"
+        if message:
+            system += self._nvq_prompt_supplement(message, history=history)
         system += f"\n\n{retrieval['grounding_context']}"
         if retrieval.get("research_note"):
             system += f"\n\nIf relevant, briefly note: {retrieval['research_note']}"
@@ -656,6 +680,25 @@ class OrbGeneralAssistantService:
             )
         return system
 
+    def _nvq_prompt_supplement(
+        self,
+        message: str,
+        *,
+        history: list[dict[str, Any]] | None = None,
+    ) -> str:
+        block = orb_academy_nvq_anchor_service.level_3_conversation_prompt_block(
+            message=message,
+            history=history,
+        )
+        if block:
+            return f"\n\n{block}"
+        if orb_academy_nvq_anchor_service.is_nvq_learning_question(message):
+            return (
+                f"\n\n{orb_academy_nvq_anchor_service.NVQ_AUTHENTICITY_BOUNDARY}\n"
+                "Do not invent workplace examples. Use only what the user has provided in this conversation."
+            )
+        return ""
+
     async def _llm_answer(
         self,
         message: str,
@@ -667,18 +710,26 @@ class OrbGeneralAssistantService:
         mode: str | None = None,
     ) -> dict[str, Any]:
         retrieval = retrieval or self.prepare_retrieval(message, mode=mode, has_images=bool(image_data_urls))
+        user_message = self._query_message(message, raw_user_message=None)
         system = self._build_llm_system_prompt(
             retrieval=retrieval,
             mode=mode,
             detail=detail,
             has_images=bool(image_data_urls),
+            message=user_message,
+            history=history,
         )
+        nvq_context = orb_academy_nvq_anchor_service.conversation_context_for_message(
+            user_message,
+            history,
+        )
+        llm_message = f"{nvq_context}\n\n{message}".strip() if nvq_context else message
         classification = retrieval.get("classification") or {}
         research_intent = bool(classification.get("research_intent"))
         voice_mode = detail == "voice_concise"
 
         response, decision, trace = await ai_model_router_service.complete_with_routing(
-            message=message,
+            message=llm_message,
             system_prompt=system,
             history=history,
             images=image_data_urls,
@@ -707,8 +758,9 @@ class OrbGeneralAssistantService:
 
         resolved = _finalize_standalone_answer(
             answer_text or self._fallback_answer(message, retrieval=retrieval),
-            message=message,
+            message=user_message,
             mode=mode,
+            history=history,
         )
         resolved = append_sources_basis_section(resolved, sources, message=message, mode=mode)
         return {
@@ -882,6 +934,7 @@ class OrbGeneralAssistantService:
                         agent_result["answer"],
                         message=user_message,
                         mode=mode,
+                        history=history,
                     ),
                     "sources": agent_result.get("sources") or [],
                     "citations": agent_result.get("citations") or [],
@@ -905,6 +958,8 @@ class OrbGeneralAssistantService:
             mode=mode,
             detail=detail,
             has_images=bool(images),
+            message=user_message,
+            history=history,
         )
         classification = retrieval.get("classification") or {}
         research_intent = bool(classification.get("research_intent"))
@@ -913,6 +968,12 @@ class OrbGeneralAssistantService:
         decision = None
         trace = None
         llm_user_message = user_message if retrieval.get("prompt_tier") == "fast" else message
+        nvq_context = orb_academy_nvq_anchor_service.conversation_context_for_message(
+            user_message,
+            history,
+        )
+        if nvq_context:
+            llm_user_message = f"{nvq_context}\n\n{llm_user_message}".strip()
 
         try:
             async for delta, routed_decision, routed_trace in ai_model_router_service.stream_with_routing(
@@ -943,6 +1004,7 @@ class OrbGeneralAssistantService:
                 answer_text,
                 message=user_message,
                 mode=mode,
+                history=history,
             )
             resolved = append_sources_basis_section(
                 resolved, retrieval["sources"], message=user_message, mode=mode
