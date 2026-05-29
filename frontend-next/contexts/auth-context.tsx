@@ -29,7 +29,7 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 
-const publicPathPrefixes = ['/login', '/unauthorized']
+const publicPathPrefixes = ['/login', '/unauthorized', '/orb/login', '/orb/signup', '/orb/access', '/orb/onboarding']
 const publicAssetPaths = new Set([
   '/favicon.ico',
   '/apple-touch-icon.png',
@@ -185,7 +185,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (status !== 'unauthenticated' || isPublicPath(pathname) || logoutRedirecting.current) return
     const search = typeof window === 'undefined' ? '' : window.location.search
     const returnUrl = encodeURIComponent(`${pathname}${search}`)
-    router.replace(`/login?returnUrl=${returnUrl}${sessionExpired ? '&expired=1' : ''}`)
+    const loginPath = pathname.startsWith('/orb') ? '/orb/login' : '/login'
+    router.replace(`${loginPath}?returnUrl=${returnUrl}${sessionExpired ? '&expired=1' : ''}`)
   }, [pathname, router, sessionExpired, status])
 
   const login = useCallback(async (input: LoginInput) => {

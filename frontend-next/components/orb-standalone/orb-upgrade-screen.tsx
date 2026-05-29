@@ -1,0 +1,167 @@
+'use client'
+
+import Link from 'next/link'
+import { useEffect, useState } from 'react'
+import { CreditCard, Lock, Sparkles } from 'lucide-react'
+
+import {
+  fetchOrbAccess,
+  openOrbBillingPortal,
+  startOrbCheckout,
+  startOrbTrial,
+  trackOrbAnalytics,
+  type OrbAccessPayload
+} from '@/lib/orb/orb-billing-client'
+import { useAuth } from '@/contexts/auth-context'
+
+export function OrbUpgradeScreen() {
+  const { status } = useAuth()
+  const [access, setAccess] = useState<OrbAccessPayload | null>(null)
+  const [loading, setLoading] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    trackOrbAnalytics('locked_screen_viewed')
+    fetchOrbAccess()
+      .then(setAccess)
+      .catch(() => setAccess(null))
+  }, [])
+
+  async function handleTrial() {
+    setLoading('trial')
+    setError(null)
+    try {
+      trackOrbAnalytics('upgrade_clicked', { action: 'trial' })
+      await startOrbTrial()
+      window.location.href = '/orb/onboarding'
+    } catch {
+      setError('Could not start trial. Sign in and try again.')
+    } finally {
+      setLoading(null)
+    }
+  }
+
+  async function handleSubscribe() {
+    setLoading('checkout')
+    setError(null)
+    try {
+      trackOrbAnalytics('upgrade_clicked', { action: 'subscribe' })
+      const url = await startOrbCheckout(`${window.location.origin}/orb?billing=success`, `${window.location.origin}/orb/access?billing=cancelled`)
+      window.location.href = url
+    } catch {
+      setError('Checkout is unavailable. Stripe may not be configured yet.')
+    } finally {
+      setLoading(null)
+    }
+  }
+
+  async function handlePortal() {
+    setLoading('portal')
+    setError(null)
+    try {
+      const url = await openOrbBillingPortal()
+      window.location.href = url
+    } catch {
+      setError('Billing portal unavailable for this account.')
+    } finally {
+      setLoading(null)
+    }
+  }
+
+  const upgrade = access?.upgrade
+  const stripeReady = Boolean(access?.billing?.stripe_configured && upgrade?.checkout_available)
+
+  return (
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top,#EEF2FF,transparent_40%),linear-gradient(180deg,#F8FAFC,#FFFFFF)] px-6 py-12 text-slate-950">
+      <div className="mx-auto max-w-3xl">
+        <div className="rounded-[2rem] border border-white/80 bg-white/90 p-8 shadow-2xl shadow-indigo-100/60 backdrop-blur">
+          <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-indigo-50 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-indigo-700">
+            <Lock className="h-4 w-4" aria-hidden />
+            ORB Residential access
+          </div>
+          <h1 className="text-3xl font-black tracking-tight text-slate-950 md:text-4xl" data-orb-upgrade-title>
+            {access?.product ?? 'ORB Residential — Powered by IndiCare'}
+          </h1>
+          <p className="mt-3 text-lg font-semibold text-indigo-700" data-orb-upgrade-price>
+            {access?.price_label ?? '£9.99/month'}
+          </p>
+          <p className="mt-4 text-sm leading-7 text-slate-600">
+            For adults working in or around children&apos;s homes. Standalone ORB does not access IndiCare OS records.
+          </p>
+
+          <ul className="mt-8 grid gap-2 text-sm text-slate-700 sm:grid-cols-2" data-orb-upgrade-features>
+            {(upgrade?.features ?? [
+              'Residential children\'s homes assistant',
+              'Safeguarding thinking',
+              'Recording support',
+              'Ofsted / Reg 44 lens',
+              'Shift Builder',
+              'Document intelligence',
+              'Academy / NVQ helper',
+              'Profile and voice',
+              'Feedback-driven improvement'
+            ]).map((feature) => (
+              <li key={feature} className="flex items-start gap-2 rounded-xl bg-slate-50 px-3 py-2">
+                <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-indigo-600" aria-hidden />
+                {feature}
+              </li>
+            ))}
+          </ul>
+
+          {error ? <p className="mt-6 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
+
+          <div className="mt-8 flex flex-wrap gap-3">
+            {access?.trial?.available !== false ? (
+              <button
+                type="button"
+                onClick={handleTrial}
+                disabled={status !== 'authenticated' || loading !== null}
+                className="rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-bold text-white shadow-lg disabled:opacity-50"
+                data-orb-start-trial
+              >
+                {loading === 'trial' ? 'Starting trial…' : 'Start 7-day trial'}
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={handleSubscribe}
+              disabled={!stripeReady || loading !== null}
+              className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-bold text-white shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
+              data-orb-subscribe
+              title={stripeReady ? undefined : 'Stripe checkout not configured'}
+            >
+              {loading === 'checkout' ? 'Opening checkout…' : 'Subscribe for £9.99/month'}
+            </button>
+            {upgrade?.manage_billing_available ? (
+              <button
+                type="button"
+                onClick={handlePortal}
+                disabled={loading !== null}
+                className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700"
+                data-orb-manage-billing
+              >
+                <CreditCard className="h-4 w-4" aria-hidden />
+                Manage billing
+              </button>
+            ) : null}
+            {status !== 'authenticated' ? (
+              <Link href="/orb/login?returnUrl=/orb" className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700">
+                Sign in
+              </Link>
+            ) : null}
+          </div>
+
+          {!stripeReady && process.env.NODE_ENV === 'development' ? (
+            <p className="mt-4 text-xs text-amber-700" data-orb-stripe-dev-note>
+              Admin note: set STRIPE_SECRET_KEY and ORB_RESIDENTIAL_STRIPE_PRICE_ID to enable checkout.
+            </p>
+          ) : null}
+
+          <p className="mt-8 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-xs leading-6 text-slate-600" data-orb-standalone-boundary>
+            Standalone ORB does not access IndiCare OS child, home, staff, chronology or care records.
+          </p>
+        </div>
+      </div>
+    </main>
+  )
+}

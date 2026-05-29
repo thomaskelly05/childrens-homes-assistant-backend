@@ -49,9 +49,16 @@ def get_orb_residential_user(
         "providerId": user.get("provider_id"),
         "allowed_home_ids": [],
         "allowedHomeIds": [],
-        "subscription_active": False,
-        "subscription_status": "orb_residential_checked_separately",
-        "plan_name": None,
         "permissions": sorted(permissions_for_role(role)),
         "orb_residential_auth_only": True,
     }
+
+
+def get_optional_orb_residential_user(
+    request: Request,
+    bearer_token: str | None = Depends(get_bearer_token),
+) -> dict[str, Any] | None:
+    try:
+        return get_orb_residential_user(request, bearer_token)
+    except Exception:
+        return None

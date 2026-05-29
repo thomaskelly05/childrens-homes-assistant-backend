@@ -1,1 +1,1 @@
-export { default } from '../../orb-residential/access/page'
+export { OrbUpgradeScreen as default } from '@/components/orb-standalone/orb-upgrade-screen'

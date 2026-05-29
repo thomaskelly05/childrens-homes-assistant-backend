@@ -1,31 +1,29 @@
-# ORB data safety and privacy (standalone)
+# ORB Data Safety and Privacy
 
-## Standalone ORB (/orb)
+## Standalone boundary
 
-- Uses only **adult-provided** and **user-saved** context: typed messages, uploads, saved outputs, profiles, and feedback submitted in standalone ORB.
-- Does **not** access IndiCare OS child, home, staff, chronology or care records.
-- **Temporary chat** skips saved ORB profile context for that conversation.
+Standalone ORB (`/orb`) does **not** access:
 
-## IndiCare OS ORB (/assistant/orb)
+- Child / young person records
+- Home operational data
+- Staff records
+- Chronology or care records
 
-- May use **permissioned OS records** only where explicitly available and allowed for the signed-in user.
+Subscription to ORB Residential does **not** grant IndiCare OS access.
 
-## AI providers
+## Safety acceptance (version `2026-05-29-v1`)
 
-ORB may use trusted AI providers to generate responses. Those providers process the text/images you send in that request. They do not receive direct access to IndiCare OS records. Wording in the product avoids claiming providers never process data.
+Users must accept before full ORB use:
 
-## Adults should
+1. ORB supports professional thinking; does not replace safeguarding procedures
+2. Standalone ORB does not access IndiCare OS records
+3. Avoid unnecessary identifiable personal details
+4. Saved outputs and feedback may improve ORB quality safely
 
-- Avoid unnecessary personal details; prefer initials or anonymised descriptions.
-- Follow local safeguarding and emergency procedures when a child may be at risk.
-- Use OS ORB when live operational context is required.
+## Usage limits
 
-## Saved outputs and feedback
+Fair-use limits apply per plan. Hard limits return a friendly message; urgent safeguarding prompts receive a short safety template instead of a dead-end.
 
-Stored so adults can reuse them and so ORB quality can improve through **human-reviewed** changes — not automatic care decisions.
+## Feedback
 
-Admin quality review (`/admin/orb-quality`) uses feedback metadata only — not raw OS records. Improvement candidates require explicit admin approval before any prompt or scenario changes.
-
-## UI copy
-
-Help and Settings on `/orb` include **“How ORB protects your data”** — clear, reassuring, and not overpromising (no “100% safe”).
+Answer feedback is stored for admin quality review — not linked to OS child records.

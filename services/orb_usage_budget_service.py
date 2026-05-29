@@ -26,9 +26,8 @@ Longer analysis is limited right now, but these safety steps still apply.
 """.strip()
 
 GENERAL_LIMIT_TEMPLATE = (
-    "I can still give a short safety-focused response, but longer or deeper analysis is limited right now. "
-    "Try a shorter question, switch to a simpler mode, or come back later. "
-    "If this is safeguarding-related, follow your local procedure and inform your manager/DSL."
+    "You've reached today's ORB usage limit. I can still give a short safety-focused response "
+    "for urgent safeguarding concerns, but deeper analysis will be available again after your limit resets."
 )
 
 

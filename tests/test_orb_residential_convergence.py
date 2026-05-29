@@ -45,11 +45,13 @@ def test_access_service_locked_without_subscription(monkeypatch):
     conn = MagicMock()
     monkeypatch.setattr(
         "services.orb_access_service.get_orb_access_state",
-        lambda _conn, _uid: {
+        lambda _conn, _uid, user=None: {
             "can_use_orb": False,
             "subscription_active": False,
             "trial_active": False,
             "access_reason": "locked",
+            "safety_accepted": True,
+            "subscription": {},
         },
     )
     decision = orb_access_service.check_access(conn, user_id=42, workflow="ask_orb")
@@ -61,11 +63,13 @@ def test_access_service_trial_allowed(monkeypatch):
     conn = MagicMock()
     monkeypatch.setattr(
         "services.orb_access_service.get_orb_access_state",
-        lambda _conn, _uid: {
+        lambda _conn, _uid, user=None: {
             "can_use_orb": True,
             "subscription_active": False,
             "trial_active": True,
             "access_reason": "trial",
+            "safety_accepted": True,
+            "subscription": {},
         },
     )
     decision = orb_access_service.check_access(conn, user_id=42, workflow="shift_builder")
@@ -74,7 +78,7 @@ def test_access_service_trial_allowed(monkeypatch):
 
 def test_upgrade_payload_price_and_product():
     payload = orb_access_service.build_upgrade_payload()
-    assert payload["product"] == "ORB Residential"
+    assert payload["product"] == "ORB Residential — Powered by IndiCare"
     assert payload["price_gbp_monthly"] == 9.99
 
 
@@ -122,13 +126,15 @@ def test_residential_only_user_without_records_read():
 
 def test_orb_guard_unknown_role_session_passes_to_os_auth(monkeypatch):
     from starlette.requests import Request
+    from routers.auth_routes import settings as auth_settings
 
     monkeypatch.setattr(guard_middleware, "decode_session_token", lambda _token: {"sub": "5"})
+    cookie_name = auth_settings.session_cookie_name
     scope = {
         "type": "http",
         "method": "GET",
         "path": "/workspace",
-        "headers": [(b"cookie", b"session=token")],
+        "headers": [(b"cookie", f"{cookie_name}=token".encode())],
         "query_string": b"",
     }
     request = Request(scope)
@@ -143,13 +149,15 @@ def test_orb_guard_unknown_role_session_passes_to_os_auth(monkeypatch):
 
 def test_orb_guard_admin_role_is_never_residential_only(monkeypatch):
     from starlette.requests import Request
+    from routers.auth_routes import settings as auth_settings
 
     monkeypatch.setattr(guard_middleware, "decode_session_token", lambda _token: {"sub": "5", "role": "admin"})
+    cookie_name = auth_settings.session_cookie_name
     scope = {
         "type": "http",
         "method": "GET",
         "path": "/workspace",
-        "headers": [(b"cookie", b"session=token")],
+        "headers": [(b"cookie", f"{cookie_name}=token".encode())],
         "query_string": b"",
     }
     request = Request(scope)
@@ -167,7 +175,13 @@ def test_premium_locked_http_shape(monkeypatch):
     conn = MagicMock()
     monkeypatch.setattr(
         "services.orb_access_service.get_orb_access_state",
-        lambda _c, _u: {"can_use_orb": False, "trial_active": False, "subscription_active": False},
+        lambda _c, _u, user=None: {
+            "can_use_orb": False,
+            "trial_active": False,
+            "subscription_active": False,
+            "safety_accepted": True,
+            "subscription": {},
+        },
     )
     with pytest.raises(HTTPException) as exc:
         require_orb_residential_premium(
