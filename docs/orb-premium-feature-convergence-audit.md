@@ -7,6 +7,8 @@ Standalone ORB must never imply access to live IndiCare OS child, home, staff, c
 
 **Expert stress-test pack (2026-05-29):** 100 gold scenarios, modifier matrix, source citation registry, evaluator, and CLI runners — `docs/orb-residential-expert-stress-test-pack.md`, `docs/orb-source-citation-registry.md`. No second UI; strengthens `/orb` expertise over time.
 
+**Live expert answer engine (2026-05-29):** Scenario families now drive `/orb` grounding, citations, action engine packets, document lenses, and `context_used.expert_answer_engine` metadata — `docs/orb-expert-answer-engine.md`.
+
 ---
 
 ## 1. Current ORB features found (working on `/orb`)

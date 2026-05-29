@@ -4,7 +4,7 @@
 
 The ORB Action Engine turns response-bar follow-ups from composer prefills into **structured residential actions**. It uses the Knowledge Spine, ORB Operating Brain, and Data Vaults — without accessing live IndiCare OS records.
 
-**Expert stress-test integration (2026-05-29):** `what_am_i_missing` and action prompts can include markers from `orb_expert_scenario_bank_service` when the user message matches a scenario family. Source anchors for citations are selected via `orb_citation_decision_service`. See `docs/orb-residential-expert-stress-test-pack.md`.
+**Expert answer engine (2026-05-29):** Actions use `orb_expert_answer_engine_service` for scenario-family packets (red flags, must-not-say, role guidance, oversight/NVQ points) when the source text matches. Fallback: `orb_expert_scenario_bank_service`. Citations: `orb_citation_decision_service`. See [orb-expert-answer-engine.md](./orb-expert-answer-engine.md) and [orb-residential-expert-stress-test-pack.md](./orb-residential-expert-stress-test-pack.md).
 
 ---
 

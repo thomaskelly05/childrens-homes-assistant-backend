@@ -11,6 +11,7 @@ from assistant.knowledge_loader import (
     select_relevant_python_knowledge,
 )
 from services.orb_knowledge_source_pack_service import get_source_pack
+from services.orb_expert_answer_engine_service import orb_expert_answer_engine_service
 from services.orb_expert_scenario_bank_service import orb_expert_scenario_bank_service
 from services.orb_operating_brain_service import orb_operating_brain_service
 
@@ -236,6 +237,8 @@ class OrbKnowledgeRetrievalService:
         mode: str | None = None,
         profile_context: bool = False,
         attachments: list[Any] | None = None,
+        profile_role: str | None = None,
+        history: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         """Single retrieval pass per request (classification, packs, grounding, tier)."""
         started = time.perf_counter()
@@ -290,9 +293,20 @@ class OrbKnowledgeRetrievalService:
         )
         retrieval_elapsed_ms = int((time.perf_counter() - started) * 1000)
         expert_context = orb_expert_scenario_bank_service.detect_expert_context(message)
-        expert_block = orb_expert_scenario_bank_service.expert_prompt_block(message)
-        if expert_block and prompt_tier != "fast":
-            grounding_context = f"{grounding_context}\n\n{expert_block}".strip()
+        expert_packet: dict[str, Any] = {"active": False}
+        expert_block = ""
+        if prompt_tier != "fast":
+            expert_packet = orb_expert_answer_engine_service.build_expert_answer_packet(
+                message,
+                mode=mode,
+                profile_role=profile_role,
+                history=history,
+            )
+            expert_block = orb_expert_answer_engine_service.build_prompt_block(expert_packet)
+            if not expert_block:
+                expert_block = orb_expert_scenario_bank_service.expert_prompt_block(message)
+            if expert_block:
+                grounding_context = f"{grounding_context}\n\n{expert_block}".strip()
         return {
             "classification": classification,
             "prompt_tier": prompt_tier,
@@ -301,6 +315,7 @@ class OrbKnowledgeRetrievalService:
             "retrieval_elapsed_ms": retrieval_elapsed_ms,
             "grounding_char_count": len(grounding_context),
             "expert_scenario_context": expert_context,
+            "expert_answer_packet": expert_packet,
         }
 
     def retrieve_sources(
