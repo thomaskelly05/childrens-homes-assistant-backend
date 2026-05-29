@@ -489,10 +489,11 @@ export function OrbCareCompanion() {
   )
 
   useEffect(() => {
+    if (!orbSessionReady) return
     void fetchOrbSavedOutputsSummary()
       .then((summary) => setSavedOutputsCount(summary.total || 0))
       .catch(() => setSavedOutputsCount(0))
-  }, [activePanel])
+  }, [activePanel, orbSessionReady])
 
   useEffect(() => {
     setWorkspace(readStandaloneWorkspace())

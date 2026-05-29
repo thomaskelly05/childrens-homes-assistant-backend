@@ -46,7 +46,10 @@ export function OrbUpgradeScreen() {
     setError(null)
     try {
       trackOrbAnalytics('upgrade_clicked', { action: 'subscribe' })
-      const url = await startOrbCheckout(`${window.location.origin}/orb?billing=success`, `${window.location.origin}/orb/access?billing=cancelled`)
+      const url = await startOrbCheckout(
+        `${window.location.origin}/orb/billing/success`,
+        `${window.location.origin}/orb/billing/cancel`
+      )
       window.location.href = url
     } catch {
       setError('Checkout is unavailable. Stripe may not be configured yet.')
@@ -86,8 +89,17 @@ export function OrbUpgradeScreen() {
             {access?.price_label ?? '£9.99/month'}
           </p>
           <p className="mt-4 text-sm leading-7 text-slate-600">
-            For adults working in or around children&apos;s homes. Standalone ORB does not access IndiCare OS records.
+            For adults working in or around children&apos;s homes. Trial available when eligible. Subscription is
+            £9.99 per user per month after trial.
           </p>
+          {access?.access_state === 'past_due' || access?.subscription?.status === 'past_due' ? (
+            <p className="mt-3 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              Your subscription payment is past due. Update billing to restore full ORB access.
+            </p>
+          ) : null}
+          {access?.trial?.active === false && access?.trial?.available === false && !access?.can_use_orb ? (
+            <p className="mt-3 text-sm text-slate-600">Trial expired — subscribe to continue using ORB Residential.</p>
+          ) : null}
 
           <ul className="mt-8 grid gap-2 text-sm text-slate-700 sm:grid-cols-2" data-orb-upgrade-features>
             {(upgrade?.features ?? [
@@ -144,8 +156,11 @@ export function OrbUpgradeScreen() {
                 Manage billing
               </button>
             ) : null}
+            <Link href="/orb" className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700">
+              Return to ORB
+            </Link>
             {status !== 'authenticated' ? (
-              <Link href="/orb/login?returnUrl=/orb" className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700">
+              <Link href="/orb/login?returnUrl=/orb/access" className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700">
                 Sign in
               </Link>
             ) : null}

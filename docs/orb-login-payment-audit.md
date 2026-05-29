@@ -33,7 +33,10 @@ Date: 2026-05-29
 
 - **Reused:** existing auth sessions, password hashing, trial tables, plan limits, billing meter, premium dependency pattern
 - **Not reused for ORB commercial state:** `users.subscription_*` (IndiCare OS billing) — ORB uses `orb_subscriptions`
-- **Not implemented yet:** OAuth provider flows (Google/Microsoft/Apple) — env-gated UI only
+- **Added:** OAuth provider flows (`routers/orb_oauth_routes.py`) — Google/Microsoft/Apple when env configured
+- **Added:** Post-checkout `/orb/billing/success` and `/orb/billing/cancel`
+- **Added:** Public analytics events without auth; CSRF exempt signup/webhook/oauth
+- **Added:** Stripe webhook idempotency (`orb_stripe_events`, `sql/204_orb_stripe_events.sql`)
 
 ## Required env vars
 

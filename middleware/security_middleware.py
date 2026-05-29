@@ -45,6 +45,10 @@ CSRF_EXEMPT_PREFIXES = (
     "/auth/passkeys/authenticate/options",
     "/auth/passkeys/authenticate/verify",
     "/health",
+    "/orb/standalone/auth/signup",
+    "/orb/standalone/analytics/event",
+    "/orb/standalone/billing/webhook",
+    "/orb/standalone/auth/oauth/",
 )
 
 TRUSTED_ORIGIN_ORB_BOOTSTRAP_PATHS = (

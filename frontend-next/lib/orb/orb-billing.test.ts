@@ -11,7 +11,7 @@ test('ORB login copy includes product name', () => {
 test('upgrade screen shows £9.99/month', () => {
   const upgrade = readFileSync(new URL('../../components/orb-standalone/orb-upgrade-screen.tsx', import.meta.url), 'utf8')
   assert.match(upgrade, /£9\.99\/month/)
-  assert.match(upgrade, /Standalone ORB does not access IndiCare OS records/)
+  assert.match(upgrade, /Standalone ORB does not access IndiCare OS child, home, staff, chronology or care records/)
 })
 
 test('onboarding role options include NVQ assessor and learner', () => {
@@ -38,4 +38,30 @@ test('billing settings section references meter endpoints', () => {
   const billing = readFileSync(new URL('../../components/orb-standalone/orb-billing-settings-section.tsx', import.meta.url), 'utf8')
   assert.match(billing, /fetchOrbBillingMeter/)
   assert.match(billing, /Standalone ORB billing is separate from IndiCare OS/)
+  assert.match(billing, /Refresh billing status/)
+})
+
+test('billing success page refreshes access after checkout', () => {
+  const success = readFileSync(new URL('../../app/orb/billing/success/page.tsx', import.meta.url), 'utf8')
+  assert.match(success, /refreshOrbAccessAfterCheckout/)
+  assert.match(success, /Continue to ORB/)
+  assert.doesNotMatch(success, /\/oslogin|IndiCare OS dashboard/i)
+})
+
+test('billing cancel page offers retry and return', () => {
+  const cancel = readFileSync(new URL('../../app/orb/billing/cancel/page.tsx', import.meta.url), 'utf8')
+  assert.match(cancel, /Try again/)
+  assert.match(cancel, /Return to ORB/)
+  assert.match(cancel, /Start trial|Create account/)
+})
+
+test('signup uses public standalone route', () => {
+  const client = readFileSync(new URL('./orb-billing-client.ts', import.meta.url), 'utf8')
+  assert.match(client, /\/orb\/standalone\/auth\/signup/)
+})
+
+test('public auth paths skip session me on orb without cookie', () => {
+  const auth = readFileSync(new URL('../../contexts/auth-context.tsx', import.meta.url), 'utf8')
+  assert.match(auth, /\/orb\/billing\/success/)
+  assert.match(auth, /hasLikelySessionCookie/)
 })

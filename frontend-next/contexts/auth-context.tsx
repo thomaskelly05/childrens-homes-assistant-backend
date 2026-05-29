@@ -29,7 +29,16 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 
-const publicPathPrefixes = ['/login', '/unauthorized', '/orb/login', '/orb/signup', '/orb/access', '/orb/onboarding']
+const publicPathPrefixes = [
+  '/login',
+  '/unauthorized',
+  '/orb/login',
+  '/orb/signup',
+  '/orb/access',
+  '/orb/onboarding',
+  '/orb/billing/success',
+  '/orb/billing/cancel'
+]
 const publicAssetPaths = new Set([
   '/favicon.ico',
   '/apple-touch-icon.png',
@@ -68,6 +77,15 @@ function isPublicPath(pathname: string) {
   if (publicAssetPaths.has(pathname)) return true
   if (publicAssetPrefixes.some((prefix) => pathname.startsWith(prefix))) return true
   return publicPathPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))
+}
+
+function isOrbSurfacePath(pathname: string) {
+  return pathname === '/orb' || pathname.startsWith('/orb/')
+}
+
+function hasLikelySessionCookie() {
+  if (typeof document === 'undefined') return false
+  return /(?:^|;\s*)(?:__Host-indicare_session|indicare_session)=/.test(document.cookie)
 }
 
 function normaliseUser(user: StaffUser): StaffUser {
@@ -175,6 +193,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (isPublicPath(pathname)) {
       setStatus('unauthenticated')
       setSessionExpired(false)
+      setError(null)
+      setCsrfReady(Boolean(getCsrfToken()))
+      return
+    }
+    if (isOrbSurfacePath(pathname) && !hasLikelySessionCookie()) {
+      setUser(null)
+      setStatus('unauthenticated')
+      setSessionExpired(false)
+      setError(null)
       setCsrfReady(Boolean(getCsrfToken()))
       return
     }
@@ -183,6 +210,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (status !== 'unauthenticated' || isPublicPath(pathname) || logoutRedirecting.current) return
+    if (pathname === '/orb') return
     const search = typeof window === 'undefined' ? '' : window.location.search
     const returnUrl = encodeURIComponent(`${pathname}${search}`)
     const loginPath = pathname.startsWith('/orb') ? '/orb/login' : '/login'

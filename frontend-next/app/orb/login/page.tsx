@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { ShieldCheck } from 'lucide-react'
 
 import { useAuth } from '@/contexts/auth-context'
-import { trackOrbAnalytics } from '@/lib/orb/orb-billing-client'
+import { orbOAuthStartUrl, trackOrbAnalytics } from '@/lib/orb/orb-billing-client'
 
 function OrbLoginPanel() {
   const router = useRouter()
@@ -20,7 +20,9 @@ function OrbLoginPanel() {
 
   useEffect(() => {
     trackOrbAnalytics('login_viewed')
-  }, [])
+    const oauthError = searchParams.get('oauth_error')
+    if (oauthError) setError(oauthError)
+  }, [searchParams])
 
   const returnUrl = searchParams.get('returnUrl') || '/orb'
 
@@ -107,21 +109,33 @@ function OrbLoginPanel() {
 
         <div className="mt-6 space-y-2" data-orb-oauth-buttons>
           {oauth.google ? (
-            <button type="button" className="w-full rounded-2xl border border-slate-200 py-3 text-sm font-semibold">
+            <a
+              href={orbOAuthStartUrl('google', returnUrl)}
+              className="block w-full rounded-2xl border border-slate-200 py-3 text-center text-sm font-semibold"
+              data-orb-oauth-google
+            >
               Continue with Google
-            </button>
+            </a>
           ) : (
             <p className="text-xs text-slate-500">Google sign-in not configured (OAUTH_GOOGLE_CLIENT_ID).</p>
           )}
           {oauth.microsoft ? (
-            <button type="button" className="w-full rounded-2xl border border-slate-200 py-3 text-sm font-semibold">
+            <a
+              href={orbOAuthStartUrl('microsoft', returnUrl)}
+              className="block w-full rounded-2xl border border-slate-200 py-3 text-center text-sm font-semibold"
+              data-orb-oauth-microsoft
+            >
               Continue with Microsoft
-            </button>
+            </a>
           ) : null}
           {oauth.apple ? (
-            <button type="button" className="w-full rounded-2xl border border-slate-200 py-3 text-sm font-semibold">
+            <a
+              href={orbOAuthStartUrl('apple', returnUrl)}
+              className="block w-full rounded-2xl border border-slate-200 py-3 text-center text-sm font-semibold"
+              data-orb-oauth-apple
+            >
               Continue with Apple
-            </button>
+            </a>
           ) : null}
         </div>
 
