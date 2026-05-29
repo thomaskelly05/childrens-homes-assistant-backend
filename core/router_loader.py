@@ -433,10 +433,17 @@ def include_routers(app: FastAPI) -> RouterLoadReport:
                 raise
             if _is_missing_router_module(error, router_path):
                 report.skipped_optional.append((router_path, "module_not_present"))
-                logger.info("Optional router %s not present; treated as compatibility-only", router_path)
+                logger.debug("Optional router %s not present; treated as compatibility-only", router_path)
                 continue
             report.failed.append((router_path, str(error)))
             logger.warning("Router %s failed to load: %s", router_path, error)
+
+    if report.skipped_optional:
+        logger.info(
+            "Skipped %s optional compatibility router(s): %s",
+            len(report.skipped_optional),
+            ", ".join(router for router, _reason in report.skipped_optional),
+        )
 
     _LAST_LOAD_REPORT = report
     return report
