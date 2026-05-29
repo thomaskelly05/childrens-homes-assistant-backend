@@ -1,7 +1,7 @@
 # ORB Premium Feature Convergence Audit
 
 **Route:** `/orb` (canonical) · **Surface:** `OrbCareCompanion` + standalone APIs  
-**Date:** 2026-05-28 · **Pass:** Premium product + feature convergence
+**Date:** 2026-05-29 · **Pass:** Premium product + feature convergence (ChatGPT flow UX)
 
 Standalone ORB must never imply access to live IndiCare OS child, home, staff, chronology, or care records. Memory = profile, projects, user-provided context, and local chat history only.
 
@@ -85,7 +85,18 @@ Standalone ORB must never imply access to live IndiCare OS child, home, staff, c
 | Tables/charts generation | D | Markdown only |
 | Dark mode polish | D | Light primary; dark tokens exist |
 | Stop generating (mid-stream cancel) | A | AbortController + composer Stop; partial answer kept |
-| Inline suggested replies | A | `OrbSuggestedReplyChips` under last answer |
+| Inline suggested replies | A | Contextual `OrbSuggestedReplyChips` under last answer only |
+| Auto-scroll while streaming | A | `scrollContainerRef` + near-bottom guard |
+| Chat title generation | A | `orb-chat-title.ts` from first message + lens |
+| Urgent safeguarding banner | A | `orb-safety-banner.ts` — not on hello |
+| Citation popover detail | A | Why cited + excerpt vs summary basis |
+| Composer chips above input | A | Removed during active chat |
+| Scroll-to-bottom button | D | Not implemented |
+| Keyboard shortcuts (global) | Partial | Enter send, Shift+Enter newline; shortcuts panel in settings |
+| Per-message delete | D | Archive/delete chat in sidebar only |
+| Branch from edited message | A | Edit user bubble + resubmit |
+| Profile server sync | D | localStorage only |
+| Billing / onboarding | N/A | Standalone boundary |
 | Ask about this (attachments) | B | Image chips; document actions in panel |
 | Tiered backend prompts | A | `prepare_request_bundle`, fast/residential/deep |
 

@@ -718,7 +718,7 @@ class OrbGeneralAssistantService:
             ),
             "tools_used": tools,
             "internal_data_access": False,
-            "image_understanding_available": image_available,
+            "image_understanding_available": image_available if image_data_urls else None,
         }
 
     def _fallback_answer(self, message: str, *, retrieval: dict[str, Any] | None = None) -> str:
@@ -958,7 +958,7 @@ class OrbGeneralAssistantService:
                     "context_used": context_used,
                     "tools_used": ["standalone_orb_general_assistant", "ai_model_router"],
                     "internal_data_access": False,
-                    "image_understanding_available": bool(images) and bool(answer_text),
+                    "image_understanding_available": bool(answer_text) if images else None,
                 }
             )
             return

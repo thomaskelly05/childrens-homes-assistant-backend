@@ -188,6 +188,53 @@ export const ORB_INLINE_SUGGESTED_REPLIES: Array<{
   { action: 'manager_oversight', label: 'Create manager oversight note' }
 ]
 
+const GREETING_HINT_RE =
+  /^(hi|hello|hey|thanks|thank you|what can you do|how can you help)\b/i
+
+/** Contextual chips under the latest assistant answer — not above the composer. */
+export function contextualSuggestedReplies(options: {
+  mode: string
+  messageHint?: string
+}): Array<{ action: OrbResponseFollowUpAction; label: string }> {
+  const hint = (options.messageHint || '').trim()
+  const modeKey = options.mode.trim().toLowerCase()
+
+  if (!hint || GREETING_HINT_RE.test(hint)) {
+    return []
+  }
+
+  if (modeKey.includes('safeguarding') || /\b(abuse|disclosure|allegation|exploitation|unsafe)\b/i.test(hint)) {
+    return [
+      { action: 'safeguarding_lens', label: 'What needs immediate action?' },
+      { action: 'safeguarding_lens', label: 'Add safeguarding lens' },
+      { action: 'manager_oversight', label: 'Create manager oversight note' },
+      { action: 'recording_wording', label: 'What should I record?' }
+    ]
+  }
+
+  if (modeKey.includes('record') || /\b(restraint|physical intervention|record|wording|incident)\b/i.test(hint)) {
+    return [
+      { action: 'recording_wording', label: 'Convert to recording wording' },
+      { action: 'what_missing', label: 'What am I missing?' },
+      { action: 'manager_oversight', label: 'Create manager oversight note' },
+      { action: 'child_voice', label: 'Add child voice prompt' }
+    ]
+  }
+
+  if (modeKey.includes('ofsted') || modeKey.includes('reg 44')) {
+    return [
+      { action: 'ofsted_lens', label: 'Add Ofsted lens' },
+      { action: 'what_missing', label: 'What am I missing?' },
+      { action: 'manager_oversight', label: 'Create manager oversight note' }
+    ]
+  }
+
+  return [
+    { action: 'more_concise', label: 'Make this more concise' },
+    { action: 'what_missing', label: 'What am I missing?' }
+  ]
+}
+
 export type OrbAttachmentFollowUpAction =
   | 'summarise'
   | 'safeguarding_lens'
@@ -264,10 +311,14 @@ export function OrbAskAboutThisChips({
 }
 
 export function OrbSuggestedReplyChips({
-  onSelect
+  onSelect,
+  suggestions
 }: {
   onSelect: (action: OrbResponseFollowUpAction) => void
+  suggestions?: Array<{ action: OrbResponseFollowUpAction; label: string }>
 }) {
+  const items = suggestions?.length ? suggestions : ORB_INLINE_SUGGESTED_REPLIES
+  if (!items.length) return null
   return (
     <div
       className="mt-2 flex flex-wrap gap-1.5"
@@ -275,7 +326,7 @@ export function OrbSuggestedReplyChips({
       role="group"
       aria-label="Suggested follow-ups"
     >
-      {ORB_INLINE_SUGGESTED_REPLIES.map((item) => (
+      {items.map((item) => (
         <button
           key={item.action}
           type="button"

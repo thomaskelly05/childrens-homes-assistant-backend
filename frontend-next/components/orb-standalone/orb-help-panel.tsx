@@ -28,6 +28,18 @@ const SECTIONS = [
     body: 'Agents such as Safeguarding Thinking, Record This Properly, Ofsted Lens and Manager Copilot shape tone and depth. You can switch agents from the composer or sidebar.'
   },
   {
+    title: 'Actions & follow-ups',
+    body: 'Under each answer, use Copy, Regenerate, Save, or suggested chips such as recording wording, safeguarding lens, or manager oversight — only when they fit your question.'
+  },
+  {
+    title: 'Document intelligence',
+    body: 'Attach a document from Tools or the Documents panel, then use lenses such as Explain, Summarise, Action plan or Reg 44 review. ORB uses your upload — not live OS records.'
+  },
+  {
+    title: 'Shift Builder',
+    body: 'Paste shift notes to draft handover prompts, incident flags and manager review questions. Treat outputs as drafts for your professional judgement.'
+  },
+  {
     title: 'Voice and accessibility',
     body: 'Push-to-talk voice input is optional and only starts when you tap the microphone — ORB does not listen passively. Auto-speak reads completed answers using your chosen voice; it never requests microphone permission for speech output.'
   },
@@ -54,6 +66,7 @@ export function OrbHelpPanel({ open, onClose }: { open: boolean; onClose: () => 
       onClose={onClose}
       ariaLabel="ORB help"
       panelId="help"
+      layout="center"
     >
       <div className="space-y-4 p-4" data-orb-help-panel>
         {SECTIONS.map((section) => (

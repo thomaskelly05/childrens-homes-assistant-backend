@@ -322,11 +322,8 @@ export function dedupeOrbMessages(messages: StandaloneChatMessage[]): Standalone
   return result
 }
 
-export function titleFromFirstMessage(message: string): string {
-  const clean = String(message || '').replace(/\s+/g, ' ').trim()
-  if (!clean) return 'New conversation'
-  return clean.length > 54 ? `${clean.slice(0, 54).trim()}...` : clean
-}
+export { generateOrbChatTitle, titleFromFirstMessage } from '@/lib/orb/orb-chat-title'
+export type { OrbChatTitleContext } from '@/lib/orb/orb-chat-title'
 
 export function searchChats(
   chats: StandaloneChat[],

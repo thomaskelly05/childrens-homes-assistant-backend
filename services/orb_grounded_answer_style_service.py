@@ -463,6 +463,18 @@ class OrbGroundedAnswerStyleService:
                     cleaned,
                     flags=re.I,
                 ).rstrip()
+            for marker in (
+                "manager oversight is visible",
+                "ri oversight are visible",
+                "local-procedure-led",
+            ):
+                if marker in cleaned.lower():
+                    cleaned = re.sub(
+                        rf"\n+[^\n]*{re.escape(marker)}[^\n]*",
+                        "",
+                        cleaned,
+                        flags=re.I,
+                    ).rstrip()
             return cleaned
         if not high_attention and not no_boundary_topic:
             return text

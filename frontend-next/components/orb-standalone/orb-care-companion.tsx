@@ -32,6 +32,7 @@ import {
   OrbDocumentContextChips,
   OrbResponseActionBar,
   OrbSuggestedReplyChips,
+  contextualSuggestedReplies,
   type OrbAttachmentFollowUpAction,
   type OrbResponseFollowUpAction
 } from '@/components/orb-standalone/orb-assistant-message'
@@ -68,7 +69,6 @@ import { OrbVoiceSettingsPanel } from '@/components/orb-standalone/orb-voice-set
 import {
   agentForMode,
   atmosphereClassForMode,
-  suggestionsForMode,
   type ResidentialAgentDefinition
 } from '@/lib/orb/residential-agents'
 import { streamTextIntoView } from '@/lib/orb/streaming-text'
@@ -83,6 +83,16 @@ import { useMounted } from '@/hooks/use-mounted'
 import { getCsrfToken, STANDALONE_ORB_CSRF_REFRESH_MESSAGE } from '@/lib/auth/api'
 import { standaloneOsBoundaryReply } from '@/lib/orb/standalone-os-boundary'
 import { useStandaloneOrbVoice, type StandaloneOrbAnswerStyle } from '@/components/orb-standalone/use-standalone-orb-voice'
+import { generateOrbChatTitle } from '@/lib/orb/orb-chat-title'
+import {
+  URGENT_SAFEGUARDING_BANNER_COPY,
+  safeguardingBannerTextFromMessages
+} from '@/lib/orb/orb-safety-banner'
+import {
+  isOrbScrollNearBottom,
+  orbScrollBehaviorForReducedMotion,
+  scrollOrbToBottom
+} from '@/lib/orb/orb-scroll'
 import {
   buildProfileContextBlock,
   createStandaloneChat,
@@ -91,7 +101,6 @@ import {
   defaultWorkspace,
   readStandaloneWorkspace,
   repairOrbWorkspace,
-  titleFromFirstMessage,
   writeStandaloneWorkspace,
   type StandaloneChat,
   type StandaloneChatMessage,
@@ -139,17 +148,6 @@ const MODE_SAFETY: Partial<Record<StandaloneOrbMode, string>> = {
   'Ofsted Lens': 'Guidance support only. ORB does not make inspection judgements.',
   'Reg 44 / Reg 45 Prep': 'Governance support only — improvement plans and evidence remain provider-led.'
 }
-
-const HIGH_RISK_TERMS = [
-  'immediate danger',
-  'suicide',
-  'self-harm',
-  'self harm',
-  'abuse',
-  'missing',
-  'assault',
-  'emergency'
-] as const
 
 const MAX_HISTORY_TURNS = 20
 const MAX_IMAGE_ATTACHMENTS = 4
@@ -323,11 +321,6 @@ function trimConversationHistory(messages: StandaloneChatMessage[]): Array<{ rol
   return pairs.slice(-MAX_HISTORY_TURNS)
 }
 
-function transcriptHasHighRiskTerms(text: string): boolean {
-  const lower = text.toLowerCase()
-  return HIGH_RISK_TERMS.some((term) => lower.includes(term))
-}
-
 function voiceStatusLine(options: {
   voice: ReturnType<typeof useStandaloneOrbVoice>
   pending: boolean
@@ -400,6 +393,7 @@ export function OrbCareCompanion() {
   const [error, setError] = useState<string | null>(null)
   const [retryPayload, setRetryPayload] = useState<{ text: string; chatId: string } | null>(null)
   const [imageUnderstandingNote, setImageUnderstandingNote] = useState<string | null>(null)
+  const [imageNoteForMessageId, setImageNoteForMessageId] = useState<string | null>(null)
   const [attachments, setAttachments] = useState<PendingImageAttachment[]>([])
   const [micNotice, setMicNotice] = useState<string | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -428,6 +422,9 @@ export function OrbCareCompanion() {
   const composerUserEditedRef = useRef(false)
   const voiceMayFillComposerRef = useRef(false)
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null)
+  const isNearBottomRef = useRef(true)
+  const lastSendHadImagesRef = useRef(false)
   const autoSendTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const hydratedRef = useRef(false)
   const sendInFlightRef = useRef(false)
@@ -582,19 +579,41 @@ export function OrbCareCompanion() {
     setMessage(display)
   }, [voice.displayTranscript, voice.listening, voice.phase])
 
-  const scrolledMessageCountRef = useRef(0)
+  const streamingTail = useMemo(() => {
+    const last = visibleMessages[visibleMessages.length - 1]
+    if (last?.status === 'streaming' || last?.status === 'thinking') {
+      return `${last.id}:${last.content.length}`
+    }
+    return ''
+  }, [visibleMessages])
+
   useEffect(() => {
-    const count = visibleMessages.length
-    const shouldScroll = pending || count !== scrolledMessageCountRef.current
-    if (!shouldScroll) return
-    scrolledMessageCountRef.current = count
-    const reducedMotion =
-      typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    messagesEndRef.current?.scrollIntoView({
-      behavior: reducedMotion ? 'auto' : 'smooth',
-      block: 'end'
+    const container = scrollContainerRef.current
+    if (!container) return
+    const onScroll = () => {
+      isNearBottomRef.current = isOrbScrollNearBottom(container)
+    }
+    onScroll()
+    container.addEventListener('scroll', onScroll, { passive: true })
+    return () => container.removeEventListener('scroll', onScroll)
+  }, [])
+
+  const requestChatScroll = useCallback((force = false) => {
+    if (!force && !isNearBottomRef.current) return
+    const behavior = orbScrollBehaviorForReducedMotion()
+    requestAnimationFrame(() => {
+      scrollOrbToBottom(messagesEndRef.current, { behavior, block: 'end' })
     })
-  }, [visibleMessages.length, pending])
+  }, [])
+
+  useEffect(() => {
+    requestChatScroll(true)
+  }, [visibleMessages.length, pending, requestChatScroll])
+
+  useEffect(() => {
+    if (!streamingTail) return
+    requestChatScroll(false)
+  }, [streamingTail, requestChatScroll])
 
   useEffect(() => {
     return () => {
@@ -612,21 +631,19 @@ export function OrbCareCompanion() {
     })
   }, [])
 
-  const showSafeguardingEscalation =
-    mode === 'Safeguarding Thinking' ||
-    transcriptHasHighRiskTerms(message) ||
-    transcriptHasHighRiskTerms(voice.transcript) ||
-    messages.some((m) => m.role === 'user' && transcriptHasHighRiskTerms(m.content))
+  const showUrgentSafeguardingBanner = Boolean(
+    safeguardingBannerTextFromMessages(visibleMessages, mode)
+  )
 
   const cognitionAmbientState = useMemo((): OrbCognitionAmbientState => {
     if (pending) return 'thinking'
     const last = visibleMessages[visibleMessages.length - 1]
     if (last?.status === 'streaming') return 'streaming'
     if (last?.status === 'thinking') return 'analysing'
-    if (mode === 'Safeguarding Thinking' || showSafeguardingEscalation) return 'safeguarding'
+    if (mode === 'Safeguarding Thinking' || showUrgentSafeguardingBanner) return 'safeguarding'
     if (mode === 'Therapeutic Reframe' || mode === 'Staff Coach') return 'reflecting'
     return 'idle'
-  }, [pending, visibleMessages, mode, showSafeguardingEscalation])
+  }, [pending, visibleMessages, mode, showUrgentSafeguardingBanner])
 
   const cognitionStatusLabel = pending
     ? 'Thinking'
@@ -689,6 +706,7 @@ export function OrbCareCompanion() {
       if (voice.speaking) voice.cancelSpeaking()
 
       const imagePayload = attachments.map((a) => ({ data_url: a.dataUrl, name: a.name }))
+      lastSendHadImagesRef.current = imagePayload.length > 0
       let targetChatId = options?.chatId || workspace.activeChatId
       let targetChat = targetChatId ? workspace.chats.find((c) => c.id === targetChatId) ?? null : null
       const skipPersonalisation = Boolean(targetChat?.temporary)
@@ -742,9 +760,19 @@ export function OrbCareCompanion() {
           : [...existingMessages, userMessage, thinkingMessage]
       }
       priorMessages = dedupeOrbMessages(priorMessages)
-      const nextTitle = !targetChat || targetChat.title === 'New conversation'
-        ? titleFromFirstMessage(trimmed || 'Image conversation')
-        : targetChat.title
+      const titleContext = {
+        mode,
+        documentLens: pendingDocument?.title
+          ? pendingDocument.sourceId
+            ? 'policy'
+            : null
+          : null,
+        documentTitle: pendingDocument?.title ?? null
+      }
+      const nextTitle =
+        !targetChat || targetChat.title === 'New conversation' || targetChat.title === 'New chat'
+          ? generateOrbChatTitle(trimmed || 'Image conversation', titleContext)
+          : targetChat.title
 
       const commitMessages = (messages: StandaloneChatMessage[]) => {
         const normalized = dedupeOrbMessages(messages)
@@ -794,6 +822,7 @@ export function OrbCareCompanion() {
       setError(null)
       setRetryPayload(null)
       setImageUnderstandingNote(null)
+      setImageNoteForMessageId(null)
       traceOrbSend('pending_state', { sendGeneration, pending: true })
 
       const osBoundary = standaloneOsBoundaryReply(trimmed || messageBody)
@@ -913,11 +942,16 @@ export function OrbCareCompanion() {
         const displayAnswer = options?.streamErrorNote
           ? `${answer}\n\n*(${options.streamErrorNote})*`
           : answer
-        if (response.image_understanding_available === false) {
+        if (lastSendHadImagesRef.current && response.image_understanding_available === false) {
           setImageUnderstandingNote(
             'Image understanding is not available in this environment. ORB answered using your text only.'
           )
+          setImageNoteForMessageId(assistantId)
+        } else {
+          setImageUnderstandingNote(null)
+          setImageNoteForMessageId(null)
         }
+        lastSendHadImagesRef.current = false
         const responseSources = (
           (response.citations?.length ? response.citations : response.sources) ?? []
         ) as StandaloneOrbSource[]
@@ -1223,7 +1257,12 @@ export function OrbCareCompanion() {
       return
     }
     if (!voice.recognitionAvailable) {
-      setMicNotice('Voice unavailable in this browser — type instead.')
+      setMicNotice('Voice input is not available in this browser yet.')
+      window.setTimeout(() => setMicNotice(null), 5000)
+      return
+    }
+    if (voice.error) {
+      setMicNotice(voice.error)
       window.setTimeout(() => setMicNotice(null), 5000)
       return
     }
@@ -1231,7 +1270,12 @@ export function OrbCareCompanion() {
       voiceMayFillComposerRef.current = true
       composerUserEditedRef.current = false
     }
-    void voice.beginUserVoiceCapture()
+    void voice.beginUserVoiceCapture().then((started) => {
+      if (!started && voice.error) {
+        setMicNotice(voice.error)
+        window.setTimeout(() => setMicNotice(null), 5000)
+      }
+    })
   }
 
   const SLASH_MODE_COMMANDS: Record<string, StandaloneOrbMode> = {
@@ -1338,6 +1382,8 @@ export function OrbCareCompanion() {
     setError(null)
     setRetryPayload(null)
     setLastSendStatus('idle')
+    setImageUnderstandingNote(null)
+    setImageNoteForMessageId(null)
     voice.clearTranscript()
     setSidebarOpen(false)
   }
@@ -1355,6 +1401,8 @@ export function OrbCareCompanion() {
     composerUserEditedRef.current = false
     voiceMayFillComposerRef.current = false
     setError(null)
+    setImageUnderstandingNote(null)
+    setImageNoteForMessageId(null)
     setSidebarOpen(false)
   }
 
@@ -1634,14 +1682,14 @@ export function OrbCareCompanion() {
   async function saveChatNote(entry: StandaloneChatMessage) {
     try {
       await createOrbSavedOutput({
-        title: titleFromFirstMessage(entry.content) || 'ORB chat note',
+        title: generateOrbChatTitle(entry.content, { mode }) || 'ORB chat note',
         type: 'intelligence_note',
         project_id: workspace.activeProjectId,
         project_name: activeProject?.name,
         summary: entry.content.slice(0, 800),
         content_markdown: entry.content,
         intelligence_output: {
-          title: titleFromFirstMessage(entry.content) || 'ORB chat note',
+          title: generateOrbChatTitle(entry.content, { mode }) || 'ORB chat note',
           summary: entry.content.slice(0, 2000),
           type: 'answer',
           standalone_only: true,
@@ -1716,7 +1764,7 @@ export function OrbCareCompanion() {
     pending || visibleMessages.some((m) => m.status === 'streaming' || m.status === 'thinking')
 
   const composer = (
-    <div className="border-t border-[var(--orb-line)] bg-[var(--orb-composer-bg)]">
+    <div className="orb-composer-dock border-t border-transparent bg-gradient-to-t from-[#f4f6f9] via-[#f4f6f9] to-transparent pt-2">
       {documentLensActions.length ? (
         <div className="mx-auto max-w-3xl px-4 pt-3">
           <OrbDocumentContextChips
@@ -1768,7 +1816,7 @@ export function OrbCareCompanion() {
       onSummariseDocument={() => void runDocumentLens('summary')}
       onAddDocumentToLibrary={() => openKnowledgeLibrary()}
       onToolsClick={openToolsPanel}
-      suggestions={showEmptyState ? undefined : suggestionsForMode(mode)}
+      suggestions={undefined}
       agentLabel={activeAgent?.title ?? 'Ask ORB'}
       onAgentSelectorClick={() => setAgentsPanelOpen(true)}
       answering={isAnswering}
@@ -2134,9 +2182,16 @@ export function OrbCareCompanion() {
             </p>
           ) : null}
 
-          {showSafeguardingEscalation ? (
-            <div className="mx-3 mt-3 rounded-2xl border border-rose-300/30 bg-rose-950/40 px-4 py-3 text-sm leading-6 text-rose-50 md:mx-5" role="status">
-              Follow your safeguarding procedure immediately if there is current risk. ORB can help you think, but it does not replace escalation.
+          {showUrgentSafeguardingBanner ? (
+            <div
+              className="mx-auto mt-3 flex max-w-[var(--orb-chat-column-max,52.5rem)] items-start gap-3 rounded-xl border border-rose-300 bg-rose-50 px-4 py-3 text-sm leading-6 text-rose-950 shadow-sm md:px-6"
+              role="alert"
+              data-orb-safeguarding-urgent-banner
+            >
+              <span className="mt-0.5 text-lg" aria-hidden>
+                ⚠
+              </span>
+              <p>{URGENT_SAFEGUARDING_BANNER_COPY}</p>
             </div>
           ) : null}
 
@@ -2145,8 +2200,14 @@ export function OrbCareCompanion() {
           ) : null}
 
           <section className="flex min-h-0 flex-1 flex-col" onDragOver={(e) => e.preventDefault()} onDrop={handleDrop}>
-            <div className="orb-chat-thread flex-1 overflow-y-auto overflow-x-hidden px-3 py-4 md:px-6" role="log" aria-label="ORB conversation">
-              <div className="mx-auto w-full max-w-[var(--orb-chat-column-max,52.5rem)]">
+            <div
+              ref={scrollContainerRef}
+              className="orb-chat-thread flex-1 overflow-y-auto overflow-x-hidden px-3 py-6 pb-32 md:px-6"
+              role="log"
+              aria-label="ORB conversation"
+              data-orb-chat-scroll-container
+            >
+              <div className="mx-auto w-full max-w-[var(--orb-chat-column-max,50rem)]">
                 {showEmptyState ? (
                   <div
                     className="flex min-h-[min(52vh,24rem)] flex-col items-center justify-center px-2 py-6 text-center md:py-8"
@@ -2190,9 +2251,15 @@ export function OrbCareCompanion() {
                     </button>
                   </div>
                 ) : (
-                  <div className="space-y-8 pb-4">
-                    {imageUnderstandingNote ? (
-                      <p className="rounded-xl border border-slate-500/30 bg-slate-500/10 px-4 py-2 text-xs text-slate-300" role="status">
+                  <div className="space-y-6 pb-6">
+                    {imageUnderstandingNote &&
+                    imageNoteForMessageId &&
+                    visibleMessages.some((m) => m.id === imageNoteForMessageId) ? (
+                      <p
+                        className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-900"
+                        role="status"
+                        data-orb-image-unavailable-banner
+                      >
                         {imageUnderstandingNote}
                       </p>
                     ) : null}
@@ -2361,8 +2428,12 @@ export function OrbCareCompanion() {
                                 onInspectionPrep={() => handleModeChange('Ofsted Lens')}
                                 onOrbFollowUp={handleOrbFollowUp}
                               />
-                              {entry.status === 'complete' ? (
+                              {entry.status === 'complete' && index === visibleMessages.length - 1 ? (
                                 <OrbSuggestedReplyChips
+                                  suggestions={contextualSuggestedReplies({
+                                    mode,
+                                    messageHint: precedingUserMessageHint(visibleMessages, index)
+                                  })}
                                   onSelect={(action) => handleOrbFollowUp(action, entry.content, index)}
                                 />
                               ) : null}
