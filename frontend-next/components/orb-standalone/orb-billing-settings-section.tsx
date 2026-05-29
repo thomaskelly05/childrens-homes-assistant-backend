@@ -7,6 +7,7 @@ import {
   fetchOrbAccess,
   fetchOrbBillingMeter,
   openOrbBillingPortal,
+  refreshOrbAccessAfterCheckout,
   startOrbCheckout,
   startOrbTrial,
   type OrbAccessPayload
@@ -66,6 +67,24 @@ export function OrbBillingSettingsSection() {
     }
   }
 
+  async function handleRefreshStatus() {
+    setLoading(true)
+    setError(null)
+    try {
+      const result = await refreshOrbAccessAfterCheckout({ maxAttempts: 2, delayMs: 500 })
+      setAccess(result.access)
+      if (result.meter) setMeter(result.meter)
+      else setMeter(await fetchOrbBillingMeter().catch(() => null))
+      if (!result.confirmed && !result.access.can_use_orb) {
+        setError('Subscription still confirming. Try again in a moment.')
+      }
+    } catch {
+      setError('Could not refresh billing status.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="space-y-4" data-orb-billing-settings>
       <p className="text-[11px] leading-5 text-[var(--orb-muted)]">
@@ -97,14 +116,37 @@ export function OrbBillingSettingsSection() {
           </div>
         ) : null}
         {meter ? (
-          <div className="flex justify-between gap-4">
-            <dt className="text-[var(--orb-muted)]">Usage this period</dt>
-            <dd className="font-medium">{String(meter.total_requests ?? 0)} requests</dd>
-          </div>
+          <>
+            <div className="flex justify-between gap-4">
+              <dt className="text-[var(--orb-muted)]">Usage this period</dt>
+              <dd className="font-medium">{String(meter.total_requests ?? 0)} requests</dd>
+            </div>
+            {meter.soft_limit_warning ? (
+              <div className="flex justify-between gap-4">
+                <dt className="text-[var(--orb-muted)]">Usage status</dt>
+                <dd className="font-medium text-amber-700">{String(meter.soft_limit_warning)}</dd>
+              </div>
+            ) : null}
+            {meter.hard_limit_reached ? (
+              <div className="flex justify-between gap-4">
+                <dt className="text-[var(--orb-muted)]">Limit</dt>
+                <dd className="font-medium text-red-700">Period limit reached</dd>
+              </div>
+            ) : null}
+          </>
         ) : null}
       </dl>
       {error ? <p className="text-xs text-red-600">{error}</p> : null}
       <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          disabled={loading}
+          onClick={() => void handleRefreshStatus()}
+          className="rounded-lg border px-3 py-2 text-xs font-semibold disabled:opacity-50"
+          data-orb-billing-refresh-status
+        >
+          Refresh billing status
+        </button>
         {!access?.can_use_orb && access?.trial?.available ? (
           <button type="button" disabled={loading} onClick={handleTrial} className="rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white">
             Start trial

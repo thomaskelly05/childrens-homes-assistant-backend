@@ -23,6 +23,7 @@ from db.orb_residential_db import (
     start_orb_trial,
     upsert_orb_user_preferences,
 )
+from db.orb_stripe_events_db import is_orb_stripe_event_processed, record_orb_stripe_event
 from db.orb_subscription_db import (
     ORB_SAFETY_ACCEPTANCE_VERSION,
     get_orb_subscription,
@@ -32,6 +33,7 @@ from db.orb_subscription_db import (
     update_orb_subscription_state,
     upsert_orb_stripe_customer,
 )
+from services.orb_standalone_boundary import FORBIDDEN_STANDALONE_OS_KEYS
 from schemas.orb_residential_premium import OrbOnboardingPreferencesRequest
 from services.orb_access_service import orb_access_service
 from services.orb_billing_meter_service import orb_billing_meter_service
@@ -100,7 +102,7 @@ def _default_success_url(custom: str | None) -> str:
         return custom
     if STRIPE_SUCCESS_URL:
         return STRIPE_SUCCESS_URL
-    return f"{FRONTEND_APP_URL}/orb?billing=success"
+    return f"{FRONTEND_APP_URL}/orb/billing/success"
 
 
 def _default_cancel_url(custom: str | None) -> str:
@@ -108,7 +110,7 @@ def _default_cancel_url(custom: str | None) -> str:
         return custom
     if STRIPE_CANCEL_URL:
         return STRIPE_CANCEL_URL
-    return f"{FRONTEND_APP_URL}/orb/access?billing=cancelled"
+    return f"{FRONTEND_APP_URL}/orb/billing/cancel"
 
 
 def _dt_from_unix(ts: int | None) -> datetime | None:
@@ -372,32 +374,55 @@ async def orb_safety_status(
     )
 
 
+PUBLIC_ORB_ANALYTICS_EVENTS = frozenset(
+    {
+        "login_viewed",
+        "signup_viewed",
+        "oauth_clicked",
+        "locked_screen_viewed",
+        "upgrade_clicked",
+        "checkout_cancelled",
+    }
+)
+
+ORB_ANALYTICS_EVENTS = PUBLIC_ORB_ANALYTICS_EVENTS | {
+    "onboarding_started",
+    "onboarding_completed",
+    "trial_started",
+    "checkout_started",
+    "checkout_completed",
+    "subscription_active",
+    "billing_portal_opened",
+    "terms_accepted",
+}
+
+
+def _sanitize_analytics_metadata(metadata: dict[str, Any] | None) -> dict[str, Any]:
+    clean: dict[str, Any] = {}
+    for key, value in (metadata or {}).items():
+        if key in FORBIDDEN_STANDALONE_OS_KEYS:
+            continue
+        clean[key] = value
+    return clean
+
+
 @router.post("/analytics/event")
 async def orb_analytics_event(
     payload: OrbAnalyticsEventRequest,
     conn=Depends(get_db),
-    current_user=Depends(get_orb_residential_user),
+    current_user=Depends(get_optional_orb_residential_user),
 ):
-    user_id = current_user.get("user_id")
-    allowed = {
-        "login_viewed",
-        "signup_viewed",
-        "oauth_clicked",
-        "onboarding_started",
-        "onboarding_completed",
-        "trial_started",
-        "checkout_started",
-        "checkout_completed",
-        "checkout_cancelled",
-        "subscription_active",
-        "locked_screen_viewed",
-        "upgrade_clicked",
-        "billing_portal_opened",
-        "terms_accepted",
-    }
-    if payload.event not in allowed:
+    if payload.event not in ORB_ANALYTICS_EVENTS:
         raise HTTPException(status_code=400, detail="Unknown analytics event")
-    _record_analytics(conn, user_id=int(user_id) if user_id else None, event=payload.event, metadata=payload.metadata)
+    user_id = int(current_user["user_id"]) if current_user and current_user.get("user_id") else None
+    if not user_id and payload.event not in PUBLIC_ORB_ANALYTICS_EVENTS:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Sign in required for this event")
+    _record_analytics(
+        conn,
+        user_id=user_id,
+        event=payload.event,
+        metadata=_sanitize_analytics_metadata(payload.metadata),
+    )
     conn.commit()
     return _success({"recorded": True})
 
@@ -416,7 +441,11 @@ async def orb_standalone_stripe_webhook(request: Request, conn=Depends(get_db)):
         raise HTTPException(status_code=400, detail="Invalid webhook signature")
 
     event_type = event["type"]
+    stripe_event_id = str(event.get("id") or "").strip()
     data_object = event["data"]["object"]
+
+    if stripe_event_id and is_orb_stripe_event_processed(conn, stripe_event_id):
+        return JSONResponse({"ok": True, "duplicate": True})
 
     try:
         if event_type == "checkout.session.completed":
@@ -510,6 +539,14 @@ async def orb_standalone_stripe_webhook(request: Request, conn=Depends(get_db)):
                     current_period_end=_dt_from_unix(subscription.get("current_period_end")),
                     clear_payment_failed=True,
                 )
+        if stripe_event_id:
+            record_orb_stripe_event(
+                conn,
+                stripe_event_id=stripe_event_id,
+                event_type=event_type,
+                status="processed",
+                metadata={"product": "orb_residential"},
+            )
         conn.commit()
         return JSONResponse({"ok": True})
     except Exception:

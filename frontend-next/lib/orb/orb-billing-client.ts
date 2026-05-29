@@ -122,7 +122,7 @@ export async function saveOrbOnboarding(payload: Record<string, unknown>) {
 
 export async function trackOrbAnalytics(event: string, metadata?: Record<string, unknown>) {
   try {
-    await authFetch(ORB_BILLING_API.analytics, {
+    await fetch(ORB_BILLING_API.analytics, {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
@@ -131,6 +131,49 @@ export async function trackOrbAnalytics(event: string, metadata?: Record<string,
   } catch {
     // Analytics must not block UX.
   }
+}
+
+export type OrbCheckoutRefreshResult = {
+  access: OrbAccessPayload
+  meter?: Record<string, unknown> | null
+  confirmed: boolean
+}
+
+/** Poll access after Stripe checkout while webhooks may still be processing. */
+export async function refreshOrbAccessAfterCheckout(options?: {
+  maxAttempts?: number
+  delayMs?: number
+}): Promise<OrbCheckoutRefreshResult> {
+  const maxAttempts = options?.maxAttempts ?? 8
+  const delayMs = options?.delayMs ?? 1500
+  let lastAccess: OrbAccessPayload | null = null
+  let meter: Record<string, unknown> | null = null
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    lastAccess = await fetchOrbAccess()
+    if (lastAccess.can_use_orb || lastAccess.subscription?.active || lastAccess.trial?.active) {
+      try {
+        meter = await fetchOrbBillingMeter()
+      } catch {
+        meter = null
+      }
+      return { access: lastAccess, meter, confirmed: true }
+    }
+    if (attempt < maxAttempts - 1) {
+      await new Promise((resolve) => setTimeout(resolve, delayMs))
+    }
+  }
+
+  return {
+    access: lastAccess ?? (await fetchOrbAccess()),
+    meter,
+    confirmed: false
+  }
+}
+
+export function orbOAuthStartUrl(provider: 'google' | 'microsoft' | 'apple', returnUrl = '/orb') {
+  const params = new URLSearchParams({ return_url: returnUrl })
+  return `/orb/standalone/auth/oauth/${provider}/start?${params.toString()}`
 }
 
 export async function orbStandaloneSignup(input: {
