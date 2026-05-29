@@ -1,0 +1,162 @@
+/** Mobile overflow guards for /orb. Loaded last. */
+.orb-chat-layout,
+.orb-chat-layout * {
+  box-sizing: border-box;
+}
+
+.orb-chat-layout {
+  width: 100%;
+  max-width: 100vw;
+  min-height: 100dvh;
+  overflow-x: hidden !important;
+}
+
+.orb-chat-layout > .relative.flex.min-h-0.flex-1,
+.orb-chat-main,
+.orb-chat-thread,
+.orb-chat-thread > div,
+.orb-composer-dock,
+.orb-composer-glass {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.orb-chat-main,
+.orb-chat-thread,
+.orb-composer-dock {
+  width: 100%;
+  overflow-x: hidden;
+}
+
+.orb-markdown-answer,
+.orb-message-content,
+.orb-message-user,
+.orb-message-assistant {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.orb-chat-sidebar {
+  width: var(--orb-sidebar-width, 18.5rem);
+  max-width: var(--orb-sidebar-width, 18.5rem);
+  flex: 0 0 var(--orb-sidebar-width, 18.5rem);
+}
+
+@media (max-width: 1023px) {
+  html,
+  body {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .orb-chat-layout {
+    --orb-sidebar-width: min(86vw, 20rem);
+    --orb-chat-column-max: 100%;
+    --orb-composer-max: 100%;
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: hidden !important;
+  }
+
+  .orb-chat-layout > .relative.flex.min-h-0.flex-1,
+  .orb-chat-main,
+  .orb-chat-header,
+  .orb-chat-thread {
+    width: 100% !important;
+    max-width: 100vw !important;
+    min-width: 0 !important;
+    margin-left: 0 !important;
+    overflow-x: hidden !important;
+  }
+
+  .orb-chat-sidebar {
+    position: fixed !important;
+    inset: 0 auto 0 0 !important;
+    width: min(86vw, 20rem) !important;
+    max-width: min(86vw, 20rem) !important;
+    min-width: 0 !important;
+    flex-basis: auto !important;
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .orb-chat-thread {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+    padding-bottom: calc(11.5rem + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  .orb-chat-thread > div,
+  [data-orb-empty-state],
+  [data-orb-starter-cards] {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  [data-orb-starter-cards] {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+  }
+
+  .orb-starter-card {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .orb-message-user {
+    max-width: 92% !important;
+    padding-left: 0 !important;
+  }
+
+  .orb-response-action-bar {
+    max-width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .orb-composer-dock {
+    left: 0;
+    right: 0;
+    width: 100% !important;
+    max-width: 100vw !important;
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px)) !important;
+    overflow-x: hidden !important;
+  }
+
+  .orb-composer-dock > .mx-auto,
+  .orb-composer-dock > [data-orb-standalone-composer],
+  .orb-composer-dock .orb-composer-glass {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  .orb-composer-glass textarea,
+  .orb-composer-glass [data-orb-composer-input] {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  .orb-scroll-to-bottom-fab {
+    max-width: calc(100vw - 2rem);
+    bottom: calc(10.5rem + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+
+@media (max-width: 430px) {
+  .orb-chat-thread {
+    padding-left: 0.875rem !important;
+    padding-right: 0.875rem !important;
+  }
+
+  .orb-composer-dock {
+    padding-left: 0.625rem !important;
+    padding-right: 0.625rem !important;
+  }
+}
