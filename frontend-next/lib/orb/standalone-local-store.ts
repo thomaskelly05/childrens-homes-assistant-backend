@@ -18,9 +18,9 @@ export type StandaloneOrbSource = {
   label: string
   /**
    * API sources can include newer routed source types such as
-   * orb_operating_brain, orb_knowledge_spine or data-vault categories before
-   * the local store union is updated. Persist them rather than failing the
-   * production build.
+   * orb_operating_brain, orb_knowledge_spine, data-vault categories or
+   * document/action intelligence before the local store union is updated.
+   * Persist them rather than failing the production build.
    */
   type: StandaloneOrbSourceType | string
   basis?: string
@@ -46,7 +46,7 @@ export type StandaloneChatMessage = {
   imageDataUrls?: string[]
   createdAt?: number
   status?: StandaloneChatMessageStatus
-  /** Shown while status is thinking (defaults to ORB is thinking…). */
+  /** Shown while status is thinking (defaults to ORB is thinking...). */
   thinkingLabel?: string
   sources?: StandaloneOrbSource[]
   modelRouting?: StandaloneOrbModelRouting
@@ -130,7 +130,7 @@ export const DEFAULT_STANDALONE_PROJECTS: StandaloneProject[] = [
     name: 'General',
     description: 'Everyday questions and mixed topics',
     color: '#22d3ee',
-    icon: '✦',
+    icon: '*',
     createdAt: 0,
     updatedAt: 0
   },
@@ -139,7 +139,7 @@ export const DEFAULT_STANDALONE_PROJECTS: StandaloneProject[] = [
     name: 'Daily Recording',
     description: 'Notes, handovers and recording quality',
     color: '#34d399',
-    icon: '📝',
+    icon: 'note',
     createdAt: 0,
     updatedAt: 0
   },
@@ -148,7 +148,7 @@ export const DEFAULT_STANDALONE_PROJECTS: StandaloneProject[] = [
     name: 'Safeguarding Reflection',
     description: 'Thinking through concerns and escalation',
     color: '#fb7185',
-    icon: '🛡',
+    icon: 'shield',
     createdAt: 0,
     updatedAt: 0
   },
@@ -157,7 +157,7 @@ export const DEFAULT_STANDALONE_PROJECTS: StandaloneProject[] = [
     name: 'Inspection Readiness',
     description: 'Evidence, SCCIF and leadership oversight',
     color: '#a78bfa',
-    icon: '◎',
+    icon: 'eye',
     createdAt: 0,
     updatedAt: 0
   },
@@ -166,7 +166,7 @@ export const DEFAULT_STANDALONE_PROJECTS: StandaloneProject[] = [
     name: 'Reflective Supervision',
     description: 'Coaching, learning and practice development',
     color: '#f59e0b',
-    icon: '☀',
+    icon: 'sun',
     createdAt: 0,
     updatedAt: 0
   }
@@ -176,6 +176,10 @@ const STANDALONE_WORKSPACE_KEY = 'orb-standalone-workspace-v2'
 
 function now() {
   return Date.now()
+}
+
+function makeId(prefix: string) {
+  return `${prefix}-${now()}-${Math.random().toString(36).slice(2, 8)}`
 }
 
 function normaliseProject(project: Partial<StandaloneProject>, fallback: StandaloneProject): StandaloneProject {
@@ -195,7 +199,7 @@ function normaliseProfile(profile: Partial<StandaloneProfile>): StandaloneProfil
   const timestamp = now()
   const label = String(profile.label || profile.name || 'Standalone profile')
   return {
-    id: String(profile.id || `profile-${timestamp}`),
+    id: String(profile.id || makeId('profile')),
     name: String(profile.name || label),
     label,
     description: profile.description,
@@ -211,7 +215,7 @@ function normaliseProfile(profile: Partial<StandaloneProfile>): StandaloneProfil
 function normaliseMessage(message: Partial<StandaloneChatMessage>): StandaloneChatMessage | null {
   if (!message || (message.role !== 'user' && message.role !== 'assistant')) return null
   return {
-    id: String(message.id || `msg-${now()}`),
+    id: String(message.id || makeId('msg')),
     role: message.role,
     content: String(message.content || ''),
     imageDataUrls: Array.isArray(message.imageDataUrls) ? message.imageDataUrls.map(String) : undefined,
@@ -229,13 +233,13 @@ function normaliseMessage(message: Partial<StandaloneChatMessage>): StandaloneCh
 function normaliseChat(chat: Partial<StandaloneChat>): StandaloneChat {
   const timestamp = now()
   return {
-    id: String(chat.id || `chat-${timestamp}`),
+    id: String(chat.id || makeId('chat')),
     title: String(chat.title || 'New chat'),
     projectId: String(chat.projectId || STANDALONE_GENERAL_PROJECT_ID),
     profileIds: Array.isArray(chat.profileIds) ? chat.profileIds.map(String) : [],
     messages: Array.isArray(chat.messages) ? chat.messages.map(normaliseMessage).filter(Boolean) as StandaloneChatMessage[] : [],
     mode: chat.mode || 'Ask ORB',
-    conversationId: String(chat.conversationId || `conversation-${timestamp}`),
+    conversationId: String(chat.conversationId || makeId('conversation')),
     pinned: Boolean(chat.pinned),
     archived: Boolean(chat.archived),
     temporary: Boolean(chat.temporary),
@@ -247,17 +251,7 @@ function normaliseChat(chat: Partial<StandaloneChat>): StandaloneChat {
 function createDefaultWorkspace(): StandaloneWorkspace {
   const timestamp = now()
   const projects = DEFAULT_STANDALONE_PROJECTS.map((project) => ({ ...project, createdAt: timestamp, updatedAt: timestamp }))
-  const initialChat: StandaloneChat = {
-    id: `chat-${timestamp}`,
-    title: 'New chat',
-    projectId: STANDALONE_GENERAL_PROJECT_ID,
-    profileIds: [],
-    messages: [],
-    mode: 'Ask ORB',
-    conversationId: `conversation-${timestamp}`,
-    createdAt: timestamp,
-    updatedAt: timestamp
-  }
+  const initialChat = createStandaloneChat(STANDALONE_GENERAL_PROJECT_ID, 'Ask ORB')
   return {
     version: 2,
     activeChatId: initialChat.id,
@@ -266,6 +260,104 @@ function createDefaultWorkspace(): StandaloneWorkspace {
     profiles: [],
     chats: [initialChat]
   }
+}
+
+export function createStandaloneChat(
+  projectId: string = STANDALONE_GENERAL_PROJECT_ID,
+  mode: StandaloneOrbMode | string = 'Ask ORB'
+): StandaloneChat {
+  const timestamp = now()
+  return {
+    id: makeId('chat'),
+    title: 'New conversation',
+    projectId,
+    profileIds: [],
+    messages: [],
+    mode,
+    conversationId: makeId('conversation'),
+    createdAt: timestamp,
+    updatedAt: timestamp
+  }
+}
+
+export function createStandaloneProject(name: string, description?: string): StandaloneProject {
+  const timestamp = now()
+  const cleanName = name.trim() || 'New project'
+  return {
+    id: makeId('project'),
+    name: cleanName,
+    description,
+    color: '#22d3ee',
+    icon: 'folder',
+    createdAt: timestamp,
+    updatedAt: timestamp
+  }
+}
+
+export function createStandaloneProfile(profile: Partial<StandaloneProfile>): StandaloneProfile {
+  return normaliseProfile(profile)
+}
+
+export function ensureStandaloneMessage(message: Partial<StandaloneChatMessage>): StandaloneChatMessage {
+  return normaliseMessage(message) || {
+    id: makeId('msg'),
+    role: 'assistant',
+    content: '',
+    status: 'complete',
+    createdAt: now()
+  }
+}
+
+export function dedupeOrbMessages(messages: StandaloneChatMessage[]): StandaloneChatMessage[] {
+  const seen = new Set<string>()
+  const result: StandaloneChatMessage[] = []
+  for (const message of messages) {
+    const key = message.id || `${message.role}:${message.createdAt}:${message.content}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    result.push(message)
+  }
+  return result
+}
+
+export function titleFromFirstMessage(message: string): string {
+  const clean = String(message || '').replace(/\s+/g, ' ').trim()
+  if (!clean) return 'New conversation'
+  return clean.length > 54 ? `${clean.slice(0, 54).trim()}...` : clean
+}
+
+export function searchChats(
+  chats: StandaloneChat[],
+  query: string,
+  options?: { projectId?: string; includeArchived?: boolean }
+): StandaloneChat[] {
+  const term = query.trim().toLowerCase()
+  return chats
+    .filter((chat) => (options?.includeArchived ? true : !chat.archived))
+    .filter((chat) => (!options?.projectId ? true : chat.projectId === options.projectId))
+    .filter((chat) => {
+      if (!term) return true
+      return (
+        chat.title.toLowerCase().includes(term) ||
+        chat.messages.some((message) => message.content.toLowerCase().includes(term))
+      )
+    })
+    .sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt - a.updatedAt)
+}
+
+export function buildProfileContextBlock(profiles: StandaloneProfile[]): string {
+  if (!Array.isArray(profiles) || profiles.length === 0) return ''
+  const blocks = profiles.map((profile) => {
+    const lines = [
+      `Profile: ${profile.name || profile.label}`,
+      profile.description ? `Description: ${profile.description}` : '',
+      profile.notes ? `Notes: ${profile.notes}` : '',
+      profile.promptInstructions ? `Instructions: ${profile.promptInstructions}` : '',
+      profile.tags?.length ? `Tags: ${profile.tags.join(', ')}` : ''
+    ].filter(Boolean)
+    return lines.join('\n')
+  })
+  return `Standalone context profiles supplied by the user. Do not treat these as live IndiCare OS records.\n${blocks.join('\n\n')}`
 }
 
 export function loadStandaloneWorkspace(): StandaloneWorkspace {
@@ -287,14 +379,14 @@ export function loadStandaloneWorkspace(): StandaloneWorkspace {
     const activeProjectId = parsed.activeProjectId && projects.some((project) => project.id === parsed.activeProjectId)
       ? parsed.activeProjectId
       : STANDALONE_GENERAL_PROJECT_ID
-    return {
+    return repairOrbWorkspace({
       version: 2,
       activeChatId,
       activeProjectId,
       projects,
       profiles,
       chats
-    }
+    })
   } catch (error) {
     console.warn('[ORB] Could not load standalone workspace', error)
     return createDefaultWorkspace()
@@ -304,8 +396,82 @@ export function loadStandaloneWorkspace(): StandaloneWorkspace {
 export function saveStandaloneWorkspace(workspace: StandaloneWorkspace) {
   if (typeof window === 'undefined') return
   try {
-    window.localStorage.setItem(STANDALONE_WORKSPACE_KEY, JSON.stringify(workspace))
+    window.localStorage.setItem(STANDALONE_WORKSPACE_KEY, JSON.stringify(repairOrbWorkspace(workspace)))
   } catch (error) {
     console.warn('[ORB] Could not save standalone workspace', error)
   }
+}
+
+export function repairOrbWorkspace(workspace: StandaloneWorkspace): StandaloneWorkspace {
+  const repairedProjects = workspace.projects?.length
+    ? workspace.projects.map((project, index) => normaliseProject(project, DEFAULT_STANDALONE_PROJECTS[index] || DEFAULT_STANDALONE_PROJECTS[0]))
+    : DEFAULT_STANDALONE_PROJECTS.map((project) => ({ ...project, createdAt: now(), updatedAt: now() }))
+  if (!repairedProjects.some((project) => project.id === STANDALONE_GENERAL_PROJECT_ID)) {
+    repairedProjects.unshift({ ...DEFAULT_STANDALONE_PROJECTS[0], createdAt: now(), updatedAt: now() })
+  }
+  const repairedProfiles = Array.isArray(workspace.profiles) ? workspace.profiles.map(normaliseProfile) : []
+  const repairedChats = Array.isArray(workspace.chats) && workspace.chats.length
+    ? workspace.chats.map(normaliseChat)
+    : [createStandaloneChat(STANDALONE_GENERAL_PROJECT_ID, 'Ask ORB')]
+  const activeChatId = repairedChats.some((chat) => chat.id === workspace.activeChatId)
+    ? workspace.activeChatId
+    : repairedChats[0]?.id || null
+  const activeProjectId = repairedProjects.some((project) => project.id === workspace.activeProjectId)
+    ? workspace.activeProjectId
+    : STANDALONE_GENERAL_PROJECT_ID
+  return {
+    version: 2,
+    activeChatId,
+    activeProjectId,
+    projects: repairedProjects,
+    profiles: repairedProfiles,
+    chats: repairedChats
+  }
+}
+
+export function defaultWorkspace(): StandaloneWorkspace {
+  return createDefaultWorkspace()
+}
+
+export function readStandaloneWorkspace(): StandaloneWorkspace {
+  return loadStandaloneWorkspace()
+}
+
+export function writeStandaloneWorkspace(workspace: StandaloneWorkspace) {
+  saveStandaloneWorkspace(workspace)
+}
+
+export function exportStandaloneWorkspaceJson(workspace: StandaloneWorkspace): string {
+  return JSON.stringify(repairOrbWorkspace(workspace), null, 2)
+}
+
+export function clearStandaloneLocalState() {
+  if (typeof window === 'undefined') return
+  window.localStorage.removeItem(STANDALONE_WORKSPACE_KEY)
+}
+
+export function clearStandaloneProfiles(workspace: StandaloneWorkspace) {
+  saveStandaloneWorkspace({
+    ...workspace,
+    profiles: [],
+    chats: workspace.chats.map((chat) => ({ ...chat, profileIds: [], updatedAt: now() }))
+  })
+}
+
+export function clearStandaloneCustomProjects(workspace: StandaloneWorkspace) {
+  const customProjectIds = new Set(
+    workspace.projects
+      .filter((project) => project.id !== STANDALONE_GENERAL_PROJECT_ID)
+      .map((project) => project.id)
+  )
+  saveStandaloneWorkspace({
+    ...workspace,
+    activeProjectId: STANDALONE_GENERAL_PROJECT_ID,
+    projects: workspace.projects.filter((project) => project.id === STANDALONE_GENERAL_PROJECT_ID),
+    chats: workspace.chats.map((chat) => ({
+      ...chat,
+      projectId: customProjectIds.has(chat.projectId) ? STANDALONE_GENERAL_PROJECT_ID : chat.projectId,
+      updatedAt: now()
+    }))
+  })
 }
