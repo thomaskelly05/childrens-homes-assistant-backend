@@ -130,6 +130,57 @@ export type OrbDocumentIntelligenceResult = {
   reg44?: Record<string, unknown>
 }
 
+const DOCUMENT_LENS_TITLE_PREFIX: Partial<Record<OrbDocumentLens, string>> = {
+  policy_card: 'Policy Card',
+  reg44: 'Reg 44 Review',
+  reg45: 'Reg 45 Evidence Review',
+  actions: 'Action Plan',
+  safeguarding: 'Safeguarding Lens',
+  ofsted: 'Ofsted Lens',
+  staff_briefing: 'Staff Briefing',
+  recording_quality: 'Recording Quality',
+  manager_oversight: 'Manager Oversight',
+  ri_governance: 'RI Governance Lens',
+  supervision: 'Supervision Questions',
+  checklist: 'Audit Checklist',
+  what_is_missing: 'What Is Missing',
+  summary: 'Document Summary',
+  explain: 'Document Explanation'
+}
+
+/** First meaningful line from pasted/uploaded text when title is missing. */
+export function inferDocumentTitleFromText(text: string): string {
+  const lines = text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+  for (const line of lines) {
+    if (line.length < 6 || line.length > 120) continue
+    if (/^(page\s+\d|confidential|draft|version\s+\d)/i.test(line)) continue
+    if (/^[-#*]+/.test(line)) continue
+    return line.length > 80 ? `${line.slice(0, 77).trim()}…` : line
+  }
+  return 'Uploaded document'
+}
+
+/** Human-readable title for document intelligence outputs and saves. */
+export function documentIntelligenceDisplayTitle(
+  lens: OrbDocumentLens | string,
+  documentTitle?: string | null,
+  documentText?: string
+): string {
+  const key = String(lens).trim() as OrbDocumentLens
+  const prefix =
+    DOCUMENT_LENS_TITLE_PREFIX[key] ||
+    key
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, (char) => char.toUpperCase())
+  const doc =
+    (documentTitle || '').trim() ||
+    (documentText?.trim() ? inferDocumentTitleFromText(documentText) : 'Uploaded document')
+  return `${prefix} — ${doc}`
+}
+
 export function formatDocumentIntelligenceMarkdown(result: OrbDocumentIntelligenceResult): string {
   const lines: string[] = [
     `# ${result.title}`,

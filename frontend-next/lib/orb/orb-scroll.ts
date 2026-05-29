@@ -25,3 +25,13 @@ export function orbScrollBehaviorForReducedMotion(): ScrollBehavior {
   if (typeof window === 'undefined') return 'smooth'
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
 }
+
+/** Whether the scroll-to-bottom FAB should show (user scrolled up with content below). */
+export function shouldShowOrbScrollFab(options: {
+  nearBottom: boolean
+  hasMessages: boolean
+  isStreaming: boolean
+}): boolean {
+  if (options.nearBottom) return false
+  return options.hasMessages || options.isStreaming
+}

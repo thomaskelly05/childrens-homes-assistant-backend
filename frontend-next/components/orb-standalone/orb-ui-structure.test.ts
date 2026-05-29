@@ -144,18 +144,36 @@ describe('ORB ChatGPT UI structure', () => {
     assert.match(help, /immediate risk/)
   })
 
-  it('settings panel has voice and personalisation sections', () => {
+  it('settings panel has voice, chat and privacy sections', () => {
     const settings = readComponent('components/orb-standalone/orb-standalone-settings-panel.tsx')
     assert.match(settings, /data-orb-settings-section=\{section\.id\}/)
     assert.match(settings, /id: 'voice'/)
-    assert.match(settings, /id: 'personalisation'/)
-    assert.match(settings, /Memory \/ Personalisation/)
+    assert.match(settings, /id: 'chat'/)
+    assert.match(settings, /id: 'privacy'/)
+    assert.match(settings, /Standalone ORB does not access IndiCare OS child/)
   })
 
-  it('voice settings support auto-speak and british female preference', () => {
+  it('scroll-to-bottom fab is wired in care companion', () => {
+    const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
+    assert.match(companion, /OrbScrollToBottomFab/)
+    assert.match(readComponent('components/orb-standalone/orb-scroll-to-bottom-fab.tsx'), /data-orb-scroll-to-bottom/)
+  })
+
+  it('tools panel groups documents practice shift oversight research', () => {
+    const tools = readComponent('components/orb-standalone/orb-tools-panel.tsx')
+    assert.match(tools, /Documents/)
+    assert.match(tools, /Practice/)
+    assert.match(tools, /Shift/)
+    assert.match(tools, /Oversight/)
+    assert.match(tools, /Research/)
+    assert.match(tools, /disabled=\{disabled\}/)
+  })
+
+  it('voice settings support auto-speak and per-message speakAloud', () => {
     const voice = readComponent('components/orb-standalone/use-standalone-orb-voice.ts')
     const panel = readComponent('components/orb-standalone/orb-voice-settings-panel.tsx')
     assert.match(voice, /pickBritishFemaleVoice/)
+    assert.match(voice, /speakAloud/)
     assert.match(voice, /speechRate/)
     assert.match(panel, /data-orb-voice-auto-speak/)
     assert.match(panel, /Test voice/)

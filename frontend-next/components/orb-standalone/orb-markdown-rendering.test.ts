@@ -81,7 +81,7 @@ describe('ORB markdown and cognition rendering', () => {
     const assistant = readComponent('components/orb-standalone/orb-assistant-message.tsx')
     assert.match(assistant, /data-orb-action-more-menu/)
     assert.match(assistant, /label="More"/)
-    assert.match(assistant, /label="Save"/)
+    assert.match(assistant, /dataAttr="save"/)
     assert.match(assistant, /Save to project/)
   })
 
