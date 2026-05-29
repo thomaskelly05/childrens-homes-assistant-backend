@@ -1,6 +1,6 @@
 # ORB Action Engine (Standalone `/orb`)
 
-**Date:** 2026-05-28 · **Route:** `POST /orb/standalone/actions/run` · **Registry:** `GET /orb/standalone/actions`
+**Date:** 2026-05-29 · **Route:** `POST /orb/standalone/actions/run` · **Registry:** `GET /orb/standalone/actions`
 
 The ORB Action Engine turns response-bar follow-ups from composer prefills into **structured residential actions**. It uses the Knowledge Spine, ORB Operating Brain, and Data Vaults — without accessing live IndiCare OS records.
 
@@ -17,21 +17,59 @@ The ORB Action Engine turns response-bar follow-ups from composer prefills into 
 | `add_safeguarding_lens` | Safeguarding lens | Safety, facts, escalation, recording (deep/safety tier) |
 | `add_ofsted_lens` | Ofsted lens | Child experience, evidence, leadership, Reg 44/45 |
 | `create_checklist` | Checklist | Staff follow-up checklist |
+| `make_more_concise` | More concise | Shorten without losing safeguarding or escalation points |
+| `make_more_detailed` | More detailed | Structure, checks, next steps, evidence prompts |
+| `therapeutic_reframe` | Therapeutic reframe | Trauma-informed, PACE/attachment-aware reframe |
+| `supervision_prompt` | Supervision prompts | Reflection prompts for supervision |
+| `shift_handover_summary` | Handover summary | Practical shift handover from provided content |
+| `build_shift_plan` | Build shift plan | Full standalone shift plan (priorities, risks, reflection, gaps) |
+| `add_child_voice_prompt` | Child voice prompt | Safe capture prompts; never invents child views |
 
 Implementation: `services/orb_action_engine_service.py` · Routes: `routers/orb_standalone_routes.py`
+
+Frontend mapping: `frontend-next/lib/orb/orb-response-actions.ts` · Handler: `runBackendOrbAction` / `handleOrbFollowUp` in `orb-care-companion.tsx`
+
+---
+
+## Transform action safety rules
+
+All transform actions must:
+
+- Preserve uncertainty and meaning
+- Not invent facts, names, dates, or child views
+- Not hide poor practice or remove safeguarding concerns
+- Not remove professional boundaries or create false evidence
+- Not imply IndiCare OS records were checked
+
+High-risk source text (injury, police, missing, abuse, etc.) routes transform and handover actions to **deep** prompt tier where relevant. Safeguarding lens always uses deep/safety tier.
+
+---
+
+## Standalone Shift Builder behaviour
+
+Standalone Shift Builder on `/orb` does **not** access live OS records. It works from:
+
+- User-provided shift notes and chat answers
+- Uploaded document/text (when pasted or attached into context)
+- Profile preferences and selected mode
+
+`build_shift_plan` produces: shift priorities, known risks (from provided info), recording reminders, manager attention, safeguarding prompts, child voice prompts, handover summary, end-of-shift reflection, what am I missing, outstanding actions, and evidence/Ofsted relevance where appropriate.
+
+The legacy `/orb/residential/shift-builder` route remains for structured section prompts (no LLM per section in one call). In-chat **Build shift plan** uses the action engine for a single assistant message result.
+
+UI: response bar **Build shift plan** → `build_shift_plan` via `actions/run`. `/shift` slash command still opens composer guidance; follow-ups use the backend when supported.
 
 ---
 
 ## Frontend fallback actions
 
-These remain **composer prefill** until backend support is enabled:
+Composer prefill is used only when:
 
-- `more_concise` / `more_detailed`
-- `child_voice`
-- `shift_builder` (use dedicated `/orb/residential/shift-builder` in a future pass)
-- `therapeutic_reframe`, `supervision_prompt` (registry only)
+- The action is not in `BACKEND_SUPPORTED_ORB_RESPONSE_ACTIONS`
+- The backend call fails (network or server error)
+- No active chat exists
 
-Mapping: `frontend-next/lib/orb/orb-response-actions.ts` · Handler: `prefillOrbFollowUpComposer` in `orb-care-companion.tsx`
+Unsupported or future actions remain prefill-only until registered with `backend_supported: true`.
 
 ---
 
@@ -49,7 +87,7 @@ Mapping: `frontend-next/lib/orb/orb-response-actions.ts` · Handler: `prefillOrb
 ```json
 POST /orb/standalone/actions/run
 {
-  "action": "what_am_i_missing",
+  "action": "build_shift_plan",
   "source_message": "user question…",
   "source_answer": "assistant or pasted text…",
   "mode": "Ask ORB",
@@ -61,8 +99,8 @@ POST /orb/standalone/actions/run
 {
   "success": true,
   "data": {
-    "action": "what_am_i_missing",
-    "title": "What am I missing?",
+    "action": "build_shift_plan",
+    "title": "Build shift plan",
     "answer": "…",
     "sections": [{"heading": "…", "body": "…"}],
     "checklist": [],
@@ -79,12 +117,12 @@ Streaming for actions is **not** implemented; conversation SSE at `/orb/standalo
 
 ---
 
-## Future actions
+## Future work
 
-- Wire `shift_handover_summary` to backend (or residential shift-builder API).
-- Backend support for `make_more_concise` / `make_more_detailed`.
-- Optional SSE for long action outputs.
-- OS-connected actions on `/assistant/orb` with permissioned record context (separate engine path).
+- Optional SSE for long action outputs
+- Full export/document download from action results
+- OS-connected actions on `/assistant/orb` with permissioned record context (separate engine path)
+- In-chat wire to `/orb/residential/shift-builder` section-by-section workflow (optional; keep standalone boundary)
 
 ---
 

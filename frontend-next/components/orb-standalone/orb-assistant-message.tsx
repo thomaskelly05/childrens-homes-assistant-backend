@@ -346,7 +346,7 @@ export function OrbResponseActionBar({
         { action: 'child_voice', label: 'Child voice prompt' },
         { action: 'manager_oversight', label: 'Manager oversight' },
         { action: 'chronology', label: 'Chronology suggestion' },
-        { action: 'shift_builder', label: 'Shift Builder' },
+        { action: 'shift_builder', label: 'Build shift plan' },
         { action: 'checklist', label: 'Checklist' },
         { action: 'what_missing', label: 'What am I missing?' },
         { action: 'ofsted_lens', label: 'Ofsted lens' },

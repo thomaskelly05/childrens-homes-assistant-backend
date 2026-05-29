@@ -48,12 +48,44 @@ HIGH_RISK_ACTIONS = frozenset(
         "what_am_i_missing",
         "add_safeguarding_lens",
         "create_manager_oversight_note",
+        "shift_handover_summary",
+        "build_shift_plan",
     }
 )
 
 DEEP_MODE_ACTIONS = frozenset(
     {
         "add_safeguarding_lens",
+    }
+)
+
+HIGH_RISK_SOURCE_TERMS = (
+    "immediate danger",
+    "suicide",
+    "self-harm",
+    "self harm",
+    "abuse",
+    "missing",
+    "assault",
+    "emergency",
+    "injury",
+    "bruise",
+    "disclosure",
+    "allegation",
+    "weapon",
+    "hospital",
+    "police",
+)
+
+TRANSFORM_ACTIONS = frozenset(
+    {
+        "make_more_concise",
+        "make_more_detailed",
+        "therapeutic_reframe",
+        "supervision_prompt",
+        "shift_handover_summary",
+        "build_shift_plan",
+        "add_child_voice_prompt",
     }
 )
 
@@ -87,6 +119,11 @@ def _clip(text: str, limit: int = 6000) -> str:
     if len(text) <= limit:
         return text
     return f"{text[:limit].rstrip()}..."
+
+
+def _source_suggests_high_risk(source_text: str) -> bool:
+    lower = _text(source_text).lower()
+    return any(term in lower for term in HIGH_RISK_SOURCE_TERMS)
 
 
 ORB_ACTION_REGISTRY: dict[str, OrbActionDefinition] = {
@@ -207,7 +244,7 @@ ORB_ACTION_REGISTRY: dict[str, OrbActionDefinition] = {
         data_vaults=(),
         knowledge_modules=(),
         standalone_boundary=STANDALONE_BOUNDARY_PREFIX,
-        backend_supported=False,
+        backend_supported=True,
         frontend_fallback_safe=True,
     ),
     "make_more_detailed": OrbActionDefinition(
@@ -222,7 +259,7 @@ ORB_ACTION_REGISTRY: dict[str, OrbActionDefinition] = {
         data_vaults=("Recording Quality Vault",),
         knowledge_modules=("safe_recording",),
         standalone_boundary=STANDALONE_BOUNDARY_PREFIX,
-        backend_supported=False,
+        backend_supported=True,
         frontend_fallback_safe=True,
     ),
     "therapeutic_reframe": OrbActionDefinition(
@@ -237,7 +274,7 @@ ORB_ACTION_REGISTRY: dict[str, OrbActionDefinition] = {
         data_vaults=("Therapeutic Vault",),
         knowledge_modules=("trauma_informed", "therapeutic_language"),
         standalone_boundary=STANDALONE_BOUNDARY_PREFIX,
-        backend_supported=False,
+        backend_supported=True,
         frontend_fallback_safe=True,
     ),
     "supervision_prompt": OrbActionDefinition(
@@ -252,7 +289,7 @@ ORB_ACTION_REGISTRY: dict[str, OrbActionDefinition] = {
         data_vaults=("Leadership/Governance Vault", "Therapeutic Vault"),
         knowledge_modules=("leadership_management",),
         standalone_boundary=STANDALONE_BOUNDARY_PREFIX,
-        backend_supported=False,
+        backend_supported=True,
         frontend_fallback_safe=True,
     ),
     "shift_handover_summary": OrbActionDefinition(
@@ -267,7 +304,37 @@ ORB_ACTION_REGISTRY: dict[str, OrbActionDefinition] = {
         data_vaults=("Recording Quality Vault", "Safeguarding Vault"),
         knowledge_modules=("safe_recording",),
         standalone_boundary=STANDALONE_BOUNDARY_PREFIX,
-        backend_supported=False,
+        backend_supported=True,
+        frontend_fallback_safe=True,
+    ),
+    "add_child_voice_prompt": OrbActionDefinition(
+        id="add_child_voice_prompt",
+        label="Child voice prompt",
+        description="Identify missing child voice and suggest safe capture wording.",
+        residential_purpose="Strengthen child-centred recording without inventing views.",
+        required_input="source_message and/or source_answer",
+        output_type="prompt_list",
+        safety_level="medium",
+        prompt_mode="residential",
+        data_vaults=("Recording Quality Vault", "Therapeutic Vault"),
+        knowledge_modules=("safe_recording", "therapeutic_language"),
+        standalone_boundary=STANDALONE_BOUNDARY_PREFIX,
+        backend_supported=True,
+        frontend_fallback_safe=True,
+    ),
+    "build_shift_plan": OrbActionDefinition(
+        id="build_shift_plan",
+        label="Build shift plan",
+        description="Structured shift priorities, risks, handover and reflection from provided notes only.",
+        residential_purpose="End-of-shift planning and handover without live OS records.",
+        required_input="source_message and/or source_answer",
+        output_type="shift_plan",
+        safety_level="medium",
+        prompt_mode="residential",
+        data_vaults=("Recording Quality Vault", "Safeguarding Vault", "Ofsted/SCCIF Vault"),
+        knowledge_modules=("safe_recording", "contextual_safeguarding"),
+        standalone_boundary=STANDALONE_BOUNDARY_PREFIX,
+        backend_supported=True,
         frontend_fallback_safe=True,
     ),
 }
@@ -287,7 +354,12 @@ FRONTEND_TO_BACKEND_ACTION: dict[str, str] = {
     "more_concise": "make_more_concise",
     "more_detailed": "make_more_detailed",
     "improve_wording": "convert_to_recording_wording",
-    "shift_builder": "shift_handover_summary",
+    "shift_builder": "build_shift_plan",
+    "child_voice": "add_child_voice_prompt",
+    "therapeutic_reframe": "therapeutic_reframe",
+    "supervision_prompt": "supervision_prompt",
+    "shift_handover": "shift_handover_summary",
+    "build_shift_plan": "build_shift_plan",
 }
 
 
@@ -486,6 +558,8 @@ class OrbActionEngineService:
         tier = bundle.get("prompt_tier") or "residential"
         if action_id in {"add_safeguarding_lens"}:
             return "deep"
+        if action_id in TRANSFORM_ACTIONS and _source_suggests_high_risk(source_text):
+            return "deep"
         return tier
 
     def _combine_source(
@@ -603,6 +677,79 @@ class OrbActionEngineService:
                 "Each item should be actionable on shift.\n\n"
                 f"--- SOURCE ---\n{source_text}"
             )
+        if action_id == "make_more_concise":
+            return (
+                "Make the source more concise for a busy residential shift.\n"
+                "Rules: preserve meaning; remove waffle; keep all safeguarding, escalation, and "
+                "regulatory boundaries if present; do not invent facts; do not remove concerns "
+                "or hide poor practice; preserve uncertainty.\n\n"
+                f"--- SOURCE ---\n{source_text}"
+            )
+        if action_id == "make_more_detailed":
+            return (
+                "Expand the source with clearer structure, checks, next steps, and evidence prompts.\n"
+                "Rules: do not invent facts, names, dates, or outcomes; add structure only from "
+                "what is known or explicitly flagged as missing; preserve safeguarding concerns.\n\n"
+                f"--- SOURCE ---\n{source_text}"
+            )
+        if action_id == "therapeutic_reframe":
+            return (
+                "Provide a trauma-informed therapeutic reframe of the source material.\n"
+                "Use PACE/attachment-aware language; treat behaviour as communication; avoid "
+                "diagnosis; avoid blame and punitive language; suggest repair/restorative follow-up "
+                "where appropriate; do not invent facts or minimise risk.\n\n"
+                f"--- SOURCE ---\n{source_text}"
+            )
+        if action_id == "supervision_prompt":
+            return (
+                "Create supervision and reflection prompts from the source scenario.\n"
+                "Include sections for: what went well; concerns; staff support; learning; risk; "
+                "child voice; next practice step. Do not invent facts.\n\n"
+                f"--- SOURCE ---\n{source_text}"
+            )
+        if action_id == "shift_handover_summary":
+            return (
+                "Turn the source into a practical shift handover for residential children's homes.\n"
+                "Include: priority risks; key observations; actions for next shift; manager attention; "
+                "recording reminders; safeguarding considerations; what may still be missing.\n"
+                "Do not invent facts or imply live records were checked.\n\n"
+                f"--- SOURCE ---\n{source_text}"
+            )
+        if action_id == "build_shift_plan":
+            return (
+                "Build a standalone shift plan from the provided material only (no live OS records).\n"
+                "Structure with markdown headings:\n"
+                "1. Shift priorities\n"
+                "2. Known risks (from provided info only)\n"
+                "3. Recording reminders\n"
+                "4. Manager attention points\n"
+                "5. Safeguarding prompts\n"
+                "6. Child voice prompts\n"
+                "7. Handover summary\n"
+                "8. End-of-shift reflection\n"
+                "9. What am I missing?\n"
+                "10. Outstanding actions\n"
+                "11. Evidence / Ofsted relevance (where appropriate)\n"
+                "State clearly this is based only on supplied notes — not live IndiCare OS records.\n"
+                "Do not invent facts.\n\n"
+                f"--- SOURCE ---\n{source_text}"
+            )
+        if action_id == "add_child_voice_prompt":
+            gaps = analyse_what_missing_gaps(source_text)
+            child_voice_gap = any(g.id == "missing_child_voice" for g in gaps)
+            gap_note = ""
+            if child_voice_gap:
+                gap_note = (
+                    "\n\nHeuristic: child voice may be absent in the source — address this explicitly."
+                )
+            return (
+                "Review the source for child voice and perspective.\n"
+                "Identify where child voice is missing; suggest safe ways to capture child voice; "
+                "if child voice was provided, suggest clearer wording for recording.\n"
+                "Never invent the child's views, quotes, or feelings.\n"
+                f"{gap_note}\n\n"
+                f"--- SOURCE ---\n{source_text}"
+            )
         return f"Perform action {action_id} on:\n\n{source_text}"
 
     def _parse_sections_from_answer(self, answer: str) -> list[dict[str, str]]:
@@ -669,6 +816,17 @@ class OrbActionEngineService:
             suggested.append({"action": "what_am_i_missing", "label": "What am I missing?"})
         elif action_id == "add_safeguarding_lens":
             suggested.append({"action": "create_manager_oversight_note", "label": "Manager oversight note"})
+        elif action_id in {"shift_handover_summary", "build_shift_plan"}:
+            suggested.append({"action": "what_am_i_missing", "label": "What am I missing?"})
+            suggested.append({"action": "create_checklist", "label": "Checklist"})
+        elif action_id == "add_child_voice_prompt":
+            suggested.append({"action": "convert_to_recording_wording", "label": "Convert to recording wording"})
+        elif action_id == "supervision_prompt":
+            suggested.append({"action": "therapeutic_reframe", "label": "Therapeutic reframe"})
+        elif action_id == "make_more_concise":
+            suggested.append({"action": "make_more_detailed", "label": "More detailed"})
+        elif action_id == "make_more_detailed":
+            suggested.append({"action": "make_more_concise", "label": "More concise"})
 
         title = definition.label
         sources = build_standalone_sources(answer, mode=definition.prompt_mode)
@@ -747,6 +905,10 @@ class OrbActionEngineService:
             mode_name = "Ofsted Lens"
         elif action_id == "convert_to_recording_wording":
             mode_name = "Record This Properly"
+        elif action_id in {"build_shift_plan", "shift_handover_summary"}:
+            mode_name = "Record This Properly"
+        elif action_id == "supervision_prompt":
+            mode_name = "Staff Coach"
 
         source_text = self._combine_source(
             source_message=source_message,
