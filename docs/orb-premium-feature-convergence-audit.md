@@ -28,7 +28,11 @@ Standalone ORB must never imply access to live IndiCare OS child, home, staff, c
 | Voice | Push-to-talk, TTS read-aloud, voice settings | B | `use-standalone-orb-voice.ts`, `orb-voice-settings-panel.tsx` |
 | Profile | Adult profile drawer (localStorage) | A | `adult-profile-store.ts`, `orb-adult-profile-drawer.tsx` |
 | Profile | Workspace “Profiles” (user-provided child context labels) | A | `orb-standalone-sidebar.tsx` |
-| Settings | Memory, tools, permissions, accessibility panels | A | `orb-*-panel.tsx` |
+| Settings | Centre modal: appearance, voice, chat, privacy, shortcuts | A | `orb-standalone-settings-panel.tsx` |
+| Copy / save feedback | Copied, Saved, Already saved, failed states | A | `OrbResponseActionBar` action chips |
+| Document intelligence titles | Policy card, Reg 44, action plan wired to save/chat | A | `document-intelligence.ts`, message `outputTitle` |
+| Output reuse chips | Contextual chips by policy/reg44/safeguarding result | A | `contextualSuggestedRepliesForOutput` |
+| Tools menu categories | Documents, Practice, Shift, Oversight, Research | A | `orb-tools-panel.tsx` |
 | Design | Light-first premium layout (`orb-premium.css` over tokens) | A | `app/orb/layout.tsx`, `orb-chatgpt-light.css` |
 
 **Legend:** A = exists and works · B = exists but partial or hidden
@@ -76,7 +80,7 @@ Standalone ORB must never imply access to live IndiCare OS child, home, staff, c
 | Feature | Status | Notes |
 |---------|--------|-------|
 | Share chat link | D | Needs safe export/hosting design |
-| Read aloud on all messages (not last only) | D | TTS exists; per-message UX later |
+| Read aloud on all messages (not last only) | A | Speak / Stop / Voice unavailable; `speakAloud` + markdown strip |
 | Voice conversation mode | D | Push-to-talk only; full duplex later |
 | Generated file download | D | Saved outputs markdown only |
 | Web search / live browse | E/D | Policy-gated; not in standalone yet |
@@ -91,7 +95,7 @@ Standalone ORB must never imply access to live IndiCare OS child, home, staff, c
 | Urgent safeguarding banner | A | `orb-safety-banner.ts` — not on hello |
 | Citation popover detail | A | Why cited + excerpt vs summary basis |
 | Composer chips above input | A | Removed during active chat |
-| Scroll-to-bottom button | D | Not implemented |
+| Scroll-to-bottom button | A | `OrbScrollToBottomFab` when scrolled up; streaming shows “New response” |
 | Keyboard shortcuts (global) | Partial | Enter send, Shift+Enter newline; shortcuts panel in settings |
 | Per-message delete | D | Archive/delete chat in sidebar only |
 | Branch from edited message | A | Edit user bubble + resubmit |

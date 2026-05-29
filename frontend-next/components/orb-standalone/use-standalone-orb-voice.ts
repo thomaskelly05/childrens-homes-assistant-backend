@@ -462,13 +462,8 @@ export function useStandaloneOrbVoice() {
     }, CONTINUOUS_LISTEN_DELAY_MS)
   }, [])
 
-  const speak = useCallback(
+  const runSpeech = useCallback(
     (text: string, onEnd?: () => void) => {
-      if (!settingsRef.current.voiceReplies) {
-        onEnd?.()
-        return
-      }
-
       if (typeof window === 'undefined' || !window.speechSynthesis) {
         onEnd?.()
         return
@@ -558,12 +553,31 @@ export function useStandaloneOrbVoice() {
 
       speakNextChunk()
     },
-    [error, refreshVoices, scheduleContinuousListen, startSafariKeepAlive, stopSafariKeepAlive]
+    [error, refreshVoices, startSafariKeepAlive, stopSafariKeepAlive]
+  )
+
+  const speak = useCallback(
+    (text: string, onEnd?: () => void) => {
+      if (!settingsRef.current.voiceReplies) {
+        onEnd?.()
+        return
+      }
+      runSpeech(text, onEnd)
+    },
+    [runSpeech]
+  )
+
+  /** Per-message read aloud — does not require auto-speak / voice replies setting. */
+  const speakAloud = useCallback(
+    (text: string, onEnd?: () => void) => {
+      runSpeech(text, onEnd)
+    },
+    [runSpeech]
   )
 
   const testSelectedVoice = useCallback(() => {
-    speak(SPEECH_TEST_PHRASE)
-  }, [speak])
+    speakAloud(SPEECH_TEST_PHRASE)
+  }, [speakAloud])
 
   const registerAfterSpeakListener = useCallback((listener: () => void) => {
     onSpeakEndRef.current = listener
@@ -818,6 +832,7 @@ export function useStandaloneOrbVoice() {
     cancelListening,
     cancelSpeaking,
     speak,
+    speakAloud,
     clearTranscript,
     interruptForListen,
     markIdle,

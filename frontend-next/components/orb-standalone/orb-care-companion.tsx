@@ -33,9 +33,12 @@ import {
   OrbResponseActionBar,
   OrbSuggestedReplyChips,
   contextualSuggestedReplies,
+  contextualSuggestedRepliesForOutput,
   type OrbAttachmentFollowUpAction,
-  type OrbResponseFollowUpAction
+  type OrbResponseFollowUpAction,
+  type OrbSuggestedReplyItem
 } from '@/components/orb-standalone/orb-assistant-message'
+import { OrbScrollToBottomFab } from '@/components/orb-standalone/orb-scroll-to-bottom-fab'
 import { OrbAgentPanel } from '@/components/orb-standalone/orb-agent-panel'
 import { OrbResidentialAgentsPanel } from '@/components/orb-standalone/orb-residential-agents-panel'
 import { OrbDocumentPanel } from '@/components/orb-standalone/orb-document-panel'
@@ -75,6 +78,7 @@ import { streamTextIntoView } from '@/lib/orb/streaming-text'
 import {
   defaultStandaloneOrbAccessibility,
   loadStandaloneOrbAccessibility,
+  saveStandaloneOrbAccessibility,
   standaloneOrbAccessibilityClassNames,
   type StandaloneOrbAccessibilityPreferences
 } from '@/lib/orb/standalone-accessibility'
@@ -91,14 +95,22 @@ import {
 import {
   isOrbScrollNearBottom,
   orbScrollBehaviorForReducedMotion,
-  scrollOrbToBottom
+  scrollOrbToBottom,
+  shouldShowOrbScrollFab
 } from '@/lib/orb/orb-scroll'
+import { copyTextToClipboard } from '@/lib/orb/orb-clipboard'
+import { stripMarkdownForSpeech } from '@/lib/orb/orb-speech-text'
+import { loadOrbStandaloneChatSettings } from '@/lib/orb/orb-standalone-settings'
 import {
   buildProfileContextBlock,
+  clearStandaloneCustomProjects,
+  clearStandaloneLocalState,
+  clearStandaloneProfiles,
   createStandaloneChat,
   dedupeOrbMessages,
   ensureStandaloneMessage,
   defaultWorkspace,
+  exportStandaloneWorkspaceJson,
   readStandaloneWorkspace,
   repairOrbWorkspace,
   writeStandaloneWorkspace,
@@ -134,6 +146,7 @@ import {
 import { collectCognitionDisplayLabels } from '@/lib/orb/residential-agents'
 import {
   contextualDocumentActions,
+  documentIntelligenceDisplayTitle,
   formatDocumentIntelligenceMarkdown
 } from '@/lib/orb/document-intelligence'
 
@@ -345,16 +358,7 @@ function modeFromQuery(value: string | null): StandaloneOrbMode | null {
 }
 
 async function copyToClipboard(text: string) {
-  if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
-    await navigator.clipboard.writeText(text)
-    return
-  }
-  const area = document.createElement('textarea')
-  area.value = text
-  document.body.appendChild(area)
-  area.select()
-  document.execCommand('copy')
-  document.body.removeChild(area)
+  await copyTextToClipboard(text)
 }
 
 async function readFileAsDataUrl(file: File): Promise<string> {
@@ -417,6 +421,12 @@ export function OrbCareCompanion() {
   } | null>(null)
   const [adultProfile, setAdultProfile] = useState<AdultProfile | null>(null)
   const [profileDrawerOpen, setProfileDrawerOpen] = useState(false)
+  const [showScrollFab, setShowScrollFab] = useState(false)
+  const [savedOutputMessageIds, setSavedOutputMessageIds] = useState<Set<string>>(() => new Set())
+  const [saveFeedbackByMessageId, setSaveFeedbackByMessageId] = useState<
+    Record<string, 'idle' | 'saved' | 'already_saved' | 'failed'>
+  >({})
+  const [chatUiSettings, setChatUiSettings] = useState(() => loadOrbStandaloneChatSettings())
 
   const inputRef = useRef<HTMLTextAreaElement | null>(null)
   const composerUserEditedRef = useRef(false)
@@ -587,24 +597,55 @@ export function OrbCareCompanion() {
     return ''
   }, [visibleMessages])
 
+  const threadIsStreaming = useMemo(
+    () => pending || visibleMessages.some((m) => m.status === 'streaming' || m.status === 'thinking'),
+    [pending, visibleMessages]
+  )
+
   useEffect(() => {
     const container = scrollContainerRef.current
     if (!container) return
-    const onScroll = () => {
-      isNearBottomRef.current = isOrbScrollNearBottom(container)
+    const syncFab = () => {
+      const nearBottom = isOrbScrollNearBottom(container)
+      isNearBottomRef.current = nearBottom
+      setShowScrollFab(
+        shouldShowOrbScrollFab({
+          nearBottom,
+          hasMessages: visibleMessages.length > 0,
+          isStreaming: threadIsStreaming
+        })
+      )
     }
-    onScroll()
-    container.addEventListener('scroll', onScroll, { passive: true })
-    return () => container.removeEventListener('scroll', onScroll)
-  }, [])
+    syncFab()
+    container.addEventListener('scroll', syncFab, { passive: true })
+    return () => container.removeEventListener('scroll', syncFab)
+  }, [visibleMessages.length, threadIsStreaming, streamingTail])
 
   const requestChatScroll = useCallback((force = false) => {
     if (!force && !isNearBottomRef.current) return
     const behavior = orbScrollBehaviorForReducedMotion()
     requestAnimationFrame(() => {
       scrollOrbToBottom(messagesEndRef.current, { behavior, block: 'end' })
+      if (force) {
+        isNearBottomRef.current = true
+        setShowScrollFab(false)
+      }
     })
   }, [])
+
+  const speakMessageContent = useCallback(
+    (messageId: string, rawContent: string) => {
+      if (!voice.synthesisAvailable) return
+      if (voice.speaking && speakingMessageId && speakingMessageId !== messageId) {
+        voice.cancelSpeaking()
+      }
+      const speechText = stripMarkdownForSpeech(rawContent)
+      if (!speechText) return
+      setSpeakingMessageId(messageId)
+      voice.speakAloud(speechText, () => setSpeakingMessageId(null))
+    },
+    [voice, speakingMessageId]
+  )
 
   useEffect(() => {
     requestChatScroll(true)
@@ -1368,7 +1409,9 @@ export function OrbCareCompanion() {
     if (voice.speaking) voice.cancelSpeaking()
     if (voice.listening) voice.cancelListening()
     voice.pauseVoiceSession()
-    const chat = createStandaloneChat(projectId || workspace.activeProjectId, 'Ask ORB')
+    const chat = createStandaloneChat(projectId || workspace.activeProjectId, 'Ask ORB', {
+      temporary: chatUiSettings.defaultTemporaryChat
+    })
     setWorkspace((current) => ({
       ...current,
       activeChatId: chat.id,
@@ -1615,7 +1658,8 @@ export function OrbCareCompanion() {
         document_title: doc.title,
         mode
       })
-      const markdown = formatDocumentIntelligenceMarkdown(result)
+      const displayTitle = documentIntelligenceDisplayTitle(lens, doc.title || result.title, doc.text)
+      const markdown = formatDocumentIntelligenceMarkdown({ ...result, title: displayTitle })
       setWorkspace((current) => {
         const chat = current.chats.find((c) => c.id === chatId)
         if (!chat) return current
@@ -1625,6 +1669,9 @@ export function OrbCareCompanion() {
                 ...entry,
                 status: 'complete' as const,
                 content: markdown,
+                outputKind: lens,
+                outputTitle: displayTitle,
+                documentTitle: doc.title,
                 sources: [
                   {
                     label: doc.title || 'Uploaded document',
@@ -1636,7 +1683,14 @@ export function OrbCareCompanion() {
               }
             : entry
         )
-        return patchActiveChat(current, chatId, { messages: dedupeOrbMessages(messages) })
+        const title =
+          chat.title === 'New chat' || !chat.title.trim()
+            ? generateOrbChatTitle(displayTitle, {
+                documentLens: lens,
+                documentTitle: doc.title || undefined
+              })
+            : chat.title
+        return patchActiveChat(current, chatId, { messages: dedupeOrbMessages(messages), title })
       })
       setDraftNotice('Document intelligence — standalone draft from uploaded text only.')
     } catch (err) {
@@ -1656,8 +1710,14 @@ export function OrbCareCompanion() {
   async function handleOrbFollowUp(
     action: OrbResponseFollowUpAction,
     sourceContent: string,
-    assistantIndex?: number
+    assistantIndex?: number,
+    options?: { prefill?: string }
   ) {
+    if (options?.prefill?.trim()) {
+      setMessage(options.prefill.trim())
+      inputRef.current?.focus()
+      return
+    }
     if (action === 'ofsted_lens') handleModeChange('Ofsted Lens')
     if (action === 'safeguarding_lens') handleModeChange('Safeguarding Thinking')
     if (action === 'recording_wording') handleModeChange('Record This Properly')
@@ -1680,18 +1740,30 @@ export function OrbCareCompanion() {
   }
 
   async function saveChatNote(entry: StandaloneChatMessage) {
+    if (savedOutputMessageIds.has(entry.id)) {
+      setSaveFeedbackByMessageId((current) => ({ ...current, [entry.id]: 'already_saved' }))
+      return
+    }
+    const savedTitle =
+      entry.outputTitle ||
+      generateOrbChatTitle(entry.content, {
+        mode,
+        documentLens: entry.outputKind,
+        documentTitle: entry.documentTitle
+      }) ||
+      'ORB chat note'
     try {
       await createOrbSavedOutput({
-        title: generateOrbChatTitle(entry.content, { mode }) || 'ORB chat note',
-        type: 'intelligence_note',
+        title: savedTitle,
+        type: entry.outputKind === 'actions' || entry.outputKind === 'action_plan' ? 'action_plan' : 'document_review',
         project_id: workspace.activeProjectId,
         project_name: activeProject?.name,
         summary: entry.content.slice(0, 800),
         content_markdown: entry.content,
         intelligence_output: {
-          title: generateOrbChatTitle(entry.content, { mode }) || 'ORB chat note',
+          title: savedTitle,
           summary: entry.content.slice(0, 2000),
-          type: 'answer',
+          type: entry.outputKind || 'answer',
           standalone_only: true,
           os_linked: false,
           care_record_access: false
@@ -1700,12 +1772,15 @@ export function OrbCareCompanion() {
         created_from: 'chat',
         created_from_id: entry.id
       })
-      setDraftNotice('Saved output — standalone ORB artefact (not an OS record).')
+      setSavedOutputMessageIds((current) => new Set(current).add(entry.id))
+      setSaveFeedbackByMessageId((current) => ({ ...current, [entry.id]: 'saved' }))
+      setDraftNotice('Saved — standalone ORB artefact (not an OS record).')
       const summary = await fetchOrbSavedOutputsSummary()
       setSavedOutputsCount(summary.total || 0)
     } catch {
+      setSaveFeedbackByMessageId((current) => ({ ...current, [entry.id]: 'failed' }))
       await copyToClipboard(entry.content)
-      setDraftNotice('Could not save to server — copied to clipboard instead.')
+      setDraftNotice('Save failed — copied to clipboard instead.')
     }
   }
 
@@ -1932,16 +2007,54 @@ export function OrbCareCompanion() {
       />
       <OrbStandaloneSettingsPanel
         open={activePanel === 'settings'}
-        onClose={closePanel}
+        onClose={() => {
+          setChatUiSettings(loadOrbStandaloneChatSettings())
+          closePanel()
+        }}
         appearanceMode={appearanceMode}
         onAppearanceChange={setAppearanceMode}
-        onOpenMemory={openMemoryPanel}
-        onOpenAccessibility={openAccessibilityPanel}
-        onOpenPermissions={openPermissionsPanel}
+        a11yPrefs={a11yPrefs}
+        onA11yChange={(patch) => {
+          setA11yPrefs((current) => {
+            const next = { ...current, ...patch }
+            saveStandaloneOrbAccessibility(next)
+            return next
+          })
+        }}
+        voiceInputEnabled={STANDALONE_ORB_VOICE_CAPTURE_ENABLED && voice.recognitionAvailable}
+        onVoiceInputChange={() => {
+          setMicNotice(VOICE_MODE_COMING_SOON)
+        }}
+        voiceRepliesEnabled={voiceSettings.voiceReplies}
+        onVoiceRepliesChange={(enabled) => voice.setVoiceReplies(enabled)}
         onOpenVoiceSettings={openVoiceSettings}
-        onOpenIntelligenceMap={openIntelligenceMap}
         onOpenProfile={() => setProfileDrawerOpen(true)}
         onOpenHelp={openHelpPanel}
+        onExportWorkspace={() => {
+          const json = exportStandaloneWorkspaceJson(workspace)
+          const blob = new Blob([json], { type: 'application/json' })
+          const url = URL.createObjectURL(blob)
+          const anchor = document.createElement('a')
+          anchor.href = url
+          anchor.download = `orb-standalone-workspace-${Date.now()}.json`
+          anchor.click()
+          URL.revokeObjectURL(url)
+        }}
+        onClearMemory={() => {
+          if (!window.confirm('Clear all local ORB chat memory on this device?')) return
+          clearStandaloneLocalState()
+          setWorkspace(readStandaloneWorkspace())
+        }}
+        onClearProfiles={() => {
+          if (!window.confirm('Clear all local profiles?')) return
+          clearStandaloneProfiles(workspace)
+          setWorkspace(readStandaloneWorkspace())
+        }}
+        onClearProjects={() => {
+          if (!window.confirm('Clear custom projects? Chats will move to General.')) return
+          clearStandaloneCustomProjects(workspace)
+          setWorkspace(readStandaloneWorkspace())
+        }}
       />
       <OrbHelpPanel open={activePanel === 'help'} onClose={closePanel} />
       <OrbVoiceSettingsPanel open={activePanel === 'voice'} onClose={closePanel} />
@@ -1951,17 +2064,17 @@ export function OrbCareCompanion() {
         onOpenKnowledge={openKnowledgeLibrary}
         onOpenDocuments={openDocumentsPanel}
         onOpenAgents={openAgentsPanel}
-        onOpenSavedOutputs={openSavedOutputsPanel}
-        onOpenMemory={openMemoryPanel}
-        onOpenIntelligenceMap={openIntelligenceMap}
-        onOpenAccessibility={openAccessibilityPanel}
-        onOpenPermissions={openPermissionsPanel}
         onRunDeepResearch={() => {
           setAgentPanelType('deep_research')
           setAgentPanelPrompt('Run deep research on this topic')
           openAgentsPanel()
         }}
         onAskOrb={() => {
+          closePanel()
+          inputRef.current?.focus()
+        }}
+        onComposerPrefill={(text) => {
+          setMessage(text)
           closePanel()
           inputRef.current?.focus()
         }}
@@ -2315,6 +2428,8 @@ export function OrbCareCompanion() {
                             explainability={entry.explainability}
                             modelRouting={entry.modelRouting}
                             messageHint={precedingUserMessageHint(visibleMessages, index)}
+                            showCognitionLabels={chatUiSettings.showCognitionLabels}
+                            heading={entry.outputTitle}
                             cognitionContext={{
                               context_used: {
                                 cognition_display_labels: entry.explainability?.cognition_display_labels,
@@ -2386,22 +2501,16 @@ export function OrbCareCompanion() {
                                 content={entry.content}
                                 speaking={speakingMessageId === entry.id}
                                 synthesisAvailable={voice.synthesisAvailable}
+                                saveFeedback={saveFeedbackByMessageId[entry.id] || 'idle'}
                                 onRegenerate={handleRegenerate}
-                                onSpeak={() => {
-                                  setSpeakingMessageId(entry.id)
-                                  voice.speak(entry.content, () => setSpeakingMessageId(null))
-                                }}
+                                onSpeak={() => speakMessageContent(entry.id, entry.content)}
                                 onStop={voice.cancelSpeaking}
                                 onNewQuestion={() => {
                                   setMessage('')
                                   inputRef.current?.focus()
                                 }}
                                 onDraft={() => void handleDraftWording(entry.content)}
-                                onSave={
-                                  entry.content.trim().length > 300
-                                    ? () => void saveChatNote(entry)
-                                    : undefined
-                                }
+                                onSave={() => void saveChatNote(entry)}
                                 onSaveToProject={() => void saveChatNote(entry)}
                                 onActionPlan={() => {
                                   setMessage(`Create an action plan from this:\n\n${entry.content.slice(0, 500)}`)
@@ -2424,21 +2533,34 @@ export function OrbCareCompanion() {
                                     }
                                   })()
                                 }}
-                                onExport={() => void copyToClipboard(entry.content)}
                                 onInspectionPrep={() => handleModeChange('Ofsted Lens')}
                                 onOrbFollowUp={handleOrbFollowUp}
                               />
                               {entry.status === 'complete' && index === visibleMessages.length - 1 ? (
                                 <OrbSuggestedReplyChips
-                                  suggestions={contextualSuggestedReplies({
-                                    mode,
-                                    messageHint: precedingUserMessageHint(visibleMessages, index)
-                                  })}
-                                  onSelect={(action) => handleOrbFollowUp(action, entry.content, index)}
+                                  suggestions={
+                                    entry.outputKind
+                                      ? contextualSuggestedRepliesForOutput({
+                                          outputKind: entry.outputKind,
+                                          content: entry.content,
+                                          mode,
+                                          messageHint: precedingUserMessageHint(visibleMessages, index)
+                                        })
+                                      : contextualSuggestedReplies({
+                                          mode,
+                                          messageHint: precedingUserMessageHint(visibleMessages, index)
+                                        })
+                                  }
+                                  onSelect={(item) =>
+                                    void handleOrbFollowUp(item.action, entry.content, index, {
+                                      prefill: item.prefill
+                                    })
+                                  }
                                 />
                               ) : null}
                               </>
-                            ) : index !== visibleMessages.length - 1 ? (
+                            ) : index !== visibleMessages.length - 1 &&
+                              (entry.status === 'complete' || entry.status === 'stopped') ? (
                               <div className="mt-2 flex flex-wrap gap-2 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
                                 <ActionChip icon={<Copy className="h-3 w-3" />} label="Copy" onClick={() => void copyToClipboard(entry.content)} />
                                 {voice.synthesisAvailable ? (
@@ -2447,14 +2569,14 @@ export function OrbCareCompanion() {
                                   ) : (
                                     <ActionChip
                                       icon={<Volume2 className="h-3 w-3" />}
-                                      label="Read aloud"
-                                      onClick={() => {
-                                        setSpeakingMessageId(entry.id)
-                                        voice.speak(entry.content, () => setSpeakingMessageId(null))
-                                      }}
+                                      label="Speak"
+                                      onClick={() => speakMessageContent(entry.id, entry.content)}
                                     />
                                   )
-                                ) : null}
+                                ) : (
+                                  <ActionChip icon={<Volume2 className="h-3 w-3" />} label="Voice unavailable" onClick={() => {}} />
+                                )}
+                                <ActionChip icon={<FileText className="h-3 w-3" />} label="Save" onClick={() => void saveChatNote(entry)} />
                               </div>
                             ) : null}
                           </>
@@ -2500,6 +2622,13 @@ export function OrbCareCompanion() {
                 <div ref={messagesEndRef} />
               </div>
             </div>
+
+            <OrbScrollToBottomFab
+              visible={showScrollFab}
+              streaming={threadIsStreaming}
+              reducedMotion={a11yPrefs.reducedMotion}
+              onClick={() => requestChatScroll(true)}
+            />
 
             {composer}
           </section>

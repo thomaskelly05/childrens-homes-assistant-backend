@@ -19,13 +19,13 @@ describe('generateOrbChatTitle', () => {
   })
 
   it('maps reg44 document lens', () => {
-    assert.equal(generateOrbChatTitle('Review this', { documentLens: 'reg44' }), 'Reg 44 review')
+    assert.equal(generateOrbChatTitle('Review this', { documentLens: 'reg44' }), 'Reg 44 Review')
   })
 
   it('maps policy card with title', () => {
     assert.equal(
       generateOrbChatTitle('Upload policy', { documentLens: 'policy', documentTitle: 'Safer caring' }),
-      'Policy card — Safer caring'
+      'Policy Card — Safer caring'
     )
   })
 

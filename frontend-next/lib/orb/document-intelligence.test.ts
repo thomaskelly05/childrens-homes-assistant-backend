@@ -7,6 +7,7 @@ import test from 'node:test'
 import {
   contextualDocumentActions,
   detectDocumentKind,
+  documentIntelligenceDisplayTitle,
   formatDocumentIntelligenceMarkdown
 } from './document-intelligence.ts'
 
@@ -40,6 +41,13 @@ test('care companion wires document intelligence route', () => {
   assert.match(companionSource, /runOrbDocumentIntelligence/)
   assert.match(companionSource, /OrbDocumentContextChips/)
   assert.match(assistantSource, /data-orb-document-context-actions/)
+})
+
+test('display title uses lens prefix and document name', () => {
+  assert.equal(
+    documentIntelligenceDisplayTitle('reg44', 'March 2026 visit'),
+    'Reg 44 Review — March 2026 visit'
+  )
 })
 
 test('intelligence markdown includes standalone boundary', () => {

@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { isOrbScrollNearBottom, ORB_SCROLL_NEAR_BOTTOM_THRESHOLD_PX } from './orb-scroll.ts'
+import {
+  isOrbScrollNearBottom,
+  ORB_SCROLL_NEAR_BOTTOM_THRESHOLD_PX,
+  shouldShowOrbScrollFab
+} from './orb-scroll.ts'
 
 describe('orb scroll helpers', () => {
   it('treats bottom of container as near bottom', () => {
@@ -24,5 +28,19 @@ describe('orb scroll helpers', () => {
 
   it('exports sensible default threshold', () => {
     assert.ok(ORB_SCROLL_NEAR_BOTTOM_THRESHOLD_PX >= 80)
+  })
+
+  it('shows scroll fab when scrolled up with messages', () => {
+    assert.equal(
+      shouldShowOrbScrollFab({ nearBottom: false, hasMessages: true, isStreaming: false }),
+      true
+    )
+  })
+
+  it('hides scroll fab when near bottom', () => {
+    assert.equal(
+      shouldShowOrbScrollFab({ nearBottom: true, hasMessages: true, isStreaming: true }),
+      false
+    )
   })
 })

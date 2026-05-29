@@ -72,6 +72,11 @@ export type StandaloneChatMessage = {
     reasoning_summary?: string
     operational_context_used?: boolean
   }
+  /** Document intelligence or action-engine result kind for reuse chips and save titles. */
+  outputKind?: string
+  /** Display title for structured outputs (policy card, Reg 44, etc.). */
+  outputTitle?: string
+  documentTitle?: string
 }
 
 export type StandaloneProject = {
@@ -226,7 +231,10 @@ function normaliseMessage(message: Partial<StandaloneChatMessage>): StandaloneCh
     modelRouting: message.modelRouting,
     documentSuggestion: message.documentSuggestion,
     agentSuggestion: message.agentSuggestion,
-    explainability: message.explainability
+    explainability: message.explainability,
+    outputKind: message.outputKind,
+    outputTitle: message.outputTitle,
+    documentTitle: message.documentTitle
   }
 }
 

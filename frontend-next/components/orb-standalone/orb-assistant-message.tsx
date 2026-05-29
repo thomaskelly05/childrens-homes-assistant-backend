@@ -1,7 +1,13 @@
 'use client'
 
-import { useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { ChevronDown, Copy, FileText, MoreHorizontal, RotateCcw, Square, Volume2 } from 'lucide-react'
+
+import { copyTextToClipboard } from '@/lib/orb/orb-clipboard'
+import {
+  contextualSuggestedRepliesForOutput as contextualOutputReplies,
+  type OrbSuggestedReplyItem
+} from '@/lib/orb/orb-output-reuse'
 
 import { OrbHueMark } from '@/components/orb-standalone/orb-hue-logo'
 import { OrbExplainabilityPanel, type OrbExplainabilityView } from '@/components/orb-standalone/orb-explainability-panel'
@@ -61,7 +67,9 @@ export function OrbAssistantMessageBody({
   explainability,
   modelRouting,
   messageHint,
-  cognitionContext
+  cognitionContext,
+  showCognitionLabels = true,
+  heading
 }: {
   content: string
   sources?: StandaloneOrbSource[]
@@ -71,6 +79,8 @@ export function OrbAssistantMessageBody({
   modelRouting?: StandaloneOrbModelRouting
   messageHint?: string
   cognitionContext?: CognitionPillContext
+  showCognitionLabels?: boolean
+  heading?: string
 }) {
   const cognitionLabel = cognitionPillLabel(mode, explainability, messageHint, cognitionContext)
   const displayContent = stripSourcesBasisSection(content)
@@ -81,13 +91,20 @@ export function OrbAssistantMessageBody({
     >
       <OrbHueMark pulse={streaming} />
       <div className="min-w-0 flex-1">
-        <OrbCognitionIndicators
-          mode={mode}
-          streaming={streaming}
-          explainability={explainability}
-          messageHint={messageHint}
-          cognitionContext={cognitionContext}
-        />
+        {heading ? (
+          <p className="mb-1 text-xs font-semibold text-[#64748B]" data-orb-message-heading>
+            {heading}
+          </p>
+        ) : null}
+        {showCognitionLabels ? (
+          <OrbCognitionIndicators
+            mode={mode}
+            streaming={streaming}
+            explainability={explainability}
+            messageHint={messageHint}
+            cognitionContext={cognitionContext}
+          />
+        ) : null}
         <div className="orb-message-content text-[15px] leading-7 text-[var(--orb-foreground)]">
           <OrbMarkdownAnswer content={displayContent} sources={sources} />
         </div>
@@ -175,6 +192,8 @@ export type OrbResponseFollowUpAction =
   | 'ofsted_lens'
   | 'safeguarding_lens'
 
+export type { OrbSuggestedReplyItem } from '@/lib/orb/orb-output-reuse'
+
 /** Inline suggested replies shown under the latest completed assistant turn. */
 export const ORB_INLINE_SUGGESTED_REPLIES: Array<{
   action: OrbResponseFollowUpAction
@@ -195,7 +214,7 @@ const GREETING_HINT_RE =
 export function contextualSuggestedReplies(options: {
   mode: string
   messageHint?: string
-}): Array<{ action: OrbResponseFollowUpAction; label: string }> {
+}): OrbSuggestedReplyItem[] {
   const hint = (options.messageHint || '').trim()
   const modeKey = options.mode.trim().toLowerCase()
 
@@ -233,6 +252,21 @@ export function contextualSuggestedReplies(options: {
     { action: 'more_concise', label: 'Make this more concise' },
     { action: 'what_missing', label: 'What am I missing?' }
   ]
+}
+
+/** Contextual reuse chips for document intelligence and action-engine results. */
+export function contextualSuggestedRepliesForOutput(options: {
+  outputKind?: string
+  content?: string
+  mode?: string
+  messageHint?: string
+}): OrbSuggestedReplyItem[] {
+  const fromOutput = contextualOutputReplies({
+    outputKind: options.outputKind,
+    content: options.content
+  })
+  if (fromOutput.length) return fromOutput
+  return contextualSuggestedReplies({ mode: options.mode || 'Ask ORB', messageHint: options.messageHint })
 }
 
 export type OrbAttachmentFollowUpAction =
@@ -314,8 +348,8 @@ export function OrbSuggestedReplyChips({
   onSelect,
   suggestions
 }: {
-  onSelect: (action: OrbResponseFollowUpAction) => void
-  suggestions?: Array<{ action: OrbResponseFollowUpAction; label: string }>
+  onSelect: (item: OrbSuggestedReplyItem) => void
+  suggestions?: OrbSuggestedReplyItem[]
 }) {
   const items = suggestions?.length ? suggestions : ORB_INLINE_SUGGESTED_REPLIES
   if (!items.length) return null
@@ -328,11 +362,12 @@ export function OrbSuggestedReplyChips({
     >
       {items.map((item) => (
         <button
-          key={item.action}
+          key={`${item.action}-${item.label}`}
           type="button"
-          onClick={() => onSelect(item.action)}
+          onClick={() => onSelect(item)}
           className="rounded-full border border-[var(--orb-line)] bg-[#F8FAFC] px-2.5 py-1 text-[11px] font-medium text-[#475569] transition hover:border-[#94A3B8] hover:text-[#0F172A]"
           data-orb-suggested-reply={item.action}
+          data-orb-suggested-reply-label={item.label}
         >
           {item.label}
         </button>
@@ -357,7 +392,9 @@ export function OrbResponseActionBar({
   onReflection,
   onSupervision,
   onExport,
+  exportEnabled = false,
   onInspectionPrep,
+  saveFeedback = 'idle',
   onOrbFollowUp
 }: {
   mode: string
@@ -375,11 +412,44 @@ export function OrbResponseActionBar({
   onReflection?: () => void
   onSupervision?: () => void
   onExport?: () => void
+  exportEnabled?: boolean
   onInspectionPrep?: () => void
+  saveFeedback?: 'idle' | 'saved' | 'already_saved' | 'failed'
   /** Run structured ORB action or composer prefill fallback for unsupported actions. */
   onOrbFollowUp?: (action: OrbResponseFollowUpAction, sourceContent: string, assistantIndex?: number) => void
 }) {
   const [moreOpen, setMoreOpen] = useState(false)
+  const [copyFeedback, setCopyFeedback] = useState<'idle' | 'copied' | 'failed'>('idle')
+
+  useEffect(() => {
+    if (copyFeedback === 'idle') return
+    const timer = window.setTimeout(() => setCopyFeedback('idle'), 2000)
+    return () => window.clearTimeout(timer)
+  }, [copyFeedback])
+
+  const handleCopy = useCallback(async () => {
+    const result = await copyTextToClipboard(content)
+    setCopyFeedback(result === 'copied' ? 'copied' : 'failed')
+  }, [content])
+
+  const copyLabel =
+    copyFeedback === 'copied' ? 'Copied' : copyFeedback === 'failed' ? 'Copy failed' : 'Copy'
+
+  const saveLabel =
+    saveFeedback === 'saved'
+      ? 'Saved'
+      : saveFeedback === 'already_saved'
+        ? 'Already saved'
+        : saveFeedback === 'failed'
+          ? 'Save failed'
+          : 'Save'
+
+  const speakLabel = !synthesisAvailable
+    ? 'Voice unavailable'
+    : speaking
+      ? 'Stop'
+      : 'Speak'
+
   const modeKey = mode.trim().toLowerCase()
   const isRecording = modeKey === 'record this properly'
   const isStaffCoach = modeKey === 'staff coach'
@@ -387,24 +457,49 @@ export function OrbResponseActionBar({
     modeKey === 'ofsted lens' || modeKey === 'reg 44 / reg 45 prep' || modeKey.includes('reg 44')
 
   const primaryActions: ReactNode[] = [
-    <ActionChip key="copy" icon={<Copy className="h-3 w-3" />} label="Copy" onClick={() => void navigator.clipboard?.writeText(content)} />
+    <ActionChip
+      key="copy"
+      icon={<Copy className="h-3 w-3" />}
+      label={copyLabel}
+      onClick={() => void handleCopy()}
+      state={copyFeedback === 'copied' ? 'success' : copyFeedback === 'failed' ? 'error' : undefined}
+      dataAttr="copy"
+    />
   ]
   if (onRegenerate) {
     primaryActions.push(
       <ActionChip key="regen" icon={<RotateCcw className="h-3 w-3" />} label="Regenerate" onClick={onRegenerate} dataAttr="regenerate" />
     )
   }
-  if (synthesisAvailable) {
-    primaryActions.push(
+  primaryActions.push(
+    synthesisAvailable ? (
       speaking ? (
-        <ActionChip key="stop" icon={<Square className="h-3 w-3" />} label="Stop" onClick={onStop} />
+        <ActionChip key="stop" icon={<Square className="h-3 w-3" />} label="Stop" onClick={onStop} dataAttr="speak-stop" />
       ) : (
-        <ActionChip key="speak" icon={<Volume2 className="h-3 w-3" />} label="Speak" onClick={onSpeak} />
+        <ActionChip key="speak" icon={<Volume2 className="h-3 w-3" />} label="Speak" onClick={onSpeak} dataAttr="speak" />
       )
+    ) : (
+      <ActionChip
+        key="speak-unavailable"
+        icon={<Volume2 className="h-3 w-3" />}
+        label={speakLabel}
+        onClick={() => {}}
+        disabled
+        dataAttr="speak-unavailable"
+      />
     )
-  }
+  )
   if (onSave) {
-    primaryActions.push(<ActionChip key="save" icon={<FileText className="h-3 w-3" />} label="Save" onClick={onSave} />)
+    primaryActions.push(
+      <ActionChip
+        key="save"
+        icon={<FileText className="h-3 w-3" />}
+        label={saveLabel}
+        onClick={onSave}
+        state={saveFeedback === 'saved' || saveFeedback === 'already_saved' ? 'success' : saveFeedback === 'failed' ? 'error' : undefined}
+        dataAttr="save"
+      />
+    )
   }
   if (isRecording) {
     primaryActions.push(
@@ -455,7 +550,13 @@ export function OrbResponseActionBar({
   if (!isStaffCoach && onSupervision) {
     moreActions.push(<ActionChip key="supervision-more" label="Supervision prompts" onClick={onSupervision} />)
   }
-  if (onExport) moreActions.push(<ActionChip key="export" label="Export" onClick={onExport} />)
+  if (exportEnabled && onExport) {
+    moreActions.push(<ActionChip key="export" label="Export" onClick={onExport} dataAttr="export" />)
+  } else if (onExport === undefined) {
+    moreActions.push(
+      <ActionChip key="export-soon" label="Export coming soon" onClick={() => {}} disabled dataAttr="export-coming-soon" />
+    )
+  }
   if (!isInspection && onInspectionPrep) {
     moreActions.push(<ActionChip key="inspection-more" label="Inspection prep" onClick={onInspectionPrep} />)
   }
@@ -500,19 +601,26 @@ function ActionChip({
   label,
   onClick,
   dataAttr,
-  trailingIcon
+  trailingIcon,
+  disabled,
+  state
 }: {
   icon?: ReactNode
   label: string
   onClick: () => void
   dataAttr?: string
   trailingIcon?: ReactNode
+  disabled?: boolean
+  state?: 'success' | 'error'
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="orb-action-chip inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-slate-400/60"
+      disabled={disabled}
+      className={`orb-action-chip inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-slate-400/60 ${
+        state === 'success' ? 'orb-action-chip--success' : state === 'error' ? 'orb-action-chip--error' : ''
+      }`}
       data-orb-action-chip={dataAttr}
       title={label}
     >

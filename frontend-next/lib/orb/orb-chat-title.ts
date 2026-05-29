@@ -33,14 +33,33 @@ export function generateOrbChatTitle(message: string, context?: OrbChatTitleCont
   const lower = text.toLowerCase()
   const mode = String(context?.mode || '').toLowerCase()
 
-  if (context?.documentLens === 'reg44' || /reg\s*44|reg\s*45/.test(lower)) {
-    return 'Reg 44 review'
+  const lens = String(context?.documentLens || '').toLowerCase()
+  const docTitle = normalise(context?.documentTitle || '')
+
+  if (lens === 'reg44' || lens === 'reg45' || /reg\s*44|reg\s*45/.test(lower)) {
+    if (lens === 'reg45') return docTitle ? capTitle(`Reg 45 Evidence Review — ${docTitle}`, 52) : 'Reg 45 Evidence Review'
+    return docTitle ? capTitle(`Reg 44 Review — ${docTitle}`, 52) : 'Reg 44 Review'
   }
 
-  if (context?.documentLens === 'policy' || /\bpolicy\s+card\b/.test(lower)) {
-    const docTitle = normalise(context?.documentTitle || '')
-    if (docTitle) return capTitle(`Policy card — ${docTitle}`, 52)
-    return 'Policy card'
+  if (lens === 'policy_card' || lens === 'policy' || /\bpolicy\s+card\b/.test(lower)) {
+    if (docTitle) return capTitle(`Policy Card — ${docTitle}`, 52)
+    return 'Policy Card'
+  }
+
+  if (lens === 'actions' || lens === 'action_plan') {
+    return docTitle ? capTitle(`Action Plan — ${docTitle}`, 52) : 'Action Plan'
+  }
+
+  if (lens === 'safeguarding') {
+    return docTitle ? capTitle(`Safeguarding Lens — ${docTitle}`, 52) : 'Safeguarding Lens'
+  }
+
+  if (lens === 'ofsted') {
+    return docTitle ? capTitle(`Ofsted Lens — ${docTitle}`, 52) : 'Ofsted Lens'
+  }
+
+  if (lens === 'staff_briefing') {
+    return docTitle ? capTitle(`Staff Briefing — ${docTitle}`, 52) : 'Staff Briefing'
   }
 
   if (
