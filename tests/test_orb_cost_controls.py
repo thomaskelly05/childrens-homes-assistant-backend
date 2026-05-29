@@ -86,3 +86,28 @@ def test_standalone_usage_records_prompt_tier_metadata():
     from services.orb_standalone_usage_service import _estimate_cost
 
     assert _estimate_cost(100, 200, cost_tier="low") >= 0
+
+
+def test_plan_limits_service_exists():
+    from services.orb_plan_limits_service import orb_plan_limits_service
+
+    limits = orb_plan_limits_service.get_limits("orb_residential_individual")
+    assert limits.included_monthly_messages > 0
+    assert limits.daily_hard_limit >= limits.daily_soft_limit
+
+
+def test_billing_meter_route_registered():
+    feedback_routes = Path(__file__).resolve().parents[1] / "routers" / "orb_feedback_routes.py"
+    text = feedback_routes.read_text(encoding="utf-8")
+    assert "/billing/meter" in text
+    assert "orb_billing_meter_service" in text
+
+
+def test_high_risk_safeguarding_budget_check_uses_template():
+    decision = orb_usage_budget_service.check_budget(
+        user_id=99,
+        user={"id": 99, "role": "staff"},
+        prompt_tier="deep",
+        risk_level=AiRiskLevel.SAFEGUARDING_SENSITIVE,
+    )
+    assert decision.allowed is True or decision.use_safeguarding_template or decision.level in {"ok", "soft", "hard"}

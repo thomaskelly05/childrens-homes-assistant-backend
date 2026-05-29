@@ -14,6 +14,8 @@ from schemas.orb_feedback import (
 )
 from services.orb_standalone_boundary import FORBIDDEN_STANDALONE_OS_KEYS, reject_standalone_os_ids
 
+from services.orb_improvement_candidate_service import orb_improvement_candidate_service
+
 logger = logging.getLogger("indicare.orb_feedback")
 
 MAX_SNAPSHOT_CHARS = 6000
@@ -102,6 +104,10 @@ class OrbFeedbackService:
         }
 
         stored = self._persist(record_payload)
+        try:
+            orb_improvement_candidate_service.sync_from_feedback(stored)
+        except Exception:
+            logger.debug("Improvement candidate sync skipped", exc_info=True)
         return OrbFeedbackSubmitResponse(
             ok=True,
             feedback_id=stored["id"],
@@ -195,6 +201,10 @@ class OrbFeedbackService:
             document_lens=row.get("document_lens"),
             metadata=row.get("metadata") or {},
             created_at=row.get("created_at"),
+            reviewed=bool(row.get("reviewed")),
+            reviewed_by=row.get("reviewed_by"),
+            reviewed_at=row.get("reviewed_at"),
+            reviewer_note=row.get("reviewer_note"),
         )
 
 

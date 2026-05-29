@@ -25,7 +25,20 @@ Feedback creates **evidence for human review**: scenario marker gaps, answer qua
 
 `orb_feedback_improvement_service` groups feedback and produces **review suggestions** and **improvement candidates** (`review_required: true`). Candidates may propose expected markers, must-not-say lines, source anchors, role-lens fixes, or scenario variants — but nothing is applied automatically.
 
-Admin summary: `GET /orb/standalone/feedback/summary` (admin only).
+Admin summary: `GET /orb/admin/feedback/summary` (admin only). Legacy: `GET /orb/standalone/feedback/summary`.
+
+## Improvement candidates (persisted)
+
+Downvotes on scenario-loop reasons create/update rows in `orb_improvement_candidates` (`sql/202_orb_improvement_candidates.sql`).
+
+Admins approve or reject via:
+
+- `POST /orb/admin/feedback/candidates/{id}/approve`
+- `POST /orb/admin/feedback/candidates/{id}/reject`
+
+Approval **does not** auto-edit prompts, scenarios or safety rules — it records a review trail for a later implementation PR.
+
+Admin UI: `/admin/orb-quality`.
 
 ## API
 

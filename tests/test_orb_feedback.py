@@ -146,3 +146,29 @@ def test_feedback_summary_structure():
     assert summary["total_feedback"] == 3
     assert "thumbs_up_ratio" in summary
     assert "suggested_improvement_candidates" in summary
+
+
+def test_admin_routes_registered():
+    admin_routes = REPO_ROOT / "routers" / "orb_admin_routes.py"
+    text = admin_routes.read_text(encoding="utf-8")
+    assert '/feedback/summary' in text
+    assert '/feedback/candidates' in text
+    assert '/billing/usage' in text
+    assert "require_admin" in text
+
+
+def test_feedback_submit_creates_improvement_candidate():
+    from services.orb_improvement_candidate_service import orb_improvement_candidate_service
+
+    orb_improvement_candidate_service.reset_memory()
+    orb_feedback_service.submit(
+        user_id=1,
+        request=OrbFeedbackSubmitRequest(
+            message_id="msg-candidate",
+            rating="down",
+            reason="missed_child_voice",
+            detected_family="daily_note",
+        ),
+    )
+    pending = orb_improvement_candidate_service.list_candidates(status="pending")
+    assert len(pending) >= 1
