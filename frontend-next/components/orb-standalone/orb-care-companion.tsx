@@ -32,6 +32,7 @@ import {
   OrbDocumentContextChips,
   OrbResponseActionBar,
   OrbSuggestedReplyChips,
+  OrbUserSpeakerAvatar,
   contextualSuggestedReplies,
   contextualSuggestedRepliesForOutput,
   type OrbAttachmentFollowUpAction,
@@ -63,10 +64,12 @@ import { ORB_LIGHT_UI_BUILD } from '@/lib/orb/orb-light-ui-build'
 import {
   buildAdultProfilePromptBlock,
   personalisedEmptyHeading,
+  personalisedWelcomeMessage,
   readAdultProfile,
   roleBasedEmptyStarters,
   type AdultProfile
 } from '@/lib/orb/adult-profile-store'
+import { profileInitialsFromName } from '@/lib/orb/orb-profile-initials'
 import { OrbHelpPanel } from '@/components/orb-standalone/orb-help-panel'
 import { OrbVoiceSettingsPanel } from '@/components/orb-standalone/orb-voice-settings-panel'
 import {
@@ -1917,9 +1920,19 @@ export function OrbCareCompanion() {
     return PRIMARY_EMPTY_STARTERS
   }, [adultProfile])
 
+  const emptyWelcome = useMemo(() => {
+    const profile = adultProfile ?? readAdultProfile()
+    return personalisedWelcomeMessage(profile, { temporary: Boolean(activeChat?.temporary) })
+  }, [adultProfile, activeChat?.temporary])
+
   const emptyHeading = useMemo(
-    () => (adultProfile ? personalisedEmptyHeading(adultProfile) : 'How can I help?'),
-    [adultProfile]
+    () => emptyWelcome.heading || (adultProfile ? personalisedEmptyHeading(adultProfile) : 'How can I help?'),
+    [adultProfile, emptyWelcome.heading]
+  )
+
+  const userDisplayInitials = useMemo(
+    () => profileInitialsFromName(adultProfile?.name),
+    [adultProfile?.name]
   )
 
   const handleEditAndResubmit = useCallback(
@@ -2338,7 +2351,18 @@ export function OrbCareCompanion() {
                     >
                       {emptyHeading}
                     </h2>
-                    <p className="mt-2 max-w-md text-sm leading-6 text-slate-600" data-orb-empty-subline>
+                    <p className="mt-2 max-w-lg text-sm leading-7 text-slate-600" data-orb-empty-subline>
+                      {emptyWelcome.subline}
+                    </p>
+                    {emptyWelcome.temporaryNote ? (
+                      <p
+                        className="mt-2 max-w-lg text-xs font-medium leading-5 text-amber-800"
+                        data-orb-empty-temporary-note
+                      >
+                        {emptyWelcome.temporaryNote}
+                      </p>
+                    ) : null}
+                    <p className="mt-3 max-w-md text-xs leading-5 text-slate-500">
                       Pick a starter, choose an agent, or type in the composer below.
                     </p>
                     <div className="mt-6 grid w-full max-w-lg gap-2 sm:grid-cols-2" data-orb-starter-cards>
@@ -2493,91 +2517,76 @@ export function OrbCareCompanion() {
                                 </button>
                               </div>
                             ) : null}
-                            {index === visibleMessages.length - 1 &&
-                            (entry.status === 'complete' || entry.status === 'stopped') ? (
+                            {(entry.status === 'complete' || entry.status === 'stopped') ? (
                               <>
-                              <OrbResponseActionBar
-                                mode={mode}
-                                content={entry.content}
-                                speaking={speakingMessageId === entry.id}
-                                synthesisAvailable={voice.synthesisAvailable}
-                                saveFeedback={saveFeedbackByMessageId[entry.id] || 'idle'}
-                                onRegenerate={handleRegenerate}
-                                onSpeak={() => speakMessageContent(entry.id, entry.content)}
-                                onStop={voice.cancelSpeaking}
-                                onNewQuestion={() => {
-                                  setMessage('')
-                                  inputRef.current?.focus()
-                                }}
-                                onDraft={() => void handleDraftWording(entry.content)}
-                                onSave={() => void saveChatNote(entry)}
-                                onSaveToProject={() => void saveChatNote(entry)}
-                                onActionPlan={() => {
-                                  setMessage(`Create an action plan from this:\n\n${entry.content.slice(0, 500)}`)
-                                  inputRef.current?.focus()
-                                }}
-                                onReflection={() => void saveChatNote(entry)}
-                                onSupervision={() => {
-                                  void (async () => {
-                                    const ran = await runBackendOrbAction(
-                                      BACKEND_ORB_STANDALONE_ACTION_IDS.supervision_prompt,
-                                      entry.content,
-                                      index,
-                                      'supervision_prompt'
-                                    )
-                                    if (!ran) {
-                                      setMessage(
-                                        'Help me prepare supervision prompts from our last exchange.'
-                                      )
-                                      inputRef.current?.focus()
-                                    }
-                                  })()
-                                }}
-                                onInspectionPrep={() => handleModeChange('Ofsted Lens')}
-                                onOrbFollowUp={handleOrbFollowUp}
-                              />
-                              {entry.status === 'complete' && index === visibleMessages.length - 1 ? (
-                                <OrbSuggestedReplyChips
-                                  suggestions={
-                                    entry.outputKind
-                                      ? contextualSuggestedRepliesForOutput({
-                                          outputKind: entry.outputKind,
-                                          content: entry.content,
-                                          mode,
-                                          messageHint: precedingUserMessageHint(visibleMessages, index)
-                                        })
-                                      : contextualSuggestedReplies({
-                                          mode,
-                                          messageHint: precedingUserMessageHint(visibleMessages, index)
-                                        })
+                                <OrbResponseActionBar
+                                  mode={mode}
+                                  content={entry.content}
+                                  isLatest={index === visibleMessages.length - 1}
+                                  speaking={speakingMessageId === entry.id}
+                                  synthesisAvailable={voice.synthesisAvailable}
+                                  saveFeedback={saveFeedbackByMessageId[entry.id] || 'idle'}
+                                  onRegenerate={
+                                    index === visibleMessages.length - 1 ? handleRegenerate : undefined
                                   }
-                                  onSelect={(item) =>
-                                    void handleOrbFollowUp(item.action, entry.content, index, {
-                                      prefill: item.prefill
-                                    })
+                                  onSpeak={() => speakMessageContent(entry.id, entry.content)}
+                                  onStop={voice.cancelSpeaking}
+                                  onNewQuestion={() => {
+                                    setMessage('')
+                                    inputRef.current?.focus()
+                                  }}
+                                  onDraft={() => void handleDraftWording(entry.content)}
+                                  onSave={() => void saveChatNote(entry)}
+                                  onSaveToProject={() => void saveChatNote(entry)}
+                                  onActionPlan={() => {
+                                    setMessage(`Create an action plan from this:\n\n${entry.content.slice(0, 500)}`)
+                                    inputRef.current?.focus()
+                                  }}
+                                  onReflection={() => void saveChatNote(entry)}
+                                  onSupervision={() => {
+                                    void (async () => {
+                                      const ran = await runBackendOrbAction(
+                                        BACKEND_ORB_STANDALONE_ACTION_IDS.supervision_prompt,
+                                        entry.content,
+                                        index,
+                                        'supervision_prompt'
+                                      )
+                                      if (!ran) {
+                                        setMessage(
+                                          'Help me prepare supervision prompts from our last exchange.'
+                                        )
+                                        inputRef.current?.focus()
+                                      }
+                                    })()
+                                  }}
+                                  onInspectionPrep={() => handleModeChange('Ofsted Lens')}
+                                  onOrbFollowUp={(action, content) =>
+                                    void handleOrbFollowUp(action, content, index)
                                   }
                                 />
-                              ) : null}
+                                {entry.status === 'complete' && index === visibleMessages.length - 1 ? (
+                                  <OrbSuggestedReplyChips
+                                    suggestions={
+                                      entry.outputKind
+                                        ? contextualSuggestedRepliesForOutput({
+                                            outputKind: entry.outputKind,
+                                            content: entry.content,
+                                            mode,
+                                            messageHint: precedingUserMessageHint(visibleMessages, index)
+                                          })
+                                        : contextualSuggestedReplies({
+                                            mode,
+                                            messageHint: precedingUserMessageHint(visibleMessages, index)
+                                          })
+                                    }
+                                    onSelect={(item) =>
+                                      void handleOrbFollowUp(item.action, entry.content, index, {
+                                        prefill: item.prefill
+                                      })
+                                    }
+                                  />
+                                ) : null}
                               </>
-                            ) : index !== visibleMessages.length - 1 &&
-                              (entry.status === 'complete' || entry.status === 'stopped') ? (
-                              <div className="mt-2 flex flex-wrap gap-2 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
-                                <ActionChip icon={<Copy className="h-3 w-3" />} label="Copy" onClick={() => void copyToClipboard(entry.content)} />
-                                {voice.synthesisAvailable ? (
-                                  speakingMessageId === entry.id ? (
-                                    <ActionChip icon={<Square className="h-3 w-3" />} label="Stop" onClick={voice.cancelSpeaking} />
-                                  ) : (
-                                    <ActionChip
-                                      icon={<Volume2 className="h-3 w-3" />}
-                                      label="Speak"
-                                      onClick={() => speakMessageContent(entry.id, entry.content)}
-                                    />
-                                  )
-                                ) : (
-                                  <ActionChip icon={<Volume2 className="h-3 w-3" />} label="Voice unavailable" onClick={() => {}} />
-                                )}
-                                <ActionChip icon={<FileText className="h-3 w-3" />} label="Save" onClick={() => void saveChatNote(entry)} />
-                              </div>
                             ) : null}
                           </>
                           )
@@ -2585,6 +2594,7 @@ export function OrbCareCompanion() {
                           <>
                           <OrbUserMessageBubble
                             entry={entry}
+                            userInitials={userDisplayInitials}
                             onEditSubmit={handleEditAndResubmit}
                             disabled={pending || isAnswering}
                           />
@@ -2868,10 +2878,12 @@ function SourcesBasis({
 
 function OrbUserMessageBubble({
   entry,
+  userInitials,
   onEditSubmit,
   disabled
 }: {
   entry: StandaloneChatMessage
+  userInitials: string
   onEditSubmit: (messageId: string, content: string) => void
   disabled?: boolean
 }) {
@@ -2898,8 +2910,8 @@ function OrbUserMessageBubble({
   }
 
   return (
-    <article className="orb-message-user group" data-testid="orb-message-user">
-      <div className="orb-message-bubble">
+    <article className="orb-message-user group flex items-end justify-end gap-2.5" data-testid="orb-message-user">
+      <div className="orb-message-bubble min-w-0">
         {entry.imageDataUrls?.length ? (
           <div className="mb-2 flex flex-wrap gap-2">
             {entry.imageDataUrls.map((url, index) => (
@@ -2964,6 +2976,7 @@ function OrbUserMessageBubble({
           </>
         )}
       </div>
+      <OrbUserSpeakerAvatar initials={userInitials} />
     </article>
   )
 }

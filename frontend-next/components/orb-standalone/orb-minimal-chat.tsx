@@ -152,7 +152,7 @@ export function OrbMinimalChat() {
 
         <div className="mt-auto rounded-[1.5rem] border border-cyan-300/20 bg-cyan-300/[0.07] p-4">
           <p className="text-[11px] font-black uppercase tracking-[0.18em] text-cyan-200">Residential brain</p>
-          <p className="mt-2 text-sm leading-6 text-slate-300">General ChatGPT-style intelligence with safeguarding, therapeutic and Ofsted cognition when needed.</p>
+          <p className="mt-2 text-sm leading-6 text-slate-300">Broad residential care intelligence with safeguarding, therapeutic and Ofsted cognition when needed.</p>
         </div>
       </aside>
 

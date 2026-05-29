@@ -2,10 +2,28 @@
 
 import { useStandaloneOrbVoice } from '@/components/orb-standalone/use-standalone-orb-voice'
 import { OrbStandalonePanelShell } from '@/components/orb-standalone/orb-standalone-panel-shell'
+import {
+  ORB_SPEECH_RATE_PRESETS,
+  speechRatePresetFor,
+  type OrbSpeechRatePreset
+} from '@/lib/orb/orb-voice-presets'
+
+const RATE_LABELS: Record<OrbSpeechRatePreset, string> = {
+  slow: 'Slow',
+  normal: 'Normal',
+  fast: 'Fast'
+}
+
+function voiceServiceHint(voice: SpeechSynthesisVoice): string {
+  const local = voice.localService ? 'local' : 'remote'
+  return `${voice.lang} · ${local}`
+}
 
 export function OrbVoiceSettingsPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
   const voice = useStandaloneOrbVoice()
-  const { settings, availableVoices, preferredVoiceName, preferredVoiceIsBritishFemale, voiceSelectionNote } = voice
+  const { settings, availableVoices, preferredVoiceName, preferredVoiceIsBritishFemale, voiceSelectionNote } =
+    voice
+  const activeRate = speechRatePresetFor(settings.speechRate)
 
   return (
     <OrbStandalonePanelShell
@@ -17,11 +35,17 @@ export function OrbVoiceSettingsPanel({ open, onClose }: { open: boolean; onClos
       panelId="voice"
     >
       <div className="space-y-4 p-4" data-orb-voice-settings-panel>
+        <p className="text-[11px] leading-6 text-[var(--orb-muted)]" data-orb-voice-settings-help>
+          ORB can read responses aloud using your device/browser voices. Voice quality depends on Safari, Chrome,
+          macOS, iOS, Windows or Android. Choose the voice that feels most natural for you. Where possible, ORB will
+          default to a British female voice.
+        </p>
+
         <label className="flex cursor-pointer items-start justify-between gap-3 rounded-xl border border-[var(--orb-line)] bg-[var(--orb-surface)] px-4 py-3">
           <span>
-            <span className="block text-sm font-medium text-[var(--orb-foreground)]">Auto-speak responses</span>
+            <span className="block text-sm font-medium text-[var(--orb-foreground)]">Read aloud enabled</span>
             <span className="mt-0.5 block text-xs text-[var(--orb-muted)]">
-              Read assistant answers aloud when complete. Off by default for privacy.
+              Auto-speak completed answers when on. Per-message Speak works whenever your browser supports synthesis.
             </span>
           </span>
           <input
@@ -53,15 +77,36 @@ export function OrbVoiceSettingsPanel({ open, onClose }: { open: boolean; onClos
             </option>
             {availableVoices.map((v) => (
               <option key={v.voiceURI} value={v.voiceURI}>
-                {v.name} ({v.lang})
+                {v.name} ({voiceServiceHint(v)})
               </option>
             ))}
           </select>
         </label>
 
+        <fieldset>
+          <legend className="mb-2 text-xs font-medium text-[var(--orb-muted)]">Speech rate</legend>
+          <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Speech rate">
+            {(Object.keys(ORB_SPEECH_RATE_PRESETS) as OrbSpeechRatePreset[]).map((preset) => (
+              <button
+                key={preset}
+                type="button"
+                onClick={() => voice.setSpeechRate(ORB_SPEECH_RATE_PRESETS[preset])}
+                className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                  activeRate === preset
+                    ? 'border-[#0284C7] bg-[#E0F2FE] text-[#0369A1]'
+                    : 'border-[var(--orb-line)] text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)]'
+                }`}
+                data-orb-voice-rate={preset}
+              >
+                {RATE_LABELS[preset]}
+              </button>
+            ))}
+          </div>
+        </fieldset>
+
         <label className="block">
           <span className="mb-1.5 flex justify-between text-xs font-medium text-[var(--orb-muted)]">
-            <span>Speed</span>
+            <span>Fine-tune speed</span>
             <span>{settings.speechRate.toFixed(2)}</span>
           </span>
           <input
@@ -76,23 +121,6 @@ export function OrbVoiceSettingsPanel({ open, onClose }: { open: boolean; onClos
           />
         </label>
 
-        <label className="block">
-          <span className="mb-1.5 flex justify-between text-xs font-medium text-[var(--orb-muted)]">
-            <span>Pitch</span>
-            <span>{settings.speechPitch.toFixed(2)}</span>
-          </span>
-          <input
-            type="range"
-            min={0.85}
-            max={1.15}
-            step={0.01}
-            value={settings.speechPitch}
-            onChange={(e) => voice.setSpeechPitch(Number(e.target.value))}
-            className="w-full"
-            data-orb-voice-pitch
-          />
-        </label>
-
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
@@ -100,7 +128,7 @@ export function OrbVoiceSettingsPanel({ open, onClose }: { open: boolean; onClos
             className="rounded-xl border border-[var(--orb-line)] px-4 py-2 text-sm font-medium text-[var(--orb-foreground)] hover:bg-[var(--orb-surface-hover)]"
             data-orb-voice-test
           >
-            Test voice
+            Preview voice
           </button>
           <button
             type="button"

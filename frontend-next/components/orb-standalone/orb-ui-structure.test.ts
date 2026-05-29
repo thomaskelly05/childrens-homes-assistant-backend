@@ -176,7 +176,7 @@ describe('ORB ChatGPT UI structure', () => {
     assert.match(voice, /speakAloud/)
     assert.match(voice, /speechRate/)
     assert.match(panel, /data-orb-voice-auto-speak/)
-    assert.match(panel, /Test voice/)
+    assert.match(panel, /Preview voice/)
   })
 
   it('response action bar includes regenerate copy and ORB follow-up actions', () => {

@@ -5,9 +5,11 @@ import { pickBritishFemaleVoice } from './use-standalone-orb-voice.ts'
 import {
   buildAdultProfilePromptBlock,
   personalisedEmptyHeading,
+  personalisedWelcomeMessage,
   roleBasedEmptyStarters,
   DEFAULT_ADULT_PROFILE
 } from '../../lib/orb/adult-profile-store.ts'
+import { profileInitialsFromName } from '../../lib/orb/orb-profile-initials.ts'
 
 function mockVoice(name: string, lang: string, uri?: string): SpeechSynthesisVoice {
   return {
@@ -46,6 +48,19 @@ describe('adult profile personalisation', () => {
       roleLabel: 'Registered Manager'
     })
     assert.ok(starters.some((s) => s.toLowerCase().includes('oversight')))
+  })
+
+  it('welcome message personalises by registered manager role', () => {
+    const welcome = personalisedWelcomeMessage({
+      ...DEFAULT_ADULT_PROFILE,
+      name: 'Tom Kelly',
+      role: 'registered_manager'
+    })
+    assert.match(welcome.subline, /oversight|Ofsted/i)
+  })
+
+  it('initials from Tom Kelly are TK', () => {
+    assert.equal(profileInitialsFromName('Tom Kelly'), 'TK')
   })
 
   it('profile prompt block includes answer length and boundary framing', () => {

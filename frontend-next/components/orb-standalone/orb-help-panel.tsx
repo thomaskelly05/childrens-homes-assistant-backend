@@ -5,7 +5,7 @@ import { OrbStandalonePanelShell } from '@/components/orb-standalone/orb-standal
 const SECTIONS = [
   {
     title: 'What ORB is',
-    body: 'ORB is IndiCare\'s residential care companion — a ChatGPT-style assistant for thinking, recording quality, reflection and professional reasoning in children\'s homes.'
+    body: 'ORB is IndiCare\'s residential care companion — a premium AI workspace for thinking, recording quality, reflection and professional reasoning in children\'s homes.'
   },
   {
     title: 'What standalone ORB can do',

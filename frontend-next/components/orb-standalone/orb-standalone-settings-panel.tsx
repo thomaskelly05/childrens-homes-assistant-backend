@@ -171,6 +171,11 @@ export function OrbStandaloneSettingsPanel({
 
           {activeSection === 'voice' ? (
             <SettingsBlock title="Voice" description="Speech input and read-aloud preferences.">
+              <p className="text-[11px] leading-6 text-[var(--orb-muted)]" data-orb-settings-voice-help>
+                ORB can read responses aloud using your device/browser voices. Voice quality depends on Safari,
+                Chrome, macOS, iOS, Windows or Android. Choose the voice that feels most natural for you. Where
+                possible, ORB will default to a British female voice.
+              </p>
               <ToggleRow
                 label="Enable voice input"
                 hint="Push-to-talk from the composer mic button"

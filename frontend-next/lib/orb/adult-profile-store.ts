@@ -353,3 +353,75 @@ export function personalisedEmptyHeading(profile: AdultProfile): string {
   if (first) return `How can I help today, ${first}?`
   return 'How can I help today?'
 }
+
+function timeOfDayGreeting(): string {
+  const hour = new Date().getHours()
+  if (hour < 12) return 'Good morning'
+  if (hour < 17) return 'Good afternoon'
+  return 'Good evening'
+}
+
+function answerStyleHint(profile: AdultProfile): string | null {
+  if (profile.preferredAnswerLength === 'brief') return 'I will keep answers concise unless safety needs more detail.'
+  if (profile.preferredAnswerLength === 'detailed') return 'I can go into structured detail when that helps.'
+  return null
+}
+
+function lensHint(profile: AdultProfile): string | null {
+  const lenses: string[] = []
+  if (profile.defaultLenses.safeguarding) lenses.push('safeguarding')
+  if (profile.defaultLenses.ofsted) lenses.push('Ofsted and regulation')
+  if (profile.defaultLenses.recording) lenses.push('recording quality')
+  if (!lenses.length) return null
+  return `Default lenses: ${lenses.join(', ')}.`
+}
+
+/** Personalised empty-state welcome — no implication of live OS record access. */
+export function personalisedWelcomeMessage(
+  profile: AdultProfile,
+  options?: { temporary?: boolean }
+): { heading: string; subline: string; temporaryNote?: string } {
+  const first = profile.name?.trim().split(/\s+/)[0]
+  const greeting = first ? `${timeOfDayGreeting()}, ${first}.` : `${timeOfDayGreeting()}.`
+  const role = normalizeAdultProfileRole(profile.role)
+
+  let capability =
+    'I can help you think through everyday questions, recording quality, reflection and professional reasoning in children\'s homes.'
+
+  if (
+    role === 'registered_manager' ||
+    role === 'responsible_individual' ||
+    role === 'provider_director' ||
+    role === 'deputy_manager'
+  ) {
+    capability =
+      'I can help you think through recording, safeguarding, Ofsted evidence, shift planning and manager oversight — from what you share here, not live OS records.'
+  } else if (
+    role === 'residential_support_worker' ||
+    role === 'senior_support_worker' ||
+    role === 'night_staff' ||
+    role === 'agency_staff' ||
+    role === 'practitioner'
+  ) {
+    capability =
+      'I can help you record clearly, think through what to do next, prepare handover, or check what might be missing — without accessing live care records.'
+  } else if (role === 'reg_44_visitor') {
+    capability =
+      'I can help you frame observations, evidence questions and quality-of-care themes — standalone guidance only, not live home records.'
+  }
+
+  const hints = [answerStyleHint(profile), lensHint(profile)].filter(Boolean) as string[]
+  const sublineParts = [capability, ...hints, 'What would you like to work on?']
+
+  const result: { heading: string; subline: string; temporaryNote?: string } = {
+    heading: greeting,
+    subline: sublineParts.join(' ')
+  }
+
+  if (options?.temporary) {
+    result.temporaryNote =
+      'Temporary chat is on — I won\'t use your saved ORB profile for this chat.'
+  }
+
+  return result
+}

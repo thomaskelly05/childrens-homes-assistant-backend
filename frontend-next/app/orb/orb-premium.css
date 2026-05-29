@@ -5,9 +5,9 @@
  */
 
 .orb-chat-layout {
-  --orb-sidebar-width: 17.75rem;
-  --orb-chat-column-max: 50rem;
-  --orb-composer-max: 50rem;
+  --orb-sidebar-width: 18.5rem;
+  --orb-chat-column-max: 52.5rem;
+  --orb-composer-max: 52.5rem;
   background: #f4f6f9 !important;
   color: #0f172a;
 }
@@ -316,12 +316,34 @@
 }
 
 .orb-response-action-bar {
-  opacity: 0.72;
+  opacity: 1;
 }
 
-.orb-message-assistant:hover .orb-response-action-bar,
-.orb-message-assistant:focus-within .orb-response-action-bar {
+.orb-message-assistant + .orb-response-action-bar,
+.orb-message-assistant .orb-response-action-bar {
   opacity: 1;
+}
+
+.orb-speaker-avatar--user {
+  margin-bottom: 0.125rem;
+}
+
+.orb-message-assistant {
+  gap: 0.875rem;
+}
+
+.orb-message-user {
+  max-width: min(82%, 34rem);
+  padding-left: 0.75rem;
+}
+
+.orb-message-content {
+  line-height: 1.75;
+}
+
+.orb-chat-thread {
+  padding-top: 1.75rem;
+  padding-bottom: 9rem;
 }
 
 .orb-citation-card,
