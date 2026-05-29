@@ -117,3 +117,71 @@ def test_care_companion_uses_true_streaming():
     text = companion.read_text(encoding="utf-8")
     assert "sendStandaloneOrbMessageStream" in text
     assert "stream_fallback" in text
+
+
+def test_chunk_text_for_stream_preserves_spaces():
+    from services.ai_model_router_service import _chunk_text_for_stream
+
+    text = "Hello! How can I assist you today?"
+    chunks = _chunk_text_for_stream(text)
+    assert "".join(chunks) == text
+
+
+def test_openai_stream_delta_helper_preserves_leading_spaces():
+    from services.ai_providers.openai_provider import _stream_delta
+
+    assert _stream_delta(" How") == " How"
+    assert _stream_delta(" Hello") == " Hello"
+
+
+def test_instant_fast_answer_for_hello():
+    from services.orb_general_assistant_service import orb_general_assistant_service
+
+    answer = orb_general_assistant_service._try_instant_fast_answer("hello")
+    assert answer is not None
+    assert "Hello" in answer
+    assert "safeguarding" in answer.lower()
+
+
+def test_hello_sanitize_has_no_threshold_closer():
+    from services.orb_grounded_answer_style_service import orb_grounded_answer_style_service
+
+    raw = (
+        "Hello! How can I help?\n\n"
+        "ORB can support your thinking, but the threshold decision should remain human-led."
+    )
+    cleaned = orb_grounded_answer_style_service.sanitize_high_attention_closer(
+        raw,
+        message="hello",
+        mode="Ask ORB",
+    )
+    assert "threshold decision" not in cleaned.lower()
+
+
+def test_abuse_disclosure_still_gets_safeguarding_boundary():
+    from services.orb_grounded_answer_style_service import orb_grounded_answer_style_service
+
+    cleaned = orb_grounded_answer_style_service.sanitize_high_attention_closer(
+        "A young person has disclosed abuse. Seek advice.",
+        message="A young person has disclosed abuse",
+        mode="Ask ORB",
+    )
+    assert "abuse" in cleaned.lower()
+
+
+def test_restraint_recording_tier_is_residential_not_deep():
+    from services.orb_knowledge_retrieval_service import orb_knowledge_retrieval_service
+
+    tier = orb_knowledge_retrieval_service.resolve_prompt_tier(
+        "What do I record after a restraint?"
+    )
+    assert tier == "residential"
+
+
+def test_abuse_disclosure_uses_deep_tier():
+    from services.orb_knowledge_retrieval_service import orb_knowledge_retrieval_service
+
+    tier = orb_knowledge_retrieval_service.resolve_prompt_tier(
+        "A young person has disclosed abuse"
+    )
+    assert tier == "deep"

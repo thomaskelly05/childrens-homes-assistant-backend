@@ -26,6 +26,11 @@ from services.standalone_sector_knowledge_service import search_sector_knowledge
 
 logger = logging.getLogger("indicare.orb_general_assistant")
 
+INSTANT_FAST_GREETING_ANSWER = (
+    "Hello, I'm ORB. I can help with recording, safeguarding thinking, Ofsted readiness, "
+    "shift planning, documents, or general questions. What would you like to work on?"
+)
+
 
 def _finalize_standalone_answer(answer: str, *, message: str, mode: str | None = None) -> str:
     return orb_grounded_answer_style_service.sanitize_high_attention_closer(
@@ -136,6 +141,30 @@ British English. Calm, warm, concise when speaking, reflective and practical. Fo
 class OrbGeneralAssistantService:
     """Standalone general assistant mode with no IndiCare OS or care-record access."""
 
+    def _query_message(self, message: str, *, raw_user_message: str | None = None) -> str:
+        return _text(raw_user_message) or _text(message)
+
+    def _try_instant_fast_answer(self, user_message: str) -> str | None:
+        lower = _text(user_message).lower()
+        if re.fullmatch(
+            r"(hi|hello|hey|yo|thanks|thank you|thankyou|good morning|good afternoon|good evening)"
+            r"(\s+there|\s+orb)?[!?.]*",
+            lower,
+        ):
+            return INSTANT_FAST_GREETING_ANSWER
+        if re.search(r"what can you do|how can you help|what do you do", lower) and len(lower.split()) <= 12:
+            return INSTANT_FAST_GREETING_ANSWER
+        return None
+
+    def _fast_path_context_used(self, *, mode: str | None = None) -> dict[str, Any]:
+        return {
+            "surface": "standalone_orb_ai",
+            "os_linked": False,
+            "care_record_access": False,
+            "prompt_tier": "fast",
+            "cognition_display_labels": ["ORB"],
+        }
+
     def detect_document_intent(
         self,
         message: str,
@@ -191,6 +220,31 @@ class OrbGeneralAssistantService:
         profile_context: bool = False,
         has_images: bool = False,
     ) -> dict[str, Any]:
+        prompt_tier = orb_knowledge_retrieval_service.resolve_prompt_tier(
+            message,
+            mode=mode,
+            profile_context=profile_context,
+            attachments=["image"] if has_images else None,
+        )
+        if prompt_tier == "fast" and not has_images:
+            bundle = orb_knowledge_retrieval_service.prepare_request_bundle(
+                message,
+                mode=mode,
+                profile_context=profile_context,
+            )
+            classification = bundle["classification"]
+            return {
+                "classification": classification,
+                "source_packs": bundle["source_packs"],
+                "document_results": [],
+                "citations": [],
+                "sources": [],
+                "grounding_context": bundle["grounding_context"],
+                "research_note": None,
+                "routing_hint": classification.get("routing_hint"),
+                "top_source_titles": [],
+                "prompt_tier": "fast",
+            }
         try:
             rag = orb_rag_retrieval_service.retrieve_for_conversation(
                 message,
@@ -237,6 +291,13 @@ class OrbGeneralAssistantService:
             }
 
         classification = rag["classification"]
+        tier = orb_knowledge_retrieval_service.resolve_prompt_tier(
+            message,
+            mode=mode,
+            classification=classification,
+            profile_context=profile_context,
+            attachments=["image"] if has_images else None,
+        )
         return {
             "classification": classification,
             "source_packs": rag["source_packs"],
@@ -247,6 +308,7 @@ class OrbGeneralAssistantService:
             "research_note": classification.get("research_note"),
             "routing_hint": classification.get("routing_hint"),
             "top_source_titles": rag.get("top_source_titles") or [],
+            "prompt_tier": tier,
         }
 
     async def answer(
@@ -265,7 +327,7 @@ class OrbGeneralAssistantService:
     ) -> dict[str, Any]:
         started = time.perf_counter()
         images = image_data_urls or []
-        user_message = _text(raw_user_message) or message
+        user_message = self._query_message(message, raw_user_message=raw_user_message)
         profile_block = "standalone context profiles" in message.lower() or profile_context
 
         has_document = bool(_text(document_text) or document_source_id)
@@ -334,10 +396,24 @@ class OrbGeneralAssistantService:
                 )
                 return result
 
+        if not images:
+            instant = self._try_instant_fast_answer(user_message)
+            if instant is not None:
+                result = {
+                    "answer": _finalize_standalone_answer(instant, message=user_message, mode=mode),
+                    "sources": [],
+                    "citations": [],
+                    "context_used": self._fast_path_context_used(mode=mode),
+                    "tools_used": ["standalone_orb_fast_path"],
+                    "internal_data_access": False,
+                }
+                _track_standalone_governance(result, message=user_message)
+                return result
+
         retrieval = self.prepare_retrieval(
-            message,
+            user_message,
             mode=mode,
-            profile_context=profile_context or "standalone context profiles" in message.lower(),
+            profile_context=profile_context or profile_block,
             has_images=bool(images),
         )
         try:
@@ -726,10 +802,28 @@ class OrbGeneralAssistantService:
         """Stream answer text deltas. Populates stream_meta with final assistant payload fields."""
         meta = stream_meta if stream_meta is not None else {}
         images = image_data_urls or []
-        user_message = _text(raw_user_message) or message
+        user_message = self._query_message(message, raw_user_message=raw_user_message)
         profile_block = "standalone context profiles" in message.lower() or profile_context
         has_document = bool(_text(document_text) or document_source_id)
         doc_intent = self.detect_document_intent(user_message, has_document=has_document)
+
+        if not images and not has_document:
+            instant = self._try_instant_fast_answer(user_message)
+            if instant is not None:
+                resolved = _finalize_standalone_answer(instant, message=user_message, mode=mode)
+                meta.update(
+                    {
+                        "answer": resolved,
+                        "sources": [],
+                        "citations": [],
+                        "context_used": self._fast_path_context_used(mode=mode),
+                        "tools_used": ["standalone_orb_fast_path"],
+                        "internal_data_access": False,
+                    }
+                )
+                async for delta in self._yield_answer_chunks(resolved):
+                    yield delta
+                return
 
         if doc_intent.get("suggested") and doc_intent.get("needs_document"):
             result = {
@@ -796,7 +890,7 @@ class OrbGeneralAssistantService:
                 return
 
         retrieval = self.prepare_retrieval(
-            message,
+            user_message,
             mode=mode,
             profile_context=profile_context or profile_block,
             has_images=bool(images),
@@ -813,10 +907,11 @@ class OrbGeneralAssistantService:
         parts: list[str] = []
         decision = None
         trace = None
+        llm_user_message = user_message if retrieval.get("prompt_tier") == "fast" else message
 
         try:
             async for delta, routed_decision, routed_trace in ai_model_router_service.stream_with_routing(
-                message=message,
+                message=llm_user_message,
                 system_prompt=system,
                 history=history or [],
                 images=images,
@@ -841,21 +936,26 @@ class OrbGeneralAssistantService:
             ) if decision and trace else {}
             resolved = _finalize_standalone_answer(
                 answer_text,
-                message=message,
+                message=user_message,
                 mode=mode,
             )
-            resolved = append_sources_basis_section(resolved, retrieval["sources"], message=message, mode=mode)
+            resolved = append_sources_basis_section(
+                resolved, retrieval["sources"], message=user_message, mode=mode
+            )
+            context_used = self._retrieval_context_used(
+                retrieval,
+                model_routing=model_routing,
+                user_message=user_message,
+                mode=mode,
+            )
+            if retrieval.get("prompt_tier"):
+                context_used["prompt_tier"] = retrieval["prompt_tier"]
             meta.update(
                 {
                     "answer": resolved,
                     "sources": retrieval["sources"],
                     "citations": retrieval["citations"],
-                    "context_used": self._retrieval_context_used(
-                        retrieval,
-                        model_routing=model_routing,
-                        user_message=message,
-                        mode=mode,
-                    ),
+                    "context_used": context_used,
                     "tools_used": ["standalone_orb_general_assistant", "ai_model_router"],
                     "internal_data_access": False,
                     "image_understanding_available": bool(images) and bool(answer_text),

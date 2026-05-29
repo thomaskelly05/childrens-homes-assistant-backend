@@ -5,6 +5,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
 import { OrbInlineCitation } from '@/components/orb-standalone/orb-inline-citation'
+import { normaliseOrbMarkdown } from '@/lib/orb/orb-markdown-normalise'
 import type { StandaloneOrbSource } from '@/lib/orb/standalone-local-store'
 
 const CITE_PREFIX = '#orb-cite:'
@@ -102,7 +103,7 @@ function buildMarkdownComponents(sources?: StandaloneOrbSource[]): Components {
 export function OrbMarkdownAnswer({ content, sources }: { content: string; sources?: StandaloneOrbSource[] }) {
   if (!content.trim()) return null
 
-  const prepared = encodeInlineCitations(content)
+  const prepared = encodeInlineCitations(normaliseOrbMarkdown(content))
 
   return (
     <div className="orb-markdown-answer" data-orb-markdown-answer>

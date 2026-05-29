@@ -384,6 +384,34 @@ class OrbGroundedAnswerStyleService:
         text = str(message or "").lower()
         return any(term in text for term in self.SAFEGUARDING_CLOSER_RISK_TERMS)
 
+    def _is_casual_or_greeting(self, message: str) -> bool:
+        text = re.sub(r"\s+", " ", str(message or "").strip().lower())
+        if not text:
+            return True
+        if re.fullmatch(
+            r"(hi|hello|hey|thanks|thank you|thankyou|yo|good morning|good afternoon|good evening)"
+            r"(\s+there|\s+orb)?[!?.]*",
+            text,
+        ):
+            return True
+        if re.fullmatch(
+            r"(what can you do|what do you do|how can you help|help|what are you)\??",
+            text,
+        ):
+            return True
+        if any(
+            phrase in text
+            for phrase in (
+                "what is indicare",
+                "tell me about indicare",
+                "what is orb",
+                "about orb",
+                "care companion",
+            )
+        ):
+            return True
+        return False
+
     def _topic_closer(self, topic: str | None, *, message: str) -> str | None:
         if not topic:
             return None
@@ -393,6 +421,10 @@ class OrbGroundedAnswerStyleService:
             return self.TOPIC_CLOSERS.get("leadership")
         if topic in self.TOPIC_CLOSERS:
             return self.TOPIC_CLOSERS.get(topic)
+        if topic == "restraint" and not self._safeguarding_closer_indicated(message):
+            return (
+                "\n\nUse your home's policy and manager oversight where required."
+            )
         if topic in self.HIGH_ATTENTION_CLOSER_TOPICS:
             return self.SAFE_BOUNDARY_CLOSER if self._safeguarding_closer_indicated(message) else None
         return None
@@ -413,13 +445,27 @@ class OrbGroundedAnswerStyleService:
         text = str(answer or "").strip()
         if not text:
             return text
+        casual = self._is_casual_or_greeting(message)
         topic = orb_professional_curiosity_service.detect_topic(message, mode=mode)
         safeguarding_risk = self._safeguarding_closer_indicated(message)
         no_boundary_topic = topic in self.THERAPEUTIC_NO_BOUNDARY_TOPICS and not safeguarding_risk
         high_attention = topic in self.HIGH_ATTENTION_CLOSER_TOPICS or topic in orb_professional_curiosity_service.HIGH_ATTENTION_TOPICS
+        cleaned = text
+        if casual:
+            for pattern in self.THRESHOLD_BOUNDARY_CLOSER_PATTERNS:
+                cleaned = pattern.sub("", cleaned).rstrip()
+            for pattern in self.GENERIC_CLOSER_PATTERNS:
+                cleaned = pattern.sub("", cleaned).rstrip()
+            if "threshold decision should remain human-led" in cleaned.lower():
+                cleaned = re.sub(
+                    r"\n+ORB can support your thinking[\s\S]*?(?=\n\n|\Z)",
+                    "",
+                    cleaned,
+                    flags=re.I,
+                ).rstrip()
+            return cleaned
         if not high_attention and not no_boundary_topic:
             return text
-        cleaned = text
         if no_boundary_topic:
             for pattern in self.THRESHOLD_BOUNDARY_CLOSER_PATTERNS:
                 cleaned = pattern.sub("", cleaned).rstrip()

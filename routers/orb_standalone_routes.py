@@ -119,10 +119,11 @@ def _build_standalone_request_context(payload: OrbStandaloneConversationRequest)
             "surface": "standalone_orb",
             "mode": mode,
             "active_brains": ["general_assistant"],
-            "cognition_display_labels": ["General knowledge"],
-            "explainability": {"cognition_display_labels": ["General knowledge"]},
+            "cognition_display_labels": ["ORB"],
+            "explainability": {"cognition_display_labels": ["ORB"]},
             "citations": [],
             "prompt_blocks": [],
+            "skipped": True,
         }
         shared_runtime_block = ""
     else:
@@ -986,6 +987,8 @@ async def standalone_orb_conversation_stream(
                 "total_elapsed_ms": total_elapsed_ms,
                 "elapsed_ms": total_elapsed_ms,
                 "retrieval_elapsed_ms": retrieval_bundle.get("retrieval_elapsed_ms"),
+                "shared_cognition_elapsed_ms": 0 if shared_cognition.get("skipped") else None,
+                "shared_cognition_skipped": bool(shared_cognition.get("skipped")),
                 "prompt_tier": prompt_tier,
                 "prompt_char_estimate": len(framed_message),
                 "grounding_char_count": retrieval_bundle.get("grounding_char_count"),

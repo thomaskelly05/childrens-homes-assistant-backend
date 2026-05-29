@@ -190,9 +190,47 @@ export type CognitionPillContext = {
     cognition_display_labels?: string[]
     active_brains?: string[]
     depth_topic?: string
+    prompt_tier?: string
     explainability?: CognitionPillExplainability
   }
   cognition_display_labels?: string[]
+  prompt_tier?: string
+}
+
+const CASUAL_GREETING_RE =
+  /^(hi|hello|hey|thanks|thank you|what can you do|how can you help|help)[!.?\s]*$/i
+
+function isCasualGreeting(messageHint?: string): boolean {
+  const text = (messageHint || '').trim()
+  if (!text) return false
+  return CASUAL_GREETING_RE.test(text)
+}
+
+function filterLabelsForMessage(labels: string[], messageHint?: string, promptTier?: string): string[] {
+  if (promptTier === 'fast' || isCasualGreeting(messageHint)) {
+    return ['ORB']
+  }
+  if (!messageHint?.trim()) {
+    return labels
+  }
+  const text = messageHint.trim().toLowerCase()
+  const safeguarding = /\b(safeguard|abuse|allegation|exploit|missing|self-harm|self harm|lado)\b/.test(text)
+  const ofsted = /\b(ofsted|sccif|inspection|reg 44|reg 45)\b/.test(text)
+  const recording = /\b(record|recording|restraint|incident|wording|note)\b/.test(text)
+  const filtered = labels.filter((label) => {
+    const lower = label.trim().toLowerCase()
+    if (lower === 'chronology' && !/\bchronolog/.test(text)) return false
+    if (lower === 'safeguarding' && !safeguarding) return false
+    if (lower.includes('ofsted') && !ofsted && !safeguarding) return false
+    if (lower === 'automatic routing') return false
+    return true
+  })
+  if (!filtered.length && (recording || safeguarding || ofsted)) {
+    if (safeguarding) return ['Safeguarding', 'Recording quality']
+    if (ofsted) return ['Ofsted evidence', 'Leadership oversight']
+    if (recording) return ['Recording quality']
+  }
+  return filtered
 }
 
 function labelsFromBrains(activeBrains: string[] | undefined, topicLabels: string[] | null): string[] | null {
@@ -292,8 +330,14 @@ export function cognitionPillLabel(
   context?: CognitionPillContext
 ): string {
   const modeLower = mode.trim().toLowerCase()
+  const promptTier = String(
+    context?.prompt_tier || context?.context_used?.prompt_tier || ''
+  ).trim()
+  if (promptTier === 'fast' || isCasualGreeting(messageHint)) {
+    return 'ORB'
+  }
   const resolvedLabels = collectCognitionDisplayLabels(explainability, context, messageHint)
-  const autoLabels = filterAutoRouteLabels(resolvedLabels, mode)
+  const autoLabels = filterLabelsForMessage(filterAutoRouteLabels(resolvedLabels, mode), messageHint, promptTier)
   if (autoLabels.length) {
     return autoLabels.join(' · ')
   }
@@ -309,12 +353,13 @@ export function cognitionPillLabel(
   }
   const inferred = inferResidentialCognitionLabels(messageHint)
   if (inferred?.length) {
-    return filterAutoRouteLabels(inferred, mode).join(' · ') || inferred.join(' · ')
+    const filtered = filterLabelsForMessage(filterAutoRouteLabels(inferred, mode), messageHint, promptTier)
+    return filtered.join(' · ') || filtered[0] || 'ORB'
   }
   if (messageHint && RESIDENTIAL_COGNITION_HINT.test(messageHint)) {
     return 'Residential practice'
   }
-  return 'Automatic routing'
+  return 'ORB'
 }
 
 export function isAutomaticRoutingOnlyLabel(label: string): boolean {

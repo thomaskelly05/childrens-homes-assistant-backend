@@ -173,6 +173,32 @@ class OrbKnowledgeRetrievalService:
         if mode_name in DEEP_SAFETY_MODES:
             return "deep"
         if any(term in lower for term in HIGH_RISK_TERMS):
+            if "restraint" in lower and any(
+                phrase in lower
+                for phrase in (
+                    "record",
+                    "recording",
+                    "write",
+                    "wording",
+                    "note",
+                    "log",
+                    "what do i",
+                    "what should i",
+                )
+            ):
+                if not any(
+                    marker in lower
+                    for marker in (
+                        "injury",
+                        "hurt",
+                        "hospital",
+                        "abuse",
+                        "allegation",
+                        "serious",
+                        "escalat",
+                    )
+                ):
+                    return "residential"
             return "deep"
         if mode_name in RESIDENTIAL_PROMPT_MODES:
             return "residential"
@@ -224,13 +250,16 @@ class OrbKnowledgeRetrievalService:
             profile_context=profile_context,
             attachments=attachments,
         )
-        packs = self.retrieve_sources(
-            message,
-            mode=mode,
-            profile_context=profile_context,
-            attachments=attachments,
-            classification=classification,
-        )
+        if prompt_tier == "fast":
+            packs: list[dict[str, Any]] = []
+        else:
+            packs = self.retrieve_sources(
+                message,
+                mode=mode,
+                profile_context=profile_context,
+                attachments=attachments,
+                classification=classification,
+            )
         max_modules = {"fast": 0, "residential": 3, "deep": 8}.get(prompt_tier, 3)
         if max_modules:
             spine = self.retrieve_knowledge_spine(message, mode=mode, max_modules=max_modules)

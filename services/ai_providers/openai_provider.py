@@ -21,6 +21,13 @@ def _text(value: Any) -> str:
     return str(value or "").strip()
 
 
+def _stream_delta(value: Any) -> str:
+    """Preserve leading/trailing spaces inside streamed token chunks."""
+    if value is None:
+        return ""
+    return str(value)
+
+
 def _default_timeout() -> float:
     try:
         return float(os.getenv("OPENAI_TIMEOUT_SECONDS", "45"))
@@ -132,7 +139,7 @@ class OpenAiProvider(AiProviderBase):
                 if not chunk.choices:
                     continue
                 delta = chunk.choices[0].delta
-                content = _text(getattr(delta, "content", None))
+                content = _stream_delta(getattr(delta, "content", None))
                 if content:
                     yield content
         except Exception as exc:
