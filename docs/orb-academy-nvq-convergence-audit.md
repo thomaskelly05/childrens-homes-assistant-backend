@@ -3,6 +3,8 @@
 **Date:** 2026-05-29  
 **Scope:** Converge existing IndiCare Academy / qualification / workforce learning assets into standalone `/orb` without a second ORB UI or live OS record access.
 
+**Expert stress-test (2026-05-29):** Gold scenarios `GOLD-098`–`GOLD-100` and family `nvq_reflective_restraint` / `academy_nvq_source_pack` support NVQ authenticity evaluation. See `docs/orb-residential-expert-stress-test-pack.md`.
+
 ---
 
 ## 1. Existing Academy backend services

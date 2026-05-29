@@ -5,6 +5,8 @@
 
 Standalone ORB must never imply access to live IndiCare OS child, home, staff, chronology, or care records. Memory = profile, projects, user-provided context, and local chat history only.
 
+**Expert stress-test pack (2026-05-29):** 100 gold scenarios, modifier matrix, source citation registry, evaluator, and CLI runners — `docs/orb-residential-expert-stress-test-pack.md`, `docs/orb-source-citation-registry.md`. No second UI; strengthens `/orb` expertise over time.
+
 ---
 
 ## 1. Current ORB features found (working on `/orb`)
