@@ -77,6 +77,15 @@ export type StandaloneChatMessage = {
   /** Display title for structured outputs (policy card, Reg 44, etc.). */
   outputTitle?: string
   documentTitle?: string
+  /** Context for answer feedback / improvement loop (standalone-safe). */
+  feedbackContext?: {
+    prompt_tier?: string
+    detected_family?: string
+    secondary_families?: string[]
+    source_anchors?: string[]
+    action_id?: string
+    document_lens?: string
+  }
 }
 
 export type StandaloneProject = {

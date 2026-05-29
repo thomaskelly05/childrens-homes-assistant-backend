@@ -36,6 +36,10 @@ For recognised situations the engine builds a compact packet:
 
 Uses human practice brain profiles for support worker, RM, RI, Reg 44, NVQ assessor/learner, etc. Answer shape hints prioritise what that role needs on shift.
 
+## Feedback loop (review-only)
+
+Downvotes with reasons such as `missed_safeguarding`, `incorrect_source`, or `missed_nvq_learning` can produce **improvement candidates** (expected markers, source anchors, role-lens issues) via `orb_feedback_improvement_service.generate_improvement_candidates()`. Candidates always have `review_required: true` — the scenario bank is not auto-edited from a single user's feedback. See `docs/orb-feedback-learning-loop.md`.
+
 ## Citations
 
 Registry payloads include `why_cited`, `source_url`, `exact_text_available`, `basis_type`, `source_title`, `source_type`, `confidence`. Frontend popovers consume the same shape as the citation decision engine.

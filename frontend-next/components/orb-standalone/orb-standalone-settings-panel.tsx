@@ -255,10 +255,14 @@ export function OrbStandaloneSettingsPanel({
               <div className="rounded-xl border border-[var(--orb-line)] bg-[var(--orb-surface)] px-3 py-2.5" data-orb-settings-privacy>
                 <p className="flex items-center gap-2 text-[11px] font-medium text-[var(--orb-foreground)]">
                   <Shield className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                  Standalone boundary
+                  How ORB protects your data
                 </p>
-                <p className="mt-1 text-[11px] leading-5 text-[var(--orb-muted)]">
-                  Standalone ORB does not access IndiCare OS child, home, staff, chronology or care records.
+                <p className="mt-1 text-[11px] leading-5 text-[var(--orb-muted)]" data-orb-settings-data-safety>
+                  Standalone ORB does not access IndiCare OS child, home, staff, chronology or care records. ORB
+                  only uses what you type, upload, save or submit as feedback here. Temporary chat skips saved profile
+                  context for that chat. AI providers process the text you send — not live OS records. Use initials
+                  where you can. Feedback improves ORB through human review; it does not make automatic care
+                  decisions. For permissioned OS context, use IndiCare OS ORB at /assistant/orb.
                 </p>
               </div>
             </SettingsBlock>

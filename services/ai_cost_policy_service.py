@@ -6,6 +6,46 @@ from schemas.ai_models import AiCostTier, AiQualityTier, AiRiskLevel, AiTaskType
 class AiCostPolicyService:
     """Cost and quality tier policy for standalone ORB model routing."""
 
+    PROMPT_TIER_COST: dict[str, AiCostTier] = {
+        "fast": AiCostTier.LOW,
+        "residential": AiCostTier.STANDARD,
+        "deep": AiCostTier.PREMIUM,
+        "document": AiCostTier.STANDARD,
+        "action": AiCostTier.LOW,
+        "academy_nvq": AiCostTier.STANDARD,
+    }
+
+    PROMPT_TIER_QUALITY: dict[str, AiQualityTier] = {
+        "fast": AiQualityTier.FAST,
+        "residential": AiQualityTier.BALANCED,
+        "deep": AiQualityTier.HIGH,
+        "document": AiQualityTier.BALANCED,
+        "action": AiQualityTier.BALANCED,
+        "academy_nvq": AiQualityTier.BALANCED,
+    }
+
+    def tier_from_prompt_tier(self, prompt_tier: str | None) -> tuple[AiCostTier | None, AiQualityTier | None]:
+        key = str(prompt_tier or "").strip().lower()
+        if not key:
+            return None, None
+        return self.PROMPT_TIER_COST.get(key), self.PROMPT_TIER_QUALITY.get(key)
+
+    def max_tokens_for_prompt_tier(self, prompt_tier: str | None, detail_level: str = "concise") -> int | None:
+        tier = str(prompt_tier or "").strip().lower()
+        if tier == "fast":
+            return 900
+        if tier == "deep":
+            return 1500
+        if tier == "document":
+            return 1400
+        if tier == "action":
+            return 1100
+        if tier == "academy_nvq":
+            return 1300
+        if detail_level in {"detailed", "detailed_voice"}:
+            return 1600
+        return None
+
     def classify_cost_tier(
         self,
         task_type: AiTaskType,

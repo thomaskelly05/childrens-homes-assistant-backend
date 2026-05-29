@@ -407,6 +407,7 @@ class OrbGeneralAssistantService:
         document_source_id: str | None = None,
         document_title: str | None = None,
         raw_user_message: str | None = None,
+        user: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         started = time.perf_counter()
         images = image_data_urls or []
@@ -481,6 +482,22 @@ class OrbGeneralAssistantService:
                 return result
 
         if not images:
+            from services.orb_local_response_service import orb_local_response_service
+
+            local = orb_local_response_service.try_local_response(user_message, mode=mode)
+            if local is not None:
+                result = {
+                    "answer": _finalize_standalone_answer(local["answer"], message=user_message, mode=mode),
+                    "sources": local.get("sources") or [],
+                    "citations": local.get("citations") or [],
+                    "context_used": local.get("context_used") or self._fast_path_context_used(mode=mode),
+                    "tools_used": ["standalone_orb_local_template"],
+                    "internal_data_access": False,
+                    "no_llm": True,
+                }
+                _track_standalone_governance(result, message=user_message)
+                return result
+
             instant = self._try_instant_fast_answer(user_message)
             if instant is not None:
                 result = {
@@ -490,6 +507,66 @@ class OrbGeneralAssistantService:
                     "context_used": self._fast_path_context_used(mode=mode),
                     "tools_used": ["standalone_orb_fast_path"],
                     "internal_data_access": False,
+                    "no_llm": True,
+                }
+                _track_standalone_governance(result, message=user_message)
+                return result
+
+        pre_tier = orb_knowledge_retrieval_service.resolve_prompt_tier(
+            user_message,
+            mode=mode,
+            profile_context=profile_context or profile_block,
+            attachments=["image"] if images else None,
+        )
+        if user and not images:
+            from services.orb_local_response_service import orb_local_response_service
+            from services.orb_usage_budget_service import orb_usage_budget_service
+
+            budget = orb_usage_budget_service.check_budget(
+                user_id=int(user["id"]) if user.get("id") is not None else None,
+                user=user,
+                prompt_tier=pre_tier,
+                risk_level=ai_model_router_service.classify_risk(user_message, mode=mode),
+            )
+            if budget.level == "hard" and not budget.allowed:
+                limited = orb_local_response_service.budget_limited_response(
+                    safeguarding=False,
+                    message=user_message,
+                    mode=mode,
+                )
+                result = {
+                    "answer": limited["answer"],
+                    "sources": [],
+                    "citations": [],
+                    "context_used": {
+                        **(limited.get("context_used") or {}),
+                        "usage_limit": "hard",
+                        "budget_message": budget.message,
+                    },
+                    "tools_used": ["standalone_orb_budget_guard"],
+                    "internal_data_access": False,
+                    "no_llm": True,
+                }
+                _track_standalone_governance(result, message=user_message)
+                return result
+            if budget.use_safeguarding_template and budget.message:
+                result = {
+                    "answer": budget.message,
+                    "sources": [],
+                    "citations": [],
+                    "context_used": {
+                        "surface": "standalone_orb",
+                        "prompt_tier": "deep",
+                        "usage_limit": "hard_safeguarding_fallback",
+                        "model_routing": {
+                            "provider": "local",
+                            "model": "safety_template",
+                            "task_type": "safeguarding_reflection",
+                        },
+                    },
+                    "tools_used": ["standalone_orb_safeguarding_budget_fallback"],
+                    "internal_data_access": False,
+                    "no_llm": True,
                 }
                 _track_standalone_governance(result, message=user_message)
                 return result

@@ -9,6 +9,8 @@ Standalone ORB must never imply access to live IndiCare OS child, home, staff, c
 
 **Live expert answer engine (2026-05-29):** Scenario families now drive `/orb` grounding, citations, action engine packets, document lenses, and `context_used.expert_answer_engine` metadata — `docs/orb-expert-answer-engine.md`.
 
+**Feedback + cost control (2026-05-29):** Thumbs up/down on completed answers (`POST /orb/standalone/feedback`), review-only improvement candidates, data-safety Help/Settings copy, usage budgets and local templates — `docs/orb-feedback-learning-loop.md`, `docs/orb-data-safety-and-privacy.md`, `docs/orb-cost-control-strategy.md`.
+
 ---
 
 ## 1. Current ORB features found (working on `/orb`)

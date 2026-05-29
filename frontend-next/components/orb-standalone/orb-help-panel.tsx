@@ -56,6 +56,11 @@ const SECTIONS = [
     body: 'Organise chats in projects, save useful outputs from the Library, and reuse them in new conversations. Saved outputs live under Library and Tools.'
   },
   {
+    title: 'How ORB protects your data',
+    body:
+      'Standalone ORB does not access IndiCare OS child, home, staff, chronology or care records. ORB only uses what you type, upload, choose to save or submit as feedback in standalone ORB. Temporary chat skips your saved ORB profile context for that chat. ORB may use trusted AI providers to generate responses — they process the text you send, not live OS records. Avoid unnecessary personal details; use initials where you can. Saved outputs and feedback are stored so you can reuse them and so ORB can improve through human review — not automatic care decisions. IndiCare OS ORB (/assistant/orb) may use permissioned OS records only where explicitly available and allowed.'
+  },
+  {
     title: 'Privacy and data',
     body: 'Chats and profiles are stored on this device unless you export them. Standalone ORB does not send child records to IndiCare OS without the operational assistant.'
   },
