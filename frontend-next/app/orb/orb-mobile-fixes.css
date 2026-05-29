@@ -85,6 +85,7 @@
   .orb-chat-thread {
     padding-left: 1rem !important;
     padding-right: 1rem !important;
+    padding-top: 0.75rem !important;
     padding-bottom: calc(11.5rem + env(safe-area-inset-bottom, 0px)) !important;
   }
 
@@ -96,9 +97,25 @@
     min-width: 0 !important;
   }
 
+  [data-orb-empty-state] {
+    justify-content: flex-start !important;
+    min-height: auto !important;
+    padding-top: 0.5rem !important;
+    padding-bottom: 1.25rem !important;
+  }
+
+  [data-orb-empty-title] {
+    margin-top: 0 !important;
+  }
+
+  [data-orb-empty-heading] {
+    margin-top: 1.25rem !important;
+  }
+
   [data-orb-starter-cards] {
     display: grid !important;
     grid-template-columns: 1fr !important;
+    margin-top: 1.25rem !important;
   }
 
   .orb-starter-card {
@@ -123,6 +140,7 @@
     max-width: 100vw !important;
     padding-left: 0.75rem !important;
     padding-right: 0.75rem !important;
+    padding-top: 0.75rem !important;
     padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px)) !important;
     overflow-x: hidden !important;
   }
@@ -153,10 +171,40 @@
   .orb-chat-thread {
     padding-left: 0.875rem !important;
     padding-right: 0.875rem !important;
+    padding-top: 0.5rem !important;
   }
 
   .orb-composer-dock {
     padding-left: 0.625rem !important;
     padding-right: 0.625rem !important;
+  }
+
+  [data-orb-empty-state] {
+    padding-top: 0.25rem !important;
+  }
+
+  [data-orb-empty-heading] {
+    margin-top: 1rem !important;
+    font-size: 1.15rem !important;
+    line-height: 1.35 !important;
+  }
+
+  [data-orb-empty-subline] {
+    margin-top: 0.4rem !important;
+    font-size: 0.82rem !important;
+    line-height: 1.45 !important;
+  }
+
+  .orb-empty-brand-title {
+    font-size: 1.55rem !important;
+  }
+
+  .orb-empty-brand-powered {
+    font-size: 0.55rem !important;
+  }
+
+  .orb-starter-card {
+    padding: 0.825rem 1rem !important;
+    font-size: 0.875rem !important;
   }
 }
