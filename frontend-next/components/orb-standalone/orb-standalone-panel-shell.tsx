@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect } from 'react'
 import { X } from 'lucide-react'
 import type { ReactNode } from 'react'
 
@@ -12,7 +13,8 @@ export function OrbStandalonePanelShell({
   footer,
   ariaLabel,
   panelId,
-  wide
+  wide,
+  layout = 'drawer'
 }: {
   open: boolean
   title: string
@@ -24,24 +26,45 @@ export function OrbStandalonePanelShell({
   /** Marker for tests: data-orb-panel-shell={panelId} */
   panelId?: string
   wide?: boolean
+  layout?: 'drawer' | 'center'
 }) {
+  useEffect(() => {
+    if (!open) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [open, onClose])
+
   if (!open) return null
+
+  const isCenter = layout === 'center'
 
   return (
     <div
-      className="orb-panel-overlay fixed inset-0 z-[65] flex justify-end"
+      className={`orb-panel-overlay fixed inset-0 z-[65] flex bg-black/40 backdrop-blur-sm ${
+        isCenter ? 'items-center justify-center p-4' : 'justify-end'
+      }`}
       role="dialog"
       aria-modal="true"
       aria-label={ariaLabel || title}
       data-orb-panel-shell={panelId || 'panel'}
+      data-orb-panel-layout={layout}
       onClick={(event) => {
         if (event.target === event.currentTarget) onClose()
       }}
     >
       <div
-        className={`orb-panel-drawer flex h-full w-full flex-col border-l border-[var(--orb-line)] bg-[var(--orb-surface)] shadow-2xl max-md:max-h-[100dvh] md:max-h-[100dvh] ${
-          wide ? 'max-w-4xl' : 'max-w-xl'
-        }`}
+        className={
+          isCenter
+            ? `orb-panel-modal flex max-h-[min(88dvh,42rem)] w-full flex-col overflow-hidden rounded-2xl border border-[var(--orb-line)] bg-[var(--orb-surface)] shadow-2xl ${
+                wide ? 'max-w-3xl' : 'max-w-lg'
+              }`
+            : `orb-panel-drawer flex h-full w-full flex-col border-l border-[var(--orb-line)] bg-[var(--orb-surface)] shadow-2xl max-md:max-h-[100dvh] md:max-h-[100dvh] ${
+                wide ? 'max-w-4xl' : 'max-w-xl'
+              }`
+        }
         onClick={(event) => event.stopPropagation()}
       >
         <header className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--orb-line)] px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">

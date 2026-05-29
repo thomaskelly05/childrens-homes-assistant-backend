@@ -7,6 +7,17 @@ from typing import Any
 
 from services.orb_knowledge_source_pack_service import ORB_KNOWLEDGE_SOURCE_PACKS
 
+WHY_CITED_BY_LABEL: dict[str, str] = {
+    "reg 12": "Relevant to safeguarding, risk response and protecting children from harm.",
+    "reg 13": "Relevant to manager oversight, review and follow-up.",
+    "sccif": "Relevant to how inspectors consider children's experiences, safety, progress and leadership impact.",
+    "recording quality": "Relevant to factual, child-centred recording and evidence trail.",
+    "safeguarding": "Relevant to protecting children, escalation and professional curiosity.",
+    "quality standards": "Relevant to children's home practice expectations and outcomes for children.",
+    "lado": "Relevant to allegations against adults working with children and consultation routes.",
+    "working together": "Relevant to multi-agency safeguarding and information-sharing duties.",
+}
+
 TYPE_BASIS_MAP: dict[str, str] = {
     "product_context": "Built-in product-level knowledge",
     "regulatory_framework": "Built-in regulatory and inspection framework knowledge",
@@ -42,12 +53,18 @@ class OrbCitationService:
             basis = TYPE_BASIS_MAP.get(source_type, "Built-in knowledge")
             if official:
                 basis = f"Official source summary — {basis}"
+            label = _text(pack.get("short_citation_label") or pack.get("source_label"))
+            label_key = label.lower().strip("[]")
+            why_cited = WHY_CITED_BY_LABEL.get(label_key) or WHY_CITED_BY_LABEL.get(
+                label_key.replace("regulation ", "reg ")
+            )
             citations.append(
                 {
                     "id": _text(pack.get("id")) or _text(pack.get("pack_key")),
-                    "label": _text(pack.get("short_citation_label") or pack.get("source_label")),
+                    "label": label,
                     "type": source_type,
                     "basis": basis,
+                    "why_cited": why_cited,
                     "note": _text(pack.get("guidance_notes") or pack.get("description")),
                     "live_retrieved": bool(pack.get("live_retrieved")),
                     "official_source": official,

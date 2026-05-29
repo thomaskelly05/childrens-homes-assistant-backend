@@ -70,11 +70,25 @@ describe('ORB ChatGPT UI structure', () => {
     assert.match(routeCss, /orb-action-chip/)
   })
 
-  it('empty state hides composer suggestion chips (no duplicate prompt rows)', () => {
+  it('active chat hides composer suggestion chips (starters only on empty state)', () => {
     const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
-    assert.match(companion, /suggestions=\{showEmptyState \? undefined : suggestionsForMode\(mode\)\}/)
+    assert.match(companion, /suggestions=\{undefined\}/)
     assert.match(companion, /data-orb-starter-cards/)
+    assert.match(companion, /contextualSuggestedReplies/)
     assert.doesNotMatch(companion, /OrbSmartSuggestions/)
+  })
+
+  it('uses near-bottom scroll container for streaming', () => {
+    const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
+    assert.match(companion, /scrollContainerRef/)
+    assert.match(companion, /data-orb-chat-scroll-container/)
+    assert.match(companion, /isNearBottomRef/)
+  })
+
+  it('urgent safeguarding banner is context gated', () => {
+    const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
+    assert.match(companion, /data-orb-safeguarding-urgent-banner/)
+    assert.match(companion, /safeguardingBannerTextFromMessages/)
   })
 
   it('header does not duplicate full sidebar controls', () => {

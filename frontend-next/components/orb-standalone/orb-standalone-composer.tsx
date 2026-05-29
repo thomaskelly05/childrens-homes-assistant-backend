@@ -385,20 +385,30 @@ export function OrbStandaloneComposer({
                 <button
                   type="button"
                   onClick={onMicClick}
-                  disabled={voiceCaptureEnabled && !voiceRecognitionAvailable}
+                  disabled={!voiceCaptureEnabled || !voiceRecognitionAvailable}
                   aria-label={
-                    voiceCaptureEnabled
-                      ? voiceListening
-                        ? 'Stop listening'
-                        : 'Start voice input'
-                      : 'Voice mode coming next'
+                    !voiceCaptureEnabled
+                      ? 'Voice unavailable'
+                      : !voiceRecognitionAvailable
+                        ? 'Voice input is not available in this browser yet'
+                        : voiceListening
+                          ? 'Stop voice input'
+                          : 'Start voice input'
                   }
-                  className={`inline-flex h-10 min-w-10 shrink-0 items-center justify-center rounded-full transition disabled:opacity-40 ${
+                  title={
+                    !voiceCaptureEnabled || !voiceRecognitionAvailable
+                      ? 'Voice input is not available in this browser yet.'
+                      : voiceListening
+                        ? 'Stop voice input'
+                        : 'Start voice input'
+                  }
+                  className={`inline-flex h-10 min-w-10 shrink-0 items-center justify-center rounded-full transition disabled:cursor-not-allowed disabled:opacity-45 ${
                     voiceListening
                       ? 'bg-sky-100 text-sky-700 shadow-sm'
                       : 'bg-white text-slate-500 shadow-sm hover:bg-slate-100 hover:text-slate-900'
                   }`}
                   data-orb-composer-mic
+                  data-orb-composer-mic-available={voiceRecognitionAvailable ? 'true' : 'false'}
                   data-no-navigation-rescue="true"
                 >
                   {voiceListening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}

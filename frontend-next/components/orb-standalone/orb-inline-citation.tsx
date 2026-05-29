@@ -6,11 +6,36 @@ import { ExternalLink } from 'lucide-react'
 import { citationCardForLabel } from '@/lib/orb/citation-cards'
 import type { StandaloneOrbSource } from '@/lib/orb/standalone-local-store'
 
+type ExtendedSource = StandaloneOrbSource & {
+  exact_citation?: string
+  excerpt?: string
+  quote_allowed?: boolean
+  confidence_level?: string
+  official_source?: boolean
+}
+
+function exactExcerptFromSource(source: ExtendedSource): string | null {
+  const excerpt = String(source.excerpt || source.exact_citation || '').trim()
+  if (!excerpt) return null
+  if (source.quote_allowed === false) return null
+  return excerpt
+}
+
 export function OrbInlineCitation({ source }: { source: StandaloneOrbSource }) {
   const [open, setOpen] = useState(false)
+  const extended = source as ExtendedSource
   const anchor = source.label || 'Source'
   const short = anchor.length > 28 ? `${anchor.slice(0, 26)}…` : anchor
   const card = citationCardForLabel(anchor)
+  const exactExcerpt = exactExcerptFromSource(extended)
+  const whyCited =
+    (extended as { why_cited?: string }).why_cited ||
+    card?.whyCited ||
+    source.basis ||
+    'Referenced in this answer as institutional guidance.'
+  const basisLine = exactExcerpt
+    ? null
+    : source.basis || card?.whyItMatters || 'Summary basis from ORB Knowledge Spine unless an exact excerpt is shown.'
 
   return (
     <span className="orb-citation-inline relative inline align-baseline leading-none">
@@ -30,36 +55,43 @@ export function OrbInlineCitation({ source }: { source: StandaloneOrbSource }) {
       {open ? (
         <span
           role="tooltip"
-          className="orb-citation-card absolute bottom-full left-1/2 z-30 mb-2 w-72 -translate-x-1/2 rounded-2xl border border-[#CBD5E1] bg-white p-3.5 text-left shadow-lg"
+          className="orb-citation-card absolute bottom-full left-1/2 z-30 mb-2 w-80 max-w-[min(20rem,calc(100vw-2rem))] -translate-x-1/2 rounded-2xl border border-[#CBD5E1] bg-white p-3.5 text-left shadow-lg"
           data-orb-citation-popover
         >
           <p className="text-sm font-semibold text-[#0F172A]">{card?.title ?? anchor}</p>
-          <p className="mt-2 text-[11px] leading-5 text-[#475569]">
-            {card?.whyItMatters ?? source.basis ?? 'Institutional guidance anchor referenced in this response.'}
-          </p>
+          <div className="mt-2">
+            <p className="orb-citation-section-label text-[9px] font-semibold uppercase tracking-wide">Why cited</p>
+            <p className="mt-0.5 text-[11px] leading-5 text-[#475569]">{whyCited}</p>
+          </div>
+          {exactExcerpt ? (
+            <div className="mt-2.5 rounded-lg border border-[#E2E8F0] bg-[#F8FAFC] px-2.5 py-2">
+              <p className="orb-citation-section-label text-[9px] font-semibold uppercase tracking-wide">Exact excerpt</p>
+              <p className="mt-1 text-[11px] leading-5 text-[#334155]">&ldquo;{exactExcerpt}&rdquo;</p>
+            </div>
+          ) : (
+            <p className="mt-2 text-[10px] font-medium text-[#64748B]" data-orb-citation-summary-basis>
+              Summary basis only — not an exact regulation quote.
+            </p>
+          )}
+          {basisLine && !exactExcerpt ? (
+            <div className="mt-2">
+              <p className="orb-citation-section-label text-[9px] font-semibold uppercase tracking-wide">Source basis</p>
+              <p className="mt-0.5 text-[11px] leading-5 text-[#475569]">{basisLine}</p>
+            </div>
+          ) : null}
           {card?.practicalApplication ? (
             <div className="mt-2.5">
               <p className="orb-citation-section-label text-[9px] font-semibold uppercase tracking-wide">In practice</p>
               <p className="mt-0.5 text-[11px] leading-5 text-[#475569]">{card.practicalApplication}</p>
             </div>
           ) : null}
-          {card?.inspectionMeaning ? (
-            <div className="mt-2">
-              <p className="orb-citation-section-label text-[9px] font-semibold uppercase tracking-wide">Inspection lens</p>
-              <p className="mt-0.5 text-[11px] leading-5 text-[#475569]">{card.inspectionMeaning}</p>
-            </div>
+          {extended.confidence_level ? (
+            <p className="mt-2 text-[10px] text-[#64748B]">
+              Confidence: {String(extended.confidence_level).replace(/_/g, ' ')}
+              {extended.official_source ? ' · Official source summary' : ''}
+            </p>
           ) : null}
-          {card?.evidenceExpectations?.length ? (
-            <div className="mt-2">
-              <p className="orb-citation-section-label text-[9px] font-semibold uppercase tracking-wide">Evidence expectations</p>
-              <ul className="mt-0.5 list-disc pl-4 text-[10px] leading-5 text-[#64748B]">
-                {card.evidenceExpectations.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-          {source.note && source.note !== source.basis ? (
+          {source.note && source.note !== source.basis && source.note !== whyCited ? (
             <p className="mt-2 text-[10px] text-[#64748B]">{source.note}</p>
           ) : null}
           <p className="mt-2.5 flex items-center gap-1 text-[9px] uppercase tracking-wide text-[#94A3B8]">
@@ -101,7 +133,7 @@ export function renderAnswerWithCitations(content: string, sources?: StandaloneO
     const source = sourceByLabel.get(label.toLowerCase()) ?? {
       label,
       type: 'regulatory_framework',
-      basis: 'Institutional guidance anchor referenced in this response.'
+      basis: 'Summary basis from ORB Knowledge Spine unless an exact excerpt exists.'
     }
     return <OrbInlineCitation key={`c-${index}-${label}`} source={source} />
   })

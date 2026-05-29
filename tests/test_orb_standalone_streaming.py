@@ -143,6 +143,25 @@ def test_instant_fast_answer_for_hello():
     assert "safeguarding" in answer.lower()
 
 
+def test_hello_stream_metadata_omits_image_unavailable_flag():
+    import asyncio
+
+    from services.orb_general_assistant_service import orb_general_assistant_service
+
+    meta: dict = {}
+
+    async def _run() -> None:
+        async for _ in orb_general_assistant_service.stream_answer(
+            "hello",
+            raw_user_message="hello",
+            stream_meta=meta,
+        ):
+            pass
+
+    asyncio.run(_run())
+    assert meta.get("image_understanding_available") is None
+
+
 def test_hello_sanitize_has_no_threshold_closer():
     from services.orb_grounded_answer_style_service import orb_grounded_answer_style_service
 
@@ -156,6 +175,7 @@ def test_hello_sanitize_has_no_threshold_closer():
         mode="Ask ORB",
     )
     assert "threshold decision" not in cleaned.lower()
+    assert "manager oversight is visible" not in cleaned.lower()
 
 
 def test_abuse_disclosure_still_gets_safeguarding_boundary():
