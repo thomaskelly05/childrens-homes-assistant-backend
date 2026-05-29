@@ -63,6 +63,7 @@ import { useOrbAppearance } from '@/components/orb-standalone/use-orb-appearance
 import { ORB_LIGHT_UI_BUILD } from '@/lib/orb/orb-light-ui-build'
 import {
   buildAdultProfilePromptBlock,
+  normalizeAdultProfileRole,
   personalisedEmptyHeading,
   personalisedWelcomeMessage,
   readAdultProfile,
@@ -1533,7 +1534,16 @@ export function OrbCareCompanion() {
       checklist: `Create a practical checklist for staff follow-up from this.\n\n${excerpt}`,
       what_missing: `What am I missing? Review for facts, concerns, gaps, escalation, recording, and follow-up.\n\n${excerpt}`,
       ofsted_lens: `Apply an Ofsted / SCCIF lens to this. What would an inspector ask? What evidence is thin?\n\n${excerpt}`,
-      safeguarding_lens: `Apply a safeguarding lens: facts, concerns, gaps, escalation, and immediate safety.\n\n${excerpt}`
+      safeguarding_lens: `Apply a safeguarding lens: facts, concerns, gaps, escalation, and immediate safety.\n\n${excerpt}`,
+      nvq_evidence_map: `Map this to possible NVQ/diploma criteria from what I describe only — do not invent practice.\n\n${excerpt}`,
+      reflective_learning: `Create a reflective account plan from what I describe only.\n\n${excerpt}`,
+      pd_prompts: `Create professional discussion prompts from what I describe only.\n\n${excerpt}`,
+      evidence_gaps: `What learning evidence gaps do you see from what I describe?\n\n${excerpt}`,
+      learner_action_plan: `Create a learner action plan for missing evidence — authentic collection only.\n\n${excerpt}`,
+      supervision_reflect: `Link this supervision material to possible qualification evidence.\n\n${excerpt}`,
+      incident_reflective: `Turn this into reflective learning from what I describe — no invented facts.\n\n${excerpt}`,
+      explain_criteria: `Explain the criteria mentioned here in plain English for residential childcare.\n\n${excerpt}`,
+      assessor_feedback: `Draft assessor feedback (support for judgement only) from what I describe.\n\n${excerpt}`
     }
     if (action === 'ofsted_lens') handleModeChange('Ofsted Lens')
     if (action === 'safeguarding_lens') handleModeChange('Safeguarding Thinking')
@@ -1582,7 +1592,10 @@ export function OrbCareCompanion() {
         mode,
         context: {
           surface: 'standalone_orb_action',
-          frontend_action: frontendAction ?? backendAction
+          frontend_action: frontendAction ?? backendAction,
+          profile_role: adultProfile
+            ? normalizeAdultProfileRole(adultProfile.role)
+            : 'residential_support_worker'
         }
       })
 
@@ -2090,6 +2103,10 @@ export function OrbCareCompanion() {
           setMessage(text)
           closePanel()
           inputRef.current?.focus()
+        }}
+        onRunStandaloneAction={(actionId, prefill) => {
+          closePanel()
+          void runBackendOrbAction(actionId, prefill, undefined, actionId)
         }}
       />
       <OrbMemoryPanel

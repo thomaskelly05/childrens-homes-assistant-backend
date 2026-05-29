@@ -11,6 +11,15 @@ export type OrbOutputReuseAction =
   | 'what_missing'
   | 'ofsted_lens'
   | 'safeguarding_lens'
+  | 'nvq_evidence_map'
+  | 'reflective_learning'
+  | 'pd_prompts'
+  | 'evidence_gaps'
+  | 'learner_action_plan'
+  | 'supervision_reflect'
+  | 'incident_reflective'
+  | 'explain_criteria'
+  | 'assessor_feedback'
 
 export type OrbSuggestedReplyItem = {
   action: OrbOutputReuseAction
@@ -89,6 +98,28 @@ export function contextualSuggestedRepliesForOutput(options: {
   if (kind === 'staff_briefing') {
     return [
       { action: 'checklist', label: 'Audit checklist' },
+      { action: 'what_missing', label: 'What is missing?' }
+    ]
+  }
+
+  if (
+    kind === 'nvq_evidence_map' ||
+    kind === 'reflective_account_plan' ||
+    kind === 'assessor_feedback' ||
+    /\b(nvq|diploma|reflective account|criteria)\b/i.test(content)
+  ) {
+    return [
+      { action: 'nvq_evidence_map', label: 'Map to NVQ evidence' },
+      { action: 'evidence_gaps', label: 'What evidence is missing?' },
+      { action: 'pd_prompts', label: 'Professional discussion prompts' },
+      { action: 'learner_action_plan', label: 'Learner action plan' }
+    ]
+  }
+
+  if (kind === 'supervision' || /\bsupervision\b/i.test(content)) {
+    return [
+      { action: 'supervision_reflect', label: 'Supervision to evidence' },
+      { action: 'reflective_learning', label: 'Reflective account plan' },
       { action: 'what_missing', label: 'What is missing?' }
     ]
   }

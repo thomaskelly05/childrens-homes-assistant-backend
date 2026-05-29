@@ -211,3 +211,20 @@ Structured fields: title, plain-English summary, what staff must know, escalatio
 - `_reject_os_ids` on upload, analyse, intelligence payloads.
 - Every response: `standalone: true`, `os_records_accessed: false`.
 - Copy states analysis is from uploaded/provided document only.
+
+---
+
+## Academy / NVQ lenses (2026-05-29)
+
+| Lens ID | Use case |
+|---------|----------|
+| `nvq_evidence_map` | Learner/assessor uploads practice or portfolio text |
+| `reflective_account_plan` | Reflective account draft |
+| `assessor_feedback` | Draft assessor feedback (judgement support only) |
+| `professional_discussion_prompts` | Criteria/evidence text |
+| `witness_testimony_prompt` | Practice description |
+| `learning_action_plan` | Gap/action planning |
+| `workbook_summary` | Workbook/assignment text |
+| `qualification_criteria_explainer` | Criteria document |
+
+All lenses: supplied text only; authenticity section; no live Academy learner records.

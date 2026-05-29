@@ -264,3 +264,19 @@ Tests: `tests/test_orb_standalone_boundary.py`, `tests/test_orb_operating_brain_
 | Composer focus ring | Soft outline in premium |
 | Text contrast | Slate hierarchy on `#f4f6f9` |
 | Mobile composer | Rounded shrink in premium media query |
+
+---
+
+## Academy / NVQ convergence (2026-05-29)
+
+| Area | Status | Notes |
+|------|--------|-------|
+| Human Practice Brain | A | `services/orb_human_practice_brain_service.py` |
+| Profile roles | A | NVQ assessor, NVQ learner, diploma learner in `adult-profile-store.ts` |
+| Action engine | A | +12 Academy/NVQ actions; role-aware what-missing |
+| Tools menu | A | Learning / Academy section |
+| Knowledge packs / vaults | A | Standalone-safe workforce learning packs |
+| Document lenses | A | NVQ evidence map, reflective account, assessor feedback, etc. |
+| OS Academy API | — | Remains `/academy/*` — future OS-connected ORB PR |
+
+Full audit: `docs/orb-academy-nvq-convergence-audit.md`

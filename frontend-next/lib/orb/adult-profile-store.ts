@@ -12,6 +12,9 @@ export type AdultProfileRole =
   | 'provider_director'
   | 'reg_44_visitor'
   | 'social_worker'
+  | 'nvq_assessor'
+  | 'nvq_learner'
+  | 'diploma_learner'
   | 'trainer_consultant'
   | 'other'
   | 'practitioner'
@@ -102,6 +105,9 @@ export const CANONICAL_ADULT_PROFILE_ROLES: AdultProfileRole[] = [
   'provider_director',
   'reg_44_visitor',
   'social_worker',
+  'nvq_assessor',
+  'nvq_learner',
+  'diploma_learner',
   'trainer_consultant',
   'other'
 ]
@@ -168,6 +174,9 @@ export function roleLabelFor(role: AdultProfileRole): string {
     provider_director: 'Provider / director',
     reg_44_visitor: 'Reg 44 visitor',
     social_worker: 'Social worker',
+    nvq_assessor: 'NVQ assessor',
+    nvq_learner: 'NVQ learner',
+    diploma_learner: 'Diploma learner',
     trainer_consultant: 'Trainer / consultant',
     other: 'Other',
     practitioner: 'Residential support worker',
@@ -243,6 +252,21 @@ export function roleResponseGuidance(profile: AdultProfile): string | null {
   const role = normalizeAdultProfileRole(profile.role)
   if (role === 'registered_manager' || role === 'responsible_individual' || role === 'provider_director') {
     return 'Lean toward oversight, evidence, actions, staff learning, Ofsted readiness, manager grip, and decision rationale.'
+  }
+  if (role === 'deputy_manager') {
+    return 'Lean toward RM cover, oversight, risk, staff learning, and recording standards.'
+  }
+  if (role === 'reg_44_visitor') {
+    return 'Lean toward independent scrutiny, triangulation, child voice, evidence sufficiency, and questions to ask next.'
+  }
+  if (role === 'nvq_assessor') {
+    return 'Lean toward evidence mapping, professional discussion, criteria gaps, assessor feedback, and learner authenticity — never fabricate evidence.'
+  }
+  if (role === 'nvq_learner' || role === 'diploma_learner') {
+    return 'Lean toward plain-English criteria, reflective account structure, evidence suggestions, and authenticity — based only on what the learner describes.'
+  }
+  if (role === 'trainer_consultant') {
+    return 'Lean toward training design, briefing, facilitation questions, and policy-to-learning links.'
   }
   if (
     role === 'residential_support_worker' ||
@@ -345,6 +369,22 @@ export function roleBasedEmptyStarters(profile: AdultProfile): string[] {
       'Where might quality standards be thin?'
     ]
   }
+  if (role === 'nvq_assessor') {
+    return [
+      'Help me map this practice to criteria',
+      'What professional discussion questions fit?',
+      'What evidence gaps do you see?',
+      'Draft assessor feedback from what I describe'
+    ]
+  }
+  if (role === 'nvq_learner' || role === 'diploma_learner') {
+    return [
+      'Explain this criterion in plain English',
+      'Help me plan a reflective account',
+      'What evidence might I already have?',
+      'Turn this incident into reflective learning'
+    ]
+  }
   return PRIMARY_GENERIC_STARTERS
 }
 
@@ -408,6 +448,15 @@ export function personalisedWelcomeMessage(
   } else if (role === 'reg_44_visitor') {
     capability =
       'I can help you frame observations, evidence questions and quality-of-care themes — standalone guidance only, not live home records.'
+  } else if (role === 'nvq_assessor') {
+    capability =
+      'I can help you map evidence to criteria, draft PD questions and assessor feedback, and spot gaps — from what you describe only, not live learner portfolios.'
+  } else if (role === 'nvq_learner' || role === 'diploma_learner') {
+    capability =
+      'I can explain criteria in plain English, structure reflective accounts, and suggest evidence — I will not invent workplace events; only what you tell me.'
+  } else if (role === 'trainer_consultant') {
+    capability =
+      'I can help with briefings, learning questions and facilitation — standalone workforce development support, not live Academy records.'
   }
 
   const hints = [answerStyleHint(profile), lensHint(profile)].filter(Boolean) as string[]

@@ -117,6 +117,7 @@ class OrbKnowledgeRetrievalService:
             "safeguarding_principles": self.should_use_safeguarding_boundary(message, mode=mode_name),
             "therapeutic_practice": self._should_use_therapeutic(message, mode=mode_name),
             "residential_childrens_homes": self._should_use_residential_practice(message, mode=mode_name),
+            "academy_nvq_learning": self._should_use_academy_nvq_learning(message, mode=mode_name),
             "general_knowledge": self.should_use_general_knowledge(message, mode=mode_name),
             "user_provided_context": profile_context
             or "standalone context profiles" in lower
@@ -568,6 +569,28 @@ class OrbKnowledgeRetrievalService:
             "Manager Copilot",
         }
 
+    def _should_use_academy_nvq_learning(self, message: str, *, mode: str | None = None) -> bool:
+        lower = _lower(message)
+        terms = (
+            "nvq",
+            "diploma",
+            "qualification",
+            "workbook",
+            "portfolio",
+            "assessor",
+            "learner",
+            "reflective account",
+            "professional discussion",
+            "witness testimony",
+            "competency",
+            "level 3",
+            "level 4",
+            "level 5",
+            "academy",
+            "evidence mapping",
+        )
+        return any(term in lower for term in terms) or (mode or "").strip() == "Staff Coach"
+
     def _has_research_intent(self, lower: str) -> bool:
         return any(term in lower for term in RESEARCH_INTENT_TERMS)
 
@@ -635,6 +658,16 @@ class OrbKnowledgeRetrievalService:
             keys.append("recording_quality")
         if intents.get("therapeutic_practice"):
             keys.append("therapeutic_practice")
+        if intents.get("academy_nvq_learning"):
+            keys.extend(
+                [
+                    "academy_learning",
+                    "nvq_diploma_support",
+                    "workforce_development",
+                    "qualification_evidence",
+                    "reflective_practice_learning",
+                ]
+            )
         if intents.get("user_provided_context"):
             keys.append("user_provided_context")
         if intents.get("general_knowledge"):

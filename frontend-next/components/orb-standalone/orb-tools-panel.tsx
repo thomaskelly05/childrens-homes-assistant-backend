@@ -84,7 +84,8 @@ export function OrbToolsPanel({
   onOpenAgents,
   onRunDeepResearch,
   onAskOrb,
-  onComposerPrefill
+  onComposerPrefill,
+  onRunStandaloneAction
 }: {
   open: boolean
   onClose: () => void
@@ -94,6 +95,8 @@ export function OrbToolsPanel({
   onRunDeepResearch?: () => void
   onAskOrb?: () => void
   onComposerPrefill?: (text: string) => void
+  /** Backend-supported Academy/NVQ actions via /orb/standalone/actions/run */
+  onRunStandaloneAction?: (actionId: string, prefill: string) => void
 }) {
   const [query, setQuery] = useState('')
 
@@ -192,6 +195,129 @@ export function OrbToolsPanel({
     [onComposerPrefill]
   )
 
+  const academyTools: ToolItem[] = useMemo(
+    () => [
+      {
+        id: 'nvq-helper',
+        label: 'NVQ / Diploma helper',
+        description: 'Explain criteria and plan reflective accounts',
+        icon: <BookOpen className="h-4 w-4" aria-hidden />,
+        onClick: () =>
+          onRunStandaloneAction?.(
+            'explain_nvq_criteria',
+            'I need help with my residential childcare diploma — explain the criteria I paste next in plain English.'
+          ) ??
+          onComposerPrefill?.(
+            'I need help with my residential childcare diploma — explain criteria in plain English.'
+          )
+      },
+      {
+        id: 'explain-criteria',
+        label: 'Explain criteria',
+        description: 'Plain-English criteria from text you provide',
+        icon: <BookOpen className="h-4 w-4" aria-hidden />,
+        onClick: () =>
+          onRunStandaloneAction?.(
+            'explain_nvq_criteria',
+            'Explain these qualification criteria in plain English:'
+          ) ?? onComposerPrefill?.('Explain these qualification criteria in plain English:')
+      },
+      {
+        id: 'map-evidence',
+        label: 'Map evidence',
+        description: 'Map described practice to criteria — no invented events',
+        icon: <ClipboardList className="h-4 w-4" aria-hidden />,
+        onClick: () =>
+          onRunStandaloneAction?.(
+            'map_to_nvq_evidence',
+            'Map the practice I describe below to possible NVQ/diploma criteria. Do not invent events:'
+          ) ??
+          onComposerPrefill?.('Map my described practice to possible NVQ evidence (I will paste details):')
+      },
+      {
+        id: 'reflective-plan',
+        label: 'Reflective account plan',
+        description: 'Structure reflection from real practice you describe',
+        icon: <FileText className="h-4 w-4" aria-hidden />,
+        onClick: () =>
+          onRunStandaloneAction?.(
+            'create_reflective_account_plan',
+            'Create a reflective account plan from the practice I describe — do not invent incidents:'
+          ) ??
+          onComposerPrefill?.('Create a reflective account plan from the practice I describe:')
+      },
+      {
+        id: 'pd-prompts',
+        label: 'Professional discussion prompts',
+        description: 'PD questions for assessors from supplied evidence',
+        icon: <MessageSquare className="h-4 w-4" aria-hidden />,
+        onClick: () =>
+          onRunStandaloneAction?.(
+            'create_professional_discussion_prompts',
+            'Create professional discussion prompts from the evidence I describe:'
+          ) ??
+          onComposerPrefill?.('Create professional discussion prompts from this evidence:')
+      },
+      {
+        id: 'witness-prompt',
+        label: 'Witness testimony prompt',
+        description: 'Witness focus areas from described practice',
+        icon: <MessageSquare className="h-4 w-4" aria-hidden />,
+        onClick: () =>
+          onRunStandaloneAction?.(
+            'create_witness_testimony_prompt',
+            'Suggest witness testimony prompts from the practice I describe:'
+          ) ?? onComposerPrefill?.('Suggest witness testimony prompts for:')
+      },
+      {
+        id: 'evidence-gaps',
+        label: 'Evidence gaps',
+        description: 'Gaps in learning evidence from what you share',
+        icon: <Sparkles className="h-4 w-4" aria-hidden />,
+        onClick: () =>
+          onRunStandaloneAction?.(
+            'identify_learning_evidence_gaps',
+            'What learning evidence gaps do you see from what I describe?'
+          ) ?? onComposerPrefill?.('What learning evidence gaps do you see from what I describe?')
+      },
+      {
+        id: 'learner-plan',
+        label: 'Learner action plan',
+        description: 'Plan to collect authentic missing evidence',
+        icon: <ClipboardList className="h-4 w-4" aria-hidden />,
+        onClick: () =>
+          onRunStandaloneAction?.(
+            'create_learner_action_plan',
+            'Create a learner action plan for missing evidence from what I describe:'
+          ) ?? onComposerPrefill?.('Create a learner action plan for missing evidence:')
+      },
+      {
+        id: 'incident-learning',
+        label: 'Staff learning from incident',
+        description: 'Reflective learning from an incident you describe',
+        icon: <Shield className="h-4 w-4" aria-hidden />,
+        onClick: () =>
+          onRunStandaloneAction?.(
+            'incident_to_reflective_learning',
+            'Turn this incident into reflective learning from what I describe only:'
+          ) ??
+          onComposerPrefill?.('Turn this incident into reflective learning (I will describe what happened):')
+      },
+      {
+        id: 'supervision-evidence',
+        label: 'Supervision to evidence',
+        description: 'Link supervision themes to qualification evidence',
+        icon: <FileText className="h-4 w-4" aria-hidden />,
+        onClick: () =>
+          onRunStandaloneAction?.(
+            'supervision_to_learning_evidence',
+            'Link this supervision material to possible learning evidence:'
+          ) ?? onComposerPrefill?.('Link this supervision to possible learning evidence:')
+      }
+    ],
+    [onComposerPrefill, onRunStandaloneAction]
+  )
+
   const oversightTools: ToolItem[] = useMemo(
     () => [
       {
@@ -264,6 +390,7 @@ export function OrbToolsPanel({
 
   const sections = [
     { title: 'Documents', tools: filterTools(documentTools) },
+    { title: 'Learning / Academy', tools: filterTools(academyTools) },
     { title: 'Practice', tools: filterTools(practiceTools) },
     { title: 'Shift', tools: filterTools(shiftTools) },
     { title: 'Oversight', tools: filterTools(oversightTools) },

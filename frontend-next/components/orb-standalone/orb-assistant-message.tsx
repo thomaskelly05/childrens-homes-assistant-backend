@@ -222,6 +222,15 @@ export type OrbResponseFollowUpAction =
   | 'what_missing'
   | 'ofsted_lens'
   | 'safeguarding_lens'
+  | 'nvq_evidence_map'
+  | 'reflective_learning'
+  | 'pd_prompts'
+  | 'evidence_gaps'
+  | 'learner_action_plan'
+  | 'supervision_reflect'
+  | 'incident_reflective'
+  | 'explain_criteria'
+  | 'assessor_feedback'
 
 export type { OrbSuggestedReplyItem } from '@/lib/orb/orb-output-reuse'
 
@@ -277,6 +286,45 @@ export function contextualSuggestedReplies(options: {
       { action: 'what_missing', label: 'What am I missing?' },
       { action: 'manager_oversight', label: 'Create manager oversight note' }
     ]
+  }
+
+  if (
+    /\b(nvq|diploma|criteria|assessor|learner|workbook|portfolio|reflective account)\b/i.test(hint)
+  ) {
+    return [
+      { action: 'nvq_evidence_map', label: 'Map to NVQ evidence' },
+      { action: 'reflective_learning', label: 'Reflective account plan' },
+      { action: 'pd_prompts', label: 'Professional discussion prompts' },
+      { action: 'evidence_gaps', label: 'What evidence is missing?' }
+    ]
+  }
+
+  if (/\b(supervision)\b/i.test(hint) && !/\b(nvq|diploma)\b/i.test(hint)) {
+    return [
+      { action: 'supervision_reflect', label: 'Supervision to evidence' },
+      { action: 'reflective_learning', label: 'Turn into reflective learning' },
+      { action: 'what_missing', label: 'What am I missing?' }
+    ]
+  }
+
+  if (/\b(policy|training)\b/i.test(hint)) {
+    return [
+      { action: 'explain_criteria', label: 'Explain criteria' },
+      { action: 'reflective_learning', label: 'Turn into reflective learning' },
+      { action: 'what_missing', label: 'What am I missing?' }
+    ]
+  }
+
+  if (/\b(incident|restraint|safeguarding)\b/i.test(hint)) {
+    const chips: Array<{ action: OrbResponseFollowUpAction; label: string }> = [
+      { action: 'incident_reflective', label: 'Turn into reflective learning' },
+      { action: 'recording_wording', label: 'Convert to recording wording' },
+      { action: 'what_missing', label: 'What am I missing?' }
+    ]
+    if (/\b(safeguarding|abuse|harm|injury)\b/i.test(hint)) {
+      chips.unshift({ action: 'safeguarding_lens', label: 'Add safeguarding lens' })
+    }
+    return chips.slice(0, 4)
   }
 
   return [

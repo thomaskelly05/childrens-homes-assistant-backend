@@ -25,6 +25,27 @@ The ORB Action Engine turns response-bar follow-ups from composer prefills into 
 | `build_shift_plan` | Build shift plan | Full standalone shift plan (priorities, risks, reflection, gaps) |
 | `add_child_voice_prompt` | Child voice prompt | Safe capture prompts; never invents child views |
 
+### Academy / NVQ actions (2026-05-29)
+
+| Action ID | UI label | Purpose |
+|-----------|----------|---------|
+| `map_to_nvq_evidence` | Map to NVQ evidence | Criteria/themes, gaps, authenticity warning |
+| `explain_nvq_criteria` | Explain criteria | Plain-English diploma criteria |
+| `create_reflective_account_plan` | Reflective account plan | 8-section plan from described practice only |
+| `review_reflective_account` | Review reflective account | Structure/gaps — not official assessment |
+| `create_professional_discussion_prompts` | PD prompts | Assessor PD questions |
+| `create_witness_testimony_prompt` | Witness testimony | Witness scope and prompts |
+| `identify_learning_evidence_gaps` | Evidence gaps | Portfolio gap analysis |
+| `create_learner_action_plan` | Learner action plan | Authentic evidence collection plan |
+| `assessor_feedback_draft` | Assessor feedback | Strengths, gaps, PD questions, boundary note |
+| `supervision_to_learning_evidence` | Supervision to evidence | Link supervision to qualification evidence |
+| `incident_to_reflective_learning` | Incident → learning | Reflective structure from described incident |
+| `policy_to_learning_questions` | Policy → learning | Knowledge questions from policy text |
+
+Role shaping: pass `context.profile_role` (e.g. `nvq_assessor`, `nvq_learner`). Human Practice Brain: `services/orb_human_practice_brain_service.py`.
+
+Tools menu: **Learning / Academy** in `orb-tools-panel.tsx` calls `actions/run` when chat is active.
+
 Implementation: `services/orb_action_engine_service.py` · Routes: `routers/orb_standalone_routes.py`
 
 Frontend mapping: `frontend-next/lib/orb/orb-response-actions.ts` · Handler: `runBackendOrbAction` / `handleOrbFollowUp` in `orb-care-companion.tsx`
