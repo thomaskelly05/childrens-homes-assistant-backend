@@ -1,10 +1,11 @@
 import type { Metadata } from 'next'
 import { ReactNode } from 'react'
 
-/* chatgpt-light: tokens, motion, markdown; premium: layout/sidebar/composer; mobile-fixes loads last */
+/* chatgpt-light: tokens, motion, markdown; premium: layout/sidebar/composer; mobile-fixes and ultra-premium load last */
 import './orb-chatgpt-light.css'
 import './orb-premium.css'
 import './orb-mobile-fixes.css'
+import './orb-ultra-premium.css'
 import { ORB_APPEARANCE_BOOTSTRAP_SCRIPT } from '@/lib/orb/orb-appearance'
 import {
   ORB_COGNITION_ROUTING_BUILD,
