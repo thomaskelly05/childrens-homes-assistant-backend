@@ -34,14 +34,14 @@ export type OrbPasskeyListResponse = {
   }>
 }
 
+type JsonPublicKeyCredential = PublicKeyCredential & {
+  toJSON: () => unknown
+}
+
 declare global {
   interface PublicKeyCredentialConstructor {
     parseRequestOptionsFromJSON?: (options: unknown) => PublicKeyCredentialRequestOptions
     parseCreationOptionsFromJSON?: (options: unknown) => PublicKeyCredentialCreationOptions
-  }
-
-  interface PublicKeyCredential {
-    toJSON?: () => unknown
   }
 }
 
@@ -71,7 +71,7 @@ function parseCreationOptions(options: unknown): PublicKeyCredentialCreationOpti
 
 function credentialToJson(credential: Credential | null): unknown {
   if (!credential) throw new Error('Passkey was cancelled.')
-  const maybePublic = credential as PublicKeyCredential
+  const maybePublic = credential as Partial<JsonPublicKeyCredential>
   if (typeof maybePublic.toJSON === 'function') return maybePublic.toJSON()
   throw new Error('This browser cannot serialise passkey credentials.')
 }
