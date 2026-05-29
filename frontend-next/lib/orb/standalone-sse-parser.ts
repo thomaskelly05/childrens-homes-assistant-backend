@@ -30,7 +30,7 @@ export function parseStandaloneOrbSseBlock(block: string): StandaloneOrbStreamEv
   }
   if (eventName === 'token') {
     const record = parsed as { delta?: string }
-    if (typeof record.delta === 'string' && record.delta) {
+    if (typeof record.delta === 'string') {
       return { event: 'token', delta: record.delta }
     }
     return null

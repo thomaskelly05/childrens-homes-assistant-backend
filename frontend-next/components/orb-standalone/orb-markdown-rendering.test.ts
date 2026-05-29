@@ -25,6 +25,7 @@ describe('ORB markdown and cognition rendering', () => {
     const markdown = readComponent('components/orb-standalone/orb-markdown-answer.tsx')
     assert.match(markdown, /#orb-cite:/)
     assert.match(markdown, /encodeInlineCitations/)
+    assert.match(markdown, /normaliseOrbMarkdown/)
     assert.doesNotMatch(markdown, /content\.split/)
   })
 

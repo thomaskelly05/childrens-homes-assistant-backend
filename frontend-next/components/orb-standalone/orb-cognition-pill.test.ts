@@ -24,9 +24,24 @@ describe('cognitionPillLabel', () => {
     assert.match(label, /Medication \/ health/)
   })
 
-  it('may show Automatic routing for non-residential general questions', () => {
+  it('shows ORB for casual greetings', () => {
+    const label = cognitionPillLabel('Ask ORB', {}, 'hello')
+    assert.equal(label, 'ORB')
+  })
+
+  it('shows ORB for fast prompt tier even with backend labels', () => {
+    const label = cognitionPillLabel(
+      'Ask ORB',
+      { cognition_display_labels: ['Safeguarding', 'Chronology', 'Ofsted evidence'] },
+      'hello',
+      { prompt_tier: 'fast' }
+    )
+    assert.equal(label, 'ORB')
+  })
+
+  it('defaults to ORB for non-residential general questions', () => {
     const label = cognitionPillLabel('Ask ORB', {}, 'Explain quantum entanglement')
-    assert.equal(label, 'Automatic routing')
+    assert.equal(label, 'ORB')
   })
 
   it('filters Ofsted Lens from Ask ORB auto labels', () => {
