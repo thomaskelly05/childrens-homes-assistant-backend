@@ -2,8 +2,8 @@ export type OrbAppearanceMode = 'light' | 'dark' | 'system'
 
 export const ORB_APPEARANCE_STORAGE_KEY = 'orb-appearance-mode'
 
-/** One-time migration: PR #1334 dark default → PR #1335 light default on /orb */
-export const ORB_APPEARANCE_MIGRATION_KEY = 'orb-appearance-migrated-chatgpt-light-v1'
+/** Current appearance preference version. Default is system-led unless the user explicitly chooses light/dark. */
+export const ORB_APPEARANCE_MIGRATION_KEY = 'orb-appearance-system-default-v2'
 
 export function resolveOrbTheme(mode: OrbAppearanceMode): 'light' | 'dark' {
   if (mode === 'light' || mode === 'dark') return mode
@@ -23,16 +23,16 @@ function readStoredAppearanceMode(): OrbAppearanceMode | null {
 }
 
 /**
- * Resets legacy dark/system preferences from the PR #1334 ambient UI era so /orb
- * defaults to light until the user explicitly picks dark again in Settings.
+ * Keep an existing explicit light/dark choice, but default new/legacy users to system.
+ * This makes mobile ORB feel native: dark phone = dark ORB, light phone = light ORB.
  */
-export function migrateOrbAppearanceForLightDefault(): void {
+export function migrateOrbAppearanceForSystemDefault(): void {
   if (typeof window === 'undefined') return
   try {
     if (window.localStorage.getItem(ORB_APPEARANCE_MIGRATION_KEY) === 'done') return
     const stored = readStoredAppearanceMode()
-    if (stored === 'dark' || stored === 'system') {
-      window.localStorage.setItem(ORB_APPEARANCE_STORAGE_KEY, 'light')
+    if (!stored) {
+      window.localStorage.setItem(ORB_APPEARANCE_STORAGE_KEY, 'system')
     }
     window.localStorage.setItem(ORB_APPEARANCE_MIGRATION_KEY, 'done')
   } catch {
@@ -41,9 +41,9 @@ export function migrateOrbAppearanceForLightDefault(): void {
 }
 
 export function readOrbAppearanceMode(): OrbAppearanceMode {
-  if (typeof window === 'undefined') return 'light'
-  migrateOrbAppearanceForLightDefault()
-  return readStoredAppearanceMode() ?? 'light'
+  if (typeof window === 'undefined') return 'system'
+  migrateOrbAppearanceForSystemDefault()
+  return readStoredAppearanceMode() ?? 'system'
 }
 
 export function writeOrbAppearanceMode(mode: OrbAppearanceMode): void {
@@ -70,4 +70,4 @@ export function clearOrbDocumentTheme(): void {
 }
 
 /** Inline bootstrap for /orb layout — must stay in sync with readOrbAppearanceMode + resolveOrbTheme */
-export const ORB_APPEARANCE_BOOTSTRAP_SCRIPT = `(function(){try{var M=${JSON.stringify(ORB_APPEARANCE_MIGRATION_KEY)};var K=${JSON.stringify(ORB_APPEARANCE_STORAGE_KEY)};if(localStorage.getItem(M)!=='done'){var v=localStorage.getItem(K);if(v==='dark'||v==='system')localStorage.setItem(K,'light');localStorage.setItem(M,'done');}var mode=localStorage.getItem(K);var theme='light';if(mode==='dark')theme='dark';else if(mode==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches)theme='dark';document.documentElement.setAttribute('data-orb-theme',theme);document.body&&document.body.setAttribute('data-orb-theme',theme);}catch(e){document.documentElement.setAttribute('data-orb-theme','light');document.body&&document.body.setAttribute('data-orb-theme','light');}})();`
+export const ORB_APPEARANCE_BOOTSTRAP_SCRIPT = `(function(){try{var M=${JSON.stringify(ORB_APPEARANCE_MIGRATION_KEY)};var K=${JSON.stringify(ORB_APPEARANCE_STORAGE_KEY)};if(localStorage.getItem(M)!=='done'&&!localStorage.getItem(K)){localStorage.setItem(K,'system');localStorage.setItem(M,'done');}var mode=localStorage.getItem(K)||'system';var theme='light';if(mode==='dark')theme='dark';else if(mode==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches)theme='dark';document.documentElement.setAttribute('data-orb-theme',theme);document.body&&document.body.setAttribute('data-orb-theme',theme);}catch(e){var dark=false;try{dark=window.matchMedia('(prefers-color-scheme: dark)').matches;}catch(_e){}document.documentElement.setAttribute('data-orb-theme',dark?'dark':'light');document.body&&document.body.setAttribute('data-orb-theme',dark?'dark':'light');}})();`
