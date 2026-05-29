@@ -229,8 +229,12 @@ See also: `docs/orb-speed-and-instant-feel-audit.md` for performance work comple
 | `/orb/standalone/agents/*` | Yes | Agent orchestration |
 | `/orb/standalone/evaluation/*` | Yes | Quality evaluation |
 | `/orb/standalone/outputs/*` | Yes | Saved artefacts |
+| `/orb/standalone/actions` | Yes | Structured action registry |
+| `/orb/standalone/actions/run` | Yes | Residential action engine (no OS records) |
 
-Tests: `tests/test_orb_standalone_boundary.py`, `tests/test_orb_operating_brain_convergence.py`, `tests/test_orb_knowledge_routes.py`, `tests/test_orb_saved_output_routes.py`.
+**ORB Action Engine (2026-05-28):** Seven backend actions (What am I missing, recording wording, manager oversight, chronology, safeguarding/Ofsted lenses, checklist). Frontend maps supported chips to `runStandaloneOrbAction`; others use composer prefill. See `docs/orb-action-engine.md`.
+
+Tests: `tests/test_orb_standalone_boundary.py`, `tests/test_orb_operating_brain_convergence.py`, `tests/test_orb_knowledge_routes.py`, `tests/test_orb_saved_output_routes.py`, `tests/test_orb_standalone_action_engine.py`.
 
 ---
 

@@ -31,6 +31,7 @@ from services.indicare_intelligence_surface_router import (
     indicare_intelligence_surface_router,
     standalone_os_boundary_message,
 )
+from services.orb_action_engine_service import orb_action_engine_service
 from services.orb_standalone_sources import (
     INDICARE_PRODUCT_FALLBACK,
     append_sources_basis_section,
@@ -53,7 +54,7 @@ FORBIDDEN_STANDALONE_OS_KEYS = (
 
 
 def _reject_standalone_os_ids(payload: dict[str, Any]) -> None:
-    scopes = [payload, payload.get("metadata") or {}]
+    scopes = [payload, payload.get("metadata") or {}, payload.get("context") or {}]
     for scope in scopes:
         if not isinstance(scope, dict):
             continue
@@ -314,6 +315,16 @@ class OrbStandaloneConversationRequest(BaseModel):
     document_title: str | None = Field(default=None, max_length=500)
 
 
+class OrbStandaloneActionRunRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    action: str = Field(..., min_length=1, max_length=80)
+    source_message: str | None = Field(default=None, max_length=12000)
+    source_answer: str | None = Field(default=None, max_length=50000)
+    mode: str = Field(default="Ask ORB", max_length=80)
+    context: dict[str, Any] = Field(default_factory=dict)
+
+
 def _standalone_contract() -> dict[str, Any]:
     return {
         "name": "ORB Care Companion",
@@ -334,6 +345,8 @@ def _standalone_contract() -> dict[str, Any]:
             "health": "/orb/standalone/health",
             "conversation": "/orb/standalone/conversation",
             "conversation_stream": "/orb/standalone/conversation/stream",
+            "actions_run": "/orb/standalone/actions/run",
+            "actions_registry": "/orb/standalone/actions",
             "config": "/orb/standalone/config",
             "knowledge_health": "/orb/standalone/knowledge/health",
             "knowledge_sources": "/orb/standalone/knowledge/sources",
@@ -1022,3 +1035,68 @@ async def standalone_orb_conversation_stream(
             "X-Accel-Buffering": "no",
         },
     )
+
+
+@router.get("/actions")
+async def standalone_orb_actions_registry(
+    current_user=Depends(require_standalone_orb_access),
+):
+    """Structured ORB action registry for standalone residential follow-ups."""
+    return {
+        "success": True,
+        "data": {
+            "actions": orb_action_engine_service.list_actions(),
+            "backend_supported_ids": sorted(
+                item["id"]
+                for item in orb_action_engine_service.list_actions()
+                if item.get("backend_supported")
+            ),
+            "standalone": True,
+            "os_records_accessed": False,
+        },
+    }
+
+
+@router.post("/actions/run")
+async def standalone_orb_action_run(
+    payload: OrbStandaloneActionRunRequest,
+    current_user=Depends(require_standalone_orb_access),
+):
+    _reject_standalone_os_ids(payload.model_dump())
+    action_id = orb_action_engine_service.resolve_backend_action_id(payload.action)
+    if not orb_action_engine_service.is_backend_supported(action_id):
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "success": False,
+                "error": "action_not_backend_supported",
+                "action": payload.action,
+                "message": "Use composer prefill for this action until backend support is enabled.",
+            },
+        )
+    if not _text(payload.source_message) and not _text(payload.source_answer):
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "success": False,
+                "error": "missing_source",
+                "message": "Provide source_message and/or source_answer.",
+            },
+        )
+
+    try:
+        result = await orb_action_engine_service.run_action(
+            action=action_id,
+            source_message=payload.source_message,
+            source_answer=payload.source_answer,
+            mode=payload.mode,
+            context=payload.context,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail={"success": False, "error": str(exc)}) from exc
+
+    return {"success": True, "data": result}
+
+
+def _text(value: Any) -> str:
+    return str(value or "").strip()

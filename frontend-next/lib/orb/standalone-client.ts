@@ -32,7 +32,9 @@ export const STANDALONE_ORB_API_PATHS = {
   outputsSummary: '/orb/standalone/outputs/summary',
   capabilities: '/orb/standalone/capabilities',
   capabilitiesSummary: '/orb/standalone/capabilities/summary',
-  surfaceRoute: '/orb/standalone/surface-route'
+  surfaceRoute: '/orb/standalone/surface-route',
+  actionsRegistry: '/orb/standalone/actions',
+  actionsRun: '/orb/standalone/actions/run'
 } as const
 
 export const STANDALONE_ORB_MODES = [
@@ -255,6 +257,57 @@ export type StandaloneOrbConversationResponse = {
   guardrails?: string[]
   image_understanding_available?: boolean
   error_detail?: string
+}
+
+export type StandaloneOrbActionRunRequest = {
+  action: string
+  source_message?: string
+  source_answer?: string
+  mode?: StandaloneOrbMode | string
+  context?: Record<string, unknown>
+}
+
+export type StandaloneOrbActionSection = {
+  heading: string
+  body: string
+}
+
+export type StandaloneOrbActionRunResult = {
+  action: string
+  title: string
+  answer: string
+  sections?: StandaloneOrbActionSection[]
+  checklist?: string[]
+  confidence?: string
+  sources?: StandaloneOrbSource[]
+  standalone: boolean
+  os_records_accessed: boolean
+  suggested_next_actions?: Array<{ action: string; label: string }>
+  action_engine?: Record<string, unknown>
+}
+
+export async function runStandaloneOrbAction(
+  request: StandaloneOrbActionRunRequest,
+  signal?: AbortSignal
+): Promise<StandaloneOrbActionRunResult> {
+  const payload = await authFetch<{ success?: boolean; data?: StandaloneOrbActionRunResult }>(
+    STANDALONE_ORB_API_PATHS.actionsRun,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+      signal: withTimeout(signal)
+    }
+  )
+  const data = payload?.data
+  if (!data?.answer) {
+    throw new AuthApiError(503, 'ORB could not complete that action. Please try again.')
+  }
+  return {
+    ...data,
+    standalone: data.standalone ?? true,
+    os_records_accessed: data.os_records_accessed ?? false
+  }
 }
 
 function withTimeout(signal?: AbortSignal): AbortSignal {

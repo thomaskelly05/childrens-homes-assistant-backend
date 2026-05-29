@@ -38,6 +38,9 @@ Status key: **Done** = verified in code · **Partial** = UI or backend incomplet
 | Delete message | — | Missing | — | Per-message delete | Later | Low | Safe |
 | Suggested replies (inline) | Chips under last answer | Done | `orb-assistant-message.tsx` | — | No | High | Safe |
 | Ask about this | Attachment chips | Done | `orb-assistant-message.tsx` | Document panel parity | Partial | High | Safe |
+| Structured response actions | `POST /orb/standalone/actions/run` | Done | `orb_action_engine_service.py`, `orb-response-actions.ts` | Stream actions | Partial | Very high | No OS records |
+| What am I missing | Backend action + heuristics | Done | `orb_action_engine_service.py` | OS chronology compare | No | Very high | Provided text only |
+| Recording / oversight / chronology actions | Backend engine | Done | `orb-care-companion.tsx` | Shift builder API wire | Partial | Very high | Standalone boundary |
 
 ---
 
@@ -209,7 +212,7 @@ Status: **Done** · **Partial** · **Missing** · **N/A** (not for standalone) �
 | `/ofsted` | Ofsted Lens |
 | `/shift` | Handover prompt + Ask ORB |
 | `/supervision` | Staff Coach + supervision prompt |
-| `/whatamimissing` | Gap-analysis prompt |
+| `/whatamimissing` | Gap-analysis prompt (or use What am I missing chip → action engine) |
 | `/therapeutic` | Therapeutic Reframe |
 | `/manager` | Manager Copilot |
 | `/reg44` `/reg45` | Reg 44 / Reg 45 Prep |
