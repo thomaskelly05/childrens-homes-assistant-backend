@@ -1,12 +1,13 @@
 'use client'
 
-import { FormEvent, Suspense, useEffect, useState } from 'react'
+import { FormEvent, Suspense, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ShieldCheck } from 'lucide-react'
+import { Fingerprint, ShieldCheck } from 'lucide-react'
 
 import { useAuth } from '@/contexts/auth-context'
 import { orbOAuthStartUrl, trackOrbAnalytics } from '@/lib/orb/orb-billing-client'
+import { beginOrbPasskeyLogin, orbPasskeysSupported } from '@/lib/orb/orb-passkey-client'
 
 function OrbLoginPanel() {
   const router = useRouter()
@@ -17,14 +18,24 @@ function OrbLoginPanel() {
   const [remember, setRemember] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [passkeySubmitting, setPasskeySubmitting] = useState(false)
+  const [passkeysAvailable, setPasskeysAvailable] = useState(false)
 
   useEffect(() => {
     trackOrbAnalytics('login_viewed')
     const oauthError = searchParams.get('oauth_error')
     if (oauthError) setError(oauthError)
+    setPasskeysAvailable(orbPasskeysSupported())
   }, [searchParams])
 
   const returnUrl = searchParams.get('returnUrl') || '/orb'
+
+  const biometricLabel = useMemo(() => {
+    if (typeof navigator !== 'undefined' && /iPhone|iPad|Macintosh/i.test(navigator.userAgent)) {
+      return 'Sign in with Face ID / Touch ID'
+    }
+    return 'Sign in with passkey'
+  }, [])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -45,6 +56,23 @@ function OrbLoginPanel() {
       setError(caught instanceof Error ? caught.message : 'Sign-in failed')
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  async function handlePasskeyLogin() {
+    setPasskeySubmitting(true)
+    setError(null)
+    try {
+      const response = await beginOrbPasskeyLogin(email)
+      if (response.authenticated || response.ok) {
+        router.replace(returnUrl)
+        return
+      }
+      setError(response.message || 'Passkey sign-in could not be completed')
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Passkey sign-in failed')
+    } finally {
+      setPasskeySubmitting(false)
     }
   }
 
@@ -80,6 +108,7 @@ function OrbLoginPanel() {
               onChange={(e) => setEmail(e.target.value)}
               className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3"
               data-testid="orb-login-email"
+              autoComplete="email webauthn"
             />
           </label>
           <label className="block text-sm font-semibold">
@@ -91,6 +120,7 @@ function OrbLoginPanel() {
               onChange={(e) => setPassword(e.target.value)}
               className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3"
               data-testid="orb-login-password"
+              autoComplete="current-password"
             />
           </label>
           <label className="flex items-center gap-2 text-sm text-slate-600">
@@ -106,6 +136,19 @@ function OrbLoginPanel() {
             {submitting ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
+
+        {passkeysAvailable ? (
+          <button
+            type="button"
+            onClick={handlePasskeyLogin}
+            disabled={passkeySubmitting || !email.trim()}
+            className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-sky-200 bg-sky-50 py-3 text-sm font-bold text-sky-800 transition hover:bg-sky-100 disabled:cursor-not-allowed disabled:opacity-50"
+            data-orb-passkey-login
+          >
+            <Fingerprint className="h-4 w-4" aria-hidden />
+            {passkeySubmitting ? 'Checking passkey…' : biometricLabel}
+          </button>
+        ) : null}
 
         <div className="mt-6 space-y-2" data-orb-oauth-buttons>
           {oauth.google ? (
