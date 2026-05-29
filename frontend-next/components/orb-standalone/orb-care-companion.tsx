@@ -29,6 +29,7 @@ import {
 import {
   OrbAskAboutThisChips,
   OrbAssistantMessageBody,
+  OrbDocumentContextChips,
   OrbResponseActionBar,
   OrbSuggestedReplyChips,
   type OrbAttachmentFollowUpAction,
@@ -106,8 +107,10 @@ import {
   logOrbCognitionDebug,
   logOrbTiming,
   queryStandaloneOrbConversation,
+  runOrbDocumentIntelligence,
   runStandaloneOrbAction,
   sendStandaloneOrbMessageStream,
+  type OrbDocumentLens,
   STANDALONE_ORB_EMPTY_ANSWER_MESSAGE,
   STANDALONE_ORB_MODES,
   type StandaloneOrbAgentSuggestion,
@@ -120,6 +123,10 @@ import {
   isBackendSupportedOrbResponseAction
 } from '@/lib/orb/orb-response-actions'
 import { collectCognitionDisplayLabels } from '@/lib/orb/residential-agents'
+import {
+  contextualDocumentActions,
+  formatDocumentIntelligenceMarkdown
+} from '@/lib/orb/document-intelligence'
 
 /** Push-to-talk voice with reflective pacing — no passive listening. */
 const STANDALONE_ORB_VOICE_CAPTURE_ENABLED = true
@@ -1524,6 +1531,80 @@ export function OrbCareCompanion() {
     }
   }
 
+  const documentLensActions = useMemo(() => {
+    if (!pendingDocument?.text?.trim() && !pendingDocument?.sourceId) return []
+    return contextualDocumentActions(pendingDocument.text || '', pendingDocument.title)
+  }, [pendingDocument?.text, pendingDocument?.sourceId, pendingDocument?.title])
+
+  async function runDocumentLens(lens: OrbDocumentLens) {
+    const doc = pendingDocument
+    if (!doc || (!doc.text?.trim() && !doc.sourceId)) return
+
+    const chatId = workspace.activeChatId
+    if (!chatId || pending || sendInFlightRef.current) return
+
+    const thinkingMessage = ensureStandaloneMessage({
+      role: 'assistant',
+      content: '',
+      status: 'thinking',
+      thinkingLabel: 'Analysing document…'
+    })
+
+    setPending(true)
+    setWorkspace((current) => {
+      const chat = current.chats.find((c) => c.id === chatId)
+      if (!chat) return current
+      return patchActiveChat(current, chatId, {
+        messages: dedupeOrbMessages([...chat.messages, thinkingMessage])
+      })
+    })
+
+    try {
+      const result = await runOrbDocumentIntelligence({
+        lens,
+        document_text: doc.sourceId ? undefined : doc.text,
+        document_source_id: doc.sourceId || undefined,
+        document_title: doc.title,
+        mode
+      })
+      const markdown = formatDocumentIntelligenceMarkdown(result)
+      setWorkspace((current) => {
+        const chat = current.chats.find((c) => c.id === chatId)
+        if (!chat) return current
+        const messages = chat.messages.map((entry) =>
+          entry.id === thinkingMessage.id
+            ? {
+                ...entry,
+                status: 'complete' as const,
+                content: markdown,
+                sources: [
+                  {
+                    label: doc.title || 'Uploaded document',
+                    type: 'user_provided',
+                    basis: 'User-provided document only — no live OS records',
+                    live_retrieved: false
+                  }
+                ]
+              }
+            : entry
+        )
+        return patchActiveChat(current, chatId, { messages: dedupeOrbMessages(messages) })
+      })
+      setDraftNotice('Document intelligence — standalone draft from uploaded text only.')
+    } catch (err) {
+      setWorkspace((current) => {
+        const chat = current.chats.find((c) => c.id === chatId)
+        if (!chat) return current
+        return patchActiveChat(current, chatId, {
+          messages: chat.messages.filter((m) => m.id !== thinkingMessage.id)
+        })
+      })
+      setDraftNotice(err instanceof Error ? err.message : 'Document intelligence failed.')
+    } finally {
+      setPending(false)
+    }
+  }
+
   async function handleOrbFollowUp(
     action: OrbResponseFollowUpAction,
     sourceContent: string,
@@ -1635,6 +1716,15 @@ export function OrbCareCompanion() {
     pending || visibleMessages.some((m) => m.status === 'streaming' || m.status === 'thinking')
 
   const composer = (
+    <div className="border-t border-[var(--orb-line)] bg-[var(--orb-composer-bg)]">
+      {documentLensActions.length ? (
+        <div className="mx-auto max-w-3xl px-4 pt-3">
+          <OrbDocumentContextChips
+            actions={documentLensActions}
+            onSelect={(lens) => void runDocumentLens(lens as OrbDocumentLens)}
+          />
+        </div>
+      ) : null}
     <OrbStandaloneComposer
       value={message}
       composerStateLength={message.trim().length}
@@ -1670,21 +1760,12 @@ export function OrbCareCompanion() {
       onPaste={handlePaste}
       onDrop={handleDrop}
       inputRef={inputRef}
-      documentAttached={Boolean(pendingDocument?.text)}
+      documentAttached={Boolean(pendingDocument?.text || pendingDocument?.sourceId)}
       documentTitle={pendingDocument?.title}
       onAttachDocumentClick={() => openDocumentsPanel()}
-      onAnalyseDocument={() => {
-        openDocumentsPanel()
-        setMessage((current) => current || 'Analyse this document')
-      }}
-      onDocumentActionPlan={() => {
-        openDocumentsPanel()
-        setMessage('Create an action plan from this document')
-      }}
-      onSummariseDocument={() => {
-        openDocumentsPanel()
-        setMessage('Summarise the uploaded document')
-      }}
+      onAnalyseDocument={() => void runDocumentLens('explain')}
+      onDocumentActionPlan={() => void runDocumentLens('actions')}
+      onSummariseDocument={() => void runDocumentLens('summary')}
       onAddDocumentToLibrary={() => openKnowledgeLibrary()}
       onToolsClick={openToolsPanel}
       suggestions={showEmptyState ? undefined : suggestionsForMode(mode)}
@@ -1693,6 +1774,7 @@ export function OrbCareCompanion() {
       answering={isAnswering}
       onStopGenerating={isAnswering ? handleStopGeneration : undefined}
     />
+    </div>
   )
 
   function openVoiceSettings() {

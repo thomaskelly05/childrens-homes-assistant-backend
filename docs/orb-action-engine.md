@@ -73,6 +73,17 @@ Unsupported or future actions remain prefill-only until registered with `backend
 
 ---
 
+## Document Intelligence integration
+
+Structured **document lenses** (policy card, Reg 44 extraction, grouped action plans, etc.) run via:
+
+- `POST /orb/standalone/documents/intelligence`
+- Service: `services/orb_document_intelligence_service.py`
+
+In-chat document chips on `/orb` call this route directly. The Action Engine remains the path for **message/response** follow-ups (`what_am_i_missing`, `create_checklist`, etc.). Where overlap exists (e.g. checklist, safeguarding lens), prefer the document intelligence route when the source is an uploaded document; use the action engine for assistant answer follow-ups.
+
+See `docs/orb-document-intelligence-convergence-audit.md`.
+
 ## Standalone boundary
 
 - Rejects OS identifiers: `child_id`, `young_person_id`, `home_id`, `staff_id`, `record_id`, `chronology_id` (including in `context`).

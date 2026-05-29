@@ -64,6 +64,20 @@ def test_action_plan_route(fake_state):
     assert understanding["action_plan"]
 
 
+def test_document_intelligence_route(fake_state):
+    from schemas.orb_document_intelligence import OrbDocumentIntelligenceRequest
+
+    response = asyncio.run(
+        document_routes.document_intelligence(
+            OrbDocumentIntelligenceRequest(document_text=SAMPLE, lens="summary"),
+            current_user=fake_state["user"],
+        )
+    )
+    assert response["success"] is True
+    assert response["data"]["standalone"] is True
+    assert response["data"]["os_records_accessed"] is False
+
+
 def test_briefing_and_compare_routes(fake_state):
     briefing = asyncio.run(
         document_routes.document_briefing(

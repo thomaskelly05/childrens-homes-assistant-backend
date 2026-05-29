@@ -1,0 +1,200 @@
+/** Standalone ORB document intelligence — lenses and contextual UI actions. */
+
+export type OrbDocumentLens =
+  | 'summary'
+  | 'explain'
+  | 'actions'
+  | 'policy_card'
+  | 'reg44'
+  | 'reg45'
+  | 'ofsted'
+  | 'safeguarding'
+  | 'recording_quality'
+  | 'manager_oversight'
+  | 'ri_governance'
+  | 'staff_briefing'
+  | 'supervision'
+  | 'checklist'
+  | 'what_is_missing'
+
+export type OrbDocumentKind = 'reg44' | 'policy' | 'incident_record' | 'general'
+
+export type OrbDocumentContextualAction = {
+  lens: OrbDocumentLens
+  label: string
+}
+
+const REG44_MARKERS = [
+  'regulation 44',
+  'reg 44',
+  'reg44',
+  'independent visitor',
+  'visitor report',
+  'monthly visit'
+]
+
+const POLICY_MARKERS = ['policy', 'procedure', 'guidance', 'staff must', 'escalat']
+
+const INCIDENT_MARKERS = ['incident', 'daily note', 'recording', 'chronology', 'safeguarding concern']
+
+export function detectDocumentKind(text: string, title = ''): OrbDocumentKind {
+  const combined = `${title} ${text}`.toLowerCase()
+  if (REG44_MARKERS.some((term) => combined.includes(term))) return 'reg44'
+  if (POLICY_MARKERS.some((term) => combined.includes(term))) return 'policy'
+  if (INCIDENT_MARKERS.some((term) => combined.includes(term))) return 'incident_record'
+  return 'general'
+}
+
+const CORE_ACTIONS: OrbDocumentContextualAction[] = [
+  { lens: 'summary', label: 'Summarise this' },
+  { lens: 'explain', label: 'Explain this' },
+  { lens: 'actions', label: 'Create action plan' }
+]
+
+const REG44_ACTIONS: OrbDocumentContextualAction[] = [
+  { lens: 'reg44', label: 'Reg 44 extraction' },
+  { lens: 'actions', label: 'Action plan' },
+  { lens: 'manager_oversight', label: 'Manager response' },
+  { lens: 'ri_governance', label: 'RI oversight' },
+  { lens: 'ofsted', label: 'Ofsted lens' }
+]
+
+const POLICY_ACTIONS: OrbDocumentContextualAction[] = [
+  { lens: 'policy_card', label: 'Policy card' },
+  { lens: 'staff_briefing', label: 'Staff briefing' },
+  { lens: 'checklist', label: 'Audit checklist' },
+  { lens: 'supervision', label: 'Supervision questions' },
+  { lens: 'recording_quality', label: 'Recording requirements' }
+]
+
+const INCIDENT_ACTIONS: OrbDocumentContextualAction[] = [
+  { lens: 'recording_quality', label: 'Recording quality' },
+  { lens: 'safeguarding', label: 'Safeguarding lens' },
+  { lens: 'manager_oversight', label: 'Manager oversight' },
+  { lens: 'what_is_missing', label: 'What is missing?' }
+]
+
+export function contextualDocumentActions(text: string, title = ''): OrbDocumentContextualAction[] {
+  const kind = detectDocumentKind(text, title)
+  const seen = new Set<OrbDocumentLens>()
+  const merged: OrbDocumentContextualAction[] = []
+
+  const add = (items: OrbDocumentContextualAction[]) => {
+    for (const item of items) {
+      if (seen.has(item.lens)) continue
+      seen.add(item.lens)
+      merged.push(item)
+    }
+  }
+
+  add(CORE_ACTIONS)
+  if (kind === 'reg44') add(REG44_ACTIONS)
+  else if (kind === 'policy') add(POLICY_ACTIONS)
+  else if (kind === 'incident_record') add(INCIDENT_ACTIONS)
+  else {
+    add([
+      { lens: 'policy_card', label: 'Policy card' },
+      { lens: 'ofsted', label: 'Ofsted lens' },
+      { lens: 'safeguarding', label: 'Safeguarding lens' },
+      { lens: 'what_is_missing', label: 'What is missing?' }
+    ])
+  }
+
+  return merged.slice(0, 8)
+}
+
+export type OrbDocumentIntelligenceSection = {
+  heading: string
+  body: string
+  items?: string[]
+}
+
+export type OrbDocumentIntelligenceResult = {
+  lens: OrbDocumentLens
+  title: string
+  summary: string
+  sections?: OrbDocumentIntelligenceSection[]
+  actions?: Array<{
+    title: string
+    reason?: string | null
+    owner?: string | null
+    due_date?: string | null
+    risk_level?: string | null
+  }>
+  checklist?: string[]
+  confidence?: string
+  standalone?: boolean
+  os_records_accessed?: boolean
+  missing_information?: string[]
+  policy_card?: Record<string, unknown>
+  reg44?: Record<string, unknown>
+}
+
+export function formatDocumentIntelligenceMarkdown(result: OrbDocumentIntelligenceResult): string {
+  const lines: string[] = [
+    `# ${result.title}`,
+    '',
+    `**Lens:** ${result.lens.replace(/_/g, ' ')}`,
+    '',
+    result.summary,
+    '',
+    '_Based only on the uploaded or pasted document — standalone ORB has not checked live IndiCare OS records._',
+    ''
+  ]
+
+  for (const section of result.sections || []) {
+    lines.push(`## ${section.heading}`)
+    if (section.body) lines.push(section.body)
+    for (const item of section.items || []) {
+      lines.push(`- ${item}`)
+    }
+    lines.push('')
+  }
+
+  if (result.policy_card) {
+    const card = result.policy_card as Record<string, string>
+    if (card.what_staff_must_know) {
+      lines.push('## What staff must know')
+      lines.push(card.what_staff_must_know)
+      lines.push('')
+    }
+    if (card.when_to_escalate) {
+      lines.push('## When to escalate')
+      lines.push(card.when_to_escalate)
+      lines.push('')
+    }
+    if (card.manager_responsibilities) {
+      lines.push('## Manager responsibilities')
+      lines.push(card.manager_responsibilities)
+      lines.push('')
+    }
+  }
+
+  if (result.actions?.length) {
+    lines.push('## Draft actions')
+    for (const action of result.actions) {
+      const owner = action.owner ? ` (${action.owner})` : ''
+      const due = action.due_date ? ` — due: ${action.due_date}` : ''
+      lines.push(`- **${action.title}**${owner}${due}`)
+      if (action.reason) lines.push(`  - ${action.reason}`)
+    }
+    lines.push('')
+  }
+
+  if (result.checklist?.length) {
+    lines.push('## Checklist')
+    for (const item of result.checklist) {
+      lines.push(`- [ ] ${item}`)
+    }
+    lines.push('')
+  }
+
+  if (result.missing_information?.length) {
+    lines.push('## Missing information')
+    for (const gap of result.missing_information) {
+      lines.push(`- ${gap}`)
+    }
+  }
+
+  return lines.join('\n').trim()
+}

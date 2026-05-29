@@ -22,6 +22,8 @@ export const STANDALONE_ORB_API_PATHS = {
   documentsHealth: '/orb/standalone/documents/health',
   documentsUpload: '/orb/standalone/documents/upload',
   documentsAnalyse: '/orb/standalone/documents/analyse',
+  documentsIntelligence: '/orb/standalone/documents/intelligence',
+  documentsLenses: '/orb/standalone/documents/lenses',
   evaluationHealth: '/orb/standalone/evaluation/health',
   agentsHealth: '/orb/standalone/agents/health',
   agentsList: '/orb/standalone/agents',
@@ -1045,6 +1047,71 @@ export async function analyseOrbStandaloneDocument(body: {
     body: JSON.stringify({ ...body, include_evaluation: true })
   })
   return unwrapKnowledgeData<{ understanding: OrbDocumentUnderstanding }>(payload)
+}
+
+export type OrbDocumentLens =
+  | 'summary'
+  | 'explain'
+  | 'actions'
+  | 'policy_card'
+  | 'reg44'
+  | 'reg45'
+  | 'ofsted'
+  | 'safeguarding'
+  | 'recording_quality'
+  | 'manager_oversight'
+  | 'ri_governance'
+  | 'staff_briefing'
+  | 'supervision'
+  | 'checklist'
+  | 'what_is_missing'
+
+export type OrbDocumentIntelligenceResponse = {
+  lens: OrbDocumentLens
+  title: string
+  summary: string
+  sections?: Array<{ heading: string; body: string; items?: string[] }>
+  actions?: Array<{
+    title: string
+    reason?: string | null
+    owner?: string | null
+    due_date?: string | null
+    risk_level?: string | null
+  }>
+  checklist?: string[]
+  confidence?: string
+  standalone?: boolean
+  os_records_accessed?: boolean
+  missing_information?: string[]
+  policy_card?: Record<string, unknown>
+  reg44?: Record<string, unknown>
+}
+
+export async function runOrbDocumentIntelligence(body: {
+  lens: OrbDocumentLens
+  document_text?: string
+  document_source_id?: string
+  document_title?: string
+  mode?: string
+  context?: Record<string, unknown>
+  question?: string
+}) {
+  const payload = await authFetch<{
+    success?: boolean
+    data?: OrbDocumentIntelligenceResponse
+  }>(STANDALONE_ORB_API_PATHS.documentsIntelligence, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  })
+  if (!payload?.data?.summary) {
+    throw new AuthApiError(503, 'ORB could not complete document intelligence.')
+  }
+  return {
+    ...payload.data,
+    standalone: payload.data.standalone ?? true,
+    os_records_accessed: payload.data.os_records_accessed ?? false
+  }
 }
 
 export type OrbAgentType =

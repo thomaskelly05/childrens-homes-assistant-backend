@@ -206,6 +206,36 @@ export const ORB_ATTACHMENT_FOLLOW_UPS: Array<{
   { action: 'action_plan', label: 'Action plan' }
 ]
 
+export function OrbDocumentContextChips({
+  actions,
+  onSelect
+}: {
+  actions: Array<{ lens: string; label: string }>
+  onSelect: (lens: string) => void
+}) {
+  if (!actions.length) return null
+  return (
+    <div
+      className="mt-2 flex flex-wrap gap-1.5"
+      data-orb-document-context-actions
+      role="group"
+      aria-label="Document intelligence actions"
+    >
+      {actions.map((item) => (
+        <button
+          key={item.lens}
+          type="button"
+          onClick={() => onSelect(item.lens)}
+          className="rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-[11px] font-medium text-cyan-900 transition hover:bg-cyan-100"
+          data-orb-document-lens={item.lens}
+        >
+          {item.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 export function OrbAskAboutThisChips({
   onSelect
 }: {

@@ -18,7 +18,10 @@ Status key: **Done** = verified in code · **Partial** = UI or backend incomplet
 | Voice conversation | Push-to-talk only | Partial | `orb-standalone-composer.tsx` | Duplex mode | No | Medium | Privacy review |
 | Image upload | Composer attachments | Done | `orb-care-companion.tsx` | — | No | Medium | User-supplied only |
 | Document upload | Document panel | Done | `orb-document-panel.tsx`, `orb_document_routes.py` | PPTX depth | Partial | High | User uploads only |
-| Document analysis | Analyse / summarise actions | Done | `orb-document-panel.tsx` | — | No | High | No OS records |
+| Document analysis | Document Intelligence lenses (15+) | Done | `orb_document_intelligence_service.py`, `document-intelligence.ts` | OS sync | No | Very high | No OS records |
+| Document analysis (panel) | Analyse / summarise tabs | Done | `orb-document-panel.tsx` | Lens parity in panel | Partial | High | No OS records |
+| Policy card from document | `policy_card` lens | Done | `/documents/intelligence` | OS publish | No | Very high | Draft only |
+| Reg 44 from document | `reg44` lens + OS reader heuristics | Done | `orb_reg44_document_extraction.py` | DB import | No | Very high | Text only |
 | Generated file download | Saved outputs | Partial | `orb_saved_output_routes.py` | PDF/DOCX gen | No | Medium | Standalone artefacts |
 | Memory / profile | Adult profile + workspace profiles | Done | `adult-profile-store.ts`, `orb-memory-panel.tsx` | Server sync | Partial | High | No OS records |
 | Temporary chat | Temporary thread flag | Done | `standalone-local-store.ts`, `orb-care-companion.tsx` | Server ephemeral | Partial | High | Skips profile in prompt |
