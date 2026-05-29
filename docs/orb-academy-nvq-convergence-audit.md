@@ -5,6 +5,8 @@
 
 **Expert stress-test (2026-05-29):** Gold scenarios `GOLD-098`–`GOLD-100` and family `nvq_reflective_restraint` / `academy_nvq_source_pack` support NVQ authenticity evaluation. See `docs/orb-residential-expert-stress-test-pack.md`.
 
+**Live NVQ answers (2026-05-29):** `orb_expert_answer_engine_service` detects diploma/NVQ prompts, applies authenticity `must_not_say`, and shapes assessor/learner responses. See [orb-expert-answer-engine.md](./orb-expert-answer-engine.md).
+
 ---
 
 ## 1. Existing Academy backend services

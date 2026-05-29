@@ -13,6 +13,7 @@ from services.ai_model_router_service import (
     ai_model_router_service,
 )
 from services.orb_citation_service import orb_citation_service
+from services.orb_expert_answer_engine_service import orb_expert_answer_engine_service
 from services.orb_knowledge_retrieval_service import orb_knowledge_retrieval_service
 from services.orb_rag_retrieval_service import orb_rag_retrieval_service
 from services.orb_standalone_sources import (
@@ -236,6 +237,49 @@ class OrbGeneralAssistantService:
             "auto_run": True,
         }
 
+    def _attach_expert_engine(
+        self,
+        retrieval: dict[str, Any],
+        message: str,
+        *,
+        mode: str | None = None,
+        history: list[dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
+        tier = retrieval.get("prompt_tier") or "residential"
+        if tier == "fast":
+            retrieval["expert_answer_packet"] = {"active": False}
+            return retrieval
+        bundle = orb_knowledge_retrieval_service.prepare_request_bundle(
+            message,
+            mode=mode,
+            history=history,
+        )
+        packet = bundle.get("expert_answer_packet") or {"active": False}
+        retrieval["expert_answer_packet"] = packet
+        if packet.get("active") and bundle.get("grounding_context"):
+            existing = _text(retrieval.get("grounding_context"))
+            block = orb_expert_answer_engine_service.build_prompt_block(packet)
+            if block and block not in existing:
+                retrieval["grounding_context"] = f"{existing}\n\n{block}".strip()
+        retrieval.setdefault("prompt_tier", bundle.get("prompt_tier"))
+        return retrieval
+
+    def _apply_expert_self_check(
+        self,
+        answer: str,
+        retrieval: dict[str, Any],
+        *,
+        citations: list[dict[str, Any]] | None = None,
+    ) -> tuple[str, dict[str, Any]]:
+        packet = retrieval.get("expert_answer_packet") or {}
+        if not packet.get("active"):
+            return answer, {}
+        check = orb_expert_answer_engine_service.evaluate_answer_light(
+            packet, answer, citations=citations
+        )
+        answer = orb_expert_answer_engine_service.maybe_append_critical_note(answer, check)
+        return answer, check
+
     def prepare_retrieval(
         self,
         message: str,
@@ -243,6 +287,7 @@ class OrbGeneralAssistantService:
         mode: str | None = None,
         profile_context: bool = False,
         has_images: bool = False,
+        history: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         prompt_tier = orb_knowledge_retrieval_service.resolve_prompt_tier(
             message,
@@ -257,7 +302,7 @@ class OrbGeneralAssistantService:
                 profile_context=profile_context,
             )
             classification = bundle["classification"]
-            return {
+            retrieval = {
                 "classification": classification,
                 "source_packs": bundle["source_packs"],
                 "document_results": [],
@@ -268,7 +313,9 @@ class OrbGeneralAssistantService:
                 "routing_hint": classification.get("routing_hint"),
                 "top_source_titles": [],
                 "prompt_tier": "fast",
+                "expert_answer_packet": bundle.get("expert_answer_packet") or {"active": False},
             }
+            return retrieval
         try:
             rag = orb_rag_retrieval_service.retrieve_for_conversation(
                 message,
@@ -297,7 +344,14 @@ class OrbGeneralAssistantService:
                 has_images=has_images,
             )
             sources = orb_citation_service.frontend_sources_payload(citations)
-            return {
+            fallback_tier = orb_knowledge_retrieval_service.resolve_prompt_tier(
+                message,
+                mode=mode,
+                classification=classification,
+                profile_context=profile_context,
+                attachments=["image"] if has_images else None,
+            )
+            retrieval = {
                 "classification": classification,
                 "source_packs": packs,
                 "document_results": [],
@@ -312,7 +366,11 @@ class OrbGeneralAssistantService:
                 "research_note": classification.get("research_note"),
                 "routing_hint": classification.get("routing_hint"),
                 "top_source_titles": [p.get("title") for p in packs if p.get("title")],
+                "prompt_tier": fallback_tier,
             }
+            return self._attach_expert_engine(
+                retrieval, message, mode=mode, history=history
+            )
 
         classification = rag["classification"]
         tier = orb_knowledge_retrieval_service.resolve_prompt_tier(
@@ -322,7 +380,7 @@ class OrbGeneralAssistantService:
             profile_context=profile_context,
             attachments=["image"] if has_images else None,
         )
-        return {
+        retrieval = {
             "classification": classification,
             "source_packs": rag["source_packs"],
             "document_results": rag.get("document_results") or [],
@@ -334,6 +392,7 @@ class OrbGeneralAssistantService:
             "top_source_titles": rag.get("top_source_titles") or [],
             "prompt_tier": tier,
         }
+        return self._attach_expert_engine(retrieval, message, mode=mode, history=history)
 
     async def answer(
         self,
@@ -440,6 +499,7 @@ class OrbGeneralAssistantService:
             mode=mode,
             profile_context=profile_context or profile_block,
             has_images=bool(images),
+            history=history,
         )
         try:
             result = await asyncio.wait_for(
@@ -589,6 +649,7 @@ class OrbGeneralAssistantService:
         document_analysis: dict[str, Any] | None = None,
         user_message: str | None = None,
         mode: str | None = None,
+        expert_self_check: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         packs = retrieval.get("source_packs") or []
         document_results = retrieval.get("document_results") or []
@@ -625,6 +686,15 @@ class OrbGeneralAssistantService:
             agent_hint = detect_agent_intent(user_message, mode=mode)
             if agent_hint and "agent" not in context:
                 context["agent"] = {**agent_hint, "auto_run": False}
+        packet = retrieval.get("expert_answer_packet") or {}
+        if packet.get("active"):
+            context["expert_answer_engine"] = orb_expert_answer_engine_service.metadata_for_context(
+                packet, expert_self_check
+            )
+        if expert_self_check:
+            context["expert_self_check"] = expert_self_check
+        if retrieval.get("prompt_tier"):
+            context["prompt_tier"] = retrieval["prompt_tier"]
         return context
 
     def _mode_behaviour_hint(self, mode: str | None) -> str:
@@ -763,6 +833,9 @@ class OrbGeneralAssistantService:
             history=history,
         )
         resolved = append_sources_basis_section(resolved, sources, message=message, mode=mode)
+        resolved, expert_check = self._apply_expert_self_check(
+            resolved, retrieval, citations=citations
+        )
         return {
             "answer": resolved,
             "sources": sources,
@@ -772,6 +845,7 @@ class OrbGeneralAssistantService:
                 model_routing=model_routing,
                 user_message=message,
                 mode=mode,
+                expert_self_check=expert_check,
             ),
             "tools_used": tools,
             "internal_data_access": False,
@@ -952,6 +1026,7 @@ class OrbGeneralAssistantService:
             mode=mode,
             profile_context=profile_context or profile_block,
             has_images=bool(images),
+            history=history,
         )
         system = self._build_llm_system_prompt(
             retrieval=retrieval,
@@ -1009,11 +1084,17 @@ class OrbGeneralAssistantService:
             resolved = append_sources_basis_section(
                 resolved, retrieval["sources"], message=user_message, mode=mode
             )
+            resolved, expert_check = self._apply_expert_self_check(
+                resolved,
+                retrieval,
+                citations=retrieval.get("citations"),
+            )
             context_used = self._retrieval_context_used(
                 retrieval,
                 model_routing=model_routing,
                 user_message=user_message,
                 mode=mode,
+                expert_self_check=expert_check,
             )
             if retrieval.get("prompt_tier"):
                 context_used["prompt_tier"] = retrieval["prompt_tier"]

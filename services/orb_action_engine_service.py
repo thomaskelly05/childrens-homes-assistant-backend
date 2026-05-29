@@ -16,6 +16,7 @@ from services.orb_human_practice_brain_service import orb_human_practice_brain_s
 from services.orb_knowledge_retrieval_service import orb_knowledge_retrieval_service
 from services.orb_operating_brain_service import orb_operating_brain_service
 from services.orb_standalone_brain_service import orb_standalone_brain_service
+from services.orb_expert_answer_engine_service import orb_expert_answer_engine_service
 from services.orb_expert_scenario_bank_service import orb_expert_scenario_bank_service
 from services.orb_standalone_sources import build_standalone_sources
 
@@ -560,8 +561,14 @@ def analyse_what_missing_gaps(
     lower = text.lower()
     gaps: list[WhatMissingGap] = []
 
-    expert_ctx = orb_expert_scenario_bank_service.detect_expert_context(text)
-    for marker in (expert_ctx.get("expected_markers") or [])[:6]:
+    expert_packet = orb_expert_answer_engine_service.build_expert_answer_packet(
+        text, profile_role=profile_role
+    )
+    expert_markers = list(expert_packet.get("self_check_markers") or [])
+    if not expert_markers:
+        expert_ctx = orb_expert_scenario_bank_service.detect_expert_context(text)
+        expert_markers = list(expert_ctx.get("expected_markers") or [])
+    for marker in expert_markers[:6]:
         marker_id = re.sub(r"[^a-z0-9]+", "_", marker.lower())[:48]
         gaps.append(
             WhatMissingGap(
@@ -793,6 +800,7 @@ class OrbActionEngineService:
         mode: str,
         prompt_tier: str,
         profile_role: str | None = None,
+        source_text: str = "",
     ) -> str:
         parts = [
             "You are ORB Care Companion running a structured residential children's homes action.",
@@ -819,9 +827,13 @@ class OrbActionEngineService:
             )
         if self._vault_block(definition):
             parts.append(self._vault_block(definition))
-        expert_block = orb_expert_scenario_bank_service.expert_prompt_block(
-            grounding_context[:2000] if grounding_context else ""
+        source_for_expert = _text(source_text) or (grounding_context[:2000] if grounding_context else "")
+        expert_packet = orb_expert_answer_engine_service.build_expert_answer_packet(
+            source_for_expert, profile_role=profile_role, mode=mode
         )
+        expert_block = orb_expert_answer_engine_service.build_prompt_block(expert_packet)
+        if not expert_block:
+            expert_block = orb_expert_scenario_bank_service.expert_prompt_block(source_for_expert)
         if expert_block:
             parts.append(expert_block)
         if operating_block:
@@ -1178,6 +1190,7 @@ class OrbActionEngineService:
             mode=mode_name,
             prompt_tier=prompt_tier,
             profile_role=profile_role,
+            source_text=source_text,
         )
         user_prompt = self._action_user_prompt(
             action_id,

@@ -109,6 +109,7 @@ def _build_standalone_request_context(payload: OrbStandaloneConversationRequest)
         mode=mode,
         profile_context=profile_context,
         attachments=image_urls[:4] or None,
+        history=history,
     )
     prompt_tier = retrieval_bundle["prompt_tier"]
     grounding_context = retrieval_bundle["grounding_context"]
@@ -729,6 +730,14 @@ async def standalone_orb_conversation(
         context_used["official_source_grounding"] = bool(shared_cognition.get("citations"))
         context_used["orb_knowledge_grounding_injected"] = True
         context_used["orb_knowledge_grounding_preview"] = grounding_context[:1200]
+        expert_packet = retrieval_bundle.get("expert_answer_packet") or {}
+        if expert_packet.get("active") and not context_used.get("expert_answer_engine"):
+            from services.orb_expert_answer_engine_service import orb_expert_answer_engine_service
+
+            context_used["expert_answer_engine"] = orb_expert_answer_engine_service.metadata_for_context(
+                expert_packet,
+                context_used.get("expert_self_check"),
+            )
         context_used = _apply_cognition_context(
             context_used,
             shared_cognition=shared_cognition,
@@ -963,6 +972,14 @@ async def standalone_orb_conversation_stream(
             context_used["official_source_grounding"] = bool(shared_cognition.get("citations"))
             context_used["orb_knowledge_grounding_injected"] = True
             context_used["orb_knowledge_grounding_preview"] = grounding_context[:1200]
+            expert_packet = retrieval_bundle.get("expert_answer_packet") or {}
+            if expert_packet.get("active") and not context_used.get("expert_answer_engine"):
+                from services.orb_expert_answer_engine_service import orb_expert_answer_engine_service
+
+                context_used["expert_answer_engine"] = orb_expert_answer_engine_service.metadata_for_context(
+                    expert_packet,
+                    context_used.get("expert_self_check"),
+                )
             context_used = _apply_cognition_context(
                 context_used,
                 shared_cognition=shared_cognition,

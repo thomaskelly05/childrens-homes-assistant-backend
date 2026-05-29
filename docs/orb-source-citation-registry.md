@@ -6,7 +6,8 @@ Honest citation metadata for standalone ORB: which official and sector sources a
 
 Registry data: `assistant/knowledge/orb_source_registry.py`  
 Service: `services/orb_source_registry_service.py`  
-Selection: `services/orb_citation_decision_service.py`
+Selection: `services/orb_citation_decision_service.py`  
+Live conversation: `services/orb_expert_answer_engine_service.py` → packet `source_anchors` → standalone sources (`build_standalone_sources`). See [orb-expert-answer-engine.md](./orb-expert-answer-engine.md).
 
 ## Core official sources (Stage 1)
 

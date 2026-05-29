@@ -4,7 +4,7 @@
 
 This audit maps existing document, extractor, and action-planner functionality and records what was converged into the standalone ORB Document Intelligence layer.
 
-**Source anchors (2026-05-29):** Document intelligence can align citations with `orb_source_registry_service` / `orb_citation_decision_service` when scenario families are detected (Reg 44/45, safeguarding uploads). See `docs/orb-source-citation-registry.md`.
+**Expert scenario families (2026-05-29):** `orb_document_intelligence_service._enrich_with_expert_families()` runs `orb_expert_answer_engine_service` on document text — incident/reg44/policy/NVQ lenses get family checklists, gaps, Reg 44 triangulation questions, and registry source anchors. See [orb-expert-answer-engine.md](./orb-expert-answer-engine.md) and `docs/orb-source-citation-registry.md`.
 
 ---
 

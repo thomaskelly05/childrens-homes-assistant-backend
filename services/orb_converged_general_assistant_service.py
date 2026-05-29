@@ -63,6 +63,7 @@ class OrbConvergedGeneralAssistantService:
             mode=mode,
             profile_context=profile_context,
             attachments=["image"] if image_data_urls else None,
+            history=history,
         )
         prompt_tier = retrieval_bundle["prompt_tier"]
 
@@ -191,6 +192,7 @@ class OrbConvergedGeneralAssistantService:
             mode=mode,
             profile_context=profile_context,
             attachments=["image"] if image_data_urls else None,
+            history=history,
         )
         prompt_tier = retrieval_bundle["prompt_tier"]
 

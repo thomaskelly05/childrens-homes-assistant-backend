@@ -24,6 +24,7 @@ from services.orb_document_understanding_service import (
     orb_document_understanding_service,
 )
 from services.orb_knowledge_library_service import orb_knowledge_library_service
+from services.orb_expert_answer_engine_service import orb_expert_answer_engine_service
 from services.orb_reg44_document_extraction import NOT_STATED, extract_reg44_report
 
 logger = logging.getLogger("indicare.orb_document_intelligence")
@@ -341,7 +342,95 @@ class OrbDocumentIntelligenceService:
         else:
             data = await self._lens_from_understanding(title, text, source_id, request)
 
+        data = self._enrich_with_expert_families(data, title=title, text=text, lens=lens)
         return OrbDocumentIntelligenceResponse(success=True, data=data)
+
+    def _enrich_with_expert_families(
+        self,
+        data: OrbDocumentIntelligenceData,
+        *,
+        title: str,
+        text: str,
+        lens: str,
+    ) -> OrbDocumentIntelligenceData:
+        """Apply scenario-family markers to document lens outputs."""
+        combined = f"{title}\n{text}"
+        doc_kind = detect_document_kind(text, title)
+        packet = orb_expert_answer_engine_service.build_expert_answer_packet(combined)
+        if not packet.get("active"):
+            return data
+
+        missing = list(data.missing_information)
+        checklist = list(data.checklist)
+        sections = list(data.sections)
+
+        for flag in (packet.get("red_flags") or [])[:6]:
+            if flag not in missing:
+                missing.append(f"Expert gap to check: {flag}")
+
+        if lens in ("recording_quality", "safeguarding", "actions") or doc_kind == "incident_record":
+            for item in (packet.get("what_to_check") or [])[:5]:
+                checklist.append(item)
+            sections.append(
+                OrbDocumentIntelligenceSection(
+                    heading="Scenario-family checks",
+                    body="From residential expert scenario recognition (supplied document only).",
+                    items=(packet.get("what_to_check") or [])[:6],
+                )
+            )
+
+        if lens == "reg44" or doc_kind == "reg44":
+            reg44_q = packet.get("reg44_questions") or []
+            if reg44_q:
+                sections.append(
+                    OrbDocumentIntelligenceSection(
+                        heading="Reg 44 triangulation questions",
+                        body="Independent scrutiny prompts from expert scenario families.",
+                        items=reg44_q[:8],
+                    )
+                )
+
+        if lens == "policy_card" or doc_kind == "policy":
+            sections.append(
+                OrbDocumentIntelligenceSection(
+                    heading="Staff briefing / audit prompts",
+                    body="Policy-to-practice checks (no live OS access).",
+                    items=(packet.get("what_to_escalate") or [])[:5]
+                    + ["Supervision questions: is practice matching policy in records?"],
+                )
+            )
+
+        if lens in {
+            "nvq_evidence_map",
+            "reflective_account_plan",
+            "assessor_feedback",
+            "professional_discussion_prompts",
+        }:
+            nvq = packet.get("nvq_learning_points") or []
+            must = packet.get("must_not_say") or []
+            sections.append(
+                OrbDocumentIntelligenceSection(
+                    heading="Academy / NVQ authenticity",
+                    body="Evidence mapping from expert NVQ scenario family.",
+                    items=nvq[:6] + must[:3],
+                )
+            )
+
+        anchors = packet.get("source_anchors") or []
+        sources = list(data.sources)
+        for anchor in anchors[:4]:
+            sid = anchor.get("source_id")
+            if sid and not any(s.get("source_id") == sid for s in sources):
+                sources.append(anchor)
+
+        return data.model_copy(
+            update={
+                "missing_information": missing[:20],
+                "checklist": checklist[:20],
+                "sections": sections,
+                "sources": sources,
+            }
+        )
 
     async def _resolve_document(
         self, request: OrbDocumentIntelligenceRequest

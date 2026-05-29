@@ -6,6 +6,8 @@ ORB expert testing uses a **structured scenario matrix** — families, modifiers
 
 The canonical UI remains **`/orb`**. This pack does not add a second ORB UI and does not connect standalone ORB to live IndiCare OS records.
 
+**Live answers (2026-05-29):** Scenario families are now active in production `/orb` conversation via the [ORB Expert Answer Engine](./orb-expert-answer-engine.md) — recognition, expert packets, role shaping, citations, and local self-check. The stress-test pack remains the evaluation backbone.
+
 ## Components
 
 | Component | Location |
@@ -17,6 +19,7 @@ The canonical UI remains **`/orb`**. This pack does not add a second ORB UI and 
 | Scenario bank service | `services/orb_expert_scenario_bank_service.py` |
 | Evaluator service | `services/orb_expert_scenario_evaluator_service.py` |
 | Citation decision engine | `services/orb_citation_decision_service.py` |
+| **Expert answer engine (live `/orb`)** | `services/orb_expert_answer_engine_service.py` |
 | Schemas | `schemas/orb_expert_scenarios.py`, `schemas/orb_expert_review.py` |
 
 ## Gold scenarios
