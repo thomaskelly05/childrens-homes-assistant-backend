@@ -5,6 +5,7 @@ import {
   Accessibility,
   Bell,
   Database,
+  Fingerprint,
   HelpCircle,
   Keyboard,
   Lock,
@@ -14,6 +15,7 @@ import {
   Settings,
   Shield,
   Sun,
+  Trash2,
   Type,
   User
 } from 'lucide-react'
@@ -22,6 +24,13 @@ import { OrbAppearanceControl } from '@/components/orb-standalone/orb-appearance
 import { OrbBillingSettingsSection } from '@/components/orb-standalone/orb-billing-settings-section'
 import { OrbStandalonePanelShell } from '@/components/orb-standalone/orb-standalone-panel-shell'
 import type { OrbAppearanceMode } from '@/lib/orb/orb-appearance'
+import {
+  deleteOrbPasskey,
+  fetchOrbPasskeys,
+  orbPasskeysSupported,
+  registerOrbPasskey,
+  type OrbPasskeyListResponse
+} from '@/lib/orb/orb-passkey-client'
 import {
   defaultOrbStandaloneChatSettings,
   loadOrbStandaloneChatSettings,
@@ -34,6 +43,7 @@ type SettingsSectionId =
   | 'appearance'
   | 'voice'
   | 'chat'
+  | 'security'
   | 'billing'
   | 'privacy'
   | 'notifications'
@@ -44,12 +54,15 @@ const SECTION_META: Array<{ id: SettingsSectionId; label: string }> = [
   { id: 'appearance', label: 'Appearance' },
   { id: 'voice', label: 'Voice' },
   { id: 'chat', label: 'Chat' },
+  { id: 'security', label: 'Security' },
   { id: 'billing', label: 'Billing' },
   { id: 'privacy', label: 'Privacy & data' },
   { id: 'notifications', label: 'Notifications' },
   { id: 'shortcuts', label: 'Shortcuts' },
   { id: 'about', label: 'About' }
 ]
+
+type PasskeyItem = NonNullable<OrbPasskeyListResponse['items']>[number]
 
 export function OrbStandaloneSettingsPanel({
   open,
@@ -90,11 +103,61 @@ export function OrbStandaloneSettingsPanel({
 }) {
   const [activeSection, setActiveSection] = useState<SettingsSectionId>('appearance')
   const [chatSettings, setChatSettings] = useState<OrbStandaloneChatSettings>(defaultOrbStandaloneChatSettings)
+  const [passkeysSupported, setPasskeysSupported] = useState(false)
+  const [passkeys, setPasskeys] = useState<PasskeyItem[]>([])
+  const [passkeyStatus, setPasskeyStatus] = useState<string | null>(null)
+  const [passkeyBusy, setPasskeyBusy] = useState(false)
 
   useEffect(() => {
     if (!open) return
     setChatSettings(loadOrbStandaloneChatSettings())
+    setPasskeysSupported(orbPasskeysSupported())
   }, [open])
+
+  useEffect(() => {
+    if (!open || activeSection !== 'security') return
+    void refreshPasskeys()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, activeSection])
+
+  async function refreshPasskeys() {
+    try {
+      const response = await fetchOrbPasskeys()
+      setPasskeys(response.items ?? [])
+      setPasskeyStatus(null)
+    } catch (caught) {
+      setPasskeys([])
+      setPasskeyStatus(caught instanceof Error ? caught.message : 'Could not load passkeys')
+    }
+  }
+
+  async function handleAddPasskey() {
+    setPasskeyBusy(true)
+    setPasskeyStatus(null)
+    try {
+      await registerOrbPasskey('ORB passkey')
+      setPasskeyStatus('Face ID / Touch ID is now enabled for this account.')
+      await refreshPasskeys()
+    } catch (caught) {
+      setPasskeyStatus(caught instanceof Error ? caught.message : 'Passkey setup was cancelled or failed.')
+    } finally {
+      setPasskeyBusy(false)
+    }
+  }
+
+  async function handleDeletePasskey(passkeyId: number) {
+    setPasskeyBusy(true)
+    setPasskeyStatus(null)
+    try {
+      await deleteOrbPasskey(passkeyId)
+      setPasskeyStatus('Passkey removed.')
+      await refreshPasskeys()
+    } catch (caught) {
+      setPasskeyStatus(caught instanceof Error ? caught.message : 'Could not remove passkey.')
+    } finally {
+      setPasskeyBusy(false)
+    }
+  }
 
   function updateChat(patch: Partial<OrbStandaloneChatSettings>) {
     setChatSettings((current) => {
@@ -142,7 +205,7 @@ export function OrbStandaloneSettingsPanel({
             <SettingsBlock title="Appearance" description="How ORB looks on this device.">
               <OrbAppearanceControl value={appearanceMode} onChange={(mode) => onAppearanceChange?.(mode)} />
               <p className="text-[11px] leading-5 text-[var(--orb-muted)]">
-                Dark theme is available; full dark polish is still improving.
+                System follows your device. You can override it here.
               </p>
               <fieldset>
                 <legend className="mb-2 flex items-center gap-2 text-xs font-medium text-[var(--orb-foreground)]">
@@ -231,6 +294,70 @@ export function OrbStandaloneSettingsPanel({
                   onClose()
                 }}
               />
+            </SettingsBlock>
+          ) : null}
+
+          {activeSection === 'security' ? (
+            <SettingsBlock title="Security" description="Use Face ID, Touch ID, fingerprint or device passkeys.">
+              <div className="rounded-xl border border-[var(--orb-line)] bg-[var(--orb-surface)] px-4 py-3">
+                <p className="flex items-center gap-2 text-sm font-semibold text-[var(--orb-foreground)]">
+                  <Fingerprint className="h-4 w-4 text-[#0284C7]" aria-hidden />
+                  Face ID / Touch ID
+                </p>
+                <p className="mt-1 text-xs leading-5 text-[var(--orb-muted)]">
+                  Add a passkey so this device can sign in to ORB more quickly. Your biometric stays on your device;
+                  ORB stores the passkey credential needed to recognise you securely.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleAddPasskey}
+                  disabled={!passkeysSupported || passkeyBusy}
+                  className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#0284C7] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#0369A1] disabled:cursor-not-allowed disabled:opacity-50"
+                  data-orb-passkey-register
+                >
+                  <Fingerprint className="h-4 w-4" aria-hidden />
+                  {passkeyBusy ? 'Working…' : passkeysSupported ? 'Add Face ID / Touch ID' : 'Passkeys unavailable'}
+                </button>
+                {passkeyStatus ? (
+                  <p className="mt-2 text-xs leading-5 text-[var(--orb-muted)]" data-orb-passkey-status>
+                    {passkeyStatus}
+                  </p>
+                ) : null}
+              </div>
+
+              <div className="space-y-2" data-orb-passkey-list>
+                <p className="text-xs font-semibold text-[var(--orb-foreground)]">Saved passkeys</p>
+                {passkeys.length ? (
+                  passkeys.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center justify-between gap-3 rounded-xl border border-[var(--orb-line)] px-4 py-3"
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-medium text-[var(--orb-foreground)]">
+                          {item.nickname || 'ORB passkey'}
+                        </span>
+                        <span className="block text-xs text-[var(--orb-muted)]">
+                          {item.last_used_at ? `Last used ${new Date(item.last_used_at).toLocaleDateString()}` : 'Not used yet'}
+                        </span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleDeletePasskey(item.id)}
+                        disabled={passkeyBusy}
+                        className="rounded-full border border-[var(--orb-line)] p-2 text-[var(--orb-muted)] transition hover:bg-red-50 hover:text-red-700 disabled:opacity-50"
+                        aria-label="Remove passkey"
+                      >
+                        <Trash2 className="h-4 w-4" aria-hidden />
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <p className="rounded-xl border border-dashed border-[var(--orb-line)] px-4 py-3 text-xs text-[var(--orb-muted)]">
+                    No passkeys saved yet.
+                  </p>
+                )}
+              </div>
             </SettingsBlock>
           ) : null}
 
@@ -324,15 +451,7 @@ export function OrbStandaloneSettingsPanel({
   )
 }
 
-function SettingsBlock({
-  title,
-  description,
-  children
-}: {
-  title: string
-  description: string
-  children: ReactNode
-}) {
+function SettingsBlock({ title, description, children }: { title: string; description: string; children: ReactNode }) {
   return (
     <section>
       <h3 className="text-sm font-semibold text-[var(--orb-foreground)]">{title}</h3>
