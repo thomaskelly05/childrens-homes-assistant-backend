@@ -20,6 +20,24 @@ OrbDocumentAnalysisMode = Literal[
     "full_review",
 ]
 
+OrbDocumentLens = Literal[
+    "summary",
+    "explain",
+    "actions",
+    "policy_card",
+    "reg44",
+    "reg45",
+    "ofsted",
+    "safeguarding",
+    "recording_quality",
+    "manager_oversight",
+    "ri_governance",
+    "staff_briefing",
+    "supervision",
+    "checklist",
+    "what_is_missing",
+]
+
 OrbDocumentActionPriority = Literal["low", "medium", "high", "urgent"]
 
 
@@ -125,6 +143,7 @@ class OrbDocumentAnalysisRequest(OrbStandaloneBoundaryMixin):
     model_config = ConfigDict(extra="ignore")
 
     mode: OrbDocumentAnalysisMode = "explain"
+    lens: OrbDocumentLens | None = None
     source_id: str | None = Field(default=None, max_length=120)
     title: str | None = Field(default=None, max_length=500)
     text: str | None = Field(default=None, max_length=500_000)

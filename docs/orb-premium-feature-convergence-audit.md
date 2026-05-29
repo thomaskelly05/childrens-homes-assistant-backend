@@ -24,7 +24,7 @@ Standalone ORB must never imply access to live IndiCare OS child, home, staff, c
 | Intelligence | Deep research / agents panel | A | `orb-agent-panel.tsx`, `orb_agent_routes.py` |
 | Intelligence | Citations / explainability / cognition pill | A | `orb-explainability-panel.tsx`, backend cognition |
 | Workspace | Projects, saved outputs | A | `standalone-local-store.ts`, `orb_saved_output_routes.py` |
-| Documents | Upload, summarise, analyse (standalone) | A | `orb-document-panel.tsx`, `orb_document_routes.py` |
+| Documents | Upload, Document Intelligence lenses, in-chat chips | A | `orb_document_intelligence_service.py`, `orb-care-companion.tsx`, `orb_document_routes.py` |
 | Voice | Push-to-talk, TTS read-aloud, voice settings | B | `use-standalone-orb-voice.ts`, `orb-voice-settings-panel.tsx` |
 | Profile | Adult profile drawer (localStorage) | A | `adult-profile-store.ts`, `orb-adult-profile-drawer.tsx` |
 | Profile | Workspace “Profiles” (user-provided child context labels) | A | `orb-standalone-sidebar.tsx` |
