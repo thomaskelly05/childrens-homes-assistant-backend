@@ -227,3 +227,190 @@ def test_frontend_backend_supported_actions_mapping():
 
 def test_forbidden_keys_include_chronology_id():
     assert "chronology_id" in FORBIDDEN_STANDALONE_OS_KEYS
+
+
+@pytest.mark.asyncio
+async def test_make_more_concise_preserves_safeguarding_boundary(monkeypatch):
+    captured: dict = {}
+
+    async def stub_llm(*, user_prompt: str, system_prompt: str, **_kwargs):
+        captured["user"] = user_prompt
+        return (
+            "Based only on what you have provided…\n\n"
+            "Escalation to DSL considered. Injury noted — cause unclear."
+        )
+
+    monkeypatch.setattr(orb_action_engine_service, "_llm_complete", stub_llm)
+    result = await orb_action_engine_service.run_action(
+        action="make_more_concise",
+        source_answer="Long notes about injury and possible safeguarding escalation to DSL.",
+        mode="Ask ORB",
+    )
+    assert result["action"] == "make_more_concise"
+    assert "safeguarding" in captured["user"].lower()
+    assert "escalation" in result["answer"].lower() or "dsl" in result["answer"].lower()
+
+
+@pytest.mark.asyncio
+async def test_make_more_detailed_adds_checks_without_inventing(monkeypatch):
+    captured: dict = {}
+
+    async def stub_llm(*, user_prompt: str, system_prompt: str, **_kwargs):
+        captured["user"] = user_prompt
+        return "Based only on what you have provided…\n\n## Next steps\nConfirm timeline with on-call."
+
+    monkeypatch.setattr(orb_action_engine_service, "_llm_complete", stub_llm)
+    await orb_action_engine_service.run_action(
+        action="make_more_detailed",
+        source_answer="Brief incident note.",
+        mode="Ask ORB",
+    )
+    assert "do not invent" in captured["user"].lower()
+
+
+@pytest.mark.asyncio
+async def test_therapeutic_reframe_avoids_punitive_wording(monkeypatch):
+    captured: dict = {}
+
+    async def stub_llm(*, user_prompt: str, **_kwargs):
+        captured["prompt"] = user_prompt
+        return (
+            "Based only on what you have provided…\n\n"
+            "Behaviour may communicate unmet need. Staff offered co-regulation."
+        )
+
+    monkeypatch.setattr(orb_action_engine_service, "_llm_complete", stub_llm)
+    result = await orb_action_engine_service.run_action(
+        action="therapeutic_reframe",
+        source_answer="The child was defiant and manipulative.",
+        mode="Ask ORB",
+    )
+    assert "punitive" in captured["prompt"].lower()
+    assert "defiant" not in result["answer"].lower()
+
+
+@pytest.mark.asyncio
+async def test_supervision_prompt_includes_staff_support_and_learning(monkeypatch):
+    captured: dict = {}
+
+    async def stub_llm(*, user_prompt: str, **_kwargs):
+        captured["prompt"] = user_prompt
+        return (
+            "Based only on what you have provided…\n\n"
+            "## Staff support\nRest debrief.\n## Learning\nPACE refresher."
+        )
+
+    monkeypatch.setattr(orb_action_engine_service, "_llm_complete", stub_llm)
+    result = await orb_action_engine_service.run_action(
+        action="supervision_prompt",
+        source_answer="Difficult evening on unit.",
+        mode="Staff Coach",
+    )
+    prompt = captured["prompt"].lower()
+    assert "staff support" in prompt
+    assert "learning" in prompt
+    assert result["title"] == "Supervision prompts"
+
+
+@pytest.mark.asyncio
+async def test_shift_handover_includes_risks_actions_manager_missing(monkeypatch):
+    captured: dict = {}
+
+    async def stub_llm(*, user_prompt: str, **_kwargs):
+        captured["prompt"] = user_prompt
+        return (
+            "Based only on what you have provided…\n\n"
+            "## Priority risks\nEscalation.\n## Manager attention\nRM brief.\n## Missing\nChild voice."
+        )
+
+    monkeypatch.setattr(orb_action_engine_service, "_llm_complete", stub_llm)
+    result = await orb_action_engine_service.run_action(
+        action="shift_handover_summary",
+        source_answer="End of shift notes.",
+        mode="Record This Properly",
+    )
+    prompt = captured["prompt"].lower()
+    assert "priority risks" in prompt
+    assert "manager attention" in prompt
+    assert "missing" in prompt
+    assert result["os_records_accessed"] is False
+
+
+@pytest.mark.asyncio
+async def test_build_shift_plan_standalone_sections(monkeypatch):
+    captured: dict = {}
+
+    async def stub_llm(*, user_prompt: str, **_kwargs):
+        captured["prompt"] = user_prompt
+        return "Based only on what you have provided…\n\n## Shift priorities\n1. Safety."
+
+    monkeypatch.setattr(orb_action_engine_service, "_llm_complete", stub_llm)
+    result = await orb_action_engine_service.run_action(
+        action="build_shift_plan",
+        source_answer="Shift notes for unit A.",
+        mode="Ask ORB",
+    )
+    assert result["action"] == "build_shift_plan"
+    assert "shift priorities" in captured["prompt"].lower()
+    assert "no live" in captured["prompt"].lower() or "not live" in captured["prompt"].lower()
+
+
+@pytest.mark.asyncio
+async def test_child_voice_prompt_does_not_invent_views(monkeypatch):
+    captured: dict = {}
+
+    async def stub_llm(*, user_prompt: str, system_prompt: str, **_kwargs):
+        captured["user"] = user_prompt
+        assert "never invent" in user_prompt.lower()
+        return "Based only on what you have provided…\n\nSuggest capturing child's words safely."
+
+    monkeypatch.setattr(orb_action_engine_service, "_llm_complete", stub_llm)
+    result = await orb_action_engine_service.run_action(
+        action="add_child_voice_prompt",
+        source_answer="Staff reported upset after contact.",
+        mode="Ask ORB",
+    )
+    assert result["action"] == "add_child_voice_prompt"
+
+
+@pytest.mark.asyncio
+async def test_high_risk_transform_uses_deep_tier(monkeypatch):
+    tiers: list[str] = []
+
+    async def stub_llm(*, prompt_tier: str, **_kwargs):
+        tiers.append(prompt_tier)
+        return "Based only on what you have provided…\n\nHandover."
+
+    monkeypatch.setattr(orb_action_engine_service, "_llm_complete", stub_llm)
+    tier = orb_action_engine_service.resolve_prompt_tier(
+        "shift_handover_summary",
+        source_text="Police attended after injury",
+        mode="Ask ORB",
+    )
+    assert tier == "deep"
+    await orb_action_engine_service.run_action(
+        action="shift_handover_summary",
+        source_answer="Police attended after injury",
+        mode="Ask ORB",
+    )
+    assert tiers == ["deep"]
+
+
+def test_transform_actions_are_backend_supported():
+    for action_id in (
+        "make_more_concise",
+        "make_more_detailed",
+        "therapeutic_reframe",
+        "supervision_prompt",
+        "shift_handover_summary",
+        "build_shift_plan",
+        "add_child_voice_prompt",
+    ):
+        assert orb_action_engine_service.is_backend_supported(action_id), action_id
+
+
+def test_frontend_maps_shift_builder_to_build_shift_plan():
+    text = ACTIONS_TS.read_text(encoding="utf-8")
+    assert "shift_builder: 'build_shift_plan'" in text
+    assert "more_concise: 'make_more_concise'" in text
+    assert "child_voice: 'add_child_voice_prompt'" in text

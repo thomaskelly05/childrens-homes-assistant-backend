@@ -115,6 +115,7 @@ import {
   type StandaloneOrbMode
 } from '@/lib/orb/standalone-client'
 import {
+  BACKEND_ORB_STANDALONE_ACTION_IDS,
   backendOrbActionIdForFollowUp,
   isBackendSupportedOrbResponseAction
 } from '@/lib/orb/orb-response-actions'
@@ -1440,30 +1441,15 @@ export function OrbCareCompanion() {
     inputRef.current?.focus()
   }
 
-  async function handleOrbFollowUp(
-    action: OrbResponseFollowUpAction,
+  async function runBackendOrbAction(
+    backendAction: string,
     sourceContent: string,
-    assistantIndex?: number
+    assistantIndex?: number,
+    frontendAction?: string
   ) {
-    if (action === 'ofsted_lens') handleModeChange('Ofsted Lens')
-    if (action === 'safeguarding_lens') handleModeChange('Safeguarding Thinking')
-    if (action === 'recording_wording') handleModeChange('Record This Properly')
-
-    if (!isBackendSupportedOrbResponseAction(action)) {
-      prefillOrbFollowUpComposer(action, sourceContent)
-      return
-    }
-
-    const backendAction = backendOrbActionIdForFollowUp(action)
-    if (!backendAction || pending || sendInFlightRef.current) {
-      prefillOrbFollowUpComposer(action, sourceContent)
-      return
-    }
-
     const chatId = workspace.activeChatId
-    if (!chatId) {
-      prefillOrbFollowUpComposer(action, sourceContent)
-      return
+    if (!chatId || pending || sendInFlightRef.current) {
+      return false
     }
 
     const sourceMessage =
@@ -1493,7 +1479,10 @@ export function OrbCareCompanion() {
         source_message: sourceMessage,
         source_answer: sourceContent.slice(0, 12000),
         mode,
-        context: { surface: 'standalone_orb_action', frontend_action: action }
+        context: {
+          surface: 'standalone_orb_action',
+          frontend_action: frontendAction ?? backendAction
+        }
       })
 
       const actionMessage = ensureStandaloneMessage({
@@ -1519,6 +1508,7 @@ export function OrbCareCompanion() {
         })
       })
       setDraftNotice(`${result.title} — standalone ORB action (not an OS record).`)
+      return true
     } catch {
       setWorkspace((current) => {
         const chat = current.chats.find((c) => c.id === chatId)
@@ -1528,9 +1518,35 @@ export function OrbCareCompanion() {
         })
       })
       setDraftNotice('Action could not run — composer prefill is available instead.')
-      prefillOrbFollowUpComposer(action, sourceContent)
+      return false
     } finally {
       setPending(false)
+    }
+  }
+
+  async function handleOrbFollowUp(
+    action: OrbResponseFollowUpAction,
+    sourceContent: string,
+    assistantIndex?: number
+  ) {
+    if (action === 'ofsted_lens') handleModeChange('Ofsted Lens')
+    if (action === 'safeguarding_lens') handleModeChange('Safeguarding Thinking')
+    if (action === 'recording_wording') handleModeChange('Record This Properly')
+
+    if (!isBackendSupportedOrbResponseAction(action)) {
+      prefillOrbFollowUpComposer(action, sourceContent)
+      return
+    }
+
+    const backendAction = backendOrbActionIdForFollowUp(action)
+    if (!backendAction) {
+      prefillOrbFollowUpComposer(action, sourceContent)
+      return
+    }
+
+    const ran = await runBackendOrbAction(backendAction, sourceContent, assistantIndex, action)
+    if (!ran) {
+      prefillOrbFollowUpComposer(action, sourceContent)
     }
   }
 
@@ -2244,8 +2260,20 @@ export function OrbCareCompanion() {
                                 }}
                                 onReflection={() => void saveChatNote(entry)}
                                 onSupervision={() => {
-                                  setMessage('Help me prepare supervision prompts from our last exchange.')
-                                  inputRef.current?.focus()
+                                  void (async () => {
+                                    const ran = await runBackendOrbAction(
+                                      BACKEND_ORB_STANDALONE_ACTION_IDS.supervision_prompt,
+                                      entry.content,
+                                      index,
+                                      'supervision_prompt'
+                                    )
+                                    if (!ran) {
+                                      setMessage(
+                                        'Help me prepare supervision prompts from our last exchange.'
+                                      )
+                                      inputRef.current?.focus()
+                                    }
+                                  })()
                                 }}
                                 onExport={() => void copyToClipboard(entry.content)}
                                 onInspectionPrep={() => handleModeChange('Ofsted Lens')}

@@ -40,7 +40,11 @@ Status key: **Done** = verified in code · **Partial** = UI or backend incomplet
 | Ask about this | Attachment chips | Done | `orb-assistant-message.tsx` | Document panel parity | Partial | High | Safe |
 | Structured response actions | `POST /orb/standalone/actions/run` | Done | `orb_action_engine_service.py`, `orb-response-actions.ts` | Stream actions | Partial | Very high | No OS records |
 | What am I missing | Backend action + heuristics | Done | `orb_action_engine_service.py` | OS chronology compare | No | Very high | Provided text only |
-| Recording / oversight / chronology actions | Backend engine | Done | `orb-care-companion.tsx` | Shift builder API wire | Partial | Very high | Standalone boundary |
+| Recording / oversight / chronology actions | Backend engine | Done | `orb-care-companion.tsx` | — | No | Very high | Standalone boundary |
+| Transform actions (concise, detailed, reframe) | Backend engine | Done | `orb_action_engine_service.py` | — | No | High | No invented facts |
+| Shift plan / handover | `build_shift_plan`, `shift_handover_summary` | Done | `orb-care-companion.tsx` | Section-by-section residential API | Partial | Very high | Provided notes only |
+| Child voice prompt | `add_child_voice_prompt` | Done | Action engine | — | No | High | Never invents views |
+| Supervision prompts (toolbar) | `supervision_prompt` action | Done | `orb-care-companion.tsx` | — | No | High | Staff Coach mode |
 
 ---
 

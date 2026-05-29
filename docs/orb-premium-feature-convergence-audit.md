@@ -110,8 +110,8 @@ Legend: **Done** · **Partial** · **UI only** · **Backend only** · **Legacy**
 | Therapeutic language rewrite | Done | Therapeutic Reframe |
 | Chronology suggestion | Partial | Follow-up (no OS write) |
 | Manager oversight draft | Done | Follow-up action |
-| Handover summary | Done | `/shift` + Shift Builder follow-up |
-| End-of-shift summary | Partial | Same as handover |
+| Handover summary | Done | `shift_handover_summary` + `build_shift_plan` actions |
+| End-of-shift summary | Done | `build_shift_plan` (reflection + gaps sections) |
 
 ### Safeguarding tools
 
@@ -174,7 +174,7 @@ Legend: **Done** · **Partial** · **UI only** · **Backend only** · **Legacy**
 |------|--------|
 | Shift Builder | Partial — follow-up + backend draft API |
 | Priority planner | Partial — handover prompts |
-| End-of-shift reflection | Partial |
+| End-of-shift reflection | Done | `build_shift_plan` action |
 | Manager attention / what missing | Done — follow-ups + slash |
 | Outstanding actions summary | Partial |
 
@@ -206,7 +206,7 @@ Legend: **Done** · **Partial** · **UI only** · **Backend only** · **Legacy**
 ## 8. Recommended next implementation order
 
 1. **True streaming** — SSE backend + frontend token renderer (`docs/orb-speed-and-instant-feel-audit.md`).
-2. **Shift Builder panel** — wire “Shift Builder” action to dedicated workspace (notes exist in `docs/orb-shift-builder-product-notes.md`).
+2. **Shift Builder dedicated page** — `/orb/shift-builder` redirect remains; in-chat `build_shift_plan` action is wired (2026-05-29).
 3. **Regenerate from message** — retry from a specific assistant turn (not only last user).
 4. **Share/export pack** — markdown/PDF export of thread + saved outputs (standalone artefacts only).
 5. **Deepen agent registry** — Ofsted Lens, Safeguarding, Record agents as first-class with health checks in UI.
@@ -232,7 +232,7 @@ See also: `docs/orb-speed-and-instant-feel-audit.md` for performance work comple
 | `/orb/standalone/actions` | Yes | Structured action registry |
 | `/orb/standalone/actions/run` | Yes | Residential action engine (no OS records) |
 
-**ORB Action Engine (2026-05-28):** Seven backend actions (What am I missing, recording wording, manager oversight, chronology, safeguarding/Ofsted lenses, checklist). Frontend maps supported chips to `runStandaloneOrbAction`; others use composer prefill. See `docs/orb-action-engine.md`.
+**ORB Action Engine (2026-05-29):** Fourteen backend actions including transform actions (concise/detailed, therapeutic reframe, supervision, handover, build shift plan, child voice). Frontend maps supported chips to `runBackendOrbAction`; composer prefill only on failure or unsupported actions. See `docs/orb-action-engine.md`.
 
 Tests: `tests/test_orb_standalone_boundary.py`, `tests/test_orb_operating_brain_convergence.py`, `tests/test_orb_knowledge_routes.py`, `tests/test_orb_saved_output_routes.py`, `tests/test_orb_standalone_action_engine.py`.
 
