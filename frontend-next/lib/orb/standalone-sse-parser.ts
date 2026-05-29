@@ -2,7 +2,10 @@
 
 export type StandaloneOrbStreamEvent =
   | { event: 'token'; delta: string }
-  | { event: 'metadata'; payload: Record<string, unknown> }
+  // Metadata is normalised by standalone-client.ts into the concrete ORB response shape.
+  // Keep this permissive so typed callers can pass parser payloads through without
+  // production build failures when metadata gains new dynamic fields.
+  | { event: 'metadata'; payload: any }
   | { event: 'done'; ok: boolean }
   | { event: 'error'; error: string; detail?: string }
 
@@ -33,7 +36,7 @@ export function parseStandaloneOrbSseBlock(block: string): StandaloneOrbStreamEv
     return null
   }
   if (eventName === 'metadata') {
-    return { event: 'metadata', payload: parsed as Record<string, unknown> }
+    return { event: 'metadata', payload: parsed as any }
   }
   if (eventName === 'done') {
     const record = parsed as { ok?: boolean }
