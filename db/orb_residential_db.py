@@ -7,6 +7,13 @@ from typing import Any
 import psycopg2
 from psycopg2.extras import Json, RealDictCursor
 
+from db.orb_subscription_db import (
+    get_orb_subscription,
+    has_orb_safety_acceptance,
+    user_has_used_orb_trial,
+)
+from services.orb_subscription_plan_service import subscription_grants_orb_access
+
 logger = logging.getLogger(__name__)
 
 
@@ -37,20 +44,18 @@ def _safe_rollback(conn) -> None:
         logger.debug("Could not rollback ORB residential fallback transaction", exc_info=True)
 
 
-def _user_allows_orb(user: dict[str, Any]) -> bool:
+def _user_admin_bypass(user: dict[str, Any]) -> bool:
     role = str(user.get("role") or "").strip().lower()
-    plan = str(user.get("plan_name") or "").strip().lower()
-    subscription_status = str(user.get("subscription_status") or "").strip().lower()
-    return bool(user.get("subscription_active")) or role in {
-        "admin",
-        "super_admin",
-        "superadmin",
-        "founder",
-        "owner",
-    } or "founding" in plan or subscription_status == "active"
+    return role in {"admin", "super_admin", "superadmin"}
 
 
-def get_orb_access_state(conn, user_id: int) -> dict[str, Any]:
+def _user_founding_bypass(user: dict[str, Any]) -> bool:
+    role = str(user.get("role") or "").strip().lower()
+    plan = str(user.get("plan_name") or user.get("orb_plan") or "").strip().lower()
+    return role in {"founder", "owner"} or "founding" in plan
+
+
+def get_orb_access_state(conn, user_id: int, *, user: dict[str, Any] | None = None) -> dict[str, Any]:
     """Return premium access state for ORB Residential.
 
     Active subscription wins. Otherwise an active unexpired trial grants access.
@@ -58,24 +63,32 @@ def get_orb_access_state(conn, user_id: int) -> dict[str, Any]:
     /orb chat. Fall back to the user's core subscription/admin state and surface a
     migration note in the access payload.
     """
-    with conn.cursor(cursor_factory=RealDictCursor) as cur:
-        cur.execute(
-            """
-            SELECT
-                id,
-                email,
-                subscription_active,
-                subscription_status,
-                plan_name,
-                current_period_end,
-                role
-            FROM users
-            WHERE id = %s
-            LIMIT 1
-            """,
-            (user_id,),
-        )
-        user = _row(cur.fetchone()) or {}
+    if user is None:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT
+                    id,
+                    email,
+                    role,
+                    first_name,
+                    last_name
+                FROM users
+                WHERE id = %s
+                LIMIT 1
+                """,
+                (user_id,),
+            )
+            user = _row(cur.fetchone()) or {}
+
+    subscription = get_orb_subscription(conn, user_id) or {}
+    safety_accepted = has_orb_safety_acceptance(conn, user_id)
+
+    prefs = None
+    try:
+        prefs = get_orb_user_preferences(conn, user_id)
+    except Exception:
+        prefs = None
 
     trial = None
     trial_table_missing = False
@@ -109,37 +122,56 @@ def get_orb_access_state(conn, user_id: int) -> dict[str, Any]:
         )
 
     now = datetime.now(timezone.utc)
-    subscription_active = bool(user.get("subscription_active"))
+    subscription_status = str(subscription.get("subscription_status") or "inactive").lower()
+    subscription_active = subscription_grants_orb_access(
+        subscription_status,
+        period_end=subscription.get("current_period_end"),
+    )
     trial_active = False
+    trial_days_left = None
     if trial:
         expires_at = trial.get("expires_at")
         if expires_at and expires_at.tzinfo is None:
             expires_at = expires_at.replace(tzinfo=timezone.utc)
         trial_active = trial.get("status") == "active" and bool(expires_at and expires_at > now)
+        if trial_active and expires_at:
+            trial_days_left = max(0, int((expires_at - now).total_seconds() // 86400) + 1)
 
-    fallback_allowed = _user_allows_orb(user) if trial_table_missing else False
-    can_use_orb = subscription_active or trial_active or fallback_allowed
+    admin_bypass = _user_admin_bypass(user)
+    founding_bypass = _user_founding_bypass(user)
+    trial_available = not user_has_used_orb_trial(conn, user_id) and not subscription_active
+    can_use_orb = subscription_active or trial_active or admin_bypass or founding_bypass
     access_reason = (
-        "subscription"
+        "admin_bypass"
+        if admin_bypass
+        else "founding_plan_bypass"
+        if founding_bypass
+        else "subscription"
         if subscription_active
         else "trial"
         if trial_active
-        else "subscription_fallback_pending_orb_migration"
-        if fallback_allowed
         else "locked"
     )
 
     return {
         "user_id": user_id,
+        "subscription": subscription,
         "subscription_active": subscription_active,
-        "subscription_status": user.get("subscription_status"),
-        "plan_name": user.get("plan_name"),
-        "current_period_end": user.get("current_period_end"),
+        "subscription_status": subscription_status,
+        "plan_name": subscription.get("orb_plan"),
+        "current_period_end": subscription.get("current_period_end"),
         "trial": trial,
         "trial_active": trial_active,
+        "trial_available": trial_available,
+        "trial_days_left": trial_days_left,
         "trial_table_missing": trial_table_missing,
+        "admin_bypass": admin_bypass,
+        "founding_bypass": founding_bypass,
+        "enterprise_later": False,
         "can_use_orb": can_use_orb,
         "access_reason": access_reason,
+        "safety_accepted": safety_accepted,
+        "onboarding_completed": bool((prefs or {}).get("onboarding_completed_at")),
         "migration_required": trial_table_missing,
     }
 

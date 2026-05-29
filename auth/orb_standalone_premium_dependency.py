@@ -24,22 +24,32 @@ def require_rich_orb_premium_access(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Sign in to use ORB Residential")
 
     decision = orb_access_service.check_access(conn, user_id=int(user_id), workflow="ask_orb")
-    if decision.allowed:
-        current_user["orb_access"] = decision.access_state
-        return current_user
+    if not decision.access_state.get("safety_accepted", False):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "error": "safety_acceptance_required",
+                "message": "Accept ORB Residential safety statements before use.",
+                "os_access_granted": False,
+            },
+        )
 
-    upgrade = orb_access_service.build_upgrade_payload()
-    raise HTTPException(
-        status_code=status.HTTP_402_PAYMENT_REQUIRED,
-        detail={
-            "error": "premium_required",
-            "product": upgrade["product"],
-            "price_gbp_monthly": upgrade["price_gbp_monthly"],
-            "tagline": upgrade["tagline"],
-            "reason": decision.reason,
-            "trial": upgrade["trial"],
-            "access_state": decision.access_state,
-            "upgrade": upgrade,
-            "os_links": False,
+    if not decision.allowed:
+        upgrade = orb_access_service.build_upgrade_payload()
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail={
+                "error": "premium_required",
+                "product": upgrade["product"],
+                "price_label": upgrade.get("price_label"),
+                "price_gbp_monthly": upgrade["price_gbp_monthly"],
+                "reason": decision.reason,
+                "trial": upgrade["trial"],
+                "access_state": decision.access_state,
+                "upgrade": upgrade,
+                "os_links": False,
         },
     )
+
+    current_user["orb_access"] = decision.access_state
+    return current_user

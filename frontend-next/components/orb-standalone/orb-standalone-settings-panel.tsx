@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 
 import { OrbAppearanceControl } from '@/components/orb-standalone/orb-appearance-control'
+import { OrbBillingSettingsSection } from '@/components/orb-standalone/orb-billing-settings-section'
 import { OrbStandalonePanelShell } from '@/components/orb-standalone/orb-standalone-panel-shell'
 import type { OrbAppearanceMode } from '@/lib/orb/orb-appearance'
 import {
@@ -33,6 +34,7 @@ type SettingsSectionId =
   | 'appearance'
   | 'voice'
   | 'chat'
+  | 'billing'
   | 'privacy'
   | 'notifications'
   | 'shortcuts'
@@ -42,6 +44,7 @@ const SECTION_META: Array<{ id: SettingsSectionId; label: string }> = [
   { id: 'appearance', label: 'Appearance' },
   { id: 'voice', label: 'Voice' },
   { id: 'chat', label: 'Chat' },
+  { id: 'billing', label: 'Billing' },
   { id: 'privacy', label: 'Privacy & data' },
   { id: 'notifications', label: 'Notifications' },
   { id: 'shortcuts', label: 'Shortcuts' },
@@ -228,6 +231,12 @@ export function OrbStandaloneSettingsPanel({
                   onClose()
                 }}
               />
+            </SettingsBlock>
+          ) : null}
+
+          {activeSection === 'billing' ? (
+            <SettingsBlock title="Billing" description="ORB Residential plan and fair-use usage.">
+              <OrbBillingSettingsSection />
             </SettingsBlock>
           ) : null}
 

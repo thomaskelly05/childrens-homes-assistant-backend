@@ -1,0 +1,41 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+
+test('ORB login copy includes product name', () => {
+  const login = readFileSync(new URL('../../app/orb/login/page.tsx', import.meta.url), 'utf8')
+  assert.match(login, /ORB Residential — Powered by IndiCare/)
+  assert.match(login, /Standalone ORB does not access IndiCare OS records/)
+})
+
+test('upgrade screen shows £9.99/month', () => {
+  const upgrade = readFileSync(new URL('../../components/orb-standalone/orb-upgrade-screen.tsx', import.meta.url), 'utf8')
+  assert.match(upgrade, /£9\.99\/month/)
+  assert.match(upgrade, /Standalone ORB does not access IndiCare OS records/)
+})
+
+test('onboarding role options include NVQ assessor and learner', () => {
+  const onboarding = readFileSync(new URL('../../app/orb/onboarding/page.tsx', import.meta.url), 'utf8')
+  const roles = readFileSync(new URL('./orb-billing-client.ts', import.meta.url), 'utf8')
+  assert.match(onboarding, /ORB_ROLE_OPTIONS/)
+  assert.match(roles, /NVQ assessor/)
+  assert.match(roles, /NVQ learner/)
+})
+
+test('safety acceptance statements present', () => {
+  const client = readFileSync(new URL('./orb-billing-client.ts', import.meta.url), 'utf8')
+  assert.match(client, /does not access IndiCare OS records/)
+  assert.match(client, /safeguarding procedures/)
+})
+
+test('OAuth buttons only shown when configured', () => {
+  const login = readFileSync(new URL('../../app/orb/login/page.tsx', import.meta.url), 'utf8')
+  assert.match(login, /NEXT_PUBLIC_OAUTH_GOOGLE_ENABLED/)
+  assert.match(login, /not configured/)
+})
+
+test('billing settings section references meter endpoints', () => {
+  const billing = readFileSync(new URL('../../components/orb-standalone/orb-billing-settings-section.tsx', import.meta.url), 'utf8')
+  assert.match(billing, /fetchOrbBillingMeter/)
+  assert.match(billing, /Standalone ORB billing is separate from IndiCare OS/)
+})

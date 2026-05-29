@@ -32,6 +32,7 @@ from services.indicare_intelligence_surface_router import (
     standalone_os_boundary_message,
 )
 from services.orb_action_engine_service import orb_action_engine_service
+from services.orb_plan_enforcement_service import orb_plan_enforcement_service
 from services.orb_standalone_usage_service import record_standalone_orb_usage
 from services.orb_standalone_sources import (
     INDICARE_PRODUCT_FALLBACK,
@@ -611,6 +612,35 @@ def _standalone_conversation_response(
     return payload
 
 
+def _enforce_plan_limits(
+    *,
+    current_user: dict[str, Any],
+    message: str | None = None,
+    prompt_tier: str | None = None,
+    event_type: str = "conversation",
+) -> dict[str, Any] | None:
+    user_id = current_user.get("user_id") or current_user.get("id")
+    decision = orb_plan_enforcement_service.enforce_or_raise(
+        user_id=int(user_id) if user_id is not None else None,
+        user=current_user,
+        message=message,
+        prompt_tier=prompt_tier,
+        event_type=event_type,
+    )
+    if decision.use_safeguarding_template:
+        return {
+            "answer": decision.message,
+            "confidence": "medium",
+            "context_used": {
+                "usage_limit": "hard_safeguarding_fallback",
+                "hard_limit_reached": True,
+            },
+        }
+    if decision.soft_limit_reached:
+        current_user["orb_usage_warning"] = decision.message
+    return None
+
+
 @router.post("/conversation")
 async def standalone_orb_conversation(
     payload: OrbStandaloneConversationRequest,
@@ -630,6 +660,24 @@ async def standalone_orb_conversation(
     standalone_brain = ctx["standalone_brain"]
     framed_message = ctx["framed_message"]
     profile_context = ctx["profile_context"]
+
+    limited = _enforce_plan_limits(
+        current_user=current_user,
+        message=payload.message,
+        prompt_tier=prompt_tier,
+        event_type="conversation",
+    )
+    if limited:
+        return {
+            "success": True,
+            "data": _standalone_conversation_response(
+                answer=str(limited["answer"]),
+                mode=mode,
+                conversation_id=payload.conversation_id,
+                confidence=str(limited.get("confidence") or "medium"),
+                context_used=limited.get("context_used"),
+            ),
+        }
 
     route_started = time.perf_counter()
     try:
