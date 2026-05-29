@@ -214,6 +214,11 @@ def record_orb_usage_event(
     latency_ms: int | None = None,
     success: bool = True,
     metadata: dict[str, Any] | None = None,
+    route: str | None = None,
+    action_id: str | None = None,
+    document_lens: str | None = None,
+    prompt_tier: str | None = None,
+    provider: str | None = None,
 ) -> dict[str, Any]:
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
@@ -221,11 +226,13 @@ def record_orb_usage_event(
                 """
                 INSERT INTO orb_usage_events (
                     user_id, event_type, mode, workflow, model,
-                    tokens_in, tokens_out, estimated_cost, latency_ms, success, metadata
+                    tokens_in, tokens_out, estimated_cost, latency_ms, success, metadata,
+                    route, action_id, document_lens, prompt_tier, provider
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id, user_id, event_type, mode, workflow, model, tokens_in, tokens_out,
-                          estimated_cost, latency_ms, success, metadata, created_at
+                          estimated_cost, latency_ms, success, metadata, created_at,
+                          route, action_id, document_lens, prompt_tier, provider
                 """,
                 (
                     user_id,
@@ -239,6 +246,11 @@ def record_orb_usage_event(
                     latency_ms,
                     success,
                     Json(metadata or {}),
+                    route,
+                    action_id,
+                    document_lens,
+                    prompt_tier,
+                    provider,
                 ),
             )
             return dict(cur.fetchone())

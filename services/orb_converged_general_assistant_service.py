@@ -45,6 +45,7 @@ class OrbConvergedGeneralAssistantService:
         document_source_id: str | None = None,
         document_title: str | None = None,
         raw_user_message: str | None = None,
+        user: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         user_message = _safe_text(raw_user_message) or _safe_text(message)
         supplied_context_types: list[str] = []
@@ -105,6 +106,7 @@ class OrbConvergedGeneralAssistantService:
             document_source_id=document_source_id,
             document_title=document_title,
             raw_user_message=user_message,
+            user=user,
         )
 
         answer_text = _safe_text(result.get("answer"))

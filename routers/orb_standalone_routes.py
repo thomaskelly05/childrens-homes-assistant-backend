@@ -32,6 +32,7 @@ from services.indicare_intelligence_surface_router import (
     standalone_os_boundary_message,
 )
 from services.orb_action_engine_service import orb_action_engine_service
+from services.orb_standalone_usage_service import record_standalone_orb_usage
 from services.orb_standalone_sources import (
     INDICARE_PRODUCT_FALLBACK,
     append_sources_basis_section,
@@ -43,34 +44,7 @@ logger = logging.getLogger("indicare.orb_standalone")
 
 router = APIRouter(prefix="/orb/standalone", tags=["ORB Standalone Assistant"])
 
-FORBIDDEN_STANDALONE_OS_KEYS = (
-    "child_id",
-    "young_person_id",
-    "staff_id",
-    "home_id",
-    "record_id",
-    "chronology_id",
-)
-
-
-def _reject_standalone_os_ids(payload: dict[str, Any]) -> None:
-    scopes = [payload, payload.get("metadata") or {}, payload.get("context") or {}]
-    for scope in scopes:
-        if not isinstance(scope, dict):
-            continue
-        for key in FORBIDDEN_STANDALONE_OS_KEYS:
-            if scope.get(key) is not None:
-                raise HTTPException(
-                    status_code=400,
-                    detail={
-                        "error": "standalone_os_boundary",
-                        "message": (
-                            "Standalone ORB cannot accept live IndiCare OS record identifiers. "
-                            "Use IndiCare OS ORB at /assistant/orb for permissioned records."
-                        ),
-                        "field": key,
-                    },
-                )
+from services.orb_standalone_boundary import FORBIDDEN_STANDALONE_OS_KEYS, reject_standalone_os_ids as _reject_standalone_os_ids
 
 
 def _sse_event(event: str, payload: Any) -> str:
@@ -671,8 +645,17 @@ async def standalone_orb_conversation(
             document_source_id=payload.document_source_id,
             document_title=payload.document_title,
             raw_user_message=payload.message,
+            user=current_user,
         )
         elapsed_ms = int((time.perf_counter() - route_started) * 1000)
+        record_standalone_orb_usage(
+            user_id=int(current_user["id"]) if current_user.get("id") is not None else None,
+            result=assistant_data,
+            event_type="conversation",
+            mode=mode,
+            latency_ms=elapsed_ms,
+            success=bool(assistant_data.get("answer")),
+        )
         model_routing = (assistant_data.get("context_used") or {}).get("model_routing") or {}
         logger.info(
             "standalone_orb_conversation ok mode=%s detail=%s images=%s brains=%s tier=%s elapsed_ms=%s retrieval_ms=%s",

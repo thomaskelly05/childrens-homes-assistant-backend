@@ -172,6 +172,8 @@ class AiModelRouterService:
             )
 
         risk = self.classify_risk(request.message, mode=request.mode)
+        prompt_tier = _text((request.retrieval_context or {}).get("prompt_tier"))
+        tier_cost, tier_quality = ai_cost_policy_service.tier_from_prompt_tier(prompt_tier)
         quality = ai_cost_policy_service.classify_quality_tier(
             task_type,
             risk,
@@ -187,6 +189,13 @@ class AiModelRouterService:
             has_images=bool(request.images),
             research_intent=request.research_intent,
         )
+        if tier_quality is not None:
+            quality = tier_quality
+        if tier_cost is not None and risk != AiRiskLevel.SAFEGUARDING_SENSITIVE:
+            if task_type != AiTaskType.SAFEGUARDING_REFLECTION:
+                cost = tier_cost
+        elif tier_cost is not None and prompt_tier == "deep":
+            cost = AiCostTier.PREMIUM
 
         capability = AiModelCapability.VISION if request.images else AiModelCapability.TEXT
         provider = ai_provider_registry.get_default_provider()
@@ -204,11 +213,20 @@ class AiModelRouterService:
             fallback_model = None
 
         reason = self._routing_reason(task_type, quality, cost, provider, model)
-        max_tokens = ai_cost_policy_service.max_tokens_for_task(
-            task_type,
-            request.detail_level,
-            voice_mode=request.voice_mode,
+        max_tokens = (
+            ai_cost_policy_service.max_tokens_for_prompt_tier(
+                prompt_tier,
+                request.detail_level,
+            )
+            or ai_cost_policy_service.max_tokens_for_task(
+                task_type,
+                request.detail_level,
+                voice_mode=request.voice_mode,
+            )
         )
+        history_cap = 12 if prompt_tier == "fast" else 20
+        if request.history and len(request.history) > history_cap:
+            request = request.model_copy(update={"history": request.history[-history_cap:]})
         timeout = ai_cost_policy_service.timeout_for_task(task_type, quality)
 
         return AiRoutingDecision(

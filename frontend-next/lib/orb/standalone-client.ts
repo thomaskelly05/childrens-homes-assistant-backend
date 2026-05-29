@@ -36,8 +36,89 @@ export const STANDALONE_ORB_API_PATHS = {
   capabilitiesSummary: '/orb/standalone/capabilities/summary',
   surfaceRoute: '/orb/standalone/surface-route',
   actionsRegistry: '/orb/standalone/actions',
-  actionsRun: '/orb/standalone/actions/run'
+  actionsRun: '/orb/standalone/actions/run',
+  feedback: '/orb/standalone/feedback'
 } as const
+
+export type OrbFeedbackRating = 'up' | 'down'
+
+export type OrbFeedbackDownReason =
+  | 'too_generic'
+  | 'missed_safeguarding'
+  | 'missed_child_voice'
+  | 'missed_ofsted_reg44'
+  | 'missed_manager_oversight'
+  | 'missed_risk'
+  | 'missed_recording'
+  | 'missed_nvq_learning'
+  | 'wrong_tone'
+  | 'too_long'
+  | 'too_short'
+  | 'unsafe'
+  | 'incorrect_source'
+  | 'not_practical'
+  | 'wrong_role'
+  | 'other'
+
+export const ORB_FEEDBACK_DOWN_REASONS: Array<{ value: OrbFeedbackDownReason; label: string }> = [
+  { value: 'too_generic', label: 'Too generic' },
+  { value: 'missed_safeguarding', label: 'Missed safeguarding' },
+  { value: 'missed_child_voice', label: 'Missed child voice' },
+  { value: 'missed_ofsted_reg44', label: 'Missed Ofsted / Reg 44' },
+  { value: 'missed_manager_oversight', label: 'Missed manager oversight' },
+  { value: 'missed_risk', label: 'Missed risk' },
+  { value: 'missed_recording', label: 'Missed recording quality' },
+  { value: 'missed_nvq_learning', label: 'Missed NVQ / learning' },
+  { value: 'wrong_tone', label: 'Wrong tone' },
+  { value: 'too_long', label: 'Too long' },
+  { value: 'too_short', label: 'Too short' },
+  { value: 'unsafe', label: 'Unsafe wording' },
+  { value: 'incorrect_source', label: 'Incorrect source' },
+  { value: 'not_practical', label: 'Not practical' },
+  { value: 'wrong_role', label: 'Wrong role lens' },
+  { value: 'other', label: 'Other' }
+]
+
+export type StandaloneOrbFeedbackRequest = {
+  message_id: string
+  conversation_id?: string | null
+  rating: OrbFeedbackRating
+  reason?: OrbFeedbackDownReason | 'helpful'
+  comment?: string
+  answer_snapshot?: string
+  question_snapshot?: string
+  mode?: string
+  profile_role?: string
+  prompt_tier?: string
+  detected_family?: string
+  secondary_families?: string[]
+  source_anchors?: string[]
+  action_id?: string
+  document_lens?: string
+  metadata?: Record<string, unknown>
+}
+
+export async function submitStandaloneOrbFeedback(request: StandaloneOrbFeedbackRequest) {
+  const headers = new Headers({ 'Content-Type': 'application/json' })
+  applyCsrfHeaders(headers, 'POST')
+  const response = await authFetchResponse(STANDALONE_ORB_API_PATHS.feedback, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(request),
+    credentials: 'include'
+  })
+  if (!response.ok) {
+    let message = 'Feedback not sent. Try again.'
+    try {
+      const body = (await response.json()) as { detail?: unknown }
+      if (typeof body.detail === 'string') message = body.detail
+    } catch {
+      /* ignore */
+    }
+    throw new AuthApiError(response.status, message)
+  }
+  return response.json() as Promise<{ success?: boolean; data?: { ok?: boolean; feedback_id?: number | string } }>
+}
 
 export const STANDALONE_ORB_MODES = [
   'Ask ORB',
@@ -221,11 +302,19 @@ export type StandaloneOrbTimingMetadata = {
   frontend_elapsed_ms?: number
 }
 
+export type StandaloneOrbExpertAnswerEngineContext = {
+  detected_family?: string
+  secondary_families?: string[]
+  source_anchors?: string[]
+  active?: boolean
+}
+
 export type StandaloneOrbContextUsed = {
   surface?: string
   mode?: string
   os_linked?: boolean
   care_record_access?: boolean
+  prompt_tier?: string
   timing?: StandaloneOrbTimingMetadata
   cognition_display_labels?: string[]
   active_brains?: string[]
@@ -233,6 +322,7 @@ export type StandaloneOrbContextUsed = {
   reasoning_lenses?: string[]
   retrieval?: StandaloneOrbRetrievalContext
   model_routing?: StandaloneOrbModelRouting
+  expert_answer_engine?: StandaloneOrbExpertAnswerEngineContext
   document_analysis?: {
     suggested?: boolean
     mode?: string

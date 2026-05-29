@@ -39,6 +39,7 @@ import {
   type OrbResponseFollowUpAction,
   type OrbSuggestedReplyItem
 } from '@/components/orb-standalone/orb-assistant-message'
+import { OrbMessageFeedback } from '@/components/orb-standalone/orb-message-feedback'
 import { OrbScrollToBottomFab } from '@/components/orb-standalone/orb-scroll-to-bottom-fab'
 import { OrbAgentPanel } from '@/components/orb-standalone/orb-agent-panel'
 import { OrbResidentialAgentsPanel } from '@/components/orb-standalone/orb-residential-agents-panel'
@@ -1037,6 +1038,13 @@ export function OrbCareCompanion() {
           agentRaw?.suggested && !agentRaw?.auto_run ? agentRaw : undefined
         const documentSuggestion =
           docAnalysisRaw?.suggested && docAnalysisRaw?.needs_document ? docAnalysisRaw : undefined
+        const expertMeta = response.context_used?.expert_answer_engine as
+          | {
+              detected_family?: string
+              secondary_families?: string[]
+              source_anchors?: string[]
+            }
+          | undefined
         const assistantMessage: StandaloneChatMessage = {
           id: assistantId,
           role: 'assistant',
@@ -1047,7 +1055,13 @@ export function OrbCareCompanion() {
           modelRouting: modelRouting ?? undefined,
           explainability: explainabilityRaw,
           agentSuggestion,
-          documentSuggestion
+          documentSuggestion,
+          feedbackContext: {
+            prompt_tier: response.context_used?.prompt_tier ?? modelRouting?.cost_tier,
+            detected_family: expertMeta?.detected_family,
+            secondary_families: expertMeta?.secondary_families,
+            source_anchors: expertMeta?.source_anchors
+          }
         }
         setWorkspace((current) => {
           const chat = current.chats.find((c) => c.id === targetChatId)
@@ -2610,6 +2624,40 @@ export function OrbCareCompanion() {
                                   onInspectionPrep={() => handleModeChange('Ofsted Lens')}
                                   onOrbFollowUp={(action, content) =>
                                     void handleOrbFollowUp(action, content, index)
+                                  }
+                                />
+                                <OrbMessageFeedback
+                                  payload={{
+                                    message_id: entry.id,
+                                    conversation_id: activeChat?.conversationId,
+                                    rating: 'up',
+                                    answer_snapshot: entry.content.slice(0, 6000),
+                                    question_snapshot: precedingUserMessageHint(
+                                      visibleMessages,
+                                      index
+                                    )?.slice(0, 4000),
+                                    mode,
+                                    profile_role: adultProfile
+                                      ? adultProfile.roleLabel || adultProfile.role
+                                      : undefined,
+                                    prompt_tier: entry.feedbackContext?.prompt_tier,
+                                    detected_family: entry.feedbackContext?.detected_family,
+                                    secondary_families: entry.feedbackContext?.secondary_families,
+                                    source_anchors: entry.feedbackContext?.source_anchors,
+                                    document_lens: entry.feedbackContext?.document_lens
+                                  }}
+                                  onRetryWithFeedback={
+                                    index === visibleMessages.length - 1
+                                      ? (comment, reason) => {
+                                          const detailSuffix = comment.trim()
+                                            ? ` ${comment.trim()}`
+                                            : ''
+                                          setMessage(
+                                            `Please try again. The last answer missed something (${reason.replace(/_/g, ' ')}).${detailSuffix}`
+                                          )
+                                          inputRef.current?.focus()
+                                        }
+                                      : undefined
                                   }
                                 />
                                 {entry.status === 'complete' && index === visibleMessages.length - 1 ? (
