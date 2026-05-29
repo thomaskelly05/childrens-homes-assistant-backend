@@ -44,7 +44,7 @@
     padding-left: 0.875rem !important;
     padding-right: 0.875rem !important;
     padding-top: 0.35rem !important;
-    padding-bottom: calc(8.5rem + env(safe-area-inset-bottom, 0px)) !important;
+    padding-bottom: calc(8.3rem + env(safe-area-inset-bottom, 0px)) !important;
   }
 
   [data-orb-empty-state] {
@@ -115,7 +115,7 @@
     padding-left: 0.75rem !important;
     padding-right: 0.75rem !important;
     padding-top: 0.35rem !important;
-    padding-bottom: calc(0.45rem + env(safe-area-inset-bottom, 0px)) !important;
+    padding-bottom: calc(0.42rem + env(safe-area-inset-bottom, 0px)) !important;
     overflow-x: hidden !important;
     background: transparent !important;
     background-image: none !important;
@@ -166,15 +166,47 @@
   }
 
   [data-orb-composer-disclaimer] {
-    margin-top: 0.35rem !important;
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-    font-size: 0.56rem !important;
-    line-height: 0.8rem !important;
+    display: flex !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0.42rem auto 0 !important;
+    padding: 0 !important;
+    justify-content: center !important;
+    gap: 0.35rem !important;
+    font-size: 0 !important;
+    line-height: 0 !important;
+    opacity: 0.68 !important;
+  }
+
+  [data-orb-composer-disclaimer]::before {
+    content: 'i' !important;
+    display: inline-flex !important;
+    width: 0.9rem !important;
+    height: 0.9rem !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border: 1px solid currentColor !important;
+    border-radius: 999px !important;
+    color: #7c8798 !important;
+    font-size: 0.55rem !important;
+    line-height: 1 !important;
+  }
+
+  [data-orb-composer-disclaimer]::after {
+    content: 'Standalone ORB · © 2026 IndiCare' !important;
+    color: #7c8798 !important;
+    font-size: 0.62rem !important;
+    line-height: 0.95rem !important;
+    white-space: nowrap !important;
+  }
+
+  html[data-orb-theme='dark'] [data-orb-composer-disclaimer]::before,
+  html[data-orb-theme='dark'] [data-orb-composer-disclaimer]::after {
+    color: #5f6673 !important;
   }
 
   .orb-scroll-to-bottom-fab {
     max-width: calc(100vw - 2rem);
-    bottom: calc(8.25rem + env(safe-area-inset-bottom, 0px)) !important;
+    bottom: calc(8.05rem + env(safe-area-inset-bottom, 0px)) !important;
   }
 }
