@@ -38,11 +38,9 @@ type JsonPublicKeyCredential = PublicKeyCredential & {
   toJSON: () => unknown
 }
 
-declare global {
-  interface PublicKeyCredentialConstructor {
-    parseRequestOptionsFromJSON?: (options: unknown) => PublicKeyCredentialRequestOptions
-    parseCreationOptionsFromJSON?: (options: unknown) => PublicKeyCredentialCreationOptions
-  }
+type PublicKeyCredentialJsonParsers = typeof PublicKeyCredential & {
+  parseRequestOptionsFromJSON?: (options: unknown) => PublicKeyCredentialRequestOptions
+  parseCreationOptionsFromJSON?: (options: unknown) => PublicKeyCredentialCreationOptions
 }
 
 export function orbPasskeysSupported(): boolean {
@@ -55,16 +53,22 @@ function requirePasskeySupport() {
   }
 }
 
+function passkeyParsers(): PublicKeyCredentialJsonParsers {
+  return PublicKeyCredential as PublicKeyCredentialJsonParsers
+}
+
 function parseRequestOptions(options: unknown): PublicKeyCredentialRequestOptions {
-  if (typeof PublicKeyCredential.parseRequestOptionsFromJSON === 'function') {
-    return PublicKeyCredential.parseRequestOptionsFromJSON(options)
+  const parsers = passkeyParsers()
+  if (typeof parsers.parseRequestOptionsFromJSON === 'function') {
+    return parsers.parseRequestOptionsFromJSON(options)
   }
   return options as PublicKeyCredentialRequestOptions
 }
 
 function parseCreationOptions(options: unknown): PublicKeyCredentialCreationOptions {
-  if (typeof PublicKeyCredential.parseCreationOptionsFromJSON === 'function') {
-    return PublicKeyCredential.parseCreationOptionsFromJSON(options)
+  const parsers = passkeyParsers()
+  if (typeof parsers.parseCreationOptionsFromJSON === 'function') {
+    return parsers.parseCreationOptionsFromJSON(options)
   }
   return options as PublicKeyCredentialCreationOptions
 }
