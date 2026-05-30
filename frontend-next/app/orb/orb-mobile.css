@@ -144,6 +144,11 @@
     pointer-events: auto !important;
   }
 
+  .orb-composer-input-hit-target,
+  [data-orb-composer-input-hit-target] {
+    display: none !important;
+  }
+
   /* Do not hide the first composer row. On some mobile browsers that collapsed the input hit-area. */
   .orb-composer-glass > div:first-child {
     display: flex !important;
@@ -156,16 +161,17 @@
     display: block !important;
     min-width: 0 !important;
     width: 100% !important;
-    min-height: 2.25rem !important;
+    min-height: 2.75rem !important;
     max-height: 8rem !important;
-    padding-top: 0.35rem !important;
-    padding-bottom: 0.2rem !important;
+    padding-top: 0.65rem !important;
+    padding-bottom: 0.35rem !important;
     font-size: 1rem !important;
     line-height: 1.5rem !important;
     pointer-events: auto !important;
-    touch-action: manipulation !important;
+    touch-action: auto !important;
     -webkit-user-select: text !important;
     user-select: text !important;
+    cursor: text !important;
   }
 
   .orb-composer-action-rail {
