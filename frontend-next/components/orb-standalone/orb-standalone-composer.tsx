@@ -105,11 +105,19 @@ export function OrbStandaloneComposer({
 }) {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const cameraInputRef = useRef<HTMLInputElement | null>(null)
+  const fallbackInputRef = useRef<HTMLTextAreaElement | null>(null)
   const trimmedMessage = value.trim()
   const stateLength = composerStateLength ?? trimmedMessage.length
   const canSend = trimmedMessage.length > 0 || attachments.length > 0
   const sendDisabled = pending || !canSend
   const disabledReason = sendDisabledReason(pending, canSend)
+
+  function setInputNode(node: HTMLTextAreaElement | null) {
+    fallbackInputRef.current = node
+    if (inputRef && 'current' in inputRef) {
+      ;(inputRef as React.MutableRefObject<HTMLTextAreaElement | null>).current = node
+    }
+  }
 
   function syncMessage(next: string) {
     onChange(next)
@@ -118,6 +126,21 @@ export function OrbStandaloneComposer({
   function handleDragOver(event: DragEvent) {
     event.preventDefault()
     event.stopPropagation()
+  }
+
+  function focusComposerInput(event: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) {
+    if (pending) return
+    const target = event.target as HTMLElement | null
+    if (target?.closest('button,input,textarea,a,[role="button"]')) return
+    const input = inputRef?.current ?? fallbackInputRef.current
+    if (!input) return
+    input.focus({ preventScroll: true })
+    const end = input.value.length
+    try {
+      input.setSelectionRange(end, end)
+    } catch {
+      // Safari can throw if selection is unavailable; focus still worked.
+    }
   }
 
   return (
@@ -138,20 +161,11 @@ export function OrbStandaloneComposer({
             <p className="mt-1 text-sm italic text-slate-700">&ldquo;{displayTranscript}&rdquo;</p>
             {!autoSend ? (
               <div className="mt-3 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={onSendTranscript}
-                  disabled={pending}
-                  className="inline-flex h-9 items-center gap-1.5 rounded-full bg-slate-950 px-4 text-xs font-semibold text-white"
-                >
+                <button type="button" onClick={onSendTranscript} disabled={pending} className="inline-flex h-9 items-center gap-1.5 rounded-full bg-slate-950 px-4 text-xs font-semibold text-white">
                   <Send className="h-3.5 w-3.5" aria-hidden />
                   Send transcript
                 </button>
-                <button
-                  type="button"
-                  onClick={onRetryTranscript}
-                  className="inline-flex h-9 items-center rounded-full border border-slate-200 bg-white px-4 text-xs font-medium text-slate-600"
-                >
+                <button type="button" onClick={onRetryTranscript} className="inline-flex h-9 items-center rounded-full border border-slate-200 bg-white px-4 text-xs font-medium text-slate-600">
                   Try again
                 </button>
               </div>
@@ -182,12 +196,7 @@ export function OrbStandaloneComposer({
           {suggestions && suggestions.length > 0 && !value.trim() && !pending && !answering ? (
             <div className="mb-2 flex flex-wrap gap-1.5 px-1" data-orb-composer-suggestions>
               {suggestions.slice(0, 3).map((suggestion) => (
-                <button
-                  key={suggestion}
-                  type="button"
-                  onClick={() => syncMessage(suggestion)}
-                  className="rounded-full border border-sky-100 bg-white/75 px-3 py-1.5 text-xs font-semibold text-sky-800 shadow-sm transition hover:border-sky-200 hover:bg-sky-50"
-                >
+                <button key={suggestion} type="button" onClick={() => syncMessage(suggestion)} className="rounded-full border border-sky-100 bg-white/75 px-3 py-1.5 text-xs font-semibold text-sky-800 shadow-sm transition hover:border-sky-200 hover:bg-sky-50">
                   {suggestion}
                 </button>
               ))}
@@ -196,17 +205,14 @@ export function OrbStandaloneComposer({
 
           <div
             className={`orb-composer-glass p-2.5 sm:p-3 ${answering ? 'orb-composer-answering orb-answering-pulse' : ''}`}
+            onClick={focusComposerInput}
+            onTouchEnd={focusComposerInput}
             data-orb-composer-answering={answering ? 'true' : 'false'}
+            data-orb-composer-card
           >
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/70 px-0.5 pb-2">
               {onAgentSelectorClick ? (
-                <button
-                  type="button"
-                  onClick={onAgentSelectorClick}
-                  className="inline-flex max-w-full items-center gap-2 rounded-full border border-slate-200 bg-white/85 px-3 py-1.5 text-xs font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50"
-                  data-orb-composer-agent-selector
-                  aria-label="Choose agent"
-                >
+                <button type="button" onClick={onAgentSelectorClick} className="inline-flex max-w-full items-center gap-2 rounded-full border border-slate-200 bg-white/85 px-3 py-1.5 text-xs font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50" data-orb-composer-agent-selector aria-label="Choose agent">
                   <span className="truncate">{agentLabel || mode || 'Ask ORB'}</span>
                   <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-500" aria-hidden />
                 </button>
@@ -238,12 +244,7 @@ export function OrbStandaloneComposer({
                   <div key={file.id} className="relative">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={file.previewUrl} alt={file.name} className="h-16 w-16 rounded-2xl border border-white/80 object-cover shadow-sm" />
-                    <button
-                      type="button"
-                      onClick={() => onRemoveAttachment(file.id)}
-                      className="absolute -right-1 -top-1 rounded-full border border-white bg-slate-950 p-0.5 text-white shadow-sm"
-                      aria-label={`Remove ${file.name}`}
-                    >
+                    <button type="button" onClick={() => onRemoveAttachment(file.id)} className="absolute -right-1 -top-1 rounded-full border border-white bg-slate-950 p-0.5 text-white shadow-sm" aria-label={`Remove ${file.name}`}>
                       <X className="h-3 w-3" />
                     </button>
                   </div>
@@ -253,31 +254,15 @@ export function OrbStandaloneComposer({
 
             {documentAttached ? (
               <div className="mt-3 flex flex-wrap items-center gap-2 px-1">
-                {onAnalyseDocument ? (
-                  <button type="button" onClick={onAnalyseDocument} className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-600 hover:bg-slate-50">
-                    Analyse
-                  </button>
-                ) : null}
-                {onDocumentActionPlan ? (
-                  <button type="button" onClick={onDocumentActionPlan} className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-600 hover:bg-slate-50">
-                    Action plan
-                  </button>
-                ) : null}
-                {onSummariseDocument ? (
-                  <button type="button" onClick={onSummariseDocument} className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-600 hover:bg-slate-50">
-                    Summarise
-                  </button>
-                ) : null}
-                {onAddDocumentToLibrary ? (
-                  <button type="button" onClick={onAddDocumentToLibrary} className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-600 hover:bg-slate-50">
-                    Add to library
-                  </button>
-                ) : null}
+                {onAnalyseDocument ? <button type="button" onClick={onAnalyseDocument} className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-600 hover:bg-slate-50">Analyse</button> : null}
+                {onDocumentActionPlan ? <button type="button" onClick={onDocumentActionPlan} className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-600 hover:bg-slate-50">Action plan</button> : null}
+                {onSummariseDocument ? <button type="button" onClick={onSummariseDocument} className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-600 hover:bg-slate-50">Summarise</button> : null}
+                {onAddDocumentToLibrary ? <button type="button" onClick={onAddDocumentToLibrary} className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-600 hover:bg-slate-50">Add to library</button> : null}
               </div>
             ) : null}
 
             <textarea
-              ref={inputRef}
+              ref={setInputNode}
               id="orb-standalone-input"
               name="message"
               value={value}
@@ -289,9 +274,7 @@ export function OrbStandaloneComposer({
                 if (event.key !== 'Enter' || event.shiftKey) return
                 event.preventDefault()
                 const form = event.currentTarget.form
-                if (form && !sendDisabled) {
-                  form.requestSubmit()
-                }
+                if (form && !sendDisabled) form.requestSubmit()
               }}
               rows={1}
               className="mt-1.5 max-h-40 min-h-[3.25rem] w-full resize-none bg-transparent px-0.5 py-2 text-[0.9375rem] leading-6 text-[var(--orb-foreground)] outline-none focus:outline-none focus-visible:outline-none placeholder:text-slate-500 [touch-action:manipulation]"
@@ -304,131 +287,31 @@ export function OrbStandaloneComposer({
             />
 
             <div className="mt-1 flex items-center justify-between gap-3 px-1">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/png,image/jpeg,image/webp,image/gif,image/*"
-                multiple
-                className="hidden"
-                onChange={(event) => {
-                  if (event.target.files?.length) onAddFiles(event.target.files)
-                  event.target.value = ''
-                }}
-              />
-              <input
-                ref={cameraInputRef}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                className="hidden"
-                onChange={(event) => {
-                  if (event.target.files?.length) onAddFiles(event.target.files)
-                  event.target.value = ''
-                }}
-              />
+              <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/*" multiple className="hidden" onChange={(event) => { if (event.target.files?.length) onAddFiles(event.target.files); event.target.value = '' }} />
+              <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(event) => { if (event.target.files?.length) onAddFiles(event.target.files); event.target.value = '' }} />
 
               <div className="orb-composer-action-rail flex items-center gap-0.5 p-0.5">
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="inline-flex h-8 min-w-8 shrink-0 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
-                  aria-label="Attach image"
-                  data-orb-composer-attach
-                >
+                <button type="button" onClick={() => fileInputRef.current?.click()} className="inline-flex h-8 min-w-8 shrink-0 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-900" aria-label="Attach image" data-orb-composer-attach>
                   <Plus className="h-4.5 w-4.5" aria-hidden />
                 </button>
-                {onAttachDocumentClick ? (
-                  <button
-                    type="button"
-                    onClick={onAttachDocumentClick}
-                    className="inline-flex h-8 min-w-8 shrink-0 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
-                    aria-label="Attach document"
-                    data-orb-composer-document
-                  >
-                    <FileText className="h-4.5 w-4.5" aria-hidden />
-                  </button>
-                ) : null}
-                {onToolsClick ? (
-                  <button
-                    type="button"
-                    onClick={onToolsClick}
-                    className="inline-flex h-8 min-w-8 shrink-0 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
-                    aria-label="Tools"
-                    data-orb-composer-tools
-                  >
-                    <Wrench className="h-4.5 w-4.5" aria-hidden />
-                  </button>
-                ) : null}
-                <button
-                  type="button"
-                  onClick={() => cameraInputRef.current?.click()}
-                  className="inline-flex h-8 min-w-8 shrink-0 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 md:hidden"
-                  aria-label="Use camera"
-                >
+                {onAttachDocumentClick ? <button type="button" onClick={onAttachDocumentClick} className="inline-flex h-8 min-w-8 shrink-0 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-900" aria-label="Attach document" data-orb-composer-document><FileText className="h-4.5 w-4.5" aria-hidden /></button> : null}
+                {onToolsClick ? <button type="button" onClick={onToolsClick} className="inline-flex h-8 min-w-8 shrink-0 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-900" aria-label="Tools" data-orb-composer-tools><Wrench className="h-4.5 w-4.5" aria-hidden /></button> : null}
+                <button type="button" onClick={() => cameraInputRef.current?.click()} className="inline-flex h-8 min-w-8 shrink-0 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 md:hidden" aria-label="Use camera">
                   <Camera className="h-4.5 w-4.5" aria-hidden />
                 </button>
               </div>
 
               <div className="flex items-center gap-2">
                 {answering && onStopGenerating ? (
-                  <button
-                    type="button"
-                    onClick={onStopGenerating}
-                    className="inline-flex h-10 min-w-10 shrink-0 items-center justify-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-3 text-rose-800 shadow-sm transition hover:bg-rose-100"
-                    aria-label="Stop generating"
-                    data-orb-composer-stop-generating
-                  >
+                  <button type="button" onClick={onStopGenerating} className="inline-flex h-10 min-w-10 shrink-0 items-center justify-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-3 text-rose-800 shadow-sm transition hover:bg-rose-100" aria-label="Stop generating" data-orb-composer-stop-generating>
                     <Square className="h-4 w-4 fill-current" aria-hidden />
                     <span className="hidden text-xs font-semibold sm:inline">Stop</span>
                   </button>
                 ) : null}
-                <button
-                  type="button"
-                  onClick={onMicClick}
-                  disabled={!voiceCaptureEnabled || !voiceRecognitionAvailable}
-                  aria-label={
-                    !voiceCaptureEnabled
-                      ? 'Voice unavailable'
-                      : !voiceRecognitionAvailable
-                        ? 'Voice input is not available in this browser yet'
-                        : voiceListening
-                          ? 'Stop voice input'
-                          : 'Start voice input'
-                  }
-                  title={
-                    !voiceCaptureEnabled || !voiceRecognitionAvailable
-                      ? 'Voice input is not available in this browser yet.'
-                      : voiceListening
-                        ? 'Stop voice input'
-                        : 'Start voice input'
-                  }
-                  className={`inline-flex h-10 min-w-10 shrink-0 items-center justify-center rounded-full transition disabled:cursor-not-allowed disabled:opacity-45 ${
-                    voiceListening
-                      ? 'bg-sky-100 text-sky-700 shadow-sm'
-                      : 'bg-white text-slate-500 shadow-sm hover:bg-slate-100 hover:text-slate-900'
-                  }`}
-                  data-orb-composer-mic
-                  data-orb-composer-mic-available={voiceRecognitionAvailable ? 'true' : 'false'}
-                  data-no-navigation-rescue="true"
-                >
+                <button type="button" onClick={onMicClick} disabled={!voiceCaptureEnabled || !voiceRecognitionAvailable} aria-label={!voiceCaptureEnabled ? 'Voice unavailable' : !voiceRecognitionAvailable ? 'Voice input is not available in this browser yet' : voiceListening ? 'Stop voice input' : 'Start voice input'} title={!voiceCaptureEnabled || !voiceRecognitionAvailable ? 'Voice input is not available in this browser yet.' : voiceListening ? 'Stop voice input' : 'Start voice input'} className={`inline-flex h-10 min-w-10 shrink-0 items-center justify-center rounded-full transition disabled:cursor-not-allowed disabled:opacity-45 ${voiceListening ? 'bg-sky-100 text-sky-700 shadow-sm' : 'bg-white text-slate-500 shadow-sm hover:bg-slate-100 hover:text-slate-900'}`} data-orb-composer-mic data-orb-composer-mic-available={voiceRecognitionAvailable ? 'true' : 'false'} data-no-navigation-rescue="true">
                   {voiceListening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
                 </button>
-                <button
-                  type="submit"
-                  disabled={sendDisabled || (answering && Boolean(onStopGenerating))}
-                  aria-label="Send message"
-                  onClick={(event) => logTapTarget(event, 'orb-standalone-send-click')}
-                  onPointerUp={(event) => {
-                    if (event.pointerType !== 'touch') return
-                    logTapTarget(event, 'orb-standalone-send-pointer')
-                  }}
-                  className="orb-composer-send pointer-events-auto inline-flex h-11 min-h-11 min-w-11 shrink-0 cursor-pointer touch-manipulation items-center justify-center rounded-full text-white transition disabled:opacity-35"
-                  data-orb-composer-send
-                  data-testid="orb-standalone-send-clickable"
-                  data-send-disabled-reason={disabledReason}
-                  data-message-length={trimmedMessage.length}
-                  data-no-navigation-rescue="true"
-                >
+                <button type="submit" disabled={sendDisabled || (answering && Boolean(onStopGenerating))} aria-label="Send message" onClick={(event) => logTapTarget(event, 'orb-standalone-send-click')} onPointerUp={(event) => { if (event.pointerType !== 'touch') return; logTapTarget(event, 'orb-standalone-send-pointer') }} className="orb-composer-send pointer-events-auto inline-flex h-11 min-h-11 min-w-11 shrink-0 cursor-pointer touch-manipulation items-center justify-center rounded-full text-white transition disabled:opacity-35" data-orb-composer-send data-testid="orb-standalone-send-clickable" data-send-disabled-reason={disabledReason} data-message-length={trimmedMessage.length} data-no-navigation-rescue="true">
                   <Send className="h-5 w-5" />
                 </button>
               </div>
@@ -437,35 +320,21 @@ export function OrbStandaloneComposer({
 
           <div className="orb-voice-status-slot mt-2 flex min-h-[1.25rem] flex-wrap items-center justify-between gap-2 px-2">
             {voiceStatusText ? (
-              <p id="orb-standalone-status" className="text-[11px] leading-5 text-slate-500" role="status" data-orb-voice-status>
-                {voiceStatusText}
-              </p>
+              <p id="orb-standalone-status" className="text-[11px] leading-5 text-slate-500" role="status" data-orb-voice-status>{voiceStatusText}</p>
             ) : (
-              <span id="orb-standalone-status" className="sr-only" data-orb-voice-status>
-                Ready to type
-              </span>
+              <span id="orb-standalone-status" className="sr-only" data-orb-voice-status>Ready to type</span>
             )}
             <span className="text-[10px] text-slate-400">Mode: {mode}</span>
           </div>
 
           {voiceCaptureEnabled && voiceListening ? (
             <div className="mt-1.5 px-2">
-              <button
-                type="button"
-                onClick={onCancelListening}
-                className="inline-flex h-7 items-center rounded-full border border-slate-200 bg-white px-3 text-[11px] font-medium text-slate-500"
-              >
-                Cancel listening
-              </button>
+              <button type="button" onClick={onCancelListening} className="inline-flex h-7 items-center rounded-full border border-slate-200 bg-white px-3 text-[11px] font-medium text-slate-500">Cancel listening</button>
             </div>
           ) : null}
           {voiceCaptureEnabled && voiceSpeaking ? (
             <div className="mt-1.5 px-2">
-              <button
-                type="button"
-                onClick={onStopSpeaking}
-                className="inline-flex h-7 items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 text-[11px] font-semibold text-amber-800"
-              >
+              <button type="button" onClick={onStopSpeaking} className="inline-flex h-7 items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 text-[11px] font-semibold text-amber-800">
                 <Square className="h-3 w-3 fill-current" />
                 Stop speaking
               </button>
