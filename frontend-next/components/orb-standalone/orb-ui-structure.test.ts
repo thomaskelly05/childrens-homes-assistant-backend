@@ -39,7 +39,8 @@ describe('ORB ChatGPT UI structure', () => {
     const layout = readComponent('app/orb/layout.tsx')
     assert.match(layout, /ORB_APPEARANCE_BOOTSTRAP_SCRIPT/)
     assert.match(layout, /orb-appearance-bootstrap/)
-    assert.match(layout, /orb-chatgpt-light\.css/)
+    assert.match(layout, /orb-desktop\.css/)
+    assert.match(layout, /orb-mobile\.css/)
     assert.match(layout, /data-orb-light-ui-build/)
     assert.match(layout, /__ORB_LIGHT_UI_BUILD__/)
     assert.match(layout, /data-orb-cognition-routing-build/)
@@ -51,7 +52,7 @@ describe('ORB ChatGPT UI structure', () => {
 
   it('globals and route CSS ship ChatGPT-light build marker and hue pulse classes', () => {
     const globals = readComponent('app/globals.css')
-    const routeCss = readComponent('app/orb/orb-chatgpt-light.css')
+    const routeCss = readComponent('app/orb/orb-desktop.css')
     assert.match(globals, /orb-chatgpt-light-build-marker-1338/)
     assert.match(routeCss, /orb-chatgpt-light-build-marker-1338/)
     assert.match(globals, /orb-hue-response-pulse|orb-response-active/)
@@ -62,7 +63,7 @@ describe('ORB ChatGPT UI structure', () => {
 
   it('citation chips use readable light-mode styling', () => {
     const citation = readComponent('components/orb-standalone/orb-inline-citation.tsx')
-    const routeCss = readComponent('app/orb/orb-chatgpt-light.css')
+    const routeCss = readComponent('app/orb/orb-desktop.css')
     assert.match(citation, /orb-citation-chip-light/)
     assert.match(routeCss, /#0284c7/)
     assert.match(routeCss, /#075985/)

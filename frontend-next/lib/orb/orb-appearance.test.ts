@@ -4,7 +4,7 @@ import { describe, it } from 'node:test'
 import {
   ORB_APPEARANCE_MIGRATION_KEY,
   ORB_APPEARANCE_STORAGE_KEY,
-  migrateOrbAppearanceForLightDefault,
+  migrateOrbAppearanceForSystemDefault,
   readOrbAppearanceMode,
   resolveOrbTheme,
   writeOrbAppearanceMode
@@ -25,8 +25,8 @@ function mockBrowserStorage() {
 }
 
 describe('orb appearance', () => {
-  it('defaults to light when storage is empty', () => {
-    assert.equal(readOrbAppearanceMode(), 'light')
+  it('defaults to system when storage is empty', () => {
+    assert.equal(readOrbAppearanceMode(), 'system')
   })
 
   it('resolves system theme without window as light', () => {
@@ -46,13 +46,27 @@ describe('orb appearance', () => {
     }
   })
 
-  it('migrates legacy dark preference to light once', () => {
+  it('migrates legacy users without stored preference to system once', () => {
     const bag = mockBrowserStorage()
     try {
-      bag[ORB_APPEARANCE_STORAGE_KEY] = 'dark'
-      assert.equal(readOrbAppearanceMode(), 'light')
-      assert.equal(bag[ORB_APPEARANCE_STORAGE_KEY], 'light')
+      migrateOrbAppearanceForSystemDefault()
+      assert.equal(bag[ORB_APPEARANCE_STORAGE_KEY], 'system')
       assert.equal(bag[ORB_APPEARANCE_MIGRATION_KEY], 'done')
+      bag[ORB_APPEARANCE_STORAGE_KEY] = 'dark'
+      migrateOrbAppearanceForSystemDefault()
+      assert.equal(bag[ORB_APPEARANCE_STORAGE_KEY], 'dark')
+    } finally {
+      Reflect.deleteProperty(globalThis, 'localStorage')
+      Reflect.deleteProperty(globalThis, 'window')
+    }
+  })
+
+  it('preserves explicit light or dark choices after migration', () => {
+    const bag = mockBrowserStorage()
+    try {
+      bag[ORB_APPEARANCE_STORAGE_KEY] = 'light'
+      bag[ORB_APPEARANCE_MIGRATION_KEY] = 'done'
+      assert.equal(readOrbAppearanceMode(), 'light')
       bag[ORB_APPEARANCE_STORAGE_KEY] = 'dark'
       assert.equal(readOrbAppearanceMode(), 'dark')
     } finally {
@@ -61,26 +75,13 @@ describe('orb appearance', () => {
     }
   })
 
-  it('migrates legacy system preference to light once', () => {
+  it('migrateOrbAppearanceForSystemDefault is idempotent', () => {
     const bag = mockBrowserStorage()
     try {
-      bag[ORB_APPEARANCE_STORAGE_KEY] = 'system'
-      assert.equal(readOrbAppearanceMode(), 'light')
-      assert.equal(bag[ORB_APPEARANCE_STORAGE_KEY], 'light')
-    } finally {
-      Reflect.deleteProperty(globalThis, 'localStorage')
-      Reflect.deleteProperty(globalThis, 'window')
-    }
-  })
-
-  it('migrateOrbAppearanceForLightDefault is idempotent', () => {
-    const bag = mockBrowserStorage()
-    try {
-      bag[ORB_APPEARANCE_STORAGE_KEY] = 'system'
-      migrateOrbAppearanceForLightDefault()
-      migrateOrbAppearanceForLightDefault()
-      assert.equal(bag[ORB_APPEARANCE_STORAGE_KEY], 'light')
+      migrateOrbAppearanceForSystemDefault()
+      migrateOrbAppearanceForSystemDefault()
       assert.equal(bag[ORB_APPEARANCE_MIGRATION_KEY], 'done')
+      assert.equal(bag[ORB_APPEARANCE_STORAGE_KEY], 'system')
     } finally {
       Reflect.deleteProperty(globalThis, 'localStorage')
       Reflect.deleteProperty(globalThis, 'window')
