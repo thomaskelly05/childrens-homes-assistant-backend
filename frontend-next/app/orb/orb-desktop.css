@@ -19,6 +19,8 @@
   --orb-line: #d9dee8;
   --orb-surface: #fff;
   --orb-surface-elevated: #f8fafc;
+  --orb-surface-hover: rgba(15, 23, 42, 0.055);
+  --orb-bg-deep: #f8fbff;
   --orb-accent: var(--orb-brand-blue-deep);
   width: 100%;
   max-width: 100vw;
@@ -36,18 +38,52 @@ html[data-orb-theme='dark'] .orb-chat-layout {
   --orb-line: rgba(255, 255, 255, 0.09);
   --orb-surface: #111113;
   --orb-surface-elevated: #17171a;
+  --orb-surface-hover: rgba(255, 255, 255, 0.07);
+  --orb-bg-deep: #000;
   background:
     radial-gradient(circle at 54% 16%, rgba(0, 184, 255, 0.16), transparent 34rem),
     #000;
   color: var(--orb-foreground);
 }
 
+.orb-chat-layout :where(button, a, input, textarea, select, [role='button'], [tabindex]) {
+  pointer-events: auto;
+}
+
+.orb-chat-layout :where(button, a, input, textarea, select) {
+  -webkit-tap-highlight-color: rgba(0, 184, 255, 0.18);
+}
+
+.orb-ambient-cognition,
+.orb-ambient-cognition *,
+.orb-canvas-wash,
+.orb-background-wash {
+  pointer-events: none !important;
+}
+
 .orb-chat-main,
 .orb-chat-thread,
-.orb-composer-dock {
+.orb-composer-dock,
+.orb-chat-composer,
+.orb-composer-floating-wrap {
   width: 100%;
   min-width: 0;
   overflow-x: hidden;
+}
+
+.orb-chat-main {
+  position: relative;
+  z-index: 1;
+}
+
+.orb-chat-header {
+  position: relative;
+  z-index: 30;
+}
+
+.orb-chat-thread {
+  position: relative;
+  z-index: 1;
 }
 
 .orb-chat-sidebar {
@@ -107,7 +143,17 @@ html[data-orb-theme='dark'] [data-orb-brand-powered] {
   line-height: 0.95;
 }
 
+.orb-composer-floating-wrap,
+.orb-chat-composer {
+  position: relative;
+  z-index: 40;
+  pointer-events: auto;
+}
+
 .orb-composer-glass {
+  position: relative;
+  z-index: 41;
+  pointer-events: auto;
   border: 1px solid rgba(15, 23, 42, 0.08);
   background: rgba(255, 255, 255, 0.86);
   color: var(--orb-foreground);
@@ -125,6 +171,15 @@ html[data-orb-theme='dark'] .orb-composer-glass {
 .orb-composer-glass:focus-within {
   border-color: rgba(0, 184, 255, 0.42);
   box-shadow: 0 0 0 1px rgba(0, 184, 255, 0.16), 0 20px 55px rgba(0, 119, 255, 0.16);
+}
+
+.orb-composer-glass textarea,
+.orb-composer-glass [data-orb-composer-input] {
+  position: relative;
+  z-index: 42;
+  pointer-events: auto !important;
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 .orb-composer-action-rail,
@@ -158,6 +213,32 @@ html[data-orb-theme='dark'] .orb-composer-send:disabled {
   opacity: 0.92;
 }
 
+.orb-panel-row,
+.orb-starter-card,
+.orb-response-action-bar button,
+.orb-sidebar-dropdown-menu,
+.orb-sidebar-dropdown-menu button,
+[data-orb-header-profile],
+[data-orb-header-export],
+[data-orb-composer-card],
+[data-orb-composer-attach],
+[data-orb-composer-mic],
+[data-orb-composer-send] {
+  pointer-events: auto !important;
+}
+
+.orb-starter-card {
+  border-radius: 1rem;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(255, 255, 255, 0.84);
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.06);
+}
+
+html[data-orb-theme='dark'] .orb-starter-card {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.045);
+}
+
 [data-orb-composer-disclaimer] {
   display: inline-flex;
   width: auto;
@@ -169,6 +250,7 @@ html[data-orb-theme='dark'] .orb-composer-send:disabled {
   border-radius: 999px;
   color: #94a3b8;
   opacity: 0.72;
+  pointer-events: none;
 }
 
 [data-orb-composer-disclaimer]::before {
@@ -197,6 +279,28 @@ html[data-orb-theme='dark'] .orb-composer-send:disabled {
 .orb-message-assistant {
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+.orb-scroll-to-bottom-fab {
+  position: fixed;
+  z-index: 70;
+  right: 1rem;
+  bottom: 9rem;
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 184, 255, 0.22);
+  background: rgba(255, 255, 255, 0.9);
+  padding: 0.55rem 0.75rem;
+  color: #0369a1;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.16);
+}
+
+html[data-orb-theme='dark'] .orb-scroll-to-bottom-fab {
+  background: rgba(18, 18, 20, 0.92);
+  color: #67e8f9;
 }
 
 @media (prefers-reduced-motion: no-preference) {
