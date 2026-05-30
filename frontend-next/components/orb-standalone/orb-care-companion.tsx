@@ -76,6 +76,7 @@ import {
   STANDALONE_ORB_SIGN_IN_PATH,
   STANDALONE_ORB_SIGN_IN_REQUIRED_ANSWER,
   isStandaloneOrbSignInPromptMessage,
+  isStandaloneOrbSafetyAcceptanceMessage,
   isOrbMinimalTurn,
   standaloneGreetingLocalAnswer,
   tryStandaloneGuestLocalAnswer
@@ -139,6 +140,7 @@ import {
   fetchOrbSavedOutputsSummary,
   fetchStandaloneOrbConfig,
   isStandaloneOrbRetryableNetworkError,
+  ORB_SAFETY_ONBOARDING_PATH,
   parseStandaloneOrbSendError,
   logOrbCognitionDebug,
   logOrbTiming,
@@ -447,6 +449,30 @@ function OrbSignInCallToAction({ className = '' }: { className?: string }) {
       Sign in to ORB Residential
     </button>
   )
+}
+
+function OrbSafetyAcceptanceCallToAction({ className = '' }: { className?: string }) {
+  const router = useRouter()
+  return (
+    <button
+      type="button"
+      data-orb-safety-acceptance-cta
+      onClick={() => router.push(ORB_SAFETY_ONBOARDING_PATH)}
+      className={`mt-3 inline-flex h-9 items-center rounded-full bg-[var(--orb-accent)] px-4 text-xs font-semibold text-white hover:opacity-95 ${className}`}
+    >
+      Continue
+    </button>
+  )
+}
+
+function orbErrorCallToAction(message: string, className = 'mt-3') {
+  if (isStandaloneOrbSafetyAcceptanceMessage(message)) {
+    return <OrbSafetyAcceptanceCallToAction className={className} />
+  }
+  if (isStandaloneOrbSignInPromptMessage(message)) {
+    return <OrbSignInCallToAction className={className} />
+  }
+  return null
 }
 
 export function OrbCareCompanion() {
@@ -1328,8 +1354,9 @@ export function OrbCareCompanion() {
         }
         const parsed = parseStandaloneOrbSendError(caught)
         const signInRequired =
-          isStandaloneOrbSignInPromptMessage(parsed.message) ||
-          ((parsed.status === 401 || parsed.status === 403) && !account.hasBackendSession)
+          !parsed.safetyAcceptanceRequired &&
+          (isStandaloneOrbSignInPromptMessage(parsed.message) ||
+            ((parsed.status === 401 || parsed.status === 403) && !account.hasBackendSession))
         const displayMessage = signInRequired ? parsed.message : parsed.message
         traceOrbSend('request_failed', {
           sendGeneration,
@@ -2608,9 +2635,11 @@ export function OrbCareCompanion() {
                             >
                               <p className="orb-message-error-card__title mb-2 text-xs font-semibold">ORB</p>
                               <p className="orb-message-error-card__body text-sm">{entry.content}</p>
-                              {isStandaloneOrbSignInPromptMessage(entry.content) ? (
-                                <OrbSignInCallToAction className="mt-3" />
-                              ) : retryPayload && index === visibleMessages.length - 1 ? (
+                              {orbErrorCallToAction(entry.content)}
+                              {!isStandaloneOrbSignInPromptMessage(entry.content) &&
+                              !isStandaloneOrbSafetyAcceptanceMessage(entry.content) &&
+                              retryPayload &&
+                              index === visibleMessages.length - 1 ? (
                                 <button
                                   type="button"
                                   data-testid="orb-message-retry"
@@ -2656,9 +2685,7 @@ export function OrbCareCompanion() {
                               }
                             }}
                           />
-                            {isStandaloneOrbSignInPromptMessage(entry.content) ? (
-                              <OrbSignInCallToAction />
-                            ) : null}
+                            {orbErrorCallToAction(entry.content, '')}
                             {entry.documentSuggestion?.needs_document ? (
                               <div className="mt-3 flex flex-wrap gap-2">
                                 <button
@@ -2857,9 +2884,10 @@ export function OrbCareCompanion() {
                         data-testid="orb-send-error"
                       >
                         <p className="orb-message-error-card__body">{error}</p>
-                        {isStandaloneOrbSignInPromptMessage(error) ? (
-                          <OrbSignInCallToAction className="mt-3" />
-                        ) : retryPayload ? (
+                        {orbErrorCallToAction(error)}
+                        {!isStandaloneOrbSignInPromptMessage(error) &&
+                        !isStandaloneOrbSafetyAcceptanceMessage(error) &&
+                        retryPayload ? (
                           <button
                             type="button"
                             data-testid="orb-message-retry"

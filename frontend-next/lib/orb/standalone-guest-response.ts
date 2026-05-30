@@ -116,3 +116,7 @@ export function isStandaloneOrbSignInPromptMessage(message: string): boolean {
     /sign in to use orb/i.test(message)
   )
 }
+
+export function isStandaloneOrbSafetyAcceptanceMessage(message: string): boolean {
+  return /accept orb residential safety statements before use/i.test(message)
+}

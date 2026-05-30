@@ -121,13 +121,31 @@ If migrations **200–203** are not applied, ORB Residential access checks may f
 
 The application rolls back failed transactions and returns a controlled access-denied or 503 response rather than crashing, but users will not be able to use premium conversation features until migrations are applied.
 
+### Missing `sql/203_orb_residential_subscriptions.sql` and safety 403s
+
+Without migration **203**, the `orb_safety_acceptances` table may be missing. Signed-in users (including admin bypass) can still authenticate (`/auth/me` 200, `/orb/standalone/access` 200), but protected ORB routes such as `/orb/standalone/config`, `/orb/standalone/conversation`, and `/orb/standalone/conversation/stream` return **403** with:
+
+```json
+{
+  "detail": {
+    "error": "safety_acceptance_required",
+    "message": "Accept ORB Residential safety statements before use.",
+    "os_access_granted": false
+  }
+}
+```
+
+This is not a sign-in problem. Users must complete ORB Residential safety acceptance (for example via `/orb/onboarding`) after migration 203 is applied. Until then, logs may also show warnings such as `ORB user preferences table unavailable` or `ORB premium trial table unavailable`.
+
 Symptoms in Render logs:
 
 - `relation "orb_user_preferences" does not exist`
 - `relation "orb_subscriptions" does not exist`
+- `relation "orb_safety_acceptances" does not exist`
 - `InFailedSqlTransaction: current transaction is aborted`
+- `/orb/standalone/config` 403 with `safety_acceptance_required`
 
-**Fix:** apply migrations 200–203 (minimum) in order, then redeploy or retry the request.
+**Fix:** apply migrations 200–203 (minimum) in order, confirm `orb_safety_acceptances` exists, have the user accept safety statements at `/orb/onboarding`, then redeploy or retry the request.
 
 ## Related documentation
 

@@ -23,14 +23,21 @@ function detailFromPayload(payload: unknown): AuthErrorDetail | string {
     if ('detail' in record) {
       const detail = record.detail
       if (detail && typeof detail === 'object') {
-        const structured = detail as AuthErrorDetail
-        if (structured.code === 'csrf_invalid') {
+        const structured = detail as Record<string, unknown>
+        const code =
+          typeof structured.code === 'string'
+            ? structured.code
+            : typeof structured.error === 'string'
+              ? structured.error
+              : undefined
+        const message = typeof structured.message === 'string' ? structured.message : undefined
+        if (code === 'csrf_invalid') {
           return {
             code: 'csrf_invalid',
-            message: structured.message || STANDALONE_ORB_CSRF_REFRESH_MESSAGE
+            message: message || STANDALONE_ORB_CSRF_REFRESH_MESSAGE
           }
         }
-        return structured
+        return { code, message, retry_after_seconds: structured.retry_after_seconds as number | undefined }
       }
       if (typeof detail === 'string') return detail
     }
