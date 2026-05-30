@@ -58,8 +58,11 @@ export function isOrbAuthRequiredStatus(status: number, code?: string) {
   if (status === 401) return true
   if (status !== 403) return false
   const normalized = (code || '').toLowerCase()
+  if (!normalized) return false
   if (normalized === 'csrf_failed' || normalized === 'csrf_invalid') return false
-  return true
+  if (normalized.includes('safety_acceptance')) return false
+  if (normalized.includes('premium') || normalized.includes('subscription') || normalized.includes('access')) return false
+  return normalized.includes('auth') || normalized.includes('session') || normalized.includes('sign_in') || normalized.includes('login')
 }
 
 const CSRF_COOKIE_PATTERN = /(?:^|;\s*)(?:__Host-indicare_csrf|indicare_csrf)=([^;]*)/
