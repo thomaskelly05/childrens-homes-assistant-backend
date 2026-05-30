@@ -95,6 +95,7 @@ import {
   type StandaloneOrbAccessibilityPreferences
 } from '@/lib/orb/standalone-accessibility'
 import { useAuth } from '@/contexts/auth-context'
+import { useOrbAccountState } from '@/hooks/use-orb-account-state'
 import { useMounted } from '@/hooks/use-mounted'
 import { getCsrfToken, STANDALONE_ORB_CSRF_REFRESH_MESSAGE } from '@/lib/auth/api'
 import { standaloneOsBoundaryReply } from '@/lib/orb/standalone-os-boundary'
@@ -433,8 +434,9 @@ function OrbSignInCallToAction({ className = '' }: { className?: string }) {
 }
 
 export function OrbCareCompanion() {
-  const { status, user, csrfReady, refreshSession } = useAuth()
-  const orbSessionReady = status === 'authenticated' && Boolean(user) && csrfReady
+  const { status, csrfReady, refreshSession } = useAuth()
+  const account = useOrbAccountState()
+  const orbSessionReady = account.isSignedIn && csrfReady && !account.isLoading
   const mounted = useMounted()
   const { resolvedTheme, appearanceMode, setAppearanceMode } = useOrbAppearance()
   const searchParams = useSearchParams()
@@ -524,20 +526,34 @@ export function OrbCareCompanion() {
   }, [])
 
   useEffect(() => {
+    if (account.isLoading) return
+    setAdultProfile((current) => {
+      const local = current ?? readAdultProfile()
+      if (!account.isSignedIn) return local
+      return {
+        ...account.adultProfile,
+        name: local.name.trim() ? local.name : account.adultProfile.name,
+        role: local.updatedAt > 0 ? local.role : account.adultProfile.role,
+        roleLabel: local.updatedAt > 0 ? local.roleLabel : account.adultProfile.roleLabel
+      }
+    })
+  }, [account.isLoading, account.isSignedIn, account.adultProfile, account.userEmail])
+
+  useEffect(() => {
     if (adultProfile?.voicePreference?.prefersSpokenResponses && !voiceSettings.voiceReplies) {
       voice.updateSettings({ voiceReplies: true })
     }
   }, [adultProfile?.voicePreference?.prefersSpokenResponses, voice, voiceSettings.voiceReplies])
 
   useEffect(() => {
-    if (status !== 'authenticated' || !user) return
+    if (!account.isSignedIn) return
     if (sessionPrimedRef.current) return
     sessionPrimedRef.current = true
     traceOrbSend('session_prime_start')
     void refreshSession().finally(() => {
       traceOrbSend('session_prime_end', { csrfReady: Boolean(getCsrfToken()) })
     })
-  }, [status, user, refreshSession])
+  }, [account.isSignedIn, refreshSession])
 
   useEffect(() => {
     return () => {
@@ -1267,7 +1283,7 @@ export function OrbCareCompanion() {
         }
         const parsed = parseStandaloneOrbSendError(caught)
         const signInRequired =
-          parsed.status === 401 && (status !== 'authenticated' || isStandaloneOrbSignInPromptMessage(parsed.message))
+          parsed.status === 401 && (!account.isSignedIn || isStandaloneOrbSignInPromptMessage(parsed.message))
         const displayMessage = signInRequired ? STANDALONE_ORB_SIGN_IN_REQUIRED_ANSWER : parsed.message
         traceOrbSend('request_failed', {
           sendGeneration,
@@ -1310,10 +1326,10 @@ export function OrbCareCompanion() {
       attachedProfiles,
       adultProfile,
       mode,
+      account.isSignedIn,
       orbSessionReady,
       pending,
       refreshSession,
-      status,
       voice,
       voiceSettings.answerStyle,
       voiceSettings.voiceReplies,
@@ -2438,9 +2454,11 @@ export function OrbCareCompanion() {
                     className="flex min-h-[min(52vh,24rem)] flex-col items-center justify-center px-2 py-6 text-center md:py-8"
                     data-orb-empty-state
                   >
-                    <p className="orb-empty-brand-title orb-hue-text" data-orb-brand-name data-orb-empty-title>
-                      ORB
-                    </p>
+                    <div className="orb-empty-title-wrap" data-orb-empty-title-wrap>
+                      <p className="orb-empty-brand-title orb-hue-text" data-orb-brand-name data-orb-empty-title>
+                        ORB
+                      </p>
+                    </div>
                     <p className="orb-empty-brand-powered mt-1.5" data-orb-brand-powered>
                       Powered by IndiCare
                     </p>
