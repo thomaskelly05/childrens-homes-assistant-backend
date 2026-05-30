@@ -59,12 +59,20 @@ function bufferToBase64Url(buffer: ArrayBuffer): string {
   return window.btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')
 }
 
+function viewToArrayBuffer(view: ArrayBufferView): ArrayBuffer {
+  const copy = new Uint8Array(view.byteLength)
+  copy.set(new Uint8Array(view.buffer, view.byteOffset, view.byteLength))
+  return copy.buffer
+}
+
 function normaliseCredentialJson(value: unknown): unknown {
   if (!value || typeof value !== 'object') return value
   if (value instanceof ArrayBuffer) return bufferToBase64Url(value)
-  if (ArrayBuffer.isView(value)) return bufferToBase64Url(value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength))
+  if (ArrayBuffer.isView(value)) return bufferToBase64Url(viewToArrayBuffer(value))
   if (Array.isArray(value)) return value.map(normaliseCredentialJson)
-  return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([key, item]) => [key, normaliseCredentialJson(item)]))
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>).map(([key, item]) => [key, normaliseCredentialJson(item)])
+  )
 }
 
 export function orbPasskeysSupported(): boolean {
