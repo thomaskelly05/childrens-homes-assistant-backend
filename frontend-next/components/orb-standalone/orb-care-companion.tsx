@@ -1,7 +1,8 @@
 'use client'
 
 import { FormEvent, useRef, useState, type DragEvent } from 'react'
-import { Copy, Menu, User } from 'lucide-react'
+import { Copy, LogIn, LogOut, Menu, User } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 
 import {
   OrbStandaloneComposer,
@@ -18,6 +19,7 @@ import { OrbAssistantMessageBody } from '@/components/orb-standalone/orb-assista
 import { OrbAmbientCognition } from '@/components/orb-standalone/orb-ambient-cognition'
 import { useOrbAppearance } from '@/components/orb-standalone/use-orb-appearance'
 import { useStandaloneOrbVoice } from '@/components/orb-standalone/use-standalone-orb-voice'
+import { useAuth } from '@/contexts/auth-context'
 import { AuthApiError } from '@/lib/auth/api'
 import {
   createStandaloneChat,
@@ -89,6 +91,8 @@ function friendlyOrbError(error: unknown): string {
 }
 
 export function OrbCareCompanion() {
+  const router = useRouter()
+  const auth = useAuth()
   const { resolvedTheme, appearanceMode, setAppearanceMode } = useOrbAppearance()
   const voice = useStandaloneOrbVoice()
   const [workspace, setWorkspace] = useState<StandaloneWorkspace>(() => {
@@ -105,6 +109,7 @@ export function OrbCareCompanion() {
   const [activePanel, setActivePanel] = useState<Panel>(null)
   const [agentsOpen, setAgentsOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
+  const [accountOpen, setAccountOpen] = useState(false)
   const [adultProfile, setAdultProfile] = useState<AdultProfile | null>(() => readAdultProfile())
   const [a11yPrefs, setA11yPrefs] = useState<StandaloneOrbAccessibilityPreferences>(defaultStandaloneOrbAccessibility)
   const inputRef = useRef<HTMLTextAreaElement | null>(null)
@@ -112,6 +117,7 @@ export function OrbCareCompanion() {
   const activeChat = workspace.chats.find((chat) => chat.id === workspace.activeChatId) ?? workspace.chats[0]
   const visibleMessages = activeChat?.messages ?? []
   const showEmptyState = visibleMessages.length === 0
+  const isSignedIn = auth.status === 'authenticated'
 
   function persistMessages(messages: StandaloneChatMessage[]) {
     if (!activeChat) return
@@ -123,6 +129,27 @@ export function OrbCareCompanion() {
     }
     setWorkspace(nextWorkspace)
     writeStandaloneWorkspace(nextWorkspace)
+  }
+
+  async function handleLogout() {
+    setAccountOpen(false)
+    await auth.logout()
+    router.replace('/orb/login?returnUrl=%2Forb')
+  }
+
+  function handleSignIn() {
+    setAccountOpen(false)
+    router.push('/orb/login?returnUrl=%2Forb')
+  }
+
+  function handleAccess() {
+    setAccountOpen(false)
+    router.push('/orb/access')
+  }
+
+  function handleProfile() {
+    setAccountOpen(false)
+    setProfileOpen(true)
   }
 
   async function handleSubmit(event?: FormEvent<HTMLFormElement>) {
@@ -143,6 +170,17 @@ export function OrbCareCompanion() {
         ...thinkingMessage,
         content: localAnswer,
         status: 'complete'
+      }
+      persistMessages(baseMessages.map((entry) => (entry.id === thinkingMessage.id ? assistantMessage : entry)))
+      setPending(false)
+      return
+    }
+
+    if (!isSignedIn) {
+      const assistantMessage: StandaloneChatMessage = {
+        ...thinkingMessage,
+        content: 'Please sign in to use ORB. Tap the profile icon, then Sign in.',
+        status: 'error'
       }
       persistMessages(baseMessages.map((entry) => (entry.id === thinkingMessage.id ? assistantMessage : entry)))
       setPending(false)
@@ -313,9 +351,45 @@ export function OrbCareCompanion() {
               <Menu className="h-5 w-5" />
             </button>
             <h1 className="min-w-0 flex-1 truncate text-sm font-semibold text-[var(--orb-foreground)] md:text-base">ORB</h1>
-            <button type="button" className="rounded-lg p-2 text-[var(--orb-muted)]" onClick={() => setProfileOpen(true)} aria-label="Profile">
-              <User className="h-4 w-4" />
-            </button>
+            <div className="relative">
+              <button
+                type="button"
+                className="rounded-lg p-2 text-[var(--orb-muted)]"
+                onClick={() => setAccountOpen((current) => !current)}
+                aria-label={isSignedIn ? 'Account options' : 'Sign in options'}
+                data-orb-header-profile
+              >
+                <User className="h-4 w-4" />
+              </button>
+              {accountOpen ? (
+                <div className="absolute right-0 top-full z-50 mt-2 w-64 rounded-2xl border border-[var(--orb-line)] bg-[var(--orb-surface)] p-2 text-sm text-[var(--orb-foreground)] shadow-2xl" role="menu">
+                  <div className="border-b border-[var(--orb-line)] px-3 py-2">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--orb-muted)]">ORB account</p>
+                    <p className="mt-1 truncate text-sm font-medium">{isSignedIn ? auth.user?.email || 'Signed in' : 'Not signed in'}</p>
+                  </div>
+                  {!isSignedIn ? (
+                    <button type="button" className="mt-2 flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-[var(--orb-surface-hover)]" onClick={handleSignIn} role="menuitem">
+                      <LogIn className="h-4 w-4" />
+                      Sign in to ORB
+                    </button>
+                  ) : (
+                    <>
+                      <button type="button" className="mt-2 flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-[var(--orb-surface-hover)]" onClick={handleProfile} role="menuitem">
+                        <User className="h-4 w-4" />
+                        Profile
+                      </button>
+                      <button type="button" className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-[var(--orb-surface-hover)]" onClick={handleAccess} role="menuitem">
+                        Manage ORB access
+                      </button>
+                      <button type="button" className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-rose-600 hover:bg-rose-50" onClick={() => void handleLogout()} role="menuitem">
+                        <LogOut className="h-4 w-4" />
+                        Log out
+                      </button>
+                    </>
+                  )}
+                </div>
+              ) : null}
+            </div>
             <button type="button" className="rounded-lg p-2 text-[var(--orb-muted)]" onClick={() => navigator.clipboard?.writeText(visibleMessages.map((m) => `${m.role}: ${m.content}`).join('\n\n'))} aria-label="Copy chat">
               <Copy className="h-4 w-4" />
             </button>
