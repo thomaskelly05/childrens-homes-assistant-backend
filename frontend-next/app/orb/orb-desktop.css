@@ -120,19 +120,24 @@ html[data-orb-theme='dark'] .orb-chat-header {
   -webkit-background-clip: text;
   color: transparent;
   -webkit-text-fill-color: transparent;
-  font-weight: 850;
-  letter-spacing: -0.06em;
-  filter: drop-shadow(0 0 18px rgba(0, 184, 255, 0.16));
+  font-weight: 950;
+  letter-spacing: -0.09em;
+  filter: drop-shadow(0 0 16px rgba(0, 184, 255, 0.24)) drop-shadow(0 0 34px rgba(0, 119, 255, 0.18));
 }
 
 html[data-orb-theme='dark'] .orb-hue-text,
 html[data-orb-theme='dark'] [data-orb-empty-title] {
-  filter: drop-shadow(0 0 24px rgba(0, 184, 255, 0.32));
+  filter: drop-shadow(0 0 24px rgba(0, 184, 255, 0.36)) drop-shadow(0 0 44px rgba(0, 119, 255, 0.24));
+}
+
+[data-orb-empty-title] {
+  font-size: clamp(4rem, 9vw, 6.75rem);
 }
 
 [data-orb-brand-powered] {
-  color: rgba(0, 119, 255, 0.58);
-  letter-spacing: 0.34em;
+  color: rgba(0, 119, 255, 0.62);
+  letter-spacing: 0.38em;
+  font-weight: 700;
 }
 
 html[data-orb-theme='dark'] [data-orb-brand-powered] {
@@ -140,7 +145,7 @@ html[data-orb-theme='dark'] [data-orb-brand-powered] {
 }
 
 .orb-empty-brand-title {
-  line-height: 0.95;
+  line-height: 0.9;
 }
 
 .orb-composer-floating-wrap,
@@ -310,8 +315,8 @@ html[data-orb-theme='dark'] .orb-scroll-to-bottom-fab {
 }
 
 @keyframes orb-wordmark-breathe {
-  0%, 100% { filter: drop-shadow(0 0 16px rgba(0, 184, 255, 0.16)); }
-  50% { filter: drop-shadow(0 0 28px rgba(0, 184, 255, 0.38)); }
+  0%, 100% { filter: drop-shadow(0 0 18px rgba(0, 184, 255, 0.24)) drop-shadow(0 0 34px rgba(0, 119, 255, 0.18)); }
+  50% { filter: drop-shadow(0 0 34px rgba(0, 184, 255, 0.44)) drop-shadow(0 0 54px rgba(0, 119, 255, 0.3)); }
 }
 
 /* Build markers — keep in sync with app/globals.css */
@@ -444,4 +449,38 @@ html[data-orb-theme='light'] .orb-chat-layout {
 .orb-document-panel {
   border-color: var(--orb-line);
   background: var(--orb-surface);
+}
+
+.orb-sidebar-dropdown-menu,
+.orb-action-more-menu {
+  z-index: 10020 !important;
+  border-radius: 1rem !important;
+  border: 1px solid rgba(0, 119, 255, 0.14) !important;
+  background: rgba(255, 255, 255, 0.98) !important;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.2) !important;
+  backdrop-filter: blur(16px) saturate(150%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(150%) !important;
+}
+
+.orb-sidebar-dropdown-menu button,
+.orb-action-more-menu button {
+  width: 100%;
+  justify-content: flex-start;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+.orb-sidebar-dropdown-menu button:hover,
+.orb-action-more-menu button:hover {
+  background: rgba(0, 184, 255, 0.08) !important;
+}
+
+.orb-panel-overlay {
+  background: rgba(248, 251, 255, 0.78) !important;
+  backdrop-filter: blur(10px) saturate(145%) !important;
+  -webkit-backdrop-filter: blur(10px) saturate(145%) !important;
+}
+
+.orb-panel-drawer {
+  background: rgba(255, 255, 255, 0.98) !important;
 }
