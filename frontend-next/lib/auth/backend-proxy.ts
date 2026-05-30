@@ -55,9 +55,16 @@ function sanitizeResponseHeaders(upstream: Headers): Headers {
   upstream.forEach((value, key) => {
     const lower = key.toLowerCase()
     if (HOP_BY_HOP_HEADERS.has(lower)) return
+    if (lower === 'content-length') return
     headers.append(key, value)
   })
   return headers
+}
+
+function isStreamResponse(pathSegments: string[], upstream: Response): boolean {
+  const contentType = upstream.headers.get('content-type')?.toLowerCase() || ''
+  const path = pathSegments.join('/').toLowerCase()
+  return contentType.includes('text/event-stream') || path.includes('conversation/stream')
 }
 
 export async function proxyRequestToBackend(
@@ -79,9 +86,20 @@ export async function proxyRequestToBackend(
     cache: 'no-store'
   })
 
-  return new Response(upstream.body, {
+  const responseHeaders = sanitizeResponseHeaders(upstream.headers)
+
+  if (isStreamResponse(pathSegments, upstream)) {
+    return new Response(upstream.body, {
+      status: upstream.status,
+      statusText: upstream.statusText,
+      headers: responseHeaders
+    })
+  }
+
+  const body = await upstream.arrayBuffer()
+  return new Response(body, {
     status: upstream.status,
     statusText: upstream.statusText,
-    headers: sanitizeResponseHeaders(upstream.headers)
+    headers: responseHeaders
   })
 }
