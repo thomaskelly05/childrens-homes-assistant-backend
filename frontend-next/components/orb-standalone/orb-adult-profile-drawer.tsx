@@ -1,8 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { X } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { LogIn, LogOut, X } from 'lucide-react'
 
+import { useAuth } from '@/contexts/auth-context'
 import {
   CANONICAL_ADULT_PROFILE_ROLES,
   DEFAULT_ADULT_PROFILE,
@@ -33,7 +35,10 @@ export function OrbAdultProfileDrawer({
   onClose: () => void
   onSave: (next: AdultProfile) => void
 }) {
+  const router = useRouter()
+  const auth = useAuth()
   const [draft, setDraft] = useState(profile)
+  const isSignedIn = auth.status === 'authenticated'
 
   useEffect(() => {
     if (open) setDraft(profile)
@@ -65,6 +70,22 @@ export function OrbAdultProfileDrawer({
     onClose()
   }
 
+  function goToSignIn() {
+    onClose()
+    router.push('/orb/login?returnUrl=%2Forb')
+  }
+
+  function goToAccess() {
+    onClose()
+    router.push('/orb/access')
+  }
+
+  async function logout() {
+    onClose()
+    await auth.logout()
+    router.replace('/orb/login?returnUrl=%2Forb')
+  }
+
   return (
     <div className="orb-panel-overlay fixed inset-0 z-[60] flex justify-end bg-black/40 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Adult profile">
       <div className="orb-panel-drawer flex h-full w-full max-w-md flex-col border-l border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] shadow-2xl">
@@ -90,6 +111,57 @@ export function OrbAdultProfileDrawer({
           >
             {STANDALONE_PROFILE_BOUNDARY_NOTE}
           </p>
+
+          <section className="rounded-2xl border border-[var(--orb-line)] bg-[var(--orb-surface)] p-4" data-orb-account-controls>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold text-[var(--orb-foreground)]">ORB account</h3>
+                <p className="mt-1 text-xs leading-relaxed text-[var(--orb-muted)]">
+                  {isSignedIn ? auth.user?.email || 'Signed in' : 'Not signed in'}
+                </p>
+              </div>
+              <span className="rounded-full border border-[var(--orb-line)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--orb-muted)]">
+                {isSignedIn ? 'Active' : 'Signed out'}
+              </span>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {!isSignedIn ? (
+                <button
+                  type="button"
+                  onClick={goToSignIn}
+                  className="inline-flex items-center gap-2 rounded-xl bg-[var(--orb-accent)] px-3 py-2 text-xs font-semibold text-[var(--orb-on-accent)]"
+                  data-orb-account-sign-in
+                >
+                  <LogIn className="h-4 w-4" />
+                  Sign in to ORB
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={goToAccess}
+                    className="rounded-xl border border-[var(--orb-line)] px-3 py-2 text-xs font-semibold text-[var(--orb-foreground)] hover:bg-[var(--orb-surface-hover)]"
+                    data-orb-account-access
+                  >
+                    Manage ORB access
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void logout()}
+                    className="inline-flex items-center gap-2 rounded-xl border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50"
+                    data-orb-account-logout
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Log out
+                  </button>
+                </>
+              )}
+            </div>
+            <p className="mt-3 text-[11px] leading-relaxed text-[var(--orb-muted)]">
+              Face ID, Touch ID and passkeys are available from the ORB sign-in flow when supported by your device.
+            </p>
+          </section>
+
           <Field label="Your name">
             <input
               value={draft.name}
