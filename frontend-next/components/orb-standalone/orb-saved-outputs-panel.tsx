@@ -177,12 +177,12 @@ export function OrbSavedOutputsPanel({
     <OrbStandalonePanelShell
       open={open}
       title="Saved outputs"
-      subtitle="Your standalone ORB library"
+      subtitle="Your ORB Residential library"
       onClose={onClose}
       panelId="saved_outputs"
       wide
       ariaLabel="ORB saved outputs"
-      footer="Saved outputs are standalone ORB artefacts."
+      footer="Saved outputs are ORB Residential artefacts."
     >
       <div className="flex min-h-0 flex-col md:flex-row" data-orb-saved-outputs-panel>
         <div className="flex w-full shrink-0 flex-col border-b border-white/[0.06] md:max-w-md md:border-b-0 md:border-r">

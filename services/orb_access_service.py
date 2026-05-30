@@ -1,12 +1,14 @@
 from __future__ import annotations
 
-"""ORB Residential access management service."""
+"""Commercial access layer for ORB Residential."""
 
+import logging
 from dataclasses import dataclass
 from typing import Any
 
-from db.orb_residential_db import get_orb_access_state
+from db.orb_residential_db import _safe_rollback, get_orb_access_state
 from services.orb_billing_meter_service import orb_billing_meter_service
+from services.orb_product_copy import ORB_DATA_BOUNDARY
 from services.orb_subscription_plan_service import (
     ORB_RESIDENTIAL_PRICE_LABEL,
     ORB_RESIDENTIAL_PRODUCT,
@@ -28,6 +30,9 @@ PREMIUM_WORKFLOWS = {
     "document_support",
     "voice_workflows",
 }
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -105,7 +110,12 @@ class OrbAccessService:
         if user_id is None:
             return self._unauthenticated_payload()
 
-        raw = get_orb_access_state(conn, user_id, user=user)
+        try:
+            raw = get_orb_access_state(conn, user_id, user=user)
+        except Exception:
+            _safe_rollback(conn)
+            logger.exception("Failed to load ORB access state for user_id=%s", user_id)
+            return self._db_failure_payload(user_id, user=user)
         access_state = self._resolve_access_state(raw, user=user)
         subscription = raw.get("subscription") or {}
         trial = raw.get("trial") or {}
@@ -152,6 +162,7 @@ class OrbAccessService:
             "safety_accepted": safety_accepted,
             "onboarding_completed": bool(raw.get("onboarding_completed")),
             "upgrade": self._upgrade_payload(raw, access_state),
+            "db_error": raw.get("db_error"),
             "oauth": {
                 "google": oauth_provider_configured("google"),
                 "microsoft": oauth_provider_configured("microsoft"),
@@ -182,6 +193,26 @@ class OrbAccessService:
         if user and user.get("user_id"):
             return "authenticated_no_subscription"
         return "locked"
+
+    def _db_failure_payload(self, user_id: int, *, user: dict[str, Any] | None = None) -> dict[str, Any]:
+        """Locked payload when access DB reads fail — never grants ORB Residential access."""
+        return {
+            "product": ORB_RESIDENTIAL_PRODUCT,
+            "price_label": ORB_RESIDENTIAL_PRICE_LABEL,
+            "can_use_orb": False,
+            "access_state": "access_check_unavailable",
+            "trial": {"available": False, "active": False},
+            "subscription": {"active": False, "status": None},
+            "billing": {"stripe_configured": stripe_configured(), "price_gbp_monthly": 9.99},
+            "usage_meter": {},
+            "standalone": True,
+            "os_records_accessed": False,
+            "os_access_granted": False,
+            "safety_accepted": False,
+            "onboarding_completed": False,
+            "db_error": "access_state_unavailable",
+            "upgrade": self.build_upgrade_payload(),
+        }
 
     def _unauthenticated_payload(self) -> dict[str, Any]:
         return {
@@ -227,7 +258,7 @@ class OrbAccessService:
                 "Feedback-driven improvement",
             ],
             "trial": {"enabled": True, "days": 7},
-            "boundary_note": "Standalone ORB does not access IndiCare OS records.",
+            "boundary_note": ORB_DATA_BOUNDARY,
             "os_links": False,
             "checkout_available": stripe_configured(),
         }

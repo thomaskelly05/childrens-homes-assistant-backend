@@ -33,8 +33,14 @@ def _has_orb_table_error(exc: Exception) -> bool:
         or "orb_saved_projects" in text
         or "orb_saved_outputs" in text
         or "orb_usage_events" in text
+        or "orb_subscriptions" in text
+        or "orb_safety_acceptances" in text
         or "does not exist" in text
     )
+
+
+def _is_aborted_transaction(exc: Exception) -> bool:
+    return isinstance(exc, psycopg2.errors.InFailedSqlTransaction) or "infailedsqltransaction" in str(exc).lower()
 
 
 def _safe_rollback(conn) -> None:
@@ -55,6 +61,42 @@ def _user_founding_bypass(user: dict[str, Any]) -> bool:
     return role in {"founder", "owner"} or "founding" in plan
 
 
+def _orb_access_state_error_fallback(
+    user_id: int,
+    *,
+    user: dict[str, Any] | None = None,
+    migration_required: bool = False,
+    db_error: str | None = None,
+) -> dict[str, Any]:
+    """Safe locked access payload when DB reads fail — never grants premium access."""
+    user = user or {}
+    admin_bypass = _user_admin_bypass(user)
+    founding_bypass = _user_founding_bypass(user)
+    can_use_orb = admin_bypass or founding_bypass
+    return {
+        "user_id": user_id,
+        "subscription": {},
+        "subscription_active": False,
+        "subscription_status": "inactive",
+        "plan_name": None,
+        "current_period_end": None,
+        "trial": None,
+        "trial_active": False,
+        "trial_available": not can_use_orb,
+        "trial_days_left": None,
+        "trial_table_missing": migration_required,
+        "admin_bypass": admin_bypass,
+        "founding_bypass": founding_bypass,
+        "enterprise_later": False,
+        "can_use_orb": can_use_orb,
+        "access_reason": "admin_bypass" if admin_bypass else "founding_plan_bypass" if founding_bypass else "locked",
+        "safety_accepted": False,
+        "onboarding_completed": False,
+        "migration_required": migration_required,
+        "db_error": db_error,
+    }
+
+
 def get_orb_access_state(conn, user_id: int, *, user: dict[str, Any] | None = None) -> dict[str, Any]:
     """Return premium access state for ORB Residential.
 
@@ -63,6 +105,30 @@ def get_orb_access_state(conn, user_id: int, *, user: dict[str, Any] | None = No
     /orb chat. Fall back to the user's core subscription/admin state and surface a
     migration note in the access payload.
     """
+    try:
+        return _load_orb_access_state(conn, user_id, user=user)
+    except Exception as exc:
+        _safe_rollback(conn)
+        if _has_orb_table_error(exc) or _is_aborted_transaction(exc):
+            logger.warning(
+                "ORB access state degraded (migration or aborted transaction) for user_id=%s: %s",
+                user_id,
+                exc,
+            )
+            return _orb_access_state_error_fallback(
+                user_id,
+                user=user,
+                migration_required=True,
+            )
+        logger.exception("ORB access state query failed for user_id=%s", user_id)
+        return _orb_access_state_error_fallback(
+            user_id,
+            user=user,
+            db_error="access_state_unavailable",
+        )
+
+
+def _load_orb_access_state(conn, user_id: int, *, user: dict[str, Any] | None = None) -> dict[str, Any]:
     if user is None:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
@@ -83,12 +149,7 @@ def get_orb_access_state(conn, user_id: int, *, user: dict[str, Any] | None = No
 
     subscription = get_orb_subscription(conn, user_id) or {}
     safety_accepted = has_orb_safety_acceptance(conn, user_id)
-
-    prefs = None
-    try:
-        prefs = get_orb_user_preferences(conn, user_id)
-    except Exception:
-        prefs = None
+    prefs = get_orb_user_preferences(conn, user_id)
 
     trial = None
     trial_table_missing = False
@@ -112,10 +173,10 @@ def get_orb_access_state(conn, user_id: int, *, user: dict[str, Any] | None = No
             )
             trial = _row(cur.fetchone())
     except Exception as exc:
+        _safe_rollback(conn)
         if not _has_orb_table_error(exc):
             raise
         trial_table_missing = True
-        _safe_rollback(conn)
         logger.warning(
             "ORB premium trial table unavailable; falling back to user subscription state for user_id=%s",
             user_id,
@@ -349,18 +410,28 @@ def upsert_orb_user_preferences(
 
 
 def get_orb_user_preferences(conn, user_id: int) -> dict[str, Any] | None:
-    with conn.cursor(cursor_factory=RealDictCursor) as cur:
-        cur.execute(
-            """
-            SELECT user_id, role_label, work_environment, preferred_support_style,
-                   onboarding_completed_at, preferences, created_at, updated_at
-            FROM orb_user_preferences
-            WHERE user_id = %s
-            LIMIT 1
-            """,
-            (user_id,),
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT user_id, role_label, work_environment, preferred_support_style,
+                       onboarding_completed_at, preferences, created_at, updated_at
+                FROM orb_user_preferences
+                WHERE user_id = %s
+                LIMIT 1
+                """,
+                (user_id,),
+            )
+            return _row(cur.fetchone())
+    except Exception as exc:
+        _safe_rollback(conn)
+        if not _has_orb_table_error(exc):
+            raise
+        logger.warning(
+            "ORB user preferences table unavailable for user_id=%s; continuing without preferences",
+            user_id,
         )
-        return _row(cur.fetchone())
+        return None
 
 
 def create_orb_saved_project(

@@ -234,7 +234,7 @@
   }
 
   [data-orb-composer-disclaimer]::after {
-    content: 'Standalone ORB · © 2026 IndiCare' !important;
+    content: 'ORB Residential · © 2026 IndiCare' !important;
     color: #7c8798 !important;
     font-size: 0.62rem !important;
     line-height: 0.95rem !important;

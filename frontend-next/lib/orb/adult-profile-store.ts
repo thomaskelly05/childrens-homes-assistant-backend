@@ -85,7 +85,7 @@ export type AdultProfile = {
 export const ADULT_PROFILE_STORAGE_KEY = 'orb-adult-profile-v1'
 
 export const STANDALONE_PROFILE_BOUNDARY_NOTE =
-  'Standalone ORB uses only your profile, projects, and what you type. It does not access live IndiCare OS child, home, staff, or care records.'
+  'ORB Residential uses your profile, conversation, uploaded documents and IndiCare residential intelligence. It does not access IndiCare OS records.'
 
 const LEGACY_ROLE_MIGRATION: Partial<Record<AdultProfileRole, AdultProfileRole>> = {
   practitioner: 'residential_support_worker',

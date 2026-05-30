@@ -28,7 +28,7 @@ async def assistant_product_map(current_user=Depends(require_assistant_access)):
                         "governance",
                         "compliance tooling",
                     ],
-                    "must_not_be_used_as": "Standalone public ORB Care Companion",
+                    "must_not_be_used_as": "ORB Residential public product at /orb",
                 },
                 "indicare_os_orb": {
                     "name": "IndiCare OS ORB",
@@ -43,10 +43,10 @@ async def assistant_product_map(current_user=Depends(require_assistant_access)):
                     },
                 },
                 "orb_care_companion": {
-                    "name": "ORB Care Companion",
+                    "name": "ORB Residential",
                     "route": "/orb",
                     "type": "standalone",
-                    "purpose": "Standalone ChatGPT-style assistant for residential care guidance, reflection and voice.",
+                    "purpose": "ORB Residential — Powered by IndiCare. Individual subscription assistant for residential care guidance, reflection and voice.",
                     "api": {
                         "config": "/orb/standalone/config",
                         "conversation": "/orb/standalone/conversation",
@@ -76,7 +76,7 @@ async def assistant_product_map(current_user=Depends(require_assistant_access)):
             },
             "routes": {
                 "/orb": {
-                    "product": "ORB Care Companion",
+                    "product": "ORB Residential",
                     "type": "standalone",
                     "os_linked": False,
                 },

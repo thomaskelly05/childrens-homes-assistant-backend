@@ -62,6 +62,7 @@ import { OrbStandaloneSidebar } from '@/components/orb-standalone/orb-standalone
 import { OrbHueMark } from '@/components/orb-standalone/orb-hue-logo'
 import { useOrbAppearance } from '@/components/orb-standalone/use-orb-appearance'
 import { ORB_LIGHT_UI_BUILD } from '@/lib/orb/orb-light-ui-build'
+import { ORB_DATA_BOUNDARY, ORB_DATA_BOUNDARY_SHORT, ORB_PRODUCT_NAME } from '@/lib/orb/orb-product-copy'
 import {
   buildAdultProfilePromptBlock,
   normalizeAdultProfileRole,
@@ -443,7 +444,7 @@ function OrbSignInCallToAction({ className = '' }: { className?: string }) {
       onClick={() => router.push(STANDALONE_ORB_SIGN_IN_PATH)}
       className={`mt-3 inline-flex h-9 items-center rounded-full bg-[var(--orb-accent)] px-4 text-xs font-semibold text-white hover:opacity-95 ${className}`}
     >
-      Sign in to ORB
+      Sign in to ORB Residential
     </button>
   )
 }
@@ -1654,7 +1655,7 @@ export function OrbCareCompanion() {
 
   function handleAttachmentFollowUp(action: OrbAttachmentFollowUpAction) {
     const prompts: Record<OrbAttachmentFollowUpAction, string> = {
-      summarise: 'Summarise what you can see in the image(s) I shared. Standalone ORB only — no OS records.',
+      summarise: 'Summarise what you can see in the image(s) I shared. ORB Residential only — no IndiCare OS records.',
       safeguarding_lens:
         'Apply a safeguarding lens to the image(s) or document I shared: facts, concerns, gaps, escalation.',
       ofsted_lens: 'Apply an Ofsted / SCCIF lens to what I shared. What evidence would an inspector ask for?',
@@ -1761,7 +1762,7 @@ export function OrbCareCompanion() {
         explainability: {
           confidence: result.confidence,
           human_review_boundaries: [
-            'Standalone ORB action — based only on provided text, not live OS records.'
+            'ORB Residential action — based only on provided text, not IndiCare OS records.'
           ],
           reasoning_summary: result.title
         }
@@ -1774,7 +1775,7 @@ export function OrbCareCompanion() {
           messages: replaceMessageById(chat.messages, thinkingMessage.id, actionMessage)
         })
       })
-      setDraftNotice(`${result.title} — standalone ORB action (not an OS record).`)
+      setDraftNotice(`${result.title} — ORB Residential action (not an OS record).`)
       return true
     } catch {
       setWorkspace((current) => {
@@ -1943,7 +1944,7 @@ export function OrbCareCompanion() {
       })
       setSavedOutputMessageIds((current) => new Set(current).add(entry.id))
       setSaveFeedbackByMessageId((current) => ({ ...current, [entry.id]: 'saved' }))
-      setDraftNotice('Saved — standalone ORB artefact (not an OS record).')
+      setDraftNotice('Saved — ORB Residential artefact (not an OS record).')
       const summary = await fetchOrbSavedOutputsSummary()
       setSavedOutputsCount(summary.total || 0)
     } catch {
@@ -2133,7 +2134,7 @@ export function OrbCareCompanion() {
       data-orb-agent={activeAgent?.id ?? 'ask_orb'}
       data-orb-cognition-state={cognitionAmbientState}
     >
-      <span className="sr-only">ORB Care Companion — standalone residential care assistant</span>
+      <span className="sr-only">{ORB_PRODUCT_NAME} — {ORB_DATA_BOUNDARY}</span>
       <OrbAmbientCognition
         state={cognitionAmbientState}
         agentAtmosphere={atmosphereClass}
@@ -2391,8 +2392,9 @@ export function OrbCareCompanion() {
               <span
                 className="hidden shrink-0 rounded-full border border-[#93C5FD] bg-[#F0F9FF] px-2.5 py-0.5 text-[10px] font-semibold text-[#0369A1] sm:inline"
                 data-orb-header-privacy
+                title={ORB_DATA_BOUNDARY}
               >
-                No OS records accessed
+                {ORB_DATA_BOUNDARY_SHORT}
               </span>
             )}
             <button
@@ -2516,7 +2518,7 @@ export function OrbCareCompanion() {
                   >
                     <div className="orb-empty-title-wrap" data-orb-empty-title-wrap>
                       <p className="orb-empty-brand-title orb-hue-text" data-orb-brand-name data-orb-empty-title>
-                        ORB
+                        ORB Residential
                       </p>
                     </div>
                     <p className="orb-empty-brand-powered mt-1.5" data-orb-brand-powered>
@@ -3111,7 +3113,7 @@ function SourcesBasis({
         </div>
       ) : null}
       {open ? (
-        <p className="mt-1 text-[10px] text-slate-600">Standalone mode — no OS records accessed</p>
+        <p className="mt-1 text-[10px] text-slate-600">ORB Residential — no OS records accessed</p>
       ) : null}
     </div>
   )

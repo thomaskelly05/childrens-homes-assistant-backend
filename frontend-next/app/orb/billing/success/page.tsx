@@ -87,8 +87,7 @@ export default function OrbBillingSuccessPage() {
           </Link>
         </div>
         <p className="mt-8 text-xs leading-6 text-slate-500">
-          ORB Residential — Powered by IndiCare. Standalone ORB does not access IndiCare OS child, home, staff,
-          chronology or care records.
+          ORB Residential — Powered by IndiCare. ORB Residential does not access IndiCare OS records.
         </p>
       </div>
     </main>

@@ -23,13 +23,13 @@ const assistantLinks = [
   {
     href: '/record',
     title: 'Recording help',
-    description: 'Guided recording launcher — ORB prompts open standalone ORB Care Companion.',
+    description: 'Guided recording launcher — ORB prompts open ORB Residential at /orb.',
     icon: PenLine
   },
   {
     href: '/orb',
-    title: 'ORB Care Companion',
-    description: 'Standalone ChatGPT-style assistant — no OS records or CareHub context.',
+    title: 'ORB Residential',
+    description: 'Individual subscription assistant at /orb — no IndiCare OS records or CareHub context.',
     icon: Mic2
   }
 ] as const
@@ -41,7 +41,7 @@ export default function AssistantPage() {
         <p className="text-[11px] font-black uppercase tracking-[0.24em] text-blue-600">IndiCare OS Assistant</p>
         <h1 className="mt-3 text-4xl font-black tracking-[-0.06em] text-slate-950 md:text-5xl">Choose your assistant surface</h1>
         <p className="mt-4 max-w-3xl text-sm font-semibold leading-7 text-slate-600">
-          OS-linked assistants stay inside IndiCare OS. Standalone ORB Care Companion lives at /orb and never retrieves care records.
+          OS-linked assistants stay inside IndiCare OS. ORB Residential lives at /orb and never retrieves care records.
         </p>
       </header>
 

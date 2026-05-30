@@ -47,8 +47,8 @@ def test_advanced_features_behind_tools_or_settings():
 
 def test_privacy_and_empty_state_markers():
     sources = _read(ORB_COMPANION) + _read(ORB_SIDEBAR)
-    assert 'No OS records accessed' in sources
-    assert 'How can I help?' in sources
+    assert 'ORB Residential does not access IndiCare OS records' in sources
+    assert 'Ready when you are' in sources
     assert 'data-orb-empty-state' in _read(ORB_COMPANION)
     companion = _read(ORB_COMPANION)
     assert 'data-orb-starter-cards' in companion

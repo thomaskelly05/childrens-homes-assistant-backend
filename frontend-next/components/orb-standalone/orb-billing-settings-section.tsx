@@ -179,7 +179,7 @@ export function OrbBillingSettingsSection() {
         <p className="text-[10px] text-amber-700">Stripe env not configured — billing buttons disabled.</p>
       ) : null}
       <p className="text-[10px] leading-5 text-[var(--orb-muted)]">
-        Standalone ORB billing is separate from IndiCare OS. No OS records are accessed through this subscription.
+        ORB Residential billing is separate from IndiCare OS. ORB Residential does not grant IndiCare OS access.
       </p>
     </div>
   )

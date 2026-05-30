@@ -62,7 +62,7 @@ def test_archive_delete_export_reuse():
     exported = orb_saved_output_service.export_output(record.id, "markdown")
     assert exported is not None
     assert "Action plan draft" in exported["content"]
-    assert "standalone ORB artefacts" in exported["content"]
+    assert "ORB Residential artefacts" in exported["content"]
 
     plain = orb_saved_output_service.export_output(record.id, "plain_text")
     assert plain is not None

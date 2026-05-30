@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from fastapi import Depends, HTTPException, status
 
 from auth.orb_residential_auth_loader import get_orb_residential_user
 from db.connection import get_db
+from db.orb_residential_db import _safe_rollback
 from services.orb_access_service import orb_access_service
+
+logger = logging.getLogger(__name__)
 
 
 def require_rich_orb_premium_access(
@@ -23,7 +27,30 @@ def require_rich_orb_premium_access(
     if not user_id:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Sign in to use ORB Residential")
 
-    decision = orb_access_service.check_access(conn, user_id=int(user_id), workflow="ask_orb")
+    try:
+        decision = orb_access_service.check_access(conn, user_id=int(user_id), workflow="ask_orb")
+    except Exception:
+        _safe_rollback(conn)
+        logger.exception("ORB Residential access check failed for user_id=%s", user_id)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "error": "access_check_unavailable",
+                "message": "ORB Residential access could not be verified right now. Please try again shortly.",
+                "os_access_granted": False,
+            },
+        ) from None
+
+    if decision.access_state.get("db_error"):
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "error": "access_check_unavailable",
+                "message": "ORB Residential access could not be verified right now. Please try again shortly.",
+                "os_access_granted": False,
+            },
+        )
+
     if not decision.access_state.get("safety_accepted", False):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

@@ -36,7 +36,7 @@ from services.orb_intelligence_output_service import (
 logger = logging.getLogger("indicare.orb_saved_outputs")
 
 STANDALONE_ARTEFACT_NOTICE = (
-    "Saved outputs are standalone ORB artefacts for adult review. "
+    "Saved outputs are ORB Residential artefacts for adult review. "
     "They are not added to IndiCare OS records, Care Hub, chronology or child documents."
 )
 

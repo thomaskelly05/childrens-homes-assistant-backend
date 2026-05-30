@@ -227,7 +227,7 @@ export const ORB_COMMON_NEEDS = [
 
 export const ORB_SAFETY_STATEMENTS = [
   'I understand ORB supports professional thinking and does not replace safeguarding procedures.',
-  'I understand standalone ORB does not access IndiCare OS records.',
+  'I understand ORB Residential does not access IndiCare OS records.',
   'I will avoid entering unnecessary identifiable personal details where possible.',
   'I understand saved outputs and feedback may be used to improve ORB quality safely.'
 ] as const

@@ -231,7 +231,7 @@ export function understandingToIntelligenceOutput(
     limitations: understanding.limitations,
     boundaries: {
       notice:
-        'Standalone ORB does not access live IndiCare OS records. Uploaded documents are user-provided only.'
+        'ORB Residential does not access IndiCare OS records. Uploaded documents are user-provided only.'
     }
   }
 }
@@ -252,7 +252,7 @@ export function agentResponseToIntelligenceOutput(
     safety_notice: response.safety_notice,
     gaps: response.warnings,
     boundaries: {
-      notice: 'Standalone ORB — Knowledge Library and user documents only; no live OS records.'
+      notice: 'ORB Residential — Knowledge Library and user documents only; no IndiCare OS records.'
     }
   }
 }

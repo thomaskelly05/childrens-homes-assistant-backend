@@ -8,12 +8,12 @@ const SECTIONS = [
     body: 'ORB is IndiCare\'s residential care companion — a premium AI workspace for thinking, recording quality, reflection and professional reasoning in children\'s homes.'
   },
   {
-    title: 'What standalone ORB can do',
-    body: 'Help with wording, safeguarding thinking, Ofsted/SCCIF reflection, therapeutic interpretation, supervision prep, chronology reasoning, pattern recognition and general questions — without accessing live care records.'
+    title: 'What ORB Residential can do',
+    body: 'Help with wording, safeguarding thinking, Ofsted/SCCIF reflection, therapeutic interpretation, supervision prep, chronology reasoning, pattern recognition and general questions — using your profile, conversation, uploads and IndiCare residential intelligence.'
   },
   {
-    title: 'What standalone ORB cannot do',
-    body: 'Standalone ORB does not access live child, staff or home records. It does not make safeguarding threshold decisions, replace LADO, police, social worker, clinical or legal advice, or predict Ofsted outcomes.'
+    title: 'What ORB Residential cannot do',
+    body: 'ORB Residential does not access IndiCare OS records. It does not make safeguarding threshold decisions, replace LADO, police, social worker, clinical or legal advice, or predict Ofsted outcomes.'
   },
   {
     title: 'When to use OS ORB',
@@ -56,13 +56,13 @@ const SECTIONS = [
     body: 'Organise chats in projects, save useful outputs from the Library, and reuse them in new conversations. Saved outputs live under Library and Tools.'
   },
   {
-    title: 'How ORB protects your data',
+    title: 'ORB Residential data safety',
     body:
-      'Standalone ORB does not access IndiCare OS child, home, staff, chronology or care records. ORB only uses what you type, upload, choose to save or submit as feedback in standalone ORB. Temporary chat skips your saved ORB profile context for that chat. ORB may use trusted AI providers to generate responses — they process the text you send, not live OS records. Avoid unnecessary personal details; use initials where you can. Saved outputs and feedback are stored so you can reuse them and so ORB can improve through human review — not automatic care decisions. IndiCare OS ORB (/assistant/orb) may use permissioned OS records only where explicitly available and allowed.'
+      'ORB Residential does not access IndiCare OS records. It uses your profile, conversation, uploaded documents and IndiCare residential intelligence. Temporary chat skips your saved ORB profile context for that chat. ORB may use trusted AI providers to generate responses — they process the text you send, not IndiCare OS records. Avoid unnecessary personal details; use initials where you can. Saved outputs and feedback are stored so you can reuse them and so ORB can improve through human review — not automatic care decisions. IndiCare OS ORB (/assistant/orb) may use permissioned OS records only where explicitly available and allowed.'
   },
   {
     title: 'Privacy and data',
-    body: 'Chats and profiles are stored on this device unless you export them. Standalone ORB does not send child records to IndiCare OS without the operational assistant.'
+    body: 'Chats and profiles are stored on this device unless you export them. ORB Residential does not send child records to IndiCare OS without the operational assistant.'
   },
   {
     title: 'Quick shortcuts',
@@ -75,7 +75,7 @@ export function OrbHelpPanel({ open, onClose }: { open: boolean; onClose: () => 
     <OrbStandalonePanelShell
       open={open}
       title="Using ORB"
-      subtitle="Standalone Care Companion"
+      subtitle="ORB Residential"
       onClose={onClose}
       ariaLabel="ORB help"
       panelId="help"
@@ -89,7 +89,7 @@ export function OrbHelpPanel({ open, onClose }: { open: boolean; onClose: () => 
           </section>
         ))}
         <p className="text-[11px] leading-5 text-[var(--orb-muted)]" data-orb-help-safeguarding-boundary>
-          Standalone ORB does not access live child, staff or home records. Use OS ORB for permissioned operational
+          ORB Residential does not access IndiCare OS records. Use OS ORB for permissioned operational
           context. If a child is at immediate risk, follow local safeguarding and emergency procedures.
         </p>
       </div>

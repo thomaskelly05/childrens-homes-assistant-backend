@@ -83,7 +83,7 @@ export default function OrbOnboardingPage() {
       <div className="mx-auto max-w-2xl rounded-[2rem] border border-white/80 bg-white/90 p-8 shadow-2xl">
         <p className="text-xs font-bold uppercase tracking-[0.18em] text-indigo-700">ORB onboarding · step {step} of 4</p>
         <h1 className="mt-2 text-3xl font-black tracking-tight">Welcome to ORB Residential</h1>
-        <p className="mt-2 text-sm text-slate-600">Standalone ORB does not access IndiCare OS records.</p>
+        <p className="mt-2 text-sm text-slate-600">ORB Residential does not access IndiCare OS records.</p>
 
         {step === 1 ? (
           <section className="mt-8 space-y-4">
