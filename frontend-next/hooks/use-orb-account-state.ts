@@ -40,6 +40,9 @@ export type OrbAccountState = {
   /** Set when signed in but /orb/standalone/access failed (403/503). */
   accessFetchStatus: number | null
   hasConfirmedAccess: boolean
+  /** null when signed out or access payload unavailable. */
+  safetyAccepted: boolean | null
+  adminBypass: boolean
   refresh: () => Promise<void>
   signInUrl: string
   accessUrl: string
@@ -176,6 +179,8 @@ export function useOrbAccountState(): OrbAccountState {
     : null
   const trialEndsAt = isSignedIn ? access?.trial?.expires_at ?? null : null
   const hasConfirmedAccess = isSignedIn && accessIsActive(access) && !isAuthFailureStatus(accessFetchStatus ?? 0)
+  const safetyAccepted = isSignedIn && access ? Boolean(access.safety_accepted) : isSignedIn ? false : null
+  const adminBypass = isSignedIn && access?.access_state === 'admin_bypass'
 
   return {
     isLoading,
@@ -195,6 +200,8 @@ export function useOrbAccountState(): OrbAccountState {
     access,
     accessFetchStatus,
     hasConfirmedAccess,
+    safetyAccepted,
+    adminBypass,
     refresh,
     signInUrl: ORB_SIGN_IN_URL,
     accessUrl: ORB_ACCESS_URL

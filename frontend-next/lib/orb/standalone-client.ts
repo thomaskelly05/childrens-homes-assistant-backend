@@ -12,6 +12,18 @@ import {
   parseStandaloneOrbSseBlock,
   type StandaloneOrbStreamEvent as StandaloneOrbStreamEventBase
 } from '@/lib/orb/standalone-sse-parser'
+import {
+  extractOrbErrorPayload,
+  isStandaloneOrbSafetyAcceptanceCode,
+  ORB_SAFETY_ACCEPTANCE_MESSAGE
+} from '@/lib/orb/standalone-error-payload'
+
+export {
+  extractOrbErrorPayload,
+  isStandaloneOrbSafetyAcceptanceCode,
+  ORB_SAFETY_ACCEPTANCE_MESSAGE,
+  ORB_SAFETY_ONBOARDING_PATH
+} from '@/lib/orb/standalone-error-payload'
 
 const STANDALONE_REQUEST_TIMEOUT_MS = 45_000
 
@@ -454,6 +466,16 @@ export function logOrbTiming(
   console.info(`[orb-timing] ${event}`, detail)
 }
 
+function throwIfSafetyAcceptanceRequired(status: number, payload: unknown): void {
+  if (status !== 403) return
+  const extracted = extractOrbErrorPayload(payload)
+  if (!isStandaloneOrbSafetyAcceptanceCode(extracted.code)) return
+  throw new AuthApiError(403, {
+    code: 'safety_acceptance_required',
+    message: extracted.message?.trim() || ORB_SAFETY_ACCEPTANCE_MESSAGE
+  })
+}
+
 function extractAnswer(payload: unknown): string | null {
   if (!payload || typeof payload !== 'object') return null
   const record = payload as Record<string, unknown>
@@ -528,18 +550,21 @@ export async function queryStandaloneOrbConversation(
             typeof record.message === 'string' ? record.message : STANDALONE_ORB_CSRF_REFRESH_MESSAGE
         })
       }
-      if (isOrbAuthRequiredStatus(response.status, String(record?.code || ''))) {
+      throwIfSafetyAcceptanceRequired(response.status, payload)
+      const extracted = extractOrbErrorPayload(payload)
+      if (isOrbAuthRequiredStatus(response.status, extracted.code || '')) {
         throw new AuthApiError(response.status, {
           code: 'auth_required',
           message: ORB_AUTH_SIGN_IN_MESSAGE
         })
       }
-      throw new AuthApiError(
-        response.status,
-        typeof record?.message === 'string'
-          ? { code: String(record.code || 'request_failed'), message: record.message }
-          : 'ORB could not finish that response. Please try again.'
-      )
+      if (extracted.message) {
+        throw new AuthApiError(response.status, {
+          code: extracted.code || 'request_failed',
+          message: extracted.message
+        })
+      }
+      throw new AuthApiError(response.status, 'ORB could not finish that response. Please try again.')
     }
     if (!payload) {
       throw new AuthApiError(503, 'ORB could not finish that response. Please try again.')
@@ -718,18 +743,21 @@ export async function sendStandaloneOrbMessageStream(
           typeof payload.message === 'string' ? payload.message : STANDALONE_ORB_CSRF_REFRESH_MESSAGE
       })
     }
-    if (isOrbAuthRequiredStatus(response.status, String(payload?.code || ''))) {
+    throwIfSafetyAcceptanceRequired(response.status, payload)
+    const extracted = extractOrbErrorPayload(payload)
+    if (isOrbAuthRequiredStatus(response.status, extracted.code || '')) {
       throw new AuthApiError(response.status, {
         code: 'auth_required',
         message: ORB_AUTH_SIGN_IN_MESSAGE
       })
     }
-    throw new AuthApiError(
-      response.status,
-      typeof payload?.message === 'string'
-        ? { code: String(payload.code || 'request_failed'), message: payload.message }
-        : 'ORB could not finish that response. Please try again.'
-    )
+    if (extracted.message) {
+      throw new AuthApiError(response.status, {
+        code: extracted.code || 'request_failed',
+        message: extracted.message
+      })
+    }
+    throw new AuthApiError(response.status, 'ORB could not finish that response. Please try again.')
   }
 
   const body = response.body
@@ -1614,6 +1642,7 @@ export type StandaloneOrbSendErrorInfo = {
   message: string
   detail?: string
   csrfFailed: boolean
+  safetyAcceptanceRequired: boolean
 }
 
 export function isStandaloneOrbCsrfError(error: unknown) {
@@ -1631,12 +1660,23 @@ export function isStandaloneOrbRetryableNetworkError(error: unknown): boolean {
 export function parseStandaloneOrbSendError(error: unknown): StandaloneOrbSendErrorInfo {
   if (error instanceof AuthApiError) {
     const csrfFailed = isStandaloneOrbCsrfError(error)
+    const safetyAcceptanceRequired = isStandaloneOrbSafetyAcceptanceCode(error.code)
     if (csrfFailed) {
       return {
         status: error.status,
         detail: error.code || 'csrf_failed',
         message: error.message || STANDALONE_ORB_CSRF_REFRESH_MESSAGE,
-        csrfFailed: true
+        csrfFailed: true,
+        safetyAcceptanceRequired: false
+      }
+    }
+    if (safetyAcceptanceRequired) {
+      return {
+        status: error.status,
+        detail: error.code || 'safety_acceptance_required',
+        message: error.message || ORB_SAFETY_ACCEPTANCE_MESSAGE,
+        csrfFailed: false,
+        safetyAcceptanceRequired: true
       }
     }
     if (isOrbAuthRequiredStatus(error.status, error.code)) {
@@ -1644,7 +1684,8 @@ export function parseStandaloneOrbSendError(error: unknown): StandaloneOrbSendEr
         status: error.status,
         detail: error.code || 'auth_required',
         message: ORB_AUTH_SIGN_IN_MESSAGE,
-        csrfFailed: false
+        csrfFailed: false,
+        safetyAcceptanceRequired: false
       }
     }
     if (error.status === 401) {
@@ -1652,7 +1693,8 @@ export function parseStandaloneOrbSendError(error: unknown): StandaloneOrbSendEr
         status: 401,
         detail: error.code,
         message: ORB_AUTH_SIGN_IN_MESSAGE,
-        csrfFailed: false
+        csrfFailed: false,
+        safetyAcceptanceRequired: false
       }
     }
     if (error.status === 0) {
@@ -1660,7 +1702,8 @@ export function parseStandaloneOrbSendError(error: unknown): StandaloneOrbSendEr
         status: 0,
         detail: error.code,
         message: STANDALONE_ORB_NETWORK_ERROR_MESSAGE,
-        csrfFailed: false
+        csrfFailed: false,
+        safetyAcceptanceRequired: false
       }
     }
     if (error.status === 504 || error.status >= 500) {
@@ -1668,41 +1711,47 @@ export function parseStandaloneOrbSendError(error: unknown): StandaloneOrbSendEr
         status: error.status,
         detail: error.code,
         message: STANDALONE_ORB_SEND_RETRY_MESSAGE,
-        csrfFailed: false
+        csrfFailed: false,
+        safetyAcceptanceRequired: false
       }
     }
     return {
       status: error.status,
       detail: error.code,
       message: error.message || STANDALONE_ORB_SEND_RETRY_MESSAGE,
-      csrfFailed: false
+      csrfFailed: false,
+      safetyAcceptanceRequired: false
     }
   }
   if (error instanceof TypeError) {
     return {
       status: 0,
       message: STANDALONE_ORB_NETWORK_ERROR_MESSAGE,
-      csrfFailed: false
+      csrfFailed: false,
+      safetyAcceptanceRequired: false
     }
   }
   if (error instanceof Error && error.name === 'AbortError') {
     return {
       status: 504,
       message: STANDALONE_ORB_SEND_RETRY_MESSAGE,
-      csrfFailed: false
+      csrfFailed: false,
+      safetyAcceptanceRequired: false
     }
   }
   if (error instanceof Error) {
     return {
       status: 0,
       message: error.message || STANDALONE_ORB_SEND_RETRY_MESSAGE,
-      csrfFailed: false
+      csrfFailed: false,
+      safetyAcceptanceRequired: false
     }
   }
   return {
     status: 0,
     message: STANDALONE_ORB_SEND_RETRY_MESSAGE,
-    csrfFailed: false
+    csrfFailed: false,
+    safetyAcceptanceRequired: false
   }
 }
 

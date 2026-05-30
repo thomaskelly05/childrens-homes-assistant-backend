@@ -14,10 +14,13 @@ describe('standalone ORB auth errors', () => {
 
     assert.match(api, /ORB_AUTH_SIGN_IN_MESSAGE = 'Please sign in to use ORB Residential\.'/)
     assert.match(api, /isOrbAuthRequiredStatus/)
+    assert.match(api, /safety_acceptance/)
     assert.match(client, /ORB_AUTH_SIGN_IN_MESSAGE/)
     assert.match(client, /isOrbAuthRequiredStatus\(response\.status/)
     assert.match(client, /message: ORB_AUTH_SIGN_IN_MESSAGE/)
+    assert.match(client, /throwIfSafetyAcceptanceRequired/)
     assert.match(guest, /please sign in to use orb residential/i)
+    assert.match(guest, /isStandaloneOrbSafetyAcceptanceMessage/)
   })
 
   it('orb care companion shows sign-in CTA for auth prompt messages', () => {

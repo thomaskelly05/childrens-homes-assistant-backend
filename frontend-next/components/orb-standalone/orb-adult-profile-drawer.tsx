@@ -145,6 +145,17 @@ export function OrbAdultProfileDrawer({
                       : 'ORB Residential access could not be confirmed. Open Manage access to review your plan.'}
                   </p>
                 ) : null}
+                {account.isSignedIn && account.safetyAccepted !== null ? (
+                  <p className="mt-1 text-[11px] text-[var(--orb-muted)]" data-orb-account-safety-state>
+                    Safety accepted: {account.safetyAccepted ? 'yes' : 'no'}
+                    {account.adminBypass ? ' · admin bypass' : ''}
+                  </p>
+                ) : null}
+                {account.isSignedIn && account.safetyAccepted === false ? (
+                  <p className="mt-1 text-[11px] text-amber-700" data-orb-account-safety-warning>
+                    Safety statements need accepting before ORB Residential can answer.
+                  </p>
+                ) : null}
                 {account.isSignedIn && account.hasConfirmedAccess && account.subscriptionStatus ? (
                   <p className="mt-1 text-[11px] text-[var(--orb-muted)]" data-orb-account-subscription>
                     Subscription: {account.subscriptionStatus.replace(/_/g, ' ')}
