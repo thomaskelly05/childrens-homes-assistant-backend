@@ -78,7 +78,7 @@ export default function OrbBillingCancelPage() {
           )}
         </div>
         <p className="mt-8 text-xs leading-6 text-slate-500">
-          Standalone ORB does not access IndiCare OS records. Your ORB subscription does not grant IndiCare OS access.
+          ORB Residential does not access IndiCare OS records. Your ORB subscription does not grant IndiCare OS access.
         </p>
       </div>
     </main>

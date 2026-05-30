@@ -12,7 +12,7 @@ import {
 } from '@/lib/orb/standalone-local-store'
 
 export const STANDALONE_MEMORY_NOTICE =
-  'Standalone ORB remembers only what you save locally or add to this standalone workspace. It does not access IndiCare OS records.'
+  'ORB Residential uses your profile, conversation, uploaded documents and IndiCare residential intelligence. It does not access IndiCare OS records.'
 
 export function OrbMemoryPanel({
   open,

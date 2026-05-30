@@ -5,7 +5,7 @@ export function OrbStandaloneVoice() {
   return (
     <div className="mx-auto flex max-w-4xl flex-col items-center gap-6" data-orb-state="listening">
       <div className="orb-screen-edge-pulse" data-orb-state="listening" aria-hidden />
-      <OrbRenderer state="listening" captionsEnabled caption="Voice uses standalone context only. No OS records are available here." presenceLabel="Voice-first standalone ORB" />
+      <OrbRenderer state="listening" captionsEnabled caption="Voice uses ORB Residential context only. No IndiCare OS records are available here." presenceLabel="Voice-first ORB Residential" />
       <OrbInteractionLayer captionText="Voice connection will use realtime only when configured; text and captions remain available." />
     </div>
   )

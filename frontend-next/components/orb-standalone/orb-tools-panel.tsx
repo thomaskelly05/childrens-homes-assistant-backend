@@ -407,7 +407,7 @@ export function OrbToolsPanel({
       onClose={onClose}
       ariaLabel="ORB tools"
       panelId="tools"
-      footer="Standalone ORB does not access IndiCare OS records."
+      footer="ORB Residential does not access IndiCare OS records."
     >
       <div className="space-y-5 p-4" data-orb-tools-panel>
         <p className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.12em] text-[#0369A1]">

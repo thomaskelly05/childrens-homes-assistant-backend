@@ -41,7 +41,7 @@ def test_tools_panel_contains_expected_tools():
 
 def test_memory_panel_standalone_wording():
     text = _read(MEMORY_PANEL)
-    assert "Standalone ORB remembers only what you save locally" in text
+    assert "ORB Residential uses your profile, conversation, uploaded documents" in text
     assert "Clear local chat memory" in text
     assert "does not access IndiCare OS records" in text
     assert "OS memory" not in text.lower() or "does not access" in text

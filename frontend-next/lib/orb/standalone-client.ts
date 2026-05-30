@@ -469,7 +469,7 @@ export async function fetchStandaloneOrbConfig(signal?: AbortSignal): Promise<St
   const payload = await authFetch<{ success?: boolean; data?: StandaloneOrbConfig }>('/orb/standalone/config', {
     signal: withTimeout(signal)
   })
-  if (!payload?.data) throw new AuthApiError(503, 'Could not load ORB Care Companion configuration.')
+  if (!payload?.data) throw new AuthApiError(503, 'Could not load ORB Residential configuration.')
   return payload.data
 }
 

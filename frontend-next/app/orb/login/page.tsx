@@ -92,10 +92,11 @@ function OrbLoginPanel() {
           ORB Residential
         </div>
         <h1 className="text-3xl font-black tracking-tight" data-orb-login-title>
-          ORB Residential — Powered by IndiCare
+          Sign in to ORB Residential
         </h1>
+        <p className="mt-2 text-sm font-semibold text-indigo-700">Powered by IndiCare</p>
         <p className="mt-3 text-sm leading-6 text-slate-600" data-orb-login-tagline>
-          For adults working in or around children&apos;s homes. Standalone ORB does not access IndiCare OS records.
+          For adults working in or around children&apos;s homes. ORB Residential does not access IndiCare OS records.
         </p>
 
         {error ? <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}

@@ -23,7 +23,7 @@ import { defaultOrbPreferences, type OrbContext, type OrbState } from '@/lib/orb
 const standaloneContext: OrbContext = {
   route: '/assistant',
   workspace: 'standalone_orb',
-  page_title: 'Standalone ORB',
+  page_title: 'ORB Residential',
   selected_young_person_id: null,
   selected_young_person_key: null,
   selected_record_id: null,
@@ -202,7 +202,7 @@ export function OrbStandaloneExperience({ voiceFirst = true }: { voiceFirst?: bo
           state={renderState}
           captionsEnabled={showCaptions}
           caption={captionText}
-          presenceLabel="Standalone ORB - no IndiCare OS records"
+          presenceLabel="ORB Residential — no IndiCare OS records"
         />
         <button
           type="button"
@@ -219,7 +219,7 @@ export function OrbStandaloneExperience({ voiceFirst = true }: { voiceFirst?: bo
         <div className="orb-floating-panel max-w-3xl px-6 py-4 text-white">
           <p className="orb-kicker text-[11px] font-black uppercase tracking-[0.24em]">{orbProductCopy.standaloneBrand}</p>
           <h1 className="orb-title-glow mt-2 text-3xl font-black tracking-[-0.07em] md:text-5xl">{statusLine(snapshot)}</h1>
-          <p className="mt-3 text-sm leading-7 text-slate-300">{orbProductCopy.standaloneSubprompt} Standalone mode cannot retrieve children, homes, chronology or provider records.</p>
+          <p className="mt-3 text-sm leading-7 text-slate-300">{orbProductCopy.standaloneSubprompt} ORB Residential cannot retrieve children, homes, chronology or provider records.</p>
         </div>
 
         {failureCode ? <OrbFailureState code={failureCode} /> : null}

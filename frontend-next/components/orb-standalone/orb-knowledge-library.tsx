@@ -230,7 +230,7 @@ export function OrbKnowledgeLibraryPanel({ open, onClose }: { open: boolean; onC
       onClose={onClose}
       panelId="knowledge"
       ariaLabel="ORB Knowledge Library"
-      footer="Standalone ORB does not access IndiCare OS records."
+      footer="ORB Residential does not access IndiCare OS records."
     >
       <div className="px-4 py-3" data-orb-knowledge-library>
           {summary ? <p className="mb-3 text-[11px] text-slate-500">{summary}</p> : null}

@@ -173,13 +173,13 @@ export function OrbStandaloneSettingsPanel({
     <OrbStandalonePanelShell
       open={open}
       title="Settings"
-      subtitle="Standalone ORB"
+      subtitle="ORB Residential"
       onClose={onClose}
       ariaLabel="ORB settings"
       panelId="settings"
       layout="center"
       wide
-      footer="Standalone ORB does not access IndiCare OS child, home, staff, chronology or care records."
+      footer="ORB Residential does not access IndiCare OS records. It uses your profile, conversation, uploaded documents and IndiCare residential intelligence."
     >
       <div className="flex min-h-0 flex-1 flex-col md:flex-row" data-orb-settings-panel>
         <nav className="shrink-0 border-b border-[var(--orb-line)] p-2 md:w-44 md:border-b-0 md:border-r" data-orb-settings-nav>
@@ -394,7 +394,7 @@ export function OrbStandaloneSettingsPanel({
                   How ORB protects your data
                 </p>
                 <p className="mt-1 text-[11px] leading-5 text-[var(--orb-muted)]" data-orb-settings-data-safety>
-                  Standalone ORB does not access IndiCare OS child, home, staff, chronology or care records. ORB
+                  ORB Residential does not access IndiCare OS records. It uses your profile, conversation, uploaded documents and IndiCare residential intelligence. ORB
                   only uses what you type, upload, save or submit as feedback here. Temporary chat skips saved profile
                   context for that chat. AI providers process the text you send — not live OS records. Use initials
                   where you can. Feedback improves ORB through human review; it does not make automatic care
@@ -405,7 +405,7 @@ export function OrbStandaloneSettingsPanel({
           ) : null}
 
           {activeSection === 'notifications' ? (
-            <SettingsBlock title="Notifications" description="Coming soon on standalone ORB.">
+            <SettingsBlock title="Notifications" description="Coming soon on ORB Residential.">
               <ComingSoonRow icon={<Bell className="h-4 w-4" />} label="Safeguarding reminders" />
               <ComingSoonRow icon={<Bell className="h-4 w-4" />} label="Supervision prep prompts" />
             </SettingsBlock>

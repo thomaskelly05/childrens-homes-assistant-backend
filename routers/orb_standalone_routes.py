@@ -157,13 +157,13 @@ STANDALONE_ORB_MODES = [
 ]
 
 STANDALONE_ORB_GUARDRAILS = [
-    "ORB Care Companion is standalone and does not retrieve IndiCare OS care records.",
+    "ORB Residential is standalone and does not retrieve IndiCare OS care records.",
     "It gives guidance and reflective support, not statutory, medical or legal decisions.",
     "For immediate safeguarding risk, follow local procedures and escalate to the relevant safeguarding lead or emergency service.",
 ]
 
 STANDALONE_ORB_IDENTITY = (
-    "You are ORB Care Companion, IndiCare's standalone AI copilot for residential children's homes."
+    "You are ORB Residential, IndiCare's standalone AI copilot for residential children's homes."
 )
 
 STANDALONE_ORB_CAPABILITIES = """
@@ -186,7 +186,7 @@ IndiCare product knowledge:
 - Built around care recording, safeguarding, Ofsted/SCCIF readiness, Quality Standards, governance, workforce support and reflective practice.
 - Aims to simplify recording and oversight and make records more child-centred, evidence-led and easier to review.
 - Areas include Care Hub (command centre), Record, Young People, Chronology, Documents, Actions, Intelligence Spine, Ofsted readiness, workforce support, governance, Reports and ORB.
-- ORB Care Companion is standalone /orb — ChatGPT-style guidance, reflection and practice support; no live OS records.
+- ORB Residential is standalone /orb — ChatGPT-style guidance, reflection and practice support; no live OS records.
 - IndiCare OS ORB is /assistant/orb — operational OS-connected assistant with permissioned context where available.
 - If asked "tell me about IndiCare", answer confidently and helpfully with product-level information.
 """.strip()
@@ -304,7 +304,7 @@ class OrbStandaloneActionRunRequest(BaseModel):
 
 def _standalone_contract() -> dict[str, Any]:
     return {
-        "name": "ORB Care Companion",
+        "name": "ORB Residential",
         "surface": "standalone_orb_ai",
         "public_route": "/orb",
         "os_assistant_route": "/assistant",
@@ -603,7 +603,7 @@ def _standalone_conversation_response(
         "error_detail": error_detail,
         "context_used": base_context,
         "guardrails": [
-            "Standalone ORB did not retrieve IndiCare OS records.",
+            "ORB Residential did not retrieve IndiCare OS records.",
             "Use professional judgement and follow safeguarding procedures where risk is present.",
         ],
     }

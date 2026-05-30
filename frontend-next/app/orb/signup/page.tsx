@@ -43,7 +43,7 @@ export default function OrbSignupPage() {
           Create your ORB Residential account
         </h1>
         <p className="mt-3 text-sm leading-6 text-slate-600">
-          For adults working in or around children&apos;s homes. Standalone ORB does not access IndiCare OS records.
+          For adults working in or around children&apos;s homes. ORB Residential does not access IndiCare OS records.
         </p>
         {error ? <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
         <form className="mt-6 space-y-4" onSubmit={handleSubmit} data-testid="orb-signup-form">

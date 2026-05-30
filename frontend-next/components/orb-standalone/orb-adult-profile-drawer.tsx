@@ -53,7 +53,7 @@ export function OrbAdultProfileDrawer({
       : 'Signed out'
 
   const accountDetail = account.isLoading
-    ? 'Checking your ORB account…'
+    ? 'Checking your ORB Residential account…'
     : account.isSignedIn
       ? [account.userName || account.userEmail, account.planName, account.accessState ? formatAccessStateLabel(account.accessState) : null]
           .filter(Boolean)
@@ -134,7 +134,7 @@ export function OrbAdultProfileDrawer({
           <section className="rounded-2xl border border-[var(--orb-line)] bg-[var(--orb-surface)] p-4" data-orb-account-controls>
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h3 className="text-sm font-semibold text-[var(--orb-foreground)]">ORB account</h3>
+                <h3 className="text-sm font-semibold text-[var(--orb-foreground)]">ORB Residential account</h3>
                 <p className="mt-1 text-xs leading-relaxed text-[var(--orb-muted)]" data-orb-account-email>
                   {accountDetail}
                 </p>
@@ -163,7 +163,7 @@ export function OrbAdultProfileDrawer({
                   data-orb-account-sign-in
                 >
                   <LogIn className="h-4 w-4" />
-                  Sign in to ORB
+                  Sign in to ORB Residential
                 </button>
               ) : null}
               {account.isSignedIn ? (
@@ -174,7 +174,7 @@ export function OrbAdultProfileDrawer({
                     className="rounded-xl border border-[var(--orb-line)] px-3 py-2 text-xs font-semibold text-[var(--orb-foreground)] hover:bg-[var(--orb-surface-hover)]"
                     data-orb-account-access
                   >
-                    Manage ORB access
+                    Manage ORB Residential access
                   </button>
                   <button
                     type="button"
@@ -197,7 +197,7 @@ export function OrbAdultProfileDrawer({
             </p>
             {!account.isSignedIn && !account.isLoading ? (
               <p className="mt-2 text-[11px] leading-relaxed text-[var(--orb-muted)]">
-                Standalone ORB does not access IndiCare OS child, home, or staff records.
+                ORB Residential does not access IndiCare OS records.
               </p>
             ) : null}
           </section>

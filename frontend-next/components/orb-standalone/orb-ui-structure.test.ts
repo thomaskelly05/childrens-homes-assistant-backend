@@ -141,7 +141,7 @@ describe('ORB ChatGPT UI structure', () => {
   it('help panel contains safeguarding boundary text', () => {
     const help = readComponent('components/orb-standalone/orb-help-panel.tsx')
     assert.match(help, /Using ORB/)
-    assert.match(help, /does not access live child, staff or home records/)
+    assert.match(help, /does not access IndiCare OS records/)
     assert.match(help, /immediate risk/)
   })
 
@@ -151,7 +151,7 @@ describe('ORB ChatGPT UI structure', () => {
     assert.match(settings, /id: 'voice'/)
     assert.match(settings, /id: 'chat'/)
     assert.match(settings, /id: 'privacy'/)
-    assert.match(settings, /Standalone ORB does not access IndiCare OS child/)
+    assert.match(settings, /ORB Residential does not access IndiCare OS/)
   })
 
   it('scroll-to-bottom fab is wired in care companion', () => {

@@ -359,7 +359,7 @@ export function OrbStandaloneComposer({
         </form>
 
         <p className="mt-2 px-2 text-center text-[10px] leading-4 text-[var(--orb-muted)]" data-orb-composer-disclaimer>
-          Standalone ORB can make mistakes. It does not access IndiCare OS records.
+          ORB Residential can make mistakes. ORB Residential does not access IndiCare OS records.
         </p>
       </div>
     </div>

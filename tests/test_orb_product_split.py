@@ -52,7 +52,7 @@ INTELLIGENCE_PRODUCT_LAYER_MARKERS = [
     "OrbToolsPanel",
     "IndiCare Tools",
     "OrbMemoryPanel",
-    "Standalone ORB remembers only what you save locally",
+    "ORB Residential uses your profile, conversation, uploaded documents",
     "OrbStandaloneAccessibilityPanel",
     "orb-dyslexia-mode",
     "standaloneOsBoundaryReply",
@@ -60,9 +60,9 @@ INTELLIGENCE_PRODUCT_LAYER_MARKERS = [
 ]
 
 STANDALONE_UI_MARKERS = [
-    "ORB Care Companion",
-    "Standalone residential care assistant",
-    "No OS records",
+    "ORB Residential",
+    "Powered by IndiCare",
+    "does not access IndiCare OS records",
 ]
 
 CHATGPT_STYLE_MARKERS = [
@@ -70,11 +70,11 @@ CHATGPT_STYLE_MARKERS = [
     "Search chats",
     "Projects",
     "Recent chats",
-    "How can I help?",
+    "Ready when you are",
     "More examples",
-    "Standalone residential care assistant",
-    "No OS records accessed",
+    "ORB Residential",
     "Powered by IndiCare",
+    "No IndiCare OS records",
     "orb-chat-layout",
     "orb-chat-sidebar",
     "orb-chat-main",
@@ -308,7 +308,7 @@ SAVED_OUTPUTS_MARKERS = [
     "Save to project",
     "Reuse in chat",
     "Export markdown",
-    "standalone ORB artefacts",
+    "ORB Residential artefacts",
     "orb-saved-outputs-panel",
     "listOrbSavedOutputs",
     "createOrbSavedOutput",
@@ -861,7 +861,7 @@ def test_assistants_map_differentiates_products():
     assert '"/orb"' in text
     assert '"/assistant"' in text
     assert '"/assistant/orb"' in text
-    assert "ORB Care Companion" in text
+    assert "ORB Residential" in text
     assert "IndiCare OS ORB" in text
     assert "operational_os_orb" in text
 

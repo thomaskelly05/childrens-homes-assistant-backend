@@ -173,7 +173,7 @@ export function OrbUpgradeScreen() {
           ) : null}
 
           <p className="mt-8 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-xs leading-6 text-slate-600" data-orb-standalone-boundary>
-            Standalone ORB does not access IndiCare OS child, home, staff, chronology or care records.
+            ORB Residential does not access IndiCare OS records. It uses your profile, conversation, uploaded documents and IndiCare residential intelligence.
           </p>
         </div>
       </div>

@@ -79,8 +79,8 @@ export default function OrbAskPage() {
         </div>
 
         <div className="mt-6 rounded-2xl bg-gradient-to-br from-indigo-50 to-white p-4 text-sm text-[#4B5563]">
-          <p className="font-semibold text-[#111827]">Standalone mode</p>
-          <p className="mt-2 leading-5">ORB only uses what you type, upload or save here. No OS records or chronology.</p>
+          <p className="font-semibold text-[#111827]">ORB Residential</p>
+          <p className="mt-2 leading-5">ORB only uses what you type, upload or save here. No IndiCare OS records.</p>
         </div>
       </aside>
 

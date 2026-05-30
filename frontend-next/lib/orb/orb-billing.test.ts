@@ -4,14 +4,15 @@ import { readFileSync } from 'node:fs'
 
 test('ORB login copy includes product name', () => {
   const login = readFileSync(new URL('../../app/orb/login/page.tsx', import.meta.url), 'utf8')
-  assert.match(login, /ORB Residential — Powered by IndiCare/)
-  assert.match(login, /Standalone ORB does not access IndiCare OS records/)
+  assert.match(login, /Sign in to ORB Residential/)
+  assert.match(login, /Powered by IndiCare/)
+  assert.match(login, /ORB Residential does not access IndiCare OS records/)
 })
 
 test('upgrade screen shows £9.99/month', () => {
   const upgrade = readFileSync(new URL('../../components/orb-standalone/orb-upgrade-screen.tsx', import.meta.url), 'utf8')
   assert.match(upgrade, /£9\.99\/month/)
-  assert.match(upgrade, /Standalone ORB does not access IndiCare OS child, home, staff, chronology or care records/)
+  assert.match(upgrade, /ORB Residential does not access IndiCare OS records/)
 })
 
 test('onboarding role options include NVQ assessor and learner', () => {
@@ -37,7 +38,7 @@ test('OAuth buttons only shown when configured', () => {
 test('billing settings section references meter endpoints', () => {
   const billing = readFileSync(new URL('../../components/orb-standalone/orb-billing-settings-section.tsx', import.meta.url), 'utf8')
   assert.match(billing, /fetchOrbBillingMeter/)
-  assert.match(billing, /Standalone ORB billing is separate from IndiCare OS/)
+  assert.match(billing, /ORB Residential billing is separate from IndiCare OS/)
   assert.match(billing, /Refresh billing status/)
 })
 
@@ -65,4 +66,11 @@ test('public orb auth paths still hydrate session via refreshSession', () => {
   assert.match(auth, /\/orb\/billing\/success/)
   assert.match(auth, /isOrbSurfacePath\(pathname\)[\s\S]*refreshSession/)
   assert.doesNotMatch(auth, /hasLikelySessionCookie/)
+})
+
+test('orb product copy helper exports canonical strings', () => {
+  const copy = readFileSync(new URL('./orb-product-copy.ts', import.meta.url), 'utf8')
+  assert.match(copy, /ORB Residential/)
+  assert.match(copy, /Powered by IndiCare/)
+  assert.match(copy, /does not access IndiCare OS records/)
 })

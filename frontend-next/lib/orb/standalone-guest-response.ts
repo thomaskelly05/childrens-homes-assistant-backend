@@ -3,6 +3,8 @@
  * so greetings and help work without a session. Real questions require ORB sign-in.
  */
 
+import { ORB_DATA_BOUNDARY, ORB_DATA_BOUNDARY_SHORT } from '@/lib/orb/orb-product-copy'
+
 const GREETING_RE =
   /^(hi|hello|hey|hiya|yo|cheers|good morning|good afternoon|good evening)(\s+there|\s+orb)?[!?.]*$/i
 
@@ -12,10 +14,10 @@ export const ORB_GREETING_HELLO_ANSWER = 'Hello — what would you like to work 
 export const ORB_GREETING_THANKS_ANSWER = "You're welcome."
 
 export const STANDALONE_ORB_GUEST_CAPABILITIES_ANSWER =
-  "I'm ORB Care Companion on standalone /orb. I can help with recording quality, safeguarding thinking, Ofsted/SCCIF reflection, therapeutic interpretation, supervision prep, documents you upload, NVQ learning support, and general questions — without accessing live OS records. What would you like to work on?"
+  "I'm ORB Residential at /orb. I can help with recording quality, safeguarding thinking, Ofsted/SCCIF reflection, therapeutic interpretation, supervision prep, documents you upload, NVQ learning support, and general questions — without accessing IndiCare OS records. What would you like to work on?"
 
 export const STANDALONE_ORB_SIGN_IN_REQUIRED_ANSWER =
-  'Sign in to ORB Residential to ask regulatory and practice questions with full answers. Standalone ORB does not access IndiCare OS child, home or staff records — only what you type here.'
+  `Sign in to ORB Residential to ask regulatory and practice questions with full answers. ${ORB_DATA_BOUNDARY_SHORT} Only what you type here is used before sign-in.`
 
 export const STANDALONE_ORB_SIGN_IN_PATH = '/orb/login?returnUrl=%2Forb'
 
@@ -59,7 +61,7 @@ export function isStandaloneGuestHelpIntent(message: string): boolean {
   }
   if (/\b(data safety|protect my data|how is my data|privacy|is my data safe)\b/.test(lower)) return true
   if (/\b(how to use orb|how do i use orb|getting started)\b/.test(lower)) return true
-  if (/\bstandalone boundary\b/.test(lower)) return true
+  if (/\b(orb residential boundary|product boundary)\b/.test(lower)) return true
   return false
 }
 
@@ -75,25 +77,21 @@ export function tryStandaloneGuestLocalAnswer(message: string): string | null {
   }
 
   if (/\b(data safety|protect my data|how is my data|privacy|is my data safe)\b/.test(lower)) {
-    return `**How ORB protects your data (standalone /orb)**
+    return `**ORB Residential data safety**
 
-- Standalone ORB does **not** access IndiCare OS child, home, staff, chronology or care records.
-- ORB only uses what you type, upload, choose to save, or submit as feedback in standalone ORB.
+- ${ORB_DATA_BOUNDARY}
 - **Temporary chat** skips your saved ORB profile context for that conversation.
 - Please avoid unnecessary personal details. Use initials or anonymised details where you can.
 
 For permissioned operational context, use IndiCare OS ORB at /assistant/orb where your role allows.`
   }
 
-  if (/\bstandalone boundary\b/.test(lower)) {
-    return (
-      'Standalone ORB at /orb uses only what you provide — typed messages, uploads, saved outputs and feedback. ' +
-      'It cannot access IndiCare OS child, home, staff or chronology records.'
-    )
+  if (/\b(orb residential boundary|product boundary)\b/.test(lower)) {
+    return ORB_DATA_BOUNDARY
   }
 
   if (/\b(how to use orb|how do i use orb|getting started)\b/.test(lower)) {
-    return `**How to use standalone ORB**
+    return `**How to use ORB Residential**
 1. Choose a mode (Ask ORB, Safeguarding, Ofsted Lens, recording support, etc.).
 2. Type your question — use initials where you can.
 3. Use **Copy**, **Save**, or follow-up chips under answers you want to keep.

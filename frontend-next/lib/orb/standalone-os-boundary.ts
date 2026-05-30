@@ -67,7 +67,7 @@ export function detectStandaloneOsContextRequest(text: string): boolean {
 }
 
 export const STANDALONE_OS_BOUNDARY_MESSAGE =
-  'This needs permissioned IndiCare OS context. Use OS ORB at /assistant/orb. Standalone ORB does not access live child records, chronology or placement data.'
+  'This needs permissioned IndiCare OS context. Use OS ORB at /assistant/orb. ORB Residential does not access IndiCare OS records.'
 
 const MANAGER_ROUTE_HINTS: Array<{ pattern: RegExp; route: string }> = [
   { pattern: /\bour\b.+\b(record quality|recording quality|weak record)\b/i, route: '/assistant/orb?mode=record_quality_review' },
@@ -96,5 +96,5 @@ export function standaloneOsBoundaryReply(text: string): string | null {
   if (!detectStandaloneOsContextRequest(text)) {
     return null
   }
-  return `This needs permissioned IndiCare OS context. Use OS ORB (${suggestedOperationalOrbRoute(text)}). Standalone ORB does not access live child records, chronology or placement data.`
+  return `This needs permissioned IndiCare OS context. Use OS ORB (${suggestedOperationalOrbRoute(text)}). ORB Residential does not access IndiCare OS records.`
 }

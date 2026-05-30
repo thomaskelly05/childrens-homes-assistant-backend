@@ -286,7 +286,7 @@ html[data-orb-theme='dark'] .orb-starter-card {
 }
 
 [data-orb-composer-disclaimer]::after {
-  content: ' © 2026 IndiCare.';
+  content: 'ORB Residential · © 2026 IndiCare.';
   white-space: nowrap;
 }
 

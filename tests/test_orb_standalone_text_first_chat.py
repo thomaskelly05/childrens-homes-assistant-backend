@@ -26,7 +26,7 @@ def test_orb_branding_copy():
     assert 'data-orb-brand-name' in COMPANION.read_text(encoding="utf-8")
     assert "Powered by IndiCare" in sources
     assert "ORB" in sources
-    assert "No OS records accessed" in sources
+    assert "ORB Residential does not access IndiCare OS records" in sources
     assert "Standalone residential care assistant" in sources
 
 
