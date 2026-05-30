@@ -1,9 +1,11 @@
 import type { NextConfig } from 'next'
 
 const backendOrigin = (
+  process.env.INTERNAL_API_BASE_URL ||
+  process.env.API_BASE_URL ||
+  process.env.BACKEND_URL ||
   process.env.NEXT_PUBLIC_BACKEND_URL ||
   process.env.NEXT_PUBLIC_API_BASE_URL ||
-  process.env.BACKEND_URL ||
   (process.env.NODE_ENV === 'production' ? 'https://api.indicare.co.uk' : 'http://localhost:8000')
 ).replace(/\/+$/, '')
 
@@ -17,6 +19,7 @@ const nextConfig: NextConfig = {
   },
   async rewrites() {
     return [
+      // Auth-sensitive traffic should use the `/backend/*` App Router proxy (Set-Cookie + SSE).
       {
         source: '/api/:path*',
         destination: `${backendOrigin}/api/:path*`

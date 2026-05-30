@@ -1,3 +1,4 @@
+import { resolveAuthApiPath } from '@/lib/auth/api-base'
 import type { AuthErrorDetail } from './types'
 
 export class AuthApiError extends Error {
@@ -51,6 +52,16 @@ function assertRelativeApiPath(path: string) {
   }
 }
 
+export const ORB_AUTH_SIGN_IN_MESSAGE = 'Please sign in to use ORB Residential.'
+
+export function isOrbAuthRequiredStatus(status: number, code?: string) {
+  if (status === 401) return true
+  if (status !== 403) return false
+  const normalized = (code || '').toLowerCase()
+  if (normalized === 'csrf_failed' || normalized === 'csrf_invalid') return false
+  return true
+}
+
 const CSRF_COOKIE_PATTERN = /(?:^|;\s*)(?:__Host-indicare_csrf|indicare_csrf)=([^;]*)/
 
 export const STANDALONE_ORB_CSRF_REFRESH_MESSAGE =
@@ -89,6 +100,7 @@ export function isTemporaryUnavailableError(error: unknown) {
 
 export async function authFetchResponse(path: string, init: RequestInit = {}): Promise<Response> {
   assertRelativeApiPath(path)
+  const resolvedPath = resolveAuthApiPath(path)
   const method = (init.method || 'GET').toUpperCase()
   const headers = new Headers(init.headers)
   const isFormData = typeof FormData !== 'undefined' && init.body instanceof FormData
@@ -97,7 +109,7 @@ export async function authFetchResponse(path: string, init: RequestInit = {}): P
   }
   applyCsrfHeaders(headers, method)
 
-  return fetch(path, {
+  return fetch(resolvedPath, {
     ...init,
     credentials: 'include',
     cache: 'no-store',

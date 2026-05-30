@@ -138,7 +138,14 @@ export function OrbAdultProfileDrawer({
                 <p className="mt-1 text-xs leading-relaxed text-[var(--orb-muted)]" data-orb-account-email>
                   {accountDetail}
                 </p>
-                {account.isSignedIn && account.subscriptionStatus ? (
+                {account.isSignedIn && account.accessFetchStatus && account.accessFetchStatus >= 400 ? (
+                  <p className="mt-1 text-[11px] text-amber-700" data-orb-account-access-problem>
+                    {account.accessFetchStatus === 503
+                      ? 'ORB Residential access is temporarily unavailable. Try again shortly.'
+                      : 'ORB Residential access could not be confirmed. Open Manage access to review your plan.'}
+                  </p>
+                ) : null}
+                {account.isSignedIn && account.hasConfirmedAccess && account.subscriptionStatus ? (
                   <p className="mt-1 text-[11px] text-[var(--orb-muted)]" data-orb-account-subscription>
                     Subscription: {account.subscriptionStatus.replace(/_/g, ' ')}
                     {account.trialEndsAt
@@ -201,6 +208,12 @@ export function OrbAdultProfileDrawer({
               </p>
             ) : null}
           </section>
+
+          {!account.isSignedIn && !account.isLoading ? (
+            <p className="text-[11px] leading-relaxed text-[var(--orb-muted)]" data-orb-local-profile-note>
+              Preferences below are saved on this device only until you sign in to ORB Residential.
+            </p>
+          ) : null}
 
           <Field label="Your name">
             <input

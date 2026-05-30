@@ -1328,8 +1328,9 @@ export function OrbCareCompanion() {
         }
         const parsed = parseStandaloneOrbSendError(caught)
         const signInRequired =
-          parsed.status === 401 && (!account.isSignedIn || isStandaloneOrbSignInPromptMessage(parsed.message))
-        const displayMessage = signInRequired ? STANDALONE_ORB_SIGN_IN_REQUIRED_ANSWER : parsed.message
+          isStandaloneOrbSignInPromptMessage(parsed.message) ||
+          ((parsed.status === 401 || parsed.status === 403) && !account.hasBackendSession)
+        const displayMessage = signInRequired ? parsed.message : parsed.message
         traceOrbSend('request_failed', {
           sendGeneration,
           message: displayMessage,
@@ -2364,6 +2365,7 @@ export function OrbCareCompanion() {
               setSidebarOpen(false)
             }}
             adultProfile={adultProfile}
+            profileDisplayMode={account.profileDisplayMode}
             cognitionStatusLabel={cognitionStatusLabel}
             cognitionModeLabel={activeAgent?.cognitionLabel}
             savedOutputsCount={savedOutputsCount}

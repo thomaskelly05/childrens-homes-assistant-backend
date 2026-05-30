@@ -1,4 +1,6 @@
-const API_BASE = typeof window !== 'undefined' ? '' : process.env.NEXT_PUBLIC_API_URL || ''
+import { getAuthApiBase } from '@/lib/auth/api-base'
+
+const API_BASE = typeof window !== 'undefined' ? getAuthApiBase() : process.env.INTERNAL_API_BASE_URL || ''
 
 function residentialHeaders(): HeadersInit {
   return {

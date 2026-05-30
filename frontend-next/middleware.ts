@@ -6,6 +6,7 @@ const publicPrefixes = [
   '/login',
   '/unauthorized',
   '/auth',
+  '/backend',
   '/api',
   '/mfa',
   '/mfa-setup',

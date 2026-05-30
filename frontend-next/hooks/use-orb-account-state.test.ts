@@ -15,6 +15,16 @@ describe('useOrbAccountState', () => {
     assert.match(source, /readAdultProfile/)
     assert.match(source, /isLoading/)
     assert.match(source, /isSignedIn/)
+    assert.match(source, /hasBackendSession/)
+    assert.match(source, /profileDisplayMode/)
+    assert.match(source, /hasConfirmedAccess/)
+    assert.match(source, /accessFetchStatus/)
     assert.match(source, /mergeProfileWithAuthUser/)
+  })
+
+  it('does not treat local profile as signed-in account', () => {
+    const source = readFileSync(join(root, 'hooks/use-orb-account-state.ts'), 'utf8')
+    assert.match(source, /const isSignedIn = hasBackendSession/)
+    assert.match(source, /profileDisplayMode: OrbProfileDisplayMode = isSignedIn \? 'signed_in_account' : 'local_profile'/)
   })
 })
