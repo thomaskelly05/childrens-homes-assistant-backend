@@ -12,7 +12,7 @@ import { beginOrbPasskeyLogin, orbPasskeysSupported } from '@/lib/orb/orb-passke
 function OrbLoginPanel() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { login, status } = useAuth()
+  const { login, status, refreshSession } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [remember, setRemember] = useState(true)
@@ -44,6 +44,7 @@ function OrbLoginPanel() {
     try {
       const response = await login({ email, password, remember })
       if (response.authenticated) {
+        await refreshSession()
         router.replace(returnUrl)
         return
       }
@@ -65,6 +66,7 @@ function OrbLoginPanel() {
     try {
       const response = await beginOrbPasskeyLogin(email)
       if (response.authenticated || response.ok) {
+        await refreshSession()
         router.replace(returnUrl)
         return
       }
@@ -140,7 +142,7 @@ function OrbLoginPanel() {
         {passkeysAvailable ? (
           <button
             type="button"
-            onClick={handlePasskeyLogin}
+            onClick={() => void handlePasskeyLogin()}
             disabled={passkeySubmitting || !email.trim()}
             className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-sky-200 bg-sky-50 py-3 text-sm font-bold text-sky-800 transition hover:bg-sky-100 disabled:cursor-not-allowed disabled:opacity-50"
             data-orb-passkey-login
@@ -148,7 +150,12 @@ function OrbLoginPanel() {
             <Fingerprint className="h-4 w-4" aria-hidden />
             {passkeySubmitting ? 'Checking passkey…' : biometricLabel}
           </button>
-        ) : null}
+        ) : (
+          <p className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs leading-5 text-slate-600" data-orb-passkey-unavailable>
+            Face ID, Touch ID and passkeys are not available in this browser. Use email and password, or try Safari or
+            Chrome on a supported device.
+          </p>
+        )}
 
         <div className="mt-6 space-y-2" data-orb-oauth-buttons>
           {oauth.google ? (

@@ -703,7 +703,7 @@ function ChatMenu({
   const anchorRef = useRef<HTMLButtonElement>(null)
 
   return (
-    <div className="shrink-0 opacity-0 transition group-hover:opacity-100">
+    <div className="shrink-0 opacity-100 transition lg:opacity-0 lg:group-hover:opacity-100">
       <button
         ref={anchorRef}
         type="button"

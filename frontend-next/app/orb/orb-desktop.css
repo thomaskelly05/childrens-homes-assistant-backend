@@ -90,8 +90,9 @@ html[data-orb-theme='dark'] .orb-chat-layout {
   width: var(--orb-sidebar-width);
   max-width: var(--orb-sidebar-width);
   flex: 0 0 var(--orb-sidebar-width);
-  background: rgba(255, 255, 255, 0.74);
-  border-color: rgba(15, 23, 42, 0.08);
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(0, 119, 255, 0.1);
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.65);
   backdrop-filter: blur(22px) saturate(145%);
   -webkit-backdrop-filter: blur(22px) saturate(145%);
 }
@@ -113,15 +114,26 @@ html[data-orb-theme='dark'] .orb-chat-header {
   border-color: rgba(255, 255, 255, 0.08);
 }
 
+.orb-empty-title-wrap,
+[data-orb-empty-title-wrap] {
+  overflow: visible;
+  padding-inline: 0.12em;
+  line-height: 1;
+}
+
 .orb-hue-text,
 [data-orb-empty-title] {
+  display: inline-block;
+  overflow: visible;
+  max-width: none;
   background: linear-gradient(120deg, var(--orb-brand-blue), var(--orb-brand-blue-deep) 50%, var(--orb-brand-cyan));
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
   -webkit-text-fill-color: transparent;
   font-weight: 950;
-  letter-spacing: -0.09em;
+  line-height: 1;
+  letter-spacing: -0.06em;
   filter: drop-shadow(0 0 16px rgba(0, 184, 255, 0.24)) drop-shadow(0 0 34px rgba(0, 119, 255, 0.18));
 }
 

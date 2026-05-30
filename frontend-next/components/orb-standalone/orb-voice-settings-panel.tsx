@@ -36,9 +36,15 @@ export function OrbVoiceSettingsPanel({ open, onClose }: { open: boolean; onClos
     >
       <div className="space-y-4 p-4" data-orb-voice-settings-panel>
         <p className="text-[11px] leading-6 text-[var(--orb-muted)]" data-orb-voice-settings-help>
-          ORB can read responses aloud using your device/browser voices. Voice quality depends on Safari, Chrome,
-          macOS, iOS, Windows or Android. Choose the voice that feels most natural for you. Where possible, ORB will
-          default to a British female voice.
+          ORB will use the most natural British voice available on this device. Premium remote voice is used when
+          enabled on your deployment; otherwise ORB reads aloud with your browser&apos;s best en-GB voice (British
+          female preferred). Quality depends on Safari, Chrome, macOS, iOS, Windows or Android.
+        </p>
+
+        <p className="rounded-lg border border-[var(--orb-line)] bg-[var(--orb-surface)] px-3 py-2 text-[11px] leading-5 text-[var(--orb-muted)]" data-orb-voice-mode-note>
+          <span className="font-semibold text-[var(--orb-foreground)]">Voice mode: </span>
+          Device voice fallback
+          {voice.synthesisAvailable ? ' (available)' : ' (unavailable on this browser)'}
         </p>
 
         <label className="flex cursor-pointer items-start justify-between gap-3 rounded-xl border border-[var(--orb-line)] bg-[var(--orb-surface)] px-4 py-3">

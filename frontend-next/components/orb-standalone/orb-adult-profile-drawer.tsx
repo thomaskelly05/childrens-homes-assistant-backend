@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { LogIn, LogOut, X } from 'lucide-react'
 
 import { useAuth } from '@/contexts/auth-context'
+import { useOrbAccountState } from '@/hooks/use-orb-account-state'
 import {
   CANONICAL_ADULT_PROFILE_ROLES,
   DEFAULT_ADULT_PROFILE,
@@ -22,6 +23,11 @@ import {
 } from '@/lib/orb/adult-profile-store'
 import { RESIDENTIAL_AGENTS, type ResidentialAgentId } from '@/lib/orb/residential-agents'
 
+function formatAccessStateLabel(accessState: string | null): string | null {
+  if (!accessState) return null
+  return accessState.replace(/_/g, ' ')
+}
+
 export function OrbAdultProfileDrawer({
   open,
   profile,
@@ -37,8 +43,22 @@ export function OrbAdultProfileDrawer({
 }) {
   const router = useRouter()
   const auth = useAuth()
+  const account = useOrbAccountState()
   const [draft, setDraft] = useState(profile)
-  const isSignedIn = auth.status === 'authenticated'
+
+  const accountStatusLabel = account.isLoading
+    ? 'Checking account…'
+    : account.isSignedIn
+      ? 'Signed in'
+      : 'Signed out'
+
+  const accountDetail = account.isLoading
+    ? 'Checking your ORB account…'
+    : account.isSignedIn
+      ? [account.userName || account.userEmail, account.planName, account.accessState ? formatAccessStateLabel(account.accessState) : null]
+          .filter(Boolean)
+          .join(' · ')
+      : 'Not signed in'
 
   useEffect(() => {
     if (open) setDraft(profile)
@@ -72,18 +92,17 @@ export function OrbAdultProfileDrawer({
 
   function goToSignIn() {
     onClose()
-    router.push('/orb/login?returnUrl=%2Forb')
+    router.push(account.signInUrl)
   }
 
   function goToAccess() {
     onClose()
-    router.push('/orb/access')
+    router.push(account.accessUrl)
   }
 
-  async function logout() {
+  async function handleLogout() {
     onClose()
     await auth.logout()
-    router.replace('/orb/login?returnUrl=%2Forb')
   }
 
   return (
@@ -116,16 +135,27 @@ export function OrbAdultProfileDrawer({
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h3 className="text-sm font-semibold text-[var(--orb-foreground)]">ORB account</h3>
-                <p className="mt-1 text-xs leading-relaxed text-[var(--orb-muted)]">
-                  {isSignedIn ? auth.user?.email || 'Signed in' : 'Not signed in'}
+                <p className="mt-1 text-xs leading-relaxed text-[var(--orb-muted)]" data-orb-account-email>
+                  {accountDetail}
                 </p>
+                {account.isSignedIn && account.subscriptionStatus ? (
+                  <p className="mt-1 text-[11px] text-[var(--orb-muted)]" data-orb-account-subscription>
+                    Subscription: {account.subscriptionStatus.replace(/_/g, ' ')}
+                    {account.trialEndsAt
+                      ? ` · trial ends ${new Date(account.trialEndsAt).toLocaleDateString('en-GB')}`
+                      : ''}
+                  </p>
+                ) : null}
               </div>
-              <span className="rounded-full border border-[var(--orb-line)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--orb-muted)]">
-                {isSignedIn ? 'Active' : 'Signed out'}
+              <span
+                className="rounded-full border border-[var(--orb-line)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--orb-muted)]"
+                data-orb-account-status-badge
+              >
+                {accountStatusLabel}
               </span>
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
-              {!isSignedIn ? (
+              {!account.isSignedIn && !account.isLoading ? (
                 <button
                   type="button"
                   onClick={goToSignIn}
@@ -135,7 +165,8 @@ export function OrbAdultProfileDrawer({
                   <LogIn className="h-4 w-4" />
                   Sign in to ORB
                 </button>
-              ) : (
+              ) : null}
+              {account.isSignedIn ? (
                 <>
                   <button
                     type="button"
@@ -147,7 +178,7 @@ export function OrbAdultProfileDrawer({
                   </button>
                   <button
                     type="button"
-                    onClick={() => void logout()}
+                    onClick={() => void handleLogout()}
                     className="inline-flex items-center gap-2 rounded-xl border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50"
                     data-orb-account-logout
                   >
@@ -155,11 +186,20 @@ export function OrbAdultProfileDrawer({
                     Log out
                   </button>
                 </>
-              )}
+              ) : null}
             </div>
-            <p className="mt-3 text-[11px] leading-relaxed text-[var(--orb-muted)]">
-              Face ID, Touch ID and passkeys are available from the ORB sign-in flow when supported by your device.
+            <p className="mt-3 text-[11px] leading-relaxed text-[var(--orb-muted)]" data-orb-passkey-hint>
+              {account.isSignedIn
+                ? account.hasPasskeys
+                  ? 'Face ID, Touch ID or passkey is set up on your account. Manage passkeys in Settings → Security.'
+                  : 'Add Face ID, Touch ID or a passkey in Settings → Security for faster sign-in on this device.'
+                : 'Face ID, Touch ID and passkeys are available from the ORB sign-in flow when supported by your device.'}
             </p>
+            {!account.isSignedIn && !account.isLoading ? (
+              <p className="mt-2 text-[11px] leading-relaxed text-[var(--orb-muted)]">
+                Standalone ORB does not access IndiCare OS child, home, or staff records.
+              </p>
+            ) : null}
           </section>
 
           <Field label="Your name">
@@ -468,7 +508,7 @@ export function OrbAdultProfileDrawer({
   )
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <label className="block">
       <span className="mb-1.5 block text-xs font-medium text-[var(--orb-muted)]">{label}</span>

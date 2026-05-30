@@ -60,8 +60,9 @@ test('signup uses public standalone route', () => {
   assert.match(client, /\/orb\/standalone\/auth\/signup/)
 })
 
-test('public auth paths skip session me on orb without cookie', () => {
+test('public orb auth paths still hydrate session via refreshSession', () => {
   const auth = readFileSync(new URL('../../contexts/auth-context.tsx', import.meta.url), 'utf8')
   assert.match(auth, /\/orb\/billing\/success/)
-  assert.match(auth, /hasLikelySessionCookie/)
+  assert.match(auth, /isOrbSurfacePath\(pathname\)[\s\S]*refreshSession/)
+  assert.doesNotMatch(auth, /hasLikelySessionCookie/)
 })

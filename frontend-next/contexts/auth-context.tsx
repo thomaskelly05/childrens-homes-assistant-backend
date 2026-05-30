@@ -83,11 +83,6 @@ function isOrbSurfacePath(pathname: string) {
   return pathname === '/orb' || pathname.startsWith('/orb/')
 }
 
-function hasLikelySessionCookie() {
-  if (typeof document === 'undefined') return false
-  return /(?:^|;\s*)(?:__Host-indicare_session|indicare_session)=/.test(document.cookie)
-}
-
 function normaliseUser(user: StaffUser): StaffUser {
   const role = normaliseRole(user.role)
   return {
@@ -191,18 +186,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     suppressProductionConsole()
     if (isPublicPath(pathname)) {
-      setStatus('unauthenticated')
-      setSessionExpired(false)
-      setError(null)
-      setCsrfReady(Boolean(getCsrfToken()))
-      return
-    }
-    if (isOrbSurfacePath(pathname) && !hasLikelySessionCookie()) {
-      setUser(null)
-      setStatus('unauthenticated')
-      setSessionExpired(false)
-      setError(null)
-      setCsrfReady(Boolean(getCsrfToken()))
+      if (!isOrbSurfacePath(pathname)) {
+        setStatus('unauthenticated')
+        setSessionExpired(false)
+        setError(null)
+        setCsrfReady(Boolean(getCsrfToken()))
+        return
+      }
+      void refreshSession().finally(() => {
+        setCsrfReady(Boolean(getCsrfToken()))
+      })
       return
     }
     void refreshSession()
@@ -261,6 +254,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const logout = useCallback(async () => {
+    const redirectToOrbLogin = isOrbSurfacePath(pathname)
     try {
       if (!e2eAuthEnabled) {
         await authFetch('/auth/logout', { method: 'POST' })
@@ -272,9 +266,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null)
       setStatus('unauthenticated')
       setCsrfReady(false)
-      router.replace('/login')
+      router.replace(redirectToOrbLogin ? '/orb/login?returnUrl=%2Forb' : '/login')
     }
-  }, [router])
+  }, [pathname, router])
 
   const value = useMemo<AuthContextValue>(
     () => ({
