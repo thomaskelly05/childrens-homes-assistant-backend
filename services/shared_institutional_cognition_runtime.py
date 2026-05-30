@@ -9,6 +9,7 @@ from services.orb_knowledge_grounding_service import orb_knowledge_grounding_ser
 from services.orb_professional_curiosity_service import orb_professional_curiosity_service
 from services.orb_residential_cognition_router import orb_residential_cognition_router
 from services.orb_scenario_playbook_service import orb_scenario_playbook_service
+from services.orb_sector_evidence_pipeline_service import orb_sector_evidence_pipeline_service
 
 
 class SharedInstitutionalCognitionRuntime:
@@ -33,6 +34,13 @@ class SharedInstitutionalCognitionRuntime:
         depth_frame = orb_institutional_depth_frame_service.build_frame(message=message, mode=mode)
         active_brains = list(routing.get("active_brains") or [])
         active_brains = self._merge_depth_brains(active_brains=active_brains, depth_frame=depth_frame)
+        sector_evidence = self._sector_evidence_context(
+            surface=surface,
+            message=message,
+            mode=mode,
+            active_brains=active_brains,
+        )
+        active_brains = self._merge_sector_evidence_brains(active_brains, sector_evidence)
         grounding = orb_knowledge_grounding_service.build_grounding(
             message=message,
             mode=mode,
@@ -42,6 +50,7 @@ class SharedInstitutionalCognitionRuntime:
         depth_prompt = orb_institutional_depth_frame_service.prompt_block(message=message, mode=mode)
         curiosity_prompt = orb_professional_curiosity_service.prompt_block(message, mode=mode)
         playbook_prompt = orb_scenario_playbook_service.prompt_block(message)
+        sector_evidence_prompt = sector_evidence.get("prompt_addendum")
         guidance_prefix = None
         if surface == "standalone_orb":
             prefix = standalone_guidance_boundary_prefix(message, history=history, mode=mode)
@@ -51,19 +60,24 @@ class SharedInstitutionalCognitionRuntime:
                     "Do not repeat this boundary phrase again in the same conversation unless the user asks about live records."
                 )
         citations = list(grounding.get("citations") or [])
+        citations.extend(sector_evidence.get("citations") or [])
 
         return {
             "surface": surface,
             "mode": mode or "Ask ORB",
             "boundary": boundary,
             "active_brains": active_brains,
-            "cognition_display_labels": routing.get("cognition_display_labels") or [],
+            "cognition_display_labels": self._merge_display_labels(
+                routing.get("cognition_display_labels") or [],
+                sector_evidence.get("display_labels") or [],
+            ),
             "routing": routing,
             "knowledge_grounding": grounding,
+            "sector_evidence": sector_evidence,
             "depth_frame": depth_frame,
             "prompt_blocks": [
                 block
-                for block in (guidance_prefix, playbook_prompt, grounded_prompt, depth_prompt, curiosity_prompt)
+                for block in (guidance_prefix, playbook_prompt, sector_evidence_prompt, grounded_prompt, depth_prompt, curiosity_prompt)
                 if block
             ],
             "guidance_boundary_prefix": guidance_prefix,
@@ -84,10 +98,19 @@ class SharedInstitutionalCognitionRuntime:
                 "official_source_anchors": bool(citations),
                 "data_boundary": boundary["summary"],
                 "depth_topic": depth_frame.get("topic") if depth_frame else None,
-                "reasoning_lenses": (depth_frame.get("required_lenses") or routing.get("reasoning_lenses") or [])[:8],
+                "reasoning_lenses": self._merge_display_labels(
+                    (depth_frame.get("required_lenses") or routing.get("reasoning_lenses") or [])[:8],
+                    sector_evidence.get("reasoning_lenses") or [],
+                ),
                 "cognition_mode": mode or "Ask ORB",
-                "cognition_display_labels": routing.get("cognition_display_labels") or [],
-                "vault_domains": grounding.get("vault_domains") or [],
+                "cognition_display_labels": self._merge_display_labels(
+                    routing.get("cognition_display_labels") or [],
+                    sector_evidence.get("display_labels") or [],
+                ),
+                "vault_domains": self._merge_display_labels(
+                    grounding.get("vault_domains") or [],
+                    sector_evidence.get("vault_domains") or [],
+                ),
                 "safeguarding_boundaries": list(boundary.get("safeguarding_boundaries", []))
                 if isinstance(boundary.get("safeguarding_boundaries"), list)
                 else [],
@@ -122,6 +145,14 @@ class SharedInstitutionalCognitionRuntime:
                 [
                     f"- Depth topic: {depth_frame.get('topic')}",
                     f"- Depth purpose: {depth_frame.get('purpose')}",
+                ]
+            )
+        sector = context.get("sector_evidence") or {}
+        if sector.get("active"):
+            lines.extend(
+                [
+                    "- Sector evidence pipelines: " + "; ".join(sector.get("pipeline_ids") or []),
+                    "- Sector evidence boundary: use public learning themes as professional prompts; do not claim a user's scenario matches a named report or review.",
                 ]
             )
         lines.extend(context["response_requirements"])
@@ -182,6 +213,100 @@ class SharedInstitutionalCognitionRuntime:
         ):
             brains.append("chronology_cognition")
         return list(dict.fromkeys(brains))
+
+    def _sector_evidence_context(
+        self,
+        *,
+        surface: str,
+        message: str,
+        mode: str | None,
+        active_brains: list[str],
+    ) -> dict[str, Any]:
+        if surface != "standalone_orb":
+            return {"active": False, "reason": "not_standalone_orb"}
+        prompt = orb_sector_evidence_pipeline_service.build_prompt_addendum(
+            message,
+            mode=mode,
+            limit=4,
+        )
+        pipeline_ids = self._sector_pipeline_ids(message=message, mode=mode, active_brains=active_brains)
+        if not prompt and not pipeline_ids:
+            return {"active": False, "reason": "no_sector_evidence_trigger"}
+        pipelines = []
+        for pipeline_id in pipeline_ids:
+            pipeline = orb_sector_evidence_pipeline_service.get_pipeline(pipeline_id)
+            if pipeline:
+                pipelines.append(pipeline)
+        display_labels = [p["label"] for p in pipelines[:5]]
+        reasoning_lenses = []
+        vault_domains = []
+        for pipeline in pipelines:
+            reasoning_lenses.extend(pipeline.get("strengthens_lenses") or [])
+            vault_domains.extend(pipeline.get("source_kinds") or [])
+        return {
+            "active": True,
+            "prompt_addendum": prompt,
+            "pipeline_ids": pipeline_ids,
+            "pipelines": pipelines,
+            "display_labels": display_labels,
+            "reasoning_lenses": self._merge_display_labels([], reasoning_lenses),
+            "vault_domains": self._merge_display_labels([], vault_domains),
+            "active_brains": [f"sector_evidence:{pid}" for pid in pipeline_ids],
+            "citations": [],
+            "standalone": True,
+            "os_records_accessed": False,
+        }
+
+    def _sector_pipeline_ids(self, *, message: str, mode: str | None, active_brains: list[str]) -> list[str]:
+        text = f"{message or ''} {mode or ''}".lower()
+        brain_text = " ".join(active_brains).lower()
+        selected: list[str] = []
+        def add(*ids: str) -> None:
+            for pid in ids:
+                if pid not in selected:
+                    selected.append(pid)
+        if any(term in text or term in brain_text for term in ("ofsted", "inspection", "sccif", "reg 44", "reg 45", "regulatory")):
+            add("ofsted_current_cycle", "inspection_language_benchmark", "leadership_governance_ri")
+        if any(term in text or term in brain_text for term in ("safeguard", "risk", "what am i missing", "professional curiosity", "allegation", "missing", "exploitation")):
+            add("safeguarding_review_learning", "pfd_system_learning", "missing_exploitation_contextual_safeguarding")
+        if any(term in text or term in brain_text for term in ("record", "recording", "daily note", "incident", "chronology", "wording")):
+            add("recording_quality_learning", "inspection_language_benchmark")
+        if any(term in text or term in brain_text for term in ("child voice", "lived experience", "wishes", "feelings", "advocacy", "complaint")):
+            add("child_voice_lived_experience", "rights_advocacy_complaints")
+        if any(term in text or term in brain_text for term in ("therapeutic", "trauma", "behaviour", "repair", "restorative", "attachment")):
+            add("research_practice_evidence", "restrictive_practice_behaviour")
+        if any(term in text or term in brain_text for term in ("manager", "leadership", "oversight", "ri", "responsible individual", "governance", "audit")):
+            add("leadership_governance_ri", "ombudsman_complaints_learning")
+        if any(term in text or term in brain_text for term in ("staff", "supervision", "training", "safer recruitment", "workforce", "induction")):
+            add("workforce_safer_recruitment")
+        if any(term in text for term in ("school", "education", "attendance", "pep", "send", "exclusion")):
+            add("education_attendance_send")
+        if any(term in text for term in ("health", "medication", "wellbeing", "mental health", "sleep", "eating")):
+            add("health_medication_wellbeing")
+        if any(term in text for term in ("equality", "identity", "autism", "neurodiv", "disability", "culture", "language")):
+            add("equality_identity_neurodiversity")
+        if any(term in text for term in ("restraint", "restrictive", "physical intervention", "de-escalation")):
+            add("restrictive_practice_behaviour")
+        if any(term in text for term in ("statistics", "sector trend", "market", "national picture", "data")):
+            add("social_care_statistics")
+        if any(term in text for term in ("consultation", "policy", "reform", "future", "bill")):
+            add("policy_consultation_tracker", "guidance_change_tracker")
+        if any(term in text for term in ("legal", "rights", "deprivation", "liberty", "court", "tribunal")):
+            add("legal_boundary_learning")
+        return selected[:8]
+
+    def _merge_sector_evidence_brains(self, active_brains: list[str], sector_evidence: dict[str, Any]) -> list[str]:
+        brains = list(active_brains)
+        brains.extend(sector_evidence.get("active_brains") or [])
+        return list(dict.fromkeys(brains))
+
+    def _merge_display_labels(self, base: list[str], additions: list[str]) -> list[str]:
+        values: list[str] = []
+        for item in list(base or []) + list(additions or []):
+            text = str(item or "").strip()
+            if text and text not in values:
+                values.append(text)
+        return values
 
     def _merge_depth_brains(self, *, active_brains: list[str], depth_frame: dict[str, Any]) -> list[str]:
         brains = list(active_brains)
@@ -252,6 +377,13 @@ class SharedInstitutionalCognitionRuntime:
             "what patterns matter, what oversight is needed, what emotional meaning exists, and what evidence "
             "would strengthen confidence — without making threshold decisions.",
         ]
+        if any(str(brain).startswith("sector_evidence:") for brain in active_brains):
+            requirements.extend(
+                [
+                    "- Where public sector evidence is retrieved, use it as learning themes and professional prompts — not as a claim that this situation matches a named report, review or inspection.",
+                    "- Make the practical relevance clear: what it changes about safeguarding thinking, recording, child voice, oversight or Ofsted evidence.",
+                ]
+            )
         if depth_frame:
             requirements.extend(
                 [
