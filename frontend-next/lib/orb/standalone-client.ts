@@ -4,6 +4,8 @@ import {
   authFetchResponse,
   AuthApiError,
   getCsrfToken,
+  isOrbAuthRequiredStatus,
+  ORB_AUTH_SIGN_IN_MESSAGE,
   STANDALONE_ORB_CSRF_REFRESH_MESSAGE
 } from '@/lib/auth/api'
 import {
@@ -526,6 +528,12 @@ export async function queryStandaloneOrbConversation(
             typeof record.message === 'string' ? record.message : STANDALONE_ORB_CSRF_REFRESH_MESSAGE
         })
       }
+      if (isOrbAuthRequiredStatus(response.status, String(record?.code || ''))) {
+        throw new AuthApiError(response.status, {
+          code: 'auth_required',
+          message: ORB_AUTH_SIGN_IN_MESSAGE
+        })
+      }
       throw new AuthApiError(
         response.status,
         typeof record?.message === 'string'
@@ -708,6 +716,12 @@ export async function sendStandaloneOrbMessageStream(
         code: 'csrf_failed',
         message:
           typeof payload.message === 'string' ? payload.message : STANDALONE_ORB_CSRF_REFRESH_MESSAGE
+      })
+    }
+    if (isOrbAuthRequiredStatus(response.status, String(payload?.code || ''))) {
+      throw new AuthApiError(response.status, {
+        code: 'auth_required',
+        message: ORB_AUTH_SIGN_IN_MESSAGE
       })
     }
     throw new AuthApiError(
@@ -1625,11 +1639,19 @@ export function parseStandaloneOrbSendError(error: unknown): StandaloneOrbSendEr
         csrfFailed: true
       }
     }
+    if (isOrbAuthRequiredStatus(error.status, error.code)) {
+      return {
+        status: error.status,
+        detail: error.code || 'auth_required',
+        message: ORB_AUTH_SIGN_IN_MESSAGE,
+        csrfFailed: false
+      }
+    }
     if (error.status === 401) {
       return {
         status: 401,
         detail: error.code,
-        message: STANDALONE_ORB_SESSION_EXPIRED_MESSAGE,
+        message: ORB_AUTH_SIGN_IN_MESSAGE,
         csrfFailed: false
       }
     }

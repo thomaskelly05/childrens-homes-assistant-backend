@@ -111,6 +111,7 @@ export function standaloneOrbMessageNeedsSignIn(message: string): boolean {
 export function isStandaloneOrbSignInPromptMessage(message: string): boolean {
   return (
     message.includes(STANDALONE_ORB_SIGN_IN_REQUIRED_ANSWER) ||
+    /please sign in to use orb residential/i.test(message) ||
     /sign in to orb residential/i.test(message) ||
     /sign in to use orb/i.test(message)
   )

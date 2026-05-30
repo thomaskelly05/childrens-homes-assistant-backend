@@ -54,6 +54,7 @@ export function OrbStandaloneSidebar({
   onOpenHelp,
   onOpenAdultProfile,
   adultProfile,
+  profileDisplayMode = 'local_profile',
   savedOutputsCount,
   onClose
 }: {
@@ -73,6 +74,7 @@ export function OrbStandaloneSidebar({
   onOpenHelp?: () => void
   onOpenAdultProfile?: () => void
   adultProfile?: AdultProfile | null
+  profileDisplayMode?: 'local_profile' | 'signed_in_account'
   cognitionStatusLabel?: string
   cognitionModeLabel?: string
   savedOutputsCount?: number
@@ -459,10 +461,25 @@ export function OrbStandaloneSidebar({
             data-orb-sidebar-profile-greeting
           >
             <p className="truncate text-sm font-semibold text-[var(--orb-foreground)]" data-orb-profile-greeting>
-              {adultProfile.name?.trim()
-                ? `${adultProfile.name.trim()} · ${adultProfile.roleLabel}`
-                : adultProfile.roleLabel}
+              {profileDisplayMode === 'local_profile' ? (
+                <>
+                  <span className="text-[var(--orb-muted)]" data-orb-profile-mode-label>
+                    Local profile
+                  </span>
+                  {adultProfile.name?.trim() ? ` · ${adultProfile.name.trim()}` : null}
+                  {adultProfile.roleLabel ? ` · ${adultProfile.roleLabel}` : null}
+                </>
+              ) : adultProfile.name?.trim() ? (
+                `${adultProfile.name.trim()} · ${adultProfile.roleLabel}`
+              ) : (
+                adultProfile.roleLabel
+              )}
             </p>
+            {profileDisplayMode === 'local_profile' ? (
+              <p className="mt-0.5 text-[10px] text-[var(--orb-muted)]" data-orb-profile-sign-in-hint>
+                Sign in for your ORB Residential account
+              </p>
+            ) : null}
             {adultProfile.homeName ? (
               <p className="mt-0.5 truncate text-[11px] text-[var(--orb-muted)]">{adultProfile.homeName}</p>
             ) : null}
