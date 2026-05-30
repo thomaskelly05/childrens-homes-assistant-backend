@@ -25,7 +25,9 @@ from services.orb_document_ingestion_service import (
     orb_document_ingestion_service,
 )
 from services.orb_knowledge_library_service import orb_knowledge_library_service
+from services.orb_public_evidence_intelligence_service import orb_public_evidence_intelligence_service
 from services.orb_rag_retrieval_service import orb_rag_retrieval_service
+from services.orb_sector_evidence_pipeline_service import orb_sector_evidence_pipeline_service
 
 logger = logging.getLogger("indicare.orb_knowledge_routes")
 
@@ -41,6 +43,24 @@ class OrbKnowledgeFileIngestRequest(BaseModel):
     source_type: str | None = Field(default=None, max_length=80)
     title: str | None = Field(default=None, max_length=500)
     metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class OrbKnowledgeUrlImportRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    url: str = Field(..., min_length=8, max_length=2000)
+    pipeline_id: str | None = Field(default=None, max_length=120)
+    kind: str | None = Field(default=None, max_length=120)
+    title: str | None = Field(default=None, max_length=500)
+    approve_now: bool = True
+
+
+class OrbKnowledgePipelineSearchRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    query: str = Field(..., min_length=1, max_length=2000)
+    pipeline_id: str | None = Field(default=None, max_length=120)
+    limit: int = Field(default=8, ge=1, le=30)
 
 
 def _success(data: Any) -> dict[str, Any]:
@@ -215,3 +235,90 @@ async def search_knowledge(
         source_type=payload.source_type,
     )
     return _success({"query": payload.query, "results": [r.model_dump() for r in results], "total": len(results)})
+
+
+@router.get("/public-evidence/status")
+async def public_evidence_status(current_user=Depends(require_standalone_orb_access)):
+    return _success(orb_public_evidence_intelligence_service.status())
+
+
+@router.post("/public-evidence/seed-registry")
+async def seed_public_evidence_registry(current_user=Depends(require_standalone_orb_access)):
+    return _success(orb_public_evidence_intelligence_service.seed_registry())
+
+
+@router.post("/public-evidence/import-url")
+async def import_public_evidence_url(
+    payload: OrbKnowledgeUrlImportRequest,
+    current_user=Depends(require_standalone_orb_access),
+):
+    if payload.pipeline_id:
+        result = await orb_sector_evidence_pipeline_service.import_url(
+            payload.pipeline_id,
+            payload.url,
+            title=payload.title,
+            approve_now=payload.approve_now,
+        )
+    else:
+        result = await orb_public_evidence_intelligence_service.import_url(
+            payload.url,
+            kind=payload.kind,
+            title=payload.title,
+            approve_now=payload.approve_now,
+        )
+    if not result.get("success"):
+        raise HTTPException(status_code=400, detail=result)
+    return _success(result)
+
+
+@router.post("/public-evidence/search")
+async def search_public_evidence(
+    payload: OrbKnowledgePipelineSearchRequest,
+    current_user=Depends(require_standalone_orb_access),
+):
+    if payload.pipeline_id:
+        return _success(
+            orb_sector_evidence_pipeline_service.search_pipeline(
+                payload.pipeline_id,
+                payload.query,
+                limit=payload.limit,
+            )
+        )
+    return _success(orb_public_evidence_intelligence_service.search(payload.query, limit=payload.limit))
+
+
+@router.get("/pipelines")
+async def list_sector_evidence_pipelines(current_user=Depends(require_standalone_orb_access)):
+    return _success(orb_sector_evidence_pipeline_service.list_pipelines())
+
+
+@router.get("/pipelines/brains")
+async def sector_evidence_brains(current_user=Depends(require_standalone_orb_access)):
+    return _success(orb_sector_evidence_pipeline_service.brains_map())
+
+
+@router.get("/pipelines/status")
+async def sector_evidence_pipeline_status(current_user=Depends(require_standalone_orb_access)):
+    return _success(orb_sector_evidence_pipeline_service.status())
+
+
+@router.get("/pipelines/{pipeline_id}")
+async def get_sector_evidence_pipeline(
+    pipeline_id: str,
+    current_user=Depends(require_standalone_orb_access),
+):
+    pipeline = orb_sector_evidence_pipeline_service.get_pipeline(pipeline_id)
+    if not pipeline:
+        raise HTTPException(status_code=404, detail="Sector evidence pipeline not found")
+    return _success(pipeline)
+
+
+@router.post("/pipelines/{pipeline_id}/seed")
+async def seed_sector_evidence_pipeline(
+    pipeline_id: str,
+    current_user=Depends(require_standalone_orb_access),
+):
+    result = await orb_sector_evidence_pipeline_service.seed_pipeline(pipeline_id)
+    if not result.get("success"):
+        raise HTTPException(status_code=404, detail=result)
+    return _success(result)
