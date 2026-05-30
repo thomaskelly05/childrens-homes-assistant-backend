@@ -16,11 +16,14 @@ ROUTES = Path(__file__).resolve().parents[1] / "routers" / "orb_standalone_route
 
 
 def test_greeting_uses_no_llm_template():
+    from services.orb_local_response_service import ORB_GREETING_HELLO_ANSWER
+
     local = orb_local_response_service.try_local_response("hello")
     assert local is not None
     assert local.get("no_llm") is True
+    assert local.get("answer") == ORB_GREETING_HELLO_ANSWER
     instant = orb_general_assistant_service._try_instant_fast_answer("hello")
-    assert instant is not None
+    assert instant == ORB_GREETING_HELLO_ANSWER
 
 
 def test_fast_tier_uses_low_cost_route():

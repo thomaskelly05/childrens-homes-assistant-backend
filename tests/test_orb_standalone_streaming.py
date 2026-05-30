@@ -139,8 +139,15 @@ def test_instant_fast_answer_for_hello():
 
     answer = orb_general_assistant_service._try_instant_fast_answer("hello")
     assert answer is not None
-    assert "Hello" in answer
-    assert "safeguarding" in answer.lower()
+    assert answer == "Hello — what would you like to work on?"
+    assert "safeguarding" not in answer.lower()
+
+
+def test_instant_fast_answer_for_thanks():
+    from services.orb_general_assistant_service import orb_general_assistant_service
+
+    answer = orb_general_assistant_service._try_instant_fast_answer("thank you")
+    assert answer == "You're welcome."
 
 
 def test_hello_stream_metadata_omits_image_unavailable_flag():

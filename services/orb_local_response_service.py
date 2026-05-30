@@ -60,6 +60,9 @@ WHAT_ORB_CAN_DO = (
     "and general questions — without accessing live OS records. What would you like to work on?"
 )
 
+ORB_GREETING_HELLO_ANSWER = "Hello — what would you like to work on?"
+ORB_GREETING_THANKS_ANSWER = "You're welcome."
+
 
 class OrbLocalResponseService:
     """Cost-safe template responses — no LLM call."""
@@ -75,11 +78,17 @@ class OrbLocalResponseService:
             return None
 
         if re.fullmatch(
-            r"(hi|hello|hey|yo|thanks|thank you|thankyou|good morning|good afternoon|good evening)"
+            r"(thanks|thank you|thankyou)(\s+you|\s+orb)?[!?.]*",
+            lower,
+        ):
+            return self._payload(ORB_GREETING_THANKS_ANSWER, template="greeting_thanks")
+
+        if re.fullmatch(
+            r"(hi|hello|hey|yo|good morning|good afternoon|good evening)"
             r"(\s+there|\s+orb)?[!?.]*",
             lower,
         ):
-            return self._payload(WHAT_ORB_CAN_DO, template="greeting")
+            return self._payload(ORB_GREETING_HELLO_ANSWER, template="greeting")
 
         if any(p in lower for p in ("what can you do", "how can you help", "what do you do")) and len(lower.split()) <= 14:
             return self._payload(WHAT_ORB_CAN_DO, template="capabilities")

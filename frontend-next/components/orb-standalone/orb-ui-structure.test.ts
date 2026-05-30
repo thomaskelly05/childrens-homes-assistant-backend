@@ -103,7 +103,7 @@ describe('ORB ChatGPT UI structure', () => {
   it('composer keeps send handler and Ask anything placeholder path', () => {
     const composer = readComponent('components/orb-standalone/orb-standalone-composer.tsx')
     assert.match(composer, /data-testid="orb-standalone-send-clickable"/)
-    assert.match(composer, /placeholderForMode/)
+    assert.match(composer, /Ask anything/)
     assert.match(composer, /type="submit"/)
     assert.match(composer, /orb-composer-answering/)
     assert.match(composer, /data-orb-composer-stop-generating/)

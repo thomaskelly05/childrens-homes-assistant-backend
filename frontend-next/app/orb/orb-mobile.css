@@ -128,23 +128,25 @@
     margin-right: 0 !important;
   }
 
-  .orb-composer-glass {
-    position: relative !important;
-    z-index: 61 !important;
-    min-height: 6.8rem !important;
-    border-radius: 2.25rem !important;
-    padding: 0.72rem !important;
-    pointer-events: auto !important;
-  }
 
   .orb-composer-input-hit-target,
   [data-orb-composer-input-hit-target] {
     display: none !important;
   }
 
-  /* Do not hide the first composer row. On some mobile browsers that collapsed the input hit-area. */
-  .orb-composer-glass > div:first-child {
-    display: flex !important;
+  [data-orb-composer-mode-row] {
+    display: none !important;
+  }
+
+  .orb-composer-glass {
+    position: relative !important;
+    z-index: 61 !important;
+    pointer-events: auto !important;
+    min-height: 4.5rem !important;
+    border-radius: 1.75rem !important;
+    padding: 0.55rem 0.65rem !important;
+    border-width: 1px !important;
+    box-shadow: 0 1px 2px rgb(15 23 42 / 0.06) !important;
   }
 
   .orb-composer-glass textarea,
@@ -171,8 +173,19 @@
     border-radius: 9999px !important;
   }
 
-  .orb-composer-action-rail button:not([data-orb-composer-attach]) {
+  .orb-composer-action-rail button:not([data-orb-composer-attach]):not([data-orb-composer-tools]) {
     display: none !important;
+  }
+
+  .orb-response-action-bar:not([data-orb-response-action-bar-minimal]) {
+    gap: 0.35rem !important;
+    padding-top: 0.65rem !important;
+    border-top-color: rgb(226 232 240 / 0.65) !important;
+  }
+
+  .orb-response-action-bar:not([data-orb-response-action-bar-minimal]) .orb-action-chip {
+    padding: 0.35rem 0.55rem !important;
+    font-size: 0.68rem !important;
   }
 
   .orb-voice-status-slot {

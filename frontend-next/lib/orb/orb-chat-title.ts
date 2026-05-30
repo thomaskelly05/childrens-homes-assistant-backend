@@ -103,7 +103,7 @@ export function generateOrbChatTitle(message: string, context?: OrbChatTitleCont
   }
 
   if (isGreeting(text)) {
-    return 'Hello'
+    return 'ORB'
   }
 
   if (!text || text === '[Image attachment]') {

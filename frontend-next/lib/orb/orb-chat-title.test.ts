@@ -29,7 +29,8 @@ describe('generateOrbChatTitle', () => {
     )
   })
 
-  it('keeps hello as Hello', () => {
-    assert.equal(generateOrbChatTitle('hello'), 'Hello')
+  it('keeps ORB title for greetings', () => {
+    assert.equal(generateOrbChatTitle('hello'), 'ORB')
+    assert.equal(generateOrbChatTitle('thank you'), 'ORB')
   })
 })

@@ -75,6 +75,7 @@ import {
   STANDALONE_ORB_SIGN_IN_PATH,
   STANDALONE_ORB_SIGN_IN_REQUIRED_ANSWER,
   isStandaloneOrbSignInPromptMessage,
+  isOrbMinimalTurn,
   tryStandaloneGuestLocalAnswer
 } from '@/lib/orb/standalone-guest-response'
 import { profileInitialsFromName } from '@/lib/orb/orb-profile-initials'
@@ -2020,7 +2021,7 @@ export function OrbCareCompanion() {
   }, [adultProfile, activeChat?.temporary])
 
   const emptyHeading = useMemo(
-    () => emptyWelcome.heading || (adultProfile ? personalisedEmptyHeading(adultProfile) : 'How can I help?'),
+    () => emptyWelcome.heading || (adultProfile ? personalisedEmptyHeading(adultProfile) : 'Ready when you are.'),
     [adultProfile, emptyWelcome.heading]
   )
 
@@ -2449,9 +2450,11 @@ export function OrbCareCompanion() {
                     >
                       {emptyHeading}
                     </h2>
-                    <p className="mt-2 max-w-lg text-sm leading-7 text-slate-600" data-orb-empty-subline>
-                      {emptyWelcome.subline}
-                    </p>
+                    {emptyWelcome.subline ? (
+                      <p className="mt-2 max-w-lg text-sm leading-7 text-slate-600" data-orb-empty-subline>
+                        {emptyWelcome.subline}
+                      </p>
+                    ) : null}
                     {emptyWelcome.temporaryNote ? (
                       <p
                         className="mt-2 max-w-lg text-xs font-medium leading-5 text-amber-800"
@@ -2460,7 +2463,7 @@ export function OrbCareCompanion() {
                         {emptyWelcome.temporaryNote}
                       </p>
                     ) : null}
-                    <p className="mt-3 max-w-md text-xs leading-5 text-slate-500">
+                    <p className="mt-3 hidden max-w-md text-xs leading-5 text-slate-500 md:block" data-orb-empty-hint>
                       Pick a starter, choose an agent, or type in the composer below.
                     </p>
                     <div className="mt-6 grid w-full max-w-lg gap-2 sm:grid-cols-2" data-orb-starter-cards>
@@ -2544,15 +2547,24 @@ export function OrbCareCompanion() {
                             </article>
                           ) : (
                           <>
+                          {(() => {
+                            const messageHint = precedingUserMessageHint(visibleMessages, index)
+                            const minimalTurn = isOrbMinimalTurn({
+                              userMessage: messageHint,
+                              assistantContent: entry.content
+                            })
+                            return (
+                              <>
                           <OrbAssistantMessageBody
                             content={entry.content}
-                            sources={entry.sources}
+                            sources={minimalTurn ? [] : entry.sources}
                             mode={mode}
                             streaming={entry.status === 'streaming'}
                             explainability={entry.explainability}
                             modelRouting={entry.modelRouting}
-                            messageHint={precedingUserMessageHint(visibleMessages, index)}
-                            showCognitionLabels={chatUiSettings.showCognitionLabels}
+                            messageHint={messageHint}
+                            showCognitionLabels={!minimalTurn && chatUiSettings.showCognitionLabels}
+                            showExplainability={!minimalTurn}
                             heading={entry.outputTitle}
                             cognitionContext={{
                               context_used: {
@@ -2625,12 +2637,15 @@ export function OrbCareCompanion() {
                                 <OrbResponseActionBar
                                   mode={mode}
                                   content={entry.content}
+                                  minimal={minimalTurn}
                                   isLatest={index === visibleMessages.length - 1}
                                   speaking={speakingMessageId === entry.id}
                                   synthesisAvailable={voice.synthesisAvailable}
                                   saveFeedback={saveFeedbackByMessageId[entry.id] || 'idle'}
                                   onRegenerate={
-                                    index === visibleMessages.length - 1 ? handleRegenerate : undefined
+                                    !minimalTurn && index === visibleMessages.length - 1
+                                      ? handleRegenerate
+                                      : undefined
                                   }
                                   onSpeak={() => speakMessageContent(entry.id, entry.content)}
                                   onStop={voice.cancelSpeaking}
@@ -2639,8 +2654,8 @@ export function OrbCareCompanion() {
                                     inputRef.current?.focus()
                                   }}
                                   onDraft={() => void handleDraftWording(entry.content)}
-                                  onSave={() => void saveChatNote(entry)}
-                                  onSaveToProject={() => void saveChatNote(entry)}
+                                  onSave={minimalTurn ? undefined : () => void saveChatNote(entry)}
+                                  onSaveToProject={minimalTurn ? undefined : () => void saveChatNote(entry)}
                                   onActionPlan={() => {
                                     setMessage(`Create an action plan from this:\n\n${entry.content.slice(0, 500)}`)
                                     inputRef.current?.focus()
@@ -2663,10 +2678,13 @@ export function OrbCareCompanion() {
                                     })()
                                   }}
                                   onInspectionPrep={() => handleModeChange('Ofsted Lens')}
-                                  onOrbFollowUp={(action, content) =>
-                                    void handleOrbFollowUp(action, content, index)
+                                  onOrbFollowUp={
+                                    minimalTurn
+                                      ? undefined
+                                      : (action, content) => void handleOrbFollowUp(action, content, index)
                                   }
                                 />
+                                {!minimalTurn ? (
                                 <OrbMessageFeedback
                                   payload={{
                                     message_id: entry.id,
@@ -2701,7 +2719,10 @@ export function OrbCareCompanion() {
                                       : undefined
                                   }
                                 />
-                                {entry.status === 'complete' && index === visibleMessages.length - 1 ? (
+                                ) : null}
+                                {!minimalTurn &&
+                                entry.status === 'complete' &&
+                                index === visibleMessages.length - 1 ? (
                                   <OrbSuggestedReplyChips
                                     suggestions={
                                       entry.outputKind
@@ -2709,11 +2730,11 @@ export function OrbCareCompanion() {
                                             outputKind: entry.outputKind,
                                             content: entry.content,
                                             mode,
-                                            messageHint: precedingUserMessageHint(visibleMessages, index)
+                                            messageHint
                                           })
                                         : contextualSuggestedReplies({
                                             mode,
-                                            messageHint: precedingUserMessageHint(visibleMessages, index)
+                                            messageHint
                                           })
                                     }
                                     onSelect={(item) =>
@@ -2725,6 +2746,9 @@ export function OrbCareCompanion() {
                                 ) : null}
                               </>
                             ) : null}
+                              </>
+                            )
+                          })()}
                           </>
                           )
                         ) : (

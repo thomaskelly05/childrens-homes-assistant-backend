@@ -36,8 +36,9 @@ describe('pickBritishFemaleVoice', () => {
 })
 
 describe('adult profile personalisation', () => {
-  it('personalises empty state heading with first name', () => {
+  it('personalises empty state heading with calm ready copy', () => {
     const heading = personalisedEmptyHeading({ ...DEFAULT_ADULT_PROFILE, name: 'Tom Kelly' })
+    assert.match(heading, /Ready when you are/i)
     assert.match(heading, /Tom/)
   })
 
@@ -50,30 +51,33 @@ describe('adult profile personalisation', () => {
     assert.ok(starters.some((s) => s.toLowerCase().includes('oversight')))
   })
 
-  it('welcome message personalises by registered manager role', () => {
+  it('welcome message stays calm for registered manager role', () => {
     const welcome = personalisedWelcomeMessage({
       ...DEFAULT_ADULT_PROFILE,
       name: 'Tom Kelly',
       role: 'registered_manager'
     })
-    assert.match(welcome.subline, /oversight|Ofsted/i)
+    assert.match(welcome.heading, /Ready when you are/i)
+    assert.equal(welcome.subline, '')
   })
 
-  it('welcome message personalises by NVQ assessor role', () => {
+  it('welcome message stays calm for NVQ assessor role', () => {
     const welcome = personalisedWelcomeMessage({
       ...DEFAULT_ADULT_PROFILE,
       role: 'nvq_assessor',
       roleLabel: 'NVQ assessor'
     })
-    assert.match(welcome.subline, /evidence|criteria|portfolio/i)
+    assert.match(welcome.heading, /Ready when you are/i)
+    assert.equal(welcome.subline, '')
   })
 
-  it('welcome message personalises by support worker role', () => {
+  it('welcome message stays calm for support worker role', () => {
     const welcome = personalisedWelcomeMessage({
       ...DEFAULT_ADULT_PROFILE,
       role: 'residential_support_worker'
     })
-    assert.match(welcome.subline, /record|handover|missing/i)
+    assert.match(welcome.heading, /Ready when you are/i)
+    assert.equal(welcome.subline, '')
   })
 
   it('initials from Tom Kelly are TK', () => {

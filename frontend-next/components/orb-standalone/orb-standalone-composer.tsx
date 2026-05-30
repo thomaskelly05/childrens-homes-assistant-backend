@@ -4,7 +4,6 @@ import { FormEvent, useRef, type DragEvent } from 'react'
 import { Camera, ChevronDown, FileText, Mic, MicOff, Plus, Send, Square, Wrench, X } from 'lucide-react'
 
 import { logTapTarget } from '@/lib/interaction/mobile-tap-debug'
-import { placeholderForMode } from '@/lib/orb/residential-agents'
 import type { StandaloneOrbMode } from '@/lib/orb/standalone-client'
 
 export type PendingImageAttachment = {
@@ -214,9 +213,12 @@ export function OrbStandaloneComposer({
             data-orb-composer-answering={answering ? 'true' : 'false'}
             data-orb-composer-card
           >
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/70 px-0.5 pb-2">
+            <div
+              className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/70 px-0.5 pb-2"
+              data-orb-composer-mode-row
+            >
               {onAgentSelectorClick ? (
-                <button type="button" onClick={onAgentSelectorClick} className="inline-flex max-w-full items-center gap-2 rounded-full border border-slate-200 bg-white/85 px-3 py-1.5 text-xs font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50" data-orb-composer-agent-selector aria-label="Choose agent">
+                <button type="button" onClick={onAgentSelectorClick} className="orb-composer-agent-selector inline-flex max-w-full items-center gap-2 rounded-full border border-slate-200 bg-white/85 px-3 py-1.5 text-xs font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50" data-orb-composer-agent-selector aria-label="Choose agent">
                   <span className="truncate">{agentLabel || mode || 'Ask ORB'}</span>
                   <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-500" aria-hidden />
                 </button>
@@ -284,7 +286,8 @@ export function OrbStandaloneComposer({
               }}
               rows={1}
               className="mt-1.5 max-h-40 min-h-[3.25rem] w-full resize-none bg-transparent px-0.5 py-2 text-[0.9375rem] leading-6 text-[var(--orb-foreground)] outline-none focus:outline-none focus-visible:outline-none placeholder:text-slate-500"
-              placeholder={placeholderForMode(mode)}
+              placeholder="Ask anything"
+              data-orb-composer-placeholder="ask-anything"
               disabled={pending}
               aria-describedby="orb-standalone-status"
               autoCapitalize="sentences"
@@ -335,7 +338,9 @@ export function OrbStandaloneComposer({
             ) : (
               <span id="orb-standalone-status" className="sr-only" data-orb-voice-status>Ready to type</span>
             )}
-            <span className="text-[10px] text-slate-400">Mode: {mode}</span>
+            <span className="hidden text-[10px] text-slate-400 md:inline" data-orb-composer-mode-label>
+              Mode: {mode}
+            </span>
           </div>
 
           {voiceCaptureEnabled && voiceListening ? (
