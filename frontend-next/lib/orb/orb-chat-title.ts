@@ -7,7 +7,7 @@ export type OrbChatTitleContext = {
 }
 
 const GREETING_RE =
-  /^(hi|hello|hey|yo|thanks|thank you|thankyou|good morning|good afternoon|good evening)(\s+there|\s+orb)?[!?.]*$/i
+  /^(hi|hello|hey|hiya|yo|cheers|thanks|thank you|thankyou|good morning|good afternoon|good evening)(\s+there|\s+orb)?[!?.]*$/i
 
 function normalise(text: string): string {
   return text.replace(/\s+/g, ' ').trim()

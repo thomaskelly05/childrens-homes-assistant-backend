@@ -25,6 +25,12 @@ def test_greeting_uses_no_llm_template():
     instant = orb_general_assistant_service._try_instant_fast_answer("hello")
     assert instant == ORB_GREETING_HELLO_ANSWER
 
+    for variant in ("hiya", "cheers", "good evening"):
+        variant_local = orb_local_response_service.try_local_response(variant)
+        assert variant_local is not None
+        assert variant_local.get("no_llm") is True
+        assert variant_local.get("answer") == ORB_GREETING_HELLO_ANSWER
+
 
 def test_fast_tier_uses_low_cost_route():
     tier = orb_knowledge_retrieval_service.resolve_prompt_tier("hello there")

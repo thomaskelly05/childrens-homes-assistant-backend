@@ -4,7 +4,7 @@
  */
 
 const GREETING_RE =
-  /^(hi|hello|hey|yo|good morning|good afternoon|good evening)(\s+there|\s+orb)?[!?.]*$/i
+  /^(hi|hello|hey|hiya|yo|cheers|good morning|good afternoon|good evening)(\s+there|\s+orb)?[!?.]*$/i
 
 const THANKS_RE = /^(thanks|thank you|thankyou)(\s+you|\s+orb)?[!?.]*$/i
 

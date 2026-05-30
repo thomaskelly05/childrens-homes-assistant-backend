@@ -488,9 +488,38 @@ html[data-orb-theme='light'] .orb-chat-layout {
 }
 
 .orb-panel-overlay {
-  background: rgba(248, 251, 255, 0.78) !important;
-  backdrop-filter: blur(10px) saturate(145%) !important;
-  -webkit-backdrop-filter: blur(10px) saturate(145%) !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  max-width: 100vw !important;
+  height: 100dvh !important;
+  background: rgba(15, 23, 42, 0.2) !important;
+  backdrop-filter: blur(12px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(140%) !important;
+}
+
+.orb-message-error-card {
+  border-radius: 0.75rem;
+  border: 1px solid #f59e0b;
+  background: #fffbeb;
+  color: #78350f;
+}
+
+.orb-message-error-card__title {
+  color: #7c2d12;
+}
+
+.orb-message-error-card__body {
+  color: #78350f;
+}
+
+.orb-message-error-card__retry {
+  border: 1px solid #d97706;
+  background: #fff7ed;
+  color: #7c2d12;
+}
+
+.orb-message-error-card__retry:hover:not(:disabled) {
+  background: #ffedd5;
 }
 
 .orb-panel-drawer {
