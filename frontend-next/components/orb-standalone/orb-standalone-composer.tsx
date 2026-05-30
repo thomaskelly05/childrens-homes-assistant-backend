@@ -128,10 +128,8 @@ export function OrbStandaloneComposer({
     event.stopPropagation()
   }
 
-  function focusComposerInput(event: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) {
+  function focusInput() {
     if (pending) return
-    const target = event.target as HTMLElement | null
-    if (target?.closest('button,input,textarea,a,[role="button"]')) return
     const input = inputRef?.current ?? fallbackInputRef.current
     if (!input) return
     input.focus({ preventScroll: true })
@@ -141,6 +139,12 @@ export function OrbStandaloneComposer({
     } catch {
       // Safari can throw if selection is unavailable; focus still worked.
     }
+  }
+
+  function focusComposerInput(event: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) {
+    const target = event.target as HTMLElement | null
+    if (target?.closest('button,input,textarea,a,[role="button"]')) return
+    focusInput()
   }
 
   return (
@@ -261,11 +265,30 @@ export function OrbStandaloneComposer({
               </div>
             ) : null}
 
+            <button
+              type="button"
+              className="orb-composer-input-hit-target"
+              onClick={focusInput}
+              onTouchEnd={(event) => {
+                event.preventDefault()
+                focusInput()
+              }}
+              aria-label="Focus message input"
+              tabIndex={-1}
+              data-orb-composer-input-hit-target
+            >
+              <span>{value ? value : placeholderForMode(mode)}</span>
+            </button>
+
             <textarea
               ref={setInputNode}
               id="orb-standalone-input"
               name="message"
               value={value}
+              onFocus={() => document.body.setAttribute('data-orb-composer-focused', 'true')}
+              onBlur={() => document.body.removeAttribute('data-orb-composer-focused')}
+              onPointerDown={() => focusInput()}
+              onTouchStart={() => focusInput()}
               onChange={(event) => syncMessage(event.currentTarget.value)}
               onInput={(event) => syncMessage(event.currentTarget.value)}
               onCompositionEnd={(event) => syncMessage(event.currentTarget.value)}
@@ -277,10 +300,14 @@ export function OrbStandaloneComposer({
                 if (form && !sendDisabled) form.requestSubmit()
               }}
               rows={1}
-              className="mt-1.5 max-h-40 min-h-[3.25rem] w-full resize-none bg-transparent px-0.5 py-2 text-[0.9375rem] leading-6 text-[var(--orb-foreground)] outline-none focus:outline-none focus-visible:outline-none placeholder:text-slate-500 [touch-action:manipulation]"
+              className="mt-1.5 max-h-40 min-h-[3.25rem] w-full resize-none bg-transparent px-0.5 py-2 text-[0.9375rem] leading-6 text-[var(--orb-foreground)] outline-none focus:outline-none focus-visible:outline-none placeholder:text-slate-500"
               placeholder={placeholderForMode(mode)}
               disabled={pending}
               aria-describedby="orb-standalone-status"
+              autoCapitalize="sentences"
+              autoCorrect="on"
+              spellCheck="true"
+              inputMode="text"
               data-orb-composer-input
               data-testid="orb-standalone-message-input"
               data-input-source="controlled"
