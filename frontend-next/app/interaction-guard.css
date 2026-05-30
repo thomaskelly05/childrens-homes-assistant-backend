@@ -92,3 +92,109 @@ textarea {
   z-index: 5;
   pointer-events: auto !important;
 }
+
+/*
+ * ORB Residential /orb theme guard.
+ *
+ * The canonical ORB route has its own desktop/mobile design files, but the
+ * shared app globals still contain older cinematic ambience layers and Tailwind
+ * gradient utilities used by earlier ORB prototypes. Those layers were still
+ * painting the blue-grey main canvas and the pale bottom composer wash in dark
+ * mode. Keep them interactive-safe and visually neutral here so /orb can follow
+ * the ChatGPT-like light/dark theme tokens from orb-desktop.css and orb-mobile.css.
+ */
+html[data-orb-theme='dark'] .orb-chat-layout .orb-ambient-cognition,
+html[data-orb-theme='dark'] .orb-chat-layout .orb-ambient-cognition *,
+html[data-orb-theme='dark'] .orb-chat-layout .orb-cinematic-light-field,
+html[data-orb-theme='dark'] .orb-chat-layout .orb-neural-haze,
+html[data-orb-theme='dark'] .orb-chat-layout .orb-screen-edge-pulse,
+html[data-orb-theme='dark'] .orb-chat-layout .orb-atmospheric-diffusion,
+html[data-orb-theme='dark'] .orb-chat-layout .orb-background-wash,
+html[data-orb-theme='dark'] .orb-chat-layout .orb-canvas-wash,
+html[data-orb-theme='dark'] .orb-chat-layout [data-orb-thread-wash],
+html[data-orb-theme='dark'] .orb-chat-layout [data-orb-canvas-wash],
+html[data-orb-theme='dark'] .orb-chat-layout [data-orb-background-wash] {
+  display: none !important;
+  opacity: 0 !important;
+  background: none !important;
+  background-image: none !important;
+  filter: none !important;
+}
+
+html[data-orb-theme='dark'] .orb-chat-layout,
+html[data-orb-theme='dark'] .orb-chat-layout .orb-chat-main,
+html[data-orb-theme='dark'] .orb-chat-layout .orb-chat-thread,
+html[data-orb-theme='dark'] .orb-chat-layout section[aria-label='ORB conversation'],
+html[data-orb-theme='dark'] .orb-chat-layout [data-orb-chat-scroll-container] {
+  background: #0d0d0d !important;
+  background-color: #0d0d0d !important;
+  background-image: none !important;
+}
+
+html[data-orb-theme='dark'] .orb-chat-layout .orb-composer-dock {
+  background: #0d0d0d !important;
+  background-color: #0d0d0d !important;
+  background-image: none !important;
+  border-top-color: rgba(255, 255, 255, 0.1) !important;
+  box-shadow: none !important;
+}
+
+html[data-orb-theme='dark'] .orb-chat-layout .orb-composer-glass {
+  background: #171717 !important;
+  background-color: #171717 !important;
+  background-image: none !important;
+  border-color: rgba(255, 255, 255, 0.16) !important;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.34) !important;
+}
+
+html[data-orb-theme='dark'] .orb-chat-layout .orb-chat-header,
+html[data-orb-theme='dark'] .orb-chat-layout header.orb-chat-header {
+  background: #0d0d0d !important;
+  background-color: #0d0d0d !important;
+  background-image: none !important;
+  border-bottom-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+html[data-orb-theme='dark'] .orb-chat-layout .orb-chat-sidebar {
+  background: #111113 !important;
+  background-color: #111113 !important;
+  background-image: none !important;
+  border-right-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+html[data-orb-theme='dark'] .orb-chat-layout .orb-response-action-bar button,
+html[data-orb-theme='dark'] .orb-chat-layout .orb-action-chip,
+html[data-orb-theme='dark'] .orb-chat-layout [data-orb-followup-chip],
+html[data-orb-theme='dark'] .orb-chat-layout [data-orb-suggestion-chip] {
+  background: #171717 !important;
+  background-color: #171717 !important;
+  background-image: none !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  color: #f4f4f5 !important;
+  box-shadow: none !important;
+}
+
+html[data-orb-theme='dark'] .orb-chat-layout [data-orb-composer-disclaimer] {
+  color: #8e8e93 !important;
+  opacity: 0.78 !important;
+}
+
+html[data-orb-theme='light'] .orb-chat-layout .orb-ambient-cognition,
+html[data-orb-theme='light'] .orb-chat-layout .orb-ambient-cognition *,
+html[data-orb-theme='light'] .orb-chat-layout .orb-cinematic-light-field,
+html[data-orb-theme='light'] .orb-chat-layout .orb-neural-haze,
+html[data-orb-theme='light'] .orb-chat-layout .orb-screen-edge-pulse,
+html[data-orb-theme='light'] .orb-chat-layout .orb-atmospheric-diffusion {
+  display: none !important;
+  opacity: 0 !important;
+}
+
+html[data-orb-theme='light'] .orb-chat-layout,
+html[data-orb-theme='light'] .orb-chat-layout .orb-chat-main,
+html[data-orb-theme='light'] .orb-chat-layout .orb-chat-thread,
+html[data-orb-theme='light'] .orb-chat-layout .orb-composer-dock,
+html[data-orb-theme='light'] .orb-chat-layout [data-orb-chat-scroll-container] {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  background-image: none !important;
+}
