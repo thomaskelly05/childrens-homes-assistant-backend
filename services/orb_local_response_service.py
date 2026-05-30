@@ -84,7 +84,7 @@ class OrbLocalResponseService:
             return self._payload(ORB_GREETING_THANKS_ANSWER, template="greeting_thanks")
 
         if re.fullmatch(
-            r"(hi|hello|hey|yo|good morning|good afternoon|good evening)"
+            r"(hi|hello|hey|hiya|yo|cheers|good morning|good afternoon|good evening)"
             r"(\s+there|\s+orb)?[!?.]*",
             lower,
         ):

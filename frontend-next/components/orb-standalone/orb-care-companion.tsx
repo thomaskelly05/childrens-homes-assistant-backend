@@ -76,6 +76,7 @@ import {
   STANDALONE_ORB_SIGN_IN_REQUIRED_ANSWER,
   isStandaloneOrbSignInPromptMessage,
   isOrbMinimalTurn,
+  standaloneGreetingLocalAnswer,
   tryStandaloneGuestLocalAnswer
 } from '@/lib/orb/standalone-guest-response'
 import { profileInitialsFromName } from '@/lib/orb/orb-profile-initials'
@@ -303,6 +304,20 @@ function createErrorPlaceholder(id: string, message: string): StandaloneChatMess
     status: 'error',
     createdAt: Date.now()
   }
+}
+
+function stripInFlightAssistantPlaceholders(messages: StandaloneChatMessage[]): StandaloneChatMessage[] {
+  return dedupeOrbMessages(
+    messages.filter((entry) => entry.status !== 'thinking' && entry.status !== 'streaming')
+  )
+}
+
+function replaceInFlightWithError(
+  messages: StandaloneChatMessage[],
+  errorMessage: StandaloneChatMessage
+): StandaloneChatMessage[] {
+  const withoutInFlight = stripInFlightAssistantPlaceholders(messages)
+  return dedupeOrbMessages([...withoutInFlight, errorMessage])
 }
 
 const ANSWER_STYLE_LABELS: Record<StandaloneOrbAnswerStyle, string> = {
@@ -914,6 +929,35 @@ export function OrbCareCompanion() {
         voice.markIdle()
       }
 
+      const greetingAnswer =
+        imagePayload.length === 0 && !options?.retry ? standaloneGreetingLocalAnswer(trimmed) : null
+      if (greetingAnswer) {
+        const assistantMessage: StandaloneChatMessage = {
+          id: `a-greeting-${Date.now()}`,
+          role: 'assistant',
+          content: greetingAnswer,
+          status: 'complete',
+          createdAt: Date.now()
+        }
+        persistChat(targetChatId!, {
+          messages: dedupeOrbMessages(replaceMessageById(priorMessages, thinkingMessageId, assistantMessage))
+        })
+        setLastSendStatus('success')
+        setError(null)
+        setRetryPayload(null)
+        requestAbortRef.current?.abort()
+        requestAbortRef.current = null
+        streamAbortRef.current?.abort()
+        streamAbortRef.current = null
+        streamPartialRef.current = ''
+        traceOrbSend('local_greeting_response', {
+          sendGeneration,
+          signedIn: orbSessionReady
+        })
+        sendInFlightRef.current = false
+        return
+      }
+
       setPending(true)
       setLastSendStatus('sending')
       setError(null)
@@ -1308,16 +1352,24 @@ export function OrbCareCompanion() {
         setWorkspace((current) => {
           const chat = current.chats.find((c) => c.id === targetChatId)
           if (!chat) return current
-          const withError = chat.messages.some((entry) => entry.id === thinkingMessageId)
-            ? replaceMessageById(chat.messages, thinkingMessageId, errorMessage)
-            : dedupeOrbMessages([...chat.messages, errorMessage])
-          return patchActiveChat(current, chat.id, { messages: withError })
+          return patchActiveChat(current, chat.id, {
+            messages: replaceInFlightWithError(chat.messages, errorMessage)
+          })
         })
+        requestAbortRef.current?.abort()
+        requestAbortRef.current = null
+        streamAbortRef.current?.abort()
+        streamAbortRef.current = null
+        streamPartialRef.current = ''
       } finally {
         if (isCurrentSend()) {
           setPending(false)
           sendInFlightRef.current = false
           traceOrbSend('pending_state', { sendGeneration, pending: false })
+        }
+        if (!isCurrentSend() || sendGenerationRef.current === sendGeneration) {
+          if (requestAbortRef.current?.signal.aborted) requestAbortRef.current = null
+          if (streamAbortRef.current?.signal.aborted) streamAbortRef.current = null
         }
       }
     },
@@ -1572,7 +1624,10 @@ export function OrbCareCompanion() {
     if (!pending && !sendInFlightRef.current) return
     traceOrbSend('request_abort', { reason: 'user_stop' })
     requestAbortRef.current?.abort()
+    requestAbortRef.current = null
     streamAbortRef.current?.abort()
+    streamAbortRef.current = null
+    streamPartialRef.current = ''
     voice.cancelSpeaking()
     setWorkspace((current) => {
       const chatId = current.activeChatId
@@ -2251,7 +2306,12 @@ export function OrbCareCompanion() {
       />
 
       {sidebarOpen ? (
-        <button type="button" className="fixed inset-0 z-40 bg-black/60 lg:hidden" aria-label="Close sidebar" onClick={() => setSidebarOpen(false)} />
+        <button
+          type="button"
+          className="orb-panel-overlay fixed inset-0 z-40 lg:hidden"
+          aria-label="Close sidebar"
+          onClick={() => setSidebarOpen(false)}
+        />
       ) : null}
 
       <div className="relative flex min-h-0 flex-1">
@@ -2538,14 +2598,14 @@ export function OrbCareCompanion() {
                             </article>
                           ) : entry.status === 'error' ? (
                             <article
-                              className="orb-message-assistant rounded-xl border border-amber-300/25 bg-amber-400/10 px-4 py-3"
+                              className="orb-message-error-card orb-message-assistant px-4 py-3"
                               data-testid="orb-message-error"
                               role="alert"
                             >
-                              <p className="mb-2 text-xs font-medium text-amber-100/90">ORB</p>
-                              <p className="text-sm text-amber-50">{entry.content}</p>
+                              <p className="orb-message-error-card__title mb-2 text-xs font-semibold">ORB</p>
+                              <p className="orb-message-error-card__body text-sm">{entry.content}</p>
                               {isStandaloneOrbSignInPromptMessage(entry.content) ? (
-                                <OrbSignInCallToAction className="border border-white/20 bg-white/10 text-amber-50" />
+                                <OrbSignInCallToAction className="mt-3" />
                               ) : retryPayload && index === visibleMessages.length - 1 ? (
                                 <button
                                   type="button"
@@ -2557,7 +2617,7 @@ export function OrbCareCompanion() {
                                     })
                                   }
                                   disabled={pending}
-                                  className="mt-3 inline-flex h-9 items-center rounded-full border border-amber-200/40 px-4 text-xs font-semibold text-amber-50 hover:bg-amber-400/15 disabled:opacity-40"
+                                  className="orb-message-error-card__retry mt-3 inline-flex h-9 items-center rounded-full px-4 text-xs font-semibold disabled:opacity-40"
                                 >
                                   Retry
                                 </button>
@@ -2788,20 +2848,20 @@ export function OrbCareCompanion() {
                     ))}
                     {error && !visibleMessages.some((entry) => entry.status === 'error') ? (
                       <div
-                        className="rounded-xl border border-amber-300/25 bg-amber-400/10 px-4 py-3 text-sm text-amber-50"
+                        className="orb-message-error-card px-4 py-3 text-sm"
                         role="alert"
                         data-testid="orb-send-error"
                       >
-                        <p>{error}</p>
+                        <p className="orb-message-error-card__body">{error}</p>
                         {isStandaloneOrbSignInPromptMessage(error) ? (
-                          <OrbSignInCallToAction className="border border-white/20 bg-white/10 text-amber-50" />
+                          <OrbSignInCallToAction className="mt-3" />
                         ) : retryPayload ? (
                           <button
                             type="button"
                             data-testid="orb-message-retry"
                             onClick={() => void sendMessage(retryPayload.text, { retry: true, chatId: retryPayload.chatId })}
                             disabled={pending}
-                            className="mt-3 inline-flex h-9 items-center rounded-full border border-amber-200/40 px-4 text-xs font-semibold text-amber-50 hover:bg-amber-400/15 disabled:opacity-40"
+                            className="orb-message-error-card__retry mt-3 inline-flex h-9 items-center rounded-full px-4 text-xs font-semibold disabled:opacity-40"
                           >
                             Retry
                           </button>

@@ -232,4 +232,38 @@ describe('ORB ChatGPT UI structure', () => {
     assert.match(companion, /Save & submit/)
     assert.match(companion, /data-orb-edit-save/)
   })
+
+  it('handles greetings locally before backend for signed-in and signed-out users', () => {
+    const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
+    assert.match(companion, /standaloneGreetingLocalAnswer\(trimmed\)/)
+    assert.match(companion, /local_greeting_response/)
+    const greetingIdx = companion.indexOf('standaloneGreetingLocalAnswer(trimmed)')
+    const setPendingIdx = companion.indexOf('setPending(true)')
+    assert.ok(greetingIdx >= 0 && setPendingIdx >= 0)
+    assert.ok(greetingIdx < setPendingIdx, 'greeting must be resolved before pending/backend send')
+  })
+
+  it('clears in-flight streaming placeholders on send failure', () => {
+    const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
+    assert.match(companion, /replaceInFlightWithError/)
+    assert.match(companion, /streamAbortRef\.current = null/)
+  })
+
+  it('error cards use high-contrast ORB classes', () => {
+    const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
+    const mobileCss = readComponent('app/orb/orb-mobile.css')
+    const desktopCss = readComponent('app/orb/orb-desktop.css')
+    assert.match(companion, /orb-message-error-card/)
+    assert.match(companion, /orb-message-error-card__body/)
+    assert.match(desktopCss, /\.orb-message-error-card[\s\S]*#78350f/)
+    assert.match(mobileCss, /\.orb-panel-overlay/)
+  })
+
+  it('mobile sidebar overlay covers full viewport without harsh grey strip', () => {
+    const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
+    const mobileCss = readComponent('app/orb/orb-mobile.css')
+    assert.match(companion, /orb-panel-overlay fixed inset-0/)
+    assert.match(mobileCss, /width:\s*100vw/)
+    assert.match(mobileCss, /height:\s*100dvh/)
+  })
 })
