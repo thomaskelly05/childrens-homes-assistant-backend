@@ -18,9 +18,9 @@ import { OrbAssistantMessageBody } from '@/components/orb-standalone/orb-assista
 import { OrbAmbientCognition } from '@/components/orb-standalone/orb-ambient-cognition'
 import { useOrbAppearance } from '@/components/orb-standalone/use-orb-appearance'
 import { useStandaloneOrbVoice } from '@/components/orb-standalone/use-standalone-orb-voice'
+import { AuthApiError } from '@/lib/auth/api'
 import {
   createStandaloneChat,
-  defaultWorkspace,
   exportStandaloneWorkspaceJson,
   readStandaloneWorkspace,
   writeStandaloneWorkspace,
@@ -29,7 +29,6 @@ import {
 } from '@/lib/orb/standalone-local-store'
 import {
   queryStandaloneOrbConversation,
-  STANDALONE_ORB_MODES,
   type StandaloneOrbMode
 } from '@/lib/orb/standalone-client'
 import { readAdultProfile, type AdultProfile } from '@/lib/orb/adult-profile-store'
@@ -38,7 +37,6 @@ import {
   saveStandaloneOrbAccessibility,
   type StandaloneOrbAccessibilityPreferences
 } from '@/lib/orb/standalone-accessibility'
-import { loadOrbStandaloneChatSettings } from '@/lib/orb/orb-standalone-settings'
 
 const STANDALONE_ORB_VOICE_CAPTURE_ENABLED = true
 
@@ -59,6 +57,35 @@ function makeMessage(role: 'user' | 'assistant', content: string, status: Standa
     status,
     createdAt: Date.now()
   }
+}
+
+function localFastAnswer(text: string): string | null {
+  const normalised = text.trim().toLowerCase().replace(/[.!?\s]+$/g, '')
+  if (['hi', 'hello', 'hey', 'hiya', 'morning', 'good morning', 'good afternoon', 'good evening'].includes(normalised)) {
+    return 'Hello — I’m ready when you are.'
+  }
+  if (['thanks', 'thank you', 'cheers'].includes(normalised)) {
+    return 'You’re welcome.'
+  }
+  return null
+}
+
+function friendlyOrbError(error: unknown): string {
+  if (error instanceof AuthApiError) {
+    if (error.status === 402) {
+      return 'Your ORB access is not active yet. Please start your trial or manage your subscription from /orb/access.'
+    }
+    if (error.status === 403) {
+      return error.message && error.message !== 'ORB could not finish that response. Please try again.'
+        ? error.message
+        : 'ORB needs the safety statement accepted before it can answer. Please open /orb/onboarding or refresh and try again.'
+    }
+    if (error.status === 401) {
+      return 'Please sign in again to use ORB.'
+    }
+    if (error.message) return error.message
+  }
+  return error instanceof Error ? error.message : 'ORB could not respond. Please try again.'
 }
 
 export function OrbCareCompanion() {
@@ -110,6 +137,18 @@ export function OrbCareCompanion() {
     setMessage('')
     setPending(true)
 
+    const localAnswer = localFastAnswer(text)
+    if (localAnswer) {
+      const assistantMessage: StandaloneChatMessage = {
+        ...thinkingMessage,
+        content: localAnswer,
+        status: 'complete'
+      }
+      persistMessages(baseMessages.map((entry) => (entry.id === thinkingMessage.id ? assistantMessage : entry)))
+      setPending(false)
+      return
+    }
+
     try {
       const response = await queryStandaloneOrbConversation({
         message: text,
@@ -128,7 +167,7 @@ export function OrbCareCompanion() {
     } catch (error) {
       const assistantMessage: StandaloneChatMessage = {
         ...thinkingMessage,
-        content: error instanceof Error ? error.message : 'ORB could not respond. Please try again.',
+        content: friendlyOrbError(error),
         status: 'error'
       }
       persistMessages(baseMessages.map((entry) => (entry.id === thinkingMessage.id ? assistantMessage : entry)))
