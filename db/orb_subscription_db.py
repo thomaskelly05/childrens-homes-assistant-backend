@@ -33,6 +33,45 @@ def _safe_rollback(conn) -> None:
         logger.debug("Could not rollback ORB subscription transaction", exc_info=True)
 
 
+def _ensure_orb_safety_acceptances_table(conn) -> bool:
+    """Create the minimal safety acceptance table if production migration 203 is missing.
+
+    This is not a replacement for applying migrations; it prevents onboarding from
+    dead-ending with a 500 when the acceptance table is the only missing ORB table.
+    """
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS orb_safety_acceptances (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    product TEXT NOT NULL DEFAULT 'orb_residential',
+                    version TEXT NOT NULL,
+                    accepted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    metadata JSONB NOT NULL DEFAULT '{}'::jsonb
+                )
+                """
+            )
+            cur.execute(
+                """
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_orb_safety_acceptances_user_product_version
+                    ON orb_safety_acceptances(user_id, product, version)
+                """
+            )
+            cur.execute(
+                """
+                CREATE INDEX IF NOT EXISTS idx_orb_safety_acceptances_user_id
+                    ON orb_safety_acceptances(user_id)
+                """
+            )
+        return True
+    except Exception:
+        _safe_rollback(conn)
+        logger.exception("Could not self-heal ORB safety acceptance table")
+        return False
+
+
 def get_orb_subscription(conn, user_id: int) -> dict[str, Any] | None:
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
@@ -236,7 +275,24 @@ def has_orb_safety_acceptance(
         if not _has_table_error(exc):
             raise
         _safe_rollback(conn)
-        return False
+        if not _ensure_orb_safety_acceptances_table(conn):
+            return False
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT 1
+                    FROM orb_safety_acceptances
+                    WHERE user_id = %s AND product = %s AND version = %s
+                    LIMIT 1
+                    """,
+                    (user_id, product, version),
+                )
+                return cur.fetchone() is not None
+        except Exception:
+            _safe_rollback(conn)
+            logger.exception("ORB safety acceptance read failed after table self-heal for user_id=%s", user_id)
+            return False
 
 
 def record_orb_safety_acceptance(
@@ -247,30 +303,61 @@ def record_orb_safety_acceptance(
     version: str = ORB_SAFETY_ACCEPTANCE_VERSION,
     metadata: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    with conn.cursor(cursor_factory=RealDictCursor) as cur:
-        cur.execute(
-            """
-            INSERT INTO orb_safety_acceptances (user_id, product, version, metadata)
-            VALUES (%s, %s, %s, %s)
-            ON CONFLICT DO NOTHING
-            RETURNING id, user_id, product, version, accepted_at, metadata
-            """,
-            (user_id, product, version, Json(metadata or {})),
-        )
-        row = cur.fetchone()
-        if row:
-            return dict(row)
-        cur.execute(
-            """
-            SELECT id, user_id, product, version, accepted_at, metadata
-            FROM orb_safety_acceptances
-            WHERE user_id = %s AND product = %s AND version = %s
-            LIMIT 1
-            """,
-            (user_id, product, version),
-        )
-        existing = cur.fetchone()
-        return dict(existing) if existing else {}
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                INSERT INTO orb_safety_acceptances (user_id, product, version, metadata)
+                VALUES (%s, %s, %s, %s)
+                ON CONFLICT DO NOTHING
+                RETURNING id, user_id, product, version, accepted_at, metadata
+                """,
+                (user_id, product, version, Json(metadata or {})),
+            )
+            row = cur.fetchone()
+            if row:
+                return dict(row)
+            cur.execute(
+                """
+                SELECT id, user_id, product, version, accepted_at, metadata
+                FROM orb_safety_acceptances
+                WHERE user_id = %s AND product = %s AND version = %s
+                LIMIT 1
+                """,
+                (user_id, product, version),
+            )
+            existing = cur.fetchone()
+            return dict(existing) if existing else {}
+    except Exception as exc:
+        if not _has_table_error(exc):
+            raise
+        _safe_rollback(conn)
+        if not _ensure_orb_safety_acceptances_table(conn):
+            raise
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                INSERT INTO orb_safety_acceptances (user_id, product, version, metadata)
+                VALUES (%s, %s, %s, %s)
+                ON CONFLICT DO NOTHING
+                RETURNING id, user_id, product, version, accepted_at, metadata
+                """,
+                (user_id, product, version, Json(metadata or {})),
+            )
+            row = cur.fetchone()
+            if row:
+                return dict(row)
+            cur.execute(
+                """
+                SELECT id, user_id, product, version, accepted_at, metadata
+                FROM orb_safety_acceptances
+                WHERE user_id = %s AND product = %s AND version = %s
+                LIMIT 1
+                """,
+                (user_id, product, version),
+            )
+            existing = cur.fetchone()
+            return dict(existing) if existing else {}
 
 
 def user_has_used_orb_trial(conn, user_id: int) -> bool:
