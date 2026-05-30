@@ -43,6 +43,30 @@ type PublicKeyCredentialJsonParsers = typeof PublicKeyCredential & {
   parseCreationOptionsFromJSON?: (options: unknown) => PublicKeyCredentialCreationOptions
 }
 
+function base64UrlToBuffer(value: string): ArrayBuffer {
+  const base64 = value.replace(/-/g, '+').replace(/_/g, '/')
+  const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=')
+  const raw = window.atob(padded)
+  const bytes = new Uint8Array(raw.length)
+  for (let i = 0; i < raw.length; i += 1) bytes[i] = raw.charCodeAt(i)
+  return bytes.buffer
+}
+
+function bufferToBase64Url(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer)
+  let binary = ''
+  for (let i = 0; i < bytes.byteLength; i += 1) binary += String.fromCharCode(bytes[i])
+  return window.btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')
+}
+
+function normaliseCredentialJson(value: unknown): unknown {
+  if (!value || typeof value !== 'object') return value
+  if (value instanceof ArrayBuffer) return bufferToBase64Url(value)
+  if (ArrayBuffer.isView(value)) return bufferToBase64Url(value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength))
+  if (Array.isArray(value)) return value.map(normaliseCredentialJson)
+  return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([key, item]) => [key, normaliseCredentialJson(item)]))
+}
+
 export function orbPasskeysSupported(): boolean {
   return typeof window !== 'undefined' && typeof window.PublicKeyCredential !== 'undefined' && typeof navigator !== 'undefined' && !!navigator.credentials
 }
@@ -62,7 +86,18 @@ function parseRequestOptions(options: unknown): PublicKeyCredentialRequestOption
   if (typeof parsers.parseRequestOptionsFromJSON === 'function') {
     return parsers.parseRequestOptionsFromJSON(options)
   }
-  return options as PublicKeyCredentialRequestOptions
+
+  const raw = options as Record<string, unknown>
+  return {
+    ...raw,
+    challenge: base64UrlToBuffer(String(raw.challenge || '')),
+    allowCredentials: Array.isArray(raw.allowCredentials)
+      ? raw.allowCredentials.map((item) => ({
+          ...(item as Record<string, unknown>),
+          id: base64UrlToBuffer(String((item as Record<string, unknown>).id || ''))
+        }))
+      : undefined
+  } as PublicKeyCredentialRequestOptions
 }
 
 function parseCreationOptions(options: unknown): PublicKeyCredentialCreationOptions {
@@ -70,14 +105,30 @@ function parseCreationOptions(options: unknown): PublicKeyCredentialCreationOpti
   if (typeof parsers.parseCreationOptionsFromJSON === 'function') {
     return parsers.parseCreationOptionsFromJSON(options)
   }
-  return options as PublicKeyCredentialCreationOptions
+
+  const raw = options as Record<string, unknown>
+  const user = (raw.user || {}) as Record<string, unknown>
+  return {
+    ...raw,
+    challenge: base64UrlToBuffer(String(raw.challenge || '')),
+    user: {
+      ...user,
+      id: base64UrlToBuffer(String(user.id || ''))
+    },
+    excludeCredentials: Array.isArray(raw.excludeCredentials)
+      ? raw.excludeCredentials.map((item) => ({
+          ...(item as Record<string, unknown>),
+          id: base64UrlToBuffer(String((item as Record<string, unknown>).id || ''))
+        }))
+      : undefined
+  } as PublicKeyCredentialCreationOptions
 }
 
 function credentialToJson(credential: Credential | null): unknown {
   if (!credential) throw new Error('Passkey was cancelled.')
   const maybePublic = credential as Partial<JsonPublicKeyCredential>
   if (typeof maybePublic.toJSON === 'function') return maybePublic.toJSON()
-  throw new Error('This browser cannot serialise passkey credentials.')
+  return normaliseCredentialJson(credential)
 }
 
 export async function beginOrbPasskeyLogin(email: string): Promise<OrbPasskeyVerifyResponse> {
