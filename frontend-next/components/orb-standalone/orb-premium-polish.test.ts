@@ -102,24 +102,26 @@ describe('ORB speaker identity', () => {
 })
 
 describe('ORB personalised welcome', () => {
-  it('registered manager welcome includes oversight and Ofsted themes', () => {
+  it('registered manager welcome stays minimal', () => {
     const welcome = personalisedWelcomeMessage({
       ...DEFAULT_ADULT_PROFILE,
       name: 'Tom Kelly',
       role: 'registered_manager',
       roleLabel: 'Registered Manager'
     })
-    assert.match(welcome.subline, /Ofsted|oversight|safeguarding/i)
+    assert.match(welcome.heading, /Ready when you are/i)
     assert.match(welcome.heading, /Tom/)
+    assert.equal(welcome.subline, '')
   })
 
-  it('support worker welcome includes practical support', () => {
+  it('support worker welcome stays minimal', () => {
     const welcome = personalisedWelcomeMessage({
       ...DEFAULT_ADULT_PROFILE,
       name: 'Alex',
       role: 'residential_support_worker'
     })
-    assert.match(welcome.subline, /record|handover|missing/i)
+    assert.match(welcome.heading, /Ready when you are/i)
+    assert.equal(welcome.subline, '')
   })
 
   it('temporary chat welcome mentions temporary mode', () => {

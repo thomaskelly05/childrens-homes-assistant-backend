@@ -28,10 +28,8 @@ from services.standalone_sector_knowledge_service import search_sector_knowledge
 
 logger = logging.getLogger("indicare.orb_general_assistant")
 
-INSTANT_FAST_GREETING_ANSWER = (
-    "Hello, I'm ORB. I can help with recording, safeguarding thinking, Ofsted readiness, "
-    "shift planning, documents, or general questions. What would you like to work on?"
-)
+INSTANT_FAST_GREETING_ANSWER = "Hello — what would you like to work on?"
+INSTANT_FAST_THANKS_ANSWER = "You're welcome."
 
 
 def _finalize_standalone_answer(
@@ -172,7 +170,12 @@ class OrbGeneralAssistantService:
     def _try_instant_fast_answer(self, user_message: str) -> str | None:
         lower = _text(user_message).lower()
         if re.fullmatch(
-            r"(hi|hello|hey|yo|thanks|thank you|thankyou|good morning|good afternoon|good evening)"
+            r"(thanks|thank you|thankyou)(\s+you|\s+orb)?[!?.]*",
+            lower,
+        ):
+            return INSTANT_FAST_THANKS_ANSWER
+        if re.fullmatch(
+            r"(hi|hello|hey|yo|good morning|good afternoon|good evening)"
             r"(\s+there|\s+orb)?[!?.]*",
             lower,
         ):

@@ -390,51 +390,21 @@ export function roleBasedEmptyStarters(profile: AdultProfile): string[] {
 
 export function personalisedEmptyHeading(profile: AdultProfile): string {
   const first = profile.name?.trim().split(/\s+/)[0]
-  if (first) return `How can I help today, ${first}?`
-  return 'How can I help today?'
+  if (first) return `Ready when you are, ${first}.`
+  return 'Ready when you are.'
 }
 
-function timeOfDayGreeting(): string {
-  const hour = new Date().getHours()
-  if (hour < 12) return 'Good morning'
-  if (hour < 17) return 'Good afternoon'
-  return 'Good evening'
-}
-
-function roleWelcomeSubline(role: AdultProfileRole): string {
-  switch (normalizeAdultProfileRole(role)) {
-    case 'registered_manager':
-    case 'responsible_individual':
-      return 'Oversight, safeguarding and Ofsted-ready reflection — from what you share here, not live OS records.'
-    case 'deputy_manager':
-    case 'provider_director':
-    case 'senior_support_worker':
-      return 'Escalation, handover and oversight support for your shift — standalone ORB only uses what you type.'
-    case 'reg_44_visitor':
-      return 'Reg 44 observations and quality-standard evidence questions — you provide the detail.'
-    case 'nvq_assessor':
-      return 'Evidence, criteria and portfolio mapping from practice you describe — no invented witness facts.'
-    case 'nvq_learner':
-    case 'diploma_learner':
-      return 'Reflective accounts and criteria in plain English — you answer from your own experience.'
-    case 'residential_support_worker':
-      return 'Recording, handover and missing-from-care thinking for the shift — practical and grounded.'
-    default:
-      return 'Ready when you are.'
-  }
-}
-
-/** Personalised empty-state welcome — short, premium, no implication of live OS record access. */
+/** Personalised empty-state welcome — calm, minimal, no sales pitch. */
 export function personalisedWelcomeMessage(
   profile: AdultProfile,
   options?: { temporary?: boolean }
 ): { heading: string; subline: string; temporaryNote?: string } {
   const first = profile.name?.trim().split(/\s+/)[0]
-  const greeting = first ? `${timeOfDayGreeting()}, ${first}.` : `${timeOfDayGreeting()}.`
+  const heading = first ? `Ready when you are, ${first}.` : 'Ready when you are.'
 
   const result: { heading: string; subline: string; temporaryNote?: string } = {
-    heading: greeting,
-    subline: roleWelcomeSubline(profile.role)
+    heading,
+    subline: ''
   }
 
   if (options?.temporary) {

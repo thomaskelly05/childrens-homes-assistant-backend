@@ -34,8 +34,8 @@ describe('document intelligence titles', () => {
 describe('contextual output reuse chips', () => {
   it('offers policy card follow-ups', () => {
     const chips = contextualSuggestedRepliesForOutput({ outputKind: 'policy_card' })
-    assert.ok(chips.some((c) => c.label === 'Staff briefing'))
-    assert.ok(chips.some((c) => c.label === 'What is missing?'))
+    assert.ok(chips.some((c) => c.label === 'Staff summary'))
+    assert.ok(chips.some((c) => c.label === 'Action plan'))
   })
 
   it('offers safeguarding lens follow-ups', () => {

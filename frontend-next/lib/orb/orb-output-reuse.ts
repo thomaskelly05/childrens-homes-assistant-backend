@@ -37,35 +37,33 @@ export function contextualSuggestedRepliesForOutput(options: {
 
   if (kind === 'policy_card' || /\bpolicy card\b/.test(content)) {
     return [
+      { action: 'more_detailed', label: 'Policy card' },
+      {
+        action: 'shift_builder',
+        label: 'Action plan',
+        prefill: 'Create an action plan from this policy card.'
+      },
       {
         action: 'more_detailed',
-        label: 'Staff briefing',
-        prefill: 'Turn this policy card into a concise staff briefing for the team.'
-      },
-      {
-        action: 'manager_oversight',
-        label: 'Supervision questions',
-        prefill: 'Create supervision questions from this policy card.'
-      },
-      { action: 'checklist', label: 'Audit checklist' },
-      { action: 'what_missing', label: 'What is missing?' }
+        label: 'Staff summary',
+        prefill: 'Turn this policy card into a concise staff summary for the team.'
+      }
     ]
   }
 
   if (kind === 'reg44' || kind === 'reg45' || /\breg\s*44\b/.test(content)) {
     return [
+      { action: 'ofsted_lens', label: 'Add Ofsted lens' },
+      {
+        action: 'what_missing',
+        label: 'What would Reg 44 look for?',
+        prefill: 'What would Reg 44 look for in this situation?'
+      },
       {
         action: 'shift_builder',
         label: 'Create action plan',
         prefill: 'Create an action plan from this Reg 44 review.'
-      },
-      { action: 'manager_oversight', label: 'Manager oversight note' },
-      {
-        action: 'ofsted_lens',
-        label: 'RI governance lens',
-        prefill: 'Add a responsible individual governance lens to this Reg 44 review.'
-      },
-      { action: 'what_missing', label: 'What is missing?' }
+      }
     ]
   }
 
@@ -80,9 +78,9 @@ export function contextualSuggestedRepliesForOutput(options: {
   if (kind === 'recording_quality' || /\brecording quality\b/.test(content)) {
     return [
       { action: 'recording_wording', label: 'Convert to recording wording' },
-      { action: 'child_voice', label: 'Add child voice prompt' },
-      { action: 'manager_oversight', label: 'Manager oversight note' },
-      { action: 'what_missing', label: 'What is missing?' }
+      { action: 'what_missing', label: 'What am I missing?' },
+      { action: 'safeguarding_lens', label: 'Add safeguarding lens' },
+      { action: 'manager_oversight', label: 'Create manager oversight note' }
     ]
   }
 
@@ -106,13 +104,12 @@ export function contextualSuggestedRepliesForOutput(options: {
     kind === 'nvq_evidence_map' ||
     kind === 'reflective_account_plan' ||
     kind === 'assessor_feedback' ||
-    /\b(nvq|diploma|reflective account|criteria)\b/i.test(content)
+    /\b(nvq|diploma|reflective account|criteria|academy)\b/i.test(content)
   ) {
     return [
-      { action: 'nvq_evidence_map', label: 'Map to NVQ evidence' },
-      { action: 'evidence_gaps', label: 'What evidence is missing?' },
-      { action: 'pd_prompts', label: 'Professional discussion prompts' },
-      { action: 'learner_action_plan', label: 'Learner action plan' }
+      { action: 'nvq_evidence_map', label: 'Map to evidence' },
+      { action: 'reflective_learning', label: 'Reflective account plan' },
+      { action: 'pd_prompts', label: 'Assessor questions' }
     ]
   }
 

@@ -100,6 +100,7 @@ export function OrbAssistantMessageBody({
   messageHint,
   cognitionContext,
   showCognitionLabels = true,
+  showExplainability = true,
   heading
 }: {
   content: string
@@ -111,6 +112,7 @@ export function OrbAssistantMessageBody({
   messageHint?: string
   cognitionContext?: CognitionPillContext
   showCognitionLabels?: boolean
+  showExplainability?: boolean
   heading?: string
 }) {
   const cognitionLabel = cognitionPillLabel(mode, explainability, messageHint, cognitionContext)
@@ -139,8 +141,12 @@ export function OrbAssistantMessageBody({
         <div className="orb-message-content text-[15px] leading-7 text-[var(--orb-foreground)]">
           <OrbMarkdownAnswer content={displayContent} sources={sources} />
         </div>
-        <OrbExplainabilityPanel explainability={explainability} cognitionModeLabel={cognitionLabel} />
-        <OrbSourcesDetail content={content} sources={sources} modelRouting={modelRouting} />
+        {showExplainability ? (
+          <OrbExplainabilityPanel explainability={explainability} cognitionModeLabel={cognitionLabel} />
+        ) : null}
+        {showExplainability ? (
+          <OrbSourcesDetail content={content} sources={sources} modelRouting={modelRouting} />
+        ) : null}
       </div>
     </article>
   )
@@ -248,7 +254,7 @@ export const ORB_INLINE_SUGGESTED_REPLIES: Array<{
 ]
 
 const GREETING_HINT_RE =
-  /^(hi|hello|hey|thanks|thank you|what can you do|how can you help)\b/i
+  /^(hi|hello|hey|yo|thanks|thank you|thankyou|good morning|good afternoon|good evening|what can you do|how can you help)\b/i
 
 /** Contextual chips under the latest assistant answer — not above the composer. */
 export function contextualSuggestedReplies(options: {
@@ -264,10 +270,10 @@ export function contextualSuggestedReplies(options: {
 
   if (modeKey.includes('safeguarding') || /\b(abuse|disclosure|allegation|exploitation|unsafe)\b/i.test(hint)) {
     return [
-      { action: 'safeguarding_lens', label: 'What needs immediate action?' },
+      { action: 'recording_wording', label: 'Convert to recording wording' },
+      { action: 'what_missing', label: 'What am I missing?' },
       { action: 'safeguarding_lens', label: 'Add safeguarding lens' },
-      { action: 'manager_oversight', label: 'Create manager oversight note' },
-      { action: 'recording_wording', label: 'What should I record?' }
+      { action: 'manager_oversight', label: 'Create manager oversight note' }
     ]
   }
 
@@ -275,27 +281,34 @@ export function contextualSuggestedReplies(options: {
     return [
       { action: 'recording_wording', label: 'Convert to recording wording' },
       { action: 'what_missing', label: 'What am I missing?' },
-      { action: 'manager_oversight', label: 'Create manager oversight note' },
-      { action: 'child_voice', label: 'Add child voice prompt' }
+      { action: 'safeguarding_lens', label: 'Add safeguarding lens' },
+      { action: 'manager_oversight', label: 'Create manager oversight note' }
     ]
   }
 
   if (modeKey.includes('ofsted') || modeKey.includes('reg 44')) {
     return [
       { action: 'ofsted_lens', label: 'Add Ofsted lens' },
-      { action: 'what_missing', label: 'What am I missing?' },
-      { action: 'manager_oversight', label: 'Create manager oversight note' }
+      {
+        action: 'what_missing',
+        label: 'What would Reg 44 look for?',
+        prefill: 'What would Reg 44 look for in this situation?'
+      },
+      {
+        action: 'shift_builder',
+        label: 'Create action plan',
+        prefill: 'Create an action plan from this.'
+      }
     ]
   }
 
   if (
-    /\b(nvq|diploma|criteria|assessor|learner|workbook|portfolio|reflective account)\b/i.test(hint)
+    /\b(nvq|diploma|criteria|assessor|learner|workbook|portfolio|reflective account|academy)\b/i.test(hint)
   ) {
     return [
-      { action: 'nvq_evidence_map', label: 'Map to NVQ evidence' },
+      { action: 'nvq_evidence_map', label: 'Map to evidence' },
       { action: 'reflective_learning', label: 'Reflective account plan' },
-      { action: 'pd_prompts', label: 'Professional discussion prompts' },
-      { action: 'evidence_gaps', label: 'What evidence is missing?' }
+      { action: 'pd_prompts', label: 'Assessor questions' }
     ]
   }
 
@@ -307,11 +320,19 @@ export function contextualSuggestedReplies(options: {
     ]
   }
 
-  if (/\b(policy|training)\b/i.test(hint)) {
+  if (/\b(policy|training|document)\b/i.test(hint)) {
     return [
-      { action: 'explain_criteria', label: 'Explain criteria' },
-      { action: 'reflective_learning', label: 'Turn into reflective learning' },
-      { action: 'what_missing', label: 'What am I missing?' }
+      { action: 'more_detailed', label: 'Policy card' },
+      {
+        action: 'shift_builder',
+        label: 'Action plan',
+        prefill: 'Create an action plan from this policy.'
+      },
+      {
+        action: 'more_detailed',
+        label: 'Staff summary',
+        prefill: 'Turn this into a concise staff summary.'
+      }
     ]
   }
 
@@ -327,10 +348,7 @@ export function contextualSuggestedReplies(options: {
     return chips.slice(0, 4)
   }
 
-  return [
-    { action: 'more_concise', label: 'Make this more concise' },
-    { action: 'what_missing', label: 'What am I missing?' }
-  ]
+  return []
 }
 
 /** Contextual reuse chips for document intelligence and action-engine results. */
@@ -475,7 +493,8 @@ export function OrbResponseActionBar({
   onInspectionPrep,
   saveFeedback = 'idle',
   onOrbFollowUp,
-  isLatest = true
+  isLatest = true,
+  minimal = false
 }: {
   mode: string
   content: string
@@ -499,6 +518,8 @@ export function OrbResponseActionBar({
   onOrbFollowUp?: (action: OrbResponseFollowUpAction, sourceContent: string, assistantIndex?: number) => void
   /** When false, Regenerate is hidden (older messages). */
   isLatest?: boolean
+  /** Greeting / minimal local turns — hide the full action row. */
+  minimal?: boolean
 }) {
   const [moreOpen, setMoreOpen] = useState(false)
   const [copyFeedback, setCopyFeedback] = useState<'idle' | 'copied' | 'failed'>('idle')
@@ -516,6 +537,27 @@ export function OrbResponseActionBar({
 
   const copyLabel =
     copyFeedback === 'copied' ? 'Copied' : copyFeedback === 'failed' ? 'Copy failed' : 'Copy'
+
+  if (minimal) {
+    return (
+      <div
+        className="orb-response-action-bar orb-response-action-bar--minimal mt-2 flex justify-end"
+        data-orb-response-actions
+        data-orb-response-action-bar
+        data-orb-response-action-bar-minimal
+      >
+        <div className="relative" data-orb-action-more-menu>
+          <ActionChip
+            icon={<MoreHorizontal className="h-3 w-3" />}
+            label={copyLabel}
+            onClick={() => void handleCopy()}
+            dataAttr="copy"
+            state={copyFeedback === 'copied' ? 'success' : copyFeedback === 'failed' ? 'error' : undefined}
+          />
+        </div>
+      </div>
+    )
+  }
 
   const saveLabel =
     saveFeedback === 'saved'

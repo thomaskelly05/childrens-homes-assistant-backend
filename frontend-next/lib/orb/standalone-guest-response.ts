@@ -4,7 +4,12 @@
  */
 
 const GREETING_RE =
-  /^(hi|hello|hey|yo|thanks|thank you|thankyou|good morning|good afternoon|good evening)(\s+there|\s+orb)?[!?.]*$/i
+  /^(hi|hello|hey|yo|good morning|good afternoon|good evening)(\s+there|\s+orb)?[!?.]*$/i
+
+const THANKS_RE = /^(thanks|thank you|thankyou)(\s+you|\s+orb)?[!?.]*$/i
+
+export const ORB_GREETING_HELLO_ANSWER = 'Hello — what would you like to work on?'
+export const ORB_GREETING_THANKS_ANSWER = "You're welcome."
 
 export const STANDALONE_ORB_GUEST_CAPABILITIES_ANSWER =
   "I'm ORB Care Companion on standalone /orb. I can help with recording quality, safeguarding thinking, Ofsted/SCCIF reflection, therapeutic interpretation, supervision prep, documents you upload, NVQ learning support, and general questions — without accessing live OS records. What would you like to work on?"
@@ -14,10 +19,35 @@ export const STANDALONE_ORB_SIGN_IN_REQUIRED_ANSWER =
 
 export const STANDALONE_ORB_SIGN_IN_PATH = '/orb/login?returnUrl=%2Forb'
 
+export function isStandaloneGuestThanks(message: string): boolean {
+  const text = message.trim()
+  if (!text) return false
+  return THANKS_RE.test(text)
+}
+
 export function isStandaloneGuestGreeting(message: string): boolean {
   const text = message.trim()
   if (!text) return false
-  return GREETING_RE.test(text)
+  return GREETING_RE.test(text) || isStandaloneGuestThanks(text)
+}
+
+export function standaloneGreetingLocalAnswer(message: string): string | null {
+  const text = message.trim()
+  if (!text) return null
+  if (isStandaloneGuestThanks(text)) return ORB_GREETING_THANKS_ANSWER
+  if (GREETING_RE.test(text)) return ORB_GREETING_HELLO_ANSWER
+  return null
+}
+
+export function isOrbMinimalTurn(options: {
+  userMessage?: string | null
+  assistantContent?: string | null
+}): boolean {
+  const user = (options.userMessage || '').trim()
+  if (user && isStandaloneGuestGreeting(user)) return true
+  const content = (options.assistantContent || '').trim()
+  if (content === ORB_GREETING_HELLO_ANSWER || content === ORB_GREETING_THANKS_ANSWER) return true
+  return false
 }
 
 export function isStandaloneGuestHelpIntent(message: string): boolean {
@@ -37,9 +67,8 @@ export function tryStandaloneGuestLocalAnswer(message: string): string | null {
   const lower = message.trim().toLowerCase()
   if (!lower) return null
 
-  if (isStandaloneGuestGreeting(lower)) {
-    return STANDALONE_ORB_GUEST_CAPABILITIES_ANSWER
-  }
+  const greetingAnswer = standaloneGreetingLocalAnswer(message)
+  if (greetingAnswer) return greetingAnswer
 
   if (/\b(what can you do|how can you help|what do you do)\b/.test(lower) && lower.split(/\s+/).length <= 14) {
     return STANDALONE_ORB_GUEST_CAPABILITIES_ANSWER
