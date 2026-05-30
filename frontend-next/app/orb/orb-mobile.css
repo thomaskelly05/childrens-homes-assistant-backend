@@ -79,21 +79,14 @@
 
   [data-orb-empty-subline] {
     max-width: 19rem !important;
-    font-size: 0 !important;
-    line-height: 0 !important;
     margin-top: 0.95rem !important;
+    font-size: 0.95rem !important;
+    line-height: 1.45rem !important;
+    color: #64748b !important;
   }
 
-  [data-orb-empty-subline]::before {
-    content: 'Ready when you are.';
-    display: block;
-    font-size: 1rem;
-    line-height: 1.5rem;
-    color: #64748b;
-  }
-
-  html[data-orb-theme='dark'] [data-orb-empty-subline]::before {
-    color: #8b8b93;
+  html[data-orb-theme='dark'] [data-orb-empty-subline] {
+    color: #8b8b93 !important;
   }
 
   [data-orb-empty-state] > p:not([data-orb-brand-powered]):not([data-orb-empty-subline]):not([data-orb-empty-title]) {

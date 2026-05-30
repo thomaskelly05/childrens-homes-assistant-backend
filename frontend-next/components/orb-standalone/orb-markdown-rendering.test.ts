@@ -39,7 +39,7 @@ describe('ORB markdown and cognition rendering', () => {
   })
 
   it('route CSS ships orb-markdown-answer typography rules', () => {
-    const routeCss = readComponent('app/orb/orb-chatgpt-light.css')
+    const routeCss = readComponent('app/orb/orb-desktop.css')
     assert.match(routeCss, /\.orb-markdown-answer h2/)
     assert.match(routeCss, /\.orb-markdown-answer strong/)
     assert.match(routeCss, /list-style: disc/)
@@ -47,7 +47,7 @@ describe('ORB markdown and cognition rendering', () => {
 
   it('citation chips use high-contrast light styles', () => {
     const citation = readComponent('components/orb-standalone/orb-inline-citation.tsx')
-    const routeCss = readComponent('app/orb/orb-chatgpt-light.css')
+    const routeCss = readComponent('app/orb/orb-desktop.css')
     assert.match(citation, /orb-citation-chip-light/)
     assert.match(citation, /rounded-full/)
     assert.match(routeCss, /#e0f2fe/)
@@ -89,7 +89,7 @@ describe('ORB markdown and cognition rendering', () => {
 
   it('document panel has readable light inputs and empty state', () => {
     const panel = readComponent('components/orb-standalone/orb-document-panel.tsx')
-    const routeCss = readComponent('app/orb/orb-chatgpt-light.css')
+    const routeCss = readComponent('app/orb/orb-desktop.css')
     assert.match(panel, /data-orb-document-empty/)
     assert.match(panel, /orb-doc-input/)
     assert.match(panel, /Standalone context only/)

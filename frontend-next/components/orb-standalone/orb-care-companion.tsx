@@ -10,7 +10,7 @@ import {
   type FormEvent,
   type ReactNode
 } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import {
   Copy,
   FileText,
@@ -71,6 +71,12 @@ import {
   roleBasedEmptyStarters,
   type AdultProfile
 } from '@/lib/orb/adult-profile-store'
+import {
+  STANDALONE_ORB_SIGN_IN_PATH,
+  STANDALONE_ORB_SIGN_IN_REQUIRED_ANSWER,
+  isStandaloneOrbSignInPromptMessage,
+  tryStandaloneGuestLocalAnswer
+} from '@/lib/orb/standalone-guest-response'
 import { profileInitialsFromName } from '@/lib/orb/orb-profile-initials'
 import { OrbHelpPanel } from '@/components/orb-standalone/orb-help-panel'
 import { OrbVoiceSettingsPanel } from '@/components/orb-standalone/orb-voice-settings-panel'
@@ -411,6 +417,20 @@ function patchActiveChat(workspace: StandaloneWorkspace, chatId: string, patch: 
   }
 }
 
+function OrbSignInCallToAction({ className = '' }: { className?: string }) {
+  const router = useRouter()
+  return (
+    <button
+      type="button"
+      data-orb-sign-in-cta
+      onClick={() => router.push(STANDALONE_ORB_SIGN_IN_PATH)}
+      className={`mt-3 inline-flex h-9 items-center rounded-full bg-[var(--orb-accent)] px-4 text-xs font-semibold text-white hover:opacity-95 ${className}`}
+    >
+      Sign in to ORB
+    </button>
+  )
+}
+
 export function OrbCareCompanion() {
   const { status, user, csrfReady, refreshSession } = useAuth()
   const orbSessionReady = status === 'authenticated' && Boolean(user) && csrfReady
@@ -744,20 +764,6 @@ export function OrbCareCompanion() {
         internalRetry: Boolean(options?.internalRetry)
       })
 
-      if (!orbSessionReady) {
-        traceOrbSend('submit_blocked', { sendGeneration, reason: 'session_not_ready', status, csrfReady })
-        try {
-          await refreshSession()
-        } catch {
-          /* refreshSession surfaces auth errors via context */
-        }
-        if (!getCsrfToken()) {
-          setError(STANDALONE_ORB_CSRF_REFRESH_MESSAGE)
-          setLastSendStatus('error')
-          return
-        }
-      }
-
       const contentKey = (trimmed || '[Image attachment]').trim().toLowerCase()
       const guardChatId = options?.chatId || workspace.activeChatId || 'new'
       const now = Date.now()
@@ -920,6 +926,41 @@ export function OrbCareCompanion() {
         })
         setLastSendStatus('success')
         traceOrbSend('pending_state', { sendGeneration, pending: false, reason: 'os_boundary' })
+        setPending(false)
+        sendInFlightRef.current = false
+        return
+      }
+
+      if (!orbSessionReady) {
+        const guestAnswer =
+          imagePayload.length > 0
+            ? `${STANDALONE_ORB_SIGN_IN_REQUIRED_ANSWER}\n\nSign in to attach images and run document intelligence.`
+            : tryStandaloneGuestLocalAnswer(trimmed) ?? STANDALONE_ORB_SIGN_IN_REQUIRED_ANSWER
+        const assistantMessage: StandaloneChatMessage = {
+          id: `a-guest-${Date.now()}`,
+          role: 'assistant',
+          content: guestAnswer,
+          status: 'complete',
+          createdAt: Date.now(),
+          explainability: { cognition_display_labels: ['ORB'] }
+        }
+        persistChat(targetChatId!, {
+          messages: dedupeOrbMessages(replaceMessageById(priorMessages, thinkingMessageId, assistantMessage))
+        })
+        setLastSendStatus('success')
+        setError(null)
+        setRetryPayload(null)
+        traceOrbSend('guest_local_response', { sendGeneration, signedIn: false })
+        setPending(false)
+        sendInFlightRef.current = false
+        return
+      }
+
+      if (!getCsrfToken()) {
+        traceOrbSend('submit_blocked', { sendGeneration, reason: 'csrf_not_ready' })
+        void refreshSession()
+        setError(STANDALONE_ORB_CSRF_REFRESH_MESSAGE)
+        setLastSendStatus('error')
         setPending(false)
         sendInFlightRef.current = false
         return
@@ -1224,9 +1265,12 @@ export function OrbCareCompanion() {
           return
         }
         const parsed = parseStandaloneOrbSendError(caught)
+        const signInRequired =
+          parsed.status === 401 && (status !== 'authenticated' || isStandaloneOrbSignInPromptMessage(parsed.message))
+        const displayMessage = signInRequired ? STANDALONE_ORB_SIGN_IN_REQUIRED_ANSWER : parsed.message
         traceOrbSend('request_failed', {
           sendGeneration,
-          message: parsed.message,
+          message: displayMessage,
           status: parsed.status,
           detail: parsed.detail,
           csrfFailed: parsed.csrfFailed
@@ -1235,10 +1279,10 @@ export function OrbCareCompanion() {
         if (parsed.csrfFailed) {
           void refreshSession()
         }
-        setError(parsed.message)
+        setError(displayMessage)
         setLastSendStatus('error')
         setRetryPayload({ text: trimmed || messageBody, chatId: targetChatId! })
-        const errorMessage = createErrorPlaceholder(`a-error-${Date.now()}`, parsed.message)
+        const errorMessage = createErrorPlaceholder(`a-error-${Date.now()}`, displayMessage)
         traceOrbSend('placeholder_replace', {
           sendGeneration,
           from: thinkingMessageId,
@@ -1287,13 +1331,6 @@ export function OrbCareCompanion() {
         return
       }
 
-      if (!orbSessionReady) {
-        traceOrbSend('submit_blocked', { reason: 'session_not_ready' })
-        setError('Preparing your secure session…')
-        void refreshSession()
-        return
-      }
-
       const finalText = message.trim()
       const activeAgentForLog = agentForMode(mode)
 
@@ -1321,9 +1358,7 @@ export function OrbCareCompanion() {
       attachments.length,
       message,
       mode,
-      orbSessionReady,
       pending,
-      refreshSession,
       sendMessage
     ]
   )
@@ -1913,7 +1948,7 @@ export function OrbCareCompanion() {
     <OrbStandaloneComposer
       value={message}
       composerStateLength={message.trim().length}
-      pending={pending || !orbSessionReady}
+      pending={pending}
       lastSendStatus={lastSendStatus}
       mode={mode}
       attachments={attachments}
@@ -2488,7 +2523,9 @@ export function OrbCareCompanion() {
                             >
                               <p className="mb-2 text-xs font-medium text-amber-100/90">ORB</p>
                               <p className="text-sm text-amber-50">{entry.content}</p>
-                              {retryPayload && index === visibleMessages.length - 1 ? (
+                              {isStandaloneOrbSignInPromptMessage(entry.content) ? (
+                                <OrbSignInCallToAction className="border border-white/20 bg-white/10 text-amber-50" />
+                              ) : retryPayload && index === visibleMessages.length - 1 ? (
                                 <button
                                   type="button"
                                   data-testid="orb-message-retry"
@@ -2525,6 +2562,9 @@ export function OrbCareCompanion() {
                               }
                             }}
                           />
+                            {isStandaloneOrbSignInPromptMessage(entry.content) ? (
+                              <OrbSignInCallToAction />
+                            ) : null}
                             {entry.documentSuggestion?.needs_document ? (
                               <div className="mt-3 flex flex-wrap gap-2">
                                 <button
@@ -2711,7 +2751,9 @@ export function OrbCareCompanion() {
                         data-testid="orb-send-error"
                       >
                         <p>{error}</p>
-                        {retryPayload ? (
+                        {isStandaloneOrbSignInPromptMessage(error) ? (
+                          <OrbSignInCallToAction className="border border-white/20 bg-white/10 text-amber-50" />
+                        ) : retryPayload ? (
                           <button
                             type="button"
                             data-testid="orb-message-retry"
