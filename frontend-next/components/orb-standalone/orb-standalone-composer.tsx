@@ -265,21 +265,6 @@ export function OrbStandaloneComposer({
               </div>
             ) : null}
 
-            <button
-              type="button"
-              className="orb-composer-input-hit-target"
-              onClick={focusInput}
-              onTouchEnd={(event) => {
-                event.preventDefault()
-                focusInput()
-              }}
-              aria-label="Focus message input"
-              tabIndex={-1}
-              data-orb-composer-input-hit-target
-            >
-              <span>{value ? value : placeholderForMode(mode)}</span>
-            </button>
-
             <textarea
               ref={setInputNode}
               id="orb-standalone-input"
@@ -287,8 +272,6 @@ export function OrbStandaloneComposer({
               value={value}
               onFocus={() => document.body.setAttribute('data-orb-composer-focused', 'true')}
               onBlur={() => document.body.removeAttribute('data-orb-composer-focused')}
-              onPointerDown={() => focusInput()}
-              onTouchStart={() => focusInput()}
               onChange={(event) => syncMessage(event.currentTarget.value)}
               onInput={(event) => syncMessage(event.currentTarget.value)}
               onCompositionEnd={(event) => syncMessage(event.currentTarget.value)}
@@ -305,6 +288,7 @@ export function OrbStandaloneComposer({
               disabled={pending}
               aria-describedby="orb-standalone-status"
               autoCapitalize="sentences"
+              autoComplete="off"
               autoCorrect="on"
               spellCheck="true"
               inputMode="text"
