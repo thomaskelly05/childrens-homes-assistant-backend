@@ -1,10 +1,10 @@
 /**
- * ORB Residential realtime voice client — session, WebSocket, optional streaming audio.
- * Falls back to browser STT/TTS when server provider is not configured.
+ * ORB Residential realtime voice client — session, WebSocket, OpenAI WebRTC, browser fallback.
  */
 
 import { resolveAuthApiPath } from '@/lib/auth/api-base'
 
+import { OrbOpenAIRealtimeWebRTCClient } from './orb-openai-realtime-webrtc-client'
 import { startOrbVoiceSession, type OrbVoiceSessionResponse, type VoiceProviderType } from './orb-voice-client'
 import { VOICE_CLIENT_EVENTS, type VoiceRealtimeServerMessage } from './orb-voice-events'
 import { OrbVoiceVad } from './orb-voice-vad'
@@ -30,10 +30,17 @@ export type OrbRealtimeVoiceCallbacks = {
   onPartialTranscript?: (text: string) => void
   onFinalTranscript?: (text: string) => void
   onAssistantDelta?: (delta: string) => void
+  onAssistantDone?: (text: string) => void
   onServerEvent?: (event: VoiceRealtimeServerMessage) => void
   onError?: (message: string) => void
   onInterrupted?: () => void
+  onFallback?: (reason: string) => void
 }
+
+export const REALTIME_FALLBACK_MESSAGE =
+  'Realtime voice was unavailable, so ORB is using browser voice fallback.'
+
+const DEFAULT_REALTIME_MODEL = 'gpt-realtime'
 
 function wsUrlFromPath(path: string): string {
   if (typeof window === 'undefined') return path
@@ -45,13 +52,23 @@ function wsUrlFromPath(path: string): string {
   return `${protocol}//${window.location.host}${resolved}`
 }
 
+function extractClientSecret(session: OrbVoiceSessionResponse): string | null {
+  const secret = session.openai_session?.client_secret
+  if (!secret) return null
+  if (typeof secret === 'object' && secret.value) return String(secret.value)
+  return null
+}
+
 export class OrbRealtimeVoiceClient {
   private session: OrbVoiceSessionResponse | null = null
   private socket: WebSocket | null = null
+  private webrtcClient: OrbOpenAIRealtimeWebRTCClient | null = null
   private mediaStream: MediaStream | null = null
   private mediaRecorder: MediaRecorder | null = null
   private vad: OrbVoiceVad | null = null
   private state: OrbRealtimeVoiceState = 'idle'
+  private webrtcActive = false
+  private webrtcAttempted = false
   private readonly callbacks: OrbRealtimeVoiceCallbacks
 
   constructor(callbacks: OrbRealtimeVoiceCallbacks = {}) {
@@ -70,8 +87,12 @@ export class OrbRealtimeVoiceClient {
     return this.session?.provider === 'websocket_realtime' && this.session.status === 'ready'
   }
 
+  get usesOpenAIWebRTC(): boolean {
+    return this.webrtcActive
+  }
+
   get usesBrowserFallback(): boolean {
-    return !this.usesWebSocket
+    return !this.usesWebSocket && !this.usesOpenAIWebRTC
   }
 
   get fallbackReason(): string | null {
@@ -81,6 +102,16 @@ export class OrbRealtimeVoiceClient {
   private setState(next: OrbRealtimeVoiceState) {
     this.state = next
     this.callbacks.onStateChange?.(next)
+  }
+
+  private canUseOpenAIWebRTC(session: OrbVoiceSessionResponse): boolean {
+    return (
+      session.provider === 'openai_realtime' &&
+      session.status === 'ready' &&
+      Boolean(extractClientSecret(session)) &&
+      typeof window !== 'undefined' &&
+      typeof RTCPeerConnection !== 'undefined'
+    )
   }
 
   async startSession(options: {
@@ -98,12 +129,34 @@ export class OrbRealtimeVoiceClient {
     this.callbacks.onProviderResolved?.(session)
 
     if (session.provider === 'websocket_realtime' && session.status === 'ready' && session.websocket_url) {
-      await this.connectWebSocket(session.websocket_url)
-      this.setState('listening')
+      try {
+        await this.connectWebSocket(session.websocket_url)
+        this.setState('listening')
+      } catch {
+        this.triggerBrowserFallback('WebSocket connection failed.')
+      }
+    } else if (this.canUseOpenAIWebRTC(session)) {
+      this.setState('idle')
+    } else if (session.provider === 'openai_realtime') {
+      this.triggerBrowserFallback(session.fallback_reason || 'OpenAI Realtime session was not ready.')
     } else {
       this.setState('idle')
     }
     return session
+  }
+
+  private triggerBrowserFallback(reason: string) {
+    this.webrtcActive = false
+    this.closeWebRTC()
+    if (this.session) {
+      this.session = {
+        ...this.session,
+        provider: 'browser_fallback',
+        fallback_reason: reason
+      }
+    }
+    this.callbacks.onFallback?.(REALTIME_FALLBACK_MESSAGE)
+    this.setState('idle')
   }
 
   private async connectWebSocket(relativePath: string): Promise<void> {
@@ -171,6 +224,10 @@ export class OrbRealtimeVoiceClient {
   }
 
   async startMicrophone(options?: { vadEnabled?: boolean; bargeInWhileSpeaking?: boolean }): Promise<boolean> {
+    if (this.session && this.canUseOpenAIWebRTC(this.session) && !this.webrtcAttempted) {
+      return this.startOpenAIWebRTC(options)
+    }
+
     if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
       this.callbacks.onError?.('Microphone is not available in this browser.')
       return false
@@ -210,6 +267,86 @@ export class OrbRealtimeVoiceClient {
     return true
   }
 
+  private async startOpenAIWebRTC(options?: {
+    vadEnabled?: boolean
+    bargeInWhileSpeaking?: boolean
+  }): Promise<boolean> {
+    if (!this.session) return false
+    const clientSecret = extractClientSecret(this.session)
+    if (!clientSecret) {
+      this.triggerBrowserFallback('Missing OpenAI client secret.')
+      return false
+    }
+
+    this.webrtcAttempted = true
+    this.setState('connecting')
+
+    const client = new OrbOpenAIRealtimeWebRTCClient({
+      onStateChange: (state) => this.setState(state),
+      onPartialTranscript: (text) => this.callbacks.onPartialTranscript?.(text),
+      onFinalTranscript: (text) => this.callbacks.onFinalTranscript?.(text),
+      onAssistantDelta: (delta) => this.callbacks.onAssistantDelta?.(delta),
+      onAssistantDone: (text) => this.callbacks.onAssistantDone?.(text),
+      onServerEvent: (event) =>
+        this.callbacks.onServerEvent?.({ type: event.type, text: typeof event.text === 'string' ? event.text : undefined }),
+      onError: (message) => {
+        if (this.webrtcActive) {
+          this.triggerBrowserFallback(message)
+        } else {
+          this.triggerBrowserFallback('WebRTC connection failed.')
+        }
+      },
+      onInterrupted: () => this.callbacks.onInterrupted?.()
+    })
+
+    try {
+      await client.connect({
+        clientSecret,
+        model: this.session.openai_session?.model || DEFAULT_REALTIME_MODEL,
+        voice: this.session.provider_voice,
+        transcriptionModel: 'whisper-1'
+      })
+      this.webrtcClient = client
+      this.webrtcActive = true
+      this.mediaStream = null
+      this.setState('listening')
+      return true
+    } catch (error) {
+      this.webrtcClient = null
+      this.webrtcActive = false
+      const message = error instanceof Error ? error.message : 'WebRTC connection failed.'
+      if (message.toLowerCase().includes('microphone')) {
+        this.setState('error')
+        this.callbacks.onError?.('Microphone permission denied.')
+        return false
+      }
+      this.triggerBrowserFallback(message)
+      return false
+    }
+  }
+
+  speakAssistantReply(text: string) {
+    if (this.usesOpenAIWebRTC && this.webrtcClient) {
+      this.webrtcClient.speakAssistantReply(text)
+      this.setState('thinking')
+      return
+    }
+  }
+
+  sendTranscriptText(text: string) {
+    if (this.usesOpenAIWebRTC && this.webrtcClient) {
+      this.webrtcClient.speakText(text)
+      return
+    }
+    if (!this.usesWebSocket || !text.trim()) return
+    this.socket?.send(
+      JSON.stringify({
+        type: VOICE_CLIENT_EVENTS.transcriptText,
+        data: { text: text.trim() }
+      })
+    )
+  }
+
   private startMediaRecorder() {
     if (!this.mediaStream || typeof MediaRecorder === 'undefined') return
     try {
@@ -242,25 +379,23 @@ export class OrbRealtimeVoiceClient {
     }
   }
 
-  sendTranscriptText(text: string) {
-    if (!this.usesWebSocket || !text.trim()) return
-    this.socket?.send(
-      JSON.stringify({
-        type: VOICE_CLIENT_EVENTS.transcriptText,
-        data: { text: text.trim() }
-      })
-    )
-  }
-
   async interrupt(): Promise<void> {
     if (typeof window !== 'undefined') {
       window.speechSynthesis?.cancel()
     }
-    if (this.usesWebSocket && this.socket?.readyState === WebSocket.OPEN) {
+    if (this.usesOpenAIWebRTC && this.webrtcClient) {
+      this.webrtcClient.interrupt()
+    } else if (this.usesWebSocket && this.socket?.readyState === WebSocket.OPEN) {
       this.socket.send(JSON.stringify({ type: VOICE_CLIENT_EVENTS.userInterrupt }))
     }
     this.setState('interrupted')
     this.callbacks.onInterrupted?.()
+  }
+
+  private closeWebRTC() {
+    this.webrtcClient?.close()
+    this.webrtcClient = null
+    this.webrtcActive = false
   }
 
   stop(): void {
@@ -270,12 +405,14 @@ export class OrbRealtimeVoiceClient {
     this.vad = null
     this.mediaStream?.getTracks().forEach((track) => track.stop())
     this.mediaStream = null
+    this.closeWebRTC()
     if (this.socket?.readyState === WebSocket.OPEN) {
       this.socket.send(JSON.stringify({ type: VOICE_CLIENT_EVENTS.sessionStop }))
       this.socket.close()
     }
     this.socket = null
     this.session = null
+    this.webrtcAttempted = false
     this.setState('ended')
   }
 }

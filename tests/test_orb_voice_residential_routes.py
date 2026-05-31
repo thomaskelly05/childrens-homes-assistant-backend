@@ -181,3 +181,93 @@ def test_orb_voice_ws_accepts_interrupt_event(voice_client, monkeypatch):
         ws.send_json({"type": "user.interrupt"})
         interrupted = ws.receive_json()
         assert interrupted["type"] == "interrupted"
+
+
+def test_orb_voice_session_openai_does_not_expose_api_key(voice_client, monkeypatch):
+    monkeypatch.setenv("ORB_VOICE_REALTIME_PROVIDER", "openai")
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    monkeypatch.setenv("ORB_REALTIME_ENABLED", "true")
+
+    async def fake_ephemeral(**_kwargs):
+        return {
+            "provider": "openai_realtime",
+            "configured": True,
+            "session": {
+                "id": "sess_test",
+                "client_secret": {"value": "ek_test", "expires_at": 999},
+                "api_key": "sk-should-not-leak",
+            },
+            "model": "gpt-realtime",
+            "voice": "coral",
+            "fallback_text_mode": False,
+        }
+
+    monkeypatch.setattr(
+        "routers.orb_voice_residential_routes.orb_realtime_provider_service.create_ephemeral_session",
+        fake_ephemeral,
+    )
+
+    response = voice_client.post(
+        "/orb/voice/session",
+        json={"mode": "conversational", "voice_id": "orb_british_female"},
+    )
+    body = response.json()
+    dumped = response.text
+    assert "sk-should-not-leak" not in dumped
+    assert "OPENAI_API_KEY" not in dumped
+    assert body["openai_session"]["client_secret"]["value"] == "ek_test"
+
+
+def test_orb_voice_session_openai_disabled_when_realtime_flag_off(voice_client, monkeypatch):
+    monkeypatch.setenv("ORB_VOICE_REALTIME_PROVIDER", "openai")
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    monkeypatch.setenv("ORB_REALTIME_ENABLED", "false")
+
+    response = voice_client.post(
+        "/orb/voice/session",
+        json={"mode": "conversational", "voice_id": "orb_british_female"},
+    )
+    assert response.status_code == 200
+    assert response.json()["provider"] == "browser_fallback"
+
+
+def test_orb_voice_session_invalid_profile_falls_back_to_default(voice_client):
+    response = voice_client.post(
+        "/orb/voice/session",
+        json={"mode": "conversational", "voice_id": "unknown_profile_xyz"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["selected_voice_profile"] == "orb_british_female"
+
+
+def test_orb_voice_session_instructions_include_residential_guidance(voice_client, monkeypatch):
+    monkeypatch.setenv("ORB_VOICE_REALTIME_PROVIDER", "openai")
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    monkeypatch.setenv("ORB_REALTIME_ENABLED", "true")
+    captured: dict = {}
+
+    async def fake_ephemeral(**kwargs):
+        captured.update(kwargs)
+        return {
+            "provider": "openai_realtime",
+            "configured": True,
+            "session": {"client_secret": {"value": "ek_test", "expires_at": 999}},
+            "model": "gpt-realtime",
+            "voice": "sage",
+            "fallback_text_mode": False,
+        }
+
+    monkeypatch.setattr(
+        "routers.orb_voice_residential_routes.orb_realtime_provider_service.create_ephemeral_session",
+        fake_ephemeral,
+    )
+
+    voice_client.post(
+        "/orb/voice/session",
+        json={"mode": "reflective_practice", "voice_id": "orb_reflective"},
+    )
+    instructions = captured.get("instructions") or ""
+    assert "ORB Voice" in instructions
+    assert "Reflective Practice" in instructions
+    assert captured.get("voice") == "sage"

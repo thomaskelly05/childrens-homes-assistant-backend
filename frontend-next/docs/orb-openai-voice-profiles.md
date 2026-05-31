@@ -44,7 +44,7 @@ Without these, the API returns **`browser_fallback`** honestly — browser Speec
 
 ## Fallback behaviour
 
-1. **OpenAI Realtime configured** → `POST /orb/voice/session` returns `provider: openai_realtime`, ephemeral `client_secret` for WebRTC, resolved `provider_voice` (developer UI only).
+1. **OpenAI Realtime configured** → `POST /orb/voice/session` returns `provider: openai_realtime`, ephemeral `client_secret` for WebRTC (`lib/orb/voice/orb-openai-realtime-webrtc-client.ts`), resolved `provider_voice` (developer UI only). See `docs/orb-openai-realtime-webrtc-setup.md`.
 2. **Not configured** → `provider: browser_fallback`; UI uses `resolveBrowserVoice()` with profile keyword hints.
 3. **Preview** → tries `/orb/voice/speak`; if no server audio, uses browser `speechSynthesis` without starting a full session.
 
