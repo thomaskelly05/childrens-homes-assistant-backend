@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { ChevronDown } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { LogIn, LogOut, X } from 'lucide-react'
 
@@ -45,6 +46,9 @@ export function OrbAdultProfileDrawer({
   const auth = useAuth()
   const account = useOrbAccountState()
   const [draft, setDraft] = useState(profile)
+  const [openSection, setOpenSection] = useState<string | null>(null)
+
+  const isDirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(profile), [draft, profile])
 
   const accountStatusLabel = account.isLoading
     ? 'Checking account…'
@@ -111,7 +115,7 @@ export function OrbAdultProfileDrawer({
         <header className="flex items-center justify-between border-b border-[var(--orb-line)] px-5 py-4">
           <div>
             <p className="text-xs font-medium uppercase tracking-[0.12em] text-[var(--orb-muted)]">Your profile</p>
-            <h2 className="text-lg font-semibold text-[var(--orb-foreground)]">Cognition & preferences</h2>
+            <h2 className="text-lg font-semibold text-[var(--orb-foreground)]">{draft.name?.trim() || 'ORB Residential'}</h2>
             {cognitionModeLabel ? (
               <p className="mt-1 text-xs text-[var(--orb-accent)]" data-orb-profile-cognition-mode>
                 Active agent · {cognitionModeLabel}
@@ -123,15 +127,30 @@ export function OrbAdultProfileDrawer({
           </button>
         </header>
 
-        <div className="orb-panel-body flex-1 space-y-5 overflow-y-auto px-5 py-5">
-          <p
-            className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5 text-xs leading-relaxed text-sky-900"
-            data-orb-profile-boundary-note
-          >
-            {STANDALONE_PROFILE_BOUNDARY_NOTE}
-          </p>
+        <div className="orb-panel-body flex-1 space-y-3 overflow-y-auto px-5 py-5" data-orb-profile-panel-scroll>
+          <section className="rounded-2xl border border-[var(--orb-line)] bg-[var(--orb-surface)] p-4" data-orb-profile-summary>
+            <p className="text-sm font-medium text-[var(--orb-foreground)]">{accountDetail}</p>
+            {account.isSignedIn && account.planName ? (
+              <p className="mt-1 text-xs text-[var(--orb-muted)]">{account.planName}</p>
+            ) : null}
+            <p className="mt-2 text-[11px] text-[var(--orb-muted)]" data-orb-passkey-hint>
+              {account.isSignedIn
+                ? account.hasPasskeys
+                  ? 'Use Face ID, Touch ID or device passkey — configured on this account.'
+                  : 'Use Face ID, Touch ID or device passkey — add one in Security below.'
+                : 'Sign in to manage Face ID, Touch ID or device passkeys.'}
+            </p>
+          </section>
 
-          <section className="rounded-2xl border border-[var(--orb-line)] bg-[var(--orb-surface)] p-4" data-orb-account-controls>
+          <nav className="space-y-1" data-orb-profile-section-nav aria-label="Profile settings">
+            <ProfileSection
+              id="account"
+              title="Account"
+              summary={accountStatusLabel}
+              open={openSection === 'account'}
+              onToggle={() => setOpenSection((s) => (s === 'account' ? null : 'account'))}
+            >
+          <section className="space-y-3 pt-1" data-orb-account-controls>
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h3 className="text-sm font-semibold text-[var(--orb-foreground)]">ORB Residential account</h3>
@@ -206,26 +225,22 @@ export function OrbAdultProfileDrawer({
                 </>
               ) : null}
             </div>
-            <p className="mt-3 text-[11px] leading-relaxed text-[var(--orb-muted)]" data-orb-passkey-hint>
-              {account.isSignedIn
-                ? account.hasPasskeys
-                  ? 'Face ID, Touch ID or passkey is set up on your account. Manage passkeys in Settings → Security.'
-                  : 'Add Face ID, Touch ID or a passkey in Settings → Security for faster sign-in on this device.'
-                : 'Face ID, Touch ID and passkeys are available from the ORB sign-in flow when supported by your device.'}
-            </p>
             {!account.isSignedIn && !account.isLoading ? (
-              <p className="mt-2 text-[11px] leading-relaxed text-[var(--orb-muted)]">
+              <p className="text-[11px] leading-relaxed text-[var(--orb-muted)]">
                 ORB Residential does not access IndiCare OS records.
               </p>
             ) : null}
           </section>
+            </ProfileSection>
 
-          {!account.isSignedIn && !account.isLoading ? (
-            <p className="text-[11px] leading-relaxed text-[var(--orb-muted)]" data-orb-local-profile-note>
-              Preferences below are saved on this device only until you sign in to ORB Residential.
-            </p>
-          ) : null}
-
+            <ProfileSection
+              id="personalisation"
+              title="Personalisation"
+              summary={[draft.roleLabel || draft.role, draft.preferredTone].filter(Boolean).join(' · ') || 'Name and answer style'}
+              open={openSection === 'personalisation'}
+              onToggle={() => setOpenSection((s) => (s === 'personalisation' ? null : 'personalisation'))}
+            >
+          <div className="space-y-4 pt-1" data-orb-personalisation-fields>
           <Field label="Your name">
             <input
               value={draft.name}
@@ -251,6 +266,31 @@ export function OrbAdultProfileDrawer({
               ))}
             </select>
           </Field>
+          <Field label="Answer style">
+            <ToneSelect value={draft.preferredTone} onChange={(v) => patch('preferredTone', v)} />
+          </Field>
+          <Field label="Writing style">
+            <select
+              value={draft.writingStyle}
+              onChange={(e) => patch('writingStyle', e.target.value as WritingStyle)}
+              className="orb-profile-input w-full"
+            >
+              <option value="concise">Concise</option>
+              <option value="structured">Structured</option>
+              <option value="narrative">Narrative</option>
+            </select>
+          </Field>
+          </div>
+            </ProfileSection>
+
+            <ProfileSection
+              id="home"
+              title="Home context"
+              summary={draft.homeName?.trim() || 'Optional when needed'}
+              open={openSection === 'home'}
+              onToggle={() => setOpenSection((s) => (s === 'home' ? null : 'home'))}
+            >
+          <div className="space-y-4 pt-1" data-orb-home-context-fields>
           <Field label="Current setting">
             <input
               value={draft.homeName}
@@ -276,6 +316,17 @@ export function OrbAdultProfileDrawer({
               <input value={draft.shiftRole ?? ''} onChange={(e) => patch('shiftRole', e.target.value)} className="orb-profile-input w-full" />
             </Field>
           </div>
+          </div>
+            </ProfileSection>
+
+            <ProfileSection
+              id="memory"
+              title="Memory"
+              summary="Agents, lenses and cognition"
+              open={openSection === 'memory'}
+              onToggle={() => setOpenSection((s) => (s === 'memory' ? null : 'memory'))}
+            >
+          <div className="space-y-4 pt-1" data-orb-memory-fields>
           <Field label="Preferred agent">
             <select
               value={draft.preferredAgent}
@@ -288,9 +339,6 @@ export function OrbAdultProfileDrawer({
                 </option>
               ))}
             </select>
-          </Field>
-          <Field label="Preferred response style">
-            <ToneSelect value={draft.preferredTone} onChange={(v) => patch('preferredTone', v)} />
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Answer length">
@@ -384,17 +432,6 @@ export function OrbAdultProfileDrawer({
               <option value="standard">Standard</option>
               <option value="heightened">Heightened awareness</option>
               <option value="maximum">Maximum (high-risk contexts)</option>
-            </select>
-          </Field>
-          <Field label="Writing style">
-            <select
-              value={draft.writingStyle}
-              onChange={(e) => patch('writingStyle', e.target.value as WritingStyle)}
-              className="orb-profile-input w-full"
-            >
-              <option value="concise">Concise</option>
-              <option value="structured">Structured</option>
-              <option value="narrative">Narrative</option>
             </select>
           </Field>
           <Field label="Therapeutic preferences">
@@ -508,6 +545,59 @@ export function OrbAdultProfileDrawer({
               </label>
             </div>
           </section>
+          </div>
+            </ProfileSection>
+
+            <ProfileSection
+              id="security"
+              title="Security"
+              summary="Passkeys and sign-in"
+              open={openSection === 'security'}
+              onToggle={() => setOpenSection((s) => (s === 'security' ? null : 'security'))}
+            >
+              <div className="space-y-3 pt-1 text-xs leading-relaxed text-[var(--orb-muted)]" data-orb-profile-security>
+                <p>Use Face ID, Touch ID or device passkey for faster sign-in when your device supports it.</p>
+                <button
+                  type="button"
+                  onClick={goToAccess}
+                  className="rounded-xl border border-[var(--orb-line)] px-3 py-2 text-xs font-semibold text-[var(--orb-foreground)] hover:bg-[var(--orb-surface-hover)]"
+                >
+                  Open billing &amp; account
+                </button>
+                {account.isSignedIn ? (
+                  <button
+                    type="button"
+                    onClick={() => void handleLogout()}
+                    className="inline-flex items-center gap-2 rounded-xl border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Log out
+                  </button>
+                ) : null}
+              </div>
+            </ProfileSection>
+
+            <ProfileSection
+              id="privacy"
+              title="Data & privacy"
+              summary="ORB Residential boundary"
+              open={openSection === 'privacy'}
+              onToggle={() => setOpenSection((s) => (s === 'privacy' ? null : 'privacy'))}
+            >
+              <p
+                className="pt-1 text-xs leading-relaxed text-[var(--orb-muted)]"
+                data-orb-profile-boundary-note
+              >
+                {STANDALONE_PROFILE_BOUNDARY_NOTE}
+              </p>
+            </ProfileSection>
+          </nav>
+
+          {!account.isSignedIn && !account.isLoading ? (
+            <p className="text-[11px] leading-relaxed text-[var(--orb-muted)]" data-orb-local-profile-note>
+              Preferences are saved on this device until you sign in.
+            </p>
+          ) : null}
         </div>
 
         <footer className="flex gap-2 border-t border-[var(--orb-line)] px-5 py-4">
@@ -518,16 +608,57 @@ export function OrbAdultProfileDrawer({
           >
             Reset defaults
           </button>
-          <button
-            type="button"
-            onClick={save}
-            className="flex-1 rounded-xl bg-[var(--orb-accent)] py-2.5 text-sm font-semibold text-[var(--orb-on-accent)]"
-            data-orb-profile-save
-          >
-            Save profile
-          </button>
+          {isDirty ? (
+            <button
+              type="button"
+              onClick={save}
+              className="flex-1 rounded-xl bg-[var(--orb-accent)] py-2.5 text-sm font-semibold text-[var(--orb-on-accent)]"
+              data-orb-profile-save
+            >
+              Save profile
+            </button>
+          ) : null}
         </footer>
       </div>
+    </div>
+  )
+}
+
+function ProfileSection({
+  id,
+  title,
+  summary,
+  open,
+  onToggle,
+  children
+}: {
+  id: string
+  title: string
+  summary: string
+  open: boolean
+  onToggle: () => void
+  children: ReactNode
+}) {
+  return (
+    <div className="rounded-xl border border-[var(--orb-line)] bg-[var(--orb-surface)]" data-orb-profile-section={id}>
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full items-center gap-2 px-3 py-3 text-left"
+        aria-expanded={open}
+        data-orb-profile-section-toggle={id}
+      >
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-semibold text-[var(--orb-foreground)]">{title}</span>
+          <span className="block truncate text-[11px] text-[var(--orb-muted)]">{summary}</span>
+        </span>
+        <ChevronDown className={`h-4 w-4 shrink-0 text-[var(--orb-muted)] transition ${open ? 'rotate-180' : ''}`} aria-hidden />
+      </button>
+      {open ? (
+        <div className="border-t border-[var(--orb-line)] px-3 pb-3" data-orb-profile-section-body>
+          {children}
+        </div>
+      ) : null}
     </div>
   )
 }

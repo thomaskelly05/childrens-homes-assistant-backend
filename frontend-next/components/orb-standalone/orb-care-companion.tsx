@@ -17,11 +17,13 @@ import {
   Menu,
   Pencil,
   RotateCcw,
+  Save,
   Square,
   User,
   Volume2,
   X
 } from 'lucide-react'
+import { OrbGlow } from '@/components/orb-standalone/orb-glow'
 import {
   OrbStandaloneComposer,
   type PendingImageAttachment
@@ -2409,6 +2411,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
               onChatSearchChange={setChatSearch}
               onSelectChat={selectChat}
               onNewChat={() => startNewChat()}
+              onWorkspaceChange={setWorkspace}
               onOpenStation={openResidentialStation}
               onOpenSettings={() => {
                 openSettingsPanel()
@@ -2515,6 +2518,20 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
               {activeChat?.temporary ? 'Normal chat' : 'Temporary'}
             </button>
             <div className="flex shrink-0 items-center gap-0.5">
+              {residentialSurface ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    openSavedOutputsPanel()
+                    setSidebarOpen(false)
+                  }}
+                  className="rounded-lg p-2 text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00B8FF]/50 lg:hidden"
+                  aria-label="Saved outputs and stations"
+                  data-orb-header-stations
+                >
+                  <Save className="h-4 w-4" />
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={() => {
@@ -2531,7 +2548,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                 type="button"
                 onClick={() => void exportConversation()}
                 disabled={visibleMessages.length === 0}
-                className="rounded-lg p-2 text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00B8FF]/50 disabled:opacity-40"
+                className="hidden rounded-lg p-2 text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00B8FF]/50 disabled:opacity-40 sm:inline-flex"
                 aria-label="Copy chat"
                 data-orb-header-export
               >
@@ -2624,16 +2641,22 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                     className="flex min-h-[min(52vh,24rem)] flex-col items-center justify-center px-2 py-6 text-center md:py-8"
                     data-orb-empty-state
                   >
-                    <div className="orb-empty-title-wrap" data-orb-empty-title-wrap>
+                    <div className="relative flex justify-center" data-orb-empty-sphere>
+                      <OrbGlow state="idle" interactive={false} size="dock" compactLabels />
+                    </div>
+                    <div className="orb-empty-title-wrap hidden md:block" data-orb-empty-title-wrap>
                       <p className="orb-empty-brand-title orb-hue-text" data-orb-brand-name data-orb-empty-title>
                         ORB Residential
                       </p>
                     </div>
-                    <p className="orb-empty-brand-powered mt-1.5" data-orb-brand-powered>
+                    <p className="orb-empty-brand-powered mt-1.5 hidden md:block" data-orb-brand-powered>
                       Powered by IndiCare
                     </p>
+                    <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-sky-500/70 md:hidden" data-orb-empty-brand-small>
+                      ORB Residential
+                    </p>
                     <h2
-                      className="mt-6 text-xl font-semibold tracking-tight text-slate-900 md:text-[1.35rem]"
+                      className="mt-4 text-xl font-semibold tracking-tight text-slate-900 md:mt-6 md:text-[1.35rem]"
                       data-orb-empty-heading
                     >
                       {emptyHeading}
@@ -3263,7 +3286,7 @@ function OrbUserMessageBubble({
 
   return (
     <article className="orb-message-user group flex items-end justify-end gap-2.5" data-testid="orb-message-user">
-      <div className="orb-message-bubble min-w-0">
+      <div className="orb-message-bubble min-w-0 max-w-[82%]" data-orb-user-message-bubble>
         {entry.imageDataUrls?.length ? (
           <div className="mb-2 flex flex-wrap gap-2">
             {entry.imageDataUrls.map((url, index) => (

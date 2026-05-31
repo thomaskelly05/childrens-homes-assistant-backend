@@ -1,5 +1,12 @@
 /** Canonical ORB mobile design layer. Keep phone-specific styling here only. */
 @media (max-width: 1023px) {
+  html:has(.orb-chat-layout),
+  html:has(.orb-chat-layout) body {
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
+  }
+
   html,
   body {
     max-width: 100%;
@@ -12,8 +19,10 @@
     --orb-composer-max: 100%;
     width: 100%;
     max-width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
     min-height: 100dvh;
-    overflow-x: hidden !important;
+    overflow: hidden !important;
   }
 
   .orb-chat-layout > .relative.flex.min-h-0.flex-1,
@@ -25,6 +34,19 @@
     min-width: 0 !important;
     margin-left: 0 !important;
     overflow-x: hidden !important;
+  }
+
+  .orb-chat-header {
+    min-height: 3.5rem;
+    max-height: 4rem;
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+  }
+
+  .orb-chat-header [data-orb-header-title] {
+    font-size: 1rem !important;
+    line-height: 1.35rem !important;
+    font-weight: 600 !important;
   }
 
   .orb-chat-sidebar {
@@ -43,8 +65,8 @@
   .orb-chat-thread {
     padding-left: 0.875rem !important;
     padding-right: 0.875rem !important;
-    padding-top: 0.35rem !important;
-    padding-bottom: calc(9rem + env(safe-area-inset-bottom, 0px)) !important;
+    padding-top: 0.75rem !important;
+    padding-bottom: calc(7.5rem + env(safe-area-inset-bottom, 0px)) !important;
   }
 
   [data-orb-empty-state] {
@@ -53,48 +75,43 @@
     min-width: 0 !important;
     justify-content: flex-start !important;
     min-height: auto !important;
-    padding-top: clamp(2.4rem, 8dvh, 4.2rem) !important;
-    padding-bottom: 0.75rem !important;
+    padding-top: clamp(1.25rem, 5dvh, 2.5rem) !important;
+    padding-bottom: 0.5rem !important;
   }
 
-  [data-orb-empty-title-wrap] {
-    overflow: visible !important;
-    padding-inline: 0.1em !important;
-    line-height: 1 !important;
+  [data-orb-empty-sphere] {
+    width: clamp(4.5rem, 22vw, 6rem) !important;
+    height: clamp(4.5rem, 22vw, 6rem) !important;
   }
 
-  [data-orb-empty-title] {
-    margin-top: 0 !important;
-    font-size: clamp(3.35rem, 17vw, 5rem) !important;
-    line-height: 1 !important;
-    letter-spacing: -0.06em !important;
-    font-weight: 950 !important;
-    overflow: visible !important;
-    filter: drop-shadow(0 0 10px rgba(0, 184, 255, 0.28)) drop-shadow(0 0 30px rgba(0, 119, 255, 0.22)) !important;
-  }
-
+  [data-orb-empty-title-wrap],
   [data-orb-brand-powered] {
-    margin-top: 0.9rem !important;
-    font-size: 0.72rem !important;
-    line-height: 1rem !important;
-    letter-spacing: 0.38em !important;
-    font-weight: 700 !important;
-    color: rgba(0, 119, 255, 0.62) !important;
+    display: none !important;
+  }
+
+  [data-orb-empty-brand-small] {
+    display: block !important;
+    margin-top: 0.75rem !important;
+    font-size: 0.68rem !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.2em !important;
+    text-transform: uppercase !important;
+    color: rgba(0, 119, 255, 0.55) !important;
   }
 
   [data-orb-empty-heading] {
-    margin-top: 2.35rem !important;
-    font-size: clamp(1.55rem, 7vw, 2.15rem) !important;
-    line-height: 1.08 !important;
-    letter-spacing: -0.055em !important;
-    font-weight: 850 !important;
+    margin-top: 1rem !important;
+    font-size: clamp(1.625rem, 7.5vw, 2.125rem) !important;
+    line-height: 1.12 !important;
+    letter-spacing: -0.04em !important;
+    font-weight: 700 !important;
   }
 
   [data-orb-empty-subline] {
     max-width: 19rem !important;
-    margin-top: 0.95rem !important;
-    font-size: 0.95rem !important;
-    line-height: 1.45rem !important;
+    margin-top: 0.5rem !important;
+    font-size: 0.75rem !important;
+    line-height: 1.25rem !important;
     color: #64748b !important;
   }
 
@@ -102,13 +119,42 @@
     color: #8b8b93 !important;
   }
 
-  [data-orb-empty-state] > p:not([data-orb-brand-powered]):not([data-orb-empty-subline]):not([data-orb-empty-title]) {
-    display: none !important;
-  }
-
   [data-orb-starter-cards],
   [data-orb-more-examples] {
     display: none !important;
+  }
+
+  .orb-message-content {
+    font-size: 1rem !important;
+    line-height: 1.6 !important;
+  }
+
+  .orb-message-content h1,
+  .orb-markdown-answer h1 {
+    font-size: 1.25rem !important;
+    line-height: 1.35 !important;
+  }
+
+  .orb-message-content h2,
+  .orb-markdown-answer h2 {
+    font-size: 1.125rem !important;
+    line-height: 1.4 !important;
+  }
+
+  .orb-message-content h3,
+  .orb-markdown-answer h3 {
+    font-size: 1.0625rem !important;
+  }
+
+  .orb-message-user .orb-message-content,
+  [data-orb-user-message-bubble] {
+    font-size: 0.9375rem !important;
+    padding: 0.75rem 1rem !important;
+    max-width: 82% !important;
+  }
+
+  .orb-lenses-used__toggle {
+    font-size: 0.75rem !important;
   }
 
   .orb-composer-dock,
@@ -122,8 +168,8 @@
     max-width: 100vw !important;
     padding-left: 0.75rem !important;
     padding-right: 0.75rem !important;
-    padding-top: 0.35rem !important;
-    padding-bottom: calc(1.15rem + env(safe-area-inset-bottom, 0px)) !important;
+    padding-top: 0.25rem !important;
+    padding-bottom: calc(0.65rem + env(safe-area-inset-bottom, 0px)) !important;
     overflow-x: hidden !important;
     background: transparent !important;
     background-image: none !important;
@@ -141,7 +187,6 @@
     margin-right: 0 !important;
   }
 
-
   .orb-composer-input-hit-target,
   [data-orb-composer-input-hit-target] {
     display: none !important;
@@ -155,9 +200,10 @@
     position: relative !important;
     z-index: 61 !important;
     pointer-events: auto !important;
-    min-height: 4.5rem !important;
-    border-radius: 1.75rem !important;
-    padding: 0.55rem 0.65rem !important;
+    min-height: 4rem !important;
+    max-height: none !important;
+    border-radius: 1.35rem !important;
+    padding: 0.45rem 0.55rem !important;
     border-width: 1px !important;
     box-shadow: 0 1px 2px rgb(15 23 42 / 0.06) !important;
   }
@@ -169,12 +215,12 @@
     display: block !important;
     min-width: 0 !important;
     width: 100% !important;
-    min-height: 2.75rem !important;
-    max-height: 8rem !important;
-    padding-top: 0.65rem !important;
-    padding-bottom: 0.35rem !important;
+    min-height: 2.35rem !important;
+    max-height: 8.75rem !important;
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.25rem !important;
     font-size: 1rem !important;
-    line-height: 1.5rem !important;
+    line-height: 1.45rem !important;
     pointer-events: auto !important;
     touch-action: auto !important;
     -webkit-user-select: text !important;
@@ -186,19 +232,65 @@
     border-radius: 9999px !important;
   }
 
-  .orb-composer-action-rail button:not([data-orb-composer-attach]):not([data-orb-composer-tools]) {
+  .orb-composer-action-rail button:not([data-orb-composer-attach]):not([data-orb-composer-tools]):not([data-orb-composer-mic]) {
     display: none !important;
   }
 
-  .orb-response-action-bar:not([data-orb-response-action-bar-minimal]) {
-    gap: 0.35rem !important;
-    padding-top: 0.65rem !important;
-    border-top-color: rgb(226 232 240 / 0.65) !important;
+  [data-orb-composer-attach],
+  [data-orb-composer-tools],
+  [data-orb-composer-mic] {
+    min-width: 2.5rem !important;
+    min-height: 2.5rem !important;
   }
 
-  .orb-response-action-bar:not([data-orb-response-action-bar-minimal]) .orb-action-chip {
-    padding: 0.35rem 0.55rem !important;
-    font-size: 0.68rem !important;
+  [data-orb-composer-send],
+  .orb-composer-send {
+    min-width: 2.75rem !important;
+    min-height: 2.75rem !important;
+  }
+
+  .orb-response-action-bar--icons {
+    flex-wrap: nowrap !important;
+    gap: 0.35rem !important;
+    padding-top: 0.55rem !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .orb-response-action-bar--icons .orb-action-chip {
+    min-width: 2.375rem !important;
+    min-height: 2.375rem !important;
+    padding: 0.4rem !important;
+    border-radius: 0.65rem !important;
+  }
+
+  .orb-response-action-bar--icons .orb-action-chip__label {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+  }
+
+  .orb-suggested-replies-row {
+    flex-wrap: nowrap !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .orb-suggested-reply-chip {
+    font-size: 0.8125rem !important;
+    padding: 0.5rem 0.75rem !important;
+    white-space: nowrap !important;
+  }
+
+  [data-orb-message-feedback] button[data-orb-feedback-up],
+  [data-orb-message-feedback] button[data-orb-feedback-down] {
+    min-width: 2.375rem !important;
+    min-height: 2.375rem !important;
   }
 
   .orb-voice-status-slot {
@@ -206,49 +298,12 @@
   }
 
   [data-orb-composer-disclaimer] {
-    display: flex !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    margin: 0.42rem auto 0 !important;
-    padding: 0 !important;
-    justify-content: center !important;
-    gap: 0.35rem !important;
-    font-size: 0 !important;
-    line-height: 0 !important;
-    opacity: 0.68 !important;
-    pointer-events: none !important;
-  }
-
-  [data-orb-composer-disclaimer]::before {
-    content: 'i' !important;
-    display: inline-flex !important;
-    width: 0.9rem !important;
-    height: 0.9rem !important;
-    align-items: center !important;
-    justify-content: center !important;
-    border: 1px solid currentColor !important;
-    border-radius: 999px !important;
-    color: #7c8798 !important;
-    font-size: 0.55rem !important;
-    line-height: 1 !important;
-  }
-
-  [data-orb-composer-disclaimer]::after {
-    content: 'ORB Residential · © 2026 IndiCare' !important;
-    color: #7c8798 !important;
-    font-size: 0.62rem !important;
-    line-height: 0.95rem !important;
-    white-space: nowrap !important;
-  }
-
-  html[data-orb-theme='dark'] [data-orb-composer-disclaimer]::before,
-  html[data-orb-theme='dark'] [data-orb-composer-disclaimer]::after {
-    color: #5f6673 !important;
+    display: none !important;
   }
 
   .orb-scroll-to-bottom-fab {
     max-width: calc(100vw - 2rem);
-    bottom: calc(8.75rem + env(safe-area-inset-bottom, 0px)) !important;
+    bottom: calc(7.25rem + env(safe-area-inset-bottom, 0px)) !important;
   }
 
   .orb-chat-layout > button[aria-label='Close sidebar'],
@@ -272,6 +327,11 @@
     box-shadow: 16px 0 48px rgba(0, 119, 255, 0.08), 20px 0 60px rgba(15, 23, 42, 0.08) !important;
   }
 
+  html[data-orb-theme='dark'] .orb-chat-sidebar,
+  html[data-orb-theme='dark'] .orb-panel-drawer {
+    background: linear-gradient(180deg, rgba(17, 17, 19, 0.98), rgba(13, 13, 15, 0.96)) !important;
+  }
+
   .orb-chat-sidebar button[aria-haspopup='menu'],
   .orb-chat-sidebar .group .opacity-0 {
     opacity: 1 !important;
@@ -284,6 +344,10 @@
     background: rgba(255, 255, 255, 0.92) !important;
     border: 1px solid rgba(0, 119, 255, 0.1) !important;
     box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08) !important;
+  }
+
+  html[data-orb-theme='dark'] .orb-chat-sidebar button[aria-haspopup='menu'] {
+    background: rgba(32, 33, 35, 0.95) !important;
   }
 
   .orb-sidebar-dropdown-menu {
@@ -303,5 +367,48 @@
     border-radius: 1rem !important;
     border-color: rgba(0, 119, 255, 0.14) !important;
     box-shadow: 0 22px 55px rgba(15, 23, 42, 0.18) !important;
+  }
+
+  .orb-panel-drawer {
+    max-width: 100vw !important;
+    width: 100% !important;
+  }
+
+  [data-orb-oauth-buttons] a,
+  [data-orb-oauth-buttons] button {
+    min-height: 3rem !important;
+    padding-top: 0.65rem !important;
+    padding-bottom: 0.65rem !important;
+  }
+
+  [data-orb-profile-section-nav] {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  [data-orb-profile-section-body][hidden] {
+    display: none !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .orb-response-action-bar:not([data-orb-response-action-bar-minimal]) .orb-action-chip__label {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+  }
+
+  .orb-response-action-bar:not([data-orb-response-action-bar-minimal]) .orb-action-chip {
+    min-width: 2.375rem !important;
+    min-height: 2.375rem !important;
+    padding: 0.4rem !important;
+    justify-content: center !important;
   }
 }
