@@ -84,9 +84,9 @@ export function OrbVoiceStation({
         onClose()
       }}
       panelId="orb-voice"
-      size="standard"
+      size="wide"
     >
-      <div className="flex flex-col items-center p-4 pb-6" data-orb-voice-station>
+      <div className="flex flex-col items-center p-6 pb-8" data-orb-voice-station>
         <GlassOrbMark
           size="hero"
           pulse={pending || voice.speaking || voice.listening}
@@ -97,12 +97,12 @@ export function OrbVoiceStation({
           {active ? (voice.listening ? 'Listening…' : pending ? 'ORB is thinking…' : voice.speaking ? 'Speaking…' : 'Your turn') : 'Start voice conversation'}
         </p>
 
-        <p className="mt-1 text-center text-xs text-[var(--orb-muted)]" data-orb-voice-mic-status>
+        <p className="mt-2 text-center text-sm text-[var(--orb-muted)]" data-orb-voice-mic-status>
           {voice.recognitionAvailable
             ? active
-              ? 'Microphone active after you tapped Start'
-              : 'Microphone starts only when you tap Start'
-            : 'Voice input is not available in this browser — use text in chat.'}
+              ? 'Microphone active after you pressed Start'
+              : 'Voice starts only when you press Start.'
+            : 'Voice input is not available in this browser.'}
         </p>
 
         <div className="mt-6 flex flex-wrap items-center justify-center gap-2">

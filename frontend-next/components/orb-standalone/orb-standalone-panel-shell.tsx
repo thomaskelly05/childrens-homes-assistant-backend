@@ -81,10 +81,12 @@ export function OrbStandalonePanelShell({
         }
         onClick={(event) => event.stopPropagation()}
       >
-        <header className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--orb-line)] px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
+        <header className="flex shrink-0 items-center justify-between gap-3 border-b border-cyan-500/10 px-5 py-4 pt-[max(0.75rem,env(safe-area-inset-top))]">
           <div className="min-w-0">
-            <h2 className="truncate text-sm font-semibold text-[var(--orb-foreground)]">{title}</h2>
-            {subtitle ? <p className="truncate text-[11px] leading-5 text-[var(--orb-muted)]">{subtitle}</p> : null}
+            <h2 className="truncate text-base font-semibold tracking-tight text-[var(--orb-foreground)]">{title}</h2>
+            {subtitle ? (
+              <p className="mt-0.5 truncate text-sm leading-6 text-[var(--orb-muted)]">{subtitle}</p>
+            ) : null}
           </div>
           <button
             type="button"

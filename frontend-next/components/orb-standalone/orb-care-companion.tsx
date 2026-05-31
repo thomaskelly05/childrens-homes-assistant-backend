@@ -26,8 +26,15 @@ import {
 import { OrbGlow } from '@/components/orb-standalone/orb-glow'
 import {
   ensureResidentialWorkspaceProjects,
+  readOrbProjectsMemory,
+  residentialProjectsToMemory,
   writeOrbProjectsMemory
 } from '@/lib/orb/orb-residential-projects'
+import {
+  fetchOrbServerProjects,
+  mergeServerProjectsWithLocal,
+  syncOrbProjectsToServer
+} from '@/lib/orb/orb-projects-client'
 import {
   readOrbSidebarCollapsed,
   writeOrbSidebarCollapsed
@@ -602,7 +609,31 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   useEffect(() => {
     if (!residentialSurface || !workspaceHydratedRef.current) return
     writeOrbProjectsMemory(workspace)
-  }, [residentialSurface, workspace])
+    if (account.isSignedIn) {
+      void syncOrbProjectsToServer(residentialProjectsToMemory(workspace))
+    }
+  }, [residentialSurface, workspace, account.isSignedIn])
+
+  useEffect(() => {
+    if (!residentialSurface || !account.isSignedIn || !workspaceHydratedRef.current) return
+    void fetchOrbServerProjects()
+      .then((server) => {
+        if (!server.length) return
+        const localMemory = readOrbProjectsMemory() ?? residentialProjectsToMemory(workspace)
+        const merged = mergeServerProjectsWithLocal(localMemory, server)
+        setWorkspace((current) => {
+          const projects = current.projects.map((project) => {
+            const remote = merged.find((row) => row.id === project.id)
+            if (!remote?.pinnedContext) return project
+            return { ...project, memory: remote.pinnedContext, updatedAt: Date.now() }
+          })
+          return { ...current, projects }
+        })
+      })
+      .catch(() => {
+        // Offline or unauthenticated — localStorage fallback only
+      })
+  }, [residentialSurface, account.isSignedIn])
 
   useEffect(() => {
     if (account.isLoading) return
@@ -1124,6 +1155,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
 
       const frontendRequestStartedAt = Date.now()
 
+      const projectMemory = (activeProject?.memory || activeProject?.description || '').trim()
       const conversationRequest = {
         message: framedMessage,
         mode,
@@ -1133,7 +1165,8 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         images: imagePayload.length ? imagePayload : undefined,
         document_text: pendingDocument?.text,
         document_source_id: pendingDocument?.sourceId || undefined,
-        document_title: pendingDocument?.title
+        document_title: pendingDocument?.title,
+        ...(projectMemory ? { project_memory: projectMemory } : {})
       }
 
       const runConversationRequest = async () =>

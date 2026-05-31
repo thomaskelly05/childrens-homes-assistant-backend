@@ -293,11 +293,24 @@ async def orb_subscription_checkout(
 ):
     from routers.orb_billing_routes import OrbCheckoutRequest, orb_standalone_checkout
 
+    base = FRONTEND_APP_URL.rstrip("/")
+    success = payload.success_url or f"{base}/orb?billing=success"
+    cancel = payload.cancel_url or f"{base}/orb?billing=cancelled"
     return await orb_standalone_checkout(
-        OrbCheckoutRequest(success_url=payload.success_url, cancel_url=payload.cancel_url),
+        OrbCheckoutRequest(success_url=success, cancel_url=cancel),
         conn=conn,
         current_user=current_user,
     )
+
+
+@router.post("/subscription/portal")
+async def orb_subscription_portal(
+    conn=Depends(get_db),
+    current_user=Depends(require_orb_residential_auth),
+):
+    from routers.orb_billing_routes import orb_standalone_billing_portal
+
+    return await orb_standalone_billing_portal(conn=conn, current_user=current_user)
 
 
 @router.post("/subscription/cancel")

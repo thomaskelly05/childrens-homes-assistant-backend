@@ -204,6 +204,7 @@ export type StandaloneOrbConversationRequest = {
   document_text?: string
   document_source_id?: string
   document_title?: string
+  project_memory?: string
 }
 
 export type StandaloneOrbSourceType =
@@ -521,7 +522,8 @@ export async function queryStandaloneOrbConversation(
       ...(request.images?.length ? { images: request.images } : {}),
       ...(request.document_text ? { document_text: request.document_text } : {}),
       ...(request.document_source_id ? { document_source_id: request.document_source_id } : {}),
-      ...(request.document_title ? { document_title: request.document_title } : {})
+      ...(request.document_title ? { document_title: request.document_title } : {}),
+      ...(request.project_memory ? { project_memory: request.project_memory } : {})
     })
     const headers = new Headers({ 'Content-Type': 'application/json' })
     applyCsrfHeaders(headers, 'POST')
@@ -671,7 +673,8 @@ function buildStandaloneConversationBody(request: StandaloneOrbConversationReque
     ...(request.images?.length ? { images: request.images } : {}),
     ...(request.document_text ? { document_text: request.document_text } : {}),
     ...(request.document_source_id ? { document_source_id: request.document_source_id } : {}),
-    ...(request.document_title ? { document_title: request.document_title } : {})
+    ...(request.document_title ? { document_title: request.document_title } : {}),
+    ...(request.project_memory ? { project_memory: request.project_memory } : {})
   })
 }
 

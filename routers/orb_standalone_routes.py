@@ -124,6 +124,14 @@ def _build_standalone_request_context(payload: OrbStandaloneConversationRequest)
         )
 
     standalone_brain = orb_standalone_brain_service.context_payload(payload.message, mode=mode)
+    project_memory_block = ""
+    memory_text = (payload.project_memory or "").strip()
+    if memory_text:
+        project_memory_block = (
+            "User-selected ORB project context: "
+            f"{memory_text}\n"
+            "This is user-supplied ORB memory, not verified live IndiCare OS record data."
+        )
     framed_message = _build_framed_message(
         mode=mode,
         user_message=payload.message,
@@ -132,6 +140,7 @@ def _build_standalone_request_context(payload: OrbStandaloneConversationRequest)
         grounding_context=grounding_context,
         prompt_tier=prompt_tier,
         shared_runtime_block=shared_runtime_block,
+        project_memory_block=project_memory_block or None,
     )
     return {
         "mode": mode,
@@ -297,6 +306,7 @@ class OrbStandaloneConversationRequest(BaseModel):
     document_text: str | None = Field(default=None, max_length=500_000)
     document_source_id: str | None = Field(default=None, max_length=120)
     document_title: str | None = Field(default=None, max_length=500)
+    project_memory: str | None = Field(default=None, max_length=20000)
 
 
 class OrbStandaloneActionRunRequest(BaseModel):
@@ -376,6 +386,7 @@ def _build_framed_message(
     grounding_context: str | None = None,
     prompt_tier: str = "residential",
     shared_runtime_block: str | None = None,
+    project_memory_block: str | None = None,
 ) -> str:
     resolved_mode = orb_standalone_brain_service.normalise_mode(mode)
     mode_hint = MODE_BEHAVIOUR.get(resolved_mode) or MODE_BEHAVIOUR.get(mode, "")
@@ -394,6 +405,7 @@ def _build_framed_message(
         parts = [
             STANDALONE_ORB_IDENTITY,
             STANDALONE_ORB_BOUNDARIES,
+            project_memory_block or "",
             grounding_context or "",
             mode_hint,
             detail_hint,
@@ -419,6 +431,7 @@ def _build_framed_message(
             STANDALONE_ORB_BOUNDARIES,
             STANDALONE_ORB_CITATIONS,
             shared_runtime_block,
+            project_memory_block or "",
             grounding_context or "",
             STANDALONE_ORB_TONE,
             brain_block,
@@ -435,6 +448,7 @@ def _build_framed_message(
         STANDALONE_ORB_BOUNDARIES,
         STANDALONE_ORB_CAPABILITIES,
         shared_runtime_block,
+        project_memory_block or "",
         grounding_context or "",
         STANDALONE_ORB_TONE,
         brain_block,

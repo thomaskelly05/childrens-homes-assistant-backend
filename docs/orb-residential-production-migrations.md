@@ -14,6 +14,7 @@ Run in this exact order against the production database:
 | 4 | `sql/203_orb_residential_subscriptions.sql` | Stripe subscription spine and safety acceptances |
 | 5 | `sql/204_orb_stripe_events.sql` | Idempotent Stripe webhook event log |
 | 6 | `sql/205_orb_oauth_accounts.sql` | OAuth provider account linkage for ORB Residential sign-in |
+| 7 | `sql/206_orb_commercial_infrastructure.sql` | Usage spending caps, top-up credits, server-side ORB projects |
 
 ## What each migration creates
 

@@ -92,6 +92,8 @@ export type StandaloneProject = {
   id: string
   name: string
   description?: string
+  /** User-supplied ORB project memory (not live OS data). */
+  memory?: string
   color?: string
   icon?: string
   createdAt: number

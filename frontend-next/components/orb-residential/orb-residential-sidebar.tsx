@@ -286,7 +286,9 @@ export function OrbResidentialSidebar({
     onWorkspaceChange({
       ...workspace,
       projects: projects.map((p) =>
-        p.id === projectId ? { ...p, description: memory || undefined, updatedAt: Date.now() } : p
+        p.id === projectId
+          ? { ...p, memory: memory || undefined, updatedAt: Date.now() }
+          : p
       )
     })
   }
@@ -635,7 +637,7 @@ export function OrbResidentialSidebar({
       <OrbProjectMemoryModal
         open={Boolean(memoryModalProject)}
         projectName={memoryModalProject?.name || 'Project'}
-        initialMemory={memoryModalProject?.description || ''}
+        initialMemory={memoryModalProject?.memory || memoryModalProject?.description || ''}
         onClose={() => setMemoryModalProject(null)}
         onSave={(memory) => {
           if (memoryModalProject) saveProjectMemory(memoryModalProject.id, memory)
