@@ -247,18 +247,20 @@ async def orb_standalone_checkout(
             upsert_orb_stripe_customer(conn, user_id=user_id, stripe_customer_id=customer_id)
             conn.commit()
 
-        session = stripe.checkout.Session.create(
-            mode="subscription",
-            customer=customer_id,
-            line_items=[{"price": orb_residential_stripe_price_id(), "quantity": 1}],
-            success_url=_default_success_url(payload.success_url),
-            cancel_url=_default_cancel_url(payload.cancel_url),
-            metadata=orb_subscription_plan_service.stripe_metadata(user_id=user_id, email=email),
-            subscription_data={
+        session_kwargs: dict[str, Any] = {
+            "mode": "subscription",
+            "customer": customer_id,
+            "line_items": [{"price": orb_residential_stripe_price_id(), "quantity": 1}],
+            "success_url": _default_success_url(payload.success_url),
+            "cancel_url": _default_cancel_url(payload.cancel_url),
+            "metadata": orb_subscription_plan_service.stripe_metadata(user_id=user_id, email=email),
+            "subscription_data": {
                 "metadata": orb_subscription_plan_service.stripe_metadata(user_id=user_id, email=email),
             },
-            allow_promotion_codes=True,
-        )
+            "allow_promotion_codes": True,
+        }
+        session_kwargs["automatic_payment_methods"] = {"enabled": True}
+        session = stripe.checkout.Session.create(**session_kwargs)
         _record_analytics(conn, user_id=user_id, event="checkout_started")
         conn.commit()
         return {"success": True, "checkout_url": session.url}

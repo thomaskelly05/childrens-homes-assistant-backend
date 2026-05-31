@@ -12,16 +12,17 @@ from typing import Any
 
 REVIEW_SECTIONS = [
     "Overall View",
-    "What Is Strong",
-    "What Is Missing",
+    "Strengths",
+    "Missing Information",
     "Child Voice",
-    "Safeguarding / Professional Curiosity",
-    "Recording Quality",
-    "Evidence of Impact",
-    "Leadership / RI Oversight",
-    "Ofsted / SCCIF Lens",
-    "What Would Make This Stronger",
-    "Suggested Rewrite / Template Where Helpful",
+    "Child Experience",
+    "Safeguarding",
+    "Professional Curiosity",
+    "Impact",
+    "Leadership",
+    "Ofsted Lens",
+    "Outstanding Practice",
+    "Suggested Improvements",
 ]
 
 DOCUMENT_TYPES = {
