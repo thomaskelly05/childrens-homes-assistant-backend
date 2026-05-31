@@ -1,12 +1,5 @@
-import type { Metadata } from 'next'
-
-import { OrbReviewScreen } from '@/components/orb-residential/orb-review-screen'
-
-export const metadata: Metadata = {
-  title: 'Review This · ORB Residential',
-  description: 'Review records through safeguarding, child voice and Ofsted lenses.'
-}
+import { redirect } from 'next/navigation'
 
 export default function OrbReviewPage() {
-  return <OrbReviewScreen />
+  redirect('/orb?station=review')
 }

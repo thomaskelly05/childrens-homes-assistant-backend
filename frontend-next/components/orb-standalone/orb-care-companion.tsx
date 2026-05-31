@@ -59,6 +59,10 @@ import {
 import { OrbAmbientCognition, type OrbCognitionAmbientState } from '@/components/orb-standalone/orb-ambient-cognition'
 import { OrbAdultProfileDrawer } from '@/components/orb-standalone/orb-adult-profile-drawer'
 import { OrbStandaloneSidebar } from '@/components/orb-standalone/orb-standalone-sidebar'
+import {
+  OrbResidentialSidebar,
+  type OrbResidentialStationId
+} from '@/components/orb-residential/orb-residential-sidebar'
 import { OrbHueMark } from '@/components/orb-standalone/orb-hue-logo'
 import { useOrbAppearance } from '@/components/orb-standalone/use-orb-appearance'
 import { ORB_LIGHT_UI_BUILD } from '@/lib/orb/orb-light-ui-build'
@@ -475,7 +479,7 @@ function orbErrorCallToAction(message: string, className = 'mt-3') {
   return null
 }
 
-export function OrbCareCompanion() {
+export function OrbCareCompanion({ residentialSurface = false }: { residentialSurface?: boolean } = {}) {
   const { status, csrfReady, refreshSession } = useAuth()
   const account = useOrbAccountState()
   const orbSessionReady = account.isSignedIn && csrfReady && !account.isLoading
@@ -1568,6 +1572,51 @@ export function OrbCareCompanion() {
     inputRef.current?.focus()
   }
 
+  function openResidentialStation(station: OrbResidentialStationId) {
+    switch (station) {
+      case 'review':
+        setMessage('Review this text for safeguarding, child voice, recording quality and Ofsted readiness:\n\n')
+        openDocumentsPanel()
+        break
+      case 'templates':
+        openKnowledgeLibrary()
+        break
+      case 'learn':
+        setMessage('Create a 5-minute learning session on: ')
+        inputRef.current?.focus()
+        break
+      case 'saved':
+        openSavedOutputsPanel()
+        break
+      case 'locality':
+        setMessage('Help me create a locality risk assessment for our home. ')
+        inputRef.current?.focus()
+        break
+      case 'ofsted':
+        handleModeChange('Ofsted Lens')
+        break
+      case 'safeguarding':
+        handleModeChange('Safeguarding Thinking')
+        break
+      default:
+        break
+    }
+    setSidebarOpen(false)
+  }
+
+  useEffect(() => {
+    if (!residentialSurface || !mounted) return
+    const station = searchParams.get('station') as OrbResidentialStationId | null
+    const lens = searchParams.get('lens')
+    if (station) openResidentialStation(station)
+    else if (lens === 'ofsted') handleModeChange('Ofsted Lens')
+    else if (lens === 'safeguarding') handleModeChange('Safeguarding Thinking')
+    else if (lens === 'locality') {
+      setMessage('Help me create a locality risk assessment for our home. ')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run when URL station/lens changes
+  }, [mounted, residentialSurface, searchParams])
+
   function startTemporaryChat() {
     if (voice.speaking) voice.cancelSpeaking()
     if (voice.listening) voice.cancelListening()
@@ -2120,10 +2169,12 @@ export function OrbCareCompanion() {
     return personalisedWelcomeMessage(profile, { temporary: Boolean(activeChat?.temporary) })
   }, [adultProfile, activeChat?.temporary])
 
-  const emptyHeading = useMemo(
-    () => emptyWelcome.heading || (adultProfile ? personalisedEmptyHeading(adultProfile) : 'Ready when you are.'),
-    [adultProfile, emptyWelcome.heading]
-  )
+  const emptyHeading = useMemo(() => {
+    if (residentialSurface) {
+      return personalisedEmptyHeading(adultProfile ?? readAdultProfile()) || 'How can I help today?'
+    }
+    return emptyWelcome.heading || (adultProfile ? personalisedEmptyHeading(adultProfile) : 'Ready when you are.')
+  }, [adultProfile, emptyWelcome.heading, residentialSurface])
 
   const userDisplayInitials = useMemo(
     () => profileInitialsFromName(adultProfile?.name),
@@ -2152,8 +2203,9 @@ export function OrbCareCompanion() {
 
   return (
     <main
-      className={`orb-chat-layout relative flex flex-col overflow-hidden ${layoutA11yClass} ${atmosphereClass} ${themeClass} ${isAnswering ? 'orb-response-active' : ''}`}
+      className={`orb-chat-layout relative flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden ${layoutA11yClass} ${atmosphereClass} ${themeClass} ${isAnswering ? 'orb-response-active' : ''} ${residentialSurface ? 'orb-chat-layout--residential' : ''}`}
       data-orb-theme={resolvedTheme}
+      data-orb-residential-surface={residentialSurface ? 'true' : undefined}
       data-orb-light-ui-build={ORB_LIGHT_UI_BUILD}
       data-orb-appearance-mode={appearanceMode}
       data-orb-active-panel={activePanel || 'none'}
@@ -2345,59 +2397,86 @@ export function OrbCareCompanion() {
 
       <div className="relative flex min-h-0 flex-1">
         <aside
-          className={`orb-chat-sidebar fixed inset-y-0 left-0 z-50 flex flex-col border-r border-[var(--orb-line)] transition-transform lg:static lg:z-auto lg:translate-x-0 ${
+          className={`orb-chat-sidebar fixed inset-y-0 left-0 z-50 flex w-[min(100%,18.75rem)] flex-col border-r border-[var(--orb-line)] transition-transform lg:static lg:z-auto lg:w-[18.75rem] lg:translate-x-0 ${
             sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
           }`}
+          data-orb-sidebar-scroll-container
         >
-          <OrbStandaloneSidebar
-            workspace={workspace}
-            chatSearch={chatSearch}
-            onChatSearchChange={setChatSearch}
-            onSelectChat={selectChat}
-            onNewChat={startNewChat}
-            onSelectProject={(projectId) => setWorkspace((c) => ({ ...c, activeProjectId: projectId }))}
-            onWorkspaceChange={setWorkspace}
-            onOpenSettings={() => {
-              openSettingsPanel()
-              setSidebarOpen(false)
-            }}
-            onOpenSavedOutputs={() => {
-              openSavedOutputsPanel()
-              setSidebarOpen(false)
-            }}
-            onOpenTools={() => {
-              openToolsPanel()
-              setSidebarOpen(false)
-            }}
-            onOpenAgents={() => {
-              setAgentsPanelOpen(true)
-              setSidebarOpen(false)
-            }}
-            onOpenLibrary={() => {
-              openKnowledgeLibrary()
-              setSidebarOpen(false)
-            }}
-            onOpenDeepResearch={() => {
-              setAgentPanelType('deep_research')
-              setAgentPanelPrompt('Run deep research on this topic')
-              openAgentsPanel()
-              setSidebarOpen(false)
-            }}
-            onOpenHelp={() => {
-              openHelpPanel()
-              setSidebarOpen(false)
-            }}
-            onOpenAdultProfile={() => {
-              setProfileDrawerOpen(true)
-              setSidebarOpen(false)
-            }}
-            adultProfile={adultProfile}
-            profileDisplayMode={account.profileDisplayMode}
-            cognitionStatusLabel={cognitionStatusLabel}
-            cognitionModeLabel={activeAgent?.cognitionLabel}
-            savedOutputsCount={savedOutputsCount}
-            onClose={() => setSidebarOpen(false)}
-          />
+          {residentialSurface ? (
+            <OrbResidentialSidebar
+              workspace={workspace}
+              chatSearch={chatSearch}
+              onChatSearchChange={setChatSearch}
+              onSelectChat={selectChat}
+              onNewChat={() => startNewChat()}
+              onOpenStation={openResidentialStation}
+              onOpenSettings={() => {
+                openSettingsPanel()
+                setSidebarOpen(false)
+              }}
+              onOpenSavedOutputs={() => {
+                openSavedOutputsPanel()
+                setSidebarOpen(false)
+              }}
+              onOpenProfile={() => {
+                setProfileDrawerOpen(true)
+                setSidebarOpen(false)
+              }}
+              adultProfile={adultProfile}
+              savedOutputsCount={savedOutputsCount}
+              onClose={() => setSidebarOpen(false)}
+            />
+          ) : (
+            <OrbStandaloneSidebar
+              workspace={workspace}
+              chatSearch={chatSearch}
+              onChatSearchChange={setChatSearch}
+              onSelectChat={selectChat}
+              onNewChat={startNewChat}
+              onSelectProject={(projectId) => setWorkspace((c) => ({ ...c, activeProjectId: projectId }))}
+              onWorkspaceChange={setWorkspace}
+              onOpenSettings={() => {
+                openSettingsPanel()
+                setSidebarOpen(false)
+              }}
+              onOpenSavedOutputs={() => {
+                openSavedOutputsPanel()
+                setSidebarOpen(false)
+              }}
+              onOpenTools={() => {
+                openToolsPanel()
+                setSidebarOpen(false)
+              }}
+              onOpenAgents={() => {
+                setAgentsPanelOpen(true)
+                setSidebarOpen(false)
+              }}
+              onOpenLibrary={() => {
+                openKnowledgeLibrary()
+                setSidebarOpen(false)
+              }}
+              onOpenDeepResearch={() => {
+                setAgentPanelType('deep_research')
+                setAgentPanelPrompt('Run deep research on this topic')
+                openAgentsPanel()
+                setSidebarOpen(false)
+              }}
+              onOpenHelp={() => {
+                openHelpPanel()
+                setSidebarOpen(false)
+              }}
+              onOpenAdultProfile={() => {
+                setProfileDrawerOpen(true)
+                setSidebarOpen(false)
+              }}
+              adultProfile={adultProfile}
+              profileDisplayMode={account.profileDisplayMode}
+              cognitionStatusLabel={cognitionStatusLabel}
+              cognitionModeLabel={activeAgent?.cognitionLabel}
+              savedOutputsCount={savedOutputsCount}
+              onClose={() => setSidebarOpen(false)}
+            />
+          )}
         </aside>
 
         <div className="orb-chat-main flex min-h-0 min-w-0 flex-1 flex-col">

@@ -2,46 +2,59 @@
 
 import Link from 'next/link'
 
-import { OrbCapabilityCard } from '@/components/orb-residential/ui/orb-capability-card'
 import { OrbButton } from '@/components/orb-residential/ui/orb-button'
 import { OrbGlowHero } from '@/components/orb-residential/ui/orb-glow-hero'
-import { OrbShell } from '@/components/orb-residential/ui/orb-shell'
-import { orbElectricGlow, orbGlassCard } from '@/components/orb-residential/ui/orb-theme'
+import { orbElectricGlow, orbGlassCard, orbNavyGradient, orbNavyPage } from '@/components/orb-residential/ui/orb-theme'
 
-const CAPABILITIES = [
-  { title: 'Review This', href: '/orb/review' },
-  { title: 'Templates', href: '/orb/templates' },
-  { title: 'Learn', href: '/orb/learn' },
-  { title: 'Saved Outputs', href: '/orb/saved' },
-  { title: 'Ofsted Lens', href: '/orb?lens=ofsted' },
-  { title: 'Safeguarding Lens', href: '/orb?lens=safeguarding' },
-  { title: 'Locality Risk', href: '/orb?lens=locality' }
+const EXAMPLE_HINTS = [
+  { label: 'Review incidents', href: '/orb?station=review' },
+  { label: 'Create templates', href: '/orb?station=templates' },
+  { label: 'Ask about Ofsted', href: '/orb?q=What%20should%20we%20prepare%20for%20Ofsted%3F' },
+  { label: 'Learn in minutes', href: '/orb?station=learn' }
 ]
 
 export function OrbFrontDoor() {
   return (
-    <OrbShell>
-      <section className="flex min-h-[calc(100vh-8rem)] flex-col justify-center gap-5 pb-2 pt-1 text-center" data-orb-front-door>
-        <div className={`mx-auto grid w-full max-w-5xl items-center gap-5 lg:grid-cols-[0.92fr_1.08fr] ${orbElectricGlow}`}>
-          <div className="order-1 flex justify-center lg:order-2">
-            <div className="scale-[0.72] sm:scale-[0.82] lg:scale-90">
+    <div
+      className={`${orbNavyPage} ${orbNavyGradient} flex h-[100dvh] flex-col overflow-hidden`}
+      data-orb-front-door
+    >
+      <header className="mx-auto flex w-full max-w-5xl shrink-0 items-center justify-between px-6 py-5">
+        <Link href="/" className="flex flex-col gap-0.5" data-orb-brand>
+          <span className="text-sm font-semibold tracking-tight text-white">ORB Residential</span>
+          <span className="text-[11px] font-medium text-sky-300/80">Powered by IndiCare Intelligence</span>
+        </Link>
+        <Link href="/os" className="text-xs font-medium text-slate-400 transition hover:text-sky-300" data-orb-os-link>
+          IndiCare OS
+        </Link>
+      </header>
+
+      <main className="mx-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col justify-center px-6 pb-6">
+        <div className={`grid items-center gap-6 lg:grid-cols-[0.95fr_1.05fr] ${orbElectricGlow}`}>
+          <div className="flex justify-center lg:justify-end">
+            <div className="scale-[0.68] sm:scale-[0.78] lg:scale-[0.88]">
               <OrbGlowHero compact />
             </div>
           </div>
 
-          <div className={`order-2 ${orbGlassCard} px-5 py-5 sm:px-8 sm:py-7 lg:order-1 lg:text-left`}>
-            <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.34em] text-sky-300/80">
-              ORB Residential
-            </p>
-            <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-5xl sm:leading-tight">
+          <div className={`${orbGlassCard} px-6 py-6 sm:px-8 sm:py-8`}>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.34em] text-sky-300/80">ORB Residential</p>
+            <p className="mt-2 text-xs text-slate-400">Powered by IndiCare Intelligence</p>
+            <h1 className="mt-4 text-2xl font-semibold tracking-tight text-white sm:text-4xl sm:leading-tight">
               The Professional AI Copilot for Children&apos;s Homes
             </h1>
-            <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-slate-400 lg:mx-0 sm:text-base">
-              Write better records. Strengthen safeguarding. Create templates. Stay inspection ready.
+            <p className="mt-4 text-sm leading-7 text-slate-400">
+              Ask questions.
+              <br />
+              Write better records.
+              <br />
+              Review practice.
+              <br />
+              Stay inspection ready.
             </p>
 
-            <div className="mt-5 flex flex-col gap-3 sm:flex-row lg:justify-start justify-center">
-              <OrbButton href="/orb/login?returnUrl=/orb/setup" data-testid="orb-cta-trial">
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+              <OrbButton href="/orb/login?returnUrl=/orb" data-testid="orb-cta-trial">
                 Start Free Trial
               </OrbButton>
               <OrbButton variant="secondary" href="/orb/login" data-testid="orb-cta-sign-in">
@@ -49,35 +62,31 @@ export function OrbFrontDoor() {
               </OrbButton>
             </div>
 
-            <div className="mt-5 grid gap-2 sm:grid-cols-2">
-              <OrbButton variant="secondary" href="/orb/login?returnUrl=/orb/setup&provider=microsoft" className="w-full text-sm">
-                Continue with Microsoft
-              </OrbButton>
-              <OrbButton variant="ghost" href="/orb/login?returnUrl=/orb/setup&provider=google" className="w-full text-sm">
-                Google / Apple / Email
-              </OrbButton>
-            </div>
+            <p className="mt-4 text-xs text-slate-500">7 day free trial. Then £9.99/month.</p>
 
-            <div className="mt-5 grid gap-1 text-xs leading-5 text-slate-500 sm:grid-cols-[1fr_1.5fr]">
-              <p>7 Day Free Trial. Then £9.99/month.</p>
-              <p>ORB supports professional judgement and local safeguarding procedures.</p>
-            </div>
+            <ul className="mt-5 flex flex-wrap gap-2">
+              {EXAMPLE_HINTS.map((hint) => (
+                <li key={hint.label}>
+                  <Link
+                    href={hint.href}
+                    className="rounded-full border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 text-[10px] font-medium text-slate-500 transition hover:border-sky-400/25 hover:text-slate-300"
+                    data-orb-front-door-example
+                  >
+                    {hint.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
+      </main>
 
-        <div className="mx-auto grid w-full max-w-5xl grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
-          {CAPABILITIES.map((cap, index) => (
-            <OrbCapabilityCard key={cap.title} title={cap.title} href={cap.href} subtle={index >= 4} />
-          ))}
-        </div>
-
-        <p className="text-center text-[11px] text-slate-600">
-          Already using IndiCare OS?{' '}
-          <Link href="/os" className="text-sky-400/90 hover:text-sky-300">
-            Open OS workspace
-          </Link>
+      <footer className="mx-auto w-full max-w-5xl shrink-0 px-6 pb-5">
+        <p className="text-center text-[10px] leading-5 text-slate-600">
+          ORB supports professional judgement. It does not replace safeguarding procedures, managers, emergency
+          services or local protocols.
         </p>
-      </section>
-    </OrbShell>
+      </footer>
+    </div>
   )
 }

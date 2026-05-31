@@ -672,3 +672,24 @@ html[data-orb-theme='light'] .orb-composer-glass,
   border-color: rgba(15, 23, 42, 0.12) !important;
   box-shadow: 0 18px 45px rgba(15, 23, 42, 0.1) !important;
 }
+
+/** ORB Residential — ChatGPT-style viewport lock (no page scroll). */
+.orb-chat-layout--residential,
+html[data-orb-residential='1'] .orb-chat-layout {
+  height: 100vh;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+  background: #0d0d0d;
+}
+
+.orb-chat-layout--residential .orb-chat-thread,
+.orb-chat-layout--residential [data-orb-chat-scroll-container] {
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.orb-chat-layout--residential .orb-composer-dock textarea {
+  max-height: 12rem;
+  overflow-y: auto;
+}
