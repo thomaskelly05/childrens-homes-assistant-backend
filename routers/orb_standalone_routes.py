@@ -103,16 +103,23 @@ def _build_standalone_request_context(payload: OrbStandaloneConversationRequest)
         }
         shared_runtime_block = ""
     else:
+        standalone_operational_context: dict[str, Any] = {}
+        if payload.document_text:
+            standalone_operational_context["document_text"] = payload.document_text
+        if payload.document_title:
+            standalone_operational_context["document_title"] = payload.document_title
         shared_cognition = shared_institutional_cognition_runtime.build_context(
             surface="standalone_orb",
             message=payload.message,
             mode=mode,
+            operational_context=standalone_operational_context or None,
             history=history,
         )
         shared_runtime_block = shared_institutional_cognition_runtime.prompt_addendum(
             surface="standalone_orb",
             message=payload.message,
             mode=mode,
+            operational_context=standalone_operational_context or None,
             history=history,
         )
 
@@ -750,8 +757,9 @@ async def standalone_orb_conversation(
             confidence=confidence,
             cognition_display_labels=cognition_labels,
             depth_topic=shared_explain.get("depth_topic"),
-            reasoning_lenses=list(shared_explain.get("reasoning_lenses") or []),
+            reasoning_lenses=list(shared_explain.get("reasoning_lenses") or shared_cognition.get("active_lenses") or []),
             vault_domains=list(shared_explain.get("vault_domains") or []),
+            shared_explainability=shared_explain,
         )
         response_sources = filter_display_sources(response_sources, message=payload.message, mode=mode)
         response_citations = filter_display_sources(response_citations, message=payload.message, mode=mode)
@@ -858,8 +866,9 @@ async def standalone_orb_conversation(
             confidence="low",
             cognition_display_labels=cognition_labels,
             depth_topic=shared_explain.get("depth_topic"),
-            reasoning_lenses=list(shared_explain.get("reasoning_lenses") or []),
+            reasoning_lenses=list(shared_explain.get("reasoning_lenses") or shared_cognition.get("active_lenses") or []),
             vault_domains=list(shared_explain.get("vault_domains") or []),
+            shared_explainability=shared_explain,
         )
         sources = filter_display_sources(sources, message=payload.message, mode=mode)
         citations = filter_display_sources(citations, message=payload.message, mode=mode)
@@ -992,8 +1001,9 @@ async def standalone_orb_conversation_stream(
                 confidence=confidence,
                 cognition_display_labels=cognition_labels,
                 depth_topic=shared_explain.get("depth_topic"),
-                reasoning_lenses=list(shared_explain.get("reasoning_lenses") or []),
+                reasoning_lenses=list(shared_explain.get("reasoning_lenses") or shared_cognition.get("active_lenses") or []),
                 vault_domains=list(shared_explain.get("vault_domains") or []),
+                shared_explainability=shared_explain,
             )
             response_sources = filter_display_sources(response_sources, message=payload.message, mode=mode)
             response_citations = filter_display_sources(response_citations, message=payload.message, mode=mode)

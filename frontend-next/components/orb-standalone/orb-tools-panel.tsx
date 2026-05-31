@@ -100,6 +100,50 @@ export function OrbToolsPanel({
 }) {
   const [query, setQuery] = useState('')
 
+  const orbAppsTools: ToolItem[] = useMemo(
+    () => [
+      {
+        id: 'review-this',
+        label: 'Review This',
+        description: 'Review pasted incident, plan or record for practice quality',
+        icon: <ClipboardList className="h-4 w-4" aria-hidden />,
+        onClick: () =>
+          onComposerPrefill?.(
+            'Review this document for child voice, safeguarding, recording quality, evidence of impact and Ofsted readiness. I will paste the text below:\n\n'
+          ) ?? onOpenDocuments?.()
+      },
+      {
+        id: 'template-library',
+        label: 'Template Library',
+        description: 'Safeguarding, recording, care plans, Ofsted and locality templates',
+        icon: <FileText className="h-4 w-4" aria-hidden />,
+        onClick: () =>
+          onComposerPrefill?.(
+            'Open the ORB template library — list templates for safeguarding and recording, or create a missing from care return conversation template.'
+          )
+      },
+      {
+        id: 'locality-risk',
+        label: 'Locality Risk',
+        description: 'Locality risk assessment template and guidance',
+        icon: <Shield className="h-4 w-4" aria-hidden />,
+        onClick: () =>
+          onComposerPrefill?.(
+            'Help me write a locality risk assessment for my home. I will supply postcode, town and local authority.'
+          )
+      },
+      {
+        id: 'learn-micro',
+        label: 'Learn',
+        description: 'Turn guidance into a 5-minute staff learning session',
+        icon: <BookOpen className="h-4 w-4" aria-hidden />,
+        onClick: () =>
+          onComposerPrefill?.('Turn your previous answer into a 5-minute staff learning session with discussion questions.')
+      }
+    ],
+    [onComposerPrefill, onOpenDocuments]
+  )
+
   const documentTools: ToolItem[] = useMemo(
     () => [
       {
@@ -389,6 +433,7 @@ export function OrbToolsPanel({
   }
 
   const sections = [
+    { title: 'ORB apps', tools: filterTools(orbAppsTools) },
     { title: 'Documents', tools: filterTools(documentTools) },
     { title: 'Learning / Academy', tools: filterTools(academyTools) },
     { title: 'Practice', tools: filterTools(practiceTools) },
