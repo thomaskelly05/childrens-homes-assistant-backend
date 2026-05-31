@@ -73,7 +73,7 @@ describe('ORB Residential routing', () => {
     assert.match(experience, /OrbCareCompanion residentialSurface/)
     assert.match(companion, /OrbResidentialSidebar/)
     assert.match(companion, /h-\[100dvh\]/)
-    assert.match(companion, /How can I help today/)
+    assert.match(companion, /Ready when you are/)
     assert.doesNotMatch(companion, /AppShell/)
   })
 
@@ -89,7 +89,7 @@ describe('ORB Residential routing', () => {
 
   it('stations are in sidebar but not on front door', () => {
     const sidebar = readApp('components/orb-residential/orb-residential-sidebar.tsx')
-    for (const station of ['review', 'templates', 'learn', 'saved', 'locality', 'ofsted', 'safeguarding']) {
+    for (const station of ['review', 'templates', 'knowledge', 'saved']) {
       assert.match(sidebar, new RegExp(`id: '${station}'`))
     }
     assert.match(sidebar, /data-orb-sidebar-station=\{station\.id\}/)
@@ -98,7 +98,7 @@ describe('ORB Residential routing', () => {
   it('capability routes deep-link into /orb stations', () => {
     assert.match(readApp('app/orb/review/page.tsx'), /redirect\('\/orb\?station=review'\)/)
     assert.match(readApp('app/orb/templates/page.tsx'), /redirect\('\/orb\?station=templates'\)/)
-    assert.match(readApp('app/orb/learn/page.tsx'), /redirect\('\/orb\?station=learn'\)/)
+    assert.match(readApp('app/orb/learn/page.tsx'), /redirect\('\/orb\?station=knowledge'\)/)
     assert.match(readApp('app/orb/saved/page.tsx'), /redirect\('\/orb\?station=saved'\)/)
   })
 

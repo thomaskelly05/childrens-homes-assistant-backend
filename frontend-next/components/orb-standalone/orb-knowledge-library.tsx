@@ -14,6 +14,7 @@ import {
   OrbSourceGovernanceActions,
   OrbSourceGovernanceBadges
 } from '@/components/orb-standalone/orb-source-governance-panel'
+import { ORB_KNOWLEDGE_CENTRE_TITLE, ORB_KNOWLEDGE_TOPICS } from '@/lib/orb/orb-residential-copy'
 import {
   approveOrbKnowledgeSource,
   archiveOrbKnowledgeSource,
@@ -48,7 +49,7 @@ const SOURCE_TYPES: OrbKnowledgeSourceType[] = [
 
 const DOCUMENT_FAMILIES: { value: OrbKnowledgeDocumentFamily | string; label: string }[] = [
   { value: 'provider_policy', label: 'Provider policy' },
-  { value: 'ofsted', label: 'Ofsted' },
+  { value: 'ofsted', label: 'Regulatory / inspection' },
   { value: 'dfe', label: 'DfE' },
   { value: 'legislation', label: 'Legislation' },
   { value: 'safeguarding', label: 'Safeguarding' },
@@ -59,7 +60,15 @@ const DOCUMENT_FAMILIES: { value: OrbKnowledgeDocumentFamily | string; label: st
 
 type GovernanceTab = 'all' | 'official' | 'needs_review'
 
-export function OrbKnowledgeLibraryPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function OrbKnowledgeLibraryPanel({
+  open,
+  onClose,
+  residentialSurface = false
+}: {
+  open: boolean
+  onClose: () => void
+  residentialSurface?: boolean
+}) {
   const [sources, setSources] = useState<OrbKnowledgeSource[]>([])
   const [summary, setSummary] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -230,8 +239,12 @@ export function OrbKnowledgeLibraryPanel({ open, onClose }: { open: boolean; onC
   return (
     <OrbStandalonePanelShell
       open={open}
-      title="Knowledge Library"
-      subtitle="Sources support ORB answers. Check official status and review dates."
+      title={residentialSurface ? ORB_KNOWLEDGE_CENTRE_TITLE : 'Knowledge Library'}
+      subtitle={
+        residentialSurface
+          ? 'Guidance sources for residential practice — SCCIF, regulations, safeguarding and recording standards.'
+          : 'Sources support ORB answers. Check official status and review dates.'
+      }
       onClose={onClose}
       panelId="knowledge"
       ariaLabel="ORB Knowledge Library"
@@ -483,11 +496,32 @@ export function OrbKnowledgeLibraryPanel({ open, onClose }: { open: boolean; onC
               Loading sources…
             </p>
           ) : sources.length === 0 && !error ? (
-            <OrbStationEmptyState
-              dataAttr="knowledge_library"
-              title="No sources loaded yet."
-              body="Official guidance and uploaded sources will appear here when connected."
-            />
+            residentialSurface ? (
+              <div className="orb-station-empty-state" data-orb-knowledge-coming-soon>
+                <p className="orb-station-empty-state__title">Guidance library coming soon</p>
+                <p className="orb-station-empty-state__body">
+                  ORB will connect trusted residential sources here. Topics will include:
+                </p>
+                <ul className="mt-3 space-y-1 text-left text-xs text-[var(--orb-muted)]">
+                  {ORB_KNOWLEDGE_TOPICS.map((topic) => (
+                    <li key={topic} className="flex items-center gap-2">
+                      <span className="h-1 w-1 rounded-full bg-sky-400/80" aria-hidden />
+                      {topic}
+                    </li>
+                  ))}
+                </ul>
+                <p className="orb-station-empty-state__body mt-3">
+                  You can still ask ORB about these topics in chat — answers use built-in residential practice
+                  guidance.
+                </p>
+              </div>
+            ) : (
+              <OrbStationEmptyState
+                dataAttr="knowledge_library"
+                title="No sources loaded yet."
+                body="Official guidance and uploaded sources will appear here when connected."
+              />
+            )
           ) : (
             <ul className="space-y-2">
               {sources.map((source) => (

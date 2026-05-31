@@ -92,7 +92,7 @@ describe('ORB markdown and cognition rendering', () => {
     const routeCss = readComponent('app/orb/orb-desktop.css')
     assert.match(panel, /data-orb-document-empty/)
     assert.match(panel, /orb-doc-input/)
-    assert.match(panel, /Standalone context only/)
+    assert.match(panel, /not saved to live IndiCare OS records/)
     assert.match(routeCss, /\.orb-document-panel/)
   })
 })

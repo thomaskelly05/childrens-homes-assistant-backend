@@ -1,0 +1,52 @@
+import type { StandaloneOrbMode } from '@/lib/orb/standalone-client'
+
+/** User-facing product copy for ORB Residential — safe, regulatory-aware language. */
+export const ORB_RESIDENTIAL_PRODUCT_NAME = 'ORB Residential'
+export const ORB_RESIDENTIAL_TAGLINE = 'Powered by IndiCare Intelligence'
+
+export const ORB_RESIDENTIAL_EMPTY_SUBLINE =
+  'Ask about recording, safeguarding, regulatory practice, templates or reflective practice.'
+
+export const ORB_RESIDENTIAL_EMPTY_STARTERS: Array<{ text: string; mode?: StandaloneOrbMode }> = [
+  { text: 'Review an incident', mode: 'Safeguarding Thinking' },
+  { text: 'Write a handover' },
+  { text: 'Create a risk assessment' },
+  { text: 'Prepare for inspection', mode: 'Ofsted Lens' },
+  { text: 'Analyse a document' },
+  { text: 'Reflect on practice', mode: 'Staff Coach' }
+]
+
+/** Visible mode labels — internal mode ids may still use legacy names for API compatibility. */
+export const ORB_RESIDENTIAL_MODE_DISPLAY: Partial<Record<StandaloneOrbMode, string>> = {
+  'Ofsted Lens': 'Inspection Readiness',
+  'Reg 44 / Reg 45 Prep': 'Regulation 44 preparation'
+}
+
+export function residentialModeDisplayLabel(mode: string): string {
+  return ORB_RESIDENTIAL_MODE_DISPLAY[mode as StandaloneOrbMode] ?? mode
+}
+
+/** Simplified “why ORB answered this way” — no internal architecture labels. */
+export const ORB_USER_EXPLAINABILITY_CONSIDERATIONS = [
+  'Residential childcare practice',
+  'Safeguarding responsibilities',
+  'Regulatory expectations',
+  'Child-centred recording',
+  'Reflective practice',
+  'Professional accountability'
+] as const
+
+export const ORB_KNOWLEDGE_CENTRE_TITLE = 'Residential Knowledge Centre'
+
+export const ORB_KNOWLEDGE_TOPICS = [
+  'SCCIF',
+  "Children's Homes Regulations",
+  'Quality Standards',
+  'Working Together',
+  'Safeguarding guidance',
+  'Recording standards',
+  'Safer recruitment',
+  'Regulation 44',
+  'Regulation 45',
+  'Residential care practice guidance'
+] as const

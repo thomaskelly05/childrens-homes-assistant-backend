@@ -49,6 +49,11 @@ import { OrbResidentialAgentsPanel } from '@/components/orb-standalone/orb-resid
 import { OrbDocumentPanel } from '@/components/orb-standalone/orb-document-panel'
 import { OrbSavedOutputsPanel } from '@/components/orb-standalone/orb-saved-outputs-panel'
 import { OrbKnowledgeLibraryPanel } from '@/components/orb-standalone/orb-knowledge-library'
+import { OrbTemplatesPanel } from '@/components/orb-standalone/orb-templates-panel'
+import {
+  ORB_RESIDENTIAL_EMPTY_STARTERS,
+  ORB_RESIDENTIAL_EMPTY_SUBLINE
+} from '@/lib/orb/orb-residential-copy'
 import { OrbStandaloneAccessibilityPanel } from '@/components/orb-standalone/orb-accessibility-panel'
 import { OrbIntelligenceMapPanel } from '@/components/orb-standalone/orb-intelligence-map-panel'
 import { OrbMemoryPanel } from '@/components/orb-standalone/orb-memory-panel'
@@ -182,7 +187,7 @@ const MODE_SAFETY: Partial<Record<StandaloneOrbMode, string>> = {
   'Safeguarding Thinking':
     'Follow safeguarding procedures and escalate immediate risk. ORB supports thinking; it does not make decisions.',
   'Record This Properly': 'ORB can help with wording, but review before adding to records.',
-  'Ofsted Lens': 'Guidance support only. ORB does not make inspection judgements.',
+  'Ofsted Lens': 'Inspection readiness guidance only. ORB does not make regulatory judgements.',
   'Reg 44 / Reg 45 Prep': 'Governance support only — improvement plans and evidence remain provider-led.'
 }
 
@@ -660,6 +665,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   const openDocumentsPanel = useCallback(() => openPanel('documents'), [openPanel])
   const openAgentsPanel = useCallback(() => openPanel('agents'), [openPanel])
   const openKnowledgeLibrary = useCallback(() => openPanel('knowledge'), [openPanel])
+  const openTemplatesPanel = useCallback(() => openPanel('templates'), [openPanel])
   const openSavedOutputsPanel = useCallback(() => openPanel('saved_outputs'), [openPanel])
   const openMemoryPanel = useCallback(() => openPanel('memory'), [openPanel])
   const openAccessibilityPanel = useCallback(() => openPanel('accessibility'), [openPanel])
@@ -1578,28 +1584,19 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   function openResidentialStation(station: OrbResidentialStationId) {
     switch (station) {
       case 'review':
-        setMessage('Review this text for safeguarding, child voice, recording quality and Ofsted readiness:\n\n')
+        setMessage(
+          'Review this text for safeguarding, child voice, recording quality and inspection readiness:\n\n'
+        )
         openDocumentsPanel()
         break
       case 'templates':
-        openKnowledgeLibrary()
+        openTemplatesPanel()
         break
-      case 'learn':
-        setMessage('Create a 5-minute learning session on: ')
-        inputRef.current?.focus()
+      case 'knowledge':
+        openKnowledgeLibrary()
         break
       case 'saved':
         openSavedOutputsPanel()
-        break
-      case 'locality':
-        setMessage('Help me create a locality risk assessment for our home. ')
-        inputRef.current?.focus()
-        break
-      case 'ofsted':
-        handleModeChange('Ofsted Lens')
-        break
-      case 'safeguarding':
-        handleModeChange('Safeguarding Thinking')
         break
       default:
         break
@@ -1612,11 +1609,8 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
     const station = searchParams.get('station') as OrbResidentialStationId | null
     const lens = searchParams.get('lens')
     if (station) openResidentialStation(station)
-    else if (lens === 'ofsted') handleModeChange('Ofsted Lens')
+    else if (lens === 'ofsted' || lens === 'inspection') handleModeChange('Ofsted Lens')
     else if (lens === 'safeguarding') handleModeChange('Safeguarding Thinking')
-    else if (lens === 'locality') {
-      setMessage('Help me create a locality risk assessment for our home. ')
-    }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- run when URL station/lens changes
   }, [mounted, residentialSurface, searchParams])
 
@@ -2161,11 +2155,12 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   }
 
   const emptyStarters = useMemo(() => {
+    if (residentialSurface) return ORB_RESIDENTIAL_EMPTY_STARTERS
     if (adultProfile?.name || adultProfile?.role !== 'residential_support_worker') {
       return roleBasedEmptyStarters(adultProfile ?? readAdultProfile()).map((text) => ({ text }))
     }
     return PRIMARY_EMPTY_STARTERS
-  }, [adultProfile])
+  }, [adultProfile, residentialSurface])
 
   const emptyWelcome = useMemo(() => {
     const profile = adultProfile ?? readAdultProfile()
@@ -2174,7 +2169,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
 
   const emptyHeading = useMemo(() => {
     if (residentialSurface) {
-      return personalisedEmptyHeading(adultProfile ?? readAdultProfile()) || 'How can I help today?'
+      return personalisedEmptyHeading(adultProfile ?? readAdultProfile())
     }
     return emptyWelcome.heading || (adultProfile ? personalisedEmptyHeading(adultProfile) : 'Ready when you are.')
   }, [adultProfile, emptyWelcome.heading, residentialSurface])
@@ -2229,7 +2224,20 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         <div className="pointer-events-none fixed inset-0 orb-cinematic-light-field opacity-35" aria-hidden />
       ) : null}
 
-      <OrbKnowledgeLibraryPanel open={activePanel === 'knowledge'} onClose={closePanel} />
+      <OrbKnowledgeLibraryPanel
+        open={activePanel === 'knowledge'}
+        onClose={closePanel}
+        residentialSurface={residentialSurface}
+      />
+      <OrbTemplatesPanel
+        open={activePanel === 'templates'}
+        onClose={closePanel}
+        onUseTemplate={(prompt) => {
+          setMessage(prompt)
+          closePanel()
+          inputRef.current?.focus()
+        }}
+      />
       <OrbSavedOutputsPanel
         open={activePanel === 'saved_outputs'}
         onClose={closePanel}
@@ -2700,9 +2708,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                         data-orb-empty-subline
                       >
                         {emptyWelcome.subline ||
-                          (residentialSurface
-                            ? 'Ask about recording, safeguarding, Ofsted, templates or practice.'
-                            : '')}
+                          (residentialSurface ? ORB_RESIDENTIAL_EMPTY_SUBLINE : '')}
                       </p>
                     ) : null}
                     {emptyWelcome.temporaryNote ? (
@@ -2721,7 +2727,14 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                         <button
                           key={starter.text}
                           type="button"
-                          onClick={() => applyPrompt(starter)}
+                          onClick={() => {
+                            if (residentialSurface && starter.text === 'Analyse a document') {
+                              openDocumentsPanel()
+                              setSidebarOpen(false)
+                              return
+                            }
+                            applyPrompt(starter)
+                          }}
                           className="orb-starter-card px-4 py-3.5 text-left text-sm leading-snug"
                           data-orb-starter-card
                         >
@@ -2815,8 +2828,11 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                             explainability={entry.explainability}
                             modelRouting={entry.modelRouting}
                             messageHint={messageHint}
-                            showCognitionLabels={!minimalTurn && chatUiSettings.showCognitionLabels}
+                            showCognitionLabels={
+                              !residentialSurface && !minimalTurn && chatUiSettings.showCognitionLabels
+                            }
                             showExplainability={!minimalTurn}
+                            residentialSurface={residentialSurface}
                             heading={entry.outputTitle}
                             cognitionContext={{
                               context_used: {

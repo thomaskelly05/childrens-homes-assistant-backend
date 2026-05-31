@@ -168,29 +168,33 @@ export function OrbDocumentPanel({
     <OrbStandalonePanelShell
       open={open}
       title="Documents"
-      subtitle="Upload, paste or analyse standalone documents."
+      subtitle="Standalone document analysis"
       onClose={onClose}
       panelId="documents"
       ariaLabel="ORB documents"
-      footer="Standalone context only — not saved to IndiCare OS records."
+      footer="Documents analysed here are not saved to live IndiCare OS records unless you choose to save them."
     >
       <div className="orb-document-panel space-y-4 p-4" data-orb-document-panel>
-        <p className="rounded-xl border border-[#CBD5E1] bg-[#F8FAFC] px-3 py-2.5 text-[11px] leading-5 text-[#475569]">
-          Standalone context only — not saved to IndiCare OS records.
+        <p className="orb-doc-glass-card rounded-xl border border-[var(--orb-line)] px-3 py-2.5 text-[11px] leading-5 text-[var(--orb-muted)]">
+          Documents analysed here are not saved to live IndiCare OS records unless you choose to save them.
         </p>
 
         {!hasContent && !understanding ? (
           <div
-            className="rounded-xl border border-dashed border-[#CBD5E1] bg-[#F8FAFC] px-4 py-8 text-center"
+            className="orb-doc-glass-card rounded-xl border border-dashed border-[var(--orb-line)] px-4 py-8 text-center"
             data-orb-document-empty
           >
-            <FileText className="mx-auto h-8 w-8 text-[#94A3B8]" aria-hidden />
-            <p className="mt-2 text-sm font-semibold text-[#0F172A]">No document yet</p>
-            <p className="mt-1 text-xs text-[#64748B]">Paste text or upload a file to analyse with ORB.</p>
+            <FileText className="mx-auto h-8 w-8 text-[var(--orb-muted)]" aria-hidden />
+            <p className="mt-2 text-sm font-semibold text-[var(--orb-foreground)]">No document yet</p>
+            <p className="mt-1 text-xs text-[var(--orb-muted)]">Paste text or upload a file to analyse with ORB.</p>
           </div>
         ) : null}
 
-        <div className="flex flex-wrap gap-1 rounded-xl border border-[#CBD5E1] bg-[#F8FAFC] p-1" role="tablist" aria-label="Document actions">
+        <div
+          className="flex flex-wrap gap-1 rounded-xl border border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] p-1"
+          role="tablist"
+          aria-label="Document actions"
+        >
           {TABS.map((item) => (
             <button
               key={item.id}
@@ -200,8 +204,8 @@ export function OrbDocumentPanel({
               onClick={() => selectTab(item.id)}
               className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
                 tab === item.id
-                  ? 'border border-[#0284C7] bg-white text-[#0369A1] shadow-sm'
-                  : 'text-[#475569] hover:bg-white hover:text-[#0F172A]'
+                  ? 'border border-sky-400/30 bg-[var(--orb-surface-hover)] text-[var(--orb-foreground)]'
+                  : 'text-[var(--orb-muted)] hover:text-[var(--orb-foreground)]'
               }`}
             >
               {item.label}
@@ -209,11 +213,15 @@ export function OrbDocumentPanel({
           ))}
         </div>
 
-        <div className="flex gap-1 rounded-lg border border-[#CBD5E1] bg-white p-0.5" role="tablist" aria-label="Input method">
+        <div
+          className="flex gap-1 rounded-lg border border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] p-0.5"
+          role="tablist"
+          aria-label="Input method"
+        >
           {(
             [
-              { id: 'paste' as const, label: 'Paste' },
-              { id: 'upload' as const, label: 'Upload' }
+              { id: 'paste' as const, label: 'Paste text' },
+              { id: 'upload' as const, label: 'Upload file' }
             ] as const
           ).map((item) => (
             <button
@@ -223,7 +231,9 @@ export function OrbDocumentPanel({
               aria-selected={inputTab === item.id}
               onClick={() => setInputTab(item.id)}
               className={`flex-1 rounded-md px-3 py-1.5 text-xs font-semibold transition ${
-                inputTab === item.id ? 'bg-[#EAF6FF] text-[#0369A1]' : 'text-[#475569] hover:bg-[#F1F5F9]'
+                inputTab === item.id
+                  ? 'bg-[var(--orb-surface-hover)] text-[var(--orb-foreground)]'
+                  : 'text-[var(--orb-muted)] hover:text-[var(--orb-foreground)]'
               }`}
             >
               {item.label}
@@ -232,9 +242,9 @@ export function OrbDocumentPanel({
         </div>
 
         {inputTab === 'upload' ? (
-          <label className="orb-doc-upload-zone flex cursor-pointer flex-col items-center justify-center rounded-xl border border-[#CBD5E1] bg-white px-4 py-6 text-center hover:bg-[#F8FAFC]">
-            <span className="text-sm font-semibold text-[#0F172A]">Upload file</span>
-            <span className="mt-1 text-xs text-[#64748B]">.txt, .md, .pdf, .docx</span>
+          <label className="orb-doc-upload-zone flex cursor-pointer flex-col items-center justify-center rounded-xl border border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] px-4 py-6 text-center hover:bg-[var(--orb-surface-hover)]">
+            <span className="text-sm font-semibold text-[var(--orb-foreground)]">Upload file</span>
+            <span className="mt-1 text-xs text-[var(--orb-muted)]">.txt, .md, .pdf, .docx</span>
             <input
               type="file"
               accept=".txt,.md,.pdf,.docx"
@@ -247,16 +257,16 @@ export function OrbDocumentPanel({
           </label>
         ) : null}
 
-        <label className="block text-xs font-semibold text-[#475569]">
+        <label className="block text-xs font-semibold text-[var(--orb-muted)]">
           Title
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="orb-doc-input mt-1 w-full rounded-lg border border-[#CBD5E1] bg-white px-3 py-2 text-sm text-[#0F172A] placeholder:text-[#64748B]"
+            className="orb-doc-input mt-1 w-full rounded-lg border border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] px-3 py-2 text-sm text-[var(--orb-foreground)] placeholder:text-[var(--orb-muted)]"
           />
         </label>
         {inputTab === 'paste' ? (
-          <label className="block text-xs font-semibold text-[#475569]">
+          <label className="block text-xs font-semibold text-[var(--orb-muted)]">
             Document text
             <textarea
               data-orb-doc-paste
@@ -264,17 +274,17 @@ export function OrbDocumentPanel({
               onChange={(e) => setText(e.target.value)}
               rows={6}
               placeholder="Paste policy, inspection notes, or guidance…"
-              className="orb-doc-input mt-1 w-full rounded-lg border border-[#CBD5E1] bg-white px-3 py-2 text-sm text-[#0F172A] placeholder:text-[#64748B]"
+              className="orb-doc-input mt-1 w-full rounded-lg border border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] px-3 py-2 text-sm text-[var(--orb-foreground)] placeholder:text-[var(--orb-muted)]"
             />
           </label>
         ) : null}
 
-        <label className="flex items-center gap-2 text-xs text-[#64748B]">
+        <label className="flex items-center gap-2 text-xs text-[var(--orb-muted)]">
           <input
             type="checkbox"
             checked={closeAfterAnalyse}
             onChange={(e) => setCloseAfterAnalyse(e.target.checked)}
-            className="rounded border-[#CBD5E1]"
+            className="rounded border-[var(--orb-line)]"
           />
           Close panel after analysis
         </label>

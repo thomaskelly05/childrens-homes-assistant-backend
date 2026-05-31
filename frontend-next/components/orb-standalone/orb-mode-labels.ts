@@ -4,7 +4,7 @@ import type { StandaloneOrbMode } from '@/lib/orb/standalone-client'
 export const STANDALONE_MODE_CHIP_LABELS: Record<StandaloneOrbMode, string> = {
   'Ask ORB': 'Ask ORB',
   'Safeguarding Thinking': 'Safeguarding',
-  'Ofsted Lens': 'Ofsted',
+  'Ofsted Lens': 'Inspection',
   'Record This Properly': 'Record',
   'Therapeutic Reframe': 'Therapeutic',
   'Manager Copilot': 'Manager',

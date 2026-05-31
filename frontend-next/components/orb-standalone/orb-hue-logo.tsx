@@ -1,5 +1,7 @@
 'use client'
 
+import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
+
 type OrbHueLogoProps = {
   size?: 'sm' | 'md' | 'lg'
   pulse?: boolean
@@ -37,12 +39,10 @@ export function OrbPoweredByIndicare({ className = '' }: { className?: string })
 
 export function OrbHueMark({ pulse = false, className = '' }: { pulse?: boolean; className?: string }) {
   return (
-    <span
-      className={`orb-hue-mark inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#00B8FF]/28 bg-gradient-to-br from-[#00B8FF]/16 via-[#60A5FA]/12 to-[#818CF8]/14 text-sm font-bold shadow-sm ${pulse ? 'orb-hue-mark--pulse orb-assistant-thinking-mark' : ''} ${className}`.trim()}
-      data-orb-hue-mark
-      aria-hidden
-    >
-      <span className={`orb-hue-text text-sm font-bold ${pulse ? 'orb-hue-pulse' : ''}`}>O</span>
-    </span>
+    <GlassOrbMark
+      size="sm"
+      pulse={pulse}
+      className={`orb-hue-mark ${pulse ? 'orb-assistant-thinking-mark' : ''} ${className}`.trim()}
+    />
   )
 }

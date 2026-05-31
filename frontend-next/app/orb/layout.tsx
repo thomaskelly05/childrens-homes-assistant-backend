@@ -18,7 +18,10 @@ const ORB_COGNITION_ROUTING_BUILD_SCRIPT = `window.__ORB_COGNITION_ROUTING_BUILD
 export const metadata: Metadata = {
   title: 'ORB Residential',
   description:
-    "ORB Residential — Powered by IndiCare Intelligence. Standalone premium intelligence for adults working in children's residential care."
+    "ORB Residential — Powered by IndiCare Intelligence. Standalone premium intelligence for adults working in children's residential care.",
+  manifest: '/manifest.json',
+  appleWebApp: { capable: true, title: 'ORB Residential' },
+  themeColor: '#05070d'
 }
 
 export default function OrbLayout({ children }: { children: ReactNode }) {

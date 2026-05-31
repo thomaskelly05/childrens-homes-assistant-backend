@@ -152,6 +152,7 @@ export function OrbAssistantMessageBody({
   cognitionContext,
   showCognitionLabels = true,
   showExplainability = true,
+  residentialSurface = false,
   heading
 }: {
   content: string
@@ -164,6 +165,7 @@ export function OrbAssistantMessageBody({
   cognitionContext?: CognitionPillContext
   showCognitionLabels?: boolean
   showExplainability?: boolean
+  residentialSurface?: boolean
   heading?: string
 }) {
   const cognitionLabel = cognitionPillLabel(mode, explainability, messageHint, cognitionContext)
@@ -180,7 +182,7 @@ export function OrbAssistantMessageBody({
             {heading}
           </p>
         ) : null}
-        {showCognitionLabels ? (
+        {showCognitionLabels && !residentialSurface ? (
           <OrbCognitionIndicators
             mode={mode}
             streaming={streaming}
@@ -193,7 +195,11 @@ export function OrbAssistantMessageBody({
           <OrbMarkdownAnswer content={displayContent} sources={sources} />
         </div>
         {showExplainability ? (
-          <OrbExplainabilityPanel explainability={explainability} cognitionModeLabel={cognitionLabel} />
+          <OrbExplainabilityPanel
+            explainability={explainability}
+            cognitionModeLabel={cognitionLabel}
+            residentialSurface={residentialSurface}
+          />
         ) : null}
         {showExplainability ? (
           <OrbSourcesDetail content={content} sources={sources} modelRouting={modelRouting} />

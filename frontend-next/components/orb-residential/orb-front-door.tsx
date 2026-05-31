@@ -9,7 +9,7 @@ import { orbElectricGlow, orbGlassCard, orbNavyGradient, orbNavyPage } from '@/c
 const EXAMPLE_HINTS = [
   { label: 'Review incidents', href: '/orb?station=review' },
   { label: 'Create templates', href: '/orb?station=templates' },
-  { label: 'Ask about Ofsted', href: '/orb?q=What%20should%20we%20prepare%20for%20Ofsted%3F' },
+  { label: 'Prepare for inspection', href: '/orb?q=Help%20me%20prepare%20for%20inspection%20readiness' },
   { label: 'Learn in minutes', href: '/orb?station=learn' }
 ]
 
