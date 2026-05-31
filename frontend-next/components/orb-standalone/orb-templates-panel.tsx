@@ -8,12 +8,14 @@ import { OrbStandalonePanelShell } from '@/components/orb-standalone/orb-standal
 import {
   ORB_TEMPLATE_FALLBACK_CATEGORIES,
   filterFallbackTemplates,
-  templateUsePrompt
+  templateImmediatePrompt
 } from '@/lib/orb/orb-templates-fallback'
 import {
   isOrbStationAuthError,
   OrbStationAuthError,
-  OrbStationEmptyState
+  OrbStationEmptyState,
+  OrbStationReconnectBanner,
+  shouldBlockStationForAuth
 } from '@/components/orb-standalone/orb-station-panel-states'
 import {
   fetchOrbTemplateCategories,
@@ -36,12 +38,14 @@ export function OrbTemplatesPanel({
   open,
   onClose,
   onUseTemplate,
-  residentialSurface = false
+  residentialSurface = false,
+  sessionReady = true
 }: {
   open: boolean
   onClose: () => void
   onUseTemplate?: (prompt: string, template: OrbTemplateSummary) => void
   residentialSurface?: boolean
+  sessionReady?: boolean
 }) {
   const [categories, setCategories] = useState<string[]>(FALLBACK_CATEGORIES)
   const [category, setCategory] = useState('')
@@ -86,29 +90,26 @@ export function OrbTemplatesPanel({
     void load()
   }, [open, load])
 
-  async function handleUseTemplate() {
-    if (!selected) return
-    setGenerating(true)
-    setError(null)
-    try {
-      const result = (await generateOrbTemplate({ template_id: selected.id, context: '' })) as {
-        data?: { content?: string }
-        content?: string
+  function buildImmediatePrompt(template: OrbTemplateSummary): string {
+    return templateImmediatePrompt(template.title, {
+      category: template.category,
+      description: template.description
+    })
+  }
+
+  async function handleUseTemplate(template: OrbTemplateSummary) {
+    const prompt = buildImmediatePrompt(template)
+    onUseTemplate?.(prompt, template)
+    onClose()
+    if (!template.id.startsWith('fallback-') && sessionReady) {
+      setGenerating(true)
+      try {
+        await generateOrbTemplate({ template_id: template.id, context: '' })
+      } catch {
+        // Chat generation uses immediate prompt; API prefill is optional.
+      } finally {
+        setGenerating(false)
       }
-      const content =
-        (result as { data?: { content?: string } }).data?.content ||
-        (result as { content?: string }).content ||
-        ''
-      const prompt = content.trim()
-        ? `Help me complete this ${selected.title} template. Here is the starting structure:\n\n${content}`
-        : templateUsePrompt(selected.title)
-      onUseTemplate?.(prompt, selected)
-      onClose()
-    } catch {
-      onUseTemplate?.(templateUsePrompt(selected.title), selected)
-      onClose()
-    } finally {
-      setGenerating(false)
     }
   }
 
@@ -164,8 +165,10 @@ export function OrbTemplatesPanel({
           ))}
         </div>
 
-        {error && isOrbStationAuthError(error) ? (
+        {error && shouldBlockStationForAuth(sessionReady, error) ? (
           <OrbStationAuthError detail={error} />
+        ) : error && isOrbStationAuthError(error) ? (
+          <OrbStationReconnectBanner onRefresh={() => void load()} />
         ) : error ? (
           <p className="text-sm text-amber-400/90">{error}</p>
         ) : null}
@@ -189,6 +192,7 @@ export function OrbTemplatesPanel({
               <button
                 type="button"
                 onClick={() => setSelected(tpl)}
+                onDoubleClick={() => void handleUseTemplate(tpl)}
                 className={`orb-doc-glass-card w-full rounded-xl border px-4 py-3 text-left transition ${
                   selected?.id === tpl.id
                     ? 'border-sky-400/40 bg-[var(--orb-surface-hover)]'
@@ -219,11 +223,11 @@ export function OrbTemplatesPanel({
             <button
               type="button"
               disabled={generating}
-              onClick={() => void handleUseTemplate()}
+              onClick={() => void handleUseTemplate(selected)}
               className="mt-3 w-full rounded-xl bg-gradient-to-r from-[#168bff] to-[#0d5fcc] px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-sky-500/20 disabled:opacity-60"
               data-orb-use-template
             >
-              {generating ? 'Opening…' : 'Use template'}
+              {generating ? 'Generating…' : 'Use template'}
             </button>
           </div>
         ) : null}

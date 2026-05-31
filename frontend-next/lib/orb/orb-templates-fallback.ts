@@ -103,5 +103,59 @@ export function filterFallbackTemplates(options?: {
 }
 
 export function templateUsePrompt(title: string): string {
-  return `Create a ${title} for me.`
+  return templateImmediatePrompt(title)
+}
+
+const TEMPLATE_SECTION_HINTS: Record<string, string[]> = {
+  'safeguarding concern record': [
+    'Date and time',
+    'Young person',
+    'Adults present',
+    'Nature of concern',
+    'What was observed',
+    'What the child said',
+    'Immediate action taken',
+    'Manager/DSL informed',
+    'Safeguarding decision/rationale',
+    'External notifications',
+    'Follow-up actions',
+    'Chronology/plan updates',
+    'Review date'
+  ]
+}
+
+/** Rich auto-send prompt for immediate template generation in chat. */
+export function templateImmediatePrompt(
+  title: string,
+  options?: { category?: string; description?: string }
+): string {
+  const key = title.trim().toLowerCase()
+  const sections = TEMPLATE_SECTION_HINTS[key]
+  const categoryLine = options?.category ? `Category: ${options.category}.` : ''
+  const framing =
+    'Use residential children\'s home practice (not schools). Include child voice, safeguarding, manager oversight, and follow-up actions where relevant. Use clear headings and [placeholders]. Ask follow-up questions only if essential.'
+
+  if (sections?.length) {
+    return [
+      `Create a complete, professional ${title} for me now.`,
+      categoryLine,
+      framing,
+      '',
+      'Include these sections with usable wording (not just a description):',
+      ...sections.map((s) => `- ${s}`)
+    ]
+      .filter(Boolean)
+      .join('\n')
+  }
+
+  const desc = options?.description?.trim()
+  return [
+    `Create a complete, professional ${title} for me now.`,
+    categoryLine,
+    desc ? `Purpose: ${desc}` : '',
+    framing,
+    'Output a usable template with headings, placeholders, safeguarding prompts, and recording/chronology notes where relevant.'
+  ]
+    .filter(Boolean)
+    .join('\n')
 }

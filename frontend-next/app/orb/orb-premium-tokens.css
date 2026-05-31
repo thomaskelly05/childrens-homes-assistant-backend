@@ -27,6 +27,10 @@ html[data-orb-residential='1'] .orb-chat-layout {
   --orb-surface-hover: rgba(255, 255, 255, 0.06);
   --orb-bg-deep: var(--orb-premium-bg-deep);
   --orb-accent: var(--orb-premium-accent);
+  --orb-brand-blue: #168bff;
+  --orb-brand-cyan: #42d7ff;
+  --orb-glow: rgba(22, 139, 255, 0.42);
+  --orb-glass-highlight: rgba(255, 255, 255, 0.55);
 
   background:
     radial-gradient(ellipse 80% 45% at 50% -12%, rgba(22, 139, 255, 0.08), transparent 55%),
@@ -510,8 +514,29 @@ html[data-orb-residential='1'] .orb-chat-layout--residential .orb-message-assist
   height: 8.75rem;
 }
 
-.glass-orb-mark--hero .glass-orb-mark__sphere {
+.glass-orb-mark--voice {
+  width: 10rem;
+  height: 10rem;
+}
+
+@media (min-width: 768px) {
+  .glass-orb-mark--voice {
+    width: 12.5rem;
+    height: 12.5rem;
+  }
+}
+
+.glass-orb-mark--hero .glass-orb-mark__sphere,
+.glass-orb-mark--voice .glass-orb-mark__sphere {
   animation-duration: 3.2s;
+}
+
+.glass-orb-mark--thinking .glass-orb-mark__sphere {
+  animation-duration: 1.8s;
+  box-shadow:
+    inset 0 1px 10px rgba(255, 255, 255, 0.25),
+    0 0 28px var(--orb-glow, rgba(22, 139, 255, 0.45)),
+    0 0 48px rgba(124, 92, 255, 0.22);
 }
 
 .glass-orb-mark__sphere {
