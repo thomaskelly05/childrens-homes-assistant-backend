@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from services.indicare_intelligence_surface_router import standalone_guidance_boundary_prefix
+from services.orb_evidence_graph_service import orb_evidence_graph_service
 from services.orb_grounded_answer_style_service import orb_grounded_answer_style_service
 from services.orb_institutional_depth_frame_service import orb_institutional_depth_frame_service
 from services.orb_knowledge_grounding_service import orb_knowledge_grounding_service
@@ -40,7 +41,14 @@ class SharedInstitutionalCognitionRuntime:
             mode=mode,
             active_brains=active_brains,
         )
+        evidence_graph = self._evidence_graph_context(
+            surface=surface,
+            message=message,
+            mode=mode,
+            sector_evidence=sector_evidence,
+        )
         active_brains = self._merge_sector_evidence_brains(active_brains, sector_evidence)
+        active_brains = self._merge_evidence_graph_brains(active_brains, evidence_graph)
         grounding = orb_knowledge_grounding_service.build_grounding(
             message=message,
             mode=mode,
@@ -51,6 +59,7 @@ class SharedInstitutionalCognitionRuntime:
         curiosity_prompt = orb_professional_curiosity_service.prompt_block(message, mode=mode)
         playbook_prompt = orb_scenario_playbook_service.prompt_block(message)
         sector_evidence_prompt = sector_evidence.get("prompt_addendum")
+        evidence_graph_prompt = evidence_graph.get("prompt_addendum")
         guidance_prefix = None
         if surface == "standalone_orb":
             prefix = standalone_guidance_boundary_prefix(message, history=history, mode=mode)
@@ -61,23 +70,52 @@ class SharedInstitutionalCognitionRuntime:
                 )
         citations = list(grounding.get("citations") or [])
         citations.extend(sector_evidence.get("citations") or [])
+        citations.extend(evidence_graph.get("citations") or [])
+
+        cognition_display_labels = self._merge_display_labels(
+            routing.get("cognition_display_labels") or [],
+            sector_evidence.get("display_labels") or [],
+        )
+        cognition_display_labels = self._merge_display_labels(
+            cognition_display_labels,
+            evidence_graph.get("display_labels") or [],
+        )
+        reasoning_lenses = self._merge_display_labels(
+            (depth_frame.get("required_lenses") or routing.get("reasoning_lenses") or [])[:8],
+            sector_evidence.get("reasoning_lenses") or [],
+        )
+        reasoning_lenses = self._merge_display_labels(
+            reasoning_lenses,
+            evidence_graph.get("reasoning_lenses") or [],
+        )
+        vault_domains = self._merge_display_labels(
+            grounding.get("vault_domains") or [],
+            sector_evidence.get("vault_domains") or [],
+        )
+        vault_domains = self._merge_display_labels(vault_domains, evidence_graph.get("vault_domains") or [])
 
         return {
             "surface": surface,
             "mode": mode or "Ask ORB",
             "boundary": boundary,
             "active_brains": active_brains,
-            "cognition_display_labels": self._merge_display_labels(
-                routing.get("cognition_display_labels") or [],
-                sector_evidence.get("display_labels") or [],
-            ),
+            "cognition_display_labels": cognition_display_labels,
             "routing": routing,
             "knowledge_grounding": grounding,
             "sector_evidence": sector_evidence,
+            "evidence_graph": evidence_graph,
             "depth_frame": depth_frame,
             "prompt_blocks": [
                 block
-                for block in (guidance_prefix, playbook_prompt, sector_evidence_prompt, grounded_prompt, depth_prompt, curiosity_prompt)
+                for block in (
+                    guidance_prefix,
+                    playbook_prompt,
+                    sector_evidence_prompt,
+                    evidence_graph_prompt,
+                    grounded_prompt,
+                    depth_prompt,
+                    curiosity_prompt,
+                )
                 if block
             ],
             "guidance_boundary_prefix": guidance_prefix,
@@ -98,19 +136,12 @@ class SharedInstitutionalCognitionRuntime:
                 "official_source_anchors": bool(citations),
                 "data_boundary": boundary["summary"],
                 "depth_topic": depth_frame.get("topic") if depth_frame else None,
-                "reasoning_lenses": self._merge_display_labels(
-                    (depth_frame.get("required_lenses") or routing.get("reasoning_lenses") or [])[:8],
-                    sector_evidence.get("reasoning_lenses") or [],
-                ),
+                "reasoning_lenses": reasoning_lenses,
                 "cognition_mode": mode or "Ask ORB",
-                "cognition_display_labels": self._merge_display_labels(
-                    routing.get("cognition_display_labels") or [],
-                    sector_evidence.get("display_labels") or [],
-                ),
-                "vault_domains": self._merge_display_labels(
-                    grounding.get("vault_domains") or [],
-                    sector_evidence.get("vault_domains") or [],
-                ),
+                "cognition_display_labels": cognition_display_labels,
+                "vault_domains": vault_domains,
+                "sector_evidence_active": bool(sector_evidence.get("active")),
+                "evidence_graph_active": bool(evidence_graph.get("active")),
                 "safeguarding_boundaries": list(boundary.get("safeguarding_boundaries", []))
                 if isinstance(boundary.get("safeguarding_boundaries"), list)
                 else [],
@@ -153,6 +184,14 @@ class SharedInstitutionalCognitionRuntime:
                 [
                     "- Sector evidence pipelines: " + "; ".join(sector.get("pipeline_ids") or []),
                     "- Sector evidence boundary: use public learning themes as professional prompts; do not claim a user's scenario matches a named report or review.",
+                ]
+            )
+        evidence_graph = context.get("evidence_graph") or {}
+        if evidence_graph.get("active"):
+            lines.extend(
+                [
+                    "- Evidence graph: active sector-pattern links were retrieved.",
+                    "- Evidence graph boundary: use graph links to identify recurring themes and lenses, not to overclaim causation or certainty.",
                 ]
             )
         lines.extend(context["response_requirements"])
@@ -257,6 +296,39 @@ class SharedInstitutionalCognitionRuntime:
             "os_records_accessed": False,
         }
 
+    def _evidence_graph_context(
+        self,
+        *,
+        surface: str,
+        message: str,
+        mode: str | None,
+        sector_evidence: dict[str, Any],
+    ) -> dict[str, Any]:
+        if surface != "standalone_orb":
+            return {"active": False, "reason": "not_standalone_orb"}
+        if not sector_evidence.get("active"):
+            return {"active": False, "reason": "sector_evidence_not_active"}
+        prompt = orb_evidence_graph_service.prompt_addendum(f"{message} {mode or ''}", limit=5)
+        query = orb_evidence_graph_service.query_graph(f"{message} {mode or ''}", limit=8)
+        nodes = query.get("nodes") or []
+        if not prompt and not nodes:
+            return {"active": False, "reason": "no_evidence_graph_matches"}
+        labels = [node.get("label") for node in nodes if node.get("label")][:5]
+        vault_domains = [node.get("type") for node in nodes if node.get("type")]
+        return {
+            "active": True,
+            "prompt_addendum": prompt,
+            "nodes": nodes,
+            "edges": query.get("edges") or [],
+            "display_labels": labels,
+            "reasoning_lenses": labels,
+            "vault_domains": self._merge_display_labels([], vault_domains),
+            "active_brains": ["evidence_graph_cognition"],
+            "citations": [],
+            "standalone": True,
+            "os_records_accessed": False,
+        }
+
     def _sector_pipeline_ids(self, *, message: str, mode: str | None, active_brains: list[str]) -> list[str]:
         text = f"{message or ''} {mode or ''}".lower()
         brain_text = " ".join(active_brains).lower()
@@ -298,6 +370,11 @@ class SharedInstitutionalCognitionRuntime:
     def _merge_sector_evidence_brains(self, active_brains: list[str], sector_evidence: dict[str, Any]) -> list[str]:
         brains = list(active_brains)
         brains.extend(sector_evidence.get("active_brains") or [])
+        return list(dict.fromkeys(brains))
+
+    def _merge_evidence_graph_brains(self, active_brains: list[str], evidence_graph: dict[str, Any]) -> list[str]:
+        brains = list(active_brains)
+        brains.extend(evidence_graph.get("active_brains") or [])
         return list(dict.fromkeys(brains))
 
     def _merge_display_labels(self, base: list[str], additions: list[str]) -> list[str]:
@@ -382,6 +459,13 @@ class SharedInstitutionalCognitionRuntime:
                 [
                     "- Where public sector evidence is retrieved, use it as learning themes and professional prompts — not as a claim that this situation matches a named report, review or inspection.",
                     "- Make the practical relevance clear: what it changes about safeguarding thinking, recording, child voice, oversight or Ofsted evidence.",
+                ]
+            )
+        if "evidence_graph_cognition" in active_brains:
+            requirements.extend(
+                [
+                    "- Use evidence graph links to connect recurring themes, relevant ORB lenses and public evidence patterns.",
+                    "- Do not overclaim frequency, causation or certainty unless the graph provides explicit counts or sources.",
                 ]
             )
         if depth_frame:
