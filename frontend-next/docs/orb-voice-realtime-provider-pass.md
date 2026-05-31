@@ -28,8 +28,11 @@ Three levels (honest selection via env):
 | 1 | `browser_fallback` | Default — no realtime env |
 | 2 | `websocket_realtime` | `ORB_VOICE_REALTIME_PROVIDER=websocket` + server STT/TTS flags |
 | 3 | `webrtc_realtime` | `ORB_VOICE_REALTIME_PROVIDER=webrtc` + provider credentials (adapter only; offer/ICE return 501) |
+| 4 | `openai_realtime` | `ORB_VOICE_REALTIME_PROVIDER=openai` + `OPENAI_API_KEY` — ephemeral client secret for WebRTC |
 
 Selection: `services/orb_voice_realtime_config.py` → `resolve_voice_provider()`.
+
+Voice profiles: see `docs/orb-openai-voice-profiles.md`. Session accepts ORB profile IDs (e.g. `orb_british_female`) and returns `selected_voice_profile` + resolved `provider_voice`.
 
 ## 4. Browser fallback
 

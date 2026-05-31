@@ -12,11 +12,13 @@ import { OrbRealtimeVoiceClient } from '@/lib/orb/voice/orb-realtime-voice-clien
 import { frameMessageForOrbVoice } from '@/lib/orb/voice/orb-voice-prompt'
 import { saveVoiceTranscript } from '@/lib/orb/voice/save-voice-transcript'
 import { isOrbDeveloperMode } from '@/lib/orb/orb-developer-mode'
+import { getOrbVoiceProfile, orbVoiceProfileLabel } from '@/lib/orb/voice/orb-voice-profiles'
 import {
   ORB_VOICE_GREETING,
   ORB_VOICE_MODES,
   ORB_VOICE_PRESETS,
   type OrbVoiceModeId,
+  type OrbVoicePresetId,
   type OrbVoiceSessionStatus,
   type VoiceTurn
 } from '@/lib/orb/voice/orb-voice-types'
@@ -95,18 +97,24 @@ function statusLabel(status: OrbVoiceSessionStatus, permissionDenied: boolean): 
   }
 }
 
-function providerUserLabel(session: OrbVoiceSessionResponse | null): string {
-  if (!session) return ''
+function providerUserLabel(
+  session: OrbVoiceSessionResponse | null,
+  profileLabel: string
+): string {
+  if (!session) return profileLabel
+  if (session.provider === 'openai_realtime') {
+    return `${profileLabel} · OpenAI Realtime`
+  }
   if (session.provider === 'websocket_realtime') {
-    return 'Realtime voice (WebSocket)'
+    return `${profileLabel} · Realtime (WebSocket)`
   }
   if (session.provider === 'webrtc_realtime') {
-    return 'Realtime voice (WebRTC)'
+    return `${profileLabel} · Realtime (WebRTC)`
   }
   if (session.fallback_reason) {
-    return 'Browser voice fallback — realtime not configured'
+    return `${profileLabel} · Browser voice (realtime not configured)`
   }
-  return 'British female voice where available (browser)'
+  return `${profileLabel} · Browser voice`
 }
 
 export function OrbVoiceStation({
@@ -147,8 +155,10 @@ export function OrbVoiceStation({
     voice.speaking,
     realtimeUiState
   )
-  const providerLabel = providerUserLabel(voiceSession)
   const { settings } = voice
+  const selectedProfileLabel = orbVoiceProfileLabel(settings.voicePresetId)
+  const providerLabel = providerUserLabel(voiceSession, selectedProfileLabel)
+  const selectedProfile = getOrbVoiceProfile(settings.voicePresetId)
 
   const resetSession = useCallback(() => {
     setSessionActive(false)
@@ -189,7 +199,8 @@ export function OrbVoiceStation({
     voice.clearTranscript()
     const framed = frameMessageForOrbVoice(text, {
       mode: settings.voiceMode,
-      spokenAnswerLength: settings.spokenAnswerLength
+      spokenAnswerLength: settings.spokenAnswerLength,
+      voiceProfileId: settings.voicePresetId
     })
     void Promise.resolve(onSendToOrb(framed))
   }, [
@@ -270,7 +281,8 @@ export function OrbVoiceStation({
         ])
         const framed = frameMessageForOrbVoice(text, {
           mode: settings.voiceMode,
-          spokenAnswerLength: settings.spokenAnswerLength
+          spokenAnswerLength: settings.spokenAnswerLength,
+          voiceProfileId: settings.voicePresetId
         })
         void Promise.resolve(onSendToOrb(framed))
       },
@@ -392,9 +404,10 @@ export function OrbVoiceStation({
           <select
             id="orb-voice-preset-select"
             value={settings.voicePresetId}
-            onChange={(e) => voice.setVoicePresetId(e.target.value as (typeof ORB_VOICE_PRESETS)[number]['id'])}
+            onChange={(e) => voice.setVoicePresetId(e.target.value as OrbVoicePresetId)}
             className="rounded-full border border-[var(--orb-line)]/60 bg-[var(--orb-surface-elevated)]/80 px-3 py-1.5 text-xs text-[var(--orb-foreground)]"
             data-orb-voice-preset-select
+            aria-label="Voice profile"
           >
             {ORB_VOICE_PRESETS.map((preset) => (
               <option key={preset.id} value={preset.id}>
@@ -403,6 +416,12 @@ export function OrbVoiceStation({
             ))}
           </select>
         </div>
+
+        {!sessionActive ? (
+          <p className="mt-2 text-center text-[11px] text-[var(--orb-muted)]" data-orb-voice-selected-profile>
+            Voice: {selectedProfile.label} — {selectedProfile.description}
+          </p>
+        ) : null}
 
         <GlassOrbMark
           size="hero"
@@ -442,8 +461,11 @@ export function OrbVoiceStation({
             data-orb-voice-developer-details
           >
             <p>
-              Provider: {voiceSession.provider} · status: {voiceSession.status} · latency:{' '}
-              {voiceSession.capabilities.latencyClass}
+              Provider: {voiceSession.provider} · profile: {voiceSession.selected_voice_profile ?? settings.voicePresetId}
+              {voiceSession.provider_voice ? ` · OpenAI voice: ${voiceSession.provider_voice}` : ''}
+            </p>
+            <p>
+              Status: {voiceSession.status} · latency: {voiceSession.capabilities.latencyClass}
             </p>
             {voiceSession.websocket_url ? <p>WebSocket: {voiceSession.websocket_url}</p> : null}
             {devEvents.length ? <p className="mt-1 truncate">Events: {devEvents.join(' · ')}</p> : null}

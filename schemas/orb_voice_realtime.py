@@ -6,10 +6,15 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-VoiceProviderType = Literal["browser_fallback", "websocket_realtime", "webrtc_realtime"]
+VoiceProviderType = Literal[
+    "browser_fallback",
+    "websocket_realtime",
+    "webrtc_realtime",
+    "openai_realtime",
+]
 VoiceSessionStatus = Literal["ready", "not_configured", "error"]
 VoiceLatencyClass = Literal["fallback", "standard", "realtime"]
-VoiceTransportRequest = Literal["auto", "websocket", "webrtc", "browser_fallback"]
+VoiceTransportRequest = Literal["auto", "websocket", "webrtc", "openai", "browser_fallback"]
 
 CLIENT_EVENT_TYPES = frozenset(
     {
@@ -62,6 +67,14 @@ class OrbVoiceSessionRequest(BaseModel):
     transport: VoiceTransportRequest = "auto"
 
 
+class OrbVoiceOpenAISession(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    model: str | None = None
+    client_secret: dict[str, Any] | None = None
+    voice: str | None = None
+
+
 class OrbVoiceSessionResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
@@ -70,8 +83,12 @@ class OrbVoiceSessionResponse(BaseModel):
     status: VoiceSessionStatus
     mode: str = "conversational"
     voice_id: str = "orb_british_female"
+    selected_voice_profile: str = "orb_british_female"
+    profile_label: str | None = None
+    provider_voice: str | None = None
     websocket_url: str | None = None
     webrtc_offer_url: str | None = None
+    openai_session: OrbVoiceOpenAISession | None = None
     capabilities: VoiceProviderCapabilities
     message: str | None = None
     fallback_reason: str | None = None

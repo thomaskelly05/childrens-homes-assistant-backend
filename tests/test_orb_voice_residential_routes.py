@@ -37,8 +37,60 @@ def test_orb_voice_session_returns_browser_fallback_by_default(voice_client):
     assert data["status"] == "ready"
     assert data["provider"] == "browser_fallback"
     assert data["capabilities"]["latencyClass"] == "fallback"
+    assert data["selected_voice_profile"] == "orb_british_female"
+    assert data["profile_label"] == "ORB British Female"
+    assert data["provider_voice"] == "coral"
     assert "session_id" in data
     assert data.get("websocket_url") is None
+
+
+def test_orb_voice_session_resolves_reflective_profile(voice_client):
+    response = voice_client.post(
+        "/orb/voice/session",
+        json={"mode": "reflective_practice", "voice_id": "orb_reflective"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["selected_voice_profile"] == "orb_reflective"
+    assert data["provider_voice"] == "sage"
+
+
+def test_orb_voice_session_openai_realtime_when_configured(voice_client, monkeypatch):
+    monkeypatch.setenv("ORB_VOICE_REALTIME_PROVIDER", "openai")
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    monkeypatch.setenv("ORB_REALTIME_ENABLED", "true")
+
+    async def fake_ephemeral(**_kwargs):
+        return {
+            "provider": "openai_realtime",
+            "configured": True,
+            "session": {
+                "id": "sess_test",
+                "client_secret": {"value": "ek_test", "expires_at": 999},
+            },
+            "model": "gpt-realtime",
+            "voice": "coral",
+            "fallback_text_mode": False,
+        }
+
+    monkeypatch.setattr(
+        "routers.orb_voice_residential_routes.orb_realtime_provider_service.create_ephemeral_session",
+        fake_ephemeral,
+    )
+
+    response = voice_client.post(
+        "/orb/voice/session",
+        json={"mode": "conversational", "voice_id": "orb_british_female", "transport": "auto"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["provider"] == "openai_realtime"
+    assert data["capabilities"]["supportsStreamingStt"] is True
+    assert data["capabilities"]["supportsStreamingTts"] is True
+    assert data["capabilities"]["supportsDuplex"] is True
+    assert data["selected_voice_profile"] == "orb_british_female"
+    assert data["provider_voice"] == "coral"
+    assert data.get("openai_session", {}).get("client_secret", {}).get("value") == "ek_test"
 
 
 def test_orb_voice_session_returns_websocket_realtime_when_configured(voice_client, monkeypatch):
@@ -69,8 +121,10 @@ def test_orb_voice_speak_returns_browser_fallback_when_server_tts_missing(voice_
     assert data["provider"] == "browser_fallback"
     assert data["text"] == "Hello from ORB"
     assert data["voice_id"] == "orb_british_female"
+    assert data["selected_voice_profile"] == "orb_british_female"
     assert "message" in data
     assert data.get("audio_url") is None
+    assert "provider_voice" not in data or data.get("provider_voice") is None
 
 
 def test_orb_voice_transcribe_not_configured_without_text(voice_client):

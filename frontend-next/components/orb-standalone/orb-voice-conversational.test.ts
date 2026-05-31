@@ -5,6 +5,10 @@ import { fileURLToPath } from 'node:url'
 import { describe, it } from 'node:test'
 
 import { pickBritishFemaleVoice } from '../../lib/orb/voice/orb-voice-browser.ts'
+import {
+  DEFAULT_ORB_VOICE_PROFILE_ID,
+  ORB_VOICE_PROFILES
+} from '../../lib/orb/voice/orb-voice-profiles.ts'
 import { frameMessageForOrbVoice } from '../../lib/orb/voice/orb-voice-prompt.ts'
 import { ORB_VOICE_SETTINGS_STORAGE_KEY } from '../../lib/orb/voice/orb-voice-types.ts'
 
@@ -42,7 +46,51 @@ describe('ORB Voice conversational sprint', () => {
     assert.match(panel, /data-orb-voice-allow-interruption/)
     assert.match(panel, /data-orb-open-orb-voice/)
     assert.match(panel, /data-orb-voice-push-to-talk/)
-    assert.match(panel, /British female voice where available/)
+    assert.match(panel, /data-orb-voice-profile-list/)
+    assert.match(panel, /Preview voice/)
+    assert.match(panel, /data-orb-voice-use-read-aloud/)
+  })
+
+  it('voice profile registry returns ORB British Female default', () => {
+    assert.equal(DEFAULT_ORB_VOICE_PROFILE_ID, 'orb_british_female')
+    assert.ok(ORB_VOICE_PROFILES.length >= 7)
+  })
+
+  it('voice settings render all profile labels', () => {
+    const panel = readComponent('components/orb-standalone/orb-voice-settings-panel.tsx')
+    assert.match(panel, /ORB_VOICE_PROFILES\.map/)
+    assert.match(panel, /profile\.label/)
+    assert.match(panel, /data-orb-voice-profile-label/)
+    assert.equal(ORB_VOICE_PROFILES.length, 7)
+  })
+
+  it('selecting a voice persists to localStorage', () => {
+    const hook = readComponent('components/orb-standalone/use-standalone-orb-voice.ts')
+    assert.match(hook, /ORB_VOICE_SETTINGS_STORAGE_KEY/)
+    assert.match(hook, /userChoseVoice/)
+    assert.match(hook, /voicePresetId/)
+  })
+
+  it('ORB Voice modal shows selected voice label not raw OpenAI id', () => {
+    const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
+    assert.match(station, /data-orb-voice-selected-profile/)
+    assert.match(station, /orbVoiceProfileLabel/)
+    assert.doesNotMatch(station, /<option[^>]*>coral<\/option>/)
+    const panel = readComponent('components/orb-standalone/orb-voice-settings-panel.tsx')
+    assert.match(panel, /data-orb-voice-dev-openai-id/)
+  })
+
+  it('preview falls back to browser when server TTS missing', () => {
+    const hook = readComponent('components/orb-standalone/use-standalone-orb-voice.ts')
+    assert.match(hook, /previewVoiceProfile/)
+    assert.match(hook, /requestOrbVoiceSpeak/)
+    assert.match(hook, /speakAloud/)
+  })
+
+  it('speak answer uses selected profile via resolveBrowserVoice', () => {
+    const hook = readComponent('components/orb-standalone/use-standalone-orb-voice.ts')
+    assert.match(hook, /resolveBrowserVoice/)
+    assert.match(hook, /readAloudProfileId/)
   })
 
   it('composer mic and speak remain visible', () => {

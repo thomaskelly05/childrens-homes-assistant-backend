@@ -1,3 +1,4 @@
+import { getOrbVoiceProfile } from '@/lib/orb/voice/orb-voice-profiles'
 import type { OrbVoiceModeId, OrbSpokenAnswerLength } from '@/lib/orb/voice/orb-voice-types'
 
 const MODE_INSTRUCTIONS: Record<OrbVoiceModeId, string> = {
@@ -27,14 +28,20 @@ export function voiceModeInstruction(mode: OrbVoiceModeId): string {
 
 export function frameMessageForOrbVoice(
   userText: string,
-  options: { mode: OrbVoiceModeId; spokenAnswerLength: OrbSpokenAnswerLength }
+  options: {
+    mode: OrbVoiceModeId
+    spokenAnswerLength: OrbSpokenAnswerLength
+    voiceProfileId?: string
+  }
 ): string {
   const modeLine = voiceModeInstruction(options.mode)
   const lengthLine = LENGTH_HINTS[options.spokenAnswerLength]
+  const profile = getOrbVoiceProfile(options.voiceProfileId)
   return [
     userText.trim(),
     '',
     '[ORB Voice — spoken response]',
+    `Voice style: ${profile.label}. ${profile.instructions}`,
     modeLine,
     lengthLine,
     'Use shorter sentences suitable for speech. No internal reasoning labels. No long bullet lists unless asked. If a full template would be long, offer to generate it in chat instead of reading it out.'
