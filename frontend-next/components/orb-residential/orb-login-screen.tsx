@@ -180,7 +180,11 @@ function OrbLoginPanel() {
                   />
                 </label>
               </>
-            ) : null}
+            ) : (
+              <p className="text-xs text-slate-500" data-orb-passkey-unavailable>
+                Passkeys are not available on this device
+              </p>
+            )}
           </div>
 
           {showEmailForm ? (
@@ -218,9 +222,8 @@ function OrbLoginPanel() {
                 {submitting ? 'Signing in…' : 'Sign in with email'}
               </button>
               <p className="text-center text-xs text-slate-500">
-                Prefer an authenticator app?{' '}
-                <Link href="/mfa" className="text-sky-400 hover:text-sky-300">
-                  Use authenticator app
+                <Link href="/mfa" className="text-sky-400 hover:text-sky-300" data-orb-authenticator-fallback>
+                  Use authenticator app instead
                 </Link>
               </p>
             </form>

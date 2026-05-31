@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
-import { ChevronDown, Copy, FileText, MoreHorizontal, RotateCcw, Square, Volume2 } from 'lucide-react'
+import { ChevronDown, Copy, FileText, MoreHorizontal, RotateCcw, Sparkles, Square, Volume2 } from 'lucide-react'
 
 import { copyTextToClipboard } from '@/lib/orb/orb-clipboard'
 import {
@@ -14,19 +14,25 @@ import { profileInitialsFromName } from '@/lib/orb/orb-profile-initials'
 import { OrbExplainabilityPanel, type OrbExplainabilityView } from '@/components/orb-standalone/orb-explainability-panel'
 import { OrbMarkdownAnswer } from '@/components/orb-standalone/orb-markdown-answer'
 import { logOrbCognitionDebug } from '@/lib/orb/standalone-client'
-import { cognitionPillLabel, type CognitionPillContext } from '@/lib/orb/residential-agents'
+import { cognitionPillLabel, collectCognitionDisplayLabels, type CognitionPillContext } from '@/lib/orb/residential-agents'
 import type { StandaloneOrbSource } from '@/lib/orb/standalone-local-store'
 import type { StandaloneOrbModelRouting } from '@/lib/orb/standalone-client'
 
-function CognitionPill({ label }: { label: string }) {
-  return (
-    <span
-      className="inline-flex items-center rounded-full border border-[var(--orb-line)] bg-[#F8FAFC] px-2 py-0.5 text-[10px] font-semibold text-[#475569]"
-      data-orb-cognition-pill
-    >
-      Using · {label}
-    </span>
+function lensChipLabels(
+  mode: string,
+  explainability?: OrbExplainabilityView,
+  messageHint?: string,
+  cognitionContext?: CognitionPillContext
+): string[] {
+  const summary = cognitionPillLabel(mode, explainability, messageHint, cognitionContext)
+  if (!summary || summary === 'ORB') return []
+  const fromExplainability = collectCognitionDisplayLabels(
+    explainability,
+    cognitionContext,
+    messageHint
   )
+  if (fromExplainability.length) return fromExplainability
+  return summary.split(' · ').map((part) => part.trim()).filter(Boolean)
 }
 
 function stripSourcesBasisSection(content: string): string {
@@ -76,13 +82,58 @@ export function OrbCognitionIndicators({
   messageHint?: string
   cognitionContext?: CognitionPillContext
 }) {
+  const [open, setOpen] = useState(false)
+  const chips = lensChipLabels(mode, explainability, messageHint, cognitionContext)
   const label = cognitionPillLabel(mode, explainability, messageHint, cognitionContext)
   logOrbCognitionDebug('rendered pill', { label, mode, messageHint })
+
+  if (!streaming && chips.length === 0) return null
+
   return (
-    <div className="mb-2 flex flex-wrap items-center gap-1.5">
-      <CognitionPill label={label} />
+    <div
+      className="orb-lenses-used mb-2"
+      data-orb-lenses-used
+      data-orb-lenses-collapsed={open ? 'false' : 'true'}
+    >
+      {chips.length ? (
+        <>
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            className="orb-lenses-used__toggle flex w-full max-w-full items-center gap-1.5 rounded-lg py-0.5 text-left text-[12px] text-slate-500 transition hover:text-slate-300"
+            aria-expanded={open}
+            data-orb-lenses-toggle
+          >
+            <Sparkles className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
+            <span className="min-w-0 truncate font-medium">ORB lenses used</span>
+            <ChevronDown
+              className={`ml-auto h-3.5 w-3.5 shrink-0 transition ${open ? 'rotate-180' : ''}`}
+              aria-hidden
+            />
+          </button>
+          {open ? (
+            <div
+              className="orb-lenses-used__panel mt-1.5 rounded-lg border border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] px-2 py-2"
+              data-orb-lenses-panel
+            >
+              <div className="orb-lenses-used__chips flex gap-1.5 overflow-x-auto pb-0.5" role="list">
+                {chips.map((chip) => (
+                  <span
+                    key={chip}
+                    className="orb-lenses-used__chip shrink-0 rounded-full border border-[var(--orb-line)] px-2 py-0.5 text-[11px] text-slate-400"
+                    data-orb-cognition-pill
+                    role="listitem"
+                  >
+                    {chip}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </>
+      ) : null}
       {streaming ? (
-        <span className="orb-electric-text text-[10px] orb-streaming-pulse" aria-live="polite">
+        <span className="orb-electric-text mt-1 block text-[10px] orb-streaming-pulse" aria-live="polite">
           composing
         </span>
       ) : null}
@@ -138,7 +189,7 @@ export function OrbAssistantMessageBody({
             cognitionContext={cognitionContext}
           />
         ) : null}
-        <div className="orb-message-content text-[15px] leading-7 text-[var(--orb-foreground)]">
+        <div className="orb-message-content text-[15px] leading-relaxed text-[var(--orb-foreground)] md:leading-7">
           <OrbMarkdownAnswer content={displayContent} sources={sources} />
         </div>
         {showExplainability ? (
@@ -452,7 +503,7 @@ export function OrbSuggestedReplyChips({
   if (!items.length) return null
   return (
     <div
-      className="mt-2 flex flex-wrap gap-1.5"
+      className="orb-suggested-replies-row mt-2 flex gap-1.5 overflow-x-auto pb-0.5"
       data-orb-suggested-replies
       role="group"
       aria-label="Suggested follow-ups"
@@ -462,7 +513,7 @@ export function OrbSuggestedReplyChips({
           key={`${item.action}-${item.label}`}
           type="button"
           onClick={() => onSelect(item)}
-          className="rounded-full border border-[var(--orb-line)] bg-[#F8FAFC] px-2.5 py-1 text-[11px] font-medium text-[#475569] transition hover:border-[#94A3B8] hover:text-[#0F172A]"
+          className="orb-suggested-reply-chip shrink-0 rounded-full border border-[var(--orb-line)] bg-[#F8FAFC] px-2.5 py-1 text-[11px] font-medium text-[#475569] transition hover:border-[#94A3B8] hover:text-[#0F172A]"
           data-orb-suggested-reply={item.action}
           data-orb-suggested-reply-label={item.label}
         >
@@ -688,7 +739,7 @@ export function OrbResponseActionBar({
 
   return (
     <div
-      className="orb-response-action-bar mt-3 flex flex-wrap items-center gap-1.5 border-t border-[var(--orb-line)] pt-3"
+      className="orb-response-action-bar orb-response-action-bar--icons mt-3 flex flex-nowrap items-center gap-1 overflow-x-auto border-t border-[var(--orb-line)] pt-3"
       data-orb-response-actions
       data-orb-response-action-bar
       data-orb-response-action-bar-persistent
@@ -743,14 +794,15 @@ function ActionChip({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`orb-action-chip inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-slate-400/60 ${
+      className={`orb-action-chip inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-slate-400/60 ${
         state === 'success' ? 'orb-action-chip--success' : state === 'error' ? 'orb-action-chip--error' : ''
       }`}
       data-orb-action-chip={dataAttr}
+      aria-label={label}
       title={label}
     >
       {icon}
-      {label}
+      <span className="orb-action-chip__label">{label}</span>
       {trailingIcon}
     </button>
   )

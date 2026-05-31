@@ -19,6 +19,7 @@ import {
 
 import { OrbHueMark } from '@/components/orb-standalone/orb-hue-logo'
 import type { AdultProfile } from '@/lib/orb/adult-profile-store'
+import { OrbSidebarChatList } from '@/components/orb-standalone/orb-sidebar-chat-menu'
 import { searchChats, type StandaloneChat, type StandaloneWorkspace } from '@/lib/orb/standalone-local-store'
 
 const STATIONS = [
@@ -72,6 +73,7 @@ export function OrbResidentialSidebar({
   onOpenSettings,
   onOpenSavedOutputs,
   onOpenProfile,
+  onWorkspaceChange,
   adultProfile,
   savedOutputsCount,
   onClose
@@ -85,6 +87,7 @@ export function OrbResidentialSidebar({
   onOpenSettings?: () => void
   onOpenSavedOutputs?: () => void
   onOpenProfile?: () => void
+  onWorkspaceChange: (next: StandaloneWorkspace) => void
   adultProfile?: AdultProfile | null
   savedOutputsCount?: number
   onClose?: () => void
@@ -94,6 +97,27 @@ export function OrbResidentialSidebar({
     [workspace.chats, chatSearch]
   )
   const timeGroupedChats = useMemo(() => groupChatsByRecency(filteredChats), [filteredChats])
+
+  function updateChat(chatId: string, patch: Partial<StandaloneChat>) {
+    onWorkspaceChange({
+      ...workspace,
+      chats: workspace.chats.map((c) => (c.id === chatId ? { ...c, ...patch, updatedAt: Date.now() } : c))
+    })
+  }
+
+  function deleteChat(chatId: string) {
+    const chats = workspace.chats.filter((c) => c.id !== chatId)
+    const activeChatId = workspace.activeChatId === chatId ? chats[0]?.id ?? null : workspace.activeChatId
+    onWorkspaceChange({ ...workspace, chats, activeChatId })
+  }
+
+  function renameChat(chatId: string) {
+    const chat = workspace.chats.find((c) => c.id === chatId)
+    if (!chat) return
+    const next = window.prompt('Rename chat', chat.title)
+    if (!next?.trim()) return
+    updateChat(chatId, { title: next.trim() })
+  }
 
   return (
     <>
@@ -153,23 +177,15 @@ export function OrbResidentialSidebar({
                 <p className="px-2 pb-1 text-[10px] font-medium uppercase tracking-wide text-[var(--orb-muted)]">
                   {group.label}
                 </p>
-                <ul className="space-y-0.5">
-                  {group.chats.map((chat) => (
-                    <li key={chat.id}>
-                      <button
-                        type="button"
-                        onClick={() => onSelectChat(chat.id)}
-                        className={`w-full truncate rounded-lg px-3 py-2 text-left text-[13px] transition ${
-                          workspace.activeChatId === chat.id
-                            ? 'orb-sidebar-chat-active font-semibold'
-                            : 'text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]'
-                        }`}
-                      >
-                        {chat.title}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+                <OrbSidebarChatList
+                  chats={group.chats}
+                  activeChatId={workspace.activeChatId}
+                  onSelectChat={onSelectChat}
+                  onRename={renameChat}
+                  onDelete={deleteChat}
+                  onPin={(chat) => updateChat(chat.id, { pinned: !chat.pinned })}
+                  onArchive={(chat) => updateChat(chat.id, { archived: true })}
+                />
               </div>
             ))}
           </div>
