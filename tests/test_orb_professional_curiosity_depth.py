@@ -254,6 +254,23 @@ def test_therapeutic_sanitize_uses_therapeutic_closer_not_threshold_boundary():
     assert "threshold decision" not in cleaned.lower()
 
 
+def test_general_ofsted_sanitize_strips_threshold_closer_and_adds_inspection_closer():
+    raw = (
+        "## Key functions of Ofsted\n"
+        "Ofsted inspects schools and educational institutions.\n\n"
+        "ORB can support your thinking, but the threshold decision should remain human-led and "
+        "local-procedure-led."
+    )
+    cleaned = orb_grounded_answer_style_service.sanitize_high_attention_closer(
+        raw,
+        message="Tell me about Ofsted",
+        mode="Ask ORB",
+    )
+    lower = cleaned.lower()
+    assert "threshold decision" not in lower
+    assert "inspection readiness checklist" in lower or "evidence review" in lower
+
+
 def test_medication_sources_filter_out_therapeutic_practice_pack():
     sources = [
         {"label": "Therapeutic practice", "type": "therapeutic_practice", "basis": "Emotionally containing language"},

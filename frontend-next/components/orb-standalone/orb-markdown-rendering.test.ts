@@ -18,7 +18,7 @@ describe('ORB markdown and cognition rendering', () => {
     assert.match(markdown, /remarkGfm/)
     assert.match(assistant, /OrbMarkdownAnswer/)
     assert.match(markdown, /orb-md-h2/)
-    assert.match(markdown, /font-bold text-\[#0F172A\]/)
+    assert.match(markdown, /font-bold text-\[var\(--orb-foreground/)
   })
 
   it('markdown uses single-pass citation link encoding for inline chips', () => {

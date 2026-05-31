@@ -138,4 +138,61 @@ describe('ORB Residential mobile UX', () => {
     assert.match(tokens, /#05070D/)
     assert.match(tokens, /#168BFF/)
   })
+
+  it('PremiumMobileOrb renders a single sphere element not duplicate orbs', () => {
+    const orb = readComponent('components/orb-residential/ui/premium-mobile-orb.tsx')
+    const premiumCss = readComponent('app/orb/orb-premium-tokens.css')
+    assert.match(orb, /premium-mobile-orb__sphere/)
+    assert.doesNotMatch(orb, /premium-mobile-orb__glow/)
+    assert.doesNotMatch(orb, /premium-mobile-orb__core/)
+    const sphereCount = (orb.match(/premium-mobile-orb__sphere/g) || []).length
+    assert.equal(sphereCount, 1)
+    assert.match(premiumCss, /\.premium-mobile-orb__sphere/)
+  })
+
+  it('residential experience forces dark theme isolation wrapper', () => {
+    const experience = readComponent('components/orb-residential/orb-residential-experience.tsx')
+    const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
+    const premiumCss = readComponent('app/orb/orb-premium-tokens.css')
+    assert.match(experience, /data-orb-residential/)
+    assert.match(experience, /orb-residential-root/)
+    assert.match(experience, /data-orb-residential.*1/)
+    assert.match(companion, /orb-residential-root/)
+    assert.match(companion, /effectiveTheme = residentialSurface \? 'dark'/)
+    assert.match(premiumCss, /html\[data-orb-residential='1'\]/)
+  })
+
+  it('markdown answer headings use theme foreground not near-black on dark', () => {
+    const markdown = readComponent('components/orb-standalone/orb-markdown-answer.tsx')
+    const premiumCss = readComponent('app/orb/orb-premium-tokens.css')
+    assert.match(markdown, /text-\[var\(--orb-foreground/)
+    assert.match(premiumCss, /\.orb-markdown-answer h2/)
+    assert.match(premiumCss, /#f7faff/)
+  })
+
+  it('station panels use friendly auth error not raw red main UI', () => {
+    const saved = readComponent('components/orb-standalone/orb-saved-outputs-panel.tsx')
+    const knowledge = readComponent('components/orb-standalone/orb-knowledge-library.tsx')
+    assert.match(saved, /OrbStationAuthError/)
+    assert.match(saved, /isOrbStationAuthError/)
+    assert.match(knowledge, /OrbStationAuthError/)
+    assert.doesNotMatch(saved, /text-red-600.*Authentication/)
+    assert.doesNotMatch(knowledge, /text-red-600.*Authentication/)
+  })
+
+  it('safety modal exposes failed save state for retry', () => {
+    const modal = readComponent('components/orb-residential/orb-safety-modal.tsx')
+    assert.match(modal, /data-orb-safety-save-error/)
+    assert.match(modal, /Could not save\. Try again\./)
+    assert.match(modal, /setSubmitting\(false\)/)
+  })
+
+  it('mobile sidebar stays on dark theme classes', () => {
+    const mobileCss = readComponent('app/orb/orb-mobile.css')
+    const premiumCss = readComponent('app/orb/orb-premium-tokens.css')
+    assert.match(mobileCss, /\.orb-chat-sidebar/)
+    assert.match(mobileCss, /#070b14/)
+    assert.match(premiumCss, /html\[data-orb-residential='1'\]/)
+    assert.match(premiumCss, /\.orb-chat-sidebar/)
+  })
 })

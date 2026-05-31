@@ -19,7 +19,7 @@ export function OrbSafetyModal({ onAccepted }: { onAccepted: () => void }) {
       await acceptOrbSafety(ORB_SAFETY_VERSION)
       onAccepted()
     } catch {
-      setError('Could not save your acknowledgement. Try again.')
+      setError('Could not save. Try again.')
     } finally {
       setSubmitting(false)
     }
@@ -32,13 +32,25 @@ export function OrbSafetyModal({ onAccepted }: { onAccepted: () => void }) {
       aria-labelledby="orb-safety-title"
       data-orb-safety-modal
     >
-      <div className="w-full max-w-md rounded-3xl border border-white/10 bg-[#0a1228] p-6 shadow-2xl">
+      <div
+        className="max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-2rem))] w-full max-w-md overflow-y-auto rounded-3xl border border-white/10 bg-[#0a1228] p-6 shadow-2xl"
+        style={{ marginBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      >
         <h2 id="orb-safety-title" className="text-lg font-semibold text-white">
           Before using ORB
         </h2>
-        <p className="mt-3 text-sm leading-relaxed text-slate-300">{SAFETY_TEXT}</p>
-        {error ? <p className="mt-3 text-sm text-red-400">{error}</p> : null}
-        <OrbButton className="mt-6 w-full" onClick={() => void handleAccept()} disabled={submitting}>
+        <p className="mt-3 text-base leading-relaxed text-slate-300">{SAFETY_TEXT}</p>
+        {error ? (
+          <p className="mt-3 text-base text-red-400" data-orb-safety-save-error role="alert">
+            {error}
+          </p>
+        ) : null}
+        <OrbButton
+          className="mt-6 min-h-[3rem] w-full text-base md:min-h-[3.5rem]"
+          onClick={() => void handleAccept()}
+          disabled={submitting}
+          data-orb-safety-accept
+        >
           {submitting ? 'Saving…' : 'I understand'}
         </OrbButton>
       </div>

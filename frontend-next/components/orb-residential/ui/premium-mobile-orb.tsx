@@ -22,8 +22,7 @@ export function PremiumMobileOrb({
       role="img"
       aria-label={label}
     >
-      <div className="premium-mobile-orb__glow" aria-hidden />
-      <div className="premium-mobile-orb__core" aria-hidden />
+      <div className="premium-mobile-orb__sphere" aria-hidden />
     </div>
   )
 }

@@ -89,6 +89,16 @@ class OrbGroundedAnswerStyleService:
         "education_health": (
             "\n\nKeep advocacy, plan review and child progress visible — not only appointments or process lists."
         ),
+        "inspection": (
+            "\n\nORB can help you turn this into an inspection readiness checklist, Reg 44/45 preparation note, "
+            "or evidence review."
+        ),
+        "templates": (
+            "\n\nORB can generate this as a template and export it where supported."
+        ),
+        "learning": (
+            "\n\nORB can turn this into a five-minute staff learning session."
+        ),
     }
 
     SAFEGUARDING_CLOSER_RISK_TERMS = frozenset(
@@ -222,8 +232,14 @@ class OrbGroundedAnswerStyleService:
                 "- Fact vs interpretation, child voice, antecedent/response/outcome, manager review, inspection relevance; placeholders for missing facts.",
             ],
             "inspection": [
-                "Reg 44/45 / inspection depth:",
+                "Ofsted / SCCIF depth for children's homes (not generic schools guidance unless clearly needed):",
+                "- Structure: ## What Ofsted means for children's homes, ## What inspectors look at, "
+                "## What a Registered Manager should evidence, ## What an RI should challenge, ## What ORB can help with.",
+                "- Anchor to children's homes, residential childcare, Registered Managers, Responsible Individuals, "
+                "SCCIF, Quality Standards, safeguarding, leadership and management, child voice, evidence of impact, inspection readiness.",
+                "- Do not simply explain what Ofsted is as a general regulator; focus on residential care practice and evidence.",
                 "- Evaluative not descriptive Reg 45; Reg 44 repetition; triangulation; child experience and impact evidence [SCCIF] [Reg 13].",
+                "- End with inspection-readiness support (checklist, Reg 44/45 note, evidence review) — not generic safeguarding threshold language unless risk is asked.",
             ],
             "placement_planning": [
                 "Care/placement/risk planning depth:",
@@ -373,6 +389,14 @@ class OrbGroundedAnswerStyleService:
         "recording": ("before sign-off", "child voice, staff response"),
         "cumulative_concern": ("registered manager and", "ri oversight are visible"),
         "leadership": ("children were safer", "understood the pattern"),
+        "inspection": (
+            "inspection readiness checklist",
+            "reg 44/45 preparation",
+            "evidence review",
+            "ri challenge questions",
+        ),
+        "templates": ("generate this as a template", "export it where supported"),
+        "learning": ("five-minute staff learning", "staff learning session"),
     }
 
     SAFE_BOUNDARY_CLOSER = (
@@ -384,6 +408,40 @@ class OrbGroundedAnswerStyleService:
     def _safeguarding_closer_indicated(self, message: str) -> bool:
         text = str(message or "").lower()
         return any(term in text for term in self.SAFEGUARDING_CLOSER_RISK_TERMS)
+
+    def _is_general_ofsted_question(self, message: str) -> bool:
+        text = re.sub(r"\s+", " ", str(message or "").strip().lower())
+        if not text:
+            return False
+        if not any(term in text for term in ("ofsted", "sccif", "quality standard", "reg 44", "reg 45")):
+            return False
+        if self._safeguarding_closer_indicated(message):
+            return False
+        general_patterns = (
+            r"^tell me about ofsted\.?$",
+            r"^what is ofsted\??$",
+            r"^explain ofsted\.?$",
+            r"^what does ofsted do\??$",
+            r"^how does ofsted work\??$",
+            r"^ofsted\??$",
+        )
+        if any(re.fullmatch(pattern, text) for pattern in general_patterns):
+            return True
+        if "tell me about ofsted" in text and len(text) < 80:
+            return True
+        return False
+
+    def _detect_templates_or_learning_topic(self, message: str, *, mode: str | None = None) -> str | None:
+        text = str(message or "").lower()
+        mode_text = str(mode or "").lower()
+        if any(term in text or term in mode_text for term in ("template", "form", "export", "document template")):
+            return "templates"
+        if any(
+            term in text or term in mode_text
+            for term in ("learn", "training", "staff session", "nvq", "academy", "cpd", "reflective practice")
+        ):
+            return "learning"
+        return None
 
     def _is_casual_or_greeting(self, message: str) -> bool:
         text = re.sub(r"\s+", " ", str(message or "").strip().lower())
@@ -417,8 +475,13 @@ class OrbGroundedAnswerStyleService:
         if orb_academy_nvq_anchor_service.is_nvq_learning_question(message):
             if not orb_academy_nvq_anchor_service.is_safeguarding_threshold_question(message):
                 return None
+        alt = self._detect_templates_or_learning_topic(message)
+        if alt and alt in self.TOPIC_CLOSERS:
+            return self.TOPIC_CLOSERS.get(alt)
         if not topic:
             return None
+        if topic == "inspection" and not self._safeguarding_closer_indicated(message):
+            return self.TOPIC_CLOSERS.get("inspection")
         if topic in {"therapeutic", "recording", "education_health"} and not self._safeguarding_closer_indicated(message):
             return self.TOPIC_CLOSERS.get(topic)
         if topic == "leadership":
@@ -465,8 +528,16 @@ class OrbGroundedAnswerStyleService:
             return cleaned
         casual = self._is_casual_or_greeting(message)
         topic = orb_professional_curiosity_service.detect_topic(message, mode=mode)
+        alt_topic = self._detect_templates_or_learning_topic(message, mode=mode)
+        if alt_topic:
+            topic = alt_topic
         safeguarding_risk = self._safeguarding_closer_indicated(message)
-        no_boundary_topic = topic in self.THERAPEUTIC_NO_BOUNDARY_TOPICS and not safeguarding_risk
+        general_ofsted = self._is_general_ofsted_question(message) or (
+            topic == "inspection" and not safeguarding_risk
+        )
+        no_boundary_topic = (
+            topic in self.THERAPEUTIC_NO_BOUNDARY_TOPICS or topic in {"inspection", "templates", "learning"}
+        ) and not safeguarding_risk
         high_attention = topic in self.HIGH_ATTENTION_CLOSER_TOPICS or topic in orb_professional_curiosity_service.HIGH_ATTENTION_TOPICS
         cleaned = text
         if casual:
@@ -496,17 +567,37 @@ class OrbGroundedAnswerStyleService:
             return cleaned
         if not high_attention and not no_boundary_topic:
             return text
-        if no_boundary_topic:
+        if no_boundary_topic or general_ofsted:
             for pattern in self.THRESHOLD_BOUNDARY_CLOSER_PATTERNS:
                 cleaned = pattern.sub("", cleaned).rstrip()
+            if "threshold decision" in cleaned.lower():
+                cleaned = re.sub(
+                    r"\n+ORB can support your thinking[\s\S]*?(?=\n\n|\Z)",
+                    "",
+                    cleaned,
+                    flags=re.I,
+                ).rstrip()
             for term in ("lado", "threshold decision", "ri oversight", "local-procedure-led"):
-                if term in cleaned.lower() and topic == "therapeutic":
+                if term in cleaned.lower() and topic in {"therapeutic", "inspection"}:
                     cleaned = re.sub(
                         rf"\n+[^\n]*{re.escape(term)}[^\n]*(?:\n[^\n]*{re.escape(term)}[^\n]*)*",
                         "",
                         cleaned,
                         flags=re.I,
                     ).rstrip()
+            if general_ofsted:
+                for marker in (
+                    "manager oversight is visible",
+                    "local-procedure-led",
+                    "seek appropriate advice",
+                ):
+                    if marker in cleaned.lower():
+                        cleaned = re.sub(
+                            rf"\n+[^\n]*{re.escape(marker)}[^\n]*",
+                            "",
+                            cleaned,
+                            flags=re.I,
+                        ).rstrip()
         for pattern in self.GENERIC_CLOSER_PATTERNS:
             cleaned = pattern.sub("", cleaned).rstrip()
         cleaned = self._strip_trailing_coaching_questions(cleaned)

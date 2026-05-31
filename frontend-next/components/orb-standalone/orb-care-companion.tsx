@@ -2202,12 +2202,14 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   const layoutA11yClass = standaloneOrbAccessibilityClassNames(a11yPrefs)
 
   const atmosphereClass = atmosphereClassForMode(mode)
-  const themeClass = resolvedTheme === 'light' ? 'orb-theme-light' : 'orb-theme-dark'
+  const effectiveTheme = residentialSurface ? 'dark' : resolvedTheme
+  const themeClass = effectiveTheme === 'light' ? 'orb-theme-light' : 'orb-theme-dark'
 
   return (
     <main
-      className={`orb-chat-layout relative flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden ${layoutA11yClass} ${atmosphereClass} ${themeClass} ${isAnswering ? 'orb-response-active' : ''} ${residentialSurface ? 'orb-chat-layout--residential' : ''}`}
-      data-orb-theme={resolvedTheme}
+      className={`orb-chat-layout relative flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden ${layoutA11yClass} ${atmosphereClass} ${themeClass} ${isAnswering ? 'orb-response-active' : ''} ${residentialSurface ? 'orb-chat-layout--residential orb-residential-root' : ''}`}
+      data-orb-theme={effectiveTheme}
+      {...(residentialSurface ? { 'data-orb-residential': 'true' as const } : {})}
       data-orb-residential-surface={residentialSurface ? 'true' : undefined}
       data-orb-light-ui-build={ORB_LIGHT_UI_BUILD}
       data-orb-appearance-mode={appearanceMode}
@@ -2223,7 +2225,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         agentAtmosphere={atmosphereClass}
         reducedMotion={a11yPrefs.reducedMotion}
       />
-      {resolvedTheme === 'dark' ? (
+      {effectiveTheme === 'dark' ? (
         <div className="pointer-events-none fixed inset-0 orb-cinematic-light-field opacity-35" aria-hidden />
       ) : null}
 
@@ -2645,13 +2647,20 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                   >
                     <div className="relative flex justify-center" data-orb-empty-sphere>
                       {residentialSurface ? (
-                        <>
-                          <PremiumMobileOrb variant="mobile" className="md:hidden" />
-                          <PremiumMobileOrb variant="desktop" className="hidden md:flex" />
-                        </>
-                      ) : (
+                        <PremiumMobileOrb
+                          variant="mobile"
+                          className="md:hidden"
+                        />
+                      ) : null}
+                      {residentialSurface ? (
+                        <PremiumMobileOrb
+                          variant="desktop"
+                          className="hidden md:flex"
+                        />
+                      ) : null}
+                      {!residentialSurface ? (
                         <OrbGlow state="idle" interactive={false} size="dock" compactLabels />
-                      )}
+                      ) : null}
                     </div>
                     {residentialSurface ? (
                       <div data-orb-empty-brand-stack>
@@ -2676,13 +2685,20 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                       </>
                     )}
                     <h2
-                      className="mt-4 text-xl font-semibold tracking-tight text-slate-900 md:mt-6 md:text-[1.35rem]"
+                      className={`mt-4 text-xl font-semibold tracking-tight md:mt-6 md:text-[1.35rem] ${
+                        residentialSurface ? 'text-[var(--orb-premium-text,#f7faff)]' : 'text-slate-900'
+                      }`}
                       data-orb-empty-heading
                     >
                       {emptyHeading}
                     </h2>
                     {residentialSurface || emptyWelcome.subline ? (
-                      <p className="mt-2 max-w-lg text-sm leading-7 text-slate-600" data-orb-empty-subline>
+                      <p
+                        className={`mt-2 max-w-lg text-sm leading-7 ${
+                          residentialSurface ? 'text-[var(--orb-premium-text-secondary,#a7aebd)]' : 'text-slate-600'
+                        }`}
+                        data-orb-empty-subline
+                      >
                         {emptyWelcome.subline ||
                           (residentialSurface
                             ? 'Ask about recording, safeguarding, Ofsted, templates or practice.'
