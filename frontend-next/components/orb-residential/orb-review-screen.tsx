@@ -25,6 +25,10 @@ const DOC_TYPES = [
 
 type ReviewSection = { title: string; body: string; accent: OrbResultAccent }
 
+function mapArray<T, R>(value: unknown, mapper: (item: T, index: number) => R): R[] {
+  return Array.isArray(value) ? (value as T[]).map(mapper) : []
+}
+
 function sectionsFromUnderstanding(u: OrbDocumentUnderstanding): ReviewSection[] {
   const evalObj = (u.evaluation ?? {}) as Record<string, unknown>
   const fromEval = (key: string) => {
@@ -37,21 +41,56 @@ function sectionsFromUnderstanding(u: OrbDocumentUnderstanding): ReviewSection[]
 
   const sections: ReviewSection[] = [
     { title: 'Overall View', body: u.plain_english_summary || fromEval('overall_view'), accent: 'default' },
-    { title: 'What is Strong', body: fromEval('strengths') || u.important_points?.map((p) => p.point).join('\n') || '', accent: 'blue' },
-    { title: 'What is Missing', body: u.gaps_or_missing_information?.map((g) => g.gap).join('\n') || fromEval('gaps'), accent: 'default' },
+    {
+      title: 'What is Strong',
+      body:
+        fromEval('strengths') ||
+        mapArray<{ point?: string }, string>(u.important_points, (p) => String(p.point ?? ''))
+          .filter(Boolean)
+          .join('\n') ||
+        '',
+      accent: 'blue'
+    },
+    {
+      title: 'What is Missing',
+      body:
+        mapArray<{ gap?: string }, string>(u.gaps_or_missing_information, (g) => String(g.gap ?? ''))
+          .filter(Boolean)
+          .join('\n') || fromEval('gaps'),
+      accent: 'default'
+    },
     { title: 'Child Voice', body: fromEval('child_voice'), accent: 'teal' },
-    { title: 'Safeguarding', body: u.risks_or_concerns?.map((r) => r.risk).join('\n') || fromEval('safeguarding'), accent: 'amber' },
+    {
+      title: 'Safeguarding',
+      body:
+        mapArray<{ risk?: string }, string>(u.risks_or_concerns, (r) => String(r.risk ?? ''))
+          .filter(Boolean)
+          .join('\n') || fromEval('safeguarding'),
+      accent: 'amber'
+    },
     { title: 'Professional Curiosity', body: fromEval('professional_curiosity'), accent: 'default' },
     { title: 'Recording Quality', body: fromEval('recording_quality'), accent: 'default' },
     {
       title: 'Evidence of Impact',
-      body: fromEval('impact') || u.practice_implications?.map((p) => p.implication ?? '').join('\n') || '',
+      body:
+        fromEval('impact') ||
+        mapArray<{ implication?: string }, string>(u.practice_implications, (p) => String(p.implication ?? ''))
+          .filter(Boolean)
+          .join('\n') ||
+        '',
       accent: 'blue'
     },
     { title: 'Leadership / RI Oversight', body: fromEval('leadership'), accent: 'default' },
     { title: 'Ofsted / SCCIF Lens', body: fromEval('ofsted'), accent: 'purple' },
     { title: 'Outstanding Practice', body: fromEval('outstanding'), accent: 'gold' },
-    { title: 'Suggested Improvements', body: u.suggested_questions?.map((q) => `• ${q.question}`).join('\n') || fromEval('improvements'), accent: 'default' }
+    {
+      title: 'Suggested Improvements',
+      body:
+        mapArray<{ question?: string }, string>(u.suggested_questions, (q) => `• ${q.question ?? ''}`)
+          .filter(Boolean)
+          .join('\n') || fromEval('improvements'),
+      accent: 'default'
+    }
   ]
 
   return sections.filter((s) => s.body.trim())

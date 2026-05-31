@@ -2655,16 +2655,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                   >
                     <div className="relative flex justify-center" data-orb-empty-sphere>
                       {residentialSurface ? (
-                        <PremiumMobileOrb
-                          variant="mobile"
-                          className="md:hidden"
-                        />
-                      ) : null}
-                      {residentialSurface ? (
-                        <PremiumMobileOrb
-                          variant="desktop"
-                          className="hidden md:flex"
-                        />
+                        <PremiumMobileOrb variant="desktop" className="premium-mobile-orb--responsive" />
                       ) : null}
                       {!residentialSurface ? (
                         <OrbGlow state="idle" interactive={false} size="dock" compactLabels />
@@ -3117,6 +3108,9 @@ function OrbPromptDrawer({
   onApply: (entry: PromptEntry) => void
   onClose: () => void
 }) {
+  const safeGroups = Array.isArray(groups) ? groups : []
+  const safeMoreStarters = Array.isArray(moreStarters) ? moreStarters : []
+
   return (
     <div className="fixed inset-0 z-[68] flex items-end justify-center bg-black/60 p-4 sm:items-center" role="dialog" aria-label="Example prompts">
       <div className="max-h-[85dvh] w-full max-w-lg overflow-y-auto rounded-2xl border border-white/10 bg-[#0d1117] p-4 shadow-2xl">
@@ -3126,11 +3120,11 @@ function OrbPromptDrawer({
             <X className="h-5 w-5" />
           </button>
         </div>
-        {groups.map((group) => (
+        {safeGroups.map((group) => (
           <div key={group.title} className="mb-4">
             <p className="mb-1 text-[10px] font-medium uppercase tracking-wide text-slate-500">{group.title}</p>
             <ul className="space-y-1">
-              {group.prompts.map((prompt) => (
+              {(Array.isArray(group.prompts) ? group.prompts : []).map((prompt) => (
                 <li key={prompt.text}>
                   <button
                     type="button"
@@ -3146,7 +3140,7 @@ function OrbPromptDrawer({
         ))}
         {moreExpanded ? (
           <ul className="mb-3 space-y-1">
-            {moreStarters.map((prompt) => (
+            {safeMoreStarters.map((prompt) => (
               <li key={prompt.text}>
                 <button
                   type="button"

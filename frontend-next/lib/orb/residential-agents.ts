@@ -1,5 +1,9 @@
 import type { StandaloneOrbMode } from '@/lib/orb/standalone-client'
 
+function asArray<T>(value: unknown): T[] {
+  return Array.isArray(value) ? (value as T[]) : []
+}
+
 export type ResidentialAgentId =
   | 'ask_orb'
   | 'safeguarding_thinking'
@@ -294,19 +298,19 @@ export function collectCognitionDisplayLabels(
   messageHint?: string
 ): string[] {
   const ctx = context?.context_used
-  const fromContext =
+  const rawLabels =
     ctx?.cognition_display_labels ??
     context?.cognition_display_labels ??
     ctx?.explainability?.cognition_display_labels ??
-    explainability?.cognition_display_labels ??
-    []
+    explainability?.cognition_display_labels
+  const fromContext = asArray<string>(rawLabels)
   if (fromContext.length) {
-    return fromContext.filter(Boolean) as string[]
+    return fromContext.filter(Boolean)
   }
   const inferred = inferResidentialCognitionLabels(messageHint)
   if (inferred?.length) return inferred
   const brainDerived = labelsFromBrains(
-    ctx?.active_brains ?? explainability?.active_brains,
+    asArray<string>(ctx?.active_brains ?? explainability?.active_brains),
     inferResidentialCognitionLabels(messageHint)
   )
   return brainDerived ?? []

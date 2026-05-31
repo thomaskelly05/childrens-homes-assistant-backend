@@ -680,7 +680,16 @@ html[data-orb-residential='1'] .orb-chat-layout {
   height: 100dvh;
   max-height: 100dvh;
   overflow: hidden;
-  background: #0d0d0d;
+  background: #05070d;
+  color-scheme: dark;
+}
+
+@media (min-width: 1024px) {
+  html[data-orb-residential='1'] .orb-chat-sidebar {
+    width: var(--orb-sidebar-width, 17.5rem);
+    min-width: var(--orb-sidebar-width, 17.5rem);
+    max-width: var(--orb-sidebar-width, 17.5rem);
+  }
 }
 
 .orb-chat-layout--residential .orb-chat-thread,
