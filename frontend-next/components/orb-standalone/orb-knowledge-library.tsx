@@ -9,7 +9,9 @@ import { OrbStandalonePanelShell } from '@/components/orb-standalone/orb-standal
 import {
   isOrbStationAuthError,
   OrbStationAuthError,
-  OrbStationEmptyState
+  OrbStationEmptyState,
+  OrbStationReconnectBanner,
+  shouldBlockStationForAuth
 } from '@/components/orb-standalone/orb-station-panel-states'
 import {
   OrbCitationHealthSummary,
@@ -66,12 +68,14 @@ export function OrbKnowledgeLibraryPanel({
   open,
   onClose,
   residentialSurface = false,
-  onAskOrb
+  onAskOrb,
+  sessionReady = true
 }: {
   open: boolean
   onClose: () => void
   residentialSurface?: boolean
   onAskOrb?: (prompt: string) => void
+  sessionReady?: boolean
 }) {
   const [sources, setSources] = useState<OrbKnowledgeSource[]>([])
   const [summary, setSummary] = useState<string | null>(null)
@@ -272,8 +276,10 @@ export function OrbKnowledgeLibraryPanel({
           ) : null}
           {summary ? <p className="mb-3 text-[11px] text-slate-500">{summary}</p> : null}
           {error ? (
-            isOrbStationAuthError(error) ? (
+            shouldBlockStationForAuth(sessionReady, error) ? (
               <OrbStationAuthError detail={error} />
+            ) : isOrbStationAuthError(error) ? (
+              <OrbStationReconnectBanner onRefresh={() => void refresh()} />
             ) : (
               <OrbStationEmptyState
                 dataAttr="knowledge_error"

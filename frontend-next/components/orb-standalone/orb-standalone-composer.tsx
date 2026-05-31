@@ -3,6 +3,10 @@
 import { FormEvent, useEffect, useRef, type DragEvent } from 'react'
 import { Camera, ChevronDown, FileText, Mic, MicOff, Plus, Send, Square, Wrench, X } from 'lucide-react'
 
+import {
+  OrbComposerPlusMenu,
+  type OrbComposerPlusAction
+} from '@/components/orb-standalone/orb-composer-plus-menu'
 import { logTapTarget } from '@/lib/interaction/mobile-tap-debug'
 import type { StandaloneOrbMode } from '@/lib/orb/standalone-client'
 
@@ -61,7 +65,8 @@ export function OrbStandaloneComposer({
   onAgentSelectorClick,
   answering,
   onStopGenerating,
-  residentialSurface = false
+  residentialSurface = false,
+  onPlusMenuAction
 }: {
   value: string
   pending: boolean
@@ -103,6 +108,7 @@ export function OrbStandaloneComposer({
   answering?: boolean
   onStopGenerating?: () => void
   residentialSurface?: boolean
+  onPlusMenuAction?: (action: OrbComposerPlusAction) => void
 }) {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const cameraInputRef = useRef<HTMLInputElement | null>(null)
@@ -309,9 +315,16 @@ export function OrbStandaloneComposer({
             <div className={compactResidential ? 'flex items-end gap-1.5' : ''}>
             {compactResidential ? (
               <div className="orb-composer-action-rail flex shrink-0 items-center gap-0.5 pb-1">
-                <button type="button" onClick={() => fileInputRef.current?.click()} className="inline-flex h-9 min-w-9 shrink-0 items-center justify-center rounded-full text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]" aria-label="Attach" data-orb-composer-attach>
-                  <Plus className="h-4 w-4" aria-hidden />
-                </button>
+                {onPlusMenuAction ? (
+                  <OrbComposerPlusMenu
+                    onSelect={onPlusMenuAction}
+                    onAttachFiles={() => fileInputRef.current?.click()}
+                  />
+                ) : (
+                  <button type="button" onClick={() => fileInputRef.current?.click()} className="inline-flex h-9 min-w-9 shrink-0 items-center justify-center rounded-full text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]" aria-label="Attach" data-orb-composer-attach>
+                    <Plus className="h-4 w-4" aria-hidden />
+                  </button>
+                )}
                 {onAttachDocumentClick ? <button type="button" onClick={onAttachDocumentClick} className="inline-flex h-9 min-w-9 shrink-0 items-center justify-center rounded-full text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)]" aria-label="Attach document" data-orb-composer-document><FileText className="h-4 w-4" aria-hidden /></button> : null}
                 {onToolsClick ? <button type="button" onClick={onToolsClick} className="inline-flex h-9 min-w-9 shrink-0 items-center justify-center rounded-full text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)]" aria-label="Tools" data-orb-composer-tools><Wrench className="h-4 w-4" aria-hidden /></button> : null}
               </div>

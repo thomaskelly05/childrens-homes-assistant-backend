@@ -702,3 +702,23 @@ html[data-orb-residential='1'] .orb-chat-layout {
   max-height: 12rem;
   overflow-y: auto;
 }
+
+.orb-chat-layout--residential .orb-chat-shell,
+.orb-chat-layout--residential .orb-chat-main {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.orb-chat-layout--residential .orb-chat-main > section {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.orb-chat-layout--residential .orb-composer-zone,
+.orb-chat-layout--residential .orb-composer-dock {
+  flex: 0 0 auto;
+}

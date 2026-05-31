@@ -67,6 +67,8 @@ import { OrbIntelligenceMapPanel } from '@/components/orb-standalone/orb-intelli
 import { OrbMemoryPanel } from '@/components/orb-standalone/orb-memory-panel'
 import { OrbPermissionsPanel } from '@/components/orb-standalone/orb-permissions-panel'
 import { OrbToolsPanel } from '@/components/orb-standalone/orb-tools-panel'
+import { OrbVoiceStation } from '@/components/orb-standalone/orb-voice-station'
+import type { OrbComposerPlusAction } from '@/components/orb-standalone/orb-composer-plus-menu'
 import { OrbStandaloneSettingsPanel } from '@/components/orb-standalone/orb-standalone-settings-panel'
 import {
   ORB_TOOL_TO_PANEL,
@@ -695,6 +697,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   const openPermissionsPanel = useCallback(() => openPanel('permissions'), [openPanel])
   const openIntelligenceMap = useCallback(() => openPanel('intelligence_map'), [openPanel])
   const openBillingPanel = useCallback(() => openPanel('billing'), [openPanel])
+  const openOrbVoicePanel = useCallback(() => openPanel('orb_voice'), [openPanel])
 
   function openResidentialAccount() {
     if (residentialSurface) {
@@ -1641,10 +1644,49 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       case 'documents':
         openDocumentsPanel()
         break
+      case 'orb_voice':
+        openOrbVoicePanel()
+        break
       default:
         break
     }
     setSidebarOpen(false)
+  }
+
+  function handleComposerPlusAction(action: OrbComposerPlusAction) {
+    switch (action) {
+      case 'upload_document':
+        openDocumentsPanel()
+        break
+      case 'review_text':
+        setMessage(
+          'Review this text for safeguarding, child voice, recording quality and inspection readiness:\n\n'
+        )
+        closePanel()
+        inputRef.current?.focus()
+        break
+      case 'use_template':
+        openTemplatesPanel()
+        break
+      case 'knowledge':
+        openKnowledgeLibrary()
+        break
+      case 'orb_voice':
+        openOrbVoicePanel()
+        break
+      case 'learning_session':
+        setMessage('Create a 5-minute staff learning session from this topic with discussion questions:\n\n')
+        closePanel()
+        void sendMessage(
+          'Create a 5-minute staff learning session for residential childcare staff with clear objectives, discussion questions and a short knowledge check.'
+        )
+        break
+      case 'saved_outputs':
+        openSavedOutputsPanel()
+        break
+      default:
+        break
+    }
   }
 
   useEffect(() => {
@@ -2190,6 +2232,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       answering={isAnswering}
       onStopGenerating={isAnswering ? handleStopGeneration : undefined}
       residentialSurface={residentialSurface}
+      onPlusMenuAction={residentialSurface ? handleComposerPlusAction : undefined}
     />
     </div>
   )
@@ -2279,6 +2322,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         open={activePanel === 'knowledge'}
         onClose={closePanel}
         residentialSurface={residentialSurface}
+        sessionReady={orbSessionReady}
         onAskOrb={(prompt) => {
           setMessage(prompt)
           closePanel()
@@ -2289,16 +2333,17 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         open={activePanel === 'templates'}
         onClose={closePanel}
         residentialSurface={residentialSurface}
+        sessionReady={orbSessionReady}
         onUseTemplate={(prompt) => {
-          setMessage(prompt)
           closePanel()
-          inputRef.current?.focus()
+          void sendMessage(prompt)
         }}
       />
       <OrbSavedOutputsPanel
         open={activePanel === 'saved_outputs'}
         onClose={closePanel}
         residentialSurface={residentialSurface}
+        sessionReady={orbSessionReady}
         workspace={workspace}
         onReuseInChat={(prompt) => {
           setMessage(prompt)
@@ -2355,8 +2400,12 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           })
         }}
         voiceInputEnabled={STANDALONE_ORB_VOICE_CAPTURE_ENABLED && voice.recognitionAvailable}
-        onVoiceInputChange={() => {
-          setMicNotice(VOICE_MODE_COMING_SOON)
+        onVoiceInputChange={(enabled) => {
+          if (enabled && voice.recognitionAvailable) {
+            setMicNotice(null)
+          } else if (enabled) {
+            setMicNotice(VOICE_MODE_COMING_SOON)
+          }
         }}
         voiceRepliesEnabled={voiceSettings.voiceReplies}
         onVoiceRepliesChange={(enabled) => voice.setVoiceReplies(enabled)}
@@ -2391,6 +2440,15 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       />
       <OrbHelpPanel open={activePanel === 'help'} onClose={closePanel} />
       <OrbVoiceSettingsPanel open={activePanel === 'voice'} onClose={closePanel} />
+      {residentialSurface ? (
+        <OrbVoiceStation
+          open={activePanel === 'orb_voice'}
+          onClose={closePanel}
+          voice={voice}
+          pending={pending}
+          onSendToOrb={(text) => void sendMessage(text)}
+        />
+      ) : null}
       <OrbToolsPanel
         open={activePanel === 'tools'}
         onClose={closePanel}
@@ -2725,7 +2783,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           <section className="flex min-h-0 flex-1 flex-col" onDragOver={(e) => e.preventDefault()} onDrop={handleDrop}>
             <div
               ref={scrollContainerRef}
-              className="orb-chat-thread flex-1 overflow-y-auto overflow-x-hidden px-3 py-6 pb-32 md:px-6"
+              className={`orb-chat-thread flex-1 overflow-y-auto overflow-x-hidden px-3 py-6 md:px-6 ${residentialSurface ? 'pb-4' : 'pb-32'}`}
               role="log"
               aria-label="ORB conversation"
               data-orb-chat-scroll-container
@@ -3184,6 +3242,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           open={accountModalOpen}
           onClose={() => setAccountModalOpen(false)}
           profile={adultProfile}
+          userEmail={account.userEmail}
           onOpenSettings={() => {
             setAccountModalOpen(false)
             openSettingsPanel()
@@ -3192,7 +3251,13 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
             setAccountModalOpen(false)
             openBillingPanel()
           }}
+          onOpenVoiceSettings={() => {
+            setAccountModalOpen(false)
+            openVoiceSettings()
+          }}
           passkeyEnabled={account.hasPasskeys}
+          projectCount={workspace.projects?.length ?? 0}
+          savedOutputsCount={savedOutputsCount}
         />
       ) : null}
       {adultProfile && !residentialSurface ? (
