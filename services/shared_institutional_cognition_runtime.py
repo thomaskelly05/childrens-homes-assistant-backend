@@ -7,10 +7,13 @@ from services.orb_evidence_graph_service import orb_evidence_graph_service
 from services.orb_grounded_answer_style_service import orb_grounded_answer_style_service
 from services.orb_institutional_depth_frame_service import orb_institutional_depth_frame_service
 from services.orb_knowledge_grounding_service import orb_knowledge_grounding_service
+from services.orb_location_intelligence_service import orb_location_intelligence_service
+from services.orb_outstanding_practice_lens_service import orb_outstanding_practice_lens_service
 from services.orb_professional_curiosity_service import orb_professional_curiosity_service
 from services.orb_residential_cognition_router import orb_residential_cognition_router
 from services.orb_scenario_playbook_service import orb_scenario_playbook_service
 from services.orb_sector_evidence_pipeline_service import orb_sector_evidence_pipeline_service
+from services.orb_template_copilot_service import orb_template_copilot_service
 
 
 class SharedInstitutionalCognitionRuntime:
@@ -47,8 +50,25 @@ class SharedInstitutionalCognitionRuntime:
             mode=mode,
             sector_evidence=sector_evidence,
         )
+        outstanding_practice = self._outstanding_practice_context(
+            surface=surface,
+            message=message,
+            mode=mode,
+            operational_context=operational_context,
+        )
+        template_copilot = self._template_copilot_context(
+            surface=surface,
+            message=message,
+            operational_context=operational_context,
+        )
+        location_intelligence = self._location_intelligence_context(
+            surface=surface,
+            message=message,
+            operational_context=operational_context,
+        )
         active_brains = self._merge_sector_evidence_brains(active_brains, sector_evidence)
         active_brains = self._merge_evidence_graph_brains(active_brains, evidence_graph)
+        active_brains = self._merge_context_brains(active_brains, outstanding_practice, template_copilot, location_intelligence)
         grounding = orb_knowledge_grounding_service.build_grounding(
             message=message,
             mode=mode,
@@ -60,6 +80,9 @@ class SharedInstitutionalCognitionRuntime:
         playbook_prompt = orb_scenario_playbook_service.prompt_block(message)
         sector_evidence_prompt = sector_evidence.get("prompt_addendum")
         evidence_graph_prompt = evidence_graph.get("prompt_addendum")
+        outstanding_prompt = outstanding_practice.get("prompt_addendum")
+        template_prompt = template_copilot.get("prompt_addendum")
+        location_prompt = location_intelligence.get("prompt_addendum")
         guidance_prefix = None
         if surface == "standalone_orb":
             prefix = standalone_guidance_boundary_prefix(message, history=history, mode=mode)
@@ -76,23 +99,26 @@ class SharedInstitutionalCognitionRuntime:
             routing.get("cognition_display_labels") or [],
             sector_evidence.get("display_labels") or [],
         )
-        cognition_display_labels = self._merge_display_labels(
-            cognition_display_labels,
-            evidence_graph.get("display_labels") or [],
-        )
+        cognition_display_labels = self._merge_display_labels(cognition_display_labels, evidence_graph.get("display_labels") or [])
+        cognition_display_labels = self._merge_display_labels(cognition_display_labels, outstanding_practice.get("display_labels") or [])
+        cognition_display_labels = self._merge_display_labels(cognition_display_labels, template_copilot.get("display_labels") or [])
+        cognition_display_labels = self._merge_display_labels(cognition_display_labels, location_intelligence.get("display_labels") or [])
         reasoning_lenses = self._merge_display_labels(
             (depth_frame.get("required_lenses") or routing.get("reasoning_lenses") or [])[:8],
             sector_evidence.get("reasoning_lenses") or [],
         )
-        reasoning_lenses = self._merge_display_labels(
-            reasoning_lenses,
-            evidence_graph.get("reasoning_lenses") or [],
-        )
+        reasoning_lenses = self._merge_display_labels(reasoning_lenses, evidence_graph.get("reasoning_lenses") or [])
+        reasoning_lenses = self._merge_display_labels(reasoning_lenses, outstanding_practice.get("reasoning_lenses") or [])
+        reasoning_lenses = self._merge_display_labels(reasoning_lenses, template_copilot.get("reasoning_lenses") or [])
+        reasoning_lenses = self._merge_display_labels(reasoning_lenses, location_intelligence.get("reasoning_lenses") or [])
         vault_domains = self._merge_display_labels(
             grounding.get("vault_domains") or [],
             sector_evidence.get("vault_domains") or [],
         )
         vault_domains = self._merge_display_labels(vault_domains, evidence_graph.get("vault_domains") or [])
+        vault_domains = self._merge_display_labels(vault_domains, outstanding_practice.get("vault_domains") or [])
+        vault_domains = self._merge_display_labels(vault_domains, template_copilot.get("vault_domains") or [])
+        vault_domains = self._merge_display_labels(vault_domains, location_intelligence.get("vault_domains") or [])
 
         return {
             "surface": surface,
@@ -104,6 +130,9 @@ class SharedInstitutionalCognitionRuntime:
             "knowledge_grounding": grounding,
             "sector_evidence": sector_evidence,
             "evidence_graph": evidence_graph,
+            "outstanding_practice": outstanding_practice,
+            "template_copilot": template_copilot,
+            "location_intelligence": location_intelligence,
             "depth_frame": depth_frame,
             "prompt_blocks": [
                 block
@@ -112,6 +141,9 @@ class SharedInstitutionalCognitionRuntime:
                     playbook_prompt,
                     sector_evidence_prompt,
                     evidence_graph_prompt,
+                    outstanding_prompt,
+                    template_prompt,
+                    location_prompt,
                     grounded_prompt,
                     depth_prompt,
                     curiosity_prompt,
@@ -142,6 +174,9 @@ class SharedInstitutionalCognitionRuntime:
                 "vault_domains": vault_domains,
                 "sector_evidence_active": bool(sector_evidence.get("active")),
                 "evidence_graph_active": bool(evidence_graph.get("active")),
+                "outstanding_practice_active": bool(outstanding_practice.get("active")),
+                "template_copilot_active": bool(template_copilot.get("active")),
+                "location_intelligence_active": bool(location_intelligence.get("active")),
                 "safeguarding_boundaries": list(boundary.get("safeguarding_boundaries", []))
                 if isinstance(boundary.get("safeguarding_boundaries"), list)
                 else [],
@@ -194,6 +229,12 @@ class SharedInstitutionalCognitionRuntime:
                     "- Evidence graph boundary: use graph links to identify recurring themes and lenses, not to overclaim causation or certainty.",
                 ]
             )
+        if (context.get("outstanding_practice") or {}).get("active"):
+            lines.append("- Outstanding Practice Lens: active for this answer; push beyond compliance toward child impact and evidence of practice quality.")
+        if (context.get("template_copilot") or {}).get("active"):
+            lines.append("- Template Copilot: active; if the user asks for a template, produce a usable structured template.")
+        if (context.get("location_intelligence") or {}).get("active"):
+            lines.append("- Location Intelligence: active; use supplied locality details only and avoid inventing local facts.")
         lines.extend(context["response_requirements"])
         lines.extend(context["prompt_blocks"])
         return "\n\n".join(lines)
@@ -329,6 +370,57 @@ class SharedInstitutionalCognitionRuntime:
             "os_records_accessed": False,
         }
 
+    def _outstanding_practice_context(self, *, surface: str, message: str, mode: str | None, operational_context: dict[str, Any] | None) -> dict[str, Any]:
+        if surface != "standalone_orb":
+            return {"active": False, "reason": "not_standalone_orb"}
+        role = (operational_context or {}).get("role") or (operational_context or {}).get("selected_role")
+        return {
+            **orb_outstanding_practice_lens_service.metadata(role=role),
+            "prompt_addendum": orb_outstanding_practice_lens_service.prompt_block(role=role, mode=mode, message=message),
+            "display_labels": ["Outstanding Practice Lens"],
+            "reasoning_lenses": ["Child Experience", "Child Voice", "Evidence of Impact", "Leadership Oversight", "Ofsted Line of Enquiry"],
+            "vault_domains": ["practice_quality", "quality_standards", "sccif"],
+            "active_brains": ["outstanding_practice_cognition"],
+        }
+
+    def _template_copilot_context(self, *, surface: str, message: str, operational_context: dict[str, Any] | None) -> dict[str, Any]:
+        if surface != "standalone_orb":
+            return {"active": False, "reason": "not_standalone_orb"}
+        prompt = orb_template_copilot_service.prompt_block(
+            message,
+            role=(operational_context or {}).get("role") or (operational_context or {}).get("selected_role"),
+        )
+        if not prompt:
+            return {"active": False, "reason": "no_template_request"}
+        template_type = orb_template_copilot_service.detect_template_type(message)
+        return {
+            "active": True,
+            "prompt_addendum": prompt,
+            "template_type": template_type,
+            "display_labels": ["Template Copilot"],
+            "reasoning_lenses": ["Template Structure", "Child Voice", "Professional Curiosity", "Evidence of Impact"],
+            "vault_domains": ["templates", "documents"],
+            "active_brains": ["template_copilot_cognition"],
+            "standalone": True,
+            "os_records_accessed": False,
+        }
+
+    def _location_intelligence_context(self, *, surface: str, message: str, operational_context: dict[str, Any] | None) -> dict[str, Any]:
+        if surface != "standalone_orb":
+            return {"active": False, "reason": "not_standalone_orb"}
+        prompt = orb_location_intelligence_service.prompt_block(message, context=operational_context)
+        if not prompt:
+            return {"active": False, "reason": "no_location_request"}
+        metadata = orb_location_intelligence_service.metadata(message, context=operational_context)
+        return {
+            **metadata,
+            "prompt_addendum": prompt,
+            "display_labels": ["Locality Intelligence"],
+            "reasoning_lenses": ["Locality Risk", "Contextual Safeguarding", "Missing From Care", "Protective Factors"],
+            "vault_domains": ["locality", "contextual_safeguarding"],
+            "active_brains": ["location_intelligence_cognition"],
+        }
+
     def _sector_pipeline_ids(self, *, message: str, mode: str | None, active_brains: list[str]) -> list[str]:
         text = f"{message or ''} {mode or ''}".lower()
         brain_text = " ".join(active_brains).lower()
@@ -375,6 +467,13 @@ class SharedInstitutionalCognitionRuntime:
     def _merge_evidence_graph_brains(self, active_brains: list[str], evidence_graph: dict[str, Any]) -> list[str]:
         brains = list(active_brains)
         brains.extend(evidence_graph.get("active_brains") or [])
+        return list(dict.fromkeys(brains))
+
+    def _merge_context_brains(self, active_brains: list[str], *contexts: dict[str, Any]) -> list[str]:
+        brains = list(active_brains)
+        for context in contexts:
+            if context.get("active"):
+                brains.extend(context.get("active_brains") or [])
         return list(dict.fromkeys(brains))
 
     def _merge_display_labels(self, base: list[str], additions: list[str]) -> list[str]:
@@ -454,6 +553,17 @@ class SharedInstitutionalCognitionRuntime:
             "what patterns matter, what oversight is needed, what emotional meaning exists, and what evidence "
             "would strengthen confidence — without making threshold decisions.",
         ]
+        if "outstanding_practice_cognition" in active_brains:
+            requirements.extend(
+                [
+                    "- Apply the Outstanding Practice Lens in every residential-care answer: child experience, child voice, relationships, safeguarding meaning, leadership oversight, evidence of impact and learning.",
+                    "- Do not simply answer whether something is compliant; explain what would make practice stronger or closer to outstanding where relevant.",
+                ]
+            )
+        if "template_copilot_cognition" in active_brains:
+            requirements.append("- If the user asks for a template, produce a practical template with headings and fillable prompts, not just advice.")
+        if "location_intelligence_cognition" in active_brains:
+            requirements.append("- For locality questions, use supplied location details only; do not invent local crime, exploitation or safeguarding facts.")
         if any(str(brain).startswith("sector_evidence:") for brain in active_brains):
             requirements.extend(
                 [
@@ -532,11 +642,12 @@ class SharedInstitutionalCognitionRuntime:
                     "- End with medication safety/MAR/handover closer — not generic coaching questions.",
                 ]
             )
-        if topic == "missing":
+        if topic in {"missing", "missing_substance_return"}:
             requirements.extend(
                 [
                     "- Missing cognition: welfare on return, push/pull factors, exploitation/contextual safeguarding, routes, unknown adults, return conversation, chronology and manager/Ofsted lens.",
-                    "- Use markdown ## Immediate safety, ## Return conversation, ## What to record, ## Patterns to explore, ## Manager oversight and Ofsted lens, ## Next safe steps.",
+                    "- Include child experience and relationship response: connection before interrogation, especially where the child refuses to engage.",
+                    "- Use markdown ## Immediate safety, ## Return conversation, ## Professional curiosity, ## Child experience, ## What to record, ## Patterns to explore, ## Manager oversight and Ofsted lens, ## What should change next.",
                     "- Open with: 'The key is to understand both the immediate safety picture and why the young person went missing.' when using a standalone opener.",
                     "- End with welfare/return/risk/chronology/manager oversight closer — not generic coaching questions.",
                 ]
