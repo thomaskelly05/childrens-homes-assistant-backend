@@ -113,11 +113,24 @@ export function OrbAdultProfileDrawer({
     <div className="orb-panel-overlay fixed inset-0 z-[60] flex justify-end bg-black/40 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Adult profile">
       <div className="orb-panel-drawer flex h-full w-full max-w-md flex-col border-l border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] shadow-2xl">
         <header className="flex items-center justify-between border-b border-[var(--orb-line)] px-5 py-4">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-[0.12em] text-[var(--orb-muted)]">Your profile</p>
-            <h2 className="text-lg font-semibold text-[var(--orb-foreground)]">{draft.name?.trim() || 'ORB Residential'}</h2>
+          <div className="min-w-0 flex-1">
+            <h2 className="text-lg font-semibold tracking-tight text-[var(--orb-foreground)]">
+              {draft.name?.trim() || 'ORB Residential'}
+            </h2>
+            <p className="mt-0.5 text-xs text-[var(--orb-muted)]">ORB Residential account</p>
+            <div data-orb-profile-status-chips>
+              <span data-orb-profile-status-chip>{accountStatusLabel}</span>
+              {account.isSignedIn ? (
+                <span data-orb-profile-status-chip>
+                  {account.hasPasskeys ? 'Passkey enabled' : 'Passkey available'}
+                </span>
+              ) : null}
+              {account.isSignedIn && account.planName ? (
+                <span data-orb-profile-status-chip>{account.planName}</span>
+              ) : null}
+            </div>
             {cognitionModeLabel ? (
-              <p className="mt-1 text-xs text-[var(--orb-accent)]" data-orb-profile-cognition-mode>
+              <p className="mt-2 text-xs text-[var(--orb-accent)]" data-orb-profile-cognition-mode>
                 Active agent · {cognitionModeLabel}
               </p>
             ) : null}
@@ -640,7 +653,7 @@ function ProfileSection({
   children: ReactNode
 }) {
   return (
-    <div className="rounded-xl border border-[var(--orb-line)] bg-[var(--orb-surface)]" data-orb-profile-section={id}>
+    <div className="rounded-xl border border-[var(--orb-line)] bg-[var(--orb-surface)]" data-orb-profile-section={id} data-orb-profile-section-card>
       <button
         type="button"
         onClick={onToggle}

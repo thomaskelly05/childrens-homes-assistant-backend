@@ -188,12 +188,13 @@ export function OrbStandaloneSettingsPanel({
               key={section.id}
               type="button"
               onClick={() => setActiveSection(section.id)}
-              className={`mb-0.5 flex w-full rounded-lg px-3 py-2 text-left text-xs transition ${
+              className={`orb-settings-nav-item mb-0.5 flex w-full rounded-lg px-3 py-2 text-left text-xs transition ${
                 activeSection === section.id
-                  ? 'bg-[#EAF6FF] font-semibold text-[#0369A1]'
+                  ? 'orb-settings-nav-item--active font-semibold'
                   : 'text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]'
               }`}
               data-orb-settings-section={section.id}
+              data-orb-settings-nav-active={activeSection === section.id ? 'true' : 'false'}
             >
               {section.label}
             </button>
