@@ -78,6 +78,13 @@ describe('ORB Voice conversational sprint', () => {
     assert.match(client, /startOrbVoiceSession/)
     assert.match(client, /requestOrbVoiceSpeak/)
     assert.match(client, /browser_fallback/)
+    assert.match(client, /websocket_realtime/)
+  })
+
+  it('realtime provider pass doc exists', () => {
+    const doc = readComponent('docs/orb-voice-realtime-provider-pass.md')
+    assert.match(doc, /WebSocket/)
+    assert.match(doc, /browser fallback/i)
   })
 
   it('save voice transcript uses voice_transcript type', () => {

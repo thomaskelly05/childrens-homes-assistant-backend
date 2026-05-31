@@ -3,12 +3,16 @@
 export type OrbVoiceSessionStatus =
   | 'idle'
   | 'requesting_permission'
+  | 'connecting'
   | 'listening'
+  | 'speech_detected'
   | 'transcribing'
   | 'thinking'
   | 'speaking'
   | 'interrupted'
+  | 'reconnecting'
   | 'error'
+  | 'ended'
 
 export type OrbVoiceModeId =
   | 'conversational'
@@ -36,6 +40,7 @@ export type VoiceTurn = {
   completedAt?: string
   interrupted?: boolean
   mode?: OrbVoiceModeId
+  provider?: string
 }
 
 export type OrbVoiceSessionState = {

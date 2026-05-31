@@ -1,6 +1,6 @@
-# ORB Voice Report — ORB Voice Realtime Conversational Sprint
+# ORB Voice Report — Realtime Provider Pass
 
-## 1. Current voice audit
+## 1. Existing voice audit
 
 | Area | Finding |
 |------|---------|
@@ -8,77 +8,73 @@
 | Voice hook | `useStandaloneOrbVoice` — Web Speech STT/TTS, phases, interrupt |
 | Composer | Mic (`data-orb-composer-mic`), transcript preview, barge-in while ORB speaks |
 | Settings | `OrbVoiceSettingsPanel` + Settings → Voice section |
-| Navigation | Sidebar Apps → ORB Voice; plus menu → Start ORB Voice; account → Voice settings |
-| Backend | `POST /orb/voice/session`, `/transcribe`, `/speak` on residential router |
+| Backend residential | `POST /orb/voice/session`, `/transcribe`, `/speak`, `WS /orb/voice/ws/{id}` |
 | Standalone realtime | `orb_voice_session_service` (OpenAI realtime) — separate product surface |
 | Legacy frontend | `frontend/js/indicare-voice-*.js` — not modified |
 
-Turn-based fallback preserved. Wake phrase / always-listening remain disabled.
+Turn-based browser fallback preserved. No always-listening.
 
-## 2. Voice architecture
+## 2. Reused components
 
-Three layers documented in `docs/orb-voice-realtime-architecture.md`:
+- `orb-voice-browser.ts`, `useStandaloneOrbVoice`, `orb-voice-prompt.ts`
+- `save-voice-transcript.ts` (enhanced metadata)
+- `routers/orb_voice_residential_routes.py` (extended, not replaced)
 
-1. Browser `SpeechRecognition` + `speechSynthesis`
-2. Server abstraction via `lib/orb/voice/orb-voice-client.ts`
-3. Future WebRTC/WebSocket duplex (not faked)
+## 3. Provider abstraction
 
-## 3. Browser fallback
+`VoiceProviderType`: `browser_fallback` | `websocket_realtime` | `webrtc_realtime`
 
-Default path. British female preference via `pickBritishFemaleVoice()` (en-GB, name hints). Chunked TTS for long replies. Safari keep-alive for synthesis.
+`VoiceProviderCapabilities` on session response (streaming STT/TTS, barge-in, VAD, duplex, latency class).
 
-## 4. Backend voice routes
+## 4. WebSocket implementation status
 
-`routers/orb_voice_residential_routes.py` returns honest `provider` values:
+**Implemented:** session URL, authenticated WS handler, event schema, client `OrbRealtimeVoiceClient`, interrupt + dev text simulation.
 
-- `browser_fallback` when `ORB_VOICE_SERVER_*` not set
-- `server` session id when `ORB_VOICE_REALTIME_PROVIDER` and STT/TTS flags set
-- Speak never claims audio was generated without a real `audio_url`
+**Not faked:** audio STT/TTS until provider credentials are wired.
 
-## 5. ORB Voice modal/app
+## 5. WebRTC implementation status
 
-Premium voice room: large ORB with listening/thinking/speaking glow, mode + voice selectors, transcript cards, Start / Speak / Interrupt / End / Save transcript.
+**Prepared:** session fields, 501 on offer/ICE routes, capabilities on session.
 
-## 6. Interruption / barge-in
+**Not implemented:** SDP/ICE exchange (documented in `orb-voice-realtime-provider-pass.md`).
 
-- Setting: **Allow interruption**
-- While speaking: **Interrupt** button (`data-orb-voice-interrupt`) calls `speechSynthesis.cancel()` via `interruptForListen()`
-- Transcript marks **Interrupted** on the assistant turn
-- Composer mic also barge-ins when ORB is speaking
+## 6. Streaming STT status
 
-## 7. British female voice selection
+Client can send `audio.chunk` (MediaRecorder webm/opus base64). Server routes to provider when credentials exist; otherwise error + browser SpeechRecognition fallback.
 
-Presets: ORB British Female, Calm, Professional, System fallback. UI copy: “British female voice where available”. No false neural-voice claims.
+## 7. Streaming TTS status
 
-## 8. Voice settings
+Event contract (`tts.start`, `tts.audio`, `tts.end`) defined. Production playback uses browser `speechSynthesis` until server audio is wired.
 
-Persisted in `orb-voice-settings` (migrates legacy `orb-standalone-voice-settings`). Fields: mode, voice preset, rate, spoken length, auto-speak, interruption, push-to-talk, auto-send, save transcript, browser fallback.
+## 8. VAD status
 
-## 9. Main composer mic/speak
+Browser VAD via `orb-voice-vad.ts` (Web Audio). Server VAD interface prepared via capabilities only.
 
-Unchanged entry points; mic visible on residential; speak on assistant messages via `speakAloud` / stop while speaking.
+## 9. Interruption / barge-in status
 
-## 10. Transcript save
+Interrupt button, `user.interrupt` WS event, `speechSynthesis.cancel()`, transcript **Interrupted** label, optional VAD barge-in while speaking.
 
-`saveVoiceTranscript()` → Saved Outputs type `voice_transcript`, with local fallback if API unavailable.
+## 10. ORB Voice UI changes
 
-## 11. Safety / privacy
+- Provider label (browser vs realtime vs fallback reason)
+- States: connecting, speech_detected, ended
+- Developer-only provider/WebSocket/event strip (`isOrbDeveloperMode`)
+- ORB glow for listen / think / speak
 
-- Voice only after explicit Start or mic press
-- Footer safety copy for professional judgement and emergencies
-- Permission denied: clear message; typing still available
-- Voice prompts avoid cognition/reasoning labels; safeguarding mode stays procedure-aware
+## 11. Safety / privacy handling
 
-## 12. Future realtime plan
+Explicit Start; mic stopped on End/close; no passive listening; safeguarding footer unchanged.
 
-See `docs/orb-voice-realtime-architecture.md`. Env: `ORB_VOICE_REALTIME_PROVIDER`, `ORB_VOICE_SERVER_STT`, `ORB_VOICE_SERVER_TTS`.
+## 12. Tests / build result
 
-## 13. Tests / build
+Run locally:
 
-- `components/orb-standalone/orb-voice-conversational.test.ts` (in `npm run test:orb`)
-- `tests/test_orb_voice_residential_routes.py`
-- Run locally: `npm run test:orb`, `npm run typecheck`, `npm run build`
+```bash
+source .venv/bin/activate
+python -m pytest tests/test_orb_voice_residential_routes.py -q
+cd frontend-next && npm run test:orb && npm run typecheck && npm run build
+```
 
-## 14. Remaining provider setup
+## 13. Remaining provider / env setup
 
-Configure server STT/TTS and realtime provider env vars when ready. Wire streaming audio gateway and map `orb_british_*` presets to provider voice ids. Until then, browser fallback is the supported production path.
+Set `ORB_VOICE_REALTIME_PROVIDER`, `ORB_VOICE_SERVER_STT`, `ORB_VOICE_SERVER_TTS`, and vendor API keys. See `docs/orb-voice-realtime-provider-pass.md`.

@@ -1,27 +1,27 @@
 from __future__ import annotations
 
-"""ORB Residential voice API — browser STT/TTS primary; honest server hooks for future duplex."""
+"""ORB Residential voice API — browser STT/TTS primary; honest WebSocket/WebRTC realtime hooks."""
 
 import os
-import uuid
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, status
 from pydantic import BaseModel, ConfigDict, Field
 
 from auth.orb_residential_dependencies import require_orb_residential_auth
+from schemas.orb_voice_realtime import (
+    OrbVoiceSessionRequest,
+    OrbVoiceSessionResponse,
+    VoiceProviderCapabilities,
+)
+from services.orb_voice_realtime_config import (
+    _provider_has_stt_credentials,
+    _provider_has_tts_credentials,
+    resolve_voice_provider,
+)
+from services.orb_voice_realtime_session_store import orb_voice_realtime_session_store
+from services.orb_voice_realtime_ws_handler import orb_voice_realtime_ws_handler
 
 router = APIRouter(prefix="/orb/voice", tags=["ORB Residential Voice"])
-
-ORB_VOICE_SERVER_STT = os.getenv("ORB_VOICE_SERVER_STT", "").strip().lower() in {"1", "true", "yes", "on"}
-ORB_VOICE_SERVER_TTS = os.getenv("ORB_VOICE_SERVER_TTS", "").strip().lower() in {"1", "true", "yes", "on"}
-ORB_VOICE_REALTIME = os.getenv("ORB_VOICE_REALTIME_PROVIDER", "").strip()
-
-
-class OrbVoiceSessionRequest(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-
-    mode: str = Field(default="conversational", max_length=80)
-    voice_id: str = Field(default="orb_british_female", max_length=80)
 
 
 class OrbVoiceTextRequest(BaseModel):
@@ -38,31 +38,121 @@ class OrbVoiceTranscribeRequest(BaseModel):
     text: str | None = Field(default=None, max_length=50_000)
 
 
-def _server_provider_ready() -> bool:
-    return bool(ORB_VOICE_REALTIME) and (ORB_VOICE_SERVER_STT or ORB_VOICE_SERVER_TTS)
+def _user_id(current_user: dict) -> int | None:
+    try:
+        value = current_user.get("user_id") or current_user.get("id")
+        return int(value) if value is not None else None
+    except (TypeError, ValueError):
+        return None
 
 
-@router.post("/session")
+@router.post("/session", response_model=OrbVoiceSessionResponse)
 async def orb_voice_session(
     payload: OrbVoiceSessionRequest,
+    current_user=Depends(require_orb_residential_auth),
+):
+    provider, session_status, capabilities, fallback_reason = resolve_voice_provider(payload.transport)
+
+    if provider == "browser_fallback":
+        session_id = f"browser_{os.urandom(8).hex()}"
+        return OrbVoiceSessionResponse(
+            session_id=session_id,
+            provider=provider,
+            status="ready",
+            mode=payload.mode,
+            voice_id=payload.voice_id,
+            capabilities=capabilities,
+            message="Use browser SpeechRecognition and SpeechSynthesis. Configure ORB_VOICE_REALTIME_PROVIDER for server realtime.",
+            fallback_reason=fallback_reason,
+        )
+
+    record = orb_voice_realtime_session_store.create(
+        user_id=_user_id(current_user),
+        provider=provider,
+        status=session_status,
+        mode=payload.mode,
+        voice_id=payload.voice_id,
+        capabilities=capabilities,
+    )
+
+    if session_status != "ready":
+        return OrbVoiceSessionResponse(
+            session_id=record.session_id,
+            provider="browser_fallback",
+            status="ready",
+            mode=payload.mode,
+            voice_id=payload.voice_id,
+            capabilities=VoiceProviderCapabilities(
+                provider=capabilities.provider,
+                supportsStreamingStt=False,
+                supportsStreamingTts=False,
+                supportsBargeIn=True,
+                supportsVad=True,
+                supportsDuplex=False,
+                supportsServerAudio=False,
+                latencyClass="fallback",
+            ),
+            message="Realtime provider not fully configured. Use browser voice.",
+            fallback_reason=fallback_reason or "Provider credentials missing.",
+        )
+
+    websocket_url = f"/orb/voice/ws/{record.session_id}" if provider == "websocket_realtime" else None
+    webrtc_offer_url = f"/orb/voice/webrtc/offer/{record.session_id}" if provider == "webrtc_realtime" else None
+
+    return OrbVoiceSessionResponse(
+        session_id=record.session_id,
+        provider=provider,
+        status=session_status,
+        mode=payload.mode,
+        voice_id=payload.voice_id,
+        websocket_url=websocket_url,
+        webrtc_offer_url=webrtc_offer_url,
+        capabilities=capabilities,
+    )
+
+
+@router.websocket("/ws/{session_id}")
+async def orb_voice_realtime_ws(websocket: WebSocket, session_id: str) -> None:
+    await orb_voice_realtime_ws_handler.handle(websocket, session_id)
+
+
+@router.post("/webrtc/offer/{session_id}")
+async def orb_voice_webrtc_offer(
+    session_id: str,
     _current_user=Depends(require_orb_residential_auth),
 ):
-    if _server_provider_ready():
-        return {
-            "session_id": f"orb_voice_{uuid.uuid4().hex[:16]}",
-            "status": "ready",
-            "provider": "server",
-            "mode": payload.mode,
-            "voice_id": payload.voice_id,
-        }
-    return {
-        "session_id": f"browser_{uuid.uuid4().hex[:16]}",
-        "status": "ready",
-        "provider": "browser_fallback",
-        "mode": payload.mode,
-        "voice_id": payload.voice_id,
-        "message": "Use browser SpeechRecognition and SpeechSynthesis. Configure ORB_VOICE_REALTIME_PROVIDER for server duplex.",
-    }
+    record = orb_voice_realtime_session_store.get(session_id)
+    if not record or record.provider != "webrtc_realtime":
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail={
+                "status": "not_configured",
+                "message": "WebRTC realtime is not enabled for this session.",
+            },
+        )
+    raise HTTPException(
+        status_code=status.HTTP_501_NOT_IMPLEMENTED,
+        detail={
+            "status": "not_configured",
+            "message": "WebRTC offer/answer exchange is not implemented yet. Use WebSocket or browser fallback.",
+            "session_id": session_id,
+        },
+    )
+
+
+@router.post("/webrtc/ice/{session_id}")
+async def orb_voice_webrtc_ice(
+    session_id: str,
+    _current_user=Depends(require_orb_residential_auth),
+):
+    raise HTTPException(
+        status_code=status.HTTP_501_NOT_IMPLEMENTED,
+        detail={
+            "status": "not_configured",
+            "message": "WebRTC ICE handling is not implemented yet.",
+            "session_id": session_id,
+        },
+    )
 
 
 @router.post("/transcribe")
@@ -70,7 +160,7 @@ async def orb_voice_transcribe(
     payload: OrbVoiceTranscribeRequest,
     _current_user=Depends(require_orb_residential_auth),
 ):
-    if ORB_VOICE_SERVER_STT and payload.text:
+    if _provider_has_stt_credentials() and payload.text:
         return {
             "provider": "server",
             "status": "ok",
@@ -81,7 +171,7 @@ async def orb_voice_transcribe(
             "provider": "browser_fallback",
             "status": "ok",
             "text": payload.text.strip(),
-            "message": "Text fallback accepted. Configure ORB_VOICE_SERVER_STT for audio transcription.",
+            "message": "Text fallback accepted. Configure ORB_VOICE_SERVER_STT and provider credentials for audio transcription.",
         }
     return {
         "provider": "browser_fallback",
@@ -96,14 +186,14 @@ async def orb_voice_speak(
     _current_user=Depends(require_orb_residential_auth),
 ):
     voice_id = (payload.voice_id or "orb_british_female").strip()
-    if ORB_VOICE_SERVER_TTS:
+    if _provider_has_tts_credentials():
         return {
             "provider": "server",
             "text": payload.text,
             "voice_id": voice_id,
             "rate": payload.rate,
             "audio_url": None,
-            "message": "Server TTS hook reserved — wire ORB_VOICE_SERVER_TTS provider when ready.",
+            "message": "Server TTS hook reserved — wire ORB_VOICE_PROVIDER_NAME when ready.",
         }
     return {
         "provider": "browser_fallback",

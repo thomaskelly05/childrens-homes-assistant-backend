@@ -4,23 +4,43 @@
 
 import { authFetch } from '@/lib/auth/api'
 
-export type OrbVoiceProvider = 'browser_fallback' | 'server' | 'not_configured'
+export type VoiceProviderType = 'browser_fallback' | 'websocket_realtime' | 'webrtc_realtime'
+export type VoiceLatencyClass = 'fallback' | 'standard' | 'realtime'
+
+export type VoiceProviderCapabilities = {
+  provider: string
+  supportsStreamingStt: boolean
+  supportsStreamingTts: boolean
+  supportsBargeIn: boolean
+  supportsVad: boolean
+  supportsDuplex: boolean
+  supportsServerAudio: boolean
+  latencyClass: VoiceLatencyClass
+}
 
 export type OrbVoiceSessionResponse = {
   session_id: string
-  status: 'ready' | 'unavailable'
-  provider: OrbVoiceProvider
+  status: 'ready' | 'not_configured' | 'error'
+  provider: VoiceProviderType
+  mode?: string
+  voice_id?: string
+  websocket_url?: string | null
+  webrtc_offer_url?: string | null
+  capabilities: VoiceProviderCapabilities
+  message?: string | null
+  fallback_reason?: string | null
 }
 
 export type OrbVoiceSpeakResponse = {
-  provider: OrbVoiceProvider
+  provider: 'browser_fallback' | 'server'
   text: string
   voice_id: string
   audio_url?: string | null
+  message?: string
 }
 
 export type OrbVoiceTranscribeResponse = {
-  provider: OrbVoiceProvider
+  provider: 'browser_fallback' | 'server'
   text?: string | null
   status?: 'not_configured' | 'ok'
   message?: string
@@ -38,20 +58,35 @@ async function postJson<T>(path: string, body: Record<string, unknown>): Promise
   return payload as T
 }
 
+const BROWSER_CAPABILITIES: VoiceProviderCapabilities = {
+  provider: 'browser',
+  supportsStreamingStt: false,
+  supportsStreamingTts: false,
+  supportsBargeIn: true,
+  supportsVad: true,
+  supportsDuplex: false,
+  supportsServerAudio: false,
+  latencyClass: 'fallback'
+}
+
 export async function startOrbVoiceSession(options: {
   mode?: string
   voice_id?: string
+  transport?: 'auto' | 'websocket' | 'webrtc' | 'browser_fallback'
 }): Promise<OrbVoiceSessionResponse> {
   try {
-    return await postJson<OrbVoiceSessionResponse>('/api/orb/voice/session', {
+    return await postJson<OrbVoiceSessionResponse>('/orb/voice/session', {
       mode: options.mode ?? 'conversational',
-      voice_id: options.voice_id ?? 'orb_british_female'
+      voice_id: options.voice_id ?? 'orb_british_female',
+      transport: options.transport ?? 'auto'
     })
   } catch {
     return {
       session_id: `local_${Date.now()}`,
       status: 'ready',
-      provider: 'browser_fallback'
+      provider: 'browser_fallback',
+      capabilities: BROWSER_CAPABILITIES,
+      fallback_reason: 'Could not reach voice session API.'
     }
   }
 }
@@ -62,7 +97,7 @@ export async function requestOrbVoiceSpeak(options: {
   rate?: number
 }): Promise<OrbVoiceSpeakResponse> {
   try {
-    return await postJson<OrbVoiceSpeakResponse>('/api/orb/voice/speak', {
+    return await postJson<OrbVoiceSpeakResponse>('/orb/voice/speak', {
       text: options.text,
       voice_id: options.voice_id ?? 'orb_british_female',
       rate: options.rate ?? 1
@@ -80,7 +115,7 @@ export async function requestOrbVoiceTranscribe(options: {
   text?: string
 }): Promise<OrbVoiceTranscribeResponse> {
   try {
-    return await postJson<OrbVoiceTranscribeResponse>('/api/orb/voice/transcribe', {
+    return await postJson<OrbVoiceTranscribeResponse>('/orb/voice/transcribe', {
       text: options.text ?? ''
     })
   } catch {
