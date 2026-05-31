@@ -51,12 +51,26 @@ class OrbProfessionalCuriosityService:
             "Police/social worker notification and local missing procedure followed?",
             "Return conversation: where did they go, who were they with, unknown adults, how did they travel?",
             "Phone/social media contact during absence; substances, money, gifts, sexual or criminal exploitation indicators?",
+            "If cannabis, alcohol or substances are indicated: how did they obtain them, who supplied them, was there debt, pressure, coercion, gifting, older peer/adult influence or a location pattern?",
             "Did they feel safe; what made them leave; what made them return; did they avoid someone/something in the home?",
+            "What might the young person be feeling on return — shame, fear, exhaustion, relief, worry about consequences or loyalty to someone outside the home?",
+            "Relationship lens: how staff respond after return may determine whether the child feels safe enough to talk later; prioritise connection before interrogation.",
             "What would help them stay safe next time?",
             "Patterns: repeated times, locations/routes, peers/adults, family/contact, school/education, staff/relationship, emotional triggers.",
             "Push factors inside the home and pull factors outside; escalation or reduction over time; contextual safeguarding links?",
             "Recording: chronology, missing report, return conversation, agencies informed, risk update, safety plan, child voice, manager review.",
-            "Ofsted lens: does the home understand why children go missing — learning, prevention, risk reduction, multi-agency impact?",
+            "Ofsted line of enquiry: does the home understand why children go missing — learning, prevention, risk reduction, multi-agency impact and evidence that action changed something?",
+            "Learning loop: what needs to change tomorrow — risk assessment, exploitation screening, placement plan, safety plan, key-work, staffing approach or manager oversight?",
+        ],
+        "missing_substance_return": [
+            "This is not just a behaviour-management issue: missing episode + substance indicator + refusal to engage should increase professional curiosity without jumping to conclusions.",
+            "Immediate welfare: presentation, intoxication level, injury, distress, hydration/food/rest, medical advice if needed, and safe observation.",
+            "Contextual safeguarding: who were they with, how did they get cannabis/substances, was there gifting, debt, pressure, coercion, older peer/adult influence, vehicle, location or phone/social-media contact?",
+            "Child experience: consider shame, fear, exhaustion, anxiety, avoidance, loyalty, worry about consequences or feeling controlled; do not treat silence as defiance only.",
+            "Relationship response: calm connection first; give space while maintaining safety; avoid interrogation; offer a later return conversation with a trusted adult.",
+            "Recording: factual observations, direct quotes, welfare checks, staff response, child voice when available, agencies informed, risk review and manager oversight.",
+            "Ofsted line of enquiry: would the record show that staff understood why the child went missing, explored exploitation/substance risk, updated plans and learned from the episode?",
+            "Learning loop: risk assessment, missing-from-care plan, exploitation screening, placement/safety plan, key-work themes, chronology and management review should be considered.",
         ],
         "restraint": [
             "Was intervention necessary, proportionate and least restrictive?",
@@ -188,6 +202,7 @@ class OrbProfessionalCuriosityService:
             "allegations",
             "recording",
             "missing",
+            "missing_substance_return",
             "restraint",
             "chronology",
             "leadership",
@@ -212,6 +227,8 @@ class OrbProfessionalCuriosityService:
     def detect_topic(self, message: str, *, mode: str | None = None) -> str | None:
         text = str(message or "").lower()
         mode_text = str(mode or "").lower()
+        if self._is_missing_substance_return(text):
+            return "missing_substance_return"
         if any(term in text for term in ("taken tablets", "overdose", "swallowed tablets", "self-harmed", "self harm")):
             return "self_harm"
         playbook = orb_scenario_playbook_service.detect_playbook(message)
@@ -327,6 +344,14 @@ class OrbProfessionalCuriosityService:
         ]
         for lens in lenses:
             lines.append(f"  - {lens}")
+        if topic == "missing_substance_return":
+            lines.extend(
+                [
+                    "- For RSW/Senior roles, keep this practical and calm, but do not flatten it into a checklist.",
+                    "- The answer must include: immediate welfare; professional curiosity; child experience; relationship response; recording; manager/DSL escalation; Ofsted evidence; learning loop.",
+                    "- Avoid saying this means exploitation. Say it increases professional curiosity and should prompt contextual safeguarding thinking.",
+                ]
+            )
         lines.extend(
             [
                 "- Do not end high-attention answers with vague 'would you like to explore further?' closers.",
@@ -344,6 +369,12 @@ class OrbProfessionalCuriosityService:
             "high_attention": topic in self.HIGH_ATTENTION_TOPICS if topic else False,
             "lenses": self.lenses_for(message, mode=mode),
         }
+
+    def _is_missing_substance_return(self, text: str) -> bool:
+        missing = any(term in text for term in ("missing", "abscond", "away from home", "returned", "return from missing", "went missing"))
+        substance = any(term in text for term in ("cannabis", "weed", "smell of cannabis", "smells of cannabis", "substance", "intoxicated", "drug"))
+        disengaged = any(term in text for term in ("refus", "won't talk", "would not talk", "slammed", "shut themselves", "bedroom door", "not engaging"))
+        return missing and substance and disengaged
 
     def _is_cumulative_concern(self, text: str) -> bool:
         has_allegation = "allegation" in text
