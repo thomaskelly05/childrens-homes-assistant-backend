@@ -1,5 +1,11 @@
 /** ORB Voice — shared types for conversational voice in ORB Residential. */
 
+import {
+  DEFAULT_ORB_VOICE_PROFILE_ID,
+  ORB_VOICE_PROFILES,
+  type OrbVoiceProfileId
+} from '@/lib/orb/voice/orb-voice-profiles'
+
 export type OrbVoiceSessionStatus =
   | 'idle'
   | 'requesting_permission'
@@ -22,11 +28,8 @@ export type OrbVoiceModeId =
   | 'safeguarding_support'
   | 'learning_coach'
 
-export type OrbVoicePresetId =
-  | 'orb_british_female'
-  | 'orb_british_calm'
-  | 'orb_british_professional'
-  | 'system_fallback'
+/** User-selected ORB voice profile (not raw OpenAI voice ID). */
+export type OrbVoicePresetId = OrbVoiceProfileId
 
 export type OrbSpokenAnswerLength = 'short' | 'balanced' | 'detailed'
 
@@ -86,12 +89,9 @@ export const ORB_VOICE_MODES: Array<{ id: OrbVoiceModeId; label: string; hint: s
   }
 ]
 
-export const ORB_VOICE_PRESETS: Array<{ id: OrbVoicePresetId; label: string }> = [
-  { id: 'orb_british_female', label: 'ORB British Female' },
-  { id: 'orb_british_calm', label: 'ORB British Calm' },
-  { id: 'orb_british_professional', label: 'ORB British Professional' },
-  { id: 'system_fallback', label: 'System voice fallback' }
-]
+export const ORB_VOICE_PRESETS = ORB_VOICE_PROFILES.map((p) => ({ id: p.id as OrbVoicePresetId, label: p.label }))
+
+export { DEFAULT_ORB_VOICE_PROFILE_ID }
 
 export const ORB_VOICE_SETTINGS_STORAGE_KEY = 'orb-voice-settings'
 export const ORB_VOICE_SETTINGS_LEGACY_KEY = 'orb-standalone-voice-settings'

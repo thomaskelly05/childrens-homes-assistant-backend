@@ -17,7 +17,20 @@ logger = logging.getLogger("indicare.orb.realtime")
 OPENAI_REALTIME_CLIENT_SECRET_URL = os.getenv("OPENAI_REALTIME_CLIENT_SECRET_URL", "https://api.openai.com/v1/realtime/client_secrets")
 OPENAI_REALTIME_SESSION_URL = os.getenv("OPENAI_REALTIME_SESSION_URL", "https://api.openai.com/v1/realtime/sessions")
 DEFAULT_REALTIME_MODEL = os.getenv("ORB_REALTIME_MODEL") or os.getenv("INDICARE_REALTIME_MODEL", "gpt-realtime")
-ALLOWED_SYNTHETIC_VOICES = {"alloy", "ash", "ballad", "coral", "echo", "sage", "shimmer", "verse", "marin", "cedar"}
+ALLOWED_SYNTHETIC_VOICES = {
+    "alloy",
+    "ash",
+    "ballad",
+    "coral",
+    "echo",
+    "sage",
+    "shimmer",
+    "verse",
+    "marin",
+    "cedar",
+    "nova",
+    "onyx",
+}
 
 
 def _enabled(value: str | None, default: bool = True) -> bool:

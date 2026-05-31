@@ -20,6 +20,11 @@ def _realtime_provider() -> str:
     return os.getenv("ORB_VOICE_REALTIME_PROVIDER", "browser_fallback").strip().lower()
 
 
+def _openai_realtime_configured() -> bool:
+    """OpenAI Realtime when ORB_VOICE_REALTIME_PROVIDER=openai and API key is set."""
+    return _realtime_provider() == "openai" and bool(os.getenv("OPENAI_API_KEY", "").strip())
+
+
 def _provider_name() -> str:
     return os.getenv("ORB_VOICE_PROVIDER_NAME", "none").strip().lower() or "none"
 
@@ -93,6 +98,17 @@ def build_capabilities(
             supportsServerAudio=False,
             latencyClass="fallback",
         )
+    if provider == "openai_realtime":
+        return VoiceProviderCapabilities(
+            provider="openai_realtime",
+            supportsStreamingStt=True,
+            supportsStreamingTts=True,
+            supportsBargeIn=True,
+            supportsVad=True,
+            supportsDuplex=True,
+            supportsServerAudio=True,
+            latencyClass="realtime",
+        )
     latency: VoiceLatencyClass = "realtime" if provider == "webrtc_realtime" else "standard"
     return VoiceProviderCapabilities(
         provider=_provider_name(),
@@ -113,7 +129,9 @@ def resolve_voice_provider(
 
     requested = transport
     if transport == "auto":
-        if _webrtc_env_configured():
+        if _openai_realtime_configured():
+            requested = "openai"
+        elif _webrtc_env_configured():
             requested = "webrtc"
         elif _websocket_env_configured():
             requested = "websocket"
@@ -125,6 +143,21 @@ def resolve_voice_provider(
             "browser_fallback",
             "ready",
             build_capabilities(provider="browser_fallback", streaming_stt=False, streaming_tts=False),
+            None,
+        )
+
+    if requested == "openai":
+        if not _openai_realtime_configured():
+            return (
+                "browser_fallback",
+                "ready",
+                build_capabilities(provider="browser_fallback", streaming_stt=False, streaming_tts=False),
+                "OpenAI Realtime is not configured — using browser voice.",
+            )
+        return (
+            "openai_realtime",
+            "ready",
+            build_capabilities(provider="openai_realtime", streaming_stt=True, streaming_tts=True),
             None,
         )
 

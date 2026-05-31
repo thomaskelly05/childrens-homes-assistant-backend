@@ -4,7 +4,11 @@
 
 import { authFetch } from '@/lib/auth/api'
 
-export type VoiceProviderType = 'browser_fallback' | 'websocket_realtime' | 'webrtc_realtime'
+export type VoiceProviderType =
+  | 'browser_fallback'
+  | 'websocket_realtime'
+  | 'webrtc_realtime'
+  | 'openai_realtime'
 export type VoiceLatencyClass = 'fallback' | 'standard' | 'realtime'
 
 export type VoiceProviderCapabilities = {
@@ -18,23 +22,35 @@ export type VoiceProviderCapabilities = {
   latencyClass: VoiceLatencyClass
 }
 
+export type OrbVoiceOpenAISession = {
+  model?: string | null
+  client_secret?: { value?: string; expires_at?: number | string } | null
+  voice?: string | null
+}
+
 export type OrbVoiceSessionResponse = {
   session_id: string
   status: 'ready' | 'not_configured' | 'error'
   provider: VoiceProviderType
   mode?: string
   voice_id?: string
+  selected_voice_profile?: string
+  profile_label?: string | null
+  provider_voice?: string | null
   websocket_url?: string | null
   webrtc_offer_url?: string | null
+  openai_session?: OrbVoiceOpenAISession | null
   capabilities: VoiceProviderCapabilities
   message?: string | null
   fallback_reason?: string | null
 }
 
 export type OrbVoiceSpeakResponse = {
-  provider: 'browser_fallback' | 'server'
+  provider: 'browser_fallback' | 'server' | 'openai_realtime'
   text: string
   voice_id: string
+  selected_voice_profile?: string
+  provider_voice?: string | null
   audio_url?: string | null
   message?: string
 }

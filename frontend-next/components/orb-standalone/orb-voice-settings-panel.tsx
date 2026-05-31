@@ -2,12 +2,14 @@
 
 import { useStandaloneOrbVoice } from '@/components/orb-standalone/use-standalone-orb-voice'
 import { OrbStandalonePanelShell } from '@/components/orb-standalone/orb-standalone-panel-shell'
+import { isOrbDeveloperMode } from '@/lib/orb/orb-developer-mode'
 import {
   ORB_SPEECH_RATE_PRESETS,
   speechRatePresetFor,
   type OrbSpeechRatePreset
 } from '@/lib/orb/orb-voice-presets'
-import { ORB_VOICE_MODES, ORB_VOICE_PRESETS } from '@/lib/orb/voice/orb-voice-types'
+import { ORB_VOICE_PROFILES, getOrbVoiceProfile, orbVoiceProfileLabel } from '@/lib/orb/voice/orb-voice-profiles'
+import { ORB_VOICE_MODES } from '@/lib/orb/voice/orb-voice-types'
 import type { OrbSpokenAnswerLength, OrbVoiceModeId, OrbVoicePresetId } from '@/lib/orb/voice/orb-voice-types'
 
 const RATE_LABELS: Record<OrbSpeechRatePreset, string> = {
@@ -40,6 +42,9 @@ export function OrbVoiceSettingsPanel({
   const { settings, availableVoices, preferredVoiceName, preferredVoiceIsBritishFemale, voiceSelectionNote } =
     voice
   const activeRate = speechRatePresetFor(settings.speechRate)
+  const developerMode = isOrbDeveloperMode()
+  const selectedProfile = getOrbVoiceProfile(settings.voicePresetId)
+  const readAloudProfile = getOrbVoiceProfile(settings.readAloudProfileId ?? settings.voicePresetId)
 
   return (
     <OrbStandalonePanelShell
@@ -52,8 +57,8 @@ export function OrbVoiceSettingsPanel({
     >
       <div className="space-y-4 p-4" data-orb-voice-settings-panel>
         <p className="text-[11px] leading-6 text-[var(--orb-muted)]" data-orb-voice-settings-help>
-          British female voice where available on this device. Premium neural voices only apply when your
-          deployment configures a server provider — otherwise ORB uses browser Speech Synthesis.
+          Choose how ORB sounds. ORB-branded voices use OpenAI Realtime when your deployment configures it;
+          otherwise ORB honestly uses your browser&apos;s Speech Synthesis with the closest matching device voice.
         </p>
 
         {onOpenOrbVoice ? (
@@ -86,21 +91,93 @@ export function OrbVoiceSettingsPanel({
           </select>
         </label>
 
-        <label className="block">
-          <span className="mb-1.5 block text-xs font-medium text-[var(--orb-muted)]">Selected voice</span>
-          <select
-            value={settings.voicePresetId}
-            onChange={(e) => voice.setVoicePresetId(e.target.value as OrbVoicePresetId)}
-            className="orb-profile-input w-full"
-            data-orb-voice-preset
-          >
-            {ORB_VOICE_PRESETS.map((preset) => (
-              <option key={preset.id} value={preset.id}>
-                {preset.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <fieldset className="space-y-3" data-orb-voice-profile-list>
+          <legend className="text-xs font-medium text-[var(--orb-muted)]">Selected voice</legend>
+          {ORB_VOICE_PROFILES.map((profile) => {
+            const selected = settings.voicePresetId === profile.id
+            return (
+              <div
+                key={profile.id}
+                className={`rounded-xl border px-4 py-3 transition ${
+                  selected
+                    ? 'border-[#0284C7] bg-[#E0F2FE]/10'
+                    : 'border-[var(--orb-line)] bg-[var(--orb-surface)]'
+                }`}
+                data-orb-voice-profile-card={profile.id}
+              >
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-medium text-[var(--orb-foreground)]" data-orb-voice-profile-label>
+                      {profile.label}
+                    </p>
+                    <p className="mt-0.5 text-xs text-[var(--orb-muted)]">{profile.description}</p>
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {profile.bestFor.map((tag) => (
+                        <span
+                          key={tag}
+                          className="rounded-full border border-[var(--orb-line)]/60 px-2 py-0.5 text-[10px] text-[var(--orb-muted)]"
+                          data-orb-voice-profile-tag
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                    {developerMode && profile.openaiVoice ? (
+                      <p className="mt-1 text-[10px] text-[var(--orb-muted)]" data-orb-voice-dev-openai-id>
+                        OpenAI voice: {profile.openaiVoice}
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => void voice.previewVoiceProfile(profile.id as OrbVoicePresetId)}
+                      className="rounded-lg border border-[var(--orb-line)] px-3 py-1.5 text-[11px] font-medium text-[var(--orb-foreground)] hover:bg-[var(--orb-surface-hover)]"
+                      data-orb-voice-preview
+                    >
+                      Preview voice
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => voice.setVoicePresetId(profile.id as OrbVoicePresetId)}
+                      className={`rounded-lg px-3 py-1.5 text-[11px] font-medium ${
+                        selected
+                          ? 'bg-[#0284C7] text-white'
+                          : 'border border-[var(--orb-line)] text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)]'
+                      }`}
+                      data-orb-voice-use-for-orb
+                    >
+                      {selected ? 'ORB Voice voice' : 'Use for ORB Voice'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => voice.setReadAloudProfileId(profile.id as OrbVoicePresetId)}
+                      className="rounded-lg border border-[var(--orb-line)] px-3 py-1.5 text-[11px] text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)]"
+                      data-orb-voice-use-read-aloud
+                    >
+                      Use for read aloud
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </fieldset>
+
+        <p className="text-xs text-[var(--orb-muted)]">
+          ORB Voice: <strong className="font-medium text-[var(--orb-foreground)]">{selectedProfile.label}</strong>
+          {' · '}
+          Read aloud: <strong className="font-medium text-[var(--orb-foreground)]">{readAloudProfile.label}</strong>
+        </p>
+
+        <button
+          type="button"
+          onClick={() => voice.setVoiceAsDefault()}
+          className="w-full rounded-xl border border-[var(--orb-line)] px-4 py-2 text-sm font-medium text-[var(--orb-foreground)] hover:bg-[var(--orb-surface-hover)]"
+          data-orb-voice-set-default
+        >
+          Set current ORB Voice selection as default for read aloud
+        </button>
 
         <label className="block">
           <span className="mb-1.5 block text-xs font-medium text-[var(--orb-muted)]">Browser voice override</span>
@@ -112,8 +189,8 @@ export function OrbVoiceSettingsPanel({
           >
             <option value="">
               {preferredVoiceName
-                ? `Best match: ${preferredVoiceName}${preferredVoiceIsBritishFemale ? ' (British female)' : ''}`
-                : 'Automatic — British female where available'}
+                ? `Profile match: ${preferredVoiceName}${preferredVoiceIsBritishFemale ? ' (British female)' : ''}`
+                : `Automatic — ${orbVoiceProfileLabel(settings.voicePresetId)}`}
             </option>
             {availableVoices.map((v) => (
               <option key={v.voiceURI} value={v.voiceURI}>

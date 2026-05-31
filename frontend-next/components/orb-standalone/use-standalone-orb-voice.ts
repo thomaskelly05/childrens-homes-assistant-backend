@@ -8,6 +8,15 @@ import {
   stripWakePhraseFromTranscript,
   transcriptContainsWakePhrase
 } from '@/lib/orb/voice/orb-voice-browser'
+import {
+  DEFAULT_ORB_VOICE_PROFILE_ID,
+  ORB_VOICE_PREVIEW_PHRASE,
+  defaultVoiceProfileForMode,
+  getOrbVoiceProfile,
+  normaliseOrbVoiceProfileId,
+  resolveBrowserVoice
+} from '@/lib/orb/voice/orb-voice-profiles'
+import { requestOrbVoiceSpeak } from '@/lib/orb/voice/orb-voice-client'
 import type { OrbSpokenAnswerLength, OrbVoiceModeId, OrbVoicePresetId } from '@/lib/orb/voice/orb-voice-types'
 import {
   ORB_VOICE_SETTINGS_LEGACY_KEY,
@@ -65,6 +74,10 @@ export type StandaloneOrbVoiceSettings = {
   speechPitch: number
   voiceMode: OrbVoiceModeId
   voicePresetId: OrbVoicePresetId
+  /** When set, Speak on answers uses this profile; otherwise voicePresetId. */
+  readAloudProfileId: OrbVoicePresetId | null
+  /** User explicitly picked a voice — do not auto-switch on mode change. */
+  userChoseVoice: boolean
   spokenAnswerLength: OrbSpokenAnswerLength
   allowInterruption: boolean
   pushToTalk: boolean
@@ -101,7 +114,9 @@ const DEFAULT_SETTINGS: StandaloneOrbVoiceSettings = {
   speechRate: 0.92,
   speechPitch: 1,
   voiceMode: 'conversational',
-  voicePresetId: 'orb_british_female',
+  voicePresetId: DEFAULT_ORB_VOICE_PROFILE_ID,
+  readAloudProfileId: null,
+  userChoseVoice: false,
   spokenAnswerLength: 'balanced',
   allowInterruption: true,
   pushToTalk: true,
@@ -110,7 +125,7 @@ const DEFAULT_SETTINGS: StandaloneOrbVoiceSettings = {
 }
 
 const SPEECH_CHUNK_PAUSE_MS = 80
-const SPEECH_TEST_PHRASE = "Hello, I'm ORB. I'll use this voice when available."
+const SPEECH_TEST_PHRASE = ORB_VOICE_PREVIEW_PHRASE
 const SAFARI_KEEPALIVE_MS = 140
 
 function readStoredSettings(): StandaloneOrbVoiceSettings {
@@ -134,7 +149,11 @@ function readStoredSettings(): StandaloneOrbVoiceSettings {
       speechRate: typeof parsed.speechRate === 'number' ? parsed.speechRate : DEFAULT_SETTINGS.speechRate,
       speechPitch: typeof parsed.speechPitch === 'number' ? parsed.speechPitch : DEFAULT_SETTINGS.speechPitch,
       voiceMode: parsed.voiceMode ?? DEFAULT_SETTINGS.voiceMode,
-      voicePresetId: parsed.voicePresetId ?? DEFAULT_SETTINGS.voicePresetId,
+      voicePresetId: normaliseOrbVoiceProfileId(parsed.voicePresetId),
+      readAloudProfileId: parsed.readAloudProfileId
+        ? normaliseOrbVoiceProfileId(parsed.readAloudProfileId)
+        : null,
+      userChoseVoice: parsed.userChoseVoice ?? DEFAULT_SETTINGS.userChoseVoice,
       spokenAnswerLength: parsed.spokenAnswerLength ?? DEFAULT_SETTINGS.spokenAnswerLength,
       allowInterruption: parsed.allowInterruption ?? DEFAULT_SETTINGS.allowInterruption,
       pushToTalk: parsed.pushToTalk ?? DEFAULT_SETTINGS.pushToTalk,
@@ -147,7 +166,12 @@ function readStoredSettings(): StandaloneOrbVoiceSettings {
 }
 
 function britishPreferenceForPreset(preset: OrbVoicePresetId): boolean {
-  return preset !== 'system_fallback'
+  const profile = getOrbVoiceProfile(preset)
+  return profile.id !== 'system_fallback'
+}
+
+function activeSpeakProfileId(settings: StandaloneOrbVoiceSettings): OrbVoicePresetId {
+  return settings.readAloudProfileId ?? settings.voicePresetId
 }
 
 function voiceLooksFemale(name: string): boolean {
@@ -270,12 +294,17 @@ export function useStandaloneOrbVoice() {
     if (typeof window === 'undefined' || !window.speechSynthesis) return
     const voices = window.speechSynthesis.getVoices()
     setAvailableVoices(voices)
-    const preferBritish = britishPreferenceForPreset(settingsRef.current.voicePresetId)
-    const picked = pickBritishFemaleVoice(
+    const profileId = activeSpeakProfileId(settingsRef.current)
+    const picked = resolveBrowserVoice(
+      profileId,
       voices,
-      preferBritish && settingsRef.current.britishFemalePreference,
       settingsRef.current.selectedVoiceUri
-    )
+    ) ??
+      pickBritishFemaleVoice(
+        voices,
+        britishPreferenceForPreset(profileId) && settingsRef.current.britishFemalePreference,
+        settingsRef.current.selectedVoiceUri
+      )
     preferredVoiceRef.current = picked
     setPreferredVoiceName(picked?.name ?? null)
     if (settingsRef.current.britishFemalePreference && voices.length) {
@@ -514,9 +543,43 @@ export function useStandaloneOrbVoice() {
     [runSpeech]
   )
 
+  const previewVoiceProfile = useCallback(
+    async (profileId?: OrbVoicePresetId) => {
+      const id = profileId ?? settingsRef.current.voicePresetId
+      try {
+        const response = await requestOrbVoiceSpeak({
+          text: SPEECH_TEST_PHRASE,
+          voice_id: id,
+          rate: settingsRef.current.speechRate
+        })
+        if (response.provider === 'server' || response.provider === 'openai_realtime') {
+          if (response.audio_url) {
+            const audio = new Audio(response.audio_url)
+            void audio.play()
+            return
+          }
+        }
+      } catch {
+        /* fall through to browser */
+      }
+      const previous = settingsRef.current.voicePresetId
+      if (profileId && profileId !== previous) {
+        settingsRef.current = { ...settingsRef.current, voicePresetId: profileId }
+        refreshVoices()
+      }
+      speakAloud(SPEECH_TEST_PHRASE, () => {
+        if (profileId && profileId !== previous) {
+          settingsRef.current = { ...settingsRef.current, voicePresetId: previous }
+          refreshVoices()
+        }
+      })
+    },
+    [refreshVoices, speakAloud]
+  )
+
   const testSelectedVoice = useCallback(() => {
-    speakAloud(SPEECH_TEST_PHRASE)
-  }, [speakAloud])
+    void previewVoiceProfile(settingsRef.current.voicePresetId)
+  }, [previewVoiceProfile])
 
   const registerAfterSpeakListener = useCallback((listener: () => void) => {
     onSpeakEndRef.current = listener
@@ -799,12 +862,30 @@ export function useStandaloneOrbVoice() {
       }
       refreshVoices()
     },
-    setVoiceMode: (voiceMode: OrbVoiceModeId) => updateSettings({ voiceMode }),
+    setVoiceMode: (voiceMode: OrbVoiceModeId) => {
+      const patch: Partial<StandaloneOrbVoiceSettings> = { voiceMode }
+      if (!settingsRef.current.userChoseVoice) {
+        patch.voicePresetId = defaultVoiceProfileForMode(voiceMode)
+        patch.britishFemalePreference = britishPreferenceForPreset(patch.voicePresetId)
+      }
+      updateSettings(patch)
+    },
     setVoicePresetId: (voicePresetId: OrbVoicePresetId) =>
       updateSettings({
-        voicePresetId,
+        voicePresetId: normaliseOrbVoiceProfileId(voicePresetId),
+        userChoseVoice: true,
         britishFemalePreference: britishPreferenceForPreset(voicePresetId)
       }),
+    setReadAloudProfileId: (readAloudProfileId: OrbVoicePresetId | null) =>
+      updateSettings({
+        readAloudProfileId: readAloudProfileId ? normaliseOrbVoiceProfileId(readAloudProfileId) : null
+      }),
+    setVoiceAsDefault: () =>
+      updateSettings({
+        readAloudProfileId: settingsRef.current.voicePresetId,
+        userChoseVoice: true
+      }),
+    previewVoiceProfile,
     setSpokenAnswerLength: (spokenAnswerLength: OrbSpokenAnswerLength) => updateSettings({ spokenAnswerLength }),
     setAllowInterruption: (allowInterruption: boolean) => updateSettings({ allowInterruption }),
     setPushToTalk: (pushToTalk: boolean) => updateSettings({ pushToTalk }),

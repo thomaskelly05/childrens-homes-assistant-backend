@@ -75,6 +75,16 @@ python -m pytest tests/test_orb_voice_residential_routes.py -q
 cd frontend-next && npm run test:orb && npm run typecheck && npm run build
 ```
 
-## 13. Remaining provider / env setup
+## 13. OpenAI voice picker (this sprint)
 
-Set `ORB_VOICE_REALTIME_PROVIDER`, `ORB_VOICE_SERVER_STT`, `ORB_VOICE_SERVER_TTS`, and vendor API keys. See `docs/orb-voice-realtime-provider-pass.md`.
+- Seven ORB-branded profiles in `lib/orb/voice/orb-voice-profiles.ts`
+- Settings → Voice cards with preview, ORB Voice vs read-aloud
+- ORB Voice modal voice dropdown before Start
+- Per-mode defaults when user has not locked a voice choice
+- `POST /orb/voice/session` resolves profile → OpenAI voice when realtime is configured
+
+See `docs/orb-openai-voice-profiles.md`.
+
+## 14. Remaining provider / env setup
+
+Set `ORB_VOICE_REALTIME_PROVIDER=openai`, `OPENAI_API_KEY`, `ORB_REALTIME_ENABLED`, and optional `ORB_VOICE_DEFAULT_PROFILE`. For WebSocket dev path, set `ORB_VOICE_SERVER_STT`, `ORB_VOICE_SERVER_TTS`, and vendor keys. See `docs/orb-voice-realtime-provider-pass.md`.
