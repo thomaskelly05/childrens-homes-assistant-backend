@@ -74,7 +74,9 @@ import { OrbIntelligenceMapPanel } from '@/components/orb-standalone/orb-intelli
 import { OrbMemoryPanel } from '@/components/orb-standalone/orb-memory-panel'
 import { OrbPermissionsPanel } from '@/components/orb-standalone/orb-permissions-panel'
 import { OrbToolsPanel } from '@/components/orb-standalone/orb-tools-panel'
+import { OrbDictateStation } from '@/components/orb-standalone/orb-dictate-station'
 import { OrbVoiceStation } from '@/components/orb-standalone/orb-voice-station'
+import type { OrbDictateNoteType } from '@/lib/orb/dictate/orb-dictate-types'
 import type { OrbComposerPlusAction } from '@/components/orb-standalone/orb-composer-plus-menu'
 import { OrbStandaloneSettingsPanel } from '@/components/orb-standalone/orb-standalone-settings-panel'
 import {
@@ -532,6 +534,8 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [activePanel, setActivePanel] = useState<OrbStandalonePanel>(null)
+  const [dictateImportTranscript, setDictateImportTranscript] = useState<string | undefined>()
+  const [dictateImportNoteType, setDictateImportNoteType] = useState<OrbDictateNoteType | undefined>()
   const [agentsPanelOpen, setAgentsPanelOpen] = useState(false)
   const [promptDrawerOpen, setPromptDrawerOpen] = useState(false)
   const [moreExamplesExpanded, setMoreExamplesExpanded] = useState(false)
@@ -744,6 +748,14 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   const openIntelligenceMap = useCallback(() => openPanel('intelligence_map'), [openPanel])
   const openBillingPanel = useCallback(() => openPanel('billing'), [openPanel])
   const openOrbVoicePanel = useCallback(() => openPanel('orb_voice'), [openPanel])
+  const openOrbDictatePanel = useCallback(
+    (opts?: { transcript?: string; noteType?: OrbDictateNoteType }) => {
+      setDictateImportTranscript(opts?.transcript)
+      setDictateImportNoteType(opts?.noteType)
+      openPanel('orb_dictate')
+    },
+    [openPanel]
+  )
 
   function openResidentialAccount() {
     if (residentialSurface) {
@@ -1695,6 +1707,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       case 'orb_voice':
         openOrbVoicePanel()
         break
+      case 'orb_dictate':
+        openOrbDictatePanel()
+        break
       default:
         break
     }
@@ -1721,6 +1736,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         break
       case 'orb_voice':
         openOrbVoicePanel()
+        break
+      case 'orb_dictate':
+        openOrbDictatePanel()
         break
       case 'learning_session':
         setMessage('Create a 5-minute staff learning session from this topic with discussion questions:\n\n')
@@ -2494,15 +2512,32 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         onOpenOrbVoice={residentialSurface ? openOrbVoicePanel : undefined}
       />
       {residentialSurface ? (
-        <OrbVoiceStation
-          open={activePanel === 'orb_voice'}
-          onClose={closePanel}
-          voice={voice}
-          pending={pending}
-          assistantReply={voiceStationAssistant?.text ?? null}
-          assistantReplyKey={voiceStationAssistant?.key ?? null}
-          onSendToOrb={(text) => void sendMessage(text)}
-        />
+        <>
+          <OrbVoiceStation
+            open={activePanel === 'orb_voice'}
+            onClose={closePanel}
+            voice={voice}
+            pending={pending}
+            assistantReply={voiceStationAssistant?.text ?? null}
+            assistantReplyKey={voiceStationAssistant?.key ?? null}
+            onSendToOrb={(text) => void sendMessage(text)}
+            onOpenDictate={(transcript, noteType) => openOrbDictatePanel({ transcript, noteType })}
+          />
+          <OrbDictateStation
+            open={activePanel === 'orb_dictate'}
+            onClose={() => {
+              setDictateImportTranscript(undefined)
+              setDictateImportNoteType(undefined)
+              closePanel()
+            }}
+            voice={voice}
+            initialTranscript={dictateImportTranscript}
+            initialNoteType={dictateImportNoteType}
+            onSendToChat={(text) => void sendMessage(text)}
+            onOpenOrbVoice={openOrbVoicePanel}
+            onOpenTemplates={openTemplatesPanel}
+          />
+        </>
       ) : null}
       <OrbToolsPanel
         open={activePanel === 'tools'}

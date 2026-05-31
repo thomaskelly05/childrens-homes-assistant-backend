@@ -6,6 +6,7 @@ import {
   FileText,
   FolderOpen,
   Mic,
+  PenLine,
   Plus,
   Save,
   Sparkles,
@@ -18,6 +19,7 @@ export type OrbComposerPlusAction =
   | 'use_template'
   | 'knowledge'
   | 'orb_voice'
+  | 'orb_dictate'
   | 'learning_session'
   | 'saved_outputs'
 
@@ -31,6 +33,7 @@ const ITEMS: Array<{
   { id: 'use_template', label: 'Use template', icon: FileText },
   { id: 'knowledge', label: 'Open Knowledge Centre', icon: BookOpen },
   { id: 'orb_voice', label: 'Start ORB Voice', icon: Mic },
+  { id: 'orb_dictate', label: 'ORB Dictate', icon: PenLine },
   { id: 'learning_session', label: 'Create learning session', icon: Sparkles },
   { id: 'saved_outputs', label: 'Saved Outputs', icon: Save }
 ]

@@ -121,6 +121,16 @@ function providerUserLabel(
   return `${profileLabel} · Browser voice`
 }
 
+function formatTurnsAsTranscript(turns: VoiceTurn[]): string {
+  return turns
+    .filter((t) => t.role === 'user' || t.role === 'assistant')
+    .map((t) => {
+      const label = t.role === 'user' ? 'You' : 'ORB'
+      return `${label}: ${t.text.trim()}`
+    })
+    .join('\n\n')
+}
+
 export function OrbVoiceStation({
   open,
   onClose,
@@ -128,7 +138,8 @@ export function OrbVoiceStation({
   onSendToOrb,
   pending = false,
   assistantReply = null,
-  assistantReplyKey = null
+  assistantReplyKey = null,
+  onOpenDictate
 }: {
   open: boolean
   onClose: () => void
@@ -137,6 +148,7 @@ export function OrbVoiceStation({
   pending?: boolean
   assistantReply?: string | null
   assistantReplyKey?: string | null
+  onOpenDictate?: (transcript: string, noteType?: import('@/lib/orb/dictate/orb-dictate-types').OrbDictateNoteType) => void
 }) {
   const [sessionActive, setSessionActive] = useState(false)
   const [turns, setTurns] = useState<VoiceTurn[]>([])
@@ -680,6 +692,43 @@ export function OrbVoiceStation({
           <p className="mt-3 text-center text-xs text-[#5ec8ff]" role="status">
             {saveNotice}
           </p>
+        ) : null}
+
+        {turns.length > 0 && onOpenDictate ? (
+          <div className="mt-4 flex flex-wrap justify-center gap-2" data-orb-voice-dictate-actions>
+            <button
+              type="button"
+              className="rounded-full border border-sky-400/40 bg-sky-500/10 px-3 py-1.5 text-xs text-sky-100"
+              data-orb-voice-to-dictate
+              onClick={() => onOpenDictate(formatTurnsAsTranscript(turns))}
+            >
+              Turn this into a note
+            </button>
+            <button
+              type="button"
+              className="rounded-full border border-[var(--orb-line)]/60 px-3 py-1.5 text-xs text-[var(--orb-foreground)]"
+              data-orb-voice-to-incident
+              onClick={() => onOpenDictate(formatTurnsAsTranscript(turns), 'incident_record')}
+            >
+              Create incident record
+            </button>
+            <button
+              type="button"
+              className="rounded-full border border-[var(--orb-line)]/60 px-3 py-1.5 text-xs text-[var(--orb-foreground)]"
+              data-orb-voice-to-supervision
+              onClick={() => onOpenDictate(formatTurnsAsTranscript(turns), 'supervision_reflection')}
+            >
+              Reflective supervision note
+            </button>
+            <button
+              type="button"
+              className="rounded-full border border-[var(--orb-line)]/60 px-3 py-1.5 text-xs text-[var(--orb-foreground)]"
+              data-orb-voice-to-manager
+              onClick={() => onOpenDictate(formatTurnsAsTranscript(turns), 'manager_oversight_note')}
+            >
+              Manager oversight summary
+            </button>
+          </div>
         ) : null}
 
         {turns.length > 0 ? (

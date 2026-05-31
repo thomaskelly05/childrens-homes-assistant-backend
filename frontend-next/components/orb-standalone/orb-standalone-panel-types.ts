@@ -14,6 +14,7 @@ export type OrbStandalonePanel =
   | 'help'
   | 'voice'
   | 'orb_voice'
+  | 'orb_dictate'
   | 'billing'
   | null
 
@@ -32,6 +33,7 @@ export const ORB_STANDALONE_PANEL_IDS: Exclude<OrbStandalonePanel, null>[] = [
   'help',
   'voice',
   'orb_voice',
+  'orb_dictate',
   'billing'
 ]
 
