@@ -15,7 +15,7 @@ import { fetchOrbPasskeyStatus } from '@/lib/orb/orb-passkey-client'
 import { normaliseRole } from '@/lib/auth/permissions'
 import type { StaffUser } from '@/lib/auth/types'
 
-export const ORB_SIGN_IN_URL = '/orb/login?returnUrl=%2Forb%2Fsetup'
+export const ORB_SIGN_IN_URL = '/orb/login?returnUrl=%2Forb'
 export const ORB_ACCESS_URL = '/orb/billing'
 
 export type OrbProfileDisplayMode = 'local_profile' | 'signed_in_account'

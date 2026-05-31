@@ -17,59 +17,107 @@ describe('ORB Residential routing', () => {
     assert.equal(isStandaloneOrbSurfaceRoute('/'), true)
     assert.equal(isStandaloneOrbSurfaceRoute('/orb'), true)
     assert.equal(isStandaloneOrbSurfaceRoute('/orb/login'), true)
+    assert.equal(isStandaloneOrbSurfaceRoute('/orb/review'), true)
     assert.equal(isStandaloneOrbSurfaceRoute('/homes'), false)
     assert.equal(isStandaloneOrbSurfaceRoute('/os'), false)
   })
 
-  it('root page renders ORB front door', () => {
+  it('root page renders ORB front door without OS shell', () => {
     const page = readApp('app/page.tsx')
     assert.match(page, /OrbFrontDoor/)
     assert.doesNotMatch(page, /OsHomeClient/)
   })
 
-  it('/os renders IndiCare OS landing', () => {
+  it('front door fits one screen without large capability cards', () => {
+    const door = readApp('components/orb-residential/orb-front-door.tsx')
+    assert.match(door, /h-\[100dvh\].*overflow-hidden/s)
+    assert.match(door, /Start Free Trial/)
+    assert.match(door, /\/orb\/login\?returnUrl=\/orb/)
+    assert.doesNotMatch(door, /OrbCapabilityCard/)
+    assert.match(door, /data-orb-front-door-example/)
+  })
+
+  it('/orb/login shows Microsoft, Google, Apple, Email with icons and OAuth return /orb', () => {
+    const login = readApp('components/orb-residential/orb-login-screen.tsx')
+    const authBtn = readApp('components/orb-residential/ui/orb-auth-button.tsx')
+    assert.match(login, /Continue with Microsoft/)
+    assert.match(login, /Continue with Google/)
+    assert.match(login, /Continue with Apple/)
+    assert.match(login, /Continue with Email/)
+    assert.match(login, /orbOAuthStartUrl\('microsoft', ORB_RETURN\)/)
+    assert.match(login, /Use Face ID, Touch ID or device passkey/)
+    assert.match(login, /h-\[100dvh\].*overflow-hidden/s)
+    assert.match(authBtn, /OrbAuthProviderIcon/)
+    assert.match(authBtn, /MicrosoftIcon/)
+  })
+
+  it('passkey option uses orbPasskeysSupported guard', () => {
+    const login = readApp('components/orb-residential/orb-login-screen.tsx')
+    assert.match(login, /orbPasskeysSupported/)
+    assert.match(login, /data-orb-passkey-sign-in/)
+  })
+
+  it('/orb/setup is minimal optional onboarding', () => {
+    const setup = readApp('components/orb-residential/orb-setup-screen.tsx')
+    assert.doesNotMatch(setup, /TOTAL_STEPS = 5/)
+    assert.match(setup, /Optional profile setup/)
+    assert.match(setup, /data-orb-setup-skip/)
+    assert.match(setup, /Set this up later/)
+  })
+
+  it('/orb renders ChatGPT-style ORB shell via OrbCareCompanion', () => {
+    const page = readApp('app/orb/page.tsx')
+    const experience = readApp('components/orb-residential/orb-residential-experience.tsx')
+    const companion = readApp('components/orb-standalone/orb-care-companion.tsx')
+    assert.match(page, /OrbResidentialExperience/)
+    assert.match(experience, /OrbCareCompanion residentialSurface/)
+    assert.match(companion, /OrbResidentialSidebar/)
+    assert.match(companion, /h-\[100dvh\]/)
+    assert.match(companion, /How can I help today/)
+    assert.doesNotMatch(companion, /AppShell/)
+  })
+
+  it('viewport scroll rules: sidebar and chat areas scroll independently', () => {
+    const css = readApp('app/orb/orb-desktop.css')
+    const sidebar = readApp('components/orb-residential/orb-residential-sidebar.tsx')
+    assert.match(css, /orb-chat-layout--residential/)
+    assert.match(css, /overflow:\s*hidden/)
+    assert.match(css, /overflow-y:\s*auto/)
+    assert.match(sidebar, /data-orb-sidebar-scroll/)
+    assert.match(readApp('components/orb-standalone/orb-care-companion.tsx'), /data-orb-chat-scroll-container/)
+  })
+
+  it('stations are in sidebar but not on front door', () => {
+    const sidebar = readApp('components/orb-residential/orb-residential-sidebar.tsx')
+    for (const station of ['review', 'templates', 'learn', 'saved', 'locality', 'ofsted', 'safeguarding']) {
+      assert.match(sidebar, new RegExp(`id: '${station}'`))
+    }
+    assert.match(sidebar, /data-orb-sidebar-station=\{station\.id\}/)
+  })
+
+  it('capability routes deep-link into /orb stations', () => {
+    assert.match(readApp('app/orb/review/page.tsx'), /redirect\('\/orb\?station=review'\)/)
+    assert.match(readApp('app/orb/templates/page.tsx'), /redirect\('\/orb\?station=templates'\)/)
+    assert.match(readApp('app/orb/learn/page.tsx'), /redirect\('\/orb\?station=learn'\)/)
+    assert.match(readApp('app/orb/saved/page.tsx'), /redirect\('\/orb\?station=saved'\)/)
+  })
+
+  it('/os still renders IndiCare OS', () => {
     const page = readApp('app/os/page.tsx')
     assert.match(page, /OsHomeClient/)
     assert.match(page, /IndiCare OS/)
   })
 
-  it('/orb/login renders OAuth options with setup return_url', () => {
+  it('safety modal is compact single step', () => {
+    const modal = readApp('components/orb-residential/orb-safety-modal.tsx')
+    assert.match(modal, /Before using ORB/)
+    assert.match(modal, /I understand/)
+  })
+
+  it('post-login routes to /orb not mandatory setup', () => {
     const login = readApp('components/orb-residential/orb-login-screen.tsx')
-    assert.match(login, /Continue with Microsoft/)
-    assert.match(login, /orbOAuthStartUrl\('microsoft', SETUP_RETURN\)/)
-    assert.match(login, /SETUP_RETURN = '\/orb\/setup'/)
-  })
-
-  it('/orb/setup renders onboarding steps', () => {
-    const setup = readApp('components/orb-residential/orb-setup-screen.tsx')
-    assert.match(setup, /TOTAL_STEPS = 5/)
-    assert.match(setup, /Enter ORB/)
-    assert.match(setup, /saveOrbOnboarding/)
-  })
-
-  it('canonical capability routes exist', () => {
-    for (const route of ['review', 'templates', 'learn', 'saved', 'setup', 'billing']) {
-      const page = readApp(`app/orb/${route}/page.tsx`)
-      assert.ok(page.length > 0, `missing app/orb/${route}/page.tsx`)
-    }
-  })
-
-  it('legacy onboarding and access redirect', () => {
-    assert.match(readApp('app/orb/onboarding/page.tsx'), /redirect\('\/orb\/setup'\)/)
-    assert.match(readApp('app/orb/access/page.tsx'), /redirect\('\/orb\/billing'\)/)
-  })
-
-  it('front door links to trial login and OS', () => {
-    const door = readApp('components/orb-residential/orb-front-door.tsx')
-    assert.match(door, /\/orb\/login\?returnUrl=\/orb\/setup/)
-    assert.match(door, /href="\/os"/)
-    assert.match(door, /Start Free Trial/)
-  })
-
-  it('ORB home does not import OS AppShell', () => {
-    const home = readApp('components/orb-residential/orb-residential-chat-home.tsx')
-    assert.doesNotMatch(home, /AppShell/)
-    assert.doesNotMatch(home, /OsScopeGate/)
-    assert.match(home, /OrbShell/)
+    assert.match(login, /return ORB_RETURN/)
+    assert.match(login, /const ORB_RETURN = '\/orb'/)
+    assert.doesNotMatch(login, /onboarding_completed.*\/orb\/setup/s)
   })
 })

@@ -7,7 +7,8 @@ test('ORB login copy includes product name', () => {
   assert.match(login, /professional AI copilot/)
   assert.match(login, /Continue with Microsoft/)
   assert.match(login, /Powered by IndiCare Intelligence/)
-  assert.match(login, /\/orb\/setup/)
+  assert.match(login, /ORB_RETURN = '\/orb'/)
+  assert.match(login, /orbOAuthStartUrl\('microsoft', ORB_RETURN\)/)
 })
 
 test('upgrade screen shows £9.99/month', () => {
@@ -16,10 +17,11 @@ test('upgrade screen shows £9.99/month', () => {
   assert.match(upgrade, /ORB Residential does not access IndiCare OS records/)
 })
 
-test('onboarding role options include NVQ assessor and learner', () => {
+test('onboarding role options include core residential roles', () => {
   const onboarding = readFileSync(new URL('../../components/orb-residential/orb-setup-screen.tsx', import.meta.url), 'utf8')
   const roles = readFileSync(new URL('./orb-billing-client.ts', import.meta.url), 'utf8')
   assert.match(onboarding, /Residential Support Worker/)
+  assert.match(onboarding, /Optional profile setup/)
   assert.match(roles, /NVQ assessor/)
   assert.match(roles, /NVQ learner/)
 })
