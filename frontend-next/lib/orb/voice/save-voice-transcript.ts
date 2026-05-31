@@ -1,7 +1,15 @@
 import { createOrbSavedOutput, type OrbSavedOutputType } from '@/lib/orb/standalone-client'
-import type { VoiceTurn } from '@/lib/orb/voice/orb-voice-types'
+import type { OrbVoiceModeId, VoiceTurn } from '@/lib/orb/voice/orb-voice-types'
 
 const LOCAL_VOICE_TRANSCRIPTS_KEY = 'orb-voice-transcript-fallback'
+
+export type SaveVoiceTranscriptOptions = {
+  mode?: OrbVoiceModeId
+  provider?: string
+  startedAt?: string
+  endedAt?: string
+  projectId?: string | null
+}
 
 export type SaveVoiceTranscriptResult = {
   ok: boolean
@@ -10,17 +18,29 @@ export type SaveVoiceTranscriptResult = {
   message: string
 }
 
-function formatTranscriptMarkdown(turns: VoiceTurn[]): string {
-  return turns
+function formatTranscriptMarkdown(turns: VoiceTurn[], meta: SaveVoiceTranscriptOptions): string {
+  const header = [
+    meta.provider ? `**Provider:** ${meta.provider}` : null,
+    meta.mode ? `**Mode:** ${meta.mode.replace(/_/g, ' ')}` : null,
+    meta.startedAt ? `**Started:** ${meta.startedAt}` : null,
+    meta.endedAt ? `**Ended:** ${meta.endedAt}` : null,
+    meta.projectId ? `**Project:** ${meta.projectId}` : null
+  ]
+    .filter(Boolean)
+    .join(' · ')
+
+  const body = turns
     .map((turn) => {
       const label = turn.role === 'user' ? 'You' : turn.role === 'assistant' ? 'ORB' : 'System'
       const interrupted = turn.interrupted ? ' *(interrupted)*' : ''
       return `### ${label}${interrupted}\n\n${turn.text.trim()}`
     })
     .join('\n\n')
+
+  return header ? `${header}\n\n${body}` : body
 }
 
-function saveLocalFallback(turns: VoiceTurn[], title: string) {
+function saveLocalFallback(turns: VoiceTurn[], title: string, meta: SaveVoiceTranscriptOptions) {
   if (typeof window === 'undefined') return
   try {
     const raw = window.localStorage.getItem(LOCAL_VOICE_TRANSCRIPTS_KEY)
@@ -30,6 +50,7 @@ function saveLocalFallback(turns: VoiceTurn[], title: string) {
       title,
       type: 'voice_transcript',
       turns,
+      meta,
       savedAt: new Date().toISOString()
     })
     window.localStorage.setItem(LOCAL_VOICE_TRANSCRIPTS_KEY, JSON.stringify(list.slice(0, 40)))
@@ -38,7 +59,10 @@ function saveLocalFallback(turns: VoiceTurn[], title: string) {
   }
 }
 
-export async function saveVoiceTranscript(turns: VoiceTurn[]): Promise<SaveVoiceTranscriptResult> {
+export async function saveVoiceTranscript(
+  turns: VoiceTurn[],
+  options: SaveVoiceTranscriptOptions = {}
+): Promise<SaveVoiceTranscriptResult> {
   if (!turns.length) {
     return { ok: false, savedRemote: false, message: 'Nothing to save yet.' }
   }
@@ -51,15 +75,18 @@ export async function saveVoiceTranscript(turns: VoiceTurn[]): Promise<SaveVoice
     minute: '2-digit'
   })
   const title = `ORB Voice conversation — ${dateLabel}`
-  const content = formatTranscriptMarkdown(turns)
+  const content = formatTranscriptMarkdown(turns, options)
+  const tags = ['orb-voice', 'voice-transcript']
+  if (options.provider) tags.push(`provider-${options.provider}`)
+  if (options.mode) tags.push(`mode-${options.mode}`)
 
   try {
     const record = await createOrbSavedOutput({
       title,
       type: 'voice_transcript' as OrbSavedOutputType,
-      summary: `${turns.length} voice turns`,
+      summary: `${turns.length} voice turns · ${options.provider ?? 'browser'}`,
       content_markdown: content,
-      tags: ['orb-voice', 'voice-transcript'],
+      tags,
       created_from: 'manual'
     })
     return {
@@ -69,7 +96,7 @@ export async function saveVoiceTranscript(turns: VoiceTurn[]): Promise<SaveVoice
       message: 'Transcript saved to Saved Outputs.'
     }
   } catch {
-    saveLocalFallback(turns, title)
+    saveLocalFallback(turns, title, options)
     return {
       ok: true,
       savedRemote: false,

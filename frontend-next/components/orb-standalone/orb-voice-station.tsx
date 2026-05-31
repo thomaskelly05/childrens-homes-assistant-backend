@@ -7,9 +7,11 @@ import { OrbAppModal } from '@/components/orb-standalone/orb-app-modal'
 import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
 import type { useStandaloneOrbVoice } from '@/components/orb-standalone/use-standalone-orb-voice'
 import { stripMarkdownForSpeech } from '@/lib/orb/orb-speech-text'
-import { startOrbVoiceSession } from '@/lib/orb/voice/orb-voice-client'
+import type { OrbVoiceSessionResponse } from '@/lib/orb/voice/orb-voice-client'
+import { OrbRealtimeVoiceClient } from '@/lib/orb/voice/orb-realtime-voice-client'
 import { frameMessageForOrbVoice } from '@/lib/orb/voice/orb-voice-prompt'
 import { saveVoiceTranscript } from '@/lib/orb/voice/save-voice-transcript'
+import { isOrbDeveloperMode } from '@/lib/orb/orb-developer-mode'
 import {
   ORB_VOICE_GREETING,
   ORB_VOICE_MODES,
@@ -32,8 +34,10 @@ function mapPhaseToStatus(
   phase: VoiceApi['phase'],
   pending: boolean,
   listening: boolean,
-  speaking: boolean
+  speaking: boolean,
+  realtimeState: OrbVoiceSessionStatus | null
 ): OrbVoiceSessionStatus {
+  if (realtimeState && realtimeState !== 'idle') return realtimeState
   if (phase === 'error') return 'error'
   if (phase === 'interrupted') return 'interrupted'
   if (pending) return 'thinking'
@@ -47,6 +51,8 @@ function mapPhaseToStatus(
 function orbVisualClass(status: OrbVoiceSessionStatus): string {
   switch (status) {
     case 'listening':
+    case 'speech_detected':
+    case 'connecting':
       return 'glass-orb-mark--voice glass-orb-mark--listening'
     case 'thinking':
     case 'transcribing':
@@ -67,7 +73,10 @@ function statusLabel(status: OrbVoiceSessionStatus, permissionDenied: boolean): 
   switch (status) {
     case 'requesting_permission':
       return 'Checking microphone…'
+    case 'connecting':
+      return 'Connecting voice…'
     case 'listening':
+    case 'speech_detected':
       return 'Listening…'
     case 'transcribing':
       return 'Processing what you said…'
@@ -79,9 +88,25 @@ function statusLabel(status: OrbVoiceSessionStatus, permissionDenied: boolean): 
       return 'Interrupted — listening again'
     case 'error':
       return 'Voice unavailable — you can still type'
+    case 'ended':
+      return 'Voice session ended'
     default:
       return 'Ready when you press Start'
   }
+}
+
+function providerUserLabel(session: OrbVoiceSessionResponse | null): string {
+  if (!session) return ''
+  if (session.provider === 'websocket_realtime') {
+    return 'Realtime voice (WebSocket)'
+  }
+  if (session.provider === 'webrtc_realtime') {
+    return 'Realtime voice (WebRTC)'
+  }
+  if (session.fallback_reason) {
+    return 'Browser voice fallback — realtime not configured'
+  }
+  return 'British female voice where available (browser)'
 }
 
 export function OrbVoiceStation({
@@ -104,18 +129,35 @@ export function OrbVoiceStation({
   const [sessionActive, setSessionActive] = useState(false)
   const [turns, setTurns] = useState<VoiceTurn[]>([])
   const [saveNotice, setSaveNotice] = useState<string | null>(null)
-  const [providerLabel, setProviderLabel] = useState<string | null>(null)
+  const [voiceSession, setVoiceSession] = useState<OrbVoiceSessionResponse | null>(null)
+  const [realtimeUiState, setRealtimeUiState] = useState<OrbVoiceSessionStatus | null>(null)
+  const [devEvents, setDevEvents] = useState<string[]>([])
+  const [sessionStartedAt, setSessionStartedAt] = useState<string | null>(null)
+  const realtimeRef = useRef<OrbRealtimeVoiceClient | null>(null)
   const lastSentRef = useRef('')
   const lastAssistantKeyRef = useRef<string | null>(null)
   const greetedRef = useRef(false)
+  const developerMode = isOrbDeveloperMode()
   const permissionDenied = Boolean(voice.error?.toLowerCase().includes('microphone'))
 
-  const status = mapPhaseToStatus(voice.phase, pending, voice.listening, voice.speaking)
+  const status = mapPhaseToStatus(
+    voice.phase,
+    pending,
+    voice.listening,
+    voice.speaking,
+    realtimeUiState
+  )
+  const providerLabel = providerUserLabel(voiceSession)
   const { settings } = voice
 
   const resetSession = useCallback(() => {
     setSessionActive(false)
     greetedRef.current = false
+    realtimeRef.current?.stop()
+    realtimeRef.current = null
+    setVoiceSession(null)
+    setRealtimeUiState(null)
+    setDevEvents([])
     voice.cancelListening()
     voice.cancelSpeaking()
     voice.clearTranscript()
@@ -206,40 +248,89 @@ export function OrbVoiceStation({
     voice.resumeVoiceSession()
     setSessionActive(true)
     greetedRef.current = true
-    const session = await startOrbVoiceSession({
-      mode: settings.voiceMode,
-      voice_id: settings.voicePresetId
+    setSessionStartedAt(new Date().toISOString())
+    setRealtimeUiState('connecting')
+
+    const client = new OrbRealtimeVoiceClient({
+      onStateChange: setRealtimeUiState,
+      onProviderResolved: setVoiceSession,
+      onFinalTranscript: (text) => {
+        if (!text.trim()) return
+        voice.clearTranscript()
+        setTurns((prev) => [
+          ...prev,
+          {
+            id: newTurnId(),
+            role: 'user',
+            text,
+            startedAt: new Date().toISOString(),
+            mode: settings.voiceMode,
+            provider: voiceSession?.provider
+          }
+        ])
+        const framed = frameMessageForOrbVoice(text, {
+          mode: settings.voiceMode,
+          spokenAnswerLength: settings.spokenAnswerLength
+        })
+        void Promise.resolve(onSendToOrb(framed))
+      },
+      onServerEvent: (event) => {
+        if (developerMode) {
+          setDevEvents((prev) => [`${event.type}`, ...prev].slice(0, 8))
+        }
+      },
+      onError: () => {
+        setRealtimeUiState('error')
+      }
     })
-    setProviderLabel(
-      session.provider === 'browser_fallback'
-        ? 'British female voice where available (browser)'
-        : 'Server voice session'
-    )
+    realtimeRef.current = client
+
+    const session = await client.startSession({
+      mode: settings.voiceMode,
+      voice_id: settings.voicePresetId,
+      transport: 'auto'
+    })
+    setVoiceSession(session)
+
     setTurns([
       {
         id: newTurnId(),
         role: 'system',
         text: ORB_VOICE_GREETING,
         startedAt: new Date().toISOString(),
-        mode: settings.voiceMode
+        mode: settings.voiceMode,
+        provider: session.provider
       }
     ])
-    if (settings.voiceReplies && voice.synthesisAvailable) {
-      voice.speakAloud(ORB_VOICE_GREETING, () => {
+
+    const beginBrowserCapture = () => {
+      if (settings.voiceReplies && voice.synthesisAvailable) {
+        voice.speakAloud(ORB_VOICE_GREETING, () => {
+          void voice.beginUserVoiceCapture()
+        })
+      } else {
         void voice.beginUserVoiceCapture()
+      }
+    }
+
+    if (client.usesWebSocket && session.capabilities.supportsStreamingStt) {
+      await client.startMicrophone({
+        vadEnabled: true,
+        bargeInWhileSpeaking: settings.allowInterruption
       })
     } else {
-      void voice.beginUserVoiceCapture()
+      beginBrowserCapture()
     }
   }
 
-  function handleInterrupt() {
+  async function handleInterrupt() {
     setTurns((prev) => {
       if (!prev.length) return prev
       const last = prev[prev.length - 1]
       if (last.role !== 'assistant') return prev
       return [...prev.slice(0, -1), { ...last, interrupted: true }]
     })
+    await realtimeRef.current?.interrupt()
     voice.interruptForListen()
   }
 
@@ -250,7 +341,13 @@ export function OrbVoiceStation({
 
   async function handleSaveTranscript() {
     const result = await saveVoiceTranscript(
-      turns.filter((t) => t.role === 'user' || t.role === 'assistant')
+      turns.filter((t) => t.role === 'user' || t.role === 'assistant'),
+      {
+        mode: settings.voiceMode,
+        provider: voiceSession?.provider ?? 'browser_fallback',
+        startedAt: sessionStartedAt ?? undefined,
+        endedAt: new Date().toISOString()
+      }
     )
     setSaveNotice(result.message)
     window.setTimeout(() => setSaveNotice(null), 5000)
@@ -309,7 +406,13 @@ export function OrbVoiceStation({
 
         <GlassOrbMark
           size="hero"
-          pulse={status === 'listening' || status === 'thinking' || status === 'speaking'}
+          pulse={
+            status === 'listening' ||
+            status === 'speech_detected' ||
+            status === 'connecting' ||
+            status === 'thinking' ||
+            status === 'speaking'
+          }
           className={`mt-6 ${orbVisualClass(status)}`}
         />
 
@@ -327,10 +430,24 @@ export function OrbVoiceStation({
             : 'Voice input is not available in this browser.'}
         </p>
 
-        {providerLabel ? (
+        {sessionActive && providerLabel ? (
           <p className="mt-1 text-center text-[10px] text-[var(--orb-muted)]" data-orb-voice-provider>
             {providerLabel}
           </p>
+        ) : null}
+
+        {developerMode && sessionActive && voiceSession ? (
+          <div
+            className="mt-2 max-w-md rounded-lg border border-dashed border-[var(--orb-line)]/50 px-3 py-2 text-left text-[10px] text-[var(--orb-muted)]"
+            data-orb-voice-developer-details
+          >
+            <p>
+              Provider: {voiceSession.provider} · status: {voiceSession.status} · latency:{' '}
+              {voiceSession.capabilities.latencyClass}
+            </p>
+            {voiceSession.websocket_url ? <p>WebSocket: {voiceSession.websocket_url}</p> : null}
+            {devEvents.length ? <p className="mt-1 truncate">Events: {devEvents.join(' · ')}</p> : null}
+          </div>
         ) : null}
 
         <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
