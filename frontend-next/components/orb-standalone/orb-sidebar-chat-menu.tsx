@@ -13,7 +13,8 @@ export function OrbSidebarChatList({
   onRename,
   onDelete,
   onPin,
-  onArchive
+  onArchive,
+  onMoveToProject
 }: {
   chats: StandaloneChat[]
   activeChatId: string | null
@@ -22,6 +23,7 @@ export function OrbSidebarChatList({
   onDelete: (chatId: string) => void
   onPin: (chat: StandaloneChat) => void
   onArchive: (chat: StandaloneChat) => void
+  onMoveToProject?: (chatId: string) => void
 }) {
   return (
     <ul className="space-y-0.5" data-orb-sidebar-chat-list>
@@ -46,6 +48,7 @@ export function OrbSidebarChatList({
             onDelete={() => onDelete(chat.id)}
             onPin={() => onPin(chat)}
             onArchive={() => onArchive(chat)}
+            onMoveToProject={onMoveToProject ? () => onMoveToProject(chat.id) : undefined}
           />
         </li>
       ))}
@@ -58,13 +61,15 @@ function OrbSidebarChatMenu({
   onRename,
   onDelete,
   onPin,
-  onArchive
+  onArchive,
+  onMoveToProject
 }: {
   chat: StandaloneChat
   onRename: () => void
   onDelete: () => void
   onPin: () => void
   onArchive: () => void
+  onMoveToProject?: () => void
 }) {
   const [open, setOpen] = useState(false)
   const anchorRef = useRef<HTMLButtonElement>(null)
@@ -94,6 +99,11 @@ function OrbSidebarChatMenu({
           <Archive className="mr-1 inline h-3 w-3" aria-hidden />
           Archive
         </button>
+        {onMoveToProject ? (
+          <button type="button" onClick={() => { onMoveToProject(); setOpen(false) }}>
+            Move to project
+          </button>
+        ) : null}
         <button type="button" className="orb-sidebar-dropdown-menu__danger" onClick={() => { onDelete(); setOpen(false) }}>
           Delete
         </button>

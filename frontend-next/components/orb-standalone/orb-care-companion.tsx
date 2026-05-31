@@ -24,7 +24,14 @@ import {
   X
 } from 'lucide-react'
 import { OrbGlow } from '@/components/orb-standalone/orb-glow'
-import { PremiumMobileOrb } from '@/components/orb-residential/ui/premium-mobile-orb'
+import {
+  ensureResidentialWorkspaceProjects,
+  writeOrbProjectsMemory
+} from '@/lib/orb/orb-residential-projects'
+import {
+  readOrbSidebarCollapsed,
+  writeOrbSidebarCollapsed
+} from '@/lib/orb/orb-sidebar-preference'
 import {
   OrbStandaloneComposer,
   type PendingImageAttachment
@@ -514,6 +521,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   const [attachments, setAttachments] = useState<PendingImageAttachment[]>([])
   const [micNotice, setMicNotice] = useState<string | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [activePanel, setActivePanel] = useState<OrbStandalonePanel>(null)
   const [agentsPanelOpen, setAgentsPanelOpen] = useState(false)
   const [promptDrawerOpen, setPromptDrawerOpen] = useState(false)
@@ -578,11 +586,21 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   }, [activePanel, orbSessionReady])
 
   useEffect(() => {
-    setWorkspace(readStandaloneWorkspace())
+    let next = readStandaloneWorkspace()
+    if (residentialSurface) {
+      next = ensureResidentialWorkspaceProjects(next)
+      setSidebarCollapsed(readOrbSidebarCollapsed())
+    }
+    setWorkspace(next)
     setA11yPrefs(loadStandaloneOrbAccessibility())
     setAdultProfile(readAdultProfile())
     workspaceHydratedRef.current = true
-  }, [])
+  }, [residentialSurface])
+
+  useEffect(() => {
+    if (!residentialSurface || !workspaceHydratedRef.current) return
+    writeOrbProjectsMemory(workspace)
+  }, [residentialSurface, workspace])
 
   useEffect(() => {
     if (account.isLoading) return
@@ -684,6 +702,14 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
     } else {
       setProfileDrawerOpen(true)
     }
+  }
+
+  function toggleSidebarCollapsed() {
+    setSidebarCollapsed((current) => {
+      const next = !current
+      writeOrbSidebarCollapsed(next)
+      return next
+    })
   }
 
   useEffect(() => {
@@ -2100,7 +2126,13 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
     pending || visibleMessages.some((m) => m.status === 'streaming' || m.status === 'thinking')
 
   const composer = (
-    <div className="orb-composer-dock border-t border-transparent bg-gradient-to-t from-[#f4f6f9] via-[#f4f6f9] to-transparent pt-2">
+    <div
+      className={`orb-composer-dock flex-none border-t border-transparent pt-2 ${
+        residentialSurface
+          ? 'bg-gradient-to-t from-[#05070d] via-[#05070d]/95 to-transparent'
+          : 'bg-gradient-to-t from-[#f4f6f9] via-[#f4f6f9] to-transparent'
+      }`}
+    >
       {documentLensActions.length ? (
         <div className="mx-auto max-w-3xl px-4 pt-3">
           <OrbDocumentContextChips
@@ -2157,6 +2189,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       onAgentSelectorClick={() => setAgentsPanelOpen(true)}
       answering={isAnswering}
       onStopGenerating={isAnswering ? handleStopGeneration : undefined}
+      residentialSurface={residentialSurface}
     />
     </div>
   )
@@ -2435,9 +2468,18 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         />
       ) : null}
 
-      <div className="relative flex min-h-0 flex-1">
+      <div
+        className={`relative flex min-h-0 flex-1 ${residentialSurface ? 'orb-chat-shell' : ''}`}
+        data-orb-sidebar-collapsed={residentialSurface && sidebarCollapsed ? 'true' : undefined}
+      >
         <aside
-          className={`orb-chat-sidebar fixed inset-y-0 left-0 z-50 flex w-[min(100%,18.75rem)] flex-col border-r border-[var(--orb-line)] transition-transform lg:static lg:z-auto lg:w-[18.75rem] lg:translate-x-0 ${
+          className={`orb-chat-sidebar fixed inset-y-0 left-0 z-50 flex flex-col border-r border-[var(--orb-line)]/50 transition-[transform,width] duration-200 lg:static lg:z-auto lg:translate-x-0 ${
+            residentialSurface
+              ? sidebarCollapsed
+                ? 'w-[4.25rem] max-w-[4.25rem] lg:w-[var(--orb-sidebar-width-collapsed,4.25rem)]'
+                : 'w-[min(100%,18.125rem)] max-w-[18.125rem] lg:w-[var(--orb-sidebar-width,18.125rem)]'
+              : 'w-[min(100%,18.75rem)] lg:w-[18.75rem]'
+          } ${
             sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
           }`}
           data-orb-sidebar-scroll-container
@@ -2448,7 +2490,12 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
               chatSearch={chatSearch}
               onChatSearchChange={setChatSearch}
               onSelectChat={selectChat}
-              onNewChat={() => startNewChat()}
+              onNewChat={(projectId) => startNewChat(projectId)}
+              onSelectProject={(projectId) =>
+                setWorkspace((current) => ({ ...current, activeProjectId: projectId }))
+              }
+              collapsed={sidebarCollapsed}
+              onToggleCollapse={toggleSidebarCollapsed}
               onWorkspaceChange={setWorkspace}
               onOpenStation={openResidentialStation}
               onOpenSettings={() => {
@@ -2524,8 +2571,14 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           )}
         </aside>
 
-        <div className="orb-chat-main flex min-h-0 min-w-0 flex-1 flex-col">
-          <header className="orb-chat-header relative z-10 flex shrink-0 items-center gap-2 border-b border-[var(--orb-line)] bg-[var(--orb-bg-deep)]/90 px-3 py-2.5 backdrop-blur-sm md:px-5">
+        <div className="orb-chat-main flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+          <header
+            className={`orb-chat-header relative z-10 flex shrink-0 items-center gap-2 px-3 py-2.5 backdrop-blur-sm md:px-5 ${
+              residentialSurface
+                ? 'border-b border-[var(--orb-line)]/40 bg-[var(--orb-bg-deep)]/90'
+                : 'border-b border-[var(--orb-line)] bg-[var(--orb-bg-deep)]/90'
+            }`}
+          >
             <button type="button" className="rounded-lg p-2 text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)] lg:hidden" onClick={() => setSidebarOpen(true)} aria-label="Open sidebar">
               <Menu className="h-5 w-5" />
             </button>

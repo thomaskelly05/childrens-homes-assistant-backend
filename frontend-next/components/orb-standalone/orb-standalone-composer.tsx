@@ -1,6 +1,6 @@
 'use client'
 
-import { FormEvent, useRef, type DragEvent } from 'react'
+import { FormEvent, useEffect, useRef, type DragEvent } from 'react'
 import { Camera, ChevronDown, FileText, Mic, MicOff, Plus, Send, Square, Wrench, X } from 'lucide-react'
 
 import { logTapTarget } from '@/lib/interaction/mobile-tap-debug'
@@ -60,7 +60,8 @@ export function OrbStandaloneComposer({
   agentLabel,
   onAgentSelectorClick,
   answering,
-  onStopGenerating
+  onStopGenerating,
+  residentialSurface = false
 }: {
   value: string
   pending: boolean
@@ -101,6 +102,7 @@ export function OrbStandaloneComposer({
   onAgentSelectorClick?: () => void
   answering?: boolean
   onStopGenerating?: () => void
+  residentialSurface?: boolean
 }) {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const cameraInputRef = useRef<HTMLInputElement | null>(null)
@@ -146,9 +148,23 @@ export function OrbStandaloneComposer({
     focusInput()
   }
 
+  function syncComposerHeight() {
+    const input = inputRef?.current ?? fallbackInputRef.current
+    if (!input || !residentialSurface) return
+    input.style.height = 'auto'
+    const maxHeight = typeof window !== 'undefined' && window.innerWidth < 768 ? 140 : 220
+    input.style.height = `${Math.min(input.scrollHeight, maxHeight)}px`
+  }
+
+  useEffect(() => {
+    syncComposerHeight()
+  }, [value, residentialSurface])
+
+  const compactResidential = residentialSurface
+
   return (
     <div
-      className="orb-chat-composer orb-composer-floating-wrap shrink-0 px-3 md:px-5"
+      className={`orb-chat-composer orb-composer-floating-wrap shrink-0 px-3 md:px-5 ${compactResidential ? 'orb-composer-zone' : ''}`}
       onDragOver={handleDragOver}
       onDrop={onDrop}
       data-orb-composer
@@ -207,12 +223,14 @@ export function OrbStandaloneComposer({
           ) : null}
 
           <div
-            className={`orb-composer-glass p-2.5 sm:p-3 ${answering ? 'orb-composer-answering orb-answering-pulse' : ''}`}
+            className={`orb-composer-glass ${compactResidential ? 'orb-composer-glass--compact p-2 sm:p-2.5' : 'p-2.5 sm:p-3'} ${answering ? 'orb-composer-answering orb-answering-pulse' : ''}`}
             onClick={focusComposerInput}
             onTouchEnd={focusComposerInput}
             data-orb-composer-answering={answering ? 'true' : 'false'}
             data-orb-composer-card
+            data-orb-composer-compact={compactResidential ? 'true' : undefined}
           >
+            {!compactResidential ? (
             <div
               className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/70 px-0.5 pb-2"
               data-orb-composer-mode-row
@@ -243,6 +261,7 @@ export function OrbStandaloneComposer({
                 ) : null}
               </div>
             </div>
+            ) : null}
 
             {attachments.length > 0 ? (
               <div className="mt-3 flex flex-wrap gap-2 px-1">
@@ -267,6 +286,37 @@ export function OrbStandaloneComposer({
               </div>
             ) : null}
 
+            {compactResidential && (documentAttached || voiceListening) ? (
+              <div className="mb-1 flex flex-wrap items-center gap-2 px-0.5 text-[10px] text-[var(--orb-muted)]">
+                {documentAttached ? (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-[var(--orb-line)]/50 px-2 py-0.5">
+                    <FileText className="h-3 w-3" aria-hidden />
+                    {documentTitle || 'Document attached'}
+                  </span>
+                ) : null}
+                {voiceListening ? (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-[var(--orb-line)]/50 px-2 py-0.5">
+                    <Mic className="h-3 w-3" aria-hidden />
+                    Listening
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
+
+            <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/*" multiple className="hidden" onChange={(event) => { if (event.target.files?.length) onAddFiles(event.target.files); event.target.value = '' }} />
+            <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(event) => { if (event.target.files?.length) onAddFiles(event.target.files); event.target.value = '' }} />
+
+            <div className={compactResidential ? 'flex items-end gap-1.5' : ''}>
+            {compactResidential ? (
+              <div className="orb-composer-action-rail flex shrink-0 items-center gap-0.5 pb-1">
+                <button type="button" onClick={() => fileInputRef.current?.click()} className="inline-flex h-9 min-w-9 shrink-0 items-center justify-center rounded-full text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]" aria-label="Attach" data-orb-composer-attach>
+                  <Plus className="h-4 w-4" aria-hidden />
+                </button>
+                {onAttachDocumentClick ? <button type="button" onClick={onAttachDocumentClick} className="inline-flex h-9 min-w-9 shrink-0 items-center justify-center rounded-full text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)]" aria-label="Attach document" data-orb-composer-document><FileText className="h-4 w-4" aria-hidden /></button> : null}
+                {onToolsClick ? <button type="button" onClick={onToolsClick} className="inline-flex h-9 min-w-9 shrink-0 items-center justify-center rounded-full text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)]" aria-label="Tools" data-orb-composer-tools><Wrench className="h-4 w-4" aria-hidden /></button> : null}
+              </div>
+            ) : null}
+
             <textarea
               ref={setInputNode}
               id="orb-standalone-input"
@@ -274,9 +324,18 @@ export function OrbStandaloneComposer({
               value={value}
               onFocus={() => document.body.setAttribute('data-orb-composer-focused', 'true')}
               onBlur={() => document.body.removeAttribute('data-orb-composer-focused')}
-              onChange={(event) => syncMessage(event.currentTarget.value)}
-              onInput={(event) => syncMessage(event.currentTarget.value)}
-              onCompositionEnd={(event) => syncMessage(event.currentTarget.value)}
+              onChange={(event) => {
+                syncMessage(event.currentTarget.value)
+                syncComposerHeight()
+              }}
+              onInput={(event) => {
+                syncMessage(event.currentTarget.value)
+                syncComposerHeight()
+              }}
+              onCompositionEnd={(event) => {
+                syncMessage(event.currentTarget.value)
+                syncComposerHeight()
+              }}
               onPaste={onPaste}
               onKeyDown={(event) => {
                 if (event.key !== 'Enter' || event.shiftKey) return
@@ -285,7 +344,11 @@ export function OrbStandaloneComposer({
                 if (form && !sendDisabled) form.requestSubmit()
               }}
               rows={1}
-              className="mt-1.5 max-h-40 min-h-[3.25rem] w-full resize-none bg-transparent px-0.5 py-2 text-[0.9375rem] leading-6 text-[var(--orb-foreground)] outline-none focus:outline-none focus-visible:outline-none placeholder:text-slate-500"
+              className={
+                compactResidential
+                  ? 'min-h-[2.5rem] max-h-[8.75rem] min-w-0 flex-1 resize-none overflow-y-auto bg-transparent px-1 py-2.5 text-[0.9375rem] leading-6 text-[var(--orb-foreground)] outline-none placeholder:text-[var(--orb-muted)] md:max-h-[13.75rem]'
+                  : 'mt-1.5 max-h-40 min-h-[3.25rem] w-full resize-none bg-transparent px-0.5 py-2 text-[0.9375rem] leading-6 text-[var(--orb-foreground)] outline-none focus:outline-none focus-visible:outline-none placeholder:text-slate-500'
+              }
               placeholder="Ask anything"
               data-orb-composer-placeholder="ask-anything"
               disabled={pending}
@@ -300,10 +363,37 @@ export function OrbStandaloneComposer({
               data-input-source="controlled"
             />
 
-            <div className="mt-1 flex items-center justify-between gap-3 px-1">
-              <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/*" multiple className="hidden" onChange={(event) => { if (event.target.files?.length) onAddFiles(event.target.files); event.target.value = '' }} />
-              <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(event) => { if (event.target.files?.length) onAddFiles(event.target.files); event.target.value = '' }} />
+            {compactResidential && onAgentSelectorClick ? (
+              <button
+                type="button"
+                onClick={onAgentSelectorClick}
+                className="orb-composer-agent-pill mb-1 hidden shrink-0 rounded-full border border-[var(--orb-line)]/40 px-2 py-0.5 text-[10px] font-medium text-[var(--orb-muted)] hover:text-[var(--orb-foreground)] sm:inline-flex"
+                data-orb-composer-agent-selector
+                aria-label="Choose mode"
+              >
+                {agentLabel || 'Ask ORB'}
+              </button>
+            ) : null}
 
+            {compactResidential ? (
+              <div className="flex shrink-0 items-center gap-1.5 pb-1">
+                {answering && onStopGenerating ? (
+                  <button type="button" onClick={onStopGenerating} className="inline-flex h-9 min-w-9 items-center justify-center rounded-full border border-rose-400/30 text-rose-300" aria-label="Stop generating" data-orb-composer-stop-generating>
+                    <Square className="h-4 w-4 fill-current" aria-hidden />
+                  </button>
+                ) : null}
+                <button type="button" onClick={onMicClick} disabled={!voiceCaptureEnabled || !voiceRecognitionAvailable} aria-label="Voice input" className={`inline-flex h-9 min-w-9 items-center justify-center rounded-full transition disabled:opacity-40 ${voiceListening ? 'text-sky-300' : 'text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)]'}`} data-orb-composer-mic>
+                  {voiceListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                </button>
+                <button type="submit" disabled={sendDisabled || (answering && Boolean(onStopGenerating))} aria-label="Send message" className="orb-composer-send inline-flex h-9 min-w-9 items-center justify-center rounded-full text-white transition disabled:opacity-35" data-orb-composer-send data-testid="orb-standalone-send-clickable">
+                  <Send className="h-4 w-4" />
+                </button>
+              </div>
+            ) : null}
+            </div>
+
+            {!compactResidential ? (
+            <div className="mt-1 flex items-center justify-between gap-3 px-1">
               <div className="orb-composer-action-rail flex items-center gap-0.5 p-0.5">
                 <button type="button" onClick={() => fileInputRef.current?.click()} className="inline-flex h-8 min-w-8 shrink-0 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-900" aria-label="Attach image" data-orb-composer-attach>
                   <Plus className="h-4.5 w-4.5" aria-hidden />
@@ -330,17 +420,20 @@ export function OrbStandaloneComposer({
                 </button>
               </div>
             </div>
+            ) : null}
           </div>
 
-          <div className="orb-voice-status-slot mt-2 flex min-h-[1.25rem] flex-wrap items-center justify-between gap-2 px-2">
+          <div className={`orb-voice-status-slot mt-2 flex min-h-[1.25rem] flex-wrap items-center justify-between gap-2 px-2 ${compactResidential ? 'hidden' : ''}`}>
             {voiceStatusText ? (
               <p id="orb-standalone-status" className="text-[11px] leading-5 text-slate-500" role="status" data-orb-voice-status>{voiceStatusText}</p>
             ) : (
               <span id="orb-standalone-status" className="sr-only" data-orb-voice-status>Ready to type</span>
             )}
-            <span className="hidden text-[10px] text-slate-400 md:inline" data-orb-composer-mode-label>
-              Mode: {mode}
-            </span>
+            {!compactResidential ? (
+              <span className="hidden text-[10px] text-slate-400 md:inline" data-orb-composer-mode-label>
+                Mode: {mode}
+              </span>
+            ) : null}
           </div>
 
           {voiceCaptureEnabled && voiceListening ? (
@@ -358,9 +451,20 @@ export function OrbStandaloneComposer({
           ) : null}
         </form>
 
-        <p className="mt-2 px-2 text-center text-[10px] leading-4 text-[var(--orb-muted)]" data-orb-composer-disclaimer>
-          ORB Residential can make mistakes. ORB Residential does not access IndiCare OS records.
-        </p>
+        {compactResidential ? (
+          <footer className="orb-residential-footer mt-2 hidden text-center md:block" data-orb-residential-footer>
+            <p className="text-[10px] leading-4 text-[var(--orb-muted)]" data-orb-composer-disclaimer>
+              ORB Residential can make mistakes. It does not access IndiCare OS records unless you choose to connect them.
+            </p>
+            <p className="mt-1 text-[10px] leading-4 text-[var(--orb-muted)]/80" data-orb-residential-copyright>
+              ORB Residential · © 2026 IndiCare
+            </p>
+          </footer>
+        ) : (
+          <p className="mt-2 px-2 text-center text-[10px] leading-4 text-[var(--orb-muted)]" data-orb-composer-disclaimer>
+            ORB Residential can make mistakes. ORB Residential does not access IndiCare OS records.
+          </p>
+        )}
       </div>
     </div>
   )
