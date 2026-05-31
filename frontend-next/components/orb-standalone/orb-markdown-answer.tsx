@@ -33,21 +33,21 @@ function encodeInlineCitations(content: string): string {
 function buildMarkdownComponents(sources?: StandaloneOrbSource[]): Components {
   return {
     h1: ({ children }) => (
-      <h2 className="orb-md-h2 mb-2 mt-5 first:mt-0 text-[17px] font-bold leading-snug text-[#0F172A]">{children}</h2>
+      <h2 className="orb-md-h2 mb-2 mt-5 first:mt-0 text-[17px] font-bold leading-snug text-[var(--orb-foreground,#0F172A)]">{children}</h2>
     ),
     h2: ({ children }) => (
-      <h2 className="orb-md-h2 mb-2 mt-5 first:mt-0 text-base font-bold leading-snug text-[#0F172A]">{children}</h2>
+      <h2 className="orb-md-h2 mb-2 mt-5 first:mt-0 text-base font-bold leading-snug text-[var(--orb-foreground,#0F172A)]">{children}</h2>
     ),
     h3: ({ children }) => (
-      <h3 className="orb-md-h3 mb-2 mt-4 first:mt-0 text-[15px] font-bold leading-snug text-[#0F172A]">{children}</h3>
+      <h3 className="orb-md-h3 mb-2 mt-4 first:mt-0 text-[15px] font-bold leading-snug text-[var(--orb-foreground,#0F172A)]">{children}</h3>
     ),
     h4: ({ children }) => (
-      <h4 className="orb-md-h4 mb-1.5 mt-3 text-[14px] font-bold leading-snug text-[#0F172A]">{children}</h4>
+      <h4 className="orb-md-h4 mb-1.5 mt-3 text-[14px] font-bold leading-snug text-[var(--orb-foreground,#0F172A)]">{children}</h4>
     ),
     p: ({ children }) => (
       <p className="orb-md-p mb-3 last:mb-0 text-[15px] leading-[1.7] text-[var(--orb-foreground)]">{children}</p>
     ),
-    strong: ({ children }) => <strong className="font-bold text-[#0F172A]">{children}</strong>,
+    strong: ({ children }) => <strong className="font-bold text-[var(--orb-foreground,#0F172A)]">{children}</strong>,
     em: ({ children }) => <em className="italic text-[var(--orb-foreground)]">{children}</em>,
     ul: ({ children }) => <ul className="orb-md-ul mb-3 list-disc space-y-1.5 pl-5 last:mb-0">{children}</ul>,
     ol: ({ children }) => <ol className="orb-md-ol mb-3 list-decimal space-y-1.5 pl-5 last:mb-0">{children}</ol>,
