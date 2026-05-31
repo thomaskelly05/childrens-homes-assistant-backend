@@ -49,11 +49,15 @@ Audio chunks are accepted only when provider STT credentials exist; otherwise th
 
 Developer/test text simulation: `ORB_VOICE_DEV_TEXT_SIMULATION=true` emits `stt.partial` / `stt.final` for `transcript.text` events (no fake audio).
 
-## 6. WebRTC future path
+## 6. OpenAI Realtime WebRTC (implemented)
 
-- Session may return `webrtc_offer_url`
-- `POST /orb/voice/webrtc/offer/{session_id}` and `/ice/{session_id}` return **501 not_configured**
-- Wire provider SDP exchange when OpenAI/vendor WebRTC is integrated
+- When `ORB_VOICE_REALTIME_PROVIDER=openai` + `OPENAI_API_KEY` + `ORB_REALTIME_ENABLED=true`, session returns `openai_realtime` with `openai_session.client_secret`.
+- Frontend: `lib/orb/voice/orb-openai-realtime-webrtc-client.ts` reuses `lib/orb/network/OrbRealtimeClient` (OS ORB path).
+- Browser POSTs offer SDP to `https://api.openai.com/v1/realtime` with ephemeral secret; mic + playback over WebRTC; events on data channel `oai-events`.
+- On failure → browser fallback message (non-blocking).
+- Legacy `POST /orb/voice/webrtc/offer/{session_id}` remains 501 (server-mediated WebRTC adapter not used for OpenAI direct WebRTC).
+
+See `docs/orb-openai-realtime-webrtc-setup.md`.
 
 ## 7. VAD implementation
 

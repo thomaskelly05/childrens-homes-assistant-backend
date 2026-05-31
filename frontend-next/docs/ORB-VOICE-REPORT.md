@@ -34,9 +34,9 @@ Turn-based browser fallback preserved. No always-listening.
 
 ## 5. WebRTC implementation status
 
-**Prepared:** session fields, 501 on offer/ICE routes, capabilities on session.
+**Implemented (OpenAI Realtime):** ephemeral `client_secret` from `/orb/voice/session`, direct browser WebRTC to OpenAI via `orb-openai-realtime-webrtc-client.ts` (reuses `lib/orb/network/OrbRealtimeClient`). User mic after Start; remote audio playback; data-channel events; `response.cancel` interruption; fallback to browser voice on failure.
 
-**Not implemented:** SDP/ICE exchange (documented in `orb-voice-realtime-provider-pass.md`).
+**Prepared only:** server-mediated `webrtc_offer_url` routes (501) for non-OpenAI vendors.
 
 ## 6. Streaming STT status
 
@@ -87,4 +87,6 @@ See `docs/orb-openai-voice-profiles.md`.
 
 ## 14. Remaining provider / env setup
 
-Set `ORB_VOICE_REALTIME_PROVIDER=openai`, `OPENAI_API_KEY`, `ORB_REALTIME_ENABLED`, and optional `ORB_VOICE_DEFAULT_PROFILE`. For WebSocket dev path, set `ORB_VOICE_SERVER_STT`, `ORB_VOICE_SERVER_TTS`, and vendor keys. See `docs/orb-voice-realtime-provider-pass.md`.
+**OpenAI Realtime WebRTC (production):** `ORB_VOICE_REALTIME_PROVIDER=openai`, `OPENAI_API_KEY` (server only), `ORB_REALTIME_ENABLED=true`, optional `OPENAI_REALTIME_MODEL`, `OPENAI_REALTIME_TRANSCRIPTION_MODEL`, `ORB_VOICE_DEFAULT_PROFILE`. See `docs/orb-openai-realtime-webrtc-setup.md`.
+
+**WebSocket dev path:** `ORB_VOICE_SERVER_STT`, `ORB_VOICE_SERVER_TTS`, and vendor keys. See `docs/orb-voice-realtime-provider-pass.md`.

@@ -8,7 +8,7 @@ import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
 import type { useStandaloneOrbVoice } from '@/components/orb-standalone/use-standalone-orb-voice'
 import { stripMarkdownForSpeech } from '@/lib/orb/orb-speech-text'
 import type { OrbVoiceSessionResponse } from '@/lib/orb/voice/orb-voice-client'
-import { OrbRealtimeVoiceClient } from '@/lib/orb/voice/orb-realtime-voice-client'
+import { OrbRealtimeVoiceClient, REALTIME_FALLBACK_MESSAGE } from '@/lib/orb/voice/orb-realtime-voice-client'
 import { frameMessageForOrbVoice } from '@/lib/orb/voice/orb-voice-prompt'
 import { saveVoiceTranscript } from '@/lib/orb/voice/save-voice-transcript'
 import { isOrbDeveloperMode } from '@/lib/orb/orb-developer-mode'
@@ -99,11 +99,15 @@ function statusLabel(status: OrbVoiceSessionStatus, permissionDenied: boolean): 
 
 function providerUserLabel(
   session: OrbVoiceSessionResponse | null,
-  profileLabel: string
+  profileLabel: string,
+  usingBrowserFallback: boolean
 ): string {
   if (!session) return profileLabel
-  if (session.provider === 'openai_realtime') {
-    return `${profileLabel} · OpenAI Realtime`
+  if (session.provider === 'openai_realtime' && !usingBrowserFallback) {
+    return `${profileLabel} · Realtime voice`
+  }
+  if (session.provider === 'openai_realtime' && usingBrowserFallback) {
+    return `${profileLabel} · Browser voice fallback`
   }
   if (session.provider === 'websocket_realtime') {
     return `${profileLabel} · Realtime (WebSocket)`
@@ -111,8 +115,8 @@ function providerUserLabel(
   if (session.provider === 'webrtc_realtime') {
     return `${profileLabel} · Realtime (WebRTC)`
   }
-  if (session.fallback_reason) {
-    return `${profileLabel} · Browser voice (realtime not configured)`
+  if (session.fallback_reason || usingBrowserFallback) {
+    return `${profileLabel} · Browser voice fallback`
   }
   return `${profileLabel} · Browser voice`
 }
@@ -141,6 +145,9 @@ export function OrbVoiceStation({
   const [realtimeUiState, setRealtimeUiState] = useState<OrbVoiceSessionStatus | null>(null)
   const [devEvents, setDevEvents] = useState<string[]>([])
   const [sessionStartedAt, setSessionStartedAt] = useState<string | null>(null)
+  const [fallbackNotice, setFallbackNotice] = useState<string | null>(null)
+  const [realtimeSpeaking, setRealtimeSpeaking] = useState(false)
+  const [usingBrowserFallback, setUsingBrowserFallback] = useState(false)
   const realtimeRef = useRef<OrbRealtimeVoiceClient | null>(null)
   const lastSentRef = useRef('')
   const lastAssistantKeyRef = useRef<string | null>(null)
@@ -157,7 +164,10 @@ export function OrbVoiceStation({
   )
   const { settings } = voice
   const selectedProfileLabel = orbVoiceProfileLabel(settings.voicePresetId)
-  const providerLabel = providerUserLabel(voiceSession, selectedProfileLabel)
+  const providerLabel = providerUserLabel(voiceSession, selectedProfileLabel, usingBrowserFallback)
+  const isRealtimeActive = Boolean(
+    voiceSession?.provider === 'openai_realtime' && !usingBrowserFallback && sessionActive
+  )
   const selectedProfile = getOrbVoiceProfile(settings.voicePresetId)
 
   const resetSession = useCallback(() => {
@@ -168,6 +178,9 @@ export function OrbVoiceStation({
     setVoiceSession(null)
     setRealtimeUiState(null)
     setDevEvents([])
+    setFallbackNotice(null)
+    setRealtimeSpeaking(false)
+    setUsingBrowserFallback(false)
     voice.cancelListening()
     voice.cancelSpeaking()
     voice.clearTranscript()
@@ -182,6 +195,7 @@ export function OrbVoiceStation({
 
   useEffect(() => {
     if (!sessionActive || !open) return
+    if (realtimeRef.current?.usesOpenAIWebRTC) return
     const text = (voice.transcript || voice.displayTranscript || '').trim()
     if (!text || text === lastSentRef.current) return
     if (voice.phase !== 'transcript_ready' && !voice.transcript) return
@@ -234,12 +248,18 @@ export function OrbVoiceStation({
     setTurns((prev) => [...prev, turn])
 
     if (settings.voiceReplies && voice.synthesisAvailable && spoken) {
-      voice.speakAloud(spoken, () => {
-        if (!settings.pushToTalk && sessionActive) {
-          void voice.beginUserVoiceCapture()
-        }
-      })
-    } else if (!settings.pushToTalk && sessionActive && voice.recognitionAvailable) {
+      if (realtimeRef.current?.usesOpenAIWebRTC) {
+        realtimeRef.current.speakAssistantReply(spoken)
+        setRealtimeSpeaking(true)
+      } else {
+        voice.speakAloud(spoken, () => {
+          setRealtimeSpeaking(false)
+          if (!settings.pushToTalk && sessionActive) {
+            void voice.beginUserVoiceCapture()
+          }
+        })
+      }
+    } else if (!settings.pushToTalk && sessionActive && voice.recognitionAvailable && !realtimeRef.current?.usesOpenAIWebRTC) {
       void voice.beginUserVoiceCapture()
     }
   }, [
@@ -263,8 +283,19 @@ export function OrbVoiceStation({
     setRealtimeUiState('connecting')
 
     const client = new OrbRealtimeVoiceClient({
-      onStateChange: setRealtimeUiState,
+      onStateChange: (state) => {
+        setRealtimeUiState(state)
+        if (state === 'speaking') setRealtimeSpeaking(true)
+        if (state === 'listening' || state === 'idle' || state === 'interrupted') {
+          setRealtimeSpeaking(false)
+        }
+      },
       onProviderResolved: setVoiceSession,
+      onPartialTranscript: (text) => {
+        if (developerMode && text) {
+          setDevEvents((prev) => [`stt.partial`, ...prev].slice(0, 8))
+        }
+      },
       onFinalTranscript: (text) => {
         if (!text.trim()) return
         voice.clearTranscript()
@@ -286,10 +317,59 @@ export function OrbVoiceStation({
         })
         void Promise.resolve(onSendToOrb(framed))
       },
+      onAssistantDelta: (delta) => {
+        if (!delta.trim()) return
+        setTurns((prev) => {
+          const last = prev[prev.length - 1]
+          if (last?.role === 'assistant' && !last.completedAt) {
+            return [...prev.slice(0, -1), { ...last, text: `${last.text}${delta}` }]
+          }
+          return [
+            ...prev,
+            {
+              id: newTurnId(),
+              role: 'assistant',
+              text: delta,
+              startedAt: new Date().toISOString(),
+              mode: settings.voiceMode,
+              provider: 'openai_realtime'
+            }
+          ]
+        })
+      },
+      onAssistantDone: (text) => {
+        if (!text.trim()) return
+        setTurns((prev) => {
+          const last = prev[prev.length - 1]
+          if (last?.role === 'assistant' && !last.completedAt) {
+            return [
+              ...prev.slice(0, -1),
+              { ...last, text, completedAt: new Date().toISOString() }
+            ]
+          }
+          return [
+            ...prev,
+            {
+              id: newTurnId(),
+              role: 'assistant',
+              text,
+              startedAt: new Date().toISOString(),
+              completedAt: new Date().toISOString(),
+              mode: settings.voiceMode,
+              provider: 'openai_realtime'
+            }
+          ]
+        })
+        setRealtimeSpeaking(false)
+      },
       onServerEvent: (event) => {
         if (developerMode) {
           setDevEvents((prev) => [`${event.type}`, ...prev].slice(0, 8))
         }
+      },
+      onFallback: (message) => {
+        setFallbackNotice(message || REALTIME_FALLBACK_MESSAGE)
+        setUsingBrowserFallback(true)
       },
       onError: () => {
         setRealtimeUiState('error')
@@ -330,6 +410,16 @@ export function OrbVoiceStation({
         vadEnabled: true,
         bargeInWhileSpeaking: settings.allowInterruption
       })
+    } else if (session.provider === 'openai_realtime' && session.openai_session?.client_secret?.value) {
+      await client.startMicrophone({
+        vadEnabled: true,
+        bargeInWhileSpeaking: settings.allowInterruption
+      })
+      if (client.usesOpenAIWebRTC) {
+        setUsingBrowserFallback(false)
+      } else if (client.usesBrowserFallback) {
+        beginBrowserCapture()
+      }
     } else {
       beginBrowserCapture()
     }
@@ -366,7 +456,9 @@ export function OrbVoiceStation({
   }
 
   const showInterrupt =
-    sessionActive && voice.speaking && settings.allowInterruption
+    sessionActive &&
+    settings.allowInterruption &&
+    (voice.speaking || realtimeSpeaking)
 
   return (
     <OrbAppModal
@@ -432,8 +524,18 @@ export function OrbVoiceStation({
             status === 'thinking' ||
             status === 'speaking'
           }
-          className={`mt-6 ${orbVisualClass(status)}`}
+          className={`mt-6 ${orbVisualClass(status)}${isRealtimeActive ? ' glass-orb-mark--realtime-live' : ''}`}
         />
+
+        {isRealtimeActive ? (
+          <p
+            className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-medium text-emerald-200"
+            data-orb-voice-live-indicator
+          >
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" aria-hidden />
+            Live realtime voice
+          </p>
+        ) : null}
 
         <p className="mt-6 text-center text-sm font-medium text-[var(--orb-foreground)]" data-orb-voice-status-label>
           {sessionActive ? statusLabel(status, permissionDenied) : 'Start a voice conversation'}
@@ -455,6 +557,16 @@ export function OrbVoiceStation({
           </p>
         ) : null}
 
+        {fallbackNotice ? (
+          <p
+            className="mt-2 max-w-md text-center text-xs text-amber-200/90"
+            role="status"
+            data-orb-voice-fallback-notice
+          >
+            {fallbackNotice}
+          </p>
+        ) : null}
+
         {developerMode && sessionActive && voiceSession ? (
           <div
             className="mt-2 max-w-md rounded-lg border border-dashed border-[var(--orb-line)]/50 px-3 py-2 text-left text-[10px] text-[var(--orb-muted)]"
@@ -466,6 +578,11 @@ export function OrbVoiceStation({
             </p>
             <p>
               Status: {voiceSession.status} · latency: {voiceSession.capabilities.latencyClass}
+              {voiceSession.openai_session?.model ? ` · model: ${voiceSession.openai_session.model}` : ''}
+            </p>
+            <p>
+              WebRTC: {realtimeRef.current?.usesOpenAIWebRTC ? 'connected' : 'inactive'} · browser fallback:{' '}
+              {usingBrowserFallback ? 'yes' : 'no'}
             </p>
             {voiceSession.websocket_url ? <p>WebSocket: {voiceSession.websocket_url}</p> : null}
             {devEvents.length ? <p className="mt-1 truncate">Events: {devEvents.join(' · ')}</p> : null}
@@ -488,14 +605,32 @@ export function OrbVoiceStation({
               <button
                 type="button"
                 onClick={() =>
-                  voice.listening ? voice.cancelListening() : void voice.beginUserVoiceCapture()
+                  realtimeRef.current?.usesOpenAIWebRTC
+                    ? void realtimeRef.current.interrupt()
+                    : voice.listening
+                      ? voice.cancelListening()
+                      : void voice.beginUserVoiceCapture()
                 }
                 className="inline-flex items-center gap-2 rounded-full border border-[var(--orb-line)] px-4 py-2 text-sm font-medium text-[var(--orb-foreground)]"
                 data-orb-voice-mute-toggle
-                aria-label={voice.listening ? 'Mute microphone' : 'Speak'}
+                aria-label={
+                  realtimeRef.current?.usesOpenAIWebRTC
+                    ? 'Interrupt'
+                    : voice.listening
+                      ? 'Mute microphone'
+                      : 'Speak'
+                }
               >
-                {voice.listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-                {voice.listening ? 'Mute' : 'Speak'}
+                {voice.listening && !realtimeRef.current?.usesOpenAIWebRTC ? (
+                  <MicOff className="h-4 w-4" />
+                ) : (
+                  <Mic className="h-4 w-4" />
+                )}
+                {realtimeRef.current?.usesOpenAIWebRTC
+                  ? 'Listening'
+                  : voice.listening
+                    ? 'Mute'
+                    : 'Speak'}
               </button>
               {showInterrupt ? (
                 <button

@@ -21,8 +21,12 @@ def _realtime_provider() -> str:
 
 
 def _openai_realtime_configured() -> bool:
-    """OpenAI Realtime when ORB_VOICE_REALTIME_PROVIDER=openai and API key is set."""
-    return _realtime_provider() == "openai" and bool(os.getenv("OPENAI_API_KEY", "").strip())
+    """OpenAI Realtime when provider=openai, ORB_REALTIME_ENABLED, and API key is set."""
+    if _realtime_provider() != "openai":
+        return False
+    if not _env_bool("ORB_REALTIME_ENABLED", default=True):
+        return False
+    return bool(os.getenv("OPENAI_API_KEY", "").strip())
 
 
 def _provider_name() -> str:

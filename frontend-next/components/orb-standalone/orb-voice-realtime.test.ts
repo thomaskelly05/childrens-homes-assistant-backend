@@ -80,7 +80,37 @@ describe('ORB Voice realtime provider pass', () => {
   it('voice session API uses honest provider types', () => {
     const api = readComponent('lib/orb/voice/orb-voice-client.ts')
     assert.match(api, /websocket_realtime/)
+    assert.match(api, /openai_realtime/)
     assert.match(api, /browser_fallback/)
     assert.match(api, /\/orb\/voice\/session/)
+  })
+
+  it('openai webrtc client uses RTCPeerConnection and ephemeral secret', () => {
+    const webrtc = readComponent('lib/orb/voice/orb-openai-realtime-webrtc-client.ts')
+    assert.match(webrtc, /OrbRealtimeClient/)
+    assert.match(webrtc, /RTCPeerConnection/)
+    assert.match(webrtc, /response\.cancel/)
+    assert.match(webrtc, /session\.update/)
+    assert.doesNotMatch(webrtc, /localStorage/)
+    assert.doesNotMatch(webrtc, /console\.log.*clientSecret/i)
+  })
+
+  it('realtime client wires openai webrtc path and fallback', () => {
+    const client = readComponent('lib/orb/voice/orb-realtime-voice-client.ts')
+    assert.match(client, /OrbOpenAIRealtimeWebRTCClient/)
+    assert.match(client, /usesOpenAIWebRTC/)
+    assert.match(client, /REALTIME_FALLBACK_MESSAGE/)
+    assert.match(client, /client_secret/)
+    assert.match(client, /getUserMedia/)
+    assert.match(client, /response\.cancel|interrupt\(\)/)
+  })
+
+  it('station shows fallback notice and live realtime indicator', () => {
+    const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
+    assert.match(station, /data-orb-voice-fallback-notice/)
+    assert.match(station, /data-orb-voice-live-indicator/)
+    assert.match(station, /REALTIME_FALLBACK_MESSAGE/)
+    assert.match(station, /usesOpenAIWebRTC/)
+    assert.match(station, /speakAssistantReply/)
   })
 })
