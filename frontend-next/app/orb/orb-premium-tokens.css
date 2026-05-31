@@ -1,0 +1,351 @@
+/**
+ * ORB Residential premium identity tokens — deep midnight, electric blue glow, glass surfaces.
+ * Applied on residential chat layout and station panels.
+ */
+.orb-chat-layout--residential,
+html[data-orb-residential='1'] .orb-chat-layout {
+  --orb-premium-bg-deep: #05070d;
+  --orb-premium-bg-mid: #070b14;
+  --orb-premium-bg-soft: #08111f;
+  --orb-premium-accent: #168bff;
+  --orb-premium-cyan: #42d7ff;
+  --orb-premium-violet: #7c5cff;
+  --orb-premium-text: #f7faff;
+  --orb-premium-text-secondary: #a7aebd;
+  --orb-premium-text-muted: #6f7787;
+  --orb-premium-border: rgba(255, 255, 255, 0.1);
+  --orb-premium-border-glow: rgba(66, 215, 255, 0.18);
+  --orb-premium-glass: rgba(255, 255, 255, 0.045);
+  --orb-premium-glass-strong: rgba(255, 255, 255, 0.07);
+  --orb-premium-shadow: 0 12px 40px rgba(0, 0, 0, 0.45), 0 0 48px rgba(22, 139, 255, 0.06);
+
+  --orb-foreground: var(--orb-premium-text);
+  --orb-muted: var(--orb-premium-text-secondary);
+  --orb-line: var(--orb-premium-border);
+  --orb-surface: rgba(8, 17, 31, 0.92);
+  --orb-surface-elevated: rgba(7, 11, 20, 0.96);
+  --orb-surface-hover: rgba(255, 255, 255, 0.06);
+  --orb-bg-deep: var(--orb-premium-bg-deep);
+  --orb-accent: var(--orb-premium-accent);
+
+  background:
+    radial-gradient(ellipse 80% 45% at 50% -12%, rgba(22, 139, 255, 0.08), transparent 55%),
+    radial-gradient(ellipse 40% 30% at 88% 92%, rgba(124, 92, 255, 0.05), transparent 50%),
+    linear-gradient(180deg, var(--orb-premium-bg-deep) 0%, var(--orb-premium-bg-mid) 48%, var(--orb-premium-bg-soft) 100%) !important;
+  color: var(--orb-premium-text);
+}
+
+.orb-chat-layout--residential .orb-chat-header {
+  min-height: 3.5rem;
+  max-height: 3.75rem;
+  background: rgba(5, 7, 13, 0.85) !important;
+  border-bottom-color: var(--orb-premium-border) !important;
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+}
+
+.orb-chat-layout--residential .orb-chat-header [data-orb-header-title] {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.orb-chat-layout--residential .orb-chat-header button {
+  color: var(--orb-premium-text-muted);
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.orb-chat-layout--residential .orb-chat-header button:hover,
+.orb-chat-layout--residential .orb-chat-header button:focus-visible {
+  color: var(--orb-premium-text);
+}
+
+/* Premium compact ORB mark */
+.premium-mobile-orb {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 4.5rem;
+  height: 4.5rem;
+  max-width: 5.5rem;
+  max-height: 5.5rem;
+  margin-inline: auto;
+  isolation: isolate;
+}
+
+.premium-mobile-orb--desktop {
+  width: 7.5rem;
+  height: 7.5rem;
+  max-width: 10rem;
+  max-height: 10rem;
+}
+
+.premium-mobile-orb__glow {
+  position: absolute;
+  inset: -18%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(22, 139, 255, 0.35) 0%,
+    rgba(66, 215, 255, 0.12) 38%,
+    rgba(124, 92, 255, 0.06) 58%,
+    transparent 72%
+  );
+  filter: blur(10px);
+  opacity: 0.85;
+  animation: premium-orb-breathe 4.8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.premium-mobile-orb__core {
+  position: relative;
+  z-index: 1;
+  width: 72%;
+  height: 72%;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.55) 0%, transparent 42%),
+    radial-gradient(circle at 68% 72%, rgba(124, 92, 255, 0.35) 0%, transparent 45%),
+    radial-gradient(circle at 50% 55%, #168bff 0%, #0a4a9e 72%, #05070d 100%);
+  box-shadow:
+    inset 0 1px 12px rgba(255, 255, 255, 0.22),
+    0 0 28px rgba(22, 139, 255, 0.45),
+    0 0 56px rgba(66, 215, 255, 0.15);
+  animation: premium-orb-breathe 4.8s ease-in-out infinite;
+}
+
+.premium-mobile-orb--desktop .premium-mobile-orb__core {
+  width: 68%;
+  height: 68%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .premium-mobile-orb__glow,
+  .premium-mobile-orb__core {
+    animation: none;
+  }
+}
+
+@keyframes premium-orb-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.88;
+  }
+  50% {
+    transform: scale(1.04);
+    opacity: 1;
+  }
+}
+
+/* Empty state — residential */
+[data-orb-residential-empty] {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0;
+}
+
+[data-orb-empty-brand-stack] {
+  margin-top: 0.875rem;
+}
+
+[data-orb-empty-brand-name] {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--orb-premium-text, #f7faff);
+}
+
+[data-orb-empty-brand-tagline] {
+  margin-top: 0.2rem;
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--orb-premium-text-muted, #6f7787);
+}
+
+.orb-chat-layout--residential [data-orb-empty-heading] {
+  margin-top: 1.125rem !important;
+  font-size: clamp(1.25rem, 5.5vw, 1.5rem) !important;
+  font-weight: 600 !important;
+  line-height: 1.25 !important;
+  letter-spacing: -0.03em !important;
+  color: var(--orb-premium-text) !important;
+}
+
+.orb-chat-layout--residential [data-orb-empty-subline] {
+  margin-top: 0.5rem !important;
+  max-width: 20rem !important;
+  font-size: 0.8125rem !important;
+  line-height: 1.45 !important;
+  color: var(--orb-premium-text-secondary) !important;
+}
+
+/* Composer glass — residential */
+.orb-chat-layout--residential .orb-composer-glass {
+  border-radius: 1.75rem !important;
+  border: 1px solid var(--orb-premium-border-glow) !important;
+  background: linear-gradient(
+    165deg,
+    rgba(255, 255, 255, 0.08) 0%,
+    rgba(255, 255, 255, 0.04) 100%
+  ) !important;
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  box-shadow: var(--orb-premium-shadow) !important;
+  min-height: 4rem;
+}
+
+.orb-chat-layout--residential .orb-composer-send {
+  background: linear-gradient(135deg, #168bff, #0d5fcc) !important;
+  border: 1px solid rgba(66, 215, 255, 0.25) !important;
+  box-shadow: 0 4px 16px rgba(22, 139, 255, 0.35) !important;
+}
+
+/* Message polish */
+.orb-chat-layout--residential .orb-message-user .orb-message-content,
+.orb-chat-layout--residential [data-orb-user-message-bubble] {
+  background: linear-gradient(145deg, rgba(22, 139, 255, 0.22), rgba(8, 17, 31, 0.95)) !important;
+  border: 1px solid rgba(66, 215, 255, 0.2) !important;
+  color: var(--orb-premium-text) !important;
+}
+
+.orb-chat-layout--residential .orb-message-assistant .orb-message-content {
+  color: var(--orb-premium-text);
+  line-height: 1.6;
+}
+
+.orb-chat-layout--residential .orb-action-chip {
+  border: 1px solid var(--orb-premium-border) !important;
+  background: var(--orb-premium-glass) !important;
+  color: var(--orb-premium-text-muted) !important;
+  backdrop-filter: blur(8px);
+}
+
+.orb-chat-layout--residential .orb-action-chip:hover {
+  color: var(--orb-premium-text) !important;
+  border-color: var(--orb-premium-border-glow) !important;
+  background: var(--orb-premium-glass-strong) !important;
+}
+
+.orb-chat-layout--residential .orb-suggested-reply-chip {
+  border: 1px solid var(--orb-premium-border) !important;
+  background: var(--orb-premium-glass) !important;
+  color: var(--orb-premium-text-secondary) !important;
+}
+
+.orb-chat-layout--residential .orb-lenses-used__toggle {
+  color: var(--orb-premium-text-muted);
+}
+
+.orb-chat-layout--residential .orb-lenses-used__panel {
+  border: 1px solid var(--orb-premium-border);
+  background: var(--orb-premium-glass-strong);
+  backdrop-filter: blur(12px);
+}
+
+/* Settings — dark glass selected row */
+.orb-settings-nav-item--active,
+[data-orb-settings-nav-active='true'] {
+  background: rgba(22, 139, 255, 0.12) !important;
+  border: 1px solid rgba(66, 215, 255, 0.22) !important;
+  color: var(--orb-premium-cyan, #42d7ff) !important;
+  font-weight: 600 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+/* Station panel states */
+.orb-station-empty-state {
+  margin: 1.5rem 1rem;
+  padding: 1.25rem 1rem;
+  text-align: center;
+  border-radius: 1rem;
+  border: 1px solid var(--orb-premium-border, rgba(255, 255, 255, 0.1));
+  background: var(--orb-premium-glass, rgba(255, 255, 255, 0.045));
+}
+
+.orb-station-empty-state__title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--orb-premium-text, #f7faff);
+}
+
+.orb-station-empty-state__body {
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--orb-premium-text-secondary, #a7aebd);
+}
+
+.orb-station-auth-error {
+  margin: 1.25rem 1rem;
+  padding: 1.25rem 1rem;
+  text-align: center;
+  border-radius: 1rem;
+  border: 1px solid rgba(66, 215, 255, 0.2);
+  background: linear-gradient(165deg, rgba(22, 139, 255, 0.08), rgba(255, 255, 255, 0.03));
+}
+
+.orb-station-auth-error__title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--orb-premium-text, #f7faff);
+}
+
+.orb-station-auth-error__body {
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  color: var(--orb-premium-text-secondary, #a7aebd);
+}
+
+.orb-station-auth-error__cta {
+  margin-top: 0.875rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.5rem;
+  padding: 0 1rem;
+  border-radius: 9999px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #f7faff;
+  background: linear-gradient(135deg, #168bff, #0d5fcc);
+  border: 1px solid rgba(66, 215, 255, 0.3);
+}
+
+.orb-station-auth-error__details {
+  margin-top: 0.75rem;
+  font-size: 0.6875rem;
+  color: var(--orb-premium-text-muted, #6f7787);
+}
+
+/* Profile premium cards */
+[data-orb-profile-status-chips] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.75rem;
+}
+
+[data-orb-profile-status-chip] {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 9999px;
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border: 1px solid var(--orb-premium-border, rgba(255, 255, 255, 0.1));
+  background: var(--orb-premium-glass, rgba(255, 255, 255, 0.045));
+  color: var(--orb-premium-text-secondary, #a7aebd);
+}
+
+[data-orb-profile-section-card] {
+  border-radius: 0.875rem;
+  border: 1px solid var(--orb-premium-border, rgba(255, 255, 255, 0.1));
+  background: var(--orb-premium-glass, rgba(255, 255, 255, 0.045));
+  backdrop-filter: blur(10px);
+}

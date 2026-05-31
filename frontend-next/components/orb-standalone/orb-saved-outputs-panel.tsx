@@ -9,6 +9,11 @@ import {
 } from '@/components/orb-standalone/orb-intelligence-output'
 import { OrbStandalonePanelShell } from '@/components/orb-standalone/orb-standalone-panel-shell'
 import {
+  isOrbStationAuthError,
+  OrbStationAuthError,
+  OrbStationEmptyState
+} from '@/components/orb-standalone/orb-station-panel-states'
+import {
   archiveOrbSavedOutput,
   deleteOrbSavedOutput,
   exportOrbSavedOutput,
@@ -252,11 +257,21 @@ export function OrbSavedOutputsPanel({
                 Loading…
               </p>
             ) : error ? (
-              <p className="px-2 py-4 text-xs text-red-300">{error}</p>
+              isOrbStationAuthError(error) ? (
+                <OrbStationAuthError detail={error} />
+              ) : (
+                <OrbStationEmptyState
+                  dataAttr="saved_outputs_error"
+                  title="Could not load saved outputs"
+                  body="Try again in a moment. Use Details in account settings if this persists."
+                />
+              )
             ) : items.length === 0 ? (
-              <p className="px-2 py-4 text-xs leading-5 text-slate-500" data-orb-saved-outputs-empty>
-                No saved outputs yet. Run a document review, agent or deep research and save the result.
-              </p>
+              <OrbStationEmptyState
+                dataAttr="saved_outputs"
+                title="No saved outputs yet."
+                body="When you save reviews, templates or learning sessions, they'll appear here."
+              />
             ) : (
                 grouped.map(([projectName, groupItems]) => (
                   <div key={projectName} className="mb-4">

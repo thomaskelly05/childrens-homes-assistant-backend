@@ -27,13 +27,15 @@ describe('ORB Residential mobile UX', () => {
     assert.match(assistant, /data-orb-lenses-toggle/)
   })
 
-  it('residential sidebar exposes rename and delete via chat menu', () => {
+  it('residential sidebar exposes rename pin archive and delete via chat menu', () => {
     const sidebar = readComponent('components/orb-residential/orb-residential-sidebar.tsx')
     const menu = readComponent('components/orb-standalone/orb-sidebar-chat-menu.tsx')
     assert.match(sidebar, /OrbSidebarChatList/)
     assert.match(sidebar, /onWorkspaceChange/)
     assert.match(sidebar, /renameChat/)
     assert.match(menu, /Rename/)
+    assert.match(menu, /Pin/)
+    assert.match(menu, /Archive/)
     assert.match(menu, /Delete/)
     assert.match(menu, /data-orb-sidebar-chat-menu/)
   })
@@ -45,6 +47,40 @@ describe('ORB Residential mobile UX', () => {
     assert.match(companion, /overflow-hidden/)
     assert.match(mobileCss, /overflow:\s*hidden/)
     assert.match(mobileCss, /\.orb-composer-glass/)
+    assert.match(mobileCss, /safe-area-inset-bottom/)
+  })
+
+  it('mobile empty state uses compact PremiumMobileOrb not oversized hero', () => {
+    const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
+    const orb = readComponent('components/orb-residential/ui/premium-mobile-orb.tsx')
+    const mobileCss = readComponent('app/orb/orb-mobile.css')
+    assert.match(companion, /PremiumMobileOrb/)
+    assert.match(companion, /data-orb-residential-empty/)
+    assert.match(orb, /data-premium-mobile-orb/)
+    assert.match(mobileCss, /premium-mobile-orb/)
+    assert.match(mobileCss, /max-width:\s*5\.5rem/)
+    assert.doesNotMatch(companion, /size="hero"/)
+  })
+
+  it('settings selected item uses dark glass styling not bright white block', () => {
+    const settings = readComponent('components/orb-standalone/orb-standalone-settings-panel.tsx')
+    const premiumCss = readComponent('app/orb/orb-premium-tokens.css')
+    assert.match(settings, /orb-settings-nav-item--active/)
+    assert.match(settings, /data-orb-settings-nav-active/)
+    assert.doesNotMatch(settings, /bg-\[#EAF6FF\]/)
+    assert.match(premiumCss, /\.orb-settings-nav-item--active/)
+  })
+
+  it('stations show friendly auth error and polished empty states', () => {
+    const states = readComponent('components/orb-standalone/orb-station-panel-states.tsx')
+    const saved = readComponent('components/orb-standalone/orb-saved-outputs-panel.tsx')
+    const knowledge = readComponent('components/orb-standalone/orb-knowledge-library.tsx')
+    assert.match(states, /Reconnect to continue/)
+    assert.match(states, /data-orb-station-sign-in-again/)
+    assert.match(saved, /No saved outputs yet/)
+    assert.match(saved, /When you save reviews/)
+    assert.match(knowledge, /No sources loaded yet/)
+    assert.match(knowledge, /Official guidance and uploaded sources/)
   })
 
   it('sidebar station links remain on residential sidebar', () => {
@@ -53,15 +89,18 @@ describe('ORB Residential mobile UX', () => {
       assert.match(sidebar, new RegExp(`data-orb-sidebar-station=\\{station\\.id\\}|data-orb-sidebar-station="${station}"|id: '${station}'`))
     }
     assert.match(sidebar, /data-orb-sidebar-stations/)
+    assert.match(sidebar, /Powered by IndiCare Intelligence/)
   })
 
-  it('profile panel uses collapsible grouped sections', () => {
+  it('profile panel uses collapsible grouped sections and status chips', () => {
     const profile = readComponent('components/orb-standalone/orb-adult-profile-drawer.tsx')
     assert.match(profile, /data-orb-profile-section-nav/)
     assert.match(profile, /ProfileSection/)
     assert.match(profile, /id="personalisation"/)
     assert.match(profile, /id="security"/)
     assert.match(profile, /isDirty/)
+    assert.match(profile, /data-orb-profile-status-chips/)
+    assert.match(profile, /data-orb-profile-section-card/)
   })
 
   it('orb residential experience does not mount OS sidebar', () => {
@@ -90,5 +129,13 @@ describe('ORB Residential mobile UX', () => {
     const mobileCss = readComponent('app/orb/orb-mobile.css')
     assert.match(assistant, /orb-suggested-replies-row/)
     assert.match(mobileCss, /\.orb-suggested-replies-row/)
+  })
+
+  it('premium design tokens and CSS layer are wired', () => {
+    const layout = readComponent('app/orb/layout.tsx')
+    const tokens = readComponent('lib/orb/design-tokens.ts')
+    assert.match(layout, /orb-premium-tokens\.css/)
+    assert.match(tokens, /#05070D/)
+    assert.match(tokens, /#168BFF/)
   })
 })

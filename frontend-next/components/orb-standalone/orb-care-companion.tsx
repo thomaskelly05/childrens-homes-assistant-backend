@@ -24,6 +24,7 @@ import {
   X
 } from 'lucide-react'
 import { OrbGlow } from '@/components/orb-standalone/orb-glow'
+import { PremiumMobileOrb } from '@/components/orb-residential/ui/premium-mobile-orb'
 import {
   OrbStandaloneComposer,
   type PendingImageAttachment
@@ -2638,32 +2639,54 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
               <div className="mx-auto w-full max-w-[var(--orb-chat-column-max,50rem)]">
                 {showEmptyState ? (
                   <div
-                    className="flex min-h-[min(52vh,24rem)] flex-col items-center justify-center px-2 py-6 text-center md:py-8"
+                    className={`flex min-h-[min(48vh,22rem)] flex-col items-center justify-center px-2 py-6 text-center md:min-h-[min(52vh,24rem)] md:py-8 ${residentialSurface ? 'orb-residential-empty' : ''}`}
                     data-orb-empty-state
+                    {...(residentialSurface ? { 'data-orb-residential-empty': true } : {})}
                   >
                     <div className="relative flex justify-center" data-orb-empty-sphere>
-                      <OrbGlow state="idle" interactive={false} size="dock" compactLabels />
+                      {residentialSurface ? (
+                        <>
+                          <PremiumMobileOrb variant="mobile" className="md:hidden" />
+                          <PremiumMobileOrb variant="desktop" className="hidden md:flex" />
+                        </>
+                      ) : (
+                        <OrbGlow state="idle" interactive={false} size="dock" compactLabels />
+                      )}
                     </div>
-                    <div className="orb-empty-title-wrap hidden md:block" data-orb-empty-title-wrap>
-                      <p className="orb-empty-brand-title orb-hue-text" data-orb-brand-name data-orb-empty-title>
-                        ORB Residential
-                      </p>
-                    </div>
-                    <p className="orb-empty-brand-powered mt-1.5 hidden md:block" data-orb-brand-powered>
-                      Powered by IndiCare
-                    </p>
-                    <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-sky-500/70 md:hidden" data-orb-empty-brand-small>
-                      ORB Residential
-                    </p>
+                    {residentialSurface ? (
+                      <div data-orb-empty-brand-stack>
+                        <p className="orb-empty-brand-title" data-orb-empty-brand-name>
+                          ORB Residential
+                        </p>
+                        <p data-orb-empty-brand-tagline>Powered by IndiCare Intelligence</p>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="orb-empty-title-wrap hidden md:block" data-orb-empty-title-wrap>
+                          <p className="orb-empty-brand-title orb-hue-text" data-orb-brand-name data-orb-empty-title>
+                            ORB Residential
+                          </p>
+                        </div>
+                        <p className="orb-empty-brand-powered mt-1.5 hidden md:block" data-orb-brand-powered>
+                          Powered by IndiCare
+                        </p>
+                        <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-sky-500/70 md:hidden" data-orb-empty-brand-small>
+                          ORB Residential
+                        </p>
+                      </>
+                    )}
                     <h2
                       className="mt-4 text-xl font-semibold tracking-tight text-slate-900 md:mt-6 md:text-[1.35rem]"
                       data-orb-empty-heading
                     >
                       {emptyHeading}
                     </h2>
-                    {emptyWelcome.subline ? (
+                    {residentialSurface || emptyWelcome.subline ? (
                       <p className="mt-2 max-w-lg text-sm leading-7 text-slate-600" data-orb-empty-subline>
-                        {emptyWelcome.subline}
+                        {emptyWelcome.subline ||
+                          (residentialSurface
+                            ? 'Ask about recording, safeguarding, Ofsted, templates or practice.'
+                            : '')}
                       </p>
                     ) : null}
                     {emptyWelcome.temporaryNote ? (

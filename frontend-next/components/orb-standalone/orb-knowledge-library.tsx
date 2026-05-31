@@ -5,6 +5,11 @@ import { Loader2, Plus, Search } from 'lucide-react'
 
 import { OrbStandalonePanelShell } from '@/components/orb-standalone/orb-standalone-panel-shell'
 import {
+  isOrbStationAuthError,
+  OrbStationAuthError,
+  OrbStationEmptyState
+} from '@/components/orb-standalone/orb-station-panel-states'
+import {
   OrbCitationHealthSummary,
   OrbSourceGovernanceActions,
   OrbSourceGovernanceBadges
@@ -234,7 +239,17 @@ export function OrbKnowledgeLibraryPanel({ open, onClose }: { open: boolean; onC
     >
       <div className="px-4 py-3" data-orb-knowledge-library>
           {summary ? <p className="mb-3 text-[11px] text-slate-500">{summary}</p> : null}
-          {error ? <p className="mb-3 rounded-lg bg-rose-500/10 px-3 py-2 text-xs text-rose-200">{error}</p> : null}
+          {error ? (
+            isOrbStationAuthError(error) ? (
+              <OrbStationAuthError detail={error} />
+            ) : (
+              <OrbStationEmptyState
+                dataAttr="knowledge_error"
+                title="Could not load Knowledge Library"
+                body="Try again shortly. Your sources are unchanged on the server."
+              />
+            )
+          ) : null}
 
           <div className="mb-3 flex flex-wrap gap-1" data-orb-knowledge-sections>
             {(['all', 'official', 'needs_review'] as GovernanceTab[]).map((t) => (
@@ -467,6 +482,12 @@ export function OrbKnowledgeLibraryPanel({ open, onClose }: { open: boolean; onC
               <Loader2 className="h-4 w-4 animate-spin" />
               Loading sources…
             </p>
+          ) : sources.length === 0 && !error ? (
+            <OrbStationEmptyState
+              dataAttr="knowledge_library"
+              title="No sources loaded yet."
+              body="Official guidance and uploaded sources will appear here when connected."
+            />
           ) : (
             <ul className="space-y-2">
               {sources.map((source) => (
