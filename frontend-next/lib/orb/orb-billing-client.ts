@@ -261,3 +261,73 @@ export const ORB_SAFETY_STATEMENTS = [
 ] as const
 
 export const ORB_SAFETY_VERSION = '2026-05-29-v1'
+
+export type OrbTemplateCategory = { id: string; name: string; slug?: string }
+export type OrbTemplateSummary = {
+  id: string
+  title: string
+  category?: string
+  description?: string
+  favourite?: boolean
+  last_used_at?: string | null
+}
+
+export async function fetchOrbTemplateCategories() {
+  const response = await authFetch<{ success?: boolean; data?: OrbTemplateCategory[] }>(
+    ORB_TEMPLATES_API.categories,
+    { credentials: 'include' }
+  )
+  return response.data ?? (Array.isArray(response) ? response : [])
+}
+
+export async function fetchOrbTemplates(params?: { category?: string; search?: string }) {
+  const query = new URLSearchParams()
+  if (params?.category) query.set('category', params.category)
+  if (params?.search) query.set('search', params.search)
+  const path = query.toString() ? `${ORB_TEMPLATES_API.list}?${query}` : ORB_TEMPLATES_API.list
+  const response = await authFetch<{ success?: boolean; data?: OrbTemplateSummary[] }>(path, {
+    credentials: 'include'
+  })
+  return response.data ?? []
+}
+
+export async function fetchOrbTemplate(id: string) {
+  const response = await authFetch<{ success?: boolean; data?: Record<string, unknown> }>(
+    `${ORB_TEMPLATES_API.list}/${encodeURIComponent(id)}`,
+    { credentials: 'include' }
+  )
+  return response.data ?? response
+}
+
+export async function generateOrbTemplate(body: { template_id: string; context?: string }) {
+  return authFetch(ORB_TEMPLATES_API.generate, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  })
+}
+
+export async function exportOrbTemplate(format: 'pdf' | 'docx', body: Record<string, unknown>) {
+  const path = format === 'pdf' ? ORB_TEMPLATES_API.exportPdf : ORB_TEMPLATES_API.exportDocx
+  const response = await authFetchResponse(path, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  })
+  return response
+}
+
+export async function generateOrbLearningFromAnswer(body: {
+  answer_text: string
+  session_type?: string
+  topic?: string
+}) {
+  return authFetch<{ success?: boolean; data?: Record<string, unknown> }>(ORB_BILLING_API.learnFromAnswer, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  })
+}

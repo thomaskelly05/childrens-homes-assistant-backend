@@ -13,7 +13,7 @@ import {
   fetchOrbTemplates,
   generateOrbTemplate,
   type OrbTemplateSummary
-} from '@/lib/orb/orb-templates-client'
+} from '@/lib/orb/orb-billing-client'
 
 const FALLBACK_CATEGORIES = [
   'Safeguarding',

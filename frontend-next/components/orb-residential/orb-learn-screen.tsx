@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { OrbGlassCard } from '@/components/orb-residential/ui/orb-glass-card'
 import { OrbShell } from '@/components/orb-residential/ui/orb-shell'
 import { OrbButton } from '@/components/orb-residential/ui/orb-button'
-import { generateOrbLearningFromAnswer } from '@/lib/orb/orb-learn-client'
+import { generateOrbLearningFromAnswer } from '@/lib/orb/orb-billing-client'
 
 const SESSION_TYPES = [
   { id: 'five_minute', label: '5-minute learning session' },
