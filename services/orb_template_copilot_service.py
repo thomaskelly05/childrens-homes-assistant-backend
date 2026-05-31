@@ -10,6 +10,8 @@ read or write IndiCare OS records.
 
 from typing import Any
 
+from services.orb_template_library_registry import orb_template_library_registry
+
 
 TEMPLATE_SECTIONS: dict[str, list[str]] = {
     "incident_review": [
@@ -81,6 +83,9 @@ TEMPLATE_SECTIONS: dict[str, list[str]] = {
 
 class OrbTemplateCopilotService:
     def detect_template_type(self, message: str) -> str | None:
+        registry_id = orb_template_library_registry.resolve_template_id(message)
+        if registry_id:
+            return registry_id
         text = str(message or "").lower()
         if "locality" in text and "risk" in text:
             return "locality_risk_assessment"
@@ -119,6 +124,10 @@ class OrbTemplateCopilotService:
         return "\n".join(lines)
 
     def build_template(self, template_type: str, *, title: str | None = None) -> dict[str, Any]:
+        from services.orb_template_generation_service import orb_template_generation_service
+
+        if orb_template_library_registry.get_template(template_type):
+            return orb_template_generation_service.generate(template_type, title=title)
         key = template_type if template_type in TEMPLATE_SECTIONS else "safeguarding_template"
         return {
             "template_type": key,

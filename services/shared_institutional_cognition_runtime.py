@@ -14,6 +14,12 @@ from services.orb_residential_cognition_router import orb_residential_cognition_
 from services.orb_scenario_playbook_service import orb_scenario_playbook_service
 from services.orb_sector_evidence_pipeline_service import orb_sector_evidence_pipeline_service
 from services.orb_template_copilot_service import orb_template_copilot_service
+from services.orb_indicare_intelligence_convergence_service import (
+    orb_indicare_intelligence_convergence_service,
+)
+from services.orb_isn_cognition_service import orb_isn_cognition_service
+from services.orb_review_this_service import orb_review_this_service
+from services.orb_learning_micro_service import orb_learning_micro_service
 
 
 class SharedInstitutionalCognitionRuntime:
@@ -66,9 +72,37 @@ class SharedInstitutionalCognitionRuntime:
             message=message,
             operational_context=operational_context,
         )
+        intelligence_convergence = self._intelligence_convergence_context(
+            surface=surface,
+            message=message,
+            mode=mode,
+        )
+        isn_cognition = self._isn_cognition_context(
+            surface=surface,
+            message=message,
+            mode=mode,
+        )
+        review_this = self._review_this_context(
+            surface=surface,
+            message=message,
+            operational_context=operational_context,
+        )
+        learning_micro = self._learning_micro_context(
+            surface=surface,
+            message=message,
+        )
         active_brains = self._merge_sector_evidence_brains(active_brains, sector_evidence)
         active_brains = self._merge_evidence_graph_brains(active_brains, evidence_graph)
-        active_brains = self._merge_context_brains(active_brains, outstanding_practice, template_copilot, location_intelligence)
+        active_brains = self._merge_context_brains(
+            active_brains,
+            outstanding_practice,
+            template_copilot,
+            location_intelligence,
+            isn_cognition,
+            review_this,
+            learning_micro,
+        )
+        active_brains = self._merge_intelligence_engine_brains(active_brains, intelligence_convergence)
         grounding = orb_knowledge_grounding_service.build_grounding(
             message=message,
             mode=mode,
@@ -83,6 +117,10 @@ class SharedInstitutionalCognitionRuntime:
         outstanding_prompt = outstanding_practice.get("prompt_addendum")
         template_prompt = template_copilot.get("prompt_addendum")
         location_prompt = location_intelligence.get("prompt_addendum")
+        convergence_prompt = intelligence_convergence.get("prompt_addendum")
+        isn_prompt = isn_cognition.get("prompt_addendum")
+        review_prompt = review_this.get("prompt_addendum")
+        learning_prompt = learning_micro.get("prompt_addendum")
         guidance_prefix = None
         if surface == "standalone_orb":
             prefix = standalone_guidance_boundary_prefix(message, history=history, mode=mode)
@@ -103,6 +141,13 @@ class SharedInstitutionalCognitionRuntime:
         cognition_display_labels = self._merge_display_labels(cognition_display_labels, outstanding_practice.get("display_labels") or [])
         cognition_display_labels = self._merge_display_labels(cognition_display_labels, template_copilot.get("display_labels") or [])
         cognition_display_labels = self._merge_display_labels(cognition_display_labels, location_intelligence.get("display_labels") or [])
+        cognition_display_labels = self._merge_display_labels(cognition_display_labels, isn_cognition.get("display_labels") or [])
+        cognition_display_labels = self._merge_display_labels(cognition_display_labels, review_this.get("display_labels") or [])
+        cognition_display_labels = self._merge_display_labels(cognition_display_labels, learning_micro.get("display_labels") or [])
+        if routing.get("topic") in {"medication", "missing", "therapeutic", "recording", "cumulative_concern"}:
+            routed = list(routing.get("cognition_display_labels") or [])
+            if routed:
+                cognition_display_labels = routed[:5]
         reasoning_lenses = self._merge_display_labels(
             (depth_frame.get("required_lenses") or routing.get("reasoning_lenses") or [])[:8],
             sector_evidence.get("reasoning_lenses") or [],
@@ -111,6 +156,10 @@ class SharedInstitutionalCognitionRuntime:
         reasoning_lenses = self._merge_display_labels(reasoning_lenses, outstanding_practice.get("reasoning_lenses") or [])
         reasoning_lenses = self._merge_display_labels(reasoning_lenses, template_copilot.get("reasoning_lenses") or [])
         reasoning_lenses = self._merge_display_labels(reasoning_lenses, location_intelligence.get("reasoning_lenses") or [])
+        reasoning_lenses = self._merge_display_labels(reasoning_lenses, intelligence_convergence.get("active_lenses") or [])
+        reasoning_lenses = self._merge_display_labels(reasoning_lenses, isn_cognition.get("reasoning_lenses") or [])
+        reasoning_lenses = self._merge_display_labels(reasoning_lenses, review_this.get("reasoning_lenses") or [])
+        reasoning_lenses = self._merge_display_labels(reasoning_lenses, learning_micro.get("reasoning_lenses") or [])
         vault_domains = self._merge_display_labels(
             grounding.get("vault_domains") or [],
             sector_evidence.get("vault_domains") or [],
@@ -119,6 +168,9 @@ class SharedInstitutionalCognitionRuntime:
         vault_domains = self._merge_display_labels(vault_domains, outstanding_practice.get("vault_domains") or [])
         vault_domains = self._merge_display_labels(vault_domains, template_copilot.get("vault_domains") or [])
         vault_domains = self._merge_display_labels(vault_domains, location_intelligence.get("vault_domains") or [])
+        vault_domains = self._merge_display_labels(vault_domains, isn_cognition.get("vault_domains") or [])
+        vault_domains = self._merge_display_labels(vault_domains, review_this.get("vault_domains") or [])
+        vault_domains = self._merge_display_labels(vault_domains, learning_micro.get("vault_domains") or [])
 
         return {
             "surface": surface,
@@ -133,6 +185,12 @@ class SharedInstitutionalCognitionRuntime:
             "outstanding_practice": outstanding_practice,
             "template_copilot": template_copilot,
             "location_intelligence": location_intelligence,
+            "intelligence_convergence": intelligence_convergence,
+            "isn_cognition": isn_cognition,
+            "review_this": review_this,
+            "learning_micro": learning_micro,
+            "active_engines": intelligence_convergence.get("active_engines") or [],
+            "active_lenses": reasoning_lenses,
             "depth_frame": depth_frame,
             "prompt_blocks": [
                 block
@@ -141,6 +199,10 @@ class SharedInstitutionalCognitionRuntime:
                     playbook_prompt,
                     sector_evidence_prompt,
                     evidence_graph_prompt,
+                    convergence_prompt,
+                    isn_prompt,
+                    review_prompt,
+                    learning_prompt,
                     outstanding_prompt,
                     template_prompt,
                     location_prompt,
@@ -177,6 +239,19 @@ class SharedInstitutionalCognitionRuntime:
                 "outstanding_practice_active": bool(outstanding_practice.get("active")),
                 "template_copilot_active": bool(template_copilot.get("active")),
                 "location_intelligence_active": bool(location_intelligence.get("active")),
+                "intelligence_convergence_active": bool(intelligence_convergence.get("active")),
+                "isn_cognition_active": bool(isn_cognition.get("active")),
+                "isn_data_backed": False,
+                "review_this_active": bool(review_this.get("active")),
+                "learning_micro_active": bool(learning_micro.get("active")),
+                "template_generation_used": bool(template_copilot.get("active")),
+                "outstanding_practice_lens_applied": bool(outstanding_practice.get("active")),
+                "standalone_only_reasoning": surface == "standalone_orb" and not bool(
+                    operational_context and boundary["can_use_live_records"]
+                ),
+                "os_data_used": bool(operational_context and boundary["can_use_live_records"]),
+                "active_intelligence_layers": intelligence_convergence.get("intelligence_layers") or {},
+                "activation_rules_matched": intelligence_convergence.get("activation_rules_matched") or [],
                 "safeguarding_boundaries": list(boundary.get("safeguarding_boundaries", []))
                 if isinstance(boundary.get("safeguarding_boundaries"), list)
                 else [],
@@ -235,6 +310,21 @@ class SharedInstitutionalCognitionRuntime:
             lines.append("- Template Copilot: active; if the user asks for a template, produce a usable structured template.")
         if (context.get("location_intelligence") or {}).get("active"):
             lines.append("- Location Intelligence: active; use supplied locality details only and avoid inventing local facts.")
+        if (context.get("intelligence_convergence") or {}).get("active"):
+            lines.append(
+                "- IndiCare Intelligence layers auto-activated: "
+                + "; ".join((context.get("intelligence_convergence") or {}).get("cognition_display_labels") or [])[:200]
+            )
+        if (context.get("isn_cognition") or {}).get("active"):
+            isn = context.get("isn_cognition") or {}
+            if isn.get("isn_reasoning_only"):
+                lines.append("- ISN: reasoning lens only (no live ISN data in standalone ORB).")
+            else:
+                lines.append("- ISN: may use permissioned OS ISN context where supplied.")
+        if (context.get("review_this") or {}).get("active"):
+            lines.append("- Review This: structure the answer using the required review headings.")
+        if (context.get("learning_micro") or {}).get("active"):
+            lines.append("- Learning micro-format: produce a short staff learning artefact from the guidance.")
         lines.extend(context["response_requirements"])
         lines.extend(context["prompt_blocks"])
         return "\n\n".join(lines)
@@ -421,6 +511,79 @@ class SharedInstitutionalCognitionRuntime:
             "active_brains": ["location_intelligence_cognition"],
         }
 
+    def _intelligence_convergence_context(
+        self, *, surface: str, message: str, mode: str | None
+    ) -> dict[str, Any]:
+        routing = orb_indicare_intelligence_convergence_service.route(message, mode=mode)
+        engines = routing.get("active_engines") or []
+        if not engines:
+            return {"active": False, "reason": "no_engines"}
+        lines = [
+            "IndiCare Intelligence Convergence (automatic layer activation):",
+            "- Active intelligence layers: " + "; ".join(routing.get("cognition_display_labels") or engines[:8]),
+            "- Standalone ORB uses these as reasoning lenses only unless OS permissioned context is explicitly supplied.",
+        ]
+        if routing.get("activation_rules_matched"):
+            lines.append("- Matched activation rules: " + ", ".join(routing["activation_rules_matched"][:6]))
+        return {
+            "active": True,
+            **routing,
+            "prompt_addendum": "\n".join(lines),
+            "active_brains": [f"intelligence:{e}" for e in engines[:12]],
+        }
+
+    def _isn_cognition_context(self, *, surface: str, message: str, mode: str | None) -> dict[str, Any]:
+        prompt = orb_isn_cognition_service.prompt_block(message, mode=mode)
+        if not prompt:
+            return {"active": False, "reason": "no_isn_trigger"}
+        meta = orb_isn_cognition_service.metadata(message, mode=mode)
+        os_backed = surface == "os_orb"
+        return {
+            **meta,
+            "prompt_addendum": prompt,
+            "display_labels": ["ISN Lens"] if meta.get("active") else [],
+            "reasoning_lenses": ["ISN", "Contextual Safeguarding", "Routes and Hotspots"],
+            "vault_domains": ["isn", "contextual_safeguarding"],
+            "active_brains": ["isn_cognition_lens"],
+            "isn_data_backed": os_backed,
+            "isn_reasoning_only": not os_backed,
+        }
+
+    def _review_this_context(
+        self, *, surface: str, message: str, operational_context: dict[str, Any] | None
+    ) -> dict[str, Any]:
+        if surface != "standalone_orb":
+            doc_text = (operational_context or {}).get("document_text")
+        else:
+            doc_text = (operational_context or {}).get("document_text") or (operational_context or {}).get(
+                "pasted_document"
+            )
+        role = (operational_context or {}).get("role") or (operational_context or {}).get("selected_role")
+        meta = orb_review_this_service.metadata(message, document_text=doc_text)
+        prompt = orb_review_this_service.prompt_block(
+            message,
+            document_type=(operational_context or {}).get("document_type"),
+            document_text=doc_text,
+            role=role,
+        )
+        if not prompt:
+            return {"active": False, "reason": "no_review_request"}
+        return {**meta, "prompt_addendum": prompt}
+
+    def _learning_micro_context(self, *, surface: str, message: str) -> dict[str, Any]:
+        meta = orb_learning_micro_service.metadata(message)
+        prompt = orb_learning_micro_service.prompt_block(message)
+        if not prompt:
+            return {"active": False, "reason": "no_learning_request"}
+        return {**meta, "prompt_addendum": prompt}
+
+    def _merge_intelligence_engine_brains(
+        self, active_brains: list[str], convergence: dict[str, Any]
+    ) -> list[str]:
+        brains = list(active_brains)
+        brains.extend(convergence.get("active_brains") or [])
+        return list(dict.fromkeys(brains))
+
     def _sector_pipeline_ids(self, *, message: str, mode: str | None, active_brains: list[str]) -> list[str]:
         text = f"{message or ''} {mode or ''}".lower()
         brain_text = " ".join(active_brains).lower()
@@ -564,6 +727,20 @@ class SharedInstitutionalCognitionRuntime:
             requirements.append("- If the user asks for a template, produce a practical template with headings and fillable prompts, not just advice.")
         if "location_intelligence_cognition" in active_brains:
             requirements.append("- For locality questions, use supplied location details only; do not invent local crime, exploitation or safeguarding facts.")
+        if "review_this_cognition" in active_brains:
+            requirements.append(
+                "- Use the Review This structure with markdown ## headings for each review section; do not grade the home or predict Ofsted outcomes."
+            )
+        if "learning_micro_cognition" in active_brains:
+            requirements.append("- Produce a concise learning artefact (objective, key messages, example, questions, practice takeaway).")
+        if "isn_cognition_lens" in active_brains:
+            requirements.append(
+                "- Apply ISN thinking (signals, routes, hotspots, contextual safeguarding) as a lens; do not claim live ISN data unless OS context confirms it."
+            )
+        if any(str(brain).startswith("intelligence:") for brain in active_brains):
+            requirements.append(
+                "- Multiple IndiCare intelligence layers are active; weave them into one practical answer without listing layers mechanically."
+            )
         if any(str(brain).startswith("sector_evidence:") for brain in active_brains):
             requirements.extend(
                 [

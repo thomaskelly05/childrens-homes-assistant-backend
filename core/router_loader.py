@@ -57,6 +57,7 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
             "routers.assistant_upload_routes",
             "routers.assistant_legacy_redirect_routes",
             "routers.orb_standalone_routes",
+            "routers.orb_template_routes",
             "routers.orb_residential_premium_routes",
             "routers.orb_agent_routes",
             "routers.orb_knowledge_routes",

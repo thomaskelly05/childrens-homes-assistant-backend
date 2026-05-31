@@ -5,6 +5,11 @@ import { ChevronDown, Sparkles } from 'lucide-react'
 
 export type OrbExplainabilityView = {
   active_brains?: string[]
+  active_engines?: string[]
+  how_orb_thought?: string
+  intelligence_layers?: Record<string, string>
+  standalone_only_reasoning?: boolean
+  isn_reasoning_only?: boolean
   frameworks_used?: string[]
   evidence_focus?: string[]
   confidence?: string
@@ -49,8 +54,15 @@ export function OrbExplainabilityPanel({
       </button>
       {open ? (
         <div className="orb-explainability-fade mt-2 space-y-3 rounded-xl border border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] px-4 py-3.5 text-[11px] leading-5 text-[var(--orb-muted)]">
-          {explainability.reasoning_summary ? (
+          {explainability.how_orb_thought ? (
+            <p className="text-sm leading-6 text-[var(--orb-foreground)]">{explainability.how_orb_thought}</p>
+          ) : explainability.reasoning_summary ? (
             <p className="text-sm leading-6 text-[var(--orb-foreground)]">{explainability.reasoning_summary}</p>
+          ) : null}
+          {explainability.standalone_only_reasoning ? (
+            <p className="text-[10px] text-amber-700/90 dark:text-amber-400/90">
+              Standalone guidance only — no live IndiCare OS records were used.
+            </p>
           ) : null}
           {(cognitionModeLabel || explainability.cognition_mode) && (
             <div className="flex flex-wrap gap-2">
