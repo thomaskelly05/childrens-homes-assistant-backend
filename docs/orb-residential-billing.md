@@ -10,6 +10,7 @@ Price: **£9.99/month** (`orb_residential_individual`)
 3. Set `ORB_RESIDENTIAL_STRIPE_PRICE_ID=price_...`
 4. Configure webhook endpoint: `POST /orb/standalone/billing/webhook`
 5. Events: `checkout.session.completed`, `customer.subscription.*`, `invoice.payment_*`
+6. **Apple Pay / Google Pay:** In Stripe Dashboard → Settings → Payment methods, enable wallets. Register and verify `app.indicare.co.uk` under Payment method domains. Checkout uses `automatic_payment_methods`.
 
 ## API routes
 
@@ -18,7 +19,10 @@ Price: **£9.99/month** (`orb_residential_individual`)
 | GET | `/orb/standalone/access` | Optional | Full access payload |
 | GET | `/orb/standalone/billing/status` | Yes | Access + subscription + meter |
 | GET | `/orb/standalone/billing/meter` | Yes + premium | Usage meter |
-| POST | `/orb/standalone/billing/checkout` | Yes | Stripe Checkout session |
+| POST | `/orb/subscription/checkout` | Yes | Stripe Checkout session (canonical) |
+| POST | `/orb/standalone/billing/checkout` | Yes | Legacy alias |
+| POST | `/orb/subscription/cancel` | Yes | Cancel at period end (default) |
+| GET | `/orb/subscription` | Yes | Access + subscription |
 | POST | `/orb/standalone/billing/portal` | Yes | Customer portal |
 | POST | `/orb/standalone/billing/webhook` | Stripe sig | Subscription sync |
 | POST | `/orb/standalone/trial/start` | Yes | 7-day trial |

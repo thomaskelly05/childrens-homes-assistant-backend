@@ -45,14 +45,35 @@ export const ORB_BILLING_API = {
   access: '/orb/standalone/access',
   status: '/orb/standalone/billing/status',
   meter: '/orb/standalone/billing/meter',
-  checkout: '/orb/standalone/billing/checkout',
+  checkout: '/orb/subscription/checkout',
+  checkoutLegacy: '/orb/standalone/billing/checkout',
   portal: '/orb/standalone/billing/portal',
   trialStart: '/orb/standalone/trial/start',
-  onboarding: '/orb/standalone/onboarding/preferences',
+  setup: '/orb/setup',
+  profile: '/orb/profile',
+  memory: '/orb/memory',
+  subscription: '/orb/subscription',
+  subscriptionCancel: '/orb/subscription/cancel',
+  onboarding: '/orb/setup',
+  onboardingLegacy: '/orb/standalone/onboarding/preferences',
+  learnFromAnswer: '/orb/learn/from-answer',
+  authProviders: '/orb/auth/providers',
   safetyAccept: '/orb/standalone/safety/accept',
   safetyStatus: '/orb/standalone/safety/status',
   signup: '/orb/standalone/auth/signup',
   analytics: '/orb/standalone/analytics/event'
+} as const
+
+export const ORB_TEMPLATES_API = {
+  list: '/templates',
+  categories: '/templates/categories',
+  generate: '/templates/generate',
+  exportPdf: '/templates/export/pdf',
+  exportDocx: '/templates/export/docx'
+} as const
+
+export const ORB_SAVED_OUTPUTS_API = {
+  list: '/saved-outputs'
 } as const
 
 export async function fetchOrbAccess(): Promise<OrbAccessPayload> {
@@ -109,6 +130,13 @@ export async function acceptOrbSafety(version: string) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ version, accepted: true })
   })
+}
+
+export async function fetchOrbSetup() {
+  const response = await authFetch<{ success?: boolean; data?: Record<string, unknown> }>(ORB_BILLING_API.setup, {
+    credentials: 'include'
+  })
+  return response.data ?? {}
 }
 
 export async function saveOrbOnboarding(payload: Record<string, unknown>) {

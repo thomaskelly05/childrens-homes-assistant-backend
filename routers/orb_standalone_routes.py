@@ -23,7 +23,7 @@ from services.orb_standalone_brain_service import orb_standalone_brain_service
 from services.orb_grounded_answer_style_service import orb_grounded_answer_style_service
 from services.orb_official_source_anchor_service import orb_official_source_anchor_service
 from services.shared_institutional_cognition_runtime import shared_institutional_cognition_runtime
-from services.orb_explainability_runtime_service import orb_explainability_runtime_service
+from services.orb_unified_explainability_service import orb_unified_explainability_service
 from services.indicare_intelligence_capability_service import (
     indicare_intelligence_capability_service,
 )
@@ -748,7 +748,7 @@ async def standalone_orb_conversation(
             shared_cognition=shared_cognition,
             explainability={"cognition_display_labels": shared_explain.get("cognition_display_labels")},
         )
-        explainability = orb_explainability_runtime_service.build(
+        explainability = orb_unified_explainability_service.build(
             surface="standalone_orb",
             mode=mode,
             active_brains=list(shared_cognition.get("active_brains") or []),
@@ -756,10 +756,10 @@ async def standalone_orb_conversation(
             operational_context_used=False,
             confidence=confidence,
             cognition_display_labels=cognition_labels,
-            depth_topic=shared_explain.get("depth_topic"),
             reasoning_lenses=list(shared_explain.get("reasoning_lenses") or shared_cognition.get("active_lenses") or []),
             vault_domains=list(shared_explain.get("vault_domains") or []),
             shared_explainability=shared_explain,
+            source_anchors=list(shared_explain.get("source_anchors") or []),
         )
         response_sources = filter_display_sources(response_sources, message=payload.message, mode=mode)
         response_citations = filter_display_sources(response_citations, message=payload.message, mode=mode)
@@ -857,7 +857,7 @@ async def standalone_orb_conversation(
             shared_cognition=shared_cognition,
             explainability={"cognition_display_labels": shared_explain.get("cognition_display_labels")},
         )
-        explainability = orb_explainability_runtime_service.build(
+        explainability = orb_unified_explainability_service.build(
             surface="standalone_orb",
             mode=mode,
             active_brains=list(shared_cognition.get("active_brains") or []),
@@ -865,10 +865,10 @@ async def standalone_orb_conversation(
             operational_context_used=False,
             confidence="low",
             cognition_display_labels=cognition_labels,
-            depth_topic=shared_explain.get("depth_topic"),
             reasoning_lenses=list(shared_explain.get("reasoning_lenses") or shared_cognition.get("active_lenses") or []),
             vault_domains=list(shared_explain.get("vault_domains") or []),
             shared_explainability=shared_explain,
+            source_anchors=list(shared_explain.get("source_anchors") or []),
         )
         sources = filter_display_sources(sources, message=payload.message, mode=mode)
         citations = filter_display_sources(citations, message=payload.message, mode=mode)
@@ -992,7 +992,7 @@ async def standalone_orb_conversation_stream(
                 shared_cognition=shared_cognition,
                 explainability={"cognition_display_labels": shared_explain.get("cognition_display_labels")},
             )
-            explainability = orb_explainability_runtime_service.build(
+            explainability = orb_unified_explainability_service.build(
                 surface="standalone_orb",
                 mode=mode,
                 active_brains=list(shared_cognition.get("active_brains") or []),
@@ -1000,10 +1000,10 @@ async def standalone_orb_conversation_stream(
                 operational_context_used=False,
                 confidence=confidence,
                 cognition_display_labels=cognition_labels,
-                depth_topic=shared_explain.get("depth_topic"),
                 reasoning_lenses=list(shared_explain.get("reasoning_lenses") or shared_cognition.get("active_lenses") or []),
                 vault_domains=list(shared_explain.get("vault_domains") or []),
                 shared_explainability=shared_explain,
+                source_anchors=list(shared_explain.get("source_anchors") or []),
             )
             response_sources = filter_display_sources(response_sources, message=payload.message, mode=mode)
             response_citations = filter_display_sources(response_citations, message=payload.message, mode=mode)
