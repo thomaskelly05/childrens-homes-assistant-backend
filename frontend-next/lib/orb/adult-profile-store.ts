@@ -350,7 +350,7 @@ export function roleBasedEmptyStarters(profile: AdultProfile): string[] {
       'What needs my oversight today?',
       'Help me review a safeguarding pattern',
       'Prepare a supervision conversation',
-      'What would Ofsted ask?'
+      'What would an inspector ask?'
     ]
   }
   if (role === 'deputy_manager' || role === 'provider_director' || role === 'senior_support_worker') {
@@ -358,7 +358,7 @@ export function roleBasedEmptyStarters(profile: AdultProfile): string[] {
       'What should I escalate to the manager?',
       'Help me review overnight events',
       'Prepare handover points',
-      'What would Ofsted look for?'
+      'What would inspection evidence look for?'
     ]
   }
   if (role === 'reg_44_visitor') {
@@ -404,7 +404,8 @@ export function personalisedWelcomeMessage(
 
   const result: { heading: string; subline: string; temporaryNote?: string } = {
     heading,
-    subline: ''
+    subline:
+      'Ask about recording, safeguarding, regulatory practice, templates or reflective practice.'
   }
 
   if (options?.temporary) {

@@ -85,11 +85,13 @@ describe('ORB Residential mobile UX', () => {
 
   it('sidebar station links remain on residential sidebar', () => {
     const sidebar = readComponent('components/orb-residential/orb-residential-sidebar.tsx')
-    for (const station of ['review', 'templates', 'learn', 'saved', 'ofsted', 'safeguarding']) {
+    for (const station of ['review', 'templates', 'knowledge', 'saved']) {
       assert.match(sidebar, new RegExp(`data-orb-sidebar-station=\\{station\\.id\\}|data-orb-sidebar-station="${station}"|id: '${station}'`))
     }
+    assert.match(sidebar, /Residential Knowledge Centre/)
+    assert.match(sidebar, /GlassOrbMark/)
     assert.match(sidebar, /data-orb-sidebar-stations/)
-    assert.match(sidebar, /Powered by IndiCare Intelligence/)
+    assert.match(sidebar, /ORB_RESIDENTIAL_TAGLINE/)
   })
 
   it('profile panel uses collapsible grouped sections and status chips', () => {

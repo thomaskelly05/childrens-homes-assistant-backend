@@ -3,6 +3,7 @@ export type OrbStandalonePanel =
   | 'tools'
   | 'documents'
   | 'agents'
+  | 'templates'
   | 'knowledge'
   | 'saved_outputs'
   | 'memory'
@@ -18,6 +19,7 @@ export const ORB_STANDALONE_PANEL_IDS: Exclude<OrbStandalonePanel, null>[] = [
   'tools',
   'documents',
   'agents',
+  'templates',
   'knowledge',
   'saved_outputs',
   'memory',

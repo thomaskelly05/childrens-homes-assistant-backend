@@ -19,7 +19,30 @@ export const metadata: Metadata = {
     template: '%s · ORB Residential'
   },
   description:
-    'The professional AI copilot for children\'s homes, powered by IndiCare Intelligence.'
+    'The professional AI copilot for children\'s homes, powered by IndiCare Intelligence.',
+  manifest: '/manifest.json',
+  applicationName: 'ORB Residential',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'ORB Residential'
+  },
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#f8fafc' },
+    { media: '(prefers-color-scheme: dark)', color: '#05070d' }
+  ],
+  icons: {
+    icon: [{ url: '/icons/orb-icon-192.png', sizes: '192x192', type: 'image/png' }],
+    apple: [{ url: '/icons/orb-icon-192.png', sizes: '192x192', type: 'image/png' }]
+  }
+}
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: 'cover' as const,
+  themeColor: '#05070d'
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

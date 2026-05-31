@@ -58,7 +58,7 @@ describe('adult profile personalisation', () => {
       role: 'registered_manager'
     })
     assert.match(welcome.heading, /Ready when you are/i)
-    assert.equal(welcome.subline, '')
+    assert.match(welcome.subline, /regulatory practice/)
   })
 
   it('welcome message stays calm for NVQ assessor role', () => {
@@ -68,7 +68,7 @@ describe('adult profile personalisation', () => {
       roleLabel: 'NVQ assessor'
     })
     assert.match(welcome.heading, /Ready when you are/i)
-    assert.equal(welcome.subline, '')
+    assert.match(welcome.subline, /regulatory practice/)
   })
 
   it('welcome message stays calm for support worker role', () => {
@@ -77,7 +77,7 @@ describe('adult profile personalisation', () => {
       role: 'residential_support_worker'
     })
     assert.match(welcome.heading, /Ready when you are/i)
-    assert.equal(welcome.subline, '')
+    assert.match(welcome.subline, /regulatory practice/)
   })
 
   it('initials from Tom Kelly are TK', () => {

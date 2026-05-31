@@ -1,0 +1,26 @@
+{
+  "name": "ORB Residential",
+  "short_name": "ORB",
+  "description": "ChatGPT-style residential childcare intelligence, powered by IndiCare.",
+  "start_url": "/orb",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#05070d",
+  "theme_color": "#05070d",
+  "categories": ["productivity", "education"],
+  "icons": [
+    {
+      "src": "/icons/orb-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/orb-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
