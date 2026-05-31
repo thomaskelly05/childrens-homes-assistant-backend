@@ -8,6 +8,7 @@ import {
   understandingToIntelligenceOutput
 } from '@/components/orb-standalone/orb-intelligence-output'
 import { OrbOutputSaveActions } from '@/components/orb-standalone/orb-output-save-actions'
+import { orbStationShellProps } from '@/components/orb-standalone/orb-app-modal'
 import { OrbStandalonePanelShell } from '@/components/orb-standalone/orb-standalone-panel-shell'
 import type { StandaloneProject } from '@/lib/orb/standalone-local-store'
 import {
@@ -46,7 +47,8 @@ export function OrbDocumentPanel({
   projects,
   activeProjectId,
   activeProjectName,
-  onReuseInChat
+  onReuseInChat,
+  residentialSurface = false
 }: {
   open: boolean
   onClose: () => void
@@ -60,6 +62,7 @@ export function OrbDocumentPanel({
   activeProjectId?: string
   activeProjectName?: string
   onReuseInChat?: (prompt: string) => void
+  residentialSurface?: boolean
 }) {
   const [title, setTitle] = useState('Uploaded document')
   const [sourceType, setSourceType] = useState('user_uploaded')
@@ -168,11 +171,12 @@ export function OrbDocumentPanel({
     <OrbStandalonePanelShell
       open={open}
       title="Documents"
-      subtitle="Standalone document analysis"
+      subtitle="Analyse policies, inspection notes, care documents or guidance using ORB."
       onClose={onClose}
       panelId="documents"
       ariaLabel="ORB documents"
-      footer="Documents analysed here are not saved to live IndiCare OS records unless you choose to save them."
+      footer="Documents analysed here are standalone ORB Residential documents. They are not saved to live IndiCare OS records unless you choose to save them."
+      {...orbStationShellProps(residentialSurface, 'wide')}
     >
       <div className="orb-document-panel space-y-4 p-4" data-orb-document-panel>
         <p className="orb-doc-glass-card rounded-xl border border-[var(--orb-line)] px-3 py-2.5 text-[11px] leading-5 text-[var(--orb-muted)]">

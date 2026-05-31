@@ -3,23 +3,31 @@
 /**
  * Single living glass orb mark — sidebar, avatars, loading states.
  */
+export type GlassOrbMarkSize = 'tiny' | 'xs' | 'sm' | 'md' | 'empty' | 'lg' | 'hero'
+
 export function GlassOrbMark({
   size = 'md',
   pulse = false,
   className = ''
 }: {
-  size?: 'xs' | 'sm' | 'md' | 'lg'
+  size?: GlassOrbMarkSize
   pulse?: boolean
   className?: string
 }) {
   const sizeClass =
-    size === 'xs'
-      ? 'glass-orb-mark--xs'
-      : size === 'sm'
-        ? 'glass-orb-mark--sm'
-        : size === 'lg'
-          ? 'glass-orb-mark--lg'
-          : 'glass-orb-mark--md'
+    size === 'tiny'
+      ? 'glass-orb-mark--tiny'
+      : size === 'xs'
+        ? 'glass-orb-mark--xs'
+        : size === 'sm'
+          ? 'glass-orb-mark--sm'
+          : size === 'empty'
+            ? 'glass-orb-mark--empty'
+            : size === 'lg'
+              ? 'glass-orb-mark--lg'
+              : size === 'hero'
+                ? 'glass-orb-mark--hero'
+                : 'glass-orb-mark--md'
 
   return (
     <span
@@ -54,7 +62,7 @@ export function OrbResidentialLogoLockup({
       <p className={`mt-3 font-semibold tracking-tight text-[var(--orb-foreground,#f7faff)] ${titleClass}`}>
         ORB Residential
       </p>
-      <p className="mt-1 text-[10px] font-medium tracking-[0.12em] text-[var(--orb-muted,#6f7787)]">
+      <p className="mt-1 text-[10px] font-medium tracking-[0.12em] text-[#5ec8ff]/90">
         Powered by IndiCare Intelligence
       </p>
     </div>

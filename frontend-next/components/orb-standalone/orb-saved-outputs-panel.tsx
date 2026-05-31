@@ -7,6 +7,7 @@ import {
   OrbIntelligenceOutput,
   type OrbIntelligenceOutputView
 } from '@/components/orb-standalone/orb-intelligence-output'
+import { orbStationShellProps } from '@/components/orb-standalone/orb-app-modal'
 import { OrbStandalonePanelShell } from '@/components/orb-standalone/orb-standalone-panel-shell'
 import {
   isOrbStationAuthError,
@@ -72,12 +73,14 @@ export function OrbSavedOutputsPanel({
   open,
   onClose,
   workspace,
-  onReuseInChat
+  onReuseInChat,
+  residentialSurface = false
 }: {
   open: boolean
   onClose: () => void
   workspace: StandaloneWorkspace
   onReuseInChat?: (prompt: string) => void
+  residentialSurface?: boolean
 }) {
   const [loading, setLoading] = useState(false)
   const [items, setItems] = useState<OrbSavedOutputSummary[]>([])
@@ -181,13 +184,13 @@ export function OrbSavedOutputsPanel({
   return (
     <OrbStandalonePanelShell
       open={open}
-      title="Saved outputs"
-      subtitle="Your ORB Residential library"
+      title="Saved Outputs"
+      subtitle="Reusable answers, briefings and plans from ORB."
       onClose={onClose}
       panelId="saved_outputs"
-      wide
       ariaLabel="ORB saved outputs"
       footer="Saved outputs are ORB Residential artefacts."
+      {...orbStationShellProps(residentialSurface, 'wide')}
     >
       <div className="flex min-h-0 flex-col md:flex-row" data-orb-saved-outputs-panel>
         <div className="flex w-full shrink-0 flex-col border-b border-white/[0.06] md:max-w-md md:border-b-0 md:border-r">

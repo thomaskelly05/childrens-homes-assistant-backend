@@ -22,8 +22,10 @@ import {
 
 import { OrbAppearanceControl } from '@/components/orb-standalone/orb-appearance-control'
 import { OrbBillingSettingsSection } from '@/components/orb-standalone/orb-billing-settings-section'
+import { orbStationShellProps } from '@/components/orb-standalone/orb-app-modal'
 import { OrbStandalonePanelShell } from '@/components/orb-standalone/orb-standalone-panel-shell'
 import type { OrbAppearanceMode } from '@/lib/orb/orb-appearance'
+import { isOrbDeveloperMode } from '@/lib/orb/orb-developer-mode'
 import {
   deleteOrbPasskey,
   fetchOrbPasskeys,
@@ -81,10 +83,12 @@ export function OrbStandaloneSettingsPanel({
   onExportWorkspace,
   onClearMemory,
   onClearProfiles,
-  onClearProjects
+  onClearProjects,
+  residentialSurface = false
 }: {
   open: boolean
   onClose: () => void
+  residentialSurface?: boolean
   appearanceMode?: OrbAppearanceMode
   onAppearanceChange?: (mode: OrbAppearanceMode) => void
   a11yPrefs?: StandaloneOrbAccessibilityPreferences
@@ -107,6 +111,7 @@ export function OrbStandaloneSettingsPanel({
   const [passkeys, setPasskeys] = useState<PasskeyItem[]>([])
   const [passkeyStatus, setPasskeyStatus] = useState<string | null>(null)
   const [passkeyBusy, setPasskeyBusy] = useState(false)
+  const developerMode = isOrbDeveloperMode()
 
   useEffect(() => {
     if (!open) return
@@ -177,9 +182,10 @@ export function OrbStandaloneSettingsPanel({
       onClose={onClose}
       ariaLabel="ORB settings"
       panelId="settings"
-      layout="center"
-      wide
       footer="ORB Residential does not access IndiCare OS records. It uses your profile, conversation, uploaded documents and IndiCare residential intelligence."
+      {...(residentialSurface
+        ? orbStationShellProps(true, 'compact')
+        : { layout: 'center' as const, wide: true })}
     >
       <div className="flex min-h-0 flex-1 flex-col md:flex-row" data-orb-settings-panel>
         <nav className="shrink-0 border-b border-[var(--orb-line)] p-2 md:w-44 md:border-b-0 md:border-r" data-orb-settings-nav>
@@ -279,13 +285,17 @@ export function OrbStandaloneSettingsPanel({
                 onChange={(value) => updateChat({ defaultTemporaryChat: value })}
                 dataAttr="default-temporary-chat"
               />
-              <ToggleRow
-                label="Show cognition labels"
-                hint="Pills such as “Using · Safeguarding” under assistant answers"
-                checked={chatSettings.showCognitionLabels}
-                onChange={(value) => updateChat({ showCognitionLabels: value })}
-                dataAttr="show-cognition-labels"
-              />
+              {developerMode ? (
+                <div data-orb-settings-developer-only>
+                  <ToggleRow
+                    label="Show cognition labels"
+                    hint="Developer only — internal routing labels under answers"
+                    checked={chatSettings.showCognitionLabels}
+                    onChange={(value) => updateChat({ showCognitionLabels: value })}
+                    dataAttr="show-cognition-labels"
+                  />
+                </div>
+              ) : null}
               <RowButton
                 icon={<User className="h-4 w-4" />}
                 label="Manage profile"

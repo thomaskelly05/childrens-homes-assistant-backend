@@ -413,24 +413,44 @@ html[data-orb-residential='1'] .orb-chat-layout--residential .orb-message-assist
   isolation: isolate;
 }
 
+/* tiny 24px · small 40px · md 44px · empty 72px · hero 140px */
+.glass-orb-mark--tiny {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
 .glass-orb-mark--xs {
   width: 1.5rem;
   height: 1.5rem;
 }
 
 .glass-orb-mark--sm {
-  width: 2rem;
-  height: 2rem;
+  width: 2.5rem;
+  height: 2.5rem;
 }
 
 .glass-orb-mark--md {
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 2.75rem;
+  height: 2.75rem;
+}
+
+.glass-orb-mark--empty {
+  width: 4.5rem;
+  height: 4.5rem;
 }
 
 .glass-orb-mark--lg {
   width: 3rem;
   height: 3rem;
+}
+
+.glass-orb-mark--hero {
+  width: 8.75rem;
+  height: 8.75rem;
+}
+
+.glass-orb-mark--hero .glass-orb-mark__sphere {
+  animation-duration: 3.2s;
 }
 
 .glass-orb-mark__sphere {
@@ -449,6 +469,39 @@ html[data-orb-residential='1'] .orb-chat-layout--residential .orb-message-assist
 
 .glass-orb-mark--pulse .glass-orb-mark__sphere {
   animation-duration: 2.4s;
+}
+
+/* Centred app modals — ChatGPT-style station pop-outs */
+.orb-panel-modal--compact {
+  max-width: min(100%, 45rem);
+}
+
+.orb-panel-modal--standard {
+  max-width: min(100%, 48rem);
+}
+
+.orb-panel-modal--wide {
+  max-width: min(100%, 62.5rem);
+}
+
+@media (max-width: 639px) {
+  .orb-panel-modal--fullscreen-mobile {
+    max-width: 100%;
+    max-height: 100dvh;
+    height: 100dvh;
+    border-radius: 0;
+  }
+}
+
+html[data-orb-residential='1'] [data-orb-app-modal='true'] .orb-panel-modal {
+  background: rgba(12, 16, 28, 0.96);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+html[data-orb-residential='1'] .orb-empty-brand-tagline,
+html[data-orb-residential='1'] [data-orb-sidebar-brand] + p,
+html[data-orb-residential='1'] [data-orb-empty-brand-tagline] {
+  color: #5ec8ff;
 }
 
 .orb-doc-glass-card {

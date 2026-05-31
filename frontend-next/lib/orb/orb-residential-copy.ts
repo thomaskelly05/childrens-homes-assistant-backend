@@ -4,6 +4,8 @@ import type { StandaloneOrbMode } from '@/lib/orb/standalone-client'
 export const ORB_RESIDENTIAL_PRODUCT_NAME = 'ORB Residential'
 export const ORB_RESIDENTIAL_TAGLINE = 'Powered by IndiCare Intelligence'
 
+export const ORB_RESIDENTIAL_EMPTY_HEADING_DESKTOP = 'What are you working on?'
+
 export const ORB_RESIDENTIAL_EMPTY_SUBLINE =
   'Ask about recording, safeguarding, regulatory practice, templates or reflective practice.'
 
