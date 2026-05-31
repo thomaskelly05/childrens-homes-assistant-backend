@@ -1,17 +1,20 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { CreditCard } from 'lucide-react'
+import { CreditCard, RefreshCw, Wallet } from 'lucide-react'
 
 import { OrbAppModal } from '@/components/orb-standalone/orb-app-modal'
 import {
   fetchOrbAccess,
-  fetchOrbBillingMeter,
+  fetchOrbUsage,
   openOrbBillingPortal,
   refreshOrbAccessAfterCheckout,
+  saveOrbSpendingCap,
   startOrbCheckout,
+  startOrbTopUpCheckout,
   startOrbTrial,
-  type OrbAccessPayload
+  type OrbAccessPayload,
+  type OrbUsageSummary
 } from '@/lib/orb/orb-billing-client'
 
 const PLAN_FEATURES = [
@@ -20,26 +23,54 @@ const PLAN_FEATURES = [
   'Templates',
   'Knowledge Centre',
   'Documents',
-  'Saved Outputs'
+  'Saved Outputs',
+  'ORB Voice'
 ]
+
+const TOP_UP_OPTIONS = [
+  { label: '£5', pence: 500 },
+  { label: '£10', pence: 1000 },
+  { label: '£25', pence: 2500 },
+  { label: '£50', pence: 5000 }
+] as const
+
+function cardClassName() {
+  return 'orb-doc-glass-card rounded-2xl border border-cyan-500/15 bg-white/[0.03] p-5 shadow-[0_8px_32px_rgba(0,0,0,0.25)]'
+}
 
 export function OrbBillingModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [access, setAccess] = useState<OrbAccessPayload | null>(null)
-  const [meter, setMeter] = useState<Record<string, unknown> | null>(null)
+  const [usage, setUsage] = useState<OrbUsageSummary | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [spendingCap, setSpendingCap] = useState('')
+  const [monthlyCapPounds, setMonthlyCapPounds] = useState('')
+  const [warningPercent, setWarningPercent] = useState('80')
+  const [allowOverage, setAllowOverage] = useState(false)
+
+  async function loadBilling() {
+    const [accessPayload, usagePayload] = await Promise.all([
+      fetchOrbAccess(),
+      fetchOrbUsage().catch(() => null)
+    ])
+    setAccess(accessPayload)
+    setUsage(usagePayload)
+    if (usagePayload?.monthly_cap_pence != null) {
+      setMonthlyCapPounds(String(Math.round(usagePayload.monthly_cap_pence / 100)))
+    }
+    if (usagePayload?.warning_threshold_percent != null) {
+      setWarningPercent(String(usagePayload.warning_threshold_percent))
+    }
+    setAllowOverage(Boolean(usagePayload?.allow_overage))
+  }
 
   useEffect(() => {
     if (!open) return
-    Promise.all([fetchOrbAccess(), fetchOrbBillingMeter().catch(() => null)])
-      .then(([accessPayload, meterPayload]) => {
-        setAccess(accessPayload)
-        setMeter(meterPayload)
-      })
-      .catch(() => {
-        setError('Billing information could not be loaded.')
-      })
+    setError(null)
+    setNotice(null)
+    void loadBilling().catch(() => {
+      setError('Billing information could not be loaded. You can still subscribe when checkout is available.')
+    })
   }, [open])
 
   const stripeReady = Boolean(access?.billing?.stripe_configured)
@@ -48,11 +79,16 @@ export function OrbBillingModal({ open, onClose }: { open: boolean; onClose: () 
 
   async function handleCheckout() {
     setLoading(true)
+    setError(null)
     try {
       const url = await startOrbCheckout()
       window.location.href = url
     } catch {
-      setError('Checkout unavailable. Billing is almost ready — you can manage your subscription through Stripe when enabled.')
+      setError(
+        stripeReady
+          ? 'Checkout could not be started. Try again in a moment.'
+          : 'Stripe is not configured yet. Subscription checkout will be available once billing is enabled.'
+      )
     } finally {
       setLoading(false)
     }
@@ -60,11 +96,12 @@ export function OrbBillingModal({ open, onClose }: { open: boolean; onClose: () 
 
   async function handlePortal() {
     setLoading(true)
+    setError(null)
     try {
       const url = await openOrbBillingPortal()
       window.location.href = url
     } catch {
-      setError('Billing portal unavailable.')
+      setError('Manage subscription opens in Stripe when you have an active customer record.')
     } finally {
       setLoading(false)
     }
@@ -74,9 +111,47 @@ export function OrbBillingModal({ open, onClose }: { open: boolean; onClose: () 
     setLoading(true)
     try {
       await startOrbTrial()
-      setAccess(await fetchOrbAccess())
+      await loadBilling()
+      setNotice('Trial started.')
     } catch {
       setError('Trial could not be started.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleSaveCap() {
+    setLoading(true)
+    setError(null)
+    try {
+      const pounds = monthlyCapPounds.trim()
+      const monthly_cap_pence = pounds ? Math.round(Number(pounds) * 100) : null
+      await saveOrbSpendingCap({
+        monthly_cap_pence,
+        warning_threshold_percent: Math.min(100, Math.max(0, Number(warningPercent) || 80)),
+        allow_overage: allowOverage
+      })
+      setUsage(await fetchOrbUsage())
+      setNotice('Spending cap saved.')
+    } catch {
+      setError('Could not save spending cap.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleTopUp(amountPence: number) {
+    setLoading(true)
+    setError(null)
+    try {
+      const url = await startOrbTopUpCheckout(amountPence)
+      window.location.href = url
+    } catch {
+      setError(
+        stripeReady
+          ? 'Top-up checkout could not be started.'
+          : 'Top-up requires Stripe to be configured.'
+      )
     } finally {
       setLoading(false)
     }
@@ -89,103 +164,179 @@ export function OrbBillingModal({ open, onClose }: { open: boolean; onClose: () 
       subtitle="Manage your ORB Residential subscription and usage."
       onClose={onClose}
       panelId="billing"
-      size="compact"
+      size="wide"
     >
-      <div className="space-y-5 p-4" data-orb-billing-modal>
-        <section className="orb-doc-glass-card rounded-xl border border-[var(--orb-line)] p-4" data-orb-billing-plan-card>
-          <p className="text-sm font-semibold text-[var(--orb-foreground)]">ORB Residential</p>
-          <p className="mt-1 text-lg font-semibold text-[#5ec8ff]">£9.99/month</p>
-          <ul className="mt-3 space-y-1 text-xs text-[var(--orb-muted)]">
+      <div className="space-y-6 p-5 sm:p-6" data-orb-billing-modal>
+        <section className={cardClassName()} data-orb-billing-plan-card>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-base font-semibold text-[var(--orb-foreground)]">ORB Residential</p>
+              <p className="mt-1 text-2xl font-semibold tracking-tight text-[#5ec8ff]">£9.99/month</p>
+            </div>
+            <span className="rounded-full border border-cyan-500/25 bg-cyan-500/10 px-3 py-1 text-xs font-medium capitalize text-cyan-200">
+              {statusLabel}
+            </span>
+          </div>
+          <ul className="mt-4 grid gap-2 text-sm text-[var(--orb-muted)] sm:grid-cols-2">
             {PLAN_FEATURES.map((feature) => (
               <li key={feature} className="flex items-center gap-2">
-                <span className="h-1 w-1 rounded-full bg-cyan-400" aria-hidden />
+                <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" aria-hidden />
                 {feature}
               </li>
             ))}
           </ul>
+          <p className="mt-4 text-xs leading-5 text-[var(--orb-muted)]">
+            Pay with card, Apple Pay or Google Pay in Stripe Checkout when your domain is verified.
+          </p>
         </section>
 
-        <section data-orb-billing-status>
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--orb-muted)]">Status</h3>
-          <dl className="mt-2 grid gap-2 text-xs">
-            <div className="flex justify-between gap-4">
-              <dt className="text-[var(--orb-muted)]">Subscription</dt>
-              <dd className="font-medium capitalize">{statusLabel}</dd>
+        <section className={cardClassName()} data-orb-billing-status>
+          <h3 className="text-sm font-semibold text-[var(--orb-foreground)]">Subscription</h3>
+          <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
+            <div>
+              <dt className="text-[var(--orb-muted)]">Status</dt>
+              <dd className="mt-0.5 font-medium capitalize">{statusLabel}</dd>
             </div>
             {access?.subscription?.current_period_end ? (
-              <div className="flex justify-between gap-4">
+              <div>
                 <dt className="text-[var(--orb-muted)]">Renews</dt>
-                <dd className="font-medium">{String(access.subscription.current_period_end).slice(0, 10)}</dd>
-              </div>
-            ) : null}
-            {access?.trial?.active ? (
-              <div className="flex justify-between gap-4">
-                <dt className="text-[var(--orb-muted)]">Trial</dt>
-                <dd className="font-medium">
-                  Active{access.trial.days_left != null ? ` · ${access.trial.days_left} days left` : ''}
+                <dd className="mt-0.5 font-medium">
+                  {String(access.subscription.current_period_end).slice(0, 10)}
                 </dd>
               </div>
             ) : null}
-          </dl>
-        </section>
-
-        <section data-orb-billing-usage>
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--orb-muted)]">Usage</h3>
-          <dl className="mt-2 grid gap-2 text-xs">
-            <div className="flex justify-between gap-4">
-              <dt className="text-[var(--orb-muted)]">Messages this period</dt>
-              <dd className="font-medium">{String(meter?.total_requests ?? meter?.messages_used ?? '—')}</dd>
-            </div>
-            {meter?.soft_limit_warning ? (
-              <div className="flex justify-between gap-4">
-                <dt className="text-[var(--orb-muted)]">Warning</dt>
-                <dd className="font-medium text-amber-300">{String(meter.soft_limit_warning)}</dd>
+            {access?.trial?.active ? (
+              <div>
+                <dt className="text-[var(--orb-muted)]">Trial</dt>
+                <dd className="mt-0.5 font-medium">
+                  Active
+                  {access.trial.days_left != null ? ` · ${access.trial.days_left} days left` : ''}
+                </dd>
               </div>
             ) : null}
+            <div>
+              <dt className="text-[var(--orb-muted)]">Payment</dt>
+              <dd className="mt-0.5 font-medium">{stripeReady ? 'Stripe ready' : 'Setup required'}</dd>
+            </div>
           </dl>
         </section>
 
-        <section data-orb-billing-spending-cap>
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--orb-muted)]">Spending cap</h3>
-          <p className="mt-1 text-[11px] leading-5 text-[var(--orb-muted)]">
+        <section className={cardClassName()} data-orb-billing-usage>
+          <h3 className="text-sm font-semibold text-[var(--orb-foreground)]">Usage</h3>
+          <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
+            <div>
+              <dt className="text-[var(--orb-muted)]">Messages this period</dt>
+              <dd className="mt-0.5 font-medium">{usage?.messages_this_period ?? '—'}</dd>
+            </div>
+            <div>
+              <dt className="text-[var(--orb-muted)]">Included allowance</dt>
+              <dd className="mt-0.5 font-medium">
+                {usage?.included_messages != null ? usage.included_messages : 'Plan allowance'}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[var(--orb-muted)]">Credits balance</dt>
+              <dd className="mt-0.5 font-medium">
+                {usage?.credits_balance != null
+                  ? `£${(usage.credits_balance / 100).toFixed(2)}`
+                  : '—'}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[var(--orb-muted)]">Estimated spend</dt>
+              <dd className="mt-0.5 font-medium">
+                {usage?.estimated_spend_pence != null
+                  ? `£${(usage.estimated_spend_pence / 100).toFixed(2)}`
+                  : '—'}
+              </dd>
+            </div>
+          </dl>
+        </section>
+
+        <section className={cardClassName()} data-orb-billing-spending-cap>
+          <h3 className="text-sm font-semibold text-[var(--orb-foreground)]">Spending cap</h3>
+          <p className="mt-1 text-sm leading-6 text-[var(--orb-muted)]">
             Set a monthly cap for additional usage beyond your plan allowance.
           </p>
-          <div className="mt-2 flex gap-2">
-            <input
-              type="number"
-              min={0}
-              value={spendingCap}
-              onChange={(e) => setSpendingCap(e.target.value)}
-              placeholder="Monthly cap (£)"
-              className="min-w-0 flex-1 rounded-lg border border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] px-3 py-2 text-xs text-[var(--orb-foreground)]"
-            />
-            <button
-              type="button"
-              className="rounded-lg border border-[var(--orb-line)] px-3 py-2 text-xs font-semibold text-[var(--orb-muted)]"
-              disabled
-              title="Spending cap will be available when billing meter is fully enabled"
-            >
-              Set cap
-            </button>
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <label className="block text-xs text-[var(--orb-muted)] sm:col-span-1">
+              Monthly cap (£)
+              <input
+                type="number"
+                min={0}
+                value={monthlyCapPounds}
+                onChange={(e) => setMonthlyCapPounds(e.target.value)}
+                placeholder="e.g. 10"
+                className="mt-1 w-full rounded-xl border border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] px-3 py-2.5 text-sm text-[var(--orb-foreground)]"
+              />
+            </label>
+            <label className="block text-xs text-[var(--orb-muted)]">
+              Warning at (%)
+              <input
+                type="number"
+                min={0}
+                max={100}
+                value={warningPercent}
+                onChange={(e) => setWarningPercent(e.target.value)}
+                className="mt-1 w-full rounded-xl border border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] px-3 py-2.5 text-sm text-[var(--orb-foreground)]"
+              />
+            </label>
+            <label className="flex items-end gap-2 pb-2 text-sm text-[var(--orb-foreground)]">
+              <input
+                type="checkbox"
+                checked={allowOverage}
+                onChange={(e) => setAllowOverage(e.target.checked)}
+                className="rounded border-[var(--orb-line)]"
+              />
+              Allow overage
+            </label>
           </div>
+          <button
+            type="button"
+            disabled={loading}
+            onClick={() => void handleSaveCap()}
+            className="mt-4 rounded-xl border border-cyan-500/30 bg-cyan-500/10 px-4 py-2.5 text-sm font-semibold text-cyan-100 disabled:opacity-50"
+            data-orb-billing-save-cap
+          >
+            Save cap
+          </button>
         </section>
 
-        <section data-orb-billing-buy-more>
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--orb-muted)]">Buy more</h3>
-          <p className="mt-1 text-[11px] text-[var(--orb-muted)]">
-            Top up with extra usage credits via Stripe Checkout (card, Apple Pay or Google Pay where supported).
+        <section className={cardClassName()} data-orb-billing-buy-more>
+          <h3 className="text-sm font-semibold text-[var(--orb-foreground)]">Buy more</h3>
+          <p className="mt-1 text-sm leading-6 text-[var(--orb-muted)]">
+            Top up with extra usage credits via Stripe Checkout — card, Apple Pay or Google Pay where supported.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {TOP_UP_OPTIONS.map((option) => (
+              <button
+                key={option.pence}
+                type="button"
+                disabled={loading || !stripeReady}
+                onClick={() => void handleTopUp(option.pence)}
+                className="rounded-xl border border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] px-4 py-2.5 text-sm font-semibold hover:border-cyan-500/40 disabled:opacity-50"
+                data-orb-billing-topup={option.pence}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <p className="mt-3 flex items-center gap-2 text-xs text-[var(--orb-muted)]">
+            <Wallet className="h-3.5 w-3.5" aria-hidden />
+            Buy credits
           </p>
         </section>
 
-        {error ? <p className="text-xs text-amber-300/90">{error}</p> : null}
+        {notice ? <p className="text-sm text-cyan-200/90">{notice}</p> : null}
+        {error ? <p className="text-sm text-amber-300/90">{error}</p> : null}
 
-        <div className="flex flex-wrap gap-2">
+        <div className="sticky bottom-0 flex flex-wrap gap-2 border-t border-[var(--orb-line)] bg-[var(--orb-surface)]/95 pt-4 backdrop-blur-sm">
           {!access?.can_use_orb && access?.trial?.available ? (
             <button
               type="button"
               disabled={loading}
               onClick={() => void handleTrial()}
-              className="rounded-lg bg-cyan-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
+              className="rounded-xl bg-cyan-600 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
               data-orb-billing-trial
             >
               Start free trial
@@ -196,7 +347,7 @@ export function OrbBillingModal({ open, onClose }: { open: boolean; onClose: () 
               type="button"
               disabled={loading || !stripeReady}
               onClick={() => void handleCheckout()}
-              className="rounded-lg bg-gradient-to-r from-[#168bff] to-[#0d5fcc] px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
+              className="rounded-xl bg-gradient-to-r from-[#168bff] to-[#0d5fcc] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
               data-orb-billing-upgrade
             >
               Subscribe · £9.99/month
@@ -206,10 +357,10 @@ export function OrbBillingModal({ open, onClose }: { open: boolean; onClose: () 
               type="button"
               disabled={loading || !stripeReady}
               onClick={() => void handlePortal()}
-              className="inline-flex items-center gap-1 rounded-lg border border-[var(--orb-line)] px-3 py-2 text-xs font-semibold disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-xl border border-[var(--orb-line)] px-4 py-2.5 text-sm font-semibold disabled:opacity-50"
               data-orb-billing-portal
             >
-              <CreditCard className="h-3.5 w-3.5" aria-hidden />
+              <CreditCard className="h-4 w-4" aria-hidden />
               Manage subscription
             </button>
           )}
@@ -217,21 +368,27 @@ export function OrbBillingModal({ open, onClose }: { open: boolean; onClose: () 
             type="button"
             disabled={loading}
             onClick={() => {
-              void refreshOrbAccessAfterCheckout({ maxAttempts: 2, delayMs: 500 }).then((result) => {
+              void refreshOrbAccessAfterCheckout({ maxAttempts: 2, delayMs: 500 }).then(async (result) => {
                 setAccess(result.access)
-                if (result.meter) setMeter(result.meter)
+                try {
+                  setUsage(await fetchOrbUsage())
+                } catch {
+                  // keep prior usage
+                }
               })
             }}
-            className="rounded-lg border border-[var(--orb-line)] px-3 py-2 text-xs font-semibold"
+            className="inline-flex items-center gap-2 rounded-xl border border-[var(--orb-line)] px-4 py-2.5 text-sm font-semibold"
             data-orb-billing-refresh
           >
+            <RefreshCw className="h-4 w-4" aria-hidden />
             Refresh status
           </button>
         </div>
 
         {!stripeReady ? (
-          <p className="text-[10px] leading-5 text-[var(--orb-muted)]" data-orb-billing-stripe-fallback>
-            Billing is almost ready. You can manage your subscription through Stripe when enabled.
+          <p className="text-xs leading-5 text-[var(--orb-muted)]" data-orb-billing-stripe-fallback>
+            Stripe environment variables are not configured. Subscribe and top-up actions stay disabled until
+            production setup is complete.
           </p>
         ) : null}
       </div>

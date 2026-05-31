@@ -454,6 +454,22 @@ async def orb_standalone_stripe_webhook(request: Request, conn=Depends(get_db)):
             metadata = data_object.get("metadata") or {}
             if metadata.get("product") not in {None, "orb_residential"}:
                 return JSONResponse({"ok": True, "ignored": True})
+            if metadata.get("purchase_type") == "usage_topup":
+                user_id_raw = metadata.get("user_id")
+                session_id = str(data_object.get("id") or "")
+                amount_raw = metadata.get("amount_pence") or data_object.get("amount_total")
+                if user_id_raw and session_id:
+                    from db.orb_usage_commercial_db import record_orb_usage_credit_purchase
+
+                    amount_pence = int(amount_raw) if amount_raw is not None else 0
+                    record_orb_usage_credit_purchase(
+                        conn,
+                        user_id=int(user_id_raw),
+                        stripe_checkout_session_id=session_id,
+                        amount_pence=amount_pence,
+                        status="completed",
+                    )
+                return JSONResponse({"ok": True, "topup": True})
             user_id = metadata.get("user_id")
             customer_id = data_object.get("customer")
             subscription_id = data_object.get("subscription")

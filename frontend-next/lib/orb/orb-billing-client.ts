@@ -54,6 +54,10 @@ export const ORB_BILLING_API = {
   memory: '/orb/memory',
   subscription: '/orb/subscription',
   subscriptionCancel: '/orb/subscription/cancel',
+  subscriptionPortal: '/orb/subscription/portal',
+  usage: '/orb/usage',
+  spendingCap: '/orb/usage/spending-cap',
+  topUpCheckout: '/orb/usage/top-up-checkout',
   onboarding: '/orb/setup',
   onboardingLegacy: '/orb/standalone/onboarding/preferences',
   learnFromAnswer: '/orb/learn/from-answer',
@@ -97,12 +101,73 @@ export async function startOrbTrial() {
   })
 }
 
+export type OrbUsageSummary = {
+  messages_this_period: number
+  included_messages: number | null
+  extra_usage_pence: number
+  estimated_spend_pence: number
+  monthly_cap_pence: number | null
+  warning_threshold_percent: number
+  allow_overage: boolean
+  credits_balance: number
+}
+
+export async function fetchOrbUsage(): Promise<OrbUsageSummary> {
+  const response = await authFetch<OrbUsageSummary | { data?: OrbUsageSummary }>(ORB_BILLING_API.usage, {
+    credentials: 'include'
+  })
+  if (response && typeof response === 'object' && 'messages_this_period' in response) {
+    return response as OrbUsageSummary
+  }
+  return (response as { data?: OrbUsageSummary }).data ?? {
+    messages_this_period: 0,
+    included_messages: null,
+    extra_usage_pence: 0,
+    estimated_spend_pence: 0,
+    monthly_cap_pence: null,
+    warning_threshold_percent: 80,
+    allow_overage: false,
+    credits_balance: 0
+  }
+}
+
+export async function saveOrbSpendingCap(body: {
+  monthly_cap_pence: number | null
+  warning_threshold_percent: number
+  allow_overage: boolean
+}) {
+  return authFetch<{ ok: boolean }>(ORB_BILLING_API.spendingCap, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  })
+}
+
+export async function startOrbTopUpCheckout(amountPence: number): Promise<string> {
+  const response = await authFetchResponse(ORB_BILLING_API.topUpCheckout, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ amount_pence: amountPence })
+  })
+  const body = (await response.json()) as { checkout_url?: string }
+  if (!response.ok || !body.checkout_url) {
+    throw new Error('Top-up checkout could not be started')
+  }
+  return body.checkout_url
+}
+
 export async function startOrbCheckout(successUrl?: string, cancelUrl?: string) {
+  const base =
+    typeof window !== 'undefined' ? window.location.origin : ''
+  const resolvedSuccess = successUrl ?? (base ? `${base}/orb?billing=success` : undefined)
+  const resolvedCancel = cancelUrl ?? (base ? `${base}/orb?billing=cancelled` : undefined)
   const response = await authFetchResponse(ORB_BILLING_API.checkout, {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ success_url: successUrl, cancel_url: cancelUrl })
+    body: JSON.stringify({ success_url: resolvedSuccess, cancel_url: resolvedCancel })
   })
   const body = (await response.json()) as { checkout_url?: string; success?: boolean }
   if (!response.ok || !body.checkout_url) {
@@ -112,10 +177,15 @@ export async function startOrbCheckout(successUrl?: string, cancelUrl?: string) 
 }
 
 export async function openOrbBillingPortal() {
-  const response = await authFetchResponse(ORB_BILLING_API.portal, {
+  const response = await authFetchResponse(ORB_BILLING_API.subscriptionPortal, {
     method: 'POST',
     credentials: 'include'
-  })
+  }).catch(() =>
+    authFetchResponse(ORB_BILLING_API.portal, {
+      method: 'POST',
+      credentials: 'include'
+    })
+  )
   const body = (await response.json()) as { portal_url?: string }
   if (!response.ok || !body.portal_url) {
     throw new Error('Billing portal unavailable')

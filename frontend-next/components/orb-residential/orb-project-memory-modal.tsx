@@ -30,12 +30,12 @@ export function OrbProjectMemoryModal({
       subtitle={`Optional context for ${projectName}`}
       onClose={onClose}
       panelId="project-memory"
-      size="compact"
+      size="standard"
     >
-      <div className="space-y-4 p-4" data-orb-project-memory-modal>
-        <p className="text-xs leading-5 text-[var(--orb-muted)]">
-          This memory helps ORB when you chat inside this project. It is stored on this device only — not live
-          IndiCare OS data.
+      <div className="space-y-5 p-5 sm:p-6" data-orb-project-memory-modal>
+        <p className="text-sm leading-6 text-[var(--orb-muted)]">
+          This memory helps ORB when you chat inside this project. It syncs to your account when signed in, with
+          local backup on this device. It is user-supplied ORB memory — not live IndiCare OS record data.
         </p>
         <textarea
           value={memory}

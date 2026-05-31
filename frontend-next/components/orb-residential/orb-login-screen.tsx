@@ -9,7 +9,12 @@ import { OrbHeroSphere } from '@/components/orb-residential/ui/orb-hero-sphere'
 import { useOrbResidentialThemeLock } from '@/components/orb-residential/use-orb-residential-theme-lock'
 import { orbNavyGradient, orbNavyPage } from '@/components/orb-residential/ui/orb-theme'
 import { useAuth } from '@/contexts/auth-context'
-import { fetchOrbAccess, orbOAuthStartUrl, trackOrbAnalytics } from '@/lib/orb/orb-billing-client'
+import {
+  fetchOrbAccess,
+  ORB_BILLING_API,
+  orbOAuthStartUrl,
+  trackOrbAnalytics
+} from '@/lib/orb/orb-billing-client'
 import { beginOrbPasskeyLogin, orbPasskeysSupported } from '@/lib/orb/orb-passkey-client'
 
 const ORB_RETURN = '/orb'
@@ -36,18 +41,29 @@ function OrbLoginPanel() {
 
   const returnUrl = searchParams.get('returnUrl') || ORB_RETURN
 
-  const oauth = useMemo(
-    () => ({
-      google: process.env.NEXT_PUBLIC_OAUTH_GOOGLE_ENABLED === '1',
-      microsoft: process.env.NEXT_PUBLIC_OAUTH_MICROSOFT_ENABLED === '1',
-      apple: process.env.NEXT_PUBLIC_OAUTH_APPLE_ENABLED === '1'
-    }),
-    []
-  )
+  const [oauth, setOauth] = useState({
+    google: process.env.NEXT_PUBLIC_OAUTH_GOOGLE_ENABLED === '1',
+    microsoft: process.env.NEXT_PUBLIC_OAUTH_MICROSOFT_ENABLED === '1',
+    apple: process.env.NEXT_PUBLIC_OAUTH_APPLE_ENABLED === '1'
+  })
 
   useEffect(() => {
     setPasskeySupported(orbPasskeysSupported())
     trackOrbAnalytics('login_viewed')
+    void fetch(ORB_BILLING_API.authProviders, { credentials: 'include' })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body) => {
+        const providers = (body as { data?: { oauth?: Record<string, boolean> } })?.data?.oauth
+        if (!providers) return
+        setOauth({
+          google: Boolean(providers.google),
+          microsoft: Boolean(providers.microsoft),
+          apple: Boolean(providers.apple)
+        })
+      })
+      .catch(() => {
+        // Keep build-time flags
+      })
     const oauthError = searchParams.get('oauth_error')
     if (oauthError) setError(oauthError)
     if (searchParams.get('provider') === 'email') setShowEmailForm(true)
@@ -152,7 +168,7 @@ function OrbLoginPanel() {
               disabled={!oauth.google}
               data-orb-oauth-google
             >
-              {oauth.google ? 'Continue with Google' : 'Google sign-in not configured'}
+              {oauth.google ? 'Continue with Google' : 'Google — not configured'}
             </OrbAuthButton>
             <OrbAuthButton
               provider="apple"

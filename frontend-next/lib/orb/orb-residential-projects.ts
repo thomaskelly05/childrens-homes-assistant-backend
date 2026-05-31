@@ -57,15 +57,19 @@ function timestamp() {
 
 export function residentialProjectsToMemory(workspace: StandaloneWorkspace): OrbResidentialProjectMemory[] {
   const chats = Array.isArray(workspace.chats) ? workspace.chats : []
-  return (Array.isArray(workspace.projects) ? workspace.projects : []).map((project) => ({
-    id: project.id,
-    title: project.name,
-    description: project.description,
-    createdAt: project.createdAt,
-    updatedAt: project.updatedAt,
-    chatIds: chats.filter((chat) => chat.projectId === project.id).map((chat) => chat.id),
-    pinnedContext: undefined
-  }))
+  return (Array.isArray(workspace.projects) ? workspace.projects : []).map((project) => {
+    const extended = project as { memory?: string }
+    const memory = extended.memory?.trim() || project.description?.trim()
+    return {
+      id: project.id,
+      title: project.name,
+      description: project.description,
+      createdAt: project.createdAt,
+      updatedAt: project.updatedAt,
+      chatIds: chats.filter((chat) => chat.projectId === project.id).map((chat) => chat.id),
+      pinnedContext: memory || undefined
+    }
+  })
 }
 
 export function writeOrbProjectsMemory(workspace: StandaloneWorkspace): void {
