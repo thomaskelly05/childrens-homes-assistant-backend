@@ -82,8 +82,8 @@ export default function OrbBillingSuccessPage() {
           >
             Continue to ORB
           </button>
-          <Link href="/orb/access" className="rounded-2xl px-5 py-3 text-sm font-semibold text-indigo-700">
-            View access
+          <Link href="/orb/billing" className="rounded-2xl px-5 py-3 text-sm font-semibold text-indigo-700">
+            View billing
           </Link>
         </div>
         <p className="mt-8 text-xs leading-6 text-slate-500">

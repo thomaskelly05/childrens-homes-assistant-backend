@@ -1,1 +1,6 @@
-export { OrbUpgradeScreen as default } from '@/components/orb-standalone/orb-upgrade-screen'
+import { redirect } from 'next/navigation'
+
+/** Legacy route — canonical billing is /orb/billing */
+export default function OrbAccessRedirect() {
+  redirect('/orb/billing')
+}

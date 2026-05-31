@@ -14,8 +14,12 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'IndiCare OS',
-  description: 'Children\'s home operational workspace'
+  title: {
+    default: 'ORB Residential',
+    template: '%s · ORB Residential'
+  },
+  description:
+    'The professional AI copilot for children\'s homes, powered by IndiCare Intelligence.'
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

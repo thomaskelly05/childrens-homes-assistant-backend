@@ -1,17 +1,17 @@
 import { Suspense } from 'react'
 
-import { OrbCareCompanion } from '@/components/orb-standalone/orb-care-companion'
+import { OrbResidentialChatHome } from '@/components/orb-residential/orb-residential-chat-home'
 
 export default function OrbPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center bg-[#F7F7F8] text-sm text-[#6B7280]">
+        <div className="flex min-h-screen items-center justify-center bg-[#050b18] text-sm text-slate-400">
           Loading ORB…
         </div>
       }
     >
-      <OrbCareCompanion />
+      <OrbResidentialChatHome />
     </Suspense>
   )
 }

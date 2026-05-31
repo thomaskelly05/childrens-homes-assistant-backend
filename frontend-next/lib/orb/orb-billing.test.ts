@@ -3,10 +3,11 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 
 test('ORB login copy includes product name', () => {
-  const login = readFileSync(new URL('../../app/orb/login/page.tsx', import.meta.url), 'utf8')
-  assert.match(login, /Sign in to ORB Residential/)
-  assert.match(login, /Powered by IndiCare/)
-  assert.match(login, /ORB Residential does not access IndiCare OS records/)
+  const login = readFileSync(new URL('../../components/orb-residential/orb-login-screen.tsx', import.meta.url), 'utf8')
+  assert.match(login, /professional AI copilot/)
+  assert.match(login, /Continue with Microsoft/)
+  assert.match(login, /Powered by IndiCare Intelligence/)
+  assert.match(login, /\/orb\/setup/)
 })
 
 test('upgrade screen shows £9.99/month', () => {
@@ -16,9 +17,9 @@ test('upgrade screen shows £9.99/month', () => {
 })
 
 test('onboarding role options include NVQ assessor and learner', () => {
-  const onboarding = readFileSync(new URL('../../app/orb/onboarding/page.tsx', import.meta.url), 'utf8')
+  const onboarding = readFileSync(new URL('../../components/orb-residential/orb-setup-screen.tsx', import.meta.url), 'utf8')
   const roles = readFileSync(new URL('./orb-billing-client.ts', import.meta.url), 'utf8')
-  assert.match(onboarding, /ORB_ROLE_OPTIONS/)
+  assert.match(onboarding, /Residential Support Worker/)
   assert.match(roles, /NVQ assessor/)
   assert.match(roles, /NVQ learner/)
 })
@@ -30,7 +31,7 @@ test('safety acceptance statements present', () => {
 })
 
 test('OAuth buttons only shown when configured', () => {
-  const login = readFileSync(new URL('../../app/orb/login/page.tsx', import.meta.url), 'utf8')
+  const login = readFileSync(new URL('../../components/orb-residential/orb-login-screen.tsx', import.meta.url), 'utf8')
   assert.match(login, /NEXT_PUBLIC_OAUTH_GOOGLE_ENABLED/)
   assert.match(login, /not configured/)
 })

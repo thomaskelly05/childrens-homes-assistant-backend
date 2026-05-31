@@ -28,7 +28,7 @@ export default function OrbSignupPage() {
     try {
       await orbStandaloneSignup({ email, password, first_name: firstName, last_name: lastName })
       await login({ email, password, remember: true })
-      router.replace('/orb/onboarding')
+      router.replace('/orb/setup')
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Signup failed')
     } finally {

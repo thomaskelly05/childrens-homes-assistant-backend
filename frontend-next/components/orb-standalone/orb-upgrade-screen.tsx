@@ -33,7 +33,7 @@ export function OrbUpgradeScreen() {
     try {
       trackOrbAnalytics('upgrade_clicked', { action: 'trial' })
       await startOrbTrial()
-      window.location.href = '/orb/onboarding'
+      window.location.href = '/orb/setup'
     } catch {
       setError('Could not start trial. Sign in and try again.')
     } finally {
@@ -160,7 +160,7 @@ export function OrbUpgradeScreen() {
               Return to ORB
             </Link>
             {status !== 'authenticated' ? (
-              <Link href="/orb/login?returnUrl=/orb/access" className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700">
+              <Link href="/orb/login?returnUrl=/orb/billing" className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700">
                 Sign in
               </Link>
             ) : null}
