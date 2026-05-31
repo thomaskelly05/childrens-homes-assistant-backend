@@ -17,6 +17,7 @@ import {
 
 import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
 import { ORB_RESIDENTIAL_TAGLINE } from '@/lib/orb/orb-residential-copy'
+import { asArray } from '@/lib/orb/orb-safe-array'
 import type { AdultProfile } from '@/lib/orb/adult-profile-store'
 import { OrbSidebarChatList } from '@/components/orb-standalone/orb-sidebar-chat-menu'
 import { searchChats, type StandaloneChat, type StandaloneWorkspace } from '@/lib/orb/standalone-local-store'
@@ -88,27 +89,29 @@ export function OrbResidentialSidebar({
   savedOutputsCount?: number
   onClose?: () => void
 }) {
+  const chats = asArray<StandaloneChat>(workspace.chats)
+
   const filteredChats = useMemo(
-    () => searchChats(workspace.chats, chatSearch, { includeArchived: false }),
-    [workspace.chats, chatSearch]
+    () => searchChats(chats, chatSearch, { includeArchived: false }),
+    [chats, chatSearch]
   )
   const timeGroupedChats = useMemo(() => groupChatsByRecency(filteredChats), [filteredChats])
 
   function updateChat(chatId: string, patch: Partial<StandaloneChat>) {
     onWorkspaceChange({
       ...workspace,
-      chats: workspace.chats.map((c) => (c.id === chatId ? { ...c, ...patch, updatedAt: Date.now() } : c))
+      chats: chats.map((c) => (c.id === chatId ? { ...c, ...patch, updatedAt: Date.now() } : c))
     })
   }
 
   function deleteChat(chatId: string) {
-    const chats = workspace.chats.filter((c) => c.id !== chatId)
-    const activeChatId = workspace.activeChatId === chatId ? chats[0]?.id ?? null : workspace.activeChatId
-    onWorkspaceChange({ ...workspace, chats, activeChatId })
+    const nextChats = chats.filter((c) => c.id !== chatId)
+    const activeChatId = workspace.activeChatId === chatId ? nextChats[0]?.id ?? null : workspace.activeChatId
+    onWorkspaceChange({ ...workspace, chats: nextChats, activeChatId })
   }
 
   function renameChat(chatId: string) {
-    const chat = workspace.chats.find((c) => c.id === chatId)
+    const chat = chats.find((c) => c.id === chatId)
     if (!chat) return
     const next = window.prompt('Rename chat', chat.title)
     if (!next?.trim()) return

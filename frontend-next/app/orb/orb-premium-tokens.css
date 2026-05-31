@@ -462,3 +462,110 @@ html[data-orb-residential='1'] .orb-templates-panel .orb-doc-glass-card {
   background: rgba(255, 255, 255, 0.045);
   border-color: rgba(255, 255, 255, 0.1);
 }
+
+/* Residential root — force dark OS chrome and block light leakage */
+html[data-orb-residential='1'],
+html[data-orb-residential='1'] body,
+.orb-residential-root {
+  color-scheme: dark;
+  background: var(--orb-premium-bg-deep, #05070d);
+  color: var(--orb-premium-text, #f7faff);
+}
+
+html[data-orb-residential='1'] .orb-theme-light,
+html[data-orb-residential='1'] .orb-chat-layout.orb-theme-light {
+  color-scheme: dark !important;
+}
+
+/* Desktop chat column — ChatGPT-style readable width */
+@media (min-width: 768px) {
+  html[data-orb-residential='1'] .orb-chat-layout--residential {
+    --orb-sidebar-width: 17.5rem;
+    --orb-chat-column-max: 50rem;
+    --orb-composer-max: 50rem;
+  }
+
+  html[data-orb-residential='1'] .orb-chat-layout--residential .orb-chat-thread {
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+}
+
+@media (min-width: 1024px) {
+  html[data-orb-residential='1'] .orb-chat-layout--residential {
+    --orb-chat-column-max: 53.75rem;
+    --orb-composer-max: 53.75rem;
+  }
+}
+
+/* Responsive empty-state orb — one sphere, scales by breakpoint */
+.premium-mobile-orb--responsive {
+  width: 4.5rem;
+  height: 4.5rem;
+}
+
+@media (min-width: 768px) {
+  .premium-mobile-orb--responsive {
+    width: 6.5rem;
+    height: 6.5rem;
+  }
+
+  .premium-mobile-orb--responsive .premium-mobile-orb__sphere {
+    width: 78%;
+    height: 78%;
+  }
+}
+
+@media (min-width: 1024px) {
+  .premium-mobile-orb--responsive {
+    width: 7.5rem;
+    height: 7.5rem;
+  }
+}
+
+/* Landing/login hero — no square glow box behind sphere */
+[data-orb-hero-sphere],
+[data-orb-empty-sphere],
+[data-orb-empty-sphere-mark] {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+html[data-orb-residential='1'] [data-orb-glow-hero],
+html[data-orb-residential='1'] [data-standalone-orb-state] .orb-sphere-wrap {
+  background: transparent !important;
+}
+
+html[data-orb-residential='1'] .orb-sphere-wrap::after,
+html[data-orb-residential='1'] .orb-standalone-halo {
+  opacity: 0 !important;
+}
+
+/* Login autofill — keep fields dark/readable */
+html[data-orb-residential='1'] .orb-login-input:-webkit-autofill,
+html[data-orb-residential='1'] .orb-login-input:-webkit-autofill:hover,
+html[data-orb-residential='1'] .orb-login-input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #f7faff !important;
+  caret-color: #f7faff;
+  box-shadow: 0 0 0 1000px #0a1228 inset !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+  transition: background-color 99999s ease-out 0s;
+}
+
+/* Disabled OAuth — muted but not broken */
+html[data-orb-residential='1'] .orb-auth-button[aria-disabled='true'],
+html[data-orb-residential='1'] .orb-auth-button:disabled {
+  opacity: 0.72;
+  color: #6f7787 !important;
+}
+
+/* Station panels + inputs stay dark */
+html[data-orb-residential='1'] .orb-panel-drawer input,
+html[data-orb-residential='1'] .orb-panel-drawer textarea,
+html[data-orb-residential='1'] .orb-panel-drawer select,
+html[data-orb-residential='1'] .orb-document-panel input,
+html[data-orb-residential='1'] .orb-templates-panel input {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: #f7faff !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}

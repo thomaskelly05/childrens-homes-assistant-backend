@@ -22,6 +22,7 @@ import {
   type SafeguardingIntensity,
   type WritingStyle
 } from '@/lib/orb/adult-profile-store'
+import { isOrbDeveloperMode } from '@/lib/orb/orb-developer-mode'
 import { RESIDENTIAL_AGENTS, type ResidentialAgentId } from '@/lib/orb/residential-agents'
 
 function formatAccessStateLabel(accessState: string | null): string | null {
@@ -49,6 +50,7 @@ export function OrbAdultProfileDrawer({
   const [openSection, setOpenSection] = useState<string | null>(null)
 
   const isDirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(profile), [draft, profile])
+  const developerMode = isOrbDeveloperMode()
 
   const accountStatusLabel = account.isLoading
     ? 'Checking account…'
@@ -129,7 +131,7 @@ export function OrbAdultProfileDrawer({
                 <span data-orb-profile-status-chip>{account.planName}</span>
               ) : null}
             </div>
-            {cognitionModeLabel ? (
+            {developerMode && cognitionModeLabel ? (
               <p className="mt-2 text-xs text-[var(--orb-accent)]" data-orb-profile-cognition-mode>
                 Active agent · {cognitionModeLabel}
               </p>
@@ -180,7 +182,7 @@ export function OrbAdultProfileDrawer({
                 {account.isSignedIn && account.safetyAccepted !== null ? (
                   <p className="mt-1 text-[11px] text-[var(--orb-muted)]" data-orb-account-safety-state>
                     Safety accepted: {account.safetyAccepted ? 'yes' : 'no'}
-                    {account.adminBypass ? ' · admin bypass' : ''}
+                    {developerMode && account.adminBypass ? ' · admin bypass' : ''}
                   </p>
                 ) : null}
                 {account.isSignedIn && account.safetyAccepted === false ? (
@@ -334,8 +336,8 @@ export function OrbAdultProfileDrawer({
 
             <ProfileSection
               id="memory"
-              title="Memory"
-              summary="Agents, lenses and cognition"
+              title={developerMode ? 'Memory' : 'Personalisation'}
+              summary={developerMode ? 'Agents, lenses and cognition' : 'Answer style and default lenses'}
               open={openSection === 'memory'}
               onToggle={() => setOpenSection((s) => (s === 'memory' ? null : 'memory'))}
             >
@@ -508,6 +510,7 @@ export function OrbAdultProfileDrawer({
               </label>
             </div>
           </section>
+          {developerMode ? (
           <section className="rounded-2xl border border-[var(--orb-line)] bg-[var(--orb-surface)] p-4" data-orb-cognition-preferences>
             <h3 className="text-sm font-semibold text-[var(--orb-foreground)]">Cognition preferences</h3>
             <div className="mt-3 space-y-3">
@@ -558,6 +561,7 @@ export function OrbAdultProfileDrawer({
               </label>
             </div>
           </section>
+          ) : null}
           </div>
             </ProfileSection>
 

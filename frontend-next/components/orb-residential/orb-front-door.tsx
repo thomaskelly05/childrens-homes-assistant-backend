@@ -3,7 +3,8 @@
 import Link from 'next/link'
 
 import { OrbButton } from '@/components/orb-residential/ui/orb-button'
-import { OrbGlowHero } from '@/components/orb-residential/ui/orb-glow-hero'
+import { OrbHeroSphere } from '@/components/orb-residential/ui/orb-hero-sphere'
+import { useOrbResidentialThemeLock } from '@/components/orb-residential/use-orb-residential-theme-lock'
 import { orbElectricGlow, orbGlassCard, orbNavyGradient, orbNavyPage } from '@/components/orb-residential/ui/orb-theme'
 
 const EXAMPLE_HINTS = [
@@ -14,12 +15,15 @@ const EXAMPLE_HINTS = [
 ]
 
 export function OrbFrontDoor() {
+  useOrbResidentialThemeLock()
+
   return (
     <div
-      className={`${orbNavyPage} ${orbNavyGradient} flex h-[100dvh] flex-col overflow-hidden`}
+      className={`orb-residential-root ${orbNavyPage} ${orbNavyGradient} flex h-[100dvh] flex-col overflow-hidden`}
       data-orb-front-door
+      data-orb-residential="true"
     >
-      <header className="mx-auto flex w-full max-w-5xl shrink-0 items-center justify-between px-6 py-5">
+      <header className="mx-auto flex w-full max-w-[68rem] shrink-0 items-center justify-between px-6 py-5 lg:px-8">
         <Link href="/" className="flex flex-col gap-0.5" data-orb-brand>
           <span className="text-sm font-semibold tracking-tight text-white">ORB Residential</span>
           <span className="text-[11px] font-medium text-sky-300/80">Powered by IndiCare Intelligence</span>
@@ -29,18 +33,19 @@ export function OrbFrontDoor() {
         </Link>
       </header>
 
-      <main className="mx-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col justify-center px-6 pb-6">
-        <div className={`grid items-center gap-6 lg:grid-cols-[0.95fr_1.05fr] ${orbElectricGlow}`}>
+      <main className="mx-auto flex min-h-0 w-full max-w-[68rem] flex-1 flex-col justify-center px-6 pb-6 lg:px-8">
+        <div
+          className={`grid items-center gap-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-10 ${orbElectricGlow}`}
+          data-orb-front-door-hero
+        >
           <div className="flex justify-center lg:justify-end">
-            <div className="scale-[0.68] sm:scale-[0.78] lg:scale-[0.88]">
-              <OrbGlowHero compact />
-            </div>
+            <OrbHeroSphere className="scale-90 sm:scale-100 lg:scale-110" />
           </div>
 
-          <div className={`${orbGlassCard} px-6 py-6 sm:px-8 sm:py-8`}>
+          <div className={`${orbGlassCard} px-7 py-7 sm:px-9 sm:py-9`} data-orb-front-door-card>
             <p className="text-[11px] font-semibold uppercase tracking-[0.34em] text-sky-300/80">ORB Residential</p>
             <p className="mt-2 text-xs text-slate-400">Powered by IndiCare Intelligence</p>
-            <h1 className="mt-4 text-2xl font-semibold tracking-tight text-white sm:text-4xl sm:leading-tight">
+            <h1 className="mt-4 text-2xl font-semibold tracking-tight text-white sm:text-[2rem] sm:leading-tight lg:text-[2.25rem]">
               The Professional AI Copilot for Children&apos;s Homes
             </h1>
             <p className="mt-4 text-sm leading-7 text-slate-400">
@@ -53,7 +58,7 @@ export function OrbFrontDoor() {
               Stay inspection ready.
             </p>
 
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
               <OrbButton href="/orb/login?returnUrl=/orb" data-testid="orb-cta-trial">
                 Start Free Trial
               </OrbButton>
@@ -81,7 +86,7 @@ export function OrbFrontDoor() {
         </div>
       </main>
 
-      <footer className="mx-auto w-full max-w-5xl shrink-0 px-6 pb-5">
+      <footer className="mx-auto w-full max-w-[68rem] shrink-0 px-6 pb-5 lg:px-8">
         <p className="text-center text-[10px] leading-5 text-slate-600">
           ORB supports professional judgement. It does not replace safeguarding procedures, managers, emergency
           services or local protocols.

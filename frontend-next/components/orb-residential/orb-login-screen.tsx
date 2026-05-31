@@ -5,7 +5,8 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 
 import { OrbAuthButton } from '@/components/orb-residential/ui/orb-auth-button'
-import { OrbGlowHero } from '@/components/orb-residential/ui/orb-glow-hero'
+import { OrbHeroSphere } from '@/components/orb-residential/ui/orb-hero-sphere'
+import { useOrbResidentialThemeLock } from '@/components/orb-residential/use-orb-residential-theme-lock'
 import { orbNavyGradient, orbNavyPage } from '@/components/orb-residential/ui/orb-theme'
 import { useAuth } from '@/contexts/auth-context'
 import { fetchOrbAccess, orbOAuthStartUrl, trackOrbAnalytics } from '@/lib/orb/orb-billing-client'
@@ -20,6 +21,7 @@ function resolvePostLoginRoute(access: Awaited<ReturnType<typeof fetchOrbAccess>
 }
 
 function OrbLoginPanel() {
+  useOrbResidentialThemeLock()
   const router = useRouter()
   const searchParams = useSearchParams()
   const { login, status, refreshSession } = useAuth()
@@ -106,8 +108,15 @@ function OrbLoginPanel() {
     }
   }
 
+  const inputClass =
+    'orb-login-input mt-2 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-white placeholder:text-slate-500'
+
   return (
-    <div className={`${orbNavyPage} ${orbNavyGradient} h-[100dvh] overflow-hidden`} data-orb-login-page>
+    <div
+      className={`orb-residential-root ${orbNavyPage} ${orbNavyGradient} h-[100dvh] overflow-hidden`}
+      data-orb-login-page
+      data-orb-residential="true"
+    >
       <div className="mx-auto grid h-full max-w-6xl lg:grid-cols-2">
         <div className="hidden flex-col justify-center px-6 py-8 lg:flex lg:px-12">
           <Link href="/" className="text-sm font-semibold text-white">
@@ -117,8 +126,8 @@ function OrbLoginPanel() {
           <h1 className="mt-8 text-3xl font-semibold tracking-tight text-white" data-orb-login-title>
             The professional AI copilot for children&apos;s homes
           </h1>
-          <div className="mt-8">
-            <OrbGlowHero compact />
+          <div className="mt-8 flex justify-center lg:justify-start">
+            <OrbHeroSphere className="scale-90" />
           </div>
         </div>
 
@@ -174,7 +183,7 @@ function OrbLoginPanel() {
                     value={passkeyEmail}
                     onChange={(e) => setPasskeyEmail(e.target.value)}
                     placeholder="you@provider.co.uk"
-                    className="mt-1 w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white"
+                    className="orb-login-input mt-1 w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white"
                     autoComplete="email webauthn"
                     data-orb-passkey-email
                   />
@@ -196,7 +205,7 @@ function OrbLoginPanel() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="mt-2 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-white"
+                  className={inputClass}
                   data-testid="orb-login-email"
                   autoComplete="email"
                 />
@@ -208,7 +217,7 @@ function OrbLoginPanel() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="mt-2 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-white"
+                  className={inputClass}
                   data-testid="orb-login-password"
                   autoComplete="current-password"
                 />
