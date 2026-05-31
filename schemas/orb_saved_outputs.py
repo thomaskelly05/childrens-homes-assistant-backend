@@ -23,6 +23,7 @@ OrbSavedOutputType = Literal[
     "checklist",
     "supervision_guide",
     "intelligence_note",
+    "voice_transcript",
 ]
 
 OrbSavedOutputStatus = Literal["draft", "saved", "archived", "pinned"]

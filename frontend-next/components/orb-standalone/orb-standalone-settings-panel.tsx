@@ -78,6 +78,7 @@ export function OrbStandaloneSettingsPanel({
   voiceRepliesEnabled,
   onVoiceRepliesChange,
   onOpenVoiceSettings,
+  onOpenOrbVoice,
   onOpenProfile,
   onOpenHelp,
   onExportWorkspace,
@@ -98,6 +99,7 @@ export function OrbStandaloneSettingsPanel({
   voiceRepliesEnabled?: boolean
   onVoiceRepliesChange?: (enabled: boolean) => void
   onOpenVoiceSettings?: () => void
+  onOpenOrbVoice?: () => void
   onOpenProfile?: () => void
   onOpenHelp?: () => void
   onExportWorkspace?: () => void
@@ -267,12 +269,23 @@ export function OrbStandaloneSettingsPanel({
               <RowButton
                 icon={<Mic className="h-4 w-4" />}
                 label="Voice settings"
-                hint="British voice, speed, pitch and test"
+                hint="British voice, speed, modes and interruption"
                 onClick={() => {
                   onOpenVoiceSettings?.()
                   onClose()
                 }}
               />
+              {onOpenOrbVoice ? (
+                <RowButton
+                  icon={<Mic className="h-4 w-4" />}
+                  label="Open ORB Voice"
+                  hint="Conversational voice room for residential childcare"
+                  onClick={() => {
+                    onOpenOrbVoice()
+                    onClose()
+                  }}
+                />
+              ) : null}
             </SettingsBlock>
           ) : null}
 

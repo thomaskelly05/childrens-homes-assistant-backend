@@ -1391,6 +1391,7 @@ export type OrbSavedOutputType =
   | 'checklist'
   | 'supervision_guide'
   | 'intelligence_note'
+  | 'voice_transcript'
 
 export type OrbSavedOutputStatus = 'draft' | 'saved' | 'archived' | 'pinned'
 

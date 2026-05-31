@@ -11,7 +11,7 @@ import {
 import { profileInitialsFromName } from '../../lib/orb/orb-profile-initials.ts'
 import { stripMarkdownForSpeech } from '../../lib/orb/orb-speech-text.ts'
 import { ORB_SPEECH_RATE_PRESETS, speechRatePresetFor } from '../../lib/orb/orb-voice-presets.ts'
-import { pickBritishFemaleVoice } from './use-standalone-orb-voice.ts'
+import { pickBritishFemaleVoice } from '../../lib/orb/voice/orb-voice-browser.ts'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '../..')
 
@@ -167,7 +167,7 @@ describe('ORB voice settings', () => {
     assert.match(panel, /data-orb-voice-select/)
     assert.match(panel, /data-orb-voice-rate/)
     const hook = readComponent('components/orb-standalone/use-standalone-orb-voice.ts')
-    assert.match(hook, /orb-standalone-voice-settings/)
+    assert.match(hook, /ORB_VOICE_SETTINGS_STORAGE_KEY/)
     assert.match(hook, /selectedVoiceUri/)
   })
 })

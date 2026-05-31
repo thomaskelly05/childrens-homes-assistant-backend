@@ -50,4 +50,5 @@ test('voice station requires explicit start', () => {
   )
   assert.match(voice, /Voice starts only when you press Start/)
   assert.match(voice, /data-orb-voice-start/)
+  assert.match(voice, /Start conversation/)
 })

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { pickBritishFemaleVoice } from './use-standalone-orb-voice.ts'
+import { pickBritishFemaleVoice } from '../../lib/orb/voice/orb-voice-browser.ts'
 import {
   buildAdultProfilePromptBlock,
   personalisedEmptyHeading,
