@@ -13,6 +13,7 @@ export type OrbStandalonePanel =
   | 'settings'
   | 'help'
   | 'voice'
+  | 'billing'
   | null
 
 export const ORB_STANDALONE_PANEL_IDS: Exclude<OrbStandalonePanel, null>[] = [
@@ -28,7 +29,8 @@ export const ORB_STANDALONE_PANEL_IDS: Exclude<OrbStandalonePanel, null>[] = [
   'intelligence_map',
   'settings',
   'help',
-  'voice'
+  'voice',
+  'billing'
 ]
 
 /** Map tools drawer tool ids to panel routes. */

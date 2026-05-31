@@ -3,7 +3,13 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Loader2, Search } from 'lucide-react'
 
+import { orbStationShellProps } from '@/components/orb-standalone/orb-app-modal'
 import { OrbStandalonePanelShell } from '@/components/orb-standalone/orb-standalone-panel-shell'
+import {
+  ORB_TEMPLATE_FALLBACK_CATEGORIES,
+  filterFallbackTemplates,
+  templateUsePrompt
+} from '@/lib/orb/orb-templates-fallback'
 import {
   isOrbStationAuthError,
   OrbStationAuthError,
@@ -16,16 +22,7 @@ import {
   type OrbTemplateSummary
 } from '@/lib/orb/orb-billing-client'
 
-const FALLBACK_CATEGORIES = [
-  'Daily recording',
-  'Incident report',
-  'Safeguarding',
-  'Care planning',
-  'Regulatory / inspection',
-  'Leadership',
-  'Supervision',
-  'Reflective practice'
-]
+const FALLBACK_CATEGORIES = [...ORB_TEMPLATE_FALLBACK_CATEGORIES]
 
 function friendlyCategoryLabel(raw: string): string {
   return raw
@@ -38,11 +35,13 @@ function friendlyCategoryLabel(raw: string): string {
 export function OrbTemplatesPanel({
   open,
   onClose,
-  onUseTemplate
+  onUseTemplate,
+  residentialSurface = false
 }: {
   open: boolean
   onClose: () => void
   onUseTemplate?: (prompt: string, template: OrbTemplateSummary) => void
+  residentialSurface?: boolean
 }) {
   const [categories, setCategories] = useState<string[]>(FALLBACK_CATEGORIES)
   const [category, setCategory] = useState('')
@@ -62,14 +61,20 @@ export function OrbTemplatesPanel({
         setCategories(cats.map((c) => friendlyCategoryLabel(c.name || c.id)))
       }
       const list = await fetchOrbTemplates({ category: category || undefined, search: search || undefined })
-      setTemplates(list)
+      if (list.length) {
+        setTemplates(list)
+      } else {
+        setTemplates(filterFallbackTemplates({ category: category || undefined, search: search || undefined }))
+        setError(null)
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Template library unavailable.'
       if (isOrbStationAuthError(message)) {
         setError(message)
+        setTemplates(filterFallbackTemplates({ category: category || undefined, search: search || undefined }))
       } else {
-        setError('Template library unavailable. Check you are signed in.')
-        setTemplates([])
+        setTemplates(filterFallbackTemplates({ category: category || undefined, search: search || undefined }))
+        setError(null)
       }
     } finally {
       setLoading(false)
@@ -96,14 +101,11 @@ export function OrbTemplatesPanel({
         ''
       const prompt = content.trim()
         ? `Help me complete this ${selected.title} template. Here is the starting structure:\n\n${content}`
-        : `Help me complete a ${selected.title}. Walk me through each section with child-centred, professional wording.`
+        : templateUsePrompt(selected.title)
       onUseTemplate?.(prompt, selected)
       onClose()
     } catch {
-      onUseTemplate?.(
-        `Help me complete a ${selected.title}. Walk me through each section with child-centred, professional wording.`,
-        selected
-      )
+      onUseTemplate?.(templateUsePrompt(selected.title), selected)
       onClose()
     } finally {
       setGenerating(false)
@@ -114,11 +116,11 @@ export function OrbTemplatesPanel({
     <OrbStandalonePanelShell
       open={open}
       title="Templates"
-      subtitle="Professional residential care templates — open quickly and complete with ORB."
+      subtitle="Residential childcare templates you can generate, adapt and export."
       onClose={onClose}
       panelId="templates"
       ariaLabel="ORB template library"
-      wide
+      {...orbStationShellProps(residentialSurface, 'wide')}
     >
       <div className="orb-templates-panel space-y-4 p-4" data-orb-templates-panel>
         <div className="relative">
@@ -176,8 +178,8 @@ export function OrbTemplatesPanel({
 
         {!loading && templates.length === 0 && !isOrbStationAuthError(error) ? (
           <OrbStationEmptyState
-            title="No templates found"
-            body="Try another category or search term. Templates load from your signed-in account."
+            title="No templates match your search"
+            body="Try another category or search term."
           />
         ) : null}
 

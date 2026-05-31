@@ -51,6 +51,7 @@ import { OrbSavedOutputsPanel } from '@/components/orb-standalone/orb-saved-outp
 import { OrbKnowledgeLibraryPanel } from '@/components/orb-standalone/orb-knowledge-library'
 import { OrbTemplatesPanel } from '@/components/orb-standalone/orb-templates-panel'
 import {
+  ORB_RESIDENTIAL_EMPTY_HEADING_DESKTOP,
   ORB_RESIDENTIAL_EMPTY_STARTERS,
   ORB_RESIDENTIAL_EMPTY_SUBLINE
 } from '@/lib/orb/orb-residential-copy'
@@ -65,7 +66,10 @@ import {
   type OrbStandalonePanel
 } from '@/components/orb-standalone/orb-standalone-panel-types'
 import { OrbAmbientCognition, type OrbCognitionAmbientState } from '@/components/orb-standalone/orb-ambient-cognition'
+import { OrbAccountModal } from '@/components/orb-standalone/orb-account-modal'
 import { OrbAdultProfileDrawer } from '@/components/orb-standalone/orb-adult-profile-drawer'
+import { OrbBillingModal } from '@/components/orb-standalone/orb-billing-modal'
+import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
 import { OrbStandaloneSidebar } from '@/components/orb-standalone/orb-standalone-sidebar'
 import {
   OrbResidentialSidebar,
@@ -530,6 +534,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   } | null>(null)
   const [adultProfile, setAdultProfile] = useState<AdultProfile | null>(null)
   const [profileDrawerOpen, setProfileDrawerOpen] = useState(false)
+  const [accountModalOpen, setAccountModalOpen] = useState(false)
   const [showScrollFab, setShowScrollFab] = useState(false)
   const [savedOutputMessageIds, setSavedOutputMessageIds] = useState<Set<string>>(() => new Set())
   const [saveFeedbackByMessageId, setSaveFeedbackByMessageId] = useState<
@@ -671,6 +676,15 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   const openAccessibilityPanel = useCallback(() => openPanel('accessibility'), [openPanel])
   const openPermissionsPanel = useCallback(() => openPanel('permissions'), [openPanel])
   const openIntelligenceMap = useCallback(() => openPanel('intelligence_map'), [openPanel])
+  const openBillingPanel = useCallback(() => openPanel('billing'), [openPanel])
+
+  function openResidentialAccount() {
+    if (residentialSurface) {
+      setAccountModalOpen(true)
+    } else {
+      setProfileDrawerOpen(true)
+    }
+  }
 
   useEffect(() => {
     if (!workspaceHydratedRef.current) return
@@ -1598,6 +1612,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       case 'saved':
         openSavedOutputsPanel()
         break
+      case 'documents':
+        openDocumentsPanel()
+        break
       default:
         break
     }
@@ -2167,7 +2184,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
     return personalisedWelcomeMessage(profile, { temporary: Boolean(activeChat?.temporary) })
   }, [adultProfile, activeChat?.temporary])
 
-  const emptyHeading = useMemo(() => {
+  const emptyHeadingMobile = useMemo(() => {
     if (residentialSurface) {
       return personalisedEmptyHeading(adultProfile ?? readAdultProfile())
     }
@@ -2224,14 +2241,21 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         <div className="pointer-events-none fixed inset-0 orb-cinematic-light-field opacity-35" aria-hidden />
       ) : null}
 
+      <OrbBillingModal open={activePanel === 'billing'} onClose={closePanel} />
       <OrbKnowledgeLibraryPanel
         open={activePanel === 'knowledge'}
         onClose={closePanel}
         residentialSurface={residentialSurface}
+        onAskOrb={(prompt) => {
+          setMessage(prompt)
+          closePanel()
+          inputRef.current?.focus()
+        }}
       />
       <OrbTemplatesPanel
         open={activePanel === 'templates'}
         onClose={closePanel}
+        residentialSurface={residentialSurface}
         onUseTemplate={(prompt) => {
           setMessage(prompt)
           closePanel()
@@ -2241,6 +2265,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       <OrbSavedOutputsPanel
         open={activePanel === 'saved_outputs'}
         onClose={closePanel}
+        residentialSurface={residentialSurface}
         workspace={workspace}
         onReuseInChat={(prompt) => {
           setMessage(prompt)
@@ -2250,6 +2275,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       <OrbDocumentPanel
         open={activePanel === 'documents'}
         onClose={closePanel}
+        residentialSurface={residentialSurface}
         projects={workspace.projects}
         activeProjectId={workspace.activeProjectId}
         activeProjectName={activeProject?.name}
@@ -2280,6 +2306,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       />
       <OrbStandaloneSettingsPanel
         open={activePanel === 'settings'}
+        residentialSurface={residentialSurface}
         onClose={() => {
           setChatUiSettings(loadOrbStandaloneChatSettings())
           closePanel()
@@ -2301,7 +2328,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         voiceRepliesEnabled={voiceSettings.voiceReplies}
         onVoiceRepliesChange={(enabled) => voice.setVoiceReplies(enabled)}
         onOpenVoiceSettings={openVoiceSettings}
-        onOpenProfile={() => setProfileDrawerOpen(true)}
+        onOpenProfile={openResidentialAccount}
         onOpenHelp={openHelpPanel}
         onExportWorkspace={() => {
           const json = exportStandaloneWorkspaceJson(workspace)
@@ -2433,7 +2460,11 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                 setSidebarOpen(false)
               }}
               onOpenProfile={() => {
-                setProfileDrawerOpen(true)
+                openResidentialAccount()
+                setSidebarOpen(false)
+              }}
+              onOpenBilling={() => {
+                openBillingPanel()
                 setSidebarOpen(false)
               }}
               adultProfile={adultProfile}
@@ -2510,7 +2541,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
               >
                 Temporary · no memory
               </span>
-            ) : (
+            ) : !residentialSurface ? (
               <span
                 className="hidden shrink-0 rounded-full border border-[#93C5FD] bg-[#F0F9FF] px-2.5 py-0.5 text-[10px] font-semibold text-[#0369A1] sm:inline"
                 data-orb-header-privacy
@@ -2518,7 +2549,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
               >
                 {ORB_DATA_BOUNDARY_SHORT}
               </span>
-            )}
+            ) : null}
             <button
               type="button"
               onClick={() => (activeChat?.temporary ? startNewChat() : startTemporaryChat())}
@@ -2546,11 +2577,11 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
               <button
                 type="button"
                 onClick={() => {
-                  setProfileDrawerOpen(true)
+                  openResidentialAccount()
                   setSidebarOpen(false)
                 }}
                 className="rounded-lg p-2 text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[#0077FF] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00B8FF]/50"
-                aria-label="Profile"
+                aria-label="Account"
                 data-orb-header-profile
               >
                 <User className="h-4 w-4" />
@@ -2655,17 +2686,15 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                   >
                     <div className="relative flex justify-center" data-orb-empty-sphere>
                       {residentialSurface ? (
-                        <PremiumMobileOrb variant="desktop" className="premium-mobile-orb--responsive" />
+                        <GlassOrbMark size="empty" pulse data-orb-empty-sphere-mark />
                       ) : null}
                       {!residentialSurface ? (
                         <OrbGlow state="idle" interactive={false} size="dock" compactLabels />
                       ) : null}
                     </div>
                     {residentialSurface ? (
-                      <div data-orb-empty-brand-stack>
-                        <p className="orb-empty-brand-title" data-orb-empty-brand-name>
-                          ORB Residential
-                        </p>
+                      <div className="sr-only" data-orb-empty-brand-stack>
+                        <p data-orb-empty-brand-name>ORB Residential</p>
                         <p data-orb-empty-brand-tagline>Powered by IndiCare Intelligence</p>
                       </div>
                     ) : (
@@ -2683,14 +2712,31 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                         </p>
                       </>
                     )}
-                    <h2
-                      className={`mt-4 text-xl font-semibold tracking-tight md:mt-6 md:text-[1.35rem] ${
-                        residentialSurface ? 'text-[var(--orb-premium-text,#f7faff)]' : 'text-slate-900'
-                      }`}
-                      data-orb-empty-heading
-                    >
-                      {emptyHeading}
-                    </h2>
+                    {residentialSurface ? (
+                      <>
+                        <h2
+                          className="mt-4 hidden text-xl font-semibold tracking-tight text-[var(--orb-premium-text,#f7faff)] md:mt-6 md:block md:text-[1.35rem]"
+                          data-orb-empty-heading
+                          data-orb-empty-heading-desktop
+                        >
+                          {ORB_RESIDENTIAL_EMPTY_HEADING_DESKTOP}
+                        </h2>
+                        <h2
+                          className="mt-4 text-xl font-semibold tracking-tight text-[var(--orb-premium-text,#f7faff)] md:hidden"
+                          data-orb-empty-heading
+                          data-orb-empty-heading-mobile
+                        >
+                          {emptyHeadingMobile}
+                        </h2>
+                      </>
+                    ) : (
+                      <h2
+                        className="mt-4 text-xl font-semibold tracking-tight text-slate-900 md:mt-6 md:text-[1.35rem]"
+                        data-orb-empty-heading
+                      >
+                        {emptyHeadingMobile}
+                      </h2>
+                    )}
                     {residentialSurface || emptyWelcome.subline ? (
                       <p
                         className={`mt-2 max-w-lg text-sm leading-7 ${
@@ -3080,7 +3126,23 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         />
       ) : null}
 
-      {adultProfile ? (
+      {adultProfile && residentialSurface ? (
+        <OrbAccountModal
+          open={accountModalOpen}
+          onClose={() => setAccountModalOpen(false)}
+          profile={adultProfile}
+          onOpenSettings={() => {
+            setAccountModalOpen(false)
+            openSettingsPanel()
+          }}
+          onOpenBilling={() => {
+            setAccountModalOpen(false)
+            openBillingPanel()
+          }}
+          passkeyEnabled={account.hasPasskeys}
+        />
+      ) : null}
+      {adultProfile && !residentialSurface ? (
         <OrbAdultProfileDrawer
           open={profileDrawerOpen}
           profile={adultProfile}

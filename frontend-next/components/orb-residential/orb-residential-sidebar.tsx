@@ -7,6 +7,7 @@ import {
   CreditCard,
   FileCheck,
   FileText,
+  FolderOpen,
   MessageSquarePlus,
   Save,
   Search,
@@ -25,7 +26,8 @@ import { searchChats, type StandaloneChat, type StandaloneWorkspace } from '@/li
 const NAV_ITEMS = [
   { id: 'review', label: 'Review This', icon: FileCheck },
   { id: 'templates', label: 'Templates', icon: FileText },
-  { id: 'knowledge', label: 'Residential Knowledge Centre', icon: BookOpen },
+  { id: 'knowledge', label: 'Knowledge Centre', icon: BookOpen },
+  { id: 'documents', label: 'Documents', icon: FolderOpen },
   { id: 'saved', label: 'Saved Outputs', icon: Save }
 ] as const
 
@@ -70,6 +72,7 @@ export function OrbResidentialSidebar({
   onOpenSettings,
   onOpenSavedOutputs,
   onOpenProfile,
+  onOpenBilling,
   onWorkspaceChange,
   adultProfile,
   savedOutputsCount,
@@ -84,6 +87,7 @@ export function OrbResidentialSidebar({
   onOpenSettings?: () => void
   onOpenSavedOutputs?: () => void
   onOpenProfile?: () => void
+  onOpenBilling?: () => void
   onWorkspaceChange: (next: StandaloneWorkspace) => void
   adultProfile?: AdultProfile | null
   savedOutputsCount?: number
@@ -240,10 +244,15 @@ export function OrbResidentialSidebar({
           <Settings className="h-4 w-4" />
           <span>Settings</span>
         </button>
-        <Link href="/orb/billing" className="orb-sidebar-nav-item w-full" data-orb-sidebar-billing>
+        <button
+          type="button"
+          onClick={() => onOpenBilling?.()}
+          className="orb-sidebar-nav-item w-full"
+          data-orb-sidebar-billing
+        >
           <CreditCard className="h-4 w-4" />
           <span>Billing</span>
-        </Link>
+        </button>
         <Link href="/os" className="orb-sidebar-nav-item w-full" data-orb-sidebar-os-link>
           <span className="text-[10px] font-semibold uppercase tracking-wide text-sky-400/90">IndiCare OS</span>
         </Link>

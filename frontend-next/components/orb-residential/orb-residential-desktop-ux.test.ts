@@ -72,12 +72,12 @@ describe('ORB Residential desktop UX', () => {
     assert.match(profile, /developerMode \? \([\s\S]*data-orb-cognition-preferences/)
   })
 
-  it('desktop empty state uses single responsive PremiumMobileOrb', () => {
+  it('desktop empty state uses single GlassOrbMark sphere', () => {
     const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
     const premiumCss = readComponent('app/orb/orb-premium-tokens.css')
-    assert.match(companion, /premium-mobile-orb--responsive/)
+    assert.match(companion, /GlassOrbMark size="empty"/)
     assert.doesNotMatch(companion, /variant="mobile"[\s\S]*md:hidden[\s\S]*variant="desktop"[\s\S]*hidden md:flex/)
-    assert.match(premiumCss, /premium-mobile-orb--responsive/)
+    assert.match(premiumCss, /glass-orb-mark--empty/)
   })
 
   it('premium CSS forces dark under data-orb-residential and blocks light theme', () => {

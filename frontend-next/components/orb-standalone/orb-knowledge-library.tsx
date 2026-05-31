@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Loader2, Plus, Search } from 'lucide-react'
 
+import { orbStationShellProps } from '@/components/orb-standalone/orb-app-modal'
+import { OrbKnowledgeBuiltinPanel } from '@/components/orb-standalone/orb-knowledge-builtin-panel'
 import { OrbStandalonePanelShell } from '@/components/orb-standalone/orb-standalone-panel-shell'
 import {
   isOrbStationAuthError,
@@ -14,7 +16,7 @@ import {
   OrbSourceGovernanceActions,
   OrbSourceGovernanceBadges
 } from '@/components/orb-standalone/orb-source-governance-panel'
-import { ORB_KNOWLEDGE_CENTRE_TITLE, ORB_KNOWLEDGE_TOPICS } from '@/lib/orb/orb-residential-copy'
+import { ORB_KNOWLEDGE_CENTRE_TITLE } from '@/lib/orb/orb-residential-copy'
 import {
   approveOrbKnowledgeSource,
   archiveOrbKnowledgeSource,
@@ -63,11 +65,13 @@ type GovernanceTab = 'all' | 'official' | 'needs_review'
 export function OrbKnowledgeLibraryPanel({
   open,
   onClose,
-  residentialSurface = false
+  residentialSurface = false,
+  onAskOrb
 }: {
   open: boolean
   onClose: () => void
   residentialSurface?: boolean
+  onAskOrb?: (prompt: string) => void
 }) {
   const [sources, setSources] = useState<OrbKnowledgeSource[]>([])
   const [summary, setSummary] = useState<string | null>(null)
@@ -242,15 +246,30 @@ export function OrbKnowledgeLibraryPanel({
       title={residentialSurface ? ORB_KNOWLEDGE_CENTRE_TITLE : 'Knowledge Library'}
       subtitle={
         residentialSurface
-          ? 'Guidance sources for residential practice — SCCIF, regulations, safeguarding and recording standards.'
+          ? 'Sources, guidance and documents that support ORB Residential.'
           : 'Sources support ORB answers. Check official status and review dates.'
       }
       onClose={onClose}
       panelId="knowledge"
       ariaLabel="ORB Knowledge Library"
-      footer="ORB Residential does not access IndiCare OS records."
+      footer={residentialSurface ? undefined : 'ORB Residential does not access IndiCare OS records.'}
+      {...orbStationShellProps(residentialSurface, 'wide')}
     >
       <div className="px-4 py-3" data-orb-knowledge-library>
+          {residentialSurface ? (
+            <OrbKnowledgeBuiltinPanel
+              authBlocked={Boolean(error && isOrbStationAuthError(error))}
+              onAskOrb={(prompt) => {
+                onAskOrb?.(prompt)
+                onClose()
+              }}
+            />
+          ) : null}
+          {residentialSurface ? (
+            <p className="mb-3 mt-4 text-[10px] font-semibold uppercase tracking-wide text-[var(--orb-muted)]">
+              Connected sources
+            </p>
+          ) : null}
           {summary ? <p className="mb-3 text-[11px] text-slate-500">{summary}</p> : null}
           {error ? (
             isOrbStationAuthError(error) ? (
@@ -264,6 +283,8 @@ export function OrbKnowledgeLibraryPanel({
             )
           ) : null}
 
+          {!residentialSurface ? (
+          <>
           <div className="mb-3 flex flex-wrap gap-1" data-orb-knowledge-sections>
             {(['all', 'official', 'needs_review'] as GovernanceTab[]).map((t) => (
               <button
@@ -489,6 +510,8 @@ export function OrbKnowledgeLibraryPanel({
               </button>
             </form>
           ) : null}
+          </>
+          ) : null}
 
           {loading ? (
             <p className="flex items-center gap-2 text-xs text-slate-500">
@@ -497,24 +520,9 @@ export function OrbKnowledgeLibraryPanel({
             </p>
           ) : sources.length === 0 && !error ? (
             residentialSurface ? (
-              <div className="orb-station-empty-state" data-orb-knowledge-coming-soon>
-                <p className="orb-station-empty-state__title">Guidance library coming soon</p>
-                <p className="orb-station-empty-state__body">
-                  ORB will connect trusted residential sources here. Topics will include:
-                </p>
-                <ul className="mt-3 space-y-1 text-left text-xs text-[var(--orb-muted)]">
-                  {ORB_KNOWLEDGE_TOPICS.map((topic) => (
-                    <li key={topic} className="flex items-center gap-2">
-                      <span className="h-1 w-1 rounded-full bg-sky-400/80" aria-hidden />
-                      {topic}
-                    </li>
-                  ))}
-                </ul>
-                <p className="orb-station-empty-state__body mt-3">
-                  You can still ask ORB about these topics in chat — answers use built-in residential practice
-                  guidance.
-                </p>
-              </div>
+              <p className="text-xs text-[var(--orb-muted)]" data-orb-knowledge-connected-empty>
+                No additional connected sources yet. Use the built-in library above or ask ORB in chat.
+              </p>
             ) : (
               <OrbStationEmptyState
                 dataAttr="knowledge_library"

@@ -50,16 +50,14 @@ describe('ORB Residential mobile UX', () => {
     assert.match(mobileCss, /safe-area-inset-bottom/)
   })
 
-  it('mobile empty state uses compact PremiumMobileOrb not oversized hero', () => {
+  it('mobile empty state uses compact GlassOrbMark not oversized hero', () => {
     const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
-    const orb = readComponent('components/orb-residential/ui/premium-mobile-orb.tsx')
-    const mobileCss = readComponent('app/orb/orb-mobile.css')
-    assert.match(companion, /PremiumMobileOrb/)
-    assert.match(companion, /premium-mobile-orb--responsive/)
+    const mark = readComponent('components/orb-residential/ui/glass-orb-mark.tsx')
+    const premiumCss = readComponent('app/orb/orb-premium-tokens.css')
+    assert.match(companion, /GlassOrbMark size="empty"/)
     assert.match(companion, /data-orb-residential-empty/)
-    assert.match(orb, /data-premium-mobile-orb/)
-    assert.match(mobileCss, /premium-mobile-orb/)
-    assert.match(mobileCss, /max-width:\s*5\.5rem/)
+    assert.match(mark, /glass-orb-mark--empty/)
+    assert.match(premiumCss, /glass-orb-mark--empty/)
     assert.doesNotMatch(companion, /size="hero"/)
   })
 
@@ -80,16 +78,16 @@ describe('ORB Residential mobile UX', () => {
     assert.match(states, /data-orb-station-sign-in-again/)
     assert.match(saved, /No saved outputs yet/)
     assert.match(saved, /When you save reviews/)
-    assert.match(knowledge, /No sources loaded yet/)
-    assert.match(knowledge, /Official guidance and uploaded sources/)
+    assert.match(knowledge, /OrbKnowledgeBuiltinPanel/)
+    assert.match(knowledge, /data-orb-knowledge-connected-empty/)
   })
 
   it('sidebar station links remain on residential sidebar', () => {
     const sidebar = readComponent('components/orb-residential/orb-residential-sidebar.tsx')
-    for (const station of ['review', 'templates', 'knowledge', 'saved']) {
-      assert.match(sidebar, new RegExp(`data-orb-sidebar-station=\\{station\\.id\\}|data-orb-sidebar-station="${station}"|id: '${station}'`))
+    for (const station of ['review', 'templates', 'knowledge', 'documents', 'saved']) {
+      assert.match(sidebar, new RegExp(`id: '${station}'`))
     }
-    assert.match(sidebar, /Residential Knowledge Centre/)
+    assert.match(sidebar, /Knowledge Centre/)
     assert.match(sidebar, /GlassOrbMark/)
     assert.match(sidebar, /data-orb-sidebar-stations/)
     assert.match(sidebar, /ORB_RESIDENTIAL_TAGLINE/)
