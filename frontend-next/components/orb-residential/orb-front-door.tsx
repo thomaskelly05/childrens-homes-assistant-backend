@@ -6,7 +6,7 @@ import { OrbCapabilityCard } from '@/components/orb-residential/ui/orb-capabilit
 import { OrbButton } from '@/components/orb-residential/ui/orb-button'
 import { OrbGlowHero } from '@/components/orb-residential/ui/orb-glow-hero'
 import { OrbShell } from '@/components/orb-residential/ui/orb-shell'
-import { orbElectricGlow } from '@/components/orb-residential/ui/orb-theme'
+import { orbElectricGlow, orbGlassCard } from '@/components/orb-residential/ui/orb-theme'
 
 const CAPABILITIES = [
   { title: 'Review This', href: '/orb/review' },
@@ -21,49 +21,57 @@ const CAPABILITIES = [
 export function OrbFrontDoor() {
   return (
     <OrbShell>
-      <section className="flex flex-col items-center pt-4 text-center sm:pt-8" data-orb-front-door>
-        <OrbGlowHero />
-        <div className={`mx-auto max-w-3xl ${orbElectricGlow}`}>
-          <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-5xl sm:leading-tight">
-            The Professional AI Copilot for Children&apos;s Homes
-          </h1>
-          <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-slate-400 sm:text-lg">
-            Write better records.
-            <br />
-            Strengthen safeguarding.
-            <br />
-            Create templates.
-            <br />
-            Stay inspection ready.
-          </p>
-          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <OrbButton href="/orb/login?returnUrl=/orb/setup" data-testid="orb-cta-trial">
-              Start Free Trial
-            </OrbButton>
-            <OrbButton variant="secondary" href="/orb/login" data-testid="orb-cta-sign-in">
-              Sign In
-            </OrbButton>
+      <section className="flex min-h-[calc(100vh-8rem)] flex-col justify-center gap-5 pb-2 pt-1 text-center" data-orb-front-door>
+        <div className={`mx-auto grid w-full max-w-5xl items-center gap-5 lg:grid-cols-[0.92fr_1.08fr] ${orbElectricGlow}`}>
+          <div className="order-1 flex justify-center lg:order-2">
+            <div className="scale-[0.72] sm:scale-[0.82] lg:scale-90">
+              <OrbGlowHero compact />
+            </div>
           </div>
-          <div className="mx-auto mt-8 flex max-w-md flex-col gap-2">
-            <OrbButton variant="secondary" href="/orb/login?returnUrl=/orb/setup&provider=microsoft" className="w-full">
-              Continue with Microsoft
-            </OrbButton>
-            <OrbButton variant="ghost" href="/orb/login?returnUrl=/orb/setup&provider=google" className="w-full text-sm">
-              Continue with Google · Apple · Email
-            </OrbButton>
+
+          <div className={`order-2 ${orbGlassCard} px-5 py-5 sm:px-8 sm:py-7 lg:order-1 lg:text-left`}>
+            <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.34em] text-sky-300/80">
+              ORB Residential
+            </p>
+            <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-5xl sm:leading-tight">
+              The Professional AI Copilot for Children&apos;s Homes
+            </h1>
+            <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-slate-400 lg:mx-0 sm:text-base">
+              Write better records. Strengthen safeguarding. Create templates. Stay inspection ready.
+            </p>
+
+            <div className="mt-5 flex flex-col gap-3 sm:flex-row lg:justify-start justify-center">
+              <OrbButton href="/orb/login?returnUrl=/orb/setup" data-testid="orb-cta-trial">
+                Start Free Trial
+              </OrbButton>
+              <OrbButton variant="secondary" href="/orb/login" data-testid="orb-cta-sign-in">
+                Sign In
+              </OrbButton>
+            </div>
+
+            <div className="mt-5 grid gap-2 sm:grid-cols-2">
+              <OrbButton variant="secondary" href="/orb/login?returnUrl=/orb/setup&provider=microsoft" className="w-full text-sm">
+                Continue with Microsoft
+              </OrbButton>
+              <OrbButton variant="ghost" href="/orb/login?returnUrl=/orb/setup&provider=google" className="w-full text-sm">
+                Google / Apple / Email
+              </OrbButton>
+            </div>
+
+            <div className="mt-5 grid gap-1 text-xs leading-5 text-slate-500 sm:grid-cols-[1fr_1.5fr]">
+              <p>7 Day Free Trial. Then £9.99/month.</p>
+              <p>ORB supports professional judgement and local safeguarding procedures.</p>
+            </div>
           </div>
-          <p className="mt-6 text-sm text-slate-500">7 Day Free Trial. Then £9.99/month.</p>
-          <p className="mx-auto mt-8 max-w-2xl text-xs leading-relaxed text-slate-500">
-            ORB supports professional judgement. It does not replace safeguarding procedures, managers, emergency
-            services or local protocols.
-          </p>
         </div>
-        <div className="mt-14 grid w-full max-w-4xl grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
+
+        <div className="mx-auto grid w-full max-w-5xl grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
           {CAPABILITIES.map((cap, index) => (
             <OrbCapabilityCard key={cap.title} title={cap.title} href={cap.href} subtle={index >= 4} />
           ))}
         </div>
-        <p className="mt-10 text-center text-xs text-slate-600">
+
+        <p className="text-center text-[11px] text-slate-600">
           Already using IndiCare OS?{' '}
           <Link href="/os" className="text-sky-400/90 hover:text-sky-300">
             Open OS workspace
