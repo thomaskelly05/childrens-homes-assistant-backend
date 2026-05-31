@@ -684,6 +684,21 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
     return workspace.chats.find((c) => c.id === workspace.activeChatId) ?? null
   }, [workspace.activeChatId, workspace.chats])
 
+  const voiceStationAssistant = useMemo(() => {
+    if (activePanel !== 'orb_voice' || !activeChat) return null
+    const lastAssistant = [...activeChat.messages]
+      .reverse()
+      .find(
+        (entry) =>
+          entry.role === 'assistant' &&
+          entry.status !== 'thinking' &&
+          entry.status !== 'error' &&
+          entry.content.trim()
+      )
+    if (!lastAssistant) return null
+    return { key: lastAssistant.id, text: lastAssistant.content }
+  }, [activePanel, activeChat])
+
   const messages = activeChat?.messages ?? []
   const visibleMessages = useMemo(() => dedupeOrbMessages(messages), [messages])
   const mode =
@@ -1566,7 +1581,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       return
     }
     if (!voice.recognitionAvailable) {
-      setMicNotice('Voice input is not available in this browser yet.')
+      setMicNotice('Voice input is not available in this browser.')
       window.setTimeout(() => setMicNotice(null), 5000)
       return
     }
@@ -2443,6 +2458,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         voiceRepliesEnabled={voiceSettings.voiceReplies}
         onVoiceRepliesChange={(enabled) => voice.setVoiceReplies(enabled)}
         onOpenVoiceSettings={openVoiceSettings}
+        onOpenOrbVoice={residentialSurface ? openOrbVoicePanel : undefined}
         onOpenProfile={openResidentialAccount}
         onOpenHelp={openHelpPanel}
         onExportWorkspace={() => {
@@ -2472,13 +2488,19 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         }}
       />
       <OrbHelpPanel open={activePanel === 'help'} onClose={closePanel} />
-      <OrbVoiceSettingsPanel open={activePanel === 'voice'} onClose={closePanel} />
+      <OrbVoiceSettingsPanel
+        open={activePanel === 'voice'}
+        onClose={closePanel}
+        onOpenOrbVoice={residentialSurface ? openOrbVoicePanel : undefined}
+      />
       {residentialSurface ? (
         <OrbVoiceStation
           open={activePanel === 'orb_voice'}
           onClose={closePanel}
           voice={voice}
           pending={pending}
+          assistantReply={voiceStationAssistant?.text ?? null}
+          assistantReplyKey={voiceStationAssistant?.key ?? null}
           onSendToOrb={(text) => void sendMessage(text)}
         />
       ) : null}

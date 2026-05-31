@@ -539,6 +539,31 @@ html[data-orb-residential='1'] .orb-chat-layout--residential .orb-message-assist
     0 0 48px rgba(124, 92, 255, 0.22);
 }
 
+.glass-orb-mark--listening .glass-orb-mark__sphere {
+  animation-duration: 2.2s;
+  box-shadow:
+    inset 0 1px 10px rgba(255, 255, 255, 0.28),
+    0 0 32px rgba(94, 200, 255, 0.55),
+    0 0 56px rgba(22, 139, 255, 0.35);
+}
+
+.glass-orb-mark--speaking .glass-orb-mark__sphere {
+  animation-duration: 2.6s;
+  box-shadow:
+    inset 0 1px 10px rgba(255, 255, 255, 0.22),
+    0 0 24px rgba(124, 92, 255, 0.4),
+    0 0 40px rgba(22, 139, 255, 0.28);
+}
+
+.glass-orb-mark--idle.glass-orb-mark--voice .glass-orb-mark__sphere {
+  animation-duration: 4.2s;
+  opacity: 0.95;
+}
+
+.orb-voice-room {
+  background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(22, 139, 255, 0.08), transparent 70%);
+}
+
 .glass-orb-mark__sphere {
   width: 88%;
   height: 88%;

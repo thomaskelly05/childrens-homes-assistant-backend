@@ -2,6 +2,20 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import {
+  pickBritishFemaleVoice,
+  splitTextForSpeechChunks,
+  stripWakePhraseFromTranscript,
+  transcriptContainsWakePhrase
+} from '@/lib/orb/voice/orb-voice-browser'
+import type { OrbSpokenAnswerLength, OrbVoiceModeId, OrbVoicePresetId } from '@/lib/orb/voice/orb-voice-types'
+import {
+  ORB_VOICE_SETTINGS_LEGACY_KEY,
+  ORB_VOICE_SETTINGS_STORAGE_KEY
+} from '@/lib/orb/voice/orb-voice-types'
+
+export { pickBritishFemaleVoice, splitTextForSpeechChunks, stripWakePhraseFromTranscript, transcriptContainsWakePhrase }
+
 type BrowserSpeechRecognition = {
   lang: string
   interimResults: boolean
@@ -49,6 +63,13 @@ export type StandaloneOrbVoiceSettings = {
   selectedVoiceUri: string | null
   speechRate: number
   speechPitch: number
+  voiceMode: OrbVoiceModeId
+  voicePresetId: OrbVoicePresetId
+  spokenAnswerLength: OrbSpokenAnswerLength
+  allowInterruption: boolean
+  pushToTalk: boolean
+  saveTranscript: boolean
+  useBrowserFallback: boolean
 }
 
 export type StandaloneOrbWakeStatus =
@@ -61,7 +82,7 @@ export const WAKE_PHRASE_TEXT = 'Hey ORB'
 
 const WAKE_TRIGGERS = ['hey orb', 'hi orb', 'okay orb', 'ok orb', 'orb'] as const
 
-const SETTINGS_STORAGE_KEY = 'orb-standalone-voice-settings'
+const SETTINGS_STORAGE_KEY = ORB_VOICE_SETTINGS_STORAGE_KEY
 
 const WAKE_RESTART_DELAY_MS = 450
 const CONTINUOUS_LISTEN_DELAY_MS = 700
@@ -78,35 +99,16 @@ const DEFAULT_SETTINGS: StandaloneOrbVoiceSettings = {
   answerStyle: 'balanced',
   selectedVoiceUri: null,
   speechRate: 0.92,
-  speechPitch: 1
+  speechPitch: 1,
+  voiceMode: 'conversational',
+  voicePresetId: 'orb_british_female',
+  spokenAnswerLength: 'balanced',
+  allowInterruption: true,
+  pushToTalk: true,
+  saveTranscript: true,
+  useBrowserFallback: true
 }
 
-/** Explicit preference order for British female voices */
-const PREFERRED_VOICE_NAMES = [
-  'google uk english female',
-  'microsoft sonia online (natural) - english (united kingdom)',
-  'microsoft sonia',
-  'microsoft libby online (natural) - english (united kingdom)',
-  'microsoft libby',
-  'google uk english male'
-] as const
-
-/** Tier 1: en-GB + female hint */
-const GB_FEMALE_HINTS = [
-  'google uk english female',
-  'microsoft sonia',
-  'microsoft libby',
-  'serena',
-  'kate',
-  'victoria',
-  'female',
-  'natural'
-] as const
-
-/** Tier 3: English female hints */
-const EN_FEMALE_HINTS = ['samantha', 'victoria', 'female', 'zira', 'jenny', 'aria', 'libby', 'sonia', 'natural'] as const
-
-const SPEECH_CHUNK_MAX_CHARS = 170
 const SPEECH_CHUNK_PAUSE_MS = 80
 const SPEECH_TEST_PHRASE = "Hello, I'm ORB. I'll use this voice when available."
 const SAFARI_KEEPALIVE_MS = 140
@@ -114,7 +116,13 @@ const SAFARI_KEEPALIVE_MS = 140
 function readStoredSettings(): StandaloneOrbVoiceSettings {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS
   try {
-    const raw = window.localStorage.getItem(SETTINGS_STORAGE_KEY)
+    let raw = window.localStorage.getItem(SETTINGS_STORAGE_KEY)
+    if (!raw) {
+      raw = window.localStorage.getItem(ORB_VOICE_SETTINGS_LEGACY_KEY)
+      if (raw) {
+        window.localStorage.setItem(SETTINGS_STORAGE_KEY, raw)
+      }
+    }
     if (!raw) return DEFAULT_SETTINGS
     const parsed = JSON.parse(raw) as Partial<StandaloneOrbVoiceSettings>
     return {
@@ -124,85 +132,34 @@ function readStoredSettings(): StandaloneOrbVoiceSettings {
       continuousConversation: false,
       voiceReplies: parsed.voiceReplies ?? DEFAULT_SETTINGS.voiceReplies,
       speechRate: typeof parsed.speechRate === 'number' ? parsed.speechRate : DEFAULT_SETTINGS.speechRate,
-      speechPitch: typeof parsed.speechPitch === 'number' ? parsed.speechPitch : DEFAULT_SETTINGS.speechPitch
+      speechPitch: typeof parsed.speechPitch === 'number' ? parsed.speechPitch : DEFAULT_SETTINGS.speechPitch,
+      voiceMode: parsed.voiceMode ?? DEFAULT_SETTINGS.voiceMode,
+      voicePresetId: parsed.voicePresetId ?? DEFAULT_SETTINGS.voicePresetId,
+      spokenAnswerLength: parsed.spokenAnswerLength ?? DEFAULT_SETTINGS.spokenAnswerLength,
+      allowInterruption: parsed.allowInterruption ?? DEFAULT_SETTINGS.allowInterruption,
+      pushToTalk: parsed.pushToTalk ?? DEFAULT_SETTINGS.pushToTalk,
+      saveTranscript: parsed.saveTranscript ?? DEFAULT_SETTINGS.saveTranscript,
+      useBrowserFallback: parsed.useBrowserFallback ?? DEFAULT_SETTINGS.useBrowserFallback
     }
   } catch {
     return DEFAULT_SETTINGS
   }
 }
 
+function britishPreferenceForPreset(preset: OrbVoicePresetId): boolean {
+  return preset !== 'system_fallback'
+}
+
 function voiceLooksFemale(name: string): boolean {
   const lower = name.toLowerCase()
   if (lower.includes('male') && !lower.includes('female')) return false
-  return GB_FEMALE_HINTS.some((hint) => lower.includes(hint)) || EN_FEMALE_HINTS.some((hint) => lower.includes(hint))
-}
-
-function voiceScore(voice: SpeechSynthesisVoice, preferBritishFemale: boolean): number {
-  const name = voice.name.toLowerCase()
-  const lang = voice.lang.toLowerCase()
-
-  for (let i = 0; i < PREFERRED_VOICE_NAMES.length; i += 1) {
-    if (name.includes(PREFERRED_VOICE_NAMES[i])) return 120 - i * 5
-  }
-
-  if (!preferBritishFemale) {
-    if (lang.startsWith('en-gb')) return 80
-    if (lang.startsWith('en')) return 50
-    return 10
-  }
-
-  if (lang.startsWith('en-gb') && voiceLooksFemale(name)) return 100
-  if (lang.startsWith('en-gb')) return 75
-  if (voiceLooksFemale(name) && lang.startsWith('en')) return 60
-  if (lang.startsWith('en') && voiceLooksFemale(name)) return 55
-  if (lang.startsWith('en')) return 35
-  return 5
-}
-
-export function pickBritishFemaleVoice(
-  voices: SpeechSynthesisVoice[],
-  preferBritishFemale = true,
-  selectedUri: string | null = null
-): SpeechSynthesisVoice | null {
-  if (!voices.length) return null
-  if (selectedUri) {
-    const explicit = voices.find((v) => v.voiceURI === selectedUri)
-    if (explicit) return explicit
-  }
-  const sorted = [...voices].sort((a, b) => voiceScore(b, preferBritishFemale) - voiceScore(a, preferBritishFemale))
-  return sorted[0] ?? null
-}
-
-/** Split long assistant replies for reliable Safari/Chrome speech synthesis playback */
-export function splitTextForSpeechChunks(text: string, maxChars = SPEECH_CHUNK_MAX_CHARS): string[] {
-  const trimmed = text.trim()
-  if (!trimmed) return []
-  if (trimmed.length <= maxChars) return [trimmed]
-
-  const sentences = trimmed.split(/(?<=[.!?…])\s+|\n+/)
-  const chunks: string[] = []
-  let buffer = ''
-
-  for (const sentence of sentences) {
-    const piece = sentence.trim()
-    if (!piece) continue
-    const candidate = buffer ? `${buffer} ${piece}` : piece
-    if (candidate.length <= maxChars) {
-      buffer = candidate
-      continue
-    }
-    if (buffer) chunks.push(buffer)
-    if (piece.length <= maxChars) {
-      buffer = piece
-    } else {
-      for (let i = 0; i < piece.length; i += maxChars) {
-        chunks.push(piece.slice(i, i + maxChars))
-      }
-      buffer = ''
-    }
-  }
-  if (buffer) chunks.push(buffer)
-  return chunks.length ? chunks : [trimmed]
+  return (
+    lower.includes('female') ||
+    lower.includes('sonia') ||
+    lower.includes('libby') ||
+    lower.includes('serena') ||
+    lower.includes('kate')
+  )
 }
 
 function getSpeechRecognitionCtor(): SpeechRecognitionCtor | null {
@@ -212,25 +169,6 @@ function getSpeechRecognitionCtor(): SpeechRecognitionCtor | null {
     webkitSpeechRecognition?: SpeechRecognitionCtor
   }
   return w.SpeechRecognition || w.webkitSpeechRecognition || null
-}
-
-export function stripWakePhraseFromTranscript(text: string): string {
-  let cleaned = text.trim()
-  for (const trigger of WAKE_TRIGGERS) {
-    const pattern = new RegExp(`^${trigger}[,\\s!?.]*`, 'i')
-    cleaned = cleaned.replace(pattern, '').trim()
-  }
-  return cleaned
-}
-
-export function transcriptContainsWakePhrase(text: string): boolean {
-  const lower = text.toLowerCase().trim()
-  return WAKE_TRIGGERS.some((trigger) => {
-    if (trigger === 'orb') {
-      return /\b(hey|hi|okay|ok)\s+orb\b/i.test(lower) || /^orb[,!\s]/i.test(lower)
-    }
-    return lower.includes(trigger)
-  })
 }
 
 export function useStandaloneOrbVoice() {
@@ -332,9 +270,10 @@ export function useStandaloneOrbVoice() {
     if (typeof window === 'undefined' || !window.speechSynthesis) return
     const voices = window.speechSynthesis.getVoices()
     setAvailableVoices(voices)
+    const preferBritish = britishPreferenceForPreset(settingsRef.current.voicePresetId)
     const picked = pickBritishFemaleVoice(
       voices,
-      settingsRef.current.britishFemalePreference,
+      preferBritish && settingsRef.current.britishFemalePreference,
       settingsRef.current.selectedVoiceUri
     )
     preferredVoiceRef.current = picked
@@ -733,6 +672,7 @@ export function useStandaloneOrbVoice() {
   }, [interimTranscript, phase, transcript])
 
   const interruptForListen = useCallback(() => {
+    if (!settingsRef.current.allowInterruption && speaking) return
     clearTimers()
     speakGenerationRef.current += 1
     speakChunksRef.current = []
@@ -743,7 +683,7 @@ export function useStandaloneOrbVoice() {
     setPhase('interrupted')
     if (!userInitiatedVoiceRef.current) return
     startListening()
-  }, [clearTimers, startListening])
+  }, [clearTimers, speaking, startListening])
 
   const pauseVoiceSession = useCallback(() => {
     setVoiceSessionPaused(true)
@@ -855,9 +795,24 @@ export function useStandaloneOrbVoice() {
       settingsRef.current = DEFAULT_SETTINGS
       if (typeof window !== 'undefined') {
         window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(DEFAULT_SETTINGS))
+        window.localStorage.removeItem(ORB_VOICE_SETTINGS_LEGACY_KEY)
       }
       refreshVoices()
     },
+    setVoiceMode: (voiceMode: OrbVoiceModeId) => updateSettings({ voiceMode }),
+    setVoicePresetId: (voicePresetId: OrbVoicePresetId) =>
+      updateSettings({
+        voicePresetId,
+        britishFemalePreference: britishPreferenceForPreset(voicePresetId)
+      }),
+    setSpokenAnswerLength: (spokenAnswerLength: OrbSpokenAnswerLength) => updateSettings({ spokenAnswerLength }),
+    setAllowInterruption: (allowInterruption: boolean) => updateSettings({ allowInterruption }),
+    setPushToTalk: (pushToTalk: boolean) => updateSettings({ pushToTalk }),
+    setSaveTranscript: (saveTranscript: boolean) => updateSettings({ saveTranscript }),
+    setUseBrowserFallback: (useBrowserFallback: boolean) => updateSettings({ useBrowserFallback }),
+    setAutoSend: (autoSend: boolean) => updateSettings({ autoSend }),
+    setShowTranscriptBeforeSend: (showTranscriptBeforeSend: boolean) =>
+      updateSettings({ showTranscriptBeforeSend }),
     voiceSelectionNote,
     preferredVoiceIsBritishFemale: preferredVoiceName
       ? voiceLooksFemale(preferredVoiceName.toLowerCase()) &&
