@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
 
 export default function OrbResidentialOnboardingPage() {
-  redirect('/orb/onboarding')
+  redirect('/orb/setup')
 }

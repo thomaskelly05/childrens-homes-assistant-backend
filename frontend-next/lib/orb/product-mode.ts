@@ -27,9 +27,11 @@ export function boundaryForOrbProductMode(productMode: OrbProductMode): OrbProdu
   }
 }
 
-/** Standalone ORB Residential surface at `/orb` (no OS scope or records). */
+/** Public ORB front door and standalone ORB surfaces (no OS AppShell). */
 export function isStandaloneOrbSurfaceRoute(pathname: string | null | undefined) {
-  return Boolean(pathname === '/orb' || pathname?.startsWith('/orb/'))
+  if (!pathname) return false
+  if (pathname === '/') return true
+  return pathname === '/orb' || pathname.startsWith('/orb/')
 }
 
 /** Legacy assistant shell routes (separate from `/orb` standalone surface). */

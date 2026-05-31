@@ -25,7 +25,7 @@ export default function OrbBillingCancelPage() {
       )
       window.location.href = url
     } catch {
-      window.location.href = '/orb/access'
+      window.location.href = '/orb/billing'
     }
   }
 
@@ -36,9 +36,9 @@ export default function OrbBillingCancelPage() {
     }
     try {
       await startOrbTrial()
-      window.location.href = '/orb/onboarding'
+      window.location.href = '/orb/setup'
     } catch {
-      window.location.href = '/orb/access'
+      window.location.href = '/orb/billing'
     }
   }
 

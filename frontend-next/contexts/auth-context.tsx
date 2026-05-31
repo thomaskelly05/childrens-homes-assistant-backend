@@ -35,6 +35,7 @@ const publicPathPrefixes = [
   '/orb/login',
   '/orb/signup',
   '/orb/access',
+  '/orb/billing',
   '/orb/onboarding',
   '/orb/billing/success',
   '/orb/billing/cancel'
@@ -74,12 +75,14 @@ const e2eUser: StaffUser = {
 }
 
 function isPublicPath(pathname: string) {
+  if (pathname === '/') return true
   if (publicAssetPaths.has(pathname)) return true
   if (publicAssetPrefixes.some((prefix) => pathname.startsWith(prefix))) return true
   return publicPathPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))
 }
 
 function isOrbSurfacePath(pathname: string) {
+  if (pathname === '/') return true
   return pathname === '/orb' || pathname.startsWith('/orb/')
 }
 
@@ -203,7 +206,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (status !== 'unauthenticated' || isPublicPath(pathname) || logoutRedirecting.current) return
-    if (pathname === '/orb') return
+    if (pathname === '/' || pathname === '/orb') return
     const search = typeof window === 'undefined' ? '' : window.location.search
     const returnUrl = encodeURIComponent(`${pathname}${search}`)
     const loginPath = pathname.startsWith('/orb') ? '/orb/login' : '/login'
