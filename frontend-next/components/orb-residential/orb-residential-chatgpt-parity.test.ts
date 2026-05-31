@@ -101,4 +101,39 @@ describe('ORB Residential ChatGPT parity', () => {
     const templates = readComponent('components/orb-standalone/orb-templates-panel.tsx')
     assert.match(templates, /orbStationShellProps\(residentialSurface/)
   })
+
+  it('sidebar collapse preference uses orb-sidebar-collapsed localStorage key', () => {
+    const pref = readComponent('lib/orb/orb-sidebar-preference.ts')
+    const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
+    assert.match(pref, /ORB_SIDEBAR_COLLAPSED_KEY = 'orb-sidebar-collapsed'/)
+    assert.match(companion, /readOrbSidebarCollapsed/)
+    assert.match(companion, /writeOrbSidebarCollapsed/)
+    assert.match(companion, /toggleSidebarCollapsed/)
+    assert.match(companion, /data-orb-sidebar-collapsed/)
+  })
+
+  it('residential projects seed and persist via orb-projects key', () => {
+    const projects = readComponent('lib/orb/orb-residential-projects.ts')
+    const sidebar = readComponent('components/orb-residential/orb-residential-sidebar.tsx')
+    assert.match(projects, /ORB_PROJECTS_STORAGE_KEY = 'orb-projects'/)
+    assert.match(projects, /My Home/)
+    assert.match(projects, /ensureResidentialWorkspaceProjects/)
+    assert.match(sidebar, /data-orb-sidebar-projects/)
+    assert.match(sidebar, /data-orb-sidebar-new-project/)
+  })
+
+  it('composer compact mode and centred footer on residential', () => {
+    const composer = readComponent('components/orb-standalone/orb-standalone-composer.tsx')
+    const premium = readComponent('app/orb/orb-premium-tokens.css')
+    assert.match(composer, /residentialSurface/)
+    assert.match(composer, /orb-composer-glass--compact/)
+    assert.match(composer, /data-orb-residential-footer/)
+    assert.match(composer, /ORB Residential · © 2026 IndiCare/)
+    assert.match(premium, /orb-chat-shell/)
+  })
+
+  it('saved outputs modal has designed empty state', () => {
+    const saved = readComponent('components/orb-standalone/orb-saved-outputs-panel.tsx')
+    assert.match(saved, /No saved outputs yet\./)
+  })
 })

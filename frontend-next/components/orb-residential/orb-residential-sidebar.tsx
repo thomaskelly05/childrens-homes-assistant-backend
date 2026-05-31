@@ -1,12 +1,15 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import {
   BookOpen,
+  ChevronLeft,
+  ChevronRight,
   CreditCard,
   FileCheck,
   FileText,
+  FolderKanban,
   FolderOpen,
   MessageSquarePlus,
   Save,
@@ -21,7 +24,14 @@ import { ORB_RESIDENTIAL_TAGLINE } from '@/lib/orb/orb-residential-copy'
 import { asArray } from '@/lib/orb/orb-safe-array'
 import type { AdultProfile } from '@/lib/orb/adult-profile-store'
 import { OrbSidebarChatList } from '@/components/orb-standalone/orb-sidebar-chat-menu'
-import { searchChats, type StandaloneChat, type StandaloneWorkspace } from '@/lib/orb/standalone-local-store'
+import {
+  createStandaloneProject,
+  searchChats,
+  STANDALONE_GENERAL_PROJECT_ID,
+  type StandaloneChat,
+  type StandaloneProject,
+  type StandaloneWorkspace
+} from '@/lib/orb/standalone-local-store'
 
 const NAV_ITEMS = [
   { id: 'review', label: 'Review This', icon: FileCheck },
@@ -62,6 +72,34 @@ function groupChatsByRecency(chats: StandaloneChat[]) {
   return groups
 }
 
+function SidebarIconButton({
+  label,
+  onClick,
+  children,
+  active,
+  dataOrb
+}: {
+  label: string
+  onClick: () => void
+  children: ReactNode
+  active?: boolean
+  dataOrb?: string
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`orb-sidebar-nav-item w-full ${active ? 'orb-sidebar-nav-item--active' : ''}`}
+      aria-label={label}
+      title={label}
+      {...(dataOrb ? { [`data-${dataOrb}`]: true } : {})}
+    >
+      {children}
+      <span className="orb-sidebar-nav-item__label sr-only">{label}</span>
+    </button>
+  )
+}
+
 export function OrbResidentialSidebar({
   workspace,
   chatSearch,
@@ -74,6 +112,9 @@ export function OrbResidentialSidebar({
   onOpenProfile,
   onOpenBilling,
   onWorkspaceChange,
+  onSelectProject,
+  collapsed = false,
+  onToggleCollapse,
   adultProfile,
   savedOutputsCount,
   onClose
@@ -82,24 +123,38 @@ export function OrbResidentialSidebar({
   chatSearch: string
   onChatSearchChange: (value: string) => void
   onSelectChat: (chatId: string) => void
-  onNewChat: () => void
+  onNewChat: (projectId?: string) => void
   onOpenStation: (station: OrbResidentialStationId) => void
   onOpenSettings?: () => void
   onOpenSavedOutputs?: () => void
   onOpenProfile?: () => void
   onOpenBilling?: () => void
   onWorkspaceChange: (next: StandaloneWorkspace) => void
+  onSelectProject?: (projectId: string) => void
+  collapsed?: boolean
+  onToggleCollapse?: () => void
   adultProfile?: AdultProfile | null
   savedOutputsCount?: number
   onClose?: () => void
 }) {
+  const [projectsOpen, setProjectsOpen] = useState(true)
+  const [projectEditorOpen, setProjectEditorOpen] = useState(false)
+  const [newProjectName, setNewProjectName] = useState('')
+
   const chats = asArray<StandaloneChat>(workspace.chats)
+  const projects = asArray<StandaloneProject>(workspace.projects)
 
   const filteredChats = useMemo(
-    () => searchChats(chats, chatSearch, { includeArchived: false }),
-    [chats, chatSearch]
+    () =>
+      searchChats(chats, chatSearch, {
+        projectId: chatSearch.trim() ? undefined : workspace.activeProjectId,
+        includeArchived: false
+      }),
+    [chats, chatSearch, workspace.activeProjectId]
   )
   const timeGroupedChats = useMemo(() => groupChatsByRecency(filteredChats), [filteredChats])
+
+  const activeProject = projects.find((project) => project.id === workspace.activeProjectId)
 
   function updateChat(chatId: string, patch: Partial<StandaloneChat>) {
     onWorkspaceChange({
@@ -122,31 +177,182 @@ export function OrbResidentialSidebar({
     updateChat(chatId, { title: next.trim() })
   }
 
+  function moveChatToProject(chatId: string) {
+    const chat = chats.find((c) => c.id === chatId)
+    if (!chat) return
+    const choice = window.prompt(
+      `Move "${chat.title}" to project:\n${projects.map((p) => `• ${p.name}`).join('\n')}\n\nEnter project name`
+    )
+    if (!choice?.trim()) return
+    const project = projects.find((p) => p.name.toLowerCase() === choice.trim().toLowerCase())
+    if (!project) return
+    updateChat(chatId, { projectId: project.id })
+  }
+
+  function saveProject() {
+    const name = newProjectName.trim()
+    if (!name) return
+    const project = createStandaloneProject(name)
+    onWorkspaceChange({
+      ...workspace,
+      projects: [...projects, project],
+      activeProjectId: project.id
+    })
+    setNewProjectName('')
+    setProjectEditorOpen(false)
+    setProjectsOpen(true)
+    onSelectProject?.(project.id)
+  }
+
+  function renameProject(project: StandaloneProject) {
+    const next = window.prompt('Rename project', project.name)
+    if (!next?.trim()) return
+    onWorkspaceChange({
+      ...workspace,
+      projects: projects.map((p) =>
+        p.id === project.id ? { ...p, name: next.trim(), updatedAt: Date.now() } : p
+      )
+    })
+  }
+
+  function deleteProject(projectId: string) {
+    if (projectId === STANDALONE_GENERAL_PROJECT_ID) return
+    const nextChats = chats.map((c) =>
+      c.projectId === projectId ? { ...c, projectId: STANDALONE_GENERAL_PROJECT_ID } : c
+    )
+    onWorkspaceChange({
+      ...workspace,
+      projects: projects.filter((p) => p.id !== projectId),
+      chats: nextChats,
+      activeProjectId:
+        workspace.activeProjectId === projectId ? STANDALONE_GENERAL_PROJECT_ID : workspace.activeProjectId
+    })
+  }
+
+  function editProjectContext(project: StandaloneProject) {
+    const next = window.prompt(
+      'Optional project memory for ORB (not live OS records)',
+      project.description || ''
+    )
+    if (next === null) return
+    onWorkspaceChange({
+      ...workspace,
+      projects: projects.map((p) =>
+        p.id === project.id ? { ...p, description: next.trim() || undefined, updatedAt: Date.now() } : p
+      )
+    })
+  }
+
+  if (collapsed) {
+    return (
+      <div className="orb-sidebar-rail flex h-full flex-col items-center gap-1 py-2" data-orb-sidebar-collapsed="true">
+        {onToggleCollapse ? (
+          <button
+            type="button"
+            className="mb-1 rounded-lg p-2 text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]"
+            onClick={onToggleCollapse}
+            aria-label="Expand sidebar"
+            data-orb-sidebar-expand
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        ) : null}
+        <GlassOrbMark size="sm" className="mb-2" pulse />
+        <SidebarIconButton
+          label="New chat"
+          onClick={() => onNewChat(workspace.activeProjectId)}
+          dataOrb="orb-sidebar-new-chat"
+        >
+          <MessageSquarePlus className="h-4 w-4 shrink-0" />
+        </SidebarIconButton>
+        <SidebarIconButton
+          label="Search chats"
+          onClick={() => {
+            onToggleCollapse?.()
+            window.setTimeout(() => {
+              document.querySelector<HTMLInputElement>('[data-orb-sidebar-search]')?.focus()
+            }, 120)
+          }}
+          dataOrb="orb-sidebar-search-nav"
+        >
+          <Search className="h-4 w-4 shrink-0" />
+        </SidebarIconButton>
+        <SidebarIconButton
+          label="Projects"
+          onClick={() => {
+            onToggleCollapse?.()
+            setProjectsOpen(true)
+          }}
+          dataOrb="orb-sidebar-projects-nav"
+        >
+          <FolderKanban className="h-4 w-4 shrink-0" />
+        </SidebarIconButton>
+        <div className="mt-auto flex w-full flex-col gap-0.5 px-1">
+          {NAV_ITEMS.slice(0, 3).map((station) => {
+            const Icon = station.icon
+            return (
+              <SidebarIconButton
+                key={station.id}
+                label={station.label}
+                onClick={() => {
+                  if (station.id === 'saved') onOpenSavedOutputs?.()
+                  else onOpenStation(station.id)
+                }}
+                dataOrb={`orb-sidebar-station-${station.id}`}
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+              </SidebarIconButton>
+            )
+          })}
+          <SidebarIconButton label="Settings" onClick={() => onOpenSettings?.()} dataOrb="orb-sidebar-settings">
+            <Settings className="h-4 w-4 shrink-0" />
+          </SidebarIconButton>
+          <SidebarIconButton label="Account" onClick={() => onOpenProfile?.()} dataOrb="orb-sidebar-profile">
+            <User className="h-4 w-4 shrink-0" />
+          </SidebarIconButton>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <>
-      <div className="shrink-0 border-b border-[var(--orb-line)] px-3 py-3">
+      <div className="shrink-0 px-3 py-3">
         <div className="flex items-start gap-2.5">
-          <GlassOrbMark size="sm" className="mt-0.5" />
+          <GlassOrbMark size="sm" className="mt-0.5" pulse />
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold leading-tight text-[var(--orb-foreground)]" data-orb-sidebar-brand>
               ORB Residential
             </p>
-            <p className="mt-0.5 text-[10px] text-[var(--orb-muted)]">{ORB_RESIDENTIAL_TAGLINE}</p>
+            <p className="orb-sidebar-powered-tagline mt-0.5 text-[10px]">{ORB_RESIDENTIAL_TAGLINE}</p>
           </div>
-          {onClose ? (
-            <button
-              type="button"
-              className="rounded-lg p-1 text-[var(--orb-muted)] lg:hidden"
-              onClick={onClose}
-              aria-label="Close sidebar"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          ) : null}
+          <div className="flex shrink-0 items-center gap-0.5">
+            {onToggleCollapse ? (
+              <button
+                type="button"
+                className="hidden rounded-lg p-1.5 text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)] lg:inline-flex"
+                onClick={onToggleCollapse}
+                aria-label="Collapse sidebar"
+                data-orb-sidebar-collapse
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+            ) : null}
+            {onClose ? (
+              <button
+                type="button"
+                className="rounded-lg p-1 text-[var(--orb-muted)] lg:hidden"
+                onClick={onClose}
+                aria-label="Close sidebar"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            ) : null}
+          </div>
         </div>
         <button
           type="button"
-          onClick={onNewChat}
+          onClick={() => onNewChat(workspace.activeProjectId)}
           className="orb-sidebar-nav-item orb-sidebar-nav-item--active mt-2.5 w-full"
           data-orb-sidebar-new-chat
         >
@@ -156,7 +362,7 @@ export function OrbResidentialSidebar({
       </div>
 
       <div className="orb-sidebar-group min-h-0 flex-1 overflow-y-auto px-2 py-2" data-orb-sidebar-scroll>
-        <label className="mb-2 flex items-center gap-2 rounded-xl border border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] px-3 py-2">
+        <label className="mb-2 flex items-center gap-2 rounded-xl border border-[var(--orb-line)]/60 bg-[var(--orb-surface-elevated)] px-3 py-2">
           <Search className="h-4 w-4 shrink-0 text-[var(--orb-muted)]" aria-hidden />
           <input
             type="search"
@@ -167,6 +373,111 @@ export function OrbResidentialSidebar({
             data-orb-sidebar-search
           />
         </label>
+
+        <div className="mb-3" data-orb-sidebar-projects>
+          <button
+            type="button"
+            className="flex w-full items-center justify-between px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--orb-muted)]"
+            onClick={() => setProjectsOpen((open) => !open)}
+            aria-expanded={projectsOpen}
+          >
+            <span>Projects</span>
+            <span className="text-[var(--orb-muted)]">{projectsOpen ? '−' : '+'}</span>
+          </button>
+          {projectsOpen ? (
+            <div className="mt-1 space-y-0.5">
+              {projectEditorOpen ? (
+                <div className="rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)] p-2">
+                  <input
+                    type="text"
+                    value={newProjectName}
+                    onChange={(e) => setNewProjectName(e.target.value)}
+                    placeholder="Project name"
+                    className="w-full rounded-lg border border-[var(--orb-line)]/50 bg-transparent px-2 py-1.5 text-sm text-[var(--orb-foreground)] outline-none"
+                    data-orb-sidebar-new-project-input
+                  />
+                  <div className="mt-2 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={saveProject}
+                      className="rounded-full bg-[#168bff] px-3 py-1 text-xs font-semibold text-white"
+                    >
+                      Save
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setProjectEditorOpen(false)}
+                      className="rounded-full px-3 py-1 text-xs text-[var(--orb-muted)]"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setProjectEditorOpen(true)}
+                  className="orb-sidebar-nav-item w-full text-[var(--orb-muted)]"
+                  data-orb-sidebar-new-project
+                >
+                  <FolderKanban className="h-4 w-4" />
+                  <span>New project</span>
+                </button>
+              )}
+              <ul className="space-y-0.5" data-orb-sidebar-project-list>
+                {projects.map((project) => (
+                  <li key={project.id} className="group flex items-center gap-0.5">
+                    <button
+                      type="button"
+                      onClick={() => onSelectProject?.(project.id)}
+                      className={`min-w-0 flex-1 rounded-lg px-2.5 py-2 text-left text-[13px] transition ${
+                        workspace.activeProjectId === project.id
+                          ? 'orb-sidebar-nav-item--active font-semibold'
+                          : 'text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]'
+                      }`}
+                      data-orb-sidebar-project={project.id}
+                      title={project.description}
+                    >
+                      <span className="truncate">{project.name}</span>
+                    </button>
+                    {project.id !== STANDALONE_GENERAL_PROJECT_ID ? (
+                      <div className="flex opacity-0 transition group-hover:opacity-100">
+                        <button
+                          type="button"
+                          className="rounded p-1 text-[10px] text-[var(--orb-muted)] hover:text-[var(--orb-foreground)]"
+                          aria-label={`Rename ${project.name}`}
+                          onClick={() => renameProject(project)}
+                        >
+                          ···
+                        </button>
+                      </div>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+              {activeProject?.description ? (
+                <p className="mt-1.5 px-2 text-[10px] leading-4 text-[var(--orb-muted)]" data-orb-sidebar-project-context>
+                  {activeProject.description}
+                  <button
+                    type="button"
+                    className="ml-1 underline underline-offset-2 hover:text-[var(--orb-foreground)]"
+                    onClick={() => editProjectContext(activeProject)}
+                  >
+                    Edit memory
+                  </button>
+                </p>
+              ) : activeProject ? (
+                <button
+                  type="button"
+                  className="mt-1 px-2 text-[10px] text-[var(--orb-muted)] underline underline-offset-2 hover:text-[var(--orb-foreground)]"
+                  onClick={() => editProjectContext(activeProject)}
+                >
+                  Add optional project memory
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
 
         <p className="px-2 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--orb-muted)]">
           Recent chats
@@ -189,13 +500,17 @@ export function OrbResidentialSidebar({
                   onDelete={deleteChat}
                   onPin={(chat) => updateChat(chat.id, { pinned: !chat.pinned })}
                   onArchive={(chat) => updateChat(chat.id, { archived: true })}
+                  onMoveToProject={moveChatToProject}
                 />
               </div>
             ))}
           </div>
         )}
 
-        <ul className="mt-4 space-y-0.5 border-t border-[var(--orb-line)] pt-3" data-orb-sidebar-stations>
+        <p className="mt-4 px-2 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--orb-muted)]">
+          Apps
+        </p>
+        <ul className="space-y-0.5" data-orb-sidebar-stations>
           {NAV_ITEMS.map((station) => {
             const Icon = station.icon
             const badge =
@@ -225,7 +540,7 @@ export function OrbResidentialSidebar({
         </ul>
       </div>
 
-      <div className="shrink-0 space-y-0.5 border-t border-[var(--orb-line)] p-2" data-orb-sidebar-bottom>
+      <div className="shrink-0 space-y-0.5 p-2" data-orb-sidebar-bottom>
         <button
           type="button"
           onClick={() => onOpenProfile?.()}
