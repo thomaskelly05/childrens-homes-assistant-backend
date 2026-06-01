@@ -62,6 +62,15 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string)
   })
 }
 
+function firstFailureSummary(failures: Array<Record<string, unknown>>): string {
+  const failure = failures.find((item) => item.reason === 'provider_sdp_negotiation_failed') ?? failures[0]
+  if (!failure) return ''
+  const status = typeof failure.status === 'number' ? `HTTP ${failure.status}` : String(failure.reason || '')
+  const body = typeof failure.body === 'string' ? failure.body : ''
+  if (!body) return status
+  return `${status}: ${body.slice(0, 260)}`
+}
+
 export function mapNetworkStateToOrbState(state: OrbNetworkState): OrbState {
   return state
 }
@@ -210,7 +219,8 @@ export class OrbRealtimeClient {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${options.ephemeralKey}`,
-        'Content-Type': 'application/sdp'
+        'Content-Type': 'application/sdp',
+        'OpenAI-Beta': 'realtime=v1'
       },
       body: sdp
     })
@@ -220,10 +230,8 @@ export class OrbRealtimeClient {
     const offer = await peer.createOffer()
     await peer.setLocalDescription(offer)
     const sdp = offer.sdp || ''
-    const endpoints = [
-      OPENAI_REALTIME_SDP_URL,
-      `${OPENAI_REALTIME_SDP_URL}?model=${encodeURIComponent(options.model)}`
-    ]
+    const modelEndpoint = `${OPENAI_REALTIME_SDP_URL}?model=${encodeURIComponent(options.model)}`
+    const endpoints = [modelEndpoint, OPENAI_REALTIME_SDP_URL]
     const failures: Array<Record<string, unknown>> = []
     let response: Response | null = null
     let endpoint = endpoints[0]
@@ -255,18 +263,22 @@ export class OrbRealtimeClient {
         reason: 'provider_sdp_negotiation_failed',
         status: response.status,
         statusText: response.statusText,
-        body: body.slice(0, 500),
+        body: body.slice(0, 900),
         model: options.model
       })
       response = null
     }
 
     if (!response) {
-      throw new OrbRealtimeNegotiationError('Realtime audio could not connect just now.', {
-        reason: 'provider_sdp_negotiation_failed',
-        failures,
-        model: options.model,
-      })
+      const summary = firstFailureSummary(failures)
+      throw new OrbRealtimeNegotiationError(
+        summary ? `Realtime audio could not connect just now. ${summary}` : 'Realtime audio could not connect just now.',
+        {
+          reason: 'provider_sdp_negotiation_failed',
+          failures,
+          model: options.model,
+        }
+      )
     }
 
     const answer = await response.text()
