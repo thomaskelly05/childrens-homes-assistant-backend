@@ -200,9 +200,12 @@ export function OrbVoiceStation({
   })
   readiness.microphone_permission = micPermission === 'unknown' && permissionDenied ? 'denied' : micPermission
 
+  const captureActive = voice.captureActive || voice.listening
+
   const readinessUi = orbVoiceReadinessPresentation(readiness, {
     subscriptionActive,
-    sessionActive
+    sessionActive,
+    captureActive
   })
 
   const status = mapPhaseToStatus(
@@ -336,19 +339,15 @@ export function OrbVoiceStation({
     const result = await testMicrophoneLevel()
     setMicPermission(result.ok ? 'granted' : micPermission === 'granted' ? 'granted' : 'denied')
     setMicTestMessage(result.message)
+    if (process.env.NODE_ENV === 'development') {
+      console.debug('[orb-voice] microphone test', result)
+    }
   }
 
   async function handleStart() {
     if (!subscriptionActive) return
-    const access = await requestMicrophoneAccess()
-    setMicPermission(access.permission)
-    if (!access.ok && access.permission === 'denied') {
-      setRealtimeUiState('error')
-      return
-    }
     if (!voice.recognitionAvailable && !readiness.fallback_available) return
     voice.resumeVoiceSession()
-    setSessionActive(true)
     greetedRef.current = true
     setSessionStartedAt(new Date().toISOString())
     setRealtimeUiState('connecting')
@@ -466,34 +465,53 @@ export function OrbVoiceStation({
       }
     ])
 
-    const beginBrowserCapture = () => {
+    const beginBrowserCapture = async (): Promise<boolean> => {
       if (settings.voiceReplies && voice.synthesisAvailable) {
-        voice.speakAloud(ORB_VOICE_GREETING, () => {
-          void voice.beginUserVoiceCapture()
+        return new Promise((resolve) => {
+          voice.speakAloud(ORB_VOICE_GREETING, () => {
+            void voice.beginUserVoiceCapture().then(resolve)
+          })
         })
-      } else {
-        void voice.beginUserVoiceCapture()
       }
+      return voice.beginUserVoiceCapture()
     }
 
+    let captureStarted = false
+
     if (client.usesWebSocket && session.capabilities.supportsStreamingStt) {
-      await client.startMicrophone({
+      captureStarted = await client.startMicrophone({
         vadEnabled: true,
         bargeInWhileSpeaking: settings.allowInterruption
       })
     } else if (session.provider === 'openai_realtime' && session.openai_session?.client_secret?.value) {
-      await client.startMicrophone({
+      captureStarted = await client.startMicrophone({
         vadEnabled: true,
         bargeInWhileSpeaking: settings.allowInterruption
       })
       if (client.usesOpenAIWebRTC) {
         setUsingBrowserFallback(false)
       } else if (client.usesBrowserFallback) {
-        beginBrowserCapture()
+        captureStarted = await beginBrowserCapture()
       }
     } else {
-      beginBrowserCapture()
+      captureStarted = await beginBrowserCapture()
     }
+
+    if (!captureStarted) {
+      setFallbackNotice(
+        voice.error ||
+          'Live speech recognition unavailable — open Dictate or paste a transcript.'
+      )
+      setUsingBrowserFallback(true)
+      setRealtimeUiState('error')
+      if (onOpenDictate) {
+        setMicTestMessage('Opening ORB Dictate for recording…')
+        onOpenDictate('')
+      }
+      return
+    }
+
+    setSessionActive(true)
   }
 
   async function handleInterrupt() {
@@ -609,15 +627,21 @@ export function OrbVoiceStation({
         ) : null}
 
         <p className="mt-6 text-center text-sm font-medium text-[var(--orb-foreground)]" data-orb-voice-status-label data-orb-voice-readiness={readinessUi.state}>
-          {sessionActive && status !== 'error' ? statusLabel(status, permissionDenied) : readinessUi.headline}
+          {sessionActive && captureActive && status !== 'error'
+          ? statusLabel(status, permissionDenied)
+          : sessionActive && !captureActive
+            ? 'Starting microphone…'
+            : readinessUi.headline}
         </p>
 
         <p className="mt-2 text-center text-sm text-[var(--orb-muted)]" data-orb-voice-mic-status>
-          {sessionActive && status !== 'error'
+          {sessionActive && captureActive && status !== 'error'
             ? settings.pushToTalk
               ? 'Push-to-talk — use Speak when you are ready.'
               : 'Hands-free in this session — ORB will listen again after speaking.'
-            : readinessUi.detail}
+            : sessionActive && !captureActive
+              ? 'Allow microphone access if prompted, or open Dictate.'
+              : readinessUi.detail}
         </p>
 
         {micTestMessage ? (

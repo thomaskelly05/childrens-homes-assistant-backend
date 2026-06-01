@@ -10,6 +10,7 @@ import stripe
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, ConfigDict, Field
 
+from auth.orb_residential_auth_loader import get_orb_residential_user
 from auth.orb_residential_dependencies import require_orb_residential_auth
 from db.connection import get_db
 from db.orb_subscription_db import get_orb_subscription, upsert_orb_stripe_customer
@@ -85,10 +86,11 @@ def _usage_summary(conn, *, user_id: int, user: dict[str, Any]) -> dict[str, Any
     }
 
 
+@router.get("")
 @router.get("/")
 async def get_orb_usage(
     conn=Depends(get_db),
-    current_user=Depends(require_orb_residential_auth),
+    current_user=Depends(get_orb_residential_user),
 ):
     """Usage summary for signed-in ORB Residential users.
 

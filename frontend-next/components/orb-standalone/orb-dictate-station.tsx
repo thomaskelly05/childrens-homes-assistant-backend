@@ -38,6 +38,7 @@ import {
   saveOrbDictateNote,
   transcribeOrbDictateAudio
 } from '@/lib/orb/dictate/orb-dictate-client'
+import { detectSpeechRecognitionSupported } from '@/lib/orb/voice/orb-voice-readiness'
 import {
   anonymiseText,
   modeToNoteType,
@@ -129,6 +130,7 @@ export function OrbDictateStation({
   const [reflectiveAnswers, setReflectiveAnswers] = useState<string[]>([])
   const [reflectiveDraft, setReflectiveDraft] = useState('')
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const recorderModeRef = useRef<'speech' | 'media' | null>(null)
 
   const needsConsent = startMode === 'record_debrief' || dictateMode !== 'rough_note'
 
@@ -152,6 +154,7 @@ export function OrbDictateStation({
     setRecordingActive(false)
     setRecordingPaused(false)
     setTimerSec(0)
+    recorderModeRef.current = null
     voice.cancelListening()
     voice.clearTranscript()
     if (timerRef.current) clearInterval(timerRef.current)
@@ -232,31 +235,81 @@ export function OrbDictateStation({
       setStatusMessage('Please confirm consent before recording a conversation or debrief.')
       return
     }
-    if (!voice.recognitionAvailable) {
-      setStatusMessage('Microphone transcription is not available in this browser. Paste your transcript instead.')
-      return
-    }
     setRecordingActive(true)
     setRecordingPaused(false)
     setStatusMessage(null)
-    const ok = await voice.beginUserVoiceCapture()
+
+    const useSpeech = voice.recognitionAvailable || detectSpeechRecognitionSupported()
+    if (useSpeech) {
+      recorderModeRef.current = 'speech'
+      const ok = await voice.beginUserVoiceCapture({ mode: 'continuous' })
+      if (!ok) {
+        setRecordingActive(false)
+        setStatusMessage(
+          voice.error || 'Could not access the microphone. You can paste a transcript instead.'
+        )
+      }
+      return
+    }
+
+    recorderModeRef.current = 'media'
+    const ok = await voice.beginMediaRecorderCapture()
     if (!ok) {
       setRecordingActive(false)
-      setStatusMessage('Could not access the microphone. You can paste a transcript instead.')
+      setStatusMessage(
+        'Live speech recognition unavailable — paste a transcript or upload audio when transcription is ready.'
+      )
     }
   }
 
   function handlePauseRecording() {
     setRecordingPaused(true)
-    voice.cancelListening()
+    if (recorderModeRef.current === 'speech') {
+      voice.cancelListening()
+    }
   }
 
   function handleResumeRecording() {
     setRecordingPaused(false)
-    void voice.beginUserVoiceCapture()
+    if (recorderModeRef.current === 'speech') {
+      void voice.beginUserVoiceCapture({ mode: 'continuous' })
+      return
+    }
+    if (recorderModeRef.current === 'media') {
+      void voice.beginMediaRecorderCapture()
+    }
   }
 
-  function handleStopRecording() {
+  async function handleStopRecording() {
+    if (recorderModeRef.current === 'media') {
+      const blob = await voice.endMediaRecorderCapture()
+      if (blob) {
+        setUploadingAudio(true)
+        setUploadFileLabel('Recorded note')
+        try {
+          const file = new File([blob], `dictate-recording-${Date.now()}.webm`, {
+            type: blob.type || 'audio/webm'
+          })
+          const result = await transcribeOrbDictateAudio(file, {
+            conversation_consent_confirmed: needsConsent ? authorityConsent && consentConfirmed : undefined
+          })
+          setTranscript(result.transcript)
+          setSegments(result.segments ?? textToSegments(result.transcript, 'live', result.participants ?? []))
+          if (result.participants?.length) setParticipants(result.participants)
+          setStartMode('paste')
+          setStatusMessage('Recording transcribed — review before generating.')
+        } catch {
+          setUploadError(
+            'Audio transcription is not available yet. Please paste the transcript — your recording was captured.'
+          )
+        } finally {
+          setUploadingAudio(false)
+        }
+      }
+      resetRecording()
+      return
+    }
+
     const live = (voice.transcript || voice.displayTranscript || '').trim()
     if (live) setTranscript((prev) => (prev ? `${prev}\n${live}` : live))
     voice.clearTranscript()
