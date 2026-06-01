@@ -117,6 +117,28 @@ export async function startOrbVoiceSession(options: {
   }
 }
 
+/** Dedicated realtime voice session — does not mask missing provider as browser_fallback. */
+export async function startOrbRealtimeVoiceSession(options: {
+  mode?: string
+  voice_id?: string
+}): Promise<OrbVoiceSessionResponse> {
+  try {
+    return await postJson<OrbVoiceSessionResponse>('/orb/voice/realtime/session', {
+      mode: options.mode ?? 'conversational',
+      voice_id: options.voice_id ?? 'orb_british_female',
+      transport: 'auto'
+    })
+  } catch {
+    return {
+      session_id: `local_${Date.now()}`,
+      status: 'not_configured',
+      provider: 'browser_fallback',
+      capabilities: BROWSER_CAPABILITIES,
+      fallback_reason: 'Could not reach realtime voice session API.'
+    }
+  }
+}
+
 export { fetchOrbVoiceRealtimeStatus, isOrbRealtimeVoiceAvailable } from './orb-realtime-availability'
 export type { OrbRealtimeVoiceAvailability, OrbRealtimeVoiceStatus } from './orb-realtime-availability'
 

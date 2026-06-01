@@ -14,7 +14,13 @@ export type DictateState =
   | 'generated'
   | 'error'
 
-export type DictateCaptureMode = 'speech' | 'paste' | 'upload' | 'audio_fallback' | 'none'
+export type DictateCaptureMode =
+  | 'realtime_transcription'
+  | 'speech'
+  | 'paste'
+  | 'upload'
+  | 'audio_fallback'
+  | 'none'
 
 export type DictateStartSource = 'none' | 'user_click' | 'paste' | 'upload' | 'import'
 
@@ -59,3 +65,8 @@ export const DICTATE_NO_SPEECH_MESSAGE =
 
 export const DICTATE_AUDIO_FALLBACK_FAILED_MESSAGE =
   'Your browser allowed the microphone but did not provide audio data. Use speech transcript, Chrome/Edge, upload audio, or paste a transcript.'
+
+export const DICTATE_REALTIME_NOT_CONFIGURED_MESSAGE =
+  'Realtime transcription is not configured. Paste transcript or upload audio.'
+
+export const DICTATE_REALTIME_LISTENING_MESSAGE = 'Listening — live transcript via server realtime'

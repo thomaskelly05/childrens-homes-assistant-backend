@@ -197,6 +197,46 @@ def test_dictate_transcribe_text(dictate_client):
     assert response.json()["data"]["transcript"] == "Rough shift notes here."
 
 
+def test_dictate_realtime_session_not_configured_when_env_missing(dictate_client):
+    response = dictate_client.post("/orb/dictate/realtime/session", json={})
+    assert response.status_code == 200
+    data = response.json()
+    assert data["ok"] is True
+    assert data["configured"] is False
+    assert data["reason"] == "not_configured"
+    assert "Paste transcript" in data["message"]
+
+
+def test_dictate_realtime_session_returns_client_secret_when_configured(dictate_client, monkeypatch):
+    monkeypatch.setenv("ORB_VOICE_REALTIME_PROVIDER", "openai")
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    monkeypatch.setenv("ORB_REALTIME_ENABLED", "true")
+
+    async def fake_dictate_session(**_kwargs):
+        return {
+            "provider": "openai_realtime",
+            "configured": True,
+            "session": {
+                "id": "dictate_sess",
+                "client_secret": {"value": "ek_dictate", "expires_at": 999},
+            },
+            "model": "gpt-realtime",
+            "fallback_text_mode": False,
+        }
+
+    monkeypatch.setattr(
+        "routers.orb_dictate_routes.orb_realtime_provider_service.create_dictate_transcription_session",
+        fake_dictate_session,
+    )
+    response = dictate_client.post("/orb/dictate/realtime/session", json={})
+    assert response.status_code == 200
+    data = response.json()
+    assert data["configured"] is True
+    assert data["provider"] == "openai"
+    assert data["openai_session"]["client_secret"]["value"] == "ek_dictate"
+    assert "OPENAI_API_KEY" not in response.text
+
+
 def test_dictate_transcribe_audio_accepts_wav_webm_mp4(dictate_client, monkeypatch):
     async def fake_transcribe(_path: str):
         return {

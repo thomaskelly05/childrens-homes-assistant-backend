@@ -130,6 +130,37 @@ async def orb_voice_session_status(_current_user=Depends(require_orb_residential
     }
 
 
+@router.post("/realtime/session", response_model=OrbVoiceSessionResponse)
+async def orb_voice_realtime_session(
+    payload: OrbVoiceSessionRequest,
+    current_user=Depends(require_orb_residential_auth),
+):
+    """Create a conversational realtime voice session — no browser_fallback masking when unconfigured."""
+    if not _openai_realtime_configured():
+        return OrbVoiceSessionResponse(
+            session_id=f"unconfigured_{os.urandom(6).hex()}",
+            provider="browser_fallback",
+            status="not_configured",
+            mode=payload.mode,
+            voice_id=normalise_profile_id(payload.voice_id),
+            capabilities=VoiceProviderCapabilities(
+                provider="browser",
+                supportsStreamingStt=False,
+                supportsStreamingTts=False,
+                supportsBargeIn=False,
+                supportsVad=False,
+                supportsDuplex=False,
+                supportsServerAudio=False,
+                latencyClass="fallback",
+            ),
+            message="Live ORB Voice is not available yet. Configure realtime voice to use this.",
+            fallback_reason="not_configured",
+        )
+
+    forced = payload.model_copy(update={"transport": "auto"})
+    return await orb_voice_session(forced, current_user)
+
+
 @router.post("/session", response_model=OrbVoiceSessionResponse)
 async def orb_voice_session(
     payload: OrbVoiceSessionRequest,

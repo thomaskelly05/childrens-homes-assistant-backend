@@ -29,12 +29,13 @@ const DEFAULT_UNAVAILABLE: OrbRealtimeVoiceAvailability = {
 /** Probe GET /orb/voice/session/status — never throws; 500 → unavailable. */
 export async function fetchOrbVoiceRealtimeStatus(): Promise<OrbRealtimeVoiceStatus> {
   try {
+    const { emitOrbClientDebug } = await import('@/lib/orb/orb-client-debug')
     const payload = await authFetch('/orb/voice/session/status', { method: 'GET' })
     if (!payload || typeof payload !== 'object') {
       return { ok: false, realtime_enabled: false, provider: null, reason: 'endpoint_failed' }
     }
     const data = payload as Record<string, unknown>
-    return {
+    const status: OrbRealtimeVoiceStatus = {
       ok: Boolean(data.ok ?? true),
       realtime_enabled: Boolean(data.realtime_enabled),
       provider: typeof data.provider === 'string' ? data.provider : data.provider === null ? null : null,
@@ -47,6 +48,16 @@ export async function fetchOrbVoiceRealtimeStatus(): Promise<OrbRealtimeVoiceSta
             ? 'configured'
             : 'not_configured'
     }
+    emitOrbClientDebug({
+      area: 'voice',
+      event: 'realtime_status',
+      detail: {
+        realtime_enabled: status.realtime_enabled,
+        provider: status.provider,
+        reason: status.reason
+      }
+    })
+    return status
   } catch {
     return { ok: false, realtime_enabled: false, provider: null, reason: 'endpoint_failed' }
   }
@@ -80,6 +91,9 @@ export async function beginOrbRealtimeVoiceConversation(options: {
   mode?: string
   voice_id?: string
 }): Promise<BeginOrbRealtimeVoiceResult> {
+  const { emitOrbClientDebug } = await import('@/lib/orb/orb-client-debug')
+  emitOrbClientDebug({ area: 'voice', event: 'voice_realtime_session_requested', detail: {} })
+
   const { OrbRealtimeVoiceClient } = await import('./orb-realtime-voice-client')
   const client = new OrbRealtimeVoiceClient()
   try {
@@ -89,22 +103,40 @@ export async function beginOrbRealtimeVoiceConversation(options: {
       transport: 'auto'
     })
     if (!sessionHasRealtimeProvider(session)) {
+      emitOrbClientDebug({
+        area: 'voice',
+        event: 'voice_realtime_session_failed',
+        detail: { reason: session.fallback_reason ?? 'not_configured' }
+      })
       return {
         ok: false,
         session,
-        error: session.fallback_reason || 'Realtime voice is not configured on the server.'
+        error:
+          session.message ||
+          session.fallback_reason ||
+          'Live ORB Voice is not available yet. Configure realtime voice to use this.'
       }
     }
     const micOk = await client.startMicrophone({ vadEnabled: true, bargeInWhileSpeaking: true })
     if (!micOk) {
       client.stop()
+      emitOrbClientDebug({
+        area: 'voice',
+        event: 'voice_realtime_session_failed',
+        detail: { error: 'microphone_denied' }
+      })
       return { ok: false, session, error: 'Microphone could not connect to the realtime voice session.' }
     }
+    emitOrbClientDebug({
+      area: 'voice',
+      event: 'voice_realtime_session_started',
+      detail: { provider: session.provider, sessionId: session.session_id }
+    })
+    emitOrbClientDebug({ area: 'voice', event: 'voice_realtime_audio_started', detail: {} })
     return { ok: true, session }
   } catch (error) {
-    return {
-      ok: false,
-      error: error instanceof Error ? error.message : 'Realtime voice session failed.'
-    }
+    const message = error instanceof Error ? error.message : 'Realtime voice session failed.'
+    emitOrbClientDebug({ area: 'voice', event: 'voice_realtime_session_failed', detail: { error: message } })
+    return { ok: false, error: message }
   }
 }

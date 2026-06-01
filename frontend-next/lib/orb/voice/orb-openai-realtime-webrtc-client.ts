@@ -24,6 +24,8 @@ export type OrbOpenAIRealtimeConnectOptions = {
   model: string
   voice?: string | null
   transcriptionModel?: string | null
+  /** When true, session is input-transcription only (ORB Dictate) — no assistant voice output. */
+  transcriptionOnly?: boolean
 }
 
 const DEFAULT_REALTIME_MODEL = 'gpt-realtime'
@@ -57,6 +59,7 @@ export class OrbOpenAIRealtimeWebRTCClient {
   private assistantBuffer = ''
   private partialTranscript = ''
   private closed = false
+  private transcriptionOnly = false
   private connectOptions: OrbOpenAIRealtimeConnectOptions | null = null
   private readonly callbacks: OrbOpenAIRealtimeWebRTCCallbacks
 
@@ -88,8 +91,9 @@ export class OrbOpenAIRealtimeWebRTCClient {
     }
 
     const model = options.model?.trim() || DEFAULT_REALTIME_MODEL
-    const voice = options.voice?.trim() || undefined
+    const voice = options.transcriptionOnly ? undefined : options.voice?.trim() || undefined
     const transcriptionModel = options.transcriptionModel?.trim() || 'whisper-1'
+    this.transcriptionOnly = Boolean(options.transcriptionOnly)
 
     this.peerClient = new OrbRealtimeClient({
       onEvent: (raw) => this.handleProviderEvent(raw),
@@ -129,11 +133,14 @@ export class OrbOpenAIRealtimeWebRTCClient {
         interrupt_response: true
       }
     }
-    if (voice) {
+    if (!this.transcriptionOnly && voice) {
       session.voice = voice
     }
     if (transcriptionModel) {
       session.input_audio_transcription = { model: transcriptionModel }
+    }
+    if (this.transcriptionOnly) {
+      session.modalities = ['text']
     }
     this.send({ type: 'session.update', session })
   }

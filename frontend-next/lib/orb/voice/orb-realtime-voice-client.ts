@@ -5,7 +5,11 @@
 import { resolveAuthApiPath } from '@/lib/auth/api-base'
 
 import { OrbOpenAIRealtimeWebRTCClient } from './orb-openai-realtime-webrtc-client'
-import { startOrbVoiceSession, type OrbVoiceSessionResponse, type VoiceProviderType } from './orb-voice-client'
+import {
+  startOrbRealtimeVoiceSession,
+  type OrbVoiceSessionResponse,
+  type VoiceProviderType
+} from './orb-voice-client'
 import { VOICE_CLIENT_EVENTS, type VoiceRealtimeServerMessage } from './orb-voice-events'
 import { OrbVoiceVad } from './orb-voice-vad'
 import type { OrbVoiceModeId, OrbVoicePresetId } from './orb-voice-types'
@@ -120,10 +124,9 @@ export class OrbRealtimeVoiceClient {
     transport?: 'auto' | 'websocket' | 'webrtc' | 'browser_fallback'
   }): Promise<OrbVoiceSessionResponse> {
     this.setState('connecting')
-    const session = await startOrbVoiceSession({
+    const session = await startOrbRealtimeVoiceSession({
       mode: options.mode,
-      voice_id: options.voice_id,
-      transport: options.transport ?? 'auto'
+      voice_id: options.voice_id
     })
     this.session = session
     this.callbacks.onProviderResolved?.(session)

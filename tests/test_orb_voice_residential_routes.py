@@ -77,6 +77,50 @@ def test_orb_voice_session_resolves_reflective_profile(voice_client):
     assert data["provider_voice"] == "sage"
 
 
+def test_orb_voice_realtime_session_not_configured_when_env_missing(voice_client):
+    response = voice_client.post(
+        "/orb/voice/realtime/session",
+        json={"mode": "conversational", "voice_id": "orb_british_female"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "not_configured"
+    assert "Configure realtime voice" in (data.get("message") or "")
+
+
+def test_orb_voice_realtime_session_openai_when_configured(voice_client, monkeypatch):
+    monkeypatch.setenv("ORB_VOICE_REALTIME_PROVIDER", "openai")
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    monkeypatch.setenv("ORB_REALTIME_ENABLED", "true")
+
+    async def fake_ephemeral(**_kwargs):
+        return {
+            "provider": "openai_realtime",
+            "configured": True,
+            "session": {
+                "id": "sess_rt",
+                "client_secret": {"value": "ek_rt", "expires_at": 999},
+            },
+            "model": "gpt-realtime",
+            "voice": "coral",
+            "fallback_text_mode": False,
+        }
+
+    monkeypatch.setattr(
+        "routers.orb_voice_residential_routes.orb_realtime_provider_service.create_ephemeral_session",
+        fake_ephemeral,
+    )
+    response = voice_client.post(
+        "/orb/voice/realtime/session",
+        json={"mode": "conversational", "voice_id": "orb_british_female"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["provider"] == "openai_realtime"
+    assert data["openai_session"]["client_secret"]["value"] == "ek_rt"
+    assert "OPENAI_API_KEY" not in response.text
+
+
 def test_orb_voice_session_openai_realtime_when_configured(voice_client, monkeypatch):
     monkeypatch.setenv("ORB_VOICE_REALTIME_PROVIDER", "openai")
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
