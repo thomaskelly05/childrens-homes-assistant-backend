@@ -166,7 +166,6 @@ function OrbLoginPanel() {
               provider="google"
               href={oauth.google ? orbOAuthStartUrl('google', ORB_RETURN) : undefined}
               disabled={!oauth.google}
-              data-orb-oauth-google
             >
               {oauth.google ? 'Continue with Google' : 'Google — not configured'}
             </OrbAuthButton>
@@ -174,7 +173,6 @@ function OrbLoginPanel() {
               provider="apple"
               href={oauth.apple ? orbOAuthStartUrl('apple', ORB_RETURN) : undefined}
               disabled={!oauth.apple}
-              data-orb-oauth-apple
             >
               Continue with Apple
             </OrbAuthButton>

@@ -31,10 +31,12 @@ import {
   writeOrbProjectsMemory
 } from '@/lib/orb/orb-residential-projects'
 import {
-  fetchOrbServerProjects,
-  mergeServerProjectsWithLocal,
-  syncOrbProjectsToServer
-} from '@/lib/orb/orb-projects-client'
+  fetchOrbProjectsResilient,
+  mergeOrbProjectsSafely,
+  syncOrbProjectsDebounced
+} from '@/lib/orb/orb-projects-resilience'
+import { fetchOrbSavedOutputsSummaryResilient } from '@/lib/orb/orb-saved-outputs-resilience'
+import { shouldSkipAuthenticatedOrbFetch } from '@/lib/orb/orb-session-gate'
 import {
   readOrbSidebarCollapsed,
   writeOrbSidebarCollapsed
@@ -133,6 +135,7 @@ import {
 } from '@/lib/orb/standalone-accessibility'
 import { useAuth } from '@/contexts/auth-context'
 import { useOrbAccountState } from '@/hooks/use-orb-account-state'
+import { useOrbSessionGate } from '@/hooks/use-orb-session-gate'
 import { useMounted } from '@/hooks/use-mounted'
 import { getCsrfToken, STANDALONE_ORB_CSRF_REFRESH_MESSAGE } from '@/lib/auth/api'
 import { standaloneOsBoundaryReply } from '@/lib/orb/standalone-os-boundary'
@@ -171,7 +174,6 @@ import {
 } from '@/lib/orb/standalone-local-store'
 import {
   createOrbSavedOutput,
-  fetchOrbSavedOutputsSummary,
   fetchStandaloneOrbConfig,
   isStandaloneOrbRetryableNetworkError,
   ORB_SAFETY_ONBOARDING_PATH,
@@ -512,6 +514,7 @@ function orbErrorCallToAction(message: string, className = 'mt-3') {
 export function OrbCareCompanion({ residentialSurface = false }: { residentialSurface?: boolean } = {}) {
   const { status, csrfReady, refreshSession } = useAuth()
   const account = useOrbAccountState()
+  const sessionGate = useOrbSessionGate()
   const orbSessionReady = account.isSignedIn && csrfReady && !account.isLoading
   const mounted = useMounted()
   const { resolvedTheme, appearanceMode, setAppearanceMode } = useOrbAppearance()
@@ -593,8 +596,8 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   )
 
   useEffect(() => {
-    if (!orbSessionReady) return
-    void fetchOrbSavedOutputsSummary()
+    if (!orbSessionReady || shouldSkipAuthenticatedOrbFetch()) return
+    void fetchOrbSavedOutputsSummaryResilient()
       .then((summary) => setSavedOutputsCount(summary.total || 0))
       .catch(() => setSavedOutputsCount(0))
   }, [activePanel, orbSessionReady])
@@ -614,30 +617,28 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   useEffect(() => {
     if (!residentialSurface || !workspaceHydratedRef.current) return
     writeOrbProjectsMemory(workspace)
-    if (account.isSignedIn) {
-      void syncOrbProjectsToServer(residentialProjectsToMemory(workspace))
+    if (account.isSignedIn && !shouldSkipAuthenticatedOrbFetch()) {
+      void syncOrbProjectsDebounced(residentialProjectsToMemory(workspace))
     }
   }, [residentialSurface, workspace, account.isSignedIn])
 
   useEffect(() => {
-    if (!residentialSurface || !account.isSignedIn || !workspaceHydratedRef.current) return
-    void fetchOrbServerProjects()
-      .then((server) => {
-        if (!server.length) return
-        const localMemory = readOrbProjectsMemory() ?? residentialProjectsToMemory(workspace)
-        const merged = mergeServerProjectsWithLocal(localMemory, server)
-        setWorkspace((current) => {
-          const projects = current.projects.map((project) => {
-            const remote = merged.find((row) => row.id === project.id)
-            if (!remote?.pinnedContext) return project
-            return { ...project, memory: remote.pinnedContext, updatedAt: Date.now() }
-          })
-          return { ...current, projects }
+    if (!residentialSurface || !workspaceHydratedRef.current) return
+    if (!account.isSignedIn && shouldSkipAuthenticatedOrbFetch()) return
+    void fetchOrbProjectsResilient().then(({ server, usedLocalFallback }) => {
+      if (usedLocalFallback && !server.length) return
+      if (!server.length) return
+      const localMemory = readOrbProjectsMemory() ?? residentialProjectsToMemory(workspace)
+      const merged = mergeOrbProjectsSafely(localMemory, server)
+      setWorkspace((current) => {
+        const projects = current.projects.map((project) => {
+          const remote = merged.find((row) => row.id === project.id)
+          if (!remote?.pinnedContext) return project
+          return { ...project, memory: remote.pinnedContext, updatedAt: Date.now() }
         })
+        return { ...current, projects }
       })
-      .catch(() => {
-        // Offline or unauthenticated — localStorage fallback only
-      })
+    })
   }, [residentialSurface, account.isSignedIn])
 
   useEffect(() => {
@@ -2175,7 +2176,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       setSavedOutputMessageIds((current) => new Set(current).add(entry.id))
       setSaveFeedbackByMessageId((current) => ({ ...current, [entry.id]: 'saved' }))
       setDraftNotice('Saved — ORB Residential artefact (not an OS record).')
-      const summary = await fetchOrbSavedOutputsSummary()
+      const summary = await fetchOrbSavedOutputsSummaryResilient()
       setSavedOutputsCount(summary.total || 0)
     } catch {
       setSaveFeedbackByMessageId((current) => ({ ...current, [entry.id]: 'failed' }))
@@ -3357,6 +3358,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           passkeyEnabled={account.hasPasskeys}
           projectCount={workspace.projects?.length ?? 0}
           savedOutputsCount={savedOutputsCount}
+          localContentMode={
+            sessionGate.backendSyncState === 'offline' || sessionGate.backendSyncState === 'degraded'
+          }
         />
       ) : null}
       {adultProfile && !residentialSurface ? (

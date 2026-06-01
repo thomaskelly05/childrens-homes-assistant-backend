@@ -10,20 +10,25 @@ import {
   type OrbDictateQuickAction
 } from '@/lib/orb/dictate/orb-dictate-studio-actions'
 import type { OrbDictateEditResult } from '@/lib/orb/dictate/orb-dictate-client'
+import { diffOrbDictateSections } from '@/lib/orb/dictate/orb-dictate-diff'
 
 export function OrbDictateStudioAssistant({
   editing,
   pendingEdit,
+  originalText,
   onRunEdit,
   onApplyEdit,
   onDiscardEdit,
+  onKeepSuggestion,
   onSetInstruction
 }: {
   editing: boolean
   pendingEdit: OrbDictateEditResult | null
+  originalText: string
   onRunEdit: (mode: OrbDictateEditMode | undefined, instruction: string) => void
   onApplyEdit: () => void
   onDiscardEdit: () => void
+  onKeepSuggestion: () => void
   onSetInstruction: (text: string) => void
 }) {
   const [instruction, setInstruction] = useState('')
@@ -104,6 +109,7 @@ export function OrbDictateStudioAssistant({
         <section
           className="rounded-xl border border-sky-400/30 bg-sky-500/5 p-3"
           data-orb-dictate-edit-preview
+          data-orb-dictate-section-diff
         >
           <div className="flex items-center gap-2 text-xs font-semibold text-sky-200">
             <Sparkles className="h-3.5 w-3.5" />
@@ -123,12 +129,32 @@ export function OrbDictateStudioAssistant({
               ))}
             </ul>
           ) : null}
-          <div
-            className="mt-2 max-h-32 overflow-y-auto rounded-lg border border-[var(--orb-line)]/40 bg-black/20 p-2 text-[11px] text-slate-300 whitespace-pre-wrap"
-            data-orb-dictate-revised-preview
-          >
-            {pendingEdit.revised_text.slice(0, 1200)}
-            {pendingEdit.revised_text.length > 1200 ? '…' : ''}
+          <div className="mt-2 space-y-2" data-orb-dictate-section-changes>
+            {diffOrbDictateSections(originalText, pendingEdit.revised_text).map((section) => (
+              <details
+                key={section.heading}
+                className="rounded-lg border border-[var(--orb-line)]/40 bg-black/20 p-2"
+                open
+              >
+                <summary className="cursor-pointer text-[11px] font-medium text-sky-200">
+                  {section.heading} — changed
+                </summary>
+                <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                  <div>
+                    <p className="text-[10px] uppercase text-slate-500">Before</p>
+                    <p className="mt-0.5 max-h-24 overflow-y-auto whitespace-pre-wrap text-[10px] text-slate-400">
+                      {section.before.slice(0, 500)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase text-slate-500">After</p>
+                    <p className="mt-0.5 max-h-24 overflow-y-auto whitespace-pre-wrap text-[10px] text-slate-200">
+                      {section.after.slice(0, 500)}
+                    </p>
+                  </div>
+                </div>
+              </details>
+            ))}
           </div>
           <div className="mt-2 flex flex-wrap gap-2">
             <button
@@ -138,6 +164,14 @@ export function OrbDictateStudioAssistant({
               onClick={onApplyEdit}
             >
               Apply changes
+            </button>
+            <button
+              type="button"
+              data-orb-dictate-keep-suggestion
+              className="rounded-lg border border-sky-400/30 px-3 py-1.5 text-xs text-sky-100"
+              onClick={onKeepSuggestion}
+            >
+              Keep as suggestion
             </button>
             <button
               type="button"

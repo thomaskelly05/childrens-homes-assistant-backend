@@ -99,10 +99,9 @@ npm run build
 
 ## 13. Remaining enhancements
 
-- Find/replace for anonymisation
-- Section-level diff highlighting
-- Tone lock UI
-- Record readiness score (lightweight)
+See `docs/orb-final-reliability-and-dictate-refinement-report.md` for the reliability pass (find/replace, section diff, tone lock, readiness, draft sync, OAuth navigation, API fallbacks).
+
+Still optional:
+
 - Redaction markers
-- Playwright e2e: paste → generate → therapeutic → apply → save
-- Sync local drafts to backend when connection returns
+- Full Playwright e2e: paste → generate → therapeutic → apply → save (scaffold in `e2e/orb-dictate.spec.ts`)

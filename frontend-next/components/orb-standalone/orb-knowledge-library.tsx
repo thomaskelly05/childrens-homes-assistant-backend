@@ -281,11 +281,10 @@ export function OrbKnowledgeLibraryPanel({
             ) : isOrbStationAuthError(error) ? (
               <OrbStationReconnectBanner onRefresh={() => void refresh()} />
             ) : (
-              <OrbStationEmptyState
-                dataAttr="knowledge_error"
-                title="Could not load Knowledge Library"
-                body="Try again shortly. Your sources are unchanged on the server."
-              />
+              <p className="mb-3 text-xs text-slate-400" data-orb-knowledge-error-soft>
+                Connected sources are temporarily unavailable. Built-in residential guidance below remains
+                available.
+              </p>
             )
           ) : null}
 

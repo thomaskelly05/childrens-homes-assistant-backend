@@ -4,6 +4,7 @@ import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, 
 import { usePathname, useRouter } from 'next/navigation'
 
 import { authFetch, AuthApiError, getCsrfToken, isAuthFailureStatus, isTemporaryUnavailableStatus } from '@/lib/auth/api'
+import { markOrbBackendDegraded, markOrbBackendReady, resetOrbSessionGate } from '@/lib/orb/orb-session-gate'
 import { normaliseRole, permissionsForRole } from '@/lib/auth/permissions'
 import { clearSensitiveBrowserState, suppressProductionConsole } from '@/lib/security/privacy'
 import type { AuthMeResponse, LoginResponse, StaffUser } from '@/lib/auth/types'
@@ -146,6 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSessionExpired(false)
         setCsrfReady(Boolean(getCsrfToken()))
         logoutRedirecting.current = false
+        markOrbBackendReady()
       } catch (caught) {
         const authError = caught instanceof AuthApiError ? caught : null
         if (authError && isTemporaryUnavailableStatus(authError.status)) {
@@ -169,6 +171,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setError(authError.message || 'Your session could not be loaded')
           setSessionExpired(true)
           setCsrfReady(false)
+          markOrbBackendDegraded('auth')
           return
         }
         clearCachedIdentity()
@@ -269,6 +272,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null)
       setStatus('unauthenticated')
       setCsrfReady(false)
+      resetOrbSessionGate()
       router.replace(redirectToOrbLogin ? '/orb/login?returnUrl=%2Forb' : '/login')
     }
   }, [pathname, router])

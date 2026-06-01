@@ -75,7 +75,7 @@ export function OrbStandalonePanelShell({
       <div
         className={
           isCenter
-            ? `orb-panel-modal flex max-h-[min(90dvh,52rem)] w-full flex-col overflow-hidden rounded-2xl border border-[var(--orb-line)] bg-[var(--orb-surface)] shadow-2xl ${sizeClass}`
+            ? `orb-panel-modal flex max-h-[min(calc(100dvh-2rem),56rem)] w-full flex-col overflow-hidden rounded-2xl border border-[var(--orb-line)] bg-[var(--orb-surface)] shadow-2xl ${sizeClass}`
             : `orb-panel-drawer flex h-full w-full flex-col border-l border-[var(--orb-line)] bg-[var(--orb-surface)] shadow-2xl max-md:max-h-[100dvh] md:max-h-[100dvh] ${
                 wide ? 'max-w-4xl' : 'max-w-xl'
               }`

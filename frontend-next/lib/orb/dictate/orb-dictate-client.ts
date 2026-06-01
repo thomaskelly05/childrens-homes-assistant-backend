@@ -272,13 +272,22 @@ export async function patchOrbDictateNote(
   })
 }
 
-export function withDictateExportDraftNotice(title: string, body: string, noteType: string): string {
+export function withDictateExportDraftNotice(
+  title: string,
+  body: string,
+  noteType: string,
+  extras?: { readiness?: string; tone?: string }
+): string {
   const date = new Date().toLocaleDateString('en-GB', { dateStyle: 'medium' })
+  const readinessLine = extras?.readiness ? `**Readiness:** ${extras.readiness}\n` : ''
+  const toneLine = extras?.tone ? `**Tone lock:** ${extras.tone}\n` : ''
   return (
     `# ${title}\n\n` +
     `**Note type:** ${noteType.replace(/_/g, ' ')}\n` +
-    `**Generated:** ${date}\n\n` +
-    `*Draft for review — not submitted to live care records.*\n\n` +
+    `**Generated:** ${date}\n` +
+    readinessLine +
+    toneLine +
+    `\n*Draft for review — not submitted to live care records.*\n\n` +
     `---\n\n${body}`
   )
 }
