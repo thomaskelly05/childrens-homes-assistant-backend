@@ -33,9 +33,11 @@ def test_list_sources_route(fake_state):
 
 
 def test_ingest_and_search_routes(fake_state):
+    from schemas.orb_knowledge import OrbKnowledgeDocumentIngestRequest, OrbKnowledgeSearchRequest
+
     ingest = asyncio.run(
-        knowledge_routes.ingest_document(
-            knowledge_routes.OrbKnowledgeDocumentIngestRequest(
+        knowledge_routes.ingest_text(
+            OrbKnowledgeDocumentIngestRequest(
                 title="Test note guidance",
                 text="Daily notes should be factual and child-centred with the child's voice.",
                 source_type="recording_quality",
@@ -48,7 +50,7 @@ def test_ingest_and_search_routes(fake_state):
 
     search = asyncio.run(
         knowledge_routes.search_knowledge(
-            knowledge_routes.OrbKnowledgeSearchRequest(query="daily note child voice"),
+            OrbKnowledgeSearchRequest(query="daily note child voice"),
             current_user=fake_state["user"],
         )
     )

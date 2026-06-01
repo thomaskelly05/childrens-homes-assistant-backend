@@ -18,6 +18,7 @@ from services.orb_saved_output_service import orb_saved_output_service
 def memory_outputs(monkeypatch):
     svc = orb_saved_output_service
     svc._memory = {}
+    svc._storage_mode = "memory"
     monkeypatch.setattr(svc, "_detect_storage_mode", lambda: "memory")
 
 

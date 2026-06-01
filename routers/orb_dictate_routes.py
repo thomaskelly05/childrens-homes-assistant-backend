@@ -10,6 +10,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 
+from auth.orb_dictate_dependency import require_orb_dictate_access
 from auth.orb_residential_dependencies import require_orb_residential_auth
 from schemas.orb_dictate import (
     OrbDictateEditRequest,
@@ -56,7 +57,7 @@ async def dictate_templates(current_user=Depends(require_orb_residential_auth)):
 @router.post("/transcribe")
 async def dictate_transcribe(
     payload: OrbDictateTranscribeRequest,
-    current_user=Depends(require_orb_residential_auth),
+    current_user=Depends(require_orb_dictate_access),
 ):
     if payload.conversation_consent_confirmed is False:
         raise HTTPException(
@@ -90,7 +91,7 @@ async def dictate_transcribe(
 async def dictate_transcribe_audio(
     file: UploadFile = File(...),
     conversation_consent_confirmed: bool | None = None,
-    current_user=Depends(require_orb_residential_auth),
+    current_user=Depends(require_orb_dictate_access),
 ):
     if conversation_consent_confirmed is False:
         raise HTTPException(
@@ -121,7 +122,7 @@ async def dictate_transcribe_audio(
 @router.post("/edit")
 async def dictate_edit(
     payload: OrbDictateEditRequest,
-    current_user=Depends(require_orb_residential_auth),
+    current_user=Depends(require_orb_dictate_access),
 ):
     try:
         result = edit_dictate_document(payload)
@@ -135,7 +136,7 @@ async def dictate_edit(
 @router.post("/generate")
 async def dictate_generate(
     payload: OrbDictateGenerateRequest,
-    current_user=Depends(require_orb_residential_auth),
+    current_user=Depends(require_orb_dictate_access),
 ):
     try:
         result = generate_dictate_note(payload)
@@ -149,7 +150,7 @@ async def dictate_generate(
 @router.post("/save")
 async def dictate_save(
     payload: OrbDictateSaveRequest,
-    current_user=Depends(require_orb_residential_auth),
+    current_user=Depends(require_orb_dictate_access),
 ):
     try:
         result = save_dictate_note(current_user, payload)
@@ -161,7 +162,7 @@ async def dictate_save(
 @router.post("/export")
 async def dictate_export(
     payload: OrbDictateExportRequest,
-    current_user=Depends(require_orb_residential_auth),
+    current_user=Depends(require_orb_dictate_access),
 ):
     note = (payload.professional_note or "").strip()
     if not note:
@@ -184,7 +185,7 @@ async def dictate_export(
 
 
 @router.get("/notes")
-async def dictate_list_notes(current_user=Depends(require_orb_residential_auth)):
+async def dictate_list_notes(current_user=Depends(require_orb_dictate_access)):
     items = list_dictate_notes_for_user(current_user)
     return _success(
         [item.model_dump() for item in items],
@@ -195,7 +196,7 @@ async def dictate_list_notes(current_user=Depends(require_orb_residential_auth))
 @router.get("/notes/{note_id}")
 async def dictate_get_note(
     note_id: str,
-    current_user=Depends(require_orb_residential_auth),
+    current_user=Depends(require_orb_dictate_access),
 ):
     for item in list_dictate_notes_for_user(current_user):
         if item.note_id == note_id:
@@ -207,7 +208,7 @@ async def dictate_get_note(
 async def dictate_patch_note(
     note_id: str,
     payload: OrbDictateNotePatch,
-    current_user=Depends(require_orb_residential_auth),
+    current_user=Depends(require_orb_dictate_access),
 ):
     if not payload.professional_note and not payload.title and not payload.summary:
         raise HTTPException(status_code=400, detail="No updates provided.")
@@ -229,7 +230,7 @@ async def dictate_patch_note(
 @router.delete("/notes/{note_id}")
 async def dictate_delete_note(
     note_id: str,
-    current_user=Depends(require_orb_residential_auth),
+    current_user=Depends(require_orb_dictate_access),
 ):
     return _success(
         {"note_id": note_id, "deleted": True},

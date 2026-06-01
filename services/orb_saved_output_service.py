@@ -91,8 +91,18 @@ def _parse_json(value: Any, default: Any) -> Any:
 
 class OrbSavedOutputService:
     def __init__(self) -> None:
-        self._memory: dict[str, dict[str, Any]] = {}
+        self._memory: dict[int, dict[str, dict[str, Any]]] = {}
         self._storage_mode: str = "memory"
+
+    @staticmethod
+    def _resolve_user_id(user_id: int) -> int:
+        resolved = int(user_id)
+        if resolved <= 0:
+            raise ValueError("user_id is required for saved outputs")
+        return resolved
+
+    def _user_memory(self, user_id: int) -> dict[str, dict[str, Any]]:
+        return self._memory.setdefault(self._resolve_user_id(user_id), {})
 
     def _use_db(self) -> bool:
         try:
@@ -126,31 +136,42 @@ class OrbSavedOutputService:
             self._storage_mode = "memory"
         return self._storage_mode
 
+    def verify_schema(self) -> dict[str, Any]:
+        from services.orb_schema_verification import verify_saved_outputs_schema
+
+        return verify_saved_outputs_schema()
+
     def health(self) -> OrbSavedOutputHealth:
         mode = self._detect_storage_mode()
-        count = len(self._memory) if mode == "memory" else self._count_db()
+        count = self._count_all_outputs() if mode == "postgresql" else sum(
+            len(bucket) for bucket in self._memory.values()
+        )
+        schema = self.verify_schema()
+        status = "ready" if schema.get("status") != "fail" else "schema_mismatch"
         return OrbSavedOutputHealth(
-            status="ready",
+            status=status,
             storage_mode=mode,
             output_count=count,
         )
 
-    def _count_db(self) -> int:
+    def _count_all_outputs(self) -> int:
         try:
             conn = get_db_connection()
             try:
                 with conn.cursor() as cur:
-                    cur.execute("SELECT COUNT(*) FROM orb_saved_outputs")
+                    cur.execute(
+                        "SELECT COUNT(*) FROM orb_saved_outputs WHERE user_id IS NOT NULL"
+                    )
                     row = cur.fetchone()
                     return int(row[0]) if row else 0
             finally:
                 release_db_connection(conn)
         except Exception:
-            return len(self._memory)
+            return sum(len(bucket) for bucket in self._memory.values())
 
-    def get_summary(self) -> dict[str, Any]:
+    def get_summary(self, user_id: int) -> dict[str, Any]:
         health = self.health()
-        items = self.list_outputs(OrbSavedOutputListRequest(limit=200))
+        items = self.list_outputs(user_id, OrbSavedOutputListRequest(limit=200))
         by_type: dict[str, int] = {}
         by_status: dict[str, int] = {}
         for item in items.items:
@@ -188,6 +209,7 @@ class OrbSavedOutputService:
 
     def maybe_save_intelligence(
         self,
+        user_id: int,
         output: OrbIntelligenceOutput | dict[str, Any],
         options: OrbSavedOutputSaveOptions | None,
         *,
@@ -200,6 +222,7 @@ class OrbSavedOutputService:
         if not options or not options.save_output:
             return hints, ctx
         record = self.save_from_intelligence_output(
+            user_id,
             output,
             project_id=options.project_id,
             project_name=options.project_name,
@@ -220,6 +243,7 @@ class OrbSavedOutputService:
 
     def save_from_intelligence_output(
         self,
+        user_id: int,
         output: OrbIntelligenceOutput | dict[str, Any],
         *,
         project_id: str | None = None,
@@ -270,9 +294,10 @@ class OrbSavedOutputService:
             created_from_id=created_from_id,
             metadata={"artefact_notice": STANDALONE_ARTEFACT_NOTICE},
         )
-        return self.create_output(payload)
+        return self.create_output(user_id, payload)
 
-    def create_output(self, payload: OrbSavedOutputCreate) -> OrbSavedOutputRecord:
+    def create_output(self, user_id: int, payload: OrbSavedOutputCreate) -> OrbSavedOutputRecord:
+        uid = self._resolve_user_id(user_id)
         record = OrbSavedOutputRecord(
             id=str(uuid4()),
             title=payload.title,
@@ -296,11 +321,11 @@ class OrbSavedOutputService:
             created_from_id=payload.created_from_id,
             metadata=dict(payload.metadata),
         )
-        row = self._record_to_row(record)
+        row = self._record_to_row(record, user_id=uid)
         if self._detect_storage_mode() == "postgresql":
             self._insert_db(row)
         else:
-            self._memory[record.id] = row
+            self._user_memory(uid)[record.id] = row
         try:
             from services.indicare_ai_governance_event_service import indicare_ai_governance_event_service
 
@@ -309,11 +334,14 @@ class OrbSavedOutputService:
             pass
         return record
 
-    def list_outputs(self, request: OrbSavedOutputListRequest) -> OrbSavedOutputListResponse:
+    def list_outputs(
+        self, user_id: int, request: OrbSavedOutputListRequest
+    ) -> OrbSavedOutputListResponse:
+        uid = self._resolve_user_id(user_id)
         if self._detect_storage_mode() == "postgresql":
-            rows, total = self._list_db(request)
+            rows, total = self._list_db(uid, request)
         else:
-            rows, total = self._list_memory(request)
+            rows, total = self._list_memory(uid, request)
         items = [self._row_to_summary(row) for row in rows]
         return OrbSavedOutputListResponse(
             items=items,
@@ -322,16 +350,16 @@ class OrbSavedOutputService:
             offset=request.offset,
         )
 
-    def get_output(self, output_id: str) -> OrbSavedOutputRecord | None:
-        row = self._fetch_row(output_id)
+    def get_output(self, user_id: int, output_id: str) -> OrbSavedOutputRecord | None:
+        row = self._fetch_row(self._resolve_user_id(user_id), output_id)
         if not row:
             return None
         return self._row_to_record(row)
 
     def update_output(
-        self, output_id: str, payload: OrbSavedOutputUpdate
+        self, user_id: int, output_id: str, payload: OrbSavedOutputUpdate
     ) -> OrbSavedOutputRecord | None:
-        existing = self.get_output(output_id)
+        existing = self.get_output(user_id, output_id)
         if not existing:
             return None
         patch = payload.model_dump(exclude_unset=True)
@@ -341,28 +369,35 @@ class OrbSavedOutputService:
         if patch.get("status") == "archived" and not existing.archived_at:
             existing.archived_at = _now_iso()
         existing.updated_at = _now_iso()
-        row = self._record_to_row(existing)
+        uid = self._resolve_user_id(user_id)
+        row = self._record_to_row(existing, user_id=uid)
         if self._detect_storage_mode() == "postgresql":
-            self._update_db(row)
+            self._update_db(uid, row)
         else:
-            self._memory[output_id] = row
+            self._user_memory(uid)[output_id] = row
         return existing
 
-    def archive_output(self, output_id: str) -> OrbSavedOutputRecord | None:
+    def archive_output(self, user_id: int, output_id: str) -> OrbSavedOutputRecord | None:
         return self.update_output(
+            user_id,
             output_id,
             OrbSavedOutputUpdate(status="archived"),
         )
 
-    def delete_output(self, output_id: str) -> bool:
+    def delete_output(self, user_id: int, output_id: str) -> bool:
+        uid = self._resolve_user_id(user_id)
         if self._detect_storage_mode() == "postgresql":
-            return self._delete_db(output_id)
-        return self._memory.pop(output_id, None) is not None
+            return self._delete_db(uid, output_id)
+        bucket = self._user_memory(uid)
+        return bucket.pop(output_id, None) is not None
 
     def export_output(
-        self, output_id: str, fmt: OrbSavedOutputExportFormat = "markdown"
+        self,
+        user_id: int,
+        output_id: str,
+        fmt: OrbSavedOutputExportFormat = "markdown",
     ) -> dict[str, Any] | None:
-        record = self.get_output(output_id)
+        record = self.get_output(user_id, output_id)
         if not record:
             return None
         from services.ai_privacy_guard_service import ai_privacy_guard_service
@@ -391,9 +426,9 @@ class OrbSavedOutputService:
         }
 
     def build_reuse_prompt(
-        self, output_id: str, instruction: str | None = None
+        self, user_id: int, output_id: str, instruction: str | None = None
     ) -> OrbSavedOutputReuseResponse | None:
-        record = self.get_output(output_id)
+        record = self.get_output(user_id, output_id)
         if not record:
             return None
         summary = _text(record.summary) or _text(record.content_markdown)[:1200]
@@ -413,6 +448,11 @@ class OrbSavedOutputService:
             source_count=len(record.sources),
             safety_notice=STANDALONE_BOUNDARY_NOTICE,
         )
+
+    def reuse_output(
+        self, user_id: int, output_id: str, instruction: str | None = None
+    ) -> OrbSavedOutputReuseResponse | None:
+        return self.build_reuse_prompt(user_id, output_id, instruction)
 
     def _suggested_type_from_intelligence(
         self, data: dict[str, Any], *, analysis_mode: str | None = None
@@ -474,12 +514,13 @@ class OrbSavedOutputService:
         plain = re.sub(r"\*\*([^*]+)\*\*", r"\1", plain)
         return plain.strip()
 
-    def _record_to_row(self, record: OrbSavedOutputRecord) -> dict[str, Any]:
+    def _record_to_row(self, record: OrbSavedOutputRecord, *, user_id: int) -> dict[str, Any]:
         archived = record.archived_at
         if record.status == "archived" and not archived:
             archived = _now_iso()
         return {
             "id": record.id,
+            "user_id": self._resolve_user_id(user_id),
             "title": record.title,
             "type": record.type,
             "status": record.status,
@@ -557,15 +598,15 @@ class OrbSavedOutputService:
             updated_at=str(row.get("updated_at") or _now_iso()),
         )
 
-    def _fetch_row(self, output_id: str) -> dict[str, Any] | None:
+    def _fetch_row(self, user_id: int, output_id: str) -> dict[str, Any] | None:
         if self._detect_storage_mode() == "postgresql":
-            return self._fetch_db(output_id)
-        return self._memory.get(output_id)
+            return self._fetch_db(user_id, output_id)
+        return self._user_memory(user_id).get(output_id)
 
     def _list_memory(
-        self, request: OrbSavedOutputListRequest
+        self, user_id: int, request: OrbSavedOutputListRequest
     ) -> tuple[list[dict[str, Any]], int]:
-        rows = list(self._memory.values())
+        rows = list(self._user_memory(user_id).values())
         filtered = [r for r in rows if self._matches_filters(r, request)]
         filtered.sort(key=lambda r: str(r.get("created_at") or ""), reverse=True)
         total = len(filtered)
@@ -605,14 +646,14 @@ class OrbSavedOutputService:
                 cur.execute(
                     """
                     INSERT INTO orb_saved_outputs (
-                        id, title, type, status, project_id, project_name,
+                        id, user_id, title, type, status, project_id, project_name,
                         profile_ids, tags, summary, content_markdown, content_json,
                         intelligence_output, sources, citations, quality, model_routing,
                         retrieval_context, created_from, created_from_id,
                         standalone_only, os_linked, care_record_access, metadata,
                         created_at, updated_at, archived_at
                     ) VALUES (
-                        %(id)s, %(title)s, %(type)s, %(status)s, %(project_id)s, %(project_name)s,
+                        %(id)s, %(user_id)s, %(title)s, %(type)s, %(status)s, %(project_id)s, %(project_name)s,
                         %(profile_ids)s, %(tags)s, %(summary)s, %(content_markdown)s, %(content_json)s,
                         %(intelligence_output)s, %(sources)s, %(citations)s, %(quality)s, %(model_routing)s,
                         %(retrieval_context)s, %(created_from)s, %(created_from_id)s,
@@ -639,7 +680,8 @@ class OrbSavedOutputService:
         finally:
             release_db_connection(conn)
 
-    def _update_db(self, row: dict[str, Any]) -> None:
+    def _update_db(self, user_id: int, row: dict[str, Any]) -> None:
+        row = {**row, "user_id": user_id}
         conn = get_db_connection()
         try:
             with conn.cursor() as cur:
@@ -653,10 +695,11 @@ class OrbSavedOutputService:
                         content_json=%(content_json)s, metadata=%(metadata)s,
                         updated_at=%(updated_at)s::timestamptz,
                         archived_at=%(archived_at)s::timestamptz
-                    WHERE id=%(id)s
+                    WHERE id=%(id)s AND user_id=%(user_id)s
                     """,
                     {
                         "id": row["id"],
+                        "user_id": row["user_id"],
                         "title": row["title"],
                         "type": row["type"],
                         "status": row["status"],
@@ -676,32 +719,38 @@ class OrbSavedOutputService:
         finally:
             release_db_connection(conn)
 
-    def _delete_db(self, output_id: str) -> bool:
+    def _delete_db(self, user_id: int, output_id: str) -> bool:
         conn = get_db_connection()
         try:
             with conn.cursor() as cur:
-                cur.execute("DELETE FROM orb_saved_outputs WHERE id=%s", (output_id,))
+                cur.execute(
+                    "DELETE FROM orb_saved_outputs WHERE id=%s AND user_id=%s",
+                    (output_id, user_id),
+                )
                 deleted = cur.rowcount > 0
             conn.commit()
             return deleted
         finally:
             release_db_connection(conn)
 
-    def _fetch_db(self, output_id: str) -> dict[str, Any] | None:
+    def _fetch_db(self, user_id: int, output_id: str) -> dict[str, Any] | None:
         conn = get_db_connection()
         try:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                cur.execute("SELECT * FROM orb_saved_outputs WHERE id=%s", (output_id,))
+                cur.execute(
+                    "SELECT * FROM orb_saved_outputs WHERE id=%s AND user_id=%s",
+                    (output_id, user_id),
+                )
                 row = cur.fetchone()
                 return dict(row) if row else None
         finally:
             release_db_connection(conn)
 
     def _list_db(
-        self, request: OrbSavedOutputListRequest
+        self, user_id: int, request: OrbSavedOutputListRequest
     ) -> tuple[list[dict[str, Any]], int]:
-        clauses = ["1=1"]
-        params: list[Any] = []
+        clauses = ["user_id = %s"]
+        params: list[Any] = [user_id]
         if request.project_id:
             clauses.append("project_id = %s")
             params.append(request.project_id)

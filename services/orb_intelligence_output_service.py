@@ -7,7 +7,11 @@ from typing import Any
 from schemas.orb_agents import OrbAgentRunResponse
 from schemas.orb_documents import OrbDocumentAnalysisResponse, OrbDocumentUnderstanding
 from schemas.orb_evaluation import OrbEvaluationResult
-from schemas.orb_saved_outputs import OrbSavedOutputSaveOptions, OrbSavedOutputType
+from schemas.orb_saved_outputs import (
+    OrbIntelligenceSaveContext,
+    OrbSavedOutputSaveOptions,
+    OrbSavedOutputType,
+)
 from schemas.orb_intelligence_output import (
     OrbIntelligenceAction,
     OrbIntelligenceBoundary,
@@ -434,6 +438,7 @@ class OrbIntelligenceOutputService:
         tags: list[str] | None = None,
         save_title: str | None = None,
         save_output_type: OrbSavedOutputType | None = None,
+        user_id: int | None = None,
     ) -> dict[str, Any]:
         from services.orb_saved_output_service import orb_saved_output_service
 
@@ -447,13 +452,18 @@ class OrbIntelligenceOutputService:
                 title=save_title,
                 output_type=save_output_type,
             )
-        hints, saved = orb_saved_output_service.maybe_save_intelligence(
-            output,
-            options,
-            created_from=created_from,
-            created_from_id=created_from_id,
-            analysis_mode=analysis_mode,
-        )
+        hints = orb_saved_output_service.build_save_hints(output, analysis_mode=analysis_mode)
+        saved_ctx = OrbIntelligenceSaveContext(available=True, saved=False, type=hints.suggested_output_type)
+        if options and options.save_output and user_id is not None:
+            hints, saved_ctx = orb_saved_output_service.maybe_save_intelligence(
+                int(user_id),
+                output,
+                options,
+                created_from=created_from,
+                created_from_id=created_from_id,
+                analysis_mode=analysis_mode,
+            )
+        saved = saved_ctx
         return {
             "intelligence_output": output.model_dump(),
             "save_hints": hints.model_dump(),

@@ -145,6 +145,45 @@ BUILTIN_GOVERNANCE_WARNING = (
     "These are built-in summaries. Upload official documents for exact source retrieval."
 )
 
+GLOBAL_KNOWLEDGE_SCOPES = frozenset({"global_builtin", "global_admin_approved"})
+
+
+def _normalize_user_id(value: Any) -> int | None:
+    if value is None or value == "":
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def resolve_source_scope(source: dict[str, Any]) -> str:
+    scope = _text(source.get("source_scope"))
+    if scope:
+        return scope
+    origin = _text(source.get("origin"))
+    if origin in {"seeded", "built_in", "builtin"}:
+        return "global_builtin"
+    if source.get("governance_status") == "approved" and source.get("official_source"):
+        return "global_admin_approved"
+    if source.get("uploaded_by_user_id") or source.get("owner_user_id"):
+        return "user_private"
+    return "global_builtin"
+
+
+def user_can_view_knowledge_source(source: dict[str, Any], viewer_user_id: int | None) -> bool:
+    scope = resolve_source_scope(source)
+    if scope in GLOBAL_KNOWLEDGE_SCOPES:
+        return True
+    if scope == "organisation_private":
+        return False
+    if scope == "user_private":
+        owner = _normalize_user_id(source.get("owner_user_id")) or _normalize_user_id(
+            source.get("uploaded_by_user_id")
+        )
+        return viewer_user_id is not None and owner is not None and owner == viewer_user_id
+    return True
+
 
 def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
@@ -264,6 +303,9 @@ class OrbKnowledgeLibraryService:
             "source_integrity": row.get("source_integrity") or "summary_only",
             "copyright_note": row.get("copyright_note"),
             "citation_style": row.get("citation_style"),
+            "source_scope": row.get("source_scope") or resolve_source_scope(row),
+            "owner_user_id": row.get("owner_user_id"),
+            "organisation_id": row.get("organisation_id"),
         }
 
     def _row_to_chunk(self, row: dict[str, Any]) -> dict[str, Any]:
@@ -365,6 +407,7 @@ class OrbKnowledgeLibraryService:
                 "notes": governance.get("notes"),
                 "document_family": governance.get("document_family"),
                 "source_integrity": governance.get("source_integrity", "summary_only"),
+                "source_scope": "global_builtin",
             }
             self._persist_source(source)
             chunks = orb_document_ingestion_service.chunk_text(
@@ -470,6 +513,7 @@ class OrbKnowledgeLibraryService:
         source_type: str | None = None,
         status: str | None = None,
         governance_status: str | None = None,
+        viewer_user_id: int | None = None,
     ) -> list[dict[str, Any]]:
         self._ensure_seeded()
         if self._use_db():
@@ -498,7 +542,12 @@ class OrbKnowledgeLibraryService:
                         )
                         rows = cur.fetchall()
                     self._storage_mode = "postgresql"
-                    return [self._row_to_source(dict(row)) for row in rows]
+                    sources = [self._row_to_source(dict(row)) for row in rows]
+                    return [
+                        s
+                        for s in sources
+                        if user_can_view_knowledge_source(s, viewer_user_id)
+                    ]
                 finally:
                     release_db_connection(conn)
             except Exception:
@@ -512,9 +561,12 @@ class OrbKnowledgeLibraryService:
             sources = [s for s in sources if s.get("status") == status]
         if governance_status:
             sources = [s for s in sources if s.get("governance_status") == governance_status]
+        sources = [s for s in sources if user_can_view_knowledge_source(s, viewer_user_id)]
         return sorted(sources, key=lambda s: (s.get("origin", ""), s.get("title", "")))
 
-    def get_source(self, source_id: str) -> dict[str, Any] | None:
+    def get_source(
+        self, source_id: str, *, viewer_user_id: int | None = None
+    ) -> dict[str, Any] | None:
         self._ensure_seeded()
         if self._use_db():
             try:
@@ -527,12 +579,18 @@ class OrbKnowledgeLibraryService:
                         )
                         row = cur.fetchone()
                     if row:
-                        return self._row_to_source(dict(row))
+                        source = self._row_to_source(dict(row))
+                        if user_can_view_knowledge_source(source, viewer_user_id):
+                            return source
+                        return None
                 finally:
                     release_db_connection(conn)
             except Exception:
                 pass
-        return self._memory_sources.get(source_id)
+        source = self._memory_sources.get(source_id)
+        if source and user_can_view_knowledge_source(source, viewer_user_id):
+            return source
+        return None
 
     def create_source(self, payload: dict[str, Any]) -> dict[str, Any]:
         source_id = payload.get("id") or f"orb-ks-{uuid.uuid4().hex[:12]}"
@@ -573,6 +631,10 @@ class OrbKnowledgeLibraryService:
             "source_integrity": payload.get("source_integrity") or "unknown",
             "copyright_note": payload.get("copyright_note"),
             "citation_style": payload.get("citation_style"),
+            "source_scope": payload.get("source_scope")
+            or ("user_private" if payload.get("uploaded_by_user_id") else "global_admin_approved"),
+            "owner_user_id": payload.get("owner_user_id") or payload.get("uploaded_by_user_id"),
+            "organisation_id": payload.get("organisation_id"),
         }
         return self._persist_source(source)
 
@@ -1116,6 +1178,50 @@ class OrbKnowledgeLibraryService:
             "warnings": list(dict.fromkeys(warnings)),
             "health_status": health_status,
         }
+
+    def ingest_text(self, payload: Any) -> dict[str, Any]:
+        from services.orb_document_ingestion_service import orb_document_ingestion_service
+
+        data = payload.model_dump() if hasattr(payload, "model_dump") else dict(payload)
+        source_id = f"orb-ingest-{uuid.uuid4().hex[:12]}"
+        meta = dict(data.get("metadata") or {})
+        source = self.create_source(
+            {
+                "id": source_id,
+                "title": _text(data.get("title")),
+                "description": data.get("description"),
+                "source_type": data.get("source_type") or "user_uploaded",
+                "source_label": data.get("source_label") or _text(data.get("title")),
+                "status": "indexed",
+                "origin": "user_uploaded",
+                "metadata": meta,
+                "uploaded_by_user_id": meta.get("uploaded_by_user_id"),
+                "owner_user_id": meta.get("owner_user_id"),
+                "source_scope": meta.get("source_scope", "user_private"),
+                "governance_status": "approved" if data.get("approve_now") else "draft",
+            }
+        )
+        chunks = orb_document_ingestion_service.chunk_text(
+            _text(data.get("text")),
+            source_title=source["title"],
+            source_type=source["source_type"],
+            source_id=source_id,
+        )
+        records = []
+        for chunk in chunks:
+            enriched = orb_document_ingestion_service._enrich_chunk(
+                chunk, source_type=source["source_type"], source=source
+            )
+            records.append(
+                orb_document_ingestion_service._chunk_record_from_enriched(
+                    source_id, source["source_type"], enriched
+                )
+            )
+        self.upsert_chunks(source_id, records)
+        return {"source_id": source_id, "chunk_count": len(records), "source": source}
+
+    def rebuild_citations(self, source_id: str) -> dict[str, Any]:
+        return self.rebuild_citations_for_source(source_id)
 
     def rebuild_citations_for_source(self, source_id: str) -> dict[str, Any]:
         from services.orb_document_ingestion_service import orb_document_ingestion_service

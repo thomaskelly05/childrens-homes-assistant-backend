@@ -4,6 +4,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from auth.orb_dictate_dependency import require_orb_dictate_access
 from auth.orb_residential_dependencies import require_orb_residential_auth
 from routers.orb_dictate_routes import router
 from services.orb_dictate_edit_service import edit_dictate_document
@@ -20,6 +21,7 @@ def dictate_client():
         return {"id": 1, "user_id": 1, "role": "orb_residential", "email": "orb@test"}
 
     app.dependency_overrides[require_orb_residential_auth] = fake_auth
+    app.dependency_overrides[require_orb_dictate_access] = fake_auth
     client = TestClient(app)
     yield client
     app.dependency_overrides.clear()
@@ -84,7 +86,7 @@ def test_dictate_generate_requires_consent_for_conversation(dictate_client):
 def test_dictate_save_returns_standalone_boundary(dictate_client, monkeypatch):
     from schemas.orb_saved_outputs import OrbSavedOutputRecord
 
-    def fake_create(payload):
+    def fake_create(_user_id, payload):
         return OrbSavedOutputRecord(
             id="out_test",
             title=payload.title,

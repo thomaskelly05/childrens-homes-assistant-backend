@@ -34,7 +34,7 @@ export default function OrbAskPage() {
     setError(null)
     setAnswer('')
     try {
-      const payload = await fetchOrbResidential<{ data: { answer?: string } }>('/orb/residential/conversation', {
+      const payload = await fetchOrbResidential<{ data: { answer?: string } }>('/orb/standalone/conversation', {
         method: 'POST',
         body: JSON.stringify({ message: text, mode: 'Ask ORB' }),
       })

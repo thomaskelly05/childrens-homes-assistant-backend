@@ -25,6 +25,13 @@ def _success(data: Any) -> dict[str, Any]:
     return {"success": True, "data": data}
 
 
+def _user_id(current_user: dict[str, Any]) -> int:
+    uid = current_user.get("user_id") or current_user.get("id")
+    if uid is None:
+        raise HTTPException(status_code=401, detail="Sign in to use ORB saved outputs")
+    return int(uid)
+
+
 def _reject_os_ids(payload: dict[str, Any]) -> None:
     forbidden_keys = (
         "child_id",
@@ -53,7 +60,7 @@ async def outputs_health(current_user=Depends(require_standalone_orb_access)):
 
 @router.get("/summary")
 async def outputs_summary(current_user=Depends(require_standalone_orb_access)):
-    return _success(orb_saved_output_service.get_summary())
+    return _success(orb_saved_output_service.get_summary(_user_id(current_user)))
 
 
 @router.get("")
@@ -78,7 +85,7 @@ async def list_outputs(
         limit=limit,
         offset=offset,
     )
-    result = orb_saved_output_service.list_outputs(request)
+    result = orb_saved_output_service.list_outputs(_user_id(current_user), request)
     return _success(result.model_dump())
 
 
@@ -88,13 +95,13 @@ async def create_output(
     current_user=Depends(require_standalone_orb_access),
 ):
     _reject_os_ids(payload.model_dump())
-    output = orb_saved_output_service.create_output(payload)
+    output = orb_saved_output_service.create_output(_user_id(current_user), payload)
     return _success(output.model_dump())
 
 
 @router.get("/{output_id}")
 async def get_output(output_id: str, current_user=Depends(require_standalone_orb_access)):
-    output = orb_saved_output_service.get_output(output_id)
+    output = orb_saved_output_service.get_output(_user_id(current_user), output_id)
     if not output:
         raise HTTPException(status_code=404, detail="Saved output not found")
     return _success(output.model_dump())
@@ -107,7 +114,7 @@ async def update_output(
     current_user=Depends(require_standalone_orb_access),
 ):
     _reject_os_ids(payload.model_dump())
-    output = orb_saved_output_service.update_output(output_id, payload)
+    output = orb_saved_output_service.update_output(_user_id(current_user), output_id, payload)
     if not output:
         raise HTTPException(status_code=404, detail="Saved output not found")
     return _success(output.model_dump())
@@ -115,7 +122,7 @@ async def update_output(
 
 @router.post("/{output_id}/archive")
 async def archive_output(output_id: str, current_user=Depends(require_standalone_orb_access)):
-    output = orb_saved_output_service.archive_output(output_id)
+    output = orb_saved_output_service.archive_output(_user_id(current_user), output_id)
     if not output:
         raise HTTPException(status_code=404, detail="Saved output not found")
     return _success(output.model_dump())
@@ -123,7 +130,7 @@ async def archive_output(output_id: str, current_user=Depends(require_standalone
 
 @router.delete("/{output_id}")
 async def delete_output(output_id: str, current_user=Depends(require_standalone_orb_access)):
-    deleted = orb_saved_output_service.delete_output(output_id)
+    deleted = orb_saved_output_service.delete_output(_user_id(current_user), output_id)
     return _success({"deleted": deleted, "output_id": output_id})
 
 
@@ -133,7 +140,9 @@ async def export_output(
     payload: OrbSavedOutputExportRequest,
     current_user=Depends(require_standalone_orb_access),
 ):
-    exported = orb_saved_output_service.export_output(output_id, payload.format)
+    exported = orb_saved_output_service.export_output(
+        _user_id(current_user), output_id, payload.format
+    )
     if not exported:
         raise HTTPException(status_code=404, detail="Saved output not found")
     return _success(exported)
@@ -145,7 +154,9 @@ async def reuse_output(
     payload: OrbSavedOutputReuseRequest,
     current_user=Depends(require_standalone_orb_access),
 ):
-    reused = orb_saved_output_service.reuse_output(output_id, payload.instruction)
+    reused = orb_saved_output_service.reuse_output(
+        _user_id(current_user), output_id, payload.instruction
+    )
     if not reused:
         raise HTTPException(status_code=404, detail="Saved output not found")
-    return _success(reused)
+    return _success(reused.model_dump())

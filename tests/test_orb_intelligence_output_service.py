@@ -97,6 +97,7 @@ def test_build_save_envelope_hints():
         save_output=True,
         project_id="project-1",
         tags=["briefing"],
+        user_id=42,
     )
     assert saved["saved_output"]["saved"] is True
     assert saved["saved_output"]["output_id"]

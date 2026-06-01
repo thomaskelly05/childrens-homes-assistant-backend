@@ -19,6 +19,13 @@ def _success(data: Any) -> dict[str, Any]:
     return {"success": True, "data": data}
 
 
+def _user_id(current_user: dict) -> int:
+    uid = current_user.get("user_id") or current_user.get("id")
+    if uid is None:
+        raise HTTPException(status_code=401, detail="Sign in required")
+    return int(uid)
+
+
 def _reject_os_ids(payload: dict[str, Any]) -> None:
     forbidden_keys = ("child_id", "young_person_id", "staff_id", "home_id", "record_id", "chronology_id")
     for scope in (payload, payload.get("metadata") or {}):
@@ -54,7 +61,7 @@ async def list_saved_outputs(
         limit=limit,
         offset=offset,
     )
-    return _success(orb_saved_output_service.list_outputs(request))
+    return _success(orb_saved_output_service.list_outputs(_user_id(current_user), request))
 
 
 @router.post("")
@@ -62,9 +69,8 @@ async def create_saved_output(
     body: OrbSavedOutputCreate,
     current_user=Depends(require_standalone_orb_access),
 ):
-    payload = body.model_dump()
-    _reject_os_ids(payload)
-    return _success(orb_saved_output_service.create_output(payload))
+    _reject_os_ids(body.model_dump())
+    return _success(orb_saved_output_service.create_output(_user_id(current_user), body))
 
 
 @router.delete("/{output_id}")
@@ -72,7 +78,7 @@ async def delete_saved_output(
     output_id: str,
     current_user=Depends(require_standalone_orb_access),
 ):
-    deleted = orb_saved_output_service.delete_output(output_id)
+    deleted = orb_saved_output_service.delete_output(_user_id(current_user), output_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Saved output not found")
     return _success({"deleted": True, "id": output_id})

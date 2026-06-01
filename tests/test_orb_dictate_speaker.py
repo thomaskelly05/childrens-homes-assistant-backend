@@ -4,6 +4,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from auth.orb_dictate_dependency import require_orb_dictate_access
 from auth.orb_residential_dependencies import require_orb_residential_auth
 from routers.orb_dictate_routes import router
 from services.orb_dictate_service import generate_dictate_note
@@ -28,6 +29,7 @@ def dictate_client():
         return {"id": 1, "user_id": 1, "role": "orb_residential", "email": "orb@test"}
 
     app.dependency_overrides[require_orb_residential_auth] = fake_auth
+    app.dependency_overrides[require_orb_dictate_access] = fake_auth
     client = TestClient(app)
     yield client
     app.dependency_overrides.clear()
