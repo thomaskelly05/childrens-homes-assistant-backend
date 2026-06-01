@@ -14,6 +14,7 @@ import {
   FolderOpen,
   MessageSquarePlus,
   Mic,
+  PenLine,
   Save,
   Search,
   Settings,
@@ -46,8 +47,9 @@ const NAV_ITEMS = [
   { id: 'templates', label: 'Templates', icon: FileText },
   { id: 'knowledge', label: 'Knowledge Centre', icon: BookOpen },
   { id: 'documents', label: 'Documents', icon: FolderOpen },
-  { id: 'saved', label: 'Saved Outputs', icon: Save },
-  { id: 'orb_voice', label: 'ORB Voice', icon: Mic }
+  { id: 'orb_voice', label: 'ORB Voice', icon: Mic },
+  { id: 'orb_dictate', label: 'ORB Dictate', icon: PenLine },
+  { id: 'saved', label: 'Saved Outputs', icon: Save }
 ] as const
 
 export type OrbResidentialStationId = (typeof NAV_ITEMS)[number]['id']

@@ -1,0 +1,279 @@
+"""ORB Dictate note-type templates for residential childcare recording."""
+
+from __future__ import annotations
+
+from schemas.orb_dictate import OrbDictateNoteType, OrbDictateTemplate, OrbDictateTemplateSection
+
+
+def _sections(*pairs: tuple[str, str, list[str], bool]) -> list[OrbDictateTemplateSection]:
+    return [
+        OrbDictateTemplateSection(id=sid, title=title, prompts=prompts, required=required)
+        for sid, title, prompts, required in pairs
+    ]
+
+
+_DICTATE_TEMPLATES: dict[OrbDictateNoteType, OrbDictateTemplate] = {
+    "daily_record": OrbDictateTemplate(
+        note_type="daily_record",
+        title="Daily record",
+        purpose="Capture shift events, child presentation and follow-up in professional wording.",
+        when_to_use="After key interactions, routines, outings or notable presentation during a shift.",
+        sections=_sections(
+            ("datetime", "Date and time", ["When did this occur?"], True),
+            ("present", "Who was present", ["Who was present or on duty?"], True),
+            ("happened", "What happened", ["What happened factually?"], True),
+            ("presentation", "Child's presentation", ["How did the child present?"], True),
+            ("child_voice", "Child voice", ["What did the child say, show or communicate?"], True),
+            ("staff_response", "Staff response", ["How did adults respond and support?"], True),
+            ("outcome", "Outcome", ["What was the outcome at the time?"], True),
+            ("follow_up", "Follow-up", ["Any follow-up required?"], False),
+            ("plan", "Plan / chronology update", ["Does this affect the plan or chronology?"], False),
+        ),
+        quality_checks=[
+            "Child voice where appropriate",
+            "Observable facts not judgement",
+            "Times and adults named",
+        ],
+        export_label="Daily record",
+    ),
+    "incident_record": OrbDictateTemplate(
+        note_type="incident_record",
+        title="Incident record",
+        purpose="Structure a factual incident account with safeguarding and manager oversight.",
+        when_to_use="After behavioural incidents, injuries, damage, absconding attempts or serious dysregulation.",
+        sections=_sections(
+            ("datetime_location", "Date, time and location", ["When and where?"], True),
+            ("antecedents", "Antecedents / context", ["What led up to this?"], True),
+            ("happened", "What happened", ["Sequence of events — facts only"], True),
+            ("child_voice", "Child voice / presentation", ["Child's words and presentation"], True),
+            ("staff_response", "Staff response", ["Adult actions and support"], True),
+            ("deescalation", "De-escalation / support", ["De-escalation strategies used"], True),
+            ("injuries", "Injuries / damage", ["Any injury or damage — or state none"], True),
+            ("safeguarding", "Safeguarding considerations", ["Safeguarding meaning and escalation"], True),
+            ("notifications", "Notifications", ["Who was informed and when"], True),
+            ("manager", "Manager oversight", ["Manager review needs"], True),
+            ("follow_up", "Follow-up actions", ["Actions and timescales"], True),
+            ("plan_review", "Plan / risk review", ["Impact on plan or risk assessment"], False),
+        ),
+        quality_checks=[
+            "Chronological facts",
+            "Safeguarding and notifications",
+            "Manager oversight flagged",
+        ],
+        export_label="Incident record",
+    ),
+    "safeguarding_concern_record": OrbDictateTemplate(
+        note_type="safeguarding_concern_record",
+        title="Safeguarding concern record",
+        purpose="Document a safeguarding concern with child voice, immediate safety and rationale.",
+        when_to_use="When a concern arises about harm, neglect, exploitation or professional boundaries.",
+        sections=_sections(
+            ("summary", "Concern summary", ["What is the concern?"], True),
+            ("observed", "Observed / disclosed", ["What was seen or disclosed?"], True),
+            ("child_words", "Child's words", ["Child's words in quote marks where possible"], True),
+            ("safety", "Immediate safety", ["Immediate safety actions"], True),
+            ("informed", "Who was informed", ["Internal and external contacts"], True),
+            ("decision", "Safeguarding decision", ["Decision taken and rationale"], True),
+            ("agencies", "External agencies", ["Agency involvement if any"], False),
+            ("rationale", "Rationale", ["Professional reasoning — facts led"], True),
+            ("follow_up", "Follow-up", ["Next steps"], True),
+            ("review", "Review", ["Review date / manager sign-off needs"], True),
+        ),
+        quality_checks=["Child voice", "Immediate safety", "Escalation documented"],
+        export_label="Safeguarding concern",
+    ),
+    "missing_episode_note": OrbDictateTemplate(
+        note_type="missing_episode_note",
+        title="Missing episode note",
+        purpose="Record missing-from-care and return conversation with contextual safeguarding lens.",
+        when_to_use="After a missing episode or return conversation.",
+        sections=_sections(
+            ("time_missing", "Time missing", ["When was the child noted missing?"], True),
+            ("return_time", "Return time", ["When did they return?"], True),
+            ("presentation", "Presentation on return", ["Presentation on return"], True),
+            ("whereabouts", "Whereabouts if known", ["Where they were if known"], False),
+            ("companions", "Who they were with", ["Companions or contacts"], False),
+            ("transport", "Transport / routes", ["Routes or transport noted"], False),
+            ("unknown_adults", "Unknown adults / vehicles", ["Unknown adults or vehicles"], False),
+            ("substances", "Substances / gifts / debts", ["Any indicators discussed"], False),
+            ("child_voice", "Child voice", ["Child's account"], True),
+            ("return_conversation", "Return conversation", ["Return conversation summary"], True),
+            ("isn", "ISN / contextual safeguarding", ["Contextual safeguarding considerations"], True),
+            ("manager", "Manager oversight", ["Manager actions"], True),
+            ("plan", "Plan updates", ["Plan / risk updates"], True),
+        ),
+        quality_checks=["Return conversation", "Contextual safeguarding", "Manager oversight"],
+        export_label="Missing episode",
+    ),
+    "manager_oversight_note": OrbDictateTemplate(
+        note_type="manager_oversight_note",
+        title="Manager oversight note",
+        purpose="Capture manager review, professional curiosity and required actions.",
+        when_to_use="When reviewing records, practice or child experience as a manager.",
+        sections=_sections(
+            ("reviewed", "Record reviewed", ["What was reviewed?"], True),
+            ("concerns", "Key concerns", ["Key concerns"], True),
+            ("experience", "Child experience", ["Child experience lens"], True),
+            ("curiosity", "Professional curiosity", ["Questions and hypotheses — fact led"], True),
+            ("safeguarding", "Safeguarding meaning", ["Safeguarding implications"], True),
+            ("actions", "Actions required", ["Actions"], True),
+            ("timescale", "Timescale", ["Timescales"], True),
+            ("responsible", "Responsible person", ["Who owns actions"], True),
+            ("review_date", "Review date", ["When to review again"], True),
+        ),
+        quality_checks=["Actions with owners", "Child experience", "Safeguarding considered"],
+        export_label="Manager oversight",
+    ),
+    "chronology_entry": OrbDictateTemplate(
+        note_type="chronology_entry",
+        title="Chronology entry",
+        purpose="Add a dated chronology entry with significance and plan impact.",
+        when_to_use="When an event should be tracked on the child's chronology.",
+        sections=_sections(
+            ("datetime", "Date and time", ["When?"], True),
+            ("event", "Event", ["What happened?"], True),
+            ("significance", "Significance", ["Why does this matter?"], True),
+            ("impact", "Child impact", ["Impact on the child"], True),
+            ("action", "Action taken", ["Actions taken"], True),
+            ("linked", "Linked record", ["Linked record reference if any"], False),
+            ("plan", "Plan / risk update", ["Plan or risk update"], False),
+        ),
+        quality_checks=["Significance clear", "Child impact", "Dated"],
+        export_label="Chronology entry",
+    ),
+    "handover_note": OrbDictateTemplate(
+        note_type="handover_note",
+        title="Handover note",
+        purpose="Support safe shift handover with risks, events and plans.",
+        when_to_use="At end of shift or before handover to the next team.",
+        sections=_sections(
+            ("presentation", "Current presentation", ["How are children presenting?"], True),
+            ("risks", "Risks / alerts", ["Active risks and alerts"], True),
+            ("events", "Key events", ["Key events this shift"], True),
+            ("health", "Medication / health", ["Health and medication notes"], False),
+            ("contact", "Family / contact", ["Contact or family updates"], False),
+            ("next_shift", "Plans for next shift", ["Priorities for incoming team"], True),
+            ("manager", "Manager messages", ["Manager messages"], False),
+        ),
+        quality_checks=["Risks highlighted", "Clear priorities"],
+        export_label="Handover",
+    ),
+    "supervision_reflection": OrbDictateTemplate(
+        note_type="supervision_reflection",
+        title="Reflective supervision note",
+        purpose="Structure supervision reflection with learning and safeguarding themes.",
+        when_to_use="After supervision or reflective practice discussion.",
+        sections=_sections(
+            ("topic", "Topic discussed", ["What was discussed?"], True),
+            ("reflection", "Reflection", ["Reflection"], True),
+            ("emotional", "Emotional impact", ["Emotional impact on practitioner"], False),
+            ("learning", "Learning", ["Learning points"], True),
+            ("themes", "Safeguarding / recording themes", ["Themes for recording or safeguarding"], True),
+            ("actions", "Actions", ["Actions agreed"], True),
+            ("support", "Support needed", ["Support needed"], False),
+            ("review", "Review date", ["Review date"], False),
+        ),
+        quality_checks=["Learning captured", "Actions agreed"],
+        export_label="Supervision reflection",
+    ),
+    "keywork_summary": OrbDictateTemplate(
+        note_type="keywork_summary",
+        title="Keywork session summary",
+        purpose="Summarise a keywork session with child voice and plan links.",
+        when_to_use="After a planned keywork or direct work session.",
+        sections=_sections(
+            ("datetime", "Date and time", ["When was the session?"], True),
+            ("focus", "Session focus", ["What was the focus?"], True),
+            ("child_voice", "Child voice", ["Child's participation and words"], True),
+            ("progress", "Progress", ["Progress observed"], True),
+            ("plan", "Plan links", ["Links to care or support plan"], True),
+            ("follow_up", "Follow-up", ["Follow-up actions"], True),
+        ),
+        quality_checks=["Child voice", "Plan links"],
+        export_label="Keywork summary",
+    ),
+    "staff_debrief": OrbDictateTemplate(
+        note_type="staff_debrief",
+        title="Staff debrief",
+        purpose="Capture team debrief after significant events.",
+        when_to_use="After incidents, missing episodes or emotionally loaded shifts.",
+        sections=_sections(
+            ("context", "Context", ["What prompted the debrief?"], True),
+            ("facts", "Shared facts", ["Agreed facts"], True),
+            ("child_experience", "Child experience", ["Child experience discussion"], True),
+            ("learning", "Learning", ["Learning for the home"], True),
+            ("actions", "Actions", ["Actions"], True),
+        ),
+        quality_checks=["Facts separated from opinion", "Learning and actions"],
+        export_label="Staff debrief",
+    ),
+    "learning_note": OrbDictateTemplate(
+        note_type="learning_note",
+        title="Learning / CPD note",
+        purpose="Record practice learning for CPD or team development.",
+        when_to_use="After training, reflection or practice learning.",
+        sections=_sections(
+            ("topic", "Topic", ["What was learned?"], True),
+            ("application", "Application to practice", ["How will this change practice?"], True),
+            ("recording", "Recording implications", ["Implications for recording quality"], False),
+            ("share", "Share with team", ["What to share with the team?"], False),
+        ),
+        quality_checks=["Application to residential practice"],
+        export_label="Learning note",
+    ),
+    "action_plan": OrbDictateTemplate(
+        note_type="action_plan",
+        title="Action plan",
+        purpose="Turn discussion into owned actions with timescales.",
+        when_to_use="When agreeing actions after incidents, reviews or supervision.",
+        sections=_sections(
+            ("context", "Context", ["Background"], True),
+            ("actions", "Actions", ["Specific actions"], True),
+            ("owners", "Owners", ["Who is responsible?"], True),
+            ("timescales", "Timescales", ["By when?"], True),
+            ("review", "Review", ["Review date"], True),
+        ),
+        quality_checks=["Named owners", "Timescales"],
+        export_label="Action plan",
+    ),
+    "reg44_prep_note": OrbDictateTemplate(
+        note_type="reg44_prep_note",
+        title="Reg 44 / Reg 45 preparation note",
+        purpose="Prepare governance reflection for independent scrutiny visits.",
+        when_to_use="When preparing for Reg 44 or Reg 45 visits.",
+        sections=_sections(
+            ("themes", "Themes for visit", ["Key themes"], True),
+            ("evidence", "Evidence available", ["Evidence and records"], True),
+            ("gaps", "Gaps", ["Known gaps"], True),
+            ("actions", "Actions before visit", ["Actions"], True),
+        ),
+        quality_checks=["Evidence led", "Gaps acknowledged"],
+        export_label="Reg 44 / 45 prep",
+    ),
+    "ofsted_evidence_summary": OrbDictateTemplate(
+        note_type="ofsted_evidence_summary",
+        title="Ofsted evidence summary",
+        purpose="Summarise practice evidence against SCCIF / Quality Standards lens.",
+        when_to_use="When preparing inspection evidence or self-evaluation.",
+        sections=_sections(
+            ("standard", "Quality Standard / theme", ["Which theme?"], True),
+            ("evidence", "Evidence", ["What evidence exists?"], True),
+            ("impact", "Impact on children", ["Impact on children"], True),
+            ("gaps", "Gaps", ["Gaps to address"], True),
+            ("actions", "Improvement actions", ["Actions"], True),
+        ),
+        quality_checks=["Child impact", "Evidence specific"],
+        export_label="Ofsted evidence summary",
+    ),
+}
+
+
+def list_dictate_templates() -> list[OrbDictateTemplate]:
+    return list(_DICTATE_TEMPLATES.values())
+
+
+def get_dictate_template(note_type: OrbDictateNoteType) -> OrbDictateTemplate:
+    template = _DICTATE_TEMPLATES.get(note_type)
+    if not template:
+        raise KeyError(note_type)
+    return template

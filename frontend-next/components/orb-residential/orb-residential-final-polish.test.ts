@@ -55,9 +55,11 @@ describe('ORB Residential final product polish', () => {
     assert.match(voice, /data-orb-voice-start/)
     assert.match(voice, /data-orb-voice-station/)
     assert.match(plus, /orb_voice/)
+    assert.match(plus, /orb_dictate/)
     assert.match(plus, /use_template/)
     assert.match(companion, /OrbVoiceStation/)
     assert.match(companion, /openOrbVoicePanel/)
+    assert.match(companion, /OrbDictateStation/)
   })
 
   it('premium account modal and project memory editor', () => {
