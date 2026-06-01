@@ -24,6 +24,11 @@ export type MicrophoneAccessResult = {
   stream: MediaStream | null
 }
 
+type PcmCapture = {
+  stop: () => Promise<Blob | null>
+  cancel: () => void
+}
+
 function permissionFromError(error: unknown): MicrophonePermissionState {
   const name = error instanceof DOMException ? error.name : ''
   if (name === 'NotAllowedError' || name === 'PermissionDeniedError') return 'denied'
@@ -44,11 +49,7 @@ export async function probeMicrophoneAccess(): Promise<MicrophoneAccessResult> {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
     stream.getTracks().forEach((track) => {
-      try {
-        track.stop()
-      } catch {
-        /* ignore */
-      }
+      try { track.stop() } catch { /* ignore */ }
     })
     return { ok: true, permission: 'granted', stream: null }
   } catch (error) {
@@ -72,18 +73,13 @@ export async function acquireMicrophoneStream(): Promise<MicrophoneAccessResult>
 export function releaseMicrophoneStream(stream: MediaStream | null | undefined) {
   if (!stream) return
   stream.getTracks().forEach((track) => {
-    try {
-      track.stop()
-    } catch {
-      /* ignore */
-    }
+    try { track.stop() } catch { /* ignore */ }
   })
 }
 
 export type MediaRecorderCapture = {
   stop: () => Promise<{ blob: Blob | null; mimeType: string }>
   cancel: () => void
-  /** Present on captures from startMediaRecorderCapture — used for confirmed start. */
   recorder?: MediaRecorder
 }
 
@@ -121,7 +117,79 @@ function startRecorder(recorder: MediaRecorder, mimeType: string, timesliceMs?: 
   else recorder.start()
 }
 
-function buildMediaRecorderCapture(recorder: MediaRecorder, chunks: Blob[]): MediaRecorderCapture {
+function encodeWav(samples: Float32Array[], sampleRate: number): Blob | null {
+  const totalSamples = samples.reduce((sum, chunk) => sum + chunk.length, 0)
+  if (!totalSamples) return null
+  const buffer = new ArrayBuffer(44 + totalSamples * 2)
+  const view = new DataView(buffer)
+  let offset = 0
+  const writeString = (value: string) => {
+    for (let i = 0; i < value.length; i += 1) view.setUint8(offset + i, value.charCodeAt(i))
+    offset += value.length
+  }
+  writeString('RIFF')
+  view.setUint32(offset, 36 + totalSamples * 2, true); offset += 4
+  writeString('WAVE')
+  writeString('fmt ')
+  view.setUint32(offset, 16, true); offset += 4
+  view.setUint16(offset, 1, true); offset += 2
+  view.setUint16(offset, 1, true); offset += 2
+  view.setUint32(offset, sampleRate, true); offset += 4
+  view.setUint32(offset, sampleRate * 2, true); offset += 4
+  view.setUint16(offset, 2, true); offset += 2
+  view.setUint16(offset, 16, true); offset += 2
+  writeString('data')
+  view.setUint32(offset, totalSamples * 2, true); offset += 4
+  for (const chunk of samples) {
+    for (let i = 0; i < chunk.length; i += 1) {
+      const s = Math.max(-1, Math.min(1, chunk[i]))
+      view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true)
+      offset += 2
+    }
+  }
+  return new Blob([buffer], { type: 'audio/wav' })
+}
+
+function startPcmCapture(stream: MediaStream): PcmCapture | null {
+  if (typeof window === 'undefined') return null
+  const AudioContextCtor = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+  if (!AudioContextCtor) return null
+  try {
+    const context = new AudioContextCtor()
+    const source = context.createMediaStreamSource(stream)
+    const processor = context.createScriptProcessor(4096, 1, 1)
+    const samples: Float32Array[] = []
+    let active = true
+    processor.onaudioprocess = (event) => {
+      if (!active) return
+      const input = event.inputBuffer.getChannelData(0)
+      samples.push(new Float32Array(input))
+    }
+    source.connect(processor)
+    processor.connect(context.destination)
+    return {
+      stop: async () => {
+        active = false
+        try { processor.disconnect() } catch { /* ignore */ }
+        try { source.disconnect() } catch { /* ignore */ }
+        const wav = encodeWav(samples, context.sampleRate)
+        try { await context.close() } catch { /* ignore */ }
+        return wav
+      },
+      cancel: () => {
+        active = false
+        samples.length = 0
+        try { processor.disconnect() } catch { /* ignore */ }
+        try { source.disconnect() } catch { /* ignore */ }
+        void context.close().catch(() => undefined)
+      }
+    }
+  } catch {
+    return null
+  }
+}
+
+function buildMediaRecorderCapture(recorder: MediaRecorder, chunks: Blob[], pcmCapture: PcmCapture | null): MediaRecorderCapture {
   return {
     recorder,
     stop: () =>
@@ -132,44 +200,37 @@ function buildMediaRecorderCapture(recorder: MediaRecorder, chunks: Blob[]): Med
         const finish = () => {
           if (settled) return
           settled = true
-          window.setTimeout(() => {
-            resolve({ blob: buildAudioBlob(chunks, mimeType), mimeType })
+          window.setTimeout(async () => {
+            const mediaBlob = buildAudioBlob(chunks, mimeType)
+            if (mediaBlob?.size) {
+              pcmCapture?.cancel()
+              resolve({ blob: mediaBlob, mimeType })
+              return
+            }
+            const wav = await pcmCapture?.stop()
+            resolve({ blob: wav ?? null, mimeType: wav ? 'audio/wav' : mimeType })
           }, isSafariLike() ? 750 : 150)
         }
 
         const handleData = (event: BlobEvent) => {
           if (event.data?.size > 0) chunks.push(event.data)
         }
-        const handleStop = () => finish()
-
         recorder.addEventListener('dataavailable', handleData)
-        recorder.addEventListener('stop', handleStop, { once: true })
+        recorder.addEventListener('stop', finish, { once: true })
 
         if (recorder.state === 'inactive') {
           finish()
           return
         }
 
-        try {
-          recorder.requestData()
-        } catch {
-          /* Safari may not support requestData in every state. stop() still flushes final data. */
-        }
-
-        try {
-          recorder.stop()
-        } catch {
-          finish()
-        }
+        try { recorder.requestData() } catch { /* Safari may not support requestData in every state. */ }
+        try { recorder.stop() } catch { finish() }
       }),
     cancel: () => {
       chunks.length = 0
+      pcmCapture?.cancel()
       if (recorder.state !== 'inactive') {
-        try {
-          recorder.stop()
-        } catch {
-          /* ignore */
-        }
+        try { recorder.stop() } catch { /* ignore */ }
       }
     }
   }
@@ -187,29 +248,20 @@ export function startMediaRecorderCapture(
   try {
     recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream)
   } catch {
-    try {
-      recorder = new MediaRecorder(stream)
-    } catch {
-      return null
-    }
+    try { recorder = new MediaRecorder(stream) } catch { return null }
   }
 
   recorder.ondataavailable = (event) => {
     if (event.data.size > 0) chunks.push(event.data)
   }
 
+  const pcmCapture = startPcmCapture(stream)
   startRecorder(recorder, recorder.mimeType || mimeType, options?.timesliceMs)
 
-  return buildMediaRecorderCapture(recorder, chunks)
+  return buildMediaRecorderCapture(recorder, chunks, pcmCapture)
 }
 
-/** Start MediaRecorder and resolve only after the recorder start event fires.
- *
- * Important: register the start listener before calling recorder.start(). The
- * previous implementation called startMediaRecorderCapture(), which starts the
- * recorder immediately, then attached the confirmation listener afterwards. In
- * Safari this can miss the fast `start` event and falsely cancel a working mic.
- */
+/** Start MediaRecorder and resolve only after the recorder start event fires. */
 export async function startMediaRecorderCaptureConfirmed(
   stream: MediaStream,
   options?: { mimeType?: string; timesliceMs?: number }
@@ -221,18 +273,15 @@ export async function startMediaRecorderCaptureConfirmed(
   try {
     recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream)
   } catch {
-    try {
-      recorder = new MediaRecorder(stream)
-    } catch {
-      return null
-    }
+    try { recorder = new MediaRecorder(stream) } catch { return null }
   }
 
   recorder.ondataavailable = (event) => {
     if (event.data.size > 0) chunks.push(event.data)
   }
 
-  const capture = buildMediaRecorderCapture(recorder, chunks)
+  const pcmCapture = startPcmCapture(stream)
+  const capture = buildMediaRecorderCapture(recorder, chunks, pcmCapture)
   const started = confirmMediaRecorderStart(recorder)
   try {
     startRecorder(recorder, recorder.mimeType || mimeType, options?.timesliceMs)
