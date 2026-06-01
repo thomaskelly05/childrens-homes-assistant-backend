@@ -74,12 +74,19 @@ function screenState() {
     composerMicRoute: readAttr('data-orb-composer-mic-route'),
     composerMicReason: readAttr('data-orb-composer-mic-reason'),
     voiceStartStage: readAttr('data-orb-voice-start-stage'),
+    voicePhase: readAttr('data-orb-voice-phase'),
+    voiceCaptureState: readAttr('data-orb-voice-capture-state'),
     voiceCaptureActive: readAttr('data-orb-voice-capture-active'),
     voiceListening: readAttr('data-orb-voice-listening'),
     voiceProvider: readAttr('data-orb-voice-provider'),
+    voiceRealtimeAvailable: readAttr('data-orb-voice-realtime-available'),
     dictateRecordingState: readAttr('data-orb-dictate-recording-state'),
     dictateRecorderMode: readAttr('data-orb-dictate-recorder-mode'),
+    dictateTranscriptLength: readAttr('data-orb-dictate-transcript-length'),
     dictateAudioSize: readAttr('data-orb-dictate-audio-size'),
+    dictateCaptureSource: readAttr('data-orb-dictate-capture-source'),
+    dictateChunkCount: readAttr('data-orb-dictate-chunk-count'),
+    dictateSampleCount: readAttr('data-orb-dictate-sample-count'),
     dictateStatus: readAttr('data-orb-dictate-status')
   }
 }

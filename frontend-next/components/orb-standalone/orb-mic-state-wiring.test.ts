@@ -64,7 +64,7 @@ describe('ORB mic state wiring', () => {
   it('voice session live requires browser capture active', () => {
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
     assert.match(station, /const captureActive = browserCaptureActive/)
-    assert.match(station, /voiceSessionLive = voiceStartStage === 'active' && captureActive/)
+    assert.match(station, /voiceSessionLive = realtimeVoiceReady && voiceStartStage === 'active' && captureActive/)
     assert.match(station, /data-orb-voice-capture-active/)
   })
 
@@ -110,12 +110,14 @@ describe('ORB mic state wiring', () => {
     assert.equal(result.ok, true)
   })
 
-  it('Dictate falls back to MediaRecorder when SpeechRecognition short-starts', () => {
+  it('Dictate prefers speech first and falls back to MediaRecorder when speech fails', () => {
     const dictate = readComponent('components/orb-standalone/orb-dictate-station.tsx')
     const hook = readComponent('components/orb-standalone/use-standalone-orb-voice.ts')
     assert.match(hook, /beginMediaRecorderCapture\(\)/)
     assert.match(dictate, /startMediaRecorder/)
-    assert.match(dictate, /mediaRecorderAvailable && \(isSafariBrowser\(\)/)
+    assert.match(dictate, /preferSpeechRecognition = speechRecognitionAvailable/)
+    assert.match(dictate, /beginDictateSpeechCapture/)
+    assert.match(dictate, /dictate_media_fallback_started/)
   })
 
   it('Dictate recording UI uses explicit recordingUiState machine', () => {

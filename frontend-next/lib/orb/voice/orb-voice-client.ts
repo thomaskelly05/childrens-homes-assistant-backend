@@ -85,6 +85,16 @@ const BROWSER_CAPABILITIES: VoiceProviderCapabilities = {
   latencyClass: 'fallback'
 }
 
+/** True when the server selected a duplex realtime provider (not browser-only fallback). */
+export function isRealtimeVoiceProvider(session: OrbVoiceSessionResponse): boolean {
+  if (session.status !== 'ready') return false
+  return (
+    session.provider === 'openai_realtime' ||
+    session.provider === 'websocket_realtime' ||
+    session.provider === 'webrtc_realtime'
+  )
+}
+
 export async function startOrbVoiceSession(options: {
   mode?: string
   voice_id?: string

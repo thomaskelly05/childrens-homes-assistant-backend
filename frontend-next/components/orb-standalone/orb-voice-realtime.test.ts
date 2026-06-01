@@ -20,11 +20,13 @@ describe('ORB Voice realtime provider pass', () => {
     assert.doesNotMatch(client, /getUserMedia\(\{ audio: true \}\)[\s\S]*constructor/)
   })
 
-  it('voice station uses browser speech recognition for live session', () => {
+  it('voice station probes realtime session before live conversation', () => {
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /beginSpeechRecognitionCapture/)
+    assert.match(station, /isRealtimeVoiceProvider/)
+    assert.match(station, /startOrbVoiceSession/)
     assert.match(station, /data-orb-voice-start-stage/)
     assert.match(station, /testMicrophoneLevel/)
+    assert.match(station, /Live ORB Voice is not available yet/)
     assert.doesNotMatch(station, /OrbRealtimeVoiceClient/)
   })
 

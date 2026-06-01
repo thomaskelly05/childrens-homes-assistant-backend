@@ -93,23 +93,23 @@ describe('ORB mic gating and routing', () => {
     assert.match(dictate, /orbMicDevLog\('dictate record clicked'/)
   })
 
-  it('voice uses browser speech recognition for live session, not MediaRecorder', () => {
+  it('voice requires realtime before browser speech session, not MediaRecorder', () => {
     const hook = readComponent('components/orb-standalone/use-standalone-orb-voice.ts')
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
     assert.match(hook, /beginSpeechRecognitionCapture/)
-    assert.match(hook, /startRecognitionSessionConfirmed/)
-    assert.match(hook, /confirmSpeechRecognitionStart/)
-    assert.match(station, /beginSpeechRecognitionCapture/)
+    assert.match(hook, /beginDictateSpeechCapture/)
+    assert.match(station, /isRealtimeVoiceProvider/)
+    assert.match(station, /realtimeVoiceReady/)
     assert.doesNotMatch(station, /beginUserVoiceCapture\(\)/)
-    assert.match(station, /Live voice is not stable in this browser/)
     assert.match(station, /data-orb-voice-capture-active/)
     assert.match(station, /voiceSessionLive/)
   })
 
-  it('voice routes to dictate when speech recognition unavailable', () => {
+  it('voice routes to dictate when realtime voice unavailable', () => {
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /Open Dictate and start recording/)
+    assert.match(station, /Open Dictate/)
     assert.match(station, /data-orb-voice-open-dictate/)
+    assert.match(station, /Live ORB Voice is not available yet/)
   })
 
   it('composer mic supports forced mic query routing', () => {

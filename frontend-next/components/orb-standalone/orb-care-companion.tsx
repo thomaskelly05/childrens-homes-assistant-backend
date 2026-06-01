@@ -146,10 +146,10 @@ import {
   resolveOrbMicAccessContext
 } from '@/lib/orb/voice/orb-mic-access'
 import {
-  detectMediaRecorderSupported,
-  detectSpeechRecognitionSupported,
-  isSafariBrowser
-} from '@/lib/orb/voice/orb-voice-readiness'
+  isRealtimeVoiceProvider,
+  startOrbVoiceSession
+} from '@/lib/orb/voice/orb-voice-client'
+import { isSafariBrowser } from '@/lib/orb/voice/orb-voice-readiness'
 import { useOrbSessionGate } from '@/hooks/use-orb-session-gate'
 import { useMounted } from '@/hooks/use-mounted'
 import { getCsrfToken, STANDALONE_ORB_CSRF_REFRESH_MESSAGE } from '@/lib/auth/api'
@@ -556,6 +556,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   const [dictateImportNoteType, setDictateImportNoteType] = useState<OrbDictateNoteType | undefined>()
   const [dictateImportStudio, setDictateImportStudio] = useState(false)
   const [dictateAutoStart, setDictateAutoStart] = useState(false)
+  const [realtimeVoiceAvailable, setRealtimeVoiceAvailable] = useState(false)
   const [agentsPanelOpen, setAgentsPanelOpen] = useState(false)
   const [promptDrawerOpen, setPromptDrawerOpen] = useState(false)
   const [moreExamplesExpanded, setMoreExamplesExpanded] = useState(false)
@@ -1611,25 +1612,38 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
     [account.adminBypass, account.hasConfirmedAccess, account.role]
   )
 
+  useEffect(() => {
+    if (!mounted || shouldSkipAuthenticatedOrbFetch()) return
+    let cancelled = false
+    void startOrbVoiceSession({ transport: 'auto' }).then((session) => {
+      if (cancelled) return
+      setRealtimeVoiceAvailable(isRealtimeVoiceProvider(session))
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [mounted])
+
   const micQueryParam = mounted ? searchParams.get('mic')?.toLowerCase() : null
+
+  const voiceGenuinelyAvailable =
+    orbMicAccess.canUseLiveVoice && realtimeVoiceAvailable
 
   const composerMicRoute = useMemo((): 'dictate' | 'voice' => {
     if (micQueryParam === 'dictate') return 'dictate'
-    if (micQueryParam === 'voice') return 'voice'
+    if (micQueryParam === 'voice') return voiceGenuinelyAvailable ? 'voice' : 'dictate'
     if (isSafariBrowser()) return 'dictate'
-    const liveSpeechOk = voice.recognitionAvailable || detectSpeechRecognitionSupported()
-    if (orbMicAccess.canUseLiveVoice && liveSpeechOk) return 'voice'
+    if (voiceGenuinelyAvailable) return 'voice'
     return 'dictate'
-  }, [micQueryParam, orbMicAccess.canUseLiveVoice, voice.recognitionAvailable])
+  }, [micQueryParam, voiceGenuinelyAvailable])
 
   const composerMicReason = useMemo((): string => {
     if (micQueryParam === 'dictate') return 'forced'
-    if (micQueryParam === 'voice') return 'forced'
+    if (micQueryParam === 'voice') return voiceGenuinelyAvailable ? 'forced' : 'fallback'
     if (isSafariBrowser()) return 'safari'
-    const liveSpeechOk = voice.recognitionAvailable || detectSpeechRecognitionSupported()
-    if (orbMicAccess.canUseLiveVoice && liveSpeechOk) return 'voice_available'
+    if (voiceGenuinelyAvailable) return 'voice_available'
     return 'fallback'
-  }, [micQueryParam, orbMicAccess.canUseLiveVoice, voice.recognitionAvailable])
+  }, [micQueryParam, voiceGenuinelyAvailable])
 
   function handleMicClick() {
     orbMicDevLog('composer mic clicked', `${composerMicRoute}:${composerMicReason}`)
@@ -1647,9 +1661,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       return
     }
 
-    const liveSpeechOk = voice.recognitionAvailable || detectSpeechRecognitionSupported()
-    const openVoice =
-      composerMicRoute === 'voice' && orbMicAccess.canUseLiveVoice && liveSpeechOk
+    const openVoice = composerMicRoute === 'voice' && voiceGenuinelyAvailable
 
     if (openVoice) {
       orbMicDevLog('opening voice')
@@ -1838,8 +1850,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
     if (mic === 'dictate') {
       openOrbDictatePanel({ autoStart: true })
     } else if (mic === 'voice') {
-      const liveSpeechOk = voice.recognitionAvailable || detectSpeechRecognitionSupported()
-      if (orbMicAccess.canUseLiveVoice && liveSpeechOk) openOrbVoicePanel()
+      if (realtimeVoiceAvailable && orbMicAccess.canUseLiveVoice) openOrbVoicePanel()
       else openOrbDictatePanel({ autoStart: true })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- deep link once URL mic param is present
@@ -2627,7 +2638,12 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
               inputRef.current?.focus()
             }}
             onOpenDictate={(transcript, noteType, opts) =>
-              openOrbDictatePanel({ transcript, noteType, studio: opts?.studio })
+              openOrbDictatePanel({
+                transcript,
+                noteType,
+                studio: opts?.studio,
+                autoStart: opts?.autoStart
+              })
             }
           />
           <OrbDictateStation
