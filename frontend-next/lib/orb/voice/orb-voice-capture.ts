@@ -81,37 +81,19 @@ export type MediaRecorderCapture = {
   recorder?: MediaRecorder
 }
 
-/** Record audio via MediaRecorder when Web Speech Recognition is unavailable. */
-export function startMediaRecorderCapture(
-  stream: MediaStream,
-  options?: { mimeType?: string; timesliceMs?: number }
-): MediaRecorderCapture | null {
-  if (typeof MediaRecorder === 'undefined') return null
-  const preferred = options?.mimeType ?? 'audio/webm;codecs=opus'
-  const mimeType = MediaRecorder.isTypeSupported(preferred)
-    ? preferred
-    : MediaRecorder.isTypeSupported('audio/webm')
-      ? 'audio/webm'
-      : ''
-  const chunks: Blob[] = []
-  let recorder: MediaRecorder
+function pickMediaRecorderMimeType(preferred?: string): string {
+  if (typeof MediaRecorder === 'undefined') return ''
+  const requested = preferred ?? 'audio/webm;codecs=opus'
   try {
-    recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream)
+    if (requested && MediaRecorder.isTypeSupported(requested)) return requested
+    if (MediaRecorder.isTypeSupported('audio/webm')) return 'audio/webm'
   } catch {
-    try {
-      recorder = new MediaRecorder(stream)
-    } catch {
-      return null
-    }
+    return ''
   }
+  return ''
+}
 
-  recorder.ondataavailable = (event) => {
-    if (event.data.size > 0) chunks.push(event.data)
-  }
-
-  const timeslice = options?.timesliceMs ?? 250
-  recorder.start(timeslice)
-
+function buildMediaRecorderCapture(recorder: MediaRecorder, chunks: Blob[]): MediaRecorderCapture {
   return {
     recorder,
     stop: () =>
@@ -144,15 +126,73 @@ export function startMediaRecorderCapture(
   }
 }
 
-/** Start MediaRecorder and resolve only after the recorder start event fires. */
+/** Record audio via MediaRecorder when Web Speech Recognition is unavailable. */
+export function startMediaRecorderCapture(
+  stream: MediaStream,
+  options?: { mimeType?: string; timesliceMs?: number }
+): MediaRecorderCapture | null {
+  if (typeof MediaRecorder === 'undefined') return null
+  const mimeType = pickMediaRecorderMimeType(options?.mimeType)
+  const chunks: Blob[] = []
+  let recorder: MediaRecorder
+  try {
+    recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream)
+  } catch {
+    try {
+      recorder = new MediaRecorder(stream)
+    } catch {
+      return null
+    }
+  }
+
+  recorder.ondataavailable = (event) => {
+    if (event.data.size > 0) chunks.push(event.data)
+  }
+
+  const timeslice = options?.timesliceMs ?? 250
+  recorder.start(timeslice)
+
+  return buildMediaRecorderCapture(recorder, chunks)
+}
+
+/** Start MediaRecorder and resolve only after the recorder start event fires.
+ *
+ * Important: register the start listener before calling recorder.start(). The
+ * previous implementation called startMediaRecorderCapture(), which starts the
+ * recorder immediately, then attached the confirmation listener afterwards. In
+ * Safari this can miss the fast `start` event and falsely cancel a working mic.
+ */
 export async function startMediaRecorderCaptureConfirmed(
   stream: MediaStream,
   options?: { mimeType?: string; timesliceMs?: number }
 ): Promise<MediaRecorderCapture | null> {
-  const capture = startMediaRecorderCapture(stream, options)
-  if (!capture) return null
-  if (!capture.recorder) return capture
-  const ok = await confirmMediaRecorderStart(capture.recorder)
+  if (typeof MediaRecorder === 'undefined') return null
+  const mimeType = pickMediaRecorderMimeType(options?.mimeType)
+  const chunks: Blob[] = []
+  let recorder: MediaRecorder
+  try {
+    recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream)
+  } catch {
+    try {
+      recorder = new MediaRecorder(stream)
+    } catch {
+      return null
+    }
+  }
+
+  recorder.ondataavailable = (event) => {
+    if (event.data.size > 0) chunks.push(event.data)
+  }
+
+  const capture = buildMediaRecorderCapture(recorder, chunks)
+  const started = confirmMediaRecorderStart(recorder)
+  try {
+    recorder.start(options?.timesliceMs ?? 250)
+  } catch {
+    capture.cancel()
+    return null
+  }
+  const ok = await started
   if (!ok) {
     capture.cancel()
     return null
