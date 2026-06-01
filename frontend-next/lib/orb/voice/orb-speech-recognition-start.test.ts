@@ -58,13 +58,23 @@ function createMockRecognition(behaviour: {
 }
 
 describe('confirmSpeechRecognitionStart', () => {
-  it('resolves true only after onstart and minimum hold', async () => {
+  it('resolves true when onstart fires', async () => {
     const recognition = createMockRecognition({ onStart: 'immediate' })
+    const result = await confirmSpeechRecognitionStart(recognition, { timeoutMs: 500 })
+    assert.equal(result.ok, true)
+  })
+
+  it('can still enforce a hold window when explicitly requested', async () => {
+    const recognition = createMockRecognition({
+      onStart: 'immediate',
+      onEndAfterStartMs: 30
+    })
     const result = await confirmSpeechRecognitionStart(recognition, {
       timeoutMs: 500,
-      minimumHoldMs: 40
+      minimumHoldMs: 80
     })
-    assert.equal(result.ok, true)
+    assert.equal(result.ok, false)
+    assert.equal(result.reason, 'speech_recognition_ended_immediately')
   })
 
   it('resolves false on onerror before onstart', async () => {
@@ -81,14 +91,14 @@ describe('confirmSpeechRecognitionStart', () => {
     assert.equal(result.reason, 'onend_before_onstart')
   })
 
-  it('resolves false when onend fires before minimumHoldMs', async () => {
+  it('resolves false when onend fires before explicit minimumHoldMs', async () => {
     const recognition = createMockRecognition({
       onStart: 'immediate',
       onEndAfterStartMs: 30
     })
     const result = await confirmSpeechRecognitionStart(recognition, {
       timeoutMs: 500,
-      minimumHoldMs: SPEECH_RECOGNITION_MINIMUM_HOLD_MS
+      minimumHoldMs: 80
     })
     assert.equal(result.ok, false)
     assert.equal(result.reason, 'speech_recognition_ended_immediately')
@@ -152,5 +162,9 @@ describe('ORB voice hook confirmed capture', () => {
 describe('RECOGNITION_START_TIMEOUT_MS', () => {
   it('defaults to 2500ms', () => {
     assert.equal(RECOGNITION_START_TIMEOUT_MS, 2500)
+  })
+
+  it('does not require a hold window by default', () => {
+    assert.equal(SPEECH_RECOGNITION_MINIMUM_HOLD_MS, 0)
   })
 })
