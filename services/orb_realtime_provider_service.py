@@ -146,6 +146,39 @@ class OrbRealtimeProviderService:
     def client_secret_body(self, *, instructions: str, voice: str | None = None) -> dict[str, Any]:
         return {"session": self.client_secret_session_body(instructions=instructions, voice=voice)}
 
+    def dictate_transcription_session_body(self, *, instructions: str) -> dict[str, Any]:
+        """Legacy /sessions fallback for ORB Dictate — transcription only, no assistant audio."""
+
+        transcription_model = os.getenv("ORB_REALTIME_TRANSCRIPTION_MODEL", "whisper-1")
+        return {
+            "type": "realtime",
+            "model": DEFAULT_REALTIME_MODEL,
+            "instructions": instructions,
+            "modalities": ["text"],
+            "input_audio_transcription": {"model": transcription_model},
+            "turn_detection": _turn_detection(),
+            "input_audio_noise_reduction": {"type": "near_field"},
+        }
+
+    def dictate_client_secret_body(self, *, instructions: str) -> dict[str, Any]:
+        """client_secrets body for ORB Dictate realtime transcription (no voice output)."""
+
+        transcription_model = os.getenv("ORB_REALTIME_TRANSCRIPTION_MODEL", "whisper-1")
+        return {
+            "session": {
+                "type": "realtime",
+                "model": DEFAULT_REALTIME_MODEL,
+                "instructions": instructions,
+                "audio": {
+                    "input": {
+                        "turn_detection": _turn_detection(),
+                        "transcription": {"model": transcription_model},
+                        "noise_reduction": {"type": "near_field"},
+                    },
+                },
+            }
+        }
+
     async def _post_openai(self, client: httpx.AsyncClient, *, url: str, body: dict[str, Any], api_key: str) -> httpx.Response:
         return await client.post(
             url,
@@ -281,6 +314,117 @@ class OrbRealtimeProviderService:
             "issued_at": issued_at,
             "expires_at": expires_at,
             "refresh_recommended_seconds": 55,
+            "provider_latency_ms": latency_ms,
+            "provider_endpoint": endpoint_used,
+            "fallback_text_mode": False,
+        }
+
+    async def create_dictate_transcription_session(
+        self,
+        *,
+        instructions: str,
+        current_user: dict[str, Any] | None = None,
+        orb_session_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Issue an ephemeral OpenAI Realtime session for ORB Dictate (input transcription only)."""
+
+        session_body = self.dictate_transcription_session_body(instructions=instructions)
+        client_secret_body = self.dictate_client_secret_body(instructions=instructions)
+        api_key = os.getenv("OPENAI_API_KEY") if self.configured() else None
+        issued_at = datetime.now(timezone.utc).isoformat()
+        if not api_key:
+            self._metrics["dictate_not_configured"] += 1
+            return {
+                "provider": "openai_realtime",
+                "configured": False,
+                "env_gated": True,
+                "fallback_text_mode": True,
+                "unavailable_reason": "Realtime transcription is not configured. Paste transcript or upload audio.",
+                "request_body": {"model": session_body["model"]},
+            }
+        if not self.provider_available():
+            return {
+                "provider": "openai_realtime",
+                "configured": True,
+                "error": "provider_circuit_open",
+                "fallback_text_mode": True,
+                "unavailable_reason": "Realtime transcription is temporarily unavailable. Paste transcript or upload audio.",
+            }
+
+        start = time.perf_counter()
+        response: httpx.Response | None = None
+        endpoint_used = "client_secrets"
+        try:
+            async with httpx.AsyncClient(timeout=httpx.Timeout(20.0, connect=8.0)) as client:
+                response = await self._post_openai(
+                    client, url=OPENAI_REALTIME_CLIENT_SECRET_URL, body=client_secret_body, api_key=api_key
+                )
+                if response.status_code == 404:
+                    endpoint_used = "sessions_fallback"
+                    response = await self._post_openai(
+                        client, url=OPENAI_REALTIME_SESSION_URL, body=session_body, api_key=api_key
+                    )
+        except httpx.TimeoutException:
+            self._record_failure("provider_timeout", retryable=True)
+            return {
+                "provider": "openai_realtime",
+                "configured": True,
+                "error": "provider_timeout",
+                "fallback_text_mode": True,
+                "unavailable_reason": "Realtime transcription timed out. Paste transcript or upload audio.",
+            }
+        except httpx.RequestError:
+            self._record_failure("provider_unreachable", retryable=True)
+            return {
+                "provider": "openai_realtime",
+                "configured": True,
+                "error": "provider_unreachable",
+                "fallback_text_mode": True,
+                "unavailable_reason": "Realtime transcription is temporarily unavailable. Paste transcript or upload audio.",
+            }
+
+        latency_ms = round((time.perf_counter() - start) * 1000, 2)
+        self._last_latency_ms = latency_ms
+        if response is None or response.status_code >= 400:
+            status_code = response.status_code if response is not None else 0
+            self._record_failure("realtime_session_failed", retryable=status_code in {408, 409, 425, 429, 500, 502, 503, 504}, status=status_code or None)
+            return {
+                "provider": "openai_realtime",
+                "configured": True,
+                "error": "realtime_session_failed",
+                "status": status_code,
+                "fallback_text_mode": True,
+                "unavailable_reason": "Realtime transcription could not start. Paste transcript or upload audio.",
+            }
+
+        raw = response.json()
+        data = _public_openai_session_payload(raw if isinstance(raw, dict) else {})
+        secret_value = _client_secret_value(data)
+        expires_at = _client_secret_expires_at(data)
+        wrapped_session = data
+        if endpoint_used == "client_secrets":
+            wrapped_session = {
+                "id": data.get("id") or f"orb_dictate_{int(time.time())}",
+                "object": data.get("object") or "realtime.client_secret",
+                "model": DEFAULT_REALTIME_MODEL,
+                "client_secret": {"value": secret_value, "expires_at": expires_at},
+            }
+        self._metrics["dictate_sessions_created"] += 1
+        self._consecutive_failures = 0
+        orb_observability_service.record_provider_success(latency_ms)
+        logger.info(
+            "orb_dictate_realtime_session_created session_id=%s user_id=%s latency_ms=%s",
+            orb_session_id,
+            (current_user or {}).get("id"),
+            latency_ms,
+        )
+        return {
+            "provider": "openai_realtime",
+            "configured": True,
+            "session": wrapped_session,
+            "model": DEFAULT_REALTIME_MODEL,
+            "issued_at": issued_at,
+            "expires_at": expires_at,
             "provider_latency_ms": latency_ms,
             "provider_endpoint": endpoint_used,
             "fallback_text_mode": False,

@@ -29,10 +29,12 @@ describe('ORB Dictate clean rebuild', () => {
 
   it('does not automatically fall back to MediaRecorder after speech failure', () => {
     const dictate = readComponent('components/orb-standalone/orb-dictate-station.tsx')
-    const speechHandler = dictate.match(/async function handleStartSpeechTranscript[\s\S]*?^  async function handleAudioFallbackClick/m)?.[0] ?? ''
+    const speechHandler =
+      dictate.match(/async function handleStartSpeechTranscript[\s\S]*?async function handleBrowserSpeechFallbackClick/m)?.[0] ?? ''
     assert.doesNotMatch(speechHandler, /beginMediaRecorderCapture/)
     assert.match(dictate, /handleAudioFallbackClick/)
     assert.match(dictate, /data-orb-dictate-audio-fallback/)
+    assert.match(dictate, /OrbDictateRealtimeTranscription/)
   })
 
   it('exposes dictate state machine data attributes', () => {
@@ -91,5 +93,13 @@ describe('Flight recorder data attributes', () => {
     assert.match(recorder, /voiceSessionConnected/)
     assert.match(recorder, /voiceRealtimeAvailable/)
     assert.match(recorder, /Copy debug report/)
+  })
+
+  it('flight recorder events emitted from realtime modules', () => {
+    const dictateRealtime = readComponent('lib/orb/dictate/orb-dictate-realtime.ts')
+    assert.match(dictateRealtime, /realtime_status|dictate_realtime_session_requested/)
+    const availability = readComponent('lib/orb/voice/orb-realtime-availability.ts')
+    assert.match(availability, /realtime_status/)
+    assert.match(availability, /voice_realtime_session_failed/)
   })
 })

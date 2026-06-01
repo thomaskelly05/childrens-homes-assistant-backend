@@ -30,6 +30,8 @@ from services.orb_dictate_service import (
     save_dictate_note,
     transcribe_dictate_audio,
 )
+from services.orb_realtime_provider_service import orb_realtime_provider_service
+from services.orb_voice_realtime_config import _openai_realtime_configured
 
 router = APIRouter(prefix="/orb/dictate", tags=["ORB Dictate"])
 
@@ -44,6 +46,52 @@ def _success(data: Any, **extra: Any) -> dict[str, Any]:
     payload: dict[str, Any] = {"success": True, "data": data}
     payload.update(extra)
     return payload
+
+
+DICTATE_REALTIME_INSTRUCTIONS = (
+    "You are a silent transcription assistant for ORB Dictate in residential childcare. "
+    "Transcribe the user's speech accurately. Do not speak or generate responses unless explicitly asked."
+)
+
+
+@router.post("/realtime/session")
+async def dictate_realtime_session(current_user=Depends(require_orb_dictate_access)):
+    """Create a server-backed realtime transcription session (ephemeral client secret only)."""
+    if not _openai_realtime_configured():
+        return {
+            "ok": True,
+            "configured": False,
+            "provider": None,
+            "reason": "not_configured",
+            "message": "Realtime transcription is not configured. Paste transcript or upload audio.",
+        }
+
+    session_id = f"dictate_{uuid.uuid4().hex[:16]}"
+    provider_result = await orb_realtime_provider_service.create_dictate_transcription_session(
+        instructions=DICTATE_REALTIME_INSTRUCTIONS,
+        current_user=current_user,
+        orb_session_id=session_id,
+    )
+    if not provider_result.get("configured") or provider_result.get("fallback_text_mode"):
+        return {
+            "ok": True,
+            "configured": False,
+            "provider": None,
+            "reason": "not_configured",
+            "message": provider_result.get("unavailable_reason")
+            or "Realtime transcription is not configured. Paste transcript or upload audio.",
+        }
+
+    session_payload = provider_result.get("session") or {}
+    return {
+        "ok": True,
+        "configured": True,
+        "session_id": session_id,
+        "provider": "openai",
+        "model": provider_result.get("model"),
+        "openai_session": session_payload,
+        "reason": "configured",
+    }
 
 
 @router.get("/templates")

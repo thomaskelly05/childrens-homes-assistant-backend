@@ -50,10 +50,10 @@ const READY_HEADLINE = 'Start conversation'
 const READY_DETAIL = 'ORB will ask for microphone access when you start.'
 
 const LIVE_VOICE_UNAVAILABLE_HEADLINE =
-  'Live ORB Voice is not available yet. Use ORB Dictate for voice-to-text.'
+  'Live ORB Voice is not available yet. Configure realtime voice to use this.'
 
 const LIVE_VOICE_UNAVAILABLE_DETAIL =
-  'Conversational voice needs a realtime voice session on the server. Use ORB Dictate for reliable speech-to-text in this browser.'
+  'Set OPENAI_API_KEY, ORB_REALTIME_ENABLED=true, and ORB_VOICE_REALTIME_PROVIDER=openai on the server. Use ORB Dictate for speech-to-text meanwhile.'
 
 const SPEECH_RECOGNITION_FALLBACK =
   'Live voice is temporarily unavailable; Dictate still works.'
