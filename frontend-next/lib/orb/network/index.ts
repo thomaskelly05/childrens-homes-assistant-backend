@@ -219,8 +219,7 @@ export class OrbRealtimeClient {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${options.ephemeralKey}`,
-        'Content-Type': 'application/sdp',
-        'OpenAI-Beta': 'realtime=v1'
+        'Content-Type': 'application/sdp'
       },
       body: sdp
     })
