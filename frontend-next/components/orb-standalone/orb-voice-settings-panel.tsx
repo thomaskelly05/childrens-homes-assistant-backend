@@ -29,6 +29,28 @@ function voiceServiceHint(voice: SpeechSynthesisVoice): string {
   return `${voice.lang} · ${local}`
 }
 
+type VoiceSettingsCompat = ReturnType<typeof useStandaloneOrbVoice> & {
+  preferredVoiceIsBritishFemale: boolean
+  setReadAloudProfileId: (profileId: OrbVoicePresetId | null) => void
+  setVoiceAsDefault: () => void
+  previewVoiceProfile: (profileId?: OrbVoicePresetId) => void | Promise<void>
+  setSpokenAnswerLength: (length: OrbSpokenAnswerLength) => void
+  setAllowInterruption: (enabled: boolean) => void
+  setPushToTalk: (enabled: boolean) => void
+  setSaveTranscript: (enabled: boolean) => void
+  setUseBrowserFallback: (enabled: boolean) => void
+  setAutoSend: (enabled: boolean) => void
+}
+
+function looksBritishFemaleVoice(name: string | null): boolean {
+  if (!name) return false
+  const lower = name.toLowerCase()
+  return (
+    (lower.includes('female') || lower.includes('sonia') || lower.includes('libby') || lower.includes('serena') || lower.includes('kate')) &&
+    (lower.includes('uk') || lower.includes('gb') || lower.includes('british') || lower.includes('sonia') || lower.includes('libby'))
+  )
+}
+
 export function OrbVoiceSettingsPanel({
   open,
   onClose,
@@ -38,7 +60,22 @@ export function OrbVoiceSettingsPanel({
   onClose: () => void
   onOpenOrbVoice?: () => void
 }) {
-  const voice = useStandaloneOrbVoice()
+  const baseVoice = useStandaloneOrbVoice()
+  const voice = {
+    ...baseVoice,
+    preferredVoiceIsBritishFemale: looksBritishFemaleVoice(baseVoice.preferredVoiceName),
+    setReadAloudProfileId: (profileId: OrbVoicePresetId | null) =>
+      baseVoice.updateSettings({ readAloudProfileId: profileId }),
+    setVoiceAsDefault: () => baseVoice.updateSettings({ readAloudProfileId: baseVoice.settings.voicePresetId }),
+    previewVoiceProfile: () => baseVoice.testSelectedVoice(),
+    setSpokenAnswerLength: (spokenAnswerLength: OrbSpokenAnswerLength) =>
+      baseVoice.updateSettings({ spokenAnswerLength }),
+    setAllowInterruption: (allowInterruption: boolean) => baseVoice.updateSettings({ allowInterruption }),
+    setPushToTalk: (pushToTalk: boolean) => baseVoice.updateSettings({ pushToTalk }),
+    setSaveTranscript: (saveTranscript: boolean) => baseVoice.updateSettings({ saveTranscript }),
+    setUseBrowserFallback: (useBrowserFallback: boolean) => baseVoice.updateSettings({ useBrowserFallback }),
+    setAutoSend: (autoSend: boolean) => baseVoice.updateSettings({ autoSend })
+  } satisfies VoiceSettingsCompat
   const { settings, availableVoices, preferredVoiceName, preferredVoiceIsBritishFemale, voiceSelectionNote } =
     voice
   const activeRate = speechRatePresetFor(settings.speechRate)
