@@ -99,7 +99,7 @@ export function assessOrbVoiceReadiness(input: {
 
 export function orbVoiceReadinessPresentation(
   readiness: OrbVoiceReadiness,
-  options?: { subscriptionActive?: boolean; sessionActive?: boolean }
+  options?: { subscriptionActive?: boolean; sessionActive?: boolean; captureActive?: boolean }
 ): OrbVoiceReadinessPresentation {
   const subscriptionActive = options?.subscriptionActive !== false
 
@@ -169,12 +169,24 @@ export function orbVoiceReadinessPresentation(
   }
 
   if (readiness.microphone_permission === 'prompt' || readiness.microphone_permission === 'unknown') {
-    if (options?.sessionActive) {
+    if (options?.sessionActive && options?.captureActive) {
       return {
         state: 'ready',
         headline: 'Listening…',
         detail: 'Speak naturally. ORB will respond when you pause.',
         primaryAction: 'start',
+        showTestMicrophone: true,
+        showAllowMicrophone: true,
+        showOpenDictate: true,
+        showTypeInstead: true
+      }
+    }
+    if (options?.sessionActive && !options?.captureActive) {
+      return {
+        state: 'needs_permission',
+        headline: 'Microphone not active yet',
+        detail: 'Allow microphone access or use Dictate to record a note.',
+        primaryAction: 'allow_microphone',
         showTestMicrophone: true,
         showAllowMicrophone: true,
         showOpenDictate: true,
@@ -194,11 +206,18 @@ export function orbVoiceReadinessPresentation(
   }
 
   if (readiness.can_use_realtime_voice || readiness.fallback_available) {
+    const sessionHeadline = options?.sessionActive
+      ? options?.captureActive
+        ? 'Voice session active'
+        : 'Connecting voice…'
+      : 'Start conversation'
     return {
       state: 'ready',
-      headline: options?.sessionActive ? 'Voice session active' : 'Start conversation',
+      headline: sessionHeadline,
       detail: options?.sessionActive
-        ? 'Push-to-talk or hands-free depending on your voice settings.'
+        ? options?.captureActive
+          ? 'Push-to-talk or hands-free depending on your voice settings.'
+          : 'Waiting for microphone capture to start.'
         : 'ORB will ask for microphone access when you start.',
       primaryAction: 'start',
       showTestMicrophone: true,
@@ -220,13 +239,19 @@ export function orbVoiceReadinessPresentation(
   }
 }
 
-export async function requestMicrophoneAccess(): Promise<{ ok: boolean; permission: MicrophonePermissionState }> {
+async function probeMicrophonePermissionOnly(): Promise<{ ok: boolean; permission: MicrophonePermissionState }> {
   if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
     return { ok: false, permission: 'unknown' }
   }
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-    stream.getTracks().forEach((track) => track.stop())
+    stream.getTracks().forEach((track) => {
+      try {
+        track.stop()
+      } catch {
+        /* ignore */
+      }
+    })
     return { ok: true, permission: 'granted' }
   } catch (error) {
     const name = error instanceof DOMException ? error.name : ''
@@ -237,8 +262,14 @@ export async function requestMicrophoneAccess(): Promise<{ ok: boolean; permissi
   }
 }
 
+/** Permission probe only — does not leave the microphone active. */
+export async function requestMicrophoneAccess(): Promise<{ ok: boolean; permission: MicrophonePermissionState }> {
+  const access = await probeMicrophonePermissionOnly()
+  return { ok: access.ok, permission: access.permission }
+}
+
 export async function testMicrophoneLevel(): Promise<{ ok: boolean; message: string }> {
-  const access = await requestMicrophoneAccess()
+  const access = await probeMicrophonePermissionOnly()
   if (!access.ok) {
     return {
       ok: false,

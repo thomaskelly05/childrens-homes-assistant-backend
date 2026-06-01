@@ -9,6 +9,15 @@ import {
   transcriptContainsWakePhrase
 } from '@/lib/orb/voice/orb-voice-browser'
 import {
+  acquireMicrophoneStream,
+  isActiveCaptureState,
+  probeMicrophoneAccess,
+  releaseMicrophoneStream,
+  startMediaRecorderCapture,
+  type MediaRecorderCapture,
+  type OrbVoiceCaptureState
+} from '@/lib/orb/voice/orb-voice-capture'
+import {
   DEFAULT_ORB_VOICE_PROFILE_ID,
   ORB_VOICE_PREVIEW_PHRASE,
   defaultVoiceProfileForMode,
@@ -23,7 +32,13 @@ import {
   ORB_VOICE_SETTINGS_STORAGE_KEY
 } from '@/lib/orb/voice/orb-voice-types'
 
-export { pickBritishFemaleVoice, splitTextForSpeechChunks, stripWakePhraseFromTranscript, transcriptContainsWakePhrase }
+export {
+  pickBritishFemaleVoice,
+  splitTextForSpeechChunks,
+  stripWakePhraseFromTranscript,
+  transcriptContainsWakePhrase
+}
+export type { OrbVoiceCaptureState }
 
 type BrowserSpeechRecognition = {
   lang: string
@@ -211,6 +226,7 @@ export function useStandaloneOrbVoice() {
   const [synthesisAvailable, setSynthesisAvailable] = useState(false)
   const [wakeStatus, setWakeStatus] = useState<StandaloneOrbWakeStatus>('off')
   const [voiceSessionPaused, setVoiceSessionPaused] = useState(false)
+  const [voiceCaptureState, setVoiceCaptureState] = useState<OrbVoiceCaptureState>('idle')
 
   const recognitionRef = useRef<BrowserSpeechRecognition | null>(null)
   const recognitionModeRef = useRef<'active' | 'continuous' | null>(null)
@@ -229,22 +245,22 @@ export function useStandaloneOrbVoice() {
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const onSpeakEndRef = useRef<(() => void) | null>(null)
   const mediaStreamRef = useRef<MediaStream | null>(null)
+  const mediaRecorderCaptureRef = useRef<MediaRecorderCapture | null>(null)
   const safariKeepAliveRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const userInitiatedVoiceRef = useRef(false)
   const [speechPlaybackError, setSpeechPlaybackError] = useState<string | null>(null)
 
-  const stopMediaStream = useCallback(() => {
-    const stream = mediaStreamRef.current
-    if (!stream) return
-    stream.getTracks().forEach((track) => {
-      try {
-        track.stop()
-      } catch {
-        /* ignore */
-      }
-    })
-    mediaStreamRef.current = null
+  const stopMediaRecorderCapture = useCallback(() => {
+    mediaRecorderCaptureRef.current?.cancel()
+    mediaRecorderCaptureRef.current = null
   }, [])
+
+  const stopMediaStream = useCallback(() => {
+    stopMediaRecorderCapture()
+    releaseMicrophoneStream(mediaStreamRef.current)
+    mediaStreamRef.current = null
+    setVoiceCaptureState((current) => (current === 'speaking' ? 'speaking' : 'idle'))
+  }, [stopMediaRecorderCapture])
 
   const stopSafariKeepAlive = useCallback(() => {
     if (safariKeepAliveRef.current) {
@@ -381,13 +397,19 @@ export function useStandaloneOrbVoice() {
     silenceTimerRef.current = setTimeout(onTimeout, SILENCE_TIMEOUT_MS)
   }, [])
 
-  const abortRecognition = useCallback(() => {
-    recognitionRef.current?.abort()
-    recognitionRef.current = null
-    recognitionModeRef.current = null
-    setListening(false)
-    stopMediaStream()
-  }, [stopMediaStream])
+  const abortRecognition = useCallback(
+    (options?: { keepStream?: boolean }) => {
+      recognitionRef.current?.abort()
+      recognitionRef.current = null
+      recognitionModeRef.current = null
+      setListening(false)
+      if (!options?.keepStream) {
+        setVoiceCaptureState('idle')
+        stopMediaStream()
+      }
+    },
+    [stopMediaStream]
+  )
 
   const cancelListening = useCallback(() => {
     clearTimers()
@@ -613,7 +635,7 @@ export function useStandaloneOrbVoice() {
       utteranceRef.current = null
       setSpeaking(false)
 
-      abortRecognition()
+      abortRecognition({ keepStream: mode === 'continuous' && Boolean(mediaStreamRef.current) })
 
       const recognition = new Recognition()
       recognition.lang = 'en-GB'
@@ -624,6 +646,7 @@ export function useStandaloneOrbVoice() {
 
       recognition.onstart = () => {
         setListening(true)
+        setVoiceCaptureState('listening')
         if (mode === 'continuous') {
           setPhase('continuous_listening')
         } else {
@@ -666,20 +689,38 @@ export function useStandaloneOrbVoice() {
       recognition.onerror = () => {
         setListening(false)
         recognitionRef.current = null
+        setVoiceCaptureState('error')
         setError('Voice is unavailable in this browser. You can still type.')
         setPhase('error')
+        stopMediaStream()
       }
 
       recognition.onend = () => {
         setListening(false)
         recognitionRef.current = null
         setInterimTranscript('')
+        const continuous = recognitionModeRef.current === 'continuous'
+        setVoiceCaptureState(transcriptRef.current.trim() ? 'ready' : continuous ? 'ready' : 'idle')
+        if (!continuous) {
+          stopMediaStream()
+        }
         setPhase((current) => {
           if (current === 'listening' || current === 'continuous_listening') {
-            return transcriptRef.current.trim() ? 'transcript_ready' : 'idle'
+            return transcriptRef.current.trim() ? 'transcript_ready' : continuous ? 'continuous_listening' : 'idle'
           }
           return current
         })
+        if (continuous && userInitiatedVoiceRef.current && !voiceSessionPausedRef.current) {
+          window.setTimeout(() => {
+            if (userInitiatedVoiceRef.current && !recognitionRef.current && mediaStreamRef.current) {
+              try {
+                startRecognitionSession('continuous')
+              } catch {
+                /* ignore restart errors */
+              }
+            }
+          }, 300)
+        }
       }
 
       recognitionRef.current = recognition
@@ -691,7 +732,7 @@ export function useStandaloneOrbVoice() {
         setPhase('error')
       }
     },
-    [abortRecognition, resetSilenceTimer]
+    [abortRecognition, resetSilenceTimer, stopMediaStream]
   )
 
   const scheduleWakeRestart = useCallback(() => {
@@ -772,38 +813,104 @@ export function useStandaloneOrbVoice() {
     setWakeStatus('off')
   }, [pauseVoiceSession, stopMediaStream])
 
-  const requestMicrophonePermission = useCallback(async (): Promise<boolean> => {
-    if (!userInitiatedVoiceRef.current) return false
-    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) return true
-    stopMediaStream()
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      mediaStreamRef.current = stream
-      stream.getTracks().forEach((track) => track.stop())
-      mediaStreamRef.current = null
+  const requestMicrophonePermission = useCallback(
+    async (options?: { probeOnly?: boolean }): Promise<boolean> => {
+      if (!userInitiatedVoiceRef.current && !options?.probeOnly) return false
+      setVoiceCaptureState('requesting_permission')
+      if (options?.probeOnly) {
+        const access = await probeMicrophoneAccess()
+        setVoiceCaptureState(access.ok ? 'ready' : 'error')
+        return access.ok
+      }
+      stopMediaStream()
+      const access = await acquireMicrophoneStream()
+      if (!access.ok || !access.stream) {
+        setVoiceCaptureState('error')
+        return false
+      }
+      mediaStreamRef.current = access.stream
+      setVoiceCaptureState('ready')
       return true
-    } catch {
-      return false
-    }
-  }, [stopMediaStream])
+    },
+    [stopMediaStream]
+  )
 
   const markIdle = useCallback(() => {
     if (!listening && !speaking) setPhase(error ? 'error' : 'idle')
   }, [error, listening, speaking])
 
-  const beginUserVoiceCapture = useCallback(async (): Promise<boolean> => {
+  const beginMediaRecorderCapture = useCallback(async (): Promise<boolean> => {
     if (voiceSessionPausedRef.current) return false
     userInitiatedVoiceRef.current = true
     setWakeStatus('off')
+    setError(null)
     const granted = await requestMicrophonePermission()
-    if (!granted) {
+    if (!granted || !mediaStreamRef.current) {
       userInitiatedVoiceRef.current = false
-      setError('Microphone access is needed for voice input. You can still type.')
+      setError('Microphone access is needed for recording. Open Dictate or paste a transcript.')
+      setVoiceCaptureState('error')
       return false
     }
-    startRecognitionSession('active')
+    const capture = startMediaRecorderCapture(mediaStreamRef.current)
+    if (!capture) {
+      stopMediaStream()
+      userInitiatedVoiceRef.current = false
+      setError('Live speech recognition unavailable — open Dictate or paste a transcript.')
+      setVoiceCaptureState('error')
+      return false
+    }
+    mediaRecorderCaptureRef.current = capture
+    setListening(true)
+    setVoiceCaptureState('recording')
+    setPhase('listening')
     return true
-  }, [requestMicrophonePermission, startRecognitionSession])
+  }, [requestMicrophonePermission, stopMediaStream])
+
+  const endMediaRecorderCapture = useCallback(async (): Promise<Blob | null> => {
+    const capture = mediaRecorderCaptureRef.current
+    if (!capture) return null
+    setVoiceCaptureState('transcribing')
+    const result = await capture.stop()
+    mediaRecorderCaptureRef.current = null
+    setListening(false)
+    stopMediaStream()
+    setVoiceCaptureState('ready')
+    return result.blob
+  }, [stopMediaStream])
+
+  const testMicrophonePermission = useCallback(async (): Promise<boolean> => {
+    userInitiatedVoiceRef.current = true
+    const ok = await requestMicrophonePermission({ probeOnly: true })
+    userInitiatedVoiceRef.current = false
+    return ok
+  }, [requestMicrophonePermission])
+
+  const beginUserVoiceCapture = useCallback(
+    async (options?: { mode?: 'active' | 'continuous' }): Promise<boolean> => {
+      if (voiceSessionPausedRef.current) return false
+      userInitiatedVoiceRef.current = true
+      setWakeStatus('off')
+      setError(null)
+
+      const Recognition = getSpeechRecognitionCtor()
+      if (!Recognition) {
+        return beginMediaRecorderCapture()
+      }
+
+      const granted = await requestMicrophonePermission()
+      if (!granted) {
+        userInitiatedVoiceRef.current = false
+        setError('Microphone access is needed for voice input. You can still type.')
+        setVoiceCaptureState('error')
+        return false
+      }
+      startRecognitionSession(options?.mode ?? 'active')
+      return true
+    },
+    [beginMediaRecorderCapture, requestMicrophonePermission, startRecognitionSession]
+  )
+
+  const captureActive = isActiveCaptureState(voiceCaptureState) || listening
 
   return {
     phase,
@@ -845,6 +952,11 @@ export function useStandaloneOrbVoice() {
     pauseVoiceSession,
     resumeVoiceSession,
     endVoiceSession,
+    voiceCaptureState,
+    captureActive,
+    testMicrophonePermission,
+    beginMediaRecorderCapture,
+    endMediaRecorderCapture,
     registerAfterSpeakListener,
     testSelectedVoice,
     stripWakePhraseFromTranscript,

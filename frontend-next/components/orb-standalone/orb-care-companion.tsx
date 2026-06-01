@@ -1601,7 +1601,8 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       return
     }
     if (!voice.recognitionAvailable) {
-      setMicNotice('Voice input is not available in this browser.')
+      openOrbDictatePanel()
+      setMicNotice('Opening ORB Dictate — use Record note for microphone capture in this browser.')
       window.setTimeout(() => setMicNotice(null), 5000)
       return
     }
