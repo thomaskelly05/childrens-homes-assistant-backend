@@ -23,6 +23,8 @@ describe('backend proxy route', () => {
     assert.match(helper, /x-csrf-token/i)
     assert.match(helper, /upstream\.body/)
     assert.match(helper, /status: upstream\.status/)
+    assert.match(helper, /UPSTREAM_CORS_HEADERS/)
+    assert.match(helper, /handlePreflight/)
   })
 
   it('auth client prefixes ORB and auth paths with resolveAuthApiPath', () => {

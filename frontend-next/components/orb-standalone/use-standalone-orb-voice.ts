@@ -15,6 +15,7 @@ import {
   releaseMicrophoneStream,
   startMediaRecorderCaptureConfirmed,
   type MediaRecorderCapture,
+  type MediaRecorderStopResult,
   type OrbVoiceCaptureState
 } from '@/lib/orb/voice/orb-voice-capture'
 import { confirmSpeechRecognitionStart } from '@/lib/orb/voice/orb-speech-recognition-start'
@@ -686,7 +687,7 @@ export function useStandaloneOrbVoice() {
     return true
   }, [requestMicrophonePermission, stopMediaStream])
 
-  const endMediaRecorderCapture = useCallback(async (): Promise<Blob | null> => {
+  const endMediaRecorderCapture = useCallback(async (): Promise<MediaRecorderStopResult | null> => {
     const capture = mediaRecorderCaptureRef.current
     if (!capture) return null
     setVoiceCaptureState('transcribing')
@@ -696,7 +697,7 @@ export function useStandaloneOrbVoice() {
     releaseMicrophoneStream(mediaStreamRef.current)
     mediaStreamRef.current = null
     setVoiceCaptureState('ready')
-    return result.blob
+    return result
   }, [])
 
   const testMicrophonePermission = useCallback(async (): Promise<boolean> => {

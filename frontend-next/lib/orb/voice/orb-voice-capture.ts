@@ -24,9 +24,22 @@ export type MicrophoneAccessResult = {
   stream: MediaStream | null
 }
 
+export type MediaRecorderCaptureSource = 'media_recorder' | 'web_audio_wav' | 'none'
+
+export type MediaRecorderStopResult = {
+  blob: Blob | null
+  mimeType: string
+  source: MediaRecorderCaptureSource
+  size: number
+  chunkCount: number
+  sampleCount: number
+  recorderMimeType: string
+}
+
 type PcmCapture = {
   stop: () => Promise<Blob | null>
   cancel: () => void
+  sampleCount: () => number
 }
 
 function permissionFromError(error: unknown): MicrophonePermissionState {
@@ -35,7 +48,7 @@ function permissionFromError(error: unknown): MicrophonePermissionState {
   return 'unknown'
 }
 
-function isSafariLike(): boolean {
+export function isSafariLike(): boolean {
   if (typeof navigator === 'undefined') return false
   const ua = navigator.userAgent.toLowerCase()
   return ua.includes('safari') && !ua.includes('chrome') && !ua.includes('chromium') && !ua.includes('android')
@@ -78,7 +91,7 @@ export function releaseMicrophoneStream(stream: MediaStream | null | undefined) 
 }
 
 export type MediaRecorderCapture = {
-  stop: () => Promise<{ blob: Blob | null; mimeType: string }>
+  stop: () => Promise<MediaRecorderStopResult>
   cancel: () => void
   recorder?: MediaRecorder
 }
@@ -150,6 +163,16 @@ function encodeWav(samples: Float32Array[], sampleRate: number): Blob | null {
   return new Blob([buffer], { type: 'audio/wav' })
 }
 
+async function resumeAudioContext(context: AudioContext): Promise<void> {
+  if (context.state === 'suspended') {
+    try {
+      await context.resume()
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
 function startPcmCapture(stream: MediaStream): PcmCapture | null {
   if (typeof window === 'undefined') return null
   const AudioContextCtor = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
@@ -158,20 +181,34 @@ function startPcmCapture(stream: MediaStream): PcmCapture | null {
     const context = new AudioContextCtor()
     const source = context.createMediaStreamSource(stream)
     const processor = context.createScriptProcessor(4096, 1, 1)
+    const silentGain = context.createGain()
+    silentGain.gain.value = 0
     const samples: Float32Array[] = []
     let active = true
+    let sampleCount = 0
+
     processor.onaudioprocess = (event) => {
       if (!active) return
       const input = event.inputBuffer.getChannelData(0)
+      if (!input.length) return
       samples.push(new Float32Array(input))
+      sampleCount += input.length
     }
+
     source.connect(processor)
-    processor.connect(context.destination)
+    processor.connect(silentGain)
+    silentGain.connect(context.destination)
+
+    void resumeAudioContext(context)
+
     return {
+      sampleCount: () => sampleCount,
       stop: async () => {
         active = false
         try { processor.disconnect() } catch { /* ignore */ }
         try { source.disconnect() } catch { /* ignore */ }
+        try { silentGain.disconnect() } catch { /* ignore */ }
+        await resumeAudioContext(context)
         const wav = encodeWav(samples, context.sampleRate)
         try { await context.close() } catch { /* ignore */ }
         return wav
@@ -179,8 +216,10 @@ function startPcmCapture(stream: MediaStream): PcmCapture | null {
       cancel: () => {
         active = false
         samples.length = 0
+        sampleCount = 0
         try { processor.disconnect() } catch { /* ignore */ }
         try { source.disconnect() } catch { /* ignore */ }
+        try { silentGain.disconnect() } catch { /* ignore */ }
         void context.close().catch(() => undefined)
       }
     }
@@ -189,49 +228,101 @@ function startPcmCapture(stream: MediaStream): PcmCapture | null {
   }
 }
 
+function emptyStopResult(recorderMimeType: string, chunkCount: number, sampleCount: number): MediaRecorderStopResult {
+  return {
+    blob: null,
+    mimeType: recorderMimeType,
+    source: 'none',
+    size: 0,
+    chunkCount,
+    sampleCount,
+    recorderMimeType
+  }
+}
+
 function buildMediaRecorderCapture(recorder: MediaRecorder, chunks: Blob[], pcmCapture: PcmCapture | null): MediaRecorderCapture {
+  const recorderMimeType = recorder.mimeType || 'audio/webm'
+
   return {
     recorder,
     stop: () =>
       new Promise((resolve) => {
-        const mimeType = recorder.mimeType || 'audio/webm'
         let settled = false
 
         const finish = () => {
           if (settled) return
           settled = true
+          const flushDelayMs = isSafariLike() ? 900 : 200
           window.setTimeout(async () => {
-            const mediaBlob = buildAudioBlob(chunks, mimeType)
+            const mediaBlob = buildAudioBlob(chunks, recorderMimeType)
+            const chunkCount = chunks.filter((chunk) => chunk.size > 0).length
+            const sampleCount = pcmCapture?.sampleCount() ?? 0
+
             if (mediaBlob?.size) {
               pcmCapture?.cancel()
-              resolve({ blob: mediaBlob, mimeType })
+              resolve({
+                blob: mediaBlob,
+                mimeType: mediaBlob.type || recorderMimeType,
+                source: 'media_recorder',
+                size: mediaBlob.size,
+                chunkCount,
+                sampleCount,
+                recorderMimeType
+              })
               return
             }
+
             const wav = await pcmCapture?.stop()
-            resolve({ blob: wav ?? null, mimeType: wav ? 'audio/wav' : mimeType })
-          }, isSafariLike() ? 750 : 150)
+            if (wav?.size) {
+              resolve({
+                blob: wav,
+                mimeType: 'audio/wav',
+                source: 'web_audio_wav',
+                size: wav.size,
+                chunkCount,
+                sampleCount,
+                recorderMimeType
+              })
+              return
+            }
+
+            resolve(emptyStopResult(recorderMimeType, chunkCount, sampleCount))
+          }, flushDelayMs)
         }
 
         const handleData = (event: BlobEvent) => {
           if (event.data?.size > 0) chunks.push(event.data)
         }
+
         recorder.addEventListener('dataavailable', handleData)
-        recorder.addEventListener('stop', finish, { once: true })
 
         if (recorder.state === 'inactive') {
+          recorder.removeEventListener('dataavailable', handleData)
           finish()
           return
         }
 
+        recorder.addEventListener(
+          'stop',
+          () => {
+            recorder.removeEventListener('dataavailable', handleData)
+            finish()
+          },
+          { once: true }
+        )
+
         try { recorder.requestData() } catch { /* Safari may not support requestData in every state. */ }
-        try { recorder.stop() } catch { finish() }
+        try { recorder.stop() } catch {
+          recorder.removeEventListener('dataavailable', handleData)
+          finish()
+        }
       }),
     cancel: () => {
       chunks.length = 0
-      pcmCapture?.cancel()
       if (recorder.state !== 'inactive') {
         try { recorder.stop() } catch { /* ignore */ }
       }
+      pcmCapture?.cancel()
     }
   }
 }

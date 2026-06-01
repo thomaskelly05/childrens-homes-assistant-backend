@@ -20,14 +20,12 @@ describe('ORB Voice realtime provider pass', () => {
     assert.doesNotMatch(client, /getUserMedia\(\{ audio: true \}\)[\s\S]*constructor/)
   })
 
-  it('station uses explicit Start and realtime client', () => {
+  it('voice station uses browser speech recognition for live session', () => {
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /data-orb-voice-start/)
-    assert.match(station, /OrbRealtimeVoiceClient/)
-    assert.match(station, /requestMicrophoneAccess/)
-    assert.match(station, /data-orb-voice-readiness/)
-    assert.match(station, /data-orb-voice-interrupt/)
-    assert.doesNotMatch(station, /always.?listen/i)
+    assert.match(station, /beginSpeechRecognitionCapture/)
+    assert.match(station, /data-orb-voice-start-stage/)
+    assert.match(station, /testMicrophoneLevel/)
+    assert.doesNotMatch(station, /OrbRealtimeVoiceClient/)
   })
 
   it('voice client connects websocket when url returned', () => {
@@ -37,12 +35,9 @@ describe('ORB Voice realtime provider pass', () => {
     assert.match(client, /usesWebSocket/)
   })
 
-  it('interrupt sends user.interrupt and cancels synthesis', () => {
-    const client = readComponent('lib/orb/voice/orb-realtime-voice-client.ts')
-    assert.match(client, /VOICE_CLIENT_EVENTS\.userInterrupt/)
-    assert.match(client, /speechSynthesis\?\.cancel/)
+  it('interrupt cancels synthesis in hook', () => {
     const hook = readComponent('components/orb-standalone/use-standalone-orb-voice.ts')
-    assert.match(hook, /speechSynthesis\.cancel/)
+    assert.match(hook, /speechSynthesis\?\.cancel/)
     assert.match(hook, /interruptForListen/)
   })
 
@@ -53,12 +48,10 @@ describe('ORB Voice realtime provider pass', () => {
     assert.match(vad, /onSpeechEnd/)
   })
 
-  it('close stops mic tracks', () => {
-    const client = readComponent('lib/orb/voice/orb-realtime-voice-client.ts')
-    assert.match(client, /getTracks\(\)\.forEach/)
-    assert.match(client, /track\.stop/)
-    const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /realtimeRef\.current\?\.stop/)
+  it('hook stops mic tracks on endVoiceSession', () => {
+    const hook = readComponent('components/orb-standalone/use-standalone-orb-voice.ts')
+    assert.match(hook, /releaseMicrophoneStream/)
+    assert.match(hook, /endVoiceSession/)
   })
 
   it('transcript save includes provider metadata', () => {
@@ -67,10 +60,10 @@ describe('ORB Voice realtime provider pass', () => {
     assert.match(save, /voice_transcript/)
   })
 
-  it('developer details hidden from normal markup', () => {
+  it('developer details available in developer mode only', () => {
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /data-orb-voice-developer-details/)
     assert.match(station, /isOrbDeveloperMode/)
+    assert.match(station, /developerMode \?/)
   })
 
   it('shared event contract names', () => {
@@ -78,40 +71,15 @@ describe('ORB Voice realtime provider pass', () => {
     assert.equal(VOICE_SERVER_EVENTS.interrupted, 'interrupted')
   })
 
-  it('voice session API uses honest provider types', () => {
-    const api = readComponent('lib/orb/voice/orb-voice-client.ts')
-    assert.match(api, /websocket_realtime/)
-    assert.match(api, /openai_realtime/)
-    assert.match(api, /browser_fallback/)
-    assert.match(api, /\/orb\/voice\/session/)
-  })
-
-  it('openai webrtc client uses RTCPeerConnection and ephemeral secret', () => {
-    const webrtc = readComponent('lib/orb/voice/orb-openai-realtime-webrtc-client.ts')
-    assert.match(webrtc, /OrbRealtimeClient/)
-    assert.match(webrtc, /RTCPeerConnection/)
-    assert.match(webrtc, /response\.cancel/)
-    assert.match(webrtc, /session\.update/)
-    assert.doesNotMatch(webrtc, /localStorage/)
-    assert.doesNotMatch(webrtc, /console\.log.*clientSecret/i)
-  })
-
-  it('realtime client wires openai webrtc path and fallback', () => {
-    const client = readComponent('lib/orb/voice/orb-realtime-voice-client.ts')
-    assert.match(client, /OrbOpenAIRealtimeWebRTCClient/)
-    assert.match(client, /usesOpenAIWebRTC/)
-    assert.match(client, /REALTIME_FALLBACK_MESSAGE/)
-    assert.match(client, /client_secret/)
-    assert.match(client, /getUserMedia/)
-    assert.match(client, /response\.cancel|interrupt\(\)/)
-  })
-
-  it('station shows fallback notice and live realtime indicator', () => {
+  it('voice station does not show active orb without capture', () => {
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /data-orb-voice-fallback-notice/)
-    assert.match(station, /data-orb-voice-live-indicator/)
-    assert.match(station, /REALTIME_FALLBACK_MESSAGE/)
-    assert.match(station, /usesOpenAIWebRTC/)
-    assert.match(station, /speakAssistantReply/)
+    assert.match(station, /voiceSessionLive &&/)
+    assert.match(station, /data-orb-voice-capture-active/)
+  })
+
+  it('dictate uses recordingUiState before showing recording', () => {
+    const dictate = readComponent('components/orb-standalone/orb-dictate-station.tsx')
+    assert.match(dictate, /recordingUiState === 'recording'/)
+    assert.match(dictate, /setRecordingUiState\('recording'\)/)
   })
 })

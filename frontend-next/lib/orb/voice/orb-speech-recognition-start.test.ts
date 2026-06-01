@@ -126,23 +126,21 @@ describe('ORB voice hook confirmed capture', () => {
     const hook = readComponent('components/orb-standalone/use-standalone-orb-voice.ts')
     assert.match(hook, /startRecognitionSessionConfirmed/)
     assert.match(hook, /confirmSpeechRecognitionStart/)
-    assert.match(hook, /not stable in this browser/)
+    assert.match(hook, /not stable in this browser/i)
     assert.match(hook, /await startRecognitionSessionConfirmed/)
   })
 
-  it('voice station does not set sessionActive before captureStarted', () => {
+  it('voice station only treats session as live when capture is active', () => {
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /setSessionActive\(true\)/)
-    assert.match(station, /if \(!captureStarted\)/)
-    assert.match(station, /VOICE_CAPTURE_WATCHDOG_MS/)
-    assert.match(station, /realtimeMicStarted/)
+    assert.match(station, /voiceSessionLive = voiceStartStage === 'active' && captureActive/)
+    assert.match(station, /browserCaptureActiveRef/)
+    assert.match(station, /Live voice is not stable in this browser/)
   })
 
-  it('dictate does not set recordingActive until capture confirmed', () => {
+  it('dictate uses recordingUiState before showing recording', () => {
     const dictate = readComponent('components/orb-standalone/orb-dictate-station.tsx')
-    assert.match(dictate, /setCaptureStarting\(true\)/)
-    assert.match(dictate, /setRecordingActive\(false\)/)
-    assert.match(dictate, /setRecordingActive\(true\)/)
+    assert.match(dictate, /setRecordingUiState\('starting'\)/)
+    assert.match(dictate, /setRecordingUiState\('recording'\)/)
     assert.match(dictate, /Starting microphone/)
     assert.match(dictate, /SPEECH_START_FAILED_MESSAGE/)
   })

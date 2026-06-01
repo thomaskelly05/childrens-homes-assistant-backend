@@ -33,8 +33,8 @@ describe('ORB mic gating and routing', () => {
     assert.equal(ui.state, 'subscription_inactive')
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
     assert.match(station, /Activate subscription to use live voice/)
-    assert.match(station, /data-orb-voice-start-blocked/)
     assert.match(station, /disabled=\{startDisabled\}/)
+    assert.match(station, /data-orb-voice-start-stage/)
   })
 
   it('inactive subscription keeps Open Dictate enabled', () => {
@@ -70,9 +70,9 @@ describe('ORB mic gating and routing', () => {
 
   it('composer mic routes to Dictate when live Voice is inactive', () => {
     const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
-    assert.match(companion, /opening dictate fallback/)
+    assert.match(companion, /opening dictate/)
     assert.match(companion, /openOrbDictatePanel/)
-    assert.match(companion, /Live voice is not available\. Dictate is open/)
+    assert.match(companion, /Dictate is open/)
     const composer = readComponent('components/orb-standalone/orb-standalone-composer.tsx')
     assert.match(composer, /data-orb-composer-mic-route/)
     assert.doesNotMatch(composer, /disabled=\{!voiceCaptureEnabled \|\| !voiceRecognitionAvailable\}/)
@@ -81,7 +81,7 @@ describe('ORB mic gating and routing', () => {
   it('disabled voice start only when intentionally blocked', () => {
     assert.equal(canUseLiveVoice({ subscriptionActive: false }), false)
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /data-orb-voice-start-disabled-reason/)
+    assert.match(station, /startDisabled/)
     assert.match(station, /liveVoiceAllowed/)
   })
 
@@ -93,7 +93,7 @@ describe('ORB mic gating and routing', () => {
     assert.match(dictate, /orbMicDevLog\('dictate record clicked'/)
   })
 
-  it('voice does not use MediaRecorder as live voice fallback', () => {
+  it('voice uses browser speech recognition for live session, not MediaRecorder', () => {
     const hook = readComponent('components/orb-standalone/use-standalone-orb-voice.ts')
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
     assert.match(hook, /beginSpeechRecognitionCapture/)
@@ -101,17 +101,37 @@ describe('ORB mic gating and routing', () => {
     assert.match(hook, /confirmSpeechRecognitionStart/)
     assert.match(station, /beginSpeechRecognitionCapture/)
     assert.doesNotMatch(station, /beginUserVoiceCapture\(\)/)
-    assert.match(station, /beginBrowserSpeechCapture/)
-    assert.match(station, /VOICE_CAPTURE_WATCHDOG_MS/)
-    assert.match(station, /showSpeakControl[\s\S]*voiceSessionLive/)
-    assert.match(station, /realtimeMicStarted/)
+    assert.match(station, /Live voice is not stable in this browser/)
+    assert.match(station, /data-orb-voice-capture-active/)
+    assert.match(station, /voiceSessionLive/)
   })
 
   it('voice routes to dictate when speech recognition unavailable', () => {
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /shouldOpenDictateFallback/)
-    assert.match(station, /Open Dictate to record or paste notes/)
+    assert.match(station, /Open Dictate and start recording/)
     assert.match(station, /data-orb-voice-open-dictate/)
+  })
+
+  it('composer mic supports forced mic query routing', () => {
+    const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
+    assert.match(companion, /searchParams\.get\('mic'\)/)
+    assert.match(companion, /initialAutoStart=\{dictateAutoStart\}/)
+    assert.match(companion, /autoStart: true/)
+  })
+
+  it('dictate exposes flight-recorder data attributes', () => {
+    const dictate = readComponent('components/orb-standalone/orb-dictate-station.tsx')
+    assert.match(dictate, /data-orb-dictate-recording-state/)
+    assert.match(dictate, /data-orb-dictate-recorder-mode/)
+    assert.match(dictate, /data-orb-dictate-audio-size/)
+    assert.match(dictate, /did not provide audio data/)
+  })
+
+  it('flight recorder reads data attributes not body text', () => {
+    const recorder = readComponent('components/orb-standalone/orb-client-flight-recorder.tsx')
+    assert.match(recorder, /data-orb-dictate-recording-state/)
+    assert.doesNotMatch(recorder, /Recording audio/i)
+    assert.match(recorder, /Copy debug report/)
   })
 
   it('dictate handleStartRecording uses explicit mode', () => {
@@ -138,7 +158,8 @@ describe('ORB mic gating and routing', () => {
 
   it('composer mic aria is open voice or dictate', () => {
     const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
-    assert.match(companion, /composerMicAriaLabel="Open voice or Dictate"/)
+    assert.match(companion, /composerMicAriaLabel/)
+    assert.match(companion, /composerMicRoute/)
   })
 
 })

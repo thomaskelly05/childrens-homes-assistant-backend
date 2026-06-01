@@ -195,3 +195,29 @@ def test_dictate_transcribe_text(dictate_client):
     )
     assert response.status_code == 200
     assert response.json()["data"]["transcript"] == "Rough shift notes here."
+
+
+def test_dictate_transcribe_audio_accepts_wav_webm_mp4(dictate_client, monkeypatch):
+    async def fake_transcribe(_path: str):
+        return {
+            "transcript": "Captured audio transcript.",
+            "segments": [],
+            "participants": [],
+        }
+
+    monkeypatch.setattr(
+        "routers.orb_dictate_routes.transcribe_dictate_audio",
+        fake_transcribe,
+    )
+
+    for filename, content_type in (
+        ("note.webm", "audio/webm"),
+        ("note.wav", "audio/wav"),
+        ("note.mp4", "audio/mp4"),
+    ):
+        response = dictate_client.post(
+            "/orb/dictate/transcribe/audio",
+            files={"file": (filename, b"\x00\x01\x02", content_type)},
+        )
+        assert response.status_code == 200, filename
+        assert response.json()["data"]["transcript"] == "Captured audio transcript."

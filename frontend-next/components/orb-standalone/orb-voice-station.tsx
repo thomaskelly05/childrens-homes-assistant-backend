@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Mic, MicOff, Save, Square } from 'lucide-react'
 
 import { OrbAppModal } from '@/components/orb-standalone/orb-app-modal'
@@ -159,6 +159,12 @@ export function OrbVoiceStation({
   const [startBlockedMessage, setStartBlockedMessage] = useState<string | null>(null)
   const [sessionStartedAt, setSessionStartedAt] = useState<string | null>(null)
   const [lastAssistantKey, setLastAssistantKey] = useState<string | null>(null)
+  const voiceStartStageRef = useRef(voiceStartStage)
+  const browserCaptureActiveRef = useRef(false)
+
+  useEffect(() => {
+    voiceStartStageRef.current = voiceStartStage
+  }, [voiceStartStage])
 
   const developerMode = isOrbDeveloperMode()
   const micAccess: OrbMicAccessContext = {
@@ -173,10 +179,17 @@ export function OrbVoiceStation({
     voice.captureActive ||
     voice.listening ||
     voice.voiceCaptureState === 'listening' ||
+    voice.voiceCaptureState === 'recording' ||
     voice.phase === 'listening' ||
     voice.phase === 'continuous_listening'
-  const captureActive = voiceCaptureConfirmed || browserCaptureActive
+  const captureActive = browserCaptureActive
   const voiceSessionLive = voiceStartStage === 'active' && captureActive
+  const voiceProvider: 'speech_recognition' | 'media' | 'none' =
+    voice.voiceCaptureState === 'recording' ? 'media' : browserCaptureActive ? 'speech_recognition' : 'none'
+
+  useEffect(() => {
+    browserCaptureActiveRef.current = browserCaptureActive
+  }, [browserCaptureActive])
   const voiceStarting = voiceStartStage === 'starting_browser_speech'
   const permissionDenied =
     micPermission === 'denied' || Boolean(voice.error?.toLowerCase().includes('microphone'))
@@ -225,6 +238,18 @@ export function OrbVoiceStation({
     if (!open) return
     void probeMicrophonePermission().then(setMicPermission)
   }, [open])
+
+  useEffect(() => {
+    if (!open || voiceStartStage !== 'active') return
+    const watchdog = window.setTimeout(() => {
+      if (voiceStartStageRef.current !== 'active') return
+      if (browserCaptureActiveRef.current) return
+      setVoiceStartStage('failed')
+      setVoiceCaptureConfirmed(false)
+      setFallbackNotice('Live voice is not stable in this browser. Dictate is available.')
+    }, 1000)
+    return () => window.clearTimeout(watchdog)
+  }, [open, voiceStartStage])
 
   useEffect(() => {
     if (!voiceSessionLive || !open) return
@@ -426,7 +451,14 @@ export function OrbVoiceStation({
       panelId="orb-voice"
       size="wide"
     >
-      <div className="orb-voice-room pointer-events-auto flex flex-col items-center p-6 pb-8" data-orb-voice-station>
+      <div
+        className="orb-voice-room pointer-events-auto flex flex-col items-center p-6 pb-8"
+        data-orb-voice-station
+        data-orb-voice-start-stage={voiceStartStage}
+        data-orb-voice-capture-active={captureActive ? 'true' : 'false'}
+        data-orb-voice-listening={voice.listening ? 'true' : 'false'}
+        data-orb-voice-provider={voiceProvider}
+      >
         <div className="flex w-full max-w-lg flex-wrap items-center justify-center gap-2">
           <label className="sr-only" htmlFor="orb-voice-mode-select">
             Voice mode
@@ -469,11 +501,11 @@ export function OrbVoiceStation({
 
         <GlassOrbMark
           size="hero"
-          pulse={voiceStarting || status === 'listening' || status === 'thinking' || status === 'speaking'}
-          className={`mt-6 ${orbVisualClass(status)}`}
+          pulse={voiceSessionLive && (status === 'listening' || status === 'thinking' || status === 'speaking')}
+          className={`mt-6 ${voiceSessionLive ? orbVisualClass(status) : 'glass-orb-mark--voice glass-orb-mark--idle'}`}
         />
 
-        <p className="mt-6 text-center text-sm font-medium text-[var(--orb-foreground)]" data-orb-voice-status-label data-orb-voice-start-stage={voiceStartStage}>
+        <p className="mt-6 text-center text-sm font-medium text-[var(--orb-foreground)]" data-orb-voice-status-label>
           {headline}
         </p>
         <p className="mt-2 text-center text-sm text-[var(--orb-muted)]" data-orb-voice-mic-status>
@@ -491,9 +523,19 @@ export function OrbVoiceStation({
           </p>
         ) : null}
         {fallbackNotice ? (
-          <p className="mt-2 max-w-md text-center text-xs text-amber-800 dark:text-amber-200/90" role="status">
-            {fallbackNotice}
-          </p>
+          <div className="mt-2 max-w-md text-center" role="status">
+            <p className="text-xs text-amber-800 dark:text-amber-200/90">{fallbackNotice}</p>
+            {onOpenDictate ? (
+              <button
+                type="button"
+                data-orb-voice-open-dictate
+                className="mt-2 rounded-full border border-[var(--orb-line)] bg-[var(--orb-primary-soft)] px-3 py-1.5 text-xs font-medium text-[var(--orb-primary)]"
+                onClick={() => onOpenDictate('')}
+              >
+                Open Dictate and start recording
+              </button>
+            ) : null}
+          </div>
         ) : null}
         {developerMode ? (
           <p className="mt-2 max-w-md text-center font-mono text-[10px] text-[var(--orb-muted)]">
@@ -593,10 +635,10 @@ export function OrbVoiceStation({
 
         {transcriptAvailable && onOpenDictate ? (
           <div className="mt-4 flex flex-wrap justify-center gap-2" data-orb-voice-dictate-actions>
-            <button type="button" className="rounded-full border border-[var(--orb-line)] bg-[var(--orb-primary-soft)] px-3 py-1.5 text-xs text-[var(--orb-primary)]" onClick={() => onOpenDictate(formatTurnsAsTranscript(turns))}>
+            <button type="button" data-orb-voice-to-dictate className="rounded-full border border-[var(--orb-line)] bg-[var(--orb-primary-soft)] px-3 py-1.5 text-xs text-[var(--orb-primary)]" onClick={() => onOpenDictate(formatTurnsAsTranscript(turns))}>
               Send transcript to ORB Dictate
             </button>
-            <button type="button" className="rounded-full border border-[var(--orb-line)] bg-[var(--orb-primary-soft)] px-3 py-1.5 text-xs text-[var(--orb-primary)]" onClick={() => onOpenDictate(formatTurnsAsTranscript(turns), 'daily_record', { studio: true })}>
+            <button type="button" data-orb-voice-to-dictate-studio className="rounded-full border border-[var(--orb-line)] bg-[var(--orb-primary-soft)] px-3 py-1.5 text-xs text-[var(--orb-primary)]" onClick={() => onOpenDictate(formatTurnsAsTranscript(turns), 'daily_record', { studio: true })}>
               Open in ORB Dictate Studio
             </button>
           </div>

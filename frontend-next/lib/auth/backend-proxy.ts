@@ -11,6 +11,16 @@ const HOP_BY_HOP_HEADERS = new Set([
   'upgrade'
 ])
 
+/** Upstream CORS headers confuse browsers on same-origin `/backend` fetches — strip them. */
+const UPSTREAM_CORS_HEADERS = new Set([
+  'access-control-allow-origin',
+  'access-control-allow-credentials',
+  'access-control-allow-headers',
+  'access-control-allow-methods',
+  'access-control-expose-headers',
+  'access-control-max-age'
+])
+
 const FORWARD_REQUEST_HEADERS = [
   'accept',
   'accept-language',
@@ -55,10 +65,19 @@ function sanitizeResponseHeaders(upstream: Headers): Headers {
   upstream.forEach((value, key) => {
     const lower = key.toLowerCase()
     if (HOP_BY_HOP_HEADERS.has(lower)) return
+    if (UPSTREAM_CORS_HEADERS.has(lower)) return
     if (lower === 'content-length') return
     headers.append(key, value)
   })
   return headers
+}
+
+function handlePreflight(request: Request): Response | null {
+  if (request.method.toUpperCase() !== 'OPTIONS') return null
+  const headers = new Headers()
+  headers.set('Allow', 'GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS')
+  headers.set('Cache-Control', 'no-store')
+  return new Response(null, { status: 204, headers })
 }
 
 function isStreamResponse(pathSegments: string[], upstream: Response): boolean {
@@ -71,6 +90,9 @@ export async function proxyRequestToBackend(
   request: Request,
   pathSegments: string[]
 ): Promise<Response> {
+  const preflight = handlePreflight(request)
+  if (preflight) return preflight
+
   const upstreamUrl = buildUpstreamUrl(pathSegments, request)
   const headers = pickForwardHeaders(request)
   const method = request.method.toUpperCase()
