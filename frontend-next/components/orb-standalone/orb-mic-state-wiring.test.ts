@@ -1,0 +1,166 @@
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { describe, it } from 'node:test'
+
+import {
+  SPEECH_RECOGNITION_MINIMUM_HOLD_MS,
+  confirmSpeechRecognitionStart
+} from '../../lib/orb/voice/orb-speech-recognition-start.ts'
+
+const root = join(dirname(fileURLToPath(import.meta.url)), '../..')
+
+function readComponent(relativePath: string) {
+  return readFileSync(join(root, relativePath), 'utf8')
+}
+
+type MockRecognition = {
+  onstart: (() => void) | null
+  onerror: (() => void) | null
+  onend: (() => void) | null
+  onresult?: ((event: unknown) => void) | null
+  start: () => void
+}
+
+function createMockRecognition(behaviour: {
+  onStart?: 'immediate' | 'never'
+  onEndAfterStartMs?: number
+  onErrorBeforeStart?: boolean
+  onEndBeforeStart?: boolean
+  onResultAfterStartMs?: number
+  startThrows?: boolean
+}): MockRecognition {
+  const recognition: MockRecognition = {
+    onstart: null,
+    onerror: null,
+    onend: null,
+    onresult: null,
+    start: () => {
+      if (behaviour.startThrows) throw new Error('start failed')
+      if (behaviour.onErrorBeforeStart) {
+        queueMicrotask(() => recognition.onerror?.())
+        return
+      }
+      if (behaviour.onEndBeforeStart) {
+        queueMicrotask(() => recognition.onend?.())
+        return
+      }
+      if (behaviour.onStart === 'immediate') {
+        queueMicrotask(() => recognition.onstart?.())
+      }
+      if (behaviour.onEndAfterStartMs != null) {
+        setTimeout(() => recognition.onend?.(), behaviour.onEndAfterStartMs)
+      }
+      if (behaviour.onResultAfterStartMs != null) {
+        setTimeout(() => recognition.onresult?.({}), behaviour.onResultAfterStartMs)
+      }
+    }
+  }
+  return recognition
+}
+
+describe('ORB mic state wiring', () => {
+  it('captureActive includes realtimeMicStarted', () => {
+    const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
+    assert.match(station, /realtimeMicStarted/)
+    assert.match(station, /const captureActive = browserCaptureActive \|\| realtimeMicStarted/)
+    assert.match(station, /browserCaptureActive/)
+  })
+
+  it('watchdog does not fire when realtimeMicStarted=true path is used', () => {
+    const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
+    assert.match(station, /setRealtimeMicStarted\(true\)/)
+    assert.match(station, /voiceStartStage !== 'starting_realtime_mic'/)
+    assert.doesNotMatch(station, /sessionActive && !captureActive/)
+    assert.match(station, /voiceStartStage === 'active'/)
+  })
+
+  it('watchdog fires when starting_browser_speech never becomes active', () => {
+    const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
+    assert.match(station, /starting_browser_speech/)
+    assert.match(station, /MIC_WATCHDOG_BROWSER_SPEECH_MESSAGE/)
+    assert.match(station, /VOICE_CAPTURE_WATCHDOG_MS/)
+    assert.match(station, /setVoiceStartStage\('failed'\)/)
+  })
+
+  it('SpeechRecognition confirmed start fails if onend occurs before minimumHoldMs', async () => {
+    const recognition = createMockRecognition({
+      onStart: 'immediate',
+      onEndAfterStartMs: 50
+    })
+    const result = await confirmSpeechRecognitionStart(recognition, {
+      timeoutMs: 800,
+      minimumHoldMs: SPEECH_RECOGNITION_MINIMUM_HOLD_MS
+    })
+    assert.equal(result.ok, false)
+    assert.equal(result.reason, 'speech_recognition_ended_immediately')
+  })
+
+  it('SpeechRecognition confirmed start succeeds after minimum hold', async () => {
+    const recognition = createMockRecognition({ onStart: 'immediate' })
+    const result = await confirmSpeechRecognitionStart(recognition, {
+      timeoutMs: 800,
+      minimumHoldMs: 40
+    })
+    assert.equal(result.ok, true)
+  })
+
+  it('SpeechRecognition confirmed start succeeds early on onresult', async () => {
+    const recognition = createMockRecognition({
+      onStart: 'immediate',
+      onResultAfterStartMs: 20
+    })
+    const result = await confirmSpeechRecognitionStart(recognition, {
+      timeoutMs: 800,
+      minimumHoldMs: 500
+    })
+    assert.equal(result.ok, true)
+  })
+
+  it('Dictate falls back to MediaRecorder when SpeechRecognition short-starts', () => {
+    const dictate = readComponent('components/orb-standalone/orb-dictate-station.tsx')
+    const hook = readComponent('components/orb-standalone/use-standalone-orb-voice.ts')
+    assert.match(hook, /beginMediaRecorderCapture\(\)/)
+    assert.match(dictate, /startMediaRecorder/)
+    assert.match(dictate, /mediaRecorderAvailable && \(isSafariBrowser\(\)/)
+  })
+
+  it('Dictate Start sets recordingActive only after confirmed capture', () => {
+    const dictate = readComponent('components/orb-standalone/orb-dictate-station.tsx')
+    assert.match(dictate, /setRecordingActive\(false\)/)
+    assert.match(dictate, /setCaptureStarting\(true\)/)
+    assert.match(dictate, /setRecordingActive\(true\)/)
+    assert.match(dictate, /setCaptureStarting\(false\)/)
+  })
+
+  it('Voice does not show Speak/End during start stage', () => {
+    const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
+    assert.match(station, /voiceSessionLive \?/)
+    assert.match(station, /voiceStarting \?/)
+    assert.match(station, /data-orb-voice-cancel-start/)
+    assert.doesNotMatch(station, /sessionActive \? \([\s\S]*captureActive \?/)
+  })
+
+  it('Voice shows Cancel during start stage', () => {
+    const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
+    assert.match(station, /data-orb-voice-cancel-start/)
+    assert.match(station, /Cancel/)
+  })
+
+  it('Dictate shows Stop only once capture has started', () => {
+    const dictate = readComponent('components/orb-standalone/orb-dictate-station.tsx')
+    assert.match(dictate, /!recordingActive && !captureStarting/)
+    assert.match(dictate, /data-orb-dictate-capture-starting/)
+    assert.match(dictate, /handleStopRecording/)
+    assert.match(dictate, /aria-label="Stop"/)
+  })
+
+  it('Voice tracks voiceStartStage through handleStart', () => {
+    const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
+    assert.match(station, /starting_session/)
+    assert.match(station, /starting_realtime_mic/)
+    assert.match(station, /starting_browser_speech/)
+    assert.match(station, /setVoiceStartStage\('active'\)/)
+  })
+})

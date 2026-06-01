@@ -39,7 +39,11 @@ import {
   transcribeOrbDictateAudio
 } from '@/lib/orb/dictate/orb-dictate-client'
 import { orbMicDevLog } from '@/lib/orb/voice/orb-mic-access'
-import { detectMediaRecorderSupported, detectSpeechRecognitionSupported } from '@/lib/orb/voice/orb-voice-readiness'
+import {
+  detectMediaRecorderSupported,
+  detectSpeechRecognitionSupported,
+  isSafariBrowser
+} from '@/lib/orb/voice/orb-voice-readiness'
 import {
   anonymiseText,
   modeToNoteType,
@@ -323,45 +327,63 @@ export function OrbDictateStation({
     setStatusMessage(null)
     setRecordedAudioLabel(null)
 
-    const useSpeech = speechRecognitionAvailable
-    if (useSpeech) {
-      recorderModeRef.current = 'speech'
-      const ok = await voice.beginUserVoiceCapture({ mode: 'continuous' })
-      setCaptureStarting(false)
+    const startMediaRecorder = async (): Promise<boolean> => {
+      recorderModeRef.current = 'media'
+      const ok = await voice.beginMediaRecorderCapture()
       if (!ok) {
-        setRecordingActive(false)
         const denied = voice.error?.toLowerCase().includes('microphone')
         setStatusMessage(
           denied
             ? MIC_BLOCKED_MESSAGE
-            : voice.error?.toLowerCase().includes('speech recognition')
-              ? SPEECH_START_FAILED_MESSAGE
-              : voice.error || SPEECH_START_FAILED_MESSAGE
+            : 'Audio capture is unavailable in this browser — paste or upload a transcript instead.'
         )
-        orbMicDevLog('speech capture failed', voice.error ?? 'unknown')
-        return
+        orbMicDevLog('media recorder failed', voice.error ?? 'unknown')
+        return false
       }
+      setStatusMessage(
+        'Recording audio. Automatic transcription depends on backend availability.'
+      )
       setRecordingActive(true)
-      orbMicDevLog('speech capture started')
-      return
+      orbMicDevLog('media recorder started')
+      return true
     }
 
-    recorderModeRef.current = 'media'
-    const ok = await voice.beginMediaRecorderCapture()
-    setCaptureStarting(false)
-    if (!ok) {
+    const preferMediaRecorder =
+      mediaRecorderAvailable && (isSafariBrowser() || !speechRecognitionAvailable)
+
+    if (!preferMediaRecorder && speechRecognitionAvailable) {
+      recorderModeRef.current = 'speech'
+      const ok = await voice.beginUserVoiceCapture({ mode: 'continuous' })
+      setCaptureStarting(false)
+      if (ok) {
+        setRecordingActive(true)
+        orbMicDevLog('speech capture started')
+        return
+      }
+      if (mediaRecorderAvailable) {
+        setCaptureStarting(true)
+        const mediaOk = await startMediaRecorder()
+        setCaptureStarting(false)
+        if (mediaOk) return
+      }
       setRecordingActive(false)
       const denied = voice.error?.toLowerCase().includes('microphone')
       setStatusMessage(
         denied
           ? MIC_BLOCKED_MESSAGE
-          : 'Audio capture is unavailable in this browser — paste or upload a transcript instead.'
+          : voice.error?.toLowerCase().includes('not stable')
+            ? voice.error
+            : voice.error?.toLowerCase().includes('speech recognition')
+              ? SPEECH_START_FAILED_MESSAGE
+              : voice.error || SPEECH_START_FAILED_MESSAGE
       )
-      orbMicDevLog('media recorder failed', voice.error ?? 'unknown')
+      orbMicDevLog('speech capture failed', voice.error ?? 'unknown')
       return
     }
-    setRecordingActive(true)
-    orbMicDevLog('media recorder started')
+
+    const mediaOk = await startMediaRecorder()
+    setCaptureStarting(false)
+    if (!mediaOk) setRecordingActive(false)
   }
 
   function handleSelectStartMode(id: OrbDictateStartMode) {
@@ -433,7 +455,7 @@ export function OrbDictateStation({
         } catch {
           setBackendTranscriptionAvailable(false)
           const notice =
-            'Audio captured. Automatic transcription is not available yet. Please paste the transcript or upload audio when transcription is enabled.'
+            'Audio captured. Automatic transcription is not available yet. Paste a transcript to generate professional wording.'
           setUploadError(notice)
           setStatusMessage(notice)
         } finally {
@@ -731,7 +753,7 @@ export function OrbDictateStation({
       ? recordingPaused
         ? 'Paused'
         : recorderModeRef.current === 'media'
-          ? 'Recording audio…'
+          ? 'Recording audio. Automatic transcription depends on backend availability.'
           : 'Listening…'
       : statusMessage?.toLowerCase().includes('speech recognition could not')
         ? 'Speech recognition failed'
@@ -956,12 +978,12 @@ export function OrbDictateStation({
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-1">
-                  {!recordingActive ? (
+                  {!recordingActive && !captureStarting ? (
                     <button
                       type="button"
                       data-orb-dictate-record-start
                       className="inline-flex items-center gap-1 rounded-full bg-[var(--orb-primary-soft)] px-3 py-1.5 text-xs text-[var(--orb-foreground)] disabled:cursor-not-allowed disabled:opacity-50"
-                      disabled={(needsConsent && !consentConfirmed) || !micCaptureAvailable || captureStarting}
+                      disabled={(needsConsent && !consentConfirmed) || !micCaptureAvailable}
                       title={
                         !micCaptureAvailable
                           ? 'Paste a transcript instead'
@@ -973,6 +995,13 @@ export function OrbDictateStation({
                     >
                       <Mic className="h-3.5 w-3.5" /> Start
                     </button>
+                  ) : captureStarting ? (
+                    <span
+                      className="inline-flex items-center gap-1 rounded-full border border-[var(--orb-line)]/60 px-3 py-1.5 text-xs text-[var(--orb-muted)]"
+                      data-orb-dictate-capture-starting
+                    >
+                      Starting microphone…
+                    </span>
                   ) : (
                     <>
                       {recorderModeRef.current === 'speech' ? (

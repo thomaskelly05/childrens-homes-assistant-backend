@@ -1,41 +1,72 @@
 /**
- * Confirmed SpeechRecognition start — waits for onstart before reporting success.
+ * Confirmed SpeechRecognition start — waits for onstart (and minimum hold) before reporting success.
  * Safe to import from tests without React.
  */
 
 export const RECOGNITION_START_TIMEOUT_MS = 2500
+export const SPEECH_RECOGNITION_MINIMUM_HOLD_MS = 500
+
+export type OrbSpeechRecognitionStartFailureReason =
+  | 'timeout'
+  | 'onend_before_onstart'
+  | 'onerror_before_onstart'
+  | 'speech_recognition_ended_immediately'
+  | 'start_throw'
+
+export type OrbSpeechRecognitionStartResult = {
+  ok: boolean
+  reason?: OrbSpeechRecognitionStartFailureReason
+}
 
 export type OrbSpeechRecognitionLike = {
   onstart: (() => void) | null
   onerror: (() => void) | null
   onend: (() => void) | null
+  onresult?: ((...args: never[]) => void) | null
   start: () => void
 }
 
 /**
- * Call recognition.start() and resolve only after onstart fires.
- * Resolves false on onerror before start, onend before onstart, start() throw, or timeout.
+ * Call recognition.start() and resolve only after confirmed active capture.
+ * Success requires onstart plus either minimumHoldMs without onend/onerror, or an onresult event.
  */
 export function confirmSpeechRecognitionStart(
   recognition: OrbSpeechRecognitionLike,
-  options?: { timeoutMs?: number }
-): Promise<boolean> {
+  options?: { timeoutMs?: number; minimumHoldMs?: number }
+): Promise<OrbSpeechRecognitionStartResult> {
   const timeoutMs = options?.timeoutMs ?? RECOGNITION_START_TIMEOUT_MS
+  const minimumHoldMs = options?.minimumHoldMs ?? SPEECH_RECOGNITION_MINIMUM_HOLD_MS
 
   return new Promise((resolve) => {
     let settled = false
     let started = false
+    let holdTimerId: ReturnType<typeof setTimeout> | null = null
     let timeoutId: ReturnType<typeof setTimeout> | null = null
 
     const priorOnstart = recognition.onstart
     const priorOnerror = recognition.onerror
     const priorOnend = recognition.onend
+    const priorOnresult = recognition.onresult
 
-    const finish = (ok: boolean) => {
+    const finish = (result: OrbSpeechRecognitionStartResult) => {
       if (settled) return
       settled = true
       if (timeoutId) clearTimeout(timeoutId)
-      resolve(ok)
+      if (holdTimerId) clearTimeout(holdTimerId)
+      resolve(result)
+    }
+
+    const confirmSuccess = () => {
+      finish({ ok: true })
+    }
+
+    recognition.onresult = (event) => {
+      try {
+        priorOnresult?.(event)
+      } catch {
+        /* ignore handler errors */
+      }
+      if (started) confirmSuccess()
     }
 
     recognition.onstart = () => {
@@ -45,7 +76,9 @@ export function confirmSpeechRecognitionStart(
       } catch {
         /* ignore handler errors */
       }
-      finish(true)
+      holdTimerId = setTimeout(() => {
+        if (!settled) confirmSuccess()
+      }, minimumHoldMs)
     }
 
     recognition.onerror = () => {
@@ -54,7 +87,10 @@ export function confirmSpeechRecognitionStart(
       } catch {
         /* ignore */
       }
-      finish(false)
+      finish({
+        ok: false,
+        reason: started ? 'speech_recognition_ended_immediately' : 'onerror_before_onstart'
+      })
     }
 
     recognition.onend = () => {
@@ -63,15 +99,23 @@ export function confirmSpeechRecognitionStart(
       } catch {
         /* ignore */
       }
-      if (!started) finish(false)
+      if (!started) {
+        finish({ ok: false, reason: 'onend_before_onstart' })
+        return
+      }
+      if (holdTimerId) {
+        clearTimeout(holdTimerId)
+        holdTimerId = null
+      }
+      finish({ ok: false, reason: 'speech_recognition_ended_immediately' })
     }
 
-    timeoutId = setTimeout(() => finish(false), timeoutMs)
+    timeoutId = setTimeout(() => finish({ ok: false, reason: 'timeout' }), timeoutMs)
 
     try {
       recognition.start()
     } catch {
-      finish(false)
+      finish({ ok: false, reason: 'start_throw' })
     }
   })
 }
