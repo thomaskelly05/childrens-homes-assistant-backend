@@ -145,7 +145,10 @@ import {
   orbMicDevLog,
   resolveOrbMicAccessContext
 } from '@/lib/orb/voice/orb-mic-access'
-import { detectMediaRecorderSupported } from '@/lib/orb/voice/orb-voice-readiness'
+import {
+  detectMediaRecorderSupported,
+  detectSpeechRecognitionSupported
+} from '@/lib/orb/voice/orb-voice-readiness'
 import { useOrbSessionGate } from '@/hooks/use-orb-session-gate'
 import { useMounted } from '@/hooks/use-mounted'
 import { getCsrfToken, STANDALONE_ORB_CSRF_REFRESH_MESSAGE } from '@/lib/auth/api'
@@ -1621,9 +1624,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         voice.stopListening()
         return
       }
-      const speechInputOk =
-        voice.recognitionAvailable || detectMediaRecorderSupported()
-      if (orbMicAccess.canUseLiveVoice && speechInputOk) {
+      const liveSpeechOk =
+        voice.recognitionAvailable || detectSpeechRecognitionSupported()
+      if (orbMicAccess.canUseLiveVoice && liveSpeechOk) {
         orbMicDevLog('opening voice')
         openOrbVoicePanel()
         return
@@ -1644,27 +1647,23 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       voice.stopListening()
       return
     }
-    if (!voice.recognitionAvailable && !detectMediaRecorderSupported()) {
+    if (!voice.recognitionAvailable && !detectSpeechRecognitionSupported()) {
       openOrbDictatePanel()
-      setMicNotice('Opening ORB Dictate — use Record note for microphone capture in this browser.')
-      window.setTimeout(() => setMicNotice(null), 5000)
+      setMicNotice(
+        'Live voice is not available. Dictate is open so you can record or paste notes.'
+      )
+      window.setTimeout(() => setMicNotice(null), 8000)
       return
     }
-    if (voice.error) {
-      setMicNotice(voice.error)
-      window.setTimeout(() => setMicNotice(null), 5000)
+    if (!orbMicAccess.canUseLiveVoice) {
+      openOrbDictatePanel()
+      setMicNotice(
+        'Live voice is not available. Dictate is open so you can record or paste notes.'
+      )
+      window.setTimeout(() => setMicNotice(null), 8000)
       return
     }
-    if (!message.trim()) {
-      voiceMayFillComposerRef.current = true
-      composerUserEditedRef.current = false
-    }
-    void voice.beginUserVoiceCapture().then((started) => {
-      if (!started && voice.error) {
-        setMicNotice(voice.error)
-        window.setTimeout(() => setMicNotice(null), 5000)
-      }
-    })
+    openOrbVoicePanel()
   }
 
   const SLASH_MODE_COMMANDS: Record<string, StandaloneOrbMode> = {
@@ -2341,19 +2340,14 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       onChange={handleMessageChange}
       onSubmit={handleComposerSubmit}
       composerMicEnabled={canUseComposerMic()}
-      composerMicAriaLabel={
-        residentialSurface
-          ? orbMicAccess.canUseLiveVoice && voice.recognitionAvailable
-            ? 'Open ORB Voice'
-            : 'Open ORB Dictate to record or paste notes'
-          : undefined
-      }
+      composerMicAriaLabel="Open voice or Dictate"
       composerMicTitle={
         residentialSurface
-          ? orbMicAccess.canUseLiveVoice && voice.recognitionAvailable
-            ? 'Open live ORB Voice conversation'
-            : 'Live voice is not available — open ORB Dictate to record or paste notes'
-          : undefined
+          ? orbMicAccess.canUseLiveVoice &&
+            (voice.recognitionAvailable || detectSpeechRecognitionSupported())
+            ? 'Open ORB Voice for live conversation'
+            : 'Open ORB Dictate to record or paste notes'
+          : 'Open voice or Dictate'
       }
       onMicClick={handleMicClick}
       onCancelListening={voice.cancelListening}

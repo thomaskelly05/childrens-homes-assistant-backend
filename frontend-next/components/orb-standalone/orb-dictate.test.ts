@@ -198,6 +198,22 @@ describe('ORB Dictate', () => {
     assert.match(voice, /data-orb-voice-to-dictate-studio/)
   })
 
+  it('guided reflective debrief is typed not mic', () => {
+    const station = readComponent('components/orb-standalone/orb-dictate-station.tsx')
+    assert.match(station, /Guided reflective debrief/)
+    assert.match(station, /data-orb-dictate-reflective/)
+    assert.doesNotMatch(
+      station,
+      /Guided reflective debrief[\s\S]*handleStartRecording\(id\)/
+    )
+  })
+
+  it('dictate media recorder does not show pause when recording audio only', () => {
+    const station = readComponent('components/orb-standalone/orb-dictate-station.tsx')
+    assert.match(station, /recorderModeRef\.current === 'speech'/)
+    assert.match(station, /data-orb-dictate-capture-capability/)
+  })
+
   it('anonymise action available in studio', () => {
     const studio = readComponent('components/orb-standalone/orb-dictate-studio.tsx')
     assert.match(studio, /data-orb-dictate-action-anonymise/)

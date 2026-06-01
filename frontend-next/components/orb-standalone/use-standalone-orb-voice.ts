@@ -17,6 +17,7 @@ import {
   type MediaRecorderCapture,
   type OrbVoiceCaptureState
 } from '@/lib/orb/voice/orb-voice-capture'
+import { detectMediaRecorderSupported } from '@/lib/orb/voice/orb-voice-readiness'
 import {
   DEFAULT_ORB_VOICE_PROFILE_ID,
   ORB_VOICE_PREVIEW_PHRASE,
@@ -885,6 +886,40 @@ export function useStandaloneOrbVoice() {
     return ok
   }, [requestMicrophonePermission])
 
+  /** SpeechRecognition only — for ORB Voice live conversation. Never falls back to MediaRecorder. */
+  const beginSpeechRecognitionCapture = useCallback(
+    async (options?: { mode?: 'active' | 'continuous' }): Promise<boolean> => {
+      if (voiceSessionPausedRef.current) return false
+      const Recognition = getSpeechRecognitionCtor()
+      if (!Recognition) {
+        setError('Speech recognition is unavailable in this browser.')
+        setVoiceCaptureState('error')
+        return false
+      }
+      userInitiatedVoiceRef.current = true
+      setWakeStatus('off')
+      setError(null)
+      const granted = await requestMicrophonePermission()
+      if (!granted) {
+        userInitiatedVoiceRef.current = false
+        setError('Microphone access is needed for voice input. You can still type.')
+        setVoiceCaptureState('error')
+        return false
+      }
+      try {
+        startRecognitionSession(options?.mode ?? 'active')
+        return true
+      } catch {
+        userInitiatedVoiceRef.current = false
+        setError('Speech recognition could not start. Open Dictate or type instead.')
+        setVoiceCaptureState('error')
+        return false
+      }
+    },
+    [requestMicrophonePermission, startRecognitionSession]
+  )
+
+  /** Dictate / composer — may fall back to MediaRecorder when SpeechRecognition is unavailable. */
   const beginUserVoiceCapture = useCallback(
     async (options?: { mode?: 'active' | 'continuous' }): Promise<boolean> => {
       if (voiceSessionPausedRef.current) return false
@@ -947,6 +982,8 @@ export function useStandaloneOrbVoice() {
     interruptForListen,
     markIdle,
     beginUserVoiceCapture,
+    beginSpeechRecognitionCapture,
+    mediaRecorderAvailable: detectMediaRecorderSupported(),
     startWakeListening,
     stopWakeListening,
     pauseVoiceSession,

@@ -30,6 +30,7 @@ import {
 } from '@/lib/orb/voice/orb-mic-access'
 import {
   assessOrbVoiceReadiness,
+  detectSpeechRecognitionSupported,
   orbVoiceReadinessPresentation,
   probeMicrophonePermission,
   requestMicrophoneAccess,
@@ -114,14 +115,14 @@ function statusLabel(status: OrbVoiceSessionStatus, permissionDenied: boolean): 
 function providerUserLabel(
   session: OrbVoiceSessionResponse | null,
   profileLabel: string,
-  usingBrowserFallback: boolean
+  usingBrowserSpeechRecognition: boolean
 ): string {
   if (!session) return profileLabel
-  if (session.provider === 'openai_realtime' && !usingBrowserFallback) {
+  if (session.provider === 'openai_realtime' && !usingBrowserSpeechRecognition) {
     return `${profileLabel} · Realtime voice`
   }
-  if (session.provider === 'openai_realtime' && usingBrowserFallback) {
-    return `${profileLabel} · Browser voice fallback`
+  if (session.provider === 'openai_realtime' && usingBrowserSpeechRecognition) {
+    return `${profileLabel} · Browser speech recognition`
   }
   if (session.provider === 'websocket_realtime') {
     return `${profileLabel} · Realtime (WebSocket)`
@@ -129,10 +130,25 @@ function providerUserLabel(
   if (session.provider === 'webrtc_realtime') {
     return `${profileLabel} · Realtime (WebRTC)`
   }
-  if (session.fallback_reason || usingBrowserFallback) {
-    return `${profileLabel} · Browser voice fallback`
+  if (session.fallback_reason || usingBrowserSpeechRecognition) {
+    return `${profileLabel} · Browser speech recognition`
   }
-  return `${profileLabel} · Browser voice`
+  return `${profileLabel} · Browser speech recognition`
+}
+
+function canStartBrowserSpeechRecognition(voiceApi: VoiceApi): boolean {
+  return voiceApi.recognitionAvailable || detectSpeechRecognitionSupported()
+}
+
+function canStartLiveRealtime(
+  liveVoiceAllowed: boolean,
+  realtimeServiceAvailable: boolean | 'unknown'
+): boolean {
+  return liveVoiceAllowed && realtimeServiceAvailable !== false
+}
+
+function shouldOpenDictateFallback(voiceApi: VoiceApi, liveVoiceAllowed: boolean): boolean {
+  return !liveVoiceAllowed || !canStartBrowserSpeechRecognition(voiceApi)
 }
 
 function formatTurnsAsTranscript(turns: VoiceTurn[]): string {
@@ -183,7 +199,7 @@ export function OrbVoiceStation({
   const [sessionStartedAt, setSessionStartedAt] = useState<string | null>(null)
   const [fallbackNotice, setFallbackNotice] = useState<string | null>(null)
   const [realtimeSpeaking, setRealtimeSpeaking] = useState(false)
-  const [usingBrowserFallback, setUsingBrowserFallback] = useState(false)
+  const [usingBrowserSpeechRecognition, setUsingBrowserSpeechRecognition] = useState(false)
   const realtimeRef = useRef<OrbRealtimeVoiceClient | null>(null)
   const lastSentRef = useRef('')
   const lastAssistantKeyRef = useRef<string | null>(null)
@@ -212,7 +228,7 @@ export function OrbVoiceStation({
     recognitionAvailable: voice.recognitionAvailable,
     synthesisAvailable: voice.synthesisAvailable,
     permissionDenied,
-    realtimeServiceAvailable: usingBrowserFallback ? false : voiceSession ? true : 'unknown',
+    realtimeServiceAvailable: usingBrowserSpeechRecognition ? false : voiceSession ? true : 'unknown',
     subscriptionActive,
     micAccess
   })
@@ -227,7 +243,9 @@ export function OrbVoiceStation({
     captureActive
   })
 
-  const startDisabledByBrowser = !voice.recognitionAvailable && !readiness.fallback_available
+  const speechRecognitionOk = canStartBrowserSpeechRecognition(voice)
+  const realtimeOk = canStartLiveRealtime(liveVoiceAllowed, readiness.realtime_service_available)
+  const startDisabledByBrowser = !speechRecognitionOk && !realtimeOk
   const startDisabled = !liveVoiceAllowed || startDisabledByBrowser
   const startButtonLabel = !liveVoiceAllowed
     ? 'Activate subscription to use live voice'
@@ -244,10 +262,15 @@ export function OrbVoiceStation({
   )
   const { settings } = voice
   const selectedProfileLabel = orbVoiceProfileLabel(settings.voicePresetId)
-  const providerLabel = providerUserLabel(voiceSession, selectedProfileLabel, usingBrowserFallback)
+  const providerLabel = providerUserLabel(voiceSession, selectedProfileLabel, usingBrowserSpeechRecognition)
   const isRealtimeActive = Boolean(
-    voiceSession?.provider === 'openai_realtime' && !usingBrowserFallback && sessionActive
+    voiceSession?.provider === 'openai_realtime' && !usingBrowserSpeechRecognition && sessionActive
   )
+  const showSpeakControl =
+    sessionActive &&
+    !isRealtimeActive &&
+    speechRecognitionOk &&
+    (settings.pushToTalk || usingBrowserSpeechRecognition)
   const selectedProfile = getOrbVoiceProfile(settings.voicePresetId)
 
   const resetSession = useCallback(() => {
@@ -260,7 +283,7 @@ export function OrbVoiceStation({
     setDevEvents([])
     setFallbackNotice(null)
     setRealtimeSpeaking(false)
-    setUsingBrowserFallback(false)
+    setUsingBrowserSpeechRecognition(false)
     voice.cancelListening()
     voice.cancelSpeaking()
     voice.clearTranscript()
@@ -335,12 +358,12 @@ export function OrbVoiceStation({
         voice.speakAloud(spoken, () => {
           setRealtimeSpeaking(false)
           if (!settings.pushToTalk && sessionActive) {
-            void voice.beginUserVoiceCapture()
+            void voice.beginSpeechRecognitionCapture()
           }
         })
       }
-    } else if (!settings.pushToTalk && sessionActive && voice.recognitionAvailable && !realtimeRef.current?.usesOpenAIWebRTC) {
-      void voice.beginUserVoiceCapture()
+    } else if (!settings.pushToTalk && sessionActive && speechRecognitionOk && !realtimeRef.current?.usesOpenAIWebRTC) {
+      void voice.beginSpeechRecognitionCapture({ mode: 'continuous' })
     }
   }, [
     assistantReply,
@@ -379,8 +402,11 @@ export function OrbVoiceStation({
       orbMicDevLog('voice start blocked: subscription inactive')
       return
     }
-    if (!voice.recognitionAvailable && !readiness.fallback_available) {
-      setStartBlockedMessage('Live voice is not supported in this browser. Open Dictate to record a note.')
+    if (!speechRecognitionOk && !realtimeOk) {
+      setStartBlockedMessage(
+        'Live voice is not available in this browser. Open Dictate to record or paste notes.'
+      )
+      if (onOpenDictate) onOpenDictate('')
       return
     }
     setStartBlockedMessage(null)
@@ -477,7 +503,7 @@ export function OrbVoiceStation({
       },
       onFallback: (message) => {
         setFallbackNotice(message || REALTIME_FALLBACK_MESSAGE)
-        setUsingBrowserFallback(true)
+        if (speechRecognitionOk) setUsingBrowserSpeechRecognition(true)
       },
       onError: () => {
         setRealtimeUiState('error')
@@ -503,15 +529,17 @@ export function OrbVoiceStation({
       }
     ])
 
-    const beginBrowserCapture = async (): Promise<boolean> => {
+    const beginBrowserSpeechCapture = async (): Promise<boolean> => {
+      if (!speechRecognitionOk) return false
+      setUsingBrowserSpeechRecognition(true)
       if (settings.voiceReplies && voice.synthesisAvailable) {
         return new Promise((resolve) => {
           voice.speakAloud(ORB_VOICE_GREETING, () => {
-            void voice.beginUserVoiceCapture().then(resolve)
+            void voice.beginSpeechRecognitionCapture({ mode: 'continuous' }).then(resolve)
           })
         })
       }
-      return voice.beginUserVoiceCapture()
+      return voice.beginSpeechRecognitionCapture({ mode: 'continuous' })
     }
 
     let captureStarted = false
@@ -527,20 +555,22 @@ export function OrbVoiceStation({
         bargeInWhileSpeaking: settings.allowInterruption
       })
       if (client.usesOpenAIWebRTC) {
-        setUsingBrowserFallback(false)
+        setUsingBrowserSpeechRecognition(false)
       } else if (client.usesBrowserFallback) {
-        captureStarted = await beginBrowserCapture()
+        captureStarted = await beginBrowserSpeechCapture()
       }
-    } else {
-      captureStarted = await beginBrowserCapture()
+    } else if (speechRecognitionOk) {
+      captureStarted = await beginBrowserSpeechCapture()
     }
 
     if (!captureStarted) {
+      realtimeRef.current?.stop()
+      realtimeRef.current = null
+      setVoiceSession(null)
       setFallbackNotice(
         voice.error ||
-          'Live speech recognition unavailable — open Dictate or paste a transcript.'
+          'Speech recognition could not start. Open Dictate or type instead.'
       )
-      setUsingBrowserFallback(true)
       setRealtimeUiState('error')
       if (onOpenDictate) {
         setMicTestMessage('Opening ORB Dictate for recording…')
@@ -656,7 +686,7 @@ export function OrbVoiceStation({
 
         {isRealtimeActive ? (
           <p
-            className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-medium text-emerald-200"
+            className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-200"
             data-orb-voice-live-indicator
           >
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" aria-hidden />
@@ -683,13 +713,13 @@ export function OrbVoiceStation({
         </p>
 
         {micTestMessage ? (
-          <p className="mt-2 text-center text-xs text-sky-200/90" role="status" data-orb-voice-mic-test>
+          <p className="mt-2 text-center text-xs text-sky-700 dark:text-sky-200/90" role="status" data-orb-voice-mic-test>
             {micTestMessage}
           </p>
         ) : null}
 
         {startBlockedMessage && !sessionActive ? (
-          <p className="mt-2 text-center text-xs text-amber-200/90" role="status" data-orb-voice-start-blocked>
+          <p className="mt-2 text-center text-xs text-amber-800 dark:text-amber-200/90" role="status" data-orb-voice-start-blocked>
             {startBlockedMessage}
           </p>
         ) : null}
@@ -702,11 +732,28 @@ export function OrbVoiceStation({
 
         {fallbackNotice ? (
           <p
-            className="mt-2 max-w-md text-center text-xs text-amber-200/90"
+            className="mt-2 max-w-md text-center text-xs text-amber-800 dark:text-amber-200/90"
             role="status"
             data-orb-voice-fallback-notice
           >
             {fallbackNotice}
+          </p>
+        ) : null}
+
+        {developerMode ? (
+          <p
+            className="mt-2 max-w-md text-center font-mono text-[10px] text-[var(--orb-muted)]"
+            data-orb-voice-dev-diagnostics
+          >
+            capture={voice.voiceCaptureState} recognition=
+            {speechRecognitionOk ? 'available' : 'unavailable'} recorder=
+            {voice.mediaRecorderAvailable ? 'available' : 'unavailable'} realtime=
+            {readiness.realtime_service_available === 'unknown'
+              ? 'unknown'
+              : readiness.realtime_service_available
+                ? 'available'
+                : 'unavailable'}{' '}
+            provider={voiceSession?.provider ?? 'none'} lastError={voice.error ?? 'none'}
           </p>
         ) : null}
 
@@ -725,7 +772,7 @@ export function OrbVoiceStation({
             </p>
             <p>
               WebRTC: {realtimeRef.current?.usesOpenAIWebRTC ? 'connected' : 'inactive'} · browser fallback:{' '}
-              {usingBrowserFallback ? 'yes' : 'no'}
+              {usingBrowserSpeechRecognition ? 'yes' : 'no'}
             </p>
             {voiceSession.websocket_url ? <p>WebSocket: {voiceSession.websocket_url}</p> : null}
             {devEvents.length ? <p className="mt-1 truncate">Events: {devEvents.join(' · ')}</p> : null}
@@ -747,7 +794,7 @@ export function OrbVoiceStation({
             <button
               type="button"
               onClick={() => void handleAllowMicrophone()}
-              className="rounded-full border border-sky-400/40 bg-sky-500/10 px-4 py-2 text-xs font-medium text-sky-100"
+              className="rounded-full border border-sky-400/40 bg-sky-500/10 px-4 py-2 text-xs font-medium text-sky-800 dark:text-sky-100"
               data-orb-voice-allow-mic
             >
               Allow microphone
@@ -802,41 +849,43 @@ export function OrbVoiceStation({
             </button>
           ) : (
             <>
-              <button
-                type="button"
-                onClick={() =>
-                  realtimeRef.current?.usesOpenAIWebRTC
-                    ? void realtimeRef.current.interrupt()
+              {isRealtimeActive || showSpeakControl ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    realtimeRef.current?.usesOpenAIWebRTC
+                      ? void realtimeRef.current.interrupt()
+                      : voice.listening
+                        ? voice.cancelListening()
+                        : void voice.beginSpeechRecognitionCapture({ mode: 'continuous' })
+                  }
+                  className="inline-flex items-center gap-2 rounded-full border border-[var(--orb-line)] px-4 py-2 text-sm font-medium text-[var(--orb-foreground)]"
+                  data-orb-voice-mute-toggle
+                  aria-label={
+                    realtimeRef.current?.usesOpenAIWebRTC
+                      ? 'Interrupt'
+                      : voice.listening
+                        ? 'Mute microphone'
+                        : 'Speak'
+                  }
+                >
+                  {voice.listening && !realtimeRef.current?.usesOpenAIWebRTC ? (
+                    <MicOff className="h-4 w-4" />
+                  ) : (
+                    <Mic className="h-4 w-4" />
+                  )}
+                  {realtimeRef.current?.usesOpenAIWebRTC
+                    ? 'Listening'
                     : voice.listening
-                      ? voice.cancelListening()
-                      : void voice.beginUserVoiceCapture()
-                }
-                className="inline-flex items-center gap-2 rounded-full border border-[var(--orb-line)] px-4 py-2 text-sm font-medium text-[var(--orb-foreground)]"
-                data-orb-voice-mute-toggle
-                aria-label={
-                  realtimeRef.current?.usesOpenAIWebRTC
-                    ? 'Interrupt'
-                    : voice.listening
-                      ? 'Mute microphone'
-                      : 'Speak'
-                }
-              >
-                {voice.listening && !realtimeRef.current?.usesOpenAIWebRTC ? (
-                  <MicOff className="h-4 w-4" />
-                ) : (
-                  <Mic className="h-4 w-4" />
-                )}
-                {realtimeRef.current?.usesOpenAIWebRTC
-                  ? 'Listening'
-                  : voice.listening
-                    ? 'Mute'
-                    : 'Speak'}
-              </button>
+                      ? 'Mute'
+                      : 'Speak'}
+                </button>
+              ) : null}
               {showInterrupt ? (
                 <button
                   type="button"
                   onClick={handleInterrupt}
-                  className="inline-flex items-center gap-2 rounded-full border border-rose-400/40 bg-rose-500/10 px-4 py-2 text-sm font-medium text-rose-100"
+                  className="inline-flex items-center gap-2 rounded-full border border-rose-400/40 bg-rose-500/10 px-4 py-2 text-sm font-medium text-rose-800 dark:text-rose-100"
                   data-orb-voice-interrupt
                 >
                   <Square className="h-3.5 w-3.5 fill-current" />
@@ -959,7 +1008,7 @@ export function OrbVoiceStation({
             {turns.map((line) => (
               <div
                 key={line.id}
-                className="mb-3 rounded-xl border border-white/5 bg-black/10 px-3 py-2 last:mb-0"
+                className="mb-3 rounded-xl border border-[var(--orb-line)]/40 bg-[var(--orb-surface-elevated)]/80 px-3 py-2 last:mb-0"
                 data-orb-voice-turn={line.role}
               >
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-[#5ec8ff]/90">

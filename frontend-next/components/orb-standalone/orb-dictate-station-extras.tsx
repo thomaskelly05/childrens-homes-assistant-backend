@@ -31,7 +31,7 @@ export function OrbDictateModeSelect({
         data-orb-dictate-mode
         value={mode}
         onChange={(e) => onChange(e.target.value as OrbDictateMode)}
-        className="mt-2 w-full rounded-xl border border-[var(--orb-line)]/60 bg-black/20 px-3 py-2 text-sm text-white"
+        className="mt-2 w-full rounded-xl border border-[var(--orb-line)]/60 bg-[var(--orb-surface)] px-3 py-2 text-sm text-[var(--orb-foreground)]"
       >
         {MODES.map((m) => (
           <option key={m} value={m}>
@@ -62,7 +62,7 @@ export function OrbDictateParticipantsPanel({
   }
 
   return (
-    <section className="rounded-xl border border-[var(--orb-line)]/60 bg-white/[0.03] p-3" data-orb-dictate-participants>
+    <section className="rounded-xl border border-[var(--orb-line)]/60 bg-[var(--orb-surface-elevated)] p-3" data-orb-dictate-participants>
       <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--orb-muted)]">
         Meeting participants / Speakers
       </h3>
@@ -79,7 +79,7 @@ export function OrbDictateParticipantsPanel({
         <button
           type="button"
           data-orb-dictate-import-participants
-          className="rounded-lg border border-[var(--orb-line)]/50 px-2 py-1 text-xs text-slate-200"
+          className="rounded-lg border border-[var(--orb-line)]/50 px-2 py-1 text-xs text-[var(--orb-foreground)]"
           onClick={onImportFromTranscript}
         >
           Import from transcript
@@ -97,7 +97,7 @@ export function OrbDictateParticipantsPanel({
                 next[idx] = { ...p, name: e.target.value }
                 onChange(next)
               }}
-              className="rounded-lg border border-[var(--orb-line)]/50 bg-black/20 px-2 py-1 text-xs text-white"
+              className="rounded-lg border border-[var(--orb-line)]/50 bg-[var(--orb-surface)] px-2 py-1 text-xs text-[var(--orb-foreground)]"
             />
             <input
               data-orb-dictate-participant-role
@@ -108,7 +108,7 @@ export function OrbDictateParticipantsPanel({
                 next[idx] = { ...p, role: e.target.value || undefined }
                 onChange(next)
               }}
-              className="rounded-lg border border-[var(--orb-line)]/50 bg-black/20 px-2 py-1 text-xs text-white"
+              className="rounded-lg border border-[var(--orb-line)]/50 bg-[var(--orb-surface)] px-2 py-1 text-xs text-[var(--orb-foreground)]"
             />
           </li>
         ))}
@@ -157,7 +157,7 @@ export function OrbDictateTranscriptSegmentsEditor({
   }
 
   return (
-    <section className="rounded-xl border border-[var(--orb-line)]/60 bg-white/[0.02] p-3" data-orb-dictate-segments>
+    <section className="rounded-xl border border-[var(--orb-line)]/60 bg-[var(--orb-surface-elevated)] p-3" data-orb-dictate-segments>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--orb-muted)]">Transcript segments</h3>
         <button
@@ -180,7 +180,7 @@ export function OrbDictateTranscriptSegmentsEditor({
                   if (e.target.value) assignParticipant(idx, e.target.value)
                   else updateSegment(idx, { speaker_id: undefined })
                 }}
-                className="max-w-[10rem] rounded border border-[var(--orb-line)]/50 bg-black/30 px-1 py-0.5 text-[10px] text-white"
+                className="max-w-[10rem] rounded border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)] px-1 py-0.5 text-[10px] text-[var(--orb-foreground)]"
               >
                 <option value="">Custom label</option>
                 {participants.map((p) => (
@@ -192,14 +192,14 @@ export function OrbDictateTranscriptSegmentsEditor({
               <input
                 value={seg.speaker_label}
                 onChange={(e) => updateSegment(idx, { speaker_label: e.target.value })}
-                className="min-w-[6rem] flex-1 rounded border border-[var(--orb-line)]/50 bg-black/30 px-1 py-0.5 text-[10px] text-white"
+                className="min-w-[6rem] flex-1 rounded border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)] px-1 py-0.5 text-[10px] text-[var(--orb-foreground)]"
               />
             </div>
             <textarea
               value={seg.text}
               rows={2}
               onChange={(e) => updateSegment(idx, { text: e.target.value })}
-              className="mt-1 w-full resize-none rounded border border-[var(--orb-line)]/40 bg-black/20 px-2 py-1 text-xs text-slate-200"
+              className="mt-1 w-full resize-none rounded border border-[var(--orb-line)]/40 bg-[var(--orb-surface)] px-2 py-1 text-xs text-[var(--orb-foreground)]"
             />
             <div className="mt-1 flex flex-wrap gap-2 text-[10px]">
               <label className="flex items-center gap-1 text-[var(--orb-muted)]">
@@ -253,7 +253,7 @@ export function OrbDictateAudioUpload({
   error: string | null
 }) {
   return (
-    <section className="rounded-xl border border-[var(--orb-line)]/60 bg-white/[0.02] p-3" data-orb-dictate-upload>
+    <section className="rounded-xl border border-[var(--orb-line)]/60 bg-[var(--orb-surface-elevated)] p-3" data-orb-dictate-upload>
       <label className="flex cursor-pointer items-center gap-2 text-xs text-sky-200">
         <Upload className="h-4 w-4" aria-hidden />
         <span>{uploading ? 'Transcribing audio…' : 'Upload audio file'}</span>

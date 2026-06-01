@@ -16,23 +16,19 @@ Paste into the browser devtools console on `/orb` while signed in. Does not prin
     return { path, status: r.status, body }
   }
 
-  const theme =
-    typeof localStorage !== 'undefined'
-      ? {
-          orb_theme: localStorage.getItem('orb-theme'),
-          orb_appearance: localStorage.getItem('orb-appearance')
-        }
-      : {}
-
-  const { assessOrbVoiceReadiness, detectSpeechRecognitionSupported, detectMediaRecorderSupported } =
-    await import('/_next/static/chunks/').catch(() => ({}))
+  const theme = {
+    orb_theme: localStorage.getItem('orb-theme'),
+    orb_appearance: localStorage.getItem('orb-appearance'),
+    data_orb_theme: document.documentElement.getAttribute('data-orb-theme'),
+    layout_class: document.querySelector('.orb-chat-layout')?.className ?? null
+  }
 
   const voiceReadiness = {
-    speech_recognition: typeof window !== 'undefined' && Boolean(
+    speech_recognition: Boolean(
       window.SpeechRecognition || window.webkitSpeechRecognition
     ),
     media_recorder: typeof MediaRecorder !== 'undefined',
-    secure_context: typeof window !== 'undefined' ? window.isSecureContext : false
+    secure_context: window.isSecureContext
   }
 
   const micHold = await (async () => {
@@ -48,29 +44,16 @@ Paste into the browser devtools console on `/orb` while signed in. Does not prin
     }
   })()
 
-  const dictateProbe = await (async () => {
-    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
-      return { ok: false, reason: 'unsupported' }
-    }
-    let stream
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const rec = new MediaRecorder(stream)
-      const chunks = []
-      rec.ondataavailable = (e) => e.data.size && chunks.push(e.data)
-      rec.start(200)
-      await new Promise((r) => setTimeout(r, 400))
-      rec.stop()
-      await new Promise((r) => {
-        rec.onstop = r
-      })
-      stream.getTracks().forEach((t) => t.stop())
-      return { ok: true, bytes: chunks.reduce((n, c) => n + c.size, 0) }
-    } catch (e) {
-      stream?.getTracks().forEach((t) => t.stop())
-      return { ok: false, reason: e instanceof Error ? e.name : 'error' }
-    }
-  })()
+  const ui = {
+    dictate_paste_tile: Boolean(document.querySelector('[data-orb-dictate-start="paste"]')),
+    dictate_record_note: Boolean(document.querySelector('[data-orb-dictate-start="record_note"]')),
+    composer_mic: Boolean(document.querySelector('[data-orb-composer-mic]')),
+    voice_start: document.querySelector('[data-orb-voice-start]'),
+    voice_start_disabled_reason: document
+      .querySelector('[data-orb-voice-start]')
+      ?.getAttribute('data-orb-voice-start-disabled-reason'),
+    open_dictate_instead: Boolean(document.querySelector('[data-orb-voice-open-dictate]'))
+  }
 
   const results = {
     passkeys: await get('/auth/passkeys/status'),
@@ -80,25 +63,40 @@ Paste into the browser devtools console on `/orb` while signed in. Does not prin
     theme,
     voiceReadiness,
     micHold,
-    dictateProbe
+    ui
   }
 
   console.table([
     { check: 'passkeys', status: results.passkeys.status },
     { check: 'projects', status: results.projects.status },
     { check: 'usage', status: results.usage.status },
-    { check: 'seed project', status: results.seed_project.status }
+    { check: 'seed project', status: results.seed_project.status },
+    { check: 'speech_recognition', ok: results.voiceReadiness.speech_recognition },
+    { check: 'media_recorder', ok: results.voiceReadiness.media_recorder },
+    { check: 'mic 2s hold', ok: results.micHold.ok },
+    { check: 'dictate paste tile', ok: results.ui.dictate_paste_tile },
+    { check: 'dictate record note', ok: results.ui.dictate_record_note },
+    { check: 'composer mic', ok: results.ui.composer_mic },
+    { check: 'open dictate instead', ok: results.ui.open_dictate_instead }
   ])
   console.log('ORB QA detail', results)
   return results
 })()
 ```
 
-Expected when signed in:
+## Manual checklist (after deploy)
 
-| Check | Status |
-|-------|--------|
-| passkeys | 200 |
-| projects | 200 |
-| usage | 200 |
-| seed project | 404 (acceptable) |
+| Check | Expected |
+|-------|----------|
+| `/backend/orb/usage` | 200 |
+| Light mode | White / pale blue surfaces; modals not black |
+| Dark mode | Premium navy / blue glow retained |
+| System mode | Follows device preference |
+| Voice inactive subscription | Start disabled; Open Dictate enabled |
+| Voice Safari / no SpeechRecognition | Routes to Dictate; no dead Speak |
+| Voice session | Active only when realtime mic or SpeechRecognition started |
+| Composer mic | Always opens Voice or Dictate |
+| Dictate paste flow | Paste → Use pasted text → Generate → output or local draft |
+| Dictate record | Starts speech or honest audio-only message |
+| Stop dictation | Keeps transcript visible |
+| No dead controls | No clickable buttons that do nothing |
