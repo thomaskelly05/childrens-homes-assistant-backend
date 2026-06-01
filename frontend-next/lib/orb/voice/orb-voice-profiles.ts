@@ -8,6 +8,7 @@ export type OrbVoiceProfile = {
   label: string
   description: string
   provider: 'openai' | 'browser'
+  locale: string
   openaiVoice?: string
   fallbackVoiceKeywords?: string[]
   instructions: string
@@ -39,6 +40,7 @@ export const ORB_VOICE_PROFILES: OrbVoiceProfile[] = [
     label: 'ORB British Female',
     description: 'Warm, calm, supportive and professional.',
     provider: 'openai',
+    locale: 'en-GB',
     openaiVoice: 'coral',
     fallbackVoiceKeywords: ['en-GB', 'female', 'Samantha', 'Serena', 'Kate'],
     instructions:
@@ -50,6 +52,7 @@ export const ORB_VOICE_PROFILES: OrbVoiceProfile[] = [
     label: 'ORB Calm Professional',
     description: 'Clear, balanced and steady for day-to-day guidance.',
     provider: 'openai',
+    locale: 'en-GB',
     openaiVoice: 'marin',
     fallbackVoiceKeywords: ['en-GB', 'professional', 'Sonia', 'Serena'],
     instructions:
@@ -61,6 +64,7 @@ export const ORB_VOICE_PROFILES: OrbVoiceProfile[] = [
     label: 'ORB Reflective',
     description: 'Gentle and thoughtful for supervision, reflection and therapeutic practice.',
     provider: 'openai',
+    locale: 'en-GB',
     openaiVoice: 'sage',
     fallbackVoiceKeywords: ['en-GB', 'gentle', 'female', 'Serena'],
     instructions:
@@ -72,6 +76,7 @@ export const ORB_VOICE_PROFILES: OrbVoiceProfile[] = [
     label: 'ORB Clear Guidance',
     description: 'Crisp and structured for Ofsted, policies and instructions.',
     provider: 'openai',
+    locale: 'en-GB',
     openaiVoice: 'cedar',
     fallbackVoiceKeywords: ['en-GB', 'clear', 'Daniel', 'Google UK English Male'],
     instructions:
@@ -83,6 +88,7 @@ export const ORB_VOICE_PROFILES: OrbVoiceProfile[] = [
     label: 'ORB Friendly Coach',
     description: 'Encouraging and approachable for learning and staff support.',
     provider: 'openai',
+    locale: 'en-GB',
     openaiVoice: 'nova',
     fallbackVoiceKeywords: ['en-GB', 'friendly', 'Jenny', 'Aria'],
     instructions:
@@ -94,6 +100,7 @@ export const ORB_VOICE_PROFILES: OrbVoiceProfile[] = [
     label: 'ORB Serious Safeguarding',
     description: 'Calm, concise and serious for safeguarding and risk discussions.',
     provider: 'openai',
+    locale: 'en-GB',
     openaiVoice: 'onyx',
     fallbackVoiceKeywords: ['en-GB', 'male', 'David', 'serious'],
     instructions:
@@ -105,6 +112,7 @@ export const ORB_VOICE_PROFILES: OrbVoiceProfile[] = [
     label: 'System fallback',
     description: "Uses your device's available voice if realtime voice is unavailable.",
     provider: 'browser',
+    locale: 'en-GB',
     instructions: 'Use the closest available device voice. Keep British English where possible.',
     bestFor: ['Offline', 'Unsupported browsers', 'Device default']
   }
