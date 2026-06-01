@@ -702,7 +702,31 @@ export function OrbVoiceStation({
               data-orb-voice-to-dictate
               onClick={() => onOpenDictate(formatTurnsAsTranscript(turns))}
             >
-              Turn this into a note
+              Send transcript to ORB Dictate
+            </button>
+            <button
+              type="button"
+              className="rounded-full border border-[var(--orb-line)]/60 px-3 py-1.5 text-xs text-[var(--orb-foreground)]"
+              data-orb-voice-to-meeting
+              onClick={() => onOpenDictate(formatTurnsAsTranscript(turns), 'team_meeting')}
+            >
+              Turn this into meeting notes
+            </button>
+            <button
+              type="button"
+              className="rounded-full border border-[var(--orb-line)]/60 px-3 py-1.5 text-xs text-[var(--orb-foreground)]"
+              data-orb-voice-to-debrief
+              onClick={() => onOpenDictate(formatTurnsAsTranscript(turns), 'staff_debrief')}
+            >
+              Turn this into reflective debrief
+            </button>
+            <button
+              type="button"
+              className="rounded-full border border-[var(--orb-line)]/60 px-3 py-1.5 text-xs text-[var(--orb-foreground)]"
+              data-orb-voice-to-recording
+              onClick={() => onOpenDictate(formatTurnsAsTranscript(turns), 'daily_record')}
+            >
+              Turn this into recording wording
             </button>
             <button
               type="button"

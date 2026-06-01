@@ -1,5 +1,10 @@
 import { authFetch, authFetchResponse } from '@/lib/auth/api'
 import type {
+  OrbDictateMode,
+  OrbDictateParticipant,
+  OrbDictateTranscriptSegment
+} from '@/lib/orb/dictate/orb-dictate-speaker'
+import type {
   OrbDictateGenerateResult,
   OrbDictateNoteType,
   OrbDictateTemplate
@@ -24,6 +29,7 @@ export async function fetchOrbDictateTemplates(): Promise<OrbDictateTemplate[]> 
 export type GenerateOrbDictatePayload = {
   input_text: string
   note_type: OrbDictateNoteType
+  mode?: OrbDictateMode
   audience?: string
   tone?: string
   include_child_voice?: boolean
@@ -33,6 +39,112 @@ export type GenerateOrbDictatePayload = {
   include_ofsted_lens?: boolean
   source?: 'dictation' | 'orb_voice' | 'paste' | 'upload'
   conversation_consent_confirmed?: boolean
+  consent_confirmed?: boolean
+  investigation_boundary_confirmed?: boolean
+  participants?: OrbDictateParticipant[]
+  segments?: OrbDictateTranscriptSegment[]
+}
+
+export type TranscribeAudioResult = {
+  transcript: string
+  segments: OrbDictateTranscriptSegment[]
+  participants: OrbDictateParticipant[]
+  speaker_summary?: { known_speakers: number; unknown_speakers: number; needs_review: boolean }
+  speaker_boundary_notice?: string
+}
+
+const ACCEPTED_AUDIO_TYPES = [
+  'audio/webm',
+  'audio/mp3',
+  'audio/mpeg',
+  'audio/wav',
+  'audio/m4a',
+  'audio/mp4',
+  'audio/x-m4a'
+]
+
+export function isAcceptedDictateAudio(file: File): boolean {
+  if (ACCEPTED_AUDIO_TYPES.includes(file.type)) return true
+  return /\.(webm|mp3|mpeg|wav|m4a|mp4)$/i.test(file.name)
+}
+
+function normalizeParticipant(raw: Record<string, unknown>): OrbDictateParticipant {
+  return {
+    id: String(raw.id ?? ''),
+    name: String(raw.name ?? ''),
+    role: raw.role ? String(raw.role) : undefined,
+    organisation: raw.organisation ? String(raw.organisation) : undefined,
+    initials: raw.initials ? String(raw.initials) : undefined,
+    introducedBy: (raw.introducedBy ?? raw.introduced_by ?? 'unknown') as OrbDictateParticipant['introducedBy']
+  }
+}
+
+function normalizeSegment(raw: Record<string, unknown>): OrbDictateTranscriptSegment {
+  return {
+    id: String(raw.id ?? ''),
+    speaker_id: raw.speaker_id ? String(raw.speaker_id) : raw.speakerId ? String(raw.speakerId) : undefined,
+    speaker_label: String(raw.speaker_label ?? raw.speakerLabel ?? 'Speaker 1'),
+    text: String(raw.text ?? ''),
+    source: (raw.source ?? 'upload') as OrbDictateTranscriptSegment['source'],
+    is_direct_quote: Boolean(raw.is_direct_quote ?? raw.isDirectQuote),
+    needs_review: Boolean(raw.needs_review ?? raw.needsReview)
+  }
+}
+
+export async function transcribeOrbDictateAudio(
+  file: File,
+  opts?: { conversation_consent_confirmed?: boolean }
+): Promise<TranscribeAudioResult> {
+  const form = new FormData()
+  form.append('file', file)
+  if (opts?.conversation_consent_confirmed !== undefined) {
+    form.append('conversation_consent_confirmed', String(opts.conversation_consent_confirmed))
+  }
+  const res = await authFetchResponse(DICTATE_BASE + '/transcribe/audio', {
+    method: 'POST',
+    body: form
+  })
+  if (!res.ok) throw new Error('Transcription failed')
+  const json = (await res.json()) as { success: boolean; data: Record<string, unknown> }
+  if (!json.success) throw new Error('Transcription failed')
+  const data = json.data
+  return {
+    transcript: String(data.transcript ?? ''),
+    segments: (Array.isArray(data.segments) ? data.segments : []).map((s) =>
+      normalizeSegment(s as Record<string, unknown>)
+    ),
+    participants: (Array.isArray(data.participants) ? data.participants : []).map((p) =>
+      normalizeParticipant(p as Record<string, unknown>)
+    ),
+    speaker_summary: data.speaker_summary as TranscribeAudioResult['speaker_summary'],
+    speaker_boundary_notice: data.speaker_boundary_notice as string | undefined
+  }
+}
+
+function serializeGeneratePayload(payload: GenerateOrbDictatePayload): Record<string, unknown> {
+  return {
+    ...payload,
+    participants: payload.participants?.map((p) => ({
+      id: p.id,
+      name: p.name,
+      role: p.role,
+      organisation: p.organisation,
+      initials: p.initials,
+      introduced_by: p.introducedBy ?? 'unknown'
+    })),
+    segments: payload.segments?.map((s) => ({
+      id: s.id,
+      speaker_id: s.speaker_id,
+      speaker_label: s.speaker_label,
+      text: s.text,
+      started_at: s.started_at,
+      ended_at: s.ended_at,
+      confidence: s.confidence,
+      source: s.source,
+      is_direct_quote: s.is_direct_quote,
+      needs_review: s.needs_review
+    }))
+  }
 }
 
 export async function generateOrbDictateNote(
@@ -42,7 +154,7 @@ export async function generateOrbDictateNote(
     const json = await authFetch<unknown>(DICTATE_BASE + '/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(serializeGeneratePayload(payload))
     })
     return parseEnvelope<OrbDictateGenerateResult>(json)
   } catch {
@@ -121,21 +233,25 @@ export async function exportOrbDictateNote(payload: {
 
 export const ORB_VOICE_TRANSCRIPT_STORAGE_KEY = 'orb-voice-transcript-fallback'
 
-export function readLatestOrbVoiceTranscript(): string {
-  if (typeof window === 'undefined') return ''
+export function readLatestOrbVoiceTurns(): Array<{ role: string; text: string }> {
+  if (typeof window === 'undefined') return []
   try {
     const raw = window.localStorage.getItem(ORB_VOICE_TRANSCRIPT_STORAGE_KEY)
-    if (!raw) return ''
+    if (!raw) return []
     const list = JSON.parse(raw) as Array<{ turns?: Array<{ role: string; text: string }> }>
-    const latest = list[0]
-    if (!latest?.turns?.length) return ''
-    return latest.turns
-      .map((t) => {
-        const label = t.role === 'user' ? 'You' : t.role === 'assistant' ? 'ORB' : 'System'
-        return `${label}: ${t.text}`
-      })
-      .join('\n\n')
+    return list[0]?.turns ?? []
   } catch {
-    return ''
+    return []
   }
+}
+
+export function readLatestOrbVoiceTranscript(): string {
+  const turns = readLatestOrbVoiceTurns()
+  if (!turns.length) return ''
+  return turns
+    .map((t) => {
+      const label = t.role === 'user' ? 'You' : t.role === 'assistant' ? 'ORB' : 'System'
+      return `${label}: ${t.text}`
+    })
+    .join('\n\n')
 }

@@ -19,7 +19,22 @@ OrbDictateNoteType = Literal[
     "action_plan",
     "reg44_prep_note",
     "ofsted_evidence_summary",
+    "team_meeting",
+    "investigation_meeting",
+    "strategy_multi_agency_prep",
 ]
+
+OrbDictateMode = Literal[
+    "rough_note",
+    "team_meeting",
+    "staff_debrief",
+    "investigation_meeting",
+    "reflective_supervision",
+    "strategy_multi_agency_prep",
+    "handover",
+]
+
+OrbDictateSegmentSource = Literal["live", "upload", "paste", "orb_voice"]
 
 OrbDictateSource = Literal["dictation", "orb_voice", "paste", "upload", "template"]
 
@@ -50,11 +65,46 @@ class OrbDictateTemplate(BaseModel):
     export_label: str
 
 
+class OrbDictateParticipant(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    id: str
+    name: str
+    role: str | None = None
+    organisation: str | None = None
+    initials: str | None = None
+    introduced_by: Literal["self", "manual", "import", "unknown"] = "unknown"
+
+
+class OrbDictateTranscriptSegment(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    id: str
+    speaker_id: str | None = None
+    speaker_label: str
+    text: str
+    started_at: str | None = None
+    ended_at: str | None = None
+    confidence: float | None = None
+    source: OrbDictateSegmentSource = "paste"
+    is_direct_quote: bool = False
+    needs_review: bool = False
+
+
+class OrbDictateSpeakerSummary(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    known_speakers: int = 0
+    unknown_speakers: int = 0
+    needs_review: bool = True
+
+
 class OrbDictateGenerateRequest(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     input_text: str = Field(..., min_length=1, max_length=120_000)
     note_type: OrbDictateNoteType = "daily_record"
+    mode: OrbDictateMode | None = None
     audience: str = Field(default="residential_practitioner", max_length=120)
     tone: str = Field(default="professional", max_length=80)
     include_child_voice: bool = True
@@ -65,6 +115,10 @@ class OrbDictateGenerateRequest(BaseModel):
     template_id: str | None = Field(default=None, max_length=120)
     source: OrbDictateSource = "dictation"
     conversation_consent_confirmed: bool | None = None
+    consent_confirmed: bool | None = None
+    investigation_boundary_confirmed: bool | None = None
+    participants: list[OrbDictateParticipant] = Field(default_factory=list)
+    segments: list[OrbDictateTranscriptSegment] = Field(default_factory=list)
 
 
 class OrbDictateQualityChecks(BaseModel):
@@ -75,6 +129,15 @@ class OrbDictateQualityChecks(BaseModel):
     manager_oversight: OrbDictateQualityStatus = "missing"
     impact: OrbDictateQualityStatus = "missing"
     recording_quality: Literal["good", "needs_review"] = "needs_review"
+    factual_clarity: OrbDictateQualityStatus = "missing"
+    staff_response: OrbDictateQualityStatus = "missing"
+    professional_curiosity: OrbDictateQualityStatus = "missing"
+    chronology_relevance: OrbDictateQualityStatus = "missing"
+    plan_risk_review: OrbDictateQualityStatus = "missing"
+    recording_tone: OrbDictateQualityStatus = "missing"
+    non_judgemental_language: OrbDictateQualityStatus = "missing"
+    evidence_of_action: OrbDictateQualityStatus = "missing"
+    follow_up_review_date: OrbDictateQualityStatus = "missing"
 
 
 class OrbDictateGenerateResponse(BaseModel):
@@ -94,6 +157,10 @@ class OrbDictateGenerateResponse(BaseModel):
     )
     standalone_boundary: str
     governance_notice: str
+    participants: list[OrbDictateParticipant] = Field(default_factory=list)
+    segments: list[OrbDictateTranscriptSegment] = Field(default_factory=list)
+    speaker_summary: OrbDictateSpeakerSummary | None = None
+    speaker_boundary_notice: str | None = None
 
 
 class OrbDictateTranscribeRequest(BaseModel):

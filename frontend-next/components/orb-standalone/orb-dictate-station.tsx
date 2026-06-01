@@ -20,12 +20,35 @@ import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
 import type { useStandaloneOrbVoice } from '@/components/orb-standalone/use-standalone-orb-voice'
 import { copyTextToClipboard } from '@/lib/orb/orb-clipboard'
 import {
+  OrbDictateAudioUpload,
+  OrbDictateGovernanceConsent,
+  OrbDictateModeSelect,
+  OrbDictateParticipantsPanel,
+  OrbDictateTranscriptSegmentsEditor,
+  consentReadyForGenerate
+} from '@/components/orb-standalone/orb-dictate-station-extras'
+import {
   buildLocalDictateFallback,
   exportOrbDictateNote,
   generateOrbDictateNote,
+  isAcceptedDictateAudio,
   readLatestOrbVoiceTranscript,
-  saveOrbDictateNote
+  readLatestOrbVoiceTurns,
+  saveOrbDictateNote,
+  transcribeOrbDictateAudio
 } from '@/lib/orb/dictate/orb-dictate-client'
+import {
+  anonymiseText,
+  modeToNoteType,
+  segmentsToPlainText,
+  SPEAKER_BOUNDARY_COPY,
+  suggestParticipantsFromText,
+  textToSegments,
+  voiceTurnsToSegments,
+  type OrbDictateMode,
+  type OrbDictateParticipant,
+  type OrbDictateTranscriptSegment
+} from '@/lib/orb/dictate/orb-dictate-speaker'
 import {
   generateFlagsForVoiceCommand,
   noteTypeForVoiceCommand,
@@ -81,6 +104,17 @@ export function OrbDictateStation({
   const [recordingPaused, setRecordingPaused] = useState(false)
   const [timerSec, setTimerSec] = useState(0)
   const [consentConfirmed, setConsentConfirmed] = useState(false)
+  const [dictateMode, setDictateMode] = useState<OrbDictateMode>('rough_note')
+  const [participants, setParticipants] = useState<OrbDictateParticipant[]>([])
+  const [segments, setSegments] = useState<OrbDictateTranscriptSegment[]>([])
+  const [authorityConsent, setAuthorityConsent] = useState(false)
+  const [participantsAware, setParticipantsAware] = useState(false)
+  const [draftReviewConfirmed, setDraftReviewConfirmed] = useState(false)
+  const [noAutoSubmitConfirmed, setNoAutoSubmitConfirmed] = useState(false)
+  const [investigationConfirmed, setInvestigationConfirmed] = useState(false)
+  const [uploadingAudio, setUploadingAudio] = useState(false)
+  const [uploadFileLabel, setUploadFileLabel] = useState<string | null>(null)
+  const [uploadError, setUploadError] = useState<string | null>(null)
   const [output, setOutput] = useState<OrbDictateGenerateResult | null>(null)
   const [outputTab, setOutputTab] = useState<OutputTab>('professional')
   const [editedNote, setEditedNote] = useState('')
@@ -92,13 +126,23 @@ export function OrbDictateStation({
   const [reflectiveDraft, setReflectiveDraft] = useState('')
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  const needsConsent = startMode === 'record_debrief'
+  const needsConsent = startMode === 'record_debrief' || dictateMode !== 'rough_note'
 
   const liveTranscript = useMemo(() => {
     const live = (voice.transcript || voice.displayTranscript || '').trim()
     if (!live) return transcript
     return transcript ? `${transcript}\n${live}` : live
   }, [transcript, voice.transcript, voice.displayTranscript])
+
+  const effectiveInputText = useMemo(() => {
+    if (segments.length) return segmentsToPlainText(segments)
+    return liveTranscript.trim() || pasteText.trim()
+  }, [segments, liveTranscript, pasteText])
+
+  useEffect(() => {
+    if (dictateMode === 'rough_note') return
+    setNoteType(modeToNoteType(dictateMode))
+  }, [dictateMode])
 
   const resetRecording = useCallback(() => {
     setRecordingActive(false)
@@ -220,45 +264,147 @@ export function OrbDictateStation({
   function applyPaste() {
     const text = pasteText.trim()
     if (!text) return
-    setTranscript(text)
+    syncSegmentsFromText(text, 'paste')
     setStartMode('paste')
     setStatusMessage('Transcript added.')
   }
 
+  function runSpeakerAction(action: string) {
+    const input = effectiveInputText
+    if (!input) {
+      setStatusMessage('Add a transcript first.')
+      return
+    }
+    if (action === 'anonymise') {
+      const next = anonymiseText(editedNote || output?.professional_note || input, participants)
+      setEditedNote(next)
+      setStatusMessage('Names replaced with roles where possible.')
+      return
+    }
+    const promptMap: Record<string, Partial<Parameters<typeof generateOrbDictateNote>[0]>> = {
+      summarise_by_speaker: { include_child_voice: true },
+      action_list: { include_actions: true },
+      meeting_minutes: { mode: 'team_meeting', note_type: 'team_meeting' },
+      investigation_note: { mode: 'investigation_meeting', note_type: 'investigation_meeting' },
+      manager_oversight: { include_manager_oversight: true, note_type: 'manager_oversight_note' },
+      supervision_reflection: { mode: 'reflective_supervision', note_type: 'supervision_reflection' },
+      safeguarding_summary: { include_safeguarding: true, note_type: 'safeguarding_concern_record' }
+    }
+    void runGenerate(promptMap[action] ?? {})
+  }
+
   function importFromOrbVoice() {
-    const text = readLatestOrbVoiceTranscript()
-    if (!text) {
+    const turns = readLatestOrbVoiceTurns()
+    if (!turns.length) {
       setStatusMessage('No saved ORB Voice transcript found. Save a conversation in ORB Voice first.')
       return
     }
-    setTranscript(text)
+    const segs = voiceTurnsToSegments(turns)
+    setSegments(segs)
+    setTranscript(segmentsToPlainText(segs))
     setStartMode('import_voice')
-    setStatusMessage('Imported from ORB Voice.')
+    setStatusMessage('Imported from ORB Voice — relabel speakers as needed.')
+  }
+
+  function syncSegmentsFromText(text: string, source: OrbDictateTranscriptSegment['source'] = 'paste') {
+    const segs = textToSegments(text, source, participants)
+    setSegments(segs)
+    setTranscript(text)
+  }
+
+  async function handleAudioUpload(file: File) {
+    setUploadError(null)
+    if (!isAcceptedDictateAudio(file)) {
+      setUploadError('Unsupported file type. Use webm, mp3, wav or m4a — or paste a transcript instead.')
+      return
+    }
+    setUploadingAudio(true)
+    setUploadFileLabel(file.name)
+    try {
+      const durationHint =
+        typeof document !== 'undefined'
+          ? await new Promise<string | null>((resolve) => {
+              const url = URL.createObjectURL(file)
+              const audio = new Audio(url)
+              audio.addEventListener('loadedmetadata', () => {
+                const sec = Math.round(audio.duration)
+                URL.revokeObjectURL(url)
+                resolve(Number.isFinite(sec) ? `Duration ~${Math.floor(sec / 60)}:${(sec % 60).toString().padStart(2, '0')}` : null)
+              })
+              audio.addEventListener('error', () => {
+                URL.revokeObjectURL(url)
+                resolve(null)
+              })
+            })
+          : null
+      setUploadFileLabel(durationHint ? `${file.name} · ${durationHint}` : file.name)
+      const result = await transcribeOrbDictateAudio(file, {
+        conversation_consent_confirmed: needsConsent ? authorityConsent && consentConfirmed : undefined
+      })
+      setTranscript(result.transcript)
+      setSegments(result.segments ?? textToSegments(result.transcript, 'upload', result.participants ?? []))
+      if (result.participants?.length) setParticipants(result.participants)
+      setStartMode('paste')
+      setStatusMessage('Audio transcribed — review speaker labels before generating.')
+    } catch {
+      setUploadError('Upload or transcription failed. Paste your transcript instead.')
+    } finally {
+      setUploadingAudio(false)
+    }
   }
 
   async function runGenerate(overrides?: Partial<Parameters<typeof generateOrbDictateNote>[0]>) {
-    const input = liveTranscript.trim() || pasteText.trim()
+    const input = effectiveInputText
     if (!input) {
       setStatusMessage('Add a transcript before generating.')
       return
     }
+    const governanceOk = consentReadyForGenerate(dictateMode, {
+      authorityConsent,
+      draftReviewConfirmed,
+      participantsAwareConfirmed: participantsAware,
+      noAutoSubmitConfirmed,
+      investigationConfirmed
+    })
+    if (needsConsent && !governanceOk && dictateMode !== 'rough_note') {
+      setStatusMessage('Complete consent and governance confirmations before generating.')
+      return
+    }
+    if (needsConsent && startMode === 'record_debrief' && !consentConfirmed) {
+      setStatusMessage('Please confirm consent before recording a conversation or debrief.')
+      return
+    }
+    const segs = segments.length ? segments : textToSegments(input, startMode === 'import_voice' ? 'orb_voice' : 'paste', participants)
     setGenerating(true)
     setStatusMessage(null)
     try {
       const result = await generateOrbDictateNote({
         input_text: input,
         note_type: noteType,
+        mode: dictateMode,
         include_child_voice: true,
         include_safeguarding: true,
         include_manager_oversight: true,
         include_actions: true,
         include_ofsted_lens: outputTab === 'evidence',
         source: startMode === 'import_voice' ? 'orb_voice' : startMode === 'paste' ? 'paste' : 'dictation',
-        conversation_consent_confirmed: needsConsent ? consentConfirmed : undefined,
+        conversation_consent_confirmed: needsConsent ? consentConfirmed || authorityConsent : undefined,
+        consent_confirmed:
+          dictateMode !== 'rough_note'
+            ? governanceOk
+            : needsConsent
+              ? consentConfirmed
+              : undefined,
+        investigation_boundary_confirmed:
+          dictateMode === 'investigation_meeting' ? investigationConfirmed : undefined,
+        participants,
+        segments: segs,
         ...overrides
       })
       setOutput(result)
       setEditedNote(result.professional_note)
+      if (result.participants?.length) setParticipants(result.participants as OrbDictateParticipant[])
+      if (result.segments?.length) setSegments(result.segments as OrbDictateTranscriptSegment[])
       setStatusMessage('Professional note ready for review.')
     } catch {
       const fallback = buildLocalDictateFallback(input, noteType)
@@ -455,6 +601,8 @@ export function OrbDictateStation({
               </section>
             ) : null}
 
+            <OrbDictateModeSelect mode={dictateMode} onChange={setDictateMode} />
+
             <section>
               <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--orb-muted)]">Note type</h3>
               <select
@@ -471,7 +619,43 @@ export function OrbDictateStation({
               </select>
             </section>
 
-            {needsConsent ? (
+            <OrbDictateParticipantsPanel
+              participants={participants}
+              onChange={setParticipants}
+              transcript={effectiveInputText}
+              onImportFromTranscript={() => {
+                const suggested = suggestParticipantsFromText(effectiveInputText)
+                setParticipants(suggested)
+                setStatusMessage(
+                  suggested.length
+                    ? `Imported ${suggested.length} suggested participant(s) — confirm names and roles.`
+                    : 'No introductions detected — add participants manually.'
+                )
+              }}
+            />
+
+            <OrbDictateAudioUpload
+              onFile={(file) => void handleAudioUpload(file)}
+              uploading={uploadingAudio}
+              fileLabel={uploadFileLabel}
+              error={uploadError}
+            />
+
+            <OrbDictateGovernanceConsent
+              mode={dictateMode}
+              authorityConsent={authorityConsent}
+              investigationConfirmed={investigationConfirmed}
+              draftReviewConfirmed={draftReviewConfirmed}
+              participantsAwareConfirmed={participantsAware}
+              noAutoSubmitConfirmed={noAutoSubmitConfirmed}
+              onAuthorityConsentChange={setAuthorityConsent}
+              onInvestigationChange={setInvestigationConfirmed}
+              onDraftReviewChange={setDraftReviewConfirmed}
+              onParticipantsAwareChange={setParticipantsAware}
+              onNoAutoSubmitChange={setNoAutoSubmitConfirmed}
+            />
+
+            {startMode === 'record_debrief' && dictateMode === 'rough_note' ? (
               <section
                 className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-100/90"
                 data-orb-dictate-consent
@@ -556,6 +740,15 @@ export function OrbDictateStation({
                 {liveTranscript || <span className="text-[var(--orb-muted)]">Live transcript appears here…</span>}
               </div>
             </section>
+
+            <OrbDictateTranscriptSegmentsEditor
+              segments={segments}
+              participants={participants}
+              onChange={(next) => {
+                setSegments(next)
+                setTranscript(segmentsToPlainText(next))
+              }}
+            />
 
             <button
               type="button"
@@ -695,6 +888,36 @@ export function OrbDictateStation({
                 >
                   Add safeguarding
                 </button>
+                <button
+                  type="button"
+                  data-orb-dictate-action-anonymise
+                  className="inline-flex items-center gap-1 rounded-lg border border-[var(--orb-line)]/50 px-2 py-1 text-xs text-slate-200 hover:bg-white/5"
+                  onClick={() => runSpeakerAction('anonymise')}
+                >
+                  Anonymise
+                </button>
+                <button
+                  type="button"
+                  data-orb-dictate-speaker-actions
+                  className="inline-flex items-center gap-1 rounded-lg border border-[var(--orb-line)]/50 px-2 py-1 text-xs text-slate-200 hover:bg-white/5"
+                  onClick={() => runSpeakerAction('meeting_minutes')}
+                >
+                  Meeting minutes
+                </button>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1 rounded-lg border border-[var(--orb-line)]/50 px-2 py-1 text-xs text-slate-200 hover:bg-white/5"
+                  onClick={() => runSpeakerAction('investigation_note')}
+                >
+                  Investigation note
+                </button>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1 rounded-lg border border-[var(--orb-line)]/50 px-2 py-1 text-xs text-slate-200 hover:bg-white/5"
+                  onClick={() => runSpeakerAction('summarise_by_speaker')}
+                >
+                  Summarise by speaker
+                </button>
               </div>
             ) : null}
           </div>
@@ -702,8 +925,11 @@ export function OrbDictateStation({
 
         <footer className="mt-3 shrink-0 space-y-1 border-t border-[var(--orb-line)]/30 pt-3 text-[10px] text-[var(--orb-muted)]">
           <p>{ORB_DICTATE_GOVERNANCE_COPY.draft}</p>
+          <p>{ORB_DICTATE_GOVERNANCE_COPY.speaker}</p>
+          <p data-orb-dictate-speaker-boundary>{SPEAKER_BOUNDARY_COPY}</p>
           <p>{ORB_DICTATE_GOVERNANCE_COPY.recording}</p>
           <p>{ORB_DICTATE_GOVERNANCE_COPY.boundary}</p>
+          <p>{ORB_DICTATE_GOVERNANCE_COPY.saveWording}</p>
           <p>{ORB_DICTATE_GOVERNANCE_COPY.retention}</p>
           {statusMessage ? (
             <p className="text-xs text-sky-300/90" role="status">

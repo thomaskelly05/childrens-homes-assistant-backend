@@ -97,10 +97,25 @@ Nine questions (one at a time) in the station UI; answers are combined into tran
 | `npm run test:orb` (includes `orb-dictate.test.ts`) | Dictate tests pass |
 | `npm run typecheck` | Run in CI/local before release |
 
-## 12. Remaining production tasks
+## 12. Speaker-aware pass (ORB Dictate convergence)
 
-- Wire optional server-side audio transcribe in UI (multipart upload to `/orb/dictate/transcribe/audio`).
-- Align frontend `recording-quality-coach.ts` checks with backend `compute_quality_checks` for parity.
-- Deep link `?station=orb_dictate` in URL handler (optional).
+See `orb-dictate-speaker-aware-notes.md` for full detail.
+
+| Area | Delivered |
+|------|-----------|
+| Speaker model | Participants + transcript segments + speaker summary |
+| Introductions | Parse “Name, Role, speaking” — suggest, confirm, edit |
+| Diarisation boundary | No voiceprint / no biometric identity claims |
+| Modes | Team meeting, investigation, debrief, supervision, strategy prep, handover |
+| Consent | Multi-person modes require governance checkboxes; investigation boundary |
+| Audio upload | UI → `POST /orb/dictate/transcribe/audio` |
+| Deep link | `/orb?station=orb_dictate` and `/orb?station=dictate` |
+| Quality checks | Backend `orb_dictate_quality.py` aligned with recording-quality-coach |
+| ORB Voice | Send to Dictate, meeting notes, debrief, recording wording |
+| Tests | `orb-dictate.test.ts`, `test_orb_dictate_speaker.py`, voice conversational import fix |
+
+## 13. Remaining production tasks
+
+- Playwright E2E: paste → generate → save/export (`playwright.config.ts` exists; add `e2e/orb-dictate.spec.ts` when auth fixture ready).
+- Optional diarisation provider (Speaker 1/2 → participant mapping).
 - OS users: clearer UX when AI Notes convergence saves to `ai_meeting_notes`.
-- E2E Playwright path for record → generate → save on residential surface.

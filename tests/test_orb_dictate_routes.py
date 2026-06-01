@@ -54,6 +54,19 @@ def test_dictate_generate_without_openai(monkeypatch, dictate_client):
     assert "IndiCare OS" in data["standalone_boundary"]
 
 
+def test_dictate_generate_team_meeting_requires_consent_confirmed(dictate_client):
+    response = dictate_client.post(
+        "/orb/dictate/generate",
+        json={
+            "input_text": "Team meeting notes.",
+            "note_type": "team_meeting",
+            "mode": "team_meeting",
+            "consent_confirmed": False,
+        },
+    )
+    assert response.status_code == 400
+
+
 def test_dictate_generate_requires_consent_for_conversation(dictate_client):
     response = dictate_client.post(
         "/orb/dictate/generate",

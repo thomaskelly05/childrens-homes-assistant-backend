@@ -1757,7 +1757,10 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
 
   useEffect(() => {
     if (!residentialSurface || !mounted) return
-    const station = searchParams.get('station') as OrbResidentialStationId | null
+    const stationParam = searchParams.get('station')
+    const station = (
+      stationParam === 'dictate' ? 'orb_dictate' : stationParam
+    ) as OrbResidentialStationId | null
     const lens = searchParams.get('lens')
     if (station) openResidentialStation(station)
     else if (lens === 'ofsted' || lens === 'inspection') handleModeChange('Ofsted Lens')

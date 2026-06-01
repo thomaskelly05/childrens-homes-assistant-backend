@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import logging
 import os
-import re
 from typing import Any
 from uuid import uuid4
 
@@ -20,9 +19,17 @@ from schemas.orb_dictate import (
     OrbDictateGenerateResponse,
     OrbDictateNotePatch,
     OrbDictateNoteSummary,
-    OrbDictateQualityChecks,
     OrbDictateSaveRequest,
     OrbDictateSaveResponse,
+)
+from services.orb_dictate_quality import MULTI_PERSON_NOTE_TYPES, compute_quality_checks
+from services.orb_dictate_speaker import (
+    SPEAKER_BOUNDARY_COPY,
+    build_speaker_summary,
+    participants_block_for_prompt,
+    segments_to_plain_text,
+    suggest_participants_from_text,
+    text_to_segments,
 )
 from schemas.orb_saved_outputs import OrbSavedOutputCreate
 from services.ai_note_export_service import create_docx_export, create_pdf_export, safe_filename
@@ -42,26 +49,39 @@ GOVERNANCE_NOTICE = (
     "ORB Dictate helps create draft wording. Adults must review, edit and approve before using it as a formal record."
 )
 
-CHILD_VOICE_MARKERS = re.compile(
-    r'\b(said|told|shared|communicated|expressed|voice|wish|feeling|felt)\b|"',
-    re.I,
+MODE_TO_NOTE_TYPE: dict[str, str] = {
+    "rough_note": "daily_record",
+    "team_meeting": "team_meeting",
+    "staff_debrief": "staff_debrief",
+    "investigation_meeting": "investigation_meeting",
+    "reflective_supervision": "supervision_reflection",
+    "strategy_multi_agency_prep": "strategy_multi_agency_prep",
+    "handover": "handover_note",
+}
+
+MULTI_PERSON_MODES = frozenset(
+    {
+        "team_meeting",
+        "staff_debrief",
+        "investigation_meeting",
+        "reflective_supervision",
+        "strategy_multi_agency_prep",
+        "handover",
+    }
 )
-SAFEGUARDING_MARKERS = re.compile(
-    r"\b(safeguard|concern|disclosure|injury|missing|exploitation|harm|risk|escalat)\b",
-    re.I,
-)
-MANAGER_MARKERS = re.compile(
-    r"\b(manager|oversight|reviewed|notified|registered manager|duty manager)\b",
-    re.I,
-)
-IMPACT_MARKERS = re.compile(
-    r"\b(outcome|impact|follow[\s-]?up|plan|next step|result)\b",
-    re.I,
-)
-JUDGEMENTAL_MARKERS = re.compile(
-    r"\b(manipulative|naughty|attention[\s-]?seeking|refused|kicked off|bad behaviour)\b",
-    re.I,
-)
+
+
+def _resolve_note_type(request: OrbDictateGenerateRequest) -> str:
+    if request.mode and request.mode in MODE_TO_NOTE_TYPE:
+        return MODE_TO_NOTE_TYPE[request.mode]
+    return request.note_type
+
+
+def _requires_consent(request: OrbDictateGenerateRequest, note_type: str) -> bool:
+    mode = request.mode or ""
+    if mode in MULTI_PERSON_MODES:
+        return True
+    return note_type in MULTI_PERSON_NOTE_TYPES
 
 
 def _openai_client() -> OpenAI | None:
@@ -75,39 +95,9 @@ def _truncate(text: str, max_len: int = 120_000) -> str:
     return (text or "").strip()[:max_len]
 
 
-def compute_quality_checks(text: str, note_type: str) -> OrbDictateQualityChecks:
-    body = _truncate(text, 50_000)
-    child = "present" if CHILD_VOICE_MARKERS.search(body) or '"' in body else "missing"
-    if child == "present" and len(body) < 80:
-        child = "weak"
-
-    safeguarding = "present" if SAFEGUARDING_MARKERS.search(body) else "missing"
-    if note_type in {"safeguarding_concern_record", "incident_record", "missing_episode_note"}:
-        safeguarding = "review" if safeguarding == "missing" else safeguarding
-
-    manager = "present" if MANAGER_MARKERS.search(body) else "missing"
-    if note_type in {"manager_oversight_note", "incident_record"} and manager == "missing":
-        manager = "missing"
-
-    impact = "present" if IMPACT_MARKERS.search(body) else "missing"
-    recording_quality: str = "good"
-    if JUDGEMENTAL_MARKERS.search(body) or child in {"missing", "weak"}:
-        recording_quality = "needs_review"
-    if safeguarding == "review" or safeguarding == "missing":
-        if note_type in {"safeguarding_concern_record", "incident_record"}:
-            recording_quality = "needs_review"
-
-    return OrbDictateQualityChecks(
-        child_voice=child,  # type: ignore[arg-type]
-        safeguarding=safeguarding,  # type: ignore[arg-type]
-        manager_oversight=manager,  # type: ignore[arg-type]
-        impact=impact,  # type: ignore[arg-type]
-        recording_quality=recording_quality,  # type: ignore[arg-type]
-    )
-
-
 def _fallback_generate(request: OrbDictateGenerateRequest) -> OrbDictateGenerateResponse:
-    template = get_dictate_template(request.note_type)
+    note_type = _resolve_note_type(request)
+    template = get_dictate_template(note_type)  # type: ignore[arg-type]
     transcript = _truncate(request.input_text)
     section_lines = []
     for section in template.sections:
@@ -122,7 +112,13 @@ def _fallback_generate(request: OrbDictateGenerateRequest) -> OrbDictateGenerate
     actions: list[str] = []
     if request.include_actions:
         actions = ["Review draft wording", "Add times and names", "Confirm manager oversight if required"]
-    quality = compute_quality_checks(professional, request.note_type)
+    participants = list(request.participants)
+    segments = list(request.segments)
+    if not segments:
+        segments = text_to_segments(transcript, source=request.source, participants=participants)
+    if not participants:
+        participants = suggest_participants_from_text(transcript)
+    quality = compute_quality_checks(professional, note_type)
     ofsted = None
     if request.include_ofsted_lens:
         ofsted = (
@@ -131,7 +127,7 @@ def _fallback_generate(request: OrbDictateGenerateRequest) -> OrbDictateGenerate
         )
     return OrbDictateGenerateResponse(
         title=template.export_label,
-        note_type=request.note_type,
+        note_type=note_type,  # type: ignore[arg-type]
         professional_note=professional,
         summary=summary,
         actions=actions,
@@ -140,12 +136,22 @@ def _fallback_generate(request: OrbDictateGenerateRequest) -> OrbDictateGenerate
         quality_checks=quality,
         standalone_boundary=STANDALONE_BOUNDARY,
         governance_notice=GOVERNANCE_NOTICE,
+        participants=participants,
+        segments=segments,
+        speaker_summary=build_speaker_summary(participants, segments),
+        speaker_boundary_notice=SPEAKER_BOUNDARY_COPY,
     )
 
 
-def _build_generate_prompt(request: OrbDictateGenerateRequest) -> tuple[str, str]:
-    template = get_dictate_template(request.note_type)
-    intelligence_block = recording_intelligence_service.build_prompt_block(request.input_text)
+def _build_generate_prompt(request: OrbDictateGenerateRequest, note_type: str) -> tuple[str, str]:
+    template = get_dictate_template(note_type)  # type: ignore[arg-type]
+    transcript_body = (
+        segments_to_plain_text(request.segments)
+        if request.segments
+        else request.input_text
+    )
+    intelligence_block = recording_intelligence_service.build_prompt_block(transcript_body)
+    speaker_block = participants_block_for_prompt(request.participants, request.segments)
     section_spec = "\n".join(
         f"- {s.title}: " + "; ".join(s.prompts)
         for s in template.sections
@@ -160,6 +166,14 @@ def _build_generate_prompt(request: OrbDictateGenerateRequest) -> tuple[str, str
     if request.include_ofsted_lens:
         flags.append("Add a short Ofsted/SCCIF evidence lens paragraph.")
 
+    investigation_rules = ""
+    if note_type == "investigation_meeting":
+        investigation_rules = (
+            "\nInvestigation meeting rules: use neutral language; do not state allegations as fact; "
+            "do not make findings or conclusions unless explicitly provided in the input; "
+            "attribute statements (e.g. 'X stated that…'); flag points requiring clarification."
+        )
+
     system = (
         "You are ORB Dictate for UK residential children's homes. "
         "Turn rough spoken notes into professional, factual recording wording. "
@@ -167,31 +181,57 @@ def _build_generate_prompt(request: OrbDictateGenerateRequest) -> tuple[str, str
         "ofsted_lens (string or null). "
         "Never invent facts. Use [not stated] where detail is missing. "
         "Use non-judgemental, child-centred language. "
-        "Do not claim submission to any care system."
+        "Do not claim submission to any care system. "
+        "When speakers are identified, attribute key points by name/role where useful — do not over-attribute."
+        f"{investigation_rules}"
     )
     user = (
         f"Note type: {template.title}\n"
         f"Purpose: {template.purpose}\n"
         f"Audience: {request.audience}\n"
         f"Tone: {request.tone}\n"
-        f"Source: {request.source}\n\n"
+        f"Source: {request.source}\n"
+        f"Mode: {request.mode or note_type}\n\n"
         f"Required sections:\n{section_spec}\n\n"
         f"Instructions:\n" + "\n".join(f"- {f}" for f in flags) + "\n\n"
+        f"{speaker_block}\n\n"
         f"{intelligence_block}\n\n"
-        f"Rough input / transcript:\n{request.input_text}"
+        f"Rough input / transcript:\n{transcript_body}"
     )
     return system, user
 
 
 def generate_dictate_note(request: OrbDictateGenerateRequest) -> OrbDictateGenerateResponse:
+    note_type = _resolve_note_type(request)
     if request.source in {"dictation", "orb_voice", "upload"} and request.conversation_consent_confirmed is False:
         raise ValueError("Conversation or debrief recording requires consent confirmation.")
+    if _requires_consent(request, note_type) and request.consent_confirmed is not True:
+        raise ValueError(
+            "Multi-person meeting, debrief or investigation modes require consent confirmation."
+        )
+    if note_type == "investigation_meeting" and request.investigation_boundary_confirmed is not True:
+        raise ValueError(
+            "Investigation meeting mode requires confirmation that ORB Dictate must not make findings "
+            "unless explicitly agreed and recorded."
+        )
+
+    participants = list(request.participants)
+    segments = list(request.segments)
+    if not segments:
+        segments = text_to_segments(
+            request.input_text,
+            source=request.source,
+            participants=participants,
+        )
+    if not participants:
+        participants = suggest_participants_from_text(request.input_text)
 
     client = _openai_client()
     if not client:
-        return _fallback_generate(request)
+        req = request.model_copy(update={"participants": participants, "segments": segments})
+        return _fallback_generate(req)
 
-    system, user = _build_generate_prompt(request)
+    system, user = _build_generate_prompt(request, note_type)
     try:
         response = client.chat.completions.create(
             model=os.environ.get("ORB_DICTATE_MODEL", "gpt-4.1-mini"),
@@ -208,10 +248,11 @@ def generate_dictate_note(request: OrbDictateGenerateRequest) -> OrbDictateGener
         logger.exception("ORB Dictate generation failed — using structured fallback")
         return _fallback_generate(request)
 
-    template = get_dictate_template(request.note_type)
+    template = get_dictate_template(note_type)  # type: ignore[arg-type]
     professional = _truncate(str(parsed.get("professional_note") or parsed.get("note") or ""), 80_000)
     if not professional:
-        return _fallback_generate(request)
+        req = request.model_copy(update={"participants": participants, "segments": segments})
+        return _fallback_generate(req)
 
     title = _truncate(str(parsed.get("title") or template.export_label), 200)
     summary = _truncate(str(parsed.get("summary") or ""), 4000)
@@ -225,23 +266,38 @@ def generate_dictate_note(request: OrbDictateGenerateRequest) -> OrbDictateGener
             "Review against your home's Quality Standards mapping."
         )
 
-    quality = compute_quality_checks(professional, request.note_type)
+    transcript_text = segments_to_plain_text(segments) if segments else _truncate(request.input_text)
+    quality = compute_quality_checks(professional, note_type)
     return OrbDictateGenerateResponse(
         title=title,
-        note_type=request.note_type,
+        note_type=note_type,  # type: ignore[arg-type]
         professional_note=professional,
         summary=summary or f"Draft {template.title.lower()} for review.",
         actions=actions,
-        transcript=_truncate(request.input_text),
+        transcript=transcript_text,
         ofsted_lens=ofsted_text if request.include_ofsted_lens else None,
         quality_checks=quality,
         standalone_boundary=STANDALONE_BOUNDARY,
         governance_notice=GOVERNANCE_NOTICE,
+        participants=participants,
+        segments=segments,
+        speaker_summary=build_speaker_summary(participants, segments),
+        speaker_boundary_notice=SPEAKER_BOUNDARY_COPY,
     )
 
 
 async def transcribe_dictate_audio(file_path: str) -> dict[str, Any]:
-    return await transcribe_audio(file_path)
+    result = await transcribe_audio(file_path)
+    transcript = str(result.get("transcript") or result.get("text") or "").strip()
+    participants = suggest_participants_from_text(transcript)
+    segments = text_to_segments(transcript, source="upload", participants=participants)
+    return {
+        "transcript": transcript,
+        "segments": [s.model_dump() for s in segments],
+        "participants": [p.model_dump() for p in participants],
+        "speaker_summary": build_speaker_summary(participants, segments).model_dump(),
+        "speaker_boundary_notice": SPEAKER_BOUNDARY_COPY,
+    }
 
 
 def _user_can_access_os_ai_notes(user: dict[str, Any]) -> bool:

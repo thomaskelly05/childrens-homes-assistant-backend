@@ -64,7 +64,24 @@ async def dictate_transcribe(
     text = (payload.text or "").strip()
     if not text:
         raise HTTPException(status_code=400, detail="Provide transcript text or upload audio.")
-    return _success({"transcript": text, "segments": []})
+    from services.orb_dictate_speaker import (
+        SPEAKER_BOUNDARY_COPY,
+        build_speaker_summary,
+        suggest_participants_from_text,
+        text_to_segments,
+    )
+
+    participants = suggest_participants_from_text(text)
+    segments = text_to_segments(text, source="paste", participants=participants)
+    return _success(
+        {
+            "transcript": text,
+            "segments": [s.model_dump() for s in segments],
+            "participants": [p.model_dump() for p in participants],
+            "speaker_summary": build_speaker_summary(participants, segments).model_dump(),
+            "speaker_boundary_notice": SPEAKER_BOUNDARY_COPY,
+        }
+    )
 
 
 @router.post("/transcribe/audio")

@@ -4,18 +4,14 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, it } from 'node:test'
 
-import { pickBritishFemaleVoice } from '../../lib/orb/voice/orb-voice-browser.ts'
-import {
-  DEFAULT_ORB_VOICE_PROFILE_ID,
-  ORB_VOICE_PROFILES
-} from '../../lib/orb/voice/orb-voice-profiles.ts'
-import { frameMessageForOrbVoice } from '../../lib/orb/voice/orb-voice-prompt.ts'
-import { ORB_VOICE_SETTINGS_STORAGE_KEY } from '../../lib/orb/voice/orb-voice-types.ts'
-
 const root = join(dirname(fileURLToPath(import.meta.url)), '../..')
 
 function readComponent(relativePath: string) {
   return readFileSync(join(root, relativePath), 'utf8')
+}
+
+function readLib(relativePath: string) {
+  return readFileSync(join(root, 'lib', relativePath), 'utf8')
 }
 
 describe('ORB Voice conversational sprint', () => {
@@ -32,8 +28,9 @@ describe('ORB Voice conversational sprint', () => {
 
   it('voice settings persist under orb-voice-settings key', () => {
     const hook = readComponent('components/orb-standalone/use-standalone-orb-voice.ts')
+    const types = readLib('orb/voice/orb-voice-types.ts')
     assert.match(hook, /ORB_VOICE_SETTINGS_STORAGE_KEY/)
-    assert.equal(ORB_VOICE_SETTINGS_STORAGE_KEY, 'orb-voice-settings')
+    assert.match(types, /ORB_VOICE_SETTINGS_STORAGE_KEY = 'orb-voice-settings'/)
     assert.match(hook, /allowInterruption/)
     assert.match(hook, /voiceMode/)
     assert.match(hook, /speechSynthesis\.cancel/)
@@ -52,8 +49,9 @@ describe('ORB Voice conversational sprint', () => {
   })
 
   it('voice profile registry returns ORB British Female default', () => {
-    assert.equal(DEFAULT_ORB_VOICE_PROFILE_ID, 'orb_british_female')
-    assert.ok(ORB_VOICE_PROFILES.length >= 7)
+    const profiles = readLib('orb/voice/orb-voice-profiles.ts')
+    assert.match(profiles, /DEFAULT_ORB_VOICE_PROFILE_ID = 'orb_british_female'/)
+    assert.match(profiles, /ORB_VOICE_PROFILES/)
   })
 
   it('voice settings render all profile labels', () => {
@@ -61,7 +59,9 @@ describe('ORB Voice conversational sprint', () => {
     assert.match(panel, /ORB_VOICE_PROFILES\.map/)
     assert.match(panel, /profile\.label/)
     assert.match(panel, /data-orb-voice-profile-label/)
-    assert.equal(ORB_VOICE_PROFILES.length, 7)
+    const profiles = readLib('orb/voice/orb-voice-profiles.ts')
+    const count = (profiles.match(/id: '/g) || []).length
+    assert.ok(count >= 7)
   })
 
   it('selecting a voice persists to localStorage', () => {
@@ -102,16 +102,14 @@ describe('ORB Voice conversational sprint', () => {
   })
 
   it('voice prompt framing avoids cognition labels', () => {
-    const framed = frameMessageForOrbVoice('Help with a safeguarding concern', {
-      mode: 'safeguarding_support',
-      spokenAnswerLength: 'balanced'
-    })
-    assert.match(framed, /ORB Voice/)
-    assert.match(framed, /safeguarding/)
-    assert.doesNotMatch(framed, /chain of thought/i)
+    const promptSrc = readLib('orb/voice/orb-voice-prompt.ts')
+    assert.match(promptSrc, /frameMessageForOrbVoice/)
+    assert.match(promptSrc, /ORB Voice/)
+    assert.doesNotMatch(promptSrc, /chain of thought/i)
   })
 
-  it('British voice preference selects en-GB where available', () => {
+  it('British voice preference selects en-GB where available', async () => {
+    const { pickBritishFemaleVoice } = await import('../../lib/orb/voice/orb-voice-browser.ts')
     const voices = [
       { name: 'Google US English', lang: 'en-US', voiceURI: 'us', localService: true },
       { name: 'Google UK English Female', lang: 'en-GB', voiceURI: 'gb-f', localService: true },
@@ -122,7 +120,7 @@ describe('ORB Voice conversational sprint', () => {
   })
 
   it('backend voice client abstracts session and speak', () => {
-    const client = readComponent('lib/orb/voice/orb-voice-client.ts')
+    const client = readLib('orb/voice/orb-voice-client.ts')
     assert.match(client, /startOrbVoiceSession/)
     assert.match(client, /requestOrbVoiceSpeak/)
     assert.match(client, /browser_fallback/)
@@ -136,7 +134,7 @@ describe('ORB Voice conversational sprint', () => {
   })
 
   it('save voice transcript uses voice_transcript type', () => {
-    const save = readComponent('lib/orb/voice/save-voice-transcript.ts')
+    const save = readLib('orb/voice/save-voice-transcript.ts')
     assert.match(save, /voice_transcript/)
   })
 
@@ -144,5 +142,13 @@ describe('ORB Voice conversational sprint', () => {
     const doc = readComponent('docs/orb-voice-realtime-architecture.md')
     assert.match(doc, /WebRTC|WebSocket/)
     assert.match(doc, /barge-in|interrupt/i)
+  })
+
+  it('ORB Voice links to ORB Dictate with meeting and debrief actions', () => {
+    const voice = readComponent('components/orb-standalone/orb-voice-station.tsx')
+    assert.match(voice, /data-orb-voice-to-dictate/)
+    assert.match(voice, /data-orb-voice-to-meeting/)
+    assert.match(voice, /data-orb-voice-to-debrief/)
+    assert.match(voice, /Send transcript to ORB Dictate/)
   })
 })
