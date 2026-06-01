@@ -1,93 +1,101 @@
-import type { OrbSavedOutputSummary, OrbSavedOutputType } from '@/lib/orb/standalone-client'
+'use client'
 
-export const ORB_SAVED_OUTPUTS_LOCAL_KEY = 'orb-saved-outputs-local'
+import type { OrbSavedOutputRecord, OrbSavedOutputType } from '@/lib/orb/standalone-client'
 
-export type OrbLocalSavedOutput = OrbSavedOutputSummary & {
-  content_markdown?: string | null
-  local_only?: boolean
+const STORAGE_KEY = 'orb-saved-outputs-local'
+
+export type OrbLocalSavedOutput = {
+  id: string
+  title: string
+  type: OrbSavedOutputType | string
+  summary?: string
+  content_markdown?: string
+  project_id?: string
+  project_name?: string
+  tags?: string[]
+  created_at?: string
+  updated_at?: string
 }
 
-function readRaw(): OrbLocalSavedOutput[] {
+function readStore(): OrbLocalSavedOutput[] {
   if (typeof window === 'undefined') return []
   try {
-    const raw = window.localStorage.getItem(ORB_SAVED_OUTPUTS_LOCAL_KEY)
+    const raw = window.localStorage.getItem(STORAGE_KEY)
     if (!raw) return []
-    const parsed = JSON.parse(raw) as OrbLocalSavedOutput[]
-    return Array.isArray(parsed) ? parsed : []
+    const parsed = JSON.parse(raw) as unknown
+    if (!Array.isArray(parsed)) return []
+    return parsed.filter((entry): entry is OrbLocalSavedOutput => Boolean(entry && typeof entry === 'object'))
   } catch {
     return []
   }
 }
 
-function writeRaw(items: OrbLocalSavedOutput[]) {
+function writeStore(items: OrbLocalSavedOutput[]) {
   if (typeof window === 'undefined') return
-  window.localStorage.setItem(ORB_SAVED_OUTPUTS_LOCAL_KEY, JSON.stringify(items.slice(0, 80)))
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
+  } catch {
+    // ignore quota errors
+  }
 }
 
-export function listOrbLocalSavedOutputs(params?: {
-  search?: string
-  output_type?: string
-  project_id?: string
-}): { items: OrbLocalSavedOutput[]; total: number } {
-  let items = readRaw()
-  if (params?.search?.trim()) {
-    const q = params.search.trim().toLowerCase()
-    items = items.filter(
-      (row) =>
-        row.title.toLowerCase().includes(q) ||
-        (row.summary || '').toLowerCase().includes(q) ||
-        (row.tags || []).some((t) => t.toLowerCase().includes(q))
-    )
-  }
-  if (params?.output_type) {
-    items = items.filter((row) => row.type === params.output_type)
-  }
-  if (params?.project_id) {
-    items = items.filter((row) => row.project_id === params.project_id)
-  }
-  return { items, total: items.length }
+function makeLocalId() {
+  return `local_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 }
 
-export function upsertOrbLocalSavedOutput(input: {
-  id?: string
-  title: string
-  type: OrbSavedOutputType
-  summary?: string
-  content_markdown?: string
-  project_id?: string | null
-  project_name?: string | null
-  tags?: string[]
-}): OrbLocalSavedOutput {
-  const now = new Date().toISOString()
-  const id = input.id || `local_${Date.now()}`
-  const row: OrbLocalSavedOutput = {
-    id,
-    title: input.title,
-    type: input.type,
-    status: 'draft',
-    summary: input.summary || input.content_markdown?.slice(0, 280) || null,
-    content_markdown: input.content_markdown,
-    project_id: input.project_id,
-    project_name: input.project_name,
-    tags: input.tags,
-    created_at: now,
-    updated_at: now,
-    standalone_only: true,
-    local_only: true
-  }
-  const rest = readRaw().filter((item) => item.id !== id)
-  writeRaw([row, ...rest])
-  return row
+export function listOrbLocalSavedOutputs(): OrbLocalSavedOutput[] {
+  return readStore().sort((a, b) => {
+    const aTime = Date.parse(a.updated_at || a.created_at || '') || 0
+    const bTime = Date.parse(b.updated_at || b.created_at || '') || 0
+    return bTime - aTime
+  })
 }
 
 export function getOrbLocalSavedOutput(id: string): OrbLocalSavedOutput | null {
-  return readRaw().find((row) => row.id === id) ?? null
+  return readStore().find((item) => item.id === id) ?? null
+}
+
+export function upsertOrbLocalSavedOutput(
+  payload: Omit<OrbLocalSavedOutput, 'id' | 'created_at' | 'updated_at'> & { id?: string }
+): OrbLocalSavedOutput {
+  const items = readStore()
+  const now = new Date().toISOString()
+  const id = payload.id?.startsWith('local_') ? payload.id : payload.id ? `local_${payload.id}` : makeLocalId()
+  const existing = items.find((item) => item.id === id)
+  const next: OrbLocalSavedOutput = {
+    ...existing,
+    ...payload,
+    id,
+    created_at: existing?.created_at ?? now,
+    updated_at: now
+  }
+  const without = items.filter((item) => item.id !== id)
+  writeStore([next, ...without])
+  return next
 }
 
 export function removeOrbLocalSavedOutput(id: string): void {
-  writeRaw(readRaw().filter((row) => row.id !== id))
+  writeStore(readStore().filter((item) => item.id !== id))
 }
 
-export function localSavedOutputsSummary(): { total: number; storage_mode: 'local' } {
-  return { total: readRaw().length, storage_mode: 'local' }
+export function countOrbLocalSavedOutputs(): number {
+  return readStore().length
+}
+
+export function orbLocalSavedOutputAsRecord(item: OrbLocalSavedOutput): OrbSavedOutputRecord {
+  const now = new Date().toISOString()
+  return {
+    id: item.id,
+    title: item.title,
+    type: item.type as OrbSavedOutputRecord['type'],
+    summary: item.summary,
+    content_markdown: item.content_markdown,
+    project_id: item.project_id,
+    project_name: item.project_name,
+    tags: item.tags,
+    status: 'saved',
+    created_at: item.created_at || now,
+    updated_at: item.updated_at || item.created_at || now,
+    intelligence_output: { title: item.title, summary: item.summary || '' }
+  } as unknown as OrbSavedOutputRecord
 }

@@ -1,46 +1,49 @@
+'use client'
+
 import { AuthApiError } from '@/lib/auth/api'
 
+import {
+  countOrbLocalSavedOutputs,
+  listOrbLocalSavedOutputs,
+  orbLocalSavedOutputAsRecord
+} from '@/lib/orb/orb-saved-outputs-local'
+import { recordOrbFetchOutcome, shouldSkipAuthenticatedOrbFetch } from '@/lib/orb/orb-session-gate'
 import {
   fetchOrbSavedOutputsSummary,
   listOrbSavedOutputs,
   type OrbSavedOutputSummary
 } from '@/lib/orb/standalone-client'
-import {
-  listOrbLocalSavedOutputs,
-  localSavedOutputsSummary,
-  type OrbLocalSavedOutput
-} from '@/lib/orb/orb-saved-outputs-local'
-import { recordOrbFetchOutcome, shouldSkipAuthenticatedOrbFetch } from '@/lib/orb/orb-session-gate'
 
 export type OrbSavedOutputsListResult = {
   items: OrbSavedOutputSummary[]
-  total: number
   storageMode: 'server' | 'local' | 'mixed'
   reconnectSuggested: boolean
 }
 
-export async function fetchOrbSavedOutputsSummaryResilient(): Promise<{
-  total: number
-  storage_mode?: string
-  localFallback?: boolean
-}> {
-  if (shouldSkipAuthenticatedOrbFetch()) {
-    const local = localSavedOutputsSummary()
-    return { total: local.total, storage_mode: 'local', localFallback: true }
-  }
-  try {
-    const summary = await fetchOrbSavedOutputsSummary()
-    recordOrbFetchOutcome(null)
-    return summary
-  } catch (caught) {
-    recordOrbFetchOutcome(caught)
-    const local = localSavedOutputsSummary()
-    return { total: Math.max(summaryCountFromError(caught), local.total), storage_mode: 'local', localFallback: true }
-  }
+function localSummaries(): OrbSavedOutputSummary[] {
+  const now = new Date().toISOString()
+  return listOrbLocalSavedOutputs().map((item) => ({
+    id: item.id,
+    title: item.title,
+    type: item.type as OrbSavedOutputSummary['type'],
+    summary: item.summary,
+    project_id: item.project_id,
+    project_name: item.project_name,
+    status: 'saved' as const,
+    created_at: item.created_at || now,
+    updated_at: item.updated_at || item.created_at || now
+  }))
 }
 
-function summaryCountFromError(_error: unknown): number {
-  return 0
+function mergeSummaries(server: OrbSavedOutputSummary[], local: OrbSavedOutputSummary[]): OrbSavedOutputSummary[] {
+  const byId = new Map<string, OrbSavedOutputSummary>()
+  for (const item of local) byId.set(item.id, item)
+  for (const item of server) byId.set(item.id, item)
+  return Array.from(byId.values()).sort((a, b) => {
+    const aTime = Date.parse(a.updated_at || a.created_at || '') || 0
+    const bTime = Date.parse(b.updated_at || b.created_at || '') || 0
+    return bTime - aTime
+  })
 }
 
 export async function listOrbSavedOutputsResilient(params?: {
@@ -53,61 +56,62 @@ export async function listOrbSavedOutputsResilient(params?: {
   limit?: number
   offset?: number
 }): Promise<OrbSavedOutputsListResult> {
-  const local = listOrbLocalSavedOutputs({
-    search: params?.search,
-    output_type: params?.output_type,
-    project_id: params?.project_id
-  })
-
+  const local = localSummaries()
   if (shouldSkipAuthenticatedOrbFetch()) {
+    return { items: local, storageMode: local.length ? 'local' : 'server', reconnectSuggested: true }
+  }
+  try {
+    const payload = await listOrbSavedOutputs(params)
+    recordOrbFetchOutcome(null)
+    const serverItems = payload.items ?? []
+    if (!local.length) {
+      return { items: serverItems, storageMode: 'server', reconnectSuggested: false }
+    }
     return {
-      items: local.items,
-      total: local.total,
-      storageMode: 'local',
+      items: mergeSummaries(serverItems, local),
+      storageMode: 'mixed',
+      reconnectSuggested: false
+    }
+  } catch (error) {
+    recordOrbFetchOutcome(error)
+    if (error instanceof AuthApiError && process.env.NODE_ENV === 'development') {
+      console.debug('[orb-saved-outputs] list failed', error.status, error.message)
+    }
+    return {
+      items: local,
+      storageMode: local.length ? 'local' : 'server',
       reconnectSuggested: true
     }
   }
+}
 
+export async function fetchOrbSavedOutputsSummaryResilient(signal?: AbortSignal): Promise<{
+  total: number
+  by_type: Record<string, number>
+  storage_mode?: string
+}> {
+  if (shouldSkipAuthenticatedOrbFetch()) {
+    const localCount = countOrbLocalSavedOutputs()
+    return { total: localCount, by_type: {}, storage_mode: 'local' }
+  }
   try {
-    const remote = await listOrbSavedOutputs(params)
+    const summary = await fetchOrbSavedOutputsSummary(signal)
     recordOrbFetchOutcome(null)
-    if (!remote.items.length && local.items.length) {
-      return {
-        items: local.items,
-        total: local.total,
-        storageMode: 'local',
-        reconnectSuggested: false
-      }
-    }
-    const merged = mergeSavedOutputs(remote.items, local.items)
+    const localCount = countOrbLocalSavedOutputs()
+    if (!localCount) return summary
     return {
-      items: merged,
-      total: merged.length,
-      storageMode: local.items.length ? 'mixed' : 'server',
-      reconnectSuggested: false
+      ...summary,
+      total: Math.max(summary.total || 0, localCount),
+      storage_mode: summary.storage_mode === 'local' ? 'local' : 'mixed'
     }
-  } catch (caught) {
-    recordOrbFetchOutcome(caught)
-    const auth = caught instanceof AuthApiError && (caught.status === 401 || caught.status === 403)
-    return {
-      items: local.items,
-      total: local.total,
-      storageMode: 'local',
-      reconnectSuggested: Boolean(auth || local.items.length)
+  } catch (error) {
+    recordOrbFetchOutcome(error)
+    if (error instanceof AuthApiError && process.env.NODE_ENV === 'development') {
+      console.debug('[orb-saved-outputs] summary failed', error.status, error.message)
     }
+    const localCount = countOrbLocalSavedOutputs()
+    return { total: localCount, by_type: {}, storage_mode: 'local' }
   }
 }
 
-function mergeSavedOutputs(
-  remote: OrbSavedOutputSummary[],
-  local: OrbLocalSavedOutput[]
-): OrbSavedOutputSummary[] {
-  const byId = new Map<string, OrbSavedOutputSummary>()
-  for (const row of remote) byId.set(row.id, row)
-  for (const row of local) {
-    if (!byId.has(row.id)) byId.set(row.id, row)
-  }
-  return Array.from(byId.values()).sort(
-    (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
-  )
-}
+export { orbLocalSavedOutputAsRecord }

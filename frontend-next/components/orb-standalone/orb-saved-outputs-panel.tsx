@@ -29,7 +29,7 @@ import {
   type OrbSavedOutputType
 } from '@/lib/orb/standalone-client'
 import { getOrbLocalSavedOutput, removeOrbLocalSavedOutput } from '@/lib/orb/orb-saved-outputs-local'
-import { listOrbSavedOutputsResilient } from '@/lib/orb/orb-saved-outputs-resilience'
+import { listOrbSavedOutputsResilient, orbLocalSavedOutputAsRecord } from '@/lib/orb/orb-saved-outputs-resilience'
 import type { StandaloneProject, StandaloneWorkspace } from '@/lib/orb/standalone-local-store'
 
 const TYPE_LABELS: Record<string, string> = {
@@ -144,30 +144,14 @@ export function OrbSavedOutputsPanel({
     }
     if (selectedId.startsWith('local_')) {
       const local = getOrbLocalSavedOutput(selectedId)
-      setDetail(
-        local
-          ? ({
-              ...local,
-              content_markdown: local.content_markdown,
-              intelligence_output: { title: local.title, summary: local.summary || '' }
-            } as OrbSavedOutputRecord)
-          : null
-      )
+      setDetail(local ? orbLocalSavedOutputAsRecord(local) : null)
       return
     }
     void getOrbSavedOutput(selectedId)
       .then(setDetail)
       .catch(() => {
         const local = getOrbLocalSavedOutput(selectedId)
-        setDetail(
-          local
-            ? ({
-                ...local,
-                content_markdown: local.content_markdown,
-                intelligence_output: { title: local.title, summary: local.summary || '' }
-              } as OrbSavedOutputRecord)
-            : null
-        )
+        setDetail(local ? orbLocalSavedOutputAsRecord(local) : null)
       })
   }, [selectedId])
 

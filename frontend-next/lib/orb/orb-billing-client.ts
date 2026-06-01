@@ -220,7 +220,7 @@ export async function saveOrbOnboarding(payload: Record<string, unknown>) {
 
 export async function trackOrbAnalytics(event: string, metadata?: Record<string, unknown>) {
   try {
-    await fetch(ORB_BILLING_API.analytics, {
+    await authFetch(ORB_BILLING_API.analytics, {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },

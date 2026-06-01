@@ -1,80 +1,95 @@
+'use client'
+
 import { AuthApiError } from '@/lib/auth/api'
 
+import type { OrbResidentialProjectMemory } from '@/lib/orb/orb-residential-projects'
 import {
   fetchOrbServerProjects,
   mergeServerProjectsWithLocal,
   syncOrbProjectsToServer,
   type OrbServerProject
 } from '@/lib/orb/orb-projects-client'
-import type { OrbResidentialProjectMemory } from '@/lib/orb/orb-residential-projects'
 import { recordOrbFetchOutcome, shouldSkipAuthenticatedOrbFetch } from '@/lib/orb/orb-session-gate'
+import {
+  DEFAULT_STANDALONE_PROJECTS,
+  STANDALONE_GENERAL_PROJECT_ID
+} from '@/lib/orb/standalone-local-store'
 
-const SEED_PROJECT_PREFIX = 'orb-residential-seed-'
-let syncInFlight: Promise<void> | null = null
-let lastSyncAt = 0
-const SYNC_DEBOUNCE_MS = 8_000
+const ORB_RESIDENTIAL_SEED_PROJECT_IDS = new Set([
+  STANDALONE_GENERAL_PROJECT_ID,
+  ...DEFAULT_STANDALONE_PROJECTS.map((project) => project.id),
+  'project-my-home',
+  'project-inspection-prep',
+  'project-templates',
+  'project-training'
+])
 
-export function isOrbSeedProjectId(id: string): boolean {
-  return id.startsWith(SEED_PROJECT_PREFIX) || id.startsWith('seed-')
+const SYNC_DEBOUNCE_MS = 1200
+let syncTimer: ReturnType<typeof setTimeout> | null = null
+let syncInFlight = false
+
+export function isOrbSeedProjectId(projectId: string): boolean {
+  const id = projectId.trim()
+  if (!id) return true
+  if (ORB_RESIDENTIAL_SEED_PROJECT_IDS.has(id)) return true
+  return id.startsWith('orb-residential-seed')
 }
 
-export function isValidOrbProjectIdForApi(id: string): boolean {
-  if (!id?.trim()) return false
+/** Client-only / template project IDs must not be PATCH/POST'd to the API. */
+export function isValidOrbProjectIdForApi(projectId: string): boolean {
+  const id = projectId.trim()
+  if (!id || id.length > 80) return false
   if (isOrbSeedProjectId(id)) return false
-  return /^[a-zA-Z0-9_-]{8,64}$/.test(id) || /^\d+$/.test(id)
-}
-
-export type OrbProjectsFetchResult = {
-  server: OrbServerProject[]
-  usedLocalFallback: boolean
-  error: 'auth' | 'server' | null
-}
-
-export async function fetchOrbProjectsResilient(): Promise<OrbProjectsFetchResult> {
-  if (shouldSkipAuthenticatedOrbFetch()) {
-    return { server: [], usedLocalFallback: true, error: 'auth' }
-  }
-  try {
-    const server = await fetchOrbServerProjects()
-    recordOrbFetchOutcome(null)
-    return { server, usedLocalFallback: false, error: null }
-  } catch (caught) {
-    const status = caught instanceof AuthApiError ? caught.status : 503
-    recordOrbFetchOutcome(caught)
-    if (status === 401 || status === 403) {
-      return { server: [], usedLocalFallback: true, error: 'auth' }
-    }
-    return { server: [], usedLocalFallback: true, error: 'server' }
-  }
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/.test(id)) return false
+  return true
 }
 
 export function mergeOrbProjectsSafely(
   local: OrbResidentialProjectMemory[],
   server: OrbServerProject[]
 ): OrbResidentialProjectMemory[] {
-  if (!server.length) return local
   return mergeServerProjectsWithLocal(local, server)
 }
 
-export async function syncOrbProjectsDebounced(projects: OrbResidentialProjectMemory[]): Promise<void> {
-  if (shouldSkipAuthenticatedOrbFetch()) return
-  const syncable = projects.filter((p) => isValidOrbProjectIdForApi(p.id))
-  if (!syncable.length) return
-  const now = Date.now()
-  if (now - lastSyncAt < SYNC_DEBOUNCE_MS) return
-  if (syncInFlight) return syncInFlight
-
-  const run = async () => {
-    lastSyncAt = Date.now()
-    try {
-      await syncOrbProjectsToServer(syncable)
-      recordOrbFetchOutcome(null)
-    } catch (caught) {
-      recordOrbFetchOutcome(caught)
-    } finally {
-      syncInFlight = null
-    }
+export async function fetchOrbProjectsResilient(): Promise<{
+  server: OrbServerProject[]
+  usedLocalFallback: boolean
+}> {
+  if (shouldSkipAuthenticatedOrbFetch()) {
+    return { server: [], usedLocalFallback: true }
   }
-  syncInFlight = run()
-  return syncInFlight
+  try {
+    const server = await fetchOrbServerProjects()
+    recordOrbFetchOutcome(null)
+    return { server, usedLocalFallback: false }
+  } catch (error) {
+    recordOrbFetchOutcome(error)
+    if (error instanceof AuthApiError && process.env.NODE_ENV === 'development') {
+      console.debug('[orb-projects] list failed', error.status, error.message)
+    }
+    return { server: [], usedLocalFallback: true }
+  }
+}
+
+export function syncOrbProjectsDebounced(projects: OrbResidentialProjectMemory[]): void {
+  if (shouldSkipAuthenticatedOrbFetch()) return
+  const syncable = projects.filter((project) => isValidOrbProjectIdForApi(project.id))
+  if (!syncable.length) return
+  if (syncTimer) clearTimeout(syncTimer)
+  syncTimer = setTimeout(() => {
+    syncTimer = null
+    if (syncInFlight) return
+    syncInFlight = true
+    void syncOrbProjectsToServer(syncable)
+      .then(() => recordOrbFetchOutcome(null))
+      .catch((error) => {
+        recordOrbFetchOutcome(error)
+        if (process.env.NODE_ENV === 'development') {
+          console.debug('[orb-projects] sync failed', error)
+        }
+      })
+      .finally(() => {
+        syncInFlight = false
+      })
+  }, SYNC_DEBOUNCE_MS)
 }
