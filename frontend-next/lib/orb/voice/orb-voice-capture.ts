@@ -3,6 +3,8 @@
  * Safe to import from tests without React.
  */
 
+import { confirmMediaRecorderStart } from '@/lib/orb/voice/orb-speech-recognition-start'
+
 export type OrbVoiceCaptureState =
   | 'idle'
   | 'requesting_permission'
@@ -75,6 +77,8 @@ export function releaseMicrophoneStream(stream: MediaStream | null | undefined) 
 export type MediaRecorderCapture = {
   stop: () => Promise<{ blob: Blob | null; mimeType: string }>
   cancel: () => void
+  /** Present on captures from startMediaRecorderCapture — used for confirmed start. */
+  recorder?: MediaRecorder
 }
 
 /** Record audio via MediaRecorder when Web Speech Recognition is unavailable. */
@@ -109,6 +113,7 @@ export function startMediaRecorderCapture(
   recorder.start(timeslice)
 
   return {
+    recorder,
     stop: () =>
       new Promise((resolve) => {
         if (recorder.state === 'inactive') {
@@ -137,6 +142,22 @@ export function startMediaRecorderCapture(
       }
     }
   }
+}
+
+/** Start MediaRecorder and resolve only after the recorder start event fires. */
+export async function startMediaRecorderCaptureConfirmed(
+  stream: MediaStream,
+  options?: { mimeType?: string; timesliceMs?: number }
+): Promise<MediaRecorderCapture | null> {
+  const capture = startMediaRecorderCapture(stream, options)
+  if (!capture) return null
+  if (!capture.recorder) return capture
+  const ok = await confirmMediaRecorderStart(capture.recorder)
+  if (!ok) {
+    capture.cancel()
+    return null
+  }
+  return capture
 }
 
 export function isActiveCaptureState(state: OrbVoiceCaptureState): boolean {

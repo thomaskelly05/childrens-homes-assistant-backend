@@ -97,9 +97,13 @@ describe('ORB mic gating and routing', () => {
     const hook = readComponent('components/orb-standalone/use-standalone-orb-voice.ts')
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
     assert.match(hook, /beginSpeechRecognitionCapture/)
+    assert.match(hook, /startRecognitionSessionConfirmed/)
+    assert.match(hook, /confirmSpeechRecognitionStart/)
     assert.match(station, /beginSpeechRecognitionCapture/)
     assert.doesNotMatch(station, /beginUserVoiceCapture\(\)/)
     assert.match(station, /beginBrowserSpeechCapture/)
+    assert.match(station, /VOICE_CAPTURE_WATCHDOG_MS/)
+    assert.match(station, /showSpeakControl[\s\S]*captureActive/)
   })
 
   it('voice routes to dictate when speech recognition unavailable', () => {

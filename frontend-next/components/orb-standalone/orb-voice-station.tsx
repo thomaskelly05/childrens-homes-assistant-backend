@@ -43,6 +43,14 @@ type VoiceApi = ReturnType<typeof useStandaloneOrbVoice>
 const SAFETY_COPY =
   'ORB Voice supports professional judgement. If there is immediate risk, follow your home\'s procedures and contact emergency services where required.'
 
+const VOICE_CAPTURE_WATCHDOG_MS = 3000
+
+const SPEECH_RECOGNITION_FALLBACK =
+  'Speech recognition could not start. Open Dictate or type instead.'
+
+const MIC_WATCHDOG_MESSAGE =
+  'Microphone did not start. Open Dictate or check Safari microphone settings.'
+
 function newTurnId() {
   return `turn_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 }
@@ -268,6 +276,7 @@ export function OrbVoiceStation({
   )
   const showSpeakControl =
     sessionActive &&
+    captureActive &&
     !isRealtimeActive &&
     speechRecognitionOk &&
     (settings.pushToTalk || usingBrowserSpeechRecognition)
@@ -295,6 +304,16 @@ export function OrbVoiceStation({
   useEffect(() => {
     if (!open) resetSession()
   }, [open, resetSession])
+
+  useEffect(() => {
+    if (!open || !sessionActive || captureActive) return
+    const timer = window.setTimeout(() => {
+      resetSession()
+      setFallbackNotice(MIC_WATCHDOG_MESSAGE)
+      setMicTestMessage(MIC_WATCHDOG_MESSAGE)
+    }, VOICE_CAPTURE_WATCHDOG_MS)
+    return () => window.clearTimeout(timer)
+  }, [open, sessionActive, captureActive, resetSession])
 
   useEffect(() => {
     if (!sessionActive || !open) return
@@ -567,10 +586,7 @@ export function OrbVoiceStation({
       realtimeRef.current?.stop()
       realtimeRef.current = null
       setVoiceSession(null)
-      setFallbackNotice(
-        voice.error ||
-          'Speech recognition could not start. Open Dictate or type instead.'
-      )
+      setFallbackNotice(voice.error || SPEECH_RECOGNITION_FALLBACK)
       setRealtimeUiState('error')
       if (onOpenDictate) {
         setMicTestMessage('Opening ORB Dictate for recording…')
@@ -724,7 +740,7 @@ export function OrbVoiceStation({
           </p>
         ) : null}
 
-        {sessionActive && providerLabel ? (
+        {sessionActive && captureActive && providerLabel ? (
           <p className="mt-1 text-center text-[10px] text-[var(--orb-muted)]" data-orb-voice-provider>
             {providerLabel}
           </p>
@@ -847,18 +863,28 @@ export function OrbVoiceStation({
             >
               {startButtonLabel}
             </button>
-          ) : (
+          ) : captureActive ? (
             <>
               {isRealtimeActive || showSpeakControl ? (
                 <button
                   type="button"
-                  onClick={() =>
-                    realtimeRef.current?.usesOpenAIWebRTC
-                      ? void realtimeRef.current.interrupt()
-                      : voice.listening
-                        ? voice.cancelListening()
-                        : void voice.beginSpeechRecognitionCapture({ mode: 'continuous' })
-                  }
+                  onClick={() => {
+                    if (realtimeRef.current?.usesOpenAIWebRTC) {
+                      void realtimeRef.current.interrupt()
+                      return
+                    }
+                    if (voice.listening) {
+                      voice.cancelListening()
+                      return
+                    }
+                    void voice.beginSpeechRecognitionCapture({ mode: 'continuous' }).then((ok) => {
+                      if (!ok) {
+                        setFallbackNotice(voice.error || SPEECH_RECOGNITION_FALLBACK)
+                        setMicTestMessage(voice.error || SPEECH_RECOGNITION_FALLBACK)
+                        if (onOpenDictate) onOpenDictate('')
+                      }
+                    })
+                  }}
                   className="inline-flex items-center gap-2 rounded-full border border-[var(--orb-line)] px-4 py-2 text-sm font-medium text-[var(--orb-foreground)]"
                   data-orb-voice-mute-toggle
                   aria-label={
@@ -913,16 +939,26 @@ export function OrbVoiceStation({
                   Save transcript
                 </button>
               ) : null}
+              <button
+                type="button"
+                onClick={handleEnd}
+                className="rounded-full px-4 py-2 text-sm font-medium text-[var(--orb-muted)] hover:text-[var(--orb-foreground)]"
+                data-orb-voice-end
+              >
+                End
+              </button>
             </>
+          ) : (
+            <button
+              type="button"
+              onClick={handleEnd}
+              className="rounded-full px-4 py-2 text-sm font-medium text-[var(--orb-muted)] hover:text-[var(--orb-foreground)]"
+              data-orb-voice-end
+              data-orb-voice-end-starting
+            >
+              End
+            </button>
           )}
-          <button
-            type="button"
-            onClick={handleEnd}
-            className="rounded-full px-4 py-2 text-sm font-medium text-[var(--orb-muted)] hover:text-[var(--orb-foreground)]"
-            data-orb-voice-end
-          >
-            End
-          </button>
         </div>
 
         {saveNotice ? (
@@ -935,7 +971,7 @@ export function OrbVoiceStation({
           <div className="mt-4 flex flex-wrap justify-center gap-2" data-orb-voice-dictate-actions>
             <button
               type="button"
-              className="rounded-full border border-sky-400/40 bg-sky-500/10 px-3 py-1.5 text-xs text-sky-100"
+              className="rounded-full border border-[var(--orb-line)] bg-[var(--orb-primary-soft)] px-3 py-1.5 text-xs text-[var(--orb-primary)]"
               data-orb-voice-to-dictate
               onClick={() => onOpenDictate(formatTurnsAsTranscript(turns))}
             >
@@ -943,7 +979,7 @@ export function OrbVoiceStation({
             </button>
             <button
               type="button"
-              className="rounded-full border border-violet-400/40 bg-violet-500/10 px-3 py-1.5 text-xs text-violet-100"
+              className="rounded-full border border-[var(--orb-line)] bg-[var(--orb-primary-soft)] px-3 py-1.5 text-xs text-[var(--orb-primary)]"
               data-orb-voice-to-dictate-studio
               onClick={() => onOpenDictate(formatTurnsAsTranscript(turns), 'daily_record', { studio: true })}
             >
