@@ -149,10 +149,7 @@ import {
   isRealtimeVoiceProvider,
   startOrbVoiceSession
 } from '@/lib/orb/voice/orb-voice-client'
-import {
-  detectSpeechRecognitionSupported,
-  isSafariBrowser
-} from '@/lib/orb/voice/orb-voice-readiness'
+import { isSafariBrowser } from '@/lib/orb/voice/orb-voice-readiness'
 import { useOrbSessionGate } from '@/hooks/use-orb-session-gate'
 import { useMounted } from '@/hooks/use-mounted'
 import { getCsrfToken, STANDALONE_ORB_CSRF_REFRESH_MESSAGE } from '@/lib/auth/api'
