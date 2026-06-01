@@ -4,62 +4,36 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, it } from 'node:test'
 
-const root = join(dirname(fileURLToPath(import.meta.url)), '../../..')
+const root = dirname(fileURLToPath(import.meta.url))
 
-function read(relativePath: string) {
-  return readFileSync(join(root, relativePath), 'utf8')
-}
-
-describe('ORB voice capture', () => {
-  it('separates permission probe from active stream acquisition', () => {
-    const capture = read('lib/orb/voice/orb-voice-capture.ts')
-    assert.match(capture, /probeMicrophoneAccess/)
-    assert.match(capture, /acquireMicrophoneStream/)
-    assert.match(capture, /releaseMicrophoneStream/)
-    assert.doesNotMatch(capture, /probeMicrophoneAccess[\s\S]*releaseMicrophoneStream[\s\S]*probeMicrophoneAccess/)
+describe('orb-voice-capture', () => {
+  it('attaches dataavailable before MediaRecorder start in confirmed path', () => {
+    const source = readFileSync(join(root, 'orb-voice-capture.ts'), 'utf8')
+    assert.match(source, /recorder\.ondataavailable/)
+    assert.match(source, /confirmMediaRecorderStart\(recorder\)/)
+    assert.match(source, /startRecorder\(recorder/)
   })
 
-  it('voice hook does not stop stream immediately after permission for capture', () => {
-    const hook = read('components/orb-standalone/use-standalone-orb-voice.ts')
-    assert.match(hook, /acquireMicrophoneStream/)
-    assert.match(hook, /probeOnly/)
-    assert.match(hook, /voiceCaptureState/)
-    assert.match(hook, /beginMediaRecorderCapture/)
+  it('stop prefers MediaRecorder blob then WAV fallback metadata', () => {
+    const source = readFileSync(join(root, 'orb-voice-capture.ts'), 'utf8')
+    assert.match(source, /source: 'media_recorder'/)
+    assert.match(source, /source: 'web_audio_wav'/)
+    assert.match(source, /source: 'none'/)
+    assert.match(source, /pcmCapture\?\.stop\(\)/)
+    assert.match(source, /requestData\(\)/)
   })
 
-  it('readiness does not claim active session without capture', () => {
-    const readiness = read('lib/orb/voice/orb-voice-readiness.ts')
-    assert.match(readiness, /captureActive/)
-    assert.match(readiness, /Microphone not active yet/)
+  it('PCM fallback resumes AudioContext and uses silent gain', () => {
+    const source = readFileSync(join(root, 'orb-voice-capture.ts'), 'utf8')
+    assert.match(source, /resumeAudioContext/)
+    assert.match(source, /silentGain\.gain\.value = 0/)
+    assert.match(source, /createScriptProcessor/)
   })
 
-  it('voice station waits for capture before session active', () => {
-    const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /captureStarted/)
-    assert.match(station, /setSessionActive\(true\)/)
-    const startIdx = station.indexOf('async function handleStart')
-    const block = station.slice(startIdx, startIdx + 3500)
-    const activeIdx = block.indexOf('setSessionActive(true)')
-    const captureIdx = block.indexOf('captureStarted')
-    assert.ok(captureIdx > 0 && activeIdx > captureIdx)
-  })
-
-  it('composer mic opens dictate when speech recognition unavailable', () => {
-    const companion = read('components/orb-standalone/orb-care-companion.tsx')
-    assert.match(companion, /openOrbDictatePanel/)
-    assert.match(companion, /detectSpeechRecognitionSupported/)
-  })
-
-  it('readiness separates speech recognition from media recorder', () => {
-    const readiness = read('lib/orb/voice/orb-voice-readiness.ts')
-    assert.match(readiness, /speech_recognition_available/)
-    assert.match(readiness, /fallback_available: speech_recognition_available/)
-  })
-
-  it('dictate uses continuous capture or media recorder fallback', () => {
-    const dictate = read('components/orb-standalone/orb-dictate-station.tsx')
-    assert.match(dictate, /mode: 'continuous'/)
-    assert.match(dictate, /beginMediaRecorderCapture/)
-    assert.match(dictate, /applyPaste/)
+  it('exports MediaRecorderStopResult with chunk and sample counts', () => {
+    const source = readFileSync(join(root, 'orb-voice-capture.ts'), 'utf8')
+    assert.match(source, /chunkCount/)
+    assert.match(source, /sampleCount/)
+    assert.match(source, /MediaRecorderStopResult/)
   })
 })

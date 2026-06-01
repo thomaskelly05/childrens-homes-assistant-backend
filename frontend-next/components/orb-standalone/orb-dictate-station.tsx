@@ -38,7 +38,9 @@ import {
   saveOrbDictateNote,
   transcribeOrbDictateAudio
 } from '@/lib/orb/dictate/orb-dictate-client'
+import { emitOrbClientDebug } from '@/lib/orb/orb-client-debug'
 import { orbMicDevLog } from '@/lib/orb/voice/orb-mic-access'
+import type { MediaRecorderCaptureSource } from '@/lib/orb/voice/orb-voice-capture'
 import {
   detectMediaRecorderSupported,
   detectSpeechRecognitionSupported,
@@ -84,6 +86,29 @@ function formatTimer(seconds: number) {
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
+export type OrbDictateRecordingUiState =
+  | 'idle'
+  | 'starting'
+  | 'recording'
+  | 'stopping'
+  | 'processing'
+  | 'stopped'
+  | 'error'
+
+function extensionForAudioMime(mimeType: string): string {
+  const lower = mimeType.toLowerCase()
+  if (lower.includes('wav')) return '.wav'
+  if (lower.includes('mp4') || lower.includes('m4a')) return '.mp4'
+  if (lower.includes('mpeg') || lower.includes('mp3')) return '.mp3'
+  return '.webm'
+}
+
+function captureSourceLabel(source: MediaRecorderCaptureSource): string {
+  if (source === 'media_recorder') return 'Audio captured via browser recorder'
+  if (source === 'web_audio_wav') return 'Audio captured via WAV fallback'
+  return ''
+}
+
 export function OrbDictateStation({
   open,
   onClose,
@@ -93,7 +118,8 @@ export function OrbDictateStation({
   onOpenTemplates,
   initialTranscript,
   initialNoteType,
-  initialStudio
+  initialStudio,
+  initialAutoStart = false
 }: {
   open: boolean
   onClose: () => void
@@ -104,13 +130,14 @@ export function OrbDictateStation({
   initialTranscript?: string
   initialNoteType?: OrbDictateNoteType
   initialStudio?: boolean
+  /** When true, start recording once the panel opens (composer mic / ?mic=dictate). */
+  initialAutoStart?: boolean
 }) {
   const [startMode, setStartMode] = useState<OrbDictateStartMode | null>(null)
   const [noteType, setNoteType] = useState<OrbDictateNoteType>(initialNoteType ?? 'daily_record')
   const [transcript, setTranscript] = useState('')
   const [pasteText, setPasteText] = useState('')
-  const [recordingActive, setRecordingActive] = useState(false)
-  const [captureStarting, setCaptureStarting] = useState(false)
+  const [recordingUiState, setRecordingUiState] = useState<OrbDictateRecordingUiState>('idle')
   const [recordingPaused, setRecordingPaused] = useState(false)
   const [timerSec, setTimerSec] = useState(0)
   const [consentConfirmed, setConsentConfirmed] = useState(false)
@@ -137,12 +164,20 @@ export function OrbDictateStation({
   const [reflectiveDraft, setReflectiveDraft] = useState('')
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const recorderModeRef = useRef<'speech' | 'media' | null>(null)
+  const [recorderMode, setRecorderMode] = useState<'speech' | 'media' | 'none'>('none')
   const transcriptBufferRef = useRef<string[]>([])
   const lastDictateTranscriptRef = useRef('')
   const [backendTranscriptionAvailable, setBackendTranscriptionAvailable] = useState<boolean | 'unknown'>(
     'unknown'
   )
   const [recordedAudioLabel, setRecordedAudioLabel] = useState<string | null>(null)
+  const [lastCaptureSource, setLastCaptureSource] = useState<MediaRecorderCaptureSource>('none')
+  const [lastAudioByteSize, setLastAudioByteSize] = useState(0)
+  const autoStartAttemptedRef = useRef(false)
+  const autoStartPendingRef = useRef(initialAutoStart)
+
+  const recordingActive = recordingUiState === 'recording'
+  const captureStarting = recordingUiState === 'starting'
 
   const needsConsent = startMode === 'record_debrief' || dictateMode !== 'rough_note'
 
@@ -184,12 +219,14 @@ export function OrbDictateStation({
   }, [dictateMode])
 
   const resetRecording = useCallback(() => {
-    setRecordingActive(false)
-    setCaptureStarting(false)
+    setRecordingUiState('idle')
     setRecordingPaused(false)
     setTimerSec(0)
     recorderModeRef.current = null
+    setRecorderMode('none')
     lastDictateTranscriptRef.current = ''
+    setLastCaptureSource('none')
+    setLastAudioByteSize(0)
     voice.cancelListening()
     if (timerRef.current) clearInterval(timerRef.current)
   }, [voice])
@@ -206,14 +243,29 @@ export function OrbDictateStation({
       setOutput(null)
       setStatusMessage(null)
       setPhase('capture')
+      autoStartAttemptedRef.current = false
+      autoStartPendingRef.current = initialAutoStart
       return
     }
+    autoStartPendingRef.current = initialAutoStart
     if (initialTranscript) {
       setTranscript(initialTranscript)
       setStartMode('import_voice')
     }
     if (initialStudio) setPhase('studio')
-  }, [open, initialTranscript, initialStudio, resetRecording])
+  }, [open, initialTranscript, initialStudio, initialAutoStart, resetRecording])
+
+  useEffect(() => {
+    if (!open || !initialAutoStart || autoStartAttemptedRef.current) return
+    if (recordingUiState !== 'idle' || uploadingAudio) return
+    autoStartAttemptedRef.current = true
+    const timer = window.setTimeout(() => {
+      if (!autoStartPendingRef.current) return
+      void handleStartRecording('record_note')
+    }, 120)
+    return () => window.clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialAutoStart, recordingUiState, uploadingAudio])
 
   useEffect(() => {
     if (!recordingActive || recordingPaused) return
@@ -279,24 +331,29 @@ export function OrbDictateStation({
     if (mode) setStartMode(mode)
     transcriptBufferRef.current = transcript.trim() ? [transcript.trim()] : []
     lastDictateTranscriptRef.current = ''
-    setRecordingActive(false)
-    setCaptureStarting(true)
+    setRecordingUiState('starting')
     setRecordingPaused(false)
     setStatusMessage(null)
     setRecordedAudioLabel(null)
+    setLastCaptureSource('none')
+    setLastAudioByteSize(0)
 
     const startMediaRecorder = async (): Promise<boolean> => {
       recorderModeRef.current = 'media'
+      setRecorderMode('media')
       const ok = await voice.beginMediaRecorderCapture()
       if (!ok) {
         const denied = voice.error?.toLowerCase().includes('microphone')
+        setRecordingUiState('error')
         setStatusMessage(denied ? MIC_BLOCKED_MESSAGE : 'Audio capture is unavailable in this browser — paste or upload a transcript instead.')
         orbMicDevLog('media recorder failed', voice.error ?? 'unknown')
+        emitOrbClientDebug({ area: 'dictate', event: 'record_start_failed', detail: { mode: 'media', error: voice.error } })
         return false
       }
       setStatusMessage('Recording audio. Automatic transcription depends on backend availability.')
-      setRecordingActive(true)
+      setRecordingUiState('recording')
       orbMicDevLog('media recorder started')
+      emitOrbClientDebug({ area: 'dictate', event: 'record_started', detail: { mode: 'media' } })
       return true
     }
 
@@ -304,20 +361,20 @@ export function OrbDictateStation({
 
     if (!preferMediaRecorder && speechRecognitionAvailable) {
       recorderModeRef.current = 'speech'
+      setRecorderMode('speech')
       const ok = await voice.beginUserVoiceCapture({ mode: 'continuous' })
-      setCaptureStarting(false)
       if (ok) {
-        setRecordingActive(true)
+        setRecordingUiState('recording')
         orbMicDevLog('speech capture started')
+        emitOrbClientDebug({ area: 'dictate', event: 'record_started', detail: { mode: 'speech' } })
         return
       }
       if (mediaRecorderAvailable) {
-        setCaptureStarting(true)
+        setRecordingUiState('starting')
         const mediaOk = await startMediaRecorder()
-        setCaptureStarting(false)
         if (mediaOk) return
       }
-      setRecordingActive(false)
+      setRecordingUiState('error')
       const denied = voice.error?.toLowerCase().includes('microphone')
       setStatusMessage(
         denied
@@ -329,12 +386,12 @@ export function OrbDictateStation({
               : voice.error || SPEECH_START_FAILED_MESSAGE
       )
       orbMicDevLog('speech capture failed', voice.error ?? 'unknown')
+      emitOrbClientDebug({ area: 'dictate', event: 'record_start_failed', detail: { mode: 'speech', error: voice.error } })
       return
     }
 
     const mediaOk = await startMediaRecorder()
-    setCaptureStarting(false)
-    if (!mediaOk) setRecordingActive(false)
+    if (!mediaOk) setRecordingUiState('error')
   }
 
   function handleSelectStartMode(id: OrbDictateStartMode) {
@@ -360,35 +417,57 @@ export function OrbDictateStation({
       return
     }
     setRecordingPaused(false)
-    setCaptureStarting(true)
-    setRecordingActive(false)
+    setRecordingUiState('starting')
     if (recorderModeRef.current === 'speech') {
       const ok = await voice.beginUserVoiceCapture({ mode: 'continuous' })
-      setCaptureStarting(false)
       if (!ok) {
+        setRecordingUiState('error')
         setStatusMessage(voice.error || SPEECH_START_FAILED_MESSAGE)
         return
       }
-      setRecordingActive(true)
+      setRecordingUiState('recording')
     }
   }
 
   async function handleStopRecording() {
     const effectiveNeedsConsent = startMode === 'record_debrief' || dictateMode !== 'rough_note'
     if (recorderModeRef.current === 'media') {
-      setRecordingActive(false)
-      setCaptureStarting(false)
+      setRecordingUiState('stopping')
       setRecordingPaused(false)
       setStatusMessage('Stopping recording…')
       if (timerRef.current) clearInterval(timerRef.current)
-      const blob = await voice.endMediaRecorderCapture()
-      if (blob) {
+      emitOrbClientDebug({ area: 'dictate', event: 'record_stop_requested', detail: { mode: 'media' } })
+
+      const captureResult = await voice.endMediaRecorderCapture()
+      const blob = captureResult?.blob ?? null
+      const source = captureResult?.source ?? 'none'
+      const byteSize = captureResult?.size ?? blob?.size ?? 0
+
+      setLastCaptureSource(source)
+      setLastAudioByteSize(byteSize)
+      emitOrbClientDebug({
+        area: 'dictate',
+        event: 'record_stopped',
+        detail: {
+          source,
+          size: byteSize,
+          chunkCount: captureResult?.chunkCount,
+          sampleCount: captureResult?.sampleCount,
+          recorderMimeType: captureResult?.recorderMimeType
+        }
+      })
+
+      if (blob && byteSize > 0) {
+        setRecordingUiState('processing')
         setUploadingAudio(true)
-        setRecordedAudioLabel('Recorded note')
-        setUploadFileLabel('Recorded note')
+        const sourceLabel = captureSourceLabel(source)
+        setRecordedAudioLabel(sourceLabel || 'Recorded note')
+        setUploadFileLabel(sourceLabel || 'Recorded note')
         setStatusMessage('Audio captured. Preparing transcription…')
         try {
-          const file = new File([blob], `dictate-recording-${Date.now()}.webm`, { type: blob.type || 'audio/webm' })
+          const mime = blob.type || captureResult?.mimeType || 'audio/webm'
+          const ext = extensionForAudioMime(mime)
+          const file = new File([blob], `dictate-recording-${Date.now()}${ext}`, { type: mime })
           const result = await transcribeOrbDictateAudio(file, {
             conversation_consent_confirmed: effectiveNeedsConsent ? authorityConsent && consentConfirmed : undefined
           })
@@ -400,19 +479,27 @@ export function OrbDictateStation({
           if (result.participants?.length) setParticipants(result.participants)
           setStartMode('paste')
           setOutputTab('transcript')
+          setRecordingUiState('stopped')
           setStatusMessage('Recording transcribed — review before generating.')
         } catch {
           setBackendTranscriptionAvailable(false)
-          const notice = 'Audio captured. Automatic transcription is not available yet. Paste a transcript to generate professional wording.'
+          setRecordingUiState('stopped')
+          const notice = `${captureSourceLabel(source) || 'Audio captured'}. Automatic transcription is not available yet. Paste a transcript to generate professional wording.`
           setUploadError(notice)
           setStatusMessage(notice)
         } finally {
           setUploadingAudio(false)
         }
       } else {
-        setStatusMessage('Recording stopped, but no audio was captured. Try again or paste a transcript.')
+        setRecordingUiState('error')
+        setStatusMessage(
+          'Your browser allowed the microphone but did not provide audio data. Try Chrome/Edge, upload audio, or paste a transcript.'
+        )
       }
-      resetRecording()
+      recorderModeRef.current = null
+      setRecorderMode('none')
+      lastDictateTranscriptRef.current = ''
+      if (timerRef.current) clearInterval(timerRef.current)
       return
     }
 
@@ -427,6 +514,7 @@ export function OrbDictateStation({
     setOutputTab('transcript')
     voice.clearTranscript()
     lastDictateTranscriptRef.current = ''
+    setRecordingUiState(joined ? 'stopped' : 'idle')
     resetRecording()
     if (joined) setStatusMessage('Recording stopped — review your transcript before generating.')
   }
@@ -709,7 +797,14 @@ export function OrbDictateStation({
       size={phase === 'studio' ? 'xlarge' : 'wide'}
       ariaLabel={phase === 'studio' ? 'ORB Dictate Studio' : 'ORB Dictate'}
     >
-      <div className="orb-dictate pointer-events-auto flex min-h-0 flex-1 flex-col" data-orb-dictate-station>
+      <div
+        className="orb-dictate pointer-events-auto flex min-h-0 flex-1 flex-col"
+        data-orb-dictate-station
+        data-orb-dictate-recording-state={recordingUiState}
+        data-orb-dictate-recorder-mode={recorderMode}
+        data-orb-dictate-audio-size={lastAudioByteSize > 0 ? String(lastAudioByteSize) : undefined}
+        data-orb-dictate-status={(statusMessage ?? recordingUiState).slice(0, 120)}
+      >
         {phase === 'studio' && output ? (
           <OrbDictateStudio output={output} participants={participants} segments={segments} onBack={() => setPhase('capture')} onSendToChat={onSendToChat} onOpenOrbVoice={onOpenOrbVoice} onStatusMessage={setStatusMessage} />
         ) : (

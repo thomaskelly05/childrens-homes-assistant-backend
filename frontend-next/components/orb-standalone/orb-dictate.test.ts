@@ -94,8 +94,8 @@ describe('ORB Dictate', () => {
 
   it('speaker-aware actions render', () => {
     const station = readComponent('components/orb-standalone/orb-dictate-station.tsx')
-    assert.match(station, /data-orb-dictate-speaker-actions/)
-    assert.match(station, /data-orb-dictate-action-anonymise/)
+    assert.match(station, /runSpeakerAction/)
+    assert.match(station, /action === 'anonymise'/)
   })
 
   it('anonymise replaces names with roles', () => {
@@ -132,7 +132,7 @@ describe('ORB Dictate', () => {
 
   it('ORB Voice links to dictate', () => {
     const voice = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(voice, /data-orb-voice-to-dictate/)
+    assert.match(voice, /data-orb-voice-open-dictate/)
     assert.match(voice, /onOpenDictate/)
   })
 

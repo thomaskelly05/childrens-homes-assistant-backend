@@ -37,6 +37,8 @@ export function OrbStandaloneComposer({
   voiceStatusText,
   voiceCaptureEnabled = false,
   composerMicEnabled = true,
+  composerMicRoute = 'dictate',
+  composerMicReason = 'fallback',
   composerMicAriaLabel,
   composerMicTitle,
   transcriptReady,
@@ -83,6 +85,8 @@ export function OrbStandaloneComposer({
   voiceCaptureEnabled?: boolean
   /** When false, mic button is disabled (e.g. voice capture globally off). */
   composerMicEnabled?: boolean
+  composerMicRoute?: 'dictate' | 'voice'
+  composerMicReason?: string
   composerMicAriaLabel?: string
   composerMicTitle?: string
   transcriptReady: boolean
@@ -421,7 +425,8 @@ export function OrbStandaloneComposer({
                   title={micHint}
                   className={`pointer-events-auto inline-flex h-9 min-w-9 items-center justify-center rounded-full transition disabled:cursor-not-allowed disabled:opacity-40 ${voiceListening ? 'text-sky-300' : 'text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)]'}`}
                   data-orb-composer-mic
-                  data-orb-composer-mic-route={voiceRecognitionAvailable ? 'voice-or-capture' : 'dictate-fallback'}
+                  data-orb-composer-mic-route={composerMicRoute}
+                  data-orb-composer-mic-reason={composerMicReason}
                 >
                   {voiceListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
                 </button>
@@ -461,7 +466,8 @@ export function OrbStandaloneComposer({
                   className={`pointer-events-auto inline-flex h-10 min-w-10 shrink-0 items-center justify-center rounded-full transition disabled:cursor-not-allowed disabled:opacity-45 ${voiceListening ? 'bg-sky-100 text-sky-700 shadow-sm' : 'bg-white text-slate-500 shadow-sm hover:bg-slate-100 hover:text-slate-900'}`}
                   data-orb-composer-mic
                   data-orb-composer-mic-available={voiceRecognitionAvailable ? 'true' : 'false'}
-                  data-orb-composer-mic-route={voiceRecognitionAvailable ? 'voice-or-capture' : 'dictate-fallback'}
+                  data-orb-composer-mic-route={composerMicRoute}
+                  data-orb-composer-mic-reason={composerMicReason}
                   data-no-navigation-rescue="true"
                 >
                   {voiceListening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}

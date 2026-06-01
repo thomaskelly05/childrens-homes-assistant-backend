@@ -11,6 +11,7 @@ from middleware.security_middleware import AuditLoggingMiddleware, CsrfProtectio
 
 REQUIRED_PRODUCTION_ORIGINS = {
     "https://app.indicare.co.uk",
+    "https://www.app.indicare.co.uk",
     "https://indicare-frontend-next.onrender.com",
 }
 
@@ -18,9 +19,9 @@ REQUIRED_PRODUCTION_ORIGINS = {
 def allowed_origins() -> list[str]:
     app_env = os.getenv("APP_ENV", "development").strip().lower()
     default_origins = (
-        "https://app.indicare.co.uk,https://indicare-frontend-next.onrender.com"
+        "https://app.indicare.co.uk,https://www.app.indicare.co.uk,https://indicare-frontend-next.onrender.com"
         if app_env == "production"
-        else "https://app.indicare.co.uk,https://indicare-frontend-next.onrender.com,http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001"
+        else "https://app.indicare.co.uk,https://www.app.indicare.co.uk,https://indicare-frontend-next.onrender.com,http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001"
     )
     configured = os.getenv(
         "ALLOWED_ORIGINS",
