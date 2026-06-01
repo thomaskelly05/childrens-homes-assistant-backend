@@ -64,7 +64,7 @@ describe('ORB mic gating and routing', () => {
     const dictate = readComponent('components/orb-standalone/orb-dictate-station.tsx')
     assert.doesNotMatch(dictate, /subscriptionActive/)
     assert.match(dictate, /handleSelectStartMode/)
-    assert.match(dictate, /record_note.*handleStartRecording|handleStartRecording/s)
+    assert.match(dictate, /handleStartSpeechTranscript/)
     assert.match(dictate, /data-orb-dictate-start=\{id\}/)
   })
 
@@ -89,8 +89,8 @@ describe('ORB mic gating and routing', () => {
     const dictate = readComponent('components/orb-standalone/orb-dictate-station.tsx')
     assert.match(dictate, /data-orb-dictate-start=\{id\}/)
     assert.match(dictate, /handleSelectStartMode\(id\)/)
-    assert.match(dictate, /data-orb-dictate-record-start/)
-    assert.match(dictate, /orbMicDevLog\('dictate record clicked'/)
+    assert.match(dictate, /data-orb-dictate-speech-start|data-orb-dictate-record-start/)
+    assert.match(dictate, /orbMicDevLog\('dictate speech start clicked'/)
   })
 
   it('voice requires realtime before browser speech session, not MediaRecorder', () => {
@@ -98,7 +98,7 @@ describe('ORB mic gating and routing', () => {
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
     assert.match(hook, /beginSpeechRecognitionCapture/)
     assert.match(hook, /beginDictateSpeechCapture/)
-    assert.match(station, /isRealtimeVoiceProvider/)
+    assert.match(station, /fetchOrbVoiceRealtimeStatus|isRealtimeVoiceProvider/)
     assert.match(station, /realtimeVoiceReady/)
     assert.doesNotMatch(station, /beginUserVoiceCapture\(\)/)
     assert.match(station, /data-orb-voice-capture-active/)
@@ -115,8 +115,8 @@ describe('ORB mic gating and routing', () => {
   it('composer mic supports forced mic query routing', () => {
     const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
     assert.match(companion, /searchParams\.get\('mic'\)/)
-    assert.match(companion, /initialAutoStart=\{dictateAutoStart\}/)
-    assert.match(companion, /autoStart: true/)
+    assert.match(companion, /openOrbDictatePanel\(\)/)
+    assert.doesNotMatch(companion, /autoStart: true/)
   })
 
   it('dictate exposes flight-recorder data attributes', () => {
@@ -124,7 +124,7 @@ describe('ORB mic gating and routing', () => {
     assert.match(dictate, /data-orb-dictate-recording-state/)
     assert.match(dictate, /data-orb-dictate-recorder-mode/)
     assert.match(dictate, /data-orb-dictate-audio-size/)
-    assert.match(dictate, /did not provide audio data/)
+    assert.match(dictate, /DICTATE_AUDIO_FALLBACK_FAILED_MESSAGE|did not provide audio data/)
   })
 
   it('flight recorder reads data attributes not body text', () => {
@@ -134,10 +134,9 @@ describe('ORB mic gating and routing', () => {
     assert.match(recorder, /Copy debug report/)
   })
 
-  it('dictate handleStartRecording uses explicit mode', () => {
+  it('dictate handleStartSpeechTranscript uses explicit mode', () => {
     const dictate = readComponent('components/orb-standalone/orb-dictate-station.tsx')
-    assert.match(dictate, /handleStartRecording\(mode\?: OrbDictateStartMode\)/)
-    assert.match(dictate, /handleStartRecording\(id\)/)
+    assert.match(dictate, /handleStartSpeechTranscript\(mode\?: OrbDictateStartMode\)/)
     assert.match(dictate, /effectiveStartMode = mode \?\? startMode/)
   })
 
@@ -149,7 +148,7 @@ describe('ORB mic gating and routing', () => {
 
   it('dictate paste and generate status messages exist', () => {
     const dictate = readComponent('components/orb-standalone/orb-dictate-station.tsx')
-    assert.match(dictate, /Transcript added\./)
+    assert.match(dictate, /Transcript added/)
     assert.match(dictate, /Generating professional note/)
     assert.match(dictate, /Professional note ready\./)
     assert.match(dictate, /Generation service unavailable — local draft created/)

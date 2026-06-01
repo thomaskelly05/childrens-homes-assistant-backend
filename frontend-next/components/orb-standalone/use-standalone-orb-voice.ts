@@ -748,11 +748,28 @@ export function useStandaloneOrbVoice() {
   }, [requestMicrophonePermission, speechRecognitionFailureMessage, startRecognitionSessionConfirmed])
 
   const beginDictateSpeechCapture = useCallback(async (): Promise<boolean> => {
+    if (voiceSessionPausedRef.current) return false
+    const Recognition = getSpeechRecognitionCtor()
+    if (!Recognition) {
+      setError('Speech recognition is unavailable in this browser.')
+      setVoiceCaptureState('error')
+      return false
+    }
     dictateSpeechCaptureRef.current = true
-    const ok = await beginSpeechRecognitionCapture({ mode: 'continuous' })
-    if (!ok) dictateSpeechCaptureRef.current = false
-    return ok
-  }, [beginSpeechRecognitionCapture])
+    userInitiatedVoiceRef.current = true
+    setWakeStatus('off')
+    setError(null)
+    // SpeechRecognition.start() must run in the user-gesture stack — do not await getUserMedia first.
+    const startResult = await startRecognitionSessionConfirmed('continuous')
+    if (!startResult.ok) {
+      dictateSpeechCaptureRef.current = false
+      userInitiatedVoiceRef.current = false
+      setError(speechRecognitionFailureMessage(startResult.reason))
+      setVoiceCaptureState('error')
+      return false
+    }
+    return true
+  }, [speechRecognitionFailureMessage, startRecognitionSessionConfirmed])
 
   const beginUserVoiceCapture = useCallback(async (options?: { mode?: 'active' | 'continuous' }): Promise<boolean> => {
     userInitiatedVoiceRef.current = true
@@ -764,7 +781,6 @@ export function useStandaloneOrbVoice() {
     const Recognition = getSpeechRecognitionCtor()
     if (!Recognition) {
       dictateSpeechCaptureRef.current = false
-      if (detectMediaRecorderSupported()) return beginMediaRecorderCapture()
       setError('Speech recognition is unavailable in this browser.')
       setVoiceCaptureState('error')
       return false
@@ -780,14 +796,13 @@ export function useStandaloneOrbVoice() {
     const startResult = await startRecognitionSessionConfirmed(options?.mode ?? 'active')
     if (!startResult.ok) {
       dictateSpeechCaptureRef.current = false
-      if (detectMediaRecorderSupported()) return beginMediaRecorderCapture()
       userInitiatedVoiceRef.current = false
       setError(speechRecognitionFailureMessage(startResult.reason))
       setVoiceCaptureState('error')
       return false
     }
     return true
-  }, [beginMediaRecorderCapture, requestMicrophonePermission, speechRecognitionFailureMessage, startRecognitionSessionConfirmed])
+  }, [requestMicrophonePermission, speechRecognitionFailureMessage, startRecognitionSessionConfirmed])
 
   const endDictateSpeechCapture = useCallback(() => {
     dictateSpeechCaptureRef.current = false

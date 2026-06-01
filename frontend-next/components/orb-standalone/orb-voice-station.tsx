@@ -6,8 +6,6 @@ import { Mic, MicOff, Save, Square } from 'lucide-react'
 import { OrbAppModal } from '@/components/orb-standalone/orb-app-modal'
 import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
 import type { useStandaloneOrbVoice } from '@/components/orb-standalone/use-standalone-orb-voice'
-import { stripMarkdownForSpeech } from '@/lib/orb/orb-speech-text'
-import { frameMessageForOrbVoice } from '@/lib/orb/voice/orb-voice-prompt'
 import { saveVoiceTranscript } from '@/lib/orb/voice/save-voice-transcript'
 import { isOrbDeveloperMode } from '@/lib/orb/orb-developer-mode'
 import { getOrbVoiceProfile, orbVoiceProfileLabel } from '@/lib/orb/voice/orb-voice-profiles'
@@ -27,9 +25,10 @@ import {
   type OrbMicAccessContext
 } from '@/lib/orb/voice/orb-mic-access'
 import {
-  isRealtimeVoiceProvider,
-  startOrbVoiceSession
-} from '@/lib/orb/voice/orb-voice-client'
+  beginOrbRealtimeVoiceConversation,
+  fetchOrbVoiceRealtimeStatus,
+  type OrbRealtimeVoiceStatus
+} from '@/lib/orb/voice/orb-realtime-availability'
 import { emitOrbClientDebug } from '@/lib/orb/orb-client-debug'
 import {
   assessOrbVoiceReadiness,
@@ -51,10 +50,10 @@ const READY_HEADLINE = 'Start conversation'
 const READY_DETAIL = 'ORB will ask for microphone access when you start.'
 
 const LIVE_VOICE_UNAVAILABLE_HEADLINE =
-  'Live ORB Voice is not available yet — use Dictate'
+  'Live ORB Voice is not available yet. Use ORB Dictate for voice-to-text.'
 
 const LIVE_VOICE_UNAVAILABLE_DETAIL =
-  'Conversational voice needs a realtime voice session on the server. Use Dictate for reliable voice-to-text in this browser.'
+  'Conversational voice needs a realtime voice session on the server. Use ORB Dictate for reliable speech-to-text in this browser.'
 
 const SPEECH_RECOGNITION_FALLBACK =
   'Live voice is temporarily unavailable; Dictate still works.'
@@ -157,7 +156,7 @@ export function OrbVoiceStation({
   onOpenDictate?: (
     transcript: string,
     noteType?: import('@/lib/orb/dictate/orb-dictate-types').OrbDictateNoteType,
-    opts?: { studio?: boolean; autoStart?: boolean }
+    opts?: { studio?: boolean }
   ) => void
 }) {
   const [voiceStartStage, setVoiceStartStage] = useState<VoiceStartStage>('idle')
@@ -171,6 +170,9 @@ export function OrbVoiceStation({
   const [sessionStartedAt, setSessionStartedAt] = useState<string | null>(null)
   const [lastAssistantKey, setLastAssistantKey] = useState<string | null>(null)
   const [realtimeVoiceAvailable, setRealtimeVoiceAvailable] = useState<boolean | 'unknown'>('unknown')
+  const [realtimeStatus, setRealtimeStatus] = useState<OrbRealtimeVoiceStatus | null>(null)
+  const [realtimeSessionConnected, setRealtimeSessionConnected] = useState(false)
+  const [voiceError, setVoiceError] = useState<string | null>(null)
   const voiceStartStageRef = useRef(voiceStartStage)
   const browserCaptureActiveRef = useRef(false)
 
@@ -196,7 +198,19 @@ export function OrbVoiceStation({
     voice.phase === 'listening' ||
     voice.phase === 'continuous_listening'
   const captureActive = browserCaptureActive
-  const voiceSessionLive = realtimeVoiceReady && voiceStartStage === 'active' && captureActive
+  const voiceSessionLive = realtimeVoiceReady && realtimeSessionConnected && voiceStartStage === 'active'
+  const voiceState =
+    voiceStartStage === 'failed'
+      ? 'failed'
+      : voiceSessionLive
+        ? voice.speaking
+          ? 'speaking'
+          : voice.listening
+            ? 'listening'
+            : 'active'
+        : realtimeVoiceAvailable === false
+          ? 'unavailable'
+          : 'idle'
   const voiceProvider: 'speech_recognition' | 'media' | 'none' =
     voice.voiceCaptureState === 'recording' ? 'media' : browserCaptureActive ? 'speech_recognition' : 'none'
 
@@ -232,6 +246,8 @@ export function OrbVoiceStation({
   const resetSession = useCallback(() => {
     setVoiceStartStage('idle')
     setVoiceCaptureConfirmed(false)
+    setRealtimeSessionConnected(false)
+    setVoiceError(null)
     setTurns([])
     setFallbackNotice(null)
     setStartBlockedMessage(null)
@@ -255,115 +271,38 @@ export function OrbVoiceStation({
   useEffect(() => {
     if (!open) {
       setRealtimeVoiceAvailable('unknown')
+      setRealtimeStatus(null)
       return
     }
+    emitOrbClientDebug({ area: 'voice', event: 'voice_opened', detail: {} })
     let cancelled = false
-    void startOrbVoiceSession({ mode: voice.settings.voiceMode, transport: 'auto' }).then((session) => {
+    void fetchOrbVoiceRealtimeStatus().then((status) => {
       if (cancelled) return
-      const ready = isRealtimeVoiceProvider(session)
-      setRealtimeVoiceAvailable(ready)
-      if (!ready) {
-        emitOrbClientDebug({ area: 'voice', event: 'voice_realtime_unavailable', detail: { provider: session.provider, status: session.status } })
+      setRealtimeStatus(status)
+      setRealtimeVoiceAvailable(status.realtime_enabled)
+      emitOrbClientDebug({
+        area: 'voice',
+        event: 'voice_realtime_status',
+        detail: {
+          realtime_enabled: status.realtime_enabled,
+          provider: status.provider,
+          reason: status.reason
+        }
+      })
+      if (!status.realtime_enabled) {
+        emitOrbClientDebug({ area: 'voice', event: 'voice_realtime_unavailable', detail: { reason: status.reason } })
       }
     })
     return () => {
       cancelled = true
     }
-  }, [open, voice.settings.voiceMode])
+  }, [open])
 
   useEffect(() => {
     if (!open || voiceStartStage !== 'active') return
-    if (captureActive) return
+    if (realtimeSessionConnected) return
     emitOrbClientDebug({ area: 'voice', event: 'voice_fake_active_prevented', detail: { stage: voiceStartStage } })
-  }, [open, voiceStartStage, captureActive])
-
-  useEffect(() => {
-    if (!open || voiceStartStage !== 'active') return
-    const watchdog = window.setTimeout(() => {
-      if (voiceStartStageRef.current !== 'active') return
-      if (browserCaptureActiveRef.current) return
-      setVoiceStartStage('failed')
-      setVoiceCaptureConfirmed(false)
-      setFallbackNotice('Live voice is not stable in this browser. Dictate is available.')
-    }, 1000)
-    return () => window.clearTimeout(watchdog)
-  }, [open, voiceStartStage])
-
-  useEffect(() => {
-    if (!voiceSessionLive || !open) return
-    const text = (voice.transcript || voice.displayTranscript || '').trim()
-    if (!text || pending) return
-
-    const userTurn: VoiceTurn = {
-      id: newTurnId(),
-      role: 'user',
-      text,
-      startedAt: new Date().toISOString(),
-      mode: voice.settings.voiceMode,
-      provider: 'browser_fallback'
-    }
-    setTurns((prev) => [...prev, userTurn])
-    voice.clearTranscript()
-    const framed = frameMessageForOrbVoice(text, {
-      mode: voice.settings.voiceMode,
-      spokenAnswerLength: voice.settings.spokenAnswerLength,
-      voiceProfileId: voice.settings.voicePresetId
-    })
-    void Promise.resolve(onSendToOrb(framed))
-  }, [
-    voiceSessionLive,
-    open,
-    voice.transcript,
-    voice.displayTranscript,
-    pending,
-    onSendToOrb,
-    voice
-  ])
-
-  useEffect(() => {
-    if (!voiceSessionLive || !open || !assistantReply?.trim() || pending) return
-    const key = assistantReplyKey ?? assistantReply
-    if (key === lastAssistantKey) return
-    setLastAssistantKey(key)
-
-    const spoken = stripMarkdownForSpeech(assistantReply)
-    const turn: VoiceTurn = {
-      id: newTurnId(),
-      role: 'assistant',
-      text: assistantReply.trim(),
-      startedAt: new Date().toISOString(),
-      completedAt: new Date().toISOString(),
-      mode: voice.settings.voiceMode,
-      provider: 'browser_fallback'
-    }
-    setTurns((prev) => [...prev, turn])
-
-    if (voice.settings.voiceReplies && voice.synthesisAvailable && spoken) {
-      voice.speakAloud(spoken, () => {
-        if (!voice.settings.pushToTalk && voiceStartStage === 'active') {
-          void voice.beginSpeechRecognitionCapture({ mode: 'continuous' }).then((ok) => {
-            setVoiceCaptureConfirmed(ok)
-            if (!ok) setFallbackNotice(SPEECH_RECOGNITION_FALLBACK)
-          })
-        }
-      })
-    } else if (!voice.settings.pushToTalk && speechRecognitionOk) {
-      void voice.beginSpeechRecognitionCapture({ mode: 'continuous' }).then((ok) => {
-        setVoiceCaptureConfirmed(ok)
-        if (!ok) setFallbackNotice(SPEECH_RECOGNITION_FALLBACK)
-      })
-    }
-  }, [
-    assistantReply,
-    assistantReplyKey,
-    lastAssistantKey,
-    open,
-    pending,
-    speechRecognitionOk,
-    voice,
-    voiceSessionLive,
-    voiceStartStage
-  ])
+  }, [open, voiceStartStage, realtimeSessionConnected])
 
   async function handleAllowMicrophone() {
     const access = await requestMicrophoneAccess()
@@ -380,10 +319,12 @@ export function OrbVoiceStation({
   }
 
   async function handleStart() {
+    emitOrbClientDebug({ area: 'voice', event: 'voice_start_clicked', detail: {} })
     setStartBlockedMessage(null)
     setFallbackNotice(null)
     setMicTestMessage(null)
     setVoiceCaptureConfirmed(false)
+    setVoiceError(null)
 
     if (!liveVoiceAllowed) {
       setStartBlockedMessage(
@@ -400,24 +341,29 @@ export function OrbVoiceStation({
       return
     }
 
-    if (!speechRecognitionOk) {
-      setVoiceStartStage('failed')
-      setFallbackNotice(SPEECH_RECOGNITION_FALLBACK)
-      return
-    }
-
     setVoiceStartStage('starting_browser_speech')
     setSessionStartedAt(new Date().toISOString())
     voice.resumeVoiceSession()
 
-    const ok = await voice.beginSpeechRecognitionCapture({ mode: 'continuous' })
-    if (!ok) {
+    const result = await beginOrbRealtimeVoiceConversation({
+      mode: voice.settings.voiceMode,
+      voice_id: voice.settings.voicePresetId
+    })
+    if (!result.ok) {
       setVoiceCaptureConfirmed(false)
+      setRealtimeSessionConnected(false)
       setVoiceStartStage('failed')
-      setFallbackNotice(SPEECH_RECOGNITION_FALLBACK)
+      setVoiceError(result.error ?? LIVE_VOICE_UNAVAILABLE_HEADLINE)
+      setFallbackNotice(result.error ?? LIVE_VOICE_UNAVAILABLE_HEADLINE)
+      emitOrbClientDebug({
+        area: 'voice',
+        event: 'voice_session_failed',
+        detail: { error: result.error, provider: result.session?.provider }
+      })
       return
     }
 
+    setRealtimeSessionConnected(true)
     setVoiceCaptureConfirmed(true)
     setTurns([
       {
@@ -426,10 +372,15 @@ export function OrbVoiceStation({
         text: ORB_VOICE_GREETING,
         startedAt: new Date().toISOString(),
         mode: voice.settings.voiceMode,
-        provider: 'browser_fallback'
+        provider: result.session?.provider ?? 'openai_realtime'
       }
     ])
     setVoiceStartStage('active')
+    emitOrbClientDebug({
+      area: 'voice',
+      event: 'voice_session_started',
+      detail: { provider: result.session?.provider, sessionId: result.session?.session_id }
+    })
   }
 
   function handleCancelStart() {
@@ -455,14 +406,12 @@ export function OrbVoiceStation({
     window.setTimeout(() => setSaveNotice(null), 5000)
   }
 
-  const startDisabled = !liveVoiceAllowed || !realtimeVoiceReady || !speechRecognitionOk
+  const startDisabled = !liveVoiceAllowed || !realtimeVoiceReady
   const startButtonLabel = !liveVoiceAllowed
     ? 'Activate subscription to use live voice'
     : !realtimeVoiceReady
       ? 'Live ORB Voice not configured yet'
-      : !speechRecognitionOk
-        ? 'Live voice unavailable in this browser'
-        : 'Start conversation'
+      : 'Start conversation'
 
   const showRealtimeUnavailable = realtimeVoiceAvailable === false && !voiceSessionLive
 
@@ -507,11 +456,15 @@ export function OrbVoiceStation({
       <div
         className="orb-voice-room pointer-events-auto flex flex-col items-center p-6 pb-8"
         data-orb-voice-station
+        data-orb-voice-state={voiceState}
         data-orb-voice-start-stage={voiceStartStage}
         data-orb-voice-capture-active={captureActive ? 'true' : 'false'}
         data-orb-voice-listening={voice.listening ? 'true' : 'false'}
+        data-orb-voice-speaking={voice.speaking ? 'true' : 'false'}
         data-orb-voice-provider={voiceProvider}
         data-orb-voice-realtime-available={realtimeVoiceAvailable === true ? 'true' : realtimeVoiceAvailable === false ? 'false' : undefined}
+        data-orb-voice-session-connected={realtimeSessionConnected ? 'true' : 'false'}
+        data-orb-voice-error={voiceError ?? undefined}
         data-orb-voice-phase={voice.phase}
         data-orb-voice-capture-state={voice.voiceCaptureState}
       >
@@ -588,7 +541,7 @@ export function OrbVoiceStation({
                 type="button"
                 data-orb-voice-open-dictate
                 className="mt-2 rounded-full border border-[var(--orb-line)] bg-[var(--orb-primary-soft)] px-3 py-1.5 text-xs font-medium text-[var(--orb-primary)]"
-                onClick={() => onOpenDictate('', undefined, { autoStart: true })}
+                onClick={() => onOpenDictate('', undefined)}
               >
                 Open Dictate
               </button>
@@ -638,24 +591,11 @@ export function OrbVoiceStation({
             </button>
           ) : voiceSessionLive ? (
             <>
-              <button
-                type="button"
-                onClick={() => {
-                  if (browserCaptureActive) {
-                    voice.cancelListening()
-                    setVoiceCaptureConfirmed(false)
-                    return
-                  }
-                  void voice.beginSpeechRecognitionCapture({ mode: 'continuous' }).then((ok) => {
-                    setVoiceCaptureConfirmed(ok)
-                    if (!ok) setFallbackNotice(SPEECH_RECOGNITION_FALLBACK)
-                  })
-                }}
-                className="inline-flex items-center gap-2 rounded-full border border-[var(--orb-line)] px-4 py-2 text-sm font-medium text-[var(--orb-foreground)]"
-              >
-                {browserCaptureActive ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-                {browserCaptureActive ? 'Mute' : 'Speak'}
-              </button>
+              {realtimeSessionConnected ? (
+                <p className="w-full text-center text-xs text-[var(--orb-muted)]">
+                  Realtime voice session connected — speak naturally. Use End when finished.
+                </p>
+              ) : null}
               {voice.speaking ? (
                 <button type="button" onClick={voice.cancelSpeaking} className="inline-flex items-center gap-2 rounded-full border border-[var(--orb-line)] px-4 py-2 text-sm font-medium text-[var(--orb-muted)]">
                   <Square className="h-3.5 w-3.5 fill-current" />
@@ -678,7 +618,7 @@ export function OrbVoiceStation({
                 <button
                   type="button"
                   data-orb-voice-open-dictate
-                  onClick={() => onOpenDictate('', undefined, { autoStart: true })}
+                  onClick={() => onOpenDictate('', undefined)}
                   className="rounded-full bg-gradient-to-r from-[#168bff] to-[#0d5fcc] px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-sky-500/25"
                 >
                   Open Dictate

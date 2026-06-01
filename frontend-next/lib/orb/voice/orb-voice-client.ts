@@ -109,13 +109,16 @@ export async function startOrbVoiceSession(options: {
   } catch {
     return {
       session_id: `local_${Date.now()}`,
-      status: 'ready',
+      status: 'not_configured',
       provider: 'browser_fallback',
       capabilities: BROWSER_CAPABILITIES,
       fallback_reason: 'Could not reach voice session API.'
     }
   }
 }
+
+export { fetchOrbVoiceRealtimeStatus, isOrbRealtimeVoiceAvailable } from './orb-realtime-availability'
+export type { OrbRealtimeVoiceAvailability, OrbRealtimeVoiceStatus } from './orb-realtime-availability'
 
 export async function requestOrbVoiceSpeak(options: {
   text: string

@@ -37,7 +37,7 @@ describe('ORB Dictate', () => {
     const station = readComponent('components/orb-standalone/orb-dictate-station.tsx')
     assert.match(station, /OrbAppModal/)
     assert.match(station, /data-orb-dictate-station/)
-    assert.match(station, /data-orb-dictate-record-start/)
+    assert.match(station, /data-orb-dictate-speech-start/)
     assert.doesNotMatch(station, /layout="drawer"/)
   })
 
@@ -204,7 +204,7 @@ describe('ORB Dictate', () => {
     assert.match(station, /data-orb-dictate-reflective/)
     assert.doesNotMatch(
       station,
-      /Guided reflective debrief[\s\S]*handleStartRecording\(id\)/
+      /Guided reflective debrief[\s\S]*handleStartSpeechTranscript\(id\)/
     )
   })
 

@@ -145,10 +145,8 @@ import {
   orbMicDevLog,
   resolveOrbMicAccessContext
 } from '@/lib/orb/voice/orb-mic-access'
-import {
-  isRealtimeVoiceProvider,
-  startOrbVoiceSession
-} from '@/lib/orb/voice/orb-voice-client'
+import { emitOrbClientDebug } from '@/lib/orb/orb-client-debug'
+import { isOrbRealtimeVoiceAvailable } from '@/lib/orb/voice/orb-realtime-availability'
 import { isSafariBrowser } from '@/lib/orb/voice/orb-voice-readiness'
 import { useOrbSessionGate } from '@/hooks/use-orb-session-gate'
 import { useMounted } from '@/hooks/use-mounted'
@@ -555,7 +553,6 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   const [dictateImportTranscript, setDictateImportTranscript] = useState<string | undefined>()
   const [dictateImportNoteType, setDictateImportNoteType] = useState<OrbDictateNoteType | undefined>()
   const [dictateImportStudio, setDictateImportStudio] = useState(false)
-  const [dictateAutoStart, setDictateAutoStart] = useState(false)
   const [realtimeVoiceAvailable, setRealtimeVoiceAvailable] = useState(false)
   const [agentsPanelOpen, setAgentsPanelOpen] = useState(false)
   const [promptDrawerOpen, setPromptDrawerOpen] = useState(false)
@@ -770,11 +767,10 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   const openBillingPanel = useCallback(() => openPanel('billing'), [openPanel])
   const openOrbVoicePanel = useCallback(() => openPanel('orb_voice'), [openPanel])
   const openOrbDictatePanel = useCallback(
-    (opts?: { transcript?: string; noteType?: OrbDictateNoteType; studio?: boolean; autoStart?: boolean }) => {
+    (opts?: { transcript?: string; noteType?: OrbDictateNoteType; studio?: boolean }) => {
       setDictateImportTranscript(opts?.transcript)
       setDictateImportNoteType(opts?.noteType)
       setDictateImportStudio(Boolean(opts?.studio))
-      setDictateAutoStart(Boolean(opts?.autoStart))
       openPanel('orb_dictate')
     },
     [openPanel]
@@ -1615,9 +1611,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   useEffect(() => {
     if (!mounted || shouldSkipAuthenticatedOrbFetch()) return
     let cancelled = false
-    void startOrbVoiceSession({ transport: 'auto' }).then((session) => {
+    void isOrbRealtimeVoiceAvailable().then((availability) => {
       if (cancelled) return
-      setRealtimeVoiceAvailable(isRealtimeVoiceProvider(session))
+      setRealtimeVoiceAvailable(availability.realtimeVoiceAvailable)
     })
     return () => {
       cancelled = true
@@ -1632,17 +1628,16 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   const composerMicRoute = useMemo((): 'dictate' | 'voice' => {
     if (micQueryParam === 'dictate') return 'dictate'
     if (micQueryParam === 'voice') return voiceGenuinelyAvailable ? 'voice' : 'dictate'
-    if (isSafariBrowser()) return 'dictate'
-    if (voiceGenuinelyAvailable) return 'voice'
     return 'dictate'
   }, [micQueryParam, voiceGenuinelyAvailable])
 
   const composerMicReason = useMemo((): string => {
     if (micQueryParam === 'dictate') return 'forced'
-    if (micQueryParam === 'voice') return voiceGenuinelyAvailable ? 'forced' : 'fallback'
+    if (micQueryParam === 'voice') {
+      return voiceGenuinelyAvailable ? 'forced' : 'realtime_unavailable'
+    }
     if (isSafariBrowser()) return 'safari'
-    if (voiceGenuinelyAvailable) return 'voice_available'
-    return 'fallback'
+    return 'default'
   }, [micQueryParam, voiceGenuinelyAvailable])
 
   function handleMicClick() {
@@ -1669,12 +1664,11 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       return
     }
 
+    emitOrbClientDebug({ area: 'composer', event: 'composer_mic_clicked', detail: { route: composerMicRoute, reason: composerMicReason } })
     orbMicDevLog('opening dictate', composerMicReason)
-    openOrbDictatePanel({ autoStart: true })
-    if (composerMicReason !== 'voice_available') {
-      setMicNotice('Dictate is open — recording will start when the microphone is ready.')
-      window.setTimeout(() => setMicNotice(null), 8000)
-    }
+    openOrbDictatePanel()
+    setMicNotice('Dictate is open — press Start speech transcript when you are ready.')
+    window.setTimeout(() => setMicNotice(null), 8000)
   }
 
   const SLASH_MODE_COMMANDS: Record<string, StandaloneOrbMode> = {
@@ -1848,10 +1842,10 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
     if (!residentialSurface || !mounted) return
     const mic = searchParams.get('mic')?.toLowerCase()
     if (mic === 'dictate') {
-      openOrbDictatePanel({ autoStart: true })
+      openOrbDictatePanel()
     } else if (mic === 'voice') {
       if (realtimeVoiceAvailable && orbMicAccess.canUseLiveVoice) openOrbVoicePanel()
-      else openOrbDictatePanel({ autoStart: true })
+      else openOrbDictatePanel()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- deep link once URL mic param is present
   }, [mounted, residentialSurface, searchParams.get('mic')])
@@ -2641,8 +2635,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
               openOrbDictatePanel({
                 transcript,
                 noteType,
-                studio: opts?.studio,
-                autoStart: opts?.autoStart
+                studio: opts?.studio
               })
             }
           />
@@ -2652,14 +2645,12 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
               setDictateImportTranscript(undefined)
               setDictateImportNoteType(undefined)
               setDictateImportStudio(false)
-              setDictateAutoStart(false)
               closePanel()
             }}
             voice={voice}
             initialTranscript={dictateImportTranscript}
             initialNoteType={dictateImportNoteType}
             initialStudio={dictateImportStudio}
-            initialAutoStart={dictateAutoStart}
             onSendToChat={(text) => void sendMessage(text)}
             onOpenOrbVoice={openOrbVoicePanel}
             onOpenTemplates={openTemplatesPanel}
