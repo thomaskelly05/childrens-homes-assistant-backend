@@ -16,6 +16,7 @@ psql "$DATABASE_URL" -f sql/207_orb_saved_outputs_canonical.sql
 
 - Adds `user_id` and missing rich columns when upgrading from 075.
 - Detects 200 premium shape (`workflow`, `output_type`, numeric `id`) and rebuilds into canonical text-id table.
+- Legacy `tags TEXT[]` (200 shape) is copied into temporary `tags_jsonb` before canonical rebuild — never assigns JSONB into the legacy `TEXT[]` column.
 - Rows without `user_id` are moved to `orb_saved_outputs_orphaned` (not served by the API).
 
 ## Verification

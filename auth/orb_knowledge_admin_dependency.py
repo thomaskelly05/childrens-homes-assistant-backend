@@ -4,8 +4,12 @@ from __future__ import annotations
 
 from typing import Any
 
+from fastapi import Depends
+
 from auth.permissions import require_admin
 
 
-def require_orb_knowledge_admin(current_user: dict[str, Any] = require_admin) -> dict[str, Any]:
+def require_orb_knowledge_admin(
+    current_user: dict[str, Any] = Depends(require_admin),
+) -> dict[str, Any]:
     return current_user

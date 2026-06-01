@@ -884,14 +884,20 @@ class OrbKnowledgeLibraryService:
     def get_candidate_chunks_for_semantic_search(
         self,
         filters: dict[str, Any] | None = None,
+        *,
+        viewer_user_id: int | None = None,
     ) -> list[dict[str, Any]]:
         filters = filters or {}
         chunks = self.list_chunks()
-        source_by_id = {s["id"]: s for s in self.list_sources()}
+        source_by_id = {
+            s["id"]: s for s in self.list_sources(viewer_user_id=viewer_user_id)
+        }
         candidates: list[dict[str, Any]] = []
         for chunk in chunks:
             source = source_by_id.get(chunk["source_id"])
             if not source or source.get("status") == "archived":
+                continue
+            if not user_can_view_knowledge_source(source, viewer_user_id):
                 continue
             if filters.get("source_type") and source.get("source_type") != filters["source_type"]:
                 continue
@@ -975,6 +981,7 @@ class OrbKnowledgeLibraryService:
         filters: dict[str, Any] | None = None,
         limit: int = 8,
         expanded_query: str | None = None,
+        viewer_user_id: int | None = None,
     ) -> list[dict[str, Any]]:
         self._ensure_seeded()
         filters = filters or {}
@@ -989,12 +996,16 @@ class OrbKnowledgeLibraryService:
         expanded_terms = [_text(t).lower() for t in expansion.get("expanded_terms") or []]
 
         chunks = self.list_chunks()
-        source_by_id = {s["id"]: s for s in self.list_sources()}
+        source_by_id = {
+            s["id"]: s for s in self.list_sources(viewer_user_id=viewer_user_id)
+        }
         scored: list[tuple[float, dict[str, Any], str]] = []
 
         for chunk in chunks:
             source = source_by_id.get(chunk["source_id"])
             if not source or source.get("status") == "archived":
+                continue
+            if not user_can_view_knowledge_source(source, viewer_user_id):
                 continue
             if filters.get("governance_status") and source.get("governance_status") != filters["governance_status"]:
                 continue

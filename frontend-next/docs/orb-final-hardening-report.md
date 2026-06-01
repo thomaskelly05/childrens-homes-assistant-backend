@@ -64,6 +64,13 @@ P0 blockers addressed surgically: user-scoped saved outputs, schema migration, D
 
 - `/orb/ask` now calls `/orb/standalone/conversation`
 
+## Codex P1 review fixes
+
+1. **Admin dependency** — `require_orb_knowledge_admin` now uses `Depends(require_admin)` so FastAPI invokes the real admin check on mutation routes.
+2. **RAG knowledge search** — `/orb/standalone/knowledge/search` passes `viewer_user_id` into `orb_rag_retrieval_service.search`, which filters keyword and semantic candidates via `list_sources(viewer_user_id=...)`.
+3. **Saved output migration** — `sql/207_orb_saved_outputs_canonical.sql` converts legacy `TEXT[]` tags through a temporary `tags_jsonb` column (catalog-detected type); no JSONB is written into a `TEXT[]` column.
+4. **Tests** — P1 suites: 24 passed (`test_orb_knowledge_rbac`, `test_orb_saved_outputs_isolation`, `test_orb_migration_schema`); ORB regression: 27 passed; `npm run test:orb` and `npm run typecheck` passed.
+
 ## 15. Tests/build results
 
 Run:
