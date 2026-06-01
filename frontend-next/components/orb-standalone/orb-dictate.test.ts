@@ -201,5 +201,32 @@ describe('ORB Dictate', () => {
   it('anonymise action available in studio', () => {
     const studio = readComponent('components/orb-standalone/orb-dictate-studio.tsx')
     assert.match(studio, /data-orb-dictate-action-anonymise/)
+    assert.match(studio, /data-orb-dictate-apply-anonymise/)
+  })
+
+  it('find replace panel in studio', () => {
+    const studio = readComponent('components/orb-standalone/orb-dictate-studio.tsx')
+    const findReplace = readComponent('components/orb-standalone/orb-dictate-find-replace-panel.tsx')
+    assert.match(studio, /OrbDictateFindReplacePanel/)
+    assert.match(findReplace, /data-orb-dictate-find-replace/)
+    assert.match(findReplace, /data-orb-dictate-replace-all/)
+  })
+
+  it('tone lock and readiness in studio', () => {
+    const studio = readComponent('components/orb-standalone/orb-dictate-studio.tsx')
+    assert.match(studio, /data-orb-dictate-tone-lock/)
+    assert.match(studio, /data-orb-dictate-readiness-status/)
+  })
+
+  it('section diff preview in assistant', () => {
+    const assistant = readComponent('components/orb-standalone/orb-dictate-studio-assistant.tsx')
+    assert.match(assistant, /data-orb-dictate-section-changes/)
+  })
+
+  it('draft sync prompt when backend available', () => {
+    const studio = readComponent('components/orb-standalone/orb-dictate-studio.tsx')
+    const sync = readComponent('components/orb-standalone/orb-dictate-draft-sync-prompt.tsx')
+    assert.match(studio, /OrbDictateDraftSyncPrompt/)
+    assert.match(sync, /data-orb-dictate-draft-sync-prompt/)
   })
 })

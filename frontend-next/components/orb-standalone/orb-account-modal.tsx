@@ -27,7 +27,8 @@ export function OrbAccountModal({
   onLogOut,
   passkeyEnabled,
   projectCount = 0,
-  savedOutputsCount = 0
+  savedOutputsCount = 0,
+  localContentMode = false
 }: {
   open: boolean
   onClose: () => void
@@ -40,6 +41,8 @@ export function OrbAccountModal({
   passkeyEnabled?: boolean
   projectCount?: number
   savedOutputsCount?: number
+  /** True when backend session is unavailable but local ORB content remains. */
+  localContentMode?: boolean
 }) {
   const [access, setAccess] = useState<OrbAccessPayload | null>(null)
 
@@ -87,6 +90,15 @@ export function OrbAccountModal({
             </p>
           ) : null}
           <p className="mt-1 text-xs text-[#5ec8ff]/90">ORB Residential account</p>
+          {localContentMode ? (
+            <p
+              className="mt-2 rounded-lg border border-amber-400/20 bg-amber-400/10 px-3 py-2 text-xs leading-5 text-amber-100/95"
+              data-orb-account-local-mode
+            >
+              You are using local ORB content until your session reconnects. Projects, drafts and saved outputs on
+              this device are kept safe.
+            </p>
+          ) : null}
           <div className="mt-3 flex flex-wrap gap-1.5" data-orb-account-status-chips>
             {statusChips
               .filter((chip) => chip.show)
@@ -102,20 +114,20 @@ export function OrbAccountModal({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 text-center text-xs" data-orb-account-stats>
-          <div className="rounded-xl border border-[var(--orb-line)]/40 bg-[var(--orb-surface-elevated)] px-3 py-2.5">
+        <div className="grid grid-cols-2 gap-3 text-center text-xs" data-orb-account-stats>
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] px-3 py-3 shadow-inner shadow-black/10">
             <p className="text-[10px] uppercase tracking-wide text-[var(--orb-muted)]">Plan</p>
             <p className="mt-0.5 font-semibold capitalize text-[var(--orb-foreground)]" data-orb-account-subscription>
               {subscriptionLabel}
             </p>
           </div>
-          <div className="rounded-xl border border-[var(--orb-line)]/40 bg-[var(--orb-surface-elevated)] px-3 py-2.5">
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] px-3 py-3 shadow-inner shadow-black/10">
             <p className="text-[10px] uppercase tracking-wide text-[var(--orb-muted)]">Projects</p>
             <p className="mt-0.5 font-semibold text-[var(--orb-foreground)]" data-orb-account-project-count>
               {projectCount}
             </p>
           </div>
-          <div className="rounded-xl border border-[var(--orb-line)]/40 bg-[var(--orb-surface-elevated)] px-3 py-2.5">
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] px-3 py-3 shadow-inner shadow-black/10">
             <p className="text-[10px] uppercase tracking-wide text-[var(--orb-muted)]">Saved outputs</p>
             <p className="mt-0.5 font-semibold text-[var(--orb-foreground)]" data-orb-account-saved-count>
               {savedOutputsCount}

@@ -597,7 +597,17 @@ html[data-orb-residential='1'] .orb-chat-layout--residential .orb-message-assist
 
 .orb-panel-modal--xlarge {
   max-width: min(100%, 80rem);
-  max-height: min(92dvh, 56rem);
+  max-height: min(calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 1.5rem), 56rem);
+}
+
+html[data-orb-residential='1'] .orb-dictate-studio-scroll {
+  min-height: 0;
+}
+
+html[data-orb-residential='1'] [data-orb-dictate-station] .orb-panel-body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 @media (max-width: 639px) {

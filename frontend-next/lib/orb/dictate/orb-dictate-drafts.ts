@@ -1,3 +1,4 @@
+import type { OrbDictateToneLock } from '@/lib/orb/dictate/orb-dictate-tone-lock'
 import type { OrbDictateNoteType, OrbDictateQualityChecks } from '@/lib/orb/dictate/orb-dictate-types'
 import type { OrbDictateParticipant, OrbDictateTranscriptSegment } from '@/lib/orb/dictate/orb-dictate-speaker'
 
@@ -24,6 +25,8 @@ export type OrbDictateDraft = {
   updated_at: string
   versions: OrbDictateDraftVersion[]
   is_draft: boolean
+  tone_lock?: OrbDictateToneLock | null
+  readiness_label?: string | null
 }
 
 function readAllDrafts(): OrbDictateDraft[] {

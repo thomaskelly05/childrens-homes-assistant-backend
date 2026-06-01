@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Archive, Download, Loader2, MessageSquarePlus, Search, Trash2 } from 'lucide-react'
 
 import {
@@ -21,7 +21,6 @@ import {
   deleteOrbSavedOutput,
   exportOrbSavedOutput,
   getOrbSavedOutput,
-  listOrbSavedOutputs,
   reuseOrbSavedOutput,
   STANDALONE_ARTEFACT_NOTICE,
   updateOrbSavedOutput,
@@ -29,6 +28,8 @@ import {
   type OrbSavedOutputSummary,
   type OrbSavedOutputType
 } from '@/lib/orb/standalone-client'
+import { getOrbLocalSavedOutput, removeOrbLocalSavedOutput } from '@/lib/orb/orb-saved-outputs-local'
+import { listOrbSavedOutputsResilient } from '@/lib/orb/orb-saved-outputs-resilience'
 import type { StandaloneProject, StandaloneWorkspace } from '@/lib/orb/standalone-local-store'
 
 const TYPE_LABELS: Record<string, string> = {
@@ -98,14 +99,19 @@ export function OrbSavedOutputsPanel({
   const [detail, setDetail] = useState<OrbSavedOutputRecord | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [storageMode, setStorageMode] = useState<'server' | 'local' | 'mixed'>('server')
+  const [reconnectSuggested, setReconnectSuggested] = useState(false)
+  const refreshGuardRef = useRef(false)
 
   const activeProject = workspace.projects.find((p) => p.id === workspace.activeProjectId)
 
   const refresh = useCallback(async () => {
+    if (refreshGuardRef.current) return
+    refreshGuardRef.current = true
     setLoading(true)
     setError(null)
     try {
-      const result = await listOrbSavedOutputs({
+      const result = await listOrbSavedOutputsResilient({
         search: search.trim() || undefined,
         output_type: typeFilter || undefined,
         project_id: projectFilter || undefined,
@@ -113,10 +119,16 @@ export function OrbSavedOutputsPanel({
         include_archived: includeArchived
       })
       setItems(result.items)
+      setStorageMode(result.storageMode)
+      setReconnectSuggested(result.reconnectSuggested)
+      if (result.storageMode === 'local' && result.items.length) {
+        setError(null)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load saved outputs')
     } finally {
       setLoading(false)
+      refreshGuardRef.current = false
     }
   }, [search, typeFilter, projectFilter, statusFilter, includeArchived])
 
@@ -130,9 +142,33 @@ export function OrbSavedOutputsPanel({
       setDetail(null)
       return
     }
+    if (selectedId.startsWith('local_')) {
+      const local = getOrbLocalSavedOutput(selectedId)
+      setDetail(
+        local
+          ? ({
+              ...local,
+              content_markdown: local.content_markdown,
+              intelligence_output: { title: local.title, summary: local.summary || '' }
+            } as OrbSavedOutputRecord)
+          : null
+      )
+      return
+    }
     void getOrbSavedOutput(selectedId)
       .then(setDetail)
-      .catch(() => setDetail(null))
+      .catch(() => {
+        const local = getOrbLocalSavedOutput(selectedId)
+        setDetail(
+          local
+            ? ({
+                ...local,
+                content_markdown: local.content_markdown,
+                intelligence_output: { title: local.title, summary: local.summary || '' }
+              } as OrbSavedOutputRecord)
+            : null
+        )
+      })
   }, [selectedId])
 
   const grouped = useMemo(() => {
@@ -198,6 +234,14 @@ export function OrbSavedOutputsPanel({
     >
       <div className="flex min-h-0 flex-col md:flex-row" data-orb-saved-outputs-panel>
         <div className="flex w-full shrink-0 flex-col border-b border-white/[0.06] md:max-w-md md:border-b-0 md:border-r">
+          {reconnectSuggested && items.length ? (
+            <div className="p-3 pb-0">
+              <OrbStationReconnectBanner onRefresh={() => void refresh()} />
+              <p className="mt-1 text-[10px] text-slate-500" data-orb-saved-outputs-local-hint>
+                Showing {storageMode === 'mixed' ? 'local and synced' : 'local'} saved outputs until ORB reconnects.
+              </p>
+            </div>
+          ) : null}
           <div className="space-y-2 p-3">
             <label className="flex items-center gap-2 rounded-lg bg-white/[0.04] px-3 py-2 ring-1 ring-white/[0.06]">
               <Search className="h-4 w-4 text-slate-500" aria-hidden />
@@ -279,7 +323,11 @@ export function OrbSavedOutputsPanel({
               <OrbStationEmptyState
                 dataAttr="saved_outputs"
                 title="No saved outputs yet."
-                body="When you save reviews, templates or learning sessions, they'll appear here."
+                body={
+                  storageMode === 'local'
+                    ? 'Save from ORB Dictate or chat — drafts are kept on this device until you reconnect.'
+                    : "When you save reviews, templates or learning sessions, they'll appear here."
+                }
               />
             ) : (
                 grouped.map(([projectName, groupItems]) => (

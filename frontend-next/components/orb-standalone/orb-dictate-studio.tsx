@@ -14,8 +14,11 @@ import {
   Shield
 } from 'lucide-react'
 
+import { OrbDictateDraftSyncPrompt } from '@/components/orb-standalone/orb-dictate-draft-sync-prompt'
+import { OrbDictateFindReplacePanel } from '@/components/orb-standalone/orb-dictate-find-replace-panel'
 import { OrbDictateStudioAssistant } from '@/components/orb-standalone/orb-dictate-studio-assistant'
 import { OrbDictateStudioQuality } from '@/components/orb-standalone/orb-dictate-studio-quality'
+import { useOrbSessionGate } from '@/hooks/use-orb-session-gate'
 import { copyTextToClipboard } from '@/lib/orb/orb-clipboard'
 import {
   buildLocalDictateEditFallback,
@@ -31,7 +34,21 @@ import {
   saveOrbDictateDraftLocal,
   type OrbDictateDraft
 } from '@/lib/orb/dictate/orb-dictate-drafts'
-import { anonymiseText } from '@/lib/orb/dictate/orb-dictate-speaker'
+import {
+  buildAnonymisePreview,
+  type OrbDictateAnonymisePreset
+} from '@/lib/orb/dictate/orb-dictate-anonymise-preview'
+import {
+  calculateOrbDictateReadiness,
+  orbDictateReadinessDisclaimer
+} from '@/lib/orb/dictate/orb-dictate-readiness'
+import {
+  ORB_DICTATE_TONE_LABELS,
+  ORB_DICTATE_TONE_OPTIONS,
+  toneInstructionForLock,
+  type OrbDictateToneLock
+} from '@/lib/orb/dictate/orb-dictate-tone-lock'
+import { upsertOrbLocalSavedOutput } from '@/lib/orb/orb-saved-outputs-local'
 import type { OrbDictateEditMode } from '@/lib/orb/dictate/orb-dictate-studio-actions'
 import type { OrbDictateEditResult } from '@/lib/orb/dictate/orb-dictate-client'
 import type { OrbDictateGenerateResult, OrbDictateQualityChecks } from '@/lib/orb/dictate/orb-dictate-types'
@@ -39,7 +56,7 @@ import type { OrbDictateParticipant, OrbDictateTranscriptSegment } from '@/lib/o
 
 type StudioTab = 'document' | 'assistant' | 'transcript' | 'quality' | 'export'
 
-type AutosaveStatus = 'idle' | 'saving' | 'saved' | 'offline' | 'error'
+type AutosaveStatus = 'idle' | 'saving' | 'saved_orb' | 'saved_local' | 'reconnect' | 'error'
 
 export function OrbDictateStudio({
   output,
@@ -64,17 +81,29 @@ export function OrbDictateStudio({
   const [pendingEdit, setPendingEdit] = useState<OrbDictateEditResult | null>(null)
   const [editing, setEditing] = useState(false)
   const [autosaveStatus, setAutosaveStatus] = useState<AutosaveStatus>('idle')
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null)
   const [noteId, setNoteId] = useState<string | null>(output.note_id ?? null)
+  const [toneLock, setToneLock] = useState<OrbDictateToneLock>('professional')
+  const [anonymisePreview, setAnonymisePreview] = useState<string | null>(null)
+  const [anonymisePreset, setAnonymisePreset] = useState<OrbDictateAnonymisePreset>('staff_role')
   const [versions, setVersions] = useState<OrbDictateDraft['versions']>([])
   const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null)
+  const sessionGate = useOrbSessionGate()
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastSavedRef = useRef(documentText)
 
   const wordCount = useMemo(() => documentText.trim().split(/\s+/).filter(Boolean).length, [documentText])
   const charCount = documentText.length
+  const readiness = useMemo(
+    () => calculateOrbDictateReadiness(documentText, qualityChecks),
+    [documentText, qualityChecks]
+  )
+  const backendAvailable =
+    sessionGate.backendSyncState === 'ready' || sessionGate.backendSyncState === 'unknown'
 
   useEffect(() => {
     const existing = loadOrbDictateDraft(noteId)
+    if (existing?.tone_lock) setToneLock(existing.tone_lock)
     if (existing?.versions?.length) {
       setVersions(existing.versions)
     } else {
@@ -104,21 +133,23 @@ export function OrbDictateStudio({
         quality_checks: qualityChecks,
         updated_at: new Date().toISOString(),
         versions,
-        is_draft: true
+        is_draft: true,
+        tone_lock: toneLock,
+        readiness_label: readiness.title
       }
       const withVersion = pushOrbDictateVersion(draft, { label, text, event })
       setVersions(withVersion.versions)
       saveOrbDictateDraftLocal(withVersion)
       lastSavedRef.current = text
     },
-    [noteId, output, participants, segments, qualityChecks, versions]
+    [noteId, output, participants, segments, qualityChecks, versions, toneLock, readiness.title]
   )
 
   const runAutosave = useCallback(
     async (text: string) => {
       if (text === lastSavedRef.current) return
       setAutosaveStatus('saving')
-      const draftPayload = {
+      const draftPayload: OrbDictateDraft = {
         note_id: noteId,
         title: output.title,
         note_type: output.note_type,
@@ -130,7 +161,9 @@ export function OrbDictateStudio({
         quality_checks: qualityChecks,
         updated_at: new Date().toISOString(),
         versions,
-        is_draft: true
+        is_draft: true,
+        tone_lock: toneLock,
+        readiness_label: readiness.title
       }
       saveOrbDictateDraftLocal(draftPayload)
 
@@ -141,18 +174,21 @@ export function OrbDictateStudio({
             title: output.title,
             create_version: false
           })
-          setAutosaveStatus('saved')
+          setAutosaveStatus('saved_orb')
+          setLastSavedAt(new Date().toISOString())
           lastSavedRef.current = text
           return
         } catch {
-          setAutosaveStatus('offline')
+          setAutosaveStatus(sessionGate.shouldSkipAuthenticatedFetch ? 'reconnect' : 'saved_local')
+          setLastSavedAt(new Date().toISOString())
           return
         }
       }
-      setAutosaveStatus('offline')
+      setAutosaveStatus('saved_local')
+      setLastSavedAt(new Date().toISOString())
       lastSavedRef.current = text
     },
-    [noteId, output, participants, segments, qualityChecks, versions]
+    [noteId, output, participants, segments, qualityChecks, versions, toneLock, readiness.title, sessionGate.shouldSkipAuthenticatedFetch]
   )
 
   useEffect(() => {
@@ -170,9 +206,10 @@ export function OrbDictateStudio({
     setPendingEdit(null)
     onStatusMessage(null)
     try {
+      const toneHint = toneInstructionForLock(toneLock)
       const result = await editOrbDictateDocument({
         document_text: documentText,
-        instruction,
+        instruction: instruction.trim() ? `${instruction}\n\n${toneHint}` : toneHint,
         note_type: output.note_type,
         mode
       })
@@ -224,27 +261,45 @@ export function OrbDictateStudio({
   async function handleSave() {
     setAutosaveStatus('saving')
     try {
-      const saved = await saveOrbDictateNote({
-        note_id: noteId,
-        title: output.title,
-        note_type: output.note_type,
-        professional_note: documentText,
-        summary: output.summary,
-        transcript: output.transcript,
-        actions: output.actions
-      })
-      setNoteId(saved.note_id)
-      persistDraft(documentText, 'saved', 'Saved')
-      setAutosaveStatus('saved')
-      onStatusMessage(saved.message || 'Saved to Saved Outputs.')
+      if (backendAvailable) {
+        const saved = await saveOrbDictateNote({
+          note_id: noteId,
+          title: output.title,
+          note_type: output.note_type,
+          professional_note: documentText,
+          summary: output.summary,
+          transcript: output.transcript,
+          actions: output.actions
+        })
+        setNoteId(saved.note_id)
+        persistDraft(documentText, 'saved', 'Saved')
+        setAutosaveStatus('saved_orb')
+        setLastSavedAt(new Date().toISOString())
+        onStatusMessage('Saved to ORB.')
+        return
+      }
+      throw new Error('offline')
     } catch {
-      setAutosaveStatus('error')
-      onStatusMessage('Save unavailable — draft kept locally.')
+      upsertOrbLocalSavedOutput({
+        id: noteId || undefined,
+        title: output.title,
+        type: 'intelligence_note',
+        summary: output.summary,
+        content_markdown: documentText,
+        tags: ['orb-dictate', 'local']
+      })
+      persistDraft(documentText, 'saved', 'Saved locally')
+      setAutosaveStatus(sessionGate.shouldSkipAuthenticatedFetch ? 'reconnect' : 'saved_local')
+      setLastSavedAt(new Date().toISOString())
+      onStatusMessage('Saved locally — reconnect to sync.')
     }
   }
 
   async function handleExport(format: 'pdf' | 'docx' | 'markdown') {
-    const body = withDictateExportDraftNotice(output.title, documentText, output.note_type)
+    const body = withDictateExportDraftNotice(output.title, documentText, output.note_type, {
+      readiness: readiness.title,
+      tone: ORB_DICTATE_TONE_LABELS[toneLock]
+    })
     try {
       if (format === 'markdown') {
         const result = await exportOrbDictateNote({
@@ -279,36 +334,87 @@ export function OrbDictateStudio({
     }
   }
 
-  function handleAnonymise() {
-    const next = anonymiseText(documentText, participants)
-    setDocumentText(next)
-    persistDraft(next, 'manual_edit', 'Anonymised')
-    onStatusMessage('Names replaced with roles where possible.')
+  function handleAnonymisePreview() {
+    const preview = buildAnonymisePreview(documentText, participants, anonymisePreset)
+    setAnonymisePreview(preview.previewText)
+    onStatusMessage('Preview ready — apply when you are satisfied.')
+  }
+
+  function handleApplyAnonymise() {
+    if (!anonymisePreview) return
+    setDocumentText(anonymisePreview)
+    persistDraft(anonymisePreview, 'manual_edit', 'Anonymised')
+    setAnonymisePreview(null)
+    onStatusMessage('Anonymisation applied.')
   }
 
   const autosaveLabel =
     autosaveStatus === 'saving'
       ? 'Saving…'
-      : autosaveStatus === 'saved'
-        ? 'Saved'
-        : autosaveStatus === 'offline'
-          ? 'Offline — saved locally'
-          : autosaveStatus === 'error'
-            ? 'Error saving'
-            : 'Autosaved'
+      : autosaveStatus === 'saved_orb'
+        ? 'Saved to ORB'
+        : autosaveStatus === 'saved_local'
+          ? 'Saved locally'
+          : autosaveStatus === 'reconnect'
+            ? 'Reconnect to sync'
+            : autosaveStatus === 'error'
+              ? 'Save failed'
+              : 'Autosaved'
 
   const documentPanel = (
     <div className="flex min-h-0 flex-1 flex-col gap-2">
+      <OrbDictateFindReplacePanel
+        documentText={documentText}
+        onApplyText={(text, label) => {
+          setDocumentText(text)
+          persistDraft(text, 'manual_edit', label)
+          onStatusMessage(label)
+        }}
+      />
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs text-[var(--orb-muted)]" data-orb-dictate-autosave-status>
             {autosaveLabel}
           </span>
+          {lastSavedAt ? (
+            <span className="text-[10px] text-slate-500" data-orb-dictate-last-saved>
+              {new Date(lastSavedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          ) : null}
+          <button
+            type="button"
+            data-orb-dictate-save-now
+            className="rounded-md border border-white/10 px-1.5 py-0.5 text-[10px] text-slate-300"
+            onClick={() => void handleSave()}
+          >
+            Save now
+          </button>
           <span className="text-[10px] text-[var(--orb-muted)]">
             {wordCount} words · {charCount} chars
           </span>
           <span className="rounded-md border border-amber-500/30 px-1.5 py-0.5 text-[10px] text-amber-200">Draft</span>
+          <span
+            className="rounded-md border border-emerald-500/25 px-1.5 py-0.5 text-[10px] text-emerald-200"
+            data-orb-dictate-readiness-status
+          >
+            {readiness.title}
+          </span>
         </div>
+        <label className="flex items-center gap-1 text-[10px] text-slate-400">
+          Tone lock
+          <select
+            data-orb-dictate-tone-lock
+            value={toneLock}
+            onChange={(e) => setToneLock(e.target.value as OrbDictateToneLock)}
+            className="rounded-md border border-[var(--orb-line)]/50 bg-black/20 px-1 py-0.5 text-[10px] text-slate-200"
+          >
+            {ORB_DICTATE_TONE_OPTIONS.map((tone) => (
+              <option key={tone} value={tone}>
+                {ORB_DICTATE_TONE_LABELS[tone]}
+              </option>
+            ))}
+          </select>
+        </label>
         {versions.length > 1 ? (
           <div className="flex items-center gap-1">
             <History className="h-3.5 w-3.5 text-[var(--orb-muted)]" />
@@ -395,14 +501,35 @@ export function OrbDictateStudio({
         >
           <MessageSquare className="h-3.5 w-3.5" /> Chat
         </button>
+        <select
+          data-orb-dictate-anonymise-preset
+          value={anonymisePreset}
+          onChange={(e) => setAnonymisePreset(e.target.value as OrbDictateAnonymisePreset)}
+          className="rounded-lg border border-[var(--orb-line)]/50 bg-black/20 px-1 py-1 text-[10px] text-slate-200"
+        >
+          <option value="young_person">Young person</option>
+          <option value="staff_role">Staff role</option>
+          <option value="participant_role">Participant role</option>
+          <option value="initials">Initials</option>
+        </select>
         <button
           type="button"
           data-orb-dictate-action-anonymise
           className="inline-flex items-center gap-1 rounded-lg border border-[var(--orb-line)]/50 px-2 py-1 text-xs text-slate-200 hover:bg-white/5"
-          onClick={handleAnonymise}
+          onClick={handleAnonymisePreview}
         >
-          <Shield className="h-3.5 w-3.5" /> Anonymise
+          <Shield className="h-3.5 w-3.5" /> Preview anonymise
         </button>
+        {anonymisePreview ? (
+          <button
+            type="button"
+            data-orb-dictate-apply-anonymise
+            className="rounded-lg border border-emerald-400/30 px-2 py-1 text-xs text-emerald-100"
+            onClick={handleApplyAnonymise}
+          >
+            Apply anonymise
+          </button>
+        ) : null}
         {onOpenOrbVoice ? (
           <button
             type="button"
@@ -418,14 +545,24 @@ export function OrbDictateStudio({
   )
 
   const assistantPanel = (
-    <OrbDictateStudioAssistant
-      editing={editing}
-      pendingEdit={pendingEdit}
-      onRunEdit={handleRunEdit}
-      onApplyEdit={handleApplyEdit}
-      onDiscardEdit={() => setPendingEdit(null)}
-      onSetInstruction={() => {}}
-    />
+    <div className="flex min-h-0 flex-1 flex-col gap-2">
+      {!pendingEdit && !editing ? (
+        <p className="text-xs leading-relaxed text-slate-400" data-orb-dictate-assistant-starter>
+          Ask ORB to refine tone, add safeguarding prompts, or tighten structure. Try a quick action, or type
+          “make this more therapeutic”. Changes are previewed before they replace your draft.
+        </p>
+      ) : null}
+      <OrbDictateStudioAssistant
+        editing={editing}
+        pendingEdit={pendingEdit}
+        originalText={documentText}
+        onRunEdit={handleRunEdit}
+        onApplyEdit={handleApplyEdit}
+        onDiscardEdit={() => setPendingEdit(null)}
+        onKeepSuggestion={() => onStatusMessage('Suggestion kept for reference — document unchanged.')}
+        onSetInstruction={() => {}}
+      />
+    </div>
   )
 
   const transcriptPanel = (
@@ -472,7 +609,16 @@ export function OrbDictateStudio({
   )
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col" data-orb-dictate-studio>
+    <div className="flex min-h-0 flex-1 flex-col orb-dictate-studio-scroll" data-orb-dictate-studio>
+      <OrbDictateDraftSyncPrompt backendAvailable={backendAvailable} onStatusMessage={onStatusMessage} />
+      <p className="mb-2 text-[10px] text-slate-500">{orbDictateReadinessDisclaimer()}</p>
+      {readiness.improvements.length ? (
+        <ul className="mb-2 list-disc pl-4 text-[10px] text-slate-500" data-orb-dictate-readiness-improvements>
+          {readiness.improvements.slice(0, 3).map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+        </ul>
+      ) : null}
       <div className="mb-3 flex shrink-0 items-center justify-between gap-2">
         <button
           type="button"

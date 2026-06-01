@@ -3,6 +3,8 @@ import type { ReactNode } from 'react'
 
 import { clsx } from 'clsx'
 
+import { isOrbOAuthStartPath, navigateOrbOAuthStart, type OrbOAuthProvider } from '@/lib/orb/orb-oauth-navigation'
+
 export type OrbAuthProvider = 'microsoft' | 'google' | 'apple' | 'email' | 'passkey'
 
 function MicrosoftIcon({ className }: { className?: string }) {
@@ -143,8 +145,30 @@ export function OrbAuthButton({
     )
   }
 
+  if (isOrbOAuthStartPath(href)) {
+    const oauthProvider = provider as OrbOAuthProvider
+    return (
+      <button
+        type="button"
+        className={base}
+        data-orb-oauth={provider}
+        onClick={() => {
+          try {
+            const parsed = new URL(href, window.location.origin)
+            const returnUrl = parsed.searchParams.get('return_url') || '/orb'
+            navigateOrbOAuthStart(oauthProvider, returnUrl)
+          } catch {
+            navigateOrbOAuthStart(oauthProvider, '/orb')
+          }
+        }}
+      >
+        {content}
+      </button>
+    )
+  }
+
   return (
-    <Link href={href} className={base} data-orb-oauth={provider}>
+    <Link href={href} prefetch={false} className={base} data-orb-oauth={provider}>
       {content}
     </Link>
   )
