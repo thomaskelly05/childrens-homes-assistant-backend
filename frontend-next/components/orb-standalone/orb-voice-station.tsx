@@ -150,6 +150,7 @@ export function OrbVoiceStation({
   ) => void
 }) {
   const [voiceStartStage, setVoiceStartStage] = useState<VoiceStartStage>('idle')
+  const [voiceCaptureConfirmed, setVoiceCaptureConfirmed] = useState(false)
   const [turns, setTurns] = useState<VoiceTurn[]>([])
   const [saveNotice, setSaveNotice] = useState<string | null>(null)
   const [fallbackNotice, setFallbackNotice] = useState<string | null>(null)
@@ -168,14 +169,20 @@ export function OrbVoiceStation({
   }
   const liveVoiceAllowed = canUseLiveVoice(micAccess)
   const speechRecognitionOk = voice.recognitionAvailable || detectSpeechRecognitionSupported()
-  const captureActive = voice.captureActive || voice.listening || voice.voiceCaptureState === 'listening'
+  const browserCaptureActive =
+    voice.captureActive ||
+    voice.listening ||
+    voice.voiceCaptureState === 'listening' ||
+    voice.phase === 'listening' ||
+    voice.phase === 'continuous_listening'
+  const captureActive = voiceCaptureConfirmed || browserCaptureActive
   const voiceSessionLive = voiceStartStage === 'active' && captureActive
   const voiceStarting = voiceStartStage === 'starting_browser_speech'
   const permissionDenied =
     micPermission === 'denied' || Boolean(voice.error?.toLowerCase().includes('microphone'))
   const selectedProfile = getOrbVoiceProfile(voice.settings.voicePresetId)
   const selectedProfileLabel = orbVoiceProfileLabel(voice.settings.voicePresetId)
-  const status = mapPhaseToStatus(voice.phase, pending, voice.listening, voice.speaking)
+  const status = mapPhaseToStatus(voice.phase, pending, browserCaptureActive, voice.speaking)
   const transcriptAvailable = hasUserFacingTranscript(turns)
   const canStartVoice = liveVoiceAllowed && speechRecognitionOk && !permissionDenied
 
@@ -198,6 +205,7 @@ export function OrbVoiceStation({
 
   const resetSession = useCallback(() => {
     setVoiceStartStage('idle')
+    setVoiceCaptureConfirmed(false)
     setTurns([])
     setFallbackNotice(null)
     setStartBlockedMessage(null)
@@ -271,12 +279,16 @@ export function OrbVoiceStation({
       voice.speakAloud(spoken, () => {
         if (!voice.settings.pushToTalk && voiceStartStage === 'active') {
           void voice.beginSpeechRecognitionCapture({ mode: 'continuous' }).then((ok) => {
+            setVoiceCaptureConfirmed(ok)
             if (!ok) setFallbackNotice(SPEECH_RECOGNITION_FALLBACK)
           })
         }
       })
     } else if (!voice.settings.pushToTalk && speechRecognitionOk) {
-      void voice.beginSpeechRecognitionCapture({ mode: 'continuous' })
+      void voice.beginSpeechRecognitionCapture({ mode: 'continuous' }).then((ok) => {
+        setVoiceCaptureConfirmed(ok)
+        if (!ok) setFallbackNotice(SPEECH_RECOGNITION_FALLBACK)
+      })
     }
   }, [
     assistantReply,
@@ -308,6 +320,7 @@ export function OrbVoiceStation({
     setStartBlockedMessage(null)
     setFallbackNotice(null)
     setMicTestMessage(null)
+    setVoiceCaptureConfirmed(false)
 
     if (!liveVoiceAllowed) {
       setStartBlockedMessage(
@@ -329,11 +342,13 @@ export function OrbVoiceStation({
 
     const ok = await voice.beginSpeechRecognitionCapture({ mode: 'continuous' })
     if (!ok) {
+      setVoiceCaptureConfirmed(false)
       setVoiceStartStage('failed')
       setFallbackNotice(SPEECH_RECOGNITION_FALLBACK)
       return
     }
 
+    setVoiceCaptureConfirmed(true)
     setTurns([
       {
         id: newTurnId(),
@@ -483,8 +498,8 @@ export function OrbVoiceStation({
         {developerMode ? (
           <p className="mt-2 max-w-md text-center font-mono text-[10px] text-[var(--orb-muted)]">
             capture={voice.voiceCaptureState} recognition={speechRecognitionOk ? 'available' : 'unavailable'} recorder=
-            {voice.mediaRecorderAvailable ? 'available' : 'unavailable'} stage={voiceStartStage} lastError=
-            {voice.error ?? 'none'}
+            {voice.mediaRecorderAvailable ? 'available' : 'unavailable'} stage={voiceStartStage} confirmed=
+            {voiceCaptureConfirmed ? 'true' : 'false'} lastError={voice.error ?? 'none'}
           </p>
         ) : null}
 
@@ -526,18 +541,20 @@ export function OrbVoiceStation({
               <button
                 type="button"
                 onClick={() => {
-                  if (voice.listening) {
+                  if (browserCaptureActive) {
                     voice.cancelListening()
+                    setVoiceCaptureConfirmed(false)
                     return
                   }
                   void voice.beginSpeechRecognitionCapture({ mode: 'continuous' }).then((ok) => {
+                    setVoiceCaptureConfirmed(ok)
                     if (!ok) setFallbackNotice(SPEECH_RECOGNITION_FALLBACK)
                   })
                 }}
                 className="inline-flex items-center gap-2 rounded-full border border-[var(--orb-line)] px-4 py-2 text-sm font-medium text-[var(--orb-foreground)]"
               >
-                {voice.listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-                {voice.listening ? 'Mute' : 'Speak'}
+                {browserCaptureActive ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                {browserCaptureActive ? 'Mute' : 'Speak'}
               </button>
               {voice.speaking ? (
                 <button type="button" onClick={voice.cancelSpeaking} className="inline-flex items-center gap-2 rounded-full border border-[var(--orb-line)] px-4 py-2 text-sm font-medium text-[var(--orb-muted)]">
