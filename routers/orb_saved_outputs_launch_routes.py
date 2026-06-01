@@ -10,7 +10,10 @@ from auth.orb_standalone_premium_dependency import (
     require_rich_orb_premium_access as require_standalone_orb_access,
 )
 from schemas.orb_saved_outputs import OrbSavedOutputCreate, OrbSavedOutputListRequest
-from services.orb_saved_output_service import orb_saved_output_service
+from services.orb_saved_output_service import (
+    SavedOutputSchemaMigrationRequired,
+    orb_saved_output_service,
+)
 
 router = APIRouter(prefix="/saved-outputs", tags=["ORB Saved Outputs"])
 
@@ -70,7 +73,10 @@ async def create_saved_output(
     current_user=Depends(require_standalone_orb_access),
 ):
     _reject_os_ids(body.model_dump())
-    return _success(orb_saved_output_service.create_output(_user_id(current_user), body))
+    try:
+        return _success(orb_saved_output_service.create_output(_user_id(current_user), body))
+    except SavedOutputSchemaMigrationRequired as exc:
+        raise HTTPException(status_code=503, detail=exc.message) from exc
 
 
 @router.delete("/{output_id}")
@@ -78,7 +84,10 @@ async def delete_saved_output(
     output_id: str,
     current_user=Depends(require_standalone_orb_access),
 ):
-    deleted = orb_saved_output_service.delete_output(_user_id(current_user), output_id)
+    try:
+        deleted = orb_saved_output_service.delete_output(_user_id(current_user), output_id)
+    except SavedOutputSchemaMigrationRequired as exc:
+        raise HTTPException(status_code=503, detail=exc.message) from exc
     if not deleted:
         raise HTTPException(status_code=404, detail="Saved output not found")
     return _success({"deleted": True, "id": output_id})

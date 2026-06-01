@@ -75,40 +75,89 @@ def _table_columns(table_name: str) -> set[str] | None:
         return None
 
 
-def verify_saved_outputs_schema() -> dict[str, Any]:
+MIGRATION_207_PATH = "sql/207_orb_saved_outputs_canonical.sql"
+
+
+def saved_outputs_schema_state() -> dict[str, Any]:
+    """Runtime snapshot of orb_saved_outputs schema for service guards."""
     columns = _table_columns("orb_saved_outputs")
     if columns is None:
+        return {
+            "exists": False,
+            "canonical": False,
+            "missing_columns": sorted(CANONICAL_SAVED_OUTPUT_COLUMNS),
+            "has_user_id": False,
+            "has_status": False,
+            "user_scoped": False,
+            "migration_required": False,
+        }
+    missing = sorted(CANONICAL_SAVED_OUTPUT_COLUMNS - columns)
+    has_user_id = "user_id" in columns
+    has_status = "status" in columns
+    canonical = not missing and has_user_id
+    return {
+        "exists": True,
+        "canonical": canonical,
+        "missing_columns": missing,
+        "has_user_id": has_user_id,
+        "has_status": has_status,
+        "user_scoped": has_user_id,
+        "migration_required": bool(missing) or not has_user_id,
+    }
+
+
+def verify_saved_outputs_schema() -> dict[str, Any]:
+    state = saved_outputs_schema_state()
+    if not state["exists"]:
         return {
             "status": "degraded",
             "message": "orb_saved_outputs table not present (in-memory fallback may be active)",
             "canonical": False,
-            "missing_columns": sorted(CANONICAL_SAVED_OUTPUT_COLUMNS),
+            "table_exists": False,
+            "user_scoped": False,
+            "migration_required": False,
+            "missing_columns": state["missing_columns"],
+            "migration": MIGRATION_207_PATH,
         }
-    missing = sorted(CANONICAL_SAVED_OUTPUT_COLUMNS - columns)
-    legacy_markers = []
+    columns = _table_columns("orb_saved_outputs") or set()
+    legacy_markers: list[str] = []
     if "workflow" in columns or "output_type" in columns:
         legacy_markers.append("200_premium_shape")
-    if missing:
+    if not state["has_user_id"]:
         return {
             "status": "fail",
-            "message": "orb_saved_outputs is missing canonical columns",
+            "message": "orb_saved_outputs table is legacy and not user-scoped",
             "canonical": False,
-            "missing_columns": missing,
+            "table_exists": True,
+            "user_scoped": False,
+            "migration_required": True,
+            "missing_columns": state["missing_columns"] or ["user_id"],
             "legacy_shape": legacy_markers or None,
+            "migration": MIGRATION_207_PATH,
         }
-    if "user_id" not in columns:
+    if state["missing_columns"]:
+        missing_list = ", ".join(state["missing_columns"])
         return {
             "status": "fail",
-            "message": "orb_saved_outputs lacks user_id — outputs must be user-scoped",
+            "message": f"orb_saved_outputs missing required columns: {missing_list}",
             "canonical": False,
-            "missing_columns": ["user_id"],
+            "table_exists": True,
+            "user_scoped": True,
+            "migration_required": True,
+            "missing_columns": state["missing_columns"],
+            "legacy_shape": legacy_markers or None,
+            "migration": MIGRATION_207_PATH,
         }
     return {
         "status": "ok",
         "message": "orb_saved_outputs canonical schema present",
         "canonical": True,
+        "table_exists": True,
+        "user_scoped": True,
+        "migration_required": False,
         "missing_columns": [],
         "legacy_shape": legacy_markers or None,
+        "migration": MIGRATION_207_PATH,
     }
 
 

@@ -35,6 +35,17 @@ from services.orb_intelligence_output_service import (
 
 logger = logging.getLogger("indicare.orb_saved_outputs")
 
+MIGRATION_207_PATH = "sql/207_orb_saved_outputs_canonical.sql"
+SCHEMA_DEGRADED_REASON = "saved_outputs_schema_migration_required"
+
+
+class SavedOutputSchemaMigrationRequired(Exception):
+    """Raised when a write requires canonical orb_saved_outputs schema."""
+
+    def __init__(self, message: str = "Saved output schema migration required") -> None:
+        super().__init__(message)
+        self.message = message
+
 STANDALONE_ARTEFACT_NOTICE = (
     "Saved outputs are ORB Residential artefacts for adult review. "
     "They are not added to IndiCare OS records, Care Hub, chronology or child documents."
@@ -93,6 +104,7 @@ class OrbSavedOutputService:
     def __init__(self) -> None:
         self._memory: dict[int, dict[str, dict[str, Any]]] = {}
         self._storage_mode: str = "memory"
+        self._schema_state: dict[str, Any] | None = None
 
     @staticmethod
     def _resolve_user_id(user_id: int) -> int:
@@ -116,6 +128,37 @@ class OrbSavedOutputService:
         if not self._use_db():
             self._storage_mode = "memory"
             return self._storage_mode
+        self._refresh_schema_state()
+        if self._db_table_exists():
+            self._storage_mode = "postgresql"
+        else:
+            self._storage_mode = "memory"
+        return self._storage_mode
+
+    def verify_schema(self) -> dict[str, Any]:
+        from services.orb_schema_verification import verify_saved_outputs_schema
+
+        return verify_saved_outputs_schema()
+
+    def _saved_outputs_schema_state(self) -> dict[str, Any]:
+        from services.orb_schema_verification import saved_outputs_schema_state
+
+        if self._schema_state is None:
+            self._schema_state = saved_outputs_schema_state()
+        return self._schema_state
+
+    def _refresh_schema_state(self) -> dict[str, Any]:
+        from services.orb_schema_verification import saved_outputs_schema_state
+
+        self._schema_state = saved_outputs_schema_state()
+        return self._schema_state
+
+    def _invalidate_schema_cache(self) -> None:
+        self._schema_state = None
+
+    def _db_table_exists(self) -> bool:
+        if not self._use_db():
+            return False
         try:
             conn = get_db_connection()
             try:
@@ -126,20 +169,25 @@ class OrbSavedOutputService:
                         WHERE table_schema = 'public' AND table_name = 'orb_saved_outputs'
                         """
                     )
-                    if cur.fetchone():
-                        self._storage_mode = "postgresql"
-                    else:
-                        self._storage_mode = "memory"
+                    return cur.fetchone() is not None
             finally:
                 release_db_connection(conn)
         except Exception:
-            self._storage_mode = "memory"
-        return self._storage_mode
+            return False
 
-    def verify_schema(self) -> dict[str, Any]:
-        from services.orb_schema_verification import verify_saved_outputs_schema
+    def _db_read_allowed(self) -> bool:
+        state = self._saved_outputs_schema_state()
+        return bool(state.get("exists") and state.get("has_user_id"))
 
-        return verify_saved_outputs_schema()
+    def _db_write_allowed(self) -> bool:
+        state = self._saved_outputs_schema_state()
+        return bool(state.get("exists") and state.get("canonical"))
+
+    def _require_canonical_for_write(self) -> None:
+        if not self._db_write_allowed():
+            raise SavedOutputSchemaMigrationRequired(
+                f"Apply {MIGRATION_207_PATH} before writing saved outputs to PostgreSQL"
+            )
 
     def health(self) -> OrbSavedOutputHealth:
         mode = self._detect_storage_mode()
@@ -170,22 +218,59 @@ class OrbSavedOutputService:
             return sum(len(bucket) for bucket in self._memory.values())
 
     def get_summary(self, user_id: int) -> dict[str, Any]:
+        uid = self._resolve_user_id(user_id)
+        state = self._saved_outputs_schema_state()
         health = self.health()
-        items = self.list_outputs(user_id, OrbSavedOutputListRequest(limit=200))
-        by_type: dict[str, int] = {}
-        by_status: dict[str, int] = {}
-        for item in items.items:
-            by_type[item.type] = by_type.get(item.type, 0) + 1
-            by_status[item.status] = by_status.get(item.status, 0) + 1
-        return {
-            "total": items.total,
-            "by_type": by_type,
-            "by_status": by_status,
+        base = {
             "storage_mode": health.storage_mode,
             "standalone_only": True,
             "os_linked": False,
             "care_record_access": False,
         }
+        if state.get("exists") and not state.get("has_user_id"):
+            logger.warning(
+                "orb_saved_outputs exists but lacks user_id — refusing DB reads for user %s",
+                uid,
+            )
+            return {
+                **base,
+                "total": 0,
+                "by_type": {},
+                "by_status": {},
+                "recent": [],
+                "degraded": True,
+                "reason": SCHEMA_DEGRADED_REASON,
+            }
+        try:
+            items = self.list_outputs(uid, OrbSavedOutputListRequest(limit=200))
+        except Exception:
+            logger.exception("Saved outputs summary failed for user %s", uid)
+            return {
+                **base,
+                "total": 0,
+                "by_type": {},
+                "by_status": {},
+                "recent": [],
+                "degraded": True,
+                "reason": SCHEMA_DEGRADED_REASON,
+            }
+        by_type: dict[str, int] = {}
+        by_status: dict[str, int] = {}
+        for item in items.items:
+            by_type[item.type] = by_type.get(item.type, 0) + 1
+            by_status[item.status] = by_status.get(item.status, 0) + 1
+        degraded = bool(state.get("exists") and not state.get("canonical"))
+        summary: dict[str, Any] = {
+            **base,
+            "total": items.total,
+            "by_type": by_type,
+            "by_status": by_status,
+            "recent": [item.model_dump() for item in items.items[:10]],
+        }
+        if degraded:
+            summary["degraded"] = True
+            summary["reason"] = SCHEMA_DEGRADED_REASON
+        return summary
 
     def build_save_hints(
         self,
@@ -323,6 +408,7 @@ class OrbSavedOutputService:
         )
         row = self._record_to_row(record, user_id=uid)
         if self._detect_storage_mode() == "postgresql":
+            self._require_canonical_for_write()
             self._insert_db(row)
         else:
             self._user_memory(uid)[record.id] = row
@@ -338,8 +424,12 @@ class OrbSavedOutputService:
         self, user_id: int, request: OrbSavedOutputListRequest
     ) -> OrbSavedOutputListResponse:
         uid = self._resolve_user_id(user_id)
-        if self._detect_storage_mode() == "postgresql":
-            rows, total = self._list_db(uid, request)
+        if self._detect_storage_mode() == "postgresql" and self._db_read_allowed():
+            try:
+                rows, total = self._list_db(uid, request)
+            except Exception:
+                logger.exception("Saved outputs list failed for user %s — using memory", uid)
+                rows, total = self._list_memory(uid, request)
         else:
             rows, total = self._list_memory(uid, request)
         items = [self._row_to_summary(row) for row in rows]
@@ -372,6 +462,7 @@ class OrbSavedOutputService:
         uid = self._resolve_user_id(user_id)
         row = self._record_to_row(existing, user_id=uid)
         if self._detect_storage_mode() == "postgresql":
+            self._require_canonical_for_write()
             self._update_db(uid, row)
         else:
             self._user_memory(uid)[output_id] = row
@@ -387,6 +478,7 @@ class OrbSavedOutputService:
     def delete_output(self, user_id: int, output_id: str) -> bool:
         uid = self._resolve_user_id(user_id)
         if self._detect_storage_mode() == "postgresql":
+            self._require_canonical_for_write()
             return self._delete_db(uid, output_id)
         bucket = self._user_memory(uid)
         return bucket.pop(output_id, None) is not None
@@ -599,9 +691,21 @@ class OrbSavedOutputService:
         )
 
     def _fetch_row(self, user_id: int, output_id: str) -> dict[str, Any] | None:
-        if self._detect_storage_mode() == "postgresql":
-            return self._fetch_db(user_id, output_id)
+        if self._detect_storage_mode() == "postgresql" and self._db_read_allowed():
+            try:
+                return self._fetch_db(user_id, output_id)
+            except Exception:
+                logger.exception(
+                    "Saved output fetch failed for user %s output %s", user_id, output_id
+                )
+                return self._user_memory(user_id).get(output_id)
         return self._user_memory(user_id).get(output_id)
+
+    def _table_has_column(self, column: str) -> bool:
+        state = self._saved_outputs_schema_state()
+        if not state.get("exists"):
+            return False
+        return column not in (state.get("missing_columns") or [])
 
     def _list_memory(
         self, user_id: int, request: OrbSavedOutputListRequest
@@ -742,13 +846,20 @@ class OrbSavedOutputService:
                     (output_id, user_id),
                 )
                 row = cur.fetchone()
-                return dict(row) if row else None
+                return self._normalize_db_row(dict(row)) if row else None
         finally:
             release_db_connection(conn)
 
     def _list_db(
         self, user_id: int, request: OrbSavedOutputListRequest
     ) -> tuple[list[dict[str, Any]], int]:
+        if not self._db_read_allowed():
+            return [], 0
+
+        has_status = self._table_has_column("status")
+        has_tags = self._table_has_column("tags")
+        has_content_markdown = self._table_has_column("content_markdown")
+
         clauses = ["user_id = %s"]
         params: list[Any] = [user_id]
         if request.project_id:
@@ -757,21 +868,37 @@ class OrbSavedOutputService:
         if request.output_type:
             clauses.append("type = %s")
             params.append(request.output_type)
-        if request.status:
-            clauses.append("status = %s")
-            params.append(request.status)
-        elif not request.include_archived:
-            clauses.append("status != 'archived'")
-        if request.tag:
+        if has_status:
+            if request.status:
+                clauses.append("status = %s")
+                params.append(request.status)
+            elif not request.include_archived:
+                clauses.append("status != 'archived'")
+        elif request.status == "archived" and self._table_has_column("archived_at"):
+            clauses.append("archived_at IS NOT NULL")
+        elif request.status and request.status != "saved":
+            return [], 0
+        elif not request.include_archived and self._table_has_column("archived_at"):
+            clauses.append("archived_at IS NULL")
+        if request.tag and has_tags:
             clauses.append("tags @> %s::jsonb")
             params.append(json.dumps([request.tag]))
+        elif request.tag:
+            return [], 0
         if request.search:
-            clauses.append(
-                "(title ILIKE %s OR summary ILIKE %s OR content_markdown ILIKE %s)"
-            )
+            search_parts = ["title ILIKE %s"]
             pattern = f"%{request.search}%"
-            params.extend([pattern, pattern, pattern])
+            search_params: list[Any] = [pattern]
+            if self._table_has_column("summary"):
+                search_parts.append("summary ILIKE %s")
+                search_params.append(pattern)
+            if has_content_markdown:
+                search_parts.append("content_markdown ILIKE %s")
+                search_params.append(pattern)
+            clauses.append(f"({' OR '.join(search_parts)})")
+            params.extend(search_params)
         where = " AND ".join(clauses)
+        order_col = "created_at" if self._table_has_column("created_at") else "id"
         conn = get_db_connection()
         try:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
@@ -781,15 +908,23 @@ class OrbSavedOutputService:
                     f"""
                     SELECT * FROM orb_saved_outputs
                     WHERE {where}
-                    ORDER BY created_at DESC
+                    ORDER BY {order_col} DESC
                     LIMIT %s OFFSET %s
                     """,
                     [*params, request.limit, request.offset],
                 )
-                rows = [dict(r) for r in cur.fetchall()]
+                rows = [self._normalize_db_row(dict(r)) for r in cur.fetchall()]
                 return rows, total
         finally:
             release_db_connection(conn)
+
+    def _normalize_db_row(self, row: dict[str, Any]) -> dict[str, Any]:
+        if not row.get("status"):
+            if row.get("archived_at"):
+                row["status"] = "archived"
+            else:
+                row["status"] = "saved"
+        return row
 
 
 orb_saved_output_service = OrbSavedOutputService()
