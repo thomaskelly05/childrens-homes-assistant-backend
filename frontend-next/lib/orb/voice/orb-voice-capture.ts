@@ -30,6 +30,12 @@ function permissionFromError(error: unknown): MicrophonePermissionState {
   return 'unknown'
 }
 
+function isSafariLike(): boolean {
+  if (typeof navigator === 'undefined') return false
+  const ua = navigator.userAgent.toLowerCase()
+  return ua.includes('safari') && !ua.includes('chrome') && !ua.includes('chromium') && !ua.includes('android')
+}
+
 /** Request mic access for a permission check only — releases tracks immediately. */
 export async function probeMicrophoneAccess(): Promise<MicrophoneAccessResult> {
   if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
@@ -83,15 +89,12 @@ export type MediaRecorderCapture = {
 
 function pickMediaRecorderMimeType(preferred?: string): string {
   if (typeof MediaRecorder === 'undefined') return ''
-  const candidates = [
-    preferred,
-    'audio/webm;codecs=opus',
-    'audio/webm',
-    'audio/mp4',
-    'audio/mpeg'
-  ].filter(Boolean) as string[]
+  const safari = isSafariLike()
+  const candidates = safari
+    ? [preferred, 'audio/mp4', 'audio/mpeg', 'audio/webm;codecs=opus', 'audio/webm']
+    : [preferred, 'audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/mpeg']
   try {
-    for (const candidate of candidates) {
+    for (const candidate of candidates.filter(Boolean) as string[]) {
       if (MediaRecorder.isTypeSupported(candidate)) return candidate
     }
   } catch {
@@ -104,6 +107,18 @@ function buildAudioBlob(chunks: Blob[], mimeType: string): Blob | null {
   const usable = chunks.filter((chunk) => chunk.size > 0)
   if (!usable.length) return null
   return new Blob(usable, { type: mimeType || usable[0]?.type || 'audio/webm' })
+}
+
+function shouldUseTimeslice(mimeType: string, requested?: number): number | undefined {
+  if (requested === 0) return undefined
+  if (isSafariLike() || mimeType.includes('mp4') || mimeType.includes('mpeg')) return undefined
+  return requested ?? 250
+}
+
+function startRecorder(recorder: MediaRecorder, mimeType: string, timesliceMs?: number) {
+  const timeslice = shouldUseTimeslice(mimeType, timesliceMs)
+  if (typeof timeslice === 'number') recorder.start(timeslice)
+  else recorder.start()
 }
 
 function buildMediaRecorderCapture(recorder: MediaRecorder, chunks: Blob[]): MediaRecorderCapture {
@@ -119,7 +134,7 @@ function buildMediaRecorderCapture(recorder: MediaRecorder, chunks: Blob[]): Med
           settled = true
           window.setTimeout(() => {
             resolve({ blob: buildAudioBlob(chunks, mimeType), mimeType })
-          }, 100)
+          }, isSafariLike() ? 750 : 150)
         }
 
         const handleData = (event: BlobEvent) => {
@@ -183,8 +198,7 @@ export function startMediaRecorderCapture(
     if (event.data.size > 0) chunks.push(event.data)
   }
 
-  const timeslice = options?.timesliceMs ?? 250
-  recorder.start(timeslice)
+  startRecorder(recorder, recorder.mimeType || mimeType, options?.timesliceMs)
 
   return buildMediaRecorderCapture(recorder, chunks)
 }
@@ -221,7 +235,7 @@ export async function startMediaRecorderCaptureConfirmed(
   const capture = buildMediaRecorderCapture(recorder, chunks)
   const started = confirmMediaRecorderStart(recorder)
   try {
-    recorder.start(options?.timesliceMs ?? 250)
+    startRecorder(recorder, recorder.mimeType || mimeType, options?.timesliceMs)
   } catch {
     capture.cancel()
     return null
