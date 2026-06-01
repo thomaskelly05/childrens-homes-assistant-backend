@@ -271,10 +271,12 @@ async def search_knowledge(
     filters: dict[str, Any] = {}
     if payload.source_type:
         filters["source_type"] = payload.source_type
+    viewer_user_id = _viewer_user_id(current_user)
     results = orb_rag_retrieval_service.search(
         payload.query,
         limit=payload.limit,
         filters=filters or None,
+        viewer_user_id=viewer_user_id,
     )
     serialised = [
         r.model_dump() if hasattr(r, "model_dump") else dict(r) for r in results

@@ -84,21 +84,48 @@ BEGIN
         ALTER TABLE orb_saved_outputs ADD COLUMN IF NOT EXISTS created_from_id TEXT;
         ALTER TABLE orb_saved_outputs ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ;
 
-        UPDATE orb_saved_outputs
-        SET tags = COALESCE(
-            to_jsonb(tags::text[]),
-            '[]'::jsonb
-        )
-        WHERE tags IS NOT NULL
-          AND pg_typeof(tags)::text LIKE '%[]';
+        -- Convert legacy tags (TEXT[] or JSONB) via temporary column — never assign JSONB into TEXT[] tags.
+        DO $tags_migrate$
+        DECLARE
+            tags_data_type TEXT;
+        BEGIN
+            SELECT data_type
+            INTO tags_data_type
+            FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = 'orb_saved_outputs'
+              AND column_name = 'tags';
 
-        ALTER TABLE orb_saved_outputs ADD COLUMN IF NOT EXISTS tags_jsonb JSONB NOT NULL DEFAULT '[]'::jsonb;
-        UPDATE orb_saved_outputs
-        SET tags_jsonb = CASE
-            WHEN tags IS NULL THEN '[]'::jsonb
-            WHEN pg_typeof(tags)::text LIKE '%[]' THEN to_jsonb(tags::text[])
-            ELSE tags_jsonb
-        END;
+            ALTER TABLE orb_saved_outputs ADD COLUMN IF NOT EXISTS tags_jsonb JSONB;
+
+            IF tags_data_type IS NOT NULL THEN
+                IF tags_data_type = 'ARRAY' THEN
+                    EXECUTE $sql$
+                        UPDATE orb_saved_outputs
+                        SET tags_jsonb = COALESCE(to_jsonb(tags), '[]'::jsonb)
+                        WHERE tags_jsonb IS NULL
+                    $sql$;
+                ELSIF tags_data_type = 'jsonb' THEN
+                    EXECUTE $sql$
+                        UPDATE orb_saved_outputs
+                        SET tags_jsonb = COALESCE(tags, '[]'::jsonb)
+                        WHERE tags_jsonb IS NULL
+                    $sql$;
+                ELSE
+                    UPDATE orb_saved_outputs
+                    SET tags_jsonb = '[]'::jsonb
+                    WHERE tags_jsonb IS NULL;
+                END IF;
+            ELSE
+                UPDATE orb_saved_outputs
+                SET tags_jsonb = '[]'::jsonb
+                WHERE tags_jsonb IS NULL;
+            END IF;
+
+            UPDATE orb_saved_outputs
+            SET tags_jsonb = '[]'::jsonb
+            WHERE tags_jsonb IS NULL;
+        END $tags_migrate$;
 
         INSERT INTO orb_saved_outputs_orphaned (legacy_id, legacy_shape, row_data, notes)
         SELECT

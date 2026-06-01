@@ -43,6 +43,7 @@ class OrbRagRetrievalService:
         mode: str | None = None,
         filters: dict[str, Any] | None = None,
         limit: int = 8,
+        viewer_user_id: int | None = None,
     ) -> list[dict[str, Any]]:
         filters = dict(filters or {})
         classification = orb_knowledge_retrieval_service.classify_query(query, mode=mode)
@@ -56,9 +57,13 @@ class OrbRagRetrievalService:
             filters=filters,
             limit=limit * 2,
             expanded_query=expansion.get("expanded_query"),
+            viewer_user_id=viewer_user_id,
         )
 
-        candidates = orb_knowledge_library_service.get_candidate_chunks_for_semantic_search(filters)
+        candidates = orb_knowledge_library_service.get_candidate_chunks_for_semantic_search(
+            filters,
+            viewer_user_id=viewer_user_id,
+        )
         hybrid_results, strategy = orb_semantic_retrieval_service.hybrid_search(
             query,
             keyword_results,

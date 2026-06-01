@@ -11,7 +11,7 @@
 
 ## Routes
 
-**Premium users:** health, summary, list/get source, search, citation health, ingest-file (private by default).
+**Premium users:** health, summary, list/get source, search (viewer-scoped RAG), citation health, ingest-file (private by default).
 
 **Admin only:** create/update source, approve, archive, import official, rebuild citations, public evidence seed/import, pipeline seed.
 
