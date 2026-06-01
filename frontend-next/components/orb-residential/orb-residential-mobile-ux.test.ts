@@ -84,10 +84,10 @@ describe('ORB Residential mobile UX', () => {
 
   it('sidebar station links remain on residential sidebar', () => {
     const sidebar = readComponent('components/orb-residential/orb-residential-sidebar.tsx')
-    for (const station of ['review', 'templates', 'knowledge', 'documents', 'saved']) {
+    for (const station of ['skills', 'review', 'templates', 'knowledge', 'documents', 'orb_voice', 'orb_dictate', 'saved']) {
       assert.match(sidebar, new RegExp(`id: '${station}'`))
     }
-    assert.match(sidebar, /Knowledge Centre/)
+    assert.match(sidebar, /label: 'Library'/)
     assert.match(sidebar, /GlassOrbMark/)
     assert.match(sidebar, /data-orb-sidebar-stations/)
     assert.match(sidebar, /ORB_RESIDENTIAL_TAGLINE/)
@@ -160,7 +160,7 @@ describe('ORB Residential mobile UX', () => {
     assert.match(experience, /data-orb-residential="true"/)
     assert.match(experience, /useOrbResidentialThemeLock/)
     assert.match(companion, /orb-residential-root/)
-    assert.match(companion, /effectiveTheme = residentialSurface \? 'dark'/)
+    assert.match(companion, /effectiveTheme = resolvedTheme/)
     assert.match(premiumCss, /html\[data-orb-residential='1'\]/)
   })
 

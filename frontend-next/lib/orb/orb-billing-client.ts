@@ -112,22 +112,42 @@ export type OrbUsageSummary = {
   credits_balance: number
 }
 
-export async function fetchOrbUsage(): Promise<OrbUsageSummary> {
-  const response = await authFetch<OrbUsageSummary | { data?: OrbUsageSummary }>(ORB_BILLING_API.usage, {
-    credentials: 'include'
-  })
-  if (response && typeof response === 'object' && 'messages_this_period' in response) {
-    return response as OrbUsageSummary
+export const ORB_USAGE_SAFE_FALLBACK: OrbUsageSummary = {
+  messages_this_period: 0,
+  included_messages: null,
+  extra_usage_pence: 0,
+  estimated_spend_pence: 0,
+  monthly_cap_pence: null,
+  warning_threshold_percent: 80,
+  allow_overage: false,
+  credits_balance: 0
+}
+
+function normaliseOrbUsagePayload(payload: unknown): OrbUsageSummary | null {
+  if (!payload || typeof payload !== 'object') return null
+  if ('messages_this_period' in payload) {
+    return payload as OrbUsageSummary
   }
-  return (response as { data?: OrbUsageSummary }).data ?? {
-    messages_this_period: 0,
-    included_messages: null,
-    extra_usage_pence: 0,
-    estimated_spend_pence: 0,
-    monthly_cap_pence: null,
-    warning_threshold_percent: 80,
-    allow_overage: false,
-    credits_balance: 0
+  const data = (payload as { data?: OrbUsageSummary }).data
+  if (data && typeof data === 'object' && 'messages_this_period' in data) {
+    return data
+  }
+  return null
+}
+
+/** Load usage without throwing or noisy console errors when billing is unavailable. */
+export async function fetchOrbUsage(): Promise<OrbUsageSummary> {
+  try {
+    const response = await authFetchResponse(ORB_BILLING_API.usage, {
+      credentials: 'include'
+    })
+    if (!response.ok) {
+      return { ...ORB_USAGE_SAFE_FALLBACK }
+    }
+    const payload = await response.json().catch(() => null)
+    return normaliseOrbUsagePayload(payload) ?? { ...ORB_USAGE_SAFE_FALLBACK }
+  } catch {
+    return { ...ORB_USAGE_SAFE_FALLBACK }
   }
 }
 

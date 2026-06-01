@@ -355,7 +355,9 @@ export function OrbDictateStation({
       setStartMode('paste')
       setStatusMessage('Audio transcribed — review speaker labels before generating.')
     } catch {
-      setUploadError('Upload or transcription failed. Paste your transcript instead.')
+      setUploadError(
+        'Audio transcription is unavailable right now. Your file was not lost — paste the transcript or record a note instead.'
+      )
     } finally {
       setUploadingAudio(false)
     }
@@ -420,7 +422,9 @@ export function OrbDictateStation({
       setOutput(fallback)
       setEditedNote(fallback.professional_note)
       setPhase('studio')
-      setStatusMessage('Generated offline draft. Reconnect for full ORB intelligence.')
+      setStatusMessage(
+        'ORB could not reach the full generation service. Your transcript is kept — a local draft is ready to edit.'
+      )
     } finally {
       setGenerating(false)
     }
@@ -819,7 +823,10 @@ export function OrbDictateStation({
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto p-3">
               {!output ? (
-                <p className="text-sm text-[var(--orb-muted)]">Generated output appears here for review and edit.</p>
+                <div className="space-y-3 text-sm text-[var(--orb-muted)]" data-orb-dictate-output-empty>
+                  <p>Start by recording, pasting a transcript, or uploading audio.</p>
+                  <p>When ORB has your rough note, it will create professional recording wording here.</p>
+                </div>
               ) : outputTab === 'professional' ? (
                 <textarea
                   data-orb-dictate-output

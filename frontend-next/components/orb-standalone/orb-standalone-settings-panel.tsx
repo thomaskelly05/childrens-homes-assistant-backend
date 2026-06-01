@@ -42,25 +42,25 @@ import {
 import type { StandaloneOrbAccessibilityPreferences } from '@/lib/orb/standalone-accessibility'
 
 type SettingsSectionId =
-  | 'appearance'
+  | 'general'
+  | 'personalisation'
   | 'voice'
   | 'chat'
+  | 'skills'
+  | 'privacy'
   | 'security'
   | 'billing'
-  | 'privacy'
-  | 'notifications'
-  | 'shortcuts'
   | 'about'
 
 const SECTION_META: Array<{ id: SettingsSectionId; label: string }> = [
-  { id: 'appearance', label: 'Appearance' },
+  { id: 'general', label: 'General' },
+  { id: 'personalisation', label: 'Personalisation' },
   { id: 'voice', label: 'Voice' },
   { id: 'chat', label: 'Chat' },
+  { id: 'skills', label: 'Skills' },
+  { id: 'privacy', label: 'Data controls' },
   { id: 'security', label: 'Security' },
   { id: 'billing', label: 'Billing' },
-  { id: 'privacy', label: 'Privacy & data' },
-  { id: 'notifications', label: 'Notifications' },
-  { id: 'shortcuts', label: 'Shortcuts' },
   { id: 'about', label: 'About' }
 ]
 
@@ -107,7 +107,7 @@ export function OrbStandaloneSettingsPanel({
   onClearProfiles?: () => void
   onClearProjects?: () => void
 }) {
-  const [activeSection, setActiveSection] = useState<SettingsSectionId>('appearance')
+  const [activeSection, setActiveSection] = useState<SettingsSectionId>('general')
   const [chatSettings, setChatSettings] = useState<OrbStandaloneChatSettings>(defaultOrbStandaloneChatSettings)
   const [passkeysSupported, setPasskeysSupported] = useState(false)
   const [passkeys, setPasskeys] = useState<PasskeyItem[]>([])
@@ -210,8 +210,8 @@ export function OrbStandaloneSettingsPanel({
         </nav>
 
         <div className="flex-1 overflow-y-auto p-4">
-          {activeSection === 'appearance' ? (
-            <SettingsBlock title="Appearance" description="How ORB looks on this device.">
+          {activeSection === 'general' ? (
+            <SettingsBlock title="General" description="Appearance and workspace defaults.">
               <OrbAppearanceControl value={appearanceMode} onChange={(mode) => onAppearanceChange?.(mode)} />
               <p className="text-[11px] leading-5 text-[var(--orb-muted)]">
                 System follows your device. You can override it here.
@@ -241,6 +241,25 @@ export function OrbStandaloneSettingsPanel({
                 onChange={(value) => onA11yChange?.({ reducedMotion: value })}
                 dataAttr="reduce-motion"
               />
+              <ComingSoonRow icon={<Bell className="h-4 w-4" />} label="Safeguarding reminders (coming soon)" />
+            </SettingsBlock>
+          ) : null}
+
+          {activeSection === 'personalisation' ? (
+            <SettingsBlock title="Personalisation" description="Role, tone and how ORB addresses you.">
+              <RowButton
+                icon={<User className="h-4 w-4" />}
+                label="Manage profile"
+                hint="Role, tone and custom instructions"
+                onClick={() => {
+                  onOpenProfile?.()
+                  onClose()
+                }}
+              />
+              <p className="text-[11px] leading-5 text-[var(--orb-muted)]">
+                Your profile shapes suggestions and recording style. It stays on this device unless you connect other
+                services.
+              </p>
             </SettingsBlock>
           ) : null}
 
@@ -309,15 +328,15 @@ export function OrbStandaloneSettingsPanel({
                   />
                 </div>
               ) : null}
-              <RowButton
-                icon={<User className="h-4 w-4" />}
-                label="Manage profile"
-                hint="Role, tone and custom instructions"
-                onClick={() => {
-                  onOpenProfile?.()
-                  onClose()
-                }}
-              />
+            </SettingsBlock>
+          ) : null}
+
+          {activeSection === 'skills' ? (
+            <SettingsBlock title="Skills" description="Focused workflows from the sidebar Skills panel.">
+              <p className="text-[11px] leading-5 text-[var(--orb-muted)]">
+                Open Skills from the sidebar to start safeguarding review, handovers, inspection prep and document
+                analysis with a single tap.
+              </p>
             </SettingsBlock>
           ) : null}
 
@@ -392,7 +411,7 @@ export function OrbStandaloneSettingsPanel({
           ) : null}
 
           {activeSection === 'privacy' ? (
-            <SettingsBlock title="Privacy & local data" description="Your workspace stays on this device unless you export it.">
+            <SettingsBlock title="Data controls" description="Your workspace stays on this device unless you export it.">
               <RowButton
                 icon={<Database className="h-4 w-4" />}
                 label="Export workspace JSON"
@@ -428,21 +447,6 @@ export function OrbStandaloneSettingsPanel({
             </SettingsBlock>
           ) : null}
 
-          {activeSection === 'notifications' ? (
-            <SettingsBlock title="Notifications" description="Coming soon on ORB Residential.">
-              <ComingSoonRow icon={<Bell className="h-4 w-4" />} label="Safeguarding reminders" />
-              <ComingSoonRow icon={<Bell className="h-4 w-4" />} label="Supervision prep prompts" />
-            </SettingsBlock>
-          ) : null}
-
-          {activeSection === 'shortcuts' ? (
-            <SettingsBlock title="Keyboard shortcuts" description="While chatting on /orb.">
-              <ShortcutRow keys="Enter" action="Send message" />
-              <ShortcutRow keys="Shift + Enter" action="New line in composer" />
-              <ShortcutRow keys="Esc" action="Close panel or cancel edit" />
-            </SettingsBlock>
-          ) : null}
-
           {activeSection === 'about' ? (
             <SettingsBlock title="About ORB" description="Standalone Care Companion">
               <div className="flex items-center gap-2 text-xs text-[var(--orb-muted)]">
@@ -450,6 +454,9 @@ export function OrbStandaloneSettingsPanel({
                 <Moon className="h-4 w-4" aria-hidden />
                 <span>IndiCare ORB · standalone route /orb</span>
               </div>
+              <ShortcutRow keys="Enter" action="Send message" />
+              <ShortcutRow keys="Shift + Enter" action="New line in composer" />
+              <ShortcutRow keys="Esc" action="Close panel or cancel edit" />
               <RowButton
                 icon={<HelpCircle className="h-4 w-4" />}
                 label="Help"

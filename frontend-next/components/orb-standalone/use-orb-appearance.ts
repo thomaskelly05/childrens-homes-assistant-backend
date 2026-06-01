@@ -13,7 +13,7 @@ import {
 } from '@/lib/orb/orb-appearance'
 
 export function useOrbAppearance() {
-  const [appearanceMode, setAppearanceModeState] = useState<OrbAppearanceMode>('light')
+  const [appearanceMode, setAppearanceModeState] = useState<OrbAppearanceMode>('system')
   const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light')
 
   useEffect(() => {
@@ -36,7 +36,9 @@ export function useOrbAppearance() {
 
   useEffect(() => {
     applyOrbDocumentTheme(resolvedTheme)
-    return () => clearOrbDocumentTheme()
+    return () => {
+      /* Keep bootstrap theme on unmount — residential shell may still be mounted. */
+    }
   }, [resolvedTheme])
 
   const setAppearanceMode = useCallback((mode: OrbAppearanceMode) => {

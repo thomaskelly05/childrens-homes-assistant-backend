@@ -76,6 +76,9 @@ import { OrbIntelligenceMapPanel } from '@/components/orb-standalone/orb-intelli
 import { OrbMemoryPanel } from '@/components/orb-standalone/orb-memory-panel'
 import { OrbPermissionsPanel } from '@/components/orb-standalone/orb-permissions-panel'
 import { OrbToolsPanel } from '@/components/orb-standalone/orb-tools-panel'
+import { OrbReviewPanel } from '@/components/orb-standalone/orb-review-panel'
+import { OrbSkillsPanel } from '@/components/orb-standalone/orb-skills-panel'
+import type { OrbSkillDefinition } from '@/lib/orb/orb-skills-catalog'
 import { OrbDictateStation } from '@/components/orb-standalone/orb-dictate-station'
 import { OrbVoiceStation } from '@/components/orb-standalone/orb-voice-station'
 import type { OrbDictateNoteType } from '@/lib/orb/dictate/orb-dictate-types'
@@ -742,6 +745,8 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   const openDocumentsPanel = useCallback(() => openPanel('documents'), [openPanel])
   const openAgentsPanel = useCallback(() => openPanel('agents'), [openPanel])
   const openKnowledgeLibrary = useCallback(() => openPanel('knowledge'), [openPanel])
+  const openReviewPanel = useCallback(() => openPanel('review'), [openPanel])
+  const openSkillsPanel = useCallback(() => openPanel('skills'), [openPanel])
   const openTemplatesPanel = useCallback(() => openPanel('templates'), [openPanel])
   const openSavedOutputsPanel = useCallback(() => openPanel('saved_outputs'), [openPanel])
   const openMemoryPanel = useCallback(() => openPanel('memory'), [openPanel])
@@ -1687,13 +1692,26 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
     inputRef.current?.focus()
   }
 
+  function startOrbSkill(skill: OrbSkillDefinition) {
+    if (skill.mode) handleModeChange(skill.mode as StandaloneOrbMode)
+    setMessage(skill.starterPrompt)
+    closePanel()
+    inputRef.current?.focus()
+  }
+
+  function runQualityReview(text: string) {
+    const prompt = `Review this written practice for quality score, safeguarding concerns, missing information, child voice, chronology gaps, Ofsted readiness, suggested improved wording and manager oversight prompts.\n\n${text}`
+    void sendMessage(prompt)
+    inputRef.current?.focus()
+  }
+
   function openResidentialStation(station: OrbResidentialStationId) {
     switch (station) {
       case 'review':
-        setMessage(
-          'Review this text for safeguarding, child voice, recording quality and inspection readiness:\n\n'
-        )
-        openDocumentsPanel()
+        openReviewPanel()
+        break
+      case 'skills':
+        openSkillsPanel()
         break
       case 'templates':
         openTemplatesPanel()
@@ -2362,7 +2380,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   const layoutA11yClass = standaloneOrbAccessibilityClassNames(a11yPrefs)
 
   const atmosphereClass = atmosphereClassForMode(mode)
-  const effectiveTheme = residentialSurface ? 'dark' : resolvedTheme
+  const effectiveTheme = resolvedTheme
   const themeClass = effectiveTheme === 'light' ? 'orb-theme-light' : 'orb-theme-dark'
 
   return (
@@ -2422,6 +2440,12 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           closePanel()
         }}
       />
+      <OrbReviewPanel
+        open={activePanel === 'review'}
+        onClose={closePanel}
+        onRunReview={runQualityReview}
+      />
+      <OrbSkillsPanel open={activePanel === 'skills'} onClose={closePanel} onStartSkill={startOrbSkill} />
       <OrbDocumentPanel
         open={activePanel === 'documents'}
         onClose={closePanel}
@@ -2524,9 +2548,14 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
             onClose={closePanel}
             voice={voice}
             pending={pending}
+            subscriptionActive={account.hasConfirmedAccess}
             assistantReply={voiceStationAssistant?.text ?? null}
             assistantReplyKey={voiceStationAssistant?.key ?? null}
             onSendToOrb={(text) => void sendMessage(text)}
+            onTypeInstead={() => {
+              closePanel()
+              inputRef.current?.focus()
+            }}
             onOpenDictate={(transcript, noteType, opts) =>
               openOrbDictatePanel({ transcript, noteType, studio: opts?.studio })
             }

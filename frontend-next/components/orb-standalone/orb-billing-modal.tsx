@@ -74,8 +74,12 @@ export function OrbBillingModal({ open, onClose }: { open: boolean; onClose: () 
   }, [open])
 
   const stripeReady = Boolean(access?.billing?.stripe_configured)
+  const subscriptionActive = Boolean(
+    access?.can_use_orb || access?.subscription?.active || access?.trial?.active
+  )
   const statusLabel =
     access?.subscription?.status ?? access?.access_state ?? (access?.trial?.active ? 'trial' : 'inactive')
+  const displayStatus = subscriptionActive ? statusLabel : 'Subscription inactive'
 
   async function handleCheckout() {
     setLoading(true)
@@ -174,9 +178,17 @@ export function OrbBillingModal({ open, onClose }: { open: boolean; onClose: () 
               <p className="mt-1 text-2xl font-semibold tracking-tight text-[#5ec8ff]">£9.99/month</p>
             </div>
             <span className="rounded-full border border-cyan-500/25 bg-cyan-500/10 px-3 py-1 text-xs font-medium capitalize text-cyan-200">
-              {statusLabel}
+              {displayStatus}
             </span>
           </div>
+          {!subscriptionActive ? (
+            <p className="mt-3 text-sm text-amber-100/90" data-orb-billing-inactive>
+              Subscription inactive · {stripeReady ? 'Stripe ready' : 'Stripe setup required'} · Subscribe — £9.99/month
+            </p>
+          ) : null}
+          <p className="mt-3 text-xs leading-5 text-[var(--orb-muted)]">
+            ORB Residential is standalone and does not access IndiCare OS records unless you choose to connect them.
+          </p>
           <ul className="mt-4 grid gap-2 text-sm text-[var(--orb-muted)] sm:grid-cols-2">
             {PLAN_FEATURES.map((feature) => (
               <li key={feature} className="flex items-center gap-2">
@@ -195,7 +207,7 @@ export function OrbBillingModal({ open, onClose }: { open: boolean; onClose: () 
           <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
             <div>
               <dt className="text-[var(--orb-muted)]">Status</dt>
-              <dd className="mt-0.5 font-medium capitalize">{statusLabel}</dd>
+              <dd className="mt-0.5 font-medium capitalize">{displayStatus}</dd>
             </div>
             {access?.subscription?.current_period_end ? (
               <div>

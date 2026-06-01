@@ -1,6 +1,8 @@
 /** Standalone /orb panel ids — only one may be open at a time. */
 export type OrbStandalonePanel =
   | 'tools'
+  | 'review'
+  | 'skills'
   | 'documents'
   | 'agents'
   | 'templates'
@@ -20,6 +22,8 @@ export type OrbStandalonePanel =
 
 export const ORB_STANDALONE_PANEL_IDS: Exclude<OrbStandalonePanel, null>[] = [
   'tools',
+  'review',
+  'skills',
   'documents',
   'agents',
   'templates',

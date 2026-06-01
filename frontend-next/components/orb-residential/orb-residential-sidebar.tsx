@@ -12,12 +12,14 @@ import {
   FileText,
   FolderKanban,
   FolderOpen,
+  Library,
   MessageSquarePlus,
   Mic,
   PenLine,
   Save,
   Search,
   Settings,
+  Sparkles,
   User,
   X
 } from 'lucide-react'
@@ -43,13 +45,14 @@ import {
 } from '@/lib/orb/standalone-local-store'
 
 const NAV_ITEMS = [
-  { id: 'review', label: 'Review This', icon: FileCheck },
+  { id: 'skills', label: 'Skills', icon: Sparkles },
+  { id: 'knowledge', label: 'Library', icon: Library },
   { id: 'templates', label: 'Templates', icon: FileText },
-  { id: 'knowledge', label: 'Knowledge Centre', icon: BookOpen },
+  { id: 'orb_voice', label: 'Voice', icon: Mic },
+  { id: 'orb_dictate', label: 'Dictate', icon: PenLine },
+  { id: 'review', label: 'Review', icon: FileCheck },
   { id: 'documents', label: 'Documents', icon: FolderOpen },
-  { id: 'orb_voice', label: 'ORB Voice', icon: Mic },
-  { id: 'orb_dictate', label: 'ORB Dictate', icon: PenLine },
-  { id: 'saved', label: 'Saved Outputs', icon: Save }
+  { id: 'saved', label: 'Saved outputs', icon: Save }
 ] as const
 
 export type OrbResidentialStationId = (typeof NAV_ITEMS)[number]['id']

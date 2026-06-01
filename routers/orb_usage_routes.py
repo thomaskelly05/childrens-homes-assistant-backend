@@ -28,6 +28,17 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/orb/usage", tags=["ORB Residential Usage"])
 
+SAFE_USAGE_SUMMARY: dict[str, Any] = {
+    "messages_this_period": 0,
+    "included_messages": None,
+    "extra_usage_pence": 0,
+    "estimated_spend_pence": 0,
+    "monthly_cap_pence": None,
+    "warning_threshold_percent": 80,
+    "allow_overage": False,
+    "credits_balance": 0,
+}
+
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "").strip()
 FRONTEND_APP_URL = os.getenv("FRONTEND_APP_URL", os.getenv("APP_BASE_URL", "http://localhost:3001")).strip()
 
@@ -79,8 +90,19 @@ async def get_orb_usage(
     conn=Depends(get_db),
     current_user=Depends(require_orb_residential_auth),
 ):
+    """Usage summary for signed-in ORB Residential users.
+
+  Returns HTTP 200 with zeroed fields when metering tables are unavailable or the
+  subscription is inactive — only unauthenticated requests receive 401.
+    """
     user_id = int(current_user["user_id"])
-    return _usage_summary(conn, user_id=user_id, user=current_user)
+    try:
+        summary = _usage_summary(conn, user_id=user_id, user=current_user)
+        summary.pop("meter", None)
+        return summary
+    except Exception:
+        logger.warning("ORB usage summary degraded user_id=%s", user_id, exc_info=True)
+        return dict(SAFE_USAGE_SUMMARY)
 
 
 @router.post("/spending-cap")

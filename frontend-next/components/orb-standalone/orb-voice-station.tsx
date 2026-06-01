@@ -22,6 +22,14 @@ import {
   type OrbVoiceSessionStatus,
   type VoiceTurn
 } from '@/lib/orb/voice/orb-voice-types'
+import {
+  assessOrbVoiceReadiness,
+  orbVoiceReadinessPresentation,
+  probeMicrophonePermission,
+  requestMicrophoneAccess,
+  testMicrophoneLevel,
+  type MicrophonePermissionState
+} from '@/lib/orb/voice/orb-voice-readiness'
 
 type VoiceApi = ReturnType<typeof useStandaloneOrbVoice>
 
@@ -139,7 +147,9 @@ export function OrbVoiceStation({
   pending = false,
   assistantReply = null,
   assistantReplyKey = null,
-  onOpenDictate
+  onOpenDictate,
+  subscriptionActive = true,
+  onTypeInstead
 }: {
   open: boolean
   onClose: () => void
@@ -148,6 +158,8 @@ export function OrbVoiceStation({
   pending?: boolean
   assistantReply?: string | null
   assistantReplyKey?: string | null
+  subscriptionActive?: boolean
+  onTypeInstead?: () => void
   onOpenDictate?: (
     transcript: string,
     noteType?: import('@/lib/orb/dictate/orb-dictate-types').OrbDictateNoteType,
@@ -169,7 +181,29 @@ export function OrbVoiceStation({
   const lastAssistantKeyRef = useRef<string | null>(null)
   const greetedRef = useRef(false)
   const developerMode = isOrbDeveloperMode()
-  const permissionDenied = Boolean(voice.error?.toLowerCase().includes('microphone'))
+  const [micPermission, setMicPermission] = useState<MicrophonePermissionState>('unknown')
+  const [micTestMessage, setMicTestMessage] = useState<string | null>(null)
+  const permissionDenied =
+    micPermission === 'denied' || Boolean(voice.error?.toLowerCase().includes('microphone'))
+
+  useEffect(() => {
+    if (!open) return
+    void probeMicrophonePermission().then(setMicPermission)
+  }, [open])
+
+  const readiness = assessOrbVoiceReadiness({
+    recognitionAvailable: voice.recognitionAvailable,
+    synthesisAvailable: voice.synthesisAvailable,
+    permissionDenied,
+    realtimeServiceAvailable: usingBrowserFallback ? false : voiceSession ? true : 'unknown',
+    subscriptionActive
+  })
+  readiness.microphone_permission = micPermission === 'unknown' && permissionDenied ? 'denied' : micPermission
+
+  const readinessUi = orbVoiceReadinessPresentation(readiness, {
+    subscriptionActive,
+    sessionActive
+  })
 
   const status = mapPhaseToStatus(
     voice.phase,
@@ -290,8 +324,29 @@ export function OrbVoiceStation({
     voice
   ])
 
+  async function handleAllowMicrophone() {
+    const access = await requestMicrophoneAccess()
+    setMicPermission(access.permission)
+    setMicTestMessage(
+      access.ok ? 'Microphone allowed. You can start a conversation.' : 'Microphone access was not granted.'
+    )
+  }
+
+  async function handleTestMicrophone() {
+    const result = await testMicrophoneLevel()
+    setMicPermission(result.ok ? 'granted' : micPermission === 'granted' ? 'granted' : 'denied')
+    setMicTestMessage(result.message)
+  }
+
   async function handleStart() {
-    if (!voice.recognitionAvailable) return
+    if (!subscriptionActive) return
+    const access = await requestMicrophoneAccess()
+    setMicPermission(access.permission)
+    if (!access.ok && access.permission === 'denied') {
+      setRealtimeUiState('error')
+      return
+    }
+    if (!voice.recognitionAvailable && !readiness.fallback_available) return
     voice.resumeVoiceSession()
     setSessionActive(true)
     greetedRef.current = true
@@ -553,19 +608,23 @@ export function OrbVoiceStation({
           </p>
         ) : null}
 
-        <p className="mt-6 text-center text-sm font-medium text-[var(--orb-foreground)]" data-orb-voice-status-label>
-          {sessionActive ? statusLabel(status, permissionDenied) : 'Start a voice conversation'}
+        <p className="mt-6 text-center text-sm font-medium text-[var(--orb-foreground)]" data-orb-voice-status-label data-orb-voice-readiness={readinessUi.state}>
+          {sessionActive && status !== 'error' ? statusLabel(status, permissionDenied) : readinessUi.headline}
         </p>
 
         <p className="mt-2 text-center text-sm text-[var(--orb-muted)]" data-orb-voice-mic-status>
-          {voice.recognitionAvailable
-            ? sessionActive
-              ? settings.pushToTalk
-                ? 'Push-to-talk — use Speak when you are ready.'
-                : 'Hands-free in this session — ORB will listen again after speaking.'
-              : 'Voice starts only when you press Start.'
-            : 'Voice input is not available in this browser.'}
+          {sessionActive && status !== 'error'
+            ? settings.pushToTalk
+              ? 'Push-to-talk — use Speak when you are ready.'
+              : 'Hands-free in this session — ORB will listen again after speaking.'
+            : readinessUi.detail}
         </p>
+
+        {micTestMessage ? (
+          <p className="mt-2 text-center text-xs text-sky-200/90" role="status" data-orb-voice-mic-test>
+            {micTestMessage}
+          </p>
+        ) : null}
 
         {sessionActive && providerLabel ? (
           <p className="mt-1 text-center text-[10px] text-[var(--orb-muted)]" data-orb-voice-provider>
@@ -605,12 +664,58 @@ export function OrbVoiceStation({
           </div>
         ) : null}
 
-        <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+          {readinessUi.showTestMicrophone ? (
+            <button
+              type="button"
+              onClick={() => void handleTestMicrophone()}
+              className="rounded-full border border-[var(--orb-line)] px-4 py-2 text-xs font-medium text-[var(--orb-foreground)]"
+              data-orb-voice-test-mic
+            >
+              Test microphone
+            </button>
+          ) : null}
+          {readinessUi.showAllowMicrophone && !sessionActive ? (
+            <button
+              type="button"
+              onClick={() => void handleAllowMicrophone()}
+              className="rounded-full border border-sky-400/40 bg-sky-500/10 px-4 py-2 text-xs font-medium text-sky-100"
+              data-orb-voice-allow-mic
+            >
+              Allow microphone
+            </button>
+          ) : null}
+          {readinessUi.showOpenDictate && onOpenDictate ? (
+            <button
+              type="button"
+              onClick={() => onOpenDictate('')}
+              className="rounded-full border border-[var(--orb-line)] px-4 py-2 text-xs font-medium text-[var(--orb-muted)] hover:text-[var(--orb-foreground)]"
+              data-orb-voice-open-dictate
+            >
+              Open Dictate instead
+            </button>
+          ) : null}
+          {readinessUi.showTypeInstead ? (
+            <button
+              type="button"
+              onClick={() => {
+                onTypeInstead?.()
+                onClose()
+              }}
+              className="rounded-full px-4 py-2 text-xs font-medium text-[var(--orb-muted)] hover:text-[var(--orb-foreground)]"
+              data-orb-voice-type-instead
+            >
+              Type instead
+            </button>
+          ) : null}
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
           {!sessionActive ? (
             <button
               type="button"
               onClick={() => void handleStart()}
-              disabled={!voice.recognitionAvailable}
+              disabled={!subscriptionActive || (!voice.recognitionAvailable && !readiness.fallback_available)}
               className="rounded-full bg-gradient-to-r from-[#168bff] to-[#0d5fcc] px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-sky-500/25 disabled:opacity-50"
               data-orb-voice-start
             >
