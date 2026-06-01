@@ -536,6 +536,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   const [activePanel, setActivePanel] = useState<OrbStandalonePanel>(null)
   const [dictateImportTranscript, setDictateImportTranscript] = useState<string | undefined>()
   const [dictateImportNoteType, setDictateImportNoteType] = useState<OrbDictateNoteType | undefined>()
+  const [dictateImportStudio, setDictateImportStudio] = useState(false)
   const [agentsPanelOpen, setAgentsPanelOpen] = useState(false)
   const [promptDrawerOpen, setPromptDrawerOpen] = useState(false)
   const [moreExamplesExpanded, setMoreExamplesExpanded] = useState(false)
@@ -749,9 +750,10 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   const openBillingPanel = useCallback(() => openPanel('billing'), [openPanel])
   const openOrbVoicePanel = useCallback(() => openPanel('orb_voice'), [openPanel])
   const openOrbDictatePanel = useCallback(
-    (opts?: { transcript?: string; noteType?: OrbDictateNoteType }) => {
+    (opts?: { transcript?: string; noteType?: OrbDictateNoteType; studio?: boolean }) => {
       setDictateImportTranscript(opts?.transcript)
       setDictateImportNoteType(opts?.noteType)
+      setDictateImportStudio(Boolean(opts?.studio))
       openPanel('orb_dictate')
     },
     [openPanel]
@@ -2524,18 +2526,22 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
             assistantReply={voiceStationAssistant?.text ?? null}
             assistantReplyKey={voiceStationAssistant?.key ?? null}
             onSendToOrb={(text) => void sendMessage(text)}
-            onOpenDictate={(transcript, noteType) => openOrbDictatePanel({ transcript, noteType })}
+            onOpenDictate={(transcript, noteType, opts) =>
+              openOrbDictatePanel({ transcript, noteType, studio: opts?.studio })
+            }
           />
           <OrbDictateStation
             open={activePanel === 'orb_dictate'}
             onClose={() => {
               setDictateImportTranscript(undefined)
               setDictateImportNoteType(undefined)
+              setDictateImportStudio(false)
               closePanel()
             }}
             voice={voice}
             initialTranscript={dictateImportTranscript}
             initialNoteType={dictateImportNoteType}
+            initialStudio={dictateImportStudio}
             onSendToChat={(text) => void sendMessage(text)}
             onOpenOrbVoice={openOrbVoicePanel}
             onOpenTemplates={openTemplatesPanel}

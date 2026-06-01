@@ -4,12 +4,13 @@ import { useEffect } from 'react'
 import { X } from 'lucide-react'
 import type { ReactNode } from 'react'
 
-export type OrbAppModalSize = 'compact' | 'standard' | 'wide' | 'fullscreenMobile'
+export type OrbAppModalSize = 'compact' | 'standard' | 'wide' | 'xlarge' | 'fullscreenMobile'
 
 const MODAL_SIZE_CLASS: Record<OrbAppModalSize, string> = {
   compact: 'orb-panel-modal--compact',
   standard: 'orb-panel-modal--standard',
   wide: 'orb-panel-modal--wide',
+  xlarge: 'orb-panel-modal--xlarge',
   fullscreenMobile: 'orb-panel-modal--fullscreen-mobile'
 }
 

@@ -4,9 +4,11 @@ import type {
   OrbDictateParticipant,
   OrbDictateTranscriptSegment
 } from '@/lib/orb/dictate/orb-dictate-speaker'
+import type { OrbDictateEditMode } from '@/lib/orb/dictate/orb-dictate-studio-actions'
 import type {
   OrbDictateGenerateResult,
   OrbDictateNoteType,
+  OrbDictateQualityChecks,
   OrbDictateTemplate
 } from '@/lib/orb/dictate/orb-dictate-types'
 
@@ -187,6 +189,98 @@ export function buildLocalDictateFallback(
     governance_notice:
       'ORB Dictate helps create draft wording. Adults must review, edit and approve before using it as a formal record.'
   }
+}
+
+export type OrbDictateEditResult = {
+  revised_text: string
+  change_summary: string[]
+  warnings: string[]
+  quality_checks: OrbDictateQualityChecks
+  suggested_actions: string[]
+  version_label: string
+  standalone_boundary: string
+}
+
+export async function editOrbDictateDocument(payload: {
+  document_text: string
+  instruction: string
+  note_type: OrbDictateNoteType
+  mode?: OrbDictateEditMode
+  preserve_facts?: boolean
+}): Promise<OrbDictateEditResult> {
+  try {
+    const json = await authFetch<unknown>(DICTATE_BASE + '/edit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        document_text: payload.document_text,
+        instruction: payload.instruction,
+        note_type: payload.note_type,
+        mode: payload.mode,
+        preserve_facts: payload.preserve_facts ?? true,
+        standalone_boundary: true
+      })
+    })
+    return parseEnvelope<OrbDictateEditResult>(json)
+  } catch {
+    throw new Error('Could not apply ORB edit')
+  }
+}
+
+export function buildLocalDictateEditFallback(
+  documentText: string,
+  mode: OrbDictateEditMode,
+  instruction: string
+): OrbDictateEditResult {
+  let revised = documentText
+  const change_summary: string[] = ['Offline edit — review carefully before use.']
+  const warnings: string[] = ['Reconnect for full ORB intelligence editing.']
+  if (mode === 'missing_information') {
+    revised += '\n\n## Follow-up questions for staff\n\n- What was the child\'s voice?\n- What action was taken?\n- Was the manager informed?\n'
+    change_summary.push('Added follow-up questions (offline).')
+  } else if (mode === 'spelling_grammar') {
+    change_summary.push('Spelling check limited offline — review manually.')
+  } else {
+    change_summary.push(`Applied guidance for: ${instruction || mode}`)
+  }
+  return {
+    revised_text: revised,
+    change_summary,
+    warnings,
+    quality_checks: {
+      child_voice: 'review',
+      safeguarding: 'review',
+      manager_oversight: 'missing',
+      impact: 'weak',
+      recording_quality: 'needs_review'
+    },
+    suggested_actions: ['Review draft before saving'],
+    version_label: mode.replace(/_/g, ' '),
+    standalone_boundary:
+      'ORB Dictate does not submit to IndiCare OS or any care record unless you use an approved connected workflow.'
+  }
+}
+
+export async function patchOrbDictateNote(
+  noteId: string,
+  payload: { professional_note: string; title?: string; create_version?: boolean }
+): Promise<void> {
+  await authFetch(DICTATE_BASE + `/notes/${noteId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+}
+
+export function withDictateExportDraftNotice(title: string, body: string, noteType: string): string {
+  const date = new Date().toLocaleDateString('en-GB', { dateStyle: 'medium' })
+  return (
+    `# ${title}\n\n` +
+    `**Note type:** ${noteType.replace(/_/g, ' ')}\n` +
+    `**Generated:** ${date}\n\n` +
+    `*Draft for review — not submitted to live care records.*\n\n` +
+    `---\n\n${body}`
+  )
 }
 
 export async function saveOrbDictateNote(payload: {

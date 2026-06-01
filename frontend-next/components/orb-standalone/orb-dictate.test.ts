@@ -141,4 +141,65 @@ describe('ORB Dictate', () => {
     assert.match(station, /GOVERNANCE_COPY\.boundary/)
     assert.match(station, /GOVERNANCE_COPY\.saveWording/)
   })
+
+  it('studio split screen renders on desktop', () => {
+    const studio = readComponent('components/orb-standalone/orb-dictate-studio.tsx')
+    assert.match(studio, /data-orb-dictate-studio-split/)
+    assert.match(studio, /md:grid-cols-2/)
+    assert.match(studio, /data-orb-dictate-studio-mobile-tabs/)
+  })
+
+  it('document editor and assistant panel render', () => {
+    const studio = readComponent('components/orb-standalone/orb-dictate-studio.tsx')
+    const assistant = readComponent('components/orb-standalone/orb-dictate-studio-assistant.tsx')
+    assert.match(studio, /data-orb-dictate-studio-editor/)
+    assert.match(assistant, /data-orb-dictate-studio-assistant/)
+    assert.match(assistant, /data-orb-dictate-quick-action/)
+  })
+
+  it('therapeutic quick action calls edit endpoint', () => {
+    const actions = readFileSync(join(root, 'lib/orb/dictate/orb-dictate-studio-actions.ts'), 'utf8')
+    const client = readComponent('lib/orb/dictate/orb-dictate-client.ts')
+    const studio = readComponent('components/orb-standalone/orb-dictate-studio.tsx')
+    assert.match(actions, /therapeutic_rewrite/)
+    assert.match(client, /editOrbDictateDocument/)
+    assert.match(client, /\/edit/)
+    assert.match(studio, /editOrbDictateDocument/)
+  })
+
+  it('proposed changes require apply', () => {
+    const assistant = readComponent('components/orb-standalone/orb-dictate-studio-assistant.tsx')
+    assert.match(assistant, /data-orb-dictate-apply-edit/)
+    assert.match(assistant, /data-orb-dictate-edit-preview/)
+  })
+
+  it('autosave status and local fallback', () => {
+    const studio = readComponent('components/orb-standalone/orb-dictate-studio.tsx')
+    const drafts = readComponent('lib/orb/dictate/orb-dictate-drafts.ts')
+    assert.match(studio, /data-orb-dictate-autosave-status/)
+    assert.match(drafts, /orb-dictate-drafts/)
+  })
+
+  it('quality panel renders checks', () => {
+    const quality = readComponent('components/orb-standalone/orb-dictate-studio-quality.tsx')
+    assert.match(quality, /data-orb-dictate-studio-quality/)
+    assert.match(quality, /child_voice/)
+  })
+
+  it('station opens studio after generate', () => {
+    const station = readComponent('components/orb-standalone/orb-dictate-station.tsx')
+    assert.match(station, /OrbDictateStudio/)
+    assert.match(station, /setPhase\('studio'\)/)
+    assert.match(station, /xlarge/)
+  })
+
+  it('ORB Voice can open dictate studio', () => {
+    const voice = readComponent('components/orb-standalone/orb-voice-station.tsx')
+    assert.match(voice, /data-orb-voice-to-dictate-studio/)
+  })
+
+  it('anonymise action available in studio', () => {
+    const studio = readComponent('components/orb-standalone/orb-dictate-studio.tsx')
+    assert.match(studio, /data-orb-dictate-action-anonymise/)
+  })
 })
