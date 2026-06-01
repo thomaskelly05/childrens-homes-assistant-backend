@@ -77,6 +77,12 @@ export type OrbVoiceReadinessPresentation = {
   showTypeInstead: boolean
 }
 
+export function isSafariBrowser(): boolean {
+  if (typeof navigator === 'undefined') return false
+  const ua = navigator.userAgent.toLowerCase()
+  return ua.includes('safari') && !ua.includes('chrome') && !ua.includes('chromium')
+}
+
 export function detectSpeechRecognitionSupported(): boolean {
   if (typeof window === 'undefined') return false
   const w = window as Window & {

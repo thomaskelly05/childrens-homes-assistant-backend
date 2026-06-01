@@ -6,6 +6,7 @@ import { describe, it } from 'node:test'
 
 import {
   RECOGNITION_START_TIMEOUT_MS,
+  SPEECH_RECOGNITION_MINIMUM_HOLD_MS,
   confirmSpeechRecognitionStart
 } from './orb-speech-recognition-start.ts'
 
@@ -19,6 +20,7 @@ type MockRecognition = {
   onstart: (() => void) | null
   onerror: (() => void) | null
   onend: (() => void) | null
+  onresult?: ((event: unknown) => void) | null
   start: () => void
 }
 
@@ -26,12 +28,14 @@ function createMockRecognition(behaviour: {
   onStart?: 'immediate' | 'never'
   onErrorBeforeStart?: boolean
   onEndBeforeStart?: boolean
+  onEndAfterStartMs?: number
   startThrows?: boolean
 }): MockRecognition {
   const recognition: MockRecognition = {
     onstart: null,
     onerror: null,
     onend: null,
+    onresult: null,
     start: () => {
       if (behaviour.startThrows) throw new Error('start failed')
       if (behaviour.onErrorBeforeStart) {
@@ -45,42 +49,65 @@ function createMockRecognition(behaviour: {
       if (behaviour.onStart === 'immediate') {
         queueMicrotask(() => recognition.onstart?.())
       }
+      if (behaviour.onEndAfterStartMs != null) {
+        setTimeout(() => recognition.onend?.(), behaviour.onEndAfterStartMs)
+      }
     }
   }
   return recognition
 }
 
 describe('confirmSpeechRecognitionStart', () => {
-  it('resolves true only after onstart', async () => {
+  it('resolves true only after onstart and minimum hold', async () => {
     const recognition = createMockRecognition({ onStart: 'immediate' })
-    const result = await confirmSpeechRecognitionStart(recognition, { timeoutMs: 500 })
-    assert.equal(result, true)
+    const result = await confirmSpeechRecognitionStart(recognition, {
+      timeoutMs: 500,
+      minimumHoldMs: 40
+    })
+    assert.equal(result.ok, true)
   })
 
   it('resolves false on onerror before onstart', async () => {
     const recognition = createMockRecognition({ onErrorBeforeStart: true })
     const result = await confirmSpeechRecognitionStart(recognition, { timeoutMs: 500 })
-    assert.equal(result, false)
+    assert.equal(result.ok, false)
+    assert.equal(result.reason, 'onerror_before_onstart')
   })
 
   it('resolves false on onend before onstart', async () => {
     const recognition = createMockRecognition({ onEndBeforeStart: true })
     const result = await confirmSpeechRecognitionStart(recognition, { timeoutMs: 500 })
-    assert.equal(result, false)
+    assert.equal(result.ok, false)
+    assert.equal(result.reason, 'onend_before_onstart')
+  })
+
+  it('resolves false when onend fires before minimumHoldMs', async () => {
+    const recognition = createMockRecognition({
+      onStart: 'immediate',
+      onEndAfterStartMs: 30
+    })
+    const result = await confirmSpeechRecognitionStart(recognition, {
+      timeoutMs: 500,
+      minimumHoldMs: SPEECH_RECOGNITION_MINIMUM_HOLD_MS
+    })
+    assert.equal(result.ok, false)
+    assert.equal(result.reason, 'speech_recognition_ended_immediately')
   })
 
   it('resolves false on timeout when onstart never fires', async () => {
     const recognition = createMockRecognition({ onStart: 'never' })
     const started = Date.now()
     const result = await confirmSpeechRecognitionStart(recognition, { timeoutMs: 80 })
-    assert.equal(result, false)
+    assert.equal(result.ok, false)
+    assert.equal(result.reason, 'timeout')
     assert.ok(Date.now() - started >= 75)
   })
 
   it('resolves false when start() throws', async () => {
     const recognition = createMockRecognition({ startThrows: true })
     const result = await confirmSpeechRecognitionStart(recognition, { timeoutMs: 500 })
-    assert.equal(result, false)
+    assert.equal(result.ok, false)
+    assert.equal(result.reason, 'start_throw')
   })
 })
 
@@ -89,7 +116,7 @@ describe('ORB voice hook confirmed capture', () => {
     const hook = readComponent('components/orb-standalone/use-standalone-orb-voice.ts')
     assert.match(hook, /startRecognitionSessionConfirmed/)
     assert.match(hook, /confirmSpeechRecognitionStart/)
-    assert.match(hook, /Speech recognition could not start\. Open Dictate or type instead\./)
+    assert.match(hook, /not stable in this browser/)
     assert.match(hook, /await startRecognitionSessionConfirmed/)
   })
 
@@ -98,7 +125,7 @@ describe('ORB voice hook confirmed capture', () => {
     assert.match(station, /setSessionActive\(true\)/)
     assert.match(station, /if \(!captureStarted\)/)
     assert.match(station, /VOICE_CAPTURE_WATCHDOG_MS/)
-    assert.match(station, /captureActive \?/)
+    assert.match(station, /realtimeMicStarted/)
   })
 
   it('dictate does not set recordingActive until capture confirmed', () => {

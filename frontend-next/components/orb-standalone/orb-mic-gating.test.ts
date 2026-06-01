@@ -103,7 +103,8 @@ describe('ORB mic gating and routing', () => {
     assert.doesNotMatch(station, /beginUserVoiceCapture\(\)/)
     assert.match(station, /beginBrowserSpeechCapture/)
     assert.match(station, /VOICE_CAPTURE_WATCHDOG_MS/)
-    assert.match(station, /showSpeakControl[\s\S]*captureActive/)
+    assert.match(station, /showSpeakControl[\s\S]*voiceSessionLive/)
+    assert.match(station, /realtimeMicStarted/)
   })
 
   it('voice routes to dictate when speech recognition unavailable', () => {
