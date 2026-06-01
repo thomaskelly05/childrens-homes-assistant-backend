@@ -38,6 +38,13 @@ test('OAuth buttons only shown when configured', () => {
   assert.match(login, /not configured/)
 })
 
+test('fetchOrbUsage uses silent fallback constant', () => {
+  const client = readFileSync(new URL('./orb-billing-client.ts', import.meta.url), 'utf8')
+  assert.match(client, /ORB_USAGE_SAFE_FALLBACK/)
+  assert.match(client, /authFetchResponse\(ORB_BILLING_API\.usage/)
+  assert.match(client, /if \(!response\.ok\)/)
+})
+
 test('billing settings section references meter endpoints', () => {
   const billing = readFileSync(new URL('../../components/orb-standalone/orb-billing-settings-section.tsx', import.meta.url), 'utf8')
   assert.match(billing, /fetchOrbBillingMeter/)

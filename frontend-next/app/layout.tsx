@@ -10,7 +10,8 @@ import { AuthProvider } from '@/contexts/auth-context'
 
 const inter = Inter({
   subsets: ['latin'],
-  variable: '--font-inter'
+  variable: '--font-inter',
+  display: 'swap'
 })
 
 export const metadata: Metadata = {
@@ -48,7 +49,7 @@ export const viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en-GB">
-      <body className={`${inter.variable} font-sans antialiased`}>
+      <body className={`${inter.className} ${inter.variable} antialiased`}>
         <OrbAccessibilityHydrator />
         <NavigationRescue />
         <AuthProvider>

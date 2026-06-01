@@ -104,13 +104,13 @@ export function OrbToolsPanel({
     () => [
       {
         id: 'review-this',
-        label: 'Review This',
-        description: 'Review pasted incident, plan or record for practice quality',
+        label: 'Review',
+        description: 'Quality-review incidents, records, handovers and supervision notes',
         icon: <ClipboardList className="h-4 w-4" aria-hidden />,
         onClick: () =>
           onComposerPrefill?.(
-            'Review this document for child voice, safeguarding, recording quality, evidence of impact and Ofsted readiness. I will paste the text below:\n\n'
-          ) ?? onOpenDocuments?.()
+            'Review this written practice for safeguarding, child voice, recording quality, chronology gaps and inspection readiness. I will paste the text below:\n\n'
+          )
       },
       {
         id: 'template-library',
@@ -148,8 +148,8 @@ export function OrbToolsPanel({
     () => [
       {
         id: 'upload-document',
-        label: 'Upload / paste document',
-        description: 'Attach text for document intelligence',
+        label: 'Documents',
+        description: 'Analyse policies, PDFs, inspection letters and procedures',
         icon: <FileText className="h-4 w-4" aria-hidden />,
         onClick: onOpenDocuments
       },

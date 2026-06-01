@@ -19,7 +19,7 @@ function OrbResidentialExperienceInner() {
   const showSafetyModal = account.isSignedIn && account.safetyAccepted === false
 
   return (
-    <div className="orb-residential-root min-h-[100dvh] bg-[#05070d] text-[#f7faff]" data-orb-residential="true">
+    <div className="orb-residential-root min-h-[100dvh] bg-[var(--orb-bg,#05070d)] text-[var(--orb-foreground,#f7faff)]" data-orb-residential="true">
       <OrbResidentialErrorBoundary>
         <OrbCareCompanion residentialSurface />
       </OrbResidentialErrorBoundary>

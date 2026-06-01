@@ -171,7 +171,7 @@ export function OrbDocumentPanel({
     <OrbStandalonePanelShell
       open={open}
       title="Documents"
-      subtitle="Analyse policies, inspection notes, care documents or guidance using ORB."
+      subtitle="Analyse uploaded or pasted documents — policies, guidance, inspection letters, templates and contracts. For quality-review of your own recording, use Review."
       onClose={onClose}
       panelId="documents"
       ariaLabel="ORB documents"

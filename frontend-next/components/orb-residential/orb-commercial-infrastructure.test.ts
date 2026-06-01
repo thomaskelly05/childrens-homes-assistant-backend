@@ -48,7 +48,8 @@ test('voice station requires explicit start', () => {
     new URL('../orb-standalone/orb-voice-station.tsx', import.meta.url),
     'utf8'
   )
-  assert.match(voice, /Voice starts only when you press Start/)
+  assert.match(voice, /orb-voice-readiness|orbVoiceReadinessPresentation/)
   assert.match(voice, /data-orb-voice-start/)
   assert.match(voice, /Start conversation/)
+  assert.match(voice, /Test microphone/)
 })
