@@ -138,6 +138,14 @@ import {
 } from '@/lib/orb/standalone-accessibility'
 import { useAuth } from '@/contexts/auth-context'
 import { useOrbAccountState } from '@/hooks/use-orb-account-state'
+import { normaliseRole } from '@/lib/auth/permissions'
+import { isOrbDeveloperMode } from '@/lib/orb/orb-developer-mode'
+import {
+  canUseComposerMic,
+  orbMicDevLog,
+  resolveOrbMicAccessContext
+} from '@/lib/orb/voice/orb-mic-access'
+import { detectMediaRecorderSupported } from '@/lib/orb/voice/orb-voice-readiness'
 import { useOrbSessionGate } from '@/hooks/use-orb-session-gate'
 import { useMounted } from '@/hooks/use-mounted'
 import { getCsrfToken, STANDALONE_ORB_CSRF_REFRESH_MESSAGE } from '@/lib/auth/api'
@@ -1586,10 +1594,46 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   )
 
   /** Mic is text-first on /orb; barge-in voice controls ship in the future ORB Voice surface. */
+  const orbMicAccess = useMemo(
+    () =>
+      resolveOrbMicAccessContext({
+        subscriptionActive: account.hasConfirmedAccess,
+        isAdminUser:
+          account.adminBypass || normaliseRole(account.role ?? '') === 'admin',
+        developerMode: isOrbDeveloperMode()
+      }),
+    [account.adminBypass, account.hasConfirmedAccess, account.role]
+  )
+
   function handleMicClick() {
-    if (!STANDALONE_ORB_VOICE_CAPTURE_ENABLED) {
+    orbMicDevLog('composer mic clicked')
+    if (!STANDALONE_ORB_VOICE_CAPTURE_ENABLED || !canUseComposerMic()) {
       setMicNotice(VOICE_MODE_COMING_SOON)
       window.setTimeout(() => setMicNotice(null), 5000)
+      return
+    }
+    if (residentialSurface) {
+      if (voice.speaking) {
+        voice.interruptForListen()
+        return
+      }
+      if (voice.listening) {
+        voice.stopListening()
+        return
+      }
+      const speechInputOk =
+        voice.recognitionAvailable || detectMediaRecorderSupported()
+      if (orbMicAccess.canUseLiveVoice && speechInputOk) {
+        orbMicDevLog('opening voice')
+        openOrbVoicePanel()
+        return
+      }
+      orbMicDevLog('opening dictate fallback')
+      openOrbDictatePanel()
+      setMicNotice(
+        'Live voice is not available. Dictate is open so you can record or paste notes.'
+      )
+      window.setTimeout(() => setMicNotice(null), 8000)
       return
     }
     if (voice.speaking) {
@@ -1600,7 +1644,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       voice.stopListening()
       return
     }
-    if (!voice.recognitionAvailable) {
+    if (!voice.recognitionAvailable && !detectMediaRecorderSupported()) {
       openOrbDictatePanel()
       setMicNotice('Opening ORB Dictate — use Record note for microphone capture in this browser.')
       window.setTimeout(() => setMicNotice(null), 5000)
@@ -2296,6 +2340,21 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       autoSend={STANDALONE_ORB_VOICE_CAPTURE_ENABLED && voiceSettings.autoSend}
       onChange={handleMessageChange}
       onSubmit={handleComposerSubmit}
+      composerMicEnabled={canUseComposerMic()}
+      composerMicAriaLabel={
+        residentialSurface
+          ? orbMicAccess.canUseLiveVoice && voice.recognitionAvailable
+            ? 'Open ORB Voice'
+            : 'Open ORB Dictate to record or paste notes'
+          : undefined
+      }
+      composerMicTitle={
+        residentialSurface
+          ? orbMicAccess.canUseLiveVoice && voice.recognitionAvailable
+            ? 'Open live ORB Voice conversation'
+            : 'Live voice is not available — open ORB Dictate to record or paste notes'
+          : undefined
+      }
       onMicClick={handleMicClick}
       onCancelListening={voice.cancelListening}
       onStopSpeaking={voice.cancelSpeaking}
@@ -2550,6 +2609,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
             voice={voice}
             pending={pending}
             subscriptionActive={account.hasConfirmedAccess}
+            isAdminUser={
+              account.adminBypass || normaliseRole(account.role ?? '') === 'admin'
+            }
             assistantReply={voiceStationAssistant?.text ?? null}
             assistantReplyKey={voiceStationAssistant?.key ?? null}
             onSendToOrb={(text) => void sendMessage(text)}

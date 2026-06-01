@@ -23,6 +23,12 @@ import {
   type VoiceTurn
 } from '@/lib/orb/voice/orb-voice-types'
 import {
+  canUseLiveVoice,
+  isOrbTestMode,
+  orbMicDevLog,
+  type OrbMicAccessContext
+} from '@/lib/orb/voice/orb-mic-access'
+import {
   assessOrbVoiceReadiness,
   orbVoiceReadinessPresentation,
   probeMicrophonePermission,
@@ -149,6 +155,7 @@ export function OrbVoiceStation({
   assistantReplyKey = null,
   onOpenDictate,
   subscriptionActive = true,
+  isAdminUser = false,
   onTypeInstead
 }: {
   open: boolean
@@ -159,6 +166,7 @@ export function OrbVoiceStation({
   assistantReply?: string | null
   assistantReplyKey?: string | null
   subscriptionActive?: boolean
+  isAdminUser?: boolean
   onTypeInstead?: () => void
   onOpenDictate?: (
     transcript: string,
@@ -183,8 +191,17 @@ export function OrbVoiceStation({
   const developerMode = isOrbDeveloperMode()
   const [micPermission, setMicPermission] = useState<MicrophonePermissionState>('unknown')
   const [micTestMessage, setMicTestMessage] = useState<string | null>(null)
+  const [startBlockedMessage, setStartBlockedMessage] = useState<string | null>(null)
   const permissionDenied =
     micPermission === 'denied' || Boolean(voice.error?.toLowerCase().includes('microphone'))
+
+  const micAccess: OrbMicAccessContext = {
+    subscriptionActive,
+    isAdminUser,
+    isDeveloperMode: developerMode,
+    isTestMode: isOrbTestMode()
+  }
+  const liveVoiceAllowed = canUseLiveVoice(micAccess)
 
   useEffect(() => {
     if (!open) return
@@ -196,7 +213,8 @@ export function OrbVoiceStation({
     synthesisAvailable: voice.synthesisAvailable,
     permissionDenied,
     realtimeServiceAvailable: usingBrowserFallback ? false : voiceSession ? true : 'unknown',
-    subscriptionActive
+    subscriptionActive,
+    micAccess
   })
   readiness.microphone_permission = micPermission === 'unknown' && permissionDenied ? 'denied' : micPermission
 
@@ -204,9 +222,18 @@ export function OrbVoiceStation({
 
   const readinessUi = orbVoiceReadinessPresentation(readiness, {
     subscriptionActive,
+    canUseLiveVoice: liveVoiceAllowed,
     sessionActive,
     captureActive
   })
+
+  const startDisabledByBrowser = !voice.recognitionAvailable && !readiness.fallback_available
+  const startDisabled = !liveVoiceAllowed || startDisabledByBrowser
+  const startButtonLabel = !liveVoiceAllowed
+    ? 'Activate subscription to use live voice'
+    : startDisabledByBrowser
+      ? 'Live voice unavailable in this browser'
+      : 'Start conversation'
 
   const status = mapPhaseToStatus(
     voice.phase,
@@ -345,8 +372,19 @@ export function OrbVoiceStation({
   }
 
   async function handleStart() {
-    if (!subscriptionActive) return
-    if (!voice.recognitionAvailable && !readiness.fallback_available) return
+    if (!liveVoiceAllowed) {
+      setStartBlockedMessage(
+        'Live voice needs an active ORB Residential subscription. Use Open Dictate or Type instead.'
+      )
+      orbMicDevLog('voice start blocked: subscription inactive')
+      return
+    }
+    if (!voice.recognitionAvailable && !readiness.fallback_available) {
+      setStartBlockedMessage('Live voice is not supported in this browser. Open Dictate to record a note.')
+      return
+    }
+    setStartBlockedMessage(null)
+    orbMicDevLog('voice start requested')
     voice.resumeVoiceSession()
     greetedRef.current = true
     setSessionStartedAt(new Date().toISOString())
@@ -561,7 +599,7 @@ export function OrbVoiceStation({
       panelId="orb-voice"
       size="wide"
     >
-      <div className="orb-voice-room flex flex-col items-center p-6 pb-8" data-orb-voice-station>
+      <div className="orb-voice-room pointer-events-auto flex flex-col items-center p-6 pb-8" data-orb-voice-station>
         <div className="flex w-full max-w-lg flex-wrap items-center justify-center gap-2">
           <label className="sr-only" htmlFor="orb-voice-mode-select">
             Voice mode
@@ -647,6 +685,12 @@ export function OrbVoiceStation({
         {micTestMessage ? (
           <p className="mt-2 text-center text-xs text-sky-200/90" role="status" data-orb-voice-mic-test>
             {micTestMessage}
+          </p>
+        ) : null}
+
+        {startBlockedMessage && !sessionActive ? (
+          <p className="mt-2 text-center text-xs text-amber-200/90" role="status" data-orb-voice-start-blocked>
+            {startBlockedMessage}
           </p>
         ) : null}
 
@@ -739,11 +783,22 @@ export function OrbVoiceStation({
             <button
               type="button"
               onClick={() => void handleStart()}
-              disabled={!subscriptionActive || (!voice.recognitionAvailable && !readiness.fallback_available)}
-              className="rounded-full bg-gradient-to-r from-[#168bff] to-[#0d5fcc] px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-sky-500/25 disabled:opacity-50"
+              disabled={startDisabled}
+              aria-disabled={startDisabled}
+              title={
+                !liveVoiceAllowed
+                  ? 'Activate ORB Residential subscription for live voice'
+                  : startDisabledByBrowser
+                    ? 'Use ORB Dictate to record in this browser'
+                    : 'Start a live voice conversation'
+              }
+              className="rounded-full bg-gradient-to-r from-[#168bff] to-[#0d5fcc] px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-sky-500/25 disabled:cursor-not-allowed disabled:opacity-50"
               data-orb-voice-start
+              data-orb-voice-start-disabled-reason={
+                !liveVoiceAllowed ? 'subscription' : startDisabledByBrowser ? 'browser' : undefined
+              }
             >
-              Start conversation
+              {startButtonLabel}
             </button>
           ) : (
             <>

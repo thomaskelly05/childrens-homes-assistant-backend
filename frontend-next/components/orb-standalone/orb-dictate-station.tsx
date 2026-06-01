@@ -38,7 +38,8 @@ import {
   saveOrbDictateNote,
   transcribeOrbDictateAudio
 } from '@/lib/orb/dictate/orb-dictate-client'
-import { detectSpeechRecognitionSupported } from '@/lib/orb/voice/orb-voice-readiness'
+import { orbMicDevLog } from '@/lib/orb/voice/orb-mic-access'
+import { detectMediaRecorderSupported, detectSpeechRecognitionSupported } from '@/lib/orb/voice/orb-voice-readiness'
 import {
   anonymiseText,
   modeToNoteType,
@@ -230,7 +231,11 @@ export function OrbDictateStation({
     await runGenerate({ ...flags, include_ofsted_lens: flags.include_ofsted_lens ?? action === 'ofsted_ready' })
   }
 
+  const MIC_PERMISSION_MESSAGE =
+    'Microphone could not start. Check Safari site settings and allow microphone for app.indicare.co.uk.'
+
   async function handleStartRecording() {
+    orbMicDevLog('dictate record clicked', startMode ?? 'unknown')
     if (needsConsent && !consentConfirmed) {
       setStatusMessage('Please confirm consent before recording a conversation or debrief.')
       return
@@ -245,9 +250,11 @@ export function OrbDictateStation({
       const ok = await voice.beginUserVoiceCapture({ mode: 'continuous' })
       if (!ok) {
         setRecordingActive(false)
-        setStatusMessage(
-          voice.error || 'Could not access the microphone. You can paste a transcript instead.'
-        )
+        const denied = voice.error?.toLowerCase().includes('microphone')
+        setStatusMessage(denied ? MIC_PERMISSION_MESSAGE : voice.error || MIC_PERMISSION_MESSAGE)
+        orbMicDevLog('getUserMedia failed', voice.error ?? 'speech capture failed')
+      } else {
+        orbMicDevLog('getUserMedia success')
       }
       return
     }
@@ -256,9 +263,26 @@ export function OrbDictateStation({
     const ok = await voice.beginMediaRecorderCapture()
     if (!ok) {
       setRecordingActive(false)
+      const denied = voice.error?.toLowerCase().includes('microphone')
       setStatusMessage(
-        'Live speech recognition unavailable — paste a transcript or upload audio when transcription is ready.'
+        denied
+          ? MIC_PERMISSION_MESSAGE
+          : 'Audio capture is unavailable in this browser — paste or upload a transcript instead.'
       )
+      orbMicDevLog('getUserMedia failed', voice.error ?? 'media recorder failed')
+    } else {
+      orbMicDevLog('getUserMedia success')
+    }
+  }
+
+  function handleSelectStartMode(id: OrbDictateStartMode) {
+    setStartMode(id)
+    if (id === 'import_voice') importFromOrbVoice()
+    if (id === 'template') onOpenTemplates?.()
+    if (id === 'paste') setPasteText(transcript)
+    if (id === 'record_debrief') setReflectiveMode(false)
+    if (id === 'record_note' || id === 'record_debrief') {
+      void handleStartRecording()
     }
   }
 
@@ -300,7 +324,10 @@ export function OrbDictateStation({
           setStatusMessage('Recording transcribed — review before generating.')
         } catch {
           setUploadError(
-            'Audio transcription is not available yet. Please paste the transcript — your recording was captured.'
+            'Audio captured. Transcription is not available in this browser yet — paste or upload a transcript.'
+          )
+          setStatusMessage(
+            'Audio captured. Transcription is not available in this browser yet — paste or upload a transcript.'
           )
         } finally {
           setUploadingAudio(false)
@@ -568,12 +595,17 @@ export function OrbDictateStation({
     setReflectiveIndex((i) => i + 1)
   }
 
-  const micStatus = !voice.recognitionAvailable
-    ? 'Transcription unavailable — paste instead'
-    : recordingActive
-      ? recordingPaused
-        ? 'Paused'
-        : 'Recording…'
+  const micCaptureAvailable =
+    voice.recognitionAvailable || detectSpeechRecognitionSupported() || detectMediaRecorderSupported()
+
+  const micStatus = recordingActive
+    ? recordingPaused
+      ? 'Paused'
+      : recorderModeRef.current === 'media' && !(voice.transcript || voice.displayTranscript)
+        ? 'Recording audio…'
+        : 'Listening…'
+    : !micCaptureAvailable
+      ? 'Microphone unavailable — paste instead'
       : 'Ready'
 
   const orbClass = recordingActive && !recordingPaused ? 'glass-orb-mark--listening glass-orb-mark--voice' : 'glass-orb-mark--voice glass-orb-mark--idle'
@@ -592,7 +624,7 @@ export function OrbDictateStation({
       size={phase === 'studio' ? 'xlarge' : 'wide'}
       ariaLabel={phase === 'studio' ? 'ORB Dictate Studio' : 'ORB Dictate'}
     >
-      <div className="orb-dictate flex min-h-0 flex-1 flex-col" data-orb-dictate-station>
+      <div className="orb-dictate pointer-events-auto flex min-h-0 flex-1 flex-col" data-orb-dictate-station>
         {phase === 'studio' && output ? (
           <OrbDictateStudio
             output={output}
@@ -633,13 +665,7 @@ export function OrbDictateStation({
                         ? 'border-sky-400/50 bg-sky-500/10 text-white'
                         : 'border-[var(--orb-line)]/60 bg-white/[0.03] text-[var(--orb-foreground)] hover:border-sky-400/30'
                     }`}
-                    onClick={() => {
-                      setStartMode(id)
-                      if (id === 'import_voice') importFromOrbVoice()
-                      if (id === 'template') onOpenTemplates?.()
-                      if (id === 'paste') setPasteText(transcript)
-                      if (id === 'record_debrief') setReflectiveMode(false)
-                    }}
+                    onClick={() => handleSelectStartMode(id)}
                   >
                     <Icon className="mb-1 h-4 w-4 text-sky-400" aria-hidden />
                     {label}
@@ -790,7 +816,13 @@ export function OrbDictateStation({
                     <button
                       type="button"
                       data-orb-dictate-record-start
-                      className="inline-flex items-center gap-1 rounded-full bg-sky-500/20 px-3 py-1.5 text-xs text-sky-100"
+                      className="inline-flex items-center gap-1 rounded-full bg-sky-500/20 px-3 py-1.5 text-xs text-sky-100 disabled:cursor-not-allowed disabled:opacity-50"
+                      disabled={needsConsent && !consentConfirmed}
+                      title={
+                        needsConsent && !consentConfirmed
+                          ? 'Confirm consent before recording'
+                          : 'Start microphone recording'
+                      }
                       onClick={() => void handleStartRecording()}
                     >
                       <Mic className="h-3.5 w-3.5" /> Start

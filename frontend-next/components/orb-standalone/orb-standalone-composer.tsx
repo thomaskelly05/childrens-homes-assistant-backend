@@ -36,6 +36,9 @@ export function OrbStandaloneComposer({
   voiceRecognitionAvailable,
   voiceStatusText,
   voiceCaptureEnabled = false,
+  composerMicEnabled = true,
+  composerMicAriaLabel,
+  composerMicTitle,
   transcriptReady,
   displayTranscript,
   autoSend,
@@ -78,6 +81,10 @@ export function OrbStandaloneComposer({
   voiceRecognitionAvailable: boolean
   voiceStatusText: string
   voiceCaptureEnabled?: boolean
+  /** When false, mic button is disabled (e.g. voice capture globally off). */
+  composerMicEnabled?: boolean
+  composerMicAriaLabel?: string
+  composerMicTitle?: string
   transcriptReady: boolean
   displayTranscript: string
   autoSend: boolean
@@ -118,6 +125,17 @@ export function OrbStandaloneComposer({
   const canSend = trimmedMessage.length > 0 || attachments.length > 0
   const sendDisabled = pending || !canSend
   const disabledReason = sendDisabledReason(pending, canSend)
+  const micDisabled = !composerMicEnabled || !voiceCaptureEnabled
+  const micLabel =
+    composerMicAriaLabel ??
+    (voiceListening ? 'Stop voice input' : 'Open voice or dictate')
+  const micHint =
+    composerMicTitle ??
+    (voiceListening
+      ? 'Stop voice input'
+      : voiceRecognitionAvailable
+        ? 'Open ORB Voice or start voice input'
+        : 'Open ORB Dictate to record or paste notes')
 
   function setInputNode(node: HTMLTextAreaElement | null) {
     fallbackInputRef.current = node
@@ -395,7 +413,16 @@ export function OrbStandaloneComposer({
                     <Square className="h-4 w-4 fill-current" aria-hidden />
                   </button>
                 ) : null}
-                <button type="button" onClick={onMicClick} disabled={!voiceCaptureEnabled || !voiceRecognitionAvailable} aria-label="Voice input" className={`inline-flex h-9 min-w-9 items-center justify-center rounded-full transition disabled:opacity-40 ${voiceListening ? 'text-sky-300' : 'text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)]'}`} data-orb-composer-mic>
+                <button
+                  type="button"
+                  onClick={onMicClick}
+                  disabled={micDisabled}
+                  aria-label={micLabel}
+                  title={micHint}
+                  className={`pointer-events-auto inline-flex h-9 min-w-9 items-center justify-center rounded-full transition disabled:cursor-not-allowed disabled:opacity-40 ${voiceListening ? 'text-sky-300' : 'text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)]'}`}
+                  data-orb-composer-mic
+                  data-orb-composer-mic-route={voiceRecognitionAvailable ? 'voice-or-capture' : 'dictate-fallback'}
+                >
                   {voiceListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
                 </button>
                 <button type="submit" disabled={sendDisabled || (answering && Boolean(onStopGenerating))} aria-label="Send message" className="orb-composer-send inline-flex h-9 min-w-9 items-center justify-center rounded-full text-white transition disabled:opacity-35" data-orb-composer-send data-testid="orb-standalone-send-clickable">
@@ -425,7 +452,18 @@ export function OrbStandaloneComposer({
                     <span className="hidden text-xs font-semibold sm:inline">Stop</span>
                   </button>
                 ) : null}
-                <button type="button" onClick={onMicClick} disabled={!voiceCaptureEnabled || !voiceRecognitionAvailable} aria-label={!voiceCaptureEnabled ? 'Voice unavailable' : !voiceRecognitionAvailable ? 'Voice input is not available in this browser yet' : voiceListening ? 'Stop voice input' : 'Start voice input'} title={!voiceCaptureEnabled || !voiceRecognitionAvailable ? 'Voice input is not available in this browser yet.' : voiceListening ? 'Stop voice input' : 'Start voice input'} className={`inline-flex h-10 min-w-10 shrink-0 items-center justify-center rounded-full transition disabled:cursor-not-allowed disabled:opacity-45 ${voiceListening ? 'bg-sky-100 text-sky-700 shadow-sm' : 'bg-white text-slate-500 shadow-sm hover:bg-slate-100 hover:text-slate-900'}`} data-orb-composer-mic data-orb-composer-mic-available={voiceRecognitionAvailable ? 'true' : 'false'} data-no-navigation-rescue="true">
+                <button
+                  type="button"
+                  onClick={onMicClick}
+                  disabled={micDisabled}
+                  aria-label={micLabel}
+                  title={micHint}
+                  className={`pointer-events-auto inline-flex h-10 min-w-10 shrink-0 items-center justify-center rounded-full transition disabled:cursor-not-allowed disabled:opacity-45 ${voiceListening ? 'bg-sky-100 text-sky-700 shadow-sm' : 'bg-white text-slate-500 shadow-sm hover:bg-slate-100 hover:text-slate-900'}`}
+                  data-orb-composer-mic
+                  data-orb-composer-mic-available={voiceRecognitionAvailable ? 'true' : 'false'}
+                  data-orb-composer-mic-route={voiceRecognitionAvailable ? 'voice-or-capture' : 'dictate-fallback'}
+                  data-no-navigation-rescue="true"
+                >
                   {voiceListening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
                 </button>
                 <button type="submit" disabled={sendDisabled || (answering && Boolean(onStopGenerating))} aria-label="Send message" onClick={(event) => logTapTarget(event, 'orb-standalone-send-click')} onPointerUp={(event) => { if (event.pointerType !== 'touch') return; logTapTarget(event, 'orb-standalone-send-pointer') }} className="orb-composer-send pointer-events-auto inline-flex h-11 min-h-11 min-w-11 shrink-0 cursor-pointer touch-manipulation items-center justify-center rounded-full text-white transition disabled:opacity-35" data-orb-composer-send data-testid="orb-standalone-send-clickable" data-send-disabled-reason={disabledReason} data-message-length={trimmedMessage.length} data-no-navigation-rescue="true">

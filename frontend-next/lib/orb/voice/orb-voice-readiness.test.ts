@@ -10,11 +10,27 @@ describe('orb voice readiness', () => {
   it('marks subscription inactive state', () => {
     const readiness = assessOrbVoiceReadiness({
       recognitionAvailable: true,
-      subscriptionActive: false
+      subscriptionActive: false,
+      micAccess: { subscriptionActive: false }
     })
-    const ui = orbVoiceReadinessPresentation(readiness, { subscriptionActive: false })
+    const ui = orbVoiceReadinessPresentation(readiness, {
+      subscriptionActive: false,
+      canUseLiveVoice: false
+    })
     assert.equal(ui.state, 'subscription_inactive')
     assert.match(ui.headline, /once active/i)
+    assert.equal(ui.showOpenDictate, true)
+  })
+
+  it('allows admin bypass for live voice readiness', () => {
+    const readiness = assessOrbVoiceReadiness({
+      recognitionAvailable: true,
+      subscriptionActive: false,
+      micAccess: { subscriptionActive: false, isAdminUser: true }
+    })
+    assert.equal(readiness.can_use_realtime_voice, true)
+    const ui = orbVoiceReadinessPresentation(readiness, { canUseLiveVoice: true })
+    assert.notEqual(ui.state, 'subscription_inactive')
   })
 
   it('marks microphone blocked state', () => {
