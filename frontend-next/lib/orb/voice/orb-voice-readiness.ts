@@ -1,5 +1,47 @@
 /** Client-side voice readiness — safe to import from tests without React. */
 
+export type OrbMicAccessContext = {
+  subscriptionActive: boolean
+  isAdminUser?: boolean
+  isDeveloperMode?: boolean
+  isTestMode?: boolean
+}
+
+export function isOrbTestMode(): boolean {
+  return process.env.NODE_ENV === 'development'
+}
+
+export function canUseLiveVoice(ctx: OrbMicAccessContext): boolean {
+  return Boolean(
+    ctx.subscriptionActive ||
+      ctx.isAdminUser ||
+      ctx.isDeveloperMode ||
+      ctx.isTestMode
+  )
+}
+
+/** Dictate mic capture is not subscription-gated — only browser / permission limits apply. */
+export function canUseDictateMic(options?: { browserMicUnsupported?: boolean }): boolean {
+  if (options?.browserMicUnsupported) return false
+  if (typeof window === 'undefined') return true
+  return (
+    detectSpeechRecognitionSupported() ||
+    detectMediaRecorderSupported() ||
+    Boolean(navigator.mediaDevices?.getUserMedia)
+  )
+}
+
+/** Composer mic always routes to Voice or Dictate. */
+export function canUseComposerMic(): boolean {
+  return true
+}
+
+export function orbMicDevLog(message: string, detail?: string) {
+  if (process.env.NODE_ENV !== 'development') return
+  if (detail) console.debug(`[orb-mic] ${message}`, detail)
+  else console.debug(`[orb-mic] ${message}`)
+}
+
 export type MicrophonePermissionState = 'granted' | 'prompt' | 'denied' | 'unknown'
 
 export type OrbVoiceReadiness = {
@@ -68,6 +110,7 @@ export function assessOrbVoiceReadiness(input: {
   permissionDenied?: boolean
   realtimeServiceAvailable?: boolean | 'unknown'
   subscriptionActive?: boolean
+  micAccess?: OrbMicAccessContext
 }): OrbVoiceReadiness {
   const secure_context = typeof window !== 'undefined' ? window.isSecureContext : true
   const browser_supported =
@@ -79,12 +122,15 @@ export function assessOrbVoiceReadiness(input: {
     secure_context && browser_supported && microphone_permission !== 'denied' && detectMediaRecorderSupported()
   const realtime =
     input.realtimeServiceAvailable === undefined ? 'unknown' : input.realtimeServiceAvailable
+  const liveVoiceAllowed = input.micAccess
+    ? canUseLiveVoice(input.micAccess)
+    : input.subscriptionActive !== false
   const can_use_realtime_voice =
     Boolean(input.recognitionAvailable) &&
     secure_context &&
     microphone_permission !== 'denied' &&
     realtime !== false &&
-    Boolean(input.subscriptionActive !== false)
+    liveVoiceAllowed
 
   return {
     microphone_permission,
@@ -99,11 +145,16 @@ export function assessOrbVoiceReadiness(input: {
 
 export function orbVoiceReadinessPresentation(
   readiness: OrbVoiceReadiness,
-  options?: { subscriptionActive?: boolean; sessionActive?: boolean; captureActive?: boolean }
+  options?: {
+    subscriptionActive?: boolean
+    canUseLiveVoice?: boolean
+    sessionActive?: boolean
+    captureActive?: boolean
+  }
 ): OrbVoiceReadinessPresentation {
-  const subscriptionActive = options?.subscriptionActive !== false
+  const liveVoiceAllowed = options?.canUseLiveVoice ?? options?.subscriptionActive !== false
 
-  if (!subscriptionActive) {
+  if (!liveVoiceAllowed) {
     return {
       state: 'subscription_inactive',
       headline: 'Voice is included in ORB Residential once active',
