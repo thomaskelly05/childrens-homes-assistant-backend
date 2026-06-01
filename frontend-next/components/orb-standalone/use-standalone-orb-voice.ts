@@ -19,10 +19,7 @@ import {
   type OrbVoiceCaptureState
 } from '@/lib/orb/voice/orb-voice-capture'
 import { confirmSpeechRecognitionStart } from '@/lib/orb/voice/orb-speech-recognition-start'
-import {
-  detectMediaRecorderSupported,
-  isSafariBrowser
-} from '@/lib/orb/voice/orb-voice-readiness'
+import { detectMediaRecorderSupported } from '@/lib/orb/voice/orb-voice-readiness'
 import type { OrbSpeechRecognitionStartFailureReason } from '@/lib/orb/voice/orb-speech-recognition-start'
 import {
   DEFAULT_ORB_VOICE_PROFILE_ID,
@@ -228,6 +225,7 @@ export function useStandaloneOrbVoice() {
   const mediaRecorderCaptureRef = useRef<MediaRecorderCapture | null>(null)
   const safariKeepAliveRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const userInitiatedVoiceRef = useRef(false)
+  const dictateSpeechCaptureRef = useRef(false)
   const [speechPlaybackError, setSpeechPlaybackError] = useState<string | null>(null)
 
   const stopMediaRecorderCapture = useCallback(() => {
@@ -501,8 +499,10 @@ export function useStandaloneOrbVoice() {
         setListening(true)
         setVoiceCaptureState('listening')
         setPhase(mode === 'continuous' ? 'continuous_listening' : 'listening')
-        setTranscript('')
-        setInterimTranscript('')
+        if (!dictateSpeechCaptureRef.current) {
+          setTranscript('')
+          setInterimTranscript('')
+        }
       }
       recognition.onresult = (event) => {
         let interim = ''
@@ -516,12 +516,24 @@ export function useStandaloneOrbVoice() {
         const finalTrimmed = stripWakePhraseFromTranscript(finalText.trim())
         if (interimTrimmed) setInterimTranscript(interimTrimmed)
         if (finalTrimmed) {
-          setTranscript(finalTrimmed)
-          setInterimTranscript('')
-          setPhase('transcript_ready')
-          recognition.stop()
+          if (mode === 'continuous' && dictateSpeechCaptureRef.current) {
+            setTranscript((prev) => {
+              const next = prev ? `${prev}\n${finalTrimmed}` : finalTrimmed
+              transcriptRef.current = next
+              return next
+            })
+            setInterimTranscript('')
+            setPhase('continuous_listening')
+          } else {
+            setTranscript(finalTrimmed)
+            setInterimTranscript('')
+            setPhase('transcript_ready')
+            recognition.stop()
+          }
         } else if (interimTrimmed) {
-          setTranscript(stripWakePhraseFromTranscript(interimTrimmed))
+          if (!(mode === 'continuous' && dictateSpeechCaptureRef.current)) {
+            setTranscript(stripWakePhraseFromTranscript(interimTrimmed))
+          }
         }
       }
       recognition.onerror = () => {
@@ -735,24 +747,39 @@ export function useStandaloneOrbVoice() {
     return true
   }, [requestMicrophonePermission, speechRecognitionFailureMessage, startRecognitionSessionConfirmed])
 
+  const beginDictateSpeechCapture = useCallback(async (): Promise<boolean> => {
+    dictateSpeechCaptureRef.current = true
+    const ok = await beginSpeechRecognitionCapture({ mode: 'continuous' })
+    if (!ok) dictateSpeechCaptureRef.current = false
+    return ok
+  }, [beginSpeechRecognitionCapture])
+
   const beginUserVoiceCapture = useCallback(async (options?: { mode?: 'active' | 'continuous' }): Promise<boolean> => {
     userInitiatedVoiceRef.current = true
+    dictateSpeechCaptureRef.current = options?.mode === 'continuous'
     voiceSessionPausedRef.current = false
     setVoiceSessionPaused(false)
     setWakeStatus('off')
     setError(null)
     const Recognition = getSpeechRecognitionCtor()
-    const preferMediaRecorder = isSafariBrowser() && detectMediaRecorderSupported()
-    if (!Recognition || preferMediaRecorder) return beginMediaRecorderCapture()
+    if (!Recognition) {
+      dictateSpeechCaptureRef.current = false
+      if (detectMediaRecorderSupported()) return beginMediaRecorderCapture()
+      setError('Speech recognition is unavailable in this browser.')
+      setVoiceCaptureState('error')
+      return false
+    }
     const granted = await requestMicrophonePermission()
     if (!granted) {
       userInitiatedVoiceRef.current = false
+      dictateSpeechCaptureRef.current = false
       setError('Microphone access is needed for voice input. You can still type.')
       setVoiceCaptureState('error')
       return false
     }
     const startResult = await startRecognitionSessionConfirmed(options?.mode ?? 'active')
     if (!startResult.ok) {
+      dictateSpeechCaptureRef.current = false
       if (detectMediaRecorderSupported()) return beginMediaRecorderCapture()
       userInitiatedVoiceRef.current = false
       setError(speechRecognitionFailureMessage(startResult.reason))
@@ -761,6 +788,19 @@ export function useStandaloneOrbVoice() {
     }
     return true
   }, [beginMediaRecorderCapture, requestMicrophonePermission, speechRecognitionFailureMessage, startRecognitionSessionConfirmed])
+
+  const endDictateSpeechCapture = useCallback(() => {
+    dictateSpeechCaptureRef.current = false
+    recognitionRef.current?.stop()
+    setListening(false)
+    setInterimTranscript('')
+    if (mediaStreamRef.current) {
+      releaseMicrophoneStream(mediaStreamRef.current)
+      mediaStreamRef.current = null
+    }
+    setVoiceCaptureState(transcriptRef.current.trim() ? 'ready' : 'idle')
+    setPhase(transcriptRef.current.trim() ? 'transcript_ready' : 'idle')
+  }, [])
 
   const captureActive = isActiveCaptureState(voiceCaptureState) || listening
 
@@ -803,6 +843,8 @@ export function useStandaloneOrbVoice() {
     interruptForListen,
     markIdle,
     beginUserVoiceCapture,
+    beginDictateSpeechCapture,
+    endDictateSpeechCapture,
     beginSpeechRecognitionCapture,
     startRecognitionSessionConfirmed,
     mediaRecorderAvailable: detectMediaRecorderSupported(),

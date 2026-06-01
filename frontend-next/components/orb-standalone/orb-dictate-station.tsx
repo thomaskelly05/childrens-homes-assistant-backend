@@ -43,8 +43,7 @@ import { orbMicDevLog } from '@/lib/orb/voice/orb-mic-access'
 import type { MediaRecorderCaptureSource } from '@/lib/orb/voice/orb-voice-capture'
 import {
   detectMediaRecorderSupported,
-  detectSpeechRecognitionSupported,
-  isSafariBrowser
+  detectSpeechRecognitionSupported
 } from '@/lib/orb/voice/orb-voice-readiness'
 import {
   anonymiseText,
@@ -173,6 +172,8 @@ export function OrbDictateStation({
   const [recordedAudioLabel, setRecordedAudioLabel] = useState<string | null>(null)
   const [lastCaptureSource, setLastCaptureSource] = useState<MediaRecorderCaptureSource>('none')
   const [lastAudioByteSize, setLastAudioByteSize] = useState(0)
+  const [lastChunkCount, setLastChunkCount] = useState(0)
+  const [lastSampleCount, setLastSampleCount] = useState(0)
   const autoStartAttemptedRef = useRef(false)
   const autoStartPendingRef = useRef(initialAutoStart)
 
@@ -227,6 +228,9 @@ export function OrbDictateStation({
     lastDictateTranscriptRef.current = ''
     setLastCaptureSource('none')
     setLastAudioByteSize(0)
+    setLastChunkCount(0)
+    setLastSampleCount(0)
+    voice.endDictateSpeechCapture()
     voice.cancelListening()
     if (timerRef.current) clearInterval(timerRef.current)
   }, [voice])
@@ -341,13 +345,14 @@ export function OrbDictateStation({
     const startMediaRecorder = async (): Promise<boolean> => {
       recorderModeRef.current = 'media'
       setRecorderMode('media')
+      emitOrbClientDebug({ area: 'dictate', event: 'dictate_media_fallback_started', detail: {} })
       const ok = await voice.beginMediaRecorderCapture()
       if (!ok) {
         const denied = voice.error?.toLowerCase().includes('microphone')
         setRecordingUiState('error')
         setStatusMessage(denied ? MIC_BLOCKED_MESSAGE : 'Audio capture is unavailable in this browser — paste or upload a transcript instead.')
         orbMicDevLog('media recorder failed', voice.error ?? 'unknown')
-        emitOrbClientDebug({ area: 'dictate', event: 'record_start_failed', detail: { mode: 'media', error: voice.error } })
+        emitOrbClientDebug({ area: 'dictate', event: 'dictate_capture_failed', detail: { mode: 'media', error: voice.error } })
         return false
       }
       setStatusMessage('Recording audio. Automatic transcription depends on backend availability.')
@@ -357,15 +362,19 @@ export function OrbDictateStation({
       return true
     }
 
-    const preferMediaRecorder = mediaRecorderAvailable && (isSafariBrowser() || !speechRecognitionAvailable)
+    const preferSpeechRecognition = speechRecognitionAvailable
+    const preferMediaRecorder = !speechRecognitionAvailable && mediaRecorderAvailable
 
-    if (!preferMediaRecorder && speechRecognitionAvailable) {
+    if (preferSpeechRecognition) {
       recorderModeRef.current = 'speech'
       setRecorderMode('speech')
-      const ok = await voice.beginUserVoiceCapture({ mode: 'continuous' })
+      emitOrbClientDebug({ area: 'dictate', event: 'dictate_speech_start_requested', detail: {} })
+      const ok = await voice.beginDictateSpeechCapture()
       if (ok) {
         setRecordingUiState('recording')
+        setStatusMessage('Listening — speech will appear as text')
         orbMicDevLog('speech capture started')
+        emitOrbClientDebug({ area: 'dictate', event: 'dictate_speech_started', detail: {} })
         emitOrbClientDebug({ area: 'dictate', event: 'record_started', detail: { mode: 'speech' } })
         return
       }
@@ -386,12 +395,18 @@ export function OrbDictateStation({
               : voice.error || SPEECH_START_FAILED_MESSAGE
       )
       orbMicDevLog('speech capture failed', voice.error ?? 'unknown')
-      emitOrbClientDebug({ area: 'dictate', event: 'record_start_failed', detail: { mode: 'speech', error: voice.error } })
+      emitOrbClientDebug({ area: 'dictate', event: 'dictate_capture_failed', detail: { mode: 'speech', error: voice.error } })
       return
     }
 
-    const mediaOk = await startMediaRecorder()
-    if (!mediaOk) setRecordingUiState('error')
+    if (preferMediaRecorder) {
+      const mediaOk = await startMediaRecorder()
+      if (!mediaOk) setRecordingUiState('error')
+      return
+    }
+
+    setRecordingUiState('error')
+    setStatusMessage('Paste transcript instead — microphone capture is unavailable in this browser.')
   }
 
   function handleSelectStartMode(id: OrbDictateStartMode) {
@@ -408,7 +423,7 @@ export function OrbDictateStation({
 
   function handlePauseRecording() {
     setRecordingPaused(true)
-    if (recorderModeRef.current === 'speech') voice.cancelListening()
+    if (recorderModeRef.current === 'speech') voice.endDictateSpeechCapture()
   }
 
   async function handleResumeRecording() {
@@ -419,13 +434,14 @@ export function OrbDictateStation({
     setRecordingPaused(false)
     setRecordingUiState('starting')
     if (recorderModeRef.current === 'speech') {
-      const ok = await voice.beginUserVoiceCapture({ mode: 'continuous' })
+      const ok = await voice.beginDictateSpeechCapture()
       if (!ok) {
         setRecordingUiState('error')
         setStatusMessage(voice.error || SPEECH_START_FAILED_MESSAGE)
         return
       }
       setRecordingUiState('recording')
+      setStatusMessage('Listening — speech will appear as text')
     }
   }
 
@@ -445,6 +461,19 @@ export function OrbDictateStation({
 
       setLastCaptureSource(source)
       setLastAudioByteSize(byteSize)
+      setLastChunkCount(captureResult?.chunkCount ?? 0)
+      setLastSampleCount(captureResult?.sampleCount ?? 0)
+      emitOrbClientDebug({
+        area: 'dictate',
+        event: 'dictate_media_fallback_stopped',
+        detail: {
+          source,
+          size: byteSize,
+          chunkCount: captureResult?.chunkCount,
+          sampleCount: captureResult?.sampleCount,
+          recorderMimeType: captureResult?.recorderMimeType
+        }
+      })
       emitOrbClientDebug({
         area: 'dictate',
         event: 'record_stopped',
@@ -456,6 +485,8 @@ export function OrbDictateStation({
           recorderMimeType: captureResult?.recorderMimeType
         }
       })
+
+      const existingSpeechTranscript = transcriptBufferRef.current.join('\n').trim() || transcript.trim()
 
       if (blob && byteSize > 0) {
         setRecordingUiState('processing')
@@ -490,11 +521,26 @@ export function OrbDictateStation({
         } finally {
           setUploadingAudio(false)
         }
+      } else if (existingSpeechTranscript) {
+        setTranscript(existingSpeechTranscript)
+        setSegments(textToSegments(existingSpeechTranscript, 'live', participants))
+        setRecordingUiState('stopped')
+        setStatusMessage('Speech transcript captured — review before generating.')
+        emitOrbClientDebug({
+          area: 'dictate',
+          event: 'dictate_capture_failed',
+          detail: { mode: 'media', source, size: byteSize, preservedSpeechTranscript: true }
+        })
       } else {
         setRecordingUiState('error')
         setStatusMessage(
-          'Your browser allowed the microphone but did not provide audio data. Try Chrome/Edge, upload audio, or paste a transcript.'
+          'Your browser allowed the microphone but did not provide audio data. Try speech transcript, Chrome/Edge, upload audio, or paste a transcript.'
         )
+        emitOrbClientDebug({
+          area: 'dictate',
+          event: 'dictate_capture_failed',
+          detail: { mode: 'media', source, size: byteSize, chunkCount: captureResult?.chunkCount, sampleCount: captureResult?.sampleCount }
+        })
       }
       recorderModeRef.current = null
       setRecorderMode('none')
@@ -503,20 +549,38 @@ export function OrbDictateStation({
       return
     }
 
-    const live = (voice.transcript || voice.displayTranscript || '').trim()
+    setRecordingUiState('stopping')
+    setRecordingPaused(false)
+    if (timerRef.current) clearInterval(timerRef.current)
+    emitOrbClientDebug({ area: 'dictate', event: 'dictate_speech_stopped', detail: {} })
+
+    const live = (voice.transcript || voice.displayTranscript || voice.interimTranscript || '').trim()
     if (live && !transcriptBufferRef.current.includes(live)) transcriptBufferRef.current = [...transcriptBufferRef.current, live]
     const joined = transcriptBufferRef.current.join('\n').trim()
+    voice.endDictateSpeechCapture()
     if (joined) {
       setTranscript(joined)
       setSegments(textToSegments(joined, 'live', participants))
+      setStartMode((current) => current ?? 'paste')
+      setOutputTab('transcript')
+      setRecordingUiState('stopped')
+      recorderModeRef.current = null
+      setRecorderMode('none')
+      setStatusMessage('Speech transcript captured — review before generating.')
+      emitOrbClientDebug({
+        area: 'dictate',
+        event: 'dictate_speech_result',
+        detail: { transcriptLength: joined.length }
+      })
+    } else {
+      setRecordingUiState('idle')
+      recorderModeRef.current = null
+      setRecorderMode('none')
+      setStatusMessage('No speech was detected. Try again, upload audio, or paste a transcript.')
+      emitOrbClientDebug({ area: 'dictate', event: 'dictate_capture_failed', detail: { mode: 'speech', reason: 'no_transcript' } })
     }
-    setStartMode((current) => current ?? 'paste')
-    setOutputTab('transcript')
     voice.clearTranscript()
     lastDictateTranscriptRef.current = ''
-    setRecordingUiState(joined ? 'stopped' : 'idle')
-    resetRecording()
-    if (joined) setStatusMessage('Recording stopped — review your transcript before generating.')
   }
 
   function handleClearTranscript() {
@@ -776,7 +840,7 @@ export function OrbDictateStation({
           ? 'Paused'
           : recorderModeRef.current === 'media'
             ? 'Recording audio. Automatic transcription depends on backend availability.'
-            : 'Listening…'
+            : 'Listening — speech will appear as text'
         : statusMessage?.toLowerCase().includes('speech recognition could not')
           ? 'Speech recognition failed'
           : statusMessage?.toLowerCase().includes('microphone blocked')
@@ -802,7 +866,11 @@ export function OrbDictateStation({
         data-orb-dictate-station
         data-orb-dictate-recording-state={recordingUiState}
         data-orb-dictate-recorder-mode={recorderMode}
+        data-orb-dictate-transcript-length={transcript.length > 0 ? String(transcript.length) : undefined}
         data-orb-dictate-audio-size={lastAudioByteSize > 0 ? String(lastAudioByteSize) : undefined}
+        data-orb-dictate-capture-source={lastCaptureSource !== 'none' ? lastCaptureSource : undefined}
+        data-orb-dictate-chunk-count={lastChunkCount > 0 ? String(lastChunkCount) : undefined}
+        data-orb-dictate-sample-count={lastSampleCount > 0 ? String(lastSampleCount) : undefined}
         data-orb-dictate-status={(statusMessage ?? recordingUiState).slice(0, 120)}
       >
         {phase === 'studio' && output ? (
