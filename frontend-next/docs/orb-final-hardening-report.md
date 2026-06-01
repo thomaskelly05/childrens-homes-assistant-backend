@@ -71,6 +71,16 @@ P0 blockers addressed surgically: user-scoped saved outputs, schema migration, D
 3. **Saved output migration** — `sql/207_orb_saved_outputs_canonical.sql` converts legacy `TEXT[]` tags through a temporary `tags_jsonb` column (catalog-detected type); no JSONB is written into a `TEXT[]` column.
 4. **Tests** — P1 suites: 24 passed (`test_orb_knowledge_rbac`, `test_orb_saved_outputs_isolation`, `test_orb_migration_schema`); ORB regression: 27 passed; `npm run test:orb` and `npm run typecheck` passed.
 
+## Live error fixed — saved outputs schema drift
+
+Production error: `psycopg2.errors.UndefinedColumn: column "status" does not exist` on `/orb/standalone/outputs/summary`.
+
+**Cause:** `orb_saved_outputs` exists in a legacy shape without the canonical `status` column (migration 207 not fully applied).
+
+**Runtime fix:** Service detects schema via `saved_outputs_schema_state()`, uses compatibility reads when `user_id` is present but `status` is missing, refuses DB reads when `user_id` is absent, returns degraded summary (not 500), and blocks writes with `503` until migration completes.
+
+**Production steps:** Backup DB → apply `sql/207_orb_saved_outputs_canonical.sql` → verify `/orb/system/health` (`saved_outputs_schema.status = ok`) → confirm summary no longer reports `degraded: true` → review `orb_saved_outputs_orphaned` if present.
+
 ## 15. Tests/build results
 
 Run:

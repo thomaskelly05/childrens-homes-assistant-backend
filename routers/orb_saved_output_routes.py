@@ -16,7 +16,10 @@ from schemas.orb_saved_outputs import (
     OrbSavedOutputReuseRequest,
     OrbSavedOutputUpdate,
 )
-from services.orb_saved_output_service import orb_saved_output_service
+from services.orb_saved_output_service import (
+    SavedOutputSchemaMigrationRequired,
+    orb_saved_output_service,
+)
 
 router = APIRouter(prefix="/orb/standalone/outputs", tags=["ORB Standalone Saved Outputs"])
 
@@ -95,7 +98,10 @@ async def create_output(
     current_user=Depends(require_standalone_orb_access),
 ):
     _reject_os_ids(payload.model_dump())
-    output = orb_saved_output_service.create_output(_user_id(current_user), payload)
+    try:
+        output = orb_saved_output_service.create_output(_user_id(current_user), payload)
+    except SavedOutputSchemaMigrationRequired as exc:
+        raise HTTPException(status_code=503, detail=exc.message) from exc
     return _success(output.model_dump())
 
 
@@ -114,7 +120,10 @@ async def update_output(
     current_user=Depends(require_standalone_orb_access),
 ):
     _reject_os_ids(payload.model_dump())
-    output = orb_saved_output_service.update_output(_user_id(current_user), output_id, payload)
+    try:
+        output = orb_saved_output_service.update_output(_user_id(current_user), output_id, payload)
+    except SavedOutputSchemaMigrationRequired as exc:
+        raise HTTPException(status_code=503, detail=exc.message) from exc
     if not output:
         raise HTTPException(status_code=404, detail="Saved output not found")
     return _success(output.model_dump())
@@ -122,7 +131,10 @@ async def update_output(
 
 @router.post("/{output_id}/archive")
 async def archive_output(output_id: str, current_user=Depends(require_standalone_orb_access)):
-    output = orb_saved_output_service.archive_output(_user_id(current_user), output_id)
+    try:
+        output = orb_saved_output_service.archive_output(_user_id(current_user), output_id)
+    except SavedOutputSchemaMigrationRequired as exc:
+        raise HTTPException(status_code=503, detail=exc.message) from exc
     if not output:
         raise HTTPException(status_code=404, detail="Saved output not found")
     return _success(output.model_dump())
@@ -130,7 +142,10 @@ async def archive_output(output_id: str, current_user=Depends(require_standalone
 
 @router.delete("/{output_id}")
 async def delete_output(output_id: str, current_user=Depends(require_standalone_orb_access)):
-    deleted = orb_saved_output_service.delete_output(_user_id(current_user), output_id)
+    try:
+        deleted = orb_saved_output_service.delete_output(_user_id(current_user), output_id)
+    except SavedOutputSchemaMigrationRequired as exc:
+        raise HTTPException(status_code=503, detail=exc.message) from exc
     return _success({"deleted": deleted, "output_id": output_id})
 
 

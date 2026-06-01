@@ -228,6 +228,13 @@ BEGIN
         ALTER TABLE orb_saved_outputs ADD COLUMN IF NOT EXISTS os_linked BOOLEAN NOT NULL DEFAULT FALSE;
         ALTER TABLE orb_saved_outputs ADD COLUMN IF NOT EXISTS care_record_access BOOLEAN NOT NULL DEFAULT FALSE;
         ALTER TABLE orb_saved_outputs ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ;
+        ALTER TABLE orb_saved_outputs ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'saved';
+        ALTER TABLE orb_saved_outputs ADD COLUMN IF NOT EXISTS type TEXT;
+        UPDATE orb_saved_outputs SET type = COALESCE(NULLIF(type, ''), 'general_research') WHERE type IS NULL;
+        UPDATE orb_saved_outputs
+        SET status = 'archived'
+        WHERE archived_at IS NOT NULL
+          AND status = 'saved';
 
         IF EXISTS (
             SELECT 1 FROM information_schema.columns
@@ -250,6 +257,23 @@ BEGIN
         DELETE FROM orb_saved_outputs WHERE user_id IS NULL;
     END IF;
 END $$;
+
+-- Defensive: ensure status exists on any remaining legacy shape (idempotent).
+ALTER TABLE orb_saved_outputs ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'saved';
+
+DO $status_backfill$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'orb_saved_outputs'
+          AND column_name = 'archived_at'
+    ) THEN
+        UPDATE orb_saved_outputs
+        SET status = 'archived'
+        WHERE archived_at IS NOT NULL
+          AND COALESCE(status, 'saved') = 'saved';
+    END IF;
+END $status_backfill$;
 
 CREATE INDEX IF NOT EXISTS idx_orb_saved_outputs_user_id ON orb_saved_outputs(user_id);
 CREATE INDEX IF NOT EXISTS idx_orb_saved_outputs_user_project ON orb_saved_outputs(user_id, project_id);

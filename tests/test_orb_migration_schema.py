@@ -58,6 +58,12 @@ def test_verify_saved_outputs_schema_without_db():
     assert "user_id" in CANONICAL_SAVED_OUTPUT_COLUMNS
 
 
+def test_migration_adds_status_column_defensively():
+    text = MIGRATION_PATH.read_text(encoding="utf-8")
+    assert "ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'saved'" in text
+    assert "status = 'archived'" in text
+
+
 def test_canonical_columns_include_rich_output_fields():
     required = {
         "user_id",
