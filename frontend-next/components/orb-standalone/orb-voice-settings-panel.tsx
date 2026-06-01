@@ -67,7 +67,7 @@ export function OrbVoiceSettingsPanel({
     setReadAloudProfileId: (profileId: OrbVoicePresetId | null) =>
       baseVoice.updateSettings({ readAloudProfileId: profileId }),
     setVoiceAsDefault: () => baseVoice.updateSettings({ readAloudProfileId: baseVoice.settings.voicePresetId }),
-    previewVoiceProfile: () => baseVoice.testSelectedVoice(),
+    previewVoiceProfile: (_profileId?: OrbVoicePresetId) => baseVoice.testSelectedVoice(),
     setSpokenAnswerLength: (spokenAnswerLength: OrbSpokenAnswerLength) =>
       baseVoice.updateSettings({ spokenAnswerLength }),
     setAllowInterruption: (allowInterruption: boolean) => baseVoice.updateSettings({ allowInterruption }),
