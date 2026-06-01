@@ -47,7 +47,13 @@ describe('ORB voice capture', () => {
   it('composer mic opens dictate when speech recognition unavailable', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     assert.match(companion, /openOrbDictatePanel/)
-    assert.match(companion, /!voice\.recognitionAvailable/)
+    assert.match(companion, /detectSpeechRecognitionSupported/)
+  })
+
+  it('readiness separates speech recognition from media recorder', () => {
+    const readiness = read('lib/orb/voice/orb-voice-readiness.ts')
+    assert.match(readiness, /speech_recognition_available/)
+    assert.match(readiness, /fallback_available: speech_recognition_available/)
   })
 
   it('dictate uses continuous capture or media recorder fallback', () => {

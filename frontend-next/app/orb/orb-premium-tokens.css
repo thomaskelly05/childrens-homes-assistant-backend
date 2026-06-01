@@ -406,10 +406,27 @@ html[data-orb-residential='1'] body {
 
 html[data-orb-residential='1'] .orb-chat-layout.orb-theme-light,
 html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light {
+  --orb-background: #ffffff;
+  --orb-surface: #ffffff;
+  --orb-surface-elevated: #f4f8ff;
+  --orb-surface-hover: #e8f2ff;
+  --orb-foreground: #0f172a;
+  --orb-muted: #475569;
+  --orb-line: rgba(15, 23, 42, 0.1);
+  --orb-primary: #168bff;
+  --orb-primary-soft: #e8f4ff;
+  --orb-focus: #0d5fcc;
+  --orb-premium-text: #0f172a;
+  --orb-premium-text-secondary: #475569;
+  --orb-premium-text-muted: #64748b;
+  --orb-premium-border: rgba(15, 23, 42, 0.1);
+  --orb-premium-glass: rgba(255, 255, 255, 0.92);
+  --orb-premium-glass-strong: #ffffff;
+  color-scheme: light !important;
   background:
-    radial-gradient(ellipse 80% 45% at 50% -12%, rgba(22, 139, 255, 0.08), transparent 55%),
-    linear-gradient(180deg, #05070d 0%, #070b14 48%, #08111f 100%) !important;
-  color: #f7faff !important;
+    radial-gradient(ellipse 80% 45% at 50% -12%, rgba(22, 139, 255, 0.12), transparent 55%),
+    linear-gradient(180deg, #ffffff 0%, #f8fbff 48%, #eef6ff 100%) !important;
+  color: var(--orb-foreground) !important;
 }
 
 html[data-orb-residential='1'] .orb-chat-layout--residential .orb-markdown-answer h1,
@@ -653,7 +670,30 @@ html[data-orb-residential='1'] body,
 
 html[data-orb-residential='1'] .orb-theme-light,
 html[data-orb-residential='1'] .orb-chat-layout.orb-theme-light {
-  color-scheme: dark !important;
+  color-scheme: light !important;
+}
+
+html[data-orb-residential='1'] .orb-theme-light .orb-chat-sidebar,
+html[data-orb-residential='1'] .orb-theme-light .orb-panel-drawer {
+  background: linear-gradient(180deg, #ffffff 0%, #f4f8ff 100%) !important;
+  color: var(--orb-foreground) !important;
+  border-color: var(--orb-line) !important;
+}
+
+html[data-orb-residential='1'] .orb-theme-light [data-orb-app-modal='true'] .orb-panel-modal {
+  background: #ffffff !important;
+  border-color: rgba(22, 139, 255, 0.18) !important;
+  color: var(--orb-foreground) !important;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12), 0 0 48px rgba(22, 139, 255, 0.08) !important;
+}
+
+html[data-orb-residential='1'] .orb-theme-light .orb-panel-overlay {
+  background: rgba(15, 23, 42, 0.28) !important;
+}
+
+html[data-orb-residential='1'] .orb-theme-light .orb-composer-glass {
+  background: rgba(255, 255, 255, 0.96) !important;
+  border-color: rgba(22, 139, 255, 0.2) !important;
 }
 
 /* Desktop chat column — ChatGPT-style readable width */

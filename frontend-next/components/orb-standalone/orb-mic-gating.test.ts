@@ -93,4 +93,47 @@ describe('ORB mic gating and routing', () => {
     assert.match(dictate, /orbMicDevLog\('dictate record clicked'/)
   })
 
+  it('voice does not use MediaRecorder as live voice fallback', () => {
+    const hook = readComponent('components/orb-standalone/use-standalone-orb-voice.ts')
+    const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
+    assert.match(hook, /beginSpeechRecognitionCapture/)
+    assert.match(station, /beginSpeechRecognitionCapture/)
+    assert.doesNotMatch(station, /beginUserVoiceCapture\(\)/)
+    assert.match(station, /beginBrowserSpeechCapture/)
+  })
+
+  it('voice routes to dictate when speech recognition unavailable', () => {
+    const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
+    assert.match(station, /shouldOpenDictateFallback/)
+    assert.match(station, /Open Dictate to record or paste notes/)
+    assert.match(station, /data-orb-voice-open-dictate/)
+  })
+
+  it('dictate handleStartRecording uses explicit mode', () => {
+    const dictate = readComponent('components/orb-standalone/orb-dictate-station.tsx')
+    assert.match(dictate, /handleStartRecording\(mode\?: OrbDictateStartMode\)/)
+    assert.match(dictate, /handleStartRecording\(id\)/)
+    assert.match(dictate, /effectiveStartMode = mode \?\? startMode/)
+  })
+
+  it('dictate keeps append-only transcript buffer', () => {
+    const dictate = readComponent('components/orb-standalone/orb-dictate-station.tsx')
+    assert.match(dictate, /transcriptBufferRef/)
+    assert.match(dictate, /lastDictateTranscriptRef/)
+  })
+
+  it('dictate paste and generate status messages exist', () => {
+    const dictate = readComponent('components/orb-standalone/orb-dictate-station.tsx')
+    assert.match(dictate, /Transcript added\./)
+    assert.match(dictate, /Generating professional note/)
+    assert.match(dictate, /Professional note ready\./)
+    assert.match(dictate, /Generation service unavailable — local draft created/)
+    assert.match(dictate, /buildLocalDictateFallback/)
+  })
+
+  it('composer mic aria is open voice or dictate', () => {
+    const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
+    assert.match(companion, /composerMicAriaLabel="Open voice or Dictate"/)
+  })
+
 })

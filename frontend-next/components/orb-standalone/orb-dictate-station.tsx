@@ -132,14 +132,54 @@ export function OrbDictateStation({
   const [reflectiveDraft, setReflectiveDraft] = useState('')
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const recorderModeRef = useRef<'speech' | 'media' | null>(null)
+  const transcriptBufferRef = useRef<string[]>([])
+  const lastDictateTranscriptRef = useRef('')
+  const [backendTranscriptionAvailable, setBackendTranscriptionAvailable] = useState<boolean | 'unknown'>(
+    'unknown'
+  )
+  const [recordedAudioLabel, setRecordedAudioLabel] = useState<string | null>(null)
 
   const needsConsent = startMode === 'record_debrief' || dictateMode !== 'rough_note'
 
+  const speechRecognitionAvailable =
+    voice.recognitionAvailable || detectSpeechRecognitionSupported()
+  const mediaRecorderAvailable = voice.mediaRecorderAvailable || detectMediaRecorderSupported()
+
+  const captureCapabilityMessage = useMemo(() => {
+    if (!speechRecognitionAvailable && !mediaRecorderAvailable) {
+      return 'Microphone unavailable — paste a transcript instead.'
+    }
+    if (speechRecognitionAvailable) {
+      return 'Speech recognition available'
+    }
+    if (backendTranscriptionAvailable === true) {
+      return 'Audio recording available. Automatic transcription may require upload.'
+    }
+    if (backendTranscriptionAvailable === false) {
+      return 'Recording available, but automatic transcription is not enabled yet.'
+    }
+    return 'Audio recording available. Automatic transcription may require upload.'
+  }, [
+    speechRecognitionAvailable,
+    mediaRecorderAvailable,
+    backendTranscriptionAvailable
+  ])
+
   const liveTranscript = useMemo(() => {
-    const live = (voice.transcript || voice.displayTranscript || '').trim()
-    if (!live) return transcript
-    return transcript ? `${transcript}\n${live}` : live
-  }, [transcript, voice.transcript, voice.displayTranscript])
+    if (!recordingActive) return transcript
+    const interim = (voice.interimTranscript || '').trim()
+    const buffered = transcriptBufferRef.current.length
+      ? transcriptBufferRef.current.join('\n')
+      : transcript
+    if (interim) return buffered ? `${buffered}\n${interim}` : interim
+    return buffered
+  }, [
+    transcript,
+    recordingActive,
+    voice.interimTranscript,
+    voice.transcript,
+    voice.displayTranscript
+  ])
 
   const effectiveInputText = useMemo(() => {
     if (segments.length) return segmentsToPlainText(segments)
@@ -156,14 +196,16 @@ export function OrbDictateStation({
     setRecordingPaused(false)
     setTimerSec(0)
     recorderModeRef.current = null
+    lastDictateTranscriptRef.current = ''
     voice.cancelListening()
-    voice.clearTranscript()
     if (timerRef.current) clearInterval(timerRef.current)
   }, [voice])
 
   useEffect(() => {
     if (!open) {
       resetRecording()
+      transcriptBufferRef.current = []
+      lastDictateTranscriptRef.current = ''
       setStartMode(null)
       setReflectiveMode(false)
       setReflectiveIndex(0)
@@ -191,17 +233,33 @@ export function OrbDictateStation({
   }, [recordingActive, recordingPaused])
 
   useEffect(() => {
-    if (!recordingActive) return
-    const live = (voice.transcript || voice.displayTranscript || '').trim()
-    if (live) {
-      const cmd = parseOrbDictateVoiceCommand(live)
-      if (cmd) {
-        void handleVoiceCommand(cmd.action)
-        voice.clearTranscript()
-      }
+    if (!recordingActive || recordingPaused) return
+    const finalChunk = (voice.transcript || '').trim()
+    const display = (voice.displayTranscript || '').trim()
+    const chunk =
+      finalChunk || (voice.phase === 'transcript_ready' ? display : '')
+    if (!chunk || chunk === lastDictateTranscriptRef.current) return
+    lastDictateTranscriptRef.current = chunk
+    if (!transcriptBufferRef.current.includes(chunk)) {
+      transcriptBufferRef.current = [...transcriptBufferRef.current, chunk]
+      const joined = transcriptBufferRef.current.join('\n')
+      setTranscript(joined)
+      setSegments(textToSegments(joined, 'live', participants))
+    }
+    const cmd = parseOrbDictateVoiceCommand(chunk)
+    if (cmd) {
+      void handleVoiceCommand(cmd.action)
+      voice.clearTranscript()
+      lastDictateTranscriptRef.current = ''
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [voice.transcript, voice.displayTranscript, recordingActive])
+  }, [
+    voice.transcript,
+    voice.displayTranscript,
+    voice.phase,
+    recordingActive,
+    recordingPaused
+  ])
 
   async function handleVoiceCommand(action: OrbDictateVoiceCommandAction) {
     const converted = noteTypeForVoiceCommand(action)
@@ -234,17 +292,24 @@ export function OrbDictateStation({
   const MIC_PERMISSION_MESSAGE =
     'Microphone could not start. Check Safari site settings and allow microphone for app.indicare.co.uk.'
 
-  async function handleStartRecording() {
-    orbMicDevLog('dictate record clicked', startMode ?? 'unknown')
-    if (needsConsent && !consentConfirmed) {
+  async function handleStartRecording(mode?: OrbDictateStartMode) {
+    const effectiveStartMode = mode ?? startMode
+    orbMicDevLog('dictate record clicked', effectiveStartMode ?? 'unknown')
+    const effectiveNeedsConsent =
+      effectiveStartMode === 'record_debrief' || dictateMode !== 'rough_note'
+    if (effectiveNeedsConsent && !consentConfirmed) {
       setStatusMessage('Please confirm consent before recording a conversation or debrief.')
       return
     }
+    if (mode) setStartMode(mode)
+    transcriptBufferRef.current = transcript.trim() ? [transcript.trim()] : []
+    lastDictateTranscriptRef.current = ''
     setRecordingActive(true)
     setRecordingPaused(false)
     setStatusMessage(null)
+    setRecordedAudioLabel(null)
 
-    const useSpeech = voice.recognitionAvailable || detectSpeechRecognitionSupported()
+    const useSpeech = speechRecognitionAvailable
     if (useSpeech) {
       recorderModeRef.current = 'speech'
       const ok = await voice.beginUserVoiceCapture({ mode: 'continuous' })
@@ -279,10 +344,13 @@ export function OrbDictateStation({
     setStartMode(id)
     if (id === 'import_voice') importFromOrbVoice()
     if (id === 'template') onOpenTemplates?.()
-    if (id === 'paste') setPasteText(transcript)
+    if (id === 'paste') {
+      setPasteText(transcript)
+      setOutputTab('transcript')
+    }
     if (id === 'record_debrief') setReflectiveMode(false)
     if (id === 'record_note' || id === 'record_debrief') {
-      void handleStartRecording()
+      void handleStartRecording(id)
     }
   }
 
@@ -294,41 +362,48 @@ export function OrbDictateStation({
   }
 
   function handleResumeRecording() {
+    if (recorderModeRef.current === 'media') {
+      setStatusMessage('Resume is not supported for audio-only recording — stop and start a new recording.')
+      return
+    }
     setRecordingPaused(false)
     if (recorderModeRef.current === 'speech') {
       void voice.beginUserVoiceCapture({ mode: 'continuous' })
-      return
-    }
-    if (recorderModeRef.current === 'media') {
-      void voice.beginMediaRecorderCapture()
     }
   }
 
   async function handleStopRecording() {
+    const effectiveNeedsConsent = startMode === 'record_debrief' || dictateMode !== 'rough_note'
     if (recorderModeRef.current === 'media') {
       const blob = await voice.endMediaRecorderCapture()
       if (blob) {
         setUploadingAudio(true)
+        setRecordedAudioLabel('Recorded note')
         setUploadFileLabel('Recorded note')
         try {
           const file = new File([blob], `dictate-recording-${Date.now()}.webm`, {
             type: blob.type || 'audio/webm'
           })
           const result = await transcribeOrbDictateAudio(file, {
-            conversation_consent_confirmed: needsConsent ? authorityConsent && consentConfirmed : undefined
+            conversation_consent_confirmed: effectiveNeedsConsent
+              ? authorityConsent && consentConfirmed
+              : undefined
           })
-          setTranscript(result.transcript)
-          setSegments(result.segments ?? textToSegments(result.transcript, 'live', result.participants ?? []))
+          setBackendTranscriptionAvailable(true)
+          const merged = result.transcript.trim()
+          transcriptBufferRef.current = merged ? [merged] : []
+          setTranscript(merged)
+          setSegments(result.segments ?? textToSegments(result.transcript, 'upload', result.participants ?? []))
           if (result.participants?.length) setParticipants(result.participants)
           setStartMode('paste')
+          setOutputTab('transcript')
           setStatusMessage('Recording transcribed — review before generating.')
         } catch {
-          setUploadError(
-            'Audio captured. Transcription is not available in this browser yet — paste or upload a transcript.'
-          )
-          setStatusMessage(
-            'Audio captured. Transcription is not available in this browser yet — paste or upload a transcript.'
-          )
+          setBackendTranscriptionAvailable(false)
+          const notice =
+            'Audio captured. Automatic transcription is not available yet. Please paste the transcript or upload audio when transcription is enabled.'
+          setUploadError(notice)
+          setStatusMessage(notice)
         } finally {
           setUploadingAudio(false)
         }
@@ -338,22 +413,40 @@ export function OrbDictateStation({
     }
 
     const live = (voice.transcript || voice.displayTranscript || '').trim()
-    if (live) setTranscript((prev) => (prev ? `${prev}\n${live}` : live))
+    if (live && !transcriptBufferRef.current.includes(live)) {
+      transcriptBufferRef.current = [...transcriptBufferRef.current, live]
+    }
+    const joined = transcriptBufferRef.current.join('\n').trim()
+    if (joined) {
+      setTranscript(joined)
+      setSegments(textToSegments(joined, 'live', participants))
+    }
+    setStartMode((current) => current ?? 'paste')
+    setOutputTab('transcript')
     voice.clearTranscript()
+    lastDictateTranscriptRef.current = ''
     resetRecording()
+    if (joined) {
+      setStatusMessage('Recording stopped — review your transcript before generating.')
+    }
   }
 
   function handleClearTranscript() {
     setTranscript('')
     setPasteText('')
+    transcriptBufferRef.current = []
+    lastDictateTranscriptRef.current = ''
+    setRecordedAudioLabel(null)
     voice.clearTranscript()
   }
 
   function applyPaste() {
     const text = pasteText.trim()
     if (!text) return
+    transcriptBufferRef.current = [text]
     syncSegmentsFromText(text, 'paste')
     setStartMode('paste')
+    setOutputTab('transcript')
     setStatusMessage('Transcript added.')
   }
 
@@ -432,11 +525,14 @@ export function OrbDictateStation({
       setTranscript(result.transcript)
       setSegments(result.segments ?? textToSegments(result.transcript, 'upload', result.participants ?? []))
       if (result.participants?.length) setParticipants(result.participants)
+      setBackendTranscriptionAvailable(true)
       setStartMode('paste')
+      setOutputTab('transcript')
       setStatusMessage('Audio transcribed — review speaker labels before generating.')
     } catch {
+      setBackendTranscriptionAvailable(false)
       setUploadError(
-        'Audio transcription is unavailable right now. Your file was not lost — paste the transcript or record a note instead.'
+        'Audio upload is ready, but transcription is not enabled yet. Paste the transcript to generate a note.'
       )
     } finally {
       setUploadingAudio(false)
@@ -466,7 +562,7 @@ export function OrbDictateStation({
     }
     const segs = segments.length ? segments : textToSegments(input, startMode === 'import_voice' ? 'orb_voice' : 'paste', participants)
     setGenerating(true)
-    setStatusMessage(null)
+    setStatusMessage('Generating professional note…')
     try {
       const result = await generateOrbDictateNote({
         input_text: input,
@@ -496,15 +592,15 @@ export function OrbDictateStation({
       if (result.participants?.length) setParticipants(result.participants as OrbDictateParticipant[])
       if (result.segments?.length) setSegments(result.segments as OrbDictateTranscriptSegment[])
       setPhase('studio')
-      setStatusMessage('Professional note ready — open ORB Dictate Studio to refine.')
+      setOutputTab('professional')
+      setStatusMessage('Professional note ready.')
     } catch {
       const fallback = buildLocalDictateFallback(input, noteType)
       setOutput(fallback)
       setEditedNote(fallback.professional_note)
       setPhase('studio')
-      setStatusMessage(
-        'ORB could not reach the full generation service. Your transcript is kept — a local draft is ready to edit.'
-      )
+      setOutputTab('professional')
+      setStatusMessage('Generation service unavailable — local draft created.')
     } finally {
       setGenerating(false)
     }
@@ -595,8 +691,7 @@ export function OrbDictateStation({
     setReflectiveIndex((i) => i + 1)
   }
 
-  const micCaptureAvailable =
-    voice.recognitionAvailable || detectSpeechRecognitionSupported() || detectMediaRecorderSupported()
+  const micCaptureAvailable = speechRecognitionAvailable || mediaRecorderAvailable
 
   const micStatus = recordingActive
     ? recordingPaused
@@ -662,8 +757,8 @@ export function OrbDictateStation({
                     data-orb-dictate-start={id}
                     className={`rounded-xl border px-3 py-2.5 text-left text-xs transition ${
                       startMode === id
-                        ? 'border-sky-400/50 bg-sky-500/10 text-white'
-                        : 'border-[var(--orb-line)]/60 bg-white/[0.03] text-[var(--orb-foreground)] hover:border-sky-400/30'
+                        ? 'border-sky-400/50 bg-[var(--orb-primary-soft)] text-[var(--orb-foreground)]'
+                        : 'border-[var(--orb-line)]/60 bg-[var(--orb-surface-elevated)] text-[var(--orb-foreground)] hover:border-sky-400/30'
                     }`}
                     onClick={() => handleSelectStartMode(id)}
                   >
@@ -680,29 +775,30 @@ export function OrbDictateStation({
                   setReflectiveMode(true)
                   setReflectiveIndex(0)
                   setReflectiveAnswers([])
-                  setStartMode('record_debrief')
+                  setReflectiveDraft('')
+                  setStartMode('paste')
                 }}
               >
-                Reflective debrief (one question at a time)
+                Guided reflective debrief (typed, one question at a time)
               </button>
             </section>
 
             {reflectiveMode ? (
-              <section className="rounded-xl border border-[var(--orb-line)]/60 bg-white/[0.03] p-3" data-orb-dictate-reflective-step>
+              <section className="rounded-xl border border-[var(--orb-line)]/60 bg-[var(--orb-surface-elevated)] p-3" data-orb-dictate-reflective-step>
                 <p className="text-xs text-[var(--orb-muted)]">
-                  Question {reflectiveIndex + 1} of {REFLECTIVE_DEBRIEF_QUESTIONS.length}
+                  Guided reflective debrief · question {reflectiveIndex + 1} of {REFLECTIVE_DEBRIEF_QUESTIONS.length}
                 </p>
-                <p className="mt-1 text-sm font-medium text-white">{REFLECTIVE_DEBRIEF_QUESTIONS[reflectiveIndex]}</p>
+                <p className="mt-1 text-sm font-medium text-[var(--orb-foreground)]">{REFLECTIVE_DEBRIEF_QUESTIONS[reflectiveIndex]}</p>
                 <textarea
                   value={reflectiveDraft}
                   onChange={(e) => setReflectiveDraft(e.target.value)}
                   rows={3}
-                  className="mt-2 w-full rounded-lg border border-[var(--orb-line)]/60 bg-black/20 px-3 py-2 text-sm text-white"
-                  placeholder="Your reflection…"
+                  className="mt-2 w-full rounded-lg border border-[var(--orb-line)]/60 bg-[var(--orb-surface)] px-3 py-2 text-sm text-[var(--orb-foreground)]"
+                  placeholder="Type your reflection — no microphone needed…"
                 />
                 <button
                   type="button"
-                  className="mt-2 rounded-lg bg-sky-500/20 px-3 py-1.5 text-xs font-medium text-sky-200"
+                  className="mt-2 rounded-lg bg-[var(--orb-primary-soft)] px-3 py-1.5 text-xs font-medium text-[var(--orb-foreground)]"
                   onClick={advanceReflective}
                 >
                   Next
@@ -718,7 +814,7 @@ export function OrbDictateStation({
                 data-orb-dictate-note-type
                 value={noteType}
                 onChange={(e) => setNoteType(e.target.value as OrbDictateNoteType)}
-                className="mt-2 w-full rounded-xl border border-[var(--orb-line)]/60 bg-black/20 px-3 py-2 text-sm text-white"
+                className="mt-2 w-full rounded-xl border border-[var(--orb-line)]/60 bg-[var(--orb-surface)] px-3 py-2 text-sm text-[var(--orb-foreground)]"
               >
                 {NOTE_TYPES.map((t) => (
                   <option key={t} value={t}>
@@ -800,12 +896,20 @@ export function OrbDictateStation({
               </section>
             ) : null}
 
-            <section className="rounded-xl border border-[var(--orb-line)]/60 bg-white/[0.02] p-3">
+            <section className="rounded-xl border border-[var(--orb-line)]/60 bg-[var(--orb-surface-elevated)] p-3">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <GlassOrbMark className={orbClass} size="sm" />
                   <div>
-                    <p className="text-xs font-medium text-white">{micStatus}</p>
+                    <p className="text-xs font-medium text-[var(--orb-foreground)]">{micStatus}</p>
+                    <p className="text-[10px] text-[var(--orb-muted)]" data-orb-dictate-capture-capability>
+                      {captureCapabilityMessage}
+                    </p>
+                    {recordedAudioLabel ? (
+                      <p className="text-[10px] text-[var(--orb-muted)]" data-orb-dictate-recorded-audio>
+                        {recordedAudioLabel}
+                      </p>
+                    ) : null}
                     <p className="text-[10px] text-[var(--orb-muted)]" data-orb-dictate-timer>
                       {formatTimer(timerSec)}
                     </p>
@@ -816,12 +920,14 @@ export function OrbDictateStation({
                     <button
                       type="button"
                       data-orb-dictate-record-start
-                      className="inline-flex items-center gap-1 rounded-full bg-sky-500/20 px-3 py-1.5 text-xs text-sky-100 disabled:cursor-not-allowed disabled:opacity-50"
-                      disabled={needsConsent && !consentConfirmed}
+                      className="inline-flex items-center gap-1 rounded-full bg-[var(--orb-primary-soft)] px-3 py-1.5 text-xs text-[var(--orb-foreground)] disabled:cursor-not-allowed disabled:opacity-50"
+                      disabled={(needsConsent && !consentConfirmed) || !micCaptureAvailable}
                       title={
-                        needsConsent && !consentConfirmed
-                          ? 'Confirm consent before recording'
-                          : 'Start microphone recording'
+                        !micCaptureAvailable
+                          ? 'Paste a transcript instead'
+                          : needsConsent && !consentConfirmed
+                            ? 'Confirm consent before recording'
+                            : 'Start microphone recording'
                       }
                       onClick={() => void handleStartRecording()}
                     >
@@ -829,27 +935,49 @@ export function OrbDictateStation({
                     </button>
                   ) : (
                     <>
-                      {recordingPaused ? (
-                        <button type="button" className="rounded-full p-2 hover:bg-white/10" onClick={handleResumeRecording} aria-label="Resume">
-                          <Play className="h-4 w-4" />
-                        </button>
-                      ) : (
-                        <button type="button" className="rounded-full p-2 hover:bg-white/10" onClick={handlePauseRecording} aria-label="Pause">
-                          <Pause className="h-4 w-4" />
-                        </button>
-                      )}
-                      <button type="button" className="rounded-full p-2 hover:bg-white/10" onClick={handleStopRecording} aria-label="Stop">
+                      {recorderModeRef.current === 'speech' ? (
+                        recordingPaused ? (
+                          <button
+                            type="button"
+                            className="rounded-full p-2 hover:bg-[var(--orb-surface-hover)]"
+                            onClick={handleResumeRecording}
+                            aria-label="Resume"
+                          >
+                            <Play className="h-4 w-4" />
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className="rounded-full p-2 hover:bg-[var(--orb-surface-hover)]"
+                            onClick={handlePauseRecording}
+                            aria-label="Pause"
+                          >
+                            <Pause className="h-4 w-4" />
+                          </button>
+                        )
+                      ) : null}
+                      <button
+                        type="button"
+                        className="rounded-full p-2 hover:bg-[var(--orb-surface-hover)]"
+                        onClick={handleStopRecording}
+                        aria-label="Stop"
+                      >
                         <Square className="h-4 w-4" />
                       </button>
                     </>
                   )}
-                  <button type="button" className="rounded-full p-2 hover:bg-white/10" onClick={handleClearTranscript} aria-label="Clear">
+                  <button
+                    type="button"
+                    className="rounded-full p-2 hover:bg-[var(--orb-surface-hover)]"
+                    onClick={handleClearTranscript}
+                    aria-label="Clear"
+                  >
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
               </div>
               <div
-                className="mt-3 max-h-40 overflow-y-auto rounded-lg border border-[var(--orb-line)]/40 bg-black/20 p-2 text-sm text-slate-200"
+                className="mt-3 max-h-40 overflow-y-auto rounded-lg border border-[var(--orb-line)]/40 bg-[var(--orb-surface)] p-2 text-sm text-[var(--orb-foreground)]"
                 data-orb-dictate-live-transcript
               >
                 {liveTranscript || <span className="text-[var(--orb-muted)]">Live transcript appears here…</span>}
@@ -882,7 +1010,7 @@ export function OrbDictateStation({
             ) : null}
           </div>
 
-          <div className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-[var(--orb-line)]/50 bg-white/[0.02]">
+          <div className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)]">
             <div className="flex shrink-0 gap-1 border-b border-[var(--orb-line)]/40 p-2">
               {(
                 [
@@ -898,7 +1026,9 @@ export function OrbDictateStation({
                   type="button"
                   data-orb-dictate-tab={id}
                   className={`rounded-lg px-2 py-1 text-[10px] sm:text-xs ${
-                    outputTab === id ? 'bg-sky-500/20 text-sky-100' : 'text-[var(--orb-muted)] hover:text-white'
+                    outputTab === id
+                      ? 'bg-[var(--orb-primary-soft)] text-[var(--orb-foreground)]'
+                      : 'text-[var(--orb-muted)] hover:text-[var(--orb-foreground)]'
                   }`}
                   onClick={() => setOutputTab(id)}
                 >
@@ -918,20 +1048,20 @@ export function OrbDictateStation({
                   value={editedNote}
                   onChange={(e) => setEditedNote(e.target.value)}
                   rows={16}
-                  className="h-full min-h-[12rem] w-full resize-none bg-transparent text-sm text-slate-100 focus:outline-none"
+                  className="h-full min-h-[12rem] w-full resize-none bg-transparent text-sm text-[var(--orb-foreground)] focus:outline-none"
                 />
               ) : outputTab === 'summary' ? (
-                <p className="text-sm text-slate-200">{output.summary}</p>
+                <p className="text-sm text-[var(--orb-foreground)]">{output.summary}</p>
               ) : outputTab === 'actions' ? (
-                <ul className="list-disc space-y-1 pl-4 text-sm text-slate-200">
+                <ul className="list-disc space-y-1 pl-4 text-sm text-[var(--orb-foreground)]">
                   {output.actions.map((a) => (
                     <li key={a}>{a}</li>
                   ))}
                 </ul>
               ) : outputTab === 'transcript' ? (
-                <p className="whitespace-pre-wrap text-sm text-slate-300">{output.transcript}</p>
+                <p className="whitespace-pre-wrap text-sm text-[var(--orb-foreground)]">{output.transcript}</p>
               ) : (
-                <div className="space-y-2 text-sm text-slate-200">
+                <div className="space-y-2 text-sm text-[var(--orb-foreground)]">
                   {output.ofsted_lens ? <p>{output.ofsted_lens}</p> : null}
                   <ul className="space-y-1 text-xs">
                     {Object.entries(output.quality_checks).map(([k, v]) => (
@@ -948,7 +1078,7 @@ export function OrbDictateStation({
                 <button
                   type="button"
                   data-orb-dictate-copy
-                  className="inline-flex items-center gap-1 rounded-lg border border-[var(--orb-line)]/50 px-2 py-1 text-xs text-slate-200 hover:bg-white/5"
+                  className="inline-flex items-center gap-1 rounded-lg border border-[var(--orb-line)]/50 px-2 py-1 text-xs text-[var(--orb-foreground)] hover:bg-[var(--orb-surface-hover)]"
                   onClick={() => void handleCopy()}
                 >
                   <ClipboardCopy className="h-3.5 w-3.5" /> Copy
@@ -956,7 +1086,7 @@ export function OrbDictateStation({
                 <button
                   type="button"
                   data-orb-dictate-save
-                  className="inline-flex items-center gap-1 rounded-lg border border-[var(--orb-line)]/50 px-2 py-1 text-xs text-slate-200 hover:bg-white/5"
+                  className="inline-flex items-center gap-1 rounded-lg border border-[var(--orb-line)]/50 px-2 py-1 text-xs text-[var(--orb-foreground)] hover:bg-[var(--orb-surface-hover)]"
                   onClick={() => void handleSave()}
                 >
                   <Save className="h-3.5 w-3.5" /> Save
@@ -964,7 +1094,7 @@ export function OrbDictateStation({
                 <button
                   type="button"
                   data-orb-dictate-export-pdf
-                  className="inline-flex items-center gap-1 rounded-lg border border-[var(--orb-line)]/50 px-2 py-1 text-xs text-slate-200 hover:bg-white/5"
+                  className="inline-flex items-center gap-1 rounded-lg border border-[var(--orb-line)]/50 px-2 py-1 text-xs text-[var(--orb-foreground)] hover:bg-[var(--orb-surface-hover)]"
                   onClick={() => void handleExport('pdf')}
                 >
                   <Download className="h-3.5 w-3.5" /> PDF
@@ -972,7 +1102,7 @@ export function OrbDictateStation({
                 <button
                   type="button"
                   data-orb-dictate-export-docx
-                  className="inline-flex items-center gap-1 rounded-lg border border-[var(--orb-line)]/50 px-2 py-1 text-xs text-slate-200 hover:bg-white/5"
+                  className="inline-flex items-center gap-1 rounded-lg border border-[var(--orb-line)]/50 px-2 py-1 text-xs text-[var(--orb-foreground)] hover:bg-[var(--orb-surface-hover)]"
                   onClick={() => void handleExport('docx')}
                 >
                   <FileText className="h-3.5 w-3.5" /> DOCX
@@ -980,28 +1110,28 @@ export function OrbDictateStation({
                 <button
                   type="button"
                   data-orb-dictate-send-chat
-                  className="inline-flex items-center gap-1 rounded-lg border border-[var(--orb-line)]/50 px-2 py-1 text-xs text-slate-200 hover:bg-white/5"
+                  className="inline-flex items-center gap-1 rounded-lg border border-[var(--orb-line)]/50 px-2 py-1 text-xs text-[var(--orb-foreground)] hover:bg-[var(--orb-surface-hover)]"
                   onClick={handleSendToChat}
                 >
                   Send to chat
                 </button>
                 <button
                   type="button"
-                  className="inline-flex items-center gap-1 rounded-lg border border-[var(--orb-line)]/50 px-2 py-1 text-xs text-slate-200 hover:bg-white/5"
+                  className="inline-flex items-center gap-1 rounded-lg border border-[var(--orb-line)]/50 px-2 py-1 text-xs text-[var(--orb-foreground)] hover:bg-[var(--orb-surface-hover)]"
                   onClick={() => void runGenerate({ include_child_voice: true })}
                 >
                   Add child voice
                 </button>
                 <button
                   type="button"
-                  className="inline-flex items-center gap-1 rounded-lg border border-[var(--orb-line)]/50 px-2 py-1 text-xs text-slate-200 hover:bg-white/5"
+                  className="inline-flex items-center gap-1 rounded-lg border border-[var(--orb-line)]/50 px-2 py-1 text-xs text-[var(--orb-foreground)] hover:bg-[var(--orb-surface-hover)]"
                   onClick={() => void runGenerate({ include_manager_oversight: true })}
                 >
                   Add manager oversight
                 </button>
                 <button
                   type="button"
-                  className="inline-flex items-center gap-1 rounded-lg border border-[var(--orb-line)]/50 px-2 py-1 text-xs text-slate-200 hover:bg-white/5"
+                  className="inline-flex items-center gap-1 rounded-lg border border-[var(--orb-line)]/50 px-2 py-1 text-xs text-[var(--orb-foreground)] hover:bg-[var(--orb-surface-hover)]"
                   onClick={() => void runGenerate({ include_safeguarding: true })}
                 >
                   Add safeguarding
@@ -1009,7 +1139,7 @@ export function OrbDictateStation({
                 <button
                   type="button"
                   data-orb-dictate-action-anonymise
-                  className="inline-flex items-center gap-1 rounded-lg border border-[var(--orb-line)]/50 px-2 py-1 text-xs text-slate-200 hover:bg-white/5"
+                  className="inline-flex items-center gap-1 rounded-lg border border-[var(--orb-line)]/50 px-2 py-1 text-xs text-[var(--orb-foreground)] hover:bg-[var(--orb-surface-hover)]"
                   onClick={() => runSpeakerAction('anonymise')}
                 >
                   Anonymise
@@ -1017,21 +1147,21 @@ export function OrbDictateStation({
                 <button
                   type="button"
                   data-orb-dictate-speaker-actions
-                  className="inline-flex items-center gap-1 rounded-lg border border-[var(--orb-line)]/50 px-2 py-1 text-xs text-slate-200 hover:bg-white/5"
+                  className="inline-flex items-center gap-1 rounded-lg border border-[var(--orb-line)]/50 px-2 py-1 text-xs text-[var(--orb-foreground)] hover:bg-[var(--orb-surface-hover)]"
                   onClick={() => runSpeakerAction('meeting_minutes')}
                 >
                   Meeting minutes
                 </button>
                 <button
                   type="button"
-                  className="inline-flex items-center gap-1 rounded-lg border border-[var(--orb-line)]/50 px-2 py-1 text-xs text-slate-200 hover:bg-white/5"
+                  className="inline-flex items-center gap-1 rounded-lg border border-[var(--orb-line)]/50 px-2 py-1 text-xs text-[var(--orb-foreground)] hover:bg-[var(--orb-surface-hover)]"
                   onClick={() => runSpeakerAction('investigation_note')}
                 >
                   Investigation note
                 </button>
                 <button
                   type="button"
-                  className="inline-flex items-center gap-1 rounded-lg border border-[var(--orb-line)]/50 px-2 py-1 text-xs text-slate-200 hover:bg-white/5"
+                  className="inline-flex items-center gap-1 rounded-lg border border-[var(--orb-line)]/50 px-2 py-1 text-xs text-[var(--orb-foreground)] hover:bg-[var(--orb-surface-hover)]"
                   onClick={() => runSpeakerAction('summarise_by_speaker')}
                 >
                   Summarise by speaker

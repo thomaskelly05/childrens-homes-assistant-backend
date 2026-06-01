@@ -59,7 +59,7 @@ export function OrbStandalonePanelShell({
 
   return (
     <div
-      className={`orb-panel-overlay fixed inset-0 z-[65] flex bg-black/50 backdrop-blur-md ${
+      className={`orb-panel-overlay fixed inset-0 z-[65] flex bg-[var(--orb-overlay,rgba(15,23,42,0.45))] backdrop-blur-md ${
         isCenter ? 'items-center justify-center p-3 sm:p-4' : 'justify-end'
       }`}
       role="dialog"

@@ -51,6 +51,9 @@ export type OrbVoiceReadiness = {
   secure_context: boolean
   can_record_audio: boolean
   can_use_realtime_voice: boolean
+  /** Live ORB Voice may use browser SpeechRecognition (not MediaRecorder). */
+  speech_recognition_available: boolean
+  /** @deprecated Use speech_recognition_available — kept for callers migrating off MediaRecorder-as-voice. */
   fallback_available: boolean
 }
 
@@ -120,13 +123,15 @@ export function assessOrbVoiceReadiness(input: {
     : 'unknown'
   const can_record_audio =
     secure_context && browser_supported && microphone_permission !== 'denied' && detectMediaRecorderSupported()
+  const speech_recognition_available =
+    detectSpeechRecognitionSupported() || Boolean(input.recognitionAvailable)
   const realtime =
     input.realtimeServiceAvailable === undefined ? 'unknown' : input.realtimeServiceAvailable
   const liveVoiceAllowed = input.micAccess
     ? canUseLiveVoice(input.micAccess)
     : input.subscriptionActive !== false
   const can_use_realtime_voice =
-    Boolean(input.recognitionAvailable) &&
+    speech_recognition_available &&
     secure_context &&
     microphone_permission !== 'denied' &&
     realtime !== false &&
@@ -139,7 +144,8 @@ export function assessOrbVoiceReadiness(input: {
     secure_context,
     can_record_audio,
     can_use_realtime_voice,
-    fallback_available: browser_supported || can_record_audio
+    speech_recognition_available,
+    fallback_available: speech_recognition_available
   }
 }
 
@@ -193,6 +199,32 @@ export function orbVoiceReadinessPresentation(
     }
   }
 
+  if (!readiness.speech_recognition_available && !readiness.can_record_audio) {
+    return {
+      state: 'browser_unsupported',
+      headline: 'Live voice is not available in this browser',
+      detail: 'Open Dictate to record or paste notes, or type in chat.',
+      primaryAction: 'none',
+      showTestMicrophone: false,
+      showAllowMicrophone: false,
+      showOpenDictate: true,
+      showTypeInstead: true
+    }
+  }
+
+  if (!readiness.speech_recognition_available) {
+    return {
+      state: 'browser_unsupported',
+      headline: 'Live voice is not available in this browser',
+      detail: 'Open Dictate to record or paste notes. Audio recording does not replace live conversation.',
+      primaryAction: 'none',
+      showTestMicrophone: readiness.can_record_audio,
+      showAllowMicrophone: false,
+      showOpenDictate: true,
+      showTypeInstead: true
+    }
+  }
+
   if (!readiness.browser_supported) {
     return {
       state: 'browser_unsupported',
@@ -211,7 +243,7 @@ export function orbVoiceReadinessPresentation(
       state: 'service_unavailable',
       headline: 'Live voice is temporarily unavailable; Dictate still works',
       detail: 'You can record or paste a transcript in ORB Dictate while we restore live voice.',
-      primaryAction: readiness.fallback_available ? 'start' : 'none',
+      primaryAction: readiness.speech_recognition_available ? 'start' : 'none',
       showTestMicrophone: true,
       showAllowMicrophone: true,
       showOpenDictate: true,
@@ -256,7 +288,11 @@ export function orbVoiceReadinessPresentation(
     }
   }
 
-  if (readiness.can_use_realtime_voice || readiness.fallback_available) {
+  if (
+    readiness.speech_recognition_available ||
+    readiness.realtime_service_available === true ||
+    readiness.realtime_service_available === 'unknown'
+  ) {
     const sessionHeadline = options?.sessionActive
       ? options?.captureActive
         ? 'Voice session active'
