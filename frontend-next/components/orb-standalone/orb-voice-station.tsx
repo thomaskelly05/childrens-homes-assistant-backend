@@ -42,6 +42,9 @@ type VoiceStartStage = 'idle' | 'starting_browser_speech' | 'active' | 'failed'
 const SAFETY_COPY =
   'ORB Voice supports professional judgement. If there is immediate risk, follow your home\'s procedures and contact emergency services where required.'
 
+const READY_HEADLINE = 'Start conversation'
+const READY_DETAIL = 'ORB will ask for microphone access when you start.'
+
 const SPEECH_RECOGNITION_FALLBACK =
   'Live voice is temporarily unavailable; Dictate still works.'
 
@@ -99,7 +102,7 @@ function statusLabel(status: OrbVoiceSessionStatus, permissionDenied: boolean): 
     case 'error':
       return SPEECH_RECOGNITION_FALLBACK
     default:
-      return 'Ready when you press Start'
+      return READY_HEADLINE
   }
 }
 
@@ -174,12 +177,13 @@ export function OrbVoiceStation({
   const selectedProfileLabel = orbVoiceProfileLabel(voice.settings.voicePresetId)
   const status = mapPhaseToStatus(voice.phase, pending, voice.listening, voice.speaking)
   const transcriptAvailable = hasUserFacingTranscript(turns)
+  const canStartVoice = liveVoiceAllowed && speechRecognitionOk && !permissionDenied
 
   const readiness = assessOrbVoiceReadiness({
     recognitionAvailable: speechRecognitionOk,
     synthesisAvailable: voice.synthesisAvailable,
     permissionDenied,
-    realtimeServiceAvailable: false,
+    realtimeServiceAvailable: speechRecognitionOk,
     subscriptionActive,
     micAccess
   })
@@ -379,7 +383,9 @@ export function OrbVoiceStation({
       ? SPEECH_RECOGNITION_FALLBACK
       : voiceSessionLive
         ? statusLabel(status, permissionDenied)
-        : readinessUi.headline
+        : canStartVoice
+          ? READY_HEADLINE
+          : readinessUi.headline
 
   const detail = voiceStarting
     ? 'Allow microphone access if prompted, or open Dictate.'
@@ -389,7 +395,9 @@ export function OrbVoiceStation({
         ? voice.settings.pushToTalk
           ? 'Push-to-talk — use Speak when you are ready.'
           : 'Hands-free in this session — ORB will listen again after speaking.'
-        : readinessUi.detail
+        : canStartVoice
+          ? READY_DETAIL
+          : readinessUi.detail
 
   return (
     <OrbAppModal
