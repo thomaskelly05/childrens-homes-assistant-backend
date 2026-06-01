@@ -1,10 +1,17 @@
 /**
- * Confirmed SpeechRecognition start — waits for onstart (and minimum hold) before reporting success.
+ * Confirmed SpeechRecognition start.
+ *
+ * Browser SpeechRecognition is inconsistent across Safari/Chrome. In production we treat
+ * the browser's onstart event as the confirmed start signal because some browsers can
+ * fire onend very quickly while still allowing a follow-up push-to-talk attempt. Waiting
+ * for a hold window caused ORB Voice to show false "could not start" messages even when
+ * direct browser diagnostics showed SpeechRecognition was available.
+ *
  * Safe to import from tests without React.
  */
 
 export const RECOGNITION_START_TIMEOUT_MS = 2500
-export const SPEECH_RECOGNITION_MINIMUM_HOLD_MS = 500
+export const SPEECH_RECOGNITION_MINIMUM_HOLD_MS = 0
 
 export type OrbSpeechRecognitionStartFailureReason =
   | 'timeout'
@@ -27,8 +34,15 @@ export type OrbSpeechRecognitionLike = {
 }
 
 /**
- * Call recognition.start() and resolve only after confirmed active capture.
- * Success requires onstart plus either minimumHoldMs without onend/onerror, or an onresult event.
+ * Call recognition.start() and resolve after the browser confirms onstart.
+ *
+ * Important: do not require an additional "hold" period by default. A previous
+ * implementation waited 500ms after onstart; on Safari and some Chromium sessions the
+ * recogniser can briefly end/recycle, which made ORB Voice report failure even though
+ * the user's browser and microphone had passed diagnostics.
+ *
+ * If a caller explicitly passes minimumHoldMs > 0, onend before that hold still counts
+ * as a short-start failure.
  */
 export function confirmSpeechRecognitionStart(
   recognition: OrbSpeechRecognitionLike,
@@ -76,6 +90,12 @@ export function confirmSpeechRecognitionStart(
       } catch {
         /* ignore handler errors */
       }
+
+      if (minimumHoldMs <= 0) {
+        confirmSuccess()
+        return
+      }
+
       holdTimerId = setTimeout(() => {
         if (!settled) confirmSuccess()
       }, minimumHoldMs)
@@ -99,15 +119,17 @@ export function confirmSpeechRecognitionStart(
       } catch {
         /* ignore */
       }
+
       if (!started) {
         finish({ ok: false, reason: 'onend_before_onstart' })
         return
       }
+
       if (holdTimerId) {
         clearTimeout(holdTimerId)
         holdTimerId = null
+        finish({ ok: false, reason: 'speech_recognition_ended_immediately' })
       }
-      finish({ ok: false, reason: 'speech_recognition_ended_immediately' })
     }
 
     timeoutId = setTimeout(() => finish({ ok: false, reason: 'timeout' }), timeoutMs)
