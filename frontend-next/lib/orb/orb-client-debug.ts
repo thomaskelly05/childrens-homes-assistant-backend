@@ -6,7 +6,7 @@ type OrbClientDebugEvent = {
   detail?: Record<string, unknown>
 }
 
-const MAX_EVENTS = 80
+const MAX_EVENTS = 160
 const STORAGE_KEY = 'orb-client-flight-recorder'
 
 function isEnabled(): boolean {
@@ -15,20 +15,30 @@ function isEnabled(): boolean {
   return params.get('debugVoice') === '1' || window.localStorage.getItem('orb-debug-voice') === '1'
 }
 
-function safeDetail(detail: Record<string, unknown> | undefined): Record<string, unknown> {
-  if (!detail) return {}
-  const output: Record<string, unknown> = {}
-  for (const [key, value] of Object.entries(detail).slice(0, 30)) {
-    const lower = key.toLowerCase()
-    if (lower.includes('token') || lower.includes('secret') || lower.includes('cookie')) {
-      output[key] = '[hidden]'
-      continue
-    }
-    if (typeof value === 'string') output[key] = value.slice(0, 500)
-    else if (typeof value === 'number' || typeof value === 'boolean' || value == null) output[key] = value
-    else output[key] = JSON.parse(JSON.stringify(value).slice(0, 1000))
+function safeValue(value: unknown, depth = 0): unknown {
+  if (depth > 4) return '[truncated]'
+  if (value == null || typeof value === 'boolean' || typeof value === 'number') return value
+  if (typeof value === 'string') {
+    const lower = value.toLowerCase()
+    if (lower.includes('bearer ') || lower.includes('eyj')) return '[hidden]'
+    return value.slice(0, 800)
   }
-  return output
+  if (Array.isArray(value)) return value.slice(0, 30).map((item) => safeValue(item, depth + 1))
+  if (typeof value === 'object') {
+    const output: Record<string, unknown> = {}
+    for (const [key, item] of Object.entries(value as Record<string, unknown>).slice(0, 60)) {
+      const lower = key.toLowerCase()
+      output[key] = lower.includes('token') || lower.includes('secret') || lower.includes('cookie') || lower.includes('authorization')
+        ? '[hidden]'
+        : safeValue(item, depth + 1)
+    }
+    return output
+  }
+  return String(value).slice(0, 500)
+}
+
+function safeDetail(detail: Record<string, unknown> | undefined): Record<string, unknown> {
+  return (safeValue(detail ?? {}) as Record<string, unknown>) ?? {}
 }
 
 export function emitOrbClientDebug(event: OrbClientDebugEvent): void {
@@ -67,7 +77,26 @@ export function clearOrbClientDebugEvents(): void {
   window.localStorage.removeItem(STORAGE_KEY)
 }
 
+export async function copyOrbClientDebugEvents(): Promise<string | true> {
+  const text = JSON.stringify(getOrbClientDebugEvents(), null, 2)
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text)
+      return true
+    }
+  } catch {
+    // fall through
+  }
+  return text
+}
+
 if (typeof window !== 'undefined') {
-  ;(window as typeof window & { ORB_DEBUG_EVENTS?: () => unknown[]; ORB_DEBUG_CLEAR?: () => void }).ORB_DEBUG_EVENTS = getOrbClientDebugEvents
-  ;(window as typeof window & { ORB_DEBUG_EVENTS?: () => unknown[]; ORB_DEBUG_CLEAR?: () => void }).ORB_DEBUG_CLEAR = clearOrbClientDebugEvents
+  const debugWindow = window as typeof window & {
+    ORB_DEBUG_EVENTS?: () => unknown[]
+    ORB_DEBUG_COPY?: () => Promise<string | true>
+    ORB_DEBUG_CLEAR?: () => void
+  }
+  debugWindow.ORB_DEBUG_EVENTS = getOrbClientDebugEvents
+  debugWindow.ORB_DEBUG_COPY = copyOrbClientDebugEvents
+  debugWindow.ORB_DEBUG_CLEAR = clearOrbClientDebugEvents
 }
