@@ -9,6 +9,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
+from auth.orb_knowledge_admin_dependency import require_orb_knowledge_admin
 from auth.orb_standalone_premium_dependency import (
     require_rich_orb_premium_access as require_standalone_orb_access,
 )
@@ -67,6 +68,19 @@ def _success(data: Any) -> dict[str, Any]:
     return {"success": True, "data": data}
 
 
+def _viewer_user_id(current_user: dict[str, Any]) -> int | None:
+    uid = current_user.get("user_id") or current_user.get("id")
+    return int(uid) if uid is not None else None
+
+
+def _payload_dict(payload: Any) -> dict[str, Any]:
+    if isinstance(payload, dict):
+        return payload
+    if hasattr(payload, "model_dump"):
+        return payload.model_dump()
+    return dict(payload)
+
+
 @router.get("/health")
 async def knowledge_health(current_user=Depends(require_standalone_orb_access)):
     return _success(orb_knowledge_library_service.health())
@@ -83,12 +97,12 @@ async def official_sources(current_user=Depends(require_standalone_orb_access)):
 
 
 @router.get("/sources/needing-review")
-async def sources_needing_review(current_user=Depends(require_standalone_orb_access)):
+async def sources_needing_review(_admin=Depends(require_orb_knowledge_admin)):
     return _success(orb_knowledge_library_service.list_sources_needing_review())
 
 
 @router.get("/sources/expired")
-async def sources_expired(current_user=Depends(require_standalone_orb_access)):
+async def sources_expired(_admin=Depends(require_orb_knowledge_admin)):
     return _success(orb_knowledge_library_service.list_expired_sources())
 
 
@@ -103,86 +117,96 @@ async def list_sources(
         source_type=source_type,
         status=status,
         governance_status=governance_status,
+        viewer_user_id=_viewer_user_id(current_user),
     )
-    return _success([source.model_dump() for source in sources])
+    return _success(sources)
 
 
 @router.get("/sources/{source_id}")
 async def get_source(source_id: str, current_user=Depends(require_standalone_orb_access)):
-    source = orb_knowledge_library_service.get_source(source_id)
+    source = orb_knowledge_library_service.get_source(
+        source_id, viewer_user_id=_viewer_user_id(current_user)
+    )
     if not source:
         raise HTTPException(status_code=404, detail="Knowledge source not found")
-    return _success(source.model_dump())
+    return _success(source)
 
 
 @router.get("/sources/{source_id}/citation-health")
 async def source_citation_health(source_id: str, current_user=Depends(require_standalone_orb_access)):
+    source = orb_knowledge_library_service.get_source(
+        source_id, viewer_user_id=_viewer_user_id(current_user)
+    )
+    if not source:
+        raise HTTPException(status_code=404, detail="Knowledge source not found")
     return _success(orb_knowledge_library_service.get_citation_health(source_id).model_dump())
 
 
 @router.post("/sources")
 async def create_source(
     payload: OrbKnowledgeSourceCreate,
-    current_user=Depends(require_standalone_orb_access),
+    _admin=Depends(require_orb_knowledge_admin),
 ):
-    source = orb_knowledge_library_service.create_source(payload)
-    return _success(source.model_dump())
+    source = orb_knowledge_library_service.create_source(_payload_dict(payload))
+    return _success(source)
 
 
 @router.patch("/sources/{source_id}")
 async def update_source(
     source_id: str,
     payload: OrbKnowledgeSourceUpdate,
-    current_user=Depends(require_standalone_orb_access),
+    _admin=Depends(require_orb_knowledge_admin),
 ):
-    source = orb_knowledge_library_service.update_source(source_id, payload)
+    source = orb_knowledge_library_service.update_source(source_id, _payload_dict(payload))
     if not source:
         raise HTTPException(status_code=404, detail="Knowledge source not found")
-    return _success(source.model_dump())
+    return _success(source)
 
 
 @router.patch("/sources/{source_id}/metadata")
 async def patch_source_metadata(
     source_id: str,
     payload: OrbKnowledgeSourceMetadataPatch,
-    current_user=Depends(require_standalone_orb_access),
+    _admin=Depends(require_orb_knowledge_admin),
 ):
-    source = orb_knowledge_library_service.patch_source_metadata(source_id, payload)
+    source = orb_knowledge_library_service.patch_source_metadata(
+        source_id, _payload_dict(payload)
+    )
     if not source:
         raise HTTPException(status_code=404, detail="Knowledge source not found")
-    return _success(source.model_dump())
+    return _success(source)
 
 
 @router.post("/sources/{source_id}/approve")
-async def approve_source(source_id: str, current_user=Depends(require_standalone_orb_access)):
+async def approve_source(source_id: str, _admin=Depends(require_orb_knowledge_admin)):
     source = orb_knowledge_library_service.approve_source(source_id)
     if not source:
         raise HTTPException(status_code=404, detail="Knowledge source not found")
-    return _success(source.model_dump())
+    return _success(source)
 
 
 @router.post("/sources/{source_id}/needs-review")
 async def mark_source_needs_review(
     source_id: str,
     reason: str | None = None,
-    current_user=Depends(require_standalone_orb_access),
+    _admin=Depends(require_orb_knowledge_admin),
 ):
     source = orb_knowledge_library_service.mark_needs_review(source_id, reason=reason)
     if not source:
         raise HTTPException(status_code=404, detail="Knowledge source not found")
-    return _success(source.model_dump())
+    return _success(source)
 
 
 @router.post("/sources/{source_id}/archive")
-async def archive_source(source_id: str, current_user=Depends(require_standalone_orb_access)):
+async def archive_source(source_id: str, _admin=Depends(require_orb_knowledge_admin)):
     source = orb_knowledge_library_service.archive_source(source_id)
     if not source:
         raise HTTPException(status_code=404, detail="Knowledge source not found")
-    return _success(source.model_dump())
+    return _success(source)
 
 
 @router.post("/sources/{source_id}/rebuild-citations")
-async def rebuild_citations(source_id: str, current_user=Depends(require_standalone_orb_access)):
+async def rebuild_citations(source_id: str, _admin=Depends(require_orb_knowledge_admin)):
     return _success(orb_knowledge_library_service.rebuild_citations(source_id))
 
 
@@ -191,7 +215,15 @@ async def ingest_text(
     payload: OrbKnowledgeDocumentIngestRequest,
     current_user=Depends(require_standalone_orb_access),
 ):
-    result = orb_knowledge_library_service.ingest_text(payload)
+    data = _payload_dict(payload)
+    uid = _viewer_user_id(current_user)
+    if uid is not None:
+        metadata = dict(data.get("metadata") or {})
+        metadata.setdefault("uploaded_by_user_id", uid)
+        metadata.setdefault("owner_user_id", uid)
+        metadata.setdefault("source_scope", "user_private")
+        data["metadata"] = metadata
+    result = orb_knowledge_library_service.ingest_text(data)
     return _success(result)
 
 
@@ -202,13 +234,19 @@ async def ingest_file(
 ):
     try:
         raw = base64.b64decode(payload.content_base64, validate=False)
+        metadata = dict(payload.metadata or {})
+        uid = _viewer_user_id(current_user)
+        if uid is not None:
+            metadata.setdefault("uploaded_by_user_id", uid)
+            metadata.setdefault("source_scope", "user_private")
+            metadata.setdefault("owner_user_id", uid)
         result = orb_document_ingestion_service.ingest_file(
             payload.file_name,
             raw,
             payload.content_type,
             title=payload.title,
-            source_type=payload.source_type,
-            metadata=payload.metadata,
+            source_type=payload.source_type or "user_uploaded",
+            metadata=metadata,
         )
         return _success(result)
     except ValueError as exc:
@@ -219,9 +257,10 @@ async def ingest_file(
 @router.post("/import-official")
 async def import_official_source(
     payload: OrbKnowledgeOfficialImportRequest,
-    current_user=Depends(require_standalone_orb_access),
+    _admin=Depends(require_orb_knowledge_admin),
 ):
-    return _success(orb_knowledge_library_service.import_official_source(payload))
+    data = payload.model_dump() if hasattr(payload, "model_dump") else payload
+    return _success(orb_knowledge_library_service.import_official_source(data))
 
 
 @router.post("/search")
@@ -229,12 +268,18 @@ async def search_knowledge(
     payload: OrbKnowledgeSearchRequest,
     current_user=Depends(require_standalone_orb_access),
 ):
+    filters: dict[str, Any] = {}
+    if payload.source_type:
+        filters["source_type"] = payload.source_type
     results = orb_rag_retrieval_service.search(
         payload.query,
         limit=payload.limit,
-        source_type=payload.source_type,
+        filters=filters or None,
     )
-    return _success({"query": payload.query, "results": [r.model_dump() for r in results], "total": len(results)})
+    serialised = [
+        r.model_dump() if hasattr(r, "model_dump") else dict(r) for r in results
+    ]
+    return _success({"query": payload.query, "results": serialised, "total": len(serialised)})
 
 
 @router.get("/public-evidence/status")
@@ -243,14 +288,14 @@ async def public_evidence_status(current_user=Depends(require_standalone_orb_acc
 
 
 @router.post("/public-evidence/seed-registry")
-async def seed_public_evidence_registry(current_user=Depends(require_standalone_orb_access)):
+async def seed_public_evidence_registry(_admin=Depends(require_orb_knowledge_admin)):
     return _success(orb_public_evidence_intelligence_service.seed_registry())
 
 
 @router.post("/public-evidence/import-url")
 async def import_public_evidence_url(
     payload: OrbKnowledgeUrlImportRequest,
-    current_user=Depends(require_standalone_orb_access),
+    _admin=Depends(require_orb_knowledge_admin),
 ):
     if payload.pipeline_id:
         result = await orb_sector_evidence_pipeline_service.import_url(
@@ -316,7 +361,7 @@ async def get_sector_evidence_pipeline(
 @router.post("/pipelines/{pipeline_id}/seed")
 async def seed_sector_evidence_pipeline(
     pipeline_id: str,
-    current_user=Depends(require_standalone_orb_access),
+    _admin=Depends(require_orb_knowledge_admin),
 ):
     result = await orb_sector_evidence_pipeline_service.seed_pipeline(pipeline_id)
     if not result.get("success"):

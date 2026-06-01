@@ -322,8 +322,13 @@ def save_dictate_note(user: dict[str, Any], request: OrbDictateSaveRequest) -> O
     if request.summary:
         content_md = f"**Summary:** {request.summary}\n\n{content_md}"
 
+    user_id = user.get("user_id") or user.get("id")
     try:
+        if not user_id:
+            raise ValueError("user_id required to save dictate output")
+        uid = int(user_id)
         output = orb_saved_output_service.create_output(
+            uid,
             OrbSavedOutputCreate(
                 title=request.title,
                 type="recording_rewrite",
@@ -344,7 +349,6 @@ def save_dictate_note(user: dict[str, Any], request: OrbDictateSaveRequest) -> O
     except Exception:
         logger.exception("ORB Dictate saved output failed")
 
-    user_id = user.get("user_id") or user.get("id")
     if user_id and _user_can_access_os_ai_notes(user):
         try:
             conn = get_db_connection()
@@ -423,8 +427,12 @@ def list_dictate_notes_for_user(user: dict[str, Any]) -> list[OrbDictateNoteSumm
     try:
         from schemas.orb_saved_outputs import OrbSavedOutputListRequest
 
+        uid = user.get("user_id") or user.get("id")
+        if not uid:
+            return items
         result = orb_saved_output_service.list_outputs(
-            OrbSavedOutputListRequest(tag="orb-dictate", limit=50)
+            int(uid),
+            OrbSavedOutputListRequest(tag="orb-dictate", limit=50),
         )
         for row in result.items:
             items.append(

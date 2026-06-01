@@ -954,6 +954,23 @@ async def standalone_orb_conversation_stream(
         stream_meta: dict[str, Any] = {}
         answer_parts: list[str] = []
 
+        limited = _enforce_plan_limits(
+            current_user=current_user,
+            message=payload.message,
+            prompt_tier=prompt_tier,
+            event_type="conversation_stream",
+        )
+        if limited:
+            yield _sse_event(
+                "error",
+                {
+                    "message": str(limited.get("answer") or "Usage limit reached."),
+                    "code": "usage_limit",
+                },
+            )
+            yield _sse_event("done", {"context_used": limited.get("context_used") or {}})
+            return
+
         try:
             assistant_runtime = _select_assistant_runtime()
             provider_started = time.perf_counter()
