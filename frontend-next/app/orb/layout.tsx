@@ -4,6 +4,7 @@ import { ReactNode } from 'react'
 /* Canonical ORB design layers: desktop + mobile only. */
 import './orb-desktop.css'
 import './orb-premium-tokens.css'
+import './orb-light-layer-fix.css'
 import './orb-mobile.css'
 import { ORB_APPEARANCE_BOOTSTRAP_SCRIPT } from '@/lib/orb/orb-appearance'
 import {
