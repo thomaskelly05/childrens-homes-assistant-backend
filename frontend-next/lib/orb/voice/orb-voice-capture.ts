@@ -83,14 +83,27 @@ export type MediaRecorderCapture = {
 
 function pickMediaRecorderMimeType(preferred?: string): string {
   if (typeof MediaRecorder === 'undefined') return ''
-  const requested = preferred ?? 'audio/webm;codecs=opus'
+  const candidates = [
+    preferred,
+    'audio/webm;codecs=opus',
+    'audio/webm',
+    'audio/mp4',
+    'audio/mpeg'
+  ].filter(Boolean) as string[]
   try {
-    if (requested && MediaRecorder.isTypeSupported(requested)) return requested
-    if (MediaRecorder.isTypeSupported('audio/webm')) return 'audio/webm'
+    for (const candidate of candidates) {
+      if (MediaRecorder.isTypeSupported(candidate)) return candidate
+    }
   } catch {
     return ''
   }
   return ''
+}
+
+function buildAudioBlob(chunks: Blob[], mimeType: string): Blob | null {
+  const usable = chunks.filter((chunk) => chunk.size > 0)
+  if (!usable.length) return null
+  return new Blob(usable, { type: mimeType || usable[0]?.type || 'audio/webm' })
 }
 
 function buildMediaRecorderCapture(recorder: MediaRecorder, chunks: Blob[]): MediaRecorderCapture {
@@ -98,19 +111,40 @@ function buildMediaRecorderCapture(recorder: MediaRecorder, chunks: Blob[]): Med
     recorder,
     stop: () =>
       new Promise((resolve) => {
+        const mimeType = recorder.mimeType || 'audio/webm'
+        let settled = false
+
+        const finish = () => {
+          if (settled) return
+          settled = true
+          window.setTimeout(() => {
+            resolve({ blob: buildAudioBlob(chunks, mimeType), mimeType })
+          }, 100)
+        }
+
+        const handleData = (event: BlobEvent) => {
+          if (event.data?.size > 0) chunks.push(event.data)
+        }
+        const handleStop = () => finish()
+
+        recorder.addEventListener('dataavailable', handleData)
+        recorder.addEventListener('stop', handleStop, { once: true })
+
         if (recorder.state === 'inactive') {
-          const blob = chunks.length ? new Blob(chunks, { type: recorder.mimeType || 'audio/webm' }) : null
-          resolve({ blob, mimeType: recorder.mimeType || 'audio/webm' })
+          finish()
           return
         }
-        recorder.onstop = () => {
-          const blob = chunks.length ? new Blob(chunks, { type: recorder.mimeType || 'audio/webm' }) : null
-          resolve({ blob, mimeType: recorder.mimeType || 'audio/webm' })
+
+        try {
+          recorder.requestData()
+        } catch {
+          /* Safari may not support requestData in every state. stop() still flushes final data. */
         }
+
         try {
           recorder.stop()
         } catch {
-          resolve({ blob: null, mimeType: recorder.mimeType || 'audio/webm' })
+          finish()
         }
       }),
     cancel: () => {
