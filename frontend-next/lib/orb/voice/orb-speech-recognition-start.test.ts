@@ -130,10 +130,9 @@ describe('ORB voice hook confirmed capture', () => {
     assert.match(hook, /await startRecognitionSessionConfirmed/)
   })
 
-  it('voice station only treats session as live when realtime and capture are active', () => {
+  it('voice station only treats session as live when realtime session is connected', () => {
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /voiceSessionLive = realtimeVoiceReady && voiceStartStage === 'active' && captureActive/)
-    assert.match(station, /browserCaptureActiveRef/)
+    assert.match(station, /voiceSessionLive = realtimeVoiceReady && realtimeSessionConnected/)
     assert.match(station, /voice_fake_active_prevented/)
   })
 
@@ -141,7 +140,7 @@ describe('ORB voice hook confirmed capture', () => {
     const dictate = readComponent('components/orb-standalone/orb-dictate-station.tsx')
     assert.match(dictate, /setRecordingUiState\('starting'\)/)
     assert.match(dictate, /setRecordingUiState\('recording'\)/)
-    assert.match(dictate, /Starting microphone/)
+    assert.match(dictate, /Starting speech transcript/)
     assert.match(dictate, /SPEECH_START_FAILED_MESSAGE/)
   })
 

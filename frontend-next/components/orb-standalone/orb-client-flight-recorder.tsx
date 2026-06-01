@@ -73,13 +73,20 @@ function screenState() {
     composerMic: Boolean(document.querySelector('[data-orb-composer-mic]')),
     composerMicRoute: readAttr('data-orb-composer-mic-route'),
     composerMicReason: readAttr('data-orb-composer-mic-reason'),
+    voiceState: readAttr('data-orb-voice-state'),
     voiceStartStage: readAttr('data-orb-voice-start-stage'),
     voicePhase: readAttr('data-orb-voice-phase'),
     voiceCaptureState: readAttr('data-orb-voice-capture-state'),
     voiceCaptureActive: readAttr('data-orb-voice-capture-active'),
     voiceListening: readAttr('data-orb-voice-listening'),
+    voiceSpeaking: readAttr('data-orb-voice-speaking'),
     voiceProvider: readAttr('data-orb-voice-provider'),
     voiceRealtimeAvailable: readAttr('data-orb-voice-realtime-available'),
+    voiceSessionConnected: readAttr('data-orb-voice-session-connected'),
+    voiceError: readAttr('data-orb-voice-error'),
+    dictateState: readAttr('data-orb-dictate-state'),
+    dictateCaptureMode: readAttr('data-orb-dictate-capture-mode'),
+    dictateStartSource: readAttr('data-orb-dictate-start-source'),
     dictateRecordingState: readAttr('data-orb-dictate-recording-state'),
     dictateRecorderMode: readAttr('data-orb-dictate-recorder-mode'),
     dictateTranscriptLength: readAttr('data-orb-dictate-transcript-length'),
@@ -87,7 +94,9 @@ function screenState() {
     dictateCaptureSource: readAttr('data-orb-dictate-capture-source'),
     dictateChunkCount: readAttr('data-orb-dictate-chunk-count'),
     dictateSampleCount: readAttr('data-orb-dictate-sample-count'),
-    dictateStatus: readAttr('data-orb-dictate-status')
+    dictateStatus: readAttr('data-orb-dictate-status'),
+    dictateSpeechError: readAttr('data-orb-dictate-speech-error'),
+    dictateRestartCount: readAttr('data-orb-dictate-restart-count')
   }
 }
 

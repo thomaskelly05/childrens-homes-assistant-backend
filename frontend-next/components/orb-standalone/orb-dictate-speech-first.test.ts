@@ -11,29 +11,31 @@ function readComponent(relativePath: string) {
 }
 
 describe('ORB Dictate speech-first routing', () => {
-  it('prefers speech when SpeechRecognition is available (including Safari)', () => {
+  it('uses speech transcript from explicit click (including Safari)', () => {
     const dictate = readComponent('components/orb-standalone/orb-dictate-station.tsx')
-    assert.match(dictate, /const preferSpeechRecognition = speechRecognitionAvailable/)
-    assert.match(dictate, /const preferMediaRecorder = !speechRecognitionAvailable && mediaRecorderAvailable/)
+    assert.match(dictate, /handleStartSpeechTranscript/)
+    assert.match(dictate, /Start speech transcript/)
     assert.doesNotMatch(dictate, /isSafariBrowser\(\)/)
     assert.match(dictate, /beginDictateSpeechCapture/)
+    assert.match(dictate, /handleAudioFallbackClick/)
   })
 
   it('speech mode sets listening status and data attributes', () => {
     const dictate = readComponent('components/orb-standalone/orb-dictate-station.tsx')
-    assert.match(dictate, /Listening — speech will appear as text/)
-    assert.match(dictate, /data-orb-dictate-recorder-mode/)
+    assert.match(dictate, /DICTATE_LISTENING_MESSAGE|Listening — speech will appear as text/)
+    assert.match(dictate, /data-orb-dictate-state=/)
+    assert.match(dictate, /data-orb-dictate-capture-mode=/)
     assert.match(dictate, /data-orb-dictate-recording-state/)
     assert.match(dictate, /data-orb-dictate-transcript-length/)
     assert.match(dictate, /Speech transcript captured — review before generating/)
-    assert.match(dictate, /No speech was detected\. Try again/)
+    assert.match(dictate, /DICTATE_NO_SPEECH_MESSAGE|No speech was detected/)
   })
 
   it('media fallback preserves speech transcript on zero-byte audio', () => {
     const dictate = readComponent('components/orb-standalone/orb-dictate-station.tsx')
     assert.match(dictate, /existingSpeechTranscript/)
     assert.match(dictate, /preservedSpeechTranscript/)
-    assert.match(dictate, /Try speech transcript, Chrome\/Edge/)
+    assert.match(dictate, /DICTATE_AUDIO_FALLBACK_FAILED_MESSAGE|Try speech transcript, Chrome\/Edge/)
   })
 
   it('hook does not prefer MediaRecorder on Safari when Recognition exists', () => {
@@ -55,7 +57,7 @@ describe('ORB Voice realtime availability', () => {
 
   it('voice station requires realtime before live session', () => {
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /isRealtimeVoiceProvider/)
+    assert.match(station, /fetchOrbVoiceRealtimeStatus|isRealtimeVoiceProvider/)
     assert.match(station, /realtimeVoiceReady/)
     assert.match(station, /Live ORB Voice is not available yet/)
     assert.match(station, /voice_fake_active_prevented/)
@@ -63,12 +65,11 @@ describe('ORB Voice realtime availability', () => {
 })
 
 describe('Composer mic routing', () => {
-  it('defaults to dictate unless realtime voice is configured', () => {
+  it('composer mic defaults to dictate without auto-start', () => {
     const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
     const composer = readComponent('components/orb-standalone/orb-standalone-composer.tsx')
-    assert.match(companion, /realtimeVoiceAvailable/)
-    assert.match(companion, /voiceGenuinelyAvailable/)
-    assert.match(companion, /if \(isSafariBrowser\(\)\) return 'dictate'/)
+    assert.match(companion, /isOrbRealtimeVoiceAvailable/)
+    assert.match(companion, /openOrbDictatePanel\(\)/)
     assert.match(composer, /data-orb-composer-mic-route/)
   })
 

@@ -61,19 +61,17 @@ function createMockRecognition(behaviour: {
 }
 
 describe('ORB mic state wiring', () => {
-  it('voice session live requires browser capture active', () => {
+  it('voice session live requires realtime session connected', () => {
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /const captureActive = browserCaptureActive/)
-    assert.match(station, /voiceSessionLive = realtimeVoiceReady && voiceStartStage === 'active' && captureActive/)
-    assert.match(station, /data-orb-voice-capture-active/)
+    assert.match(station, /realtimeSessionConnected/)
+    assert.match(station, /voiceSessionLive = realtimeVoiceReady && realtimeSessionConnected/)
+    assert.match(station, /data-orb-voice-session-connected/)
   })
 
-  it('watchdog degrades when active stage has no capture', () => {
+  it('prevents fake active voice without realtime connection', () => {
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /starting_browser_speech/)
-    assert.match(station, /Live voice is not stable in this browser/)
+    assert.match(station, /voice_fake_active_prevented/)
     assert.match(station, /setVoiceStartStage\('failed'\)/)
-    assert.match(station, /browserCaptureActiveRef/)
   })
 
   it('SpeechRecognition confirmed start fails if onend occurs before minimumHoldMs', async () => {
@@ -110,12 +108,12 @@ describe('ORB mic state wiring', () => {
     assert.equal(result.ok, true)
   })
 
-  it('Dictate prefers speech first and falls back to MediaRecorder when speech fails', () => {
+  it('Dictate uses explicit speech start and optional audio fallback', () => {
     const dictate = readComponent('components/orb-standalone/orb-dictate-station.tsx')
     const hook = readComponent('components/orb-standalone/use-standalone-orb-voice.ts')
-    assert.match(hook, /beginMediaRecorderCapture\(\)/)
-    assert.match(dictate, /startMediaRecorder/)
-    assert.match(dictate, /preferSpeechRecognition = speechRecognitionAvailable/)
+    assert.match(hook, /beginMediaRecorderCapture/)
+    assert.match(dictate, /handleAudioFallbackClick/)
+    assert.match(dictate, /handleStartSpeechTranscript/)
     assert.match(dictate, /beginDictateSpeechCapture/)
     assert.match(dictate, /dictate_media_fallback_started/)
   })

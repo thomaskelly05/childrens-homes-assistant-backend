@@ -27,6 +27,28 @@ def voice_client():
     orb_voice_realtime_session_store._sessions.clear()
 
 
+def test_orb_voice_session_status_not_configured_by_default(voice_client):
+    response = voice_client.get("/orb/voice/session/status")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["ok"] is True
+    assert data["realtime_enabled"] is False
+    assert data["reason"] == "not_configured"
+
+
+def test_orb_voice_session_status_enabled_when_openai_configured(voice_client, monkeypatch):
+    monkeypatch.setenv("ORB_VOICE_REALTIME_PROVIDER", "openai")
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    monkeypatch.setenv("ORB_REALTIME_ENABLED", "true")
+    response = voice_client.get("/orb/voice/session/status")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["realtime_enabled"] is True
+    assert data["provider"] == "openai"
+    assert data["requires_client_secret"] is True
+    assert data["reason"] == "configured"
+
+
 def test_orb_voice_session_returns_browser_fallback_by_default(voice_client):
     response = voice_client.post(
         "/orb/voice/session",
