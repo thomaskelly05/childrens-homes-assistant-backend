@@ -71,7 +71,11 @@ Wording: **Save to ORB**, **Copy for your records**, **Export**, **Send to chat*
 
 Not: submit to child record / finalise care record / upload to OS (unless a separate connected workflow is chosen).
 
-## 10. Remaining future work
+## 10. ORB Dictate Studio
+
+After generation, **ORB Dictate Studio** keeps speaker-aware context (participants, segments, transcript) while adults edit the professional note with ORB quick actions. See `orb-dictate-studio-report.md`.
+
+## 11. Remaining future work
 
 - Optional diarisation provider integration (Speaker 1/2 → participant mapping).
 - Playwright E2E: open ORB → Dictate → paste → generate → save/export (config exists in `playwright.config.ts`; add `e2e/orb-dictate.spec.ts` when CI auth is ready).

@@ -114,7 +114,22 @@ See `orb-dictate-speaker-aware-notes.md` for full detail.
 | ORB Voice | Send to Dictate, meeting notes, debrief, recording wording |
 | Tests | `orb-dictate.test.ts`, `test_orb_dictate_speaker.py`, voice conversational import fix |
 
-## 13. Remaining production tasks
+## 13. ORB Dictate Studio (AI editing pass)
+
+See **`orb-dictate-studio-report.md`** for the full Studio report.
+
+| Area | Delivered |
+|------|-----------|
+| Split-screen Studio | Document + ORB Assistant (`orb-dictate-studio.tsx`) |
+| AI edit endpoint | `POST /orb/dictate/edit` |
+| Quick actions | Wording, practice, inspection, convert groups |
+| Apply preview | No silent overwrite |
+| Autosave | localStorage `orb-dictate-drafts` + optional PATCH |
+| Version history | Local versions + restore |
+| Quality panel | All checks with improve actions |
+| Voice | Open in ORB Dictate Studio from ORB Voice |
+
+## 14. Remaining production tasks
 
 - Playwright E2E: paste → generate → save/export (`playwright.config.ts` exists; add `e2e/orb-dictate.spec.ts` when auth fixture ready).
 - Optional diarisation provider (Speaker 1/2 → participant mapping).

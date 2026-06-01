@@ -12,12 +12,14 @@ from fastapi.responses import FileResponse
 
 from auth.orb_residential_dependencies import require_orb_residential_auth
 from schemas.orb_dictate import (
+    OrbDictateEditRequest,
     OrbDictateExportRequest,
     OrbDictateGenerateRequest,
     OrbDictateNotePatch,
     OrbDictateSaveRequest,
     OrbDictateTranscribeRequest,
 )
+from services.orb_dictate_edit_service import edit_dictate_document
 from services.orb_dictate_service import (
     STANDALONE_BOUNDARY,
     export_dictate_note,
@@ -114,6 +116,20 @@ async def dictate_transcribe_audio(
                 os.remove(path)
             except OSError:
                 pass
+
+
+@router.post("/edit")
+async def dictate_edit(
+    payload: OrbDictateEditRequest,
+    current_user=Depends(require_orb_residential_auth),
+):
+    try:
+        result = edit_dictate_document(payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception:
+        raise HTTPException(status_code=503, detail="Document editing is temporarily unavailable.")
+    return _success(result.model_dump())
 
 
 @router.post("/generate")

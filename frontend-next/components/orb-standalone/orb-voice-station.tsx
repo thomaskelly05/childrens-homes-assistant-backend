@@ -148,7 +148,11 @@ export function OrbVoiceStation({
   pending?: boolean
   assistantReply?: string | null
   assistantReplyKey?: string | null
-  onOpenDictate?: (transcript: string, noteType?: import('@/lib/orb/dictate/orb-dictate-types').OrbDictateNoteType) => void
+  onOpenDictate?: (
+    transcript: string,
+    noteType?: import('@/lib/orb/dictate/orb-dictate-types').OrbDictateNoteType,
+    opts?: { studio?: boolean }
+  ) => void
 }) {
   const [sessionActive, setSessionActive] = useState(false)
   const [turns, setTurns] = useState<VoiceTurn[]>([])
@@ -703,6 +707,14 @@ export function OrbVoiceStation({
               onClick={() => onOpenDictate(formatTurnsAsTranscript(turns))}
             >
               Send transcript to ORB Dictate
+            </button>
+            <button
+              type="button"
+              className="rounded-full border border-violet-400/40 bg-violet-500/10 px-3 py-1.5 text-xs text-violet-100"
+              data-orb-voice-to-dictate-studio
+              onClick={() => onOpenDictate(formatTurnsAsTranscript(turns), 'daily_record', { studio: true })}
+            >
+              Open in ORB Dictate Studio
             </button>
             <button
               type="button"

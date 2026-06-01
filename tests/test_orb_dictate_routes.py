@@ -6,8 +6,9 @@ from fastapi.testclient import TestClient
 
 from auth.orb_residential_dependencies import require_orb_residential_auth
 from routers.orb_dictate_routes import router
+from services.orb_dictate_edit_service import edit_dictate_document
 from services.orb_dictate_service import generate_dictate_note
-from schemas.orb_dictate import OrbDictateGenerateRequest
+from schemas.orb_dictate import OrbDictateEditRequest, OrbDictateGenerateRequest
 
 
 @pytest.fixture
@@ -122,6 +123,67 @@ def test_generate_includes_quality_checks():
     )
     assert result.quality_checks.child_voice in {"present", "weak", "missing"}
     assert result.governance_notice
+
+
+def test_dictate_edit_spelling_grammar(dictate_client, monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    response = dictate_client.post(
+        "/orb/dictate/edit",
+        json={
+            "document_text": "Child became distresed at tea. Staff offered space.",
+            "instruction": "Check spelling and grammar",
+            "note_type": "daily_record",
+            "mode": "spelling_grammar",
+            "preserve_facts": True,
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert data["revised_text"]
+    assert "distresed" in data["revised_text"] or "distressed" in data["revised_text"].lower()
+    assert data["quality_checks"]
+    assert "IndiCare" in data["standalone_boundary"] or "draft" in data["standalone_boundary"].lower()
+
+
+def test_dictate_edit_therapeutic_does_not_invent_facts(monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    result = edit_dictate_document(
+        OrbDictateEditRequest(
+            document_text="Child was manipulative during tea.",
+            instruction="Make this more therapeutic",
+            note_type="daily_record",
+            mode="therapeutic_rewrite",
+        )
+    )
+    assert "manipulative" not in result.revised_text.lower() or "[review wording]" in result.revised_text
+    assert result.revised_text
+
+
+def test_dictate_edit_ofsted_adds_placeholders_not_evidence(monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    result = edit_dictate_document(
+        OrbDictateEditRequest(
+            document_text="Staff supported child after incident.",
+            instruction="Make Ofsted-ready",
+            note_type="incident_record",
+            mode="ofsted_ready",
+        )
+    )
+    assert "[" in result.revised_text or "placeholder" in " ".join(result.change_summary).lower()
+    assert any("evidence" in w.lower() or "placeholder" in w.lower() for w in result.warnings) or result.warnings
+
+
+def test_dictate_edit_investigation_neutral_offline(monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    result = edit_dictate_document(
+        OrbDictateEditRequest(
+            document_text="X stated that Y shouted. No conclusion reached.",
+            instruction="Improve recording",
+            note_type="investigation_meeting",
+            mode="factual_tone",
+        )
+    )
+    assert "stated" in result.revised_text.lower() or "X" in result.revised_text
 
 
 def test_dictate_transcribe_text(dictate_client):

@@ -595,6 +595,11 @@ html[data-orb-residential='1'] .orb-chat-layout--residential .orb-message-assist
   max-width: min(100%, 62.5rem);
 }
 
+.orb-panel-modal--xlarge {
+  max-width: min(100%, 80rem);
+  max-height: min(92dvh, 56rem);
+}
+
 @media (max-width: 639px) {
   .orb-panel-modal--fullscreen-mobile {
     max-width: 100%;

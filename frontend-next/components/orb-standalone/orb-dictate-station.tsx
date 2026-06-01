@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 
 import { OrbAppModal } from '@/components/orb-standalone/orb-app-modal'
+import { OrbDictateStudio } from '@/components/orb-standalone/orb-dictate-studio'
 import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
 import type { useStandaloneOrbVoice } from '@/components/orb-standalone/use-standalone-orb-voice'
 import { copyTextToClipboard } from '@/lib/orb/orb-clipboard'
@@ -85,7 +86,8 @@ export function OrbDictateStation({
   onOpenOrbVoice,
   onOpenTemplates,
   initialTranscript,
-  initialNoteType
+  initialNoteType,
+  initialStudio
 }: {
   open: boolean
   onClose: () => void
@@ -95,6 +97,7 @@ export function OrbDictateStation({
   onOpenTemplates?: () => void
   initialTranscript?: string
   initialNoteType?: OrbDictateNoteType
+  initialStudio?: boolean
 }) {
   const [startMode, setStartMode] = useState<OrbDictateStartMode | null>(null)
   const [noteType, setNoteType] = useState<OrbDictateNoteType>(initialNoteType ?? 'daily_record')
@@ -120,6 +123,7 @@ export function OrbDictateStation({
   const [editedNote, setEditedNote] = useState('')
   const [generating, setGenerating] = useState(false)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
+  const [phase, setPhase] = useState<'capture' | 'studio'>('capture')
   const [reflectiveMode, setReflectiveMode] = useState(false)
   const [reflectiveIndex, setReflectiveIndex] = useState(0)
   const [reflectiveAnswers, setReflectiveAnswers] = useState<string[]>([])
@@ -162,13 +166,17 @@ export function OrbDictateStation({
       setReflectiveAnswers([])
       setOutput(null)
       setStatusMessage(null)
+      setPhase('capture')
       return
     }
     if (initialTranscript) {
       setTranscript(initialTranscript)
       setStartMode('import_voice')
     }
-  }, [open, initialTranscript, resetRecording])
+    if (initialStudio) {
+      setPhase('studio')
+    }
+  }, [open, initialTranscript, initialStudio, resetRecording])
 
   useEffect(() => {
     if (!recordingActive || recordingPaused) return
@@ -405,11 +413,13 @@ export function OrbDictateStation({
       setEditedNote(result.professional_note)
       if (result.participants?.length) setParticipants(result.participants as OrbDictateParticipant[])
       if (result.segments?.length) setSegments(result.segments as OrbDictateTranscriptSegment[])
-      setStatusMessage('Professional note ready for review.')
+      setPhase('studio')
+      setStatusMessage('Professional note ready — open ORB Dictate Studio to refine.')
     } catch {
       const fallback = buildLocalDictateFallback(input, noteType)
       setOutput(fallback)
       setEditedNote(fallback.professional_note)
+      setPhase('studio')
       setStatusMessage('Generated offline draft. Reconnect for full ORB intelligence.')
     } finally {
       setGenerating(false)
@@ -514,14 +524,30 @@ export function OrbDictateStation({
   return (
     <OrbAppModal
       open={open}
-      title="ORB Dictate"
-      subtitle="Voice-to-recording companion for residential childcare"
+      title={phase === 'studio' ? 'ORB Dictate Studio' : 'ORB Dictate'}
+      subtitle={
+        phase === 'studio'
+          ? 'Refine your draft with ORB side-by-side'
+          : 'Voice-to-recording companion for residential childcare'
+      }
       onClose={onClose}
       panelId="orb-dictate"
-      size="wide"
-      ariaLabel="ORB Dictate"
+      size={phase === 'studio' ? 'xlarge' : 'wide'}
+      ariaLabel={phase === 'studio' ? 'ORB Dictate Studio' : 'ORB Dictate'}
     >
       <div className="orb-dictate flex min-h-0 flex-1 flex-col" data-orb-dictate-station>
+        {phase === 'studio' && output ? (
+          <OrbDictateStudio
+            output={output}
+            participants={participants}
+            segments={segments}
+            onBack={() => setPhase('capture')}
+            onSendToChat={onSendToChat}
+            onOpenOrbVoice={onOpenOrbVoice}
+            onStatusMessage={setStatusMessage}
+          />
+        ) : (
+          <>
         <p className="shrink-0 px-1 pb-3 text-sm text-[var(--orb-muted)]">
           Speak naturally. ORB will help turn rough notes, debriefs or conversations into structured professional
           wording.
@@ -922,6 +948,19 @@ export function OrbDictateStation({
             ) : null}
           </div>
         </div>
+
+        {output ? (
+          <button
+            type="button"
+            data-orb-dictate-open-studio
+            className="mt-2 w-full rounded-xl border border-sky-400/40 bg-sky-500/10 py-2 text-sm font-medium text-sky-100"
+            onClick={() => setPhase('studio')}
+          >
+            Open ORB Dictate Studio
+          </button>
+        ) : null}
+          </>
+        )}
 
         <footer className="mt-3 shrink-0 space-y-1 border-t border-[var(--orb-line)]/30 pt-3 text-[10px] text-[var(--orb-muted)]">
           <p>{ORB_DICTATE_GOVERNANCE_COPY.draft}</p>

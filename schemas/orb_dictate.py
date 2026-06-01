@@ -42,6 +42,32 @@ OrbDictateQualityStatus = Literal["present", "missing", "weak", "review", "good"
 
 OrbDictateExportFormat = Literal["copy", "pdf", "docx", "markdown", "save"]
 
+OrbDictateEditMode = Literal[
+    "spelling_grammar",
+    "therapeutic_rewrite",
+    "ofsted_ready",
+    "factual_tone",
+    "professional_language",
+    "child_voice",
+    "safeguarding_lens",
+    "manager_oversight",
+    "chronology_conversion",
+    "handover_conversion",
+    "concise_summary",
+    "action_plan",
+    "ri_summary",
+    "missing_information",
+    "recording_quality_review",
+    "less_judgemental",
+    "parent_friendly",
+    "sccif_lens",
+    "professional_curiosity",
+    "evidence_of_impact",
+    "manager_note",
+    "safeguarding_concern",
+    "supervision_reflection",
+]
+
 
 class OrbDictateTemplateSection(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -229,3 +255,29 @@ class OrbDictateNotePatch(BaseModel):
     professional_note: str | None = Field(default=None, max_length=500_000)
     summary: str | None = Field(default=None, max_length=8000)
     create_version: bool = True
+
+
+class OrbDictateEditRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    document_text: str = Field(..., min_length=1, max_length=500_000)
+    instruction: str = Field(default="", max_length=4000)
+    note_type: OrbDictateNoteType = "daily_record"
+    mode: OrbDictateEditMode | None = None
+    participants: list[OrbDictateParticipant] = Field(default_factory=list)
+    segments: list[OrbDictateTranscriptSegment] = Field(default_factory=list)
+    quality_checks: dict[str, Any] = Field(default_factory=dict)
+    preserve_facts: bool = True
+    standalone_boundary: bool = True
+
+
+class OrbDictateEditResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    revised_text: str
+    change_summary: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+    quality_checks: OrbDictateQualityChecks
+    suggested_actions: list[str] = Field(default_factory=list)
+    version_label: str
+    standalone_boundary: str
