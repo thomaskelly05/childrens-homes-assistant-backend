@@ -415,18 +415,26 @@ async def orb_analytics_event(
     current_user=Depends(get_optional_orb_residential_user),
 ):
     if payload.event not in ORB_ANALYTICS_EVENTS:
-        raise HTTPException(status_code=400, detail="Unknown analytics event")
+        return _success({"recorded": False, "disabled": True})
     user_id = int(current_user["user_id"]) if current_user and current_user.get("user_id") else None
     if not user_id and payload.event not in PUBLIC_ORB_ANALYTICS_EVENTS:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Sign in required for this event")
-    _record_analytics(
-        conn,
-        user_id=user_id,
-        event=payload.event,
-        metadata=_sanitize_analytics_metadata(payload.metadata),
-    )
-    conn.commit()
-    return _success({"recorded": True})
+        return _success({"recorded": False, "requires_sign_in": True})
+    try:
+        _record_analytics(
+            conn,
+            user_id=user_id,
+            event=payload.event,
+            metadata=_sanitize_analytics_metadata(payload.metadata),
+        )
+        conn.commit()
+        return _success({"recorded": True})
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        logger.exception("orb_analytics_event failed event=%s user_id=%s", payload.event, user_id)
+        return _success({"recorded": False, "disabled": True})
 
 
 @router.post("/billing/webhook")

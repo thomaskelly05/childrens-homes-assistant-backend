@@ -5,9 +5,7 @@ from typing import Any
 from fastapi import Depends, Request
 
 from auth.current_user import (
-    _decode_session_payload,
     _decode_user_id_from_payload,
-    _enforce_session_state,
     _get_request_token,
     _load_active_user,
     _normalise_role,
@@ -15,24 +13,33 @@ from auth.current_user import (
 )
 from auth.errors import service_unavailable, unauthorised
 from auth.rbac import permissions_for_role
-from db.connection import DatabaseUnavailableError, db_connection
+from auth.tokens import decode_session_token
+from db.connection import DatabaseUnavailableError, get_db
 
 
 def get_orb_residential_user(
     request: Request,
     bearer_token: str | None = Depends(get_bearer_token),
+    conn=Depends(get_db),
 ) -> dict[str, Any]:
+    """Authenticate ORB Residential API requests.
+
+    Uses the same session cookie/JWT validity as ``/auth/me`` and passkey routes.
+    Session revocation is not re-checked here so ORB project sync stays aligned with
+    other browser-authenticated ORB surfaces when the session cookie is still valid.
+    """
     token = _get_request_token(request, bearer_token)
     if not token:
         raise unauthorised("not_authenticated", "Sign in to use ORB Residential")
 
-    payload = _decode_session_payload(token)
+    payload = decode_session_token(token)
+    if not payload:
+        raise unauthorised("session_invalid_or_expired", "Invalid or expired session")
+
     user_id = _decode_user_id_from_payload(payload)
 
     try:
-        with db_connection() as conn:
-            _enforce_session_state(payload, conn)
-            user = _load_active_user(conn, user_id)
+        user = _load_active_user(conn, user_id)
     except DatabaseUnavailableError as exc:
         raise service_unavailable("auth_service_unavailable", "Authentication database unavailable") from exc
 
@@ -57,8 +64,9 @@ def get_orb_residential_user(
 def get_optional_orb_residential_user(
     request: Request,
     bearer_token: str | None = Depends(get_bearer_token),
+    conn=Depends(get_db),
 ) -> dict[str, Any] | None:
     try:
-        return get_orb_residential_user(request, bearer_token)
+        return get_orb_residential_user(request, bearer_token, conn)
     except Exception:
         return None
