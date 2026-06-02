@@ -24,8 +24,8 @@
   );
 }
 
-.orb-chat-layout--residential:not(.orb-theme-light),
-html[data-orb-residential='1'] .orb-chat-layout:not(.orb-theme-light) {
+.orb-chat-layout--residential.orb-theme-dark,
+.orb-chat-layout.orb-theme-dark {
   /* Layout aliases — inherit premium tokens from `.orb-residential-root`. */
   --orb-foreground: var(--orb-premium-text, #f7faff);
   --orb-muted: var(--orb-premium-text-secondary, #a7aebd);
@@ -445,7 +445,7 @@ html[data-orb-theme='light'] .orb-premium-settings-card {
 
 /* Residential theme isolation — shell + layout scoped (avoid html :not theme bleed) */
 [data-orb-shell='true'][data-orb-theme='dark'],
-.orb-chat-layout--residential:not(.orb-theme-light) {
+.orb-chat-layout--residential.orb-theme-dark {
   color-scheme: dark;
 }
 
@@ -454,12 +454,12 @@ html[data-orb-theme='light'] .orb-premium-settings-card {
   color-scheme: light;
 }
 
-html[data-orb-residential='1']:has([data-orb-shell='true'][data-orb-theme='dark']) {
+[data-orb-shell='true'][data-orb-theme='dark'] {
   background: var(--orb-page-bg, var(--orb-premium-bg-deep, #05070d)) !important;
   color: var(--orb-text-primary, var(--orb-premium-text, #f7faff)) !important;
 }
 
-html[data-orb-residential='1']:has([data-orb-shell='true'][data-orb-theme='light']) {
+[data-orb-shell='true'][data-orb-theme='light'] {
   background: #f7fbff !important;
   color: #0f172a !important;
 }
@@ -490,7 +490,7 @@ html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light {
   color: var(--orb-foreground) !important;
 }
 
-html[data-orb-residential='1'] .orb-chat-layout--residential:not(.orb-theme-light) {
+.orb-chat-layout--residential.orb-theme-dark {
   --orb-background: #030712;
   --orb-surface: #070b12;
   --orb-surface-elevated: #0b1220;
@@ -502,37 +502,37 @@ html[data-orb-residential='1'] .orb-chat-layout--residential:not(.orb-theme-ligh
   --orb-overlay: rgba(0, 0, 0, 0.72);
 }
 
-html[data-orb-residential='1'] .orb-chat-layout--residential:not(.orb-theme-light) .orb-markdown-answer h1,
-html[data-orb-residential='1'] .orb-chat-layout--residential:not(.orb-theme-light) .orb-markdown-answer h2,
-html[data-orb-residential='1'] .orb-chat-layout--residential:not(.orb-theme-light) .orb-markdown-answer h3,
-html[data-orb-residential='1'] .orb-chat-layout--residential:not(.orb-theme-light) .orb-markdown-answer h4,
-html[data-orb-residential='1'] .orb-chat-layout--residential:not(.orb-theme-light) .orb-md-h2,
-html[data-orb-residential='1'] .orb-chat-layout--residential:not(.orb-theme-light) .orb-md-h3,
-html[data-orb-residential='1'] .orb-chat-layout--residential:not(.orb-theme-light) .orb-md-h4,
-html[data-orb-residential='1'] .orb-chat-layout--residential:not(.orb-theme-light) .orb-message-content strong,
-html[data-orb-residential='1'] .orb-chat-layout--residential:not(.orb-theme-light) .orb-markdown-answer strong {
+.orb-chat-layout--residential.orb-theme-dark .orb-markdown-answer h1,
+.orb-chat-layout--residential.orb-theme-dark .orb-markdown-answer h2,
+.orb-chat-layout--residential.orb-theme-dark .orb-markdown-answer h3,
+.orb-chat-layout--residential.orb-theme-dark .orb-markdown-answer h4,
+.orb-chat-layout--residential.orb-theme-dark .orb-md-h2,
+.orb-chat-layout--residential.orb-theme-dark .orb-md-h3,
+.orb-chat-layout--residential.orb-theme-dark .orb-md-h4,
+.orb-chat-layout--residential.orb-theme-dark .orb-message-content strong,
+.orb-chat-layout--residential.orb-theme-dark .orb-markdown-answer strong {
   color: #f7faff !important;
 }
 
-html[data-orb-residential='1'] .orb-chat-layout--residential:not(.orb-theme-light) .orb-markdown-answer p,
-html[data-orb-residential='1'] .orb-chat-layout--residential:not(.orb-theme-light) .orb-markdown-answer li {
+.orb-chat-layout--residential.orb-theme-dark .orb-markdown-answer p,
+.orb-chat-layout--residential.orb-theme-dark .orb-markdown-answer li {
   font-size: 1rem !important;
   line-height: 1.6 !important;
   color: #f7faff !important;
 }
 
-html[data-orb-residential='1'] .orb-chat-layout--residential:not(.orb-theme-light) [data-orb-empty-heading] {
+.orb-chat-layout--residential.orb-theme-dark [data-orb-empty-heading] {
   color: #f7faff !important;
 }
 
-html[data-orb-residential='1'] .orb-chat-layout--residential:not(.orb-theme-light) [data-orb-empty-subline] {
+.orb-chat-layout--residential.orb-theme-dark [data-orb-empty-subline] {
   color: #a7aebd !important;
 }
 
-html[data-orb-residential='1'] .orb-chat-layout--residential:not(.orb-theme-light) .orb-chat-sidebar,
-html[data-orb-residential='1'] .orb-chat-layout--residential:not(.orb-theme-light) ~ .orb-panel-drawer,
-.orb-chat-layout--residential:not(.orb-theme-light) .orb-chat-sidebar,
-.orb-chat-layout--residential:not(.orb-theme-light) .orb-panel-drawer {
+.orb-chat-layout--residential.orb-theme-dark .orb-chat-sidebar,
+.orb-chat-layout--residential.orb-theme-dark ~ .orb-panel-drawer,
+.orb-chat-layout--residential.orb-theme-dark .orb-chat-sidebar,
+.orb-chat-layout--residential.orb-theme-dark .orb-panel-drawer {
   background: linear-gradient(180deg, #070b14 0%, #05070d 100%) !important;
   color: #f7faff !important;
 }
@@ -799,8 +799,8 @@ html[data-orb-residential='1'] .orb-theme-light .orb-panel-overlay {
   background: var(--orb-overlay, rgba(15, 23, 42, 0.2)) !important;
 }
 
-html[data-orb-residential='1']:not(.orb-theme-light) .orb-panel-overlay,
-html[data-orb-residential='1'] .orb-chat-layout--residential:not(.orb-theme-light) ~ .orb-panel-overlay {
+[data-orb-shell='true'][data-orb-theme='dark'] .orb-panel-overlay,
+.orb-chat-layout--residential.orb-theme-dark .orb-panel-overlay {
   background: var(--orb-overlay, rgba(0, 0, 0, 0.72)) !important;
 }
 
@@ -989,8 +989,10 @@ html[data-orb-residential='1'] {
   --orb-muted: #52657a;
 }
 
-html[data-orb-residential='1']:not(.orb-theme-light) .orb-dictate-mobile,
-html[data-orb-residential='1']:not(.orb-theme-light) .orb-voice-mobile {
+.orb-chat-layout--residential.orb-theme-dark .orb-dictate-mobile,
+.orb-chat-layout--residential.orb-theme-dark .orb-voice-mobile,
+[data-orb-shell='true'][data-orb-theme='dark'] .orb-dictate-mobile,
+[data-orb-shell='true'][data-orb-theme='dark'] .orb-voice-mobile {
   --orb-mobile-bg: #070b14;
   --orb-mobile-card: rgba(255, 255, 255, 0.06);
   --orb-mobile-line: rgba(255, 255, 255, 0.12);

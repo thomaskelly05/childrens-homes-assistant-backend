@@ -79,6 +79,22 @@ describe('ORB Voice start fix — start click path', () => {
     assert.match(station(), /voice_start_branch_selected[\s\S]*browser_fallback_no_realtime/)
   })
 
+  it('browser launch path is not delayed by pre-unlock audio awaits', () => {
+    const body = station().match(/async function handleStart\(\)[\s\S]*?async function handleBrowserVoicePrimary/m)?.[0] ?? ''
+    const browserBranch = body.indexOf("branch: 'browser_launch'")
+    const fallbackBranch = body.indexOf("branch: 'browser_fallback_no_realtime'")
+    const firstAudioAwait = body.indexOf('await preUnlock.play()')
+    assert.ok(browserBranch >= 0)
+    assert.ok(fallbackBranch >= 0)
+    assert.equal(firstAudioAwait, -1, 'browser SpeechRecognition start must not be preceded by awaited audio unlock')
+  })
+
+  it('browser fallback has an optimistic starting launch state so the UI cannot stay ready after click', () => {
+    assert.match(station(), /BrowserStartStage/)
+    assert.match(station(), /browserStartStage === 'starting'[\s\S]*\? 'starting'/)
+    assert.match(station(), /setBrowserStartStage\('starting'\)/)
+  })
+
   it('browser fallback does not await getUserMedia before SpeechRecognition.start', () => {
     const body = hook().match(/const beginUserVoiceCapture[\s\S]*?^  const endDictateSpeechCapture/m)?.[0] ?? ''
     assert.match(body, /SpeechRecognition\.start\(\) must run in the user-gesture stack/)

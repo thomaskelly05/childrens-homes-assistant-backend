@@ -56,6 +56,7 @@ export function OrbVoiceLaunchControls({
       <button
         type="button"
         data-orb-voice-ptt-primary
+        data-orb-voice-primary-action={launchUiState === 'ready' ? 'start' : undefined}
         disabled={primaryDisabled && launchUiState === 'ready'}
         onClick={onPrimary}
         className="w-full rounded-full bg-gradient-to-r from-[var(--orb-primary-blue,#168bff)] to-[var(--orb-primary-blue-2,#0d5fcc)] py-3 text-sm font-semibold text-white shadow-lg shadow-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
