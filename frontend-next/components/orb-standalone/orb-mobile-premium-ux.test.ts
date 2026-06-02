@@ -11,10 +11,35 @@ import {
   isTechnicalDictateStatus
 } from '../../lib/orb/dictate/orb-dictate-mobile-copy.ts'
 import {
-  voiceMobilePrimaryButton,
-  voiceMobileStatusLine,
-  voiceMobileUnavailableDetail
-} from '../../lib/orb/voice/orb-voice-mobile-copy.ts'
+  orbVoiceUiDetailLine,
+  orbVoiceUiPrimaryLabel,
+  orbVoiceUiStatusLine,
+  type OrbVoiceUiState
+} from '../../lib/orb/voice/orb-voice-ui-state.ts'
+
+function voiceMobilePrimaryButton(input: {
+  uiState: OrbVoiceUiState
+  sessionLive?: boolean
+  starting?: boolean
+}): string {
+  if (input.sessionLive) return 'End'
+  if (input.starting) return 'Connecting…'
+  return orbVoiceUiPrimaryLabel(input.uiState)
+}
+
+function voiceMobileStatusLine(input: {
+  uiState: OrbVoiceUiState
+  permissionDenied?: boolean
+  blockedReason?: string | null
+}): string {
+  if (input.permissionDenied) return 'Microphone access is blocked'
+  if (input.blockedReason?.trim()) return input.blockedReason.trim()
+  return orbVoiceUiStatusLine(input.uiState)
+}
+
+function voiceMobileUnavailableDetail(dictateRealtimeReady?: boolean): string {
+  return orbVoiceUiDetailLine('provider_unavailable', dictateRealtimeReady) ?? 'You can still type to ORB or use Dictate.'
+}
 import {
   ORB_VOICE_DEBUG_CONFIG_HINT,
   sanitizeOrbVoiceUserMessage
@@ -165,31 +190,31 @@ describe('ORB mobile premium Dictate copy', () => {
 })
 
 describe('ORB mobile premium Voice copy', () => {
-  it('idle shows one primary Start control', () => {
-    assert.equal(voiceMobilePrimaryButton({ sessionLive: false, starting: false }), 'Start')
+  it('idle shows one primary Start voice control', () => {
+    assert.equal(voiceMobilePrimaryButton({ uiState: 'ready', sessionLive: false, starting: false }), 'Start voice')
     const voice = readComponent('components/orb-standalone/orb-voice-station.tsx')
     const mobile = readComponent('components/orb-standalone/orb-voice-mobile-experience.tsx')
+    const actions = readComponent('components/orb-standalone/orb-voice-actions.tsx')
     assert.match(voice, /OrbVoiceMobileExperience/)
-    assert.match(mobile, /data-orb-voice-primary-action/)
+    assert.match(mobile, /OrbVoiceActions/)
+    assert.match(actions, /data-orb-voice-primary-action|orbVoiceUiPrimaryLabel/)
     assert.match(voice, /Talk with ORB/)
   })
 
-  it('unavailable shows one Open Dictate and one Type instead', () => {
+  it('provider unavailable shows Use Dictate and Type instead via shared actions', () => {
     const mobile = readComponent('components/orb-standalone/orb-voice-mobile-experience.tsx')
-    assert.match(mobile, /data-orb-voice-fallbacks/)
-    assert.match(mobile, /data-orb-voice-open-dictate/)
+    const actions = readComponent('components/orb-standalone/orb-voice-actions.tsx')
+    assert.match(mobile, /OrbVoiceActions/)
+    assert.match(actions, /data-orb-voice-use-dictate/)
     assert.match(mobile, /data-orb-voice-type-instead/)
-    const openCount = (mobile.match(/>\s*Open Dictate\s*</g) || []).length
-    assert.equal(openCount, 1)
-    const typeCount = (mobile.match(/>\s*Type instead\s*</g) || []).length
-    assert.equal(typeCount, 1)
+    assert.doesNotMatch(mobile, /data-orb-voice-open-dictate/)
     assert.equal(
-      voiceMobileStatusLine({ phase: 'unavailable', blockedReason: null }),
-      'Live voice is unavailable right now'
+      voiceMobileStatusLine({ uiState: 'provider_unavailable', blockedReason: null }),
+      'Live voice could not connect.'
     )
     assert.equal(
       voiceMobileUnavailableDetail(true),
-      'Dictate is ready. Live conversation is unavailable right now.'
+      'You can still type to ORB or use Dictate.'
     )
   })
 
@@ -198,7 +223,7 @@ describe('ORB mobile premium Voice copy', () => {
     const mobile = readComponent('components/orb-standalone/orb-voice-mobile-experience.tsx')
     const messages = readComponent('lib/orb/voice/orb-voice-user-messages.ts')
     assert.match(voice, /sanitizeOrbVoiceUserMessage/)
-    assert.match(mobile, /orbVoiceUnavailablePresentation/)
+    assert.match(mobile, /resolveOrbVoiceUiState|orb-voice-ui-state/)
     assert.match(messages, /ORB_VOICE_DEBUG_CONFIG_HINT/)
     assert.equal(
       sanitizeOrbVoiceUserMessage('Set OPENAI_API_KEY and ORB_REALTIME_ENABLED=true', { debug: false }),
@@ -209,7 +234,7 @@ describe('ORB mobile premium Voice copy', () => {
         debug: false,
         dictateRealtimeReady: true
       }),
-      'Dictate is ready. Live conversation is unavailable right now.'
+      'You can still type to ORB or use Dictate.'
     )
     assert.match(sanitizeOrbVoiceUserMessage('Set OPENAI_API_KEY', { debug: true }) ?? '', /OPENAI_API_KEY/)
     assert.doesNotMatch(voice, /OPENAI_API_KEY/)
@@ -217,7 +242,7 @@ describe('ORB mobile premium Voice copy', () => {
   })
 
   it('active session shows one End via primary action wiring', () => {
-    assert.equal(voiceMobilePrimaryButton({ sessionLive: true, starting: false }), 'End')
+    assert.equal(voiceMobilePrimaryButton({ uiState: 'listening', sessionLive: true, starting: false }), 'End')
     const mobile = readComponent('components/orb-standalone/orb-voice-mobile-experience.tsx')
     assert.match(readComponent('components/orb-standalone/orb-voice-station.tsx'), /if \(voiceSessionLive\) handleEnd\(\)/)
   })
@@ -227,7 +252,7 @@ describe('ORB mobile premium Voice copy', () => {
     assert.match(mobile, /data-orb-voice-post-session/)
     assert.match(mobile, /Send transcript to Dictate/)
     assert.match(mobile, /Copy transcript/)
-    assert.match(mobile, /New conversation/)
+    assert.match(mobile, /Start new voice conversation|New conversation/)
     assert.doesNotMatch(mobile, /Open Dictate instead/)
     assert.doesNotMatch(mobile, /Open Dictate again/)
   })

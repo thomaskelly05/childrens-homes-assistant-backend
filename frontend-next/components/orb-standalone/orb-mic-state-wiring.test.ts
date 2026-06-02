@@ -152,7 +152,7 @@ describe('ORB mic state wiring', () => {
 
   it('Voice tracks voiceStartStage through handleStart', () => {
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /starting_browser_speech/)
+    assert.match(station, /setVoiceStartStage\('starting'\)/)
     assert.match(station, /setVoiceStartStage\('active'\)/)
     assert.match(station, /setVoiceStartStage\('failed'\)/)
   })

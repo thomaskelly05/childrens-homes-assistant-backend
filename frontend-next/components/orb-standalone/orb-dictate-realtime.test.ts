@@ -48,14 +48,14 @@ describe('ORB Voice realtime sessions', () => {
     const voiceClient = readComponent('lib/orb/voice/orb-voice-client.ts')
     assert.match(voiceClient, /\/orb\/voice\/realtime\/session/)
     const availability = readComponent('lib/orb/voice/orb-realtime-availability.ts')
-    assert.match(availability, /voice_realtime_session_requested/)
-    assert.match(availability, /voice_realtime_audio_started/)
+    assert.match(availability, /voice_session_requested/)
+    assert.match(availability, /voice_mic_started/)
   })
 
   it('voice station requires realtime before live session', () => {
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
     assert.match(station, /realtimeVoiceReady/)
-    assert.match(station, /OrbDictateMobileExperience/)
+    assert.match(station, /OrbVoiceMobileExperience/)
     assert.doesNotMatch(station, /Configure realtime voice to use this/)
     assert.match(station, /beginOrbRealtimeVoiceConversation/)
   })

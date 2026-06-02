@@ -49,7 +49,14 @@ test('voice station requires explicit start', () => {
     'utf8'
   )
   assert.match(voice, /orb-voice-readiness|orbVoiceReadinessPresentation/)
-  assert.match(voice, /data-orb-voice-start/)
-  assert.match(voice, /data-orb-voice-primary-action|>\s*Start\s*</)
-  assert.match(voice, /Test microphone/)
+  assert.match(voice, /data-orb-voice-start-stage/)
+  const voiceActions = readFileSync(
+    new URL('../orb-standalone/orb-voice-actions.tsx', import.meta.url),
+    'utf8'
+  )
+  assert.match(voice, /OrbVoiceActions/)
+  assert.match(voiceActions, /data-orb-voice-primary-action/)
+  const uiState = readFileSync(new URL('../../lib/orb/voice/orb-voice-ui-state.ts', import.meta.url), 'utf8')
+  assert.match(uiState, /Start voice/)
+  assert.match(voice, /onTestMicrophone|Diagnostics/)
 })

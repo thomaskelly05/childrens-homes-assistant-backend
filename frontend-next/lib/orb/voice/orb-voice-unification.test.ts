@@ -21,12 +21,13 @@ describe('ORB Voice unification', () => {
     assert.match(availability, /voice_status_requested/)
     assert.match(availability, /voice_status_received/)
     assert.match(availability, /configured: status\.reason === 'configured'/)
+    assert.match(availability, /voice_status_skipped_unauthenticated/)
   })
 
-  it('realtime session emits voice_realtime_session_received with secret and model', () => {
+  it('realtime session emits voice_session_received with secret and model', () => {
     const availability = readComponent('lib/orb/voice/orb-realtime-availability.ts')
-    assert.match(availability, /voice_realtime_session_requested/)
-    assert.match(availability, /voice_realtime_session_received/)
+    assert.match(availability, /voice_session_requested/)
+    assert.match(availability, /voice_session_received/)
     assert.match(availability, /hasClientSecret/)
   })
 
@@ -34,6 +35,7 @@ describe('ORB Voice unification', () => {
     const network = readComponent('lib/orb/network/index.ts')
     for (const event of [
       'voice_peer_created',
+      'voice_peer_connected',
       'voice_sdp_offer_created',
       'voice_sdp_post_started',
       'voice_sdp_post_failed',
@@ -42,7 +44,8 @@ describe('ORB Voice unification', () => {
       'voice_data_channel_open',
       'voice_remote_track_received',
       'voice_audio_play_attempt',
-      'voice_session_live'
+      'voice_session_live',
+      'voice_transport_live'
     ]) {
       assert.match(network, new RegExp(event))
     }
@@ -62,12 +65,15 @@ describe('ORB Voice unification', () => {
     assert.match(diag, /ORB_VOICE_DIAG/)
     assert.match(diag, /peerConnectionState/)
     assert.match(diag, /lastSdpEndpoint/)
+    assert.match(diag, /authStatus/)
+    assert.match(diag, /transportLive/)
+    assert.match(diag, /lastError/)
   })
 
   it('configured status does not render configure realtime copy in station', () => {
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
     assert.doesNotMatch(station, /Configure realtime voice/i)
-    assert.match(station, /statusSaysUnavailable/)
+    assert.match(station, /resolveOrbVoiceUiState/)
   })
 
   it('session 200 but WebRTC fail shows Dictate-ready headline', () => {

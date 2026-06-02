@@ -3,8 +3,8 @@
 import { useState } from 'react'
 
 import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
+import { OrbVoiceActions } from '@/components/orb-standalone/orb-voice-actions'
 import { copyTextToClipboard } from '@/lib/orb/orb-clipboard'
-import { isOrbVoiceDebugMode } from '@/lib/orb/orb-voice-debug'
 import {
   ORB_VOICE_MODES,
   ORB_VOICE_PRESETS,
@@ -12,14 +12,15 @@ import {
   type OrbVoicePresetId,
   type VoiceTurn
 } from '@/lib/orb/voice/orb-voice-types'
-import { orbVoiceUnavailablePresentation } from '@/lib/orb/voice/orb-voice-user-messages'
+import type { OrbVoiceUiState } from '@/lib/orb/voice/orb-voice-ui-state'
 
 export function OrbVoiceMobileExperience({
+  uiState,
   orbVisualClassName,
   pulseOrb,
-  mobileStatus,
-  unavailableDetail,
-  showRealtimeUnavailable,
+  statusLine,
+  detailLine,
+  showPostSession,
   showAllowMicrophone,
   onAllowMicrophone,
   transcriptAvailable,
@@ -29,25 +30,26 @@ export function OrbVoiceMobileExperience({
   onTestMicrophone,
   voiceSessionLive,
   voiceStarting,
-  mobilePrimaryLabel,
-  startDisabled,
-  onPrimaryClick,
-  onOpenDictate,
+  primaryDisabled,
+  onPrimary,
+  onSignIn,
   onTypeInstead,
+  onUseDictate,
+  onTryAgain,
+  onOpenDictate,
   onClose,
   voiceMode,
   onVoiceModeChange,
   voicePresetId,
   onVoicePresetChange,
-  onNewConversation,
-  dictateRealtimeReady,
-  sessionDetail
+  onNewConversation
 }: {
+  uiState: OrbVoiceUiState
   orbVisualClassName: string
   pulseOrb: boolean
-  mobileStatus: string
-  unavailableDetail: string
-  showRealtimeUnavailable: boolean
+  statusLine: string
+  detailLine: string | null
+  showPostSession: boolean
   showAllowMicrophone: boolean
   onAllowMicrophone: () => void
   transcriptAvailable: boolean
@@ -57,26 +59,26 @@ export function OrbVoiceMobileExperience({
   onTestMicrophone: () => void
   voiceSessionLive: boolean
   voiceStarting: boolean
-  mobilePrimaryLabel: string
-  startDisabled: boolean
-  onPrimaryClick: () => void
-  onOpenDictate?: (transcript: string) => void
+  primaryDisabled: boolean
+  onPrimary: () => void
+  onSignIn?: () => void
   onTypeInstead?: () => void
+  onUseDictate?: () => void
+  onTryAgain?: () => void
+  onOpenDictate?: (transcript: string) => void
   onClose: () => void
   voiceMode: OrbVoiceModeId
   onVoiceModeChange: (mode: OrbVoiceModeId) => void
   voicePresetId: OrbVoicePresetId
   onVoicePresetChange: (preset: OrbVoicePresetId) => void
   onNewConversation: () => void
-  dictateRealtimeReady?: boolean
-  sessionDetail?: string | null
 }) {
   const [voiceSettingsOpen, setVoiceSettingsOpen] = useState(false)
-  const unavailableCopy = orbVoiceUnavailablePresentation({
-    debug: voiceDebug,
-    dictateRealtimeReady: dictateRealtimeReady
-  })
-  const postSession = transcriptAvailable && !voiceSessionLive && !showRealtimeUnavailable
+
+  const transcriptText = turns
+    .filter((t) => t.role === 'user' || t.role === 'assistant')
+    .map((t) => `${t.role === 'user' ? 'You' : 'ORB'}: ${t.text.trim()}`)
+    .join('\n\n')
 
   return (
     <div className="orb-voice-mobile flex min-h-0 flex-1 flex-col md:hidden" data-orb-voice-mobile>
@@ -122,11 +124,13 @@ export function OrbVoiceMobileExperience({
         ) : null}
 
         <p className="mt-4 text-center text-sm font-medium text-[var(--orb-text,var(--orb-foreground))]" data-orb-voice-status-label>
-          {showRealtimeUnavailable ? unavailableCopy.headline : mobileStatus}
+          {statusLine}
         </p>
-        <p className="mt-1 text-center text-xs text-[var(--orb-muted)]" data-orb-voice-detail>
-          {showRealtimeUnavailable ? unavailableCopy.detail : sessionDetail || unavailableDetail}
-        </p>
+        {detailLine ? (
+          <p className="mt-1 text-center text-xs text-[var(--orb-muted)]" data-orb-voice-detail>
+            {detailLine}
+          </p>
+        ) : null}
 
         {showAllowMicrophone ? (
           <button
@@ -177,45 +181,14 @@ export function OrbVoiceMobileExperience({
         className="orb-voice-mobile__controls shrink-0 space-y-2 border-t border-[var(--orb-line)]/30 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
         data-orb-voice-mobile-controls
       >
-        {showRealtimeUnavailable ? (
-          <div className="flex flex-col gap-2" data-orb-voice-fallbacks>
-            {onOpenDictate ? (
-              <button
-                type="button"
-                data-orb-voice-open-dictate
-                onClick={() => onOpenDictate('')}
-                className="w-full rounded-full bg-gradient-to-r from-[var(--orb-primary-blue,#168bff)] to-[var(--orb-primary-blue-2,#0d5fcc)] py-3 text-sm font-semibold text-white"
-              >
-                Open Dictate
-              </button>
-            ) : null}
-            <button
-              type="button"
-              data-orb-voice-type-instead
-              onClick={() => {
-                onTypeInstead?.()
-                onClose()
-              }}
-              className="w-full rounded-full border border-[var(--orb-line)] py-2.5 text-sm text-[var(--orb-muted)]"
-            >
-              Type instead
-            </button>
-          </div>
-        ) : postSession ? (
+        {showPostSession ? (
           <div className="flex flex-col gap-2" data-orb-voice-post-session>
             {onOpenDictate ? (
               <button
                 type="button"
                 data-orb-voice-to-dictate
                 className="w-full rounded-full border border-[var(--orb-line)]/60 py-2.5 text-sm text-[var(--orb-primary)]"
-                onClick={() =>
-                  onOpenDictate(
-                    turns
-                      .filter((t) => t.role === 'user' || t.role === 'assistant')
-                      .map((t) => `${t.role === 'user' ? 'You' : 'ORB'}: ${t.text.trim()}`)
-                      .join('\n\n')
-                  )
-                }
+                onClick={() => onOpenDictate(transcriptText)}
               >
                 Send transcript to Dictate
               </button>
@@ -224,14 +197,7 @@ export function OrbVoiceMobileExperience({
               type="button"
               data-orb-voice-copy-transcript
               className="w-full rounded-full border border-[var(--orb-line)]/60 py-2.5 text-sm text-[var(--orb-foreground)]"
-              onClick={() =>
-                void copyTextToClipboard(
-                  turns
-                    .filter((t) => t.role === 'user' || t.role === 'assistant')
-                    .map((t) => `${t.role === 'user' ? 'You' : 'ORB'}: ${t.text.trim()}`)
-                    .join('\n\n')
-                )
-              }
+              onClick={() => void copyTextToClipboard(transcriptText)}
             >
               Copy transcript
             </button>
@@ -241,19 +207,40 @@ export function OrbVoiceMobileExperience({
               className="w-full rounded-full bg-gradient-to-r from-[var(--orb-primary-blue,#168bff)] to-[var(--orb-primary-blue-2,#0d5fcc)] py-3 text-sm font-semibold text-white"
               onClick={onNewConversation}
             >
-              New conversation
+              Start new voice conversation
             </button>
+            {onTypeInstead ? (
+              <button
+                type="button"
+                data-orb-voice-type-instead
+                onClick={() => {
+                  onTypeInstead()
+                  onClose()
+                }}
+                className="w-full rounded-full border border-[var(--orb-line)] py-2.5 text-sm text-[var(--orb-muted)]"
+              >
+                Type instead
+              </button>
+            ) : null}
           </div>
+        ) : voiceSessionLive ? (
+          <OrbVoiceActions uiState="listening" onPrimary={onPrimary} layout="stack" />
+        ) : voiceStarting ? (
+          <OrbVoiceActions uiState="connecting" onPrimary={onPrimary} layout="stack" />
         ) : (
-          <button
-            type="button"
-            data-orb-voice-primary-action
-            disabled={voiceStarting || (mobilePrimaryLabel === 'Start' && startDisabled)}
-            onClick={onPrimaryClick}
-            className="w-full rounded-full bg-gradient-to-r from-[var(--orb-primary-blue,#168bff)] to-[var(--orb-primary-blue-2,#0d5fcc)] py-3 text-sm font-semibold text-white shadow-lg shadow-sky-500/20 disabled:opacity-50"
-          >
-            {voiceStarting ? 'Connecting…' : mobilePrimaryLabel}
-          </button>
+          <OrbVoiceActions
+            uiState={uiState}
+            primaryDisabled={primaryDisabled}
+            onPrimary={onPrimary}
+            onSignIn={onSignIn}
+            onTypeInstead={() => {
+              onTypeInstead?.()
+              onClose()
+            }}
+            onUseDictate={onUseDictate}
+            onTryAgain={onTryAgain}
+            layout="stack"
+          />
         )}
       </div>
     </div>

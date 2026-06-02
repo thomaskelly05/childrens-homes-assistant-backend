@@ -1,11 +1,11 @@
-export type OrbGreetingStyle = 'calm' | 'direct' | 'supportive'
-
 export type OrbTimeOfDay = 'morning' | 'afternoon' | 'evening' | 'generic'
 
-export function extractOrbFirstName(fullName?: string | null): string | null {
+export type OrbGreetingStyle = 'calm' | 'direct' | 'supportive'
+
+export function extractOrbFirstName(fullName: string | null | undefined): string | null {
   const trimmed = fullName?.trim()
   if (!trimmed) return null
-  const first = trimmed.split(/\s+/)[0]
+  const [first] = trimmed.split(/\s+/)
   return first || null
 }
 
@@ -16,50 +16,49 @@ export function orbTimeOfDayFromHour(hour: number): OrbTimeOfDay {
   return 'generic'
 }
 
-function greetingHeadingForPeriod(period: OrbTimeOfDay, firstName: string | null): string {
-  switch (period) {
-    case 'morning':
-      return firstName
-        ? `Good morning, ${firstName}. Ready when you are.`
-        : 'Good morning. Ready when you are.'
-    case 'afternoon':
-      return firstName
-        ? `Good afternoon, ${firstName}. What are we working on?`
-        : 'Good afternoon. What are we working on?'
-    case 'evening':
-      return firstName
-        ? `Good evening, ${firstName}. I'm here when you're ready.`
-        : "Good evening. I'm here when you're ready."
+function greetingSubline(style: OrbGreetingStyle | undefined): string {
+  switch (style) {
+    case 'direct':
+      return 'What do you need from ORB right now?'
+    case 'supportive':
+      return 'ORB is here to help you think clearly and document well.'
+    case 'calm':
     default:
-      return firstName ? `Ready when you are, ${firstName}.` : 'Ready when you are.'
+      return 'Take your time — ORB is ready when you are.'
   }
 }
 
-/** Calm, professional greeting for ORB empty state — varies by time of day. */
-export function orbPersonalisedGreeting(options?: {
+export function orbPersonalisedGreeting(input: {
   firstName?: string | null
   hour?: number
   style?: OrbGreetingStyle
-  includeContextLine?: boolean
-}): { heading: string; subline: string; period: OrbTimeOfDay } {
-  const firstName = options?.firstName?.trim() || null
-  const hour = options?.hour ?? 12
-  const period = orbTimeOfDayFromHour(hour)
-  let heading = greetingHeadingForPeriod(period, firstName)
+}): { heading: string; subline: string } {
+  const hour = input.hour ?? 12
+  const bucket = orbTimeOfDayFromHour(hour)
+  const name = input.firstName?.trim() || null
+  const subline = greetingSubline(input.style)
 
-  if (options?.style === 'direct' && period === 'generic') {
-    heading = firstName ? `${firstName}, what do you need?` : 'What do you need?'
-  } else if (options?.style === 'supportive' && period === 'generic') {
-    heading = firstName ? `I'm here for you, ${firstName}.` : "I'm here when you're ready."
+  if (bucket === 'morning') {
+    return {
+      heading: name ? `Good morning, ${name}. Ready when you are.` : 'Good morning. Ready when you are.',
+      subline
+    }
   }
-
-  const subline =
-    options?.includeContextLine === false
-      ? ''
-      : 'Ask about recording, safeguarding, reflection or inspection readiness.'
-
-  return { heading, subline, period }
+  if (bucket === 'afternoon') {
+    return {
+      heading: name
+        ? `Good afternoon, ${name}. What are we working on today?`
+        : 'Good afternoon. What are we working on today?',
+      subline
+    }
+  }
+  if (bucket === 'evening') {
+    return {
+      heading: name
+        ? `Good evening, ${name}. ORB is here when you're ready.`
+        : "Good evening. ORB is here when you're ready.",
+      subline
+    }
+  }
+  return { heading: 'Ready when you are.', subline }
 }
-
-export const ORB_CONTEXTUAL_GREETING_LINE =
-  'Ask about recording, safeguarding, reflection or inspection readiness.'

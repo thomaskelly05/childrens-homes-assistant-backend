@@ -129,7 +129,7 @@ export class OrbOpenAIRealtimeWebRTCClient {
         threshold: 0.48,
         prefix_padding_ms: 280,
         silence_duration_ms: 520,
-        create_response: false,
+        create_response: !this.transcriptionOnly,
         interrupt_response: true
       }
     }

@@ -2634,12 +2634,16 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
             voice={voice}
             pending={pending}
             subscriptionActive={account.hasConfirmedAccess}
+            isSignedIn={account.hasBackendSession}
             isAdminUser={
               account.adminBypass || normaliseRole(account.role ?? '') === 'admin'
             }
             assistantReply={voiceStationAssistant?.text ?? null}
             assistantReplyKey={voiceStationAssistant?.key ?? null}
             onSendToOrb={(text) => void sendMessage(text)}
+            onSignIn={() => {
+              window.location.href = account.signInUrl
+            }}
             onTypeInstead={() => {
               closePanel()
               inputRef.current?.focus()

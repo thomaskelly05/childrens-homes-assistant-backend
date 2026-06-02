@@ -2,9 +2,11 @@
  * ORB Voice realtime availability — honest server config probe (no fake sessions).
  */
 
-import { authFetch } from '@/lib/auth/api'
+import { AuthApiError, authFetchResponse } from '@/lib/auth/api'
 
 import { isRealtimeVoiceProvider, type OrbVoiceSessionResponse } from './orb-voice-client'
+import { getOrbVoiceCachedAuthStatus, markOrbVoiceUnauthenticated, probeOrbVoiceAuth } from './orb-voice-auth'
+import type { OrbRealtimeVoiceState } from './orb-realtime-voice-client'
 
 export type OrbRealtimeVoiceStatus = {
   ok: boolean
@@ -26,16 +28,45 @@ const DEFAULT_UNAVAILABLE: OrbRealtimeVoiceAvailability = {
   reason: 'not_configured'
 }
 
-/** Probe GET /orb/voice/session/status — never throws; 500 → unavailable. */
+const STATUS_UNAVAILABLE: OrbRealtimeVoiceStatus = {
+  ok: false,
+  realtime_enabled: false,
+  provider: null,
+  reason: 'endpoint_failed'
+}
+
+export type OrbVoiceTranscriptCallbacks = {
+  onFinalTranscript?: (text: string) => void
+  onAssistantDelta?: (delta: string) => void
+  onAssistantDone?: (text: string) => void
+  onStateChange?: (state: OrbRealtimeVoiceState) => void
+}
+
+/** Probe GET /orb/voice/session/status — never throws; skips when unauthenticated. */
 export async function fetchOrbVoiceRealtimeStatus(): Promise<OrbRealtimeVoiceStatus> {
+  const { emitOrbClientDebug } = await import('@/lib/orb/orb-client-debug')
+  const { setOrbVoiceDiagStatus, registerOrbVoiceDiagGlobal } = await import('./orb-voice-diag')
+  registerOrbVoiceDiagGlobal()
+
+  const auth = await probeOrbVoiceAuth()
+  if (auth === 'unauthenticated') {
+    emitOrbClientDebug({ area: 'voice', event: 'voice_status_skipped_unauthenticated', detail: {} })
+    return STATUS_UNAVAILABLE
+  }
+
   try {
-    const { emitOrbClientDebug } = await import('@/lib/orb/orb-client-debug')
-    const { setOrbVoiceDiagStatus, registerOrbVoiceDiagGlobal } = await import('./orb-voice-diag')
-    registerOrbVoiceDiagGlobal()
     emitOrbClientDebug({ area: 'voice', event: 'voice_status_requested', detail: {} })
-    const payload = await authFetch('/orb/voice/session/status', { method: 'GET' })
-    if (!payload || typeof payload !== 'object') {
-      return { ok: false, realtime_enabled: false, provider: null, reason: 'endpoint_failed' }
+    const response = await authFetchResponse('/orb/voice/session/status', { method: 'GET' })
+    if (response.status === 401 || response.status === 403) {
+      markOrbVoiceUnauthenticated()
+      emitOrbClientDebug({ area: 'voice', event: 'voice_status_skipped_unauthenticated', detail: { status: response.status } })
+      setOrbVoiceDiagStatus(STATUS_UNAVAILABLE, response.status)
+      return STATUS_UNAVAILABLE
+    }
+    const payload = await response.json().catch(() => undefined)
+    if (!response.ok || !payload || typeof payload !== 'object') {
+      setOrbVoiceDiagStatus(STATUS_UNAVAILABLE, response.status)
+      return STATUS_UNAVAILABLE
     }
     const data = payload as Record<string, unknown>
     const status: OrbRealtimeVoiceStatus = {
@@ -51,7 +82,7 @@ export async function fetchOrbVoiceRealtimeStatus(): Promise<OrbRealtimeVoiceSta
             ? 'configured'
             : 'not_configured'
     }
-    setOrbVoiceDiagStatus(status)
+    setOrbVoiceDiagStatus(status, response.status)
     emitOrbClientDebug({
       area: 'voice',
       event: 'voice_status_received',
@@ -70,12 +101,19 @@ export async function fetchOrbVoiceRealtimeStatus(): Promise<OrbRealtimeVoiceSta
       })
     }
     return status
-  } catch {
-    return { ok: false, realtime_enabled: false, provider: null, reason: 'endpoint_failed' }
+  } catch (error) {
+    if (error instanceof AuthApiError && (error.status === 401 || error.status === 403)) {
+      markOrbVoiceUnauthenticated()
+      emitOrbClientDebug({ area: 'voice', event: 'voice_status_skipped_unauthenticated', detail: {} })
+    }
+    return STATUS_UNAVAILABLE
   }
 }
 
 export async function isOrbRealtimeVoiceAvailable(): Promise<OrbRealtimeVoiceAvailability> {
+  if (getOrbVoiceCachedAuthStatus() === 'unauthenticated') {
+    return DEFAULT_UNAVAILABLE
+  }
   const status = await fetchOrbVoiceRealtimeStatus()
   if (!status.ok || !status.realtime_enabled) {
     return {
@@ -123,23 +161,31 @@ async function waitForVoiceTransportLive(timeoutMs: number): Promise<boolean> {
 export async function beginOrbRealtimeVoiceConversation(options: {
   mode?: string
   voice_id?: string
+  transcript?: OrbVoiceTranscriptCallbacks
 }): Promise<BeginOrbRealtimeVoiceResult> {
   const { emitOrbClientDebug } = await import('@/lib/orb/orb-client-debug')
   const {
     resetOrbVoiceDiagTransport,
     setOrbVoiceDiagSessionResponse,
-    registerOrbVoiceDiagGlobal
+    registerOrbVoiceDiagGlobal,
+    setOrbVoiceDiagLastEvent
   } = await import('./orb-voice-diag')
   const {
     clearActiveOrbRealtimeVoiceClient,
     registerActiveOrbRealtimeVoiceClient
   } = await import('./orb-voice-session-registry')
 
+  const auth = await probeOrbVoiceAuth()
+  if (auth === 'unauthenticated') {
+    return { ok: false, error: 'Sign in to use ORB Voice.' }
+  }
+
   registerOrbVoiceDiagGlobal()
   resetOrbVoiceDiagTransport()
   clearActiveOrbRealtimeVoiceClient()
 
-  emitOrbClientDebug({ area: 'voice', event: 'voice_realtime_session_requested', detail: {} })
+  emitOrbClientDebug({ area: 'voice', event: 'voice_session_requested', detail: {} })
+  setOrbVoiceDiagLastEvent('voice_session_requested')
 
   const { OrbRealtimeVoiceClient } = await import('./orb-realtime-voice-client')
   const client = new OrbRealtimeVoiceClient({
@@ -151,6 +197,28 @@ export async function beginOrbRealtimeVoiceConversation(options: {
         hasClientSecret: Boolean(extractClientSecretValue(session)),
         model: session.openai_session?.model ?? null
       })
+    },
+    onFinalTranscript: (text) => {
+      setOrbVoiceDiagLastEvent('voice_user_transcript_delta')
+      emitOrbClientDebug({ area: 'voice', event: 'voice_user_transcript_delta', detail: { length: text.length } })
+      options.transcript?.onFinalTranscript?.(text)
+    },
+    onAssistantDelta: (delta) => {
+      setOrbVoiceDiagLastEvent('voice_assistant_transcript_delta')
+      emitOrbClientDebug({ area: 'voice', event: 'voice_assistant_transcript_delta', detail: { length: delta.length } })
+      options.transcript?.onAssistantDelta?.(delta)
+    },
+    onAssistantDone: (text) => {
+      setOrbVoiceDiagLastEvent('voice_response_done')
+      emitOrbClientDebug({ area: 'voice', event: 'voice_response_done', detail: { length: text.length } })
+      options.transcript?.onAssistantDone?.(text)
+    },
+    onStateChange: (state) => {
+      if (state === 'thinking') {
+        setOrbVoiceDiagLastEvent('voice_response_started')
+        emitOrbClientDebug({ area: 'voice', event: 'voice_response_started', detail: {} })
+      }
+      options.transcript?.onStateChange?.(state)
     }
   })
   try {
@@ -162,7 +230,7 @@ export async function beginOrbRealtimeVoiceConversation(options: {
 
     emitOrbClientDebug({
       area: 'voice',
-      event: 'voice_realtime_session_received',
+      event: 'voice_session_received',
       detail: {
         hasClientSecret: Boolean(extractClientSecretValue(session)),
         sessionId: session.session_id,
@@ -181,10 +249,7 @@ export async function beginOrbRealtimeVoiceConversation(options: {
       return {
         ok: false,
         session,
-        error:
-          session.message ||
-          session.fallback_reason ||
-          'Live voice is unavailable right now.'
+        error: session.message || session.fallback_reason || 'Live voice could not connect.'
       }
     }
 
@@ -229,7 +294,8 @@ export async function beginOrbRealtimeVoiceConversation(options: {
       detail: { provider: session.provider, sessionId: session.session_id, transportLive }
     })
     if (transportLive) {
-      emitOrbClientDebug({ area: 'voice', event: 'voice_session_live', detail: { provider: session.provider } })
+      emitOrbClientDebug({ area: 'voice', event: 'voice_transport_live', detail: { provider: session.provider } })
+      setOrbVoiceDiagLastEvent('voice_transport_live')
     }
     return { ok: true, session, transportLive }
   } catch (error) {
