@@ -78,8 +78,40 @@ def test_policy_card_includes_required_fields(fake_state):
     assert card["when_to_escalate"]
     assert card["what_to_record"]
     assert card["manager_responsibilities"]
+    assert card["plain_english_summary"]
+    assert card["who_this_matters_for"]
+    assert card["key_staff_responsibilities"]
+    assert card["what_good_practice_looks_like"]
+    assert card["safeguarding_considerations"]
+    assert card["recording_requirements"]
+    assert card["manager_oversight_points"]
+    assert card["ofsted_reg44_relevance"]
+    assert card["common_mistakes_to_avoid"]
+    assert card["staff_briefing_version"]
+    assert card["legal_completeness_notice"]
+    assert card["review_before_use"]
+    assert "uploaded or pasted" in card["legal_completeness_notice"].lower()
     assert data["standalone"] is True
     assert data["os_records_accessed"] is False
+    assert data["live_record_access"] is False
+    assert data.get("risks_or_gaps") is not None
+    assert data.get("suggested_next_actions") is not None
+    assert data.get("source_document_title") == "Recording policy"
+    brain = data.get("brain_metadata") or {}
+    assert brain.get("product") == "ORB Residential"
+    assert brain.get("powered_by") == "IndiCare Intelligence"
+    assert brain.get("brain") == "orb_residential_intelligence"
+    assert brain.get("feature") == "document_intelligence"
+    assert brain.get("lens") == "policy_card"
+    assert brain.get("standalone") is True
+    assert brain.get("os_records_accessed") is False
+    assert brain.get("live_record_access") is False
+
+
+def test_policy_card_lens_registered():
+    lenses = orb_document_intelligence_service.list_lenses()
+    policy = next(item for item in lenses if item["id"] == "policy_card")
+    assert policy["label"] == "Policy Card"
 
 
 def test_reg44_does_not_invent_visit_details():

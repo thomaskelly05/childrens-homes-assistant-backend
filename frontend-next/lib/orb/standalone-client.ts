@@ -1218,6 +1218,11 @@ export type OrbDocumentIntelligenceResponse = {
   standalone?: boolean
   os_records_accessed?: boolean
   missing_information?: string[]
+  risks_or_gaps?: string[]
+  suggested_next_actions?: string[]
+  source_document_title?: string | null
+  live_record_access?: boolean
+  brain_metadata?: Record<string, unknown>
   policy_card?: Record<string, unknown>
   reg44?: Record<string, unknown>
 }

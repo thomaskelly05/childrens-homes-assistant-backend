@@ -63,6 +63,7 @@ import { OrbScrollToBottomFab } from '@/components/orb-standalone/orb-scroll-to-
 import { OrbAgentPanel } from '@/components/orb-standalone/orb-agent-panel'
 import { OrbResidentialAgentsPanel } from '@/components/orb-standalone/orb-residential-agents-panel'
 import { OrbDocumentPanel } from '@/components/orb-standalone/orb-document-panel'
+import { OrbDocumentContextPanel } from '@/components/orb-standalone/orb-document-context-panel'
 import { OrbSavedOutputsPanel } from '@/components/orb-standalone/orb-saved-outputs-panel'
 import { OrbKnowledgeLibraryPanel } from '@/components/orb-standalone/orb-knowledge-library'
 import { OrbTemplatesPanel } from '@/components/orb-standalone/orb-templates-panel'
@@ -220,7 +221,9 @@ import { collectCognitionDisplayLabels } from '@/lib/orb/residential-agents'
 import {
   contextualDocumentActions,
   documentIntelligenceDisplayTitle,
-  formatDocumentIntelligenceMarkdown
+  formatDocumentIntelligenceMarkdown,
+  RESIDENTIAL_FIRST_CLASS_LENSES,
+  type OrbDocumentIntelligenceResult
 } from '@/lib/orb/document-intelligence'
 
 /** Push-to-talk voice with reflective pacing — no passive listening. */
@@ -579,6 +582,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
     title: string
     sourceId: string | null
   } | null>(null)
+  const [documentPanelResult, setDocumentPanelResult] = useState<OrbDocumentIntelligenceResult | null>(
+    null
+  )
   const [adultProfile, setAdultProfile] = useState<AdultProfile | null>(null)
   const [profileDrawerOpen, setProfileDrawerOpen] = useState(false)
   const [showScrollFab, setShowScrollFab] = useState(false)
@@ -2117,6 +2123,48 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
     return contextualDocumentActions(pendingDocument.text || '', pendingDocument.title)
   }, [pendingDocument?.text, pendingDocument?.sourceId, pendingDocument?.title])
 
+  const documentPanelLensLabel = useMemo(() => {
+    if (!documentPanelResult) return ''
+    return (
+      RESIDENTIAL_FIRST_CLASS_LENSES.find((item) => item.lens === documentPanelResult.lens)?.label ||
+      documentPanelResult.lens.replace(/_/g, ' ')
+    )
+  }, [documentPanelResult])
+
+  const documentDesktopContextPanel =
+    residentialSurface && documentPanelResult && !isMobileViewport ? (
+      <OrbDocumentContextPanel
+        result={documentPanelResult}
+        documentTitle={
+          pendingDocument?.title ||
+          documentPanelResult.source_document_title ||
+          documentPanelResult.title
+        }
+        lensLabel={documentPanelLensLabel}
+        onAskOrb={() => {
+          const docTitle =
+            pendingDocument?.title ||
+            documentPanelResult.source_document_title ||
+            documentPanelResult.title
+          const displayTitle = documentIntelligenceDisplayTitle(
+            documentPanelResult.lens,
+            docTitle
+          )
+          const markdown = formatDocumentIntelligenceMarkdown({
+            ...documentPanelResult,
+            title: displayTitle
+          })
+          setMessage(
+            `Ask ORB about this document (${documentPanelLensLabel} — ${docTitle}):\n\n${markdown.slice(0, 1200)}`
+          )
+          closePanel()
+          inputRef.current?.focus()
+        }}
+        onCopy={() => setDraftNotice('Document output copied.')}
+        onExport={() => setDraftNotice('Document exported as markdown.')}
+      />
+    ) : null
+
   async function runDocumentLens(lens: OrbDocumentLens) {
     const doc = pendingDocument
     if (!doc || (!doc.text?.trim() && !doc.sourceId)) return
@@ -2555,6 +2603,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         projects={workspace.projects}
         activeProjectId={workspace.activeProjectId}
         activeProjectName={activeProject?.name}
+        onIntelligenceResult={setDocumentPanelResult}
         onReuseInChat={(prompt) => {
           setMessage(prompt)
           closePanel()
@@ -2562,6 +2611,11 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         onInsertIntoChat={(text) => {
           setMessage(text)
           closePanel()
+        }}
+        onAskOrbAboutDocument={({ markdown, title }) => {
+          setMessage(`Ask ORB about this document (${title}):\n\n${markdown.slice(0, 1200)}`)
+          closePanel()
+          inputRef.current?.focus()
         }}
         onOpenSavedOutputs={openSavedOutputsPanel}
         onDocumentContext={(ctx) => setPendingDocument(ctx)}
@@ -3486,6 +3540,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           />
         }
         composer={composer}
+        rightPanel={documentDesktopContextPanel}
       />
 
       {promptDrawerOpen ? (

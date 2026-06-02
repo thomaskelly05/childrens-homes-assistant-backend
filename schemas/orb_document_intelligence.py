@@ -82,7 +82,11 @@ class OrbDocumentIntelligenceData(BaseModel):
     sources: list[dict[str, Any]] = Field(default_factory=list)
     standalone: bool = True
     os_records_accessed: bool = False
+    live_record_access: bool = False
     missing_information: list[str] = Field(default_factory=list)
+    risks_or_gaps: list[str] = Field(default_factory=list)
+    suggested_next_actions: list[str] = Field(default_factory=list)
+    source_document_title: str | None = None
     reg44: dict[str, Any] | None = None
     policy_card: dict[str, Any] | None = None
     action_plan_groups: dict[str, list[OrbDocumentIntelligenceAction]] | None = None

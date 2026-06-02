@@ -8,7 +8,8 @@ import {
   contextualDocumentActions,
   detectDocumentKind,
   documentIntelligenceDisplayTitle,
-  formatDocumentIntelligenceMarkdown
+  formatDocumentIntelligenceMarkdown,
+  RESIDENTIAL_FIRST_CLASS_LENSES
 } from './document-intelligence.ts'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '../..')
@@ -58,5 +59,54 @@ test('intelligence markdown includes standalone boundary', () => {
     standalone: true,
     os_records_accessed: false
   })
-  assert.match(md, /not checked live IndiCare OS records/i)
+  assert.match(md, /Based only on the document or text you provide/i)
+  assert.match(md, /Standalone ORB does not access live care records/i)
+})
+
+test('documents panel exposes title subtitle lenses and policy card hero', () => {
+  const panel = readFileSync(
+    join(root, 'components/orb-standalone/orb-document-panel.tsx'),
+    'utf8'
+  )
+  const companion = readFileSync(
+    join(root, 'components/orb-standalone/orb-care-companion.tsx'),
+    'utf8'
+  )
+  assert.match(panel, /title="Documents"/)
+  assert.match(
+    panel,
+    /Turn policies, reports and uploaded text into residential intelligence/
+  )
+  assert.match(panel, /data-orb-document-lens-selector/)
+  assert.match(panel, /data-orb-policy-card-hero/)
+  assert.match(panel, /data-orb-copy-document-output/)
+  assert.match(panel, /data-orb-export-document-output/)
+  assert.match(panel, /data-orb-ask-orb-document/)
+  assert.match(companion, /rightPanel=\{documentDesktopContextPanel\}/)
+  const contextPanel = readFileSync(
+    join(root, 'components/orb-standalone/orb-document-context-panel.tsx'),
+    'utf8'
+  )
+  assert.match(contextPanel, /data-orb-context-kind="documents"/)
+})
+
+test('first class lenses include residential briefing lenses', () => {
+  const ids = RESIDENTIAL_FIRST_CLASS_LENSES.map((item) => item.lens)
+  for (const lens of [
+    'summary',
+    'explain',
+    'actions',
+    'policy_card',
+    'safeguarding',
+    'ofsted',
+    'reg44',
+    'reg45',
+    'recording_quality',
+    'staff_briefing',
+    'manager_oversight',
+    'ri_governance'
+  ]) {
+    assert.ok(ids.includes(lens as (typeof ids)[number]), `missing lens ${lens}`)
+  }
+  assert.ok(RESIDENTIAL_FIRST_CLASS_LENSES.some((item) => item.hero && item.lens === 'policy_card'))
 })
