@@ -25,8 +25,8 @@ export const ORB_VOICE_PANEL_TITLE = 'Voice'
 export const ORB_VOICE_PANEL_SUBTITLE = 'Speak to ORB hands-free'
 
 export const ORB_VOICE_BOUNDARY_COPY = [
-  'Voice uses what you say in this session.',
-  'Review transcripts before using them as records.',
+  'Voice transcripts are saved as standalone ORB artefacts.',
+  'Review before relying on them.',
   'Standalone ORB does not access live care records.'
 ] as const
 

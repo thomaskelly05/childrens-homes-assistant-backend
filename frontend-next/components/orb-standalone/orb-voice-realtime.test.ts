@@ -57,10 +57,21 @@ describe('ORB Voice realtime provider pass', () => {
     assert.match(hook, /endVoiceSession/)
   })
 
-  it('transcript save includes provider metadata', () => {
+  it('transcript save includes provider metadata and voice provenance', () => {
     const save = readComponent('lib/orb/voice/save-voice-transcript.ts')
     assert.match(save, /provider\?:/)
     assert.match(save, /voice_transcript/)
+    assert.match(save, /created_from: 'voice'/)
+    assert.match(save, /source_feature: 'voice'/)
+    assert.match(save, /buildVoiceSavedOutputBrainMetadata/)
+    assert.match(save, /source_text/)
+  })
+
+  it('voice station exposes save to ORB when transcript exists', () => {
+    const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
+    assert.match(station, /OrbVoiceTranscriptActions/)
+    const actions = readComponent('components/orb-standalone/orb-voice-transcript-actions.tsx')
+    assert.match(actions, /data-orb-voice-save-to-orb/)
   })
 
   it('developer details available in developer mode only', () => {

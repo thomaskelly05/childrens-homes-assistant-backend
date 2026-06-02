@@ -2,6 +2,7 @@
 
 import { Square } from 'lucide-react'
 
+import { OrbVoiceTranscriptActions } from '@/components/orb-standalone/orb-voice-transcript-actions'
 import type { OrbVoiceLaunchMode, OrbVoiceLaunchUiState } from '@/lib/orb/voice/orb-voice-launch-mode'
 import { orbVoiceLaunchPrimaryLabel } from '@/lib/orb/voice/orb-voice-launch-mode'
 
@@ -14,6 +15,9 @@ export function OrbVoiceLaunchControls({
   onPrimary,
   onSendToOrb,
   onSendToDictate,
+  onCopyTranscript,
+  onSaveTranscript,
+  savingTranscript = false,
   onCancel,
   onOpenSettings
 }: {
@@ -25,6 +29,9 @@ export function OrbVoiceLaunchControls({
   onPrimary: () => void
   onSendToOrb?: (text: string) => void
   onSendToDictate?: (text: string) => void
+  onCopyTranscript?: () => void
+  onSaveTranscript?: () => void
+  savingTranscript?: boolean
   onCancel?: () => void
   onOpenSettings?: () => void
 }) {
@@ -36,28 +43,14 @@ export function OrbVoiceLaunchControls({
   return (
     <div className="flex w-full max-w-sm flex-col gap-2" data-orb-voice-launch-controls data-orb-voice-launch-mode={launchMode}>
       {showSendActions ? (
-        <>
-          {onSendToOrb ? (
-            <button
-              type="button"
-              data-orb-voice-send-to-orb
-              className="w-full rounded-full bg-gradient-to-r from-[var(--orb-primary-blue,#168bff)] to-[var(--orb-primary-blue-2,#0d5fcc)] py-3 text-sm font-semibold text-white shadow-lg shadow-sky-500/20"
-              onClick={() => onSendToOrb(trimmed)}
-            >
-              Send to ORB
-            </button>
-          ) : null}
-          {onSendToDictate ? (
-            <button
-              type="button"
-              data-orb-voice-to-dictate
-              className="w-full rounded-full border border-[var(--orb-line)] bg-[var(--orb-primary-soft)]/40 py-2.5 text-sm font-medium text-[var(--orb-primary)]"
-              onClick={() => onSendToDictate(trimmed)}
-            >
-              Send to Dictate
-            </button>
-          ) : null}
-        </>
+        <OrbVoiceTranscriptActions
+          transcript={trimmed}
+          onCopy={onCopyTranscript ?? (() => void navigator.clipboard?.writeText(trimmed))}
+          onSave={onSaveTranscript}
+          saving={savingTranscript}
+          onSendToDictate={onSendToDictate ? () => onSendToDictate(trimmed) : undefined}
+          onSendToOrb={onSendToOrb ? () => onSendToOrb(trimmed) : undefined}
+        />
       ) : null}
 
       <button

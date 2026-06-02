@@ -87,18 +87,19 @@ describe('ORB Voice conversational sprint', () => {
 
   it('voice station links to dictate', () => {
     const voice = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(voice, /data-orb-voice-to-dictate/)
+    assert.match(voice, /OrbVoiceTranscriptActions/)
     assert.match(voice, /onOpenDictate/)
   })
 
-  it('voice station can open dictate studio', () => {
-    const voice = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(voice, /data-orb-voice-to-dictate-studio/)
+  it('voice transcript actions support dictate routing', () => {
+    const actions = readComponent('components/orb-standalone/orb-voice-transcript-actions.tsx')
+    assert.match(actions, /data-orb-voice-to-dictate/)
   })
 
   it('ORB Voice links to dictate from transcript actions', () => {
     const voice = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(voice, /data-orb-voice-post-session|data-orb-voice-to-dictate/)
-    assert.match(voice, /Send to Dictate/)
+    assert.match(voice, /OrbVoiceTranscriptActions/)
+    const actions = readComponent('components/orb-standalone/orb-voice-transcript-actions.tsx')
+    assert.match(actions, /Send to Dictate/)
   })
 })
