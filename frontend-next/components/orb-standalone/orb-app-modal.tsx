@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react'
 
+import { OrbWorkspaceFrame } from '@/components/orb-standalone/orb-workspace-frame'
 import {
   OrbStandalonePanelShell,
   type OrbAppModalSize
@@ -9,9 +10,10 @@ import {
 
 export type { OrbAppModalSize }
 
+export type OrbAppPresentation = 'modal' | 'workspace'
+
 /**
- * ChatGPT-style centred app modal for ORB Residential stations.
- * Wraps the shared panel shell with fixed centre layout and size tokens.
+ * ORB app shell — centred modal for account/settings, or full main workspace on `/orb`.
  */
 export function OrbAppModal({
   open,
@@ -22,7 +24,8 @@ export function OrbAppModal({
   footer,
   ariaLabel,
   panelId,
-  size = 'standard'
+  size = 'standard',
+  presentation = 'modal'
 }: {
   open: boolean
   title: string
@@ -33,7 +36,23 @@ export function OrbAppModal({
   ariaLabel?: string
   panelId?: string
   size?: OrbAppModalSize
+  presentation?: OrbAppPresentation
 }) {
+  if (presentation === 'workspace') {
+    return (
+      <OrbWorkspaceFrame
+        open={open}
+        title={title}
+        subtitle={subtitle ?? (ariaLabel && ariaLabel !== title ? ariaLabel : undefined)}
+        onClose={onClose}
+        panelId={panelId}
+        footer={footer}
+      >
+        {children}
+      </OrbWorkspaceFrame>
+    )
+  }
+
   return (
     <OrbStandalonePanelShell
       open={open}
@@ -52,15 +71,14 @@ export function OrbAppModal({
   )
 }
 
-/** Props for station panels: centre modal on residential, drawer elsewhere. */
+/** Props for station panels: main workspace on residential `/orb`, drawer elsewhere. */
 export function orbStationShellProps(residentialSurface: boolean | undefined, size: OrbAppModalSize = 'wide') {
   if (!residentialSurface) {
     return { layout: 'drawer' as const, wide: true }
   }
   return {
-    layout: 'center' as const,
-    modalSize: size,
-    appModal: true,
+    layout: 'workspace' as const,
+    presentation: 'workspace' as const,
     wide: size === 'wide' || size === 'standard'
   }
 }

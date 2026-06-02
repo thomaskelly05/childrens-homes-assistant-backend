@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { orbStationShellProps } from '@/components/orb-standalone/orb-app-modal'
 import { OrbStandalonePanelShell } from '@/components/orb-standalone/orb-standalone-panel-shell'
 import {
   ORB_RESIDENTIAL_SKILLS,
@@ -12,11 +13,13 @@ import {
 export function OrbSkillsPanel({
   open,
   onClose,
-  onStartSkill
+  onStartSkill,
+  residentialSurface
 }: {
   open: boolean
   onClose: () => void
   onStartSkill: (skill: OrbSkillDefinition) => void
+  residentialSurface?: boolean
 }) {
   const [query, setQuery] = useState('')
   const categories = Object.keys(ORB_SKILL_CATEGORY_LABELS) as OrbSkillCategory[]
@@ -51,6 +54,7 @@ export function OrbSkillsPanel({
       title="Skills"
       subtitle="Focused workflows for residential practice — start with a skill, then refine in chat."
       panelId="skills"
+      {...orbStationShellProps(residentialSurface, 'wide')}
     >
       <div className="space-y-4 p-4 sm:p-5" data-orb-skills-panel>
         <input
