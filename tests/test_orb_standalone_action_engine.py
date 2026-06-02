@@ -62,6 +62,9 @@ async def test_what_am_i_missing_returns_missing_child_voice_when_absent(monkeyp
     assert result["action"] == "what_am_i_missing"
     assert "missing_child_voice" in (result.get("action_engine") or {}).get("heuristic_gaps", [])
     assert result.get("os_records_accessed") is False
+    brain = result.get("brain_metadata") or {}
+    assert brain.get("brain") == "orb_residential_intelligence"
+    assert brain.get("feature") == "action_engine"
 
 
 @pytest.mark.asyncio

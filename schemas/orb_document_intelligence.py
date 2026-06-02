@@ -87,6 +87,7 @@ class OrbDocumentIntelligenceData(BaseModel):
     policy_card: dict[str, Any] | None = None
     action_plan_groups: dict[str, list[OrbDocumentIntelligenceAction]] | None = None
     understanding: dict[str, Any] | None = None
+    brain_metadata: dict[str, Any] | None = None
 
 
 class OrbDocumentIntelligenceResponse(BaseModel):

@@ -15,6 +15,11 @@ import { OrbExplainabilityPanel, type OrbExplainabilityView } from '@/components
 import { OrbMarkdownAnswer } from '@/components/orb-standalone/orb-markdown-answer'
 import { logOrbCognitionDebug } from '@/lib/orb/standalone-client'
 import { cognitionPillLabel, collectCognitionDisplayLabels, type CognitionPillContext } from '@/lib/orb/residential-agents'
+import {
+  normalizeOrbBrainMetadata,
+  orbBrainIndicatorLabel,
+  shouldShowOrbBrainIndicator
+} from '@/lib/orb/orb-brain-metadata'
 import type { StandaloneOrbSource } from '@/lib/orb/standalone-local-store'
 import type { StandaloneOrbModelRouting } from '@/lib/orb/standalone-client'
 
@@ -85,6 +90,10 @@ export function OrbCognitionIndicators({
   const [open, setOpen] = useState(false)
   const chips = lensChipLabels(mode, explainability, messageHint, cognitionContext)
   const label = cognitionPillLabel(mode, explainability, messageHint, cognitionContext)
+  const brainMeta = normalizeOrbBrainMetadata(
+    (cognitionContext?.context_used ?? undefined) as Record<string, unknown> | undefined
+  )
+  const brainLine = shouldShowOrbBrainIndicator(brainMeta) ? orbBrainIndicatorLabel(brainMeta) : null
   logOrbCognitionDebug('rendered pill', { label, mode, messageHint })
 
   if (!streaming && chips.length === 0) return null
@@ -128,6 +137,11 @@ export function OrbCognitionIndicators({
                   </span>
                 ))}
               </div>
+              {brainLine ? (
+                <p className="sr-only mt-2 text-[11px]" data-orb-brain-indicator>
+                  {brainLine}
+                </p>
+              ) : null}
             </div>
           ) : null}
         </>
@@ -169,11 +183,16 @@ export function OrbAssistantMessageBody({
   heading?: string
 }) {
   const cognitionLabel = cognitionPillLabel(mode, explainability, messageHint, cognitionContext)
+  const brainMeta = normalizeOrbBrainMetadata(
+    (cognitionContext?.context_used ?? undefined) as Record<string, unknown> | undefined
+  )
   const displayContent = stripSourcesBasisSection(content)
   return (
     <article
       className={`orb-message-assistant group flex gap-3.5 ${streaming ? 'orb-message-streaming' : ''}`}
       data-testid="orb-message-assistant"
+      data-orb-brain={brainMeta?.brain ?? undefined}
+      data-orb-brain-product={brainMeta?.product ?? undefined}
     >
       <OrbAssistantSpeakerAvatar streaming={streaming} />
       <div className="min-w-0 flex-1">

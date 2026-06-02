@@ -15,6 +15,7 @@ from services.orb_academy_nvq_anchor_service import (
 from services.orb_human_practice_brain_service import orb_human_practice_brain_service
 from services.orb_knowledge_retrieval_service import orb_knowledge_retrieval_service
 from services.orb_operating_brain_service import orb_operating_brain_service
+from services.orb_brain_metadata_service import attach_to_payload
 from services.orb_standalone_brain_service import orb_standalone_brain_service
 from services.orb_expert_answer_engine_service import orb_expert_answer_engine_service
 from services.orb_expert_scenario_bank_service import orb_expert_scenario_bank_service
@@ -1076,24 +1077,31 @@ class OrbActionEngineService:
         title = definition.label
         sources = build_standalone_sources(answer, mode=definition.prompt_mode)
 
-        return {
-            "action": action_id,
-            "title": title,
-            "answer": answer,
-            "sections": sections,
-            "checklist": checklist,
-            "confidence": confidence,
-            "sources": sources,
-            "standalone": True,
-            "os_records_accessed": False,
-            "suggested_next_actions": suggested,
-            "action_engine": {
-                "prompt_tier": prompt_tier,
-                "safety_level": definition.safety_level,
-                "backend_supported": definition.backend_supported,
-                "heuristic_gaps": [g.id for g in (gaps or [])],
+        return attach_to_payload(
+            {
+                "action": action_id,
+                "title": title,
+                "answer": answer,
+                "sections": sections,
+                "checklist": checklist,
+                "confidence": confidence,
+                "sources": sources,
+                "standalone": True,
+                "os_records_accessed": False,
+                "suggested_next_actions": suggested,
+                "action_engine": {
+                    "prompt_tier": prompt_tier,
+                    "safety_level": definition.safety_level,
+                    "backend_supported": definition.backend_supported,
+                    "heuristic_gaps": [g.id for g in (gaps or [])],
+                },
             },
-        }
+            surface="orb_standalone",
+            mode=definition.prompt_mode,
+            lens=action_id,
+            feature="action_engine",
+            sources=sources,
+        )
 
     async def _llm_complete(
         self,

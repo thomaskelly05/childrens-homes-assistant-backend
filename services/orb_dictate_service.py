@@ -36,6 +36,7 @@ from services.ai_note_export_service import create_docx_export, create_pdf_expor
 from services.ai_notes_service import transcribe_audio
 from services.orb_dictate_template_registry import get_dictate_template, list_dictate_templates
 from services.orb_saved_output_service import orb_saved_output_service
+from services.orb_brain_metadata_service import build_brain_metadata
 from services.recording_intelligence_service import recording_intelligence_service
 
 logger = logging.getLogger("indicare.orb_dictate")
@@ -69,6 +70,15 @@ MULTI_PERSON_MODES = frozenset(
         "handover",
     }
 )
+
+
+def _dictate_brain_metadata(*, note_type: str, mode: str | None = None) -> dict[str, Any]:
+    return build_brain_metadata(
+        surface="orb_standalone",
+        mode=mode or note_type,
+        lens=note_type,
+        feature="dictate",
+    )
 
 
 def _resolve_note_type(request: OrbDictateGenerateRequest) -> str:
@@ -140,6 +150,7 @@ def _fallback_generate(request: OrbDictateGenerateRequest) -> OrbDictateGenerate
         segments=segments,
         speaker_summary=build_speaker_summary(participants, segments),
         speaker_boundary_notice=SPEAKER_BOUNDARY_COPY,
+        brain_metadata=_dictate_brain_metadata(note_type=note_type, mode=request.mode),
     )
 
 
@@ -175,7 +186,7 @@ def _build_generate_prompt(request: OrbDictateGenerateRequest, note_type: str) -
         )
 
     system = (
-        "You are ORB Dictate for UK residential children's homes. "
+        "You are ORB Dictate for ORB Residential — Powered by IndiCare Intelligence. "
         "Turn rough spoken notes into professional, factual recording wording. "
         "Return JSON only with keys: title, professional_note, summary, actions (array of strings), "
         "ofsted_lens (string or null). "
@@ -283,6 +294,7 @@ def generate_dictate_note(request: OrbDictateGenerateRequest) -> OrbDictateGener
         segments=segments,
         speaker_summary=build_speaker_summary(participants, segments),
         speaker_boundary_notice=SPEAKER_BOUNDARY_COPY,
+        brain_metadata=_dictate_brain_metadata(note_type=note_type, mode=request.mode),
     )
 
 

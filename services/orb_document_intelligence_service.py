@@ -25,6 +25,7 @@ from services.orb_document_understanding_service import (
 )
 from services.orb_knowledge_library_service import orb_knowledge_library_service
 from services.orb_expert_answer_engine_service import orb_expert_answer_engine_service
+from services.orb_brain_metadata_service import build_brain_metadata
 from services.orb_reg44_document_extraction import NOT_STATED, extract_reg44_report
 
 logger = logging.getLogger("indicare.orb_document_intelligence")
@@ -316,6 +317,21 @@ def detect_document_kind(text: str, title: str = "") -> str:
 class OrbDocumentIntelligenceService:
     """Single interface for ORB document intelligence lenses."""
 
+    def _with_brain_metadata(
+        self,
+        data: OrbDocumentIntelligenceData,
+        *,
+        request: OrbDocumentIntelligenceRequest,
+    ) -> OrbDocumentIntelligenceData:
+        brain = build_brain_metadata(
+            surface="orb_standalone",
+            mode=request.mode,
+            lens=data.lens,
+            feature="document_intelligence",
+            sources=data.sources,
+        )
+        return data.model_copy(update={"brain_metadata": brain})
+
     def list_lenses(self) -> list[dict[str, Any]]:
         return list(LENS_REGISTRY.values())
 
@@ -343,6 +359,7 @@ class OrbDocumentIntelligenceService:
             data = await self._lens_from_understanding(title, text, source_id, request)
 
         data = self._enrich_with_expert_families(data, title=title, text=text, lens=lens)
+        data = self._with_brain_metadata(data, request=request)
         return OrbDocumentIntelligenceResponse(success=True, data=data)
 
     def _enrich_with_expert_families(
