@@ -4,11 +4,13 @@ import { describe, it } from 'node:test'
 import { pickBritishFemaleVoice } from '../../lib/orb/voice/orb-voice-browser.ts'
 import {
   buildAdultProfilePromptBlock,
-  personalisedEmptyHeading,
-  personalisedWelcomeMessage,
   roleBasedEmptyStarters,
   DEFAULT_ADULT_PROFILE
 } from '../../lib/orb/adult-profile-store.ts'
+import {
+  personalisedEmptyHeading,
+  personalisedWelcomeMessage
+} from '../../lib/orb/orb-personalised-greeting.ts'
 import { profileInitialsFromName } from '../../lib/orb/orb-profile-initials.ts'
 
 function mockVoice(name: string, lang: string, uri?: string): SpeechSynthesisVoice {

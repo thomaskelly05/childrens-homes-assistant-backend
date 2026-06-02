@@ -1,14 +1,5 @@
 'use client'
 
-import {
-  extractOrbFirstName,
-  orbPersonalisedGreeting,
-  type OrbGreetingStyle
-} from './orb-personalised-greeting'
-import {
-  loadOrbStandalonePersonalisation,
-  type OrbProfessionalTone
-} from './orb-standalone-personalisation'
 import type { ResidentialAgentId } from '@/lib/orb/residential-agents'
 
 /** Canonical roles for standalone ORB personalisation (legacy keys migrated on read). */
@@ -397,43 +388,3 @@ export function roleBasedEmptyStarters(profile: AdultProfile): string[] {
   return PRIMARY_GENERIC_STARTERS
 }
 
-export function personalisedEmptyHeading(
-  profile: AdultProfile,
-  options?: { hour?: number; greetingStyle?: OrbGreetingStyle; preferredName?: string }
-): string {
-  const stored = typeof window !== 'undefined' ? loadOrbStandalonePersonalisation() : null
-  const first =
-    options?.preferredName?.trim() ||
-    stored?.preferredName?.trim() ||
-    extractOrbFirstName(profile.name)
-  return orbPersonalisedGreeting({
-    firstName: first,
-    hour: options?.hour ?? new Date().getHours(),
-    style: options?.greetingStyle ?? stored?.greetingStyle
-  }).heading
-}
-
-/** Personalised empty-state welcome — calm, minimal, no sales pitch. */
-export function personalisedWelcomeMessage(
-  profile: AdultProfile,
-  options?: { temporary?: boolean; hour?: number; professionalTone?: OrbProfessionalTone }
-): { heading: string; subline: string; temporaryNote?: string } {
-  const stored = typeof window !== 'undefined' ? loadOrbStandalonePersonalisation() : null
-  const first = stored?.preferredName?.trim() || extractOrbFirstName(profile.name)
-  const greeting = orbPersonalisedGreeting({
-    firstName: first,
-    hour: options?.hour ?? new Date().getHours(),
-    style: stored?.greetingStyle
-  })
-
-  const result: { heading: string; subline: string; temporaryNote?: string } = {
-    heading: greeting.heading,
-    subline: greeting.subline
-  }
-
-  if (options?.temporary) {
-    result.temporaryNote = 'Temporary chat is on.'
-  }
-
-  return result
-}
