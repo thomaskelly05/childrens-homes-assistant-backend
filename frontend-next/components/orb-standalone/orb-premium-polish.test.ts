@@ -109,9 +109,8 @@ describe('ORB personalised welcome', () => {
       role: 'registered_manager',
       roleLabel: 'Registered Manager'
     })
-    assert.match(welcome.heading, /Ready when you are/i)
     assert.match(welcome.heading, /Tom/)
-    assert.match(welcome.subline, /regulatory practice/)
+    assert.match(welcome.subline, /inspection readiness|safeguarding|recording/i)
   })
 
   it('support worker welcome stays minimal', () => {
@@ -120,8 +119,8 @@ describe('ORB personalised welcome', () => {
       name: 'Alex',
       role: 'residential_support_worker'
     })
-    assert.match(welcome.heading, /Ready when you are/i)
-    assert.match(welcome.subline, /regulatory practice/)
+    assert.match(welcome.heading, /Alex|Ready|Good/i)
+    assert.match(welcome.subline, /inspection readiness|safeguarding|recording/i)
   })
 
   it('temporary chat welcome mentions temporary mode', () => {

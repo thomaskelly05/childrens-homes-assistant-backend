@@ -31,7 +31,7 @@ describe('ORB mobile home shell', () => {
     const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
     const mobileCss = readComponent('app/orb/orb-mobile.css')
     assert.match(companion, /data-orb-empty-heading-mobile/)
-    assert.match(companion, /Ready when you are/)
+    assert.match(companion, /personalisedEmptyHeading|orbPersonalisedGreeting|personalisedWelcomeMessage/)
     assert.match(mobileCss, /data-orb-empty-heading-mobile/)
     assert.match(mobileCss, /#0a1628|#f7faff/)
   })

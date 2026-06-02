@@ -43,12 +43,32 @@
   .orb-chat-header {
     min-height: 3.5rem;
     max-height: 3.75rem;
-    padding-top: 0.5rem !important;
+    padding-top: max(0.5rem, env(safe-area-inset-top, 0px)) !important;
     padding-bottom: 0.5rem !important;
     background: rgba(5, 7, 13, 0.85) !important;
     backdrop-filter: blur(16px) saturate(140%) !important;
     -webkit-backdrop-filter: blur(16px) saturate(140%) !important;
     border-bottom-color: rgba(255, 255, 255, 0.1) !important;
+  }
+
+  html[data-orb-theme='light'] .orb-chat-header {
+    background: rgba(255, 255, 255, 0.92) !important;
+    border-bottom-color: rgba(37, 99, 235, 0.12) !important;
+    color: #0a1628 !important;
+  }
+
+  .orb-chat-shell {
+    width: 100% !important;
+    max-width: 100vw !important;
+    min-width: 0 !important;
+    transform: none !important;
+  }
+
+  .orb-flight-recorder {
+    top: max(0.75rem, env(safe-area-inset-top, 0px)) !important;
+    bottom: auto !important;
+    z-index: 90 !important;
+    pointer-events: auto;
   }
 
   .orb-chat-header [data-orb-header-title] {

@@ -1,5 +1,14 @@
 'use client'
 
+import {
+  extractOrbFirstName,
+  orbPersonalisedGreeting,
+  type OrbGreetingStyle
+} from './orb-personalised-greeting.ts'
+import {
+  loadOrbStandalonePersonalisation,
+  type OrbProfessionalTone
+} from './orb-standalone-personalisation.ts'
 import type { ResidentialAgentId } from '@/lib/orb/residential-agents'
 
 /** Canonical roles for standalone ORB personalisation (legacy keys migrated on read). */
@@ -388,24 +397,38 @@ export function roleBasedEmptyStarters(profile: AdultProfile): string[] {
   return PRIMARY_GENERIC_STARTERS
 }
 
-export function personalisedEmptyHeading(profile: AdultProfile): string {
-  const first = profile.name?.trim().split(/\s+/)[0]
-  if (first) return `Ready when you are, ${first}.`
-  return 'Ready when you are.'
+export function personalisedEmptyHeading(
+  profile: AdultProfile,
+  options?: { hour?: number; greetingStyle?: OrbGreetingStyle; preferredName?: string }
+): string {
+  const stored = typeof window !== 'undefined' ? loadOrbStandalonePersonalisation() : null
+  const first =
+    options?.preferredName?.trim() ||
+    stored?.preferredName?.trim() ||
+    extractOrbFirstName(profile.name)
+  return orbPersonalisedGreeting({
+    firstName: first,
+    hour: options?.hour ?? new Date().getHours(),
+    style: options?.greetingStyle ?? stored?.greetingStyle
+  }).heading
 }
 
 /** Personalised empty-state welcome — calm, minimal, no sales pitch. */
 export function personalisedWelcomeMessage(
   profile: AdultProfile,
-  options?: { temporary?: boolean }
+  options?: { temporary?: boolean; hour?: number; professionalTone?: OrbProfessionalTone }
 ): { heading: string; subline: string; temporaryNote?: string } {
-  const first = profile.name?.trim().split(/\s+/)[0]
-  const heading = first ? `Ready when you are, ${first}.` : 'Ready when you are.'
+  const stored = typeof window !== 'undefined' ? loadOrbStandalonePersonalisation() : null
+  const first = stored?.preferredName?.trim() || extractOrbFirstName(profile.name)
+  const greeting = orbPersonalisedGreeting({
+    firstName: first,
+    hour: options?.hour ?? new Date().getHours(),
+    style: stored?.greetingStyle
+  })
 
   const result: { heading: string; subline: string; temporaryNote?: string } = {
-    heading,
-    subline:
-      'Ask about recording, safeguarding, regulatory practice, templates or reflective practice.'
+    heading: greeting.heading,
+    subline: greeting.subline
   }
 
   if (options?.temporary) {

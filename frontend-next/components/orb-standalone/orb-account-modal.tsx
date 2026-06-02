@@ -70,8 +70,14 @@ export function OrbAccountModal({
     return 'Inactive'
   }, [access, adminBypass, realtimeVoiceEnabled, subscriptionActive])
 
+  const isSignedIn = Boolean(onLogOut || userEmail?.trim() || adminBypass)
+
   const statusChips = [
-    { id: 'signed-in', label: 'Signed in', show: Boolean(onLogOut) },
+    { id: 'signed-in', label: 'Signed in', show: isSignedIn },
+    ...(adminBypass ? [{ id: 'admin', label: 'Admin · voice enabled', show: true as const }] : []),
+    ...(realtimeVoiceEnabled && !adminBypass
+      ? [{ id: 'voice', label: 'Voice enabled', show: true as const }]
+      : []),
     { id: 'plan', label: subscriptionLabel, show: true },
     { id: 'passkey', label: passkeyEnabled ? 'Passkey enabled' : 'Passkey not set', show: true },
     ...(profile?.roleLabel ? [{ id: 'role', label: profile.roleLabel, show: true }] : [])
@@ -215,7 +221,7 @@ export function OrbAccountModal({
               <LogOut className="h-4 w-4" />
               <span>Log out</span>
             </button>
-          ) : (
+          ) : !isSignedIn ? (
             <a
               href="/orb/login"
               className="orb-sidebar-nav-item w-full justify-start rounded-xl px-3 py-2.5"
@@ -224,7 +230,7 @@ export function OrbAccountModal({
               <Shield className="h-4 w-4" />
               <span>Sign in</span>
             </a>
-          )}
+          ) : null}
         </div>
 
         <p className="flex items-center gap-2 px-1 text-[10px] leading-4 text-[var(--orb-muted)]">
