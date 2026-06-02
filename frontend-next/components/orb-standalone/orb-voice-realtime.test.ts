@@ -26,7 +26,7 @@ describe('ORB Voice realtime provider pass', () => {
     assert.match(station, /beginOrbRealtimeVoiceConversation/)
     assert.match(station, /data-orb-voice-start-stage/)
     assert.match(station, /testMicrophoneLevel/)
-    assert.match(station, /Live ORB Voice is not available yet/)
+    assert.match(station, /Live voice is not available right now|Live ORB Voice is not available/)
     assert.doesNotMatch(station, /OrbRealtimeVoiceClient/)
     assert.doesNotMatch(station, /beginSpeechRecognitionCapture/)
   })

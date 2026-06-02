@@ -529,9 +529,20 @@ html[data-orb-residential='1'] .orb-chat-layout--residential .orb-message-assist
   height: 2.75rem;
 }
 
-.glass-orb-mark--empty {
-  width: 4.5rem;
-  height: 4.5rem;
+.glass-orb-mark--empty,
+.glass-orb-mark--home {
+  width: 4.75rem;
+  height: 4.75rem;
+}
+
+.glass-orb-mark--dictate {
+  width: 7.5rem;
+  height: 7.5rem;
+}
+
+.glass-orb-mark--voice-mobile {
+  width: min(11.25rem, 42vw);
+  height: min(11.25rem, 42vw);
 }
 
 .glass-orb-mark--lg {
@@ -821,4 +832,29 @@ html[data-orb-residential='1'] .orb-theme-light .orb-markdown-answer p,
 html[data-orb-residential='1'] .orb-theme-light .orb-markdown-answer li,
 html[data-orb-residential='1'] .orb-theme-light .orb-message-assistant .orb-message-content {
   color: var(--orb-foreground) !important;
+}
+
+/* Mobile premium — Dictate & Voice stations */
+@media (max-width: 767px) {
+  html[data-orb-residential='1'] [data-orb-panel-shell='orb-dictate'] .orb-panel-modal,
+  html[data-orb-residential='1'] [data-orb-panel-shell='orb-voice'] .orb-panel-modal {
+    width: min(calc(100vw - 1rem), 47.5rem) !important;
+    max-width: min(calc(100vw - 1rem), 47.5rem) !important;
+    max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 0.5rem) !important;
+    border-radius: 1.5rem !important;
+  }
+
+  html[data-orb-residential='1'] [data-orb-dictate-station] .orb-dictate-mobile,
+  html[data-orb-residential='1'] [data-orb-voice-station] .orb-voice-mobile {
+    min-height: 0;
+  }
+
+  html[data-orb-residential='1'] .orb-voice-mobile__controls {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+}
+
+.orb-dictate-mobile [data-orb-dictate-captured-text] {
+  min-height: 7.5rem;
+  max-height: 12rem;
 }

@@ -14,7 +14,7 @@ describe('ORB Dictate speech-first routing', () => {
   it('Start uses server realtime first; Safari avoids browser SpeechRecognition by default', () => {
     const dictate = readComponent('components/orb-standalone/orb-dictate-station.tsx')
     assert.match(dictate, /handleStartSpeechTranscript/)
-    assert.match(dictate, /Start speech transcript/)
+    assert.match(dictate, /Start recording|data-orb-dictate-primary-action/)
     assert.match(dictate, /isSafariBrowser/)
     assert.match(dictate, /OrbDictateRealtimeTranscription/)
     assert.match(dictate, /realtime_transcription/)
@@ -27,12 +27,12 @@ describe('ORB Dictate speech-first routing', () => {
 
   it('speech mode sets listening status and data attributes', () => {
     const dictate = readComponent('components/orb-standalone/orb-dictate-station.tsx')
-    assert.match(dictate, /DICTATE_LISTENING_MESSAGE|Listening — speech will appear as text/)
+    assert.match(dictate, /DICTATE_LISTENING_MESSAGE|Listening…/)
     assert.match(dictate, /data-orb-dictate-state=/)
     assert.match(dictate, /data-orb-dictate-capture-mode=/)
     assert.match(dictate, /data-orb-dictate-recording-state/)
     assert.match(dictate, /data-orb-dictate-transcript-length/)
-    assert.match(dictate, /Speech transcript captured — review before generating/)
+    assert.match(dictate, /Transcript captured|data-orb-dictate-captured-card/)
     assert.match(dictate, /DICTATE_NO_SPEECH_MESSAGE|No speech was detected/)
   })
 
@@ -64,7 +64,7 @@ describe('ORB Voice realtime availability', () => {
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
     assert.match(station, /fetchOrbVoiceRealtimeStatus|isRealtimeVoiceProvider/)
     assert.match(station, /realtimeVoiceReady/)
-    assert.match(station, /Live ORB Voice is not available yet/)
+    assert.match(station, /Live voice is not available right now|Live ORB Voice is not available/)
     assert.match(station, /voice_fake_active_prevented/)
   })
 })

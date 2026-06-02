@@ -19,9 +19,9 @@ describe('ORB Voice conversational sprint', () => {
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
     assert.match(station, /data-orb-voice-station/)
     assert.match(station, /data-orb-voice-start-stage/)
-    assert.match(station, /Start conversation/)
+    assert.match(station, /data-orb-voice-primary-action|>\s*Start\s*</)
     assert.match(station, /orbVoiceReadinessPresentation/)
-    assert.match(station, /conversational voice copilot/)
+    assert.match(station, /Talk with ORB/)
   })
 
   it('voice settings persist under orb-voice-settings key', () => {

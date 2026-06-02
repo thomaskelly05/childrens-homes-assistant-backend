@@ -3,7 +3,7 @@
 /**
  * Single living glass orb mark — sidebar, avatars, loading states.
  */
-export type GlassOrbMarkSize = 'tiny' | 'xs' | 'sm' | 'md' | 'empty' | 'lg' | 'hero'
+export type GlassOrbMarkSize = 'tiny' | 'xs' | 'sm' | 'md' | 'empty' | 'home' | 'dictate' | 'lg' | 'hero' | 'voiceMobile'
 
 export function GlassOrbMark({
   size = 'md',
@@ -23,7 +23,13 @@ export function GlassOrbMark({
           ? 'glass-orb-mark--sm'
           : size === 'empty'
             ? 'glass-orb-mark--empty'
-            : size === 'lg'
+            : size === 'home'
+              ? 'glass-orb-mark--home'
+              : size === 'dictate'
+                ? 'glass-orb-mark--dictate'
+                : size === 'voiceMobile'
+                  ? 'glass-orb-mark--voice-mobile'
+                  : size === 'lg'
               ? 'glass-orb-mark--lg'
               : size === 'hero'
                 ? 'glass-orb-mark--hero'

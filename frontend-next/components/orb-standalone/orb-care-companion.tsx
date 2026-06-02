@@ -1667,7 +1667,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
     emitOrbClientDebug({ area: 'composer', event: 'composer_mic_clicked', detail: { route: composerMicRoute, reason: composerMicReason } })
     orbMicDevLog('opening dictate', composerMicReason)
     openOrbDictatePanel()
-    setMicNotice('Dictate is open — press Start speech transcript when you are ready.')
+    setMicNotice('Dictate is open — tap Start recording when you are ready.')
     window.setTimeout(() => setMicNotice(null), 8000)
   }
 
@@ -3005,7 +3005,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                   >
                     <div className="relative flex justify-center" data-orb-empty-sphere>
                       {residentialSurface ? (
-                        <GlassOrbMark size="empty" pulse data-orb-empty-sphere-mark />
+                        <GlassOrbMark size="home" pulse data-orb-empty-sphere-mark />
                       ) : null}
                       {!residentialSurface ? (
                         <OrbGlow state="idle" interactive={false} size="dock" compactLabels />
@@ -3469,6 +3469,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           localContentMode={
             sessionGate.backendSyncState === 'offline' || sessionGate.backendSyncState === 'degraded'
           }
+          subscriptionActive={account.hasConfirmedAccess}
+          adminBypass={account.adminBypass}
+          realtimeVoiceEnabled={realtimeVoiceAvailable}
         />
       ) : null}
       {adultProfile && !residentialSurface ? (
