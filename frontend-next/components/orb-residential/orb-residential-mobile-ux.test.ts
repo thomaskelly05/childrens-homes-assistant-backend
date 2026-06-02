@@ -93,6 +93,16 @@ describe('ORB Residential mobile UX', () => {
     assert.match(sidebar, /ORB_RESIDENTIAL_TAGLINE/)
   })
 
+  it('mobile sidebar lists all apps including Dictate Review Documents Saved outputs', () => {
+    const sidebar = readComponent('components/orb-residential/orb-residential-sidebar.tsx')
+    assert.match(sidebar, /useOrbMobileViewport/)
+    assert.match(sidebar, /data-orb-sidebar-mobile-apps/)
+    assert.match(sidebar, /data-orb-sidebar-stations-mobile/)
+    for (const label of ['Dictate', 'Review', 'Documents', 'Saved outputs', 'Voice', 'Templates', 'Library', 'Skills']) {
+      assert.match(sidebar, new RegExp(label))
+    }
+  })
+
   it('profile panel uses collapsible grouped sections and status chips', () => {
     const profile = readComponent('components/orb-standalone/orb-adult-profile-drawer.tsx')
     assert.match(profile, /data-orb-profile-section-nav/)

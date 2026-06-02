@@ -42,7 +42,7 @@ export function voiceMobileStatusLine(input: {
 
 export function voiceMobileUnavailableDetail(dictateRealtimeReady?: boolean): string {
   if (dictateRealtimeReady) {
-    return 'Dictate is ready. Live conversation is still unavailable.'
+    return 'Dictate is ready. Live conversation is unavailable right now.'
   }
   return 'You can still use Dictate or type to ORB.'
 }

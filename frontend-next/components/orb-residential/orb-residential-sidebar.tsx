@@ -35,6 +35,7 @@ import {
 import { asArray } from '@/lib/orb/orb-safe-array'
 import type { AdultProfile } from '@/lib/orb/adult-profile-store'
 import { OrbSidebarChatList } from '@/components/orb-standalone/orb-sidebar-chat-menu'
+import { useOrbMobileViewport } from '@/components/orb-standalone/use-orb-mobile-viewport'
 import {
   createStandaloneProject,
   searchChats,
@@ -191,6 +192,7 @@ export function OrbResidentialSidebar({
   const [projectEditorOpen, setProjectEditorOpen] = useState(false)
   const [newProjectName, setNewProjectName] = useState('')
   const [memoryModalProject, setMemoryModalProject] = useState<StandaloneProject | null>(null)
+  const isMobile = useOrbMobileViewport()
 
   function toggleSection(section: OrbSidebarSectionKey, collapsed: boolean, setter: (v: boolean) => void) {
     const next = !collapsed
@@ -430,6 +432,42 @@ export function OrbResidentialSidebar({
           />
         </label>
 
+        {isMobile ? (
+          <div className="mb-3 shrink-0" data-orb-sidebar-mobile-apps>
+            <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--orb-muted)]">
+              Apps
+            </p>
+            <ul className="space-y-0.5" data-orb-sidebar-stations-mobile>
+              {NAV_ITEMS.map((station) => {
+                const Icon = station.icon
+                const badge =
+                  station.id === 'saved' && savedOutputsCount ? String(savedOutputsCount) : undefined
+                return (
+                  <li key={station.id}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (station.id === 'saved') onOpenSavedOutputs?.()
+                        else onOpenStation(station.id)
+                      }}
+                      className="orb-sidebar-nav-item w-full"
+                      data-orb-sidebar-station={station.id}
+                    >
+                      <Icon className="h-4 w-4 shrink-0" />
+                      <span className="flex-1 text-left text-sm">{station.label}</span>
+                      {badge ? (
+                        <span className="rounded-full bg-[var(--orb-surface-hover)] px-2 py-0.5 text-[10px]">
+                          {badge}
+                        </span>
+                      ) : null}
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        ) : null}
+
         <SidebarCollapsibleSection
           sectionKey="projects"
           title="Projects"
@@ -562,41 +600,43 @@ export function OrbResidentialSidebar({
           )}
         </SidebarCollapsibleSection>
 
-        <SidebarCollapsibleSection
-          sectionKey="apps"
-          title="Apps"
-          collapsed={appsCollapsed}
-          onToggle={() => toggleSection('apps', appsCollapsed, setAppsCollapsed)}
-        >
-          <ul className="space-y-0.5" data-orb-sidebar-stations>
-            {NAV_ITEMS.map((station) => {
-              const Icon = station.icon
-              const badge =
-                station.id === 'saved' && savedOutputsCount ? String(savedOutputsCount) : undefined
-              return (
-                <li key={station.id}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (station.id === 'saved') onOpenSavedOutputs?.()
-                      else onOpenStation(station.id)
-                    }}
-                    className="orb-sidebar-nav-item w-full"
-                    data-orb-sidebar-station={station.id}
-                  >
-                    <Icon className="h-4 w-4 shrink-0" />
-                    <span className="flex-1 text-left text-sm">{station.label}</span>
-                    {badge ? (
-                      <span className="rounded-full bg-[var(--orb-surface-hover)] px-2 py-0.5 text-[10px]">
-                        {badge}
-                      </span>
-                    ) : null}
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
-        </SidebarCollapsibleSection>
+        {!isMobile ? (
+          <SidebarCollapsibleSection
+            sectionKey="apps"
+            title="Apps"
+            collapsed={appsCollapsed}
+            onToggle={() => toggleSection('apps', appsCollapsed, setAppsCollapsed)}
+          >
+            <ul className="space-y-0.5" data-orb-sidebar-stations>
+              {NAV_ITEMS.map((station) => {
+                const Icon = station.icon
+                const badge =
+                  station.id === 'saved' && savedOutputsCount ? String(savedOutputsCount) : undefined
+                return (
+                  <li key={station.id}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (station.id === 'saved') onOpenSavedOutputs?.()
+                        else onOpenStation(station.id)
+                      }}
+                      className="orb-sidebar-nav-item w-full"
+                      data-orb-sidebar-station={station.id}
+                    >
+                      <Icon className="h-4 w-4 shrink-0" />
+                      <span className="flex-1 text-left text-sm">{station.label}</span>
+                      {badge ? (
+                        <span className="rounded-full bg-[var(--orb-surface-hover)] px-2 py-0.5 text-[10px]">
+                          {badge}
+                        </span>
+                      ) : null}
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          </SidebarCollapsibleSection>
+        ) : null}
       </div>
 
       <SidebarCollapsibleSection
