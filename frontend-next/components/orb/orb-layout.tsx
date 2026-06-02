@@ -164,9 +164,16 @@ export function OrbLayout({
         </div>
 
         {rightPanel ? (
-          <div className="orb-chat-context-panel hidden shrink-0 xl:flex" data-orb-context-panel>
-            {rightPanel}
-          </div>
+          <aside
+            className="orb-chat-context-panel hidden w-[min(100%,var(--orb-context-panel-width,22rem))] min-w-0 shrink-0 flex-col border-l border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)]/80 backdrop-blur-md xl:flex"
+            data-orb-context-panel
+            data-orb-context-panel-slot
+            aria-label="ORB contextual panel"
+          >
+            <div className="orb-context-panel-inner flex min-h-0 flex-1 flex-col overflow-hidden">
+              {rightPanel}
+            </div>
+          </aside>
         ) : null}
       </div>
     </>

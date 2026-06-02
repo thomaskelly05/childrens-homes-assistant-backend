@@ -4,7 +4,7 @@ import type { StandaloneOrbMode } from '@/lib/orb/standalone-client'
 export const ORB_RESIDENTIAL_PRODUCT_NAME = 'ORB Residential'
 export const ORB_RESIDENTIAL_TAGLINE = 'Powered by IndiCare Intelligence'
 
-export const ORB_RESIDENTIAL_EMPTY_HEADING_DESKTOP = 'What are you working on?'
+export const ORB_RESIDENTIAL_EMPTY_HEADING_DESKTOP = 'Where should we begin?'
 
 /** Calm ChatGPT-style empty heading on phone (`/orb`). */
 export const ORB_RESIDENTIAL_MOBILE_EMPTY_HEADING = 'Where should we begin?'

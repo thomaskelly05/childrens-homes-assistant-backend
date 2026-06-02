@@ -7,6 +7,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ClipboardList,
   CreditCard,
   FileCheck,
   FileText,
@@ -19,6 +20,7 @@ import {
   Save,
   Search,
   Settings,
+  Shield,
   Sparkles,
   User,
   X
@@ -26,7 +28,11 @@ import {
 
 import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
 import { OrbProjectMemoryModal } from '@/components/orb-residential/orb-project-memory-modal'
-import { ORB_RESIDENTIAL_TAGLINE } from '@/lib/orb/orb-residential-copy'
+import {
+  ORB_RESIDENTIAL_TAGLINE,
+  residentialModeDisplayLabel
+} from '@/lib/orb/orb-residential-copy'
+import type { StandaloneOrbMode } from '@/lib/orb/standalone-client'
 import {
   readOrbSidebarSectionCollapsed,
   writeOrbSidebarSectionCollapsed,
@@ -55,6 +61,32 @@ const NAV_ITEMS = [
   { id: 'documents', label: 'Documents', icon: FolderOpen },
   { id: 'saved', label: 'Saved outputs', icon: Save }
 ] as const
+
+const DESKTOP_CORE_STATION_IDS: ReadonlySet<string> = new Set(['skills', 'knowledge', 'templates'])
+const DESKTOP_CORE_NAV = NAV_ITEMS.filter((item) => DESKTOP_CORE_STATION_IDS.has(item.id))
+
+const DESKTOP_WORKSPACE_NAV: Array<{
+  id: (typeof NAV_ITEMS)[number]['id']
+  label: string
+  icon: (typeof NAV_ITEMS)[number]['icon']
+  magicNotes?: boolean
+}> = [
+  { id: 'orb_dictate', label: 'Magic Notes', icon: PenLine, magicNotes: true },
+  { id: 'orb_voice', label: 'Voice', icon: Mic },
+  { id: 'documents', label: 'Documents', icon: FolderOpen },
+  { id: 'saved', label: 'Saved Outputs', icon: Save },
+  { id: 'review', label: 'Review', icon: FileCheck }
+]
+
+const DESKTOP_INTELLIGENCE_MODES: Array<{
+  mode: StandaloneOrbMode
+  label: string
+  icon: typeof Shield
+}> = [
+  { mode: 'Ofsted Lens', label: residentialModeDisplayLabel('Ofsted Lens'), icon: ClipboardList },
+  { mode: 'Safeguarding Thinking', label: 'Safeguarding Thinking', icon: Shield },
+  { mode: 'Record This Properly', label: 'Record This Properly', icon: FileCheck }
+]
 
 const MOBILE_DRAWER_QUICK_NAV: Array<{
   id: (typeof NAV_ITEMS)[number]['id'] | 'projects'
@@ -132,6 +164,45 @@ function SidebarCollapsibleSection({
   )
 }
 
+function DesktopSidebarNavButton({
+  label,
+  icon: Icon,
+  onClick,
+  badge,
+  dataOrb,
+  stationId,
+  active
+}: {
+  label: string
+  icon: (typeof NAV_ITEMS)[number]['icon']
+  onClick: () => void
+  badge?: string
+  dataOrb?: string
+  stationId?: OrbResidentialStationId
+  active?: boolean
+}) {
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={onClick}
+        className={`orb-sidebar-nav-item w-full ${active ? 'orb-sidebar-nav-item--active' : ''}`}
+        aria-label={label}
+        {...(stationId ? { 'data-orb-sidebar-station': stationId } : {})}
+        {...(dataOrb ? { [`data-${dataOrb}`]: true } : {})}
+      >
+        <Icon className="h-4 w-4 shrink-0" aria-hidden />
+        <span className="flex-1 text-left text-sm">{label}</span>
+        {badge ? (
+          <span className="rounded-full bg-[var(--orb-surface-hover)] px-2 py-0.5 text-[10px]">
+            {badge}
+          </span>
+        ) : null}
+      </button>
+    </li>
+  )
+}
+
 function SidebarIconButton({
   label,
   onClick,
@@ -171,6 +242,8 @@ export function OrbResidentialSidebar({
   onOpenSavedOutputs,
   onOpenProfile,
   onOpenBilling,
+  onSelectMode,
+  activeMode,
   onWorkspaceChange,
   onSelectProject,
   collapsed = false,
@@ -189,6 +262,8 @@ export function OrbResidentialSidebar({
   onOpenSavedOutputs?: () => void
   onOpenProfile?: () => void
   onOpenBilling?: () => void
+  onSelectMode?: (mode: StandaloneOrbMode) => void
+  activeMode?: StandaloneOrbMode
   onWorkspaceChange: (next: StandaloneWorkspace) => void
   onSelectProject?: (projectId: string) => void
   collapsed?: boolean
@@ -385,16 +460,23 @@ export function OrbResidentialSidebar({
     )
   }
 
+  function openStation(station: OrbResidentialStationId) {
+    if (station === 'saved') onOpenSavedOutputs?.()
+    else onOpenStation(station)
+  }
+
   return (
-    <>
-      <div className="shrink-0 px-3 py-3">
+    <div className="flex h-full min-h-0 flex-col" data-orb-sidebar-panel>
+      <div className="orb-sidebar-header shrink-0 px-3 py-3" data-orb-sidebar-header>
         <div className="flex items-start gap-2.5">
           <GlassOrbMark size="sm" className="mt-0.5" pulse />
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold leading-tight text-[var(--orb-foreground)]" data-orb-sidebar-brand>
               ORB Residential
             </p>
-            <p className="orb-sidebar-powered-tagline mt-0.5 text-[10px]">{ORB_RESIDENTIAL_TAGLINE}</p>
+            <p className="orb-sidebar-powered-tagline mt-0.5 text-[10px]" data-orb-sidebar-powered>
+              {ORB_RESIDENTIAL_TAGLINE}
+            </p>
           </div>
           <div className="flex shrink-0 items-center gap-0.5">
             {onToggleCollapse ? (
@@ -423,26 +505,28 @@ export function OrbResidentialSidebar({
         <button
           type="button"
           onClick={() => onNewChat(workspace.activeProjectId)}
-          className="orb-sidebar-nav-item orb-sidebar-nav-item--active mt-2.5 w-full"
+          className="orb-sidebar-nav-item orb-sidebar-nav-item--primary mt-2.5 w-full"
           data-orb-sidebar-new-chat
+          aria-label="New chat"
         >
-          <MessageSquarePlus className="h-4 w-4" />
+          <MessageSquarePlus className="h-4 w-4" aria-hidden />
           <span>New chat</span>
         </button>
-      </div>
-
-      <div className="orb-sidebar-group min-h-0 flex-1 overflow-y-auto px-2 py-2" data-orb-sidebar-scroll>
-        <label className="mb-2 flex items-center gap-2 rounded-xl border border-[var(--orb-line)]/60 bg-[var(--orb-surface-elevated)] px-3 py-2">
+        <label className="orb-sidebar-search mt-2 flex items-center gap-2 rounded-xl border border-[var(--orb-line)]/60 bg-[var(--orb-surface-elevated)] px-3 py-2">
           <Search className="h-4 w-4 shrink-0 text-[var(--orb-muted)]" aria-hidden />
           <input
             type="search"
             value={chatSearch}
             onChange={(e) => onChatSearchChange(e.target.value)}
             placeholder="Search chats"
+            aria-label="Search chats"
             className="w-full bg-transparent text-sm text-[var(--orb-foreground)] outline-none placeholder:text-[var(--orb-muted)]"
             data-orb-sidebar-search
           />
         </label>
+      </div>
+
+      <div className="orb-sidebar-group min-h-0 flex-1 overflow-y-auto px-2 py-2" data-orb-sidebar-scroll>
 
         {isMobile ? (
           <nav className="mb-3 shrink-0 space-y-0.5" aria-label="ORB menu" data-orb-sidebar-mobile-quick-nav>
@@ -530,7 +614,7 @@ export function OrbResidentialSidebar({
                     <button
                       type="button"
                       onClick={saveProject}
-                      className="rounded-full bg-[#168bff] px-3 py-1 text-xs font-semibold text-white"
+                      className="rounded-full bg-[var(--orb-royal-blue,#168bff)] px-3 py-1 text-xs font-semibold text-white"
                     >
                       Save
                     </button>
@@ -642,83 +726,178 @@ export function OrbResidentialSidebar({
         </SidebarCollapsibleSection>
 
         {!isMobile ? (
-          <SidebarCollapsibleSection
-            sectionKey="apps"
-            title="Apps"
-            collapsed={appsCollapsed}
-            onToggle={() => toggleSection('apps', appsCollapsed, setAppsCollapsed)}
-          >
-            <ul className="space-y-0.5" data-orb-sidebar-stations>
-              {NAV_ITEMS.map((station) => {
-                const Icon = station.icon
-                const badge =
-                  station.id === 'saved' && savedOutputsCount ? String(savedOutputsCount) : undefined
-                return (
-                  <li key={station.id}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (station.id === 'saved') onOpenSavedOutputs?.()
-                        else onOpenStation(station.id)
-                      }}
-                      className="orb-sidebar-nav-item w-full"
-                      data-orb-sidebar-station={station.id}
-                    >
-                      <Icon className="h-4 w-4 shrink-0" />
-                      <span className="flex-1 text-left text-sm">{station.label}</span>
-                      {badge ? (
-                        <span className="rounded-full bg-[var(--orb-surface-hover)] px-2 py-0.5 text-[10px]">
-                          {badge}
-                        </span>
-                      ) : null}
-                    </button>
-                  </li>
-                )
-              })}
-            </ul>
-          </SidebarCollapsibleSection>
+          <nav className="mb-2 space-y-3" aria-label="ORB desktop navigation" data-orb-sidebar-desktop-nav>
+            <SidebarCollapsibleSection
+              sectionKey="apps"
+              title="Core"
+              collapsed={appsCollapsed}
+              onToggle={() => toggleSection('apps', appsCollapsed, setAppsCollapsed)}
+            >
+              <ul className="space-y-0.5" data-orb-sidebar-stations data-orb-sidebar-section="core">
+                {DESKTOP_CORE_NAV.map((station) => (
+                  <DesktopSidebarNavButton
+                    key={station.id}
+                    label={station.label}
+                    icon={station.icon}
+                    stationId={station.id}
+                    onClick={() => openStation(station.id)}
+                  />
+                ))}
+              </ul>
+            </SidebarCollapsibleSection>
+
+            <div data-orb-sidebar-section="intelligence">
+              <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--orb-muted)]">
+                Intelligence
+              </p>
+              <ul className="mt-1 space-y-0.5" data-orb-sidebar-intelligence>
+                {DESKTOP_INTELLIGENCE_MODES.map((entry) => (
+                  <DesktopSidebarNavButton
+                    key={entry.mode}
+                    label={entry.label}
+                    icon={entry.icon}
+                    active={activeMode === entry.mode}
+                    onClick={() => onSelectMode?.(entry.mode)}
+                    dataOrb={`orb-sidebar-mode-${entry.mode.replace(/\s+/g, '-').toLowerCase()}`}
+                  />
+                ))}
+              </ul>
+            </div>
+
+            <div data-orb-sidebar-section="workspace">
+              <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--orb-muted)]">
+                Workspace
+              </p>
+              <ul className="mt-1 space-y-0.5" data-orb-sidebar-workspace>
+                {DESKTOP_WORKSPACE_NAV.map((station) => (
+                  <DesktopSidebarNavButton
+                    key={station.id}
+                    label={station.label}
+                    icon={station.icon}
+                    stationId={station.id}
+                    badge={
+                      station.id === 'saved' && savedOutputsCount
+                        ? String(savedOutputsCount)
+                        : undefined
+                    }
+                    onClick={() => openStation(station.id)}
+                    {...(station.magicNotes ? { dataOrb: 'orb-sidebar-magic-notes' } : {})}
+                  />
+                ))}
+              </ul>
+            </div>
+
+            <div data-orb-sidebar-section="profiles">
+              <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--orb-muted)]">
+                Profiles
+              </p>
+              <ul className="mt-1 space-y-0.5">
+                <DesktopSidebarNavButton
+                  label={adultProfile?.name?.trim() || 'Your profile'}
+                  icon={User}
+                  onClick={() => onOpenProfile?.()}
+                  dataOrb="orb-sidebar-profile"
+                />
+              </ul>
+            </div>
+          </nav>
         ) : null}
       </div>
 
-      <SidebarCollapsibleSection
-        sectionKey="account"
-        title="Account / Workspace"
-        collapsed={accountCollapsed}
-        onToggle={() => toggleSection('account', accountCollapsed, setAccountCollapsed)}
+      <div
+        className="orb-sidebar-footer mt-auto shrink-0 border-t border-[var(--orb-line)]/40 px-2 py-2"
+        data-orb-sidebar-account-footer
       >
-        <div className="shrink-0 space-y-0.5 p-2 pt-0" data-orb-sidebar-bottom>
-          <button
-            type="button"
-            onClick={() => onOpenProfile?.()}
-            className="orb-sidebar-nav-item w-full"
-            data-orb-sidebar-profile
+        {isMobile ? (
+          <SidebarCollapsibleSection
+            sectionKey="account"
+            title="Account / Workspace"
+            collapsed={accountCollapsed}
+            onToggle={() => toggleSection('account', accountCollapsed, setAccountCollapsed)}
           >
-            <User className="h-4 w-4" />
-            <span className="truncate">{adultProfile?.name?.trim() || 'Profile'}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => onOpenSettings?.()}
-            className="orb-sidebar-nav-item w-full"
-            data-orb-sidebar-settings
-          >
-            <Settings className="h-4 w-4" />
-            <span>Settings</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => onOpenBilling?.()}
-            className="orb-sidebar-nav-item w-full"
-            data-orb-sidebar-billing
-          >
-            <CreditCard className="h-4 w-4" />
-            <span>Billing</span>
-          </button>
-          <Link href="/os" className="orb-sidebar-nav-item w-full" data-orb-sidebar-os-link>
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-sky-400/90">IndiCare OS</span>
-          </Link>
-        </div>
-      </SidebarCollapsibleSection>
+            <div className="space-y-0.5 pt-0" data-orb-sidebar-bottom>
+              <button
+                type="button"
+                onClick={() => onOpenProfile?.()}
+                className="orb-sidebar-nav-item w-full"
+                data-orb-sidebar-profile
+                aria-label="Open profile"
+              >
+                <User className="h-4 w-4" aria-hidden />
+                <span className="truncate">{adultProfile?.name?.trim() || 'Profile'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onOpenSettings?.()}
+                className="orb-sidebar-nav-item w-full"
+                data-orb-sidebar-settings
+                aria-label="Open settings"
+              >
+                <Settings className="h-4 w-4" aria-hidden />
+                <span>Settings</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onOpenBilling?.()}
+                className="orb-sidebar-nav-item w-full"
+                data-orb-sidebar-billing
+                aria-label="Open billing"
+              >
+                <CreditCard className="h-4 w-4" aria-hidden />
+                <span>Billing</span>
+              </button>
+              <Link href="/os" className="orb-sidebar-nav-item w-full" data-orb-sidebar-os-link>
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-sky-400/90">
+                  IndiCare OS
+                </span>
+              </Link>
+            </div>
+          </SidebarCollapsibleSection>
+        ) : (
+          <nav className="space-y-0.5" aria-label="Account and settings" data-orb-sidebar-bottom>
+            <button
+              type="button"
+              onClick={() => onOpenProfile?.()}
+              className="orb-sidebar-nav-item w-full"
+              data-orb-sidebar-profile
+              aria-label="Open profile"
+            >
+              <User className="h-4 w-4" aria-hidden />
+              <span className="truncate">{adultProfile?.name?.trim() || 'Profile'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onOpenSettings?.()}
+              className="orb-sidebar-nav-item w-full"
+              data-orb-sidebar-settings
+              aria-label="Open settings"
+            >
+              <Settings className="h-4 w-4" aria-hidden />
+              <span>Settings</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onOpenBilling?.()}
+              className="orb-sidebar-nav-item w-full"
+              data-orb-sidebar-billing
+              aria-label="Open billing"
+            >
+              <CreditCard className="h-4 w-4" aria-hidden />
+              <span>Billing</span>
+            </button>
+            <Link
+              href="/os"
+              className="orb-sidebar-nav-item w-full"
+              data-orb-sidebar-os-link
+              aria-label="Open IndiCare OS"
+            >
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--orb-royal-blue,#168bff)]/90">
+                IndiCare OS
+              </span>
+            </Link>
+          </nav>
+        )}
+      </div>
 
       <OrbProjectMemoryModal
         open={Boolean(memoryModalProject)}
@@ -729,6 +908,6 @@ export function OrbResidentialSidebar({
           if (memoryModalProject) saveProjectMemory(memoryModalProject.id, memory)
         }}
       />
-    </>
+    </div>
   )
 }
