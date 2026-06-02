@@ -28,7 +28,10 @@ export function OrbAccountModal({
   passkeyEnabled,
   projectCount = 0,
   savedOutputsCount = 0,
-  localContentMode = false
+  localContentMode = false,
+  subscriptionActive = false,
+  adminBypass = false,
+  realtimeVoiceEnabled = false
 }: {
   open: boolean
   onClose: () => void
@@ -43,6 +46,9 @@ export function OrbAccountModal({
   savedOutputsCount?: number
   /** True when backend session is unavailable but local ORB content remains. */
   localContentMode?: boolean
+  subscriptionActive?: boolean
+  adminBypass?: boolean
+  realtimeVoiceEnabled?: boolean
 }) {
   const [access, setAccess] = useState<OrbAccessPayload | null>(null)
 
@@ -57,11 +63,12 @@ export function OrbAccountModal({
   const email = userEmail?.trim() || null
 
   const subscriptionLabel = useMemo(() => {
+    if (adminBypass && realtimeVoiceEnabled) return 'Admin · voice enabled'
     if (access?.subscription?.status) return access.subscription.status
     if (access?.trial?.active) return 'Trial active'
-    if (access?.can_use_orb) return 'Subscribed'
+    if (access?.can_use_orb || subscriptionActive) return 'Subscribed'
     return 'Inactive'
-  }, [access])
+  }, [access, adminBypass, realtimeVoiceEnabled, subscriptionActive])
 
   const statusChips = [
     { id: 'signed-in', label: 'Signed in', show: Boolean(onLogOut) },
@@ -79,8 +86,8 @@ export function OrbAccountModal({
       panelId="account"
       size="standard"
     >
-      <div className="space-y-5 p-4" data-orb-account-modal>
-        <div className="rounded-xl border border-[var(--orb-line)]/60 bg-[var(--orb-surface-elevated)] px-4 py-4">
+      <div className="space-y-4 p-3 sm:p-4" data-orb-account-modal>
+        <div className="rounded-2xl border border-[var(--orb-line)]/60 bg-[var(--orb-surface-elevated)] px-3 py-3 sm:px-4 sm:py-4">
           <p className="text-lg font-semibold text-[var(--orb-foreground)]" data-orb-account-name>
             {displayName}
           </p>
@@ -114,20 +121,20 @@ export function OrbAccountModal({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 text-center text-xs" data-orb-account-stats>
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] px-3 py-3 shadow-inner shadow-black/10">
+        <div className="grid grid-cols-2 gap-2 text-center text-xs sm:gap-3" data-orb-account-stats>
+          <div className="rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)] px-2.5 py-2.5 sm:px-3 sm:py-3">
             <p className="text-[10px] uppercase tracking-wide text-[var(--orb-muted)]">Plan</p>
             <p className="mt-0.5 font-semibold capitalize text-[var(--orb-foreground)]" data-orb-account-subscription>
               {subscriptionLabel}
             </p>
           </div>
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] px-3 py-3 shadow-inner shadow-black/10">
+          <div className="rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)] px-2.5 py-2.5 sm:px-3 sm:py-3">
             <p className="text-[10px] uppercase tracking-wide text-[var(--orb-muted)]">Projects</p>
             <p className="mt-0.5 font-semibold text-[var(--orb-foreground)]" data-orb-account-project-count>
               {projectCount}
             </p>
           </div>
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] px-3 py-3 shadow-inner shadow-black/10">
+          <div className="rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)] px-2.5 py-2.5 sm:px-3 sm:py-3">
             <p className="text-[10px] uppercase tracking-wide text-[var(--orb-muted)]">Saved outputs</p>
             <p className="mt-0.5 font-semibold text-[var(--orb-foreground)]" data-orb-account-saved-count>
               {savedOutputsCount}

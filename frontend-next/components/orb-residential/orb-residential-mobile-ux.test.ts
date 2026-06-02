@@ -54,7 +54,7 @@ describe('ORB Residential mobile UX', () => {
     const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
     const mark = readComponent('components/orb-residential/ui/glass-orb-mark.tsx')
     const premiumCss = readComponent('app/orb/orb-premium-tokens.css')
-    assert.match(companion, /GlassOrbMark size="empty"/)
+    assert.match(companion, /GlassOrbMark size="(empty|home)"/)
     assert.match(companion, /data-orb-residential-empty/)
     assert.match(mark, /glass-orb-mark--empty/)
     assert.match(premiumCss, /glass-orb-mark--empty/)

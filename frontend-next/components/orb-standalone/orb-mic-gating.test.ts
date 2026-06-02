@@ -32,7 +32,7 @@ describe('ORB mic gating and routing', () => {
     )
     assert.equal(ui.state, 'subscription_inactive')
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /Activate subscription to use live voice/)
+    assert.match(station, /startDisabled|liveVoiceAllowed/)
     assert.match(station, /disabled=\{startDisabled\}/)
     assert.match(station, /data-orb-voice-start-stage/)
   })
@@ -109,7 +109,7 @@ describe('ORB mic gating and routing', () => {
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
     assert.match(station, /Open Dictate/)
     assert.match(station, /data-orb-voice-open-dictate/)
-    assert.match(station, /Live ORB Voice is not available yet/)
+    assert.match(station, /Live voice is not available right now|Live ORB Voice is not available/)
   })
 
   it('composer mic supports forced mic query routing', () => {

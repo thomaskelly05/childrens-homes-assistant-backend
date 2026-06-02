@@ -53,12 +53,11 @@ export function mapRecordingUiToDictateState(input: {
   return 'idle'
 }
 
-export const DICTATE_READY_MESSAGE = 'Ready to transcribe. Press Start speech transcript.'
+export const DICTATE_READY_MESSAGE = 'Ready to record'
 
-export const DICTATE_LISTENING_MESSAGE = 'Listening — speech will appear as text'
+export const DICTATE_LISTENING_MESSAGE = 'Listening…'
 
-export const DICTATE_TRANSCRIPT_READY_MESSAGE =
-  'Speech transcript captured — review before generating.'
+export const DICTATE_TRANSCRIPT_READY_MESSAGE = 'Transcript captured'
 
 export const DICTATE_NO_SPEECH_MESSAGE =
   'No speech was detected. Try again, upload audio, or paste a transcript.'
@@ -69,4 +68,4 @@ export const DICTATE_AUDIO_FALLBACK_FAILED_MESSAGE =
 export const DICTATE_REALTIME_NOT_CONFIGURED_MESSAGE =
   'Realtime transcription is not configured. Paste transcript or upload audio.'
 
-export const DICTATE_REALTIME_LISTENING_MESSAGE = 'Listening — live transcript via server realtime'
+export const DICTATE_REALTIME_LISTENING_MESSAGE = 'Listening…'

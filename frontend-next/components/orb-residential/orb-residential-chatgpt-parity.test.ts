@@ -88,7 +88,7 @@ describe('ORB Residential ChatGPT parity', () => {
     assert.match(mark, /glass-orb-mark--empty/)
     assert.match(mark, /glass-orb-mark--hero/)
     const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
-    assert.match(companion, /GlassOrbMark size="empty"/)
+    assert.match(companion, /GlassOrbMark size="(empty|home)"/)
   })
 
   it('station apps use OrbAppModal pattern not right drawer on residential', () => {

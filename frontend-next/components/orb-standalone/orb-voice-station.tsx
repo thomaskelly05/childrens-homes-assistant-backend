@@ -31,6 +31,12 @@ import {
 } from '@/lib/orb/voice/orb-realtime-availability'
 import { emitOrbClientDebug } from '@/lib/orb/orb-client-debug'
 import {
+  voiceMobilePrimaryButton,
+  voiceMobileStatusLine,
+  voiceMobileUnavailableDetail,
+  type VoiceMobileSessionPhase
+} from '@/lib/orb/voice/orb-voice-mobile-copy'
+import {
   assessOrbVoiceReadiness,
   detectSpeechRecognitionSupported,
   orbVoiceReadinessPresentation,
@@ -46,14 +52,9 @@ type VoiceStartStage = 'idle' | 'starting_browser_speech' | 'active' | 'failed'
 const SAFETY_COPY =
   'ORB Voice supports professional judgement. If there is immediate risk, follow your home\'s procedures and contact emergency services where required.'
 
-const READY_HEADLINE = 'Start conversation'
-const READY_DETAIL = 'ORB will ask for microphone access when you start.'
+const LIVE_VOICE_UNAVAILABLE_HEADLINE = 'Live voice is not available right now'
 
-const LIVE_VOICE_UNAVAILABLE_HEADLINE =
-  'Live ORB Voice is not available yet. Configure realtime voice to use this.'
-
-const LIVE_VOICE_UNAVAILABLE_DETAIL =
-  'Set OPENAI_API_KEY, ORB_REALTIME_ENABLED=true, and ORB_VOICE_REALTIME_PROVIDER=openai on the server. Use ORB Dictate for speech-to-text meanwhile.'
+const LIVE_VOICE_UNAVAILABLE_DETAIL = 'Use Dictate or type instead'
 
 const SPEECH_RECOGNITION_FALLBACK =
   'Live voice is temporarily unavailable; Dictate still works.'
@@ -112,7 +113,7 @@ function statusLabel(status: OrbVoiceSessionStatus, permissionDenied: boolean): 
     case 'error':
       return SPEECH_RECOGNITION_FALLBACK
     default:
-      return READY_HEADLINE
+      return 'Tap to start'
   }
 }
 
@@ -407,45 +408,60 @@ export function OrbVoiceStation({
   }
 
   const startDisabled = !liveVoiceAllowed || !realtimeVoiceReady
-  const startButtonLabel = !liveVoiceAllowed
-    ? 'Activate subscription to use live voice'
-    : !realtimeVoiceReady
-      ? 'Live ORB Voice not configured yet'
-      : 'Start conversation'
 
   const showRealtimeUnavailable = realtimeVoiceAvailable === false && !voiceSessionLive
 
+  const mobilePhase: VoiceMobileSessionPhase = showRealtimeUnavailable
+    ? 'unavailable'
+    : voiceStarting
+      ? 'connecting'
+      : voiceStartStage === 'failed'
+        ? 'error'
+        : voice.speaking
+          ? 'speaking'
+          : pending
+            ? 'thinking'
+            : voiceSessionLive && (voice.listening || browserCaptureActive)
+              ? 'listening'
+              : voiceSessionLive
+                ? 'listening'
+                : 'idle'
+
+  const mobileStatus = voiceMobileStatusLine({
+    phase: mobilePhase,
+    permissionDenied: permissionDenied && !voiceSessionLive,
+    blockedReason: startBlockedMessage
+  })
+
+  const mobilePrimaryLabel = voiceMobilePrimaryButton({
+    sessionLive: voiceSessionLive,
+    starting: voiceStarting
+  })
+
+  const showAllowMicrophone =
+    readinessUi.showAllowMicrophone && !voiceSessionLive && micPermission !== 'granted'
+
   const headline = showRealtimeUnavailable
     ? LIVE_VOICE_UNAVAILABLE_HEADLINE
-    : voiceStarting
-      ? 'Starting realtime voice session…'
-      : voiceStartStage === 'failed'
-        ? fallbackNotice || SPEECH_RECOGNITION_FALLBACK
-        : voiceSessionLive
-          ? statusLabel(status, permissionDenied)
-          : canStartVoice
-            ? READY_HEADLINE
-            : readinessUi.headline
+    : voiceSessionLive
+      ? statusLabel(status, permissionDenied)
+      : mobileStatus
 
   const detail = showRealtimeUnavailable
-    ? LIVE_VOICE_UNAVAILABLE_DETAIL
-    : voiceStarting
-      ? 'Allow microphone access if prompted, or open Dictate.'
-      : voiceStartStage === 'failed'
-        ? SPEECH_RECOGNITION_DETAIL
-        : voiceSessionLive
-          ? voice.settings.pushToTalk
-            ? 'Push-to-talk — use Speak when you are ready.'
-            : 'Hands-free in this session — ORB will listen again after speaking.'
-          : canStartVoice
-            ? READY_DETAIL
-            : readinessUi.detail
+    ? voiceMobileUnavailableDetail()
+    : voiceSessionLive
+      ? voice.settings.pushToTalk
+        ? 'Push-to-talk — tap Speak when ready.'
+        : 'Speak naturally — ORB will respond.'
+      : voiceStarting
+        ? 'Connecting…'
+        : readinessUi.detail
 
   return (
     <OrbAppModal
       open={open}
       title="ORB Voice"
-      subtitle="A conversational voice copilot for residential childcare."
+      subtitle="Talk with ORB."
       onClose={() => {
         resetSession()
         onClose()
@@ -454,7 +470,7 @@ export function OrbVoiceStation({
       size="wide"
     >
       <div
-        className="orb-voice-room pointer-events-auto flex flex-col items-center p-6 pb-8"
+        className="orb-voice-room pointer-events-auto flex min-h-0 flex-1 flex-col"
         data-orb-voice-station
         data-orb-voice-state={voiceState}
         data-orb-voice-start-stage={voiceStartStage}
@@ -468,6 +484,143 @@ export function OrbVoiceStation({
         data-orb-voice-phase={voice.phase}
         data-orb-voice-capture-state={voice.voiceCaptureState}
       >
+        <div className="orb-voice-mobile flex min-h-0 flex-1 flex-col md:hidden">
+          <div className="flex min-h-0 flex-1 flex-col items-center overflow-y-auto px-4 pt-4 pb-2">
+            <GlassOrbMark
+              size="voiceMobile"
+              pulse={voiceSessionLive && (status === 'listening' || status === 'thinking' || status === 'speaking')}
+              className={voiceSessionLive ? orbVisualClass(status) : 'glass-orb-mark--voice glass-orb-mark--idle'}
+            />
+            <p className="mt-5 text-center text-sm font-medium text-[var(--orb-foreground)]" data-orb-voice-status-label>
+              {mobileStatus}
+            </p>
+            {!showRealtimeUnavailable && voiceSessionLive ? (
+              <p className="mt-1 text-center text-xs text-[var(--orb-muted)]" data-orb-voice-mic-status>
+                {detail}
+              </p>
+            ) : showRealtimeUnavailable ? (
+              <p className="mt-1 text-center text-xs text-[var(--orb-muted)]">{voiceMobileUnavailableDetail()}</p>
+            ) : null}
+
+            {showAllowMicrophone ? (
+              <button
+                type="button"
+                onClick={() => void handleAllowMicrophone()}
+                className="mt-3 rounded-full border border-sky-400/40 bg-sky-500/10 px-4 py-2 text-xs font-medium text-sky-800 dark:text-sky-100"
+                data-orb-voice-allow-mic
+              >
+                Allow microphone
+              </button>
+            ) : null}
+
+            {transcriptAvailable ? (
+              <div className="orb-voice-transcript mt-5 w-full max-w-md space-y-2" data-orb-voice-transcript>
+                {turns
+                  .filter((line) => line.role === 'user' || line.role === 'assistant')
+                  .map((line) => (
+                    <div
+                      key={line.id}
+                      className={`rounded-2xl border px-3 py-2.5 ${
+                        line.role === 'user'
+                          ? 'ml-6 border-[var(--orb-line)]/40 bg-[var(--orb-primary-soft)]/40'
+                          : 'mr-6 border-[var(--orb-line)]/40 bg-[var(--orb-surface-elevated)]'
+                      }`}
+                    >
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-[#168bff]">
+                        {line.role === 'user' ? 'You' : 'ORB'}
+                      </p>
+                      <p className="mt-1 text-sm leading-6 text-[var(--orb-foreground)]">{line.text}</p>
+                    </div>
+                  ))}
+              </div>
+            ) : null}
+
+            {developerMode ? (
+              <button
+                type="button"
+                className="mt-3 text-[10px] text-[var(--orb-muted)] underline"
+                onClick={() => void handleTestMicrophone()}
+              >
+                Diagnostics · test microphone
+              </button>
+            ) : null}
+          </div>
+
+          <div className="orb-voice-mobile__controls shrink-0 space-y-2 border-t border-[var(--orb-line)]/30 px-4 py-3">
+            {showRealtimeUnavailable ? (
+              <div className="flex flex-col gap-2">
+                {onOpenDictate ? (
+                  <button
+                    type="button"
+                    data-orb-voice-open-dictate
+                    onClick={() => onOpenDictate('', undefined)}
+                    className="w-full rounded-full bg-gradient-to-r from-[#168bff] to-[#0d5fcc] py-3 text-sm font-semibold text-white"
+                  >
+                    Open Dictate
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => {
+                    onTypeInstead?.()
+                    onClose()
+                  }}
+                  className="w-full rounded-full border border-[var(--orb-line)] py-2.5 text-sm text-[var(--orb-muted)]"
+                >
+                  Type instead
+                </button>
+              </div>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  data-orb-voice-primary-action
+                  disabled={voiceStarting || (mobilePrimaryLabel === 'Start' && startDisabled)}
+                  onClick={() => {
+                    if (voiceSessionLive) handleEnd()
+                    else void handleStart()
+                  }}
+                  className="w-full rounded-full bg-gradient-to-r from-[#168bff] to-[#0d5fcc] py-3 text-sm font-semibold text-white shadow-lg shadow-sky-500/20 disabled:opacity-50"
+                >
+                  {voiceStarting ? 'Connecting…' : mobilePrimaryLabel}
+                </button>
+                <div className="flex gap-2">
+                  {onOpenDictate ? (
+                    <button
+                      type="button"
+                      className="flex-1 rounded-full border border-[var(--orb-line)]/60 py-2 text-xs text-[var(--orb-foreground)]"
+                      onClick={() => onOpenDictate('', undefined)}
+                    >
+                      Open Dictate
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    className="flex-1 rounded-full border border-[var(--orb-line)]/60 py-2 text-xs text-[var(--orb-muted)]"
+                    onClick={() => {
+                      onTypeInstead?.()
+                      onClose()
+                    }}
+                  >
+                    Type instead
+                  </button>
+                </div>
+                {transcriptAvailable && onOpenDictate && !voiceSessionLive ? (
+                  <button
+                    type="button"
+                    data-orb-voice-to-dictate
+                    className="w-full rounded-full border border-[var(--orb-line)]/60 py-2 text-xs text-[var(--orb-primary)]"
+                    onClick={() => onOpenDictate(formatTurnsAsTranscript(turns))}
+                  >
+                    Send transcript to Dictate
+                  </button>
+                ) : null}
+              </>
+            )}
+          </div>
+        </div>
+
+        <div className="hidden flex-col items-center p-6 pb-8 md:flex">
         <div className="flex w-full max-w-lg flex-wrap items-center justify-center gap-2">
           <label className="sr-only" htmlFor="orb-voice-mode-select">
             Voice mode
@@ -557,7 +710,7 @@ export function OrbVoiceStation({
         ) : null}
 
         <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-          {readinessUi.showTestMicrophone ? (
+          {developerMode && readinessUi.showTestMicrophone ? (
             <button type="button" onClick={() => void handleTestMicrophone()} className="rounded-full border border-[var(--orb-line)] px-4 py-2 text-xs font-medium text-[var(--orb-foreground)]">
               Test microphone
             </button>
@@ -646,9 +799,10 @@ export function OrbVoiceStation({
               onClick={() => void handleStart()}
               disabled={startDisabled}
               aria-disabled={startDisabled}
+              data-orb-voice-primary-action
               className="rounded-full bg-gradient-to-r from-[#168bff] to-[#0d5fcc] px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-sky-500/25 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {startButtonLabel}
+              Start
             </button>
           )}
         </div>
@@ -686,6 +840,7 @@ export function OrbVoiceStation({
         ) : null}
 
         <p className="mt-6 max-w-md text-center text-[10px] leading-4 text-[var(--orb-muted)]">{SAFETY_COPY}</p>
+        </div>
       </div>
     </OrbAppModal>
   )

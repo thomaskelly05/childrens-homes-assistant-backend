@@ -75,18 +75,18 @@ export function OrbStandalonePanelShell({
       <div
         className={
           isCenter
-            ? `orb-panel-modal pointer-events-auto flex max-h-[min(calc(100dvh-2rem),56rem)] w-full flex-col overflow-hidden rounded-2xl border border-[var(--orb-line)] bg-[var(--orb-surface)] shadow-2xl ${sizeClass}`
+            ? `orb-panel-modal pointer-events-auto flex max-h-[min(calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1rem),56rem)] w-[min(calc(100vw-1rem),47.5rem)] max-w-[min(calc(100vw-1rem),47.5rem)] flex-col overflow-hidden rounded-3xl border border-[var(--orb-line)] bg-[var(--orb-surface)] shadow-2xl max-sm:rounded-3xl ${sizeClass}`
             : `orb-panel-drawer pointer-events-auto flex h-full w-full flex-col border-l border-[var(--orb-line)] bg-[var(--orb-surface)] shadow-2xl max-md:max-h-[100dvh] md:max-h-[100dvh] ${
                 wide ? 'max-w-4xl' : 'max-w-xl'
               }`
         }
         onClick={(event) => event.stopPropagation()}
       >
-        <header className="flex shrink-0 items-center justify-between gap-3 border-b border-cyan-500/10 px-5 py-4 pt-[max(0.75rem,env(safe-area-inset-top))]">
-          <div className="min-w-0">
-            <h2 className="truncate text-base font-semibold tracking-tight text-[var(--orb-foreground)]">{title}</h2>
+        <header className="sticky top-0 z-10 flex shrink-0 items-center justify-between gap-3 border-b border-cyan-500/10 bg-[var(--orb-surface)] px-5 py-4 pt-[max(0.75rem,env(safe-area-inset-top))]">
+          <div className="min-w-0 flex-1">
+            <h2 className="text-base font-semibold tracking-tight text-[var(--orb-foreground)]">{title}</h2>
             {subtitle ? (
-              <p className="mt-0.5 truncate text-sm leading-6 text-[var(--orb-muted)]">{subtitle}</p>
+              <p className="mt-0.5 text-sm leading-snug text-[var(--orb-muted)] [text-wrap:pretty]">{subtitle}</p>
             ) : null}
           </div>
           <button

@@ -140,7 +140,7 @@ describe('ORB voice hook confirmed capture', () => {
     const dictate = readComponent('components/orb-standalone/orb-dictate-station.tsx')
     assert.match(dictate, /setRecordingUiState\('starting'\)/)
     assert.match(dictate, /setRecordingUiState\('recording'\)/)
-    assert.match(dictate, /Starting speech transcript/)
+    assert.match(dictate, /Starting…|captureStarting/)
     assert.match(dictate, /SPEECH_START_FAILED_MESSAGE/)
   })
 

@@ -50,6 +50,6 @@ test('voice station requires explicit start', () => {
   )
   assert.match(voice, /orb-voice-readiness|orbVoiceReadinessPresentation/)
   assert.match(voice, /data-orb-voice-start/)
-  assert.match(voice, /Start conversation/)
+  assert.match(voice, /data-orb-voice-primary-action|>\s*Start\s*</)
   assert.match(voice, /Test microphone/)
 })
