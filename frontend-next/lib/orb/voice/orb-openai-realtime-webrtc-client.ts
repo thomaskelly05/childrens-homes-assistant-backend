@@ -46,6 +46,9 @@ const HANDLED_REALTIME_EVENTS = new Set([
   'session.updated',
   'input_audio_buffer.speech_started',
   'input_audio_buffer.speech_stopped',
+  'input_audio_buffer.committed',
+  'conversation.item.added',
+  'conversation.item.done',
   'conversation.item.input_audio_transcription.delta',
   'conversation.item.input_audio_transcription.completed',
   'response.created',
@@ -267,7 +270,7 @@ export class OrbOpenAIRealtimeWebRTCClient {
     const sent = this.send({
       type: 'response.create',
       response: {
-        modalities: ['audio', 'text']
+        output_modalities: ['audio', 'text']
       }
     })
     if (!sent) return
@@ -441,7 +444,7 @@ export class OrbOpenAIRealtimeWebRTCClient {
     this.send({
       type: 'response.create',
       response: {
-        modalities: ['audio', 'text'],
+        output_modalities: ['audio', 'text'],
         instructions: `Speak this answer calmly in British English. Keep it concise and conversational. Do not add extra commentary. Say: ${JSON.stringify(trimmed)}`
       }
     })
