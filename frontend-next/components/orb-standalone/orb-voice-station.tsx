@@ -84,6 +84,7 @@ import {
 
 type VoiceApi = ReturnType<typeof useStandaloneOrbVoice>
 type VoiceStartStage = 'idle' | 'starting' | 'active' | 'failed'
+type BrowserStartStage = 'idle' | 'starting' | 'active' | 'failed'
 
 const SAFETY_COPY =
   'ORB Voice supports professional judgement. If there is immediate risk, follow your home\'s procedures and contact emergency services where required.'
@@ -215,6 +216,7 @@ export function OrbVoiceStation({
   const [audioPlaybackBlocked, setAudioPlaybackBlocked] = useState(false)
   const [listeningHint, setListeningHint] = useState(false)
   const [voiceStartError, setVoiceStartError] = useState<string | null>(null)
+  const [browserStartStage, setBrowserStartStage] = useState<BrowserStartStage>('idle')
   const assistantBufferRef = useRef('')
   const statusFetchedRef = useRef(false)
 
@@ -283,7 +285,7 @@ export function OrbVoiceStation({
 
   const browserTranscriptText = (voice.transcript || voice.displayTranscript || '').trim()
 
-  const launchUiState = resolveOrbVoiceLaunchUiState({
+  const resolvedLaunchUiState = resolveOrbVoiceLaunchUiState({
     launchMode,
     captureState: voice.voiceCaptureState,
     phase: voice.phase,
@@ -293,6 +295,11 @@ export function OrbVoiceStation({
     error: voice.error,
     hasTranscript: Boolean(browserTranscriptText)
   })
+
+  const launchUiState =
+    launchMode === 'browser_ptt' && browserStartStage === 'starting' && resolvedLaunchUiState === 'ready'
+      ? 'starting'
+      : resolvedLaunchUiState
 
   const useBrowserLaunch = launchMode === 'browser_ptt'
 
@@ -333,7 +340,7 @@ export function OrbVoiceStation({
     voiceStartError ||
     voice.error ||
     (voice.voiceCaptureState === 'requesting_permission' ? 'Checking microphone…' : null) ||
-    (voice.voiceCaptureState === 'starting' ? 'Starting voice…' : null)
+    (voice.voiceCaptureState === 'starting' || browserStartStage === 'starting' ? 'Starting voice…' : null)
 
   const statusLine =
     browserStatusOverride ||
@@ -395,6 +402,7 @@ export function OrbVoiceStation({
     setStartBlockedMessage(null)
     setMicTestMessage(null)
     setVoiceStartError(null)
+    setBrowserStartStage('idle')
     assistantBufferRef.current = ''
     voice.cancelListening()
     voice.cancelSpeaking()
@@ -581,14 +589,6 @@ export function OrbVoiceStation({
     setAudioPlaybackBlocked(false)
     setListeningHint(false)
 
-    try {
-      const preUnlock = new Audio()
-      preUnlock.muted = true
-      await preUnlock.play()
-    } catch {
-      /* Safari may block until session audio — Tap to hear ORB fallback */
-    }
-
     if (uiState === 'unauthenticated') {
       onSignIn?.()
       return
@@ -740,6 +740,8 @@ export function OrbVoiceStation({
     }
     voice.clearTranscript()
     setVoiceStartError(null)
+    setBrowserStartStage('starting')
+    setSessionStartedAt(new Date().toISOString())
     emitOrbClientDebug({
       area: 'voice',
       event: 'voice_start_browser_fallback_start_called',
@@ -749,9 +751,11 @@ export function OrbVoiceStation({
       mode: voice.settings.pushToTalk ? 'active' : 'continuous'
     })
     if (started) {
+      setBrowserStartStage('active')
       emitOrbClientDebug({ area: 'voice', event: 'voice_start_browser_fallback_success', detail: {} })
       return
     }
+    setBrowserStartStage('failed')
     const message =
       voice.error ||
       (micPermission === 'denied' ? ORB_VOICE_MIC_BLOCKED_MESSAGE : 'Voice could not start.')
@@ -769,6 +773,7 @@ export function OrbVoiceStation({
   }
 
   function handleBrowserVoiceCancel() {
+    setBrowserStartStage('idle')
     voice.cancelListening()
     voice.clearTranscript()
     voice.markIdle()
@@ -784,6 +789,7 @@ export function OrbVoiceStation({
     emitOrbClientDebug({ area: 'voice', event: 'voice_session_ended', detail: {} })
     clearActiveOrbRealtimeVoiceClient()
     setVoiceStartStage('idle')
+    setBrowserStartStage('idle')
     setRealtimeSessionConnected(false)
     setVoiceTransportLive(false)
     setRealtimeState('idle')

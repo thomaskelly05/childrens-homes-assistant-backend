@@ -25,6 +25,8 @@ describe('ORB UI source of truth — overlays and responsive branches', () => {
     const actions = read('components/orb-standalone/orb-voice-actions.tsx')
     assert.match(actions, /data-orb-voice-action-surface="primary"/)
     assert.match(actions, /data-orb-voice-primary-action=\{isStartVoice \? 'start'/)
+    const launch = read('components/orb-standalone/orb-voice-launch-controls.tsx')
+    assert.match(launch, /data-orb-voice-primary-action=\{launchUiState === 'ready' \? 'start'/)
     const mobile = read('components/orb-standalone/orb-voice-mobile-experience.tsx')
     assert.doesNotMatch(mobile, /md:hidden/)
   })
