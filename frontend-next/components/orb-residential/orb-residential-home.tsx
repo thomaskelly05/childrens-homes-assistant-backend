@@ -12,7 +12,7 @@ const PRIMARY_WORKFLOWS = [
   {
     title: 'Shift Builder',
     desc: 'Turn rough shift notes into structured, child-centred outputs.',
-    href: '/orb/shift-builder',
+    href: '/orb?station=shift_builder',
     accent: 'from-violet-50 to-white',
   },
   {

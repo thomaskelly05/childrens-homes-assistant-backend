@@ -102,6 +102,14 @@ describe('ORB Residential routing', () => {
     assert.match(readApp('app/orb/templates/page.tsx'), /redirect\('\/orb\?station=templates'\)/)
     assert.match(readApp('app/orb/learn/page.tsx'), /redirect\('\/orb\?station=knowledge'\)/)
     assert.match(readApp('app/orb/saved/page.tsx'), /redirect\('\/orb\?station=saved'\)/)
+    assert.match(readApp('app/orb-residential/shift-builder/page.tsx'), /redirect\('\/orb\?station=shift_builder'\)/)
+  })
+
+  it('sidebar includes Shift Builder workspace nav', () => {
+    const sidebar = readApp('components/orb-residential/orb-residential-sidebar.tsx')
+    assert.match(sidebar, /Shift Builder/)
+    assert.match(sidebar, /shift_builder/)
+    assert.match(sidebar, /Plans, handovers and what's missing/)
   })
 
   it('/os still renders IndiCare OS', () => {

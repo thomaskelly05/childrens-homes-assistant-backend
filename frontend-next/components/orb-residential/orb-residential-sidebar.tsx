@@ -8,6 +8,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ClipboardList,
+  ClipboardPen,
   CreditCard,
   FileCheck,
   FileText,
@@ -57,6 +58,7 @@ const NAV_ITEMS = [
   { id: 'templates', label: 'Templates', icon: FileText },
   { id: 'orb_voice', label: 'Voice', icon: Mic },
   { id: 'orb_dictate', label: 'Dictate', icon: PenLine },
+  { id: 'shift_builder', label: 'Shift Builder', icon: ClipboardPen },
   { id: 'review', label: 'Review', icon: FileCheck },
   { id: 'documents', label: 'Documents', icon: FolderOpen },
   { id: 'saved', label: 'Saved outputs', icon: Save }
@@ -73,6 +75,12 @@ const DESKTOP_WORKSPACE_NAV: Array<{
   magicNotes?: boolean
 }> = [
   { id: 'orb_dictate', label: 'Dictate', helper: 'Rough notes to records', icon: PenLine, magicNotes: true },
+  {
+    id: 'shift_builder',
+    label: 'Shift Builder',
+    helper: "Plans, handovers and what's missing",
+    icon: ClipboardPen
+  },
   { id: 'orb_voice', label: 'Voice', icon: Mic },
   { id: 'documents', label: 'Documents', icon: FolderOpen },
   { id: 'saved', label: 'Saved Outputs', icon: Save },
@@ -96,6 +104,12 @@ const MOBILE_DRAWER_QUICK_NAV: Array<{
   icon: (typeof NAV_ITEMS)[number]['icon']
 }> = [
   { id: 'orb_dictate', label: 'Dictate', helper: 'Rough notes to records', icon: PenLine },
+  {
+    id: 'shift_builder',
+    label: 'Shift Builder',
+    helper: "Plans, handovers and what's missing",
+    icon: ClipboardPen
+  },
   { id: 'orb_voice', label: 'Voice', icon: Mic },
   { id: 'documents', label: 'Documents', icon: FolderOpen },
   { id: 'saved', label: 'Saved Outputs', icon: Save },

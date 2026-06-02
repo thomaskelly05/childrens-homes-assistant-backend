@@ -4,6 +4,7 @@ export type OrbStandalonePanel =
   | 'review'
   | 'skills'
   | 'documents'
+  | 'shift_builder'
   | 'agents'
   | 'templates'
   | 'knowledge'
@@ -26,6 +27,7 @@ export const ORB_STANDALONE_PANEL_IDS: Exclude<OrbStandalonePanel, null>[] = [
   'review',
   'skills',
   'documents',
+  'shift_builder',
   'agents',
   'templates',
   'knowledge',

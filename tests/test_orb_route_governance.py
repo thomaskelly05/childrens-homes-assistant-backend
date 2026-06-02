@@ -9,6 +9,7 @@ CRITICAL_ORB_ROUTERS = frozenset(
         "routers.orb_billing_routes",
         "routers.orb_launch_routes",
         "routers.orb_document_routes",
+        "routers.orb_shift_builder_routes",
         "routers.orb_knowledge_routes",
         "routers.orb_agent_routes",
         "routers.orb_saved_output_routes",
