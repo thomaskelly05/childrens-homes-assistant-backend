@@ -29,6 +29,10 @@ def get_orb_usage_preferences(conn, *, user_id: int) -> dict[str, Any] | None:
             row = cur.fetchone()
             return dict(row) if row else None
     except Exception as exc:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
         if _has_table_error(exc):
             logger.debug("orb_usage_preferences unavailable", exc_info=True)
             return None
@@ -77,6 +81,10 @@ def sum_orb_usage_credits_balance(conn, *, user_id: int) -> int:
             row = cur.fetchone()
             return int(row[0] if row else 0)
     except Exception as exc:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
         if _has_table_error(exc):
             return 0
         raise

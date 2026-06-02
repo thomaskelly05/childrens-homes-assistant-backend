@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { OrbAuthButton } from '@/components/orb-residential/ui/orb-auth-button'
 import { OrbHeroSphere } from '@/components/orb-residential/ui/orb-hero-sphere'
 import { useOrbResidentialThemeLock } from '@/components/orb-residential/use-orb-residential-theme-lock'
+import { useOrbAppearance } from '@/components/orb-standalone/use-orb-appearance'
 import { orbNavyGradient, orbNavyPage } from '@/components/orb-residential/ui/orb-theme'
 import { useAuth } from '@/contexts/auth-context'
 import {
@@ -26,6 +27,7 @@ function resolvePostLoginRoute(access: Awaited<ReturnType<typeof fetchOrbAccess>
 }
 
 function OrbLoginPanel() {
+  const { resolvedTheme, appearanceMode } = useOrbAppearance()
   useOrbResidentialThemeLock()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -132,6 +134,8 @@ function OrbLoginPanel() {
       className={`orb-residential-root ${orbNavyPage} ${orbNavyGradient} h-[100dvh] overflow-hidden`}
       data-orb-login-page
       data-orb-residential="true"
+      data-orb-theme={resolvedTheme}
+      data-orb-appearance={appearanceMode}
     >
       <div className="mx-auto grid h-full max-w-6xl lg:grid-cols-2">
         <div className="hidden flex-col justify-center px-6 py-8 lg:flex lg:px-12">

@@ -15,6 +15,9 @@ export const ORB_VOICE_UNAVAILABLE_BODY =
 export const ORB_VOICE_DICTATE_READY_BODY =
   'Dictate is ready. Live conversation is unavailable right now.'
 
+export const ORB_VOICE_WEBRTC_FAILED_HEADLINE =
+  'Live voice could not connect. Dictate is ready.'
+
 export const ORB_VOICE_DEBUG_CONFIG_HINT =
   'Realtime voice not configured: OPENAI_API_KEY / ORB_REALTIME_ENABLED / ORB_VOICE_REALTIME_PROVIDER.'
 
@@ -36,6 +39,10 @@ export function sanitizeOrbVoiceUserMessage(
   if (options?.debug) return trimmed
   if (looksTechnical(trimmed)) {
     if (options?.dictateRealtimeReady) return ORB_VOICE_DICTATE_READY_BODY
+    return ORB_VOICE_UNAVAILABLE_BODY
+  }
+  if (/webrtc|realtime audio could not connect|negotiation failed/i.test(trimmed)) {
+    if (options?.dictateRealtimeReady) return ORB_VOICE_WEBRTC_FAILED_HEADLINE
     return ORB_VOICE_UNAVAILABLE_BODY
   }
   return trimmed

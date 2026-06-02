@@ -64,9 +64,12 @@ describe('ORB appearance system default', () => {
   it('exposes appearance QA markers on shell and hook', () => {
     const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
     const hook = readComponent('components/orb-standalone/use-orb-appearance.ts')
+    const appearance = readComponent('lib/orb/orb-appearance.ts')
     assert.match(companion, /data-orb-appearance-mode/)
+    assert.match(companion, /data-orb-appearance=/)
     assert.match(companion, /data-orb-system-theme/)
     assert.match(hook, /data-orb-appearance-mode/)
+    assert.match(appearance, /data-orb-appearance/)
   })
 })
 
