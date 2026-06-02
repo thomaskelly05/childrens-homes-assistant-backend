@@ -161,13 +161,13 @@ export function OrbClientFlightRecorder() {
 
   return (
     <div
-      className="orb-flight-recorder fixed right-3 top-[max(0.75rem,env(safe-area-inset-top))] z-[90] max-w-[min(220px,calc(100vw-1.5rem))] rounded-2xl border border-sky-300/80 bg-white/95 p-2 text-xs text-slate-800 shadow-lg backdrop-blur-md dark:border-sky-700/80 dark:bg-slate-950/95 dark:text-white max-lg:bottom-auto max-lg:left-auto"
+      className={`orb-flight-recorder fixed right-3 top-[max(0.75rem,env(safe-area-inset-top))] z-[90] max-w-[min(220px,calc(100vw-1.5rem))] rounded-2xl border border-sky-300/80 bg-white/95 p-2 text-xs text-slate-800 shadow-lg backdrop-blur-md dark:border-sky-700/80 dark:bg-slate-950/95 dark:text-white max-lg:bottom-auto max-lg:left-auto ${collapsed ? 'pointer-events-none' : ''}`}
       data-orb-flight-recorder
       data-orb-flight-recorder-collapsed={collapsed ? 'true' : 'false'}
     >
       <div className="flex items-start justify-between gap-2">
         <strong className="text-[11px]">ORB flight recorder</strong>
-        <div className="flex shrink-0 gap-1">
+        <div className={`flex shrink-0 gap-1 ${collapsed ? 'pointer-events-auto' : ''}`}>
           <button
             type="button"
             className="rounded-full border px-1.5 py-0.5 text-[10px]"

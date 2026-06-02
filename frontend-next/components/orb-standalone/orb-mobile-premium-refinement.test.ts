@@ -156,7 +156,7 @@ describe('ORB modals and account polish', () => {
   })
 
   it('modal shell has mobile safe-area and rounded top corners', () => {
-    const shell = readComponent('components/orb-standalone/orb-standalone-panel-shell.tsx')
+    const shell = readComponent('components/orb-standalone/orb-app-panel-shell.tsx')
     assert.match(shell, /safe-area-inset/)
     assert.match(shell, /rounded-t-\[1\.35rem\]/)
   })

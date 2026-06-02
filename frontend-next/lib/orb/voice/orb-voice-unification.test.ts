@@ -113,6 +113,8 @@ describe('ORB shell markers', () => {
 
   it('panel shell uses shared app panel marker', () => {
     const shell = readComponent('components/orb-standalone/orb-standalone-panel-shell.tsx')
-    assert.match(shell, /data-orb-app-panel-shell/)
+    assert.match(shell, /OrbAppPanelShell/)
+    const panel = readComponent('components/orb-standalone/orb-app-panel-shell.tsx')
+    assert.match(panel, /data-orb-app-panel-shell/)
   })
 })

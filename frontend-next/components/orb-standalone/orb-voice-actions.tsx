@@ -33,6 +33,7 @@ export function OrbVoiceActions({
   const wrap = stack ? 'flex flex-col gap-2' : 'flex flex-wrap items-center justify-center gap-2'
 
   const primaryLabel = orbVoiceUiPrimaryLabel(uiState)
+  const isStartVoice = primaryLabel === 'Start voice'
 
   const showTypeInstead =
     uiState === 'unauthenticated' ||
@@ -58,10 +59,15 @@ export function OrbVoiceActions({
   }
 
   return (
-    <div className={`${wrap} ${className}`.trim()} data-orb-voice-actions data-orb-voice-ui-state={uiState}>
+    <div
+      className={`${wrap} ${className}`.trim()}
+      data-orb-voice-actions
+      data-orb-voice-ui-state={uiState}
+      data-orb-voice-action-surface="primary"
+    >
       <button
         type="button"
-        data-orb-voice-primary-action
+        data-orb-voice-primary-action={isStartVoice ? 'start' : undefined}
         disabled={primaryDisabled && uiState !== 'unauthenticated'}
         onClick={handlePrimary}
         className={

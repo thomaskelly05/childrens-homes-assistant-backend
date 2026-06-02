@@ -155,12 +155,12 @@ describe('ORB mobile premium Dictate copy', () => {
   })
 
   it('runtime mobile layout marker and desktop START grid split', () => {
-    const hook = readComponent('components/orb-standalone/use-orb-mobile-viewport.ts')
+    const hook = readComponent('components/orb-standalone/use-orb-responsive-mode.ts')
     const station = readComponent('components/orb-standalone/orb-dictate-station.tsx')
     const mobile = readComponent('components/orb-standalone/orb-dictate-mobile-experience.tsx')
 
     assert.match(hook, /MOBILE_MAX_WIDTH_PX = 768/)
-    assert.match(hook, /innerWidth < MOBILE_MAX_WIDTH_PX/)
+    assert.match(hook, /width < MOBILE_MAX_WIDTH_PX/)
     assert.match(hook, /orientationchange/)
     assert.match(station, /data-orb-dictate-layout=\{/)
     assert.match(station, /mobile-runtime/)

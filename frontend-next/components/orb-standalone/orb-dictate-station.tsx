@@ -1185,7 +1185,7 @@ export function OrbDictateStation({
         {phase === 'studio' && output ? (
           <OrbDictateStudio output={output} participants={participants} segments={segments} onBack={() => setPhase('capture')} onSendToChat={onSendToChat} onOpenOrbVoice={onOpenOrbVoice} onStatusMessage={setStatusMessage} />
         ) : isMobile ? (
-          <>
+          <div data-orb-mobile-branch="active" data-orb-responsive-mode="mobile" className="flex min-h-0 flex-1 flex-col">
         <OrbDictateMobileExperience
           orbClass={orbClass}
           mobileStatusLine={mobileStatusLine}
@@ -1253,9 +1253,9 @@ export function OrbDictateStation({
         />
 
         {output ? <button type="button" data-orb-dictate-open-studio className="mt-2 w-full rounded-xl border border-[var(--orb-line)] bg-[var(--orb-primary-soft)] py-2 text-sm font-medium text-[var(--orb-primary)]" onClick={() => setPhase('studio')}>Open ORB Dictate Studio</button> : null}
-          </>
+          </div>
         ) : (
-          <>
+          <div data-orb-desktop-branch="active" data-orb-responsive-mode="desktop" className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <p className="shrink-0 px-1 pb-3 text-sm text-[var(--orb-muted)]">
           Speak naturally. ORB will help turn rough notes, debriefs or conversations into structured professional wording.
         </p>
@@ -1413,7 +1413,7 @@ export function OrbDictateStation({
         <footer className="mt-3 shrink-0 space-y-1 border-t border-[var(--orb-line)]/30 pt-3 text-[10px] text-[var(--orb-muted)]">
           <p>{ORB_DICTATE_GOVERNANCE_COPY.draft}</p><p>{ORB_DICTATE_GOVERNANCE_COPY.speaker}</p><p data-orb-dictate-speaker-boundary>{SPEAKER_BOUNDARY_COPY}</p><p>{ORB_DICTATE_GOVERNANCE_COPY.recording}</p><p>{ORB_DICTATE_GOVERNANCE_COPY.boundary}</p><p>{ORB_DICTATE_GOVERNANCE_COPY.saveWording}</p><p>{ORB_DICTATE_GOVERNANCE_COPY.retention}</p>{statusMessage ? <p className="text-xs text-[var(--orb-primary)]" role="status">{statusMessage}</p> : null}
         </footer>
-          </>
+          </div>
         )}
       </div>
     </OrbAppModal>

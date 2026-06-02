@@ -88,7 +88,7 @@ export function OrbVoiceMobileExperience({
 
   return (
     <div
-      className="orb-voice-mobile flex min-h-0 flex-1 flex-col md:hidden"
+      className="orb-voice-mobile flex min-h-0 flex-1 flex-col"
       data-orb-voice-mobile
       data-orb-voice-ui-state={uiState}
     >

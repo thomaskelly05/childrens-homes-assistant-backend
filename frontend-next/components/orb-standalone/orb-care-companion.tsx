@@ -100,6 +100,7 @@ import {
 } from '@/components/orb-residential/orb-residential-sidebar'
 import { OrbHueMark } from '@/components/orb-standalone/orb-hue-logo'
 import { useOrbAppearance } from '@/components/orb-standalone/use-orb-appearance'
+import { OrbUiAuditBootstrap } from '@/components/orb-standalone/orb-ui-audit-bootstrap'
 import { useOrbMobileViewport } from '@/components/orb-standalone/use-orb-mobile-viewport'
 import { ORB_LIGHT_UI_BUILD } from '@/lib/orb/orb-light-ui-build'
 import { ORB_DATA_BOUNDARY, ORB_DATA_BOUNDARY_SHORT, ORB_PRODUCT_NAME } from '@/lib/orb/orb-product-copy'
@@ -577,7 +578,6 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   } | null>(null)
   const [adultProfile, setAdultProfile] = useState<AdultProfile | null>(null)
   const [profileDrawerOpen, setProfileDrawerOpen] = useState(false)
-  const [accountModalOpen, setAccountModalOpen] = useState(false)
   const [showScrollFab, setShowScrollFab] = useState(false)
   const [savedOutputMessageIds, setSavedOutputMessageIds] = useState<Set<string>>(() => new Set())
   const [saveFeedbackByMessageId, setSaveFeedbackByMessageId] = useState<
@@ -782,7 +782,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
 
   function openResidentialAccount() {
     if (residentialSurface) {
-      setAccountModalOpen(true)
+      openPanel('account')
     } else {
       setProfileDrawerOpen(true)
     }
@@ -2328,6 +2328,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           ? 'bg-gradient-to-t from-[#05070d] via-[#05070d]/95 to-transparent'
           : 'bg-gradient-to-t from-[#f4f6f9] via-[#f4f6f9] to-transparent'
       }`}
+      data-orb-composer="main"
       data-orb-composer-mounted="true"
     >
       {documentLensActions.length ? (
@@ -2485,6 +2486,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       data-orb-cognition-state={cognitionAmbientState}
     >
       <span className="sr-only">{ORB_PRODUCT_NAME} — {ORB_DATA_BOUNDARY}</span>
+      <OrbUiAuditBootstrap />
       <OrbAmbientCognition
         state={cognitionAmbientState}
         agentAtmosphere={atmosphereClass}
@@ -3466,20 +3468,20 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
 
       {adultProfile && residentialSurface ? (
         <OrbAccountModal
-          open={accountModalOpen}
-          onClose={() => setAccountModalOpen(false)}
+          open={activePanel === 'account'}
+          onClose={closePanel}
           profile={adultProfile}
           userEmail={account.userEmail}
           onOpenSettings={() => {
-            setAccountModalOpen(false)
+            closePanel()
             openSettingsPanel()
           }}
           onOpenBilling={() => {
-            setAccountModalOpen(false)
+            closePanel()
             openBillingPanel()
           }}
           onOpenVoiceSettings={() => {
-            setAccountModalOpen(false)
+            closePanel()
             openVoiceSettings()
           }}
           passkeyEnabled={account.hasPasskeys}

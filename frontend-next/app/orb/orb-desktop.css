@@ -285,10 +285,7 @@ html[data-orb-theme='dark'] .orb-starter-card {
   opacity: 0.75;
 }
 
-[data-orb-composer-disclaimer]::after {
-  content: 'ORB Residential · © 2026 IndiCare.';
-  white-space: nowrap;
-}
+/* Copyright lives in [data-orb-footer="main"] — no ::after duplicate */
 
 .orb-markdown-answer,
 .orb-message-content,
