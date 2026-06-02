@@ -98,9 +98,9 @@ describe('ORB mobile shell layout', () => {
   })
 
   it('sidebar closed uses translate off-screen without main offset', () => {
-    const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
-    assert.match(companion, /-translate-x-full/)
-    assert.match(companion, /orb-chat-main/)
+    const layout = readComponent('components/orb/orb-layout.tsx')
+    assert.match(layout, /-translate-x-full/)
+    assert.match(layout, /orb-chat-main/)
   })
 })
 

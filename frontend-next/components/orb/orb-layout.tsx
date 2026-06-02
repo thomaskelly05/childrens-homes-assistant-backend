@@ -64,8 +64,8 @@ export function OrbLayout({
           className={`orb-chat-sidebar fixed inset-y-0 left-0 z-50 flex flex-col border-r border-[var(--orb-line)]/50 transition-[transform,width] duration-200 lg:static lg:z-auto lg:translate-x-0 ${
             residentialSurface
               ? sidebarCollapsed
-                ? 'w-[4.25rem] max-w-[4.25rem] lg:w-[var(--orb-sidebar-width-collapsed,4.25rem)]'
-                : 'w-[min(100%,18.125rem)] max-w-[18.125rem] lg:w-[var(--orb-sidebar-width,18.125rem)]'
+                ? 'w-[var(--orb-sidebar-width-collapsed,4.25rem)] max-w-[var(--orb-sidebar-width-collapsed,4.25rem)] lg:w-[var(--orb-sidebar-width-collapsed,4.25rem)]'
+                : 'w-[min(100%,var(--orb-sidebar-width,18.125rem))] max-w-[var(--orb-sidebar-width,18.125rem)] lg:w-[var(--orb-sidebar-width,18.125rem)]'
               : 'w-[min(100%,18.75rem)] lg:w-[18.75rem]'
           } ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
           data-orb-sidebar-scroll-container

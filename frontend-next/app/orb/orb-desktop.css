@@ -677,7 +677,7 @@ html[data-orb-residential='1'] .orb-chat-layout {
   height: 100dvh;
   max-height: 100dvh;
   overflow: hidden;
-  background: #05070d;
+  background: var(--orb-page-bg, var(--orb-premium-bg-deep, #05070d));
   color-scheme: dark;
 }
 

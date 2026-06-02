@@ -2,35 +2,43 @@
  * ORB Residential premium identity tokens — deep midnight, electric blue glow, glass surfaces.
  * Applied on residential chat layout and station panels.
  */
-.orb-chat-layout--residential,
-html[data-orb-residential='1'] .orb-chat-layout {
-  --orb-premium-bg-deep: #05070d;
+.orb-residential-root {
+  /* Fallbacks when inline theme vars are unavailable (e.g. static render). */
+  --orb-premium-bg-deep: var(--orb-bg-deep, #05070d);
   --orb-premium-bg-mid: #070b14;
   --orb-premium-bg-soft: #08111f;
-  --orb-premium-accent: #168bff;
-  --orb-premium-cyan: #42d7ff;
+  --orb-premium-accent: var(--orb-royal-blue, #168bff);
+  --orb-premium-cyan: var(--orb-brand-cyan, #42d7ff);
   --orb-premium-violet: #7c5cff;
-  --orb-premium-text: #f7faff;
-  --orb-premium-text-secondary: #a7aebd;
-  --orb-premium-text-muted: #6f7787;
-  --orb-premium-border: rgba(255, 255, 255, 0.1);
-  --orb-premium-border-glow: rgba(66, 215, 255, 0.18);
-  --orb-premium-glass: rgba(255, 255, 255, 0.045);
-  --orb-premium-glass-strong: rgba(255, 255, 255, 0.07);
-  --orb-premium-shadow: 0 12px 40px rgba(0, 0, 0, 0.45), 0 0 48px rgba(22, 139, 255, 0.06);
+  --orb-premium-text: var(--orb-text-primary, #f7faff);
+  --orb-premium-text-secondary: var(--orb-text-secondary, #a7aebd);
+  --orb-premium-text-muted: var(--orb-text-muted, #6f7787);
+  --orb-premium-border: var(--orb-border, rgba(255, 255, 255, 0.1));
+  --orb-premium-border-glow: var(--orb-border-glow, rgba(66, 215, 255, 0.18));
+  --orb-premium-glass: var(--orb-glass, rgba(255, 255, 255, 0.045));
+  --orb-premium-glass-strong: var(--orb-glass-strong, rgba(255, 255, 255, 0.07));
+  --orb-premium-shadow: var(
+    --orb-shadow-glass,
+    0 12px 40px rgba(0, 0, 0, 0.45),
+    0 0 48px rgba(22, 139, 255, 0.06)
+  );
+}
 
-  --orb-foreground: var(--orb-premium-text);
-  --orb-muted: var(--orb-premium-text-secondary);
-  --orb-line: var(--orb-premium-border);
-  --orb-surface: rgba(8, 17, 31, 0.92);
+.orb-chat-layout--residential,
+html[data-orb-residential='1'] .orb-chat-layout {
+  /* Layout aliases — inherit premium tokens from `.orb-residential-root`. */
+  --orb-foreground: var(--orb-premium-text, #f7faff);
+  --orb-muted: var(--orb-premium-text-secondary, #a7aebd);
+  --orb-line: var(--orb-premium-border, rgba(255, 255, 255, 0.1));
+  --orb-surface: var(--orb-card-bg, rgba(8, 17, 31, 0.92));
   --orb-surface-elevated: rgba(7, 11, 20, 0.96);
   --orb-surface-hover: rgba(255, 255, 255, 0.06);
-  --orb-bg-deep: var(--orb-premium-bg-deep);
-  --orb-accent: var(--orb-premium-accent);
-  --orb-brand-blue: #168bff;
-  --orb-brand-cyan: #42d7ff;
+  --orb-bg-deep: var(--orb-premium-bg-deep, #05070d);
+  --orb-accent: var(--orb-premium-accent, #168bff);
+  --orb-brand-blue: var(--orb-royal-blue, #168bff);
+  --orb-brand-cyan: var(--orb-brand-cyan, #42d7ff);
   --orb-glow: rgba(22, 139, 255, 0.42);
-  --orb-glass-highlight: rgba(255, 255, 255, 0.55);
+  --orb-glass-highlight: var(--orb-glass-highlight, rgba(255, 255, 255, 0.55));
 
   background:
     radial-gradient(ellipse 80% 45% at 50% -12%, rgba(22, 139, 255, 0.08), transparent 55%),
@@ -40,12 +48,12 @@ html[data-orb-residential='1'] .orb-chat-layout {
 }
 
 .orb-chat-layout--residential .orb-chat-header {
-  min-height: 3.5rem;
-  max-height: 3.75rem;
-  background: rgba(5, 7, 13, 0.85) !important;
+  min-height: var(--orb-header-height-min, 3.5rem);
+  max-height: var(--orb-header-height-max, 3.75rem);
+  background: color-mix(in srgb, var(--orb-premium-bg-deep, #05070d) 85%, transparent) !important;
   border-bottom-color: var(--orb-premium-border) !important;
-  backdrop-filter: blur(16px) saturate(140%);
-  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  backdrop-filter: blur(var(--orb-blur-header, 16px)) saturate(140%);
+  -webkit-backdrop-filter: blur(var(--orb-blur-header, 16px)) saturate(140%);
 }
 
 .orb-chat-layout--residential .orb-chat-header [data-orb-header-title] {
@@ -210,17 +218,17 @@ html[data-orb-residential='1'] .orb-chat-layout {
 
 /* Composer glass — residential */
 .orb-chat-layout--residential .orb-composer-glass {
-  border-radius: 1.75rem !important;
+  border-radius: var(--orb-radius-composer, 1.75rem) !important;
   border: 1px solid var(--orb-premium-border-glow) !important;
   background: linear-gradient(
     165deg,
     rgba(255, 255, 255, 0.08) 0%,
     rgba(255, 255, 255, 0.04) 100%
   ) !important;
-  backdrop-filter: blur(20px) saturate(150%);
-  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  backdrop-filter: blur(var(--orb-blur-glass, 20px)) saturate(150%);
+  -webkit-backdrop-filter: blur(var(--orb-blur-glass, 20px)) saturate(150%);
   box-shadow: var(--orb-premium-shadow) !important;
-  min-height: 3.375rem;
+  min-height: var(--orb-composer-height, 3.375rem);
 }
 
 .orb-chat-layout--residential .orb-composer-glass--compact {
@@ -247,7 +255,7 @@ html[data-orb-residential='1'] .orb-chat-layout {
 }
 
 .orb-chat-layout--residential .orb-composer-send {
-  background: linear-gradient(135deg, #168bff, #0d5fcc) !important;
+  background: linear-gradient(135deg, var(--orb-royal-blue, #168bff), var(--orb-deep-blue, #0d5fcc)) !important;
   border: 1px solid rgba(66, 215, 255, 0.25) !important;
   box-shadow: 0 4px 16px rgba(22, 139, 255, 0.35) !important;
 }
@@ -418,8 +426,8 @@ html[data-orb-theme='light'] .orb-premium-settings-card {
 /* Residential theme isolation — block OS / light theme leakage */
 html[data-orb-residential='1'],
 html[data-orb-residential='1'] body {
-  background: #05070d !important;
-  color: #f7faff !important;
+  background: var(--orb-page-bg, var(--orb-premium-bg-deep, #05070d)) !important;
+  color: var(--orb-text-primary, var(--orb-premium-text, #f7faff)) !important;
 }
 
 html[data-orb-residential='1'] .orb-chat-layout.orb-theme-light,
