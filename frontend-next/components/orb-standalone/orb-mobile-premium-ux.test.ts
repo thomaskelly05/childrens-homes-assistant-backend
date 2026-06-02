@@ -252,9 +252,11 @@ describe('ORB mobile premium Voice copy', () => {
 
   it('post-session shows Dictate copy and new conversation without duplicate fallbacks', () => {
     const mobile = readComponent('components/orb-standalone/orb-voice-mobile-experience.tsx')
+    const actions = readComponent('components/orb-standalone/orb-voice-transcript-actions.tsx')
     assert.match(mobile, /data-orb-voice-post-session/)
-    assert.match(mobile, /Send to Dictate/)
-    assert.match(mobile, /Copy transcript/)
+    assert.match(mobile, /OrbVoiceTranscriptActions/)
+    assert.match(actions, /data-orb-voice-to-dictate/)
+    assert.match(actions, /Copy transcript/)
     assert.match(mobile, /Start new voice conversation|New conversation/)
     assert.doesNotMatch(mobile, /Open Dictate instead/)
     assert.doesNotMatch(mobile, /Open Dictate again/)

@@ -5,6 +5,7 @@ import {
   normalizeOrbBrainMetadata,
   orbBrainIndicatorLabel,
   ORB_BRAIN_ID,
+  ORB_BRAIN_POWERED_BY,
   ORB_BRAIN_PRODUCT
 } from '@/lib/orb/orb-brain-metadata'
 import type { OrbSavedOutputRecord, OrbSavedOutputType } from '@/lib/orb/standalone-client'
@@ -25,6 +26,8 @@ export type OrbSavedOutputSourceFeature =
   | 'policy_card'
   | 'shift_builder'
   | 'action_engine'
+  | 'voice_transcript'
+  | 'voice_transcript'
   | 'agent'
   | 'deep_research'
   | 'manual'
@@ -50,6 +53,7 @@ export type OrbSavedOutputRerunKind =
   | 'policy_card'
   | 'shift_focus'
   | 'action_engine'
+  | 'voice_transcript'
 
 export type OrbSavedOutputRerunState = {
   kind: OrbSavedOutputRerunKind
@@ -115,6 +119,19 @@ export function extractSavedOutputBrainMetadata(
   )
   if (fromMeta) return fromMeta
   return normalizeOrbBrainMetadata(record.intelligence_output as Record<string, unknown> | undefined)
+}
+
+export function buildVoiceSavedOutputBrainMetadata(): OrbBrainMetadata {
+  return {
+    surface: 'orb_residential',
+    product: ORB_BRAIN_PRODUCT,
+    powered_by: ORB_BRAIN_POWERED_BY,
+    brain: ORB_BRAIN_ID,
+    feature: 'voice',
+    standalone: true,
+    os_records_accessed: false,
+    live_record_access: false
+  }
 }
 
 export function buildSavedOutputMetadata(
@@ -247,6 +264,21 @@ export function resolveSavedOutputRerun(record: OrbSavedOutputRecord): OrbSavedO
           : 'Original source message was not saved with this output.',
       actionId: actionId || undefined,
       sourceText: sourceText || record.content_markdown || undefined
+    }
+  }
+
+  if (
+    sourceFeature === 'voice' ||
+    record.created_from === 'voice' ||
+    record.type === 'voice_transcript'
+  ) {
+    return {
+      kind: 'voice_transcript',
+      label: 'Re-run Voice',
+      available: false,
+      reason:
+        'Voice transcripts cannot be re-run from Saved Outputs. Start a new Voice session to speak again.',
+      sourceText: sourceText || undefined
     }
   }
 

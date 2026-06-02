@@ -1,12 +1,13 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Save, Square } from 'lucide-react'
+import { Square } from 'lucide-react'
 
 import { OrbAppModal } from '@/components/orb-standalone/orb-app-modal'
 import { useOrbResponsiveMode } from '@/components/orb-standalone/use-orb-responsive-mode'
 import { OrbVoiceActions } from '@/components/orb-standalone/orb-voice-actions'
 import { OrbVoiceLaunchControls } from '@/components/orb-standalone/orb-voice-launch-controls'
+import { OrbVoiceTranscriptActions } from '@/components/orb-standalone/orb-voice-transcript-actions'
 import { OrbVoiceMobileExperience } from '@/components/orb-standalone/orb-voice-mobile-experience'
 import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
 import type { useStandaloneOrbVoice } from '@/components/orb-standalone/use-standalone-orb-voice'
@@ -160,6 +161,7 @@ export function OrbVoiceStation({
   voice,
   onSendToOrb,
   pending = false,
+  assistantReply,
   onOpenDictate,
   onOpenVoiceSettings,
   subscriptionActive = true,
@@ -192,6 +194,7 @@ export function OrbVoiceStation({
   const [sessionEnded, setSessionEnded] = useState(false)
   const [turns, setTurns] = useState<VoiceTurn[]>([])
   const [saveNotice, setSaveNotice] = useState<string | null>(null)
+  const [savingTranscript, setSavingTranscript] = useState(false)
   const [micPermission, setMicPermission] = useState<MicrophonePermissionState>('unknown')
   const [micTestMessage, setMicTestMessage] = useState<string | null>(null)
   const [startBlockedMessage, setStartBlockedMessage] = useState<string | null>(null)
@@ -274,6 +277,33 @@ export function OrbVoiceStation({
   const selectedProfileLabel = orbVoiceProfileLabel(voice.settings.voicePresetId)
   const transcriptAvailable =
     hasUserFacingTranscript(turns) || (useBrowserLaunch && Boolean(browserTranscriptText))
+
+  const voiceTranscriptText = useBrowserLaunch
+    ? browserTranscriptText
+    : formatTurnsAsTranscript(turns)
+
+  const turnsForSave = useCallback((): VoiceTurn[] => {
+    if (useBrowserLaunch && browserTranscriptText) {
+      return [
+        {
+          id: newTurnId(),
+          role: 'user',
+          text: browserTranscriptText,
+          startedAt: sessionStartedAt ?? new Date().toISOString(),
+          mode: voice.settings.voiceMode,
+          provider: 'browser'
+        }
+      ]
+    }
+    return turns.filter((t) => t.role === 'user' || t.role === 'assistant')
+  }, [
+    browserTranscriptText,
+    sessionStartedAt,
+    turns,
+    useBrowserLaunch,
+    voice.settings.voiceMode
+  ])
+
   const statusLine = useBrowserLaunch
     ? orbVoiceLaunchHeadline(launchUiState, {
         pushToTalk: voice.settings.pushToTalk,
@@ -663,18 +693,29 @@ export function OrbVoiceStation({
   }
 
   async function handleSaveTranscript() {
-    const result = await saveVoiceTranscript(
-      turns.filter((t) => t.role === 'user' || t.role === 'assistant'),
-      {
+    const saveTurns = turnsForSave()
+    if (!saveTurns.length) return
+    setSavingTranscript(true)
+    try {
+      const result = await saveVoiceTranscript(saveTurns, {
         mode: voice.settings.voiceMode,
-        provider: 'openai_realtime',
+        provider: useBrowserLaunch ? 'browser' : 'openai_realtime',
         startedAt: sessionStartedAt ?? undefined,
-        endedAt: new Date().toISOString()
-      }
-    )
-    setSaveNotice(result.message)
-    window.setTimeout(() => setSaveNotice(null), 5000)
+        endedAt: new Date().toISOString(),
+        voiceSummary: assistantReply?.trim() || undefined
+      })
+      setSaveNotice(result.message)
+      window.setTimeout(() => setSaveNotice(null), 5000)
+    } finally {
+      setSavingTranscript(false)
+    }
   }
+
+  const handleCopyTranscript = useCallback(() => {
+    void navigator.clipboard?.writeText(voiceTranscriptText)
+    setSaveNotice('Transcript copied.')
+    window.setTimeout(() => setSaveNotice(null), 3000)
+  }, [voiceTranscriptText])
 
   const handleTypeInstead = () => {
     onTypeInstead?.()
@@ -789,6 +830,11 @@ export function OrbVoiceStation({
           onTryAgain={() => void handleRetryVoice()}
           onOpenDictate={onOpenDictate}
           onClose={onClose}
+          voiceTranscriptText={voiceTranscriptText}
+          onCopyTranscript={handleCopyTranscript}
+          onSaveTranscript={() => void handleSaveTranscript()}
+          savingTranscript={savingTranscript}
+          onSendToOrbChat={(text) => void onSendToOrb(text)}
           voiceMode={voice.settings.voiceMode}
           onVoiceModeChange={voice.setVoiceMode}
           voicePresetId={voice.settings.voicePresetId}
@@ -917,6 +963,21 @@ export function OrbVoiceStation({
             </div>
           ) : null}
 
+          {transcriptAvailable && !useBrowserLaunch ? (
+            <div className="mt-4 w-full max-w-sm">
+              <OrbVoiceTranscriptActions
+                transcript={voiceTranscriptText}
+                onCopy={handleCopyTranscript}
+                onSave={() => handleSaveTranscript()}
+                saving={savingTranscript}
+                onSendToDictate={
+                  onOpenDictate ? () => onOpenDictate(voiceTranscriptText) : undefined
+                }
+                onSendToOrb={() => onSendToOrb(voiceTranscriptText)}
+              />
+            </div>
+          ) : null}
+
           <div className="mt-6 w-full max-w-sm">
             {useBrowserLaunch ? (
               <OrbVoiceLaunchControls
@@ -928,6 +989,9 @@ export function OrbVoiceStation({
                 onPrimary={() => void handleBrowserVoicePrimary()}
                 onSendToOrb={(text) => void onSendToOrb(text)}
                 onSendToDictate={onOpenDictate ? (text) => onOpenDictate(text) : undefined}
+                onCopyTranscript={handleCopyTranscript}
+                onSaveTranscript={() => void handleSaveTranscript()}
+                savingTranscript={savingTranscript}
                 onCancel={handleBrowserVoiceCancel}
                 onOpenSettings={onOpenVoiceSettings}
               />
@@ -935,34 +999,6 @@ export function OrbVoiceStation({
 
             {!useBrowserLaunch && showPostSession ? (
               <div className="flex flex-col gap-2" data-orb-voice-post-session>
-                {onOpenDictate ? (
-                  <>
-                    <button
-                      type="button"
-                      data-orb-voice-to-dictate
-                      className="w-full rounded-full border border-[var(--orb-line)] bg-[var(--orb-primary-soft)] px-3 py-2 text-sm text-[var(--orb-primary)]"
-                      onClick={() => onOpenDictate(formatTurnsAsTranscript(turns))}
-                    >
-                      Send to Dictate
-                    </button>
-                    <button
-                      type="button"
-                      data-orb-voice-to-dictate-studio
-                      className="w-full rounded-full border border-[var(--orb-line)] bg-[var(--orb-primary-soft)] px-3 py-2 text-xs text-[var(--orb-primary)]"
-                      onClick={() => onOpenDictate(formatTurnsAsTranscript(turns), 'daily_record', { studio: true })}
-                    >
-                      Open in ORB Dictate Studio
-                    </button>
-                  </>
-                ) : null}
-                <button
-                  type="button"
-                  data-orb-voice-copy-transcript
-                  className="w-full rounded-full border border-[var(--orb-line)] px-3 py-2 text-sm text-[var(--orb-foreground)]"
-                  onClick={() => void navigator.clipboard?.writeText(formatTurnsAsTranscript(turns))}
-                >
-                  Copy transcript
-                </button>
                 <OrbVoiceActions
                   uiState="ended"
                   onPrimary={() => void handleRetryVoice()}
@@ -982,16 +1018,6 @@ export function OrbVoiceStation({
                   >
                     <Square className="h-3.5 w-3.5 fill-current" />
                     Stop speaking
-                  </button>
-                ) : null}
-                {voice.settings.saveTranscript && transcriptAvailable ? (
-                  <button
-                    type="button"
-                    onClick={() => void handleSaveTranscript()}
-                    className="inline-flex items-center gap-2 rounded-full border border-[var(--orb-line)] px-4 py-2 text-sm font-medium text-[var(--orb-foreground)]"
-                  >
-                    <Save className="h-4 w-4" />
-                    Save transcript
                   </button>
                 ) : null}
                 <OrbVoiceActions uiState="listening" onPrimary={handleEnd} layout="stack" />

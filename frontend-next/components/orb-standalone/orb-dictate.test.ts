@@ -132,7 +132,9 @@ describe('ORB Dictate', () => {
 
   it('ORB Voice links to dictate', () => {
     const voice = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(voice, /data-orb-voice-use-dictate|data-orb-voice-to-dictate/)
+    const actions = readComponent('components/orb-standalone/orb-voice-transcript-actions.tsx')
+    assert.match(voice, /data-orb-voice-use-dictate|OrbVoiceTranscriptActions/)
+    assert.match(actions, /data-orb-voice-to-dictate/)
     assert.match(voice, /onOpenDictate/)
   })
 
@@ -203,9 +205,10 @@ describe('ORB Dictate', () => {
     assert.match(station, /xlarge/)
   })
 
-  it('ORB Voice can open dictate studio', () => {
-    const voice = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(voice, /data-orb-voice-to-dictate-studio/)
+  it('ORB Voice routes transcript to dictate via shared actions', () => {
+    const actions = readComponent('components/orb-standalone/orb-voice-transcript-actions.tsx')
+    assert.match(actions, /data-orb-voice-to-dictate/)
+    assert.match(actions, /Send to Dictate/)
   })
 
   it('guided reflective debrief is typed not mic', () => {

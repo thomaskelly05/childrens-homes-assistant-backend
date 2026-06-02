@@ -4,6 +4,7 @@ import { useState } from 'react'
 
 import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
 import { OrbVoiceActions } from '@/components/orb-standalone/orb-voice-actions'
+import { OrbVoiceTranscriptActions } from '@/components/orb-standalone/orb-voice-transcript-actions'
 import { copyTextToClipboard } from '@/lib/orb/orb-clipboard'
 import {
   ORB_VOICE_MODES,
@@ -50,6 +51,11 @@ export function OrbVoiceMobileExperience({
   onTryAgain,
   onOpenDictate,
   onClose,
+  voiceTranscriptText = '',
+  onCopyTranscript,
+  onSaveTranscript,
+  savingTranscript = false,
+  onSendToOrbChat,
   voiceMode,
   onVoiceModeChange,
   voicePresetId,
@@ -91,6 +97,11 @@ export function OrbVoiceMobileExperience({
   onTryAgain?: () => void
   onOpenDictate?: (transcript: string) => void
   onClose: () => void
+  voiceTranscriptText?: string
+  onCopyTranscript?: () => void
+  onSaveTranscript?: () => void
+  savingTranscript?: boolean
+  onSendToOrbChat?: (text: string) => void | Promise<void>
   voiceMode: OrbVoiceModeId
   onVoiceModeChange: (mode: OrbVoiceModeId) => void
   voicePresetId: OrbVoicePresetId
@@ -102,10 +113,12 @@ export function OrbVoiceMobileExperience({
 }) {
   const [voiceSettingsOpen, setVoiceSettingsOpen] = useState(false)
 
-  const transcriptText = turns
-    .filter((t) => t.role === 'user' || t.role === 'assistant')
-    .map((t) => `${t.role === 'user' ? 'You' : 'ORB'}: ${t.text.trim()}`)
-    .join('\n\n')
+  const transcriptText =
+    voiceTranscriptText.trim() ||
+    turns
+      .filter((t) => t.role === 'user' || t.role === 'assistant')
+      .map((t) => `${t.role === 'user' ? 'You' : 'ORB'}: ${t.text.trim()}`)
+      .join('\n\n')
 
   return (
     <div
@@ -249,26 +262,25 @@ export function OrbVoiceMobileExperience({
         className="orb-voice-mobile__controls shrink-0 space-y-2 border-t border-[var(--orb-line)]/30 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
         data-orb-voice-mobile-controls
       >
+        {transcriptAvailable && transcriptText.trim() && !useBrowserLaunch ? (
+          <OrbVoiceTranscriptActions
+            transcript={transcriptText}
+            onCopy={onCopyTranscript ?? (() => void copyTextToClipboard(transcriptText))}
+            onSave={onSaveTranscript}
+            saving={savingTranscript}
+            onSendToDictate={onOpenDictate ? () => onOpenDictate(transcriptText) : undefined}
+            onSendToOrb={
+              onSendToOrbChat
+                ? () => onSendToOrbChat(transcriptText)
+                : onSendToOrb
+                  ? () => onSendToOrb(transcriptText)
+                  : undefined
+            }
+          />
+        ) : null}
+
         {showPostSession ? (
           <div className="flex flex-col gap-2" data-orb-voice-post-session>
-            {onOpenDictate ? (
-              <button
-                type="button"
-                data-orb-voice-to-dictate
-                className="w-full rounded-full border border-[var(--orb-line)]/60 py-2.5 text-sm text-[var(--orb-primary)]"
-                onClick={() => onOpenDictate(transcriptText)}
-              >
-                Send to Dictate
-              </button>
-            ) : null}
-            <button
-              type="button"
-              data-orb-voice-copy-transcript
-              className="w-full rounded-full border border-[var(--orb-line)]/60 py-2.5 text-sm text-[var(--orb-foreground)]"
-              onClick={() => void copyTextToClipboard(transcriptText)}
-            >
-              Copy transcript
-            </button>
             <button
               type="button"
               data-orb-voice-new-conversation
@@ -301,6 +313,9 @@ export function OrbVoiceMobileExperience({
             onPrimary={() => onBrowserPrimary?.()}
             onSendToOrb={onSendToOrb}
             onSendToDictate={onOpenDictate}
+            onCopyTranscript={onCopyTranscript}
+            onSaveTranscript={onSaveTranscript}
+            savingTranscript={savingTranscript}
             onCancel={onBrowserCancel}
             onOpenSettings={onOpenVoiceSettings}
           />

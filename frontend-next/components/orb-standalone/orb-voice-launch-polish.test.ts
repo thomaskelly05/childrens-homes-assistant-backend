@@ -47,12 +47,15 @@ describe('ORB Voice launch polish', () => {
     assert.match(companion, /voicePanelUnavailable/)
   })
 
-  it('transcript can route to ORB and Dictate', () => {
+  it('transcript can route to ORB chat, Dictate, copy and save', () => {
     const controls = readComponent('components/orb-standalone/orb-voice-launch-controls.tsx')
-    assert.match(controls, /data-orb-voice-send-to-orb/)
-    assert.match(controls, /data-orb-voice-to-dictate/)
-    assert.match(controls, /Send to ORB/)
-    assert.match(controls, /Send to Dictate/)
+    const actions = readComponent('components/orb-standalone/orb-voice-transcript-actions.tsx')
+    assert.match(controls, /OrbVoiceTranscriptActions/)
+    assert.match(actions, /data-orb-voice-send-to-orb/)
+    assert.match(actions, /data-orb-voice-to-dictate/)
+    assert.match(actions, /Send to ORB chat/)
+    assert.match(actions, /Send to Dictate/)
+    assert.match(actions, /Save to ORB/)
   })
 
   it('browser launch mode when realtime not configured', () => {
@@ -82,6 +85,7 @@ describe('ORB Voice launch polish', () => {
   })
 
   it('standalone boundary copy is shown', () => {
+    assert.ok(ORB_VOICE_BOUNDARY_COPY.some((line) => line.includes('standalone ORB artefacts')))
     assert.ok(ORB_VOICE_BOUNDARY_COPY.some((line) => line.includes('live care records')))
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
     assert.match(station, /data-orb-voice-boundary-copy/)

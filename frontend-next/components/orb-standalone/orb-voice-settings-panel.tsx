@@ -345,7 +345,7 @@ export function OrbVoiceSettingsPanel({
         <label className="flex cursor-pointer items-start justify-between gap-3 rounded-xl border border-[var(--orb-line)] bg-[var(--orb-surface)] px-4 py-3">
           <span>
             <span className="block text-sm font-medium text-[var(--orb-foreground)]">Save transcript</span>
-            <span className="mt-0.5 block text-xs text-[var(--orb-muted)]">Show save in ORB Voice when a session has turns.</span>
+            <span className="mt-0.5 block text-xs text-[var(--orb-muted)]">Legacy preference — Save to ORB is always offered when a transcript exists.</span>
           </span>
           <input
             type="checkbox"
