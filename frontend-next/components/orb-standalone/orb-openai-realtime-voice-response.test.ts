@@ -41,6 +41,11 @@ describe('ORB OpenAI realtime voice response flow', () => {
     assert.match(webrtcClient, /server_vad_fallback/)
   })
 
+  it('resets response create guard for later turns', () => {
+    assert.match(webrtcClient, /responseCreateSent = false/)
+    assert.match(webrtcClient, /voice_response_ready_for_next_turn/)
+  })
+
   it('response.create uses audio-only output_modalities not response.modalities or audio plus text', () => {
     assert.match(webrtcClient, /output_modalities: \[\.\.\.REALTIME_AUDIO_OUTPUT_MODALITIES\]/)
     assert.match(webrtcClient, /output_modalities: REALTIME_AUDIO_OUTPUT_MODALITIES/)
