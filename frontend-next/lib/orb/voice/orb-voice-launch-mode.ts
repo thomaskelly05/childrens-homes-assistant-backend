@@ -3,7 +3,16 @@
  * Safe to import from tests without React.
  */
 
-import { isOrbRealtimeStatusConfigured } from './orb-voice-ui-state'
+const ORB_REALTIME_CONFIGURED_PROVIDERS = ['openai', 'openai_realtime'] as const
+
+function isOrbRealtimeStatusConfigured(
+  status: OrbRealtimeVoiceStatusLite | null | undefined
+): boolean {
+  if (!status?.ok || !status.realtime_enabled || status.reason !== 'configured') return false
+  const provider = status.provider?.trim().toLowerCase()
+  if (!provider) return false
+  return (ORB_REALTIME_CONFIGURED_PROVIDERS as readonly string[]).includes(provider)
+}
 
 export type OrbRealtimeVoiceStatusLite = {
   ok: boolean
