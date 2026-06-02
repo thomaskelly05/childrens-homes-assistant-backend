@@ -40,6 +40,7 @@ export type OrbOpenAIRealtimeConnectOptions = {
 
 const DEFAULT_REALTIME_MODEL = 'gpt-realtime'
 const RESPONSE_CREATE_FALLBACK_MS = 900
+const REALTIME_AUDIO_OUTPUT_MODALITIES = ['audio'] as const
 
 const HANDLED_REALTIME_EVENTS = new Set([
   'session.created',
@@ -185,7 +186,7 @@ export class OrbOpenAIRealtimeWebRTCClient {
     return [
       'You are ORB, a warm British professional colleague supporting children\'s residential care staff.',
       voiceModeInstruction(mode),
-      'Respond with spoken audio and brief text. Keep answers concise and conversational.'
+      'Respond with spoken audio. Keep answers concise and conversational.'
     ].join(' ')
   }
 
@@ -195,7 +196,7 @@ export class OrbOpenAIRealtimeWebRTCClient {
     options: OrbOpenAIRealtimeConnectOptions
   ) {
     const session: Record<string, unknown> = {
-      modalities: this.transcriptionOnly ? ['text'] : ['audio', 'text'],
+      modalities: this.transcriptionOnly ? ['text'] : [...REALTIME_AUDIO_OUTPUT_MODALITIES],
       instructions: this.buildSessionInstructions(options),
       turn_detection: {
         type: 'server_vad',
@@ -270,13 +271,16 @@ export class OrbOpenAIRealtimeWebRTCClient {
     const sent = this.send({
       type: 'response.create',
       response: {
-        output_modalities: ['audio', 'text']
+        output_modalities: [...REALTIME_AUDIO_OUTPUT_MODALITIES]
       }
     })
     if (!sent) return
     this.responseCreateSent = true
     updateOrbVoiceResponseFlow({ responseCreateSent: true })
-    voiceDebug('voice_response_create_sent', { reason })
+    voiceDebug('voice_response_create_sent', {
+      reason,
+      output_modalities: REALTIME_AUDIO_OUTPUT_MODALITIES
+    })
     setOrbVoiceDiagLastEvent('voice_response_create_sent')
   }
 
@@ -444,13 +448,16 @@ export class OrbOpenAIRealtimeWebRTCClient {
     this.send({
       type: 'response.create',
       response: {
-        output_modalities: ['audio', 'text'],
+        output_modalities: [...REALTIME_AUDIO_OUTPUT_MODALITIES],
         instructions: `Speak this answer calmly in British English. Keep it concise and conversational. Do not add extra commentary. Say: ${JSON.stringify(trimmed)}`
       }
     })
     this.responseCreateSent = true
     updateOrbVoiceResponseFlow({ responseCreateSent: true })
-    voiceDebug('voice_response_create_sent', { reason: 'speak_assistant_reply' })
+    voiceDebug('voice_response_create_sent', {
+      reason: 'speak_assistant_reply',
+      output_modalities: REALTIME_AUDIO_OUTPUT_MODALITIES
+    })
     this.callbacks.onStateChange?.('thinking')
   }
 

@@ -18,11 +18,13 @@ describe('ORB OpenAI realtime voice response flow', () => {
   const audio = readLib('orb/audio/index.ts')
   const station = readFileSync(join(root, 'components/orb-standalone/orb-voice-station.tsx'), 'utf8')
 
-  it('defers network session.update until voice client sends duplex config', () => {
+  it('defers network session.update until voice client sends supported config', () => {
     assert.match(network, /deferInitialSessionUpdate/)
     assert.match(webrtcClient, /deferInitialSessionUpdate: true/)
     assert.match(webrtcClient, /voice_session_update_sent/)
-    assert.match(webrtcClient, /modalities: this\.transcriptionOnly \? \['text'\] : \['audio', 'text'\]/)
+    assert.match(webrtcClient, /REALTIME_AUDIO_OUTPUT_MODALITIES = \['audio'\]/)
+    assert.match(webrtcClient, /modalities: this\.transcriptionOnly \? \['text'\] : \[\.\.\.REALTIME_AUDIO_OUTPUT_MODALITIES\]/)
+    assert.doesNotMatch(webrtcClient, /modalities: this\.transcriptionOnly \? \['text'\] : \['audio', 'text'\]/)
     assert.match(webrtcClient, /create_response: !this\.transcriptionOnly/)
   })
 
@@ -39,13 +41,15 @@ describe('ORB OpenAI realtime voice response flow', () => {
     assert.match(webrtcClient, /server_vad_fallback/)
   })
 
-  it('response.create uses output_modalities not response.modalities', () => {
-    assert.match(webrtcClient, /output_modalities/)
+  it('response.create uses audio-only output_modalities not response.modalities or audio plus text', () => {
+    assert.match(webrtcClient, /output_modalities: \[\.\.\.REALTIME_AUDIO_OUTPUT_MODALITIES\]/)
+    assert.match(webrtcClient, /output_modalities: REALTIME_AUDIO_OUTPUT_MODALITIES/)
     assert.doesNotMatch(webrtcClient, /response:\s*\{\s*modalities:/)
+    assert.doesNotMatch(webrtcClient, /output_modalities:\s*\['audio',\s*'text'\]/)
     assert.match(webrtcClient, /speakAssistantReply/)
     assert.match(
       webrtcClient,
-      /speakAssistantReply[\s\S]*output_modalities:\s*\['audio',\s*'text'\]/
+      /speakAssistantReply[\s\S]*output_modalities:\s*\[\.\.\.REALTIME_AUDIO_OUTPUT_MODALITIES\]/
     )
   })
 
