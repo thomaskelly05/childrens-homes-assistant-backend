@@ -34,7 +34,7 @@ _DICTATE_TEMPLATES: dict[OrbDictateNoteType, OrbDictateTemplate] = {
             "Observable facts not judgement",
             "Times and adults named",
         ],
-        export_label="Daily record",
+        export_label="Daily log",
     ),
     "incident_record": OrbDictateTemplate(
         note_type="incident_record",
@@ -103,7 +103,7 @@ _DICTATE_TEMPLATES: dict[OrbDictateNoteType, OrbDictateTemplate] = {
             ("plan", "Plan updates", ["Plan / risk updates"], True),
         ),
         quality_checks=["Return conversation", "Contextual safeguarding", "Manager oversight"],
-        export_label="Missing episode",
+        export_label="Missing from home return",
     ),
     "manager_oversight_note": OrbDictateTemplate(
         note_type="manager_oversight_note",
@@ -174,7 +174,7 @@ _DICTATE_TEMPLATES: dict[OrbDictateNoteType, OrbDictateTemplate] = {
             ("review", "Review date", ["Review date"], False),
         ),
         quality_checks=["Learning captured", "Actions agreed"],
-        export_label="Supervision reflection",
+        export_label="Supervision note",
     ),
     "keywork_summary": OrbDictateTemplate(
         note_type="keywork_summary",
@@ -190,7 +190,7 @@ _DICTATE_TEMPLATES: dict[OrbDictateNoteType, OrbDictateTemplate] = {
             ("follow_up", "Follow-up", ["Follow-up actions"], True),
         ),
         quality_checks=["Child voice", "Plan links"],
-        export_label="Keywork summary",
+        export_label="Key work session",
     ),
     "staff_debrief": OrbDictateTemplate(
         note_type="staff_debrief",
@@ -205,7 +205,7 @@ _DICTATE_TEMPLATES: dict[OrbDictateNoteType, OrbDictateTemplate] = {
             ("actions", "Actions", ["Actions"], True),
         ),
         quality_checks=["Facts separated from opinion", "Learning and actions"],
-        export_label="Staff debrief",
+        export_label="Debrief",
     ),
     "learning_note": OrbDictateTemplate(
         note_type="learning_note",
@@ -329,8 +329,25 @@ _DICTATE_TEMPLATES: dict[OrbDictateNoteType, OrbDictateTemplate] = {
 }
 
 
+# Hero output types surfaced first in ORB Dictate UI (residential recording flow).
+ORB_DICTATE_HERO_OUTPUT_TYPES: tuple[OrbDictateNoteType, ...] = (
+    "daily_record",
+    "incident_record",
+    "missing_episode_note",
+    "keywork_summary",
+    "handover_note",
+    "staff_debrief",
+    "supervision_reflection",
+    "safeguarding_concern_record",
+    "manager_oversight_note",
+)
+
+
 def list_dictate_templates() -> list[OrbDictateTemplate]:
-    return list(_DICTATE_TEMPLATES.values())
+    hero = set(ORB_DICTATE_HERO_OUTPUT_TYPES)
+    templates = list(_DICTATE_TEMPLATES.values())
+    templates.sort(key=lambda t: (t.note_type not in hero, t.title))
+    return templates
 
 
 def get_dictate_template(note_type: OrbDictateNoteType) -> OrbDictateTemplate:

@@ -29,12 +29,12 @@ describe('ORB Residential desktop polish', () => {
     assert.match(layout, /lg:static/)
   })
 
-  it('desktop shortcuts cover Magic Notes, Voice, Documents, Saved Outputs, and intelligence modes', () => {
+  it('desktop shortcuts cover Dictate, Voice, Documents, Saved Outputs, and intelligence modes', () => {
     const sidebar = readComponent('components/orb-residential/orb-residential-sidebar.tsx')
     const copy = readComponent('lib/orb/orb-residential-copy.ts')
 
     for (const label of [
-      'Magic Notes',
+      'Dictate',
       'Voice',
       'Documents',
       'Saved Outputs',

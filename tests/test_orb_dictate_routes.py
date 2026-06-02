@@ -7,8 +7,10 @@ from fastapi.testclient import TestClient
 from auth.orb_dictate_dependency import require_orb_dictate_access
 from auth.orb_residential_dependencies import require_orb_residential_auth
 from routers.orb_dictate_routes import router
+from services.orb_brain_metadata_service import assert_standalone_brain_contract
 from services.orb_dictate_edit_service import edit_dictate_document
 from services.orb_dictate_service import generate_dictate_note
+from services.orb_dictate_template_registry import ORB_DICTATE_HERO_OUTPUT_TYPES
 from schemas.orb_dictate import OrbDictateEditRequest, OrbDictateGenerateRequest
 
 
@@ -37,6 +39,42 @@ def test_dictate_templates_returns_note_types(dictate_client):
     assert len(data) >= 8
     assert any(item["note_type"] == "incident_record" for item in data)
     assert "standalone_boundary" in body
+    returned_types = {item["note_type"] for item in data}
+    for hero_type in ORB_DICTATE_HERO_OUTPUT_TYPES:
+        assert hero_type in returned_types
+
+
+def test_dictate_generate_includes_brain_metadata_with_output_type(monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    result = generate_dictate_note(
+        OrbDictateGenerateRequest(
+            input_text="Child settled after tea. Staff offered calm voice and space.",
+            note_type="safeguarding_concern_record",
+        )
+    )
+    assert result.brain_metadata is not None
+    assert_standalone_brain_contract(result.brain_metadata)
+    assert result.brain_metadata.get("feature") == "dictate"
+    assert result.brain_metadata.get("output_type") == "safeguarding_concern_record"
+    assert result.brain_metadata.get("os_records_accessed") is False
+    assert result.brain_metadata.get("live_record_access") is False
+
+
+def test_dictate_generate_brain_metadata_via_api(monkeypatch, dictate_client):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    response = dictate_client.post(
+        "/orb/dictate/generate",
+        json={
+            "input_text": "Rough shift notes for handover.",
+            "note_type": "daily_record",
+        },
+    )
+    assert response.status_code == 200
+    meta = response.json()["data"].get("brain_metadata") or {}
+    assert meta.get("product") == "ORB Residential"
+    assert meta.get("brain") == "orb_residential_intelligence"
+    assert meta.get("output_type") == "daily_record"
+    assert meta.get("standalone") is True
 
 
 def test_dictate_generate_without_openai(monkeypatch, dictate_client):

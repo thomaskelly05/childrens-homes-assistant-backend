@@ -78,6 +78,7 @@ def _dictate_brain_metadata(*, note_type: str, mode: str | None = None) -> dict[
         mode=mode or note_type,
         lens=note_type,
         feature="dictate",
+        extra={"output_type": note_type},
     )
 
 
@@ -177,6 +178,13 @@ def _build_generate_prompt(request: OrbDictateGenerateRequest, note_type: str) -
     if request.include_ofsted_lens:
         flags.append("Add a short Ofsted/SCCIF evidence lens paragraph.")
 
+    quality_guidance = (
+        "Recording quality priorities: factual, observable wording; child-centred language; "
+        "child voice with direct quotes where stated; staff response and support; clear outcome; "
+        "follow-up actions; safeguarding considerations; manager oversight prompts where relevant; "
+        "Ofsted/evidence relevance only when requested — never invent facts or evidence."
+    )
+
     investigation_rules = ""
     if note_type == "investigation_meeting":
         investigation_rules = (
@@ -205,6 +213,7 @@ def _build_generate_prompt(request: OrbDictateGenerateRequest, note_type: str) -
         f"Mode: {request.mode or note_type}\n\n"
         f"Required sections:\n{section_spec}\n\n"
         f"Instructions:\n" + "\n".join(f"- {f}" for f in flags) + "\n\n"
+        f"{quality_guidance}\n\n"
         f"{speaker_block}\n\n"
         f"{intelligence_block}\n\n"
         f"Rough input / transcript:\n{transcript_body}"

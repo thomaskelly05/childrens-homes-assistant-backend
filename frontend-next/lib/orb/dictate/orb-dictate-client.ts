@@ -5,6 +5,7 @@ import type {
   OrbDictateTranscriptSegment
 } from '@/lib/orb/dictate/orb-dictate-speaker'
 import type { OrbDictateEditMode } from '@/lib/orb/dictate/orb-dictate-studio-actions'
+import { buildLocalDictateBrainMetadata } from '@/lib/orb/dictate/orb-dictate-brain-metadata'
 import type {
   OrbDictateGenerateResult,
   OrbDictateNoteType,
@@ -187,7 +188,8 @@ export function buildLocalDictateFallback(
     standalone_boundary:
       'ORB Dictate does not submit to IndiCare OS or any care record unless you use an approved connected workflow.',
     governance_notice:
-      'ORB Dictate helps create draft wording. Adults must review, edit and approve before using it as a formal record.'
+      'ORB Dictate helps create draft wording. Adults must review, edit and approve before using it as a formal record.',
+    brain_metadata: buildLocalDictateBrainMetadata(noteType)
   }
 }
 

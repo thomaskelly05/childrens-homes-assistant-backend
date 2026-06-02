@@ -1,3 +1,5 @@
+import type { OrbDictateBrainMetadata } from '@/lib/orb/dictate/orb-dictate-brain-metadata'
+
 export type OrbDictateNoteType =
   | 'daily_record'
   | 'incident_record'
@@ -56,6 +58,7 @@ export type OrbDictateGenerateResult = {
   export_options: Array<'copy' | 'pdf' | 'docx' | 'save'>
   standalone_boundary: string
   governance_notice: string
+  brain_metadata?: OrbDictateBrainMetadata
   participants?: Array<{
     id: string
     name: string
@@ -84,16 +87,16 @@ export type OrbDictateTemplate = {
 }
 
 export const ORB_DICTATE_NOTE_TYPE_LABELS: Record<OrbDictateNoteType, string> = {
-  daily_record: 'Daily record',
+  daily_record: 'Daily log',
   incident_record: 'Incident record',
   chronology_entry: 'Chronology entry',
   handover_note: 'Handover',
-  keywork_summary: 'Keywork session',
-  manager_oversight_note: 'Manager oversight',
+  keywork_summary: 'Key work session',
+  manager_oversight_note: 'Manager oversight note',
   safeguarding_concern_record: 'Safeguarding concern',
-  missing_episode_note: 'Missing episode',
-  staff_debrief: 'Staff debrief',
-  supervision_reflection: 'Supervision reflection',
+  missing_episode_note: 'Missing from home return',
+  staff_debrief: 'Debrief',
+  supervision_reflection: 'Supervision note',
   learning_note: 'Learning note',
   action_plan: 'Action plan',
   reg44_prep_note: 'Reg 44 / Reg 45 prep',
@@ -115,6 +118,10 @@ export const REFLECTIVE_DEBRIEF_QUESTIONS = [
   'What needs manager oversight?'
 ] as const
 
+export const ORB_DICTATE_PRODUCT_TITLE = 'Dictate'
+export const ORB_DICTATE_PRODUCT_SUBTITLE =
+  'Turn rough shift notes into professional residential records'
+
 export const ORB_DICTATE_GOVERNANCE_COPY = {
   draft:
     'ORB Dictate helps create draft wording. Adults must review, edit and approve before using it as a formal record.',
@@ -122,6 +129,9 @@ export const ORB_DICTATE_GOVERNANCE_COPY = {
     'Do not record people without following your organisation’s consent, confidentiality and recording policies.',
   boundary:
     'ORB Dictate does not submit to IndiCare OS or any care record unless you choose an approved connected workflow.',
+  basedOnInput: 'Based only on what you provide.',
+  reviewBeforeShare: 'Review before saving or sharing.',
+  noLiveRecords: 'ORB does not access live care records in standalone mode.',
   retention: 'Transcripts are kept only when you choose to save. You can delete drafts at any time.',
   speaker:
     'ORB can label speakers from introductions and corrections. It does not verify identity by voice.',

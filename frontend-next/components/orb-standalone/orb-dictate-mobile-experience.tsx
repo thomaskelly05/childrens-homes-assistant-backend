@@ -4,6 +4,8 @@ import { useRef } from 'react'
 import { Upload } from 'lucide-react'
 
 import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
+import { OrbDictateBoundaryCopy } from '@/components/orb-standalone/orb-dictate-boundary-copy'
+import { OrbDictateOutputTypeSelector } from '@/components/orb-standalone/orb-dictate-output-type-selector'
 import {
   OrbDictateModeSelect,
   OrbDictateParticipantsPanel,
@@ -22,7 +24,8 @@ import {
   type DictateRecordingUiState
 } from '@/lib/orb/dictate/orb-dictate-mobile-copy'
 import {
-  ORB_DICTATE_NOTE_TYPE_LABELS,
+  ORB_DICTATE_PRODUCT_SUBTITLE,
+  ORB_DICTATE_PRODUCT_TITLE,
   type OrbDictateGenerateResult,
   type OrbDictateNoteType,
   type OrbDictateStartMode
@@ -30,8 +33,6 @@ import {
 import { isOrbVoiceDebugMode } from '@/lib/orb/orb-voice-debug'
 
 type OutputTab = 'professional' | 'summary' | 'actions' | 'transcript' | 'evidence'
-
-const NOTE_TYPES = Object.keys(ORB_DICTATE_NOTE_TYPE_LABELS) as OrbDictateNoteType[]
 
 export function OrbDictateMobileExperience({
   orbClass,
@@ -81,6 +82,7 @@ export function OrbDictateMobileExperience({
   onEditedNoteChange,
   mobileOutputOpen,
   onToggleOutputPreview,
+  onAskOrbImprove,
   developerMode,
   dictateState,
   recordingUiState
@@ -132,6 +134,7 @@ export function OrbDictateMobileExperience({
   onEditedNoteChange: (value: string) => void
   mobileOutputOpen: boolean
   onToggleOutputPreview: () => void
+  onAskOrbImprove?: () => void
   developerMode: boolean
   dictateState: DictateState
   recordingUiState: DictateRecordingUiState
@@ -141,6 +144,15 @@ export function OrbDictateMobileExperience({
 
   return (
     <div className="orb-dictate-mobile flex min-h-0 flex-1 flex-col" data-orb-dictate-mobile>
+      <header className="shrink-0 px-2 pt-1 text-center">
+        <h2 className="text-base font-semibold text-[var(--orb-text,var(--orb-foreground))]" data-orb-dictate-title>
+          {ORB_DICTATE_PRODUCT_TITLE}
+        </h2>
+        <p className="mt-0.5 text-[11px] text-[var(--orb-muted)]" data-orb-dictate-subtitle>
+          {ORB_DICTATE_PRODUCT_SUBTITLE}
+        </p>
+        <OrbDictateBoundaryCopy compact />
+      </header>
       <section className="flex shrink-0 flex-col items-center px-2 pt-2 text-center">
         <GlassOrbMark size="dictate" pulse={recordingActive} className={orbClass} />
         <p className="mt-3 text-sm font-medium text-[var(--orb-text,var(--orb-foreground))]" data-orb-dictate-status-line>
@@ -229,8 +241,8 @@ export function OrbDictateMobileExperience({
         ) : null}
 
         {showCapturedCard ? (
-          <section className="mt-3" data-orb-dictate-captured-card>
-            <p className="text-xs font-semibold text-[var(--orb-text,var(--orb-foreground))]">Captured transcript</p>
+          <section className="mt-3" data-orb-dictate-transcript-section data-orb-dictate-captured-card>
+            <p className="text-xs font-semibold text-[var(--orb-text,var(--orb-foreground))]">Transcript</p>
             <textarea
               value={effectiveInputText}
               onChange={(e) => onTranscriptChange(e.target.value)}
@@ -247,6 +259,9 @@ export function OrbDictateMobileExperience({
             >
               {mobileAdvancedOpen ? 'Hide advanced editing' : 'Advanced transcript editing'}
             </button>
+            <div className="mt-3">
+              <OrbDictateOutputTypeSelector value={noteType} onChange={onNoteTypeChange} compact />
+            </div>
             {mobileAdvancedOpen ? (
               <div className="mt-2 space-y-2" data-orb-dictate-advanced-body>
                 <OrbDictateTranscriptSegmentsEditor
@@ -296,23 +311,7 @@ export function OrbDictateMobileExperience({
           {mobileRecordingOpen ? (
             <div className="mt-2 space-y-2 rounded-xl border border-[var(--orb-line)]/40 p-2" data-orb-dictate-recording-options>
               <OrbDictateModeSelect mode={dictateMode} onChange={onDictateModeChange} />
-              <div>
-                <label className="text-[10px] font-semibold uppercase tracking-wide text-[var(--orb-muted)]">
-                  Note type
-                </label>
-                <select
-                  data-orb-dictate-note-type
-                  value={noteType}
-                  onChange={(e) => onNoteTypeChange(e.target.value as OrbDictateNoteType)}
-                  className="mt-1 w-full rounded-xl border border-[var(--orb-line)]/60 bg-[var(--orb-surface)] px-3 py-2 text-sm text-[var(--orb-foreground)]"
-                >
-                  {NOTE_TYPES.map((t) => (
-                    <option key={t} value={t}>
-                      {ORB_DICTATE_NOTE_TYPE_LABELS[t]}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <OrbDictateOutputTypeSelector value={noteType} onChange={onNoteTypeChange} compact />
               <OrbDictateParticipantsPanel
                 participants={participants}
                 onChange={onParticipantsChange}
@@ -379,7 +378,23 @@ export function OrbDictateMobileExperience({
               <div
                 className="mt-2 overflow-hidden rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)]"
                 data-orb-dictate-output-preview
+                data-orb-dictate-generated-output
               >
+                <div className="flex shrink-0 items-center justify-between gap-2 border-b border-[var(--orb-line)]/40 px-3 py-2">
+                  <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--orb-muted)]">
+                    Generated output
+                  </span>
+                  {onAskOrbImprove ? (
+                    <button
+                      type="button"
+                      data-orb-dictate-ask-orb-improve
+                      className="text-[10px] font-medium text-[var(--orb-primary)]"
+                      onClick={onAskOrbImprove}
+                    >
+                      Ask ORB to improve
+                    </button>
+                  ) : null}
+                </div>
                 <div className="flex shrink-0 gap-1 border-b border-[var(--orb-line)]/40 p-2">
                   {(
                     [

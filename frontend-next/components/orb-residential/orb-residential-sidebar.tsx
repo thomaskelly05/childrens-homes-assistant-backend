@@ -68,10 +68,11 @@ const DESKTOP_CORE_NAV = NAV_ITEMS.filter((item) => DESKTOP_CORE_STATION_IDS.has
 const DESKTOP_WORKSPACE_NAV: Array<{
   id: (typeof NAV_ITEMS)[number]['id']
   label: string
+  helper?: string
   icon: (typeof NAV_ITEMS)[number]['icon']
   magicNotes?: boolean
 }> = [
-  { id: 'orb_dictate', label: 'Magic Notes', icon: PenLine, magicNotes: true },
+  { id: 'orb_dictate', label: 'Dictate', helper: 'Rough notes to records', icon: PenLine, magicNotes: true },
   { id: 'orb_voice', label: 'Voice', icon: Mic },
   { id: 'documents', label: 'Documents', icon: FolderOpen },
   { id: 'saved', label: 'Saved Outputs', icon: Save },
@@ -91,9 +92,10 @@ const DESKTOP_INTELLIGENCE_MODES: Array<{
 const MOBILE_DRAWER_QUICK_NAV: Array<{
   id: (typeof NAV_ITEMS)[number]['id'] | 'projects'
   label: string
+  helper?: string
   icon: (typeof NAV_ITEMS)[number]['icon']
 }> = [
-  { id: 'orb_dictate', label: 'Magic Notes', icon: PenLine },
+  { id: 'orb_dictate', label: 'Dictate', helper: 'Rough notes to records', icon: PenLine },
   { id: 'orb_voice', label: 'Voice', icon: Mic },
   { id: 'documents', label: 'Documents', icon: FolderOpen },
   { id: 'saved', label: 'Saved Outputs', icon: Save },
@@ -166,6 +168,7 @@ function SidebarCollapsibleSection({
 
 function DesktopSidebarNavButton({
   label,
+  helper,
   icon: Icon,
   onClick,
   badge,
@@ -174,6 +177,7 @@ function DesktopSidebarNavButton({
   active
 }: {
   label: string
+  helper?: string
   icon: (typeof NAV_ITEMS)[number]['icon']
   onClick: () => void
   badge?: string
@@ -187,12 +191,17 @@ function DesktopSidebarNavButton({
         type="button"
         onClick={onClick}
         className={`orb-sidebar-nav-item w-full ${active ? 'orb-sidebar-nav-item--active' : ''}`}
-        aria-label={label}
+        aria-label={helper ? `${label} — ${helper}` : label}
         {...(stationId ? { 'data-orb-sidebar-station': stationId } : {})}
         {...(dataOrb ? { [`data-${dataOrb}`]: true } : {})}
       >
         <Icon className="h-4 w-4 shrink-0" aria-hidden />
-        <span className="flex-1 text-left text-sm">{label}</span>
+        <span className="flex min-w-0 flex-1 flex-col text-left">
+          <span className="text-sm">{label}</span>
+          {helper ? (
+            <span className="text-[10px] leading-tight text-[var(--orb-muted)]">{helper}</span>
+          ) : null}
+        </span>
         {badge ? (
           <span className="rounded-full bg-[var(--orb-surface-hover)] px-2 py-0.5 text-[10px]">
             {badge}
@@ -568,7 +577,12 @@ export function OrbResidentialSidebar({
                   {...(item.id === 'orb_dictate' ? { 'data-orb-sidebar-magic-notes': true } : {})}
                 >
                   <Icon className="h-4 w-4 shrink-0" />
-                  <span className="flex-1 text-left text-sm">{item.label}</span>
+                  <span className="flex min-w-0 flex-1 flex-col text-left">
+                    <span className="text-sm">{item.label}</span>
+                    {item.helper ? (
+                      <span className="text-[10px] leading-tight text-[var(--orb-muted)]">{item.helper}</span>
+                    ) : null}
+                  </span>
                   {badge ? (
                     <span className="rounded-full bg-[var(--orb-surface-hover)] px-2 py-0.5 text-[10px]">
                       {badge}
@@ -773,6 +787,7 @@ export function OrbResidentialSidebar({
                   <DesktopSidebarNavButton
                     key={station.id}
                     label={station.label}
+                    helper={station.helper}
                     icon={station.icon}
                     stationId={station.id}
                     badge={
