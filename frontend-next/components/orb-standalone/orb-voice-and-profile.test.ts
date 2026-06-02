@@ -37,9 +37,11 @@ describe('pickBritishFemaleVoice', () => {
 
 describe('adult profile personalisation', () => {
   it('personalises empty state heading with calm ready copy', () => {
-    const heading = personalisedEmptyHeading({ ...DEFAULT_ADULT_PROFILE, name: 'Tom Kelly' })
-    assert.match(heading, /Ready when you are/i)
-    assert.match(heading, /Tom/)
+    const heading = personalisedEmptyHeading(
+      { ...DEFAULT_ADULT_PROFILE, name: 'Tom Kelly' },
+      { hour: 15 }
+    )
+    assert.match(heading, /Good afternoon, Tom/i)
   })
 
   it('registered manager gets role-based starters', () => {
@@ -52,32 +54,41 @@ describe('adult profile personalisation', () => {
   })
 
   it('welcome message stays calm for registered manager role', () => {
-    const welcome = personalisedWelcomeMessage({
-      ...DEFAULT_ADULT_PROFILE,
-      name: 'Tom Kelly',
-      role: 'registered_manager'
-    })
-    assert.match(welcome.heading, /Ready when you are/i)
-    assert.match(welcome.subline, /regulatory practice/)
+    const welcome = personalisedWelcomeMessage(
+      {
+        ...DEFAULT_ADULT_PROFILE,
+        name: 'Tom Kelly',
+        role: 'registered_manager'
+      },
+      { hour: 10 }
+    )
+    assert.match(welcome.heading, /Good morning, Tom/i)
+    assert.match(welcome.subline, /inspection readiness|safeguarding|recording/i)
   })
 
   it('welcome message stays calm for NVQ assessor role', () => {
-    const welcome = personalisedWelcomeMessage({
-      ...DEFAULT_ADULT_PROFILE,
-      role: 'nvq_assessor',
-      roleLabel: 'NVQ assessor'
-    })
-    assert.match(welcome.heading, /Ready when you are/i)
-    assert.match(welcome.subline, /regulatory practice/)
+    const welcome = personalisedWelcomeMessage(
+      {
+        ...DEFAULT_ADULT_PROFILE,
+        role: 'nvq_assessor',
+        roleLabel: 'NVQ assessor'
+      },
+      { hour: 20 }
+    )
+    assert.match(welcome.heading, /Good evening/i)
+    assert.match(welcome.subline, /inspection readiness|safeguarding|recording/i)
   })
 
   it('welcome message stays calm for support worker role', () => {
-    const welcome = personalisedWelcomeMessage({
-      ...DEFAULT_ADULT_PROFILE,
-      role: 'residential_support_worker'
-    })
+    const welcome = personalisedWelcomeMessage(
+      {
+        ...DEFAULT_ADULT_PROFILE,
+        role: 'residential_support_worker'
+      },
+      { hour: 3 }
+    )
     assert.match(welcome.heading, /Ready when you are/i)
-    assert.match(welcome.subline, /regulatory practice/)
+    assert.match(welcome.subline, /inspection readiness|safeguarding|recording/i)
   })
 
   it('initials from Tom Kelly are TK', () => {

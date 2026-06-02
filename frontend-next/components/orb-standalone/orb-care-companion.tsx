@@ -100,6 +100,7 @@ import {
 } from '@/components/orb-residential/orb-residential-sidebar'
 import { OrbHueMark } from '@/components/orb-standalone/orb-hue-logo'
 import { useOrbAppearance } from '@/components/orb-standalone/use-orb-appearance'
+import { useOrbMobileViewport } from '@/components/orb-standalone/use-orb-mobile-viewport'
 import { ORB_LIGHT_UI_BUILD } from '@/lib/orb/orb-light-ui-build'
 import { ORB_DATA_BOUNDARY, ORB_DATA_BOUNDARY_SHORT, ORB_PRODUCT_NAME } from '@/lib/orb/orb-product-copy'
 import {
@@ -531,6 +532,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   const orbSessionReady = account.isSignedIn && csrfReady && !account.isLoading
   const mounted = useMounted()
   const { resolvedTheme, appearanceMode, setAppearanceMode } = useOrbAppearance()
+  const isMobileViewport = useOrbMobileViewport()
   const searchParams = useSearchParams()
   const initialQuery = mounted ? searchParams.get('q')?.trim() || '' : ''
   const recordingContext = mounted && searchParams.get('context') === 'recording'
@@ -1748,9 +1750,8 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
     inputRef.current?.focus()
   }
 
-  function runQualityReview(text: string) {
-    const prompt = `Review this written practice for quality score, safeguarding concerns, missing information, child voice, chronology gaps, Ofsted readiness, suggested improved wording and manager oversight prompts.\n\n${text}`
-    void sendMessage(prompt)
+  function runQualityReview(payload: { prompt: string }) {
+    void sendMessage(payload.prompt)
     inputRef.current?.focus()
   }
 
@@ -2463,6 +2464,15 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       data-orb-residential-surface={residentialSurface ? 'true' : undefined}
       data-orb-light-ui-build={ORB_LIGHT_UI_BUILD}
       data-orb-appearance-mode={appearanceMode}
+      data-orb-system-theme={
+        appearanceMode === 'system'
+          ? resolvedTheme
+          : appearanceMode === 'light'
+            ? 'light'
+            : 'dark'
+      }
+      data-orb-mobile-shell={isMobileViewport ? 'true' : undefined}
+      data-orb-chat-layout={isMobileViewport ? 'mobile' : 'desktop'}
       data-orb-active-panel={activePanel || 'none'}
       data-orb-close-all-panels
       data-orb-text-first-chat="true"

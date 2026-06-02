@@ -75,7 +75,7 @@ export function OrbStandalonePanelShell({
       <div
         className={
           isCenter
-            ? `orb-panel-modal pointer-events-auto flex max-h-[min(calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1rem),56rem)] w-[min(calc(100vw-1rem),47.5rem)] max-w-[min(calc(100vw-1rem),47.5rem)] flex-col overflow-hidden rounded-3xl border border-[var(--orb-line)] bg-[var(--orb-surface)] shadow-2xl max-sm:rounded-3xl ${sizeClass}`
+            ? `orb-panel-modal pointer-events-auto flex max-h-[min(calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1rem),56rem)] w-[min(calc(100vw-1rem),47.5rem)] max-w-[min(calc(100vw-1rem),47.5rem)] flex-col overflow-hidden rounded-3xl border border-[var(--orb-line)] bg-[var(--orb-surface)] shadow-2xl max-sm:mt-auto max-sm:max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-top)-0.5rem))] max-sm:w-[calc(100vw-0.75rem)] max-sm:rounded-t-[1.35rem] max-sm:rounded-b-none ${sizeClass}`
             : `orb-panel-drawer pointer-events-auto flex h-full w-full flex-col border-l border-[var(--orb-line)] bg-[var(--orb-surface)] shadow-2xl max-md:max-h-[100dvh] md:max-h-[100dvh] ${
                 wide ? 'max-w-4xl' : 'max-w-xl'
               }`

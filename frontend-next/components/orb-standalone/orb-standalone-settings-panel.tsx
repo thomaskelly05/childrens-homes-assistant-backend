@@ -39,6 +39,12 @@ import {
   saveOrbStandaloneChatSettings,
   type OrbStandaloneChatSettings
 } from '@/lib/orb/orb-standalone-settings'
+import {
+  defaultOrbStandalonePersonalisation,
+  loadOrbStandalonePersonalisation,
+  saveOrbStandalonePersonalisation,
+  type OrbStandalonePersonalisation
+} from '@/lib/orb/orb-standalone-personalisation'
 import type { StandaloneOrbAccessibilityPreferences } from '@/lib/orb/standalone-accessibility'
 
 type SettingsSectionId =
@@ -69,7 +75,7 @@ type PasskeyItem = NonNullable<OrbPasskeyListResponse['items']>[number]
 export function OrbStandaloneSettingsPanel({
   open,
   onClose,
-  appearanceMode = 'light',
+  appearanceMode = 'system',
   onAppearanceChange,
   a11yPrefs,
   onA11yChange,
@@ -108,6 +114,10 @@ export function OrbStandaloneSettingsPanel({
   onClearProjects?: () => void
 }) {
   const [activeSection, setActiveSection] = useState<SettingsSectionId>('general')
+  const [mobileSectionOpen, setMobileSectionOpen] = useState<SettingsSectionId | null>('general')
+  const [personalisation, setPersonalisation] = useState<OrbStandalonePersonalisation>(
+    defaultOrbStandalonePersonalisation
+  )
   const [chatSettings, setChatSettings] = useState<OrbStandaloneChatSettings>(defaultOrbStandaloneChatSettings)
   const [passkeysSupported, setPasskeysSupported] = useState(false)
   const [passkeys, setPasskeys] = useState<PasskeyItem[]>([])
@@ -118,6 +128,7 @@ export function OrbStandaloneSettingsPanel({
   useEffect(() => {
     if (!open) return
     setChatSettings(loadOrbStandaloneChatSettings())
+    setPersonalisation(loadOrbStandalonePersonalisation())
     setPasskeysSupported(orbPasskeysSupported())
   }, [open])
 
@@ -174,7 +185,16 @@ export function OrbStandaloneSettingsPanel({
     })
   }
 
+  function updatePersonalisation(patch: Partial<OrbStandalonePersonalisation>) {
+    setPersonalisation((current) => {
+      const next = { ...current, ...patch }
+      saveOrbStandalonePersonalisation(next)
+      return next
+    })
+  }
+
   const textSize = a11yPrefs?.largeText ? 'large' : 'comfortable'
+  const effectiveAppearance = appearanceMode ?? 'system'
 
   return (
     <OrbStandalonePanelShell
@@ -189,8 +209,22 @@ export function OrbStandaloneSettingsPanel({
         ? orbStationShellProps(true, 'compact')
         : { layout: 'center' as const, wide: true })}
     >
-      <div className="flex min-h-0 flex-1 flex-col md:flex-row" data-orb-settings-panel>
-        <nav className="shrink-0 border-b border-[var(--orb-line)] p-2 md:w-44 md:border-b-0 md:border-r" data-orb-settings-nav>
+      <div
+        className="flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row"
+        data-orb-settings-panel
+        data-orb-settings-layout="premium-cards"
+      >
+        <div className="orb-premium-settings-card shrink-0 border-b border-[var(--orb-line)] p-4 md:hidden">
+          <OrbAppearanceControl value={effectiveAppearance} onChange={(mode) => onAppearanceChange?.(mode)} />
+          <p className="mt-2 text-[11px] leading-5 text-[var(--orb-muted)]">
+            System follows your device — light during the day, dark at night unless you choose otherwise.
+          </p>
+        </div>
+
+        <nav
+          className="hidden shrink-0 border-b border-[var(--orb-line)] p-2 md:block md:w-44 md:border-b-0 md:border-r"
+          data-orb-settings-nav
+        >
           {SECTION_META.map((section) => (
             <button
               key={section.id}
@@ -209,10 +243,33 @@ export function OrbStandaloneSettingsPanel({
           ))}
         </nav>
 
-        <div className="flex-1 overflow-y-auto p-4">
+        <nav className="flex shrink-0 gap-1 overflow-x-auto border-b border-[var(--orb-line)] p-2 md:hidden" data-orb-settings-nav-mobile>
+          {SECTION_META.map((section) => (
+            <button
+              key={section.id}
+              type="button"
+              onClick={() => {
+                setActiveSection(section.id)
+                setMobileSectionOpen((current) => (current === section.id ? null : section.id))
+              }}
+              className={`shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-medium ${
+                mobileSectionOpen === section.id
+                  ? 'border-[var(--orb-primary)] bg-[var(--orb-primary-soft)] text-[var(--orb-foreground)]'
+                  : 'border-[var(--orb-line)] text-[var(--orb-muted)]'
+              }`}
+              data-orb-settings-section={section.id}
+            >
+              {section.label}
+            </button>
+          ))}
+        </nav>
+
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
           {activeSection === 'general' ? (
             <SettingsBlock title="General" description="Appearance and workspace defaults.">
-              <OrbAppearanceControl value={appearanceMode} onChange={(mode) => onAppearanceChange?.(mode)} />
+              <div className="hidden md:block">
+                <OrbAppearanceControl value={effectiveAppearance} onChange={(mode) => onAppearanceChange?.(mode)} />
+              </div>
               <p className="text-[11px] leading-5 text-[var(--orb-muted)]">
                 System follows your device. You can override it here.
               </p>
@@ -247,6 +304,49 @@ export function OrbStandaloneSettingsPanel({
 
           {activeSection === 'personalisation' ? (
             <SettingsBlock title="Personalisation" description="Role, tone and how ORB addresses you.">
+              <label className="block rounded-xl border border-[var(--orb-line)] px-4 py-3" data-orb-settings-preferred-name>
+                <span className="block text-sm font-medium text-[var(--orb-foreground)]">Preferred name</span>
+                <span className="block text-xs text-[var(--orb-muted)]">How ORB greets you on the home screen</span>
+                <input
+                  type="text"
+                  value={personalisation.preferredName}
+                  onChange={(e) => updatePersonalisation({ preferredName: e.target.value })}
+                  placeholder="e.g. Tom"
+                  className="mt-2 w-full rounded-lg border border-[var(--orb-line)] bg-[var(--orb-surface)] px-3 py-2 text-sm text-[var(--orb-foreground)]"
+                />
+              </label>
+              <fieldset className="rounded-xl border border-[var(--orb-line)] px-4 py-3" data-orb-settings-greeting-style>
+                <legend className="text-sm font-medium text-[var(--orb-foreground)]">Greeting style</legend>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {(['calm', 'direct', 'supportive'] as const).map((style) => (
+                    <TogglePill
+                      key={style}
+                      active={personalisation.greetingStyle === style}
+                      label={style.charAt(0).toUpperCase() + style.slice(1)}
+                      onClick={() => updatePersonalisation({ greetingStyle: style })}
+                    />
+                  ))}
+                </div>
+              </fieldset>
+              <fieldset className="rounded-xl border border-[var(--orb-line)] px-4 py-3" data-orb-settings-professional-tone>
+                <legend className="text-sm font-medium text-[var(--orb-foreground)]">Professional tone</legend>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {(
+                    [
+                      ['therapeutic', 'Therapeutic'],
+                      ['compliance', 'Compliance'],
+                      ['balanced', 'Balanced']
+                    ] as const
+                  ).map(([id, label]) => (
+                    <TogglePill
+                      key={id}
+                      active={personalisation.professionalTone === id}
+                      label={label}
+                      onClick={() => updatePersonalisation({ professionalTone: id })}
+                    />
+                  ))}
+                </div>
+              </fieldset>
               <RowButton
                 icon={<User className="h-4 w-4" />}
                 label="Manage profile"
@@ -256,10 +356,6 @@ export function OrbStandaloneSettingsPanel({
                   onClose()
                 }}
               />
-              <p className="text-[11px] leading-5 text-[var(--orb-muted)]">
-                Your profile shapes suggestions and recording style. It stays on this device unless you connect other
-                services.
-              </p>
             </SettingsBlock>
           ) : null}
 

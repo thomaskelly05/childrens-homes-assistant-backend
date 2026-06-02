@@ -110,6 +110,8 @@ function emitSnapshot(label: string, delayMs: number) {
 
 export function OrbClientFlightRecorder() {
   const [enabled, setEnabled] = useState(false)
+  const [hidden, setHidden] = useState(false)
+  const [collapsed, setCollapsed] = useState(true)
   const [count, setCount] = useState(0)
   const [copyNotice, setCopyNotice] = useState<string | null>(null)
 
@@ -121,6 +123,8 @@ export function OrbClientFlightRecorder() {
       event: 'recorder_enabled',
       detail: { state: screenState(), capabilities: browserCapabilities() }
     })
+
+    const collapseTimer = window.setTimeout(() => setCollapsed(true), 3000)
 
     const handler = (event: MouseEvent) => {
       const target = event.target as HTMLElement | null
@@ -146,49 +150,80 @@ export function OrbClientFlightRecorder() {
     document.addEventListener('click', handler, true)
     const interval = window.setInterval(() => setCount(getOrbClientDebugEvents().length), 1000)
     return () => {
+      window.clearTimeout(collapseTimer)
       document.removeEventListener('click', handler, true)
       window.clearInterval(interval)
     }
   }, [])
 
-  if (!enabled) return null
+  if (!enabled || hidden) return null
 
   return (
-    <div className="fixed bottom-3 right-3 z-[9999] max-w-[220px] rounded-2xl border border-sky-300 bg-white p-3 text-xs text-slate-800 shadow-2xl dark:border-sky-700 dark:bg-slate-950 dark:text-white">
-      <strong>ORB flight recorder</strong>
-      <div>{count} events</div>
-      <div className="mt-1 text-[11px] opacity-70">Console: ORB_DEBUG_EVENTS()</div>
-      <div className="mt-2 flex flex-wrap gap-1">
-        <button
-          type="button"
-          className="rounded-full border px-2 py-1"
-          onClick={() => {
-            clearOrbClientDebugEvents()
-            setCount(0)
-          }}
-        >
-          Clear
-        </button>
-        <button
-          type="button"
-          className="rounded-full border px-2 py-1"
-          onClick={() => {
-            void copyOrbClientDebugEvents().then((result) => {
-              if (result === true) {
-                setCopyNotice('Copied')
-              } else {
-                setCopyNotice('Copy failed — run ORB_DEBUG_COPY() in console')
-                // eslint-disable-next-line no-console
-                console.info('[ORB_DEBUG_COPY]', result)
-              }
-              window.setTimeout(() => setCopyNotice(null), 4000)
-            })
-          }}
-        >
-          Copy debug report
-        </button>
+    <div
+      className="orb-flight-recorder fixed right-3 top-[max(0.75rem,env(safe-area-inset-top))] z-[90] max-w-[min(220px,calc(100vw-1.5rem))] rounded-2xl border border-sky-300/80 bg-white/95 p-2 text-xs text-slate-800 shadow-lg backdrop-blur-md dark:border-sky-700/80 dark:bg-slate-950/95 dark:text-white max-lg:bottom-auto max-lg:left-auto"
+      data-orb-flight-recorder
+      data-orb-flight-recorder-collapsed={collapsed ? 'true' : 'false'}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <strong className="text-[11px]">ORB flight recorder</strong>
+        <div className="flex shrink-0 gap-1">
+          <button
+            type="button"
+            className="rounded-full border px-1.5 py-0.5 text-[10px]"
+            onClick={() => setCollapsed((value) => !value)}
+            data-orb-flight-recorder-toggle
+          >
+            {collapsed ? 'Show' : 'Minimise'}
+          </button>
+          <button
+            type="button"
+            className="rounded-full border px-1.5 py-0.5 text-[10px]"
+            onClick={() => setHidden(true)}
+            data-orb-flight-recorder-hide
+          >
+            Hide
+          </button>
+        </div>
       </div>
-      {copyNotice ? <p className="mt-1 text-[10px] text-sky-700 dark:text-sky-200">{copyNotice}</p> : null}
+      {!collapsed ? (
+        <>
+          <div className="mt-1">{count} events</div>
+          <div className="mt-1 text-[10px] opacity-70">Console: ORB_DEBUG_EVENTS()</div>
+          <div className="mt-2 flex flex-wrap gap-1">
+            <button
+              type="button"
+              className="rounded-full border px-2 py-1"
+              onClick={() => {
+                clearOrbClientDebugEvents()
+                setCount(0)
+              }}
+            >
+              Clear
+            </button>
+            <button
+              type="button"
+              className="rounded-full border px-2 py-1"
+              onClick={() => {
+                void copyOrbClientDebugEvents().then((result) => {
+                  if (result === true) {
+                    setCopyNotice('Copied')
+                  } else {
+                    setCopyNotice('Copy failed — run ORB_DEBUG_COPY() in console')
+                    // eslint-disable-next-line no-console
+                    console.info('[ORB_DEBUG_COPY]', result)
+                  }
+                  window.setTimeout(() => setCopyNotice(null), 4000)
+                })
+              }}
+            >
+              Copy debug report
+            </button>
+          </div>
+          {copyNotice ? <p className="mt-1 text-[10px] text-sky-700 dark:text-sky-200">{copyNotice}</p> : null}
+        </>
+      ) : (
+        <p className="mt-0.5 text-[10px] opacity-70">{count} events · debugVoice=1</p>
+      )}
     </div>
   )
 }

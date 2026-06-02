@@ -294,6 +294,24 @@ html[data-orb-residential='1'] .orb-chat-layout {
   backdrop-filter: blur(12px);
 }
 
+.orb-premium-settings-card {
+  border-radius: 1rem;
+  border: 1px solid var(--orb-line, rgba(37, 99, 235, 0.16));
+  background: var(--orb-surface-elevated, #ffffff);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+}
+
+html[data-orb-theme='dark'] .orb-premium-settings-card {
+  border-color: rgba(66, 215, 255, 0.18);
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35), 0 0 24px rgba(22, 139, 255, 0.06);
+}
+
+html[data-orb-theme='light'] .orb-premium-settings-card {
+  border-color: rgba(37, 99, 235, 0.14);
+  background: #ffffff;
+}
+
 /* Settings — dark glass selected row */
 .orb-settings-nav-item--active,
 [data-orb-settings-nav-active='true'] {
@@ -684,13 +702,21 @@ html[data-orb-residential='1'] .orb-templates-panel .orb-doc-glass-card {
   border-color: rgba(255, 255, 255, 0.1);
 }
 
-/* Residential root — force dark OS chrome and block light leakage */
-html[data-orb-residential='1'],
-html[data-orb-residential='1'] body,
-.orb-residential-root {
+/* Residential root — theme follows user choice (system / light / dark), not forced dark */
+html[data-orb-residential='1'][data-orb-theme='dark'],
+html[data-orb-residential='1'][data-orb-theme='dark'] body,
+html[data-orb-residential='1'][data-orb-theme='dark'] .orb-residential-root {
   color-scheme: dark;
   background: var(--orb-premium-bg-deep, #05070d);
   color: var(--orb-premium-text, #f7faff);
+}
+
+html[data-orb-residential='1'][data-orb-theme='light'],
+html[data-orb-residential='1'][data-orb-theme='light'] body,
+html[data-orb-residential='1'][data-orb-theme='light'] .orb-residential-root {
+  color-scheme: light;
+  background: var(--orb-premium-bg-deep, #f7fbff);
+  color: var(--orb-premium-text, #0f172a);
 }
 
 html[data-orb-residential='1'] .orb-theme-light,

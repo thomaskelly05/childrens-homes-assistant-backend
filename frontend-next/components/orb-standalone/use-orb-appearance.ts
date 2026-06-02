@@ -36,10 +36,14 @@ export function useOrbAppearance() {
 
   useEffect(() => {
     applyOrbDocumentTheme(resolvedTheme)
+    if (typeof document !== 'undefined') {
+      document.documentElement.setAttribute('data-orb-appearance-mode', appearanceMode)
+      document.documentElement.setAttribute('data-orb-system-theme', resolvedTheme)
+    }
     return () => {
       /* Keep bootstrap theme on unmount — residential shell may still be mounted. */
     }
-  }, [resolvedTheme])
+  }, [appearanceMode, resolvedTheme])
 
   const setAppearanceMode = useCallback((mode: OrbAppearanceMode) => {
     writeOrbAppearanceMode(mode)

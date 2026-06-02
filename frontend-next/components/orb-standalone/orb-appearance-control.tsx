@@ -18,7 +18,11 @@ export function OrbAppearanceControl({
   return (
     <div className="space-y-2" data-orb-appearance-control>
       <p className="text-xs font-medium text-[var(--orb-muted)]">Appearance</p>
-      <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Appearance">
+      <div
+        className="orb-appearance-segmented flex rounded-xl border border-[var(--orb-line)] bg-[var(--orb-surface)] p-0.5"
+        role="radiogroup"
+        aria-label="Appearance"
+      >
         {OPTIONS.map((option) => (
           <button
             key={option.id}
@@ -26,10 +30,10 @@ export function OrbAppearanceControl({
             role="radio"
             aria-checked={value === option.id}
             onClick={() => onChange(option.id)}
-            className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+            className={`min-h-[2.25rem] flex-1 rounded-lg px-2 py-1.5 text-xs font-semibold transition ${
               value === option.id
-                ? 'border-[var(--orb-primary-cyan)] bg-[#00B8FF]/10 text-[var(--orb-foreground)]'
-                : 'border-[var(--orb-line)] text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)]'
+                ? 'bg-gradient-to-r from-[#168bff] to-[#0d5fcc] text-white shadow-sm'
+                : 'text-[var(--orb-muted)] hover:text-[var(--orb-foreground)]'
             }`}
             data-orb-appearance-option={option.id}
           >

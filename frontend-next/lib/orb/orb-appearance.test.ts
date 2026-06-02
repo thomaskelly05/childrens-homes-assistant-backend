@@ -33,6 +33,25 @@ describe('orb appearance', () => {
     assert.equal(resolveOrbTheme('system'), 'light')
   })
 
+  it('follows prefers-color-scheme when resolving system on client', () => {
+    const originalMatchMedia = globalThis.matchMedia
+    Object.defineProperty(globalThis, 'matchMedia', {
+      value: () => ({ matches: true, addEventListener: () => {}, removeEventListener: () => {} }),
+      configurable: true
+    })
+    Object.defineProperty(globalThis, 'window', { value: globalThis, configurable: true })
+    try {
+      assert.equal(resolveOrbTheme('system'), 'dark')
+    } finally {
+      if (originalMatchMedia) {
+        Object.defineProperty(globalThis, 'matchMedia', { value: originalMatchMedia, configurable: true })
+      } else {
+        Reflect.deleteProperty(globalThis, 'matchMedia')
+      }
+      Reflect.deleteProperty(globalThis, 'window')
+    }
+  })
+
   it('persists appearance mode in localStorage', () => {
     const bag = mockBrowserStorage()
     try {

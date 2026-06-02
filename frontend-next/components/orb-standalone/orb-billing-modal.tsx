@@ -170,12 +170,15 @@ export function OrbBillingModal({ open, onClose }: { open: boolean; onClose: () 
       panelId="billing"
       size="wide"
     >
-      <div className="space-y-6 p-5 sm:p-6" data-orb-billing-modal>
-        <section className={cardClassName()} data-orb-billing-plan-card>
-          <div className="flex flex-wrap items-start justify-between gap-3">
+      <div
+        className="space-y-5 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:space-y-6 sm:p-6"
+        data-orb-billing-modal
+      >
+        <section className={`${cardClassName()} sm:p-4`} data-orb-billing-plan-card>
+          <div className="flex flex-wrap items-start justify-between gap-2 sm:gap-3">
             <div>
-              <p className="text-base font-semibold text-[var(--orb-foreground)]">ORB Residential</p>
-              <p className="mt-1 text-2xl font-semibold tracking-tight text-[#5ec8ff]">£9.99/month</p>
+              <p className="text-sm font-semibold text-[var(--orb-foreground)] sm:text-base">ORB Residential</p>
+              <p className="mt-0.5 text-xl font-semibold tracking-tight text-[#5ec8ff] sm:mt-1 sm:text-2xl">£9.99/month</p>
             </div>
             <span className="rounded-full border border-cyan-500/25 bg-cyan-500/10 px-3 py-1 text-xs font-medium capitalize text-cyan-200">
               {displayStatus}
@@ -342,7 +345,10 @@ export function OrbBillingModal({ open, onClose }: { open: boolean; onClose: () 
         {notice ? <p className="text-sm text-cyan-200/90">{notice}</p> : null}
         {error ? <p className="text-sm text-amber-300/90">{error}</p> : null}
 
-        <div className="sticky bottom-0 flex flex-wrap gap-2 border-t border-[var(--orb-line)] bg-[var(--orb-surface)]/95 pt-4 backdrop-blur-sm">
+        <div
+          className="sticky bottom-0 z-10 flex flex-wrap gap-2 border-t border-[var(--orb-line)] bg-[var(--orb-surface)]/98 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-4 backdrop-blur-md"
+          data-orb-billing-cta-bar
+        >
           {!access?.can_use_orb && access?.trial?.available ? (
             <button
               type="button"
