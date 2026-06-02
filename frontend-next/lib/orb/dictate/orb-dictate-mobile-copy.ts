@@ -24,8 +24,8 @@ export const ORB_DICTATE_MOBILE_AI_ACTIONS: ReadonlyArray<{
 }> = [
   { id: 'improve_wording', label: 'Improve wording' },
   { id: 'make_professional', label: 'Make professional' },
-  { id: 'daily_record', label: 'Create daily record' },
-  { id: 'incident_note', label: 'Create incident note' },
+  { id: 'daily_record', label: 'Daily record' },
+  { id: 'incident_note', label: 'Incident note' },
   { id: 'reflective_note', label: 'Reflective note' },
   { id: 'safeguarding_lens', label: 'Safeguarding lens' },
   { id: 'ofsted_lens', label: 'Ofsted lens' }

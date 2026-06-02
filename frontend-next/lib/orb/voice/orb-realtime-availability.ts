@@ -114,7 +114,7 @@ export async function beginOrbRealtimeVoiceConversation(options: {
         error:
           session.message ||
           session.fallback_reason ||
-          'Live ORB Voice is not available yet. Configure realtime voice to use this.'
+          'Live voice is unavailable right now.'
       }
     }
     const micOk = await client.startMicrophone({ vadEnabled: true, bargeInWhileSpeaking: true })

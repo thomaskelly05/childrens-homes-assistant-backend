@@ -55,7 +55,8 @@ describe('ORB Voice realtime sessions', () => {
   it('voice station requires realtime before live session', () => {
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
     assert.match(station, /realtimeVoiceReady/)
-    assert.match(station, /Configure realtime voice to use this/)
+    assert.match(station, /OrbDictateMobileExperience/)
+    assert.doesNotMatch(station, /Configure realtime voice to use this/)
     assert.match(station, /beginOrbRealtimeVoiceConversation/)
   })
 })

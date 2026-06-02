@@ -32,7 +32,7 @@ describe('ORB Dictate speech-first routing', () => {
     assert.match(dictate, /data-orb-dictate-capture-mode=/)
     assert.match(dictate, /data-orb-dictate-recording-state/)
     assert.match(dictate, /data-orb-dictate-transcript-length/)
-    assert.match(dictate, /Transcript captured|data-orb-dictate-captured-card/)
+    assert.match(dictate, /Transcript captured|data-orb-dictate-captured-card|OrbDictateMobileExperience/)
     assert.match(dictate, /DICTATE_NO_SPEECH_MESSAGE|No speech was detected/)
   })
 
@@ -64,7 +64,7 @@ describe('ORB Voice realtime availability', () => {
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
     assert.match(station, /fetchOrbVoiceRealtimeStatus|isRealtimeVoiceProvider/)
     assert.match(station, /realtimeVoiceReady/)
-    assert.match(station, /Live voice is not available right now|Live ORB Voice is not available/)
+    assert.match(station, /Live voice is unavailable right now|ORB_VOICE_UNAVAILABLE_HEADLINE/)
     assert.match(station, /voice_fake_active_prevented/)
   })
 })
