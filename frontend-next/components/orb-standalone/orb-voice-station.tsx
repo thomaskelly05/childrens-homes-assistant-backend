@@ -31,6 +31,7 @@ import {
   beginOrbRealtimeVoiceConversation,
   clearActiveOrbRealtimeVoiceClient,
   fetchOrbVoiceRealtimeStatus,
+  isOrbRealtimeStatusConfigured,
   type OrbRealtimeVoiceStatus
 } from '@/lib/orb/voice/orb-realtime-availability'
 import { probeOrbVoiceAuth, resetOrbVoiceAuthCache } from '@/lib/orb/voice/orb-voice-auth'
@@ -186,7 +187,7 @@ export function OrbVoiceStation({
     isTestMode: isOrbTestMode()
   }
   const liveVoiceAllowed = canUseLiveVoice(micAccess)
-  const realtimeVoiceReady = Boolean(realtimeStatus?.realtime_enabled && realtimeStatus.reason === 'configured')
+  const realtimeVoiceReady = isOrbRealtimeStatusConfigured(realtimeStatus)
 
   const voiceSessionLive =
     realtimeVoiceReady &&
@@ -589,8 +590,7 @@ export function OrbVoiceStation({
     onSignIn?.()
   }
 
-  const primaryDisabled =
-    uiState === 'ready' && (!liveVoiceAllowed || !realtimeVoiceReady || permissionDenied)
+  const primaryDisabled = uiState === 'ready' && (!liveVoiceAllowed || permissionDenied)
 
   const showPostSession =
     (uiState === 'ended' || (transcriptAvailable && !voiceSessionLive)) &&

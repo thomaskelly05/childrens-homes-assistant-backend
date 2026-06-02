@@ -4,6 +4,18 @@
 
 import type { OrbRealtimeVoiceStatus } from './orb-realtime-availability'
 
+export const ORB_REALTIME_CONFIGURED_PROVIDERS = ['openai', 'openai_realtime'] as const
+
+/** True when GET /orb/voice/session/status reports realtime ready (no session/client secret required). */
+export function isOrbRealtimeStatusConfigured(
+  status: OrbRealtimeVoiceStatus | null | undefined
+): boolean {
+  if (!status?.ok || !status.realtime_enabled || status.reason !== 'configured') return false
+  const provider = status.provider?.trim().toLowerCase()
+  if (!provider) return false
+  return (ORB_REALTIME_CONFIGURED_PROVIDERS as readonly string[]).includes(provider)
+}
+
 export type OrbVoiceUiState =
   | 'unauthenticated'
   | 'checking'
@@ -31,24 +43,22 @@ export type ResolveOrbVoiceUiStateInput = {
 
 export function resolveOrbVoiceUiState(input: ResolveOrbVoiceUiStateInput): OrbVoiceUiState {
   if (input.authStatus === 'unauthenticated') return 'unauthenticated'
-  if (input.authStatus === 'unknown' || input.statusProbe === 'loading') return 'checking'
+
+  if (
+    input.authStatus === 'unknown' ||
+    input.statusProbe === 'loading' ||
+    input.statusProbe === 'idle'
+  ) {
+    return 'checking'
+  }
 
   if (input.sessionEnded && input.startStage === 'idle') return 'ended'
 
-  if (input.webrtcFailed || (input.startStage === 'failed' && input.realtimeStatus?.reason !== 'not_configured')) {
-    return input.webrtcFailed ? 'webrtc_failed' : 'provider_unavailable'
-  }
-
-  if (
-    input.realtimeStatus &&
-    (!input.realtimeStatus.realtime_enabled ||
-      input.realtimeStatus.reason === 'not_configured' ||
-      input.realtimeStatus.reason === 'endpoint_failed')
-  ) {
-    return 'provider_unavailable'
-  }
+  if (input.webrtcFailed) return 'webrtc_failed'
 
   if (input.startStage === 'starting') return 'connecting'
+
+  if (input.startStage === 'active' && !input.transportLive) return 'connecting'
 
   if (input.startStage === 'active' && input.transportLive) {
     if (input.realtimeState === 'speaking') return 'speaking'
@@ -56,7 +66,13 @@ export function resolveOrbVoiceUiState(input: ResolveOrbVoiceUiStateInput): OrbV
     return 'listening'
   }
 
-  if (input.startStage === 'failed') return 'webrtc_failed'
+  if (input.startStage === 'failed') {
+    return isOrbRealtimeStatusConfigured(input.realtimeStatus) ? 'webrtc_failed' : 'provider_unavailable'
+  }
+
+  if (!isOrbRealtimeStatusConfigured(input.realtimeStatus)) {
+    return 'provider_unavailable'
+  }
 
   return 'ready'
 }

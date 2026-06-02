@@ -23,6 +23,10 @@ export type OrbRealtimeVoiceAvailability = {
   status?: OrbRealtimeVoiceStatus
 }
 
+import { isOrbRealtimeStatusConfigured } from './orb-voice-ui-state'
+
+export { isOrbRealtimeStatusConfigured, ORB_REALTIME_CONFIGURED_PROVIDERS } from './orb-voice-ui-state'
+
 const DEFAULT_UNAVAILABLE: OrbRealtimeVoiceAvailability = {
   realtimeVoiceAvailable: false,
   reason: 'not_configured'
@@ -116,7 +120,7 @@ export async function isOrbRealtimeVoiceAvailable(): Promise<OrbRealtimeVoiceAva
     return DEFAULT_UNAVAILABLE
   }
   const status = await fetchOrbVoiceRealtimeStatus()
-  if (!status.ok || !status.realtime_enabled) {
+  if (!isOrbRealtimeStatusConfigured(status)) {
     return {
       realtimeVoiceAvailable: false,
       reason: status.reason === 'endpoint_failed' ? 'endpoint_failed' : 'not_configured',
