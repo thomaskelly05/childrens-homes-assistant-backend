@@ -93,13 +93,13 @@ describe('ORB Residential mobile UX', () => {
     assert.match(sidebar, /ORB_RESIDENTIAL_TAGLINE/)
   })
 
-  it('mobile sidebar quick nav lists Magic Notes Voice Documents Saved Outputs Projects Recent chats', () => {
+  it('mobile sidebar quick nav lists Dictate Voice Documents Saved Outputs Projects Recent chats', () => {
     const sidebar = readComponent('components/orb-residential/orb-residential-sidebar.tsx')
     assert.match(sidebar, /useOrbMobileViewport/)
     assert.match(sidebar, /data-orb-sidebar-mobile-quick-nav/)
     assert.match(sidebar, /data-orb-sidebar-magic-notes/)
     assert.match(sidebar, /data-orb-sidebar-recent-chats-shortcut/)
-    for (const label of ['Magic Notes', 'Voice', 'Documents', 'Saved Outputs', 'Projects', 'Recent chats', 'Search']) {
+    for (const label of ['Dictate', 'Voice', 'Documents', 'Saved Outputs', 'Projects', 'Recent chats', 'Search']) {
       assert.match(sidebar, new RegExp(label))
     }
   })

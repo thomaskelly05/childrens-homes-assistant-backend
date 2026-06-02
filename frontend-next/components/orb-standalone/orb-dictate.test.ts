@@ -138,8 +138,18 @@ describe('ORB Dictate', () => {
 
   it('standalone boundary copy present', () => {
     const station = readComponent('components/orb-standalone/orb-dictate-station.tsx')
-    assert.match(station, /GOVERNANCE_COPY\.boundary/)
+    const boundary = readComponent('components/orb-standalone/orb-dictate-boundary-copy.tsx')
+    assert.match(station, /OrbDictateBoundaryCopy/)
+    assert.match(boundary, /data-orb-dictate-boundary-based-on-input/)
     assert.match(station, /GOVERNANCE_COPY\.saveWording/)
+  })
+
+  it('Dictate product title and hero output types', () => {
+    const station = readComponent('components/orb-standalone/orb-dictate-station.tsx')
+    const types = readFileSync(join(root, 'lib/orb/dictate/orb-dictate-types.ts'), 'utf8')
+    assert.match(types, /ORB_DICTATE_PRODUCT_TITLE = 'Dictate'/)
+    assert.match(station, /ORB_DICTATE_PRODUCT_SUBTITLE/)
+    assert.match(station, /data-orb-dictate-ask-orb-improve/)
   })
 
   it('studio split screen renders on desktop', () => {

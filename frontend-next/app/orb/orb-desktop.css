@@ -836,4 +836,12 @@ html[data-orb-residential='1'] .orb-chat-layout {
   html[data-orb-residential='1'] .orb-context-panel-inner[data-orb-context-kind='developer'] {
     gap: 0.75rem;
   }
+
+  html[data-orb-residential='1'] [data-orb-dictate-station][data-orb-dictate-layout='desktop-runtime'] .orb-dictate-output-types {
+    gap: 0.5rem;
+  }
+
+  html[data-orb-residential='1'] [data-orb-dictate-boundary-copy] {
+    max-width: 42rem;
+  }
 }
