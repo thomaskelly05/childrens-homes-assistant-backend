@@ -1,6 +1,10 @@
 import type { OrbState } from '../types'
 import { createOrbAudioElement, resumeOrbAudioElement, stopOrbAudioElement } from '../audio'
-import { updateOrbVoiceTransportState } from '../voice/orb-voice-diag'
+import {
+  recordOrbVoiceRawEventType,
+  updateOrbVoiceResponseFlow,
+  updateOrbVoiceTransportState
+} from '../voice/orb-voice-diag'
 
 export type OrbNetworkState =
   | 'idle'
@@ -20,6 +24,8 @@ export type OrbRealtimeConnectOptions = {
   ephemeralKey: string
   mediaStream: MediaStream
   sessionId: string
+  /** When true, caller sends session.update after connect (duplex voice / dictate). */
+  deferInitialSessionUpdate?: boolean
 }
 
 type OrbRealtimeClientCallbacks = {
@@ -126,6 +132,14 @@ export class OrbRealtimeClient {
       lastSdpEndpoint: OPENAI_REALTIME_SDP_URL
     })
     options.mediaStream.getAudioTracks().forEach((track) => peer.addTrack(track, options.mediaStream))
+    const localMicTrack = options.mediaStream.getAudioTracks()[0]
+    if (localMicTrack) {
+      updateOrbVoiceResponseFlow({
+        localMicTrackEnabled: localMicTrack.enabled,
+        localMicTrackMuted: localMicTrack.muted,
+        localMicTrackReadyState: localMicTrack.readyState
+      })
+    }
 
     peer.ontrack = (event) => {
       const [remoteStream] = event.streams
@@ -134,19 +148,15 @@ export class OrbRealtimeClient {
       updateOrbVoiceTransportState({ hasRemoteTrack: true, peerConnectionState: peer.connectionState })
       const audio = this.audio || createOrbAudioElement(remoteStream)
       audio.srcObject = remoteStream
+      audio.muted = false
+      audio.volume = 1
       this.audio = audio
-      void voiceDebug('voice_audio_play_attempt', {})
-      void resumeOrbAudioElement(audio)
-        .then(() => {
-          void import('../voice/orb-voice-diag').then(({ setOrbVoiceDiagAudioElementReady }) =>
-            setOrbVoiceDiagAudioElementReady(true)
-          )
-        })
-        .catch((error) => {
-          const message = error instanceof Error ? error.message : 'audio_play_failed'
-          void voiceDebug('voice_audio_play_failed', { message })
-          updateOrbVoiceTransportState({ lastError: message })
-        })
+      updateOrbVoiceResponseFlow({
+        remoteAudioMuted: audio.muted,
+        remoteAudioPaused: audio.paused,
+        remoteAudioReadyState: audio.readyState
+      })
+      void this.attemptRemoteAudioPlay(audio)
     }
 
     peer.onconnectionstatechange = () => {
@@ -180,7 +190,15 @@ export class OrbRealtimeClient {
 
     const channel = peer.createDataChannel('oai-events')
     this.channel = channel
-    channel.onmessage = (event) => this.callbacks.onEvent(event.data)
+    channel.onmessage = (event) => {
+      try {
+        const parsed = JSON.parse(String(event.data)) as { type?: string }
+        if (parsed?.type) recordOrbVoiceRawEventType(String(parsed.type))
+      } catch {
+        /* ignore parse for diag */
+      }
+      this.callbacks.onEvent(event.data)
+    }
     channel.onopen = () => {
       this.reconnectAttempts = 0
       this.negotiationFailed = false
@@ -189,19 +207,21 @@ export class OrbRealtimeClient {
       void voiceDebug('voice_session_live', { via: 'data_channel' })
       void voiceDebug('voice_transport_live', { via: 'data_channel' })
       this.callbacks.onStateChange('listening', { transport: 'webrtc', dataChannel: 'open' })
-      this.send({
-        type: 'session.update',
-        session: {
-          turn_detection: {
-            type: 'server_vad',
-            threshold: 0.48,
-            prefix_padding_ms: 280,
-            silence_duration_ms: ORB_SERVER_VAD_SILENCE_MS,
-            create_response: false,
-            interrupt_response: true
+      if (!options.deferInitialSessionUpdate) {
+        this.send({
+          type: 'session.update',
+          session: {
+            turn_detection: {
+              type: 'server_vad',
+              threshold: 0.48,
+              prefix_padding_ms: 280,
+              silence_duration_ms: ORB_SERVER_VAD_SILENCE_MS,
+              create_response: false,
+              interrupt_response: true
+            }
           }
-        }
-      })
+        })
+      }
       this.startHeartbeat()
     }
     channel.onerror = () => {
@@ -257,10 +277,38 @@ export class OrbRealtimeClient {
 
   handleWake() {
     if (this.stopped || !this.current || this.negotiationFailed) return
-    void resumeOrbAudioElement(this.audio)
+    void this.attemptRemoteAudioPlay(this.audio)
     if (!this.peer || ['failed', 'disconnected', 'closed'].includes(this.peer.connectionState)) {
       this.scheduleReconnect('browser_wake', 0)
     }
+  }
+
+  async attemptRemoteAudioPlay(audio: HTMLAudioElement | null = this.audio): Promise<boolean> {
+    if (!audio) return false
+    updateOrbVoiceResponseFlow({
+      audioPlayAttempted: true,
+      remoteAudioMuted: audio.muted,
+      remoteAudioPaused: audio.paused,
+      remoteAudioReadyState: audio.readyState
+    })
+    void voiceDebug('voice_audio_play_attempt', {})
+    const result = await resumeOrbAudioElement(audio)
+    updateOrbVoiceResponseFlow({
+      remoteAudioMuted: audio.muted,
+      remoteAudioPaused: audio.paused,
+      remoteAudioReadyState: audio.readyState,
+      audioPlaySucceeded: result.ok
+    })
+    if (result.ok) {
+      void voiceDebug('voice_audio_play_success', {})
+      const { setOrbVoiceDiagAudioElementReady } = await import('../voice/orb-voice-diag')
+      setOrbVoiceDiagAudioElementReady(true)
+      return true
+    }
+    const message = result.error ?? 'audio_play_failed'
+    void voiceDebug('voice_audio_play_failed', { message })
+    updateOrbVoiceTransportState({ lastError: message })
+    return false
   }
 
   private async postSdp(endpoint: string, options: OrbRealtimeConnectOptions, sdp: string) {

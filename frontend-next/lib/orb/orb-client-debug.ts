@@ -77,6 +77,20 @@ export function clearOrbClientDebugEvents(): void {
   window.localStorage.removeItem(STORAGE_KEY)
 }
 
+/** Voice-only flight recorder entries (newest last in storage; returned newest first). */
+export function getOrbVoiceDebugEventsOnly(): unknown[] {
+  const events = getOrbClientDebugEvents().filter((entry) => {
+    if (!entry || typeof entry !== 'object') return false
+    return (entry as { area?: string }).area === 'voice'
+  })
+  return [...events].reverse()
+}
+
+/** Clear flight recorder and reset in-memory voice diag transport/response counters. */
+export function clearOrbVoiceDebugEvents(): void {
+  clearOrbClientDebugEvents()
+}
+
 export async function copyOrbClientDebugEvents(): Promise<string | true> {
   const text = JSON.stringify(getOrbClientDebugEvents(), null, 2)
   try {

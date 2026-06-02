@@ -34,8 +34,12 @@ import {
   type OrbRealtimeVoiceStatus
 } from '@/lib/orb/voice/orb-realtime-availability'
 import { probeOrbVoiceAuth, resetOrbVoiceAuthCache } from '@/lib/orb/voice/orb-voice-auth'
-import { registerOrbVoiceDiagGlobal } from '@/lib/orb/voice/orb-voice-diag'
-import { emitOrbClientDebug } from '@/lib/orb/orb-client-debug'
+import {
+  clearOrbVoiceDebugEvents,
+  emitOrbClientDebug
+} from '@/lib/orb/orb-client-debug'
+import { registerOrbVoiceDiagGlobal, resetOrbVoiceDiagTransport } from '@/lib/orb/voice/orb-voice-diag'
+import { getActiveOrbRealtimeVoiceClient } from '@/lib/orb/voice/orb-voice-session-registry'
 import type { OrbRealtimeVoiceState } from '@/lib/orb/voice/orb-realtime-voice-client'
 import {
   orbVoiceUiDetailLine,
@@ -168,6 +172,8 @@ export function OrbVoiceStation({
   const [webrtcFailed, setWebrtcFailed] = useState(false)
   const [realtimeState, setRealtimeState] = useState<OrbRealtimeVoiceState>('idle')
   const [dictateRealtimeReady, setDictateRealtimeReady] = useState(false)
+  const [audioPlaybackBlocked, setAudioPlaybackBlocked] = useState(false)
+  const [listeningHint, setListeningHint] = useState(false)
   const assistantBufferRef = useRef('')
   const statusFetchedRef = useRef(false)
 
@@ -214,6 +220,10 @@ export function OrbVoiceStation({
   const statusLine = orbVoiceUiStatusLine(uiState)
   const detailLine =
     startBlockedMessage ||
+    (audioPlaybackBlocked ? 'Tap to hear ORB' : null) ||
+    (listeningHint && voiceSessionLive && realtimeState === 'listening'
+      ? "I'm listening — speak now."
+      : null) ||
     orbVoiceUiDetailLine(uiState, dictateRealtimeReady) ||
     (permissionDenied ? 'Microphone access was denied. You can still type to ORB.' : null)
 
@@ -223,6 +233,21 @@ export function OrbVoiceStation({
     voiceSessionLive &&
     (realtimeState === 'listening' || realtimeState === 'thinking' || realtimeState === 'speaking')
 
+  useEffect(() => {
+    if (!voiceSessionLive || realtimeState !== 'listening') {
+      setListeningHint(false)
+      return
+    }
+    const timer = window.setTimeout(() => setListeningHint(true), 3500)
+    return () => window.clearTimeout(timer)
+  }, [voiceSessionLive, realtimeState])
+
+  useEffect(() => {
+    if (realtimeState === 'speech_detected' || realtimeState === 'speaking' || realtimeState === 'thinking') {
+      setListeningHint(false)
+    }
+  }, [realtimeState])
+
   const resetSession = useCallback(() => {
     clearActiveOrbRealtimeVoiceClient()
     setVoiceStartStage('idle')
@@ -230,6 +255,8 @@ export function OrbVoiceStation({
     setRealtimeSessionConnected(false)
     setVoiceTransportLive(false)
     setWebrtcFailed(false)
+    setAudioPlaybackBlocked(false)
+    setListeningHint(false)
     setRealtimeState('idle')
     setTurns([])
     setStartBlockedMessage(null)
@@ -397,12 +424,33 @@ export function OrbVoiceStation({
     setMicTestMessage(result.message)
   }
 
+  async function handleUnlockAssistantAudio() {
+    const client = getActiveOrbRealtimeVoiceClient()
+    const unlocked = (await client?.unlockAssistantAudio()) ?? false
+    setAudioPlaybackBlocked(!unlocked)
+    if (unlocked) emitOrbClientDebug({ area: 'voice', event: 'voice_audio_play_success', detail: { via: 'tap_to_hear' } })
+  }
+
   async function handleStart() {
     emitOrbClientDebug({ area: 'voice', event: 'voice_start_clicked', detail: {} })
+    if (voiceDebug) {
+      clearOrbVoiceDebugEvents()
+      resetOrbVoiceDiagTransport()
+    }
     setStartBlockedMessage(null)
     setMicTestMessage(null)
     setWebrtcFailed(false)
     setSessionEnded(false)
+    setAudioPlaybackBlocked(false)
+    setListeningHint(false)
+
+    try {
+      const preUnlock = new Audio()
+      preUnlock.muted = true
+      await preUnlock.play()
+    } catch {
+      /* Safari may block until session audio — Tap to hear ORB fallback */
+    }
 
     if (uiState === 'unauthenticated') {
       onSignIn?.()
@@ -459,6 +507,9 @@ export function OrbVoiceStation({
     const transportLive = result.transportLive === true
     setRealtimeSessionConnected(transportLive)
     setVoiceTransportLive(transportLive)
+    const client = getActiveOrbRealtimeVoiceClient()
+    const audioUnlocked = (await client?.unlockAssistantAudio()) ?? false
+    setAudioPlaybackBlocked(transportLive && !audioUnlocked)
     setTurns([
       {
         id: newTurnId(),
@@ -622,6 +673,13 @@ export function OrbVoiceStation({
           voicePresetId={voice.settings.voicePresetId}
           onVoicePresetChange={voice.setVoicePresetId}
           onNewConversation={handleNewConversation}
+          audioPlaybackBlocked={audioPlaybackBlocked}
+          onUnlockAudioPlayback={() => void handleUnlockAssistantAudio()}
+          voiceDebugSendTurn={
+            voiceDebug && voiceSessionLive
+              ? () => getActiveOrbRealtimeVoiceClient()?.sendVoiceTurnFallback()
+              : undefined
+          }
         />
 
         <div className="hidden flex-col items-center p-6 pb-8 md:flex">
