@@ -3,7 +3,7 @@
  * Safe to import from tests without React.
  */
 
-import { isOrbRealtimeStatusConfigured } from './orb-voice-ui-state.ts'
+import { isOrbRealtimeStatusConfigured } from './orb-voice-ui-state'
 
 export type OrbRealtimeVoiceStatusLite = {
   ok: boolean

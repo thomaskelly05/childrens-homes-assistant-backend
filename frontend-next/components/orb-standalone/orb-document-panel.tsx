@@ -1,45 +1,37 @@
 'use client'
 
-import { useCallback, useState } from 'react'
-import { Copy, FileText, Loader2 } from 'lucide-react'
+import { useCallback, useMemo, useState } from 'react'
+import { Copy, FileText, Loader2, MessageSquare, Sparkles } from 'lucide-react'
 
+import { OrbIntelligenceOutput } from '@/components/orb-standalone/orb-intelligence-output'
 import {
-  OrbIntelligenceOutput,
-  understandingToIntelligenceOutput
-} from '@/components/orb-standalone/orb-intelligence-output'
+  documentIntelligenceToOutputView,
+  documentIntelligenceDisplayTitle,
+  exportDocumentIntelligenceMarkdown,
+  ORB_DOCUMENT_BOUNDARY_LINES,
+  RESIDENTIAL_FIRST_CLASS_LENSES,
+  type OrbDocumentIntelligenceResult,
+  type OrbDocumentLens
+} from '@/lib/orb/document-intelligence'
 import { OrbOutputSaveActions } from '@/components/orb-standalone/orb-output-save-actions'
 import { orbStationShellProps } from '@/components/orb-standalone/orb-app-modal'
 import { OrbStandalonePanelShell } from '@/components/orb-standalone/orb-standalone-panel-shell'
 import type { StandaloneProject } from '@/lib/orb/standalone-local-store'
 import {
   analyseOrbStandaloneDocument,
-  type OrbDocumentAnalysisMode,
-  type OrbDocumentUnderstanding,
+  runOrbDocumentIntelligence,
   uploadOrbStandaloneDocument
 } from '@/lib/orb/standalone-client'
 
-type DocumentTab = 'analyse' | 'action_plan' | 'briefing' | 'compare'
 type InputTab = 'paste' | 'upload'
-
-const TAB_MODES: Record<DocumentTab, OrbDocumentAnalysisMode> = {
-  analyse: 'explain',
-  action_plan: 'action_plan',
-  briefing: 'manager_briefing',
-  compare: 'policy_comparison'
-}
-
-const TABS: { id: DocumentTab; label: string }[] = [
-  { id: 'analyse', label: 'Analyse' },
-  { id: 'action_plan', label: 'Action plan' },
-  { id: 'briefing', label: 'Briefing' },
-  { id: 'compare', label: 'Compare' }
-]
 
 export function OrbDocumentPanel({
   open,
   onClose,
   onInsertIntoChat,
   onDocumentContext,
+  onIntelligenceResult,
+  onAskOrbAboutDocument,
   onRunDeepResearch,
   onRunDocumentAnalysisAgent,
   onOpenSavedOutputs,
@@ -48,12 +40,15 @@ export function OrbDocumentPanel({
   activeProjectId,
   activeProjectName,
   onReuseInChat,
-  residentialSurface = false
+  residentialSurface = false,
+  initialLens = 'explain'
 }: {
   open: boolean
   onClose: () => void
   onInsertIntoChat?: (text: string) => void
   onDocumentContext?: (ctx: { text: string; title: string; sourceId: string | null }) => void
+  onIntelligenceResult?: (result: OrbDocumentIntelligenceResult | null) => void
+  onAskOrbAboutDocument?: (payload: { markdown: string; title: string; lens: OrbDocumentLens }) => void
   onRunDeepResearch?: (ctx: { text: string; title: string; sourceId: string | null }) => void
   onRunDocumentAnalysisAgent?: (ctx: { text: string; title: string; sourceId: string | null }) => void
   onOpenSavedOutputs?: () => void
@@ -63,26 +58,37 @@ export function OrbDocumentPanel({
   activeProjectName?: string
   onReuseInChat?: (prompt: string) => void
   residentialSurface?: boolean
+  initialLens?: OrbDocumentLens
 }) {
   const [title, setTitle] = useState('Uploaded document')
   const [sourceType, setSourceType] = useState('user_uploaded')
   const [text, setText] = useState(initialText || '')
   const [inputTab, setInputTab] = useState<InputTab>('paste')
-  const [tab, setTab] = useState<DocumentTab>('analyse')
-  const [mode, setMode] = useState<OrbDocumentAnalysisMode>('explain')
+  const [selectedLens, setSelectedLens] = useState<OrbDocumentLens>(initialLens)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [sourceId, setSourceId] = useState<string | null>(null)
-  const [understanding, setUnderstanding] = useState<OrbDocumentUnderstanding | null>(null)
+  const [result, setResult] = useState<OrbDocumentIntelligenceResult | null>(null)
   const [copyNote, setCopyNote] = useState<string | null>(null)
   const [closeAfterAnalyse, setCloseAfterAnalyse] = useState(false)
 
   const hasContent = Boolean(text.trim() || sourceId)
+  const heroLens = RESIDENTIAL_FIRST_CLASS_LENSES.find((item) => item.hero)
+  const standardLenses = RESIDENTIAL_FIRST_CLASS_LENSES.filter((item) => !item.hero)
 
-  function selectTab(next: DocumentTab) {
-    setTab(next)
-    setMode(TAB_MODES[next])
-  }
+  const displayTitle = useMemo(() => {
+    if (!result) return null
+    return documentIntelligenceDisplayTitle(
+      result.lens,
+      title.trim() || result.source_document_title || result.title,
+      text
+    )
+  }, [result, text, title])
+
+  const outputView = useMemo(() => {
+    if (!result || !displayTitle) return null
+    return documentIntelligenceToOutputView(result, displayTitle)
+  }, [displayTitle, result])
 
   const runAnalyse = useCallback(async () => {
     const body = text.trim()
@@ -94,25 +100,69 @@ export function OrbDocumentPanel({
     setError(null)
     setCopyNote(null)
     try {
-      const result = await analyseOrbStandaloneDocument({
-        mode,
-        source_id: sourceId || undefined,
-        title: title.trim() || 'Document',
-        text: sourceId ? undefined : body
+      const intelligence = await runOrbDocumentIntelligence({
+        lens: selectedLens as import('@/lib/orb/standalone-client').OrbDocumentLens,
+        document_text: sourceId ? undefined : body,
+        document_source_id: sourceId || undefined,
+        document_title: title.trim() || 'Document',
+        mode: 'Ask ORB'
       })
-      setUnderstanding(result.understanding)
+      setResult(intelligence)
+      onIntelligenceResult?.(intelligence)
       onDocumentContext?.({
         text: text.trim(),
-        title: title.trim() || result.understanding.title,
-        sourceId: sourceId || result.understanding.source_id || null
+        title: title.trim() || intelligence.source_document_title || intelligence.title,
+        sourceId: sourceId || null
       })
       if (closeAfterAnalyse) onClose()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Analysis failed')
+      setResult(null)
+      onIntelligenceResult?.(null)
     } finally {
       setLoading(false)
     }
-  }, [closeAfterAnalyse, mode, onClose, onDocumentContext, sourceId, text, title])
+  }, [
+    closeAfterAnalyse,
+    onClose,
+    onDocumentContext,
+    onIntelligenceResult,
+    selectedLens,
+    sourceId,
+    text,
+    title
+  ])
+
+  async function runPolicyCompare() {
+    const body = text.trim()
+    if (!body && !sourceId) {
+      setError('Paste or upload document text first.')
+      return
+    }
+    setLoading(true)
+    setError(null)
+    try {
+      const analysed = await analyseOrbStandaloneDocument({
+        mode: 'policy_comparison',
+        source_id: sourceId || undefined,
+        title: title.trim() || 'Document',
+        text: sourceId ? undefined : body
+      })
+      setCopyNote('Policy comparison draft ready — use Save or Ask ORB to continue.')
+      onDocumentContext?.({
+        text: text.trim(),
+        title: analysed.understanding.title,
+        sourceId: sourceId || analysed.understanding.source_id || null
+      })
+      onInsertIntoChat?.(
+        `# ${analysed.understanding.title}\n\n${analysed.understanding.plain_english_summary}`
+      )
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Comparison failed')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   async function handleFileUpload(file: File) {
     setLoading(true)
@@ -141,81 +191,56 @@ export function OrbDocumentPanel({
     }
   }
 
-  function docContext() {
-    return {
-      text: text.trim(),
-      title: title.trim() || understanding?.title || 'Document',
-      sourceId: sourceId || understanding?.source_id || null
+  function handleAskOrb() {
+    if (!result || !displayTitle) return
+    const markdown = exportDocumentIntelligenceMarkdown(result, displayTitle)
+    if (onAskOrbAboutDocument) {
+      onAskOrbAboutDocument({ markdown, title: displayTitle, lens: result.lens })
+      return
     }
+    onInsertIntoChat?.(markdown)
+    onReuseInChat?.(`Ask ORB about this document output (${result.lens}): ${displayTitle}`)
   }
 
-  function formatForChat(): string {
-    if (!understanding) return ''
-    const parts = [
-      `# ${understanding.title}`,
-      understanding.plain_english_summary,
-      understanding.key_themes?.length ? `\nThemes: ${understanding.key_themes.join(', ')}` : '',
-      understanding.safety_notice ? `\n${understanding.safety_notice}` : ''
-    ]
-    const actions = understanding.action_plan?.actions || []
-    if (actions.length) {
-      parts.push('\n## Actions (draft)')
-      for (const a of actions) {
-        parts.push(`- [${a.priority}] ${a.action}`)
-      }
-    }
-    return parts.filter(Boolean).join('\n')
-  }
+  const docContext = () => ({
+    text: text.trim(),
+    title: title.trim() || result?.title || 'Document',
+    sourceId: sourceId || null
+  })
 
   return (
     <OrbStandalonePanelShell
       open={open}
       title="Documents"
-      subtitle="Analyse uploaded or pasted documents — policies, guidance, inspection letters, templates and contracts. For quality-review of your own recording, use Review."
+      subtitle="Turn policies, reports and uploaded text into residential intelligence"
       onClose={onClose}
       panelId="documents"
       ariaLabel="ORB documents"
-      footer="Documents analysed here are standalone ORB Residential documents. They are not saved to live IndiCare OS records unless you choose to save them."
+      footer="ORB Residential — Powered by IndiCare Intelligence. Documents use only what you upload or paste."
       {...orbStationShellProps(residentialSurface, 'wide')}
     >
       <div className="orb-document-panel space-y-4 p-4" data-orb-document-panel>
-        <p className="orb-doc-glass-card rounded-xl border border-[var(--orb-line)] px-3 py-2.5 text-[11px] leading-5 text-[var(--orb-muted)]">
-          Documents analysed here are not saved to live IndiCare OS records unless you choose to save them.
-        </p>
+        <ul
+          className="orb-doc-glass-card space-y-1 rounded-xl border border-[var(--orb-line)] px-3 py-2.5 text-[11px] leading-5 text-[var(--orb-muted)]"
+          data-orb-document-boundary
+        >
+          {ORB_DOCUMENT_BOUNDARY_LINES.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
 
-        {!hasContent && !understanding ? (
+        {!hasContent && !result ? (
           <div
             className="orb-doc-glass-card rounded-xl border border-dashed border-[var(--orb-line)] px-4 py-8 text-center"
             data-orb-document-empty
           >
             <FileText className="mx-auto h-8 w-8 text-[var(--orb-muted)]" aria-hidden />
             <p className="mt-2 text-sm font-semibold text-[var(--orb-foreground)]">No document yet</p>
-            <p className="mt-1 text-xs text-[var(--orb-muted)]">Paste text or upload a file to analyse with ORB.</p>
+            <p className="mt-1 text-xs text-[var(--orb-muted)]">
+              Paste text or upload a file, choose a lens, then run analysis.
+            </p>
           </div>
         ) : null}
-
-        <div
-          className="flex flex-wrap gap-1 rounded-xl border border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] p-1"
-          role="tablist"
-          aria-label="Document actions"
-        >
-          {TABS.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              role="tab"
-              aria-selected={tab === item.id}
-              onClick={() => selectTab(item.id)}
-              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-                tab === item.id
-                  ? 'border border-sky-400/30 bg-[var(--orb-surface-hover)] text-[var(--orb-foreground)]'
-                  : 'text-[var(--orb-muted)] hover:text-[var(--orb-foreground)]'
-              }`}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
 
         <div
           className="flex gap-1 rounded-lg border border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] p-0.5"
@@ -225,7 +250,7 @@ export function OrbDocumentPanel({
           {(
             [
               { id: 'paste' as const, label: 'Paste text' },
-              { id: 'upload' as const, label: 'Upload file' }
+              { id: 'upload' as const, label: 'Upload document' }
             ] as const
           ).map((item) => (
             <button
@@ -239,6 +264,7 @@ export function OrbDocumentPanel({
                   ? 'bg-[var(--orb-surface-hover)] text-[var(--orb-foreground)]'
                   : 'text-[var(--orb-muted)] hover:text-[var(--orb-foreground)]'
               }`}
+              data-orb-document-input-tab={item.id}
             >
               {item.label}
             </button>
@@ -262,7 +288,7 @@ export function OrbDocumentPanel({
         ) : null}
 
         <label className="block text-xs font-semibold text-[var(--orb-muted)]">
-          Title
+          Document title
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -277,11 +303,56 @@ export function OrbDocumentPanel({
               value={text}
               onChange={(e) => setText(e.target.value)}
               rows={6}
-              placeholder="Paste policy, inspection notes, or guidance…"
+              placeholder="Paste policy, Reg 44 report, inspection notes or guidance…"
               className="orb-doc-input mt-1 w-full rounded-lg border border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] px-3 py-2 text-sm text-[var(--orb-foreground)] placeholder:text-[var(--orb-muted)]"
             />
           </label>
         ) : null}
+
+        <div className="space-y-2" data-orb-document-lens-selector>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--orb-muted)]">
+            Choose a lens
+          </p>
+          {heroLens ? (
+            <button
+              type="button"
+              onClick={() => setSelectedLens(heroLens.lens)}
+              className={`orb-doc-policy-card-hero flex w-full flex-col items-start gap-1 rounded-xl border px-4 py-3 text-left transition ${
+                selectedLens === heroLens.lens
+                  ? 'border-sky-400/50 bg-sky-500/10 ring-1 ring-sky-400/30'
+                  : 'border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] hover:bg-[var(--orb-surface-hover)]'
+              }`}
+              data-orb-policy-card-hero
+              data-orb-document-lens={heroLens.lens}
+            >
+              <span className="inline-flex items-center gap-1.5 text-sm font-bold text-[var(--orb-foreground)]">
+                <Sparkles className="h-4 w-4 text-sky-400" aria-hidden />
+                {heroLens.label}
+              </span>
+              <span className="text-xs text-[var(--orb-muted)]">{heroLens.description}</span>
+            </button>
+          ) : null}
+          <div className="flex flex-wrap gap-1.5" role="listbox" aria-label="Document lenses">
+            {standardLenses.map((item) => (
+              <button
+                key={item.lens}
+                type="button"
+                role="option"
+                aria-selected={selectedLens === item.lens}
+                onClick={() => setSelectedLens(item.lens)}
+                className={`rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition ${
+                  selectedLens === item.lens
+                    ? 'border-sky-400/40 bg-[var(--orb-surface-hover)] text-[var(--orb-foreground)]'
+                    : 'border-[var(--orb-line)] text-[var(--orb-muted)] hover:text-[var(--orb-foreground)]'
+                }`}
+                data-orb-document-lens={item.lens}
+                title={item.description}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
         <label className="flex items-center gap-2 text-xs text-[var(--orb-muted)]">
           <input
@@ -302,74 +373,139 @@ export function OrbDocumentPanel({
             data-orb-analyse-document
           >
             {loading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <FileText className="h-4 w-4" aria-hidden />}
-            Analyse document
+            Run analysis
           </button>
           <button
             type="button"
             disabled={loading || !hasContent}
             onClick={() => {
-              selectTab('action_plan')
+              setSelectedLens('actions')
               void runAnalyse()
             }}
             className="orb-doc-secondary-btn rounded-xl border px-3 py-2.5 text-xs font-semibold disabled:cursor-not-allowed"
             data-orb-create-action-plan
           >
-            Create action plan
+            Action plan
           </button>
         </div>
 
         {error ? <p className="text-xs font-medium text-red-600">{error}</p> : null}
         {copyNote ? <p className="text-xs font-medium text-[#0369A1]">{copyNote}</p> : null}
 
-        {understanding ? (
-          <div className="space-y-4 border-t border-[#CBD5E1] pt-4">
+        {result && outputView ? (
+          <div className="space-y-4 border-t border-[var(--orb-line)] pt-4" data-orb-document-result>
             <OrbIntelligenceOutput
-              output={understandingToIntelligenceOutput(understanding)}
+              output={outputView}
               onCopy={() => setCopyNote('Copied markdown to clipboard.')}
             />
             {projects?.length ? (
               <OrbOutputSaveActions
-                output={understandingToIntelligenceOutput(understanding)}
+                output={outputView}
                 suggestedType={
-                  mode === 'action_plan'
-                    ? 'action_plan'
-                    : mode === 'manager_briefing'
-                      ? 'manager_briefing'
-                      : mode === 'staff_briefing'
-                        ? 'staff_briefing'
-                        : 'document_review'
+                  result.lens === 'actions' || result.lens === 'policy_card'
+                    ? result.lens === 'actions'
+                      ? 'action_plan'
+                      : 'document_review'
+                    : 'document_review'
                 }
-                suggestedTitle={understanding.title}
+                suggestedTitle={displayTitle || result.title}
                 projects={projects}
                 activeProjectId={activeProjectId}
                 activeProjectName={activeProjectName}
-                createdFrom="document_analysis"
-                createdFromId={understanding.source_id || undefined}
+                createdFrom="document_intelligence"
                 onReuseInChat={onReuseInChat}
                 onNotice={setCopyNote}
               />
-            ) : null}
-            <div className="flex flex-wrap gap-2">
+            ) : (
+              <p className="text-[11px] text-[var(--orb-muted)]" data-orb-save-unavailable>
+                Sign in and open a project to save outputs — copy and export are still available.
+              </p>
+            )}
+            <div className="flex flex-wrap gap-2" data-orb-document-output-actions>
               <button
                 type="button"
                 onClick={() => {
-                  void navigator.clipboard.writeText(formatForChat())
+                  if (!displayTitle) return
+                  void navigator.clipboard.writeText(exportDocumentIntelligenceMarkdown(result, displayTitle))
                   setCopyNote('Copied markdown.')
                 }}
                 className="orb-doc-secondary-btn inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-semibold"
+                data-orb-copy-document-output
               >
                 <Copy className="h-3.5 w-3.5" aria-hidden />
-                Copy markdown
+                Copy
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!displayTitle) return
+                  const blob = new Blob([exportDocumentIntelligenceMarkdown(result, displayTitle)], {
+                    type: 'text/markdown;charset=utf-8'
+                  })
+                  const url = URL.createObjectURL(blob)
+                  const anchor = document.createElement('a')
+                  anchor.href = url
+                  anchor.download = `${displayTitle.replace(/[^\w\s-]/g, '').slice(0, 48) || 'document'}.md`
+                  anchor.click()
+                  URL.revokeObjectURL(url)
+                  setCopyNote('Exported markdown file.')
+                }}
+                className="orb-doc-secondary-btn inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-semibold"
+                data-orb-export-document-output
+              >
+                <FileText className="h-3.5 w-3.5" aria-hidden />
+                Export
+              </button>
+              <button
+                type="button"
+                onClick={handleAskOrb}
+                className="orb-doc-secondary-btn inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-semibold"
+                data-orb-ask-orb-document
+              >
+                <MessageSquare className="h-3.5 w-3.5" aria-hidden />
+                Ask ORB about this
               </button>
               {onInsertIntoChat ? (
                 <button
                   type="button"
-                  onClick={() => onInsertIntoChat(formatForChat())}
+                  onClick={() => {
+                    if (!displayTitle) return
+                    onInsertIntoChat(exportDocumentIntelligenceMarkdown(result, displayTitle))
+                  }}
                   className="orb-doc-secondary-btn rounded-lg border px-3 py-1.5 text-xs font-semibold"
+                  data-orb-continue-in-chat
                 >
-                  Insert into chat
+                  Continue in ORB chat
                 </button>
               ) : null}
+            </div>
+            <div className="flex flex-wrap gap-2 border-t border-[var(--orb-line)]/60 pt-3">
+              {onRunDeepResearch ? (
+                <button
+                  type="button"
+                  onClick={() => onRunDeepResearch(docContext())}
+                  className="text-[11px] font-semibold text-[var(--orb-muted)] underline-offset-2 hover:underline"
+                >
+                  Deep research
+                </button>
+              ) : null}
+              {onRunDocumentAnalysisAgent ? (
+                <button
+                  type="button"
+                  onClick={() => onRunDocumentAnalysisAgent(docContext())}
+                  className="text-[11px] font-semibold text-[var(--orb-muted)] underline-offset-2 hover:underline"
+                >
+                  Document analysis agent
+                </button>
+              ) : null}
+              <button
+                type="button"
+                disabled={loading || !hasContent}
+                onClick={() => void runPolicyCompare()}
+                className="text-[11px] font-semibold text-[var(--orb-muted)] underline-offset-2 hover:underline disabled:opacity-50"
+              >
+                Compare policies (legacy)
+              </button>
             </div>
           </div>
         ) : null}

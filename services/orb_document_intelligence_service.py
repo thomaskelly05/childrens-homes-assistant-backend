@@ -66,8 +66,8 @@ LENS_REGISTRY: dict[str, dict[str, Any]] = {
     },
     "policy_card": {
         "id": "policy_card",
-        "label": "Policy card",
-        "description": "Staff-facing policy card from uploaded policy text.",
+        "label": "Policy Card",
+        "description": "Policy Card Generator — staff-facing card from uploaded policy text only.",
         "residential_purpose": "Translate policy into shift-ready guidance.",
         "output_structure": "policy_card sections",
         "safety_level": "medium",
@@ -86,7 +86,7 @@ LENS_REGISTRY: dict[str, dict[str, Any]] = {
     },
     "reg45": {
         "id": "reg45",
-        "label": "Reg 45 evidence review",
+        "label": "Reg 45 reflection",
         "description": "Provider quality-of-care learning lens on supplied evidence text.",
         "residential_purpose": "Support Reg 45 reflection from visitor or audit material.",
         "output_structure": "governance + learning sections",
@@ -119,7 +119,7 @@ LENS_REGISTRY: dict[str, dict[str, Any]] = {
     },
     "recording_quality": {
         "id": "recording_quality",
-        "label": "Recording quality",
+        "label": "Recording quality review",
         "description": "Recording quality and child-centred evidence lens.",
         "residential_purpose": "Improve logs and chronology evidence.",
         "output_structure": "recording standards + gaps",
@@ -130,7 +130,7 @@ LENS_REGISTRY: dict[str, dict[str, Any]] = {
     },
     "manager_oversight": {
         "id": "manager_oversight",
-        "label": "Manager oversight",
+        "label": "Manager briefing",
         "description": "Manager briefing: risks, decisions, actions from document only.",
         "residential_purpose": "RM grip without live OS records.",
         "output_structure": "manager briefing",
@@ -141,7 +141,7 @@ LENS_REGISTRY: dict[str, dict[str, Any]] = {
     },
     "ri_governance": {
         "id": "ri_governance",
-        "label": "RI / provider governance",
+        "label": "RI / provider briefing",
         "description": "RI and provider oversight reflection from supplied document.",
         "residential_purpose": "Governance learning and assurance.",
         "output_structure": "governance sections",
@@ -324,13 +324,52 @@ class OrbDocumentIntelligenceService:
         request: OrbDocumentIntelligenceRequest,
     ) -> OrbDocumentIntelligenceData:
         brain = build_brain_metadata(
-            surface="orb_standalone",
+            surface="orb_residential",
             mode=request.mode,
             lens=data.lens,
             feature="document_intelligence",
             sources=data.sources,
         )
         return data.model_copy(update={"brain_metadata": brain})
+
+    def _apply_standalone_envelope(
+        self,
+        data: OrbDocumentIntelligenceData,
+        *,
+        request: OrbDocumentIntelligenceRequest,
+        source_title: str,
+    ) -> OrbDocumentIntelligenceData:
+        """Normalize structured document output fields for all lenses."""
+        risks = list(dict.fromkeys(data.missing_information or []))
+        if data.policy_card:
+            for gap in data.policy_card.get("missing_information") or []:
+                if gap and gap not in risks:
+                    risks.append(str(gap))
+
+        suggested: list[str] = []
+        for action in data.actions[:8]:
+            if action.title and action.title not in suggested:
+                suggested.append(action.title)
+        for item in data.checklist[:6]:
+            if item and item not in suggested:
+                suggested.append(item)
+        if data.lens == "policy_card" and data.policy_card:
+            for q in (data.policy_card.get("supervision_questions") or [])[:4]:
+                if q and q not in suggested:
+                    suggested.append(f"Discuss in supervision: {q}")
+
+        doc_title = _text(source_title) or _text(request.document_title) or data.title
+
+        return data.model_copy(
+            update={
+                "source_document_title": doc_title,
+                "risks_or_gaps": risks[:20],
+                "suggested_next_actions": suggested[:12],
+                "standalone": True,
+                "os_records_accessed": False,
+                "live_record_access": False,
+            }
+        )
 
     def list_lenses(self) -> list[dict[str, Any]]:
         return list(LENS_REGISTRY.values())
@@ -359,6 +398,7 @@ class OrbDocumentIntelligenceService:
             data = await self._lens_from_understanding(title, text, source_id, request)
 
         data = self._enrich_with_expert_families(data, title=title, text=text, lens=lens)
+        data = self._apply_standalone_envelope(data, request=request, source_title=title)
         data = self._with_brain_metadata(data, request=request)
         return OrbDocumentIntelligenceResponse(success=True, data=data)
 
@@ -710,10 +750,19 @@ class OrbDocumentIntelligenceService:
         understanding = await orb_document_understanding_service.analyse_document(analysis_request)
         policy_card = self._build_policy_card(understanding, text)
 
+        skip_section_keys = {
+            "policy_title",
+            "orb_safe_answer_rules",
+            "supervision_questions",
+            "supervision_team_questions",
+            "audit_checklist",
+            "actions_to_consider",
+            "missing_information",
+        }
         sections = [
             OrbDocumentIntelligenceSection(heading=key.replace("_", " ").title(), body=_text(val), items=[])
             for key, val in policy_card.items()
-            if _text(val) and key not in {"policy_title", "orb_safe_answer_rules"}
+            if _text(val) and key not in skip_section_keys and not isinstance(val, list)
         ]
         if policy_card.get("staff_briefing_version"):
             sections.append(
@@ -722,19 +771,32 @@ class OrbDocumentIntelligenceService:
                     body=policy_card["staff_briefing_version"],
                 )
             )
-        if policy_card.get("audit_checklist"):
-            sections.append(
-                OrbDocumentIntelligenceSection(
-                    heading="Audit checklist",
-                    body="",
-                    items=policy_card["audit_checklist"],
+        for heading, key in (
+            ("Supervision / team meeting questions", "supervision_team_questions"),
+            ("Actions to consider", "actions_to_consider"),
+            ("Audit checklist", "audit_checklist"),
+        ):
+            items = policy_card.get(key) or policy_card.get(key.replace("_team", "")) or []
+            if items:
+                sections.append(
+                    OrbDocumentIntelligenceSection(heading=heading, body="", items=list(items)[:12])
                 )
+        if policy_card.get("legal_completeness_notice"):
+            sections.insert(
+                0,
+                OrbDocumentIntelligenceSection(
+                    heading="Important — read before use",
+                    body=f"{policy_card['legal_completeness_notice']} {policy_card.get('review_before_use', '')}".strip(),
+                ),
             )
 
         return OrbDocumentIntelligenceData(
             lens="policy_card",
             title=policy_card.get("policy_title") or title,
-            summary=policy_card.get("plain_english_summary") or understanding.plain_english_summary,
+            summary=(
+                f"{policy_card.get('plain_english_summary') or understanding.plain_english_summary} "
+                f"{policy_card.get('review_before_use', '')}"
+            ).strip(),
             sections=sections,
             actions=self._actions_from_understanding(understanding),
             checklist=policy_card.get("audit_checklist") or [],
@@ -830,13 +892,84 @@ class OrbDocumentIntelligenceService:
         if re.search(r"\b(within|by|hours?|days?|weeks?)\s+\d+", lower):
             timescales = "Timescales mentioned in document — confirm exact wording in original."
 
+        who_matters = ", ".join(understanding.who_needs_to_know[:6]) if understanding.who_needs_to_know else not_stated
+        staff_must_know = stated_or_missing(
+            "; ".join(understanding.key_themes[:6]) if understanding.key_themes else None,
+            keyword="staff",
+        )
+        good_practice = stated_or_missing(
+            "; ".join(
+                p.implication
+                for p in understanding.practice_implications
+                if p.implication
+            )[:600]
+            or None,
+            keyword="practice",
+        )
+        recording_req = stated_or_missing(
+            next(
+                (e.implication for e in understanding.evidence_implications if e.implication),
+                None,
+            ),
+            keyword="record",
+        )
+        manager_oversight = stated_or_missing(
+            next(
+                (
+                    p.implication
+                    for p in understanding.practice_implications
+                    if p.for_role and "manager" in (p.for_role or "").lower()
+                ),
+                None,
+            ),
+            keyword="manager",
+        )
+        safeguarding = stated_or_missing(
+            next((r.risk for r in understanding.risks_or_concerns if r.risk), None),
+            keyword="safeguarding",
+        )
+        ofsted_reg44 = stated_or_missing(
+            next((e.implication for e in understanding.evidence_implications if e.implication), None),
+            keyword="ofsted",
+        )
+        common_mistakes = stated_or_missing(
+            next((g.gap for g in understanding.gaps_or_missing_information if g.gap), None),
+        )
+        supervision_questions = [
+            q.question for q in understanding.suggested_questions if q.question
+        ]
+        actions_to_consider = [
+            a.action
+            for a in (understanding.action_plan.actions if understanding.action_plan else [])
+            if a.action
+        ][:10]
+        legal_notice = (
+            "Based only on the uploaded or pasted policy. This card does not confirm the policy "
+            "is legally complete or up to date."
+        )
+        review_notice = (
+            "Recommend registered manager and provider review before sharing with staff or "
+            "relying on this card in practice."
+        )
+
         return {
             "policy_title": understanding.title,
             "plain_english_summary": understanding.plain_english_summary,
-            "what_staff_must_know": stated_or_missing(
-                "; ".join(understanding.key_themes[:6]) if understanding.key_themes else None,
-                keyword="staff",
-            ),
+            "who_this_matters_for": who_matters,
+            "key_staff_responsibilities": staff_must_know,
+            "what_good_practice_looks_like": good_practice,
+            "safeguarding_considerations": safeguarding,
+            "recording_requirements": recording_req,
+            "manager_oversight_points": manager_oversight,
+            "ofsted_reg44_relevance": ofsted_reg44,
+            "common_mistakes_to_avoid": common_mistakes,
+            "staff_briefing_version": understanding.plain_english_summary[:800],
+            "supervision_team_questions": supervision_questions,
+            "actions_to_consider": actions_to_consider,
+            "legal_completeness_notice": legal_notice,
+            "review_before_use": review_notice,
+            # Backward-compatible keys
+            "what_staff_must_know": staff_must_know,
             "when_to_escalate": stated_or_missing(
                 next(
                     (r.risk for r in understanding.risks_or_concerns if "escalat" in (r.risk or "").lower()),
@@ -844,55 +977,23 @@ class OrbDocumentIntelligenceService:
                 ),
                 keyword="escalat",
             ),
-            "what_to_record": stated_or_missing(
-                next(
-                    (
-                        e.implication
-                        for e in understanding.evidence_implications
-                        if e.implication
-                    ),
-                    None,
-                ),
-                keyword="record",
-            ),
-            "who_to_inform": ", ".join(understanding.who_needs_to_know[:6])
-            if understanding.who_needs_to_know
-            else not_stated,
+            "what_to_record": recording_req,
+            "who_to_inform": who_matters,
             "timescales": timescales,
             "related_forms_records": stated_or_missing(None, keyword="form"),
-            "manager_responsibilities": stated_or_missing(
-                next(
-                    (
-                        p.implication
-                        for p in understanding.practice_implications
-                        if p.for_role and "manager" in (p.for_role or "").lower()
-                    ),
-                    None,
-                ),
-                keyword="manager",
+            "manager_responsibilities": manager_oversight,
+            "ri_provider_responsibilities": stated_or_missing(
+                None, keyword="responsible individual"
             ),
-            "ri_provider_responsibilities": stated_or_missing(None, keyword="responsible individual"),
-            "safeguarding_implications": stated_or_missing(
-                next((r.risk for r in understanding.risks_or_concerns if r.risk), None),
-                keyword="safeguarding",
-            ),
-            "ofsted_sccif_relevance": stated_or_missing(
-                next((e.implication for e in understanding.evidence_implications if e.implication), None),
-                keyword="ofsted",
-            ),
-            "common_mistakes": stated_or_missing(
-                next((g.gap for g in understanding.gaps_or_missing_information if g.gap), None),
-            ),
-            "staff_briefing_version": understanding.plain_english_summary[:800],
-            "supervision_questions": [
-                q.question for q in understanding.suggested_questions if q.question
-            ],
-            "audit_checklist": [
-                a.action for a in (understanding.action_plan.actions if understanding.action_plan else [])
-                if a.action
-            ][:10],
+            "safeguarding_implications": safeguarding,
+            "ofsted_sccif_relevance": ofsted_reg44,
+            "common_mistakes": common_mistakes,
+            "supervision_questions": supervision_questions,
+            "audit_checklist": actions_to_consider[:10],
             "orb_safe_answer_rules": [
                 STANDALONE_DOCUMENT_SAFETY,
+                legal_notice,
+                review_notice,
                 "Do not invent statutory timescales or claims not in the policy text.",
                 "Say when information is not stated in the supplied document.",
             ],

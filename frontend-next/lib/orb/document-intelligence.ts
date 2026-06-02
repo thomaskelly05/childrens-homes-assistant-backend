@@ -1,5 +1,41 @@
 /** Standalone ORB document intelligence — lenses and contextual UI actions. */
 
+export const ORB_DOCUMENT_BOUNDARY_LINES = [
+  'Based only on the document or text you provide.',
+  'Review before sharing or relying on it.',
+  'Standalone ORB does not access live care records.'
+] as const
+
+/** First-class residential document lenses shown in the Documents workspace. */
+export const RESIDENTIAL_FIRST_CLASS_LENSES: Array<{
+  lens: OrbDocumentLens
+  label: string
+  description?: string
+  hero?: boolean
+}> = [
+  { lens: 'summary', label: 'Summary', description: 'Concise orientation' },
+  { lens: 'explain', label: 'Explain', description: 'Plain-English meaning' },
+  { lens: 'actions', label: 'Action plan', description: 'Draft follow-up actions' },
+  {
+    lens: 'policy_card',
+    label: 'Policy Card',
+    description: 'Turn a policy into shift-ready guidance',
+    hero: true
+  },
+  { lens: 'safeguarding', label: 'Safeguarding lens', description: 'Structured safeguarding reflection' },
+  { lens: 'ofsted', label: 'Ofsted lens', description: 'Evidence and experience thinking' },
+  { lens: 'reg44', label: 'Reg 44 extraction', description: 'Visitor report themes and actions' },
+  { lens: 'reg45', label: 'Reg 45 reflection', description: 'Provider learning from evidence' },
+  {
+    lens: 'recording_quality',
+    label: 'Recording quality review',
+    description: 'Child-centred recording lens'
+  },
+  { lens: 'staff_briefing', label: 'Staff briefing', description: 'Shift-ready guidance' },
+  { lens: 'manager_oversight', label: 'Manager briefing', description: 'Risks and oversight' },
+  { lens: 'ri_governance', label: 'RI / provider briefing', description: 'Governance assurance' }
+]
+
 export type OrbDocumentLens =
   | 'summary'
   | 'explain'
@@ -161,10 +197,29 @@ export type OrbDocumentIntelligenceResult = {
   confidence?: string
   standalone?: boolean
   os_records_accessed?: boolean
+  live_record_access?: boolean
   missing_information?: string[]
+  risks_or_gaps?: string[]
+  suggested_next_actions?: string[]
+  source_document_title?: string | null
+  brain_metadata?: Record<string, unknown>
   policy_card?: Record<string, unknown>
   reg44?: Record<string, unknown>
 }
+
+const POLICY_CARD_MARKDOWN_KEYS: Array<[string, string]> = [
+  ['who_this_matters_for', 'Who this matters for'],
+  ['key_staff_responsibilities', 'Key staff responsibilities'],
+  ['what_good_practice_looks_like', 'What good practice looks like'],
+  ['safeguarding_considerations', 'Safeguarding considerations'],
+  ['recording_requirements', 'Recording requirements'],
+  ['manager_oversight_points', 'Manager oversight points'],
+  ['ofsted_reg44_relevance', 'Ofsted / Reg 44 relevance'],
+  ['common_mistakes_to_avoid', 'Common mistakes to avoid'],
+  ['staff_briefing_version', 'Staff briefing version'],
+  ['legal_completeness_notice', 'Important'],
+  ['review_before_use', 'Before use']
+]
 
 const DOCUMENT_LENS_TITLE_PREFIX: Partial<Record<OrbDocumentLens, string>> = {
   policy_card: 'Policy Card',
@@ -225,7 +280,7 @@ export function formatDocumentIntelligenceMarkdown(result: OrbDocumentIntelligen
     '',
     result.summary,
     '',
-    '_Based only on the uploaded or pasted document — standalone ORB has not checked live IndiCare OS records._',
+    `_${ORB_DOCUMENT_BOUNDARY_LINES.join(' ')}_`,
     ''
   ]
 
@@ -239,22 +294,46 @@ export function formatDocumentIntelligenceMarkdown(result: OrbDocumentIntelligen
   }
 
   if (result.policy_card) {
-    const card = result.policy_card as Record<string, string>
-    if (card.what_staff_must_know) {
-      lines.push('## What staff must know')
-      lines.push(card.what_staff_must_know)
+    const card = result.policy_card as Record<string, unknown>
+    if (card.plain_english_summary) {
+      lines.push('## Plain-English summary')
+      lines.push(String(card.plain_english_summary))
       lines.push('')
     }
-    if (card.when_to_escalate) {
-      lines.push('## When to escalate')
-      lines.push(card.when_to_escalate)
+    for (const [key, heading] of POLICY_CARD_MARKDOWN_KEYS) {
+      const val = card[key]
+      if (typeof val === 'string' && val.trim()) {
+        lines.push(`## ${heading}`)
+        lines.push(val.trim())
+        lines.push('')
+      }
+    }
+    const supervision =
+      (card.supervision_team_questions as string[] | undefined) ||
+      (card.supervision_questions as string[] | undefined)
+    if (supervision?.length) {
+      lines.push('## Supervision / team meeting questions')
+      for (const q of supervision) lines.push(`- ${q}`)
       lines.push('')
     }
-    if (card.manager_responsibilities) {
-      lines.push('## Manager responsibilities')
-      lines.push(card.manager_responsibilities)
+    const actions = card.actions_to_consider as string[] | undefined
+    if (actions?.length) {
+      lines.push('## Actions to consider')
+      for (const a of actions) lines.push(`- ${a}`)
       lines.push('')
     }
+  }
+
+  if (result.risks_or_gaps?.length) {
+    lines.push('## Risks / gaps')
+    for (const gap of result.risks_or_gaps) lines.push(`- ${gap}`)
+    lines.push('')
+  }
+
+  if (result.suggested_next_actions?.length) {
+    lines.push('## Suggested next actions')
+    for (const item of result.suggested_next_actions) lines.push(`- ${item}`)
+    lines.push('')
   }
 
   if (result.actions?.length) {
@@ -284,4 +363,62 @@ export function formatDocumentIntelligenceMarkdown(result: OrbDocumentIntelligen
   }
 
   return lines.join('\n').trim()
+}
+
+/** Map document intelligence API payload to structured output UI. */
+export function documentIntelligenceToOutputView(
+  result: OrbDocumentIntelligenceResult,
+  displayTitle?: string
+): import('@/components/orb-standalone/orb-intelligence-output').OrbIntelligenceOutputView {
+  const title = displayTitle || result.title
+  const sections =
+    result.sections?.map((section, index) => ({
+      id: `section-${index}`,
+      title: section.heading,
+      body: section.body || (section.items || []).join('\n')
+    })) || []
+
+  if (result.policy_card) {
+    const card = result.policy_card as Record<string, unknown>
+    if (card.legal_completeness_notice) {
+      sections.unshift({
+        id: 'policy-boundary',
+        title: 'Important — read before use',
+        body: [card.legal_completeness_notice, card.review_before_use].filter(Boolean).join(' ')
+      })
+    }
+  }
+
+  return {
+    title,
+    summary: result.summary,
+    type: `document_${result.lens}`,
+    sections,
+    actions: result.actions?.map((a) => {
+      const raw = (a.risk_level || 'medium').toLowerCase()
+      const priority =
+        raw === 'urgent' || raw === 'high' || raw === 'low' ? raw : ('medium' as const)
+      return {
+        action: a.title,
+        priority,
+        why_it_matters: a.reason || undefined,
+        suggested_owner_label: a.owner || undefined,
+        timescale: a.due_date || undefined
+      }
+    }),
+    gaps: result.risks_or_gaps || result.missing_information,
+    questions: result.suggested_next_actions,
+    safety_notice: ORB_DOCUMENT_BOUNDARY_LINES.join(' '),
+    boundaries: { notice: ORB_DOCUMENT_BOUNDARY_LINES.join(' ') }
+  }
+}
+
+export function exportDocumentIntelligenceMarkdown(
+  result: OrbDocumentIntelligenceResult,
+  displayTitle?: string
+): string {
+  return formatDocumentIntelligenceMarkdown({
+    ...result,
+    title: displayTitle || result.title
+  })
 }

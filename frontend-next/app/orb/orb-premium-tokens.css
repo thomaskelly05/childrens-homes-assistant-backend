@@ -725,6 +725,15 @@ html[data-orb-residential='1'] .orb-templates-panel .orb-doc-glass-card {
   border-color: rgba(255, 255, 255, 0.1);
 }
 
+html[data-orb-residential='1'] .orb-doc-policy-card-hero {
+  background: linear-gradient(
+    135deg,
+    rgba(0, 184, 255, 0.12) 0%,
+    rgba(255, 255, 255, 0.04) 55%
+  );
+  box-shadow: 0 0 0 1px rgba(66, 215, 255, 0.08);
+}
+
 /* Residential root — theme follows user choice (system / light / dark), not forced dark */
 html[data-orb-residential='1'][data-orb-theme='dark'],
 html[data-orb-residential='1'][data-orb-theme='dark'] body,
