@@ -187,6 +187,7 @@ class OrbDictateGenerateResponse(BaseModel):
     segments: list[OrbDictateTranscriptSegment] = Field(default_factory=list)
     speaker_summary: OrbDictateSpeakerSummary | None = None
     speaker_boundary_notice: str | None = None
+    brain_metadata: dict[str, Any] | None = None
 
 
 class OrbDictateTranscribeRequest(BaseModel):

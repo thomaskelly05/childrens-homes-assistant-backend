@@ -7,6 +7,7 @@ from typing import Any
 
 from schemas.orb_agents import OrbAgentRunRequest
 from services.orb_agent_registry_service import orb_agent_registry_service
+from services.orb_brain_metadata_service import merge_context_used
 
 AUTO_RUN_PATTERNS = (
     r"\bcreate a (?:manager )?briefing\b",
@@ -150,12 +151,13 @@ async def maybe_run_agent_for_conversation(
             ),
             "sources": [],
             "citations": [],
-            "context_used": {
-                "surface": "standalone_orb_ai",
-                "os_linked": False,
-                "care_record_access": False,
-                "document_analysis": {**doc_intent, "auto_run": False},
-            },
+            "context_used": merge_context_used(
+                {"document_analysis": {**doc_intent, "auto_run": False}},
+                surface="orb_standalone",
+                mode=mode,
+                feature="agent",
+                lens="document_analysis",
+            ),
             "tools_used": ["document_analysis_prompt"],
         }
 

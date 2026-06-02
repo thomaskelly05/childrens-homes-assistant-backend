@@ -32,6 +32,7 @@ from services.indicare_intelligence_surface_router import (
     standalone_os_boundary_message,
 )
 from services.orb_action_engine_service import orb_action_engine_service
+from services.orb_brain_metadata_service import attach_to_payload, merge_context_used
 from services.orb_plan_enforcement_service import orb_plan_enforcement_service
 from services.orb_standalone_usage_service import record_standalone_orb_usage
 from services.orb_standalone_sources import (
@@ -584,15 +585,18 @@ def _standalone_conversation_response(
     resolved_citations = citations or orb_citation_service.normalise_sources(resolved_sources)
     if not resolved_sources and resolved_citations:
         resolved_sources = orb_citation_service.frontend_sources_payload(resolved_citations)
-    base_context = {
-        "surface": "standalone_orb_ai",
-        "mode": mode,
-        "care_record_access": False,
-        "os_linked": False,
-        "tools_used": tools_used or ["standalone_orb_general_assistant"],
-    }
-    if context_used:
-        base_context.update(context_used)
+    base_context = merge_context_used(
+        {
+            "mode": mode,
+            "tools_used": tools_used or ["standalone_orb_general_assistant"],
+            **(context_used or {}),
+        },
+        surface="orb_standalone",
+        mode=mode,
+        feature="conversation",
+        sources=sources,
+        citations=citations,
+    )
     if "retrieval" not in base_context:
         base_context["retrieval"] = {
             "strategy": "source_pack_plus_document_rag",
@@ -608,26 +612,33 @@ def _standalone_conversation_response(
     )
     if resolved_labels:
         base_context["cognition_display_labels"] = resolved_labels
-    payload: dict[str, Any] = {
-        "ok": True,
-        "success": True,
-        "standalone": True,
-        "os_records_accessed": False,
-        "answer": answer,
-        "summary": answer.split("\n", 1)[0][:220],
-        "sources": resolved_sources,
-        "citations": resolved_citations,
-        "actions": [],
-        "confidence": confidence,
-        "conversation_id": conversation_id,
-        "image_understanding_available": image_understanding_available,
-        "error_detail": error_detail,
-        "context_used": base_context,
-        "guardrails": [
-            "ORB Residential did not retrieve IndiCare OS records.",
-            "Use professional judgement and follow safeguarding procedures where risk is present.",
-        ],
-    }
+    payload: dict[str, Any] = attach_to_payload(
+        {
+            "ok": True,
+            "success": True,
+            "standalone": True,
+            "os_records_accessed": False,
+            "answer": answer,
+            "summary": answer.split("\n", 1)[0][:220],
+            "sources": resolved_sources,
+            "citations": resolved_citations,
+            "actions": [],
+            "confidence": confidence,
+            "conversation_id": conversation_id,
+            "image_understanding_available": image_understanding_available,
+            "error_detail": error_detail,
+            "context_used": base_context,
+            "guardrails": [
+                "ORB Residential did not retrieve IndiCare OS records.",
+                "Use professional judgement and follow safeguarding procedures where risk is present.",
+            ],
+        },
+        surface="orb_standalone",
+        mode=mode,
+        feature="conversation",
+        sources=resolved_sources,
+        citations=resolved_citations,
+    )
     if resolved_labels:
         payload["cognition_display_labels"] = resolved_labels
     return payload
@@ -1187,7 +1198,17 @@ async def standalone_orb_action_run(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail={"success": False, "error": str(exc)}) from exc
 
-    return {"success": True, "data": result}
+    return {
+        "success": True,
+        "data": attach_to_payload(
+            result,
+            surface="orb_standalone",
+            mode=payload.mode,
+            feature="action_engine",
+            lens=payload.action,
+            sources=result.get("sources"),
+        ),
+    }
 
 
 def _text(value: Any) -> str:

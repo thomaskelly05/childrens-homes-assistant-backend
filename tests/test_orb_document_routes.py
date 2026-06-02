@@ -76,6 +76,9 @@ def test_document_intelligence_route(fake_state):
     assert response["success"] is True
     assert response["data"]["standalone"] is True
     assert response["data"]["os_records_accessed"] is False
+    brain = response["data"].get("brain_metadata") or {}
+    assert brain.get("brain") == "orb_residential_intelligence"
+    assert brain.get("product") == "ORB Residential"
 
 
 def test_briefing_and_compare_routes(fake_state):

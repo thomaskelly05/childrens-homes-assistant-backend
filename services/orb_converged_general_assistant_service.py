@@ -20,6 +20,7 @@ This gives us a safe runtime convergence path without breaking /orb.
 from collections.abc import AsyncIterator
 from typing import Any
 
+from services.orb_brain_metadata_service import merge_context_used
 from services.orb_general_assistant_service import orb_general_assistant_service
 from services.orb_knowledge_retrieval_service import orb_knowledge_retrieval_service
 from services.orb_residential_intelligence_service import orb_residential_intelligence_service
@@ -124,15 +125,26 @@ class OrbConvergedGeneralAssistantService:
             },
         )
 
-        context_used = dict(result.get("context_used") or {})
+        context_used = merge_context_used(
+            result.get("context_used"),
+            surface="orb_standalone",
+            mode=mode or context_packet.detected_mode,
+            feature="conversation",
+            sources=result.get("sources"),
+            citations=result.get("citations"),
+            quality=processed.get("quality"),
+            extra={
+                "premium": True,
+                "prompt_tier": prompt_tier,
+            },
+        )
         context_used.update(
             {
-                "surface": "orb_residential",
                 "premium": True,
                 "prompt_tier": prompt_tier,
                 "orb_residential_convergence": {
                     "enabled": True,
-                    "surface": "orb_residential",
+                    "surface": "orb_standalone",
                     "contract_mode": context_packet.contract_mode,
                     "detected_mode": context_packet.detected_mode,
                     "selected_knowledge_modules": context_packet.selected_knowledge_modules,
@@ -150,12 +162,9 @@ class OrbConvergedGeneralAssistantService:
                 },
             }
         )
-        context_used["care_record_access"] = False
-        context_used["os_linked"] = False
-        context_used["live_record_access"] = False
-        context_used["premium"] = True
 
         result["context_used"] = context_used
+        result["brain_metadata"] = context_used.get("brain_metadata")
         result["internal_data_access"] = False
         result["os_records_accessed"] = False
         result["quality"] = processed.get("quality")
@@ -253,15 +262,23 @@ class OrbConvergedGeneralAssistantService:
             },
         )
 
-        context_used = dict(inner_meta.get("context_used") or {})
+        context_used = merge_context_used(
+            inner_meta.get("context_used"),
+            surface="orb_standalone",
+            mode=mode,
+            feature="conversation",
+            sources=inner_meta.get("sources"),
+            citations=inner_meta.get("citations"),
+            quality=processed.get("quality"),
+            extra={"premium": True, "prompt_tier": prompt_tier},
+        )
         context_used.update(
             {
-                "surface": "orb_residential",
                 "premium": True,
                 "prompt_tier": prompt_tier,
                 "orb_residential_convergence": {
                     "enabled": True,
-                    "surface": "orb_residential",
+                    "surface": "orb_standalone",
                     "live_record_access": False,
                     "os_linked": False,
                     "care_record_access": False,
@@ -270,10 +287,9 @@ class OrbConvergedGeneralAssistantService:
                 },
             }
         )
-        context_used["care_record_access"] = False
-        context_used["os_linked"] = False
         inner_meta["answer"] = processed.get("answer") or answer_text
         inner_meta["context_used"] = context_used
+        inner_meta["brain_metadata"] = context_used.get("brain_metadata")
         inner_meta["quality"] = processed.get("quality")
         inner_meta["safe_to_show"] = processed.get("safe_to_show")
         if stream_meta is not None:

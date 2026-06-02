@@ -22,6 +22,7 @@ from schemas.orb_documents import OrbDocumentAnalysisMode, OrbDocumentAnalysisRe
 from schemas.orb_evaluation import OrbEvaluationResult
 from services.ai_model_router_service import STANDALONE_LLM_TIMEOUT_SECONDS, ai_model_router_service
 from services.orb_agent_registry_service import LIVE_WEB_NOTE, orb_agent_registry_service
+from services.orb_brain_metadata_service import merge_context_used
 from services.orb_citation_service import orb_citation_service
 from services.orb_document_understanding_service import orb_document_understanding_service
 from services.orb_evaluation_service import orb_evaluation_service
@@ -157,19 +158,24 @@ class OrbAgentOrchestratorService:
             if not (retrieval.get("document_results")):
                 warnings.append(LIVE_WEB_NOTE)
 
-            context_used = {
-                "surface": "standalone_orb_ai",
-                "os_linked": False,
-                "care_record_access": False,
-                "standalone_only": True,
-                "agent": {
-                    "type": agent_type,
-                    "name": agent.name,
-                    "auto_run": True,
-                    "classify_reason": classify_reason,
+            context_used = merge_context_used(
+                {
+                    "standalone_only": True,
+                    "agent": {
+                        "type": agent_type,
+                        "name": agent.name,
+                        "auto_run": True,
+                        "classify_reason": classify_reason,
+                    },
+                    "retrieval": self._retrieval_summary(retrieval),
                 },
-                "retrieval": self._retrieval_summary(retrieval),
-            }
+                surface="orb_standalone",
+                mode=request.mode,
+                feature="agent",
+                lens=agent_type,
+                sources=[s.model_dump() if hasattr(s, "model_dump") else s for s in sources],
+                citations=[c.model_dump() if hasattr(c, "model_dump") else c for c in citations],
+            )
             evaluation = self._evaluate_agent_output(
                 body,
                 sources=sources,
@@ -287,21 +293,24 @@ class OrbAgentOrchestratorService:
                         detail="No document_text or source_id provided",
                     ),
                 ],
-                context_used={
-                    "surface": "standalone_orb_ai",
-                    "os_linked": False,
-                    "care_record_access": False,
-                    "standalone_only": True,
-                    "document_analysis": {
-                        "needs_document": True,
-                        "document_understanding_service": True,
+                context_used=merge_context_used(
+                    {
+                        "standalone_only": True,
+                        "document_analysis": {
+                            "needs_document": True,
+                            "document_understanding_service": True,
+                        },
+                        "agent": {
+                            "type": "document_analysis",
+                            "name": agent.name,
+                            "classify_reason": classify_reason,
+                        },
                     },
-                    "agent": {
-                        "type": "document_analysis",
-                        "name": agent.name,
-                        "classify_reason": classify_reason,
-                    },
-                },
+                    surface="orb_standalone",
+                    mode=request.mode,
+                    feature="agent",
+                    lens="document_analysis",
+                ),
                 warnings=[STANDALONE_BOUNDARY_SHORT],
                 safety_notice=self.build_safety_notice(agent, request),
             )
@@ -415,25 +424,30 @@ class OrbAgentOrchestratorService:
             sources=understanding.sources,
             citations=understanding.citations,
             steps=steps,
-            context_used={
-                "surface": "standalone_orb_ai",
-                "os_linked": False,
-                "care_record_access": False,
-                "standalone_only": True,
-                "document_analysis": {
-                    "document_understanding_service": True,
-                    "analysis_mode": analysis_mode,
-                    "source_id": understanding.source_id,
+            context_used=merge_context_used(
+                {
+                    "standalone_only": True,
+                    "document_analysis": {
+                        "document_understanding_service": True,
+                        "analysis_mode": analysis_mode,
+                        "source_id": understanding.source_id,
+                    },
+                    "agent": {
+                        "type": "document_analysis",
+                        "name": agent.name,
+                        "classify_reason": classify_reason,
+                    },
+                    "retrieval": self._retrieval_summary(retrieval),
+                    "evaluation": evaluation,
+                    "intelligence_output": intel.model_dump(),
                 },
-                "agent": {
-                    "type": "document_analysis",
-                    "name": agent.name,
-                    "classify_reason": classify_reason,
-                },
-                "retrieval": self._retrieval_summary(retrieval),
-                "evaluation": evaluation,
-                "intelligence_output": intel.model_dump(),
-            },
+                surface="orb_standalone",
+                mode=request.mode,
+                feature="agent",
+                lens="document_analysis",
+                sources=understanding.sources,
+                citations=understanding.citations,
+            ),
             model_routing=understanding.model_routing,
             warnings=list(dict.fromkeys(warnings + [STANDALONE_BOUNDARY_SHORT])),
             safety_notice=understanding.safety_notice or self.build_safety_notice(agent, request),
@@ -820,11 +834,15 @@ class OrbAgentOrchestratorService:
             sources=sources,
             citations=citations,
             steps=steps or [OrbAgentStep(id="failed", label="Agent run failed", status="failed", detail=str(error))],
-            context_used={
-                "surface": "standalone_orb_ai",
-                "os_linked": False,
-                "care_record_access": False,
-            },
+            context_used=merge_context_used(
+                {},
+                surface="orb_standalone",
+                mode=request.mode,
+                feature="agent",
+                lens=agent_type,
+                sources=sources,
+                citations=citations,
+            ),
             warnings=[LIVE_WEB_NOTE, f"Agent error: {type(error).__name__ if error else 'unknown'}"],
             safety_notice=agent.safety_notice if agent else LIVE_WEB_NOTE,
         )
