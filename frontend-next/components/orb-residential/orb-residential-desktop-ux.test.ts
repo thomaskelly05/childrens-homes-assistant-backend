@@ -12,12 +12,12 @@ function readComponent(relativePath: string) {
 
 describe('ORB Residential desktop UX', () => {
   it('/orb experience wraps chat in dark residential root and error boundary', () => {
-    const experience = readComponent('components/orb-residential/orb-residential-experience.tsx')
+    const shell = readComponent('components/orb/orb-shell.tsx')
     const page = readComponent('app/orb/page.tsx')
-    assert.match(experience, /useOrbResidentialThemeLock/)
-    assert.match(experience, /OrbResidentialErrorBoundary/)
-    assert.match(experience, /data-orb-residential="true"/)
-    assert.match(page, /OrbResidentialExperience/)
+    assert.match(shell, /useOrbResidentialThemeLock/)
+    assert.match(shell, /OrbResidentialErrorBoundary/)
+    assert.match(shell, /data-orb-residential="true"/)
+    assert.match(page, /OrbShell/)
   })
 
   it('landing uses one hero sphere without OrbGlow square artefact', () => {

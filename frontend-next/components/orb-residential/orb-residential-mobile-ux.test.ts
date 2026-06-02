@@ -115,10 +115,10 @@ describe('ORB Residential mobile UX', () => {
   })
 
   it('orb residential experience does not mount OS sidebar', () => {
-    const experience = readComponent('components/orb-residential/orb-residential-experience.tsx')
+    const shell = readComponent('components/orb/orb-shell.tsx')
     const page = readComponent('app/orb/page.tsx')
-    assert.match(experience, /OrbCareCompanion residentialSurface/)
-    assert.doesNotMatch(experience, /OsSidebar|os-sidebar/)
+    assert.match(shell, /OrbCareCompanion residentialSurface/)
+    assert.doesNotMatch(shell, /OsSidebar|os-sidebar/)
     assert.doesNotMatch(page, /OsSidebar/)
   })
 
@@ -144,10 +144,11 @@ describe('ORB Residential mobile UX', () => {
 
   it('premium design tokens and CSS layer are wired', () => {
     const layout = readComponent('app/orb/layout.tsx')
-    const tokens = readComponent('lib/orb/design-tokens.ts')
+    const theme = readComponent('lib/orb/orb-theme.ts')
     assert.match(layout, /orb-premium-tokens\.css/)
-    assert.match(tokens, /#05070D/)
-    assert.match(tokens, /#168BFF/)
+    assert.match(theme, /ORB_ROYAL_BLUE/)
+    assert.match(theme, /#05070D|#05070d/)
+    assert.match(theme, /#168bff/i)
   })
 
   it('PremiumMobileOrb renders a single sphere element not duplicate orbs', () => {
@@ -162,13 +163,14 @@ describe('ORB Residential mobile UX', () => {
   })
 
   it('residential experience forces dark theme isolation wrapper', () => {
-    const experience = readComponent('components/orb-residential/orb-residential-experience.tsx')
+    const shell = readComponent('components/orb/orb-shell.tsx')
     const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
     const premiumCss = readComponent('app/orb/orb-premium-tokens.css')
-    assert.match(experience, /data-orb-residential/)
-    assert.match(experience, /orb-residential-root/)
-    assert.match(experience, /data-orb-residential="true"/)
-    assert.match(experience, /useOrbResidentialThemeLock/)
+    assert.match(shell, /data-orb-residential/)
+    assert.match(readComponent('lib/orb/orb-theme.ts'), /orb-residential-root/)
+    assert.match(shell, /ORB_SHELL_ROOT_CLASS/)
+    assert.match(shell, /data-orb-residential="true"/)
+    assert.match(shell, /useOrbResidentialThemeLock/)
     assert.match(companion, /orb-residential-root/)
     assert.match(companion, /effectiveTheme = resolvedTheme/)
     assert.match(premiumCss, /html\[data-orb-residential='1'\]/)

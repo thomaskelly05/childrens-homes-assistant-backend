@@ -67,10 +67,10 @@ describe('ORB Residential routing', () => {
 
   it('/orb renders ChatGPT-style ORB shell via OrbCareCompanion', () => {
     const page = readApp('app/orb/page.tsx')
-    const experience = readApp('components/orb-residential/orb-residential-experience.tsx')
+    const shell = readApp('components/orb/orb-shell.tsx')
     const companion = readApp('components/orb-standalone/orb-care-companion.tsx')
-    assert.match(page, /OrbResidentialExperience/)
-    assert.match(experience, /OrbCareCompanion residentialSurface/)
+    assert.match(page, /OrbShell/)
+    assert.match(shell, /OrbCareCompanion residentialSurface/)
     assert.match(companion, /OrbResidentialSidebar/)
     assert.match(companion, /h-\[100dvh\]/)
     assert.match(companion, /Ready when you are/)
@@ -85,6 +85,8 @@ describe('ORB Residential routing', () => {
     assert.match(css, /overflow-y:\s*auto/)
     assert.match(sidebar, /data-orb-sidebar-scroll/)
     assert.match(readApp('components/orb-standalone/orb-care-companion.tsx'), /data-orb-chat-scroll-container/)
+    assert.match(readApp('components/orb-standalone/orb-care-companion.tsx'), /OrbLayout/)
+    assert.match(readApp('components/orb/orb-layout.tsx'), /data-orb-sidebar-scroll-container/)
   })
 
   it('stations are in sidebar but not on front door', () => {

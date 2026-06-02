@@ -92,6 +92,7 @@ import { OrbAmbientCognition, type OrbCognitionAmbientState } from '@/components
 import { OrbAccountModal } from '@/components/orb-standalone/orb-account-modal'
 import { OrbAdultProfileDrawer } from '@/components/orb-standalone/orb-adult-profile-drawer'
 import { OrbBillingModal } from '@/components/orb-standalone/orb-billing-modal'
+import { OrbLayout } from '@/components/orb/orb-layout'
 import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
 import { OrbStandaloneSidebar } from '@/components/orb-standalone/orb-standalone-sidebar'
 import {
@@ -2746,32 +2747,15 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         }}
       />
 
-      {sidebarOpen ? (
-        <button
-          type="button"
-          className="orb-panel-overlay fixed inset-0 z-40 lg:hidden"
-          aria-label="Close sidebar"
-          onClick={() => setSidebarOpen(false)}
-        />
-      ) : null}
-
-      <div
-        className={`relative flex min-h-0 flex-1 ${residentialSurface ? 'orb-chat-shell' : ''}`}
-        data-orb-sidebar-collapsed={residentialSurface && sidebarCollapsed ? 'true' : undefined}
-      >
-        <aside
-          className={`orb-chat-sidebar fixed inset-y-0 left-0 z-50 flex flex-col border-r border-[var(--orb-line)]/50 transition-[transform,width] duration-200 lg:static lg:z-auto lg:translate-x-0 ${
-            residentialSurface
-              ? sidebarCollapsed
-                ? 'w-[4.25rem] max-w-[4.25rem] lg:w-[var(--orb-sidebar-width-collapsed,4.25rem)]'
-                : 'w-[min(100%,18.125rem)] max-w-[18.125rem] lg:w-[var(--orb-sidebar-width,18.125rem)]'
-              : 'w-[min(100%,18.75rem)] lg:w-[18.75rem]'
-          } ${
-            sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-          }`}
-          data-orb-sidebar-scroll-container
-        >
-          {residentialSurface ? (
+      <OrbLayout
+        residentialSurface={residentialSurface}
+        sidebarOpen={sidebarOpen}
+        sidebarCollapsed={sidebarCollapsed}
+        onCloseSidebarOverlay={() => setSidebarOpen(false)}
+        onDragOver={(event) => event.preventDefault()}
+        onDrop={handleDrop}
+        sidebar={
+          residentialSurface ? (
             <OrbResidentialSidebar
               workspace={workspace}
               chatSearch={chatSearch}
@@ -2855,10 +2839,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
               savedOutputsCount={savedOutputsCount}
               onClose={() => setSidebarOpen(false)}
             />
-          )}
-        </aside>
-
-        <div className="orb-chat-main flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+          )
+        }
+        header={
           <header
             className={`orb-chat-header relative z-10 flex shrink-0 items-center gap-2 px-3 py-2.5 backdrop-blur-sm md:px-5 ${
               residentialSurface
@@ -2938,7 +2921,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
               </button>
             </div>
           </header>
-
+        }
+        preThread={
+          <>
           {recordingContext ? (
             <div className="mx-3 mt-3 rounded-2xl border border-teal-300/25 bg-teal-300/10 px-4 py-3 text-sm leading-6 text-teal-50 md:mx-5" role="status">
               <strong className="font-black">Recording support:</strong> ORB can help with wording and reflection, but it cannot see the record.
@@ -3008,8 +2993,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           {modeSafety ? (
             <p className="mx-3 mt-2 text-[11px] leading-5 text-slate-500 md:mx-5">{modeSafety}</p>
           ) : null}
-
-          <section className="flex min-h-0 flex-1 flex-col" onDragOver={(e) => e.preventDefault()} onDrop={handleDrop}>
+          </>
+        }
+        thread={
             <div
               ref={scrollContainerRef}
               className={`orb-chat-thread flex-1 overflow-y-auto overflow-x-hidden px-3 py-6 md:px-6 ${residentialSurface ? 'pb-4' : 'pb-32'}`}
@@ -3439,18 +3425,17 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                 <div ref={messagesEndRef} />
               </div>
             </div>
-
-            <OrbScrollToBottomFab
-              visible={showScrollFab}
-              streaming={threadIsStreaming}
-              reducedMotion={a11yPrefs.reducedMotion}
-              onClick={() => requestChatScroll(true)}
-            />
-
-            {composer}
-          </section>
-        </div>
-      </div>
+        }
+        scrollFab={
+          <OrbScrollToBottomFab
+            visible={showScrollFab}
+            streaming={threadIsStreaming}
+            reducedMotion={a11yPrefs.reducedMotion}
+            onClick={() => requestChatScroll(true)}
+          />
+        }
+        composer={composer}
+      />
 
       {promptDrawerOpen ? (
         <OrbPromptDrawer
