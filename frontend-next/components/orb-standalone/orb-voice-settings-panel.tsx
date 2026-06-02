@@ -11,6 +11,8 @@ import {
 import { ORB_VOICE_PROFILES, getOrbVoiceProfile, orbVoiceProfileLabel } from '@/lib/orb/voice/orb-voice-profiles'
 import { ORB_VOICE_MODES } from '@/lib/orb/voice/orb-voice-types'
 import type { OrbSpokenAnswerLength, OrbVoiceModeId, OrbVoicePresetId } from '@/lib/orb/voice/orb-voice-types'
+import { ORB_VOICE_BOUNDARY_COPY } from '@/lib/orb/voice/orb-voice-launch-mode'
+import { detectSpeechRecognitionSupported } from '@/lib/orb/voice/orb-voice-readiness'
 
 const RATE_LABELS: Record<OrbSpeechRatePreset, string> = {
   slow: 'Slow',
@@ -97,6 +99,32 @@ export function OrbVoiceSettingsPanel({
           Choose how ORB sounds. ORB-branded voices use OpenAI Realtime when your deployment configures it;
           otherwise ORB honestly uses your browser&apos;s Speech Synthesis with the closest matching device voice.
         </p>
+
+        <dl className="grid gap-2 rounded-xl border border-[var(--orb-line)]/40 p-3 text-[11px]" data-orb-voice-capability-status>
+          <div className="flex justify-between gap-3">
+            <dt className="text-[var(--orb-muted)]">Speech recognition</dt>
+            <dd data-orb-voice-recognition-available={voice.recognitionAvailable ? 'true' : 'false'}>
+              {voice.recognitionAvailable || detectSpeechRecognitionSupported() ? 'Available' : 'Unavailable'}
+            </dd>
+          </div>
+          <div className="flex justify-between gap-3">
+            <dt className="text-[var(--orb-muted)]">Speech synthesis</dt>
+            <dd data-orb-voice-synthesis-available={voice.synthesisAvailable ? 'true' : 'false'}>
+              {voice.synthesisAvailable ? 'Available' : 'Unavailable'}
+            </dd>
+          </div>
+        </dl>
+
+        <p className="text-[11px] leading-6 text-[var(--orb-muted)]" data-orb-voice-settings-privacy>
+          Privacy: audio and transcripts are used only for the current interaction unless you save them.
+        </p>
+        <div className="space-y-1" data-orb-voice-settings-boundary>
+          {ORB_VOICE_BOUNDARY_COPY.map((line) => (
+            <p key={line} className="text-[10px] leading-4 text-[var(--orb-muted)]">
+              {line}
+            </p>
+          ))}
+        </div>
 
         {onOpenOrbVoice ? (
           <button

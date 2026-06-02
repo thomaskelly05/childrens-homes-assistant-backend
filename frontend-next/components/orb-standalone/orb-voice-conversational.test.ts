@@ -23,7 +23,7 @@ describe('ORB Voice conversational sprint', () => {
     assert.match(station, /OrbVoiceActions/)
     assert.match(actions, /data-orb-voice-primary-action/)
     assert.match(readLib('orb/voice/orb-voice-ui-state.ts'), /Start voice/)
-    assert.match(station, /Talk with ORB/)
+    assert.match(station, /ORB_VOICE_PANEL_SUBTITLE/)
   })
 
   it('voice settings persist under orb-voice-settings key', () => {
@@ -99,6 +99,6 @@ describe('ORB Voice conversational sprint', () => {
   it('ORB Voice links to dictate from transcript actions', () => {
     const voice = readComponent('components/orb-standalone/orb-voice-station.tsx')
     assert.match(voice, /data-orb-voice-post-session|data-orb-voice-to-dictate/)
-    assert.match(voice, /Send transcript to Dictate/)
+    assert.match(voice, /Send to Dictate/)
   })
 })
