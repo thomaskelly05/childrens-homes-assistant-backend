@@ -87,7 +87,11 @@ export function OrbVoiceMobileExperience({
     .join('\n\n')
 
   return (
-    <div className="orb-voice-mobile flex min-h-0 flex-1 flex-col md:hidden" data-orb-voice-mobile>
+    <div
+      className="orb-voice-mobile flex min-h-0 flex-1 flex-col md:hidden"
+      data-orb-voice-mobile
+      data-orb-voice-ui-state={uiState}
+    >
       <div className="flex min-h-0 flex-1 flex-col items-center overflow-y-auto overflow-x-hidden px-4 pt-4 pb-2">
         <GlassOrbMark size="voiceMobile" pulse={pulseOrb} className={orbVisualClassName} />
 

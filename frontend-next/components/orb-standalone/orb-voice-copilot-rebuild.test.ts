@@ -197,4 +197,26 @@ describe('ORB Voice copilot rebuild — UI state machine', () => {
       'provider_unavailable'
     )
   })
+
+  it('ready with provider openai before any realtime session', () => {
+    assert.equal(
+      resolveOrbVoiceUiState({
+        authStatus: 'authenticated',
+        statusProbe: 'done',
+        realtimeStatus: {
+          ok: true,
+          realtime_enabled: true,
+          provider: 'openai',
+          model: 'gpt-realtime',
+          reason: 'configured'
+        },
+        startStage: 'idle',
+        sessionEnded: false,
+        transportLive: false,
+        realtimeState: 'idle',
+        webrtcFailed: false
+      }),
+      'ready'
+    )
+  })
 })
