@@ -32,7 +32,7 @@ const MAX_RECONNECT_ATTEMPTS = 2
 const NEGOTIATION_TIMEOUT_MS = 20000
 const HEARTBEAT_MS = 15000
 const ORB_SERVER_VAD_SILENCE_MS = 520
-const OPENAI_REALTIME_SDP_URL = 'https://api.openai.com/v1/realtime'
+const OPENAI_REALTIME_SDP_URL = 'https://api.openai.com/v1/realtime/calls'
 
 class OrbNonRetryableError extends Error {}
 class OrbRealtimeNegotiationError extends Error {
