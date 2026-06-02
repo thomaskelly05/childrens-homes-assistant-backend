@@ -106,12 +106,14 @@ import { ORB_DATA_BOUNDARY, ORB_DATA_BOUNDARY_SHORT, ORB_PRODUCT_NAME } from '@/
 import {
   buildAdultProfilePromptBlock,
   normalizeAdultProfileRole,
-  personalisedEmptyHeading,
-  personalisedWelcomeMessage,
   readAdultProfile,
   roleBasedEmptyStarters,
   type AdultProfile
 } from '@/lib/orb/adult-profile-store'
+import {
+  personalisedEmptyHeading,
+  personalisedWelcomeMessage
+} from '@/lib/orb/orb-personalised-greeting'
 import {
   STANDALONE_ORB_SIGN_IN_PATH,
   STANDALONE_ORB_SIGN_IN_REQUIRED_ANSWER,

@@ -4,10 +4,8 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, it } from 'node:test'
 
-import {
-  DEFAULT_ADULT_PROFILE,
-  personalisedWelcomeMessage
-} from '../../lib/orb/adult-profile-store.ts'
+import { DEFAULT_ADULT_PROFILE } from '../../lib/orb/adult-profile-store.ts'
+import { personalisedWelcomeMessage } from '../../lib/orb/orb-personalised-greeting.ts'
 import { profileInitialsFromName } from '../../lib/orb/orb-profile-initials.ts'
 import { stripMarkdownForSpeech } from '../../lib/orb/orb-speech-text.ts'
 import { ORB_SPEECH_RATE_PRESETS, speechRatePresetFor } from '../../lib/orb/orb-voice-presets.ts'

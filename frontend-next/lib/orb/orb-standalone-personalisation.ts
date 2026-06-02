@@ -1,4 +1,4 @@
-import type { OrbGreetingStyle } from '@/lib/orb/orb-personalised-greeting'
+import type { OrbGreetingStyle } from './orb-personalised-greeting'
 
 export type OrbProfessionalTone = 'therapeutic' | 'compliance' | 'balanced'
 
