@@ -34,6 +34,7 @@ export type OrbVoiceLaunchMode = 'browser_ptt' | 'openai_realtime' | 'unavailabl
 
 export type OrbVoiceLaunchUiState =
   | 'ready'
+  | 'starting'
   | 'listening'
   | 'transcribing'
   | 'thinking'
@@ -78,6 +79,7 @@ export type ResolveOrbVoiceLaunchUiStateInput = {
 export function resolveOrbVoiceLaunchUiState(input: ResolveOrbVoiceLaunchUiStateInput): OrbVoiceLaunchUiState {
   if (input.launchMode === 'unavailable') return 'unavailable'
   if (input.error || input.captureState === 'error' || input.phase === 'error') return 'error'
+  if (input.captureState === 'requesting_permission' || input.captureState === 'starting') return 'starting'
   if (input.pending) return 'thinking'
   if (input.speaking || input.captureState === 'speaking') return 'speaking'
   if (input.captureState === 'transcribing') return 'transcribing'
@@ -92,6 +94,8 @@ export function orbVoiceLaunchStatusLabel(state: OrbVoiceLaunchUiState): string 
   switch (state) {
     case 'ready':
       return 'Ready'
+    case 'starting':
+      return 'Starting'
     case 'listening':
       return 'Listening'
     case 'transcribing':
@@ -117,6 +121,8 @@ export function orbVoiceLaunchHeadline(
     case 'ready':
       if (options?.realtimeConfigured) return 'Tap to start live voice'
       return options?.pushToTalk !== false ? 'Hold or tap to speak' : 'Tap to speak'
+    case 'starting':
+      return 'Starting voice…'
     case 'listening':
       return "I'm listening"
     case 'transcribing':

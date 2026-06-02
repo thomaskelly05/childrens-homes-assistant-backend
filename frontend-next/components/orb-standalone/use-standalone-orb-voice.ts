@@ -141,6 +141,10 @@ const SPEECH_CHUNK_PAUSE_MS = 80
 const SPEECH_TEST_PHRASE = ORB_VOICE_PREVIEW_PHRASE
 const SAFARI_KEEPALIVE_MS = 140
 export const RECOGNITION_START_TIMEOUT_MS = 2500
+export const ORB_VOICE_NO_HEAR_MESSAGE =
+  "I didn't hear anything — try again or use Dictate."
+export const ORB_VOICE_MIC_BLOCKED_MESSAGE = 'Microphone permission blocked'
+export const ORB_VOICE_UNSUPPORTED_MESSAGE = 'Voice input is not supported in this browser'
 
 function readStoredSettings(): StandaloneOrbVoiceSettings {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS
@@ -453,12 +457,10 @@ export function useStandaloneOrbVoice() {
 
   const speechRecognitionFailureMessage = useCallback(
     (reason?: OrbSpeechRecognitionStartFailureReason) => {
-      if (
-        reason === 'speech_recognition_ended_immediately' ||
-        reason === 'onend_before_onstart' ||
-        reason === 'onerror_before_onstart' ||
-        reason === 'timeout'
-      ) {
+      if (reason === 'speech_recognition_ended_immediately') {
+        return ORB_VOICE_NO_HEAR_MESSAGE
+      }
+      if (reason === 'onend_before_onstart' || reason === 'onerror_before_onstart' || reason === 'timeout') {
         return SPEECH_RECOGNITION_UNSTABLE_MESSAGE
       }
       return 'Speech recognition could not start. Open Dictate or type instead.'
@@ -549,14 +551,26 @@ export function useStandaloneOrbVoice() {
         recognitionRef.current = null
         setInterimTranscript('')
         const continuous = recognitionModeRef.current === 'continuous'
-        setVoiceCaptureState(continuous ? 'ready' : transcriptRef.current.trim() ? 'ready' : 'idle')
+        const hasTranscript = Boolean(transcriptRef.current.trim())
+        if (
+          !continuous &&
+          !hasTranscript &&
+          userInitiatedVoiceRef.current &&
+          !dictateSpeechCaptureRef.current
+        ) {
+          setError(ORB_VOICE_NO_HEAR_MESSAGE)
+          setVoiceCaptureState('error')
+          setPhase('error')
+        } else {
+          setVoiceCaptureState(continuous ? 'ready' : hasTranscript ? 'ready' : 'idle')
+          setPhase((current) => {
+            if (current === 'listening' || current === 'continuous_listening') {
+              return hasTranscript ? 'transcript_ready' : continuous ? 'continuous_listening' : 'idle'
+            }
+            return current
+          })
+        }
         if (!continuous) stopMediaStream()
-        setPhase((current) => {
-          if (current === 'listening' || current === 'continuous_listening') {
-            return transcriptRef.current.trim() ? 'transcript_ready' : continuous ? 'continuous_listening' : 'idle'
-          }
-          return current
-        })
         if (continuous && userInitiatedVoiceRef.current && !voiceSessionPausedRef.current) {
           window.setTimeout(() => {
             if (userInitiatedVoiceRef.current && !recognitionRef.current && mediaStreamRef.current) {
@@ -778,29 +792,39 @@ export function useStandaloneOrbVoice() {
     setVoiceSessionPaused(false)
     setWakeStatus('off')
     setError(null)
+    setVoiceCaptureState('starting')
     const Recognition = getSpeechRecognitionCtor()
     if (!Recognition) {
       dictateSpeechCaptureRef.current = false
-      setError('Speech recognition is unavailable in this browser.')
-      setVoiceCaptureState('error')
-      return false
-    }
-    const granted = await requestMicrophonePermission()
-    if (!granted) {
       userInitiatedVoiceRef.current = false
-      dictateSpeechCaptureRef.current = false
-      setError('Microphone access is needed for voice input. You can still type.')
+      setError(ORB_VOICE_UNSUPPORTED_MESSAGE)
       setVoiceCaptureState('error')
       return false
     }
+    // SpeechRecognition.start() must run in the user-gesture stack — do not await getUserMedia first.
     const startResult = await startRecognitionSessionConfirmed(options?.mode ?? 'active')
     if (!startResult.ok) {
+      setVoiceCaptureState('requesting_permission')
+      const granted = await requestMicrophonePermission()
+      if (granted) {
+        const retry = await startRecognitionSessionConfirmed(options?.mode ?? 'active')
+        if (retry.ok) {
+          void requestMicrophonePermission()
+          return true
+        }
+        dictateSpeechCaptureRef.current = false
+        userInitiatedVoiceRef.current = false
+        setError(speechRecognitionFailureMessage(retry.reason))
+        setVoiceCaptureState('error')
+        return false
+      }
       dictateSpeechCaptureRef.current = false
       userInitiatedVoiceRef.current = false
-      setError(speechRecognitionFailureMessage(startResult.reason))
+      setError(ORB_VOICE_MIC_BLOCKED_MESSAGE)
       setVoiceCaptureState('error')
       return false
     }
+    void requestMicrophonePermission()
     return true
   }, [requestMicrophonePermission, speechRecognitionFailureMessage, startRecognitionSessionConfirmed])
 

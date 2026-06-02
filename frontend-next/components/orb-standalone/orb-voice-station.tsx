@@ -67,6 +67,11 @@ import {
   type MicrophonePermissionState
 } from '@/lib/orb/voice/orb-voice-readiness'
 import {
+  ORB_VOICE_MIC_BLOCKED_MESSAGE,
+  ORB_VOICE_NO_HEAR_MESSAGE,
+  ORB_VOICE_UNSUPPORTED_MESSAGE
+} from '@/components/orb-standalone/use-standalone-orb-voice'
+import {
   ORB_VOICE_BOUNDARY_COPY,
   ORB_VOICE_PANEL_SUBTITLE,
   ORB_VOICE_PANEL_TITLE,
@@ -209,8 +214,28 @@ export function OrbVoiceStation({
   const [dictateRealtimeReady, setDictateRealtimeReady] = useState(false)
   const [audioPlaybackBlocked, setAudioPlaybackBlocked] = useState(false)
   const [listeningHint, setListeningHint] = useState(false)
+  const [voiceStartError, setVoiceStartError] = useState<string | null>(null)
   const assistantBufferRef = useRef('')
   const statusFetchedRef = useRef(false)
+
+  const browserSpeechSupported =
+    voice.recognitionAvailable || detectSpeechRecognitionSupported()
+
+  const emitVoiceStartCapabilities = useCallback(() => {
+    if (typeof window === 'undefined') return
+    const w = window as Window & { SpeechRecognition?: unknown; webkitSpeechRecognition?: unknown }
+    emitOrbClientDebug({
+      area: 'voice',
+      event: 'voice_start_capabilities',
+      detail: {
+        speechRecognition: Boolean(w.SpeechRecognition),
+        webkitSpeechRecognition: Boolean(w.webkitSpeechRecognition),
+        hasGetUserMedia: Boolean(navigator.mediaDevices?.getUserMedia),
+        isSecureContext: window.isSecureContext,
+        browserSpeechSupported
+      }
+    })
+  }, [browserSpeechSupported])
 
   const { mode: responsiveMode, isMobile: isMobileViewport } = useOrbResponsiveMode()
   const developerMode = isOrbDeveloperMode()
@@ -304,14 +329,24 @@ export function OrbVoiceStation({
     voice.settings.voiceMode
   ])
 
-  const statusLine = useBrowserLaunch
-    ? orbVoiceLaunchHeadline(launchUiState, {
-        pushToTalk: voice.settings.pushToTalk,
-        realtimeConfigured: false
-      })
-    : launchMode === 'unavailable'
-      ? 'Voice is not available in this browser'
-      : orbVoiceUiStatusLine(uiState)
+  const browserStatusOverride =
+    voiceStartError ||
+    voice.error ||
+    (voice.voiceCaptureState === 'requesting_permission' ? 'Checking microphone…' : null) ||
+    (voice.voiceCaptureState === 'starting' ? 'Starting voice…' : null)
+
+  const statusLine =
+    browserStatusOverride ||
+    (useBrowserLaunch
+      ? orbVoiceLaunchHeadline(launchUiState, {
+          pushToTalk: voice.settings.pushToTalk,
+          realtimeConfigured: false
+        })
+      : launchMode === 'unavailable'
+        ? ORB_VOICE_UNSUPPORTED_MESSAGE
+        : voiceStartStage === 'starting' && !voiceSessionLive
+          ? 'Starting voice…'
+          : orbVoiceUiStatusLine(uiState))
   const detailLine =
     startBlockedMessage ||
     (audioPlaybackBlocked ? 'Tap to hear ORB' : null) ||
@@ -359,6 +394,7 @@ export function OrbVoiceStation({
     setTurns([])
     setStartBlockedMessage(null)
     setMicTestMessage(null)
+    setVoiceStartError(null)
     assistantBufferRef.current = ''
     voice.cancelListening()
     voice.cancelSpeaking()
@@ -531,11 +567,14 @@ export function OrbVoiceStation({
 
   async function handleStart() {
     emitOrbClientDebug({ area: 'voice', event: 'voice_start_clicked', detail: {} })
+    emitOrbClientDebug({ area: 'voice', event: 'voice_start_handle_start_called', detail: { uiState, useBrowserLaunch } })
+    emitVoiceStartCapabilities()
     if (voiceDebug) {
       clearOrbVoiceDebugEvents()
       resetOrbVoiceDiagTransport()
     }
     setStartBlockedMessage(null)
+    setVoiceStartError(null)
     setMicTestMessage(null)
     setWebrtcFailed(false)
     setSessionEnded(false)
@@ -557,30 +596,45 @@ export function OrbVoiceStation({
 
     if (!liveVoiceAllowed) {
       setStartBlockedMessage('Live voice needs an active ORB Residential subscription.')
+      setVoiceStartError('Live voice needs an active ORB Residential subscription.')
       orbMicDevLog('voice start blocked: subscription inactive')
+      emitOrbClientDebug({ area: 'voice', event: 'voice_start_noop_prevented', detail: { reason: 'subscription_inactive' } })
       return
     }
 
     if (useBrowserLaunch) {
-      void handleBrowserVoicePrimary()
+      emitOrbClientDebug({
+        area: 'voice',
+        event: 'voice_start_branch_selected',
+        detail: { branch: 'browser_launch' }
+      })
+      await handleBrowserVoicePrimary()
       return
     }
 
     if (!realtimeVoiceReady) {
-      if (voice.recognitionAvailable || detectSpeechRecognitionSupported()) {
-        void handleBrowserVoicePrimary()
+      if (browserSpeechSupported) {
+        emitOrbClientDebug({
+          area: 'voice',
+          event: 'voice_start_branch_selected',
+          detail: { branch: 'browser_fallback_no_realtime' }
+        })
+        await handleBrowserVoicePrimary()
         return
       }
       setVoiceStartStage('failed')
-      setStartBlockedMessage(
-        sanitizeOrbVoiceUserMessage('Voice is not available in this browser.', {
-          debug: voiceDebug,
-          dictateRealtimeReady
-        }) ?? 'Voice is not available in this browser.'
-      )
+      setVoiceStartError(ORB_VOICE_UNSUPPORTED_MESSAGE)
+      setStartBlockedMessage(ORB_VOICE_UNSUPPORTED_MESSAGE)
+      emitOrbClientDebug({ area: 'voice', event: 'voice_start_unsupported_visible', detail: {} })
       return
     }
 
+    emitOrbClientDebug({
+      area: 'voice',
+      event: 'voice_start_branch_selected',
+      detail: { branch: 'openai_realtime' }
+    })
+    emitOrbClientDebug({ area: 'voice', event: 'voice_start_realtime_attempt', detail: {} })
     setVoiceStartStage('starting')
     setSessionStartedAt(new Date().toISOString())
     voice.resumeVoiceSession()
@@ -606,19 +660,32 @@ export function OrbVoiceStation({
       if (result.transportLive === false) {
         setWebrtcFailed(true)
       }
-      if (voice.recognitionAvailable || detectSpeechRecognitionSupported()) {
+      emitOrbClientDebug({
+        area: 'voice',
+        event: 'voice_start_realtime_failed',
+        detail: { error: result.error, transportLive: result.transportLive }
+      })
+      if (browserSpeechSupported) {
         emitOrbClientDebug({
           area: 'voice',
           event: 'voice_realtime_fallback_browser',
           detail: { error: result.error }
         })
+        emitOrbClientDebug({
+          area: 'voice',
+          event: 'voice_start_attempt_browser_fallback',
+          detail: { afterRealtimeFailure: true }
+        })
         setVoiceStartStage('idle')
-        void handleBrowserVoicePrimary()
+        await handleBrowserVoicePrimary()
         return
       }
       setVoiceStartStage('failed')
       const friendly = sanitizeOrbVoiceUserMessage(result.error, { debug: voiceDebug, dictateRealtimeReady })
-      if (friendly) setStartBlockedMessage(friendly)
+      if (friendly) {
+        setStartBlockedMessage(friendly)
+        setVoiceStartError(friendly)
+      }
       emitOrbClientDebug({
         area: 'voice',
         event: 'voice_session_failed',
@@ -653,24 +720,52 @@ export function OrbVoiceStation({
   }
 
   async function handleBrowserVoicePrimary() {
+    emitOrbClientDebug({
+      area: 'voice',
+      event: 'voice_start_attempt_browser_fallback',
+      detail: { listening: voice.listening, phase: voice.phase }
+    })
     if (voice.listening) {
       voice.stopListening()
       return
     }
     if (voice.phase === 'transcript_ready' && browserTranscriptText) {
+      emitOrbClientDebug({ area: 'voice', event: 'voice_start_noop_prevented', detail: { reason: 'transcript_ready' } })
+      return
+    }
+    if (!browserSpeechSupported) {
+      setVoiceStartError(ORB_VOICE_UNSUPPORTED_MESSAGE)
+      emitOrbClientDebug({ area: 'voice', event: 'voice_start_unsupported_visible', detail: {} })
       return
     }
     voice.clearTranscript()
+    setVoiceStartError(null)
+    emitOrbClientDebug({
+      area: 'voice',
+      event: 'voice_start_browser_fallback_start_called',
+      detail: { pushToTalk: voice.settings.pushToTalk }
+    })
     const started = await voice.beginUserVoiceCapture({
       mode: voice.settings.pushToTalk ? 'active' : 'continuous'
     })
-    if (!started) {
-      emitOrbClientDebug({
-        area: 'voice',
-        event: 'voice_browser_capture_failed',
-        detail: { error: voice.error }
-      })
+    if (started) {
+      emitOrbClientDebug({ area: 'voice', event: 'voice_start_browser_fallback_success', detail: {} })
+      return
     }
+    const message =
+      voice.error ||
+      (micPermission === 'denied' ? ORB_VOICE_MIC_BLOCKED_MESSAGE : 'Voice could not start.')
+    setVoiceStartError(message)
+    emitOrbClientDebug({
+      area: 'voice',
+      event: 'voice_start_browser_fallback_failed',
+      detail: { error: voice.error, micPermission }
+    })
+    emitOrbClientDebug({
+      area: 'voice',
+      event: 'voice_browser_capture_failed',
+      detail: { error: voice.error }
+    })
   }
 
   function handleBrowserVoiceCancel() {
@@ -791,6 +886,9 @@ export function OrbVoiceStation({
     'data-orb-voice-launch-mode': launchMode,
     'data-orb-voice-launch-state': launchUiState,
     'data-orb-voice-launch-status-label': orbVoiceLaunchStatusLabel(launchUiState),
+    'data-orb-voice-browser-supported': browserSpeechSupported ? 'true' : 'false',
+    'data-orb-voice-mic-permission': micPermission,
+    'data-orb-voice-start-error': voiceStartError ?? voice.error ?? '',
     'data-orb-responsive-mode': responsiveMode
   } as const
 
