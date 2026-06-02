@@ -94,7 +94,7 @@ describe('ORB Residential routing', () => {
     for (const station of ['review', 'templates', 'knowledge', 'saved']) {
       assert.match(sidebar, new RegExp(`id: '${station}'`))
     }
-    assert.match(sidebar, /data-orb-sidebar-station=\{station\.id\}/)
+    assert.match(sidebar, /data-orb-sidebar-station=\{item\.id\}|'data-orb-sidebar-station': stationId/)
   })
 
   it('capability routes deep-link into /orb stations', () => {

@@ -170,6 +170,17 @@ html[data-orb-residential='1'] .orb-chat-layout {
   color: var(--orb-premium-text) !important;
 }
 
+@media (min-width: 1024px) {
+  .orb-chat-layout--residential [data-orb-empty-heading-desktop] {
+    margin-top: 1.5rem !important;
+    font-size: clamp(1.5rem, 2.2vw, 1.875rem) !important;
+  }
+
+  .orb-chat-layout--residential .orb-residential-empty--desktop [data-orb-empty-sphere] {
+    margin-bottom: 0.25rem;
+  }
+}
+
 .orb-chat-layout--residential [data-orb-empty-subline] {
   margin-top: 0.5rem !important;
   max-width: 20rem !important;

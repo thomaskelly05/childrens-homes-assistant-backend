@@ -2328,9 +2328,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
     <div
       className={`orb-composer-dock flex-none border-t border-transparent pt-2 ${
         residentialSurface
-          ? 'bg-gradient-to-t from-[#05070d] via-[#05070d]/95 to-transparent'
+          ? 'bg-gradient-to-t from-[var(--orb-page-bg,var(--orb-bg-deep,#05070d))] via-[color-mix(in_srgb,var(--orb-page-bg,var(--orb-bg-deep,#05070d))_95%,transparent)] to-transparent'
           : 'bg-gradient-to-t from-[#f4f6f9] via-[#f4f6f9] to-transparent'
-      }`}
+      } ${residentialSurface && showEmptyState ? 'orb-composer-dock--empty' : ''}`}
       data-orb-composer="main"
       data-orb-composer-mounted="true"
     >
@@ -2792,6 +2792,12 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                 openBillingPanel()
                 setSidebarOpen(false)
               }}
+              onSelectMode={(next) => {
+                handleModeChange(next)
+                setSidebarOpen(false)
+                inputRef.current?.focus()
+              }}
+              activeMode={mode}
               adultProfile={adultProfile}
               savedOutputsCount={savedOutputsCount}
               onClose={() => setSidebarOpen(false)}
@@ -2863,7 +2869,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         header={
           <header
             className={`orb-chat-header relative z-10 flex shrink-0 items-center gap-2 px-3 py-2.5 backdrop-blur-sm md:px-5 ${
-              residentialSurface ? 'hidden lg:flex' : ''
+              residentialSurface ? 'hidden' : ''
             } ${
               residentialSurface
                 ? 'border-b border-[var(--orb-line)]/40 bg-[var(--orb-bg-deep)]/90'
@@ -3027,13 +3033,16 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
               <div className="mx-auto w-full max-w-[var(--orb-chat-column-max,50rem)]">
                 {showEmptyState ? (
                   <div
-                    className={`flex min-h-[min(48vh,22rem)] flex-col items-center justify-center px-2 py-6 text-center md:min-h-[min(52vh,24rem)] md:py-8 ${residentialSurface ? 'orb-residential-empty' : ''}`}
+                    className={`flex min-h-[min(48vh,22rem)] flex-col items-center justify-center px-2 py-6 text-center md:min-h-[min(56vh,28rem)] md:py-10 ${residentialSurface ? 'orb-residential-empty orb-residential-empty--desktop' : ''}`}
                     data-orb-empty-state
                     {...(residentialSurface ? { 'data-orb-residential-empty': true } : {})}
                   >
-                    <div className="relative flex justify-center" data-orb-empty-sphere>
+                    <div
+                      className={`relative flex justify-center ${residentialSurface ? 'md:mb-1' : ''}`}
+                      data-orb-empty-sphere
+                    >
                       {residentialSurface ? (
-                        <GlassOrbMark size="home" pulse data-orb-empty-sphere-mark />
+                        <GlassOrbMark size="home" pulse data-orb-empty-sphere-mark className="md:scale-95" />
                       ) : null}
                       {!residentialSurface ? (
                         <OrbGlow state="idle" interactive={false} size="dock" compactLabels />
@@ -3107,10 +3116,21 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                         {emptyWelcome.temporaryNote}
                       </p>
                     ) : null}
-                    <p className="mt-3 hidden max-w-md text-xs leading-5 text-slate-500 md:block" data-orb-empty-hint>
-                      Pick a starter, choose an agent, or type in the composer below.
+                    <p
+                      className={`mt-3 hidden max-w-md text-xs leading-5 md:block ${
+                        residentialSurface
+                          ? 'text-[var(--orb-premium-text-muted,#6f7787)]'
+                          : 'text-slate-500'
+                      }`}
+                      data-orb-empty-hint
+                    >
+                      Pick a starter, choose a mode, or type in the composer below.
                     </p>
-                    <div className="mt-6 grid w-full max-w-lg gap-2 sm:grid-cols-2" data-orb-starter-cards>
+                    <div
+                      className="mt-6 grid w-full max-w-2xl gap-2 sm:grid-cols-2 lg:max-w-3xl"
+                      data-orb-starter-cards
+                      data-orb-empty-starter-chips
+                    >
                       {emptyStarters.map((starter) => (
                         <button
                           key={starter.text}

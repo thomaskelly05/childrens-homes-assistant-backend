@@ -719,3 +719,121 @@ html[data-orb-residential='1'] .orb-chat-layout {
 .orb-chat-layout--residential .orb-composer-dock {
   flex: 0 0 auto;
 }
+
+/* ORB Residential — desktop ChatGPT-style shell (lg+) */
+@media (min-width: 1024px) {
+  html[data-orb-residential='1'] .orb-chat-layout--residential {
+    --orb-sidebar-width: 19rem;
+    --orb-chat-column-max: 54rem;
+    --orb-composer-max: 46rem;
+    --orb-context-panel-width: 22rem;
+  }
+
+  html[data-orb-residential='1'] .orb-chat-sidebar {
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--orb-premium-bg-mid, #070b14) 96%, transparent) 0%,
+      var(--orb-premium-bg-deep, #05070d) 100%
+    ) !important;
+    box-shadow:
+      inset -1px 0 0 var(--orb-premium-border, rgba(255, 255, 255, 0.1)),
+      20px 0 60px rgba(0, 0, 0, 0.35),
+      0 0 40px rgba(22, 139, 255, 0.04);
+  }
+
+  html[data-orb-residential='1'] [data-orb-sidebar-panel] {
+    min-height: 0;
+  }
+
+  html[data-orb-residential='1'] .orb-sidebar-header {
+    padding-bottom: 0.5rem;
+  }
+
+  html[data-orb-residential='1'] .orb-sidebar-nav-item--primary {
+    border: 1px solid color-mix(in srgb, var(--orb-royal-blue, #168bff) 35%, transparent);
+    background: color-mix(in srgb, var(--orb-royal-blue, #168bff) 12%, transparent);
+    font-weight: 600;
+  }
+
+  html[data-orb-residential='1'] .orb-sidebar-nav-item--primary:hover {
+    background: color-mix(in srgb, var(--orb-royal-blue, #168bff) 18%, transparent);
+    border-color: color-mix(in srgb, var(--orb-royal-blue, #168bff) 48%, transparent);
+  }
+
+  html[data-orb-residential='1'] .orb-sidebar-search {
+    margin-top: 0.625rem;
+  }
+
+  html[data-orb-residential='1'] .orb-sidebar-footer {
+    background: color-mix(in srgb, var(--orb-premium-bg-deep, #05070d) 92%, transparent);
+    backdrop-filter: blur(var(--orb-blur-sidebar, 18px));
+  }
+
+  html[data-orb-residential='1'] .orb-chat-thread {
+    scroll-behavior: smooth;
+    padding-top: 1.5rem;
+    padding-bottom: 1rem;
+  }
+
+  html[data-orb-residential='1'] .orb-residential-empty--desktop {
+    min-height: min(62vh, 32rem);
+  }
+
+  html[data-orb-residential='1'] [data-orb-empty-heading-desktop] {
+    font-size: clamp(1.5rem, 2.2vw, 1.875rem) !important;
+    font-weight: 600 !important;
+    letter-spacing: -0.035em !important;
+  }
+
+  html[data-orb-residential='1'] [data-orb-empty-starter-chips] .orb-starter-card {
+    border-radius: 1rem;
+    border-color: var(--orb-premium-border, rgba(255, 255, 255, 0.1));
+    background: var(--orb-premium-glass, rgba(255, 255, 255, 0.045));
+    color: var(--orb-premium-text-secondary, #a7aebd);
+    transition:
+      border-color 0.15s ease,
+      background 0.15s ease,
+      color 0.15s ease;
+  }
+
+  html[data-orb-residential='1'] [data-orb-empty-starter-chips] .orb-starter-card:hover {
+    border-color: var(--orb-premium-border-glow, rgba(66, 215, 255, 0.18));
+    background: var(--orb-premium-glass-strong, rgba(255, 255, 255, 0.07));
+    color: var(--orb-premium-text, #f7faff);
+  }
+
+  html[data-orb-residential='1'] .orb-composer-dock--empty {
+    padding-top: 0.25rem;
+  }
+
+  html[data-orb-residential='1'] .orb-composer-dock--empty .orb-composer-glass {
+    min-height: 3.75rem;
+    padding: 0.65rem 0.85rem !important;
+    box-shadow: var(--orb-shadow-composer, 0 -8px 32px rgba(0, 0, 0, 0.35)) !important;
+  }
+
+  html[data-orb-residential='1'] .orb-composer-dock--empty [data-orb-composer-input] {
+    min-height: 2.75rem;
+    font-size: 1rem;
+  }
+
+  html[data-orb-residential='1'] .orb-composer-agent-pill {
+    display: inline-flex !important;
+  }
+
+  html[data-orb-residential='1'] .orb-chat-context-panel {
+    max-height: 100%;
+  }
+
+  html[data-orb-residential='1'] .orb-context-panel-inner {
+    padding: 0.75rem;
+  }
+
+  html[data-orb-residential='1'] .orb-context-panel-inner[data-orb-context-kind='documents'],
+  html[data-orb-residential='1'] .orb-context-panel-inner[data-orb-context-kind='citations'],
+  html[data-orb-residential='1'] .orb-context-panel-inner[data-orb-context-kind='saved-outputs'],
+  html[data-orb-residential='1'] .orb-context-panel-inner[data-orb-context-kind='intelligence-watch'],
+  html[data-orb-residential='1'] .orb-context-panel-inner[data-orb-context-kind='developer'] {
+    gap: 0.75rem;
+  }
+}
