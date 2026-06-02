@@ -62,13 +62,13 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string)
   })
 }
 
-function firstFailureSummary(failures: Array<Record<string, unknown>>): string {
-  const failure = failures.find((item) => item.reason === 'provider_sdp_negotiation_failed') ?? failures[0]
+function failureSummary(failures: Array<Record<string, unknown>>): string {
+  const failure = failures[failures.length - 1]
   if (!failure) return ''
   const status = typeof failure.status === 'number' ? `HTTP ${failure.status}` : String(failure.reason || '')
   const body = typeof failure.body === 'string' ? failure.body : ''
   if (!body) return status
-  return `${status}: ${body.slice(0, 260)}`
+  return `${status}: ${body.slice(0, 360)}`
 }
 
 export function mapNetworkStateToOrbState(state: OrbNetworkState): OrbState {
@@ -229,53 +229,48 @@ export class OrbRealtimeClient {
     const offer = await peer.createOffer()
     await peer.setLocalDescription(offer)
     const sdp = offer.sdp || ''
-    const modelEndpoint = `${OPENAI_REALTIME_SDP_URL}?model=${encodeURIComponent(options.model)}`
-    const endpoints = [modelEndpoint, OPENAI_REALTIME_SDP_URL]
     const failures: Array<Record<string, unknown>> = []
+    const endpoint = OPENAI_REALTIME_SDP_URL
     let response: Response | null = null
-    let endpoint = endpoints[0]
 
-    for (const candidate of endpoints) {
-      endpoint = candidate
-      try {
-        response = await this.postSdp(candidate, options, sdp)
-      } catch (error) {
-        failures.push({
-          endpoint: candidate,
-          reason: 'network_fetch_failed',
-          error: error instanceof Error ? error.message : String(error),
-          model: options.model
-        })
-        continue
-      }
+    try {
+      response = await this.postSdp(endpoint, options, sdp)
+    } catch (error) {
+      failures.push({
+        endpoint,
+        reason: 'network_fetch_failed',
+        error: error instanceof Error ? error.message : String(error),
+        model: options.model
+      })
+    }
 
-      if (response.status === 401 || response.status === 403) {
-        this.callbacks.onStateChange(response.status === 401 ? 'expired' : 'permission_denied')
-        throw new OrbNonRetryableError(response.status === 401 ? 'Voice access expired. Please sign in again.' : "I can't access voice in this context.")
-      }
+    if (response?.status === 401 || response?.status === 403) {
+      this.callbacks.onStateChange(response.status === 401 ? 'expired' : 'permission_denied')
+      throw new OrbNonRetryableError(response.status === 401 ? 'Voice access expired. Please sign in again.' : "I can't access voice in this context.")
+    }
 
-      if (response.ok) break
-
+    if (response && !response.ok) {
       const body = await response.text().catch(() => '')
       failures.push({
-        endpoint: candidate,
+        endpoint,
         reason: 'provider_sdp_negotiation_failed',
         status: response.status,
         statusText: response.statusText,
-        body: body.slice(0, 900),
+        body: body.slice(0, 1200),
         model: options.model
       })
       response = null
     }
 
     if (!response) {
-      const summary = firstFailureSummary(failures)
+      const summary = failureSummary(failures)
       throw new OrbRealtimeNegotiationError(
         summary ? `Realtime audio could not connect just now. ${summary}` : 'Realtime audio could not connect just now.',
         {
           reason: 'provider_sdp_negotiation_failed',
           failures,
           model: options.model,
+          endpoint,
         }
       )
     }
