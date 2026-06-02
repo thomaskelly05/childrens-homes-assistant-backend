@@ -51,13 +51,13 @@ describe('ORB UI source of truth — overlays and responsive branches', () => {
     assert.match(dictate, /data-orb-desktop-branch="active"/)
   })
 
-  it('main composer and footer markers are singular', () => {
+  it('main composer marker is singular; footer only on non-residential composer', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     assert.match(companion, /data-orb-composer="main"/)
     const footer = read('components/orb-standalone/orb-footer.tsx')
     assert.match(footer, /data-orb-footer="main"/)
     const composer = read('components/orb-standalone/orb-standalone-composer.tsx')
-    assert.match(composer, /OrbFooter/)
+    assert.match(composer, /!compactResidential \?[\s\S]*OrbFooter/)
     assert.doesNotMatch(composer, /data-orb-composer[\s\n]/)
   })
 

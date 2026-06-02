@@ -14,13 +14,11 @@ export function useOrbResidentialThemeLock() {
     root.setAttribute('data-orb-appearance-mode', appearanceMode)
     root.setAttribute('data-orb-system-theme', resolvedTheme)
     root.style.colorScheme = resolvedTheme
-    document.body.classList.add('orb-residential-root')
     return () => {
       root.removeAttribute('data-orb-residential')
       root.removeAttribute('data-orb-appearance-mode')
       root.removeAttribute('data-orb-system-theme')
       root.style.colorScheme = ''
-      document.body.classList.remove('orb-residential-root')
     }
   }, [appearanceMode, resolvedTheme])
 }

@@ -10,7 +10,12 @@ export type OrbUiAuditResult = {
   backdropCount: number
   overlayCount: number
   composerCount: number
+  composerAgentSelectorCount: number
+  visibleComposerAgentSelectorCount: number
   footerCount: number
+  visibleFooterCount: number
+  footerText: string | null
+  residentialRootCount: number
   mobileBranchCount: number
   desktopBranchCount: number
   voiceActionSurfaceCount: number
@@ -21,10 +26,15 @@ export type OrbUiAuditResult = {
   hiddenButPointerActiveElements: number
   duplicateButtonsByText: Record<string, number>
   topLayerElements: string[]
+  voiceStartHitTest: OrbUiHitTestResult
   themeMarkers: {
     htmlOrbAppearance: string | null
     htmlOrbTheme: string | null
+    shellTheme: string | null
+    layoutTheme: string | null
     bodyClasses: string
+    themeLightClasses: number
+    themeDarkClasses: number
     duplicateThemeRoots: number
   }
 }
@@ -95,6 +105,19 @@ function countByText(): Record<string, number> {
   return counts
 }
 
+function isVisibleElement(el: Element): boolean {
+  if (!(el instanceof HTMLElement)) return false
+  const style = window.getComputedStyle(el)
+  const rect = el.getBoundingClientRect()
+  return (
+    style.display !== 'none' &&
+    style.visibility !== 'hidden' &&
+    Number(style.opacity) !== 0 &&
+    rect.width > 0 &&
+    rect.height > 0
+  )
+}
+
 function hiddenPointerActiveCount(): number {
   return Array.from(document.querySelectorAll('*')).filter((el) => {
     if (!(el instanceof HTMLElement)) return false
@@ -126,6 +149,12 @@ export function runOrbUiAudit(): OrbUiAuditResult {
     )
   ).slice(0, 8)
 
+  const agentSelectors = Array.from(document.querySelectorAll('[data-orb-composer-agent-selector]'))
+  const footers = Array.from(document.querySelectorAll('[data-orb-footer="main"]'))
+  const visibleFooters = footers.filter(isVisibleElement)
+  const shell = document.querySelector('[data-orb-shell="true"]')
+  const layout = document.querySelector('.orb-chat-layout--residential')
+
   return {
     shellCount: document.querySelectorAll('[data-orb-shell="true"]').length,
     activePanelCount: activePanels.length,
@@ -134,7 +163,12 @@ export function runOrbUiAudit(): OrbUiAuditResult {
     backdropCount: document.querySelectorAll('[data-orb-app-panel-backdrop]').length,
     overlayCount: document.querySelectorAll('.orb-panel-overlay').length,
     composerCount: document.querySelectorAll('[data-orb-composer="main"]').length,
-    footerCount: document.querySelectorAll('[data-orb-footer="main"]').length,
+    composerAgentSelectorCount: agentSelectors.length,
+    visibleComposerAgentSelectorCount: agentSelectors.filter(isVisibleElement).length,
+    footerCount: footers.length,
+    visibleFooterCount: visibleFooters.length,
+    footerText: visibleFooters[0]?.textContent?.trim().replace(/\s+/g, ' ') ?? null,
+    residentialRootCount: document.querySelectorAll('.orb-residential-root').length,
     mobileBranchCount: document.querySelectorAll('[data-orb-mobile-branch="active"]').length,
     desktopBranchCount: document.querySelectorAll('[data-orb-desktop-branch="active"]').length,
     voiceActionSurfaceCount: document.querySelectorAll('[data-orb-voice-action-surface="primary"]').length,
@@ -145,10 +179,15 @@ export function runOrbUiAudit(): OrbUiAuditResult {
     hiddenButPointerActiveElements: hiddenPointerActiveCount(),
     duplicateButtonsByText: countByText(),
     topLayerElements: topCandidates.map((el) => describeElement(el)).filter((s): s is string => Boolean(s)),
+    voiceStartHitTest: runOrbUiHitTest('[data-orb-voice-primary-action="start"]'),
     themeMarkers: {
       htmlOrbAppearance: doc.dataset.orbAppearance ?? null,
       htmlOrbTheme: doc.dataset.orbTheme ?? null,
+      shellTheme: shell?.getAttribute('data-orb-theme') ?? null,
+      layoutTheme: layout?.getAttribute('data-orb-theme') ?? null,
       bodyClasses: document.body.className,
+      themeLightClasses: document.querySelectorAll('.orb-theme-light').length,
+      themeDarkClasses: document.querySelectorAll('.orb-theme-dark').length,
       duplicateThemeRoots: themeRoots.length
     }
   }
