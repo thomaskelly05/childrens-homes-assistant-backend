@@ -13,7 +13,7 @@ export const ORB_VOICE_UNAVAILABLE_BODY =
   'You can still use Dictate or type to ORB.'
 
 export const ORB_VOICE_DICTATE_READY_BODY =
-  'Dictate is ready. Live conversation is still unavailable.'
+  'Dictate is ready. Live conversation is unavailable right now.'
 
 export const ORB_VOICE_DEBUG_CONFIG_HINT =
   'Realtime voice not configured: OPENAI_API_KEY / ORB_REALTIME_ENABLED / ORB_VOICE_REALTIME_PROVIDER.'

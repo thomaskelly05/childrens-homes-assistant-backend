@@ -140,7 +140,7 @@ export function OrbDictateMobileExperience({
   const uploadInputRef = useRef<HTMLInputElement>(null)
 
   return (
-    <div className="orb-dictate-mobile flex min-h-0 flex-1 flex-col md:hidden" data-orb-dictate-mobile>
+    <div className="orb-dictate-mobile flex min-h-0 flex-1 flex-col" data-orb-dictate-mobile>
       <section className="flex shrink-0 flex-col items-center px-2 pt-2 text-center">
         <GlassOrbMark size="dictate" pulse={recordingActive} className={orbClass} />
         <p className="mt-3 text-sm font-medium text-[var(--orb-text,var(--orb-foreground))]" data-orb-dictate-status-line>

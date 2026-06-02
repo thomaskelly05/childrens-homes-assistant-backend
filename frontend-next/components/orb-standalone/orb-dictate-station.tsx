@@ -18,6 +18,7 @@ import {
 import { OrbAppModal } from '@/components/orb-standalone/orb-app-modal'
 import { OrbDictateMobileExperience } from '@/components/orb-standalone/orb-dictate-mobile-experience'
 import { OrbDictateStudio } from '@/components/orb-standalone/orb-dictate-studio'
+import { useOrbMobileViewport } from '@/components/orb-standalone/use-orb-mobile-viewport'
 import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
 import type { useStandaloneOrbVoice } from '@/components/orb-standalone/use-standalone-orb-voice'
 import { copyTextToClipboard } from '@/lib/orb/orb-clipboard'
@@ -213,6 +214,7 @@ export function OrbDictateStation({
   const [mobileOutputOpen, setMobileOutputOpen] = useState(false)
   const dictateRealtimeRef = useRef<OrbDictateRealtimeTranscription | null>(null)
   const developerMode = isOrbDeveloperMode()
+  const isMobile = useOrbMobileViewport()
 
   const recordingActive = recordingUiState === 'recording'
   const safari = isSafariBrowser()
@@ -1163,6 +1165,9 @@ export function OrbDictateStation({
       <div
         className="orb-dictate pointer-events-auto flex min-h-0 flex-1 flex-col"
         data-orb-dictate-station
+        data-orb-dictate-layout={
+          phase === 'studio' ? undefined : isMobile ? 'mobile-runtime' : 'desktop-runtime'
+        }
         data-orb-dictate-state={dictateState}
         data-orb-dictate-capture-mode={captureMode}
         data-orb-dictate-start-source={startSource}
@@ -1179,7 +1184,7 @@ export function OrbDictateStation({
       >
         {phase === 'studio' && output ? (
           <OrbDictateStudio output={output} participants={participants} segments={segments} onBack={() => setPhase('capture')} onSendToChat={onSendToChat} onOpenOrbVoice={onOpenOrbVoice} onStatusMessage={setStatusMessage} />
-        ) : (
+        ) : isMobile ? (
           <>
         <OrbDictateMobileExperience
           orbClass={orbClass}
@@ -1247,10 +1252,14 @@ export function OrbDictateStation({
           recordingUiState={recordingUiState}
         />
 
-        <p className="hidden shrink-0 px-1 pb-3 text-sm text-[var(--orb-muted)] md:block">
+        {output ? <button type="button" data-orb-dictate-open-studio className="mt-2 w-full rounded-xl border border-[var(--orb-line)] bg-[var(--orb-primary-soft)] py-2 text-sm font-medium text-[var(--orb-primary)]" onClick={() => setPhase('studio')}>Open ORB Dictate Studio</button> : null}
+          </>
+        ) : (
+          <>
+        <p className="shrink-0 px-1 pb-3 text-sm text-[var(--orb-muted)]">
           Speak naturally. ORB will help turn rough notes, debriefs or conversations into structured professional wording.
         </p>
-        <div className="hidden min-h-0 flex-1 gap-4 overflow-hidden md:grid md:grid-cols-2">
+        <div className="grid min-h-0 flex-1 grid-cols-2 gap-4 overflow-hidden">
           <div className="flex min-h-0 flex-col gap-3 overflow-y-auto pr-1">
             <section>
               <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--orb-muted)]">Start</h3>
@@ -1401,11 +1410,11 @@ export function OrbDictateStation({
         </div>
 
         {output ? <button type="button" data-orb-dictate-open-studio className="mt-2 w-full rounded-xl border border-[var(--orb-line)] bg-[var(--orb-primary-soft)] py-2 text-sm font-medium text-[var(--orb-primary)]" onClick={() => setPhase('studio')}>Open ORB Dictate Studio</button> : null}
-          </>
-        )}
-        <footer className="mt-3 hidden shrink-0 space-y-1 border-t border-[var(--orb-line)]/30 pt-3 text-[10px] text-[var(--orb-muted)] md:block">
+        <footer className="mt-3 shrink-0 space-y-1 border-t border-[var(--orb-line)]/30 pt-3 text-[10px] text-[var(--orb-muted)]">
           <p>{ORB_DICTATE_GOVERNANCE_COPY.draft}</p><p>{ORB_DICTATE_GOVERNANCE_COPY.speaker}</p><p data-orb-dictate-speaker-boundary>{SPEAKER_BOUNDARY_COPY}</p><p>{ORB_DICTATE_GOVERNANCE_COPY.recording}</p><p>{ORB_DICTATE_GOVERNANCE_COPY.boundary}</p><p>{ORB_DICTATE_GOVERNANCE_COPY.saveWording}</p><p>{ORB_DICTATE_GOVERNANCE_COPY.retention}</p>{statusMessage ? <p className="text-xs text-[var(--orb-primary)]" role="status">{statusMessage}</p> : null}
         </footer>
+          </>
+        )}
       </div>
     </OrbAppModal>
   )

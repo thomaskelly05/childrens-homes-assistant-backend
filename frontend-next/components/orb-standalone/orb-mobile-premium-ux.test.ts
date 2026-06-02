@@ -12,7 +12,8 @@ import {
 } from '../../lib/orb/dictate/orb-dictate-mobile-copy.ts'
 import {
   voiceMobilePrimaryButton,
-  voiceMobileStatusLine
+  voiceMobileStatusLine,
+  voiceMobileUnavailableDetail
 } from '../../lib/orb/voice/orb-voice-mobile-copy.ts'
 import {
   ORB_VOICE_DEBUG_CONFIG_HINT,
@@ -107,7 +108,8 @@ describe('ORB mobile premium Dictate copy', () => {
     const station = readComponent('components/orb-standalone/orb-dictate-station.tsx')
     assert.match(mobile, /data-orb-dictate-recording-options-toggle/)
     assert.match(mobile, /Recording options/)
-    assert.match(station, /hidden min-h-0 flex-1 gap-4 overflow-hidden md:grid/)
+    assert.match(station, /useOrbMobileViewport/)
+    assert.match(station, /isMobile \?/)
     assert.doesNotMatch(mobile, /<h3[^>]*>Start<\/h3>/)
   })
 
@@ -125,6 +127,30 @@ describe('ORB mobile premium Dictate copy', () => {
     assert.match(mobile, /Advanced transcript editing/)
     assert.match(mobile, /aria-expanded=\{mobileAdvancedOpen\}/)
     assert.doesNotMatch(mobile, /data-orb-dictate-advanced-body[\s\S]*mobileAdvancedOpen \? null/)
+  })
+
+  it('runtime mobile layout marker and desktop START grid split', () => {
+    const hook = readComponent('components/orb-standalone/use-orb-mobile-viewport.ts')
+    const station = readComponent('components/orb-standalone/orb-dictate-station.tsx')
+    const mobile = readComponent('components/orb-standalone/orb-dictate-mobile-experience.tsx')
+
+    assert.match(hook, /MOBILE_MAX_WIDTH_PX = 768/)
+    assert.match(hook, /innerWidth < MOBILE_MAX_WIDTH_PX/)
+    assert.match(hook, /orientationchange/)
+    assert.match(station, /data-orb-dictate-layout=\{/)
+    assert.match(station, /mobile-runtime/)
+    assert.match(station, /desktop-runtime/)
+    assert.match(station, /isMobile \?/)
+    assert.match(station, /<h3[^>]*>Start<\/h3>/)
+    assert.doesNotMatch(station, /hidden min-h-0 flex-1 gap-4 overflow-hidden md:grid/)
+    assert.doesNotMatch(station, /OrbDictateMobileExperience[\s\S]*md:hidden/)
+    assert.doesNotMatch(station, /Start speech transcript/)
+    assert.match(mobile, /mobileRecordingOpen \?/)
+    assert.match(mobile, /Record debrief/)
+    const beforeRecordingOptions = mobile.slice(0, mobile.indexOf('data-orb-dictate-recording-options-toggle'))
+    assert.doesNotMatch(beforeRecordingOptions, /Record debrief/)
+    assert.doesNotMatch(beforeRecordingOptions, /Dictate mode/)
+    assert.doesNotMatch(beforeRecordingOptions, /Note type/)
   })
 
   it('technical realtime copy appears only with debugVoice', () => {
@@ -161,24 +187,33 @@ describe('ORB mobile premium Voice copy', () => {
       voiceMobileStatusLine({ phase: 'unavailable', blockedReason: null }),
       'Live voice is unavailable right now'
     )
+    assert.equal(
+      voiceMobileUnavailableDetail(true),
+      'Dictate is ready. Live conversation is unavailable right now.'
+    )
   })
 
   it('does not expose env var names unless debugVoice', () => {
     const voice = readComponent('components/orb-standalone/orb-voice-station.tsx')
     const mobile = readComponent('components/orb-standalone/orb-voice-mobile-experience.tsx')
+    const messages = readComponent('lib/orb/voice/orb-voice-user-messages.ts')
     assert.match(voice, /sanitizeOrbVoiceUserMessage/)
     assert.match(mobile, /orbVoiceUnavailablePresentation/)
-    assert.match(readComponent('lib/orb/voice/orb-voice-user-messages.ts'), /ORB_VOICE_DEBUG_CONFIG_HINT/)
+    assert.match(messages, /ORB_VOICE_DEBUG_CONFIG_HINT/)
     assert.equal(
       sanitizeOrbVoiceUserMessage('Set OPENAI_API_KEY and ORB_REALTIME_ENABLED=true', { debug: false }),
       'You can still use Dictate or type to ORB.'
     )
-    assert.match(
-      sanitizeOrbVoiceUserMessage('Set OPENAI_API_KEY', { debug: true }) ?? '',
-      /OPENAI_API_KEY/
+    assert.equal(
+      sanitizeOrbVoiceUserMessage('Set OPENAI_API_KEY and ORB_REALTIME_ENABLED=true', {
+        debug: false,
+        dictateRealtimeReady: true
+      }),
+      'Dictate is ready. Live conversation is unavailable right now.'
     )
+    assert.match(sanitizeOrbVoiceUserMessage('Set OPENAI_API_KEY', { debug: true }) ?? '', /OPENAI_API_KEY/)
     assert.doesNotMatch(voice, /OPENAI_API_KEY/)
-    assert.match(readComponent('lib/orb/voice/orb-voice-user-messages.ts'), /Realtime voice not configured/)
+    assert.match(messages, /Realtime voice not configured/)
   })
 
   it('active session shows one End via primary action wiring', () => {
