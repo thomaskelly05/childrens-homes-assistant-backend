@@ -403,18 +403,6 @@ export function OrbStandaloneComposer({
               data-input-source="controlled"
             />
 
-            {compactResidential && onAgentSelectorClick ? (
-              <button
-                type="button"
-                onClick={onAgentSelectorClick}
-                className="orb-composer-agent-pill mb-1 hidden shrink-0 rounded-full border border-[var(--orb-line)]/40 px-2 py-0.5 text-[10px] font-medium text-[var(--orb-muted)] hover:text-[var(--orb-foreground)] sm:inline-flex lg:mb-0"
-                data-orb-composer-agent-selector
-                aria-label="Choose mode"
-              >
-                {agentLabel || 'Ask ORB'}
-              </button>
-            ) : null}
-
             {compactResidential ? (
               <div className="flex shrink-0 items-center gap-1.5 pb-1">
                 {answering && onStopGenerating ? (
@@ -534,15 +522,13 @@ export function OrbStandaloneComposer({
           ) : null}
         </form>
 
-        {compactResidential ? (
-          <OrbFooter className="orb-residential-footer mt-2 hidden md:block" />
-        ) : (
+        {!compactResidential ? (
           <OrbFooter
             className="mt-2 px-2"
             disclaimer="ORB Residential can make mistakes. ORB Residential does not access IndiCare OS records."
             copyright=""
           />
-        )}
+        ) : null}
       </div>
     </div>
   )

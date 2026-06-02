@@ -24,6 +24,7 @@ function OrbShellInner() {
   return (
     <div
       className={ORB_SHELL_ROOT_CLASS}
+      data-orb-shell="true"
       data-orb-residential="true"
       data-orb-theme={resolvedTheme}
       style={getOrbThemeCssVariables(resolvedTheme)}

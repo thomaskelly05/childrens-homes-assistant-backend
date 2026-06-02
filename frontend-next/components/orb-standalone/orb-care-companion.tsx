@@ -2474,8 +2474,8 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       onAddDocumentToLibrary={() => openKnowledgeLibrary()}
       onToolsClick={openToolsPanel}
       suggestions={undefined}
-      agentLabel={activeAgent?.title ?? 'Ask ORB'}
-      onAgentSelectorClick={() => setAgentsPanelOpen(true)}
+      agentLabel={residentialSurface ? undefined : activeAgent?.title ?? 'Ask ORB'}
+      onAgentSelectorClick={residentialSurface ? undefined : () => setAgentsPanelOpen(true)}
       answering={isAnswering}
       onStopGenerating={isAnswering ? handleStopGeneration : undefined}
       residentialSurface={residentialSurface}
@@ -2740,7 +2740,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
 
   return (
     <main
-      className={`orb-chat-layout relative flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden ${layoutA11yClass} ${atmosphereClass} ${themeClass} ${isAnswering ? 'orb-response-active' : ''} ${residentialSurface ? 'orb-chat-layout--residential orb-residential-root' : ''}`}
+      className={`orb-chat-layout relative flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden ${layoutA11yClass} ${atmosphereClass} ${themeClass} ${isAnswering ? 'orb-response-active' : ''} ${residentialSurface ? 'orb-chat-layout--residential' : ''}`}
       data-orb-shell="true"
       data-orb-theme={effectiveTheme}
       data-orb-appearance={appearanceMode}

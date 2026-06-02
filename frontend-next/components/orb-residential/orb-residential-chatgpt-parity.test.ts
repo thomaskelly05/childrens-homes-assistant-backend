@@ -125,13 +125,12 @@ describe('ORB Residential ChatGPT parity', () => {
     assert.match(sidebar, /data-orb-sidebar-new-project/)
   })
 
-  it('composer compact mode and centred footer on residential', () => {
+  it('composer compact mode without duplicated mode pill or in-dock footer on residential', () => {
     const composer = readComponent('components/orb-standalone/orb-standalone-composer.tsx')
     const premium = readComponent('app/orb/orb-premium-tokens.css')
     assert.match(composer, /residentialSurface/)
     assert.match(composer, /orb-composer-glass--compact/)
-    assert.match(composer, /OrbFooter/)
-    assert.match(readComponent('components/orb-standalone/orb-footer.tsx'), /ORB Residential · © 2026 IndiCare/)
+    assert.doesNotMatch(composer, /orb-residential-footer/)
     assert.match(premium, /orb-chat-shell/)
   })
 
