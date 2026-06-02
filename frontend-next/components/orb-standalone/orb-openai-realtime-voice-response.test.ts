@@ -39,6 +39,26 @@ describe('ORB OpenAI realtime voice response flow', () => {
     assert.match(webrtcClient, /server_vad_fallback/)
   })
 
+  it('response.create uses output_modalities not response.modalities', () => {
+    assert.match(webrtcClient, /output_modalities/)
+    assert.doesNotMatch(webrtcClient, /response:\s*\{\s*modalities:/)
+    assert.match(webrtcClient, /speakAssistantReply/)
+    assert.match(
+      webrtcClient,
+      /speakAssistantReply[\s\S]*output_modalities:\s*\['audio',\s*'text'\]/
+    )
+  })
+
+  it('marks committed and conversation item events as handled', () => {
+    for (const event of [
+      'input_audio_buffer.committed',
+      'conversation.item.added',
+      'conversation.item.done'
+    ]) {
+      assert.match(webrtcClient, new RegExp(`'${event.replace(/\./g, '\\.')}'`))
+    }
+  })
+
   it('handles GA realtime event names for state and bubbles', () => {
     for (const event of [
       'input_audio_buffer.speech_started',
