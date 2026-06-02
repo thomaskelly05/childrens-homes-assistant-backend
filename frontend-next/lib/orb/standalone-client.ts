@@ -38,6 +38,8 @@ export const STANDALONE_ORB_API_PATHS = {
   documentsAnalyse: '/orb/standalone/documents/analyse',
   documentsIntelligence: '/orb/standalone/documents/intelligence',
   documentsLenses: '/orb/standalone/documents/lenses',
+  shiftBuilderGenerate: '/orb/standalone/shift-builder/generate',
+  shiftBuilderFocusModes: '/orb/standalone/shift-builder/focus-modes',
   evaluationHealth: '/orb/standalone/evaluation/health',
   agentsHealth: '/orb/standalone/agents/health',
   agentsList: '/orb/standalone/agents',
@@ -1252,6 +1254,34 @@ export async function runOrbDocumentIntelligence(body: {
     standalone: payload.data.standalone ?? true,
     os_records_accessed: payload.data.os_records_accessed ?? false
   }
+}
+
+export async function runOrbShiftBuilder(body: {
+  shift_notes: string
+  handover_text?: string
+  chat_output?: string
+  context_tags?: string[]
+  focus?: import('@/lib/orb/shift-builder').OrbShiftBuilderFocus
+  child_context?: string
+  staff_role?: string
+  context?: Record<string, unknown>
+}) {
+  const payload = await authFetch<{
+    success?: boolean
+    data?: import('@/lib/orb/shift-builder').OrbShiftBuilderResult
+  }>(STANDALONE_ORB_API_PATHS.shiftBuilderGenerate, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  })
+  if (!payload?.data?.sections?.length && !payload?.data?.summary) {
+    throw new AuthApiError(503, 'ORB could not complete Shift Builder.')
+  }
+  return {
+    ...payload.data,
+    standalone: payload.data?.standalone ?? true,
+    os_records_accessed: payload.data?.os_records_accessed ?? false
+  } as import('@/lib/orb/shift-builder').OrbShiftBuilderResult
 }
 
 export type OrbAgentType =

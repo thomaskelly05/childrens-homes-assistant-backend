@@ -6,7 +6,7 @@ import type { ReactNode } from 'react'
 
 const NAV = [
   { href: '/orb', label: 'Chat' },
-  { href: '/orb/shift-builder', label: 'Shift Builder' },
+  { href: '/orb?station=shift_builder', label: 'Shift Builder' },
   { href: '/orb/outputs', label: 'Saved' },
   { href: '/orb/projects', label: 'Projects' },
 ]

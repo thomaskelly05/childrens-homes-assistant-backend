@@ -63,6 +63,7 @@ import { OrbScrollToBottomFab } from '@/components/orb-standalone/orb-scroll-to-
 import { OrbAgentPanel } from '@/components/orb-standalone/orb-agent-panel'
 import { OrbResidentialAgentsPanel } from '@/components/orb-standalone/orb-residential-agents-panel'
 import { OrbDocumentPanel } from '@/components/orb-standalone/orb-document-panel'
+import { OrbShiftBuilderPanel } from '@/components/orb-standalone/shift-builder/orb-shift-builder-panel'
 import { OrbDocumentContextPanel } from '@/components/orb-standalone/orb-document-context-panel'
 import { OrbSavedOutputsPanel } from '@/components/orb-standalone/orb-saved-outputs-panel'
 import { OrbKnowledgeLibraryPanel } from '@/components/orb-standalone/orb-knowledge-library'
@@ -767,6 +768,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   const openToolsPanel = useCallback(() => openPanel('tools'), [openPanel])
   const openSettingsPanel = useCallback(() => openPanel('settings'), [openPanel])
   const openDocumentsPanel = useCallback(() => openPanel('documents'), [openPanel])
+  const openShiftBuilderPanel = useCallback(() => openPanel('shift_builder'), [openPanel])
   const openAgentsPanel = useCallback(() => openPanel('agents'), [openPanel])
   const openKnowledgeLibrary = useCallback(() => openPanel('knowledge'), [openPanel])
   const openReviewPanel = useCallback(() => openPanel('review'), [openPanel])
@@ -1790,6 +1792,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       case 'documents':
         openDocumentsPanel()
         break
+      case 'shift_builder':
+        openShiftBuilderPanel()
+        break
       case 'orb_voice':
         openOrbVoicePanel()
         break
@@ -2633,6 +2638,29 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           setAgentPanelPrompt(`Analyse this document and create a manager briefing: ${ctx.title}`)
           openAgentsPanel()
         }}
+      />
+      <OrbShiftBuilderPanel
+        open={activePanel === 'shift_builder'}
+        onClose={closePanel}
+        residentialSurface={residentialSurface}
+        projects={workspace.projects}
+        activeProjectId={workspace.activeProjectId}
+        activeProjectName={activeProject?.name}
+        onReuseInChat={(prompt) => {
+          setMessage(prompt)
+          closePanel()
+        }}
+        onInsertIntoChat={(text) => {
+          setMessage(text)
+          closePanel()
+        }}
+        onAskOrbImprove={(markdown, title) => {
+          setMessage(`Ask ORB to improve this shift plan (${title}):\n\n${markdown.slice(0, 2000)}`)
+          closePanel()
+          inputRef.current?.focus()
+        }}
+        onOpenDictate={(transcript) => openOrbDictatePanel({ transcript })}
+        onOpenSavedOutputs={openSavedOutputsPanel}
       />
       <OrbStandaloneSettingsPanel
         open={activePanel === 'settings'}

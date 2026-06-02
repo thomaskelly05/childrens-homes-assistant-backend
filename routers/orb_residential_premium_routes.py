@@ -32,7 +32,7 @@ from schemas.orb_residential_premium import (
     OrbSavedOutputRequest,
     OrbSavedProjectRequest,
 )
-from schemas.orb_shift_builder import OrbShiftBuilderRequest
+from schemas.orb_shift_builder import OrbShiftBuilderGenerateRequest, OrbShiftBuilderRequest
 from services.orb_access_service import orb_access_service
 from services.orb_converged_general_assistant_service import orb_converged_general_assistant_service
 from services.orb_shift_builder_service import orb_shift_builder_service
@@ -147,8 +147,38 @@ async def update_onboarding_preferences(
     return _success(row)
 
 
+@router.get("/shift-builder/focus-modes")
+async def orb_residential_shift_builder_focus_modes(
+    _current_user=Depends(orb_residential_premium_dependency("shift_builder")),
+):
+    return _success({"focus_modes": orb_shift_builder_service.list_focus_modes()})
+
+
 @router.post("/shift-builder")
 async def orb_residential_shift_builder(
+    payload: OrbShiftBuilderGenerateRequest,
+    _current_user=Depends(orb_residential_premium_dependency("shift_builder")),
+):
+    for key in ("child_id", "young_person_id", "home_id", "chronology_id", "record_id"):
+        if payload.context.get(key) is not None:
+            raise HTTPException(
+                status_code=400,
+                detail=f"ORB Residential Shift Builder must not include {key}.",
+            )
+    try:
+        result = await orb_shift_builder_service.generate(payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    data = result.model_dump()
+    data["surface"] = "orb_residential"
+    data["premium"] = True
+    data["os_linked"] = False
+    data["live_record_access"] = False
+    return _success(data)
+
+
+@router.post("/shift-builder/prompt-pack")
+async def orb_residential_shift_builder_prompt_pack(
     payload: OrbShiftBuilderRequest,
     _current_user=Depends(orb_residential_premium_dependency("shift_builder")),
 ):
