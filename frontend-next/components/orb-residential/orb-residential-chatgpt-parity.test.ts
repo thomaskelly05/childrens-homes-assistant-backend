@@ -77,10 +77,12 @@ describe('ORB Residential ChatGPT parity', () => {
 
   it('main chat does not render white background under residential root', () => {
     const premium = readComponent('app/orb/orb-premium-tokens.css')
-    const experience = readComponent('components/orb-residential/orb-residential-experience.tsx')
+    const shell = readComponent('components/orb/orb-shell.tsx')
+    const theme = readComponent('lib/orb/orb-theme.ts')
     assert.match(premium, /html\[data-orb-residential='1'\]/)
     assert.match(premium, /#05070d|#f7faff/)
-    assert.match(experience, /#05070d/)
+    assert.match(shell, /#05070d/)
+    assert.match(theme, /backgroundDeep/)
   })
 
   it('GlassOrbMark is the single orb component for residential marks', () => {
