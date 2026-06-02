@@ -56,6 +56,18 @@ const NAV_ITEMS = [
   { id: 'saved', label: 'Saved outputs', icon: Save }
 ] as const
 
+const MOBILE_DRAWER_QUICK_NAV: Array<{
+  id: (typeof NAV_ITEMS)[number]['id'] | 'projects'
+  label: string
+  icon: (typeof NAV_ITEMS)[number]['icon']
+}> = [
+  { id: 'orb_dictate', label: 'Magic Notes', icon: PenLine },
+  { id: 'orb_voice', label: 'Voice', icon: Mic },
+  { id: 'documents', label: 'Documents', icon: FolderOpen },
+  { id: 'saved', label: 'Saved Outputs', icon: Save },
+  { id: 'projects', label: 'Projects', icon: FolderKanban }
+]
+
 export type OrbResidentialStationId = (typeof NAV_ITEMS)[number]['id']
 
 function startOfDay(ts: number) {
@@ -433,39 +445,68 @@ export function OrbResidentialSidebar({
         </label>
 
         {isMobile ? (
-          <div className="mb-3 shrink-0" data-orb-sidebar-mobile-apps>
-            <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--orb-muted)]">
-              Apps
-            </p>
-            <ul className="space-y-0.5" data-orb-sidebar-stations-mobile>
-              {NAV_ITEMS.map((station) => {
-                const Icon = station.icon
-                const badge =
-                  station.id === 'saved' && savedOutputsCount ? String(savedOutputsCount) : undefined
-                return (
-                  <li key={station.id}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (station.id === 'saved') onOpenSavedOutputs?.()
-                        else onOpenStation(station.id)
-                      }}
-                      className="orb-sidebar-nav-item w-full"
-                      data-orb-sidebar-station={station.id}
-                    >
-                      <Icon className="h-4 w-4 shrink-0" />
-                      <span className="flex-1 text-left text-sm">{station.label}</span>
-                      {badge ? (
-                        <span className="rounded-full bg-[var(--orb-surface-hover)] px-2 py-0.5 text-[10px]">
-                          {badge}
-                        </span>
-                      ) : null}
-                    </button>
-                  </li>
-                )
-              })}
-            </ul>
-          </div>
+          <nav className="mb-3 shrink-0 space-y-0.5" aria-label="ORB menu" data-orb-sidebar-mobile-quick-nav>
+            <button
+              type="button"
+              onClick={() => {
+                onChatSearchChange('')
+                document.querySelector<HTMLInputElement>('[data-orb-sidebar-search]')?.focus()
+              }}
+              className="orb-sidebar-nav-item w-full"
+              data-orb-sidebar-search-shortcut
+            >
+              <Search className="h-4 w-4 shrink-0" />
+              <span className="text-sm">Search</span>
+            </button>
+            {MOBILE_DRAWER_QUICK_NAV.map((item) => {
+              const Icon = item.icon
+              const badge =
+                item.id === 'saved' && savedOutputsCount ? String(savedOutputsCount) : undefined
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => {
+                    onClose?.()
+                    if (item.id === 'saved') {
+                      onOpenSavedOutputs?.()
+                      return
+                    }
+                    if (item.id === 'projects') {
+                      setProjectsCollapsed(false)
+                      writeOrbSidebarSectionCollapsed('projects', false)
+                      return
+                    }
+                    onOpenStation(item.id)
+                  }}
+                  className="orb-sidebar-nav-item w-full"
+                  data-orb-sidebar-station={item.id}
+                  {...(item.id === 'orb_dictate' ? { 'data-orb-sidebar-magic-notes': true } : {})}
+                >
+                  <Icon className="h-4 w-4 shrink-0" />
+                  <span className="flex-1 text-left text-sm">{item.label}</span>
+                  {badge ? (
+                    <span className="rounded-full bg-[var(--orb-surface-hover)] px-2 py-0.5 text-[10px]">
+                      {badge}
+                    </span>
+                  ) : null}
+                </button>
+              )
+            })}
+            <button
+              type="button"
+              onClick={() => {
+                setRecentsCollapsed(false)
+                writeOrbSidebarSectionCollapsed('recents', false)
+                onClose?.()
+              }}
+              className="orb-sidebar-nav-item w-full"
+              data-orb-sidebar-recent-chats-shortcut
+            >
+              <BookOpen className="h-4 w-4 shrink-0" />
+              <span className="text-sm">Recent chats</span>
+            </button>
+          </nav>
         ) : null}
 
         <SidebarCollapsibleSection

@@ -69,7 +69,9 @@ import { OrbTemplatesPanel } from '@/components/orb-standalone/orb-templates-pan
 import {
   ORB_RESIDENTIAL_EMPTY_HEADING_DESKTOP,
   ORB_RESIDENTIAL_EMPTY_STARTERS,
-  ORB_RESIDENTIAL_EMPTY_SUBLINE
+  ORB_RESIDENTIAL_EMPTY_SUBLINE,
+  ORB_RESIDENTIAL_MOBILE_EMPTY_HEADING,
+  ORB_RESIDENTIAL_MOBILE_EMPTY_STARTERS
 } from '@/lib/orb/orb-residential-copy'
 import { OrbStandaloneAccessibilityPanel } from '@/components/orb-standalone/orb-accessibility-panel'
 import { OrbIntelligenceMapPanel } from '@/components/orb-standalone/orb-intelligence-map-panel'
@@ -92,7 +94,7 @@ import { OrbAmbientCognition, type OrbCognitionAmbientState } from '@/components
 import { OrbAccountModal } from '@/components/orb-standalone/orb-account-modal'
 import { OrbAdultProfileDrawer } from '@/components/orb-standalone/orb-adult-profile-drawer'
 import { OrbBillingModal } from '@/components/orb-standalone/orb-billing-modal'
-import { OrbLayout } from '@/components/orb/orb-layout'
+import { OrbLayout, OrbMobileChatHeader } from '@/components/orb/orb-layout'
 import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
 import { OrbStandaloneSidebar } from '@/components/orb-standalone/orb-standalone-sidebar'
 import {
@@ -2374,6 +2376,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           : 'Open ORB Dictate and start recording'
       }
       onMicClick={handleMicClick}
+      onVoiceClick={residentialSurface ? openOrbVoicePanel : undefined}
       onCancelListening={voice.cancelListening}
       onStopSpeaking={voice.cancelSpeaking}
       onSendTranscript={() => void sendMessage(voice.transcript || voice.displayTranscript)}
@@ -2416,12 +2419,14 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   }
 
   const emptyStarters = useMemo(() => {
-    if (residentialSurface) return ORB_RESIDENTIAL_EMPTY_STARTERS
+    if (residentialSurface) {
+      return isMobileViewport ? ORB_RESIDENTIAL_MOBILE_EMPTY_STARTERS : ORB_RESIDENTIAL_EMPTY_STARTERS
+    }
     if (adultProfile?.name || adultProfile?.role !== 'residential_support_worker') {
       return roleBasedEmptyStarters(adultProfile ?? readAdultProfile()).map((text) => ({ text }))
     }
     return PRIMARY_EMPTY_STARTERS
-  }, [adultProfile, residentialSurface])
+  }, [adultProfile, isMobileViewport, residentialSurface])
 
   const emptyWelcome = useMemo(() => {
     const profile = adultProfile ?? readAdultProfile()
@@ -2430,10 +2435,12 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
 
   const emptyHeadingMobile = useMemo(() => {
     if (residentialSurface) {
-      return personalisedEmptyHeading(adultProfile ?? readAdultProfile())
+      return isMobileViewport
+        ? ORB_RESIDENTIAL_MOBILE_EMPTY_HEADING
+        : personalisedEmptyHeading(adultProfile ?? readAdultProfile())
     }
     return emptyWelcome.heading || (adultProfile ? personalisedEmptyHeading(adultProfile) : 'Ready when you are.')
-  }, [adultProfile, emptyWelcome.heading, residentialSurface])
+  }, [adultProfile, emptyWelcome.heading, isMobileViewport, residentialSurface])
 
   const userDisplayInitials = useMemo(
     () => profileInitialsFromName(adultProfile?.name),
@@ -2841,9 +2848,23 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
             />
           )
         }
+        mobileHeader={
+          residentialSurface ? (
+            <OrbMobileChatHeader
+              onOpenMenu={() => setSidebarOpen(true)}
+              onOpenAccount={() => {
+                openResidentialAccount()
+                setSidebarOpen(false)
+              }}
+              accountUsesSettingsIcon
+            />
+          ) : undefined
+        }
         header={
           <header
             className={`orb-chat-header relative z-10 flex shrink-0 items-center gap-2 px-3 py-2.5 backdrop-blur-sm md:px-5 ${
+              residentialSurface ? 'hidden lg:flex' : ''
+            } ${
               residentialSurface
                 ? 'border-b border-[var(--orb-line)]/40 bg-[var(--orb-bg-deep)]/90'
                 : 'border-b border-[var(--orb-line)] bg-[var(--orb-bg-deep)]/90'
@@ -3066,7 +3087,11 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                     {residentialSurface || emptyWelcome.subline ? (
                       <p
                         className={`mt-2 max-w-lg text-sm leading-7 ${
-                          residentialSurface ? 'text-[var(--orb-premium-text-secondary,#a7aebd)]' : 'text-slate-600'
+                          residentialSurface && isMobileViewport
+                            ? 'hidden'
+                            : residentialSurface
+                              ? 'text-[var(--orb-premium-text-secondary,#a7aebd)]'
+                              : 'text-slate-600'
                         }`}
                         data-orb-empty-subline
                       >

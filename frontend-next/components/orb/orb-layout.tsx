@@ -1,6 +1,75 @@
 'use client'
 
+import { Menu, Settings, User } from 'lucide-react'
 import type { DragEvent, ReactNode } from 'react'
+
+import { ORB_RESIDENTIAL_TAGLINE } from '@/lib/orb/orb-residential-copy'
+
+export type OrbMobileChatHeaderProps = {
+  onOpenMenu: () => void
+  onOpenAccount: () => void
+  productName?: string
+  tagline?: string
+  /** Prefer settings icon when true; defaults to user icon. */
+  accountUsesSettingsIcon?: boolean
+}
+
+/** ChatGPT-style mobile top bar: menu, centred ORB brand, account/settings. */
+export function OrbMobileChatHeader({
+  onOpenMenu,
+  onOpenAccount,
+  productName = 'ORB',
+  tagline = ORB_RESIDENTIAL_TAGLINE,
+  accountUsesSettingsIcon = false
+}: OrbMobileChatHeaderProps) {
+  const AccountIcon = accountUsesSettingsIcon ? Settings : User
+
+  return (
+    <header
+      className="orb-chat-header orb-mobile-chat-header relative z-10 flex shrink-0 items-center gap-2 border-b border-[var(--orb-line)]/40 bg-[var(--orb-bg-deep)]/90 px-3 py-2 backdrop-blur-sm lg:hidden"
+      data-orb-mobile-header
+    >
+      <button
+        type="button"
+        className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--orb-royal-blue,#168bff)]"
+        onClick={onOpenMenu}
+        aria-label="Open menu"
+        data-orb-mobile-menu
+      >
+        <Menu className="h-5 w-5" aria-hidden />
+      </button>
+
+      <div
+        className="pointer-events-none flex min-w-0 flex-1 flex-col items-center justify-center px-1 text-center"
+        data-orb-mobile-header-brand
+      >
+        <p
+          className="truncate text-[0.9375rem] font-semibold leading-tight tracking-[-0.02em] text-[var(--orb-foreground)]"
+          data-orb-header-title
+        >
+          {productName}
+        </p>
+        <p
+          className="mt-0.5 max-w-[14rem] truncate text-[10px] font-medium leading-snug text-[var(--orb-muted)]"
+          data-orb-mobile-header-tagline
+        >
+          {tagline}
+        </p>
+      </div>
+
+      <button
+        type="button"
+        className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-royal-blue,#168bff)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--orb-royal-blue,#168bff)]"
+        onClick={onOpenAccount}
+        aria-label="Account and settings"
+        data-orb-mobile-account
+        data-orb-header-profile
+      >
+        <AccountIcon className="h-5 w-5" aria-hidden />
+      </button>
+    </header>
+  )
+}
 
 export type OrbLayoutProps = {
   /** Residential `/orb` surface — enables collapsed sidebar widths. */
@@ -10,7 +79,9 @@ export type OrbLayoutProps = {
   onCloseSidebarOverlay: () => void
   /** Desktop sidebar + mobile drawer content. */
   sidebar: ReactNode
-  /** Mobile top bar / desktop header row. */
+  /** Mobile top bar (`lg:hidden`). When set, `header` is desktop-only. */
+  mobileHeader?: ReactNode
+  /** Desktop header row (`hidden lg:flex` when `mobileHeader` is set). */
   header: ReactNode
   /** Optional banners and context rows above the chat thread. */
   preThread?: ReactNode
@@ -36,6 +107,7 @@ export function OrbLayout({
   sidebarCollapsed = false,
   onCloseSidebarOverlay,
   sidebar,
+  mobileHeader,
   header,
   preThread,
   thread,
@@ -61,7 +133,7 @@ export function OrbLayout({
         data-orb-sidebar-collapsed={residentialSurface && sidebarCollapsed ? 'true' : undefined}
       >
         <aside
-          className={`orb-chat-sidebar fixed inset-y-0 left-0 z-50 flex flex-col border-r border-[var(--orb-line)]/50 transition-[transform,width] duration-200 lg:static lg:z-auto lg:translate-x-0 ${
+          className={`orb-chat-sidebar fixed inset-y-0 left-0 z-50 flex flex-col border-r border-[var(--orb-line)]/50 transition-[transform,width] duration-200 motion-reduce:transition-none lg:static lg:z-auto lg:translate-x-0 ${
             residentialSurface
               ? sidebarCollapsed
                 ? 'w-[var(--orb-sidebar-width-collapsed,4.25rem)] max-w-[var(--orb-sidebar-width-collapsed,4.25rem)] lg:w-[var(--orb-sidebar-width-collapsed,4.25rem)]'
@@ -74,15 +146,19 @@ export function OrbLayout({
         </aside>
 
         <div className="orb-chat-main flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-          {header}
+          {mobileHeader}
+          <div className={mobileHeader ? 'hidden lg:contents' : 'contents'}>{header}</div>
           {preThread}
           <section
-            className="flex min-h-0 flex-1 flex-col"
+            className="flex min-h-0 flex-1 flex-col overflow-hidden"
             onDragOver={onDragOver}
             onDrop={onDrop}
+            data-orb-chat-body
           >
-            {thread}
-            {scrollFab}
+            <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+              {thread}
+              {scrollFab}
+            </div>
             {composer}
           </section>
         </div>

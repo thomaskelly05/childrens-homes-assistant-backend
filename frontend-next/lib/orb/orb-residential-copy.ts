@@ -6,8 +6,19 @@ export const ORB_RESIDENTIAL_TAGLINE = 'Powered by IndiCare Intelligence'
 
 export const ORB_RESIDENTIAL_EMPTY_HEADING_DESKTOP = 'What are you working on?'
 
+/** Calm ChatGPT-style empty heading on phone (`/orb`). */
+export const ORB_RESIDENTIAL_MOBILE_EMPTY_HEADING = 'Where should we begin?'
+
 export const ORB_RESIDENTIAL_EMPTY_SUBLINE =
   'Ask about recording, safeguarding, regulatory practice, templates or reflective practice.'
+
+/** Compact residential starters shown above the mobile composer on an empty chat. */
+export const ORB_RESIDENTIAL_MOBILE_EMPTY_STARTERS: Array<{ text: string; mode?: StandaloneOrbMode }> = [
+  { text: 'Help me write a daily log' },
+  { text: 'What am I missing?' },
+  { text: 'Safeguarding thinking', mode: 'Safeguarding Thinking' },
+  { text: 'Turn rough notes into a professional record', mode: 'Record This Properly' }
+]
 
 export const ORB_RESIDENTIAL_EMPTY_STARTERS: Array<{ text: string; mode?: StandaloneOrbMode }> = [
   { text: 'Review an incident', mode: 'Safeguarding Thinking' },
