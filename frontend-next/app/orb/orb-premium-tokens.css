@@ -24,8 +24,8 @@
   );
 }
 
-.orb-chat-layout--residential,
-html[data-orb-residential='1'] .orb-chat-layout {
+.orb-chat-layout--residential:not(.orb-theme-light),
+html[data-orb-residential='1'] .orb-chat-layout:not(.orb-theme-light) {
   /* Layout aliases — inherit premium tokens from `.orb-residential-root`. */
   --orb-foreground: var(--orb-premium-text, #f7faff);
   --orb-muted: var(--orb-premium-text-secondary, #a7aebd);
@@ -45,6 +45,15 @@ html[data-orb-residential='1'] .orb-chat-layout {
     radial-gradient(ellipse 40% 30% at 88% 92%, rgba(124, 92, 255, 0.05), transparent 50%),
     linear-gradient(180deg, var(--orb-premium-bg-deep) 0%, var(--orb-premium-bg-mid) 48%, var(--orb-premium-bg-soft) 100%) !important;
   color: var(--orb-premium-text);
+}
+
+.orb-chat-layout--residential.orb-theme-light,
+html[data-orb-residential='1'] .orb-chat-layout.orb-theme-light {
+  --orb-accent: #1677ff;
+  --orb-royal-blue: #1677ff;
+  --orb-brand-blue: #1677ff;
+  --orb-deep-blue: #0d5fcc;
+  --orb-soft-blue: #60a5fa;
 }
 
 .orb-chat-layout--residential .orb-chat-header {
@@ -434,11 +443,17 @@ html[data-orb-theme='light'] .orb-premium-settings-card {
   backdrop-filter: blur(10px);
 }
 
-/* Residential theme isolation — block OS / light theme leakage */
-html[data-orb-residential='1'],
-html[data-orb-residential='1'] body {
+/* Residential theme isolation — block OS leakage; respect resolved light theme */
+html[data-orb-residential='1']:not(:has(.orb-theme-light)),
+html[data-orb-residential='1']:not([data-orb-theme='light']) body:not(:has(.orb-theme-light)) {
   background: var(--orb-page-bg, var(--orb-premium-bg-deep, #05070d)) !important;
   color: var(--orb-text-primary, var(--orb-premium-text, #f7faff)) !important;
+}
+
+html[data-orb-residential='1'][data-orb-theme='light'],
+html[data-orb-residential='1']:has(.orb-theme-light) body {
+  background: #f7fbff !important;
+  color: #0f172a !important;
 }
 
 html[data-orb-residential='1'] .orb-chat-layout.orb-theme-light,
@@ -479,35 +494,37 @@ html[data-orb-residential='1'] .orb-chat-layout--residential:not(.orb-theme-ligh
   --orb-overlay: rgba(0, 0, 0, 0.72);
 }
 
-html[data-orb-residential='1'] .orb-chat-layout--residential .orb-markdown-answer h1,
-html[data-orb-residential='1'] .orb-chat-layout--residential .orb-markdown-answer h2,
-html[data-orb-residential='1'] .orb-chat-layout--residential .orb-markdown-answer h3,
-html[data-orb-residential='1'] .orb-chat-layout--residential .orb-markdown-answer h4,
-html[data-orb-residential='1'] .orb-chat-layout--residential .orb-md-h2,
-html[data-orb-residential='1'] .orb-chat-layout--residential .orb-md-h3,
-html[data-orb-residential='1'] .orb-chat-layout--residential .orb-md-h4,
-html[data-orb-residential='1'] .orb-chat-layout--residential .orb-message-content strong,
-html[data-orb-residential='1'] .orb-chat-layout--residential .orb-markdown-answer strong {
+html[data-orb-residential='1'] .orb-chat-layout--residential:not(.orb-theme-light) .orb-markdown-answer h1,
+html[data-orb-residential='1'] .orb-chat-layout--residential:not(.orb-theme-light) .orb-markdown-answer h2,
+html[data-orb-residential='1'] .orb-chat-layout--residential:not(.orb-theme-light) .orb-markdown-answer h3,
+html[data-orb-residential='1'] .orb-chat-layout--residential:not(.orb-theme-light) .orb-markdown-answer h4,
+html[data-orb-residential='1'] .orb-chat-layout--residential:not(.orb-theme-light) .orb-md-h2,
+html[data-orb-residential='1'] .orb-chat-layout--residential:not(.orb-theme-light) .orb-md-h3,
+html[data-orb-residential='1'] .orb-chat-layout--residential:not(.orb-theme-light) .orb-md-h4,
+html[data-orb-residential='1'] .orb-chat-layout--residential:not(.orb-theme-light) .orb-message-content strong,
+html[data-orb-residential='1'] .orb-chat-layout--residential:not(.orb-theme-light) .orb-markdown-answer strong {
   color: #f7faff !important;
 }
 
-html[data-orb-residential='1'] .orb-chat-layout--residential .orb-markdown-answer p,
-html[data-orb-residential='1'] .orb-chat-layout--residential .orb-markdown-answer li {
+html[data-orb-residential='1'] .orb-chat-layout--residential:not(.orb-theme-light) .orb-markdown-answer p,
+html[data-orb-residential='1'] .orb-chat-layout--residential:not(.orb-theme-light) .orb-markdown-answer li {
   font-size: 1rem !important;
   line-height: 1.6 !important;
   color: #f7faff !important;
 }
 
-html[data-orb-residential='1'] .orb-chat-layout--residential [data-orb-empty-heading] {
+html[data-orb-residential='1'] .orb-chat-layout--residential:not(.orb-theme-light) [data-orb-empty-heading] {
   color: #f7faff !important;
 }
 
-html[data-orb-residential='1'] .orb-chat-layout--residential [data-orb-empty-subline] {
+html[data-orb-residential='1'] .orb-chat-layout--residential:not(.orb-theme-light) [data-orb-empty-subline] {
   color: #a7aebd !important;
 }
 
-html[data-orb-residential='1'] .orb-chat-sidebar,
-html[data-orb-residential='1'] .orb-panel-drawer {
+html[data-orb-residential='1'] .orb-chat-layout--residential:not(.orb-theme-light) .orb-chat-sidebar,
+html[data-orb-residential='1'] .orb-chat-layout--residential:not(.orb-theme-light) ~ .orb-panel-drawer,
+html[data-orb-residential='1']:not(:has(.orb-theme-light)) .orb-chat-sidebar,
+html[data-orb-residential='1']:not(:has(.orb-theme-light)) .orb-panel-drawer {
   background: linear-gradient(180deg, #070b14 0%, #05070d 100%) !important;
   color: #f7faff !important;
 }

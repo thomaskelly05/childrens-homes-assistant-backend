@@ -567,7 +567,17 @@ export function OrbVoiceStation({
     }
 
     if (!realtimeVoiceReady) {
+      if (voice.recognitionAvailable || detectSpeechRecognitionSupported()) {
+        void handleBrowserVoicePrimary()
+        return
+      }
       setVoiceStartStage('failed')
+      setStartBlockedMessage(
+        sanitizeOrbVoiceUserMessage('Voice is not available in this browser.', {
+          debug: voiceDebug,
+          dictateRealtimeReady
+        }) ?? 'Voice is not available in this browser.'
+      )
       return
     }
 
@@ -593,10 +603,20 @@ export function OrbVoiceStation({
     if (!result.ok) {
       setRealtimeSessionConnected(false)
       setVoiceTransportLive(false)
-      setVoiceStartStage('failed')
       if (result.transportLive === false) {
         setWebrtcFailed(true)
       }
+      if (voice.recognitionAvailable || detectSpeechRecognitionSupported()) {
+        emitOrbClientDebug({
+          area: 'voice',
+          event: 'voice_realtime_fallback_browser',
+          detail: { error: result.error }
+        })
+        setVoiceStartStage('idle')
+        void handleBrowserVoicePrimary()
+        return
+      }
+      setVoiceStartStage('failed')
       const friendly = sanitizeOrbVoiceUserMessage(result.error, { debug: voiceDebug, dictateRealtimeReady })
       if (friendly) setStartBlockedMessage(friendly)
       emitOrbClientDebug({
@@ -785,6 +805,7 @@ export function OrbVoiceStation({
       }}
       panelId="voice"
       size="wide"
+      presentation="workspace"
     >
       <div
         className="orb-voice-room pointer-events-auto flex min-h-0 flex-1 flex-col"

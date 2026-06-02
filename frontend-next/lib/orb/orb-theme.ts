@@ -165,17 +165,20 @@ const ORB_THEME_LIGHT_COLORS = {
   backgroundMid: '#ffffff',
   backgroundSoft: '#eef6ff',
   textPrimary: '#0f172a',
-  textSecondary: '#475569',
-  textMuted: '#64748b',
+  textSecondary: '#334155',
+  textMuted: '#52657a',
   cardBackground: '#ffffff',
   surface: '#ffffff',
-  surfaceElevated: '#f8fbff',
+  surfaceElevated: '#ffffff',
   surfaceHover: '#e8f2ff',
-  border: 'rgba(37, 99, 235, 0.14)',
-  borderGlow: 'rgba(22, 119, 255, 0.2)',
-  glass: 'rgba(255, 255, 255, 0.92)',
+  border: 'rgba(22, 119, 255, 0.18)',
+  borderGlow: 'rgba(22, 119, 255, 0.28)',
+  glass: 'rgba(255, 255, 255, 0.98)',
   glassStrong: '#ffffff',
-  overlay: 'rgba(15, 23, 42, 0.18)'
+  overlay: 'rgba(15, 23, 42, 0.22)',
+  royalBlue: '#1677ff',
+  deepBlue: '#0d5fcc',
+  softBlue: '#3b82f6'
 } as const
 
 function residentialPalette(mode: OrbThemeMode) {
@@ -183,6 +186,9 @@ function residentialPalette(mode: OrbThemeMode) {
     return {
       colors: {
         ...ORB_THEME_COLORS,
+        royalBlue: ORB_THEME_LIGHT_COLORS.royalBlue,
+        deepBlue: ORB_THEME_LIGHT_COLORS.deepBlue,
+        softBlue: ORB_THEME_LIGHT_COLORS.softBlue,
         pageBackground: ORB_THEME_LIGHT_COLORS.pageBackground,
         backgroundDeep: ORB_THEME_LIGHT_COLORS.pageBackground,
         backgroundMid: ORB_THEME_LIGHT_COLORS.backgroundMid,

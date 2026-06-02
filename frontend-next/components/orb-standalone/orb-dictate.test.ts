@@ -33,9 +33,10 @@ describe('ORB Dictate', () => {
     assert.equal(REFLECTIVE_DEBRIEF_QUESTIONS.length, 9)
   })
 
-  it('station uses OrbAppModal not drawer', () => {
+  it('station uses workspace shell via OrbAppModal on residential', () => {
     const station = readComponent('components/orb-standalone/orb-dictate-station.tsx')
     assert.match(station, /OrbAppModal/)
+    assert.match(station, /presentation="workspace"/)
     assert.match(station, /data-orb-dictate-station/)
     assert.match(station, /data-orb-dictate-speech-start/)
     assert.doesNotMatch(station, /layout="drawer"/)

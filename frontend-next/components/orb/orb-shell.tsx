@@ -3,6 +3,7 @@
 import { Suspense, useCallback } from 'react'
 
 import { OrbCareCompanion } from '@/components/orb-standalone/orb-care-companion'
+import { useOrbAppearance } from '@/components/orb-standalone/use-orb-appearance'
 import { OrbResidentialErrorBoundary } from '@/components/orb-residential/orb-residential-error-boundary'
 import { OrbSafetyModal } from '@/components/orb-residential/orb-safety-modal'
 import { useOrbResidentialThemeLock } from '@/components/orb-residential/use-orb-residential-theme-lock'
@@ -11,6 +12,7 @@ import { getOrbThemeCssVariables, ORB_SHELL_ROOT_CLASS } from '@/lib/orb/orb-the
 
 function OrbShellInner() {
   const account = useOrbAccountState()
+  const { resolvedTheme } = useOrbAppearance()
   useOrbResidentialThemeLock()
 
   const handleSafetyAccepted = useCallback(() => {
@@ -23,7 +25,8 @@ function OrbShellInner() {
     <div
       className={ORB_SHELL_ROOT_CLASS}
       data-orb-residential="true"
-      style={getOrbThemeCssVariables('dark')}
+      data-orb-theme={resolvedTheme}
+      style={getOrbThemeCssVariables(resolvedTheme)}
     >
       <OrbResidentialErrorBoundary>
         <OrbCareCompanion residentialSurface />

@@ -7,6 +7,7 @@ import {
   type OrbAppPanelMode,
   type OrbAppPanelSize
 } from '@/components/orb-standalone/orb-app-panel-shell'
+import { OrbWorkspaceFrame } from '@/components/orb-standalone/orb-workspace-frame'
 
 export type OrbAppModalSize = OrbAppPanelSize | 'xlarge' | 'fullscreenMobile'
 
@@ -34,7 +35,8 @@ export function OrbStandalonePanelShell({
   wide,
   layout = 'drawer',
   modalSize,
-  appModal
+  appModal,
+  presentation
 }: {
   open: boolean
   title: string
@@ -45,10 +47,26 @@ export function OrbStandalonePanelShell({
   ariaLabel?: string
   panelId?: string
   wide?: boolean
-  layout?: 'drawer' | 'center'
+  layout?: 'drawer' | 'center' | 'workspace'
   modalSize?: OrbAppModalSize
   appModal?: boolean
+  presentation?: 'modal' | 'workspace'
 }) {
+  if (layout === 'workspace' || presentation === 'workspace') {
+    return (
+      <OrbWorkspaceFrame
+        open={open}
+        title={title}
+        subtitle={subtitle ?? (ariaLabel && ariaLabel !== title ? ariaLabel : undefined)}
+        onClose={onClose}
+        panelId={panelId}
+        footer={footer}
+      >
+        {children}
+      </OrbWorkspaceFrame>
+    )
+  }
+
   const isCenter = layout === 'center' || Boolean(appModal)
   const resolvedSize = modalSize ? LEGACY_SIZE_MAP[modalSize] : wide ? 'wide' : 'standard'
   const mode: OrbAppPanelMode = isCenter ? 'modal' : 'side'

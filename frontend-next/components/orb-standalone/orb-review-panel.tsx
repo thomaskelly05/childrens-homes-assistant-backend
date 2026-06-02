@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 
+import { orbStationShellProps } from '@/components/orb-standalone/orb-app-modal'
 import { OrbStandalonePanelShell } from '@/components/orb-standalone/orb-standalone-panel-shell'
 import {
   ORB_REVIEW_THERAPEUTIC_CHIPS,
@@ -23,12 +24,14 @@ export function OrbReviewPanel({
   open,
   onClose,
   onRunReview,
-  initialText = ''
+  initialText = '',
+  residentialSurface
 }: {
   open: boolean
   onClose: () => void
   onRunReview: (payload: { prompt: string; text: string; therapeuticContext: string }) => void
   initialText?: string
+  residentialSurface?: boolean
 }) {
   const [text, setText] = useState(initialText)
   const [therapeuticContext, setTherapeuticContext] = useState('')
@@ -61,6 +64,7 @@ export function OrbReviewPanel({
       title="Review"
       subtitle="Quality-review written practice — with therapeutic and safeguarding lenses."
       panelId="review"
+      {...orbStationShellProps(residentialSurface, 'wide')}
     >
       <div className="space-y-5 p-4 sm:p-5" data-orb-review-panel>
         <p className="text-xs leading-5 text-[var(--orb-muted)]">

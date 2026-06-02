@@ -92,6 +92,7 @@ import {
   ORB_TOOL_TO_PANEL,
   type OrbStandalonePanel
 } from '@/components/orb-standalone/orb-standalone-panel-types'
+import { isOrbCoreWorkspacePanel } from '@/components/orb-standalone/orb-core-workspace-panels'
 import { OrbAmbientCognition, type OrbCognitionAmbientState } from '@/components/orb-standalone/orb-ambient-cognition'
 import { OrbAccountModal } from '@/components/orb-standalone/orb-account-modal'
 import { OrbAdultProfileDrawer } from '@/components/orb-standalone/orb-adult-profile-drawer'
@@ -2542,44 +2543,11 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   const atmosphereClass = atmosphereClassForMode(mode)
   const effectiveTheme = resolvedTheme
   const themeClass = effectiveTheme === 'light' ? 'orb-theme-light' : 'orb-theme-dark'
+  const activeWorkspacePanel =
+    residentialSurface && isOrbCoreWorkspacePanel(activePanel) ? activePanel : null
 
-  return (
-    <main
-      className={`orb-chat-layout relative flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden ${layoutA11yClass} ${atmosphereClass} ${themeClass} ${isAnswering ? 'orb-response-active' : ''} ${residentialSurface ? 'orb-chat-layout--residential orb-residential-root' : ''}`}
-      data-orb-shell="true"
-      data-orb-theme={effectiveTheme}
-      data-orb-appearance={appearanceMode}
-      {...(residentialSurface ? { 'data-orb-residential': 'true' as const } : {})}
-      data-orb-residential-surface={residentialSurface ? 'true' : undefined}
-      data-orb-light-ui-build={ORB_LIGHT_UI_BUILD}
-      data-orb-appearance-mode={appearanceMode}
-      data-orb-system-theme={
-        appearanceMode === 'system'
-          ? resolvedTheme
-          : appearanceMode === 'light'
-            ? 'light'
-            : 'dark'
-      }
-      data-orb-mobile-shell={isMobileViewport ? 'true' : undefined}
-      data-orb-chat-layout={isMobileViewport ? 'mobile' : 'desktop'}
-      data-orb-active-panel={activePanel || 'none'}
-      data-orb-close-all-panels
-      data-orb-text-first-chat="true"
-      data-orb-agent={activeAgent?.id ?? 'ask_orb'}
-      data-orb-cognition-state={cognitionAmbientState}
-    >
-      <span className="sr-only">{ORB_PRODUCT_NAME} — {ORB_DATA_BOUNDARY}</span>
-      <OrbUiAuditBootstrap />
-      <OrbAmbientCognition
-        state={cognitionAmbientState}
-        agentAtmosphere={atmosphereClass}
-        reducedMotion={a11yPrefs.reducedMotion}
-      />
-      {effectiveTheme === 'dark' ? (
-        <div className="pointer-events-none fixed inset-0 orb-cinematic-light-field opacity-35" aria-hidden />
-      ) : null}
-
-      <OrbBillingModal open={activePanel === 'billing'} onClose={closePanel} />
+  const renderResidentialCorePanels = () => (
+    <>
       <OrbKnowledgeLibraryPanel
         open={activePanel === 'knowledge'}
         onClose={closePanel}
@@ -2651,8 +2619,14 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         open={activePanel === 'review'}
         onClose={closePanel}
         onRunReview={runQualityReview}
+        residentialSurface={residentialSurface}
       />
-      <OrbSkillsPanel open={activePanel === 'skills'} onClose={closePanel} onStartSkill={startOrbSkill} />
+      <OrbSkillsPanel
+        open={activePanel === 'skills'}
+        onClose={closePanel}
+        onStartSkill={startOrbSkill}
+        residentialSurface={residentialSurface}
+      />
       <OrbDocumentPanel
         open={activePanel === 'documents'}
         onClose={closePanel}
@@ -2718,6 +2692,90 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         onOpenDictate={(transcript) => openOrbDictatePanel({ transcript })}
         onOpenSavedOutputs={openSavedOutputsPanel}
       />
+      <OrbVoiceStation
+        open={activePanel === 'orb_voice'}
+        onClose={closePanel}
+        voice={voice}
+        pending={pending}
+        subscriptionActive={account.hasConfirmedAccess}
+        isSignedIn={account.hasBackendSession}
+        isAdminUser={account.adminBypass || normaliseRole(account.role ?? '') === 'admin'}
+        assistantReply={voiceStationAssistant?.text ?? null}
+        assistantReplyKey={voiceStationAssistant?.key ?? null}
+        onSendToOrb={(text) => void sendMessage(text)}
+        onSignIn={() => {
+          window.location.href = account.signInUrl
+        }}
+        onTypeInstead={() => {
+          closePanel()
+          inputRef.current?.focus()
+        }}
+        onOpenDictate={(transcript, noteType, opts) =>
+          openOrbDictatePanel({
+            transcript,
+            noteType,
+            studio: opts?.studio
+          })
+        }
+        onOpenVoiceSettings={openVoiceSettings}
+      />
+      <OrbDictateStation
+        open={activePanel === 'orb_dictate'}
+        onClose={() => {
+          setDictateImportTranscript(undefined)
+          setDictateImportNoteType(undefined)
+          setDictateImportStudio(false)
+          closePanel()
+        }}
+        voice={voice}
+        initialTranscript={dictateImportTranscript}
+        initialNoteType={dictateImportNoteType}
+        initialStudio={dictateImportStudio}
+        onSendToChat={(text) => void sendMessage(text)}
+        onOpenOrbVoice={openOrbVoicePanel}
+        onOpenTemplates={openTemplatesPanel}
+      />
+    </>
+  )
+
+  return (
+    <main
+      className={`orb-chat-layout relative flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden ${layoutA11yClass} ${atmosphereClass} ${themeClass} ${isAnswering ? 'orb-response-active' : ''} ${residentialSurface ? 'orb-chat-layout--residential orb-residential-root' : ''}`}
+      data-orb-shell="true"
+      data-orb-theme={effectiveTheme}
+      data-orb-appearance={appearanceMode}
+      {...(residentialSurface ? { 'data-orb-residential': 'true' as const } : {})}
+      data-orb-residential-surface={residentialSurface ? 'true' : undefined}
+      data-orb-light-ui-build={ORB_LIGHT_UI_BUILD}
+      data-orb-appearance-mode={appearanceMode}
+      data-orb-system-theme={
+        appearanceMode === 'system'
+          ? resolvedTheme
+          : appearanceMode === 'light'
+            ? 'light'
+            : 'dark'
+      }
+      data-orb-mobile-shell={isMobileViewport ? 'true' : undefined}
+      data-orb-chat-layout={isMobileViewport ? 'mobile' : 'desktop'}
+      data-orb-active-panel={activePanel || 'none'}
+      data-orb-close-all-panels
+      data-orb-text-first-chat="true"
+      data-orb-agent={activeAgent?.id ?? 'ask_orb'}
+      data-orb-cognition-state={cognitionAmbientState}
+    >
+      <span className="sr-only">{ORB_PRODUCT_NAME} — {ORB_DATA_BOUNDARY}</span>
+      <OrbUiAuditBootstrap />
+      <OrbAmbientCognition
+        state={cognitionAmbientState}
+        agentAtmosphere={atmosphereClass}
+        reducedMotion={a11yPrefs.reducedMotion}
+      />
+      {effectiveTheme === 'dark' ? (
+        <div className="pointer-events-none fixed inset-0 orb-cinematic-light-field opacity-35" aria-hidden />
+      ) : null}
+
+      <OrbBillingModal open={activePanel === 'billing'} onClose={closePanel} />
+      {!residentialSurface ? renderResidentialCorePanels() : null}
       <OrbStandaloneSettingsPanel
         open={activePanel === 'settings'}
         residentialSurface={residentialSurface}
@@ -2781,55 +2839,6 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         onClose={closePanel}
         onOpenOrbVoice={residentialSurface ? openOrbVoicePanel : undefined}
       />
-      {residentialSurface ? (
-        <>
-          <OrbVoiceStation
-            open={activePanel === 'orb_voice'}
-            onClose={closePanel}
-            voice={voice}
-            pending={pending}
-            subscriptionActive={account.hasConfirmedAccess}
-            isSignedIn={account.hasBackendSession}
-            isAdminUser={
-              account.adminBypass || normaliseRole(account.role ?? '') === 'admin'
-            }
-            assistantReply={voiceStationAssistant?.text ?? null}
-            assistantReplyKey={voiceStationAssistant?.key ?? null}
-            onSendToOrb={(text) => void sendMessage(text)}
-            onSignIn={() => {
-              window.location.href = account.signInUrl
-            }}
-            onTypeInstead={() => {
-              closePanel()
-              inputRef.current?.focus()
-            }}
-            onOpenDictate={(transcript, noteType, opts) =>
-              openOrbDictatePanel({
-                transcript,
-                noteType,
-                studio: opts?.studio
-              })
-            }
-            onOpenVoiceSettings={openVoiceSettings}
-          />
-          <OrbDictateStation
-            open={activePanel === 'orb_dictate'}
-            onClose={() => {
-              setDictateImportTranscript(undefined)
-              setDictateImportNoteType(undefined)
-              setDictateImportStudio(false)
-              closePanel()
-            }}
-            voice={voice}
-            initialTranscript={dictateImportTranscript}
-            initialNoteType={dictateImportNoteType}
-            initialStudio={dictateImportStudio}
-            onSendToChat={(text) => void sendMessage(text)}
-            onOpenOrbVoice={openOrbVoicePanel}
-            onOpenTemplates={openTemplatesPanel}
-          />
-        </>
-      ) : null}
       <OrbToolsPanel
         open={activePanel === 'tools'}
         onClose={closePanel}
@@ -3094,6 +3103,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           </header>
         }
         preThread={
+          activeWorkspacePanel ? undefined : (
           <>
           {recordingContext ? (
             <div className="mx-3 mt-3 rounded-2xl border border-teal-300/25 bg-teal-300/10 px-4 py-3 text-sm leading-6 text-teal-50 md:mx-5" role="status">
@@ -3165,8 +3175,12 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
             <p className="mx-3 mt-2 text-[11px] leading-5 text-slate-500 md:mx-5">{modeSafety}</p>
           ) : null}
           </>
+          )
         }
         thread={
+          activeWorkspacePanel ? (
+            renderResidentialCorePanels()
+          ) : (
             <div
               ref={scrollContainerRef}
               className={`orb-chat-thread flex-1 overflow-y-auto overflow-x-hidden px-3 py-6 md:px-6 ${residentialSurface ? 'pb-4' : 'pb-32'}`}
@@ -3614,16 +3628,19 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                 <div ref={messagesEndRef} />
               </div>
             </div>
+          )
         }
         scrollFab={
+          activeWorkspacePanel ? undefined : (
           <OrbScrollToBottomFab
             visible={showScrollFab}
             streaming={threadIsStreaming}
             reducedMotion={a11yPrefs.reducedMotion}
             onClick={() => requestChatScroll(true)}
           />
+          )
         }
-        composer={composer}
+        composer={activeWorkspacePanel ? null : composer}
         rightPanel={documentDesktopContextPanel}
       />
 
