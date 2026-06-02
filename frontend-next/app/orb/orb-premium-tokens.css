@@ -651,7 +651,11 @@ html[data-orb-residential='1'] .orb-chat-layout--residential .orb-message-assist
 }
 
 .orb-panel-modal--wide {
-  max-width: min(100%, 62.5rem);
+  max-width: min(100%, 60rem);
+}
+
+.orb-panel-modal--workstation {
+  max-width: min(100%, 68.75rem);
 }
 
 .orb-panel-modal--xlarge {
@@ -818,6 +822,24 @@ html[data-orb-residential='1'] .orb-standalone-halo {
 }
 
 /* Login autofill — keep fields dark/readable */
+html[data-orb-theme='light'] [data-orb-login-page] h1,
+html[data-orb-theme='light'] [data-orb-login-page] h2,
+html[data-orb-theme='light'] [data-orb-login-page] label,
+html[data-orb-theme='light'] [data-orb-login-page] p,
+html[data-orb-theme='light'] [data-orb-login-page] a {
+  color: #0a1628;
+}
+
+html[data-orb-theme='light'] [data-orb-login-page] .orb-login-input {
+  color: #0a1628;
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(13, 95, 204, 0.22);
+}
+
+html[data-orb-theme='light'] [data-orb-login-page] .orb-login-input::placeholder {
+  color: #5b6b82;
+}
+
 html[data-orb-residential='1'] .orb-login-input:-webkit-autofill,
 html[data-orb-residential='1'] .orb-login-input:-webkit-autofill:hover,
 html[data-orb-residential='1'] .orb-login-input:-webkit-autofill:focus {

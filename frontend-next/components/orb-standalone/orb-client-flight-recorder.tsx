@@ -83,6 +83,7 @@ function screenState() {
     voiceProvider: readAttr('data-orb-voice-provider'),
     voiceRealtimeAvailable: readAttr('data-orb-voice-realtime-available'),
     voiceSessionConnected: readAttr('data-orb-voice-session-connected'),
+    voiceTransportLive: readAttr('data-orb-voice-transport-live'),
     voiceError: readAttr('data-orb-voice-error'),
     dictateState: readAttr('data-orb-dictate-state'),
     dictateCaptureMode: readAttr('data-orb-dictate-capture-mode'),

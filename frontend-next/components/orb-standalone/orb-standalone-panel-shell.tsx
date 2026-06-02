@@ -4,12 +4,13 @@ import { useEffect } from 'react'
 import { X } from 'lucide-react'
 import type { ReactNode } from 'react'
 
-export type OrbAppModalSize = 'compact' | 'standard' | 'wide' | 'xlarge' | 'fullscreenMobile'
+export type OrbAppModalSize = 'compact' | 'standard' | 'wide' | 'workstation' | 'xlarge' | 'fullscreenMobile'
 
 const MODAL_SIZE_CLASS: Record<OrbAppModalSize, string> = {
   compact: 'orb-panel-modal--compact',
   standard: 'orb-panel-modal--standard',
   wide: 'orb-panel-modal--wide',
+  workstation: 'orb-panel-modal--workstation',
   xlarge: 'orb-panel-modal--xlarge',
   fullscreenMobile: 'orb-panel-modal--fullscreen-mobile'
 }
@@ -66,6 +67,7 @@ export function OrbStandalonePanelShell({
       aria-modal="true"
       aria-label={ariaLabel || title}
       data-orb-panel-shell={panelId || 'panel'}
+      data-orb-app-panel-shell="true"
       data-orb-panel-layout={isCenter ? 'center' : layout}
       {...(appModal ? { 'data-orb-app-modal': 'true' as const } : {})}
       onClick={(event) => {

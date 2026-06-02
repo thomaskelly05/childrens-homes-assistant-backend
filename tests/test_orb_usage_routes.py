@@ -45,6 +45,20 @@ def usage_client():
     app.dependency_overrides.clear()
 
 
+def test_sum_orb_usage_credits_balance_rolls_back_on_missing_table():
+    from db.orb_usage_commercial_db import sum_orb_usage_credits_balance
+
+    conn = MagicMock()
+    cur = MagicMock()
+    conn.cursor.return_value.__enter__.return_value = cur
+    cur.execute.side_effect = Exception('relation "orb_usage_credits" does not exist')
+
+    balance = sum_orb_usage_credits_balance(conn, user_id=42)
+
+    assert balance == 0
+    conn.rollback.assert_called()
+
+
 def test_get_orb_usage_returns_safe_summary_on_meter_failure():
     from routers.orb_usage_routes import get_orb_usage
 

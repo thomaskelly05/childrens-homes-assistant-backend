@@ -28,9 +28,11 @@ import {
 } from '@/lib/orb/voice/orb-mic-access'
 import {
   beginOrbRealtimeVoiceConversation,
+  clearActiveOrbRealtimeVoiceClient,
   fetchOrbVoiceRealtimeStatus,
   type OrbRealtimeVoiceStatus
 } from '@/lib/orb/voice/orb-realtime-availability'
+import { registerOrbVoiceDiagGlobal } from '@/lib/orb/voice/orb-voice-diag'
 import { emitOrbClientDebug } from '@/lib/orb/orb-client-debug'
 import {
   voiceMobilePrimaryButton,
@@ -40,6 +42,7 @@ import {
 } from '@/lib/orb/voice/orb-voice-mobile-copy'
 import {
   ORB_VOICE_UNAVAILABLE_HEADLINE,
+  ORB_VOICE_WEBRTC_FAILED_HEADLINE,
   sanitizeOrbVoiceUserMessage
 } from '@/lib/orb/voice/orb-voice-user-messages'
 import { isOrbDictateRealtimeAvailable } from '@/lib/orb/dictate/orb-dictate-realtime'
@@ -177,6 +180,7 @@ export function OrbVoiceStation({
   const [realtimeVoiceAvailable, setRealtimeVoiceAvailable] = useState<boolean | 'unknown'>('unknown')
   const [realtimeStatus, setRealtimeStatus] = useState<OrbRealtimeVoiceStatus | null>(null)
   const [realtimeSessionConnected, setRealtimeSessionConnected] = useState(false)
+  const [voiceTransportLive, setVoiceTransportLive] = useState(false)
   const [voiceError, setVoiceError] = useState<string | null>(null)
   const [dictateRealtimeReady, setDictateRealtimeReady] = useState(false)
   const voiceStartStageRef = useRef(voiceStartStage)
@@ -205,7 +209,8 @@ export function OrbVoiceStation({
     voice.phase === 'listening' ||
     voice.phase === 'continuous_listening'
   const captureActive = browserCaptureActive
-  const voiceSessionLive = realtimeVoiceReady && realtimeSessionConnected && voiceStartStage === 'active'
+  const voiceSessionLive =
+    realtimeVoiceReady && realtimeSessionConnected && voiceTransportLive && voiceStartStage === 'active'
   const voiceState =
     voiceStartStage === 'failed'
       ? 'failed'
@@ -251,9 +256,11 @@ export function OrbVoiceStation({
   })
 
   const resetSession = useCallback(() => {
+    clearActiveOrbRealtimeVoiceClient()
     setVoiceStartStage('idle')
     setVoiceCaptureConfirmed(false)
     setRealtimeSessionConnected(false)
+    setVoiceTransportLive(false)
     setVoiceError(null)
     setTurns([])
     setFallbackNotice(null)
@@ -274,6 +281,10 @@ export function OrbVoiceStation({
     if (!open) return
     void probeMicrophonePermission().then(setMicPermission)
   }, [open])
+
+  useEffect(() => {
+    registerOrbVoiceDiagGlobal()
+  }, [])
 
   useEffect(() => {
     if (!open) {
@@ -373,22 +384,27 @@ export function OrbVoiceStation({
     if (!result.ok) {
       setVoiceCaptureConfirmed(false)
       setRealtimeSessionConnected(false)
+      setVoiceTransportLive(false)
       setVoiceStartStage('failed')
       const friendly =
         sanitizeOrbVoiceUserMessage(result.error, { debug: voiceDebug, dictateRealtimeReady }) ??
-        ORB_VOICE_UNAVAILABLE_HEADLINE
+        (result.transportLive === false
+          ? ORB_VOICE_WEBRTC_FAILED_HEADLINE
+          : ORB_VOICE_UNAVAILABLE_HEADLINE)
       setVoiceError(friendly)
       setFallbackNotice(friendly)
       emitOrbClientDebug({
         area: 'voice',
         event: 'voice_session_failed',
-        detail: { error: result.error, provider: result.session?.provider }
+        detail: { error: result.error, provider: result.session?.provider, transportLive: result.transportLive }
       })
       return
     }
 
-    setRealtimeSessionConnected(true)
-    setVoiceCaptureConfirmed(true)
+    const transportLive = result.transportLive === true
+    setRealtimeSessionConnected(transportLive)
+    setVoiceTransportLive(transportLive)
+    setVoiceCaptureConfirmed(transportLive)
     setTurns([
       {
         id: newTurnId(),
@@ -412,9 +428,11 @@ export function OrbVoiceStation({
   }
 
   function handleEnd() {
+    clearActiveOrbRealtimeVoiceClient()
     setVoiceStartStage('idle')
     setVoiceCaptureConfirmed(false)
     setRealtimeSessionConnected(false)
+    setVoiceTransportLive(false)
     setStartBlockedMessage(null)
     setMicTestMessage(null)
     voice.cancelListening()
@@ -442,13 +460,18 @@ export function OrbVoiceStation({
 
   const startDisabled = !liveVoiceAllowed || !realtimeVoiceReady
 
-  const showRealtimeUnavailable = realtimeVoiceAvailable === false && !voiceSessionLive
+  const statusSaysUnavailable =
+    realtimeStatus?.reason === 'not_configured' || realtimeStatus?.reason === 'endpoint_failed'
+  const voiceFailed = voiceStartStage === 'failed'
+  const showRealtimeUnavailable =
+    (realtimeVoiceAvailable === false && statusSaysUnavailable && voiceStartStage !== 'starting_browser_speech') ||
+    (voiceFailed && !voiceSessionLive)
 
   const mobilePhase: VoiceMobileSessionPhase = showRealtimeUnavailable
     ? 'unavailable'
     : voiceStarting
       ? 'connecting'
-      : voiceStartStage === 'failed'
+      : voiceFailed
         ? 'error'
         : voice.speaking
           ? 'speaking'
@@ -513,6 +536,7 @@ export function OrbVoiceStation({
         data-orb-voice-provider={voiceProvider}
         data-orb-voice-realtime-available={realtimeVoiceAvailable === true ? 'true' : realtimeVoiceAvailable === false ? 'false' : undefined}
         data-orb-voice-session-connected={realtimeSessionConnected ? 'true' : 'false'}
+        data-orb-voice-transport-live={voiceTransportLive ? 'true' : 'false'}
         data-orb-voice-error={voiceError ?? undefined}
         data-orb-voice-phase={voice.phase}
         data-orb-voice-capture-state={voice.voiceCaptureState}

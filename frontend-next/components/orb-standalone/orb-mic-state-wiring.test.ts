@@ -64,7 +64,8 @@ describe('ORB mic state wiring', () => {
   it('voice session live requires realtime session connected', () => {
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
     assert.match(station, /realtimeSessionConnected/)
-    assert.match(station, /voiceSessionLive = realtimeVoiceReady && realtimeSessionConnected/)
+    assert.match(station, /voiceTransportLive/)
+    assert.match(station, /voiceSessionLive[\s\S]*voiceTransportLive/)
     assert.match(station, /data-orb-voice-session-connected/)
   })
 

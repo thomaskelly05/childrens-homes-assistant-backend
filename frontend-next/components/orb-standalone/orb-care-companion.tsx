@@ -2326,6 +2326,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           ? 'bg-gradient-to-t from-[#05070d] via-[#05070d]/95 to-transparent'
           : 'bg-gradient-to-t from-[#f4f6f9] via-[#f4f6f9] to-transparent'
       }`}
+      data-orb-composer-mounted="true"
     >
       {documentLensActions.length ? (
         <div className="mx-auto max-w-3xl px-4 pt-3">
@@ -2459,7 +2460,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   return (
     <main
       className={`orb-chat-layout relative flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden ${layoutA11yClass} ${atmosphereClass} ${themeClass} ${isAnswering ? 'orb-response-active' : ''} ${residentialSurface ? 'orb-chat-layout--residential orb-residential-root' : ''}`}
+      data-orb-shell="true"
       data-orb-theme={effectiveTheme}
+      data-orb-appearance={appearanceMode}
       {...(residentialSurface ? { 'data-orb-residential': 'true' as const } : {})}
       data-orb-residential-surface={residentialSurface ? 'true' : undefined}
       data-orb-light-ui-build={ORB_LIGHT_UI_BUILD}

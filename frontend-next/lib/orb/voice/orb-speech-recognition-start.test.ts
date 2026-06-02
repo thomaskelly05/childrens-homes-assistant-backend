@@ -132,7 +132,8 @@ describe('ORB voice hook confirmed capture', () => {
 
   it('voice station only treats session as live when realtime session is connected', () => {
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /voiceSessionLive = realtimeVoiceReady && realtimeSessionConnected/)
+    assert.match(station, /voiceTransportLive/)
+    assert.match(station, /data-orb-voice-transport-live/)
     assert.match(station, /voice_fake_active_prevented/)
   })
 

@@ -35,7 +35,7 @@ export function useOrbAppearance() {
   }, [appearanceMode])
 
   useEffect(() => {
-    applyOrbDocumentTheme(resolvedTheme)
+    applyOrbDocumentTheme(resolvedTheme, appearanceMode)
     if (typeof document !== 'undefined') {
       document.documentElement.setAttribute('data-orb-appearance-mode', appearanceMode)
       document.documentElement.setAttribute('data-orb-system-theme', resolvedTheme)

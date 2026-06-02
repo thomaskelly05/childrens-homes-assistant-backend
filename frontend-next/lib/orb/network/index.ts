@@ -1,5 +1,6 @@
 import type { OrbState } from '../types'
 import { createOrbAudioElement, resumeOrbAudioElement, stopOrbAudioElement } from '../audio'
+import { updateOrbVoiceTransportState } from '../voice/orb-voice-diag'
 
 export type OrbNetworkState =
   | 'idle'
@@ -32,7 +33,16 @@ const MAX_RECONNECT_ATTEMPTS = 2
 const NEGOTIATION_TIMEOUT_MS = 20000
 const HEARTBEAT_MS = 15000
 const ORB_SERVER_VAD_SILENCE_MS = 520
-const OPENAI_REALTIME_SDP_URL = 'https://api.openai.com/v1/realtime/calls'
+export const OPENAI_REALTIME_SDP_URL = 'https://api.openai.com/v1/realtime/calls'
+
+async function voiceDebug(event: string, detail?: Record<string, unknown>) {
+  try {
+    const { emitOrbClientDebug } = await import('../orb-client-debug')
+    emitOrbClientDebug({ area: 'voice', event, detail })
+  } catch {
+    /* diagnostics optional */
+  }
+}
 
 class OrbNonRetryableError extends Error {}
 class OrbRealtimeNegotiationError extends Error {
@@ -108,21 +118,40 @@ export class OrbRealtimeClient {
 
     const peer = new RTCPeerConnection()
     this.peer = peer
+    void voiceDebug('voice_peer_created', { sessionId: options.sessionId })
+    updateOrbVoiceTransportState({
+      peerConnectionState: peer.connectionState,
+      iceConnectionState: peer.iceConnectionState,
+      lastSdpEndpoint: OPENAI_REALTIME_SDP_URL
+    })
     options.mediaStream.getAudioTracks().forEach((track) => peer.addTrack(track, options.mediaStream))
 
     peer.ontrack = (event) => {
       const [remoteStream] = event.streams
       if (!remoteStream) return
+      void voiceDebug('voice_remote_track_received', { trackCount: remoteStream.getTracks().length })
+      updateOrbVoiceTransportState({ hasRemoteTrack: true, peerConnectionState: peer.connectionState })
       const audio = this.audio || createOrbAudioElement(remoteStream)
       audio.srcObject = remoteStream
       this.audio = audio
-      void resumeOrbAudioElement(audio)
+      void voiceDebug('voice_audio_play_attempt', {})
+      void resumeOrbAudioElement(audio).catch((error) => {
+        const message = error instanceof Error ? error.message : 'audio_play_failed'
+        void voiceDebug('voice_audio_play_failed', { message })
+        updateOrbVoiceTransportState({ lastError: message })
+      })
     }
 
     peer.onconnectionstatechange = () => {
+      updateOrbVoiceTransportState({
+        peerConnectionState: peer.connectionState,
+        iceConnectionState: peer.iceConnectionState,
+        dataChannelState: this.channel?.readyState ?? null
+      })
       if (this.stopped || this.negotiationFailed) return
       if (peer.connectionState === 'connected') {
         this.reconnectAttempts = 0
+        void voiceDebug('voice_session_live', { via: 'peer_connected' })
         this.callbacks.onStateChange('listening', { transport: 'webrtc' })
         this.startHeartbeat()
         return
@@ -133,12 +162,22 @@ export class OrbRealtimeClient {
       }
     }
 
+    peer.oniceconnectionstatechange = () => {
+      updateOrbVoiceTransportState({
+        iceConnectionState: peer.iceConnectionState,
+        peerConnectionState: peer.connectionState
+      })
+    }
+
     const channel = peer.createDataChannel('oai-events')
     this.channel = channel
     channel.onmessage = (event) => this.callbacks.onEvent(event.data)
     channel.onopen = () => {
       this.reconnectAttempts = 0
       this.negotiationFailed = false
+      void voiceDebug('voice_data_channel_open', {})
+      updateOrbVoiceTransportState({ dataChannelState: 'open', peerConnectionState: peer.connectionState })
+      void voiceDebug('voice_session_live', { via: 'data_channel' })
       this.callbacks.onStateChange('listening', { transport: 'webrtc', dataChannel: 'open' })
       this.send({
         type: 'session.update',
@@ -229,17 +268,23 @@ export class OrbRealtimeClient {
     const offer = await peer.createOffer()
     await peer.setLocalDescription(offer)
     const sdp = offer.sdp || ''
+    void voiceDebug('voice_sdp_offer_created', { bytes: sdp.length })
     const failures: Array<Record<string, unknown>> = []
     const endpoint = OPENAI_REALTIME_SDP_URL
+    updateOrbVoiceTransportState({ lastSdpEndpoint: endpoint })
     let response: Response | null = null
 
+    void voiceDebug('voice_sdp_post_started', { endpoint })
     try {
       response = await this.postSdp(endpoint, options, sdp)
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      void voiceDebug('voice_sdp_post_failed', { endpoint, reason: 'network_fetch_failed', body: message })
+      updateOrbVoiceTransportState({ lastError: message })
       failures.push({
         endpoint,
         reason: 'network_fetch_failed',
-        error: error instanceof Error ? error.message : String(error),
+        error: message,
         model: options.model
       })
     }
@@ -251,6 +296,12 @@ export class OrbRealtimeClient {
 
     if (response && !response.ok) {
       const body = await response.text().catch(() => '')
+      void voiceDebug('voice_sdp_post_failed', {
+        endpoint,
+        status: response.status,
+        body: body.slice(0, 400)
+      })
+      updateOrbVoiceTransportState({ lastError: `SDP HTTP ${response.status}` })
       failures.push({
         endpoint,
         reason: 'provider_sdp_negotiation_failed',
@@ -279,7 +330,13 @@ export class OrbRealtimeClient {
     if (!answer.trim()) {
       throw new OrbRealtimeNegotiationError('Realtime audio returned an empty connection answer.', { reason: 'empty_sdp_answer', model: options.model, endpoint })
     }
+    void voiceDebug('voice_sdp_answer_received', { bytes: answer.length })
     await peer.setRemoteDescription({ type: 'answer', sdp: answer })
+    void voiceDebug('voice_remote_description_set', {})
+    updateOrbVoiceTransportState({
+      peerConnectionState: peer.connectionState,
+      iceConnectionState: peer.iceConnectionState
+    })
   }
 
   private scheduleReconnect(reason: string, explicitDelay?: number) {
