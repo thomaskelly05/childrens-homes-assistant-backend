@@ -4,11 +4,11 @@ import {
   extractOrbFirstName,
   orbPersonalisedGreeting,
   type OrbGreetingStyle
-} from './orb-personalised-greeting.ts'
+} from './orb-personalised-greeting'
 import {
   loadOrbStandalonePersonalisation,
   type OrbProfessionalTone
-} from './orb-standalone-personalisation.ts'
+} from './orb-standalone-personalisation'
 import type { ResidentialAgentId } from '@/lib/orb/residential-agents'
 
 /** Canonical roles for standalone ORB personalisation (legacy keys migrated on read). */
