@@ -5,6 +5,7 @@
 import { resolveAuthApiPath } from '@/lib/auth/api-base'
 
 import { OrbOpenAIRealtimeWebRTCClient } from './orb-openai-realtime-webrtc-client'
+import { voiceModeInstruction } from './orb-voice-prompt'
 import {
   startOrbRealtimeVoiceSession,
   type OrbVoiceSessionResponse,
@@ -95,6 +96,17 @@ export class OrbRealtimeVoiceClient {
     return this.webrtcActive
   }
 
+  /** Unlock assistant audio playback (call from Start voice user gesture). */
+  async unlockAssistantAudio(): Promise<boolean> {
+    if (!this.webrtcClient) return false
+    return this.webrtcClient.unlockAudioPlayback()
+  }
+
+  /** Debug-only manual turn commit when server VAD does not auto-create. */
+  sendVoiceTurnFallback(): void {
+    this.webrtcClient?.sendTurnFallback()
+  }
+
   get usesBrowserFallback(): boolean {
     return !this.usesWebSocket && !this.usesOpenAIWebRTC
   }
@@ -118,11 +130,14 @@ export class OrbRealtimeVoiceClient {
     )
   }
 
+  private voiceMode: OrbVoiceModeId = 'conversational'
+
   async startSession(options: {
     mode?: OrbVoiceModeId
     voice_id?: OrbVoicePresetId
     transport?: 'auto' | 'websocket' | 'webrtc' | 'browser_fallback'
   }): Promise<OrbVoiceSessionResponse> {
+    this.voiceMode = options.mode ?? 'conversational'
     this.setState('connecting')
     const session = await startOrbRealtimeVoiceSession({
       mode: options.mode,
@@ -307,7 +322,9 @@ export class OrbRealtimeVoiceClient {
         clientSecret,
         model: this.session.openai_session?.model || DEFAULT_REALTIME_MODEL,
         voice: this.session.provider_voice,
-        transcriptionModel: 'whisper-1'
+        transcriptionModel: 'whisper-1',
+        voiceMode: this.voiceMode,
+        instructions: voiceModeInstruction(this.voiceMode)
       })
       this.webrtcClient = client
       this.webrtcActive = true

@@ -134,6 +134,11 @@ describe('ORB Voice copilot rebuild — diagnostics', () => {
     assert.match(diag, /lastError/)
     assert.match(diag, /statusHttpStatus/)
     assert.match(diag, /audioElementReady/)
+    assert.match(diag, /lastRawEventTypes/)
+    assert.match(diag, /responseCreateSent/)
+    assert.match(diag, /sessionUpdateSent/)
+    assert.match(diag, /audioPlaySucceeded/)
+    assert.match(diag, /localMicTrackMuted/)
   })
 
   it('flight recorder auth and transport events exist', () => {

@@ -2,7 +2,11 @@
  * Voice diagnostics for debugVoice=1 — window.ORB_VOICE_DIAG()
  */
 
-import { emitOrbClientDebug } from '@/lib/orb/orb-client-debug'
+import {
+  clearOrbVoiceDebugEvents,
+  emitOrbClientDebug,
+  getOrbVoiceDebugEventsOnly
+} from '@/lib/orb/orb-client-debug'
 
 import { OPENAI_REALTIME_SDP_URL } from '@/lib/orb/network'
 
@@ -18,6 +22,22 @@ export type OrbVoiceTransportLiveState = {
   transportLive: boolean
   lastSdpEndpoint: string | null
   lastError: string | null
+}
+
+export type OrbVoiceResponseFlowState = {
+  sessionUpdateSent: boolean
+  responseCreateSent: boolean
+  userTranscriptLength: number
+  assistantTranscriptLength: number
+  audioPlayAttempted: boolean
+  audioPlaySucceeded: boolean
+  remoteAudioMuted: boolean | null
+  remoteAudioPaused: boolean | null
+  remoteAudioReadyState: number | null
+  localMicTrackEnabled: boolean | null
+  localMicTrackMuted: boolean | null
+  localMicTrackReadyState: string | null
+  lastRawEventTypes: string[]
 }
 
 let lastStatus: OrbRealtimeVoiceStatus | null = null
@@ -37,6 +57,24 @@ let transportState: OrbVoiceTransportLiveState = {
   lastSdpEndpoint: OPENAI_REALTIME_SDP_URL,
   lastError: null
 }
+
+let responseFlowState: OrbVoiceResponseFlowState = {
+  sessionUpdateSent: false,
+  responseCreateSent: false,
+  userTranscriptLength: 0,
+  assistantTranscriptLength: 0,
+  audioPlayAttempted: false,
+  audioPlaySucceeded: false,
+  remoteAudioMuted: null,
+  remoteAudioPaused: null,
+  remoteAudioReadyState: null,
+  localMicTrackEnabled: null,
+  localMicTrackMuted: null,
+  localMicTrackReadyState: null,
+  lastRawEventTypes: []
+}
+
+const MAX_LAST_EVENT_TYPES = 24
 
 export function setOrbVoiceDiagStatus(status: OrbRealtimeVoiceStatus | null, httpStatus?: number): void {
   lastStatus = status
@@ -64,6 +102,16 @@ export function setOrbVoiceDiagAudioElementReady(ready: boolean): void {
   audioElementReady = ready
 }
 
+export function recordOrbVoiceRawEventType(eventType: string): void {
+  lastEventType = eventType
+  const next = [...responseFlowState.lastRawEventTypes, eventType].slice(-MAX_LAST_EVENT_TYPES)
+  responseFlowState = { ...responseFlowState, lastRawEventTypes: next }
+}
+
+export function updateOrbVoiceResponseFlow(partial: Partial<OrbVoiceResponseFlowState>): void {
+  responseFlowState = { ...responseFlowState, ...partial }
+}
+
 export function updateOrbVoiceTransportState(partial: Partial<OrbVoiceTransportLiveState>): void {
   transportState = { ...transportState, ...partial }
   transportState.transportLive = Boolean(
@@ -89,6 +137,21 @@ export function resetOrbVoiceDiagTransport(): void {
   }
   audioElementReady = false
   lastEventType = null
+  responseFlowState = {
+    sessionUpdateSent: false,
+    responseCreateSent: false,
+    userTranscriptLength: 0,
+    assistantTranscriptLength: 0,
+    audioPlayAttempted: false,
+    audioPlaySucceeded: false,
+    remoteAudioMuted: null,
+    remoteAudioPaused: null,
+    remoteAudioReadyState: null,
+    localMicTrackEnabled: null,
+    localMicTrackMuted: null,
+    localMicTrackReadyState: null,
+    lastRawEventTypes: []
+  }
 }
 
 function sessionHasClientSecret(session: ReturnType<typeof getActiveOrbRealtimeVoiceSession>): boolean {
@@ -117,7 +180,20 @@ export function buildOrbVoiceDiagSnapshot() {
     audioElementReady,
     transportLive: transportState.transportLive,
     lastEventType,
+    lastRawEventTypes: [...responseFlowState.lastRawEventTypes],
     lastError: transportState.lastError,
+    sessionUpdateSent: responseFlowState.sessionUpdateSent,
+    responseCreateSent: responseFlowState.responseCreateSent,
+    userTranscriptLength: responseFlowState.userTranscriptLength,
+    assistantTranscriptLength: responseFlowState.assistantTranscriptLength,
+    audioPlayAttempted: responseFlowState.audioPlayAttempted,
+    audioPlaySucceeded: responseFlowState.audioPlaySucceeded,
+    remoteAudioMuted: responseFlowState.remoteAudioMuted,
+    remoteAudioPaused: responseFlowState.remoteAudioPaused,
+    remoteAudioReadyState: responseFlowState.remoteAudioReadyState,
+    localMicTrackEnabled: responseFlowState.localMicTrackEnabled,
+    localMicTrackMuted: responseFlowState.localMicTrackMuted,
+    localMicTrackReadyState: responseFlowState.localMicTrackReadyState,
     userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
     status: lastStatus,
     sessionResponseShape: lastSessionResponseShape,
@@ -128,10 +204,19 @@ export function buildOrbVoiceDiagSnapshot() {
 
 export function registerOrbVoiceDiagGlobal(): void {
   if (typeof window === 'undefined') return
-  const w = window as Window & { ORB_VOICE_DIAG?: () => ReturnType<typeof buildOrbVoiceDiagSnapshot> }
+  const w = window as Window & {
+    ORB_VOICE_DIAG?: () => ReturnType<typeof buildOrbVoiceDiagSnapshot>
+    ORB_VOICE_EVENTS_ONLY?: () => unknown[]
+    ORB_VOICE_RESET_DEBUG?: () => void
+  }
   w.ORB_VOICE_DIAG = () => {
     const snapshot = buildOrbVoiceDiagSnapshot()
     emitOrbClientDebug({ area: 'voice', event: 'voice_diag_snapshot', detail: snapshot as Record<string, unknown> })
     return snapshot
+  }
+  w.ORB_VOICE_EVENTS_ONLY = () => getOrbVoiceDebugEventsOnly()
+  w.ORB_VOICE_RESET_DEBUG = () => {
+    clearOrbVoiceDebugEvents()
+    resetOrbVoiceDiagTransport()
   }
 }

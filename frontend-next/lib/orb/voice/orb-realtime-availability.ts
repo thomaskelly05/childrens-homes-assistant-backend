@@ -36,6 +36,7 @@ const STATUS_UNAVAILABLE: OrbRealtimeVoiceStatus = {
 }
 
 export type OrbVoiceTranscriptCallbacks = {
+  onPartialTranscript?: (text: string) => void
   onFinalTranscript?: (text: string) => void
   onAssistantDelta?: (delta: string) => void
   onAssistantDone?: (text: string) => void
@@ -198,9 +199,14 @@ export async function beginOrbRealtimeVoiceConversation(options: {
         model: session.openai_session?.model ?? null
       })
     },
-    onFinalTranscript: (text) => {
+    onPartialTranscript: (text) => {
       setOrbVoiceDiagLastEvent('voice_user_transcript_delta')
       emitOrbClientDebug({ area: 'voice', event: 'voice_user_transcript_delta', detail: { length: text.length } })
+      options.transcript?.onPartialTranscript?.(text)
+    },
+    onFinalTranscript: (text) => {
+      setOrbVoiceDiagLastEvent('voice_user_transcript_done')
+      emitOrbClientDebug({ area: 'voice', event: 'voice_user_transcript_done', detail: { length: text.length } })
       options.transcript?.onFinalTranscript?.(text)
     },
     onAssistantDelta: (delta) => {

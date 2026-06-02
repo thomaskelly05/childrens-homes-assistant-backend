@@ -41,18 +41,28 @@ export function triggerOrbHaptic(kind: 'tap' | 'interrupt' | 'reconnect' | 'succ
 export function createOrbAudioElement(stream: MediaStream) {
   const audio = new Audio()
   audio.autoplay = true
+  audio.muted = false
+  audio.volume = 1
   audio.setAttribute('playsinline', 'true')
   audio.srcObject = stream
   return audio
 }
 
-export async function resumeOrbAudioElement(audio: HTMLAudioElement | null) {
-  if (!audio) return false
+export type OrbAudioPlayResult = {
+  ok: boolean
+  error?: string
+}
+
+export async function resumeOrbAudioElement(audio: HTMLAudioElement | null): Promise<OrbAudioPlayResult> {
+  if (!audio) return { ok: false, error: 'no_audio_element' }
+  audio.muted = false
+  audio.volume = 1
   try {
     await audio.play()
-    return true
-  } catch {
-    return false
+    return { ok: true }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'audio_play_failed'
+    return { ok: false, error: message }
   }
 }
 

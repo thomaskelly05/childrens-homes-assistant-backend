@@ -42,7 +42,10 @@ export function OrbVoiceMobileExperience({
   onVoiceModeChange,
   voicePresetId,
   onVoicePresetChange,
-  onNewConversation
+  onNewConversation,
+  audioPlaybackBlocked = false,
+  onUnlockAudioPlayback,
+  voiceDebugSendTurn
 }: {
   uiState: OrbVoiceUiState
   orbVisualClassName: string
@@ -72,6 +75,9 @@ export function OrbVoiceMobileExperience({
   voicePresetId: OrbVoicePresetId
   onVoicePresetChange: (preset: OrbVoicePresetId) => void
   onNewConversation: () => void
+  audioPlaybackBlocked?: boolean
+  onUnlockAudioPlayback?: () => void
+  voiceDebugSendTurn?: () => void
 }) {
   const [voiceSettingsOpen, setVoiceSettingsOpen] = useState(false)
 
@@ -126,10 +132,32 @@ export function OrbVoiceMobileExperience({
         <p className="mt-4 text-center text-sm font-medium text-[var(--orb-text,var(--orb-foreground))]" data-orb-voice-status-label>
           {statusLine}
         </p>
-        {detailLine ? (
+        {detailLine && !audioPlaybackBlocked ? (
           <p className="mt-1 text-center text-xs text-[var(--orb-muted)]" data-orb-voice-detail>
             {detailLine}
           </p>
+        ) : null}
+
+        {audioPlaybackBlocked && onUnlockAudioPlayback ? (
+          <button
+            type="button"
+            onClick={onUnlockAudioPlayback}
+            className="mt-3 rounded-full border border-[var(--orb-primary)]/50 bg-[var(--orb-primary-soft)]/30 px-4 py-2 text-sm font-medium text-[var(--orb-primary)]"
+            data-orb-voice-tap-to-hear
+          >
+            Tap to hear ORB
+          </button>
+        ) : null}
+
+        {voiceDebugSendTurn ? (
+          <button
+            type="button"
+            onClick={voiceDebugSendTurn}
+            className="mt-2 rounded-full border border-amber-400/40 px-3 py-1.5 text-[10px] text-amber-800 dark:text-amber-100"
+            data-orb-voice-send-turn-debug
+          >
+            Send turn (debug)
+          </button>
         ) : null}
 
         {showAllowMicrophone ? (
