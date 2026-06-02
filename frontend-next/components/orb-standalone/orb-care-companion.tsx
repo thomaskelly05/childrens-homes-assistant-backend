@@ -194,6 +194,8 @@ import {
   type StandaloneOrbSource,
   type StandaloneWorkspace
 } from '@/lib/orb/standalone-local-store'
+import { buildSavedOutputCreateBody } from '@/lib/orb/orb-saved-output-adapters'
+import type { OrbSavedOutputRerunState } from '@/lib/orb/orb-saved-output-adapters'
 import {
   createOrbSavedOutput,
   fetchStandaloneOrbConfig,
@@ -565,6 +567,12 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   const [dictateImportTranscript, setDictateImportTranscript] = useState<string | undefined>()
   const [dictateImportNoteType, setDictateImportNoteType] = useState<OrbDictateNoteType | undefined>()
   const [dictateImportStudio, setDictateImportStudio] = useState(false)
+  const [documentImportText, setDocumentImportText] = useState<string | undefined>()
+  const [documentImportLens, setDocumentImportLens] = useState<OrbDocumentLens | undefined>()
+  const [shiftImportNotes, setShiftImportNotes] = useState<string | undefined>()
+  const [shiftImportFocus, setShiftImportFocus] = useState<
+    import('@/lib/orb/shift-builder').OrbShiftBuilderFocus | undefined
+  >()
   const [realtimeVoiceAvailable, setRealtimeVoiceAvailable] = useState(false)
   const [agentsPanelOpen, setAgentsPanelOpen] = useState(false)
   const [promptDrawerOpen, setPromptDrawerOpen] = useState(false)
@@ -2296,25 +2304,34 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       }) ||
       'ORB chat note'
     try {
-      await createOrbSavedOutput({
-        title: savedTitle,
-        type: entry.outputKind === 'actions' || entry.outputKind === 'action_plan' ? 'action_plan' : 'document_review',
-        project_id: workspace.activeProjectId,
-        project_name: activeProject?.name,
-        summary: entry.content.slice(0, 800),
-        content_markdown: entry.content,
-        intelligence_output: {
+      const isAction =
+        entry.outputKind === 'actions' ||
+        entry.outputKind === 'action_plan' ||
+        Boolean(entry.feedbackContext?.action_id)
+      await createOrbSavedOutput(
+        buildSavedOutputCreateBody({
           title: savedTitle,
-          summary: entry.content.slice(0, 2000),
-          type: entry.outputKind || 'answer',
-          standalone_only: true,
-          os_linked: false,
-          care_record_access: false
-        },
-        sources: entry.sources,
-        created_from: 'chat',
-        created_from_id: entry.id
-      })
+          type: isAction ? 'action_plan' : 'general_research',
+          project_id: workspace.activeProjectId,
+          project_name: activeProject?.name,
+          summary: entry.content.slice(0, 800),
+          content_markdown: entry.content,
+          intelligence_output: {
+            title: savedTitle,
+            summary: entry.content.slice(0, 2000),
+            type: entry.outputKind || 'answer'
+          },
+          sources: entry.sources,
+          created_from: isAction ? 'action_engine' : 'chat',
+          created_from_id: entry.id,
+          extras: {
+            source_feature: isAction ? 'action_engine' : 'chat',
+            source_text: entry.content,
+            action_id: entry.feedbackContext?.action_id,
+            lens: entry.feedbackContext?.document_lens
+          }
+        })
+      )
       setSavedOutputMessageIds((current) => new Set(current).add(entry.id))
       setSaveFeedbackByMessageId((current) => ({ ...current, [entry.id]: 'saved' }))
       setDraftNotice('Saved — ORB Residential artefact (not an OS record).')
@@ -2593,6 +2610,41 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         onReuseInChat={(prompt) => {
           setMessage(prompt)
           closePanel()
+          inputRef.current?.focus()
+        }}
+        onAskOrb={(prompt) => {
+          setMessage(prompt)
+          closePanel()
+          inputRef.current?.focus()
+        }}
+        onSendToDictate={(text) => {
+          openOrbDictatePanel({ transcript: text })
+        }}
+        onUseInShiftBuilder={(notes, focus) => {
+          setShiftImportNotes(notes)
+          setShiftImportFocus(
+            focus as import('@/lib/orb/shift-builder').OrbShiftBuilderFocus | undefined
+          )
+          openShiftBuilderPanel()
+        }}
+        onRerun={(state: OrbSavedOutputRerunState) => {
+          if (!state.available) return
+          if (state.kind === 'document_lens' || state.kind === 'policy_card') {
+            setDocumentImportText(state.sourceText)
+            setDocumentImportLens(state.lens as OrbDocumentLens)
+            openDocumentsPanel()
+            return
+          }
+          if (state.kind === 'shift_focus') {
+            setShiftImportNotes(state.sourceText)
+            setShiftImportFocus(state.focus)
+            openShiftBuilderPanel()
+            return
+          }
+          if (state.kind === 'action_engine' && state.actionId && state.sourceText) {
+            void runBackendOrbAction(state.actionId, state.sourceText, undefined, state.actionId)
+            closePanel()
+          }
         }}
       />
       <OrbReviewPanel
@@ -2605,6 +2657,8 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         open={activePanel === 'documents'}
         onClose={closePanel}
         residentialSurface={residentialSurface}
+        initialText={documentImportText}
+        initialLens={documentImportLens}
         projects={workspace.projects}
         activeProjectId={workspace.activeProjectId}
         activeProjectName={activeProject?.name}
@@ -2643,6 +2697,8 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         open={activePanel === 'shift_builder'}
         onClose={closePanel}
         residentialSurface={residentialSurface}
+        initialNotes={shiftImportNotes}
+        initialFocus={shiftImportFocus}
         projects={workspace.projects}
         activeProjectId={workspace.activeProjectId}
         activeProjectName={activeProject?.name}

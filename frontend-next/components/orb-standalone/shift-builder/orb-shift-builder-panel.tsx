@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ClipboardList, Copy, FileText, Loader2, MessageSquare, PenLine, Sparkles } from 'lucide-react'
 
 import { OrbIntelligenceOutput } from '@/components/orb-standalone/orb-intelligence-output'
@@ -60,7 +60,17 @@ export function OrbShiftBuilderPanel({
   const [result, setResult] = useState<OrbShiftBuilderResult | null>(null)
   const [copyNote, setCopyNote] = useState<string | null>(null)
 
+  useEffect(() => {
+    if (!open) return
+    if (initialNotes) setShiftNotes(initialNotes)
+    if (initialFocus) setFocus(initialFocus)
+  }, [open, initialNotes, initialFocus])
+
   const hasInput = Boolean(shiftNotes.trim() || handoverText.trim() || chatOutput.trim())
+
+  const combinedSourceNotes = useMemo(() => {
+    return [shiftNotes.trim(), handoverText.trim(), chatOutput.trim()].filter(Boolean).join('\n\n')
+  }, [shiftNotes, handoverText, chatOutput])
 
   const displayTitle = useMemo(() => {
     if (!result) return null
@@ -295,6 +305,12 @@ export function OrbShiftBuilderPanel({
                 activeProjectId={activeProjectId}
                 activeProjectName={activeProjectName}
                 createdFrom="shift_builder"
+                saveExtras={{
+                  source_feature: 'shift_builder',
+                  brain_metadata: result.brain_metadata,
+                  source_text: combinedSourceNotes || undefined,
+                  focus: result.focus
+                }}
                 onReuseInChat={onReuseInChat}
                 onNotice={setCopyNote}
               />

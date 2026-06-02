@@ -33,6 +33,12 @@ OrbSavedOutputVisibility = Literal["standalone_private", "standalone_project"]
 OrbSavedOutputCreatedFrom = Literal[
     "chat",
     "document_analysis",
+    "document_intelligence",
+    "policy_card",
+    "dictate",
+    "voice",
+    "shift_builder",
+    "action_engine",
     "agent",
     "deep_research",
     "manual",

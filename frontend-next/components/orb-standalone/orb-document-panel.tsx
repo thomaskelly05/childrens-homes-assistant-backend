@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Copy, FileText, Loader2, MessageSquare, Sparkles } from 'lucide-react'
 
 import { OrbIntelligenceOutput } from '@/components/orb-standalone/orb-intelligence-output'
@@ -71,6 +71,12 @@ export function OrbDocumentPanel({
   const [result, setResult] = useState<OrbDocumentIntelligenceResult | null>(null)
   const [copyNote, setCopyNote] = useState<string | null>(null)
   const [closeAfterAnalyse, setCloseAfterAnalyse] = useState(false)
+
+  useEffect(() => {
+    if (!open) return
+    if (initialText) setText(initialText)
+    if (initialLens) setSelectedLens(initialLens)
+  }, [open, initialText, initialLens])
 
   const hasContent = Boolean(text.trim() || sourceId)
   const heroLens = RESIDENTIAL_FIRST_CLASS_LENSES.find((item) => item.hero)
@@ -412,7 +418,13 @@ export function OrbDocumentPanel({
                 projects={projects}
                 activeProjectId={activeProjectId}
                 activeProjectName={activeProjectName}
-                createdFrom="document_intelligence"
+                createdFrom={result.lens === 'policy_card' ? 'policy_card' : 'document_intelligence'}
+                saveExtras={{
+                  source_feature: result.lens === 'policy_card' ? 'policy_card' : 'document_intelligence',
+                  brain_metadata: result.brain_metadata,
+                  source_text: text.trim() || undefined,
+                  lens: result.lens
+                }}
                 onReuseInChat={onReuseInChat}
                 onNotice={setCopyNote}
               />

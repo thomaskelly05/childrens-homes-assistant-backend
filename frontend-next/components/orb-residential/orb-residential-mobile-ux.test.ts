@@ -77,7 +77,7 @@ describe('ORB Residential mobile UX', () => {
     assert.match(states, /Reconnect to continue/)
     assert.match(states, /data-orb-station-sign-in-again/)
     assert.match(saved, /No saved outputs yet/)
-    assert.match(saved, /When you save reviews/)
+    assert.match(saved, /Save from chat answers, Dictate, Documents/)
     assert.match(knowledge, /OrbKnowledgeBuiltinPanel/)
     assert.match(knowledge, /data-orb-knowledge-connected-empty/)
   })

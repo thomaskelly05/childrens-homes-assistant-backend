@@ -1531,6 +1531,7 @@ export async function createOrbSavedOutput(body: {
   quality?: Record<string, unknown>
   created_from?: string
   created_from_id?: string
+  metadata?: Record<string, unknown>
 }) {
   const payload = await authFetch(STANDALONE_ORB_API_PATHS.outputs, {
     method: 'POST',
@@ -1608,7 +1609,7 @@ export async function reuseOrbSavedOutput(outputId: string, instruction?: string
 }
 
 export const STANDALONE_ARTEFACT_NOTICE =
-  'Saved outputs are standalone ORB artefacts. They are not added to IndiCare OS records.'
+  'Saved outputs are standalone ORB artefacts. Review before sharing or relying on them. Standalone ORB does not access live care records.'
 
 export type StandaloneOrbCapability = {
   id: string
