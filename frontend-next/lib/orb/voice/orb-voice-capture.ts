@@ -7,6 +7,7 @@ import { confirmMediaRecorderStart } from '@/lib/orb/voice/orb-speech-recognitio
 
 export type OrbVoiceCaptureState =
   | 'idle'
+  | 'starting'
   | 'requesting_permission'
   | 'ready'
   | 'listening'

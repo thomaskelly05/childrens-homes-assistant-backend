@@ -1,5 +1,6 @@
 'use client'
 
+import { emitOrbClientDebug } from '@/lib/orb/orb-client-debug'
 import type { OrbVoiceUiState } from '@/lib/orb/voice/orb-voice-ui-state'
 import { orbVoiceUiPrimaryLabel } from '@/lib/orb/voice/orb-voice-ui-state'
 
@@ -47,6 +48,8 @@ export function OrbVoiceActions({
     Boolean(onUseDictate)
 
   const handlePrimary = () => {
+    emitOrbClientDebug({ area: 'voice', event: 'voice_start_click_received', detail: { uiState } })
+    emitOrbClientDebug({ area: 'voice', event: 'voice_start_handle_primary_called', detail: { uiState } })
     if (uiState === 'unauthenticated') {
       onSignIn?.()
       return

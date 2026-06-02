@@ -2741,7 +2741,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   return (
     <main
       className={`orb-chat-layout relative flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden ${layoutA11yClass} ${atmosphereClass} ${themeClass} ${isAnswering ? 'orb-response-active' : ''} ${residentialSurface ? 'orb-chat-layout--residential' : ''}`}
-      data-orb-shell="true"
+      data-orb-companion-root="true"
       data-orb-theme={effectiveTheme}
       data-orb-appearance={appearanceMode}
       {...(residentialSurface ? { 'data-orb-residential': 'true' as const } : {})}

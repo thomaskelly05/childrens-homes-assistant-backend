@@ -104,9 +104,10 @@ describe('ORB Voice unification', () => {
 })
 
 describe('ORB shell markers', () => {
-  it('care companion exposes shell and composer markers', () => {
+  it('care companion exposes companion root and composer markers', () => {
     const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
-    assert.match(companion, /data-orb-shell/)
+    assert.match(companion, /data-orb-companion-root/)
+    assert.doesNotMatch(companion, /data-orb-shell="true"/)
     assert.match(companion, /data-orb-composer-mounted/)
     assert.match(companion, /data-orb-appearance=/)
   })
