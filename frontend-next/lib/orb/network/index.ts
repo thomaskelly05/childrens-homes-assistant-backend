@@ -119,6 +119,7 @@ export class OrbRealtimeClient {
     const peer = new RTCPeerConnection()
     this.peer = peer
     void voiceDebug('voice_peer_created', { sessionId: options.sessionId })
+    void voiceDebug('voice_peer_connected', { sessionId: options.sessionId })
     updateOrbVoiceTransportState({
       peerConnectionState: peer.connectionState,
       iceConnectionState: peer.iceConnectionState,
@@ -135,11 +136,17 @@ export class OrbRealtimeClient {
       audio.srcObject = remoteStream
       this.audio = audio
       void voiceDebug('voice_audio_play_attempt', {})
-      void resumeOrbAudioElement(audio).catch((error) => {
-        const message = error instanceof Error ? error.message : 'audio_play_failed'
-        void voiceDebug('voice_audio_play_failed', { message })
-        updateOrbVoiceTransportState({ lastError: message })
-      })
+      void resumeOrbAudioElement(audio)
+        .then(() => {
+          void import('../voice/orb-voice-diag').then(({ setOrbVoiceDiagAudioElementReady }) =>
+            setOrbVoiceDiagAudioElementReady(true)
+          )
+        })
+        .catch((error) => {
+          const message = error instanceof Error ? error.message : 'audio_play_failed'
+          void voiceDebug('voice_audio_play_failed', { message })
+          updateOrbVoiceTransportState({ lastError: message })
+        })
     }
 
     peer.onconnectionstatechange = () => {
@@ -152,6 +159,8 @@ export class OrbRealtimeClient {
       if (peer.connectionState === 'connected') {
         this.reconnectAttempts = 0
         void voiceDebug('voice_session_live', { via: 'peer_connected' })
+        void voiceDebug('voice_peer_connected', { state: peer.connectionState })
+        void voiceDebug('voice_transport_live', { via: 'peer_connected' })
         this.callbacks.onStateChange('listening', { transport: 'webrtc' })
         this.startHeartbeat()
         return
@@ -178,6 +187,7 @@ export class OrbRealtimeClient {
       void voiceDebug('voice_data_channel_open', {})
       updateOrbVoiceTransportState({ dataChannelState: 'open', peerConnectionState: peer.connectionState })
       void voiceDebug('voice_session_live', { via: 'data_channel' })
+      void voiceDebug('voice_transport_live', { via: 'data_channel' })
       this.callbacks.onStateChange('listening', { transport: 'webrtc', dataChannel: 'open' })
       this.send({
         type: 'session.update',

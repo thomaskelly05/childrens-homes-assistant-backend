@@ -4,8 +4,11 @@
 
 import { emitOrbClientDebug } from '@/lib/orb/orb-client-debug'
 
-import { getActiveOrbRealtimeVoiceClient, getActiveOrbRealtimeVoiceSession } from './orb-voice-session-registry'
+import { OPENAI_REALTIME_SDP_URL } from '@/lib/orb/network'
+
 import type { OrbRealtimeVoiceStatus } from './orb-realtime-availability'
+import { getActiveOrbRealtimeVoiceClient, getActiveOrbRealtimeVoiceSession } from './orb-voice-session-registry'
+import type { OrbVoiceAuthStatus } from './orb-voice-ui-state'
 
 export type OrbVoiceTransportLiveState = {
   peerConnectionState: string | null
@@ -19,22 +22,46 @@ export type OrbVoiceTransportLiveState = {
 
 let lastStatus: OrbRealtimeVoiceStatus | null = null
 let lastSessionResponseShape: Record<string, unknown> | null = null
+let authStatus: OrbVoiceAuthStatus = 'unknown'
+let statusHttpStatus: number | null = null
+let sessionHttpStatus: number | null = null
+let lastEventType: string | null = null
+let audioElementReady = false
+
 let transportState: OrbVoiceTransportLiveState = {
   peerConnectionState: null,
   iceConnectionState: null,
   dataChannelState: null,
   hasRemoteTrack: false,
   transportLive: false,
-  lastSdpEndpoint: null,
+  lastSdpEndpoint: OPENAI_REALTIME_SDP_URL,
   lastError: null
 }
 
-export function setOrbVoiceDiagStatus(status: OrbRealtimeVoiceStatus | null): void {
+export function setOrbVoiceDiagStatus(status: OrbRealtimeVoiceStatus | null, httpStatus?: number): void {
   lastStatus = status
+  if (httpStatus !== undefined) statusHttpStatus = httpStatus
 }
 
-export function setOrbVoiceDiagSessionResponse(session: Record<string, unknown> | null): void {
+export function setOrbVoiceDiagSessionResponse(
+  session: Record<string, unknown> | null,
+  httpStatus?: number
+): void {
   lastSessionResponseShape = session
+  if (httpStatus !== undefined) sessionHttpStatus = httpStatus
+}
+
+export function setOrbVoiceDiagAuthStatus(status: OrbVoiceAuthStatus, httpStatus: number | null): void {
+  authStatus = status
+  if (httpStatus !== null) statusHttpStatus = httpStatus
+}
+
+export function setOrbVoiceDiagLastEvent(eventType: string): void {
+  lastEventType = eventType
+}
+
+export function setOrbVoiceDiagAudioElementReady(ready: boolean): void {
+  audioElementReady = ready
 }
 
 export function updateOrbVoiceTransportState(partial: Partial<OrbVoiceTransportLiveState>): void {
@@ -57,9 +84,11 @@ export function resetOrbVoiceDiagTransport(): void {
     dataChannelState: null,
     hasRemoteTrack: false,
     transportLive: false,
-    lastSdpEndpoint: transportState.lastSdpEndpoint,
+    lastSdpEndpoint: transportState.lastSdpEndpoint ?? OPENAI_REALTIME_SDP_URL,
     lastError: null
   }
+  audioElementReady = false
+  lastEventType = null
 }
 
 function sessionHasClientSecret(session: ReturnType<typeof getActiveOrbRealtimeVoiceSession>): boolean {
@@ -73,21 +102,27 @@ export function buildOrbVoiceDiagSnapshot() {
   const session = getActiveOrbRealtimeVoiceSession()
   const client = getActiveOrbRealtimeVoiceClient()
   return {
-    status: lastStatus,
-    sessionResponseShape: lastSessionResponseShape,
+    authStatus,
+    statusHttpStatus,
+    realtimeEnabled: lastStatus?.realtime_enabled ?? null,
+    provider: session?.provider ?? lastStatus?.provider ?? null,
+    sessionHttpStatus,
     hasClientSecret: sessionHasClientSecret(session),
     model: session?.openai_session?.model ?? lastStatus?.model ?? null,
-    sessionId: session?.session_id ?? null,
-    provider: session?.provider ?? null,
+    sdpEndpoint: transportState.lastSdpEndpoint ?? OPENAI_REALTIME_SDP_URL,
     peerConnectionState: transportState.peerConnectionState,
     iceConnectionState: transportState.iceConnectionState,
     dataChannelState: transportState.dataChannelState,
     hasRemoteTrack: transportState.hasRemoteTrack,
+    audioElementReady,
     transportLive: transportState.transportLive,
-    clientUsesWebRTC: client?.usesOpenAIWebRTC ?? false,
-    lastSdpEndpoint: transportState.lastSdpEndpoint,
+    lastEventType,
     lastError: transportState.lastError,
-    browser: typeof navigator !== 'undefined' ? navigator.userAgent : null
+    userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+    status: lastStatus,
+    sessionResponseShape: lastSessionResponseShape,
+    sessionId: session?.session_id ?? null,
+    clientUsesWebRTC: client?.usesOpenAIWebRTC ?? false
   }
 }
 

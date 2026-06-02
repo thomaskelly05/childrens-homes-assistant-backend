@@ -32,8 +32,8 @@ describe('ORB mic gating and routing', () => {
     )
     assert.equal(ui.state, 'subscription_inactive')
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /startDisabled|liveVoiceAllowed/)
-    assert.match(station, /disabled=\{startDisabled\}/)
+    assert.match(station, /primaryDisabled|liveVoiceAllowed/)
+    assert.match(station, /primaryDisabled/)
     assert.match(station, /data-orb-voice-start-stage/)
   })
 
@@ -52,12 +52,10 @@ describe('ORB mic gating and routing', () => {
     )
     assert.equal(ui.showOpenDictate, true)
     assert.equal(ui.showTypeInstead, true)
-    const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    const openDictateButton = station.match(
-      /<button[\s\S]*?data-orb-voice-open-dictate[\s\S]*?<\/button>/
-    )?.[0]
-    assert.ok(openDictateButton, 'expected Open Dictate button')
-    assert.doesNotMatch(openDictateButton ?? '', /\bdisabled=/)
+    const actions = readComponent('components/orb-standalone/orb-voice-actions.tsx')
+    assert.match(actions, /data-orb-voice-use-dictate/)
+    assert.match(actions, /Use Dictate/)
+    assert.doesNotMatch(actions, /data-orb-voice-use-dictate[\s\S]*disabled=/)
   })
 
   it('dictate record is not blocked by subscription', () => {
@@ -81,7 +79,7 @@ describe('ORB mic gating and routing', () => {
   it('disabled voice start only when intentionally blocked', () => {
     assert.equal(canUseLiveVoice({ subscriptionActive: false }), false)
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /startDisabled/)
+    assert.match(station, /primaryDisabled/)
     assert.match(station, /liveVoiceAllowed/)
   })
 
@@ -107,9 +105,10 @@ describe('ORB mic gating and routing', () => {
 
   it('voice routes to dictate when realtime voice unavailable', () => {
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /Open Dictate/)
-    assert.match(station, /data-orb-voice-open-dictate/)
-    assert.match(station, /Live voice is unavailable right now|ORB_VOICE_UNAVAILABLE_HEADLINE/)
+    const actions = readComponent('components/orb-standalone/orb-voice-actions.tsx')
+    assert.match(actions, /Use Dictate/)
+    assert.match(actions, /data-orb-voice-use-dictate/)
+    assert.match(station, /resolveOrbVoiceUiState|ORB_VOICE_UNAVAILABLE_HEADLINE|provider_unavailable/)
   })
 
   it('composer mic supports forced mic query routing', () => {

@@ -7,7 +7,9 @@ const TECHNICAL_PATTERNS = [
   /server realtime/i
 ] as const
 
-export const ORB_VOICE_UNAVAILABLE_HEADLINE = 'Live voice is unavailable right now'
+export const ORB_VOICE_SIGN_IN_HEADLINE = 'Sign in to use ORB Voice.'
+
+export const ORB_VOICE_UNAVAILABLE_HEADLINE = 'Live voice could not connect.'
 
 export const ORB_VOICE_UNAVAILABLE_BODY =
   'You can still use Dictate or type to ORB.'
@@ -38,7 +40,7 @@ export function sanitizeOrbVoiceUserMessage(
   if (!trimmed) return null
   if (options?.debug) return trimmed
   if (looksTechnical(trimmed)) {
-    if (options?.dictateRealtimeReady) return ORB_VOICE_DICTATE_READY_BODY
+    if (options?.dictateRealtimeReady) return 'You can still type to ORB or use Dictate.'
     return ORB_VOICE_UNAVAILABLE_BODY
   }
   if (/webrtc|realtime audio could not connect|negotiation failed/i.test(trimmed)) {
@@ -60,6 +62,8 @@ export function orbVoiceUnavailablePresentation(options?: {
   }
   return {
     headline: ORB_VOICE_UNAVAILABLE_HEADLINE,
-    detail: options?.dictateRealtimeReady ? ORB_VOICE_DICTATE_READY_BODY : ORB_VOICE_UNAVAILABLE_BODY
+    detail: options?.dictateRealtimeReady
+      ? 'You can still type to ORB or use Dictate.'
+      : ORB_VOICE_UNAVAILABLE_BODY
   }
 }

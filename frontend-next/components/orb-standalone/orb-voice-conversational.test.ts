@@ -17,10 +17,12 @@ function readLib(relativePath: string) {
 describe('ORB Voice conversational sprint', () => {
   it('station renders premium voice room with explicit start', () => {
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
+    const actions = readComponent('components/orb-standalone/orb-voice-actions.tsx')
     assert.match(station, /data-orb-voice-station/)
     assert.match(station, /data-orb-voice-start-stage/)
-    assert.match(station, /data-orb-voice-primary-action|>\s*Start\s*</)
-    assert.match(station, /orbVoiceReadinessPresentation/)
+    assert.match(station, /OrbVoiceActions/)
+    assert.match(actions, /data-orb-voice-primary-action/)
+    assert.match(readLib('orb/voice/orb-voice-ui-state.ts'), /Start voice/)
     assert.match(station, /Talk with ORB/)
   })
 
@@ -96,7 +98,7 @@ describe('ORB Voice conversational sprint', () => {
 
   it('ORB Voice links to dictate from transcript actions', () => {
     const voice = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(voice, /data-orb-voice-dictate-actions/)
-    assert.match(voice, /Send transcript to ORB Dictate/)
+    assert.match(voice, /data-orb-voice-post-session|data-orb-voice-to-dictate/)
+    assert.match(voice, /Send transcript to Dictate/)
   })
 })
