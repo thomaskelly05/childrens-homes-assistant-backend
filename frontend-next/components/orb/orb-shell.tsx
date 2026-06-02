@@ -7,7 +7,7 @@ import { OrbResidentialErrorBoundary } from '@/components/orb-residential/orb-re
 import { OrbSafetyModal } from '@/components/orb-residential/orb-safety-modal'
 import { useOrbResidentialThemeLock } from '@/components/orb-residential/use-orb-residential-theme-lock'
 import { useOrbAccountState } from '@/hooks/use-orb-account-state'
-import { ORB_SHELL_ROOT_CLASS, orbResidentialRootStyle } from '@/lib/orb/orb-theme'
+import { getOrbThemeCssVariables, ORB_SHELL_ROOT_CLASS } from '@/lib/orb/orb-theme'
 
 function OrbShellInner() {
   const account = useOrbAccountState()
@@ -23,7 +23,7 @@ function OrbShellInner() {
     <div
       className={ORB_SHELL_ROOT_CLASS}
       data-orb-residential="true"
-      style={orbResidentialRootStyle('dark')}
+      style={getOrbThemeCssVariables('dark')}
     >
       <OrbResidentialErrorBoundary>
         <OrbCareCompanion residentialSurface />
@@ -38,7 +38,7 @@ export function OrbShell() {
   return (
     <Suspense
       fallback={
-        <div className="flex h-[100dvh] items-center justify-center bg-[#050b18] text-sm text-slate-400">
+        <div className="orb-residential-root flex h-[100dvh] items-center justify-center bg-[var(--orb-page-bg,#05070d)] text-sm text-[var(--orb-text-muted,#6f7787)]">
           Loading ORB…
         </div>
       }

@@ -261,9 +261,9 @@ describe('ORB ChatGPT UI structure', () => {
   })
 
   it('mobile sidebar overlay covers full viewport without harsh grey strip', () => {
-    const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
+    const layout = readComponent('components/orb/orb-layout.tsx')
     const mobileCss = readComponent('app/orb/orb-mobile.css')
-    assert.match(companion, /orb-panel-overlay fixed inset-0/)
+    assert.match(layout, /orb-panel-overlay fixed inset-0/)
     assert.match(mobileCss, /width:\s*100vw/)
     assert.match(mobileCss, /height:\s*100dvh/)
   })

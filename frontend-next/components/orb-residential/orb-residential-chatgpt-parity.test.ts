@@ -107,11 +107,12 @@ describe('ORB Residential ChatGPT parity', () => {
   it('sidebar collapse preference uses orb-sidebar-collapsed localStorage key', () => {
     const pref = readComponent('lib/orb/orb-sidebar-preference.ts')
     const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
+    const layout = readComponent('components/orb/orb-layout.tsx')
     assert.match(pref, /ORB_SIDEBAR_COLLAPSED_KEY = 'orb-sidebar-collapsed'/)
     assert.match(companion, /readOrbSidebarCollapsed/)
     assert.match(companion, /writeOrbSidebarCollapsed/)
     assert.match(companion, /toggleSidebarCollapsed/)
-    assert.match(companion, /data-orb-sidebar-collapsed/)
+    assert.match(layout, /data-orb-sidebar-collapsed/)
   })
 
   it('residential projects seed and persist via orb-projects key', () => {
