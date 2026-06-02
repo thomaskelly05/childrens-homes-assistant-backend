@@ -1,0 +1,135 @@
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { describe, it } from 'node:test'
+
+import {
+  ORB_VOICE_BOUNDARY_COPY,
+  ORB_VOICE_PANEL_SUBTITLE,
+  ORB_VOICE_PANEL_TITLE,
+  orbVoiceLaunchStatusLabel,
+  resolveOrbVoiceLaunchMode,
+  resolveOrbVoiceLaunchUiState,
+  shouldSuppressOrbAutoReadAloud
+} from '../../lib/orb/voice/orb-voice-launch-mode.ts'
+
+const root = join(dirname(fileURLToPath(import.meta.url)), '../..')
+
+function readComponent(relativePath: string) {
+  return readFileSync(join(root, relativePath), 'utf8')
+}
+
+describe('ORB Voice launch polish', () => {
+  it('panel title and subtitle', () => {
+    assert.equal(ORB_VOICE_PANEL_TITLE, 'Voice')
+    assert.equal(ORB_VOICE_PANEL_SUBTITLE, 'Speak to ORB hands-free')
+    const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
+    assert.match(station, /ORB_VOICE_PANEL_TITLE/)
+    assert.match(station, /ORB_VOICE_PANEL_SUBTITLE/)
+  })
+
+  it('launch state labels render', () => {
+    assert.equal(orbVoiceLaunchStatusLabel('listening'), 'Listening')
+    assert.equal(orbVoiceLaunchStatusLabel('transcribing'), 'Transcribing')
+    assert.equal(orbVoiceLaunchStatusLabel('unavailable'), 'Unavailable')
+    const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
+    assert.match(station, /data-orb-voice-launch-status-label/)
+    assert.match(station, /data-orb-voice-launch-state/)
+  })
+
+  it('composer voice button exists with unavailable aria', () => {
+    const composer = readComponent('components/orb-standalone/orb-standalone-composer.tsx')
+    assert.match(composer, /data-orb-composer-voice/)
+    assert.match(composer, /aria-label/)
+    assert.match(composer, /data-orb-composer-voice-unavailable/)
+    const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
+    assert.match(companion, /voicePanelUnavailable/)
+  })
+
+  it('transcript can route to ORB and Dictate', () => {
+    const controls = readComponent('components/orb-standalone/orb-voice-launch-controls.tsx')
+    assert.match(controls, /data-orb-voice-send-to-orb/)
+    assert.match(controls, /data-orb-voice-to-dictate/)
+    assert.match(controls, /Send to ORB/)
+    assert.match(controls, /Send to Dictate/)
+  })
+
+  it('browser launch mode when realtime not configured', () => {
+    assert.equal(
+      resolveOrbVoiceLaunchMode({
+        realtimeStatus: { ok: true, realtime_enabled: false, provider: null, reason: 'not_configured' },
+        recognitionAvailable: true,
+        synthesisAvailable: false,
+        liveVoiceAllowed: true
+      }),
+      'browser_ptt'
+    )
+    assert.equal(
+      resolveOrbVoiceLaunchMode({
+        realtimeStatus: {
+          ok: true,
+          realtime_enabled: true,
+          provider: 'openai',
+          reason: 'configured'
+        },
+        recognitionAvailable: true,
+        synthesisAvailable: true,
+        liveVoiceAllowed: true
+      }),
+      'openai_realtime'
+    )
+  })
+
+  it('standalone boundary copy is shown', () => {
+    assert.ok(ORB_VOICE_BOUNDARY_COPY.some((line) => line.includes('live care records')))
+    const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
+    assert.match(station, /data-orb-voice-boundary-copy/)
+  })
+
+  it('safeguarding suppresses auto read-aloud', () => {
+    assert.equal(shouldSuppressOrbAutoReadAloud('Safeguarding Thinking', false), true)
+    assert.equal(shouldSuppressOrbAutoReadAloud('Ask ORB', false), false)
+    assert.equal(shouldSuppressOrbAutoReadAloud('Ask ORB', true), true)
+    const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
+    assert.match(companion, /Safeguarding Thinking/)
+    assert.match(companion, /showUrgentSafeguardingBanner/)
+  })
+
+  it('unsupported browser launch state', () => {
+    assert.equal(
+      resolveOrbVoiceLaunchUiState({
+        launchMode: 'unavailable',
+        captureState: 'idle',
+        phase: 'idle',
+        listening: false,
+        speaking: false
+      }),
+      'unavailable'
+    )
+    const readiness = readComponent('lib/orb/voice/orb-voice-readiness.ts')
+    assert.match(readiness, /browser_unsupported/)
+  })
+
+  it('thinking state while ORB pending', () => {
+    assert.equal(
+      resolveOrbVoiceLaunchUiState({
+        launchMode: 'browser_ptt',
+        captureState: 'ready',
+        phase: 'idle',
+        listening: false,
+        speaking: false,
+        pending: true
+      }),
+      'thinking'
+    )
+  })
+
+  it('mobile and desktop layout hooks remain', () => {
+    const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
+    assert.match(station, /data-orb-mobile-branch/)
+    assert.match(station, /data-orb-voice-desktop/)
+    const mobile = readComponent('components/orb-standalone/orb-voice-mobile-experience.tsx')
+    assert.match(mobile, /data-orb-voice-mobile/)
+  })
+})

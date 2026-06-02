@@ -50,6 +50,7 @@ export function OrbStandaloneComposer({
   composerStateLength,
   onMicClick,
   onVoiceClick,
+  voicePanelUnavailable = false,
   onCancelListening,
   onStopSpeaking,
   onSendTranscript,
@@ -99,6 +100,8 @@ export function OrbStandaloneComposer({
   composerStateLength?: number
   onMicClick: () => void
   onVoiceClick?: () => void
+  /** When true, ORB Voice panel opens but browser speech is unavailable. */
+  voicePanelUnavailable?: boolean
   onCancelListening: () => void
   onStopSpeaking: () => void
   onSendTranscript: () => void
@@ -436,10 +439,19 @@ export function OrbStandaloneComposer({
                   <button
                     type="button"
                     onClick={onVoiceClick}
-                    aria-label="Open ORB Voice"
-                    title="Open ORB Voice for live conversation"
-                    className="pointer-events-auto inline-flex h-9 min-w-9 items-center justify-center rounded-full text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-royal-blue,#168bff)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--orb-royal-blue,#168bff)]"
+                    aria-label={
+                      voicePanelUnavailable
+                        ? 'Open ORB Voice (unavailable in this browser)'
+                        : 'Open ORB Voice'
+                    }
+                    title={
+                      voicePanelUnavailable
+                        ? 'ORB Voice is unavailable in this browser — open for alternatives'
+                        : 'Open ORB Voice for hands-free input'
+                    }
+                    className={`pointer-events-auto inline-flex h-9 min-w-9 items-center justify-center rounded-full transition hover:bg-[var(--orb-surface-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--orb-royal-blue,#168bff)] ${voicePanelUnavailable ? 'text-[var(--orb-muted)] opacity-60' : 'text-[var(--orb-muted)] hover:text-[var(--orb-royal-blue,#168bff)]'}`}
                     data-orb-composer-voice
+                    data-orb-composer-voice-unavailable={voicePanelUnavailable ? 'true' : 'false'}
                   >
                     <AudioLines className="h-4 w-4" aria-hidden />
                   </button>

@@ -1349,7 +1349,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         if (
           STANDALONE_ORB_VOICE_CAPTURE_ENABLED &&
           voiceSettings.voiceReplies &&
-          voice.synthesisAvailable
+          voice.synthesisAvailable &&
+          mode !== 'Safeguarding Thinking' &&
+          !showUrgentSafeguardingBanner
         ) {
           setSpeakingMessageId(assistantId)
           voice.speak(displayAnswer, () => setSpeakingMessageId(null))
@@ -1629,8 +1631,10 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
 
   const micQueryParam = mounted ? searchParams.get('mic')?.toLowerCase() : null
 
+  const voiceBrowserCapable = voice.recognitionAvailable || voice.synthesisAvailable
   const voiceGenuinelyAvailable =
-    orbMicAccess.canUseLiveVoice && realtimeVoiceAvailable
+    orbMicAccess.canUseLiveVoice && (realtimeVoiceAvailable || voiceBrowserCapable)
+  const voicePanelUnavailable = !voiceBrowserCapable && !realtimeVoiceAvailable
 
   const composerMicRoute = useMemo((): 'dictate' | 'voice' => {
     if (micQueryParam === 'dictate') return 'dictate'
@@ -2377,6 +2381,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       }
       onMicClick={handleMicClick}
       onVoiceClick={residentialSurface ? openOrbVoicePanel : undefined}
+      voicePanelUnavailable={residentialSurface ? voicePanelUnavailable : false}
       onCancelListening={voice.cancelListening}
       onStopSpeaking={voice.cancelSpeaking}
       onSendTranscript={() => void sendMessage(voice.transcript || voice.displayTranscript)}
@@ -2667,6 +2672,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                 studio: opts?.studio
               })
             }
+            onOpenVoiceSettings={openVoiceSettings}
           />
           <OrbDictateStation
             open={activePanel === 'orb_dictate'}

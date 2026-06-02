@@ -12,10 +12,22 @@ import {
   type OrbVoicePresetId,
   type VoiceTurn
 } from '@/lib/orb/voice/orb-voice-types'
+import { OrbVoiceLaunchControls } from '@/components/orb-standalone/orb-voice-launch-controls'
+import type { OrbVoiceLaunchMode, OrbVoiceLaunchUiState } from '@/lib/orb/voice/orb-voice-launch-mode'
+import { orbVoiceLaunchStatusLabel } from '@/lib/orb/voice/orb-voice-launch-mode'
 import type { OrbVoiceUiState } from '@/lib/orb/voice/orb-voice-ui-state'
 
 export function OrbVoiceMobileExperience({
   uiState,
+  launchMode = 'openai_realtime',
+  launchUiState = 'ready',
+  browserTranscript = '',
+  useBrowserLaunch = false,
+  onSendToOrb,
+  onBrowserPrimary,
+  onBrowserCancel,
+  onOpenVoiceSettings,
+  pushToTalk = true,
   orbVisualClassName,
   pulseOrb,
   statusLine,
@@ -48,6 +60,15 @@ export function OrbVoiceMobileExperience({
   voiceDebugSendTurn
 }: {
   uiState: OrbVoiceUiState
+  launchMode?: OrbVoiceLaunchMode
+  launchUiState?: OrbVoiceLaunchUiState
+  browserTranscript?: string
+  useBrowserLaunch?: boolean
+  onSendToOrb?: (text: string) => void | Promise<void>
+  onBrowserPrimary?: () => void
+  onBrowserCancel?: () => void
+  onOpenVoiceSettings?: () => void
+  pushToTalk?: boolean
   orbVisualClassName: string
   pulseOrb: boolean
   statusLine: string
@@ -136,6 +157,11 @@ export function OrbVoiceMobileExperience({
         <p className="mt-4 text-center text-sm font-medium text-[var(--orb-text,var(--orb-foreground))]" data-orb-voice-status-label>
           {statusLine}
         </p>
+        {useBrowserLaunch ? (
+          <p className="sr-only" data-orb-voice-launch-status-label>
+            {orbVoiceLaunchStatusLabel(launchUiState)}
+          </p>
+        ) : null}
         {detailLine && !audioPlaybackBlocked ? (
           <p className="mt-1 text-center text-xs text-[var(--orb-muted)]" data-orb-voice-detail>
             {detailLine}
@@ -175,7 +201,17 @@ export function OrbVoiceMobileExperience({
           </button>
         ) : null}
 
-        {transcriptAvailable ? (
+        {useBrowserLaunch && browserTranscript.trim() ? (
+          <div
+            className="orb-voice-transcript mt-5 w-full max-w-md rounded-2xl border border-[var(--orb-line)]/40 bg-[var(--orb-surface-elevated)]/60 p-3 text-left"
+            data-orb-voice-transcript-preview
+          >
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-[#5ec8ff]/90">Transcript preview</p>
+            <p className="mt-1 text-xs leading-5 text-[var(--orb-foreground)]">{browserTranscript.trim()}</p>
+          </div>
+        ) : null}
+
+        {transcriptAvailable && !useBrowserLaunch ? (
           <div className="orb-voice-transcript mt-5 w-full max-w-md space-y-2" data-orb-voice-transcript>
             {turns
               .filter((line) => line.role === 'user' || line.role === 'assistant')
@@ -222,7 +258,7 @@ export function OrbVoiceMobileExperience({
                 className="w-full rounded-full border border-[var(--orb-line)]/60 py-2.5 text-sm text-[var(--orb-primary)]"
                 onClick={() => onOpenDictate(transcriptText)}
               >
-                Send transcript to Dictate
+                Send to Dictate
               </button>
             ) : null}
             <button
@@ -255,6 +291,19 @@ export function OrbVoiceMobileExperience({
               </button>
             ) : null}
           </div>
+        ) : useBrowserLaunch && launchMode !== 'unavailable' ? (
+          <OrbVoiceLaunchControls
+            launchMode={launchMode}
+            launchUiState={launchUiState}
+            pushToTalk={pushToTalk}
+            transcript={browserTranscript}
+            primaryDisabled={primaryDisabled}
+            onPrimary={() => onBrowserPrimary?.()}
+            onSendToOrb={onSendToOrb}
+            onSendToDictate={onOpenDictate}
+            onCancel={onBrowserCancel}
+            onOpenSettings={onOpenVoiceSettings}
+          />
         ) : voiceSessionLive ? (
           <OrbVoiceActions uiState="listening" onPrimary={onPrimary} layout="stack" />
         ) : voiceStarting ? (

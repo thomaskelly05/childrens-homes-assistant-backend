@@ -92,6 +92,7 @@ class OrbVoiceSessionResponse(BaseModel):
     capabilities: VoiceProviderCapabilities
     message: str | None = None
     fallback_reason: str | None = None
+    brain_metadata: dict[str, Any] | None = None
 
 
 class VoiceRealtimeEvent(BaseModel):

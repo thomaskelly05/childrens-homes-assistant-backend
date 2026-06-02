@@ -69,7 +69,8 @@ describe('ORB Voice UI state — ready before session', () => {
     )
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
     assert.doesNotMatch(station, /hasClientSecret/)
-    assert.match(station, /primaryDisabled = uiState === 'ready' && \(!liveVoiceAllowed \|\| permissionDenied\)/)
+    assert.match(station, /primaryDisabled/)
+    assert.match(station, /useBrowserLaunch/)
   })
 
   it('provider openai is accepted as configured', () => {

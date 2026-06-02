@@ -34,6 +34,12 @@ def test_orb_voice_session_status_not_configured_by_default(voice_client):
     assert data["ok"] is True
     assert data["realtime_enabled"] is False
     assert data["reason"] == "not_configured"
+    brain = data.get("brain_metadata") or {}
+    assert brain.get("brain") == "orb_residential_intelligence"
+    assert brain.get("feature") == "voice"
+    assert brain.get("standalone") is True
+    assert brain.get("os_records_accessed") is False
+    assert brain.get("live_record_access") is False
 
 
 def test_orb_voice_session_status_enabled_when_openai_configured(voice_client, monkeypatch):
@@ -59,6 +65,10 @@ def test_orb_voice_session_returns_browser_fallback_by_default(voice_client):
     assert data["status"] == "ready"
     assert data["provider"] == "browser_fallback"
     assert data["capabilities"]["latencyClass"] == "fallback"
+    brain = data.get("brain_metadata") or {}
+    assert brain.get("product") == "ORB Residential"
+    assert brain.get("powered_by") == "IndiCare Intelligence"
+    assert brain.get("feature") == "voice"
     assert data["selected_voice_profile"] == "orb_british_female"
     assert data["profile_label"] == "ORB British Female"
     assert data["provider_voice"] == "coral"

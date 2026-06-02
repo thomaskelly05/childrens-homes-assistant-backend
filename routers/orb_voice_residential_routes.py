@@ -31,8 +31,17 @@ from services.orb_voice_realtime_config import (
 DEFAULT_OPENAI_REALTIME_MODEL = os.getenv("ORB_REALTIME_MODEL", "gpt-realtime").strip() or "gpt-realtime"
 from services.orb_voice_realtime_session_store import orb_voice_realtime_session_store
 from services.orb_voice_realtime_ws_handler import orb_voice_realtime_ws_handler
+from services.orb_brain_metadata_service import attach_to_payload, build_brain_metadata
 
 router = APIRouter(prefix="/orb/voice", tags=["ORB Residential Voice"])
+
+
+def _voice_brain_metadata() -> dict:
+    return build_brain_metadata(surface="orb_residential", feature="voice")
+
+
+def _voice_status_payload(body: dict) -> dict:
+    return attach_to_payload(body, surface="orb_residential", feature="voice")
 
 
 class OrbVoiceTextRequest(BaseModel):
@@ -87,6 +96,7 @@ def _session_response_base(
         capabilities=capabilities,
         message=message,
         fallback_reason=fallback_reason,
+        brain_metadata=_voice_brain_metadata(),
     )
 
 
@@ -94,40 +104,48 @@ def _session_response_base(
 async def orb_voice_session_status(_current_user=Depends(require_orb_residential_auth)):
     """Honest realtime configuration probe — always 200, never 500 for missing env."""
     if _openai_realtime_configured():
-        return {
-            "ok": True,
-            "realtime_enabled": True,
-            "provider": "openai",
-            "model": DEFAULT_OPENAI_REALTIME_MODEL,
-            "requires_client_secret": True,
-            "reason": "configured",
-        }
+        return _voice_status_payload(
+            {
+                "ok": True,
+                "realtime_enabled": True,
+                "provider": "openai",
+                "model": DEFAULT_OPENAI_REALTIME_MODEL,
+                "requires_client_secret": True,
+                "reason": "configured",
+            }
+        )
     provider = os.getenv("ORB_VOICE_REALTIME_PROVIDER", "browser_fallback").strip().lower()
     if provider in {"websocket", "webrtc"}:
         _, session_status, _, fallback_reason = resolve_voice_provider(provider)  # type: ignore[arg-type]
         enabled = session_status == "ready" and provider != "browser_fallback"
         if enabled:
-            return {
+            return _voice_status_payload(
+                {
+                    "ok": True,
+                    "realtime_enabled": True,
+                    "provider": provider,
+                    "model": None,
+                    "requires_client_secret": provider == "openai",
+                    "reason": "configured",
+                }
+            )
+        return _voice_status_payload(
+            {
                 "ok": True,
-                "realtime_enabled": True,
-                "provider": provider,
-                "model": None,
-                "requires_client_secret": provider == "openai",
-                "reason": "configured",
+                "realtime_enabled": False,
+                "provider": None,
+                "reason": "not_configured",
+                "message": fallback_reason or "Realtime voice is not configured.",
             }
-        return {
+        )
+    return _voice_status_payload(
+        {
             "ok": True,
             "realtime_enabled": False,
             "provider": None,
             "reason": "not_configured",
-            "message": fallback_reason or "Realtime voice is not configured.",
         }
-    return {
-        "ok": True,
-        "realtime_enabled": False,
-        "provider": None,
-        "reason": "not_configured",
-    }
+    )
 
 
 @router.post("/realtime/session", response_model=OrbVoiceSessionResponse)
