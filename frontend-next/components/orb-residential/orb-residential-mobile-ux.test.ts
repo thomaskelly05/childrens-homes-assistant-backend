@@ -93,14 +93,45 @@ describe('ORB Residential mobile UX', () => {
     assert.match(sidebar, /ORB_RESIDENTIAL_TAGLINE/)
   })
 
-  it('mobile sidebar lists all apps including Dictate Review Documents Saved outputs', () => {
+  it('mobile sidebar quick nav lists Magic Notes Voice Documents Saved Outputs Projects Recent chats', () => {
     const sidebar = readComponent('components/orb-residential/orb-residential-sidebar.tsx')
     assert.match(sidebar, /useOrbMobileViewport/)
-    assert.match(sidebar, /data-orb-sidebar-mobile-apps/)
-    assert.match(sidebar, /data-orb-sidebar-stations-mobile/)
-    for (const label of ['Dictate', 'Review', 'Documents', 'Saved outputs', 'Voice', 'Templates', 'Library', 'Skills']) {
+    assert.match(sidebar, /data-orb-sidebar-mobile-quick-nav/)
+    assert.match(sidebar, /data-orb-sidebar-magic-notes/)
+    assert.match(sidebar, /data-orb-sidebar-recent-chats-shortcut/)
+    for (const label of ['Magic Notes', 'Voice', 'Documents', 'Saved Outputs', 'Projects', 'Recent chats', 'Search']) {
       assert.match(sidebar, new RegExp(label))
     }
+  })
+
+  it('mobile ChatGPT shell header menu account empty starters and composer', () => {
+    const layout = readComponent('components/orb/orb-layout.tsx')
+    const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
+    const composer = readComponent('components/orb-standalone/orb-standalone-composer.tsx')
+    const copy = readComponent('lib/orb/orb-residential-copy.ts')
+    const mobileCss = readComponent('app/orb/orb-mobile.css')
+
+    assert.match(layout, /OrbMobileChatHeader/)
+    assert.match(layout, /data-orb-mobile-header/)
+    assert.match(layout, /data-orb-mobile-menu/)
+    assert.match(layout, /data-orb-mobile-account/)
+    assert.match(companion, /OrbMobileChatHeader/)
+    assert.match(companion, /mobileHeader=/)
+    assert.match(copy, /ORB_RESIDENTIAL_MOBILE_EMPTY_HEADING/)
+    assert.match(copy, /Where should we begin\?/)
+    for (const starter of [
+      'Help me write a daily log',
+      'What am I missing?',
+      'Safeguarding thinking',
+      'Turn rough notes into a professional record'
+    ]) {
+      assert.match(copy, new RegExp(starter.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
+    }
+    assert.match(composer, /data-orb-composer-voice/)
+    assert.match(composer, /data-orb-standalone-composer/)
+    assert.match(mobileCss, /orb-mobile-chat-header/)
+    assert.match(mobileCss, /safe-area-inset-bottom/)
+    assert.doesNotMatch(companion, /OsSidebar|operational-orb-page/)
   })
 
   it('profile panel uses collapsible grouped sections and status chips', () => {

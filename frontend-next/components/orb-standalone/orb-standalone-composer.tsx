@@ -1,7 +1,7 @@
 'use client'
 
 import { FormEvent, useEffect, useRef, type DragEvent } from 'react'
-import { Camera, ChevronDown, FileText, Mic, MicOff, Plus, Send, Square, Wrench, X } from 'lucide-react'
+import { AudioLines, Camera, ChevronDown, FileText, Mic, MicOff, Plus, Send, Square, Wrench, X } from 'lucide-react'
 
 import {
   OrbComposerPlusMenu,
@@ -49,6 +49,7 @@ export function OrbStandaloneComposer({
   onSubmit,
   composerStateLength,
   onMicClick,
+  onVoiceClick,
   onCancelListening,
   onStopSpeaking,
   onSendTranscript,
@@ -97,6 +98,7 @@ export function OrbStandaloneComposer({
   onSubmit: (event?: FormEvent<HTMLFormElement>) => void | Promise<void>
   composerStateLength?: number
   onMicClick: () => void
+  onVoiceClick?: () => void
   onCancelListening: () => void
   onStopSpeaking: () => void
   onSendTranscript: () => void
@@ -430,6 +432,18 @@ export function OrbStandaloneComposer({
                 >
                   {voiceListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
                 </button>
+                {onVoiceClick ? (
+                  <button
+                    type="button"
+                    onClick={onVoiceClick}
+                    aria-label="Open ORB Voice"
+                    title="Open ORB Voice for live conversation"
+                    className="pointer-events-auto inline-flex h-9 min-w-9 items-center justify-center rounded-full text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-royal-blue,#168bff)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--orb-royal-blue,#168bff)]"
+                    data-orb-composer-voice
+                  >
+                    <AudioLines className="h-4 w-4" aria-hidden />
+                  </button>
+                ) : null}
                 <button type="submit" disabled={sendDisabled || (answering && Boolean(onStopGenerating))} aria-label="Send message" className="orb-composer-send inline-flex h-9 min-w-9 items-center justify-center rounded-full text-white transition disabled:opacity-35" data-orb-composer-send data-testid="orb-standalone-send-clickable">
                   <Send className="h-4 w-4" />
                 </button>

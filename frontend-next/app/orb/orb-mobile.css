@@ -42,7 +42,7 @@
 
   .orb-chat-header {
     min-height: var(--orb-mobile-header-height, var(--orb-header-height-min, 3.5rem));
-    max-height: var(--orb-header-height-max, 3.75rem);
+    max-height: none;
     padding-top: max(0.5rem, env(safe-area-inset-top, 0px)) !important;
     padding-bottom: 0.5rem !important;
     background: color-mix(in srgb, var(--orb-premium-bg-deep, #05070d) 85%, transparent) !important;
@@ -55,6 +55,42 @@
     background: rgba(255, 255, 255, 0.92) !important;
     border-bottom-color: rgba(37, 99, 235, 0.12) !important;
     color: #0a1628 !important;
+  }
+
+  .orb-mobile-chat-header {
+    min-height: calc(var(--orb-mobile-header-height, 3.25rem) + env(safe-area-inset-top, 0px));
+    max-height: none;
+    padding-left: max(0.5rem, env(safe-area-inset-left, 0px)) !important;
+    padding-right: max(0.5rem, env(safe-area-inset-right, 0px)) !important;
+    z-index: 30 !important;
+  }
+
+  .orb-mobile-chat-header [data-orb-mobile-header-tagline] {
+    color: var(--orb-premium-text-muted, #6f7787) !important;
+    letter-spacing: 0.01em;
+  }
+
+  html[data-orb-theme='light'] .orb-mobile-chat-header {
+    background: rgba(255, 255, 255, 0.94) !important;
+    border-bottom-color: rgba(37, 99, 235, 0.12) !important;
+  }
+
+  html[data-orb-residential='1'] .orb-chat-layout--residential .orb-chat-main {
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--orb-page-bg, #05070d) 92%, #ffffff) 0%,
+      var(--orb-page-bg, #05070d) 48%,
+      var(--orb-page-bg, #05070d) 100%
+    ) !important;
+  }
+
+  html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .orb-chat-main {
+    background: linear-gradient(180deg, #f7fbff 0%, #eef6ff 55%, #f5f9ff 100%) !important;
+  }
+
+  [data-orb-chat-body] {
+    min-height: 0 !important;
+    flex: 1 1 auto !important;
   }
 
   .orb-chat-shell {
@@ -103,10 +139,17 @@
   }
 
   .orb-chat-thread {
-    padding-left: var(--orb-spacing-mobile-inline, 0.75rem) !important;
-    padding-right: var(--orb-spacing-mobile-inline, 0.75rem) !important;
-    padding-top: 0.5rem !important;
-    padding-bottom: calc(6.75rem + env(safe-area-inset-bottom, 0px)) !important;
+    padding-left: max(var(--orb-spacing-mobile-inline, 0.75rem), env(safe-area-inset-left, 0px)) !important;
+    padding-right: max(var(--orb-spacing-mobile-inline, 0.75rem), env(safe-area-inset-right, 0px)) !important;
+    padding-top: 0.75rem !important;
+    padding-bottom: calc(7.5rem + env(safe-area-inset-bottom, 0px)) !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  html[data-orb-residential='1'] [data-orb-residential-empty] {
+    min-height: min(42dvh, 22rem) !important;
+    padding-inline: 0.5rem !important;
   }
 
   [data-orb-empty-state] {
@@ -207,14 +250,10 @@
     padding-inline: 0.25rem;
   }
 
-  @media (min-width: 380px) {
-    [data-orb-starter-cards] {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-  }
-
   [data-orb-starter-card] {
-    min-height: 3.25rem;
+    min-height: 2.875rem;
+    padding: 0.65rem 0.85rem !important;
+    font-size: 0.8125rem !important;
     border-radius: 1rem !important;
     border: 1px solid rgba(22, 139, 255, 0.22) !important;
     background: #ffffff !important;
@@ -289,21 +328,32 @@
   .orb-composer-dock,
   .orb-chat-composer,
   .orb-composer-floating-wrap {
-    position: relative !important;
+    position: sticky !important;
+    bottom: 0 !important;
     z-index: 60 !important;
     left: 0;
     right: 0;
     width: 100% !important;
     max-width: 100vw !important;
-    padding-left: 0.75rem !important;
-    padding-right: 0.75rem !important;
-    padding-top: 0.25rem !important;
+    margin-top: auto !important;
+    flex-shrink: 0 !important;
+    padding-left: max(0.75rem, env(safe-area-inset-left, 0px)) !important;
+    padding-right: max(0.75rem, env(safe-area-inset-right, 0px)) !important;
+    padding-top: 0.35rem !important;
     padding-bottom: calc(0.65rem + env(safe-area-inset-bottom, 0px)) !important;
     overflow-x: hidden !important;
-    background: transparent !important;
-    background-image: none !important;
+    background: linear-gradient(
+      180deg,
+      transparent 0%,
+      color-mix(in srgb, var(--orb-page-bg, #05070d) 88%, transparent) 28%,
+      var(--orb-page-bg, #05070d) 100%
+    ) !important;
     box-shadow: none !important;
     pointer-events: auto !important;
+  }
+
+  html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .orb-composer-dock {
+    background: linear-gradient(180deg, transparent 0%, rgba(247, 251, 255, 0.92) 35%, #f7fbff 100%) !important;
   }
 
   .orb-composer-dock > .mx-auto,
@@ -333,11 +383,21 @@
     max-height: none !important;
     border-radius: var(--orb-radius-composer, 1.75rem) !important;
     padding: 0.45rem 0.55rem !important;
-    border: 1px solid rgba(66, 215, 255, 0.18) !important;
-    background: linear-gradient(165deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04)) !important;
+    border: 1px solid rgba(22, 139, 255, 0.22) !important;
+    background: linear-gradient(
+      165deg,
+      color-mix(in srgb, #ffffff 14%, transparent),
+      color-mix(in srgb, #ffffff 6%, transparent)
+    ) !important;
     backdrop-filter: blur(var(--orb-blur-glass, 20px)) saturate(150%) !important;
     -webkit-backdrop-filter: blur(var(--orb-blur-glass, 20px)) saturate(150%) !important;
     box-shadow: var(--orb-premium-shadow, 0 12px 40px rgba(0, 0, 0, 0.45), 0 0 48px rgba(22, 139, 255, 0.06)) !important;
+  }
+
+  html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .orb-composer-glass {
+    background: rgba(255, 255, 255, 0.92) !important;
+    border-color: rgba(22, 139, 255, 0.18) !important;
+    box-shadow: 0 12px 36px rgba(15, 23, 42, 0.08), 0 0 32px rgba(22, 139, 255, 0.06) !important;
   }
 
   .orb-composer-glass textarea,
@@ -364,15 +424,35 @@
     border-radius: 9999px !important;
   }
 
-  .orb-composer-action-rail button:not([data-orb-composer-attach]):not([data-orb-composer-tools]):not([data-orb-composer-mic]) {
+  .orb-composer-action-rail button:not([data-orb-composer-attach]):not([data-orb-composer-tools]) {
     display: none !important;
   }
 
   [data-orb-composer-attach],
   [data-orb-composer-tools],
-  [data-orb-composer-mic] {
-    min-width: 2.5rem !important;
-    min-height: 2.5rem !important;
+  [data-orb-composer-mic],
+  [data-orb-composer-voice] {
+    min-width: 2.75rem !important;
+    min-height: 2.75rem !important;
+  }
+
+  [data-orb-composer-voice] {
+    color: var(--orb-royal-blue, #168bff) !important;
+    border: 1px solid rgba(22, 139, 255, 0.22) !important;
+    background: rgba(22, 139, 255, 0.08) !important;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .orb-chat-sidebar,
+    .orb-panel-overlay,
+    .orb-composer-glass,
+    [data-orb-starter-card] {
+      transition: none !important;
+    }
+
+    [data-orb-starter-card]:active {
+      transform: none !important;
+    }
   }
 
   [data-orb-composer-send],
