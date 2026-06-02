@@ -41,6 +41,28 @@ describe('ORB OpenAI realtime voice response flow', () => {
     assert.match(webrtcClient, /server_vad_fallback/)
   })
 
+  it('resets responseCreateSent guard so later turns can send response.create', () => {
+    assert.match(webrtcClient, /responseCreateSent = false/)
+    assert.match(webrtcClient, /voice_response_ready_for_next_turn/)
+    assert.match(webrtcClient, /markResponseReady/)
+    assert.match(
+      webrtcClient,
+      /input_audio_buffer\.speech_started[\s\S]*markResponseReady\('speech_started'\)/
+    )
+    assert.match(
+      webrtcClient,
+      /case 'response\.done':[\s\S]*markResponseReady\('response_done'\)/
+    )
+    assert.match(
+      webrtcClient,
+      /case 'error':[\s\S]*markResponseReady\('error'\)/
+    )
+    assert.match(
+      webrtcClient,
+      /interrupt\(\)[\s\S]*markResponseReady\('interrupt'\)/
+    )
+  })
+
   it('response.create uses audio-only output_modalities not response.modalities or audio plus text', () => {
     assert.match(webrtcClient, /output_modalities: \[\.\.\.REALTIME_AUDIO_OUTPUT_MODALITIES\]/)
     assert.match(webrtcClient, /output_modalities: REALTIME_AUDIO_OUTPUT_MODALITIES/)

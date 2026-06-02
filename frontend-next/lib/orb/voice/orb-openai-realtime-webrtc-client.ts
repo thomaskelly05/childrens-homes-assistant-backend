@@ -257,6 +257,12 @@ export class OrbOpenAIRealtimeWebRTCClient {
     }
   }
 
+  private markResponseReady(reason: string) {
+    this.responseCreateSent = false
+    updateOrbVoiceResponseFlow({ responseCreateSent: false })
+    voiceDebug('voice_response_ready_for_next_turn', { reason })
+  }
+
   private scheduleResponseCreateFallback() {
     if (this.transcriptionOnly || this.responseInFlight || this.responseCreateSent) return
     this.clearResponseCreateFallback()
@@ -307,6 +313,7 @@ export class OrbOpenAIRealtimeWebRTCClient {
         break
       case 'input_audio_buffer.speech_started':
         this.clearResponseCreateFallback()
+        this.markResponseReady('speech_started')
         voiceDebug('voice_input_audio_started', {})
         setOrbVoiceDiagLastEvent('voice_input_audio_started')
         this.callbacks.onStateChange?.('speech_detected')
@@ -395,6 +402,7 @@ export class OrbOpenAIRealtimeWebRTCClient {
       case 'response.done': {
         this.clearResponseCreateFallback()
         this.responseInFlight = false
+        this.markResponseReady('response_done')
         const text = this.assistantBuffer.trim()
         this.assistantBuffer = ''
         if (text) {
@@ -408,6 +416,7 @@ export class OrbOpenAIRealtimeWebRTCClient {
       case 'error': {
         this.clearResponseCreateFallback()
         this.responseInFlight = false
+        this.markResponseReady('error')
         const message =
           typeof event.message === 'string'
             ? event.message
@@ -469,6 +478,7 @@ export class OrbOpenAIRealtimeWebRTCClient {
   interrupt() {
     this.clearResponseCreateFallback()
     this.responseInFlight = false
+    this.markResponseReady('interrupt')
     this.send({ type: 'response.cancel' })
     this.peerClient?.stopAudio()
     this.assistantBuffer = ''
@@ -491,6 +501,7 @@ export class OrbOpenAIRealtimeWebRTCClient {
     this.assistantBuffer = ''
     this.partialTranscript = ''
     this.responseInFlight = false
+    this.responseCreateSent = false
     this.callbacks.onStateChange?.('ended')
   }
 }
