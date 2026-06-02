@@ -91,7 +91,7 @@ describe('ORB reliability pass', () => {
   })
 
   it('modal viewport uses dvh safe area for xlarge dictate', () => {
-    const shell = readComponent('components/orb-standalone/orb-standalone-panel-shell.tsx')
+    const shell = readComponent('components/orb-standalone/orb-app-panel-shell.tsx')
     const css = readFileSync(join(root, 'app/orb/orb-premium-tokens.css'), 'utf8')
     assert.match(shell, /100dvh/)
     assert.match(css, /orb-dictate-studio-scroll/)

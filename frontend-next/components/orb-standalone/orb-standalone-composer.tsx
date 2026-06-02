@@ -7,6 +7,7 @@ import {
   OrbComposerPlusMenu,
   type OrbComposerPlusAction
 } from '@/components/orb-standalone/orb-composer-plus-menu'
+import { OrbFooter } from '@/components/orb-standalone/orb-footer'
 import { logTapTarget } from '@/lib/interaction/mobile-tap-debug'
 import type { StandaloneOrbMode } from '@/lib/orb/standalone-client'
 
@@ -195,7 +196,6 @@ export function OrbStandaloneComposer({
       className={`orb-chat-composer orb-composer-floating-wrap shrink-0 px-3 md:px-5 ${compactResidential ? 'orb-composer-zone' : ''}`}
       onDragOver={handleDragOver}
       onDrop={onDrop}
-      data-orb-composer
       data-orb-standalone-composer
       data-testid="orb-standalone-composer"
       data-pending={pending ? 'true' : 'false'}
@@ -509,18 +509,13 @@ export function OrbStandaloneComposer({
         </form>
 
         {compactResidential ? (
-          <footer className="orb-residential-footer mt-2 hidden text-center md:block" data-orb-residential-footer>
-            <p className="text-[10px] leading-4 text-[var(--orb-muted)]" data-orb-composer-disclaimer>
-              ORB Residential can make mistakes. It does not access IndiCare OS records unless you choose to connect them.
-            </p>
-            <p className="mt-1 text-[10px] leading-4 text-[var(--orb-muted)]/80" data-orb-residential-copyright>
-              ORB Residential · © 2026 IndiCare
-            </p>
-          </footer>
+          <OrbFooter className="orb-residential-footer mt-2 hidden md:block" />
         ) : (
-          <p className="mt-2 px-2 text-center text-[10px] leading-4 text-[var(--orb-muted)]" data-orb-composer-disclaimer>
-            ORB Residential can make mistakes. ORB Residential does not access IndiCare OS records.
-          </p>
+          <OrbFooter
+            className="mt-2 px-2"
+            disclaimer="ORB Residential can make mistakes. ORB Residential does not access IndiCare OS records."
+            copyright=""
+          />
         )}
       </div>
     </div>

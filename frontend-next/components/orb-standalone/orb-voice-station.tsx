@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Save, Square } from 'lucide-react'
 
 import { OrbAppModal } from '@/components/orb-standalone/orb-app-modal'
+import { useOrbResponsiveMode } from '@/components/orb-standalone/use-orb-responsive-mode'
 import { OrbVoiceActions } from '@/components/orb-standalone/orb-voice-actions'
 import { OrbVoiceMobileExperience } from '@/components/orb-standalone/orb-voice-mobile-experience'
 import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
@@ -178,6 +179,7 @@ export function OrbVoiceStation({
   const assistantBufferRef = useRef('')
   const statusFetchedRef = useRef(false)
 
+  const { mode: responsiveMode, isMobile: isMobileViewport } = useOrbResponsiveMode()
   const developerMode = isOrbDeveloperMode()
   const voiceDebug = isOrbVoiceDebugMode() || developerMode
   const micAccess: OrbMicAccessContext = {
@@ -615,6 +617,20 @@ export function OrbVoiceStation({
     captureActive: false
   })
 
+  const voiceRoomProps = {
+    'data-orb-voice-station': true,
+    'data-orb-voice-ui-state': uiState,
+    'data-orb-voice-state': uiState,
+    'data-orb-voice-start-stage': voiceStartStage,
+    'data-orb-voice-capture-active': voiceSessionLive ? 'true' : 'false',
+    'data-orb-voice-auth': authStatus,
+    'data-orb-voice-realtime-available': realtimeVoiceReady ? 'true' : 'false',
+    'data-orb-voice-session-connected': realtimeSessionConnected ? 'true' : 'false',
+    'data-orb-voice-transport-live': voiceTransportLive ? 'true' : 'false',
+    'data-orb-voice-phase': realtimeState,
+    'data-orb-responsive-mode': responsiveMode
+  } as const
+
   return (
     <OrbAppModal
       open={open}
@@ -624,22 +640,16 @@ export function OrbVoiceStation({
         resetSession()
         onClose()
       }}
-      panelId="orb-voice"
+      panelId="voice"
       size="wide"
     >
       <div
         className="orb-voice-room pointer-events-auto flex min-h-0 flex-1 flex-col"
-        data-orb-voice-station
+        {...voiceRoomProps}
         data-orb-voice-ui-state={uiState}
-        data-orb-voice-state={uiState}
-        data-orb-voice-start-stage={voiceStartStage}
-        data-orb-voice-capture-active={voiceSessionLive ? 'true' : 'false'}
-        data-orb-voice-auth={authStatus}
-        data-orb-voice-realtime-available={realtimeVoiceReady ? 'true' : 'false'}
-        data-orb-voice-session-connected={realtimeSessionConnected ? 'true' : 'false'}
-        data-orb-voice-transport-live={voiceTransportLive ? 'true' : 'false'}
-        data-orb-voice-phase={realtimeState}
       >
+        {isMobileViewport ? (
+        <div className="flex min-h-0 flex-1 flex-col" data-orb-mobile-branch="active">
         <OrbVoiceMobileExperience
           uiState={uiState}
           orbVisualClassName={orbVisual}
@@ -681,8 +691,13 @@ export function OrbVoiceStation({
               : undefined
           }
         />
-
-        <div className="hidden flex-col items-center p-6 pb-8 md:flex">
+        </div>
+        ) : (
+        <div
+          className="flex flex-col items-center p-6 pb-8"
+          data-orb-desktop-branch="active"
+          data-orb-voice-desktop
+        >
           <div className="flex w-full max-w-lg flex-wrap items-center justify-center gap-2">
             <label className="sr-only" htmlFor="orb-voice-mode-select">
               Voice mode
@@ -866,6 +881,7 @@ export function OrbVoiceStation({
 
           <p className="mt-6 max-w-md text-center text-[10px] leading-4 text-[var(--orb-muted)]">{SAFETY_COPY}</p>
         </div>
+        )}
       </div>
     </OrbAppModal>
   )
