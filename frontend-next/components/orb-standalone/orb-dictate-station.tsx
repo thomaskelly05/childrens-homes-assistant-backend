@@ -96,6 +96,7 @@ import {
   type OrbDictateNoteType,
   type OrbDictateStartMode
 } from '@/lib/orb/dictate/orb-dictate-types'
+import { buildSavedOutputCreateBody } from '@/lib/orb/orb-saved-output-adapters'
 import { createOrbSavedOutput } from '@/lib/orb/standalone-client'
 import { isOrbDeveloperMode } from '@/lib/orb/orb-developer-mode'
 import {
@@ -987,14 +988,21 @@ export function OrbDictateStation({
       setStatusMessage(saved.message || 'Saved to Saved Outputs.')
     } catch {
       try {
-        await createOrbSavedOutput({
-          title: output.title,
-          type: 'recording_rewrite',
-          summary: output.summary,
-          content_markdown: text,
-          tags: ['orb-dictate', output.note_type],
-          created_from: 'manual'
-        })
+        await createOrbSavedOutput(
+          buildSavedOutputCreateBody({
+            title: output.title,
+            type: 'recording_rewrite',
+            summary: output.summary,
+            content_markdown: text,
+            tags: ['orb-dictate', output.note_type],
+            created_from: 'dictate',
+            extras: {
+              source_feature: 'dictate',
+              brain_metadata: output.brain_metadata,
+              source_text: output.transcript || text
+            }
+          })
+        )
         setStatusMessage('Saved to Saved Outputs.')
       } catch {
         setStatusMessage('Save unavailable — use copy to keep your wording.')

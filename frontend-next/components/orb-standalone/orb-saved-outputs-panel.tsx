@@ -1,12 +1,13 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Archive, Download, Loader2, MessageSquarePlus, Search, Trash2 } from 'lucide-react'
+import { Archive, Loader2, Search, Trash2 } from 'lucide-react'
 
 import {
   OrbIntelligenceOutput,
   type OrbIntelligenceOutputView
 } from '@/components/orb-standalone/orb-intelligence-output'
+import { OrbSavedOutputDetailActions } from '@/components/orb-standalone/orb-saved-output-detail-actions'
 import { orbStationShellProps } from '@/components/orb-standalone/orb-app-modal'
 import { OrbStandalonePanelShell } from '@/components/orb-standalone/orb-standalone-panel-shell'
 import {
@@ -17,37 +18,23 @@ import {
   shouldBlockStationForAuth
 } from '@/components/orb-standalone/orb-station-panel-states'
 import {
+  extractSavedOutputBrainMetadata,
+  savedOutputSourceLabel,
+  savedOutputTypeLabel,
+  type OrbSavedOutputRerunState
+} from '@/lib/orb/orb-saved-output-adapters'
+import { shouldShowOrbBrainIndicator, orbBrainIndicatorLabel } from '@/lib/orb/orb-brain-metadata'
+import {
   archiveOrbSavedOutput,
   deleteOrbSavedOutput,
-  exportOrbSavedOutput,
   getOrbSavedOutput,
-  reuseOrbSavedOutput,
-  STANDALONE_ARTEFACT_NOTICE,
   updateOrbSavedOutput,
   type OrbSavedOutputRecord,
-  type OrbSavedOutputSummary,
-  type OrbSavedOutputType
+  type OrbSavedOutputSummary
 } from '@/lib/orb/standalone-client'
 import { getOrbLocalSavedOutput, removeOrbLocalSavedOutput } from '@/lib/orb/orb-saved-outputs-local'
 import { listOrbSavedOutputsResilient, orbLocalSavedOutputAsRecord } from '@/lib/orb/orb-saved-outputs-resilience'
 import type { StandaloneProject, StandaloneWorkspace } from '@/lib/orb/standalone-local-store'
-
-const TYPE_LABELS: Record<string, string> = {
-  action_plan: 'Action plan',
-  document_review: 'Document review',
-  manager_briefing: 'Manager briefing',
-  staff_briefing: 'Staff briefing',
-  deep_research: 'Deep research',
-  policy_comparison: 'Policy comparison',
-  ofsted_evidence_map: 'Ofsted evidence',
-  recording_rewrite: 'Recording rewrite',
-  safeguarding_reflection: 'Safeguarding',
-  therapeutic_practice: 'Therapeutic',
-  general_research: 'Research',
-  intelligence_note: 'Note',
-  checklist: 'Checklist',
-  supervision_guide: 'Supervision'
-}
 
 const FILTER_CHIPS: Array<{ id: string; label: string; type: string }> = [
   { id: 'all', label: 'All', type: '' },
@@ -77,6 +64,10 @@ export function OrbSavedOutputsPanel({
   onClose,
   workspace,
   onReuseInChat,
+  onAskOrb,
+  onSendToDictate,
+  onUseInShiftBuilder,
+  onRerun,
   residentialSurface = false,
   sessionReady = true
 }: {
@@ -84,6 +75,10 @@ export function OrbSavedOutputsPanel({
   onClose: () => void
   workspace: StandaloneWorkspace
   onReuseInChat?: (prompt: string) => void
+  onAskOrb?: (prompt: string) => void
+  onSendToDictate?: (text: string) => void
+  onUseInShiftBuilder?: (notes: string, focus?: string) => void
+  onRerun?: (state: OrbSavedOutputRerunState) => void
   residentialSurface?: boolean
   sessionReady?: boolean
 }) {
@@ -102,8 +97,6 @@ export function OrbSavedOutputsPanel({
   const [storageMode, setStorageMode] = useState<'server' | 'local' | 'mixed'>('server')
   const [reconnectSuggested, setReconnectSuggested] = useState(false)
   const refreshGuardRef = useRef(false)
-
-  const activeProject = workspace.projects.find((p) => p.id === workspace.activeProjectId)
 
   const refresh = useCallback(async () => {
     if (refreshGuardRef.current) return
@@ -166,6 +159,11 @@ export function OrbSavedOutputsPanel({
     return Array.from(map.entries())
   }, [items])
 
+  const detailBrain = useMemo(
+    () => (detail ? extractSavedOutputBrainMetadata(detail) : null),
+    [detail]
+  )
+
   async function handleArchive(id: string) {
     await archiveOrbSavedOutput(id)
     setNotice('Output archived.')
@@ -175,22 +173,14 @@ export function OrbSavedOutputsPanel({
 
   async function handleDelete(id: string) {
     if (!window.confirm('Delete this saved output permanently?')) return
-    await deleteOrbSavedOutput(id)
+    if (id.startsWith('local_')) {
+      removeOrbLocalSavedOutput(id)
+    } else {
+      await deleteOrbSavedOutput(id)
+    }
     setNotice('Output deleted.')
     void refresh()
     if (selectedId === id) setSelectedId(null)
-  }
-
-  async function handleExport(id: string) {
-    const exported = await exportOrbSavedOutput(id, 'markdown')
-    void navigator.clipboard.writeText(exported.content)
-    setNotice('Export markdown copied to clipboard.')
-  }
-
-  async function handleReuse(id: string) {
-    const reuse = await reuseOrbSavedOutput(id)
-    onReuseInChat?.(reuse.suggested_prompt)
-    onClose()
   }
 
   async function handleRename(id: string, current: string) {
@@ -205,15 +195,21 @@ export function OrbSavedOutputsPanel({
     }
   }
 
+  function handleRerun(state: OrbSavedOutputRerunState) {
+    if (!state.available) return
+    onRerun?.(state)
+    onClose()
+  }
+
   return (
     <OrbStandalonePanelShell
       open={open}
       title="Saved Outputs"
-      subtitle="Reusable answers, briefings and plans from ORB."
+      subtitle="Reuse, export and improve your ORB work"
       onClose={onClose}
       panelId="saved_outputs"
       ariaLabel="ORB saved outputs"
-      footer="Saved outputs are ORB Residential artefacts."
+      footer="Saved outputs are standalone ORB artefacts."
       {...orbStationShellProps(residentialSurface, 'wide')}
     >
       <div className="flex min-h-0 flex-col md:flex-row" data-orb-saved-outputs-panel>
@@ -285,7 +281,7 @@ export function OrbSavedOutputsPanel({
             </div>
           </div>
 
-          <div className="max-h-[40vh] flex-1 overflow-y-auto p-2 md:max-h-none">
+          <div className="max-h-[40vh] flex-1 overflow-y-auto p-2 md:max-h-none" data-orb-saved-outputs-list>
             {loading ? (
               <p className="flex items-center gap-2 px-2 py-4 text-xs text-slate-400">
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
@@ -309,53 +305,70 @@ export function OrbSavedOutputsPanel({
                 title="No saved outputs yet."
                 body={
                   storageMode === 'local'
-                    ? 'Save from ORB Dictate or chat — drafts are kept on this device until you reconnect.'
-                    : "When you save reviews, templates or learning sessions, they'll appear here."
+                    ? 'Save from ORB chat, Dictate, Documents or Shift Builder — drafts stay on this device until you reconnect.'
+                    : 'Save from chat answers, Dictate, Documents, Policy Card or Shift Builder to build your library here.'
                 }
               />
             ) : (
-                grouped.map(([projectName, groupItems]) => (
-                  <div key={projectName} className="mb-4">
-                    <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500">{projectName}</p>
-                    <ul className="space-y-1">
-                      {groupItems.map((item) => (
-                        <li key={item.id}>
-                          <button
-                            type="button"
-                            onClick={() => setSelectedId(item.id)}
-                            className={`orb-panel-card w-full rounded-xl border px-3 py-2 text-left transition ${
-                              selectedId === item.id
-                                ? 'border-cyan-300/25 bg-white/[0.08]'
-                                : 'border-white/[0.06] hover:bg-white/[0.04]'
-                            }`}
-                          >
-                            <div className="flex items-start justify-between gap-2">
-                              <span className="text-sm font-medium text-white line-clamp-1">{item.title}</span>
-                              <span className="shrink-0 rounded bg-white/[0.06] px-1.5 py-0.5 text-[10px] text-slate-400">
-                                {TYPE_LABELS[item.type] || item.type}
-                              </span>
-                            </div>
-                            {item.summary ? (
-                              <p className="mt-1 line-clamp-2 text-xs text-slate-500">{item.summary}</p>
-                            ) : null}
-                            <p className="mt-1 text-[10px] text-slate-600">
-                              {item.source_count ? `${item.source_count} sources · ` : ''}
-                              {new Date(item.created_at).toLocaleDateString()}
-                            </p>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))
-              )}
+              grouped.map(([projectName, groupItems]) => (
+                <div key={projectName} className="mb-4">
+                  <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                    {projectName}
+                  </p>
+                  <ul className="space-y-1">
+                    {groupItems.map((item) => (
+                      <li key={item.id}>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedId(item.id)}
+                          className={`orb-panel-card w-full rounded-xl border px-3 py-2 text-left transition ${
+                            selectedId === item.id
+                              ? 'border-cyan-300/25 bg-white/[0.08]'
+                              : 'border-white/[0.06] hover:bg-white/[0.04]'
+                          }`}
+                          data-orb-saved-output-item
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <span className="text-sm font-medium text-white line-clamp-1">{item.title}</span>
+                            <span className="shrink-0 rounded bg-white/[0.06] px-1.5 py-0.5 text-[10px] text-slate-400">
+                              {savedOutputTypeLabel(item.type)}
+                            </span>
+                          </div>
+                          {item.summary ? (
+                            <p className="mt-1 line-clamp-2 text-xs text-slate-500">{item.summary}</p>
+                          ) : null}
+                          <p className="mt-1 text-[10px] text-slate-600">
+                            {item.source_count ? `${item.source_count} sources · ` : ''}
+                            {new Date(item.created_at).toLocaleDateString()}
+                          </p>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
-        <div className="flex min-h-[12rem] min-w-0 flex-1 flex-col">
-            {detail ? (
-              <>
-                <div className="flex flex-wrap items-center gap-2 border-b border-white/[0.06] px-4 py-2">
+        <div
+          className="flex min-h-[12rem] min-w-0 flex-1 flex-col md:border-l md:border-white/[0.04]"
+          data-orb-saved-output-detail
+        >
+          {detail ? (
+            <>
+              <div className="border-b border-white/[0.06] px-4 py-3">
+                <h3 className="text-base font-semibold text-white">{detail.title}</h3>
+                <p className="mt-1 text-xs text-slate-400">
+                  {savedOutputTypeLabel(detail.type)} · {savedOutputSourceLabel(detail)} ·{' '}
+                  {new Date(detail.created_at).toLocaleString()}
+                </p>
+                {shouldShowOrbBrainIndicator(detailBrain) && detailBrain ? (
+                  <p className="mt-1 text-[10px] text-cyan-300/80" data-orb-saved-output-brain>
+                    {orbBrainIndicatorLabel(detailBrain)}
+                  </p>
+                ) : null}
+                <div className="mt-2 flex flex-wrap gap-2">
                   <button
                     type="button"
                     onClick={() => void handleRename(detail.id, detail.title)}
@@ -373,24 +386,6 @@ export function OrbSavedOutputsPanel({
                   </button>
                   <button
                     type="button"
-                    onClick={() => void handleExport(detail.id)}
-                    className="inline-flex items-center gap-1 rounded-lg border border-white/10 px-2 py-1 text-xs text-slate-300"
-                  >
-                    <Download className="h-3.5 w-3.5" aria-hidden />
-                    Export markdown
-                  </button>
-                  {onReuseInChat ? (
-                    <button
-                      type="button"
-                      onClick={() => void handleReuse(detail.id)}
-                      className="inline-flex items-center gap-1 rounded-lg border border-violet-400/30 bg-violet-500/10 px-2 py-1 text-xs text-violet-100"
-                    >
-                      <MessageSquarePlus className="h-3.5 w-3.5" aria-hidden />
-                      Reuse in chat
-                    </button>
-                  ) : null}
-                  <button
-                    type="button"
                     onClick={() => void handleDelete(detail.id)}
                     className="inline-flex items-center gap-1 rounded-lg border border-red-400/20 px-2 py-1 text-xs text-red-300"
                   >
@@ -398,16 +393,31 @@ export function OrbSavedOutputsPanel({
                     Delete
                   </button>
                 </div>
-                <div className="flex-1 overflow-y-auto p-4">
-                  <OrbIntelligenceOutput output={recordToView(detail)} />
-                </div>
-              </>
-            ) : (
-              <div className="flex flex-1 items-center justify-center p-8 text-center text-sm text-slate-500">
-                Select a saved output to open, export, or reuse in chat.
               </div>
-            )}
-          {notice ? <p className="shrink-0 border-t border-white/[0.06] px-4 py-2 text-xs text-emerald-300/90">{notice}</p> : null}
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                <OrbSavedOutputDetailActions
+                  record={detail}
+                  onNotice={setNotice}
+                  onAskOrb={onAskOrb || onReuseInChat}
+                  onSendToDictate={onSendToDictate}
+                  onUseInShiftBuilder={onUseInShiftBuilder}
+                  onReuseInChat={onReuseInChat}
+                  onRerun={onRerun ? handleRerun : undefined}
+                />
+                <OrbIntelligenceOutput output={recordToView(detail)} />
+              </div>
+            </>
+          ) : (
+            <div
+              className="flex flex-1 items-center justify-center p-8 text-center text-sm text-slate-500"
+              data-orb-saved-output-detail-empty
+            >
+              Select a saved output to open, export, or reuse in chat.
+            </div>
+          )}
+          {notice ? (
+            <p className="shrink-0 border-t border-white/[0.06] px-4 py-2 text-xs text-emerald-300/90">{notice}</p>
+          ) : null}
         </div>
       </div>
     </OrbStandalonePanelShell>

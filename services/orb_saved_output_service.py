@@ -28,6 +28,7 @@ from schemas.orb_saved_outputs import (
     OrbSavedOutputType,
     OrbSavedOutputUpdate,
 )
+from services.orb_brain_metadata_service import build_brain_metadata, normalise_brain_metadata
 from services.orb_intelligence_output_service import (
     STANDALONE_BOUNDARY_NOTICE,
     orb_intelligence_output_service,
@@ -381,8 +382,35 @@ class OrbSavedOutputService:
         )
         return self.create_output(user_id, payload)
 
+    def _enrich_create_metadata(self, payload: OrbSavedOutputCreate) -> dict[str, Any]:
+        """Merge brain metadata and standalone flags into saved output metadata."""
+        metadata = dict(payload.metadata or {})
+        metadata.setdefault("standalone", True)
+        metadata.setdefault("os_records_accessed", False)
+        metadata.setdefault("live_record_access", False)
+        if payload.created_from and not metadata.get("source_feature"):
+            metadata["source_feature"] = payload.created_from
+        nested_brain = metadata.get("brain_metadata")
+        intel = payload.intelligence_output or {}
+        if not isinstance(nested_brain, dict):
+            nested_brain = normalise_brain_metadata(intel) or normalise_brain_metadata(
+                {"brain_metadata": intel.get("brain_metadata")}
+            )
+        if not nested_brain:
+            feature = _text(metadata.get("source_feature") or payload.created_from) or "saved_outputs"
+            nested_brain = build_brain_metadata(
+                surface="orb_residential",
+                feature=feature.replace("_", " "),
+                mode=metadata.get("lens") or metadata.get("focus"),
+                lens=_text(metadata.get("lens")) or None,
+            )
+        metadata["brain_metadata"] = nested_brain
+        metadata.setdefault("artefact_notice", STANDALONE_ARTEFACT_NOTICE)
+        return metadata
+
     def create_output(self, user_id: int, payload: OrbSavedOutputCreate) -> OrbSavedOutputRecord:
         uid = self._resolve_user_id(user_id)
+        enriched_metadata = self._enrich_create_metadata(payload)
         record = OrbSavedOutputRecord(
             id=str(uuid4()),
             title=payload.title,
@@ -404,7 +432,7 @@ class OrbSavedOutputService:
             retrieval_context=dict(payload.retrieval_context),
             created_from=payload.created_from,
             created_from_id=payload.created_from_id,
-            metadata=dict(payload.metadata),
+            metadata=enriched_metadata,
         )
         row = self._record_to_row(record, user_id=uid)
         if self._detect_storage_mode() == "postgresql":
@@ -577,10 +605,16 @@ class OrbSavedOutputService:
             )
         if fmt == "plain_text":
             return self._markdown_to_plain(record.content_markdown or record.summary or "")
+        metadata = record.metadata or {}
+        source_feature = _text(metadata.get("source_feature") or record.created_from)
+        brain = metadata.get("brain_metadata")
+        if not isinstance(brain, dict):
+            brain = normalise_brain_metadata(record.intelligence_output or {})
         lines = [
             f"# {record.title}",
             "",
             f"**Type:** {record.type}",
+            f"**Source:** {source_feature.replace('_', ' ') if source_feature else 'manual'}",
             f"**Status:** {record.status}",
         ]
         if record.project_name:
@@ -591,12 +625,22 @@ class OrbSavedOutputService:
             lines.append("")
         if record.content_markdown:
             lines.append(record.content_markdown)
+        if isinstance(brain, dict) and brain.get("product"):
+            lines.extend(
+                [
+                    "",
+                    f"**ORB brain:** {brain.get('product')} · {brain.get('powered_by', 'IndiCare Intelligence')}",
+                ]
+            )
         lines.extend(
             [
                 "",
                 "---",
                 STANDALONE_ARTEFACT_NOTICE,
                 STANDALONE_BOUNDARY_NOTICE,
+                "Saved outputs are standalone ORB artefacts.",
+                "Review before sharing or relying on them.",
+                "Standalone ORB does not access live care records.",
             ]
         )
         return "\n".join(lines).strip()

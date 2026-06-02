@@ -8,6 +8,11 @@ import {
   type OrbIntelligenceOutputView
 } from '@/components/orb-standalone/orb-intelligence-output'
 import {
+  buildSavedOutputCreateBody,
+  ORB_SAVED_OUTPUT_BOUNDARY_LINES,
+  type OrbSavedOutputSaveExtras
+} from '@/lib/orb/orb-saved-output-adapters'
+import {
   createOrbSavedOutput,
   exportOrbSavedOutput,
   reuseOrbSavedOutput,
@@ -26,6 +31,7 @@ export function OrbOutputSaveActions({
   activeProjectName,
   createdFrom = 'manual',
   createdFromId,
+  saveExtras,
   onSaved,
   onReuseInChat,
   onNotice
@@ -39,6 +45,7 @@ export function OrbOutputSaveActions({
   activeProjectName?: string
   createdFrom?: string
   createdFromId?: string
+  saveExtras?: OrbSavedOutputSaveExtras
   onSaved?: (outputId: string) => void
   onReuseInChat?: (prompt: string) => void
   onNotice?: (message: string) => void
@@ -52,31 +59,39 @@ export function OrbOutputSaveActions({
 
   const markdown = buildCopyMarkdown(output)
 
+  function buildBody(resolvedType: OrbSavedOutputType) {
+    const project = projects.find((p) => p.id === projectId)
+    return buildSavedOutputCreateBody({
+      title: title.trim() || output.title,
+      type: resolvedType,
+      project_id: projectId || undefined,
+      project_name: project?.name || activeProjectName,
+      tags: tagsText
+        .split(',')
+        .map((t) => t.trim())
+        .filter(Boolean),
+      summary: output.summary,
+      content_markdown: markdown,
+      intelligence_output: output as unknown as Record<string, unknown>,
+      sources: output.sources,
+      citations: output.citations,
+      quality: output.quality as Record<string, unknown> | undefined,
+      created_from: createdFrom,
+      created_from_id: createdFromId,
+      extras: {
+        ...saveExtras,
+        source_feature: saveExtras?.source_feature || (createdFrom as OrbSavedOutputSaveExtras['source_feature'])
+      }
+    })
+  }
+
   async function handleSave(asType?: OrbSavedOutputType) {
     const resolvedType = asType || type
-    const project = projects.find((p) => p.id === projectId)
     setSaving(true)
     try {
-      const record = await createOrbSavedOutput({
-        title: title.trim() || output.title,
-        type: resolvedType,
-        project_id: projectId || undefined,
-        project_name: project?.name || activeProjectName,
-        tags: tagsText
-          .split(',')
-          .map((t) => t.trim())
-          .filter(Boolean),
-        summary: output.summary,
-        content_markdown: markdown,
-        intelligence_output: output as unknown as Record<string, unknown>,
-        sources: output.sources,
-        citations: output.citations,
-        quality: output.quality as Record<string, unknown> | undefined,
-        created_from: createdFrom,
-        created_from_id: createdFromId
-      })
+      const record = await createOrbSavedOutput(buildBody(resolvedType))
       onSaved?.(record.id)
-      onNotice?.('Saved to project.')
+      onNotice?.('Saved to Saved Outputs.')
       setSaveOpen(false)
     } catch {
       void navigator.clipboard.writeText(markdown)
@@ -88,16 +103,7 @@ export function OrbOutputSaveActions({
 
   async function handleExport() {
     try {
-      const saved = await createOrbSavedOutput({
-        title: title.trim() || output.title,
-        type,
-        project_id: projectId || undefined,
-        project_name: projects.find((p) => p.id === projectId)?.name,
-        summary: output.summary,
-        content_markdown: markdown,
-        intelligence_output: output as unknown as Record<string, unknown>,
-        created_from: createdFrom
-      })
+      const saved = await createOrbSavedOutput(buildBody(type))
       const exported = await exportOrbSavedOutput(saved.id, 'markdown')
       void navigator.clipboard.writeText(exported.content)
       onNotice?.('Exported markdown copied to clipboard.')
@@ -109,14 +115,7 @@ export function OrbOutputSaveActions({
 
   async function handleReuse() {
     try {
-      const saved = await createOrbSavedOutput({
-        title: title.trim() || output.title,
-        type,
-        summary: output.summary,
-        content_markdown: markdown,
-        intelligence_output: output as unknown as Record<string, unknown>,
-        created_from: createdFrom
-      })
+      const saved = await createOrbSavedOutput(buildBody(type))
       const reuse = await reuseOrbSavedOutput(saved.id)
       onReuseInChat?.(reuse.suggested_prompt)
     } catch {
@@ -127,16 +126,22 @@ export function OrbOutputSaveActions({
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" data-orb-output-save-actions>
+      <ul className="space-y-0.5 text-[11px] leading-relaxed text-slate-500">
+        {ORB_SAVED_OUTPUT_BOUNDARY_LINES.map((line) => (
+          <li key={line}>{line}</li>
+        ))}
+      </ul>
       <p className="text-[11px] leading-relaxed text-slate-500">{STANDALONE_ARTEFACT_NOTICE}</p>
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
           onClick={() => setSaveOpen((o) => !o)}
           className="inline-flex items-center gap-1 rounded-lg border border-cyan-400/30 bg-cyan-500/10 px-3 py-1.5 text-xs text-cyan-100"
+          data-orb-save-output
         >
           <FolderPlus className="h-3.5 w-3.5" aria-hidden />
-          Save to project
+          Save to Saved Outputs
         </button>
         <button
           type="button"
@@ -161,6 +166,7 @@ export function OrbOutputSaveActions({
             onNotice?.('Copied markdown to clipboard.')
           }}
           className="inline-flex items-center gap-1 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-slate-300"
+          data-orb-copy-output
         >
           <Copy className="h-3.5 w-3.5" aria-hidden />
           Copy markdown
@@ -169,6 +175,7 @@ export function OrbOutputSaveActions({
           type="button"
           onClick={() => void handleExport()}
           className="inline-flex items-center gap-1 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-slate-300"
+          data-orb-export-output
         >
           <Download className="h-3.5 w-3.5" aria-hidden />
           Export markdown
@@ -178,9 +185,10 @@ export function OrbOutputSaveActions({
             type="button"
             onClick={() => void handleReuse()}
             className="inline-flex items-center gap-1 rounded-lg border border-violet-400/30 bg-violet-500/10 px-3 py-1.5 text-xs text-violet-100"
+            data-orb-ask-orb-output
           >
             <MessageSquarePlus className="h-3.5 w-3.5" aria-hidden />
-            Reuse in chat
+            Ask ORB about this
           </button>
         ) : null}
       </div>
@@ -208,6 +216,8 @@ export function OrbOutputSaveActions({
               <option value="staff_briefing">Staff briefing</option>
               <option value="deep_research">Deep research</option>
               <option value="general_research">General research</option>
+              <option value="intelligence_note">Note</option>
+              <option value="recording_rewrite">Recording rewrite</option>
             </select>
           </label>
           <label className="block text-xs text-slate-400">
