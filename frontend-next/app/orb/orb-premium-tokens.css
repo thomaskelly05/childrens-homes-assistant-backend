@@ -858,3 +858,48 @@ html[data-orb-residential='1'] .orb-theme-light .orb-message-assistant .orb-mess
   min-height: 7.5rem;
   max-height: 12rem;
 }
+
+/* Mobile product tokens — Dictate, Voice, home */
+html[data-orb-residential='1'] {
+  --orb-mobile-bg: #f5f9ff;
+  --orb-mobile-card: #ffffff;
+  --orb-mobile-line: rgba(22, 119, 255, 0.14);
+  --orb-primary-blue: #168bff;
+  --orb-primary-blue-2: #0d5fcc;
+  --orb-text: #0a1628;
+  --orb-muted: #52657a;
+}
+
+html[data-orb-residential='1']:not(.orb-theme-light) .orb-dictate-mobile,
+html[data-orb-residential='1']:not(.orb-theme-light) .orb-voice-mobile {
+  --orb-mobile-bg: #070b14;
+  --orb-mobile-card: rgba(255, 255, 255, 0.06);
+  --orb-mobile-line: rgba(255, 255, 255, 0.12);
+  --orb-text: #f7faff;
+  --orb-muted: #a7aebd;
+}
+
+.glass-orb-mark--home .glass-orb-mark__sphere,
+.glass-orb-mark--dictate .glass-orb-mark__sphere,
+.glass-orb-mark--voice-mobile .glass-orb-mark__sphere {
+  box-shadow:
+    0 0 32px rgba(22, 139, 255, 0.45),
+    0 0 64px rgba(66, 215, 255, 0.2),
+    inset 0 -8px 24px rgba(13, 95, 204, 0.35);
+}
+
+.glass-orb-mark--pulse .glass-orb-mark__sphere {
+  animation: orb-mobile-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes orb-mobile-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  50% {
+    transform: scale(1.04);
+    filter: brightness(1.08);
+  }
+}

@@ -14,12 +14,43 @@ import {
   voiceMobilePrimaryButton,
   voiceMobileStatusLine
 } from '../../lib/orb/voice/orb-voice-mobile-copy.ts'
+import {
+  ORB_VOICE_DEBUG_CONFIG_HINT,
+  sanitizeOrbVoiceUserMessage
+} from '../../lib/orb/voice/orb-voice-user-messages.ts'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '../..')
 
 function readComponent(relativePath: string) {
   return readFileSync(join(root, relativePath), 'utf8')
 }
+
+describe('ORB mobile home shell', () => {
+  it('mobile home greeting is visible and uses strong heading tokens', () => {
+    const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
+    const mobileCss = readComponent('app/orb/orb-mobile.css')
+    assert.match(companion, /data-orb-empty-heading-mobile/)
+    assert.match(companion, /Ready when you are/)
+    assert.match(mobileCss, /data-orb-empty-heading-mobile/)
+    assert.match(mobileCss, /#0a1628|#f7faff/)
+  })
+
+  it('starter prompts render as premium cards not hidden on mobile', () => {
+    const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
+    const mobileCss = readComponent('app/orb/orb-mobile.css')
+    assert.match(companion, /data-orb-starter-cards/)
+    assert.match(companion, /data-orb-starter-card/)
+    assert.match(mobileCss, /\[data-orb-starter-cards\]/)
+    assert.match(mobileCss, /\[data-orb-starter-card\]/)
+    assert.doesNotMatch(mobileCss, /\[data-orb-starter-cards\]\s*\{[^}]*display:\s*none/)
+  })
+
+  it('mobile layout avoids horizontal overflow on empty state', () => {
+    const mobileCss = readComponent('app/orb/orb-mobile.css')
+    assert.match(mobileCss, /overflow-x:\s*hidden/)
+    assert.match(mobileCss, /max-width:\s*100vw/)
+  })
+})
 
 describe('ORB mobile premium Dictate copy', () => {
   it('idle shows Start recording', () => {
@@ -64,24 +95,46 @@ describe('ORB mobile premium Dictate copy', () => {
       'Record more'
     )
     const dictate = readComponent('components/orb-standalone/orb-dictate-station.tsx')
-    assert.match(dictate, /data-orb-dictate-primary-action/)
+    const mobile = readComponent('components/orb-standalone/orb-dictate-mobile-experience.tsx')
+    assert.match(dictate, /OrbDictateMobileExperience/)
+    assert.match(mobile, /data-orb-dictate-primary-action/)
     assert.doesNotMatch(dictate, /Start speech transcript/)
+    assert.doesNotMatch(mobile, /Start speech transcript/)
   })
 
-  it('transcript ready shows captured card and generate enabled wiring', () => {
+  it('idle does not show old START grid by default on mobile', () => {
+    const mobile = readComponent('components/orb-standalone/orb-dictate-mobile-experience.tsx')
+    const station = readComponent('components/orb-standalone/orb-dictate-station.tsx')
+    assert.match(mobile, /data-orb-dictate-recording-options-toggle/)
+    assert.match(mobile, /Recording options/)
+    assert.match(station, /hidden min-h-0 flex-1 gap-4 overflow-hidden md:grid/)
+    assert.doesNotMatch(mobile, /<h3[^>]*>Start<\/h3>/)
+  })
+
+  it('transcript ready shows captured transcript card and sticky generate', () => {
     assert.equal(dictateMobileShowsCapturedCard({ hasTranscript: true, dictateState: 'transcript_ready' }), true)
-    const dictate = readComponent('components/orb-standalone/orb-dictate-station.tsx')
-    assert.match(dictate, /data-orb-dictate-captured-card/)
-    assert.match(dictate, /data-orb-dictate-generate-sticky/)
-    assert.match(dictate, /disabled=\{generating \|\| !effectiveInputText\.trim\(\)\}/)
+    const mobile = readComponent('components/orb-standalone/orb-dictate-mobile-experience.tsx')
+    assert.match(mobile, /data-orb-dictate-captured-card/)
+    assert.match(mobile, /data-orb-dictate-generate-sticky/)
+    assert.match(mobile, /data-orb-dictate-generate-idle/)
+    assert.match(mobile, /disabled=\{generating \|\| !effectiveInputText\.trim\(\)\}/)
   })
 
-  it('error without transcript does not show captured state', () => {
-    assert.equal(dictateMobileShowsCapturedCard({ hasTranscript: false, dictateState: 'error' }), false)
-    assert.equal(
-      dictateMobilePrimaryButton({ dictateState: 'error', recordingUiState: 'error', hasTranscript: false }),
-      'Try again'
-    )
+  it('advanced transcript editing is collapsed by default', () => {
+    const mobile = readComponent('components/orb-standalone/orb-dictate-mobile-experience.tsx')
+    assert.match(mobile, /Advanced transcript editing/)
+    assert.match(mobile, /aria-expanded=\{mobileAdvancedOpen\}/)
+    assert.doesNotMatch(mobile, /data-orb-dictate-advanced-body[\s\S]*mobileAdvancedOpen \? null/)
+  })
+
+  it('technical realtime copy appears only with debugVoice', () => {
+    const mobile = readComponent('components/orb-standalone/orb-dictate-mobile-experience.tsx')
+    assert.match(mobile, /isOrbVoiceDebugMode/)
+    assert.match(mobile, /Realtime transcription ready/)
+    assert.ok(isTechnicalDictateStatus('Start server realtime transcription'))
+    const userFacing = mobile.replace(/voiceDebug[\s\S]*?Realtime transcription ready/g, '')
+    assert.doesNotMatch(userFacing, /Start speech transcript/)
+    assert.doesNotMatch(userFacing, /server realtime transcription/)
   })
 })
 
@@ -89,20 +142,59 @@ describe('ORB mobile premium Voice copy', () => {
   it('idle shows one primary Start control', () => {
     assert.equal(voiceMobilePrimaryButton({ sessionLive: false, starting: false }), 'Start')
     const voice = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(voice, /data-orb-voice-primary-action/)
+    const mobile = readComponent('components/orb-standalone/orb-voice-mobile-experience.tsx')
+    assert.match(voice, /OrbVoiceMobileExperience/)
+    assert.match(mobile, /data-orb-voice-primary-action/)
     assert.match(voice, /Talk with ORB/)
   })
 
-  it('unavailable shows Dictate and Type fallback without fake active state', () => {
-    const voice = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(voice, /Live voice is not available right now/)
-    assert.match(voice, /data-orb-voice-open-dictate/)
-    assert.match(voice, /Type instead/)
-    assert.match(voice, /voice_fake_active_prevented/)
+  it('unavailable shows one Open Dictate and one Type instead', () => {
+    const mobile = readComponent('components/orb-standalone/orb-voice-mobile-experience.tsx')
+    assert.match(mobile, /data-orb-voice-fallbacks/)
+    assert.match(mobile, /data-orb-voice-open-dictate/)
+    assert.match(mobile, /data-orb-voice-type-instead/)
+    const openCount = (mobile.match(/>\s*Open Dictate\s*</g) || []).length
+    assert.equal(openCount, 1)
+    const typeCount = (mobile.match(/>\s*Type instead\s*</g) || []).length
+    assert.equal(typeCount, 1)
     assert.equal(
       voiceMobileStatusLine({ phase: 'unavailable', blockedReason: null }),
-      'Live voice is not available right now'
+      'Live voice is unavailable right now'
     )
+  })
+
+  it('does not expose env var names unless debugVoice', () => {
+    const voice = readComponent('components/orb-standalone/orb-voice-station.tsx')
+    const mobile = readComponent('components/orb-standalone/orb-voice-mobile-experience.tsx')
+    assert.match(voice, /sanitizeOrbVoiceUserMessage/)
+    assert.match(mobile, /orbVoiceUnavailablePresentation/)
+    assert.match(readComponent('lib/orb/voice/orb-voice-user-messages.ts'), /ORB_VOICE_DEBUG_CONFIG_HINT/)
+    assert.equal(
+      sanitizeOrbVoiceUserMessage('Set OPENAI_API_KEY and ORB_REALTIME_ENABLED=true', { debug: false }),
+      'You can still use Dictate or type to ORB.'
+    )
+    assert.match(
+      sanitizeOrbVoiceUserMessage('Set OPENAI_API_KEY', { debug: true }) ?? '',
+      /OPENAI_API_KEY/
+    )
+    assert.doesNotMatch(voice, /OPENAI_API_KEY/)
+    assert.match(readComponent('lib/orb/voice/orb-voice-user-messages.ts'), /Realtime voice not configured/)
+  })
+
+  it('active session shows one End via primary action wiring', () => {
+    assert.equal(voiceMobilePrimaryButton({ sessionLive: true, starting: false }), 'End')
+    const mobile = readComponent('components/orb-standalone/orb-voice-mobile-experience.tsx')
+    assert.match(readComponent('components/orb-standalone/orb-voice-station.tsx'), /if \(voiceSessionLive\) handleEnd\(\)/)
+  })
+
+  it('post-session shows Dictate copy and new conversation without duplicate fallbacks', () => {
+    const mobile = readComponent('components/orb-standalone/orb-voice-mobile-experience.tsx')
+    assert.match(mobile, /data-orb-voice-post-session/)
+    assert.match(mobile, /Send transcript to Dictate/)
+    assert.match(mobile, /Copy transcript/)
+    assert.match(mobile, /New conversation/)
+    assert.doesNotMatch(mobile, /Open Dictate instead/)
+    assert.doesNotMatch(mobile, /Open Dictate again/)
   })
 })
 
@@ -123,14 +215,16 @@ describe('ORB mobile shell and composer', () => {
     assert.match(mobileCss, /data-orb-composer-mic/)
   })
 
-  it('non-debug UI avoids technical dictate copy strings', () => {
-    const dictate = readComponent('components/orb-standalone/orb-dictate-station.tsx')
-    assert.match(dictate, /isOrbDeveloperMode/)
-    assert.match(dictate, /isTechnicalDictateStatus/)
-    assert.ok(isTechnicalDictateStatus('Start server realtime transcription'))
-    assert.ok(isTechnicalDictateStatus('Speech transcript captured — review'))
-    const userFacing = dictate.replace(/developerMode[\s\S]*?<\/div>/g, '')
-    assert.doesNotMatch(userFacing, /Start speech transcript/)
-    assert.doesNotMatch(userFacing, /server realtime transcription/)
+  it('mobile product tokens are defined', () => {
+    const tokens = readComponent('app/orb/orb-premium-tokens.css')
+    for (const name of [
+      '--orb-mobile-bg',
+      '--orb-mobile-card',
+      '--orb-primary-blue',
+      '--orb-text',
+      '--orb-muted'
+    ]) {
+      assert.match(tokens, new RegExp(name))
+    }
   })
 })

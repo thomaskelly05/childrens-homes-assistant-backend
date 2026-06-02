@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 
 import { OrbAppModal } from '@/components/orb-standalone/orb-app-modal'
+import { OrbDictateMobileExperience } from '@/components/orb-standalone/orb-dictate-mobile-experience'
 import { OrbDictateStudio } from '@/components/orb-standalone/orb-dictate-studio'
 import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
 import type { useStandaloneOrbVoice } from '@/components/orb-standalone/use-standalone-orb-voice'
@@ -97,7 +98,6 @@ import {
   dictateMobileShowsCapturedCard,
   dictateMobileStatusLine,
   isTechnicalDictateStatus,
-  ORB_DICTATE_MOBILE_AI_ACTIONS,
   type DictateMobileAiActionId
 } from '@/lib/orb/dictate/orb-dictate-mobile-copy'
 
@@ -208,8 +208,9 @@ export function OrbDictateStation({
   )
   const [browserFallbackChosen, setBrowserFallbackChosen] = useState(false)
   const [realtimeInterim, setRealtimeInterim] = useState('')
-  const [mobileModeOpen, setMobileModeOpen] = useState(false)
+  const [mobileRecordingOpen, setMobileRecordingOpen] = useState(false)
   const [mobileAdvancedOpen, setMobileAdvancedOpen] = useState(false)
+  const [mobileOutputOpen, setMobileOutputOpen] = useState(false)
   const dictateRealtimeRef = useRef<OrbDictateRealtimeTranscription | null>(null)
   const developerMode = isOrbDeveloperMode()
 
@@ -1180,210 +1181,71 @@ export function OrbDictateStation({
           <OrbDictateStudio output={output} participants={participants} segments={segments} onBack={() => setPhase('capture')} onSendToChat={onSendToChat} onOpenOrbVoice={onOpenOrbVoice} onStatusMessage={setStatusMessage} />
         ) : (
           <>
-        <div
-          className="orb-dictate-mobile flex min-h-0 flex-1 flex-col md:hidden"
-          data-orb-dictate-mobile
-        >
-          <section className="flex shrink-0 flex-col items-center px-2 pt-2 text-center">
-            <GlassOrbMark
-              size="dictate"
-              pulse={recordingActive && !recordingPaused}
-              className={orbClass}
-            />
-            <p className="mt-3 text-sm text-[var(--orb-muted)]" data-orb-dictate-status-line>
-              {mobileStatusLine}
-            </p>
-            {recordingActive || captureStarting ? (
-              <p className="mt-1 font-mono text-xs text-[var(--orb-muted)]" data-orb-dictate-timer>
-                {formatTimer(timerSec)}
-              </p>
-            ) : realtimeTranscriptionAvailable === true ? (
-              <p className="mt-1 text-[11px] text-[var(--orb-muted)]">Realtime transcription ready</p>
-            ) : null}
-            <button
-              type="button"
-              data-orb-dictate-primary-action
-              data-orb-dictate-speech-start={mobilePrimaryLabel === 'Start recording' || mobilePrimaryLabel === 'Record more' ? 'true' : undefined}
-              className="mt-4 inline-flex min-h-[2.75rem] items-center justify-center rounded-full bg-gradient-to-r from-[#168bff] to-[#0d5fcc] px-8 text-sm font-semibold text-white shadow-lg shadow-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={uploadingAudio || (needsConsent && !consentConfirmed && mobilePrimaryLabel === 'Start recording')}
-              onClick={() => handleMobilePrimaryAction()}
-            >
-              {captureStarting ? 'Starting…' : mobilePrimaryLabel}
-            </button>
-            {showMobileCapturedCard ? (
-              <div className="mt-2 flex flex-wrap justify-center gap-2">
-                <button
-                  type="button"
-                  data-orb-dictate-clear
-                  className="rounded-full border border-[var(--orb-line)]/60 px-3 py-1 text-xs text-[var(--orb-muted)]"
-                  onClick={handleClearTranscript}
-                >
-                  Clear
-                </button>
-                {dictateState === 'error' || recordingUiState === 'error' ? (
-                  <button
-                    type="button"
-                    className="rounded-full border border-[var(--orb-line)]/60 px-3 py-1 text-xs text-[var(--orb-primary)]"
-                    onClick={() => {
-                      setStartMode('paste')
-                      setStatusMessage('Paste your transcript below.')
-                    }}
-                  >
-                    Paste transcript
-                  </button>
-                ) : null}
-              </div>
-            ) : null}
-          </section>
-
-          <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-28">
-            {recordingActive ? (
-              <div
-                className="mt-3 rounded-2xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)] p-3"
-                data-orb-dictate-live-transcript
-              >
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--orb-muted)]">Live transcript</p>
-                <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[var(--orb-foreground)]">
-                  {liveTranscript || <span className="text-[var(--orb-muted)]">Your words will appear here…</span>}
-                </p>
-              </div>
-            ) : null}
-
-            {showMobileCapturedCard ? (
-              <section className="mt-3" data-orb-dictate-captured-card>
-                <p className="text-xs font-semibold text-[var(--orb-foreground)]">Captured transcript</p>
-                <textarea
-                  value={effectiveInputText}
-                  onChange={(e) => {
-                    setTranscript(e.target.value)
-                    setSegments(textToSegments(e.target.value, 'paste', participants))
-                  }}
-                  rows={6}
-                  className="mt-2 w-full resize-y rounded-2xl border border-[var(--orb-line)]/60 bg-[var(--orb-surface)] px-3 py-2.5 text-sm leading-6 text-[var(--orb-foreground)]"
-                  data-orb-dictate-captured-text
-                />
-                <button
-                  type="button"
-                  className="mt-2 text-xs text-[var(--orb-primary)]"
-                  onClick={() => setMobileAdvancedOpen((o) => !o)}
-                >
-                  {mobileAdvancedOpen ? 'Hide advanced editing' : 'Advanced transcript editing'}
-                </button>
-                {mobileAdvancedOpen ? (
-                  <div className="mt-2 space-y-2">
-                    <OrbDictateTranscriptSegmentsEditor
-                      segments={segments}
-                      participants={participants}
-                      onChange={(next) => {
-                        setSegments(next)
-                        setTranscript(segmentsToPlainText(next))
-                      }}
-                    />
-                    <OrbDictateParticipantsPanel
-                      participants={participants}
-                      onChange={setParticipants}
-                      transcript={effectiveInputText}
-                      onImportFromTranscript={() => {
-                        const suggested = suggestParticipantsFromText(effectiveInputText)
-                        setParticipants(suggested)
-                      }}
-                    />
-                  </div>
-                ) : null}
-              </section>
-            ) : null}
-
-            {showMobileCapturedCard ? (
-              <div className="mt-4 flex flex-wrap gap-2" data-orb-dictate-ai-actions>
-                {ORB_DICTATE_MOBILE_AI_ACTIONS.map((action) => (
-                  <button
-                    key={action.id}
-                    type="button"
-                    data-orb-dictate-ai={action.id}
-                    className="rounded-full border border-[var(--orb-line)]/60 bg-[var(--orb-surface-elevated)] px-3 py-1.5 text-xs text-[var(--orb-foreground)]"
-                    disabled={generating}
-                    onClick={() => handleMobileAiAction(action.id)}
-                  >
-                    {action.label}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-
-            <div className="mt-4">
-              <button
-                type="button"
-                className="flex w-full items-center justify-between rounded-xl border border-[var(--orb-line)]/50 px-3 py-2 text-xs text-[var(--orb-muted)]"
-                onClick={() => setMobileModeOpen((o) => !o)}
-                data-orb-dictate-mode-toggle
-              >
-                <span>Mode · {ORB_DICTATE_MODE_LABELS[dictateMode]}</span>
-                <span>{mobileModeOpen ? '−' : '+'}</span>
-              </button>
-              {mobileModeOpen ? (
-                <div className="mt-2 space-y-2 rounded-xl border border-[var(--orb-line)]/40 p-2">
-                  <OrbDictateModeSelect mode={dictateMode} onChange={setDictateMode} />
-                  <div className="grid grid-cols-2 gap-2">
-                    {(
-                      [
-                        ['record_note', 'Record note'],
-                        ['record_debrief', 'Record debrief'],
-                        ['paste', 'Paste transcript'],
-                        ['import_voice', 'Import voice'],
-                        ['template', 'Use template']
-                      ] as const
-                    ).map(([id, label]) => (
-                      <button
-                        key={id}
-                        type="button"
-                        data-orb-dictate-start={id}
-                        className={`rounded-lg border px-2 py-2 text-left text-[11px] ${startMode === id ? 'border-[var(--orb-primary)]/40 bg-[var(--orb-primary-soft)]' : 'border-[var(--orb-line)]/50'}`}
-                        onClick={() => handleSelectStartMode(id)}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                  {startMode === 'paste' ? (
-                    <textarea
-                      data-orb-dictate-paste
-                      value={pasteText}
-                      onChange={(e) => setPasteText(e.target.value)}
-                      rows={3}
-                      placeholder="Paste transcript…"
-                      className="w-full rounded-lg border border-[var(--orb-line)]/60 bg-[var(--orb-surface)] px-2 py-2 text-sm"
-                    />
-                  ) : null}
-                </div>
-              ) : null}
-            </div>
-
-            {developerMode ? (
-              <p className="mt-3 font-mono text-[10px] text-[var(--orb-muted)]" data-orb-dictate-debug>
-                mode={captureMode} state={dictateState} len={effectiveInputText.length}
-              </p>
-            ) : null}
-          </div>
-
-          <div
-            className="sticky bottom-0 shrink-0 border-t border-[var(--orb-line)]/40 bg-[var(--orb-surface)] px-3 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
-            data-orb-dictate-generate-sticky
-          >
-            <button
-              type="button"
-              data-orb-dictate-generate
-              disabled={generating || !effectiveInputText.trim()}
-              className="w-full rounded-full bg-gradient-to-r from-[#168bff] to-[#0d5fcc] py-3 text-sm font-semibold text-white disabled:opacity-50"
-              onClick={() => void runGenerate()}
-            >
-              {generating
-                ? 'Generating…'
-                : effectiveInputText.trim()
-                  ? 'Generate professional note'
-                  : 'Add a transcript to generate'}
-            </button>
-          </div>
-        </div>
+        <OrbDictateMobileExperience
+          orbClass={orbClass}
+          mobileStatusLine={mobileStatusLine}
+          mobilePrimaryLabel={mobilePrimaryLabel}
+          captureStarting={captureStarting}
+          recordingActive={recordingActive && !recordingPaused}
+          timerSec={timerSec}
+          formatTimer={formatTimer}
+          showRealtimeReadyHint={realtimeTranscriptionAvailable === true}
+          uploadingAudio={uploadingAudio}
+          needsConsent={needsConsent}
+          consentConfirmed={consentConfirmed}
+          onPrimaryAction={handleMobilePrimaryAction}
+          showCapturedCard={showMobileCapturedCard}
+          liveTranscript={liveTranscript}
+          effectiveInputText={effectiveInputText}
+          onTranscriptChange={(value) => {
+            setTranscript(value)
+            setSegments(textToSegments(value, 'paste', participants))
+          }}
+          segments={segments}
+          participants={participants}
+          onSegmentsChange={(next) => {
+            setSegments(next)
+            setTranscript(segmentsToPlainText(next))
+          }}
+          onParticipantsChange={setParticipants}
+          onImportParticipants={() => {
+            const suggested = suggestParticipantsFromText(effectiveInputText)
+            setParticipants(suggested)
+          }}
+          mobileAdvancedOpen={mobileAdvancedOpen}
+          onToggleAdvanced={() => setMobileAdvancedOpen((o) => !o)}
+          onClearTranscript={handleClearTranscript}
+          onPasteTranscript={() => {
+            setStartMode('paste')
+            setMobileRecordingOpen(true)
+            setStatusMessage('Paste your transcript below.')
+          }}
+          onAudioUpload={(file) => void handleAudioUpload(file)}
+          generating={generating}
+          onAiAction={handleMobileAiAction}
+          onGenerate={() => void runGenerate()}
+          mobileRecordingOpen={mobileRecordingOpen}
+          onToggleRecordingOptions={() => setMobileRecordingOpen((o) => !o)}
+          dictateMode={dictateMode}
+          onDictateModeChange={setDictateMode}
+          noteType={noteType}
+          onNoteTypeChange={setNoteType}
+          startMode={startMode}
+          onSelectStartMode={handleSelectStartMode}
+          pasteText={pasteText}
+          onPasteTextChange={setPasteText}
+          onApplyPaste={applyPaste}
+          output={output}
+          outputTab={outputTab}
+          onOutputTabChange={setOutputTab}
+          editedNote={editedNote}
+          onEditedNoteChange={setEditedNote}
+          mobileOutputOpen={mobileOutputOpen}
+          onToggleOutputPreview={() => setMobileOutputOpen((o) => !o)}
+          developerMode={developerMode}
+          dictateState={dictateState}
+          recordingUiState={recordingUiState}
+        />
 
         <p className="hidden shrink-0 px-1 pb-3 text-sm text-[var(--orb-muted)] md:block">
           Speak naturally. ORB will help turn rough notes, debriefs or conversations into structured professional wording.
@@ -1541,7 +1403,7 @@ export function OrbDictateStation({
         {output ? <button type="button" data-orb-dictate-open-studio className="mt-2 w-full rounded-xl border border-[var(--orb-line)] bg-[var(--orb-primary-soft)] py-2 text-sm font-medium text-[var(--orb-primary)]" onClick={() => setPhase('studio')}>Open ORB Dictate Studio</button> : null}
           </>
         )}
-        <footer className="mt-3 shrink-0 space-y-1 border-t border-[var(--orb-line)]/30 pt-3 text-[10px] text-[var(--orb-muted)]">
+        <footer className="mt-3 hidden shrink-0 space-y-1 border-t border-[var(--orb-line)]/30 pt-3 text-[10px] text-[var(--orb-muted)] md:block">
           <p>{ORB_DICTATE_GOVERNANCE_COPY.draft}</p><p>{ORB_DICTATE_GOVERNANCE_COPY.speaker}</p><p data-orb-dictate-speaker-boundary>{SPEAKER_BOUNDARY_COPY}</p><p>{ORB_DICTATE_GOVERNANCE_COPY.recording}</p><p>{ORB_DICTATE_GOVERNANCE_COPY.boundary}</p><p>{ORB_DICTATE_GOVERNANCE_COPY.saveWording}</p><p>{ORB_DICTATE_GOVERNANCE_COPY.retention}</p>{statusMessage ? <p className="text-xs text-[var(--orb-primary)]" role="status">{statusMessage}</p> : null}
         </footer>
       </div>
