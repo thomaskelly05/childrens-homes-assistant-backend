@@ -96,4 +96,51 @@ describe('ORB Residential dark theme lock', () => {
     assert.match(theme, /overflow-x-hidden/)
     assert.match(mobileCss, /overflow-x:\s*hidden/)
   })
+
+  it('desktop CSS scopes light defaults away from residential layout', () => {
+    const desktop = readComponent('app/orb/orb-desktop.css')
+    assert.match(desktop, /\.orb-chat-layout:not\(\.orb-chat-layout--residential\)/)
+    assert.match(desktop, /\.orb-chat-layout--residential[\s\S]*color-scheme:\s*dark/)
+    assert.match(desktop, /shell\/layout dark authority/)
+    assert.match(
+      desktop,
+      /\.orb-chat-layout:not\(\.orb-chat-layout--residential\)[\s\S]*#ffffff 0%, #ffffff 52%/
+    )
+  })
+
+  it('desktop CSS applies workspace dark tokens at lg+ for residential', () => {
+    const desktop = readComponent('app/orb/orb-desktop.css')
+    assert.match(desktop, /@media \(min-width: 1024px\)[\s\S]*\.orb-chat-layout--residential \.orb-main-workspace/)
+    assert.match(desktop, /--orb-mobile-ws-panel/)
+    assert.match(desktop, /\[data-orb-billing-modal\] \.orb-billing-card/)
+    assert.match(desktop, /\.orb-chat-context-panel/)
+  })
+
+  it('premium tokens residential launch lock quarantines light theme', () => {
+    const premium = readComponent('app/orb/orb-premium-tokens.css')
+    assert.match(premium, /ORB Residential launch lock/)
+    assert.match(premium, /\.orb-chat-layout--residential\.orb-theme-light[\s\S]*color-scheme:\s*dark/)
+    assert.match(premium, /--orb-mobile-ws-panel:\s*#070b14/)
+    assert.doesNotMatch(premium, /--orb-mobile-bg:\s*#f5f9ff/)
+  })
+
+  it('care companion never applies orb-theme-light on residential surface', () => {
+    const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
+    assert.match(companion, /residentialSurface \? 'dark' : resolvedTheme/)
+    assert.match(companion, /orb-theme-dark/)
+    assert.doesNotMatch(companion, /residentialSurface \? 'orb-theme-light'/)
+  })
+
+  it('ORB_DESKTOP_THEME_AUDIT helper is registered for debug', () => {
+    const audit = readComponent('components/orb-standalone/orb-ui-audit.ts')
+    assert.match(audit, /runOrbDesktopThemeAudit/)
+    assert.match(audit, /ORB_DESKTOP_THEME_AUDIT/)
+    assert.match(audit, /whiteCardCountInResidential/)
+    assert.match(audit, /residentialLightLayoutCount/)
+  })
+
+  it('context panel stays xl-only two-column (not mobile)', () => {
+    const layout = readComponent('components/orb/orb-layout.tsx')
+    assert.match(layout, /orb-chat-context-panel hidden[\s\S]*xl:flex/)
+  })
 })

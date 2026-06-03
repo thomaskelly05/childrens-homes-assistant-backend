@@ -54,10 +54,11 @@ describe('ORB Residential composer and shell cleanup', () => {
     assert.match(station, /OrbVoiceActions/)
   })
 
-  it('premium tokens prefer layout-scoped residential theme selectors', () => {
+  it('premium tokens use residential launch lock over legacy light selectors', () => {
     const premium = readComponent('app/orb/orb-premium-tokens.css')
-    assert.match(premium, /\.orb-chat-layout--residential\.orb-theme-light/)
-    assert.match(premium, /\[data-orb-shell='true'\]\[data-orb-theme='light'\]/)
+    assert.match(premium, /ORB Residential launch lock/)
+    assert.match(premium, /\[data-orb-shell='true'\]\[data-orb-residential='true'\]/)
+    assert.match(premium, /\.orb-chat-layout--residential\.orb-theme-light[\s\S]*--orb-premium-bg-deep:\s*#05070d/)
     assert.doesNotMatch(
       premium,
       /html\[data-orb-residential='1'\]:not\(:has\(\.orb-theme-light\)\)\s*\{/
