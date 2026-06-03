@@ -424,6 +424,214 @@ export function runOrbUiDuplicates(): {
   }
 }
 
+export type OrbThemeAuditResult = ReturnType<typeof runOrbThemeAudit>
+export type OrbOrbAuditResult = ReturnType<typeof runOrbOrbAudit>
+export type OrbResidentialFullAuditResult = ReturnType<typeof runOrbResidentialFullAudit>
+
+function reasonOrbNodeHidden(el: HTMLElement): string | null {
+  const style = window.getComputedStyle(el)
+  const rect = el.getBoundingClientRect()
+  if (style.display === 'none') return 'display:none'
+  if (style.visibility === 'hidden') return 'visibility:hidden'
+  if (Number(style.opacity) === 0) return 'opacity:0'
+  if (rect.width <= 0 || rect.height <= 0) return `zero-size:${rect.width}x${rect.height}`
+
+  const parent = el.parentElement
+  if (parent) {
+    const parentStyle = window.getComputedStyle(parent)
+    if (parentStyle.display === 'none') return 'parent-display:none'
+    if (parentStyle.overflow === 'hidden' && rect.width > 0) {
+      const parentRect = parent.getBoundingClientRect()
+      if (rect.right > parentRect.right + 2 || rect.bottom > parentRect.bottom + 2) {
+        return 'parent-overflow:hidden'
+      }
+    }
+  }
+  return null
+}
+
+/** Runtime theme alignment audit — html, body, shell, layout, classes, mismatches. */
+export function runOrbThemeAudit(): {
+  selectedAppearance: string | null
+  resolvedTheme: string | null
+  htmlTheme: string | null
+  bodyTheme: string | null
+  shellTheme: string | null
+  layoutTheme: string | null
+  htmlClasses: string
+  bodyClasses: string
+  shellClasses: string
+  cssColorScheme: string
+  mismatches: string[]
+} {
+  if (typeof document === 'undefined') {
+    return {
+      selectedAppearance: null,
+      resolvedTheme: null,
+      htmlTheme: null,
+      bodyTheme: null,
+      shellTheme: null,
+      layoutTheme: null,
+      htmlClasses: '',
+      bodyClasses: '',
+      shellClasses: '',
+      cssColorScheme: '',
+      mismatches: ['no-document']
+    }
+  }
+
+  const shell = document.querySelector('[data-orb-shell="true"]')
+  const layout = document.querySelector('.orb-chat-layout--residential')
+  const html = document.documentElement
+  const body = document.body
+
+  const selectedAppearance = html.dataset.orbAppearanceMode ?? html.dataset.orbAppearance ?? null
+  const resolvedTheme = html.dataset.orbSystemTheme ?? html.dataset.orbTheme ?? null
+  const htmlTheme = html.dataset.orbTheme ?? null
+  const bodyTheme = body?.dataset.orbTheme ?? null
+  const shellTheme = shell?.getAttribute('data-orb-theme') ?? null
+  const layoutTheme = layout?.getAttribute('data-orb-theme') ?? null
+  const mismatches: string[] = []
+
+  if (!resolvedTheme) mismatches.push('missing resolved theme on html')
+  if (htmlTheme !== resolvedTheme) mismatches.push('html data-orb-theme mismatch')
+  if (bodyTheme && bodyTheme !== resolvedTheme) mismatches.push('body data-orb-theme mismatch')
+  if (shellTheme && shellTheme !== resolvedTheme) mismatches.push('shell data-orb-theme mismatch')
+  if (layoutTheme && layoutTheme !== resolvedTheme) mismatches.push('layout data-orb-theme mismatch')
+  if (resolvedTheme && !html.classList.contains(`orb-theme-${resolvedTheme}`)) {
+    mismatches.push(`html missing orb-theme-${resolvedTheme}`)
+  }
+  if (resolvedTheme && body && !body.classList.contains(`orb-theme-${resolvedTheme}`)) {
+    mismatches.push(`body missing orb-theme-${resolvedTheme}`)
+  }
+  if (html.style.colorScheme && resolvedTheme && html.style.colorScheme !== resolvedTheme) {
+    mismatches.push('html color-scheme mismatch')
+  }
+
+  return {
+    selectedAppearance,
+    resolvedTheme,
+    htmlTheme,
+    bodyTheme,
+    shellTheme,
+    layoutTheme,
+    htmlClasses: html.className,
+    bodyClasses: body?.className ?? '',
+    shellClasses: shell?.className ?? '',
+    cssColorScheme: html.style.colorScheme || '',
+    mismatches
+  }
+}
+
+/** Runtime living ORB visibility audit. */
+export function runOrbOrbAudit(): {
+  presenceCount: number
+  sphereCount: number
+  visiblePresenceCount: number
+  visibleSphereCount: number
+  nodes: Array<{
+    selector: string
+    display: string
+    visibility: string
+    opacity: string
+    width: number
+    height: number
+    zIndex: string
+    position: string
+    background: string
+    parentDisplay: string
+    parentOverflow: string
+    parentWidth: number
+    parentHeight: number
+    reasonIfHidden: string | null
+  }>
+} {
+  if (typeof document === 'undefined' || typeof window === 'undefined') {
+    return {
+      presenceCount: 0,
+      sphereCount: 0,
+      visiblePresenceCount: 0,
+      visibleSphereCount: 0,
+      nodes: []
+    }
+  }
+
+  const presenceNodes = Array.from(document.querySelectorAll('[data-orb-presence], .orb-presence'))
+  const sphereNodes = Array.from(document.querySelectorAll('[data-orb-living-sphere], .orb-living-sphere'))
+
+  const nodes = [...presenceNodes, ...sphereNodes].map((el, index) => {
+    if (!(el instanceof HTMLElement)) {
+      return {
+        selector: `node-${index}`,
+        display: '',
+        visibility: '',
+        opacity: '',
+        width: 0,
+        height: 0,
+        zIndex: '',
+        position: '',
+        background: '',
+        parentDisplay: '',
+        parentOverflow: '',
+        parentWidth: 0,
+        parentHeight: 0,
+        reasonIfHidden: 'not-html-element'
+      }
+    }
+    const style = window.getComputedStyle(el)
+    const rect = el.getBoundingClientRect()
+    const parent = el.parentElement
+    const parentStyle = parent ? window.getComputedStyle(parent) : null
+    const parentRect = parent?.getBoundingClientRect()
+    const selector =
+      el.getAttribute('data-orb-presence') != null
+        ? '.orb-presence'
+        : el.classList.contains('orb-living-sphere')
+          ? '.orb-living-sphere'
+          : el.tagName.toLowerCase()
+
+    return {
+      selector,
+      display: style.display,
+      visibility: style.visibility,
+      opacity: style.opacity,
+      width: Math.round(rect.width),
+      height: Math.round(rect.height),
+      zIndex: style.zIndex,
+      position: style.position,
+      background: style.backgroundColor,
+      parentDisplay: parentStyle?.display ?? '',
+      parentOverflow: parentStyle?.overflow ?? '',
+      parentWidth: Math.round(parentRect?.width ?? 0),
+      parentHeight: Math.round(parentRect?.height ?? 0),
+      reasonIfHidden: reasonOrbNodeHidden(el)
+    }
+  })
+
+  const visiblePresenceCount = presenceNodes.filter((el) => isVisibleElement(el)).length
+  const visibleSphereCount = sphereNodes.filter((el) => isVisibleElement(el)).length
+
+  return {
+    presenceCount: presenceNodes.length,
+    sphereCount: sphereNodes.length,
+    visiblePresenceCount,
+    visibleSphereCount,
+    nodes
+  }
+}
+
+export function runOrbResidentialFullAudit(): {
+  theme: ReturnType<typeof runOrbThemeAudit>
+  orb: ReturnType<typeof runOrbOrbAudit>
+  viewport: OrbMobileViewportOverflowResult
+} {
+  return {
+    theme: runOrbThemeAudit(),
+    orb: runOrbOrbAudit(),
+    viewport: auditOrbMobileViewportOverflow()
+  }
+}
+
 export function registerOrbUiAuditGlobals(): void {
   if (typeof window === 'undefined') return
   const w = window as Window & {
@@ -432,10 +640,16 @@ export function registerOrbUiAuditGlobals(): void {
     ORB_UI_HIT_TEST?: (selectorOrText: string) => OrbUiHitTestResult
     ORB_UI_DUPLICATES?: () => ReturnType<typeof runOrbUiDuplicates>
     ORB_MOBILE_VIEWPORT_AUDIT?: () => OrbMobileViewportOverflowResult
+    ORB_THEME_AUDIT?: () => ReturnType<typeof runOrbThemeAudit>
+    ORB_ORB_AUDIT?: () => ReturnType<typeof runOrbOrbAudit>
+    ORB_RESIDENTIAL_FULL_AUDIT?: () => ReturnType<typeof runOrbResidentialFullAudit>
   }
   w.ORB_UI_AUDIT = runOrbUiAudit
   w.ORB_DESKTOP_THEME_AUDIT = runOrbDesktopThemeAudit
   w.ORB_UI_HIT_TEST = runOrbUiHitTest
   w.ORB_UI_DUPLICATES = runOrbUiDuplicates
   w.ORB_MOBILE_VIEWPORT_AUDIT = auditOrbMobileViewportOverflow
+  w.ORB_THEME_AUDIT = runOrbThemeAudit
+  w.ORB_ORB_AUDIT = runOrbOrbAudit
+  w.ORB_RESIDENTIAL_FULL_AUDIT = runOrbResidentialFullAudit
 }

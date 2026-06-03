@@ -1,8 +1,15 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode
+} from 'react'
 
-import { useOrbAppearanceContext } from '@/components/orb-standalone/orb-appearance-provider'
 import {
   ORB_APPEARANCE_STORAGE_KEY,
   msUntilNextOrbSystemThemeBoundary,
@@ -13,8 +20,18 @@ import {
 } from '@/lib/orb/orb-appearance'
 import { applyOrbResidentialTheme } from '@/lib/orb/orb-residential-theme'
 
+export type OrbAppearanceContextValue = {
+  appearanceMode: OrbAppearanceMode
+  resolvedTheme: 'light' | 'dark'
+  setAppearanceMode: (mode: OrbAppearanceMode) => void
+  storageKey: string
+  residentialThemeLocked: false
+}
+
+const OrbAppearanceContext = createContext<OrbAppearanceContextValue | null>(null)
+
 function isOrbResidentialRoute(): boolean {
-  if (typeof document === 'undefined') return false
+  if (typeof document === 'undefined') return true
   return (
     document.documentElement.getAttribute('data-orb-residential') === '1' ||
     document.querySelector('[data-orb-residential-surface="true"]') != null ||
@@ -22,8 +39,13 @@ function isOrbResidentialRoute(): boolean {
   )
 }
 
-function useOrbAppearanceStandalone(skip: boolean) {
-  const residential = isOrbResidentialRoute()
+export function OrbAppearanceProvider({
+  children,
+  residential = true
+}: {
+  children: ReactNode
+  residential?: boolean
+}) {
   const [appearanceMode, setAppearanceModeState] = useState<OrbAppearanceMode>(() =>
     readOrbAppearanceMode({ residential })
   )
@@ -32,14 +54,12 @@ function useOrbAppearanceStandalone(skip: boolean) {
   )
 
   useEffect(() => {
-    if (skip) return
     const stored = readOrbAppearanceMode({ residential: isOrbResidentialRoute() })
     setAppearanceModeState(stored)
     setResolvedTheme(resolveOrbTheme(stored))
-  }, [skip])
+  }, [residential])
 
   useEffect(() => {
-    if (skip) return
     if (appearanceMode !== 'system') {
       setResolvedTheme(resolveOrbTheme(appearanceMode))
       return
@@ -63,36 +83,32 @@ function useOrbAppearanceStandalone(skip: boolean) {
       window.clearTimeout(timerId)
       window.clearInterval(minuteTick)
     }
-  }, [skip, appearanceMode])
+  }, [appearanceMode])
 
   useEffect(() => {
-    if (skip) return
     applyOrbResidentialTheme({ selectedAppearance: appearanceMode, resolvedTheme })
-  }, [skip, appearanceMode, resolvedTheme])
+  }, [appearanceMode, resolvedTheme])
 
-  const setAppearanceMode = useCallback(
-    (mode: OrbAppearanceMode) => {
-      if (skip) return
-      writeOrbAppearanceMode(mode)
-      setAppearanceModeState(mode)
-      setResolvedTheme(resolveOrbTheme(mode))
-    },
-    [skip]
+  const setAppearanceMode = useCallback((mode: OrbAppearanceMode) => {
+    writeOrbAppearanceMode(mode)
+    setAppearanceModeState(mode)
+    setResolvedTheme(resolveOrbTheme(mode))
+  }, [])
+
+  const value = useMemo<OrbAppearanceContextValue>(
+    () => ({
+      appearanceMode,
+      resolvedTheme,
+      setAppearanceMode,
+      storageKey: ORB_APPEARANCE_STORAGE_KEY,
+      residentialThemeLocked: false
+    }),
+    [appearanceMode, resolvedTheme, setAppearanceMode]
   )
 
-  return {
-    appearanceMode,
-    resolvedTheme,
-    setAppearanceMode,
-    storageKey: ORB_APPEARANCE_STORAGE_KEY,
-    residentialThemeLocked: false as const
-  }
+  return <OrbAppearanceContext.Provider value={value}>{children}</OrbAppearanceContext.Provider>
 }
 
-/** Appearance hook — uses `OrbAppearanceProvider` on `/orb` when present. */
-export function useOrbAppearance() {
-  const context = useOrbAppearanceContext()
-  const skipStandalone = context != null
-  const standalone = useOrbAppearanceStandalone(skipStandalone)
-  return context ?? standalone
+export function useOrbAppearanceContext(): OrbAppearanceContextValue | null {
+  return useContext(OrbAppearanceContext)
 }

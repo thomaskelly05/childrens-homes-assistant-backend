@@ -52,8 +52,8 @@ describe('ORB Residential two-theme system', () => {
   it('theme sync hook applies document attributes from resolved theme', () => {
     const sync = readComponent('components/orb-residential/use-orb-residential-theme-sync.ts')
     assert.match(sync, /resolvedTheme/)
-    assert.match(sync, /applyOrbDocumentTheme/)
-    assert.match(sync, /data-orb-theme/)
+    assert.match(sync, /applyOrbResidentialTheme/)
+    assert.doesNotMatch(sync, /applyOrbDocumentTheme/)
     assert.doesNotMatch(sync, /ORB_RESIDENTIAL_RESOLVED_THEME/)
   })
 

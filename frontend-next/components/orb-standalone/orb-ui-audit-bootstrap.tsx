@@ -9,13 +9,7 @@ import { registerOrbUiAuditGlobals } from '@/components/orb-standalone/orb-ui-au
 /** Registers window.ORB_UI_AUDIT helpers in debug / developer mode. */
 export function OrbUiAuditBootstrap() {
   useEffect(() => {
-    if (
-      isOrbDeveloperMode() ||
-      isOrbVoiceDebugMode() ||
-      process.env.NEXT_PUBLIC_ORB_UI_AUDIT === '1'
-    ) {
-      registerOrbUiAuditGlobals()
-    }
+    registerOrbUiAuditGlobals()
   }, [])
   return null
 }

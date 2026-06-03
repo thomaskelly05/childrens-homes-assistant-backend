@@ -3,27 +3,17 @@
 import { useEffect } from 'react'
 
 import { useOrbAppearance } from '@/components/orb-standalone/use-orb-appearance'
-import { applyOrbDocumentTheme } from '@/lib/orb/orb-appearance'
+import { applyOrbResidentialTheme } from '@/lib/orb/orb-residential-theme'
 
-/** Keeps html/body/shell data attributes aligned with resolved ORB Residential theme. */
+/**
+ * Re-applies residential theme when this subtree mounts (login, front door, errors).
+ * Does not strip document theme on unmount — `applyOrbResidentialTheme` is the authority.
+ */
 export function useOrbResidentialThemeSync() {
   const { appearanceMode, resolvedTheme } = useOrbAppearance()
 
   useEffect(() => {
-    const root = document.documentElement
-    root.setAttribute('data-orb-residential', '1')
-    root.setAttribute('data-orb-appearance-mode', appearanceMode)
-    root.setAttribute('data-orb-system-theme', resolvedTheme)
-    root.setAttribute('data-orb-theme', resolvedTheme)
-    root.style.colorScheme = resolvedTheme
-    applyOrbDocumentTheme(resolvedTheme, appearanceMode)
-    return () => {
-      root.removeAttribute('data-orb-residential')
-      root.removeAttribute('data-orb-appearance-mode')
-      root.removeAttribute('data-orb-system-theme')
-      root.removeAttribute('data-orb-theme')
-      root.style.colorScheme = ''
-    }
+    applyOrbResidentialTheme({ selectedAppearance: appearanceMode, resolvedTheme })
   }, [appearanceMode, resolvedTheme])
 }
 
