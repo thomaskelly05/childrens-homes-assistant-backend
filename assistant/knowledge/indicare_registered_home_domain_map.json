@@ -1,0 +1,4141 @@
+{
+  "version": "indicare_intelligence_10",
+  "domain_count": 55,
+  "domains": [
+    {
+      "domain_id": "admission_and_matching",
+      "name": "Admission and matching",
+      "description": "Matching, referrals, readiness and safe admission.",
+      "triggers": [
+        "admission",
+        "matching",
+        "and"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "admission_and_matching_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on admission and matching.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "statement_of_purpose",
+      "name": "Statement of Purpose",
+      "description": "Home purpose, ethos and regulatory statement alignment.",
+      "triggers": [
+        "statement",
+        "purpose",
+        "of"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "statement_of_purpose_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on statement of purpose.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "childrens_guide",
+      "name": "Children's guide",
+      "description": "Accessible information for children about the home.",
+      "triggers": [
+        "children's",
+        "guide",
+        "childrens"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "childrens_guide_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on children's guide.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "child_profile_story",
+      "name": "Child profile/story",
+      "description": "Lived narrative, identity and known history.",
+      "triggers": [
+        "child",
+        "profile",
+        "story"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "child_profile_story_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on child profile/story.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "placement_plan",
+      "name": "Placement plan",
+      "description": "Placement agreement, duties and review triggers.",
+      "triggers": [
+        "placement",
+        "plan"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "placement_plan_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on placement plan.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "care_planning",
+      "name": "Care planning",
+      "description": "Holistic care plans, goals and review.",
+      "triggers": [
+        "care",
+        "planning"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "care_planning_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on care planning.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "risk_assessment",
+      "name": "Risk assessment",
+      "description": "Dynamic risk identification and mitigation.",
+      "triggers": [
+        "risk",
+        "assessment"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "risk_assessment_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on risk assessment.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "behaviour_support",
+      "name": "Behaviour support",
+      "description": "Behaviour as communication and support plans.",
+      "triggers": [
+        "behaviour",
+        "support"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "behaviour_support_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on behaviour support.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "missing_from_home",
+      "name": "Missing from home",
+      "description": "Missing episodes, return and pattern thinking.",
+      "triggers": [
+        "missing",
+        "absent",
+        "awol",
+        "return home",
+        "rhi",
+        "from"
+      ],
+      "quality_standards": [
+        "qs7_protection"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "missing_from_home_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on missing from home.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "exploitation_cse_cce",
+      "name": "Exploitation/CSE/CCE/county lines",
+      "description": "Contextual safeguarding and exploitation indicators.",
+      "triggers": [
+        "exploit",
+        "cse",
+        "cce",
+        "county lines",
+        "cannabis",
+        "exploitation"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "exploitation_cse_cce_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on exploitation/cse/cce/county lines.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "allegations_lado",
+      "name": "Allegations and LADO",
+      "description": "Allegations against adults and LADO pathways.",
+      "triggers": [
+        "allegation",
+        "lado",
+        "hurt me",
+        "staff conduct",
+        "allegations"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "allegations_lado_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on allegations and lado.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "safeguarding_referrals",
+      "name": "Safeguarding referrals",
+      "description": "Referrals, thresholds and multi-agency response.",
+      "triggers": [
+        "safeguarding",
+        "referrals"
+      ],
+      "quality_standards": [
+        "qs7_protection"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "safeguarding_referrals_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on safeguarding referrals.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "self_harm_suicide",
+      "name": "Self-harm/suicide risk",
+      "description": "Self-harm, suicidal ideation and safety planning.",
+      "triggers": [
+        "self-harm",
+        "self harm",
+        "suicide",
+        "cuts",
+        "self",
+        "harm"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "self_harm_suicide_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on self-harm/suicide risk.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "health",
+      "name": "Health",
+      "description": "Physical health, GP and health plans.",
+      "triggers": [
+        "health"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "health_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on health.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "mental_health_camhs",
+      "name": "Mental health/CAMHS/crisis",
+      "description": "Mental health support and crisis pathways.",
+      "triggers": [
+        "mental",
+        "health",
+        "camhs",
+        "crisis"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "mental_health_camhs_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on mental health/camhs/crisis.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "medication_mar_prn",
+      "name": "Medication/MAR/PRN/errors",
+      "description": "Medication administration and error response.",
+      "triggers": [
+        "medication",
+        "errors",
+        "mar"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "medication_mar_prn_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on medication/mar/prn/errors.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "education_attendance_pep",
+      "name": "Education/attendance/PEP",
+      "description": "Education, attendance and personal education plans.",
+      "triggers": [
+        "education",
+        "attendance"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "education_attendance_pep_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on education/attendance/pep.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "send_ehcp_autism",
+      "name": "SEND/EHCP/autism/GDD",
+      "description": "SEND needs and specialist support.",
+      "triggers": [
+        "send",
+        "ehcp",
+        "autism"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "send_ehcp_autism_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on send/ehcp/autism/gdd.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "family_time_contact",
+      "name": "Family time/contact",
+      "description": "Contact arrangements and relationship support.",
+      "triggers": [
+        "family",
+        "time",
+        "contact"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "family_time_contact_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on family time/contact.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "identity_culture_religion",
+      "name": "Identity/culture/religion/belonging",
+      "description": "Identity, culture and belonging.",
+      "triggers": [
+        "identity",
+        "culture",
+        "religion",
+        "belonging"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "identity_culture_religion_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on identity/culture/religion/belonging.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "advocacy_complaints",
+      "name": "Advocacy/complaints",
+      "description": "Advocacy routes and complaints handling.",
+      "triggers": [
+        "advocacy",
+        "complaints"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "advocacy_complaints_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on advocacy/complaints.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "childrens_rights",
+      "name": "Children's rights",
+      "description": "Rights, participation and dignity.",
+      "triggers": [
+        "children's",
+        "rights",
+        "childrens"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "childrens_rights_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on children's rights.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "positive_relationships",
+      "name": "Positive relationships",
+      "description": "Relational practice and repair.",
+      "triggers": [
+        "positive",
+        "relationships"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "positive_relationships_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on positive relationships.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "restorative_practice",
+      "name": "Restorative practice/repair",
+      "description": "Repair after conflict or harm.",
+      "triggers": [
+        "restorative",
+        "practice",
+        "repair"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "restorative_practice_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on restorative practice/repair.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "restraint_restrictive",
+      "name": "Restraint/physical intervention/restrictive practice",
+      "description": "Restrictive practice governance.",
+      "triggers": [
+        "restraint",
+        "physical intervention",
+        "held",
+        "restrictive"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "restraint_restrictive_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on restraint/physical intervention/restrictive practice.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "police_involvement",
+      "name": "Police involvement",
+      "description": "Police contact, crime and missing protocols.",
+      "triggers": [
+        "police",
+        "involvement"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "police_involvement_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on police involvement.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "emergency_services",
+      "name": "Emergency services",
+      "description": "999, ambulance and emergency response.",
+      "triggers": [
+        "emergency",
+        "services"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "emergency_services_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on emergency services.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "online_safety",
+      "name": "Online safety/devices/image sharing/grooming",
+      "description": "Digital safeguarding.",
+      "triggers": [
+        "online",
+        "safety",
+        "devices",
+        "image"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "online_safety_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on online safety/devices/image sharing/grooming.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "bullying_peer_risk",
+      "name": "Bullying/peer risk",
+      "description": "Peer-on-peer harm and group dynamics.",
+      "triggers": [
+        "bullying",
+        "peer",
+        "risk"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "bullying_peer_risk_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on bullying/peer risk.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "transitions_discharge",
+      "name": "Transitions/discharge/independence",
+      "description": "Moves, discharge and independence.",
+      "triggers": [
+        "transitions",
+        "discharge",
+        "independence"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "transitions_discharge_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on transitions/discharge/independence.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "staff_conduct_safer_caring",
+      "name": "Staff conduct/safer caring",
+      "description": "Boundaries, conduct and safer caring.",
+      "triggers": [
+        "staff",
+        "conduct",
+        "safer",
+        "caring"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "staff_conduct_safer_caring_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on staff conduct/safer caring.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "safer_recruitment_dbs",
+      "name": "Safer recruitment/DBS/references",
+      "description": "Recruitment and suitability checks.",
+      "triggers": [
+        "safer",
+        "recruitment",
+        "references"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "safer_recruitment_dbs_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on safer recruitment/dbs/references.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "supervision_training",
+      "name": "Supervision/training/workforce competence",
+      "description": "Supervision and competence.",
+      "triggers": [
+        "supervision",
+        "training",
+        "workforce",
+        "competence"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "supervision_training_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on supervision/training/workforce competence.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "rota_staffing",
+      "name": "Rota/staffing levels/agency staff",
+      "description": "Staffing sufficiency and agency use.",
+      "triggers": [
+        "rota",
+        "staffing",
+        "levels",
+        "agency"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "rota_staffing_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on rota/staffing levels/agency staff.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "manager_oversight",
+      "name": "Manager oversight",
+      "description": "Registered manager oversight and action.",
+      "triggers": [
+        "manager",
+        "oversight"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "manager_oversight_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on manager oversight.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "ri_governance",
+      "name": "Responsible Individual governance",
+      "description": "Provider governance and assurance.",
+      "triggers": [
+        "responsible",
+        "individual",
+        "governance",
+        "ri"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "ri_governance_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on responsible individual governance.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "provider_drift",
+      "name": "Provider-level drift",
+      "description": "Drift, repeat weakness and improvement.",
+      "triggers": [
+        "provider",
+        "level",
+        "drift"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "provider_drift_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on provider-level drift.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "regulation_40",
+      "name": "Regulation 40 notifications",
+      "description": "Statutory notifications to Ofsted.",
+      "triggers": [
+        "regulation",
+        "notifications",
+        "40"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "regulation_40_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on regulation 40 notifications.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "regulation_44",
+      "name": "Regulation 44 visits",
+      "description": "Independent person visits.",
+      "triggers": [
+        "regulation",
+        "visits",
+        "44"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "regulation_44_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on regulation 44 visits.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "regulation_45",
+      "name": "Regulation 45 quality of care review",
+      "description": "Quality of care reviews.",
+      "triggers": [
+        "regulation",
+        "quality",
+        "care",
+        "review",
+        "45"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "regulation_45_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on regulation 45 quality of care review.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "ofsted_sccif",
+      "name": "Ofsted SCCIF",
+      "description": "Inspection framework and evidence.",
+      "triggers": [
+        "ofsted",
+        "sccif",
+        "inspection"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "ofsted_sccif_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on ofsted sccif.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "document_readiness",
+      "name": "Document readiness",
+      "description": "Records and document quality for review.",
+      "triggers": [
+        "document",
+        "readiness"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "document_readiness_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on document readiness.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "chronology",
+      "name": "Chronology",
+      "description": "Chronological evidence and pattern.",
+      "triggers": [
+        "chronology"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "chronology_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on chronology.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "handover_communication",
+      "name": "Handover/communication",
+      "description": "Shift handover and communication.",
+      "triggers": [
+        "handover",
+        "communication"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "handover_communication_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on handover/communication.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "premises_fire_hs",
+      "name": "Premises/fire/H&S",
+      "description": "Premises safety and health and safety.",
+      "triggers": [
+        "premises",
+        "fire"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "premises_fire_hs_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on premises/fire/h&s.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "data_protection_sharing",
+      "name": "Data protection/information sharing",
+      "description": "GDPR and lawful sharing.",
+      "triggers": [
+        "data",
+        "protection",
+        "information",
+        "sharing"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "data_protection_sharing_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on data protection/information sharing.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "lscp_local_procedures",
+      "name": "LSCP/local procedures",
+      "description": "Local safeguarding partnership procedures.",
+      "triggers": [
+        "lscp",
+        "local",
+        "procedures"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "lscp_local_procedures_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on lscp/local procedures.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "social_worker_iro",
+      "name": "Social worker/IRO/placing authority",
+      "description": "Statutory partners and reviews.",
+      "triggers": [
+        "social",
+        "worker",
+        "placing",
+        "authority"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "social_worker_iro_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on social worker/iro/placing authority.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "parent_person_pr",
+      "name": "Parent/person with PR",
+      "description": "Parental responsibility and contact.",
+      "triggers": [
+        "parent",
+        "person",
+        "with"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "parent_person_pr_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on parent/person with pr.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "commissioner_la_oversight",
+      "name": "Commissioner/local authority oversight",
+      "description": "Commissioning and placement oversight.",
+      "triggers": [
+        "commissioner",
+        "local",
+        "authority",
+        "oversight",
+        "la"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "commissioner_la_oversight_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on commissioner/local authority oversight.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "finance_pocket_money",
+      "name": "Finance/pocket money/possessions",
+      "description": "Money, possessions and fairness.",
+      "triggers": [
+        "finance",
+        "pocket",
+        "money",
+        "possessions"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "finance_pocket_money_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on finance/pocket money/possessions.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "food_nutrition_care",
+      "name": "Food/nutrition/clothing/personal care",
+      "description": "Daily care and dignity.",
+      "triggers": [
+        "food",
+        "nutrition",
+        "clothing",
+        "personal"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "food_nutrition_care_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on food/nutrition/clothing/personal care.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "transport_community",
+      "name": "Transport/community access",
+      "description": "Community access and transport risk.",
+      "triggers": [
+        "transport",
+        "community",
+        "access"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "transport_community_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on transport/community access.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "visitors_unauthorised_contact",
+      "name": "Visitors/unauthorised contact",
+      "description": "Visitors and unauthorised contact.",
+      "triggers": [
+        "visitors",
+        "unauthorised",
+        "contact"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "visitors_unauthorised_contact_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on visitors/unauthorised contact.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    },
+    {
+      "domain_id": "night_routines_sleep",
+      "name": "Night-time routines/sleep/bedroom safety",
+      "description": "Sleep, night routines and bedroom safety.",
+      "triggers": [
+        "night",
+        "time",
+        "routines",
+        "sleep"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose"
+      ],
+      "professional_lenses": [
+        "registered_manager",
+        "residential_support_worker"
+      ],
+      "records_to_check": [
+        "daily_record",
+        "incident",
+        "risk_assessment",
+        "care_plan"
+      ],
+      "evidence_markers": [
+        "child_voice",
+        "adult_action",
+        "follow_up",
+        "manager_oversight"
+      ],
+      "risk_markers": [
+        "immediate_safety",
+        "pattern",
+        "escalation"
+      ],
+      "common_gaps": [
+        "missing child voice",
+        "no manager review",
+        "unclear escalation"
+      ],
+      "trusted_source_needs": [
+        "dfe_childrens_homes_regulations_guide",
+        "working_together_safeguarding"
+      ],
+      "minimum_answer_requirements": [
+        "immediate safety where relevant",
+        "what to record",
+        "who to inform",
+        "what ORB cannot decide"
+      ],
+      "related_services": [
+        "orb_residential_brain_catalog_service",
+        "orb_institutional_depth_frame_service",
+        "orb_quality_standards_brain_service"
+      ],
+      "scenario_tests": [
+        "night_routines_sleep_smoke"
+      ],
+      "adult_needs_to_know": [
+        "Adults need clear, practical guidance on night-time routines/sleep/bedroom safety.",
+        "Separate facts from assumptions; do not invent case details."
+      ],
+      "answer_lens": [
+        "Start with safest practical next step.",
+        "Use plain shift-ready language."
+      ],
+      "evidence_questions": [
+        "What happened?",
+        "Who knows?",
+        "What was recorded?",
+        "What changed?"
+      ],
+      "boundaries": [
+        "No statutory threshold decisions.",
+        "No diagnosis or grade prediction."
+      ]
+    }
+  ]
+}

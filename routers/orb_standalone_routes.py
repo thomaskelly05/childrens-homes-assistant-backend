@@ -19,6 +19,7 @@ from services.ai_provider_registry import ai_provider_registry
 from services.orb_converged_general_assistant_service import orb_converged_general_assistant_service
 from services.orb_general_assistant_service import orb_general_assistant_service
 from services.orb_knowledge_retrieval_service import orb_knowledge_retrieval_service
+from services.indicare_intelligence_core_service import indicare_intelligence_core_service
 from services.orb_standalone_brain_service import orb_standalone_brain_service
 from services.orb_grounded_answer_style_service import orb_grounded_answer_style_service
 from services.orb_official_source_anchor_service import orb_official_source_anchor_service
@@ -133,6 +134,8 @@ def _build_standalone_request_context(payload: OrbStandaloneConversationRequest)
             f"{memory_text}\n"
             "This is user-supplied ORB memory, not verified live IndiCare OS record data."
         )
+    indicare_intelligence = retrieval_bundle.get("indicare_intelligence") or {}
+    expert_depth = retrieval_bundle.get("expert_depth") or indicare_intelligence.get("expert_depth")
     framed_message = _build_framed_message(
         mode=mode,
         user_message=payload.message,
@@ -142,6 +145,7 @@ def _build_standalone_request_context(payload: OrbStandaloneConversationRequest)
         prompt_tier=prompt_tier,
         shared_runtime_block=shared_runtime_block,
         project_memory_block=project_memory_block or None,
+        expert_depth=expert_depth,
     )
     return {
         "mode": mode,
@@ -156,6 +160,8 @@ def _build_standalone_request_context(payload: OrbStandaloneConversationRequest)
         "shared_cognition": shared_cognition,
         "standalone_brain": standalone_brain,
         "framed_message": framed_message,
+        "indicare_intelligence": indicare_intelligence,
+        "expert_depth": expert_depth,
     }
 
 STANDALONE_ORB_MODES = [
@@ -388,6 +394,7 @@ def _build_framed_message(
     prompt_tier: str = "residential",
     shared_runtime_block: str | None = None,
     project_memory_block: str | None = None,
+    expert_depth: str | None = None,
 ) -> str:
     resolved_mode = orb_standalone_brain_service.normalise_mode(mode)
     mode_hint = MODE_BEHAVIOUR.get(resolved_mode) or MODE_BEHAVIOUR.get(mode, "")
@@ -402,10 +409,17 @@ def _build_framed_message(
     elif detail == "detailed":
         detail_hint = "Answer style: Detailed — provide fuller structured guidance with practical next steps."
 
-    if prompt_tier == "fast":
+    depth_hint = ""
+    if expert_depth:
+        depth_hint = (
+            f"IndiCare Intelligence depth: {expert_depth}. "
+            "ORB shell — brain has scanned this request; adapt answer length and framing to depth."
+        )
+    if prompt_tier == "fast" and expert_depth == "general_light":
         parts = [
             STANDALONE_ORB_IDENTITY,
             STANDALONE_ORB_BOUNDARIES,
+            depth_hint,
             project_memory_block or "",
             grounding_context or "",
             mode_hint,
@@ -692,6 +706,7 @@ async def standalone_orb_conversation(
     standalone_brain = ctx["standalone_brain"]
     framed_message = ctx["framed_message"]
     profile_context = ctx["profile_context"]
+    indicare_intelligence = ctx.get("indicare_intelligence") or retrieval_bundle.get("indicare_intelligence") or {}
 
     limited = _enforce_plan_limits(
         current_user=current_user,
@@ -825,6 +840,31 @@ async def standalone_orb_conversation(
             "provider": model_routing.get("provider"),
             "route": "/orb/standalone/conversation",
         }
+        if indicare_intelligence:
+            context_used["indicare_intelligence"] = {
+                "version": indicare_intelligence.get("version"),
+                "expert_depth": indicare_intelligence.get("expert_depth"),
+                "care_relevance_score": indicare_intelligence.get("care_relevance_score"),
+                "active_intelligence_layers": indicare_intelligence.get("active_intelligence_layers"),
+                "registered_home_domains": indicare_intelligence.get("registered_home_domains"),
+                "quality_standard_hits": indicare_intelligence.get("quality_standard_hits"),
+            }
+            quality_gate = indicare_intelligence_core_service.evaluate_answer(indicare_intelligence, answer)
+            context_used["answer_quality_gate"] = quality_gate
+            if not quality_gate.get("passed"):
+                for flag in quality_gate.get("critical_flags") or []:
+                    if flag == "grade_prediction" and "inadequate" not in answer.lower():
+                        continue
+                    if flag == "fake_os_access":
+                        answer = orb_grounded_answer_style_service.sanitize_high_attention_closer(
+                            answer + "\n\n(ORB does not access live IndiCare OS records in standalone mode.)",
+                            message=payload.message,
+                            mode=mode,
+                        )
+            indicare_intelligence_core_service.record_learning(
+                indicare_intelligence,
+                prompt_text=payload.message,
+            )
         return _standalone_conversation_response(
             answer=answer,
             mode=mode,
