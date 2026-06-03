@@ -4,29 +4,31 @@ import type { StandaloneOrbMode } from '@/lib/orb/standalone-client'
 export const ORB_RESIDENTIAL_PRODUCT_NAME = 'ORB Residential'
 export const ORB_RESIDENTIAL_TAGLINE = 'Powered by IndiCare Intelligence'
 
-export const ORB_RESIDENTIAL_EMPTY_HEADING_DESKTOP = 'Where should we begin?'
+/** Action-led empty heading — desktop and mobile share the same clear prompt. */
+export const ORB_RESIDENTIAL_EMPTY_HEADING_DESKTOP = 'What do you need help with?'
 
 /** Calm ChatGPT-style empty heading on phone (`/orb`). */
-export const ORB_RESIDENTIAL_MOBILE_EMPTY_HEADING = 'Where should we begin?'
+export const ORB_RESIDENTIAL_MOBILE_EMPTY_HEADING = 'What do you need help with?'
 
-export const ORB_RESIDENTIAL_EMPTY_SUBLINE =
-  'Ask about recording, safeguarding, regulatory practice, templates or reflective practice.'
+/** Optional emotional brand line — hero / first-run only, not global chrome. */
+export const ORB_RESIDENTIAL_BRAND_EMOTIONAL_LINE = 'Care. Connect. Empower.'
+
+/** Intentionally empty — keep the home screen calm; starters carry the guidance. */
+export const ORB_RESIDENTIAL_EMPTY_SUBLINE = ''
 
 /** Compact residential starters shown above the mobile composer on an empty chat. */
 export const ORB_RESIDENTIAL_MOBILE_EMPTY_STARTERS: Array<{ text: string; mode?: StandaloneOrbMode }> = [
-  { text: 'Help me write a daily log' },
-  { text: 'What am I missing?' },
-  { text: 'Safeguarding thinking', mode: 'Safeguarding Thinking' },
-  { text: 'Turn rough notes into a professional record', mode: 'Record This Properly' }
+  { text: 'Write a daily log' },
+  { text: 'Turn rough notes into a record', mode: 'Record This Properly' },
+  { text: 'Review an incident', mode: 'Safeguarding Thinking' },
+  { text: 'Ask a safeguarding question', mode: 'Safeguarding Thinking' }
 ]
 
 export const ORB_RESIDENTIAL_EMPTY_STARTERS: Array<{ text: string; mode?: StandaloneOrbMode }> = [
+  { text: 'Write a daily log' },
+  { text: 'Turn rough notes into a record', mode: 'Record This Properly' },
   { text: 'Review an incident', mode: 'Safeguarding Thinking' },
-  { text: 'Write a handover' },
-  { text: 'Create a risk assessment' },
-  { text: 'Prepare for inspection', mode: 'Ofsted Lens' },
-  { text: 'Analyse a document' },
-  { text: 'Reflect on practice', mode: 'Staff Coach' }
+  { text: 'Ask a safeguarding question', mode: 'Safeguarding Thinking' }
 ]
 
 /** Visible mode labels — internal mode ids may still use legacy names for API compatibility. */

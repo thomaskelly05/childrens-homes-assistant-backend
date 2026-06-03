@@ -77,7 +77,7 @@ describe('ORB Residential desktop UX', () => {
     const premiumCss = readComponent('app/orb/orb-premium-tokens.css')
     assert.match(companion, /GlassOrbMark size="(empty|home)"/)
     assert.doesNotMatch(companion, /variant="mobile"[\s\S]*md:hidden[\s\S]*variant="desktop"[\s\S]*hidden md:flex/)
-    assert.match(premiumCss, /glass-orb-mark--empty/)
+    assert.match(premiumCss, /orb-presence--home/)
   })
 
   it('premium CSS supports light and dark residential themes', () => {

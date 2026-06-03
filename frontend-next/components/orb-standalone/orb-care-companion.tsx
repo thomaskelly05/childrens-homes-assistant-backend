@@ -69,6 +69,7 @@ import { OrbSavedOutputsPanel } from '@/components/orb-standalone/orb-saved-outp
 import { OrbKnowledgeLibraryPanel } from '@/components/orb-standalone/orb-knowledge-library'
 import { OrbTemplatesPanel } from '@/components/orb-standalone/orb-templates-panel'
 import {
+  ORB_RESIDENTIAL_BRAND_EMOTIONAL_LINE,
   ORB_RESIDENTIAL_EMPTY_HEADING_DESKTOP,
   ORB_RESIDENTIAL_EMPTY_STARTERS,
   ORB_RESIDENTIAL_EMPTY_SUBLINE,
@@ -3194,17 +3195,25 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                       data-orb-empty-sphere
                     >
                       {residentialSurface ? (
-                        <GlassOrbMark size="home" pulse data-orb-empty-sphere-mark className="md:scale-95" />
+                        <GlassOrbMark size="home" pulse state="idle" className="md:scale-95" data-orb-empty-sphere-mark />
                       ) : null}
                       {!residentialSurface ? (
                         <OrbGlow state="idle" interactive={false} size="dock" compactLabels />
                       ) : null}
                     </div>
                     {residentialSurface ? (
-                      <div className="sr-only" data-orb-empty-brand-stack>
-                        <p data-orb-empty-brand-name>ORB Residential</p>
-                        <p data-orb-empty-brand-tagline>Powered by IndiCare Intelligence</p>
-                      </div>
+                      <>
+                        <div className="sr-only" data-orb-empty-brand-stack>
+                          <p data-orb-empty-brand-name>ORB</p>
+                          <p data-orb-empty-brand-tagline>Powered by IndiCare Intelligence</p>
+                        </div>
+                        <p
+                          className="mt-3 text-[11px] font-medium tracking-[0.14em] text-[var(--orb-premium-cyan,#5ec8ff)]/85"
+                          data-orb-brand-emotional-line
+                        >
+                          {ORB_RESIDENTIAL_BRAND_EMOTIONAL_LINE}
+                        </p>
+                      </>
                     ) : (
                       <>
                         <div className="orb-empty-title-wrap hidden md:block" data-orb-empty-title-wrap>
@@ -3245,19 +3254,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                         {emptyHeadingMobile}
                       </h2>
                     )}
-                    {residentialSurface || emptyWelcome.subline ? (
-                      <p
-                        className={`mt-2 max-w-lg text-sm leading-7 ${
-                          residentialSurface && isMobileViewport
-                            ? 'hidden'
-                            : residentialSurface
-                              ? 'text-[var(--orb-premium-text-secondary,#a7aebd)]'
-                              : 'text-slate-600'
-                        }`}
-                        data-orb-empty-subline
-                      >
-                        {emptyWelcome.subline ||
-                          (residentialSurface ? ORB_RESIDENTIAL_EMPTY_SUBLINE : '')}
+                    {!residentialSurface && (emptyWelcome.subline || ORB_RESIDENTIAL_EMPTY_SUBLINE) ? (
+                      <p className="mt-2 max-w-lg text-sm leading-7 text-slate-600" data-orb-empty-subline>
+                        {emptyWelcome.subline || ORB_RESIDENTIAL_EMPTY_SUBLINE}
                       </p>
                     ) : null}
                     {emptyWelcome.temporaryNote ? (
@@ -3268,16 +3267,11 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                         {emptyWelcome.temporaryNote}
                       </p>
                     ) : null}
-                    <p
-                      className={`mt-3 hidden max-w-md text-xs leading-5 md:block ${
-                        residentialSurface
-                          ? 'text-[var(--orb-premium-text-muted,#6f7787)]'
-                          : 'text-slate-500'
-                      }`}
-                      data-orb-empty-hint
-                    >
-                      Pick a starter, choose a mode, or type in the composer below.
-                    </p>
+                    {!residentialSurface ? (
+                      <p className="mt-3 hidden max-w-md text-xs leading-5 text-slate-500 md:block" data-orb-empty-hint>
+                        Pick a starter, choose a mode, or type in the composer below.
+                      </p>
+                    ) : null}
                     <div
                       className="mt-6 grid w-full max-w-2xl gap-2 sm:grid-cols-2 lg:max-w-3xl"
                       data-orb-starter-cards

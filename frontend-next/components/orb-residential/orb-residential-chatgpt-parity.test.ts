@@ -85,12 +85,15 @@ describe('ORB Residential ChatGPT parity', () => {
     assert.match(theme, /backgroundDeep/)
   })
 
-  it('GlassOrbMark is the single orb component for residential marks', () => {
+  it('OrbPresence is the single orb component for residential marks', () => {
+    const presence = readComponent('components/orb-residential/ui/orb-presence.tsx')
     const mark = readComponent('components/orb-residential/ui/glass-orb-mark.tsx')
-    assert.match(mark, /glass-orb-mark--empty/)
-    assert.match(mark, /glass-orb-mark--hero/)
+    assert.match(presence, /OrbSphere/)
+    assert.match(presence, /orb-presence--home/)
+    assert.match(mark, /OrbPresence/)
     const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
     assert.match(companion, /GlassOrbMark size="(empty|home)"/)
+    assert.match(companion, /ORB_RESIDENTIAL_BRAND_EMOTIONAL_LINE/)
   })
 
   it('station apps use OrbAppModal pattern not right drawer on residential', () => {
