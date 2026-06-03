@@ -80,10 +80,11 @@ describe('ORB Residential desktop UX', () => {
     assert.match(premiumCss, /glass-orb-mark--empty/)
   })
 
-  it('premium CSS forces dark under data-orb-residential and blocks light theme', () => {
+  it('premium CSS forces dark under data-orb-residential via launch lock', () => {
     const premiumCss = readComponent('app/orb/orb-premium-tokens.css')
     assert.match(premiumCss, /color-scheme:\s*dark/)
-    assert.match(premiumCss, /html\[data-orb-residential='1'\] \.orb-theme-light/)
+    assert.match(premiumCss, /ORB Residential launch lock/)
+    assert.match(premiumCss, /\.orb-chat-layout--residential\.orb-theme-light[\s\S]*color-scheme:\s*dark/)
     assert.match(premiumCss, /--orb-chat-column-max:\s*53\.75rem/)
   })
 

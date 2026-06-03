@@ -980,15 +980,15 @@ html[data-orb-residential='1'] [data-orb-dictate-output-types] {
   }
 }
 
-/* Mobile product tokens — Dictate, Voice, home */
+/* Mobile product tokens — residential launch is dark-only */
 html[data-orb-residential='1'] {
-  --orb-mobile-bg: #f5f9ff;
-  --orb-mobile-card: var(--orb-mobile-ws-card, #ffffff);
-  --orb-mobile-line: rgba(22, 119, 255, 0.14);
+  --orb-mobile-bg: #070b14;
+  --orb-mobile-card: var(--orb-mobile-ws-card, rgba(8, 17, 31, 0.92));
+  --orb-mobile-line: rgba(255, 255, 255, 0.12);
   --orb-primary-blue: #168bff;
   --orb-primary-blue-2: #0d5fcc;
-  --orb-text: var(--orb-mobile-ws-text, #0a1628);
-  --orb-muted: var(--orb-mobile-ws-muted, #52657a);
+  --orb-text: var(--orb-mobile-ws-text, #f7faff);
+  --orb-muted: var(--orb-mobile-ws-muted, #a7aebd);
 }
 
 .orb-chat-layout--residential.orb-theme-dark .orb-dictate-mobile,
@@ -1025,4 +1025,77 @@ html[data-orb-residential='1'] {
     transform: scale(1.04);
     filter: brightness(1.08);
   }
+}
+
+/**
+ * ORB Residential launch lock — dark authority from shell/layout.
+ * Quarantines legacy `.orb-theme-light` rules above; light class must not change surfaces.
+ */
+html[data-orb-residential='1'] .orb-chat-layout--residential,
+html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light,
+html[data-orb-residential='1'] .orb-chat-layout.orb-theme-light.orb-chat-layout--residential,
+[data-orb-shell='true'][data-orb-residential='true'],
+[data-orb-shell='true'][data-orb-residential='true'][data-orb-theme='light'] {
+  color-scheme: dark !important;
+  --orb-background: #030712;
+  --orb-surface: #070b12;
+  --orb-surface-elevated: #0b1220;
+  --orb-surface-hover: rgba(255, 255, 255, 0.06);
+  --orb-foreground: #f8fafc;
+  --orb-muted: #9ca3af;
+  --orb-line: rgba(96, 165, 250, 0.22);
+  --orb-page-bg: var(--orb-premium-bg-deep, #05070d);
+  --orb-premium-text: #f7faff;
+  --orb-premium-text-secondary: #a7aebd;
+  --orb-premium-text-muted: #6f7787;
+  --orb-premium-border: rgba(255, 255, 255, 0.1);
+  --orb-premium-glass: rgba(255, 255, 255, 0.045);
+  --orb-premium-glass-strong: rgba(255, 255, 255, 0.07);
+  --orb-premium-bg-deep: #05070d;
+  --orb-premium-bg-mid: #070b14;
+  --orb-premium-bg-soft: #08111f;
+  --orb-overlay: rgba(0, 0, 0, 0.72);
+  --orb-mobile-ws-panel: #070b14;
+  --orb-mobile-ws-card: rgba(8, 17, 31, 0.92);
+  --orb-mobile-ws-card-border: rgba(66, 215, 255, 0.14);
+  --orb-mobile-ws-text: #f7faff;
+  --orb-mobile-ws-muted: #a7aebd;
+  --orb-mobile-ws-input: rgba(255, 255, 255, 0.06);
+  --orb-mobile-ws-footer: rgba(7, 11, 20, 0.98);
+  --orb-mobile-bg: #070b14;
+  --orb-mobile-card: rgba(8, 17, 31, 0.92);
+  --orb-text: #f7faff;
+  background: var(--orb-page-bg) !important;
+  color: var(--orb-premium-text) !important;
+}
+
+html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .orb-chat-sidebar,
+html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .orb-panel-drawer,
+html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .orb-composer-glass,
+html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light [data-orb-app-modal='true'] .orb-panel-modal,
+html[data-orb-residential='1'] .orb-theme-light .orb-chat-sidebar,
+html[data-orb-residential='1'] .orb-theme-light .orb-panel-drawer,
+html[data-orb-residential='1'] .orb-theme-light .orb-composer-glass,
+html[data-orb-residential='1'] .orb-theme-light [data-orb-app-modal='true'] .orb-panel-modal {
+  color-scheme: dark !important;
+  background: linear-gradient(180deg, #070b14 0%, #05070d 100%) !important;
+  border-color: var(--orb-premium-border, rgba(255, 255, 255, 0.1)) !important;
+  color: #f7faff !important;
+}
+
+html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .orb-composer-glass,
+html[data-orb-residential='1'] .orb-theme-light .orb-composer-glass {
+  background: linear-gradient(
+    165deg,
+    color-mix(in srgb, #ffffff 14%, transparent),
+    color-mix(in srgb, #ffffff 6%, transparent)
+  ) !important;
+  border-color: rgba(22, 139, 255, 0.22) !important;
+}
+
+html[data-orb-residential='1'][data-orb-theme='light'] body,
+html[data-orb-residential='1'][data-orb-theme='light'] .orb-residential-root {
+  color-scheme: dark !important;
+  background: var(--orb-premium-bg-deep, #05070d) !important;
+  color: var(--orb-premium-text, #f7faff) !important;
 }

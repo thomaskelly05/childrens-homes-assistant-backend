@@ -92,8 +92,14 @@
     ) !important;
   }
 
+  /* quarantined — residential launch lock forces dark main below */
   html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .orb-chat-main {
-    background: linear-gradient(180deg, #f7fbff 0%, #eef6ff 55%, #f5f9ff 100%) !important;
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--orb-page-bg, #05070d) 92%, #ffffff) 0%,
+      var(--orb-page-bg, #05070d) 48%,
+      var(--orb-page-bg, #05070d) 100%
+    ) !important;
   }
 
   [data-orb-chat-body] {
@@ -402,7 +408,7 @@
   }
 
   html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .orb-composer-dock {
-    background: linear-gradient(180deg, transparent 0%, rgba(247, 251, 255, 0.92) 35%, #f7fbff 100%) !important;
+    background: linear-gradient(180deg, transparent 0%, rgba(5, 7, 13, 0.85) 35%, #05070d 100%) !important;
   }
 
   .orb-composer-dock > .mx-auto,
@@ -444,9 +450,13 @@
   }
 
   html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .orb-composer-glass {
-    background: rgba(255, 255, 255, 0.92) !important;
-    border-color: rgba(22, 139, 255, 0.18) !important;
-    box-shadow: 0 12px 36px rgba(15, 23, 42, 0.08), 0 0 32px rgba(22, 139, 255, 0.06) !important;
+    background: linear-gradient(
+      165deg,
+      color-mix(in srgb, #ffffff 14%, transparent),
+      color-mix(in srgb, #ffffff 6%, transparent)
+    ) !important;
+    border-color: rgba(22, 139, 255, 0.22) !important;
+    box-shadow: var(--orb-premium-shadow, 0 12px 40px rgba(0, 0, 0, 0.45), 0 0 48px rgba(22, 139, 255, 0.06)) !important;
   }
 
   .orb-composer-glass textarea,

@@ -2,6 +2,24 @@
  * Browser-only ORB UI duplication audit helpers (debug / developer mode).
  */
 
+export type OrbDesktopThemeAuditResult = {
+  shellTheme: string | null
+  layoutTheme: string | null
+  htmlOrbTheme: string | null
+  residentialFlag: boolean
+  themeLightClassCount: number
+  themeDarkClassCount: number
+  residentialLightLayoutCount: number
+  whiteCardCountInResidential: number
+  visibleComposerCount: number
+  residentialRootCount: number
+  desktopOverflowWidth: number
+  mobileOverflowWidth: number
+  documentScrollWidth: number
+  viewportWidth: number
+  ok: boolean
+}
+
 export type OrbUiAuditResult = {
   shellCount: number
   activePanelCount: number
@@ -130,6 +148,105 @@ function hiddenPointerActiveCount(): number {
     const pe = style.pointerEvents
     return pe !== 'none' && el.querySelector('button, [role="button"], a, input, textarea, select')
   }).length
+}
+
+function countWhiteCardsInResidential(): number {
+  const root =
+    document.querySelector('[data-orb-shell="true"][data-orb-residential="true"]') ??
+    document.querySelector('.orb-chat-layout--residential')
+  if (!root) return 0
+
+  const whiteSelectors = [
+    '.bg-white',
+    '.bg-slate-50',
+    '.bg-slate-100',
+    '.orb-billing-card',
+    '.orb-mobile-workspace-card',
+    '.orb-premium-settings-card',
+    '.orb-doc-glass-card'
+  ].join(',')
+
+  return Array.from(root.querySelectorAll(whiteSelectors)).filter((el) => {
+    if (!(el instanceof HTMLElement) || !isVisibleElement(el)) return false
+    const bg = window.getComputedStyle(el).backgroundColor
+    return (
+      bg === 'rgb(255, 255, 255)' ||
+      bg === 'rgba(255, 255, 255, 1)' ||
+      bg === 'rgb(248, 250, 252)' ||
+      bg === 'rgb(247, 251, 255)'
+    )
+  }).length
+}
+
+/** Debug helper — residential desktop/mobile theme authority and overflow. */
+export function runOrbDesktopThemeAudit(): OrbDesktopThemeAuditResult {
+  if (typeof document === 'undefined' || typeof window === 'undefined') {
+    return {
+      shellTheme: null,
+      layoutTheme: null,
+      htmlOrbTheme: null,
+      residentialFlag: false,
+      themeLightClassCount: 0,
+      themeDarkClassCount: 0,
+      residentialLightLayoutCount: 0,
+      whiteCardCountInResidential: 0,
+      visibleComposerCount: 0,
+      residentialRootCount: 0,
+      desktopOverflowWidth: 0,
+      mobileOverflowWidth: 0,
+      documentScrollWidth: 0,
+      viewportWidth: 0,
+      ok: true
+    }
+  }
+
+  const viewportWidth = window.innerWidth
+  const documentScrollWidth = document.documentElement.scrollWidth
+  const shell = document.querySelector('[data-orb-shell="true"]')
+  const layout = document.querySelector('.orb-chat-layout--residential')
+  const composers = Array.from(document.querySelectorAll('[data-orb-composer="main"]')).filter(
+    isVisibleElement
+  )
+  const residentialLightLayouts = document.querySelectorAll(
+    '.orb-chat-layout--residential.orb-theme-light'
+  ).length
+  const themeLightClassCount = document.querySelectorAll('.orb-theme-light').length
+  const themeDarkClassCount = document.querySelectorAll('.orb-theme-dark').length
+  const whiteCardCountInResidential = countWhiteCardsInResidential()
+  const overflow = auditOrbMobileViewportOverflow(viewportWidth)
+
+  const shellTheme = shell?.getAttribute('data-orb-theme') ?? null
+  const layoutTheme = layout?.getAttribute('data-orb-theme') ?? null
+  const htmlOrbTheme = document.documentElement.dataset.orbTheme ?? null
+  const residentialFlag = document.documentElement.dataset.orbResidential === '1'
+
+  const ok =
+    residentialFlag &&
+    shellTheme === 'dark' &&
+    (layoutTheme === null || layoutTheme === 'dark') &&
+    htmlOrbTheme === 'dark' &&
+    residentialLightLayouts === 0 &&
+    whiteCardCountInResidential === 0 &&
+    composers.length <= 1 &&
+    overflow.ok
+
+  return {
+    shellTheme,
+    layoutTheme,
+    htmlOrbTheme,
+    residentialFlag,
+    themeLightClassCount,
+    themeDarkClassCount,
+    residentialLightLayoutCount: residentialLightLayouts,
+    whiteCardCountInResidential,
+    visibleComposerCount: composers.length,
+    residentialRootCount: document.querySelectorAll('.orb-residential-root').length,
+    desktopOverflowWidth: documentScrollWidth,
+    mobileOverflowWidth: overflow.documentScrollWidth,
+    documentScrollWidth,
+    viewportWidth,
+    ok
+  }
 }
 
 export function runOrbUiAudit(): OrbUiAuditResult {
@@ -309,11 +426,13 @@ export function registerOrbUiAuditGlobals(): void {
   if (typeof window === 'undefined') return
   const w = window as Window & {
     ORB_UI_AUDIT?: () => OrbUiAuditResult
+    ORB_DESKTOP_THEME_AUDIT?: () => OrbDesktopThemeAuditResult
     ORB_UI_HIT_TEST?: (selectorOrText: string) => OrbUiHitTestResult
     ORB_UI_DUPLICATES?: () => ReturnType<typeof runOrbUiDuplicates>
     ORB_MOBILE_VIEWPORT_AUDIT?: () => OrbMobileViewportOverflowResult
   }
   w.ORB_UI_AUDIT = runOrbUiAudit
+  w.ORB_DESKTOP_THEME_AUDIT = runOrbDesktopThemeAudit
   w.ORB_UI_HIT_TEST = runOrbUiHitTest
   w.ORB_UI_DUPLICATES = runOrbUiDuplicates
   w.ORB_MOBILE_VIEWPORT_AUDIT = auditOrbMobileViewportOverflow

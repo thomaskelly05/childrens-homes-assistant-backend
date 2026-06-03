@@ -80,6 +80,7 @@ describe('ORB UI source of truth — overlays and responsive branches', () => {
     const audit = read('components/orb-standalone/orb-ui-audit.ts')
     assert.ok(audit.length > 100)
     assert.match(audit, /runOrbUiAudit/)
+    assert.match(audit, /runOrbDesktopThemeAudit/)
     assert.match(audit, /runOrbUiHitTest/)
     assert.match(audit, /runOrbUiDuplicates/)
     assert.match(audit, /registerOrbUiAuditGlobals/)
