@@ -15,6 +15,7 @@ import {
   FolderKanban,
   FolderOpen,
   Library,
+  MessageSquare,
   MessageSquarePlus,
   Mic,
   PenLine,
@@ -66,37 +67,65 @@ const NAV_ITEMS = [
   { id: 'saved', label: 'Saved outputs', icon: Save }
 ] as const
 
-const DESKTOP_CORE_STATION_IDS: ReadonlySet<string> = new Set(['skills', 'knowledge', 'templates'])
-const DESKTOP_CORE_NAV = NAV_ITEMS.filter((item) => DESKTOP_CORE_STATION_IDS.has(item.id))
+export type OrbResidentialPracticePanelId =
+  | 'inspection_readiness'
+  | 'safeguarding_thinking'
+  | 'record_properly'
 
-const DESKTOP_WORKSPACE_NAV: Array<{
-  id: (typeof NAV_ITEMS)[number]['id']
+const DESKTOP_MAIN_NAV: Array<{
+  id: (typeof NAV_ITEMS)[number]['id'] | 'chat'
   label: string
   helper?: string
   icon: (typeof NAV_ITEMS)[number]['icon']
   magicNotes?: boolean
 }> = [
+  { id: 'chat', label: 'Chat', icon: MessageSquare },
   { id: 'orb_dictate', label: 'Dictate', helper: 'Rough notes to records', icon: PenLine, magicNotes: true },
   {
     id: 'shift_builder',
     label: 'Shift Builder',
-    helper: "Plans, handovers and what's missing",
+    helper: 'Handover and shift plan',
     icon: ClipboardPen
   },
   { id: 'orb_voice', label: 'Voice', icon: Mic },
   { id: 'documents', label: 'Documents', icon: FolderOpen },
-  { id: 'saved', label: 'Saved Outputs', icon: Save },
-  { id: 'review', label: 'Review', icon: FileCheck }
+  { id: 'saved', label: 'Saved Outputs', icon: Save }
 ]
 
-const DESKTOP_INTELLIGENCE_MODES: Array<{
-  mode: StandaloneOrbMode
+const DESKTOP_PRACTICE_NAV: Array<{
+  id: (typeof NAV_ITEMS)[number]['id'] | OrbResidentialPracticePanelId
   label: string
-  icon: typeof Shield
+  icon: (typeof NAV_ITEMS)[number]['icon']
+  practicePanel?: OrbResidentialPracticePanelId
 }> = [
-  { mode: 'Ofsted Lens', label: residentialModeDisplayLabel('Ofsted Lens'), icon: ClipboardList },
-  { mode: 'Safeguarding Thinking', label: 'Safeguarding Thinking', icon: Shield },
-  { mode: 'Record This Properly', label: 'Record This Properly', icon: FileCheck }
+  { id: 'review', label: 'Review', icon: FileCheck },
+  {
+    id: 'inspection_readiness',
+    label: residentialModeDisplayLabel('Ofsted Lens'),
+    icon: ClipboardList,
+    practicePanel: 'inspection_readiness'
+  },
+  {
+    id: 'safeguarding_thinking',
+    label: 'Safeguarding Thinking',
+    icon: Shield,
+    practicePanel: 'safeguarding_thinking'
+  },
+  {
+    id: 'record_properly',
+    label: 'Record This Properly',
+    icon: FileCheck,
+    practicePanel: 'record_properly'
+  }
+]
+
+const DESKTOP_LIBRARY_NAV: Array<{
+  id: (typeof NAV_ITEMS)[number]['id']
+  label: string
+  icon: (typeof NAV_ITEMS)[number]['icon']
+}> = [
+  { id: 'templates', label: 'Templates', icon: FileText },
+  { id: 'knowledge', label: 'Knowledge Centre', icon: Library }
 ]
 
 const MOBILE_DRAWER_QUICK_NAV: Array<{
@@ -268,6 +297,7 @@ export function OrbResidentialSidebar({
   onOpenProfile,
   onOpenBilling,
   onSelectMode,
+  onOpenPracticePanel,
   activeMode,
   onWorkspaceChange,
   onSelectProject,
@@ -288,6 +318,7 @@ export function OrbResidentialSidebar({
   onOpenProfile?: () => void
   onOpenBilling?: () => void
   onSelectMode?: (mode: StandaloneOrbMode) => void
+  onOpenPracticePanel?: (panel: OrbResidentialPracticePanelId) => void
   activeMode?: StandaloneOrbMode
   onWorkspaceChange: (next: StandaloneWorkspace) => void
   onSelectProject?: (projectId: string) => void
@@ -299,7 +330,6 @@ export function OrbResidentialSidebar({
 }) {
   const [projectsCollapsed, setProjectsCollapsed] = useState(() => readOrbSidebarSectionCollapsed('projects'))
   const [recentsCollapsed, setRecentsCollapsed] = useState(() => readOrbSidebarSectionCollapsed('recents'))
-  const [appsCollapsed, setAppsCollapsed] = useState(() => readOrbSidebarSectionCollapsed('apps'))
   const [accountCollapsed, setAccountCollapsed] = useState(() => readOrbSidebarSectionCollapsed('account'))
   const [projectEditorOpen, setProjectEditorOpen] = useState(false)
   const [newProjectName, setNewProjectName] = useState('')
@@ -777,62 +807,88 @@ export function OrbResidentialSidebar({
 
         {!isMobile ? (
           <nav className="mb-2 space-y-3" aria-label="ORB desktop navigation" data-orb-sidebar-desktop-nav>
-            <SidebarCollapsibleSection
-              sectionKey="apps"
-              title="Core"
-              collapsed={appsCollapsed}
-              onToggle={() => toggleSection('apps', appsCollapsed, setAppsCollapsed)}
-            >
-              <ul className="space-y-0.5" data-orb-sidebar-stations data-orb-sidebar-section="core">
-                {DESKTOP_CORE_NAV.map((station) => (
-                  <DesktopSidebarNavButton
-                    key={station.id}
-                    label={station.label}
-                    icon={station.icon}
-                    stationId={station.id}
-                    onClick={() => openStation(station.id)}
-                  />
-                ))}
-              </ul>
-            </SidebarCollapsibleSection>
-
-            <div data-orb-sidebar-section="intelligence">
+            <div data-orb-sidebar-section="main">
               <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--orb-muted)]">
-                Intelligence
+                Main
               </p>
-              <ul className="mt-1 space-y-0.5" data-orb-sidebar-intelligence>
-                {DESKTOP_INTELLIGENCE_MODES.map((entry) => (
+              <ul className="mt-1 space-y-0.5" data-orb-sidebar-main>
+                {DESKTOP_MAIN_NAV.map((entry) => {
+                  const Icon = entry.icon
+                  const isChat = entry.id === 'chat'
+                  return (
+                    <li key={entry.id}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (isChat) {
+                            onNewChat(workspace.activeProjectId)
+                            return
+                          }
+                          openStation(entry.id as OrbResidentialStationId)
+                        }}
+                        className="orb-sidebar-nav-item w-full"
+                        {...(entry.id === 'orb_dictate' ? { 'data-orb-sidebar-magic-notes': true } : {})}
+                        {...(isChat ? { 'data-orb-sidebar-chat': true } : { 'data-orb-sidebar-station': entry.id })}
+                      >
+                        <Icon className="h-4 w-4 shrink-0" aria-hidden />
+                        <span className="flex min-w-0 flex-1 flex-col text-left">
+                          <span className="text-sm">{entry.label}</span>
+                          {entry.helper ? (
+                            <span className="text-[10px] leading-tight text-[var(--orb-muted)]">{entry.helper}</span>
+                          ) : null}
+                        </span>
+                        {entry.id === 'saved' && savedOutputsCount ? (
+                          <span className="rounded-full bg-[var(--orb-surface-hover)] px-2 py-0.5 text-[10px]">
+                            {savedOutputsCount}
+                          </span>
+                        ) : null}
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+
+            <div data-orb-sidebar-section="practice">
+              <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--orb-muted)]">
+                Practice
+              </p>
+              <ul className="mt-1 space-y-0.5" data-orb-sidebar-practice>
+                {DESKTOP_PRACTICE_NAV.map((entry) => (
                   <DesktopSidebarNavButton
-                    key={entry.mode}
+                    key={entry.id}
                     label={entry.label}
                     icon={entry.icon}
-                    active={activeMode === entry.mode}
-                    onClick={() => onSelectMode?.(entry.mode)}
-                    dataOrb={`orb-sidebar-mode-${entry.mode.replace(/\s+/g, '-').toLowerCase()}`}
+                    stationId={entry.practicePanel ? undefined : (entry.id as OrbResidentialStationId)}
+                    onClick={() => {
+                      if (entry.practicePanel) {
+                        onOpenPracticePanel?.(entry.practicePanel)
+                        return
+                      }
+                      openStation(entry.id as OrbResidentialStationId)
+                    }}
+                    dataOrb={
+                      entry.practicePanel
+                        ? `orb-sidebar-practice-${entry.practicePanel}`
+                        : `orb-sidebar-station-${entry.id}`
+                    }
                   />
                 ))}
               </ul>
             </div>
 
-            <div data-orb-sidebar-section="workspace">
+            <div data-orb-sidebar-section="library">
               <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--orb-muted)]">
-                Workspace
+                Library
               </p>
-              <ul className="mt-1 space-y-0.5" data-orb-sidebar-workspace>
-                {DESKTOP_WORKSPACE_NAV.map((station) => (
+              <ul className="mt-1 space-y-0.5" data-orb-sidebar-library>
+                {DESKTOP_LIBRARY_NAV.map((station) => (
                   <DesktopSidebarNavButton
                     key={station.id}
                     label={station.label}
-                    helper={station.helper}
                     icon={station.icon}
                     stationId={station.id}
-                    badge={
-                      station.id === 'saved' && savedOutputsCount
-                        ? String(savedOutputsCount)
-                        : undefined
-                    }
                     onClick={() => openStation(station.id)}
-                    {...(station.magicNotes ? { dataOrb: 'orb-sidebar-magic-notes' } : {})}
                   />
                 ))}
               </ul>

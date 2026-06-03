@@ -62,7 +62,7 @@ export function OrbReviewPanel({
       open={open}
       onClose={onClose}
       title="Review"
-      subtitle="Quality-review written practice — with therapeutic and safeguarding lenses."
+      subtitle="Review written practice with therapeutic, safeguarding and recording quality lenses."
       panelId="review"
       {...orbStationShellProps(residentialSurface, 'wide')}
     >

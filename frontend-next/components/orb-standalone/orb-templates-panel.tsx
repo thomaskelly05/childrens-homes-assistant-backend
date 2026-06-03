@@ -26,10 +26,32 @@ import {
 
 const FALLBACK_CATEGORIES = [...ORB_TEMPLATE_FALLBACK_CATEGORIES]
 
+const TEMPLATE_CATEGORY_LABELS: Record<string, string> = {
+  care_planning: 'Care planning',
+  learning_academy: 'Learning',
+  risk_assessment: 'Risk assessment',
+  safeguarding: 'Safeguarding',
+  recording: 'Recording',
+  ofsted: 'Ofsted / SCCIF',
+  sccif: 'Ofsted / SCCIF',
+  leadership: 'Leadership / RI',
+  supervision: 'Supervision',
+  locality: 'Locality',
+  learning: 'Learning'
+}
+
 function friendlyCategoryLabel(raw: string): string {
+  const key = raw.trim().toLowerCase().replace(/\s+/g, '_')
+  if (TEMPLATE_CATEGORY_LABELS[key]) return TEMPLATE_CATEGORY_LABELS[key]
+  if (/[a-z]+_[a-z]/.test(key)) {
+    return key
+      .split('_')
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ')
+  }
   return raw
-    .replace(/\bOfsted\b/gi, 'Regulatory')
-    .replace(/SCCIF/gi, 'inspection framework')
+    .replace(/\bOfsted\b/gi, 'Ofsted / SCCIF')
+    .replace(/SCCIF/gi, 'Ofsted / SCCIF')
     .replace(/\s+/g, ' ')
     .trim()
 }
@@ -117,7 +139,7 @@ export function OrbTemplatesPanel({
     <OrbStandalonePanelShell
       open={open}
       title="Templates"
-      subtitle="Residential childcare templates you can generate, adapt and export."
+      subtitle="Choose a template, then ORB helps you adapt it."
       onClose={onClose}
       panelId="templates"
       ariaLabel="ORB template library"

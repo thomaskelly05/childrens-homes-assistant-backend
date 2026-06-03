@@ -1216,7 +1216,11 @@ html[data-orb-residential='1'] .orb-chat-layout {
   html[data-orb-residential='1'] [data-orb-shift-builder-panel],
   html[data-orb-residential='1'] [data-orb-skills-panel],
   html[data-orb-residential='1'] [data-orb-templates-panel],
-  html[data-orb-residential='1'] [data-orb-knowledge-library] {
+  html[data-orb-residential='1'] [data-orb-knowledge-library],
+  html[data-orb-residential='1'] [data-orb-inspection-readiness-panel],
+  html[data-orb-residential='1'] [data-orb-safeguarding-thinking-panel],
+  html[data-orb-residential='1'] [data-orb-record-properly-panel],
+  html[data-orb-residential='1'] [data-orb-review-panel] {
     max-width: var(--orb-desktop-page-max);
     margin-inline: auto;
     width: 100%;

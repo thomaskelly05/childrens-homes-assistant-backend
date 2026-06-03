@@ -19,10 +19,13 @@ describe('ORB main workspace shell', () => {
   it('core workspace panel list matches product tools', () => {
     assert.deepEqual([...ORB_CORE_WORKSPACE_PANELS].sort(), [
       'documents',
+      'inspection_readiness',
       'knowledge',
       'orb_dictate',
       'orb_voice',
+      'record_properly',
       'review',
+      'safeguarding_thinking',
       'saved_outputs',
       'shift_builder',
       'skills',

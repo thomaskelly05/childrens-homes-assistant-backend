@@ -103,8 +103,14 @@ import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
 import { OrbStandaloneSidebar } from '@/components/orb-standalone/orb-standalone-sidebar'
 import {
   OrbResidentialSidebar,
+  type OrbResidentialPracticePanelId,
   type OrbResidentialStationId
 } from '@/components/orb-residential/orb-residential-sidebar'
+import {
+  OrbInspectionReadinessPanel,
+  OrbRecordProperlyPanel,
+  OrbSafeguardingThinkingPanel
+} from '@/components/orb-standalone/orb-practice-panels'
 import { OrbHueMark } from '@/components/orb-standalone/orb-hue-logo'
 import { useOrbAppearance } from '@/components/orb-standalone/use-orb-appearance'
 import { OrbUiAuditBootstrap } from '@/components/orb-standalone/orb-ui-audit-bootstrap'
@@ -782,6 +788,10 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   const openAgentsPanel = useCallback(() => openPanel('agents'), [openPanel])
   const openKnowledgeLibrary = useCallback(() => openPanel('knowledge'), [openPanel])
   const openReviewPanel = useCallback(() => openPanel('review'), [openPanel])
+  const openPracticePanel = useCallback(
+    (panel: OrbResidentialPracticePanelId) => openPanel(panel),
+    [openPanel]
+  )
   const openSkillsPanel = useCallback(() => openPanel('skills'), [openPanel])
   const openTemplatesPanel = useCallback(() => openPanel('templates'), [openPanel])
   const openSavedOutputsPanel = useCallback(() => openPanel('saved_outputs'), [openPanel])
@@ -1782,6 +1792,12 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
     inputRef.current?.focus()
   }
 
+  function runPracticeWorkspace(payload: { prompt: string; mode: StandaloneOrbMode }) {
+    handleModeChange(payload.mode)
+    void sendMessage(payload.prompt)
+    inputRef.current?.focus()
+  }
+
   function openResidentialStation(station: OrbResidentialStationId) {
     switch (station) {
       case 'review':
@@ -2622,6 +2638,24 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         onRunReview={runQualityReview}
         residentialSurface={residentialSurface}
       />
+      <OrbInspectionReadinessPanel
+        open={activePanel === 'inspection_readiness'}
+        onClose={closePanel}
+        onRun={runPracticeWorkspace}
+        residentialSurface={residentialSurface}
+      />
+      <OrbSafeguardingThinkingPanel
+        open={activePanel === 'safeguarding_thinking'}
+        onClose={closePanel}
+        onRun={runPracticeWorkspace}
+        residentialSurface={residentialSurface}
+      />
+      <OrbRecordProperlyPanel
+        open={activePanel === 'record_properly'}
+        onClose={closePanel}
+        onRun={runPracticeWorkspace}
+        residentialSurface={residentialSurface}
+      />
       <OrbSkillsPanel
         open={activePanel === 'skills'}
         onClose={closePanel}
@@ -2944,6 +2978,10 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                 handleModeChange(next)
                 setSidebarOpen(false)
                 inputRef.current?.focus()
+              }}
+              onOpenPracticePanel={(panel) => {
+                openPracticePanel(panel)
+                setSidebarOpen(false)
               }}
               activeMode={mode}
               adultProfile={adultProfile}

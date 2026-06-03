@@ -51,7 +51,11 @@ export const ORB_USER_EXPLAINABILITY_CONSIDERATIONS = [
   'Professional accountability'
 ] as const
 
-export const ORB_KNOWLEDGE_CENTRE_TITLE = 'Residential Knowledge Centre'
+export const ORB_KNOWLEDGE_CENTRE_TITLE = 'Knowledge Centre'
+
+/** Purpose line for Knowledge Centre workspace. */
+export const ORB_KNOWLEDGE_CENTRE_PURPOSE =
+  'Sources, guidance and documents that support ORB Residential.'
 
 export const ORB_KNOWLEDGE_TOPICS = [
   'SCCIF',

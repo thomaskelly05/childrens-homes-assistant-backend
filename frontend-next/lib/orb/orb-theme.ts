@@ -112,6 +112,7 @@ export const ORB_THEME_MOBILE_WORKSPACE = {
 
 /** Desktop layout tokens (matches `app/orb/orb-desktop.css` + premium tokens). */
 export const ORB_THEME_LAYOUT_DESKTOP = {
+  /** ~280px calm desktop sidebar */
   sidebarWidth: '17.5rem',
   sidebarWidthCollapsed: '4.25rem',
   sidebarWidthLegacy: '18.5rem',

@@ -8,6 +8,9 @@ export const ORB_CORE_WORKSPACE_PANELS = [
   'shift_builder',
   'saved_outputs',
   'review',
+  'inspection_readiness',
+  'safeguarding_thinking',
+  'record_properly',
   'templates',
   'knowledge',
   'skills'

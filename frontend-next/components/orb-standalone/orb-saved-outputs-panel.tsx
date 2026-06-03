@@ -309,8 +309,8 @@ export function OrbSavedOutputsPanel({
                 title="No saved outputs yet."
                 body={
                   storageMode === 'local'
-                    ? 'Save from ORB chat, Dictate, Documents or Shift Builder — drafts stay on this device until you reconnect.'
-                    : 'Save from chat answers, Dictate, Documents, Policy Card or Shift Builder to build your library here.'
+                    ? 'When ORB helps you write a record, review practice or create a briefing, you can save it here and reuse it later. Drafts stay on this device until you reconnect.'
+                    : 'No saved outputs yet. When ORB helps you write a record, review practice or create a briefing, you can save it here and reuse it later.'
                 }
               />
             ) : (
@@ -416,7 +416,9 @@ export function OrbSavedOutputsPanel({
               className="flex flex-1 items-center justify-center p-6 text-center text-sm text-[var(--orb-mobile-ws-muted,var(--orb-muted))]"
               data-orb-saved-output-detail-empty
             >
-              Select a saved output to open, export, or reuse in chat.
+              {items.length === 0
+                ? 'No saved outputs yet. When ORB helps you write a record, review practice or create a briefing, you can save it here and reuse it later.'
+                : 'Select a saved output to open, export, or reuse in chat.'}
             </div>
           )}
           {notice ? (
