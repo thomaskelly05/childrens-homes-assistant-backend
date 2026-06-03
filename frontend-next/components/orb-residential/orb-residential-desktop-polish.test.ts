@@ -19,9 +19,9 @@ describe('ORB Residential desktop polish', () => {
     assert.match(sidebar, /data-orb-sidebar-new-chat/)
     assert.match(sidebar, /data-orb-sidebar-search/)
     assert.match(sidebar, /data-orb-sidebar-desktop-nav/)
-    assert.match(sidebar, /data-orb-sidebar-section="core"/)
-    assert.match(sidebar, /data-orb-sidebar-section="intelligence"/)
-    assert.match(sidebar, /data-orb-sidebar-section="workspace"/)
+    assert.match(sidebar, /data-orb-sidebar-section="main"/)
+    assert.match(sidebar, /data-orb-sidebar-section="practice"/)
+    assert.match(sidebar, /data-orb-sidebar-section="library"/)
     assert.match(sidebar, /data-orb-sidebar-account-footer/)
     assert.doesNotMatch(sidebar, /data-orb-sidebar-section="profiles"/)
     assert.match(sidebar, /Recent chats/)
@@ -43,8 +43,9 @@ describe('ORB Residential desktop polish', () => {
     ]) {
       assert.match(sidebar, new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
     }
-    assert.match(sidebar, /Ofsted Lens|Inspection Readiness/)
-    assert.match(sidebar, /onSelectMode/)
+    assert.match(sidebar, /Inspection Readiness|residentialModeDisplayLabel\('Ofsted Lens'\)/)
+    assert.match(sidebar, /onOpenPracticePanel/)
+    assert.match(sidebar, /data-orb-sidebar-chat/)
     assert.match(copy, /ORB_RESIDENTIAL_EMPTY_HEADING_DESKTOP = 'What do you need help with\?'/)
   })
 

@@ -41,6 +41,10 @@ export type OrbDesktopLayoutAuditResult = {
   horizontalOverflow: boolean
   activeContentFitsViewport: boolean
   themeMismatchCount: number
+  hiddenFixedElementCount: number
+  bottomContentClippedCount: number
+  mainContentMaxWidthPx: number | null
+  settingsBillingAccountVisible: boolean
   ok: boolean
 }
 
@@ -807,6 +811,10 @@ export function runOrbDesktopLayoutAudit(): OrbDesktopLayoutAuditResult {
       horizontalOverflow: false,
       activeContentFitsViewport: true,
       themeMismatchCount: 0,
+      hiddenFixedElementCount: 0,
+      bottomContentClippedCount: 0,
+      mainContentMaxWidthPx: null,
+      settingsBillingAccountVisible: true,
       ok: true
     }
   }
@@ -839,7 +847,11 @@ export function runOrbDesktopLayoutAudit(): OrbDesktopLayoutAuditResult {
     '[data-orb-skills-panel]',
     '[data-orb-templates-panel]',
     '[data-orb-knowledge-library]',
-    '[data-orb-residential-empty]'
+    '[data-orb-residential-empty]',
+    '[data-orb-inspection-readiness-panel]',
+    '[data-orb-safeguarding-thinking-panel]',
+    '[data-orb-record-properly-panel]',
+    '[data-orb-review-panel]'
   ]
 
   const maxWidthContainers = containerSelectors.flatMap((selector) => {
@@ -973,6 +985,37 @@ export function runOrbDesktopLayoutAudit(): OrbDesktopLayoutAuditResult {
     (themeAudit.layoutTheme && themeAudit.shellTheme && themeAudit.layoutTheme !== themeAudit.shellTheme ? 1 : 0) +
     (!themeAudit.ok && themeAudit.residentialFlag ? 1 : 0)
 
+  const hiddenFixedElementCount = Array.from(
+    document.querySelectorAll('[style*="position: fixed"], [style*="position:fixed"]')
+  ).filter((el) => {
+    if (!(el instanceof HTMLElement) || !isVisibleElement(el)) return false
+    const style = window.getComputedStyle(el)
+    if (style.position !== 'fixed') return false
+    const rect = el.getBoundingClientRect()
+    return rect.width < 2 && rect.height < 2
+  }).length
+
+  const bottomContentClippedCount = Array.from(
+    document.querySelectorAll(
+      '[data-orb-composer="main"], [data-orb-sidebar-account-footer], [data-orb-billing-cta-bar], [data-orb-workspace-panel] .orb-workspace-body > *'
+    )
+  ).filter((el) => {
+    if (!(el instanceof HTMLElement) || !isVisibleElement(el)) return false
+    const rect = el.getBoundingClientRect()
+    return rect.bottom > viewportHeight + 6 && rect.top < viewportHeight
+  }).length
+
+  const mainContentMaxWidthPx = mainRect ? Math.round(mainRect.width) : null
+
+  const settingsBillingAccountVisible =
+    !isDesktop ||
+    (['[data-orb-sidebar-settings]', '[data-orb-sidebar-billing]', '[data-orb-sidebar-profile]'] as const).every(
+      (selector) => {
+        const el = document.querySelector(selector)
+        return el instanceof HTMLElement && isVisibleElement(el)
+      }
+    )
+
   const failures: string[] = [...overlapWarnings]
   if (elementsExceedingViewport.length) failures.push('elements exceed viewport width')
   if (isDesktop && mobileOnlyClassesActiveOnDesktop.length) {
@@ -993,6 +1036,18 @@ export function runOrbDesktopLayoutAudit(): OrbDesktopLayoutAuditResult {
     failures.push('active workspace content exceeds viewport without scroll')
   }
   if (themeMismatchCount > 0) failures.push('theme mismatch detected')
+  if (isDesktop && hiddenFixedElementCount > 0) {
+    failures.push(`hidden fixed elements detected (${hiddenFixedElementCount})`)
+  }
+  if (isDesktop && bottomContentClippedCount > 0) {
+    failures.push(`bottom content may be hidden behind viewport (${bottomContentClippedCount})`)
+  }
+  if (isDesktop && mainContentMaxWidthPx !== null && mainContentMaxWidthPx > viewportWidth + 2) {
+    failures.push('main content wider than viewport')
+  }
+  if (isDesktop && !settingsBillingAccountVisible) {
+    failures.push('account/settings/billing not visible in sidebar')
+  }
 
   if (failures.length) {
     console.warn('[ORB_DESKTOP_LAYOUT_AUDIT] issues:', failures)
@@ -1033,6 +1088,10 @@ export function runOrbDesktopLayoutAudit(): OrbDesktopLayoutAuditResult {
     horizontalOverflow,
     activeContentFitsViewport,
     themeMismatchCount,
+    hiddenFixedElementCount,
+    bottomContentClippedCount,
+    mainContentMaxWidthPx,
+    settingsBillingAccountVisible,
     ok: failures.length === 0
   }
 }

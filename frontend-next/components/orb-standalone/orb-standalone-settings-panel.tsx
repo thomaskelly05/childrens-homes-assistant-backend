@@ -436,7 +436,7 @@ export function OrbStandaloneSettingsPanel({
           {activeSection === 'skills' ? (
             <SettingsBlock title="Skills" description="Focused workflows from the sidebar Skills panel.">
               <p className="text-[11px] leading-5 text-[var(--orb-muted)]">
-                Open Skills from the sidebar to start safeguarding review, handovers, inspection prep and document
+                Use Practice and Library items in the sidebar for safeguarding review, handovers, inspection prep and
                 analysis with a single tap.
               </p>
             </SettingsBlock>

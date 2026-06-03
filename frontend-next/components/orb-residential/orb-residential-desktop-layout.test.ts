@@ -74,6 +74,28 @@ describe('ORB Residential desktop layout system', () => {
     assert.match(shift, /data-orb-shift-builder-panel/)
   })
 
+  it('desktop practice workspace panels are registered in core workspace list', () => {
+    const core = read('components/orb-standalone/orb-core-workspace-panels.ts')
+    const practice = read('components/orb-standalone/orb-practice-panels.tsx')
+
+    assert.match(core, /inspection_readiness/)
+    assert.match(core, /safeguarding_thinking/)
+    assert.match(core, /record_properly/)
+    assert.match(practice, /data-orb-inspection-readiness-panel/)
+    assert.match(practice, /data-orb-safeguarding-thinking-panel/)
+    assert.match(practice, /data-orb-record-properly-panel/)
+  })
+
+  it('template categories map internal ids to human-readable labels', () => {
+    const templates = read('components/orb-standalone/orb-templates-panel.tsx')
+    const fallback = read('lib/orb/orb-templates-fallback.ts')
+    assert.match(templates, /TEMPLATE_CATEGORY_LABELS/)
+    assert.match(templates, /care_planning: 'Care planning'/)
+    assert.match(templates, /learning_academy: 'Learning'/)
+    assert.match(fallback, /'Care Planning'/)
+    assert.doesNotMatch(fallback, /care_planning|learning_academy/)
+  })
+
   it('desktop Dictate uses deliberate two-column card layout', () => {
     const desktop = read('app/orb/orb-desktop.css')
     const dictate = read('components/orb-standalone/orb-dictate-station.tsx')
@@ -106,6 +128,10 @@ describe('ORB Residential desktop layout system', () => {
     assert.match(audit, /sidebarScrollContainerExists/)
     assert.match(audit, /accountFooterReachable/)
     assert.match(audit, /themeMismatchCount/)
+    assert.match(audit, /hiddenFixedElementCount/)
+    assert.match(audit, /bottomContentClippedCount/)
+    assert.match(audit, /mainContentMaxWidthPx/)
+    assert.match(audit, /settingsBillingAccountVisible/)
     assert.match(presence, /OrbSphere/)
     assert.doesNotMatch(presence, /orb-brand\.png|\.png/)
   })

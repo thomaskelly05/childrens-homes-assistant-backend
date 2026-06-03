@@ -77,7 +77,7 @@ describe('ORB Residential mobile UX', () => {
     assert.match(states, /Reconnect to continue/)
     assert.match(states, /data-orb-station-sign-in-again/)
     assert.match(saved, /No saved outputs yet/)
-    assert.match(saved, /Save from chat answers, Dictate, Documents/)
+    assert.match(saved, /When ORB helps you write a record, review practice or create a briefing/)
     assert.match(knowledge, /OrbKnowledgeBuiltinPanel/)
     assert.match(knowledge, /data-orb-knowledge-connected-empty/)
   })
@@ -89,7 +89,8 @@ describe('ORB Residential mobile UX', () => {
     }
     assert.match(sidebar, /label: 'Library'/)
     assert.match(sidebar, /GlassOrbMark/)
-    assert.match(sidebar, /data-orb-sidebar-stations/)
+    assert.match(sidebar, /data-orb-sidebar-main/)
+    assert.match(sidebar, /data-orb-sidebar-library/)
     assert.match(sidebar, /ORB_RESIDENTIAL_TAGLINE/)
   })
 
