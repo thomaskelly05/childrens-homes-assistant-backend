@@ -81,7 +81,7 @@ describe('ORB Residential ChatGPT parity', () => {
     const theme = readComponent('lib/orb/orb-theme.ts')
     assert.match(premium, /html\[data-orb-residential='1'\]/)
     assert.match(premium, /#05070d|#f7faff/)
-    assert.match(shell, /#05070d/)
+    assert.match(shell, /#f7fbff|getOrbThemeCssVariables\(resolvedTheme\)/)
     assert.match(theme, /backgroundDeep/)
   })
 

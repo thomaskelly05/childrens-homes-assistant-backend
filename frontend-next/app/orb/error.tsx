@@ -3,7 +3,7 @@
 import { useEffect } from 'react'
 import Link from 'next/link'
 
-import { useOrbResidentialThemeLock } from '@/components/orb-residential/use-orb-residential-theme-lock'
+import { useOrbResidentialThemeSync } from '@/components/orb-residential/use-orb-residential-theme-sync'
 import { isOrbDeveloperMode } from '@/lib/orb/orb-developer-mode'
 
 export default function OrbRouteError({
@@ -13,7 +13,7 @@ export default function OrbRouteError({
   error: Error & { digest?: string }
   reset: () => void
 }) {
-  useOrbResidentialThemeLock()
+  useOrbResidentialThemeSync()
 
   useEffect(() => {
     console.error('[ORB] route error', error)

@@ -4,7 +4,7 @@ import Link from 'next/link'
 
 import { OrbButton } from '@/components/orb-residential/ui/orb-button'
 import { OrbHeroSphere } from '@/components/orb-residential/ui/orb-hero-sphere'
-import { useOrbResidentialThemeLock } from '@/components/orb-residential/use-orb-residential-theme-lock'
+import { useOrbResidentialThemeSync } from '@/components/orb-residential/use-orb-residential-theme-sync'
 import { orbElectricGlow, orbGlassCard, orbNavyGradient, orbNavyPage } from '@/components/orb-residential/ui/orb-theme'
 
 const EXAMPLE_HINTS = [
@@ -15,7 +15,7 @@ const EXAMPLE_HINTS = [
 ]
 
 export function OrbFrontDoor() {
-  useOrbResidentialThemeLock()
+  useOrbResidentialThemeSync()
 
   return (
     <div

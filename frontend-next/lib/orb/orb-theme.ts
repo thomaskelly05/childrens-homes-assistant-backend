@@ -130,13 +130,37 @@ export const ORB_THEME_LAYOUT_DESKTOP = {
 
 export type OrbThemeMode = 'dark' | 'light'
 
-/** Residential `/orb` is dark-only until the appearance system is rebuilt. */
-export const ORB_RESIDENTIAL_RESOLVED_THEME: OrbThemeMode = 'dark'
+/** Default resolved theme for ORB Residential when no user preference is stored. */
+export const ORB_RESIDENTIAL_DEFAULT_THEME: OrbThemeMode = 'light'
 
-/** Resolved theme for ORB Residential — always dark for launch. */
-export function resolveOrbResidentialTheme(): OrbThemeMode {
-  return ORB_RESIDENTIAL_RESOLVED_THEME
-}
+/** Semantic ORB Residential tokens — consumed by route CSS and components. */
+export const ORB_RES_CSS_VARS = {
+  bg: '--orb-res-bg',
+  surface: '--orb-res-surface',
+  surfaceStrong: '--orb-res-surface-strong',
+  card: '--orb-res-card',
+  cardHover: '--orb-res-card-hover',
+  border: '--orb-res-border',
+  borderStrong: '--orb-res-border-strong',
+  text: '--orb-res-text',
+  textMuted: '--orb-res-text-muted',
+  textSoft: '--orb-res-text-soft',
+  primary: '--orb-res-primary',
+  primaryStrong: '--orb-res-primary-strong',
+  primarySoft: '--orb-res-primary-soft',
+  glow: '--orb-res-glow',
+  shadow: '--orb-res-shadow',
+  inputBg: '--orb-res-input-bg',
+  inputText: '--orb-res-input-text',
+  inputPlaceholder: '--orb-res-input-placeholder'
+} as const
+
+const ORB_THEME_SHADOWS_LIGHT = {
+  glass: '0 4px 24px rgba(15, 23, 42, 0.08), 0 0 0 1px rgba(22, 119, 255, 0.06)',
+  composer: '0 -4px 24px rgba(15, 23, 42, 0.06)',
+  header: '0 1px 0 rgba(37, 99, 235, 0.08)',
+  sidebar: '12px 0 40px rgba(15, 23, 42, 0.06), 0 0 24px rgba(22, 119, 255, 0.05)'
+} as const
 
 /** CSS custom property names consumed by ORB route stylesheets. */
 export const ORB_THEME_CSS_VARS = {
@@ -218,6 +242,53 @@ const ORB_THEME_LIGHT_COLORS = {
   softBlue: '#3b82f6'
 } as const
 
+
+function residentialSemanticTokens(mode: OrbThemeMode) {
+  if (mode === 'light') {
+    return {
+      [ORB_RES_CSS_VARS.bg]: '#f7fbff',
+      [ORB_RES_CSS_VARS.surface]: 'rgba(255, 255, 255, 0.98)',
+      [ORB_RES_CSS_VARS.surfaceStrong]: '#ffffff',
+      [ORB_RES_CSS_VARS.card]: '#ffffff',
+      [ORB_RES_CSS_VARS.cardHover]: '#edf6ff',
+      [ORB_RES_CSS_VARS.border]: 'rgba(37, 99, 235, 0.14)',
+      [ORB_RES_CSS_VARS.borderStrong]: 'rgba(22, 119, 255, 0.22)',
+      [ORB_RES_CSS_VARS.text]: '#0f172a',
+      [ORB_RES_CSS_VARS.textMuted]: '#52657a',
+      [ORB_RES_CSS_VARS.textSoft]: '#64748b',
+      [ORB_RES_CSS_VARS.primary]: '#1677ff',
+      [ORB_RES_CSS_VARS.primaryStrong]: '#0d5fcc',
+      [ORB_RES_CSS_VARS.primarySoft]: 'rgba(22, 119, 255, 0.1)',
+      [ORB_RES_CSS_VARS.glow]: 'rgba(22, 119, 255, 0.18)',
+      [ORB_RES_CSS_VARS.shadow]: ORB_THEME_SHADOWS_LIGHT.glass,
+      [ORB_RES_CSS_VARS.inputBg]: '#ffffff',
+      [ORB_RES_CSS_VARS.inputText]: '#0f172a',
+      [ORB_RES_CSS_VARS.inputPlaceholder]: '#64748b'
+    }
+  }
+
+  return {
+    [ORB_RES_CSS_VARS.bg]: ORB_THEME_COLORS.pageBackground,
+    [ORB_RES_CSS_VARS.surface]: 'rgba(8, 17, 31, 0.92)',
+    [ORB_RES_CSS_VARS.surfaceStrong]: 'rgba(7, 11, 20, 0.96)',
+    [ORB_RES_CSS_VARS.card]: 'rgba(8, 17, 31, 0.92)',
+    [ORB_RES_CSS_VARS.cardHover]: 'rgba(255, 255, 255, 0.06)',
+    [ORB_RES_CSS_VARS.border]: 'rgba(255, 255, 255, 0.1)',
+    [ORB_RES_CSS_VARS.borderStrong]: 'rgba(66, 215, 255, 0.22)',
+    [ORB_RES_CSS_VARS.text]: ORB_THEME_COLORS.textPrimary,
+    [ORB_RES_CSS_VARS.textMuted]: ORB_THEME_COLORS.textSecondary,
+    [ORB_RES_CSS_VARS.textSoft]: ORB_THEME_COLORS.textMuted,
+    [ORB_RES_CSS_VARS.primary]: ORB_ROYAL_BLUE,
+    [ORB_RES_CSS_VARS.primaryStrong]: ORB_DEEP_BLUE,
+    [ORB_RES_CSS_VARS.primarySoft]: 'rgba(22, 139, 255, 0.14)',
+    [ORB_RES_CSS_VARS.glow]: ORB_THEME_COLORS.glowElectric,
+    [ORB_RES_CSS_VARS.shadow]: ORB_THEME_SHADOWS.glass,
+    [ORB_RES_CSS_VARS.inputBg]: 'rgba(255, 255, 255, 0.06)',
+    [ORB_RES_CSS_VARS.inputText]: ORB_THEME_COLORS.textPrimary,
+    [ORB_RES_CSS_VARS.inputPlaceholder]: '#6f7787'
+  }
+}
+
 function residentialPalette(mode: OrbThemeMode) {
   if (mode === 'light') {
     return {
@@ -259,12 +330,15 @@ function residentialPalette(mode: OrbThemeMode) {
  * Canonical CSS variable map for the `/orb` residential root.
  * Apply on `.orb-residential-root` in `OrbShell`.
  */
-export function getOrbThemeCssVariables(mode: OrbThemeMode = 'dark'): Record<string, string> {
+export function getOrbThemeCssVariables(mode: OrbThemeMode = ORB_RESIDENTIAL_DEFAULT_THEME): Record<string, string> {
   const palette = residentialPalette(mode)
   const { colors } = palette
   const mobileWorkspace = ORB_THEME_MOBILE_WORKSPACE[mode]
+  const shadows = mode === 'light' ? ORB_THEME_SHADOWS_LIGHT : ORB_THEME_SHADOWS
+  const semantic = residentialSemanticTokens(mode)
 
   return {
+    ...semantic,
     [ORB_THEME_CSS_VARS.foreground]: colors.textPrimary,
     [ORB_THEME_CSS_VARS.muted]: colors.textSecondary,
     [ORB_THEME_CSS_VARS.line]: colors.border,
@@ -290,8 +364,8 @@ export function getOrbThemeCssVariables(mode: OrbThemeMode = 'dark'): Record<str
     [ORB_THEME_CSS_VARS.textMuted]: colors.textMuted,
     [ORB_THEME_CSS_VARS.border]: colors.border,
     [ORB_THEME_CSS_VARS.borderGlow]: colors.borderGlow,
-    [ORB_THEME_CSS_VARS.shadowGlass]: ORB_THEME_SHADOWS.glass,
-    [ORB_THEME_CSS_VARS.shadowComposer]: ORB_THEME_SHADOWS.composer,
+    [ORB_THEME_CSS_VARS.shadowGlass]: shadows.glass,
+    [ORB_THEME_CSS_VARS.shadowComposer]: shadows.composer,
     [ORB_THEME_CSS_VARS.blurHeader]: ORB_THEME_BLUR.header,
     [ORB_THEME_CSS_VARS.blurGlass]: ORB_THEME_BLUR.glass,
     [ORB_THEME_CSS_VARS.blurOverlay]: ORB_THEME_BLUR.overlay,
@@ -326,7 +400,7 @@ export function getOrbThemeCssVariables(mode: OrbThemeMode = 'dark'): Record<str
     '--orb-premium-border-glow': colors.borderGlow,
     '--orb-premium-glass': colors.glass,
     '--orb-premium-glass-strong': colors.glassStrong,
-    '--orb-premium-shadow': ORB_THEME_SHADOWS.glass,
+    '--orb-premium-shadow': shadows.glass,
     '--orb-mobile-header-height': ORB_THEME_LAYOUT_MOBILE.headerMinHeight,
     '--orb-mobile-composer-height': ORB_THEME_LAYOUT_MOBILE.composerMinHeight,
     [ORB_THEME_CSS_VARS.mobileWsPanel]: mobileWorkspace.panel,
@@ -340,15 +414,15 @@ export function getOrbThemeCssVariables(mode: OrbThemeMode = 'dark'): Record<str
 }
 
 /** @deprecated Prefer `getOrbThemeCssVariables`. */
-export function orbResidentialThemeCssVars(mode: OrbThemeMode = 'dark'): Record<string, string> {
+export function orbResidentialThemeCssVars(mode: OrbThemeMode = ORB_RESIDENTIAL_DEFAULT_THEME): Record<string, string> {
   return getOrbThemeCssVariables(mode)
 }
 
 /** Inline style object for the residential root wrapper in `OrbShell`. */
-export function orbResidentialRootStyle(mode: OrbThemeMode = 'dark'): CSSProperties {
+export function orbResidentialRootStyle(mode: OrbThemeMode = ORB_RESIDENTIAL_DEFAULT_THEME): CSSProperties {
   return getOrbThemeCssVariables(mode) as CSSProperties
 }
 
 /** Root class names for the canonical ORB residential shell. */
 export const ORB_SHELL_ROOT_CLASS =
-  'orb-residential-root min-h-[100dvh] w-full max-w-[100vw] overflow-x-hidden bg-[var(--orb-page-bg,var(--orb-bg,#05070d))] text-[var(--orb-text-primary,var(--orb-foreground,#f7faff))]'
+  'orb-residential-root min-h-[100dvh] w-full max-w-[100vw] overflow-x-hidden bg-[var(--orb-page-bg,var(--orb-bg,#f7fbff))] text-[var(--orb-text-primary,var(--orb-foreground,#0f172a))]'

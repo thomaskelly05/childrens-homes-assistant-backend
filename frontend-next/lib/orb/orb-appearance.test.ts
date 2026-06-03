@@ -5,6 +5,7 @@ import {
   ORB_APPEARANCE_MIGRATION_KEY,
   ORB_APPEARANCE_STORAGE_KEY,
   migrateOrbAppearanceForSystemDefault,
+  migrateOrbResidentialLightDefault,
   readOrbAppearanceMode,
   resolveOrbTheme,
   writeOrbAppearanceMode

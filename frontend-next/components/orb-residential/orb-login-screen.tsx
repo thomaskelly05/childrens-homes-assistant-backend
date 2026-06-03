@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 
 import { OrbAuthButton } from '@/components/orb-residential/ui/orb-auth-button'
 import { OrbHeroSphere } from '@/components/orb-residential/ui/orb-hero-sphere'
-import { useOrbResidentialThemeLock } from '@/components/orb-residential/use-orb-residential-theme-lock'
+import { useOrbResidentialThemeSync } from '@/components/orb-residential/use-orb-residential-theme-sync'
 import { useOrbAppearance } from '@/components/orb-standalone/use-orb-appearance'
 import { orbNavyGradient, orbNavyPage } from '@/components/orb-residential/ui/orb-theme'
 import { useAuth } from '@/contexts/auth-context'
@@ -28,7 +28,7 @@ function resolvePostLoginRoute(access: Awaited<ReturnType<typeof fetchOrbAccess>
 
 function OrbLoginPanel() {
   const { resolvedTheme, appearanceMode } = useOrbAppearance()
-  useOrbResidentialThemeLock()
+  useOrbResidentialThemeSync()
   const router = useRouter()
   const searchParams = useSearchParams()
   const { login, status, refreshSession } = useAuth()

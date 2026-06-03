@@ -29,12 +29,12 @@ describe('ORB Residential composer and shell cleanup', () => {
   it('canonical residential root is OrbShell only', () => {
     const shell = readComponent('components/orb/orb-shell.tsx')
     const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
-    const themeLock = readComponent('components/orb-residential/use-orb-residential-theme-lock.ts')
+    const themeSync = readComponent('components/orb-residential/use-orb-residential-theme-sync.ts')
     assert.match(shell, /ORB_SHELL_ROOT_CLASS/)
     assert.match(shell, /data-orb-shell="true"/)
     assert.match(companion, /orb-chat-layout--residential/)
     assert.doesNotMatch(companion, /orb-chat-layout--residential orb-residential-root/)
-    assert.doesNotMatch(themeLock, /orb-residential-root/)
+    assert.doesNotMatch(themeSync, /orb-residential-root/)
   })
 
   it('UI audit reports composer agent selector and residential root counts', () => {
@@ -54,14 +54,11 @@ describe('ORB Residential composer and shell cleanup', () => {
     assert.match(station, /OrbVoiceActions/)
   })
 
-  it('premium tokens use residential launch lock over legacy light selectors', () => {
+  it('premium tokens expose residential light and dark theme selectors', () => {
     const premium = readComponent('app/orb/orb-premium-tokens.css')
-    assert.match(premium, /ORB Residential launch lock/)
-    assert.match(premium, /\[data-orb-shell='true'\]\[data-orb-residential='true'\]/)
-    assert.match(premium, /\.orb-chat-layout--residential\.orb-theme-light[\s\S]*--orb-premium-bg-deep:\s*#05070d/)
-    assert.doesNotMatch(
-      premium,
-      /html\[data-orb-residential='1'\]:not\(:has\(\.orb-theme-light\)\)\s*\{/
-    )
+    assert.doesNotMatch(premium, /ORB Residential launch lock/)
+    assert.match(premium, /\.orb-chat-layout--residential\.orb-theme-light/)
+    assert.match(premium, /\.orb-chat-layout--residential\.orb-theme-dark/)
+    assert.match(premium, /--orb-res-bg/)
   })
 })
