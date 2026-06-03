@@ -11,6 +11,15 @@ import {
   writeOrbAppearanceMode,
   type OrbAppearanceMode
 } from '@/lib/orb/orb-appearance'
+import { ORB_RESIDENTIAL_RESOLVED_THEME } from '@/lib/orb/orb-theme'
+
+function isOrbResidentialRoute(): boolean {
+  if (typeof document === 'undefined') return false
+  return (
+    document.documentElement.getAttribute('data-orb-residential') === '1' ||
+    document.querySelector('[data-orb-residential-surface="true"]') != null
+  )
+}
 
 export function useOrbAppearance() {
   const [appearanceMode, setAppearanceModeState] = useState<OrbAppearanceMode>('system')
@@ -35,10 +44,11 @@ export function useOrbAppearance() {
   }, [appearanceMode])
 
   useEffect(() => {
-    applyOrbDocumentTheme(resolvedTheme, appearanceMode)
+    const themeForDocument = isOrbResidentialRoute() ? ORB_RESIDENTIAL_RESOLVED_THEME : resolvedTheme
+    applyOrbDocumentTheme(themeForDocument, appearanceMode)
     if (typeof document !== 'undefined') {
       document.documentElement.setAttribute('data-orb-appearance-mode', appearanceMode)
-      document.documentElement.setAttribute('data-orb-system-theme', resolvedTheme)
+      document.documentElement.setAttribute('data-orb-system-theme', themeForDocument)
     }
     return () => {
       /* Keep bootstrap theme on unmount — residential shell may still be mounted. */
@@ -51,10 +61,14 @@ export function useOrbAppearance() {
     setResolvedTheme(resolveOrbTheme(mode))
   }, [])
 
+  const residentialLocked = isOrbResidentialRoute()
+  const effectiveResolvedTheme = residentialLocked ? ORB_RESIDENTIAL_RESOLVED_THEME : resolvedTheme
+
   return {
     appearanceMode,
-    resolvedTheme,
+    resolvedTheme: effectiveResolvedTheme,
     setAppearanceMode,
-    storageKey: ORB_APPEARANCE_STORAGE_KEY
+    storageKey: ORB_APPEARANCE_STORAGE_KEY,
+    residentialThemeLocked: residentialLocked
   }
 }

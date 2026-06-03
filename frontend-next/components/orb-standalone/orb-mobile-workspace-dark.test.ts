@@ -32,6 +32,7 @@ describe('ORB mobile workspace dark surfaces', () => {
     assert.match(mobileCss, /html\[data-orb-theme='dark'\] \.orb-main-workspace \.orb-mobile-workspace-card/)
     assert.match(mobileCss, /html\[data-orb-theme='dark'\] \.orb-main-workspace \.orb-doc-glass-card/)
     assert.match(mobileCss, /html\[data-orb-theme='dark'\] \.orb-main-workspace \.orb-station-empty-state/)
+    assert.match(mobileCss, /\.orb-chat-layout--residential \.orb-main-workspace \.orb-mobile-workspace-card/)
     assert.doesNotMatch(
       mobileCss,
       /html\[data-orb-theme='dark'\][\s\S]*\.orb-main-workspace[\s\S]*background:\s*#fff(?:fff)?\b/i
@@ -48,6 +49,7 @@ describe('ORB mobile workspace dark surfaces', () => {
     assert.match(mobileCss, /\[data-orb-billing-modal\][\s\S]*\.orb-billing-card/)
     assert.match(mobileCss, /\[data-orb-billing-cta-bar\]/)
     assert.match(mobileCss, /safe-area-inset-bottom/)
+    assert.doesNotMatch(billing, /bg-white|text-slate/)
   })
 
   it('saved outputs empty state uses dark mobile workspace card class', () => {
@@ -78,9 +80,10 @@ describe('ORB mobile workspace dark surfaces', () => {
     assert.match(mobileCss, /\[data-orb-settings-nav-mobile\][\s\S]*overflow-x:\s*hidden/)
   })
 
-  it('light mode preserves white workspace cards via theme-scoped overrides', () => {
+  it('light-layer-fix does not target residential ORB', () => {
     const lightFix = readComponent('app/orb/orb-light-layer-fix.css')
-    assert.match(lightFix, /\.orb-theme-light \.orb-main-workspace/)
-    assert.match(lightFix, /var\(--orb-mobile-ws-card,\s*#ffffff\)/)
+    assert.match(lightFix, /:not\(\.orb-chat-layout--residential\)/)
+    assert.doesNotMatch(lightFix, /html\[data-orb-residential='1'\]/)
+    assert.doesNotMatch(lightFix, /\.orb-chat-layout--residential\.orb-theme-light/)
   })
 })

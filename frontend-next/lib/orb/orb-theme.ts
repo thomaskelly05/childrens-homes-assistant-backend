@@ -130,6 +130,14 @@ export const ORB_THEME_LAYOUT_DESKTOP = {
 
 export type OrbThemeMode = 'dark' | 'light'
 
+/** Residential `/orb` is dark-only until the appearance system is rebuilt. */
+export const ORB_RESIDENTIAL_RESOLVED_THEME: OrbThemeMode = 'dark'
+
+/** Resolved theme for ORB Residential — always dark for launch. */
+export function resolveOrbResidentialTheme(): OrbThemeMode {
+  return ORB_RESIDENTIAL_RESOLVED_THEME
+}
+
 /** CSS custom property names consumed by ORB route stylesheets. */
 export const ORB_THEME_CSS_VARS = {
   foreground: '--orb-foreground',

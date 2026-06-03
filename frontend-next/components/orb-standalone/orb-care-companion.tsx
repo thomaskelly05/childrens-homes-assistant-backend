@@ -2541,7 +2541,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   const layoutA11yClass = standaloneOrbAccessibilityClassNames(a11yPrefs)
 
   const atmosphereClass = atmosphereClassForMode(mode)
-  const effectiveTheme = resolvedTheme
+  const effectiveTheme = residentialSurface ? 'dark' : resolvedTheme
   const themeClass = effectiveTheme === 'light' ? 'orb-theme-light' : 'orb-theme-dark'
   const activeWorkspacePanel =
     residentialSurface && isOrbCoreWorkspacePanel(activePanel) ? activePanel : null
@@ -2748,13 +2748,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       data-orb-residential-surface={residentialSurface ? 'true' : undefined}
       data-orb-light-ui-build={ORB_LIGHT_UI_BUILD}
       data-orb-appearance-mode={appearanceMode}
-      data-orb-system-theme={
-        appearanceMode === 'system'
-          ? resolvedTheme
-          : appearanceMode === 'light'
-            ? 'light'
-            : 'dark'
-      }
+      data-orb-system-theme={effectiveTheme}
       data-orb-mobile-shell={isMobileViewport ? 'true' : undefined}
       data-orb-chat-layout={isMobileViewport ? 'mobile' : 'desktop'}
       data-orb-active-panel={activePanel || 'none'}

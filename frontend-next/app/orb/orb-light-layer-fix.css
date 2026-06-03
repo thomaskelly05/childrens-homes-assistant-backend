@@ -1,25 +1,18 @@
 /*
- * ORB light-mode layer repair.
+ * ORB light-mode layer repair (non-residential only).
  *
- * The premium token sheet was originally dark-first and later added light-mode
- * overrides. A few broad dark rules still leaked through in light mode, which
- * created the washed-out/duplicated-layer effect: dark header, faint white text,
- * and surfaces that looked like a transparent overlay was sitting above the app.
- *
- * Keep dark mode unchanged. When .orb-theme-light is active, force a single
- * white/blue surface stack and restore readable slate text.
+ * ORB Residential (`/orb`) is locked to premium dark at launch — these overrides
+ * apply only to standalone/non-residential `.orb-chat-layout` surfaces.
  */
 
-[data-orb-shell='true'][data-orb-theme='light'],
-.orb-chat-layout--residential.orb-theme-light,
-.orb-chat-layout.orb-theme-light {
+[data-orb-shell='true'][data-orb-theme='light']:not([data-orb-residential='true']),
+.orb-chat-layout.orb-theme-light:not(.orb-chat-layout--residential) {
   color-scheme: light !important;
   background: #f7fbff !important;
   color: #0f172a !important;
 }
 
-html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light,
-html[data-orb-residential='1'] .orb-chat-layout.orb-theme-light {
+.orb-chat-layout.orb-theme-light:not(.orb-chat-layout--residential) {
   --orb-premium-bg-deep: #f7fbff;
   --orb-premium-bg-mid: #ffffff;
   --orb-premium-bg-soft: #eef6ff;
@@ -48,8 +41,7 @@ html[data-orb-residential='1'] .orb-chat-layout.orb-theme-light {
   color: #0f172a !important;
 }
 
-html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .orb-chat-header,
-html[data-orb-residential='1'] .orb-chat-layout.orb-theme-light .orb-chat-header {
+.orb-chat-layout.orb-theme-light:not(.orb-chat-layout--residential) .orb-chat-header {
   background: rgba(255, 255, 255, 0.92) !important;
   border-bottom-color: rgba(37, 99, 235, 0.12) !important;
   color: #0f172a !important;
@@ -58,107 +50,82 @@ html[data-orb-residential='1'] .orb-chat-layout.orb-theme-light .orb-chat-header
   -webkit-backdrop-filter: blur(18px) saturate(160%);
 }
 
-html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .orb-chat-header *,
-html[data-orb-residential='1'] .orb-chat-layout.orb-theme-light .orb-chat-header * {
+.orb-chat-layout.orb-theme-light:not(.orb-chat-layout--residential) .orb-chat-header * {
   color: #0f172a !important;
 }
 
-html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .orb-chat-sidebar,
-html[data-orb-residential='1'] .orb-chat-layout.orb-theme-light .orb-chat-sidebar,
-html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .orb-panel-drawer,
-html[data-orb-residential='1'] .orb-chat-layout.orb-theme-light .orb-panel-drawer {
+.orb-chat-layout.orb-theme-light:not(.orb-chat-layout--residential) .orb-chat-sidebar,
+.orb-chat-layout.orb-theme-light:not(.orb-chat-layout--residential) .orb-panel-drawer {
   background: linear-gradient(180deg, #ffffff 0%, #f5f9ff 100%) !important;
   color: #0f172a !important;
   border-color: rgba(37, 99, 235, 0.14) !important;
 }
 
-html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light [data-orb-empty-heading],
-html[data-orb-residential='1'] .orb-chat-layout.orb-theme-light [data-orb-empty-heading],
-html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .orb-message-content,
-html[data-orb-residential='1'] .orb-chat-layout.orb-theme-light .orb-message-content,
-html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .orb-markdown-answer,
-html[data-orb-residential='1'] .orb-chat-layout.orb-theme-light .orb-markdown-answer,
-html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .orb-markdown-answer p,
-html[data-orb-residential='1'] .orb-chat-layout.orb-theme-light .orb-markdown-answer p,
-html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .orb-markdown-answer li,
-html[data-orb-residential='1'] .orb-chat-layout.orb-theme-light .orb-markdown-answer li,
-html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .orb-message-content strong,
-html[data-orb-residential='1'] .orb-chat-layout.orb-theme-light .orb-message-content strong {
+.orb-chat-layout.orb-theme-light:not(.orb-chat-layout--residential) [data-orb-empty-heading],
+.orb-chat-layout.orb-theme-light:not(.orb-chat-layout--residential) .orb-message-content,
+.orb-chat-layout.orb-theme-light:not(.orb-chat-layout--residential) .orb-markdown-answer,
+.orb-chat-layout.orb-theme-light:not(.orb-chat-layout--residential) .orb-markdown-answer p,
+.orb-chat-layout.orb-theme-light:not(.orb-chat-layout--residential) .orb-markdown-answer li,
+.orb-chat-layout.orb-theme-light:not(.orb-chat-layout--residential) .orb-message-content strong,
+.orb-chat-layout.orb-theme-light:not(.orb-chat-layout--residential) .orb-markdown-answer strong {
   color: #0f172a !important;
 }
 
-html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light [data-orb-empty-subline],
-html[data-orb-residential='1'] .orb-chat-layout.orb-theme-light [data-orb-empty-subline],
-html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light [data-orb-composer-disclaimer],
-html[data-orb-residential='1'] .orb-chat-layout.orb-theme-light [data-orb-composer-disclaimer],
-html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light [data-orb-residential-copyright],
-html[data-orb-residential='1'] .orb-chat-layout.orb-theme-light [data-orb-residential-copyright] {
+.orb-chat-layout.orb-theme-light:not(.orb-chat-layout--residential) [data-orb-empty-subline],
+.orb-chat-layout.orb-theme-light:not(.orb-chat-layout--residential) [data-orb-composer-disclaimer],
+.orb-chat-layout.orb-theme-light:not(.orb-chat-layout--residential) [data-orb-residential-copyright] {
   color: #52657a !important;
 }
 
-html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .orb-action-chip,
-html[data-orb-residential='1'] .orb-chat-layout.orb-theme-light .orb-action-chip,
-html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .orb-suggested-reply-chip,
-html[data-orb-residential='1'] .orb-chat-layout.orb-theme-light .orb-suggested-reply-chip {
+.orb-chat-layout.orb-theme-light:not(.orb-chat-layout--residential) .orb-action-chip,
+.orb-chat-layout.orb-theme-light:not(.orb-chat-layout--residential) .orb-suggested-reply-chip {
   background: #ffffff !important;
   border-color: rgba(37, 99, 235, 0.14) !important;
   color: #334155 !important;
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05) !important;
 }
 
-html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .orb-composer-glass,
-html[data-orb-residential='1'] .orb-chat-layout.orb-theme-light .orb-composer-glass {
+.orb-chat-layout.orb-theme-light:not(.orb-chat-layout--residential) .orb-composer-glass {
   background: rgba(255, 255, 255, 0.98) !important;
   border-color: rgba(22, 119, 255, 0.24) !important;
   box-shadow: 0 18px 46px rgba(15, 23, 42, 0.1), 0 0 32px rgba(22, 119, 255, 0.12) !important;
 }
 
-html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .orb-panel-overlay,
-html[data-orb-residential='1'] .orb-chat-layout.orb-theme-light .orb-panel-overlay {
+.orb-chat-layout.orb-theme-light:not(.orb-chat-layout--residential) .orb-panel-overlay {
   background: rgba(15, 23, 42, 0.18) !important;
 }
 
-html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light [data-orb-app-modal='true'] .orb-panel-modal,
-html[data-orb-residential='1'] .orb-chat-layout.orb-theme-light [data-orb-app-modal='true'] .orb-panel-modal {
+.orb-chat-layout.orb-theme-light:not(.orb-chat-layout--residential) [data-orb-app-modal='true'] .orb-panel-modal {
   background: #ffffff !important;
   color: #0f172a !important;
   border-color: rgba(22, 119, 255, 0.18) !important;
 }
 
-html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light [data-orb-app-modal='true'] .orb-panel-modal *,
-html[data-orb-residential='1'] .orb-chat-layout.orb-theme-light [data-orb-app-modal='true'] .orb-panel-modal * {
+.orb-chat-layout.orb-theme-light:not(.orb-chat-layout--residential) [data-orb-app-modal='true'] .orb-panel-modal * {
   color: inherit;
 }
 
-html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light input,
-html[data-orb-residential='1'] .orb-chat-layout.orb-theme-light input,
-html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light textarea,
-html[data-orb-residential='1'] .orb-chat-layout.orb-theme-light textarea,
-html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light select,
-html[data-orb-residential='1'] .orb-chat-layout.orb-theme-light select {
+.orb-chat-layout.orb-theme-light:not(.orb-chat-layout--residential) input,
+.orb-chat-layout.orb-theme-light:not(.orb-chat-layout--residential) textarea,
+.orb-chat-layout.orb-theme-light:not(.orb-chat-layout--residential) select {
   background: #ffffff !important;
   color: #0f172a !important;
   border-color: rgba(37, 99, 235, 0.16) !important;
 }
 
-html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .orb-main-workspace .orb-mobile-workspace-card,
-html[data-orb-residential='1'] .orb-chat-layout.orb-theme-light .orb-main-workspace .orb-mobile-workspace-card,
-html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .orb-main-workspace .orb-doc-glass-card,
-html[data-orb-residential='1'] .orb-chat-layout.orb-theme-light .orb-main-workspace .orb-doc-glass-card,
-html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .orb-main-workspace .orb-station-empty-state,
-html[data-orb-residential='1'] .orb-chat-layout.orb-theme-light .orb-main-workspace .orb-station-empty-state,
-html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .orb-main-workspace .orb-premium-settings-card,
-html[data-orb-residential='1'] .orb-chat-layout.orb-theme-light .orb-main-workspace .orb-premium-settings-card,
-html[data-orb-residential='1'] .orb-theme-light [data-orb-billing-modal] .orb-billing-card,
-html[data-orb-residential='1'] .orb-theme-light [data-orb-account-modal] .orb-mobile-workspace-card {
+.orb-chat-layout.orb-theme-light:not(.orb-chat-layout--residential) .orb-main-workspace .orb-mobile-workspace-card,
+.orb-chat-layout.orb-theme-light:not(.orb-chat-layout--residential) .orb-main-workspace .orb-doc-glass-card,
+.orb-chat-layout.orb-theme-light:not(.orb-chat-layout--residential) .orb-main-workspace .orb-station-empty-state,
+.orb-chat-layout.orb-theme-light:not(.orb-chat-layout--residential) .orb-main-workspace .orb-premium-settings-card,
+.orb-chat-layout.orb-theme-light:not(.orb-chat-layout--residential) [data-orb-billing-modal] .orb-billing-card,
+.orb-chat-layout.orb-theme-light:not(.orb-chat-layout--residential) [data-orb-account-modal] .orb-mobile-workspace-card {
   background: var(--orb-mobile-ws-card, #ffffff) !important;
   border-color: var(--orb-mobile-ws-card-border, rgba(37, 99, 235, 0.14)) !important;
   color: var(--orb-mobile-ws-text, #0f172a) !important;
   box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06) !important;
 }
 
-html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .orb-main-workspace,
-html[data-orb-residential='1'] .orb-chat-layout.orb-theme-light .orb-main-workspace {
+.orb-chat-layout.orb-theme-light:not(.orb-chat-layout--residential) .orb-main-workspace {
   background: var(--orb-mobile-ws-panel, #f7fbff) !important;
   color: var(--orb-mobile-ws-text, #0f172a) !important;
 }

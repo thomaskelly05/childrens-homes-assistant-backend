@@ -206,7 +206,7 @@ describe('ORB Residential mobile UX', () => {
     assert.match(shell, /useOrbResidentialThemeLock/)
     assert.match(companion, /orb-chat-layout--residential/)
     assert.doesNotMatch(companion, /orb-chat-layout--residential orb-residential-root/)
-    assert.match(companion, /effectiveTheme = resolvedTheme/)
+    assert.match(companion, /residentialSurface \? 'dark' : resolvedTheme/)
     assert.match(premiumCss, /html\[data-orb-residential='1'\]/)
   })
 
