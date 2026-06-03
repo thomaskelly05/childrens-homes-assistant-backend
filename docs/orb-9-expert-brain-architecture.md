@@ -1,5 +1,11 @@
 # ORB 9/10 Expert Brain — Master Architecture
 
+> **ORB is the shell. IndiCare Intelligence is the brain.**
+
+Every `/ORB` request passes through `services/indicare_intelligence_core_service.py` (Perfect 10), which orchestrates ORB 9 and converged layers. Answer depth adapts (`general_light` → `safeguarding_critical`) without forcing residential framing on unrelated questions.
+
+See also: `docs/indicare-intelligence-perfect-10-architecture.md`
+
 ## Vision
 
 One **Master ORB Expert Brain** that thinks around the **whole child** — not only Ofsted — with governed sources, explicit professional lenses, Quality Standards spine, missingness detection, and a safety quality gate before any answer is shown.

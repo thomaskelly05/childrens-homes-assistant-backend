@@ -296,27 +296,30 @@ class OrbKnowledgeRetrievalService:
         expert_packet: dict[str, Any] = {"active": False}
         expert_block = ""
         expert_brain_9: dict[str, Any] = {"active": False}
-        if prompt_tier != "fast":
-            expert_brain_9 = orb_expert_brain_orchestrator_service.build_context_packet(
-                message,
-                mode=mode,
-                profile_role=profile_role,
-                history=history,
-            )
-            expert_packet = expert_brain_9.get("expert_packet") or expert_packet
-            expert_block = orb_expert_brain_orchestrator_service.build_prompt_block(expert_brain_9)
-            if not expert_block:
-                expert_packet = orb_expert_answer_engine_service.build_expert_answer_packet(
-                    message,
-                    mode=mode,
-                    profile_role=profile_role,
-                    history=history,
-                )
-                expert_block = orb_expert_answer_engine_service.build_prompt_block(expert_packet)
+        indicare_intelligence: dict[str, Any] = {"active": False}
+        from services.indicare_intelligence_core_service import indicare_intelligence_core_service
+
+        indicare_intelligence = indicare_intelligence_core_service.build_intelligence_packet(
+            message,
+            mode=mode,
+            profile_role=profile_role,
+            history=history,
+            profile_context=profile_context,
+        )
+        expert_brain_9 = indicare_intelligence.get("orb9_packet") or expert_brain_9
+        expert_packet = expert_brain_9.get("expert_packet") or expert_packet
+        expert_block = indicare_intelligence.get("prompt_block") or ""
+        if not expert_block and prompt_tier != "fast":
+            expert_block = orb_expert_answer_engine_service.build_prompt_block(expert_packet)
             if not expert_block:
                 expert_block = orb_expert_scenario_bank_service.expert_prompt_block(message)
-            if expert_block:
-                grounding_context = f"{grounding_context}\n\n{expert_block}".strip()
+        if expert_block:
+            grounding_context = f"{expert_block}\n\n{grounding_context}".strip()
+        depth = indicare_intelligence.get("expert_depth") or "general_light"
+        if depth in ("residential_deep", "safeguarding_critical") and prompt_tier != "deep":
+            prompt_tier = "deep"
+        elif depth in ("residential_light", "residential_standard") and prompt_tier == "fast":
+            prompt_tier = "residential"
         return {
             "classification": classification,
             "prompt_tier": prompt_tier,
@@ -327,6 +330,9 @@ class OrbKnowledgeRetrievalService:
             "expert_scenario_context": expert_context,
             "expert_answer_packet": expert_packet,
             "expert_brain_9": expert_brain_9,
+            "indicare_intelligence": indicare_intelligence,
+            "expert_depth": indicare_intelligence.get("expert_depth"),
+            "care_relevance_score": indicare_intelligence.get("care_relevance_score"),
         }
 
     def retrieve_sources(

@@ -9,7 +9,6 @@ from typing import Any
 from services.orb_expert_answer_engine_service import orb_expert_answer_engine_service
 from services.orb_followup_learning_service import orb_followup_learning_service
 from services.orb_gap_detection_service import orb_gap_detection_service
-from services.orb_knowledge_retrieval_service import orb_knowledge_retrieval_service
 from services.orb_learning_ledger_service import orb_learning_ledger_service
 from services.orb_missingness_graph_service import orb_missingness_graph_service
 from services.orb_operating_brain_service import orb_operating_brain_service
@@ -54,6 +53,8 @@ class OrbExpertBrainOrchestratorService:
         follow_up_message: str | None = None,
         sequence_id: str | None = None,
     ) -> dict[str, Any]:
+        from services.orb_knowledge_retrieval_service import orb_knowledge_retrieval_service
+
         frame = orb_standalone_brain_service.frame(message, mode=mode)
         classification = orb_knowledge_retrieval_service.classify_query(message, mode=mode)
         expert_packet = orb_expert_answer_engine_service.build_expert_answer_packet(
