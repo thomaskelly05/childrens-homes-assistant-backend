@@ -44,13 +44,14 @@ export function OrbMobileChatHeader({
         data-orb-mobile-header-brand
       >
         <p
-          className="truncate text-[0.9375rem] font-semibold leading-tight tracking-[-0.02em] text-[var(--orb-foreground)]"
+          className="truncate text-[0.9375rem] font-bold leading-tight tracking-[-0.03em] text-[var(--orb-foreground)]"
           data-orb-header-title
+          data-orb-header-brand-title
         >
           {productName}
         </p>
         <p
-          className="mt-0.5 max-w-[14rem] truncate text-[10px] font-medium leading-snug text-[var(--orb-muted)]"
+          className="mt-0.5 max-w-[14rem] truncate text-[10px] font-semibold leading-snug text-[var(--orb-muted)]"
           data-orb-mobile-header-tagline
         >
           {tagline}

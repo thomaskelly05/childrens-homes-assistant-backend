@@ -111,36 +111,36 @@ html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-dark .orb
 }
 
 .orb-chat-layout--residential.orb-theme-dark .bg-white,
-.orb-chat-layout--residential .bg-slate-50,
-.orb-chat-layout--residential .bg-slate-100,
+.orb-chat-layout--residential.orb-theme-dark .bg-slate-50,
+.orb-chat-layout--residential.orb-theme-dark .bg-slate-100,
 html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-dark .bg-white,
-html[data-orb-residential='1'] .orb-chat-layout--residential .bg-slate-50,
-html[data-orb-residential='1'] .orb-chat-layout--residential .bg-slate-100 {
+html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-dark .bg-slate-50,
+html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-dark .bg-slate-100 {
   background-color: var(--orb-premium-bg-deep, #05070d) !important;
 }
 
 .orb-chat-layout--residential.orb-theme-dark .text-slate-900,
-.orb-chat-layout--residential .text-slate-950,
-.orb-chat-layout--residential .text-gray-900,
+.orb-chat-layout--residential.orb-theme-dark .text-slate-950,
+.orb-chat-layout--residential.orb-theme-dark .text-gray-900,
 html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-dark .text-slate-900,
-html[data-orb-residential='1'] .orb-chat-layout--residential .text-slate-950,
-html[data-orb-residential='1'] .orb-chat-layout--residential .text-gray-900 {
+html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-dark .text-slate-950,
+html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-dark .text-gray-900 {
   color: #f7faff !important;
 }
 
 .orb-chat-layout--residential.orb-theme-dark .text-slate-700,
-.orb-chat-layout--residential .text-slate-600,
-.orb-chat-layout--residential .text-gray-600,
+.orb-chat-layout--residential.orb-theme-dark .text-slate-600,
+.orb-chat-layout--residential.orb-theme-dark .text-gray-600,
 html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-dark .text-slate-700,
-html[data-orb-residential='1'] .orb-chat-layout--residential .text-slate-600,
-html[data-orb-residential='1'] .orb-chat-layout--residential .text-gray-600 {
+html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-dark .text-slate-600,
+html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-dark .text-gray-600 {
   color: #c7c7cc !important;
 }
 
 .orb-chat-layout--residential.orb-theme-dark .text-slate-500,
-.orb-chat-layout--residential .text-gray-500,
+.orb-chat-layout--residential.orb-theme-dark .text-gray-500,
 html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-dark .text-slate-500,
-html[data-orb-residential='1'] .orb-chat-layout--residential .text-gray-500 {
+html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-dark .text-gray-500 {
   color: #a7aebd !important;
 }
 
