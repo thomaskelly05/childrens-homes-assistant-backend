@@ -45,7 +45,7 @@ describe('ORB Residential desktop polish', () => {
     }
     assert.match(sidebar, /Ofsted Lens|Inspection Readiness/)
     assert.match(sidebar, /onSelectMode/)
-    assert.match(copy, /ORB_RESIDENTIAL_EMPTY_HEADING_DESKTOP = 'Where should we begin\?'/)
+    assert.match(copy, /ORB_RESIDENTIAL_EMPTY_HEADING_DESKTOP = 'What do you need help with\?'/)
   })
 
   it('empty state, composer, and layout markers exist without OS route coupling', () => {

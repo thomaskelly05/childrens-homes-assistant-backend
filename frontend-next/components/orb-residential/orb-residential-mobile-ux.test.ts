@@ -56,8 +56,8 @@ describe('ORB Residential mobile UX', () => {
     const premiumCss = readComponent('app/orb/orb-premium-tokens.css')
     assert.match(companion, /GlassOrbMark size="(empty|home)"/)
     assert.match(companion, /data-orb-residential-empty/)
-    assert.match(mark, /glass-orb-mark--empty/)
-    assert.match(premiumCss, /glass-orb-mark--empty/)
+    assert.match(mark, /OrbPresence/)
+    assert.match(premiumCss, /orb-presence--home/)
     assert.doesNotMatch(companion, /size="hero"/)
   })
 
@@ -118,12 +118,12 @@ describe('ORB Residential mobile UX', () => {
     assert.match(companion, /OrbMobileChatHeader/)
     assert.match(companion, /mobileHeader=/)
     assert.match(copy, /ORB_RESIDENTIAL_MOBILE_EMPTY_HEADING/)
-    assert.match(copy, /Where should we begin\?/)
+    assert.match(copy, /What do you need help with\?/)
     for (const starter of [
-      'Help me write a daily log',
-      'What am I missing?',
-      'Safeguarding thinking',
-      'Turn rough notes into a professional record'
+      'Write a daily log',
+      'Turn rough notes into a record',
+      'Review an incident',
+      'Ask a safeguarding question'
     ]) {
       assert.match(copy, new RegExp(starter.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
     }
@@ -184,15 +184,13 @@ describe('ORB Residential mobile UX', () => {
     assert.match(theme, /#168bff/i)
   })
 
-  it('PremiumMobileOrb renders a single sphere element not duplicate orbs', () => {
+  it('PremiumMobileOrb delegates to OrbPresence (single living sphere)', () => {
     const orb = readComponent('components/orb-residential/ui/premium-mobile-orb.tsx')
     const premiumCss = readComponent('app/orb/orb-premium-tokens.css')
-    assert.match(orb, /premium-mobile-orb__sphere/)
+    assert.match(orb, /OrbPresence/)
     assert.doesNotMatch(orb, /premium-mobile-orb__glow/)
     assert.doesNotMatch(orb, /premium-mobile-orb__core/)
-    const sphereCount = (orb.match(/premium-mobile-orb__sphere/g) || []).length
-    assert.equal(sphereCount, 1)
-    assert.match(premiumCss, /\.premium-mobile-orb__sphere/)
+    assert.match(premiumCss, /\.orb-presence/)
   })
 
   it('residential experience uses single theme root with light default', () => {

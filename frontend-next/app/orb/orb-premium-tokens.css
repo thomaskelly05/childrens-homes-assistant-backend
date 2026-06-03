@@ -706,6 +706,123 @@ html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .or
   animation-duration: 2.4s;
 }
 
+/* Living ORB — OrbPresence (canonical residential sphere via OrbSphere layers) */
+.orb-presence {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  isolation: isolate;
+}
+
+.orb-presence .orb-sphere-wrap {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.orb-presence .orb-sphere-wrap > .orb-sphere {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.orb-presence--tiny,
+.orb-presence--xs {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.orb-presence--sm {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+.orb-presence--md {
+  width: 2.75rem;
+  height: 2.75rem;
+}
+
+.orb-presence--empty,
+.orb-presence--home {
+  width: 4.75rem;
+  height: 4.75rem;
+}
+
+.orb-presence--dictate {
+  width: 7.5rem;
+  height: 7.5rem;
+}
+
+.orb-presence--voice-mobile {
+  width: min(11.25rem, 42vw);
+  height: min(11.25rem, 42vw);
+}
+
+.orb-presence--lg {
+  width: 3rem;
+  height: 3rem;
+}
+
+.orb-presence--hero {
+  width: 8.75rem;
+  height: 8.75rem;
+}
+
+.orb-presence--voice {
+  width: 10rem;
+  height: 10rem;
+}
+
+@media (min-width: 768px) {
+  .orb-presence--voice {
+    width: 12.5rem;
+    height: 12.5rem;
+  }
+}
+
+.orb-presence--pulse .orb-sphere-wrap {
+  animation: premium-orb-breathe 4.2s ease-in-out infinite;
+}
+
+.orb-presence[data-orb-presence-state='listening'] .orb-sphere-wrap {
+  filter: drop-shadow(0 0 28px rgba(94, 200, 255, 0.45)) drop-shadow(0 0 48px rgba(22, 139, 255, 0.28));
+}
+
+.orb-presence[data-orb-presence-state='thinking'] .orb-sphere-liquid {
+  animation-duration: calc(var(--orb-motion-speed, 10.5s) * 0.65);
+}
+
+.orb-presence[data-orb-presence-state='responding'] .orb-sphere-wrap {
+  filter: drop-shadow(0 0 24px rgba(124, 92, 255, 0.32)) drop-shadow(0 0 40px rgba(251, 191, 36, 0.18));
+}
+
+.orb-presence[data-orb-presence-state='error'] {
+  opacity: 0.82;
+  filter: saturate(0.72);
+}
+
+html[data-orb-residential='1'] .orb-theme-light .orb-presence[data-orb-presence-state='idle'] {
+  --orb-hue-a: 13, 71, 161;
+  --orb-hue-b: 37, 99, 235;
+  --orb-hue-c: 192, 38, 211;
+  --orb-warm: 251, 146, 60;
+  --orb-glow: 0.54;
+}
+
+html[data-orb-residential='1'] .orb-theme-light .orb-presence[data-orb-presence-state='listening'] {
+  --orb-hue-a: 14, 165, 233;
+  --orb-hue-b: 37, 99, 235;
+  --orb-hue-c: 167, 139, 250;
+  --orb-glow: 0.62;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orb-presence--pulse .orb-sphere-wrap {
+    animation: none !important;
+  }
+}
+
 /* Centred app modals — ChatGPT-style station pop-outs */
 .orb-panel-modal--compact {
   max-width: min(100%, 45rem);
@@ -901,9 +1018,16 @@ html[data-orb-residential='1'] [data-standalone-orb-state] .orb-sphere-wrap {
   background: transparent !important;
 }
 
-html[data-orb-residential='1'] .orb-sphere-wrap::after,
 html[data-orb-residential='1'] .orb-standalone-halo {
   opacity: 0 !important;
+}
+
+html[data-orb-residential='1'] [data-standalone-orb-state]:not([data-orb-presence]) .orb-sphere-wrap::after {
+  opacity: 0 !important;
+}
+
+html[data-orb-residential='1'] .orb-presence .orb-sphere-wrap::after {
+  opacity: 0.55 !important;
 }
 
 /* Login autofill — keep fields dark/readable */
@@ -1187,9 +1311,16 @@ html[data-orb-residential='1'] [data-standalone-orb-state] .orb-sphere-wrap {
   background: transparent !important;
 }
 
-html[data-orb-residential='1'] .orb-sphere-wrap::after,
 html[data-orb-residential='1'] .orb-standalone-halo {
   opacity: 0 !important;
+}
+
+html[data-orb-residential='1'] [data-standalone-orb-state]:not([data-orb-presence]) .orb-sphere-wrap::after {
+  opacity: 0 !important;
+}
+
+html[data-orb-residential='1'] .orb-presence .orb-sphere-wrap::after {
+  opacity: 0.55 !important;
 }
 
 /* Login autofill — keep fields dark/readable */

@@ -1,28 +1,30 @@
 'use client'
 
+import { OrbPresence } from '@/components/orb-residential/ui/orb-presence'
+
 /**
- * Compact premium ORB mark for residential empty state — circle only, no square halo artefact.
+ * Compact premium ORB mark for residential landing/login — canonical `OrbPresence`.
  */
 export function PremiumMobileOrb({
   variant = 'mobile',
   className = '',
-  label = 'ORB'
+  label = 'ORB',
+  state = 'idle'
 }: {
   variant?: 'mobile' | 'desktop'
   className?: string
   label?: string
+  state?: 'idle' | 'listening' | 'thinking' | 'responding' | 'error'
 }) {
-  const sizeClass = variant === 'desktop' ? 'premium-mobile-orb--desktop' : 'premium-mobile-orb--mobile'
+  const size = variant === 'desktop' ? 'home' : 'empty'
 
   return (
     <div
-      className={`premium-mobile-orb ${sizeClass} ${className}`.trim()}
+      className={`premium-mobile-orb premium-mobile-orb--${variant} ${className}`.trim()}
       data-premium-mobile-orb
       data-orb-empty-sphere-mark
-      role="img"
-      aria-label={label}
     >
-      <div className="premium-mobile-orb__sphere" aria-hidden />
+      <OrbPresence size={size} state={state} pulse={state === 'idle'} label={label} />
     </div>
   )
 }
