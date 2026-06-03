@@ -110,9 +110,7 @@ export function OrbAuthButton({
 }) {
   const base = clsx(
     'orb-auth-button flex w-full items-center justify-center gap-2.5 rounded-2xl border px-4 py-3 text-sm font-semibold transition min-h-[3rem] sm:min-h-[3.25rem]',
-    disabled
-      ? 'cursor-not-allowed border-white/5 bg-white/[0.02] text-slate-500'
-      : 'border-white/12 bg-white/[0.05] text-white hover:border-sky-400/30 hover:bg-white/[0.08]',
+    disabled ? 'orb-auth-button--disabled cursor-not-allowed' : 'orb-auth-button--enabled',
     className
   )
 

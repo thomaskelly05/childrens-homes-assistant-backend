@@ -7,7 +7,8 @@ import { describe, it } from 'node:test'
 import {
   ORB_APPEARANCE_STORAGE_KEY,
   readOrbAppearanceMode,
-  resolveOrbTheme
+  resolveOrbTheme,
+  resolveOrbThemeFromTimeOfDay
 } from '../../lib/orb/orb-appearance.ts'
 import { orbPersonalisedGreeting } from '../../lib/orb/orb-personalised-greeting.ts'
 import { buildOrbReviewPrompt } from '../../lib/orb/orb-review-prompt.ts'
@@ -23,22 +24,16 @@ describe('ORB appearance system default', () => {
     assert.equal(readOrbAppearanceMode(), 'system')
   })
 
-  it('resolves system theme from prefers-color-scheme when window is available', () => {
-    const originalMatchMedia = globalThis.matchMedia
+  it('resolves system theme from local time of day when window is available', () => {
     const originalWindow = globalThis.window
     Object.defineProperty(globalThis, 'window', { value: globalThis, configurable: true })
-    Object.defineProperty(globalThis, 'matchMedia', {
-      value: () => ({ matches: true, addEventListener: () => {}, removeEventListener: () => {} }),
-      configurable: true
-    })
     try {
-      assert.equal(resolveOrbTheme('system'), 'dark')
+      const evening = new Date('2026-06-03T21:00:00')
+      const morning = new Date('2026-06-03T09:00:00')
+      assert.equal(resolveOrbTheme('system'), resolveOrbThemeFromTimeOfDay())
+      assert.equal(resolveOrbThemeFromTimeOfDay(evening), 'dark')
+      assert.equal(resolveOrbThemeFromTimeOfDay(morning), 'light')
     } finally {
-      if (originalMatchMedia) {
-        Object.defineProperty(globalThis, 'matchMedia', { value: originalMatchMedia, configurable: true })
-      } else {
-        Reflect.deleteProperty(globalThis, 'matchMedia')
-      }
       if (originalWindow) {
         Object.defineProperty(globalThis, 'window', { value: originalWindow, configurable: true })
       } else {

@@ -2,7 +2,8 @@
 
 import { useEffect, useState, type CSSProperties } from 'react'
 
-import { OrbBrandImage } from '@/components/orb-core/orb-brand-image'
+import { OrbSphere } from '@/components/orb-core/orb-sphere'
+import type { OrbRenderState } from '@/components/orb-core/orb-sphere'
 
 export type StandaloneOrbGlowState =
   | 'idle'
@@ -31,6 +32,21 @@ const STATE_LABELS: Record<StandaloneOrbGlowState, string> = {
   recording: 'Ready',
   safeguarding: 'Privacy',
   error: 'Error'
+}
+
+const STATE_TO_RENDER: Record<StandaloneOrbGlowState, OrbRenderState> = {
+  idle: 'idle',
+  wake_listening: 'listening',
+  wake_detected: 'listening',
+  listening: 'listening',
+  continuous_listening: 'listening',
+  transcript_ready: 'idle',
+  thinking: 'thinking',
+  speaking: 'speaking',
+  interrupted: 'listening',
+  recording: 'handover',
+  safeguarding: 'safeguarding_cautious',
+  error: 'permission_denied'
 }
 
 const STATE_HUES: Record<StandaloneOrbGlowState, { ring: string; glow: string; core: string }> = {
@@ -103,11 +119,11 @@ const ORB_SIZE_CLASSES = {
   fab: 'h-14 w-14'
 } as const
 
-const ORB_BRAND_CROP = {
-  hero: 'full' as const,
-  dock: 'full' as const,
-  compact: 'sphere' as const,
-  fab: 'sphere' as const
+const ORB_SPHERE_SIZE = {
+  hero: 'xlarge' as const,
+  dock: 'large' as const,
+  compact: 'medium' as const,
+  fab: 'small' as const
 }
 
 export type OrbGlowSize = keyof typeof ORB_SIZE_CLASSES
@@ -132,6 +148,7 @@ export function OrbGlow({
   compactLabels?: boolean
 }) {
   const [reducedMotion, setReducedMotion] = useState(false)
+  const renderState = STATE_TO_RENDER[state]
   const hues = STATE_HUES[state]
   const statusText = label || STATE_LABELS[state]
 
@@ -170,17 +187,17 @@ export function OrbGlow({
     state === 'wake_detected'
 
   const sizeClass = ORB_SIZE_CLASSES[size]
-  const brandCrop = ORB_BRAND_CROP[size]
+  const sphereSize = ORB_SPHERE_SIZE[size]
 
   const orbButton = (
     <div
       className={`relative mx-auto flex items-center justify-center ${sizeClass} ${pulseClass}`}
       data-standalone-orb-state={state}
-      data-orb-presence-state={state === 'speaking' ? 'responding' : state === 'thinking' ? 'thinking' : state === 'error' ? 'error' : state.includes('listening') || state === 'interrupted' ? 'listening' : 'idle'}
+      data-orb-state={renderState}
       style={{ '--orb-core-glow': hues.core } as CSSProperties}
     >
       <div
-        className={`pointer-events-none absolute inset-[-18%] rounded-full bg-gradient-to-br ${hues.ring} blur-3xl opacity-40 ${hues.glow} orb-standalone-halo`}
+        className={`pointer-events-none absolute inset-[-22%] rounded-full bg-gradient-to-br ${hues.ring} blur-3xl ${hues.glow} orb-standalone-halo`}
         aria-hidden
       />
       {(state === 'listening' ||
@@ -200,9 +217,12 @@ export function OrbGlow({
       {state === 'interrupted' && !reducedMotion ? (
         <div className="pointer-events-none absolute inset-[-12%] rounded-full border border-amber-300/35 orb-standalone-interrupt-ring" aria-hidden />
       ) : null}
-      <div className="relative z-[1] flex h-full w-full items-center justify-center" data-orb-brand-slot>
-        <OrbBrandImage crop={brandCrop} alt="ORB" className="h-full w-full" />
-      </div>
+      <div
+        className={`pointer-events-none absolute inset-[-10%] rounded-full border border-white/20 bg-white/[0.03] backdrop-blur-sm ${reducedMotion ? '' : 'animate-[orb-standalone-spin_14s_linear_infinite]'}`}
+        aria-hidden
+      />
+      <div className="pointer-events-none absolute inset-[12%] rounded-full bg-gradient-to-br from-white/25 via-white/5 to-transparent opacity-80" aria-hidden />
+      <OrbSphere state={renderState} size={sphereSize} />
 
       {showWaveform && !reducedMotion ? (
         <div className="pointer-events-none absolute bottom-3 flex items-end gap-1.5" aria-hidden>

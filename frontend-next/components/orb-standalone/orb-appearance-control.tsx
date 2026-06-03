@@ -21,7 +21,7 @@ export function OrbAppearanceControl({
     <div className="space-y-2" data-orb-appearance-control>
       <p className="text-xs font-medium text-[var(--orb-muted)]">Appearance</p>
       <p className="text-[11px] leading-5 text-[var(--orb-muted)]" data-orb-appearance-hint>
-        System follows your device. You can override it here.
+        System changes automatically based on time of day.
       </p>
       <div
         className="orb-appearance-segmented flex rounded-xl border border-[var(--orb-line)] bg-[var(--orb-surface)] p-0.5"

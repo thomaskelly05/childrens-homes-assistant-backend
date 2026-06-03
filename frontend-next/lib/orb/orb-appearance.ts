@@ -14,10 +14,20 @@ export const ORB_RESIDENTIAL_APPEARANCE_MIGRATION_KEY = 'orb-appearance-resident
 /** Default appearance mode on `/orb` when nothing is stored. */
 export const ORB_RESIDENTIAL_DEFAULT_APPEARANCE: OrbAppearanceMode = 'light'
 
+/** System mode: light from 07:00 through 18:59 local time; dark otherwise. */
+export const ORB_SYSTEM_LIGHT_START_HOUR = 7
+export const ORB_SYSTEM_DARK_START_HOUR = 19
+
+/** Resolve light/dark from local time of day (for System appearance). */
+export function resolveOrbThemeFromTimeOfDay(at: Date = new Date()): 'light' | 'dark' {
+  const hour = at.getHours()
+  return hour >= ORB_SYSTEM_LIGHT_START_HOUR && hour < ORB_SYSTEM_DARK_START_HOUR ? 'light' : 'dark'
+}
+
 export function resolveOrbTheme(mode: OrbAppearanceMode): 'light' | 'dark' {
   if (mode === 'light' || mode === 'dark') return mode
-  if (typeof window === 'undefined') return 'light'
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  if (typeof window === 'undefined') return resolveOrbThemeFromTimeOfDay()
+  return resolveOrbThemeFromTimeOfDay()
 }
 
 function readStoredAppearanceMode(): OrbAppearanceMode | null {
@@ -105,7 +115,22 @@ export function clearOrbDocumentTheme(): void {
   document.body?.removeAttribute('data-orb-appearance')
 }
 
+/** Milliseconds until the next system theme boundary (07:00 or 19:00 local). */
+export function msUntilNextOrbSystemThemeBoundary(at: Date = new Date()): number {
+  const next = new Date(at)
+  const hour = at.getHours()
+  if (hour >= ORB_SYSTEM_LIGHT_START_HOUR && hour < ORB_SYSTEM_DARK_START_HOUR) {
+    next.setHours(ORB_SYSTEM_DARK_START_HOUR, 0, 0, 0)
+  } else if (hour < ORB_SYSTEM_LIGHT_START_HOUR) {
+    next.setHours(ORB_SYSTEM_LIGHT_START_HOUR, 0, 0, 0)
+  } else {
+    next.setDate(next.getDate() + 1)
+    next.setHours(ORB_SYSTEM_LIGHT_START_HOUR, 0, 0, 0)
+  }
+  return Math.max(1000, next.getTime() - at.getTime())
+}
+
 /**
  * Inline bootstrap for `/orb` layout — prevents flash and aligns html/body before React hydrates.
  */
-export const ORB_APPEARANCE_BOOTSTRAP_SCRIPT = `(function(){try{var M=${JSON.stringify(ORB_APPEARANCE_MIGRATION_KEY)};var RM=${JSON.stringify(ORB_RESIDENTIAL_APPEARANCE_MIGRATION_KEY)};var K=${JSON.stringify(ORB_APPEARANCE_STORAGE_KEY)};var DEF=${JSON.stringify(ORB_RESIDENTIAL_DEFAULT_APPEARANCE)};if(localStorage.getItem(M)!=='done'&&!localStorage.getItem(K)){localStorage.setItem(K,'system');localStorage.setItem(M,'done');}if(localStorage.getItem(RM)!=='done'&&!localStorage.getItem(K)){localStorage.setItem(K,DEF);localStorage.setItem(RM,'done');}var mode=localStorage.getItem(K)||DEF;var theme=mode==='dark'?'dark':mode==='light'?'light':(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.setAttribute('data-orb-residential','1');document.documentElement.setAttribute('data-orb-appearance',mode);document.documentElement.setAttribute('data-orb-appearance-mode',mode);document.documentElement.setAttribute('data-orb-theme',theme);document.documentElement.setAttribute('data-orb-system-theme',theme);document.documentElement.style.colorScheme=theme;document.body&&(document.body.setAttribute('data-orb-appearance',mode),document.body.setAttribute('data-orb-appearance-mode',mode),document.body.setAttribute('data-orb-theme',theme));}catch(e){var fb=${JSON.stringify(ORB_RESIDENTIAL_DEFAULT_THEME)};document.documentElement.setAttribute('data-orb-residential','1');document.documentElement.setAttribute('data-orb-appearance',${JSON.stringify(ORB_RESIDENTIAL_DEFAULT_APPEARANCE)});document.documentElement.setAttribute('data-orb-appearance-mode',${JSON.stringify(ORB_RESIDENTIAL_DEFAULT_APPEARANCE)});document.documentElement.setAttribute('data-orb-theme',fb);document.documentElement.setAttribute('data-orb-system-theme',fb);document.documentElement.style.colorScheme=fb;document.body&&(document.body.setAttribute('data-orb-appearance',${JSON.stringify(ORB_RESIDENTIAL_DEFAULT_APPEARANCE)}),document.body.setAttribute('data-orb-appearance-mode',${JSON.stringify(ORB_RESIDENTIAL_DEFAULT_APPEARANCE)}),document.body.setAttribute('data-orb-theme',fb));}})();`
+export const ORB_APPEARANCE_BOOTSTRAP_SCRIPT = `(function(){try{var M=${JSON.stringify(ORB_APPEARANCE_MIGRATION_KEY)};var RM=${JSON.stringify(ORB_RESIDENTIAL_APPEARANCE_MIGRATION_KEY)};var K=${JSON.stringify(ORB_APPEARANCE_STORAGE_KEY)};var DEF=${JSON.stringify(ORB_RESIDENTIAL_DEFAULT_APPEARANCE)};var LH=${ORB_SYSTEM_LIGHT_START_HOUR};var DH=${ORB_SYSTEM_DARK_START_HOUR};function timeTheme(){var h=new Date().getHours();return h>=LH&&h<DH?'light':'dark';}if(localStorage.getItem(M)!=='done'&&!localStorage.getItem(K)){localStorage.setItem(K,'system');localStorage.setItem(M,'done');}if(localStorage.getItem(RM)!=='done'&&!localStorage.getItem(K)){localStorage.setItem(K,DEF);localStorage.setItem(RM,'done');}var mode=localStorage.getItem(K)||DEF;var theme=mode==='dark'?'dark':mode==='light'?'light':timeTheme();document.documentElement.setAttribute('data-orb-residential','1');document.documentElement.setAttribute('data-orb-appearance',mode);document.documentElement.setAttribute('data-orb-appearance-mode',mode);document.documentElement.setAttribute('data-orb-theme',theme);document.documentElement.setAttribute('data-orb-system-theme',theme);document.documentElement.style.colorScheme=theme;document.body&&(document.body.setAttribute('data-orb-appearance',mode),document.body.setAttribute('data-orb-appearance-mode',mode),document.body.setAttribute('data-orb-theme',theme));}catch(e){var fb=${JSON.stringify(ORB_RESIDENTIAL_DEFAULT_THEME)};document.documentElement.setAttribute('data-orb-residential','1');document.documentElement.setAttribute('data-orb-appearance',${JSON.stringify(ORB_RESIDENTIAL_DEFAULT_APPEARANCE)});document.documentElement.setAttribute('data-orb-appearance-mode',${JSON.stringify(ORB_RESIDENTIAL_DEFAULT_APPEARANCE)});document.documentElement.setAttribute('data-orb-theme',fb);document.documentElement.setAttribute('data-orb-system-theme',fb);document.documentElement.style.colorScheme=fb;document.body&&(document.body.setAttribute('data-orb-appearance',${JSON.stringify(ORB_RESIDENTIAL_DEFAULT_APPEARANCE)}),document.body.setAttribute('data-orb-appearance-mode',${JSON.stringify(ORB_RESIDENTIAL_DEFAULT_APPEARANCE)}),document.body.setAttribute('data-orb-theme',fb));}})();`
