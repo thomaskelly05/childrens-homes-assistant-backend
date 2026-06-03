@@ -295,14 +295,24 @@ class OrbKnowledgeRetrievalService:
         expert_context = orb_expert_scenario_bank_service.detect_expert_context(message)
         expert_packet: dict[str, Any] = {"active": False}
         expert_block = ""
+        expert_brain_9: dict[str, Any] = {"active": False}
         if prompt_tier != "fast":
-            expert_packet = orb_expert_answer_engine_service.build_expert_answer_packet(
+            expert_brain_9 = orb_expert_brain_orchestrator_service.build_context_packet(
                 message,
                 mode=mode,
                 profile_role=profile_role,
                 history=history,
             )
-            expert_block = orb_expert_answer_engine_service.build_prompt_block(expert_packet)
+            expert_packet = expert_brain_9.get("expert_packet") or expert_packet
+            expert_block = orb_expert_brain_orchestrator_service.build_prompt_block(expert_brain_9)
+            if not expert_block:
+                expert_packet = orb_expert_answer_engine_service.build_expert_answer_packet(
+                    message,
+                    mode=mode,
+                    profile_role=profile_role,
+                    history=history,
+                )
+                expert_block = orb_expert_answer_engine_service.build_prompt_block(expert_packet)
             if not expert_block:
                 expert_block = orb_expert_scenario_bank_service.expert_prompt_block(message)
             if expert_block:
@@ -316,6 +326,7 @@ class OrbKnowledgeRetrievalService:
             "grounding_char_count": len(grounding_context),
             "expert_scenario_context": expert_context,
             "expert_answer_packet": expert_packet,
+            "expert_brain_9": expert_brain_9,
         }
 
     def retrieve_sources(

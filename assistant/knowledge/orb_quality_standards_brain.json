@@ -1,0 +1,185 @@
+{
+  "version": "1.0.0",
+  "standards": [
+    {
+      "standard_id": "qs1_quality_and_purpose",
+      "regulation": "Reg 6",
+      "name": "Quality and purpose of care standard",
+      "child_question": "Is care for me, not just the home's routine?",
+      "adult_practice_questions": [
+        "Does daily practice reflect this child's plan and purpose?",
+        "Is care individualised and intentional?"
+      ],
+      "manager_oversight_questions": [
+        "Is care drifting into task-based routine?",
+        "Do records show impact on the child?"
+      ],
+      "professional_lenses": ["child", "residential_support_worker", "registered_manager", "social_worker", "ofsted_inspector"],
+      "records_to_check": ["care_plan", "daily_notes", "keywork", "placement_plan"],
+      "evidence_markers": ["individualised care", "plan reflected in practice", "purposeful routines"],
+      "risk_markers": ["generic care", "plans not reflected", "activity without impact"],
+      "orb_answer_rules": ["Name child impact", "Link to plan", "Do not claim compliance without evidence"],
+      "linked_services": ["care_hub_intelligence", "orb_operating_brain"]
+    },
+    {
+      "standard_id": "qs2_child_voice",
+      "regulation": "Reg 7",
+      "name": "Children's views, wishes and feelings standard",
+      "child_question": "Do adults listen to me and does it change anything?",
+      "adult_practice_questions": [
+        "Is the child's voice recorded in their words?",
+        "Did views influence decisions?"
+      ],
+      "manager_oversight_questions": [
+        "Is voice consistent across records?",
+        "Is voice tokenistic or acted upon?"
+      ],
+      "professional_lenses": ["child", "advocate", "iro", "reg_44_visitor", "ofsted_inspector"],
+      "records_to_check": ["child_voice_records", "meetings", "complaints", "reviews"],
+      "evidence_markers": ["direct quotes", "decisions influenced by voice", "child saw change"],
+      "risk_markers": ["missing child voice", "adult interpretation only", "records say settled but child disagrees"],
+      "orb_answer_rules": ["Use exact words where provided", "Flag mismatch with adult records"],
+      "linked_services": ["isn_child_voice_service", "orb_gap_detection"]
+    },
+    {
+      "standard_id": "qs3_education",
+      "regulation": "Reg 8",
+      "name": "Education standard",
+      "child_question": "Am I supported to learn and attend?",
+      "adult_practice_questions": [
+        "Is attendance and engagement visible?",
+        "Are SEND/EHCP needs reflected?"
+      ],
+      "manager_oversight_questions": [
+        "Is virtual school involved where needed?",
+        "Are school refusal patterns analysed?"
+      ],
+      "professional_lenses": ["virtual_school", "sendco", "social_worker", "registered_manager"],
+      "records_to_check": ["education_logs", "pep", "ehcp", "attendance"],
+      "evidence_markers": ["PEP actions closed", "attendance support plan", "SEND provision visible"],
+      "risk_markers": ["school refusal unaddressed", "no education follow-up", "weak PEP evidence"],
+      "orb_answer_rules": ["Name education partners", "Do not blame the child for refusal"],
+      "linked_services": ["care_hub_intelligence"]
+    },
+    {
+      "standard_id": "qs4_enjoyment_achievement",
+      "regulation": "Reg 9",
+      "name": "Enjoyment and achievement standard",
+      "child_question": "Can I do things I enjoy and build skills?",
+      "adult_practice_questions": [
+        "Are activities meaningful to this child?",
+        "Is progress from starting points visible?"
+      ],
+      "manager_oversight_questions": [
+        "Is the home offering purposeful opportunities?",
+        "Is progress evidenced?"
+      ],
+      "professional_lenses": ["child", "residential_support_worker", "ofsted_inspector"],
+      "records_to_check": ["activities", "achievements", "hobbies", "outcomes"],
+      "evidence_markers": ["progress from starting points", "child-chosen activities"],
+      "risk_markers": ["generic activities only", "no evidence of enjoyment or skill-building"],
+      "orb_answer_rules": ["Connect to identity and belonging", "Evidence impact not just attendance at activities"],
+      "linked_services": []
+    },
+    {
+      "standard_id": "qs5_health_wellbeing",
+      "regulation": "Reg 10",
+      "name": "Health and well-being standard",
+      "child_question": "Do adults notice when I am unwell or struggling?",
+      "adult_practice_questions": [
+        "Are health appointments and medication managed safely?",
+        "Is emotional wellbeing tracked?"
+      ],
+      "manager_oversight_questions": [
+        "Is CAMHS/GP involvement timely?",
+        "Are self-harm risks reviewed?"
+      ],
+      "professional_lenses": ["gp", "camhs", "registered_manager", "social_worker"],
+      "records_to_check": ["health_logs", "medication", "camhs", "safety_plans"],
+      "evidence_markers": ["timely health advice", "medication accuracy", "wellbeing support"],
+      "risk_markers": ["missed health follow-up", "self-harm without plan update", "medication errors unreviewed"],
+      "orb_answer_rules": ["Never diagnose", "Escalate medical/mental health routes", "Cite NICE silver sources where relevant"],
+      "linked_services": ["orb_quality_standards_brain"]
+    },
+    {
+      "standard_id": "qs6_positive_relationships",
+      "regulation": "Reg 11",
+      "name": "Positive relationships standard",
+      "child_question": "Do I have safe, warm relationships here?",
+      "adult_practice_questions": [
+        "Are relationships boundaried and consistent?",
+        "Is repair attempted after conflict?"
+      ],
+      "manager_oversight_questions": [
+        "Is staff practice trauma-informed?",
+        "Are punitive patterns challenged?"
+      ],
+      "professional_lenses": ["child", "residential_support_worker", "therapist", "ofsted_inspector"],
+      "records_to_check": ["keywork", "restorative_notes", "supervision", "complaints"],
+      "evidence_markers": ["warm boundaried relationships", "repair after conflict", "PACE-informed responses"],
+      "risk_markers": ["punitive language", "relationship breakdown unaddressed", "staff turnover impact hidden"],
+      "orb_answer_rules": ["Behaviour as communication", "Avoid judgemental labels"],
+      "linked_services": ["orb_therapeutic_reasoning_service"]
+    },
+    {
+      "standard_id": "qs7_protection",
+      "regulation": "Reg 12",
+      "name": "Protection of children standard",
+      "child_question": "Am I safe and do adults notice risk early?",
+      "adult_practice_questions": [
+        "Are risks understood and escalated proportionately?",
+        "Are missing, exploitation and peer risks screened?"
+      ],
+      "manager_oversight_questions": [
+        "Are patterns identified across incidents?",
+        "Is LADO route considered for allegations?"
+      ],
+      "professional_lenses": ["registered_manager", "social_worker", "police", "lado", "health", "ofsted_inspector", "reg_44_visitor"],
+      "records_to_check": ["safeguarding_concern", "missing_episode", "exploitation_screen", "risk_assessment", "chronology", "manager_review", "notifications"],
+      "evidence_markers": ["timely action", "clear escalation", "child voice", "plan updated", "learning captured"],
+      "risk_markers": ["repeated concern", "no manager review", "weak chronology", "missing exploitation analysis", "no social worker update"],
+      "orb_answer_rules": ["ORB does not decide thresholds", "Name who to inform", "Never state abuse as fact without evidence"],
+      "linked_services": ["missing_episode_service", "exploitation_risk_intelligence_service", "orb_scenario_playbook"]
+    },
+    {
+      "standard_id": "qs8_leadership",
+      "regulation": "Reg 13",
+      "name": "Leadership and management standard",
+      "child_question": "Do leaders know what life is like for me here?",
+      "adult_practice_questions": [
+        "Is oversight visible in records?",
+        "Do leaders act before drift?"
+      ],
+      "manager_oversight_questions": [
+        "What do I know vs what is recorded?",
+        "Are Reg 44 actions closed?"
+      ],
+      "professional_lenses": ["registered_manager", "responsible_individual", "reg_44_visitor", "ofsted_inspector", "commissioner"],
+      "records_to_check": ["manager_reviews", "reg44", "reg45", "audits", "supervision", "actions"],
+      "evidence_markers": ["leaders know the home", "actions closed with impact", "weaknesses identified early"],
+      "risk_markers": ["weak manager review", "repeated Reg 44 actions", "provider drift", "no governance grip"],
+      "orb_answer_rules": ["Distinguish manager oversight from staff task completion"],
+      "linked_services": ["governance_intelligence_service", "manager_daily_brief_service"]
+    },
+    {
+      "standard_id": "qs9_care_planning",
+      "regulation": "Reg 14",
+      "name": "Care planning standard",
+      "child_question": "Do plans make sense for me and change when my life changes?",
+      "adult_practice_questions": [
+        "Are plans live and updated after incidents?",
+        "Does chronology inform planning?"
+      ],
+      "manager_oversight_questions": [
+        "Are plans updated within required timescales?",
+        "Is multi-agency input visible?"
+      ],
+      "professional_lenses": ["social_worker", "iro", "registered_manager", "advocate"],
+      "records_to_check": ["care_plan", "risk_assessment", "placement_plan", "chronology", "lac_review"],
+      "evidence_markers": ["plan updated after incident", "child involved in review", "actions with owners"],
+      "risk_markers": ["plans not updated after incidents", "stale risk assessment", "no chronology"],
+      "orb_answer_rules": ["Name what to update", "Link recording to plan"],
+      "linked_services": ["chronology_pattern_service"]
+    }
+  ]
+}

@@ -1,0 +1,122 @@
+{
+  "version": "1.0.0",
+  "sequences": {
+    "missing_episode": {
+      "title": "Missing episode return",
+      "steps": [
+        "Immediate safety and welfare check on return",
+        "Manager or on-call notification without delay",
+        "Police return/update where applicable",
+        "Social worker and placing authority contact",
+        "Safe and well / return home interview planning",
+        "Exploitation and contextual safeguarding indicators",
+        "Accurate contemporaneous record",
+        "Risk assessment and placement plan review"
+      ]
+    },
+    "allegation_against_staff": {
+      "title": "Allegation against staff",
+      "steps": [
+        "Listen and reassure the child",
+        "Do not promise secrecy",
+        "Do not investigate — preserve the child's account",
+        "Protect the child and manage contact proportionately",
+        "Manager and LADO route per local procedures",
+        "Preserve evidence and exact words",
+        "Record factually without opinion"
+      ]
+    },
+    "self_harm": {
+      "title": "Self-harm concern",
+      "steps": [
+        "Injury and immediate safety",
+        "Suicide and self-harm risk including means and access",
+        "Manager escalation",
+        "Medical and mental health advice route",
+        "Contemporaneous record",
+        "Safety plan and risk assessment update"
+      ]
+    },
+    "restraint": {
+      "title": "Physical intervention / restraint",
+      "steps": [
+        "Trigger and risk present",
+        "De-escalation attempts",
+        "Necessity and proportionality",
+        "Least restrictive option",
+        "Hold details and duration",
+        "Injury checks for child and staff",
+        "Child and staff debrief",
+        "Manager review",
+        "Plan and restrictive practice review"
+      ]
+    },
+    "ofsted_readiness": {
+      "title": "Ofsted readiness check",
+      "steps": [
+        "Child lived experience and voice",
+        "Safeguarding risk and timely action",
+        "Evidence of action and impact",
+        "Manager oversight",
+        "Demonstrable impact not activity",
+        "Learning captured",
+        "Improvement plan linkage"
+      ]
+    },
+    "recording_quality": {
+      "title": "Recording quality",
+      "steps": [
+        "What happened (facts)",
+        "Child voice (exact words where possible)",
+        "Staff observation",
+        "Staff response",
+        "Outcome",
+        "Follow-up actions",
+        "Link to care plan and risk plan"
+      ]
+    },
+    "pattern_analysis": {
+      "title": "Pattern analysis",
+      "steps": [
+        "Timeline of events",
+        "Repeated themes",
+        "Competing hypotheses",
+        "Risk change over time",
+        "Professional curiosity",
+        "Plan updates",
+        "Manager oversight and governance"
+      ]
+    },
+    "professional_boundary_social_media": {
+      "title": "Professional boundary / social media",
+      "steps": [
+        "Do not accept contact",
+        "Do not reply privately",
+        "Report through line management",
+        "Record factually",
+        "Reassure in person with safe boundaries",
+        "Explore unmet need without collusion"
+      ]
+    },
+    "reg44_reg45": {
+      "title": "Reg 44 and Reg 45",
+      "steps": [
+        "Reg 44: independent scrutiny now — triangulation and challenge",
+        "Reg 45: provider quality analysis over time — themes and improvement",
+        "Separate visitor scrutiny from provider self-evaluation",
+        "Evidence actions closed and impact visible"
+      ]
+    },
+    "child_voice_mismatch": {
+      "title": "Child voice mismatch with records",
+      "steps": [
+        "Believe the feeling — explore safely",
+        "Record exact words",
+        "Check mismatch between child account and adult records",
+        "Involve manager and team",
+        "Advocacy, complaint or safeguarding route if needed",
+        "Update plans and show what changed for the child"
+      ]
+    }
+  }
+}
