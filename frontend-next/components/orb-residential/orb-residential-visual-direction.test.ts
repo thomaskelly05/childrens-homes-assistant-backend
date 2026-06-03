@@ -11,18 +11,16 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential visual direction regressions', () => {
-  it('OrbPresence uses static brand image asset (no CSS sphere recreation)', () => {
-    const brandCss = read('app/orb/orb-brand-asset.css')
-    const layout = read('app/orb/layout.tsx')
-    assert.match(layout, /orb-brand-asset\.css/)
-    assert.match(brandCss, /orb-brand-image/)
-    assert.match(brandCss, /display:\s*none !important/)
+  it('OrbPresence uses living OrbSphere (not static brand image)', () => {
     const presence = read('components/orb-residential/ui/orb-presence.tsx')
-    assert.match(presence, /OrbBrandImage/)
-    assert.doesNotMatch(presence, /OrbSphere|premium-mobile-orb__sphere|glass-orb-mark__sphere/)
+    assert.match(presence, /OrbSphere/)
+    assert.match(presence, /getOrbHueProfile/)
+    assert.doesNotMatch(presence, /OrbBrandImage/)
+    const premium = read('app/orb/orb-premium-tokens.css')
+    assert.match(premium, /\.orb-presence \.orb-sphere-wrap/)
     const glow = read('components/orb-standalone/orb-glow.tsx')
-    assert.match(glow, /OrbBrandImage/)
-    assert.doesNotMatch(glow, /OrbSphere/)
+    assert.match(glow, /OrbSphere/)
+    assert.doesNotMatch(glow, /OrbBrandImage/)
   })
 
   it('light mode mobile workspace must not use launch dark lock panel colours', () => {
@@ -97,5 +95,15 @@ describe('ORB Residential visual direction regressions', () => {
     assert.match(mobileBlock!, /--orb-mobile-bg: var\(--orb-mobile-ws-panel, #f7fbff\)/)
     assert.match(mobileBlock!, /--orb-text: var\(--orb-mobile-ws-text, #0f172a\)/)
     assert.doesNotMatch(mobileBlock!, /--orb-mobile-bg: #070b14/)
+  })
+
+  it('login auth buttons have high-contrast enabled styles in light and dark', () => {
+    const premium = read('app/orb/orb-premium-tokens.css')
+    assert.match(premium, /\.orb-login-root--light \.orb-auth-button--enabled/)
+    assert.match(premium, /\.orb-login-root--dark \.orb-auth-button--enabled/)
+    const login = read('components/orb-residential/orb-login-screen.tsx')
+    const authBtn = read('components/orb-residential/ui/orb-auth-button.tsx')
+    assert.match(login, /orb-login-root--light|orb-login-root--dark/)
+    assert.match(authBtn, /orb-auth-button--enabled/)
   })
 })

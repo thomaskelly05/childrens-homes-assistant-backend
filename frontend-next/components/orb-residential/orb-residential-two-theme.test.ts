@@ -32,7 +32,9 @@ describe('ORB Residential two-theme system', () => {
     const appearance = readComponent('lib/orb/orb-appearance.ts')
     assert.match(appearance, /ORB_RESIDENTIAL_DEFAULT_APPEARANCE[\s\S]*'light'/)
     assert.match(appearance, /readOrbAppearanceMode\(options\?: \{ residential\?: boolean \}\)/)
-    assert.match(appearance, /mode==='dark'\?'dark':mode==='light'\?'light'/)
+    assert.match(appearance, /timeTheme\(\)/)
+    assert.match(appearance, /resolveOrbThemeFromTimeOfDay/)
+    assert.doesNotMatch(appearance, /prefers-color-scheme/)
     assert.doesNotMatch(appearance, /var theme='dark'/)
   })
 
@@ -70,6 +72,7 @@ describe('ORB Residential two-theme system', () => {
     assert.doesNotMatch(control, /premium dark mode/)
     assert.doesNotMatch(control, /disabled = residentialLocked/)
     assert.match(control, /data-orb-appearance-option/)
+    assert.match(control, /time of day/i)
   })
 
   it('useOrbAppearance does not lock residential theme', () => {

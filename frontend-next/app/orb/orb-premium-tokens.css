@@ -742,11 +742,16 @@ html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .or
   isolation: isolate;
 }
 
-.orb-presence .orb-brand-image {
+.orb-presence .orb-sphere-wrap {
   width: 100% !important;
   height: 100% !important;
   max-width: 100%;
   max-height: 100%;
+}
+
+.orb-presence .orb-sphere-wrap > .orb-sphere {
+  width: 100% !important;
+  height: 100% !important;
 }
 
 .orb-presence--tiny,
@@ -803,13 +808,25 @@ html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .or
   }
 }
 
-.orb-presence--pulse .orb-brand-image {
-  animation: orb-brand-breathe 4.2s ease-in-out infinite;
+.orb-presence--pulse .orb-sphere-wrap {
+  animation: premium-orb-breathe 4.2s ease-in-out infinite;
 }
 
-/* Presence state styling uses layout chrome only — brand image stays unfiltered (see orb-brand-asset.css). */
+.orb-presence[data-orb-presence-state='listening'] .orb-sphere-wrap {
+  filter: drop-shadow(0 0 28px rgba(94, 200, 255, 0.45)) drop-shadow(0 0 48px rgba(22, 139, 255, 0.28));
+}
+
+.orb-presence[data-orb-presence-state='thinking'] .orb-sphere-liquid {
+  animation-duration: calc(var(--orb-motion-speed, 10.5s) * 0.65);
+}
+
+.orb-presence[data-orb-presence-state='responding'] .orb-sphere-wrap {
+  filter: drop-shadow(0 0 24px rgba(124, 92, 255, 0.32)) drop-shadow(0 0 40px rgba(251, 191, 36, 0.18));
+}
+
 .orb-presence[data-orb-presence-state='error'] {
-  opacity: 0.88;
+  opacity: 0.82;
+  filter: saturate(0.72);
 }
 
 html[data-orb-residential='1'] .orb-theme-light .orb-presence[data-orb-presence-state='idle'] {
@@ -1057,12 +1074,8 @@ html[data-orb-residential='1'] .orb-presence .orb-sphere-wrap::after {
   content: none !important;
 }
 
-html[data-orb-residential='1'] .orb-presence .orb-sphere-wrap {
-  filter: none;
-}
-
 html[data-orb-residential='1'] .orb-presence .orb-brand-image {
-  filter: none;
+  display: none !important;
 }
 
 /* Residential brand header — readable in both themes */
@@ -1101,23 +1114,152 @@ html[data-orb-residential='1'] .orb-theme-dark [data-orb-mobile-header-tagline] 
   font-weight: 600;
 }
 
-/* Login autofill — keep fields dark/readable */
+/* Login — premium sign-in (light + dark) */
+.orb-login-root--light {
+  background: linear-gradient(180deg, #f7fbff 0%, #eef4fc 100%);
+  color: #0a1628;
+}
+
+.orb-login-root--dark {
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(56, 189, 248, 0.18), transparent),
+    radial-gradient(ellipse 60% 40% at 100% 0%, rgba(99, 102, 241, 0.12), transparent),
+    linear-gradient(180deg, #050b18 0%, #0a1228 55%, #050b18 100%);
+  color: #f1f5f9;
+}
+
+.orb-login-root--light .orb-login-brand-link,
+.orb-login-root--light .orb-login-signin-title,
+.orb-login-root--light .orb-login-headline {
+  color: #0a1628;
+}
+
+.orb-login-root--light .orb-login-tagline,
+.orb-login-root--light .orb-login-lead,
+.orb-login-root--light .orb-login-muted,
+.orb-login-root--light .orb-login-field-label {
+  color: #475569;
+}
+
+.orb-login-root--dark .orb-login-brand-link,
+.orb-login-root--dark .orb-login-signin-title,
+.orb-login-root--dark .orb-login-headline {
+  color: #f8fafc;
+}
+
+.orb-login-root--dark .orb-login-tagline {
+  color: rgba(125, 211, 252, 0.85);
+}
+
+.orb-login-root--dark .orb-login-lead,
+.orb-login-root--dark .orb-login-muted,
+.orb-login-root--dark .orb-login-field-label {
+  color: #94a3b8;
+}
+
+.orb-login-root--light .orb-login-panel {
+  border-color: rgba(13, 95, 204, 0.12);
+}
+
+.orb-login-root--dark .orb-login-panel {
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.orb-login-root--light .orb-auth-button--enabled {
+  background: #ffffff;
+  color: #0a1628;
+  border-color: rgba(13, 95, 204, 0.28);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+.orb-login-root--light .orb-auth-button--enabled:hover {
+  border-color: rgba(22, 119, 255, 0.45);
+  background: #f8fbff;
+  box-shadow: 0 4px 14px rgba(22, 119, 255, 0.12);
+}
+
+.orb-login-root--dark .orb-auth-button--enabled {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f8fafc;
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.orb-login-root--dark .orb-auth-button--enabled:hover {
+  border-color: rgba(56, 189, 248, 0.4);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.orb-login-root--light .orb-auth-button--disabled,
+.orb-login-root--dark .orb-auth-button--disabled {
+  opacity: 0.55;
+  color: #64748b;
+  border-color: rgba(100, 116, 139, 0.2);
+  background: rgba(148, 163, 184, 0.08);
+}
+
+.orb-login-root--light .orb-login-input {
+  color: #0a1628;
+  background: #ffffff;
+  border: 1px solid rgba(13, 95, 204, 0.22);
+}
+
+.orb-login-root--light .orb-login-input::placeholder {
+  color: #64748b;
+}
+
+.orb-login-root--dark .orb-login-input {
+  color: #f8fafc;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.orb-login-root--dark .orb-login-input::placeholder {
+  color: #64748b;
+}
+
+.orb-login-root--light .orb-login-submit {
+  background: linear-gradient(135deg, #168bff, #0d5fcc);
+  color: #ffffff;
+}
+
+.orb-login-root--dark .orb-login-submit {
+  background: linear-gradient(135deg, #38bdf8, #2563eb);
+  color: #0a1628;
+}
+
+.orb-login-root--light .orb-login-link,
+.orb-login-root--light .orb-login-link-trial {
+  color: #0d5fcc;
+}
+
+.orb-login-root--dark .orb-login-link,
+.orb-login-root--dark .orb-login-link-trial {
+  color: #7dd3fc;
+}
+
+.orb-login-root--light .orb-login-link-subtle,
+.orb-login-root--dark .orb-login-link-subtle {
+  color: #64748b;
+}
+
+.orb-login-root--light .orb-login-error {
+  background: rgba(239, 68, 68, 0.08);
+  color: #b91c1c;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.orb-login-root--dark .orb-login-error {
+  background: rgba(239, 68, 68, 0.12);
+  color: #fecaca;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
 html[data-orb-theme='light'] [data-orb-login-page] h1,
 html[data-orb-theme='light'] [data-orb-login-page] h2,
 html[data-orb-theme='light'] [data-orb-login-page] label,
 html[data-orb-theme='light'] [data-orb-login-page] p,
 html[data-orb-theme='light'] [data-orb-login-page] a {
-  color: #0a1628;
-}
-
-html[data-orb-theme='light'] [data-orb-login-page] .orb-login-input {
-  color: #0a1628;
-  background: rgba(255, 255, 255, 0.92);
-  border-color: rgba(13, 95, 204, 0.22);
-}
-
-html[data-orb-theme='light'] [data-orb-login-page] .orb-login-input::placeholder {
-  color: #5b6b82;
+  color: inherit;
 }
 
 html[data-orb-residential='1'] .orb-login-input:-webkit-autofill,
@@ -1393,12 +1535,8 @@ html[data-orb-residential='1'] .orb-presence .orb-sphere-wrap::after {
   content: none !important;
 }
 
-html[data-orb-residential='1'] .orb-presence .orb-sphere-wrap {
-  filter: none;
-}
-
 html[data-orb-residential='1'] .orb-presence .orb-brand-image {
-  filter: none;
+  display: none !important;
 }
 
 /* Residential brand header — readable in both themes */
@@ -1437,23 +1575,152 @@ html[data-orb-residential='1'] .orb-theme-dark [data-orb-mobile-header-tagline] 
   font-weight: 600;
 }
 
-/* Login autofill — keep fields dark/readable */
+/* Login — premium sign-in (light + dark) */
+.orb-login-root--light {
+  background: linear-gradient(180deg, #f7fbff 0%, #eef4fc 100%);
+  color: #0a1628;
+}
+
+.orb-login-root--dark {
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(56, 189, 248, 0.18), transparent),
+    radial-gradient(ellipse 60% 40% at 100% 0%, rgba(99, 102, 241, 0.12), transparent),
+    linear-gradient(180deg, #050b18 0%, #0a1228 55%, #050b18 100%);
+  color: #f1f5f9;
+}
+
+.orb-login-root--light .orb-login-brand-link,
+.orb-login-root--light .orb-login-signin-title,
+.orb-login-root--light .orb-login-headline {
+  color: #0a1628;
+}
+
+.orb-login-root--light .orb-login-tagline,
+.orb-login-root--light .orb-login-lead,
+.orb-login-root--light .orb-login-muted,
+.orb-login-root--light .orb-login-field-label {
+  color: #475569;
+}
+
+.orb-login-root--dark .orb-login-brand-link,
+.orb-login-root--dark .orb-login-signin-title,
+.orb-login-root--dark .orb-login-headline {
+  color: #f8fafc;
+}
+
+.orb-login-root--dark .orb-login-tagline {
+  color: rgba(125, 211, 252, 0.85);
+}
+
+.orb-login-root--dark .orb-login-lead,
+.orb-login-root--dark .orb-login-muted,
+.orb-login-root--dark .orb-login-field-label {
+  color: #94a3b8;
+}
+
+.orb-login-root--light .orb-login-panel {
+  border-color: rgba(13, 95, 204, 0.12);
+}
+
+.orb-login-root--dark .orb-login-panel {
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.orb-login-root--light .orb-auth-button--enabled {
+  background: #ffffff;
+  color: #0a1628;
+  border-color: rgba(13, 95, 204, 0.28);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+.orb-login-root--light .orb-auth-button--enabled:hover {
+  border-color: rgba(22, 119, 255, 0.45);
+  background: #f8fbff;
+  box-shadow: 0 4px 14px rgba(22, 119, 255, 0.12);
+}
+
+.orb-login-root--dark .orb-auth-button--enabled {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f8fafc;
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.orb-login-root--dark .orb-auth-button--enabled:hover {
+  border-color: rgba(56, 189, 248, 0.4);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.orb-login-root--light .orb-auth-button--disabled,
+.orb-login-root--dark .orb-auth-button--disabled {
+  opacity: 0.55;
+  color: #64748b;
+  border-color: rgba(100, 116, 139, 0.2);
+  background: rgba(148, 163, 184, 0.08);
+}
+
+.orb-login-root--light .orb-login-input {
+  color: #0a1628;
+  background: #ffffff;
+  border: 1px solid rgba(13, 95, 204, 0.22);
+}
+
+.orb-login-root--light .orb-login-input::placeholder {
+  color: #64748b;
+}
+
+.orb-login-root--dark .orb-login-input {
+  color: #f8fafc;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.orb-login-root--dark .orb-login-input::placeholder {
+  color: #64748b;
+}
+
+.orb-login-root--light .orb-login-submit {
+  background: linear-gradient(135deg, #168bff, #0d5fcc);
+  color: #ffffff;
+}
+
+.orb-login-root--dark .orb-login-submit {
+  background: linear-gradient(135deg, #38bdf8, #2563eb);
+  color: #0a1628;
+}
+
+.orb-login-root--light .orb-login-link,
+.orb-login-root--light .orb-login-link-trial {
+  color: #0d5fcc;
+}
+
+.orb-login-root--dark .orb-login-link,
+.orb-login-root--dark .orb-login-link-trial {
+  color: #7dd3fc;
+}
+
+.orb-login-root--light .orb-login-link-subtle,
+.orb-login-root--dark .orb-login-link-subtle {
+  color: #64748b;
+}
+
+.orb-login-root--light .orb-login-error {
+  background: rgba(239, 68, 68, 0.08);
+  color: #b91c1c;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.orb-login-root--dark .orb-login-error {
+  background: rgba(239, 68, 68, 0.12);
+  color: #fecaca;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
 html[data-orb-theme='light'] [data-orb-login-page] h1,
 html[data-orb-theme='light'] [data-orb-login-page] h2,
 html[data-orb-theme='light'] [data-orb-login-page] label,
 html[data-orb-theme='light'] [data-orb-login-page] p,
 html[data-orb-theme='light'] [data-orb-login-page] a {
-  color: #0a1628;
-}
-
-html[data-orb-theme='light'] [data-orb-login-page] .orb-login-input {
-  color: #0a1628;
-  background: rgba(255, 255, 255, 0.92);
-  border-color: rgba(13, 95, 204, 0.22);
-}
-
-html[data-orb-theme='light'] [data-orb-login-page] .orb-login-input::placeholder {
-  color: #5b6b82;
+  color: inherit;
 }
 
 html[data-orb-residential='1'] .orb-login-input:-webkit-autofill,

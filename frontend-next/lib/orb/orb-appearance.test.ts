@@ -4,10 +4,15 @@ import { describe, it } from 'node:test'
 import {
   ORB_APPEARANCE_MIGRATION_KEY,
   ORB_APPEARANCE_STORAGE_KEY,
+  ORB_SYSTEM_DARK_START_HOUR,
+  ORB_SYSTEM_LIGHT_START_HOUR,
+  ORB_APPEARANCE_BOOTSTRAP_SCRIPT,
   migrateOrbAppearanceForSystemDefault,
   migrateOrbResidentialLightDefault,
+  msUntilNextOrbSystemThemeBoundary,
   readOrbAppearanceMode,
   resolveOrbTheme,
+  resolveOrbThemeFromTimeOfDay,
   writeOrbAppearanceMode
 } from './orb-appearance.ts'
 import { placeholderForMode } from './residential-agents.ts'
@@ -30,27 +35,25 @@ describe('orb appearance', () => {
     assert.equal(readOrbAppearanceMode(), 'system')
   })
 
-  it('resolves system theme without window as light', () => {
-    assert.equal(resolveOrbTheme('system'), 'light')
+  it('resolves system theme from time of day without window', () => {
+    assert.equal(resolveOrbThemeFromTimeOfDay(new Date('2026-06-03T10:00:00')), 'light')
+    assert.equal(resolveOrbThemeFromTimeOfDay(new Date('2026-06-03T20:00:00')), 'dark')
+    assert.equal(resolveOrbThemeFromTimeOfDay(new Date('2026-06-03T06:30:00')), 'dark')
+    assert.equal(resolveOrbTheme('system'), resolveOrbThemeFromTimeOfDay())
   })
 
-  it('follows prefers-color-scheme when resolving system on client', () => {
-    const originalMatchMedia = globalThis.matchMedia
-    Object.defineProperty(globalThis, 'matchMedia', {
-      value: () => ({ matches: true, addEventListener: () => {}, removeEventListener: () => {} }),
-      configurable: true
-    })
-    Object.defineProperty(globalThis, 'window', { value: globalThis, configurable: true })
-    try {
-      assert.equal(resolveOrbTheme('system'), 'dark')
-    } finally {
-      if (originalMatchMedia) {
-        Object.defineProperty(globalThis, 'matchMedia', { value: originalMatchMedia, configurable: true })
-      } else {
-        Reflect.deleteProperty(globalThis, 'matchMedia')
-      }
-      Reflect.deleteProperty(globalThis, 'window')
-    }
+  it('uses configured day/night hour boundaries', () => {
+    assert.equal(ORB_SYSTEM_LIGHT_START_HOUR, 7)
+    assert.equal(ORB_SYSTEM_DARK_START_HOUR, 19)
+  })
+
+  it('schedules next system theme boundary after morning or evening', () => {
+    const morning = msUntilNextOrbSystemThemeBoundary(new Date('2026-06-03T08:00:00'))
+    const evening = msUntilNextOrbSystemThemeBoundary(new Date('2026-06-03T21:00:00'))
+    assert.ok(morning > 0)
+    assert.ok(evening > 0)
+    assert.ok(morning < 12 * 60 * 60 * 1000)
+    assert.ok(evening < 12 * 60 * 60 * 1000)
   })
 
   it('persists appearance mode in localStorage', () => {
@@ -106,6 +109,11 @@ describe('orb appearance', () => {
       Reflect.deleteProperty(globalThis, 'localStorage')
       Reflect.deleteProperty(globalThis, 'window')
     }
+  })
+
+  it('bootstrap script resolves system theme from local time not prefers-color-scheme', () => {
+    assert.match(ORB_APPEARANCE_BOOTSTRAP_SCRIPT, /function timeTheme\(\)/)
+    assert.doesNotMatch(ORB_APPEARANCE_BOOTSTRAP_SCRIPT, /prefers-color-scheme/)
   })
 })
 

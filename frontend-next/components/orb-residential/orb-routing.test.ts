@@ -46,7 +46,7 @@ describe('ORB Residential routing', () => {
     assert.match(login, /Continue with Email/)
     assert.match(login, /orbOAuthStartUrl\('microsoft', ORB_RETURN\)/)
     assert.match(login, /Use Face ID, Touch ID or device passkey/)
-    assert.match(login, /h-\[100dvh\].*overflow-hidden/s)
+    assert.match(login, /min-h-\[100dvh\]/s)
     assert.match(authBtn, /OrbAuthProviderIcon/)
     assert.match(authBtn, /MicrosoftIcon/)
   })

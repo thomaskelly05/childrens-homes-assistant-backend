@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react'
 import {
   ORB_APPEARANCE_STORAGE_KEY,
   applyOrbDocumentTheme,
+  msUntilNextOrbSystemThemeBoundary,
   readOrbAppearanceMode,
   resolveOrbTheme,
   writeOrbAppearanceMode,
@@ -39,11 +40,25 @@ export function useOrbAppearance() {
       setResolvedTheme(resolveOrbTheme(appearanceMode))
       return
     }
-    const media = window.matchMedia('(prefers-color-scheme: dark)')
-    const sync = () => setResolvedTheme(media.matches ? 'dark' : 'light')
+
+    const sync = () => setResolvedTheme(resolveOrbTheme('system'))
     sync()
-    media.addEventListener('change', sync)
-    return () => media.removeEventListener('change', sync)
+
+    const scheduleNext = () => {
+      const delay = msUntilNextOrbSystemThemeBoundary()
+      return window.setTimeout(() => {
+        sync()
+        timerId = scheduleNext()
+      }, delay)
+    }
+
+    let timerId = scheduleNext()
+    const minuteTick = window.setInterval(sync, 60_000)
+
+    return () => {
+      window.clearTimeout(timerId)
+      window.clearInterval(minuteTick)
+    }
   }, [appearanceMode])
 
   useEffect(() => {
