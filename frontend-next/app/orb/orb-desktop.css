@@ -1303,3 +1303,265 @@ html[data-orb-residential='1'] .orb-chat-layout {
     max-width: min(calc(100vw - 2rem), 45rem);
   }
 }
+
+/* ==========================================================================
+   ORB Residential — desktop calm shell (lg+ only; mobile layer untouched)
+   ========================================================================== */
+@media (min-width: 1024px) {
+  html[data-orb-residential='1'] .orb-chat-layout--residential {
+    min-height: 100vh;
+    min-height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
+  }
+
+  html[data-orb-residential='1'] .orb-chat-shell {
+    min-height: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
+  }
+
+  html[data-orb-residential='1'] .orb-chat-sidebar {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    max-height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+    box-shadow: inset -1px 0 0 var(--orb-premium-border, rgba(255, 255, 255, 0.08)) !important;
+  }
+
+  html[data-orb-residential='1'] [data-orb-sidebar-panel] {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100%;
+  }
+
+  html[data-orb-residential='1'] [data-orb-sidebar-scroll] {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+
+  html[data-orb-residential='1'] .orb-sidebar-footer,
+  html[data-orb-residential='1'] [data-orb-sidebar-account-footer] {
+    flex: 0 0 auto;
+    position: relative;
+    z-index: 2;
+  }
+
+  /* Quieter sidebar — ChatGPT-like active states, less admin chrome */
+  html[data-orb-residential='1'] .orb-sidebar-nav-item--primary {
+    border: 1px solid var(--orb-premium-border, rgba(255, 255, 255, 0.12)) !important;
+    background: var(--orb-surface-hover, rgba(255, 255, 255, 0.06)) !important;
+    font-weight: 600;
+    box-shadow: none !important;
+  }
+
+  html[data-orb-residential='1'] .orb-sidebar-nav-item--primary:hover {
+    background: var(--orb-premium-glass-strong, rgba(255, 255, 255, 0.08)) !important;
+    border-color: var(--orb-premium-border-glow, rgba(66, 215, 255, 0.16)) !important;
+  }
+
+  html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-dark .orb-sidebar-nav-item--active,
+  html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .orb-sidebar-nav-item--active {
+    background: var(--orb-surface-hover, rgba(255, 255, 255, 0.08)) !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    color: var(--orb-foreground, var(--orb-premium-text, #f7faff)) !important;
+    font-weight: 600;
+  }
+
+  html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .orb-sidebar-nav-item--active {
+    background: rgba(15, 23, 42, 0.06) !important;
+    color: #0f172a !important;
+  }
+
+  html[data-orb-residential='1'] [data-orb-sidebar-section] > p {
+    opacity: 0.72;
+    letter-spacing: 0.12em;
+  }
+
+  html[data-orb-residential='1'] .orb-sidebar-search {
+    border-color: var(--orb-premium-border, rgba(255, 255, 255, 0.1)) !important;
+    background: var(--orb-premium-glass, rgba(255, 255, 255, 0.04)) !important;
+    box-shadow: none !important;
+  }
+
+  /* Main column — thread scrolls, composer always visible on home/chat */
+  html[data-orb-residential='1'] .orb-chat-main {
+    min-height: 0;
+    max-height: 100dvh;
+    overflow: hidden;
+  }
+
+  html[data-orb-residential='1'] [data-orb-chat-body] {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  html[data-orb-residential='1'] [data-orb-chat-body] > .relative {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  html[data-orb-residential='1'] .orb-chat-thread,
+  html[data-orb-residential='1'] [data-orb-chat-scroll-container] {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  html[data-orb-residential='1'] .orb-composer-dock,
+  html[data-orb-residential='1'] .orb-composer-zone {
+    flex: 0 0 auto;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    position: relative;
+    z-index: 20;
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+  }
+
+  html[data-orb-residential='1'] .orb-composer-dock .orb-chat-composer {
+    padding-bottom: 0.25rem;
+  }
+
+  html[data-orb-residential='1'] .orb-composer-dock .orb-composer-glass {
+    max-width: min(var(--orb-composer-max, 46rem), calc(100vw - var(--orb-desktop-sidebar-width, 17.5rem) - 3rem));
+    margin-inline: auto;
+    border-radius: 1.5rem !important;
+    box-shadow: 0 8px 28px rgba(15, 23, 42, 0.08) !important;
+  }
+
+  html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-dark .orb-composer-dock .orb-composer-glass {
+    box-shadow: var(--orb-shadow-composer, 0 -4px 24px rgba(0, 0, 0, 0.32)) !important;
+  }
+
+  /* Home hero — smaller ORB, no overlap with heading/starters */
+  html[data-orb-residential='1'] [data-orb-residential-empty] .orb-presence--hero,
+  html[data-orb-residential='1'] [data-orb-residential-empty] [data-orb-empty-sphere] .orb-presence--hero {
+    --orb-presence-size: clamp(7.5rem, 11vw, 10.5rem) !important;
+    width: var(--orb-presence-size) !important;
+    height: var(--orb-presence-size) !important;
+    max-width: var(--orb-presence-size) !important;
+    max-height: var(--orb-presence-size) !important;
+  }
+
+  html[data-orb-residential='1'] .orb-residential-empty--desktop {
+    padding-top: clamp(0.75rem, 4vh, 2rem) !important;
+    padding-bottom: 0.75rem !important;
+  }
+
+  html[data-orb-residential='1'] [data-orb-empty-starter-chips] .orb-starter-card {
+    border-width: 1px;
+    box-shadow: none !important;
+    font-weight: 500;
+  }
+
+  html[data-orb-residential='1'] [data-orb-more-examples] {
+    opacity: 0.8;
+    font-weight: 500;
+  }
+
+  /* Workspace frame — capped readable columns, calmer cards */
+  html[data-orb-residential='1'] .orb-main-workspace {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  html[data-orb-residential='1'] .orb-workspace-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+  }
+
+  html[data-orb-residential='1'] .orb-main-workspace .orb-mobile-workspace-card,
+  html[data-orb-residential='1'] .orb-main-workspace .orb-doc-glass-card,
+  html[data-orb-residential='1'] .orb-main-workspace .orb-panel-card {
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04) !important;
+  }
+
+  html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-dark .orb-main-workspace .orb-mobile-workspace-card,
+  html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-dark .orb-main-workspace .orb-doc-glass-card,
+  html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-dark .orb-main-workspace .orb-panel-card {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22) !important;
+  }
+
+  html[data-orb-residential='1'] [data-orb-workspace-panel] .orb-workspace-body > * {
+    max-width: var(--orb-desktop-page-max, 75rem);
+    width: 100%;
+    margin-inline: auto;
+  }
+
+  html[data-orb-residential='1'] [data-orb-document-panel] textarea,
+  html[data-orb-residential='1'] [data-orb-shift-builder-panel] textarea,
+  html[data-orb-residential='1'] [data-orb-dictate-station] textarea {
+    max-width: 42rem;
+  }
+
+  /* Saved Outputs — library empty state, not admin split table */
+  html[data-orb-residential='1'] [data-orb-saved-outputs-panel][data-orb-saved-outputs-empty='true'] {
+    max-width: var(--orb-desktop-page-max, 75rem);
+    margin-inline: auto;
+  }
+
+  html[data-orb-residential='1'] [data-orb-saved-outputs-panel][data-orb-saved-outputs-empty='true'] > :first-child {
+    width: 100% !important;
+    max-width: 100% !important;
+    border-right: 0 !important;
+  }
+
+  html[data-orb-residential='1'] [data-orb-saved-outputs-panel][data-orb-saved-outputs-empty='true'] [data-orb-saved-output-detail] {
+    display: none !important;
+  }
+
+  /* Account & billing modals — viewport height with internal scroll */
+  html[data-orb-residential='1'] [data-orb-app-modal='true'] .orb-panel-modal {
+    max-height: min(100dvh, 100vh);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  html[data-orb-residential='1'] [data-orb-app-modal='true'] .orb-panel-body,
+  html[data-orb-residential='1'] [data-orb-account-modal],
+  html[data-orb-residential='1'] [data-orb-billing-modal] {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    min-height: 0;
+  }
+
+  html[data-orb-residential='1'] [data-orb-billing-modal] {
+    max-height: calc(min(100dvh, 100vh) - 7rem);
+    padding-bottom: 0 !important;
+  }
+
+  html[data-orb-residential='1'] [data-orb-billing-modal] [data-orb-billing-cta-bar] {
+    position: sticky;
+    bottom: 0;
+    z-index: 3;
+    flex-shrink: 0;
+  }
+
+  html[data-orb-residential='1'] [data-orb-account-modal] {
+    max-height: calc(min(100dvh, 100vh) - 6rem);
+  }
+}

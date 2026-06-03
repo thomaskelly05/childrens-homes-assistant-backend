@@ -35,6 +35,12 @@ export type OrbDesktopLayoutAuditResult = {
   mobileOnlyClassesActiveOnDesktop: string[]
   staticOrbImageCount: number
   visibleLivingSphereCount: number
+  composerVisibleOnHomeChat: boolean
+  sidebarScrollContainerExists: boolean
+  accountFooterReachable: boolean
+  horizontalOverflow: boolean
+  activeContentFitsViewport: boolean
+  themeMismatchCount: number
   ok: boolean
 }
 
@@ -795,6 +801,12 @@ export function runOrbDesktopLayoutAudit(): OrbDesktopLayoutAuditResult {
       mobileOnlyClassesActiveOnDesktop: [],
       staticOrbImageCount: 0,
       visibleLivingSphereCount: 0,
+      composerVisibleOnHomeChat: true,
+      sidebarScrollContainerExists: true,
+      accountFooterReachable: true,
+      horizontalOverflow: false,
+      activeContentFitsViewport: true,
+      themeMismatchCount: 0,
       ok: true
     }
   }
@@ -908,12 +920,79 @@ export function runOrbDesktopLayoutAudit(): OrbDesktopLayoutAuditResult {
     document.querySelectorAll('.orb-living-sphere, [data-orb-living-sphere]')
   ).filter(isVisibleElement).length
 
+  const composerDock = document.querySelector('[data-orb-composer="main"]')
+  const composerRect = composerDock instanceof HTMLElement ? composerDock.getBoundingClientRect() : null
+  const composerStyle = composerDock instanceof HTMLElement ? window.getComputedStyle(composerDock) : null
+  const onHomeOrChat =
+    Boolean(document.querySelector('[data-orb-residential-empty]')) || activeWorkspacePanel === null
+  const composerVisibleOnHomeChat =
+    !isDesktop ||
+    !onHomeOrChat ||
+    (composerRect !== null &&
+      composerStyle !== null &&
+      composerStyle.display !== 'none' &&
+      composerStyle.visibility !== 'hidden' &&
+      Number(composerStyle.opacity) > 0.05 &&
+      composerRect.height > 8 &&
+      composerRect.bottom <= viewportHeight + 2 &&
+      composerRect.top < viewportHeight - 4)
+
+  const sidebarScroll = document.querySelector('[data-orb-sidebar-scroll]')
+  const sidebarScrollContainer = document.querySelector('[data-orb-sidebar-scroll-container]')
+  const sidebarScrollContainerExists = Boolean(sidebarScroll && sidebarScrollContainer)
+
+  const accountFooter = document.querySelector('[data-orb-sidebar-account-footer]')
+  const accountFooterRect =
+    accountFooter instanceof HTMLElement ? accountFooter.getBoundingClientRect() : null
+  const accountFooterReachable =
+    !isDesktop ||
+    (accountFooterRect !== null &&
+      accountFooterRect.bottom <= viewportHeight + 2 &&
+      accountFooterRect.top < viewportHeight - 8)
+
+  const horizontalOverflow =
+    document.documentElement.scrollWidth > viewportWidth + 2 ||
+    (layoutRoot instanceof HTMLElement && layoutRoot.scrollWidth > viewportWidth + 2)
+
+  const activePanelEl = document.querySelector('[data-orb-workspace-panel]')
+  let activeContentFitsViewport = true
+  if (isDesktop && activePanelEl instanceof HTMLElement && isVisibleElement(activePanelEl)) {
+    const panelRect = activePanelEl.getBoundingClientRect()
+    const body = activePanelEl.querySelector('.orb-workspace-body')
+    const bodyStyle = body instanceof HTMLElement ? window.getComputedStyle(body) : null
+    const panelOverflows =
+      panelRect.bottom > viewportHeight + 4 && bodyStyle?.overflowY !== 'auto' && bodyStyle?.overflowY !== 'scroll'
+    activeContentFitsViewport = !panelOverflows || bodyStyle?.overflowY === 'auto' || bodyStyle?.overflowY === 'scroll'
+  }
+
+  const themeAudit = runOrbDesktopThemeAudit()
+  const themeMismatchCount =
+    (themeAudit.shellTheme && themeAudit.htmlOrbTheme && themeAudit.shellTheme !== themeAudit.htmlOrbTheme
+      ? 1
+      : 0) +
+    (themeAudit.layoutTheme && themeAudit.shellTheme && themeAudit.layoutTheme !== themeAudit.shellTheme ? 1 : 0) +
+    (!themeAudit.ok && themeAudit.residentialFlag ? 1 : 0)
+
   const failures: string[] = [...overlapWarnings]
   if (elementsExceedingViewport.length) failures.push('elements exceed viewport width')
   if (isDesktop && mobileOnlyClassesActiveOnDesktop.length) {
     failures.push('mobile-only classes active on desktop')
   }
   if (staticOrbImageCount > 0) failures.push('static orb PNG detected in product UI')
+  if (isDesktop && onHomeOrChat && !composerVisibleOnHomeChat) {
+    failures.push('composer not visible on home/chat')
+  }
+  if (isDesktop && !sidebarScrollContainerExists) {
+    failures.push('sidebar scroll container missing')
+  }
+  if (isDesktop && !accountFooterReachable) {
+    failures.push('account/workspace footer not reachable')
+  }
+  if (horizontalOverflow) failures.push('horizontal overflow on document')
+  if (isDesktop && !activeContentFitsViewport) {
+    failures.push('active workspace content exceeds viewport without scroll')
+  }
+  if (themeMismatchCount > 0) failures.push('theme mismatch detected')
 
   if (failures.length) {
     console.warn('[ORB_DESKTOP_LAYOUT_AUDIT] issues:', failures)
@@ -948,6 +1027,12 @@ export function runOrbDesktopLayoutAudit(): OrbDesktopLayoutAuditResult {
     mobileOnlyClassesActiveOnDesktop,
     staticOrbImageCount,
     visibleLivingSphereCount,
+    composerVisibleOnHomeChat,
+    sidebarScrollContainerExists,
+    accountFooterReachable,
+    horizontalOverflow,
+    activeContentFitsViewport,
+    themeMismatchCount,
     ok: failures.length === 0
   }
 }
