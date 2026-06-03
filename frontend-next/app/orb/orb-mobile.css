@@ -434,8 +434,25 @@
     pointer-events: auto !important;
   }
 
-  html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .orb-composer-dock {
-    background: linear-gradient(180deg, transparent 0%, rgba(5, 7, 13, 0.85) 35%, #05070d 100%) !important;
+  html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-dark .orb-composer-dock,
+  .orb-chat-layout--residential.orb-theme-dark .orb-composer-dock {
+    background: linear-gradient(
+      180deg,
+      transparent 0%,
+      color-mix(in srgb, var(--orb-page-bg, #05070d) 88%, transparent) 28%,
+      var(--orb-page-bg, #05070d) 100%
+    ) !important;
+  }
+
+  html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .orb-composer-dock,
+  .orb-chat-layout--residential.orb-theme-light .orb-composer-dock {
+    background: linear-gradient(
+      180deg,
+      transparent 0%,
+      color-mix(in srgb, var(--orb-page-bg, #f8fbff) 65%, transparent) 30%,
+      var(--orb-page-bg, #f8fbff) 100%
+    ) !important;
+    box-shadow: none !important;
   }
 
   .orb-composer-dock > .mx-auto,
@@ -476,8 +493,8 @@
     box-shadow: var(--orb-premium-shadow, 0 12px 40px rgba(0, 0, 0, 0.45), 0 0 48px rgba(22, 139, 255, 0.06)) !important;
   }
 
-  html[data-orb-residential='1'] .orb-composer-glass,
-  .orb-chat-layout--residential .orb-composer-glass {
+  html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-dark .orb-composer-glass,
+  .orb-chat-layout--residential.orb-theme-dark .orb-composer-glass {
     border: 1px solid var(--orb-premium-border, rgba(255, 255, 255, 0.1)) !important;
     background: linear-gradient(
       165deg,
@@ -491,15 +508,12 @@
 
   html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .orb-composer-glass,
   .orb-chat-layout--residential.orb-theme-light .orb-composer-glass {
-    border-color: var(--orb-premium-border, rgba(255, 255, 255, 0.1)) !important;
-    background: linear-gradient(
-      165deg,
-      color-mix(in srgb, var(--orb-premium-glass-strong, rgba(255, 255, 255, 0.07)) 88%, transparent),
-      color-mix(in srgb, var(--orb-premium-glass, rgba(255, 255, 255, 0.045)) 72%, transparent)
-    ) !important;
-    box-shadow:
-      0 10px 32px rgba(0, 0, 0, 0.38),
-      0 0 32px rgba(22, 139, 255, 0.05) !important;
+    border: 1px solid var(--orb-res-border-strong, rgba(37, 99, 235, 0.18)) !important;
+    background: rgba(255, 255, 255, 0.86) !important;
+    backdrop-filter: blur(var(--orb-blur-glass, 20px)) saturate(160%) !important;
+    -webkit-backdrop-filter: blur(var(--orb-blur-glass, 20px)) saturate(160%) !important;
+    box-shadow: var(--orb-res-shadow, 0 8px 28px rgba(15, 23, 42, 0.08), 0 0 24px rgba(22, 119, 255, 0.06)) !important;
+    color: var(--orb-res-text, #0f172a) !important;
   }
 
   .orb-composer-glass textarea,

@@ -220,13 +220,15 @@ export function runOrbDesktopThemeAudit(): OrbDesktopThemeAuditResult {
   const htmlOrbTheme = document.documentElement.dataset.orbTheme ?? null
   const residentialFlag = document.documentElement.dataset.orbResidential === '1'
 
+  const resolvedTheme = shellTheme ?? layoutTheme ?? htmlOrbTheme
+
   const ok =
     residentialFlag &&
-    shellTheme === 'dark' &&
-    (layoutTheme === null || layoutTheme === 'dark') &&
-    htmlOrbTheme === 'dark' &&
-    residentialLightLayouts === 0 &&
-    whiteCardCountInResidential === 0 &&
+    Boolean(resolvedTheme) &&
+    (resolvedTheme === 'light' || resolvedTheme === 'dark') &&
+    shellTheme === resolvedTheme &&
+    (layoutTheme === null || layoutTheme === resolvedTheme) &&
+    (htmlOrbTheme === null || htmlOrbTheme === resolvedTheme) &&
     composers.length <= 1 &&
     overflow.ok
 

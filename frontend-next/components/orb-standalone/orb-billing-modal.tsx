@@ -35,7 +35,7 @@ const TOP_UP_OPTIONS = [
 ] as const
 
 function cardClassName() {
-  return 'orb-billing-card orb-mobile-workspace-card orb-doc-glass-card rounded-2xl border border-[var(--orb-mobile-ws-card-border,var(--orb-line))] bg-[var(--orb-mobile-ws-card,rgba(8,17,31,0.92))] p-5 text-[var(--orb-mobile-ws-text,var(--orb-foreground))] shadow-[0_12px_32px_rgba(0,0,0,0.35)]'
+  return 'orb-billing-card orb-mobile-workspace-card orb-doc-glass-card rounded-2xl border border-[var(--orb-mobile-ws-card-border,var(--orb-line))] bg-[var(--orb-mobile-ws-card,rgba(8,17,31,0.92))] p-5 text-[var(--orb-mobile-ws-text,var(--orb-foreground))] shadow-[var(--orb-res-shadow,0_10px_28px_rgba(15,23,42,0.06))]'
 }
 
 export function OrbBillingModal({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -178,14 +178,19 @@ export function OrbBillingModal({ open, onClose }: { open: boolean; onClose: () 
           <div className="flex flex-wrap items-start justify-between gap-2 sm:gap-3">
             <div>
               <p className="text-sm font-semibold text-[var(--orb-foreground)] sm:text-base">ORB Residential</p>
-              <p className="mt-0.5 text-xl font-semibold tracking-tight text-[#5ec8ff] sm:mt-1 sm:text-2xl">£9.99/month</p>
+              <p className="mt-0.5 text-xl font-semibold tracking-tight text-[var(--orb-res-primary,#1677ff)] sm:mt-1 sm:text-2xl">
+                £9.99/month
+              </p>
             </div>
-            <span className="rounded-full border border-cyan-500/25 bg-cyan-500/10 px-3 py-1 text-xs font-medium capitalize text-cyan-200">
+            <span className="rounded-full border border-[var(--orb-res-status-pill-bg,rgba(22,119,255,0.1))] bg-[var(--orb-res-status-pill-bg,rgba(22,119,255,0.1))] px-3 py-1 text-xs font-medium capitalize text-[var(--orb-res-status-pill-text,#1e3a8a)]">
               {displayStatus}
             </span>
           </div>
           {!subscriptionActive ? (
-            <p className="mt-3 text-sm text-amber-100/90" data-orb-billing-inactive>
+            <p
+              className="mt-3 rounded-lg border border-[var(--orb-res-info-border,#bfdbfe)] bg-[var(--orb-res-info-bg,#eff6ff)] px-3 py-2 text-sm leading-5 text-[var(--orb-res-info-text,#1e3a8a)]"
+              data-orb-billing-inactive
+            >
               Subscription inactive · {stripeReady ? 'Stripe ready' : 'Stripe setup required'} · Subscribe — £9.99/month
             </p>
           ) : null}
@@ -342,8 +347,14 @@ export function OrbBillingModal({ open, onClose }: { open: boolean; onClose: () 
           </p>
         </section>
 
-        {notice ? <p className="text-sm text-cyan-200/90">{notice}</p> : null}
-        {error ? <p className="text-sm text-amber-300/90">{error}</p> : null}
+        {notice ? (
+          <p className="text-sm text-[var(--orb-res-info-text,#1e3a8a)]">{notice}</p>
+        ) : null}
+        {error ? (
+          <p className="rounded-lg border border-[var(--orb-res-warning-border,#fbbf24)] bg-[var(--orb-res-warning-bg,#fffbeb)] px-3 py-2 text-sm text-[var(--orb-res-warning-text,#92400e)]">
+            {error}
+          </p>
+        ) : null}
 
         <div
           className="sticky bottom-0 z-10 flex flex-wrap items-stretch gap-2.5 border-t border-[var(--orb-mobile-ws-card-border,var(--orb-line))] bg-[var(--orb-mobile-ws-footer,var(--orb-surface))]/98 px-1 pb-[max(0.875rem,env(safe-area-inset-bottom))] pt-4 backdrop-blur-md sm:gap-3 sm:px-0"

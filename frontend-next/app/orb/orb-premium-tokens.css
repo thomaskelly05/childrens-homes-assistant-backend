@@ -570,10 +570,16 @@ html[data-orb-residential='1'] .orb-panel-overlay {
   background: rgba(5, 7, 13, 0.62) !important;
 }
 
-html[data-orb-residential='1'] .orb-theme-light .orb-message-assistant .orb-message-content,
-html[data-orb-residential='1'] .orb-chat-layout--residential .orb-message-assistant .orb-message-content {
+html[data-orb-residential='1'] .orb-theme-dark .orb-message-assistant .orb-message-content,
+html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-dark .orb-message-assistant .orb-message-content {
   background: transparent !important;
   color: #f7faff !important;
+}
+
+html[data-orb-residential='1'] .orb-theme-light .orb-message-assistant .orb-message-content,
+html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .orb-message-assistant .orb-message-content {
+  background: transparent !important;
+  color: var(--orb-foreground, #0f172a) !important;
 }
 
 /* Glass orb mark — single living sphere */
@@ -822,6 +828,17 @@ html[data-orb-residential='1'] .orb-theme-light .orb-panel-overlay {
 html[data-orb-residential='1'] .orb-theme-light .orb-composer-glass {
   background: rgba(255, 255, 255, 0.96) !important;
   border-color: rgba(22, 139, 255, 0.2) !important;
+}
+
+html[data-orb-residential='1'] .orb-theme-light .orb-composer-dock,
+html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .orb-composer-dock {
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    color-mix(in srgb, var(--orb-page-bg, #f8fbff) 70%, transparent) 32%,
+    var(--orb-page-bg, #f8fbff) 100%
+  ) !important;
+  box-shadow: none !important;
 }
 
 /* Desktop chat column — ChatGPT-style readable width */
@@ -1097,6 +1114,17 @@ html[data-orb-residential='1'] .orb-theme-light .orb-panel-overlay {
 html[data-orb-residential='1'] .orb-theme-light .orb-composer-glass {
   background: rgba(255, 255, 255, 0.96) !important;
   border-color: rgba(22, 139, 255, 0.2) !important;
+}
+
+html[data-orb-residential='1'] .orb-theme-light .orb-composer-dock,
+html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .orb-composer-dock {
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    color-mix(in srgb, var(--orb-page-bg, #f8fbff) 70%, transparent) 32%,
+    var(--orb-page-bg, #f8fbff) 100%
+  ) !important;
+  box-shadow: none !important;
 }
 
 /* Desktop chat column — ChatGPT-style readable width */

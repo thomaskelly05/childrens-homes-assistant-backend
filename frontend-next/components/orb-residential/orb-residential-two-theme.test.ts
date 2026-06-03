@@ -110,6 +110,7 @@ describe('ORB Residential two-theme system', () => {
     const desktop = readComponent('app/orb/orb-desktop.css')
     assert.match(desktop, /\.orb-chat-layout--residential\.orb-theme-dark/)
     assert.match(desktop, /\.orb-chat-layout--residential\.orb-theme-light/)
+    assert.doesNotMatch(desktop, /^\.orb-chat-layout--residential,\s*\n\[data-orb-shell/m)
     assert.doesNotMatch(desktop, /shell\/layout dark authority/)
   })
 
