@@ -742,19 +742,11 @@ html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .or
   isolation: isolate;
 }
 
-.orb-presence .orb-sphere-wrap {
+.orb-presence .orb-brand-image {
   width: 100% !important;
   height: 100% !important;
   max-width: 100%;
   max-height: 100%;
-  border-radius: 50%;
-  overflow: visible;
-  background: transparent !important;
-}
-
-.orb-presence .orb-sphere-wrap > .orb-sphere {
-  width: 100% !important;
-  height: 100% !important;
 }
 
 .orb-presence--tiny,
@@ -811,25 +803,13 @@ html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .or
   }
 }
 
-.orb-presence--pulse .orb-sphere-wrap {
-  animation: premium-orb-breathe 4.2s ease-in-out infinite;
+.orb-presence--pulse .orb-brand-image {
+  animation: orb-brand-breathe 4.2s ease-in-out infinite;
 }
 
-.orb-presence[data-orb-presence-state='listening'] .orb-sphere-wrap {
-  filter: drop-shadow(0 0 28px rgba(94, 200, 255, 0.45)) drop-shadow(0 0 48px rgba(22, 139, 255, 0.28));
-}
-
-.orb-presence[data-orb-presence-state='thinking'] .orb-sphere-liquid {
-  animation-duration: calc(var(--orb-motion-speed, 10.5s) * 0.65);
-}
-
-.orb-presence[data-orb-presence-state='responding'] .orb-sphere-wrap {
-  filter: drop-shadow(0 0 24px rgba(124, 92, 255, 0.32)) drop-shadow(0 0 40px rgba(251, 191, 36, 0.18));
-}
-
+/* Presence state styling uses layout chrome only — brand image stays unfiltered (see orb-brand-asset.css). */
 .orb-presence[data-orb-presence-state='error'] {
-  opacity: 0.82;
-  filter: saturate(0.72);
+  opacity: 0.88;
 }
 
 html[data-orb-residential='1'] .orb-theme-light .orb-presence[data-orb-presence-state='idle'] {
@@ -1081,16 +1061,8 @@ html[data-orb-residential='1'] .orb-presence .orb-sphere-wrap {
   filter: none;
 }
 
-html[data-orb-residential='1'] .orb-presence .orb-sphere {
-  filter:
-    drop-shadow(0 0 28px rgba(var(--orb-hue-a), calc(var(--orb-glow, 0.5) * 0.62)))
-    drop-shadow(0 0 56px rgba(var(--orb-hue-b), calc(var(--orb-glow, 0.5) * 0.3)));
-}
-
-html[data-orb-residential='1'] .orb-theme-light .orb-presence .orb-sphere {
-  filter:
-    drop-shadow(0 0 20px rgba(22, 119, 255, 0.2))
-    drop-shadow(0 0 40px rgba(37, 99, 235, 0.1));
+html[data-orb-residential='1'] .orb-presence .orb-brand-image {
+  filter: none;
 }
 
 /* Residential brand header — readable in both themes */
@@ -1233,15 +1205,15 @@ html[data-orb-residential='1'] [data-orb-dictate-output-types] {
   }
 }
 
-/* Mobile product tokens — residential launch is dark-only */
+/* Mobile product tokens — follow shell theme variables (light fallbacks before hydration) */
 html[data-orb-residential='1'] {
-  --orb-mobile-bg: #070b14;
-  --orb-mobile-card: var(--orb-mobile-ws-card, rgba(8, 17, 31, 0.92));
-  --orb-mobile-line: rgba(255, 255, 255, 0.12);
+  --orb-mobile-bg: var(--orb-mobile-ws-panel, #f7fbff);
+  --orb-mobile-card: var(--orb-mobile-ws-card, #ffffff);
+  --orb-mobile-line: var(--orb-mobile-ws-card-border, rgba(37, 99, 235, 0.14));
   --orb-primary-blue: #168bff;
   --orb-primary-blue-2: #0d5fcc;
-  --orb-text: var(--orb-mobile-ws-text, #f7faff);
-  --orb-muted: var(--orb-mobile-ws-muted, #a7aebd);
+  --orb-text: var(--orb-mobile-ws-text, #0f172a);
+  --orb-muted: var(--orb-mobile-ws-muted, #52657a);
 }
 
 .orb-chat-layout--residential.orb-theme-dark .orb-dictate-mobile,
@@ -1425,16 +1397,8 @@ html[data-orb-residential='1'] .orb-presence .orb-sphere-wrap {
   filter: none;
 }
 
-html[data-orb-residential='1'] .orb-presence .orb-sphere {
-  filter:
-    drop-shadow(0 0 28px rgba(var(--orb-hue-a), calc(var(--orb-glow, 0.5) * 0.62)))
-    drop-shadow(0 0 56px rgba(var(--orb-hue-b), calc(var(--orb-glow, 0.5) * 0.3)));
-}
-
-html[data-orb-residential='1'] .orb-theme-light .orb-presence .orb-sphere {
-  filter:
-    drop-shadow(0 0 20px rgba(22, 119, 255, 0.2))
-    drop-shadow(0 0 40px rgba(37, 99, 235, 0.1));
+html[data-orb-residential='1'] .orb-presence .orb-brand-image {
+  filter: none;
 }
 
 /* Residential brand header — readable in both themes */
@@ -1577,15 +1541,15 @@ html[data-orb-residential='1'] [data-orb-dictate-output-types] {
   }
 }
 
-/* Mobile product tokens — residential launch is dark-only */
+/* Mobile product tokens — follow shell theme variables (light fallbacks before hydration) */
 html[data-orb-residential='1'] {
-  --orb-mobile-bg: #070b14;
-  --orb-mobile-card: var(--orb-mobile-ws-card, rgba(8, 17, 31, 0.92));
-  --orb-mobile-line: rgba(255, 255, 255, 0.12);
+  --orb-mobile-bg: var(--orb-mobile-ws-panel, #f7fbff);
+  --orb-mobile-card: var(--orb-mobile-ws-card, #ffffff);
+  --orb-mobile-line: var(--orb-mobile-ws-card-border, rgba(37, 99, 235, 0.14));
   --orb-primary-blue: #168bff;
   --orb-primary-blue-2: #0d5fcc;
-  --orb-text: var(--orb-mobile-ws-text, #f7faff);
-  --orb-muted: var(--orb-mobile-ws-muted, #a7aebd);
+  --orb-text: var(--orb-mobile-ws-text, #0f172a);
+  --orb-muted: var(--orb-mobile-ws-muted, #52657a);
 }
 
 .orb-chat-layout--residential.orb-theme-dark .orb-dictate-mobile,

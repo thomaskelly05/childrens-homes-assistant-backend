@@ -1,11 +1,10 @@
 'use client'
 
-import { useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { useEffect, useState } from 'react'
 
-import { OrbSphere, type OrbRenderState } from '@/components/orb-core/orb-sphere'
-import { getOrbHueProfile } from '@/lib/orb/rendering/visual-system'
+import { OrbBrandImage, type OrbBrandImageCrop } from '@/components/orb-core/orb-brand-image'
 
-/** Canonical ORB Residential presence states — map to `OrbSphere` render states. */
+/** Canonical ORB Residential presence states (visual state is conveyed outside the static brand asset). */
 export type OrbPresenceState = 'idle' | 'listening' | 'thinking' | 'responding' | 'error'
 
 export type OrbPresenceSize =
@@ -21,28 +20,6 @@ export type OrbPresenceSize =
   | 'lg'
   | 'hero'
 
-const PRESENCE_TO_RENDER: Record<OrbPresenceState, OrbRenderState> = {
-  idle: 'idle',
-  listening: 'listening',
-  thinking: 'thinking',
-  responding: 'speaking',
-  error: 'offline'
-}
-
-const SIZE_TO_SPHERE: Record<OrbPresenceSize, 'small' | 'medium' | 'large' | 'xlarge'> = {
-  tiny: 'small',
-  xs: 'small',
-  sm: 'small',
-  md: 'medium',
-  empty: 'large',
-  home: 'large',
-  dictate: 'xlarge',
-  voice: 'xlarge',
-  voiceMobile: 'xlarge',
-  lg: 'medium',
-  hero: 'xlarge'
-}
-
 const SIZE_CLASS: Record<OrbPresenceSize, string> = {
   tiny: 'orb-presence--tiny',
   xs: 'orb-presence--xs',
@@ -55,6 +32,20 @@ const SIZE_CLASS: Record<OrbPresenceSize, string> = {
   voiceMobile: 'orb-presence--voice-mobile',
   lg: 'orb-presence--lg',
   hero: 'orb-presence--hero'
+}
+
+const SIZE_CROP: Record<OrbPresenceSize, OrbBrandImageCrop> = {
+  tiny: 'sphere',
+  xs: 'sphere',
+  sm: 'sphere',
+  md: 'sphere',
+  empty: 'full',
+  home: 'full',
+  dictate: 'full',
+  voice: 'full',
+  voiceMobile: 'full',
+  lg: 'sphere',
+  hero: 'full'
 }
 
 /** Infer presence state from legacy `glass-orb-mark--*` modifier classes. */
@@ -91,32 +82,19 @@ export function OrbPresence({
     return () => mq.removeEventListener('change', update)
   }, [])
 
-  const renderState = reducedMotion ? 'reduced_motion' : PRESENCE_TO_RENDER[state]
-  const sphereSize = SIZE_TO_SPHERE[size]
-  const hueProfile = useMemo(() => getOrbHueProfile(renderState, reducedMotion), [renderState, reducedMotion])
-
-  const hueStyle = {
-    '--orb-hue-a': hueProfile.hueA,
-    '--orb-hue-b': hueProfile.hueB,
-    '--orb-hue-c': hueProfile.hueC,
-    '--orb-warm': hueProfile.warm,
-    '--orb-glow': String(hueProfile.glow),
-    '--orb-motion-speed': reducedMotion ? '0.001ms' : hueProfile.motionSpeed,
-    '--orb-edge-opacity': String(hueProfile.edgeOpacity)
-  } as CSSProperties
+  const crop = SIZE_CROP[size]
+  const shouldPulse = pulse && !reducedMotion && state === 'idle'
 
   return (
     <span
-      className={`orb-presence ${SIZE_CLASS[size]} ${pulse && !reducedMotion ? 'orb-presence--pulse' : ''} ${className}`.trim()}
+      className={`orb-presence ${SIZE_CLASS[size]} ${shouldPulse ? 'orb-presence--pulse' : ''} ${className}`.trim()}
       data-orb-presence
       data-orb-presence-state={state}
-      data-orb-state={renderState}
-      style={hueStyle}
       role={label ? 'img' : undefined}
       aria-label={label}
       aria-hidden={label ? undefined : true}
     >
-      <OrbSphere state={renderState} size={sphereSize} />
+      <OrbBrandImage crop={crop} alt={label ?? 'ORB'} />
     </span>
   )
 }
