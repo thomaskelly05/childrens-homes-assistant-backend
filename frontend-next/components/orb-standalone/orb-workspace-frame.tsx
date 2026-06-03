@@ -28,12 +28,12 @@ export function OrbWorkspaceFrame({
 
   return (
     <div
-      className="orb-main-workspace flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--orb-bg-deep,var(--orb-page-bg,#f7fbff))]"
+      className="orb-main-workspace orb-mobile-workspace-panel flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--orb-mobile-ws-panel,var(--orb-bg-deep,var(--orb-page-bg,#070b14)))] text-[var(--orb-mobile-ws-text,var(--orb-foreground))]"
       data-orb-main-workspace="true"
       data-orb-workspace-panel={panelId}
       data-orb-app-panel-active="true"
     >
-      <header className="orb-workspace-header flex shrink-0 items-center gap-2 border-b border-[var(--orb-line)] bg-[var(--orb-surface-elevated,var(--orb-surface,#fff))] px-3 py-2.5 md:px-5">
+      <header className="orb-workspace-header flex shrink-0 items-center gap-2 border-b border-[var(--orb-mobile-ws-card-border,var(--orb-line))] bg-[var(--orb-mobile-ws-footer,var(--orb-surface-elevated))] px-3 py-2.5 md:px-5">
         <button
           type="button"
           onClick={onClose}
@@ -59,9 +59,11 @@ export function OrbWorkspaceFrame({
           <X className="h-5 w-5" aria-hidden />
         </button>
       </header>
-      <div className="orb-workspace-body min-h-0 flex-1 overflow-y-auto overscroll-contain">{children}</div>
+      <div className="orb-workspace-body orb-mobile-workspace-body min-h-0 flex-1 overflow-y-auto overscroll-contain pb-[max(1rem,env(safe-area-inset-bottom))]">
+        {children}
+      </div>
       {footer ? (
-        <footer className="shrink-0 border-t border-[var(--orb-line)] px-4 py-3 text-[11px] leading-5 text-[var(--orb-muted)]">
+        <footer className="orb-mobile-workspace-footer shrink-0 border-t border-[var(--orb-mobile-ws-card-border,var(--orb-line))] bg-[var(--orb-mobile-ws-footer,var(--orb-surface-elevated))] px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-[11px] leading-5 text-[var(--orb-mobile-ws-muted,var(--orb-muted))]">
           {footer}
         </footer>
       ) : null}

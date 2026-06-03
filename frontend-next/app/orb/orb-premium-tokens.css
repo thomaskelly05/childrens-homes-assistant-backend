@@ -983,12 +983,12 @@ html[data-orb-residential='1'] [data-orb-dictate-output-types] {
 /* Mobile product tokens — Dictate, Voice, home */
 html[data-orb-residential='1'] {
   --orb-mobile-bg: #f5f9ff;
-  --orb-mobile-card: #ffffff;
+  --orb-mobile-card: var(--orb-mobile-ws-card, #ffffff);
   --orb-mobile-line: rgba(22, 119, 255, 0.14);
   --orb-primary-blue: #168bff;
   --orb-primary-blue-2: #0d5fcc;
-  --orb-text: #0a1628;
-  --orb-muted: #52657a;
+  --orb-text: var(--orb-mobile-ws-text, #0a1628);
+  --orb-muted: var(--orb-mobile-ws-muted, #52657a);
 }
 
 .orb-chat-layout--residential.orb-theme-dark .orb-dictate-mobile,

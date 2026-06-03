@@ -213,23 +213,23 @@ export function OrbSavedOutputsPanel({
       {...orbStationShellProps(residentialSurface, 'wide')}
     >
       <div className="flex min-h-0 flex-col md:flex-row" data-orb-saved-outputs-panel>
-        <div className="flex w-full shrink-0 flex-col border-b border-white/[0.06] md:max-w-md md:border-b-0 md:border-r">
+        <div className="flex w-full shrink-0 flex-col border-b border-[var(--orb-mobile-ws-card-border,var(--orb-line))] md:max-w-md md:border-b-0 md:border-r">
           {reconnectSuggested && items.length ? (
             <div className="p-3 pb-0">
               <OrbStationReconnectBanner onRefresh={() => void refresh()} />
-              <p className="mt-1 text-[10px] text-slate-500" data-orb-saved-outputs-local-hint>
+              <p className="mt-1 text-[10px] text-[var(--orb-mobile-ws-muted,var(--orb-muted))]" data-orb-saved-outputs-local-hint>
                 Showing {storageMode === 'mixed' ? 'local and synced' : 'local'} saved outputs until ORB reconnects.
               </p>
             </div>
           ) : null}
           <div className="space-y-2 p-3">
-            <label className="flex items-center gap-2 rounded-lg bg-white/[0.04] px-3 py-2 ring-1 ring-white/[0.06]">
-              <Search className="h-4 w-4 text-slate-500" aria-hidden />
+            <label className="orb-mobile-workspace-card flex items-center gap-2 rounded-lg px-3 py-2 ring-1 ring-[var(--orb-mobile-ws-card-border,var(--orb-line))]">
+              <Search className="h-4 w-4 text-[var(--orb-mobile-ws-muted,var(--orb-muted))]" aria-hidden />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search saved outputs"
-                className="w-full bg-transparent text-sm text-white outline-none placeholder:text-slate-500"
+                className="w-full bg-transparent text-sm text-[var(--orb-mobile-ws-text,var(--orb-foreground))] outline-none placeholder:text-[var(--orb-mobile-ws-muted,var(--orb-muted))]"
                 data-orb-saved-outputs-search
               />
             </label>
@@ -243,7 +243,7 @@ export function OrbSavedOutputsPanel({
                     setTypeFilter(chip.type)
                   }}
                   className={`rounded-full px-2.5 py-1 text-[10px] font-medium ${
-                    chipFilter === chip.id ? 'bg-white/[0.1] text-white' : 'bg-white/[0.03] text-slate-500'
+                    chipFilter === chip.id ? 'bg-[var(--orb-primary-soft,rgba(22,139,255,0.16))] text-[var(--orb-mobile-ws-text,var(--orb-foreground))]' : 'bg-[var(--orb-mobile-ws-input,rgba(255,255,255,0.06))] text-[var(--orb-mobile-ws-muted,var(--orb-muted))]'
                   }`}
                 >
                   {chip.label}
@@ -253,7 +253,7 @@ export function OrbSavedOutputsPanel({
             <select
               value={projectFilter}
               onChange={(e) => setProjectFilter(e.target.value)}
-              className="w-full rounded-lg border border-white/10 bg-black/30 px-2 py-1.5 text-xs text-white"
+              className="w-full rounded-lg border border-[var(--orb-mobile-ws-card-border,var(--orb-line))] bg-[var(--orb-mobile-ws-input,var(--orb-surface))] px-2 py-1.5 text-xs text-[var(--orb-mobile-ws-text,var(--orb-foreground))]"
             >
               <option value="">All projects</option>
               {workspace.projects.map((p: StandaloneProject) => (
@@ -263,7 +263,7 @@ export function OrbSavedOutputsPanel({
               ))}
             </select>
             <div className="flex flex-wrap items-center gap-2 text-xs">
-              <label className="flex items-center gap-1 text-slate-400">
+              <label className="flex items-center gap-1 text-[var(--orb-mobile-ws-muted,var(--orb-muted))]">
                 <input
                   type="checkbox"
                   checked={includeArchived}
@@ -274,16 +274,16 @@ export function OrbSavedOutputsPanel({
               <button
                 type="button"
                 onClick={() => void refresh()}
-                className="ml-auto rounded-lg border border-white/10 px-2 py-1 text-slate-300"
+                className="ml-auto rounded-lg border border-[var(--orb-mobile-ws-card-border,var(--orb-line))] px-2 py-1 text-[var(--orb-mobile-ws-text,var(--orb-foreground))]"
               >
                 Refresh
               </button>
             </div>
           </div>
 
-          <div className="max-h-[40vh] flex-1 overflow-y-auto p-2 md:max-h-none" data-orb-saved-outputs-list>
+          <div className="max-h-[min(36vh,18rem)] flex-1 overflow-y-auto p-2 md:max-h-none" data-orb-saved-outputs-list>
             {loading ? (
-              <p className="flex items-center gap-2 px-2 py-4 text-xs text-slate-400">
+              <p className="flex items-center gap-2 px-2 py-4 text-xs text-[var(--orb-mobile-ws-muted,var(--orb-muted))]">
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
                 Loading…
               </p>
@@ -312,7 +312,7 @@ export function OrbSavedOutputsPanel({
             ) : (
               grouped.map(([projectName, groupItems]) => (
                 <div key={projectName} className="mb-4">
-                  <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                  <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--orb-mobile-ws-muted,var(--orb-muted))]">
                     {projectName}
                   </p>
                   <ul className="space-y-1">
@@ -323,21 +323,21 @@ export function OrbSavedOutputsPanel({
                           onClick={() => setSelectedId(item.id)}
                           className={`orb-panel-card w-full rounded-xl border px-3 py-2 text-left transition ${
                             selectedId === item.id
-                              ? 'border-cyan-300/25 bg-white/[0.08]'
-                              : 'border-white/[0.06] hover:bg-white/[0.04]'
+                              ? 'border-[var(--orb-primary,#168bff)]/40 bg-[var(--orb-primary-soft,rgba(22,139,255,0.16))]'
+                              : 'border-[var(--orb-mobile-ws-card-border,var(--orb-line))] hover:bg-[var(--orb-surface-hover)]'
                           }`}
                           data-orb-saved-output-item
                         >
                           <div className="flex items-start justify-between gap-2">
-                            <span className="text-sm font-medium text-white line-clamp-1">{item.title}</span>
-                            <span className="shrink-0 rounded bg-white/[0.06] px-1.5 py-0.5 text-[10px] text-slate-400">
+                            <span className="text-sm font-medium text-[var(--orb-mobile-ws-text,var(--orb-foreground))] line-clamp-1">{item.title}</span>
+                            <span className="shrink-0 rounded bg-[var(--orb-mobile-ws-input,rgba(255,255,255,0.06))] px-1.5 py-0.5 text-[10px] text-[var(--orb-mobile-ws-muted,var(--orb-muted))]">
                               {savedOutputTypeLabel(item.type)}
                             </span>
                           </div>
                           {item.summary ? (
-                            <p className="mt-1 line-clamp-2 text-xs text-slate-500">{item.summary}</p>
+                            <p className="mt-1 line-clamp-2 text-xs text-[var(--orb-mobile-ws-muted,var(--orb-muted))]">{item.summary}</p>
                           ) : null}
-                          <p className="mt-1 text-[10px] text-slate-600">
+                          <p className="mt-1 text-[10px] text-[var(--orb-mobile-ws-muted,var(--orb-muted))] opacity-80">
                             {item.source_count ? `${item.source_count} sources · ` : ''}
                             {new Date(item.created_at).toLocaleDateString()}
                           </p>
@@ -352,14 +352,14 @@ export function OrbSavedOutputsPanel({
         </div>
 
         <div
-          className="flex min-h-[12rem] min-w-0 flex-1 flex-col md:border-l md:border-white/[0.04]"
+          className="flex min-h-[10rem] min-w-0 flex-1 flex-col md:min-h-[10rem] md:min-h-[12rem] md:border-l md:border-[var(--orb-mobile-ws-card-border,var(--orb-line))]"
           data-orb-saved-output-detail
         >
           {detail ? (
             <>
-              <div className="border-b border-white/[0.06] px-4 py-3">
-                <h3 className="text-base font-semibold text-white">{detail.title}</h3>
-                <p className="mt-1 text-xs text-slate-400">
+              <div className="border-b border-[var(--orb-mobile-ws-card-border,var(--orb-line))] px-4 py-3">
+                <h3 className="text-base font-semibold text-[var(--orb-mobile-ws-text,var(--orb-foreground))]">{detail.title}</h3>
+                <p className="mt-1 text-xs text-[var(--orb-mobile-ws-muted,var(--orb-muted))]">
                   {savedOutputTypeLabel(detail.type)} · {savedOutputSourceLabel(detail)} ·{' '}
                   {new Date(detail.created_at).toLocaleString()}
                 </p>
@@ -372,14 +372,14 @@ export function OrbSavedOutputsPanel({
                   <button
                     type="button"
                     onClick={() => void handleRename(detail.id, detail.title)}
-                    className="rounded-lg border border-white/10 px-2 py-1 text-xs text-slate-300"
+                    className="rounded-lg border border-[var(--orb-mobile-ws-card-border,var(--orb-line))] px-2 py-1 text-xs text-[var(--orb-mobile-ws-text,var(--orb-foreground))]"
                   >
                     Rename
                   </button>
                   <button
                     type="button"
                     onClick={() => void handleArchive(detail.id)}
-                    className="inline-flex items-center gap-1 rounded-lg border border-white/10 px-2 py-1 text-xs text-slate-300"
+                    className="inline-flex items-center gap-1 rounded-lg border border-[var(--orb-mobile-ws-card-border,var(--orb-line))] px-2 py-1 text-xs text-[var(--orb-mobile-ws-text,var(--orb-foreground))]"
                   >
                     <Archive className="h-3.5 w-3.5" aria-hidden />
                     Archive
@@ -409,14 +409,14 @@ export function OrbSavedOutputsPanel({
             </>
           ) : (
             <div
-              className="flex flex-1 items-center justify-center p-8 text-center text-sm text-slate-500"
+              className="flex flex-1 items-center justify-center p-6 text-center text-sm text-[var(--orb-mobile-ws-muted,var(--orb-muted))]"
               data-orb-saved-output-detail-empty
             >
               Select a saved output to open, export, or reuse in chat.
             </div>
           )}
           {notice ? (
-            <p className="shrink-0 border-t border-white/[0.06] px-4 py-2 text-xs text-emerald-300/90">{notice}</p>
+            <p className="shrink-0 border-t border-[var(--orb-mobile-ws-card-border,var(--orb-line))] px-4 py-2 text-xs text-emerald-300/90">{notice}</p>
           ) : null}
         </div>
       </div>

@@ -88,6 +88,28 @@ export const ORB_THEME_LAYOUT_MOBILE = {
   spacingBlock: ORB_THEME_SPACING.sm
 } as const
 
+/** Mobile workspace panel surfaces — shared across ORB tool screens on `/orb`. */
+export const ORB_THEME_MOBILE_WORKSPACE = {
+  dark: {
+    panel: '#070b14',
+    card: 'rgba(8, 17, 31, 0.92)',
+    cardBorder: 'rgba(66, 215, 255, 0.14)',
+    text: '#f7faff',
+    muted: '#a7aebd',
+    input: 'rgba(255, 255, 255, 0.06)',
+    footer: 'rgba(7, 11, 20, 0.98)'
+  },
+  light: {
+    panel: '#f7fbff',
+    card: '#ffffff',
+    cardBorder: 'rgba(37, 99, 235, 0.14)',
+    text: '#0f172a',
+    muted: '#52657a',
+    input: '#ffffff',
+    footer: 'rgba(255, 255, 255, 0.98)'
+  }
+} as const
+
 /** Desktop layout tokens (matches `app/orb/orb-desktop.css` + premium tokens). */
 export const ORB_THEME_LAYOUT_DESKTOP = {
   sidebarWidth: '18.125rem',
@@ -157,7 +179,14 @@ export const ORB_THEME_CSS_VARS = {
   spacingMobileBlock: '--orb-spacing-mobile-block',
   spacingDesktopInline: '--orb-spacing-desktop-inline',
   spacingDesktopBlock: '--orb-spacing-desktop-block',
-  overlay: '--orb-overlay'
+  overlay: '--orb-overlay',
+  mobileWsPanel: '--orb-mobile-ws-panel',
+  mobileWsCard: '--orb-mobile-ws-card',
+  mobileWsCardBorder: '--orb-mobile-ws-card-border',
+  mobileWsText: '--orb-mobile-ws-text',
+  mobileWsMuted: '--orb-mobile-ws-muted',
+  mobileWsInput: '--orb-mobile-ws-input',
+  mobileWsFooter: '--orb-mobile-ws-footer'
 } as const
 
 const ORB_THEME_LIGHT_COLORS = {
@@ -225,6 +254,7 @@ function residentialPalette(mode: OrbThemeMode) {
 export function getOrbThemeCssVariables(mode: OrbThemeMode = 'dark'): Record<string, string> {
   const palette = residentialPalette(mode)
   const { colors } = palette
+  const mobileWorkspace = ORB_THEME_MOBILE_WORKSPACE[mode]
 
   return {
     [ORB_THEME_CSS_VARS.foreground]: colors.textPrimary,
@@ -290,7 +320,14 @@ export function getOrbThemeCssVariables(mode: OrbThemeMode = 'dark'): Record<str
     '--orb-premium-glass-strong': colors.glassStrong,
     '--orb-premium-shadow': ORB_THEME_SHADOWS.glass,
     '--orb-mobile-header-height': ORB_THEME_LAYOUT_MOBILE.headerMinHeight,
-    '--orb-mobile-composer-height': ORB_THEME_LAYOUT_MOBILE.composerMinHeight
+    '--orb-mobile-composer-height': ORB_THEME_LAYOUT_MOBILE.composerMinHeight,
+    [ORB_THEME_CSS_VARS.mobileWsPanel]: mobileWorkspace.panel,
+    [ORB_THEME_CSS_VARS.mobileWsCard]: mobileWorkspace.card,
+    [ORB_THEME_CSS_VARS.mobileWsCardBorder]: mobileWorkspace.cardBorder,
+    [ORB_THEME_CSS_VARS.mobileWsText]: mobileWorkspace.text,
+    [ORB_THEME_CSS_VARS.mobileWsMuted]: mobileWorkspace.muted,
+    [ORB_THEME_CSS_VARS.mobileWsInput]: mobileWorkspace.input,
+    [ORB_THEME_CSS_VARS.mobileWsFooter]: mobileWorkspace.footer
   }
 }
 

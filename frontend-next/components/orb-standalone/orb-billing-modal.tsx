@@ -346,7 +346,7 @@ export function OrbBillingModal({ open, onClose }: { open: boolean; onClose: () 
         {error ? <p className="text-sm text-amber-300/90">{error}</p> : null}
 
         <div
-          className="sticky bottom-0 z-10 flex flex-wrap gap-2 border-t border-[var(--orb-line)] bg-[var(--orb-surface)]/98 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-4 backdrop-blur-md"
+          className="sticky bottom-0 z-10 flex flex-wrap gap-2 border-t border-[var(--orb-mobile-ws-card-border,var(--orb-line))] bg-[var(--orb-mobile-ws-footer,var(--orb-surface))]/98 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-4 backdrop-blur-md"
           data-orb-billing-cta-bar
         >
           {!access?.can_use_orb && access?.trial?.available ? (
