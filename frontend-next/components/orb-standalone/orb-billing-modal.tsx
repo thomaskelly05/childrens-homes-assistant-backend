@@ -346,7 +346,7 @@ export function OrbBillingModal({ open, onClose }: { open: boolean; onClose: () 
         {error ? <p className="text-sm text-amber-300/90">{error}</p> : null}
 
         <div
-          className="sticky bottom-0 z-10 flex flex-wrap gap-2 border-t border-[var(--orb-mobile-ws-card-border,var(--orb-line))] bg-[var(--orb-mobile-ws-footer,var(--orb-surface))]/98 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-4 backdrop-blur-md"
+          className="sticky bottom-0 z-10 flex flex-wrap items-stretch gap-2.5 border-t border-[var(--orb-mobile-ws-card-border,var(--orb-line))] bg-[var(--orb-mobile-ws-footer,var(--orb-surface))]/98 px-1 pb-[max(0.875rem,env(safe-area-inset-bottom))] pt-4 backdrop-blur-md sm:gap-3 sm:px-0"
           data-orb-billing-cta-bar
         >
           {!access?.can_use_orb && access?.trial?.available ? (
@@ -354,7 +354,7 @@ export function OrbBillingModal({ open, onClose }: { open: boolean; onClose: () 
               type="button"
               disabled={loading}
               onClick={() => void handleTrial()}
-              className="rounded-xl bg-cyan-600 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+              className="min-h-11 min-w-0 flex-1 basis-full rounded-xl bg-cyan-600 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50 sm:flex-none sm:basis-auto"
               data-orb-billing-trial
             >
               Start free trial
@@ -365,7 +365,7 @@ export function OrbBillingModal({ open, onClose }: { open: boolean; onClose: () 
               type="button"
               disabled={loading || !stripeReady}
               onClick={() => void handleCheckout()}
-              className="rounded-xl bg-gradient-to-r from-[#168bff] to-[#0d5fcc] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+              className="min-h-11 min-w-0 flex-1 basis-full rounded-xl bg-gradient-to-r from-[#168bff] to-[#0d5fcc] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50 sm:flex-none sm:basis-auto"
               data-orb-billing-upgrade
             >
               Subscribe · £9.99/month
@@ -375,11 +375,11 @@ export function OrbBillingModal({ open, onClose }: { open: boolean; onClose: () 
               type="button"
               disabled={loading || !stripeReady}
               onClick={() => void handlePortal()}
-              className="inline-flex items-center gap-2 rounded-xl border border-[var(--orb-line)] px-4 py-2.5 text-sm font-semibold disabled:opacity-50"
+              className="inline-flex min-h-11 min-w-0 flex-1 basis-full items-center justify-center gap-2 rounded-xl border border-[var(--orb-line)] px-4 py-2.5 text-sm font-semibold disabled:opacity-50 sm:flex-none sm:basis-auto"
               data-orb-billing-portal
             >
-              <CreditCard className="h-4 w-4" aria-hidden />
-              Manage subscription
+              <CreditCard className="h-4 w-4 shrink-0" aria-hidden />
+              <span className="truncate">Manage subscription</span>
             </button>
           )}
           <button
@@ -395,11 +395,11 @@ export function OrbBillingModal({ open, onClose }: { open: boolean; onClose: () 
                 }
               })
             }}
-            className="inline-flex items-center gap-2 rounded-xl border border-[var(--orb-line)] px-4 py-2.5 text-sm font-semibold"
+            className="inline-flex min-h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-xl border border-[var(--orb-line)] px-4 py-2.5 text-sm font-semibold sm:flex-none sm:basis-auto"
             data-orb-billing-refresh
           >
-            <RefreshCw className="h-4 w-4" aria-hidden />
-            Refresh status
+            <RefreshCw className="h-4 w-4 shrink-0" aria-hidden />
+            <span className="truncate">Refresh status</span>
           </button>
         </div>
 
