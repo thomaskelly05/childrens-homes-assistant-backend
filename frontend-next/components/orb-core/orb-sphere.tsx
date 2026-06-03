@@ -12,26 +12,28 @@ const SIZE_CLASS: Record<'small' | 'medium' | 'large' | 'xlarge', string> = {
 }
 
 /**
- * Cross-browser living ORB — radial-gradient sphere visible without filters, blend modes, or PNG.
+ * Cross-browser living ORB — radial-gradient sphere.
+ * Inside `OrbPresence`, size is set by variant CSS (`--orb-presence-size`).
  */
 export function OrbSphere({
   state = 'idle',
-  size = 'large'
+  size
 }: {
   state?: OrbRenderState
+  /** Used only outside `OrbPresence` (legacy embeds). Residential presence ignores this. */
   size?: 'small' | 'medium' | 'large' | 'xlarge'
 }) {
-  const sizeClass = SIZE_CLASS[size]
+  const fallbackSizeClass = size ? SIZE_CLASS[size] : 'h-full w-full min-h-0 min-w-0'
 
   return (
     <div
-      className={`orb-sphere-wrap relative inline-flex ${sizeClass} items-center justify-center`}
+      className={`orb-sphere-wrap relative inline-flex items-center justify-center ${fallbackSizeClass}`}
       data-orb-state={state}
       role="img"
       aria-label={`ORB ${state.replaceAll('_', ' ')}`}
     >
       <span
-        className={`orb-living-sphere orb-sphere relative block ${sizeClass}`}
+        className={`orb-living-sphere orb-sphere relative block ${size ? fallbackSizeClass : 'h-full w-full min-h-0 min-w-0'}`}
         data-orb-living-sphere
         data-orb-state={state}
         aria-hidden

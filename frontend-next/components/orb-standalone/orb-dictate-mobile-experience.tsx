@@ -154,7 +154,7 @@ export function OrbDictateMobileExperience({
         <OrbDictateBoundaryCopy compact />
       </header>
       <section className="flex shrink-0 flex-col items-center px-2 pt-2 text-center">
-        <GlassOrbMark size="dictate" pulse={recordingActive} className={orbClass} />
+        <GlassOrbMark variant="dictate" pulse={recordingActive} className={`shrink-0 ${orbClass}`} />
         <p className="mt-3 text-sm font-medium text-[var(--orb-text,var(--orb-foreground))]" data-orb-dictate-status-line>
           {mobileStatusLine}
         </p>

@@ -93,7 +93,9 @@ describe('ORB residential theme runtime', () => {
     assert.match(audit, /ORB_ORB_AUDIT/)
     assert.match(audit, /ORB_RESIDENTIAL_FULL_AUDIT/)
     assert.match(audit, /visibleSphereCount/)
-    assert.match(audit, /mismatches/)
+    assert.match(audit, /hiddenSphereCount/)
+    assert.match(audit, /failures/)
+    assert.match(audit, /overlapsMainHeading/)
   })
 
   it('voice and dictate stations use OrbPresence', () => {

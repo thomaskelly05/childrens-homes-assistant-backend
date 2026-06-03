@@ -54,11 +54,11 @@ describe('ORB Residential mobile UX', () => {
     const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
     const mark = readComponent('components/orb-residential/ui/glass-orb-mark.tsx')
     const premiumCss = readComponent('app/orb/orb-premium-tokens.css')
-    assert.match(companion, /GlassOrbMark size="(empty|home)"/)
+    assert.match(companion, /GlassOrbMark variant="hero"/)
     assert.match(companion, /data-orb-residential-empty/)
     assert.match(mark, /OrbPresence/)
-    assert.match(premiumCss, /orb-presence--home/)
-    assert.doesNotMatch(companion, /size="hero"/)
+    assert.match(premiumCss, /orb-presence--hero/)
+    assert.doesNotMatch(companion, /variant="workspace"[\s\S]*data-orb-empty-state/)
   })
 
   it('settings selected item uses dark glass styling not bright white block', () => {

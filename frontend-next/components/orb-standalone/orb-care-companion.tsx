@@ -3191,11 +3191,12 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                     {...(residentialSurface ? { 'data-orb-residential-empty': true } : {})}
                   >
                     <div
-                      className={`relative flex justify-center ${residentialSurface ? 'md:mb-1' : ''}`}
+                      className="relative flex shrink-0 justify-center"
                       data-orb-empty-sphere
+                      data-orb-presence-slot="hero"
                     >
                       {residentialSurface ? (
-                        <GlassOrbMark size="home" pulse state="idle" className="md:scale-95" data-orb-empty-sphere-mark />
+                        <GlassOrbMark variant="hero" pulse state="idle" data-orb-empty-sphere-mark />
                       ) : null}
                       {!residentialSurface ? (
                         <OrbGlow state="idle" interactive={false} size="dock" compactLabels />

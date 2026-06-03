@@ -16,15 +16,13 @@ export function PremiumMobileOrb({
   label?: string
   state?: 'idle' | 'listening' | 'thinking' | 'responding' | 'error'
 }) {
-  const size = variant === 'desktop' ? 'home' : 'empty'
-
   return (
     <div
       className={`premium-mobile-orb premium-mobile-orb--${variant} ${className}`.trim()}
       data-premium-mobile-orb
       data-orb-empty-sphere-mark
     >
-      <OrbPresence size={size} state={state} pulse={state === 'idle'} label={label} />
+      <OrbPresence variant="hero" state={state} pulse={state === 'idle'} label={label} />
     </div>
   )
 }

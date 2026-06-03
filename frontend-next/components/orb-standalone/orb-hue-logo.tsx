@@ -40,7 +40,7 @@ export function OrbPoweredByIndicare({ className = '' }: { className?: string })
 export function OrbHueMark({ pulse = false, className = '' }: { pulse?: boolean; className?: string }) {
   return (
     <GlassOrbMark
-      size="sm"
+      variant="avatar"
       pulse={pulse}
       className={`orb-hue-mark ${pulse ? 'orb-assistant-thinking-mark' : ''} ${className}`.trim()}
     />
