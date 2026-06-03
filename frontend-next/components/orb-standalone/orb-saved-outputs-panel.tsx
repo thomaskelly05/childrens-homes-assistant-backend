@@ -212,8 +212,8 @@ export function OrbSavedOutputsPanel({
       footer="Saved outputs are standalone ORB artefacts."
       {...orbStationShellProps(residentialSurface, 'wide')}
     >
-      <div className="flex min-h-0 flex-col md:flex-row" data-orb-saved-outputs-panel>
-        <div className="flex w-full shrink-0 flex-col border-b border-[var(--orb-mobile-ws-card-border,var(--orb-line))] md:max-w-md md:border-b-0 md:border-r">
+      <div className="flex min-h-0 flex-col lg:flex-row" data-orb-saved-outputs-panel>
+        <div className="flex w-full shrink-0 flex-col border-b border-[var(--orb-mobile-ws-card-border,var(--orb-line))] lg:w-[var(--orb-desktop-saved-list-width,27.5rem)] lg:max-w-[var(--orb-desktop-saved-list-width,27.5rem)] lg:border-b-0 lg:border-r">
           {reconnectSuggested && items.length ? (
             <div className="p-3 pb-0">
               <OrbStationReconnectBanner onRefresh={() => void refresh()} />
@@ -281,7 +281,7 @@ export function OrbSavedOutputsPanel({
             </div>
           </div>
 
-          <div className="max-h-[min(36vh,18rem)] flex-1 overflow-y-auto p-2 md:max-h-none" data-orb-saved-outputs-list>
+          <div className="max-h-[min(36vh,18rem)] flex-1 overflow-y-auto p-2 lg:max-h-none" data-orb-saved-outputs-list>
             {loading ? (
               <p className="flex items-center gap-2 px-2 py-4 text-xs text-[var(--orb-mobile-ws-muted,var(--orb-muted))]">
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
@@ -352,7 +352,7 @@ export function OrbSavedOutputsPanel({
         </div>
 
         <div
-          className="flex min-h-[10rem] min-w-0 flex-1 flex-col md:min-h-[10rem] md:min-h-[12rem] md:border-l md:border-[var(--orb-mobile-ws-card-border,var(--orb-line))]"
+          className="flex min-h-[10rem] min-w-0 flex-1 flex-col lg:min-h-[12rem] lg:border-l lg:border-[var(--orb-mobile-ws-card-border,var(--orb-line))]"
           data-orb-saved-output-detail
         >
           {detail ? (

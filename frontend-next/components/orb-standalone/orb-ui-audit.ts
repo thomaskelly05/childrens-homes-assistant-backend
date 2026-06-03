@@ -20,6 +20,24 @@ export type OrbDesktopThemeAuditResult = {
   ok: boolean
 }
 
+export type OrbDesktopLayoutAuditResult = {
+  viewportWidth: number
+  viewportHeight: number
+  sidebarWidth: number | null
+  mainContentWidth: number | null
+  activeRoute: string | null
+  activeWorkspacePanel: string | null
+  maxWidthContainers: Array<{ selector: string; maxWidth: string; width: number }>
+  orbPresenceBoundingBox: { x: number; y: number; width: number; height: number } | null
+  headingBoundingBox: { x: number; y: number; width: number; height: number } | null
+  overlapWarnings: string[]
+  elementsExceedingViewport: string[]
+  mobileOnlyClassesActiveOnDesktop: string[]
+  staticOrbImageCount: number
+  visibleLivingSphereCount: number
+  ok: boolean
+}
+
 export type OrbUiAuditResult = {
   shellCount: number
   activePanelCount: number
@@ -759,6 +777,181 @@ export function runOrbOrbAudit(): {
   }
 }
 
+/** Desktop layout audit — viewport, sidebar, max-width containers, orb overlap, mobile class leaks. */
+export function runOrbDesktopLayoutAudit(): OrbDesktopLayoutAuditResult {
+  if (typeof document === 'undefined' || typeof window === 'undefined') {
+    return {
+      viewportWidth: 0,
+      viewportHeight: 0,
+      sidebarWidth: null,
+      mainContentWidth: null,
+      activeRoute: null,
+      activeWorkspacePanel: null,
+      maxWidthContainers: [],
+      orbPresenceBoundingBox: null,
+      headingBoundingBox: null,
+      overlapWarnings: [],
+      elementsExceedingViewport: [],
+      mobileOnlyClassesActiveOnDesktop: [],
+      staticOrbImageCount: 0,
+      visibleLivingSphereCount: 0,
+      ok: true
+    }
+  }
+
+  const viewportWidth = window.innerWidth
+  const viewportHeight = window.innerHeight
+  const isDesktop = viewportWidth >= 1024
+
+  const sidebar = document.querySelector('.orb-chat-sidebar')
+  const sidebarRect = sidebar instanceof HTMLElement ? sidebar.getBoundingClientRect() : null
+
+  const main = document.querySelector('.orb-chat-main')
+  const mainRect = main instanceof HTMLElement ? main.getBoundingClientRect() : null
+
+  const workspacePanel = document.querySelector('[data-orb-workspace-panel]')
+  const activeWorkspacePanel = workspacePanel?.getAttribute('data-orb-workspace-panel') ?? null
+
+  const activeRoute =
+    activeWorkspacePanel ??
+    (document.querySelector('[data-orb-residential-empty]') ? 'home' : null) ??
+    window.location.pathname
+
+  const containerSelectors = [
+    '[data-orb-settings-panel]',
+    '[data-orb-document-panel]',
+    '[data-orb-shift-builder-panel]',
+    '[data-orb-saved-outputs-panel]',
+    '[data-orb-dictate-station]',
+    '[data-orb-voice-desktop]',
+    '[data-orb-skills-panel]',
+    '[data-orb-templates-panel]',
+    '[data-orb-knowledge-library]',
+    '[data-orb-residential-empty]'
+  ]
+
+  const maxWidthContainers = containerSelectors.flatMap((selector) => {
+    const el = document.querySelector(selector)
+    if (!(el instanceof HTMLElement) || !isVisibleElement(el)) return []
+    const style = window.getComputedStyle(el)
+    const rect = el.getBoundingClientRect()
+    return [
+      {
+        selector,
+        maxWidth: style.maxWidth,
+        width: Math.round(rect.width)
+      }
+    ]
+  })
+
+  const presence =
+    document.querySelector('[data-orb-presence-slot="hero"] .orb-living-sphere') ??
+    document.querySelector('.orb-presence--hero .orb-living-sphere') ??
+    document.querySelector('[data-orb-presence] .orb-living-sphere')
+
+  const heading =
+    document.querySelector('[data-orb-empty-heading-desktop]') ??
+    document.querySelector('[data-orb-empty-heading-mobile]') ??
+    document.querySelector('[data-orb-empty-heading]')
+
+  const orbRect = presence instanceof HTMLElement ? presence.getBoundingClientRect() : null
+  const headingRect = heading instanceof HTMLElement ? heading.getBoundingClientRect() : null
+
+  const overlapWarnings: string[] = []
+  if (orbRect && headingRect && rectsOverlap(orbRect, headingRect)) {
+    overlapWarnings.push('orb overlaps main heading')
+  }
+
+  const emotionalLine = document.querySelector('[data-orb-empty-emotional-line]')
+  if (orbRect && emotionalLine instanceof HTMLElement) {
+    const lineRect = emotionalLine.getBoundingClientRect()
+    if (rectsOverlap(orbRect, lineRect)) {
+      overlapWarnings.push('orb overlaps emotional tagline')
+    }
+  }
+
+  const elementsExceedingViewport: string[] = []
+  const layoutRoot =
+    document.querySelector('.orb-chat-layout--residential') ?? document.documentElement
+  for (const el of Array.from(layoutRoot.querySelectorAll('*'))) {
+    if (!(el instanceof HTMLElement) || !isVisibleElement(el)) continue
+    const rect = el.getBoundingClientRect()
+    if (rect.right > viewportWidth + 2) {
+      const marker =
+        el.getAttribute('data-orb-workspace-panel') ??
+        el.getAttribute('data-orb-settings-panel') ??
+        (el.className.toString().slice(0, 48) || el.tagName.toLowerCase())
+      elementsExceedingViewport.push(String(marker))
+      if (elementsExceedingViewport.length >= 8) break
+    }
+  }
+
+  const mobileOnlyClassesActiveOnDesktop: string[] = []
+  if (isDesktop) {
+    const mobileBranchActive = document.querySelectorAll('[data-orb-mobile-branch="active"]').length
+    if (mobileBranchActive > 0) {
+      mobileOnlyClassesActiveOnDesktop.push(`data-orb-mobile-branch active (${mobileBranchActive})`)
+    }
+    const mobileNavVisible = Array.from(
+      document.querySelectorAll('[data-orb-settings-nav-mobile], [data-orb-sidebar-mobile-quick-nav]')
+    ).filter(isVisibleElement)
+    if (mobileNavVisible.length > 0) {
+      mobileOnlyClassesActiveOnDesktop.push('mobile-only nav visible on desktop')
+    }
+  }
+
+  const staticOrbImageCount = Array.from(document.querySelectorAll('img')).filter((img) =>
+    orbUsesStaticImage(img)
+  ).length
+
+  const visibleLivingSphereCount = Array.from(
+    document.querySelectorAll('.orb-living-sphere, [data-orb-living-sphere]')
+  ).filter(isVisibleElement).length
+
+  const failures: string[] = [...overlapWarnings]
+  if (elementsExceedingViewport.length) failures.push('elements exceed viewport width')
+  if (isDesktop && mobileOnlyClassesActiveOnDesktop.length) {
+    failures.push('mobile-only classes active on desktop')
+  }
+  if (staticOrbImageCount > 0) failures.push('static orb PNG detected in product UI')
+
+  if (failures.length) {
+    console.warn('[ORB_DESKTOP_LAYOUT_AUDIT] issues:', failures)
+  }
+
+  return {
+    viewportWidth,
+    viewportHeight,
+    sidebarWidth: sidebarRect ? Math.round(sidebarRect.width) : null,
+    mainContentWidth: mainRect ? Math.round(mainRect.width) : null,
+    activeRoute,
+    activeWorkspacePanel,
+    maxWidthContainers,
+    orbPresenceBoundingBox: orbRect
+      ? {
+          x: Math.round(orbRect.x),
+          y: Math.round(orbRect.y),
+          width: Math.round(orbRect.width),
+          height: Math.round(orbRect.height)
+        }
+      : null,
+    headingBoundingBox: headingRect
+      ? {
+          x: Math.round(headingRect.x),
+          y: Math.round(headingRect.y),
+          width: Math.round(headingRect.width),
+          height: Math.round(headingRect.height)
+        }
+      : null,
+    overlapWarnings,
+    elementsExceedingViewport,
+    mobileOnlyClassesActiveOnDesktop,
+    staticOrbImageCount,
+    visibleLivingSphereCount,
+    ok: failures.length === 0
+  }
+}
+
 export function runOrbResidentialFullAudit(): {
   theme: ReturnType<typeof runOrbThemeAudit>
   orb: ReturnType<typeof runOrbOrbAudit>
@@ -776,6 +969,7 @@ export function registerOrbUiAuditGlobals(): void {
   const w = window as Window & {
     ORB_UI_AUDIT?: () => OrbUiAuditResult
     ORB_DESKTOP_THEME_AUDIT?: () => OrbDesktopThemeAuditResult
+    ORB_DESKTOP_LAYOUT_AUDIT?: () => OrbDesktopLayoutAuditResult
     ORB_UI_HIT_TEST?: (selectorOrText: string) => OrbUiHitTestResult
     ORB_UI_DUPLICATES?: () => ReturnType<typeof runOrbUiDuplicates>
     ORB_MOBILE_VIEWPORT_AUDIT?: () => OrbMobileViewportOverflowResult
@@ -785,6 +979,7 @@ export function registerOrbUiAuditGlobals(): void {
   }
   w.ORB_UI_AUDIT = runOrbUiAudit
   w.ORB_DESKTOP_THEME_AUDIT = runOrbDesktopThemeAudit
+  w.ORB_DESKTOP_LAYOUT_AUDIT = runOrbDesktopLayoutAudit
   w.ORB_UI_HIT_TEST = runOrbUiHitTest
   w.ORB_UI_DUPLICATES = runOrbUiDuplicates
   w.ORB_MOBILE_VIEWPORT_AUDIT = auditOrbMobileViewportOverflow

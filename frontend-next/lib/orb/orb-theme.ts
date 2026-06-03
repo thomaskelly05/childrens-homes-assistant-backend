@@ -112,7 +112,7 @@ export const ORB_THEME_MOBILE_WORKSPACE = {
 
 /** Desktop layout tokens (matches `app/orb/orb-desktop.css` + premium tokens). */
 export const ORB_THEME_LAYOUT_DESKTOP = {
-  sidebarWidth: '18.125rem',
+  sidebarWidth: '17.5rem',
   sidebarWidthCollapsed: '4.25rem',
   sidebarWidthLegacy: '18.5rem',
   chatColumnMax: '52.5rem',
@@ -125,7 +125,15 @@ export const ORB_THEME_LAYOUT_DESKTOP = {
   headerMinHeight: '3.5rem',
   headerMaxHeight: '3.75rem',
   spacingInline: ORB_THEME_SPACING.lg,
-  spacingBlock: ORB_THEME_SPACING.md
+  spacingBlock: ORB_THEME_SPACING.md,
+  pageMax: '75rem',
+  settingsMax: '65rem',
+  heroStarterMax: '47.5rem',
+  segmentedMax: '45rem',
+  voiceMax: '45rem',
+  savedListWidth: '27.5rem',
+  contentGutter: '1.5rem',
+  heroPresenceSize: 'clamp(11.25rem, 18vw, 17.5rem)'
 } as const
 
 export type OrbThemeMode = 'dark' | 'light'
