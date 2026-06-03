@@ -33,7 +33,10 @@ export function OrbWorkspaceFrame({
       data-orb-workspace-panel={panelId}
       data-orb-app-panel-active="true"
     >
-      <header className="orb-workspace-header flex shrink-0 items-center gap-2 border-b border-[var(--orb-mobile-ws-card-border,var(--orb-line))] bg-[var(--orb-mobile-ws-footer,var(--orb-surface-elevated))] px-3 py-2.5 md:px-5">
+      <header
+        className="orb-workspace-header flex shrink-0 items-center gap-2 border-b border-[var(--orb-mobile-ws-card-border,var(--orb-line))] bg-[var(--orb-mobile-ws-footer,var(--orb-surface-elevated))] px-3 py-2.5 md:px-5"
+        data-orb-workspace-header
+      >
         <button
           type="button"
           onClick={onClose}

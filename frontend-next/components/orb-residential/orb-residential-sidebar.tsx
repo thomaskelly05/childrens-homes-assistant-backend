@@ -535,7 +535,10 @@ export function OrbResidentialSidebar({
           <MessageSquarePlus className="h-4 w-4" aria-hidden />
           <span>New chat</span>
         </button>
-        <label className="orb-sidebar-search mt-2 flex items-center gap-2 rounded-xl border border-[var(--orb-line)]/60 bg-[var(--orb-surface-elevated)] px-3 py-2">
+        <label
+          className="orb-sidebar-search mt-2 flex items-center gap-2 rounded-xl border border-[var(--orb-line)]/60 bg-[var(--orb-surface-elevated)] px-3 py-2"
+          data-orb-sidebar-search-wrap
+        >
           <Search className="h-4 w-4 shrink-0 text-[var(--orb-muted)]" aria-hidden />
           <input
             type="search"
