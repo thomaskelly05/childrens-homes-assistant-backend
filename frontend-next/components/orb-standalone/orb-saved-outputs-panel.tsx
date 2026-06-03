@@ -212,7 +212,11 @@ export function OrbSavedOutputsPanel({
       footer="Saved outputs are standalone ORB artefacts."
       {...orbStationShellProps(residentialSurface, 'wide')}
     >
-      <div className="flex min-h-0 flex-col lg:flex-row" data-orb-saved-outputs-panel>
+      <div
+        className="flex min-h-0 flex-col lg:flex-row"
+        data-orb-saved-outputs-panel
+        {...(items.length === 0 && !loading ? { 'data-orb-saved-outputs-empty': true } : {})}
+      >
         <div className="flex w-full shrink-0 flex-col border-b border-[var(--orb-mobile-ws-card-border,var(--orb-line))] lg:w-[var(--orb-desktop-saved-list-width,27.5rem)] lg:max-w-[var(--orb-desktop-saved-list-width,27.5rem)] lg:border-b-0 lg:border-r">
           {reconnectSuggested && items.length ? (
             <div className="p-3 pb-0">

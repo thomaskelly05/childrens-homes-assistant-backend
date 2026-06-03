@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import {
   BookOpen,
@@ -35,6 +35,8 @@ import {
 } from '@/lib/orb/orb-residential-copy'
 import type { StandaloneOrbMode } from '@/lib/orb/standalone-client'
 import {
+  ORB_SIDEBAR_PROJECTS_COLLAPSED_KEY,
+  ORB_SIDEBAR_RECENTS_COLLAPSED_KEY,
   readOrbSidebarSectionCollapsed,
   writeOrbSidebarSectionCollapsed,
   type OrbSidebarSectionKey
@@ -303,6 +305,23 @@ export function OrbResidentialSidebar({
   const [newProjectName, setNewProjectName] = useState('')
   const [memoryModalProject, setMemoryModalProject] = useState<StandaloneProject | null>(null)
   const isMobile = useOrbMobileViewport()
+
+  /** Desktop first visit — collapse Projects/Recents for a calmer menu (mobile defaults unchanged). */
+  useEffect(() => {
+    if (isMobile || typeof window === 'undefined') return
+    try {
+      if (window.localStorage.getItem(ORB_SIDEBAR_PROJECTS_COLLAPSED_KEY) === null) {
+        setProjectsCollapsed(true)
+        writeOrbSidebarSectionCollapsed('projects', true)
+      }
+      if (window.localStorage.getItem(ORB_SIDEBAR_RECENTS_COLLAPSED_KEY) === null) {
+        setRecentsCollapsed(true)
+        writeOrbSidebarSectionCollapsed('recents', true)
+      }
+    } catch {
+      // ignore
+    }
+  }, [isMobile])
 
   function toggleSection(section: OrbSidebarSectionKey, collapsed: boolean, setter: (v: boolean) => void) {
     const next = !collapsed
@@ -816,20 +835,6 @@ export function OrbResidentialSidebar({
                     {...(station.magicNotes ? { dataOrb: 'orb-sidebar-magic-notes' } : {})}
                   />
                 ))}
-              </ul>
-            </div>
-
-            <div data-orb-sidebar-section="profiles">
-              <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--orb-muted)]">
-                Profiles
-              </p>
-              <ul className="mt-1 space-y-0.5">
-                <DesktopSidebarNavButton
-                  label={adultProfile?.name?.trim() || 'Your profile'}
-                  icon={User}
-                  onClick={() => onOpenProfile?.()}
-                  dataOrb="orb-sidebar-profile"
-                />
               </ul>
             </div>
           </nav>
