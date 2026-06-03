@@ -702,6 +702,34 @@
     background: color-mix(in srgb, var(--orb-premium-bg-deep, #05070d) 55%, transparent) !important;
   }
 
+  /* ORB Residential — always premium dark workspace (launch lock) */
+  .orb-chat-layout--residential .orb-main-workspace,
+  [data-orb-residential-surface='true'] .orb-main-workspace,
+  html[data-orb-residential='1'] .orb-chat-layout--residential .orb-main-workspace {
+    background: var(--orb-mobile-ws-panel, #070b14) !important;
+    color: var(--orb-mobile-ws-text, #f7faff) !important;
+  }
+
+  .orb-chat-layout--residential .orb-main-workspace .orb-mobile-workspace-card,
+  .orb-chat-layout--residential .orb-main-workspace .orb-doc-glass-card,
+  .orb-chat-layout--residential .orb-main-workspace .orb-station-empty-state,
+  .orb-chat-layout--residential .orb-main-workspace .orb-premium-settings-card,
+  .orb-chat-layout--residential [data-orb-billing-modal] .orb-billing-card,
+  .orb-chat-layout--residential [data-orb-account-modal] .orb-mobile-workspace-card {
+    background: var(--orb-mobile-ws-card, rgba(8, 17, 31, 0.92)) !important;
+    border-color: var(--orb-mobile-ws-card-border, rgba(66, 215, 255, 0.14)) !important;
+    color: var(--orb-mobile-ws-text, #f7faff) !important;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35), 0 0 24px rgba(22, 139, 255, 0.06);
+  }
+
+  .orb-chat-layout--residential [data-orb-billing-modal] [data-orb-billing-cta-bar] {
+    background: var(--orb-mobile-ws-footer, rgba(7, 11, 20, 0.98)) !important;
+    border-top-color: var(--orb-mobile-ws-card-border, rgba(66, 215, 255, 0.14)) !important;
+    color: var(--orb-mobile-ws-text, #f7faff);
+    backdrop-filter: blur(12px) saturate(140%);
+    -webkit-backdrop-filter: blur(12px) saturate(140%);
+  }
+
   /* Mobile workspace — shared dark/light surfaces for tool panels */
   html[data-orb-theme='dark'] .orb-main-workspace,
   .orb-chat-layout.orb-theme-dark .orb-main-workspace,

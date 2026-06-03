@@ -59,9 +59,9 @@ describe('ORB main workspace shell', () => {
 
   it('theme root applies resolved appearance once via orb shell and document', () => {
     const shell = readComponent('components/orb/orb-shell.tsx')
-    assert.match(shell, /useOrbAppearance/)
-    assert.match(shell, /getOrbThemeCssVariables\(resolvedTheme\)/)
-    assert.doesNotMatch(shell, /getOrbThemeCssVariables\('dark'\)/)
+    assert.match(shell, /useOrbResidentialThemeLock/)
+    assert.match(shell, /getOrbThemeCssVariables\(ORB_RESIDENTIAL_RESOLVED_THEME\)/)
+    assert.match(shell, /ORB_RESIDENTIAL_RESOLVED_THEME/)
     const appearance = readComponent('lib/orb/orb-appearance.ts')
     assert.match(appearance, /setAttribute\('data-orb-theme', theme\)/)
     const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')

@@ -194,7 +194,7 @@ export function OrbStandaloneSettingsPanel({
   }
 
   const textSize = a11yPrefs?.largeText ? 'large' : 'comfortable'
-  const effectiveAppearance = appearanceMode ?? 'system'
+  const effectiveAppearance = residentialSurface ? 'dark' : (appearanceMode ?? 'system')
 
   return (
     <OrbStandalonePanelShell
@@ -215,10 +215,11 @@ export function OrbStandaloneSettingsPanel({
         data-orb-settings-layout="premium-cards"
       >
         <div className="orb-premium-settings-card shrink-0 border-b border-[var(--orb-line)] p-4 md:hidden">
-          <OrbAppearanceControl value={effectiveAppearance} onChange={(mode) => onAppearanceChange?.(mode)} />
-          <p className="mt-2 text-[11px] leading-5 text-[var(--orb-muted)]">
-            System follows your device — light during the day, dark at night unless you choose otherwise.
-          </p>
+          <OrbAppearanceControl
+            value={effectiveAppearance}
+            residentialLocked={residentialSurface}
+            onChange={(mode) => onAppearanceChange?.(mode)}
+          />
         </div>
 
         <nav
@@ -269,11 +270,17 @@ export function OrbStandaloneSettingsPanel({
           {activeSection === 'general' ? (
             <SettingsBlock title="General" description="Appearance and workspace defaults.">
               <div className="hidden md:block">
-                <OrbAppearanceControl value={effectiveAppearance} onChange={(mode) => onAppearanceChange?.(mode)} />
+                <OrbAppearanceControl
+                  value={effectiveAppearance}
+                  residentialLocked={residentialSurface}
+                  onChange={(mode) => onAppearanceChange?.(mode)}
+                />
               </div>
-              <p className="text-[11px] leading-5 text-[var(--orb-muted)]">
-                System follows your device. You can override it here.
-              </p>
+              {!residentialSurface ? (
+                <p className="text-[11px] leading-5 text-[var(--orb-muted)]">
+                  System follows your device. You can override it here.
+                </p>
+              ) : null}
               <fieldset>
                 <legend className="mb-2 flex items-center gap-2 text-xs font-medium text-[var(--orb-foreground)]">
                   <Type className="h-3.5 w-3.5" aria-hidden />
