@@ -152,7 +152,39 @@ export const ORB_RES_CSS_VARS = {
   shadow: '--orb-res-shadow',
   inputBg: '--orb-res-input-bg',
   inputText: '--orb-res-input-text',
-  inputPlaceholder: '--orb-res-input-placeholder'
+  inputPlaceholder: '--orb-res-input-placeholder',
+  infoBg: '--orb-res-info-bg',
+  infoBorder: '--orb-res-info-border',
+  infoText: '--orb-res-info-text',
+  warningBg: '--orb-res-warning-bg',
+  warningBorder: '--orb-res-warning-border',
+  warningText: '--orb-res-warning-text',
+  statusPillBg: '--orb-res-status-pill-bg',
+  statusPillText: '--orb-res-status-pill-text'
+} as const
+
+/** Readable info / warning surfaces for ORB Residential modals and banners. */
+export const ORB_RESIDENTIAL_SEMANTIC_SURFACES = {
+  light: {
+    infoBg: '#eff6ff',
+    infoBorder: '#bfdbfe',
+    infoText: '#1e3a8a',
+    warningBg: '#fffbeb',
+    warningBorder: '#fbbf24',
+    warningText: '#92400e',
+    statusPillBg: 'rgba(22, 119, 255, 0.1)',
+    statusPillText: '#1e3a8a'
+  },
+  dark: {
+    infoBg: 'rgba(22, 119, 255, 0.12)',
+    infoBorder: 'rgba(66, 215, 255, 0.28)',
+    infoText: '#bfdbfe',
+    warningBg: 'rgba(251, 191, 36, 0.12)',
+    warningBorder: 'rgba(251, 191, 36, 0.35)',
+    warningText: '#fde68a',
+    statusPillBg: 'rgba(22, 139, 255, 0.14)',
+    statusPillText: '#bfdbfe'
+  }
 } as const
 
 const ORB_THEME_SHADOWS_LIGHT = {
@@ -263,7 +295,15 @@ function residentialSemanticTokens(mode: OrbThemeMode) {
       [ORB_RES_CSS_VARS.shadow]: ORB_THEME_SHADOWS_LIGHT.glass,
       [ORB_RES_CSS_VARS.inputBg]: '#ffffff',
       [ORB_RES_CSS_VARS.inputText]: '#0f172a',
-      [ORB_RES_CSS_VARS.inputPlaceholder]: '#64748b'
+      [ORB_RES_CSS_VARS.inputPlaceholder]: '#64748b',
+      [ORB_RES_CSS_VARS.infoBg]: ORB_RESIDENTIAL_SEMANTIC_SURFACES.light.infoBg,
+      [ORB_RES_CSS_VARS.infoBorder]: ORB_RESIDENTIAL_SEMANTIC_SURFACES.light.infoBorder,
+      [ORB_RES_CSS_VARS.infoText]: ORB_RESIDENTIAL_SEMANTIC_SURFACES.light.infoText,
+      [ORB_RES_CSS_VARS.warningBg]: ORB_RESIDENTIAL_SEMANTIC_SURFACES.light.warningBg,
+      [ORB_RES_CSS_VARS.warningBorder]: ORB_RESIDENTIAL_SEMANTIC_SURFACES.light.warningBorder,
+      [ORB_RES_CSS_VARS.warningText]: ORB_RESIDENTIAL_SEMANTIC_SURFACES.light.warningText,
+      [ORB_RES_CSS_VARS.statusPillBg]: ORB_RESIDENTIAL_SEMANTIC_SURFACES.light.statusPillBg,
+      [ORB_RES_CSS_VARS.statusPillText]: ORB_RESIDENTIAL_SEMANTIC_SURFACES.light.statusPillText
     }
   }
 
@@ -285,7 +325,15 @@ function residentialSemanticTokens(mode: OrbThemeMode) {
     [ORB_RES_CSS_VARS.shadow]: ORB_THEME_SHADOWS.glass,
     [ORB_RES_CSS_VARS.inputBg]: 'rgba(255, 255, 255, 0.06)',
     [ORB_RES_CSS_VARS.inputText]: ORB_THEME_COLORS.textPrimary,
-    [ORB_RES_CSS_VARS.inputPlaceholder]: '#6f7787'
+    [ORB_RES_CSS_VARS.inputPlaceholder]: '#6f7787',
+    [ORB_RES_CSS_VARS.infoBg]: ORB_RESIDENTIAL_SEMANTIC_SURFACES.dark.infoBg,
+    [ORB_RES_CSS_VARS.infoBorder]: ORB_RESIDENTIAL_SEMANTIC_SURFACES.dark.infoBorder,
+    [ORB_RES_CSS_VARS.infoText]: ORB_RESIDENTIAL_SEMANTIC_SURFACES.dark.infoText,
+    [ORB_RES_CSS_VARS.warningBg]: ORB_RESIDENTIAL_SEMANTIC_SURFACES.dark.warningBg,
+    [ORB_RES_CSS_VARS.warningBorder]: ORB_RESIDENTIAL_SEMANTIC_SURFACES.dark.warningBorder,
+    [ORB_RES_CSS_VARS.warningText]: ORB_RESIDENTIAL_SEMANTIC_SURFACES.dark.warningText,
+    [ORB_RES_CSS_VARS.statusPillBg]: ORB_RESIDENTIAL_SEMANTIC_SURFACES.dark.statusPillBg,
+    [ORB_RES_CSS_VARS.statusPillText]: ORB_RESIDENTIAL_SEMANTIC_SURFACES.dark.statusPillText
   }
 }
 

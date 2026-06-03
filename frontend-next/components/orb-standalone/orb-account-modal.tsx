@@ -102,10 +102,10 @@ export function OrbAccountModal({
               {email}
             </p>
           ) : null}
-          <p className="mt-1 text-xs text-[#5ec8ff]/90">ORB Residential account</p>
+          <p className="mt-1 text-xs text-[var(--orb-res-primary,#1677ff)]">ORB Residential account</p>
           {localContentMode ? (
             <p
-              className="mt-2 rounded-lg border border-amber-400/20 bg-amber-400/10 px-3 py-2 text-xs leading-5 text-amber-100/95"
+              className="mt-2 rounded-lg border border-[var(--orb-res-info-border,#bfdbfe)] bg-[var(--orb-res-info-bg,#eff6ff)] px-3 py-2 text-xs leading-5 text-[var(--orb-res-info-text,#1e3a8a)]"
               data-orb-account-local-mode
             >
               You are using local ORB content until your session reconnects. Projects, drafts and saved outputs on
