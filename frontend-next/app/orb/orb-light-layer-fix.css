@@ -1,8 +1,7 @@
 /*
  * ORB light-mode layer repair (non-residential only).
  *
- * ORB Residential (`/orb`) is locked to premium dark at launch — these overrides
- * apply only to standalone/non-residential `.orb-chat-layout` surfaces.
+ * Non-residential ORB surfaces only — ORB Residential (`/orb`) uses `orb-premium-tokens.css`.
  */
 
 [data-orb-shell='true'][data-orb-theme='light']:not([data-orb-residential='true']),

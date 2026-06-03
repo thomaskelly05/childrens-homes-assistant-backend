@@ -41,7 +41,7 @@
   box-sizing: border-box;
 }
 
-/* ORB Residential — shell/layout dark authority (does not depend on html[data-orb-theme] alone). */
+/* ORB Residential — dark theme shell/layout */
 .orb-chat-layout--residential,
 [data-orb-shell='true'][data-orb-residential='true'] .orb-chat-layout--residential,
 html[data-orb-residential='1'] .orb-chat-layout--residential {
@@ -69,7 +69,8 @@ html[data-orb-residential='1'] .orb-chat-layout--residential .orb-chat-sidebar {
   color: var(--orb-premium-text, #f7faff) !important;
 }
 
-.orb-chat-layout--residential .orb-chat-header,
+.orb-chat-layout--residential.orb-theme-dark .orb-chat-header,
+.orb-chat-layout--residential.orb-theme-light .orb-chat-header,
 html[data-orb-residential='1'] .orb-chat-layout--residential .orb-chat-header {
   background: color-mix(in srgb, var(--orb-premium-bg-deep, #05070d) 85%, transparent) !important;
   border-color: var(--orb-premium-border, rgba(255, 255, 255, 0.1)) !important;
@@ -977,7 +978,7 @@ html[data-orb-residential='1'] .orb-chat-layout {
   }
 }
 
-/* ORB Residential — desktop workspace + modals (lg+; mirrors mobile launch lock). */
+/* ORB Residential — desktop workspace + modals (lg+). */
 @media (min-width: 1024px) {
   .orb-chat-layout--residential .orb-main-workspace,
   html[data-orb-residential='1'] .orb-chat-layout--residential .orb-main-workspace,

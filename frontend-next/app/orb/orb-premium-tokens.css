@@ -238,8 +238,8 @@ html[data-orb-residential='1'] .orb-chat-layout.orb-theme-light {
   padding-top: 0.25rem;
 }
 
-/* Composer glass — residential */
-.orb-chat-layout--residential .orb-composer-glass {
+/* Composer glass — residential dark */
+.orb-chat-layout--residential.orb-theme-dark .orb-composer-glass {
   border-radius: var(--orb-radius-composer, 1.75rem) !important;
   border: 1px solid var(--orb-premium-border-glow) !important;
   background: linear-gradient(
@@ -251,6 +251,19 @@ html[data-orb-residential='1'] .orb-chat-layout.orb-theme-light {
   -webkit-backdrop-filter: blur(var(--orb-blur-glass, 20px)) saturate(150%);
   box-shadow: var(--orb-premium-shadow) !important;
   min-height: var(--orb-composer-height, 3.375rem);
+  color: var(--orb-res-text, #f7faff) !important;
+}
+
+/* Composer glass — residential light */
+.orb-chat-layout--residential.orb-theme-light .orb-composer-glass {
+  border-radius: var(--orb-radius-composer, 1.75rem) !important;
+  border: 1px solid var(--orb-res-border-strong, rgba(22, 119, 255, 0.22)) !important;
+  background: var(--orb-res-surface, rgba(255, 255, 255, 0.98)) !important;
+  backdrop-filter: blur(var(--orb-blur-glass, 20px)) saturate(160%);
+  -webkit-backdrop-filter: blur(var(--orb-blur-glass, 20px)) saturate(160%);
+  box-shadow: var(--orb-res-shadow, 0 4px 24px rgba(15, 23, 42, 0.08)) !important;
+  min-height: var(--orb-composer-height, 3.375rem);
+  color: var(--orb-res-text, #0f172a) !important;
 }
 
 .orb-chat-layout--residential .orb-composer-glass--compact {
@@ -1027,75 +1040,277 @@ html[data-orb-residential='1'] {
   }
 }
 
-/**
- * ORB Residential launch lock — dark authority from shell/layout.
- * Quarantines legacy `.orb-theme-light` rules above; light class must not change surfaces.
- */
-html[data-orb-residential='1'] .orb-chat-layout--residential,
-html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light,
-html[data-orb-residential='1'] .orb-chat-layout.orb-theme-light.orb-chat-layout--residential,
-[data-orb-shell='true'][data-orb-residential='true'],
-[data-orb-shell='true'][data-orb-residential='true'][data-orb-theme='light'] {
-  color-scheme: dark !important;
-  --orb-background: #030712;
-  --orb-surface: #070b12;
-  --orb-surface-elevated: #0b1220;
-  --orb-surface-hover: rgba(255, 255, 255, 0.06);
-  --orb-foreground: #f8fafc;
-  --orb-muted: #9ca3af;
-  --orb-line: rgba(96, 165, 250, 0.22);
-  --orb-page-bg: var(--orb-premium-bg-deep, #05070d);
-  --orb-premium-text: #f7faff;
-  --orb-premium-text-secondary: #a7aebd;
-  --orb-premium-text-muted: #6f7787;
-  --orb-premium-border: rgba(255, 255, 255, 0.1);
-  --orb-premium-glass: rgba(255, 255, 255, 0.045);
-  --orb-premium-glass-strong: rgba(255, 255, 255, 0.07);
-  --orb-premium-bg-deep: #05070d;
-  --orb-premium-bg-mid: #070b14;
-  --orb-premium-bg-soft: #08111f;
-  --orb-overlay: rgba(0, 0, 0, 0.72);
-  --orb-mobile-ws-panel: #070b14;
-  --orb-mobile-ws-card: rgba(8, 17, 31, 0.92);
-  --orb-mobile-ws-card-border: rgba(66, 215, 255, 0.14);
-  --orb-mobile-ws-text: #f7faff;
-  --orb-mobile-ws-muted: #a7aebd;
-  --orb-mobile-ws-input: rgba(255, 255, 255, 0.06);
-  --orb-mobile-ws-footer: rgba(7, 11, 20, 0.98);
-  --orb-mobile-bg: #070b14;
-  --orb-mobile-card: rgba(8, 17, 31, 0.92);
-  --orb-text: #f7faff;
-  background: var(--orb-page-bg) !important;
-  color: var(--orb-premium-text) !important;
+
+/* Residential light — composer, sidebar, modals use shared tokens from shell inline vars */
+.orb-chat-layout--residential.orb-theme-light .orb-composer-glass,
+html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .orb-composer-glass {
+  background: var(--orb-res-surface, rgba(255, 255, 255, 0.98)) !important;
+  border-color: var(--orb-res-border-strong, rgba(22, 119, 255, 0.22)) !important;
+  box-shadow: var(--orb-res-shadow, 0 4px 24px rgba(15, 23, 42, 0.08)) !important;
+  color: var(--orb-res-text, #0f172a) !important;
 }
 
+.orb-chat-layout--residential.orb-theme-light .orb-chat-sidebar,
+.orb-chat-layout--residential.orb-theme-light .orb-panel-drawer,
 html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .orb-chat-sidebar,
-html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .orb-panel-drawer,
-html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .orb-composer-glass,
-html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light [data-orb-app-modal='true'] .orb-panel-modal,
-html[data-orb-residential='1'] .orb-theme-light .orb-chat-sidebar,
-html[data-orb-residential='1'] .orb-theme-light .orb-panel-drawer,
-html[data-orb-residential='1'] .orb-theme-light .orb-composer-glass,
-html[data-orb-residential='1'] .orb-theme-light [data-orb-app-modal='true'] .orb-panel-modal {
-  color-scheme: dark !important;
-  background: linear-gradient(180deg, #070b14 0%, #05070d 100%) !important;
-  border-color: var(--orb-premium-border, rgba(255, 255, 255, 0.1)) !important;
-  color: #f7faff !important;
-}
-
-html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .orb-composer-glass,
-html[data-orb-residential='1'] .orb-theme-light .orb-composer-glass {
-  background: linear-gradient(
-    165deg,
-    color-mix(in srgb, #ffffff 14%, transparent),
-    color-mix(in srgb, #ffffff 6%, transparent)
-  ) !important;
-  border-color: rgba(22, 139, 255, 0.22) !important;
+html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .orb-panel-drawer {
+  background: linear-gradient(180deg, var(--orb-res-surface-strong, #ffffff) 0%, var(--orb-res-bg, #f7fbff) 100%) !important;
+  border-color: var(--orb-res-border, rgba(37, 99, 235, 0.14)) !important;
+  color: var(--orb-res-text, #0f172a) !important;
 }
 
 html[data-orb-residential='1'][data-orb-theme='light'] body,
 html[data-orb-residential='1'][data-orb-theme='light'] .orb-residential-root {
-  color-scheme: dark !important;
-  background: var(--orb-premium-bg-deep, #05070d) !important;
-  color: var(--orb-premium-text, #f7faff) !important;
+  color-scheme: light !important;
+  background: var(--orb-res-bg, #f7fbff) !important;
+  color: var(--orb-res-text, #0f172a) !important;
+}
+
+html[data-orb-residential='1'] .orb-theme-light,
+html[data-orb-residential='1'] .orb-chat-layout.orb-theme-light {
+  color-scheme: light !important;
+}
+
+html[data-orb-residential='1'] .orb-theme-light .orb-chat-sidebar,
+html[data-orb-residential='1'] .orb-theme-light .orb-panel-drawer {
+  background: linear-gradient(180deg, #ffffff 0%, #f4f8ff 100%) !important;
+  color: var(--orb-foreground) !important;
+  border-color: var(--orb-line) !important;
+}
+
+html[data-orb-residential='1'] .orb-theme-light [data-orb-app-modal='true'] .orb-panel-modal {
+  background: #ffffff !important;
+  border-color: rgba(22, 139, 255, 0.18) !important;
+  color: var(--orb-foreground) !important;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12), 0 0 48px rgba(22, 139, 255, 0.08) !important;
+}
+
+html[data-orb-residential='1'] .orb-theme-light .orb-panel-overlay {
+  background: var(--orb-overlay, rgba(15, 23, 42, 0.2)) !important;
+}
+
+[data-orb-shell='true'][data-orb-theme='dark'] .orb-panel-overlay,
+.orb-chat-layout--residential.orb-theme-dark .orb-panel-overlay {
+  background: var(--orb-overlay, rgba(0, 0, 0, 0.72)) !important;
+}
+
+html[data-orb-residential='1'] .orb-theme-light .orb-composer-glass {
+  background: rgba(255, 255, 255, 0.96) !important;
+  border-color: rgba(22, 139, 255, 0.2) !important;
+}
+
+/* Desktop chat column — ChatGPT-style readable width */
+@media (min-width: 768px) {
+  html[data-orb-residential='1'] .orb-chat-layout--residential {
+    --orb-sidebar-width: 18.125rem;
+    --orb-sidebar-width-collapsed: 4.25rem;
+    --orb-chat-column-max: 50rem;
+    --orb-composer-max: 50rem;
+  }
+
+  html[data-orb-residential='1'] .orb-chat-layout--residential .orb-chat-thread {
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+}
+
+@media (min-width: 1024px) {
+  html[data-orb-residential='1'] .orb-chat-layout--residential {
+    --orb-chat-column-max: 53.75rem;
+    --orb-composer-max: 53.75rem;
+  }
+}
+
+/* Responsive empty-state orb — one sphere, scales by breakpoint */
+.premium-mobile-orb--responsive {
+  width: 4.5rem;
+  height: 4.5rem;
+}
+
+@media (min-width: 768px) {
+  .premium-mobile-orb--responsive {
+    width: 6.5rem;
+    height: 6.5rem;
+  }
+
+  .premium-mobile-orb--responsive .premium-mobile-orb__sphere {
+    width: 78%;
+    height: 78%;
+  }
+}
+
+@media (min-width: 1024px) {
+  .premium-mobile-orb--responsive {
+    width: 7.5rem;
+    height: 7.5rem;
+  }
+}
+
+/* Landing/login hero — no square glow box behind sphere */
+[data-orb-hero-sphere],
+[data-orb-empty-sphere],
+[data-orb-empty-sphere-mark] {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+html[data-orb-residential='1'] [data-orb-glow-hero],
+html[data-orb-residential='1'] [data-standalone-orb-state] .orb-sphere-wrap {
+  background: transparent !important;
+}
+
+html[data-orb-residential='1'] .orb-sphere-wrap::after,
+html[data-orb-residential='1'] .orb-standalone-halo {
+  opacity: 0 !important;
+}
+
+/* Login autofill — keep fields dark/readable */
+html[data-orb-theme='light'] [data-orb-login-page] h1,
+html[data-orb-theme='light'] [data-orb-login-page] h2,
+html[data-orb-theme='light'] [data-orb-login-page] label,
+html[data-orb-theme='light'] [data-orb-login-page] p,
+html[data-orb-theme='light'] [data-orb-login-page] a {
+  color: #0a1628;
+}
+
+html[data-orb-theme='light'] [data-orb-login-page] .orb-login-input {
+  color: #0a1628;
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(13, 95, 204, 0.22);
+}
+
+html[data-orb-theme='light'] [data-orb-login-page] .orb-login-input::placeholder {
+  color: #5b6b82;
+}
+
+html[data-orb-residential='1'] .orb-login-input:-webkit-autofill,
+html[data-orb-residential='1'] .orb-login-input:-webkit-autofill:hover,
+html[data-orb-residential='1'] .orb-login-input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #f7faff !important;
+  caret-color: #f7faff;
+  box-shadow: 0 0 0 1000px #0a1228 inset !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+  transition: background-color 99999s ease-out 0s;
+}
+
+/* Disabled OAuth — muted but not broken */
+html[data-orb-residential='1'] .orb-auth-button[aria-disabled='true'],
+html[data-orb-residential='1'] .orb-auth-button:disabled {
+  opacity: 0.72;
+  color: #6f7787 !important;
+}
+
+/* Station panels + inputs — theme tokens */
+html[data-orb-residential='1'] .orb-panel-drawer input,
+html[data-orb-residential='1'] .orb-panel-drawer textarea,
+html[data-orb-residential='1'] .orb-panel-drawer select,
+html[data-orb-residential='1'] .orb-document-panel input,
+html[data-orb-residential='1'] .orb-templates-panel input,
+html[data-orb-residential='1'] [data-orb-app-modal='true'] input,
+html[data-orb-residential='1'] [data-orb-app-modal='true'] textarea,
+html[data-orb-residential='1'] [data-orb-app-modal='true'] select {
+  background: var(--orb-surface, rgba(255, 255, 255, 0.05)) !important;
+  color: var(--orb-foreground, #f7faff) !important;
+  border-color: var(--orb-line, rgba(255, 255, 255, 0.12)) !important;
+}
+
+html[data-orb-residential='1'] .orb-theme-light .orb-voice-room,
+html[data-orb-residential='1'] .orb-theme-light [data-orb-dictate-station] {
+  background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(22, 119, 255, 0.06), transparent 70%);
+}
+
+html[data-orb-residential='1'] .orb-theme-light .orb-markdown-answer p,
+html[data-orb-residential='1'] .orb-theme-light .orb-markdown-answer li,
+html[data-orb-residential='1'] .orb-theme-light .orb-message-assistant .orb-message-content {
+  color: var(--orb-foreground) !important;
+}
+
+/* Mobile premium — Dictate & Voice stations */
+@media (max-width: 767px) {
+  html[data-orb-residential='1'] [data-orb-panel-shell='orb-dictate'] .orb-panel-modal,
+  html[data-orb-residential='1'] [data-orb-panel-shell='orb-voice'] .orb-panel-modal {
+    width: min(calc(100vw - 1rem), 47.5rem) !important;
+    max-width: min(calc(100vw - 1rem), 47.5rem) !important;
+    max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 0.5rem) !important;
+    border-radius: 1.5rem !important;
+  }
+
+  html[data-orb-residential='1'] [data-orb-dictate-station] .orb-dictate-mobile,
+  html[data-orb-residential='1'] [data-orb-voice-station] .orb-voice-mobile {
+    min-height: 0;
+  }
+
+  html[data-orb-residential='1'] .orb-voice-mobile__controls {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+}
+
+.orb-dictate-mobile [data-orb-dictate-captured-text] {
+  min-height: 7.5rem;
+  max-height: 12rem;
+}
+
+html[data-orb-residential='1'] .orb-dictate-output-type-card {
+  min-height: 3.25rem;
+}
+
+html[data-orb-residential='1'] [data-orb-dictate-output-types] {
+  scroll-margin-top: 0.5rem;
+}
+
+@media (min-width: 1024px) {
+  html[data-orb-residential='1'] [data-orb-dictate-station][data-orb-dictate-layout='desktop-runtime'] {
+    --orb-dictate-column-gap: 1rem;
+  }
+
+  html[data-orb-residential='1'] [data-orb-dictate-generated-output] {
+    min-height: 12rem;
+  }
+}
+
+/* Mobile product tokens — residential launch is dark-only */
+html[data-orb-residential='1'] {
+  --orb-mobile-bg: #070b14;
+  --orb-mobile-card: var(--orb-mobile-ws-card, rgba(8, 17, 31, 0.92));
+  --orb-mobile-line: rgba(255, 255, 255, 0.12);
+  --orb-primary-blue: #168bff;
+  --orb-primary-blue-2: #0d5fcc;
+  --orb-text: var(--orb-mobile-ws-text, #f7faff);
+  --orb-muted: var(--orb-mobile-ws-muted, #a7aebd);
+}
+
+.orb-chat-layout--residential.orb-theme-dark .orb-dictate-mobile,
+.orb-chat-layout--residential.orb-theme-dark .orb-voice-mobile,
+[data-orb-shell='true'][data-orb-theme='dark'] .orb-dictate-mobile,
+[data-orb-shell='true'][data-orb-theme='dark'] .orb-voice-mobile {
+  --orb-mobile-bg: #070b14;
+  --orb-mobile-card: rgba(255, 255, 255, 0.06);
+  --orb-mobile-line: rgba(255, 255, 255, 0.12);
+  --orb-text: #f7faff;
+  --orb-muted: #a7aebd;
+}
+
+.glass-orb-mark--home .glass-orb-mark__sphere,
+.glass-orb-mark--dictate .glass-orb-mark__sphere,
+.glass-orb-mark--voice-mobile .glass-orb-mark__sphere {
+  box-shadow:
+    0 0 32px rgba(22, 139, 255, 0.45),
+    0 0 64px rgba(66, 215, 255, 0.2),
+    inset 0 -8px 24px rgba(13, 95, 204, 0.35);
+}
+
+.glass-orb-mark--pulse .glass-orb-mark__sphere {
+  animation: orb-mobile-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes orb-mobile-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  50% {
+    transform: scale(1.04);
+    filter: brightness(1.08);
+  }
 }

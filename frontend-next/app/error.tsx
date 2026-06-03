@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useEffect, useMemo } from 'react'
 
 import { WorkspaceRecoveryPanel } from '@/components/indicare/workspaces/workspace-recovery-panel'
-import { useOrbResidentialThemeLock } from '@/components/orb-residential/use-orb-residential-theme-lock'
+import { useOrbResidentialThemeSync } from '@/components/orb-residential/use-orb-residential-theme-sync'
 import { isOrbDeveloperMode } from '@/lib/orb/orb-developer-mode'
 
 function useOrbResidentialRoute(): boolean {
@@ -16,12 +16,12 @@ function useOrbResidentialRoute(): boolean {
 }
 
 function OrbResidentialGlobalError({ error, reset }: { error: Error; reset?: () => void }) {
-  useOrbResidentialThemeLock()
+  useOrbResidentialThemeSync()
   const developerMode = isOrbDeveloperMode()
 
   return (
     <main
-      className="orb-residential-root flex min-h-[100dvh] items-center justify-center bg-[#05070d] px-6 py-10 text-[#f7faff]"
+      className="orb-residential-root flex min-h-[100dvh] items-center justify-center bg-[var(--orb-page-bg,#f7fbff)] px-6 py-10 text-[var(--orb-text-primary,#0f172a)]"
       data-orb-residential-error
     >
       <div className="w-full max-w-md rounded-3xl border border-white/10 bg-white/[0.04] p-8">

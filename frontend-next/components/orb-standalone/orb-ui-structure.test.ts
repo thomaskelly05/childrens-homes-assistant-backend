@@ -26,7 +26,7 @@ describe('ORB ChatGPT UI structure', () => {
   it('care companion wires appearance and theme markers', () => {
     const source = readComponent('components/orb-standalone/orb-care-companion.tsx')
     assert.match(source, /data-orb-theme=\{effectiveTheme\}/)
-    assert.match(source, /residentialSurface \? 'dark' : resolvedTheme/)
+    assert.match(source, /const effectiveTheme = resolvedTheme/)
     assert.match(source, /data-orb-light-ui-build/)
     assert.match(source, /useOrbAppearance/)
     assert.match(source, /personalisedEmptyHeading/)

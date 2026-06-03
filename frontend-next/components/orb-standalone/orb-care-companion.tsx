@@ -2541,7 +2541,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   const layoutA11yClass = standaloneOrbAccessibilityClassNames(a11yPrefs)
 
   const atmosphereClass = atmosphereClassForMode(mode)
-  const effectiveTheme = residentialSurface ? 'dark' : resolvedTheme
+  const effectiveTheme = resolvedTheme
   const themeClass = effectiveTheme === 'light' ? 'orb-theme-light' : 'orb-theme-dark'
   const activeWorkspacePanel =
     residentialSurface && isOrbCoreWorkspacePanel(activePanel) ? activePanel : null

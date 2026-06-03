@@ -11,18 +11,12 @@ function readComponent(relativePath: string) {
 }
 
 describe('ORB Residential launch polish', () => {
-  it('mobile home starter cards use premium dark glass not white blocks', () => {
+  it('mobile home starter cards use theme-scoped glass surfaces', () => {
     const mobileCss = readComponent('app/orb/orb-mobile.css')
-    assert.match(mobileCss, /html\[data-orb-residential='1'\] \[data-orb-starter-card\]/)
+    assert.match(mobileCss, /orb-theme-dark \[data-orb-starter-card\]|orb-theme-light \[data-orb-starter-card\]/)
     assert.match(mobileCss, /--orb-premium-glass/)
-    assert.doesNotMatch(
-      mobileCss,
-      /html\[data-orb-residential='1'\] \[data-orb-starter-card\][\s\S]*background:\s*rgba\(255,\s*255,\s*255,\s*0\.96\)/
-    )
-    assert.doesNotMatch(
-      mobileCss,
-      /html\[data-orb-residential='1'\] \[data-orb-starter-card\][\s\S]*background:\s*#ffffff/
-    )
+    assert.match(mobileCss, /--orb-res-card|#ffffff/)
+    assert.match(mobileCss, /--orb-premium-glass/)
   })
 
   it('care companion renders one main composer when workspace panel closed', () => {
@@ -61,13 +55,13 @@ describe('ORB Residential launch polish', () => {
     assert.match(readComponent('app/orb/orb-mobile.css'), /\[data-orb-account-modal\]/)
   })
 
-  it('desktop shell stays dark locked for residential', () => {
+  it('desktop shell supports light and dark residential themes', () => {
     const desktop = readComponent('app/orb/orb-desktop.css')
     const premium = readComponent('app/orb/orb-premium-tokens.css')
-    assert.match(desktop, /\.orb-chat-layout--residential[\s\S]*color-scheme:\s*dark/)
-    assert.match(premium, /ORB Residential launch lock/)
-    assert.match(premium, /color-scheme:\s*dark !important/)
-    assert.doesNotMatch(premium, /--orb-mobile-bg:\s*#f5f9ff/)
+    assert.match(desktop, /\.orb-chat-layout--residential\.orb-theme-dark/)
+    assert.match(desktop, /\.orb-chat-layout--residential\.orb-theme-light/)
+    assert.doesNotMatch(premium, /ORB Residential launch lock/)
+    assert.match(premium, /--orb-res-bg/)
   })
 
   it('mobile sidebar drawer does not reserve layout width on main column', () => {
@@ -79,14 +73,14 @@ describe('ORB Residential launch polish', () => {
     assert.match(mobileCss, /flex:\s*1 1 100%/)
   })
 
-  it('residential launch lock keeps dark surfaces when orb-theme-light is present', () => {
+  it('light theme uses pale workspace surfaces on residential', () => {
     const premium = readComponent('app/orb/orb-premium-tokens.css')
     const mobileCss = readComponent('app/orb/orb-mobile.css')
-    assert.match(premium, /\.orb-chat-layout--residential\.orb-theme-light[\s\S]*--orb-premium-bg-deep:\s*#05070d/)
+    assert.match(premium, /\.orb-chat-layout--residential\.orb-theme-light/)
     assert.match(mobileCss, /\.orb-chat-layout--residential\.orb-theme-light \.orb-main-workspace/)
-    assert.doesNotMatch(
+    assert.match(
       mobileCss,
-      /\.orb-chat-layout--residential\.orb-theme-light \.orb-main-workspace[\s\S]*#f7fbff/
+      /\.orb-chat-layout--residential\.orb-theme-light \.orb-main-workspace[\s\S]*#f7fbff|var\(--orb-res-bg/
     )
   })
 

@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     "ORB Residential — Powered by IndiCare Intelligence. Standalone premium intelligence for adults working in children's residential care.",
   manifest: '/manifest.json',
   appleWebApp: { capable: true, title: 'ORB Residential' },
-  themeColor: '#05070d'
+  themeColor: '#f7fbff'
 }
 
 export default function OrbLayout({ children }: { children: ReactNode }) {

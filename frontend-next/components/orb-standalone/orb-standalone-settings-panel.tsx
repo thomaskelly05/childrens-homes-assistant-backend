@@ -194,7 +194,7 @@ export function OrbStandaloneSettingsPanel({
   }
 
   const textSize = a11yPrefs?.largeText ? 'large' : 'comfortable'
-  const effectiveAppearance = residentialSurface ? 'dark' : (appearanceMode ?? 'system')
+  const effectiveAppearance = appearanceMode ?? 'system'
 
   return (
     <OrbStandalonePanelShell
@@ -217,7 +217,6 @@ export function OrbStandaloneSettingsPanel({
         <div className="orb-premium-settings-card shrink-0 border-b border-[var(--orb-line)] p-4 md:hidden">
           <OrbAppearanceControl
             value={effectiveAppearance}
-            residentialLocked={residentialSurface}
             onChange={(mode) => onAppearanceChange?.(mode)}
           />
         </div>
@@ -272,7 +271,6 @@ export function OrbStandaloneSettingsPanel({
               <div className="hidden md:block">
                 <OrbAppearanceControl
                   value={effectiveAppearance}
-                  residentialLocked={residentialSurface}
                   onChange={(mode) => onAppearanceChange?.(mode)}
                 />
               </div>

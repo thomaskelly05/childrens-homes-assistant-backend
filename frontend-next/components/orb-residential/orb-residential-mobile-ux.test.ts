@@ -179,7 +179,8 @@ describe('ORB Residential mobile UX', () => {
     assert.match(layout, /orb-premium-tokens\.css/)
     assert.match(theme, /ORB_ROYAL_BLUE/)
     assert.match(theme, /getOrbThemeCssVariables/)
-    assert.match(theme, /#05070D|#05070d/)
+    assert.match(theme, /#05070D|#05070d|#f7fbff/)
+    assert.match(theme, /ORB_RESIDENTIAL_DEFAULT_THEME/)
     assert.match(theme, /#168bff/i)
   })
 
@@ -194,20 +195,22 @@ describe('ORB Residential mobile UX', () => {
     assert.match(premiumCss, /\.premium-mobile-orb__sphere/)
   })
 
-  it('residential experience forces dark theme isolation wrapper', () => {
+  it('residential experience uses single theme root with light default', () => {
     const shell = readComponent('components/orb/orb-shell.tsx')
     const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
     const premiumCss = readComponent('app/orb/orb-premium-tokens.css')
+    const theme = readComponent('lib/orb/orb-theme.ts')
     assert.match(shell, /data-orb-residential/)
-    assert.match(readComponent('lib/orb/orb-theme.ts'), /orb-residential-root/)
+    assert.match(theme, /ORB_RESIDENTIAL_DEFAULT_THEME[\s\S]*'light'/)
     assert.match(shell, /ORB_SHELL_ROOT_CLASS/)
-    assert.match(shell, /getOrbThemeCssVariables/)
+    assert.match(shell, /getOrbThemeCssVariables\(resolvedTheme\)/)
     assert.match(shell, /data-orb-residential="true"/)
-    assert.match(shell, /useOrbResidentialThemeLock/)
+    assert.match(shell, /useOrbResidentialThemeSync/)
     assert.match(companion, /orb-chat-layout--residential/)
     assert.doesNotMatch(companion, /orb-chat-layout--residential orb-residential-root/)
-    assert.match(companion, /residentialSurface \? 'dark' : resolvedTheme/)
+    assert.match(companion, /const effectiveTheme = resolvedTheme/)
     assert.match(premiumCss, /html\[data-orb-residential='1'\]/)
+    assert.match(premiumCss, /--orb-res-bg/)
   })
 
   it('markdown answer headings use theme foreground not near-black on dark', () => {

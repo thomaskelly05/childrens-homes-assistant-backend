@@ -5,13 +5,11 @@ import { useCallback, useEffect, useState } from 'react'
 import {
   ORB_APPEARANCE_STORAGE_KEY,
   applyOrbDocumentTheme,
-  clearOrbDocumentTheme,
   readOrbAppearanceMode,
   resolveOrbTheme,
   writeOrbAppearanceMode,
   type OrbAppearanceMode
 } from '@/lib/orb/orb-appearance'
-import { ORB_RESIDENTIAL_RESOLVED_THEME } from '@/lib/orb/orb-theme'
 
 function isOrbResidentialRoute(): boolean {
   if (typeof document === 'undefined') return false
@@ -22,11 +20,16 @@ function isOrbResidentialRoute(): boolean {
 }
 
 export function useOrbAppearance() {
-  const [appearanceMode, setAppearanceModeState] = useState<OrbAppearanceMode>('system')
-  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light')
+  const residential = isOrbResidentialRoute()
+  const [appearanceMode, setAppearanceModeState] = useState<OrbAppearanceMode>(() =>
+    readOrbAppearanceMode({ residential })
+  )
+  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>(() =>
+    resolveOrbTheme(readOrbAppearanceMode({ residential }))
+  )
 
   useEffect(() => {
-    const stored = readOrbAppearanceMode()
+    const stored = readOrbAppearanceMode({ residential: isOrbResidentialRoute() })
     setAppearanceModeState(stored)
     setResolvedTheme(resolveOrbTheme(stored))
   }, [])
@@ -44,14 +47,13 @@ export function useOrbAppearance() {
   }, [appearanceMode])
 
   useEffect(() => {
-    const themeForDocument = isOrbResidentialRoute() ? ORB_RESIDENTIAL_RESOLVED_THEME : resolvedTheme
-    applyOrbDocumentTheme(themeForDocument, appearanceMode)
+    applyOrbDocumentTheme(resolvedTheme, appearanceMode)
     if (typeof document !== 'undefined') {
       document.documentElement.setAttribute('data-orb-appearance-mode', appearanceMode)
-      document.documentElement.setAttribute('data-orb-system-theme', themeForDocument)
-    }
-    return () => {
-      /* Keep bootstrap theme on unmount — residential shell may still be mounted. */
+      document.documentElement.setAttribute('data-orb-system-theme', resolvedTheme)
+      if (isOrbResidentialRoute()) {
+        document.documentElement.setAttribute('data-orb-residential', '1')
+      }
     }
   }, [appearanceMode, resolvedTheme])
 
@@ -61,14 +63,11 @@ export function useOrbAppearance() {
     setResolvedTheme(resolveOrbTheme(mode))
   }, [])
 
-  const residentialLocked = isOrbResidentialRoute()
-  const effectiveResolvedTheme = residentialLocked ? ORB_RESIDENTIAL_RESOLVED_THEME : resolvedTheme
-
   return {
     appearanceMode,
-    resolvedTheme: effectiveResolvedTheme,
+    resolvedTheme,
     setAppearanceMode,
     storageKey: ORB_APPEARANCE_STORAGE_KEY,
-    residentialThemeLocked: residentialLocked
+    residentialThemeLocked: false
   }
 }

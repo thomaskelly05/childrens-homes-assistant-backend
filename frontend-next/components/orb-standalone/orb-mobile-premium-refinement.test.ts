@@ -55,10 +55,8 @@ describe('ORB appearance system default', () => {
   it('does not force dark lock on ORB Residential root CSS', () => {
     const tokens = readComponent('app/orb/orb-premium-tokens.css')
     assert.match(tokens, /data-orb-theme='dark'\]/)
-    assert.doesNotMatch(
-      tokens,
-      /html\[data-orb-residential='1'\],\s*\nhtml\[data-orb-residential='1'\] body,\s*\n\.orb-residential-root \{\s*\n\s*color-scheme: dark/
-    )
+    assert.doesNotMatch(tokens, /ORB Residential launch lock/)
+    assert.match(tokens, /--orb-res-bg/)
   })
 
   it('exposes appearance QA markers on shell and hook', () => {

@@ -11,10 +11,10 @@ function readComponent(relativePath: string) {
 }
 
 describe('ORB Residential desktop UX', () => {
-  it('/orb experience wraps chat in dark residential root and error boundary', () => {
+  it('/orb experience wraps chat in residential root and error boundary', () => {
     const shell = readComponent('components/orb/orb-shell.tsx')
     const page = readComponent('app/orb/page.tsx')
-    assert.match(shell, /useOrbResidentialThemeLock/)
+    assert.match(shell, /useOrbResidentialThemeSync/)
     assert.match(shell, /OrbResidentialErrorBoundary/)
     assert.match(shell, /data-orb-residential="true"/)
     assert.match(page, /OrbShell/)
@@ -24,7 +24,7 @@ describe('ORB Residential desktop UX', () => {
     const door = readComponent('components/orb-residential/orb-front-door.tsx')
     const hero = readComponent('components/orb-residential/ui/orb-hero-sphere.tsx')
     assert.match(door, /OrbHeroSphere/)
-    assert.match(door, /useOrbResidentialThemeLock/)
+    assert.match(door, /useOrbResidentialThemeSync/)
     assert.match(door, /data-orb-residential="true"/)
     assert.doesNotMatch(door, /OrbGlowHero/)
     assert.match(hero, /PremiumMobileOrb/)
@@ -36,7 +36,7 @@ describe('ORB Residential desktop UX', () => {
     const login = readComponent('components/orb-residential/orb-login-screen.tsx')
     assert.match(login, /OrbHeroSphere/)
     assert.match(login, /orb-login-input/)
-    assert.match(login, /useOrbResidentialThemeLock/)
+    assert.match(login, /useOrbResidentialThemeSync/)
     assert.doesNotMatch(login, /OrbGlowHero/)
   })
 
@@ -80,11 +80,12 @@ describe('ORB Residential desktop UX', () => {
     assert.match(premiumCss, /glass-orb-mark--empty/)
   })
 
-  it('premium CSS forces dark under data-orb-residential via launch lock', () => {
+  it('premium CSS supports light and dark residential themes', () => {
     const premiumCss = readComponent('app/orb/orb-premium-tokens.css')
-    assert.match(premiumCss, /color-scheme:\s*dark/)
-    assert.match(premiumCss, /ORB Residential launch lock/)
-    assert.match(premiumCss, /\.orb-chat-layout--residential\.orb-theme-light[\s\S]*color-scheme:\s*dark/)
+    assert.match(premiumCss, /\.orb-chat-layout--residential\.orb-theme-dark/)
+    assert.match(premiumCss, /\.orb-chat-layout--residential\.orb-theme-light/)
+    assert.doesNotMatch(premiumCss, /ORB Residential launch lock/)
+    assert.match(premiumCss, /--orb-res-bg/)
     assert.match(premiumCss, /--orb-chat-column-max:\s*53\.75rem/)
   })
 

@@ -1,9 +1,18 @@
+/** Mirrors `ORB_RESIDENTIAL_DEFAULT_THEME` in `orb-theme.ts`. */
+const ORB_RESIDENTIAL_DEFAULT_THEME = 'light' as const
+
 export type OrbAppearanceMode = 'light' | 'dark' | 'system'
 
 export const ORB_APPEARANCE_STORAGE_KEY = 'orb-appearance-mode'
 
 /** Current appearance preference version. Default is system-led unless the user explicitly chooses light/dark. */
 export const ORB_APPEARANCE_MIGRATION_KEY = 'orb-appearance-system-default-v2'
+
+/** ORB Residential (`/orb`) defaults to light for new users. */
+export const ORB_RESIDENTIAL_APPEARANCE_MIGRATION_KEY = 'orb-appearance-residential-light-v1'
+
+/** Default appearance mode on `/orb` when nothing is stored. */
+export const ORB_RESIDENTIAL_DEFAULT_APPEARANCE: OrbAppearanceMode = 'light'
 
 export function resolveOrbTheme(mode: OrbAppearanceMode): 'light' | 'dark' {
   if (mode === 'light' || mode === 'dark') return mode
@@ -40,8 +49,28 @@ export function migrateOrbAppearanceForSystemDefault(): void {
   }
 }
 
-export function readOrbAppearanceMode(): OrbAppearanceMode {
-  if (typeof window === 'undefined') return 'system'
+export function migrateOrbResidentialLightDefault(): void {
+  if (typeof window === 'undefined') return
+  try {
+    if (window.localStorage.getItem(ORB_RESIDENTIAL_APPEARANCE_MIGRATION_KEY) === 'done') return
+    const stored = readStoredAppearanceMode()
+    if (!stored || stored === 'system') {
+      window.localStorage.setItem(ORB_APPEARANCE_STORAGE_KEY, ORB_RESIDENTIAL_DEFAULT_APPEARANCE)
+    }
+    window.localStorage.setItem(ORB_RESIDENTIAL_APPEARANCE_MIGRATION_KEY, 'done')
+  } catch {
+    /* ignore */
+  }
+}
+
+export function readOrbAppearanceMode(options?: { residential?: boolean }): OrbAppearanceMode {
+  if (typeof window === 'undefined') {
+    return options?.residential ? ORB_RESIDENTIAL_DEFAULT_APPEARANCE : 'system'
+  }
+  if (options?.residential) {
+    migrateOrbResidentialLightDefault()
+    return readStoredAppearanceMode() ?? ORB_RESIDENTIAL_DEFAULT_APPEARANCE
+  }
   migrateOrbAppearanceForSystemDefault()
   return readStoredAppearanceMode() ?? 'system'
 }
@@ -51,6 +80,7 @@ export function writeOrbAppearanceMode(mode: OrbAppearanceMode): void {
   try {
     window.localStorage.setItem(ORB_APPEARANCE_STORAGE_KEY, mode)
     window.localStorage.setItem(ORB_APPEARANCE_MIGRATION_KEY, 'done')
+    window.localStorage.setItem(ORB_RESIDENTIAL_APPEARANCE_MIGRATION_KEY, 'done')
   } catch {
     /* ignore */
   }
@@ -76,8 +106,6 @@ export function clearOrbDocumentTheme(): void {
 }
 
 /**
- * Inline bootstrap for `/orb` layout.
- * Residential ORB is dark-only at launch — appearance preference is stored for settings UI
- * but does not switch the resolved theme until the theme system is rebuilt.
+ * Inline bootstrap for `/orb` layout — prevents flash and aligns html/body before React hydrates.
  */
-export const ORB_APPEARANCE_BOOTSTRAP_SCRIPT = `(function(){try{var M=${JSON.stringify(ORB_APPEARANCE_MIGRATION_KEY)};var K=${JSON.stringify(ORB_APPEARANCE_STORAGE_KEY)};if(localStorage.getItem(M)!=='done'&&!localStorage.getItem(K)){localStorage.setItem(K,'system');localStorage.setItem(M,'done');}var mode=localStorage.getItem(K)||'system';var theme='dark';document.documentElement.setAttribute('data-orb-residential','1');document.documentElement.setAttribute('data-orb-appearance',mode);document.documentElement.setAttribute('data-orb-appearance-mode',mode);document.documentElement.setAttribute('data-orb-theme',theme);document.documentElement.setAttribute('data-orb-system-theme',theme);document.documentElement.style.colorScheme=theme;document.body&&(document.body.setAttribute('data-orb-appearance',mode),document.body.setAttribute('data-orb-appearance-mode',mode),document.body.setAttribute('data-orb-theme',theme));}catch(e){document.documentElement.setAttribute('data-orb-residential','1');document.documentElement.setAttribute('data-orb-appearance','system');document.documentElement.setAttribute('data-orb-appearance-mode','system');document.documentElement.setAttribute('data-orb-theme','dark');document.documentElement.setAttribute('data-orb-system-theme','dark');document.documentElement.style.colorScheme='dark';document.body&&(document.body.setAttribute('data-orb-appearance','system'),document.body.setAttribute('data-orb-appearance-mode','system'),document.body.setAttribute('data-orb-theme','dark'));}})();`
+export const ORB_APPEARANCE_BOOTSTRAP_SCRIPT = `(function(){try{var M=${JSON.stringify(ORB_APPEARANCE_MIGRATION_KEY)};var RM=${JSON.stringify(ORB_RESIDENTIAL_APPEARANCE_MIGRATION_KEY)};var K=${JSON.stringify(ORB_APPEARANCE_STORAGE_KEY)};var DEF=${JSON.stringify(ORB_RESIDENTIAL_DEFAULT_APPEARANCE)};if(localStorage.getItem(M)!=='done'&&!localStorage.getItem(K)){localStorage.setItem(K,'system');localStorage.setItem(M,'done');}if(localStorage.getItem(RM)!=='done'&&!localStorage.getItem(K)){localStorage.setItem(K,DEF);localStorage.setItem(RM,'done');}var mode=localStorage.getItem(K)||DEF;var theme=mode==='dark'?'dark':mode==='light'?'light':(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.setAttribute('data-orb-residential','1');document.documentElement.setAttribute('data-orb-appearance',mode);document.documentElement.setAttribute('data-orb-appearance-mode',mode);document.documentElement.setAttribute('data-orb-theme',theme);document.documentElement.setAttribute('data-orb-system-theme',theme);document.documentElement.style.colorScheme=theme;document.body&&(document.body.setAttribute('data-orb-appearance',mode),document.body.setAttribute('data-orb-appearance-mode',mode),document.body.setAttribute('data-orb-theme',theme));}catch(e){var fb=${JSON.stringify(ORB_RESIDENTIAL_DEFAULT_THEME)};document.documentElement.setAttribute('data-orb-residential','1');document.documentElement.setAttribute('data-orb-appearance',${JSON.stringify(ORB_RESIDENTIAL_DEFAULT_APPEARANCE)});document.documentElement.setAttribute('data-orb-appearance-mode',${JSON.stringify(ORB_RESIDENTIAL_DEFAULT_APPEARANCE)});document.documentElement.setAttribute('data-orb-theme',fb);document.documentElement.setAttribute('data-orb-system-theme',fb);document.documentElement.style.colorScheme=fb;document.body&&(document.body.setAttribute('data-orb-appearance',${JSON.stringify(ORB_RESIDENTIAL_DEFAULT_APPEARANCE)}),document.body.setAttribute('data-orb-appearance-mode',${JSON.stringify(ORB_RESIDENTIAL_DEFAULT_APPEARANCE)}),document.body.setAttribute('data-orb-theme',fb));}})();`
