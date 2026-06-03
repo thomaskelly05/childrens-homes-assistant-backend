@@ -90,6 +90,13 @@ describe('ORB Residential two-theme system', () => {
     assert.equal(threw, true)
   })
 
+  it('orb layout loads static brand asset stylesheet', () => {
+    const layout = readComponent('app/orb/layout.tsx')
+    assert.match(layout, /orb-brand-asset\.css/)
+    const brand = readComponent('components/orb-core/orb-brand-image.tsx')
+    assert.match(brand, /ORB_BRAND_IMAGE_SRC|\/assets\/orb\/orb-brand\.png/)
+  })
+
   it('premium tokens removed launch dark lock', () => {
     const premium = readComponent('app/orb/orb-premium-tokens.css')
     assert.doesNotMatch(premium, /ORB Residential launch lock/)

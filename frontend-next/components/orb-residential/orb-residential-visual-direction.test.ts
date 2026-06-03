@@ -11,13 +11,18 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential visual direction regressions', () => {
-  it('OrbPresence does not keep square halo pseudo-element on residential sphere', () => {
-    const premium = read('app/orb/orb-premium-tokens.css')
-    assert.match(premium, /\.orb-presence \.orb-sphere-wrap::after[\s\S]*display:\s*none/)
-    assert.doesNotMatch(premium, /\.orb-presence \.orb-sphere-wrap::after[\s\S]*opacity:\s*0\.55/)
-    assert.match(premium, /\.orb-presence \.orb-sphere-wrap[\s\S]*border-radius:\s*50%/)
+  it('OrbPresence uses static brand image asset (no CSS sphere recreation)', () => {
+    const brandCss = read('app/orb/orb-brand-asset.css')
+    const layout = read('app/orb/layout.tsx')
+    assert.match(layout, /orb-brand-asset\.css/)
+    assert.match(brandCss, /orb-brand-image/)
+    assert.match(brandCss, /display:\s*none !important/)
     const presence = read('components/orb-residential/ui/orb-presence.tsx')
-    assert.doesNotMatch(presence, /premium-mobile-orb__sphere|glass-orb-mark__sphere/)
+    assert.match(presence, /OrbBrandImage/)
+    assert.doesNotMatch(presence, /OrbSphere|premium-mobile-orb__sphere|glass-orb-mark__sphere/)
+    const glow = read('components/orb-standalone/orb-glow.tsx')
+    assert.match(glow, /OrbBrandImage/)
+    assert.doesNotMatch(glow, /OrbSphere/)
   })
 
   it('light mode mobile workspace must not use launch dark lock panel colours', () => {
@@ -82,5 +87,15 @@ describe('ORB Residential visual direction regressions', () => {
     const mobile = read('app/orb/orb-mobile.css')
     assert.match(mobile, /orb-theme-light[\s\S]*\[data-orb-billing-modal\][\s\S]*#ffffff/)
     assert.match(mobile, /orb-theme-light[\s\S]*\[data-orb-account-modal\][\s\S]*#ffffff/)
+  })
+
+  it('residential mobile tokens use light fallbacks not launch-dark lock', () => {
+    const premium = read('app/orb/orb-premium-tokens.css')
+    assert.doesNotMatch(premium, /residential launch is dark-only/i)
+    const mobileBlock = premium.match(/html\[data-orb-residential='1'\]\s*\{[^}]+\}/s)?.[0]
+    assert.ok(mobileBlock)
+    assert.match(mobileBlock!, /--orb-mobile-bg: var\(--orb-mobile-ws-panel, #f7fbff\)/)
+    assert.match(mobileBlock!, /--orb-text: var\(--orb-mobile-ws-text, #0f172a\)/)
+    assert.doesNotMatch(mobileBlock!, /--orb-mobile-bg: #070b14/)
   })
 })

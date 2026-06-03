@@ -3709,9 +3709,9 @@ function OrbPromptDrawer({
 
   return (
     <div className="fixed inset-0 z-[68] flex items-end justify-center bg-black/60 p-4 sm:items-center" role="dialog" aria-label="Example prompts">
-      <div className="max-h-[85dvh] w-full max-w-lg overflow-y-auto rounded-2xl border border-white/10 bg-[#0d1117] p-4 shadow-2xl">
+      <div className="max-h-[85dvh] w-full max-w-lg overflow-y-auto rounded-2xl border border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] p-4 text-[var(--orb-foreground)] shadow-2xl">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-white">Example prompts</h2>
+          <h2 className="text-sm font-semibold text-[var(--orb-foreground)]">Example prompts</h2>
           <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-slate-400 hover:bg-white/[0.06]" aria-label="Close">
             <X className="h-5 w-5" />
           </button>
