@@ -224,6 +224,72 @@ export function runOrbUiHitTest(selectorOrText: string): OrbUiHitTestResult {
   }
 }
 
+export type OrbMobileViewportOverflowOffender = {
+  selector: string
+  tag: string
+  right: number
+  width: number
+}
+
+export type OrbMobileViewportOverflowResult = {
+  viewportWidth: number
+  documentScrollWidth: number
+  offenders: OrbMobileViewportOverflowOffender[]
+  ok: boolean
+}
+
+const ORB_MOBILE_VIEWPORT_SHELL_SELECTORS = [
+  '[data-orb-shell="true"]',
+  '.orb-residential-root',
+  '.orb-chat-layout',
+  '.orb-chat-shell',
+  '.orb-chat-main',
+  '.orb-chat-header',
+  '.orb-mobile-chat-header',
+  '[data-orb-composer="main"]',
+  '.orb-composer-dock',
+  '[data-orb-standalone-composer]',
+  '.orb-composer-glass',
+  '[data-orb-starter-cards]',
+  '[data-orb-starter-card]',
+  '[data-orb-empty-state]',
+  '[data-orb-residential-empty]'
+] as const
+
+/** Debug/test helper: visible ORB shell nodes must not extend past the viewport width. */
+export function auditOrbMobileViewportOverflow(
+  viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 390
+): OrbMobileViewportOverflowResult {
+  if (typeof document === 'undefined') {
+    return { viewportWidth, documentScrollWidth: 0, offenders: [], ok: true }
+  }
+
+  const offenders: OrbMobileViewportOverflowOffender[] = []
+  const tolerance = 1
+
+  for (const selector of ORB_MOBILE_VIEWPORT_SHELL_SELECTORS) {
+    document.querySelectorAll(selector).forEach((el) => {
+      if (!(el instanceof HTMLElement) || !isVisibleElement(el)) return
+      const rect = el.getBoundingClientRect()
+      if (rect.width <= 0 || rect.height <= 0) return
+      if (rect.right > viewportWidth + tolerance || rect.width > viewportWidth + tolerance) {
+        offenders.push({
+          selector,
+          tag: el.tagName.toLowerCase(),
+          right: Math.round(rect.right * 100) / 100,
+          width: Math.round(rect.width * 100) / 100
+        })
+      }
+    })
+  }
+
+  const documentScrollWidth = document.documentElement.scrollWidth
+  const ok =
+    offenders.length === 0 && documentScrollWidth <= viewportWidth + tolerance
+
+  return { viewportWidth, documentScrollWidth, offenders, ok }
+}
+
 export function runOrbUiDuplicates(): {
   duplicateButtonsByText: Record<string, number>
   voiceStartButtons: number
@@ -245,8 +311,10 @@ export function registerOrbUiAuditGlobals(): void {
     ORB_UI_AUDIT?: () => OrbUiAuditResult
     ORB_UI_HIT_TEST?: (selectorOrText: string) => OrbUiHitTestResult
     ORB_UI_DUPLICATES?: () => ReturnType<typeof runOrbUiDuplicates>
+    ORB_MOBILE_VIEWPORT_AUDIT?: () => OrbMobileViewportOverflowResult
   }
   w.ORB_UI_AUDIT = runOrbUiAudit
   w.ORB_UI_HIT_TEST = runOrbUiHitTest
   w.ORB_UI_DUPLICATES = runOrbUiDuplicates
+  w.ORB_MOBILE_VIEWPORT_AUDIT = auditOrbMobileViewportOverflow
 }

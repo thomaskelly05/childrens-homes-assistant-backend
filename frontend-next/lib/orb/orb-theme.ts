@@ -306,4 +306,4 @@ export function orbResidentialRootStyle(mode: OrbThemeMode = 'dark'): CSSPropert
 
 /** Root class names for the canonical ORB residential shell. */
 export const ORB_SHELL_ROOT_CLASS =
-  'orb-residential-root min-h-[100dvh] bg-[var(--orb-page-bg,var(--orb-bg,#05070d))] text-[var(--orb-text-primary,var(--orb-foreground,#f7faff))]'
+  'orb-residential-root min-h-[100dvh] w-full max-w-[100vw] overflow-x-hidden bg-[var(--orb-page-bg,var(--orb-bg,#05070d))] text-[var(--orb-text-primary,var(--orb-foreground,#f7faff))]'
