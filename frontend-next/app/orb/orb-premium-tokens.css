@@ -802,6 +802,16 @@ html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .or
   }
 }
 
+@media (min-width: 1024px) {
+  html[data-orb-residential='1'] .orb-presence--hero {
+    --orb-presence-size: clamp(11.25rem, 18vw, 17.5rem);
+  }
+
+  html[data-orb-residential='1'] .orb-presence--workspace {
+    --orb-presence-size: clamp(10rem, 14vw, 14rem);
+  }
+}
+
 /* Legacy class aliases (map to same tokens as variants) */
 .orb-presence--home,
 .orb-presence--empty {
