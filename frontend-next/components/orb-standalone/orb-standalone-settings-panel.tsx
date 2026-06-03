@@ -243,21 +243,22 @@ export function OrbStandaloneSettingsPanel({
           ))}
         </nav>
 
-        <nav className="flex shrink-0 gap-1 overflow-x-auto border-b border-[var(--orb-line)] p-2 md:hidden" data-orb-settings-nav-mobile>
+        <nav className="flex shrink-0 flex-col gap-1 border-b border-[var(--orb-line)] p-2 md:hidden" data-orb-settings-nav-mobile>
           {SECTION_META.map((section) => (
             <button
               key={section.id}
               type="button"
               onClick={() => {
                 setActiveSection(section.id)
-                setMobileSectionOpen((current) => (current === section.id ? null : section.id))
+                setMobileSectionOpen(section.id)
               }}
-              className={`shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-medium ${
-                mobileSectionOpen === section.id
-                  ? 'border-[var(--orb-primary)] bg-[var(--orb-primary-soft)] text-[var(--orb-foreground)]'
-                  : 'border-[var(--orb-line)] text-[var(--orb-muted)]'
+              className={`flex w-full rounded-lg border px-3 py-2 text-left text-xs font-medium transition ${
+                activeSection === section.id
+                  ? 'orb-settings-nav-item--active border-[var(--orb-primary)] bg-[var(--orb-primary-soft)] text-[var(--orb-foreground)]'
+                  : 'border-transparent text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]'
               }`}
               data-orb-settings-section={section.id}
+              data-orb-settings-nav-active={activeSection === section.id ? 'true' : 'false'}
             >
               {section.label}
             </button>

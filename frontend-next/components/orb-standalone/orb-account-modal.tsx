@@ -93,7 +93,7 @@ export function OrbAccountModal({
       size="standard"
     >
       <div className="space-y-4 p-3 sm:p-4" data-orb-account-modal>
-        <div className="rounded-2xl border border-[var(--orb-line)]/60 bg-[var(--orb-surface-elevated)] px-3 py-3 sm:px-4 sm:py-4">
+        <div className="orb-mobile-workspace-card rounded-2xl border border-[var(--orb-line)]/60 bg-[var(--orb-surface-elevated)] px-3 py-3 sm:px-4 sm:py-4">
           <p className="text-lg font-semibold text-[var(--orb-foreground)]" data-orb-account-name>
             {displayName}
           </p>
@@ -128,25 +128,25 @@ export function OrbAccountModal({
         </div>
 
         <div className="grid grid-cols-2 gap-2 text-center text-xs sm:gap-3" data-orb-account-stats>
-          <div className="rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)] px-2.5 py-2.5 sm:px-3 sm:py-3">
+          <div className="orb-mobile-workspace-card rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)] px-2.5 py-2.5 sm:px-3 sm:py-3">
             <p className="text-[10px] uppercase tracking-wide text-[var(--orb-muted)]">Plan</p>
             <p className="mt-0.5 font-semibold capitalize text-[var(--orb-foreground)]" data-orb-account-subscription>
               {subscriptionLabel}
             </p>
           </div>
-          <div className="rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)] px-2.5 py-2.5 sm:px-3 sm:py-3">
+          <div className="orb-mobile-workspace-card rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)] px-2.5 py-2.5 sm:px-3 sm:py-3">
             <p className="text-[10px] uppercase tracking-wide text-[var(--orb-muted)]">Projects</p>
             <p className="mt-0.5 font-semibold text-[var(--orb-foreground)]" data-orb-account-project-count>
               {projectCount}
             </p>
           </div>
-          <div className="rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)] px-2.5 py-2.5 sm:px-3 sm:py-3">
+          <div className="orb-mobile-workspace-card rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)] px-2.5 py-2.5 sm:px-3 sm:py-3">
             <p className="text-[10px] uppercase tracking-wide text-[var(--orb-muted)]">Saved outputs</p>
             <p className="mt-0.5 font-semibold text-[var(--orb-foreground)]" data-orb-account-saved-count>
               {savedOutputsCount}
             </p>
           </div>
-          <div className="rounded-xl border border-[var(--orb-line)]/40 bg-[var(--orb-surface-elevated)] px-3 py-2.5">
+          <div className="orb-mobile-workspace-card rounded-xl border border-[var(--orb-line)]/40 bg-[var(--orb-surface-elevated)] px-3 py-2.5">
             <p className="text-[10px] uppercase tracking-wide text-[var(--orb-muted)]">Passkeys</p>
             <p className="mt-0.5 font-semibold text-[var(--orb-foreground)]" data-orb-account-passkey>
               {passkeyEnabled ? 'On' : 'Off'}
