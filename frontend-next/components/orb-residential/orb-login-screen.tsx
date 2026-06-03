@@ -8,6 +8,7 @@ import { OrbAuthButton } from '@/components/orb-residential/ui/orb-auth-button'
 import { OrbHeroSphere } from '@/components/orb-residential/ui/orb-hero-sphere'
 import { useOrbResidentialThemeSync } from '@/components/orb-residential/use-orb-residential-theme-sync'
 import { useOrbAppearance } from '@/components/orb-standalone/use-orb-appearance'
+import { getOrbThemeCssVariables } from '@/lib/orb/orb-theme'
 import { useAuth } from '@/contexts/auth-context'
 import {
   fetchOrbAccess,
@@ -137,6 +138,8 @@ function OrbLoginPanel() {
       data-orb-residential="true"
       data-orb-theme={resolvedTheme}
       data-orb-appearance={appearanceMode}
+      data-orb-appearance-mode={appearanceMode}
+      style={getOrbThemeCssVariables(resolvedTheme)}
     >
       <div className="orb-login-shell mx-auto flex min-h-[100dvh] max-w-lg flex-col px-6 py-8 sm:max-w-6xl sm:px-8 lg:grid lg:max-w-6xl lg:grid-cols-2 lg:gap-0">
         <div className="orb-login-hero hidden flex-col justify-center lg:flex lg:px-12">

@@ -7,6 +7,7 @@ import './orb-premium-tokens.css'
 import './orb-brand-asset.css'
 import './orb-light-layer-fix.css'
 import './orb-mobile.css'
+import { OrbResidentialThemeRoot } from '@/app/orb/orb-theme-root'
 import { ORB_APPEARANCE_BOOTSTRAP_SCRIPT } from '@/lib/orb/orb-appearance'
 import {
   ORB_COGNITION_ROUTING_BUILD,
@@ -51,7 +52,7 @@ export default function OrbLayout({ children }: { children: ReactNode }) {
         id="orb-cognition-routing-build"
         dangerouslySetInnerHTML={{ __html: ORB_COGNITION_ROUTING_BUILD_SCRIPT }}
       />
-      {children}
+      <OrbResidentialThemeRoot>{children}</OrbResidentialThemeRoot>
     </>
   )
 }

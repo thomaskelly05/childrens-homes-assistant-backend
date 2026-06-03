@@ -24,11 +24,12 @@ describe('ORB living presence', () => {
     assert.match(presence, /reduced_motion/)
   })
 
-  it('premium tokens style listening thinking and responding sphere states', () => {
+  it('premium tokens style listening thinking and responding living sphere states', () => {
     const css = read('app/orb/orb-premium-tokens.css')
     assert.match(css, /\[data-orb-presence-state='listening'\] \.orb-sphere-wrap/)
-    assert.match(css, /\[data-orb-presence-state='thinking'\] \.orb-sphere-liquid/)
+    assert.match(css, /\[data-orb-presence-state='thinking'\] \.orb-living-sphere/)
     assert.match(css, /\[data-orb-presence-state='responding'\] \.orb-sphere-wrap/)
+    assert.match(css, /\.orb-living-sphere/)
   })
 
   it('appearance control documents time-of-day system mode', () => {
