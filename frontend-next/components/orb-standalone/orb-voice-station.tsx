@@ -1020,7 +1020,7 @@ export function OrbVoiceStation({
             </p>
           ) : null}
 
-          <GlassOrbMark size="hero" pulse={pulseOrb} className={`mt-6 ${orbVisual}`} />
+          <GlassOrbMark variant="workspace" pulse={pulseOrb} className={`mt-6 shrink-0 ${orbVisual}`} />
 
           <p className="mt-6 text-center text-sm font-medium text-[var(--orb-foreground)]" data-orb-voice-status-label>
             {statusLine}

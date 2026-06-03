@@ -8,7 +8,12 @@ import { getOrbHueProfile } from '@/lib/orb/rendering/visual-system'
 /** Canonical ORB Residential presence states — map to `OrbSphere` render states. */
 export type OrbPresenceState = 'idle' | 'listening' | 'thinking' | 'responding' | 'error'
 
+/** Fixed layout variants — one size rule per surface (never one global hero size everywhere). */
+export type OrbPresenceVariant = 'hero' | 'workspace' | 'voice' | 'dictate' | 'avatar' | 'compact'
+
+/** Legacy size aliases map to variants via `resolveOrbPresenceVariant`. */
 export type OrbPresenceSize =
+  | OrbPresenceVariant
   | 'tiny'
   | 'xs'
   | 'sm'
@@ -29,32 +34,40 @@ const PRESENCE_TO_RENDER: Record<OrbPresenceState, OrbRenderState> = {
   error: 'offline'
 }
 
-const SIZE_TO_SPHERE: Record<OrbPresenceSize, 'small' | 'medium' | 'large' | 'xlarge'> = {
-  tiny: 'small',
-  xs: 'small',
-  sm: 'small',
-  md: 'medium',
-  empty: 'large',
-  home: 'large',
-  dictate: 'xlarge',
-  voice: 'xlarge',
-  voiceMobile: 'xlarge',
-  lg: 'medium',
-  hero: 'xlarge'
+const VARIANT_CLASS: Record<OrbPresenceVariant, string> = {
+  hero: 'orb-presence--hero',
+  workspace: 'orb-presence--workspace',
+  voice: 'orb-presence--voice',
+  dictate: 'orb-presence--dictate',
+  avatar: 'orb-presence--avatar',
+  compact: 'orb-presence--compact'
 }
 
-const SIZE_CLASS: Record<OrbPresenceSize, string> = {
-  tiny: 'orb-presence--tiny',
-  xs: 'orb-presence--xs',
-  sm: 'orb-presence--sm',
-  md: 'orb-presence--md',
-  empty: 'orb-presence--empty',
-  home: 'orb-presence--home',
-  dictate: 'orb-presence--dictate',
-  voice: 'orb-presence--voice',
-  voiceMobile: 'orb-presence--voice-mobile',
-  lg: 'orb-presence--lg',
-  hero: 'orb-presence--hero'
+/** Map legacy `size` props and explicit variants to canonical layout variant. */
+export function resolveOrbPresenceVariant(input: OrbPresenceSize = 'hero'): OrbPresenceVariant {
+  switch (input) {
+    case 'hero':
+    case 'home':
+      return 'hero'
+    case 'workspace':
+    case 'voice':
+    case 'voiceMobile':
+      return 'voice'
+    case 'dictate':
+      return 'dictate'
+    case 'avatar':
+    case 'tiny':
+    case 'xs':
+    case 'sm':
+    case 'md':
+    case 'lg':
+      return 'avatar'
+    case 'compact':
+    case 'empty':
+      return 'compact'
+    default:
+      return input
+  }
 }
 
 /** Infer presence state from legacy `glass-orb-mark--*` modifier classes. */
@@ -69,13 +82,16 @@ export function orbPresenceStateFromClassName(className: string): OrbPresenceSta
 
 export function OrbPresence({
   state = 'idle',
-  size = 'md',
+  size,
+  variant,
   pulse = false,
   className = '',
   label
 }: {
   state?: OrbPresenceState
+  /** @deprecated Prefer `variant` — legacy alias resolved via `resolveOrbPresenceVariant`. */
   size?: OrbPresenceSize
+  variant?: OrbPresenceVariant
   pulse?: boolean
   className?: string
   label?: string
@@ -91,8 +107,8 @@ export function OrbPresence({
     return () => mq.removeEventListener('change', update)
   }, [])
 
+  const resolvedVariant = resolveOrbPresenceVariant(variant ?? size ?? 'hero')
   const renderState = reducedMotion ? 'reduced_motion' : PRESENCE_TO_RENDER[state]
-  const sphereSize = SIZE_TO_SPHERE[size]
   const hueProfile = useMemo(() => getOrbHueProfile(renderState, reducedMotion), [renderState, reducedMotion])
 
   const hueStyle = {
@@ -107,8 +123,9 @@ export function OrbPresence({
 
   return (
     <span
-      className={`orb-presence ${SIZE_CLASS[size]} ${pulse && !reducedMotion ? 'orb-presence--pulse' : ''} ${className}`.trim()}
+      className={`orb-presence ${VARIANT_CLASS[resolvedVariant]} ${pulse && !reducedMotion ? 'orb-presence--pulse' : ''} ${className}`.trim()}
       data-orb-presence
+      data-orb-presence-variant={resolvedVariant}
       data-orb-presence-state={state}
       data-orb-state={renderState}
       style={hueStyle}
@@ -116,7 +133,7 @@ export function OrbPresence({
       aria-label={label}
       aria-hidden={label ? undefined : true}
     >
-      <OrbSphere state={renderState} size={sphereSize} />
+      <OrbSphere state={renderState} />
     </span>
   )
 }

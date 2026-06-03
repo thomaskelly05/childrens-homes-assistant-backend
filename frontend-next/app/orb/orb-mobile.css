@@ -203,22 +203,22 @@
   [data-orb-empty-sphere] {
     width: auto !important;
     height: auto !important;
-    max-width: 6.5rem !important;
-    max-height: 6.5rem !important;
+    max-width: min(9.75rem, 42vw) !important;
+    max-height: min(9.75rem, 42vw) !important;
+    margin-bottom: 0 !important;
   }
 
-  [data-orb-empty-sphere] .glass-orb-mark--empty,
-  [data-orb-empty-sphere] .glass-orb-mark--home {
-    width: 5.75rem !important;
-    height: 5.75rem !important;
+  [data-orb-empty-sphere] .orb-presence--hero {
+    max-width: min(9.75rem, 42vw);
+    max-height: min(9.75rem, 42vw);
   }
 
   [data-orb-empty-sphere] .premium-mobile-orb,
   [data-premium-mobile-orb] {
-    width: 4.5rem !important;
-    height: 4.5rem !important;
-    max-width: 5.5rem !important;
-    max-height: 5.5rem !important;
+    width: auto !important;
+    height: auto !important;
+    max-width: min(9.75rem, 42vw) !important;
+    max-height: min(9.75rem, 42vw) !important;
   }
 
   [data-orb-empty-sphere] .orb-standalone-halo,

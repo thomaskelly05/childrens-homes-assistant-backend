@@ -75,9 +75,9 @@ describe('ORB Residential desktop UX', () => {
   it('desktop empty state uses single GlassOrbMark sphere', () => {
     const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
     const premiumCss = readComponent('app/orb/orb-premium-tokens.css')
-    assert.match(companion, /GlassOrbMark size="(empty|home)"/)
+    assert.match(companion, /GlassOrbMark variant="hero"/)
     assert.doesNotMatch(companion, /variant="mobile"[\s\S]*md:hidden[\s\S]*variant="desktop"[\s\S]*hidden md:flex/)
-    assert.match(premiumCss, /orb-presence--home/)
+    assert.match(premiumCss, /orb-presence--hero/)
   })
 
   it('premium CSS supports light and dark residential themes', () => {

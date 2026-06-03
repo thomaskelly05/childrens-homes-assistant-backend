@@ -3,29 +3,35 @@
 import {
   OrbPresence,
   orbPresenceStateFromClassName,
+  resolveOrbPresenceVariant,
   type OrbPresenceSize,
-  type OrbPresenceState
+  type OrbPresenceState,
+  type OrbPresenceVariant
 } from '@/components/orb-residential/ui/orb-presence'
 
 /** Residential ORB mark — delegates to `OrbPresence` (single source of truth). */
 export type GlassOrbMarkSize = OrbPresenceSize
+export type GlassOrbMarkVariant = OrbPresenceVariant
 
 export function GlassOrbMark({
-  size = 'md',
+  size,
+  variant,
   pulse = false,
   state,
   className = ''
 }: {
   size?: GlassOrbMarkSize
+  variant?: GlassOrbMarkVariant
   pulse?: boolean
   state?: OrbPresenceState
   className?: string
 }) {
   const resolvedState = state ?? orbPresenceStateFromClassName(className) ?? 'idle'
+  const resolvedVariant = resolveOrbPresenceVariant(variant ?? size ?? 'avatar')
 
   return (
     <span data-glass-orb-mark>
-      <OrbPresence size={size} state={resolvedState} pulse={pulse} className={className} />
+      <OrbPresence variant={resolvedVariant} state={resolvedState} pulse={pulse} className={className} />
     </span>
   )
 }

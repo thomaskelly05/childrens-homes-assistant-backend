@@ -523,12 +523,50 @@ export function runOrbThemeAudit(): {
   }
 }
 
+const MOBILE_HOME_ORB_MAX_PX = 156
+
+function rectsOverlap(a: DOMRect, b: DOMRect, padding = 4): boolean {
+  return !(
+    a.right + padding < b.left ||
+    a.left - padding > b.right ||
+    a.bottom + padding < b.top ||
+    a.top - padding > b.bottom
+  )
+}
+
+function orbUsesStaticImage(el: Element): boolean {
+  if (!(el instanceof HTMLElement)) return false
+  if (el.tagName === 'IMG') {
+    const src = (el as HTMLImageElement).src || ''
+    return /orb-brand|orb-brand-image/i.test(src)
+  }
+  const bg = window.getComputedStyle(el).backgroundImage
+  return /orb-brand\.png|url\(/i.test(bg) && /orb-brand/i.test(bg)
+}
+
 /** Runtime living ORB visibility audit. */
 export function runOrbOrbAudit(): {
   presenceCount: number
   sphereCount: number
   visiblePresenceCount: number
   visibleSphereCount: number
+  hiddenSphereCount: number
+  staticImageInPresenceCount: number
+  overlapsMainHeading: boolean
+  homeOrbExceedsMobileMax: boolean
+  failures: string[]
+  spheres: Array<{
+    variant: string | null
+    width: number
+    height: number
+    display: string
+    visibility: string
+    opacity: string
+    position: string
+    usesStaticImage: boolean
+    boundingBox: { x: number; y: number; width: number; height: number }
+    reasonIfHidden: string | null
+  }>
   nodes: Array<{
     selector: string
     display: string
@@ -552,12 +590,22 @@ export function runOrbOrbAudit(): {
       sphereCount: 0,
       visiblePresenceCount: 0,
       visibleSphereCount: 0,
+      hiddenSphereCount: 0,
+      staticImageInPresenceCount: 0,
+      overlapsMainHeading: false,
+      homeOrbExceedsMobileMax: false,
+      failures: [],
+      spheres: [],
       nodes: []
     }
   }
 
   const presenceNodes = Array.from(document.querySelectorAll('[data-orb-presence], .orb-presence'))
   const sphereNodes = Array.from(document.querySelectorAll('[data-orb-living-sphere], .orb-living-sphere'))
+  const heading =
+    document.querySelector('[data-orb-empty-heading-mobile]') ??
+    document.querySelector('[data-orb-empty-heading]') ??
+    document.querySelector('[data-orb-empty-heading-desktop]')
 
   const nodes = [...presenceNodes, ...sphereNodes].map((el, index) => {
     if (!(el instanceof HTMLElement)) {
@@ -610,12 +658,103 @@ export function runOrbOrbAudit(): {
 
   const visiblePresenceCount = presenceNodes.filter((el) => isVisibleElement(el)).length
   const visibleSphereCount = sphereNodes.filter((el) => isVisibleElement(el)).length
+  const hiddenSphereCount = sphereNodes.length - visibleSphereCount
+
+  let overlapsMainHeading = false
+  let homeOrbExceedsMobileMax = false
+  const headingRect = heading instanceof HTMLElement ? heading.getBoundingClientRect() : null
+
+  const spheres = sphereNodes.map((el) => {
+    if (!(el instanceof HTMLElement)) {
+      return {
+        variant: null,
+        width: 0,
+        height: 0,
+        display: '',
+        visibility: '',
+        opacity: '',
+        position: '',
+        usesStaticImage: false,
+        boundingBox: { x: 0, y: 0, width: 0, height: 0 },
+        reasonIfHidden: 'not-html-element'
+      }
+    }
+    const style = window.getComputedStyle(el)
+    const rect = el.getBoundingClientRect()
+    const presence = el.closest('[data-orb-presence]')
+    const variant = presence?.getAttribute('data-orb-presence-variant') ?? null
+    const visible = isVisibleElement(el)
+
+    if (visible && headingRect && rectsOverlap(rect, headingRect)) {
+      overlapsMainHeading = true
+    }
+
+    if (
+      visible &&
+      variant === 'hero' &&
+      window.innerWidth < 768 &&
+      Math.max(rect.width, rect.height) > MOBILE_HOME_ORB_MAX_PX + 2
+    ) {
+      homeOrbExceedsMobileMax = true
+    }
+
+    const width = Math.round(rect.width)
+    const height = Math.round(rect.height)
+    const aspectDelta = Math.abs(width - height)
+    const looksSquareArtifact =
+      visible && aspectDelta <= 2 && (width > 48 || height > 48) && style.backgroundColor === 'rgb(0, 0, 0)'
+
+    return {
+      variant,
+      width,
+      height,
+      display: style.display,
+      visibility: style.visibility,
+      opacity: style.opacity,
+      position: style.position,
+      usesStaticImage: orbUsesStaticImage(el) || Boolean(presence?.querySelector('img[src*="orb-brand"]')),
+      boundingBox: {
+        x: Math.round(rect.x),
+        y: Math.round(rect.y),
+        width,
+        height
+      },
+      reasonIfHidden: reasonOrbNodeHidden(el) ?? (looksSquareArtifact ? 'square-black-artifact' : null)
+    }
+  })
+
+  const staticImageInPresenceCount = presenceNodes.filter((el) => {
+    if (!(el instanceof HTMLElement)) return false
+    return Array.from(el.querySelectorAll('img')).some((img) => orbUsesStaticImage(img))
+  }).length
+
+  const failures: string[] = []
+  if (visibleSphereCount === 0) failures.push('no visible living sphere')
+  if (staticImageInPresenceCount > 0) failures.push('orb presence uses static brand image')
+  if (overlapsMainHeading) failures.push('orb overlaps main heading')
+  if (homeOrbExceedsMobileMax) failures.push(`home orb exceeds mobile max (${MOBILE_HOME_ORB_MAX_PX}px)`)
+  for (const sphere of spheres) {
+    if (sphere.reasonIfHidden === 'square-black-artifact') {
+      failures.push('rectangular/square orb artifact detected')
+      break
+    }
+  }
+
+  if (failures.length) {
+    console.error('[ORB_ORB_AUDIT] failures:', failures, { spheres, nodes })
+  }
 
   return {
     presenceCount: presenceNodes.length,
     sphereCount: sphereNodes.length,
     visiblePresenceCount,
     visibleSphereCount,
+    hiddenSphereCount,
+    staticImageInPresenceCount,
+    overlapsMainHeading,
+    homeOrbExceedsMobileMax,
+    failures,
+    spheres,
     nodes
   }
 }

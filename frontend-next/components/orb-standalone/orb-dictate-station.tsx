@@ -1352,7 +1352,7 @@ export function OrbDictateStation({
               </h3>
               <div className="mt-2 flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <GlassOrbMark className={orbClass} size="sm" />
+                  <GlassOrbMark className={orbClass} variant="avatar" />
                   <div>
                     <p className="text-xs font-medium text-[var(--orb-foreground)]">{micStatus}</p>
                     {developerMode ? (
