@@ -9,9 +9,9 @@ type OrbHueLogoProps = {
 }
 
 const sizeClass: Record<NonNullable<OrbHueLogoProps['size']>, string> = {
-  sm: 'text-lg',
-  md: 'text-2xl',
-  lg: 'text-4xl md:text-5xl'
+  sm: 'text-lg font-extrabold',
+  md: 'text-2xl font-extrabold',
+  lg: 'text-4xl font-extrabold md:text-5xl'
 }
 
 export function OrbHueLogo({ size = 'md', pulse = false, className = '' }: OrbHueLogoProps) {
@@ -29,7 +29,7 @@ export function OrbHueLogo({ size = 'md', pulse = false, className = '' }: OrbHu
 export function OrbPoweredByIndicare({ className = '' }: { className?: string }) {
   return (
     <p
-      className={`orb-electric-text text-[11px] font-semibold uppercase tracking-[0.18em] ${className}`.trim()}
+      className={`orb-electric-text text-[11px] font-semibold tracking-[0.06em] ${className}`.trim()}
       data-orb-powered-indicare
     >
       Powered by IndiCare

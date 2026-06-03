@@ -3208,8 +3208,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                           <p data-orb-empty-brand-tagline>Powered by IndiCare Intelligence</p>
                         </div>
                         <p
-                          className="mt-3 text-[11px] font-medium tracking-[0.14em] text-[var(--orb-premium-cyan,#5ec8ff)]/85"
+                          className="mt-3 text-[11px] font-medium tracking-[0.12em] text-[var(--orb-res-text-soft,var(--orb-muted))]"
                           data-orb-brand-emotional-line
+                          data-orb-empty-emotional-line
                         >
                           {ORB_RESIDENTIAL_BRAND_EMOTIONAL_LINE}
                         </p>

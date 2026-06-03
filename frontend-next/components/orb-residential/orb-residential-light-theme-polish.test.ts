@@ -71,4 +71,13 @@ describe('ORB Residential light theme polish', () => {
     assert.match(account, /--orb-res-info-text/)
     assert.doesNotMatch(account, /text-amber-100/)
   })
+
+  it('mobile residential light workspace no longer ships dark lock', () => {
+    const mobileCss = read('app/orb/orb-mobile.css')
+    assert.doesNotMatch(mobileCss, /launch dark lock/i)
+    assert.match(
+      mobileCss,
+      /\.orb-chat-layout--residential\.orb-theme-light \.orb-main-workspace[\s\S]*#f7fbff/
+    )
+  })
 })
