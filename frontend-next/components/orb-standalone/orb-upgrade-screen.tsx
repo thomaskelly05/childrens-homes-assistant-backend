@@ -15,7 +15,7 @@ import {
 import { useAuth } from '@/contexts/auth-context'
 
 export function OrbUpgradeScreen() {
-  const { status } = useAuth()
+  const { status, logout } = useAuth()
   const [access, setAccess] = useState<OrbAccessPayload | null>(null)
   const [loading, setLoading] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -83,14 +83,16 @@ export function OrbUpgradeScreen() {
             ORB Residential access
           </div>
           <h1 className="text-3xl font-black tracking-tight text-slate-950 md:text-4xl" data-orb-upgrade-title>
-            {access?.product ?? 'ORB Residential — Powered by IndiCare'}
+            {status === 'authenticated' && !access?.can_use_orb
+              ? 'Start ORB Residential'
+              : access?.product ?? 'ORB Residential — Powered by IndiCare'}
           </h1>
           <p className="mt-3 text-lg font-semibold text-indigo-700" data-orb-upgrade-price>
             {access?.price_label ?? '£9.99/month'}
           </p>
-          <p className="mt-4 text-sm leading-7 text-slate-600">
-            For adults working in or around children&apos;s homes. Trial available when eligible. Subscription is
-            £9.99 per user per month after trial.
+          <p className="mt-4 text-sm leading-7 text-slate-600" data-orb-upgrade-includes>
+            Includes ORB chat, dictate, voice, documents, templates and saved outputs. For adults working in or
+            around children&apos;s homes. Trial available when eligible.
           </p>
           {access?.access_state === 'past_due' || access?.subscription?.status === 'past_due' ? (
             <p className="mt-3 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900">
@@ -156,6 +158,22 @@ export function OrbUpgradeScreen() {
                 Manage billing
               </button>
             ) : null}
+            <button
+              type="button"
+              onClick={() => {
+                setLoading('refresh')
+                setError(null)
+                void fetchOrbAccess()
+                  .then(setAccess)
+                  .catch(() => setError('Could not refresh status. Try again.'))
+                  .finally(() => setLoading(null))
+              }}
+              disabled={loading !== null}
+              className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700 disabled:opacity-50"
+              data-orb-billing-refresh
+            >
+              {loading === 'refresh' ? 'Refreshing…' : 'Refresh status'}
+            </button>
             <Link href="/orb" className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700">
               Return to ORB
             </Link>
@@ -163,7 +181,16 @@ export function OrbUpgradeScreen() {
               <Link href="/orb/login?returnUrl=/orb/billing" className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700">
                 Sign in
               </Link>
-            ) : null}
+            ) : (
+              <button
+                type="button"
+                onClick={() => void logout().then(() => { window.location.href = '/orb/login' })}
+                className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700"
+                data-orb-upgrade-sign-out
+              >
+                Sign out
+              </button>
+            )}
           </div>
 
           {!stripeReady && process.env.NODE_ENV === 'development' ? (
