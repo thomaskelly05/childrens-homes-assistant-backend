@@ -18,13 +18,20 @@ describe('ORB voice profiles registry', () => {
     assert.match(src, /label: 'ORB British Female'/)
   })
 
-  it('lists all seven user-facing profiles', () => {
+  it('lists curated premium profiles', () => {
+    const src = readVoiceProfilesSource()
+    assert.match(src, /calm_female/)
+    assert.match(src, /calm_male/)
+    assert.match(src, /neutral_professional/)
+    assert.match(src, /soft_supportive/)
+    assert.match(src, /concise_shift/)
+    assert.match(src, /ORB_VOICE_CURATED_PROFILE_IDS/)
+  })
+
+  it('retains legacy orb profiles for backward compatibility', () => {
     const src = readVoiceProfilesSource()
     assert.match(src, /orb_calm_professional/)
     assert.match(src, /orb_reflective/)
-    assert.match(src, /orb_clear_guidance/)
-    assert.match(src, /orb_friendly_coach/)
-    assert.match(src, /orb_serious_safeguarding/)
     assert.match(src, /system_fallback/)
   })
 
@@ -40,10 +47,10 @@ describe('ORB voice profiles registry', () => {
     assert.match(src, /orb_british_calm: 'orb_calm_professional'/)
   })
 
-  it('mode defaults choose correct voice profile', () => {
+  it('mode defaults choose curated voice profiles', () => {
     const src = readVoiceProfilesSource()
-    assert.match(src, /reflective_practice: 'orb_reflective'/)
-    assert.match(src, /safeguarding_support: 'orb_serious_safeguarding'/)
+    assert.match(src, /reflective_practice: 'soft_supportive'/)
+    assert.match(src, /safeguarding_support: 'calm_male'/)
     assert.match(src, /defaultVoiceProfileForMode/)
   })
 

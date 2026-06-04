@@ -220,8 +220,9 @@ export function shouldBlockAutoSpokenReply(options: {
   if (!options.voiceRepliesEnabled) return true
   if (options.privacyMode || options.lowSensoryMode) return true
   if (options.urgentSafeguarding || options.mode === 'Safeguarding Thinking') return true
-  const depth = options.expertDepth
+  const depth = (options.expertDepth || '').trim().toLowerCase()
   if (depth === 'safeguarding_critical') return true
+  if (depth === 'residential_deep') return true
   return false
 }
 

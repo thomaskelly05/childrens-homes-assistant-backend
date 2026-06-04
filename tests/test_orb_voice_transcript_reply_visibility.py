@@ -27,7 +27,7 @@ def test_voice_assistant_reply_wired_from_companion():
 def test_voice_spoken_blocked_still_shows_text():
     voice = read_frontend("components/orb-standalone/orb-voice-station.tsx")
     assert "data-orb-voice-spoken-blocked" in voice
-    assert "shouldBlockAutoSpokenReply" in voice
+    assert "resolveOrbVoiceSpeechDecision" in voice
 
 
 def test_high_risk_auto_send_pause():

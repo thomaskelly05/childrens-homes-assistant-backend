@@ -187,10 +187,11 @@ import { stripMarkdownForSpeech } from '@/lib/orb/orb-speech-text'
 import { loadOrbStandaloneChatSettings } from '@/lib/orb/orb-standalone-settings'
 import {
   estimateTranscriptExpertDepth,
+  extractAnswerQualityGate,
   extractIndicareIntelligenceCore,
-  shouldBlockAutoSpokenReply,
   shouldPauseVoiceAutoSend
 } from '@/lib/orb/indicare-intelligence-core'
+import { resolveOrbVoiceSpeechDecision } from '@/lib/orb/voice/orb-voice-speech-policy'
 import {
   buildProfileContextBlock,
   clearStandaloneCustomProjects,
@@ -755,7 +756,15 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           entry.content.trim()
       )
     if (!lastAssistant) return null
-    return { key: lastAssistant.id, text: lastAssistant.content }
+    const lastUser = [...activeChat.messages]
+      .reverse()
+      .find((entry) => entry.role === 'user' && entry.content.trim())
+    return {
+      key: lastAssistant.id,
+      text: lastAssistant.content,
+      userHint: lastUser?.content,
+      contextUsed: lastAssistant.contextUsed
+    }
   }, [activePanel, activeChat])
 
   const messages = activeChat?.messages ?? []
@@ -1391,19 +1400,30 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         const intelCore = extractIndicareIntelligenceCore(
           response.context_used as unknown as Record<string, unknown> | undefined
         )
-        if (
-          STANDALONE_ORB_VOICE_CAPTURE_ENABLED &&
-          voice.synthesisAvailable &&
-          !shouldBlockAutoSpokenReply({
-            voiceRepliesEnabled: voiceSettings.voiceReplies,
-            lowSensoryMode: a11yPrefs.lowSensoryMode,
-            expertDepth: intelCore?.expert_depth,
-            mode,
-            urgentSafeguarding: showUrgentSafeguardingBanner
-          })
-        ) {
-          setSpeakingMessageId(assistantId)
-          voice.speak(displayAnswer, () => setSpeakingMessageId(null))
+        const qualityGate = extractAnswerQualityGate(
+          response.context_used as unknown as Record<string, unknown> | undefined
+        )
+        const speechDecision = resolveOrbVoiceSpeechDecision({
+          writtenAnswer: displayAnswer,
+          userMessageHint: trimmed,
+          voiceRepliesEnabled: voiceSettings.voiceReplies,
+          privacyMode: voiceSettings.privacyMode,
+          lowSensoryMode: a11yPrefs.lowSensoryMode,
+          expertDepth: intelCore?.expert_depth,
+          careRelevanceScore: intelCore?.care_relevance_score,
+          qualityGate,
+          core: intelCore,
+          mode,
+          urgentSafeguarding: showUrgentSafeguardingBanner,
+          spokenAnswerLength: voiceSettings.spokenAnswerLength,
+          sensitiveSpokenRepliesEnabled: voiceSettings.sensitiveSpokenReplies
+        })
+        if (STANDALONE_ORB_VOICE_CAPTURE_ENABLED && voice.synthesisAvailable && speechDecision.allowAutoSpeak) {
+          const spoken = stripMarkdownForSpeech(speechDecision.spokenText || displayAnswer)
+          if (spoken.trim()) {
+            setSpeakingMessageId(assistantId)
+            voice.speak(spoken, () => setSpeakingMessageId(null))
+          }
         }
       }
 
@@ -2823,6 +2843,8 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         isAdminUser={account.adminBypass || normaliseRole(account.role ?? '') === 'admin'}
         assistantReply={voiceStationAssistant?.text ?? null}
         assistantReplyKey={voiceStationAssistant?.key ?? null}
+        assistantReplyUserHint={voiceStationAssistant?.userHint ?? null}
+        assistantReplyContext={voiceStationAssistant?.contextUsed ?? null}
         onSendToOrb={(text) => void sendMessage(text)}
         onSignIn={() => {
           window.location.href = account.signInUrl

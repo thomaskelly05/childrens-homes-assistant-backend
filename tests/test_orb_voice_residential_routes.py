@@ -200,7 +200,7 @@ def test_orb_voice_speak_returns_browser_fallback_when_server_tts_missing(voice_
     assert data["selected_voice_profile"] == "orb_british_female"
     assert "message" in data
     assert data.get("audio_url") is None
-    assert "provider_voice" not in data or data.get("provider_voice") is None
+    assert data.get("fallback_to_browser") is True
 
 
 def test_orb_voice_transcribe_not_configured_without_text(voice_client):
