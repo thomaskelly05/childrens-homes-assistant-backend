@@ -22,6 +22,17 @@ import {
 } from '@/lib/orb/orb-brain-metadata'
 import type { StandaloneOrbSource } from '@/lib/orb/standalone-local-store'
 import type { StandaloneOrbModelRouting } from '@/lib/orb/standalone-client'
+import {
+  extractAnswerQualityGate,
+  extractIndicareIntelligenceCore,
+  managerCanExpandIntelligence,
+  shouldShowManagerOversightCta,
+  shouldShowRecordProperlyCta
+} from '@/lib/orb/indicare-intelligence-core'
+import {
+  OrbIntelligenceActionCtas,
+  OrbIntelligenceCorePanel
+} from '@/components/orb-standalone/orb-intelligence-core-panel'
 
 function lensChipLabels(
   mode: string,
@@ -167,7 +178,10 @@ export function OrbAssistantMessageBody({
   showCognitionLabels = true,
   showExplainability = true,
   residentialSurface = false,
-  heading
+  heading,
+  userRole,
+  onRecordProperly,
+  onManagerOversight
 }: {
   content: string
   sources?: StandaloneOrbSource[]
@@ -181,11 +195,21 @@ export function OrbAssistantMessageBody({
   showExplainability?: boolean
   residentialSurface?: boolean
   heading?: string
+  userRole?: string | null
+  onRecordProperly?: () => void
+  onManagerOversight?: () => void
 }) {
   const cognitionLabel = cognitionPillLabel(mode, explainability, messageHint, cognitionContext)
   const brainMeta = normalizeOrbBrainMetadata(
     (cognitionContext?.context_used ?? undefined) as Record<string, unknown> | undefined
   )
+  const intelligenceCore = extractIndicareIntelligenceCore(
+    cognitionContext?.context_used as Record<string, unknown> | undefined
+  )
+  const qualityGate = extractAnswerQualityGate(
+    cognitionContext?.context_used as Record<string, unknown> | undefined
+  )
+  const showTechnical = managerCanExpandIntelligence(userRole)
   const displayContent = stripSourcesBasisSection(content)
   return (
     <article
@@ -222,6 +246,23 @@ export function OrbAssistantMessageBody({
         ) : null}
         {showExplainability ? (
           <OrbSourcesDetail content={content} sources={sources} modelRouting={modelRouting} />
+        ) : null}
+        {!streaming && (intelligenceCore || qualityGate) ? (
+          <>
+            <OrbIntelligenceActionCtas
+              showRecordProperly={shouldShowRecordProperlyCta(messageHint || content, intelligenceCore)}
+              showManagerOversight={
+                showTechnical && shouldShowManagerOversightCta(intelligenceCore, qualityGate)
+              }
+              onRecordProperly={onRecordProperly}
+              onManagerOversight={onManagerOversight}
+            />
+            <OrbIntelligenceCorePanel
+              core={intelligenceCore}
+              qualityGate={qualityGate}
+              showTechnicalDetails={showTechnical}
+            />
+          </>
         ) : null}
       </div>
     </article>

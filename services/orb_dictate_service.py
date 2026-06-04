@@ -37,6 +37,8 @@ from services.ai_notes_service import transcribe_audio
 from services.orb_dictate_template_registry import get_dictate_template, list_dictate_templates
 from services.orb_saved_output_service import orb_saved_output_service
 from services.orb_brain_metadata_service import build_brain_metadata
+from services.indicare_intelligence_core_service import indicare_intelligence_core_service
+from services.indicare_intelligence_route_finalize_service import intelligence_context_summary
 from services.recording_intelligence_service import recording_intelligence_service
 
 logger = logging.getLogger("indicare.orb_dictate")
@@ -72,13 +74,26 @@ MULTI_PERSON_MODES = frozenset(
 )
 
 
-def _dictate_brain_metadata(*, note_type: str, mode: str | None = None) -> dict[str, Any]:
+def _dictate_brain_metadata(
+    *,
+    note_type: str,
+    mode: str | None = None,
+    transcript_text: str = "",
+) -> dict[str, Any]:
+    intel_packet = indicare_intelligence_core_service.build_intelligence_packet(
+        transcript_text or "dictate recording",
+        mode=mode or note_type,
+    )
+    intel_summary = intelligence_context_summary(intel_packet)
     return build_brain_metadata(
         surface="orb_standalone",
         mode=mode or note_type,
         lens=note_type,
         feature="dictate",
-        extra={"output_type": note_type},
+        extra={
+            "output_type": note_type,
+            "indicare_intelligence_core": intel_summary,
+        },
     )
 
 
@@ -151,7 +166,11 @@ def _fallback_generate(request: OrbDictateGenerateRequest) -> OrbDictateGenerate
         segments=segments,
         speaker_summary=build_speaker_summary(participants, segments),
         speaker_boundary_notice=SPEAKER_BOUNDARY_COPY,
-        brain_metadata=_dictate_brain_metadata(note_type=note_type, mode=request.mode),
+        brain_metadata=_dictate_brain_metadata(
+            note_type=note_type,
+            mode=request.mode,
+            transcript_text=transcript,
+        ),
     )
 
 
@@ -162,7 +181,18 @@ def _build_generate_prompt(request: OrbDictateGenerateRequest, note_type: str) -
         if request.segments
         else request.input_text
     )
-    intelligence_block = recording_intelligence_service.build_prompt_block(transcript_body)
+    intel_packet = indicare_intelligence_core_service.build_intelligence_packet(
+        transcript_body,
+        mode=request.mode or note_type,
+    )
+    intelligence_block = "\n\n".join(
+        part
+        for part in (
+            intel_packet.get("prompt_block"),
+            recording_intelligence_service.build_prompt_block(transcript_body),
+        )
+        if part
+    )
     speaker_block = participants_block_for_prompt(request.participants, request.segments)
     section_spec = "\n".join(
         f"- {s.title}: " + "; ".join(s.prompts)
@@ -303,7 +333,11 @@ def generate_dictate_note(request: OrbDictateGenerateRequest) -> OrbDictateGener
         segments=segments,
         speaker_summary=build_speaker_summary(participants, segments),
         speaker_boundary_notice=SPEAKER_BOUNDARY_COPY,
-        brain_metadata=_dictate_brain_metadata(note_type=note_type, mode=request.mode),
+        brain_metadata=_dictate_brain_metadata(
+            note_type=note_type,
+            mode=request.mode,
+            transcript_text=transcript_text,
+        ),
     )
 
 

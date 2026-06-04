@@ -326,6 +326,27 @@ export type StandaloneOrbExpertAnswerEngineContext = {
   active?: boolean
 }
 
+export type IndicareIntelligenceCoreContext = {
+  version?: string
+  expert_depth?: string
+  care_relevance_score?: number
+  active_intelligence_layers?: string[]
+  registered_home_domains?: string[]
+  quality_standard_hits?: string[]
+  professional_lens_hits?: string[]
+  source_basis?: Record<string, unknown>
+  missing_evidence?: Array<{ id: string; label: string }>
+  gaps?: Array<Record<string, unknown>>
+  quality_gate_preview?: Record<string, unknown>
+}
+
+export type IndicareAnswerQualityGateContext = {
+  passed?: boolean
+  composite_score?: number
+  critical_flags?: string[]
+  recommendations?: string[]
+}
+
 export type StandaloneOrbContextUsed = {
   surface?: string
   mode?: string
@@ -340,6 +361,10 @@ export type StandaloneOrbContextUsed = {
   retrieval?: StandaloneOrbRetrievalContext
   model_routing?: StandaloneOrbModelRouting
   expert_answer_engine?: StandaloneOrbExpertAnswerEngineContext
+  indicare_intelligence?: IndicareIntelligenceCoreContext
+  indicare_intelligence_core?: IndicareIntelligenceCoreContext
+  expert_brain_9?: IndicareIntelligenceCoreContext & { active?: boolean }
+  answer_quality_gate?: IndicareAnswerQualityGateContext
   document_analysis?: {
     suggested?: boolean
     mode?: string
@@ -393,6 +418,8 @@ export type StandaloneOrbActionRunResult = {
   os_records_accessed: boolean
   suggested_next_actions?: Array<{ action: string; label: string }>
   action_engine?: Record<string, unknown>
+  indicare_intelligence_core?: IndicareIntelligenceCoreContext
+  context_used?: StandaloneOrbContextUsed
 }
 
 export async function runStandaloneOrbAction(

@@ -72,6 +72,8 @@ export type StandaloneChatMessage = {
     reasoning_summary?: string
     operational_context_used?: boolean
   }
+  /** IndiCare Intelligence Core + quality gate metadata from API context_used. */
+  contextUsed?: Record<string, unknown>
   /** Document intelligence or action-engine result kind for reuse chips and save titles. */
   outputKind?: string
   /** Display title for structured outputs (policy card, Reg 44, etc.). */

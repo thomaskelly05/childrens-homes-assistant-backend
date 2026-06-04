@@ -58,4 +58,4 @@ def test_intelligence_evaluate_answer_on_packet():
 def test_standalone_routes_import_intelligence_core():
     from routers import orb_standalone_routes
 
-    assert hasattr(orb_standalone_routes, "indicare_intelligence_core_service")
+    assert hasattr(orb_standalone_routes, "finalize_standalone_intelligence")

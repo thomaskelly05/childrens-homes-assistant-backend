@@ -28,6 +28,8 @@ from services.orb_operational_context_service import (
 from services.orb_standalone_brain_service import orb_standalone_brain_service
 from services.shared_institutional_cognition_runtime import shared_institutional_cognition_runtime
 from services.orb_universal_evidence_service import orb_universal_evidence_service
+from services.orb_knowledge_retrieval_service import orb_knowledge_retrieval_service
+from services.indicare_intelligence_route_finalize_service import finalize_standalone_intelligence
 
 logger = logging.getLogger("indicare.orb_operational_assistant")
 
@@ -145,6 +147,12 @@ class OrbOperationalAssistantService:
         boundaries = self._safety_boundaries(request, context_summary)
         sources = self.build_sources(context_bundle)
         citations = self.build_citations(sources)
+        standalone_mode = self._standalone_mode_for_request(request)
+        retrieval_bundle = orb_knowledge_retrieval_service.prepare_request_bundle(
+            request.message,
+            mode=standalone_mode,
+        )
+        indicare_intelligence = retrieval_bundle.get("indicare_intelligence") or {}
 
         from services.ai_privacy_guard_service import ai_privacy_guard_service
 
@@ -171,6 +179,8 @@ class OrbOperationalAssistantService:
                 safe_bundle = dict(context_bundle)
                 safe_bundle["privacy_safe_context"] = privacy_guard.safe_context
                 safe_bundle["orb_sources"] = [s.model_dump() for s in sources]
+                safe_bundle["indicare_intelligence"] = indicare_intelligence
+                safe_bundle["retrieval_bundle"] = retrieval_bundle
                 prompt = self.build_operational_prompt(request, safe_bundle)
                 model_request = self.build_model_request(request, prompt, safe_bundle)
                 response, decision, trace = await ai_model_router_service.complete_with_routing(
@@ -211,6 +221,22 @@ class OrbOperationalAssistantService:
                 warnings.append("Manager review required before acting on safeguarding-related content.")
 
         answer = self.apply_safety_boundaries(answer, request, context_bundle)
+        intelligence_meta: dict[str, Any] = {}
+        if indicare_intelligence:
+            answer, intelligence_meta = finalize_standalone_intelligence(
+                indicare_intelligence=indicare_intelligence,
+                answer=answer,
+                prompt_text=request.message,
+                message=request.message,
+                mode=standalone_mode,
+                record_learning=True,
+                apply_gate_fixes=False,
+            )
+            routing_meta = dict(routing_meta or {})
+            routing_meta["indicare_intelligence"] = intelligence_meta.get("indicare_intelligence")
+            routing_meta["indicare_intelligence_core"] = intelligence_meta.get("indicare_intelligence_core")
+            routing_meta["answer_quality_gate"] = intelligence_meta.get("answer_quality_gate")
+            routing_meta["learning_ledger"] = intelligence_meta.get("learning_ledger")
         evaluation = self.evaluate_answer(answer, request, context_bundle)
 
         intelligence_output = orb_intelligence_output_service.from_operational_answer(
@@ -348,6 +374,8 @@ class OrbOperationalAssistantService:
         else:
             summary = orb_operational_context_bridge.summarise_context(context)
         standalone_mode = self._standalone_mode_for_request(request)
+        indicare_intelligence = context.get("indicare_intelligence") or {}
+        intelligence_block = str(indicare_intelligence.get("prompt_block") or "").strip()
         standalone_brain_block = orb_standalone_brain_service.build_prompt_block(request.message, mode=standalone_mode)
         shared_runtime_block = shared_institutional_cognition_runtime.prompt_addendum(
             surface="operational_orb",
@@ -369,6 +397,17 @@ class OrbOperationalAssistantService:
             standalone_brain_block,
             "",
             shared_runtime_block,
+        ]
+        if intelligence_block:
+            lines.extend(
+                [
+                    "",
+                    "IndiCare Intelligence Core (permission-scoped OS path):",
+                    intelligence_block,
+                ]
+            )
+        lines.extend(
+            [
             "",
             "OS answer contract:",
             "- Answer the question directly from the evidence below where possible.",
@@ -376,7 +415,8 @@ class OrbOperationalAssistantService:
             "- If the evidence does not answer the question, say: I cannot evidence that from the available records.",
             "- Then say which area to check next: records, documents, chronology, appointments, plans, actions, home oversight or provider oversight.",
             "- For Reg 44/Reg 45 requests, structure the answer as: evidence seen, evidence gaps, impact on children, leadership action, questions for visitor/RM, and draft improvement actions.",
-        ]
+            ]
+        )
         if request.form_id or request.recording_type:
             lines.append("")
             lines.append("Recording workspace context (summary only — no full draft body):")

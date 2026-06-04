@@ -19,7 +19,10 @@ from services.ai_provider_registry import ai_provider_registry
 from services.orb_converged_general_assistant_service import orb_converged_general_assistant_service
 from services.orb_general_assistant_service import orb_general_assistant_service
 from services.orb_knowledge_retrieval_service import orb_knowledge_retrieval_service
-from services.indicare_intelligence_core_service import indicare_intelligence_core_service
+from services.indicare_intelligence_route_finalize_service import (
+    finalize_standalone_intelligence,
+    merge_intelligence_into_context,
+)
 from services.orb_standalone_brain_service import orb_standalone_brain_service
 from services.orb_grounded_answer_style_service import orb_grounded_answer_style_service
 from services.orb_official_source_anchor_service import orb_official_source_anchor_service
@@ -841,30 +844,15 @@ async def standalone_orb_conversation(
             "route": "/orb/standalone/conversation",
         }
         if indicare_intelligence:
-            context_used["indicare_intelligence"] = {
-                "version": indicare_intelligence.get("version"),
-                "expert_depth": indicare_intelligence.get("expert_depth"),
-                "care_relevance_score": indicare_intelligence.get("care_relevance_score"),
-                "active_intelligence_layers": indicare_intelligence.get("active_intelligence_layers"),
-                "registered_home_domains": indicare_intelligence.get("registered_home_domains"),
-                "quality_standard_hits": indicare_intelligence.get("quality_standard_hits"),
-            }
-            quality_gate = indicare_intelligence_core_service.evaluate_answer(indicare_intelligence, answer)
-            context_used["answer_quality_gate"] = quality_gate
-            if not quality_gate.get("passed"):
-                for flag in quality_gate.get("critical_flags") or []:
-                    if flag == "grade_prediction" and "inadequate" not in answer.lower():
-                        continue
-                    if flag == "fake_os_access":
-                        answer = orb_grounded_answer_style_service.sanitize_high_attention_closer(
-                            answer + "\n\n(ORB does not access live IndiCare OS records in standalone mode.)",
-                            message=payload.message,
-                            mode=mode,
-                        )
-            indicare_intelligence_core_service.record_learning(
-                indicare_intelligence,
+            answer, intel_meta = finalize_standalone_intelligence(
+                indicare_intelligence=indicare_intelligence,
+                answer=answer,
                 prompt_text=payload.message,
+                message=payload.message,
+                mode=mode,
+                sanitize_closer=orb_grounded_answer_style_service.sanitize_high_attention_closer,
             )
+            context_used = merge_intelligence_into_context(context_used, intel_meta)
         return _standalone_conversation_response(
             answer=answer,
             mode=mode,
@@ -997,6 +985,7 @@ async def standalone_orb_conversation_stream(
     standalone_brain = ctx["standalone_brain"]
     framed_message = ctx["framed_message"]
     profile_context = ctx["profile_context"]
+    indicare_intelligence = ctx.get("indicare_intelligence") or retrieval_bundle.get("indicare_intelligence") or {}
 
     async def event_generator() -> AsyncIterator[str]:
         request_started = time.perf_counter()
@@ -1137,6 +1126,16 @@ async def standalone_orb_conversation_stream(
                 "route": "/orb/standalone/conversation/stream",
                 "stream_mode": "provider_tokens",
             }
+            if indicare_intelligence:
+                answer, intel_meta = finalize_standalone_intelligence(
+                    indicare_intelligence=indicare_intelligence,
+                    answer=answer,
+                    prompt_text=payload.message,
+                    message=payload.message,
+                    mode=mode,
+                    sanitize_closer=orb_grounded_answer_style_service.sanitize_high_attention_closer,
+                )
+                context_used = merge_intelligence_into_context(context_used, intel_meta)
             metadata_payload = {
                 "ok": True,
                 "standalone": True,
