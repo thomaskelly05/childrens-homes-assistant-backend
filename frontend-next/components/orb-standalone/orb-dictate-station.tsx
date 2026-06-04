@@ -1294,8 +1294,8 @@ export function OrbDictateStation({
         <OrbDictateBoundaryCopy compact />
         <div className="grid min-h-0 flex-1 grid-cols-2 gap-4 overflow-hidden">
           <div className="flex min-h-0 flex-col gap-3 overflow-y-auto pr-1">
-            <section>
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--orb-muted)]">Start</h3>
+            <section data-orb-dictate-capture-section>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--orb-muted)]">Capture</h3>
               <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {([
                   ['record_note', 'Record note', Mic],

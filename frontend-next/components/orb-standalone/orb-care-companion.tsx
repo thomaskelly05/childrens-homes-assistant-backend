@@ -95,6 +95,7 @@ import {
 } from '@/components/orb-standalone/orb-standalone-panel-types'
 import { isOrbCoreWorkspacePanel } from '@/components/orb-standalone/orb-core-workspace-panels'
 import { OrbAmbientCognition, type OrbCognitionAmbientState } from '@/components/orb-standalone/orb-ambient-cognition'
+import { OrbIntelligenceMicroStatus } from '@/components/orb-standalone/orb-intelligence-micro-status'
 import { OrbAccountModal } from '@/components/orb-standalone/orb-account-modal'
 import { OrbAdultProfileDrawer } from '@/components/orb-standalone/orb-adult-profile-drawer'
 import { OrbBillingModal } from '@/components/orb-standalone/orb-billing-modal'
@@ -2461,6 +2462,20 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   const isAnswering =
     pending || visibleMessages.some((m) => m.status === 'streaming' || m.status === 'thinking')
 
+  const answeringExpertDepth = useMemo(() => {
+    const modeKey = mode.trim().toLowerCase()
+    if (modeKey.includes('safeguarding')) return 'safeguarding_critical'
+    if (modeKey.includes('record')) return 'residential_deep'
+    if (modeKey.includes('ofsted') || modeKey.includes('manager') || modeKey.includes('staff coach')) {
+      return 'residential_light'
+    }
+    const lastAssistant = [...visibleMessages].reverse().find((m) => m.role === 'assistant' && m.contextUsed)
+    const fromCore = lastAssistant?.contextUsed
+      ? extractIndicareIntelligenceCore(lastAssistant.contextUsed as Record<string, unknown>)?.expert_depth
+      : undefined
+    return fromCore || 'general_light'
+  }, [mode, visibleMessages])
+
   const composer = (
     <div
       className={`orb-composer-dock flex-none border-t border-transparent pt-2 ${
@@ -2479,6 +2494,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           />
         </div>
       ) : null}
+      <OrbIntelligenceMicroStatus active={isAnswering} expertDepth={answeringExpertDepth} />
     <OrbStandaloneComposer
       value={message}
       composerStateLength={message.trim().length}
@@ -3647,7 +3663,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                                           })
                                         : contextualSuggestedReplies({
                                             mode,
-                                            messageHint
+                                            messageHint,
+                                            content: entry.content,
+                                            contextUsed: entry.contextUsed as Record<string, unknown> | undefined
                                           })
                                     }
                                     onSelect={(item) =>

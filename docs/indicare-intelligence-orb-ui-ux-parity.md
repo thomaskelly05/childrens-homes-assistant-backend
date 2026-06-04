@@ -47,3 +47,18 @@ Surfaced from Core `gaps` / `missingness_graph` when present, including:
 
 - `tests/test_indicare_orb_frontend_core_metadata.py`
 - `tests/test_indicare_voice_dictation_intelligence_parity.py`
+- `tests/test_orb_premium_ux_contract.py`
+- `tests/test_orb_voice_transcript_reply_visibility.py`
+
+## Premium UX polish (June 2026)
+
+- **Composer copyright:** `OrbComposerCopyright` under residential composer — professional judgement line, not repeated banners.
+- **Action chips:** `buildIntelligenceContextActionChips` uses `expert_depth`; general answers stay light; care answers show recording/safeguarding/Ofsted chips.
+- **What ORB checked:** Collapsed default; summary chips when expanded; missing evidence only when gaps exist; manager debug drawer role-gated.
+- **Voice reply visibility:** `assistantReply` from chat now rendered in `OrbVoiceStation` (`data-orb-voice-reply`) — previously passed but not displayed. See `docs/orb-voice-transcript-reply-audit.md`.
+- **Micro-status:** `OrbIntelligenceMicroStatus` during residential+ streaming; none for `general_light`.
+- **Workspace layout:** `OrbPremiumWorkspaceLayout` for practice panels (one-screen starting states).
+- **Templates:** Card grid with featured sorting.
+- **Documents:** Upload / lens / output section markers.
+
+All routes and Core metadata paths unchanged.

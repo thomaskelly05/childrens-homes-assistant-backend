@@ -168,6 +168,7 @@ export function OrbVoiceStation({
   onSendToOrb,
   pending = false,
   assistantReply,
+  assistantReplyKey,
   onOpenDictate,
   onOpenVoiceSettings,
   subscriptionActive = true,
@@ -284,6 +285,25 @@ export function OrbVoiceStation({
   })
 
   const browserTranscriptText = (voice.transcript || voice.displayTranscript || '').trim()
+
+  const orbTextReply = (assistantReply || '').trim()
+  const orbReplyFromTurns = turns
+    .filter((t) => t.role === 'assistant')
+    .map((t) => t.text.trim())
+    .filter(Boolean)
+    .join('\n\n')
+  const displayedOrbReply = orbTextReply || orbReplyFromTurns
+
+  const spokenReplyBlocked = shouldBlockAutoSpokenReply({
+    voiceRepliesEnabled: voice.settings.voiceReplies,
+    expertDepth: undefined,
+    mode: undefined
+  })
+  const spokenReplyBlockedReason = !voice.settings.voiceReplies
+    ? 'Voice replies are off — read ORB’s text answer below.'
+    : spokenReplyBlocked
+      ? 'Spoken reply paused for review — text answer shown below.'
+      : null
 
   const resolvedLaunchUiState = resolveOrbVoiceLaunchUiState({
     launchMode,
@@ -1058,8 +1078,47 @@ export function OrbVoiceStation({
               data-orb-voice-transcript
               data-orb-voice-transcript-preview
             >
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-[#5ec8ff]/90">Transcript preview</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-[#5ec8ff]/90">Your transcript</p>
               <p className="mt-2 text-xs leading-5 text-[var(--orb-foreground)]">{browserTranscriptText}</p>
+            </div>
+          ) : null}
+
+          {displayedOrbReply ? (
+            <div
+              className="orb-voice-reply mt-4 max-h-[min(36vh,18rem)] w-full overflow-y-auto rounded-2xl border border-[var(--orb-line)]/40 bg-[var(--orb-surface-elevated)]/60 p-4 text-left backdrop-blur-md"
+              data-orb-voice-reply
+              data-orb-voice-reply-key={assistantReplyKey ?? undefined}
+            >
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-[#5ec8ff]/90">ORB</p>
+              <p className="mt-2 whitespace-pre-wrap text-xs leading-5 text-[var(--orb-foreground)]">
+                {displayedOrbReply}
+              </p>
+              {spokenReplyBlockedReason ? (
+                <p className="mt-2 text-[10px] text-amber-700 dark:text-amber-200/90" data-orb-voice-spoken-blocked>
+                  {spokenReplyBlockedReason}
+                </p>
+              ) : null}
+            </div>
+          ) : pending ? (
+            <div
+              className="orb-voice-reply mt-4 w-full rounded-2xl border border-[var(--orb-line)]/40 bg-[var(--orb-surface-elevated)]/40 p-4"
+              data-orb-voice-reply-pending
+            >
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--orb-muted)]">ORB</p>
+              <p className="mt-2 text-xs text-[var(--orb-muted)]">Preparing answer…</p>
+            </div>
+          ) : null}
+
+          {(displayedOrbReply || browserTranscriptText) && useBrowserLaunch ? (
+            <div className="mt-3 flex flex-wrap justify-center gap-2" data-orb-voice-continue-chat>
+              <button
+                type="button"
+                onClick={() => void onSendToOrb(browserTranscriptText || displayedOrbReply)}
+                className="rounded-full border border-[var(--orb-line)] px-3 py-1.5 text-xs font-medium text-[var(--orb-foreground)] hover:bg-[var(--orb-surface-hover)]"
+                data-orb-voice-send-to-chat
+              >
+                Continue in chat
+              </button>
             </div>
           ) : null}
 

@@ -528,7 +528,9 @@ export function OrbStandaloneComposer({
             disclaimer="ORB Residential can make mistakes. ORB Residential does not access IndiCare OS records."
             copyright=""
           />
-        ) : null}
+        ) : (
+          <OrbComposerCopyright className="mt-1.5 px-2" />
+        )}
       </div>
     </div>
   )

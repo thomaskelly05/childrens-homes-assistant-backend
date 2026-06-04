@@ -27,7 +27,8 @@ import {
   extractIndicareIntelligenceCore,
   managerCanExpandIntelligence,
   shouldShowManagerOversightCta,
-  shouldShowRecordProperlyCta
+  shouldShowRecordProperlyCta,
+  buildIntelligenceContextActionChips
 } from '@/lib/orb/indicare-intelligence-core'
 import {
   OrbIntelligenceActionCtas,
