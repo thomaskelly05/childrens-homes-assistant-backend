@@ -146,7 +146,7 @@ export function OrbReviewPanel({
               )
             })}
           </div>
-        </details>
+        </section>
 
         <button
           type="button"
