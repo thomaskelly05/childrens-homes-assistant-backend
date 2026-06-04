@@ -7,6 +7,7 @@ import {
   OrbComposerPlusMenu,
   type OrbComposerPlusAction
 } from '@/components/orb-standalone/orb-composer-plus-menu'
+import { OrbComposerCopyright } from '@/components/orb-standalone/orb-composer-copyright'
 import { OrbFooter } from '@/components/orb-standalone/orb-footer'
 import { logTapTarget } from '@/lib/interaction/mobile-tap-debug'
 import type { StandaloneOrbMode } from '@/lib/orb/standalone-client'
@@ -528,7 +529,9 @@ export function OrbStandaloneComposer({
             disclaimer="ORB Residential can make mistakes. ORB Residential does not access IndiCare OS records."
             copyright=""
           />
-        ) : null}
+        ) : (
+          <OrbComposerCopyright className="mt-2 px-2 pb-1" />
+        )}
       </div>
     </div>
   )

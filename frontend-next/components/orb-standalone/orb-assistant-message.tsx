@@ -378,8 +378,10 @@ const GREETING_HINT_RE =
 export function contextualSuggestedReplies(options: {
   mode: string
   messageHint?: string
+  content?: string
+  contextUsed?: Record<string, unknown>
 }): OrbSuggestedReplyItem[] {
-  const hint = (options.messageHint || '').trim()
+  const hint = (options.messageHint || options.content || '').trim()
   const modeKey = options.mode.trim().toLowerCase()
 
   if (!hint || GREETING_HINT_RE.test(hint)) {
