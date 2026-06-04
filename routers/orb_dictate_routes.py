@@ -20,6 +20,7 @@ from schemas.orb_dictate import (
     OrbDictateSaveRequest,
     OrbDictateTranscribeRequest,
 )
+from services.ai_external_call_governance import governance_ids_from_user
 from services.orb_dictate_edit_service import edit_dictate_document
 from services.orb_dictate_service import (
     STANDALONE_BOUNDARY,
@@ -172,8 +173,14 @@ async def dictate_edit(
     payload: OrbDictateEditRequest,
     current_user=Depends(require_orb_dictate_access),
 ):
+    ids = governance_ids_from_user(current_user)
     try:
-        result = edit_dictate_document(payload)
+        result = edit_dictate_document(
+            payload,
+            provider_id=ids["provider_id"],
+            home_id=ids["home_id"],
+            user_id=ids["user_id"],
+        )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception:
@@ -186,8 +193,14 @@ async def dictate_generate(
     payload: OrbDictateGenerateRequest,
     current_user=Depends(require_orb_dictate_access),
 ):
+    ids = governance_ids_from_user(current_user)
     try:
-        result = generate_dictate_note(payload)
+        result = generate_dictate_note(
+            payload,
+            provider_id=ids["provider_id"],
+            home_id=ids["home_id"],
+            user_id=ids["user_id"],
+        )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception:

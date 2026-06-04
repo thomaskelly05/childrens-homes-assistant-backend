@@ -1,34 +1,19 @@
-import os
 import json
 import asyncio
+import os
 from datetime import datetime, timezone
 from typing import Any
 
-from openai import OpenAI
-
-
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
-if not OPENAI_API_KEY:
-    raise RuntimeError("OPENAI_API_KEY is not set")
-
-client = OpenAI(api_key=OPENAI_API_KEY)
+from schemas.data_protection import DataClassification
+from services.ai_external_call_governance import (
+    FEATURE_AI_NOTES,
+    governed_transcribe_audio_file,
+    redact_plain_text,
+    try_governed_draft_text,
+)
 
 MAX_AUDIO_BYTES = 25 * 1024 * 1024
 MAX_TEXT_CHARS = 120000
-
-
-def _get_audio_mime_type(file_path: str) -> str:
-    filename = os.path.basename(file_path).lower()
-
-    if filename.endswith(".m4a") or filename.endswith(".mp4"):
-        return "audio/mp4"
-    if filename.endswith(".ogg"):
-        return "audio/ogg"
-    if filename.endswith(".wav"):
-        return "audio/wav"
-    if filename.endswith(".mp3"):
-        return "audio/mpeg"
-    return "audio/webm"
 
 
 def _normalise_text(value: str | None) -> str:
@@ -72,8 +57,13 @@ def _speaker_text_from_segments(segments: list[dict[str, Any]]) -> str:
     ).strip()
 
 
-# ✅ FIXED TRANSCRIPTION (THIS WAS BREAKING YOUR APP)
-def _transcribe_audio_sync(file_path: str) -> dict[str, Any]:
+def _transcribe_audio_sync(
+    file_path: str,
+    *,
+    provider_id: int | None = None,
+    home_id: int | None = None,
+    user_id: int | None = None,
+) -> dict[str, Any]:
     if not os.path.exists(file_path):
         raise RuntimeError("Audio file not found")
 
@@ -83,20 +73,19 @@ def _transcribe_audio_sync(file_path: str) -> dict[str, Any]:
     if os.path.getsize(file_path) > MAX_AUDIO_BYTES:
         raise RuntimeError("Audio file is too large")
 
-    mime_type = _get_audio_mime_type(file_path)
+    result = governed_transcribe_audio_file(
+        file_path,
+        feature=FEATURE_AI_NOTES,
+        provider_id=provider_id,
+        home_id=home_id,
+        user_id=user_id,
+        data_classification=DataClassification.CONFIDENTIAL_CHILD,
+        metadata={"route": "ai_notes_service.transcribe"},
+    )
 
-    with open(file_path, "rb") as audio_file:
-        result = client.audio.transcriptions.create(
-            model="gpt-4o-transcribe",  # ✅ FIXED MODEL
-            file=(os.path.basename(file_path), audio_file, mime_type)
-        )
+    text = _normalise_text(result.get("transcript"))
+    segments = _normalise_speaker_segments(result.get("segments") or [])
 
-    result_dict = result.model_dump() if hasattr(result, "model_dump") else result
-
-    text = _normalise_text(result_dict.get("text"))
-    segments = _normalise_speaker_segments(result_dict.get("segments") or [])
-
-    # ✅ SAFE FALLBACK (prevents crashes)
     if not segments and text:
         segments = [{
             "id": "seg_1",
@@ -113,14 +102,26 @@ def _transcribe_audio_sync(file_path: str) -> dict[str, Any]:
     return {
         "transcript": _truncate_text(text),
         "segments": segments,
-        "duration": result_dict.get("duration")
+        "duration": result.get("duration")
     }
 
 
-async def transcribe_audio(file_path: str) -> dict[str, Any]:
+async def transcribe_audio(
+    file_path: str,
+    *,
+    provider_id: int | None = None,
+    home_id: int | None = None,
+    user_id: int | None = None,
+) -> dict[str, Any]:
     try:
         return await asyncio.wait_for(
-            asyncio.to_thread(_transcribe_audio_sync, file_path),
+            asyncio.to_thread(
+                _transcribe_audio_sync,
+                file_path,
+                provider_id=provider_id,
+                home_id=home_id,
+                user_id=user_id,
+            ),
             timeout=180
         )
     except asyncio.TimeoutError:
@@ -128,10 +129,6 @@ async def transcribe_audio(file_path: str) -> dict[str, Any]:
     except Exception as e:
         raise RuntimeError(f"Transcription failed: {str(e)}")
 
-
-# =========================
-# AI NOTE GENERATION
-# =========================
 
 def _build_meeting_note_prompt(transcript: str):
     today = datetime.now(timezone.utc).strftime("%d %B %Y")
@@ -150,64 +147,112 @@ Transcript:
     return system_prompt, user_prompt
 
 
-def _generate_note_sync(transcript: str):
+def _generate_note_sync(
+    transcript: str,
+    *,
+    provider_id: int | None = None,
+    home_id: int | None = None,
+    user_id: int | None = None,
+):
     transcript = _truncate_text(transcript)
 
     if not transcript:
         return {"note": "", "safeguarding_flag": False, "safeguarding_reason": "No transcript"}
 
-    system_prompt, user_prompt = _build_meeting_note_prompt(transcript)
+    redacted, _ = redact_plain_text(transcript, mode="strict")
+    system_prompt, user_prompt = _build_meeting_note_prompt(redacted)
 
-    response = client.chat.completions.create(
+    response = try_governed_draft_text(
+        feature=FEATURE_AI_NOTES,
+        system_prompt=system_prompt,
+        prompt=user_prompt,
         model="gpt-4.1-mini",
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
-        ],
-        temperature=0.2,
-        response_format={"type": "json_object"}
+        provider_id=provider_id,
+        home_id=home_id,
+        user_id=user_id,
+        data_classification=DataClassification.CONFIDENTIAL_CHILD,
+        metadata={"route": "ai_notes_service.generate_note", "draft_only": True},
     )
+    if response is None:
+        return {
+            "note": redacted,
+            "safeguarding_flag": False,
+            "safeguarding_reason": "External AI disabled — draft requires human review",
+            "draft_only": True,
+        }
 
     try:
-        return json.loads(response.choices[0].message.content)
-    except:
-        return {"note": response.choices[0].message.content}
+        return json.loads(response.text)
+    except Exception:
+        return {"note": response.text, "draft_only": True}
 
 
-async def generate_note(transcript: str):
-    return await asyncio.to_thread(_generate_note_sync, transcript)
-
-
-# =========================
-# EDIT NOTE
-# =========================
-
-async def edit_note(text: str, mode: str, instruction: str = ""):
-    response = client.chat.completions.create(
-        model="gpt-4.1-mini",
-        messages=[
-            {"role": "system", "content": "Edit professionally."},
-            {"role": "user", "content": text}
-        ]
+async def generate_note(
+    transcript: str,
+    *,
+    provider_id: int | None = None,
+    home_id: int | None = None,
+    user_id: int | None = None,
+):
+    return await asyncio.to_thread(
+        _generate_note_sync,
+        transcript,
+        provider_id=provider_id,
+        home_id=home_id,
+        user_id=user_id,
     )
-    return response.choices[0].message.content
 
 
-# =========================
-# ACTION EXTRACTION
-# =========================
-
-async def extract_actions(text: str):
-    response = client.chat.completions.create(
+async def edit_note(
+    text: str,
+    mode: str,
+    instruction: str = "",
+    *,
+    provider_id: int | None = None,
+    home_id: int | None = None,
+    user_id: int | None = None,
+):
+    redacted, _ = redact_plain_text(text, mode="strict")
+    response = try_governed_draft_text(
+        feature=FEATURE_AI_NOTES,
+        system_prompt="Edit professionally. Draft for human review only.",
+        prompt=f"Mode: {mode}\nInstruction: {instruction}\n\nText:\n{redacted}",
         model="gpt-4.1-mini",
-        messages=[
-            {"role": "system", "content": "Extract actions as JSON list"},
-            {"role": "user", "content": text}
-        ]
+        provider_id=provider_id,
+        home_id=home_id,
+        user_id=user_id,
+        data_classification=DataClassification.CONFIDENTIAL_CHILD,
+        metadata={"route": "ai_notes_service.edit_note", "draft_only": True},
     )
+    if response is None:
+        return redacted
+    return response.text
+
+
+async def extract_actions(
+    text: str,
+    *,
+    provider_id: int | None = None,
+    home_id: int | None = None,
+    user_id: int | None = None,
+):
+    redacted, _ = redact_plain_text(text, mode="strict")
+    response = try_governed_draft_text(
+        feature=FEATURE_AI_NOTES,
+        system_prompt="Extract actions as JSON list with key actions",
+        prompt=redacted,
+        model="gpt-4.1-mini",
+        provider_id=provider_id,
+        home_id=home_id,
+        user_id=user_id,
+        data_classification=DataClassification.CONFIDENTIAL_CHILD,
+        metadata={"route": "ai_notes_service.extract_actions", "draft_only": True},
+    )
+    if response is None:
+        return []
 
     try:
-        parsed = json.loads(response.choices[0].message.content)
+        parsed = json.loads(response.text)
         return parsed.get("actions", [])
-    except:
+    except Exception:
         return []

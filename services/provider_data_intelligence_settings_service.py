@@ -31,7 +31,18 @@ class ProviderDataIntelligenceSettingsService:
         external_ai_enabled = _env_bool("AI_EXTERNAL_PROCESSING_ENABLED", False)
         base_features = ["metadata", "orb_text_fallback", "orb_chat_stream"]
         if external_ai_enabled:
-            base_features.extend(["report_drafting", "risk_drafting"])
+            base_features.extend(
+                [
+                    "report_drafting",
+                    "risk_drafting",
+                    "document_generation",
+                    "document_ai_review",
+                    "ai_notes",
+                    "dictate",
+                    "dictate_edit",
+                    "knowledge_embedding",
+                ]
+            )
         return ProviderDataIntelligenceSettings(
             provider_id=provider_id,
             home_id=home_id,

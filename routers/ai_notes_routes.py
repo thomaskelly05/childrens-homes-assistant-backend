@@ -21,6 +21,7 @@ from db.ai_note_versions_db import (
     list_ai_note_versions,
     get_ai_note_version
 )
+from services.ai_external_call_governance import governance_ids_from_user
 from services.ai_notes_service import (
     transcribe_audio,
     generate_note,
@@ -223,7 +224,13 @@ async def transcribe_note_audio(
         if not os.path.exists(temp_path) or os.path.getsize(temp_path) == 0:
             raise HTTPException(status_code=400, detail="Uploaded file is empty")
 
-        result = await transcribe_audio(temp_path)
+        ids = governance_ids_from_user(current_user)
+        result = await transcribe_audio(
+            temp_path,
+            provider_id=ids["provider_id"],
+            home_id=ids["home_id"],
+            user_id=ids["user_id"],
+        )
 
         return {
             "ok": True,
@@ -253,7 +260,13 @@ async def generate_ai_note(
         raise HTTPException(status_code=400, detail="Transcript required")
 
     try:
-        result = await generate_note(transcript)
+        ids = governance_ids_from_user(current_user)
+        result = await generate_note(
+            transcript,
+            provider_id=ids["provider_id"],
+            home_id=ids["home_id"],
+            user_id=ids["user_id"],
+        )
 
         return {
             "ok": True,
@@ -285,10 +298,14 @@ async def edit_ai_note(
         raise HTTPException(status_code=400, detail="Edit mode required")
 
     try:
+        ids = governance_ids_from_user(current_user)
         edited = await edit_note(
             text=text,
             mode=mode,
-            instruction=instruction
+            instruction=instruction,
+            provider_id=ids["provider_id"],
+            home_id=ids["home_id"],
+            user_id=ids["user_id"],
         )
 
         return {
@@ -312,7 +329,13 @@ async def extract_ai_note_actions(
         raise HTTPException(status_code=400, detail="Text required")
 
     try:
-        actions = await extract_actions(text)
+        ids = governance_ids_from_user(current_user)
+        actions = await extract_actions(
+            text,
+            provider_id=ids["provider_id"],
+            home_id=ids["home_id"],
+            user_id=ids["user_id"],
+        )
         return {
             "ok": True,
             "actions": actions

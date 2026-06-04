@@ -66,17 +66,27 @@ class OrbEmbeddingService:
         if not cleaned:
             return {"available": True, "embeddings": [], "model": self._model}
 
-        api_key = _text(os.getenv("OPENAI_API_KEY"))
         try:
-            from openai import OpenAI
+            from services.ai_external_call_governance import FEATURE_KNOWLEDGE_EMBEDDING, governed_embeddings_create
 
-            client = OpenAI(api_key=api_key)
             all_vectors: list[list[float]] = []
             for i in range(0, len(cleaned), self._batch_size):
                 batch = cleaned[i : i + self._batch_size]
-                response = client.embeddings.create(model=self._model, input=batch)
-                ordered = sorted(response.data, key=lambda item: item.index)
-                all_vectors.extend([list(item.embedding) for item in ordered])
+                result = governed_embeddings_create(
+                    batch,
+                    feature=FEATURE_KNOWLEDGE_EMBEDDING,
+                    model=self._model,
+                    metadata={"route": "orb_embedding_service.embed_many"},
+                )
+                if not result.get("available"):
+                    return {
+                        "available": False,
+                        "embeddings": [],
+                        "model": self._model,
+                        "error": result.get("reason") or result.get("error") or "embedding_blocked",
+                        "blocked": bool(result.get("blocked")),
+                    }
+                all_vectors.extend(result.get("embeddings") or [])
             return {"available": True, "embeddings": all_vectors, "model": self._model}
         except Exception as exc:
             logger.debug("ORB embedding request failed", exc_info=True)

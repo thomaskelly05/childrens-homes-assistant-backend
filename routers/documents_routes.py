@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
-from openai import OpenAI
 from docx import Document
 from docx.enum.section import WD_ORIENT
 from psycopg2.extras import RealDictCursor
@@ -15,6 +14,13 @@ import logging
 
 from auth.session_user import get_current_user
 from db.connection import get_db
+from schemas.data_protection import DataClassification
+from services.ai_external_call_governance import (
+    FEATURE_DOCUMENT_GENERATION,
+    governance_ids_from_user,
+    governed_draft_text,
+    redact_plain_text,
+)
 from services.os_sync_hooks import sync_after_save
 
 router = APIRouter(
@@ -24,7 +30,6 @@ router = APIRouter(
 
 logger = logging.getLogger(__name__)
 limiter = Limiter(key_func=get_remote_address)
-client = OpenAI()
 
 ALLOWED_ROLES = {"manager", "admin"}
 MAX_DESCRIPTION_LENGTH = 8000
@@ -195,47 +200,65 @@ def judgement_areas_for_document(document_type: str) -> list[str]:
     return ["experiences_and_progress"]
 
 
-def safe_model_text(prompt: str) -> str:
+def _document_classification(document_type: str) -> DataClassification:
+    if document_type in {"safeguarding", "incident", "risk"}:
+        return DataClassification.SAFEGUARDING_SENSITIVE
+    return DataClassification.CONFIDENTIAL_CHILD
+
+
+def safe_model_text(prompt: str, *, current_user: dict, document_type: str) -> str:
+    ids = governance_ids_from_user(current_user)
+    redacted_prompt, _ = redact_plain_text(
+        prompt,
+        mode="safeguarding_strict"
+        if document_type in {"safeguarding", "incident", "risk"}
+        else "strict",
+    )
     try:
-        res = client.chat.completions.create(
+        response = governed_draft_text(
+            feature=FEATURE_DOCUMENT_GENERATION,
+            system_prompt=(
+                "You write professional, factual UK residential childcare documents. "
+                "Do not include markdown fences. Do not invent facts. "
+                "Use clear headings and plain professional language. "
+                "Output is draft-only and requires human review before record use."
+            ),
+            prompt=redacted_prompt,
             model="gpt-4o-mini",
-            messages=[
-                {
-                    "role": "system",
-                    "content": (
-                        "You write professional, factual UK residential childcare documents. "
-                        "Do not include markdown fences. Do not invent facts. "
-                        "Use clear headings and plain professional language."
-                    ),
-                },
-                {"role": "user", "content": prompt},
-            ],
-            temperature=0.2,
+            provider_id=ids["provider_id"],
+            home_id=ids["home_id"],
+            user_id=ids["user_id"],
+            data_classification=_document_classification(document_type),
+            metadata={"route": "documents_routes.safe_model_text", "document_type": document_type},
         )
-        return (res.choices[0].message.content or "").strip()
+        return (response.text or "").strip()
+    except HTTPException:
+        raise
     except Exception:
-        logger.exception("OpenAI text generation failed")
+        logger.exception("Governed document text generation failed")
         raise HTTPException(status_code=502, detail="Document generation service failed")
 
 
-def safe_model_json(prompt: str) -> list[dict]:
+def safe_model_json(prompt: str, *, current_user: dict, document_type: str) -> list[dict]:
+    ids = governance_ids_from_user(current_user)
+    redacted_prompt, _ = redact_plain_text(prompt, mode="strict")
     try:
-        res = client.chat.completions.create(
+        response = governed_draft_text(
+            feature=FEATURE_DOCUMENT_GENERATION,
+            system_prompt=(
+                "Return valid JSON only. "
+                "Output an object with key 'risks' containing a list of exactly 5 risk items. "
+                "Draft for human review only."
+            ),
+            prompt=redacted_prompt,
             model="gpt-4o-mini",
-            response_format={"type": "json_object"},
-            messages=[
-                {
-                    "role": "system",
-                    "content": (
-                        "Return valid JSON only. "
-                        "Output an object with key 'risks' containing a list of exactly 5 risk items."
-                    ),
-                },
-                {"role": "user", "content": prompt},
-            ],
-            temperature=0.1,
+            provider_id=ids["provider_id"],
+            home_id=ids["home_id"],
+            user_id=ids["user_id"],
+            data_classification=_document_classification(document_type),
+            metadata={"route": "documents_routes.safe_model_json", "document_type": document_type},
         )
-        raw = (res.choices[0].message.content or "").strip()
+        raw = (response.text or "").strip()
         parsed = json.loads(raw)
 
         risks = parsed.get("risks")
@@ -301,7 +324,7 @@ Follow Up Actions
 Situation:
 {payload.description}
 """
-    text = safe_model_text(prompt)
+    text = safe_model_text(prompt, current_user=current_user, document_type="incident")
     doc = write_simple_doc("Incident Report", text)
 
     audit_id = audit_document_action(
@@ -349,7 +372,7 @@ Return JSON as:
 Situation:
 {payload.description}
 """
-    risks = safe_model_json(prompt)
+    risks = safe_model_json(prompt, current_user=current_user, document_type="risk")
 
     doc = Document()
     section = doc.sections[0]
@@ -428,7 +451,7 @@ Next Actions
 Notes:
 {payload.description}
 """
-    text = safe_model_text(prompt)
+    text = safe_model_text(prompt, current_user=current_user, document_type="daily-log")
     doc = write_simple_doc("Daily Log Entry", text)
 
     audit_id = audit_document_action(
@@ -470,7 +493,7 @@ Tasks for Next Shift
 Notes:
 {payload.description}
 """
-    text = safe_model_text(prompt)
+    text = safe_model_text(prompt, current_user=current_user, document_type="handover")
     doc = write_simple_doc("Shift Handover", text)
 
     audit_id = audit_document_action(
@@ -511,7 +534,7 @@ Outcome
 Concern:
 {payload.description}
 """
-    text = safe_model_text(prompt)
+    text = safe_model_text(prompt, current_user=current_user, document_type="safeguarding")
     doc = write_simple_doc("Safeguarding Concern Record", text)
 
     audit_id = audit_document_action(
@@ -551,7 +574,7 @@ Future Actions
 Reflection:
 {payload.description}
 """
-    text = safe_model_text(prompt)
+    text = safe_model_text(prompt, current_user=current_user, document_type="reflection")
     doc = write_simple_doc("Reflective Practice Record", text)
 
     audit_id = audit_document_action(

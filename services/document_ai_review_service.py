@@ -5,13 +5,15 @@ import logging
 import os
 from typing import Any
 
-from openai import OpenAI
-
+from schemas.data_protection import DataClassification
+from services.ai_external_call_governance import (
+    FEATURE_DOCUMENT_AI_REVIEW,
+    redact_plain_text,
+    try_governed_draft_text,
+)
 from services.document_rules_engine import get_document_rule_payload, suggest_document_links
 
 logger = logging.getLogger("indicare.document_ai_review")
-
-client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 
 AI_REVIEW_ACTIONS = {
@@ -221,6 +223,9 @@ def review_document_with_ai(
     payload: dict[str, Any] | None,
     actions: list[str] | None = None,
     model: str = "gpt-4o-mini",
+    provider_id: int | None = None,
+    home_id: int | None = None,
+    user_id: int | None = None,
 ) -> dict[str, Any]:
     clean_document_type = _safe_string(document_type).lower()
     clean_payload = _normalise_payload(payload)
@@ -244,25 +249,51 @@ def review_document_with_ai(
 
     prompt = _build_system_prompt(clean_document_type, rule, clean_actions)
 
+    redacted_source, _ = redact_plain_text(source_text, mode="strict")
+    redacted_payload = {
+        key: redact_plain_text(_safe_string(value), mode="strict")[0]
+        for key, value in clean_payload.items()
+    }
     user_message = f"""
 DOCUMENT PAYLOAD:
-{json.dumps(clean_payload, ensure_ascii=False, indent=2)}
+{json.dumps(redacted_payload, ensure_ascii=False, indent=2)}
 
 FULL DOCUMENT TEXT:
-{source_text}
+{redacted_source}
 """.strip()
 
-    try:
-        response = client.chat.completions.create(
-            model=model,
-            temperature=0.2,
-            messages=[
-                {"role": "system", "content": prompt},
-                {"role": "user", "content": user_message},
-            ],
-        )
+    classification = (
+        DataClassification.SAFEGUARDING_SENSITIVE
+        if clean_document_type in {"safeguarding", "incident", "allegation"}
+        else DataClassification.CONFIDENTIAL_CHILD
+    )
 
-        content = _safe_string(response.choices[0].message.content if response.choices else "")
+    try:
+        gateway_response = try_governed_draft_text(
+            feature=FEATURE_DOCUMENT_AI_REVIEW,
+            system_prompt=prompt,
+            prompt=user_message,
+            model=model,
+            provider_id=provider_id,
+            home_id=home_id,
+            user_id=user_id,
+            data_classification=classification,
+            metadata={
+                "route": "document_ai_review_service.review_document_with_ai",
+                "document_type": clean_document_type,
+                "draft_only": True,
+            },
+        )
+        if gateway_response is None:
+            return {
+                "ok": True,
+                "review": _fallback_response(clean_document_type, clean_payload, clean_actions),
+                "governance_blocked": True,
+                "draft_only": True,
+                "human_review_required": True,
+            }
+
+        content = _safe_string(gateway_response.text)
         parsed = _extract_json(content)
 
         if not parsed:
@@ -313,6 +344,8 @@ FULL DOCUMENT TEXT:
         return {
             "ok": True,
             "review": parsed,
+            "draft_only": True,
+            "human_review_required": True,
         }
 
     except Exception:

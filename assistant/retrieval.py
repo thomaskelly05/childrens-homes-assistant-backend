@@ -6,15 +6,13 @@ import os
 import time
 from typing import Any
 
-from openai import OpenAI
 from psycopg2.extras import RealDictCursor
 
 from db.connection import get_db_connection, release_db_connection
+from schemas.data_protection import DataClassification
+from services.ai_external_call_governance import FEATURE_KNOWLEDGE_EMBEDDING, governed_embeddings_create
 
 logger = logging.getLogger("indicare.retrieval")
-
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
-client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
 
 EMBEDDING_MODEL = os.environ.get("EMBEDDING_MODEL", "text-embedding-3-small")
 EMBEDDING_CACHE_TTL_SECONDS = int(os.environ.get("EMBEDDING_CACHE_TTL_SECONDS", "900"))
@@ -215,24 +213,38 @@ def _build_query_text(
     return _trim_text("\n".join(parts).strip(), MAX_EMBED_TEXT_CHARS)
 
 
-def embed_query(text: str) -> list[float]:
+def embed_query(
+    text: str,
+    *,
+    provider_id: int | None = None,
+    home_id: int | None = None,
+    user_id: int | None = None,
+) -> list[float]:
     safe_text = _trim_text(text, MAX_EMBED_TEXT_CHARS)
-
-    if client is None:
-        raise RuntimeError(
-            "OPENAI_API_KEY is missing; knowledge retrieval cannot create embeddings."
-        )
 
     cached = _get_cached_embedding(safe_text)
     if cached is not None:
         return cached
 
-    response = client.embeddings.create(
+    result = governed_embeddings_create(
+        [safe_text],
+        feature=FEATURE_KNOWLEDGE_EMBEDDING,
         model=EMBEDDING_MODEL,
-        input=safe_text,
+        provider_id=provider_id,
+        home_id=home_id,
+        user_id=user_id,
+        data_classification=DataClassification.CONFIDENTIAL_CHILD,
+        metadata={"route": "assistant.retrieval.embed_query"},
     )
+    if not result.get("available"):
+        reason = result.get("reason") or result.get("error") or "embedding_blocked"
+        raise RuntimeError(f"Knowledge retrieval embedding unavailable: {reason}")
 
-    embedding = response.data[0].embedding
+    embeddings = result.get("embeddings") or []
+    if not embeddings:
+        raise RuntimeError("Knowledge retrieval returned no embedding vector")
+
+    embedding = embeddings[0]
     _set_cached_embedding(safe_text, embedding)
 
     return embedding

@@ -1,10 +1,19 @@
 from typing import Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from openai import OpenAI
 
 from auth.session_user import get_current_user
+from schemas.data_protection import DataClassification
+from services.ai_external_call_governance import (
+    FEATURE_REPORT_DRAFTING,
+    governance_ids_from_user,
+    governed_draft_text,
+    redact_plain_text,
+)
+from services.provider_data_intelligence_settings_service import (
+    provider_data_intelligence_settings_service,
+)
 
 router = APIRouter(
     prefix="/reports",
@@ -12,8 +21,6 @@ router = APIRouter(
     dependencies=[Depends(get_current_user)],
 )
 compat_router = APIRouter(prefix="/api/reports", tags=["Reports compatibility"])
-
-client = OpenAI()
 
 
 class IncidentRequest(BaseModel):
@@ -29,7 +36,22 @@ class ReportRequest(BaseModel):
 
 
 @router.post("/incident")
-def generate_incident_report(payload: IncidentRequest):
+def generate_incident_report(
+    payload: IncidentRequest,
+    current_user: dict[str, Any] = Depends(get_current_user),
+):
+    ids = governance_ids_from_user(current_user)
+    settings = provider_data_intelligence_settings_service.defaults(
+        provider_id=ids["provider_id"],
+        home_id=ids["home_id"],
+    )
+    if not settings.report_ai_drafting_enabled:
+        raise HTTPException(
+            status_code=403,
+            detail="Report AI drafting is disabled for this provider",
+        )
+
+    redacted_description, _ = redact_plain_text(payload.description, mode=settings.redaction_mode or "strict")
     prompt = f"""
 You help residential children's home staff write structured incident reports.
 
@@ -47,17 +69,25 @@ Reflection
 Next Steps
 
 Incident description:
-{payload.description}
+{redacted_description}
 """
 
-    response = client.chat.completions.create(
+    response = governed_draft_text(
+        feature=FEATURE_REPORT_DRAFTING,
+        prompt=prompt,
         model="gpt-4o-mini",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.3,
+        provider_id=ids["provider_id"],
+        home_id=ids["home_id"],
+        user_id=ids["user_id"],
+        data_classification=DataClassification.SAFEGUARDING_SENSITIVE,
+        metadata={"route": "reports_routes.incident", "draft_only": True},
     )
 
     return {
-        "report": response.choices[0].message.content
+        "report": response.text,
+        "draft_only": True,
+        "human_review_required": True,
+        "external_ai_used": response.external_ai_used,
     }
 
 

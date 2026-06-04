@@ -8,9 +8,13 @@ import os
 from typing import Any
 from uuid import uuid4
 
-from openai import OpenAI
-
 from core.policy_engine import policy_engine
+from schemas.data_protection import DataClassification
+from services.ai_external_call_governance import (
+    FEATURE_DICTATE,
+    redact_plain_text,
+    try_governed_draft_text,
+)
 from db.ai_note_versions_db import ensure_ai_note_versions_table, insert_ai_note_version
 from db.ai_notes_db import ensure_ai_meetings_table, insert_ai_meeting_note, update_ai_meeting_note
 from db.connection import get_db_connection, release_db_connection
@@ -108,13 +112,6 @@ def _requires_consent(request: OrbDictateGenerateRequest, note_type: str) -> boo
     if mode in MULTI_PERSON_MODES:
         return True
     return note_type in MULTI_PERSON_NOTE_TYPES
-
-
-def _openai_client() -> OpenAI | None:
-    key = os.environ.get("OPENAI_API_KEY", "").strip()
-    if not key:
-        return None
-    return OpenAI(api_key=key)
 
 
 def _truncate(text: str, max_len: int = 120_000) -> str:
@@ -251,7 +248,13 @@ def _build_generate_prompt(request: OrbDictateGenerateRequest, note_type: str) -
     return system, user
 
 
-def generate_dictate_note(request: OrbDictateGenerateRequest) -> OrbDictateGenerateResponse:
+def generate_dictate_note(
+    request: OrbDictateGenerateRequest,
+    *,
+    provider_id: int | None = None,
+    home_id: int | None = None,
+    user_id: int | None = None,
+) -> OrbDictateGenerateResponse:
     note_type = _resolve_note_type(request)
     if request.source in {"dictation", "orb_voice", "upload"} and request.conversation_consent_confirmed is False:
         raise ValueError("Conversation or debrief recording requires consent confirmation.")
@@ -276,23 +279,26 @@ def generate_dictate_note(request: OrbDictateGenerateRequest) -> OrbDictateGener
     if not participants:
         participants = suggest_participants_from_text(request.input_text)
 
-    client = _openai_client()
-    if not client:
+    system, user = _build_generate_prompt(request, note_type)
+    redacted_user, _ = redact_plain_text(user, mode="strict")
+
+    gateway_response = try_governed_draft_text(
+        feature=FEATURE_DICTATE,
+        system_prompt=system,
+        prompt=redacted_user,
+        model=os.environ.get("ORB_DICTATE_MODEL", "gpt-4.1-mini"),
+        provider_id=provider_id,
+        home_id=home_id,
+        user_id=user_id,
+        data_classification=DataClassification.CONFIDENTIAL_CHILD,
+        metadata={"route": "orb_dictate_service.generate_dictate_note", "note_type": note_type},
+    )
+    if gateway_response is None:
         req = request.model_copy(update={"participants": participants, "segments": segments})
         return _fallback_generate(req)
 
-    system, user = _build_generate_prompt(request, note_type)
     try:
-        response = client.chat.completions.create(
-            model=os.environ.get("ORB_DICTATE_MODEL", "gpt-4.1-mini"),
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": user},
-            ],
-            temperature=0.2,
-            response_format={"type": "json_object"},
-        )
-        raw = response.choices[0].message.content or "{}"
+        raw = gateway_response.text or "{}"
         parsed = json.loads(raw)
     except Exception:
         logger.exception("ORB Dictate generation failed — using structured fallback")
