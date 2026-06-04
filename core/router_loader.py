@@ -29,6 +29,7 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
             "routers.session_security_routes",
             "routers.account_routes",
             "routers.admin_routes",
+            "routers.admin_ai_settings_routes",
             "routers.profile_routes",
             "routers.billing_routes",
             "routers.legal_acceptance_routes",

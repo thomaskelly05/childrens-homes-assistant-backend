@@ -77,6 +77,11 @@ export default async function SettingsPage() {
           empty={<EmptyState title="No AI governance returned" description="No assistant governance settings are available for this session." />}
         />
         <p className="mt-5 rounded-2xl border border-amber-100 bg-amber-50 p-4 text-sm leading-6 text-amber-900">Assistant output remains draft support. Safeguarding, regulatory and clinical decisions require professional judgement and manager oversight.</p>
+        <div className="mt-5">
+          <Link href="/settings/ai-trust" className="inline-flex rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white">
+            AI Trust &amp; Data Settings
+          </Link>
+        </div>
       </Card>
       <Card>
         <OperationalLifecyclePanel
@@ -104,7 +109,7 @@ export default async function SettingsPage() {
             ['Users / Roles', 'Available through auth/session and manager routes where permitted.'],
             ['Audit', 'Manager audit routes exist; record-level audit panels still need a shared adapter.'],
             ['Retention', 'No unified retention endpoint was found during the audit.'],
-            ['Assistant Policy', 'AI gateway and ORB status are wired; provider policy editing needs backend support.']
+            ['Assistant Policy', 'AI gateway and ORB status are wired; provider admins can edit trust settings at /settings/ai-trust.']
           ].map(([title, body]) => (
             <div key={title} className="rounded-[22px] border border-slate-100 bg-slate-50 p-4">
               <h3 className="text-sm font-black text-slate-950">{title}</h3>
