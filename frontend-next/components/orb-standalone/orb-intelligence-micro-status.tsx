@@ -7,10 +7,12 @@ import { intelligenceMicroStatusForDepth } from '@/lib/orb/indicare-intelligence
 /** Subtle rotating micro-status while residential+ answers are prepared. */
 export function OrbIntelligenceMicroStatus({
   active,
-  expertDepth
+  expertDepth,
+  backendMessage
 }: {
   active: boolean
   expertDepth?: string
+  backendMessage?: string | null
 }) {
   const [index, setIndex] = useState(0)
 
@@ -25,7 +27,7 @@ export function OrbIntelligenceMicroStatus({
 
   if (!active) return null
 
-  const message = intelligenceMicroStatusForDepth(expertDepth, index)
+  const message = intelligenceMicroStatusForDepth(expertDepth, index, backendMessage)
   if (!message) return null
 
   return (

@@ -1,7 +1,15 @@
 /** SSE block parser for standalone ORB streaming (no network/auth dependencies). */
 
+export type StandaloneOrbStreamStatus = {
+  type?: string
+  stage: string
+  message?: string
+  expert_depth?: string
+}
+
 export type StandaloneOrbStreamEvent =
   | { event: 'token'; delta: string }
+  | { event: 'status'; status: StandaloneOrbStreamStatus }
   // Metadata is normalised by standalone-client.ts into the concrete ORB response shape.
   // Keep this permissive so typed callers can pass parser payloads through without
   // production build failures when metadata gains new dynamic fields.
@@ -32,6 +40,13 @@ export function parseStandaloneOrbSseBlock(block: string): StandaloneOrbStreamEv
     const record = parsed as { delta?: string }
     if (typeof record.delta === 'string') {
       return { event: 'token', delta: record.delta }
+    }
+    return null
+  }
+  if (eventName === 'status') {
+    const record = parsed as StandaloneOrbStreamStatus
+    if (typeof record.stage === 'string') {
+      return { event: 'status', status: record }
     }
     return null
   }

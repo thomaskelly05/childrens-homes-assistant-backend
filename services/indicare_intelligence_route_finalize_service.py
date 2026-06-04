@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from services.indicare_intelligence_core_service import indicare_intelligence_core_service
+from services.orb_chat_timing_service import OrbChatTimingTracker
+
+logger = logging.getLogger("indicare.intelligence_finalize")
 
 CARE_RELATED_ACTION_IDS = frozenset(
     {
@@ -122,6 +126,7 @@ def finalize_standalone_intelligence(
     record_learning: bool = True,
     apply_gate_fixes: bool = True,
     sanitize_closer: Any | None = None,
+    timing: OrbChatTimingTracker | None = None,
 ) -> tuple[str, dict[str, Any]]:
     """Run quality gate + optional learning ledger; return answer and context fragments."""
     packet = dict(indicare_intelligence or {})
@@ -129,12 +134,18 @@ def finalize_standalone_intelligence(
     if not packet:
         return answer, meta
 
+    if timing:
+        timing.mark("finalise_start")
+
     summary = intelligence_context_summary(packet)
     meta["indicare_intelligence"] = summary
     meta["indicare_intelligence_core"] = summary
 
     quality_gate = indicare_intelligence_core_service.evaluate_answer(packet, answer)
     meta["answer_quality_gate"] = quality_gate
+
+    if timing:
+        timing.mark("quality_gate_complete")
 
     if apply_gate_fixes and not quality_gate.get("passed"):
         answer = apply_quality_gate_answer_fixes(
@@ -146,8 +157,20 @@ def finalize_standalone_intelligence(
         )
 
     if record_learning:
-        learning = indicare_intelligence_core_service.record_learning(packet, prompt_text=prompt_text)
-        meta["learning_ledger"] = learning
+        try:
+            learning = indicare_intelligence_core_service.record_learning(packet, prompt_text=prompt_text)
+            meta["learning_ledger"] = learning
+        except Exception as exc:
+            logger.warning(
+                "learning_ledger_record_failed error_type=%s",
+                type(exc).__name__,
+            )
+            meta["learning_ledger"] = {
+                "recorded": False,
+                "error": type(exc).__name__,
+            }
+        if timing:
+            timing.mark("ledger_complete")
 
     return answer, meta
 

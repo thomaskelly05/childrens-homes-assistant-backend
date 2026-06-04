@@ -2,15 +2,14 @@
 
 from __future__ import annotations
 
-import json
-import os
 from typing import Any
 
 from services.orb_gap_detection_service import orb_gap_detection_service
 from services.orb_quality_standards_brain_service import orb_quality_standards_brain_service
+from services.orb_static_intelligence_cache import load_static_json
 from services.orb_whole_child_lens_service import orb_whole_child_lens_service
 
-_SEQ_PATH = os.path.join(os.path.dirname(__file__), "..", "assistant", "knowledge", "orb_scenario_sequences.json")
+_SCENARIO_SEQUENCES_PATH = "assistant/knowledge/orb_scenario_sequences.json"
 
 
 class OrbMissingnessGraphService:
@@ -52,8 +51,7 @@ class OrbMissingnessGraphService:
         }
 
     def _sequence(self, sequence_id: str | None, message: str) -> dict[str, Any] | None:
-        with open(os.path.normpath(_SEQ_PATH), encoding="utf-8") as f:
-            data = json.load(f)
+        data = load_static_json(_SCENARIO_SEQUENCES_PATH)
         sequences = data.get("sequences") or {}
         if sequence_id and sequence_id in sequences:
             return sequences[sequence_id]

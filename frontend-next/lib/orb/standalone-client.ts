@@ -676,8 +676,11 @@ export async function queryStandaloneOrbConversation(
 
 export const sendStandaloneOrbMessage = queryStandaloneOrbConversation
 
+export type { StandaloneOrbStreamStatus } from '@/lib/orb/standalone-sse-parser'
+
 export type StandaloneOrbStreamEvent =
   | { event: 'token'; delta: string }
+  | { event: 'status'; status: import('@/lib/orb/standalone-sse-parser').StandaloneOrbStreamStatus }
   | { event: 'metadata'; payload: StandaloneOrbConversationResponse }
   | { event: 'done'; ok: boolean }
   | { event: 'error'; error: string; detail?: string }
@@ -687,6 +690,7 @@ export type { StandaloneOrbStreamEventBase }
 
 export type StandaloneOrbStreamCallbacks = {
   onToken: (delta: string, partial: string) => void
+  onStatus?: (status: import('@/lib/orb/standalone-sse-parser').StandaloneOrbStreamStatus) => void
   onMetadata?: (response: StandaloneOrbConversationResponse) => void
   onDone?: () => void
   onError?: (error: string, detail?: string) => void
@@ -819,6 +823,8 @@ export async function sendStandaloneOrbMessageStream(
           sawToken = true
           partial += event.delta
           callbacks.onToken(event.delta, partial)
+        } else if (event.event === 'status') {
+          callbacks.onStatus?.(event.status)
         } else if (event.event === 'metadata') {
           metadata = normaliseStreamMetadata(
             event.payload as StandaloneOrbConversationResponse,

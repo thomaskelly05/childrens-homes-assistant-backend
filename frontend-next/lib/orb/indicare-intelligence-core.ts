@@ -306,19 +306,21 @@ export function buildIntelligenceContextActionChips(options: {
   ]
 }
 
-export const ORB_INTELLIGENCE_MICRO_STATUS_MESSAGES = [
-  'Checking context…',
-  'Checking recording gaps…',
-  'Checking professional lenses…',
-  'Preparing answer…'
-] as const
+const MICRO_STATUS_BY_DEPTH: Record<string, readonly string[]> = {
+  residential_light: ['Checking context…', 'Preparing answer…'],
+  residential_standard: ['Checking recording gaps…', 'Preparing answer…'],
+  residential_deep: ['Checking safety, recording and oversight…', 'Preparing answer…'],
+  safeguarding_critical: ['Checking immediate safety steps…', 'Preparing answer…']
+}
 
 export function intelligenceMicroStatusForDepth(
   depth: string | undefined,
-  index: number
+  index: number,
+  backendMessage?: string | null
 ): string | null {
+  if (backendMessage?.trim()) return backendMessage.trim()
   const normalised = (depth || 'general_light').trim().toLowerCase()
   if (normalised === 'general_light') return null
-  const messages = ORB_INTELLIGENCE_MICRO_STATUS_MESSAGES
+  const messages = MICRO_STATUS_BY_DEPTH[normalised] ?? MICRO_STATUS_BY_DEPTH.residential_light
   return messages[index % messages.length] ?? messages[0]
 }
