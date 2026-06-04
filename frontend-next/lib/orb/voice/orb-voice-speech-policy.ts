@@ -83,6 +83,7 @@ function depthAllowsShortSpoken(depth: string, manualSpeak: boolean): boolean {
 
 export function resolveOrbVoiceSpeechDecision(input: ResolveOrbVoiceSpeechInput): OrbVoiceSpeechDecision {
   const depth = normaliseDepth(input.expertDepth ?? input.core?.expert_depth)
+  const manualSpeak = Boolean(input.manualSpeak)
   const blocked = shouldBlockAutoSpokenReply({
     voiceRepliesEnabled: input.voiceRepliesEnabled,
     privacyMode: input.privacyMode,
@@ -105,7 +106,7 @@ export function resolveOrbVoiceSpeechDecision(input: ResolveOrbVoiceSpeechInput)
     Boolean(input.lowSensoryMode)
 
   let blockedReason: string | null = null
-  if (!input.voiceRepliesEnabled && !input.manualSpeak) {
+  if (!input.voiceRepliesEnabled && !manualSpeak) {
     blockedReason = 'Voice replies are off — read ORB’s text answer below.'
   } else if (depth === 'safeguarding_critical') {
     blockedReason = SAFEGUARDING_CRITICAL_SPOKEN_BLOCKED_MESSAGE
@@ -114,7 +115,7 @@ export function resolveOrbVoiceSpeechDecision(input: ResolveOrbVoiceSpeechInput)
   } else if (highRiskTopic && !sensitiveAllowed) {
     blockedReason =
       'Spoken reply paused for privacy/safeguarding. ORB has shown the answer on screen.'
-  } else if (depth === 'residential_deep' && !input.manualSpeak) {
+  } else if (depth === 'residential_deep' && !manualSpeak) {
     blockedReason = 'Text-first for this topic — use Speak again if you need a short summary.'
   } else if (blocked) {
     blockedReason = 'Spoken reply paused for review — text answer shown below.'
@@ -122,7 +123,7 @@ export function resolveOrbVoiceSpeechDecision(input: ResolveOrbVoiceSpeechInput)
 
   const summary =
     input.writtenAnswer.trim() &&
-    (input.manualSpeak || !textOnlyPreferred || depthAllowsShortSpoken(depth, input.manualSpeak === true))
+    (manualSpeak || !textOnlyPreferred || depthAllowsShortSpoken(depth, manualSpeak))
       ? buildOrbSpokenSummary({
           writtenAnswer: input.writtenAnswer,
           userMessageHint: input.userMessageHint,
@@ -146,8 +147,8 @@ export function resolveOrbVoiceSpeechDecision(input: ResolveOrbVoiceSpeechInput)
     Boolean(spokenText) &&
     input.voiceRepliesEnabled &&
     !(depth === 'safeguarding_critical' && !sensitiveAllowed) &&
-    !(input.privacyMode && !input.manualSpeak) &&
-    !(input.lowSensoryMode && !input.manualSpeak)
+    !(input.privacyMode && !manualSpeak) &&
+    !(input.lowSensoryMode && !manualSpeak)
 
   return {
     allowAutoSpeak,
