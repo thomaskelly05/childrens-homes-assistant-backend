@@ -12,7 +12,12 @@ import { OrbVoiceMobileExperience } from '@/components/orb-standalone/orb-voice-
 import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
 import type { useStandaloneOrbVoice } from '@/components/orb-standalone/use-standalone-orb-voice'
 import { saveVoiceTranscript } from '@/lib/orb/voice/save-voice-transcript'
-import { shouldBlockAutoSpokenReply } from '@/lib/orb/indicare-intelligence-core'
+import {
+  extractAnswerQualityGate,
+  extractIndicareIntelligenceCore
+} from '@/lib/orb/indicare-intelligence-core'
+import { resolveOrbVoiceSpeechDecision } from '@/lib/orb/voice/orb-voice-speech-policy'
+import { stripMarkdownForSpeech } from '@/lib/orb/orb-speech-text'
 import { isOrbDeveloperMode } from '@/lib/orb/orb-developer-mode'
 import { isOrbVoiceDebugMode } from '@/lib/orb/orb-voice-debug'
 import { getOrbVoiceProfile, orbVoiceProfileLabel } from '@/lib/orb/voice/orb-voice-profiles'
@@ -170,6 +175,8 @@ export function OrbVoiceStation({
   pending = false,
   assistantReply,
   assistantReplyKey,
+  assistantReplyUserHint,
+  assistantReplyContext,
   onOpenDictate,
   onOpenVoiceSettings,
   subscriptionActive = true,
@@ -185,6 +192,8 @@ export function OrbVoiceStation({
   pending?: boolean
   assistantReply?: string | null
   assistantReplyKey?: string | null
+  assistantReplyUserHint?: string | null
+  assistantReplyContext?: Record<string, unknown> | null
   subscriptionActive?: boolean
   isAdminUser?: boolean
   onTypeInstead?: () => void
@@ -295,16 +304,34 @@ export function OrbVoiceStation({
     .join('\n\n')
   const displayedOrbReply = orbTextReply || orbReplyFromTurns
 
-  const spokenReplyBlocked = shouldBlockAutoSpokenReply({
-    voiceRepliesEnabled: voice.settings.voiceReplies,
-    expertDepth: undefined,
-    mode: undefined
-  })
-  const spokenReplyBlockedReason = !voice.settings.voiceReplies
-    ? 'Voice replies are off — read ORB’s text answer below.'
-    : spokenReplyBlocked
-      ? 'Spoken reply paused for review — text answer shown below.'
-      : null
+  const replyIntelCore = extractIndicareIntelligenceCore(assistantReplyContext ?? undefined)
+  const replyQualityGate = extractAnswerQualityGate(assistantReplyContext ?? undefined)
+  const speechDecision = displayedOrbReply
+    ? resolveOrbVoiceSpeechDecision({
+        writtenAnswer: displayedOrbReply,
+        userMessageHint: assistantReplyUserHint ?? browserTranscriptText,
+        voiceRepliesEnabled: voice.settings.voiceReplies,
+        privacyMode: voice.settings.privacyMode,
+        expertDepth: replyIntelCore?.expert_depth,
+        careRelevanceScore: replyIntelCore?.care_relevance_score,
+        qualityGate: replyQualityGate,
+        core: replyIntelCore,
+        spokenAnswerLength: voice.settings.spokenAnswerLength,
+        sensitiveSpokenRepliesEnabled: voice.settings.sensitiveSpokenReplies
+      })
+    : null
+  const spokenReplyBlockedReason =
+    speechDecision && !speechDecision.allowAutoSpeak ? speechDecision.blockedReason : null
+  const recentVoiceTurns = turns
+    .filter((t) => t.role === 'user' || t.role === 'assistant')
+    .slice(-6)
+
+  const handleSpeakAgain = useCallback(() => {
+    if (!displayedOrbReply || !speechDecision?.allowManualSpeak || !speechDecision.spokenText) return
+    const spoken = stripMarkdownForSpeech(speechDecision.spokenText)
+    if (!spoken.trim()) return
+    voice.speakAloud(spoken)
+  }, [displayedOrbReply, speechDecision, voice])
 
   const resolvedLaunchUiState = resolveOrbVoiceLaunchUiState({
     launchMode,
@@ -1073,14 +1100,21 @@ export function OrbVoiceStation({
             </button>
           ) : null}
 
-          {useBrowserLaunch && browserTranscriptText ? (
+          {(browserTranscriptText || voice.interimTranscript) && useBrowserLaunch ? (
             <div
-              className="orb-voice-transcript mt-6 max-h-[min(36vh,18rem)] w-full overflow-y-auto rounded-2xl border border-[var(--orb-line)]/40 bg-[var(--orb-surface-elevated)]/60 p-4 text-left backdrop-blur-md"
+              className="orb-voice-transcript mt-6 w-full rounded-2xl border border-[var(--orb-line)]/40 bg-[var(--orb-surface-elevated)]/60 p-4 text-left backdrop-blur-md"
               data-orb-voice-transcript
-              data-orb-voice-transcript-preview
+              data-orb-voice-you-said
             >
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-[#5ec8ff]/90">Your transcript</p>
-              <p className="mt-2 text-xs leading-5 text-[var(--orb-foreground)]">{browserTranscriptText}</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-[#5ec8ff]/90">You said</p>
+              <p className="mt-2 text-xs leading-5 text-[var(--orb-foreground)]">
+                {browserTranscriptText || voice.interimTranscript}
+              </p>
+              {voice.interimTranscript && !browserTranscriptText ? (
+                <p className="mt-1 text-[10px] italic text-[var(--orb-muted)]" data-orb-voice-interim>
+                  Listening…
+                </p>
+              ) : null}
             </div>
           ) : null}
 
@@ -1088,9 +1122,32 @@ export function OrbVoiceStation({
             <div
               className="orb-voice-reply mt-4 max-h-[min(36vh,18rem)] w-full overflow-y-auto rounded-2xl border border-[var(--orb-line)]/40 bg-[var(--orb-surface-elevated)]/60 p-4 text-left backdrop-blur-md"
               data-orb-voice-reply
+              data-orb-voice-orb-replied
               data-orb-voice-reply-key={assistantReplyKey ?? undefined}
             >
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-[#5ec8ff]/90">ORB</p>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-[#5ec8ff]/90">ORB replied</p>
+                <span
+                  className="text-[10px] text-[var(--orb-muted)]"
+                  data-orb-voice-speech-status={
+                    voice.speaking
+                      ? 'speaking'
+                      : spokenReplyBlockedReason
+                        ? 'blocked'
+                        : speechDecision?.allowAutoSpeak
+                          ? 'ready'
+                          : 'silent'
+                  }
+                >
+                  {voice.speaking
+                    ? 'Speaking…'
+                    : spokenReplyBlockedReason
+                      ? 'Speech paused'
+                      : voice.settings.voiceReplies
+                        ? 'Silent'
+                        : 'Voice replies off'}
+                </span>
+              </div>
               <p className="mt-2 whitespace-pre-wrap text-xs leading-5 text-[var(--orb-foreground)]">
                 {displayedOrbReply}
               </p>
@@ -1099,27 +1156,58 @@ export function OrbVoiceStation({
                   {spokenReplyBlockedReason}
                 </p>
               ) : null}
+              <div className="mt-3 flex flex-wrap gap-2">
+                {speechDecision?.allowManualSpeak ? (
+                  <button
+                    type="button"
+                    onClick={handleSpeakAgain}
+                    className="rounded-full border border-[var(--orb-line)] px-3 py-1.5 text-[10px] font-medium text-[var(--orb-foreground)]"
+                    data-orb-voice-speak-again
+                  >
+                    Speak again
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose()
+                    void onSendToOrb(browserTranscriptText || displayedOrbReply)
+                  }}
+                  className="rounded-full border border-[var(--orb-line)] px-3 py-1.5 text-[10px] font-medium text-[var(--orb-foreground)]"
+                  data-orb-voice-continue-chat
+                >
+                  Continue in chat
+                </button>
+              </div>
             </div>
           ) : pending ? (
             <div
               className="orb-voice-reply mt-4 w-full rounded-2xl border border-[var(--orb-line)]/40 bg-[var(--orb-surface-elevated)]/40 p-4"
               data-orb-voice-reply-pending
             >
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--orb-muted)]">ORB</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--orb-muted)]">ORB replied</p>
               <p className="mt-2 text-xs text-[var(--orb-muted)]">Preparing answer…</p>
             </div>
           ) : null}
 
-          {(displayedOrbReply || browserTranscriptText) && useBrowserLaunch ? (
-            <div className="mt-3 flex flex-wrap justify-center gap-2" data-orb-voice-continue-chat>
-              <button
-                type="button"
-                onClick={() => void onSendToOrb(browserTranscriptText || displayedOrbReply)}
-                className="rounded-full border border-[var(--orb-line)] px-3 py-1.5 text-xs font-medium text-[var(--orb-foreground)] hover:bg-[var(--orb-surface-hover)]"
-                data-orb-voice-send-to-chat
-              >
-                Continue in chat
-              </button>
+          {recentVoiceTurns.length > 1 ? (
+            <div
+              className="mt-4 w-full rounded-2xl border border-[var(--orb-line)]/30 p-3"
+              data-orb-voice-recent-turns
+            >
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--orb-muted)]">
+                Recent voice turns
+              </p>
+              <ul className="mt-2 space-y-2">
+                {recentVoiceTurns.map((line) => (
+                  <li key={line.id} className="text-[10px] leading-4 text-[var(--orb-muted)]">
+                    <span className="font-medium text-[var(--orb-foreground)]">
+                      {line.role === 'user' ? 'You' : 'ORB'}:
+                    </span>{' '}
+                    {line.text.length > 120 ? `${line.text.slice(0, 117)}…` : line.text}
+                  </li>
+                ))}
+              </ul>
             </div>
           ) : null}
 
@@ -1148,18 +1236,43 @@ export function OrbVoiceStation({
             </div>
           ) : null}
 
-          {transcriptAvailable && !useBrowserLaunch ? (
-            <div className="mt-4 w-full max-w-sm">
+          {(transcriptAvailable || browserTranscriptText) && onOpenDictate ? (
+            <div className="mt-4 flex w-full max-w-sm flex-col gap-2" data-orb-voice-dictate-bridge>
               <OrbVoiceTranscriptActions
-                transcript={voiceTranscriptText}
+                transcript={voiceTranscriptText || browserTranscriptText}
                 onCopy={handleCopyTranscript}
-                onSave={() => handleSaveTranscript()}
+                onSave={voice.settings.saveTranscript ? () => handleSaveTranscript() : undefined}
                 saving={savingTranscript}
-                onSendToDictate={
-                  onOpenDictate ? () => onOpenDictate(voiceTranscriptText) : undefined
-                }
-                onSendToOrb={() => onSendToOrb(voiceTranscriptText)}
+                onSendToDictate={() => onOpenDictate(voiceTranscriptText || browserTranscriptText)}
+                onSendToOrb={() => onSendToOrb(voiceTranscriptText || browserTranscriptText)}
               />
+              <button
+                type="button"
+                className="w-full rounded-full border border-[var(--orb-line)] px-3 py-2 text-xs text-[var(--orb-foreground)]"
+                data-orb-voice-to-record
+                onClick={() =>
+                  onOpenDictate(voiceTranscriptText || browserTranscriptText, 'daily_record', { studio: true })
+                }
+              >
+                Turn this into a record
+              </button>
+              <button
+                type="button"
+                className="w-full rounded-full border border-[var(--orb-line)] px-3 py-2 text-xs text-[var(--orb-foreground)]"
+                data-orb-voice-handover
+                onClick={() =>
+                  onOpenDictate(
+                    `Handover from ORB Voice session:\n\n${voiceTranscriptText || browserTranscriptText}`,
+                    'handover_note',
+                    { studio: true }
+                  )
+                }
+              >
+                Create handover from this conversation
+              </button>
+              <p className="text-[10px] leading-4 text-[var(--orb-muted)]" data-orb-voice-dictate-boundary>
+                Drafts open in Dictate for review — nothing is saved to live records automatically.
+              </p>
             </div>
           ) : null}
 

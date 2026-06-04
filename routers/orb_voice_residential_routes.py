@@ -29,6 +29,7 @@ from services.orb_voice_realtime_config import (
 )
 
 DEFAULT_OPENAI_REALTIME_MODEL = os.getenv("ORB_REALTIME_MODEL", "gpt-realtime").strip() or "gpt-realtime"
+from services.orb_voice_provider_service import OrbVoiceSpeakRequest, orb_voice_provider_service
 from services.orb_voice_realtime_session_store import orb_voice_realtime_session_store
 from services.orb_voice_realtime_ws_handler import orb_voice_realtime_ws_handler
 from services.orb_brain_metadata_service import attach_to_payload, build_brain_metadata
@@ -47,8 +48,14 @@ def _voice_status_payload(body: dict) -> dict:
 class OrbVoiceTextRequest(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
-    text: str = Field(..., min_length=1, max_length=50_000)
+    text: str | None = Field(default=None, max_length=50_000)
+    spoken_summary: str | None = Field(default=None, max_length=8_000)
     voice_id: str | None = Field(default=None, max_length=80)
+    voice_profile: str | None = Field(default=None, max_length=80)
+    expert_depth: str | None = Field(default=None, max_length=80)
+    privacy_mode: bool = False
+    low_sensory_mode: bool = False
+    manual_speak: bool = False
     rate: float = Field(default=1.0, ge=0.5, le=2.0)
 
 
@@ -61,6 +68,14 @@ class OrbVoiceTranscribeRequest(BaseModel):
 def _user_id(current_user: dict) -> int | None:
     try:
         value = current_user.get("user_id") or current_user.get("id")
+        return int(value) if value is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _provider_id(current_user: dict) -> int | None:
+    try:
+        value = current_user.get("provider_id")
         return int(value) if value is not None else None
     except (TypeError, ValueError):
         return None
@@ -372,43 +387,43 @@ async def orb_voice_transcribe(
     }
 
 
+@router.get("/provider-status")
+async def orb_voice_provider_status(current_user=Depends(require_orb_residential_auth)):
+    """Honest premium TTS availability — never exposes API keys."""
+    body = orb_voice_provider_service.provider_status(
+        provider_id=_provider_id(current_user),
+        home_id=None,
+    )
+    return _voice_status_payload(body)
+
+
 @router.post("/speak")
 async def orb_voice_speak(
     payload: OrbVoiceTextRequest,
-    _current_user=Depends(require_orb_residential_auth),
+    current_user=Depends(require_orb_residential_auth),
 ):
-    profile_id = normalise_profile_id(payload.voice_id)
-    resolved = resolve_voice_profile_for_session(profile_id)
-    openai_voice = resolve_openai_voice(profile_id)
+    spoken = (payload.spoken_summary or payload.text or "").strip()
+    if not spoken:
+        raise HTTPException(status_code=400, detail="spoken_summary or text is required")
 
-    if _provider_has_tts_credentials() and openai_voice and _openai_realtime_configured():
-        return {
-            "provider": "openai_realtime",
-            "text": payload.text,
-            "voice_id": profile_id,
-            "selected_voice_profile": profile_id,
-            "provider_voice": openai_voice,
-            "rate": payload.rate,
-            "audio_url": None,
-            "message": "Server TTS hook reserved — wire preview audio when OPENAI_API_KEY is set.",
-        }
-    if _provider_has_tts_credentials():
-        return {
-            "provider": "server",
-            "text": payload.text,
-            "voice_id": profile_id,
-            "selected_voice_profile": profile_id,
-            "provider_voice": openai_voice,
-            "rate": payload.rate,
-            "audio_url": None,
-            "message": "Server TTS hook reserved — wire ORB_VOICE_PROVIDER_NAME when ready.",
-        }
-    return {
-        "provider": "browser_fallback",
-        "text": payload.text,
-        "voice_id": profile_id,
-        "selected_voice_profile": profile_id,
-        "profile_label": resolved.get("profile_label"),
-        "rate": payload.rate,
-        "message": "No server audio generated. Use browser SpeechSynthesis with the returned text.",
-    }
+    profile_id = normalise_profile_id(payload.voice_profile or payload.voice_id)
+    result = orb_voice_provider_service.speak(
+        OrbVoiceSpeakRequest(
+            spoken_summary=spoken,
+            voice_profile=profile_id,
+            expert_depth=payload.expert_depth,
+            privacy_mode=payload.privacy_mode,
+            low_sensory_mode=payload.low_sensory_mode,
+            manual_speak=payload.manual_speak,
+            rate=payload.rate,
+            provider_id=_provider_id(current_user),
+            home_id=None,
+            user_id=_user_id(current_user),
+        )
+    )
+    legacy_provider = result.get("provider")
+    if legacy_provider == "browser_speech":
+        result = {**result, "provider": "browser_fallback"}
+    if "voice_id" not in result and "voice_profile" in result:
+        result = {**result, "voice_id": result["voice_profile"]}
+    return _voice_status_payload(result)

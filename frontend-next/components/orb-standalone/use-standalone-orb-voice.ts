@@ -30,6 +30,7 @@ import {
   resolveBrowserVoice
 } from '@/lib/orb/voice/orb-voice-profiles'
 import { requestOrbVoiceSpeak } from '@/lib/orb/voice/orb-voice-client'
+import { requestOrbVoiceProviderSpeak } from '@/lib/orb/voice/orb-voice-provider'
 import type { OrbSpokenAnswerLength, OrbVoiceModeId, OrbVoicePresetId } from '@/lib/orb/voice/orb-voice-types'
 import {
   ORB_VOICE_SETTINGS_LEGACY_KEY,
@@ -98,6 +99,8 @@ export type StandaloneOrbVoiceSettings = {
   pushToTalk: boolean
   saveTranscript: boolean
   useBrowserFallback: boolean
+  privacyMode: boolean
+  sensitiveSpokenReplies: boolean
 }
 
 export type StandaloneOrbWakeStatus =
@@ -134,7 +137,9 @@ const DEFAULT_SETTINGS: StandaloneOrbVoiceSettings = {
   allowInterruption: true,
   pushToTalk: true,
   saveTranscript: true,
-  useBrowserFallback: true
+  useBrowserFallback: true,
+  privacyMode: false,
+  sensitiveSpokenReplies: false
 }
 
 const SPEECH_CHUNK_PAUSE_MS = 80
@@ -424,6 +429,17 @@ export function useStandaloneOrbVoice() {
   const previewVoiceProfile = useCallback(async (profileId?: OrbVoicePresetId) => {
     const id = profileId ?? settingsRef.current.voicePresetId
     try {
+      const premium = await requestOrbVoiceProviderSpeak({
+        spoken_summary: SPEECH_TEST_PHRASE,
+        voice_profile: id,
+        rate: settingsRef.current.speechRate,
+        manual_speak: true
+      })
+      if (premium.provider === 'premium_tts' && premium.audio_url) {
+        const audio = new Audio(premium.audio_url)
+        void audio.play()
+        return
+      }
       const response = await requestOrbVoiceSpeak({
         text: SPEECH_TEST_PHRASE,
         voice_id: id,
