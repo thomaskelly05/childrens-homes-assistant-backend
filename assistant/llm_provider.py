@@ -9,9 +9,28 @@ from typing import Any, AsyncIterator, Protocol
 
 from openai import AsyncOpenAI
 
+from schemas.data_protection import DataClassification
+from services.ai_external_call_governance import (
+    evaluate_external_call,
+    governance_context_from_metadata,
+    record_model_usage,
+    redact_chat_messages,
+)
 from services.ai_gateway_service import AIGatewayRequest, ai_gateway_service
 
 logger = logging.getLogger("indicare.llm_provider")
+
+APPROVED_LLM_PROVIDERS = frozenset({"openai"})
+# Future: register Azure OpenAI or other approved adapters here without changing call sites.
+STREAMING_AI_FEATURE = "orb_chat_stream"
+
+
+def _runtime_environment() -> str:
+    return _safe_string(os.getenv("INDICARE_ENV") or os.getenv("ENVIRONMENT") or "development").lower()
+
+
+def _is_production_env() -> bool:
+    return _runtime_environment() in {"production", "prod", "live"}
 
 
 @dataclass
@@ -246,7 +265,7 @@ class OpenAIProvider:
                 pass
 
         logger.info(
-            "LLM stream start provider=%s model=%s temperature=%s max_tokens=%s messages=%s governance=streaming_pending_gateway",
+            "LLM stream start provider=%s model=%s temperature=%s max_tokens=%s messages=%s governance=privacy_decision",
             self._provider_name,
             model,
             temperature,
@@ -339,8 +358,33 @@ class OpenAIProvider:
             logger.warning("OpenAIProvider.stream_chat called with no valid messages")
             return
 
+        meta = request.metadata if isinstance(request.metadata, dict) else {}
+        ctx = governance_context_from_metadata(meta)
+        classification = meta.get("data_classification")
+        data_class = None
+        if classification:
+            try:
+                data_class = DataClassification(str(classification))
+            except ValueError:
+                data_class = DataClassification.INTERNAL_OPERATIONAL
+
+        decision = evaluate_external_call(
+            feature=str(meta.get("ai_feature") or STREAMING_AI_FEATURE),
+            provider_id=ctx.get("provider_id"),
+            home_id=ctx.get("home_id"),
+            user_id=ctx.get("user_id"),
+            data_classification=data_class,
+            metadata={**meta, "model": _safe_string(request.model) or "gpt-4o-mini", "route": "llm_provider.stream_chat"},
+            local_fallback_available=True,
+        )
+        if not decision.allowed:
+            raise RuntimeError(decision.reason)
+
+        messages, redaction_applied = redact_chat_messages(messages, mode=decision.redaction_mode)
+
         structured_output = _should_request_structured_output(request.metadata)
         final_text_parts: list[str] = []
+        model_name = _safe_string(request.model) or "gpt-4o-mini"
 
         try:
             async for token in self._stream_text_chat(
@@ -365,16 +409,33 @@ class OpenAIProvider:
             logger.exception(
                 "LLM stream failed provider=%s model=%s error=%r",
                 self._provider_name,
-                _safe_string(request.model) or "gpt-4o-mini",
+                model_name,
                 exc,
             )
             raise
 
         finally:
+            try:
+                output_estimate = max(1, int(len("".join(final_text_parts)) / 4))
+                input_estimate = max(1, int(sum(len(m.get("content", "")) for m in messages) / 4))
+                record_model_usage(
+                    feature=str(meta.get("ai_feature") or STREAMING_AI_FEATURE),
+                    decision=decision,
+                    provider_id=ctx.get("provider_id"),
+                    home_id=ctx.get("home_id"),
+                    user_id=ctx.get("user_id"),
+                    model=model_name,
+                    input_tokens=input_estimate,
+                    output_tokens=output_estimate,
+                    redaction_applied=redaction_applied,
+                    metadata={"route": "llm_provider.stream_chat", "stream": True},
+                )
+            except Exception:
+                logger.warning("Failed to record streaming AI usage audit", exc_info=True)
             logger.info(
                 "LLM stream end provider=%s model=%s",
                 self._provider_name,
-                _safe_string(request.model) or "gpt-4o-mini",
+                model_name,
             )
 
 
@@ -384,12 +445,24 @@ _provider_instance: LLMProvider | None = None
 def build_llm_provider() -> LLMProvider:
     config = _load_provider_config()
 
-    if config.provider_name == "openai":
-        return OpenAIProvider(config)
+    if config.provider_name in APPROVED_LLM_PROVIDERS:
+        if config.provider_name == "openai":
+            return OpenAIProvider(config)
+
+    if _is_production_env():
+        raise RuntimeError(
+            f"Unknown LLM provider '{config.provider_name}'. "
+            f"Approved providers: {', '.join(sorted(APPROVED_LLM_PROVIDERS))}. "
+            "Set INDICARE_LLM_PROVIDER to an approved value."
+        )
 
     logger.warning(
-        "Unknown LLM provider '%s'. Falling back to OpenAIProvider.",
+        "Unknown LLM provider '%s' in %s environment. "
+        "Falling back to OpenAIProvider for development only. "
+        "Approved providers: %s",
         config.provider_name,
+        _runtime_environment(),
+        ", ".join(sorted(APPROVED_LLM_PROVIDERS)),
     )
     return OpenAIProvider(config)
 

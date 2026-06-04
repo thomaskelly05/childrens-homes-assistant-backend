@@ -2,24 +2,42 @@
 
 from __future__ import annotations
 
-import re
 from datetime import datetime, timezone
 from typing import Any
 
 from schemas.orb_learning_ledger import OrbLearningLedgerEntry
+from services.ai_redaction_service import ai_redaction_service
+
+_PROMPT_SUMMARY_MAX = 400
+_FORBIDDEN_STORE_KEYS = frozenset({"prompt_text", "full_prompt", "transcript", "raw_transcript"})
 
 
 def _utc_now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def _redact_prompt(text: str, max_len: int = 400) -> str:
-    t = str(text or "").strip()
-    t = re.sub(r"\b[A-Z][a-z]+ [A-Z][a-z]+\b", "[name]", t)
-    t = re.sub(r"\b\d{1,3}\s*years?\s*old\b", "[age]", t, flags=re.I)
-    if len(t) > max_len:
-        t = t[:max_len] + "..."
-    return t
+def _redact_prompt_summary(text: str, *, max_len: int = _PROMPT_SUMMARY_MAX) -> str:
+    """Redact identifiers using the shared AI redaction service, then truncate."""
+    raw = str(text or "").strip()
+    if not raw:
+        return ""
+    result = ai_redaction_service.redact_to_result(raw, mode="safeguarding_strict")
+    redacted = result.text.strip()
+    if len(redacted) > max_len:
+        redacted = redacted[:max_len].rstrip() + "..."
+    return redacted
+
+
+def _sanitize_learning_tags(tags: list[Any] | None) -> list[str]:
+    safe: list[str] = []
+    for tag in tags or []:
+        value = str(tag or "").strip().lower()
+        if not value:
+            continue
+        if any(ch.isdigit() for ch in value) and len(value) > 32:
+            continue
+        safe.append(value[:64])
+    return safe[:20]
 
 
 class OrbLearningLedgerService:
@@ -31,8 +49,13 @@ class OrbLearningLedgerService:
             payload = entry.model_dump()
         else:
             payload = dict(entry)
-        payload["prompt_summary"] = _redact_prompt(payload.get("prompt_summary") or payload.get("prompt_text") or "")
-        payload.pop("prompt_text", None)
+
+        for key in _FORBIDDEN_STORE_KEYS:
+            payload.pop(key, None)
+
+        summary_source = payload.get("prompt_summary") or ""
+        payload["prompt_summary"] = _redact_prompt_summary(summary_source)
+        payload["learning_tags"] = _sanitize_learning_tags(payload.get("learning_tags"))
         payload["recorded_at"] = _utc_now()
         self._entries.append(payload)
         return payload
