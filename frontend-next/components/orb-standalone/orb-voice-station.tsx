@@ -12,6 +12,7 @@ import { OrbVoiceMobileExperience } from '@/components/orb-standalone/orb-voice-
 import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
 import type { useStandaloneOrbVoice } from '@/components/orb-standalone/use-standalone-orb-voice'
 import { saveVoiceTranscript } from '@/lib/orb/voice/save-voice-transcript'
+import { shouldBlockAutoSpokenReply } from '@/lib/orb/indicare-intelligence-core'
 import { isOrbDeveloperMode } from '@/lib/orb/orb-developer-mode'
 import { isOrbVoiceDebugMode } from '@/lib/orb/orb-voice-debug'
 import { getOrbVoiceProfile, orbVoiceProfileLabel } from '@/lib/orb/voice/orb-voice-profiles'

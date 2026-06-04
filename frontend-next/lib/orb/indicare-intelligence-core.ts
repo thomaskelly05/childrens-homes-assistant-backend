@@ -73,11 +73,12 @@ export function extractIndicareIntelligenceCore(
   const ctx = asRecord(contextUsed)
   if (!ctx) return null
 
+  const expertBrain = asRecord(ctx.expert_brain_9)
   const direct =
     asRecord(ctx.indicare_intelligence_core) ??
     asRecord(ctx.indicare_intelligence) ??
-    asRecord(ctx.expert_brain_9)?.indicare_intelligence_core ??
-    asRecord(ctx.expert_brain_9)
+    asRecord(expertBrain?.indicare_intelligence_core) ??
+    expertBrain
 
   if (!direct) return null
 

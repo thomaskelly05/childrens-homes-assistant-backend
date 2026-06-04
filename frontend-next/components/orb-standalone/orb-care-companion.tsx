@@ -152,8 +152,7 @@ import {
   loadStandaloneOrbAccessibility,
   type StandaloneOrbAccessibilityPreferences,
   saveStandaloneOrbAccessibility,
-  standaloneOrbAccessibilityClassNames,
-  type StandaloneOrbAccessibilityPreferences
+  standaloneOrbAccessibilityClassNames
 } from '@/lib/orb/standalone-accessibility'
 import { useAuth } from '@/contexts/auth-context'
 import { useOrbAccountState } from '@/hooks/use-orb-account-state'
@@ -3494,8 +3493,8 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                             residentialSurface={residentialSurface}
                             heading={entry.outputTitle}
                             userRole={adultProfile?.role ?? account.role ?? undefined}
-                            onRecordProperly={() => setMode('Record This Properly')}
-                            onManagerOversight={() => setMode('Manager Copilot')}
+                            onRecordProperly={() => handleModeChange('Record This Properly')}
+                            onManagerOversight={() => handleModeChange('Manager Copilot')}
                             cognitionContext={{
                               context_used: {
                                 ...(entry.contextUsed ?? {}),
