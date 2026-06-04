@@ -1,4 +1,10 @@
-/** IndiCare Intelligence Core metadata from standalone/OS ORB API responses. */
+import {
+  ORB_GENERAL_DELAYED_THINKING,
+  ORB_MICRO_STATUS_BY_DEPTH,
+  sanitiseOrbUserFacingStatus
+} from '@/lib/orb/orb-user-facing-copy'
+
+/** Internal intelligence metadata from standalone/OS ORB API responses (logic only in normal UI). */
 
 export type IndicareIntelligenceGapChip = {
   id: string
@@ -17,6 +23,8 @@ export type IndicareIntelligenceCoreView = {
   missing_evidence?: IndicareIntelligenceGapChip[]
   gaps?: Array<Record<string, unknown>>
   quality_gate_preview?: Record<string, unknown>
+  /** Plain-language chips for staff-facing Response support panel. */
+  response_support?: string[]
 }
 
 export type IndicareAnswerQualityGate = {
@@ -106,8 +114,33 @@ export function extractIndicareIntelligenceCore(
     source_basis: asRecord(direct.source_basis) ?? undefined,
     missing_evidence: missing,
     gaps: Array.isArray(direct.gaps) ? (direct.gaps as Array<Record<string, unknown>>) : undefined,
-    quality_gate_preview: asRecord(direct.quality_gate_preview) ?? undefined
+    quality_gate_preview: asRecord(direct.quality_gate_preview) ?? undefined,
+    response_support: Array.isArray(direct.response_support)
+      ? (direct.response_support as string[])
+      : undefined
   }
+}
+
+/** Plain-language support chips for the Response support panel (never raw backend field names). */
+export function buildResponseSupportDisplayChips(
+  core: IndicareIntelligenceCoreView | null,
+  qualityGate: IndicareAnswerQualityGate | null
+): string[] {
+  if (core?.response_support?.length) {
+    return core.response_support.filter((c) => Boolean(c?.trim()))
+  }
+  const chips: string[] = []
+  const depth = (core?.expert_depth || 'general_light').toLowerCase()
+  if (depth !== 'general_light') {
+    chips.push('Safety considered', 'Relevant guidance considered')
+  }
+  if (core?.missing_evidence?.length) {
+    chips.push('Possible gaps highlighted')
+  }
+  if (qualityGate && typeof qualityGate.passed === 'boolean') {
+    chips.push('Response reviewed')
+  }
+  return [...new Set(chips)]
 }
 
 export function extractAnswerQualityGate(
@@ -291,7 +324,7 @@ export function buildIntelligenceContextActionChips(options: {
         label: 'Escalation considerations',
         prefill: 'What escalation considerations should I think about here?'
       },
-      { action: 'evidence_gaps', label: 'Missing evidence' },
+      { action: 'evidence_gaps', label: 'What am I missing?' },
       {
         action: 'shift_builder',
         label: 'Create action plan',
@@ -306,21 +339,17 @@ export function buildIntelligenceContextActionChips(options: {
   ]
 }
 
-const MICRO_STATUS_BY_DEPTH: Record<string, readonly string[]> = {
-  residential_light: ['Checking context…', 'Preparing answer…'],
-  residential_standard: ['Checking recording gaps…', 'Preparing answer…'],
-  residential_deep: ['Checking safety, recording and oversight…', 'Preparing answer…'],
-  safeguarding_critical: ['Checking immediate safety steps…', 'Preparing answer…']
-}
-
 export function intelligenceMicroStatusForDepth(
   depth: string | undefined,
   index: number,
   backendMessage?: string | null
 ): string | null {
-  if (backendMessage?.trim()) return backendMessage.trim()
+  const sanitised = sanitiseOrbUserFacingStatus(backendMessage)
+  if (sanitised) return sanitised
   const normalised = (depth || 'general_light').trim().toLowerCase()
-  if (normalised === 'general_light') return null
-  const messages = MICRO_STATUS_BY_DEPTH[normalised] ?? MICRO_STATUS_BY_DEPTH.residential_light
+  if (normalised === 'general_light') {
+    return index > 0 ? ORB_GENERAL_DELAYED_THINKING : null
+  }
+  const messages = ORB_MICRO_STATUS_BY_DEPTH[normalised] ?? ORB_MICRO_STATUS_BY_DEPTH.residential_light
   return messages[index % messages.length] ?? messages[0]
 }

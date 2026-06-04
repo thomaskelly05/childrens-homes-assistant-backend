@@ -25,8 +25,8 @@ from services.indicare_intelligence_route_finalize_service import (
 )
 from services.indicare_intelligence_core_service import indicare_intelligence_core_service
 from services.orb_chat_timing_service import OrbChatTimingTracker, orb_chat_timing_debug_enabled
+from services.orb_fast_opening_service import fast_opening_for_message
 from services.orb_stream_status_service import (
-    safeguarding_opening_token,
     stream_status_payload,
     stream_status_sequence,
 )
@@ -1003,6 +1003,18 @@ async def standalone_orb_conversation_stream(
         for status_event in stream_status_sequence(quick_depth):
             yield _sse_event("status", status_event)
 
+        fast_opening = fast_opening_for_message(
+            payload.message,
+            expert_depth=quick_depth,
+            mode=mode,
+        )
+        if fast_opening:
+            answer_parts.append(fast_opening)
+            if first_token_ms is None:
+                first_token_ms = int((time.perf_counter() - request_started) * 1000)
+                timing.mark("first_token")
+            yield _sse_event("token", {"delta": f"{fast_opening}\n\n"})
+
         timing.mark("core_start")
         ctx = _build_standalone_request_context(payload)
         timing.mark("core_complete")
@@ -1041,14 +1053,6 @@ async def standalone_orb_conversation_stream(
             return
 
         try:
-            opening = safeguarding_opening_token() if expert_depth == "safeguarding_critical" else None
-            if opening:
-                answer_parts.append(opening)
-                if first_token_ms is None:
-                    first_token_ms = int((time.perf_counter() - request_started) * 1000)
-                    timing.mark("first_token")
-                yield _sse_event("token", {"delta": f"{opening}\n\n"})
-
             assistant_runtime = _select_assistant_runtime()
             provider_started = time.perf_counter()
             timing.mark("model_start")
