@@ -51,13 +51,23 @@ export default function OrbBillingSuccessPage() {
         <p className="mt-3 text-sm leading-6 text-slate-600">
           Your ORB Residential subscription is being confirmed. This usually takes a few seconds after checkout.
         </p>
-        <p className="mt-4 text-sm font-medium text-indigo-700">
+        <p className="mt-4 text-sm font-medium text-indigo-700" data-orb-billing-success-status>
           {phase === 'confirming'
             ? 'Payment received, setting up your access…'
             : phase === 'ready'
-              ? 'Your ORB Residential access is ready.'
-              : 'Still confirming — use refresh if access has not updated yet.'}
+              ? access?.safety_accepted === false
+                ? 'Payment confirmed. Next: accept the safety statement when you open ORB.'
+                : 'Your ORB Residential access is ready.'
+              : 'Still confirming — use refresh if access has not updated yet. Your payment was received.'}
         </p>
+        {phase === 'ready' && access?.safety_accepted === false ? (
+          <p
+            className="mt-3 rounded-2xl bg-indigo-50 px-4 py-3 text-sm leading-6 text-indigo-900"
+            data-orb-billing-success-safety-note
+          >
+            Subscribed users must accept a one-time safety statement before using ORB. This is separate from payment.
+          </p>
+        ) : null}
         {access ? (
           <p className="mt-2 text-xs text-slate-500">
             Status: {access.subscription?.status ?? access.access_state} · {access.price_label ?? '£9.99/month'}

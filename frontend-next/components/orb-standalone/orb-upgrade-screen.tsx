@@ -94,9 +94,14 @@ export function OrbUpgradeScreen() {
             Includes ORB chat, dictate, voice, documents, templates and saved outputs. For adults working in or
             around children&apos;s homes. Trial available when eligible.
           </p>
-          {access?.access_state === 'past_due' || access?.subscription?.status === 'past_due' ? (
-            <p className="mt-3 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          {access?.access_state === 'subscription_past_due' || access?.subscription?.status === 'past_due' ? (
+            <p className="mt-3 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900" data-orb-upgrade-past-due>
               Your subscription payment is past due. Update billing to restore full ORB access.
+            </p>
+          ) : null}
+          {access?.access_state === 'subscription_cancelled' ? (
+            <p className="mt-3 rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-800" data-orb-upgrade-cancelled>
+              Your subscription has been cancelled. Subscribe again to restore ORB access when your paid period ends.
             </p>
           ) : null}
           {access?.trial?.active === false && access?.trial?.available === false && !access?.can_use_orb ? (

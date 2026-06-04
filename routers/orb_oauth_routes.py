@@ -46,10 +46,16 @@ async def orb_oauth_start(
 ):
     key = provider.strip().lower()
     if not provider_enabled(key):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="OAuth provider is not enabled")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"{key.title()} sign-in is not enabled for ORB Residential.",
+        )
     config = load_provider_config(key)
     if not config:
-        raise HTTPException(status_code=status.HTTP_503_NOT_FOUND, detail="OAuth provider is not fully configured")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"{key.title()} sign-in is not fully configured on the server. Contact your administrator.",
+        )
     state = secrets.token_urlsafe(32)
     store_oauth_session(request, provider=key, state=state, return_url=return_url)
     return _redirect(build_authorize_url(config, state=state))
