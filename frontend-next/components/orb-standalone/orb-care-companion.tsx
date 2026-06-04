@@ -149,6 +149,7 @@ import { streamTextIntoView } from '@/lib/orb/streaming-text'
 import {
   defaultStandaloneOrbAccessibility,
   loadStandaloneOrbAccessibility,
+  type StandaloneOrbAccessibilityPreferences,
   saveStandaloneOrbAccessibility,
   standaloneOrbAccessibilityClassNames,
   type StandaloneOrbAccessibilityPreferences
@@ -184,6 +185,11 @@ import {
 import { copyTextToClipboard } from '@/lib/orb/orb-clipboard'
 import { stripMarkdownForSpeech } from '@/lib/orb/orb-speech-text'
 import { loadOrbStandaloneChatSettings } from '@/lib/orb/orb-standalone-settings'
+import {
+  extractIndicareIntelligenceCore,
+  shouldBlockAutoSpokenReply,
+  shouldPauseVoiceAutoSend
+} from '@/lib/orb/indicare-intelligence-core'
 import {
   buildProfileContextBlock,
   clearStandaloneCustomProjects,
@@ -1356,6 +1362,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           explainability: explainabilityRaw,
           agentSuggestion,
           documentSuggestion,
+          contextUsed: response.context_used
+            ? (response.context_used as unknown as Record<string, unknown>)
+            : undefined,
           feedbackContext: {
             prompt_tier: response.context_used?.prompt_tier ?? modelRouting?.cost_tier,
             detected_family: expertMeta?.detected_family,
@@ -1374,12 +1383,19 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         setLastSendStatus('success')
         setError(null)
         setRetryPayload(null)
+        const intelCore = extractIndicareIntelligenceCore(
+          response.context_used as unknown as Record<string, unknown> | undefined
+        )
         if (
           STANDALONE_ORB_VOICE_CAPTURE_ENABLED &&
-          voiceSettings.voiceReplies &&
           voice.synthesisAvailable &&
-          mode !== 'Safeguarding Thinking' &&
-          !showUrgentSafeguardingBanner
+          !shouldBlockAutoSpokenReply({
+            voiceRepliesEnabled: voiceSettings.voiceReplies,
+            lowSensoryMode: a11yPrefs.lowSensoryMode,
+            expertDepth: intelCore?.expert_depth,
+            mode,
+            urgentSafeguarding: showUrgentSafeguardingBanner
+          })
         ) {
           setSpeakingMessageId(assistantId)
           voice.speak(displayAnswer, () => setSpeakingMessageId(null))
@@ -1413,7 +1429,10 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                 applyStreamingPartial(streamPartialRef.current, {
                   sources: responseSources.length ? responseSources : undefined,
                   modelRouting: meta.context_used?.model_routing,
-                  explainability: buildExplainabilityFromResponse(meta, trimmed || messageBody)
+                  explainability: buildExplainabilityFromResponse(meta, trimmed || messageBody),
+                  contextUsed: meta.context_used
+                    ? (meta.context_used as unknown as Record<string, unknown>)
+                    : undefined
                 })
               }
             },
@@ -1591,6 +1610,32 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       workspace.chats
     ]
   )
+
+  useEffect(() => {
+    if (!STANDALONE_ORB_VOICE_CAPTURE_ENABLED) return
+    if (!voiceSettings.autoSend) return
+    if (voice.phase !== 'transcript_ready') return
+    const text = (voice.transcript || voice.displayTranscript).trim()
+    if (!text || pending || sendInFlightRef.current) return
+    if (shouldPauseVoiceAutoSend(text)) return
+    if (autoSendTimerRef.current) clearTimeout(autoSendTimerRef.current)
+    autoSendTimerRef.current = setTimeout(() => {
+      void sendMessage(text)
+      voice.clearTranscript()
+      voiceMayFillComposerRef.current = false
+    }, 450)
+    return () => {
+      if (autoSendTimerRef.current) clearTimeout(autoSendTimerRef.current)
+    }
+  }, [
+    voice.phase,
+    voice.transcript,
+    voice.displayTranscript,
+    voiceSettings.autoSend,
+    pending,
+    sendMessage,
+    voice.clearTranscript
+  ])
 
   const handleComposerSubmit = useCallback(
     async (event?: FormEvent<HTMLFormElement>) => {
@@ -2453,7 +2498,11 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       })}
       transcriptReady={STANDALONE_ORB_VOICE_CAPTURE_ENABLED && voice.phase === 'transcript_ready'}
       displayTranscript={voice.displayTranscript}
-      autoSend={STANDALONE_ORB_VOICE_CAPTURE_ENABLED && voiceSettings.autoSend}
+      autoSend={
+        STANDALONE_ORB_VOICE_CAPTURE_ENABLED &&
+        voiceSettings.autoSend &&
+        !shouldPauseVoiceAutoSend((voice.transcript || voice.displayTranscript).trim())
+      }
       onChange={handleMessageChange}
       onSubmit={handleComposerSubmit}
       composerMicEnabled={canUseComposerMic()}
@@ -3428,8 +3477,12 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                             showExplainability={!minimalTurn}
                             residentialSurface={residentialSurface}
                             heading={entry.outputTitle}
+                            userRole={adultProfile?.role ?? account.role ?? undefined}
+                            onRecordProperly={() => setMode('Record This Properly')}
+                            onManagerOversight={() => setMode('Manager Copilot')}
                             cognitionContext={{
                               context_used: {
+                                ...(entry.contextUsed ?? {}),
                                 cognition_display_labels: entry.explainability?.cognition_display_labels,
                                 active_brains: entry.explainability?.active_brains,
                                 depth_topic: entry.explainability?.depth_topic

@@ -16,6 +16,11 @@ from services.orb_human_practice_brain_service import orb_human_practice_brain_s
 from services.orb_knowledge_retrieval_service import orb_knowledge_retrieval_service
 from services.orb_operating_brain_service import orb_operating_brain_service
 from services.orb_brain_metadata_service import attach_to_payload
+from services.indicare_intelligence_route_finalize_service import (
+    finalize_standalone_intelligence,
+    intelligence_context_summary,
+    is_care_related_action,
+)
 from services.orb_standalone_brain_service import orb_standalone_brain_service
 from services.orb_expert_answer_engine_service import orb_expert_answer_engine_service
 from services.orb_expert_scenario_bank_service import orb_expert_scenario_bank_service
@@ -1035,6 +1040,8 @@ class OrbActionEngineService:
         definition: OrbActionDefinition,
         gaps: list[WhatMissingGap] | None = None,
         prompt_tier: str,
+        indicare_intelligence: dict[str, Any] | None = None,
+        intelligence_meta: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         sections = self._parse_sections_from_answer(answer)
         if action_id == "what_am_i_missing" and gaps and not sections:
@@ -1077,25 +1084,34 @@ class OrbActionEngineService:
         title = definition.label
         sources = build_standalone_sources(answer, mode=definition.prompt_mode)
 
-        return attach_to_payload(
-            {
-                "action": action_id,
-                "title": title,
-                "answer": answer,
-                "sections": sections,
-                "checklist": checklist,
-                "confidence": confidence,
-                "sources": sources,
-                "standalone": True,
-                "os_records_accessed": False,
-                "suggested_next_actions": suggested,
-                "action_engine": {
-                    "prompt_tier": prompt_tier,
-                    "safety_level": definition.safety_level,
-                    "backend_supported": definition.backend_supported,
-                    "heuristic_gaps": [g.id for g in (gaps or [])],
-                },
+        payload: dict[str, Any] = {
+            "action": action_id,
+            "title": title,
+            "answer": answer,
+            "sections": sections,
+            "checklist": checklist,
+            "confidence": confidence,
+            "sources": sources,
+            "standalone": True,
+            "os_records_accessed": False,
+            "suggested_next_actions": suggested,
+            "action_engine": {
+                "prompt_tier": prompt_tier,
+                "safety_level": definition.safety_level,
+                "backend_supported": definition.backend_supported,
+                "heuristic_gaps": [g.id for g in (gaps or [])],
             },
+        }
+        if indicare_intelligence:
+            summary = intelligence_context_summary(indicare_intelligence)
+            payload["indicare_intelligence_core"] = summary
+            payload["context_used"] = {
+                "indicare_intelligence": summary,
+                "indicare_intelligence_core": summary,
+                **(intelligence_meta or {}),
+            }
+        return attach_to_payload(
+            payload,
             surface="orb_standalone",
             mode=definition.prompt_mode,
             lens=action_id,
@@ -1228,12 +1244,29 @@ class OrbActionEngineService:
                 message=source_text,
             )
 
+        indicare_intelligence = retrieval.get("indicare_intelligence") or {}
+        intelligence_meta: dict[str, Any] = {}
+        if indicare_intelligence and (
+            is_care_related_action(action_id) or indicare_intelligence.get("expert_depth") != "general_light"
+        ):
+            answer, intelligence_meta = finalize_standalone_intelligence(
+                indicare_intelligence=indicare_intelligence,
+                answer=answer,
+                prompt_text=source_text,
+                message=source_text,
+                mode=mode_name,
+                record_learning=True,
+                apply_gate_fixes=True,
+            )
+
         return self._build_structured_payload(
             action_id,
             answer=answer,
             definition=definition,
             gaps=gaps,
             prompt_tier=prompt_tier,
+            indicare_intelligence=indicare_intelligence if indicare_intelligence else None,
+            intelligence_meta=intelligence_meta or None,
         )
 
 
