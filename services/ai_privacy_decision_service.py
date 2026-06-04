@@ -69,7 +69,7 @@ class AIPrivacyDecisionService:
         self,
         request: AIPrivacyDecisionRequest,
     ) -> ProviderDataIntelligenceSettings:
-        settings = provider_data_intelligence_settings_service.defaults(
+        settings = provider_data_intelligence_settings_service.get_effective_settings(
             provider_id=request.provider_id,
             home_id=request.home_id,
         )

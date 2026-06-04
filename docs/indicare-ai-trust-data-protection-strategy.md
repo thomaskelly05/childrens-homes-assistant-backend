@@ -56,13 +56,15 @@ IndiCare configures providers with a **no training on customer data** expectatio
 
 ## Provider controls
 
-Providers can control (via environment today; admin API planned):
+Providers can control via **admin API** (`/api/admin/ai-settings`) and optional **Next.js UI** (`/settings/ai-trust`), with environment variables as fallback when no database row exists:
 
 - Whether external AI is enabled at all
-- Redaction strictness
-- Which features may call external models
-- Whether prompts or transcripts may be stored
-- Realtime voice and report drafting toggles
+- Redaction strictness (`strict`, `balanced`, `off`)
+- Which features may call external models (restricted decision features always blocked)
+- Whether prompts or transcripts may be stored (off by default; explicit acknowledgement required)
+- Realtime voice, report drafting, premium TTS, data retention, and local policy sources
+
+See `indicare-provider-ai-trust-settings.md` and `indicare-provider-ai-settings-admin-audit.md`.
 
 ## Human review
 

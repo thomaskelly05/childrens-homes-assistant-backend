@@ -175,12 +175,26 @@ class ProviderDataIntelligenceSettings(BaseModel):
     orb_enabled: bool = True
     realtime_voice_enabled: bool = False
     report_ai_drafting_enabled: bool = False
+    premium_tts_enabled: bool = False
     data_retention_days: int | None = None
+    local_policy_sources_enabled: bool = False
     transcript_storage: bool = False
     prompt_storage: bool = False
     demo_mode_disabled: bool = True
     inspection_readiness_enabled: bool = True
     metadata_extraction_enabled: bool = True
+
+
+class ProviderAISettingsSourceBundle(BaseModel):
+    """Effective settings plus per-field source metadata for admin APIs."""
+
+    effective: ProviderDataIntelligenceSettings
+    provider_level: ProviderDataIntelligenceSettings | None = None
+    home_override: ProviderDataIntelligenceSettings | None = None
+    env_defaults: ProviderDataIntelligenceSettings
+    sources: dict[str, str] = Field(default_factory=dict)
+    warnings: list[str] = Field(default_factory=list)
+    db_available: bool = True
 
 
 class CacheEntry(BaseModel):

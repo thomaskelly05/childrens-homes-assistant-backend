@@ -88,7 +88,9 @@ class AIGatewayService:
         self._client: OpenAI | None = None
 
     def governance_status(self, *, provider_id: int | None = None, home_id: int | None = None) -> dict[str, Any]:
-        settings = provider_data_intelligence_settings_service.defaults(provider_id=provider_id, home_id=home_id)
+        settings = provider_data_intelligence_settings_service.get_effective_settings(
+            provider_id=provider_id, home_id=home_id
+        )
         return {
             "external_ai_enabled": settings.external_ai_enabled,
             "redaction_mode": settings.redaction_mode,
@@ -151,7 +153,7 @@ class AIGatewayService:
                 metadata={"model": request.model, "route": "ai_gateway"},
             )
         )
-        settings = provider_data_intelligence_settings_service.defaults(
+        settings = provider_data_intelligence_settings_service.get_effective_settings(
             provider_id=request.provider_id,
             home_id=request.home_id,
         )

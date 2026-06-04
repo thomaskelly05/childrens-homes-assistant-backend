@@ -41,7 +41,7 @@ def generate_incident_report(
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
     ids = governance_ids_from_user(current_user)
-    settings = provider_data_intelligence_settings_service.defaults(
+    settings = provider_data_intelligence_settings_service.get_effective_settings(
         provider_id=ids["provider_id"],
         home_id=ids["home_id"],
     )
