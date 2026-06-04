@@ -12,9 +12,13 @@ GOVERNED_PATHS = {
     "services/ai_model_router_service.py",
 }
 
-# Known legacy/direct bypasses documented in the convergence audit (not removed in this pass).
+# Legacy paths that may still import OpenAI lazily (not live product routes).
 KNOWN_LEGACY_BYPASSES = {
     "assistant/streaming.py",
+}
+
+# Converged to gateway / ai_external_call_governance (no module-level OpenAI client).
+CONVERGED_LEGACY_PATHS = {
     "assistant/retrieval.py",
     "routers/documents_routes.py",
     "routers/reports_routes.py",
@@ -25,6 +29,7 @@ KNOWN_LEGACY_BYPASSES = {
     "services/orb_embedding_service.py",
     "services/title_service.py",
     "services/ai_reasoning_service.py",
+    "services/ai_external_call_governance.py",
 }
 
 
@@ -57,9 +62,13 @@ def test_openai_import_sites_are_inventory_complete():
             if "from openai" in text or "import openai" in text.lower():
                 rel = str(path.relative_to(root)).replace("\\", "/")
                 hits.add(rel)
-    allowed = GOVERNED_PATHS | KNOWN_LEGACY_BYPASSES | ADDITIONAL_KNOWN_PATHS | {
-        "scripts/generate_orb_scenario_variants.py"
-    }
+    allowed = (
+        GOVERNED_PATHS
+        | KNOWN_LEGACY_BYPASSES
+        | CONVERGED_LEGACY_PATHS
+        | ADDITIONAL_KNOWN_PATHS
+        | {"scripts/generate_orb_scenario_variants.py"}
+    )
     undocumented = hits - allowed
     assert not undocumented, f"New direct OpenAI sites must be documented or routed via gateway: {undocumented}"
 

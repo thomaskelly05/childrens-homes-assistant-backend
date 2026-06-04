@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import logging
+import os
 from typing import Any
 
 logger = logging.getLogger("indicare.ai_external_call_governance")
+
+from fastapi import HTTPException
 
 from schemas.data_protection import AIPrivacyDecision, DataClassification
 from services.ai_privacy_decision_service import (
@@ -14,6 +17,35 @@ from services.ai_privacy_decision_service import (
 )
 from services.ai_redaction_service import ai_redaction_service
 from services.ai_usage_audit_service import ai_usage_audit_service
+
+# Feature keys used by legacy route convergence (allowlisted when external AI is enabled).
+FEATURE_DOCUMENT_GENERATION = "document_generation"
+FEATURE_DOCUMENT_AI_REVIEW = "document_ai_review"
+FEATURE_REPORT_DRAFTING = "report_drafting"
+FEATURE_AI_NOTES = "ai_notes"
+FEATURE_DICTATE = "dictate"
+FEATURE_DICTATE_EDIT = "dictate_edit"
+FEATURE_KNOWLEDGE_EMBEDDING = "knowledge_embedding"
+FEATURE_LEGACY_STREAMING = "legacy_assistant_stream"
+
+
+def governance_ids_from_user(user: dict[str, Any] | None) -> dict[str, int | None]:
+    if not isinstance(user, dict):
+        return {"provider_id": None, "home_id": None, "user_id": None}
+
+    def _safe_int(value: Any) -> int | None:
+        try:
+            if value is None or value == "":
+                return None
+            return int(value)
+        except (TypeError, ValueError):
+            return None
+
+    return {
+        "provider_id": _safe_int(user.get("provider_id") or user.get("providerId")),
+        "home_id": _safe_int(user.get("home_id") or user.get("homeId")),
+        "user_id": _safe_int(user.get("user_id") or user.get("id")),
+    }
 
 
 def governance_context_from_metadata(metadata: dict[str, Any] | None) -> dict[str, Any]:
@@ -119,3 +151,262 @@ def record_model_usage(
         )
     except Exception:
         logger.warning("Failed to persist model usage audit", exc_info=True)
+
+
+def redact_plain_text(text: str, *, mode: str) -> tuple[str, bool]:
+    result = ai_redaction_service.redact_text(text or "", mode=mode)
+    return result.text, bool(result.replacements)
+
+
+def _blocked_detail(decision: AIPrivacyDecision, feature: str) -> str:
+    return {
+        "external_ai_disabled": "External AI processing is disabled for this provider or environment",
+        "feature_not_allowlisted": f"AI feature is not enabled: {feature}",
+        "classification_blocks_external_ai": "This data classification cannot be sent to external AI",
+        "restricted_decision_feature": "This feature must remain human-led and cannot use external AI",
+    }.get(decision.reason, "External AI request blocked by privacy policy")
+
+
+def governed_draft_text(
+    *,
+    feature: str,
+    prompt: str,
+    system_prompt: str | None = None,
+    model: str | None = None,
+    provider_id: int | None = None,
+    home_id: int | None = None,
+    user_id: int | None = None,
+    data_classification: DataClassification | None = None,
+    external_ai_required: bool = True,
+    local_fallback_available: bool = False,
+    max_output_tokens: int | None = None,
+    metadata: dict[str, Any] | None = None,
+):
+    """Run a governed non-streaming draft via the central AI gateway."""
+    from services.ai_gateway_service import AIGatewayRequest, ai_gateway_service
+
+    decision = evaluate_external_call(
+        feature=feature,
+        provider_id=provider_id,
+        home_id=home_id,
+        user_id=user_id,
+        data_classification=data_classification,
+        metadata=metadata,
+        local_fallback_available=local_fallback_available,
+    )
+    if external_ai_required and not decision.allowed:
+        raise HTTPException(status_code=403, detail=_blocked_detail(decision, feature))
+
+    return ai_gateway_service.draft_text(
+        AIGatewayRequest(
+            feature=feature,
+            prompt=prompt,
+            system_prompt=system_prompt,
+            model=model or os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+            provider_id=provider_id,
+            home_id=home_id,
+            user_id=user_id,
+            external_ai_required=external_ai_required,
+            max_output_tokens=max_output_tokens or int(os.getenv("AI_GATEWAY_MAX_OUTPUT_TOKENS", "1200")),
+            metadata={
+                **(metadata or {}),
+                "data_classification": (data_classification or DataClassification.INTERNAL_OPERATIONAL).value,
+                "draft_only": True,
+                "human_review_required": True,
+            },
+        )
+    )
+
+
+def try_governed_draft_text(
+    *,
+    feature: str,
+    prompt: str,
+    system_prompt: str | None = None,
+    model: str | None = None,
+    provider_id: int | None = None,
+    home_id: int | None = None,
+    user_id: int | None = None,
+    data_classification: DataClassification | None = None,
+    local_fallback_available: bool = True,
+    max_output_tokens: int | None = None,
+    metadata: dict[str, Any] | None = None,
+):
+    """Return gateway response when allowed; None when blocked and a local fallback should be used."""
+    decision = evaluate_external_call(
+        feature=feature,
+        provider_id=provider_id,
+        home_id=home_id,
+        user_id=user_id,
+        data_classification=data_classification,
+        metadata=metadata,
+        local_fallback_available=local_fallback_available,
+    )
+    if not decision.allowed:
+        return None
+    return governed_draft_text(
+        feature=feature,
+        prompt=prompt,
+        system_prompt=system_prompt,
+        model=model,
+        provider_id=provider_id,
+        home_id=home_id,
+        user_id=user_id,
+        data_classification=data_classification,
+        external_ai_required=True,
+        local_fallback_available=False,
+        max_output_tokens=max_output_tokens,
+        metadata=metadata,
+    )
+
+
+def governed_embeddings_create(
+    texts: list[str],
+    *,
+    feature: str = FEATURE_KNOWLEDGE_EMBEDDING,
+    model: str | None = None,
+    provider_id: int | None = None,
+    home_id: int | None = None,
+    user_id: int | None = None,
+    data_classification: DataClassification | None = DataClassification.PUBLIC_SYSTEM,
+    metadata: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Create embeddings after privacy decision and redaction."""
+    decision = evaluate_external_call(
+        feature=feature,
+        provider_id=provider_id,
+        home_id=home_id,
+        user_id=user_id,
+        data_classification=data_classification,
+        metadata=metadata,
+        local_fallback_available=False,
+    )
+    embedding_model = model or os.getenv("EMBEDDING_MODEL") or os.getenv("OPENAI_EMBEDDING_MODEL") or "text-embedding-3-small"
+
+    if not decision.allowed:
+        return {
+            "available": False,
+            "embeddings": [],
+            "model": embedding_model,
+            "blocked": True,
+            "reason": decision.reason,
+        }
+
+    cleaned = [str(t or "").strip() for t in texts if str(t or "").strip()]
+    if not cleaned:
+        return {"available": True, "embeddings": [], "model": embedding_model}
+
+    redacted_inputs: list[str] = []
+    redaction_applied = False
+    for item in cleaned:
+        redacted, applied = redact_plain_text(item, mode=decision.redaction_mode)
+        redaction_applied = redaction_applied or applied
+        redacted_inputs.append(redacted)
+
+    api_key = (os.getenv("OPENAI_API_KEY") or "").strip()
+    if not api_key:
+        return {
+            "available": False,
+            "embeddings": [],
+            "model": embedding_model,
+            "error": "external_ai_not_configured",
+        }
+
+    try:
+        from openai import OpenAI
+
+        client = OpenAI(api_key=api_key)
+        response = client.embeddings.create(model=embedding_model, input=redacted_inputs)
+        ordered = sorted(response.data, key=lambda item: item.index)
+        vectors = [list(item.embedding) for item in ordered]
+        input_tokens = max(1, sum(len(t) for t in redacted_inputs) // 4)
+        record_model_usage(
+            feature=feature,
+            decision=decision,
+            provider_id=provider_id,
+            home_id=home_id,
+            user_id=user_id,
+            model=embedding_model,
+            input_tokens=input_tokens,
+            output_tokens=0,
+            redaction_applied=redaction_applied,
+            metadata={**(metadata or {}), "embedding_count": len(vectors)},
+        )
+        return {"available": True, "embeddings": vectors, "model": embedding_model}
+    except Exception as exc:
+        logger.warning("Governed embedding request failed", exc_info=True)
+        return {
+            "available": False,
+            "embeddings": [],
+            "model": embedding_model,
+            "error": str(exc)[:200],
+        }
+
+
+def governed_transcribe_audio_file(
+    file_path: str,
+    *,
+    feature: str = FEATURE_AI_NOTES,
+    provider_id: int | None = None,
+    home_id: int | None = None,
+    user_id: int | None = None,
+    data_classification: DataClassification = DataClassification.CONFIDENTIAL_CHILD,
+    metadata: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Transcribe audio via external STT after privacy decision (no transcript storage by default)."""
+    import mimetypes
+
+    decision = evaluate_external_call(
+        feature=feature,
+        provider_id=provider_id,
+        home_id=home_id,
+        user_id=user_id,
+        data_classification=data_classification,
+        metadata=metadata,
+        local_fallback_available=False,
+    )
+    if not decision.allowed:
+        raise RuntimeError(_blocked_detail(decision, feature))
+
+    if not os.path.exists(file_path):
+        raise RuntimeError("Audio file not found")
+
+    api_key = (os.getenv("OPENAI_API_KEY") or "").strip()
+    if not api_key:
+        raise RuntimeError("External AI is not configured")
+
+    filename = os.path.basename(file_path)
+    mime_type = mimetypes.guess_type(filename)[0] or "audio/webm"
+
+    from openai import OpenAI
+
+    client = OpenAI(api_key=api_key)
+    with open(file_path, "rb") as audio_file:
+        result = client.audio.transcriptions.create(
+            model=os.getenv("AI_NOTES_TRANSCRIBE_MODEL", "gpt-4o-transcribe"),
+            file=(filename, audio_file, mime_type),
+        )
+
+    result_dict = result.model_dump() if hasattr(result, "model_dump") else result
+    transcript = str(result_dict.get("text") or "").strip()
+    redacted, redaction_applied = redact_plain_text(transcript, mode=decision.redaction_mode)
+
+    record_model_usage(
+        feature=feature,
+        decision=decision,
+        provider_id=provider_id,
+        home_id=home_id,
+        user_id=user_id,
+        model=os.getenv("AI_NOTES_TRANSCRIBE_MODEL", "gpt-4o-transcribe"),
+        input_tokens=max(1, len(redacted) // 4),
+        output_tokens=max(1, len(redacted) // 4),
+        redaction_applied=redaction_applied,
+        metadata={**(metadata or {}), "route": "governed_transcribe_audio_file"},
+    )
+
+    return {
+        "transcript": redacted,
+        "segments": [],
+        "duration": result_dict.get("duration"),
+        "redaction_applied": redaction_applied,
+    }

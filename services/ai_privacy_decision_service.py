@@ -120,7 +120,19 @@ class AIPrivacyDecisionService:
                 return decision
 
         if feature not in {f.lower() for f in settings.allowed_ai_features}:
-            legacy = {"risk_drafting", "report_drafting", "orb_text_fallback", "metadata", "orb_chat_stream"}
+            legacy = {
+                "risk_drafting",
+                "report_drafting",
+                "document_generation",
+                "document_ai_review",
+                "ai_notes",
+                "dictate",
+                "dictate_edit",
+                "knowledge_embedding",
+                "orb_text_fallback",
+                "metadata",
+                "orb_chat_stream",
+            }
             if feature not in legacy:
                 decision = self._blocked("feature_not_allowlisted", classification, settings, request)
                 self._audit_decision(request, decision, settings, blocked=True)

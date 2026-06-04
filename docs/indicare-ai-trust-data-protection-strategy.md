@@ -12,6 +12,15 @@ External AI (currently OpenAI, configurable) is used only when a provider explic
 - Structured metadata wrapping after an answer is formed
 - Optional report or risk drafting where enabled
 - Dictation cleanup and voice-related hooks where configured
+- Legacy document generation (`/documents/*`) and document AI review (`/document-ai/review`)
+- AI meeting notes (transcription and drafting) when enabled
+- Knowledge retrieval and ORB Knowledge Library embeddings (redacted, audited)
+
+See also:
+
+- `indicare-external-ai-route-inventory.md` — route-level inventory
+- `indicare-legacy-ai-route-governance-audit.md` — convergence audit and risk register
+- `indicare-embedding-data-protection-policy.md` — embedding-specific rules
 
 ## What does not use external AI
 

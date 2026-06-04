@@ -4,11 +4,6 @@ import json
 import os
 from typing import Any
 
-try:
-    from openai import AsyncOpenAI
-except Exception:  # pragma: no cover - app can still run without optional package
-    AsyncOpenAI = None  # type: ignore
-
 from services.defensible_ai_policy import build_defensible_ai_guard
 
 
@@ -110,14 +105,13 @@ async def run_os_reasoning(*, question: str, context: dict[str, Any]) -> str:
         requires_evidence_grounding=True,
     )
 
-    api_key = os.getenv("OPENAI_API_KEY")
-    model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+    from schemas.data_protection import DataClassification
+    from services.ai_external_call_governance import redact_plain_text, try_governed_draft_text
 
-    if not api_key or AsyncOpenAI is None:
-        return _fallback_reasoning(clean_question, context)
-
-    client = AsyncOpenAI(api_key=api_key)
     compact_context = _compact_context(context)
+    provider_id = context.get("provider_id") if isinstance(context.get("provider_id"), int) else None
+    home_id = context.get("home_id") if isinstance(context.get("home_id"), int) else None
+    user_id = context.get("user_id") if isinstance(context.get("user_id"), int) else None
 
     prompt = f"""
 Question:
@@ -128,14 +122,20 @@ Context JSON:
 
 {guard}
 """.strip()
+    redacted_prompt, _ = redact_plain_text(prompt, mode="strict")
 
-    response = await client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": f"{SYSTEM_PROMPT}\n\n{guard}"},
-            {"role": "user", "content": prompt},
-        ],
-        temperature=0.15,
+    gateway_response = try_governed_draft_text(
+        feature="orb_text_fallback",
+        system_prompt=f"{SYSTEM_PROMPT}\n\n{guard}",
+        prompt=redacted_prompt,
+        model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+        provider_id=provider_id,
+        home_id=home_id,
+        user_id=user_id,
+        data_classification=DataClassification.CONFIDENTIAL_CHILD,
+        metadata={"route": "ai_reasoning_service.run_os_reasoning", "draft_only": True},
     )
+    if gateway_response is None:
+        return _fallback_reasoning(clean_question, context)
 
-    return response.choices[0].message.content or _fallback_reasoning(clean_question, context)
+    return gateway_response.text or _fallback_reasoning(clean_question, context)

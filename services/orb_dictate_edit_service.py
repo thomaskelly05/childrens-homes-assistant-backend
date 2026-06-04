@@ -8,14 +8,18 @@ import os
 import re
 from typing import Any
 
-from openai import OpenAI
-
+from schemas.data_protection import DataClassification
 from schemas.orb_dictate import (
     OrbDictateEditRequest,
     OrbDictateEditResponse,
     OrbDictateQualityChecks,
 )
 from services.orb_dictate_quality import compute_quality_checks
+from services.ai_external_call_governance import (
+    FEATURE_DICTATE_EDIT,
+    redact_plain_text,
+    try_governed_draft_text,
+)
 from services.orb_dictate_service import STANDALONE_BOUNDARY
 from services.recording_intelligence_service import recording_intelligence_service
 
@@ -131,13 +135,6 @@ JUDGEMENTAL_RE = re.compile(
     r"non[\s-]?compliant|chose to behave)\b",
     re.I,
 )
-
-
-def _openai_client() -> OpenAI | None:
-    key = os.environ.get("OPENAI_API_KEY", "").strip()
-    if not key:
-        return None
-    return OpenAI(api_key=key)
 
 
 def _resolve_mode(request: OrbDictateEditRequest) -> str:
@@ -275,28 +272,37 @@ def _build_edit_prompt(request: OrbDictateEditRequest, mode: str) -> tuple[str, 
     return system, user
 
 
-def edit_dictate_document(request: OrbDictateEditRequest) -> OrbDictateEditResponse:
+def edit_dictate_document(
+    request: OrbDictateEditRequest,
+    *,
+    provider_id: int | None = None,
+    home_id: int | None = None,
+    user_id: int | None = None,
+) -> OrbDictateEditResponse:
     text = (request.document_text or "").strip()
     if not text:
         raise ValueError("document_text is required.")
 
     mode = _resolve_mode(request)
-    client = _openai_client()
-    if not client:
+    system, user = _build_edit_prompt(request, mode)
+    redacted_user, _ = redact_plain_text(user, mode="strict")
+
+    gateway_response = try_governed_draft_text(
+        feature=FEATURE_DICTATE_EDIT,
+        system_prompt=system,
+        prompt=redacted_user,
+        model=os.environ.get("ORB_DICTATE_MODEL", "gpt-4.1-mini"),
+        provider_id=provider_id,
+        home_id=home_id,
+        user_id=user_id,
+        data_classification=DataClassification.CONFIDENTIAL_CHILD,
+        metadata={"route": "orb_dictate_edit_service.edit_dictate_document", "mode": mode},
+    )
+    if gateway_response is None:
         return _fallback_edit(request, mode)
 
-    system, user = _build_edit_prompt(request, mode)
     try:
-        response = client.chat.completions.create(
-            model=os.environ.get("ORB_DICTATE_MODEL", "gpt-4.1-mini"),
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": user},
-            ],
-            temperature=0.2,
-            response_format={"type": "json_object"},
-        )
-        raw = response.choices[0].message.content or "{}"
+        raw = gateway_response.text or "{}"
         parsed: dict[str, Any] = json.loads(raw)
     except Exception:
         logger.exception("ORB Dictate edit failed — using fallback")
