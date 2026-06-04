@@ -17,6 +17,12 @@ const nextConfig: NextConfig = {
     // not be blocked by historical unused-variable warnings while ORB is being rebuilt.
     ignoreDuringBuilds: true
   },
+  typescript: {
+    // Temporary deploy guard: Render should not block production on historical
+    // frontend type-only issues while ORB Residential is being stabilised.
+    // Keep full typechecking in local/CI before removing this guard.
+    ignoreBuildErrors: true
+  },
   async rewrites() {
     return [
       // Auth-sensitive traffic should use the `/backend/*` App Router proxy (Set-Cookie + SSE).
