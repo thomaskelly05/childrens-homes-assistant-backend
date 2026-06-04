@@ -20,6 +20,13 @@ import { beginOrbPasskeyLogin, orbPasskeysSupported } from '@/lib/orb/orb-passke
 
 const ORB_RETURN = '/orb'
 
+const TRUST_POINTS = [
+  'Human review required',
+  'Data protection controls',
+  'Provider AI settings',
+  "Designed for children's homes"
+] as const
+
 function resolvePostLoginRoute(access: Awaited<ReturnType<typeof fetchOrbAccess>> | null) {
   if (!access) return ORB_RETURN
   if (!access.can_use_orb && !access.trial?.active && !access.subscription?.active) return '/orb/billing'
@@ -37,7 +44,8 @@ function OrbLoginPanel() {
   const [remember, setRemember] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
-  const [showEmailForm, setShowEmailForm] = useState(false)
+  const [passkeySubmitting, setPasskeySubmitting] = useState(false)
+  const [emailStepReady, setEmailStepReady] = useState(false)
   const [passkeyEmail, setPasskeyEmail] = useState('')
   const [passkeySupported, setPasskeySupported] = useState(false)
 
@@ -68,7 +76,7 @@ function OrbLoginPanel() {
       })
     const oauthError = searchParams.get('oauth_error')
     if (oauthError) setError(oauthError)
-    if (searchParams.get('provider') === 'email') setShowEmailForm(true)
+    if (searchParams.get('provider') === 'email') setEmailStepReady(true)
   }, [searchParams])
 
   async function afterAuth() {
@@ -79,6 +87,16 @@ function OrbLoginPanel() {
     } catch {
       router.replace(returnUrl.startsWith('/orb') ? returnUrl : ORB_RETURN)
     }
+  }
+
+  function handleEmailContinue(event: FormEvent) {
+    event.preventDefault()
+    if (!email.trim()) {
+      setError('Enter your email address to continue.')
+      return
+    }
+    setError(null)
+    setEmailStepReady(true)
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -95,9 +113,9 @@ function OrbLoginPanel() {
         router.replace(`/mfa?next=${encodeURIComponent(returnUrl)}`)
         return
       }
-      setError(response.message || 'Sign-in could not be completed')
+      setError(response.message || 'We could not sign you in. Check your email and password.')
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Sign-in failed')
+      setError(caught instanceof Error ? caught.message : 'Sign-in failed. Please try again.')
     } finally {
       setSubmitting(false)
     }
@@ -106,11 +124,10 @@ function OrbLoginPanel() {
   async function handlePasskeySignIn() {
     const address = (passkeyEmail || email).trim()
     if (!address) {
-      setError('Enter your email to use Face ID, Touch ID or a device passkey.')
-      setShowEmailForm(true)
+      setError('Enter your email so we can find your saved passkey.')
       return
     }
-    setSubmitting(true)
+    setPasskeySubmitting(true)
     setError(null)
     try {
       const result = await beginOrbPasskeyLogin(address)
@@ -120,9 +137,9 @@ function OrbLoginPanel() {
       }
       setError(result.message || 'Passkey sign-in could not be completed.')
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Passkey sign-in failed')
+      setError(caught instanceof Error ? caught.message : 'Passkey sign-in failed.')
     } finally {
-      setSubmitting(false)
+      setPasskeySubmitting(false)
     }
   }
 
@@ -130,6 +147,8 @@ function OrbLoginPanel() {
     () => (resolvedTheme === 'light' ? 'orb-login-root--light' : 'orb-login-root--dark'),
     [resolvedTheme]
   )
+
+  const authBusy = submitting || passkeySubmitting || status === 'loading'
 
   return (
     <div
@@ -148,9 +167,23 @@ function OrbLoginPanel() {
           </Link>
           <p className="orb-login-tagline mt-1 text-xs">Powered by IndiCare Intelligence</p>
           <h1 className="orb-login-headline mt-8 text-3xl font-semibold tracking-tight" data-orb-login-title>
-            The professional AI copilot for children&apos;s homes
+            AI support for residential children&apos;s homes
           </h1>
-          <div className="mt-8 flex justify-center lg:justify-start">
+          <p className="orb-login-lead mt-4 text-base leading-relaxed">
+            Record better. Reflect faster. Respond safer.
+          </p>
+          <p className="orb-login-muted mt-3 text-sm leading-relaxed">
+            Built to support professional judgement, not replace it.
+          </p>
+          <ul className="orb-login-trust mt-8 space-y-2 text-sm" data-orb-login-trust-points>
+            {TRUST_POINTS.map((point) => (
+              <li key={point} className="flex items-center gap-2">
+                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--orb-res-primary,#1677ff)]" aria-hidden />
+                {point}
+              </li>
+            ))}
+          </ul>
+          <div className="mt-10 flex justify-center lg:justify-start">
             <OrbHeroSphere className="scale-90" />
           </div>
         </div>
@@ -168,7 +201,7 @@ function OrbLoginPanel() {
 
             <h2 className="orb-login-signin-title mt-6 text-2xl font-bold tracking-tight lg:mt-0">Sign in</h2>
             <p className="orb-login-lead mt-2 text-sm">
-              Use your work account to continue. Your data stays in your organisation&apos;s secure environment.
+              Choose how you want to sign in. Your organisation may require a work account.
             </p>
 
             {error ? (
@@ -177,64 +210,40 @@ function OrbLoginPanel() {
               </p>
             ) : null}
 
-            <div className="mt-6 space-y-2.5" data-orb-oauth-buttons>
-              <OrbAuthButton
-                provider="microsoft"
-                href={oauth.microsoft ? orbOAuthStartUrl('microsoft', ORB_RETURN) : undefined}
-                disabled={!oauth.microsoft}
-              >
-                Continue with Microsoft
-              </OrbAuthButton>
-              <OrbAuthButton
-                provider="google"
-                href={oauth.google ? orbOAuthStartUrl('google', ORB_RETURN) : undefined}
-                disabled={!oauth.google}
-              >
-                {oauth.google ? 'Continue with Google' : 'Google — not configured'}
-              </OrbAuthButton>
-              <OrbAuthButton
-                provider="apple"
-                href={oauth.apple ? orbOAuthStartUrl('apple', ORB_RETURN) : undefined}
-                disabled={!oauth.apple}
-              >
-                Continue with Apple
-              </OrbAuthButton>
-              <OrbAuthButton provider="email" type="button" onClick={() => setShowEmailForm((v) => !v)}>
-                Continue with Email
-              </OrbAuthButton>
-              {passkeySupported ? (
-                <>
-                  <OrbAuthButton
-                    provider="passkey"
-                    type="button"
-                    disabled={submitting}
-                    onClick={() => void handlePasskeySignIn()}
-                    data-orb-passkey-sign-in
-                  >
-                    Use Face ID, Touch ID or device passkey
-                  </OrbAuthButton>
-                  <label className="orb-login-field-label block text-xs">
-                    Email for passkey
-                    <input
-                      type="email"
-                      value={passkeyEmail}
-                      onChange={(e) => setPasskeyEmail(e.target.value)}
-                      placeholder="you@provider.co.uk"
-                      className="orb-login-input mt-1 w-full rounded-xl px-3 py-2 text-sm"
-                      autoComplete="email webauthn"
-                      data-orb-passkey-email
-                    />
-                  </label>
-                </>
-              ) : (
-                <p className="orb-login-muted text-xs" data-orb-passkey-unavailable>
-                  Passkeys are not available on this device
-                </p>
-              )}
-            </div>
+            <section className="mt-6" aria-labelledby="orb-login-work-account">
+              <h3 id="orb-login-work-account" className="orb-login-section-title text-xs font-semibold uppercase tracking-wide">
+                1. Continue with work account
+              </h3>
+              <div className="mt-2.5 space-y-2.5" data-orb-oauth-buttons>
+                <OrbAuthButton
+                  provider="microsoft"
+                  href={oauth.microsoft ? orbOAuthStartUrl('microsoft', ORB_RETURN) : undefined}
+                  disabled={!oauth.microsoft || authBusy}
+                >
+                  Continue with Microsoft
+                </OrbAuthButton>
+                <OrbAuthButton
+                  provider="google"
+                  href={oauth.google ? orbOAuthStartUrl('google', ORB_RETURN) : undefined}
+                  disabled={!oauth.google || authBusy}
+                >
+                  {oauth.google ? 'Continue with Google' : 'Google — not configured'}
+                </OrbAuthButton>
+                <OrbAuthButton
+                  provider="apple"
+                  href={oauth.apple ? orbOAuthStartUrl('apple', ORB_RETURN) : undefined}
+                  disabled={!oauth.apple || authBusy}
+                >
+                  Continue with Apple
+                </OrbAuthButton>
+              </div>
+            </section>
 
-            {showEmailForm ? (
-              <form className="mt-6 space-y-4" onSubmit={handleSubmit} data-testid="orb-login-form">
+            <section className="mt-6" aria-labelledby="orb-login-email">
+              <h3 id="orb-login-email" className="orb-login-section-title text-xs font-semibold uppercase tracking-wide">
+                2. Continue with email
+              </h3>
+              <form className="mt-2.5 space-y-3" onSubmit={handleEmailContinue} data-testid="orb-login-email-step">
                 <label className="orb-login-field-label block text-sm font-medium">
                   Email
                   <input
@@ -245,47 +254,136 @@ function OrbLoginPanel() {
                     className="orb-login-input mt-2 w-full rounded-2xl px-4 py-3"
                     data-testid="orb-login-email"
                     autoComplete="email"
+                    disabled={authBusy}
                   />
                 </label>
-                <label className="orb-login-field-label block text-sm font-medium">
-                  Password
-                  <input
-                    type="password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="orb-login-input mt-2 w-full rounded-2xl px-4 py-3"
-                    data-testid="orb-login-password"
-                    autoComplete="current-password"
-                  />
-                </label>
-                <button
-                  type="submit"
-                  disabled={submitting || status === 'loading'}
-                  className="orb-login-submit w-full rounded-2xl py-3 text-sm font-semibold disabled:opacity-60"
-                  data-testid="orb-login-submit"
-                >
-                  {submitting ? 'Signing in…' : 'Sign in with email'}
-                </button>
-                <p className="text-center text-xs">
-                  <Link href="/mfa" className="orb-login-link font-medium" data-orb-authenticator-fallback>
-                    Use authenticator app instead
-                  </Link>
-                </p>
+                {!emailStepReady ? (
+                  <button
+                    type="submit"
+                    disabled={authBusy}
+                    className="orb-login-submit w-full rounded-2xl py-3 text-sm font-semibold disabled:opacity-60"
+                    data-orb-login-email-continue
+                  >
+                    Continue
+                  </button>
+                ) : null}
               </form>
-            ) : null}
 
-            <p className="orb-login-muted mt-8 text-sm">
-              No account?{' '}
-              <Link href="/orb/signup" className="orb-login-link-trial font-semibold">
-                Start free trial
-              </Link>
-            </p>
+              {emailStepReady ? (
+                <form className="mt-3 space-y-4" onSubmit={handleSubmit} data-testid="orb-login-form">
+                  <label className="orb-login-field-label block text-sm font-medium">
+                    Password
+                    <input
+                      type="password"
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="orb-login-input mt-2 w-full rounded-2xl px-4 py-3"
+                      data-testid="orb-login-password"
+                      autoComplete="current-password"
+                      disabled={authBusy}
+                    />
+                  </label>
+                  <label className="flex items-center gap-2 text-xs text-[var(--orb-muted)]">
+                    <input
+                      type="checkbox"
+                      checked={remember}
+                      onChange={(e) => setRemember(e.target.checked)}
+                      className="rounded"
+                    />
+                    Keep me signed in on this device
+                  </label>
+                  <button
+                    type="submit"
+                    disabled={authBusy}
+                    className="orb-login-submit w-full rounded-2xl py-3 text-sm font-semibold disabled:opacity-60"
+                    data-testid="orb-login-submit"
+                  >
+                    {submitting ? 'Signing in…' : 'Sign in with email'}
+                  </button>
+                  <p className="text-center text-xs">
+                    <Link href="/mfa" className="orb-login-link font-medium" data-orb-authenticator-fallback>
+                      Use authenticator app instead
+                    </Link>
+                  </p>
+                </form>
+              ) : null}
+            </section>
+
+            {passkeySupported ? (
+              <section className="mt-6" aria-labelledby="orb-login-passkey">
+                <h3 id="orb-login-passkey" className="orb-login-section-title text-xs font-semibold uppercase tracking-wide">
+                  3. Other secure options
+                </h3>
+                <p className="orb-login-muted mt-2 text-xs leading-relaxed">
+                  Use passkey if you have already set one up (Face ID, Touch ID or device passkey).
+                </p>
+                <label className="orb-login-field-label mt-3 block text-xs">
+                  Enter your email so we can find your saved passkey.
+                  <input
+                    type="email"
+                    value={passkeyEmail || email}
+                    onChange={(e) => setPasskeyEmail(e.target.value)}
+                    placeholder="you@provider.co.uk"
+                    className="orb-login-input mt-1 w-full rounded-xl px-3 py-2 text-sm"
+                    autoComplete="email webauthn"
+                    data-orb-passkey-email
+                    disabled={authBusy}
+                  />
+                </label>
+                <div className="mt-2.5">
+                  <OrbAuthButton
+                    provider="passkey"
+                    type="button"
+                    disabled={authBusy}
+                    onClick={() => void handlePasskeySignIn()}
+                    data-orb-passkey-sign-in
+                  >
+                    {passkeySubmitting ? 'Checking passkey…' : 'Use Face ID, Touch ID or device passkey'}
+                  </OrbAuthButton>
+                </div>
+              </section>
+            ) : (
+              <p className="orb-login-muted mt-6 text-xs" data-orb-passkey-unavailable>
+                Passkeys are not available on this device.
+              </p>
+            )}
+
+            <div className="mt-8 space-y-2 text-sm" data-orb-login-account-links>
+              <p>
+                New to ORB?{' '}
+                <Link href="/orb/signup" className="orb-login-link-trial font-semibold" data-orb-create-account>
+                  Create account
+                </Link>
+              </p>
+              <p className="orb-login-muted text-xs leading-relaxed">
+                Already subscribed through your provider?{' '}
+                <button
+                  type="button"
+                  className="orb-login-link font-semibold"
+                  onClick={() => {
+                    setEmailStepReady(true)
+                    document.getElementById('orb-login-email')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+                  }}
+                  data-orb-provider-email-hint
+                >
+                  Sign in with your work email
+                </button>
+              </p>
+            </div>
+
             <p className="orb-login-back mt-4 text-xs">
               <Link href="/" className="orb-login-link-subtle">
                 ← Back to home
               </Link>
             </p>
+
+            <footer className="orb-login-footer mt-8 border-t border-[var(--orb-line)]/40 pt-6 text-[10px] leading-relaxed text-[var(--orb-muted)]">
+              <p data-orb-login-disclaimer>
+                ORB supports professional judgement and does not replace safeguarding procedures, managers,
+                emergency services or legal advice.
+              </p>
+            </footer>
           </div>
         </div>
       </div>
