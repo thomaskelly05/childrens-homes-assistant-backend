@@ -10,8 +10,10 @@ from typing import Any
 from fastapi import HTTPException
 from openai import OpenAI
 
+from schemas.data_protection import DataClassification
+from services.ai_external_call_governance import record_model_usage
+from services.ai_privacy_decision_service import AIPrivacyDecisionRequest, ai_privacy_decision_service
 from services.ai_redaction_service import ai_redaction_service
-from services.ai_usage_audit_service import ai_usage_audit_service
 from services.provider_data_intelligence_settings_service import provider_data_intelligence_settings_service
 
 logger = logging.getLogger("indicare.ai_gateway")
@@ -28,15 +30,6 @@ MODEL_COSTS_PER_1K_TOKENS: dict[str, dict[str, float]] = {
     "gpt-4o-mini": {"input": 0.00012, "output": 0.00048},
     "gpt-4o": {"input": 0.004, "output": 0.012},
 }
-
-RESTRICTED_FEATURE_PREFIXES = (
-    "safeguarding_decision",
-    "lado_decision",
-    "police_decision",
-    "medical_diagnosis",
-    "legal_decision",
-)
-
 
 @dataclass
 class AIGatewayRequest:
@@ -138,22 +131,48 @@ class AIGatewayService:
             self._client = OpenAI()
         return self._client
 
-    def _assert_allowed(self, request: AIGatewayRequest) -> dict[str, Any]:
-        settings = provider_data_intelligence_settings_service.defaults(provider_id=request.provider_id, home_id=request.home_id)
-        feature = (request.feature or "").strip().lower()
-        if any(feature.startswith(prefix) for prefix in RESTRICTED_FEATURE_PREFIXES):
-            raise HTTPException(status_code=403, detail="This feature must remain human-led and cannot be delegated to external AI")
-        if request.external_ai_required and not settings.external_ai_enabled:
-            raise HTTPException(status_code=403, detail="External AI processing is disabled for this environment/provider")
-        if request.external_ai_required and feature not in settings.allowed_ai_features and "risk_drafting" not in settings.allowed_ai_features:
-            # Permit explicit feature allow-listing but keep legacy risk drafting available via env.
-            if feature not in {"risk_drafting", "report_drafting", "orb_text_fallback", "metadata"}:
-                raise HTTPException(status_code=403, detail=f"AI feature is not enabled: {feature}")
-        return settings.model_dump()
+    def _govern_request(self, request: AIGatewayRequest) -> tuple[dict[str, Any], Any]:
+        classification = None
+        raw_class = (request.metadata or {}).get("data_classification")
+        if raw_class:
+            try:
+                classification = DataClassification(str(raw_class))
+            except ValueError:
+                classification = None
+
+        decision = ai_privacy_decision_service.decide(
+            AIPrivacyDecisionRequest(
+                provider_id=request.provider_id,
+                home_id=request.home_id,
+                user_id=request.user_id,
+                feature=request.feature,
+                data_classification=classification,
+                redaction_mode=request.redaction_mode,
+                metadata={"model": request.model, "route": "ai_gateway"},
+            )
+        )
+        settings = provider_data_intelligence_settings_service.defaults(
+            provider_id=request.provider_id,
+            home_id=request.home_id,
+        )
+        governance = settings.model_dump()
+        governance["privacy_decision"] = decision.model_dump()
+
+        if request.external_ai_required and not decision.allowed:
+            detail = {
+                "external_ai_disabled": "External AI processing is disabled for this environment/provider",
+                "restricted_decision_feature": "This feature must remain human-led and cannot be delegated to external AI",
+                "feature_not_allowlisted": f"AI feature is not enabled: {request.feature}",
+                "classification_blocks_external_ai": "This data classification cannot be sent to external AI",
+                "export_restricted_blocks_external_ai": "Export-restricted data cannot be sent to external AI",
+            }.get(decision.reason, "External AI request blocked by privacy policy")
+            raise HTTPException(status_code=403, detail=detail)
+
+        return governance, decision
 
     def draft_text(self, request: AIGatewayRequest) -> AIGatewayResponse:
-        governance = self._assert_allowed(request)
-        mode = request.redaction_mode or governance.get("redaction_mode") or "strict"
+        governance, decision = self._govern_request(request)
+        mode = request.redaction_mode or decision.redaction_mode or governance.get("redaction_mode") or "strict"
         redacted_prompt = ai_redaction_service.redact_text(request.prompt, mode=mode)
         redacted_system = ai_redaction_service.redact_text(request.system_prompt or "", mode=mode)
 
@@ -193,14 +212,26 @@ class AIGatewayService:
             "estimated_input_tokens": input_tokens,
             "estimated_output_tokens": actual_output_tokens,
             "estimated_cost_gbp": actual_cost,
-            "prompt_stored": bool(governance.get("prompt_storage")),
-            "transcript_stored": bool(governance.get("transcript_storage")),
+            "prompt_stored": decision.store_prompts,
+            "transcript_stored": decision.store_transcripts,
             "started_at": started.isoformat(),
             "completed_at": datetime.now(timezone.utc).isoformat(),
-            "metadata": request.metadata,
+            "metadata": {**(request.metadata or {}), "no_training_required": decision.no_training_required},
         }
         logger.info("ai_gateway_request %s", json.dumps({k: v for k, v in audit.items() if k != "metadata"}, default=str))
-        ai_usage_audit_service.record(audit)
+        record_model_usage(
+            feature=request.feature,
+            decision=decision,
+            provider_id=request.provider_id,
+            home_id=request.home_id,
+            user_id=request.user_id,
+            model=request.model,
+            input_tokens=input_tokens,
+            output_tokens=actual_output_tokens,
+            cost_gbp=actual_cost,
+            redaction_applied=mode != "off",
+            metadata=audit.get("metadata"),
+        )
 
         return AIGatewayResponse(
             ok=True,
