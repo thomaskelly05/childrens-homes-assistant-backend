@@ -225,7 +225,8 @@ export function OrbDocumentPanel({
       footer="ORB Residential — Powered by IndiCare Intelligence. Documents use only what you upload or paste."
       {...orbStationShellProps(residentialSurface, 'wide')}
     >
-      <div className="orb-document-panel space-y-4 p-4" data-orb-document-panel>
+      <div className="orb-document-panel space-y-3 p-4" data-orb-document-panel>
+        <section data-orb-document-upload-section className="space-y-3">
         <ul
           className="orb-doc-glass-card space-y-1 rounded-xl border border-[var(--orb-line)] px-3 py-2.5 text-[11px] leading-5 text-[var(--orb-muted)]"
           data-orb-document-boundary
@@ -314,7 +315,9 @@ export function OrbDocumentPanel({
             />
           </label>
         ) : null}
+        </section>
 
+        <section data-orb-document-lens-section>
         <div className="space-y-2" data-orb-document-lens-selector>
           <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--orb-muted)]">
             Choose a lens
@@ -359,6 +362,7 @@ export function OrbDocumentPanel({
             ))}
           </div>
         </div>
+        </section>
 
         <label className="flex items-center gap-2 text-xs text-[var(--orb-muted)]">
           <input
@@ -399,7 +403,7 @@ export function OrbDocumentPanel({
         {copyNote ? <p className="text-xs font-medium text-[#0369A1]">{copyNote}</p> : null}
 
         {result && outputView ? (
-          <div className="space-y-4 border-t border-[var(--orb-line)] pt-4" data-orb-document-result>
+          <section className="space-y-4 border-t border-[var(--orb-line)] pt-4" data-orb-document-output-section data-orb-document-result>
             <OrbIntelligenceOutput
               output={outputView}
               onCopy={() => setCopyNote('Copied markdown to clipboard.')}
@@ -519,7 +523,7 @@ export function OrbDocumentPanel({
                 Compare policies (legacy)
               </button>
             </div>
-          </div>
+          </section>
         ) : null}
       </div>
     </OrbStandalonePanelShell>

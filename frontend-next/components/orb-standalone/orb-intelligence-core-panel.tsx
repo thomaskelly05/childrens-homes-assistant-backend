@@ -8,6 +8,28 @@ import type {
   IndicareIntelligenceCoreView
 } from '@/lib/orb/indicare-intelligence-core'
 
+function formatDepthLabel(depth?: string): string | null {
+  if (!depth) return null
+  return depth
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
+function CoreChip({ label, value, tone = 'neutral' }: { label: string; value: string; tone?: 'neutral' | 'amber' | 'sky' }) {
+  const toneClass =
+    tone === 'amber'
+      ? 'border-amber-200/80 bg-amber-50 text-amber-900 dark:border-amber-500/30 dark:bg-amber-950/40 dark:text-amber-100'
+      : tone === 'sky'
+        ? 'border-sky-200/80 bg-sky-50 text-sky-900 dark:border-sky-500/30 dark:bg-sky-950/40 dark:text-sky-100'
+        : 'border-slate-200/80 bg-white/80 text-slate-700 dark:border-white/10 dark:bg-white/[0.06] dark:text-slate-300'
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium ${toneClass}`}>
+      <span className="opacity-70">{label}</span>
+      <span>{value}</span>
+    </span>
+  )
+}
+
 export function OrbIntelligenceCorePanel({
   core,
   qualityGate,
@@ -24,18 +46,30 @@ export function OrbIntelligenceCorePanel({
 
   if (!core && !qualityGate) return null
 
-  const chips = core?.missing_evidence ?? []
+  const missingChips = core?.missing_evidence ?? []
+  const hasMissingEvidence = missingChips.length > 0
   const gateLabel =
     qualityGate?.passed === true
       ? 'Passed'
       : qualityGate?.passed === false
         ? 'Review recommended'
         : null
+  const depthLabel = formatDepthLabel(core?.expert_depth)
+  const careRelevance =
+    typeof core?.care_relevance_score === 'number' ? `${core.care_relevance_score}/100` : null
+  const qualityStandards = core?.quality_standard_hits?.slice(0, 3).join(', ')
+  const lenses = core?.professional_lens_hits?.slice(0, 3).join(', ')
+  const domains = core?.registered_home_domains?.slice(0, 3).join(', ')
+  const sourceBasis =
+    core?.source_basis && typeof core.source_basis === 'object'
+      ? Object.keys(core.source_basis).slice(0, 2).join(', ')
+      : null
 
   return (
     <div
       className="mt-3 rounded-xl border border-slate-200/80 bg-slate-50/90 text-xs text-slate-600 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-400"
       data-orb-intelligence-core-panel
+      data-orb-what-orb-checked-collapsed={open ? 'false' : 'true'}
     >
       <button
         type="button"
@@ -50,9 +84,27 @@ export function OrbIntelligenceCorePanel({
 
       {open ? (
         <div className="space-y-2 border-t border-slate-200/70 px-3 py-2 dark:border-white/10">
-          {chips.length ? (
+          <div className="flex flex-wrap gap-1.5" data-orb-intelligence-summary-chips>
+            {depthLabel ? <CoreChip label="Depth" value={depthLabel} tone="sky" /> : null}
+            {careRelevance ? <CoreChip label="Care relevance" value={careRelevance} /> : null}
+            {qualityStandards ? (
+              <CoreChip label="Quality Standards" value={qualityStandards} />
+            ) : null}
+            {lenses ? <CoreChip label="Professional lenses" value={lenses} /> : null}
+            {domains ? <CoreChip label="Registered home domains" value={domains} /> : null}
+            {sourceBasis ? <CoreChip label="Source basis" value={sourceBasis} /> : null}
+            {gateLabel ? (
+              <CoreChip
+                label="Quality gate"
+                value={gateLabel}
+                tone={qualityGate?.passed === false ? 'amber' : 'neutral'}
+              />
+            ) : null}
+          </div>
+
+          {hasMissingEvidence ? (
             <div className="flex flex-wrap gap-1.5" data-orb-missing-evidence-chips>
-              {chips.map((chip) => (
+              {missingChips.map((chip) => (
                 <span
                   key={chip.id}
                   className="rounded-full border border-amber-200/80 bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-900 dark:border-amber-500/30 dark:bg-amber-950/40 dark:text-amber-100"
@@ -70,57 +122,30 @@ export function OrbIntelligenceCorePanel({
               onClick={() => setDebugOpen((v) => !v)}
               data-orb-intelligence-debug-toggle
             >
-              {debugOpen ? 'Hide intelligence details' : 'Intelligence details'}
+              {debugOpen ? 'Hide manager / RI details' : 'Manager / RI details'}
             </button>
           ) : null}
 
           {showTechnicalDetails && debugOpen ? (
             <dl className="grid gap-1 text-[11px]" data-orb-intelligence-debug-drawer>
-              {core?.expert_depth ? (
-                <>
-                  <dt className="font-semibold text-slate-500">Depth</dt>
-                  <dd>{core.expert_depth}</dd>
-                </>
-              ) : null}
-              {typeof core?.care_relevance_score === 'number' ? (
-                <>
-                  <dt className="font-semibold text-slate-500">Care relevance</dt>
-                  <dd>{core.care_relevance_score}/100</dd>
-                </>
-              ) : null}
               {core?.active_intelligence_layers?.length ? (
                 <>
                   <dt className="font-semibold text-slate-500">Layers</dt>
                   <dd>{core.active_intelligence_layers.join(', ')}</dd>
                 </>
               ) : null}
-              {core?.registered_home_domains?.length ? (
+              {typeof qualityGate?.composite_score === 'number' ? (
                 <>
-                  <dt className="font-semibold text-slate-500">Domains</dt>
-                  <dd>{core.registered_home_domains.join(', ')}</dd>
-                </>
-              ) : null}
-              {core?.quality_standard_hits?.length ? (
-                <>
-                  <dt className="font-semibold text-slate-500">Quality Standards</dt>
-                  <dd>{core.quality_standard_hits.join(', ')}</dd>
-                </>
-              ) : null}
-              {core?.professional_lens_hits?.length ? (
-                <>
-                  <dt className="font-semibold text-slate-500">Professional lenses</dt>
-                  <dd>{core.professional_lens_hits.join(', ')}</dd>
-                </>
-              ) : null}
-              {gateLabel ? (
-                <>
-                  <dt className="font-semibold text-slate-500">Quality gate</dt>
+                  <dt className="font-semibold text-slate-500">Composite score</dt>
                   <dd data-orb-quality-gate-result={qualityGate?.passed ? 'passed' : 'review'}>
-                    {gateLabel}
-                    {typeof qualityGate?.composite_score === 'number'
-                      ? ` (${qualityGate.composite_score})`
-                      : ''}
+                    {qualityGate.composite_score}
                   </dd>
+                </>
+              ) : null}
+              {qualityGate?.critical_flags?.length ? (
+                <>
+                  <dt className="font-semibold text-slate-500">Critical flags</dt>
+                  <dd>{qualityGate.critical_flags.join(', ')}</dd>
                 </>
               ) : null}
             </dl>

@@ -201,3 +201,123 @@ export function managerCanExpandIntelligence(role: string | null | undefined): b
     normalised.includes('provider')
   )
 }
+
+/** Context-aware follow-up chip item (matches OrbSuggestedReplyItem shape). */
+export type IntelligenceContextActionChip = {
+  action: string
+  label: string
+  prefill?: string
+}
+
+const GENERAL_UNRELATED_RE =
+  /^(what is the capital of|who is the president|capital of france|weather in|tell me a joke|2\s*\+\s*2)/i
+
+function normaliseExpertDepth(core: IndicareIntelligenceCoreView | null | undefined): string {
+  const depth = (core?.expert_depth || 'general_light').trim().toLowerCase()
+  if (
+    depth === 'residential_standard' ||
+    depth === 'residential_light' ||
+    depth === 'residential_deep' ||
+    depth === 'safeguarding_critical'
+  ) {
+    return depth
+  }
+  return 'general_light'
+}
+
+function isObviouslyGeneralUnrelated(messageHint: string, content: string): boolean {
+  const hint = messageHint.trim()
+  if (!hint) return false
+  if (GENERAL_UNRELATED_RE.test(hint)) return true
+  if (
+    hint.length < 40 &&
+    !/\b(child|young person|home|staff|record|incident|safeguarding)\b/i.test(hint) &&
+    !/\b(child|young person|home|staff|record|incident|safeguarding|ofsted|care)\b/i.test(content.slice(0, 200))
+  ) {
+    return /^(hi|hello|hey)\b/i.test(hint)
+  }
+  return false
+}
+
+/** Build context-aware follow-up chips from Core depth and message context. */
+export function buildIntelligenceContextActionChips(options: {
+  core?: IndicareIntelligenceCoreView | null
+  messageHint?: string
+  content?: string
+  mode?: string
+}): IntelligenceContextActionChip[] {
+  const hint = (options.messageHint || '').trim()
+  const content = (options.content || '').trim()
+  const depth = normaliseExpertDepth(options.core)
+
+  if (!hint && !content) return []
+
+  if (isObviouslyGeneralUnrelated(hint, content)) {
+    return [
+      { action: 'more_concise', label: 'Make shorter' },
+      { action: 'more_detailed', label: 'Explain more' }
+    ]
+  }
+
+  if (depth === 'general_light') {
+    return [
+      { action: 'more_concise', label: 'Make shorter' },
+      { action: 'more_detailed', label: 'Explain more' },
+      { action: 'reflective_learning', label: 'Save' }
+    ]
+  }
+
+  if (depth === 'residential_light' || depth === 'residential_standard') {
+    return [
+      { action: 'recording_wording', label: 'Record this properly' },
+      { action: 'what_missing', label: 'What am I missing?' },
+      { action: 'safeguarding_lens', label: 'Add safeguarding lens' },
+      { action: 'ofsted_lens', label: 'Add Ofsted lens' },
+      {
+        action: 'shift_builder',
+        label: 'Create action plan',
+        prefill: 'Create an action plan from this.'
+      }
+    ]
+  }
+
+  if (depth === 'residential_deep' || depth === 'safeguarding_critical') {
+    return [
+      { action: 'manager_oversight', label: 'Manager oversight' },
+      { action: 'what_missing', label: 'What needs recording?' },
+      {
+        action: 'safeguarding_lens',
+        label: 'Escalation considerations',
+        prefill: 'What escalation considerations should I think about here?'
+      },
+      { action: 'evidence_gaps', label: 'Missing evidence' },
+      {
+        action: 'shift_builder',
+        label: 'Create action plan',
+        prefill: 'Create an action plan from this.'
+      }
+    ]
+  }
+
+  return [
+    { action: 'more_concise', label: 'Make shorter' },
+    { action: 'what_missing', label: 'What am I missing?' }
+  ]
+}
+
+export const ORB_INTELLIGENCE_MICRO_STATUS_MESSAGES = [
+  'Checking context…',
+  'Checking recording gaps…',
+  'Checking professional lenses…',
+  'Preparing answer…'
+] as const
+
+export function intelligenceMicroStatusForDepth(
+  depth: string | undefined,
+  index: number
+): string | null {
+  const normalised = (depth || 'general_light').trim().toLowerCase()
+  if (normalised === 'general_light') return null
+  const messages = ORB_INTELLIGENCE_MICRO_STATUS_MESSAGES
+  return messages[index % messages.length] ?? messages[0]
+}
