@@ -92,6 +92,30 @@ CARE_RELEVANCE_FLAGS = {
 class IndicareIntelligenceCoreService:
     """Always-on intelligence packet for every /ORB request."""
 
+    def estimate_expert_depth(
+        self,
+        message: str,
+        *,
+        mode: str | None = None,
+        profile_context: bool = False,
+    ) -> str:
+        """Lightweight depth estimate before full retrieval (stream status / UX)."""
+        mode_name = str(mode or "Ask ORB").strip() or "Ask ORB"
+        from services.orb_knowledge_retrieval_service import orb_knowledge_retrieval_service
+
+        classification = orb_knowledge_retrieval_service.classify_query(
+            message, mode=mode_name, profile_context=profile_context
+        )
+        care_score, _, _ = self._score_care_relevance(
+            message, mode=mode_name, classification=classification
+        )
+        return self._resolve_expert_depth(
+            message,
+            mode=mode_name,
+            care_score=care_score,
+            classification=classification,
+        )
+
     def build_intelligence_packet(
         self,
         message: str,
@@ -116,6 +140,19 @@ class IndicareIntelligenceCoreService:
             care_score=care_score,
             classification=classification,
         )
+
+        if expert_depth == "general_light" and care_score < 20:
+            return self._build_general_light_packet(
+                message,
+                mode=mode_name,
+                classification=classification,
+                care_score=care_score,
+                care_flags=care_flags,
+                hidden_flags=hidden_flags,
+                profile_role=profile_role,
+                history=history,
+                follow_up_message=follow_up_message,
+            )
 
         orb9_packet = orb_expert_brain_orchestrator_service.build_context_packet(
             message,
@@ -214,6 +251,79 @@ class IndicareIntelligenceCoreService:
                 "Ofsted report intelligence is anonymised practice learning only; "
                 "never predict grades or auto-apply statutory updates."
             ),
+        }
+
+    def _build_general_light_packet(
+        self,
+        message: str,
+        *,
+        mode: str,
+        classification: dict[str, Any],
+        care_score: int,
+        care_flags: list[str],
+        hidden_flags: list[str],
+        profile_role: str | None = None,
+        history: list[dict[str, Any]] | None = None,
+        follow_up_message: str | None = None,
+    ) -> dict[str, Any]:
+        """Fast path: safety shell without residential domain/gap/missingness scans."""
+        expert_depth = "general_light"
+        orb9_packet = orb_expert_brain_orchestrator_service.build_context_packet(
+            message,
+            mode=mode,
+            profile_role=profile_role,
+            history=history,
+            follow_up_message=follow_up_message,
+        )
+        risk = str(orb9_packet.get("risk_level") or "low").lower()
+        convergence = orb_indicare_intelligence_convergence_service.route(message, mode=mode)
+        active_layers = list(convergence.get("active_engines") or [])[:6]
+        pack_keys = classification.get("pack_keys") or []
+        source_basis = indicare_source_convergence_service.build_source_basis(
+            message=message,
+            pack_keys=pack_keys[:2],
+            profile_context=False,
+        )
+        quality_preview = orb_answer_quality_gate_service.evaluate_packet(
+            {**orb9_packet, "message": message, "mode": mode, "risk_level": risk}
+        )
+        prompt_block = self.build_prompt_block(
+            expert_depth=expert_depth,
+            orb9_packet=orb9_packet,
+            domain_block="",
+            depth_frame_block="",
+            operating_block="",
+            qs_block="",
+            care_score=care_score,
+        )
+        return {
+            "version": "indicare_intelligence_10",
+            "orb_shell": True,
+            "expert_depth": expert_depth,
+            "care_relevance_score": care_score,
+            "hidden_care_relevance_flags": hidden_flags,
+            "active_intelligence_layers": active_layers,
+            "active_brains": list(dict.fromkeys(["indicare_intelligence_core", "general_assistant"])),
+            "registered_home_domains": [],
+            "quality_standard_hits": [],
+            "professional_lens_hits": [],
+            "whole_child_domains": [],
+            "scenario_sequences": [],
+            "source_basis": source_basis,
+            "gaps": [],
+            "missingness_graph": {"nodes": [], "edges": []},
+            "quality_gate_preview": quality_preview,
+            "learning_tags": [],
+            "prompt_block": prompt_block,
+            "orb9_packet": orb9_packet,
+            "classification": classification,
+            "convergence": convergence,
+            "domain_context": {"matched_domain_ids": []},
+            "ofsted_learning_note": (
+                "Ofsted report intelligence is anonymised practice learning only; "
+                "never predict grades or auto-apply statutory updates."
+            ),
+            "general_light_fast_path": True,
         }
 
     def build_prompt_block(

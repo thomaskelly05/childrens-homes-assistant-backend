@@ -23,6 +23,13 @@ from services.indicare_intelligence_route_finalize_service import (
     finalize_standalone_intelligence,
     merge_intelligence_into_context,
 )
+from services.indicare_intelligence_core_service import indicare_intelligence_core_service
+from services.orb_chat_timing_service import OrbChatTimingTracker, orb_chat_timing_debug_enabled
+from services.orb_stream_status_service import (
+    safeguarding_opening_token,
+    stream_status_payload,
+    stream_status_sequence,
+)
 from services.orb_standalone_brain_service import orb_standalone_brain_service
 from services.orb_grounded_answer_style_service import orb_grounded_answer_style_service
 from services.orb_official_source_anchor_service import orb_official_source_anchor_service
@@ -972,27 +979,49 @@ async def standalone_orb_conversation_stream(
 ):
     """SSE stream of ORB answer tokens with final metadata (standalone boundary preserved)."""
     _reject_standalone_os_ids(payload.model_dump())
-    ctx = _build_standalone_request_context(payload)
-    mode = ctx["mode"]
-    detail = ctx["detail"]
-    history = ctx["history"]
-    image_urls = ctx["image_urls"]
-    retrieval_bundle = ctx["retrieval_bundle"]
-    prompt_tier = ctx["prompt_tier"]
-    grounding_context = ctx["grounding_context"]
-    retrieval_preview = ctx["retrieval_preview"]
-    shared_cognition = ctx["shared_cognition"]
-    standalone_brain = ctx["standalone_brain"]
-    framed_message = ctx["framed_message"]
-    profile_context = ctx["profile_context"]
-    indicare_intelligence = ctx.get("indicare_intelligence") or retrieval_bundle.get("indicare_intelligence") or {}
+    mode = orb_standalone_brain_service.normalise_mode(payload.mode or "Ask ORB")
 
     async def event_generator() -> AsyncIterator[str]:
+        timing = OrbChatTimingTracker()
+        timing.mark("request_received")
         request_started = time.perf_counter()
         first_token_ms: int | None = None
         provider_started: float | None = None
         stream_meta: dict[str, Any] = {}
         answer_parts: list[str] = []
+
+        yield _sse_event("status", stream_status_payload("received"))
+
+        profile_context = (
+            "standalone context profiles" in payload.message.lower() or "profile:" in payload.message.lower()
+        )
+        quick_depth = indicare_intelligence_core_service.estimate_expert_depth(
+            payload.message,
+            mode=mode,
+            profile_context=profile_context,
+        )
+        for status_event in stream_status_sequence(quick_depth):
+            yield _sse_event("status", status_event)
+
+        timing.mark("core_start")
+        ctx = _build_standalone_request_context(payload)
+        timing.mark("core_complete")
+        detail = ctx["detail"]
+        history = ctx["history"]
+        image_urls = ctx["image_urls"]
+        retrieval_bundle = ctx["retrieval_bundle"]
+        prompt_tier = ctx["prompt_tier"]
+        grounding_context = ctx["grounding_context"]
+        retrieval_preview = ctx["retrieval_preview"]
+        shared_cognition = ctx["shared_cognition"]
+        standalone_brain = ctx["standalone_brain"]
+        framed_message = ctx["framed_message"]
+        indicare_intelligence = ctx.get("indicare_intelligence") or retrieval_bundle.get("indicare_intelligence") or {}
+        expert_depth = str(
+            ctx.get("expert_depth")
+            or indicare_intelligence.get("expert_depth")
+            or quick_depth
+        )
 
         limited = _enforce_plan_limits(
             current_user=current_user,
@@ -1012,8 +1041,17 @@ async def standalone_orb_conversation_stream(
             return
 
         try:
+            opening = safeguarding_opening_token() if expert_depth == "safeguarding_critical" else None
+            if opening:
+                answer_parts.append(opening)
+                if first_token_ms is None:
+                    first_token_ms = int((time.perf_counter() - request_started) * 1000)
+                    timing.mark("first_token")
+                yield _sse_event("token", {"delta": f"{opening}\n\n"})
+
             assistant_runtime = _select_assistant_runtime()
             provider_started = time.perf_counter()
+            timing.mark("model_start")
             async for delta in assistant_runtime.stream_answer(
                 framed_message,
                 history=history,
@@ -1029,9 +1067,11 @@ async def standalone_orb_conversation_stream(
             ):
                 if first_token_ms is None:
                     first_token_ms = int((time.perf_counter() - request_started) * 1000)
+                    timing.mark("first_token")
                 answer_parts.append(delta)
                 yield _sse_event("token", {"delta": delta})
 
+            timing.mark("stream_complete")
             assistant_data = dict(stream_meta)
             if not assistant_data.get("answer"):
                 assistant_data["answer"] = "".join(answer_parts).strip()
@@ -1125,6 +1165,7 @@ async def standalone_orb_conversation_stream(
                 "provider": model_routing.get("provider"),
                 "route": "/orb/standalone/conversation/stream",
                 "stream_mode": "provider_tokens",
+                "expert_depth": expert_depth,
             }
             if indicare_intelligence:
                 answer, intel_meta = finalize_standalone_intelligence(
@@ -1134,8 +1175,14 @@ async def standalone_orb_conversation_stream(
                     message=payload.message,
                     mode=mode,
                     sanitize_closer=orb_grounded_answer_style_service.sanitize_high_attention_closer,
+                    timing=timing,
                 )
                 context_used = merge_intelligence_into_context(context_used, intel_meta)
+            timing.mark("response_sent")
+            if orb_chat_timing_debug_enabled():
+                debug_timing = timing.to_debug_metadata()
+                if debug_timing:
+                    context_used["timing"]["debug_timing"] = debug_timing
             metadata_payload = {
                 "ok": True,
                 "standalone": True,

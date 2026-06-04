@@ -186,6 +186,7 @@ import { copyTextToClipboard } from '@/lib/orb/orb-clipboard'
 import { stripMarkdownForSpeech } from '@/lib/orb/orb-speech-text'
 import { loadOrbStandaloneChatSettings } from '@/lib/orb/orb-standalone-settings'
 import {
+  estimateTranscriptExpertDepth,
   extractIndicareIntelligenceCore,
   shouldBlockAutoSpokenReply,
   shouldPauseVoiceAutoSend
@@ -568,6 +569,8 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   const [modes, setModes] = useState<string[]>([...STANDALONE_ORB_MODES])
   const [message, setMessage] = useState('')
   const [pending, setPending] = useState(false)
+  const [answeringStreamStatus, setAnsweringStreamStatus] = useState<string | null>(null)
+  const [answeringDepthHint, setAnsweringDepthHint] = useState<string | null>(null)
   const [lastSendStatus, setLastSendStatus] = useState<LastSendStatus>('idle')
   const [error, setError] = useState<string | null>(null)
   const [retryPayload, setRetryPayload] = useState<{ text: string; chatId: string } | null>(null)
@@ -1123,6 +1126,8 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
 
       setMessage('')
       setAttachments([])
+      setAnsweringStreamStatus(null)
+      setAnsweringDepthHint(estimateTranscriptExpertDepth(trimmed || messageBody))
       composerUserEditedRef.current = false
       voiceMayFillComposerRef.current = false
       if (STANDALONE_ORB_VOICE_CAPTURE_ENABLED) {
@@ -1422,6 +1427,16 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
             conversationRequest,
             {
               onToken: (_delta, partial) => applyStreamingPartial(partial),
+              onStatus: (status) => {
+                const statusLine = status.message?.trim()
+                if (status.expert_depth) {
+                  setAnsweringDepthHint(status.expert_depth)
+                }
+                if (statusLine) {
+                  setAnsweringStreamStatus(statusLine)
+                  applyStreamingPartial(streamPartialRef.current, { streamStatus: statusLine })
+                }
+              },
               onMetadata: (meta) => {
                 const responseSources = (
                   (meta.citations?.length ? meta.citations : meta.sources) ?? []
@@ -1507,6 +1522,8 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
 
         if (!isCurrentSend() || streamGenerationRef.current !== streamGeneration) return
 
+        setAnsweringStreamStatus(null)
+        setAnsweringDepthHint(null)
         finalizeAssistantFromResponse(
           response,
           response.error_detail
@@ -2462,6 +2479,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
     pending || visibleMessages.some((m) => m.status === 'streaming' || m.status === 'thinking')
 
   const answeringExpertDepth = useMemo(() => {
+    if (isAnswering && answeringDepthHint) return answeringDepthHint
     const modeKey = mode.trim().toLowerCase()
     if (modeKey.includes('safeguarding')) return 'safeguarding_critical'
     if (modeKey.includes('record')) return 'residential_deep'
@@ -2473,7 +2491,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       ? extractIndicareIntelligenceCore(lastAssistant.contextUsed as Record<string, unknown>)?.expert_depth
       : undefined
     return fromCore || 'general_light'
-  }, [mode, visibleMessages])
+  }, [mode, visibleMessages, isAnswering, answeringDepthHint])
 
   const composer = (
     <div
@@ -2493,7 +2511,11 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           />
         </div>
       ) : null}
-      <OrbIntelligenceMicroStatus active={isAnswering} expertDepth={answeringExpertDepth} />
+      <OrbIntelligenceMicroStatus
+        active={isAnswering}
+        expertDepth={answeringExpertDepth}
+        backendMessage={answeringStreamStatus}
+      />
     <OrbStandaloneComposer
       value={message}
       composerStateLength={message.trim().length}
@@ -3483,6 +3505,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                             sources={minimalTurn ? [] : entry.sources}
                             mode={mode}
                             streaming={entry.status === 'streaming'}
+                            streamStatus={entry.streamStatus}
                             explainability={entry.explainability}
                             modelRouting={entry.modelRouting}
                             messageHint={messageHint}

@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import dynamic from 'next/dynamic'
 import { ChevronDown, Copy, FileText, MoreHorizontal, RotateCcw, Sparkles, Square, Volume2 } from 'lucide-react'
 
 import { copyTextToClipboard } from '@/lib/orb/orb-clipboard'
@@ -30,10 +31,15 @@ import {
   shouldShowRecordProperlyCta,
   buildIntelligenceContextActionChips
 } from '@/lib/orb/indicare-intelligence-core'
-import {
-  OrbIntelligenceActionCtas,
-  OrbIntelligenceCorePanel
-} from '@/components/orb-standalone/orb-intelligence-core-panel'
+import { OrbIntelligenceActionCtas } from '@/components/orb-standalone/orb-intelligence-core-panel'
+
+const OrbIntelligenceCorePanel = dynamic(
+  () =>
+    import('@/components/orb-standalone/orb-intelligence-core-panel').then(
+      (mod) => mod.OrbIntelligenceCorePanel
+    ),
+  { ssr: false, loading: () => null }
+)
 
 function lensChipLabels(
   mode: string,
@@ -167,11 +173,26 @@ export function OrbCognitionIndicators({
   )
 }
 
+function OrbStreamingSkeleton() {
+  return (
+    <div
+      className="orb-stream-skeleton my-2 space-y-2"
+      data-orb-stream-skeleton
+      aria-hidden
+    >
+      <div className="h-3 w-[92%] animate-pulse rounded bg-slate-200/80 dark:bg-white/10" />
+      <div className="h-3 w-[78%] animate-pulse rounded bg-slate-200/70 dark:bg-white/[0.07]" />
+      <div className="h-3 w-[64%] animate-pulse rounded bg-slate-200/60 dark:bg-white/[0.05]" />
+    </div>
+  )
+}
+
 export function OrbAssistantMessageBody({
   content,
   sources,
   mode,
   streaming,
+  streamStatus,
   explainability,
   modelRouting,
   messageHint,
@@ -188,6 +209,7 @@ export function OrbAssistantMessageBody({
   sources?: StandaloneOrbSource[]
   mode: string
   streaming?: boolean
+  streamStatus?: string
   explainability?: OrbExplainabilityView
   modelRouting?: StandaloneOrbModelRouting
   messageHint?: string
@@ -212,6 +234,17 @@ export function OrbAssistantMessageBody({
   )
   const showTechnical = managerCanExpandIntelligence(userRole)
   const displayContent = stripSourcesBasisSection(content)
+  const [showSkeleton, setShowSkeleton] = useState(false)
+
+  useEffect(() => {
+    if (!streaming || displayContent.trim()) {
+      setShowSkeleton(false)
+      return
+    }
+    const timer = window.setTimeout(() => setShowSkeleton(true), 400)
+    return () => window.clearTimeout(timer)
+  }, [streaming, displayContent])
+
   return (
     <article
       className={`orb-message-assistant group flex gap-3.5 ${streaming ? 'orb-message-streaming' : ''}`}
@@ -235,8 +268,20 @@ export function OrbAssistantMessageBody({
             cognitionContext={cognitionContext}
           />
         ) : null}
+        {streaming && streamStatus && !displayContent.trim() ? (
+          <p
+            className="mb-1 text-[11px] text-[var(--orb-muted)]"
+            data-orb-stream-inline-status
+            role="status"
+          >
+            {streamStatus}
+          </p>
+        ) : null}
         <div className="orb-message-content text-[15px] leading-relaxed text-[var(--orb-foreground)] md:leading-7">
-          <OrbMarkdownAnswer content={displayContent} sources={sources} />
+          {showSkeleton && !displayContent.trim() ? <OrbStreamingSkeleton /> : null}
+          {displayContent.trim() ? (
+            <OrbMarkdownAnswer content={displayContent} sources={sources} />
+          ) : null}
         </div>
         {showExplainability ? (
           <OrbExplainabilityPanel

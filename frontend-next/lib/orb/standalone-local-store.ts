@@ -48,6 +48,8 @@ export type StandaloneChatMessage = {
   status?: StandaloneChatMessageStatus
   /** Shown while status is thinking (defaults to ORB is thinking...). */
   thinkingLabel?: string
+  /** Latest backend stream status line (residential/deep perceived speed). */
+  streamStatus?: string
   sources?: StandaloneOrbSource[]
   modelRouting?: StandaloneOrbModelRouting
   documentSuggestion?: {
