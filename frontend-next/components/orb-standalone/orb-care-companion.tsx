@@ -1428,10 +1428,10 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
             {
               onToken: (_delta, partial) => applyStreamingPartial(partial),
               onStatus: (status) => {
-                const statusLine = status.message?.trim()
                 if (status.expert_depth) {
                   setAnsweringDepthHint(status.expert_depth)
                 }
+                const statusLine = status.message?.trim()
                 if (statusLine) {
                   setAnsweringStreamStatus(statusLine)
                   applyStreamingPartial(streamPartialRef.current, { streamStatus: statusLine })

@@ -4,13 +4,21 @@ from __future__ import annotations
 
 from typing import Any
 
-SAFEGUARDING_IMMEDIATE_OPENING = (
-    "First, check immediate safety and follow your local safeguarding procedure. "
-    "I'm preparing the full steps now."
-)
+# User-facing status copy only — no backend architecture labels.
+USER_STATUS_THINKING = "Thinking…"
+USER_STATUS_PREPARING_GUIDANCE = "Preparing guidance…"
+USER_STATUS_SAFEST_STEPS = "Checking the safest next steps…"
+USER_STATUS_RECORDING_POINTS = "Preparing recording points…"
+USER_STATUS_BUILDING_ANSWER = "Building the answer…"
 
 
-def stream_status_payload(stage: str, *, message: str | None = None, expert_depth: str | None = None) -> dict[str, Any]:
+def stream_status_payload(
+    stage: str,
+    *,
+    message: str | None = None,
+    expert_depth: str | None = None,
+) -> dict[str, Any]:
+    """Build SSE status payload. expert_depth is kept for client routing logic only."""
     payload: dict[str, Any] = {"type": "status", "stage": stage}
     if message:
         payload["message"] = message
@@ -29,12 +37,12 @@ def stream_status_sequence(expert_depth: str) -> list[dict[str, Any]]:
         return [
             stream_status_payload(
                 "safety_check",
-                message="Checking immediate safety steps…",
+                message=USER_STATUS_SAFEST_STEPS,
                 expert_depth=depth,
             ),
             stream_status_payload(
-                "preparing_answer",
-                message="Preparing answer…",
+                "building_answer",
+                message=USER_STATUS_BUILDING_ANSWER,
                 expert_depth=depth,
             ),
         ]
@@ -42,13 +50,13 @@ def stream_status_sequence(expert_depth: str) -> list[dict[str, Any]]:
     if depth == "residential_deep":
         return [
             stream_status_payload(
-                "context_check",
-                message="Checking safety, recording and oversight…",
+                "safety_check",
+                message=USER_STATUS_SAFEST_STEPS,
                 expert_depth=depth,
             ),
             stream_status_payload(
-                "preparing_answer",
-                message="Preparing answer…",
+                "building_answer",
+                message=USER_STATUS_BUILDING_ANSWER,
                 expert_depth=depth,
             ),
         ]
@@ -56,13 +64,13 @@ def stream_status_sequence(expert_depth: str) -> list[dict[str, Any]]:
     if depth == "residential_standard":
         return [
             stream_status_payload(
-                "recording_gaps",
-                message="Checking recording gaps…",
+                "preparing_guidance",
+                message=USER_STATUS_PREPARING_GUIDANCE,
                 expert_depth=depth,
             ),
             stream_status_payload(
-                "preparing_answer",
-                message="Preparing answer…",
+                "recording_points",
+                message=USER_STATUS_RECORDING_POINTS,
                 expert_depth=depth,
             ),
         ]
@@ -70,17 +78,16 @@ def stream_status_sequence(expert_depth: str) -> list[dict[str, Any]]:
     # residential_light and other residential-ish depths
     return [
         stream_status_payload(
-            "context_check",
-            message="Checking context…",
-            expert_depth=depth,
-        ),
-        stream_status_payload(
-            "preparing_answer",
-            message="Preparing answer…",
+            "preparing_guidance",
+            message=USER_STATUS_PREPARING_GUIDANCE,
             expert_depth=depth,
         ),
     ]
 
 
-def safeguarding_opening_token() -> str | None:
-    return SAFEGUARDING_IMMEDIATE_OPENING
+def delayed_thinking_status(expert_depth: str) -> dict[str, Any] | None:
+    """Optional delayed status for general_light when generation is slow."""
+    depth = (expert_depth or "general_light").strip().lower()
+    if depth != "general_light":
+        return None
+    return stream_status_payload("thinking", message=USER_STATUS_THINKING, expert_depth=depth)

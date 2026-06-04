@@ -26,11 +26,12 @@ import type { StandaloneOrbModelRouting } from '@/lib/orb/standalone-client'
 import {
   extractAnswerQualityGate,
   extractIndicareIntelligenceCore,
-  managerCanExpandIntelligence,
   shouldShowManagerOversightCta,
   shouldShowRecordProperlyCta,
   buildIntelligenceContextActionChips
 } from '@/lib/orb/indicare-intelligence-core'
+import { isOrbDeveloperMode } from '@/lib/orb/orb-developer-mode'
+import { sanitiseOrbUserFacingStatus } from '@/lib/orb/orb-user-facing-copy'
 import { OrbIntelligenceActionCtas } from '@/components/orb-standalone/orb-intelligence-core-panel'
 
 const OrbIntelligenceCorePanel = dynamic(
@@ -232,8 +233,9 @@ export function OrbAssistantMessageBody({
   const qualityGate = extractAnswerQualityGate(
     cognitionContext?.context_used as Record<string, unknown> | undefined
   )
-  const showTechnical = managerCanExpandIntelligence(userRole)
+  const developerMode = isOrbDeveloperMode()
   const displayContent = stripSourcesBasisSection(content)
+  const displayStreamStatus = sanitiseOrbUserFacingStatus(streamStatus)
   const [showSkeleton, setShowSkeleton] = useState(false)
 
   useEffect(() => {
@@ -268,13 +270,13 @@ export function OrbAssistantMessageBody({
             cognitionContext={cognitionContext}
           />
         ) : null}
-        {streaming && streamStatus && !displayContent.trim() ? (
+        {streaming && displayStreamStatus && !displayContent.trim() ? (
           <p
             className="mb-1 text-[11px] text-[var(--orb-muted)]"
             data-orb-stream-inline-status
             role="status"
           >
-            {streamStatus}
+            {displayStreamStatus}
           </p>
         ) : null}
         <div className="orb-message-content text-[15px] leading-relaxed text-[var(--orb-foreground)] md:leading-7">
@@ -297,16 +299,15 @@ export function OrbAssistantMessageBody({
           <>
             <OrbIntelligenceActionCtas
               showRecordProperly={shouldShowRecordProperlyCta(messageHint || content, intelligenceCore)}
-              showManagerOversight={
-                showTechnical && shouldShowManagerOversightCta(intelligenceCore, qualityGate)
-              }
+              showManagerOversight={shouldShowManagerOversightCta(intelligenceCore, qualityGate)}
               onRecordProperly={onRecordProperly}
               onManagerOversight={onManagerOversight}
             />
             <OrbIntelligenceCorePanel
               core={intelligenceCore}
               qualityGate={qualityGate}
-              showTechnicalDetails={showTechnical}
+              showTechnicalDetails={developerMode}
+              userRole={userRole}
             />
           </>
         ) : null}

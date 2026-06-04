@@ -7,6 +7,7 @@ from typing import Any
 
 from services.indicare_intelligence_core_service import indicare_intelligence_core_service
 from services.orb_chat_timing_service import OrbChatTimingTracker
+from services.orb_response_support_service import build_response_support_chips
 
 logger = logging.getLogger("indicare.intelligence_finalize")
 
@@ -32,7 +33,12 @@ CARE_RELATED_ACTION_IDS = frozenset(
 )
 
 
-def intelligence_context_summary(indicare_intelligence: dict[str, Any] | None) -> dict[str, Any]:
+def intelligence_context_summary(
+    indicare_intelligence: dict[str, Any] | None,
+    *,
+    quality_gate: dict[str, Any] | None = None,
+    mode: str | None = None,
+) -> dict[str, Any]:
     """Compact metadata for API context_used / frontend indicare_intelligence_core."""
     packet = dict(indicare_intelligence or {})
     if not packet:
@@ -40,6 +46,8 @@ def intelligence_context_summary(indicare_intelligence: dict[str, Any] | None) -
     gaps = packet.get("gaps") or []
     missingness = packet.get("missingness_graph") or {}
     missing_evidence = _missing_evidence_chips(gaps, missingness)
+    gate = quality_gate or packet.get("quality_gate_preview")
+    response_support = build_response_support_chips(packet, quality_gate=gate, mode=mode)
     return {
         "version": packet.get("version"),
         "expert_depth": packet.get("expert_depth"),
@@ -52,6 +60,7 @@ def intelligence_context_summary(indicare_intelligence: dict[str, Any] | None) -
         "gaps": gaps,
         "missing_evidence": missing_evidence,
         "quality_gate_preview": packet.get("quality_gate_preview"),
+        "response_support": response_support,
     }
 
 
@@ -137,12 +146,12 @@ def finalize_standalone_intelligence(
     if timing:
         timing.mark("finalise_start")
 
-    summary = intelligence_context_summary(packet)
-    meta["indicare_intelligence"] = summary
-    meta["indicare_intelligence_core"] = summary
-
     quality_gate = indicare_intelligence_core_service.evaluate_answer(packet, answer)
     meta["answer_quality_gate"] = quality_gate
+
+    summary = intelligence_context_summary(packet, quality_gate=quality_gate, mode=mode)
+    meta["indicare_intelligence"] = summary
+    meta["indicare_intelligence_core"] = summary
 
     if timing:
         timing.mark("quality_gate_complete")

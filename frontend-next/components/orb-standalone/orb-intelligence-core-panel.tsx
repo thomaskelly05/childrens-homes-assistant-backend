@@ -7,25 +7,19 @@ import type {
   IndicareAnswerQualityGate,
   IndicareIntelligenceCoreView
 } from '@/lib/orb/indicare-intelligence-core'
+import {
+  buildResponseSupportDisplayChips,
+  managerCanExpandIntelligence
+} from '@/lib/orb/indicare-intelligence-core'
+import { ORB_RESPONSE_SUPPORT_PANEL_LABEL } from '@/lib/orb/orb-user-facing-copy'
 
-function formatDepthLabel(depth?: string): string | null {
-  if (!depth) return null
-  return depth
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (c) => c.toUpperCase())
-}
-
-function CoreChip({ label, value, tone = 'neutral' }: { label: string; value: string; tone?: 'neutral' | 'amber' | 'sky' }) {
-  const toneClass =
-    tone === 'amber'
-      ? 'border-amber-200/80 bg-amber-50 text-amber-900 dark:border-amber-500/30 dark:bg-amber-950/40 dark:text-amber-100'
-      : tone === 'sky'
-        ? 'border-sky-200/80 bg-sky-50 text-sky-900 dark:border-sky-500/30 dark:bg-sky-950/40 dark:text-sky-100'
-        : 'border-slate-200/80 bg-white/80 text-slate-700 dark:border-white/10 dark:bg-white/[0.06] dark:text-slate-300'
+function SupportChip({ label }: { label: string }) {
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium ${toneClass}`}>
-      <span className="opacity-70">{label}</span>
-      <span>{value}</span>
+    <span
+      className="inline-flex rounded-full border border-slate-200/80 bg-white/80 px-2 py-0.5 text-[10px] font-medium text-slate-700 dark:border-white/10 dark:bg-white/[0.06] dark:text-slate-300"
+      data-orb-response-support-chip
+    >
+      {label}
     </span>
   )
 }
@@ -34,41 +28,29 @@ export function OrbIntelligenceCorePanel({
   core,
   qualityGate,
   expandedByDefault = false,
-  showTechnicalDetails = false
+  showTechnicalDetails = false,
+  userRole
 }: {
   core: IndicareIntelligenceCoreView | null
   qualityGate?: IndicareAnswerQualityGate | null
   expandedByDefault?: boolean
+  /** Developer/debug mode — shows raw technical metadata drawer. */
   showTechnicalDetails?: boolean
+  userRole?: string | null
 }) {
   const [open, setOpen] = useState(expandedByDefault)
   const [debugOpen, setDebugOpen] = useState(false)
 
-  if (!core && !qualityGate) return null
+  const supportChips = buildResponseSupportDisplayChips(core, qualityGate ?? null)
+  if (!supportChips.length && !showTechnicalDetails) return null
 
-  const missingChips = core?.missing_evidence ?? []
-  const hasMissingEvidence = missingChips.length > 0
-  const gateLabel =
-    qualityGate?.passed === true
-      ? 'Passed'
-      : qualityGate?.passed === false
-        ? 'Review recommended'
-        : null
-  const depthLabel = formatDepthLabel(core?.expert_depth)
-  const careRelevance =
-    typeof core?.care_relevance_score === 'number' ? `${core.care_relevance_score}/100` : null
-  const qualityStandards = core?.quality_standard_hits?.slice(0, 3).join(', ')
-  const lenses = core?.professional_lens_hits?.slice(0, 3).join(', ')
-  const domains = core?.registered_home_domains?.slice(0, 3).join(', ')
-  const sourceBasis =
-    core?.source_basis && typeof core.source_basis === 'object'
-      ? Object.keys(core.source_basis).slice(0, 2).join(', ')
-      : null
+  const managerDetail = managerCanExpandIntelligence(userRole) && !showTechnicalDetails
 
   return (
     <div
       className="mt-3 rounded-xl border border-slate-200/80 bg-slate-50/90 text-xs text-slate-600 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-400"
       data-orb-intelligence-core-panel
+      data-orb-response-support-panel
       data-orb-what-orb-checked-collapsed={open ? 'false' : 'true'}
     >
       <button
@@ -76,35 +58,26 @@ export function OrbIntelligenceCorePanel({
         className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left font-medium text-slate-700 dark:text-slate-300"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
+        data-orb-response-support-toggle
         data-orb-what-orb-checked-toggle
       >
-        <span>What ORB checked</span>
+        <span>{ORB_RESPONSE_SUPPORT_PANEL_LABEL}</span>
         <ChevronDown className={`h-4 w-4 shrink-0 transition ${open ? 'rotate-180' : ''}`} aria-hidden />
       </button>
 
       {open ? (
         <div className="space-y-2 border-t border-slate-200/70 px-3 py-2 dark:border-white/10">
-          <div className="flex flex-wrap gap-1.5" data-orb-intelligence-summary-chips>
-            {depthLabel ? <CoreChip label="Depth" value={depthLabel} tone="sky" /> : null}
-            {careRelevance ? <CoreChip label="Care relevance" value={careRelevance} /> : null}
-            {qualityStandards ? (
-              <CoreChip label="Quality Standards" value={qualityStandards} />
-            ) : null}
-            {lenses ? <CoreChip label="Professional lenses" value={lenses} /> : null}
-            {domains ? <CoreChip label="Registered home domains" value={domains} /> : null}
-            {sourceBasis ? <CoreChip label="Source basis" value={sourceBasis} /> : null}
-            {gateLabel ? (
-              <CoreChip
-                label="Quality gate"
-                value={gateLabel}
-                tone={qualityGate?.passed === false ? 'amber' : 'neutral'}
-              />
-            ) : null}
-          </div>
+          {supportChips.length ? (
+            <div className="flex flex-wrap gap-1.5" data-orb-response-support-chips>
+              {supportChips.map((chip) => (
+                <SupportChip key={chip} label={chip} />
+              ))}
+            </div>
+          ) : null}
 
-          {hasMissingEvidence ? (
+          {managerDetail && core?.missing_evidence?.length ? (
             <div className="flex flex-wrap gap-1.5" data-orb-missing-evidence-chips>
-              {missingChips.map((chip) => (
+              {core.missing_evidence.map((chip) => (
                 <span
                   key={chip.id}
                   className="rounded-full border border-amber-200/80 bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-900 dark:border-amber-500/30 dark:bg-amber-950/40 dark:text-amber-100"
@@ -122,21 +95,33 @@ export function OrbIntelligenceCorePanel({
               onClick={() => setDebugOpen((v) => !v)}
               data-orb-intelligence-debug-toggle
             >
-              {debugOpen ? 'Hide manager / RI details' : 'Manager / RI details'}
+              {debugOpen ? 'Hide technical details' : 'Technical details'}
             </button>
           ) : null}
 
           {showTechnicalDetails && debugOpen ? (
             <dl className="grid gap-1 text-[11px]" data-orb-intelligence-debug-drawer>
+              {core?.expert_depth ? (
+                <>
+                  <dt className="font-semibold text-slate-500">Response type (internal)</dt>
+                  <dd>{core.expert_depth}</dd>
+                </>
+              ) : null}
+              {typeof core?.care_relevance_score === 'number' ? (
+                <>
+                  <dt className="font-semibold text-slate-500">Context score (internal)</dt>
+                  <dd>{core.care_relevance_score}</dd>
+                </>
+              ) : null}
               {core?.active_intelligence_layers?.length ? (
                 <>
-                  <dt className="font-semibold text-slate-500">Layers</dt>
+                  <dt className="font-semibold text-slate-500">Layers (internal)</dt>
                   <dd>{core.active_intelligence_layers.join(', ')}</dd>
                 </>
               ) : null}
               {typeof qualityGate?.composite_score === 'number' ? (
                 <>
-                  <dt className="font-semibold text-slate-500">Composite score</dt>
+                  <dt className="font-semibold text-slate-500">Review score (internal)</dt>
                   <dd data-orb-quality-gate-result={qualityGate?.passed ? 'passed' : 'review'}>
                     {qualityGate.composite_score}
                   </dd>
@@ -144,7 +129,7 @@ export function OrbIntelligenceCorePanel({
               ) : null}
               {qualityGate?.critical_flags?.length ? (
                 <>
-                  <dt className="font-semibold text-slate-500">Critical flags</dt>
+                  <dt className="font-semibold text-slate-500">Review flags (internal)</dt>
                   <dd>{qualityGate.critical_flags.join(', ')}</dd>
                 </>
               ) : null}
@@ -187,7 +172,7 @@ export function OrbIntelligenceActionCtas({
           className="rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-900 hover:bg-violet-100 dark:border-violet-500/40 dark:bg-violet-950/50 dark:text-violet-100"
           data-orb-cta-manager-oversight
         >
-          Manager oversight view
+          Manager oversight
         </button>
       ) : null}
     </div>

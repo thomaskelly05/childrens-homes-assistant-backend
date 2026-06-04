@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 
 import { intelligenceMicroStatusForDepth } from '@/lib/orb/indicare-intelligence-core'
+import { sanitiseOrbUserFacingStatus } from '@/lib/orb/orb-user-facing-copy'
 
 /** Subtle rotating micro-status while residential+ answers are prepared. */
 export function OrbIntelligenceMicroStatus({
@@ -27,7 +28,9 @@ export function OrbIntelligenceMicroStatus({
 
   if (!active) return null
 
-  const message = intelligenceMicroStatusForDepth(expertDepth, index, backendMessage)
+  const message = sanitiseOrbUserFacingStatus(
+    intelligenceMicroStatusForDepth(expertDepth, index, backendMessage)
+  )
   if (!message) return null
 
   return (
