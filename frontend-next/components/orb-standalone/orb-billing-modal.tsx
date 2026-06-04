@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { CreditCard, RefreshCw, Wallet } from 'lucide-react'
 
+import { OrbLegalLinks } from '@/components/orb-residential/orb-legal-links'
 import { OrbAppModal } from '@/components/orb-standalone/orb-app-modal'
 import {
   fetchOrbAccess,
@@ -516,6 +517,12 @@ export function OrbBillingModal({ open, onClose }: { open: boolean; onClose: () 
             production setup is complete.
           </p>
         ) : null}
+
+        <OrbLegalLinks
+          className="justify-start pt-2 text-xs"
+          linkClassName="font-semibold text-[var(--orb-res-primary,#1677ff)] hover:underline"
+          testId="orb-billing-legal-links"
+        />
       </div>
     </OrbAppModal>
   )

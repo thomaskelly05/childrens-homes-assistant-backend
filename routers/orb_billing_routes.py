@@ -129,9 +129,15 @@ def _extract_price_id(subscription_obj: dict[str, Any] | Any) -> str | None:
 
 def _require_stripe_checkout() -> None:
     if not STRIPE_SECRET_KEY:
-        raise HTTPException(status_code=503, detail="Stripe is not configured")
+        raise HTTPException(
+            status_code=503,
+            detail="Stripe billing is not configured yet (STRIPE_SECRET_KEY missing on the server).",
+        )
     if not orb_residential_stripe_price_id():
-        raise HTTPException(status_code=503, detail="ORB Residential Stripe price ID is not configured")
+        raise HTTPException(
+            status_code=503,
+            detail="ORB Residential subscription price is not configured (ORB_RESIDENTIAL_STRIPE_PRICE_ID missing).",
+        )
 
 
 def _record_analytics(conn, *, user_id: int | None, event: str, metadata: dict[str, Any] | None = None) -> None:
@@ -275,7 +281,10 @@ async def orb_standalone_billing_portal(
     current_user=Depends(require_orb_residential_auth),
 ):
     if not STRIPE_SECRET_KEY:
-        raise HTTPException(status_code=503, detail="Stripe is not configured")
+        raise HTTPException(
+            status_code=503,
+            detail="Stripe billing is not configured yet (STRIPE_SECRET_KEY missing on the server).",
+        )
     user_id = int(current_user["user_id"])
     subscription = get_orb_subscription(conn, user_id)
     customer_id = (subscription or {}).get("stripe_customer_id")

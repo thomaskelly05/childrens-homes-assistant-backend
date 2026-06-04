@@ -2,7 +2,9 @@
 
 Date: 2026-06-04
 
-Summary of ORB Residential login, account access, and billing UX for launch. See also [orb-login-billing-readiness-audit.md](./orb-login-billing-readiness-audit.md).
+Summary of ORB Residential login, account access, and billing UX for launch.
+
+**Related docs:** [orb-production-access-readiness-audit.md](./orb-production-access-readiness-audit.md) · [orb-stripe-production-readiness.md](./orb-stripe-production-readiness.md) · [orb-auth-production-readiness.md](./orb-auth-production-readiness.md) · [orb-launch-access-checklist.md](./orb-launch-access-checklist.md) · [orb-login-billing-readiness-audit.md](./orb-login-billing-readiness-audit.md)
 
 ## Auth methods (preserved)
 
@@ -33,11 +35,19 @@ Individual plan: **ORB Residential — Individual**, **£9.99/month**.
 | Signed in, inactive | `/orb/billing` “Start ORB Residential”, subscribe + refresh + sign out |
 | Trial active | Status pill “Trial active”; full access if safety accepted |
 | Subscribed active | Manage subscription in billing modal |
-| Past due | Status “Past due”; subscribe/portal messaging |
+| Past due | Status “Past due”; subscribe/portal messaging (`subscription_past_due`) |
+| Cancelled | Upgrade banner; resubscribe via checkout |
+| Safety pending | `access_blocker: safety_acceptance` — modal after payment |
 | Provider-managed | Sign-in hint only; no team billing API |
-| Admin bypass | Account chip “Admin · voice enabled” |
+| Admin bypass | Account chip “Admin · voice enabled”; safety still required for `can_use_orb` |
 
 States not backed by API are not invented in UI.
+
+## Legal pages (2026-06-04)
+
+- `/privacy` — starter privacy summary (legal review required)
+- `/terms` — starter terms (legal review required)
+- Linked from login footer, billing modal, and account privacy section
 
 ## Stripe wiring
 

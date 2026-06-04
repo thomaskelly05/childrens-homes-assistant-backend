@@ -16,7 +16,19 @@ import {
   orbOAuthStartUrl,
   trackOrbAnalytics
 } from '@/lib/orb/orb-billing-client'
+import { OrbLegalLinks } from '@/components/orb-residential/orb-legal-links'
 import { beginOrbPasskeyLogin, orbPasskeysSupported } from '@/lib/orb/orb-passkey-client'
+
+function formatOAuthError(raw: string): string {
+  const decoded = decodeURIComponent(raw.replace(/\+/g, ' '))
+  if (/invalid_oauth_state/i.test(decoded)) {
+    return 'Sign-in expired or was interrupted. Start again from this page.'
+  }
+  if (/not enabled|not configured/i.test(decoded)) {
+    return 'That sign-in method is not available right now. Try email or another option.'
+  }
+  return decoded.length > 160 ? `${decoded.slice(0, 157)}…` : decoded
+}
 
 const ORB_RETURN = '/orb'
 
@@ -75,7 +87,7 @@ function OrbLoginPanel() {
         // Keep build-time flags
       })
     const oauthError = searchParams.get('oauth_error')
-    if (oauthError) setError(oauthError)
+    if (oauthError) setError(formatOAuthError(oauthError))
     if (searchParams.get('provider') === 'email') setEmailStepReady(true)
   }, [searchParams])
 
@@ -383,6 +395,11 @@ function OrbLoginPanel() {
                 ORB supports professional judgement and does not replace safeguarding procedures, managers,
                 emergency services or legal advice.
               </p>
+              <OrbLegalLinks
+                className="mt-4 justify-start gap-4"
+                linkClassName="orb-login-link font-semibold"
+                testId="orb-login-legal-links"
+              />
             </footer>
           </div>
         </div>

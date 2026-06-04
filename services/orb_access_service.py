@@ -127,7 +127,14 @@ class OrbAccessService:
             meter = {}
 
         safety_accepted = bool(raw.get("safety_accepted"))
-        can_use_orb = bool(raw.get("can_use_orb")) and safety_accepted
+        raw_can_use = bool(raw.get("can_use_orb"))
+        can_use_orb = raw_can_use and safety_accepted
+        access_blocker = self._resolve_access_blocker(
+            raw,
+            raw_can_use=raw_can_use,
+            safety_accepted=safety_accepted,
+            can_use_orb=can_use_orb,
+        )
 
         return {
             "product": ORB_RESIDENTIAL_PRODUCT,
@@ -160,6 +167,7 @@ class OrbAccessService:
             "os_records_accessed": False,
             "os_access_granted": False,
             "safety_accepted": safety_accepted,
+            "access_blocker": access_blocker,
             "onboarding_completed": bool(raw.get("onboarding_completed")),
             "upgrade": self._upgrade_payload(raw, access_state),
             "db_error": raw.get("db_error"),
@@ -169,6 +177,30 @@ class OrbAccessService:
                 "apple": oauth_provider_configured("apple"),
             },
         }
+
+    def _resolve_access_blocker(
+        self,
+        raw: dict[str, Any],
+        *,
+        raw_can_use: bool,
+        safety_accepted: bool,
+        can_use_orb: bool,
+    ) -> str | None:
+        if can_use_orb:
+            return None
+        if raw_can_use and not safety_accepted:
+            return "safety_acceptance"
+        if raw.get("subscription_active") or raw.get("trial_active"):
+            status = str(raw.get("subscription_status") or "").lower()
+            if status in {"past_due"}:
+                return "subscription_past_due"
+            if status in {"canceled", "cancelled"}:
+                return "subscription_cancelled"
+        if raw.get("trial_available"):
+            return "trial_or_subscribe"
+        if raw.get("admin_bypass") or raw.get("founding_bypass"):
+            return "safety_acceptance" if not safety_accepted else None
+        return "subscription"
 
     def _resolve_access_state(self, raw: dict[str, Any], *, user: dict[str, Any] | None) -> str:
         if raw.get("admin_bypass"):

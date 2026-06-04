@@ -84,6 +84,39 @@ def test_enterprise_provider_later_placeholder(monkeypatch):
     assert payload["access_state"] == "enterprise_provider_later"
 
 
+def test_admin_bypass_still_needs_safety_for_can_use_orb(monkeypatch):
+    conn = MagicMock()
+    monkeypatch.setattr(
+        "services.orb_access_service.get_orb_access_state",
+        lambda _c, _u, user=None: {
+            "can_use_orb": True,
+            "admin_bypass": True,
+            "safety_accepted": False,
+            "subscription": {},
+        },
+    )
+    payload = orb_access_service.build_access_payload(6, conn=conn, user={"id": 6, "role": "admin"})
+    assert payload["access_state"] == "admin_bypass"
+    assert payload["can_use_orb"] is False
+    assert payload["access_blocker"] == "safety_acceptance"
+
+
+def test_subscription_cancelled_access_state(monkeypatch):
+    conn = MagicMock()
+    monkeypatch.setattr(
+        "services.orb_access_service.get_orb_access_state",
+        lambda _c, _u, user=None: {
+            "can_use_orb": False,
+            "subscription_active": True,
+            "subscription_status": "cancelled",
+            "safety_accepted": True,
+            "subscription": {"subscription_status": "cancelled"},
+        },
+    )
+    payload = orb_access_service.build_access_payload(7, conn=conn, user={"user_id": 7})
+    assert payload["access_state"] == "subscription_cancelled"
+
+
 def test_safety_blocks_can_use_orb_even_with_subscription(monkeypatch):
     conn = MagicMock()
     monkeypatch.setattr(

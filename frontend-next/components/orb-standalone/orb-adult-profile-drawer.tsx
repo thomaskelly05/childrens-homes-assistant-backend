@@ -5,6 +5,7 @@ import { ChevronDown } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { LogIn, LogOut, X } from 'lucide-react'
 
+import { OrbLegalLinks } from '@/components/orb-residential/orb-legal-links'
 import { useAuth } from '@/contexts/auth-context'
 import { useOrbAccountState } from '@/hooks/use-orb-account-state'
 import {
@@ -607,6 +608,11 @@ export function OrbAdultProfileDrawer({
               >
                 {STANDALONE_PROFILE_BOUNDARY_NOTE}
               </p>
+              <OrbLegalLinks
+                className="mt-4 justify-start gap-4 text-xs"
+                linkClassName="font-semibold text-[var(--orb-res-primary,#1677ff)] hover:underline"
+                testId="orb-profile-legal-links"
+              />
             </ProfileSection>
           </nav>
 

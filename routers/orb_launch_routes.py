@@ -25,6 +25,11 @@ from services.orb_home_profile_service import orb_home_profile_service
 from services.orb_learning_micro_service import orb_learning_micro_service
 from services.orb_memory_service import orb_memory_service
 from services.orb_onboarding_profile_service import orb_onboarding_profile_service
+from services.orb_production_config_service import (
+    oauth_config_warnings,
+    passkey_config_warnings,
+    stripe_config_warnings,
+)
 from services.orb_subscription_plan_service import (
     ORB_RESIDENTIAL_PRICE_LABEL,
     oauth_provider_configured,
@@ -416,5 +421,11 @@ async def list_auth_providers(current_user=Depends(get_optional_orb_residential_
             "oauth_start_template": "/orb/standalone/auth/oauth/{provider}/start",
             "login_path": "/auth/login",
             "front_door_url": FRONTEND_APP_URL.rstrip("/"),
+            "legal": {"privacy": "/privacy", "terms": "/terms"},
+            "config_warnings": {
+                "stripe": stripe_config_warnings(),
+                "oauth": oauth_config_warnings(),
+                "passkeys": passkey_config_warnings(),
+            },
         }
     )
