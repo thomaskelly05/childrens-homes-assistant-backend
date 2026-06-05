@@ -6,11 +6,12 @@ import {
   OrbPremiumButton,
   OrbPremiumPill,
   OrbPremiumTextarea,
-  OrbPremiumTrustStrip
+  OrbStudioComposerCard,
+  OrbStudioPage,
+  OrbStudioSidebarPanel
 } from '@/components/orb/premium'
 import { ORB_PREMIUM_ACTION_LABELS } from '@/components/orb/premium/orb-premium-theme'
 import { orbStationShellProps } from '@/components/orb-standalone/orb-app-modal'
-import { OrbPremiumWorkspaceLayout } from '@/components/orb-standalone/orb-premium-workspace-layout'
 import { OrbStandalonePanelShell } from '@/components/orb-standalone/orb-standalone-panel-shell'
 import {
   buildOrbInspectionReadinessPrompt,
@@ -48,50 +49,59 @@ export function OrbInspectionReadinessPanel({
       {...orbStationShellProps(residentialSurface, 'wide')}
       onClose={onClose}
     >
-      <div className="p-4 sm:p-5" data-orb-inspection-readiness-panel data-orb-premium-page="inspection_readiness">
-        <OrbPremiumWorkspaceLayout
-          panelId="inspection_readiness"
-          intro={
-            <OrbPremiumTrustStrip tone="safety" data-orb-inspection-disclaimer>
-              ORB supports inspection readiness. It does not make regulatory judgements.
-            </OrbPremiumTrustStrip>
-          }
-          primaryAction={
-            <OrbPremiumButton
-              disabled={!evidence.trim()}
-              fullWidth
-              data-orb-inspection-run
-              onClick={() => {
-                onRun({
-                  prompt: buildOrbInspectionReadinessPrompt({ evidence, focus }),
-                  mode: 'Ofsted Lens'
-                })
-                onClose()
-              }}
-            >
-              {ORB_PREMIUM_ACTION_LABELS.continueInChat}
-            </OrbPremiumButton>
-          }
-          advanced={
-            <ul className="space-y-1 text-xs text-[var(--orb-muted)]">
+      <OrbStudioPage
+        studioId="inspection_readiness"
+        trustStrip={
+          <span data-orb-inspection-disclaimer>
+            ORB supports inspection readiness. It does not make regulatory judgements.
+          </span>
+        }
+        trustTone="safety"
+        primaryAction={
+          <OrbPremiumButton
+            disabled={!evidence.trim()}
+            fullWidth
+            data-orb-inspection-run
+            onClick={() => {
+              onRun({
+                prompt: buildOrbInspectionReadinessPrompt({ evidence, focus }),
+                mode: 'Ofsted Lens'
+              })
+              onClose()
+            }}
+          >
+            {ORB_PREMIUM_ACTION_LABELS.continueInChat}
+          </OrbPremiumButton>
+        }
+        advanced={
+          <ul className="space-y-1 text-xs text-[var(--orb-muted)]">
+            <li>Evidence themes and gaps</li>
+            <li>Questions an inspector may explore</li>
+            <li>Readiness questions for staff</li>
+            <li>Practical follow-up actions</li>
+          </ul>
+        }
+        sidebar={
+          <OrbStudioSidebarPanel title="Guidance" subtitle="What ORB can help with">
+            <ul className="space-y-2 text-xs text-[var(--orb-muted)]">
               <li>Evidence themes and gaps</li>
-              <li>Questions an inspector may explore</li>
-              <li>Readiness questions for staff</li>
+              <li>Inspector question prompts</li>
+              <li>Staff readiness questions</li>
               <li>Practical follow-up actions</li>
             </ul>
-          }
-        >
-          <label className="block">
-            {fieldLabel('Paste evidence / notes')}
+          </OrbStudioSidebarPanel>
+        }
+      >
+        <div data-orb-inspection-readiness-panel data-orb-premium-page="inspection_readiness">
+          <OrbStudioComposerCard label="Paste evidence / notes">
             <OrbPremiumTextarea
               value={evidence}
               onChange={(e) => setEvidence(e.target.value)}
-              rows={6}
+              rows={8}
               placeholder="Policies, records, visit notes, staff reflections…"
-              className="mt-2"
               data-orb-inspection-evidence
             />
-          </label>
+          </OrbStudioComposerCard>
           <fieldset className="mt-3 space-y-2">
             <legend className="text-xs font-medium text-[var(--orb-muted)]">First action</legend>
             <div className="flex flex-wrap gap-2">
@@ -113,8 +123,8 @@ export function OrbInspectionReadinessPanel({
               ))}
             </div>
           </fieldset>
-        </OrbPremiumWorkspaceLayout>
-      </div>
+        </div>
+      </OrbStudioPage>
     </OrbStandalonePanelShell>
   )
 }
@@ -143,71 +153,78 @@ export function OrbSafeguardingThinkingPanel({
       {...orbStationShellProps(residentialSurface, 'wide')}
       onClose={onClose}
     >
-      <div className="p-4 sm:p-5" data-orb-safeguarding-thinking-panel data-orb-premium-page="safeguarding_thinking">
-        <OrbPremiumWorkspaceLayout
-          panelId="safeguarding_thinking"
-          intro={
-            <OrbPremiumTrustStrip tone="safety" data-orb-safeguarding-reminder>
-              Follow local safeguarding procedures and emergency escalation where needed. ORB supports thinking; it
-              does not make safeguarding decisions.
-            </OrbPremiumTrustStrip>
-          }
-          primaryAction={
-            <OrbPremiumButton
-              disabled={!concern.trim()}
-              fullWidth
-              data-orb-safeguarding-run
-              onClick={() => {
-                onRun({
-                  prompt: buildOrbSafeguardingThinkingPrompt({ concern, immediateRisk, context }),
-                  mode: 'Safeguarding Thinking'
-                })
-                onClose()
-              }}
-            >
-              {ORB_PREMIUM_ACTION_LABELS.continueInChat}
-            </OrbPremiumButton>
-          }
-          advanced={
-            <>
-              <label className="block">
-                {fieldLabel('Immediate risk?')}
-                <OrbPremiumTextarea
-                  value={immediateRisk}
-                  onChange={(e) => setImmediateRisk(e.target.value)}
-                  rows={2}
-                  placeholder="e.g. current location, known risks, who is present…"
-                  className="mt-2"
-                  data-orb-safeguarding-risk
-                />
-              </label>
-              <label className="mt-3 block">
-                {fieldLabel('Known vulnerabilities / context')}
-                <OrbPremiumTextarea
-                  value={context}
-                  onChange={(e) => setContext(e.target.value)}
-                  rows={2}
-                  placeholder="Optional — history, plans, communication needs…"
-                  className="mt-2"
-                  data-orb-safeguarding-context
-                />
-              </label>
-            </>
-          }
-        >
-          <label className="block">
-            {fieldLabel('Describe the concern')}
+      <OrbStudioPage
+        studioId="safeguarding_thinking"
+        trustStrip={
+          <span data-orb-safeguarding-reminder>
+            Follow local safeguarding procedures and emergency escalation where needed. ORB supports thinking; it
+            does not make safeguarding decisions.
+          </span>
+        }
+        trustTone="safety"
+        primaryAction={
+          <OrbPremiumButton
+            disabled={!concern.trim()}
+            fullWidth
+            data-orb-safeguarding-run
+            onClick={() => {
+              onRun({
+                prompt: buildOrbSafeguardingThinkingPrompt({ concern, immediateRisk, context }),
+                mode: 'Safeguarding Thinking'
+              })
+              onClose()
+            }}
+          >
+            {ORB_PREMIUM_ACTION_LABELS.continueInChat}
+          </OrbPremiumButton>
+        }
+        advanced={
+          <>
+            <label className="block">
+              {fieldLabel('Immediate risk?')}
+              <OrbPremiumTextarea
+                value={immediateRisk}
+                onChange={(e) => setImmediateRisk(e.target.value)}
+                rows={2}
+                placeholder="e.g. current location, known risks, who is present…"
+                className="mt-2"
+                data-orb-safeguarding-risk
+              />
+            </label>
+            <label className="mt-3 block">
+              {fieldLabel('Known vulnerabilities / context')}
+              <OrbPremiumTextarea
+                value={context}
+                onChange={(e) => setContext(e.target.value)}
+                rows={2}
+                placeholder="Optional — history, plans, communication needs…"
+                className="mt-2"
+                data-orb-safeguarding-context
+              />
+            </label>
+          </>
+        }
+        sidebar={
+          <OrbStudioSidebarPanel title="Safeguarding guidance" subtitle="ORB supports thinking — not decisions">
+            <p className="text-xs text-[var(--orb-muted)]">
+              Describe concerns in plain language. ORB will help you think through risk, missing information and
+              escalation — you remain responsible for action.
+            </p>
+          </OrbStudioSidebarPanel>
+        }
+      >
+        <div data-orb-safeguarding-thinking-panel data-orb-premium-page="safeguarding_thinking">
+          <OrbStudioComposerCard label="Describe the concern">
             <OrbPremiumTextarea
               value={concern}
               onChange={(e) => setConcern(e.target.value)}
-              rows={5}
+              rows={8}
               placeholder="What are you worried about?"
-              className="mt-2"
               data-orb-safeguarding-concern
             />
-          </label>
-        </OrbPremiumWorkspaceLayout>
-      </div>
+          </OrbStudioComposerCard>
+        </div>
+      </OrbStudioPage>
     </OrbStandalonePanelShell>
   )
 }
@@ -238,98 +255,100 @@ export function OrbRecordProperlyPanel({
       {...orbStationShellProps(residentialSurface, 'wide')}
       onClose={onClose}
     >
-      <div className="p-4 sm:p-5" data-orb-record-properly-panel data-orb-premium-page="record_properly">
-        <OrbPremiumWorkspaceLayout
-          panelId="record_properly"
-          intro={
-            <OrbPremiumTrustStrip>
-              Tell ORB what happened. ORB will shape a draft record for your review — not a live care record.
-            </OrbPremiumTrustStrip>
-          }
-          primaryAction={
-            <OrbPremiumButton
-              disabled={!whatHappened.trim()}
-              fullWidth
-              data-orb-record-run
-              onClick={() => {
-                onRun({
-                  prompt: buildOrbRecordProperlyPrompt({
-                    whatHappened,
-                    whoInvolved,
-                    staffObservations,
-                    staffActions,
-                    followUp
-                  }),
-                  mode: 'Record This Properly'
-                })
-                onClose()
-              }}
-            >
-              {ORB_PREMIUM_ACTION_LABELS.generateDraft}
-            </OrbPremiumButton>
-          }
-          advanced={
-            <>
-              <label className="block">
-                {fieldLabel('Who was involved?')}
-                <OrbPremiumTextarea
-                  value={whoInvolved}
-                  onChange={(e) => setWhoInvolved(e.target.value)}
-                  rows={2}
-                  placeholder="Young people, staff, others…"
-                  className="mt-2"
-                  data-orb-record-who
-                />
-              </label>
-              <label className="mt-3 block">
-                {fieldLabel('What did staff see/hear?')}
-                <OrbPremiumTextarea
-                  value={staffObservations}
-                  onChange={(e) => setStaffObservations(e.target.value)}
-                  rows={2}
-                  placeholder="Observations only — avoid opinion where possible…"
-                  className="mt-2"
-                  data-orb-record-observations
-                />
-              </label>
-              <label className="mt-3 block">
-                {fieldLabel('What did staff do?')}
-                <OrbPremiumTextarea
-                  value={staffActions}
-                  onChange={(e) => setStaffActions(e.target.value)}
-                  rows={2}
-                  placeholder="Actions, de-escalation, contacts…"
-                  className="mt-2"
-                  data-orb-record-actions
-                />
-              </label>
-              <label className="mt-3 block">
-                {fieldLabel('What needs follow-up?')}
-                <OrbPremiumTextarea
-                  value={followUp}
-                  onChange={(e) => setFollowUp(e.target.value)}
-                  rows={2}
-                  placeholder="Handover, manager, external agency…"
-                  className="mt-2"
-                  data-orb-record-followup
-                />
-              </label>
-            </>
-          }
-        >
-          <label className="block">
-            {fieldLabel('What happened?')}
+      <OrbStudioPage
+        studioId="record_properly"
+        trustStrip="Tell ORB what happened. ORB will shape a draft record for your review — not a live care record."
+        primaryAction={
+          <OrbPremiumButton
+            disabled={!whatHappened.trim()}
+            fullWidth
+            data-orb-record-run
+            onClick={() => {
+              onRun({
+                prompt: buildOrbRecordProperlyPrompt({
+                  whatHappened,
+                  whoInvolved,
+                  staffObservations,
+                  staffActions,
+                  followUp
+                }),
+                mode: 'Record This Properly'
+              })
+              onClose()
+            }}
+          >
+            {ORB_PREMIUM_ACTION_LABELS.generateDraft}
+          </OrbPremiumButton>
+        }
+        advanced={
+          <>
+            <label className="block">
+              {fieldLabel('Who was involved?')}
+              <OrbPremiumTextarea
+                value={whoInvolved}
+                onChange={(e) => setWhoInvolved(e.target.value)}
+                rows={2}
+                placeholder="Young people, staff, others…"
+                className="mt-2"
+                data-orb-record-who
+              />
+            </label>
+            <label className="mt-3 block">
+              {fieldLabel('What did staff see/hear?')}
+              <OrbPremiumTextarea
+                value={staffObservations}
+                onChange={(e) => setStaffObservations(e.target.value)}
+                rows={2}
+                placeholder="Observations only — avoid opinion where possible…"
+                className="mt-2"
+                data-orb-record-observations
+              />
+            </label>
+            <label className="mt-3 block">
+              {fieldLabel('What did staff do?')}
+              <OrbPremiumTextarea
+                value={staffActions}
+                onChange={(e) => setStaffActions(e.target.value)}
+                rows={2}
+                placeholder="Actions, de-escalation, contacts…"
+                className="mt-2"
+                data-orb-record-actions
+              />
+            </label>
+            <label className="mt-3 block">
+              {fieldLabel('What needs follow-up?')}
+              <OrbPremiumTextarea
+                value={followUp}
+                onChange={(e) => setFollowUp(e.target.value)}
+                rows={2}
+                placeholder="Handover, manager, external agency…"
+                className="mt-2"
+                data-orb-record-followup
+              />
+            </label>
+          </>
+        }
+        sidebar={
+          <OrbStudioSidebarPanel title="Recording guidance" subtitle="Child-centred professional records">
+            <p className="text-xs text-[var(--orb-muted)]">
+              Describe facts in plain language. ORB will suggest structure and wording — you review before saving or
+              opening in ORB Write.
+            </p>
+          </OrbStudioSidebarPanel>
+        }
+      >
+        <div data-orb-record-properly-panel data-orb-premium-page="record_properly">
+          <OrbStudioComposerCard label="What happened?">
             <OrbPremiumTextarea
               value={whatHappened}
               onChange={(e) => setWhatHappened(e.target.value)}
-              rows={5}
+              rows={8}
               placeholder="Facts in plain language…"
-              className="mt-2"
               data-orb-record-what
             />
-          </label>
-        </OrbPremiumWorkspaceLayout>
-      </div>
+          </OrbStudioComposerCard>
+        </div>
+      </OrbStudioPage>
     </OrbStandalonePanelShell>
   )
 }

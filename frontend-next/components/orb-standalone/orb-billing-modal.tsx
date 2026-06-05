@@ -35,7 +35,7 @@ const TOP_UP_OPTIONS = [
 ] as const
 
 function cardClassName() {
-  return 'orb-billing-card orb-mobile-workspace-card orb-doc-glass-card rounded-2xl border border-[var(--orb-mobile-ws-card-border,var(--orb-line))] bg-[var(--orb-mobile-ws-card,rgba(8,17,31,0.92))] p-5 text-[var(--orb-mobile-ws-text,var(--orb-foreground))] shadow-[var(--orb-res-shadow,0_10px_28px_rgba(15,23,42,0.06))]'
+  return 'orb-studio-modal-section orb-billing-card orb-mobile-workspace-card orb-doc-glass-card rounded-2xl border border-[var(--orb-mobile-ws-card-border,var(--orb-line))] bg-[var(--orb-mobile-ws-card,rgba(8,17,31,0.92))] p-5 text-[var(--orb-mobile-ws-text,var(--orb-foreground))] shadow-[var(--orb-res-shadow,0_10px_28px_rgba(15,23,42,0.06))]'
 }
 
 function formatSubscriptionStatus(access: OrbAccessPayload | null, subscriptionActive: boolean): string {

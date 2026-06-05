@@ -10,7 +10,9 @@ import {
   OrbWriteGuidancePanel,
   type OrbWriteSelectedGuidance
 } from '@/components/orb-write/orb-write-guidance-panel'
+import { OrbStudioShell } from '@/components/orb/premium'
 import { OrbWriteEditor } from '@/components/orb-write/orb-write-editor'
+import { OrbWriteSourcePanel } from '@/components/orb-write/orb-write-source-panel'
 import { OrbWriteStartScreen } from '@/components/orb-write/orb-write-start-screen'
 import { copyTextToClipboard } from '@/lib/orb/orb-clipboard'
 import {
@@ -330,9 +332,9 @@ export function OrbWriteStandalonePanel({
       ariaLabel="ORB Write standalone workspace"
       presentation="workspace"
     >
-      <div className="flex min-h-0 flex-1 flex-col gap-3" data-orb-write-standalone>
+      <OrbStudioShell studioId="write" className="min-h-0 flex-1 gap-3" data-orb-write-standalone>
         {view === 'start' ? (
-          <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[1fr_320px]">
+          <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[1fr_320px]" data-orb-write-studio-start>
             <OrbWriteStartScreen
               roughText={roughText}
               onRoughTextChange={setRoughText}
@@ -364,7 +366,7 @@ export function OrbWriteStandalonePanel({
             </div>
           </div>
         ) : doc ? (
-          <>
+          <div className="flex min-h-0 flex-1 flex-col gap-3" data-orb-write-studio-editor>
             <header className="flex shrink-0 items-center gap-2 border-b border-[var(--orb-line)]/40 pb-2">
               <button
                 type="button"
@@ -385,19 +387,28 @@ export function OrbWriteStandalonePanel({
                 className="min-w-0 flex-1 bg-transparent text-lg font-semibold text-[var(--orb-foreground)] focus:outline-none"
               />
             </header>
-            <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[1fr_320px]">
-              <OrbWriteEditor
+            <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[260px_1fr_300px] xl:grid-cols-[280px_1fr_320px]">
+              <OrbWriteSourcePanel
                 document={doc}
-                onChange={updateBody}
-                onWordCountChange={setWordCount}
-                lastEdited={`Last edited ${lastEdited}`}
-                onCopy={() => void handleCopy()}
-                onPrint={() => printOrbWriteDocument(doc)}
-                onExportPdf={() => void exportOrbWritePdf(doc)}
-                onSaveDraft={() => void handleSaveDraft()}
-                onApprove={handleApprove}
+                onContinueFromDictate={onOpenDictate}
+                onOpenTemplates={onOpenTemplates}
+                onOpenSavedDraft={openFromDraft}
+                hasLocalDraft={hasLocalDraft}
               />
-              <div className="flex min-h-0 flex-col gap-3 overflow-hidden">
+              <div className="orb-write-studio-editor min-h-0 overflow-hidden">
+                <OrbWriteEditor
+                  document={doc}
+                  onChange={updateBody}
+                  onWordCountChange={setWordCount}
+                  lastEdited={`Last edited ${lastEdited}`}
+                  onCopy={() => void handleCopy()}
+                  onPrint={() => printOrbWriteDocument(doc)}
+                  onExportPdf={() => void exportOrbWritePdf(doc)}
+                  onSaveDraft={() => void handleSaveDraft()}
+                  onApprove={handleApprove}
+                />
+              </div>
+              <div className="flex min-h-0 flex-col gap-3 overflow-hidden" data-orb-write-assistant-panel>
                 <OrbWriteGuidancePanel
                   document={doc}
                   selected={selectedGuidance}
@@ -417,9 +428,9 @@ export function OrbWriteStandalonePanel({
             <span className="sr-only" data-orb-write-word-count>
               {wordCount} words
             </span>
-          </>
+          </div>
         ) : null}
-      </div>
+      </OrbStudioShell>
     </OrbAppModal>
   )
 }

@@ -11,7 +11,9 @@ import {
   OrbPremiumTabs,
   OrbPremiumTextarea,
   OrbPremiumToolbar,
-  OrbPremiumTrustStrip
+  OrbPremiumTrustStrip,
+  OrbStudioHero,
+  OrbStudioShell
 } from '@/components/orb/premium'
 import { ORB_PREMIUM_ACTION_LABELS } from '@/components/orb/premium/orb-premium-theme'
 import { OrbIntelligenceOutput } from '@/components/orb-standalone/orb-intelligence-output'
@@ -270,9 +272,16 @@ export function OrbDocumentPanel({
       footer="ORB Residential — Powered by IndiCare Intelligence. Documents use only what you upload or paste."
       {...orbStationShellProps(residentialSurface, 'wide')}
     >
+      <OrbStudioShell studioId="knowledge" className="min-h-0 flex-1 gap-3 p-3 sm:p-4">
+        <OrbStudioHero
+          title="Documents & Guidance"
+          subtitle="Official guidance, home documents and uploads that support ORB Residential."
+          icon={<FileText className="h-5 w-5" />}
+          compact
+        />
       <OrbPremiumPage
         panelId="documents"
-        className="orb-document-panel"
+        className="orb-document-panel !p-0"
         toolbar={
           <OrbPremiumToolbar
             searchValue={librarySearch}
@@ -696,6 +705,7 @@ export function OrbDocumentPanel({
         </>
         ) : null}
       </OrbPremiumPage>
+      </OrbStudioShell>
     </OrbStandalonePanelShell>
   )
 }

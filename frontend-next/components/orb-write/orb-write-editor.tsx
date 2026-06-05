@@ -114,7 +114,7 @@ export function OrbWriteEditor({
   const scale = zoomMode === 'fit-width' ? undefined : zoomPercent / 100
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)]" data-orb-write-editor>
+    <div className="orb-write-studio-editor flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)]" data-orb-write-editor>
       <OrbWriteToolbar
         onCommand={runCommand}
         canUndo={canUndo}
@@ -132,7 +132,7 @@ export function OrbWriteEditor({
       />
       <div
         ref={canvasRef}
-        className="min-h-0 flex-1 overflow-auto bg-[#e8eaed] p-4 md:p-6"
+        className="orb-studio-document-canvas-workspace min-h-0 flex-1 overflow-auto bg-[#e8eaed] p-4 md:p-6"
         data-orb-write-canvas-workspace
       >
         <div

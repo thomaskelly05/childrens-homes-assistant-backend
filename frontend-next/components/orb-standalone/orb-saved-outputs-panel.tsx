@@ -5,9 +5,10 @@ import { Archive, Loader2, Trash2 } from 'lucide-react'
 
 import {
   OrbPremiumButton,
-  OrbPremiumEmptyState,
   OrbPremiumPill,
-  OrbPremiumToolbar
+  OrbPremiumToolbar,
+  OrbStudioEmptyState,
+  OrbStudioHeader
 } from '@/components/orb/premium'
 import { ORB_PREMIUM_ACTION_LABELS } from '@/components/orb/premium/orb-premium-theme'
 import {
@@ -224,11 +225,17 @@ export function OrbSavedOutputsPanel({
       {...orbStationShellProps(residentialSurface, 'wide')}
     >
       <div
-        className="flex min-h-0 flex-col lg:flex-row"
+        className="orb-studio-shell flex min-h-0 flex-col gap-3 p-3 sm:p-4 lg:flex-row"
         data-orb-saved-outputs-panel
+        data-orb-studio-shell="saved_outputs"
         {...(items.length === 0 && !loading ? { 'data-orb-saved-outputs-empty': true } : {})}
       >
         <div className="flex w-full shrink-0 flex-col border-b border-[var(--orb-mobile-ws-card-border,var(--orb-line))] lg:w-[var(--orb-desktop-saved-list-width,27.5rem)] lg:max-w-[var(--orb-desktop-saved-list-width,27.5rem)] lg:border-b-0 lg:border-r">
+          <OrbStudioHeader
+            title="Document archive"
+            subtitle="Reuse, export and improve your ORB work"
+            className="px-2 pb-2 lg:px-3"
+          />
           {reconnectSuggested && items.length ? (
             <div className="p-3 pb-0">
               <OrbStationReconnectBanner onRefresh={() => void refresh()} />
@@ -312,10 +319,9 @@ export function OrbSavedOutputsPanel({
                 />
               )
             ) : items.length === 0 ? (
-              <OrbPremiumEmptyState
-                dataAttr="saved_outputs"
+              <OrbStudioEmptyState
                 title="No saved outputs yet"
-                body={
+                description={
                   storageMode === 'local'
                     ? 'Records, briefings and document reviews you save will appear here. Drafts stay on this device until you reconnect.'
                     : 'Records, briefings and document reviews you save will appear here.'

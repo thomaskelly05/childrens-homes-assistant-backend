@@ -5,11 +5,12 @@ import { useMemo, useState } from 'react'
 import {
   OrbPremiumButton,
   OrbPremiumCard,
-  OrbPremiumPage,
   OrbPremiumPill,
   OrbPremiumSection,
   OrbPremiumTextarea,
-  OrbPremiumTrustStrip
+  OrbStudioComposerCard,
+  OrbStudioPage,
+  OrbStudioSidebarPanel
 } from '@/components/orb/premium'
 import { ORB_PREMIUM_ACTION_LABELS } from '@/components/orb/premium/orb-premium-theme'
 import { orbStationShellProps } from '@/components/orb-standalone/orb-app-modal'
@@ -76,13 +77,9 @@ export function OrbReviewPanel({
       panelId="review"
       {...orbStationShellProps(residentialSurface, 'wide')}
     >
-      <OrbPremiumPage
-        panelId="review"
-        trustStrip={
-          <OrbPremiumTrustStrip>
-            ORB supports professional judgement. Adults must review and approve all wording before use in records.
-          </OrbPremiumTrustStrip>
-        }
+      <OrbStudioPage
+        studioId="review"
+        trustStrip="ORB supports professional judgement. Adults must review and approve all wording before use in records."
         primaryAction={
           <OrbPremiumButton
             disabled={!text.trim()}
@@ -102,30 +99,29 @@ export function OrbReviewPanel({
             {ORB_PREMIUM_ACTION_LABELS.generateDraft}
           </OrbPremiumButton>
         }
+        sidebar={
+          <OrbStudioSidebarPanel title="Review outputs" subtitle="What ORB will help with">
+            <ul className="space-y-1.5 text-sm text-[var(--orb-muted)]">
+              {REVIEW_OUTPUT_SECTIONS.map((item) => (
+                <li key={item} className="flex gap-2" data-orb-review-output-section={item}>
+                  <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-sky-400" aria-hidden />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </OrbStudioSidebarPanel>
+        }
       >
-        <OrbPremiumCard padded className="!p-4">
-          <h3 className="text-sm font-semibold text-[var(--orb-foreground)]">ORB outputs</h3>
-          <ul className="mt-2 space-y-1.5 text-sm text-[var(--orb-muted)]">
-            {REVIEW_OUTPUT_SECTIONS.map((item) => (
-              <li key={item} className="flex gap-2" data-orb-review-output-section={item}>
-                <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-sky-400" aria-hidden />
-                {item}
-              </li>
-            ))}
-          </ul>
-        </OrbPremiumCard>
-
-        <label className="block">
-          <span className="text-xs font-medium text-[var(--orb-muted)]">Review written practice</span>
+        <div data-orb-review-panel>
+        <OrbStudioComposerCard label="Review written practice">
           <OrbPremiumTextarea
             value={text}
             onChange={(e) => setText(e.target.value)}
-            rows={8}
+            rows={10}
             placeholder="Paste an incident, daily record, handover or supervision note…"
-            className="mt-2"
             data-orb-review-input
           />
-        </label>
+        </OrbStudioComposerCard>
 
         <OrbPremiumSection
           title="Therapeutic language"
@@ -163,7 +159,8 @@ export function OrbReviewPanel({
             </div>
           </div>
         </OrbPremiumSection>
-      </OrbPremiumPage>
+        </div>
+      </OrbStudioPage>
     </OrbStandalonePanelShell>
   )
 }
