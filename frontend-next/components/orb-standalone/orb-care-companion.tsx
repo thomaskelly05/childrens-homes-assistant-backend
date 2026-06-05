@@ -3402,6 +3402,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                     data-orb-empty-state
                     {...(residentialSurface ? { 'data-orb-residential-empty': true } : {})}
                   >
+                    {residentialSurface ? <div className="orb-v2-atmosphere" aria-hidden /> : null}
                     <div
                       className="relative flex shrink-0 justify-center"
                       data-orb-empty-sphere

@@ -4,6 +4,7 @@ import { ReactNode } from 'react'
 /* Canonical ORB design layers: desktop + mobile only. */
 import './orb-desktop.css'
 import './orb-premium-tokens.css'
+import '@/components/orb/premium/orb-premium-v2.css'
 import './orb-dictate-studio-polish.css'
 import './orb-brand-asset.css'
 import './orb-light-layer-fix.css'

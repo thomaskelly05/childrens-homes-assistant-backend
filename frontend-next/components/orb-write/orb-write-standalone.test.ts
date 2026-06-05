@@ -101,8 +101,9 @@ describe('ORB Write standalone studio', () => {
     const ai = readComponent('components/orb-write/orb-write-ai-panel.tsx')
     assert.match(ai, /data-orb-write-ai-panel/)
     assert.match(ai, /editOrbDictateDocument/)
-    assert.match(ai, /OrbDictateStudioAssistant/)
+    assert.match(ai, /ORB_WRITE_AI_ACTIONS/)
     assert.doesNotMatch(ai, /brain_metadata/)
+    assert.doesNotMatch(ai, /IndiCare Brain/)
   })
 
   it('no child profile selector in standalone write', () => {
