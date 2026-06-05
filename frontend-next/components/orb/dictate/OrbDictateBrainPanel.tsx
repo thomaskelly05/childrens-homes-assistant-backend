@@ -111,9 +111,9 @@ function BrainEmptyState({
         <h4 className="text-[10px] font-semibold uppercase tracking-wider text-[var(--orb-muted)]">
           What ORB will check
         </h4>
-        <ul className="mt-1.5 list-disc space-y-0.5 pl-4 text-xs text-[var(--orb-foreground)]">
+        <ul className="mt-1.5 space-y-1.5 text-xs text-[var(--orb-foreground)]">
           {orbChecks.map((check) => (
-            <li key={check} data-orb-brain-orb-check-empty>
+            <li key={check} data-orb-brain-orb-check-empty data-orb-brain-check-item>
               {check}
             </li>
           ))}
@@ -223,9 +223,9 @@ export function OrbDictateBrainPanel({
 
             {analysis.orb_will_check?.length ? (
               <AnalysisSection title="What ORB will check" dataAttr="orb-checks">
-                <ul className="list-disc space-y-1 pl-4 text-xs">
+                <ul className="space-y-1.5 text-xs">
                   {analysis.orb_will_check.map((c) => (
-                    <li key={c} data-orb-brain-orb-check>
+                    <li key={c} data-orb-brain-orb-check data-orb-brain-check-item>
                       {c}
                     </li>
                   ))}

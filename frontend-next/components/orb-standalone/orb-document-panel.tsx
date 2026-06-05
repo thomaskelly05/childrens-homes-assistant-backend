@@ -440,7 +440,10 @@ export function OrbDocumentPanel({
         </div>
 
         {inputTab === 'upload' ? (
-          <label className="orb-doc-upload-zone flex cursor-pointer flex-col items-center justify-center rounded-xl border border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] px-4 py-6 text-center hover:bg-[var(--orb-surface-hover)]">
+          <label
+            className="orb-doc-upload-zone flex cursor-pointer flex-col items-center justify-center rounded-xl border border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] px-4 py-6 text-center hover:bg-[var(--orb-surface-hover)]"
+            data-orb-document-dropzone
+          >
             <span className="text-sm font-semibold text-[var(--orb-foreground)]">Upload file</span>
             <span className="mt-1 text-xs text-[var(--orb-muted)]">.txt, .md, .pdf, .docx</span>
             <input

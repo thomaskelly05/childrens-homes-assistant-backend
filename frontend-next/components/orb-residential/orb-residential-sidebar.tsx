@@ -957,7 +957,12 @@ export function OrbResidentialSidebar({
             </div>
           </SidebarCollapsibleSection>
         ) : (
-          <nav className="space-y-0.5" aria-label="Account and settings" data-orb-sidebar-bottom>
+          <nav
+            className="space-y-0.5 rounded-xl p-1.5"
+            aria-label="Account and settings"
+            data-orb-sidebar-bottom
+            data-orb-sidebar-account-card
+          >
             <button
               type="button"
               onClick={() => onOpenProfile?.()}

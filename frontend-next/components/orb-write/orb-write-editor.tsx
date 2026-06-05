@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { OrbWriteToolbar } from '@/components/orb-write/orb-write-toolbar'
 import { useOrbWriteZoomHandlers } from '@/components/orb-write/orb-write-zoom-controls'
 import type { OrbWriteDocument } from '@/lib/orb/write/orb-write-types'
+import { sanitizeOrbWriteHtml } from '@/lib/orb/write/orb-write-sanitize'
 import {
   readOrbWriteZoomPreference,
   writeOrbWriteZoomPreference,
@@ -65,7 +66,9 @@ export function OrbWriteEditor({
 
   const syncContent = useCallback(() => {
     if (!editorRef.current) return
-    const html = editorRef.current.innerHTML
+    const raw = editorRef.current.innerHTML
+    const html = sanitizeOrbWriteHtml(raw)
+    if (html !== raw) editorRef.current.innerHTML = html
     const plain = htmlToPlainText(html)
     const words = plain.trim().split(/\s+/).filter(Boolean).length
     onChange(html, plain)
@@ -84,7 +87,9 @@ export function OrbWriteEditor({
           '<table border="1" cellpadding="4"><tr><td>Column 1</td><td>Column 2</td></tr><tr><td></td><td></td></tr></table><p></p>'
         )
       } else if (command === 'formatBlock' && value) {
-        document.execCommand('formatBlock', false, value)
+        document.execCommand('formatBlock', false, value === 'blockquote' ? 'blockquote' : value)
+      } else if (command === 'insertHorizontalRule') {
+        document.execCommand('insertHorizontalRule', false)
       } else {
         document.execCommand(command, false, value)
       }
