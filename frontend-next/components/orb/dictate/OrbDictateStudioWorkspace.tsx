@@ -11,6 +11,7 @@ import {
   type OrbDictatePrimaryAction
 } from '@/components/orb/dictate/OrbDictateTopBar'
 import { OrbTranscriptPanel } from '@/components/orb/dictate/OrbTranscriptPanel'
+import { OrbStudioShell } from '@/components/orb/premium'
 import { OrbResizableWorkspace } from '@/components/orb/resizable-panels/orb-resizable-workspace'
 import {
   OrbDictateAudioUpload,
@@ -253,10 +254,12 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
   const advancedFooter = <OrbDictateAdvancedOptions {...props} effectiveText={effectiveText} />
 
   return (
-    <div
+    <OrbStudioShell
+      studioId="dictate"
       className="orb-dictate-studio-workspace flex min-h-0 flex-1 flex-col gap-1 overflow-hidden px-1 sm:px-2"
       data-orb-dictate-studio-workspace
       data-orb-dictate-focus-mode={focusMode ? 'true' : 'false'}
+      data-orb-dictate-empty={!hasTranscript ? 'true' : undefined}
       style={{ minHeight: 'min(100dvh - 4.5rem, calc(100svh - 4.5rem))' }}
     >
       <OrbDictateTopBar
@@ -326,7 +329,7 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
 
       {hasTranscript ? (
         <div
-          className="shrink-0 rounded-lg border border-[var(--orb-line)]/35 bg-[var(--orb-surface-elevated)]/60 px-2.5 py-1.5"
+          className="orb-studio-action-rail shrink-0 rounded-lg border border-[var(--orb-line)]/35 bg-[var(--orb-surface-elevated)]/60 px-2.5 py-1.5"
           data-orb-dictate-action-rail
         >
           <OrbDictateSuggestedOutputs
@@ -339,6 +342,6 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
           />
         </div>
       ) : null}
-    </div>
+    </OrbStudioShell>
   )
 }

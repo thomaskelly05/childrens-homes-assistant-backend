@@ -179,7 +179,7 @@ export function OrbDictateBrainPanel({
       <header className="flex shrink-0 items-center gap-2 border-b border-[var(--orb-line)]/40 px-4 py-2.5">
         <Sparkles className="h-4 w-4 text-[var(--orb-primary)]" aria-hidden />
         <div>
-          <h3 className="text-sm font-semibold text-[var(--orb-foreground)]">IndiCare Brain Analysis</h3>
+          <h3 className="text-sm font-semibold text-[var(--orb-foreground)]">ORB analysis</h3>
           <p className="text-[10px] text-[var(--orb-muted)]">Professional review support — adult remains responsible</p>
         </div>
       </header>

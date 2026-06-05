@@ -1,14 +1,16 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Loader2 } from 'lucide-react'
+import { FileText, Loader2 } from 'lucide-react'
 
 import {
   OrbPremiumButton,
   OrbPremiumEmptyState,
   OrbPremiumPage,
   OrbPremiumPill,
-  OrbPremiumToolbar
+  OrbPremiumToolbar,
+  OrbStudioHero,
+  OrbStudioShell
 } from '@/components/orb/premium'
 import { ORB_PREMIUM_ACTION_LABELS } from '@/components/orb/premium/orb-premium-theme'
 import { orbStationShellProps } from '@/components/orb-standalone/orb-app-modal'
@@ -182,6 +184,13 @@ export function OrbTemplatesPanel({
       ariaLabel="ORB template library"
       {...orbStationShellProps(residentialSurface, 'wide')}
     >
+      <OrbStudioShell studioId="templates" className="min-h-0 flex-1 gap-3 p-3 sm:p-4">
+        <OrbStudioHero
+          title="Recording library"
+          subtitle="Structured residential record types — start in Dictate, ORB Write or chat."
+          icon={<FileText className="h-5 w-5" />}
+          compact
+        />
       <OrbPremiumPage
         panelId="templates"
         toolbar={
@@ -271,10 +280,10 @@ export function OrbTemplatesPanel({
             .map((tpl) => (
             <li key={tpl.id}>
               <article
-                className={`orb-doc-glass-card orb-template-card flex h-full flex-col rounded-xl border px-4 py-3 transition ${
+                className={`orb-studio-source-card orb-doc-glass-card orb-template-card flex h-full flex-col rounded-2xl border px-4 py-4 transition ${
                   selected?.id === tpl.id
-                    ? 'border-sky-400/40 bg-[var(--orb-surface-hover)] ring-1 ring-sky-400/20'
-                    : 'border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] hover:border-sky-400/25'
+                    ? 'border-sky-400/40 bg-[var(--orb-surface-hover)] ring-1 ring-sky-400/20 shadow-[var(--orb-v2-shadow-sm)]'
+                    : 'border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] hover:border-sky-400/25 hover:shadow-[var(--orb-v2-shadow-sm)]'
                 }`}
                 data-orb-template-card={tpl.id}
                 data-orb-template-item={tpl.id}
@@ -335,6 +344,7 @@ export function OrbTemplatesPanel({
           </div>
         ) : null}
       </OrbPremiumPage>
+      </OrbStudioShell>
     </OrbStandalonePanelShell>
   )
 }

@@ -5,10 +5,13 @@ import { ClipboardList, Copy, FileText, Loader2, MessageSquare, PenLine, Sparkle
 
 import {
   OrbPremiumButton,
-  OrbPremiumEmptyState,
-  OrbPremiumPage,
   OrbPremiumPill,
-  OrbPremiumTextarea
+  OrbPremiumTextarea,
+  OrbStudioEmptyState,
+  OrbStudioGrid,
+  OrbStudioPage,
+  OrbStudioPanel,
+  OrbStudioPrimaryAction
 } from '@/components/orb/premium'
 import { ORB_PREMIUM_ACTION_LABELS } from '@/components/orb/premium/orb-premium-theme'
 import { OrbIntelligenceOutput } from '@/components/orb-standalone/orb-intelligence-output'
@@ -158,8 +161,8 @@ export function OrbShiftBuilderPanel({
       footer="ORB Residential — Powered by IndiCare Intelligence. Shift Builder uses only what you paste."
       {...orbStationShellProps(residentialSurface, 'wide')}
     >
-      <OrbPremiumPage
-        panelId="shift_builder"
+      <OrbStudioPage
+        studioId="shift_builder"
         trustStrip={
           <ul className="space-y-1" data-orb-shift-builder-boundary>
             {ORB_SHIFT_BUILDER_BOUNDARY_LINES.map((line) => (
@@ -168,11 +171,11 @@ export function OrbShiftBuilderPanel({
           </ul>
         }
         primaryAction={
-          <OrbPremiumButton
+          <OrbStudioPrimaryAction
             disabled={loading || !hasInput}
             onClick={() => void runGenerate()}
-            fullWidth
-            className="orb-doc-primary-btn"
+            working={loading}
+            className="w-full"
             data-orb-generate-shift-plan
           >
             {loading ? (
@@ -181,7 +184,7 @@ export function OrbShiftBuilderPanel({
               <Sparkles className="h-4 w-4" aria-hidden />
             )}
             {ORB_PREMIUM_ACTION_LABELS.generateShiftPlan}
-          </OrbPremiumButton>
+          </OrbStudioPrimaryAction>
         }
         advanced={
           <>
@@ -251,32 +254,35 @@ export function OrbShiftBuilderPanel({
           </>
         }
       >
-        {!hasInput && !result ? (
-          <OrbPremiumEmptyState
-            icon={ClipboardList}
-            title="No shift notes yet"
-            body="Paste rough notes, handover text or ORB chat output, then generate a draft."
-            dataAttr="shift-builder-empty"
-          />
-        ) : null}
+        <OrbStudioGrid columns={result ? 2 : 1}>
+          <OrbStudioPanel title="Shift notes" subtitle="Paste what happened on shift" panelId="shift-input">
+            {!hasInput && !result ? (
+              <OrbStudioEmptyState
+                icon={<ClipboardList className="h-6 w-6" />}
+                title="No shift notes yet"
+                description="Paste rough notes, handover text or ORB chat output, then generate a draft."
+              />
+            ) : null}
 
-        <label className="block text-xs font-semibold text-[var(--orb-muted)]">
-          Rough shift notes
-          <OrbPremiumTextarea
-            data-orb-shift-notes-input
-            value={shiftNotes}
-            onChange={(e) => setShiftNotes(e.target.value)}
-            rows={5}
-            placeholder="What happened on shift — facts, child presentation, staff response…"
-            className="orb-doc-input mt-1"
-          />
-        </label>
+            <label className="block text-xs font-semibold text-[var(--orb-muted)]">
+              Rough shift notes
+              <OrbPremiumTextarea
+                data-orb-shift-notes-input
+                value={shiftNotes}
+                onChange={(e) => setShiftNotes(e.target.value)}
+                rows={8}
+                placeholder="What happened on shift — facts, child presentation, staff response…"
+                className="orb-doc-input mt-1"
+              />
+            </label>
 
-        {error ? <p className="text-xs font-medium text-red-600">{error}</p> : null}
-        {copyNote ? <p className="text-xs font-medium text-[#0369A1]">{copyNote}</p> : null}
+            {error ? <p className="mt-2 text-xs font-medium text-red-600">{error}</p> : null}
+            {copyNote ? <p className="mt-2 text-xs font-medium text-[#0369A1]">{copyNote}</p> : null}
+          </OrbStudioPanel>
 
-        {result && outputView ? (
-          <div className="space-y-4 border-t border-[var(--orb-line)] pt-4" data-orb-shift-builder-result>
+          {result && outputView ? (
+          <OrbStudioPanel title="Handover preview" subtitle="Generated shift plan" panelId="shift-output">
+          <div className="space-y-4" data-orb-shift-builder-result>
             <OrbIntelligenceOutput
               output={outputView}
               onCopy={() => setCopyNote('Copied markdown to clipboard.')}
@@ -372,8 +378,10 @@ export function OrbShiftBuilderPanel({
               ) : null}
             </div>
           </div>
+          </OrbStudioPanel>
         ) : null}
-      </OrbPremiumPage>
+        </OrbStudioGrid>
+      </OrbStudioPage>
     </OrbStandalonePanelShell>
   )
 }

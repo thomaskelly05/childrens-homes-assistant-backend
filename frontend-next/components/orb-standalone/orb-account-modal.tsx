@@ -93,7 +93,7 @@ export function OrbAccountModal({
       size="standard"
     >
       <div className="space-y-4 p-3 sm:p-4" data-orb-account-modal>
-        <div className="orb-mobile-workspace-card rounded-2xl border border-[var(--orb-line)]/60 bg-[var(--orb-surface-elevated)] px-3 py-3 sm:px-4 sm:py-4">
+        <div className="orb-studio-modal-section orb-mobile-workspace-card rounded-2xl border border-[var(--orb-line)]/60 bg-[var(--orb-surface-elevated)] px-3 py-3 sm:px-4 sm:py-4">
           <p className="text-lg font-semibold text-[var(--orb-foreground)]" data-orb-account-name>
             {displayName}
           </p>

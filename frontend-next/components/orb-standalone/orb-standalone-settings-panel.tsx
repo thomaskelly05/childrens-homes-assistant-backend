@@ -210,9 +210,10 @@ export function OrbStandaloneSettingsPanel({
         : { layout: 'center' as const, wide: true })}
     >
       <div
-        className="flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row"
+        className="orb-studio-shell flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row"
         data-orb-settings-panel
         data-orb-settings-layout="premium-cards"
+        data-orb-studio-shell="settings"
       >
         <div className="orb-premium-settings-card shrink-0 border-b border-[var(--orb-line)] p-4 md:hidden">
           <OrbAppearanceControl
