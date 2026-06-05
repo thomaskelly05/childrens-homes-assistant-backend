@@ -1,14 +1,28 @@
 import type { OrbWriteDocument } from '@/lib/orb/write/orb-write-types'
 import { exportOrbDictateNote } from '@/lib/orb/dictate/orb-dictate-client'
+import { resolveOrbRecordingRecordType } from '@/lib/orb/recording/orb-recording-framework'
 
 const PDF_FOOTER = 'Generated with ORB Residential, powered by IndiCare Intelligence'
+
+function formatBodyWithHeadings(doc: OrbWriteDocument): string {
+  const recordType = resolveOrbRecordingRecordType({
+    recordTypeId: doc.record_type_id,
+    noteType: doc.record_type
+  })
+  const headings = doc.document_headings?.length ? doc.document_headings : recordType.pdf_heading_order
+  let body = doc.body
+  if (!/^##\s+/m.test(body) && headings.length) {
+    body = headings.map((h) => `## ${h}\n\n`).join('') + '\n' + body
+  }
+  return body
+}
 
 export function buildOrbWritePrintHtml(doc: OrbWriteDocument): string {
   const date = new Date(doc.updated_at).toLocaleString('en-GB', {
     dateStyle: 'medium',
     timeStyle: 'short'
   })
-  const escapedBody = doc.body
+  const escapedBody = formatBodyWithHeadings(doc)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
@@ -64,7 +78,7 @@ export function printOrbWriteDocument(doc: OrbWriteDocument): void {
 
 export async function exportOrbWritePdf(doc: OrbWriteDocument): Promise<void> {
   const printBody = [
-    doc.body,
+    formatBodyWithHeadings(doc),
     '',
     '---',
     '',

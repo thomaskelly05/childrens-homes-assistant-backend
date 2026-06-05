@@ -44,6 +44,15 @@ from schemas.orb_saved_outputs import OrbSavedOutputCreate
 from services.ai_note_export_service import create_docx_export, create_pdf_export, safe_filename
 from services.ai_notes_service import transcribe_audio
 from services.orb_dictate_template_registry import get_dictate_template, list_dictate_templates
+from services.orb_recording_framework_service import (
+    document_title_for_record_type,
+    framework_missing_checks,
+    orb_checks_summary,
+    recording_quality_guidance,
+    resolve_record_type,
+    structure_document_body,
+    suggested_output_labels,
+)
 from services.orb_saved_output_service import orb_saved_output_service
 from services.orb_brain_metadata_service import build_brain_metadata
 from services.indicare_intelligence_core_service import indicare_intelligence_core_service
@@ -576,8 +585,18 @@ def analyze_dictate_session(request: OrbDictateAnalyzeRequest) -> OrbDictateAnal
     )
     transcript = _truncate(request.input_text)
     template = get_dictate_template(note_type)  # type: ignore[arg-type]
+    record_type = resolve_record_type(
+        record_type_id=request.record_type_id,
+        template_id=request.template_id,
+        note_type=note_type,
+    )
     quality = compute_quality_checks(transcript, note_type)
     missing, suggestions = _build_analysis_suggestions(quality, note_type)
+
+    framework_missing = framework_missing_checks(record_type, transcript)
+    for item in framework_missing:
+        if item not in missing:
+            missing.append(item)
 
     intel_packet = indicare_intelligence_core_service.build_intelligence_packet(
         transcript,
@@ -589,6 +608,9 @@ def analyze_dictate_session(request: OrbDictateAnalyzeRequest) -> OrbDictateAnal
         safeguarding.append(
             "Safeguarding themes detected — ensure escalation and notifications are documented."
         )
+    for check in record_type.get("safeguarding_checks", [])[:3]:
+        if check not in safeguarding:
+            safeguarding.append(check)
 
     child_voice_check = (
         "Child voice appears present — verify direct quotes are accurate."
@@ -598,6 +620,8 @@ def analyze_dictate_session(request: OrbDictateAnalyzeRequest) -> OrbDictateAnal
     manager_note = None
     if quality.manager_oversight == "missing":
         manager_note = "Manager oversight not documented — add notification or review if required."
+    elif record_type.get("manager_oversight_checks"):
+        manager_note = str(record_type["manager_oversight_checks"][0])
 
     ofsted_check = None
     if intel_summary.get("gaps"):
@@ -605,18 +629,22 @@ def analyze_dictate_session(request: OrbDictateAnalyzeRequest) -> OrbDictateAnal
             "Consider inspection evidence gaps identified in your transcript — link practice to child impact."
         )
 
+    follow_up = list(record_type.get("suggested_follow_up_actions", []))[:4]
+    if not follow_up:
+        follow_up = ["Review transcript", "Confirm facts and times", "Finalise in ORB Write"]
+
     return OrbDictateAnalyzeResponse(
-        detected_record_type=template.title,
+        detected_record_type=str(record_type.get("label", template.title)),
+        record_type_id=str(record_type.get("id")),
+        required_sections=list(record_type.get("required_sections", [])),
+        orb_will_check=orb_checks_summary(record_type),
         safeguarding_concerns=safeguarding,
         missing_information=missing,
         professional_wording_suggestions=suggestions,
-        recommended_next_actions=[
-            "Review transcript",
-            "Confirm facts and times",
-            "Finalise in ORB Write",
-        ],
-        possible_outputs=[t.title for t in list_dictate_templates()[:8]],
+        recommended_next_actions=follow_up,
+        possible_outputs=suggested_output_labels(str(record_type.get("id"))),
         recording_quality_score=quality.recording_quality,
+        recording_quality_guidance=recording_quality_guidance(record_type),
         child_voice_check=child_voice_check,
         ofsted_evidence_check=ofsted_check,
         manager_oversight_note=manager_note,
@@ -662,6 +690,11 @@ def finalise_dictate_document(
         home_id=home_id,
         user_id=user_id,
     )
+    record_type = resolve_record_type(
+        record_type_id=request.record_type_id,
+        template_id=request.template_id,
+        note_type=generated.note_type,
+    )
     professional = generated.professional_note
     if request.adult_edits and request.adult_edits.strip():
         professional = request.adult_edits.strip()
@@ -674,10 +707,24 @@ def finalise_dictate_document(
         if appendix_lines:
             professional += "\n\n## Accepted suggestions (review before use)\n\n" + "\n".join(appendix_lines)
 
+    missing_notes = [
+        s.detail for s in request.accepted_suggestions if s.category == "missing" and s.status == "accepted"
+    ]
+    professional = structure_document_body(
+        record_type=record_type,
+        professional_note=professional,
+        missing_notes=missing_notes or None,
+        adult_edits_preserved=bool(request.adult_edits and request.adult_edits.strip()),
+    )
+
     transcript = request.transcript or generated.transcript
+    headings = list(record_type.get("pdf_heading_order") or record_type.get("final_document_headings") or [])
     return OrbDictateFinaliseResponse(
-        title=generated.title,
+        title=document_title_for_record_type(record_type),
         note_type=generated.note_type,
+        record_type_id=str(record_type.get("id")),
+        record_type_label=str(record_type.get("label")),
+        document_headings=headings,
         professional_note=professional,
         summary=generated.summary,
         transcript=transcript,

@@ -4,7 +4,6 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, it } from 'node:test'
 
-import { ORB_DICTATE_STUDIO_TEMPLATES } from '../../lib/orb/dictate/orb-dictate-studio-templates.ts'
 import { loadOrbDictatePanelLayout } from '../../lib/orb/dictate/orb-dictate-panel-layout.ts'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '../..')
@@ -65,8 +64,16 @@ describe('ORB Dictate + Write convergence', () => {
 
   it('suggested output buttons render', () => {
     const outputs = readComponent('components/orb/dictate/OrbDictateSuggestedOutputs.tsx')
+    const studio = readComponent('lib/orb/dictate/orb-dictate-studio-templates.ts')
     assert.match(outputs, /data-orb-suggested-output/)
-    assert.ok(ORB_DICTATE_STUDIO_TEMPLATES.length >= 9)
+    assert.match(studio, /orbRecordingStudioTemplates/)
+  })
+
+  it('selected template card is visible in studio workspace', () => {
+    const workspace = readComponent('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
+    const card = readComponent('components/orb/dictate/OrbDictateSelectedTemplateCard.tsx')
+    assert.match(workspace, /OrbDictateSelectedTemplateCard/)
+    assert.match(card, /data-orb-dictate-selected-template-card/)
   })
 
   it('station opens ORB Write on finalise', () => {

@@ -107,6 +107,16 @@ async def dictate_templates(current_user=Depends(require_orb_residential_auth)):
     )
 
 
+@router.get("/recording-framework")
+async def dictate_recording_framework(current_user=Depends(require_orb_residential_auth)):
+    from services.orb_recording_framework_service import get_framework_payload
+
+    return _success(
+        get_framework_payload(),
+        standalone_boundary=STANDALONE_BOUNDARY,
+    )
+
+
 @router.post("/transcribe")
 async def dictate_transcribe(
     payload: OrbDictateTranscribeRequest,

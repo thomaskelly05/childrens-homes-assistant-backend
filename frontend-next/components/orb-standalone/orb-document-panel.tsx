@@ -18,6 +18,11 @@ import { orbStationShellProps } from '@/components/orb-standalone/orb-app-modal'
 import { OrbStandalonePanelShell } from '@/components/orb-standalone/orb-standalone-panel-shell'
 import type { StandaloneProject } from '@/lib/orb/standalone-local-store'
 import {
+  matchOrbRecordingTypesForDocument,
+  resolveOrbRecordingRecordType
+} from '@/lib/orb/recording/orb-recording-framework'
+import type { OrbRecordingRecordType, OrbRecordingRecordTypeId } from '@/lib/orb/recording/orb-recording-types'
+import {
   analyseOrbStandaloneDocument,
   runOrbDocumentIntelligence,
   uploadOrbStandaloneDocument
@@ -71,6 +76,7 @@ export function OrbDocumentPanel({
   const [result, setResult] = useState<OrbDocumentIntelligenceResult | null>(null)
   const [copyNote, setCopyNote] = useState<string | null>(null)
   const [closeAfterAnalyse, setCloseAfterAnalyse] = useState(false)
+  const [selectedRecordTypeId, setSelectedRecordTypeId] = useState<OrbRecordingRecordTypeId | ''>('')
 
   useEffect(() => {
     if (!open) return
@@ -79,6 +85,19 @@ export function OrbDocumentPanel({
   }, [open, initialText, initialLens])
 
   const hasContent = Boolean(text.trim() || sourceId)
+
+  const suggestedRecordTypes = useMemo(
+    () => (text.trim().length > 40 ? matchOrbRecordingTypesForDocument(text) : []),
+    [text]
+  )
+
+  const selectedRecordType = useMemo(
+    () =>
+      selectedRecordTypeId
+        ? resolveOrbRecordingRecordType({ recordTypeId: selectedRecordTypeId })
+        : suggestedRecordTypes[0] ?? null,
+    [selectedRecordTypeId, suggestedRecordTypes]
+  )
   const heroLens = RESIDENTIAL_FIRST_CLASS_LENSES.find((item) => item.hero)
   const standardLenses = RESIDENTIAL_FIRST_CLASS_LENSES.filter((item) => !item.hero)
 
@@ -226,6 +245,39 @@ export function OrbDocumentPanel({
       {...orbStationShellProps(residentialSurface, 'wide')}
     >
       <div className="orb-document-panel space-y-3 p-4" data-orb-document-panel>
+        <section className="space-y-2" data-orb-document-record-type-section>
+          <label className="text-xs font-semibold text-[var(--orb-foreground)]" htmlFor="orb-document-record-type">
+            Review against record type
+          </label>
+          <select
+            id="orb-document-record-type"
+            value={selectedRecordTypeId || selectedRecordType?.id || ''}
+            onChange={(e) => setSelectedRecordTypeId(e.target.value as OrbRecordingRecordTypeId)}
+            className="w-full rounded-lg border border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] px-3 py-2 text-sm"
+            data-orb-document-record-type-select
+          >
+            <option value="">Choose record type…</option>
+            {suggestedRecordTypes.map((r: OrbRecordingRecordType) => (
+              <option key={r.id} value={r.id}>
+                {r.label} (suggested)
+              </option>
+            ))}
+          </select>
+          {selectedRecordType ? (
+            <div className="rounded-lg border border-[var(--orb-line)]/50 p-3 text-xs text-[var(--orb-muted)]" data-orb-document-record-type-card>
+              <p className="font-medium text-[var(--orb-foreground)]">{selectedRecordType.label}</p>
+              <p className="mt-1">{selectedRecordType.purpose}</p>
+              <p className="mt-2">
+                <span className="font-medium text-[var(--orb-foreground)]">Related outputs: </span>
+                {selectedRecordType.suggested_outputs
+                  .slice(0, 5)
+                  .map((id) => resolveOrbRecordingRecordType({ recordTypeId: id }).label)
+                  .join(' · ')}
+              </p>
+            </div>
+          ) : null}
+        </section>
+
         <section data-orb-document-upload-section className="space-y-3">
         <ul
           className="orb-doc-glass-card space-y-1 rounded-xl border border-[var(--orb-line)] px-3 py-2.5 text-[11px] leading-5 text-[var(--orb-muted)]"

@@ -1,5 +1,10 @@
 import type { OrbDictateQualityChecks, OrbDictateNoteType } from '@/lib/orb/dictate/orb-dictate-types'
-import { ORB_DICTATE_NOTE_TYPE_LABELS } from '@/lib/orb/dictate/orb-dictate-types'
+import {
+  buildOrbRecordingBrainContext,
+  orbRecordingSuggestedOutputs,
+  resolveOrbRecordingRecordType
+} from '@/lib/orb/recording/orb-recording-framework'
+import type { OrbRecordingRecordTypeId } from '@/lib/orb/recording/orb-recording-types'
 
 export type OrbDictateBrainSuggestion = {
   id: string
@@ -11,12 +16,16 @@ export type OrbDictateBrainSuggestion = {
 
 export type OrbDictateBrainAnalysis = {
   detected_record_type: string
+  record_type_id?: string
+  required_sections?: string[]
+  orb_will_check?: string[]
   safeguarding_concerns: string[]
   missing_information: string[]
   professional_wording_suggestions: OrbDictateBrainSuggestion[]
   recommended_next_actions: string[]
   possible_outputs: string[]
   recording_quality_score: 'good' | 'needs_review'
+  recording_quality_guidance?: string
   child_voice_check: string
   ofsted_evidence_check: string | null
   manager_oversight_note: string | null
@@ -41,12 +50,15 @@ const QUALITY_LABELS: Record<string, string> = {
 
 export function buildBrainAnalysisFromGenerate(opts: {
   noteType: OrbDictateNoteType
+  recordTypeId?: OrbRecordingRecordTypeId | string
   qualityChecks: OrbDictateQualityChecks
   summary: string
   actions: string[]
   ofstedLens?: string | null
 }): OrbDictateBrainAnalysis {
-  const { noteType, qualityChecks, summary, actions, ofstedLens } = opts
+  const { noteType, recordTypeId, qualityChecks, summary, actions, ofstedLens } = opts
+  const recordType = resolveOrbRecordingRecordType({ recordTypeId, noteType })
+  const framework = buildOrbRecordingBrainContext(recordType)
   const missing: string[] = []
   const safeguarding: string[] = []
   const suggestions: OrbDictateBrainSuggestion[] = []
@@ -84,13 +96,21 @@ export function buildBrainAnalysisFromGenerate(opts: {
       : 'Child voice not clearly present — consider adding what the young person said or communicated.'
 
   return {
-    detected_record_type: ORB_DICTATE_NOTE_TYPE_LABELS[noteType],
+    detected_record_type: framework.record_type_label,
+    record_type_id: framework.record_type_id,
+    required_sections: framework.required_sections,
+    orb_will_check: framework.orb_will_check,
     safeguarding_concerns: safeguarding,
     missing_information: missing,
     professional_wording_suggestions: suggestions,
-    recommended_next_actions: actions.length ? actions : ['Review transcript', 'Confirm facts and times', 'Finalise in ORB Write'],
-    possible_outputs: Object.values(ORB_DICTATE_NOTE_TYPE_LABELS).slice(0, 8),
+    recommended_next_actions: actions.length
+      ? actions
+      : framework.suggested_follow_up_actions.length
+        ? framework.suggested_follow_up_actions
+        : ['Review transcript', 'Confirm facts and times', 'Finalise in ORB Write'],
+    possible_outputs: orbRecordingSuggestedOutputs(framework.record_type_id).map((o) => o.label),
     recording_quality_score: qualityChecks.recording_quality,
+    recording_quality_guidance: framework.recording_quality_guidance,
     child_voice_check: childVoiceCheck,
     ofsted_evidence_check: ofstedLens ?? null,
     manager_oversight_note:

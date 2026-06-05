@@ -16,6 +16,7 @@ import { OrbWriteEditor } from '@/components/orb-write/orb-write-editor'
 import { copyTextToClipboard } from '@/lib/orb/orb-clipboard'
 import { saveOrbDictateNote } from '@/lib/orb/dictate/orb-dictate-client'
 import { copyOrbWriteText, exportOrbWritePdf, printOrbWriteDocument } from '@/lib/orb/write/orb-write-export'
+import { resolveOrbRecordingRecordType } from '@/lib/orb/recording/orb-recording-framework'
 import type { OrbWriteDocument } from '@/lib/orb/write/orb-write-types'
 import { ORB_WRITE_SAFETY_COPY } from '@/lib/orb/write/orb-write-types'
 
@@ -102,6 +103,24 @@ export function OrbWriteStation({
     setStatusMessage('Marked as approved locally. Export or save to keep your record.')
   }
 
+  const recordType = useMemo(
+    () =>
+      resolveOrbRecordingRecordType({
+        recordTypeId: doc?.record_type_id,
+        noteType: doc?.record_type
+      }),
+    [doc?.record_type, doc?.record_type_id]
+  )
+
+  const missingSectionChips = useMemo(() => {
+    if (!doc) return []
+    const plain = doc.body.replace(/<[^>]+>/g, '\n').toLowerCase()
+    return recordType.required_sections.filter((section) => {
+      const token = section.split('/')[0]?.trim().toLowerCase() ?? ''
+      return token.length > 3 && !plain.includes(token.slice(0, 12))
+    })
+  }, [doc, recordType.required_sections])
+
   if (!doc) return null
 
   return (
@@ -130,9 +149,12 @@ export function OrbWriteStation({
                 onChange={(e) => setDoc((prev) => (prev ? { ...prev, title: e.target.value } : prev))}
                 className="bg-transparent text-lg font-semibold text-[var(--orb-foreground)] focus:outline-none"
               />
-              <p className="text-xs text-[var(--orb-muted)]" data-orb-write-record-type>
+              <span
+                className="mt-1 inline-flex items-center rounded-full border border-[var(--orb-primary)]/30 bg-[var(--orb-primary-soft)] px-2 py-0.5 text-[10px] font-medium text-[var(--orb-foreground)]"
+                data-orb-write-record-type-badge
+              >
                 {doc.record_type_label}
-              </p>
+              </span>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2 text-[10px] text-[var(--orb-muted)]">
@@ -144,6 +166,31 @@ export function OrbWriteStation({
         <p className="shrink-0 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-[10px] text-[var(--orb-muted)]" data-orb-write-review-notice>
           {doc.review_required_statement}
         </p>
+
+        {recordType.required_sections.length ? (
+          <div className="shrink-0 space-y-1.5" data-orb-write-sections>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--orb-muted)]">Document sections</p>
+            <div className="flex flex-wrap gap-1.5">
+              {recordType.required_sections.map((section) => {
+                const isMissing = missingSectionChips.includes(section)
+                return (
+                  <span
+                    key={section}
+                    className={`rounded-full border px-2 py-0.5 text-[10px] ${
+                      isMissing
+                        ? 'border-amber-400/40 bg-amber-500/10 text-amber-100'
+                        : 'border-[var(--orb-line)]/40 text-[var(--orb-muted)]'
+                    }`}
+                    data-orb-write-section-chip={section.toLowerCase().replace(/\s+/g, '-')}
+                    data-orb-write-section-missing={isMissing ? 'true' : 'false'}
+                  >
+                    {section}
+                  </span>
+                )
+              })}
+            </div>
+          </div>
+        ) : null}
 
         <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[1fr_320px]">
           <OrbWriteEditor document={doc} onChange={updateBody} onWordCountChange={setWordCount} />
