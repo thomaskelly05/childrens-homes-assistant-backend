@@ -17,6 +17,8 @@ import { OrbOutputSaveActions } from '@/components/orb-standalone/orb-output-sav
 import { orbStationShellProps } from '@/components/orb-standalone/orb-app-modal'
 import { OrbStandalonePanelShell } from '@/components/orb-standalone/orb-standalone-panel-shell'
 import type { StandaloneProject } from '@/lib/orb/standalone-local-store'
+import { OrbKnowledgeOfficialGuidanceSection } from '@/components/orb-standalone/knowledge-library/orb-knowledge-official-guidance-section'
+import { OrbKnowledgeHomeDocumentsSection } from '@/components/orb-standalone/knowledge-library/orb-knowledge-home-documents-section'
 import {
   matchOrbRecordingTypesForDocument,
   resolveOrbRecordingRecordType
@@ -29,6 +31,7 @@ import {
 } from '@/lib/orb/standalone-client'
 
 type InputTab = 'paste' | 'upload'
+type KnowledgeLibraryTab = 'official' | 'home' | 'uploaded' | 'analyse'
 
 export function OrbDocumentPanel({
   open,
@@ -46,7 +49,8 @@ export function OrbDocumentPanel({
   activeProjectName,
   onReuseInChat,
   residentialSurface = false,
-  initialLens = 'explain'
+  initialLens = 'explain',
+  initialRecordTypeId
 }: {
   open: boolean
   onClose: () => void
@@ -64,6 +68,7 @@ export function OrbDocumentPanel({
   onReuseInChat?: (prompt: string) => void
   residentialSurface?: boolean
   initialLens?: OrbDocumentLens
+  initialRecordTypeId?: OrbRecordingRecordTypeId | string
 }) {
   const [title, setTitle] = useState('Uploaded document')
   const [sourceType, setSourceType] = useState('user_uploaded')
@@ -76,13 +81,22 @@ export function OrbDocumentPanel({
   const [result, setResult] = useState<OrbDocumentIntelligenceResult | null>(null)
   const [copyNote, setCopyNote] = useState<string | null>(null)
   const [closeAfterAnalyse, setCloseAfterAnalyse] = useState(false)
-  const [selectedRecordTypeId, setSelectedRecordTypeId] = useState<OrbRecordingRecordTypeId | ''>('')
+  const [selectedRecordTypeId, setSelectedRecordTypeId] = useState<OrbRecordingRecordTypeId | ''>(
+    (initialRecordTypeId as OrbRecordingRecordTypeId) || ''
+  )
+  const [libraryTab, setLibraryTab] = useState<KnowledgeLibraryTab>(
+    initialRecordTypeId ? 'official' : 'analyse'
+  )
 
   useEffect(() => {
     if (!open) return
     if (initialText) setText(initialText)
     if (initialLens) setSelectedLens(initialLens)
-  }, [open, initialText, initialLens])
+    if (initialRecordTypeId) {
+      setSelectedRecordTypeId(initialRecordTypeId as OrbRecordingRecordTypeId)
+      setLibraryTab('official')
+    }
+  }, [open, initialText, initialLens, initialRecordTypeId])
 
   const hasContent = Boolean(text.trim() || sourceId)
 
@@ -236,15 +250,83 @@ export function OrbDocumentPanel({
   return (
     <OrbStandalonePanelShell
       open={open}
-      title="Documents"
-      subtitle="Turn policies, reports and uploaded text into residential intelligence"
+      title="Documents & Guidance"
+      subtitle="Official guidance, useful links and home documents that support ORB Residential."
       onClose={onClose}
       panelId="documents"
-      ariaLabel="ORB documents"
+      ariaLabel="ORB Knowledge Library and documents"
       footer="ORB Residential — Powered by IndiCare Intelligence. Documents use only what you upload or paste."
       {...orbStationShellProps(residentialSurface, 'wide')}
     >
-      <div className="orb-document-panel space-y-3 p-4" data-orb-document-panel>
+      <div className="orb-document-panel space-y-3 p-4" data-orb-document-panel data-orb-knowledge-library>
+        <div
+          className="flex flex-wrap gap-1 rounded-lg border border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] p-0.5"
+          role="tablist"
+          aria-label="Knowledge Library sections"
+          data-orb-knowledge-library-tabs
+        >
+          {(
+            [
+              { id: 'official' as const, label: 'Official Guidance' },
+              { id: 'home' as const, label: 'My Home Documents' },
+              { id: 'uploaded' as const, label: 'Uploaded Documents' },
+              { id: 'analyse' as const, label: 'Analyse a Document' }
+            ] as const
+          ).map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={libraryTab === tab.id}
+              onClick={() => setLibraryTab(tab.id)}
+              className={`rounded-md px-2.5 py-1.5 text-[10px] font-semibold sm:text-xs ${
+                libraryTab === tab.id
+                  ? 'bg-[var(--orb-surface-hover)] text-[var(--orb-foreground)]'
+                  : 'text-[var(--orb-muted)]'
+              }`}
+              data-orb-knowledge-library-tab={tab.id}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {libraryTab === 'official' ? (
+          <OrbKnowledgeOfficialGuidanceSection
+            recordTypeFilter={selectedRecordTypeId || undefined}
+            onUseWithOrb={(entry) => {
+              onReuseInChat?.(
+                `Use official guidance (${entry.title}) from ${entry.publisher}. Link: ${entry.url}. Do not quote statutory text unless uploaded.`
+              )
+            }}
+            onLinkRecordType={(id) => setSelectedRecordTypeId(id as OrbRecordingRecordTypeId)}
+          />
+        ) : null}
+
+        {libraryTab === 'home' ? (
+          <OrbKnowledgeHomeDocumentsSection
+            initialRecordTypeId={selectedRecordTypeId || initialRecordTypeId}
+            onUseInOrb={(item) => {
+              const statusNote =
+                item.approval_status === 'approved'
+                  ? 'This is an approved home/provider document.'
+                  : `Status: ${item.approval_status} — treat as non-authoritative until approved.`
+              onReuseInChat?.(
+                `${statusNote}\n\nHome document: ${item.title}\n${item.content_text?.slice(0, 1500) ?? item.url ?? ''}`
+              )
+            }}
+          />
+        ) : null}
+
+        {libraryTab === 'uploaded' ? (
+          <p className="text-xs text-[var(--orb-muted)]">
+            Upload and paste tools are in the Analyse tab — indexed passages sync to the ORB Knowledge
+            Library API when signed in.
+          </p>
+        ) : null}
+
+        {libraryTab === 'analyse' ? (
+        <>
         <section className="space-y-2" data-orb-document-record-type-section>
           <label className="text-xs font-semibold text-[var(--orb-foreground)]" htmlFor="orb-document-record-type">
             Review against record type
@@ -576,6 +658,8 @@ export function OrbDocumentPanel({
               </button>
             </div>
           </section>
+        ) : null}
+        </>
         ) : null}
       </div>
     </OrbStandalonePanelShell>

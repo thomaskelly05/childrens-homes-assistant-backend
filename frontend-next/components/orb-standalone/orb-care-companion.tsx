@@ -68,6 +68,9 @@ import { OrbDocumentContextPanel } from '@/components/orb-standalone/orb-documen
 import { OrbSavedOutputsPanel } from '@/components/orb-standalone/orb-saved-outputs-panel'
 import { OrbKnowledgeLibraryPanel } from '@/components/orb-standalone/orb-knowledge-library'
 import { OrbTemplatesPanel } from '@/components/orb-standalone/orb-templates-panel'
+import type { OrbRecordingLibraryAction } from '@/components/orb/recording/OrbRecordingLibraryCards'
+import { saveOrbWriteTemplateHandoff } from '@/lib/orb/write/orb-write-template-handoff'
+import type { OrbRecordingRecordType } from '@/lib/orb/recording/orb-recording-types'
 import {
   ORB_RESIDENTIAL_BRAND_EMOTIONAL_LINE,
   ORB_RESIDENTIAL_EMPTY_HEADING_DESKTOP,
@@ -586,6 +589,8 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   const [dictateImportTranscript, setDictateImportTranscript] = useState<string | undefined>()
   const [dictateImportNoteType, setDictateImportNoteType] = useState<OrbDictateNoteType | undefined>()
   const [dictateImportStudio, setDictateImportStudio] = useState(false)
+  const [dictateImportStudioTemplateId, setDictateImportStudioTemplateId] = useState<string | undefined>()
+  const [documentImportRecordTypeId, setDocumentImportRecordTypeId] = useState<string | undefined>()
   const [documentImportText, setDocumentImportText] = useState<string | undefined>()
   const [documentImportLens, setDocumentImportLens] = useState<OrbDocumentLens | undefined>()
   const [shiftImportNotes, setShiftImportNotes] = useState<string | undefined>()
@@ -821,15 +826,45 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   const openBillingPanel = useCallback(() => openPanel('billing'), [openPanel])
   const openOrbVoicePanel = useCallback(() => openPanel('orb_voice'), [openPanel])
   const openOrbDictatePanel = useCallback(
-    (opts?: { transcript?: string; noteType?: OrbDictateNoteType; studio?: boolean }) => {
+    (opts?: {
+      transcript?: string
+      noteType?: OrbDictateNoteType
+      studio?: boolean
+      studioTemplateId?: string
+    }) => {
       setDictateImportTranscript(opts?.transcript)
       setDictateImportNoteType(opts?.noteType)
-      setDictateImportStudio(Boolean(opts?.studio))
+      setDictateImportStudio(Boolean(opts?.studio || opts?.studioTemplateId))
+      setDictateImportStudioTemplateId(opts?.studioTemplateId)
       openPanel('orb_dictate')
     },
     [openPanel]
   )
   const openOrbWritePanel = useCallback(() => openPanel('orb_write'), [openPanel])
+
+  const handleRecordingLibraryAction = useCallback(
+    (action: OrbRecordingLibraryAction, recordType: OrbRecordingRecordType) => {
+      closePanel()
+      if (action === 'dictate') {
+        openOrbDictatePanel({
+          studio: true,
+          studioTemplateId: recordType.studio_template_id ?? 'general',
+          noteType: recordType.dictate_note_type
+        })
+        return
+      }
+      if (action === 'write') {
+        saveOrbWriteTemplateHandoff(recordType)
+        openOrbWritePanel()
+        return
+      }
+      if (action === 'document') {
+        setDocumentImportRecordTypeId(recordType.id)
+        openDocumentsPanel()
+      }
+    },
+    [closePanel, openDocumentsPanel, openOrbDictatePanel, openOrbWritePanel]
+  )
 
   function openResidentialAccount() {
     if (residentialSurface) {
@@ -2700,6 +2735,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           closePanel()
           void sendMessage(prompt)
         }}
+        onRecordingAction={handleRecordingLibraryAction}
       />
       <OrbSavedOutputsPanel
         open={activePanel === 'saved_outputs'}
@@ -2779,10 +2815,14 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       />
       <OrbDocumentPanel
         open={activePanel === 'documents'}
-        onClose={closePanel}
+        onClose={() => {
+          setDocumentImportRecordTypeId(undefined)
+          closePanel()
+        }}
         residentialSurface={residentialSurface}
         initialText={documentImportText}
         initialLens={documentImportLens}
+        initialRecordTypeId={documentImportRecordTypeId}
         projects={workspace.projects}
         activeProjectId={workspace.activeProjectId}
         activeProjectName={activeProject?.name}
@@ -2877,12 +2917,14 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           setDictateImportTranscript(undefined)
           setDictateImportNoteType(undefined)
           setDictateImportStudio(false)
+          setDictateImportStudioTemplateId(undefined)
           closePanel()
         }}
         voice={voice}
         initialTranscript={dictateImportTranscript}
         initialNoteType={dictateImportNoteType}
         initialStudio={dictateImportStudio}
+        initialStudioTemplateId={dictateImportStudioTemplateId}
         onSendToChat={(text) => void sendMessage(text)}
         onOpenOrbVoice={openOrbVoicePanel}
         onOpenTemplates={openTemplatesPanel}

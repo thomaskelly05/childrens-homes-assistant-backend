@@ -441,8 +441,11 @@ class OrbKnowledgeRetrievalService:
                 "Use concise, accurate answers; add residential care boundaries only when the question needs them."
             )
 
+        from services.orb_knowledge_answer_priority_service import orb_knowledge_answer_priority_service
+
         lines = [
             "Grounding context (unified ORB Knowledge Spine — not live OS records or web browsing):",
+            orb_knowledge_answer_priority_service.build_priority_prompt_block(topic=message[:120]),
         ]
         pack_limit = 4 if prompt_tier == "residential" else len(packs)
         for pack in packs[:pack_limit]:

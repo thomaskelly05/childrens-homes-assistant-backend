@@ -1264,4 +1264,46 @@ class OrbKnowledgeLibraryService:
         }
 
 
+    def list_curated_official_guidance(self) -> list[dict[str, Any]]:
+        """Read-only curated official guidance metadata (links only — no statutory text copy)."""
+        path = REPO_ROOT / "data" / "orb_official_guidance_curated.json"
+        if not path.is_file():
+            return []
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            if not isinstance(data, list):
+                return []
+            return [
+                {
+                    **entry,
+                    "source_kind": "official_guidance",
+                    "metadata_only": True,
+                    "governance_status": entry.get("approval_status", "approved"),
+                    "official_source": True,
+                }
+                for entry in data
+                if isinstance(entry, dict)
+            ]
+        except (json.JSONDecodeError, OSError) as exc:
+            logger.warning("Could not load curated official guidance: %s", exc)
+            return []
+
+    def has_approved_home_or_provider_policy(
+        self,
+        *,
+        viewer_user_id: int | None = None,
+        topic: str | None = None,
+    ) -> bool:
+        for source in self.list_sources(viewer_user_id=viewer_user_id):
+            if _text(source.get("governance_status")) != "approved":
+                continue
+            family = _text(source.get("document_family"))
+            if family in {"provider_policy", "internal_guidance"}:
+                return True
+            meta = source.get("metadata") or {}
+            if _text(meta.get("source_kind")) in {"home_document", "provider_policy", "local_protocol"}:
+                return True
+        return False
+
+
 orb_knowledge_library_service = OrbKnowledgeLibraryService()

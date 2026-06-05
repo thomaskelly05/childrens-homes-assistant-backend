@@ -145,3 +145,47 @@ export function loadOrbWriteLocalDraft(): OrbWriteLocalDraft | null {
 export function hasOrbWriteLocalDraft(): boolean {
   return Boolean(loadOrbWriteLocalDraft())
 }
+
+/** Blank structured document from ORB Recording Framework — no Dictate handoff required. */
+export function createBlankOrbWriteDocumentFromRecordType(
+  recordType: OrbRecordingRecordType
+): OrbWriteDocument {
+  const now = new Date().toISOString()
+  const body = structureOrbWriteDocumentBody({ recordType, body: '' })
+  const version: OrbWriteDocumentVersion = {
+    id: 'v_blank_template',
+    label: 'Structured template',
+    body,
+    created_at: now,
+    event: 'generated'
+  }
+  return {
+    id: `write_${Date.now()}`,
+    title: recordType.label,
+    record_type: recordType.dictate_note_type,
+    record_type_id: recordType.id,
+    record_type_label: recordType.label,
+    document_headings: recordType.pdf_heading_order,
+    body,
+    transcript: '',
+    template_id: recordType.studio_template_id ?? 'general',
+    summary: '',
+    quality_checks: {
+      child_voice: 'review',
+      safeguarding: 'review',
+      manager_oversight: 'missing',
+      impact: 'weak',
+      recording_quality: 'needs_review'
+    },
+    accepted_suggestions: [],
+    participants: [],
+    segments: [],
+    review_required_statement: ORB_WRITE_REVIEW_STATEMENT,
+    created_at: now,
+    updated_at: now,
+    versions: [version],
+    word_count: 0,
+    is_draft: true,
+    is_finalised: false
+  }
+}

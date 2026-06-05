@@ -6,6 +6,10 @@ import { ArrowLeft } from 'lucide-react'
 import { OrbAppModal } from '@/components/orb-standalone/orb-app-modal'
 import { OrbDictateBrainPanel } from '@/components/orb/dictate/OrbDictateBrainPanel'
 import { OrbWriteAiPanel } from '@/components/orb-write/orb-write-ai-panel'
+import {
+  OrbWriteGuidancePanel,
+  type OrbWriteSelectedGuidance
+} from '@/components/orb-write/orb-write-guidance-panel'
 import { OrbWriteEditor } from '@/components/orb-write/orb-write-editor'
 import { OrbWriteStartScreen } from '@/components/orb-write/orb-write-start-screen'
 import { copyTextToClipboard } from '@/lib/orb/orb-clipboard'
@@ -16,7 +20,9 @@ import {
 } from '@/lib/orb/dictate/orb-dictate-brain-analysis'
 import {
   analyzeOrbDictateSession,
+  buildLocalDictateEditFallback,
   buildLocalDictateFallback,
+  editOrbDictateDocument,
   generateOrbDictateNote,
   saveOrbDictateNote
 } from '@/lib/orb/dictate/orb-dictate-client'
@@ -29,6 +35,11 @@ import {
   loadOrbWriteHandoff
 } from '@/lib/orb/write/orb-write-handoff'
 import {
+  clearOrbWriteTemplateHandoff,
+  loadOrbWriteTemplateHandoff
+} from '@/lib/orb/write/orb-write-template-handoff'
+import {
+  createBlankOrbWriteDocumentFromRecordType,
   createOrbWriteDocumentFromGenerate,
   createOrbWriteDocumentFromSavedDraft,
   hasOrbWriteLocalDraft,
@@ -67,6 +78,7 @@ export function OrbWriteStandalonePanel({
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
   const [wordCount, setWordCount] = useState(0)
   const [hasLocalDraft, setHasLocalDraft] = useState(false)
+  const [selectedGuidance, setSelectedGuidance] = useState<OrbWriteSelectedGuidance | null>(null)
 
   const recordType = useMemo(
     () => resolveOrbRecordingRecordType({ recordTypeId }),
@@ -83,6 +95,18 @@ export function OrbWriteStandalonePanel({
       setView('editor')
       clearOrbWriteHandoff()
       setStatusMessage('Document loaded from Dictate handoff.')
+      return
+    }
+    const templateHandoff = loadOrbWriteTemplateHandoff()
+    if (templateHandoff && !initialDocument) {
+      const recordType = resolveOrbRecordingRecordType({
+        recordTypeId: templateHandoff.record_type_id
+      })
+      setRecordTypeId(recordType.id)
+      setDoc(createBlankOrbWriteDocumentFromRecordType(recordType))
+      setView('editor')
+      clearOrbWriteTemplateHandoff()
+      setStatusMessage(`Structured ${recordType.label} document ready — add your notes in each section.`)
       return
     }
     if (initialDocument) {
@@ -212,6 +236,35 @@ export function OrbWriteStandalonePanel({
     })
     setStatusMessage('Suggestion applied — review before finalising.')
   }, [])
+
+  const checkDraftAgainstGuidance = useCallback(
+    async (source: OrbWriteSelectedGuidance) => {
+      if (!doc) return
+      const label = source.kind === 'official' ? source.entry.title : source.item.title
+      const status =
+        source.kind === 'official' ? source.entry.approval_status : source.item.approval_status
+      const instruction = `Check this draft against "${label}" (${status}). Identify gaps and alignment only — do not insert policy text without adult action.`
+      setStatusMessage('Checking draft against selected guidance…')
+      try {
+        const result = await editOrbDictateDocument({
+          document_text: doc.body.replace(/<[^>]+>/g, '\n'),
+          instruction,
+          note_type: doc.record_type,
+          mode: 'professional_language',
+          preserve_facts: true
+        })
+        applyRevision(result.revised_text, `Guidance check: ${label}`)
+      } catch {
+        const fallback = buildLocalDictateEditFallback(
+          doc.body.replace(/<[^>]+>/g, '\n'),
+          'professional_language',
+          instruction
+        )
+        applyRevision(fallback.revised_text, fallback.version_label)
+      }
+    },
+    [applyRevision, doc]
+  )
 
   async function handleSaveDraft() {
     if (!doc) return
@@ -344,7 +397,16 @@ export function OrbWriteStandalonePanel({
                 onSaveDraft={() => void handleSaveDraft()}
                 onApprove={handleApprove}
               />
-              <OrbWriteAiPanel document={doc} onApplyRevision={applyRevision} />
+              <div className="flex min-h-0 flex-col gap-3 overflow-hidden">
+                <OrbWriteGuidancePanel
+                  document={doc}
+                  selected={selectedGuidance}
+                  onSelect={setSelectedGuidance}
+                  onClear={() => setSelectedGuidance(null)}
+                  onCheckDraft={(source) => void checkDraftAgainstGuidance(source)}
+                />
+                <OrbWriteAiPanel document={doc} onApplyRevision={applyRevision} />
+              </div>
             </div>
             <p className="shrink-0 text-[10px] text-[var(--orb-muted)]">{ORB_WRITE_SAFETY_COPY.responsibility}</p>
             {statusMessage ? (
