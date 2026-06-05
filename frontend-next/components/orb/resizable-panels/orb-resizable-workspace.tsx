@@ -25,12 +25,14 @@ export function OrbResizableWorkspace({
   right,
   preview,
   showPreview = false,
+  compactPresets = false,
   className = ''
 }: {
   left: React.ReactNode
   right: React.ReactNode
   preview?: React.ReactNode
   showPreview?: boolean
+  compactPresets?: boolean
   className?: string
 }) {
   const [layout, setLayout] = useState<OrbDictatePanelLayout>(DEFAULT_PANEL_LAYOUT)
@@ -53,11 +55,14 @@ export function OrbResizableWorkspace({
     [applyLayout]
   )
 
-  const onPointerDownMain = useCallback((e: React.PointerEvent) => {
-    if (layout.preset === 'full-transcript' || layout.preset === 'full-brain' || layout.preset === 'full-preview') return
-    draggingRef.current = 'main'
-    e.currentTarget.setPointerCapture(e.pointerId)
-  }, [layout.preset])
+  const onPointerDownMain = useCallback(
+    (e: React.PointerEvent) => {
+      if (layout.preset === 'full-transcript' || layout.preset === 'full-brain' || layout.preset === 'full-preview') return
+      draggingRef.current = 'main'
+      e.currentTarget.setPointerCapture(e.pointerId)
+    },
+    [layout.preset]
+  )
 
   const onPointerMoveMain = useCallback(
     (e: React.PointerEvent) => {
@@ -88,31 +93,51 @@ export function OrbResizableWorkspace({
   const rightHidden = layout.preset === 'full-transcript' || layout.preset === 'full-preview'
   const previewFull = layout.preset === 'full-preview' || showPreview
 
-  return (
-    <div className={`flex min-h-0 flex-1 flex-col gap-2 ${className}`} data-orb-resizable-workspace>
-      <div className="flex shrink-0 flex-wrap items-center gap-1" data-orb-panel-presets role="toolbar" aria-label="Panel layout presets">
-        {(Object.keys(PRESET_LABELS) as OrbDictatePanelPreset[]).map((preset) => (
-          <button
-            key={preset}
-            type="button"
-            data-orb-panel-preset={preset}
-            aria-pressed={layout.preset === preset}
-            className={`rounded-lg border px-2 py-1 text-[10px] font-medium transition ${
-              layout.preset === preset
-                ? 'border-[var(--orb-primary)]/50 bg-[var(--orb-primary-soft)] text-[var(--orb-foreground)]'
-                : 'border-[var(--orb-line)]/50 text-[var(--orb-muted)] hover:text-[var(--orb-foreground)]'
-            }`}
-            onClick={() => applyPreset(preset)}
-          >
-            {PRESET_LABELS[preset]}
-          </button>
-        ))}
-      </div>
+  const presetToolbar = (
+    <div className="flex flex-wrap items-center gap-1" data-orb-panel-presets role="toolbar" aria-label="Panel layout presets">
+      {(Object.keys(PRESET_LABELS) as OrbDictatePanelPreset[]).map((preset) => (
+        <button
+          key={preset}
+          type="button"
+          data-orb-panel-preset={preset}
+          aria-pressed={layout.preset === preset}
+          className={`rounded-lg border px-2 py-1 text-[10px] font-medium transition ${
+            layout.preset === preset
+              ? 'border-[var(--orb-primary)]/50 bg-[var(--orb-primary-soft)] text-[var(--orb-foreground)]'
+              : 'border-[var(--orb-line)]/50 text-[var(--orb-muted)] hover:text-[var(--orb-foreground)]'
+          }`}
+          onClick={() => applyPreset(preset)}
+        >
+          {PRESET_LABELS[preset]}
+        </button>
+      ))}
+    </div>
+  )
 
-      <div ref={containerRef} className="flex min-h-0 flex-1 flex-col gap-2 lg:flex-row">
+  return (
+    <div
+      className={`flex min-h-0 flex-1 flex-col gap-1.5 ${className}`}
+      data-orb-resizable-workspace
+    >
+      {compactPresets ? (
+        <details className="shrink-0 text-[10px]" data-orb-panel-presets-compact>
+          <summary className="cursor-pointer font-medium text-[var(--orb-muted)] hover:text-[var(--orb-foreground)]">
+            Panel layout
+          </summary>
+          <div className="mt-1">{presetToolbar}</div>
+        </details>
+      ) : (
+        presetToolbar
+      )}
+
+      <div
+        ref={containerRef}
+        className="flex min-h-0 flex-1 flex-col gap-2 lg:flex-row"
+        style={{ minHeight: 'min(62svh, calc(100dvh - 16rem))' }}
+      >
         {!leftHidden ? (
           <section
-            className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)]"
+            className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)] shadow-sm"
             style={{ flex: previewFull && showPreview ? undefined : `0 0 ${layout.leftPercent}%` }}
             data-orb-panel-left
           >
@@ -132,15 +157,27 @@ export function OrbResizableWorkspace({
             onPointerMove={onPointerMoveMain}
             onPointerUp={onPointerUp}
             onKeyDown={(e) => {
-              if (e.key === 'ArrowLeft') applyLayout({ ...layout, leftPercent: Math.max(15, layout.leftPercent - 5), rightPercent: Math.min(85, layout.rightPercent + 5), preset: '50-50' })
-              if (e.key === 'ArrowRight') applyLayout({ ...layout, leftPercent: Math.min(85, layout.leftPercent + 5), rightPercent: Math.max(15, layout.rightPercent - 5), preset: '50-50' })
+              if (e.key === 'ArrowLeft')
+                applyLayout({
+                  ...layout,
+                  leftPercent: Math.max(15, layout.leftPercent - 5),
+                  rightPercent: Math.min(85, layout.rightPercent + 5),
+                  preset: '50-50'
+                })
+              if (e.key === 'ArrowRight')
+                applyLayout({
+                  ...layout,
+                  leftPercent: Math.min(85, layout.leftPercent + 5),
+                  rightPercent: Math.max(15, layout.rightPercent - 5),
+                  preset: '50-50'
+                })
             }}
           />
         ) : null}
 
         {!rightHidden ? (
           <section
-            className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)]"
+            className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)] shadow-sm"
             data-orb-panel-right
           >
             {right}
@@ -150,7 +187,7 @@ export function OrbResizableWorkspace({
 
       {showPreview && preview ? (
         <section
-          className="flex max-h-[35%] min-h-[8rem] shrink-0 flex-col overflow-hidden rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)] lg:max-h-[30%]"
+          className="flex max-h-[28%] min-h-[6rem] shrink-0 flex-col overflow-hidden rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)] lg:max-h-[24%]"
           data-orb-panel-preview
         >
           {preview}

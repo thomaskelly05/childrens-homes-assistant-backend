@@ -14,19 +14,23 @@ function readComponent(relativePath: string) {
 }
 
 describe('ORB Dictate + Write convergence', () => {
-  it('top bar has visible record and generate controls', () => {
+  it('top bar has visible record and contextual generate controls', () => {
     const topBar = readComponent('components/orb/dictate/OrbDictateTopBar.tsx')
     assert.match(topBar, /data-orb-dictate-top-record/)
     assert.match(topBar, /data-orb-dictate-generate/)
+    assert.match(topBar, /Analyse with ORB/)
     assert.match(topBar, /data-orb-dictate-finalise/)
-    assert.match(topBar, /data-orb-dictate-template-selector/)
+    assert.match(topBar, /OrbDictateTemplateSelector/)
   })
 
-  it('privacy banner renders in top bar', () => {
+  it('privacy trust strip renders with expandable detail', () => {
+    const strip = readComponent('components/orb/dictate/OrbDictatePrivacyStrip.tsx')
     const topBar = readComponent('components/orb/dictate/OrbDictateTopBar.tsx')
     const types = readComponent('lib/orb/write/orb-write-types.ts')
-    assert.match(topBar, /data-orb-dictate-privacy-banner/)
-    assert.match(topBar, /ORB_WRITE_PRIVACY_NOTICE/)
+    assert.match(strip, /data-orb-dictate-privacy-strip/)
+    assert.match(strip, /data-orb-dictate-privacy-detail/)
+    assert.match(strip, /Session-only transcript/)
+    assert.match(topBar, /OrbDictatePrivacyStrip/)
     assert.match(types, /No child profile data is stored in ORB Dictate/)
   })
 

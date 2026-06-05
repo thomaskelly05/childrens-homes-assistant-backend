@@ -50,7 +50,7 @@ describe('ORB Dictate hero polish', () => {
     assert.match(station, /data-orb-dictate-subtitle/)
     assert.match(workspace, /OrbTranscriptPanel/)
     assert.match(workspace, /OrbDictateBrainPanel/)
-    assert.match(topBar, /data-orb-dictate-template-selector/)
+    assert.match(topBar, /OrbDictateTemplateSelector/)
   })
 
   it('boundary copy is visible in UI', () => {

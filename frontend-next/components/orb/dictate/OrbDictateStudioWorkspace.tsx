@@ -1,10 +1,13 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { OrbDictateBrainPanel } from '@/components/orb/dictate/OrbDictateBrainPanel'
 import { OrbDictateSuggestedOutputs } from '@/components/orb/dictate/OrbDictateSuggestedOutputs'
-import { OrbDictateTopBar } from '@/components/orb/dictate/OrbDictateTopBar'
+import {
+  OrbDictateTopBar,
+  type OrbDictatePrimaryAction
+} from '@/components/orb/dictate/OrbDictateTopBar'
 import { OrbTranscriptPanel } from '@/components/orb/dictate/OrbTranscriptPanel'
 import { OrbResizableWorkspace } from '@/components/orb/resizable-panels/orb-resizable-workspace'
 import {
@@ -19,9 +22,14 @@ import {
   type OrbDictateBrainSuggestion
 } from '@/lib/orb/dictate/orb-dictate-brain-analysis'
 import { analyzeOrbDictateSession } from '@/lib/orb/dictate/orb-dictate-client'
+import {
+  readOrbDictateFocusMode,
+  writeOrbDictateFocusMode
+} from '@/lib/orb/dictate/orb-dictate-focus-mode'
 import type { OrbDictateStudioTemplate } from '@/lib/orb/dictate/orb-dictate-studio-templates'
 import type { OrbDictateMode, OrbDictateParticipant, OrbDictateTranscriptSegment } from '@/lib/orb/dictate/orb-dictate-speaker'
 import { suggestParticipantsFromText } from '@/lib/orb/dictate/orb-dictate-speaker'
+import { writeOrbSidebarCollapsed } from '@/lib/orb/orb-sidebar-preference'
 import type { OrbDictateGenerateResult, OrbDictateNoteType } from '@/lib/orb/dictate/orb-dictate-types'
 
 export type OrbDictateStudioWorkspaceProps = {
@@ -77,9 +85,17 @@ export type OrbDictateStudioWorkspaceProps = {
 export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps) {
   const [brainAnalysis, setBrainAnalysis] = useState<OrbDictateBrainAnalysis | null>(null)
   const [brainLoading, setBrainLoading] = useState(false)
-  const [showPreview, setShowPreview] = useState(false)
+  const [analysisRequested, setAnalysisRequested] = useState(false)
+  const [focusMode, setFocusMode] = useState(false)
 
   const effectiveText = props.liveTranscript.trim() || props.transcript.trim()
+  const hasTranscript = effectiveText.length > 0
+  const hasDraft = Boolean(props.output)
+  const hasAnalysis = Boolean(brainAnalysis) && !brainLoading
+
+  useEffect(() => {
+    setFocusMode(readOrbDictateFocusMode())
+  }, [])
 
   const updateSuggestion = useCallback(
     (id: string, status: OrbDictateBrainSuggestion['status']) => {
@@ -95,6 +111,37 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
     [props]
   )
 
+  const runAnalysis = useCallback(async () => {
+    if (!effectiveText) return
+    setBrainLoading(true)
+    setAnalysisRequested(true)
+    try {
+      const result = await analyzeOrbDictateSession({
+        input_text: effectiveText,
+        note_type: props.noteType,
+        mode: props.dictateMode
+      })
+      setBrainAnalysis(result)
+    } catch {
+      setBrainAnalysis(
+        buildBrainAnalysisFromGenerate({
+          noteType: props.noteType,
+          qualityChecks: {
+            child_voice: 'review',
+            safeguarding: 'review',
+            manager_oversight: 'missing',
+            impact: 'weak',
+            recording_quality: 'needs_review'
+          },
+          summary: '',
+          actions: []
+        })
+      )
+    } finally {
+      setBrainLoading(false)
+    }
+  }, [effectiveText, props.noteType, props.dictateMode])
+
   useEffect(() => {
     if (props.output) {
       setBrainAnalysis(
@@ -106,41 +153,43 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
           ofstedLens: props.output.ofsted_lens
         })
       )
-      setShowPreview(true)
       return
     }
     if (!effectiveText || effectiveText.length < 20) {
       setBrainAnalysis(null)
+      setAnalysisRequested(false)
       return
     }
+    if (!analysisRequested) return
     const timer = window.setTimeout(() => {
-      setBrainLoading(true)
-      void analyzeOrbDictateSession({
-        input_text: effectiveText,
-        note_type: props.noteType,
-        mode: props.dictateMode
-      })
-        .then((result) => setBrainAnalysis(result))
-        .catch(() => {
-          setBrainAnalysis(
-            buildBrainAnalysisFromGenerate({
-              noteType: props.noteType,
-              qualityChecks: {
-                child_voice: 'review',
-                safeguarding: 'review',
-                manager_oversight: 'missing',
-                impact: 'weak',
-                recording_quality: 'needs_review'
-              },
-              summary: '',
-              actions: []
-            })
-          )
-        })
-        .finally(() => setBrainLoading(false))
-    }, 800)
+      void runAnalysis()
+    }, 400)
     return () => window.clearTimeout(timer)
-  }, [effectiveText, props.output, props.noteType, props.dictateMode])
+  }, [effectiveText, props.output, analysisRequested, runAnalysis])
+
+  const primaryAction: OrbDictatePrimaryAction = useMemo(() => {
+    if (!hasTranscript) return 'disabled'
+    if (hasAnalysis || hasDraft) return 'generate'
+    return 'analyse'
+  }, [hasTranscript, hasDraft, hasAnalysis])
+
+  const handlePrimaryAction = useCallback(() => {
+    if (!hasTranscript) return
+    if (primaryAction === 'analyse') {
+      void runAnalysis()
+      return
+    }
+    props.onGenerate()
+  }, [hasTranscript, primaryAction, props, runAnalysis])
+
+  const toggleFocusMode = useCallback(() => {
+    setFocusMode((prev) => {
+      const next = !prev
+      writeOrbDictateFocusMode(next)
+      writeOrbSidebarCollapsed(next)
+      return next
+    })
+  }, [])
 
   const governanceOk = consentReadyForGenerate(props.dictateMode, {
     authorityConsent: props.authorityConsent,
@@ -151,7 +200,12 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
   })
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden" data-orb-dictate-studio-workspace>
+    <div
+      className="orb-dictate-studio-workspace flex min-h-0 flex-1 flex-col gap-2 overflow-hidden px-1 sm:px-2"
+      data-orb-dictate-studio-workspace
+      data-orb-dictate-focus-mode={focusMode ? 'true' : 'false'}
+      style={{ minHeight: 'min(100dvh - 7rem, calc(100svh - 7rem))' }}
+    >
       <OrbDictateTopBar
         selectedTemplateId={props.selectedTemplateId}
         onTemplateChange={props.onTemplateChange}
@@ -164,16 +218,21 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
         onPauseRecording={props.onPauseRecording}
         onResumeRecording={props.onResumeRecording}
         onStopRecording={props.onStopRecording}
-        onGenerate={props.onGenerate}
+        onPrimaryAction={handlePrimaryAction}
         onFinalise={props.onFinalise}
-        generating={props.generating}
-        canGenerate={props.canGenerate && governanceOk}
-        canFinalise={Boolean(props.output)}
+        generating={props.generating || brainLoading}
+        hasTranscript={hasTranscript}
+        hasAnalysis={hasAnalysis}
+        hasDraft={hasDraft}
+        primaryAction={primaryAction}
         speechStartDisabled={props.speechStartDisabled}
+        focusMode={focusMode}
+        onToggleFocusMode={toggleFocusMode}
       />
 
       <OrbResizableWorkspace
-        showPreview={showPreview}
+        compactPresets
+        showPreview={false}
         left={
           <OrbTranscriptPanel
             liveTranscript={props.liveTranscript}
@@ -184,17 +243,10 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
             onSegmentsChange={props.onSegmentsChange}
             recordingActive={props.recordingActive}
             recordingPaused={props.recordingPaused}
-            captureStarting={props.captureStarting}
             timerSec={props.timerSec}
             formatTimer={props.formatTimer}
             micStatus={props.micStatus}
-            orbClass={props.orbClass}
-            onStartRecording={props.onStartRecording}
-            onPauseRecording={props.onPauseRecording}
-            onResumeRecording={props.onResumeRecording}
-            onStopRecording={props.onStopRecording}
             onClearTranscript={props.onClearTranscript}
-            speechStartDisabled={props.speechStartDisabled}
             interimText={props.interimText}
           />
         }
@@ -205,17 +257,27 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
             onSuggestionUpdate={updateSuggestion}
           />
         }
-        preview={
+      />
+
+      {hasTranscript ? (
+        <div
+          className="shrink-0 rounded-xl border border-[var(--orb-line)]/40 bg-[var(--orb-surface-elevated)]/80 px-3 py-2.5"
+          data-orb-dictate-action-rail
+        >
           <OrbDictateSuggestedOutputs
+            variant="rail"
             activeNoteType={props.noteType}
             generatedTypes={props.generatedTypes}
             onSelectOutput={props.onSelectOutputType}
-            disabled={props.generating}
+            disabled={props.generating || !governanceOk}
           />
-        }
-      />
+        </div>
+      ) : null}
 
-      <details className="shrink-0 rounded-xl border border-[var(--orb-line)]/40 bg-[var(--orb-surface-elevated)] p-2 text-xs">
+      <details
+        className="shrink-0 rounded-xl border border-[var(--orb-line)]/40 bg-[var(--orb-surface-elevated)] p-2 text-xs"
+        data-orb-dictate-advanced-options
+      >
         <summary className="cursor-pointer font-medium text-[var(--orb-muted)]">Advanced options</summary>
         <div className="mt-2 space-y-2">
           <OrbDictateParticipantsPanel
