@@ -1,8 +1,19 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Copy, FileText, Loader2, MessageSquare, Sparkles } from 'lucide-react'
+import { Copy, FileText, Link2, Loader2, MessageSquare, Sparkles, Upload } from 'lucide-react'
 
+import {
+  OrbPremiumButton,
+  OrbPremiumEmptyState,
+  OrbPremiumInput,
+  OrbPremiumPage,
+  OrbPremiumTabs,
+  OrbPremiumTextarea,
+  OrbPremiumToolbar,
+  OrbPremiumTrustStrip
+} from '@/components/orb/premium'
+import { ORB_PREMIUM_ACTION_LABELS } from '@/components/orb/premium/orb-premium-theme'
 import { OrbIntelligenceOutput } from '@/components/orb-standalone/orb-intelligence-output'
 import {
   documentIntelligenceToOutputView,
@@ -87,6 +98,7 @@ export function OrbDocumentPanel({
   const [libraryTab, setLibraryTab] = useState<KnowledgeLibraryTab>(
     initialRecordTypeId ? 'official' : 'analyse'
   )
+  const [librarySearch, setLibrarySearch] = useState('')
 
   useEffect(() => {
     if (!open) return
@@ -258,38 +270,37 @@ export function OrbDocumentPanel({
       footer="ORB Residential — Powered by IndiCare Intelligence. Documents use only what you upload or paste."
       {...orbStationShellProps(residentialSurface, 'wide')}
     >
-      <div className="orb-document-panel space-y-3 p-4" data-orb-document-panel data-orb-knowledge-library>
-        <div
-          className="flex flex-wrap gap-1 rounded-lg border border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] p-0.5"
-          role="tablist"
-          aria-label="Knowledge Library sections"
-          data-orb-knowledge-library-tabs
-        >
-          {(
-            [
-              { id: 'official' as const, label: 'Official Guidance' },
-              { id: 'home' as const, label: 'My Home Documents' },
-              { id: 'uploaded' as const, label: 'Uploaded Documents' },
-              { id: 'analyse' as const, label: 'Analyse a Document' }
-            ] as const
-          ).map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              role="tab"
-              aria-selected={libraryTab === tab.id}
-              onClick={() => setLibraryTab(tab.id)}
-              className={`rounded-md px-2.5 py-1.5 text-[10px] font-semibold sm:text-xs ${
-                libraryTab === tab.id
-                  ? 'bg-[var(--orb-surface-hover)] text-[var(--orb-foreground)]'
-                  : 'text-[var(--orb-muted)]'
-              }`}
-              data-orb-knowledge-library-tab={tab.id}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+      <OrbPremiumPage
+        panelId="documents"
+        className="orb-document-panel"
+        toolbar={
+          <OrbPremiumToolbar
+            searchValue={librarySearch}
+            onSearchChange={setLibrarySearch}
+            searchPlaceholder="Search guidance, home documents and uploads…"
+          />
+        }
+        tabs={
+          <OrbPremiumTabs
+          ariaLabel="Knowledge Library sections"
+          activeId={libraryTab}
+          onChange={setLibraryTab}
+          tabs={[
+            { id: 'official', label: 'Official Guidance' },
+            { id: 'home', label: 'My Home Documents' },
+            { id: 'uploaded', label: 'Uploaded Documents' },
+            { id: 'analyse', label: 'Analyse a Document' }
+          ]}
+            data-orb-knowledge-library-tabs
+          />
+        }
+      >
+        {libraryTab === 'home' ? (
+          <OrbPremiumTrustStrip tone="muted">
+            Add approved home policies, useful guidance or local protocols. Draft items are not authoritative until
+            approved.
+          </OrbPremiumTrustStrip>
+        ) : null}
 
         {libraryTab === 'official' ? (
           <OrbKnowledgeOfficialGuidanceSection
@@ -319,10 +330,15 @@ export function OrbDocumentPanel({
         ) : null}
 
         {libraryTab === 'uploaded' ? (
-          <p className="text-xs text-[var(--orb-muted)]">
-            Upload and paste tools are in the Analyse tab — indexed passages sync to the ORB Knowledge
-            Library API when signed in.
-          </p>
+          <OrbPremiumEmptyState
+            title="Uploaded documents"
+            body="Upload and paste tools live in Analyse a Document. Indexed passages sync to the Knowledge Library when signed in."
+            actions={
+              <OrbPremiumButton variant="secondary" onClick={() => setLibraryTab('analyse')}>
+                {ORB_PREMIUM_ACTION_LABELS.analyseWithOrb}
+              </OrbPremiumButton>
+            }
+          />
         ) : null}
 
         {libraryTab === 'analyse' ? (
@@ -371,16 +387,27 @@ export function OrbDocumentPanel({
         </ul>
 
         {!hasContent && !result ? (
-          <div
-            className="orb-doc-glass-card rounded-xl border border-dashed border-[var(--orb-line)] px-4 py-8 text-center"
-            data-orb-document-empty
-          >
-            <FileText className="mx-auto h-8 w-8 text-[var(--orb-muted)]" aria-hidden />
-            <p className="mt-2 text-sm font-semibold text-[var(--orb-foreground)]">No document yet</p>
-            <p className="mt-1 text-xs text-[var(--orb-muted)]">
-              Paste text or upload a file, choose a lens, then run analysis.
-            </p>
-          </div>
+          <OrbPremiumEmptyState
+            icon={FileText}
+            title="No document yet"
+            body="Paste text or upload a file, choose a lens, then analyse with ORB."
+            dataAttr="document-empty"
+            actions={
+              <>
+                <OrbPremiumButton variant="secondary" onClick={() => setInputTab('upload')}>
+                  <Upload className="h-4 w-4" aria-hidden />
+                  Upload document
+                </OrbPremiumButton>
+                <OrbPremiumButton variant="ghost" onClick={() => setInputTab('paste')}>
+                  Paste text
+                </OrbPremiumButton>
+                <OrbPremiumButton variant="ghost" onClick={() => setLibraryTab('home')}>
+                  <Link2 className="h-4 w-4" aria-hidden />
+                  {ORB_PREMIUM_ACTION_LABELS.addDocumentOrLink}
+                </OrbPremiumButton>
+              </>
+            }
+          />
         ) : null}
 
         <div
@@ -430,22 +457,22 @@ export function OrbDocumentPanel({
 
         <label className="block text-xs font-semibold text-[var(--orb-muted)]">
           Document title
-          <input
+          <OrbPremiumInput
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="orb-doc-input mt-1 w-full rounded-lg border border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] px-3 py-2 text-sm text-[var(--orb-foreground)] placeholder:text-[var(--orb-muted)]"
+            className="orb-doc-input mt-1"
           />
         </label>
         {inputTab === 'paste' ? (
           <label className="block text-xs font-semibold text-[var(--orb-muted)]">
             Document text
-            <textarea
+            <OrbPremiumTextarea
               data-orb-doc-paste
               value={text}
               onChange={(e) => setText(e.target.value)}
               rows={6}
               placeholder="Paste policy, Reg 44 report, inspection notes or guidance…"
-              className="orb-doc-input mt-1 w-full rounded-lg border border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] px-3 py-2 text-sm text-[var(--orb-foreground)] placeholder:text-[var(--orb-muted)]"
+              className="orb-doc-input mt-1"
             />
           </label>
         ) : null}
@@ -508,17 +535,21 @@ export function OrbDocumentPanel({
           Close panel after analysis
         </label>
 
+        <OrbPremiumTrustStrip>
+          ORB analyses only what you paste or upload. It does not auto-update statutory guidance or make regulatory
+          judgements.
+        </OrbPremiumTrustStrip>
+
         <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
+          <OrbPremiumButton
             disabled={loading || !hasContent}
             onClick={() => void runAnalyse()}
-            className="orb-doc-primary-btn inline-flex flex-1 min-w-[10rem] items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed"
+            className="orb-doc-primary-btn min-w-[10rem] flex-1"
             data-orb-analyse-document
           >
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <FileText className="h-4 w-4" aria-hidden />}
-            Run analysis
-          </button>
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Sparkles className="h-4 w-4" aria-hidden />}
+            {ORB_PREMIUM_ACTION_LABELS.analyseWithOrb}
+          </OrbPremiumButton>
           <button
             type="button"
             disabled={loading || !hasContent}
@@ -625,7 +656,7 @@ export function OrbDocumentPanel({
                   className="orb-doc-secondary-btn rounded-lg border px-3 py-1.5 text-xs font-semibold"
                   data-orb-continue-in-chat
                 >
-                  Continue in ORB chat
+                  {ORB_PREMIUM_ACTION_LABELS.continueInChat}
                 </button>
               ) : null}
             </div>
@@ -661,7 +692,7 @@ export function OrbDocumentPanel({
         ) : null}
         </>
         ) : null}
-      </div>
+      </OrbPremiumPage>
     </OrbStandalonePanelShell>
   )
 }

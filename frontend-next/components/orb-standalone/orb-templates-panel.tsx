@@ -1,8 +1,16 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Loader2, Search } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 
+import {
+  OrbPremiumButton,
+  OrbPremiumEmptyState,
+  OrbPremiumPage,
+  OrbPremiumPill,
+  OrbPremiumToolbar
+} from '@/components/orb/premium'
+import { ORB_PREMIUM_ACTION_LABELS } from '@/components/orb/premium/orb-premium-theme'
 import { orbStationShellProps } from '@/components/orb-standalone/orb-app-modal'
 import { OrbStandalonePanelShell } from '@/components/orb-standalone/orb-standalone-panel-shell'
 import {
@@ -168,13 +176,36 @@ export function OrbTemplatesPanel({
     <OrbStandalonePanelShell
       open={open}
       title="Templates"
-      subtitle="Choose a template, then ORB helps you adapt it."
+      subtitle="Recording library and prompt templates — start in Dictate, ORB Write or chat."
       onClose={onClose}
       panelId="templates"
       ariaLabel="ORB template library"
       {...orbStationShellProps(residentialSurface, 'wide')}
     >
-      <div className="orb-templates-panel space-y-4 p-4" data-orb-templates-panel>
+      <OrbPremiumPage
+        panelId="templates"
+        toolbar={
+          <OrbPremiumToolbar
+            searchValue={search}
+            onSearchChange={setSearch}
+            searchPlaceholder="Search templates and record types…"
+            onSearchSubmit={() => void load()}
+            filters={
+              <>
+                <OrbPremiumPill active={!category} onClick={() => setCategory('')}>
+                  All
+                </OrbPremiumPill>
+                {categories.map((cat) => (
+                  <OrbPremiumPill key={cat} active={category === cat} onClick={() => setCategory(cat)}>
+                    {cat}
+                  </OrbPremiumPill>
+                ))}
+              </>
+            }
+          />
+        }
+        className="orb-templates-panel"
+      >
         <section data-orb-recording-library-section>
           <h3 className="mb-2 text-sm font-semibold text-[var(--orb-foreground)]">Recording library</h3>
           <p className="mb-3 text-xs text-[var(--orb-muted)]">
@@ -193,7 +224,7 @@ export function OrbTemplatesPanel({
         </section>
 
         {recordingPreview ? (
-          <div className="rounded-xl border border-[var(--orb-line)] p-4" data-orb-recording-structure-preview>
+          <div className="orb-premium-card rounded-2xl border border-[var(--orb-line)] p-4" data-orb-recording-structure-preview>
             <p className="text-sm font-semibold">{recordingPreview.label} — structure</p>
             <ul className="mt-2 list-disc space-y-1 pl-4 text-xs text-[var(--orb-muted)]">
               {recordingPreview.final_document_headings.map((h) => (
@@ -204,46 +235,6 @@ export function OrbTemplatesPanel({
         ) : null}
 
         <h3 className="text-sm font-semibold text-[var(--orb-foreground)]">Prompt templates</h3>
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--orb-muted)]" aria-hidden />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') void load()
-            }}
-            placeholder="Search templates…"
-            className="w-full rounded-xl border border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] py-2.5 pl-10 pr-4 text-sm text-[var(--orb-foreground)] placeholder:text-[var(--orb-muted)]"
-          />
-        </div>
-
-        <div className="flex flex-wrap gap-1.5">
-          <button
-            type="button"
-            onClick={() => setCategory('')}
-            className={`rounded-full px-3 py-1 text-xs font-medium ${
-              !category
-                ? 'border border-[var(--orb-line)] bg-[var(--orb-surface-hover)] text-[var(--orb-foreground)]'
-                : 'text-[var(--orb-muted)] hover:text-[var(--orb-foreground)]'
-            }`}
-          >
-            All
-          </button>
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              type="button"
-              onClick={() => setCategory(cat)}
-              className={`rounded-full px-3 py-1 text-xs font-medium ${
-                category === cat
-                  ? 'border border-[var(--orb-line)] bg-[var(--orb-surface-hover)] text-[var(--orb-foreground)]'
-                  : 'text-[var(--orb-muted)] hover:text-[var(--orb-foreground)]'
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
 
         {error && shouldBlockStationForAuth(sessionReady, error) ? (
           <OrbStationAuthError detail={error} />
@@ -260,9 +251,10 @@ export function OrbTemplatesPanel({
         ) : null}
 
         {!loading && templates.length === 0 && !isOrbStationAuthError(error) ? (
-          <OrbStationEmptyState
-            title="No templates match your search"
+          <OrbPremiumEmptyState
+            title="No templates found"
             body="Try another category or search term."
+            dataAttr="templates-empty"
           />
         ) : null}
 
@@ -303,23 +295,22 @@ export function OrbTemplatesPanel({
                   <p className="mt-1.5 text-xs text-[var(--orb-muted)]">Start with ORB to adapt this template.</p>
                 )}
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <button
-                    type="button"
+                  <OrbPremiumButton
                     disabled={generating}
                     onClick={() => void handleUseTemplate(tpl)}
-                    className="rounded-lg bg-gradient-to-r from-[#168bff] to-[#0d5fcc] px-3 py-1.5 text-xs font-semibold text-white shadow-sm disabled:opacity-60"
+                    className="px-3 py-1.5 text-xs"
                     data-orb-use-template
                   >
-                    Use template
-                  </button>
-                  <button
-                    type="button"
+                    {ORB_PREMIUM_ACTION_LABELS.useTemplate}
+                  </OrbPremiumButton>
+                  <OrbPremiumButton
+                    variant="secondary"
                     onClick={() => setSelected(tpl)}
-                    className="rounded-lg border border-[var(--orb-line)] px-3 py-1.5 text-xs font-medium text-[var(--orb-muted)] hover:text-[var(--orb-foreground)]"
+                    className="px-3 py-1.5 text-xs"
                     data-orb-template-preview
                   >
-                    Preview
-                  </button>
+                    {ORB_PREMIUM_ACTION_LABELS.previewStructure}
+                  </OrbPremiumButton>
                 </div>
               </article>
             </li>
@@ -332,18 +323,18 @@ export function OrbTemplatesPanel({
             <p className="mt-1 text-xs text-[var(--orb-muted)]">
               ORB will help you complete this template in chat with child-centred, inspection-ready wording.
             </p>
-            <button
-              type="button"
+            <OrbPremiumButton
               disabled={generating}
               onClick={() => void handleUseTemplate(selected)}
-              className="mt-3 w-full rounded-xl bg-gradient-to-r from-[#168bff] to-[#0d5fcc] px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-sky-500/20 disabled:opacity-60"
+              fullWidth
+              className="mt-3"
               data-orb-use-template
             >
-              {generating ? 'Generating…' : 'Use template'}
-            </button>
+              {generating ? 'Generating…' : ORB_PREMIUM_ACTION_LABELS.useTemplate}
+            </OrbPremiumButton>
           </div>
         ) : null}
-      </div>
+      </OrbPremiumPage>
     </OrbStandalonePanelShell>
   )
 }

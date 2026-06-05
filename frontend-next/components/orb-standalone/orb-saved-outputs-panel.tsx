@@ -1,8 +1,15 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Archive, Loader2, Search, Trash2 } from 'lucide-react'
+import { Archive, Loader2, Trash2 } from 'lucide-react'
 
+import {
+  OrbPremiumButton,
+  OrbPremiumEmptyState,
+  OrbPremiumPill,
+  OrbPremiumToolbar
+} from '@/components/orb/premium'
+import { ORB_PREMIUM_ACTION_LABELS } from '@/components/orb/premium/orb-premium-theme'
 import {
   OrbIntelligenceOutput,
   type OrbIntelligenceOutputView
@@ -68,6 +75,8 @@ export function OrbSavedOutputsPanel({
   onSendToDictate,
   onUseInShiftBuilder,
   onRerun,
+  onStartInOrbWrite,
+  onStartInDictate,
   residentialSurface = false,
   sessionReady = true
 }: {
@@ -79,6 +88,8 @@ export function OrbSavedOutputsPanel({
   onSendToDictate?: (text: string) => void
   onUseInShiftBuilder?: (notes: string, focus?: string) => void
   onRerun?: (state: OrbSavedOutputRerunState) => void
+  onStartInOrbWrite?: () => void
+  onStartInDictate?: () => void
   residentialSurface?: boolean
   sessionReady?: boolean
 }) {
@@ -226,34 +237,31 @@ export function OrbSavedOutputsPanel({
               </p>
             </div>
           ) : null}
-          <div className="space-y-2 p-3">
-            <label className="orb-mobile-workspace-card flex items-center gap-2 rounded-lg px-3 py-2 ring-1 ring-[var(--orb-mobile-ws-card-border,var(--orb-line))]">
-              <Search className="h-4 w-4 text-[var(--orb-mobile-ws-muted,var(--orb-muted))]" aria-hidden />
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search saved outputs"
-                className="w-full bg-transparent text-sm text-[var(--orb-mobile-ws-text,var(--orb-foreground))] outline-none placeholder:text-[var(--orb-mobile-ws-muted,var(--orb-muted))]"
-                data-orb-saved-outputs-search
-              />
-            </label>
-            <div className="flex flex-wrap gap-1.5" data-orb-saved-outputs-filters>
-              {FILTER_CHIPS.map((chip) => (
-                <button
-                  key={chip.id}
-                  type="button"
-                  onClick={() => {
-                    setChipFilter(chip.id)
-                    setTypeFilter(chip.type)
-                  }}
-                  className={`rounded-full px-2.5 py-1 text-[10px] font-medium ${
-                    chipFilter === chip.id ? 'bg-[var(--orb-primary-soft,rgba(22,139,255,0.16))] text-[var(--orb-mobile-ws-text,var(--orb-foreground))]' : 'bg-[var(--orb-mobile-ws-input,rgba(255,255,255,0.06))] text-[var(--orb-mobile-ws-muted,var(--orb-muted))]'
-                  }`}
-                >
-                  {chip.label}
-                </button>
-              ))}
-            </div>
+          <div className="space-y-2 p-3" data-orb-premium-page="saved_outputs">
+            <OrbPremiumToolbar
+              searchValue={search}
+              onSearchChange={setSearch}
+              searchPlaceholder="Search saved outputs"
+              searchInputProps={{ 'data-orb-saved-outputs-search': '' } as React.InputHTMLAttributes<HTMLInputElement>}
+              filtersDataAttr="data-orb-saved-outputs-filters"
+              filters={
+                <>
+                  {FILTER_CHIPS.map((chip) => (
+                    <OrbPremiumPill
+                      key={chip.id}
+                      active={chipFilter === chip.id}
+                      onClick={() => {
+                        setChipFilter(chip.id)
+                        setTypeFilter(chip.type)
+                      }}
+                      className="text-[10px]"
+                    >
+                      {chip.label}
+                    </OrbPremiumPill>
+                  ))}
+                </>
+              }
+            />
             <select
               value={projectFilter}
               onChange={(e) => setProjectFilter(e.target.value)}
@@ -304,13 +312,27 @@ export function OrbSavedOutputsPanel({
                 />
               )
             ) : items.length === 0 ? (
-              <OrbStationEmptyState
+              <OrbPremiumEmptyState
                 dataAttr="saved_outputs"
-                title="No saved outputs yet."
+                title="No saved outputs yet"
                 body={
                   storageMode === 'local'
-                    ? 'When ORB helps you write a record, review practice or create a briefing, you can save it here and reuse it later. Drafts stay on this device until you reconnect.'
-                    : 'No saved outputs yet. When ORB helps you write a record, review practice or create a briefing, you can save it here and reuse it later.'
+                    ? 'Records, briefings and document reviews you save will appear here. Drafts stay on this device until you reconnect.'
+                    : 'Records, briefings and document reviews you save will appear here.'
+                }
+                actions={
+                  <>
+                    {onStartInOrbWrite ? (
+                      <OrbPremiumButton variant="primary" onClick={onStartInOrbWrite} data-orb-saved-start-write>
+                        {ORB_PREMIUM_ACTION_LABELS.openInOrbWrite}
+                      </OrbPremiumButton>
+                    ) : null}
+                    {onStartInDictate ? (
+                      <OrbPremiumButton variant="secondary" onClick={onStartInDictate} data-orb-saved-start-dictate>
+                        {ORB_PREMIUM_ACTION_LABELS.startInDictate}
+                      </OrbPremiumButton>
+                    ) : null}
+                  </>
                 }
               />
             ) : (

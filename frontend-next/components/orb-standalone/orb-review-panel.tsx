@@ -2,6 +2,16 @@
 
 import { useMemo, useState } from 'react'
 
+import {
+  OrbPremiumButton,
+  OrbPremiumCard,
+  OrbPremiumPage,
+  OrbPremiumPill,
+  OrbPremiumSection,
+  OrbPremiumTextarea,
+  OrbPremiumTrustStrip
+} from '@/components/orb/premium'
+import { ORB_PREMIUM_ACTION_LABELS } from '@/components/orb/premium/orb-premium-theme'
 import { orbStationShellProps } from '@/components/orb-standalone/orb-app-modal'
 import { OrbStandalonePanelShell } from '@/components/orb-standalone/orb-standalone-panel-shell'
 import {
@@ -66,12 +76,34 @@ export function OrbReviewPanel({
       panelId="review"
       {...orbStationShellProps(residentialSurface, 'wide')}
     >
-      <div className="space-y-5 p-4 sm:p-5" data-orb-review-panel>
-        <p className="text-xs leading-5 text-[var(--orb-muted)]">
-          ORB supports professional judgement. Adults must review and approve all wording before use in records.
-        </p>
-
-        <section className="orb-premium-settings-card rounded-2xl border border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] p-4">
+      <OrbPremiumPage
+        panelId="review"
+        trustStrip={
+          <OrbPremiumTrustStrip>
+            ORB supports professional judgement. Adults must review and approve all wording before use in records.
+          </OrbPremiumTrustStrip>
+        }
+        primaryAction={
+          <OrbPremiumButton
+            disabled={!text.trim()}
+            fullWidth
+            data-orb-review-run
+            onClick={() => {
+              const prompt = buildOrbReviewPrompt({
+                text: text.trim(),
+                therapeuticContext,
+                chips: selectedChips,
+                professionalTone
+              })
+              onRunReview({ prompt, text: text.trim(), therapeuticContext: therapeuticContext.trim() })
+              onClose()
+            }}
+          >
+            {ORB_PREMIUM_ACTION_LABELS.generateDraft}
+          </OrbPremiumButton>
+        }
+      >
+        <OrbPremiumCard padded className="!p-4">
           <h3 className="text-sm font-semibold text-[var(--orb-foreground)]">ORB outputs</h3>
           <ul className="mt-2 space-y-1.5 text-sm text-[var(--orb-muted)]">
             {REVIEW_OUTPUT_SECTIONS.map((item) => (
@@ -81,92 +113,57 @@ export function OrbReviewPanel({
               </li>
             ))}
           </ul>
-        </section>
+        </OrbPremiumCard>
 
         <label className="block">
-          <span className="text-xs font-medium text-[var(--orb-muted)]">Paste text to review</span>
-          <textarea
+          <span className="text-xs font-medium text-[var(--orb-muted)]">Review written practice</span>
+          <OrbPremiumTextarea
             value={text}
             onChange={(e) => setText(e.target.value)}
             rows={8}
             placeholder="Paste an incident, daily record, handover or supervision note…"
-            className="mt-2 w-full rounded-xl border border-[var(--orb-line)]/60 bg-[var(--orb-surface)] px-3 py-2 text-sm text-[var(--orb-foreground)] outline-none placeholder:text-[var(--orb-muted)]"
+            className="mt-2"
             data-orb-review-input
           />
         </label>
 
-        <section
-          className="orb-premium-settings-card space-y-3 rounded-2xl border border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] p-4"
-          data-orb-review-therapeutic-input
+        <OrbPremiumSection
+          title="Therapeutic language"
+          description="Add context about the young person's needs, feelings, triggers, strengths or support approach."
+          collapsible
+          defaultOpen={false}
         >
-          <div>
-            <h3 className="text-sm font-semibold text-[var(--orb-foreground)]">Therapeutic language</h3>
-            <p className="mt-1 text-xs leading-5 text-[var(--orb-muted)]">
-              Add context about the young person&apos;s needs, feelings, triggers, strengths or support approach.
-            </p>
-          </div>
-          <textarea
-            value={therapeuticContext}
-            onChange={(e) => setTherapeuticContext(e.target.value)}
-            rows={4}
-            placeholder="Optional therapeutic context for ORB…"
-            className="w-full rounded-xl border border-[var(--orb-line)]/60 bg-[var(--orb-surface)] px-3 py-2 text-sm text-[var(--orb-foreground)] outline-none placeholder:text-[var(--orb-muted)]"
-            data-orb-review-therapeutic-textarea
-          />
-          <div className="flex flex-wrap gap-1.5" data-orb-review-therapeutic-prompts>
-            {ORB_REVIEW_THERAPEUTIC_PROMPTS.map((prompt) => (
-              <button
-                key={prompt}
-                type="button"
-                onClick={() => appendPrompt(prompt)}
-                className="rounded-full border border-[var(--orb-line)] px-2.5 py-1 text-[10px] leading-snug text-[var(--orb-muted)] transition hover:border-[var(--orb-primary)]/40 hover:text-[var(--orb-foreground)]"
-              >
-                {prompt}
-              </button>
-            ))}
-          </div>
-          <div className="flex flex-wrap gap-1.5" data-orb-review-therapeutic-chips>
-            {ORB_REVIEW_THERAPEUTIC_CHIPS.map((chip) => {
-              const active = selectedChips.includes(chip.id)
-              return (
-                <button
+          <div data-orb-review-therapeutic-input>
+            <OrbPremiumTextarea
+              value={therapeuticContext}
+              onChange={(e) => setTherapeuticContext(e.target.value)}
+              rows={4}
+              placeholder="Optional therapeutic context for ORB…"
+              data-orb-review-therapeutic-textarea
+            />
+            <div className="mt-3 flex flex-wrap gap-1.5" data-orb-review-therapeutic-prompts>
+              {ORB_REVIEW_THERAPEUTIC_PROMPTS.map((prompt) => (
+                <OrbPremiumPill key={prompt} onClick={() => appendPrompt(prompt)}>
+                  {prompt}
+                </OrbPremiumPill>
+              ))}
+            </div>
+            <div className="mt-2 flex flex-wrap gap-1.5" data-orb-review-therapeutic-chips>
+              {ORB_REVIEW_THERAPEUTIC_CHIPS.map((chip) => (
+                <OrbPremiumPill
                   key={chip.id}
-                  type="button"
-                  aria-pressed={active}
+                  active={selectedChips.includes(chip.id)}
+                  aria-pressed={selectedChips.includes(chip.id)}
                   onClick={() => toggleChip(chip.id)}
-                  className={`rounded-full border px-2.5 py-1 text-[10px] font-medium transition ${
-                    active
-                      ? 'border-[var(--orb-primary)] bg-[var(--orb-primary-soft)] text-[var(--orb-foreground)]'
-                      : 'border-[var(--orb-line)] text-[var(--orb-muted)] hover:border-[var(--orb-primary)]/35'
-                  }`}
                   data-orb-review-chip={chip.id}
                 >
                   {chip.label}
-                </button>
-              )
-            })}
+                </OrbPremiumPill>
+              ))}
+            </div>
           </div>
-        </section>
-
-        <button
-          type="button"
-          disabled={!text.trim()}
-          className="w-full rounded-xl bg-gradient-to-r from-[#168bff] to-[#0d5fcc] py-2.5 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(22,139,255,0.25)] disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none"
-          data-orb-review-run
-          onClick={() => {
-            const prompt = buildOrbReviewPrompt({
-              text: text.trim(),
-              therapeuticContext,
-              chips: selectedChips,
-              professionalTone
-            })
-            onRunReview({ prompt, text: text.trim(), therapeuticContext: therapeuticContext.trim() })
-            onClose()
-          }}
-        >
-          Run quality review
-        </button>
-      </div>
+        </OrbPremiumSection>
+      </OrbPremiumPage>
     </OrbStandalonePanelShell>
   )
 }

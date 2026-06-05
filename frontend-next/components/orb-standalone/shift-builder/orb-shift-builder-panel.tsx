@@ -3,6 +3,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ClipboardList, Copy, FileText, Loader2, MessageSquare, PenLine, Sparkles } from 'lucide-react'
 
+import {
+  OrbPremiumButton,
+  OrbPremiumEmptyState,
+  OrbPremiumPage,
+  OrbPremiumPill,
+  OrbPremiumTextarea
+} from '@/components/orb/premium'
+import { ORB_PREMIUM_ACTION_LABELS } from '@/components/orb/premium/orb-premium-theme'
 import { OrbIntelligenceOutput } from '@/components/orb-standalone/orb-intelligence-output'
 import { OrbOutputSaveActions } from '@/components/orb-standalone/orb-output-save-actions'
 import { orbStationShellProps } from '@/components/orb-standalone/orb-app-modal'
@@ -150,141 +158,119 @@ export function OrbShiftBuilderPanel({
       footer="ORB Residential — Powered by IndiCare Intelligence. Shift Builder uses only what you paste."
       {...orbStationShellProps(residentialSurface, 'wide')}
     >
-      <div className="orb-shift-builder-panel space-y-4 p-4" data-orb-shift-builder-panel>
-        <ul
-          className="orb-doc-glass-card space-y-1 rounded-xl border border-[var(--orb-line)] px-3 py-2.5 text-[11px] leading-5 text-[var(--orb-muted)]"
-          data-orb-shift-builder-boundary
-        >
-          {ORB_SHIFT_BUILDER_BOUNDARY_LINES.map((line) => (
-            <li key={line}>{line}</li>
-          ))}
-        </ul>
-
-        {!hasInput && !result ? (
-          <div
-            className="orb-doc-glass-card rounded-xl border border-dashed border-[var(--orb-line)] px-4 py-8 text-center"
-            data-orb-shift-builder-empty
+      <OrbPremiumPage
+        panelId="shift_builder"
+        trustStrip={
+          <ul className="space-y-1" data-orb-shift-builder-boundary>
+            {ORB_SHIFT_BUILDER_BOUNDARY_LINES.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        }
+        primaryAction={
+          <OrbPremiumButton
+            disabled={loading || !hasInput}
+            onClick={() => void runGenerate()}
+            fullWidth
+            className="orb-doc-primary-btn"
+            data-orb-generate-shift-plan
           >
-            <ClipboardList className="mx-auto h-8 w-8 text-[var(--orb-muted)]" aria-hidden />
-            <p className="mt-2 text-sm font-semibold text-[var(--orb-foreground)]">No shift notes yet</p>
-            <p className="mt-1 text-xs text-[var(--orb-muted)]">
-              Paste rough notes, handover text or ORB chat output, then generate.
-            </p>
-          </div>
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            ) : (
+              <Sparkles className="h-4 w-4" aria-hidden />
+            )}
+            {ORB_PREMIUM_ACTION_LABELS.generateShiftPlan}
+          </OrbPremiumButton>
+        }
+        advanced={
+          <>
+            <label className="block text-xs font-semibold text-[var(--orb-muted)]">
+              Pasted handover (optional)
+              <OrbPremiumTextarea
+                data-orb-shift-handover-input
+                value={handoverText}
+                onChange={(e) => setHandoverText(e.target.value)}
+                rows={3}
+                placeholder="Previous handover or incoming notes…"
+                className="orb-doc-input mt-1"
+              />
+            </label>
+            <label className="mt-3 block text-xs font-semibold text-[var(--orb-muted)]">
+              Copied ORB chat output (optional)
+              <OrbPremiumTextarea
+                data-orb-shift-chat-input
+                value={chatOutput}
+                onChange={(e) => setChatOutput(e.target.value)}
+                rows={3}
+                placeholder="Paste a prior ORB answer to reshape into a shift plan…"
+                className="orb-doc-input mt-1"
+              />
+            </label>
+            <label className="mt-3 block text-xs font-semibold text-[var(--orb-muted)]">
+              Optional context (not live records)
+              <OrbPremiumTextarea
+                value={childContext}
+                onChange={(e) => setChildContext(e.target.value)}
+                rows={2}
+                placeholder="e.g. two young people on unit, one on care plan review…"
+                className="orb-doc-input mt-1"
+              />
+            </label>
+            <div className="mt-3 space-y-2" data-orb-shift-context-tags>
+              <p className="text-xs font-medium text-[var(--orb-muted)]">Context tags (optional)</p>
+              <div className="flex flex-wrap gap-1.5" role="listbox" aria-label="Shift context tags">
+                {SHIFT_BUILDER_CONTEXT_TAGS.map((tag) => (
+                  <OrbPremiumPill
+                    key={tag.id}
+                    active={selectedTags.includes(tag.id)}
+                    onClick={() => toggleTag(tag.id)}
+                    data-orb-shift-context-tag={tag.id}
+                  >
+                    {tag.label}
+                  </OrbPremiumPill>
+                ))}
+              </div>
+            </div>
+            <div className="mt-3 space-y-2" data-orb-shift-focus-selector>
+              <p className="text-xs font-medium text-[var(--orb-muted)]">Output focus</p>
+              <div className="flex flex-wrap gap-1.5" role="listbox" aria-label="Shift Builder focus modes">
+                {SHIFT_BUILDER_FOCUS_MODES.map((item) => (
+                  <OrbPremiumPill
+                    key={item.focus}
+                    active={focus === item.focus}
+                    onClick={() => setFocus(item.focus)}
+                    data-orb-shift-focus={item.focus}
+                    title={item.description}
+                  >
+                    {item.label}
+                  </OrbPremiumPill>
+                ))}
+              </div>
+            </div>
+          </>
+        }
+      >
+        {!hasInput && !result ? (
+          <OrbPremiumEmptyState
+            icon={ClipboardList}
+            title="No shift notes yet"
+            body="Paste rough notes, handover text or ORB chat output, then generate a draft."
+            dataAttr="shift-builder-empty"
+          />
         ) : null}
 
         <label className="block text-xs font-semibold text-[var(--orb-muted)]">
           Rough shift notes
-          <textarea
+          <OrbPremiumTextarea
             data-orb-shift-notes-input
             value={shiftNotes}
             onChange={(e) => setShiftNotes(e.target.value)}
             rows={5}
             placeholder="What happened on shift — facts, child presentation, staff response…"
-            className="orb-doc-input mt-1 w-full rounded-lg border border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] px-3 py-2 text-sm text-[var(--orb-foreground)] placeholder:text-[var(--orb-muted)]"
+            className="orb-doc-input mt-1"
           />
         </label>
-
-        <label className="block text-xs font-semibold text-[var(--orb-muted)]">
-          Pasted handover (optional)
-          <textarea
-            data-orb-shift-handover-input
-            value={handoverText}
-            onChange={(e) => setHandoverText(e.target.value)}
-            rows={3}
-            placeholder="Previous handover or incoming notes…"
-            className="orb-doc-input mt-1 w-full rounded-lg border border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] px-3 py-2 text-sm text-[var(--orb-foreground)] placeholder:text-[var(--orb-muted)]"
-          />
-        </label>
-
-        <label className="block text-xs font-semibold text-[var(--orb-muted)]">
-          Copied ORB chat output (optional)
-          <textarea
-            data-orb-shift-chat-input
-            value={chatOutput}
-            onChange={(e) => setChatOutput(e.target.value)}
-            rows={3}
-            placeholder="Paste a prior ORB answer to reshape into a shift plan…"
-            className="orb-doc-input mt-1 w-full rounded-lg border border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] px-3 py-2 text-sm text-[var(--orb-foreground)] placeholder:text-[var(--orb-muted)]"
-          />
-        </label>
-
-        <label className="block text-xs font-semibold text-[var(--orb-muted)]">
-          Optional context (not live records)
-          <textarea
-            value={childContext}
-            onChange={(e) => setChildContext(e.target.value)}
-            rows={2}
-            placeholder="e.g. two young people on unit, one on care plan review…"
-            className="orb-doc-input mt-1 w-full rounded-lg border border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] px-3 py-2 text-sm text-[var(--orb-foreground)] placeholder:text-[var(--orb-muted)]"
-          />
-        </label>
-
-        <div className="space-y-2" data-orb-shift-context-tags>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--orb-muted)]">
-            Context tags (optional)
-          </p>
-          <div className="flex flex-wrap gap-1.5" role="listbox" aria-label="Shift context tags">
-            {SHIFT_BUILDER_CONTEXT_TAGS.map((tag) => (
-              <button
-                key={tag.id}
-                type="button"
-                role="option"
-                aria-selected={selectedTags.includes(tag.id)}
-                onClick={() => toggleTag(tag.id)}
-                className={`rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition ${
-                  selectedTags.includes(tag.id)
-                    ? 'border-sky-400/40 bg-[var(--orb-surface-hover)] text-[var(--orb-foreground)]'
-                    : 'border-[var(--orb-line)] text-[var(--orb-muted)] hover:text-[var(--orb-foreground)]'
-                }`}
-                data-orb-shift-context-tag={tag.id}
-              >
-                {tag.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="space-y-2" data-orb-shift-focus-selector>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--orb-muted)]">
-            Output focus
-          </p>
-          <div className="flex flex-wrap gap-1.5" role="listbox" aria-label="Shift Builder focus modes">
-            {SHIFT_BUILDER_FOCUS_MODES.map((item) => (
-              <button
-                key={item.focus}
-                type="button"
-                role="option"
-                aria-selected={focus === item.focus}
-                onClick={() => setFocus(item.focus)}
-                className={`rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition ${
-                  focus === item.focus
-                    ? 'border-sky-400/40 bg-[var(--orb-surface-hover)] text-[var(--orb-foreground)]'
-                    : 'border-[var(--orb-line)] text-[var(--orb-muted)] hover:text-[var(--orb-foreground)]'
-                }`}
-                data-orb-shift-focus={item.focus}
-                title={item.description}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <button
-          type="button"
-          disabled={loading || !hasInput}
-          onClick={() => void runGenerate()}
-          className="orb-doc-primary-btn inline-flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed"
-          data-orb-generate-shift-plan
-        >
-          {loading ? (
-            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-          ) : (
-            <Sparkles className="h-4 w-4" aria-hidden />
-          )}
-          Generate shift plan
-        </button>
 
         {error ? <p className="text-xs font-medium text-red-600">{error}</p> : null}
         {copyNote ? <p className="text-xs font-medium text-[#0369A1]">{copyNote}</p> : null}
@@ -381,13 +367,13 @@ export function OrbShiftBuilderPanel({
                   className="orb-doc-secondary-btn rounded-lg border px-3 py-1.5 text-xs font-semibold"
                   data-orb-continue-shift-in-chat
                 >
-                  Continue in ORB chat
+                  {ORB_PREMIUM_ACTION_LABELS.continueInChat}
                 </button>
               ) : null}
             </div>
           </div>
         ) : null}
-      </div>
+      </OrbPremiumPage>
     </OrbStandalonePanelShell>
   )
 }

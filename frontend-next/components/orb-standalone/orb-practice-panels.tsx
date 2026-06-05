@@ -2,6 +2,13 @@
 
 import { useState } from 'react'
 
+import {
+  OrbPremiumButton,
+  OrbPremiumPill,
+  OrbPremiumTextarea,
+  OrbPremiumTrustStrip
+} from '@/components/orb/premium'
+import { ORB_PREMIUM_ACTION_LABELS } from '@/components/orb/premium/orb-premium-theme'
 import { orbStationShellProps } from '@/components/orb-standalone/orb-app-modal'
 import { OrbPremiumWorkspaceLayout } from '@/components/orb-standalone/orb-premium-workspace-layout'
 import { OrbStandalonePanelShell } from '@/components/orb-standalone/orb-standalone-panel-shell'
@@ -15,28 +22,6 @@ import type { StandaloneOrbMode } from '@/lib/orb/standalone-client'
 function fieldLabel(text: string) {
   return <span className="text-xs font-medium text-[var(--orb-muted)]">{text}</span>
 }
-
-function fieldTextarea(
-  value: string,
-  onChange: (v: string) => void,
-  rows: number,
-  placeholder: string,
-  dataOrb: string
-) {
-  return (
-    <textarea
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      rows={rows}
-      placeholder={placeholder}
-      className="mt-2 w-full rounded-xl border border-[var(--orb-line)]/60 bg-[var(--orb-surface)] px-3 py-2 text-sm text-[var(--orb-foreground)] outline-none placeholder:text-[var(--orb-muted)]"
-      data-orb={dataOrb}
-    />
-  )
-}
-
-const primaryButtonClass =
-  'w-full rounded-xl bg-gradient-to-r from-[#168bff] to-[#0d5fcc] py-2.5 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(22,139,255,0.25)] disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none'
 
 export function OrbInspectionReadinessPanel({
   open,
@@ -63,19 +48,18 @@ export function OrbInspectionReadinessPanel({
       {...orbStationShellProps(residentialSurface, 'wide')}
       onClose={onClose}
     >
-      <div className="p-4 sm:p-5" data-orb-inspection-readiness-panel>
+      <div className="p-4 sm:p-5" data-orb-inspection-readiness-panel data-orb-premium-page="inspection_readiness">
         <OrbPremiumWorkspaceLayout
           panelId="inspection_readiness"
           intro={
-            <p className="text-xs leading-5 text-[var(--orb-muted)]" data-orb-inspection-disclaimer>
+            <OrbPremiumTrustStrip tone="safety" data-orb-inspection-disclaimer>
               ORB supports inspection readiness. It does not make regulatory judgements.
-            </p>
+            </OrbPremiumTrustStrip>
           }
           primaryAction={
-            <button
-              type="button"
+            <OrbPremiumButton
               disabled={!evidence.trim()}
-              className={primaryButtonClass}
+              fullWidth
               data-orb-inspection-run
               onClick={() => {
                 onRun({
@@ -85,8 +69,8 @@ export function OrbInspectionReadinessPanel({
                 onClose()
               }}
             >
-              Continue in chat
-            </button>
+              {ORB_PREMIUM_ACTION_LABELS.continueInChat}
+            </OrbPremiumButton>
           }
           advanced={
             <ul className="space-y-1 text-xs text-[var(--orb-muted)]">
@@ -99,13 +83,14 @@ export function OrbInspectionReadinessPanel({
         >
           <label className="block">
             {fieldLabel('Paste evidence / notes')}
-            {fieldTextarea(
-              evidence,
-              setEvidence,
-              6,
-              'Policies, records, visit notes, staff reflections…',
-              'orb-inspection-evidence'
-            )}
+            <OrbPremiumTextarea
+              value={evidence}
+              onChange={(e) => setEvidence(e.target.value)}
+              rows={6}
+              placeholder="Policies, records, visit notes, staff reflections…"
+              className="mt-2"
+              data-orb-inspection-evidence
+            />
           </label>
           <fieldset className="mt-3 space-y-2">
             <legend className="text-xs font-medium text-[var(--orb-muted)]">First action</legend>
@@ -117,19 +102,14 @@ export function OrbInspectionReadinessPanel({
                   ['action_plan', 'Create action plan']
                 ] as const
               ).map(([id, label]) => (
-                <button
+                <OrbPremiumPill
                   key={id}
-                  type="button"
+                  active={focus === id}
                   onClick={() => setFocus(id)}
-                  className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
-                    focus === id
-                      ? 'border-[var(--orb-primary,#168bff)] bg-[var(--orb-primary-soft,rgba(22,139,255,0.16))] text-[var(--orb-foreground)]'
-                      : 'border-[var(--orb-line)] text-[var(--orb-muted)] hover:border-[var(--orb-primary)]/35'
-                  }`}
                   data-orb-inspection-focus={id}
                 >
                   {label}
-                </button>
+                </OrbPremiumPill>
               ))}
             </div>
           </fieldset>
@@ -163,20 +143,19 @@ export function OrbSafeguardingThinkingPanel({
       {...orbStationShellProps(residentialSurface, 'wide')}
       onClose={onClose}
     >
-      <div className="p-4 sm:p-5" data-orb-safeguarding-thinking-panel>
+      <div className="p-4 sm:p-5" data-orb-safeguarding-thinking-panel data-orb-premium-page="safeguarding_thinking">
         <OrbPremiumWorkspaceLayout
           panelId="safeguarding_thinking"
           intro={
-            <p className="text-xs leading-5 text-amber-700 dark:text-amber-200/90" data-orb-safeguarding-reminder>
+            <OrbPremiumTrustStrip tone="safety" data-orb-safeguarding-reminder>
               Follow local safeguarding procedures and emergency escalation where needed. ORB supports thinking; it
               does not make safeguarding decisions.
-            </p>
+            </OrbPremiumTrustStrip>
           }
           primaryAction={
-            <button
-              type="button"
+            <OrbPremiumButton
               disabled={!concern.trim()}
-              className={primaryButtonClass}
+              fullWidth
               data-orb-safeguarding-run
               onClick={() => {
                 onRun({
@@ -186,37 +165,46 @@ export function OrbSafeguardingThinkingPanel({
                 onClose()
               }}
             >
-              Continue in chat
-            </button>
+              {ORB_PREMIUM_ACTION_LABELS.continueInChat}
+            </OrbPremiumButton>
           }
           advanced={
             <>
               <label className="block">
                 {fieldLabel('Immediate risk?')}
-                {fieldTextarea(
-                  immediateRisk,
-                  setImmediateRisk,
-                  2,
-                  'e.g. current location, known risks, who is present…',
-                  'orb-safeguarding-risk'
-                )}
+                <OrbPremiumTextarea
+                  value={immediateRisk}
+                  onChange={(e) => setImmediateRisk(e.target.value)}
+                  rows={2}
+                  placeholder="e.g. current location, known risks, who is present…"
+                  className="mt-2"
+                  data-orb-safeguarding-risk
+                />
               </label>
               <label className="mt-3 block">
                 {fieldLabel('Known vulnerabilities / context')}
-                {fieldTextarea(
-                  context,
-                  setContext,
-                  2,
-                  'Optional — history, plans, communication needs…',
-                  'orb-safeguarding-context'
-                )}
+                <OrbPremiumTextarea
+                  value={context}
+                  onChange={(e) => setContext(e.target.value)}
+                  rows={2}
+                  placeholder="Optional — history, plans, communication needs…"
+                  className="mt-2"
+                  data-orb-safeguarding-context
+                />
               </label>
             </>
           }
         >
           <label className="block">
             {fieldLabel('Describe the concern')}
-            {fieldTextarea(concern, setConcern, 5, 'What are you worried about?', 'orb-safeguarding-concern')}
+            <OrbPremiumTextarea
+              value={concern}
+              onChange={(e) => setConcern(e.target.value)}
+              rows={5}
+              placeholder="What are you worried about?"
+              className="mt-2"
+              data-orb-safeguarding-concern
+            />
           </label>
         </OrbPremiumWorkspaceLayout>
       </div>
@@ -250,19 +238,18 @@ export function OrbRecordProperlyPanel({
       {...orbStationShellProps(residentialSurface, 'wide')}
       onClose={onClose}
     >
-      <div className="p-4 sm:p-5" data-orb-record-properly-panel>
+      <div className="p-4 sm:p-5" data-orb-record-properly-panel data-orb-premium-page="record_properly">
         <OrbPremiumWorkspaceLayout
           panelId="record_properly"
           intro={
-            <p className="text-xs leading-5 text-[var(--orb-muted)]">
-              Tell ORB what happened. ORB will shape a draft record for your review.
-            </p>
+            <OrbPremiumTrustStrip>
+              Tell ORB what happened. ORB will shape a draft record for your review — not a live care record.
+            </OrbPremiumTrustStrip>
           }
           primaryAction={
-            <button
-              type="button"
+            <OrbPremiumButton
               disabled={!whatHappened.trim()}
-              className={primaryButtonClass}
+              fullWidth
               data-orb-record-run
               onClick={() => {
                 onRun({
@@ -278,39 +265,68 @@ export function OrbRecordProperlyPanel({
                 onClose()
               }}
             >
-              Generate professional record
-            </button>
+              {ORB_PREMIUM_ACTION_LABELS.generateDraft}
+            </OrbPremiumButton>
           }
           advanced={
             <>
               <label className="block">
                 {fieldLabel('Who was involved?')}
-                {fieldTextarea(whoInvolved, setWhoInvolved, 2, 'Young people, staff, others…', 'orb-record-who')}
+                <OrbPremiumTextarea
+                  value={whoInvolved}
+                  onChange={(e) => setWhoInvolved(e.target.value)}
+                  rows={2}
+                  placeholder="Young people, staff, others…"
+                  className="mt-2"
+                  data-orb-record-who
+                />
               </label>
               <label className="mt-3 block">
                 {fieldLabel('What did staff see/hear?')}
-                {fieldTextarea(
-                  staffObservations,
-                  setStaffObservations,
-                  2,
-                  'Observations only — avoid opinion where possible…',
-                  'orb-record-observations'
-                )}
+                <OrbPremiumTextarea
+                  value={staffObservations}
+                  onChange={(e) => setStaffObservations(e.target.value)}
+                  rows={2}
+                  placeholder="Observations only — avoid opinion where possible…"
+                  className="mt-2"
+                  data-orb-record-observations
+                />
               </label>
               <label className="mt-3 block">
                 {fieldLabel('What did staff do?')}
-                {fieldTextarea(staffActions, setStaffActions, 2, 'Actions, de-escalation, contacts…', 'orb-record-actions')}
+                <OrbPremiumTextarea
+                  value={staffActions}
+                  onChange={(e) => setStaffActions(e.target.value)}
+                  rows={2}
+                  placeholder="Actions, de-escalation, contacts…"
+                  className="mt-2"
+                  data-orb-record-actions
+                />
               </label>
               <label className="mt-3 block">
                 {fieldLabel('What needs follow-up?')}
-                {fieldTextarea(followUp, setFollowUp, 2, 'Handover, manager, external agency…', 'orb-record-followup')}
+                <OrbPremiumTextarea
+                  value={followUp}
+                  onChange={(e) => setFollowUp(e.target.value)}
+                  rows={2}
+                  placeholder="Handover, manager, external agency…"
+                  className="mt-2"
+                  data-orb-record-followup
+                />
               </label>
             </>
           }
         >
           <label className="block">
             {fieldLabel('What happened?')}
-            {fieldTextarea(whatHappened, setWhatHappened, 5, 'Facts in plain language…', 'orb-record-what')}
+            <OrbPremiumTextarea
+              value={whatHappened}
+              onChange={(e) => setWhatHappened(e.target.value)}
+              rows={5}
+              placeholder="Facts in plain language…"
+              className="mt-2"
+              data-orb-record-what
+            />
           </label>
         </OrbPremiumWorkspaceLayout>
       </div>
