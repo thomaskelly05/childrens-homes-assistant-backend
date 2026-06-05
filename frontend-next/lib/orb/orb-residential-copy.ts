@@ -1,3 +1,4 @@
+import { ORB_CONVERGED_CHAT_STARTERS } from '@/lib/orb/orb-navigation-convergence'
 import type { StandaloneOrbMode } from '@/lib/orb/standalone-client'
 
 /** User-facing product copy for ORB Residential — safe, regulatory-aware language. */
@@ -17,19 +18,9 @@ export const ORB_RESIDENTIAL_BRAND_EMOTIONAL_LINE = 'Care. Connect. Empower.'
 export const ORB_RESIDENTIAL_EMPTY_SUBLINE = ''
 
 /** Compact residential starters shown above the mobile composer on an empty chat. */
-export const ORB_RESIDENTIAL_MOBILE_EMPTY_STARTERS: Array<{ text: string; mode?: StandaloneOrbMode }> = [
-  { text: 'Write a daily log' },
-  { text: 'Turn rough notes into a record', mode: 'Record This Properly' },
-  { text: 'Review an incident', mode: 'Safeguarding Thinking' },
-  { text: 'Ask a safeguarding question', mode: 'Safeguarding Thinking' }
-]
+export const ORB_RESIDENTIAL_MOBILE_EMPTY_STARTERS = ORB_CONVERGED_CHAT_STARTERS
 
-export const ORB_RESIDENTIAL_EMPTY_STARTERS: Array<{ text: string; mode?: StandaloneOrbMode }> = [
-  { text: 'Write a daily log' },
-  { text: 'Turn rough notes into a record', mode: 'Record This Properly' },
-  { text: 'Review an incident', mode: 'Safeguarding Thinking' },
-  { text: 'Ask a safeguarding question', mode: 'Safeguarding Thinking' }
-]
+export const ORB_RESIDENTIAL_EMPTY_STARTERS = ORB_CONVERGED_CHAT_STARTERS
 
 /** Visible mode labels — internal mode ids may still use legacy names for API compatibility. */
 export const ORB_RESIDENTIAL_MODE_DISPLAY: Partial<Record<StandaloneOrbMode, string>> = {

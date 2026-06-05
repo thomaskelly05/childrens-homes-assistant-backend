@@ -16,10 +16,14 @@ describe('ORB Write standalone studio', () => {
     assert.match(sidebar, /orb_write/)
     assert.match(sidebar, /ORB Write/)
     assert.match(sidebar, /data-orb-sidebar-station/)
-    const dictateIdx = sidebar.indexOf("'orb_dictate'")
-    const writeIdx = sidebar.indexOf("'orb_write'")
-    const shiftIdx = sidebar.indexOf("'shift_builder'")
-    assert.ok(dictateIdx > -1 && writeIdx > dictateIdx && shiftIdx > writeIdx)
+    const mainNav = sidebar.slice(
+      sidebar.indexOf('const DESKTOP_MAIN_NAV'),
+      sidebar.indexOf('const DESKTOP_LIBRARY_NAV')
+    )
+    const dictateIdx = mainNav.indexOf("'orb_dictate'")
+    const voiceIdx = mainNav.indexOf("'orb_voice'")
+    const writeIdx = mainNav.indexOf("'orb_write'")
+    assert.ok(dictateIdx > -1 && voiceIdx > dictateIdx && writeIdx > voiceIdx)
   })
 
   it('standalone panel registered in care companion', () => {

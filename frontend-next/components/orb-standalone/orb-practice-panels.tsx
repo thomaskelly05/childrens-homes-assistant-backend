@@ -24,6 +24,7 @@ function fieldLabel(text: string) {
   return <span className="text-xs font-medium text-[var(--orb-muted)]">{text}</span>
 }
 
+/** Deprecated from primary nav; capability now lives in Chat/Templates/ORB Write/Documents. */
 export function OrbInspectionReadinessPanel({
   open,
   onClose,

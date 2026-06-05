@@ -105,11 +105,14 @@ describe('ORB Residential routing', () => {
     assert.match(readApp('app/orb-residential/shift-builder/page.tsx'), /redirect\('\/orb\?station=shift_builder'\)/)
   })
 
-  it('sidebar includes Shift Builder workspace nav', () => {
+  it('sidebar converges Shift Builder into Templates and Chat', () => {
     const sidebar = readApp('components/orb-residential/orb-residential-sidebar.tsx')
-    assert.match(sidebar, /Shift Builder/)
-    assert.match(sidebar, /shift_builder/)
-    assert.match(sidebar, /Plans, handovers and what's missing/)
+    const mainNav = sidebar.slice(
+      sidebar.indexOf('const DESKTOP_MAIN_NAV'),
+      sidebar.indexOf('const DESKTOP_LIBRARY_NAV')
+    )
+    assert.doesNotMatch(mainNav, /label: 'Shift Builder'/)
+    assert.match(readApp('lib/orb/orb-navigation-convergence.ts'), /shift_builder/)
   })
 
   it('/os still renders IndiCare OS', () => {

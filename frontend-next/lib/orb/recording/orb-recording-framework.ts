@@ -15,6 +15,14 @@ export const ORB_RECORDING_FRAMEWORK_VERSION = payload.version
 
 export const ORB_RECORDING_RECORD_TYPES: readonly OrbRecordingRecordType[] = payload.record_types
 
+import { ORB_RECOMMENDED_RECORD_TYPE_IDS } from '@/lib/orb/orb-navigation-convergence'
+
+export { ORB_RECOMMENDED_RECORD_TYPE_IDS }
+
+export function isRecommendedRecordingType(id: string): boolean {
+  return (ORB_RECOMMENDED_RECORD_TYPE_IDS as readonly string[]).includes(id)
+}
+
 export function getOrbRecordingRecordType(
   id: OrbRecordingRecordTypeId | string
 ): OrbRecordingRecordType | undefined {
