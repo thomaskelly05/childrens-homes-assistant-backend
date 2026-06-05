@@ -11,6 +11,7 @@ import {
   ClipboardPen,
   CreditCard,
   FileCheck,
+  FileEdit,
   FileText,
   FolderKanban,
   FolderOpen,
@@ -61,6 +62,7 @@ const NAV_ITEMS = [
   { id: 'templates', label: 'Templates', icon: FileText },
   { id: 'orb_voice', label: 'Voice', icon: Mic },
   { id: 'orb_dictate', label: 'Dictate', icon: PenLine },
+  { id: 'orb_write', label: 'ORB Write', icon: FileEdit },
   { id: 'shift_builder', label: 'Shift Builder', icon: ClipboardPen },
   { id: 'review', label: 'Review', icon: FileCheck },
   { id: 'documents', label: 'Documents', icon: FolderOpen },
@@ -81,6 +83,7 @@ const DESKTOP_MAIN_NAV: Array<{
 }> = [
   { id: 'chat', label: 'Chat', icon: MessageSquare },
   { id: 'orb_dictate', label: 'Dictate', helper: 'Rough notes to records', icon: PenLine, magicNotes: true },
+  { id: 'orb_write', label: 'ORB Write', helper: 'Document studio', icon: FileEdit },
   {
     id: 'shift_builder',
     label: 'Shift Builder',
@@ -135,6 +138,7 @@ const MOBILE_DRAWER_QUICK_NAV: Array<{
   icon: (typeof NAV_ITEMS)[number]['icon']
 }> = [
   { id: 'orb_dictate', label: 'Dictate', helper: 'Rough notes to records', icon: PenLine },
+  { id: 'orb_write', label: 'ORB Write', helper: 'Document studio', icon: FileEdit },
   {
     id: 'shift_builder',
     label: 'Shift Builder',

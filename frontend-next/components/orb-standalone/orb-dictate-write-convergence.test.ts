@@ -95,9 +95,9 @@ describe('ORB Dictate + Write convergence', () => {
     assert.match(write, /data-orb-write-station/)
     assert.match(editor, /data-orb-write-editor/)
     assert.match(toolbar, /data-orb-write-toolbar/)
-    assert.match(write, /data-orb-write-word-count/)
-    assert.match(write, /data-orb-write-export-pdf/)
-    assert.match(write, /data-orb-write-print/)
+    assert.match(toolbar, /data-orb-write-word-count/)
+    assert.match(toolbar, /data-orb-write-export-pdf/)
+    assert.match(toolbar, /data-orb-write-print/)
   })
 
   it('PDF export module excludes UI panels and brain metadata', () => {
@@ -106,9 +106,9 @@ describe('ORB Dictate + Write convergence', () => {
     assert.match(exportMod, /IndiCare Intelligence/)
     assert.doesNotMatch(exportMod, /brain_metadata/)
     assert.doesNotMatch(exportMod, /data-orb-panel/)
-    const write = readComponent('components/orb-write/orb-write-station.tsx')
-    assert.match(write, /data-orb-write-export-pdf/)
-    assert.match(write, /data-orb-write-print/)
+    const toolbar = readComponent('components/orb-write/orb-write-toolbar.tsx')
+    assert.match(toolbar, /data-orb-write-export-pdf/)
+    assert.match(toolbar, /data-orb-write-print/)
   })
 
   it('no child profile selector in dictate workspace', () => {

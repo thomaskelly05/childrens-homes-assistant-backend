@@ -85,6 +85,7 @@ import { OrbReviewPanel } from '@/components/orb-standalone/orb-review-panel'
 import { OrbSkillsPanel } from '@/components/orb-standalone/orb-skills-panel'
 import type { OrbSkillDefinition } from '@/lib/orb/orb-skills-catalog'
 import { OrbDictateStation } from '@/components/orb-standalone/orb-dictate-station'
+import { OrbWriteStandalonePanel } from '@/components/orb-write/orb-write-standalone-panel'
 import { OrbVoiceStation } from '@/components/orb-standalone/orb-voice-station'
 import type { OrbDictateNoteType } from '@/lib/orb/dictate/orb-dictate-types'
 import type { OrbComposerPlusAction } from '@/components/orb-standalone/orb-composer-plus-menu'
@@ -828,6 +829,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
     },
     [openPanel]
   )
+  const openOrbWritePanel = useCallback(() => openPanel('orb_write'), [openPanel])
 
   function openResidentialAccount() {
     if (residentialSurface) {
@@ -1909,6 +1911,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       case 'orb_dictate':
         openOrbDictatePanel()
         break
+      case 'orb_write':
+        openOrbWritePanel()
+        break
       default:
         break
     }
@@ -1958,7 +1963,11 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
     if (!residentialSurface || !mounted) return
     const stationParam = searchParams.get('station')
     const station = (
-      stationParam === 'dictate' ? 'orb_dictate' : stationParam
+      stationParam === 'dictate'
+        ? 'orb_dictate'
+        : stationParam === 'write'
+          ? 'orb_write'
+          : stationParam
     ) as OrbResidentialStationId | null
     const lens = searchParams.get('lens')
     if (station) openResidentialStation(station)
@@ -2877,6 +2886,13 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         onSendToChat={(text) => void sendMessage(text)}
         onOpenOrbVoice={openOrbVoicePanel}
         onOpenTemplates={openTemplatesPanel}
+      />
+      <OrbWriteStandalonePanel
+        open={activePanel === 'orb_write'}
+        onClose={closePanel}
+        onOpenTemplates={openTemplatesPanel}
+        onOpenDictate={() => openOrbDictatePanel()}
+        onOpenSavedOutputs={openSavedOutputsPanel}
       />
     </>
   )

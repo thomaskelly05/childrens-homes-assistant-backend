@@ -17,16 +17,18 @@ function formatBodyWithHeadings(doc: OrbWriteDocument): string {
   return body
 }
 
+function bodyToPrintHtml(body: string): string {
+  if (body.includes('<')) return body
+  return escapeHtml(body).replace(/\n/g, '<br/>')
+}
+
 export function buildOrbWritePrintHtml(doc: OrbWriteDocument): string {
   const date = new Date(doc.updated_at).toLocaleString('en-GB', {
     dateStyle: 'medium',
     timeStyle: 'short'
   })
-  const escapedBody = formatBodyWithHeadings(doc)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/\n/g, '<br/>')
+  const formatted = doc.body.includes('<') ? doc.body : formatBodyWithHeadings(doc)
+  const bodyContent = bodyToPrintHtml(formatted)
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -34,23 +36,30 @@ export function buildOrbWritePrintHtml(doc: OrbWriteDocument): string {
   <meta charset="utf-8"/>
   <title>${escapeHtml(doc.title)}</title>
   <style>
-    body { font-family: Georgia, 'Times New Roman', serif; max-width: 720px; margin: 2rem auto; color: #0f172a; line-height: 1.6; }
-    h1 { font-size: 1.5rem; margin-bottom: 0.25rem; }
-    .meta { font-size: 0.85rem; color: #64748b; margin-bottom: 1.5rem; }
-    .review { font-size: 0.8rem; border-left: 3px solid #2563eb; padding-left: 0.75rem; margin: 1.5rem 0; color: #334155; }
-    .footer { margin-top: 2rem; font-size: 0.75rem; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 0.75rem; }
-    @media print { body { margin: 1cm; } }
+    @page { size: A4; margin: 18mm 20mm; }
+    body { font-family: Georgia, 'Times New Roman', serif; max-width: 210mm; margin: 0 auto; color: #0f172a; line-height: 1.6; background: #fff; }
+    .page { min-height: 257mm; }
+    h1 { font-size: 1.35rem; margin: 0 0 0.5rem; font-weight: 600; }
+    .badge { display: inline-block; font-size: 0.75rem; border: 1px solid #bae6fd; background: #f0f9ff; color: #075985; border-radius: 999px; padding: 0.15rem 0.5rem; margin-right: 0.5rem; }
+    .meta { font-size: 0.8rem; color: #64748b; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid #e2e8f0; }
+    .body { font-size: 0.9rem; min-height: 180mm; }
+  .body h1, .body h2 { font-size: 1rem; font-weight: 600; margin: 1rem 0 0.5rem; }
+    .review { font-size: 0.8rem; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #e2e8f0; color: #334155; }
+    .footer { margin-top: 0.75rem; font-size: 0.7rem; color: #94a3b8; }
+    @media print { body { margin: 0; } }
   </style>
 </head>
 <body>
-  <h1>${escapeHtml(doc.title)}</h1>
-  <div class="meta">
-    <div><strong>Record type:</strong> ${escapeHtml(doc.record_type_label)}</div>
-    <div><strong>Date:</strong> ${escapeHtml(date)}</div>
-  </div>
-  <div class="body">${escapedBody}</div>
-  <div class="review">${escapeHtml(doc.review_required_statement)}</div>
-  <div class="footer">${PDF_FOOTER}</div>
+  <article class="page">
+    <h1>${escapeHtml(doc.title)}</h1>
+    <div class="meta">
+      <span class="badge">${escapeHtml(doc.record_type_label)}</span>
+      <span>${escapeHtml(date)}</span>
+    </div>
+    <div class="body">${bodyContent}</div>
+    <div class="review">${escapeHtml(doc.review_required_statement)}</div>
+    <div class="footer">${PDF_FOOTER}</div>
+  </article>
 </body>
 </html>`
 }
