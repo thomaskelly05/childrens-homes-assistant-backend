@@ -282,3 +282,76 @@ class OrbDictateEditResponse(BaseModel):
     suggested_actions: list[str] = Field(default_factory=list)
     version_label: str
     standalone_boundary: str
+
+
+class OrbDictateAnalyzeRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    input_text: str = Field(..., min_length=1, max_length=120_000)
+    note_type: OrbDictateNoteType = "daily_record"
+    mode: OrbDictateMode | None = None
+
+
+class OrbDictateBrainSuggestion(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    id: str
+    category: Literal["wording", "safeguarding", "missing", "action", "oversight", "evidence"] = "wording"
+    label: str
+    detail: str
+    status: Literal["suggested", "accepted", "rejected", "applied"] = "suggested"
+
+
+class OrbDictateAnalyzeResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    detected_record_type: str
+    safeguarding_concerns: list[str] = Field(default_factory=list)
+    missing_information: list[str] = Field(default_factory=list)
+    professional_wording_suggestions: list[OrbDictateBrainSuggestion] = Field(default_factory=list)
+    recommended_next_actions: list[str] = Field(default_factory=list)
+    possible_outputs: list[str] = Field(default_factory=list)
+    recording_quality_score: Literal["good", "needs_review"] = "needs_review"
+    child_voice_check: str = ""
+    ofsted_evidence_check: str | None = None
+    manager_oversight_note: str | None = None
+    quality_checks: OrbDictateQualityChecks
+    standalone_boundary: str
+
+
+class OrbDictateFinaliseRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    input_text: str = Field(..., min_length=1, max_length=120_000)
+    note_type: OrbDictateNoteType = "daily_record"
+    mode: OrbDictateMode | None = None
+    template_id: str | None = None
+    transcript: str | None = None
+    accepted_suggestions: list[OrbDictateBrainSuggestion] = Field(default_factory=list)
+    adult_edits: str | None = None
+    participants: list[OrbDictateParticipant] = Field(default_factory=list)
+    segments: list[OrbDictateTranscriptSegment] = Field(default_factory=list)
+    include_child_voice: bool = True
+    include_safeguarding: bool = True
+    include_manager_oversight: bool = True
+    include_actions: bool = True
+    include_ofsted_lens: bool = False
+    consent_confirmed: bool | None = None
+    investigation_boundary_confirmed: bool | None = None
+
+
+class OrbDictateFinaliseResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    title: str
+    note_type: OrbDictateNoteType
+    professional_note: str
+    summary: str
+    transcript: str
+    quality_checks: OrbDictateQualityChecks
+    review_required_statement: str
+    standalone_boundary: str
+    governance_notice: str
+    timestamp: str
+    template_id: str | None = None
+    accepted_suggestions: list[OrbDictateBrainSuggestion] = Field(default_factory=list)

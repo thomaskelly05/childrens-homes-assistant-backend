@@ -13,8 +13,10 @@ from fastapi.responses import FileResponse
 from auth.orb_dictate_dependency import require_orb_dictate_access
 from auth.orb_residential_dependencies import require_orb_residential_auth
 from schemas.orb_dictate import (
+    OrbDictateAnalyzeRequest,
     OrbDictateEditRequest,
     OrbDictateExportRequest,
+    OrbDictateFinaliseRequest,
     OrbDictateGenerateRequest,
     OrbDictateNotePatch,
     OrbDictateSaveRequest,
@@ -24,7 +26,9 @@ from services.ai_external_call_governance import governance_ids_from_user
 from services.orb_dictate_edit_service import edit_dictate_document
 from services.orb_dictate_service import (
     STANDALONE_BOUNDARY,
+    analyze_dictate_session,
     export_dictate_note,
+    finalise_dictate_document,
     generate_dictate_note,
     get_templates_payload,
     list_dictate_notes_for_user,
@@ -185,6 +189,40 @@ async def dictate_edit(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception:
         raise HTTPException(status_code=503, detail="Document editing is temporarily unavailable.")
+    return _success(result.model_dump())
+
+
+@router.post("/analyze")
+async def dictate_analyze(
+    payload: OrbDictateAnalyzeRequest,
+    current_user=Depends(require_orb_dictate_access),
+):
+    try:
+        result = analyze_dictate_session(payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception:
+        raise HTTPException(status_code=503, detail="Analysis is temporarily unavailable.")
+    return _success(result.model_dump())
+
+
+@router.post("/finalise")
+async def dictate_finalise(
+    payload: OrbDictateFinaliseRequest,
+    current_user=Depends(require_orb_dictate_access),
+):
+    ids = governance_ids_from_user(current_user)
+    try:
+        result = finalise_dictate_document(
+            payload,
+            provider_id=ids["provider_id"],
+            home_id=ids["home_id"],
+            user_id=ids["user_id"],
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception:
+        raise HTTPException(status_code=503, detail="Finalise is temporarily unavailable.")
     return _success(result.model_dump())
 
 

@@ -16,6 +16,8 @@ import {
 } from 'lucide-react'
 
 import { OrbAppModal } from '@/components/orb-standalone/orb-app-modal'
+import { OrbDictateStudioWorkspace } from '@/components/orb/dictate/OrbDictateStudioWorkspace'
+import { OrbWriteStation } from '@/components/orb-write/orb-write-station'
 import { OrbDictateBoundaryCopy } from '@/components/orb-standalone/orb-dictate-boundary-copy'
 import { OrbDictateMobileExperience } from '@/components/orb-standalone/orb-dictate-mobile-experience'
 import { OrbDictateOutputTypeSelector } from '@/components/orb-standalone/orb-dictate-output-type-selector'
@@ -32,9 +34,12 @@ import {
   OrbDictateTranscriptSegmentsEditor,
   consentReadyForGenerate
 } from '@/components/orb-standalone/orb-dictate-station-extras'
+import type { OrbDictateBrainSuggestion } from '@/lib/orb/dictate/orb-dictate-brain-analysis'
+import { applyAcceptedSuggestionsToDraft } from '@/lib/orb/dictate/orb-dictate-brain-analysis'
 import {
   buildLocalDictateFallback,
   exportOrbDictateNote,
+  finaliseOrbDictateDocument,
   generateOrbDictateNote,
   isAcceptedDictateAudio,
   readLatestOrbVoiceTranscript,
@@ -42,6 +47,13 @@ import {
   saveOrbDictateNote,
   transcribeOrbDictateAudio
 } from '@/lib/orb/dictate/orb-dictate-client'
+import { templateLabelForNoteType, type OrbDictateStudioTemplate } from '@/lib/orb/dictate/orb-dictate-studio-templates'
+import {
+  handoffToOrbWriteDocument,
+  saveOrbWriteHandoff,
+  type OrbWriteHandoffPayload
+} from '@/lib/orb/write/orb-write-handoff'
+import type { OrbWriteDocument } from '@/lib/orb/write/orb-write-types'
 import { emitOrbClientDebug } from '@/lib/orb/orb-client-debug'
 import { orbMicDevLog } from '@/lib/orb/voice/orb-mic-access'
 import type { MediaRecorderCaptureSource } from '@/lib/orb/voice/orb-voice-capture'
@@ -185,7 +197,12 @@ export function OrbDictateStation({
   const [editedNote, setEditedNote] = useState('')
   const [generating, setGenerating] = useState(false)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
-  const [phase, setPhase] = useState<'capture' | 'studio'>('capture')
+  const [phase, setPhase] = useState<'capture' | 'studio' | 'write'>('capture')
+  const [selectedTemplateId, setSelectedTemplateId] = useState('general')
+  const [acceptedSuggestions, setAcceptedSuggestions] = useState<OrbDictateBrainSuggestion[]>([])
+  const [generatedTypes, setGeneratedTypes] = useState<OrbDictateNoteType[]>([])
+  const [writeDocument, setWriteDocument] = useState<OrbWriteDocument | null>(null)
+  const [finalising, setFinalising] = useState(false)
   const [reflectiveMode, setReflectiveMode] = useState(false)
   const [reflectiveIndex, setReflectiveIndex] = useState(0)
   const [reflectiveAnswers, setReflectiveAnswers] = useState<string[]>([])
@@ -310,6 +327,10 @@ export function OrbDictateStation({
       setOutput(null)
       setStatusMessage(null)
       setPhase('capture')
+      setWriteDocument(null)
+      setAcceptedSuggestions([])
+      setGeneratedTypes([])
+      setSelectedTemplateId('general')
       setCaptureMode('none')
       setStartSource('none')
       setSpeechRestartCount(0)
@@ -902,6 +923,81 @@ export function OrbDictateStation({
     }
   }
 
+  function handleTemplateChange(template: OrbDictateStudioTemplate) {
+    setSelectedTemplateId(template.id)
+    setNoteType(template.noteType)
+    if (template.mode) setDictateMode(template.mode)
+  }
+
+  async function handleFinalise() {
+    const input = effectiveInputText
+    if (!input) {
+      setStatusMessage('Add a transcript before finalising.')
+      return
+    }
+    setFinalising(true)
+    setStatusMessage('Preparing document for ORB Write…')
+    try {
+      const segs = segments.length ? segments : textToSegments(input, 'paste', participants)
+      const result = await finaliseOrbDictateDocument({
+        input_text: input,
+        note_type: noteType,
+        mode: dictateMode,
+        template_id: selectedTemplateId,
+        transcript: input,
+        accepted_suggestions: acceptedSuggestions,
+        adult_edits: editedNote || output?.professional_note,
+        participants,
+        segments: segs,
+        consent_confirmed: needsConsent ? consentConfirmed || authorityConsent : undefined,
+        investigation_boundary_confirmed: dictateMode === 'investigation_meeting' ? investigationConfirmed : undefined
+      })
+      const generateResult = output ?? buildLocalDictateFallback(input, noteType)
+      const handoff: OrbWriteHandoffPayload = {
+        transcript: input,
+        template_id: selectedTemplateId,
+        note_type: result.note_type,
+        accepted_suggestions: acceptedSuggestions,
+        adult_edits: result.professional_note,
+        timestamp: result.timestamp,
+        generate_result: {
+          ...generateResult,
+          professional_note: applyAcceptedSuggestionsToDraft(result.professional_note, acceptedSuggestions),
+          note_type: result.note_type,
+          title: result.title,
+          summary: result.summary,
+          quality_checks: result.quality_checks
+        },
+        participants,
+        segments: segs
+      }
+      saveOrbWriteHandoff(handoff)
+      setWriteDocument(handoffToOrbWriteDocument(handoff, templateLabelForNoteType(result.note_type)))
+      setPhase('write')
+      setStatusMessage('Document opened in ORB Write — review before saving or exporting.')
+    } catch {
+      const fallback = output ?? buildLocalDictateFallback(input, noteType)
+      const body = applyAcceptedSuggestionsToDraft(editedNote || fallback.professional_note, acceptedSuggestions)
+      const handoff: OrbWriteHandoffPayload = {
+        transcript: input,
+        template_id: selectedTemplateId,
+        note_type: noteType,
+        accepted_suggestions: acceptedSuggestions,
+        adult_edits: body,
+        timestamp: new Date().toISOString(),
+        generate_result: { ...fallback, professional_note: body },
+        participants,
+        segments: segments.length ? segments : textToSegments(input, 'paste', participants)
+      }
+      saveOrbWriteHandoff(handoff)
+      setWriteDocument(handoffToOrbWriteDocument(handoff, templateLabelForNoteType(noteType)))
+      setPhase('write')
+      setStatusMessage('Opened local draft in ORB Write — reconnect to refine with ORB intelligence.')
+    } finally {
+      setFinalising(false)
+    }
+  }
+
   async function runGenerate(overrides?: Partial<Parameters<typeof generateOrbDictateNote>[0]>) {
     const input = effectiveInputText
     if (!input) {
@@ -949,16 +1045,16 @@ export function OrbDictateStation({
       setEditedNote(result.professional_note)
       if (result.participants?.length) setParticipants(result.participants as OrbDictateParticipant[])
       if (result.segments?.length) setSegments(result.segments as OrbDictateTranscriptSegment[])
-      setPhase('studio')
+      setGeneratedTypes((prev) => (prev.includes(result.note_type) ? prev : [...prev, result.note_type]))
       setOutputTab('professional')
-      setStatusMessage('Professional note ready.')
+      setStatusMessage('Professional note ready — open in ORB Write when you are ready.')
       emitOrbClientDebug({ area: 'dictate', event: 'dictate_generate_success', detail: { noteType: result.note_type } })
     } catch {
       emitOrbClientDebug({ area: 'dictate', event: 'dictate_generate_failed', detail: {} })
       const fallback = buildLocalDictateFallback(input, noteType)
       setOutput(fallback)
       setEditedNote(fallback.professional_note)
-      setPhase('studio')
+      setGeneratedTypes((prev) => (prev.includes(fallback.note_type) ? prev : [...prev, fallback.note_type]))
       setOutputTab('professional')
       setStatusMessage('Generation service unavailable — local draft created.')
     } finally {
@@ -1175,6 +1271,17 @@ export function OrbDictateStation({
     }
   }
 
+  if (phase === 'write' && writeDocument) {
+    return (
+      <OrbWriteStation
+        open={open}
+        onClose={onClose}
+        onBack={() => setPhase('capture')}
+        initialDocument={writeDocument}
+      />
+    )
+  }
+
   return (
     <OrbAppModal
       open={open}
@@ -1186,7 +1293,7 @@ export function OrbDictateStation({
       }
       onClose={onClose}
       panelId="orb-dictate"
-      size={phase === 'studio' ? 'xlarge' : 'wide'}
+      size="xlarge"
       ariaLabel={phase === 'studio' ? 'Dictate Studio' : ORB_DICTATE_PRODUCT_TITLE}
       presentation="workspace"
     >
@@ -1287,201 +1394,77 @@ export function OrbDictateStation({
           </div>
         ) : (
           <div data-orb-desktop-branch="active" data-orb-responsive-mode="desktop" className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <p className="shrink-0 px-1 pb-2 text-sm text-[var(--orb-muted)]" data-orb-dictate-flow-hint>
-          Speak or paste rough notes, choose a record type, then generate professional residential wording to edit,
-          save or export.
-        </p>
-        <OrbDictateBoundaryCopy compact />
-        <div className="grid min-h-0 flex-1 grid-cols-2 gap-4 overflow-hidden">
-          <div className="flex min-h-0 flex-col gap-3 overflow-y-auto pr-1">
-            <section data-orb-dictate-capture-section>
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--orb-muted)]">Capture</h3>
-              <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {([
-                  ['record_note', 'Record note', Mic],
-                  ['record_debrief', 'Record debrief', Mic],
-                  ['paste', 'Paste transcript', FileText],
-                  ['import_voice', 'Import from ORB Voice', Sparkles],
-                  ['template', 'Use template', FileText]
-                ] as const).map(([id, label, Icon]) => (
-                  <button key={id} type="button" data-orb-dictate-start={id} className={`rounded-xl border px-3 py-2.5 text-left text-xs transition ${startMode === id ? 'border-[var(--orb-primary)]/40 bg-[var(--orb-primary-soft)] text-[var(--orb-foreground)]' : 'border-[var(--orb-line)]/60 bg-[var(--orb-surface-elevated)] text-[var(--orb-foreground)] hover:border-[var(--orb-primary)]/30'}`} onClick={() => handleSelectStartMode(id)}>
-                    <Icon className="mb-1 h-4 w-4 text-[var(--orb-primary)]" aria-hidden />
-                    {label}
-                  </button>
-                ))}
-              </div>
-              <button type="button" className="mt-2 text-xs text-[var(--orb-primary)] hover:opacity-80" data-orb-dictate-reflective onClick={() => { setReflectiveMode(true); setReflectiveIndex(0); setReflectiveAnswers([]); setReflectiveDraft(''); setStartMode('paste') }}>
-                Guided reflective debrief (typed, one question at a time)
+        <OrbDictateStudioWorkspace
+          selectedTemplateId={selectedTemplateId}
+          onTemplateChange={handleTemplateChange}
+          noteType={noteType}
+          dictateMode={dictateMode}
+          transcript={transcript}
+          liveTranscript={liveTranscript}
+          onTranscriptChange={(value) => {
+            setTranscript(value)
+            setSegments(textToSegments(value, 'paste', participants))
+          }}
+          segments={segments}
+          onSegmentsChange={(next) => {
+            setSegments(next)
+            setTranscript(segmentsToPlainText(next))
+          }}
+          participants={participants}
+          onParticipantsChange={setParticipants}
+          recordingActive={recordingActive}
+          recordingPaused={recordingPaused}
+          captureStarting={captureStarting}
+          timerSec={timerSec}
+          formatTimer={formatTimer}
+          micStatus={micStatus}
+          orbClass={orbClass}
+          onStartRecording={() => void handleStartSpeechTranscript()}
+          onPauseRecording={handlePauseRecording}
+          onResumeRecording={handleResumeRecording}
+          onStopRecording={handleStopRecording}
+          onClearTranscript={handleClearTranscript}
+          speechStartDisabled={(needsConsent && !consentConfirmed) || !speechStartAvailable || uploadingAudio || finalising}
+          interimText={realtimeInterim || voice.interimTranscript}
+          generating={generating || finalising}
+          onGenerate={() => void runGenerate()}
+          onFinalise={() => void handleFinalise()}
+          canGenerate={effectiveInputText.trim().length > 0}
+          output={output}
+          generatedTypes={generatedTypes}
+          onSelectOutputType={(type) => {
+            setNoteType(type)
+            void runGenerate({ note_type: type })
+          }}
+          onSuggestionsChange={setAcceptedSuggestions}
+          authorityConsent={authorityConsent}
+          investigationConfirmed={investigationConfirmed}
+          draftReviewConfirmed={draftReviewConfirmed}
+          participantsAware={participantsAware}
+          noAutoSubmitConfirmed={noAutoSubmitConfirmed}
+          onAuthorityConsentChange={setAuthorityConsent}
+          onInvestigationChange={setInvestigationConfirmed}
+          onDraftReviewChange={setDraftReviewConfirmed}
+          onParticipantsAwareChange={setParticipantsAware}
+          onNoAutoSubmitChange={setNoAutoSubmitConfirmed}
+          onAudioUpload={(file) => void handleAudioUpload(file)}
+          uploadingAudio={uploadingAudio}
+          uploadFileLabel={uploadFileLabel}
+          uploadError={uploadError}
+        />
+        {output ? (
+          <div className="mt-2 flex shrink-0 flex-wrap gap-2">
+            <button type="button" data-orb-dictate-open-studio className="rounded-xl border border-[var(--orb-line)] bg-[var(--orb-primary-soft)] px-4 py-2 text-sm font-medium text-[var(--orb-primary)]" onClick={() => setPhase('studio')}>
+              Open legacy Dictate Studio
+            </button>
+            {onOpenOrbVoice ? (
+              <button type="button" className="text-xs text-sky-400/90 hover:text-sky-300" onClick={onOpenOrbVoice}>
+                Continue with ORB Voice
               </button>
-            </section>
-
-            {reflectiveMode ? (
-              <section className="rounded-xl border border-[var(--orb-line)]/60 bg-[var(--orb-surface-elevated)] p-3" data-orb-dictate-reflective-step>
-                <p className="text-xs text-[var(--orb-muted)]">Guided reflective debrief · question {reflectiveIndex + 1} of {REFLECTIVE_DEBRIEF_QUESTIONS.length}</p>
-                <p className="mt-1 text-sm font-medium text-[var(--orb-foreground)]">{REFLECTIVE_DEBRIEF_QUESTIONS[reflectiveIndex]}</p>
-                <textarea value={reflectiveDraft} onChange={(e) => setReflectiveDraft(e.target.value)} rows={3} className="mt-2 w-full rounded-lg border border-[var(--orb-line)]/60 bg-[var(--orb-surface)] px-3 py-2 text-sm text-[var(--orb-foreground)]" placeholder="Type your reflection — no microphone needed…" />
-                <button type="button" className="mt-2 rounded-lg bg-[var(--orb-primary-soft)] px-3 py-1.5 text-xs font-medium text-[var(--orb-foreground)]" onClick={advanceReflective}>Next</button>
-              </section>
             ) : null}
-
-            <OrbDictateModeSelect mode={dictateMode} onChange={setDictateMode} />
-            <OrbDictateOutputTypeSelector value={noteType} onChange={setNoteType} />
-            <OrbDictateParticipantsPanel participants={participants} onChange={setParticipants} transcript={effectiveInputText} onImportFromTranscript={() => { const suggested = suggestParticipantsFromText(effectiveInputText); setParticipants(suggested); setStatusMessage(suggested.length ? `Imported ${suggested.length} suggested participant(s) — confirm names and roles.` : 'No introductions detected — add participants manually.') }} />
-            <OrbDictateAudioUpload onFile={(file) => void handleAudioUpload(file)} uploading={uploadingAudio} fileLabel={uploadFileLabel} error={uploadError} />
-            <OrbDictateGovernanceConsent mode={dictateMode} authorityConsent={authorityConsent} investigationConfirmed={investigationConfirmed} draftReviewConfirmed={draftReviewConfirmed} participantsAwareConfirmed={participantsAware} noAutoSubmitConfirmed={noAutoSubmitConfirmed} onAuthorityConsentChange={setAuthorityConsent} onInvestigationChange={setInvestigationConfirmed} onDraftReviewChange={setDraftReviewConfirmed} onParticipantsAwareChange={setParticipantsAware} onNoAutoSubmitChange={setNoAutoSubmitConfirmed} />
-
-            {startMode === 'record_debrief' && dictateMode === 'rough_note' ? (
-              <section className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-100/90" data-orb-dictate-consent>
-                <label className="flex cursor-pointer items-start gap-2"><input type="checkbox" checked={consentConfirmed} onChange={(e) => setConsentConfirmed(e.target.checked)} className="mt-0.5" /><span>I confirm I have authority/consent to record or dictate this note. I understand I must review the output before using it as a formal record.</span></label>
-              </section>
-            ) : null}
-
-            {startMode === 'paste' ? (
-              <section>
-                <textarea data-orb-dictate-paste value={pasteText} onChange={(e) => setPasteText(e.target.value)} rows={4} placeholder="Paste transcript…" className="w-full rounded-xl border border-[var(--orb-line)]/60 bg-[var(--orb-surface)] px-3 py-2 text-sm text-[var(--orb-foreground)]" />
-                <button type="button" className="mt-2 text-xs text-sky-400" onClick={applyPaste}>Use pasted text</button>
-              </section>
-            ) : null}
-
-            <section
-              className="rounded-xl border border-[var(--orb-line)]/60 bg-[var(--orb-surface-elevated)] p-3"
-              data-orb-dictate-transcript-section
-            >
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--orb-muted)]">
-                Transcript
-              </h3>
-              <div className="mt-2 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <GlassOrbMark className={orbClass} variant="avatar" />
-                  <div>
-                    <p className="text-xs font-medium text-[var(--orb-foreground)]">{micStatus}</p>
-                    {developerMode ? (
-                      <div className="text-[10px] text-[var(--orb-muted)]" data-orb-dictate-capture-capability>
-                        {captureCapabilityLines.lines.map((line) => (
-                          <p key={line}>{line}</p>
-                        ))}
-                      </div>
-                    ) : null}
-                    {recordedAudioLabel ? <p className="text-[10px] text-[var(--orb-muted)]" data-orb-dictate-recorded-audio>{recordedAudioLabel}</p> : null}
-                    <p className="text-[10px] text-[var(--orb-muted)]" data-orb-dictate-timer>{formatTimer(timerSec)}</p>
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-1">
-                  {!recordingActive && !captureStarting ? (
-                    <>
-                      <button
-                        type="button"
-                        data-orb-dictate-speech-start
-                        data-orb-dictate-record-start
-                        className="inline-flex items-center gap-1 rounded-full bg-[var(--orb-primary-soft)] px-3 py-1.5 text-xs font-medium text-[var(--orb-foreground)] disabled:cursor-not-allowed disabled:opacity-50"
-                        disabled={(needsConsent && !consentConfirmed) || !speechStartAvailable || uploadingAudio}
-                        title={
-                          !speechStartAvailable
-                            ? DICTATE_REALTIME_NOT_CONFIGURED_MESSAGE
-                            : needsConsent && !consentConfirmed
-                              ? 'Confirm consent before recording'
-                              : 'Start recording'
-                        }
-                        onClick={() => void handleStartSpeechTranscript()}
-                      >
-                        <Mic className="h-3.5 w-3.5" /> Start recording
-                      </button>
-                      {showBrowserSpeechFallback ? (
-                        <button
-                          type="button"
-                          data-orb-dictate-browser-speech-fallback
-                          className="inline-flex items-center gap-1 rounded-full border border-[var(--orb-line)]/60 px-3 py-1.5 text-xs text-[var(--orb-muted)] hover:text-[var(--orb-foreground)] disabled:opacity-50"
-                          disabled={(needsConsent && !consentConfirmed) || uploadingAudio}
-                          onClick={() => void handleBrowserSpeechFallbackClick()}
-                        >
-                          Use browser speech (non-Safari)
-                        </button>
-                      ) : null}
-                      {showMediaFallback ? (
-                        <button
-                          type="button"
-                          data-orb-dictate-audio-fallback
-                          className="inline-flex items-center gap-1 rounded-full border border-[var(--orb-line)]/60 px-3 py-1.5 text-xs text-[var(--orb-muted)] hover:text-[var(--orb-foreground)] disabled:opacity-50"
-                          disabled={(needsConsent && !consentConfirmed) || uploadingAudio}
-                          onClick={() => void handleAudioFallbackClick()}
-                        >
-                          Try audio recording fallback
-                        </button>
-                      ) : null}
-                    </>
-                  ) : captureStarting ? (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-[var(--orb-line)]/60 px-3 py-1.5 text-xs text-[var(--orb-muted)]" data-orb-dictate-capture-starting>
-                      Starting…
-                    </span>
-                  ) : (
-                    <>
-                      {captureMode === 'realtime_transcription' || recorderModeRef.current === 'speech' ? (
-                        recordingPaused ? <button type="button" className="rounded-full p-2 hover:bg-[var(--orb-surface-hover)]" onClick={handleResumeRecording} aria-label="Resume"><Play className="h-4 w-4" /></button> : <button type="button" className="rounded-full p-2 hover:bg-[var(--orb-surface-hover)]" onClick={handlePauseRecording} aria-label="Pause"><Pause className="h-4 w-4" /></button>
-                      ) : null}
-                      <button type="button" className="rounded-full p-2 hover:bg-[var(--orb-surface-hover)]" onClick={handleStopRecording} aria-label="Stop"><Square className="h-4 w-4" /></button>
-                    </>
-                  )}
-                  <button type="button" className="rounded-full p-2 hover:bg-[var(--orb-surface-hover)]" onClick={handleClearTranscript} aria-label="Clear" disabled={uploadingAudio}><Trash2 className="h-4 w-4" /></button>
-                </div>
-              </div>
-              <div className="mt-3 max-h-40 overflow-y-auto rounded-lg border border-[var(--orb-line)]/40 bg-[var(--orb-surface)] p-2 text-sm text-[var(--orb-foreground)]" data-orb-dictate-live-transcript>{liveTranscript || <span className="text-[var(--orb-muted)]">Live transcript appears here…</span>}</div>
-            </section>
-
-            <OrbDictateTranscriptSegmentsEditor segments={segments} participants={participants} onChange={(next) => { setSegments(next); setTranscript(segmentsToPlainText(next)) }} />
-            <button type="button" data-orb-dictate-generate disabled={generating || !effectiveInputText.trim()} className="w-full rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 py-3 text-sm font-semibold text-slate-950 disabled:opacity-60" onClick={() => void runGenerate()}>{generating ? 'Generating…' : 'Generate professional note'}</button>
-            {onOpenOrbVoice ? <button type="button" className="text-xs text-sky-400/90 hover:text-sky-300" onClick={onOpenOrbVoice}>Continue with ORB Voice</button> : null}
           </div>
-
-          <div
-            className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)]"
-            data-orb-dictate-generated-output
-          >
-            <div className="flex shrink-0 items-center justify-between gap-2 border-b border-[var(--orb-line)]/40 px-3 py-2">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--orb-muted)]">
-                Generated output
-              </h3>
-              {output ? (
-                <button
-                  type="button"
-                  data-orb-dictate-ask-orb-improve
-                  className="text-[10px] font-medium text-[var(--orb-primary)] hover:opacity-80"
-                  onClick={handleAskOrbImprove}
-                >
-                  Ask ORB to improve this
-                </button>
-              ) : null}
-            </div>
-            <div className="flex shrink-0 gap-1 border-b border-[var(--orb-line)]/40 p-2">
-              {([['professional', 'Professional note'], ['summary', 'Summary'], ['actions', 'Actions'], ['transcript', 'Transcript'], ['evidence', 'Evidence / Ofsted']] as const).map(([id, label]) => <button key={id} type="button" data-orb-dictate-tab={id} className={`rounded-lg px-2 py-1 text-[10px] sm:text-xs ${outputTab === id ? 'bg-[var(--orb-primary-soft)] text-[var(--orb-foreground)]' : 'text-[var(--orb-muted)] hover:text-[var(--orb-foreground)]'}`} onClick={() => setOutputTab(id)}>{label}</button>)}
-            </div>
-            <div className="min-h-0 flex-1 overflow-y-auto p-3">
-              {!output ? <div className="space-y-3 text-sm text-[var(--orb-muted)]" data-orb-dictate-output-empty><p>Start by recording, pasting a transcript, or uploading audio.</p><p>When ORB has your rough note, it will create professional recording wording here.</p></div> : outputTab === 'professional' ? <textarea data-orb-dictate-output value={editedNote} onChange={(e) => setEditedNote(e.target.value)} rows={16} className="h-full min-h-[12rem] w-full resize-none bg-transparent text-sm text-[var(--orb-foreground)] focus:outline-none" /> : outputTab === 'summary' ? <p className="text-sm text-[var(--orb-foreground)]">{output.summary}</p> : outputTab === 'actions' ? <ul className="list-disc space-y-1 pl-4 text-sm text-[var(--orb-foreground)]">{output.actions.map((a) => <li key={a}>{a}</li>)}</ul> : outputTab === 'transcript' ? <p className="whitespace-pre-wrap text-sm text-[var(--orb-foreground)]">{output.transcript}</p> : <div className="space-y-2 text-sm text-[var(--orb-foreground)]">{output.ofsted_lens ? <p>{output.ofsted_lens}</p> : null}<ul className="space-y-1 text-xs">{Object.entries(output.quality_checks).map(([k, v]) => <li key={k}>{k.replace(/_/g, ' ')}: <span className="text-sky-300">{v}</span></li>)}</ul></div>}
-            </div>
-            {output ? (
-              <div className="flex shrink-0 flex-wrap gap-2 border-t border-[var(--orb-line)]/40 p-2" data-orb-dictate-actions>
-                <button type="button" data-orb-dictate-copy className="inline-flex items-center gap-1 rounded-lg border border-[var(--orb-line)]/50 px-2 py-1 text-xs text-[var(--orb-foreground)] hover:bg-[var(--orb-surface-hover)]" onClick={() => void handleCopy()}><ClipboardCopy className="h-3.5 w-3.5" /> Copy</button>
-                <button type="button" data-orb-dictate-save className="inline-flex items-center gap-1 rounded-lg border border-[var(--orb-line)]/50 px-2 py-1 text-xs text-[var(--orb-foreground)] hover:bg-[var(--orb-surface-hover)]" onClick={() => void handleSave()}><Save className="h-3.5 w-3.5" /> Save</button>
-                <button type="button" data-orb-dictate-export-pdf className="inline-flex items-center gap-1 rounded-lg border border-[var(--orb-line)]/50 px-2 py-1 text-xs text-[var(--orb-foreground)] hover:bg-[var(--orb-surface-hover)]" onClick={() => void handleExport('pdf')}><Download className="h-3.5 w-3.5" /> PDF</button>
-                <button type="button" data-orb-dictate-export-docx className="inline-flex items-center gap-1 rounded-lg border border-[var(--orb-line)]/50 px-2 py-1 text-xs text-[var(--orb-foreground)] hover:bg-[var(--orb-surface-hover)]" onClick={() => void handleExport('docx')}><FileText className="h-3.5 w-3.5" /> DOCX</button>
-                <button type="button" data-orb-dictate-send-chat className="inline-flex items-center gap-1 rounded-lg border border-[var(--orb-line)]/50 px-2 py-1 text-xs text-[var(--orb-foreground)] hover:bg-[var(--orb-surface-hover)]" onClick={handleSendToChat}>Continue in ORB chat</button>
-              </div>
-            ) : (
-              <div className="shrink-0 border-t border-[var(--orb-line)]/40 p-2 text-[10px] text-[var(--orb-muted)]" data-orb-dictate-actions-disabled>
-                Copy, save and export appear after you generate a draft.
-              </div>
-            )}
-          </div>
-        </div>
-
-        {output ? <button type="button" data-orb-dictate-open-studio className="mt-2 w-full rounded-xl border border-[var(--orb-line)] bg-[var(--orb-primary-soft)] py-2 text-sm font-medium text-[var(--orb-primary)]" onClick={() => setPhase('studio')}>Open Dictate Studio</button> : null}
-        <footer className="mt-3 shrink-0 space-y-2 border-t border-[var(--orb-line)]/30 pt-3 text-[10px] text-[var(--orb-muted)]">
-          <OrbDictateBoundaryCopy />
-          <p>{ORB_DICTATE_GOVERNANCE_COPY.draft}</p>
-          <p>{ORB_DICTATE_GOVERNANCE_COPY.recording}</p>
-          <p>{ORB_DICTATE_GOVERNANCE_COPY.saveWording}</p>
-          <p>{ORB_DICTATE_GOVERNANCE_COPY.retention}</p>
-          {statusMessage ? <p className="text-xs text-[var(--orb-primary)]" role="status">{statusMessage}</p> : null}
-        </footer>
+        ) : null}
+        {statusMessage ? <p className="mt-2 shrink-0 text-xs text-[var(--orb-primary)]" role="status">{statusMessage}</p> : null}
           </div>
         )}
       </div>

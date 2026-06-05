@@ -6,6 +6,8 @@ import type {
 } from '@/lib/orb/dictate/orb-dictate-speaker'
 import type { OrbDictateEditMode } from '@/lib/orb/dictate/orb-dictate-studio-actions'
 import { buildLocalDictateBrainMetadata } from '@/lib/orb/dictate/orb-dictate-brain-metadata'
+import type { OrbDictateBrainAnalysis } from '@/lib/orb/dictate/orb-dictate-brain-analysis'
+import type { OrbDictateBrainSuggestion } from '@/lib/orb/dictate/orb-dictate-brain-analysis'
 import type {
   OrbDictateGenerateResult,
   OrbDictateNoteType,
@@ -148,6 +150,74 @@ function serializeGeneratePayload(payload: GenerateOrbDictatePayload): Record<st
       needs_review: s.needs_review
     }))
   }
+}
+
+export async function analyzeOrbDictateSession(payload: {
+  input_text: string
+  note_type: OrbDictateNoteType
+  mode?: OrbDictateMode
+}): Promise<OrbDictateBrainAnalysis> {
+  const json = await authFetch<unknown>(DICTATE_BASE + '/analyze', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+  return parseEnvelope<OrbDictateBrainAnalysis>(json)
+}
+
+export type OrbDictateFinaliseResult = {
+  title: string
+  note_type: OrbDictateNoteType
+  professional_note: string
+  summary: string
+  transcript: string
+  quality_checks: OrbDictateQualityChecks
+  review_required_statement: string
+  standalone_boundary: string
+  governance_notice: string
+  timestamp: string
+  template_id?: string | null
+  accepted_suggestions: OrbDictateBrainSuggestion[]
+}
+
+export async function finaliseOrbDictateDocument(payload: {
+  input_text: string
+  note_type: OrbDictateNoteType
+  mode?: OrbDictateMode
+  template_id?: string
+  transcript?: string
+  accepted_suggestions?: OrbDictateBrainSuggestion[]
+  adult_edits?: string
+  participants?: OrbDictateParticipant[]
+  segments?: OrbDictateTranscriptSegment[]
+  consent_confirmed?: boolean
+  investigation_boundary_confirmed?: boolean
+}): Promise<OrbDictateFinaliseResult> {
+  const json = await authFetch<unknown>(DICTATE_BASE + '/finalise', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      ...payload,
+      participants: payload.participants?.map((p) => ({
+        id: p.id,
+        name: p.name,
+        role: p.role,
+        organisation: p.organisation,
+        initials: p.initials,
+        introduced_by: p.introducedBy ?? 'unknown'
+      })),
+      segments: payload.segments?.map((s) => ({
+        id: s.id,
+        speaker_id: s.speaker_id,
+        speaker_label: s.speaker_label,
+        text: s.text,
+        source: s.source,
+        is_direct_quote: s.is_direct_quote,
+        needs_review: s.needs_review
+      }))
+    })
+  })
+  return parseEnvelope<OrbDictateFinaliseResult>(json)
 }
 
 export async function generateOrbDictateNote(
