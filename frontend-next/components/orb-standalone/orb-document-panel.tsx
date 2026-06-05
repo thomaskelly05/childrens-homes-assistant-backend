@@ -22,6 +22,7 @@ import {
   documentIntelligenceDisplayTitle,
   exportDocumentIntelligenceMarkdown,
   ORB_DOCUMENT_BOUNDARY_LINES,
+  RESIDENTIAL_DOCUMENT_CROSS_ACTIONS,
   RESIDENTIAL_FIRST_CLASS_LENSES,
   type OrbDocumentIntelligenceResult,
   type OrbDocumentLens
@@ -61,6 +62,8 @@ export function OrbDocumentPanel({
   activeProjectId,
   activeProjectName,
   onReuseInChat,
+  onOpenOrbWrite,
+  onOpenTemplates,
   residentialSurface = false,
   initialLens = 'explain',
   initialRecordTypeId
@@ -79,6 +82,8 @@ export function OrbDocumentPanel({
   activeProjectId?: string
   activeProjectName?: string
   onReuseInChat?: (prompt: string) => void
+  onOpenOrbWrite?: () => void
+  onOpenTemplates?: () => void
   residentialSurface?: boolean
   initialLens?: OrbDocumentLens
   initialRecordTypeId?: OrbRecordingRecordTypeId | string
@@ -517,7 +522,7 @@ export function OrbDocumentPanel({
           <div className="flex flex-wrap gap-1.5" role="listbox" aria-label="Document lenses">
             {standardLenses.map((item) => (
               <button
-                key={item.lens}
+                key={`${item.lens}-${item.label}`}
                 type="button"
                 role="option"
                 aria-selected={selectedLens === item.lens}
@@ -551,6 +556,23 @@ export function OrbDocumentPanel({
           ORB analyses only what you paste or upload. It does not auto-update statutory guidance or make regulatory
           judgements.
         </OrbPremiumTrustStrip>
+
+        <div className="flex flex-wrap gap-2" data-orb-document-cross-actions>
+          {RESIDENTIAL_DOCUMENT_CROSS_ACTIONS.map((action) => (
+            <button
+              key={action.id}
+              type="button"
+              className="orb-doc-secondary-btn rounded-xl border px-3 py-2.5 text-xs font-semibold"
+              data-orb-document-cross-action={action.id}
+              onClick={() => {
+                if (action.id === 'use_write') onOpenOrbWrite?.()
+                if (action.id === 'use_template') onOpenTemplates?.()
+              }}
+            >
+              {action.label}
+            </button>
+          ))}
+        </div>
 
         <div className="flex flex-wrap gap-2">
           <OrbPremiumButton

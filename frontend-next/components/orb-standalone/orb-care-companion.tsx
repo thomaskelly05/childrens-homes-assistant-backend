@@ -116,6 +116,13 @@ import {
   OrbRecordProperlyPanel,
   OrbSafeguardingThinkingPanel
 } from '@/components/orb-standalone/orb-practice-panels'
+import { OrbConvergedPanelRedirect } from '@/components/orb-standalone/orb-converged-panel-redirect'
+import {
+  isDeprecatedPrimaryNavPanel,
+  practicePanelToDeprecatedId,
+  resolveConvergedNavigation,
+  type OrbDeprecatedPrimaryNavPanelId
+} from '@/lib/orb/orb-navigation-convergence'
 import { OrbHueMark } from '@/components/orb-standalone/orb-hue-logo'
 import { useOrbAppearance } from '@/components/orb-standalone/use-orb-appearance'
 import { OrbUiAuditBootstrap } from '@/components/orb-standalone/orb-ui-audit-bootstrap'
@@ -228,7 +235,6 @@ import {
   runOrbDocumentIntelligence,
   runStandaloneOrbAction,
   sendStandaloneOrbMessageStream,
-  type OrbDocumentLens,
   STANDALONE_ORB_EMPTY_ANSWER_MESSAGE,
   STANDALONE_ORB_MODES,
   type StandaloneOrbAgentSuggestion,
@@ -246,7 +252,8 @@ import {
   documentIntelligenceDisplayTitle,
   formatDocumentIntelligenceMarkdown,
   RESIDENTIAL_FIRST_CLASS_LENSES,
-  type OrbDocumentIntelligenceResult
+  type OrbDocumentIntelligenceResult,
+  type OrbDocumentLens
 } from '@/lib/orb/document-intelligence'
 
 /** Push-to-talk voice with reflective pacing — no passive listening. */
@@ -593,6 +600,10 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   const [documentImportRecordTypeId, setDocumentImportRecordTypeId] = useState<string | undefined>()
   const [documentImportText, setDocumentImportText] = useState<string | undefined>()
   const [documentImportLens, setDocumentImportLens] = useState<OrbDocumentLens | undefined>()
+  const [templatesImportSearch, setTemplatesImportSearch] = useState('')
+  const [convergenceRedirectPanel, setConvergenceRedirectPanel] =
+    useState<OrbDeprecatedPrimaryNavPanelId | null>(null)
+  const [convergenceNotice, setConvergenceNotice] = useState<string | null>(null)
   const [shiftImportNotes, setShiftImportNotes] = useState<string | undefined>()
   const [shiftImportFocus, setShiftImportFocus] = useState<
     import('@/lib/orb/shift-builder').OrbShiftBuilderFocus | undefined
@@ -812,7 +823,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   const openAgentsPanel = useCallback(() => openPanel('agents'), [openPanel])
   const openKnowledgeLibrary = useCallback(() => openPanel('knowledge'), [openPanel])
   const openReviewPanel = useCallback(() => openPanel('review'), [openPanel])
-  const openPracticePanel = useCallback(
+  const openPracticePanelDirect = useCallback(
     (panel: OrbResidentialPracticePanelId) => openPanel(panel),
     [openPanel]
   )
@@ -861,6 +872,13 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       if (action === 'document') {
         setDocumentImportRecordTypeId(recordType.id)
         openDocumentsPanel()
+        return
+      }
+      if (action === 'chat') {
+        setMessage(
+          `Help me create a ${recordType.label.toLowerCase()} using this structure:\n\n${recordType.purpose}`
+        )
+        inputRef.current?.focus()
       }
     },
     [closePanel, openDocumentsPanel, openOrbDictatePanel, openOrbWritePanel]
@@ -1917,9 +1935,57 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
     inputRef.current?.focus()
   }
 
-  function openResidentialStation(station: OrbResidentialStationId) {
-    switch (station) {
+  function applyConvergenceRoute(
+    panelId: OrbDeprecatedPrimaryNavPanelId,
+    opts?: { showRedirectCard?: boolean }
+  ) {
+    const route = resolveConvergedNavigation(panelId)
+    if (opts?.showRedirectCard) {
+      setConvergenceRedirectPanel(panelId)
+      return
+    }
+    setConvergenceNotice(route.message)
+    const destination = route.destination
+    if (destination.kind === 'chat') {
+      if (destination.mode) handleModeChange(destination.mode)
+      closePanel()
+      void sendMessage(destination.prompt)
+      inputRef.current?.focus()
+      return
+    }
+    if (route.documentLens) setDocumentImportLens(route.documentLens)
+    if (route.templatesSearch) setTemplatesImportSearch(route.templatesSearch)
+    if (route.templatesRecordTypeId) setDocumentImportRecordTypeId(route.templatesRecordTypeId)
+    switch (destination.station) {
+      case 'templates':
+        openTemplatesPanel()
+        break
+      case 'orb_write':
+        openOrbWritePanel()
+        break
+      case 'documents':
+        openDocumentsPanel()
+        break
+      case 'orb_dictate':
+        openOrbDictatePanel()
+        break
+      default:
+        break
+    }
+    setSidebarOpen(false)
+  }
+
+  function openResidentialStation(station: OrbResidentialStationId | string) {
+    if (residentialSurface && isDeprecatedPrimaryNavPanel(station)) {
+      applyConvergenceRoute(station, { showRedirectCard: true })
+      return
+    }
+    switch (station as OrbResidentialStationId) {
       case 'review':
+        if (residentialSurface) {
+          applyConvergenceRoute('review', { showRedirectCard: true })
+          break
+        }
         openReviewPanel()
         break
       case 'skills':
@@ -1929,6 +1995,10 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         openTemplatesPanel()
         break
       case 'knowledge':
+        if (residentialSurface) {
+          applyConvergenceRoute('knowledge', { showRedirectCard: true })
+          break
+        }
         openKnowledgeLibrary()
         break
       case 'saved':
@@ -1938,6 +2008,10 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         openDocumentsPanel()
         break
       case 'shift_builder':
+        if (residentialSurface) {
+          applyConvergenceRoute('shift_builder', { showRedirectCard: true })
+          break
+        }
         openShiftBuilderPanel()
         break
       case 'orb_voice':
@@ -1950,9 +2024,25 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         openOrbWritePanel()
         break
       default:
+        if (
+          residentialSurface &&
+          (station === 'inspection_readiness' ||
+            station === 'safeguarding_thinking' ||
+            station === 'record_properly')
+        ) {
+          applyConvergenceRoute(station as OrbDeprecatedPrimaryNavPanelId, { showRedirectCard: true })
+        }
         break
     }
     setSidebarOpen(false)
+  }
+
+  function openPracticePanel(panel: OrbResidentialPracticePanelId) {
+    if (residentialSurface) {
+      applyConvergenceRoute(practicePanelToDeprecatedId(panel), { showRedirectCard: true })
+      return
+    }
+    openPracticePanelDirect(panel)
   }
 
   function handleComposerPlusAction(action: OrbComposerPlusAction) {
@@ -1971,6 +2061,10 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         openTemplatesPanel()
         break
       case 'knowledge':
+        if (residentialSurface) {
+          applyConvergenceRoute('knowledge')
+          break
+        }
         openKnowledgeLibrary()
         break
       case 'orb_voice':
@@ -1993,6 +2087,12 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         break
     }
   }
+
+  useEffect(() => {
+    if (!convergenceNotice) return
+    const timer = window.setTimeout(() => setConvergenceNotice(null), 8000)
+    return () => window.clearTimeout(timer)
+  }, [convergenceNotice])
 
   useEffect(() => {
     if (!residentialSurface || !mounted) return
@@ -2347,7 +2447,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
 
     try {
       const result = await runOrbDocumentIntelligence({
-        lens,
+        lens: lens as import('@/lib/orb/standalone-client').OrbDocumentLens,
         document_text: doc.sourceId ? undefined : doc.text,
         document_source_id: doc.sourceId || undefined,
         document_title: doc.title,
@@ -2728,7 +2828,11 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       />
       <OrbTemplatesPanel
         open={activePanel === 'templates'}
-        onClose={closePanel}
+        onClose={() => {
+          setTemplatesImportSearch('')
+          closePanel()
+        }}
+        initialSearch={templatesImportSearch}
         residentialSurface={residentialSurface}
         sessionReady={orbSessionReady}
         onUseTemplate={(prompt) => {
@@ -2825,12 +2929,15 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         open={activePanel === 'documents'}
         onClose={() => {
           setDocumentImportRecordTypeId(undefined)
+          setDocumentImportLens(undefined)
           closePanel()
         }}
         residentialSurface={residentialSurface}
         initialText={documentImportText}
         initialLens={documentImportLens}
         initialRecordTypeId={documentImportRecordTypeId}
+        onOpenOrbWrite={openOrbWritePanel}
+        onOpenTemplates={openTemplatesPanel}
         projects={workspace.projects}
         activeProjectId={workspace.activeProjectId}
         activeProjectName={activeProject?.name}
@@ -2978,6 +3085,17 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       ) : null}
 
       <OrbBillingModal open={activePanel === 'billing'} onClose={closePanel} />
+      {convergenceRedirectPanel ? (
+        <OrbConvergedPanelRedirect
+          panelId={convergenceRedirectPanel}
+          onContinue={() => {
+            const panel = convergenceRedirectPanel
+            setConvergenceRedirectPanel(null)
+            applyConvergenceRoute(panel)
+          }}
+          onDismiss={() => setConvergenceRedirectPanel(null)}
+        />
+      ) : null}
       {!residentialSurface ? renderResidentialCorePanels() : null}
       <OrbStandaloneSettingsPanel
         open={activePanel === 'settings'}
@@ -3362,6 +3480,16 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           {draftNotice ? (
             <p className="mx-3 mt-3 rounded-2xl border border-amber-300/30 bg-amber-300/10 px-4 py-2 text-sm text-amber-50 md:mx-5" role="status">
               {draftNotice}
+            </p>
+          ) : null}
+
+          {convergenceNotice ? (
+            <p
+              className="mx-3 mt-3 rounded-2xl border border-sky-300/30 bg-sky-300/10 px-4 py-2 text-sm text-[var(--orb-foreground)] md:mx-5"
+              role="status"
+              data-orb-convergence-notice
+            >
+              {convergenceNotice}
             </p>
           ) : null}
 

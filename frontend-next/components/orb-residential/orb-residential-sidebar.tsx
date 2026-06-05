@@ -7,10 +7,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  ClipboardList,
-  ClipboardPen,
   CreditCard,
-  FileCheck,
   FileEdit,
   FileText,
   FolderKanban,
@@ -23,7 +20,6 @@ import {
   Save,
   Search,
   Settings,
-  Shield,
   Sparkles,
   User,
   X
@@ -31,10 +27,7 @@ import {
 
 import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
 import { OrbProjectMemoryModal } from '@/components/orb-residential/orb-project-memory-modal'
-import {
-  ORB_RESIDENTIAL_TAGLINE,
-  residentialModeDisplayLabel
-} from '@/lib/orb/orb-residential-copy'
+import { ORB_RESIDENTIAL_TAGLINE } from '@/lib/orb/orb-residential-copy'
 import type { StandaloneOrbMode } from '@/lib/orb/standalone-client'
 import {
   ORB_SIDEBAR_PROJECTS_COLLAPSED_KEY,
@@ -63,17 +56,17 @@ const NAV_ITEMS = [
   { id: 'orb_voice', label: 'Voice', icon: Mic },
   { id: 'orb_dictate', label: 'Dictate', icon: PenLine },
   { id: 'orb_write', label: 'ORB Write', icon: FileEdit },
-  { id: 'shift_builder', label: 'Shift Builder', icon: ClipboardPen },
-  { id: 'review', label: 'Review', icon: FileCheck },
+  { id: 'shift_builder', label: 'Shift Builder', icon: FileText },
+  { id: 'review', label: 'Review', icon: FileText },
   { id: 'documents', label: 'Documents & Guidance', icon: FolderOpen },
   { id: 'saved', label: 'Saved outputs', icon: Save }
 ] as const
 
-export type OrbResidentialPracticePanelId =
-  | 'inspection_readiness'
-  | 'safeguarding_thinking'
-  | 'record_properly'
+import type { OrbResidentialPracticePanelId } from '@/lib/orb/orb-navigation-convergence'
 
+export type { OrbResidentialPracticePanelId }
+
+/** Visible primary navigation — converged features live in Chat/Templates/ORB Write/Documents. */
 const DESKTOP_MAIN_NAV: Array<{
   id: (typeof NAV_ITEMS)[number]['id'] | 'chat'
   label: string
@@ -83,43 +76,8 @@ const DESKTOP_MAIN_NAV: Array<{
 }> = [
   { id: 'chat', label: 'Chat', icon: MessageSquare },
   { id: 'orb_dictate', label: 'Dictate', helper: 'Rough notes to records', icon: PenLine, magicNotes: true },
-  { id: 'orb_write', label: 'ORB Write', helper: 'Document studio', icon: FileEdit },
-  {
-    id: 'shift_builder',
-    label: 'Shift Builder',
-    helper: 'Handover and shift plan',
-    icon: ClipboardPen
-  },
-  { id: 'orb_voice', label: 'Voice', icon: Mic },
-  { id: 'documents', label: 'Documents & Guidance', helper: 'Guidance and home documents', icon: FolderOpen },
-  { id: 'saved', label: 'Saved Outputs', icon: Save }
-]
-
-const DESKTOP_PRACTICE_NAV: Array<{
-  id: (typeof NAV_ITEMS)[number]['id'] | OrbResidentialPracticePanelId
-  label: string
-  icon: (typeof NAV_ITEMS)[number]['icon']
-  practicePanel?: OrbResidentialPracticePanelId
-}> = [
-  { id: 'review', label: 'Review', icon: FileCheck },
-  {
-    id: 'inspection_readiness',
-    label: residentialModeDisplayLabel('Ofsted Lens'),
-    icon: ClipboardList,
-    practicePanel: 'inspection_readiness'
-  },
-  {
-    id: 'safeguarding_thinking',
-    label: 'Safeguarding Thinking',
-    icon: Shield,
-    practicePanel: 'safeguarding_thinking'
-  },
-  {
-    id: 'record_properly',
-    label: 'Record This Properly',
-    icon: FileCheck,
-    practicePanel: 'record_properly'
-  }
+  { id: 'orb_voice', label: 'Voice', helper: 'Hands-free copilot', icon: Mic },
+  { id: 'orb_write', label: 'ORB Write', helper: 'Document studio', icon: FileEdit }
 ]
 
 const DESKTOP_LIBRARY_NAV: Array<{
@@ -130,30 +88,33 @@ const DESKTOP_LIBRARY_NAV: Array<{
 }> = [
   { id: 'templates', label: 'Templates', helper: 'Recording library', icon: FileText },
   {
-    id: 'knowledge',
-    label: 'Knowledge Library',
-    helper: 'Same as Documents — governance view',
-    icon: Library
-  }
+    id: 'documents',
+    label: 'Documents & Guidance',
+    helper: 'Policies, guidance and document analyser',
+    icon: FolderOpen
+  },
+  { id: 'saved', label: 'Saved Outputs', helper: 'Your records and drafts', icon: Save }
+]
+
+const COLLAPSED_RAIL_STATIONS: Array<(typeof NAV_ITEMS)[number]['id']> = [
+  'orb_dictate',
+  'templates',
+  'documents'
 ]
 
 const MOBILE_DRAWER_QUICK_NAV: Array<{
-  id: (typeof NAV_ITEMS)[number]['id'] | 'projects'
+  id: (typeof NAV_ITEMS)[number]['id'] | 'projects' | 'chat'
   label: string
   helper?: string
   icon: (typeof NAV_ITEMS)[number]['icon']
 }> = [
+  { id: 'chat', label: 'Chat', icon: MessageSquare },
   { id: 'orb_dictate', label: 'Dictate', helper: 'Rough notes to records', icon: PenLine },
+  { id: 'orb_voice', label: 'Voice', helper: 'Hands-free copilot', icon: Mic },
   { id: 'orb_write', label: 'ORB Write', helper: 'Document studio', icon: FileEdit },
-  {
-    id: 'shift_builder',
-    label: 'Shift Builder',
-    helper: "Plans, handovers and what's missing",
-    icon: ClipboardPen
-  },
-  { id: 'orb_voice', label: 'Voice', icon: Mic },
+  { id: 'templates', label: 'Templates', helper: 'Recording library', icon: FileText },
   { id: 'documents', label: 'Documents & Guidance', icon: FolderOpen },
-  { id: 'saved', label: 'Saved Outputs', icon: Save },
+  { id: 'saved', label: 'Saved Outputs', helper: 'Your records and drafts', icon: Save },
   { id: 'projects', label: 'Projects', icon: FolderKanban }
 ]
 
@@ -515,7 +476,9 @@ export function OrbResidentialSidebar({
           <FolderKanban className="h-4 w-4 shrink-0" />
         </SidebarIconButton>
         <div className="mt-auto flex w-full flex-col gap-0.5 px-1">
-          {NAV_ITEMS.slice(0, 3).map((station) => {
+          {COLLAPSED_RAIL_STATIONS.map((stationId) => {
+            const station = NAV_ITEMS.find((item) => item.id === stationId)
+            if (!station) return null
             const Icon = station.icon
             return (
               <SidebarIconButton
@@ -637,6 +600,10 @@ export function OrbResidentialSidebar({
                   type="button"
                   onClick={() => {
                     onClose?.()
+                    if (item.id === 'chat') {
+                      onNewChat(workspace.activeProjectId)
+                      return
+                    }
                     if (item.id === 'saved') {
                       onOpenSavedOutputs?.()
                       return
@@ -856,34 +823,6 @@ export function OrbResidentialSidebar({
                     </li>
                   )
                 })}
-              </ul>
-            </div>
-
-            <div data-orb-sidebar-section="practice">
-              <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--orb-muted)]">
-                Practice
-              </p>
-              <ul className="mt-1 space-y-0.5" data-orb-sidebar-practice>
-                {DESKTOP_PRACTICE_NAV.map((entry) => (
-                  <DesktopSidebarNavButton
-                    key={entry.id}
-                    label={entry.label}
-                    icon={entry.icon}
-                    stationId={entry.practicePanel ? undefined : (entry.id as OrbResidentialStationId)}
-                    onClick={() => {
-                      if (entry.practicePanel) {
-                        onOpenPracticePanel?.(entry.practicePanel)
-                        return
-                      }
-                      openStation(entry.id as OrbResidentialStationId)
-                    }}
-                    dataOrb={
-                      entry.practicePanel
-                        ? `orb-sidebar-practice-${entry.practicePanel}`
-                        : `orb-sidebar-station-${entry.id}`
-                    }
-                  />
-                ))}
               </ul>
             </div>
 

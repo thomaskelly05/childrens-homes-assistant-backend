@@ -31,6 +31,7 @@ import {
 import { runOrbShiftBuilder } from '@/lib/orb/standalone-client'
 import type { StandaloneProject } from '@/lib/orb/standalone-local-store'
 
+/** Deprecated from primary nav; capability now lives in Chat/Templates/ORB Write/Dictate. */
 export function OrbShiftBuilderPanel({
   open,
   onClose,

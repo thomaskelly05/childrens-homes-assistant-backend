@@ -57,18 +57,18 @@ const TEMPLATE_CATEGORY_LABELS: Record<string, string> = {
 
 
 const FEATURED_TEMPLATE_TITLES = [
-  'Safeguarding concern record',
-  'Missing from care return conversation',
-  'Exploitation risk screening',
-  'Contextual safeguarding assessment',
-  'LADO referral preparation',
-  'Daily log rewrite',
-  'Incident debrief',
-  'Physical intervention/restraint record',
-  'Reg 44 visit summary',
-  'Reg 45 quality review',
-  'Staff supervision reflection',
-  'Manager oversight note'
+  'Handover',
+  'Shift plan',
+  'Safeguarding concern',
+  'Inspection readiness',
+  'Reg 44',
+  'Reg 45',
+  'Record this properly',
+  'Incident record',
+  'Manager summary',
+  'Action plan',
+  'Chronology entry',
+  'Daily log rewrite'
 ] as const
 
 function isFeaturedTemplate(title: string): boolean {
@@ -98,7 +98,8 @@ export function OrbTemplatesPanel({
   onUseTemplate,
   onRecordingAction,
   residentialSurface = false,
-  sessionReady = true
+  sessionReady = true,
+  initialSearch = ''
 }: {
   open: boolean
   onClose: () => void
@@ -106,10 +107,11 @@ export function OrbTemplatesPanel({
   onRecordingAction?: (action: OrbRecordingLibraryAction, recordType: OrbRecordingRecordType) => void
   residentialSurface?: boolean
   sessionReady?: boolean
+  initialSearch?: string
 }) {
   const [categories, setCategories] = useState<string[]>(FALLBACK_CATEGORIES)
   const [category, setCategory] = useState('')
-  const [search, setSearch] = useState('')
+  const [search, setSearch] = useState(initialSearch)
   const [templates, setTemplates] = useState<OrbTemplateSummary[]>([])
   const [selected, setSelected] = useState<OrbTemplateSummary | null>(null)
   const [loading, setLoading] = useState(false)
@@ -148,8 +150,9 @@ export function OrbTemplatesPanel({
 
   useEffect(() => {
     if (!open) return
+    if (initialSearch) setSearch(initialSearch)
     void load()
-  }, [open, load])
+  }, [open, load, initialSearch])
 
   function buildImmediatePrompt(template: OrbTemplateSummary): string {
     return templateImmediatePrompt(template.title, {

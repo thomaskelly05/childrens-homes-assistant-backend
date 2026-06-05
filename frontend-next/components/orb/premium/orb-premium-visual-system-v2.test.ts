@@ -26,37 +26,25 @@ describe('ORB Premium Visual System v2', () => {
     assert.match(appearance, /data-orb-visual-system','v2'/)
   })
 
-  it('sidebar renders all required residential nav items', () => {
+  it('sidebar renders simplified residential nav items', () => {
     const sidebar = read('components/orb-residential/orb-residential-sidebar.tsx')
-    for (const id of [
-      'orb_dictate',
-      'orb_write',
-      'shift_builder',
-      'orb_voice',
-      'documents',
-      'saved',
-      'templates',
-      'knowledge',
-      'review'
-    ]) {
+    for (const id of ['orb_dictate', 'orb_write', 'orb_voice', 'documents', 'saved', 'templates']) {
       assert.match(sidebar, new RegExp(`'${id}'`))
     }
-    assert.match(sidebar, /inspection_readiness/)
-    assert.match(sidebar, /safeguarding_thinking/)
-    assert.match(sidebar, /record_properly/)
     assert.match(sidebar, /data-orb-sidebar-account-card/)
+    assert.doesNotMatch(sidebar, /DESKTOP_PRACTICE_NAV/)
   })
 
   it('chat home renders premium suggestion cards and atmosphere', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
-    const copy = read('lib/orb/orb-residential-copy.ts')
+    const copy = read('lib/orb/orb-navigation-convergence.ts')
     assert.match(companion, /data-orb-starter-cards/)
     assert.match(companion, /data-orb-starter-card/)
     assert.match(companion, /orb-v2-atmosphere/)
-    assert.match(copy, /Write a daily log/)
-    assert.match(copy, /Turn rough notes into a record/)
-    assert.match(copy, /Review an incident/)
-    assert.match(copy, /Ask a safeguarding question/)
+    assert.match(copy, /Create a handover \/ shift plan/)
+    assert.match(copy, /Review written practice/)
+    assert.match(copy, /Think through a safeguarding concern/)
+    assert.match(copy, /Record this properly/)
   })
 
   it('composer still sends messages without exposing internal labels', () => {

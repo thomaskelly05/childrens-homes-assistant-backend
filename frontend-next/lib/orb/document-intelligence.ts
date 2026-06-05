@@ -12,29 +12,40 @@ export const RESIDENTIAL_FIRST_CLASS_LENSES: Array<{
   label: string
   description?: string
   hero?: boolean
+  converged?: boolean
 }> = [
-  { lens: 'summary', label: 'Summary', description: 'Concise orientation' },
-  { lens: 'explain', label: 'Explain', description: 'Plain-English meaning' },
-  { lens: 'actions', label: 'Action plan', description: 'Draft follow-up actions' },
+  { lens: 'reg44', label: 'Analyse Reg 44 report', description: 'Visitor report themes and actions', hero: true, converged: true },
+  { lens: 'summary', label: 'Analyse Statement of Purpose', description: 'Summarise purpose and practice intent', converged: true },
+  { lens: 'actions', label: 'Extract action plan', description: 'Draft follow-up actions', hero: true, converged: true },
+  { lens: 'summary', label: 'Summarise recent changes', description: 'Concise orientation on what changed', converged: true },
+  { lens: 'explain', label: 'Create easy-read summary', description: 'Plain-English meaning', hero: true, converged: true },
+  { lens: 'ofsted', label: 'Check against Quality Standards', description: 'Evidence and experience thinking', converged: true },
+  { lens: 'ofsted', label: 'Inspection readiness', description: 'Prepare inspection evidence thinking', hero: true, converged: true },
+  { lens: 'safeguarding', label: 'Safeguarding lens', description: 'Structured safeguarding reflection', converged: true },
+  {
+    lens: 'recording_quality',
+    label: 'Recording requirements',
+    description: 'Child-centred recording lens',
+    converged: true
+  },
   {
     lens: 'policy_card',
     label: 'Policy Card',
     description: 'Turn a policy into shift-ready guidance',
     hero: true
   },
-  { lens: 'safeguarding', label: 'Safeguarding lens', description: 'Structured safeguarding reflection' },
-  { lens: 'ofsted', label: 'Ofsted lens', description: 'Evidence and experience thinking' },
-  { lens: 'reg44', label: 'Reg 44 extraction', description: 'Visitor report themes and actions' },
   { lens: 'reg45', label: 'Reg 45 reflection', description: 'Provider learning from evidence' },
-  {
-    lens: 'recording_quality',
-    label: 'Recording quality review',
-    description: 'Child-centred recording lens'
-  },
   { lens: 'staff_briefing', label: 'Staff briefing', description: 'Shift-ready guidance' },
   { lens: 'manager_oversight', label: 'Manager briefing', description: 'Risks and oversight' },
-  { lens: 'ri_governance', label: 'RI / provider briefing', description: 'Governance assurance' }
+  { lens: 'ri_governance', label: 'RI / provider briefing', description: 'Governance assurance' },
+  { lens: 'what_is_missing', label: 'What is missing?', description: 'Gaps in evidence or recording' }
 ]
+
+/** Cross-room actions surfaced in Documents & Guidance (not intelligence lenses). */
+export const RESIDENTIAL_DOCUMENT_CROSS_ACTIONS = [
+  { id: 'use_write', label: 'Use with ORB Write' },
+  { id: 'use_template', label: 'Use with Template' }
+] as const
 
 export type OrbDocumentLens =
   | 'summary'
