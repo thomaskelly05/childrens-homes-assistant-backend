@@ -51,6 +51,7 @@ import {
   recordTypeIdForStudioTemplate,
   type OrbDictateStudioTemplate
 } from '@/lib/orb/dictate/orb-dictate-studio-templates'
+import { resolveOrbRecordingRecordType } from '@/lib/orb/recording/orb-recording-framework'
 import {
   handoffToOrbWriteDocument,
   saveOrbWriteHandoff,
@@ -164,7 +165,8 @@ export function OrbDictateStation({
   onOpenTemplates,
   initialTranscript,
   initialNoteType,
-  initialStudio
+  initialStudio,
+  initialStudioTemplateId
 }: {
   open: boolean
   onClose: () => void
@@ -175,6 +177,7 @@ export function OrbDictateStation({
   initialTranscript?: string
   initialNoteType?: OrbDictateNoteType
   initialStudio?: boolean
+  initialStudioTemplateId?: string
 }) {
   const [startMode, setStartMode] = useState<OrbDictateStartMode | null>(null)
   const [noteType, setNoteType] = useState<OrbDictateNoteType>(initialNoteType ?? 'daily_record')
@@ -361,8 +364,15 @@ export function OrbDictateStation({
       setTranscript(initialTranscript)
       setStartMode('import_voice')
     }
-    if (initialStudio) setPhase('studio')
-  }, [open, initialTranscript, initialStudio, resetRecording])
+    if (initialStudio || initialStudioTemplateId) setPhase('studio')
+    if (initialStudioTemplateId) {
+      setSelectedTemplateId(initialStudioTemplateId)
+      const recordType = resolveOrbRecordingRecordType({ studioTemplateId: initialStudioTemplateId })
+      setNoteType(recordType.dictate_note_type)
+    } else if (initialNoteType) {
+      setNoteType(initialNoteType)
+    }
+  }, [open, initialTranscript, initialStudio, initialStudioTemplateId, initialNoteType, resetRecording])
 
   useEffect(() => {
     if (!recordingActive || recordingPaused) return

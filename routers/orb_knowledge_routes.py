@@ -96,6 +96,11 @@ async def official_sources(current_user=Depends(require_standalone_orb_access)):
     return _success(orb_knowledge_library_service.list_official_sources())
 
 
+@router.get("/official/curated")
+async def curated_official_guidance(current_user=Depends(require_standalone_orb_access)):
+    return _success(orb_knowledge_library_service.list_curated_official_guidance())
+
+
 @router.get("/sources/needing-review")
 async def sources_needing_review(_admin=Depends(require_orb_knowledge_admin)):
     return _success(orb_knowledge_library_service.list_sources_needing_review())
