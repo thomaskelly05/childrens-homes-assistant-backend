@@ -65,7 +65,7 @@ const NAV_ITEMS = [
   { id: 'orb_write', label: 'ORB Write', icon: FileEdit },
   { id: 'shift_builder', label: 'Shift Builder', icon: ClipboardPen },
   { id: 'review', label: 'Review', icon: FileCheck },
-  { id: 'documents', label: 'Documents', icon: FolderOpen },
+  { id: 'documents', label: 'Documents & Guidance', icon: FolderOpen },
   { id: 'saved', label: 'Saved outputs', icon: Save }
 ] as const
 
@@ -91,7 +91,7 @@ const DESKTOP_MAIN_NAV: Array<{
     icon: ClipboardPen
   },
   { id: 'orb_voice', label: 'Voice', icon: Mic },
-  { id: 'documents', label: 'Documents', icon: FolderOpen },
+  { id: 'documents', label: 'Documents & Guidance', helper: 'Guidance and home documents', icon: FolderOpen },
   { id: 'saved', label: 'Saved Outputs', icon: Save }
 ]
 
@@ -125,10 +125,16 @@ const DESKTOP_PRACTICE_NAV: Array<{
 const DESKTOP_LIBRARY_NAV: Array<{
   id: (typeof NAV_ITEMS)[number]['id']
   label: string
+  helper?: string
   icon: (typeof NAV_ITEMS)[number]['icon']
 }> = [
-  { id: 'templates', label: 'Templates', icon: FileText },
-  { id: 'knowledge', label: 'Knowledge Centre', icon: Library }
+  { id: 'templates', label: 'Templates', helper: 'Recording library', icon: FileText },
+  {
+    id: 'knowledge',
+    label: 'Knowledge Library',
+    helper: 'Same as Documents — governance view',
+    icon: Library
+  }
 ]
 
 const MOBILE_DRAWER_QUICK_NAV: Array<{
@@ -146,7 +152,7 @@ const MOBILE_DRAWER_QUICK_NAV: Array<{
     icon: ClipboardPen
   },
   { id: 'orb_voice', label: 'Voice', icon: Mic },
-  { id: 'documents', label: 'Documents', icon: FolderOpen },
+  { id: 'documents', label: 'Documents & Guidance', icon: FolderOpen },
   { id: 'saved', label: 'Saved Outputs', icon: Save },
   { id: 'projects', label: 'Projects', icon: FolderKanban }
 ]

@@ -1584,7 +1584,6 @@ html[data-orb-residential='1'] {
   }
 }
 
-
 /* Residential light — composer, sidebar, modals use shared tokens from shell inline vars */
 .orb-chat-layout--residential.orb-theme-light .orb-composer-glass,
 html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .orb-composer-glass {
@@ -2049,4 +2048,34 @@ html[data-orb-residential='1'] {
     transform: scale(1.04);
     filter: brightness(1.08);
   }
+}
+
+/* ORB Premium design system — shared station surfaces */
+.orb-premium-page {
+  --orb-premium-primary: #168bff;
+  --orb-premium-primary-deep: #0d5fcc;
+}
+
+.orb-premium-card,
+.orb-premium-panel {
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
+}
+
+html[data-orb-residential='1'] .orb-theme-dark .orb-premium-card,
+html[data-orb-residential='1'] .orb-theme-dark .orb-premium-panel {
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28), 0 0 20px rgba(22, 139, 255, 0.05);
+}
+
+.orb-premium-advanced > summary {
+  list-style: none;
+}
+
+.orb-premium-advanced > summary::-webkit-details-marker {
+  display: none;
+}
+
+.orb-doc-primary-btn[data-orb-premium-button='primary'],
+button.orb-doc-primary-btn[data-orb-premium-button='primary'] {
+  background: linear-gradient(135deg, var(--orb-premium-primary, #168bff), var(--orb-premium-primary-deep, #0d5fcc));
+  color: #fff;
 }

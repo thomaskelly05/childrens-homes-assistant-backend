@@ -2756,6 +2756,14 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         onSendToDictate={(text) => {
           openOrbDictatePanel({ transcript: text })
         }}
+        onStartInOrbWrite={() => {
+          closePanel()
+          openOrbWritePanel()
+        }}
+        onStartInDictate={() => {
+          closePanel()
+          openOrbDictatePanel()
+        }}
         onUseInShiftBuilder={(notes, focus) => {
           setShiftImportNotes(notes)
           setShiftImportFocus(
