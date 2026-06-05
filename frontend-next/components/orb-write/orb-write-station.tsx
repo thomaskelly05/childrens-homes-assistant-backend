@@ -1,14 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import {
-  ArrowLeft,
-  Check,
-  ClipboardCopy,
-  Download,
-  Printer,
-  Save
-} from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 
 import { OrbAppModal } from '@/components/orb-standalone/orb-app-modal'
 import { OrbWriteAiPanel } from '@/components/orb-write/orb-write-ai-panel'
@@ -16,6 +9,7 @@ import { OrbWriteEditor } from '@/components/orb-write/orb-write-editor'
 import { copyTextToClipboard } from '@/lib/orb/orb-clipboard'
 import { saveOrbDictateNote } from '@/lib/orb/dictate/orb-dictate-client'
 import { copyOrbWriteText, exportOrbWritePdf, printOrbWriteDocument } from '@/lib/orb/write/orb-write-export'
+import { saveOrbWriteLocalDraft } from '@/lib/orb/write/orb-write-standalone'
 import { resolveOrbRecordingRecordType } from '@/lib/orb/recording/orb-recording-framework'
 import type { OrbWriteDocument } from '@/lib/orb/write/orb-write-types'
 import { ORB_WRITE_SAFETY_COPY } from '@/lib/orb/write/orb-write-types'
@@ -77,6 +71,7 @@ export function OrbWriteStation({
   async function handleSaveDraft() {
     if (!doc) return
     const plain = doc.body.replace(/<[^>]+>/g, '\n')
+    saveOrbWriteLocalDraft(doc)
     try {
       await saveOrbDictateNote({
         title: doc.title,
@@ -88,7 +83,7 @@ export function OrbWriteStation({
       setStatusMessage('Draft saved to ORB Saved Outputs.')
       setDoc((prev) => (prev ? { ...prev, is_draft: true } : prev))
     } catch {
-      setStatusMessage('Save unavailable — use copy or export.')
+      setStatusMessage('Saved locally — backend save unavailable.')
     }
   }
 
@@ -135,37 +130,21 @@ export function OrbWriteStation({
       presentation="workspace"
     >
       <div className="flex min-h-0 flex-1 flex-col gap-3" data-orb-write-station>
-        <header className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-[var(--orb-line)]/40 pb-3">
-          <div className="flex items-center gap-2">
-            {onBack ? (
-              <button type="button" className="rounded-lg p-2 hover:bg-[var(--orb-surface-hover)]" onClick={onBack} aria-label="Back to Dictate">
-                <ArrowLeft className="h-4 w-4" />
-              </button>
-            ) : null}
-            <div>
-              <input
-                data-orb-write-title
-                value={doc.title}
-                onChange={(e) => setDoc((prev) => (prev ? { ...prev, title: e.target.value } : prev))}
-                className="bg-transparent text-lg font-semibold text-[var(--orb-foreground)] focus:outline-none"
-              />
-              <span
-                className="mt-1 inline-flex items-center rounded-full border border-[var(--orb-primary)]/30 bg-[var(--orb-primary-soft)] px-2 py-0.5 text-[10px] font-medium text-[var(--orb-foreground)]"
-                data-orb-write-record-type-badge
-              >
-                {doc.record_type_label}
-              </span>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 text-[10px] text-[var(--orb-muted)]">
-            <span data-orb-write-word-count>{wordCount} words</span>
-            <span data-orb-write-last-edited>Last edited {lastEdited}</span>
+        <header className="flex shrink-0 flex-wrap items-center gap-2 border-b border-[var(--orb-line)]/40 pb-2">
+          {onBack ? (
+            <button type="button" className="rounded-lg p-2 hover:bg-[var(--orb-surface-hover)]" onClick={onBack} aria-label="Back to Dictate">
+              <ArrowLeft className="h-4 w-4" />
+            </button>
+          ) : null}
+          <div className="min-w-0 flex-1">
+            <input
+              data-orb-write-title-input
+              value={doc.title}
+              onChange={(e) => setDoc((prev) => (prev ? { ...prev, title: e.target.value } : prev))}
+              className="w-full bg-transparent text-lg font-semibold text-[var(--orb-foreground)] focus:outline-none"
+            />
           </div>
         </header>
-
-        <p className="shrink-0 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-[10px] text-[var(--orb-muted)]" data-orb-write-review-notice>
-          {doc.review_required_statement}
-        </p>
 
         {recordType.required_sections.length ? (
           <div className="shrink-0 space-y-1.5" data-orb-write-sections>
@@ -193,34 +172,29 @@ export function OrbWriteStation({
         ) : null}
 
         <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[1fr_320px]">
-          <OrbWriteEditor document={doc} onChange={updateBody} onWordCountChange={setWordCount} />
+          <OrbWriteEditor
+            document={doc}
+            onChange={updateBody}
+            onWordCountChange={setWordCount}
+            lastEdited={`Last edited ${lastEdited}`}
+            onCopy={() => void handleCopy()}
+            onPrint={() => printOrbWriteDocument(doc)}
+            onExportPdf={() => void exportOrbWritePdf(doc)}
+            onSaveDraft={() => void handleSaveDraft()}
+            onApprove={handleApprove}
+          />
           <OrbWriteAiPanel document={doc} onApplyRevision={applyRevision} />
         </div>
 
-        <footer className="flex shrink-0 flex-wrap items-center gap-2 border-t border-[var(--orb-line)]/40 pt-3">
-          <button type="button" data-orb-write-copy className="inline-flex items-center gap-1 rounded-lg border border-[var(--orb-line)]/50 px-3 py-1.5 text-xs" onClick={() => void handleCopy()}>
-            <ClipboardCopy className="h-3.5 w-3.5" /> Copy
-          </button>
-          <button type="button" data-orb-write-print className="inline-flex items-center gap-1 rounded-lg border border-[var(--orb-line)]/50 px-3 py-1.5 text-xs" onClick={() => printOrbWriteDocument(doc)}>
-            <Printer className="h-3.5 w-3.5" /> Print
-          </button>
-          <button type="button" data-orb-write-export-pdf className="inline-flex items-center gap-1 rounded-lg border border-[var(--orb-line)]/50 px-3 py-1.5 text-xs" onClick={() => void exportOrbWritePdf(doc)}>
-            <Download className="h-3.5 w-3.5" /> Export PDF
-          </button>
-          <button type="button" data-orb-write-save-draft className="inline-flex items-center gap-1 rounded-lg border border-[var(--orb-line)]/50 px-3 py-1.5 text-xs" onClick={() => void handleSaveDraft()}>
-            <Save className="h-3.5 w-3.5" /> Save draft
-          </button>
-          <button type="button" data-orb-write-approve className="inline-flex items-center gap-1 rounded-lg bg-[var(--orb-primary)] px-3 py-1.5 text-xs font-medium text-white" onClick={handleApprove}>
-            <Check className="h-3.5 w-3.5" /> Approve / finalise
-          </button>
-        </footer>
-
-        <p className="text-[10px] text-[var(--orb-muted)]">{ORB_WRITE_SAFETY_COPY.responsibility}</p>
+        <p className="shrink-0 text-[10px] text-[var(--orb-muted)]">{ORB_WRITE_SAFETY_COPY.responsibility}</p>
         {statusMessage ? (
           <p className="text-xs text-[var(--orb-primary)]" role="status">
             {statusMessage}
           </p>
         ) : null}
+        <span className="sr-only" data-orb-write-word-count>
+          {wordCount} words
+        </span>
       </div>
     </OrbAppModal>
   )
