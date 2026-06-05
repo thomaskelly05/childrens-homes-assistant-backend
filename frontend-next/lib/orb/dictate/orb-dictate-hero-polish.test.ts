@@ -40,15 +40,17 @@ describe('ORB Dictate hero polish', () => {
     assert.equal(meta.live_record_access, false)
   })
 
-  it('station shows Dictate title, subtitle, transcript and generated output sections', () => {
+  it('station shows Dictate title, subtitle, transcript and brain panels', () => {
     const station = readComponent('components/orb-standalone/orb-dictate-station.tsx')
+    const topBar = readComponent('components/orb/dictate/OrbDictateTopBar.tsx')
+    const workspace = readComponent('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
     assert.equal(ORB_DICTATE_PRODUCT_TITLE, 'Dictate')
     assert.match(ORB_DICTATE_PRODUCT_SUBTITLE, /professional residential records/)
-    assert.match(station, /data-orb-dictate-title/)
+    assert.match(topBar, /data-orb-dictate-title/)
     assert.match(station, /data-orb-dictate-subtitle/)
-    assert.match(station, /data-orb-dictate-transcript-section/)
-    assert.match(station, /data-orb-dictate-generated-output/)
-    assert.match(station, /OrbDictateOutputTypeSelector/)
+    assert.match(workspace, /OrbTranscriptPanel/)
+    assert.match(workspace, /OrbDictateBrainPanel/)
+    assert.match(topBar, /data-orb-dictate-template-selector/)
   })
 
   it('boundary copy is visible in UI', () => {
@@ -58,13 +60,14 @@ describe('ORB Dictate hero polish', () => {
     assert.equal(ORB_DICTATE_GOVERNANCE_COPY.noLiveRecords, 'ORB does not access live care records in standalone mode.')
   })
 
-  it('copy save export and ask ORB improve actions are present', () => {
-    const station = readComponent('components/orb-standalone/orb-dictate-station.tsx')
-    assert.match(station, /data-orb-dictate-copy/)
-    assert.match(station, /data-orb-dictate-save/)
-    assert.match(station, /data-orb-dictate-export-pdf/)
-    assert.match(station, /data-orb-dictate-ask-orb-improve/)
-    assert.match(station, /data-orb-dictate-actions-disabled/)
+  it('copy save export and finalise actions are present', () => {
+    const topBar = readComponent('components/orb/dictate/OrbDictateTopBar.tsx')
+    const write = readComponent('components/orb-write/orb-write-station.tsx')
+    assert.match(topBar, /data-orb-dictate-generate/)
+    assert.match(topBar, /data-orb-dictate-finalise/)
+    assert.match(write, /data-orb-write-copy/)
+    assert.match(write, /data-orb-write-save-draft/)
+    assert.match(write, /data-orb-write-export-pdf/)
   })
 
   it('sidebar nav uses Dictate label with helper text', () => {

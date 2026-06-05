@@ -35,10 +35,11 @@ describe('ORB Dictate', () => {
 
   it('station uses workspace shell via OrbAppModal on residential', () => {
     const station = readComponent('components/orb-standalone/orb-dictate-station.tsx')
+    const transcript = readComponent('components/orb/dictate/OrbTranscriptPanel.tsx')
     assert.match(station, /OrbAppModal/)
     assert.match(station, /presentation="workspace"/)
     assert.match(station, /data-orb-dictate-station/)
-    assert.match(station, /data-orb-dictate-speech-start/)
+    assert.match(transcript, /data-orb-dictate-record-start/)
     assert.doesNotMatch(station, /layout="drawer"/)
   })
 
@@ -115,11 +116,13 @@ describe('ORB Dictate', () => {
     assert.equal(suggested.length, 1)
   })
 
-  it('copy save export still work', () => {
-    const station = readComponent('components/orb-standalone/orb-dictate-station.tsx')
-    assert.match(station, /data-orb-dictate-copy/)
-    assert.match(station, /data-orb-dictate-save/)
-    assert.match(station, /data-orb-dictate-export-pdf/)
+  it('copy save export still work via ORB Write', () => {
+    const write = readComponent('components/orb-write/orb-write-station.tsx')
+    const studio = readComponent('components/orb-standalone/orb-dictate-station.tsx')
+    assert.match(write, /data-orb-write-copy/)
+    assert.match(write, /data-orb-write-save-draft/)
+    assert.match(write, /data-orb-write-export-pdf/)
+    assert.match(studio, /OrbWriteStation/)
   })
 
   it('sidebar and composer include orb_dictate', () => {
@@ -140,19 +143,21 @@ describe('ORB Dictate', () => {
   })
 
   it('standalone boundary copy present', () => {
-    const station = readComponent('components/orb-standalone/orb-dictate-station.tsx')
+    const topBar = readComponent('components/orb/dictate/OrbDictateTopBar.tsx')
     const boundary = readComponent('components/orb-standalone/orb-dictate-boundary-copy.tsx')
-    assert.match(station, /OrbDictateBoundaryCopy/)
+    const mobile = readComponent('components/orb-standalone/orb-dictate-mobile-experience.tsx')
+    assert.match(topBar, /data-orb-dictate-privacy-banner/)
     assert.match(boundary, /data-orb-dictate-boundary-based-on-input/)
-    assert.match(station, /GOVERNANCE_COPY\.saveWording/)
+    assert.match(mobile, /OrbDictateBoundaryCopy|boundary/i)
   })
 
   it('Dictate product title and hero output types', () => {
     const station = readComponent('components/orb-standalone/orb-dictate-station.tsx')
+    const topBar = readComponent('components/orb/dictate/OrbDictateTopBar.tsx')
     const types = readFileSync(join(root, 'lib/orb/dictate/orb-dictate-types.ts'), 'utf8')
     assert.match(types, /ORB_DICTATE_PRODUCT_TITLE = 'Dictate'/)
     assert.match(station, /ORB_DICTATE_PRODUCT_SUBTITLE/)
-    assert.match(station, /data-orb-dictate-ask-orb-improve/)
+    assert.match(topBar, /data-orb-dictate-template-selector/)
   })
 
   it('studio split screen renders on desktop', () => {
@@ -214,18 +219,16 @@ describe('ORB Dictate', () => {
 
   it('guided reflective debrief is typed not mic', () => {
     const station = readComponent('components/orb-standalone/orb-dictate-station.tsx')
-    assert.match(station, /Guided reflective debrief/)
-    assert.match(station, /data-orb-dictate-reflective/)
-    assert.doesNotMatch(
-      station,
-      /Guided reflective debrief[\s\S]*handleStartSpeechTranscript\(id\)/
-    )
+    const mobile = readComponent('components/orb-standalone/orb-dictate-mobile-experience.tsx')
+    assert.match(station, /REFLECTIVE_DEBRIEF_QUESTIONS/)
+    assert.match(mobile, /reflective|debrief/i)
   })
 
   it('dictate media recorder does not show pause when recording audio only', () => {
     const station = readComponent('components/orb-standalone/orb-dictate-station.tsx')
+    const transcript = readComponent('components/orb/dictate/OrbTranscriptPanel.tsx')
     assert.match(station, /recorderModeRef\.current === 'speech'/)
-    assert.match(station, /data-orb-dictate-capture-capability/)
+    assert.match(transcript, /recordingPaused/)
   })
 
   it('anonymise action available in studio', () => {

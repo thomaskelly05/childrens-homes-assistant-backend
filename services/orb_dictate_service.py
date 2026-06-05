@@ -19,6 +19,11 @@ from db.ai_note_versions_db import ensure_ai_note_versions_table, insert_ai_note
 from db.ai_notes_db import ensure_ai_meetings_table, insert_ai_meeting_note, update_ai_meeting_note
 from db.connection import get_db_connection, release_db_connection
 from schemas.orb_dictate import (
+    OrbDictateAnalyzeRequest,
+    OrbDictateAnalyzeResponse,
+    OrbDictateBrainSuggestion,
+    OrbDictateFinaliseRequest,
+    OrbDictateFinaliseResponse,
     OrbDictateGenerateRequest,
     OrbDictateGenerateResponse,
     OrbDictateNotePatch,
@@ -511,3 +516,176 @@ def list_dictate_notes_for_user(user: dict[str, Any]) -> list[OrbDictateNoteSumm
 
 def get_templates_payload() -> list[dict[str, Any]]:
     return [t.model_dump() for t in list_dictate_templates()]
+
+
+QUALITY_LABELS: dict[str, str] = {
+    "child_voice": "Child voice",
+    "safeguarding": "Safeguarding",
+    "manager_oversight": "Manager oversight",
+    "impact": "Impact and outcome",
+    "factual_clarity": "Factual clarity",
+    "staff_response": "Staff response",
+    "professional_curiosity": "Professional curiosity",
+    "chronology_relevance": "Chronology relevance",
+    "plan_risk_review": "Plan and risk review",
+    "recording_tone": "Recording tone",
+    "non_judgemental_language": "Non-judgemental language",
+    "evidence_of_action": "Evidence of action",
+    "follow_up_review_date": "Follow-up review date",
+}
+
+
+def _build_analysis_suggestions(quality: Any, note_type: str) -> tuple[list[str], list[OrbDictateBrainSuggestion]]:
+    missing: list[str] = []
+    suggestions: list[OrbDictateBrainSuggestion] = []
+    checks = quality.model_dump() if hasattr(quality, "model_dump") else dict(quality)
+    for key, value in checks.items():
+        if key == "recording_quality":
+            continue
+        label = QUALITY_LABELS.get(key, key.replace("_", " "))
+        if value in {"missing", "weak"}:
+            missing.append(f"{label} — add detail before finalising")
+            suggestions.append(
+                OrbDictateBrainSuggestion(
+                    id=f"suggest_{key}",
+                    category="safeguarding" if key == "safeguarding" else "wording",
+                    label=f"Strengthen {label.lower()}",
+                    detail=f"Consider adding {label.lower()} based on what you observed.",
+                )
+            )
+        elif value in {"review", "needs_review"}:
+            suggestions.append(
+                OrbDictateBrainSuggestion(
+                    id=f"review_{key}",
+                    category="wording",
+                    label=f"Review {label.lower()}",
+                    detail=f"{label} may need refinement — check accuracy before finalising.",
+                )
+            )
+    return missing, suggestions
+
+
+def analyze_dictate_session(request: OrbDictateAnalyzeRequest) -> OrbDictateAnalyzeResponse:
+    """Session brain analysis via existing intelligence heuristics — no OS record access."""
+    note_type = _resolve_note_type(
+        OrbDictateGenerateRequest(
+            input_text=request.input_text,
+            note_type=request.note_type,
+            mode=request.mode,
+        )
+    )
+    transcript = _truncate(request.input_text)
+    template = get_dictate_template(note_type)  # type: ignore[arg-type]
+    quality = compute_quality_checks(transcript, note_type)
+    missing, suggestions = _build_analysis_suggestions(quality, note_type)
+
+    intel_packet = indicare_intelligence_core_service.build_intelligence_packet(
+        transcript,
+        mode=request.mode or note_type,
+    )
+    intel_summary = intelligence_context_summary(intel_packet)
+    safeguarding: list[str] = []
+    if quality.safeguarding in {"present", "good"}:
+        safeguarding.append(
+            "Safeguarding themes detected — ensure escalation and notifications are documented."
+        )
+
+    child_voice_check = (
+        "Child voice appears present — verify direct quotes are accurate."
+        if quality.child_voice in {"present", "good"}
+        else "Child voice not clearly present — consider adding what the young person said or communicated."
+    )
+    manager_note = None
+    if quality.manager_oversight == "missing":
+        manager_note = "Manager oversight not documented — add notification or review if required."
+
+    ofsted_check = None
+    if intel_summary.get("gaps"):
+        ofsted_check = (
+            "Consider inspection evidence gaps identified in your transcript — link practice to child impact."
+        )
+
+    return OrbDictateAnalyzeResponse(
+        detected_record_type=template.title,
+        safeguarding_concerns=safeguarding,
+        missing_information=missing,
+        professional_wording_suggestions=suggestions,
+        recommended_next_actions=[
+            "Review transcript",
+            "Confirm facts and times",
+            "Finalise in ORB Write",
+        ],
+        possible_outputs=[t.title for t in list_dictate_templates()[:8]],
+        recording_quality_score=quality.recording_quality,
+        child_voice_check=child_voice_check,
+        ofsted_evidence_check=ofsted_check,
+        manager_oversight_note=manager_note,
+        quality_checks=quality,
+        standalone_boundary=STANDALONE_BOUNDARY,
+    )
+
+
+REVIEW_REQUIRED_STATEMENT = (
+    "This document requires adult review before saving or exporting as a formal record. "
+    "The adult remains responsible for the final record."
+)
+
+
+def finalise_dictate_document(
+    request: OrbDictateFinaliseRequest,
+    *,
+    provider_id: int | None = None,
+    home_id: int | None = None,
+    user_id: int | None = None,
+) -> OrbDictateFinaliseResponse:
+    """Generate structured document for ORB Write handoff — draft only, no live OS save."""
+    from datetime import datetime, timezone
+
+    gen_request = OrbDictateGenerateRequest(
+        input_text=request.input_text,
+        note_type=request.note_type,
+        mode=request.mode,
+        participants=request.participants,
+        segments=request.segments,
+        include_child_voice=request.include_child_voice,
+        include_safeguarding=request.include_safeguarding,
+        include_manager_oversight=request.include_manager_oversight,
+        include_actions=request.include_actions,
+        include_ofsted_lens=request.include_ofsted_lens,
+        consent_confirmed=request.consent_confirmed,
+        investigation_boundary_confirmed=request.investigation_boundary_confirmed,
+        source="dictation",
+    )
+    generated = generate_dictate_note(
+        gen_request,
+        provider_id=provider_id,
+        home_id=home_id,
+        user_id=user_id,
+    )
+    professional = generated.professional_note
+    if request.adult_edits and request.adult_edits.strip():
+        professional = request.adult_edits.strip()
+    if request.accepted_suggestions:
+        appendix_lines = [
+            f"- {s.label}: {s.detail}"
+            for s in request.accepted_suggestions
+            if s.status in {"accepted", "applied"}
+        ]
+        if appendix_lines:
+            professional += "\n\n## Accepted suggestions (review before use)\n\n" + "\n".join(appendix_lines)
+
+    transcript = request.transcript or generated.transcript
+    return OrbDictateFinaliseResponse(
+        title=generated.title,
+        note_type=generated.note_type,
+        professional_note=professional,
+        summary=generated.summary,
+        transcript=transcript,
+        quality_checks=generated.quality_checks,
+        review_required_statement=REVIEW_REQUIRED_STATEMENT,
+        standalone_boundary=STANDALONE_BOUNDARY,
+        governance_notice=GOVERNANCE_NOTICE,
+        timestamp=datetime.now(timezone.utc).isoformat(),
+        template_id=request.template_id,
+        accepted_suggestions=request.accepted_suggestions,
+    )
