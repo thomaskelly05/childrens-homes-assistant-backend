@@ -23,6 +23,7 @@ describe('ORB main workspace shell', () => {
       'knowledge',
       'orb_dictate',
       'orb_voice',
+      'orb_write',
       'record_properly',
       'review',
       'safeguarding_thinking',

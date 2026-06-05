@@ -19,12 +19,13 @@ import {
 } from '@/lib/orb/orb-billing-client'
 
 const INDIVIDUAL_PLAN_FEATURES = [
-  'ORB chat',
+  'Chat',
   'Dictate',
   'Voice',
-  'Documents',
+  'ORB Write',
   'Templates',
-  'Saved outputs'
+  'Documents & Guidance',
+  'Saved Outputs'
 ] as const
 
 const TOP_UP_OPTIONS = [
@@ -258,8 +259,8 @@ export function OrbBillingModal({ open, onClose }: { open: boolean; onClose: () 
               className="mt-3 rounded-lg border border-[var(--orb-res-info-border,#bfdbfe)] bg-[var(--orb-res-info-bg,#eff6ff)] px-3 py-2 text-sm leading-5 text-[var(--orb-res-info-text,#1e3a8a)]"
               data-orb-billing-inactive
             >
-              Start ORB Residential — £9.99/month includes chat, dictate, voice, documents, templates and saved
-              outputs.
+              Start ORB Residential — £9.99/month includes Chat, Dictate, Voice, ORB Write, Templates, Documents &amp;
+              Guidance, and Saved Outputs.
             </p>
           ) : null}
           <p

@@ -2,7 +2,20 @@
 
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import dynamic from 'next/dynamic'
-import { ChevronDown, Copy, FileText, MoreHorizontal, RotateCcw, Sparkles, Square, Volume2 } from 'lucide-react'
+import {
+  ChevronDown,
+  Copy,
+  Download,
+  FileEdit,
+  FileText,
+  LayoutTemplate,
+  MoreHorizontal,
+  Pencil,
+  RotateCcw,
+  Sparkles,
+  Square,
+  Volume2
+} from 'lucide-react'
 
 import { copyTextToClipboard } from '@/lib/orb/orb-clipboard'
 import {
@@ -657,10 +670,14 @@ export function OrbResponseActionBar({
   onExport,
   exportEnabled = false,
   onInspectionPrep,
+  onOpenInOrbWrite,
+  onUseAsTemplate,
+  onEdit,
   saveFeedback = 'idle',
   onOrbFollowUp,
   isLatest = true,
-  minimal = false
+  minimal = false,
+  iconOnly = true
 }: {
   mode: string
   content: string
@@ -679,6 +696,9 @@ export function OrbResponseActionBar({
   onExport?: () => void
   exportEnabled?: boolean
   onInspectionPrep?: () => void
+  onOpenInOrbWrite?: () => void
+  onUseAsTemplate?: () => void
+  onEdit?: () => void
   saveFeedback?: 'idle' | 'saved' | 'already_saved' | 'failed'
   /** Run structured ORB action or composer prefill fallback for unsupported actions. */
   onOrbFollowUp?: (action: OrbResponseFollowUpAction, sourceContent: string, assistantIndex?: number) => void
@@ -686,6 +706,8 @@ export function OrbResponseActionBar({
   isLatest?: boolean
   /** Greeting / minimal local turns — hide the full action row. */
   minimal?: boolean
+  /** Icon-first action row (ChatGPT-style) with accessible labels. */
+  iconOnly?: boolean
 }) {
   const [moreOpen, setMoreOpen] = useState(false)
   const [copyFeedback, setCopyFeedback] = useState<'idle' | 'copied' | 'failed'>('idle')
@@ -749,33 +771,54 @@ export function OrbResponseActionBar({
   const primaryActions: ReactNode[] = [
     <ActionChip
       key="copy"
-      icon={<Copy className="h-3 w-3" />}
+      icon={<Copy className="h-3.5 w-3.5" />}
       label={copyLabel}
       onClick={() => void handleCopy()}
       state={copyFeedback === 'copied' ? 'success' : copyFeedback === 'failed' ? 'error' : undefined}
       dataAttr="copy"
+      iconOnly={iconOnly}
     />
   ]
+  if (onEdit) {
+    primaryActions.push(
+      <ActionChip
+        key="edit"
+        icon={<Pencil className="h-3.5 w-3.5" />}
+        label="Edit"
+        onClick={onEdit}
+        dataAttr="edit"
+        iconOnly={iconOnly}
+      />
+    )
+  }
   if (onRegenerate && isLatest) {
     primaryActions.push(
-      <ActionChip key="regen" icon={<RotateCcw className="h-3 w-3" />} label="Regenerate" onClick={onRegenerate} dataAttr="regenerate" />
+      <ActionChip
+        key="regen"
+        icon={<RotateCcw className="h-3.5 w-3.5" />}
+        label="Regenerate"
+        onClick={onRegenerate}
+        dataAttr="regenerate"
+        iconOnly={iconOnly}
+      />
     )
   }
   primaryActions.push(
     synthesisAvailable ? (
       speaking ? (
-        <ActionChip key="stop" icon={<Square className="h-3 w-3" />} label="Stop" onClick={onStop} dataAttr="speak-stop" />
+        <ActionChip key="stop" icon={<Square className="h-3.5 w-3.5" />} label="Stop" onClick={onStop} dataAttr="speak-stop" iconOnly={iconOnly} />
       ) : (
-        <ActionChip key="speak" icon={<Volume2 className="h-3 w-3" />} label="Speak" onClick={onSpeak} dataAttr="speak" />
+        <ActionChip key="speak" icon={<Volume2 className="h-3.5 w-3.5" />} label="Speak" onClick={onSpeak} dataAttr="speak" iconOnly={iconOnly} />
       )
     ) : (
       <ActionChip
         key="speak-unavailable"
-        icon={<Volume2 className="h-3 w-3" />}
+        icon={<Volume2 className="h-3.5 w-3.5" />}
         label={speakLabel}
         onClick={() => {}}
         disabled
         dataAttr="speak-unavailable"
+        iconOnly={iconOnly}
       />
     )
   )
@@ -783,11 +826,48 @@ export function OrbResponseActionBar({
     primaryActions.push(
       <ActionChip
         key="save"
-        icon={<FileText className="h-3 w-3" />}
+        icon={<FileText className="h-3.5 w-3.5" />}
         label={saveLabel}
         onClick={onSave}
         state={saveFeedback === 'saved' || saveFeedback === 'already_saved' ? 'success' : saveFeedback === 'failed' ? 'error' : undefined}
         dataAttr="save"
+        iconOnly={iconOnly}
+      />
+    )
+  }
+  if (onOpenInOrbWrite) {
+    primaryActions.push(
+      <ActionChip
+        key="open-write"
+        icon={<FileEdit className="h-3.5 w-3.5" />}
+        label="Open in ORB Write"
+        onClick={onOpenInOrbWrite}
+        dataAttr="open-in-orb-write"
+        iconOnly={iconOnly}
+      />
+    )
+  }
+  if (onUseAsTemplate) {
+    primaryActions.push(
+      <ActionChip
+        key="use-template"
+        icon={<LayoutTemplate className="h-3.5 w-3.5" />}
+        label="Use as template"
+        onClick={onUseAsTemplate}
+        dataAttr="use-as-template"
+        iconOnly={iconOnly}
+      />
+    )
+  }
+  if (exportEnabled && onExport) {
+    primaryActions.push(
+      <ActionChip
+        key="export-primary"
+        icon={<Download className="h-3.5 w-3.5" />}
+        label="Export"
+        onClick={onExport}
+        dataAttr="export"
+        iconOnly={iconOnly}
       />
     )
   }
@@ -854,10 +934,11 @@ export function OrbResponseActionBar({
 
   return (
     <div
-      className="orb-response-action-bar orb-response-action-bar--icons mt-3 flex flex-nowrap items-center gap-1 overflow-x-auto border-t border-[var(--orb-line)] pt-3"
+      className="orb-response-action-bar orb-response-action-bar--icons mt-3 flex flex-nowrap items-center gap-0.5 overflow-x-auto border-t border-[var(--orb-line)] pt-2 opacity-100 transition-opacity sm:gap-1 sm:pt-3"
       data-orb-response-actions
       data-orb-response-action-bar
       data-orb-response-action-bar-persistent
+      data-orb-response-action-bar-icons={iconOnly ? 'true' : 'false'}
     >
       {primaryActions}
       {moreActions.length ? (
@@ -894,7 +975,8 @@ function ActionChip({
   dataAttr,
   trailingIcon,
   disabled,
-  state
+  state,
+  iconOnly = false
 }: {
   icon?: ReactNode
   label: string
@@ -903,21 +985,22 @@ function ActionChip({
   trailingIcon?: ReactNode
   disabled?: boolean
   state?: 'success' | 'error'
+  iconOnly?: boolean
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`orb-action-chip inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-slate-400/60 ${
-        state === 'success' ? 'orb-action-chip--success' : state === 'error' ? 'orb-action-chip--error' : ''
-      }`}
+      className={`orb-action-chip inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 text-xs font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-slate-400/60 sm:px-2.5 ${
+        iconOnly ? 'orb-action-chip--icon-only min-h-8 min-w-8' : ''
+      } ${state === 'success' ? 'orb-action-chip--success' : state === 'error' ? 'orb-action-chip--error' : ''}`}
       data-orb-action-chip={dataAttr}
       aria-label={label}
       title={label}
     >
       {icon}
-      <span className="orb-action-chip__label">{label}</span>
+      <span className={iconOnly ? 'sr-only' : 'orb-action-chip__label'}>{label}</span>
       {trailingIcon}
     </button>
   )

@@ -36,7 +36,8 @@ export function OrbStandalonePanelShell({
   layout = 'drawer',
   modalSize,
   appModal,
-  presentation
+  presentation,
+  compactChrome = false
 }: {
   open: boolean
   title: string
@@ -51,6 +52,7 @@ export function OrbStandalonePanelShell({
   modalSize?: OrbAppModalSize
   appModal?: boolean
   presentation?: 'modal' | 'workspace'
+  compactChrome?: boolean
 }) {
   if (layout === 'workspace' || presentation === 'workspace') {
     return (
@@ -61,6 +63,7 @@ export function OrbStandalonePanelShell({
         onClose={onClose}
         panelId={panelId}
         footer={footer}
+        compactChrome={compactChrome}
       >
         {children}
       </OrbWorkspaceFrame>

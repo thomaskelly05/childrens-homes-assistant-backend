@@ -262,6 +262,7 @@ export function OrbResidentialSidebar({
   onChatSearchChange,
   onSelectChat,
   onNewChat,
+  onOpenChat,
   onOpenStation,
   onOpenSettings,
   onOpenSavedOutputs,
@@ -283,6 +284,8 @@ export function OrbResidentialSidebar({
   onChatSearchChange: (value: string) => void
   onSelectChat: (chatId: string) => void
   onNewChat: (projectId?: string) => void
+  /** Return to the active chat thread without starting a new chat. */
+  onOpenChat?: () => void
   onOpenStation: (station: OrbResidentialStationId) => void
   onOpenSettings?: () => void
   onOpenSavedOutputs?: () => void
@@ -601,7 +604,7 @@ export function OrbResidentialSidebar({
                   onClick={() => {
                     onClose?.()
                     if (item.id === 'chat') {
-                      onNewChat(workspace.activeProjectId)
+                      onOpenChat?.()
                       return
                     }
                     if (item.id === 'saved') {
@@ -798,7 +801,7 @@ export function OrbResidentialSidebar({
                         type="button"
                         onClick={() => {
                           if (isChat) {
-                            onNewChat(workspace.activeProjectId)
+                            onOpenChat?.()
                             return
                           }
                           openStation(entry.id as OrbResidentialStationId)

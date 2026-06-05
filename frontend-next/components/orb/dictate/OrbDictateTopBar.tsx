@@ -83,8 +83,9 @@ export function OrbDictateTopBar({
 
   return (
     <header
-      className="orb-dictate-top-bar sticky top-0 z-10 shrink-0 border-b border-[var(--orb-line)]/40 bg-[var(--orb-surface-elevated)]/95 py-1.5 backdrop-blur-sm"
+      className="orb-dictate-top-bar orb-dictate-recorder-bar sticky top-0 z-10 shrink-0 border-b border-[var(--orb-line)]/40 bg-[var(--orb-surface-elevated)]/95 py-1.5 backdrop-blur-sm"
       data-orb-dictate-top-bar
+      data-orb-dictate-recorder-bar
     >
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <div className="flex min-w-0 items-start gap-2">
