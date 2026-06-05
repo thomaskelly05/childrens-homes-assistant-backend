@@ -1,10 +1,19 @@
 'use client'
 
+import type { ReactNode } from 'react'
 import { Loader2, Sparkles } from 'lucide-react'
 
 import type { OrbDictateBrainAnalysis, OrbDictateBrainSuggestion } from '@/lib/orb/dictate/orb-dictate-brain-analysis'
 
-function SuggestionRow({
+const PLACEHOLDER_CHIPS = [
+  'Recording quality',
+  'Missing information',
+  'Safeguarding',
+  'Child voice',
+  'Manager oversight'
+] as const
+
+function SuggestionCard({
   suggestion,
   onAccept,
   onReject,
@@ -15,21 +24,23 @@ function SuggestionRow({
   onReject: () => void
   onApply: () => void
 }) {
-  const resolved = suggestion.status === 'accepted' || suggestion.status === 'rejected' || suggestion.status === 'applied'
+  const resolved =
+    suggestion.status === 'accepted' || suggestion.status === 'rejected' || suggestion.status === 'applied'
+
   return (
     <li
-      className="rounded-lg border border-[var(--orb-line)]/40 bg-[var(--orb-surface)] p-2"
+      className="rounded-xl border border-[var(--orb-line)]/40 bg-[var(--orb-surface)] p-3 shadow-sm"
       data-orb-brain-suggestion={suggestion.id}
       data-orb-brain-suggestion-status={suggestion.status}
     >
-      <p className="text-xs font-medium text-[var(--orb-foreground)]">{suggestion.label}</p>
-      <p className="mt-0.5 text-[11px] text-[var(--orb-muted)]">{suggestion.detail}</p>
+      <p className="text-sm font-medium text-[var(--orb-foreground)]">{suggestion.label}</p>
+      <p className="mt-1 text-xs leading-relaxed text-[var(--orb-muted)]">{suggestion.detail}</p>
       {!resolved ? (
-        <div className="mt-2 flex flex-wrap gap-1">
+        <div className="mt-3 flex flex-wrap gap-2">
           <button
             type="button"
             data-orb-brain-accept
-            className="rounded-md border border-emerald-400/30 px-2 py-0.5 text-[10px] text-emerald-200"
+            className="rounded-lg border border-emerald-400/35 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-200"
             onClick={onAccept}
           >
             Accept
@@ -37,7 +48,7 @@ function SuggestionRow({
           <button
             type="button"
             data-orb-brain-reject
-            className="rounded-md border border-[var(--orb-line)]/50 px-2 py-0.5 text-[10px] text-[var(--orb-muted)]"
+            className="rounded-lg border border-[var(--orb-line)]/50 px-2.5 py-1 text-[11px] font-medium text-[var(--orb-muted)]"
             onClick={onReject}
           >
             Reject
@@ -45,16 +56,33 @@ function SuggestionRow({
           <button
             type="button"
             data-orb-brain-apply
-            className="rounded-md border border-sky-400/30 px-2 py-0.5 text-[10px] text-sky-200"
+            className="rounded-lg border border-sky-400/35 bg-sky-500/10 px-2.5 py-1 text-[11px] font-medium text-sky-200"
             onClick={onApply}
           >
             Apply
           </button>
         </div>
       ) : (
-        <p className="mt-1 text-[10px] capitalize text-[var(--orb-muted)]">{suggestion.status}</p>
+        <p className="mt-2 text-[10px] capitalize text-[var(--orb-muted)]">{suggestion.status}</p>
       )}
     </li>
+  )
+}
+
+function AnalysisSection({
+  title,
+  children,
+  dataAttr
+}: {
+  title: string
+  children: ReactNode
+  dataAttr?: string
+}) {
+  return (
+    <section className="rounded-xl border border-[var(--orb-line)]/35 bg-[var(--orb-surface)]/60 p-3" data-orb-brain-section={dataAttr}>
+      <h4 className="text-[10px] font-semibold uppercase tracking-wider text-[var(--orb-muted)]">{title}</h4>
+      <div className="mt-1.5 text-sm text-[var(--orb-foreground)]">{children}</div>
+    </section>
   )
 }
 
@@ -69,86 +97,97 @@ export function OrbDictateBrainPanel({
 }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col" data-orb-dictate-brain-panel>
-      <header className="flex shrink-0 items-center gap-2 border-b border-[var(--orb-line)]/40 px-3 py-2">
-        <Sparkles className="h-4 w-4 text-[var(--orb-primary)]" />
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--orb-muted)]">
-          IndiCare Brain Analysis
-        </h3>
+      <header className="flex shrink-0 items-center gap-2 border-b border-[var(--orb-line)]/40 px-4 py-3">
+        <Sparkles className="h-4 w-4 text-[var(--orb-primary)]" aria-hidden />
+        <div>
+          <h3 className="text-sm font-semibold text-[var(--orb-foreground)]">IndiCare Brain Analysis</h3>
+          <p className="text-[11px] text-[var(--orb-muted)]">Professional review support — adult remains responsible</p>
+        </div>
       </header>
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-3 text-sm">
+      <div className="min-h-0 flex-1 overflow-y-auto p-4 text-sm">
         {loading ? (
           <div className="flex items-center gap-2 text-[var(--orb-muted)]" data-orb-brain-loading>
             <Loader2 className="h-4 w-4 animate-spin" />
             Analysing transcript…
           </div>
         ) : !analysis ? (
-          <p className="text-[var(--orb-muted)]" data-orb-brain-empty>
-            Record or paste a transcript, then generate to see analysis and suggestions.
-          </p>
+          <div data-orb-brain-empty>
+            <p className="text-sm text-[var(--orb-muted)]">
+              Record or paste a transcript, then choose Analyse with ORB to review quality and safeguarding before drafting.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2" data-orb-brain-placeholder-chips>
+              {PLACEHOLDER_CHIPS.map((chip) => (
+                <span
+                  key={chip}
+                  className="rounded-full border border-[var(--orb-line)]/40 bg-[var(--orb-surface)]/80 px-2.5 py-1 text-[10px] text-[var(--orb-muted)]"
+                  data-orb-brain-placeholder-chip={chip.toLowerCase().replace(/\s+/g, '-')}
+                >
+                  {chip}
+                </span>
+              ))}
+            </div>
+          </div>
         ) : (
-          <div className="space-y-4">
-            <section data-orb-brain-record-type>
-              <h4 className="text-[10px] font-semibold uppercase tracking-wider text-[var(--orb-muted)]">Detected record type</h4>
-              <p className="mt-1 text-[var(--orb-foreground)]">{analysis.detected_record_type}</p>
-            </section>
+          <div className="space-y-3">
+            <AnalysisSection title="Detected record type" dataAttr="record-type">
+              <p data-orb-brain-record-type>{analysis.detected_record_type}</p>
+            </AnalysisSection>
 
-            <section data-orb-brain-quality>
-              <h4 className="text-[10px] font-semibold uppercase tracking-wider text-[var(--orb-muted)]">Recording quality</h4>
-              <p className="mt-1 text-[var(--orb-foreground)]">
-                {analysis.recording_quality_score === 'good' ? 'Good — review before finalising' : 'Needs review — check facts and gaps'}
+            <AnalysisSection title="Recording quality" dataAttr="quality">
+              <p data-orb-brain-quality>
+                {analysis.recording_quality_score === 'good'
+                  ? 'Good — review before finalising'
+                  : 'Needs review — check facts and gaps'}
               </p>
-            </section>
+            </AnalysisSection>
 
-            <section data-orb-brain-child-voice>
-              <h4 className="text-[10px] font-semibold uppercase tracking-wider text-[var(--orb-muted)]">Child voice check</h4>
-              <p className="mt-1 text-xs text-[var(--orb-foreground)]">{analysis.child_voice_check}</p>
-            </section>
+            <AnalysisSection title="Child voice check" dataAttr="child-voice">
+              <p className="text-xs leading-relaxed" data-orb-brain-child-voice>
+                {analysis.child_voice_check}
+              </p>
+            </AnalysisSection>
 
             {analysis.safeguarding_concerns.length ? (
-              <section data-orb-brain-safeguarding>
-                <h4 className="text-[10px] font-semibold uppercase tracking-wider text-[var(--orb-muted)]">Safeguarding concerns</h4>
-                <ul className="mt-1 list-disc space-y-0.5 pl-4 text-xs text-amber-200/90">
+              <AnalysisSection title="Safeguarding concerns" dataAttr="safeguarding">
+                <ul className="list-disc space-y-1 pl-4 text-xs text-amber-200/90">
                   {analysis.safeguarding_concerns.map((c) => (
                     <li key={c}>{c}</li>
                   ))}
                 </ul>
-              </section>
+              </AnalysisSection>
             ) : null}
 
             {analysis.missing_information.length ? (
-              <section data-orb-brain-missing>
-                <h4 className="text-[10px] font-semibold uppercase tracking-wider text-[var(--orb-muted)]">Missing information</h4>
-                <ul className="mt-1 list-disc space-y-0.5 pl-4 text-xs text-[var(--orb-foreground)]">
+              <AnalysisSection title="Missing information" dataAttr="missing">
+                <ul className="list-disc space-y-1 pl-4 text-xs">
                   {analysis.missing_information.map((m) => (
                     <li key={m}>{m}</li>
                   ))}
                 </ul>
-              </section>
+              </AnalysisSection>
             ) : null}
 
             {analysis.manager_oversight_note ? (
-              <section data-orb-brain-manager>
-                <h4 className="text-[10px] font-semibold uppercase tracking-wider text-[var(--orb-muted)]">Manager oversight</h4>
-                <p className="mt-1 text-xs text-[var(--orb-foreground)]">{analysis.manager_oversight_note}</p>
-              </section>
+              <AnalysisSection title="Manager oversight" dataAttr="manager">
+                <p className="text-xs leading-relaxed">{analysis.manager_oversight_note}</p>
+              </AnalysisSection>
             ) : null}
 
             {analysis.ofsted_evidence_check ? (
-              <section data-orb-brain-ofsted>
-                <h4 className="text-[10px] font-semibold uppercase tracking-wider text-[var(--orb-muted)]">Ofsted / regulatory evidence</h4>
-                <p className="mt-1 text-xs text-[var(--orb-foreground)]">{analysis.ofsted_evidence_check}</p>
-              </section>
+              <AnalysisSection title="Regulatory evidence" dataAttr="ofsted">
+                <p className="text-xs leading-relaxed">{analysis.ofsted_evidence_check}</p>
+              </AnalysisSection>
             ) : null}
 
             {analysis.professional_wording_suggestions.length ? (
               <section data-orb-brain-suggestions>
-                <h4 className="text-[10px] font-semibold uppercase tracking-wider text-[var(--orb-muted)]">
+                <h4 className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--orb-muted)]">
                   Professional wording suggestions
                 </h4>
-                <ul className="mt-2 space-y-2">
+                <ul className="space-y-2">
                   {analysis.professional_wording_suggestions.map((s) => (
-                    <SuggestionRow
+                    <SuggestionCard
                       key={s.id}
                       suggestion={s}
                       onAccept={() => onSuggestionUpdate(s.id, 'accepted')}
@@ -161,14 +200,13 @@ export function OrbDictateBrainPanel({
             ) : null}
 
             {analysis.recommended_next_actions.length ? (
-              <section data-orb-brain-actions>
-                <h4 className="text-[10px] font-semibold uppercase tracking-wider text-[var(--orb-muted)]">Recommended next actions</h4>
-                <ul className="mt-1 list-disc space-y-0.5 pl-4 text-xs text-[var(--orb-foreground)]">
+              <AnalysisSection title="Recommended next actions" dataAttr="actions">
+                <ul className="list-disc space-y-1 pl-4 text-xs">
                   {analysis.recommended_next_actions.map((a) => (
                     <li key={a}>{a}</li>
                   ))}
                 </ul>
-              </section>
+              </AnalysisSection>
             ) : null}
           </div>
         )}

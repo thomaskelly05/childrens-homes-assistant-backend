@@ -1,0 +1,50 @@
+/* ORB Dictate Studio — premium workspace polish */
+.orb-dictate-studio-workspace {
+  --orb-dictate-studio-gap: 0.5rem;
+}
+
+html[data-orb-residential='1'] .orb-dictate-studio-workspace {
+  min-height: min(calc(100dvh - 7.5rem), calc(100svh - 7.5rem));
+}
+
+html[data-orb-residential='1'] [data-orb-dictate-focus-mode='true'] {
+  padding-inline: 0.25rem;
+}
+
+html[data-orb-residential='1'] [data-orb-dictate-focus-mode='true'] [data-orb-dictate-advanced-options] {
+  display: none;
+}
+
+html[data-orb-residential='1'] [data-orb-dictate-focus-mode='true'] [data-orb-panel-presets-compact] {
+  display: none;
+}
+
+.orb-dictate-hero-record--active {
+  animation: orb-dictate-record-pulse 2s ease-in-out infinite;
+}
+
+@keyframes orb-dictate-record-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(248, 113, 113, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(248, 113, 113, 0);
+  }
+}
+
+.orb-dictate-suggested-outputs--rail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+html[data-orb-residential='1'] .orb-workspace-body:has([data-orb-dictate-studio-workspace]) {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+html[data-orb-residential='1'] [data-orb-dictate-station][data-orb-dictate-layout='desktop-runtime'] {
+  min-height: min(calc(100dvh - 8rem), calc(100svh - 8rem));
+}
