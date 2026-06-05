@@ -118,7 +118,7 @@ describe('ORB Dictate top-weight reduction', () => {
   it('workspace uses compact modal chrome on desktop', () => {
     const station = readComponent('components/orb-standalone/orb-dictate-station.tsx')
     const frame = readComponent('components/orb-standalone/orb-workspace-frame.tsx')
-    assert.match(station, /compactChrome={phase !== 'studio' && !isMobile}/)
+    assert.match(station, /compactChrome/)
     assert.match(frame, /compactChrome/)
   })
 

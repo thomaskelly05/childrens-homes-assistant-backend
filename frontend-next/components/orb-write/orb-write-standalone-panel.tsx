@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ArrowLeft } from 'lucide-react'
+import { FileEdit, Sparkles } from 'lucide-react'
 
 import { OrbAppModal } from '@/components/orb-standalone/orb-app-modal'
 import { OrbDictateBrainPanel } from '@/components/orb/dictate/OrbDictateBrainPanel'
@@ -13,7 +13,11 @@ import {
 import { OrbStudioShell } from '@/components/orb/premium'
 import { OrbWriteEditor } from '@/components/orb-write/orb-write-editor'
 import { OrbWriteSourcePanel } from '@/components/orb-write/orb-write-source-panel'
-import { OrbWriteStartScreen } from '@/components/orb-write/orb-write-start-screen'
+import {
+  clearOrbWriteContentHandoff,
+  contentHandoffToOrbWriteDocument,
+  loadOrbWriteContentHandoff
+} from '@/lib/orb/write/orb-write-content-handoff'
 import { copyTextToClipboard } from '@/lib/orb/orb-clipboard'
 import {
   buildBrainAnalysisFromGenerate,
@@ -51,8 +55,6 @@ import {
 import type { OrbWriteDocument } from '@/lib/orb/write/orb-write-types'
 import { ORB_WRITE_SAFETY_COPY } from '@/lib/orb/write/orb-write-types'
 
-type WriteView = 'start' | 'editor'
-
 export function OrbWriteStandalonePanel({
   open,
   onClose,
@@ -68,7 +70,6 @@ export function OrbWriteStandalonePanel({
   onOpenSavedOutputs?: () => void
   initialDocument?: OrbWriteDocument | null
 }) {
-  const [view, setView] = useState<WriteView>(initialDocument ? 'editor' : 'start')
   const [roughText, setRoughText] = useState('')
   const [recordTypeId, setRecordTypeId] = useState('general_dictation')
   const [brainAnalysis, setBrainAnalysis] = useState<OrbDictateBrainAnalysis | null>(null)
@@ -90,11 +91,21 @@ export function OrbWriteStandalonePanel({
   useEffect(() => {
     if (!open) return
     setHasLocalDraft(hasOrbWriteLocalDraft())
+    const contentHandoff = loadOrbWriteContentHandoff()
+    if (contentHandoff && !initialDocument) {
+      const document = contentHandoffToOrbWriteDocument(contentHandoff)
+      setDoc(document)
+      setRoughText(document.transcript)
+      if (document.record_type_id) setRecordTypeId(document.record_type_id)
+      clearOrbWriteContentHandoff()
+      setStatusMessage(`Document loaded — ${contentHandoff.source_label}.`)
+      return
+    }
     const handoff = loadOrbWriteHandoff()
     if (handoff && !initialDocument) {
       const document = handoffToOrbWriteDocument(handoff)
       setDoc(document)
-      setView('editor')
+      setRoughText(document.transcript)
       clearOrbWriteHandoff()
       setStatusMessage('Document loaded from Dictate handoff.')
       return
@@ -106,15 +117,17 @@ export function OrbWriteStandalonePanel({
       })
       setRecordTypeId(recordType.id)
       setDoc(createBlankOrbWriteDocumentFromRecordType(recordType))
-      setView('editor')
       clearOrbWriteTemplateHandoff()
       setStatusMessage(`Structured ${recordType.label} document ready — add your notes in each section.`)
       return
     }
     if (initialDocument) {
       setDoc(initialDocument)
-      setView('editor')
+      return
     }
+    const recordType = resolveOrbRecordingRecordType({ recordTypeId })
+    setDoc(createBlankOrbWriteDocumentFromRecordType(recordType))
+    setStatusMessage(null)
   }, [open, initialDocument])
 
   const lastEdited = useMemo(() => {
@@ -193,7 +206,6 @@ export function OrbWriteStandalonePanel({
         analysisSummary: brainAnalysis?.quality_checks ? undefined : brainAnalysis?.child_voice_check
       })
       setDoc(document)
-      setView('editor')
       setStatusMessage('Draft generated — review and edit before exporting.')
     } catch {
       const fallback = buildLocalDictateFallback(text, recordType.dictate_note_type)
@@ -205,7 +217,6 @@ export function OrbWriteStandalonePanel({
         acceptedSuggestions
       })
       setDoc(document)
-      setView('editor')
       setStatusMessage('Local draft generated — reconnect for ORB intelligence.')
     } finally {
       setGenerating(false)
@@ -305,91 +316,64 @@ export function OrbWriteStandalonePanel({
       return
     }
     setDoc(createOrbWriteDocumentFromSavedDraft(draft))
-    setView('editor')
     setStatusMessage('Local draft opened.')
-  }
-
-  function openGeneratedDocument() {
-    if (!generateResult) return
-    const document = createOrbWriteDocumentFromGenerate({
-      roughText: roughText.trim(),
-      recordType,
-      generateResult,
-      acceptedSuggestions
-    })
-    setDoc(document)
-    setView('editor')
   }
 
   return (
     <OrbAppModal
       open={open}
       title="ORB Write"
-      subtitle="Create, review and finalise professional residential records"
+      subtitle="Document studio"
       onClose={onClose}
       panelId="orb-write"
       size="xlarge"
       ariaLabel="ORB Write standalone workspace"
       presentation="workspace"
+      compactChrome
     >
       <OrbStudioShell studioId="write" className="min-h-0 flex-1 gap-3" data-orb-write-standalone>
-        {view === 'start' ? (
-          <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[1fr_320px]" data-orb-write-studio-start>
-            <OrbWriteStartScreen
-              roughText={roughText}
-              onRoughTextChange={setRoughText}
-              selectedRecordTypeId={recordTypeId}
-              onRecordTypeChange={setRecordTypeId}
-              onAnalyse={() => void runAnalysis()}
-              onGenerate={() => void runGenerate()}
-              onOpenDocument={generateResult ? openGeneratedDocument : undefined}
-              onStartFromTemplate={onOpenTemplates}
-              onOpenSavedDraft={openFromDraft}
-              onContinueFromDictate={onOpenDictate}
-              analysing={analysing}
-              generating={generating}
-              hasAnalysis={Boolean(brainAnalysis)}
-              hasDraft={Boolean(generateResult)}
-              hasLocalDraft={hasLocalDraft}
-              statusMessage={statusMessage}
-            />
-            <div className="min-h-[280px] overflow-hidden rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)] lg:min-h-0">
-              <OrbDictateBrainPanel
-                analysis={brainAnalysis}
-                loading={analysing}
-                studioTemplateId={recordType.studio_template_id ?? 'general'}
-                recordTypeId={recordType.id}
-                hasTranscript={roughText.trim().length > 0}
-                onAnalyse={() => void runAnalysis()}
-                onSuggestionUpdate={updateSuggestion}
-              />
-            </div>
-          </div>
-        ) : doc ? (
+        {doc ? (
           <div className="flex min-h-0 flex-1 flex-col gap-3" data-orb-write-studio-editor>
-            <header className="flex shrink-0 items-center gap-2 border-b border-[var(--orb-line)]/40 pb-2">
-              <button
-                type="button"
-                className="rounded-lg p-2 hover:bg-[var(--orb-surface-hover)]"
-                onClick={() => {
-                  setView('start')
-                  setStatusMessage(null)
-                }}
-                aria-label="Back to start"
-                data-orb-write-back-start
-              >
-                <ArrowLeft className="h-4 w-4" />
-              </button>
-              <input
-                data-orb-write-title-input
-                value={doc.title}
-                onChange={(e) => setDoc((prev) => (prev ? { ...prev, title: e.target.value } : prev))}
-                className="min-w-0 flex-1 bg-transparent text-lg font-semibold text-[var(--orb-foreground)] focus:outline-none"
-              />
+            <header
+              className="flex shrink-0 flex-wrap items-center gap-2 border-b border-[var(--orb-line)]/40 pb-2"
+              data-orb-write-studio-header
+            >
+              <div className="flex min-w-0 flex-1 items-center gap-2">
+                <FileEdit className="h-4 w-4 shrink-0 text-[var(--orb-primary)]" aria-hidden />
+                <input
+                  data-orb-write-title-input
+                  value={doc.title}
+                  onChange={(e) => setDoc((prev) => (prev ? { ...prev, title: e.target.value } : prev))}
+                  className="min-w-0 flex-1 bg-transparent text-lg font-semibold text-[var(--orb-foreground)] focus:outline-none"
+                />
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => void runAnalysis()}
+                  disabled={analysing || !roughText.trim()}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--orb-line)] px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
+                  data-orb-write-analyse
+                >
+                  <Sparkles className="h-3.5 w-3.5" aria-hidden />
+                  Analyse with ORB
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void runGenerate()}
+                  disabled={generating || !roughText.trim()}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--orb-primary)] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+                  data-orb-write-generate
+                >
+                  Generate draft
+                </button>
+              </div>
             </header>
             <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[260px_1fr_300px] xl:grid-cols-[280px_1fr_320px]">
               <OrbWriteSourcePanel
                 document={doc}
+                roughText={roughText}
+                onRoughTextChange={setRoughText}
                 onContinueFromDictate={onOpenDictate}
                 onOpenTemplates={onOpenTemplates}
                 onOpenSavedDraft={openFromDraft}
@@ -409,6 +393,17 @@ export function OrbWriteStandalonePanel({
                 />
               </div>
               <div className="flex min-h-0 flex-col gap-3 overflow-hidden" data-orb-write-assistant-panel>
+                <div className="min-h-[200px] overflow-hidden rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)] lg:min-h-0">
+                  <OrbDictateBrainPanel
+                    analysis={brainAnalysis}
+                    loading={analysing}
+                    studioTemplateId={recordType.studio_template_id ?? 'general'}
+                    recordTypeId={recordType.id}
+                    hasTranscript={roughText.trim().length > 0}
+                    onAnalyse={() => void runAnalysis()}
+                    onSuggestionUpdate={updateSuggestion}
+                  />
+                </div>
                 <OrbWriteGuidancePanel
                   document={doc}
                   selected={selectedGuidance}
@@ -419,15 +414,20 @@ export function OrbWriteStandalonePanel({
                 <OrbWriteAiPanel document={doc} onApplyRevision={applyRevision} />
               </div>
             </div>
+            <footer
+              className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-[var(--orb-line)]/40 pt-2 text-[10px] text-[var(--orb-muted)]"
+              data-orb-write-status-footer
+            >
+              <span data-orb-write-word-count-display>{wordCount} words</span>
+              <span>{doc.is_finalised ? 'Approved' : 'Draft'}</span>
+              <span>{lastEdited ? `Last edited ${lastEdited}` : null}</span>
+            </footer>
             <p className="shrink-0 text-[10px] text-[var(--orb-muted)]">{ORB_WRITE_SAFETY_COPY.responsibility}</p>
             {statusMessage ? (
               <p className="text-xs text-[var(--orb-primary)]" role="status">
                 {statusMessage}
               </p>
             ) : null}
-            <span className="sr-only" data-orb-write-word-count>
-              {wordCount} words
-            </span>
           </div>
         ) : null}
       </OrbStudioShell>

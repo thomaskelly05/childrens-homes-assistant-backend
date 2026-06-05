@@ -22,7 +22,7 @@ import {
 
 import { OrbAppearanceControl } from '@/components/orb-standalone/orb-appearance-control'
 import { OrbBillingSettingsSection } from '@/components/orb-standalone/orb-billing-settings-section'
-import { orbStationShellProps } from '@/components/orb-standalone/orb-app-modal'
+import { orbOverlayDrawerShellProps } from '@/components/orb-standalone/orb-app-modal'
 import { OrbStandalonePanelShell } from '@/components/orb-standalone/orb-standalone-panel-shell'
 import type { OrbAppearanceMode } from '@/lib/orb/orb-appearance'
 import { isOrbDeveloperMode } from '@/lib/orb/orb-developer-mode'
@@ -206,12 +206,13 @@ export function OrbStandaloneSettingsPanel({
       panelId="settings"
       footer="ORB Residential does not access IndiCare OS records. It uses your profile, conversation, uploaded documents and IndiCare residential intelligence."
       {...(residentialSurface
-        ? orbStationShellProps(true, 'compact')
+        ? orbOverlayDrawerShellProps('workstation')
         : { layout: 'center' as const, wide: true })}
     >
       <div
         className="orb-studio-shell flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row"
         data-orb-settings-panel
+        data-orb-settings-drawer
         data-orb-settings-layout="premium-cards"
         data-orb-studio-shell="settings"
       >

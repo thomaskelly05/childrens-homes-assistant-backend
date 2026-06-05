@@ -69,6 +69,7 @@ import { OrbSavedOutputsPanel } from '@/components/orb-standalone/orb-saved-outp
 import { OrbKnowledgeLibraryPanel } from '@/components/orb-standalone/orb-knowledge-library'
 import { OrbTemplatesPanel } from '@/components/orb-standalone/orb-templates-panel'
 import type { OrbRecordingLibraryAction } from '@/components/orb/recording/OrbRecordingLibraryCards'
+import { handoffTextToOrbWrite } from '@/lib/orb/write/orb-write-content-handoff'
 import { saveOrbWriteTemplateHandoff } from '@/lib/orb/write/orb-write-template-handoff'
 import type { OrbRecordingRecordType } from '@/lib/orb/recording/orb-recording-types'
 import {
@@ -565,7 +566,7 @@ function orbErrorCallToAction(message: string, className = 'mt-3') {
 }
 
 export function OrbCareCompanion({ residentialSurface = false }: { residentialSurface?: boolean } = {}) {
-  const { status, csrfReady, refreshSession } = useAuth()
+  const { status, csrfReady, refreshSession, logout } = useAuth()
   const account = useOrbAccountState()
   const sessionGate = useOrbSessionGate()
   const orbSessionReady = account.isSignedIn && csrfReady && !account.isLoading
@@ -852,6 +853,31 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
     [openPanel]
   )
   const openOrbWritePanel = useCallback(() => openPanel('orb_write'), [openPanel])
+
+  const openOrbWriteWithContent = useCallback(
+    (opts: {
+      content: string
+      source: 'chat' | 'document' | 'saved_output' | 'unknown'
+      sourceLabel: string
+      recordTypeId?: string
+      title?: string
+    }) => {
+      handoffTextToOrbWrite({
+        content: opts.content,
+        source: opts.source,
+        sourceLabel: opts.sourceLabel,
+        recordTypeId: opts.recordTypeId,
+        title: opts.title
+      })
+      openPanel('orb_write')
+    },
+    [openPanel]
+  )
+
+  const openChatPanel = useCallback(() => {
+    closePanel()
+    setSidebarOpen(false)
+  }, [closePanel])
 
   const handleRecordingLibraryAction = useCallback(
     (action: OrbRecordingLibraryAction, recordType: OrbRecordingRecordType) => {
@@ -3250,6 +3276,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
               onToggleCollapse={toggleSidebarCollapsed}
               onWorkspaceChange={setWorkspace}
               onOpenStation={openResidentialStation}
+              onOpenChat={openChatPanel}
               onOpenSettings={() => {
                 openSettingsPanel()
                 setSidebarOpen(false)
@@ -3846,6 +3873,49 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                                     })()
                                   }}
                                   onInspectionPrep={() => handleModeChange('Ofsted Lens')}
+                                  onOpenInOrbWrite={
+                                    minimalTurn
+                                      ? undefined
+                                      : () => {
+                                          openOrbWriteWithContent({
+                                            content: entry.content,
+                                            source: 'chat',
+                                            sourceLabel: 'From chat'
+                                          })
+                                        }
+                                  }
+                                  onUseAsTemplate={
+                                    minimalTurn
+                                      ? undefined
+                                      : () => {
+                                          setMessage(
+                                            `Use this as a template structure:\n\n${entry.content.slice(0, 2000)}`
+                                          )
+                                          inputRef.current?.focus()
+                                        }
+                                  }
+                                  onExport={
+                                    minimalTurn
+                                      ? undefined
+                                      : () => {
+                                          const blob = new Blob([entry.content], { type: 'text/markdown;charset=utf-8' })
+                                          const url = URL.createObjectURL(blob)
+                                          const anchor = document.createElement('a')
+                                          anchor.href = url
+                                          anchor.download = 'orb-response.md'
+                                          anchor.click()
+                                          URL.revokeObjectURL(url)
+                                        }
+                                  }
+                                  exportEnabled={!minimalTurn}
+                                  onEdit={
+                                    minimalTurn
+                                      ? undefined
+                                      : () => {
+                                          setMessage(entry.content)
+                                          inputRef.current?.focus()
+                                        }
+                                  }
                                   onOrbFollowUp={
                                     minimalTurn
                                       ? undefined
@@ -3927,6 +3997,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                             entry={entry}
                             userInitials={userDisplayInitials}
                             onEditSubmit={handleEditAndResubmit}
+                            onResend={(content) => void sendMessage(content, { retry: true })}
                             disabled={pending || isAnswering}
                           />
                           {(entry.imageDataUrls?.length ?? 0) > 0 &&
@@ -4023,6 +4094,21 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           subscriptionActive={account.hasConfirmedAccess}
           adminBypass={account.adminBypass}
           realtimeVoiceEnabled={realtimeVoiceAvailable}
+          safetyAccepted={account.safetyAccepted}
+          role={account.role}
+          onOpenSavedOutputs={() => {
+            closePanel()
+            openSavedOutputsPanel()
+          }}
+          onLogOut={
+            account.isSignedIn
+              ? () => {
+                  void logout().then(() => {
+                    window.location.href = '/orb/login'
+                  })
+                }
+              : undefined
+          }
         />
       ) : null}
       {adultProfile && !residentialSurface ? (
@@ -4249,11 +4335,13 @@ function OrbUserMessageBubble({
   entry,
   userInitials,
   onEditSubmit,
+  onResend,
   disabled
 }: {
   entry: StandaloneChatMessage
   userInitials: string
   onEditSubmit: (messageId: string, content: string) => void
+  onResend?: (content: string) => void
   disabled?: boolean
 }) {
   const [editing, setEditing] = useState(false)
@@ -4329,18 +4417,48 @@ function OrbUserMessageBubble({
         ) : (
           <>
             <p className="whitespace-pre-wrap text-[15px] leading-7 text-[var(--orb-foreground)]">{entry.content}</p>
-            <div className="mt-1.5 flex items-center justify-end gap-2 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
+            <div
+              className="orb-user-message-actions mt-1.5 flex items-center justify-end gap-1 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
+              data-orb-user-message-actions
+            >
+              <button
+                type="button"
+                onClick={() => void copyTextToClipboard(entry.content)}
+                className="orb-action-chip orb-action-chip--icon-only inline-flex min-h-8 min-w-8 items-center justify-center rounded-lg border px-2 py-1"
+                data-orb-user-action-copy
+                aria-label="Copy"
+                title="Copy"
+              >
+                <Copy className="h-3.5 w-3.5" aria-hidden />
+                <span className="sr-only">Copy</span>
+              </button>
               <button
                 type="button"
                 onClick={() => setEditing(true)}
                 disabled={disabled}
-                className="orb-action-chip inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[10px] font-semibold"
-                data-orb-message-edit-button
+                className="orb-action-chip orb-action-chip--icon-only inline-flex min-h-8 min-w-8 items-center justify-center rounded-lg border px-2 py-1"
+                data-orb-user-action-edit
+                aria-label="Edit"
+                title="Edit"
               >
-                <Pencil className="h-3 w-3" aria-hidden />
-                Edit
+                <Pencil className="h-3.5 w-3.5" aria-hidden />
+                <span className="sr-only">Edit</span>
               </button>
-              {timeLabel ? <span className="text-[10px] text-[#64748B]">{timeLabel}</span> : null}
+              {onResend ? (
+                <button
+                  type="button"
+                  onClick={() => onResend(entry.content)}
+                  disabled={disabled}
+                  className="orb-action-chip orb-action-chip--icon-only inline-flex min-h-8 min-w-8 items-center justify-center rounded-lg border px-2 py-1"
+                  data-orb-user-action-resend
+                  aria-label="Resend"
+                  title="Resend"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" aria-hidden />
+                  <span className="sr-only">Resend</span>
+                </button>
+              ) : null}
+              {timeLabel ? <span className="ml-1 text-[10px] text-[#64748B]">{timeLabel}</span> : null}
             </div>
           </>
         )}

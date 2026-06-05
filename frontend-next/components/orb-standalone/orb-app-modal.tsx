@@ -82,6 +82,16 @@ export function orbStationShellProps(residentialSurface: boolean | undefined, si
   return {
     layout: 'workspace' as const,
     presentation: 'workspace' as const,
+    compactChrome: true,
     wide: size === 'wide' || size === 'standard'
+  }
+}
+
+/** Settings, profile and account overlays — drawer over current page, not main workspace swap. */
+export function orbOverlayDrawerShellProps(size: OrbAppModalSize = 'wide') {
+  return {
+    layout: 'drawer' as const,
+    wide: size === 'wide' || size === 'workstation' || size === 'standard',
+    appModal: true
   }
 }
