@@ -18,11 +18,16 @@ import {
   shouldBlockStationForAuth
 } from '@/components/orb-standalone/orb-station-panel-states'
 import {
+  OrbRecordingLibraryCards,
+  type OrbRecordingLibraryAction
+} from '@/components/orb/recording/OrbRecordingLibraryCards'
+import {
   fetchOrbTemplateCategories,
   fetchOrbTemplates,
   generateOrbTemplate,
   type OrbTemplateSummary
 } from '@/lib/orb/orb-billing-client'
+import type { OrbRecordingRecordType } from '@/lib/orb/recording/orb-recording-types'
 
 const FALLBACK_CATEGORIES = [...ORB_TEMPLATE_FALLBACK_CATEGORIES]
 
@@ -81,12 +86,14 @@ export function OrbTemplatesPanel({
   open,
   onClose,
   onUseTemplate,
+  onRecordingAction,
   residentialSurface = false,
   sessionReady = true
 }: {
   open: boolean
   onClose: () => void
   onUseTemplate?: (prompt: string, template: OrbTemplateSummary) => void
+  onRecordingAction?: (action: OrbRecordingLibraryAction, recordType: OrbRecordingRecordType) => void
   residentialSurface?: boolean
   sessionReady?: boolean
 }) {
@@ -98,6 +105,7 @@ export function OrbTemplatesPanel({
   const [loading, setLoading] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [recordingPreview, setRecordingPreview] = useState<OrbRecordingRecordType | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -167,6 +175,35 @@ export function OrbTemplatesPanel({
       {...orbStationShellProps(residentialSurface, 'wide')}
     >
       <div className="orb-templates-panel space-y-4 p-4" data-orb-templates-panel>
+        <section data-orb-recording-library-section>
+          <h3 className="mb-2 text-sm font-semibold text-[var(--orb-foreground)]">Recording library</h3>
+          <p className="mb-3 text-xs text-[var(--orb-muted)]">
+            Structured residential record types shared across Dictate, Write and Documents.
+          </p>
+          <OrbRecordingLibraryCards
+            search={search}
+            onAction={(action, recordType) => {
+              if (action === 'preview') {
+                setRecordingPreview(recordType)
+                return
+              }
+              onRecordingAction?.(action, recordType)
+            }}
+          />
+        </section>
+
+        {recordingPreview ? (
+          <div className="rounded-xl border border-[var(--orb-line)] p-4" data-orb-recording-structure-preview>
+            <p className="text-sm font-semibold">{recordingPreview.label} — structure</p>
+            <ul className="mt-2 list-disc space-y-1 pl-4 text-xs text-[var(--orb-muted)]">
+              {recordingPreview.final_document_headings.map((h) => (
+                <li key={h}>{h}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
+        <h3 className="text-sm font-semibold text-[var(--orb-foreground)]">Prompt templates</h3>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--orb-muted)]" aria-hidden />
           <input

@@ -47,7 +47,10 @@ import {
   saveOrbDictateNote,
   transcribeOrbDictateAudio
 } from '@/lib/orb/dictate/orb-dictate-client'
-import { templateLabelForNoteType, type OrbDictateStudioTemplate } from '@/lib/orb/dictate/orb-dictate-studio-templates'
+import {
+  recordTypeIdForStudioTemplate,
+  type OrbDictateStudioTemplate
+} from '@/lib/orb/dictate/orb-dictate-studio-templates'
 import {
   handoffToOrbWriteDocument,
   saveOrbWriteHandoff,
@@ -939,11 +942,13 @@ export function OrbDictateStation({
     setStatusMessage('Preparing document for ORB Write…')
     try {
       const segs = segments.length ? segments : textToSegments(input, 'paste', participants)
+      const recordTypeId = recordTypeIdForStudioTemplate(selectedTemplateId)
       const result = await finaliseOrbDictateDocument({
         input_text: input,
         note_type: noteType,
         mode: dictateMode,
         template_id: selectedTemplateId,
+        record_type_id: recordTypeId,
         transcript: input,
         accepted_suggestions: acceptedSuggestions,
         adult_edits: editedNote || output?.professional_note,
@@ -957,6 +962,7 @@ export function OrbDictateStation({
         transcript: input,
         template_id: selectedTemplateId,
         note_type: result.note_type,
+        record_type_id: result.record_type_id ?? recordTypeId,
         accepted_suggestions: acceptedSuggestions,
         adult_edits: result.professional_note,
         timestamp: result.timestamp,
@@ -972,7 +978,7 @@ export function OrbDictateStation({
         segments: segs
       }
       saveOrbWriteHandoff(handoff)
-      setWriteDocument(handoffToOrbWriteDocument(handoff, templateLabelForNoteType(result.note_type)))
+      setWriteDocument(handoffToOrbWriteDocument(handoff))
       setPhase('write')
       setStatusMessage('Document opened in ORB Write — review before saving or exporting.')
     } catch {
@@ -982,6 +988,7 @@ export function OrbDictateStation({
         transcript: input,
         template_id: selectedTemplateId,
         note_type: noteType,
+        record_type_id: recordTypeIdForStudioTemplate(selectedTemplateId),
         accepted_suggestions: acceptedSuggestions,
         adult_edits: body,
         timestamp: new Date().toISOString(),
@@ -990,7 +997,7 @@ export function OrbDictateStation({
         segments: segments.length ? segments : textToSegments(input, 'paste', participants)
       }
       saveOrbWriteHandoff(handoff)
-      setWriteDocument(handoffToOrbWriteDocument(handoff, templateLabelForNoteType(noteType)))
+      setWriteDocument(handoffToOrbWriteDocument(handoff))
       setPhase('write')
       setStatusMessage('Opened local draft in ORB Write — reconnect to refine with ORB intelligence.')
     } finally {

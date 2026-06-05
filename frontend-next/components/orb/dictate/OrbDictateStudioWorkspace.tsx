@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { OrbDictateBrainPanel } from '@/components/orb/dictate/OrbDictateBrainPanel'
+import { OrbDictateSelectedTemplateCard } from '@/components/orb/dictate/OrbDictateSelectedTemplateCard'
 import { OrbDictateSuggestedOutputs } from '@/components/orb/dictate/OrbDictateSuggestedOutputs'
 import {
   OrbDictateTopBar,
@@ -26,7 +27,10 @@ import {
   readOrbDictateFocusMode,
   writeOrbDictateFocusMode
 } from '@/lib/orb/dictate/orb-dictate-focus-mode'
-import type { OrbDictateStudioTemplate } from '@/lib/orb/dictate/orb-dictate-studio-templates'
+import {
+  recordTypeIdForStudioTemplate,
+  type OrbDictateStudioTemplate
+} from '@/lib/orb/dictate/orb-dictate-studio-templates'
 import type { OrbDictateMode, OrbDictateParticipant, OrbDictateTranscriptSegment } from '@/lib/orb/dictate/orb-dictate-speaker'
 import { suggestParticipantsFromText } from '@/lib/orb/dictate/orb-dictate-speaker'
 import { writeOrbSidebarCollapsed } from '@/lib/orb/orb-sidebar-preference'
@@ -119,13 +123,16 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
       const result = await analyzeOrbDictateSession({
         input_text: effectiveText,
         note_type: props.noteType,
-        mode: props.dictateMode
+        mode: props.dictateMode,
+        template_id: props.selectedTemplateId,
+        record_type_id: recordTypeIdForStudioTemplate(props.selectedTemplateId)
       })
       setBrainAnalysis(result)
     } catch {
       setBrainAnalysis(
         buildBrainAnalysisFromGenerate({
           noteType: props.noteType,
+          recordTypeId: recordTypeIdForStudioTemplate(props.selectedTemplateId),
           qualityChecks: {
             child_voice: 'review',
             safeguarding: 'review',
@@ -147,6 +154,7 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
       setBrainAnalysis(
         buildBrainAnalysisFromGenerate({
           noteType: props.output.note_type,
+          recordTypeId: recordTypeIdForStudioTemplate(props.selectedTemplateId),
           qualityChecks: props.output.quality_checks,
           summary: props.output.summary,
           actions: props.output.actions,
@@ -206,6 +214,11 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
       data-orb-dictate-focus-mode={focusMode ? 'true' : 'false'}
       style={{ minHeight: 'min(100dvh - 7rem, calc(100svh - 7rem))' }}
     >
+      <OrbDictateSelectedTemplateCard
+        studioTemplateId={props.selectedTemplateId}
+        recordTypeId={recordTypeIdForStudioTemplate(props.selectedTemplateId)}
+      />
+
       <OrbDictateTopBar
         selectedTemplateId={props.selectedTemplateId}
         onTemplateChange={props.onTemplateChange}
@@ -267,6 +280,7 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
           <OrbDictateSuggestedOutputs
             variant="rail"
             activeNoteType={props.noteType}
+            studioTemplateId={props.selectedTemplateId}
             generatedTypes={props.generatedTypes}
             onSelectOutput={props.onSelectOutputType}
             disabled={props.generating || !governanceOk}

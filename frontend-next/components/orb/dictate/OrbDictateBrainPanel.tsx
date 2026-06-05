@@ -130,9 +130,31 @@ export function OrbDictateBrainPanel({
           </div>
         ) : (
           <div className="space-y-3">
-            <AnalysisSection title="Detected record type" dataAttr="record-type">
+            <AnalysisSection title="Record type" dataAttr="record-type">
               <p data-orb-brain-record-type>{analysis.detected_record_type}</p>
             </AnalysisSection>
+
+            {analysis.required_sections?.length ? (
+              <AnalysisSection title="Required sections" dataAttr="required-sections">
+                <ul className="list-disc space-y-1 pl-4 text-xs">
+                  {analysis.required_sections.map((s) => (
+                    <li key={s}>{s}</li>
+                  ))}
+                </ul>
+              </AnalysisSection>
+            ) : null}
+
+            {analysis.orb_will_check?.length ? (
+              <AnalysisSection title="What ORB will check" dataAttr="orb-checks">
+                <ul className="list-disc space-y-1 pl-4 text-xs">
+                  {analysis.orb_will_check.map((c) => (
+                    <li key={c} data-orb-brain-orb-check>
+                      {c}
+                    </li>
+                  ))}
+                </ul>
+              </AnalysisSection>
+            ) : null}
 
             <AnalysisSection title="Recording quality" dataAttr="quality">
               <p data-orb-brain-quality>
@@ -200,12 +222,36 @@ export function OrbDictateBrainPanel({
             ) : null}
 
             {analysis.recommended_next_actions.length ? (
-              <AnalysisSection title="Recommended next actions" dataAttr="actions">
+              <AnalysisSection title="Suggested next actions" dataAttr="actions">
                 <ul className="list-disc space-y-1 pl-4 text-xs">
                   {analysis.recommended_next_actions.map((a) => (
                     <li key={a}>{a}</li>
                   ))}
                 </ul>
+              </AnalysisSection>
+            ) : null}
+
+            {analysis.possible_outputs.length ? (
+              <AnalysisSection title="Suggested outputs" dataAttr="outputs">
+                <ul className="flex flex-wrap gap-1.5">
+                  {analysis.possible_outputs.map((o) => (
+                    <li
+                      key={o}
+                      className="rounded-full border border-[var(--orb-line)]/40 px-2 py-0.5 text-[10px]"
+                      data-orb-brain-suggested-output
+                    >
+                      {o}
+                    </li>
+                  ))}
+                </ul>
+              </AnalysisSection>
+            ) : null}
+
+            {analysis.recording_quality_guidance ? (
+              <AnalysisSection title="Recording guidance" dataAttr="guidance">
+                <p className="text-xs leading-relaxed" data-orb-brain-quality-guidance>
+                  {analysis.recording_quality_guidance}
+                </p>
               </AnalysisSection>
             ) : null}
           </div>

@@ -290,6 +290,8 @@ class OrbDictateAnalyzeRequest(BaseModel):
     input_text: str = Field(..., min_length=1, max_length=120_000)
     note_type: OrbDictateNoteType = "daily_record"
     mode: OrbDictateMode | None = None
+    record_type_id: str | None = Field(default=None, max_length=80)
+    template_id: str | None = Field(default=None, max_length=80)
 
 
 class OrbDictateBrainSuggestion(BaseModel):
@@ -306,12 +308,16 @@ class OrbDictateAnalyzeResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     detected_record_type: str
+    record_type_id: str | None = None
+    required_sections: list[str] = Field(default_factory=list)
+    orb_will_check: list[str] = Field(default_factory=list)
     safeguarding_concerns: list[str] = Field(default_factory=list)
     missing_information: list[str] = Field(default_factory=list)
     professional_wording_suggestions: list[OrbDictateBrainSuggestion] = Field(default_factory=list)
     recommended_next_actions: list[str] = Field(default_factory=list)
     possible_outputs: list[str] = Field(default_factory=list)
     recording_quality_score: Literal["good", "needs_review"] = "needs_review"
+    recording_quality_guidance: str = ""
     child_voice_check: str = ""
     ofsted_evidence_check: str | None = None
     manager_oversight_note: str | None = None
@@ -326,6 +332,7 @@ class OrbDictateFinaliseRequest(BaseModel):
     note_type: OrbDictateNoteType = "daily_record"
     mode: OrbDictateMode | None = None
     template_id: str | None = None
+    record_type_id: str | None = Field(default=None, max_length=80)
     transcript: str | None = None
     accepted_suggestions: list[OrbDictateBrainSuggestion] = Field(default_factory=list)
     adult_edits: str | None = None
@@ -345,6 +352,9 @@ class OrbDictateFinaliseResponse(BaseModel):
 
     title: str
     note_type: OrbDictateNoteType
+    record_type_id: str | None = None
+    record_type_label: str | None = None
+    document_headings: list[str] = Field(default_factory=list)
     professional_note: str
     summary: str
     transcript: str

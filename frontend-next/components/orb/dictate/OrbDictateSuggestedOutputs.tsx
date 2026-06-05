@@ -1,21 +1,34 @@
 'use client'
 
-import { ORB_DICTATE_SUGGESTED_OUTPUTS } from '@/lib/orb/dictate/orb-dictate-studio-templates'
+import { suggestedOutputsForRecordType } from '@/lib/orb/dictate/orb-dictate-studio-templates'
+import { resolveOrbRecordingRecordType } from '@/lib/orb/recording/orb-recording-framework'
 import type { OrbDictateNoteType } from '@/lib/orb/dictate/orb-dictate-types'
 
 export function OrbDictateSuggestedOutputs({
   activeNoteType,
+  studioTemplateId,
   generatedTypes,
   onSelectOutput,
   disabled,
   variant = 'rail'
 }: {
   activeNoteType: OrbDictateNoteType
+  studioTemplateId?: string
   generatedTypes: OrbDictateNoteType[]
   onSelectOutput: (noteType: OrbDictateNoteType) => void
   disabled?: boolean
   variant?: 'rail' | 'panel'
 }) {
+  const recordType = resolveOrbRecordingRecordType({
+    studioTemplateId,
+    noteType: activeNoteType
+  })
+  const outputs = suggestedOutputsForRecordType(recordType.id).map((o) => ({
+    id: o.id,
+    label: `Create ${o.label}`,
+    noteType: o.dictate_note_type
+  }))
+
   const isRail = variant === 'rail'
 
   return (
@@ -23,13 +36,14 @@ export function OrbDictateSuggestedOutputs({
       className={`orb-dictate-suggested-outputs ${isRail ? 'orb-dictate-suggested-outputs--rail' : ''}`}
       data-orb-suggested-outputs
       data-orb-suggested-outputs-variant={variant}
+      data-orb-suggested-outputs-record-type={recordType.id}
     >
       <header className={`shrink-0 ${isRail ? 'px-1 pb-2' : 'border-b border-[var(--orb-line)]/40 px-4 py-3'}`}>
         <h3 className={`font-semibold text-[var(--orb-foreground)] ${isRail ? 'text-xs' : 'text-sm'}`}>
           Suggested outputs
         </h3>
         <p className="mt-0.5 text-[10px] leading-relaxed text-[var(--orb-muted)]">
-          One transcript can create multiple draft outputs. Adult review required before use.
+          Relevant to {recordType.label}. Adult review required before use.
         </p>
       </header>
       <div
@@ -41,7 +55,7 @@ export function OrbDictateSuggestedOutputs({
         role="list"
         aria-label="Suggested draft outputs"
       >
-        {ORB_DICTATE_SUGGESTED_OUTPUTS.map((output) => {
+        {outputs.map((output) => {
           const isActive = activeNoteType === output.noteType
           const wasGenerated = generatedTypes.includes(output.noteType)
           return (

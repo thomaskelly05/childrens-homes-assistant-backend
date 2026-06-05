@@ -14,7 +14,9 @@ export type OrbWriteDocument = {
   id: string
   title: string
   record_type: OrbDictateNoteType
+  record_type_id?: string
   record_type_label: string
+  document_headings?: string[]
   body: string
   transcript: string
   template_id: string

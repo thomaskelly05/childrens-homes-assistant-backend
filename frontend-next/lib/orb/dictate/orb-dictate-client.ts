@@ -156,6 +156,8 @@ export async function analyzeOrbDictateSession(payload: {
   input_text: string
   note_type: OrbDictateNoteType
   mode?: OrbDictateMode
+  record_type_id?: string
+  template_id?: string
 }): Promise<OrbDictateBrainAnalysis> {
   const json = await authFetch<unknown>(DICTATE_BASE + '/analyze', {
     method: 'POST',
@@ -168,6 +170,9 @@ export async function analyzeOrbDictateSession(payload: {
 export type OrbDictateFinaliseResult = {
   title: string
   note_type: OrbDictateNoteType
+  record_type_id?: string | null
+  record_type_label?: string | null
+  document_headings?: string[]
   professional_note: string
   summary: string
   transcript: string
@@ -185,6 +190,7 @@ export async function finaliseOrbDictateDocument(payload: {
   note_type: OrbDictateNoteType
   mode?: OrbDictateMode
   template_id?: string
+  record_type_id?: string
   transcript?: string
   accepted_suggestions?: OrbDictateBrainSuggestion[]
   adult_edits?: string
