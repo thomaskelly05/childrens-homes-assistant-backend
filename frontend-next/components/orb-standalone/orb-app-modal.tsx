@@ -25,7 +25,8 @@ export function OrbAppModal({
   ariaLabel,
   panelId,
   size = 'standard',
-  presentation = 'modal'
+  presentation = 'modal',
+  compactChrome = false
 }: {
   open: boolean
   title: string
@@ -37,6 +38,7 @@ export function OrbAppModal({
   panelId?: string
   size?: OrbAppModalSize
   presentation?: OrbAppPresentation
+  compactChrome?: boolean
 }) {
   if (presentation === 'workspace') {
     return (
@@ -47,6 +49,7 @@ export function OrbAppModal({
         onClose={onClose}
         panelId={panelId}
         footer={footer}
+        compactChrome={compactChrome}
       >
         {children}
       </OrbWorkspaceFrame>

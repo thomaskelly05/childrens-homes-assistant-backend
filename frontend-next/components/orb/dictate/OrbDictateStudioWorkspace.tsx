@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { OrbDictateBrainPanel } from '@/components/orb/dictate/OrbDictateBrainPanel'
-import { OrbDictateSelectedTemplateCard } from '@/components/orb/dictate/OrbDictateSelectedTemplateCard'
+import { OrbDictatePrivacyStrip } from '@/components/orb/dictate/OrbDictatePrivacyStrip'
+import { useOrbDictatePanelLayout } from '@/components/orb/dictate/OrbDictatePanelLayoutControl'
 import { OrbDictateSuggestedOutputs } from '@/components/orb/dictate/OrbDictateSuggestedOutputs'
 import {
   OrbDictateTopBar,
@@ -86,16 +87,58 @@ export type OrbDictateStudioWorkspaceProps = {
   uploadError: string | null
 }
 
+function OrbDictateAdvancedOptions(props: OrbDictateStudioWorkspaceProps & { effectiveText: string }) {
+  return (
+    <details
+      className="text-[10px] text-[var(--orb-muted)]"
+      data-orb-dictate-advanced-options
+    >
+      <summary className="cursor-pointer font-medium hover:text-[var(--orb-foreground)]">Advanced options</summary>
+      <div className="mt-2 space-y-2">
+        <OrbDictateParticipantsPanel
+          participants={props.participants}
+          onChange={props.onParticipantsChange}
+          transcript={props.effectiveText}
+          onImportFromTranscript={() => {
+            props.onParticipantsChange(suggestParticipantsFromText(props.effectiveText))
+          }}
+        />
+        <OrbDictateAudioUpload
+          onFile={props.onAudioUpload}
+          uploading={props.uploadingAudio}
+          fileLabel={props.uploadFileLabel}
+          error={props.uploadError}
+        />
+        <OrbDictateGovernanceConsent
+          mode={props.dictateMode}
+          authorityConsent={props.authorityConsent}
+          investigationConfirmed={props.investigationConfirmed}
+          draftReviewConfirmed={props.draftReviewConfirmed}
+          participantsAwareConfirmed={props.participantsAware}
+          noAutoSubmitConfirmed={props.noAutoSubmitConfirmed}
+          onAuthorityConsentChange={props.onAuthorityConsentChange}
+          onInvestigationChange={props.onInvestigationChange}
+          onDraftReviewChange={props.onDraftReviewChange}
+          onParticipantsAwareChange={props.onParticipantsAwareChange}
+          onNoAutoSubmitChange={props.onNoAutoSubmitChange}
+        />
+      </div>
+    </details>
+  )
+}
+
 export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps) {
   const [brainAnalysis, setBrainAnalysis] = useState<OrbDictateBrainAnalysis | null>(null)
   const [brainLoading, setBrainLoading] = useState(false)
   const [analysisRequested, setAnalysisRequested] = useState(false)
   const [focusMode, setFocusMode] = useState(false)
+  const { layout: panelLayout, updateLayout: updatePanelLayout } = useOrbDictatePanelLayout()
 
   const effectiveText = props.liveTranscript.trim() || props.transcript.trim()
   const hasTranscript = effectiveText.length > 0
   const hasDraft = Boolean(props.output)
   const hasAnalysis = Boolean(brainAnalysis) && !brainLoading
+  const recordTypeId = recordTypeIdForStudioTemplate(props.selectedTemplateId)
 
   useEffect(() => {
     setFocusMode(readOrbDictateFocusMode())
@@ -125,14 +168,14 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
         note_type: props.noteType,
         mode: props.dictateMode,
         template_id: props.selectedTemplateId,
-        record_type_id: recordTypeIdForStudioTemplate(props.selectedTemplateId)
+        record_type_id: recordTypeId
       })
       setBrainAnalysis(result)
     } catch {
       setBrainAnalysis(
         buildBrainAnalysisFromGenerate({
           noteType: props.noteType,
-          recordTypeId: recordTypeIdForStudioTemplate(props.selectedTemplateId),
+          recordTypeId,
           qualityChecks: {
             child_voice: 'review',
             safeguarding: 'review',
@@ -147,14 +190,14 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
     } finally {
       setBrainLoading(false)
     }
-  }, [effectiveText, props.noteType, props.dictateMode])
+  }, [effectiveText, props.noteType, props.dictateMode, props.selectedTemplateId, recordTypeId])
 
   useEffect(() => {
     if (props.output) {
       setBrainAnalysis(
         buildBrainAnalysisFromGenerate({
           noteType: props.output.note_type,
-          recordTypeId: recordTypeIdForStudioTemplate(props.selectedTemplateId),
+          recordTypeId,
           qualityChecks: props.output.quality_checks,
           summary: props.output.summary,
           actions: props.output.actions,
@@ -173,7 +216,7 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
       void runAnalysis()
     }, 400)
     return () => window.clearTimeout(timer)
-  }, [effectiveText, props.output, analysisRequested, runAnalysis])
+  }, [effectiveText, props.output, analysisRequested, runAnalysis, recordTypeId])
 
   const primaryAction: OrbDictatePrimaryAction = useMemo(() => {
     if (!hasTranscript) return 'disabled'
@@ -207,18 +250,15 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
     investigationConfirmed: props.investigationConfirmed
   })
 
+  const advancedFooter = <OrbDictateAdvancedOptions {...props} effectiveText={effectiveText} />
+
   return (
     <div
-      className="orb-dictate-studio-workspace flex min-h-0 flex-1 flex-col gap-2 overflow-hidden px-1 sm:px-2"
+      className="orb-dictate-studio-workspace flex min-h-0 flex-1 flex-col gap-1 overflow-hidden px-1 sm:px-2"
       data-orb-dictate-studio-workspace
       data-orb-dictate-focus-mode={focusMode ? 'true' : 'false'}
-      style={{ minHeight: 'min(100dvh - 7rem, calc(100svh - 7rem))' }}
+      style={{ minHeight: 'min(100dvh - 4.5rem, calc(100svh - 4.5rem))' }}
     >
-      <OrbDictateSelectedTemplateCard
-        studioTemplateId={props.selectedTemplateId}
-        recordTypeId={recordTypeIdForStudioTemplate(props.selectedTemplateId)}
-      />
-
       <OrbDictateTopBar
         selectedTemplateId={props.selectedTemplateId}
         onTemplateChange={props.onTemplateChange}
@@ -241,11 +281,18 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
         speechStartDisabled={props.speechStartDisabled}
         focusMode={focusMode}
         onToggleFocusMode={toggleFocusMode}
+        panelLayout={panelLayout}
+        onPanelLayoutChange={updatePanelLayout}
       />
 
+      <OrbDictatePrivacyStrip />
+
       <OrbResizableWorkspace
-        compactPresets
+        hidePresetToolbar
+        layout={panelLayout}
+        onLayoutChange={updatePanelLayout}
         showPreview={false}
+        minPanelHeight="min(74dvh, calc(100svh - 8.5rem))"
         left={
           <OrbTranscriptPanel
             liveTranscript={props.liveTranscript}
@@ -261,6 +308,7 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
             micStatus={props.micStatus}
             onClearTranscript={props.onClearTranscript}
             interimText={props.interimText}
+            footerSlot={advancedFooter}
           />
         }
         right={
@@ -268,13 +316,17 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
             analysis={brainAnalysis}
             loading={brainLoading}
             onSuggestionUpdate={updateSuggestion}
+            studioTemplateId={props.selectedTemplateId}
+            recordTypeId={recordTypeId}
+            onAnalyse={handlePrimaryAction}
+            hasTranscript={hasTranscript}
           />
         }
       />
 
       {hasTranscript ? (
         <div
-          className="shrink-0 rounded-xl border border-[var(--orb-line)]/40 bg-[var(--orb-surface-elevated)]/80 px-3 py-2.5"
+          className="shrink-0 rounded-lg border border-[var(--orb-line)]/35 bg-[var(--orb-surface-elevated)]/60 px-2.5 py-1.5"
           data-orb-dictate-action-rail
         >
           <OrbDictateSuggestedOutputs
@@ -287,42 +339,6 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
           />
         </div>
       ) : null}
-
-      <details
-        className="shrink-0 rounded-xl border border-[var(--orb-line)]/40 bg-[var(--orb-surface-elevated)] p-2 text-xs"
-        data-orb-dictate-advanced-options
-      >
-        <summary className="cursor-pointer font-medium text-[var(--orb-muted)]">Advanced options</summary>
-        <div className="mt-2 space-y-2">
-          <OrbDictateParticipantsPanel
-            participants={props.participants}
-            onChange={props.onParticipantsChange}
-            transcript={effectiveText}
-            onImportFromTranscript={() => {
-              props.onParticipantsChange(suggestParticipantsFromText(effectiveText))
-            }}
-          />
-          <OrbDictateAudioUpload
-            onFile={props.onAudioUpload}
-            uploading={props.uploadingAudio}
-            fileLabel={props.uploadFileLabel}
-            error={props.uploadError}
-          />
-          <OrbDictateGovernanceConsent
-            mode={props.dictateMode}
-            authorityConsent={props.authorityConsent}
-            investigationConfirmed={props.investigationConfirmed}
-            draftReviewConfirmed={props.draftReviewConfirmed}
-            participantsAwareConfirmed={props.participantsAware}
-            noAutoSubmitConfirmed={props.noAutoSubmitConfirmed}
-            onAuthorityConsentChange={props.onAuthorityConsentChange}
-            onInvestigationChange={props.onInvestigationChange}
-            onDraftReviewChange={props.onDraftReviewChange}
-            onParticipantsAwareChange={props.onParticipantsAwareChange}
-            onNoAutoSubmitChange={props.onNoAutoSubmitChange}
-          />
-        </div>
-      </details>
     </div>
   )
 }

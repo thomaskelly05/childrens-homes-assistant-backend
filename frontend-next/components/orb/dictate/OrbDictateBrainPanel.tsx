@@ -4,14 +4,12 @@ import type { ReactNode } from 'react'
 import { Loader2, Sparkles } from 'lucide-react'
 
 import type { OrbDictateBrainAnalysis, OrbDictateBrainSuggestion } from '@/lib/orb/dictate/orb-dictate-brain-analysis'
-
-const PLACEHOLDER_CHIPS = [
-  'Recording quality',
-  'Missing information',
-  'Safeguarding',
-  'Child voice',
-  'Manager oversight'
-] as const
+import {
+  orbRecordingChecksSummary,
+  orbRecordingSuggestedOutputs,
+  resolveOrbRecordingRecordType
+} from '@/lib/orb/recording/orb-recording-framework'
+import type { OrbRecordingRecordTypeId } from '@/lib/orb/recording/orb-recording-types'
 
 function SuggestionCard({
   suggestion,
@@ -86,22 +84,103 @@ function AnalysisSection({
   )
 }
 
+function BrainEmptyState({
+  studioTemplateId,
+  recordTypeId,
+  onAnalyse,
+  analysing
+}: {
+  studioTemplateId: string
+  recordTypeId: OrbRecordingRecordTypeId | string
+  onAnalyse?: () => void
+  analysing?: boolean
+}) {
+  const recordType = resolveOrbRecordingRecordType({ studioTemplateId, recordTypeId })
+  const orbChecks = orbRecordingChecksSummary(recordType)
+  const outputs = orbRecordingSuggestedOutputs(recordType.id)
+
+  return (
+    <div data-orb-brain-empty>
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--orb-muted)]">Selected record type</p>
+      <p className="mt-1 text-sm font-semibold text-[var(--orb-foreground)]" data-orb-brain-record-type-empty>
+        {recordType.label}
+      </p>
+      <p className="mt-1 text-xs leading-relaxed text-[var(--orb-muted)]">{recordType.when_to_use}</p>
+
+      <section className="mt-4" data-orb-brain-empty-orb-checks>
+        <h4 className="text-[10px] font-semibold uppercase tracking-wider text-[var(--orb-muted)]">
+          What ORB will check
+        </h4>
+        <ul className="mt-1.5 list-disc space-y-0.5 pl-4 text-xs text-[var(--orb-foreground)]">
+          {orbChecks.map((check) => (
+            <li key={check} data-orb-brain-orb-check-empty>
+              {check}
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="mt-4" data-orb-brain-empty-outputs>
+        <h4 className="text-[10px] font-semibold uppercase tracking-wider text-[var(--orb-muted)]">
+          Suggested outputs
+        </h4>
+        <ul className="mt-1.5 flex flex-wrap gap-1.5">
+          {outputs.map((o) => (
+            <li
+              key={o.id}
+              className="rounded-full border border-[var(--orb-line)]/40 px-2 py-0.5 text-[10px] text-[var(--orb-muted)]"
+              data-orb-brain-suggested-output-empty
+            >
+              {o.label}
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {onAnalyse ? (
+        <button
+          type="button"
+          data-orb-brain-analyse-cta
+          disabled={analysing}
+          className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--orb-primary)]/45 bg-[var(--orb-primary-soft)] px-4 py-2.5 text-sm font-semibold text-[var(--orb-foreground)] disabled:opacity-50"
+          onClick={onAnalyse}
+        >
+          <Sparkles className="h-4 w-4 shrink-0" aria-hidden />
+          {analysing ? 'Analysing transcript…' : 'Analyse transcript with ORB'}
+        </button>
+      ) : (
+        <p className="mt-4 text-xs text-[var(--orb-muted)]">
+          Record or paste a transcript, then choose Analyse with ORB in the top bar.
+        </p>
+      )}
+    </div>
+  )
+}
+
 export function OrbDictateBrainPanel({
   analysis,
   loading,
-  onSuggestionUpdate
+  onSuggestionUpdate,
+  studioTemplateId,
+  recordTypeId,
+  onAnalyse,
+  hasTranscript
 }: {
   analysis: OrbDictateBrainAnalysis | null
   loading?: boolean
   onSuggestionUpdate: (id: string, status: OrbDictateBrainSuggestion['status']) => void
+  studioTemplateId?: string
+  recordTypeId?: OrbRecordingRecordTypeId | string
+  onAnalyse?: () => void
+  hasTranscript?: boolean
 }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col" data-orb-dictate-brain-panel>
-      <header className="flex shrink-0 items-center gap-2 border-b border-[var(--orb-line)]/40 px-4 py-3">
+      <header className="flex shrink-0 items-center gap-2 border-b border-[var(--orb-line)]/40 px-4 py-2.5">
         <Sparkles className="h-4 w-4 text-[var(--orb-primary)]" aria-hidden />
         <div>
           <h3 className="text-sm font-semibold text-[var(--orb-foreground)]">IndiCare Brain Analysis</h3>
-          <p className="text-[11px] text-[var(--orb-muted)]">Professional review support — adult remains responsible</p>
+          <p className="text-[10px] text-[var(--orb-muted)]">Professional review support — adult remains responsible</p>
         </div>
       </header>
 
@@ -112,22 +191,20 @@ export function OrbDictateBrainPanel({
             Analysing transcript…
           </div>
         ) : !analysis ? (
-          <div data-orb-brain-empty>
-            <p className="text-sm text-[var(--orb-muted)]">
-              Record or paste a transcript, then choose Analyse with ORB to review quality and safeguarding before drafting.
-            </p>
-            <div className="mt-4 flex flex-wrap gap-2" data-orb-brain-placeholder-chips>
-              {PLACEHOLDER_CHIPS.map((chip) => (
-                <span
-                  key={chip}
-                  className="rounded-full border border-[var(--orb-line)]/40 bg-[var(--orb-surface)]/80 px-2.5 py-1 text-[10px] text-[var(--orb-muted)]"
-                  data-orb-brain-placeholder-chip={chip.toLowerCase().replace(/\s+/g, '-')}
-                >
-                  {chip}
-                </span>
-              ))}
+          studioTemplateId && recordTypeId ? (
+            <BrainEmptyState
+              studioTemplateId={studioTemplateId}
+              recordTypeId={recordTypeId}
+              onAnalyse={hasTranscript ? onAnalyse : undefined}
+              analysing={loading}
+            />
+          ) : (
+            <div data-orb-brain-empty>
+              <p className="text-sm text-[var(--orb-muted)]">
+                Record or paste a transcript, then analyse with ORB before drafting.
+              </p>
             </div>
-          </div>
+          )
         ) : (
           <div className="space-y-3">
             <AnalysisSection title="Record type" dataAttr="record-type">

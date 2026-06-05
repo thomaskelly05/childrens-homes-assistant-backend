@@ -26,27 +26,45 @@ export function OrbResizableWorkspace({
   preview,
   showPreview = false,
   compactPresets = false,
-  className = ''
+  hidePresetToolbar = false,
+  layout: controlledLayout,
+  onLayoutChange,
+  className = '',
+  minPanelHeight
 }: {
   left: React.ReactNode
   right: React.ReactNode
   preview?: React.ReactNode
   showPreview?: boolean
   compactPresets?: boolean
+  /** When true, presets live in top-bar popover only (no visible Panel layout row). */
+  hidePresetToolbar?: boolean
+  layout?: OrbDictatePanelLayout
+  onLayoutChange?: (layout: OrbDictatePanelLayout) => void
   className?: string
+  minPanelHeight?: string
 }) {
-  const [layout, setLayout] = useState<OrbDictatePanelLayout>(DEFAULT_PANEL_LAYOUT)
+  const [internalLayout, setInternalLayout] = useState<OrbDictatePanelLayout>(DEFAULT_PANEL_LAYOUT)
+  const layout = controlledLayout ?? internalLayout
   const containerRef = useRef<HTMLDivElement>(null)
   const draggingRef = useRef<'main' | 'preview' | null>(null)
 
   useEffect(() => {
-    setLayout(loadOrbDictatePanelLayout())
-  }, [])
+    if (controlledLayout) return
+    setInternalLayout(loadOrbDictatePanelLayout())
+  }, [controlledLayout])
 
-  const applyLayout = useCallback((next: OrbDictatePanelLayout) => {
-    setLayout(next)
-    saveOrbDictatePanelLayout(next)
-  }, [])
+  const applyLayout = useCallback(
+    (next: OrbDictatePanelLayout) => {
+      if (onLayoutChange) {
+        onLayoutChange(next)
+      } else {
+        setInternalLayout(next)
+      }
+      saveOrbDictatePanelLayout(next)
+    },
+    [onLayoutChange]
+  )
 
   const applyPreset = useCallback(
     (preset: OrbDictatePanelPreset) => {
@@ -114,26 +132,30 @@ export function OrbResizableWorkspace({
     </div>
   )
 
+  const panelMinHeight = minPanelHeight ?? 'min(72dvh, calc(100svh - 9.5rem))'
+
   return (
     <div
-      className={`flex min-h-0 flex-1 flex-col gap-1.5 ${className}`}
+      className={`flex min-h-0 flex-1 flex-col ${className}`}
       data-orb-resizable-workspace
     >
-      {compactPresets ? (
-        <details className="shrink-0 text-[10px]" data-orb-panel-presets-compact>
-          <summary className="cursor-pointer font-medium text-[var(--orb-muted)] hover:text-[var(--orb-foreground)]">
-            Panel layout
-          </summary>
-          <div className="mt-1">{presetToolbar}</div>
-        </details>
-      ) : (
-        presetToolbar
-      )}
+      {!hidePresetToolbar ? (
+        compactPresets ? (
+          <details className="shrink-0 text-[10px]" data-orb-panel-presets-compact>
+            <summary className="cursor-pointer font-medium text-[var(--orb-muted)] hover:text-[var(--orb-foreground)]">
+              Panel layout
+            </summary>
+            <div className="mt-1">{presetToolbar}</div>
+          </details>
+        ) : (
+          presetToolbar
+        )
+      ) : null}
 
       <div
         ref={containerRef}
         className="flex min-h-0 flex-1 flex-col gap-2 lg:flex-row"
-        style={{ minHeight: 'min(62svh, calc(100dvh - 16rem))' }}
+        style={{ minHeight: panelMinHeight }}
       >
         {!leftHidden ? (
           <section

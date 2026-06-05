@@ -15,21 +15,24 @@ function readComponent(relativePath: string) {
 describe('ORB Dictate + Write convergence', () => {
   it('top bar has visible record and contextual generate controls', () => {
     const topBar = readComponent('components/orb/dictate/OrbDictateTopBar.tsx')
+    const workspace = readComponent('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
     assert.match(topBar, /data-orb-dictate-top-record/)
     assert.match(topBar, /data-orb-dictate-generate/)
     assert.match(topBar, /Analyse with ORB/)
     assert.match(topBar, /data-orb-dictate-finalise/)
     assert.match(topBar, /OrbDictateTemplateSelector/)
+    assert.match(workspace, /OrbDictatePrivacyStrip/)
+    assert.doesNotMatch(topBar, /OrbDictatePrivacyStrip/)
   })
 
   it('privacy trust strip renders with expandable detail', () => {
     const strip = readComponent('components/orb/dictate/OrbDictatePrivacyStrip.tsx')
-    const topBar = readComponent('components/orb/dictate/OrbDictateTopBar.tsx')
+    const workspace = readComponent('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
     const types = readComponent('lib/orb/write/orb-write-types.ts')
     assert.match(strip, /data-orb-dictate-privacy-strip/)
     assert.match(strip, /data-orb-dictate-privacy-detail/)
     assert.match(strip, /Session-only transcript/)
-    assert.match(topBar, /OrbDictatePrivacyStrip/)
+    assert.match(workspace, /OrbDictatePrivacyStrip/)
     assert.match(types, /No child profile data is stored in ORB Dictate/)
   })
 
@@ -69,11 +72,13 @@ describe('ORB Dictate + Write convergence', () => {
     assert.match(studio, /orbRecordingStudioTemplates/)
   })
 
-  it('selected template card is visible in studio workspace', () => {
+  it('selected template is compact in top bar, not large card above workspace', () => {
     const workspace = readComponent('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
-    const card = readComponent('components/orb/dictate/OrbDictateSelectedTemplateCard.tsx')
-    assert.match(workspace, /OrbDictateSelectedTemplateCard/)
-    assert.match(card, /data-orb-dictate-selected-template-card/)
+    const topBar = readComponent('components/orb/dictate/OrbDictateTopBar.tsx')
+    const selector = readComponent('components/orb/dictate/OrbDictateTemplateSelector.tsx')
+    assert.doesNotMatch(workspace, /OrbDictateSelectedTemplateCard/)
+    assert.match(topBar, /OrbDictateTemplateSelector/)
+    assert.match(selector, /data-orb-dictate-selected-template/)
   })
 
   it('station opens ORB Write on finalise', () => {

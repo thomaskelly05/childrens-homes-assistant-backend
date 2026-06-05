@@ -1303,6 +1303,7 @@ export function OrbDictateStation({
       size="xlarge"
       ariaLabel={phase === 'studio' ? 'Dictate Studio' : ORB_DICTATE_PRODUCT_TITLE}
       presentation="workspace"
+      compactChrome={phase !== 'studio' && !isMobile}
     >
       <div
         className="orb-dictate pointer-events-auto flex min-h-0 flex-1 flex-col"

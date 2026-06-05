@@ -1,5 +1,6 @@
 'use client'
 
+import type { ReactNode } from 'react'
 import { Mic, Trash2 } from 'lucide-react'
 
 import { OrbDictateTranscriptSegmentsEditor } from '@/components/orb-standalone/orb-dictate-station-extras'
@@ -19,7 +20,8 @@ export function OrbTranscriptPanel({
   formatTimer,
   micStatus,
   onClearTranscript,
-  interimText
+  interimText,
+  footerSlot
 }: {
   liveTranscript: string
   transcript: string
@@ -34,6 +36,7 @@ export function OrbTranscriptPanel({
   micStatus: string
   onClearTranscript: () => void
   interimText?: string
+  footerSlot?: ReactNode
 }) {
   const displayText = liveTranscript || transcript
   const isEmpty = !displayText.trim()
@@ -79,7 +82,7 @@ export function OrbTranscriptPanel({
           value={displayText}
           onChange={(e) => onTranscriptChange(e.target.value)}
           placeholder="Live transcript appears here… Speak or paste rough notes. Edit before finalising."
-          className="min-h-[12rem] w-full flex-1 resize-none rounded-xl border border-[var(--orb-line)]/40 bg-[var(--orb-surface)] p-4 text-sm leading-relaxed text-[var(--orb-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--orb-primary)]/35"
+          className="min-h-[16rem] w-full flex-1 resize-none rounded-xl border border-[var(--orb-line)]/40 bg-[var(--orb-surface)] p-4 text-sm leading-relaxed text-[var(--orb-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--orb-primary)]/35 sm:min-h-[18rem]"
         />
         {interimText && recordingActive ? (
           <p className="mt-2 text-xs italic text-[var(--orb-muted)]" data-orb-dictate-interim>
@@ -104,6 +107,7 @@ export function OrbTranscriptPanel({
             />
           </div>
         ) : null}
+        {footerSlot ? <div className="mt-2 border-t border-[var(--orb-line)]/20 pt-2">{footerSlot}</div> : null}
       </div>
     </div>
   )
