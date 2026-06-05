@@ -17,20 +17,22 @@ describe('ORB Dictate studio premium polish', () => {
     assert.match(topBar, /orb-dictate-hero-record/)
   })
 
-  it('template selector is visible with horizontal scroll', () => {
+  it('template selector is compact dropdown in top bar', () => {
     const selector = readComponent('components/orb/dictate/OrbDictateTemplateSelector.tsx')
     const topBar = readComponent('components/orb/dictate/OrbDictateTopBar.tsx')
     assert.match(selector, /data-orb-dictate-template-selector/)
-    assert.match(selector, /overflow-x-auto/)
+    assert.match(selector, /data-orb-dictate-template-dropdown/)
     assert.match(topBar, /OrbDictateTemplateSelector/)
   })
 
-  it('privacy strip is visible with expandable detail', () => {
+  it('privacy strip is visible with expandable detail below top bar', () => {
     const strip = readComponent('components/orb/dictate/OrbDictatePrivacyStrip.tsx')
+    const workspace = readComponent('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
     assert.match(strip, /data-orb-dictate-privacy-strip/)
     assert.match(strip, /Session-only transcript/)
     assert.match(strip, /data-orb-dictate-privacy-detail/)
     assert.match(strip, /ORB_WRITE_PRIVACY_NOTICE/)
+    assert.match(workspace, /OrbDictatePrivacyStrip/)
   })
 
   it('generate/analyse button is disabled without transcript', () => {
@@ -61,17 +63,20 @@ describe('ORB Dictate studio premium polish', () => {
     assert.match(panels, /data-orb-panel-right/)
   })
 
-  it('placeholder brain chips render before analysis', () => {
+  it('brain empty state shows record framework before analysis', () => {
     const brain = readComponent('components/orb/dictate/OrbDictateBrainPanel.tsx')
-    assert.match(brain, /data-orb-brain-placeholder-chips/)
-    assert.match(brain, /Recording quality/)
-    assert.match(brain, /Safeguarding/)
+    assert.match(brain, /data-orb-brain-empty-orb-checks/)
+    assert.match(brain, /What ORB will check/)
+    assert.match(brain, /data-orb-brain-analyse-cta/)
   })
 
-  it('advanced options are hidden by default', () => {
+  it('advanced options are collapsed in transcript footer', () => {
     const workspace = readComponent('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
+    const transcript = readComponent('components/orb/dictate/OrbTranscriptPanel.tsx')
     assert.match(workspace, /data-orb-dictate-advanced-options/)
     assert.match(workspace, /<details/)
+    assert.match(workspace, /footerSlot/)
+    assert.match(transcript, /footerSlot/)
   })
 
   it('focus mode control renders with local preference', () => {

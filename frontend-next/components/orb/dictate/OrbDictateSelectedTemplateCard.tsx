@@ -1,7 +1,6 @@
 'use client'
 
-import { ChevronDown, FileText, Shield } from 'lucide-react'
-import { useState } from 'react'
+import { FileText, Shield } from 'lucide-react'
 
 import {
   orbRecordingChecksSummary,
@@ -11,14 +10,16 @@ import {
 import type { OrbRecordingRecordTypeId } from '@/lib/orb/recording/orb-recording-types'
 import { ORB_DICTATE_GOVERNANCE_COPY } from '@/lib/orb/dictate/orb-dictate-types'
 
-export function OrbDictateSelectedTemplateCard({
+/** Progressive-disclosure template detail (popover / drawer body). */
+export function OrbDictateSelectedTemplateDetails({
   studioTemplateId,
-  recordTypeId
+  recordTypeId,
+  expanded = true
 }: {
   studioTemplateId: string
   recordTypeId?: OrbRecordingRecordTypeId | string
+  expanded?: boolean
 }) {
-  const [expanded, setExpanded] = useState(false)
   const recordType = resolveOrbRecordingRecordType({
     recordTypeId,
     studioTemplateId
@@ -27,41 +28,20 @@ export function OrbDictateSelectedTemplateCard({
   const outputs = orbRecordingSuggestedOutputs(recordType.id)
 
   return (
-    <section
-      className="shrink-0 rounded-xl border border-[var(--orb-primary)]/25 bg-[var(--orb-primary-soft)]/40 px-3 py-2.5"
-      data-orb-dictate-selected-template-card
+    <div
+      className="text-xs text-[var(--orb-muted)]"
+      data-orb-dictate-selected-template-details
       data-orb-dictate-record-type={recordType.id}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--orb-muted)]">
-            Selected template
-          </p>
-          <p className="text-sm font-semibold text-[var(--orb-foreground)]" data-orb-dictate-template-label>
-            {recordType.label}
-          </p>
-          <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-[var(--orb-muted)]" data-orb-dictate-template-purpose>
-            {recordType.when_to_use}
-          </p>
-        </div>
-        <button
-          type="button"
-          className="shrink-0 rounded-lg p-1.5 text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)]"
-          onClick={() => setExpanded((v) => !v)}
-          aria-expanded={expanded}
-          aria-label={expanded ? 'Collapse template details' : 'Expand template details'}
-          data-orb-dictate-template-expand
-        >
-          <ChevronDown className={`h-4 w-4 transition ${expanded ? 'rotate-180' : ''}`} />
-        </button>
-      </div>
+      <p className="text-sm font-semibold text-[var(--orb-foreground)]" data-orb-dictate-template-label>
+        {recordType.label}
+      </p>
+      <p className="mt-0.5 leading-relaxed" data-orb-dictate-template-purpose>
+        {recordType.when_to_use}
+      </p>
 
-      <div className="mt-2 flex flex-wrap gap-1.5" data-orb-dictate-orb-checks>
-        <span className="inline-flex items-center gap-1 rounded-full border border-[var(--orb-line)]/50 bg-[var(--orb-surface)]/80 px-2 py-0.5 text-[10px] text-[var(--orb-muted)]">
-          <Shield className="h-3 w-3" aria-hidden />
-          ORB will check
-        </span>
-        {orbChecks.slice(0, 4).map((check) => (
+      <div className="mt-2 flex flex-wrap gap-1" data-orb-dictate-orb-checks>
+        {orbChecks.slice(0, 6).map((check) => (
           <span
             key={check}
             className="rounded-full border border-[var(--orb-line)]/40 bg-[var(--orb-surface)]/60 px-2 py-0.5 text-[10px] text-[var(--orb-foreground)]"
@@ -73,7 +53,7 @@ export function OrbDictateSelectedTemplateCard({
       </div>
 
       {expanded ? (
-        <div className="mt-2 space-y-2 border-t border-[var(--orb-line)]/30 pt-2 text-xs text-[var(--orb-muted)]">
+        <div className="mt-2 space-y-2 border-t border-[var(--orb-line)]/30 pt-2">
           <p data-orb-dictate-template-when-not>
             <span className="font-medium text-[var(--orb-foreground)]">When not to use: </span>
             {recordType.when_not_to_use}
@@ -96,6 +76,36 @@ export function OrbDictateSelectedTemplateCard({
           </p>
         </div>
       ) : null}
+    </div>
+  )
+}
+
+/**
+ * Legacy full-width card — not rendered in studio workspace by default.
+ * Kept for progressive disclosure elsewhere and source-level tests.
+ */
+export function OrbDictateSelectedTemplateCard({
+  studioTemplateId,
+  recordTypeId
+}: {
+  studioTemplateId: string
+  recordTypeId?: OrbRecordingRecordTypeId | string
+}) {
+  return (
+    <section
+      className="shrink-0 rounded-xl border border-[var(--orb-primary)]/25 bg-[var(--orb-primary-soft)]/40 px-3 py-2.5"
+      data-orb-dictate-selected-template-card
+    >
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--orb-muted)]">
+        <Shield className="mr-1 inline h-3 w-3" aria-hidden />
+        Selected template
+      </p>
+      <div className="mt-1">
+        <OrbDictateSelectedTemplateDetails
+          studioTemplateId={studioTemplateId}
+          recordTypeId={recordTypeId}
+        />
+      </div>
     </section>
   )
 }

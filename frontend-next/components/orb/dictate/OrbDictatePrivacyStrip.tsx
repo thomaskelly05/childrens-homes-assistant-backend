@@ -13,7 +13,7 @@ const TRUST_STRIP =
 export function OrbDictatePrivacyStrip() {
   return (
     <div
-      className="orb-dictate-privacy-strip shrink-0 rounded-lg border border-[var(--orb-line)]/35 bg-[var(--orb-surface)]/50 px-3 py-1.5"
+      className="orb-dictate-privacy-strip shrink-0 rounded-lg border border-[var(--orb-line)]/35 bg-[var(--orb-surface)]/50 px-2.5 py-1"
       data-orb-dictate-privacy-strip
     >
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-[var(--orb-muted)]">

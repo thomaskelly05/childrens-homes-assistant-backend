@@ -14,7 +14,8 @@ export function OrbWorkspaceFrame({
   onClose,
   children,
   panelId,
-  footer
+  footer,
+  compactChrome = false
 }: {
   open: boolean
   title: string
@@ -23,6 +24,8 @@ export function OrbWorkspaceFrame({
   children: ReactNode
   panelId?: string
   footer?: ReactNode
+  /** Minimal back-only header — studio tools supply their own title bar. */
+  compactChrome?: boolean
 }) {
   if (!open) return null
 
@@ -34,24 +37,33 @@ export function OrbWorkspaceFrame({
       data-orb-app-panel-active="true"
     >
       <header
-        className="orb-workspace-header flex shrink-0 items-center gap-2 border-b border-[var(--orb-mobile-ws-card-border,var(--orb-line))] bg-[var(--orb-mobile-ws-footer,var(--orb-surface-elevated))] px-3 py-2.5 md:px-5"
+        className={`orb-workspace-header flex shrink-0 items-center gap-2 border-b border-[var(--orb-mobile-ws-card-border,var(--orb-line))] bg-[var(--orb-mobile-ws-footer,var(--orb-surface-elevated))] ${
+          compactChrome ? 'px-2 py-1.5' : 'px-3 py-2.5 md:px-5'
+        }`}
         data-orb-workspace-header
+        data-orb-workspace-header-compact={compactChrome ? 'true' : undefined}
       >
         <button
           type="button"
           onClick={onClose}
-          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--orb-royal-blue,#168bff)]"
+          className={`inline-flex shrink-0 items-center justify-center rounded-xl text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--orb-royal-blue,#168bff)] ${
+            compactChrome ? 'h-8 w-8' : 'h-10 w-10'
+          }`}
           aria-label="Back to chat"
           data-orb-workspace-back
         >
           <ArrowLeft className="h-5 w-5" aria-hidden />
         </button>
+        {!compactChrome ? (
         <div className="min-w-0 flex-1">
           <h2 className="truncate text-base font-semibold tracking-tight text-[var(--orb-foreground)]">{title}</h2>
           {subtitle ? (
             <p className="mt-0.5 truncate text-sm text-[var(--orb-muted)] [text-wrap:pretty]">{subtitle}</p>
           ) : null}
         </div>
+        ) : (
+          <div className="min-w-0 flex-1" aria-hidden />
+        )}
         <button
           type="button"
           onClick={onClose}
