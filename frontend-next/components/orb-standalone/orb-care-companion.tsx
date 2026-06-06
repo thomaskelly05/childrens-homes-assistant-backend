@@ -104,6 +104,7 @@ import {
 import { isOrbCoreWorkspacePanel } from '@/components/orb-standalone/orb-core-workspace-panels'
 import { OrbAmbientCognition, type OrbCognitionAmbientState } from '@/components/orb-standalone/orb-ambient-cognition'
 import { OrbIntelligenceMicroStatus } from '@/components/orb-standalone/orb-intelligence-micro-status'
+import { OrbAccountMenu } from '@/components/orb-residential/orb-account-menu'
 import { OrbAccountModal } from '@/components/orb-standalone/orb-account-modal'
 import { OrbAdultProfileDrawer } from '@/components/orb-standalone/orb-adult-profile-drawer'
 import { OrbBillingModal } from '@/components/orb-standalone/orb-billing-modal'
@@ -635,6 +636,8 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   )
   const [adultProfile, setAdultProfile] = useState<AdultProfile | null>(null)
   const [profileDrawerOpen, setProfileDrawerOpen] = useState(false)
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false)
+  const accountMenuAnchorRef = useRef<HTMLButtonElement>(null)
   const [showScrollFab, setShowScrollFab] = useState(false)
   const [savedOutputMessageIds, setSavedOutputMessageIds] = useState<Set<string>>(() => new Set())
   const [saveFeedbackByMessageId, setSaveFeedbackByMessageId] = useState<
@@ -913,12 +916,26 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
     [closePanel, openDocumentsPanel, openOrbDictatePanel, openOrbWritePanel]
   )
 
-  function openResidentialAccount() {
+  function openResidentialAccountMenu() {
+    if (residentialSurface) {
+      setAccountMenuOpen(true)
+    } else {
+      setProfileDrawerOpen(true)
+    }
+  }
+
+  function openResidentialProfile() {
     if (residentialSurface) {
       openPanel('account')
     } else {
       setProfileDrawerOpen(true)
     }
+  }
+
+  function handleResidentialSignOut() {
+    void logout().then(() => {
+      window.location.href = '/orb'
+    })
   }
 
   function toggleSidebarCollapsed() {
@@ -3180,7 +3197,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         onVoiceRepliesChange={(enabled) => voice.setVoiceReplies(enabled)}
         onOpenVoiceSettings={openVoiceSettings}
         onOpenOrbVoice={residentialSurface ? openOrbVoicePanel : undefined}
-        onOpenProfile={openResidentialAccount}
+        onOpenProfile={openResidentialProfile}
         onOpenHelp={openHelpPanel}
         onExportWorkspace={() => {
           const json = exportStandaloneWorkspaceJson(workspace)
@@ -3314,7 +3331,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                 setSidebarOpen(false)
               }}
               onOpenProfile={() => {
-                openResidentialAccount()
+                openResidentialAccountMenu()
                 setSidebarOpen(false)
               }}
               onOpenBilling={() => {
@@ -3392,7 +3409,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
             <OrbMobileChatHeader
               onOpenMenu={() => setSidebarOpen(true)}
               onOpenAccount={() => {
-                openResidentialAccount()
+                openResidentialAccountMenu()
                 setSidebarOpen(false)
               }}
               accountUsesSettingsIcon
@@ -3459,13 +3476,17 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
               ) : null}
               <button
                 type="button"
+                ref={accountMenuAnchorRef}
                 onClick={() => {
-                  openResidentialAccount()
+                  openResidentialAccountMenu()
                   setSidebarOpen(false)
                 }}
                 className="rounded-lg p-2 text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[#0077FF] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00B8FF]/50"
                 aria-label="Account"
+                aria-haspopup="menu"
+                aria-expanded={accountMenuOpen}
                 data-orb-header-profile
+                data-orb-account-menu-trigger
               >
                 <User className="h-4 w-4" />
               </button>
@@ -4096,6 +4117,37 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       ) : null}
 
       {adultProfile && residentialSurface ? (
+        <OrbAccountMenu
+          open={accountMenuOpen}
+          onClose={() => setAccountMenuOpen(false)}
+          anchorRef={accountMenuAnchorRef}
+          profile={adultProfile}
+          userEmail={account.userEmail}
+          userName={account.userName}
+          planLabel={account.planName}
+          subscriptionActive={account.hasConfirmedAccess}
+          savedOutputsCount={savedOutputsCount}
+          onOpenProfile={openResidentialProfile}
+          onOpenSettings={() => {
+            setAccountMenuOpen(false)
+            openSettingsPanel()
+          }}
+          onOpenBilling={() => {
+            setAccountMenuOpen(false)
+            openBillingPanel()
+          }}
+          onOpenVoiceSettings={() => {
+            setAccountMenuOpen(false)
+            openVoiceSettings()
+          }}
+          onOpenSavedOutputs={() => {
+            setAccountMenuOpen(false)
+            openSavedOutputsPanel()
+          }}
+          onSignOut={handleResidentialSignOut}
+        />
+      ) : null}
+      {adultProfile && residentialSurface ? (
         <OrbAccountModal
           open={activePanel === 'account'}
           onClose={closePanel}
@@ -4128,15 +4180,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
             closePanel()
             openSavedOutputsPanel()
           }}
-          onLogOut={
-            account.isSignedIn
-              ? () => {
-                  void logout().then(() => {
-                    window.location.href = '/orb/login'
-                  })
-                }
-              : undefined
-          }
+          onLogOut={account.isSignedIn ? handleResidentialSignOut : undefined}
         />
       ) : null}
       {adultProfile && !residentialSurface ? (

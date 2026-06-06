@@ -273,7 +273,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setStatus('unauthenticated')
       setCsrfReady(false)
       resetOrbSessionGate()
-      router.replace(redirectToOrbLogin ? '/orb/login?returnUrl=%2Forb' : '/login')
+      router.replace(redirectToOrbLogin ? '/orb' : '/login')
     }
   }, [pathname, router])
 

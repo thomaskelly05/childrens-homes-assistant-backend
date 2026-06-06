@@ -2,6 +2,7 @@
 
 import { Suspense, useCallback } from 'react'
 
+import { OrbAuthGate } from '@/components/orb-residential/orb-auth-gate'
 import { OrbCareCompanion } from '@/components/orb-standalone/orb-care-companion'
 import { OrbResidentialErrorBoundary } from '@/components/orb-residential/orb-residential-error-boundary'
 import { OrbSafetyModal } from '@/components/orb-residential/orb-safety-modal'
@@ -23,19 +24,21 @@ function OrbShellInner() {
   const themeClass = resolvedTheme === 'light' ? 'orb-theme-light' : 'orb-theme-dark'
 
   return (
-    <div
-      className={`${ORB_SHELL_ROOT_CLASS} ${themeClass}`}
-      data-orb-shell="true"
-      data-orb-residential="true"
-      data-orb-theme={resolvedTheme}
-      data-orb-appearance-mode={appearanceMode}
-      style={getOrbThemeCssVariables(resolvedTheme)}
-    >
-      <OrbResidentialErrorBoundary>
-        <OrbCareCompanion residentialSurface />
-      </OrbResidentialErrorBoundary>
-      {showSafetyModal ? <OrbSafetyModal onAccepted={handleSafetyAccepted} /> : null}
-    </div>
+    <OrbAuthGate mode="product">
+      <div
+        className={`${ORB_SHELL_ROOT_CLASS} ${themeClass}`}
+        data-orb-shell="true"
+        data-orb-residential="true"
+        data-orb-theme={resolvedTheme}
+        data-orb-appearance-mode={appearanceMode}
+        style={getOrbThemeCssVariables(resolvedTheme)}
+      >
+        <OrbResidentialErrorBoundary>
+          <OrbCareCompanion residentialSurface />
+        </OrbResidentialErrorBoundary>
+        {showSafetyModal ? <OrbSafetyModal onAccepted={handleSafetyAccepted} /> : null}
+      </div>
+    </OrbAuthGate>
   )
 }
 
@@ -44,8 +47,11 @@ export function OrbShell() {
   return (
     <Suspense
       fallback={
-        <div className="orb-residential-root flex h-[100dvh] items-center justify-center bg-[var(--orb-page-bg,#f7fbff)] text-sm text-[var(--orb-text-muted,#52657a)]">
-          Loading ORB…
+        <div
+          className="orb-residential-root flex h-[100dvh] items-center justify-center bg-[var(--orb-page-bg,#f7fbff)] text-sm text-[var(--orb-text-muted,#52657a)]"
+          data-orb-auth-loading
+        >
+          Loading…
         </div>
       }
     >
