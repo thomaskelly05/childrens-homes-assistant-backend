@@ -69,6 +69,7 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
             "routers.orb_feedback_routes",
             "routers.orb_billing_routes",
             "routers.orb_launch_routes",
+            "routers.orb_debug_routes",
             "routers.orb_usage_routes",
             "routers.orb_projects_routes",
             "routers.orb_voice_residential_routes",

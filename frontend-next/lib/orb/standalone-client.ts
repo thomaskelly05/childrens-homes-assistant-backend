@@ -764,6 +764,17 @@ export async function sendStandaloneOrbMessageStream(
   callbacks: StandaloneOrbStreamCallbacks,
   signal?: AbortSignal
 ): Promise<StandaloneOrbConversationResponse> {
+  const { shouldAllowOrbProductFetch } = await import('@/lib/orb/orb-product-bootstrap-guard')
+  const { isOrbUserInitiatedConversationStream, recordOrbBootstrapRequest } = await import(
+    '@/lib/orb/orb-request-storm-guard'
+  )
+  if (!shouldAllowOrbProductFetch('conversation_stream') || !isOrbUserInitiatedConversationStream()) {
+    throw new AuthApiError(403, {
+      code: 'bootstrap_blocked',
+      message: 'ORB chat is not available until the product is ready.'
+    })
+  }
+  recordOrbBootstrapRequest('conversation_stream')
   const endpoint = STANDALONE_ORB_API_PATHS.conversationStream
   const requestSignal = withTimeout(signal)
   const headers = new Headers({ 'Content-Type': 'application/json', Accept: 'text/event-stream' })

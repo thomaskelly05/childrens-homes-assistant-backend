@@ -11,9 +11,11 @@ import os
 from typing import Any
 
 import stripe
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
+from auth.current_user import get_bearer_token
 from auth.orb_residential_auth_loader import get_optional_orb_residential_user
 from auth.orb_residential_dependencies import require_orb_residential_auth
 from db.connection import get_db
@@ -21,6 +23,8 @@ from db.orb_residential_db import get_orb_user_preferences, upsert_orb_user_pref
 from db.orb_subscription_db import get_orb_subscription, has_orb_safety_acceptance
 from schemas.orb_residential_premium import OrbOnboardingPreferencesRequest
 from services.orb_access_service import orb_access_service
+from services.orb_build_version import orb_build_response_headers
+from services.orb_front_door_verdict_service import build_front_door_verdict
 from services.orb_home_profile_service import orb_home_profile_service
 from services.orb_learning_micro_service import orb_learning_micro_service
 from services.orb_memory_service import orb_memory_service
@@ -408,6 +412,24 @@ async def learn_from_answer(
             "usage_hint": "POST /orb/standalone/conversation with mode Learn for the full generated artefact.",
         }
     )
+
+
+@router.get("/front-door/verdict")
+async def orb_front_door_verdict(
+    request: Request,
+    conn=Depends(get_db),
+    bearer_token: str | None = Depends(get_bearer_token),
+):
+    """Canonical ORB front-door decision — no product payloads, no premium gate."""
+    verdict = build_front_door_verdict(request, conn, bearer_token)
+    headers = orb_build_response_headers(contract_version=verdict.get("contract_version"))
+    if verdict.get("clear_session"):
+        return JSONResponse(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content={"success": False, "data": verdict},
+            headers=headers,
+        )
+    return JSONResponse(status_code=status.HTTP_200_OK, content={"success": True, "data": verdict}, headers=headers)
 
 
 @router.get("/auth/providers")

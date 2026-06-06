@@ -14,18 +14,22 @@ import {
 } from '@/lib/orb/orb-billing-client'
 import { useAuth } from '@/contexts/auth-context'
 
-export function OrbUpgradeScreen() {
+export function OrbUpgradeScreen({ initialAccess = null }: { initialAccess?: OrbAccessPayload | null }) {
   const { status, logout } = useAuth()
-  const [access, setAccess] = useState<OrbAccessPayload | null>(null)
+  const [access, setAccess] = useState<OrbAccessPayload | null>(initialAccess)
   const [loading, setLoading] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     trackOrbAnalytics('locked_screen_viewed')
+    if (initialAccess) {
+      setAccess(initialAccess)
+      return
+    }
     fetchOrbAccess()
       .then(setAccess)
       .catch(() => setAccess(null))
-  }, [])
+  }, [initialAccess])
 
   async function handleTrial() {
     setLoading('trial')

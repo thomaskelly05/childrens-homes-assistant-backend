@@ -18,7 +18,7 @@ describe('ORB auth gate', () => {
 
     assert.match(gate, /OrbAuthLoadingScreen/)
     assert.match(gate, /OrbLoginScreen/)
-    assert.match(gate, /hasConfirmedAccess/)
+    assert.match(gate, /fetchOrbFrontDoorVerdict/)
     assert.match(shell, /OrbAuthGate mode="product"/)
     assert.match(loading, /data-orb-auth-loading/)
     assert.doesNotMatch(gate, /OrbCareCompanion/)
@@ -36,7 +36,7 @@ describe('ORB auth gate', () => {
     const gate = read('components/orb-residential/orb-auth-gate.tsx')
     assert.match(gate, /OrbUpgradeScreen/)
     assert.match(gate, /case 'inactive'/)
-    assert.match(gate, /hasConfirmedAccess/)
+    assert.match(gate, /initialAccess=\{verdict\?\.access/)
   })
 
   it('auth loading does not render product shell', () => {

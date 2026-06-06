@@ -1,35 +1,43 @@
-# ORB front door routing contract
+# ORB Front-Door Routing Contract
 
-## `/orb` canonical front door
+## Canonical front door
 
-- Embedded login — **no** `router.replace('/orb')` on mount
-- Auth context — **no** redirect to login when `isOrbSurfacePath(pathname)` and unauthenticated
-- Logout on `/orb` — stay on `/orb`, show login via gate
-- Same-path navigation — `wrapOrbRouter` no-ops when target equals current path
+`/orb`
 
-## Allowed navigations on `/orb`
+## Initial load sequence (post-fix)
 
-- Explicit sign-out (auth context)
-- Successful OAuth/email completion (login screen non-embedded mode only)
-- Gate-managed billing (`/orb/billing`) and safety (`/orb/setup`)
+```mermaid
+sequenceDiagram
+  participant Browser
+  participant Gate as OrbAuthGate
+  participant API as /orb/front-door/verdict
+  participant Product as ORB Product Shell
 
-## Initial `/orb` boot (first load)
+  Browser->>Gate: mount /orb
+  Gate->>API: GET verdict (once)
+  API-->>Gate: verdict payload
+  alt unauthenticated
+    Gate-->>Browser: login screen
+  else inactive
+    Gate-->>Browser: upgrade screen
+  else safety_required
+    Gate-->>Browser: setup redirect
+  else retry
+    Gate-->>Browser: retry screen
+  else ready
+    Gate->>Browser: GET /auth/me (hydrate session)
+    Gate->>Product: mount children
+  end
+```
 
-Allowed:
+## Navigation rules
 
-- `GET /auth/me`
-- `GET /orb/standalone/access` (only after `/auth/me` is authenticated)
-- `GET /orb/auth/providers` (login screen)
-- `POST /orb/standalone/analytics/event` (optional)
+- No automatic `router.replace('/orb')` during gate boot.
+- Sign-out may navigate to `/orb` once.
+- OAuth success may navigate once.
+- User clicks may navigate.
+- Background effects must not repeatedly navigate to the same `/orb` path.
 
-Blocked until `gateState === "ready"`:
+## Legacy paths
 
-- `/orb/projects`
-- `/orb/standalone/config`
-- `/orb/voice/session/status`
-- `/orb/standalone/outputs/summary`
-- Product settings/profile preloads
-
-## Debug
-
-`?debugAuth=1` — gate state, bootstrap lock, blocked bootstrap calls, network counters, loop guard, no secrets.
+Middleware converges `/login`, `/orb/login` → `/orb` with safe `returnUrl`.

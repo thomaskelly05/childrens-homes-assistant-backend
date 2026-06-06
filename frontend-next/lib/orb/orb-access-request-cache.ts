@@ -5,6 +5,7 @@
 
 import { AuthApiError } from '@/lib/auth/api'
 import { fetchOrbAccess, type OrbAccessPayload } from '@/lib/orb/orb-billing-client'
+import { recordOrbBootstrapRequest } from '@/lib/orb/orb-request-storm-guard'
 
 const ACCESS_CACHE_MS = 4_000
 
@@ -64,6 +65,7 @@ export async function fetchOrbAccessCached(options?: {
   const controller = new AbortController()
   abortController = controller
   accessRequestCount += 1
+  recordOrbBootstrapRequest('access')
 
   const promise = executeAccessFetch(controller).finally(() => {
     if (abortController === controller) {

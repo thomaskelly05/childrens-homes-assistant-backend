@@ -36,6 +36,7 @@ import {
   syncOrbProjectsDebounced
 } from '@/lib/orb/orb-projects-resilience'
 import { fetchOrbSavedOutputsSummaryResilient } from '@/lib/orb/orb-saved-outputs-resilience'
+import { markOrbUserInitiatedConversationStream } from '@/lib/orb/orb-request-storm-guard'
 import { shouldSkipAuthenticatedOrbFetch } from '@/lib/orb/orb-session-gate'
 import {
   readOrbSidebarCollapsed,
@@ -663,7 +664,6 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   const streamAbortRef = useRef<AbortController | null>(null)
   const streamGenerationRef = useRef(0)
   const streamPartialRef = useRef('')
-  const sessionPrimedRef = useRef(false)
   const workspaceHydratedRef = useRef(false)
 
   const voice = useStandaloneOrbVoice()
@@ -741,16 +741,6 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       voice.updateSettings({ voiceReplies: true })
     }
   }, [adultProfile?.voicePreference?.prefersSpokenResponses, voice, voiceSettings.voiceReplies])
-
-  useEffect(() => {
-    if (!account.isSignedIn) return
-    if (sessionPrimedRef.current) return
-    sessionPrimedRef.current = true
-    traceOrbSend('session_prime_start')
-    void refreshSession().finally(() => {
-      traceOrbSend('session_prime_end', { csrfReady: Boolean(getCsrfToken()) })
-    })
-  }, [account.isSignedIn, refreshSession])
 
   useEffect(() => {
     return () => {
@@ -1128,6 +1118,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       }
 
       sendInFlightRef.current = true
+      markOrbUserInitiatedConversationStream()
       if (!options?.retry && !options?.internalRetry) {
         lastSubmitRef.current = { chatId: guardChatId, content: contentKey, at: now }
       }

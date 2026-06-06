@@ -4,7 +4,7 @@ import logging
 from datetime import datetime
 from typing import Any
 
-from psycopg2.extras import RealDictCursor
+from psycopg2.extras import Json, RealDictCursor
 
 from db.connection import get_db_connection, release_db_connection
 
@@ -85,7 +85,7 @@ class AIUsageAuditService:
                         float(audit.get("estimated_cost_gbp") or 0),
                         bool(audit.get("prompt_stored", False)),
                         bool(audit.get("transcript_stored", False)),
-                        _safe_metadata(audit.get("metadata") or {}),
+                        Json(_safe_metadata(audit.get("metadata") or {})),
                     ),
                 )
             conn.commit()
