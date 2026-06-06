@@ -11,6 +11,7 @@ import {
   isRateLimitedStatus,
   isTemporaryUnavailableStatus
 } from '@/lib/auth/api'
+import { resetOrbAccessLoadingDeadline } from '@/lib/orb/orb-access-loading-deadline'
 import { resetOrbAuthLoadingDeadline } from '@/lib/orb/orb-auth-loading-deadline'
 import {
   ORB_AUTH_CONTEXT_TIMEOUT_MS,
@@ -164,6 +165,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setCsrfReady(Boolean(getCsrfToken()))
         logoutRedirecting.current = false
         resetOrbAuthLoadingDeadline()
+        resetOrbAccessLoadingDeadline()
         markOrbBackendReady()
       } catch (caught) {
         const authError = caught instanceof AuthApiError ? caught : null
@@ -294,6 +296,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSessionExpired(false)
       setCsrfReady(Boolean(getCsrfToken()))
       logoutRedirecting.current = false
+      resetOrbAuthLoadingDeadline()
+      resetOrbAccessLoadingDeadline()
     }
 
     return response
@@ -312,6 +316,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null)
       setStatus('unauthenticated')
       setCsrfReady(false)
+      resetOrbAuthLoadingDeadline()
+      resetOrbAccessLoadingDeadline()
       resetOrbSessionGate()
       router.replace(redirectToOrbLogin ? '/orb' : buildOrbFrontDoorUrl())
     }

@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
+from auth.current_user import get_bearer_token
 from auth.orb_residential_auth_loader import get_optional_orb_residential_user, get_orb_residential_user
 from auth.orb_residential_dependencies import require_orb_residential_auth
 from auth.passwords import hash_password
@@ -189,15 +190,35 @@ async def orb_standalone_signup(payload: OrbSignupRequest, conn=Depends(get_db))
 
 @router.get("/access")
 async def orb_standalone_access(
+    request: Request,
     conn=Depends(get_db),
-    current_user=Depends(get_optional_orb_residential_user),
+    bearer_token: str | None = Depends(get_bearer_token),
 ):
-    user_id = current_user.get("user_id") if current_user else None
-    if not user_id:
-        payload = orb_access_service.build_access_payload(None, conn=conn)
-        return _success(payload)
-    payload = orb_access_service.build_access_payload(int(user_id), conn=conn, user=current_user)
-    return _success(payload)
+    """Return commercial access payload.
+
+    - No session cookie: guest payload (200 JSON) for marketing/signup surfaces.
+    - Invalid or expired session: 401 JSON (frontend clears stale auth).
+    - Valid session: full user access payload (200 JSON).
+
+    Does not require premium subscription — avoids circular dependency with premium gates.
+    """
+    from auth.current_user import _get_request_token
+
+    token = _get_request_token(request, bearer_token)
+    if not token:
+        return _success(orb_access_service.build_access_payload(None, conn=conn))
+
+    try:
+        current_user = get_orb_residential_user(request, bearer_token, conn)
+    except HTTPException as exc:
+        if exc.status_code == status.HTTP_401_UNAUTHORIZED:
+            detail = exc.detail
+            error = detail if isinstance(detail, dict) else {"code": "session_invalid", "message": str(detail)}
+            return JSONResponse(status_code=status.HTTP_401_UNAUTHORIZED, content={"success": False, "error": error})
+        raise
+
+    user_id = int(current_user["user_id"])
+    return _success(orb_access_service.build_access_payload(user_id, conn=conn, user=current_user))
 
 
 @router.get("/billing/status")

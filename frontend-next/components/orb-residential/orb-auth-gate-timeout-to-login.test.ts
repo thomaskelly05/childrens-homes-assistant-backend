@@ -27,10 +27,11 @@ describe('ORB auth gate timeout to login', () => {
     assert.match(gate, /auth\.status === 'unauthenticated'[\s\S]*OrbLoginScreen/)
   })
 
-  it('access hang falls through to login with safe message', () => {
+  it('access hang falls through to safe retry screen with access message', () => {
     const gate = read('components/orb-residential/orb-auth-gate.tsx')
-    assert.match(gate, /accessTimedOut/)
+    assert.match(gate, /accessFallback/)
     assert.match(gate, /ACCESS_FALLBACK_MESSAGE/)
+    assert.match(gate, /OrbAccessRetryScreen/)
   })
 
   it('authenticated inactive users still reach upgrade screen', () => {

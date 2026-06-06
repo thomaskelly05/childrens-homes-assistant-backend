@@ -33,13 +33,15 @@ Deadline uses `lib/orb/orb-auth-loading-deadline.ts` so remounts cannot reset th
   - **Timeout / network (status 0)** → `unauthenticated`
 - Authenticated background refresh does **not** flip status back to `loading`
 
-### 4. Access check (12s)
+### 4. Access check (7s gate + 12s network)
 
 When authenticated but `/orb/standalone/access` hangs:
 
-- `use-orb-account-state` races fetch with timeout
-- `OrbAuthGate` `accessTimedOut` → login with access message
+- `use-orb-account-state` races fetch with 12s network timeout
+- `OrbAuthGate` `accessFallback` (7s, module-level `orb-access-loading-deadline.ts`) → `OrbAccessRetryScreen`
+- **Does not** render login while authenticated (prevents `OrbLoginScreen` auto-redirect bounce)
 - Inactive-but-signed-in users without access still see `OrbUpgradeScreen` once access resolves
+- Access **401** → `auth.logout()` → login (stale session cleared)
 
 ## Constants
 
@@ -47,7 +49,8 @@ When authenticated but `/orb/standalone/access` hangs:
 |----------|-------|-------|
 | `ORB_AUTH_GATE_FALLBACK_MS` | 5000 | `OrbAuthGate` |
 | `ORB_AUTH_CONTEXT_TIMEOUT_MS` | 8000 | `auth-context` |
-| `ORB_AUTH_LOADING_TIMEOUT_MS` | 12000 | Loading slow phase, access fetch |
+| `ORB_ACCESS_GATE_FALLBACK_MS` | 7000 | `OrbAuthGate` access verification |
+| `ORB_AUTH_LOADING_TIMEOUT_MS` | 12000 | Access fetch network race |
 
 ## Security preserved
 

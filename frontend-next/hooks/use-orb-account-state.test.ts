@@ -19,6 +19,7 @@ describe('useOrbAccountState', () => {
     assert.match(source, /profileDisplayMode/)
     assert.match(source, /hasConfirmedAccess/)
     assert.match(source, /accessFetchStatus/)
+    assert.match(source, /accessFailureKind/)
     assert.match(source, /safetyAccepted/)
     assert.match(source, /safety_accepted/)
     assert.match(source, /adminBypass/)
