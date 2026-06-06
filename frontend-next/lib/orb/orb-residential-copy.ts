@@ -1,5 +1,7 @@
-import { ORB_CONVERGED_CHAT_STARTERS } from '@/lib/orb/orb-navigation-convergence'
+import { convergedChatStarters } from '@/lib/orb/orb-converged-actions'
 import type { StandaloneOrbMode } from '@/lib/orb/standalone-client'
+
+const ORB_CONVERGED_CHAT_STARTERS = convergedChatStarters()
 
 /** User-facing product copy for ORB Residential — safe, regulatory-aware language. */
 export const ORB_RESIDENTIAL_PRODUCT_NAME = 'ORB Residential'

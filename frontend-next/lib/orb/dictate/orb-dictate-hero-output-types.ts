@@ -1,16 +1,8 @@
+import { convergedDictateHeroNoteTypes } from '@/lib/orb/orb-converged-actions'
 import type { OrbDictateNoteType } from '@/lib/orb/dictate/orb-dictate-types'
 
-/** Residential record types surfaced as the primary Dictate hero flow. */
-export const ORB_DICTATE_HERO_OUTPUT_TYPES: readonly OrbDictateNoteType[] = [
-  'daily_record',
-  'incident_record',
-  'missing_episode_note',
-  'safeguarding_concern_record',
-  'chronology_entry',
-  'handover_note',
-  'manager_oversight_note',
-  'action_plan'
-] as const
+/** Residential record types surfaced as the primary Dictate hero flow — from converged registry. */
+export const ORB_DICTATE_HERO_OUTPUT_TYPES: readonly OrbDictateNoteType[] = convergedDictateHeroNoteTypes()
 
 export const ORB_DICTATE_HERO_OUTPUT_HINTS: Partial<Record<OrbDictateNoteType, string>> = {
   daily_record: 'Shift events and presentation',

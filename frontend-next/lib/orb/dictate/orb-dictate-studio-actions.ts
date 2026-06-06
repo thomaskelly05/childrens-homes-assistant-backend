@@ -1,3 +1,4 @@
+/** Dictate studio quick-edit modes. Cross-surface practice actions: `lib/orb/orb-converged-actions.ts`. */
 export type OrbDictateEditMode =
   | 'spelling_grammar'
   | 'therapeutic_rewrite'

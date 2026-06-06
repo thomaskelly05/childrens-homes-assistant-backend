@@ -69,8 +69,11 @@ import { OrbSavedOutputsPanel } from '@/components/orb-standalone/orb-saved-outp
 import { OrbKnowledgeLibraryPanel } from '@/components/orb-standalone/orb-knowledge-library'
 import { OrbTemplatesPanel } from '@/components/orb-standalone/orb-templates-panel'
 import type { OrbRecordingLibraryAction } from '@/components/orb/recording/OrbRecordingLibraryCards'
-import { handoffTextToOrbWrite } from '@/lib/orb/write/orb-write-content-handoff'
-import { saveOrbWriteTemplateHandoff } from '@/lib/orb/write/orb-write-template-handoff'
+import {
+  convergedHandoffToOrbWrite,
+  convergedTemplateHandoff,
+  handoffSavedOutputToOrbWrite
+} from '@/lib/orb/write/orb-write-converged-handoff'
 import type { OrbRecordingRecordType } from '@/lib/orb/recording/orb-recording-types'
 import {
   ORB_RESIDENTIAL_BRAND_EMOTIONAL_LINE,
@@ -862,7 +865,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       recordTypeId?: string
       title?: string
     }) => {
-      handoffTextToOrbWrite({
+      convergedHandoffToOrbWrite({
         content: opts.content,
         source: opts.source,
         sourceLabel: opts.sourceLabel,
@@ -891,7 +894,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         return
       }
       if (action === 'write') {
-        saveOrbWriteTemplateHandoff(recordType)
+        convergedTemplateHandoff(recordType)
         openOrbWritePanel()
         return
       }
@@ -2890,9 +2893,22 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           closePanel()
           openOrbWritePanel()
         }}
+        onOpenSavedOutputInOrbWrite={(record) => {
+          handoffSavedOutputToOrbWrite(record)
+          closePanel()
+          openOrbWritePanel()
+        }}
         onStartInDictate={() => {
           closePanel()
           openOrbDictatePanel()
+        }}
+        onStartInChat={() => {
+          closePanel()
+          openChatPanel()
+        }}
+        onStartInDocuments={() => {
+          closePanel()
+          openDocumentsPanel()
         }}
         onUseInShiftBuilder={(notes, focus) => {
           setShiftImportNotes(notes)

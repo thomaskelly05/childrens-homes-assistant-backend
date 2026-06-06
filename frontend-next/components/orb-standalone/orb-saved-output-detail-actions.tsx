@@ -27,6 +27,7 @@ export function OrbSavedOutputDetailActions({
   onNotice,
   onAskOrb,
   onSendToDictate,
+  onOpenInOrbWrite,
   onUseInShiftBuilder,
   onReuseInChat,
   onRerun
@@ -35,6 +36,7 @@ export function OrbSavedOutputDetailActions({
   onNotice?: (message: string) => void
   onAskOrb?: (prompt: string) => void
   onSendToDictate?: (text: string) => void
+  onOpenInOrbWrite?: () => void
   onUseInShiftBuilder?: (notes: string, focus?: string) => void
   onReuseInChat?: (prompt: string) => void
   onRerun?: (state: OrbSavedOutputRerunState) => void
@@ -150,6 +152,17 @@ export function OrbSavedOutputDetailActions({
           >
             <Mic className="h-3.5 w-3.5" aria-hidden />
             Send to Dictate
+          </button>
+        ) : null}
+        {onOpenInOrbWrite ? (
+          <button
+            type="button"
+            onClick={onOpenInOrbWrite}
+            className="inline-flex items-center gap-1 rounded-lg border border-sky-400/30 bg-sky-500/10 px-2 py-1 text-xs text-sky-100"
+            data-orb-saved-output-open-write
+          >
+            <PenLine className="h-3.5 w-3.5" aria-hidden />
+            Open in ORB Write
           </button>
         ) : null}
         {onUseInShiftBuilder ? (

@@ -86,14 +86,16 @@ describe('ORB navigation convergence', () => {
   })
 
   it('chat starters include converged workflows', () => {
-    const copy = readComponent('lib/orb/orb-navigation-convergence.ts')
-    assert.match(copy, /Create a handover \/ shift plan/)
-    assert.match(copy, /Review written practice/)
-    assert.match(copy, /Think through a safeguarding concern/)
-    assert.match(copy, /Prepare for inspection/)
-    assert.match(copy, /Record this properly/)
-    assert.match(copy, /Create manager summary/)
-    assert.match(copy, /Build action plan from Reg 44/)
+    const registry = readComponent('lib/orb/orb-converged-actions.ts')
+    assert.match(registry, /Create handover \/ shift plan/)
+    assert.match(registry, /Review written practice/)
+    assert.match(registry, /Think through safeguarding concern/)
+    assert.match(registry, /Prepare for inspection/)
+    assert.match(registry, /Record this properly/)
+    assert.match(registry, /Create manager summary/)
+    assert.match(registry, /Build action plan from Reg 44/)
+    assert.match(registry, /Summarise recent changes/)
+    assert.match(registry, /Turn policy into easy-read briefing/)
   })
 
   it('companion wires converged redirect card', () => {
