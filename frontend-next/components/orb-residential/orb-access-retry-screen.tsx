@@ -26,13 +26,7 @@ export function OrbAccessRetryScreen({
   const themeClass = resolvedTheme === 'light' ? 'orb-login-root--light' : 'orb-login-root--dark'
 
   const handleBackToSignIn = useCallback(() => {
-    if (onBackToSignIn) {
-      onBackToSignIn()
-      return
-    }
-    if (typeof window !== 'undefined') {
-      window.location.assign('/orb')
-    }
+    onBackToSignIn?.()
   }, [onBackToSignIn])
 
   return (

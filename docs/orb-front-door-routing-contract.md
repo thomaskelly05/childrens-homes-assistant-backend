@@ -1,32 +1,18 @@
-# ORB Front Door Routing Contract
+# ORB front door routing contract
 
-Canonical front door: **`/orb`**
+## `/orb` canonical front door
 
-## Redirect rules (once only)
+- Embedded login — **no** `router.replace('/orb')` on mount
+- Auth context — **no** redirect to login when `isOrbSurfacePath(pathname)` and unauthenticated
+- Logout on `/orb` — stay on `/orb`, show login via gate
+- Same-path navigation — `wrapOrbRouter` no-ops when target equals current path
 
-| From | To |
-|------|-----|
-| `/` | `/orb` |
-| `/login` | `/orb` (+ safe `returnUrl`) |
-| `/orb/login` | `/orb` |
-| `/orb/access` | `/orb/billing` |
+## Allowed navigations on `/orb`
 
-## `/orb` behaviour
+- Explicit sign-out (auth context)
+- Successful OAuth/email completion (login screen non-embedded mode only)
+- Gate-managed billing (`/orb/billing`) and safety (`/orb/setup`)
 
-- URL stays `/orb` — login is **embedded**, not a separate route
-- `OrbAuthGate` owns all in-page state transitions
-- Middleware does **not** require session cookie on ORB product paths
+## Debug
 
-## returnUrl
-
-- Sanitized by `sanitizeOrbReturnUrl()`
-- `/`, `/home`, `/dashboard` → `/orb`
-- External URLs rejected
-- Used after successful login only (non-embedded flows) or preserved for OAuth
-- If target equals current path → no navigation
-
-## Loop prevention
-
-- No `/orb` ↔ `/orb/login` bounce (login embedded)
-- `embeddedGateMode` prevents login auto-redirect on `/orb`
-- Route loop guard stops runaway `router.replace('/orb')`
+`?debugAuth=1` — gate state, bootstrap counters, loop guard, no secrets.

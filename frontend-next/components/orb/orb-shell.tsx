@@ -9,10 +9,11 @@ import { OrbResidentialErrorBoundary } from '@/components/orb-residential/orb-re
 import { OrbSafetyModal } from '@/components/orb-residential/orb-safety-modal'
 import { useOrbResidentialThemeSync } from '@/components/orb-residential/use-orb-residential-theme-sync'
 import { useOrbAppearance } from '@/components/orb-standalone/use-orb-appearance'
-import { useOrbAccountState } from '@/hooks/use-orb-account-state'
+import { useOrbAccountState } from '@/contexts/orb-account-context'
 import { getOrbThemeCssVariables, ORB_SHELL_ROOT_CLASS } from '@/lib/orb/orb-theme'
 
-function OrbShellInner() {
+/** ORB product chrome — only mounts when OrbAuthGate reaches `ready`. */
+function OrbProductShell() {
   const account = useOrbAccountState()
   const { resolvedTheme, appearanceMode } = useOrbAppearance()
   useOrbResidentialThemeSync()
@@ -25,21 +26,20 @@ function OrbShellInner() {
   const themeClass = resolvedTheme === 'light' ? 'orb-theme-light' : 'orb-theme-dark'
 
   return (
-    <OrbAuthGate mode="product">
-      <div
-        className={`${ORB_SHELL_ROOT_CLASS} ${themeClass}`}
-        data-orb-shell="true"
-        data-orb-residential="true"
-        data-orb-theme={resolvedTheme}
-        data-orb-appearance-mode={appearanceMode}
-        style={getOrbThemeCssVariables(resolvedTheme)}
-      >
-        <OrbResidentialErrorBoundary>
-          <OrbCareCompanion residentialSurface />
-        </OrbResidentialErrorBoundary>
-        {showSafetyModal ? <OrbSafetyModal onAccepted={handleSafetyAccepted} /> : null}
-      </div>
-    </OrbAuthGate>
+    <div
+      className={`${ORB_SHELL_ROOT_CLASS} ${themeClass}`}
+      data-orb-shell="true"
+      data-orb-residential="true"
+      data-orb-product-mounted="true"
+      data-orb-theme={resolvedTheme}
+      data-orb-appearance-mode={appearanceMode}
+      style={getOrbThemeCssVariables(resolvedTheme)}
+    >
+      <OrbResidentialErrorBoundary>
+        <OrbCareCompanion residentialSurface />
+      </OrbResidentialErrorBoundary>
+      {showSafetyModal ? <OrbSafetyModal onAccepted={handleSafetyAccepted} /> : null}
+    </div>
   )
 }
 
@@ -47,7 +47,9 @@ function OrbShellInner() {
 export function OrbShell() {
   return (
     <Suspense fallback={<OrbAuthLoadingScreen />}>
-      <OrbShellInner />
+      <OrbAuthGate mode="product">
+        <OrbProductShell />
+      </OrbAuthGate>
     </Suspense>
   )
 }

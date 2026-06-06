@@ -17,7 +17,16 @@ export function OrbAuthDebugPanel({
   accessLoading,
   accessError,
   accessHttpStatus,
-  gateState
+  gateState,
+  childrenMounted = false,
+  productBootstrapAllowed = false,
+  accessRequestCount = 0,
+  projectRequestCount = 0,
+  configRequestCount = 0,
+  voiceStatusRequestCount = 0,
+  outputsSummaryRequestCount = 0,
+  lastBlockedBootstrapReason = null,
+  loopGuardBroken = false
 }: {
   pathname: string
   authStatus: string
@@ -27,6 +36,15 @@ export function OrbAuthDebugPanel({
   accessError: string | null
   accessHttpStatus: number | null
   gateState: OrbGateState
+  childrenMounted?: boolean
+  productBootstrapAllowed?: boolean
+  accessRequestCount?: number
+  projectRequestCount?: number
+  configRequestCount?: number
+  voiceStatusRequestCount?: number
+  outputsSummaryRequestCount?: number
+  lastBlockedBootstrapReason?: string | null
+  loopGuardBroken?: boolean
 }) {
   const [events, setEvents] = useState(getOrbAuthDebugEvents)
 
@@ -39,16 +57,28 @@ export function OrbAuthDebugPanel({
 
   if (!isOrbAuthDebugEnabled()) return null
 
-  const snapshot = buildOrbAuthDebugSnapshot({
-    pathname,
-    authStatus,
-    authUserPresent,
-    accessStatus,
-    accessLoading,
-    accessError,
-    accessHttpStatus,
-    gateDecision: gateState
-  })
+  const snapshot = {
+    ...buildOrbAuthDebugSnapshot({
+      pathname,
+      authStatus,
+      authUserPresent,
+      accessStatus,
+      accessLoading,
+      accessError,
+      accessHttpStatus,
+      gateDecision: gateState
+    }),
+    gateState,
+    childrenMounted,
+    productBootstrapAllowed,
+    accessRequestCount,
+    projectRequestCount,
+    configRequestCount,
+    voiceStatusRequestCount,
+    outputsSummaryRequestCount,
+    lastBlockedBootstrapReason,
+    loopGuard: { broken: loopGuardBroken }
+  }
 
   return (
     <div

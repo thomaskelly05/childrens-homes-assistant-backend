@@ -59,6 +59,15 @@ export async function fetchOrbVoiceRealtimeStatus(): Promise<OrbRealtimeVoiceSta
     return STATUS_UNAVAILABLE
   }
 
+  const { shouldAllowOrbProductFetch, recordOrbVoiceStatusBootstrapRequest } = await import(
+    '@/lib/orb/orb-product-bootstrap-guard'
+  )
+  if (!shouldAllowOrbProductFetch('voice_session_status')) {
+    emitOrbClientDebug({ area: 'voice', event: 'voice_status_skipped_gate', detail: {} })
+    return STATUS_UNAVAILABLE
+  }
+  recordOrbVoiceStatusBootstrapRequest()
+
   try {
     emitOrbClientDebug({ area: 'voice', event: 'voice_status_requested', detail: {} })
     const response = await authFetchResponse('/orb/voice/session/status', { method: 'GET' })

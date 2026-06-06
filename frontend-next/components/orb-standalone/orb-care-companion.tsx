@@ -171,7 +171,8 @@ import {
   standaloneOrbAccessibilityClassNames
 } from '@/lib/orb/standalone-accessibility'
 import { useAuth } from '@/contexts/auth-context'
-import { useOrbAccountState } from '@/hooks/use-orb-account-state'
+import { useOrbAccountState } from '@/contexts/orb-account-context'
+import { shouldAllowOrbProductFetch } from '@/lib/orb/orb-product-bootstrap-guard'
 import { normaliseRole } from '@/lib/auth/permissions'
 import { isOrbDeveloperMode } from '@/lib/orb/orb-developer-mode'
 import {
@@ -675,6 +676,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
 
   useEffect(() => {
     if (!orbSessionReady || shouldSkipAuthenticatedOrbFetch()) return
+    if (!shouldAllowOrbProductFetch('saved_outputs_summary')) return
     void fetchOrbSavedOutputsSummaryResilient()
       .then((summary) => setSavedOutputsCount(summary.total || 0))
       .catch(() => setSavedOutputsCount(0))
@@ -703,6 +705,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   useEffect(() => {
     if (!residentialSurface || !workspaceHydratedRef.current) return
     if (!account.isSignedIn && shouldSkipAuthenticatedOrbFetch()) return
+    if (!shouldAllowOrbProductFetch('projects')) return
     void fetchOrbProjectsResilient().then(({ server, usedLocalFallback }) => {
       if (usedLocalFallback && !server.length) return
       if (!server.length) return
@@ -933,9 +936,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   }
 
   function handleResidentialSignOut() {
-    void logout().then(() => {
-      window.location.href = '/orb'
-    })
+    void logout()
   }
 
   function toggleSidebarCollapsed() {
@@ -961,6 +962,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
 
   useEffect(() => {
     if (!orbSessionReady) return
+    if (!shouldAllowOrbProductFetch('standalone_config')) return
     let cancelled = false
     void fetchStandaloneOrbConfig()
       .then((config) => {

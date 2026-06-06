@@ -8,8 +8,15 @@ import { OrbAuthDebugPanel } from '@/components/orb-residential/orb-auth-debug-p
 import { OrbAuthLoadingScreen } from '@/components/orb-residential/orb-auth-loading-screen'
 import { OrbLoginScreen } from '@/components/orb-residential/orb-login-screen'
 import { OrbUpgradeScreen } from '@/components/orb-standalone/orb-upgrade-screen'
+import { OrbAccountStateProvider, useOrbAccountState } from '@/contexts/orb-account-context'
 import { useAuth } from '@/contexts/auth-context'
-import { useOrbAccountState } from '@/hooks/use-orb-account-state'
+import { getOrbAccessRequestCount } from '@/lib/orb/orb-access-request-cache'
+import { setOrbGateState } from '@/lib/orb/orb-gate-state-store'
+import {
+  canBootstrapOrbProduct,
+  getLastBlockedBootstrapReason,
+  getOrbBootstrapNetworkCounts
+} from '@/lib/orb/orb-product-bootstrap-guard'
 import {
   getOrbAccessLoadingRemainingMs,
   hasOrbAccessLoadingDeadlinePassed,
@@ -113,7 +120,16 @@ function OrbAuthGateInner({
     mode
   })
 
+  const productChildrenMounted = gateState === 'ready'
+  setOrbGateState(gateState, productChildrenMounted)
+
   const prevGateStateRef = useRef<OrbGateState>(gateState)
+  useEffect(() => {
+    if (gateState === 'ready') {
+      void account.loadPasskeyStatus()
+    }
+  }, [account, gateState])
+
   useEffect(() => {
     if (prevGateStateRef.current !== gateState) {
       recordOrbAuthDebugEvent('gate_decision', {
@@ -250,6 +266,7 @@ function OrbAuthGateInner({
     router.push('/orb/setup')
   }, [account.access, account.accessFailureKind, account.isSignedIn, account.safetyAccepted, gateState, router])
 
+  const bootstrapCounts = getOrbBootstrapNetworkCounts()
   const debugPanel = (
     <OrbAuthDebugPanel
       pathname={pathname}
@@ -260,6 +277,15 @@ function OrbAuthGateInner({
       accessError={account.accessError}
       accessHttpStatus={account.accessFetchStatus}
       gateState={gateState}
+      childrenMounted={productChildrenMounted}
+      productBootstrapAllowed={canBootstrapOrbProduct(gateState, account.access)}
+      accessRequestCount={getOrbAccessRequestCount()}
+      projectRequestCount={bootstrapCounts.projectRequestCount}
+      configRequestCount={bootstrapCounts.configRequestCount}
+      voiceStatusRequestCount={bootstrapCounts.voiceStatusRequestCount}
+      outputsSummaryRequestCount={bootstrapCounts.outputsSummaryRequestCount}
+      lastBlockedBootstrapReason={getLastBlockedBootstrapReason()}
+      loopGuardBroken={isOrbRouteLoopBroken()}
     />
   )
 
@@ -386,8 +412,10 @@ export function OrbAuthGate({
   mode?: OrbAuthGateMode
 }) {
   return (
-    <Suspense fallback={<OrbAuthLoadingScreen timeoutMs={ORB_AUTH_GATE_FALLBACK_MS} />}>
-      <OrbAuthGateInner mode={mode}>{children}</OrbAuthGateInner>
-    </Suspense>
+    <OrbAccountStateProvider>
+      <Suspense fallback={<OrbAuthLoadingScreen timeoutMs={ORB_AUTH_GATE_FALLBACK_MS} />}>
+        <OrbAuthGateInner mode={mode}>{children}</OrbAuthGateInner>
+      </Suspense>
+    </OrbAccountStateProvider>
   )
 }

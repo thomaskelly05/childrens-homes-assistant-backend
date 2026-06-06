@@ -54,7 +54,7 @@ describe('ORB auth context timeout', () => {
 
   it('access fetch uses timeout race', () => {
     const account = read('hooks/use-orb-account-state.ts')
-    assert.match(account, /Promise\.race\(\[fetchOrbAccess\(\)/)
+    assert.match(account, /Promise\.race\(\[[\s\S]*fetchOrbAccessCached/)
     assert.match(account, /ORB_AUTH_LOADING_TIMEOUT_MS/)
   })
 })

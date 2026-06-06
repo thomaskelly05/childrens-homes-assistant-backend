@@ -100,6 +100,19 @@ export function getOrbRouteRedirectAttempts(now: number = Date.now()): number {
   return redirectHistory.filter((r) => now - r.at < LOOP_WINDOW_MS).length
 }
 
+function isSamePathNavigation(target: string): boolean {
+  if (typeof window === 'undefined') return false
+  const currentPath = window.location.pathname
+  const current = `${currentPath}${window.location.search}`
+  if (target === current || target === currentPath) return true
+  try {
+    const parsed = new URL(target, window.location.origin)
+    return parsed.pathname === currentPath && parsed.search === window.location.search
+  } catch {
+    return false
+  }
+}
+
 export function wrapOrbRouter<T extends { replace: (url: string) => void; push: (url: string) => void }>(
   router: T,
   reason: string
@@ -107,6 +120,7 @@ export function wrapOrbRouter<T extends { replace: (url: string) => void; push: 
   return {
     ...router,
     replace: (url: string) => {
+      if (isSamePathNavigation(url)) return
       recordOrbRouteRedirect(url, reason)
       if (shouldBlockOrbRouteRedirect(url)) {
         recordOrbAuthDebugEvent('loop_guard', { action: 'blocked_replace', target: url, reason })
@@ -115,6 +129,7 @@ export function wrapOrbRouter<T extends { replace: (url: string) => void; push: 
       router.replace(url)
     },
     push: (url: string) => {
+      if (isSamePathNavigation(url)) return
       recordOrbRouteRedirect(url, reason)
       if (shouldBlockOrbRouteRedirect(url)) {
         recordOrbAuthDebugEvent('loop_guard', { action: 'blocked_push', target: url, reason })

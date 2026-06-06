@@ -58,13 +58,7 @@ export function OrbAuthLoadingScreen({
   }, [onRetry, timeoutMs])
 
   const handleBackToSignIn = useCallback(() => {
-    if (onBackToSignIn) {
-      onBackToSignIn()
-      return
-    }
-    if (typeof window !== 'undefined') {
-      window.location.assign('/orb')
-    }
+    onBackToSignIn?.()
   }, [onBackToSignIn])
 
   return (

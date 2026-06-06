@@ -520,6 +520,13 @@ function extractAnswer(payload: unknown): string | null {
 }
 
 export async function fetchStandaloneOrbConfig(signal?: AbortSignal): Promise<StandaloneOrbConfig> {
+  const { shouldAllowOrbProductFetch, recordOrbConfigBootstrapRequest } = await import(
+    '@/lib/orb/orb-product-bootstrap-guard'
+  )
+  if (!shouldAllowOrbProductFetch('standalone_config')) {
+    throw new AuthApiError(0, 'ORB product bootstrap blocked')
+  }
+  recordOrbConfigBootstrapRequest()
   const payload = await authFetch<{ success?: boolean; data?: StandaloneOrbConfig }>('/orb/standalone/config', {
     signal: withTimeout(signal)
   })
