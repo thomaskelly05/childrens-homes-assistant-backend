@@ -1,12 +1,13 @@
-import type { Metadata } from 'next'
+import { redirect } from 'next/navigation'
 
-import { OrbLoginScreen } from '@/components/orb-residential/orb-login-screen'
+import { buildOrbFrontDoorUrl } from '@/lib/orb/orb-front-door-routing'
 
-export const metadata: Metadata = {
-  title: 'Sign in · ORB Residential',
-  description: 'Sign in to ORB Residential — powered by IndiCare Intelligence.'
+type OrbLoginPageProps = {
+  searchParams?: Promise<{ returnUrl?: string }>
 }
 
-export default function OrbLoginPage() {
-  return <OrbLoginScreen />
+/** Legacy ORB login path — canonical sign-in lives on /orb via OrbAuthGate. */
+export default async function OrbLoginPage({ searchParams }: OrbLoginPageProps) {
+  const params = (await searchParams) ?? {}
+  redirect(buildOrbFrontDoorUrl(params.returnUrl))
 }

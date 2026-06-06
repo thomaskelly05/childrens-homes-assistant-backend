@@ -11,18 +11,16 @@ function read(relativePath: string) {
 }
 
 describe('ORB security — no product flash', () => {
-  it('middleware redirects unauthenticated ORB product paths to login', () => {
+  it('middleware converges legacy login routes to /orb without server-side product HTML', () => {
     const middleware = read('middleware.ts')
-    assert.match(middleware, /isOrbProductPath/)
+    assert.match(middleware, /redirectToOrbFrontDoor/)
     assert.match(middleware, /\/orb\/login/)
     assert.match(middleware, /returnUrl/)
-    assert.match(middleware, /const publicPrefixes = \[[\s\S]*?'\/build-live'/)
-    assert.doesNotMatch(middleware, /const publicPrefixes = \[[\s\S]*?'\/orb',/)
+    assert.doesNotMatch(middleware, /isOrbProductPath\(pathname\) && !hasSessionCookie/)
   })
 
   it('middleware keeps billing and signup public', () => {
     const middleware = read('middleware.ts')
-    assert.match(middleware, /\/orb\/login/)
     assert.match(middleware, /\/orb\/signup/)
     assert.match(middleware, /\/orb\/billing/)
     assert.match(middleware, /\/orb\/billing\/success/)

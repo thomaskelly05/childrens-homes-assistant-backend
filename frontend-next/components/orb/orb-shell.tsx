@@ -3,6 +3,7 @@
 import { Suspense, useCallback } from 'react'
 
 import { OrbAuthGate } from '@/components/orb-residential/orb-auth-gate'
+import { OrbAuthLoadingScreen } from '@/components/orb-residential/orb-auth-loading-screen'
 import { OrbCareCompanion } from '@/components/orb-standalone/orb-care-companion'
 import { OrbResidentialErrorBoundary } from '@/components/orb-residential/orb-residential-error-boundary'
 import { OrbSafetyModal } from '@/components/orb-residential/orb-safety-modal'
@@ -45,16 +46,7 @@ function OrbShellInner() {
 /** Canonical wrapper for the standalone `/orb` experience (theme, safety gate, main companion). */
 export function OrbShell() {
   return (
-    <Suspense
-      fallback={
-        <div
-          className="orb-residential-root flex h-[100dvh] items-center justify-center bg-[var(--orb-page-bg,#f7fbff)] text-sm text-[var(--orb-text-muted,#52657a)]"
-          data-orb-auth-loading
-        >
-          Loading…
-        </div>
-      }
-    >
+    <Suspense fallback={<OrbAuthLoadingScreen />}>
       <OrbShellInner />
     </Suspense>
   )

@@ -4,6 +4,7 @@ import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, 
 import { usePathname, useRouter } from 'next/navigation'
 
 import { authFetch, AuthApiError, getCsrfToken, isAuthFailureStatus, isTemporaryUnavailableStatus } from '@/lib/auth/api'
+import { ORB_AUTH_LOADING_TIMEOUT_MS, buildOrbFrontDoorUrl, isOrbSurfacePath } from '@/lib/orb/orb-front-door-routing'
 import { markOrbBackendDegraded, markOrbBackendReady, resetOrbSessionGate } from '@/lib/orb/orb-session-gate'
 import { normaliseRole, permissionsForRole } from '@/lib/auth/permissions'
 import { clearSensitiveBrowserState, suppressProductionConsole } from '@/lib/security/privacy'
@@ -33,13 +34,14 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 const publicPathPrefixes = [
   '/login',
   '/unauthorized',
-  '/orb/login',
   '/orb/signup',
   '/orb/access',
   '/orb/billing',
   '/orb/onboarding',
   '/orb/billing/success',
-  '/orb/billing/cancel'
+  '/orb/billing/cancel',
+  '/privacy',
+  '/terms'
 ]
 const publicAssetPaths = new Set([
   '/favicon.ico',
@@ -80,11 +82,6 @@ function isPublicPath(pathname: string) {
   if (publicAssetPaths.has(pathname)) return true
   if (publicAssetPrefixes.some((prefix) => pathname.startsWith(prefix))) return true
   return publicPathPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))
-}
-
-function isOrbSurfacePath(pathname: string) {
-  if (pathname === '/') return true
-  return pathname === '/orb' || pathname.startsWith('/orb/')
 }
 
 function normaliseUser(user: StaffUser): StaffUser {
@@ -135,8 +132,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       setStatus('loading')
+      let timeoutId: ReturnType<typeof setTimeout> | undefined
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(new AuthApiError(0, 'Session check timed out. Please sign in again.'))
+        }, ORB_AUTH_LOADING_TIMEOUT_MS)
+      })
+
       try {
-        const response = await authFetch<AuthMeResponse>('/auth/me')
+        const response = await Promise.race([authFetch<AuthMeResponse>('/auth/me'), timeoutPromise])
         if (!hasUserPayload(response)) {
           throw new AuthApiError(401, 'Your session could not be loaded')
         }
@@ -159,7 +163,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               setCsrfReady(Boolean(getCsrfToken()))
               return current
             }
-            setStatus('loading')
+            setStatus('unauthenticated')
             return null
           })
           return
@@ -178,8 +182,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null)
         setStatus('unauthenticated')
         setError(authError?.message || 'Your session could not be loaded')
-        setSessionExpired(false)
+        setSessionExpired(Boolean(authError?.status === 401))
         setCsrfReady(false)
+        if (!authError || authError.status === 0) {
+          markOrbBackendDegraded('auth')
+        }
+      } finally {
+        if (timeoutId) clearTimeout(timeoutId)
       }
     }
 
@@ -209,11 +218,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (status !== 'unauthenticated' || isPublicPath(pathname) || logoutRedirecting.current) return
-    if (pathname === '/' || pathname === '/orb') return
+    if (isOrbSurfacePath(pathname)) return
     const search = typeof window === 'undefined' ? '' : window.location.search
-    const returnUrl = encodeURIComponent(`${pathname}${search}`)
-    const loginPath = pathname.startsWith('/orb') ? '/orb/login' : '/login'
-    router.replace(`${loginPath}?returnUrl=${returnUrl}${sessionExpired ? '&expired=1' : ''}`)
+    const returnTarget = `${pathname}${search}`
+    const loginPath = buildOrbFrontDoorUrl(returnTarget)
+    router.replace(`${loginPath}${sessionExpired ? (loginPath.includes('?') ? '&' : '?') + 'expired=1' : ''}`)
   }, [pathname, router, sessionExpired, status])
 
   const login = useCallback(async (input: LoginInput) => {
@@ -273,7 +282,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setStatus('unauthenticated')
       setCsrfReady(false)
       resetOrbSessionGate()
-      router.replace(redirectToOrbLogin ? '/orb' : '/login')
+      router.replace(redirectToOrbLogin ? '/orb' : buildOrbFrontDoorUrl())
     }
   }, [pathname, router])
 

@@ -25,14 +25,15 @@ from services.orb_home_profile_service import orb_home_profile_service
 from services.orb_learning_micro_service import orb_learning_micro_service
 from services.orb_memory_service import orb_memory_service
 from services.orb_onboarding_profile_service import orb_onboarding_profile_service
+from services.orb_oauth_service import load_provider_config
 from services.orb_production_config_service import (
     oauth_config_warnings,
+    oauth_providers_diagnostics,
     passkey_config_warnings,
     stripe_config_warnings,
 )
 from services.orb_subscription_plan_service import (
     ORB_RESIDENTIAL_PRICE_LABEL,
-    oauth_provider_configured,
     orb_residential_stripe_price_id,
     orb_subscription_plan_service,
     stripe_configured,
@@ -59,9 +60,9 @@ def _success(data: Any, **extra: Any) -> dict[str, Any]:
 
 def _oauth_providers() -> dict[str, bool]:
     return {
-        "google": oauth_provider_configured("google"),
-        "microsoft": oauth_provider_configured("microsoft"),
-        "apple": oauth_provider_configured("apple"),
+        "google": load_provider_config("google") is not None,
+        "microsoft": load_provider_config("microsoft") is not None,
+        "apple": load_provider_config("apple") is not None,
     }
 
 
@@ -412,6 +413,7 @@ async def learn_from_answer(
 @router.get("/auth/providers")
 async def list_auth_providers(current_user=Depends(get_optional_orb_residential_user)):
     """OAuth availability for the unified sign-in screen."""
+    diagnostics = oauth_providers_diagnostics()
     return _success(
         {
             "email": True,
@@ -419,9 +421,11 @@ async def list_auth_providers(current_user=Depends(get_optional_orb_residential_
             "passkeys": True,
             "signup_path": "/orb/standalone/auth/signup",
             "oauth_start_template": "/orb/standalone/auth/oauth/{provider}/start",
-            "login_path": "/auth/login",
-            "front_door_url": FRONTEND_APP_URL.rstrip("/"),
+            "oauth_callback_template": "/orb/standalone/auth/oauth/{provider}/callback",
+            "login_path": "/orb",
+            "front_door_url": f"{FRONTEND_APP_URL.rstrip('/')}/orb",
             "legal": {"privacy": "/privacy", "terms": "/terms"},
+            "oauth_diagnostics": diagnostics,
             "config_warnings": {
                 "stripe": stripe_config_warnings(),
                 "oauth": oauth_config_warnings(),

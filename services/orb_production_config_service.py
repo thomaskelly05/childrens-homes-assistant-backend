@@ -58,6 +58,60 @@ def oauth_config_warnings() -> dict[str, list[str]]:
     }
 
 
+def _oauth_redirect_uri(provider: str) -> str | None:
+    key = provider.strip().lower()
+    env_map = {
+        "google": "OAUTH_GOOGLE_REDIRECT_URI",
+        "microsoft": "OAUTH_MICROSOFT_REDIRECT_URI",
+        "apple": "OAUTH_APPLE_REDIRECT_URI",
+    }
+    env_name = env_map.get(key)
+    if not env_name:
+        return None
+    value = os.getenv(env_name, "").strip()
+    return value or None
+
+
+def oauth_provider_diagnostics(provider: str) -> dict[str, object]:
+    """Non-secret OAuth wiring diagnostics for admin/development surfaces."""
+    from services.orb_oauth_service import load_provider_config
+
+    key = provider.strip().lower()
+    configured = load_provider_config(key) is not None
+    warnings = oauth_provider_config_warnings(key)
+    redirect_uri = _oauth_redirect_uri(key)
+    env_requirements: dict[str, list[str]] = {
+        "google": ["OAUTH_GOOGLE_CLIENT_ID", "OAUTH_GOOGLE_CLIENT_SECRET", "OAUTH_GOOGLE_REDIRECT_URI"],
+        "microsoft": [
+            "OAUTH_MICROSOFT_CLIENT_ID",
+            "OAUTH_MICROSOFT_CLIENT_SECRET",
+            "OAUTH_MICROSOFT_REDIRECT_URI",
+            "OAUTH_MICROSOFT_TENANT",
+        ],
+        "apple": [
+            "OAUTH_APPLE_CLIENT_ID",
+            "OAUTH_APPLE_TEAM_ID",
+            "OAUTH_APPLE_KEY_ID",
+            "OAUTH_APPLE_PRIVATE_KEY",
+            "OAUTH_APPLE_REDIRECT_URI",
+        ],
+    }
+    return {
+        "provider": key,
+        "enabled": configured,
+        "missing_config_warnings": warnings,
+        "redirect_uri": redirect_uri,
+        "expected_redirect_uri": redirect_uri,
+        "start_route": f"/orb/standalone/auth/oauth/{key}/start",
+        "callback_route": f"/orb/standalone/auth/oauth/{key}/callback",
+        "required_env_vars": env_requirements.get(key, []),
+    }
+
+
+def oauth_providers_diagnostics() -> dict[str, dict[str, object]]:
+    return {provider: oauth_provider_diagnostics(provider) for provider in ("google", "microsoft", "apple")}
+
+
 def passkey_config_warnings() -> list[str]:
     warnings: list[str] = []
     if not os.getenv("PASSKEY_RP_ID", "").strip():
