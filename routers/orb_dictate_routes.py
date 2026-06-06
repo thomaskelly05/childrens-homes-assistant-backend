@@ -45,6 +45,12 @@ UPLOAD_DIR = os.path.join(BASE_DIR, "_tmp_dictate_uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 MAX_AUDIO_BYTES = 25 * 1024 * 1024
+ALLOWED_AUDIO_SUFFIXES = frozenset(
+    {".webm", ".wav", ".mp3", ".m4a", ".ogg", ".mp4", ".mpeg", ".flac", ".aac", ".opus"}
+)
+BLOCKED_UPLOAD_SUFFIXES = frozenset(
+    {".exe", ".bat", ".cmd", ".com", ".msi", ".scr", ".sh", ".bash", ".php", ".html", ".htm", ".js", ".jar"}
+)
 
 
 def _success(data: Any, **extra: Any) -> dict[str, Any]:
@@ -161,7 +167,9 @@ async def dictate_transcribe_audio(
             status_code=400,
             detail="Confirm consent before transcribing conversation or debrief audio.",
         )
-    suffix = os.path.splitext(file.filename or "audio.webm")[1] or ".webm"
+    suffix = (os.path.splitext(file.filename or "audio.webm")[1] or ".webm").lower()
+    if suffix in BLOCKED_UPLOAD_SUFFIXES or suffix not in ALLOWED_AUDIO_SUFFIXES:
+        raise HTTPException(status_code=400, detail="Unsupported audio file type.")
     path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4().hex}{suffix}")
     try:
         with open(path, "wb") as handle:

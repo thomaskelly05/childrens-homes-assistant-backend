@@ -10,7 +10,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, ConfigDict, Field
 
 from auth.errors import auth_error_detail
-from auth.orb_residential_dependencies import require_orb_residential_auth
+from auth.orb_residential_dependencies import orb_residential_premium_dependency
+
+require_orb_projects_access = orb_residential_premium_dependency("ask_orb")
 from db.connection import DatabaseUnavailableError, get_db
 from db.orb_projects_db import (
     create_orb_project,
@@ -75,7 +77,7 @@ def _service_unavailable() -> HTTPException:
 @router.get("/")
 async def list_projects(
     conn=Depends(get_db),
-    current_user=Depends(require_orb_residential_auth),
+    current_user=Depends(require_orb_projects_access),
 ):
     user_id = int(current_user["user_id"])
     try:
@@ -96,7 +98,7 @@ async def list_projects(
 async def get_project(
     project_id: str,
     conn=Depends(get_db),
-    current_user=Depends(require_orb_residential_auth),
+    current_user=Depends(require_orb_projects_access),
 ):
     user_id = int(current_user["user_id"])
     try:
@@ -120,7 +122,7 @@ async def get_project(
 async def create_project(
     payload: OrbProjectCreateRequest,
     conn=Depends(get_db),
-    current_user=Depends(require_orb_residential_auth),
+    current_user=Depends(require_orb_projects_access),
 ):
     user_id = int(current_user["user_id"])
     try:
@@ -151,7 +153,7 @@ async def patch_project(
     project_id: str,
     payload: OrbProjectPatchRequest,
     conn=Depends(get_db),
-    current_user=Depends(require_orb_residential_auth),
+    current_user=Depends(require_orb_projects_access),
 ):
     user_id = int(current_user["user_id"])
     try:
@@ -186,7 +188,7 @@ async def patch_project(
 async def remove_project(
     project_id: str,
     conn=Depends(get_db),
-    current_user=Depends(require_orb_residential_auth),
+    current_user=Depends(require_orb_projects_access),
 ):
     user_id = int(current_user["user_id"])
     try:
@@ -215,7 +217,7 @@ async def get_project_chat(
     project_id: str,
     chat_id: str,
     conn=Depends(get_db),
-    current_user=Depends(require_orb_residential_auth),
+    current_user=Depends(require_orb_projects_access),
 ):
     user_id = int(current_user["user_id"])
     try:
@@ -256,7 +258,7 @@ async def attach_chat_to_project(
     project_id: str,
     chat_id: str,
     conn=Depends(get_db),
-    current_user=Depends(require_orb_residential_auth),
+    current_user=Depends(require_orb_projects_access),
 ):
     user_id = int(current_user["user_id"])
     try:
@@ -290,7 +292,7 @@ async def detach_chat_from_project(
     project_id: str,
     chat_id: str,
     conn=Depends(get_db),
-    current_user=Depends(require_orb_residential_auth),
+    current_user=Depends(require_orb_projects_access),
 ):
     user_id = int(current_user["user_id"])
     try:
