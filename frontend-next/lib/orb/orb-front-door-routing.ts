@@ -68,5 +68,8 @@ export const ORB_AUTH_GATE_FALLBACK_MS = 5_000
 /** /auth/me and access-check network ceiling — must always resolve auth status. */
 export const ORB_AUTH_CONTEXT_TIMEOUT_MS = 8_000
 
-/** Loading screen slow-phase hint and access-check timeout. */
+/** Loading screen slow-phase hint and access-check network ceiling. */
 export const ORB_AUTH_LOADING_TIMEOUT_MS = 12_000
+
+/** OrbAuthGate access-verification auto-fallback (mobile-safe, survives remounts). */
+export const ORB_ACCESS_GATE_FALLBACK_MS = 7_000

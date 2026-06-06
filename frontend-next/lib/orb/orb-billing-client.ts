@@ -1,4 +1,4 @@
-import { authFetch, authFetchResponse } from '@/lib/auth/api'
+import { authFetch, authFetchResponse, AuthApiError } from '@/lib/auth/api'
 
 export type OrbAccessPayload = {
   product: string
@@ -81,10 +81,31 @@ export const ORB_SAVED_OUTPUTS_API = {
 } as const
 
 export async function fetchOrbAccess(): Promise<OrbAccessPayload> {
-  const response = await authFetch<{ success?: boolean; data?: OrbAccessPayload }>(ORB_BILLING_API.access, {
+  const response = await authFetchResponse(ORB_BILLING_API.access, {
     credentials: 'include'
   })
-  return response.data ?? (response as unknown as OrbAccessPayload)
+  const payload = (await response.json().catch(() => undefined)) as
+    | { success?: boolean; data?: OrbAccessPayload; error?: { code?: string; message?: string } }
+    | OrbAccessPayload
+    | undefined
+
+  if (!response.ok) {
+    const record = payload && typeof payload === 'object' ? (payload as Record<string, unknown>) : null
+    const error = record?.error
+    if (error && typeof error === 'object') {
+      const structured = error as { code?: string; message?: string }
+      throw new AuthApiError(response.status, {
+        code: structured.code,
+        message: structured.message || 'ORB access could not be verified'
+      })
+    }
+    throw new AuthApiError(response.status, 'ORB access could not be verified')
+  }
+
+  if (payload && typeof payload === 'object' && 'data' in payload && payload.data) {
+    return payload.data
+  }
+  return payload as OrbAccessPayload
 }
 
 export async function fetchOrbBillingMeter() {

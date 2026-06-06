@@ -71,15 +71,20 @@ def test_optional_me_style_access_without_user():
     from routers.orb_billing_routes import orb_standalone_access
 
     conn = MagicMock()
+    request = MagicMock()
+    request.cookies = {}
+    request.headers = {}
     import asyncio
 
-    with patch("routers.orb_billing_routes.orb_access_service") as mock_access:
+    with patch("auth.current_user._get_request_token", return_value=None), patch(
+        "routers.orb_billing_routes.orb_access_service"
+    ) as mock_access:
         mock_access.build_access_payload.return_value = {
             "access_state": "unauthenticated",
             "can_use_orb": False,
             "os_access_granted": False,
         }
-        result = asyncio.run(orb_standalone_access(conn=conn, current_user=None))
+        result = asyncio.run(orb_standalone_access(request=request, conn=conn, bearer_token=None))
     assert result["success"] is True
     assert result["data"]["os_access_granted"] is False
 

@@ -3,13 +3,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { useAuth } from '@/contexts/auth-context'
-import { AuthApiError, isAuthFailureStatus } from '@/lib/auth/api'
+import { AuthApiError, isAuthFailureStatus, isTemporaryUnavailableStatus } from '@/lib/auth/api'
 import {
   readAdultProfile,
   roleLabelFor,
   type AdultProfile,
   type AdultProfileRole
 } from '@/lib/orb/adult-profile-store'
+import { resetOrbAccessLoadingDeadline } from '@/lib/orb/orb-access-loading-deadline'
 import { ORB_AUTH_LOADING_TIMEOUT_MS } from '@/lib/orb/orb-front-door-routing'
 import { fetchOrbAccess, type OrbAccessPayload } from '@/lib/orb/orb-billing-client'
 import { fetchOrbPasskeyStatus } from '@/lib/orb/orb-passkey-client'
@@ -20,6 +21,15 @@ export const ORB_SIGN_IN_URL = '/orb'
 export const ORB_ACCESS_URL = '/orb/billing'
 
 export type OrbProfileDisplayMode = 'local_profile' | 'signed_in_account'
+
+export type OrbAccessFailureKind =
+  | 'none'
+  | 'unauthorized'
+  | 'payment_required'
+  | 'safety_required'
+  | 'rate_limited'
+  | 'unavailable'
+  | 'timeout'
 
 export type OrbAccountState = {
   isLoading: boolean
@@ -38,8 +48,9 @@ export type OrbAccountState = {
   hasPasskeys: boolean
   adultProfile: AdultProfile
   access: OrbAccessPayload | null
-  /** Set when signed in but /orb/standalone/access failed (403/503). */
+  /** Set when signed in but /orb/standalone/access failed. */
   accessFetchStatus: number | null
+  accessFailureKind: OrbAccessFailureKind
   hasConfirmedAccess: boolean
   /** null when signed out or access payload unavailable. */
   safetyAccepted: boolean | null
@@ -89,6 +100,33 @@ function accessIsActive(payload: OrbAccessPayload | null): boolean {
   )
 }
 
+function classifyAccessFailure(status: number, code?: string): OrbAccessFailureKind {
+  if (status === 401) return 'unauthorized'
+  if (status === 402) return 'payment_required'
+  if (status === 403) {
+    const normalized = (code || '').toLowerCase()
+    if (normalized.includes('safety')) return 'safety_required'
+    return 'payment_required'
+  }
+  if (status === 429) return 'rate_limited'
+  if (status === 504) return 'timeout'
+  if (isTemporaryUnavailableStatus(status) || status >= 500) return 'unavailable'
+  return 'unavailable'
+}
+
+function isSafetyAcceptanceRequired(payload: OrbAccessPayload | null): boolean {
+  if (!payload) return false
+  if (payload.safety_accepted) return false
+  const blocker = String((payload as { access_blocker?: string }).access_blocker || '').toLowerCase()
+  if (blocker === 'safety_acceptance') return true
+  const entitled =
+    Boolean(payload.trial?.active) ||
+    Boolean(payload.subscription?.active) ||
+    payload.access_state === 'admin_bypass' ||
+    payload.access_state === 'founding_plan_bypass'
+  return entitled
+}
+
 export function useOrbAccountState(): OrbAccountState {
   const auth = useAuth()
   const [adultProfile, setAdultProfile] = useState<AdultProfile>(() => readAdultProfile())
@@ -96,6 +134,7 @@ export function useOrbAccountState(): OrbAccountState {
   const [hasPasskeys, setHasPasskeys] = useState(false)
   const [accessLoading, setAccessLoading] = useState(false)
   const [accessFetchStatus, setAccessFetchStatus] = useState<number | null>(null)
+  const [accessFailureKind, setAccessFailureKind] = useState<OrbAccessFailureKind>('none')
   const refreshInFlight = useRef<Promise<void> | null>(null)
 
   const isAuthLoading = auth.status === 'loading'
@@ -108,32 +147,44 @@ export function useOrbAccountState(): OrbAccountState {
     if (!hasBackendSession || !auth.user) {
       setAccess(null)
       setAccessFetchStatus(null)
+      setAccessFailureKind('none')
       setHasPasskeys(Boolean(auth.user?.has_passkeys))
       setAccessLoading(false)
       return
     }
 
     setAccessLoading(true)
+    setAccessFailureKind('none')
     let accessTimeoutId: ReturnType<typeof setTimeout> | undefined
     try {
       let accessPayload: OrbAccessPayload | null = null
       let accessStatus: number | null = null
+      let failureKind: OrbAccessFailureKind = 'none'
       try {
         const accessTimeout = new Promise<never>((_, reject) => {
           accessTimeoutId = setTimeout(() => {
-            reject(new AuthApiError(504, 'ORB access check timed out'))
+            reject(new AuthApiError(504, { code: 'access_timeout', message: 'ORB access check timed out' }))
           }, ORB_AUTH_LOADING_TIMEOUT_MS)
         })
         accessPayload = await Promise.race([fetchOrbAccess(), accessTimeout])
         accessStatus = null
+        failureKind = 'none'
+        resetOrbAccessLoadingDeadline()
       } catch (caught) {
         accessPayload = null
-        accessStatus = caught instanceof AuthApiError ? caught.status : 503
+        if (caught instanceof AuthApiError) {
+          accessStatus = caught.status
+          failureKind = classifyAccessFailure(caught.status, caught.code)
+        } else {
+          accessStatus = 503
+          failureKind = 'unavailable'
+        }
       }
 
       const passkeyStatus = await fetchOrbPasskeyStatus().catch(() => null)
       setAccess(accessPayload)
       setAccessFetchStatus(accessStatus)
+      setAccessFailureKind(failureKind)
       setHasPasskeys(
         Boolean(passkeyStatus?.has_passkeys ?? auth.user.has_passkeys ?? passkeyStatus?.items?.length)
       )
@@ -146,6 +197,7 @@ export function useOrbAccountState(): OrbAccountState {
   const refresh = useCallback(async () => {
     if (refreshInFlight.current) return refreshInFlight.current
     const run = async () => {
+      resetOrbAccessLoadingDeadline()
       setAdultProfile(readAdultProfile())
       await auth.refreshSession()
       await refreshAccessAndPasskeys()
@@ -186,8 +238,14 @@ export function useOrbAccountState(): OrbAccountState {
     ? access?.subscription?.status ?? auth.user?.subscription_status ?? null
     : null
   const trialEndsAt = isSignedIn ? access?.trial?.expires_at ?? null : null
-  const hasConfirmedAccess = isSignedIn && accessIsActive(access) && !isAuthFailureStatus(accessFetchStatus ?? 0)
   const safetyAccepted = isSignedIn && access ? Boolean(access.safety_accepted) : isSignedIn ? false : null
+  const safetyRequired = isSignedIn && isSafetyAcceptanceRequired(access)
+  const hasConfirmedAccess =
+    isSignedIn &&
+    accessIsActive(access) &&
+    !isAuthFailureStatus(accessFetchStatus ?? 0) &&
+    accessFailureKind === 'none' &&
+    !safetyRequired
   const adminBypass = isSignedIn && access?.access_state === 'admin_bypass'
 
   return {
@@ -207,6 +265,7 @@ export function useOrbAccountState(): OrbAccountState {
     adultProfile: mergedProfile,
     access,
     accessFetchStatus,
+    accessFailureKind,
     hasConfirmedAccess,
     safetyAccepted,
     adminBypass,

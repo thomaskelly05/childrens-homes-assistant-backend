@@ -35,8 +35,10 @@ All other `/orb/*` routes render through `OrbAuthGate`:
 
 1. Auth loading (branded, max 5s via `ORB_AUTH_GATE_FALLBACK_MS`)
 2. Login if unauthenticated or auth cannot be confirmed
-3. Upgrade if signed in without access
-4. Product shell only when authenticated + access confirmed
+3. Safe retry if access cannot be confirmed (timeout / 429 / 5xx)
+4. Upgrade if signed in without access
+5. Safety setup if entitled but safety not accepted
+6. Product shell only when authenticated + access confirmed
 
 ## Auth loading timeout behaviour
 
@@ -44,9 +46,10 @@ All other `/orb/*` routes render through `OrbAuthGate`:
 |-------|----------|----------|
 | Auth status `loading` | 5s (`OrbAuthGate`) | Embedded login on `/orb` |
 | `/auth/me` fetch | 8s (`auth-context`) | `unauthenticated` |
-| Access fetch (signed in) | 12s | Login or upgrade per access result |
+| Access verification (signed in) | 7s (`ORB_ACCESS_GATE_FALLBACK_MS`) | Retry screen, upgrade, or safety — never login while authenticated |
+| Access fetch network | 12s | Classified failure in `useOrbAccountState` |
 
-The gate deadline is stored in `orb-auth-loading-deadline.ts` so `Suspense` / mobile remounts cannot reset it indefinitely.
+Auth deadline: `orb-auth-loading-deadline.ts`. Access deadline: `orb-access-loading-deadline.ts`. Both survive `Suspense` / mobile remounts.
 
 ## Loop prevention
 
