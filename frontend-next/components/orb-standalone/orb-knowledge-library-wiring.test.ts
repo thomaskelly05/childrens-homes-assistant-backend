@@ -14,7 +14,7 @@ describe('ORB Templates Write Knowledge Library wiring', () => {
   it('template card Open in ORB Write uses template handoff', () => {
     const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
     const handoff = readComponent('lib/orb/write/orb-write-template-handoff.ts')
-    assert.match(companion, /saveOrbWriteTemplateHandoff/)
+    assert.match(companion, /convergedTemplateHandoff/)
     assert.match(handoff, /orb-write-template-handoff-v1/)
   })
 

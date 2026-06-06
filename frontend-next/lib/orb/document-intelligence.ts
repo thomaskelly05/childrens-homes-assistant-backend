@@ -1,4 +1,5 @@
-/** Standalone ORB document intelligence — lenses and contextual UI actions. */
+/** Standalone ORB document intelligence — lenses and contextual UI actions.
+ *  Converged lens metadata: `lib/orb/orb-converged-actions.ts` (`ORB_CONVERGED_DOCUMENT_LENSES`). */
 
 export const ORB_DOCUMENT_BOUNDARY_LINES = [
   'Based only on the document or text you provide.',

@@ -23,7 +23,9 @@ describe('ORB converged feature routing', () => {
   })
 
   it('ORB Write assistant includes converged practice workflow actions', () => {
-    const actions = readComponent('lib/orb/write/orb-write-ai-actions.ts')
+    const registry = readComponent('lib/orb/orb-converged-actions.ts')
+    const panel = readComponent('components/orb-write/orb-write-ai-panel.tsx')
+    assert.match(panel, /ORB_CONVERGED_WRITE_PANEL_GROUPS/)
     for (const label of [
       'Review this record',
       'Record this properly',
@@ -34,9 +36,13 @@ describe('ORB converged feature routing', () => {
       'Create chronology entry',
       'Create action plan',
       'What am I missing?',
-      'Check against selected guidance'
+      'Check against selected guidance',
+      'Remove blame language',
+      'Check recording quality',
+      'Check child voice',
+      'Check manager oversight'
     ]) {
-      assert.match(actions, new RegExp(label))
+      assert.match(registry, new RegExp(label))
     }
   })
 

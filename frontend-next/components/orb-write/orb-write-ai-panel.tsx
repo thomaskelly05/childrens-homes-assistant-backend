@@ -9,11 +9,8 @@ import {
   type OrbDictateEditResult
 } from '@/lib/orb/dictate/orb-dictate-client'
 import type { OrbDictateEditMode } from '@/lib/orb/dictate/orb-dictate-studio-actions'
-import {
-  ORB_WRITE_AI_ACTIONS,
-  ORB_WRITE_AI_GROUPS,
-  type OrbWriteAiAction
-} from '@/lib/orb/write/orb-write-ai-actions'
+import { ORB_CONVERGED_WRITE_PANEL_GROUPS } from '@/lib/orb/orb-converged-actions'
+import { ORB_WRITE_AI_ACTIONS, type OrbWriteAiAction } from '@/lib/orb/write/orb-write-ai-actions'
 import type { OrbWriteDocument } from '@/lib/orb/write/orb-write-types'
 
 export function OrbWriteAiPanel({
@@ -73,11 +70,11 @@ export function OrbWriteAiPanel({
       </header>
 
       <div className="min-h-0 flex-1 overflow-y-auto p-3">
-        {ORB_WRITE_AI_GROUPS.map((group) => (
-          <section key={group.id} className="mb-3 last:mb-0">
+        {ORB_CONVERGED_WRITE_PANEL_GROUPS.map((group) => (
+          <section key={group.key} className="mb-3 last:mb-0" data-orb-write-ai-group={group.key}>
             <h4 className="text-[10px] font-semibold uppercase tracking-wider text-[var(--orb-muted)]">{group.title}</h4>
             <div className="mt-1.5 flex flex-wrap gap-1.5">
-              {ORB_WRITE_AI_ACTIONS.filter((a) => a.group === group.id).map((action) => (
+              {ORB_WRITE_AI_ACTIONS.filter((a) => group.actionIds.includes(a.id)).map((action) => (
                 <button
                   key={action.id}
                   type="button"

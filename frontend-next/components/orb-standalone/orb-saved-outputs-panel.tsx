@@ -77,7 +77,10 @@ export function OrbSavedOutputsPanel({
   onUseInShiftBuilder,
   onRerun,
   onStartInOrbWrite,
+  onOpenSavedOutputInOrbWrite,
   onStartInDictate,
+  onStartInChat,
+  onStartInDocuments,
   residentialSurface = false,
   sessionReady = true
 }: {
@@ -90,7 +93,10 @@ export function OrbSavedOutputsPanel({
   onUseInShiftBuilder?: (notes: string, focus?: string) => void
   onRerun?: (state: OrbSavedOutputRerunState) => void
   onStartInOrbWrite?: () => void
+  onOpenSavedOutputInOrbWrite?: (record: OrbSavedOutputRecord) => void
   onStartInDictate?: () => void
+  onStartInChat?: () => void
+  onStartInDocuments?: () => void
   residentialSurface?: boolean
   sessionReady?: boolean
 }) {
@@ -432,6 +438,11 @@ export function OrbSavedOutputsPanel({
                   onNotice={setNotice}
                   onAskOrb={onAskOrb || onReuseInChat}
                   onSendToDictate={onSendToDictate}
+                  onOpenInOrbWrite={
+                    onOpenSavedOutputInOrbWrite
+                      ? () => onOpenSavedOutputInOrbWrite(detail)
+                      : undefined
+                  }
                   onUseInShiftBuilder={onUseInShiftBuilder}
                   onReuseInChat={onReuseInChat}
                   onRerun={onRerun ? handleRerun : undefined}
@@ -444,9 +455,39 @@ export function OrbSavedOutputsPanel({
               className="flex flex-1 items-center justify-center p-6 text-center text-sm text-[var(--orb-mobile-ws-muted,var(--orb-muted))]"
               data-orb-saved-output-detail-empty
             >
-              {items.length === 0
-                ? 'No saved outputs yet. When ORB helps you write a record, review practice or create a briefing, you can save it here and reuse it later.'
-                : 'Select a saved output to open, export, or reuse in chat.'}
+              {items.length === 0 ? (
+                <div className="space-y-3" data-orb-saved-output-empty-state>
+                  <p>
+                    No saved outputs yet. When ORB helps you write a record, review practice or create a
+                    briefing, you can save it here and reuse it later.
+                  </p>
+                  <p className="text-xs">Start from Chat, Dictate, ORB Write or Documents &amp; Guidance.</p>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    {onStartInChat ? (
+                      <OrbPremiumButton variant="secondary" onClick={onStartInChat} data-orb-saved-start-chat>
+                        Chat
+                      </OrbPremiumButton>
+                    ) : null}
+                    {onStartInDictate ? (
+                      <OrbPremiumButton variant="secondary" onClick={onStartInDictate} data-orb-saved-start-dictate>
+                        Dictate
+                      </OrbPremiumButton>
+                    ) : null}
+                    {onStartInOrbWrite ? (
+                      <OrbPremiumButton variant="secondary" onClick={onStartInOrbWrite} data-orb-saved-start-write>
+                        ORB Write
+                      </OrbPremiumButton>
+                    ) : null}
+                    {onStartInDocuments ? (
+                      <OrbPremiumButton variant="secondary" onClick={onStartInDocuments} data-orb-saved-start-documents>
+                        Documents
+                      </OrbPremiumButton>
+                    ) : null}
+                  </div>
+                </div>
+              ) : (
+                'Select a saved output to open, export, reopen in ORB Write, or reuse in chat.'
+              )}
             </div>
           )}
           {notice ? (

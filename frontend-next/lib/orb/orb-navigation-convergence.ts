@@ -104,6 +104,10 @@ export function practicePanelToDeprecatedId(
   return panel
 }
 
+/**
+ * Chat starters — kept in sync with `orb-converged-actions.ts` (`ORB_CONVERGED_CHAT_STARTER_ACTIONS`).
+ * Residential surfaces import via `orb-residential-copy.ts` from the converged registry.
+ */
 export const ORB_CONVERGED_CHAT_STARTERS: Array<{ text: string; mode?: StandaloneOrbMode }> = [
   { text: 'Create a handover / shift plan' },
   { text: 'Review written practice' },
@@ -114,7 +118,9 @@ export const ORB_CONVERGED_CHAT_STARTERS: Array<{ text: string; mode?: Standalon
   {
     text: 'Build action plan from Reg 44 / Statement of Purpose',
     mode: 'Reg 44 / Reg 45 Prep'
-  }
+  },
+  { text: 'Summarise recent changes' },
+  { text: 'Turn policy into easy-read briefing' }
 ]
 
 /** Recording library ids highlighted as common converged workflows in Templates. */

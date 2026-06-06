@@ -28,7 +28,7 @@ describe('ORB chat message actions', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     assert.match(companion, /onOpenInOrbWrite/)
     assert.match(companion, /openOrbWriteWithContent/)
-    assert.match(companion, /handoffTextToOrbWrite/)
+    assert.match(companion, /convergedHandoffToOrbWrite/)
   })
 
   it('user messages support copy, edit and resend actions', () => {
