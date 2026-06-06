@@ -104,6 +104,10 @@ export function isTemporaryUnavailableStatus(status: number) {
   return status === 503 || status === 502 || status === 504
 }
 
+export function isRateLimitedStatus(status: number) {
+  return status === 429
+}
+
 export function isTemporaryUnavailableError(error: unknown) {
   return error instanceof AuthApiError && isTemporaryUnavailableStatus(error.status)
 }

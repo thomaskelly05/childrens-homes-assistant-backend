@@ -4,7 +4,12 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { OrbHeroSphere } from '@/components/orb-residential/ui/orb-hero-sphere'
 import { useOrbAppearance } from '@/components/orb-standalone/use-orb-appearance'
-import { ORB_AUTH_LOADING_TIMEOUT_MS } from '@/lib/orb/orb-front-door-routing'
+import {
+  getOrbAuthLoadingRemainingMs,
+  hasOrbAuthLoadingDeadlinePassed,
+  markOrbAuthLoadingStart
+} from '@/lib/orb/orb-auth-loading-deadline'
+import { ORB_AUTH_GATE_FALLBACK_MS } from '@/lib/orb/orb-front-door-routing'
 import { getOrbThemeCssVariables } from '@/lib/orb/orb-theme'
 
 type OrbAuthLoadingPhase = 'checking' | 'slow' | 'retry'
@@ -13,29 +18,43 @@ type OrbAuthLoadingPhase = 'checking' | 'slow' | 'retry'
 export function OrbAuthLoadingScreen({
   onRetry,
   onBackToSignIn,
-  timeoutMs = ORB_AUTH_LOADING_TIMEOUT_MS
+  timeoutMs = ORB_AUTH_GATE_FALLBACK_MS,
+  message = 'Checking your session…',
+  submessage = 'Securing your ORB Residential access'
 }: {
   onRetry?: () => void
   onBackToSignIn?: () => void
   timeoutMs?: number
+  message?: string
+  submessage?: string
 } = {}) {
   const { resolvedTheme } = useOrbAppearance()
   const themeClass = resolvedTheme === 'light' ? 'orb-login-root--light' : 'orb-login-root--dark'
-  const [phase, setPhase] = useState<OrbAuthLoadingPhase>('checking')
+  const [phase, setPhase] = useState<OrbAuthLoadingPhase>(() =>
+    hasOrbAuthLoadingDeadlinePassed(timeoutMs) ? 'slow' : 'checking'
+  )
 
   useEffect(() => {
+    markOrbAuthLoadingStart()
+    if (hasOrbAuthLoadingDeadlinePassed(timeoutMs)) {
+      setPhase('slow')
+      return
+    }
+    const remaining = getOrbAuthLoadingRemainingMs(timeoutMs)
     const timer = window.setTimeout(() => {
       setPhase((current) => (current === 'checking' ? 'slow' : current))
-    }, timeoutMs)
+    }, remaining)
     return () => window.clearTimeout(timer)
   }, [timeoutMs])
 
   const handleRetry = useCallback(() => {
     setPhase('checking')
     onRetry?.()
+    markOrbAuthLoadingStart()
+    const remaining = getOrbAuthLoadingRemainingMs(timeoutMs)
     window.setTimeout(() => {
       setPhase((current) => (current === 'checking' ? 'slow' : current))
-    }, timeoutMs)
+    }, remaining)
   }, [onRetry, timeoutMs])
 
   const handleBackToSignIn = useCallback(() => {
@@ -50,7 +69,7 @@ export function OrbAuthLoadingScreen({
 
   return (
     <div
-      className={`orb-residential-root orb-auth-loading-root ${themeClass} flex min-h-[100dvh] min-h-[100svh] items-center justify-center`}
+      className={`orb-residential-root orb-auth-loading-root ${themeClass} flex min-h-[100dvh] min-h-[100svh] items-center justify-center overflow-y-auto`}
       data-orb-auth-loading
       data-orb-auth-loading-phase={phase}
       data-orb-residential="true"
@@ -63,12 +82,12 @@ export function OrbAuthLoadingScreen({
       aria-live="polite"
       aria-busy={phase !== 'retry'}
     >
-      <div className="orb-auth-loading-inner flex max-w-sm flex-col items-center gap-4 px-6 text-center">
+      <div className="orb-auth-loading-inner my-auto flex max-w-sm flex-col items-center gap-4 px-6 py-8 text-center">
         <OrbHeroSphere className="scale-[0.55] sm:scale-[0.65]" />
         {phase === 'checking' ? (
           <>
-            <p className="text-sm font-medium text-[var(--orb-text,#f8fafc)]">Checking your session…</p>
-            <p className="text-xs text-[var(--orb-muted,#94a3b8)]">Securing your ORB Residential access</p>
+            <p className="text-sm font-medium text-[var(--orb-text,#f8fafc)]">{message}</p>
+            <p className="text-xs text-[var(--orb-muted,#94a3b8)]">{submessage}</p>
           </>
         ) : (
           <>

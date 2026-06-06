@@ -10,6 +10,7 @@ import {
   type AdultProfile,
   type AdultProfileRole
 } from '@/lib/orb/adult-profile-store'
+import { ORB_AUTH_LOADING_TIMEOUT_MS } from '@/lib/orb/orb-front-door-routing'
 import { fetchOrbAccess, type OrbAccessPayload } from '@/lib/orb/orb-billing-client'
 import { fetchOrbPasskeyStatus } from '@/lib/orb/orb-passkey-client'
 import { normaliseRole } from '@/lib/auth/permissions'
@@ -113,11 +114,17 @@ export function useOrbAccountState(): OrbAccountState {
     }
 
     setAccessLoading(true)
+    let accessTimeoutId: ReturnType<typeof setTimeout> | undefined
     try {
       let accessPayload: OrbAccessPayload | null = null
       let accessStatus: number | null = null
       try {
-        accessPayload = await fetchOrbAccess()
+        const accessTimeout = new Promise<never>((_, reject) => {
+          accessTimeoutId = setTimeout(() => {
+            reject(new AuthApiError(504, 'ORB access check timed out'))
+          }, ORB_AUTH_LOADING_TIMEOUT_MS)
+        })
+        accessPayload = await Promise.race([fetchOrbAccess(), accessTimeout])
         accessStatus = null
       } catch (caught) {
         accessPayload = null
@@ -131,6 +138,7 @@ export function useOrbAccountState(): OrbAccountState {
         Boolean(passkeyStatus?.has_passkeys ?? auth.user.has_passkeys ?? passkeyStatus?.items?.length)
       )
     } finally {
+      if (accessTimeoutId) clearTimeout(accessTimeoutId)
       setAccessLoading(false)
     }
   }, [auth.user, hasBackendSession])
