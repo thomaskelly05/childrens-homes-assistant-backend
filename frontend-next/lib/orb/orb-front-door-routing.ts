@@ -62,4 +62,11 @@ export function isOrbPublicAuthPath(pathname: string): boolean {
   )
 }
 
+/** OrbAuthGate auto-fallback to login when auth status stays loading (mobile-safe). */
+export const ORB_AUTH_GATE_FALLBACK_MS = 5_000
+
+/** /auth/me and access-check network ceiling — must always resolve auth status. */
+export const ORB_AUTH_CONTEXT_TIMEOUT_MS = 8_000
+
+/** Loading screen slow-phase hint and access-check timeout. */
 export const ORB_AUTH_LOADING_TIMEOUT_MS = 12_000

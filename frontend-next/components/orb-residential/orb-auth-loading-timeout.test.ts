@@ -23,15 +23,17 @@ describe('ORB auth loading timeout fallback', () => {
 
   it('auth context times out session checks instead of hanging', () => {
     const auth = read('contexts/auth-context.tsx')
-    assert.match(auth, /ORB_AUTH_LOADING_TIMEOUT_MS/)
+    assert.match(auth, /ORB_AUTH_CONTEXT_TIMEOUT_MS/)
     assert.match(auth, /Promise\.race/)
     assert.match(auth, /setStatus\('unauthenticated'\)/)
   })
 
-  it('OrbAuthGate wires retry and back-to-sign-in handlers', () => {
+  it('OrbAuthGate wires retry, gate fallback, and back-to-sign-in handlers', () => {
     const gate = read('components/orb-residential/orb-auth-gate.tsx')
     assert.match(gate, /onRetry=\{handleRetry\}/)
     assert.match(gate, /onBackToSignIn=\{handleBackToSignIn\}/)
+    assert.match(gate, /authFallback/)
     assert.match(gate, /accessTimedOut/)
+    assert.match(gate, /ORB_AUTH_GATE_FALLBACK_MS/)
   })
 })

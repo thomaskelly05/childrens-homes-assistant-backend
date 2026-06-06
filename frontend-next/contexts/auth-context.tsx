@@ -3,8 +3,20 @@
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 
-import { authFetch, AuthApiError, getCsrfToken, isAuthFailureStatus, isTemporaryUnavailableStatus } from '@/lib/auth/api'
-import { ORB_AUTH_LOADING_TIMEOUT_MS, buildOrbFrontDoorUrl, isOrbSurfacePath } from '@/lib/orb/orb-front-door-routing'
+import {
+  authFetch,
+  AuthApiError,
+  getCsrfToken,
+  isAuthFailureStatus,
+  isRateLimitedStatus,
+  isTemporaryUnavailableStatus
+} from '@/lib/auth/api'
+import { resetOrbAuthLoadingDeadline } from '@/lib/orb/orb-auth-loading-deadline'
+import {
+  ORB_AUTH_CONTEXT_TIMEOUT_MS,
+  buildOrbFrontDoorUrl,
+  isOrbSurfacePath
+} from '@/lib/orb/orb-front-door-routing'
 import { markOrbBackendDegraded, markOrbBackendReady, resetOrbSessionGate } from '@/lib/orb/orb-session-gate'
 import { normaliseRole, permissionsForRole } from '@/lib/auth/permissions'
 import { clearSensitiveBrowserState, suppressProductionConsole } from '@/lib/security/privacy'
@@ -131,12 +143,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return
       }
 
-      setStatus('loading')
+      setStatus((current) => (current === 'authenticated' ? current : 'loading'))
       let timeoutId: ReturnType<typeof setTimeout> | undefined
       const timeoutPromise = new Promise<never>((_, reject) => {
         timeoutId = setTimeout(() => {
           reject(new AuthApiError(0, 'Session check timed out. Please sign in again.'))
-        }, ORB_AUTH_LOADING_TIMEOUT_MS)
+        }, ORB_AUTH_CONTEXT_TIMEOUT_MS)
       })
 
       try {
@@ -151,9 +163,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSessionExpired(false)
         setCsrfReady(Boolean(getCsrfToken()))
         logoutRedirecting.current = false
+        resetOrbAuthLoadingDeadline()
         markOrbBackendReady()
       } catch (caught) {
         const authError = caught instanceof AuthApiError ? caught : null
+        if (authError && isRateLimitedStatus(authError.status)) {
+          clearCachedIdentity()
+          setUser(null)
+          setStatus('unauthenticated')
+          setError(authError.message || 'Too many requests. Please sign in again.')
+          setSessionExpired(false)
+          setCsrfReady(false)
+          resetOrbAuthLoadingDeadline()
+          markOrbBackendDegraded('auth')
+          return
+        }
         if (authError && isTemporaryUnavailableStatus(authError.status)) {
           setError(authError.message || 'Service temporarily unavailable. Please retry.')
           setUser((current) => {
@@ -164,6 +188,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               return current
             }
             setStatus('unauthenticated')
+            resetOrbAuthLoadingDeadline()
             return null
           })
           return
@@ -175,6 +200,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setError(authError.message || 'Your session could not be loaded')
           setSessionExpired(true)
           setCsrfReady(false)
+          resetOrbAuthLoadingDeadline()
           markOrbBackendDegraded('auth')
           return
         }
@@ -184,7 +210,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setError(authError?.message || 'Your session could not be loaded')
         setSessionExpired(Boolean(authError?.status === 401))
         setCsrfReady(false)
+        resetOrbAuthLoadingDeadline()
         if (!authError || authError.status === 0) {
+          if (process.env.NODE_ENV !== 'production') {
+            console.warn('[auth] Session check failed or timed out; showing sign-in.')
+          }
           markOrbBackendDegraded('auth')
         }
       } finally {
@@ -206,6 +236,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSessionExpired(false)
         setError(null)
         setCsrfReady(Boolean(getCsrfToken()))
+        resetOrbAuthLoadingDeadline()
         return
       }
       void refreshSession().finally(() => {
