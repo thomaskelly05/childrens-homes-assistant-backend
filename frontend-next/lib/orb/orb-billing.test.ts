@@ -4,11 +4,11 @@ import { readFileSync } from 'node:fs'
 
 test('ORB login copy includes product name', () => {
   const login = readFileSync(new URL('../../components/orb-residential/orb-login-screen.tsx', import.meta.url), 'utf8')
-  assert.match(login, /professional AI copilot/)
+  assert.match(login, /AI support for residential children/)
   assert.match(login, /Continue with Microsoft/)
   assert.match(login, /Powered by IndiCare Intelligence/)
-  assert.match(login, /ORB_RETURN = '\/orb'/)
-  assert.match(login, /orbOAuthStartUrl\('microsoft', ORB_RETURN\)/)
+  assert.match(login, /ORB_CANONICAL_FRONT_DOOR/)
+  assert.match(login, /orbOAuthStartUrl\('microsoft', returnUrl\)/)
 })
 
 test('upgrade screen shows £9.99/month', () => {

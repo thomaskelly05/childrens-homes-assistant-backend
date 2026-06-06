@@ -98,11 +98,11 @@ describe('ORB residential theme runtime', () => {
     assert.match(audit, /overlapsMainHeading/)
   })
 
-  it('voice and dictate stations use OrbPresence', () => {
+  it('voice and dictate stations use living companion or glass orb marks', () => {
     const voice = read('components/orb-standalone/orb-voice-station.tsx')
     const dictate = read('components/orb-standalone/orb-dictate-station.tsx')
-    assert.match(voice, /OrbPresence|GlassOrbMark/)
-    assert.match(dictate, /OrbPresence|GlassOrbMark/)
+    assert.match(voice, /OrbVoiceCompanion/)
+    assert.match(dictate, /GlassOrbMark/)
   })
 
   it('no unscoped residential dark lock on workspace inputs', () => {

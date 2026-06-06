@@ -13,8 +13,11 @@ function readComponent(relativePath: string) {
 describe('ORB Dictate speech-first routing', () => {
   it('Start uses server realtime first; Safari avoids browser SpeechRecognition by default', () => {
     const dictate = readComponent('components/orb-standalone/orb-dictate-station.tsx')
+    const mobile = readComponent('components/orb-standalone/orb-dictate-mobile-experience.tsx')
+    const topBar = readComponent('components/orb/dictate/OrbDictateTopBar.tsx')
     assert.match(dictate, /handleStartSpeechTranscript/)
-    assert.match(dictate, /Start recording|data-orb-dictate-primary-action/)
+    assert.match(mobile, /Start recording|data-orb-dictate-speech-start/)
+    assert.match(topBar, /data-orb-dictate-primary-action/)
     assert.match(dictate, /isSafariBrowser/)
     assert.match(dictate, /OrbDictateRealtimeTranscription/)
     assert.match(dictate, /realtime_transcription/)

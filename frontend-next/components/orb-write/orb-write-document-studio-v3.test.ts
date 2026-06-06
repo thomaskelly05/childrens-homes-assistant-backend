@@ -37,12 +37,14 @@ describe('ORB Write document studio v3', () => {
     assert.match(panel, /data-orb-write-word-count-display/)
   })
 
-  it('three-column studio with source, canvas and assistant panels', () => {
+  it('document-first layout with collapsible source and guidance panels', () => {
     const panel = read('components/orb-write/orb-write-standalone-panel.tsx')
     assert.match(panel, /OrbWriteSourcePanel/)
     assert.match(panel, /OrbWriteEditor/)
     assert.match(panel, /data-orb-write-assistant-panel/)
-    assert.match(panel, /lg:grid-cols-\[260px_1fr_300px\]/)
+    assert.match(panel, /data-orb-write-document-first/)
+    assert.match(panel, /useState\(false\)[\s\S]*sourcePanelOpen/)
+    assert.match(panel, /useState\(false\)[\s\S]*guidancePanelOpen/)
   })
 
   it('content, dictate and template handoffs load into studio', () => {

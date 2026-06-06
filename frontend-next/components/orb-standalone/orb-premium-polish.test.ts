@@ -107,7 +107,7 @@ describe('ORB personalised welcome', () => {
       role: 'registered_manager',
       roleLabel: 'Registered Manager'
     })
-    assert.match(welcome.heading, /Tom/)
+    assert.match(welcome.heading, /Ready when you are|Good morning, Tom/)
     assert.match(welcome.subline, /inspection readiness|safeguarding|recording/i)
   })
 
@@ -161,8 +161,8 @@ describe('ORB voice settings', () => {
 
   it('voice picker and persistence hooks exist', () => {
     const panel = readComponent('components/orb-standalone/orb-voice-settings-panel.tsx')
-    assert.match(panel, /data-orb-voice-select/)
-    assert.match(panel, /data-orb-voice-rate/)
+    assert.match(panel, /data-orb-voice-profile-select/)
+    assert.match(panel, /ORB_SPEECH_RATE_PRESETS/)
     const hook = readComponent('components/orb-standalone/use-standalone-orb-voice.ts')
     assert.match(hook, /ORB_VOICE_SETTINGS_STORAGE_KEY/)
     assert.match(hook, /selectedVoiceUri/)

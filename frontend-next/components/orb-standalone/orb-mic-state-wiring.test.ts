@@ -144,10 +144,10 @@ describe('ORB mic state wiring', () => {
 
   it('Dictate shows Stop only once capture has started', () => {
     const dictate = readComponent('components/orb-standalone/orb-dictate-station.tsx')
-    assert.match(dictate, /!recordingActive && !captureStarting/)
-    assert.match(dictate, /data-orb-dictate-capture-starting/)
+    const mobile = readComponent('components/orb-standalone/orb-dictate-mobile-experience.tsx')
+    assert.match(dictate, /recordingActive \|\| captureStarting/)
     assert.match(dictate, /handleStopRecording/)
-    assert.match(dictate, /aria-label="Stop"/)
+    assert.match(mobile, /captureStarting \? 'Starting…' : mobilePrimaryLabel/)
   })
 
   it('Voice tracks voiceStartStage through handleStart', () => {

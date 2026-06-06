@@ -41,4 +41,31 @@ describe('ORB sign out flow', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     assert.match(companion, /onLogOut=\{account\.isSignedIn \? handleResidentialSignOut/)
   })
+
+  it('regression: account menu sign out tears down session, resets ORB gates, and hard-navigates to /orb', () => {
+    const menu = read('components/orb-residential/orb-account-menu.tsx')
+    const companion = read('components/orb-standalone/orb-care-companion.tsx')
+    const auth = read('contexts/auth-context.tsx')
+    const gate = read('components/orb-residential/orb-auth-gate.tsx')
+
+    assert.match(menu, /data-orb-account-menu-signout/)
+    assert.match(companion, /data-orb-account-menu-trigger/)
+    assert.match(companion, /setAccountMenuOpen\(\(current\) => !current\)/)
+    assert.match(companion, /onSignOut=\{handleResidentialSignOut\}/)
+    assert.match(companion, /setAccountMenuOpen\(false\)/)
+    assert.match(companion, /closePanel\(\)/)
+    assert.match(companion, /await logout\(\)/)
+    assert.match(companion, /window\.location\.replace\('\/orb'\)/)
+
+    assert.match(auth, /resetOrbAccessRequestCache\('logout'\)/)
+    assert.match(auth, /resetOrbSessionGate\(\)/)
+    assert.match(auth, /resetOrbBootstrapLock\(\)/)
+    assert.match(auth, /resetPasskeyStatusCache\(\)/)
+    assert.match(auth, /resetOrbFrontDoorVerdictStore\(\)/)
+    assert.match(auth, /setStatus\('unauthenticated'\)/)
+
+    assert.match(gate, /OrbLoginScreen/)
+    assert.match(gate, /productChildrenMounted/)
+    assert.doesNotMatch(gate, /data-orb-shell="true"/)
+  })
 })

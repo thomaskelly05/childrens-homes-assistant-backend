@@ -11,7 +11,7 @@ describe('useOrbAccountState', () => {
     const source = readFileSync(join(root, 'hooks/use-orb-account-state.ts'), 'utf8')
     assert.match(source, /useAuth\(\)/)
     assert.match(source, /fetchOrbAccessCached/)
-    assert.match(source, /fetchOrbPasskeyStatus/)
+    assert.match(source, /fetchPasskeyStatusCached/)
     assert.match(source, /loadPasskeyStatus/)
     assert.match(source, /useOrbAccountStateInternal/)
     assert.match(source, /readAdultProfile/)

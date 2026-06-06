@@ -11,13 +11,15 @@ function read(relativePath: string) {
 }
 
 describe('ORB Write word processor v2', () => {
-  it('standalone panel uses three-column studio editor layout', () => {
+  it('standalone panel uses document-first collapsible studio layout', () => {
     const panel = read('components/orb-write/orb-write-standalone-panel.tsx')
     assert.match(panel, /OrbStudioShell/)
     assert.match(panel, /OrbWriteSourcePanel/)
     assert.match(panel, /data-orb-write-assistant-panel/)
     assert.match(panel, /data-orb-write-studio-editor/)
-    assert.match(panel, /lg:grid-cols-\[260px_1fr_300px\]/)
+    assert.match(panel, /data-orb-write-document-first/)
+    assert.match(panel, /data-orb-write-source-collapsed/)
+    assert.match(panel, /data-orb-write-guidance-collapsed/)
   })
 
   it('source panel shows dictate template and draft actions', () => {

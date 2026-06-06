@@ -26,7 +26,7 @@ describe('orb-auth-state-machine', () => {
 
   it('auth gate derives inactive and safety states without product mount', () => {
     const gate = read('components/orb-residential/orb-auth-gate.tsx')
-    assert.match(gate, /deriveOrbGateState/)
+    assert.match(gate, /mapVerdictToGateState/)
     assert.match(gate, /productChildrenMounted = gateState === 'ready'/)
   })
 })

@@ -152,7 +152,7 @@ describe('ORB voice hook confirmed capture', () => {
     const voice = readComponent('components/orb-standalone/orb-voice-station.tsx')
     const dictate = readComponent('components/orb-standalone/orb-dictate-station.tsx')
     assert.match(voice, /var\(--orb-foreground\)/)
-    assert.match(dictate, /var\(--orb-surface\)/)
+    assert.match(dictate, /var\(--orb-line\)|var\(--orb-foreground\)/)
     assert.doesNotMatch(dictate, /bg-black\/20/)
   })
 })

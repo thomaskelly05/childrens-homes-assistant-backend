@@ -60,7 +60,7 @@ describe('ORB Write word processor', () => {
 
   it('AI panel uses governed edit route with child-centred actions', () => {
     const ai = read('components/orb-write/orb-write-ai-panel.tsx')
-    const actions = read('lib/orb/write/orb-write-ai-actions.ts')
+    const actions = read('lib/orb/orb-converged-actions.ts')
     assert.match(ai, /editOrbDictateDocument/)
     assert.match(ai, /ORB guidance/)
     assert.doesNotMatch(ai, /IndiCare Brain/)

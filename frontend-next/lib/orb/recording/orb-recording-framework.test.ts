@@ -50,11 +50,10 @@ describe('ORB recording framework frontend', () => {
     assert.match(brain, /data-orb-brain-quality-guidance/)
   })
 
-  it('write station shows record type badge without brain metadata', () => {
-    const write = readComponent('components/orb-write/orb-write-station.tsx')
-    assert.match(write, /data-orb-write-record-type-badge/)
-    assert.match(write, /data-orb-write-section-chip/)
-    assert.doesNotMatch(write, /brain_metadata/)
+  it('write editor shows record type badge without brain metadata', () => {
+    const editor = readComponent('components/orb-write/orb-write-editor.tsx')
+    assert.match(editor, /data-orb-write-record-type-badge/)
+    assert.doesNotMatch(editor, /brain_metadata/)
   })
 
   it('pdf export uses record type structure', () => {

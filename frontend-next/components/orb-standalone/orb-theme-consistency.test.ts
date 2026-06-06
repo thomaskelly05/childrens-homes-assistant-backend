@@ -19,14 +19,14 @@ const STATION_PANELS = [
   'components/orb-standalone/orb-practice-panels.tsx'
 ] as const
 
-describe('ORB theme consistency across station panels', () => {
-  const PREMIUM_MARKERS =
-    /OrbPremiumPage|OrbPremiumWorkspaceLayout|OrbPremiumToolbar|OrbPremiumTabs|OrbPremiumEmptyState/
+const PREMIUM_OR_STUDIO_MARKERS =
+  /OrbPremiumPage|OrbPremiumWorkspaceLayout|OrbPremiumToolbar|OrbPremiumTabs|OrbPremiumEmptyState|OrbStudioShell|OrbStudioPage|OrbStudioPanel|OrbStudioEmptyState|OrbStudioGrid/
 
+describe('ORB theme consistency across station panels', () => {
   for (const path of STATION_PANELS) {
-    it(`${path} uses shared premium components`, () => {
+    it(`${path} uses shared premium or studio components`, () => {
       const source = read(path)
-      assert.match(source, PREMIUM_MARKERS)
+      assert.match(source, PREMIUM_OR_STUDIO_MARKERS)
     })
   }
 
@@ -41,40 +41,38 @@ describe('ORB theme consistency across station panels', () => {
 
   it('Templates uses premium card grid and empty state', () => {
     const tpl = read('components/orb-standalone/orb-templates-panel.tsx')
-    assert.match(tpl, /OrbPremiumPage/)
+    assert.match(tpl, /OrbPremiumPage|OrbStudioShell/)
     assert.match(tpl, /data-orb-templates-card-grid/)
     assert.match(tpl, /OrbPremiumEmptyState/)
   })
 
-  it('Saved Outputs uses premium empty state with studio CTAs', () => {
+  it('Saved Outputs uses studio empty state with studio CTAs', () => {
     const saved = read('components/orb-standalone/orb-saved-outputs-panel.tsx')
-    assert.match(saved, /OrbPremiumEmptyState/)
+    assert.match(saved, /OrbStudioEmptyState/)
     assert.match(saved, /No saved outputs yet/)
     assert.match(saved, /data-orb-saved-start-write/)
     assert.match(saved, /data-orb-saved-start-dictate/)
   })
 
-  it('Shift Builder keeps generation logic and uses advanced collapse', () => {
+  it('Shift Builder keeps generation logic and uses studio layout', () => {
     const shift = read('components/orb-standalone/shift-builder/orb-shift-builder-panel.tsx')
     assert.match(shift, /runOrbShiftBuilder/)
-    assert.match(shift, /OrbPremiumPage/)
-    assert.match(shift, /advanced=\{/)
+    assert.match(shift, /OrbStudioPage|OrbStudioPanel/)
     assert.match(shift, /data-orb-generate-shift-plan/)
   })
 
-  it('Practice panels use premium trust strip and collapsed advanced', () => {
+  it('Practice panels use studio layout and panel markers', () => {
     const practice = read('components/orb-standalone/orb-practice-panels.tsx')
-    assert.match(practice, /OrbPremiumTrustStrip/)
-    assert.match(practice, /OrbPremiumWorkspaceLayout/)
-    assert.match(practice, /advanced=\{/)
+    assert.match(practice, /OrbStudioPage/)
+    assert.match(practice, /OrbStudioSidebarPanel/)
     assert.match(practice, /data-orb-inspection-readiness-panel/)
     assert.match(practice, /data-orb-safeguarding-thinking-panel/)
     assert.match(practice, /data-orb-record-properly-panel/)
   })
 
-  it('Review panel uses premium layout and therapeutic section collapsed', () => {
+  it('Review panel uses studio layout and therapeutic section collapsed', () => {
     const review = read('components/orb-standalone/orb-review-panel.tsx')
-    assert.match(review, /OrbPremiumPage/)
+    assert.match(review, /OrbStudioPage/)
     assert.match(review, /Review written practice/)
     assert.match(review, /collapsible/)
     assert.match(review, /data-orb-review-run/)
@@ -85,7 +83,7 @@ describe('ORB theme consistency across station panels', () => {
     assert.match(sidebar, /ORB Write/)
     assert.match(sidebar, /Documents & Guidance/)
     assert.match(sidebar, /Rough notes to records/)
-    assert.match(sidebar, /Handover and shift plan/)
+    assert.match(sidebar, /Policies, guidance and document analyser/)
   })
 
   it('does not add child profile selector to station panels', () => {

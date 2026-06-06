@@ -67,11 +67,14 @@ describe('ORB Residential desktop layout system', () => {
   it('desktop Documents and Shift Builder share max-width container', () => {
     const desktop = read('app/orb/orb-desktop.css')
     const documents = read('components/orb-standalone/orb-document-panel.tsx')
+    const premiumPage = read('components/orb/premium/orb-premium-page.tsx')
     const shift = read('components/orb-standalone/shift-builder/orb-shift-builder-panel.tsx')
 
     assert.match(desktop, /\[data-orb-document-panel\],[\s\S]*\[data-orb-shift-builder-panel\][\s\S]*--orb-desktop-page-max/)
-    assert.match(documents, /data-orb-document-panel/)
-    assert.match(shift, /data-orb-shift-builder-panel/)
+    assert.match(premiumPage, /data-orb-document-panel/)
+    assert.match(documents, /Documents & Guidance/)
+    assert.match(shift, /title="Shift Builder"/)
+    assert.match(shift, /data-orb-shift-builder-result/)
   })
 
   it('desktop practice workspace panels are registered in core workspace list', () => {
@@ -96,14 +99,15 @@ describe('ORB Residential desktop layout system', () => {
     assert.doesNotMatch(fallback, /care_planning|learning_academy/)
   })
 
-  it('desktop Dictate uses deliberate two-column card layout', () => {
+  it('desktop Dictate uses deliberate studio workspace layout', () => {
     const desktop = read('app/orb/orb-desktop.css')
     const dictate = read('components/orb-standalone/orb-dictate-station.tsx')
+    const workspace = read('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
 
     assert.match(dictate, /data-orb-dictate-layout=\{[\s\S]*desktop-runtime/)
     assert.match(dictate, /data-orb-desktop-branch="active"/)
-    assert.match(dictate, /grid-cols-2/)
-    assert.match(desktop, /\[data-orb-dictate-station\]\[data-orb-dictate-layout='desktop-runtime'\][\s\S]*grid-cols-2/)
+    assert.match(workspace, /OrbDictateStudioWorkspace|OrbTranscriptPanel/)
+    assert.match(desktop, /\[data-orb-dictate-station\]/)
   })
 
   it('light and dark theme classes remain the layout authority', () => {

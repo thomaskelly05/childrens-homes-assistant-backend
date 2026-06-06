@@ -90,7 +90,7 @@ describe('ORB markdown and cognition rendering', () => {
   it('document panel has readable light inputs and empty state', () => {
     const panel = readComponent('components/orb-standalone/orb-document-panel.tsx')
     const routeCss = readComponent('app/orb/orb-desktop.css')
-    assert.match(panel, /data-orb-document-empty/)
+    assert.match(panel, /title="No document yet"/)
     assert.match(panel, /orb-doc-input/)
     assert.match(panel, /ORB_DOCUMENT_BOUNDARY_LINES/)
     assert.match(panel, /data-orb-document-boundary/)

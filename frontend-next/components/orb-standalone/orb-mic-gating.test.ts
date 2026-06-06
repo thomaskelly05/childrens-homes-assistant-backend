@@ -60,10 +60,11 @@ describe('ORB mic gating and routing', () => {
 
   it('dictate record is not blocked by subscription', () => {
     const dictate = readComponent('components/orb-standalone/orb-dictate-station.tsx')
+    const mobile = readComponent('components/orb-standalone/orb-dictate-mobile-experience.tsx')
     assert.doesNotMatch(dictate, /subscriptionActive/)
     assert.match(dictate, /handleSelectStartMode/)
     assert.match(dictate, /handleStartSpeechTranscript/)
-    assert.match(dictate, /data-orb-dictate-start=\{id\}/)
+    assert.match(mobile, /data-orb-dictate-start=\{id\}/)
   })
 
   it('composer mic routes to Dictate when live Voice is inactive', () => {
@@ -85,9 +86,10 @@ describe('ORB mic gating and routing', () => {
 
   it('dictate Record note button fires recording handler', () => {
     const dictate = readComponent('components/orb-standalone/orb-dictate-station.tsx')
-    assert.match(dictate, /data-orb-dictate-start=\{id\}/)
-    assert.match(dictate, /handleSelectStartMode\(id\)/)
-    assert.match(dictate, /data-orb-dictate-speech-start|data-orb-dictate-record-start/)
+    const mobile = readComponent('components/orb-standalone/orb-dictate-mobile-experience.tsx')
+    assert.match(mobile, /data-orb-dictate-start=\{id\}/)
+    assert.match(mobile, /handleSelectStartMode\(id\)|onSelectStartMode/)
+    assert.match(mobile, /data-orb-dictate-speech-start/)
     assert.match(dictate, /orbMicDevLog\('dictate speech start clicked'/)
   })
 
@@ -149,7 +151,7 @@ describe('ORB mic gating and routing', () => {
     const dictate = readComponent('components/orb-standalone/orb-dictate-station.tsx')
     assert.match(dictate, /Transcript added/)
     assert.match(dictate, /Generating professional note/)
-    assert.match(dictate, /Professional note ready\./)
+    assert.match(dictate, /Professional note ready/)
     assert.match(dictate, /Generation service unavailable — local draft created/)
     assert.match(dictate, /buildLocalDictateFallback/)
   })

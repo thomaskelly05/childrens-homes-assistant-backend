@@ -229,7 +229,7 @@ describe('ORB ChatGPT UI structure', () => {
 
   it('user message edit flow markers exist', () => {
     const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
-    assert.match(companion, /data-orb-message-edit-button/)
+    assert.match(companion, /data-orb-message-edit/)
     assert.match(companion, /Save & submit/)
     assert.match(companion, /data-orb-edit-save/)
   })

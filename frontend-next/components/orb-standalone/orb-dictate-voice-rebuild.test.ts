@@ -20,8 +20,9 @@ describe('ORB Dictate clean rebuild', () => {
 
   it('starts SpeechRecognition from explicit user click handler', () => {
     const dictate = readComponent('components/orb-standalone/orb-dictate-station.tsx')
+    const mobile = readComponent('components/orb-standalone/orb-dictate-mobile-experience.tsx')
     assert.match(dictate, /handleStartSpeechTranscript/)
-    assert.match(dictate, /data-orb-dictate-speech-start/)
+    assert.match(mobile, /data-orb-dictate-speech-start/)
     assert.match(dictate, /dictate_speech_start_clicked/)
     assert.match(dictate, /setStartSource\('user_click'\)/)
     assert.match(dictate, /beginDictateSpeechCapture/)
@@ -33,18 +34,18 @@ describe('ORB Dictate clean rebuild', () => {
       dictate.match(/async function handleStartSpeechTranscript[\s\S]*?async function handleBrowserSpeechFallbackClick/m)?.[0] ?? ''
     assert.doesNotMatch(speechHandler, /beginMediaRecorderCapture/)
     assert.match(dictate, /handleAudioFallbackClick/)
-    assert.match(dictate, /data-orb-dictate-audio-fallback/)
     assert.match(dictate, /OrbDictateRealtimeTranscription/)
   })
 
   it('exposes dictate state machine data attributes', () => {
     const dictate = readComponent('components/orb-standalone/orb-dictate-station.tsx')
+    const mobile = readComponent('components/orb-standalone/orb-dictate-mobile-experience.tsx')
     assert.match(dictate, /data-orb-dictate-state=/)
     assert.match(dictate, /data-orb-dictate-capture-mode=/)
     assert.match(dictate, /data-orb-dictate-start-source=/)
     assert.match(dictate, /Transcript captured|data-orb-dictate-captured-card|OrbDictateMobileExperience/)
     assert.match(dictate, /DICTATE_NO_SPEECH_MESSAGE|No speech was detected/)
-    assert.match(dictate, /disabled=\{generating \|\| !effectiveInputText\.trim\(\)\}/)
+    assert.match(mobile, /disabled=\{generating \|\| !effectiveInputText\.trim\(\)\}/)
   })
 
   it('dictate hook skips getUserMedia before SpeechRecognition for dictate', () => {

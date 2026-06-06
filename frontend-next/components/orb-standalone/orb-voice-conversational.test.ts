@@ -43,9 +43,9 @@ describe('ORB Voice conversational sprint', () => {
     assert.match(panel, /data-orb-voice-allow-interruption/)
     assert.match(panel, /data-orb-open-orb-voice/)
     assert.match(panel, /data-orb-voice-push-to-talk/)
-    assert.match(panel, /data-orb-voice-profile-list/)
+    assert.match(panel, /data-orb-voice-profile-select/)
     assert.match(panel, /Preview voice/)
-    assert.match(panel, /data-orb-voice-use-read-aloud/)
+    assert.match(panel, /data-orb-voice-auto-speak/)
   })
 
   it('voice profile registry returns ORB British Female default', () => {
@@ -56,9 +56,9 @@ describe('ORB Voice conversational sprint', () => {
 
   it('voice settings render all profile labels', () => {
     const panel = readComponent('components/orb-standalone/orb-voice-settings-panel.tsx')
-    assert.match(panel, /ORB_VOICE_PROFILES\.map/)
-    assert.match(panel, /profile\.label/)
-    assert.match(panel, /data-orb-voice-profile-label/)
+    assert.match(panel, /listCuratedOrbVoiceProfiles/)
+    assert.match(panel, /profile\.label|orbVoiceProfileLabel/)
+    assert.match(panel, /data-orb-voice-profile-select/)
     const profiles = readLib('orb/voice/orb-voice-profiles.ts')
     const count = (profiles.match(/id: '/g) || []).length
     assert.ok(count >= 7)
