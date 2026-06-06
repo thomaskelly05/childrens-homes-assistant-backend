@@ -42,7 +42,7 @@ export function OrbTranscriptPanel({
   const isEmpty = !displayText.trim()
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col" data-orb-transcript-panel>
+    <div className="flex min-h-0 flex-1 flex-col" data-orb-transcript-panel data-orb-dictate-transcript-panel>
       <header className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--orb-line)]/40 px-4 py-3">
         <div>
           <h3 className="text-sm font-semibold text-[var(--orb-foreground)]">Live Transcript</h3>

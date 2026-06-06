@@ -466,6 +466,7 @@ export function OrbBillingModal({ open, onClose }: { open: boolean; onClose: () 
         <div
           className="sticky bottom-0 z-10 flex flex-wrap items-stretch gap-2.5 border-t border-[var(--orb-mobile-ws-card-border,var(--orb-line))] bg-[var(--orb-mobile-ws-footer,var(--orb-surface))]/98 px-1 pb-[max(0.875rem,env(safe-area-inset-bottom))] pt-4 backdrop-blur-md sm:gap-3 sm:px-0"
           data-orb-billing-cta-bar
+          data-orb-billing-sticky-footer
         >
           {!access?.can_use_orb && access?.trial?.available ? (
             <button

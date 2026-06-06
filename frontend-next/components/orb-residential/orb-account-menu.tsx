@@ -24,6 +24,9 @@ export type OrbAccountMenuProps = {
   planLabel?: string | null
   subscriptionActive?: boolean
   savedOutputsCount?: number
+  role?: string | null
+  passkeyEnabled?: boolean
+  realtimeVoiceEnabled?: boolean
   onOpenProfile: () => void
   onOpenSettings: () => void
   onOpenBilling: () => void
@@ -76,6 +79,9 @@ export function OrbAccountMenu({
   planLabel,
   subscriptionActive = false,
   savedOutputsCount = 0,
+  role = null,
+  passkeyEnabled = false,
+  realtimeVoiceEnabled = false,
   onOpenProfile,
   onOpenSettings,
   onOpenBilling,
@@ -151,16 +157,46 @@ export function OrbAccountMenu({
                 {email}
               </p>
             ) : null}
-            <span
-              className={`mt-1.5 inline-flex rounded-full border px-2 py-0.5 text-[10px] font-medium capitalize ${
-                subscriptionActive
-                  ? 'border-emerald-200/40 bg-emerald-500/10 text-emerald-200'
-                  : 'border-amber-200/40 bg-amber-500/10 text-amber-100'
-              }`}
-              data-orb-account-menu-plan
-            >
-              {statusLabel}
-            </span>
+            <div className="mt-1.5 flex flex-wrap items-center gap-1.5" data-orb-account-menu-status-row>
+              <span
+                className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-medium capitalize ${
+                  subscriptionActive
+                    ? 'border-emerald-200/40 bg-emerald-500/10 text-emerald-200'
+                    : 'border-amber-200/40 bg-amber-500/10 text-amber-100'
+                }`}
+                data-orb-account-menu-plan
+              >
+                {statusLabel}
+              </span>
+              {profile?.roleLabel ? (
+                <span
+                  className="inline-flex rounded-full border border-[var(--orb-line)]/45 px-2 py-0.5 text-[10px] font-medium text-[var(--orb-muted)]"
+                  data-orb-account-menu-role
+                >
+                  {profile.roleLabel}
+                </span>
+              ) : role ? (
+                <span
+                  className="inline-flex rounded-full border border-[var(--orb-line)]/45 px-2 py-0.5 text-[10px] font-medium capitalize text-[var(--orb-muted)]"
+                  data-orb-account-menu-role
+                >
+                  {role.replace(/_/g, ' ')}
+                </span>
+              ) : null}
+            </div>
+            <div className="mt-2 flex flex-wrap gap-1" data-orb-account-menu-quick-status>
+              <span className="rounded-md bg-[var(--orb-surface)]/80 px-1.5 py-0.5 text-[9px] text-[var(--orb-muted)]" data-orb-account-menu-passkey>
+                {passkeyEnabled ? 'Passkey on' : 'Passkey off'}
+              </span>
+              <span className="rounded-md bg-[var(--orb-surface)]/80 px-1.5 py-0.5 text-[9px] text-[var(--orb-muted)]" data-orb-account-menu-voice>
+                {realtimeVoiceEnabled ? 'Voice ready' : 'Voice available'}
+              </span>
+              {savedOutputsCount > 0 ? (
+                <span className="rounded-md bg-[var(--orb-surface)]/80 px-1.5 py-0.5 text-[9px] text-[var(--orb-muted)]" data-orb-account-menu-saved-count>
+                  {savedOutputsCount} saved
+                </span>
+              ) : null}
+            </div>
           </div>
         </div>
       </div>

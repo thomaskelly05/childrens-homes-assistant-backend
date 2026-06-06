@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { FileEdit, Sparkles } from 'lucide-react'
+import { FileEdit, PanelLeft, PanelRight, Sparkles } from 'lucide-react'
 
 import { OrbAppModal } from '@/components/orb-standalone/orb-app-modal'
 import { OrbDictateBrainPanel } from '@/components/orb/dictate/OrbDictateBrainPanel'
@@ -88,6 +88,8 @@ export function OrbWriteStandalonePanel({
   const [hasLocalDraft, setHasLocalDraft] = useState(false)
   const [selectedGuidance, setSelectedGuidance] = useState<OrbWriteSelectedGuidance | null>(null)
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false)
+  const [sourcePanelOpen, setSourcePanelOpen] = useState(true)
+  const [guidancePanelOpen, setGuidancePanelOpen] = useState(true)
 
   const recordType = useMemo(
     () => resolveOrbRecordingRecordType({ recordTypeId }),
@@ -406,6 +408,30 @@ export function OrbWriteStandalonePanel({
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
+                  onClick={() => setSourcePanelOpen((open) => !open)}
+                  className="hidden items-center gap-1 rounded-lg border border-[var(--orb-line)]/50 px-2 py-1.5 text-[10px] font-semibold text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)] lg:inline-flex"
+                  data-orb-write-panel-toggle
+                  data-orb-write-source-toggle
+                  aria-pressed={sourcePanelOpen}
+                  aria-label={sourcePanelOpen ? 'Hide source panel' : 'Show source panel'}
+                >
+                  <PanelLeft className="h-3.5 w-3.5" aria-hidden />
+                  Source
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setGuidancePanelOpen((open) => !open)}
+                  className="hidden items-center gap-1 rounded-lg border border-[var(--orb-line)]/50 px-2 py-1.5 text-[10px] font-semibold text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)] lg:inline-flex"
+                  data-orb-write-panel-toggle
+                  data-orb-write-guidance-toggle
+                  aria-pressed={guidancePanelOpen}
+                  aria-label={guidancePanelOpen ? 'Hide guidance panel' : 'Show guidance panel'}
+                >
+                  <PanelRight className="h-3.5 w-3.5" aria-hidden />
+                  Guidance
+                </button>
+                <button
+                  type="button"
                   onClick={() => void runAnalysis()}
                   disabled={analysing || !roughText.trim()}
                   className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--orb-line)] px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
@@ -425,18 +451,25 @@ export function OrbWriteStandalonePanel({
                 </button>
               </div>
             </header>
-            <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[260px_1fr_300px] xl:grid-cols-[280px_1fr_320px]">
-              <OrbWriteSourcePanel
-                document={doc}
-                roughText={roughText}
-                onRoughTextChange={setRoughText}
-                onContinueFromDictate={onOpenDictate}
-                onChooseTemplate={() => setTemplatePickerOpen(true)}
-                onOpenTemplates={onOpenTemplates}
-                onOpenSavedDraft={openFromDraft}
-                hasLocalDraft={hasLocalDraft}
-              />
-              <div className="orb-write-studio-editor min-h-0 overflow-hidden">
+            <div
+              className="orb-write-studio-grid min-h-0 flex-1 gap-3"
+              data-orb-write-layout
+              data-orb-write-source-open={sourcePanelOpen ? 'true' : 'false'}
+              data-orb-write-guidance-open={guidancePanelOpen ? 'true' : 'false'}
+            >
+              {sourcePanelOpen ? (
+                <OrbWriteSourcePanel
+                  document={doc}
+                  roughText={roughText}
+                  onRoughTextChange={setRoughText}
+                  onContinueFromDictate={onOpenDictate}
+                  onChooseTemplate={() => setTemplatePickerOpen(true)}
+                  onOpenTemplates={onOpenTemplates}
+                  onOpenSavedDraft={openFromDraft}
+                  hasLocalDraft={hasLocalDraft}
+                />
+              ) : null}
+              <div className="orb-write-studio-editor min-h-0 overflow-hidden" data-orb-write-document-canvas-host>
                 <OrbWriteEditor
                   document={doc}
                   onChange={updateBody}
@@ -449,32 +482,38 @@ export function OrbWriteStandalonePanel({
                   onApprove={handleApprove}
                 />
               </div>
-              <div className="flex min-h-0 flex-col gap-3 overflow-hidden" data-orb-write-assistant-panel>
-                <div className="min-h-[200px] overflow-hidden rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)] lg:min-h-0">
-                  <OrbDictateBrainPanel
-                    analysis={brainAnalysis}
-                    loading={analysing}
-                    studioTemplateId={recordType.studio_template_id ?? 'general'}
-                    recordTypeId={recordType.id}
-                    hasTranscript={roughText.trim().length > 0}
-                    onAnalyse={() => void runAnalysis()}
-                    onSuggestionUpdate={updateSuggestion}
+              {guidancePanelOpen ? (
+                <div
+                  className="flex min-h-0 flex-col gap-3 overflow-hidden"
+                  data-orb-write-assistant-panel
+                  data-orb-write-guidance-panel-host
+                >
+                  <div className="min-h-[200px] overflow-hidden rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)] lg:min-h-0">
+                    <OrbDictateBrainPanel
+                      analysis={brainAnalysis}
+                      loading={analysing}
+                      studioTemplateId={recordType.studio_template_id ?? 'general'}
+                      recordTypeId={recordType.id}
+                      hasTranscript={roughText.trim().length > 0}
+                      onAnalyse={() => void runAnalysis()}
+                      onSuggestionUpdate={updateSuggestion}
+                    />
+                  </div>
+                  <OrbWriteWritingStylePanel
+                    document={doc}
+                    recordType={recordType}
+                    onApplyRevision={applyRevision}
                   />
+                  <OrbWriteGuidancePanel
+                    document={doc}
+                    selected={selectedGuidance}
+                    onSelect={setSelectedGuidance}
+                    onClear={() => setSelectedGuidance(null)}
+                    onCheckDraft={(source) => void checkDraftAgainstGuidance(source)}
+                  />
+                  <OrbWriteAiPanel document={doc} onApplyRevision={applyRevision} />
                 </div>
-                <OrbWriteWritingStylePanel
-                  document={doc}
-                  recordType={recordType}
-                  onApplyRevision={applyRevision}
-                />
-                <OrbWriteGuidancePanel
-                  document={doc}
-                  selected={selectedGuidance}
-                  onSelect={setSelectedGuidance}
-                  onClear={() => setSelectedGuidance(null)}
-                  onCheckDraft={(source) => void checkDraftAgainstGuidance(source)}
-                />
-                <OrbWriteAiPanel document={doc} onApplyRevision={applyRevision} />
-              </div>
+              ) : null}
             </div>
             <footer
               className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-[var(--orb-line)]/40 pt-2 text-[10px] text-[var(--orb-muted)]"

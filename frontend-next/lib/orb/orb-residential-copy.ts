@@ -3,6 +3,30 @@ import type { StandaloneOrbMode } from '@/lib/orb/standalone-client'
 
 const ORB_CONVERGED_CHAT_STARTERS = convergedChatStarters()
 
+/** Maximum visible prompt pills on Chat home — extras live behind “More examples”. */
+export const ORB_RESIDENTIAL_PRIMARY_STARTER_COUNT = 6
+
+type ResidentialStarter = { text: string; mode?: StandaloneOrbMode }
+
+/** Calm ChatGPT-style primary starters — six visible pills on empty Chat. */
+export const ORB_RESIDENTIAL_PRIMARY_STARTERS: ResidentialStarter[] = [
+  { text: 'Review written practice' },
+  { text: 'Create a handover' },
+  { text: 'Think through a safeguarding concern', mode: 'Safeguarding Thinking' },
+  { text: 'Record this properly', mode: 'Record This Properly' },
+  { text: 'Prepare for inspection', mode: 'Ofsted Lens' },
+  { text: 'Build an action plan', mode: 'Reg 44 / Reg 45 Prep' }
+]
+
+const PRIMARY_STARTER_TEXTS = new Set(
+  ORB_RESIDENTIAL_PRIMARY_STARTERS.map((s) => s.text.trim().toLowerCase())
+)
+
+/** Additional starters surfaced via “More examples” drawer. */
+export const ORB_RESIDENTIAL_MORE_STARTERS: ResidentialStarter[] = ORB_CONVERGED_CHAT_STARTERS.filter(
+  (starter) => !PRIMARY_STARTER_TEXTS.has(starter.text.trim().toLowerCase())
+)
+
 /** User-facing product copy for ORB Residential — safe, regulatory-aware language. */
 export const ORB_RESIDENTIAL_PRODUCT_NAME = 'ORB Residential'
 export const ORB_RESIDENTIAL_TAGLINE = 'Powered by IndiCare Intelligence'
@@ -19,10 +43,10 @@ export const ORB_RESIDENTIAL_BRAND_EMOTIONAL_LINE = 'Care. Connect. Empower.'
 /** Intentionally empty — keep the home screen calm; starters carry the guidance. */
 export const ORB_RESIDENTIAL_EMPTY_SUBLINE = ''
 
-/** Compact residential starters shown above the mobile composer on an empty chat. */
-export const ORB_RESIDENTIAL_MOBILE_EMPTY_STARTERS = ORB_CONVERGED_CHAT_STARTERS
+/** Compact residential starters — same six primary pills on mobile and desktop. */
+export const ORB_RESIDENTIAL_MOBILE_EMPTY_STARTERS = ORB_RESIDENTIAL_PRIMARY_STARTERS
 
-export const ORB_RESIDENTIAL_EMPTY_STARTERS = ORB_CONVERGED_CHAT_STARTERS
+export const ORB_RESIDENTIAL_EMPTY_STARTERS = ORB_RESIDENTIAL_PRIMARY_STARTERS
 
 /** Visible mode labels — internal mode ids may still use legacy names for API compatibility. */
 export const ORB_RESIDENTIAL_MODE_DISPLAY: Partial<Record<StandaloneOrbMode, string>> = {
