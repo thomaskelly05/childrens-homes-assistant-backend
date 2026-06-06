@@ -8,7 +8,7 @@ import { OrbAuthDebugPanel } from '@/components/orb-residential/orb-auth-debug-p
 import { OrbAuthLoadingScreen } from '@/components/orb-residential/orb-auth-loading-screen'
 import { OrbLoginScreen } from '@/components/orb-residential/orb-login-screen'
 import { OrbUpgradeScreen } from '@/components/orb-standalone/orb-upgrade-screen'
-import { OrbAccountStateProvider, useOrbAccountState } from '@/contexts/orb-account-context'
+import { OrbAccountStateProvider } from '@/contexts/orb-account-context'
 import { useAuth } from '@/contexts/auth-context'
 import { getOrbAccessRequestCount } from '@/lib/orb/orb-access-request-cache'
 import { setOrbGateState } from '@/lib/orb/orb-gate-state-store'
@@ -19,30 +19,25 @@ import {
   getLastBlockedBootstrapReason,
   getOrbBootstrapNetworkCounts
 } from '@/lib/orb/orb-product-bootstrap-guard'
-import {
-  getOrbAccessLoadingRemainingMs,
-  hasOrbAccessLoadingDeadlinePassed,
-  markOrbAccessLoadingStart,
-  resetOrbAccessLoadingDeadline
-} from '@/lib/orb/orb-access-loading-deadline'
-import {
-  getOrbAuthLoadingRemainingMs,
-  hasOrbAuthLoadingDeadlinePassed,
-  markOrbAuthLoadingStart,
-  resetOrbAuthLoadingDeadline
-} from '@/lib/orb/orb-auth-loading-deadline'
 import { recordOrbAuthDebugEvent } from '@/lib/orb/orb-auth-debug-events'
-import {
-  deriveOrbGateState,
-  gateDecisionLabel,
-  type OrbGateState
-} from '@/lib/orb/orb-auth-state-machine'
+import { gateDecisionLabel, type OrbGateState } from '@/lib/orb/orb-auth-state-machine'
 import {
   ORB_ACCESS_GATE_FALLBACK_MS,
   ORB_AUTH_GATE_FALLBACK_MS,
-  isOrbSurfacePath,
   sanitizeOrbReturnUrl
 } from '@/lib/orb/orb-front-door-routing'
+import {
+  fetchOrbFrontDoorVerdict,
+  mapVerdictToGateState,
+  resetOrbFrontDoorVerdictCache,
+  type OrbFrontDoorVerdictPayload
+} from '@/lib/orb/orb-front-door-verdict-client'
+import {
+  markOrbFrontDoorVerdictProbeStarted,
+  markOrbFrontDoorVerdictResolved,
+  resetOrbFrontDoorVerdictStore
+} from '@/lib/orb/orb-front-door-verdict-store'
+import { getOrbBootstrapRequestCounts } from '@/lib/orb/orb-request-storm-guard'
 import {
   clearOrbRouteLoopGuard,
   isOrbRouteLoopBroken,
@@ -52,13 +47,9 @@ import { clearStaleOrbSessionState } from '@/lib/orb/orb-stale-session-clear'
 
 export type OrbAuthGateMode = 'product' | 'billing'
 
-const AUTH_FALLBACK_MESSAGE = 'We could not confirm your session. Please sign in.'
 const ACCESS_FALLBACK_MESSAGE =
   'We could not verify your ORB access. Try again or manage billing.'
-const ACCESS_RATE_LIMIT_MESSAGE = 'Too many access checks. Please wait a moment and try again.'
 const ACCESS_UNAVAILABLE_MESSAGE = 'ORB access is temporarily unavailable. Please try again shortly.'
-const CONTRACT_MISMATCH_MESSAGE =
-  'ORB could not verify the access contract with the server. Please try again or refresh the app.'
 
 function buildReturnUrl(pathname: string, search: string) {
   return search ? `${pathname}?${search}` : pathname
@@ -72,21 +63,15 @@ function OrbAuthGateInner({
   mode?: OrbAuthGateMode
 }) {
   const auth = useAuth()
-  const account = useOrbAccountState()
   const pathname = usePathname()
   const rawRouter = useRouter()
   const router = useMemo(() => wrapOrbRouter(rawRouter, 'orb-auth-gate'), [rawRouter])
   const searchParams = useSearchParams()
-  const sessionInvalidatedRef = useRef(false)
-  const safetyRedirectedRef = useRef(false)
-  const [accessFallback, setAccessFallback] = useState(() =>
-    auth.status === 'authenticated' && account.accessStatus === 'loading'
-      ? hasOrbAccessLoadingDeadlinePassed(ORB_ACCESS_GATE_FALLBACK_MS)
-      : false
-  )
-  const [authFallback, setAuthFallback] = useState(() =>
-    auth.status === 'loading' ? hasOrbAuthLoadingDeadlinePassed(ORB_AUTH_GATE_FALLBACK_MS) : false
-  )
+  const verdictFetchedRef = useRef(false)
+  const [verdictLoading, setVerdictLoading] = useState(true)
+  const [verdict, setVerdict] = useState<OrbFrontDoorVerdictPayload | null>(null)
+  const [verdictError, setVerdictError] = useState<string | null>(null)
+  const [backendBuild, setBackendBuild] = useState<string | null>(null)
 
   const returnUrl = useMemo(() => {
     const query = searchParams.toString()
@@ -95,196 +80,116 @@ function OrbAuthGateInner({
     return sanitizeOrbReturnUrl(fromQuery || fromPath)
   }, [pathname, searchParams])
 
-  const safetyRequired =
-    account.isSignedIn &&
-    (account.accessFailureKind === 'safety_required' ||
-      (account.safetyAccepted === false &&
-        Boolean(
-          account.access &&
-            (account.access.trial?.active ||
-              account.access.subscription?.active ||
-              account.adminBypass)
-        )))
+  const loadVerdict = useCallback(
+    async (options?: { force?: boolean }) => {
+      markOrbFrontDoorVerdictProbeStarted()
+      setVerdictLoading(true)
+      setVerdictError(null)
+      try {
+        const payload = await fetchOrbFrontDoorVerdict({ force: options?.force })
+        setVerdict(payload)
+        setBackendBuild(payload.backend_build)
+        const gate = mapVerdictToGateState(payload.verdict)
+        const productReady = payload.verdict === 'ready' && payload.frontend_should_mount_product
+        setOrbGateState(gate, productReady)
+        markOrbFrontDoorVerdictResolved(productReady)
+        recordOrbAuthDebugEvent('gate_decision', {
+          from: 'boot',
+          to: gate,
+          decision: gateDecisionLabel(gate),
+          verdict: payload.verdict
+        })
+        if (payload.clear_session) {
+          clearStaleOrbSessionState('auth_401')
+        }
+        if (payload.verdict === 'ready') {
+          await auth.refreshSession()
+        }
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'ORB front-door verdict could not be loaded'
+        setVerdictError(message)
+        setVerdict(null)
+        markOrbFrontDoorVerdictResolved(false)
+        setOrbGateState('access_retry', false)
+      } finally {
+        setVerdictLoading(false)
+      }
+    },
+    [auth]
+  )
 
-  const gateState: OrbGateState = deriveOrbGateState({
-    authStatus: auth.status,
-    isSignedIn: account.isSignedIn,
-    accessLoading: account.accessStatus === 'loading',
-    accessFailureKind: account.accessFailureKind,
-    hasConfirmedAccess: account.hasConfirmedAccess,
-    adminBypass: account.adminBypass,
-    safetyAccepted: account.safetyAccepted,
-    safetyRequired,
-    authFallback,
-    accessFallback,
-    loopBroken: isOrbRouteLoopBroken(),
-    contractMismatch: account.contractMismatch,
-    mode
-  })
+  useEffect(() => {
+    if (verdictFetchedRef.current) return
+    verdictFetchedRef.current = true
+    void loadVerdict()
+  }, [loadVerdict])
+
+  const gateState: OrbGateState = verdictLoading
+    ? 'checking_auth'
+    : verdictError
+      ? 'access_retry'
+      : mode === 'billing' && verdict?.verdict === 'ready'
+        ? 'ready'
+        : mapVerdictToGateState(verdict?.verdict ?? 'retry')
 
   const productChildrenMounted = gateState === 'ready'
   setOrbGateState(gateState, productChildrenMounted)
 
-  const prevGateStateRef = useRef<OrbGateState>(gateState)
+  const handleVerdictRetry = useCallback(() => {
+    resetOrbFrontDoorVerdictCache()
+    void loadVerdict({ force: true })
+  }, [loadVerdict])
 
-  useEffect(() => {
-    if (prevGateStateRef.current !== gateState) {
-      recordOrbAuthDebugEvent('gate_decision', {
-        from: prevGateStateRef.current,
-        to: gateState,
-        decision: gateDecisionLabel(gateState)
-      })
-      prevGateStateRef.current = gateState
-    }
-    if (gateState === 'ready') {
-      clearOrbRouteLoopGuard()
-    }
-  }, [gateState])
-
-  useEffect(() => {
-    recordOrbAuthDebugEvent('auth_transition', {
-      status: auth.status,
-      userPresent: Boolean(auth.user)
-    })
-  }, [auth.status, auth.user])
-
-  useEffect(() => {
-    recordOrbAuthDebugEvent('access_transition', {
-      status: account.accessStatus,
-      loading: account.accessStatus === 'loading',
-      failureKind: account.accessFailureKind,
-      httpStatus: account.accessFetchStatus
-    })
-  }, [
-    account.accessFailureKind,
-    account.accessFetchStatus,
-    account.accessStatus
-  ])
-
-  const handleAuthRetry = useCallback(() => {
-    setAuthFallback(false)
-    resetOrbAuthLoadingDeadline()
-    void auth.refreshSession()
-  }, [auth])
-
-  const handleAccessRetry = useCallback(() => {
-    setAccessFallback(false)
-    resetOrbAccessLoadingDeadline()
-    void account.retry()
-  }, [account])
+  const handleLoginSuccess = useCallback(() => {
+    resetOrbFrontDoorVerdictCache()
+    void loadVerdict({ force: true })
+  }, [loadVerdict])
 
   const handleBackToSignIn = useCallback(() => {
-    setAccessFallback(false)
-    resetOrbAccessLoadingDeadline()
-    if (auth.status === 'loading') {
-      setAuthFallback(true)
-      return
-    }
+    resetOrbFrontDoorVerdictStore()
+    resetOrbFrontDoorVerdictCache()
     if (auth.status !== 'unauthenticated') {
       void auth.logout()
     }
   }, [auth])
-
-  const handleLoginSuccess = useCallback(() => {
-    resetOrbAuthLoadingDeadline()
-    resetOrbAccessLoadingDeadline()
-    void auth.refreshSession().then(() => account.retry())
-  }, [account, auth])
 
   const handleManageBilling = useCallback(() => {
     router.push('/orb/billing')
   }, [router])
 
   useEffect(() => {
-    if (!isOrbSurfacePath(pathname)) {
-      resetOrbAccessLoadingDeadline()
-      setAccessFallback(false)
+    if (gateState === 'ready') {
+      clearOrbRouteLoopGuard()
     }
-  }, [pathname])
-
-  useEffect(() => {
-    if (auth.status !== 'loading') {
-      resetOrbAuthLoadingDeadline()
-      setAuthFallback(false)
-      return
-    }
-
-    markOrbAuthLoadingStart()
-    if (hasOrbAuthLoadingDeadlinePassed(ORB_AUTH_GATE_FALLBACK_MS)) {
-      setAuthFallback(true)
-      return
-    }
-
-    const remaining = getOrbAuthLoadingRemainingMs(ORB_AUTH_GATE_FALLBACK_MS)
-    const timer = window.setTimeout(() => {
-      setAuthFallback(true)
-    }, remaining)
-    return () => window.clearTimeout(timer)
-  }, [auth.status])
-
-  useEffect(() => {
-    if (auth.status !== 'authenticated' || account.accessStatus !== 'loading') {
-      if (auth.status !== 'authenticated') {
-        resetOrbAccessLoadingDeadline()
-      }
-      if (account.accessStatus !== 'loading') {
-        setAccessFallback(false)
-      }
-      return
-    }
-
-    markOrbAccessLoadingStart()
-    if (hasOrbAccessLoadingDeadlinePassed(ORB_ACCESS_GATE_FALLBACK_MS)) {
-      setAccessFallback(true)
-      return
-    }
-
-    const remaining = getOrbAccessLoadingRemainingMs(ORB_ACCESS_GATE_FALLBACK_MS)
-    const timer = window.setTimeout(() => {
-      setAccessFallback(true)
-    }, remaining)
-    return () => window.clearTimeout(timer)
-  }, [account.accessStatus, auth.status])
-
-  useEffect(() => {
-    if (account.accessFailureKind !== 'unauthorized' || sessionInvalidatedRef.current) return
-    sessionInvalidatedRef.current = true
-    resetOrbAccessLoadingDeadline()
-    clearStaleOrbSessionState('access_401')
-    void auth.logout()
-  }, [account.accessFailureKind, auth])
-
-  useEffect(() => {
-    if (safetyRedirectedRef.current) return
-    if (gateState !== 'safety_required') return
-    if (!account.isSignedIn || account.accessFailureKind === 'safety_required') return
-    if (account.safetyAccepted !== false || !account.access) return
-    safetyRedirectedRef.current = true
-    router.push('/orb/setup')
-  }, [account.access, account.accessFailureKind, account.isSignedIn, account.safetyAccepted, gateState, router])
+  }, [gateState])
 
   const bootstrapCounts = getOrbBootstrapNetworkCounts()
   const bootstrapLockDebug = getOrbBootstrapLockDebugSnapshot()
+  const stormCounts = getOrbBootstrapRequestCounts()
   const debugPanel = (
     <OrbAuthDebugPanel
       pathname={pathname}
       authStatus={auth.status}
       authUserPresent={Boolean(auth.user)}
-      accessStatus={account.accessStatus}
-      accessLoading={account.accessStatus === 'loading'}
-      accessError={account.accessError}
-      accessHttpStatus={account.accessFetchStatus}
+      accessStatus={verdict?.verdict ?? 'idle'}
+      accessLoading={verdictLoading}
+      accessError={verdictError}
+      accessHttpStatus={null}
       gateState={gateState}
       childrenMounted={productChildrenMounted}
-      productBootstrapAllowed={canBootstrapOrbProduct(gateState, account.access)}
+      productBootstrapAllowed={canBootstrapOrbProduct(gateState, verdict?.access ?? null)}
       productMounted={productChildrenMounted}
-      accountState={account.accessStatus}
+      accountState={verdict?.verdict ?? 'idle'}
       accessRequestCount={getOrbAccessRequestCount()}
       projectRequestCount={bootstrapCounts.projectRequestCount}
       configRequestCount={bootstrapCounts.configRequestCount}
       voiceStatusRequestCount={bootstrapCounts.voiceStatusRequestCount}
       outputsSummaryRequestCount={bootstrapCounts.outputsSummaryRequestCount}
       passkeyStatusRequestCount={getPasskeyStatusRequestCount()}
+      verdictRequestCount={stormCounts.verdict}
+      authMeRequestCount={stormCounts.auth_me}
+      backendBuild={backendBuild}
       bootstrapLock={bootstrapLockDebug.bootstrapLock}
       blockedBootstrapCalls={bootstrapLockDebug.blockedBootstrapCalls}
       projectFetchBlocked={bootstrapLockDebug.projectFetchBlocked}
@@ -301,9 +206,10 @@ function OrbAuthGateInner({
       return (
         <>
           <OrbAuthLoadingScreen
-            onRetry={handleAuthRetry}
+            onRetry={handleVerdictRetry}
             onBackToSignIn={handleBackToSignIn}
             timeoutMs={ORB_AUTH_GATE_FALLBACK_MS}
+            message="Checking ORB access…"
           />
           {debugPanel}
         </>
@@ -316,22 +222,8 @@ function OrbAuthGateInner({
             returnUrl={returnUrl}
             embedded
             embeddedGateMode
-            sessionError={authFallback ? AUTH_FALLBACK_MESSAGE : auth.error}
+            sessionError={verdictError ?? auth.error}
             onLoginSuccess={handleLoginSuccess}
-          />
-          {debugPanel}
-        </>
-      )
-
-    case 'checking_access':
-      return (
-        <>
-          <OrbAuthLoadingScreen
-            onRetry={handleAccessRetry}
-            onBackToSignIn={handleBackToSignIn}
-            timeoutMs={ORB_ACCESS_GATE_FALLBACK_MS}
-            message="Verifying your ORB access…"
-            submessage="Securing your ORB Residential access"
           />
           {debugPanel}
         </>
@@ -353,7 +245,7 @@ function OrbAuthGateInner({
     case 'inactive':
       return (
         <>
-          <OrbUpgradeScreen />
+          <OrbUpgradeScreen initialAccess={verdict?.access ?? null} />
           {debugPanel}
         </>
       )
@@ -362,17 +254,9 @@ function OrbAuthGateInner({
       return (
         <>
           <OrbAccessRetryScreen
-            message={
-              account.contractMismatch ? CONTRACT_MISMATCH_MESSAGE : ACCESS_FALLBACK_MESSAGE
-            }
-            detail={
-              account.accessFailureKind === 'unavailable'
-                ? ACCESS_UNAVAILABLE_MESSAGE
-                : account.accessFailureKind === 'rate_limited'
-                  ? ACCESS_RATE_LIMIT_MESSAGE
-                  : undefined
-            }
-            onRetry={handleAccessRetry}
+            message={verdictError ?? ACCESS_FALLBACK_MESSAGE}
+            detail={ACCESS_UNAVAILABLE_MESSAGE}
+            onRetry={handleVerdictRetry}
             onBackToSignIn={handleBackToSignIn}
             showManageBilling
             onManageBilling={handleManageBilling}
@@ -384,21 +268,23 @@ function OrbAuthGateInner({
     case 'ready':
       return (
         <>
-          {children}
+          <OrbAccountStateProvider
+            accessProbeEnabled
+            initialAccess={verdict?.access ?? null}
+          >
+            {children}
+          </OrbAccountStateProvider>
           {debugPanel}
         </>
       )
 
-    case 'signing_out':
-    case 'error':
-    case 'boot':
     default:
       return (
         <>
           <OrbAuthLoadingScreen
-            onRetry={handleAuthRetry}
+            onRetry={handleVerdictRetry}
             onBackToSignIn={handleBackToSignIn}
-            timeoutMs={ORB_AUTH_GATE_FALLBACK_MS}
+            timeoutMs={ORB_ACCESS_GATE_FALLBACK_MS}
             message="Please wait…"
           />
           {debugPanel}
@@ -409,7 +295,7 @@ function OrbAuthGateInner({
 
 /**
  * Hard gate for ORB Residential product surfaces.
- * Unauthenticated users see only the login screen; loading never leaks product UI.
+ * Uses GET /orb/front-door/verdict as the sole initial bootstrap probe.
  */
 export function OrbAuthGate({
   children,
@@ -419,10 +305,8 @@ export function OrbAuthGate({
   mode?: OrbAuthGateMode
 }) {
   return (
-    <OrbAccountStateProvider>
-      <Suspense fallback={<OrbAuthLoadingScreen timeoutMs={ORB_AUTH_GATE_FALLBACK_MS} />}>
-        <OrbAuthGateInner mode={mode}>{children}</OrbAuthGateInner>
-      </Suspense>
-    </OrbAccountStateProvider>
+    <Suspense fallback={<OrbAuthLoadingScreen timeoutMs={ORB_AUTH_GATE_FALLBACK_MS} />}>
+      <OrbAuthGateInner mode={mode}>{children}</OrbAuthGateInner>
+    </Suspense>
   )
 }

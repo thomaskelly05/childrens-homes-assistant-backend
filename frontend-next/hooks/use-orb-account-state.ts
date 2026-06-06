@@ -143,11 +143,17 @@ function isSafetyAcceptanceRequired(payload: OrbAccessPayload | null): boolean {
   return entitled
 }
 
+type UseOrbAccountStateOptions = {
+  accessProbeEnabled?: boolean
+  initialAccess?: OrbAccessPayload | null
+}
+
 /** Internal hook — consume via OrbAccountStateProvider / useOrbAccountState from context. */
-export function useOrbAccountStateInternal(): OrbAccountState {
+export function useOrbAccountStateInternal(options: UseOrbAccountStateOptions = {}): OrbAccountState {
+  const accessProbeEnabled = options.accessProbeEnabled ?? true
   const auth = useAuth()
   const [adultProfile, setAdultProfile] = useState<AdultProfile>(() => readAdultProfile())
-  const [access, setAccess] = useState<OrbAccessPayload | null>(null)
+  const [access, setAccess] = useState<OrbAccessPayload | null>(options.initialAccess ?? null)
   const [hasPasskeys, setHasPasskeys] = useState(false)
   const [accessLoading, setAccessLoading] = useState(false)
   const [accessFetchStatus, setAccessFetchStatus] = useState<number | null>(null)
@@ -287,6 +293,7 @@ export function useOrbAccountStateInternal(): OrbAccountState {
   }, [])
 
   useEffect(() => {
+    if (!accessProbeEnabled) return
     if (auth.status === 'loading') return
     if (auth.status === 'unauthenticated') {
       resetOrbAccessRequestCache('signed_out')
@@ -297,8 +304,19 @@ export function useOrbAccountStateInternal(): OrbAccountState {
       setHasPasskeys(false)
       return
     }
+    if (options.initialAccess && access && !accessLoading) {
+      return
+    }
     void refreshAccessAndPasskeys()
-  }, [auth.status, auth.user?.id, refreshAccessAndPasskeys])
+  }, [
+    access,
+    accessLoading,
+    accessProbeEnabled,
+    auth.status,
+    auth.user?.id,
+    options.initialAccess,
+    refreshAccessAndPasskeys
+  ])
 
   const mergedProfile = useMemo(
     () => mergeProfileWithAuthUser(adultProfile, isSignedIn ? auth.user : null),

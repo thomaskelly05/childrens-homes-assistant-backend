@@ -28,6 +28,9 @@ export function OrbAuthDebugPanel({
   voiceStatusRequestCount = 0,
   outputsSummaryRequestCount = 0,
   passkeyStatusRequestCount = 0,
+  verdictRequestCount = 0,
+  authMeRequestCount = 0,
+  backendBuild = null,
   bootstrapLock = 'locked',
   blockedBootstrapCalls = [] as string[],
   projectFetchBlocked = 0,
@@ -55,6 +58,9 @@ export function OrbAuthDebugPanel({
   voiceStatusRequestCount?: number
   outputsSummaryRequestCount?: number
   passkeyStatusRequestCount?: number
+  verdictRequestCount?: number
+  authMeRequestCount?: number
+  backendBuild?: string | null
   bootstrapLock?: 'locked' | 'unlocked'
   blockedBootstrapCalls?: string[]
   projectFetchBlocked?: number
@@ -97,6 +103,9 @@ export function OrbAuthDebugPanel({
     voiceStatusRequestCount,
     outputsSummaryRequestCount,
     passkeyStatusRequestCount,
+    verdictRequestCount,
+    authMeRequestCount,
+    backendBuild,
     bootstrapLock,
     blockedBootstrapCalls,
     projectFetchBlocked,

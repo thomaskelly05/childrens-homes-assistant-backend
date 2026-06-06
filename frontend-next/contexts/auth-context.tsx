@@ -23,6 +23,11 @@ import {
   buildOrbFrontDoorUrl,
   isOrbSurfacePath
 } from '@/lib/orb/orb-front-door-routing'
+import {
+  resetOrbFrontDoorVerdictStore,
+  shouldDeferOrbAuthMeProbe
+} from '@/lib/orb/orb-front-door-verdict-store'
+import { recordOrbBootstrapRequest } from '@/lib/orb/orb-request-storm-guard'
 import { markOrbBackendDegraded, markOrbBackendReady, resetOrbSessionGate } from '@/lib/orb/orb-session-gate'
 import { clearStaleOrbSessionState } from '@/lib/orb/orb-stale-session-clear'
 import { normaliseRole, permissionsForRole } from '@/lib/auth/permissions'
@@ -159,6 +164,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
 
       try {
+        recordOrbBootstrapRequest('auth_me')
         const response = await Promise.race([authFetch<AuthMeResponse>('/auth/me'), timeoutPromise])
         if (!hasUserPayload(response)) {
           throw new AuthApiError(401, 'Your session could not be loaded')
@@ -239,6 +245,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     suppressProductionConsole()
+    if (shouldDeferOrbAuthMeProbe(pathname)) {
+      setStatus('unauthenticated')
+      setSessionExpired(false)
+      setError(null)
+      setCsrfReady(Boolean(getCsrfToken()))
+      resetOrbAuthLoadingDeadline()
+      return
+    }
     if (isPublicPath(pathname)) {
       if (!isOrbSurfacePath(pathname)) {
         setStatus('unauthenticated')
@@ -331,6 +345,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       resetPasskeyStatusCache()
       resetOrbGateStateStore()
       resetOrbSessionGate()
+      resetOrbFrontDoorVerdictStore()
       if (redirectToOrbLogin && pathname === '/orb') {
         logoutRedirecting.current = false
         return

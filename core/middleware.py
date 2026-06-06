@@ -7,6 +7,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from middleware.access_scope_middleware import AccessScopeMiddleware
 from middleware.orb_residential_guard_middleware import OrbResidentialGuardMiddleware
 from middleware.os_read_cache_middleware import OSReadCacheMiddleware
+from middleware.orb_build_headers_middleware import OrbBuildHeadersMiddleware
 from middleware.orb_rate_limit_middleware import OrbRateLimitMiddleware
 from middleware.security_middleware import AuditLoggingMiddleware, CsrfProtectionMiddleware, SecurityHeadersMiddleware
 
@@ -67,6 +68,7 @@ def add_middlewares(app: FastAPI) -> None:
         https_only=cookie_secure_default(),
         max_age=60 * 60 * 24 * 14,
     )
+    app.add_middleware(OrbBuildHeadersMiddleware)
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(AuditLoggingMiddleware)
     app.add_middleware(OSReadCacheMiddleware)

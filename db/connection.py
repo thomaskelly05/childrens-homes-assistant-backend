@@ -493,21 +493,33 @@ def db_session(*, commit: bool = True):
         release_db_connection(conn)
 
 
+def _safe_db_finalize(conn, *, commit: bool) -> None:
+    if conn is None or conn.closed:
+        return
+    try:
+        if commit:
+            conn.commit()
+        else:
+            conn.rollback()
+    except (OperationalError, InterfaceError):
+        logger.warning(
+            "DB %s skipped: connection closed during request lifecycle",
+            "commit" if commit else "rollback",
+        )
+
+
 def get_db():
     conn = None
 
     try:
         conn = get_db_connection()
         yield conn
-
-        if conn is not None and not conn.closed:
-            conn.commit()
+        _safe_db_finalize(conn, commit=True)
 
     except DatabaseUnavailableError:
         raise
     except Exception:
-        if conn is not None and not conn.closed:
-            conn.rollback()
+        _safe_db_finalize(conn, commit=False)
         raise
 
     finally:
