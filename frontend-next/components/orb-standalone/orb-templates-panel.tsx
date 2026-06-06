@@ -273,6 +273,7 @@ export function OrbTemplatesPanel({
         <ul
           className="grid max-h-[min(52vh,28rem)] grid-cols-1 gap-3 overflow-y-auto sm:grid-cols-2"
           data-orb-templates-card-grid
+          data-orb-template-list-scroll
         >
           {[...templates]
             .sort((a, b) => {

@@ -59,7 +59,13 @@ export function OrbPremiumPage({
 
       {tabs}
 
-      <OrbPremiumPanel className="space-y-4">{children}</OrbPremiumPanel>
+      <OrbPremiumPanel
+        className="space-y-4"
+        {...(panelId === 'documents' ? { 'data-orb-knowledge-library-body': true } : {})}
+        {...(panelId === 'templates' ? { 'data-orb-template-list-scroll': true } : {})}
+      >
+        {children}
+      </OrbPremiumPanel>
 
       {secondary}
 

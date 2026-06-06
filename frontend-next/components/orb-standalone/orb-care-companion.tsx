@@ -82,7 +82,9 @@ import {
   ORB_RESIDENTIAL_EMPTY_STARTERS,
   ORB_RESIDENTIAL_EMPTY_SUBLINE,
   ORB_RESIDENTIAL_MOBILE_EMPTY_HEADING,
-  ORB_RESIDENTIAL_MOBILE_EMPTY_STARTERS
+  ORB_RESIDENTIAL_MOBILE_EMPTY_STARTERS,
+  ORB_RESIDENTIAL_MORE_STARTERS,
+  ORB_RESIDENTIAL_PRIMARY_STARTER_COUNT
 } from '@/lib/orb/orb-residential-copy'
 import { OrbStandaloneAccessibilityPanel } from '@/components/orb-standalone/orb-accessibility-panel'
 import { OrbIntelligenceMapPanel } from '@/components/orb-standalone/orb-intelligence-map-panel'
@@ -2802,7 +2804,8 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
 
   const emptyStarters = useMemo(() => {
     if (residentialSurface) {
-      return isMobileViewport ? ORB_RESIDENTIAL_MOBILE_EMPTY_STARTERS : ORB_RESIDENTIAL_EMPTY_STARTERS
+      const starters = isMobileViewport ? ORB_RESIDENTIAL_MOBILE_EMPTY_STARTERS : ORB_RESIDENTIAL_EMPTY_STARTERS
+      return starters.slice(0, ORB_RESIDENTIAL_PRIMARY_STARTER_COUNT)
     }
     if (adultProfile?.name || adultProfile?.role !== 'residential_support_worker') {
       return roleBasedEmptyStarters(adultProfile ?? readAdultProfile()).map((text) => ({ text }))
@@ -3685,9 +3688,13 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                       </p>
                     ) : null}
                     <div
-                      className="mt-6 grid w-full max-w-2xl gap-2 sm:grid-cols-2 lg:max-w-3xl"
+                      className={`mt-5 flex w-full flex-wrap justify-center gap-2 ${
+                        residentialSurface ? 'max-w-[var(--orb-composer-max,46rem)]' : 'max-w-2xl lg:max-w-3xl'
+                      }`}
                       data-orb-starter-cards
+                      data-orb-starter-pills
                       data-orb-empty-starter-chips
+                      data-orb-starter-count={emptyStarters.length}
                     >
                       {emptyStarters.map((starter) => (
                         <button
@@ -3701,8 +3708,13 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                             }
                             applyPrompt(starter)
                           }}
-                          className="orb-starter-card px-4 py-3.5 text-left text-sm leading-snug"
+                          className={
+                            residentialSurface
+                              ? 'orb-starter-pill orb-starter-card rounded-full px-4 py-2 text-left text-sm leading-snug'
+                              : 'orb-starter-card px-4 py-3.5 text-left text-sm leading-snug'
+                          }
                           data-orb-starter-card
+                          data-orb-starter-pill={residentialSurface ? 'true' : undefined}
                         >
                           {starter.text}
                         </button>
@@ -4097,8 +4109,8 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
 
       {promptDrawerOpen ? (
         <OrbPromptDrawer
-          groups={SUGGESTED_PROMPT_GROUPS}
-          moreStarters={MORE_EMPTY_STARTERS}
+          groups={residentialSurface ? [] : SUGGESTED_PROMPT_GROUPS}
+          moreStarters={residentialSurface ? ORB_RESIDENTIAL_MORE_STARTERS : MORE_EMPTY_STARTERS}
           moreExpanded={moreExamplesExpanded}
           onToggleMore={() => setMoreExamplesExpanded((o) => !o)}
           onApply={(entry) => {
@@ -4120,6 +4132,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           planLabel={account.planName}
           subscriptionActive={account.hasConfirmedAccess}
           savedOutputsCount={savedOutputsCount}
+          role={account.role}
+          passkeyEnabled={account.hasPasskeys}
+          realtimeVoiceEnabled={realtimeVoiceAvailable}
           onOpenProfile={openResidentialProfile}
           onOpenSettings={() => {
             setAccountMenuOpen(false)

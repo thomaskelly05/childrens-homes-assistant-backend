@@ -1,0 +1,301 @@
+/**
+ * ORB Residential — premium layout pass
+ * Viewport discipline, ChatGPT-style chat, studio surfaces (Dictate / Write / Voice / library).
+ */
+
+/* ── Global viewport lock reinforcement ─────────────────────────────────── */
+html[data-orb-residential='1'],
+html[data-orb-residential='1'] body {
+  height: 100%;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+
+html[data-orb-residential='1'] .orb-chat-layout--residential {
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+
+/* Core workspace stations — no page-level scroll; internal panes only */
+html[data-orb-residential='1'] [data-orb-workspace-panel] .orb-workspace-body {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+html[data-orb-residential='1'] [data-orb-workspace-panel] .orb-workspace-body > * {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+html[data-orb-residential='1'] [data-orb-workspace-panel='settings'] .orb-workspace-body,
+html[data-orb-residential='1'] [data-orb-workspace-panel='help'] .orb-workspace-body {
+  overflow-y: auto;
+}
+
+/* ── Chat home — prompt pills + centred composer focal point ────────────── */
+html[data-orb-residential='1'] [data-orb-starter-pills] {
+  display: flex !important;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+  grid-template-columns: unset !important;
+}
+
+html[data-orb-residential='1'] .orb-starter-pill,
+html[data-orb-residential='1'] [data-orb-starter-pill='true'] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border-radius: 9999px;
+  border: 1px solid color-mix(in srgb, var(--orb-royal-blue, #168bff) 22%, transparent);
+  background: color-mix(in srgb, var(--orb-surface-elevated, rgba(255, 255, 255, 0.06)) 88%, transparent);
+  backdrop-filter: blur(12px);
+  padding: 0.5rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--orb-foreground, #f7faff);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04);
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease,
+    transform 0.12s ease;
+}
+
+html[data-orb-residential='1'] .orb-starter-pill:hover,
+html[data-orb-residential='1'] [data-orb-starter-pill='true']:hover {
+  border-color: color-mix(in srgb, var(--orb-royal-blue, #168bff) 42%, transparent);
+  background: color-mix(in srgb, var(--orb-royal-blue, #168bff) 10%, var(--orb-surface-elevated));
+}
+
+html[data-orb-residential='1'] .orb-residential-empty {
+  min-height: 0 !important;
+  padding-top: clamp(0.75rem, 4vh, 2rem) !important;
+  padding-bottom: 0.5rem !important;
+}
+
+html[data-orb-residential='1'] .orb-composer-zone {
+  --orb-composer-max: 48rem;
+}
+
+html[data-orb-residential='1'] .orb-composer-glass--compact {
+  border-radius: 1.35rem;
+}
+
+/* ── Dictate studio — transcript-first, slim recorder bar ───────────────── */
+html[data-orb-residential='1'] [data-orb-dictate-studio-workspace] {
+  min-height: 0;
+  max-height: 100%;
+  overflow: hidden;
+}
+
+html[data-orb-residential='1'] [data-orb-dictate-top-bar] {
+  flex-shrink: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--orb-line) 35%, transparent);
+  background: color-mix(in srgb, var(--orb-surface-elevated) 72%, transparent);
+  backdrop-filter: blur(14px);
+}
+
+html[data-orb-residential='1'] [data-orb-dictate-transcript-panel] {
+  flex: 1 1 auto;
+  min-height: 0;
+  border-color: color-mix(in srgb, var(--orb-line) 28%, transparent) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+html[data-orb-residential='1'] [data-orb-dictate-brain-panel],
+html[data-orb-residential='1'] [data-orb-dictate-side-panel] {
+  opacity: 0.94;
+  border-color: color-mix(in srgb, var(--orb-line) 22%, transparent) !important;
+  background: color-mix(in srgb, var(--orb-surface) 82%, transparent);
+}
+
+html[data-orb-residential='1'] [data-orb-dictate-listening-indicator] {
+  animation: orb-dictate-wave 1.8s ease-in-out infinite;
+}
+
+@keyframes orb-dictate-wave {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scaleY(0.65);
+  }
+  50% {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+/* ── ORB Write — document canvas focus, collapsible panels ──────────────── */
+html[data-orb-residential='1'] [data-orb-write-studio-editor] {
+  min-height: 0;
+  overflow: hidden;
+}
+
+html[data-orb-residential='1'] .orb-write-studio-grid {
+  display: grid;
+  min-height: 0;
+  flex: 1 1 auto;
+  gap: 0.75rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 1024px) {
+  html[data-orb-residential='1'] .orb-write-studio-grid[data-orb-write-source-open='true'][data-orb-write-guidance-open='true'] {
+    grid-template-columns: minmax(12rem, 260px) minmax(0, 1fr) minmax(12rem, 300px);
+  }
+
+  html[data-orb-residential='1'] .orb-write-studio-grid[data-orb-write-source-open='true'][data-orb-write-guidance-open='false'] {
+    grid-template-columns: minmax(12rem, 260px) minmax(0, 1fr);
+  }
+
+  html[data-orb-residential='1'] .orb-write-studio-grid[data-orb-write-source-open='false'][data-orb-write-guidance-open='true'] {
+    grid-template-columns: minmax(0, 1fr) minmax(12rem, 300px);
+  }
+
+  html[data-orb-residential='1'] .orb-write-studio-grid[data-orb-write-source-open='false'][data-orb-write-guidance-open='false'] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+html[data-orb-residential='1'] [data-orb-write-document-canvas] {
+  box-shadow:
+    0 2px 8px rgba(15, 23, 42, 0.08),
+    0 12px 40px rgba(15, 23, 42, 0.06);
+}
+
+html[data-orb-residential='1'] [data-orb-write-panel-toggle] {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 0.5rem;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--orb-muted);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+html[data-orb-residential='1'] [data-orb-write-panel-toggle]:hover {
+  background: var(--orb-surface-hover);
+  color: var(--orb-foreground);
+}
+
+/* ── Voice — living companion states (premium, not cartoon) ─────────────── */
+html[data-orb-residential='1'] .orb-presence--voice .orb-living-sphere {
+  animation: orb-breathe 5.5s ease-in-out infinite;
+}
+
+html[data-orb-residential='1'] .orb-presence--voice[data-orb-presence-state='listening'] .orb-living-sphere::before {
+  animation: orb-energy-rotate 4.5s linear infinite, orb-voice-listen-pulse 1.6s ease-in-out infinite;
+  opacity: 0.88;
+}
+
+html[data-orb-residential='1'] .orb-presence--voice[data-orb-presence-state='thinking'] .orb-living-sphere::before {
+  animation: orb-energy-rotate 6s linear infinite;
+  opacity: 0.78;
+}
+
+html[data-orb-residential='1'] .orb-presence--voice[data-orb-presence-state='responding'] .orb-living-sphere {
+  animation: orb-voice-speak-glow 1.2s ease-in-out infinite;
+}
+
+html[data-orb-residential='1'] .orb-presence--voice[data-orb-presence-state='error'] .orb-living-sphere,
+html[data-orb-residential='1'] .orb-presence--voice[data-orb-presence-state='idle'] .orb-sphere-wrap[data-orb-state='offline'] .orb-living-sphere {
+  animation: none;
+  filter: saturate(0.55) brightness(0.82);
+  opacity: 0.72;
+}
+
+@keyframes orb-voice-listen-pulse {
+  0%,
+  100% {
+    transform: rotate(0deg) scale(1);
+  }
+  50% {
+    transform: rotate(8deg) scale(1.04);
+  }
+}
+
+@keyframes orb-voice-speak-glow {
+  0%,
+  100% {
+    filter: brightness(1.05) saturate(1.15);
+    box-shadow:
+      0 0 32px rgba(56, 189, 248, 0.5),
+      0 0 64px rgba(124, 92, 255, 0.28);
+  }
+  50% {
+    filter: brightness(1.18) saturate(1.32);
+    box-shadow:
+      0 0 40px rgba(56, 189, 248, 0.62),
+      0 0 80px rgba(251, 191, 36, 0.22);
+  }
+}
+
+/* Subtle abstract head silhouette — warm presence, no face */
+html[data-orb-residential='1'] .orb-presence--voice .orb-sphere-wrap::after {
+  content: '';
+  position: absolute;
+  inset: -6%;
+  border-radius: 48% 48% 42% 42% / 52% 52% 46% 46%;
+  background: radial-gradient(ellipse 70% 85% at 50% 38%, rgba(255, 255, 255, 0.06), transparent 68%);
+  pointer-events: none;
+  opacity: 0.55;
+}
+
+/* ── Templates / Documents / Saved Outputs — library studios ────────────── */
+html[data-orb-residential='1'] [data-orb-recording-library-section],
+html[data-orb-residential='1'] [data-orb-knowledge-library-tabs],
+html[data-orb-residential='1'] [data-orb-saved-outputs-panel] {
+  min-height: 0;
+  max-height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+html[data-orb-residential='1'] [data-orb-template-list-scroll],
+html[data-orb-residential='1'] [data-orb-saved-outputs-list],
+html[data-orb-residential='1'] [data-orb-knowledge-library-body] {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* ── Account / billing overlays ─────────────────────────────────────────── */
+html[data-orb-residential='1'] [data-orb-account-menu],
+html[data-orb-residential='1'] [data-orb-account-modal],
+html[data-orb-residential='1'] [data-orb-billing-modal] {
+  max-height: min(92dvh, 100%);
+}
+
+html[data-orb-residential='1'] [data-orb-billing-modal] [data-orb-billing-sticky-footer] {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  margin-top: auto;
+  padding-top: 0.75rem;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    color-mix(in srgb, var(--orb-surface-elevated) 94%, transparent) 28%
+  );
+  backdrop-filter: blur(10px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-orb-residential='1'] .orb-presence--voice .orb-living-sphere,
+  html[data-orb-residential='1'] .orb-presence--voice .orb-living-sphere::before,
+  html[data-orb-residential='1'] [data-orb-dictate-listening-indicator] {
+    animation: none !important;
+  }
+}
