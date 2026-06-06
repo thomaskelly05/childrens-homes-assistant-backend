@@ -13,6 +13,8 @@ import {
 } from '@/lib/auth/api'
 import { resetOrbAccessRequestCache } from '@/lib/orb/orb-access-request-cache'
 import { resetOrbAccessLoadingDeadline } from '@/lib/orb/orb-access-loading-deadline'
+import { resetPasskeyStatusCache } from '@/lib/auth/passkey-status-cache'
+import { resetOrbBootstrapLock } from '@/lib/orb/orb-bootstrap-lock'
 import { resetOrbBootstrapNetworkCounts } from '@/lib/orb/orb-product-bootstrap-guard'
 import { resetOrbGateStateStore } from '@/lib/orb/orb-gate-state-store'
 import { resetOrbAuthLoadingDeadline } from '@/lib/orb/orb-auth-loading-deadline'
@@ -325,6 +327,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       resetOrbAccessLoadingDeadline()
       resetOrbAccessRequestCache('logout')
       resetOrbBootstrapNetworkCounts()
+      resetOrbBootstrapLock()
+      resetPasskeyStatusCache()
       resetOrbGateStateStore()
       resetOrbSessionGate()
       if (redirectToOrbLogin && pathname === '/orb') {

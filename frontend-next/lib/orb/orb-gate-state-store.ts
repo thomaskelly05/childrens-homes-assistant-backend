@@ -4,6 +4,7 @@
  */
 
 import type { OrbGateState } from '@/lib/orb/orb-auth-state-machine'
+import { syncOrbBootstrapLock } from '@/lib/orb/orb-bootstrap-lock'
 
 let currentGateState: OrbGateState = 'boot'
 let childrenMounted = false
@@ -11,6 +12,7 @@ let childrenMounted = false
 export function setOrbGateState(state: OrbGateState, productChildrenMounted: boolean): void {
   currentGateState = state
   childrenMounted = productChildrenMounted
+  syncOrbBootstrapLock(state)
 }
 
 export function getOrbGateState(): OrbGateState {
@@ -24,4 +26,5 @@ export function areOrbProductChildrenMounted(): boolean {
 export function resetOrbGateStateStore(): void {
   currentGateState = 'boot'
   childrenMounted = false
+  syncOrbBootstrapLock('boot')
 }

@@ -4,6 +4,11 @@
 
 import type { OrbAccessPayload } from '@/lib/orb/orb-billing-client'
 import type { OrbGateState } from '@/lib/orb/orb-auth-state-machine'
+import {
+  isOrbBootstrapUnlocked,
+  recordBootstrapBlocked,
+  resetOrbBootstrapLock
+} from '@/lib/orb/orb-bootstrap-lock'
 import { getOrbGateState } from '@/lib/orb/orb-gate-state-store'
 
 export type OrbBootstrapBlockReason =
@@ -61,6 +66,7 @@ export function resetOrbBootstrapNetworkCounts(): void {
   outputsSummaryRequestCount = 0
   passkeyStatusRequestCount = 0
   lastBlockedBootstrapReason = null
+  resetOrbBootstrapLock()
 }
 
 export function getLastBlockedBootstrapReason(): OrbBootstrapBlockReason | null {
@@ -69,15 +75,18 @@ export function getLastBlockedBootstrapReason(): OrbBootstrapBlockReason | null 
 
 const READY_GATE: OrbGateState = 'ready'
 
-export function canBootstrapOrbProduct(
+export function productBootstrapAllowed(
   gateState: OrbGateState = getOrbGateState(),
   _access?: OrbAccessPayload | null
 ): boolean {
-  return gateState === READY_GATE
+  return gateState === READY_GATE && isOrbBootstrapUnlocked()
 }
 
-export function canFetchOrbPasskeyStatus(gateState: OrbGateState = getOrbGateState()): boolean {
-  return gateState === READY_GATE
+export function canBootstrapOrbProduct(
+  gateState: OrbGateState = getOrbGateState(),
+  access?: OrbAccessPayload | null
+): boolean {
+  return productBootstrapAllowed(gateState, access)
 }
 
 export function assertOrbProductBootstrapAllowed(
@@ -111,9 +120,39 @@ export function assertOrbProductBootstrapAllowed(
   }
 }
 
+function mapGateToBlockReason(gateState: OrbGateState): OrbBootstrapBlockReason {
+  return gateState === 'unauthenticated'
+    ? 'gate_unauthenticated'
+    : gateState === 'checking_auth'
+      ? 'gate_checking_auth'
+      : gateState === 'checking_access'
+        ? 'gate_checking_access'
+        : gateState === 'access_retry'
+          ? 'gate_access_retry'
+          : gateState === 'inactive'
+            ? 'gate_inactive'
+            : gateState === 'safety_required'
+              ? 'gate_safety_required'
+              : gateState === 'error' || gateState === 'signing_out'
+                ? 'gate_error'
+                : 'gate_not_ready'
+}
+
 export function shouldAllowOrbProductFetch(feature: string): boolean {
   const gateState = getOrbGateState()
-  if (canBootstrapOrbProduct(gateState)) return true
-  assertOrbProductBootstrapAllowed(feature, gateState)
-  return false
+  if (gateState !== READY_GATE) {
+    assertOrbProductBootstrapAllowed(feature, gateState)
+    recordBootstrapBlocked(feature, mapGateToBlockReason(gateState))
+    return false
+  }
+  if (!isOrbBootstrapUnlocked()) {
+    lastBlockedBootstrapReason = 'gate_not_ready'
+    recordBootstrapBlocked(feature, 'bootstrap_lock')
+    if (process.env.NODE_ENV !== 'production') {
+      // eslint-disable-next-line no-console
+      console.debug('[orb-bootstrap-guard] blocked', feature, 'bootstrap_lock', gateState)
+    }
+    return false
+  }
+  return true
 }

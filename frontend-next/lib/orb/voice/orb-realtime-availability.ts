@@ -71,9 +71,18 @@ export async function fetchOrbVoiceRealtimeStatus(): Promise<OrbRealtimeVoiceSta
   try {
     emitOrbClientDebug({ area: 'voice', event: 'voice_status_requested', detail: {} })
     const response = await authFetchResponse('/orb/voice/session/status', { method: 'GET' })
-    if (response.status === 401 || response.status === 403) {
-      markOrbVoiceUnauthenticated()
-      emitOrbClientDebug({ area: 'voice', event: 'voice_status_skipped_unauthenticated', detail: { status: response.status } })
+    if (response.status === 401 || response.status === 402 || response.status === 403) {
+      if (response.status === 401) markOrbVoiceUnauthenticated()
+      const { handleOrbProductBootstrapBlockedResponse } = await import('@/lib/orb/orb-product-bootstrap-response')
+      handleOrbProductBootstrapBlockedResponse(
+        'voice_session_status',
+        new AuthApiError(response.status, { message: 'ORB voice bootstrap blocked' })
+      )
+      emitOrbClientDebug({
+        area: 'voice',
+        event: 'voice_status_skipped_unauthenticated',
+        detail: { status: response.status }
+      })
       setOrbVoiceDiagStatus(STATUS_UNAVAILABLE, response.status)
       return STATUS_UNAVAILABLE
     }

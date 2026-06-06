@@ -16,10 +16,12 @@ import {
   resetOrbAccessRequestCache
 } from '@/lib/orb/orb-access-request-cache'
 import { ORB_AUTH_LOADING_TIMEOUT_MS } from '@/lib/orb/orb-front-door-routing'
-import { getOrbGateState } from '@/lib/orb/orb-gate-state-store'
 import type { OrbAccessPayload } from '@/lib/orb/orb-billing-client'
-import { canFetchOrbPasskeyStatus, recordOrbPasskeyStatusBootstrapRequest } from '@/lib/orb/orb-product-bootstrap-guard'
-import { fetchOrbPasskeyStatus } from '@/lib/orb/orb-passkey-client'
+import {
+  allowPasskeyStatusFetch,
+  fetchPasskeyStatusCached
+} from '@/lib/auth/passkey-status-cache'
+import { recordOrbPasskeyStatusBootstrapRequest } from '@/lib/orb/orb-product-bootstrap-guard'
 import { normaliseRole } from '@/lib/auth/permissions'
 import type { StaffUser } from '@/lib/auth/types'
 
@@ -273,9 +275,10 @@ export function useOrbAccountStateInternal(): OrbAccountState {
 
   const loadPasskeyStatus = useCallback(async () => {
     const user = auth.user
-    if (!user || !canFetchOrbPasskeyStatus(getOrbGateState())) return
+    if (!user) return
+    allowPasskeyStatusFetch('settings')
     recordOrbPasskeyStatusBootstrapRequest()
-    const passkeyStatus = await fetchOrbPasskeyStatus().catch(() => null)
+    const passkeyStatus = await fetchPasskeyStatusCached()
     setHasPasskeys(Boolean(passkeyStatus?.has_passkeys ?? user.has_passkeys ?? passkeyStatus?.items?.length))
   }, [auth.user])
 

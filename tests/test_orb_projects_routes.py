@@ -4,9 +4,10 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from auth.orb_product_bootstrap_dependency import require_orb_product_bootstrap_access
 from auth.orb_residential_dependencies import require_orb_residential_auth
 from db.connection import get_db
-from routers.orb_projects_routes import router
+from routers.orb_projects_routes import require_orb_projects_access, require_orb_projects_bootstrap, router
 
 
 @pytest.fixture
@@ -28,6 +29,9 @@ def projects_client():
         yield FakeConn()
 
     app.dependency_overrides[require_orb_residential_auth] = fake_auth
+    app.dependency_overrides[require_orb_product_bootstrap_access] = fake_auth
+    app.dependency_overrides[require_orb_projects_bootstrap] = fake_auth
+    app.dependency_overrides[require_orb_projects_access] = fake_auth
     app.dependency_overrides[get_db] = fake_db
     client = TestClient(app)
     yield client

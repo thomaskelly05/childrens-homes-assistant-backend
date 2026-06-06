@@ -13,6 +13,23 @@
 - Successful OAuth/email completion (login screen non-embedded mode only)
 - Gate-managed billing (`/orb/billing`) and safety (`/orb/setup`)
 
+## Initial `/orb` boot (first load)
+
+Allowed:
+
+- `GET /auth/me`
+- `GET /orb/standalone/access` (only after `/auth/me` is authenticated)
+- `GET /orb/auth/providers` (login screen)
+- `POST /orb/standalone/analytics/event` (optional)
+
+Blocked until `gateState === "ready"`:
+
+- `/orb/projects`
+- `/orb/standalone/config`
+- `/orb/voice/session/status`
+- `/orb/standalone/outputs/summary`
+- Product settings/profile preloads
+
 ## Debug
 
-`?debugAuth=1` — gate state, bootstrap counters, loop guard, no secrets.
+`?debugAuth=1` — gate state, bootstrap lock, blocked bootstrap calls, network counters, loop guard, no secrets.

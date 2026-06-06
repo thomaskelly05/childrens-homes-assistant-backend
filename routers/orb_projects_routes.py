@@ -10,9 +10,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, ConfigDict, Field
 
 from auth.errors import auth_error_detail
+from auth.orb_product_bootstrap_dependency import require_orb_product_bootstrap_access
 from auth.orb_residential_dependencies import orb_residential_premium_dependency
 
 require_orb_projects_access = orb_residential_premium_dependency("ask_orb")
+require_orb_projects_bootstrap = require_orb_product_bootstrap_access
 from db.connection import DatabaseUnavailableError, get_db
 from db.orb_projects_db import (
     create_orb_project,
@@ -77,7 +79,7 @@ def _service_unavailable() -> HTTPException:
 @router.get("/")
 async def list_projects(
     conn=Depends(get_db),
-    current_user=Depends(require_orb_projects_access),
+    current_user=Depends(require_orb_projects_bootstrap),
 ):
     user_id = int(current_user["user_id"])
     try:

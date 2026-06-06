@@ -20,11 +20,20 @@ export function OrbAuthDebugPanel({
   gateState,
   childrenMounted = false,
   productBootstrapAllowed = false,
+  productMounted = false,
+  accountState = 'idle',
   accessRequestCount = 0,
   projectRequestCount = 0,
   configRequestCount = 0,
   voiceStatusRequestCount = 0,
   outputsSummaryRequestCount = 0,
+  passkeyStatusRequestCount = 0,
+  bootstrapLock = 'locked',
+  blockedBootstrapCalls = [] as string[],
+  projectFetchBlocked = 0,
+  configFetchBlocked = 0,
+  voiceFetchBlocked = 0,
+  outputsFetchBlocked = 0,
   lastBlockedBootstrapReason = null,
   loopGuardBroken = false
 }: {
@@ -38,11 +47,20 @@ export function OrbAuthDebugPanel({
   gateState: OrbGateState
   childrenMounted?: boolean
   productBootstrapAllowed?: boolean
+  productMounted?: boolean
+  accountState?: string
   accessRequestCount?: number
   projectRequestCount?: number
   configRequestCount?: number
   voiceStatusRequestCount?: number
   outputsSummaryRequestCount?: number
+  passkeyStatusRequestCount?: number
+  bootstrapLock?: 'locked' | 'unlocked'
+  blockedBootstrapCalls?: string[]
+  projectFetchBlocked?: number
+  configFetchBlocked?: number
+  voiceFetchBlocked?: number
+  outputsFetchBlocked?: number
   lastBlockedBootstrapReason?: string | null
   loopGuardBroken?: boolean
 }) {
@@ -71,11 +89,20 @@ export function OrbAuthDebugPanel({
     gateState,
     childrenMounted,
     productBootstrapAllowed,
+    productMounted,
+    accountState,
     accessRequestCount,
     projectRequestCount,
     configRequestCount,
     voiceStatusRequestCount,
     outputsSummaryRequestCount,
+    passkeyStatusRequestCount,
+    bootstrapLock,
+    blockedBootstrapCalls,
+    projectFetchBlocked,
+    configFetchBlocked,
+    voiceFetchBlocked,
+    outputsFetchBlocked,
     lastBlockedBootstrapReason,
     loopGuard: { broken: loopGuardBroken }
   }

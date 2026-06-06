@@ -7,6 +7,7 @@ import os
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, status
 from pydantic import BaseModel, ConfigDict, Field
 
+from auth.orb_product_bootstrap_dependency import require_orb_product_bootstrap_access
 from auth.orb_residential_dependencies import (
     orb_residential_premium_dependency,
     require_orb_residential_auth,
@@ -130,7 +131,7 @@ def _session_response_base(
 
 
 @router.get("/session/status")
-async def orb_voice_session_status(_current_user=Depends(require_orb_residential_auth)):
+async def orb_voice_session_status(_current_user=Depends(require_orb_product_bootstrap_access)):
     """Honest realtime configuration probe — always 200, never 500 for missing env."""
     if _openai_realtime_configured():
         return _voice_status_payload(
