@@ -10,6 +10,7 @@ export type OrbAuthDebugEventKind =
   | 'redirect_attempt'
   | 'loop_guard'
   | 'stale_session_clear'
+  | 'bootstrap_api_blocked'
 
 export type OrbAuthDebugEvent = {
   at: string

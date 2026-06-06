@@ -6,6 +6,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
+from auth.orb_product_bootstrap_dependency import require_orb_product_bootstrap_access
 from auth.orb_standalone_premium_dependency import (
     require_rich_orb_premium_access as require_standalone_orb_access,
 )
@@ -62,7 +63,7 @@ async def outputs_health(current_user=Depends(require_standalone_orb_access)):
 
 
 @router.get("/summary")
-async def outputs_summary(current_user=Depends(require_standalone_orb_access)):
+async def outputs_summary(current_user=Depends(require_orb_product_bootstrap_access)):
     return _success(orb_saved_output_service.get_summary(_user_id(current_user)))
 
 

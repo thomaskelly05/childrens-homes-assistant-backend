@@ -134,6 +134,9 @@ export function OrbStandaloneSettingsPanel({
 
   useEffect(() => {
     if (!open || activeSection !== 'security') return
+    void import('@/lib/auth/passkey-status-cache').then(({ allowPasskeyStatusFetch }) => {
+      allowPasskeyStatusFetch('settings')
+    })
     void refreshPasskeys()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, activeSection])

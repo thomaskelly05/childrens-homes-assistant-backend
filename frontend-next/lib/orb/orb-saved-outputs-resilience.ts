@@ -11,6 +11,7 @@ import {
   recordOrbOutputsSummaryBootstrapRequest,
   shouldAllowOrbProductFetch
 } from '@/lib/orb/orb-product-bootstrap-guard'
+import { handleOrbProductBootstrapBlockedResponse } from '@/lib/orb/orb-product-bootstrap-response'
 import { recordOrbFetchOutcome, shouldSkipAuthenticatedOrbFetch } from '@/lib/orb/orb-session-gate'
 import {
   fetchOrbSavedOutputsSummary,
@@ -115,6 +116,7 @@ export async function fetchOrbSavedOutputsSummaryResilient(signal?: AbortSignal)
     }
   } catch (error) {
     recordOrbFetchOutcome(error)
+    handleOrbProductBootstrapBlockedResponse('outputs_summary', error)
     if (error instanceof AuthApiError && process.env.NODE_ENV === 'development') {
       console.debug('[orb-saved-outputs] summary failed', error.status, error.message)
     }

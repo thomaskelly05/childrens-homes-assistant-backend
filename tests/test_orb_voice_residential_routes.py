@@ -6,6 +6,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from auth.orb_product_bootstrap_dependency import require_orb_product_bootstrap_access
 from auth.orb_residential_dependencies import require_orb_residential_auth
 from routers.orb_voice_residential_routes import require_orb_voice_premium, router
 from schemas.orb_voice_realtime import validate_client_event
@@ -21,6 +22,7 @@ def voice_client():
         return {"id": 1, "user_id": 1, "role": "admin", "email": "admin@test"}
 
     app.dependency_overrides[require_orb_residential_auth] = fake_auth
+    app.dependency_overrides[require_orb_product_bootstrap_access] = fake_auth
     app.dependency_overrides[require_orb_voice_premium] = fake_auth
     client = TestClient(app)
     yield client

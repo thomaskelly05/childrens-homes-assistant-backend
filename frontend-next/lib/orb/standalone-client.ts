@@ -527,11 +527,17 @@ export async function fetchStandaloneOrbConfig(signal?: AbortSignal): Promise<St
     throw new AuthApiError(0, 'ORB product bootstrap blocked')
   }
   recordOrbConfigBootstrapRequest()
-  const payload = await authFetch<{ success?: boolean; data?: StandaloneOrbConfig }>('/orb/standalone/config', {
-    signal: withTimeout(signal)
-  })
-  if (!payload?.data) throw new AuthApiError(503, 'Could not load ORB Residential configuration.')
-  return payload.data
+  try {
+    const payload = await authFetch<{ success?: boolean; data?: StandaloneOrbConfig }>('/orb/standalone/config', {
+      signal: withTimeout(signal)
+    })
+    if (!payload?.data) throw new AuthApiError(503, 'Could not load ORB Residential configuration.')
+    return payload.data
+  } catch (error) {
+    const { handleOrbProductBootstrapBlockedResponse } = await import('@/lib/orb/orb-product-bootstrap-response')
+    handleOrbProductBootstrapBlockedResponse('standalone_config', error)
+    throw error
+  }
 }
 
 export const getStandaloneOrbConfig = fetchStandaloneOrbConfig

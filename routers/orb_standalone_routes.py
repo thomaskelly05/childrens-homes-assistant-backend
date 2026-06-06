@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 
+from auth.orb_product_bootstrap_dependency import require_orb_product_bootstrap_access
 from auth.orb_standalone_premium_dependency import (
     require_rich_orb_premium_access as require_standalone_orb_access,
 )
@@ -514,7 +515,7 @@ async def standalone_model_router_health(current_user=Depends(require_standalone
 
 
 @router.get("/config")
-async def standalone_orb_config(current_user=Depends(require_standalone_orb_access)):
+async def standalone_orb_config(current_user=Depends(require_orb_product_bootstrap_access)):
     return {
         "success": True,
         "data": _standalone_contract(),

@@ -13,6 +13,7 @@ import {
   recordOrbProjectBootstrapRequest,
   shouldAllowOrbProductFetch
 } from '@/lib/orb/orb-product-bootstrap-guard'
+import { handleOrbProductBootstrapBlockedResponse } from '@/lib/orb/orb-product-bootstrap-response'
 import { recordOrbFetchOutcome, shouldSkipAuthenticatedOrbFetch } from '@/lib/orb/orb-session-gate'
 import {
   DEFAULT_STANDALONE_PROJECTS,
@@ -72,6 +73,7 @@ export async function fetchOrbProjectsResilient(): Promise<{
     return { server, usedLocalFallback: false }
   } catch (error) {
     recordOrbFetchOutcome(error)
+    handleOrbProductBootstrapBlockedResponse('projects', error)
     if (error instanceof AuthApiError && process.env.NODE_ENV === 'development') {
       console.debug('[orb-projects] list failed', error.status, error.message)
     }

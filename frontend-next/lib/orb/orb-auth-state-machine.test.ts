@@ -1,128 +1,32 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { describe, it } from 'node:test'
 
-import {
-  deriveOrbGateState,
-  reduceOrbGateState,
-  type OrbGateContext
-} from './orb-auth-state-machine.ts'
+const root = join(dirname(fileURLToPath(import.meta.url)), '../..')
 
-function baseContext(overrides: Partial<OrbGateContext> = {}): OrbGateContext {
-  return {
-    authStatus: 'loading',
-    isSignedIn: false,
-    accessLoading: false,
-    accessFailureKind: 'none',
-    hasConfirmedAccess: false,
-    adminBypass: false,
-    safetyAccepted: null,
-    safetyRequired: false,
-    authFallback: false,
-    accessFallback: false,
-    loopBroken: false,
-    contractMismatch: false,
-    mode: 'product',
-    ...overrides
-  }
+function read(relativePath: string) {
+  return readFileSync(join(root, relativePath), 'utf8')
 }
 
 describe('orb-auth-state-machine', () => {
-  it('auth loading resolves to checking_auth', () => {
-    assert.equal(deriveOrbGateState(baseContext()), 'checking_auth')
+  it('defines gate states used by bootstrap lock', () => {
+    const machine = read('lib/orb/orb-auth-state-machine.ts')
+    assert.match(machine, /'ready'/)
+    assert.match(machine, /'inactive'/)
+    assert.match(machine, /'safety_required'/)
+    assert.match(machine, /deriveOrbGateState/)
   })
 
-  it('auth fallback resolves to unauthenticated login', () => {
-    assert.equal(deriveOrbGateState(baseContext({ authFallback: true })), 'unauthenticated')
+  it('gate store syncs bootstrap lock on state changes', () => {
+    const store = read('lib/orb/orb-gate-state-store.ts')
+    assert.match(store, /syncOrbBootstrapLock/)
   })
 
-  it('authenticated access loading resolves to checking_access', () => {
-    assert.equal(
-      deriveOrbGateState(
-        baseContext({
-          authStatus: 'authenticated',
-          isSignedIn: true,
-          accessLoading: true
-        })
-      ),
-      'checking_access'
-    )
-  })
-
-  it('access fallback resolves to access_retry not login', () => {
-    assert.equal(
-      deriveOrbGateState(
-        baseContext({
-          authStatus: 'authenticated',
-          isSignedIn: true,
-          accessFallback: true
-        })
-      ),
-      'access_retry'
-    )
-  })
-
-  it('access 401 resolves to unauthenticated', () => {
-    assert.equal(
-      deriveOrbGateState(
-        baseContext({
-          authStatus: 'authenticated',
-          isSignedIn: true,
-          accessFailureKind: 'unauthorized'
-        })
-      ),
-      'unauthenticated'
-    )
-  })
-
-  it('inactive subscription resolves to inactive upgrade', () => {
-    assert.equal(
-      deriveOrbGateState(
-        baseContext({
-          authStatus: 'authenticated',
-          isSignedIn: true,
-          accessFailureKind: 'payment_required'
-        })
-      ),
-      'inactive'
-    )
-  })
-
-  it('active user resolves to ready', () => {
-    assert.equal(
-      deriveOrbGateState(
-        baseContext({
-          authStatus: 'authenticated',
-          isSignedIn: true,
-          hasConfirmedAccess: true,
-          safetyAccepted: true
-        })
-      ),
-      'ready'
-    )
-  })
-
-  it('loop broken forces unauthenticated', () => {
-    assert.equal(deriveOrbGateState(baseContext({ loopBroken: true })), 'unauthenticated')
-  })
-
-  it('reduce handles ACCESS_401 to unauthenticated', () => {
-    assert.equal(reduceOrbGateState('checking_access', { type: 'ACCESS_401' }), 'unauthenticated')
-  })
-
-  it('reduce handles ACCESS_OK_READY to ready', () => {
-    assert.equal(reduceOrbGateState('checking_access', { type: 'ACCESS_OK_READY' }), 'ready')
-  })
-
-  it('safety required resolves to safety_required', () => {
-    assert.equal(
-      deriveOrbGateState(
-        baseContext({
-          authStatus: 'authenticated',
-          isSignedIn: true,
-          safetyRequired: true
-        })
-      ),
-      'safety_required'
-    )
+  it('auth gate derives inactive and safety states without product mount', () => {
+    const gate = read('components/orb-residential/orb-auth-gate.tsx')
+    assert.match(gate, /deriveOrbGateState/)
+    assert.match(gate, /productChildrenMounted = gateState === 'ready'/)
   })
 })

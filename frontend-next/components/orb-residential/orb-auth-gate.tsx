@@ -12,6 +12,8 @@ import { OrbAccountStateProvider, useOrbAccountState } from '@/contexts/orb-acco
 import { useAuth } from '@/contexts/auth-context'
 import { getOrbAccessRequestCount } from '@/lib/orb/orb-access-request-cache'
 import { setOrbGateState } from '@/lib/orb/orb-gate-state-store'
+import { getOrbBootstrapLockDebugSnapshot } from '@/lib/orb/orb-bootstrap-lock'
+import { getPasskeyStatusRequestCount } from '@/lib/auth/passkey-status-cache'
 import {
   canBootstrapOrbProduct,
   getLastBlockedBootstrapReason,
@@ -124,11 +126,6 @@ function OrbAuthGateInner({
   setOrbGateState(gateState, productChildrenMounted)
 
   const prevGateStateRef = useRef<OrbGateState>(gateState)
-  useEffect(() => {
-    if (gateState === 'ready') {
-      void account.loadPasskeyStatus()
-    }
-  }, [account, gateState])
 
   useEffect(() => {
     if (prevGateStateRef.current !== gateState) {
@@ -267,6 +264,7 @@ function OrbAuthGateInner({
   }, [account.access, account.accessFailureKind, account.isSignedIn, account.safetyAccepted, gateState, router])
 
   const bootstrapCounts = getOrbBootstrapNetworkCounts()
+  const bootstrapLockDebug = getOrbBootstrapLockDebugSnapshot()
   const debugPanel = (
     <OrbAuthDebugPanel
       pathname={pathname}
@@ -279,11 +277,20 @@ function OrbAuthGateInner({
       gateState={gateState}
       childrenMounted={productChildrenMounted}
       productBootstrapAllowed={canBootstrapOrbProduct(gateState, account.access)}
+      productMounted={productChildrenMounted}
+      accountState={account.accessStatus}
       accessRequestCount={getOrbAccessRequestCount()}
       projectRequestCount={bootstrapCounts.projectRequestCount}
       configRequestCount={bootstrapCounts.configRequestCount}
       voiceStatusRequestCount={bootstrapCounts.voiceStatusRequestCount}
       outputsSummaryRequestCount={bootstrapCounts.outputsSummaryRequestCount}
+      passkeyStatusRequestCount={getPasskeyStatusRequestCount()}
+      bootstrapLock={bootstrapLockDebug.bootstrapLock}
+      blockedBootstrapCalls={bootstrapLockDebug.blockedBootstrapCalls}
+      projectFetchBlocked={bootstrapLockDebug.projectFetchBlocked}
+      configFetchBlocked={bootstrapLockDebug.configFetchBlocked}
+      voiceFetchBlocked={bootstrapLockDebug.voiceFetchBlocked}
+      outputsFetchBlocked={bootstrapLockDebug.outputsFetchBlocked}
       lastBlockedBootstrapReason={getLastBlockedBootstrapReason()}
       loopGuardBroken={isOrbRouteLoopBroken()}
     />
