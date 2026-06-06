@@ -634,7 +634,7 @@ function ToggleRow({
 }) {
   return (
     <label
-      className={`flex items-center justify-between gap-3 rounded-xl border border-[var(--orb-line)] px-4 py-3 ${disabled ? 'opacity-60' : ''}`}
+      className={`orb-settings-row flex items-center justify-between gap-3 rounded-xl border border-[var(--orb-line)]/60 px-3.5 py-2.5 ${disabled ? 'opacity-60' : ''}`}
       data-orb-settings-toggle={dataAttr}
     >
       <span className="min-w-0">
@@ -672,7 +672,7 @@ function RowButton({
       type="button"
       onClick={onClick}
       disabled={disabled || !onClick}
-      className="orb-panel-row flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left disabled:opacity-60"
+      className="orb-panel-row orb-settings-row flex w-full items-center gap-3 rounded-xl border border-[var(--orb-line)]/60 px-3.5 py-2.5 text-left disabled:opacity-60"
     >
       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--orb-surface-hover)] text-[#0369A1]">
         {icon}

@@ -60,26 +60,29 @@ export function OrbRecordingLibraryCards({
             <span className="font-medium text-[var(--orb-foreground)]">ORB checks: </span>
             {orbRecordingChecksSummary(recordType).slice(0, 3).join(' · ')}
           </p>
-          <div className="mt-2" data-orb-template-writing-styles>
-            <p className="text-[10px] font-medium text-[var(--orb-foreground)]">ORB will help you write this in a…</p>
-            <div className="mt-1 flex flex-wrap gap-1">
-              {ORB_TEMPLATE_WRITING_STYLE_CHIPS.slice(0, 5).map((chip) => (
-                <span
-                  key={chip.id}
-                  className="rounded-full border border-[var(--orb-line)]/50 px-1.5 py-0.5 text-[9px] text-[var(--orb-muted)]"
-                  data-orb-template-writing-style={chip.id}
-                >
-                  {chip.chipLabel}
-                </span>
-              ))}
+          <details className="mt-2" data-orb-recording-writing-detail>
+            <summary>Writing guidance & therapeutic prompts</summary>
+            <div className="mt-2 space-y-2" data-orb-template-writing-styles>
+              <p className="text-[10px] font-medium text-[var(--orb-foreground)]">ORB will help you write this in a…</p>
+              <div className="flex flex-wrap gap-1">
+                {ORB_TEMPLATE_WRITING_STYLE_CHIPS.slice(0, 5).map((chip) => (
+                  <span
+                    key={chip.id}
+                    className="rounded-full border border-[var(--orb-line)]/50 px-1.5 py-0.5 text-[9px] text-[var(--orb-muted)]"
+                    data-orb-template-writing-style={chip.id}
+                  >
+                    {chip.chipLabel}
+                  </span>
+                ))}
+              </div>
             </div>
-          </div>
-          <p className="mt-1.5 text-[9px] leading-relaxed text-[var(--orb-muted)]" data-orb-template-therapeutic-prompts>
-            {allTherapeuticPrompts(recordType.id).slice(0, 2).join(' · ')}
-          </p>
-          <p className="mt-1 text-[9px] text-[var(--orb-muted)]" data-orb-template-spelling-reminder>
-            {recordType.writing_framework?.spelling_grammar_reminder ?? ORB_SPELLING_GRAMMAR_REMINDER}
-          </p>
+            <p className="mt-1.5 text-[9px] leading-relaxed text-[var(--orb-muted)]" data-orb-template-therapeutic-prompts>
+              {allTherapeuticPrompts(recordType.id).slice(0, 2).join(' · ')}
+            </p>
+            <p className="mt-1 text-[9px] text-[var(--orb-muted)]" data-orb-template-spelling-reminder>
+              {recordType.writing_framework?.spelling_grammar_reminder ?? ORB_SPELLING_GRAMMAR_REMINDER}
+            </p>
+          </details>
           <div className="mt-3 flex flex-wrap gap-2">
             <button
               type="button"

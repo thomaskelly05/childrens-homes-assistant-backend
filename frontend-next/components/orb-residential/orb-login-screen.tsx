@@ -279,8 +279,8 @@ function OrbLoginPanel({
                 </li>
               ))}
             </ul>
-            <div className="orb-login-hero-sphere-wrap mt-10 flex justify-center lg:justify-start">
-              <OrbHeroSphere className="scale-90 xl:scale-100" />
+            <div className="orb-login-hero-sphere-wrap mt-6 flex justify-center lg:mt-8 lg:justify-start">
+              <OrbHeroSphere className="scale-[0.72] xl:scale-[0.8]" />
             </div>
           </div>
         </div>
@@ -291,7 +291,7 @@ function OrbLoginPanel({
         >
           <div className="orb-login-card orb-login-panel-inner mx-auto w-full max-w-md rounded-[1.75rem] border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)]/80 p-6 shadow-xl shadow-black/10 backdrop-blur-sm sm:p-8">
             <div className="flex flex-col items-center text-center lg:hidden" data-orb-login-mobile-hero>
-              <OrbHeroSphere className="mb-3 scale-[0.62] sm:scale-[0.7]" />
+              <OrbHeroSphere className="mb-2 scale-[0.52] sm:scale-[0.58]" />
             </div>
 
             <Link href="/orb" className="orb-login-brand-link text-sm font-semibold lg:hidden" data-orb-login-brand>

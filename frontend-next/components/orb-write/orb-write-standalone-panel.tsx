@@ -90,6 +90,23 @@ export function OrbWriteStandalonePanel({
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false)
   const [sourcePanelOpen, setSourcePanelOpen] = useState(true)
   const [guidancePanelOpen, setGuidancePanelOpen] = useState(true)
+  const [compactWriteHeight, setCompactWriteHeight] = useState(false)
+
+  useEffect(() => {
+    if (!open || typeof window === 'undefined') return
+    const media = window.matchMedia('(min-width: 1024px) and (max-height: 820px)')
+    const sync = () => {
+      const compact = media.matches
+      setCompactWriteHeight(compact)
+      if (compact) {
+        setSourcePanelOpen(false)
+        setGuidancePanelOpen(false)
+      }
+    }
+    sync()
+    media.addEventListener('change', sync)
+    return () => media.removeEventListener('change', sync)
+  }, [open])
 
   const recordType = useMemo(
     () => resolveOrbRecordingRecordType({ recordTypeId }),
@@ -456,6 +473,7 @@ export function OrbWriteStandalonePanel({
               data-orb-write-layout
               data-orb-write-source-open={sourcePanelOpen ? 'true' : 'false'}
               data-orb-write-guidance-open={guidancePanelOpen ? 'true' : 'false'}
+              data-orb-write-compact-height={compactWriteHeight ? 'true' : 'false'}
             >
               {sourcePanelOpen ? (
                 <OrbWriteSourcePanel

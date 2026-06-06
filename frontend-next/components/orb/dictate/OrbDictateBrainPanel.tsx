@@ -1,7 +1,7 @@
 'use client'
 
-import type { ReactNode } from 'react'
-import { Loader2, Sparkles } from 'lucide-react'
+import { useState, type ReactNode } from 'react'
+import { Loader2, PanelRightClose, PanelRightOpen, Sparkles } from 'lucide-react'
 
 import type { OrbDictateBrainAnalysis, OrbDictateBrainSuggestion } from '@/lib/orb/dictate/orb-dictate-brain-analysis'
 import {
@@ -174,17 +174,37 @@ export function OrbDictateBrainPanel({
   onAnalyse?: () => void
   hasTranscript?: boolean
 }) {
+  const [collapsed, setCollapsed] = useState(false)
+
   return (
-    <div className="flex min-h-0 flex-1 flex-col" data-orb-dictate-brain-panel>
-      <header className="flex shrink-0 items-center gap-2 border-b border-[var(--orb-line)]/40 px-4 py-2.5">
-        <Sparkles className="h-4 w-4 text-[var(--orb-primary)]" aria-hidden />
-        <div>
-          <h3 className="text-sm font-semibold text-[var(--orb-foreground)]">ORB analysis</h3>
-          <p className="text-[10px] text-[var(--orb-muted)]">Professional review support — adult remains responsible</p>
+    <div
+      className="flex min-h-0 flex-1 flex-col rounded-xl border border-[var(--orb-line)]/25 bg-[var(--orb-surface)]/70"
+      data-orb-dictate-brain-panel
+      data-orb-dictate-side-panel
+      data-orb-dictate-brain-collapsed={collapsed ? 'true' : 'false'}
+    >
+      <header className="flex shrink-0 items-center gap-2 border-b border-[var(--orb-line)]/25 px-3 py-2">
+        <Sparkles className="h-4 w-4 shrink-0 text-[var(--orb-primary)]" aria-hidden />
+        <div className="min-w-0 flex-1">
+          <h3 className="truncate text-sm font-semibold text-[var(--orb-foreground)]">ORB analysis</h3>
+          {!collapsed ? (
+            <p className="truncate text-[10px] text-[var(--orb-muted)]">Review support — you remain responsible</p>
+          ) : null}
         </div>
+        <button
+          type="button"
+          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]"
+          onClick={() => setCollapsed((open) => !open)}
+          aria-expanded={!collapsed}
+          aria-label={collapsed ? 'Show ORB analysis panel' : 'Hide ORB analysis panel'}
+          data-orb-dictate-brain-collapse-toggle
+        >
+          {collapsed ? <PanelRightOpen className="h-4 w-4" aria-hidden /> : <PanelRightClose className="h-4 w-4" aria-hidden />}
+        </button>
       </header>
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-4 text-sm">
+      {!collapsed ? (
+      <div className="min-h-0 flex-1 overflow-y-auto p-3 text-sm">
         {loading ? (
           <div className="flex items-center gap-2 text-[var(--orb-muted)]" data-orb-brain-loading>
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -334,6 +354,7 @@ export function OrbDictateBrainPanel({
           </div>
         )}
       </div>
+      ) : null}
     </div>
   )
 }

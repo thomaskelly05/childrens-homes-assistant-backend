@@ -13,8 +13,11 @@ function read(relativePath: string) {
 describe('ORB Residential premium layout pass', () => {
   it('primary chat starters are capped at six visible pills', () => {
     const copy = read('lib/orb/orb-residential-copy.ts')
+    const companion = read('components/orb-standalone/orb-care-companion.tsx')
     assert.match(copy, /ORB_RESIDENTIAL_PRIMARY_STARTER_COUNT = 6/)
     assert.match(copy, /ORB_RESIDENTIAL_MORE_STARTERS/)
+    assert.match(companion, /slice\(0, ORB_RESIDENTIAL_PRIMARY_STARTER_COUNT\)/)
+    assert.match(companion, /data-orb-starter-count=\{emptyStarters\.length\}/)
     for (const label of [
       'Review written practice',
       'Create a handover',
@@ -35,7 +38,40 @@ describe('ORB Residential premium layout pass', () => {
     assert.match(css, /100dvh/)
     assert.match(css, /overflow:\s*hidden/)
     assert.match(companion, /h-\[100dvh\]/)
+    assert.match(css, /\.orb-chat-layout--residential[\s\S]*overflow:\s*hidden/)
     assert.match(css, /\[data-orb-workspace-panel\] \.orb-workspace-body/)
+  })
+
+  it('station panels scroll internally inside one viewport', () => {
+    const css = read('app/orb/orb-premium-layout-pass.css')
+    const page = read('components/orb/premium/orb-premium-page.tsx')
+    assert.match(css, /\[data-orb-knowledge-library-body\]/)
+    assert.match(css, /\[data-orb-template-list-scroll\]/)
+    assert.match(css, /\[data-orb-saved-outputs-list\]/)
+    assert.match(css, /\[data-orb-workspace-panel='documents'\] \.orb-workspace-body[\s\S]*overflow:\s*hidden/)
+    assert.match(page, /data-orb-knowledge-library-body/)
+    assert.match(page, /data-orb-template-list-scroll/)
+  })
+
+  it('Documents & Guidance header stays visible above scroll body', () => {
+    const documents = read('components/orb-standalone/orb-document-panel.tsx')
+    const css = read('app/orb/orb-premium-layout-pass.css')
+    assert.match(documents, /data-orb-documents-station-header/)
+    assert.match(documents, /data-orb-knowledge-library-tabs/)
+    assert.match(documents, /compactChrome:\s*false/)
+    assert.match(css, /\[data-orb-documents-station-header\][\s\S]*position:\s*sticky/)
+    assert.match(css, /\[data-orb-document-panel\][\s\S]*\[data-orb-knowledge-library-body\]/)
+  })
+
+  it('login hero sphere is sized to avoid clipping', () => {
+    const login = read('components/orb-residential/orb-login-screen.tsx')
+    const css = read('app/orb/orb-login-center.css')
+    const passCss = read('app/orb/orb-premium-layout-pass.css')
+    assert.match(login, /orb-login-hero-sphere-wrap/)
+    assert.match(login, /scale-\[0\.72\]/)
+    assert.match(css, /max-width:\s*11rem/)
+    assert.match(css, /max-height:\s*min\(9\.5rem,\s*22vh\)/)
+    assert.match(passCss, /orb-login-hero[\s\S]*max-height:\s*100dvh/)
   })
 
   it('chat home uses prompt pills and more examples drawer', () => {
@@ -47,16 +83,19 @@ describe('ORB Residential premium layout pass', () => {
     assert.match(companion, /ORB_RESIDENTIAL_MORE_STARTERS/)
     assert.match(companion, /data-orb-more-examples/)
     assert.match(css, /\[data-orb-starter-pills\]/)
+    assert.match(css, /orb-v2-atmosphere[\s\S]*opacity:\s*0\.42/)
   })
 
   it('Dictate studio keeps recorder bar and transcript as primary surface', () => {
     const dictate = read('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
     const topBar = read('components/orb/dictate/OrbDictateTopBar.tsx')
     const transcript = read('components/orb/dictate/OrbTranscriptPanel.tsx')
+    const brain = read('components/orb/dictate/OrbDictateBrainPanel.tsx')
     const css = read('app/orb/orb-premium-layout-pass.css')
     assert.match(dictate, /OrbDictateTopBar/)
     assert.match(topBar, /data-orb-dictate-top-bar/)
     assert.match(transcript, /data-orb-dictate-transcript-panel/)
+    assert.match(brain, /data-orb-dictate-brain-collapse-toggle/)
     assert.match(css, /\[data-orb-dictate-transcript-panel\]/)
   })
 
@@ -67,9 +106,19 @@ describe('ORB Residential premium layout pass', () => {
     assert.match(panel, /data-orb-write-layout/)
     assert.match(panel, /data-orb-write-source-open/)
     assert.match(panel, /data-orb-write-guidance-open/)
+    assert.match(panel, /data-orb-write-compact-height/)
     assert.match(panel, /data-orb-write-panel-toggle/)
     assert.match(editor, /data-orb-write-document-canvas/)
     assert.match(css, /\.orb-write-studio-grid/)
+    assert.match(css, /data-orb-write-compact-height/)
+  })
+
+  it('template cards tuck therapeutic guidance into expandable detail', () => {
+    const cards = read('components/orb/recording/OrbRecordingLibraryCards.tsx')
+    const css = read('app/orb/orb-premium-layout-pass.css')
+    assert.match(cards, /data-orb-recording-writing-detail/)
+    assert.match(cards, /Writing guidance & therapeutic prompts/)
+    assert.match(css, /\[data-orb-recording-writing-detail\]/)
   })
 
   it('Voice keeps existing controls with richer presence states', () => {
@@ -79,14 +128,6 @@ describe('ORB Residential premium layout pass', () => {
     assert.match(voice, /OrbVoiceActions/)
     assert.match(css, /\.orb-presence--voice\[data-orb-presence-state='listening'\]/)
     assert.match(css, /\.orb-presence--voice\[data-orb-presence-state='responding'\]/)
-  })
-
-  it('library stations scroll internally inside one viewport', () => {
-    const page = read('components/orb/premium/orb-premium-page.tsx')
-    const css = read('app/orb/orb-premium-layout-pass.css')
-    assert.match(page, /data-orb-knowledge-library-body/)
-    assert.match(page, /data-orb-template-list-scroll/)
-    assert.match(css, /\[data-orb-saved-outputs-list\]/)
   })
 
   it('account, settings and billing open as overlays', () => {
@@ -100,6 +141,7 @@ describe('ORB Residential premium layout pass', () => {
     assert.match(billing, /data-orb-billing-modal/)
     assert.match(billing, /data-orb-billing-sticky-footer/)
     assert.match(settings, /data-orb-settings-panel/)
+    assert.match(settings, /orb-settings-row/)
     assert.doesNotMatch(companion, /router\.push\('\/orb\/billing'\)/)
   })
 

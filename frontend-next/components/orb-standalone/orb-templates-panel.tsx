@@ -271,7 +271,7 @@ export function OrbTemplatesPanel({
         ) : null}
 
         <ul
-          className="grid max-h-[min(52vh,28rem)] grid-cols-1 gap-3 overflow-y-auto sm:grid-cols-2"
+          className="grid max-h-none grid-cols-1 gap-2.5 overflow-y-auto sm:grid-cols-2"
           data-orb-templates-card-grid
           data-orb-template-list-scroll
         >
@@ -284,7 +284,7 @@ export function OrbTemplatesPanel({
             .map((tpl) => (
             <li key={tpl.id}>
               <article
-                className={`orb-studio-source-card orb-doc-glass-card orb-template-card flex h-full flex-col rounded-2xl border px-4 py-4 transition ${
+                className={`orb-studio-source-card orb-doc-glass-card orb-template-card flex h-full flex-col rounded-2xl border px-3.5 py-3.5 transition ${
                   selected?.id === tpl.id
                     ? 'border-sky-400/40 bg-[var(--orb-surface-hover)] ring-1 ring-sky-400/20 shadow-[var(--orb-v2-shadow-sm)]'
                     : 'border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] hover:border-sky-400/25 hover:shadow-[var(--orb-v2-shadow-sm)]'
