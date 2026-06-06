@@ -49,15 +49,42 @@
 - Safety acceptance modal
 - Embedded login UX on `/orb` when session exists but product locked
 
+## Follow-up (2026-06-06)
+
+**Legacy route gates — implemented**
+
+`OrbAuthGate mode="product"` now wraps:
+
+- `app/orb/ask/page.tsx`
+- `app/orb/profile/page.tsx`
+- `app/orb/intelligence-map/page.tsx`
+
+Middleware product redirect + `no-store` remain unchanged. Public paths (login, signup, billing, onboarding) unaffected.
+
+**WebSocket token decision**
+
+- Shared helper: `auth/websocket_auth.py`
+- Production (`APP_ENV=production`): reject `?token=` / `?access_token=`; use session cookie or `Authorization: Bearer`
+- Non-production: query fallback retained for dev/OAuth tooling only
+- ORB voice client already uses cookie-based same-origin WebSockets
+
+**Session revocation parity**
+
+`get_orb_residential_user` invokes `_enforce_session_state` — aligned with WebSocket handlers and `get_current_user`.
+
 ## Future improvements
 
 1. Next.js `layout.tsx` server component session probe for defence in depth
 2. Remove `/orb` root exception in auth-context redirect (align with middleware)
-3. `OrbAuthGate` on legacy `/orb/ask`, `/orb/profile`, `/orb/intelligence-map`
-4. Content Security Policy headers for ORB surfaces
+3. Content Security Policy headers for ORB surfaces
+4. Remove dev-only WebSocket query-token fallback
 
 ## Tests
 
 - `frontend-next/components/orb-residential/orb-security-no-product-flash.test.ts`
 - `frontend-next/components/orb-residential/orb-auth-gate.test.ts`
 - `frontend-next/components/orb-residential/orb-sign-out-flow.test.ts`
+- `frontend-next/components/orb-residential/orb-legacy-route-gating.test.ts`
+- `frontend-next/components/orb-residential/orb-production-smoke-contract.test.ts`
+- `tests/test_orb_websocket_auth_security.py`
+- `tests/test_orb_session_revocation_security.py`

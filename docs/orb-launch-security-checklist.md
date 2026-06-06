@@ -45,8 +45,16 @@ Use before wider ORB Residential launch.
 - [ ] Pytest security suite green
 - [ ] `npm run typecheck` green in `frontend-next`
 
+## WebSocket & session (follow-up)
+
+- [ ] Production WebSocket connections use cookie/header auth only (no `?token=`)
+- [ ] Revoked sessions rejected on residential HTTP APIs (`session_revoked` 401)
+- [ ] Legacy `/orb/ask`, `/orb/profile`, `/orb/intelligence-map` behind `OrbAuthGate`
+
 ## Documentation
 
 - [ ] `docs/orb-production-security-hardening-audit.md` reviewed
+- [ ] `docs/orb-security-follow-up-audit.md` reviewed
 - [ ] `docs/orb-api-security-access-matrix.md` reviewed
+- [ ] `docs/orb-production-smoke-test.md` manual checks completed on live deploy
 - [ ] Remaining gaps accepted or scheduled

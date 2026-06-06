@@ -38,3 +38,16 @@
 **AI governance:** External calls route through `AIPrivacyDecisionService`, `AIGatewayService`, or `ai_external_call_governance`.
 
 **Active access:** `can_use_orb` + `safety_accepted` via `orb_access_service` / `require_rich_orb_premium_access`.
+
+## WebSocket / realtime (follow-up 2026-06-06)
+
+| Path | Auth | Revocation | Query `?token=` (production) | Status |
+|------|------|------------|------------------------------|--------|
+| `GET /orb/realtime/ws` | Cookie / Bearer | Yes | Rejected | fixed |
+| `WS /orb/voice/ws/{id}` | Cookie / Bearer | Yes | Rejected | fixed |
+| OS operational WS | Cookie / Bearer | Yes | Rejected | fixed |
+| `WS /assistant/realtime/ws` | Cookie / Bearer | Yes | Rejected | fixed |
+
+**Residential HTTP loader:** `get_orb_residential_user` enforces `_enforce_session_state` (revocation + touch) — status **fixed**.
+
+**Frontend legacy routes:** `/orb/ask`, `/orb/profile`, `/orb/intelligence-map` — `OrbAuthGate` + middleware — status **fixed**.

@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { FormEvent, useState } from 'react'
 
+import { OrbAuthGate } from '@/components/orb-residential/orb-auth-gate'
 import { fetchOrbResidential } from '@/components/orb-residential/orb-residential-api'
 
 const QUICK_ACTIONS = [
@@ -56,6 +57,7 @@ export default function OrbAskPage() {
   }
 
   return (
+    <OrbAuthGate mode="product">
     <div className="grid min-h-[calc(100vh-7rem)] gap-4 lg:grid-cols-[17rem_1fr]">
       <aside className="hidden rounded-[1.75rem] border border-white/70 bg-white/80 p-4 shadow-xl shadow-slate-200/70 backdrop-blur lg:block">
         <Link href="/orb" className="flex items-center gap-2 rounded-2xl bg-[#111827] px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-slate-300">
@@ -208,5 +210,6 @@ export default function OrbAskPage() {
         </form>
       </section>
     </div>
+    </OrbAuthGate>
   )
 }

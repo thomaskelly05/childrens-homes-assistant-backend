@@ -36,13 +36,23 @@ Route matrix: `docs/orb-api-security-access-matrix.md`
 
 **Option D — Hybrid gate** (implemented). See `docs/orb-auth-server-gate-plan.md`.
 
+## Follow-up pass (2026-06-06)
+
+| Area | Fix |
+|------|-----|
+| WebSocket auth | `auth/websocket_auth.py` — query tokens rejected in production; cookie/header preferred |
+| Session revocation | `get_orb_residential_user` calls `_enforce_session_state` (parity with `/auth/me`) |
+| Legacy routes | `/orb/ask`, `/orb/profile`, `/orb/intelligence-map` wrapped in `OrbAuthGate` |
+| Smoke test | `docs/orb-production-smoke-test.md` — 22-point live deployment checklist |
+| Audit | `docs/orb-security-follow-up-audit.md` |
+
 ## Remaining gaps
 
-- WebSocket `?token=` auth parameter (log/Referer leakage risk)
-- HTTP residential auth loader does not check session revocation (WebSocket does)
-- Legacy `/orb/ask`, `/orb/profile` without `OrbAuthGate` (middleware + APIs compensate)
 - Uniform rate limiting not applied to all ORB endpoints
+- CSP headers for ORB surfaces (deferred)
+- Server layout session probe (deferred defence in depth)
+- Dev-only WebSocket `?token=` fallback — remove when all clients use cookies
 
 ## Launch readiness
 
-Use `docs/orb-launch-security-checklist.md` before wider launch.
+Use `docs/orb-launch-security-checklist.md` and `docs/orb-production-smoke-test.md` before wider launch.
