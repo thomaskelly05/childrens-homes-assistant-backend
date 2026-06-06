@@ -22,6 +22,11 @@ from services.orb_document_ingestion_service import (
 )
 from services.orb_document_intelligence_service import orb_document_intelligence_service
 from services.orb_document_understanding_service import orb_document_understanding_service
+from services.orb_ai_abuse_guard_service import (
+    enforce_comparison_text_length,
+    enforce_daily_ai_call_budget,
+    enforce_document_text_length,
+)
 from services.orb_intelligence_output_service import orb_intelligence_output_service
 
 logger = logging.getLogger("indicare.orb_document_routes")
@@ -37,6 +42,29 @@ ALLOWED_DOCUMENT_SUFFIXES = frozenset({".txt", ".md", ".pdf", ".docx"})
 
 def _success(data: Any) -> dict[str, Any]:
     return {"success": True, "data": data}
+
+
+def _user_id_from(current_user: dict[str, Any]) -> int | None:
+    raw = current_user.get("user_id") or current_user.get("id")
+    try:
+        return int(raw) if raw is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _enforce_document_abuse_guards(
+    payload: OrbDocumentAnalysisRequest,
+    current_user: dict[str, Any],
+    *,
+    comparison: bool = False,
+) -> None:
+    user_id = _user_id_from(current_user)
+    enforce_daily_ai_call_budget(user_id)
+    if payload.text:
+        if comparison:
+            enforce_comparison_text_length(payload.text, user_id=user_id)
+        else:
+            enforce_document_text_length(payload.text, user_id=user_id)
 
 
 def _reject_os_ids(payload: dict[str, Any]) -> None:
@@ -131,6 +159,7 @@ async def analyse_document(
     current_user=Depends(require_standalone_orb_access),
 ):
     _reject_os_ids(payload.model_dump())
+    _enforce_document_abuse_guards(payload, current_user, comparison=payload.mode == "policy_comparison")
     lens = getattr(payload, "lens", None)
     if lens:
         intel_request = OrbDocumentIntelligenceRequest(

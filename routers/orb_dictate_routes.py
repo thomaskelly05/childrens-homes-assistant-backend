@@ -35,6 +35,7 @@ from services.orb_dictate_service import (
     save_dictate_note,
     transcribe_dictate_audio,
 )
+from services.orb_ai_abuse_guard_service import enforce_daily_ai_call_budget, enforce_transcript_length
 from services.orb_realtime_provider_service import orb_realtime_provider_service
 from services.orb_voice_realtime_config import _openai_realtime_configured
 
@@ -51,6 +52,14 @@ ALLOWED_AUDIO_SUFFIXES = frozenset(
 BLOCKED_UPLOAD_SUFFIXES = frozenset(
     {".exe", ".bat", ".cmd", ".com", ".msi", ".scr", ".sh", ".bash", ".php", ".html", ".htm", ".js", ".jar"}
 )
+
+
+def _user_id_from(current_user: dict[str, Any]) -> int | None:
+    raw = current_user.get("user_id") or current_user.get("id")
+    try:
+        return int(raw) if raw is not None else None
+    except (TypeError, ValueError):
+        return None
 
 
 def _success(data: Any, **extra: Any) -> dict[str, Any]:
@@ -133,7 +142,10 @@ async def dictate_transcribe(
             status_code=400,
             detail="Confirm consent before transcribing conversation or debrief audio.",
         )
+    user_id = _user_id_from(current_user)
+    enforce_daily_ai_call_budget(user_id)
     text = (payload.text or "").strip()
+    enforce_transcript_length(text, user_id=user_id)
     if not text:
         raise HTTPException(status_code=400, detail="Provide transcript text or upload audio.")
     from services.orb_dictate_speaker import (

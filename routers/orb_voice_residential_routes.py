@@ -19,6 +19,7 @@ from schemas.orb_voice_realtime import (
     OrbVoiceSessionResponse,
     VoiceProviderCapabilities,
 )
+from services.orb_ai_abuse_guard_service import enforce_daily_ai_call_budget, enforce_transcript_length
 from services.orb_realtime_provider_service import orb_realtime_provider_service
 from services.orb_voice_profiles import (
     build_residential_voice_instructions,
@@ -48,6 +49,14 @@ def _voice_brain_metadata() -> dict:
 
 def _voice_status_payload(body: dict) -> dict:
     return attach_to_payload(body, surface="orb_residential", feature="voice")
+
+
+def _user_id_from(current_user: dict) -> int | None:
+    raw = current_user.get("user_id") or current_user.get("id")
+    try:
+        return int(raw) if raw is not None else None
+    except (TypeError, ValueError):
+        return None
 
 
 class OrbVoiceTextRequest(BaseModel):
@@ -408,6 +417,9 @@ async def orb_voice_speak(
     current_user=Depends(require_orb_voice_premium),
 ):
     spoken = (payload.spoken_summary or payload.text or "").strip()
+    user_id = _user_id_from(current_user)
+    enforce_daily_ai_call_budget(user_id)
+    enforce_transcript_length(spoken, user_id=user_id)
     if not spoken:
         raise HTTPException(status_code=400, detail="spoken_summary or text is required")
 

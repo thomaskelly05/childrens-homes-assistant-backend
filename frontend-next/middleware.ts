@@ -71,9 +71,21 @@ export function middleware(request: NextRequest) {
   const response = NextResponse.next()
   response.headers.set('x-indicare-runtime', 'operational')
   response.headers.set('x-indicare-build-location', 'frontend-next')
+  response.headers.set('X-Content-Type-Options', 'nosniff')
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
+  response.headers.set('Permissions-Policy', 'camera=(), microphone=(self), geolocation=(), payment=()')
   if (isOrbProductPath(pathname)) {
     response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, private')
     response.headers.set('Pragma', 'no-cache')
+    response.headers.set('X-Frame-Options', 'SAMEORIGIN')
+    const cspMode = process.env.ORB_CSP_MODE === 'enforce' ? 'Content-Security-Policy' : 'Content-Security-Policy-Report-Only'
+    response.headers.set(
+      cspMode,
+      "default-src 'self'; base-uri 'self'; frame-ancestors 'self'; object-src 'none'; " +
+        "img-src 'self' data: blob: https:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; " +
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src 'self' https: wss:; " +
+        "frame-src 'self' https://js.stripe.com https://checkout.stripe.com;"
+    )
   }
   return response
 }

@@ -7,6 +7,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from middleware.access_scope_middleware import AccessScopeMiddleware
 from middleware.orb_residential_guard_middleware import OrbResidentialGuardMiddleware
 from middleware.os_read_cache_middleware import OSReadCacheMiddleware
+from middleware.orb_rate_limit_middleware import OrbRateLimitMiddleware
 from middleware.security_middleware import AuditLoggingMiddleware, CsrfProtectionMiddleware, SecurityHeadersMiddleware
 
 REQUIRED_PRODUCTION_ORIGINS = {
@@ -87,3 +88,4 @@ def add_middlewares(app: FastAPI) -> None:
             "x-indicare-rsc",
         ],
     )
+    app.add_middleware(OrbRateLimitMiddleware)
