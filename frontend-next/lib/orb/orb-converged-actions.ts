@@ -146,6 +146,86 @@ export const ORB_CONVERGED_WRITE_ACTIONS: OrbConvergedAction[] = [
     writeGroup: 'quality'
   },
   {
+    id: 'check_spelling_grammar',
+    label: 'Check spelling and grammar',
+    description: 'Spelling and grammar suggestions — adult accepts before applying',
+    category: 'quality',
+    surfaces: ['orb_write', 'dictate', 'templates'],
+    route: 'editOrbDictateDocument:spelling_grammar',
+    outputTarget: 'write',
+    requiresHumanReview: true,
+    editMode: 'spelling_grammar',
+    instruction:
+      'Check spelling and grammar — suggest corrections only, do not change meaning or direct quotes without marking them',
+    writeGroup: 'quality'
+  },
+  {
+    id: 'check_names_dates_times',
+    label: 'Check names, dates and times',
+    description: 'Verify names, dates and times are consistent and complete',
+    category: 'quality',
+    surfaces: ['orb_write', 'dictate', 'templates'],
+    route: 'editOrbDictateDocument:missing_information',
+    outputTarget: 'write',
+    requiresHumanReview: true,
+    editMode: 'missing_information',
+    instruction: 'Check names, dates and times for consistency and completeness — suggest fixes only',
+    writeGroup: 'quality'
+  },
+  {
+    id: 'apply_therapeutic_style',
+    label: 'Apply therapeutic style',
+    description: 'Trauma-informed, emotionally literate wording',
+    category: 'quality',
+    surfaces: ['orb_write', 'dictate', 'templates'],
+    route: 'editOrbDictateDocument:therapeutic_rewrite',
+    outputTarget: 'write',
+    requiresHumanReview: true,
+    editMode: 'therapeutic_rewrite',
+    instruction:
+      'Rewrite with therapeutic, trauma-informed language — behaviour as communication, non-blaming',
+    writeGroup: 'quality'
+  },
+  {
+    id: 'apply_child_centred_style',
+    label: 'Apply child-centred style',
+    description: 'Child voice and impact centred in the record',
+    category: 'quality',
+    surfaces: ['orb_write', 'dictate', 'templates'],
+    route: 'editOrbDictateDocument:child_voice',
+    outputTarget: 'write',
+    requiresHumanReview: true,
+    editMode: 'child_voice',
+    instruction: 'Rewrite with a child-centred perspective while keeping facts accurate',
+    writeGroup: 'quality'
+  },
+  {
+    id: 'apply_concise_professional_style',
+    label: 'Apply concise professional style',
+    description: 'Shorter, clear professional residential wording',
+    category: 'quality',
+    surfaces: ['orb_write', 'dictate', 'templates'],
+    route: 'editOrbDictateDocument:concise_summary',
+    outputTarget: 'write',
+    requiresHumanReview: true,
+    editMode: 'concise_summary',
+    instruction: 'Make this more concise while keeping essential facts and child voice',
+    writeGroup: 'quality'
+  },
+  {
+    id: 'apply_inspection_ready_style',
+    label: 'Apply inspection-ready style',
+    description: 'Evidence-focused, audit-ready structure',
+    category: 'inspection',
+    surfaces: ['orb_write', 'dictate', 'templates'],
+    route: 'editOrbDictateDocument:ofsted_ready',
+    outputTarget: 'write',
+    requiresHumanReview: true,
+    editMode: 'ofsted_ready',
+    instruction: 'Polish for inspection evidence — impact on child clear, structure audit-ready',
+    writeGroup: 'quality'
+  },
+  {
     id: 'record_properly',
     label: 'Record this properly',
     description: 'Turn rough notes into a professional residential record',
@@ -474,6 +554,121 @@ export const ORB_CONVERGED_CHAT_STARTER_ACTIONS: OrbConvergedAction[] = [
     requiresHumanReview: true,
     chatPrompt: 'Turn policy into easy-read briefing',
     documentLens: 'explain'
+  },
+  {
+    id: 'starter_compare_documents',
+    label: 'Compare documents',
+    description: 'Compare two policy or report versions',
+    category: 'chat_starter',
+    surfaces: ['chat', 'documents'],
+    route: 'compareOrbStandaloneDocuments',
+    outputTarget: 'document_analysis',
+    requiresHumanReview: true,
+    chatPrompt: 'Compare documents'
+  },
+  {
+    id: 'starter_create_staff_briefing',
+    label: 'Create staff briefing',
+    description: 'Staff briefing from document or comparison',
+    category: 'chat_starter',
+    surfaces: ['chat', 'documents'],
+    route: 'standalone-client:sendMessage',
+    outputTarget: 'chat',
+    requiresHumanReview: true,
+    chatPrompt: 'Create staff briefing',
+    documentLens: 'staff_briefing'
+  },
+  {
+    id: 'starter_create_action_plan_comparison',
+    label: 'Create action plan from comparison',
+    description: 'Action plan from document changes',
+    category: 'chat_starter',
+    surfaces: ['chat', 'documents'],
+    route: 'compareOrbStandaloneDocuments',
+    outputTarget: 'document_analysis',
+    requiresHumanReview: true,
+    chatPrompt: 'Create action plan from comparison'
+  },
+  {
+    id: 'starter_review_sop',
+    label: 'Review against Statement of Purpose',
+    description: 'Statement of Purpose alignment check',
+    category: 'chat_starter',
+    surfaces: ['chat', 'documents'],
+    route: 'runOrbDocumentIntelligence',
+    outputTarget: 'document_analysis',
+    requiresHumanReview: true,
+    chatPrompt: 'Review against Statement of Purpose',
+    documentLens: 'summary'
+  },
+  {
+    id: 'starter_review_quality_standards',
+    label: 'Review against Quality Standards',
+    description: 'Residential quality standards thinking',
+    category: 'chat_starter',
+    surfaces: ['chat', 'documents'],
+    route: 'runOrbDocumentIntelligence',
+    outputTarget: 'document_analysis',
+    requiresHumanReview: true,
+    chatPrompt: 'Review against Quality Standards',
+    documentLens: 'ofsted'
+  }
+]
+
+/** Document comparison — converged metadata (UI routes to compareOrbStandaloneDocuments). */
+export const ORB_CONVERGED_COMPARISON_ACTIONS: OrbConvergedAction[] = [
+  {
+    id: 'compare_documents',
+    label: 'Compare documents',
+    description: 'Compare two documents with ORB',
+    category: 'document_lens',
+    surfaces: ['documents', 'saved_outputs', 'chat'],
+    route: 'compareOrbStandaloneDocuments',
+    outputTarget: 'document_analysis',
+    requiresHumanReview: true
+  },
+  {
+    id: 'summarise_recent_changes',
+    label: 'Summarise recent changes',
+    description: 'Orientation on what changed between versions',
+    category: 'document_lens',
+    surfaces: ['documents', 'saved_outputs'],
+    route: 'compareOrbStandaloneDocuments:recent_changes',
+    outputTarget: 'document_analysis',
+    requiresHumanReview: true
+  },
+  {
+    id: 'create_easy_read_briefing',
+    label: 'Create easy-read briefing',
+    description: 'Plain-English briefing from comparison',
+    category: 'document_lens',
+    surfaces: ['documents', 'saved_outputs'],
+    route: 'compareOrbStandaloneDocuments:easy_read_briefing',
+    outputTarget: 'write',
+    requiresHumanReview: true
+  },
+  {
+    id: 'create_staff_briefing',
+    label: 'Create staff briefing',
+    description: 'Shift-ready staff briefing from documents',
+    category: 'document_lens',
+    surfaces: ['documents', 'saved_outputs', 'templates'],
+    route: 'runOrbDocumentIntelligence:staff_briefing',
+    outputTarget: 'write',
+    requiresHumanReview: true,
+    documentLens: 'staff_briefing'
+  },
+  {
+    id: 'create_action_plan_from_comparison',
+    label: 'Create action plan from comparison',
+    description: 'Manager action plan from document diff',
+    category: 'document_lens',
+    surfaces: ['documents', 'saved_outputs'],
+    route: 'compareOrbStandaloneDocuments:action_plan',
+    outputTarget: 'write',
+    requiresHumanReview: true,
+    editMode: 'action_plan',
+    instruction: 'Create a practical action plan with owners and follow-up from this comparison'
   }
 ]
 
@@ -599,6 +794,21 @@ export const ORB_CONVERGED_WRITE_PANEL_GROUPS: Array<{
     actionIds: ['missing', 'review_record', 'professional', 'remove_blame', 'child_centred', 'grammar', 'record_properly']
   },
   {
+    key: 'spelling',
+    title: 'Spelling & grammar',
+    actionIds: ['check_spelling_grammar', 'grammar', 'check_names_dates_times']
+  },
+  {
+    key: 'style',
+    title: 'Writing style',
+    actionIds: [
+      'apply_therapeutic_style',
+      'apply_child_centred_style',
+      'apply_concise_professional_style',
+      'apply_inspection_ready_style'
+    ]
+  },
+  {
     key: 'safety',
     title: 'Safety & quality',
     actionIds: [
@@ -629,7 +839,8 @@ export function convergedActionsForSurface(surface: OrbConvergedSurface): OrbCon
     ...ORB_CONVERGED_WRITE_ACTIONS,
     ...ORB_CONVERGED_CHAT_STARTER_ACTIONS,
     ...ORB_CONVERGED_DICTATE_OUTPUTS,
-    ...ORB_CONVERGED_DOCUMENT_LENSES
+    ...ORB_CONVERGED_DOCUMENT_LENSES,
+    ...ORB_CONVERGED_COMPARISON_ACTIONS
   ].filter((action) => action.surfaces.includes(surface))
 }
 

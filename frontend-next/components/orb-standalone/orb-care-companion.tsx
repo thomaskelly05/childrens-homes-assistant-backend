@@ -2978,7 +2978,19 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         initialText={documentImportText}
         initialLens={documentImportLens}
         initialRecordTypeId={documentImportRecordTypeId}
-        onOpenOrbWrite={openOrbWritePanel}
+        onOpenOrbWrite={(handoff) => {
+          if (handoff?.content) {
+            convergedHandoffToOrbWrite({
+              content: handoff.content,
+              source: 'document',
+              sourceLabel: `Documents & Guidance — ${handoff.outputType.replace(/_/g, ' ')}`,
+              title: handoff.title,
+              recordTypeId: handoff.recordTypeId,
+              suggestedOutputType: handoff.outputType
+            })
+          }
+          openOrbWritePanel()
+        }}
         onOpenTemplates={openTemplatesPanel}
         projects={workspace.projects}
         activeProjectId={workspace.activeProjectId}

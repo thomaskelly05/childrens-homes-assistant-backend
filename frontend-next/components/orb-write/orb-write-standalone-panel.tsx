@@ -14,6 +14,11 @@ import { OrbStudioShell } from '@/components/orb/premium'
 import { OrbWriteEditor } from '@/components/orb-write/orb-write-editor'
 import { OrbWriteSourcePanel } from '@/components/orb-write/orb-write-source-panel'
 import {
+  OrbWriteTemplatePicker,
+  type OrbWriteTemplateApplyMode
+} from '@/components/orb-write/orb-write-template-picker'
+import { OrbWriteWritingStylePanel } from '@/components/orb-write/orb-write-writing-style-panel'
+import {
   clearOrbWriteContentHandoff,
   contentHandoffToOrbWriteDocument,
   loadOrbWriteContentHandoff
@@ -82,6 +87,7 @@ export function OrbWriteStandalonePanel({
   const [wordCount, setWordCount] = useState(0)
   const [hasLocalDraft, setHasLocalDraft] = useState(false)
   const [selectedGuidance, setSelectedGuidance] = useState<OrbWriteSelectedGuidance | null>(null)
+  const [templatePickerOpen, setTemplatePickerOpen] = useState(false)
 
   const recordType = useMemo(
     () => resolveOrbRecordingRecordType({ recordTypeId }),
@@ -319,6 +325,56 @@ export function OrbWriteStandalonePanel({
     setStatusMessage('Local draft opened.')
   }
 
+  const applyTemplate = useCallback(
+    (opts: {
+      recordType: import('@/lib/orb/recording/orb-recording-types').OrbRecordingRecordType
+      mode: OrbWriteTemplateApplyMode
+      structuredBody?: string
+    }) => {
+      const { recordType, mode, structuredBody } = opts
+      setRecordTypeId(recordType.id)
+      setDoc((prev) => {
+        if (!prev) {
+          return createBlankOrbWriteDocumentFromRecordType(recordType)
+        }
+        if (mode === 'style_guidance') {
+          return {
+            ...prev,
+            record_type: recordType.dictate_note_type,
+            record_type_id: recordType.id,
+            record_type_label: recordType.label,
+            document_headings: recordType.pdf_heading_order,
+            template_id: recordType.studio_template_id ?? 'general',
+            updated_at: new Date().toISOString()
+          }
+        }
+        const nextBody =
+          mode === 'merge' && prev.body.trim()
+            ? `${structuredBody ?? ''}\n\n---\n\n${prev.body}`
+            : structuredBody ?? prev.body
+        return {
+          ...prev,
+          title: recordType.label,
+          record_type: recordType.dictate_note_type,
+          record_type_id: recordType.id,
+          record_type_label: recordType.label,
+          document_headings: recordType.pdf_heading_order,
+          template_id: recordType.studio_template_id ?? 'general',
+          body: nextBody,
+          updated_at: new Date().toISOString()
+        }
+      })
+      setStatusMessage(
+        mode === 'style_guidance'
+          ? `Writing style guidance updated for ${recordType.label}.`
+          : `Template applied — ${recordType.label}.`
+      )
+    },
+    []
+  )
+
+  const hasExistingContent = Boolean(doc?.body.replace(/<[^>]+>/g, '').trim())
+
   return (
     <OrbAppModal
       open={open}
@@ -375,6 +431,7 @@ export function OrbWriteStandalonePanel({
                 roughText={roughText}
                 onRoughTextChange={setRoughText}
                 onContinueFromDictate={onOpenDictate}
+                onChooseTemplate={() => setTemplatePickerOpen(true)}
                 onOpenTemplates={onOpenTemplates}
                 onOpenSavedDraft={openFromDraft}
                 hasLocalDraft={hasLocalDraft}
@@ -404,6 +461,11 @@ export function OrbWriteStandalonePanel({
                     onSuggestionUpdate={updateSuggestion}
                   />
                 </div>
+                <OrbWriteWritingStylePanel
+                  document={doc}
+                  recordType={recordType}
+                  onApplyRevision={applyRevision}
+                />
                 <OrbWriteGuidancePanel
                   document={doc}
                   selected={selectedGuidance}
@@ -430,6 +492,13 @@ export function OrbWriteStandalonePanel({
             ) : null}
           </div>
         ) : null}
+        <OrbWriteTemplatePicker
+          open={templatePickerOpen}
+          currentRecordTypeId={recordTypeId}
+          hasExistingContent={hasExistingContent}
+          onClose={() => setTemplatePickerOpen(false)}
+          onApply={applyTemplate}
+        />
       </OrbStudioShell>
     </OrbAppModal>
   )

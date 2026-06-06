@@ -23,6 +23,7 @@ export type OrbSavedOutputSourceFeature =
   | 'dictate'
   | 'voice'
   | 'document_intelligence'
+  | 'document_comparison'
   | 'policy_card'
   | 'shift_builder'
   | 'action_engine'
@@ -71,6 +72,7 @@ const SOURCE_FEATURE_LABELS: Record<string, string> = {
   dictate: 'Dictate',
   voice: 'Voice',
   document_intelligence: 'Documents',
+  document_comparison: 'Document comparison',
   policy_card: 'Policy Card',
   shift_builder: 'Shift Builder',
   action_engine: 'Action Engine',

@@ -66,6 +66,8 @@ export function buildSavedOutputWriteHandoff(
     dictate: 'dictate',
     document_intelligence: 'document',
     document_analysis: 'document',
+    document_comparison: 'document',
+    policy_change_summary: 'document',
     template: 'template',
     saved_output: 'saved_output'
   }

@@ -1219,6 +1219,21 @@ export async function analyseOrbStandaloneDocument(body: {
   return unwrapKnowledgeData<{ understanding: OrbDocumentUnderstanding }>(payload)
 }
 
+/** Two-document comparison via governed `/compare` route (policy_comparison mode). */
+export async function compareOrbStandaloneDocuments(body: {
+  mode: 'policy_comparison'
+  title: string
+  text: string
+  question?: string
+}) {
+  const payload = await authFetch('/orb/standalone/documents/compare', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...body, include_evaluation: true })
+  })
+  return unwrapKnowledgeData<{ understanding: OrbDocumentUnderstanding }>(payload)
+}
+
 export type OrbDocumentLens =
   | 'summary'
   | 'explain'
