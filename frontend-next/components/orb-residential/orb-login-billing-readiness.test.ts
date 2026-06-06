@@ -36,7 +36,7 @@ describe('ORB login and billing readiness', () => {
     assert.match(login, /Powered by IndiCare Intelligence/)
     assert.match(login, /AI support for residential children/)
     assert.match(login, /Record better\. Reflect faster\. Respond safer\./)
-    assert.match(login, /professional judgement, not replace it/)
+    assert.match(login, /professional judgement/)
     assert.match(login, /Human review required/)
   })
 

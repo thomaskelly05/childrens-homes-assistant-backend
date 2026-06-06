@@ -45,7 +45,13 @@ function resolvePostLoginRoute(access: Awaited<ReturnType<typeof fetchOrbAccess>
   return ORB_RETURN
 }
 
-function OrbLoginPanel() {
+function OrbLoginPanel({
+  returnUrl: returnUrlProp,
+  embedded = false
+}: {
+  returnUrl?: string
+  embedded?: boolean
+}) {
   const { resolvedTheme, appearanceMode } = useOrbAppearance()
   useOrbResidentialThemeSync()
   const router = useRouter()
@@ -61,13 +67,30 @@ function OrbLoginPanel() {
   const [passkeyEmail, setPasskeyEmail] = useState('')
   const [passkeySupported, setPasskeySupported] = useState(false)
 
-  const returnUrl = searchParams.get('returnUrl') || ORB_RETURN
+  const returnUrl = returnUrlProp || searchParams.get('returnUrl') || ORB_RETURN
 
   const [oauth, setOauth] = useState({
     google: process.env.NEXT_PUBLIC_OAUTH_GOOGLE_ENABLED === '1',
     microsoft: process.env.NEXT_PUBLIC_OAUTH_MICROSOFT_ENABLED === '1',
     apple: process.env.NEXT_PUBLIC_OAUTH_APPLE_ENABLED === '1'
   })
+
+  useEffect(() => {
+    if (status !== 'authenticated') return
+    let cancelled = false
+    void (async () => {
+      try {
+        const access = await fetchOrbAccess()
+        if (cancelled) return
+        router.replace(resolvePostLoginRoute(access))
+      } catch {
+        if (!cancelled) router.replace(returnUrl.startsWith('/orb') ? returnUrl : ORB_RETURN)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [returnUrl, router, status])
 
   useEffect(() => {
     setPasskeySupported(orbPasskeysSupported())
@@ -162,46 +185,77 @@ function OrbLoginPanel() {
 
   const authBusy = submitting || passkeySubmitting || status === 'loading'
 
+  if (status === 'authenticated') {
+    return (
+      <div
+        className={`orb-residential-root orb-login-root ${themeClass} flex min-h-[100dvh] items-center justify-center`}
+        data-orb-login-page
+        data-orb-auth-loading
+        data-orb-residential="true"
+        style={getOrbThemeCssVariables(resolvedTheme)}
+      >
+        <p className="text-sm text-[var(--orb-muted)]">Signing you in…</p>
+      </div>
+    )
+  }
+
   return (
     <div
       className={`orb-residential-root orb-login-root ${themeClass} min-h-[100dvh]`}
       data-orb-login-page
+      data-orb-login-mobile-single-column
       data-orb-residential="true"
       data-orb-theme={resolvedTheme}
       data-orb-appearance={appearanceMode}
       data-orb-appearance-mode={appearanceMode}
+      data-orb-login-embedded={embedded ? 'true' : undefined}
       style={getOrbThemeCssVariables(resolvedTheme)}
     >
-      <div className="orb-login-shell mx-auto flex min-h-[100dvh] max-w-lg flex-col px-6 py-8 sm:max-w-6xl sm:px-8 lg:grid lg:max-w-6xl lg:grid-cols-2 lg:gap-0">
-        <div className="orb-login-hero hidden flex-col justify-center lg:flex lg:px-12">
-          <Link href="/" className="orb-login-brand-link text-sm font-semibold" data-orb-login-brand>
-            ORB Residential
-          </Link>
-          <p className="orb-login-tagline mt-1 text-xs">Powered by IndiCare Intelligence</p>
-          <h1 className="orb-login-headline mt-8 text-3xl font-semibold tracking-tight" data-orb-login-title>
-            AI support for residential children&apos;s homes
-          </h1>
-          <p className="orb-login-lead mt-4 text-base leading-relaxed">
-            Record better. Reflect faster. Respond safer.
-          </p>
-          <p className="orb-login-muted mt-3 text-sm leading-relaxed">
-            Built to support professional judgement, not replace it.
-          </p>
-          <ul className="orb-login-trust mt-8 space-y-2 text-sm" data-orb-login-trust-points>
-            {TRUST_POINTS.map((point) => (
-              <li key={point} className="flex items-center gap-2">
-                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--orb-res-primary,#1677ff)]" aria-hidden />
-                {point}
-              </li>
-            ))}
-          </ul>
-          <div className="mt-10 flex justify-center lg:justify-start">
-            <OrbHeroSphere className="scale-90" />
+      <div
+        className="orb-login-shell mx-auto grid min-h-[100dvh] w-full max-w-[72rem] grid-cols-1 px-5 py-8 sm:px-8 lg:grid-cols-2 lg:gap-12 lg:px-10 lg:py-0"
+        data-orb-login-two-column
+      >
+        <div
+          className="orb-login-hero relative hidden flex-col justify-center lg:flex lg:px-4 xl:px-8"
+          data-orb-login-hero-centered
+        >
+          <div className="orb-login-hero-glow pointer-events-none absolute inset-0" aria-hidden />
+          <div className="relative flex flex-col justify-center">
+            <Link href="/" className="orb-login-brand-link text-sm font-semibold" data-orb-login-brand>
+              ORB Residential
+            </Link>
+            <p className="orb-login-tagline mt-1 text-xs">Powered by IndiCare Intelligence</p>
+            <h1
+              className="orb-login-headline mt-8 max-w-md text-3xl font-semibold tracking-tight xl:text-[2rem]"
+              data-orb-login-title
+            >
+              AI support for residential children&apos;s homes
+            </h1>
+            <p className="orb-login-lead mt-4 max-w-md text-base leading-relaxed">
+              Record better. Reflect faster. Respond safer.
+            </p>
+            <ul className="orb-login-trust mt-8 max-w-md space-y-2.5 text-sm" data-orb-login-trust-points>
+              {TRUST_POINTS.map((point) => (
+                <li key={point} className="flex items-center gap-2.5">
+                  <span
+                    className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--orb-res-primary,#1677ff)]"
+                    aria-hidden
+                  />
+                  {point}
+                </li>
+              ))}
+            </ul>
+            <div className="orb-login-hero-sphere-wrap mt-10 flex justify-center lg:justify-start">
+              <OrbHeroSphere className="scale-90 xl:scale-100" />
+            </div>
           </div>
         </div>
 
-        <div className="orb-login-panel flex min-h-0 flex-1 flex-col justify-center lg:border-l lg:pl-12">
-          <div className="orb-login-panel-inner mx-auto w-full max-w-md">
+        <div
+          className="orb-login-panel flex min-h-0 flex-col justify-center lg:px-4 xl:px-8"
+          data-orb-login-panel-centered
+        >
+          <div className="orb-login-card orb-login-panel-inner mx-auto w-full max-w-md rounded-[1.75rem] border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)]/80 p-6 shadow-xl shadow-black/10 backdrop-blur-sm sm:p-8">
             <div className="flex flex-col items-center text-center lg:hidden">
               <OrbHeroSphere className="mb-4 scale-75" />
             </div>
@@ -223,27 +277,30 @@ function OrbLoginPanel() {
             ) : null}
 
             <section className="mt-6" aria-labelledby="orb-login-work-account">
-              <h3 id="orb-login-work-account" className="orb-login-section-title text-xs font-semibold uppercase tracking-wide">
+              <h3
+                id="orb-login-work-account"
+                className="orb-login-section-title text-xs font-semibold uppercase tracking-wide"
+              >
                 1. Continue with work account
               </h3>
               <div className="mt-2.5 space-y-2.5" data-orb-oauth-buttons>
                 <OrbAuthButton
                   provider="microsoft"
-                  href={oauth.microsoft ? orbOAuthStartUrl('microsoft', ORB_RETURN) : undefined}
+                  href={oauth.microsoft ? orbOAuthStartUrl('microsoft', returnUrl) : undefined}
                   disabled={!oauth.microsoft || authBusy}
                 >
                   Continue with Microsoft
                 </OrbAuthButton>
                 <OrbAuthButton
                   provider="google"
-                  href={oauth.google ? orbOAuthStartUrl('google', ORB_RETURN) : undefined}
+                  href={oauth.google ? orbOAuthStartUrl('google', returnUrl) : undefined}
                   disabled={!oauth.google || authBusy}
                 >
                   {oauth.google ? 'Continue with Google' : 'Google — not configured'}
                 </OrbAuthButton>
                 <OrbAuthButton
                   provider="apple"
-                  href={oauth.apple ? orbOAuthStartUrl('apple', ORB_RETURN) : undefined}
+                  href={oauth.apple ? orbOAuthStartUrl('apple', returnUrl) : undefined}
                   disabled={!oauth.apple || authBusy}
                 >
                   Continue with Apple
@@ -324,7 +381,10 @@ function OrbLoginPanel() {
 
             {passkeySupported ? (
               <section className="mt-6" aria-labelledby="orb-login-passkey">
-                <h3 id="orb-login-passkey" className="orb-login-section-title text-xs font-semibold uppercase tracking-wide">
+                <h3
+                  id="orb-login-passkey"
+                  className="orb-login-section-title text-xs font-semibold uppercase tracking-wide"
+                >
                   3. Other secure options
                 </h3>
                 <p className="orb-login-muted mt-2 text-xs leading-relaxed">
@@ -384,16 +444,18 @@ function OrbLoginPanel() {
               </p>
             </div>
 
-            <p className="orb-login-back mt-4 text-xs">
-              <Link href="/" className="orb-login-link-subtle">
-                ← Back to home
-              </Link>
-            </p>
+            {!embedded ? (
+              <p className="orb-login-back mt-4 text-xs">
+                <Link href="/" className="orb-login-link-subtle">
+                  ← Back to home
+                </Link>
+              </p>
+            ) : null}
 
             <footer className="orb-login-footer mt-8 border-t border-[var(--orb-line)]/40 pt-6 text-[10px] leading-relaxed text-[var(--orb-muted)]">
               <p data-orb-login-disclaimer>
-                ORB supports professional judgement and does not replace safeguarding procedures, managers,
-                emergency services or legal advice.
+                ORB supports professional judgement and does not replace safeguarding procedures, managers, emergency
+                services or legal advice.
               </p>
               <OrbLegalLinks
                 className="mt-4 justify-start gap-4"
@@ -408,16 +470,25 @@ function OrbLoginPanel() {
   )
 }
 
-export function OrbLoginScreen() {
+export function OrbLoginScreen({
+  returnUrl,
+  embedded = false
+}: {
+  returnUrl?: string
+  embedded?: boolean
+} = {}) {
   return (
     <Suspense
       fallback={
-        <div className="orb-residential-root orb-login-root orb-login-root--dark flex min-h-[100dvh] items-center justify-center">
+        <div
+          className="orb-residential-root orb-login-root orb-login-root--dark flex min-h-[100dvh] items-center justify-center"
+          data-orb-auth-loading
+        >
           Loading…
         </div>
       }
     >
-      <OrbLoginPanel />
+      <OrbLoginPanel returnUrl={returnUrl} embedded={embedded} />
     </Suspense>
   )
 }

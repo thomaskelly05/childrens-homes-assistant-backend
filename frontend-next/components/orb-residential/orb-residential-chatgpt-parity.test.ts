@@ -50,7 +50,7 @@ describe('ORB Residential ChatGPT parity', () => {
     const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
     const account = readComponent('components/orb-standalone/orb-account-modal.tsx')
     assert.match(companion, /OrbAccountModal/)
-    assert.match(companion, /openResidentialAccount/)
+    assert.match(companion, /openResidentialAccountMenu|openResidentialProfile/)
     assert.match(companion, /data-orb-header-profile/)
     assert.match(account, /data-orb-account-modal/)
   })

@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect } from 'react'
 
+import { OrbAuthGate } from '@/components/orb-residential/orb-auth-gate'
 import { OrbUpgradeScreen } from '@/components/orb-standalone/orb-upgrade-screen'
 import { OrbShell } from '@/components/orb-residential/ui/orb-shell'
 
@@ -13,15 +14,17 @@ export function OrbBillingPage() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-[#050b18]" data-orb-billing>
-      <OrbShell showOsLink={false}>
-        <Link href="/orb" className="text-xs text-slate-500 hover:text-sky-300">
-          ← Back to ORB
-        </Link>
-      </OrbShell>
-      <div className="[&_.min-h-screen]:min-h-0 [&_main]:bg-transparent">
-        <OrbUpgradeScreen />
+    <OrbAuthGate mode="billing">
+      <div className="min-h-screen bg-[#050b18]" data-orb-billing>
+        <OrbShell showOsLink={false}>
+          <Link href="/orb" className="text-xs text-slate-500 hover:text-sky-300">
+            ← Back to ORB
+          </Link>
+        </OrbShell>
+        <div className="[&_.min-h-screen]:min-h-0 [&_main]:bg-transparent">
+          <OrbUpgradeScreen />
+        </div>
       </div>
-    </div>
+    </OrbAuthGate>
   )
 }
