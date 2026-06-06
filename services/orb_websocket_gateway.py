@@ -9,14 +9,16 @@ from typing import Any
 
 from fastapi import HTTPException, WebSocket, WebSocketDisconnect, status
 
-from auth.routes import settings as auth_settings
 from auth.rbac import has_permission, normalise_role
-from auth.tokens import decode_session_token
+from auth.websocket_auth import (
+    decode_websocket_session_payload,
+    resolve_websocket_session_token,
+    websocket_session_is_revoked,
+)
 from services.audit_event_service import record_audit_event
 from services.orb_observability_service import orb_observability_service, worker_id
 from services.orb_session_store import orb_session_store
 from services.realtime_event_bus import realtime_event_bus
-from services.session_security_service import is_session_revoked
 
 
 def _user_id(current_user: dict[str, Any]) -> int | None:
@@ -50,18 +52,11 @@ class OrbWebSocketGateway:
         self.max_messages_per_window = int(os.getenv("ORB_WEBSOCKET_RATE_LIMIT", "60"))
 
     def websocket_user(self, websocket: WebSocket) -> dict[str, Any] | None:
-        token = (websocket.cookies.get(auth_settings.session_cookie_name) or "").strip()
-        if not token:
-            auth = websocket.headers.get("authorization") or ""
-            if auth.lower().startswith("bearer "):
-                token = auth[7:].strip()
-        if not token:
-            token = (websocket.query_params.get("token") or "").strip()
-        payload = decode_session_token(token) if token else None
+        token = resolve_websocket_session_token(websocket)
+        payload = decode_websocket_session_payload(token) if token else None
         if not payload:
             return None
-        session_id = payload.get("sid")
-        if session_id and is_session_revoked(str(session_id)):
+        if websocket_session_is_revoked(payload):
             return None
         role = normalise_role(payload.get("role"))
         permissions = set(payload.get("permissions") or [])

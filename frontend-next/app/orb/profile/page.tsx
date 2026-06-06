@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
+import { OrbAuthGate } from '@/components/orb-residential/orb-auth-gate'
 import { OrbAdultProfileDrawer } from '@/components/orb-standalone/orb-adult-profile-drawer'
 import { readAdultProfile, type AdultProfile } from '@/lib/orb/adult-profile-store'
 import { cognitionLabelForMode } from '@/lib/orb/residential-agents'
@@ -18,15 +19,18 @@ export default function OrbProfileSettingsPage() {
 
   if (!profile) {
     return (
-      <main className="flex min-h-dvh items-center justify-center bg-[var(--orb-bg-deep)] text-[var(--orb-foreground)]">
-        <p className="text-sm text-[var(--orb-muted)]">Loading profile…</p>
-      </main>
+      <OrbAuthGate mode="product">
+        <main className="flex min-h-dvh items-center justify-center bg-[var(--orb-bg-deep)] text-[var(--orb-foreground)]">
+          <p className="text-sm text-[var(--orb-muted)]">Loading profile…</p>
+        </main>
+      </OrbAuthGate>
     )
   }
 
   const agent = agentById(profile.preferredAgent)
 
   return (
+    <OrbAuthGate mode="product">
     <main className="min-h-dvh bg-[var(--orb-bg-deep)] text-[var(--orb-foreground)]" data-orb-profile-page>
       <div className="mx-auto max-w-lg px-5 py-8">
         <Link href="/orb" className="text-sm text-[var(--orb-accent)] hover:underline">
@@ -74,5 +78,6 @@ export default function OrbProfileSettingsPage() {
         onSave={setProfile}
       />
     </main>
+    </OrbAuthGate>
   )
 }

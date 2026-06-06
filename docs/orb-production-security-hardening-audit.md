@@ -154,8 +154,8 @@ Staff and `orb_residential` users cannot PATCH settings.
 2. **Client-only `/orb` gate** — **PARTIALLY FIXED** (middleware hybrid + cache headers)
 3. **`require_orb_residential_premium` KeyError on empty user** — **FIXED**
 4. **Document upload lacked explicit size/type guards at route** — **FIXED**
-5. **WebSocket `?token=` leakage risk** — documented; not changed (OAuth-compat)
-6. **Session revocation skipped on residential HTTP loader** — documented gap
+5. **WebSocket `?token=` leakage risk** — **FIXED** (`auth/websocket_auth.py`, production rejects query tokens)
+6. **Session revocation skipped on residential HTTP loader** — **FIXED** (`_enforce_session_state`)
 
 ---
 
@@ -172,7 +172,9 @@ Staff and `orb_residential` users cannot PATCH settings.
 
 ## Remaining launch blockers (non-blocking / follow-up)
 
-- WebSocket auth via query param — prefer header-only in future
-- Residential auth loader session revocation parity with WebSocket handler
-- `/orb/ask`, `/orb/profile` pages lack `OrbAuthGate` — mitigated by middleware + API gates
 - Rate limiting not uniform on all ORB routes (signup analytics soft-fail by design)
+- CSP headers for ORB surfaces
+- Dev-only WebSocket `?token=` fallback (remove when clients migrated)
+- Server layout session probe (optional defence in depth)
+
+See `docs/orb-security-follow-up-audit.md` and `docs/orb-production-smoke-test.md`.

@@ -6,6 +6,7 @@ from fastapi import Depends, Request
 
 from auth.current_user import (
     _decode_user_id_from_payload,
+    _enforce_session_state,
     _get_request_token,
     _load_active_user,
     _normalise_role,
@@ -24,9 +25,7 @@ def get_orb_residential_user(
 ) -> dict[str, Any]:
     """Authenticate ORB Residential API requests.
 
-    Uses the same session cookie/JWT validity as ``/auth/me`` and passkey routes.
-    Session revocation is not re-checked here so ORB project sync stays aligned with
-    other browser-authenticated ORB surfaces when the session cookie is still valid.
+    Uses the same session cookie/JWT validity and revocation checks as ``/auth/me``.
     """
     token = _get_request_token(request, bearer_token)
     if not token:
@@ -36,6 +35,7 @@ def get_orb_residential_user(
     if not payload:
         raise unauthorised("session_invalid_or_expired", "Invalid or expired session")
 
+    _enforce_session_state(payload, conn)
     user_id = _decode_user_id_from_payload(payload)
 
     try:

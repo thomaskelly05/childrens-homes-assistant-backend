@@ -3,12 +3,14 @@
 import { useState } from 'react'
 import Link from 'next/link'
 
+import { OrbAuthGate } from '@/components/orb-residential/orb-auth-gate'
 import { OrbIntelligenceMapPanel } from '@/components/orb-standalone/orb-intelligence-map-panel'
 
 export default function OrbIntelligenceMapPage() {
   const [open, setOpen] = useState(true)
 
   return (
+    <OrbAuthGate mode="product">
     <div className="min-h-screen bg-[#05070d] text-white">
       <header className="flex items-center justify-between border-b border-white/10 px-6 py-4">
         <Link href="/orb" className="text-sm font-semibold text-cyan-200 hover:underline">
@@ -29,5 +31,6 @@ export default function OrbIntelligenceMapPage() {
         </div>
       ) : null}
     </div>
+    </OrbAuthGate>
   )
 }

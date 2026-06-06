@@ -7,12 +7,14 @@ import os
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 import websockets
 
-from auth.routes import settings as auth_settings
 from auth.rbac import has_permission, normalise_role
-from auth.tokens import decode_session_token
+from auth.websocket_auth import (
+    decode_websocket_session_payload,
+    resolve_websocket_session_token,
+    websocket_session_is_revoked,
+)
 from middleware.assistant_realtime_guard import assistant_realtime_guard
 from services.audit_event_service import record_audit_event
-from services.session_security_service import is_session_revoked
 
 router = APIRouter(prefix="/assistant/realtime", tags=["Assistant Realtime Proxy"])
 
@@ -25,18 +27,11 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 
 
 def _websocket_user(websocket: WebSocket) -> dict | None:
-    token = (websocket.cookies.get(auth_settings.session_cookie_name) or "").strip()
-    if not token:
-        auth = websocket.headers.get("authorization") or ""
-        if auth.lower().startswith("bearer "):
-            token = auth[7:].strip()
-    if not token:
-        token = (websocket.query_params.get("token") or "").strip()
-    payload = decode_session_token(token) if token else None
+    token = resolve_websocket_session_token(websocket)
+    payload = decode_websocket_session_payload(token) if token else None
     if not payload:
         return None
-    session_id = payload.get("sid")
-    if session_id and is_session_revoked(str(session_id)):
+    if websocket_session_is_revoked(payload):
         return None
     role = normalise_role(payload.get("role"))
     permissions = set(payload.get("permissions") or [])

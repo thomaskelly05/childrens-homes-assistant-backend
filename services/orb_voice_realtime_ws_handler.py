@@ -5,8 +5,11 @@ from typing import Any
 
 from fastapi import WebSocket, WebSocketDisconnect
 
-from auth.routes import settings as auth_settings
-from auth.tokens import decode_session_token
+from auth.websocket_auth import (
+    decode_websocket_session_payload,
+    resolve_websocket_session_token,
+    websocket_session_is_revoked,
+)
 from schemas.orb_voice_realtime import validate_client_event
 from services.orb_voice_realtime_config import (
     _dev_text_simulation,
@@ -14,22 +17,14 @@ from services.orb_voice_realtime_config import (
     _provider_has_tts_credentials,
 )
 from services.orb_voice_realtime_session_store import orb_voice_realtime_session_store
-from services.session_security_service import is_session_revoked
 
 
 def _websocket_user(websocket: WebSocket) -> dict[str, Any] | None:
-    token = (websocket.cookies.get(auth_settings.session_cookie_name) or "").strip()
-    if not token:
-        auth = websocket.headers.get("authorization") or ""
-        if auth.lower().startswith("bearer "):
-            token = auth[7:].strip()
-    if not token:
-        token = (websocket.query_params.get("token") or "").strip()
-    payload = decode_session_token(token) if token else None
+    token = resolve_websocket_session_token(websocket)
+    payload = decode_websocket_session_payload(token) if token else None
     if not payload:
         return None
-    session_id = payload.get("sid")
-    if session_id and is_session_revoked(str(session_id)):
+    if websocket_session_is_revoked(payload):
         return None
     try:
         user_id = int(payload.get("sub"))
