@@ -98,7 +98,8 @@ export function OrbAuthButton({
   provider,
   className,
   onClick,
-  type = 'link'
+  type = 'link',
+  unavailableLabel
 }: {
   href?: string
   disabled?: boolean
@@ -107,17 +108,20 @@ export function OrbAuthButton({
   className?: string
   onClick?: () => void
   type?: 'link' | 'button'
+  unavailableLabel?: string
 }) {
   const base = clsx(
-    'orb-auth-button flex w-full items-center justify-center gap-2.5 rounded-2xl border px-4 py-3 text-sm font-semibold transition min-h-[3rem] sm:min-h-[3.25rem]',
+    'orb-auth-button flex w-full items-center justify-center gap-2.5 rounded-2xl border px-4 py-2.5 text-sm font-semibold transition min-h-[2.75rem] sm:min-h-[3rem]',
     disabled ? 'orb-auth-button--disabled cursor-not-allowed' : 'orb-auth-button--enabled',
     className
   )
 
+  const label = disabled && unavailableLabel ? unavailableLabel : children
+
   const content = (
     <>
       <OrbAuthProviderIcon provider={provider} />
-      <span>{children}</span>
+      <span>{label}</span>
     </>
   )
 

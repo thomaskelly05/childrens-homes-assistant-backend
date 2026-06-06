@@ -22,19 +22,20 @@ describe('ORB Residential routing', () => {
     assert.equal(isStandaloneOrbSurfaceRoute('/os'), false)
   })
 
-  it('root page renders ORB front door without OS shell', () => {
+  it('root page redirects to canonical /orb front door', () => {
     const page = readApp('app/page.tsx')
-    assert.match(page, /OrbFrontDoor/)
+    assert.match(page, /redirect\('\/orb'\)/)
     assert.doesNotMatch(page, /OsHomeClient/)
   })
 
-  it('front door fits one screen without large capability cards', () => {
-    const door = readApp('components/orb-residential/orb-front-door.tsx')
-    assert.match(door, /h-\[100dvh\].*overflow-hidden/s)
-    assert.match(door, /Start Free Trial/)
-    assert.match(door, /\/orb\/login\?returnUrl=\/orb/)
-    assert.doesNotMatch(door, /OrbCapabilityCard/)
-    assert.match(door, /data-orb-front-door-example/)
+  it('canonical /orb login is the product front door via OrbAuthGate', () => {
+    const shell = readApp('components/orb/orb-shell.tsx')
+    const gate = readApp('components/orb-residential/orb-auth-gate.tsx')
+    const login = readApp('components/orb-residential/orb-login-screen.tsx')
+    assert.match(shell, /OrbAuthGate/)
+    assert.match(gate, /OrbLoginScreen/)
+    assert.match(login, /ORB Residential/)
+    assert.match(login, /sanitizeOrbReturnUrl/)
   })
 
   it('/orb/login shows Microsoft, Google, Apple, Email with icons and OAuth return /orb', () => {
@@ -43,9 +44,9 @@ describe('ORB Residential routing', () => {
     assert.match(login, /Continue with Microsoft/)
     assert.match(login, /Continue with Google/)
     assert.match(login, /Continue with Apple/)
-    assert.match(login, /Continue with Email/)
-    assert.match(login, /orbOAuthStartUrl\('microsoft', ORB_RETURN\)/)
-    assert.match(login, /Use Face ID, Touch ID or device passkey/)
+    assert.match(login, /Continue with email/)
+    assert.match(login, /orbOAuthStartUrl\('microsoft', returnUrl\)/)
+    assert.match(login, /Use passkey/)
     assert.match(login, /min-h-\[100dvh\]/s)
     assert.match(authBtn, /OrbAuthProviderIcon/)
     assert.match(authBtn, /MicrosoftIcon/)
@@ -130,7 +131,7 @@ describe('ORB Residential routing', () => {
   it('post-login routes to /orb not mandatory setup', () => {
     const login = readApp('components/orb-residential/orb-login-screen.tsx')
     assert.match(login, /return ORB_RETURN/)
-    assert.match(login, /const ORB_RETURN = '\/orb'/)
+    assert.match(login, /ORB_CANONICAL_FRONT_DOOR/)
     assert.doesNotMatch(login, /onboarding_completed.*\/orb\/setup/s)
   })
 })

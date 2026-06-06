@@ -34,8 +34,22 @@
 }
 
 @media (max-width: 1023px) {
+  .orb-login-root {
+    min-height: 100dvh;
+    min-height: 100svh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
   .orb-login-shell {
     max-width: 28rem;
+    min-height: min(100dvh, 100svh);
+    padding-bottom: max(1.5rem, env(safe-area-inset-bottom, 0px));
+  }
+
+  [data-orb-login-scrollable] {
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
   }
 
   .orb-login-card {
@@ -46,8 +60,40 @@
     padding-left: 0;
     padding-right: 0;
   }
+
+  [data-orb-login-safe-bottom] {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+  }
+
+  [data-orb-login-mobile-hero] {
+    max-height: 7.5rem;
+    overflow: hidden;
+  }
+
+  .orb-auth-button--disabled {
+    opacity: 0.82 !important;
+    color: #475569 !important;
+    border-color: rgba(100, 116, 139, 0.35) !important;
+    background: rgba(148, 163, 184, 0.08) !important;
+  }
+
+  .orb-login-root--dark .orb-auth-button--disabled {
+    color: #cbd5e1 !important;
+    border-color: rgba(148, 163, 184, 0.35) !important;
+    background: rgba(255, 255, 255, 0.04) !important;
+  }
 }
 
 .orb-login-hero-sphere-wrap {
   max-width: 16rem;
+}
+
+.orb-auth-loading-root {
+  min-height: 100dvh;
+  min-height: 100svh;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.orb-auth-loading-inner [data-orb-hero-sphere] {
+  max-height: 5.5rem;
 }

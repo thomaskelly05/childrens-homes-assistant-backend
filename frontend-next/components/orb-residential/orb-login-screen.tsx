@@ -18,6 +18,8 @@ import {
 } from '@/lib/orb/orb-billing-client'
 import { OrbLegalLinks } from '@/components/orb-residential/orb-legal-links'
 import { beginOrbPasskeyLogin, orbPasskeysSupported } from '@/lib/orb/orb-passkey-client'
+import { ORB_CANONICAL_FRONT_DOOR, sanitizeOrbReturnUrl } from '@/lib/orb/orb-front-door-routing'
+import { OrbAuthLoadingScreen } from '@/components/orb-residential/orb-auth-loading-screen'
 
 function formatOAuthError(raw: string): string {
   const decoded = decodeURIComponent(raw.replace(/\+/g, ' '))
@@ -30,7 +32,13 @@ function formatOAuthError(raw: string): string {
   return decoded.length > 160 ? `${decoded.slice(0, 157)}…` : decoded
 }
 
-const ORB_RETURN = '/orb'
+const ORB_RETURN = ORB_CANONICAL_FRONT_DOOR
+
+const OAUTH_UNAVAILABLE_COPY: Record<'google' | 'microsoft' | 'apple', string> = {
+  google: 'Google sign-in unavailable',
+  microsoft: 'Microsoft sign-in unavailable',
+  apple: 'Apple sign-in unavailable'
+}
 
 const TRUST_POINTS = [
   'Human review required',
@@ -47,10 +55,12 @@ function resolvePostLoginRoute(access: Awaited<ReturnType<typeof fetchOrbAccess>
 
 function OrbLoginPanel({
   returnUrl: returnUrlProp,
-  embedded = false
+  embedded = false,
+  sessionError = null
 }: {
   returnUrl?: string
   embedded?: boolean
+  sessionError?: string | null
 }) {
   const { resolvedTheme, appearanceMode } = useOrbAppearance()
   useOrbResidentialThemeSync()
@@ -66,8 +76,10 @@ function OrbLoginPanel({
   const [emailStepReady, setEmailStepReady] = useState(false)
   const [passkeyEmail, setPasskeyEmail] = useState('')
   const [passkeySupported, setPasskeySupported] = useState(false)
+  const [passkeyExpanded, setPasskeyExpanded] = useState(false)
+  const [compactViewport, setCompactViewport] = useState(false)
 
-  const returnUrl = returnUrlProp || searchParams.get('returnUrl') || ORB_RETURN
+  const returnUrl = sanitizeOrbReturnUrl(returnUrlProp || searchParams.get('returnUrl') || ORB_RETURN)
 
   const [oauth, setOauth] = useState({
     google: process.env.NEXT_PUBLIC_OAUTH_GOOGLE_ENABLED === '1',
@@ -93,6 +105,13 @@ function OrbLoginPanel({
   }, [returnUrl, router, status])
 
   useEffect(() => {
+    const updateCompact = () => {
+      const height = window.innerHeight
+      setCompactViewport(height < 720)
+      if (height >= 720) setPasskeyExpanded(true)
+    }
+    updateCompact()
+    window.addEventListener('resize', updateCompact)
     setPasskeySupported(orbPasskeysSupported())
     trackOrbAnalytics('login_viewed')
     void fetch(ORB_BILLING_API.authProviders, { credentials: 'include' })
@@ -112,7 +131,9 @@ function OrbLoginPanel({
     const oauthError = searchParams.get('oauth_error')
     if (oauthError) setError(formatOAuthError(oauthError))
     if (searchParams.get('provider') === 'email') setEmailStepReady(true)
-  }, [searchParams])
+    if (sessionError) setError(sessionError)
+    return () => window.removeEventListener('resize', updateCompact)
+  }, [searchParams, sessionError])
 
   async function afterAuth() {
     await refreshSession()
@@ -186,22 +207,12 @@ function OrbLoginPanel({
   const authBusy = submitting || passkeySubmitting || status === 'loading'
 
   if (status === 'authenticated') {
-    return (
-      <div
-        className={`orb-residential-root orb-login-root ${themeClass} flex min-h-[100dvh] items-center justify-center`}
-        data-orb-login-page
-        data-orb-auth-loading
-        data-orb-residential="true"
-        style={getOrbThemeCssVariables(resolvedTheme)}
-      >
-        <p className="text-sm text-[var(--orb-muted)]">Signing you in…</p>
-      </div>
-    )
+    return <OrbAuthLoadingScreen />
   }
 
   return (
     <div
-      className={`orb-residential-root orb-login-root ${themeClass} min-h-[100dvh]`}
+      className={`orb-residential-root orb-login-root ${themeClass} min-h-[100dvh] min-h-[100svh]`}
       data-orb-login-page
       data-orb-login-mobile-single-column
       data-orb-residential="true"
@@ -209,11 +220,16 @@ function OrbLoginPanel({
       data-orb-appearance={appearanceMode}
       data-orb-appearance-mode={appearanceMode}
       data-orb-login-embedded={embedded ? 'true' : undefined}
-      style={getOrbThemeCssVariables(resolvedTheme)}
+      style={{
+        ...getOrbThemeCssVariables(resolvedTheme),
+        paddingTop: 'env(safe-area-inset-top, 0px)',
+        paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom, 0px))'
+      }}
     >
       <div
-        className="orb-login-shell mx-auto grid min-h-[100dvh] w-full max-w-[72rem] grid-cols-1 px-5 py-8 sm:px-8 lg:grid-cols-2 lg:gap-12 lg:px-10 lg:py-0"
+        className="orb-login-shell mx-auto grid min-h-0 w-full max-w-[72rem] grid-cols-1 px-5 py-6 sm:px-8 lg:min-h-[100dvh] lg:grid-cols-2 lg:gap-12 lg:px-10 lg:py-0"
         data-orb-login-two-column
+        data-orb-login-scrollable
       >
         <div
           className="orb-login-hero relative hidden flex-col justify-center lg:flex lg:px-4 xl:px-8"
@@ -221,7 +237,7 @@ function OrbLoginPanel({
         >
           <div className="orb-login-hero-glow pointer-events-none absolute inset-0" aria-hidden />
           <div className="relative flex flex-col justify-center">
-            <Link href="/" className="orb-login-brand-link text-sm font-semibold" data-orb-login-brand>
+            <Link href="/orb" className="orb-login-brand-link text-sm font-semibold" data-orb-login-brand>
               ORB Residential
             </Link>
             <p className="orb-login-tagline mt-1 text-xs">Powered by IndiCare Intelligence</p>
@@ -256,18 +272,21 @@ function OrbLoginPanel({
           data-orb-login-panel-centered
         >
           <div className="orb-login-card orb-login-panel-inner mx-auto w-full max-w-md rounded-[1.75rem] border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)]/80 p-6 shadow-xl shadow-black/10 backdrop-blur-sm sm:p-8">
-            <div className="flex flex-col items-center text-center lg:hidden">
-              <OrbHeroSphere className="mb-4 scale-75" />
+            <div className="flex flex-col items-center text-center lg:hidden" data-orb-login-mobile-hero>
+              <OrbHeroSphere className="mb-3 scale-[0.62] sm:scale-[0.7]" />
             </div>
 
-            <Link href="/" className="orb-login-brand-link text-sm font-semibold lg:hidden" data-orb-login-brand>
+            <Link href="/orb" className="orb-login-brand-link text-sm font-semibold lg:hidden" data-orb-login-brand>
               ORB Residential
             </Link>
             <p className="orb-login-tagline mt-1 text-xs lg:hidden">Powered by IndiCare Intelligence</p>
 
-            <h2 className="orb-login-signin-title mt-6 text-2xl font-bold tracking-tight lg:mt-0">Sign in</h2>
-            <p className="orb-login-lead mt-2 text-sm">
-              Choose how you want to sign in. Your organisation may require a work account.
+            <h2 className="orb-login-signin-title mt-4 text-2xl font-bold tracking-tight lg:mt-0">Sign in</h2>
+            <p className="orb-login-lead mt-2 text-sm" data-orb-login-mobile-lead>
+              <span className="hidden sm:inline">
+                Choose how you want to sign in. Your organisation may require a work account.
+              </span>
+              <span className="sm:hidden">Sign in to ORB Residential with your work account or email.</span>
             </p>
 
             {error ? (
@@ -288,6 +307,7 @@ function OrbLoginPanel({
                   provider="microsoft"
                   href={oauth.microsoft ? orbOAuthStartUrl('microsoft', returnUrl) : undefined}
                   disabled={!oauth.microsoft || authBusy}
+                  unavailableLabel={OAUTH_UNAVAILABLE_COPY.microsoft}
                 >
                   Continue with Microsoft
                 </OrbAuthButton>
@@ -295,13 +315,15 @@ function OrbLoginPanel({
                   provider="google"
                   href={oauth.google ? orbOAuthStartUrl('google', returnUrl) : undefined}
                   disabled={!oauth.google || authBusy}
+                  unavailableLabel={OAUTH_UNAVAILABLE_COPY.google}
                 >
-                  {oauth.google ? 'Continue with Google' : 'Google — not configured'}
+                  Continue with Google
                 </OrbAuthButton>
                 <OrbAuthButton
                   provider="apple"
                   href={oauth.apple ? orbOAuthStartUrl('apple', returnUrl) : undefined}
                   disabled={!oauth.apple || authBusy}
+                  unavailableLabel={OAUTH_UNAVAILABLE_COPY.apple}
                 >
                   Continue with Apple
                 </OrbAuthButton>
@@ -330,10 +352,10 @@ function OrbLoginPanel({
                   <button
                     type="submit"
                     disabled={authBusy}
-                    className="orb-login-submit w-full rounded-2xl py-3 text-sm font-semibold disabled:opacity-60"
+                    className="orb-login-submit w-full rounded-2xl py-2.5 text-sm font-semibold disabled:opacity-60 sm:py-3"
                     data-orb-login-email-continue
                   >
-                    Continue
+                    Continue with email
                   </button>
                 ) : null}
               </form>
@@ -380,40 +402,53 @@ function OrbLoginPanel({
             </section>
 
             {passkeySupported ? (
-              <section className="mt-6" aria-labelledby="orb-login-passkey">
-                <h3
+              <section className="mt-6" aria-labelledby="orb-login-passkey" data-orb-login-passkey-section>
+                <button
+                  type="button"
+                  className="orb-login-section-title flex w-full items-center justify-between text-left text-xs font-semibold uppercase tracking-wide"
                   id="orb-login-passkey"
-                  className="orb-login-section-title text-xs font-semibold uppercase tracking-wide"
+                  onClick={() => setPasskeyExpanded((open) => !open)}
+                  aria-expanded={passkeyExpanded || !compactViewport}
+                  data-orb-passkey-toggle
                 >
-                  3. Other secure options
-                </h3>
-                <p className="orb-login-muted mt-2 text-xs leading-relaxed">
-                  Use passkey if you have already set one up (Face ID, Touch ID or device passkey).
-                </p>
-                <label className="orb-login-field-label mt-3 block text-xs">
-                  Enter your email so we can find your saved passkey.
-                  <input
-                    type="email"
-                    value={passkeyEmail || email}
-                    onChange={(e) => setPasskeyEmail(e.target.value)}
-                    placeholder="you@provider.co.uk"
-                    className="orb-login-input mt-1 w-full rounded-xl px-3 py-2 text-sm"
-                    autoComplete="email webauthn"
-                    data-orb-passkey-email
-                    disabled={authBusy}
-                  />
-                </label>
-                <div className="mt-2.5">
-                  <OrbAuthButton
-                    provider="passkey"
-                    type="button"
-                    disabled={authBusy}
-                    onClick={() => void handlePasskeySignIn()}
-                    data-orb-passkey-sign-in
-                  >
-                    {passkeySubmitting ? 'Checking passkey…' : 'Use Face ID, Touch ID or device passkey'}
-                  </OrbAuthButton>
-                </div>
+                  <span>3. Use passkey</span>
+                  {compactViewport ? (
+                    <span className="text-[10px] normal-case tracking-normal text-[var(--orb-muted)]">
+                      {passkeyExpanded ? 'Hide' : 'Show'}
+                    </span>
+                  ) : null}
+                </button>
+                {passkeyExpanded || !compactViewport ? (
+                  <>
+                    <p className="orb-login-muted mt-2 text-xs leading-relaxed">
+                      Use passkey if you have already set one up (Face ID, Touch ID or device passkey).
+                    </p>
+                    <label className="orb-login-field-label mt-3 block text-xs">
+                      Enter your email so we can find your saved passkey.
+                      <input
+                        type="email"
+                        value={passkeyEmail || email}
+                        onChange={(e) => setPasskeyEmail(e.target.value)}
+                        placeholder="you@provider.co.uk"
+                        className="orb-login-input mt-1 w-full rounded-xl px-3 py-2 text-sm"
+                        autoComplete="email webauthn"
+                        data-orb-passkey-email
+                        disabled={authBusy}
+                      />
+                    </label>
+                    <div className="mt-2.5">
+                      <OrbAuthButton
+                        provider="passkey"
+                        type="button"
+                        disabled={authBusy}
+                        onClick={() => void handlePasskeySignIn()}
+                        data-orb-passkey-sign-in
+                      >
+                        {passkeySubmitting ? 'Checking passkey…' : 'Use passkey'}
+                      </OrbAuthButton>
+                    </div>
+                  </>
+                ) : null}
               </section>
             ) : (
               <p className="orb-login-muted mt-6 text-xs" data-orb-passkey-unavailable>
@@ -444,15 +479,10 @@ function OrbLoginPanel({
               </p>
             </div>
 
-            {!embedded ? (
-              <p className="orb-login-back mt-4 text-xs">
-                <Link href="/" className="orb-login-link-subtle">
-                  ← Back to home
-                </Link>
-              </p>
-            ) : null}
-
-            <footer className="orb-login-footer mt-8 border-t border-[var(--orb-line)]/40 pt-6 text-[10px] leading-relaxed text-[var(--orb-muted)]">
+            <footer
+              className="orb-login-footer mt-8 border-t border-[var(--orb-line)]/40 pt-6 text-[10px] leading-relaxed text-[var(--orb-muted)]"
+              data-orb-login-safe-bottom
+            >
               <p data-orb-login-disclaimer>
                 ORB supports professional judgement and does not replace safeguarding procedures, managers, emergency
                 services or legal advice.
@@ -472,23 +502,16 @@ function OrbLoginPanel({
 
 export function OrbLoginScreen({
   returnUrl,
-  embedded = false
+  embedded = false,
+  sessionError = null
 }: {
   returnUrl?: string
   embedded?: boolean
+  sessionError?: string | null
 } = {}) {
   return (
-    <Suspense
-      fallback={
-        <div
-          className="orb-residential-root orb-login-root orb-login-root--dark flex min-h-[100dvh] items-center justify-center"
-          data-orb-auth-loading
-        >
-          Loading…
-        </div>
-      }
-    >
-      <OrbLoginPanel returnUrl={returnUrl} embedded={embedded} />
+    <Suspense fallback={<OrbAuthLoadingScreen />}>
+      <OrbLoginPanel returnUrl={returnUrl} embedded={embedded} sessionError={sessionError} />
     </Suspense>
   )
 }

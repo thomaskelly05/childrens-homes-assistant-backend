@@ -19,7 +19,7 @@ export const STANDALONE_ORB_GUEST_CAPABILITIES_ANSWER =
 export const STANDALONE_ORB_SIGN_IN_REQUIRED_ANSWER =
   `Sign in to ORB Residential to ask regulatory and practice questions with full answers. ${ORB_DATA_BOUNDARY_SHORT} Only what you type here is used before sign-in.`
 
-export const STANDALONE_ORB_SIGN_IN_PATH = '/orb/login?returnUrl=%2Forb'
+export const STANDALONE_ORB_SIGN_IN_PATH = '/orb'
 
 export function isStandaloneGuestThanks(message: string): boolean {
   const text = message.trim()

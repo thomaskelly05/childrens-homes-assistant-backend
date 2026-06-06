@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
+import { buildOrbFrontDoorUrl, isOrbSurfacePath, sanitizeOrbReturnUrl } from './lib/orb/orb-front-door-routing'
+
 const publicPrefixes = [
   '/login',
   '/unauthorized',
@@ -14,12 +16,13 @@ const publicPrefixes = [
   '/css',
   '/assets',
   '/components',
-  '/build-live'
+  '/build-live',
+  '/privacy',
+  '/terms'
 ]
 
-/** ORB paths that must stay reachable without a session cookie (login, signup, billing, callbacks). */
+/** ORB paths reachable without a session cookie (signup, billing, callbacks). Login is on /orb via OrbAuthGate. */
 const orbPublicPrefixes = [
-  '/orb/login',
   '/orb/signup',
   '/orb/billing',
   '/orb/billing/success',
@@ -35,36 +38,49 @@ function isPublicPath(pathname: string) {
   return publicPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))
 }
 
-function isOrbPath(pathname: string) {
-  return pathname === '/orb' || pathname.startsWith('/orb/')
-}
-
 function isOrbPublicPath(pathname: string) {
   return orbPublicPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))
 }
 
 function isOrbProductPath(pathname: string) {
-  return isOrbPath(pathname) && !isOrbPublicPath(pathname)
+  return isOrbSurfacePath(pathname) && !isOrbPublicPath(pathname)
 }
 
 function hasSessionCookie(request: NextRequest) {
   return sessionCookieNames.some((name) => Boolean(request.cookies.get(name)?.value))
 }
 
+function redirectToOrbFrontDoor(request: NextRequest, returnUrl?: string | null) {
+  const target = request.nextUrl.clone()
+  const safeReturn = sanitizeOrbReturnUrl(returnUrl ?? request.nextUrl.searchParams.get('returnUrl'))
+  target.pathname = '/orb'
+  target.search = ''
+  if (safeReturn !== '/orb') {
+    target.searchParams.set('returnUrl', safeReturn)
+  }
+  return NextResponse.redirect(target)
+}
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  if (!e2eAuthEnabled && isOrbProductPath(pathname) && !hasSessionCookie(request)) {
-    const loginUrl = request.nextUrl.clone()
-    loginUrl.pathname = '/orb/login'
-    loginUrl.searchParams.set('returnUrl', `${pathname}${request.nextUrl.search}`)
-    return NextResponse.redirect(loginUrl)
+  if (pathname === '/') {
+    return NextResponse.redirect(new URL('/orb', request.url))
   }
 
-  if (!e2eAuthEnabled && !isPublicPath(pathname) && !isOrbPath(pathname) && !hasSessionCookie(request)) {
+  if (pathname === '/login' || pathname.startsWith('/login/')) {
+    return redirectToOrbFrontDoor(request, request.nextUrl.searchParams.get('returnUrl'))
+  }
+
+  if (pathname === '/orb/login' || pathname.startsWith('/orb/login/')) {
+    return redirectToOrbFrontDoor(request, request.nextUrl.searchParams.get('returnUrl'))
+  }
+
+  if (!e2eAuthEnabled && !isPublicPath(pathname) && !isOrbSurfacePath(pathname) && !hasSessionCookie(request)) {
     const loginUrl = request.nextUrl.clone()
-    loginUrl.pathname = '/login'
-    loginUrl.searchParams.set('returnUrl', `${pathname}${request.nextUrl.search}`)
+    loginUrl.pathname = '/orb'
+    const returnTarget = `${pathname}${request.nextUrl.search}`
+    loginUrl.searchParams.set('returnUrl', sanitizeOrbReturnUrl(returnTarget))
     return NextResponse.redirect(loginUrl)
   }
 

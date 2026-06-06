@@ -37,7 +37,7 @@ function handleAuthStatus(response: Response) {
   if (typeof window === 'undefined') return
   if (response.status === 401) {
     const returnUrl = encodeURIComponent(`${window.location.pathname}${window.location.search}`)
-    window.location.assign(`/login?returnUrl=${returnUrl}&expired=1`)
+    window.location.assign(`/orb?returnUrl=${returnUrl}&expired=1`)
   }
   if (response.status === 403) {
     window.location.assign('/unauthorized')
