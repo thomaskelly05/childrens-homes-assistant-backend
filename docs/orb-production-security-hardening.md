@@ -46,12 +46,26 @@ Route matrix: `docs/orb-api-security-access-matrix.md`
 | Smoke test | `docs/orb-production-smoke-test.md` — 22-point live deployment checklist |
 | Audit | `docs/orb-security-follow-up-audit.md` |
 
+## Enterprise level-up (2026-06-06)
+
+| Area | Fix |
+|------|-----|
+| Rate limiting | `OrbRateLimitMiddleware` + `security_rate_limit_service` — auth, ORB AI, documents, billing, admin |
+| AI abuse guards | `orb_ai_abuse_guard_service` — prompt/transcript/comparison/turn/daily metadata limits |
+| Security headers | CSP report-only default (`ORB_CSP_MODE`); Stripe/OpenAI sources; Next ORB product headers |
+| Trust pack | `docs/trust/*` — provider-facing security/privacy documents |
+| Monitoring | `security.rate_limit_exceeded`, `security.ai_abuse_limit` audit events |
+| Tests | Rate limit, headers, secrets, abuse, monitoring contract tests |
+
+See `docs/orb-enterprise-security-level-up-audit.md`.
+
 ## Remaining gaps
 
-- Uniform rate limiting not applied to all ORB endpoints
-- CSP headers for ORB surfaces (deferred)
+- Distributed/redis-backed rate limiting for multi-instance deployments
+- Strict CSP enforce on Next.js (requires inline script nonce migration)
 - Server layout session probe (deferred defence in depth)
 - Dev-only WebSocket `?token=` fallback — remove when all clients use cookies
+- Partner API `rate_limit_per_minute` runtime enforcement
 
 ## Launch readiness
 

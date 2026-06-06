@@ -45,6 +45,12 @@ from services.indicare_intelligence_surface_router import (
 from services.orb_action_engine_service import orb_action_engine_service
 from services.orb_brain_metadata_service import attach_to_payload, merge_context_used
 from services.orb_plan_enforcement_service import orb_plan_enforcement_service
+from services.orb_ai_abuse_guard_service import (
+    enforce_conversation_turns,
+    enforce_daily_ai_call_budget,
+    enforce_document_text_length,
+    enforce_prompt_length,
+)
 from services.orb_standalone_usage_service import record_standalone_orb_usage
 from services.orb_standalone_sources import (
     INDICARE_PRODUCT_FALLBACK,
@@ -668,6 +674,26 @@ def _standalone_conversation_response(
     return payload
 
 
+def _user_id_from(current_user: dict[str, Any]) -> int | None:
+    raw = current_user.get("user_id") or current_user.get("id")
+    try:
+        return int(raw) if raw is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _enforce_conversation_abuse_guards(
+    payload: "OrbStandaloneConversationRequest",
+    current_user: dict[str, Any],
+) -> None:
+    user_id = _user_id_from(current_user)
+    enforce_daily_ai_call_budget(user_id)
+    enforce_prompt_length(payload.message, user_id=user_id)
+    if payload.document_text:
+        enforce_document_text_length(payload.document_text, user_id=user_id)
+    enforce_conversation_turns(payload.history, user_id=user_id)
+
+
 def _enforce_plan_limits(
     *,
     current_user: dict[str, Any],
@@ -703,6 +729,7 @@ async def standalone_orb_conversation(
     current_user=Depends(require_standalone_orb_access),
 ):
     _reject_standalone_os_ids(payload.model_dump())
+    _enforce_conversation_abuse_guards(payload, current_user)
     ctx = _build_standalone_request_context(payload)
     mode = ctx["mode"]
     detail = ctx["detail"]
@@ -979,6 +1006,7 @@ async def standalone_orb_conversation_stream(
 ):
     """SSE stream of ORB answer tokens with final metadata (standalone boundary preserved)."""
     _reject_standalone_os_ids(payload.model_dump())
+    _enforce_conversation_abuse_guards(payload, current_user)
     mode = orb_standalone_brain_service.normalise_mode(payload.mode or "Ask ORB")
 
     async def event_generator() -> AsyncIterator[str]:

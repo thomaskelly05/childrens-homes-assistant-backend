@@ -200,6 +200,33 @@ class CsrfProtectionMiddleware(BaseHTTPMiddleware):
         )
 
 
+def _csp_mode() -> str:
+    return os.getenv("ORB_CSP_MODE", "report-only").strip().lower()
+
+
+def _build_content_security_policy() -> str:
+    report_uri = os.getenv("ORB_CSP_REPORT_URI", "").strip()
+    directives = [
+        "default-src 'self'",
+        "base-uri 'self'",
+        "frame-ancestors 'self'",
+        "object-src 'none'",
+        "img-src 'self' data: blob: https:",
+        "font-src 'self' data:",
+        "style-src 'self' 'unsafe-inline'",
+        "script-src 'self' 'unsafe-inline'",
+        (
+            "connect-src 'self' https://api.openai.com wss://api.openai.com "
+            "https://api.stripe.com https://checkout.stripe.com https://billing.stripe.com"
+        ),
+        "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://checkout.stripe.com",
+        "form-action 'self'",
+    ]
+    if report_uri:
+        directives.append(f"report-uri {report_uri}")
+    return "; ".join(directives) + ";"
+
+
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         path = request.url.path
@@ -210,12 +237,13 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
         response.headers["X-Frame-Options"] = "SAMEORIGIN"
-        response.headers.setdefault(
-            "Content-Security-Policy",
-            "default-src 'self'; base-uri 'self'; frame-ancestors 'self'; object-src 'none'; "
-            "img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; "
-            "script-src 'self' 'unsafe-inline'; connect-src 'self' https://api.openai.com wss://api.openai.com",
+        csp_value = _build_content_security_policy()
+        csp_header = (
+            "Content-Security-Policy-Report-Only"
+            if _csp_mode() == "report-only"
+            else "Content-Security-Policy"
         )
+        response.headers.setdefault(csp_header, csp_value)
         response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
         response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(self), geolocation=(), payment=(), usb=(), interest-cohort=()")
         response.headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
