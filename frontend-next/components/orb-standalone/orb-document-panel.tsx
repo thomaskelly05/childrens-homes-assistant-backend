@@ -12,7 +12,6 @@ import {
   OrbPremiumTextarea,
   OrbPremiumToolbar,
   OrbPremiumTrustStrip,
-  OrbStudioHero,
   OrbStudioShell
 } from '@/components/orb/premium'
 import { ORB_PREMIUM_ACTION_LABELS } from '@/components/orb/premium/orb-premium-theme'
@@ -250,38 +249,33 @@ export function OrbDocumentPanel({
       ariaLabel="ORB Knowledge Library and documents"
       footer="ORB Residential — Powered by IndiCare Intelligence. Documents use only what you upload or paste."
       {...orbStationShellProps(residentialSurface, 'wide')}
+      {...(residentialSurface ? { compactChrome: false } : {})}
     >
-      <OrbStudioShell studioId="knowledge" className="min-h-0 flex-1 gap-3 p-3 sm:p-4">
-        <OrbStudioHero
-          title="Documents & Guidance"
-          subtitle="Official guidance, home documents and uploads that support ORB Residential."
-          icon={<FileText className="h-5 w-5" />}
-          compact
-        />
+      <OrbStudioShell studioId="knowledge" className="flex min-h-0 flex-1 flex-col gap-2 p-3 sm:p-4">
       <OrbPremiumPage
         panelId="documents"
-        className="orb-document-panel !p-0"
+        className="orb-document-panel !gap-2 !p-0"
         toolbar={
-          <OrbPremiumToolbar
-            searchValue={librarySearch}
-            onSearchChange={setLibrarySearch}
-            searchPlaceholder="Search guidance, home documents and uploads…"
-          />
-        }
-        tabs={
-          <OrbPremiumTabs
-          ariaLabel="Knowledge Library sections"
-          activeId={libraryTab}
-          onChange={setLibraryTab}
-          tabs={[
-            { id: 'official', label: 'Official Guidance' },
-            { id: 'home', label: 'My Home Documents' },
-            { id: 'uploaded', label: 'Uploaded Documents' },
-            { id: 'analyse', label: 'Analyse a Document' },
-            { id: 'compare', label: 'Compare Documents' }
-          ]}
-            data-orb-knowledge-library-tabs
-          />
+          <div data-orb-documents-station-header className="space-y-2">
+            <OrbPremiumToolbar
+              searchValue={librarySearch}
+              onSearchChange={setLibrarySearch}
+              searchPlaceholder="Search guidance, home documents and uploads…"
+            />
+            <OrbPremiumTabs
+              ariaLabel="Knowledge Library sections"
+              activeId={libraryTab}
+              onChange={setLibraryTab}
+              tabs={[
+                { id: 'official', label: 'Official Guidance' },
+                { id: 'home', label: 'My Home Documents' },
+                { id: 'uploaded', label: 'Uploaded Documents' },
+                { id: 'analyse', label: 'Analyse a Document' },
+                { id: 'compare', label: 'Compare Documents' }
+              ]}
+              data-orb-knowledge-library-tabs
+            />
+          </div>
         }
       >
         {libraryTab === 'home' ? (

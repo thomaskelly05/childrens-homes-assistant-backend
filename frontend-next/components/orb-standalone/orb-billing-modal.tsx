@@ -464,7 +464,7 @@ export function OrbBillingModal({ open, onClose }: { open: boolean; onClose: () 
         ) : null}
 
         <div
-          className="sticky bottom-0 z-10 flex flex-wrap items-stretch gap-2.5 border-t border-[var(--orb-mobile-ws-card-border,var(--orb-line))] bg-[var(--orb-mobile-ws-footer,var(--orb-surface))]/98 px-1 pb-[max(0.875rem,env(safe-area-inset-bottom))] pt-4 backdrop-blur-md sm:gap-3 sm:px-0"
+          className="sticky bottom-0 z-10 flex flex-wrap items-stretch gap-2 border-t border-[var(--orb-line)]/25 bg-[var(--orb-surface)]/90 px-1 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-sm sm:gap-2.5 sm:px-0"
           data-orb-billing-cta-bar
           data-orb-billing-sticky-footer
         >
