@@ -15,6 +15,7 @@ def test_access_without_token_returns_guest_json_payload():
     request.headers = {}
 
     guest_payload = {
+        "contract_version": "orb_access_v2",
         "access_state": "unauthenticated",
         "can_use_orb": False,
         "os_access_granted": False,
@@ -32,6 +33,7 @@ def test_access_without_token_returns_guest_json_payload():
     assert result["success"] is True
     assert result["data"]["access_state"] == "unauthenticated"
     assert result["data"]["can_use_orb"] is False
+    assert result["data"]["contract_version"] == "orb_access_v2"
 
 
 def test_access_with_invalid_token_returns_401_json():
@@ -66,6 +68,7 @@ def test_access_with_valid_session_returns_user_payload():
     request = MagicMock()
     current_user = {"user_id": 7, "email": "active@indicare.co.uk", "role": "orb_residential"}
     user_payload = {
+        "contract_version": "orb_access_v2",
         "access_state": "subscription_active",
         "can_use_orb": True,
         "safety_accepted": True,

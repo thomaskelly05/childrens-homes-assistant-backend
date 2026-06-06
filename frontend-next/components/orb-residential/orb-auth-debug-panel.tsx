@@ -1,0 +1,70 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+
+import {
+  buildOrbAuthDebugSnapshot,
+  getOrbAuthDebugEvents,
+  isOrbAuthDebugEnabled
+} from '@/lib/orb/orb-auth-debug-events'
+import type { OrbGateState } from '@/lib/orb/orb-auth-state-machine'
+
+export function OrbAuthDebugPanel({
+  pathname,
+  authStatus,
+  authUserPresent,
+  accessStatus,
+  accessLoading,
+  accessError,
+  accessHttpStatus,
+  gateState
+}: {
+  pathname: string
+  authStatus: string
+  authUserPresent: boolean
+  accessStatus: string
+  accessLoading: boolean
+  accessError: string | null
+  accessHttpStatus: number | null
+  gateState: OrbGateState
+}) {
+  const [events, setEvents] = useState(getOrbAuthDebugEvents)
+
+  useEffect(() => {
+    if (!isOrbAuthDebugEnabled()) return
+    const refresh = () => setEvents(getOrbAuthDebugEvents())
+    window.addEventListener('orb-auth-debug', refresh)
+    return () => window.removeEventListener('orb-auth-debug', refresh)
+  }, [])
+
+  if (!isOrbAuthDebugEnabled()) return null
+
+  const snapshot = buildOrbAuthDebugSnapshot({
+    pathname,
+    authStatus,
+    authUserPresent,
+    accessStatus,
+    accessLoading,
+    accessError,
+    accessHttpStatus,
+    gateDecision: gateState
+  })
+
+  return (
+    <div
+      className="fixed bottom-0 left-0 right-0 z-[9999] max-h-[40vh] overflow-auto border-t border-amber-500/40 bg-black/90 p-3 font-mono text-[10px] text-amber-100"
+      data-orb-auth-debug-panel
+    >
+      <p className="font-semibold text-amber-300">ORB Auth Debug (?debugAuth=1)</p>
+      <pre className="mt-1 whitespace-pre-wrap">{JSON.stringify(snapshot, null, 2)}</pre>
+      {events.length > 0 ? (
+        <details className="mt-2">
+          <summary className="cursor-pointer text-amber-400">Recent events ({events.length})</summary>
+          <pre className="mt-1 max-h-32 overflow-auto whitespace-pre-wrap">
+            {JSON.stringify(events.slice(-20), null, 2)}
+          </pre>
+        </details>
+      ) : null}
+    </div>
+  )
+}

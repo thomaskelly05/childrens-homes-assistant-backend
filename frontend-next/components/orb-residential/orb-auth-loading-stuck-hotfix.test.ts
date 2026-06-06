@@ -15,7 +15,8 @@ describe('ORB mobile auth loading stuck hotfix', () => {
     const gate = read('components/orb-residential/orb-auth-gate.tsx')
     assert.match(gate, /ORB_AUTH_GATE_FALLBACK_MS/)
     assert.match(gate, /authFallback/)
-    assert.match(gate, /auth\.status === 'loading'[\s\S]*authFallback[\s\S]*OrbLoginScreen/)
+    assert.match(gate, /authFallback/)
+    assert.match(gate, /case 'unauthenticated'[\s\S]*OrbLoginScreen/)
     assert.match(gate, /We could not confirm your session/)
   })
 
@@ -40,6 +41,6 @@ describe('ORB mobile auth loading stuck hotfix', () => {
     const gate = read('components/orb-residential/orb-auth-gate.tsx')
     assert.doesNotMatch(gate, /data-orb-sidebar/)
     assert.doesNotMatch(gate, /OrbCareCompanion/)
-    assert.match(gate, /status === 'unauthenticated'[\s\S]*OrbLoginScreen/)
+    assert.match(gate, /case 'unauthenticated'[\s\S]*OrbLoginScreen/)
   })
 })

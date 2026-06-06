@@ -19,6 +19,7 @@ describe('ORB stale session — access 401', () => {
   it('gate clears stale auth when access returns unauthorized', () => {
     const gate = read('components/orb-residential/orb-auth-gate.tsx')
     assert.match(gate, /accessFailureKind !== 'unauthorized'/)
+    assert.match(gate, /clearStaleOrbSessionState\('access_401'\)/)
     assert.match(gate, /void auth\.logout\(\)/)
   })
 

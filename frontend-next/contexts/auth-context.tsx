@@ -19,6 +19,7 @@ import {
   isOrbSurfacePath
 } from '@/lib/orb/orb-front-door-routing'
 import { markOrbBackendDegraded, markOrbBackendReady, resetOrbSessionGate } from '@/lib/orb/orb-session-gate'
+import { clearStaleOrbSessionState } from '@/lib/orb/orb-stale-session-clear'
 import { normaliseRole, permissionsForRole } from '@/lib/auth/permissions'
 import { clearSensitiveBrowserState, suppressProductionConsole } from '@/lib/security/privacy'
 import type { AuthMeResponse, LoginResponse, StaffUser } from '@/lib/auth/types'
@@ -196,6 +197,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return
         }
         if (authError && isAuthFailureStatus(authError.status)) {
+          clearStaleOrbSessionState('auth_401')
           clearCachedIdentity()
           setUser(null)
           setStatus('unauthenticated')
@@ -311,7 +313,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } finally {
       logoutRedirecting.current = true
-      clearSensitiveBrowserState()
+      clearStaleOrbSessionState('auth_401')
       clearCachedIdentity()
       setUser(null)
       setStatus('unauthenticated')
@@ -319,6 +321,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       resetOrbAuthLoadingDeadline()
       resetOrbAccessLoadingDeadline()
       resetOrbSessionGate()
+      if (redirectToOrbLogin && pathname === '/orb') {
+        logoutRedirecting.current = false
+        return
+      }
       router.replace(redirectToOrbLogin ? '/orb' : buildOrbFrontDoorUrl())
     }
   }, [pathname, router])

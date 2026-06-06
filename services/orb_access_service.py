@@ -137,6 +137,7 @@ class OrbAccessService:
         )
 
         return {
+            "contract_version": "orb_access_v2",
             "product": ORB_RESIDENTIAL_PRODUCT,
             "price_label": ORB_RESIDENTIAL_PRICE_LABEL,
             "can_use_orb": can_use_orb,
@@ -229,6 +230,7 @@ class OrbAccessService:
     def _db_failure_payload(self, user_id: int, *, user: dict[str, Any] | None = None) -> dict[str, Any]:
         """Locked payload when access DB reads fail — never grants ORB Residential access."""
         return {
+            "contract_version": "orb_access_v2",
             "product": ORB_RESIDENTIAL_PRODUCT,
             "price_label": ORB_RESIDENTIAL_PRICE_LABEL,
             "can_use_orb": False,
@@ -248,6 +250,7 @@ class OrbAccessService:
 
     def _unauthenticated_payload(self) -> dict[str, Any]:
         return {
+            "contract_version": "orb_access_v2",
             "product": ORB_RESIDENTIAL_PRODUCT,
             "price_label": ORB_RESIDENTIAL_PRICE_LABEL,
             "can_use_orb": False,
