@@ -2,7 +2,11 @@
 
 import { useState } from 'react'
 
-import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
+import {
+  OrbVoiceCompanion,
+  mapOrbVoiceUiToCompanionState,
+  type OrbVoiceCompanionState
+} from '@/components/orb-residential/orb-voice-companion'
 import { OrbVoiceActions } from '@/components/orb-standalone/orb-voice-actions'
 import { OrbVoiceTranscriptActions } from '@/components/orb-standalone/orb-voice-transcript-actions'
 import { copyTextToClipboard } from '@/lib/orb/orb-clipboard'
@@ -31,6 +35,7 @@ export function OrbVoiceMobileExperience({
   pushToTalk = true,
   orbVisualClassName,
   pulseOrb,
+  voiceCompanionState,
   statusLine,
   detailLine,
   showPostSession,
@@ -77,6 +82,7 @@ export function OrbVoiceMobileExperience({
   pushToTalk?: boolean
   orbVisualClassName: string
   pulseOrb: boolean
+  voiceCompanionState?: OrbVoiceCompanionState
   statusLine: string
   detailLine: string | null
   showPostSession: boolean
@@ -120,6 +126,10 @@ export function OrbVoiceMobileExperience({
       .map((t) => `${t.role === 'user' ? 'You' : 'ORB'}: ${t.text.trim()}`)
       .join('\n\n')
 
+  const resolvedCompanionState =
+    voiceCompanionState ??
+    mapOrbVoiceUiToCompanionState(useBrowserLaunch ? launchUiState : uiState)
+
   return (
     <div
       className="orb-voice-mobile flex min-h-0 flex-1 flex-col"
@@ -127,7 +137,7 @@ export function OrbVoiceMobileExperience({
       data-orb-voice-ui-state={uiState}
     >
       <div className="flex min-h-0 flex-1 flex-col items-center overflow-y-auto overflow-x-hidden px-4 pt-4 pb-2">
-        <GlassOrbMark variant="voice" pulse={pulseOrb} className={`shrink-0 ${orbVisualClassName}`} />
+        <OrbVoiceCompanion state={resolvedCompanionState} className="shrink-0" />
 
         <button
           type="button"

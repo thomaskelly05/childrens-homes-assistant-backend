@@ -249,14 +249,14 @@ export function OrbDocumentPanel({
       ariaLabel="ORB Knowledge Library and documents"
       footer="ORB Residential — Powered by IndiCare Intelligence. Documents use only what you upload or paste."
       {...orbStationShellProps(residentialSurface, 'wide')}
-      {...(residentialSurface ? { compactChrome: false } : {})}
+      {...(residentialSurface ? { compactChrome: true } : {})}
     >
       <OrbStudioShell studioId="knowledge" className="flex min-h-0 flex-1 flex-col gap-2 p-3 sm:p-4">
       <OrbPremiumPage
         panelId="documents"
         className="orb-document-panel !gap-2 !p-0"
         toolbar={
-          <div data-orb-documents-station-header className="space-y-2">
+          <div data-orb-documents-header data-orb-documents-station-header className="space-y-2">
             <OrbPremiumToolbar
               searchValue={librarySearch}
               onSearchChange={setLibrarySearch}

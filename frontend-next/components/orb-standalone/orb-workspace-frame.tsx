@@ -74,7 +74,11 @@ export function OrbWorkspaceFrame({
           <X className="h-5 w-5" aria-hidden />
         </button>
       </header>
-      <div className="orb-workspace-body orb-mobile-workspace-body min-h-0 flex-1 overflow-y-auto overscroll-contain pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <div
+        className={`orb-workspace-body orb-mobile-workspace-body min-h-0 flex-1 overscroll-contain pb-[max(1rem,env(safe-area-inset-bottom))] ${
+          panelId === 'documents' || panelId === 'orb-write' ? 'flex flex-col overflow-hidden' : 'overflow-y-auto'
+        }`}
+      >
         {children}
       </div>
       {footer ? (

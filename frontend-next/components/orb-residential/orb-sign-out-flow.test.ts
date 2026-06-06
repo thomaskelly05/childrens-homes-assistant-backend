@@ -25,7 +25,7 @@ describe('ORB sign out flow', () => {
     assert.match(auth, /clearSensitiveBrowserState/)
     assert.match(auth, /resetOrbSessionGate/)
     assert.match(companion, /handleResidentialSignOut/)
-    assert.match(companion, /window\.location\.href = '\/orb'/)
+    assert.match(companion, /window\.location\.replace\('\/orb'\)/)
     assert.match(auth, /redirectToOrbLogin \? '\/orb'/)
   })
 

@@ -88,8 +88,8 @@ export function OrbWriteStandalonePanel({
   const [hasLocalDraft, setHasLocalDraft] = useState(false)
   const [selectedGuidance, setSelectedGuidance] = useState<OrbWriteSelectedGuidance | null>(null)
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false)
-  const [sourcePanelOpen, setSourcePanelOpen] = useState(true)
-  const [guidancePanelOpen, setGuidancePanelOpen] = useState(true)
+  const [sourcePanelOpen, setSourcePanelOpen] = useState(false)
+  const [guidancePanelOpen, setGuidancePanelOpen] = useState(false)
   const [compactWriteHeight, setCompactWriteHeight] = useState(false)
 
   useEffect(() => {
@@ -393,6 +393,7 @@ export function OrbWriteStandalonePanel({
   )
 
   const hasExistingContent = Boolean(doc?.body.replace(/<[^>]+>/g, '').trim())
+  const documentFirst = !sourcePanelOpen && !guidancePanelOpen
 
   return (
     <OrbAppModal
@@ -471,6 +472,9 @@ export function OrbWriteStandalonePanel({
             <div
               className="orb-write-studio-grid min-h-0 flex-1 gap-3"
               data-orb-write-layout
+              data-orb-write-document-first={documentFirst ? 'true' : 'false'}
+              data-orb-write-source-collapsed={sourcePanelOpen ? 'false' : 'true'}
+              data-orb-write-guidance-collapsed={guidancePanelOpen ? 'false' : 'true'}
               data-orb-write-source-open={sourcePanelOpen ? 'true' : 'false'}
               data-orb-write-guidance-open={guidancePanelOpen ? 'true' : 'false'}
               data-orb-write-compact-height={compactWriteHeight ? 'true' : 'false'}

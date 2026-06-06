@@ -641,7 +641,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   const [adultProfile, setAdultProfile] = useState<AdultProfile | null>(null)
   const [profileDrawerOpen, setProfileDrawerOpen] = useState(false)
   const [accountMenuOpen, setAccountMenuOpen] = useState(false)
-  const accountMenuAnchorRef = useRef<HTMLButtonElement>(null)
+  const accountMenuAnchorRef = useRef<HTMLElement | null>(null)
   const [showScrollFab, setShowScrollFab] = useState(false)
   const [savedOutputMessageIds, setSavedOutputMessageIds] = useState<Set<string>>(() => new Set())
   const [saveFeedbackByMessageId, setSaveFeedbackByMessageId] = useState<
@@ -911,9 +911,12 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
     [closePanel, openDocumentsPanel, openOrbDictatePanel, openOrbWritePanel]
   )
 
-  function openResidentialAccountMenu() {
+  function openResidentialAccountMenu(anchor?: HTMLElement | null) {
+    if (anchor) {
+      accountMenuAnchorRef.current = anchor
+    }
     if (residentialSurface) {
-      setAccountMenuOpen(true)
+      setAccountMenuOpen((current) => !current)
     } else {
       setProfileDrawerOpen(true)
     }
@@ -921,14 +924,25 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
 
   function openResidentialProfile() {
     if (residentialSurface) {
+      setAccountMenuOpen(false)
       openPanel('account')
     } else {
       setProfileDrawerOpen(true)
     }
   }
 
-  function handleResidentialSignOut() {
-    void logout()
+  async function handleResidentialSignOut() {
+    setAccountMenuOpen(false)
+    setProfileDrawerOpen(false)
+    setSidebarOpen(false)
+    closePanel()
+    try {
+      await logout()
+    } finally {
+      if (typeof window !== 'undefined') {
+        window.location.replace('/orb')
+      }
+    }
   }
 
   function toggleSidebarCollapsed() {
@@ -3326,8 +3340,8 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                 openSavedOutputsPanel()
                 setSidebarOpen(false)
               }}
-              onOpenProfile={() => {
-                openResidentialAccountMenu()
+              onOpenProfile={(anchor) => {
+                openResidentialAccountMenu(anchor)
                 setSidebarOpen(false)
               }}
               onOpenBilling={() => {
@@ -3404,8 +3418,8 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           residentialSurface ? (
             <OrbMobileChatHeader
               onOpenMenu={() => setSidebarOpen(true)}
-              onOpenAccount={() => {
-                openResidentialAccountMenu()
+              onOpenAccount={(anchor) => {
+                openResidentialAccountMenu(anchor)
                 setSidebarOpen(false)
               }}
               accountUsesSettingsIcon
@@ -3472,9 +3486,8 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
               ) : null}
               <button
                 type="button"
-                ref={accountMenuAnchorRef}
-                onClick={() => {
-                  openResidentialAccountMenu()
+                onClick={(event) => {
+                  openResidentialAccountMenu(event.currentTarget)
                   setSidebarOpen(false)
                 }}
                 className="rounded-lg p-2 text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[#0077FF] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00B8FF]/50"
@@ -4126,6 +4139,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           open={accountMenuOpen}
           onClose={() => setAccountMenuOpen(false)}
           anchorRef={accountMenuAnchorRef}
+          preferAbove={sidebarCollapsed}
           profile={adultProfile}
           userEmail={account.userEmail}
           userName={account.userName}

@@ -7,7 +7,7 @@ import { ORB_RESIDENTIAL_TAGLINE } from '@/lib/orb/orb-residential-copy'
 
 export type OrbMobileChatHeaderProps = {
   onOpenMenu: () => void
-  onOpenAccount: () => void
+  onOpenAccount: (anchor: HTMLElement) => void
   productName?: string
   tagline?: string
   /** Prefer settings icon when true; defaults to user icon. */
@@ -61,7 +61,7 @@ export function OrbMobileChatHeader({
       <button
         type="button"
         className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-royal-blue,#168bff)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--orb-royal-blue,#168bff)]"
-        onClick={onOpenAccount}
+        onClick={(event) => onOpenAccount(event.currentTarget)}
         aria-label="Account and settings"
         data-orb-mobile-account
         data-orb-header-profile
@@ -131,6 +131,7 @@ export function OrbLayout({
 
       <div
         className={`relative flex min-h-0 flex-1 ${residentialSurface ? 'orb-chat-shell' : ''}`}
+        data-orb-sidebar-state={residentialSurface ? (sidebarCollapsed ? 'collapsed' : 'expanded') : undefined}
         data-orb-sidebar-collapsed={residentialSurface && sidebarCollapsed ? 'true' : undefined}
       >
         <aside
@@ -142,6 +143,8 @@ export function OrbLayout({
               : 'w-[min(100%,18.75rem)] lg:w-[18.75rem]'
           } ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
           data-orb-sidebar-scroll-container
+          data-orb-sidebar-state={residentialSurface ? (sidebarCollapsed ? 'collapsed' : 'expanded') : undefined}
+          data-orb-sidebar-collapsed={residentialSurface && sidebarCollapsed ? 'true' : undefined}
         >
           {sidebar}
         </aside>
