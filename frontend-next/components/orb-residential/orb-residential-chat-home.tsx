@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 import { OrbCapabilityCard } from '@/components/orb-residential/ui/orb-capability-card'
 import { OrbGlowHero } from '@/components/orb-residential/ui/orb-glow-hero'
 import { OrbShell } from '@/components/orb-residential/ui/orb-shell'
-import { useOrbAccountState } from '@/hooks/use-orb-account-state'
+import { useOrbAccountState } from '@/contexts/orb-account-context'
 import { personalisedEmptyHeading } from '@/lib/orb/orb-personalised-greeting'
 
 const SUGGESTED_PROMPTS = [

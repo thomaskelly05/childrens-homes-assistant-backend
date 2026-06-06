@@ -24,7 +24,7 @@ describe('ORB access verification hotfix', () => {
     const hook = read('hooks/use-orb-account-state.ts')
     assert.match(hook, /accessFailureKind/)
     assert.match(hook, /classifyAccessFailure/)
-    assert.match(hook, /Promise\.race\(\[fetchOrbAccess\(\), accessTimeout\]/)
+    assert.match(hook, /Promise\.race\(\[[\s\S]*fetchOrbAccessCached/)
     assert.match(hook, /setAccessLoading\(false\)/)
   })
 

@@ -35,15 +35,18 @@ describe('ORB security — no product flash', () => {
 
   it('OrbAuthGate never mounts product children while loading or unauthenticated', () => {
     const gate = read('components/orb-residential/orb-auth-gate.tsx')
-    assert.match(gate, /auth\.status === 'loading'[\s\S]*OrbAuthLoadingScreen/)
-    assert.match(gate, /auth\.status === 'unauthenticated'[\s\S]*OrbLoginScreen/)
-    assert.doesNotMatch(gate, /unauthenticated[\s\S]*OrbCareCompanion/)
-    assert.doesNotMatch(gate, /loading[\s\S]*data-orb-companion-root/)
+    assert.match(gate, /case 'checking_auth':/)
+    assert.match(gate, /case 'unauthenticated':[\s\S]*OrbLoginScreen/)
+    assert.match(gate, /productChildrenMounted = gateState === 'ready'/)
+    assert.match(gate, /case 'ready':[\s\S]*\{children\}/)
+    const readyOnlyChildren = gate.split("case 'ready'")[1]?.split("case 'signing_out'")[0] ?? ''
+    assert.match(readyOnlyChildren, /\{children\}/)
   })
 
   it('product shell stays behind OrbAuthGate', () => {
     const shell = read('components/orb/orb-shell.tsx')
     assert.match(shell, /<OrbAuthGate mode="product">/)
-    assert.match(shell, /OrbCareCompanion/)
+    assert.match(shell, /OrbProductShell/)
+    assert.match(shell, /data-orb-product-mounted/)
   })
 })

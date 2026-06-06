@@ -11,7 +11,10 @@ import {
   isRateLimitedStatus,
   isTemporaryUnavailableStatus
 } from '@/lib/auth/api'
+import { resetOrbAccessRequestCache } from '@/lib/orb/orb-access-request-cache'
 import { resetOrbAccessLoadingDeadline } from '@/lib/orb/orb-access-loading-deadline'
+import { resetOrbBootstrapNetworkCounts } from '@/lib/orb/orb-product-bootstrap-guard'
+import { resetOrbGateStateStore } from '@/lib/orb/orb-gate-state-store'
 import { resetOrbAuthLoadingDeadline } from '@/lib/orb/orb-auth-loading-deadline'
 import {
   ORB_AUTH_CONTEXT_TIMEOUT_MS,
@@ -320,6 +323,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setCsrfReady(false)
       resetOrbAuthLoadingDeadline()
       resetOrbAccessLoadingDeadline()
+      resetOrbAccessRequestCache('logout')
+      resetOrbBootstrapNetworkCounts()
+      resetOrbGateStateStore()
       resetOrbSessionGate()
       if (redirectToOrbLogin && pathname === '/orb') {
         logoutRedirecting.current = false

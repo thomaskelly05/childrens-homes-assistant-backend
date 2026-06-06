@@ -9,6 +9,10 @@ import {
   syncOrbProjectsToServer,
   type OrbServerProject
 } from '@/lib/orb/orb-projects-client'
+import {
+  recordOrbProjectBootstrapRequest,
+  shouldAllowOrbProductFetch
+} from '@/lib/orb/orb-product-bootstrap-guard'
 import { recordOrbFetchOutcome, shouldSkipAuthenticatedOrbFetch } from '@/lib/orb/orb-session-gate'
 import {
   DEFAULT_STANDALONE_PROJECTS,
@@ -55,9 +59,13 @@ export async function fetchOrbProjectsResilient(): Promise<{
   server: OrbServerProject[]
   usedLocalFallback: boolean
 }> {
+  if (!shouldAllowOrbProductFetch('projects_resilient')) {
+    return { server: [], usedLocalFallback: true }
+  }
   if (shouldSkipAuthenticatedOrbFetch()) {
     return { server: [], usedLocalFallback: true }
   }
+  recordOrbProjectBootstrapRequest()
   try {
     const server = await fetchOrbServerProjects()
     recordOrbFetchOutcome(null)

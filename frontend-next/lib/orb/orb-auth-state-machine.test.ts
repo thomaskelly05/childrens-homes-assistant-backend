@@ -112,4 +112,17 @@ describe('orb-auth-state-machine', () => {
   it('reduce handles ACCESS_OK_READY to ready', () => {
     assert.equal(reduceOrbGateState('checking_access', { type: 'ACCESS_OK_READY' }), 'ready')
   })
+
+  it('safety required resolves to safety_required', () => {
+    assert.equal(
+      deriveOrbGateState(
+        baseContext({
+          authStatus: 'authenticated',
+          isSignedIn: true,
+          safetyRequired: true
+        })
+      ),
+      'safety_required'
+    )
+  })
 })

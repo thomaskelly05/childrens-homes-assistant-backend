@@ -7,6 +7,10 @@ import {
   listOrbLocalSavedOutputs,
   orbLocalSavedOutputAsRecord
 } from '@/lib/orb/orb-saved-outputs-local'
+import {
+  recordOrbOutputsSummaryBootstrapRequest,
+  shouldAllowOrbProductFetch
+} from '@/lib/orb/orb-product-bootstrap-guard'
 import { recordOrbFetchOutcome, shouldSkipAuthenticatedOrbFetch } from '@/lib/orb/orb-session-gate'
 import {
   fetchOrbSavedOutputsSummary,
@@ -90,10 +94,15 @@ export async function fetchOrbSavedOutputsSummaryResilient(signal?: AbortSignal)
   by_type: Record<string, number>
   storage_mode?: string
 }> {
+  if (!shouldAllowOrbProductFetch('outputs_summary_resilient')) {
+    const localCount = countOrbLocalSavedOutputs()
+    return { total: localCount, by_type: {}, storage_mode: 'local' }
+  }
   if (shouldSkipAuthenticatedOrbFetch()) {
     const localCount = countOrbLocalSavedOutputs()
     return { total: localCount, by_type: {}, storage_mode: 'local' }
   }
+  recordOrbOutputsSummaryBootstrapRequest()
   try {
     const summary = await fetchOrbSavedOutputsSummary(signal)
     recordOrbFetchOutcome(null)

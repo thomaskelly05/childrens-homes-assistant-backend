@@ -7,7 +7,7 @@ import { LogIn, LogOut, X } from 'lucide-react'
 
 import { OrbLegalLinks } from '@/components/orb-residential/orb-legal-links'
 import { useAuth } from '@/contexts/auth-context'
-import { useOrbAccountState } from '@/hooks/use-orb-account-state'
+import { useOrbAccountState } from '@/contexts/orb-account-context'
 import {
   CANONICAL_ADULT_PROFILE_ROLES,
   DEFAULT_ADULT_PROFILE,
