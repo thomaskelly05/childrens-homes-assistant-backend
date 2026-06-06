@@ -36,8 +36,11 @@ describe('ORB Documents converged lenses', () => {
     assert.match(lenses, /use_template/)
   })
 
-  it('documents do not claim policy comparison if not implemented', () => {
-    const lenses = read('lib/orb/document-intelligence.ts')
-    assert.doesNotMatch(lenses, /policy comparison/i)
+  it('documents panel includes compare documents workflow', () => {
+    const panel = read('components/orb-standalone/orb-document-panel.tsx')
+    const comparison = read('components/orb-standalone/orb-document-comparison-section.tsx')
+    assert.match(panel, /Compare Documents/)
+    assert.match(panel, /OrbDocumentComparisonSection/)
+    assert.match(comparison, /data-orb-compare-with-orb/)
   })
 })

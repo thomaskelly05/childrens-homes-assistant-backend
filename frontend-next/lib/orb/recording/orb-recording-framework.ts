@@ -1,6 +1,7 @@
 import frameworkData from '@/lib/orb/recording/orb-recording-framework.json'
 
 import type { OrbDictateNoteType } from '@/lib/orb/dictate/orb-dictate-types'
+import { therapeuticWritingForRecordType } from '@/lib/orb/recording/orb-therapeutic-writing'
 import type {
   OrbRecordingBrainFrameworkContext,
   OrbRecordingFrameworkPayload,
@@ -13,7 +14,17 @@ const payload = frameworkData as OrbRecordingFrameworkPayload
 
 export const ORB_RECORDING_FRAMEWORK_VERSION = payload.version
 
-export const ORB_RECORDING_RECORD_TYPES: readonly OrbRecordingRecordType[] = payload.record_types
+function mergeTherapeuticWriting(recordTypes: OrbRecordingRecordType[]): OrbRecordingRecordType[] {
+  return recordTypes.map((row) => {
+    const supplement = therapeuticWritingForRecordType(row.id)
+    if (!supplement) return row
+    return { ...row, writing_framework: supplement }
+  })
+}
+
+export const ORB_RECORDING_RECORD_TYPES: readonly OrbRecordingRecordType[] = mergeTherapeuticWriting(
+  payload.record_types
+)
 
 import { ORB_RECOMMENDED_RECORD_TYPE_IDS } from '@/lib/orb/orb-navigation-convergence'
 
@@ -113,19 +124,43 @@ export function orbRecordingStudioTemplates(): Array<{
 export function buildOrbRecordingBrainContext(
   recordType: OrbRecordingRecordType
 ): OrbRecordingBrainFrameworkContext {
+  const wf = recordType.writing_framework
+  const therapeuticChecks = wf?.quality_checks?.slice(0, 2) ?? []
   return {
     record_type_id: recordType.id,
     record_type_label: recordType.label,
     required_sections: recordType.required_sections,
-    orb_will_check: orbRecordingChecksSummary(recordType),
+    orb_will_check: [...orbRecordingChecksSummary(recordType), ...therapeuticChecks].slice(0, 6),
     missing_evidence_checks: recordType.missing_evidence_checks,
     safeguarding_checks: recordType.safeguarding_checks,
     child_voice_checks: recordType.child_voice_checks,
     manager_oversight_checks: recordType.manager_oversight_checks,
     suggested_outputs: orbRecordingSuggestedOutputs(recordType.id),
     suggested_follow_up_actions: recordType.suggested_follow_up_actions,
-    recording_quality_guidance: recordType.professional_language_guidance
+    recording_quality_guidance: wf?.writing_guidance ?? recordType.professional_language_guidance
   }
+}
+
+/** Template groups for ORB Write template picker — mirrors recording framework categories. */
+export const ORB_WRITE_TEMPLATE_PICKER_GROUPS: Array<{
+  id: string
+  label: string
+  categories: string[]
+}> = [
+  { id: 'recording', label: 'Recording', categories: ['recording', 'therapeutic', 'education', 'health'] },
+  { id: 'safeguarding', label: 'Safeguarding', categories: ['safeguarding'] },
+  { id: 'management', label: 'Management', categories: ['leadership', 'care_planning', 'multi_agency'] },
+  { id: 'guidance', label: 'Guidance / policy', categories: ['regulatory'] },
+  { id: 'briefings', label: 'Briefings / summaries', categories: ['leadership', 'regulatory', 'multi_agency'] }
+]
+
+export function orbWriteTemplatePickerRecordTypes(search = ''): OrbRecordingRecordType[] {
+  const needle = search.trim().toLowerCase()
+  return ORB_RECORDING_RECORD_TYPES.filter((r) => {
+    if (!needle) return true
+    const hay = `${r.label} ${r.purpose} ${r.when_to_use} ${r.category}`.toLowerCase()
+    return hay.includes(needle)
+  })
 }
 
 export function structureOrbWriteDocumentBody(opts: {

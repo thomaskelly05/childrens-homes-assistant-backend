@@ -1,4 +1,5 @@
 import type { OrbDictateNoteType } from '@/lib/orb/dictate/orb-dictate-types'
+import type { OrbTherapeuticWritingFramework } from '@/lib/orb/recording/orb-therapeutic-writing'
 
 export type OrbRecordingRecordTypeId =
   | 'general_dictation'
@@ -49,6 +50,8 @@ export type OrbRecordingRecordType = {
   safety_disclaimer: string
   dictate_note_type: OrbDictateNoteType
   studio_template_id: string | null
+  /** Person-centred / therapeutic writing metadata (merged from supplement at load). */
+  writing_framework?: OrbTherapeuticWritingFramework
 }
 
 export type OrbRecordingSuggestedOutput = {

@@ -38,14 +38,14 @@ import {
   resolveOrbRecordingRecordType
 } from '@/lib/orb/recording/orb-recording-framework'
 import type { OrbRecordingRecordType, OrbRecordingRecordTypeId } from '@/lib/orb/recording/orb-recording-types'
+import { OrbDocumentComparisonSection } from '@/components/orb-standalone/orb-document-comparison-section'
 import {
-  analyseOrbStandaloneDocument,
   runOrbDocumentIntelligence,
   uploadOrbStandaloneDocument
 } from '@/lib/orb/standalone-client'
 
 type InputTab = 'paste' | 'upload'
-type KnowledgeLibraryTab = 'official' | 'home' | 'uploaded' | 'analyse'
+type KnowledgeLibraryTab = 'official' | 'home' | 'uploaded' | 'analyse' | 'compare'
 
 export function OrbDocumentPanel({
   open,
@@ -82,7 +82,12 @@ export function OrbDocumentPanel({
   activeProjectId?: string
   activeProjectName?: string
   onReuseInChat?: (prompt: string) => void
-  onOpenOrbWrite?: () => void
+  onOpenOrbWrite?: (handoff?: {
+    content: string
+    title: string
+    recordTypeId?: string
+    outputType: string
+  }) => void
   onOpenTemplates?: () => void
   residentialSurface?: boolean
   initialLens?: OrbDocumentLens
@@ -191,37 +196,6 @@ export function OrbDocumentPanel({
     title
   ])
 
-  async function runPolicyCompare() {
-    const body = text.trim()
-    if (!body && !sourceId) {
-      setError('Paste or upload document text first.')
-      return
-    }
-    setLoading(true)
-    setError(null)
-    try {
-      const analysed = await analyseOrbStandaloneDocument({
-        mode: 'policy_comparison',
-        source_id: sourceId || undefined,
-        title: title.trim() || 'Document',
-        text: sourceId ? undefined : body
-      })
-      setCopyNote('Policy comparison draft ready — use Save or Ask ORB to continue.')
-      onDocumentContext?.({
-        text: text.trim(),
-        title: analysed.understanding.title,
-        sourceId: sourceId || analysed.understanding.source_id || null
-      })
-      onInsertIntoChat?.(
-        `# ${analysed.understanding.title}\n\n${analysed.understanding.plain_english_summary}`
-      )
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Comparison failed')
-    } finally {
-      setLoading(false)
-    }
-  }
-
   async function handleFileUpload(file: File) {
     setLoading(true)
     setError(null)
@@ -303,7 +277,8 @@ export function OrbDocumentPanel({
             { id: 'official', label: 'Official Guidance' },
             { id: 'home', label: 'My Home Documents' },
             { id: 'uploaded', label: 'Uploaded Documents' },
-            { id: 'analyse', label: 'Analyse a Document' }
+            { id: 'analyse', label: 'Analyse a Document' },
+            { id: 'compare', label: 'Compare Documents' }
           ]}
             data-orb-knowledge-library-tabs
           />
@@ -488,6 +463,7 @@ export function OrbDocumentPanel({
               value={text}
               onChange={(e) => setText(e.target.value)}
               rows={6}
+              spellCheck
               placeholder="Paste policy, Reg 44 report, inspection notes or guidance…"
               className="orb-doc-input mt-1"
             />
@@ -713,18 +689,25 @@ export function OrbDocumentPanel({
                   Document analysis agent
                 </button>
               ) : null}
-              <button
-                type="button"
-                disabled={loading || !hasContent}
-                onClick={() => void runPolicyCompare()}
-                className="text-[11px] font-semibold text-[var(--orb-muted)] underline-offset-2 hover:underline disabled:opacity-50"
-              >
-                Compare policies (legacy)
-              </button>
             </div>
           </section>
         ) : null}
         </>
+        ) : null}
+
+        {libraryTab === 'compare' ? (
+          <OrbDocumentComparisonSection
+            projects={projects}
+            activeProjectId={activeProjectId}
+            activeProjectName={activeProjectName}
+            onOpenOrbWrite={
+              onOpenOrbWrite
+                ? (payload) => onOpenOrbWrite(payload)
+                : undefined
+            }
+            onReuseInChat={onReuseInChat}
+            onNotice={setCopyNote}
+          />
         ) : null}
       </OrbPremiumPage>
       </OrbStudioShell>

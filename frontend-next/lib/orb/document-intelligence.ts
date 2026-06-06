@@ -18,7 +18,12 @@ export const RESIDENTIAL_FIRST_CLASS_LENSES: Array<{
   { lens: 'reg44', label: 'Analyse Reg 44 report', description: 'Visitor report themes and actions', hero: true, converged: true },
   { lens: 'summary', label: 'Analyse Statement of Purpose', description: 'Summarise purpose and practice intent', converged: true },
   { lens: 'actions', label: 'Extract action plan', description: 'Draft follow-up actions', hero: true, converged: true },
-  { lens: 'summary', label: 'Summarise recent changes', description: 'Concise orientation on what changed', converged: true },
+  {
+    lens: 'summary',
+    label: 'Summarise recent changes',
+    description: 'Concise orientation on what changed — use Compare Documents for two-version diff',
+    converged: true
+  },
   { lens: 'explain', label: 'Create easy-read summary', description: 'Plain-English meaning', hero: true, converged: true },
   { lens: 'ofsted', label: 'Check against Quality Standards', description: 'Evidence and experience thinking', converged: true },
   { lens: 'ofsted', label: 'Inspection readiness', description: 'Prepare inspection evidence thinking', hero: true, converged: true },

@@ -10,6 +10,7 @@ export function OrbWriteSourcePanel({
   roughText,
   onRoughTextChange,
   onContinueFromDictate,
+  onChooseTemplate,
   onOpenTemplates,
   onOpenSavedDraft,
   hasLocalDraft
@@ -18,6 +19,7 @@ export function OrbWriteSourcePanel({
   roughText?: string
   onRoughTextChange?: (value: string) => void
   onContinueFromDictate?: () => void
+  onChooseTemplate?: () => void
   onOpenTemplates?: () => void
   onOpenSavedDraft?: () => void
   hasLocalDraft?: boolean
@@ -60,6 +62,7 @@ export function OrbWriteSourcePanel({
               value={roughText ?? ''}
               onChange={(e) => onRoughTextChange(e.target.value)}
               rows={6}
+              spellCheck
               placeholder="Paste or type rough notes…"
               className="w-full resize-none rounded-xl border border-[var(--orb-line)]/60 bg-[var(--orb-surface)] px-3 py-2 text-xs text-[var(--orb-foreground)] placeholder:text-[var(--orb-muted)] focus:border-[var(--orb-primary)]/40 focus:outline-none focus:ring-2 focus:ring-sky-400/20"
               data-orb-write-source-rough-text
@@ -79,6 +82,17 @@ export function OrbWriteSourcePanel({
               Continue from Dictate
             </button>
           ) : null}
+          {onChooseTemplate ? (
+            <button
+              type="button"
+              onClick={onChooseTemplate}
+              className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-semibold text-[var(--orb-foreground)] hover:bg-[var(--orb-surface-hover)]"
+              data-orb-write-choose-template
+            >
+              <FileText className="h-3.5 w-3.5" aria-hidden />
+              Choose template
+            </button>
+          ) : null}
           {onOpenTemplates ? (
             <button
               type="button"
@@ -87,7 +101,7 @@ export function OrbWriteSourcePanel({
               data-orb-write-source-template
             >
               <FileText className="h-3.5 w-3.5" aria-hidden />
-              Use a template
+              Browse all templates
             </button>
           ) : null}
           {hasLocalDraft && onOpenSavedDraft ? (
