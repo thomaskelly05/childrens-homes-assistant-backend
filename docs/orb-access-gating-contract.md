@@ -1,66 +1,47 @@
 # ORB Access Gating Contract
 
-## Purpose
+## Endpoint
 
-Define how ORB Residential resolves **access verification** after auth succeeds. Loading must always terminate in exactly one safe state.
+`GET /orb/standalone/access`
 
-## Terminal states
+## Response contract
 
-| State | When | UI |
-|-------|------|-----|
-| Login | `auth.status === 'unauthenticated'` or auth gate timeout | `OrbLoginScreen` (embedded) |
-| Upgrade / billing | Signed in, no `can_use_orb`, access 402 or payment_required | `OrbUpgradeScreen` |
-| Safety acceptance | Entitled user, `safety_accepted === false` | Redirect `/orb/setup` or safety retry |
-| Product | `hasConfirmedAccess` or `adminBypass` | Gate children (product shell) |
-| Safe retry | Access timeout, 429, 5xx, network | `OrbAccessRetryScreen` |
+All payloads include:
 
-**Never:** infinite loading, product shell during access load, login while authenticated.
+```json
+{ "contract_version": "orb_access_v2", ... }
+```
 
-## Loading copy
+Frontend rejects responses without matching `contract_version` → retry screen (`access_contract_mismatch`).
 
-| Phase | Message | Max wait |
-|-------|---------|----------|
-| Auth | “Checking your session…” | 5s (`ORB_AUTH_GATE_FALLBACK_MS`) |
-| Access | “Verifying your ORB access…” | 7s (`ORB_ACCESS_GATE_FALLBACK_MS`) |
-| Access network | `useOrbAccountState` race | 12s (`ORB_AUTH_LOADING_TIMEOUT_MS`) |
+## Status codes
 
-After access timeout (authenticated):
+| Session | HTTP | Body |
+|---------|------|------|
+| No cookie | 200 | Guest payload (`can_use_orb: false`) |
+| Invalid/expired session | **401** | `{ success: false, error: {...} }` |
+| Valid session | 200 | Full access payload |
 
-- Message: “We could not verify your ORB access. Try again or manage billing.”
-- Actions: Try again, Back to sign in, Manage billing
+**Important:** Invalid session must **not** return 200 guest — that caused stale-session loops when `/auth/me` and `/access` disagreed.
 
-## HTTP mapping (`GET /orb/standalone/access`)
+## Frontend hook (`useOrbAccountState`)
 
-| Status | Frontend `accessFailureKind` | Action |
-|--------|------------------------------|--------|
-| 200 + guest | N/A (unsigned) | Login on auth unauthenticated |
-| 200 + user payload | `none` | Upgrade or product per payload |
-| 401 | `unauthorized` | `auth.logout()` → login |
-| 402 | `payment_required` | Upgrade |
-| 403 + safety code | `safety_required` | Setup / safety flow |
-| 429 | `rate_limited` | Retry screen |
-| 5xx / 504 | `unavailable` / `timeout` | Retry screen |
+Exposes only:
 
-## Access endpoint rules (backend)
+- `accessStatus`: `idle` | `loading` | `ready` | `error`
+- `accessFetchStatus` (HTTP code)
+- `accessFailureKind`
+- `contractMismatch`
+- `retry()` — no routing
 
-- **Does not** use `require_rich_orb_premium_access` (no circular dependency)
-- No session → 200 guest JSON
-- Invalid session token → 401 JSON
-- Valid session → 200 user access JSON
-- Always JSON — no HTML redirect
+`OrbAuthGate` maps hook output to gate states.
 
-## Deadline reset
+## Gate outcomes
 
-`orb-access-loading-deadline.ts` resets on:
-
-- Successful access fetch
-- Sign in / sign out
-- Manual “Try again”
-- Leaving ORB surface paths
-
-## Implementation
-
-- `frontend-next/components/orb-residential/orb-auth-gate.tsx`
-- `frontend-next/hooks/use-orb-account-state.ts`
-- `frontend-next/lib/orb/orb-access-loading-deadline.ts`
-- `routers/orb_billing_routes.py` — `GET /access`
+| Access result | Gate state |
+|---------------|------------|
+| 401 | Clear stale state → logout → login |
+| 402 / inactive | Upgrade |
+| 403 safety | Safety retry |
+| 429 / timeout / 5xx | Access retry |
+| Active + safety OK | Product (`ready`) |

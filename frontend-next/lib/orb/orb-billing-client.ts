@@ -1,6 +1,8 @@
 import { authFetch, authFetchResponse, AuthApiError } from '@/lib/auth/api'
+import { isOrbAccessContractCompatible, ORB_ACCESS_CONTRACT_VERSION } from '@/lib/orb/orb-access-contract'
 
 export type OrbAccessPayload = {
+  contract_version?: string
   product: string
   price_label: string
   can_use_orb: boolean
@@ -102,10 +104,21 @@ export async function fetchOrbAccess(): Promise<OrbAccessPayload> {
     throw new AuthApiError(response.status, 'ORB access could not be verified')
   }
 
+  let data: OrbAccessPayload
   if (payload && typeof payload === 'object' && 'data' in payload && payload.data) {
-    return payload.data
+    data = payload.data
+  } else {
+    data = payload as OrbAccessPayload
   }
-  return payload as OrbAccessPayload
+
+  if (!isOrbAccessContractCompatible(data)) {
+    throw new AuthApiError(503, {
+      code: 'access_contract_mismatch',
+      message: `ORB access contract mismatch (expected ${ORB_ACCESS_CONTRACT_VERSION})`
+    })
+  }
+
+  return data
 }
 
 export async function fetchOrbBillingMeter() {

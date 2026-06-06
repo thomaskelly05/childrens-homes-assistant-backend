@@ -56,11 +56,15 @@ function resolvePostLoginRoute(access: Awaited<ReturnType<typeof fetchOrbAccess>
 function OrbLoginPanel({
   returnUrl: returnUrlProp,
   embedded = false,
-  sessionError = null
+  embeddedGateMode = false,
+  sessionError = null,
+  onLoginSuccess
 }: {
   returnUrl?: string
   embedded?: boolean
+  embeddedGateMode?: boolean
   sessionError?: string | null
+  onLoginSuccess?: () => void
 }) {
   const { resolvedTheme, appearanceMode } = useOrbAppearance()
   useOrbResidentialThemeSync()
@@ -80,6 +84,7 @@ function OrbLoginPanel({
   const [compactViewport, setCompactViewport] = useState(false)
 
   const returnUrl = sanitizeOrbReturnUrl(returnUrlProp || searchParams.get('returnUrl') || ORB_RETURN)
+  const autoRedirectAuthenticated = !embeddedGateMode
 
   const [oauth, setOauth] = useState({
     google: process.env.NEXT_PUBLIC_OAUTH_GOOGLE_ENABLED === '1',
@@ -88,21 +93,27 @@ function OrbLoginPanel({
   })
 
   useEffect(() => {
+    if (!autoRedirectAuthenticated) return
     if (status !== 'authenticated') return
     let cancelled = false
     void (async () => {
       try {
         const access = await fetchOrbAccess()
         if (cancelled) return
-        router.replace(resolvePostLoginRoute(access))
+        const target = resolvePostLoginRoute(access)
+        if (target === returnUrl || target === window.location.pathname) return
+        router.replace(target)
       } catch {
-        if (!cancelled) router.replace(returnUrl.startsWith('/orb') ? returnUrl : ORB_RETURN)
+        if (!cancelled) {
+          const target = returnUrl.startsWith('/orb') ? returnUrl : ORB_RETURN
+          if (target !== window.location.pathname) router.replace(target)
+        }
       }
     })()
     return () => {
       cancelled = true
     }
-  }, [returnUrl, router, status])
+  }, [autoRedirectAuthenticated, returnUrl, router, status])
 
   useEffect(() => {
     const updateCompact = () => {
@@ -137,11 +148,17 @@ function OrbLoginPanel({
 
   async function afterAuth() {
     await refreshSession()
+    if (embeddedGateMode) {
+      onLoginSuccess?.()
+      return
+    }
     try {
       const access = await fetchOrbAccess()
-      router.replace(resolvePostLoginRoute(access))
+      const target = resolvePostLoginRoute(access)
+      if (target !== window.location.pathname) router.replace(target)
     } catch {
-      router.replace(returnUrl.startsWith('/orb') ? returnUrl : ORB_RETURN)
+      const target = returnUrl.startsWith('/orb') ? returnUrl : ORB_RETURN
+      if (target !== window.location.pathname) router.replace(target)
     }
   }
 
@@ -206,7 +223,7 @@ function OrbLoginPanel({
 
   const authBusy = submitting || passkeySubmitting || status === 'loading'
 
-  if (status === 'authenticated') {
+  if (autoRedirectAuthenticated && status === 'authenticated') {
     return <OrbAuthLoadingScreen />
   }
 
@@ -220,6 +237,7 @@ function OrbLoginPanel({
       data-orb-appearance={appearanceMode}
       data-orb-appearance-mode={appearanceMode}
       data-orb-login-embedded={embedded ? 'true' : undefined}
+      data-orb-login-embedded-gate-mode={embeddedGateMode ? 'true' : undefined}
       style={{
         ...getOrbThemeCssVariables(resolvedTheme),
         paddingTop: 'env(safe-area-inset-top, 0px)',
@@ -503,15 +521,25 @@ function OrbLoginPanel({
 export function OrbLoginScreen({
   returnUrl,
   embedded = false,
-  sessionError = null
+  embeddedGateMode = false,
+  sessionError = null,
+  onLoginSuccess
 }: {
   returnUrl?: string
   embedded?: boolean
+  embeddedGateMode?: boolean
   sessionError?: string | null
+  onLoginSuccess?: () => void
 } = {}) {
   return (
     <Suspense fallback={<OrbAuthLoadingScreen />}>
-      <OrbLoginPanel returnUrl={returnUrl} embedded={embedded} sessionError={sessionError} />
+      <OrbLoginPanel
+        returnUrl={returnUrl}
+        embedded={embedded}
+        embeddedGateMode={embeddedGateMode}
+        sessionError={sessionError}
+        onLoginSuccess={onLoginSuccess}
+      />
     </Suspense>
   )
 }

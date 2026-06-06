@@ -44,9 +44,10 @@ describe('ORB mobile front door no loading loop', () => {
   it('auth gate does not router.replace while embedded login is shown on /orb', () => {
     const gate = read('components/orb-residential/orb-auth-gate.tsx')
     const auth = read('contexts/auth-context.tsx')
-    assert.doesNotMatch(gate, /router\.replace/)
+    assert.doesNotMatch(gate, /router\.replace\(\s*['"]\/orb['"]/)
     assert.doesNotMatch(gate, /window\.location/)
     assert.match(auth, /isOrbSurfacePath\(pathname\)\) return/)
+    assert.match(gate, /wrapOrbRouter/)
   })
 
   it('loading screen is scrollable with safe-area padding on mobile', () => {

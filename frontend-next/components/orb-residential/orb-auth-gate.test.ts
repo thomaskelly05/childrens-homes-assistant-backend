@@ -26,7 +26,7 @@ describe('ORB auth gate', () => {
 
   it('unauthenticated gate renders login only — no product shell markers', () => {
     const gate = read('components/orb-residential/orb-auth-gate.tsx')
-    assert.match(gate, /status === 'unauthenticated'[\s\S]*OrbLoginScreen/)
+    assert.match(gate, /case 'unauthenticated'[\s\S]*OrbLoginScreen/)
     assert.doesNotMatch(gate, /data-orb-sidebar/)
     assert.doesNotMatch(gate, /OrbResidentialSidebar/)
     assert.doesNotMatch(gate, /OrbDictateStation/)
@@ -35,7 +35,8 @@ describe('ORB auth gate', () => {
   it('inactive subscribed users see upgrade screen not full product', () => {
     const gate = read('components/orb-residential/orb-auth-gate.tsx')
     assert.match(gate, /OrbUpgradeScreen/)
-    assert.match(gate, /!account\.hasConfirmedAccess/)
+    assert.match(gate, /case 'inactive'/)
+    assert.match(gate, /hasConfirmedAccess/)
   })
 
   it('auth loading does not render product shell', () => {
@@ -44,7 +45,7 @@ describe('ORB auth gate', () => {
     assert.match(shell, /OrbAuthGate/)
     assert.match(companion, /data-orb-companion-root/)
     const gate = read('components/orb-residential/orb-auth-gate.tsx')
-    assert.match(gate, /auth\.status === 'loading'[\s\S]*OrbAuthLoadingScreen/)
+    assert.match(gate, /case 'checking_auth'[\s\S]*OrbAuthLoadingScreen/)
   })
 
   it('billing route uses billing auth gate mode', () => {

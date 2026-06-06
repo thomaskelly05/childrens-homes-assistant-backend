@@ -31,8 +31,14 @@ export type OrbAccessFailureKind =
   | 'unavailable'
   | 'timeout'
 
+export type OrbAccessStatus = 'idle' | 'loading' | 'ready' | 'error'
+
 export type OrbAccountState = {
   isLoading: boolean
+  /** Explicit access fetch lifecycle — hook never routes. */
+  accessStatus: OrbAccessStatus
+  accessError: string | null
+  contractMismatch: boolean
   isSignedIn: boolean
   /** True when backend /auth/me succeeded; local adult profile alone does not count. */
   hasBackendSession: boolean
@@ -56,6 +62,7 @@ export type OrbAccountState = {
   safetyAccepted: boolean | null
   adminBypass: boolean
   refresh: () => Promise<void>
+  retry: () => Promise<void>
   signInUrl: string
   accessUrl: string
 }
@@ -135,12 +142,21 @@ export function useOrbAccountState(): OrbAccountState {
   const [accessLoading, setAccessLoading] = useState(false)
   const [accessFetchStatus, setAccessFetchStatus] = useState<number | null>(null)
   const [accessFailureKind, setAccessFailureKind] = useState<OrbAccessFailureKind>('none')
+  const [accessError, setAccessError] = useState<string | null>(null)
+  const [contractMismatch, setContractMismatch] = useState(false)
   const refreshInFlight = useRef<Promise<void> | null>(null)
 
   const isAuthLoading = auth.status === 'loading'
   const hasBackendSession = auth.status === 'authenticated' && Boolean(auth.user)
   const isSignedIn = hasBackendSession
   const isLoading = isAuthLoading || (isSignedIn && accessLoading)
+  const accessStatus: OrbAccessStatus = !isSignedIn
+    ? 'idle'
+    : accessLoading
+      ? 'loading'
+      : accessFailureKind !== 'none' || contractMismatch
+        ? 'error'
+        : 'ready'
   const profileDisplayMode: OrbProfileDisplayMode = isSignedIn ? 'signed_in_account' : 'local_profile'
 
   const refreshAccessAndPasskeys = useCallback(async () => {
@@ -155,11 +171,15 @@ export function useOrbAccountState(): OrbAccountState {
 
     setAccessLoading(true)
     setAccessFailureKind('none')
+    setAccessError(null)
+    setContractMismatch(false)
     let accessTimeoutId: ReturnType<typeof setTimeout> | undefined
     try {
       let accessPayload: OrbAccessPayload | null = null
-      let accessStatus: number | null = null
+      let httpStatus: number | null = null
       let failureKind: OrbAccessFailureKind = 'none'
+      let errorMessage: string | null = null
+      let mismatch = false
       try {
         const accessTimeout = new Promise<never>((_, reject) => {
           accessTimeoutId = setTimeout(() => {
@@ -167,24 +187,34 @@ export function useOrbAccountState(): OrbAccountState {
           }, ORB_AUTH_LOADING_TIMEOUT_MS)
         })
         accessPayload = await Promise.race([fetchOrbAccess(), accessTimeout])
-        accessStatus = null
+        httpStatus = null
         failureKind = 'none'
         resetOrbAccessLoadingDeadline()
       } catch (caught) {
         accessPayload = null
         if (caught instanceof AuthApiError) {
-          accessStatus = caught.status
-          failureKind = classifyAccessFailure(caught.status, caught.code)
+          httpStatus = caught.status
+          if (caught.code === 'access_contract_mismatch') {
+            mismatch = true
+            failureKind = 'unavailable'
+            errorMessage = caught.message
+          } else {
+            failureKind = classifyAccessFailure(caught.status, caught.code)
+            errorMessage = caught.message
+          }
         } else {
-          accessStatus = 503
+          httpStatus = 503
           failureKind = 'unavailable'
+          errorMessage = 'ORB access could not be verified'
         }
       }
 
       const passkeyStatus = await fetchOrbPasskeyStatus().catch(() => null)
       setAccess(accessPayload)
-      setAccessFetchStatus(accessStatus)
+      setAccessFetchStatus(httpStatus)
       setAccessFailureKind(failureKind)
+      setAccessError(errorMessage)
+      setContractMismatch(mismatch)
       setHasPasskeys(
         Boolean(passkeyStatus?.has_passkeys ?? auth.user.has_passkeys ?? passkeyStatus?.items?.length)
       )
@@ -207,6 +237,11 @@ export function useOrbAccountState(): OrbAccountState {
     })
     return refreshInFlight.current
   }, [auth, refreshAccessAndPasskeys])
+
+  const retry = useCallback(async () => {
+    resetOrbAccessLoadingDeadline()
+    await refreshAccessAndPasskeys()
+  }, [refreshAccessAndPasskeys])
 
   useEffect(() => {
     setAdultProfile(readAdultProfile())
@@ -250,6 +285,9 @@ export function useOrbAccountState(): OrbAccountState {
 
   return {
     isLoading,
+    accessStatus,
+    accessError,
+    contractMismatch,
     isSignedIn,
     hasBackendSession,
     profileDisplayMode,
@@ -270,6 +308,7 @@ export function useOrbAccountState(): OrbAccountState {
     safetyAccepted,
     adminBypass,
     refresh,
+    retry,
     signInUrl: ORB_SIGN_IN_URL,
     accessUrl: ORB_ACCESS_URL
   }

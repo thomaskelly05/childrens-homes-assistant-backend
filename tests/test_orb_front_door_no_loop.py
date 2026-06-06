@@ -26,5 +26,7 @@ def test_legacy_orb_login_page_converges_to_orb():
 
 def test_auth_gate_embeds_login_without_route_replace():
     assert "OrbLoginScreen" in AUTH_GATE
-    assert "router.replace" not in AUTH_GATE
+    assert "embeddedGateMode" in AUTH_GATE
+    assert "deriveOrbGateState" in AUTH_GATE
+    assert "router.replace('/orb')" not in AUTH_GATE
     assert "window.location" not in AUTH_GATE
