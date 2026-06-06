@@ -1,0 +1,207 @@
+/**
+ * Therapeutic / person-centred writing metadata for core recording templates.
+ * Merged into canonical `orb-recording-framework` at load time — not a duplicate template source.
+ */
+
+import type { OrbRecordingRecordTypeId } from '@/lib/orb/recording/orb-recording-types'
+
+export type OrbTherapeuticWritingFramework = {
+  writing_guidance: string
+  therapeutic_prompts: string[]
+  person_centred_prompts: string[]
+  child_voice_prompts: string[]
+  trauma_informed_prompts: string[]
+  neutral_factual_prompts: string[]
+  what_to_avoid: string[]
+  quality_checks: string[]
+  safeguarding_checks: string[]
+  manager_oversight_checks: string[]
+  spelling_grammar_reminder: string
+  writing_style_ids: string[]
+}
+
+const SHARED_PROMPTS = {
+  child_voice: [
+    'What did the child say, do or show?',
+    "Is the child's voice present?",
+    'What was the impact for the child?'
+  ],
+  therapeutic: [
+    'What might this behaviour be communicating?',
+    'What did adults do to help the child feel safe?',
+    'Have we avoided blame, shame or judgemental wording?'
+  ],
+  factual: [
+    'Have we recorded observable facts before interpretation?',
+    'Are times, dates and adults named where known?'
+  ],
+  follow_up: ['What follow-up is needed?'],
+  quality: [
+    'Have we checked spelling, names, times and dates before finalising?',
+    'Would this record stand up to inspection and safeguarding review?'
+  ],
+  avoid: [
+    'Blame, shame or judgemental labels',
+    'Speculation presented as fact',
+    'Changing direct quotes without adult approval'
+  ],
+  spelling: 'Before finalising, ORB will help check spelling, grammar, names, times and dates.'
+}
+
+function framework(
+  partial: Partial<OrbTherapeuticWritingFramework> & Pick<OrbTherapeuticWritingFramework, 'writing_guidance'>
+): OrbTherapeuticWritingFramework {
+  return {
+    therapeutic_prompts: SHARED_PROMPTS.therapeutic,
+    person_centred_prompts: [
+      'What matters to the child in this situation?',
+      'How did we preserve dignity and respect?'
+    ],
+    child_voice_prompts: SHARED_PROMPTS.child_voice,
+    trauma_informed_prompts: [
+      'What might past trauma be communicating through this presentation?',
+      'Did we respond in a way that helps the child feel safe and regulated?'
+    ],
+    neutral_factual_prompts: SHARED_PROMPTS.factual,
+    what_to_avoid: SHARED_PROMPTS.avoid,
+    quality_checks: SHARED_PROMPTS.quality,
+    safeguarding_checks: ['Are safeguarding implications clear and escalated if needed?'],
+    manager_oversight_checks: ['Is manager oversight and follow-up documented?'],
+    spelling_grammar_reminder: SHARED_PROMPTS.spelling,
+    writing_style_ids: ['child_centred', 'therapeutic', 'factual', 'professional', 'safeguarding_aware'],
+    ...partial
+  }
+}
+
+export const ORB_THERAPEUTIC_WRITING_BY_RECORD_TYPE: Partial<
+  Record<
+    OrbRecordingRecordTypeId | 'action_plan' | 'policy_change_summary' | 'statement_of_purpose_review',
+    OrbTherapeuticWritingFramework
+  >
+> = {
+  general_dictation: framework({
+    writing_guidance:
+      'Turn rough notes into clear professional language — observable facts, respectful tone, child impact where relevant.',
+    therapeutic_prompts: [...SHARED_PROMPTS.therapeutic, 'Is professional judgement visible without over-interpreting?'],
+    writing_style_ids: ['professional', 'factual', 'child_centred', 'concise']
+  }),
+  daily_record: framework({
+    writing_guidance:
+      'Child-centred shift record — presentation, voice, staff response and outcome with times and observable facts.',
+    person_centred_prompts: [
+      'How was the child feeling and presenting?',
+      'What went well for the child today?'
+    ],
+    writing_style_ids: ['child_centred', 'therapeutic', 'factual', 'professional']
+  }),
+  incident_report: framework({
+    writing_guidance:
+      'Chronological, factual incident account — antecedents, child voice, de-escalation, injuries, notifications. Non-blaming.',
+    trauma_informed_prompts: [
+      'What might dysregulation have been communicating?',
+      'What helped the child return to safety?'
+    ],
+    safeguarding_checks: [
+      'Safeguarding meaning documented?',
+      'Notifications and manager oversight clear?'
+    ],
+    writing_style_ids: ['factual', 'safeguarding_aware', 'therapeutic', 'professional']
+  }),
+  missing_from_home_record: framework({
+    writing_guidance:
+      'Factual timeline, return conversation, contextual safeguarding — non-judgemental, exploitation-aware.',
+    trauma_informed_prompts: [
+      'How did we welcome the child back without shame?',
+      'What contextual safeguarding indicators are present?'
+    ],
+    writing_style_ids: ['factual', 'safeguarding_aware', 'therapeutic', 'child_centred']
+  }),
+  safeguarding_concern: framework({
+    writing_guidance:
+      'Facts-led concern record — child words in quotes, immediate safety, decision rationale, escalation pathway.',
+    safeguarding_checks: [
+      'Immediate safety actions documented?',
+      'DSL / manager informed?',
+      'Decision rationale clear?'
+    ],
+    what_to_avoid: [...SHARED_PROMPTS.avoid, 'Leading questions or conclusions before investigation'],
+    writing_style_ids: ['factual', 'safeguarding_aware', 'child_centred']
+  }),
+  physical_intervention: framework({
+    writing_guidance:
+      'Objective sequence, least-restrictive language, injury check, debrief, notifications — proportionality clear.',
+    trauma_informed_prompts: [
+      'How did we repair relationship after the intervention?',
+      'Was debrief offered and documented?'
+    ],
+    writing_style_ids: ['factual', 'safeguarding_aware', 'professional']
+  }),
+  key_work_session: framework({
+    writing_guidance:
+      'Strengths-based, child-led direct work — purpose, engagement, outcomes, plan link.',
+    therapeutic_prompts: [
+      'What strengths did the child show?',
+      'How did the child participate in the session?'
+    ],
+    writing_style_ids: ['therapeutic', 'child_centred', 'factual']
+  }),
+  manager_summary: framework({
+    writing_guidance:
+      'Fact-led manager oversight — professional curiosity, child experience, clear actions with owners and dates.',
+    manager_oversight_checks: [
+      'Actions have owners and timescales?',
+      'Child experience reflected in oversight?'
+    ],
+    writing_style_ids: ['manager_summary', 'professional', 'inspection_ready']
+  }),
+  chronology_entry: framework({
+    writing_guidance: 'Concise, dated, significance and child impact explicit — chronology-worthy events only.',
+    writing_style_ids: ['factual', 'concise', 'child_centred']
+  }),
+  handover: framework({
+    writing_guidance: 'Concise risk-focused handover — presentation, risks, actions for incoming team.',
+    writing_style_ids: ['concise', 'professional', 'safeguarding_aware']
+  }),
+  action_plan: framework({
+    writing_guidance: 'Practical actions with owners, timescales, review dates — linked to evidence from records or comparison.',
+    manager_oversight_checks: ['Each action has an owner and review point?'],
+    writing_style_ids: ['professional', 'manager_summary', 'concise']
+  }),
+  reg_44_evidence_summary: framework({
+    writing_guidance: 'Balanced evidence summary — child experience, strengths, development areas, actions from visit.',
+    writing_style_ids: ['inspection_ready', 'child_centred', 'professional']
+  }),
+  reg_45_reflection: framework({
+    writing_guidance: 'Reflective learning — what went well, improvements, child impact, non-defensive tone.',
+    therapeutic_prompts: ['What will we do differently for children as a result?'],
+    writing_style_ids: ['therapeutic', 'inspection_ready', 'manager_summary']
+  }),
+  statement_of_purpose_review: framework({
+    writing_guidance:
+      'Summarise Statement of Purpose intent, practice alignment, gaps and actions — based only on provided text.',
+    writing_style_ids: ['inspection_ready', 'professional', 'factual']
+  }),
+  policy_change_summary: framework({
+    writing_guidance:
+      'Summarise policy changes in plain English — what changed, practice impact, staff briefing points, actions.',
+    writing_style_ids: ['easy_read_briefing', 'professional', 'factual', 'safeguarding_aware']
+  })
+}
+
+export function therapeuticWritingForRecordType(
+  recordTypeId: string
+): OrbTherapeuticWritingFramework | undefined {
+  return ORB_THERAPEUTIC_WRITING_BY_RECORD_TYPE[recordTypeId as OrbRecordingRecordTypeId]
+}
+
+export function allTherapeuticPrompts(recordTypeId: string): string[] {
+  const fw = therapeuticWritingForRecordType(recordTypeId)
+  if (!fw) return [...SHARED_PROMPTS.child_voice, ...SHARED_PROMPTS.therapeutic, ...SHARED_PROMPTS.factual]
+  return [
+    ...fw.person_centred_prompts,
+    ...fw.child_voice_prompts,
+    ...fw.therapeutic_prompts,
+    ...fw.neutral_factual_prompts,
+    ...fw.trauma_informed_prompts
+  ]
+}
