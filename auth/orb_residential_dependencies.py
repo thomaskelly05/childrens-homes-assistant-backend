@@ -59,9 +59,12 @@ def require_orb_residential_premium(
     current_user: dict[str, Any] = Depends(require_orb_residential_auth),
     workflow: str = "ask_orb",
 ) -> dict[str, Any]:
+    user_id = current_user.get("user_id") or current_user.get("id")
+    if not user_id:
+        raise _forbidden("Sign in to use ORB Residential")
     decision = orb_access_service.check_access(
         conn,
-        user_id=int(current_user["user_id"]),
+        user_id=int(user_id),
         workflow=workflow,
     )
     if decision.allowed:

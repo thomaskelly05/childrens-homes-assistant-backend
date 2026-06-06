@@ -1,5 +1,5 @@
 from __future__ import annotations
 
-from auth.orb_residential_dependencies import require_orb_residential_auth
+from auth.orb_residential_dependencies import orb_residential_premium_dependency
 
-require_orb_dictate_access = require_orb_residential_auth
+require_orb_dictate_access = orb_residential_premium_dependency("record_this_properly")

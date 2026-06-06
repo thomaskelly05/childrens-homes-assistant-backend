@@ -1,0 +1,51 @@
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { describe, it } from 'node:test'
+
+const root = join(dirname(fileURLToPath(import.meta.url)), '../..')
+
+function read(relativePath: string) {
+  return readFileSync(join(root, relativePath), 'utf8')
+}
+
+describe('ORB security — no product flash', () => {
+  it('middleware redirects unauthenticated ORB product paths to login', () => {
+    const middleware = read('middleware.ts')
+    assert.match(middleware, /isOrbProductPath/)
+    assert.match(middleware, /\/orb\/login/)
+    assert.match(middleware, /returnUrl/)
+    assert.match(middleware, /const publicPrefixes = \[[\s\S]*?'\/build-live'/)
+    assert.doesNotMatch(middleware, /const publicPrefixes = \[[\s\S]*?'\/orb',/)
+  })
+
+  it('middleware keeps billing and signup public', () => {
+    const middleware = read('middleware.ts')
+    assert.match(middleware, /\/orb\/login/)
+    assert.match(middleware, /\/orb\/signup/)
+    assert.match(middleware, /\/orb\/billing/)
+    assert.match(middleware, /\/orb\/billing\/success/)
+    assert.match(middleware, /\/orb\/billing\/cancel/)
+  })
+
+  it('middleware sets no-store cache for ORB product paths', () => {
+    const middleware = read('middleware.ts')
+    assert.match(middleware, /Cache-Control/)
+    assert.match(middleware, /no-store/)
+  })
+
+  it('OrbAuthGate never mounts product children while loading or unauthenticated', () => {
+    const gate = read('components/orb-residential/orb-auth-gate.tsx')
+    assert.match(gate, /auth\.status === 'loading'[\s\S]*OrbAuthLoadingScreen/)
+    assert.match(gate, /auth\.status === 'unauthenticated'[\s\S]*OrbLoginScreen/)
+    assert.doesNotMatch(gate, /unauthenticated[\s\S]*OrbCareCompanion/)
+    assert.doesNotMatch(gate, /loading[\s\S]*data-orb-companion-root/)
+  })
+
+  it('product shell stays behind OrbAuthGate', () => {
+    const shell = read('components/orb/orb-shell.tsx')
+    assert.match(shell, /<OrbAuthGate mode="product">/)
+    assert.match(shell, /OrbCareCompanion/)
+  })
+})

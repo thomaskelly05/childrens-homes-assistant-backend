@@ -28,6 +28,12 @@ logger = logging.getLogger("indicare.orb_document_routes")
 
 router = APIRouter(prefix="/orb/standalone/documents", tags=["ORB Standalone Documents"])
 
+MAX_DOCUMENT_BYTES = 10 * 1024 * 1024
+BLOCKED_DOCUMENT_SUFFIXES = frozenset(
+    {".exe", ".bat", ".cmd", ".com", ".msi", ".scr", ".sh", ".bash", ".php", ".html", ".htm", ".js", ".jar", ".zip", ".rar"}
+)
+ALLOWED_DOCUMENT_SUFFIXES = frozenset({".txt", ".md", ".pdf", ".docx"})
+
 
 def _success(data: Any) -> dict[str, Any]:
     return {"success": True, "data": data}
@@ -77,7 +83,15 @@ async def upload_document(
     _reject_os_ids(payload.model_dump())
     try:
         if payload.content_base64 and payload.file_name:
+            suffix = (payload.file_name.rsplit(".", 1)[-1] if "." in payload.file_name else "").lower()
+            normalized_suffix = f".{suffix}" if suffix else ""
+            if normalized_suffix in BLOCKED_DOCUMENT_SUFFIXES:
+                raise HTTPException(status_code=400, detail="Unsupported or unsafe document file type.")
+            if normalized_suffix and normalized_suffix not in ALLOWED_DOCUMENT_SUFFIXES:
+                raise HTTPException(status_code=400, detail=UNSUPPORTED_FILE_MESSAGE)
             raw = base64.b64decode(payload.content_base64, validate=False)
+            if len(raw) > MAX_DOCUMENT_BYTES:
+                raise HTTPException(status_code=400, detail="Document file is too large.")
             result = orb_document_ingestion_service.ingest_file(
                 payload.file_name,
                 raw,

@@ -7,7 +7,12 @@ import os
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, status
 from pydantic import BaseModel, ConfigDict, Field
 
-from auth.orb_residential_dependencies import require_orb_residential_auth
+from auth.orb_residential_dependencies import (
+    orb_residential_premium_dependency,
+    require_orb_residential_auth,
+)
+
+require_orb_voice_premium = orb_residential_premium_dependency("voice_workflows")
 from schemas.orb_voice_realtime import (
     OrbVoiceOpenAISession,
     OrbVoiceSessionRequest,
@@ -166,7 +171,7 @@ async def orb_voice_session_status(_current_user=Depends(require_orb_residential
 @router.post("/realtime/session", response_model=OrbVoiceSessionResponse)
 async def orb_voice_realtime_session(
     payload: OrbVoiceSessionRequest,
-    current_user=Depends(require_orb_residential_auth),
+    current_user=Depends(require_orb_voice_premium),
 ):
     """Create a conversational realtime voice session — no browser_fallback masking when unconfigured."""
     if not _openai_realtime_configured():
@@ -197,7 +202,7 @@ async def orb_voice_realtime_session(
 @router.post("/session", response_model=OrbVoiceSessionResponse)
 async def orb_voice_session(
     payload: OrbVoiceSessionRequest,
-    current_user=Depends(require_orb_residential_auth),
+    current_user=Depends(require_orb_voice_premium),
 ):
     profile_id = normalise_profile_id(payload.voice_id)
     resolved = resolve_voice_profile_for_session(profile_id)
@@ -326,7 +331,7 @@ async def orb_voice_realtime_ws(websocket: WebSocket, session_id: str) -> None:
 @router.post("/webrtc/offer/{session_id}")
 async def orb_voice_webrtc_offer(
     session_id: str,
-    _current_user=Depends(require_orb_residential_auth),
+    _current_user=Depends(require_orb_voice_premium),
 ):
     record = orb_voice_realtime_session_store.get(session_id)
     if not record or record.provider != "webrtc_realtime":
@@ -350,7 +355,7 @@ async def orb_voice_webrtc_offer(
 @router.post("/webrtc/ice/{session_id}")
 async def orb_voice_webrtc_ice(
     session_id: str,
-    _current_user=Depends(require_orb_residential_auth),
+    _current_user=Depends(require_orb_voice_premium),
 ):
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
@@ -365,7 +370,7 @@ async def orb_voice_webrtc_ice(
 @router.post("/transcribe")
 async def orb_voice_transcribe(
     payload: OrbVoiceTranscribeRequest,
-    _current_user=Depends(require_orb_residential_auth),
+    _current_user=Depends(require_orb_voice_premium),
 ):
     if _provider_has_stt_credentials() and payload.text:
         return {
@@ -400,7 +405,7 @@ async def orb_voice_provider_status(current_user=Depends(require_orb_residential
 @router.post("/speak")
 async def orb_voice_speak(
     payload: OrbVoiceTextRequest,
-    current_user=Depends(require_orb_residential_auth),
+    current_user=Depends(require_orb_voice_premium),
 ):
     spoken = (payload.spoken_summary or payload.text or "").strip()
     if not spoken:
