@@ -61,7 +61,9 @@ export function OrbPremiumPage({
 
       <OrbPremiumPanel
         className="space-y-4"
-        {...(panelId === 'documents' ? { 'data-orb-knowledge-library-body': true } : {})}
+        {...(panelId === 'documents'
+          ? { 'data-orb-knowledge-library-body': true, 'data-orb-documents-content-scroll': true }
+          : {})}
         {...(panelId === 'templates' ? { 'data-orb-template-list-scroll': true } : {})}
       >
         {children}

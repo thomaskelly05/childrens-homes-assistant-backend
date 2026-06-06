@@ -562,3 +562,78 @@ html[data-orb-residential='1'] [data-orb-billing-sticky-footer] button {
 html[data-orb-residential='1'] [data-orb-billing-modal] .orb-billing-card {
   padding: 1rem 1.125rem;
 }
+
+/* ── Premium interaction pass — sidebar rail, account menu, modals ─────── */
+
+html[data-orb-residential='1'] [data-orb-sidebar-icon-rail] {
+  width: 100%;
+  max-width: var(--orb-sidebar-width-collapsed, 4.25rem);
+}
+
+html[data-orb-residential='1'] [data-orb-sidebar-icon-rail] .orb-sidebar-nav-item {
+  min-height: 2.25rem;
+  border-radius: 0.75rem;
+}
+
+html[data-orb-residential='1'] [data-orb-sidebar-icon-rail] .orb-sidebar-nav-item__label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
+
+html[data-orb-residential='1'] [data-orb-account-menu] {
+  max-height: min(85dvh, 28rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+html[data-orb-residential='1'] [data-orb-settings-drawer] {
+  max-height: min(88dvh, 40rem);
+}
+
+html[data-orb-residential='1'] [data-orb-settings-drawer] .orb-premium-settings-card {
+  padding: 0.75rem;
+}
+
+html[data-orb-residential='1'] [data-orb-billing-modal] {
+  display: flex;
+  max-height: min(85dvh, 36rem);
+  flex-direction: column;
+  overflow: hidden;
+}
+
+html[data-orb-residential='1'] [data-orb-billing-modal] > :not([data-orb-billing-sticky-footer]) {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+html[data-orb-residential='1'] [data-orb-documents-content-scroll] {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+html[data-orb-residential='1'] [data-orb-documents-header] {
+  flex-shrink: 0;
+}
+
+html[data-orb-residential='1'] [data-orb-write-document-first='true'] .orb-write-studio-grid {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+html[data-orb-residential='1'] [data-orb-write-studio-header] {
+  padding-block: 0.35rem;
+  gap: 0.35rem;
+}
+
+html[data-orb-residential='1'] [data-orb-write-document-first='true'] [data-orb-write-document-canvas] {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--orb-line) 35%, transparent);
+  border-radius: 0.75rem;
+}
+
+html[data-orb-residential='1'] .orb-voice-companion .orb-presence--voice {
+  --orb-presence-size: clamp(7.5rem, 16vh, 11rem);
+}

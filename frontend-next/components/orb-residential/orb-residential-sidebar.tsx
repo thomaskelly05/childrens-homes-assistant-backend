@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode, type RefObject } from 'react'
 import Link from 'next/link'
 import {
   BookOpen,
@@ -96,10 +96,25 @@ const DESKTOP_LIBRARY_NAV: Array<{
   { id: 'saved', label: 'Saved Outputs', helper: 'Your records and drafts', icon: Save }
 ]
 
-const COLLAPSED_RAIL_STATIONS: Array<(typeof NAV_ITEMS)[number]['id']> = [
-  'orb_dictate',
-  'templates',
-  'documents'
+const COLLAPSED_RAIL_MAIN: Array<{
+  id: (typeof NAV_ITEMS)[number]['id'] | 'chat'
+  label: string
+  icon: (typeof NAV_ITEMS)[number]['icon']
+}> = [
+  { id: 'chat', label: 'Chat', icon: MessageSquare },
+  { id: 'orb_dictate', label: 'Dictate', icon: PenLine },
+  { id: 'orb_voice', label: 'Voice', icon: Mic },
+  { id: 'orb_write', label: 'ORB Write', icon: FileEdit }
+]
+
+const COLLAPSED_RAIL_LIBRARY: Array<{
+  id: (typeof NAV_ITEMS)[number]['id']
+  label: string
+  icon: (typeof NAV_ITEMS)[number]['icon']
+}> = [
+  { id: 'templates', label: 'Templates', icon: FileText },
+  { id: 'documents', label: 'Documents & Guidance', icon: FolderOpen },
+  { id: 'saved', label: 'Saved outputs', icon: Save }
 ]
 
 const MOBILE_DRAWER_QUICK_NAV: Array<{
@@ -233,17 +248,20 @@ function SidebarIconButton({
   onClick,
   children,
   active,
-  dataOrb
+  dataOrb,
+  buttonRef
 }: {
   label: string
-  onClick: () => void
+  onClick: (event: React.MouseEvent<HTMLButtonElement>) => void
   children: ReactNode
   active?: boolean
   dataOrb?: string
+  buttonRef?: RefObject<HTMLButtonElement | null>
 }) {
   return (
     <button
       type="button"
+      ref={buttonRef}
       onClick={onClick}
       className={`orb-sidebar-nav-item w-full ${active ? 'orb-sidebar-nav-item--active' : ''}`}
       aria-label={label}
@@ -289,7 +307,7 @@ export function OrbResidentialSidebar({
   onOpenStation: (station: OrbResidentialStationId) => void
   onOpenSettings?: () => void
   onOpenSavedOutputs?: () => void
-  onOpenProfile?: () => void
+  onOpenProfile?: (anchor?: HTMLElement | null) => void
   onOpenBilling?: () => void
   onSelectMode?: (mode: StandaloneOrbMode) => void
   onOpenPracticePanel?: (panel: OrbResidentialPracticePanelId) => void
@@ -435,7 +453,12 @@ export function OrbResidentialSidebar({
 
   if (collapsed) {
     return (
-      <div className="orb-sidebar-rail flex h-full flex-col items-center gap-1 py-2" data-orb-sidebar-collapsed="true">
+      <div
+        className="orb-sidebar-rail flex h-full min-h-0 flex-col items-center gap-0.5 overflow-hidden py-2"
+        data-orb-sidebar-collapsed="true"
+        data-orb-sidebar-state="collapsed"
+        data-orb-sidebar-icon-rail
+      >
         {onToggleCollapse ? (
           <button
             type="button"
@@ -443,11 +466,12 @@ export function OrbResidentialSidebar({
             onClick={onToggleCollapse}
             aria-label="Expand sidebar"
             data-orb-sidebar-expand
+            data-orb-sidebar-collapse-toggle
           >
             <ChevronRight className="h-4 w-4" />
           </button>
         ) : null}
-        <GlassOrbMark size="sm" className="mb-2" pulse />
+        <GlassOrbMark size="sm" className="mb-1 shrink-0" pulse aria-hidden />
         <SidebarIconButton
           label="New chat"
           onClick={() => onNewChat(workspace.activeProjectId)}
@@ -455,52 +479,40 @@ export function OrbResidentialSidebar({
         >
           <MessageSquarePlus className="h-4 w-4 shrink-0" />
         </SidebarIconButton>
-        <SidebarIconButton
-          label="Search chats"
-          onClick={() => {
-            onToggleCollapse?.()
-            window.setTimeout(() => {
-              document.querySelector<HTMLInputElement>('[data-orb-sidebar-search]')?.focus()
-            }, 120)
-          }}
-          dataOrb="orb-sidebar-search-nav"
-        >
-          <Search className="h-4 w-4 shrink-0" />
-        </SidebarIconButton>
-        <SidebarIconButton
-          label="Projects"
-          onClick={() => {
-            onToggleCollapse?.()
-            setProjectsCollapsed(false)
-            writeOrbSidebarSectionCollapsed('projects', false)
-          }}
-          dataOrb="orb-sidebar-projects-nav"
-        >
-          <FolderKanban className="h-4 w-4 shrink-0" />
-        </SidebarIconButton>
-        <div className="mt-auto flex w-full flex-col gap-0.5 px-1">
-          {COLLAPSED_RAIL_STATIONS.map((stationId) => {
-            const station = NAV_ITEMS.find((item) => item.id === stationId)
-            if (!station) return null
-            const Icon = station.icon
+        <nav className="flex w-full flex-col gap-0.5 px-1" aria-label="ORB navigation">
+          {[...COLLAPSED_RAIL_MAIN, ...COLLAPSED_RAIL_LIBRARY].map((entry) => {
+            const Icon = entry.icon
             return (
               <SidebarIconButton
-                key={station.id}
-                label={station.label}
+                key={entry.id}
+                label={entry.label}
                 onClick={() => {
-                  if (station.id === 'saved') onOpenSavedOutputs?.()
-                  else onOpenStation(station.id)
+                  if (entry.id === 'chat') {
+                    onOpenChat?.()
+                    return
+                  }
+                  if (entry.id === 'saved') {
+                    onOpenSavedOutputs?.()
+                    return
+                  }
+                  onOpenStation(entry.id)
                 }}
-                dataOrb={`orb-sidebar-station-${station.id}`}
+                dataOrb={entry.id === 'chat' ? 'orb-sidebar-chat' : `orb-sidebar-station-${entry.id}`}
               >
                 <Icon className="h-4 w-4 shrink-0" />
               </SidebarIconButton>
             )
           })}
+        </nav>
+        <div className="mt-auto flex w-full flex-col gap-0.5 px-1">
           <SidebarIconButton label="Settings" onClick={() => onOpenSettings?.()} dataOrb="orb-sidebar-settings">
             <Settings className="h-4 w-4 shrink-0" />
           </SidebarIconButton>
-          <SidebarIconButton label="Account" onClick={() => onOpenProfile?.()} dataOrb="orb-sidebar-profile">
+          <SidebarIconButton
+            label="Account"
+            onClick={(e) => onOpenProfile?.(e.currentTarget)}
+            dataOrb="orb-sidebar-profile"
+          >
             <User className="h-4 w-4 shrink-0" />
           </SidebarIconButton>
         </div>
@@ -514,7 +526,7 @@ export function OrbResidentialSidebar({
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col" data-orb-sidebar-panel>
+    <div className="flex h-full min-h-0 flex-col" data-orb-sidebar-panel data-orb-sidebar-state="expanded">
       <div className="orb-sidebar-header shrink-0 px-3 py-3" data-orb-sidebar-header>
         <div className="flex items-start gap-2.5">
           <GlassOrbMark size="sm" className="mt-0.5" pulse />
@@ -534,6 +546,7 @@ export function OrbResidentialSidebar({
                 onClick={onToggleCollapse}
                 aria-label="Collapse sidebar"
                 data-orb-sidebar-collapse
+                data-orb-sidebar-collapse-toggle
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
@@ -863,10 +876,10 @@ export function OrbResidentialSidebar({
             <div className="space-y-0.5 pt-0" data-orb-sidebar-bottom>
               <button
                 type="button"
-                onClick={() => onOpenProfile?.()}
+                onClick={(e) => onOpenProfile?.(e.currentTarget)}
                 className="orb-sidebar-nav-item w-full"
                 data-orb-sidebar-profile
-                aria-label="Open profile"
+                aria-label="Open account menu"
               >
                 <User className="h-4 w-4" aria-hidden />
                 <span className="truncate">{adultProfile?.name?.trim() || 'Profile'}</span>
@@ -907,10 +920,10 @@ export function OrbResidentialSidebar({
           >
             <button
               type="button"
-              onClick={() => onOpenProfile?.()}
+              onClick={(e) => onOpenProfile?.(e.currentTarget)}
               className="orb-sidebar-nav-item w-full"
               data-orb-sidebar-profile
-              aria-label="Open profile"
+              aria-label="Open account menu"
             >
               <User className="h-4 w-4" aria-hidden />
               <span className="truncate">{adultProfile?.name?.trim() || 'Profile'}</span>

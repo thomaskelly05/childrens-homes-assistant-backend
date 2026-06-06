@@ -58,9 +58,9 @@ describe('ORB Residential premium layout pass', () => {
     const css = read('app/orb/orb-premium-layout-pass.css')
     assert.match(documents, /data-orb-documents-station-header/)
     assert.match(documents, /data-orb-knowledge-library-tabs/)
-    assert.match(documents, /compactChrome:\s*false/)
+    assert.match(documents, /compactChrome:\s*true/)
     assert.match(css, /\[data-orb-documents-station-header\][\s\S]*position:\s*sticky/)
-    assert.match(css, /\[data-orb-document-panel\][\s\S]*\[data-orb-knowledge-library-body\]/)
+    assert.match(css, /\[data-orb-documents-content-scroll\]/)
   })
 
   it('login hero sphere is sized to avoid clipping', () => {

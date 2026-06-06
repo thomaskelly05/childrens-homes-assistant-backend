@@ -18,6 +18,8 @@ export type OrbAccountMenuProps = {
   open: boolean
   onClose: () => void
   anchorRef: React.RefObject<HTMLElement | null>
+  /** Prefer opening above the anchor (collapsed sidebar account icon). */
+  preferAbove?: boolean
   profile: AdultProfile | null
   userEmail?: string | null
   userName?: string | null
@@ -40,13 +42,15 @@ function MenuItem({
   label,
   onClick,
   testId,
-  tone = 'default'
+  tone = 'default',
+  dataOrbSignOut = false
 }: {
   icon: ReactNode
   label: string
   onClick: () => void
   testId: string
   tone?: 'default' | 'danger'
+  dataOrbSignOut?: boolean
 }) {
   return (
     <button
@@ -59,6 +63,7 @@ function MenuItem({
           : 'text-[var(--orb-foreground)] hover:bg-[var(--orb-surface-hover)]'
       }`}
       data-orb-account-menu-item={testId}
+      {...(dataOrbSignOut ? { 'data-orb-account-menu-signout': true } : {})}
     >
       <span className="flex h-4 w-4 shrink-0 items-center justify-center opacity-80" aria-hidden>
         {icon}
@@ -73,6 +78,7 @@ export function OrbAccountMenu({
   open,
   onClose,
   anchorRef,
+  preferAbove = false,
   profile,
   userEmail,
   userName,
@@ -128,8 +134,19 @@ export function OrbAccountMenu({
 
   const anchor = anchorRef.current
   const rect = anchor?.getBoundingClientRect()
-  const top = rect ? rect.bottom + 8 : 56
-  const left = rect ? Math.max(12, rect.left) : 12
+  const menuWidth = Math.min(288, typeof window !== 'undefined' ? window.innerWidth - 24 : 288)
+  const left = rect
+    ? Math.min(Math.max(12, rect.right - menuWidth), typeof window !== 'undefined' ? window.innerWidth - menuWidth - 12 : 12)
+    : 12
+  const estimatedHeight = 420
+  const openAbove =
+    preferAbove ||
+    Boolean(rect && rect.bottom > (typeof window !== 'undefined' ? window.innerHeight : 800) * 0.55)
+  const top = rect
+    ? openAbove
+      ? Math.max(12, rect.top - estimatedHeight - 8)
+      : rect.bottom + 8
+    : 56
 
   return (
     <div
@@ -139,6 +156,7 @@ export function OrbAccountMenu({
       className="orb-account-menu fixed z-[80] w-[min(18rem,calc(100vw-1.5rem))] rounded-2xl border border-[var(--orb-line)]/60 bg-[var(--orb-surface-elevated)]/95 p-2 shadow-2xl shadow-black/30 backdrop-blur-xl"
       style={{ top, left }}
       data-orb-account-menu
+      data-orb-account-menu-open="true"
     >
       <div className="rounded-xl border border-[var(--orb-line)]/40 bg-[var(--orb-surface)]/80 px-3 py-3" data-orb-account-menu-header>
         <div className="flex items-start gap-3">
@@ -272,6 +290,7 @@ export function OrbAccountMenu({
             onClose()
             onSignOut()
           }}
+          dataOrbSignOut
         />
       </div>
     </div>

@@ -9,7 +9,7 @@ import { OrbVoiceActions } from '@/components/orb-standalone/orb-voice-actions'
 import { OrbVoiceLaunchControls } from '@/components/orb-standalone/orb-voice-launch-controls'
 import { OrbVoiceTranscriptActions } from '@/components/orb-standalone/orb-voice-transcript-actions'
 import { OrbVoiceMobileExperience } from '@/components/orb-standalone/orb-voice-mobile-experience'
-import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
+import { OrbVoiceCompanion, mapOrbVoiceUiToCompanionState } from '@/components/orb-residential/orb-voice-companion'
 import type { useStandaloneOrbVoice } from '@/components/orb-standalone/use-standalone-orb-voice'
 import { saveVoiceTranscript } from '@/lib/orb/voice/save-voice-transcript'
 import {
@@ -411,15 +411,11 @@ export function OrbVoiceStation({
     orbVoiceUiDetailLine(uiState, dictateRealtimeReady) ||
     (permissionDenied ? 'Microphone access was denied. You can still type to ORB.' : null)
 
-  const orbVisual = useBrowserLaunch
-    ? orbVisualClassFromLaunchState(launchUiState)
+  const companionState = useBrowserLaunch
+    ? mapOrbVoiceUiToCompanionState(launchUiState)
     : voiceSessionLive
-      ? orbVisualClassFromRealtime(realtimeState)
-      : 'glass-orb-mark--voice glass-orb-mark--idle'
-  const pulseOrb = useBrowserLaunch
-    ? launchUiState === 'listening' || launchUiState === 'thinking' || launchUiState === 'speaking'
-    : voiceSessionLive &&
-      (realtimeState === 'listening' || realtimeState === 'thinking' || realtimeState === 'speaking')
+      ? mapOrbVoiceUiToCompanionState(realtimeState)
+      : mapOrbVoiceUiToCompanionState(uiState)
 
   useEffect(() => {
     if (!voiceSessionLive || realtimeState !== 'listening') {
@@ -972,8 +968,11 @@ export function OrbVoiceStation({
           launchUiState={launchUiState}
           browserTranscript={browserTranscriptText}
           useBrowserLaunch={useBrowserLaunch}
-          orbVisualClassName={orbVisual}
-          pulseOrb={pulseOrb}
+          orbVisualClassName={orbVisualClassFromLaunchState(launchUiState)}
+          pulseOrb={
+            launchUiState === 'listening' || launchUiState === 'thinking' || launchUiState === 'speaking'
+          }
+          voiceCompanionState={companionState}
           statusLine={statusLine}
           detailLine={detailLine}
           onSendToOrb={onSendToOrb}
@@ -1068,7 +1067,7 @@ export function OrbVoiceStation({
             </p>
           ) : null}
 
-          <GlassOrbMark variant="workspace" pulse={pulseOrb} className={`mt-6 shrink-0 ${orbVisual}`} />
+          <OrbVoiceCompanion state={companionState} className="mt-6 shrink-0" />
 
           <p className="mt-6 text-center text-sm font-medium text-[var(--orb-foreground)]" data-orb-voice-status-label>
             {statusLine}
