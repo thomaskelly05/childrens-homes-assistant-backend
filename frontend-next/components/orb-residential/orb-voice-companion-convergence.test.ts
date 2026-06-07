@@ -39,11 +39,11 @@ describe('ORB Voice companion visual convergence', () => {
     }
   })
 
-  it('OrbVoiceHead exposes living-head-v7 markers and SVG profile silhouette', () => {
+  it('OrbVoiceHead exposes living-head-v8 markers and SVG profile silhouette', () => {
     const head = read('components/orb-residential/orb-voice-head.tsx')
     const companion = read('components/orb-residential/orb-voice-companion.tsx')
     const visualBuild = read('lib/orb/orb-visual-build.ts')
-    assert.match(visualBuild, /ORB_VOICE_VERSION = 'living-head-v7'/)
+    assert.match(visualBuild, /ORB_VOICE_VERSION = 'living-head-v8'/)
     assert.match(companion, /OrbVoiceHead/)
     assert.match(head, /data-orb-voice-companion/)
     assert.match(head, /data-orb-voice-companion-size=\{resolvedSize\}/)
@@ -59,6 +59,37 @@ describe('ORB Voice companion visual convergence', () => {
     assert.doesNotMatch(head, /OrbPresence/)
     assert.doesNotMatch(head, /import.*OrbSphere/)
     assert.doesNotMatch(head, /GlassOrbMark/)
+  })
+
+  it('OrbVoiceHead exposes human presence hooks for breathing, eyes and state motion', () => {
+    const head = read('components/orb-residential/orb-voice-head.tsx')
+    const css = read('components/orb-residential/orb-voice.css')
+
+    assert.match(head, /data-orb-voice-breathe/)
+    assert.match(head, /data-orb-voice-breathe-bust/)
+    assert.match(head, /data-orb-voice-eye-left/)
+    assert.match(head, /data-orb-voice-eye-right/)
+    assert.match(head, /data-orb-voice-listening-waves/)
+    assert.match(head, /data-orb-voice-particles/)
+    assert.match(head, /data-orb-voice-thinking-halo/)
+    assert.match(head, /orb-voice-companion__eye--blink/)
+    assert.match(head, /orb-voice-companion__eye-shimmer/)
+    assert.match(head, /orb-voice-companion__nose-bridge/)
+    assert.match(head, /orb-voice-companion__jaw-line/)
+    assert.match(head, /orb-voice-companion__temple-warmth/)
+
+    assert.match(css, /orb-voice-head-breathe/)
+    assert.match(css, /orb-voice-neck-breathe/)
+    assert.match(css, /orb-voice-bust-breathe/)
+    assert.match(css, /orb-voice-eye-blink/)
+    assert.match(css, /orb-voice-eye-shimmer/)
+    assert.match(css, /orb-voice-listen-wave/)
+    assert.match(css, /orb-voice-particle-drift/)
+    assert.match(css, /\[data-orb-voice-state='idle'\]/)
+    assert.match(css, /\[data-orb-voice-state='listening'\]/)
+    assert.match(css, /\[data-orb-voice-state='thinking'\]/)
+    assert.match(css, /\[data-orb-voice-state='speaking'\]/)
+    assert.match(css, /prefers-reduced-motion: reduce/)
   })
 
   it('companion size scopes separate hero, mini, and mobile-preview instances', () => {

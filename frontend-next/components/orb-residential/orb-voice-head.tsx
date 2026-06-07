@@ -70,30 +70,43 @@ function OrbVoiceHeadSvg({
   const hc = hue.hueC
   const warm = hue.warm
 
-  /* 3/4 profile facing left — cranium, forehead, cheek, chin, back of skull */
+  /* 3/4 profile facing left — cranium, forehead, nose bridge, cheek, chin, jaw */
   const headPath =
-    'M 100 18 C 128 16 156 30 164 56 C 170 80 168 106 160 128 ' +
-    'C 154 148 140 168 120 180 C 106 186 92 184 80 172 C 64 158 52 138 46 118 ' +
-    'C 40 102 34 86 36 72 C 38 56 46 42 60 32 C 76 22 88 18 100 18 Z'
+    'M 96 14 C 124 12 158 26 168 54 C 176 82 174 112 164 136 ' +
+    'C 154 158 134 176 110 184 C 94 188 76 182 64 168 C 50 152 40 130 36 108 ' +
+    'C 32 88 34 66 42 48 C 52 30 72 16 96 14 Z'
 
   const neckPath =
-    'M 86 176 C 80 194 78 214 82 232 C 94 230 106 228 116 232 ' +
-    'C 118 214 114 194 108 176 Z'
+    'M 78 178 C 72 198 70 218 74 236 C 88 234 102 232 114 236 ' +
+    'C 116 216 112 196 106 178 Z'
 
   const bustPath =
-    'M 38 238 C 20 250 26 276 68 278 C 100 280 132 278 162 270 ' +
-    'C 182 260 184 244 170 236 C 148 228 118 232 88 238 C 62 240 48 240 38 238 Z'
+    'M 32 242 C 14 254 18 278 62 280 C 98 282 136 278 168 268 ' +
+    'C 186 256 188 240 172 232 C 148 224 118 228 88 234 C 58 238 42 240 32 242 Z'
 
   const earPath =
-    'M 156 104 C 166 108 172 118 170 132 C 168 144 158 152 150 146 ' +
-    'C 144 134 148 116 156 104 Z'
+    'M 158 98 C 170 102 176 114 174 130 C 172 144 162 152 152 146 ' +
+    'C 146 132 150 112 158 98 Z'
 
   /* Forehead, nose bridge, cheek plane — left-facing profile */
   const facePlanePath =
-    'M 58 38 C 48 56 42 78 40 100 C 38 118 40 138 48 156 ' +
-    'C 36 130 34 108 36 86 C 40 64 48 48 58 38 Z'
+    'M 54 32 C 44 50 38 74 36 98 C 34 118 36 140 44 160 ' +
+    'C 32 132 30 108 32 84 C 36 60 44 44 54 32 Z'
 
-  const cheekGlowPath = 'M 42 96 C 36 112 38 132 48 150 C 44 128 42 110 42 96 Z'
+  const foreheadHighlightPath =
+    'M 56 28 C 48 38 42 52 40 68 C 46 54 52 42 62 34 C 60 30 58 28 56 28 Z'
+
+  const cheekGlowPath = 'M 40 94 C 34 110 36 132 46 152 C 42 128 40 108 40 94 Z'
+
+  const jawLinePath =
+    'M 64 168 C 78 176 96 180 110 184 C 98 178 82 172 64 168 Z'
+
+  const noseBridgePath = 'M 38 52 C 36 72 34 94 36 114 C 38 92 40 70 38 52 Z'
+
+  const chinLinePath = 'M 36 108 C 38 128 44 148 56 164 C 48 148 40 128 36 108 Z'
+
+  const templeWarmthPath =
+    'M 72 36 C 88 32 108 38 120 52 C 108 44 92 40 72 36 Z'
 
   const isSpeaking = state === 'speaking'
   const isListening = state === 'listening'
@@ -109,68 +122,86 @@ function OrbVoiceHeadSvg({
     >
       <defs>
         <radialGradient id={`${uid}-aura`} cx="50%" cy="42%" r="58%">
-          <stop offset="0%" stopColor={`rgba(56, 189, 248, ${0.28 * g})`} />
-          <stop offset="48%" stopColor={`rgba(124, 92, 255, ${0.16 * g})`} />
-          <stop offset="68%" stopColor={`rgba(236, 72, 153, ${0.1 * g})`} />
+          <stop offset="0%" stopColor={`rgba(56, 189, 248, ${0.3 * g})`} />
+          <stop offset="42%" stopColor={`rgba(47, 125, 255, ${0.2 * g})`} />
+          <stop offset="58%" stopColor={`rgba(124, 92, 255, ${0.16 * g})`} />
+          <stop offset="72%" stopColor={`rgba(236, 72, 153, ${0.1 * g})`} />
           <stop offset="100%" stopColor="transparent" />
         </radialGradient>
 
-        <linearGradient id={`${uid}-head-glass`} x1="18%" y1="8%" x2="82%" y2="92%">
-          <stop offset="0%" stopColor="rgba(255, 255, 255, 0.48)" />
-          <stop offset="14%" stopColor={`rgba(${ha}, 0.72)`} />
-          <stop offset="38%" stopColor="#2f7dff" stopOpacity="0.88" />
-          <stop offset="62%" stopColor="#1455d9" stopOpacity="0.82" />
-          <stop offset="82%" stopColor={`rgba(${hb}, 0.68)`} />
-          <stop offset="100%" stopColor="#071034" stopOpacity="0.78" />
+        <linearGradient id={`${uid}-head-glass`} x1="16%" y1="6%" x2="84%" y2="94%">
+          <stop offset="0%" stopColor="rgba(255, 255, 255, 0.52)" />
+          <stop offset="12%" stopColor={`rgba(${ha}, 0.78)`} />
+          <stop offset="32%" stopColor="#38bdf8" stopOpacity="0.82" />
+          <stop offset="48%" stopColor="#2f7dff" stopOpacity="0.9" />
+          <stop offset="64%" stopColor="#1455d9" stopOpacity="0.84" />
+          <stop offset="78%" stopColor={`rgba(${hb}, 0.72)`} />
+          <stop offset="92%" stopColor="#3b1a78" stopOpacity="0.68" />
+          <stop offset="100%" stopColor="#071034" stopOpacity="0.8" />
         </linearGradient>
 
-        <radialGradient id={`${uid}-head-core`} cx="38%" cy="40%" r="52%">
-          <stop offset="0%" stopColor={`rgba(${ha}, 0.42)`} />
-          <stop offset="55%" stopColor={`rgba(${hb}, 0.22)`} />
+        <radialGradient id={`${uid}-head-core`} cx="36%" cy="38%" r="54%">
+          <stop offset="0%" stopColor={`rgba(${ha}, 0.48)`} />
+          <stop offset="40%" stopColor={`rgba(47, 125, 255, 0.28)`} />
+          <stop offset="68%" stopColor={`rgba(${hb}, 0.22)`} />
+          <stop offset="100%" stopColor="transparent" />
+        </radialGradient>
+
+        <radialGradient id={`${uid}-temple-warmth`} cx="50%" cy="50%" r="55%">
+          <stop offset="0%" stopColor={`rgba(${hc}, 0.38)`} />
+          <stop offset="55%" stopColor={`rgba(${warm}, 0.22)`} />
           <stop offset="100%" stopColor="transparent" />
         </radialGradient>
 
         <linearGradient id={`${uid}-head-shine`} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor={`rgba(${ha}, 0.55)`} />
-          <stop offset="35%" stopColor={`rgba(${hb}, 0.18)`} />
-          <stop offset="65%" stopColor={`rgba(${hc}, 0.42)`} />
-          <stop offset="100%" stopColor={`rgba(${warm}, 0.38)`} />
+          <stop offset="0%" stopColor={`rgba(${ha}, 0.58)`} />
+          <stop offset="30%" stopColor={`rgba(${hb}, 0.2)`} />
+          <stop offset="62%" stopColor={`rgba(${hc}, 0.44)`} />
+          <stop offset="100%" stopColor={`rgba(${warm}, 0.4)`} />
         </linearGradient>
 
         <linearGradient id={`${uid}-neck`} x1="50%" y1="0%" x2="50%" y2="100%">
-          <stop offset="0%" stopColor={`rgba(${ha}, 0.42)`} />
-          <stop offset="45%" stopColor={`rgba(${hb}, 0.28)`} />
-          <stop offset="100%" stopColor="rgba(7, 16, 52, 0.38)" />
+          <stop offset="0%" stopColor={`rgba(${ha}, 0.46)`} />
+          <stop offset="40%" stopColor={`rgba(47, 125, 255, 0.32)`} />
+          <stop offset="72%" stopColor={`rgba(${hb}, 0.26)`} />
+          <stop offset="100%" stopColor="rgba(7, 16, 52, 0.42)" />
         </linearGradient>
 
-        <radialGradient id={`${uid}-bust`} cx="50%" cy="0%" r="90%">
-          <stop offset="0%" stopColor={`rgba(${ha}, 0.32)`} />
-          <stop offset="50%" stopColor={`rgba(${hb}, 0.18)`} />
+        <radialGradient id={`${uid}-bust`} cx="50%" cy="0%" r="92%">
+          <stop offset="0%" stopColor={`rgba(${ha}, 0.34)`} />
+          <stop offset="45%" stopColor={`rgba(47, 125, 255, 0.2)`} />
+          <stop offset="72%" stopColor={`rgba(${hb}, 0.16)`} />
           <stop offset="100%" stopColor="transparent" />
         </radialGradient>
 
-        <radialGradient id={`${uid}-face-plane`} cx="30%" cy="40%" r="65%">
-          <stop offset="0%" stopColor="rgba(255, 255, 255, 0.28)" />
-          <stop offset="40%" stopColor={`rgba(${ha}, 0.18)`} />
+        <radialGradient id={`${uid}-face-plane`} cx="28%" cy="38%" r="68%">
+          <stop offset="0%" stopColor="rgba(255, 255, 255, 0.34)" />
+          <stop offset="35%" stopColor={`rgba(${ha}, 0.22)`} />
           <stop offset="100%" stopColor="transparent" />
         </radialGradient>
 
-        <radialGradient id={`${uid}-cheek`} cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor={`rgba(${hc}, 0.32)`} />
+        <radialGradient id={`${uid}-forehead-spec`} cx="40%" cy="30%" r="50%">
+          <stop offset="0%" stopColor="rgba(255, 255, 255, 0.42)" />
+          <stop offset="60%" stopColor={`rgba(${ha}, 0.14)`} />
           <stop offset="100%" stopColor="transparent" />
         </radialGradient>
 
-        <radialGradient id={`${uid}-eye`} cx="50%" cy="58%" r="50%">
+        <radialGradient id={`${uid}-cheek`} cx="50%" cy="50%" r="52%">
+          <stop offset="0%" stopColor={`rgba(${hc}, 0.36)`} />
+          <stop offset="100%" stopColor="transparent" />
+        </radialGradient>
+
+        <radialGradient id={`${uid}-eye`} cx="50%" cy="58%" r="52%">
           <stop offset="0%" stopColor="rgba(224, 242, 254, 0.98)" />
-          <stop offset="68%" stopColor={`rgba(${ha}, 0.78)`} />
+          <stop offset="62%" stopColor={`rgba(${ha}, 0.82)`} />
           <stop offset="100%" stopColor="transparent" />
         </radialGradient>
 
         <linearGradient id={`${uid}-mouth`} x1="0%" y1="50%" x2="100%" y2="50%">
           <stop offset="0%" stopColor="transparent" />
-          <stop offset="18%" stopColor={`rgba(${warm}, 0.82)`} />
-          <stop offset="50%" stopColor={`rgba(${ha}, 0.96)`} />
-          <stop offset="82%" stopColor={`rgba(${hc}, 0.82)`} />
+          <stop offset="16%" stopColor={`rgba(${warm}, 0.84)`} />
+          <stop offset="50%" stopColor={`rgba(${ha}, 0.98)`} />
+          <stop offset="84%" stopColor={`rgba(${hc}, 0.84)`} />
           <stop offset="100%" stopColor="transparent" />
         </linearGradient>
 
@@ -185,43 +216,80 @@ function OrbVoiceHeadSvg({
         <filter id={`${uid}-halo-blur`} x="-50%" y="-50%" width="200%" height="200%">
           <feGaussianBlur stdDeviation="8" />
         </filter>
+
+        <filter id={`${uid}-inner-glow`} x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="3" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
       </defs>
 
       {/* Halo / aura behind silhouette */}
       <ellipse
         className="orb-voice-companion__halo-svg"
         cx="100"
-        cy="118"
-        rx="88"
-        ry="98"
+        cy="116"
+        rx="90"
+        ry="100"
         fill={`url(#${uid}-aura)`}
         filter={`url(#${uid}-halo-blur)`}
-        opacity={0.72 * g}
+        opacity={0.74 * g}
       />
 
-      {/* Shoulders / bust base */}
-      <path className="orb-voice-companion__bust" d={bustPath} fill={`url(#${uid}-bust)`} opacity="0.82" />
+      {/* Listening radial waves — outward from head */}
+      {isListening && !reducedMotion ? (
+        <g className="orb-voice-companion__listen-waves" data-orb-voice-listening-waves aria-hidden>
+          <circle className="orb-voice-companion__listen-wave orb-voice-companion__listen-wave--1" cx="100" cy="116" r="72" stroke={`rgba(${ha}, 0.22)`} strokeWidth="1" fill="none" />
+          <circle className="orb-voice-companion__listen-wave orb-voice-companion__listen-wave--2" cx="100" cy="116" r="72" stroke={`rgba(${hb}, 0.16)`} strokeWidth="0.8" fill="none" />
+          <circle className="orb-voice-companion__listen-wave orb-voice-companion__listen-wave--3" cx="100" cy="116" r="72" stroke={`rgba(${hc}, 0.12)`} strokeWidth="0.6" fill="none" />
+        </g>
+      ) : null}
+
+      {/* Listening particles */}
+      {isListening && !reducedMotion ? (
+        <g className="orb-voice-companion__particles" data-orb-voice-particles aria-hidden>
+          <circle className="orb-voice-companion__particle orb-voice-companion__particle--1" cx="148" cy="88" r="1.8" fill={`rgba(${ha}, 0.55)`} />
+          <circle className="orb-voice-companion__particle orb-voice-companion__particle--2" cx="156" cy="118" r="1.4" fill={`rgba(${hb}, 0.48)`} />
+          <circle className="orb-voice-companion__particle orb-voice-companion__particle--3" cx="142" cy="148" r="1.6" fill={`rgba(${hc}, 0.42)`} />
+          <circle className="orb-voice-companion__particle orb-voice-companion__particle--4" cx="52" cy="72" r="1.2" fill={`rgba(${ha}, 0.38)`} />
+        </g>
+      ) : null}
+
+      {/* Shoulders / bust base — breathes with chest expansion */}
+      <path
+        className="orb-voice-companion__bust orb-voice-companion__breathe-bust"
+        data-orb-voice-breathe-bust
+        d={bustPath}
+        fill={`url(#${uid}-bust)`}
+        opacity="0.84"
+      />
 
       {/* Neck */}
-      <path className="orb-voice-companion__neck" d={neckPath} fill={`url(#${uid}-neck)`} opacity="0.9" />
+      <path className="orb-voice-companion__neck orb-voice-companion__breathe-neck" d={neckPath} fill={`url(#${uid}-neck)`} opacity="0.92" />
 
       {/* Main head silhouette — glass body */}
       <path
-        className="orb-voice-companion__head-material"
+        className="orb-voice-companion__head-material orb-voice-companion__breathe-head"
+        data-orb-voice-breathe
         d={headPath}
         fill={`url(#${uid}-head-glass)`}
         filter={`url(#${uid}-soft-glow)`}
       />
 
       {/* Inner luminous core */}
-      <path className="orb-voice-companion__head-core" d={headPath} fill={`url(#${uid}-head-core)`} opacity="0.72" />
+      <path className="orb-voice-companion__head-core" d={headPath} fill={`url(#${uid}-head-core)`} opacity="0.74" />
+
+      {/* Temple warmth — pink-magenta inner glow */}
+      <path className="orb-voice-companion__temple-warmth" d={templeWarmthPath} fill={`url(#${uid}-temple-warmth)`} opacity="0.48" />
 
       {/* Glass highlight layer */}
       <path
         className="orb-voice-companion__head-glass"
         d={headPath}
         fill={`url(#${uid}-face-plane)`}
-        opacity="0.55"
+        opacity="0.56"
       />
 
       {/* Rotating shine overlay */}
@@ -229,31 +297,51 @@ function OrbVoiceHeadSvg({
         className="orb-voice-companion__head-shine"
         d={headPath}
         fill={`url(#${uid}-head-shine)`}
-        opacity="0.38"
+        opacity="0.4"
         style={{ mixBlendMode: 'soft-light' }}
       />
 
+      {/* Forehead specular highlight */}
+      <path className="orb-voice-companion__forehead-spec" d={foreheadHighlightPath} fill={`url(#${uid}-forehead-spec)`} opacity="0.52" />
+
       {/* Face plane highlight — forehead / nose bridge */}
-      <path className="orb-voice-companion__face-plane" d={facePlanePath} fill={`url(#${uid}-face-plane)`} opacity="0.42" />
+      <path className="orb-voice-companion__face-plane" d={facePlanePath} fill={`url(#${uid}-face-plane)`} opacity="0.44" />
+
+      {/* Nose bridge definition */}
+      <path className="orb-voice-companion__nose-bridge" d={noseBridgePath} fill={`rgba(${ha}, 0.14)`} opacity="0.38" />
 
       {/* Cheek warmth */}
-      <path className="orb-voice-companion__cheek-glow" d={cheekGlowPath} fill={`url(#${uid}-cheek)`} opacity="0.38" />
+      <path className="orb-voice-companion__cheek-glow" d={cheekGlowPath} fill={`url(#${uid}-cheek)`} opacity="0.4" />
 
-      {/* Ear — right side, always visible in profile */}
+      {/* Jaw line shadow */}
+      <path className="orb-voice-companion__jaw-line" d={jawLinePath} fill={`rgba(${hb}, 0.12)`} opacity="0.32" />
+
+      {/* Chin / lip line */}
+      <path
+        className="orb-voice-companion__chin-line"
+        d={chinLinePath}
+        fill="none"
+        stroke={`rgba(${warm}, 0.28)`}
+        strokeWidth="1"
+        strokeLinecap="round"
+        opacity="0.36"
+      />
+
+      {/* Ear — right side, visible in profile */}
       <path
         className="orb-voice-companion__ear orb-voice-companion__ear--right"
         data-orb-voice-ear-right
         d={earPath}
-        fill={`rgba(${ha}, 0.38)`}
-        opacity="0.72"
+        fill={`rgba(${ha}, 0.4)`}
+        opacity="0.74"
       />
       {isListening ? (
         <path
           className="orb-voice-companion__ear orb-voice-companion__ear--left"
           data-orb-voice-ear-left
-          d="M 62 108 C 56 118 54 130 58 140 C 62 148 68 144 66 132 C 64 122 64 114 62 108 Z"
-          fill={`rgba(${ha}, 0.28)`}
-          opacity="0.45"
+          d="M 60 104 C 54 114 52 126 56 138 C 60 146 66 142 64 130 C 62 120 62 112 60 104 Z"
+          fill={`rgba(${ha}, 0.3)`}
+          opacity="0.48"
         />
       ) : null}
 
@@ -261,14 +349,34 @@ function OrbVoiceHeadSvg({
       <g className="orb-voice-companion__face" data-orb-voice-face>
         <path
           className="orb-voice-companion__brow-bridge"
-          d="M 52 68 C 46 72 42 78 44 84 C 48 80 54 76 60 74 C 56 70 54 68 52 68 Z"
-          fill="rgba(255, 255, 255, 0.18)"
-          opacity="0.48"
+          d="M 50 64 C 44 68 40 74 42 80 C 46 76 52 72 58 70 C 54 66 52 64 50 64 Z"
+          fill="rgba(255, 255, 255, 0.2)"
+          opacity="0.5"
         />
 
         <g className="orb-voice-companion__eyes" data-orb-voice-eyes>
-          <ellipse className="orb-voice-companion__eye orb-voice-companion__eye--left" cx="56" cy="92" rx="5.5" ry="3.2" fill={`url(#${uid}-eye)`} />
-          <ellipse className="orb-voice-companion__eye orb-voice-companion__eye--right" cx="70" cy="90" rx="4" ry="2.6" fill={`url(#${uid}-eye)`} opacity="0.88" />
+          <ellipse
+            className="orb-voice-companion__eye orb-voice-companion__eye--left orb-voice-companion__eye--blink"
+            data-orb-voice-eye-left
+            cx="54"
+            cy="90"
+            rx="5.8"
+            ry="3.4"
+            fill={`url(#${uid}-eye)`}
+          />
+          <ellipse
+            className="orb-voice-companion__eye orb-voice-companion__eye--right orb-voice-companion__eye--blink"
+            data-orb-voice-eye-right
+            cx="68"
+            cy="88"
+            rx="4.2"
+            ry="2.8"
+            fill={`url(#${uid}-eye)`}
+            opacity="0.9"
+          />
+          {/* Eye shimmer highlights */}
+          <ellipse className="orb-voice-companion__eye-shimmer orb-voice-companion__eye-shimmer--left" cx="52" cy="89" rx="1.6" ry="1" fill="rgba(255, 255, 255, 0.72)" />
+          <ellipse className="orb-voice-companion__eye-shimmer orb-voice-companion__eye-shimmer--right" cx="67" cy="87.5" rx="1.2" ry="0.7" fill="rgba(255, 255, 255, 0.62)" opacity="0.88" />
         </g>
 
         {isSpeaking ? (
@@ -276,9 +384,9 @@ function OrbVoiceHeadSvg({
             className="orb-voice-companion__mouth-wave"
             data-orb-voice-waveform
             data-orb-voice-waveform-active="true"
-            d="M 42 144 C 48 150 56 150 62 144"
+            d="M 40 142 C 46 148 54 150 62 144 C 58 152 48 154 40 148 Z"
             stroke={`url(#${uid}-mouth)`}
-            strokeWidth="3"
+            strokeWidth="2.8"
             strokeLinecap="round"
             fill="none"
           />
@@ -287,27 +395,41 @@ function OrbVoiceHeadSvg({
             className="orb-voice-companion__mouth-wave orb-voice-companion__mouth-wave--idle"
             data-orb-voice-waveform
             data-orb-voice-waveform-active="false"
-            d="M 44 146 C 50 148 56 148 60 146"
-            stroke="rgba(186, 230, 253, 0.42)"
-            strokeWidth="1.5"
+            d="M 42 144 C 48 146 54 146 58 144"
+            stroke="rgba(186, 230, 253, 0.4)"
+            strokeWidth="1.4"
             strokeLinecap="round"
             fill="none"
-            opacity="0.22"
+            opacity="0.24"
           />
         )}
 
         {isThinking ? (
-          <ellipse
-            className="orb-voice-companion__orbit"
-            data-orb-voice-orbit
-            cx="100"
-            cy="118"
-            rx="82"
-            ry="88"
-            stroke={`rgba(${hb}, 0.42)`}
-            strokeWidth="1"
-            fill="none"
-          />
+          <g className="orb-voice-companion__thinking-halo" data-orb-voice-thinking-halo aria-hidden>
+            <ellipse
+              className="orb-voice-companion__orbit"
+              data-orb-voice-orbit
+              cx="100"
+              cy="116"
+              rx="84"
+              ry="90"
+              stroke={`rgba(${hb}, 0.38)`}
+              strokeWidth="1"
+              fill="none"
+            />
+            <ellipse
+              className="orb-voice-companion__orbit orb-voice-companion__orbit--inner"
+              data-orb-voice-orbit-inner
+              cx="100"
+              cy="116"
+              rx="76"
+              ry="82"
+              stroke={`rgba(${ha}, 0.22)`}
+              strokeWidth="0.6"
+              fill="none"
+              strokeDasharray="4 8"
+            />
+          </g>
         ) : null}
 
         {isListening ? (
@@ -315,12 +437,12 @@ function OrbVoiceHeadSvg({
             className="orb-voice-companion__listen-glow"
             data-orb-voice-listen-glow
             cx="100"
-            cy="118"
-            rx="86"
-            ry="92"
-            stroke={`rgba(${ha}, 0.28)`}
+            cy="116"
+            rx="88"
+            ry="94"
+            stroke={`rgba(${ha}, 0.32)`}
             strokeWidth="1"
-            fill={`rgba(${ha}, 0.08)`}
+            fill={`rgba(${ha}, 0.1)`}
           />
         ) : null}
       </g>
@@ -330,11 +452,11 @@ function OrbVoiceHeadSvg({
         <ellipse
           className="orb-voice-companion__aura-svg orb-voice-companion__aura--pulse"
           cx="100"
-          cy="118"
-          rx="80"
-          ry="86"
+          cy="116"
+          rx="82"
+          ry="88"
           fill={`rgba(${ha}, 0.1)`}
-          opacity="0.6"
+          opacity="0.62"
         />
       ) : null}
     </svg>
