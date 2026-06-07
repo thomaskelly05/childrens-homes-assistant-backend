@@ -122,3 +122,30 @@ Account menu primary items: Profile, Settings, Billing, Privacy, Voice, Saved Ou
 ## Success criteria
 
 ORB on phone should feel like a **mobile-first residential intelligence companion**: ask, record, write and review without fighting desktop chrome. All intelligence, routes, billing, auth and standalone boundaries remain unchanged.
+
+---
+
+## Pre-existing voice/theme contract test failures
+
+Verified on `main` after PR #1542 merge (`npm run test:orb`: **963 pass / 967 total / 4 fail**). The same four subtests already failed on parent commit `ce496983` (pre-#1542). PR #1542 **did not introduce** them — it touched mobile UX copy, layout and settings only, and **fixed** one related orb-presence contract by updating expectations for the `OrbVoiceStationContent` delegation.
+
+### Failing test names
+
+| Subtest | Suite / file |
+|---------|----------------|
+| `voice and dictate stations use living companion or glass orb marks` | `ORB residential theme runtime` — `orb-residential-theme-runtime.test.ts` |
+| `voice station unlocks audio on Start voice and offers Tap to hear ORB` | `ORB OpenAI realtime voice response flow` — `orb-openai-realtime-voice-response.test.ts` |
+| `Voice uses runtime responsive branch — not simultaneous mobile and desktop controls` | `ORB UI source of truth — overlays and responsive branches` — `orb-ui-source-of-truth.test.ts` |
+| `v2 CSS layer ships with design tokens and imports in layout` | `ORB Premium Visual System v2` — `orb-premium-visual-system-v2.test.ts` |
+
+Immediately before PR #1542, a fifth voice layout contract also failed (`voice and dictate use workspace or voice/dictate variants not home hero sizing` in `orb-residential-orb-presence.test.ts`); PR #1542 resolved it. Filtering failure output for voice/theme keywords showed **seven** lines pre-#1542 (subtests plus suite wrappers); **four** distinct subtests remain failing on `main`.
+
+### Why unrelated to PR #1542
+
+- **Stale source-read contracts** from earlier voice and CSS refactors (roughly PRs #1517–#1541): tests still expect `OrbVoiceCompanion` directly in `orb-voice-station.tsx`, debug strings in the deprecated `orb-voice-mobile-experience.tsx` shim, `useOrbResponsiveMode` in the station shell, and `orb-premium-v2.css` in `app/orb/layout.tsx`. Runtime code moved to `OrbVoiceStationContent`, `orb-style-v1` CSS layers and consolidated layout imports without updating these assertions.
+- **PR #1542 diff** does not modify `orb-voice-station.tsx`, `orb-voice-mobile-experience.tsx`, `app/orb/layout.tsx`, or `orb-premium-v2.css`.
+- **Sprint tests pass**: `orb-mobile-convergence-sprint.test.ts` and the rest of the mobile UX suite added in #1542 are green.
+
+### Launch blocker?
+
+**No.** These are non-runtime contract tests in the broader `test:orb` gate. They do not affect mobile convergence behaviour, routes, billing, auth or voice transport. Launch should rely on the sprint acceptance criteria above, manual mobile QA viewports, and the green mobile-convergence test suite — not on updating legacy voice/theme assertion strings in this sprint.
