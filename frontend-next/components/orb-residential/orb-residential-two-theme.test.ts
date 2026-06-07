@@ -95,7 +95,7 @@ describe('ORB Residential two-theme system', () => {
 
   it('orb layout loads static brand asset stylesheet', () => {
     const layout = readComponent('app/orb/layout.tsx')
-    assert.match(layout, /orb-brand-asset\.css/)
+    assert.match(layout, /orb-theme\.css/)
     const brand = readComponent('components/orb-core/orb-brand-image.tsx')
     assert.match(brand, /ORB_BRAND_IMAGE_SRC|\/assets\/orb\/orb-brand\.png/)
   })

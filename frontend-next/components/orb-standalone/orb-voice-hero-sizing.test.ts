@@ -14,7 +14,7 @@ const VOICE_UI_FILES = [
   'components/orb-standalone/orb-voice-station.tsx',
   'components/orb-standalone/orb-voice-studio-layout.tsx',
   'components/orb-residential/orb-voice-companion.tsx',
-  'components/orb-residential/orb-voice-companion.css',
+  'components/orb-residential/orb-voice.css',
   'components/orb-standalone/orb-voice-studio-layout.css'
 ] as const
 
@@ -36,7 +36,7 @@ describe('ORB Voice hero companion sizing contract', () => {
   it('hero stage is separated from state panel, mobile preview, and trust cards', () => {
     const station = read('components/orb-standalone/orb-voice-station.tsx')
     const studio = read('components/orb-standalone/orb-voice-studio-layout.tsx')
-    const css = read('components/orb-residential/orb-voice-companion.css')
+    const css = read('components/orb-residential/orb-voice.css')
     const studioCss = read('components/orb-standalone/orb-voice-studio-layout.css')
 
     assert.match(station, /OrbVoiceStatePanel/)
@@ -52,7 +52,7 @@ describe('ORB Voice hero companion sizing contract', () => {
   })
 
   it('hero has non-collapsed sizing contract and does not inherit mini/mobile-preview dimensions', () => {
-    const css = read('components/orb-residential/orb-voice-companion.css')
+    const css = read('components/orb-residential/orb-voice.css')
     const studioCss = read('components/orb-standalone/orb-voice-studio-layout.css')
 
     assert.match(css, /\[data-orb-voice-companion-size='hero'\][\s\S]*min-height:\s*300px/)
@@ -74,7 +74,7 @@ describe('ORB Voice hero companion sizing contract', () => {
 
   it('voice studio centre column keeps hero visible and scrolls body only when needed', () => {
     const station = read('components/orb-standalone/orb-voice-station.tsx')
-    const css = read('components/orb-residential/orb-voice-companion.css')
+    const css = read('components/orb-residential/orb-voice.css')
     const studioCss = read('components/orb-standalone/orb-voice-studio-layout.css')
 
     assert.match(station, /orb-voice-studio__body/)

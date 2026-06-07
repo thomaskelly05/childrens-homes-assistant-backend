@@ -56,7 +56,7 @@ describe('ORB Voice companion visual convergence', () => {
     const station = read('components/orb-standalone/orb-voice-station.tsx')
     const studio = read('components/orb-standalone/orb-voice-studio-layout.tsx')
     const mobile = read('components/orb-standalone/orb-voice-mobile-experience.tsx')
-    const css = read('components/orb-residential/orb-voice-companion.css')
+    const css = read('components/orb-residential/orb-voice.css')
 
     assert.match(companion, /resolveOrbVoiceCompanionSize/)
     assert.match(companion, /'hero' \| 'mini' \| 'mobile-preview'/)
@@ -94,7 +94,7 @@ describe('ORB Voice companion visual convergence', () => {
 
   it('voice head does not use circular-only sphere class contract', () => {
     const companion = read('components/orb-residential/orb-voice-companion.tsx')
-    const css = read('components/orb-residential/orb-voice-companion.css')
+    const css = read('components/orb-residential/orb-voice.css')
     assert.doesNotMatch(companion, /orb-living-sphere/)
     assert.doesNotMatch(companion, /orb-sphere/)
     assert.doesNotMatch(companion, /orb-presence--voice/)
@@ -118,7 +118,7 @@ describe('ORB Voice companion visual convergence', () => {
   })
 
   it('voice head CSS targets custom head silhouette with state styling', () => {
-    const css = read('components/orb-residential/orb-voice-companion.css')
+    const css = read('components/orb-residential/orb-voice.css')
     assert.match(css, /\.orb-voice-companion__eyes/)
     assert.match(css, /\[data-orb-voice-waveform\]/)
     assert.match(css, /\[data-orb-voice-state='speaking'\]/)

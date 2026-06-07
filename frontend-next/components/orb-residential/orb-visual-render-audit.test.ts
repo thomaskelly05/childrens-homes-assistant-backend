@@ -7,82 +7,108 @@ import { describe, it } from 'node:test'
 const root = join(dirname(fileURLToPath(import.meta.url)), '../..')
 
 const ORB_BUILD_VISUAL_VERSION = 'premium-final'
+const ORB_STYLE_VERSION = 'orb-style-v1'
 const ORB_CSS_CONTRACT = 'premium-viewport-final'
 const ORB_LOGIN_VERSION = 'front-door-v4'
 const ORB_VOICE_VERSION = 'living-head-v4'
 const ORB_VOICE_COMPONENT_NAME = 'OrbVoiceCompanion'
 const ORB_LOGIN_COMPONENT_NAME = 'OrbLoginScreen'
-const ORB_CANONICAL_CSS_FILES = [
-  'app/orb/orb-desktop.css',
-  'app/orb/orb-premium-tokens.css',
-  'components/orb/premium/orb-premium-v2.css',
-  'components/orb/premium/orb-premium-studio-v3.css',
-  'app/orb/orb-dictate-studio-polish.css',
-  'app/orb/orb-premium-layout-pass.css',
-  'app/orb/orb-brand-asset.css',
-  'app/orb/orb-light-layer-fix.css',
-  'app/orb/orb-login-center.css',
-  'app/orb/orb-mobile.css',
-  'components/orb-residential/orb-voice-companion.css',
-  'components/orb-standalone/orb-voice-studio-layout.css'
+const ORB_LAYOUT_CSS_FILES = [
+  'app/orb/orb-theme.css',
+  'app/orb/orb-components.css',
+  'app/orb/orb-shell.css',
+  'app/orb/orb-stations.css',
+  'app/orb/orb-login.css'
 ] as const
 
 function read(relativePath: string) {
   return readFileSync(join(root, relativePath), 'utf8')
 }
 
-/** CSS import map — single canonical hub: app/orb/layout.tsx */
+/** CSS import map — canonical hub: app/orb/layout.tsx + component co-located CSS */
 const ORB_CSS_AUDIT_MAP = [
   {
-    file: 'app/orb/orb-desktop.css',
-    importedBy: ['app/orb/layout.tsx'],
-    voice: ['.orb-main-workspace .orb-voice-room'],
-    login: [],
-    shell: ['.orb-chat-layout--residential', '[data-orb-shell]'],
-    status: 'current'
-  },
-  {
-    file: 'app/orb/orb-premium-tokens.css',
-    importedBy: ['app/orb/layout.tsx'],
-    voice: ['.orb-presence--voice', '.orb-living-sphere', '.orb-voice-room'],
-    login: ['.orb-login-root--light', '.orb-login-panel', '.orb-login-input'],
-    shell: ['.orb-chat-sidebar', '.orb-sidebar-rail', '.glass-orb-mark'],
-    status: 'current (legacy glass-orb aliases scoped away from voice companion)'
-  },
-  {
-    file: 'components/orb/premium/orb-premium-v2.css',
-    importedBy: ['app/orb/layout.tsx'],
-    voice: [],
-    login: [],
-    shell: ['.orb-chat-sidebar', '.orb-sidebar-nav-item'],
-    status: 'current'
-  },
-  {
-    file: 'components/orb/premium/orb-premium-studio-v3.css',
-    importedBy: ['app/orb/layout.tsx'],
-    voice: [],
-    login: [],
-    shell: ['.orb-studio-shell'],
-    status: 'current'
-  },
-  {
-    file: 'app/orb/orb-dictate-studio-polish.css',
+    file: 'app/orb/orb-theme.css',
     importedBy: ['app/orb/layout.tsx'],
     voice: [],
     login: [],
     shell: [],
-    status: 'current'
+    status: 'canonical (tokens layer)'
+  },
+  {
+    file: 'app/orb/orb-components.css',
+    importedBy: ['app/orb/layout.tsx'],
+    voice: [],
+    login: [],
+    shell: ['.orb-chat-sidebar', '.orb-sidebar-nav-item'],
+    status: 'canonical (components layer)'
+  },
+  {
+    file: 'app/orb/orb-shell.css',
+    importedBy: ['app/orb/layout.tsx'],
+    voice: ['.orb-main-workspace .orb-voice-room', '[data-orb-voice-mobile]'],
+    login: ['.orb-login-shell', '.orb-login-hero', '[data-orb-login-mobile-hero]'],
+    shell: ['.orb-chat-layout--residential', '[data-orb-shell]'],
+    status: 'canonical (shell layer)'
+  },
+  {
+    file: 'app/orb/orb-stations.css',
+    importedBy: ['app/orb/layout.tsx'],
+    voice: [],
+    login: [],
+    shell: [],
+    status: 'canonical (shared station polish)'
+  },
+  {
+    file: 'app/orb/orb-login.css',
+    importedBy: ['app/orb/layout.tsx'],
+    voice: [],
+    login: ['.orb-login-shell', '.orb-login-hero-sphere-wrap', '.orb-login-panel'],
+    shell: [],
+    status: 'canonical (login visual authority)'
+  },
+  {
+    file: 'app/orb/orb-premium-tokens.css',
+    importedBy: ['app/orb/orb-theme.css'],
+    voice: ['.orb-presence--voice', '.orb-living-sphere', '.orb-voice-room'],
+    login: ['.orb-login-root--light', '.orb-login-panel', '.orb-login-input'],
+    shell: ['.orb-chat-sidebar', '.orb-sidebar-rail', '.glass-orb-mark'],
+    status: 'supporting (legacy glass-orb aliases scoped away from voice companion)'
+  },
+  {
+    file: 'components/orb/premium/orb-premium-v2.css',
+    importedBy: ['app/orb/orb-components.css'],
+    voice: [],
+    login: [],
+    shell: ['.orb-chat-sidebar', '.orb-sidebar-nav-item'],
+    status: 'supporting'
+  },
+  {
+    file: 'components/orb/premium/orb-premium-studio-v3.css',
+    importedBy: ['app/orb/orb-shell.css'],
+    voice: [],
+    login: [],
+    shell: ['.orb-studio-shell'],
+    status: 'supporting'
+  },
+  {
+    file: 'app/orb/orb-dictate-studio-polish.css',
+    importedBy: ['app/orb/orb-stations.css'],
+    voice: [],
+    login: [],
+    shell: [],
+    status: 'supporting (dictate station)'
   },
   {
     file: 'app/orb/orb-premium-layout-pass.css',
-    importedBy: ['app/orb/layout.tsx'],
+    importedBy: ['app/orb/orb-shell.css'],
     voice: [],
     login: ['.orb-login-shell', '.orb-login-hero', '[data-orb-login-mobile-hero]'],
     shell: ['html[data-orb-residential] .orb-chat-layout--residential'],
-    status: 'current (viewport pass — voice visuals moved to component CSS)'
+    status: 'supporting (viewport pass — voice visuals in orb-voice.css)'
   },
   {
-    file: 'components/orb-residential/orb-voice-companion.css',
+    file: 'components/orb-residential/orb-voice.css',
     importedBy: ['components/orb-residential/orb-voice-companion.tsx'],
     voice: [
       '.orb-voice-companion',
@@ -92,7 +118,7 @@ const ORB_CSS_AUDIT_MAP = [
     ],
     login: [],
     shell: [],
-    status: 'current (canonical voice head visual authority)'
+    status: 'canonical (voice head visual authority)'
   },
   {
     file: 'components/orb-standalone/orb-voice-studio-layout.css',
@@ -105,39 +131,31 @@ const ORB_CSS_AUDIT_MAP = [
     ],
     login: [],
     shell: [],
-    status: 'current (voice studio layout + hero containment)'
+    status: 'supporting (voice studio layout + hero containment)'
   },
   {
     file: 'app/orb/orb-brand-asset.css',
-    importedBy: ['app/orb/layout.tsx'],
+    importedBy: ['app/orb/orb-theme.css'],
     voice: ['.orb-presence', '[data-orb-presence-state]'],
     login: [],
     shell: [],
-    status: 'current'
+    status: 'supporting'
   },
   {
     file: 'app/orb/orb-light-layer-fix.css',
-    importedBy: ['app/orb/layout.tsx'],
+    importedBy: ['app/orb/orb-stations.css'],
     voice: [],
     login: [],
     shell: [],
-    status: 'current (non-residential only)'
-  },
-  {
-    file: 'app/orb/orb-login-center.css',
-    importedBy: ['app/orb/layout.tsx'],
-    voice: [],
-    login: ['.orb-login-shell', '.orb-login-hero-sphere-wrap', '.orb-login-panel'],
-    shell: [],
-    status: 'current'
+    status: 'supporting (non-residential only)'
   },
   {
     file: 'app/orb/orb-mobile.css',
-    importedBy: ['app/orb/layout.tsx'],
+    importedBy: ['app/orb/orb-shell.css'],
     voice: ['[data-orb-voice-mobile]', '.orb-voice-status-slot'],
     login: [],
     shell: ['[data-orb-shell]', '.orb-chat-sidebar'],
-    status: 'current'
+    status: 'supporting'
   },
   {
     file: 'app/globals.css',
@@ -145,32 +163,27 @@ const ORB_CSS_AUDIT_MAP = [
     voice: ['.orb-voice-dock', '.orb-voice-status-slot'],
     login: [],
     shell: ['.orb-chat-sidebar'],
-    status: 'current (global foundation; residential layers override)'
+    status: 'legacy (global foundation; residential layers override)'
   }
 ] as const
 
 describe('ORB visual render audit', () => {
-  it('canonical CSS files are imported from orb layout or voice components', () => {
+  it('canonical layout CSS files are imported from orb layout; voice CSS from components', () => {
     const layout = read('app/orb/layout.tsx')
     const companion = read('components/orb-residential/orb-voice-companion.tsx')
     const studio = read('components/orb-standalone/orb-voice-studio-layout.tsx')
 
-    for (const file of ORB_CANONICAL_CSS_FILES) {
-      if (file === 'components/orb-residential/orb-voice-companion.css') {
-        assert.match(companion, /import '\.\/orb-voice-companion\.css'/)
-        continue
-      }
-      if (file === 'components/orb-standalone/orb-voice-studio-layout.css') {
-        assert.match(studio, /import '\.\/orb-voice-studio-layout\.css'/)
-        continue
-      }
-      const importName = file.replace(/^app\/orb\//, './').replace(/^components\//, '@/components/')
+    for (const file of ORB_LAYOUT_CSS_FILES) {
+      const importName = file.replace(/^app\/orb\//, './')
       assert.match(layout, new RegExp(importName.replace(/\./g, '\\.')), `${file} must be imported in orb layout`)
     }
+
+    assert.match(companion, /import '\.\/orb-voice\.css'/)
+    assert.match(studio, /import '\.\/orb-voice-studio-layout\.css'/)
   })
 
   it('documents CSS audit map entries', () => {
-    assert.equal(ORB_CSS_AUDIT_MAP.length, 13)
+    assert.equal(ORB_CSS_AUDIT_MAP.length, 16)
     for (const entry of ORB_CSS_AUDIT_MAP) {
       assert.ok(entry.file, 'each map entry needs a file path')
       assert.ok(entry.importedBy.length > 0, `${entry.file} must list importers`)
@@ -181,12 +194,16 @@ describe('ORB visual render audit', () => {
     const layout = read('app/orb/layout.tsx')
     const theme = read('lib/orb/orb-residential-theme.ts')
     const visualBuild = read('lib/orb/orb-visual-build.ts')
+    assert.match(layout, /data-orb-style-version=/)
     assert.match(layout, /data-orb-build-visual-version=/)
     assert.match(layout, /data-orb-css-contract=/)
+    assert.match(layout, /ORB_STYLE_VERSION/)
     assert.match(layout, /ORB_BUILD_VISUAL_VERSION/)
     assert.match(layout, /ORB_CSS_CONTRACT/)
+    assert.match(visualBuild, new RegExp(`ORB_STYLE_VERSION = '${ORB_STYLE_VERSION}'`))
     assert.match(visualBuild, new RegExp(`ORB_BUILD_VISUAL_VERSION = '${ORB_BUILD_VISUAL_VERSION}'`))
     assert.match(visualBuild, new RegExp(`ORB_CSS_CONTRACT = '${ORB_CSS_CONTRACT}'`))
+    assert.match(theme, /orbStyleVersion/)
     assert.match(theme, /orbBuildVisualVersion/)
     assert.match(theme, /orbCssContract/)
   })
@@ -214,7 +231,7 @@ describe('ORB visual render audit', () => {
   })
 
   it('voice head CSS is custom bust with eyes and state rings — not legacy glass orb', () => {
-    const css = read('components/orb-residential/orb-voice-companion.css')
+    const css = read('components/orb-residential/orb-voice.css')
     assert.match(css, /--orb-voice-head-width/)
     assert.match(css, /\.orb-voice-companion__head-material/)
     assert.match(css, /\.orb-voice-companion__eyes/)

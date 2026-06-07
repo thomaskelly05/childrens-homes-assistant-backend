@@ -1,17 +1,12 @@
 import type { Metadata } from 'next'
 import { ReactNode } from 'react'
 
-/* Canonical ORB design layers: desktop + mobile only. */
-import './orb-desktop.css'
-import './orb-premium-tokens.css'
-import '@/components/orb/premium/orb-premium-v2.css'
-import '@/components/orb/premium/orb-premium-studio-v3.css'
-import './orb-dictate-studio-polish.css'
-import './orb-premium-layout-pass.css'
-import './orb-brand-asset.css'
-import './orb-light-layer-fix.css'
-import './orb-login-center.css'
-import './orb-mobile.css'
+/* Canonical ORB design layers — single import hub (orb-style-v1). */
+import './orb-theme.css'
+import './orb-components.css'
+import './orb-shell.css'
+import './orb-stations.css'
+import './orb-login.css'
 import { OrbResidentialThemeRoot } from '@/app/orb/orb-theme-root'
 import { ORB_APPEARANCE_BOOTSTRAP_SCRIPT } from '@/lib/orb/orb-appearance'
 import {
@@ -22,7 +17,8 @@ import { ORB_LIGHT_UI_BUILD, ORB_LIGHT_UI_BUILD_MARKER_CLASS } from '@/lib/orb/o
 import {
   getOrbFrontendBuildInfo,
   ORB_BUILD_VISUAL_VERSION,
-  ORB_CSS_CONTRACT
+  ORB_CSS_CONTRACT,
+  ORB_STYLE_VERSION
 } from '@/lib/orb/orb-visual-build'
 
 const ORB_LIGHT_UI_BUILD_SCRIPT = `window.__ORB_LIGHT_UI_BUILD__=${JSON.stringify(ORB_LIGHT_UI_BUILD)};`
@@ -30,6 +26,7 @@ const ORB_COGNITION_ROUTING_BUILD_SCRIPT = `window.__ORB_COGNITION_ROUTING_BUILD
 const orbBuildInfo = getOrbFrontendBuildInfo()
 const ORB_VISUAL_BUILD_SCRIPT = `window.__ORB_VISUAL_BUILD__=${JSON.stringify({
   visualVersion: ORB_BUILD_VISUAL_VERSION,
+  styleVersion: ORB_STYLE_VERSION,
   cssContract: ORB_CSS_CONTRACT,
   commit: orbBuildInfo.commit,
   timestamp: orbBuildInfo.timestamp
@@ -59,6 +56,7 @@ export default function OrbLayout({ children }: { children: ReactNode }) {
       />
       <span
         className="hidden"
+        data-orb-style-version={ORB_STYLE_VERSION}
         data-orb-build-visual-version={ORB_BUILD_VISUAL_VERSION}
         data-orb-css-contract={ORB_CSS_CONTRACT}
         data-orb-build-commit={orbBuildInfo.commit}

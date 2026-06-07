@@ -13,7 +13,7 @@ function read(relativePath: string) {
 describe('ORB premium login screen layout', () => {
   it('desktop two-column layout markers exist', () => {
     const login = read('components/orb-residential/orb-login-screen.tsx')
-    const css = read('app/orb/orb-login-center.css')
+    const css = read('app/orb/orb-login.css')
 
     assert.match(login, /data-orb-login-two-column/)
     assert.match(login, /lg:grid-cols-2/)

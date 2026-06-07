@@ -182,7 +182,7 @@ describe('ORB Residential mobile UX', () => {
   it('premium design tokens and CSS layer are wired', () => {
     const layout = readComponent('app/orb/layout.tsx')
     const theme = readComponent('lib/orb/orb-theme.ts')
-    assert.match(layout, /orb-premium-tokens\.css/)
+    assert.match(layout, /orb-theme\.css/)
     assert.match(theme, /ORB_ROYAL_BLUE/)
     assert.match(theme, /getOrbThemeCssVariables/)
     assert.match(theme, /#05070D|#05070d|#f7fbff/)

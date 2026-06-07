@@ -1,6 +1,6 @@
 /**
- * ORB Voice companion — single visual authority (OrbVoiceCompanion).
- * Imported by orb-voice-companion.tsx only. Do not duplicate in layout-pass.
+ * ORB Voice — single visual authority (OrbVoiceCompanion → orb-voice.css).
+ * Imported by orb-voice-companion.tsx only. Do not duplicate in layout-pass or shell CSS.
  * OrbSphere / OrbPresence / GlassOrbMark are neutralised below — not used for Voice.
  */
 
@@ -660,3 +660,4 @@
   .orb-voice-companion [data-orb-voice-waveform-active='true'] {
     animation: none !important;
   }
+}
