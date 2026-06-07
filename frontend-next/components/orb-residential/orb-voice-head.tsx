@@ -57,7 +57,7 @@ function isEngagedAttention(state: OrbVoiceCompanionState): boolean {
 }
 
 function resolveCoreScale(state: OrbVoiceCompanionState, speechEnergy: number): number {
-  if (state === 'speaking') return 1 + speechEnergy * 0.055
+  if (state === 'speaking') return 1 + speechEnergy * 0.03
   if (state === 'listening') return 1.018
   if (state === 'thinking') return 1.012
   if (state === 'paused') return 0.992
@@ -94,6 +94,46 @@ function resolveHueShift(state: OrbVoiceCompanionState): number {
       return -4
     default:
       return 0
+  }
+}
+
+function resolveStateHue(state: OrbVoiceCompanionState): number {
+  switch (state) {
+    case 'listening':
+      return 198
+    case 'thinking':
+      return 268
+    case 'speaking':
+      return 312
+    case 'paused':
+      return 228
+    case 'error':
+      return 24
+    default:
+      return 210
+  }
+}
+
+function resolveRimStrength(state: OrbVoiceCompanionState, speechEnergy: number): number {
+  if (state === 'speaking') return 0.52 + speechEnergy * 0.38
+  if (state === 'listening') return 0.62
+  if (state === 'thinking') return 0.58
+  if (state === 'paused') return 0.38
+  if (state === 'error') return 0.34
+  return 0.48
+}
+
+function resolvePlasmaSpeed(state: OrbVoiceCompanionState, reducedMotion: boolean): number {
+  if (reducedMotion) return 0
+  switch (state) {
+    case 'thinking':
+      return 1.18
+    case 'listening':
+      return 1.08
+    case 'speaking':
+      return 1.12
+    default:
+      return 1
   }
 }
 
@@ -150,7 +190,10 @@ export function OrbVoiceHead({
     '--orb-voice-core-scale': String(resolveCoreScale(state, speechEnergy)),
     '--orb-voice-core-brightness': String(resolveCoreBrightness(state, speechEnergy)),
     '--orb-voice-hue-shift': `${resolveHueShift(state)}deg`,
-    '--orb-voice-aura-opacity': String(resolveAuraOpacity(state, speechEnergy))
+    '--orb-voice-aura-opacity': String(resolveAuraOpacity(state, speechEnergy)),
+    '--orb-voice-state-hue': String(resolveStateHue(state)),
+    '--orb-voice-rim-strength': String(resolveRimStrength(state, speechEnergy)),
+    '--orb-voice-plasma-speed': String(resolvePlasmaSpeed(state, reducedMotion))
   } as CSSProperties
 
   const resolvedSize = resolveOrbVoiceCompanionSize(size)
