@@ -1043,6 +1043,7 @@ export function OrbVoiceStation({
             ) : null
           }
         >
+          <div className="orb-voice-session-extras w-full" data-orb-voice-session-extras>
           <div className="mt-4 flex w-full flex-wrap items-center justify-center gap-2">
             <label className="sr-only" htmlFor="orb-voice-mode-select">
               Voice mode
@@ -1325,6 +1326,7 @@ export function OrbVoiceStation({
               </p>
             ))}
             <p className="text-[10px] leading-4 text-[var(--orb-muted)]">{SAFETY_COPY}</p>
+          </div>
           </div>
         </OrbVoiceStationContent>
 

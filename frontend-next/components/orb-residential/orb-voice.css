@@ -4,7 +4,7 @@
  * OrbSphere / OrbPresence / GlassOrbMark are neutralised below — not used for Voice.
  */
 
-/* ── Voice — living head v5 (canonical OrbVoiceHead) ─────────────────────── */
+/* ── Voice — living head v6 (canonical OrbVoiceHead) ─────────────────────── */
 
 /* Neutralise legacy sphere/blob selectors inside the voice companion */
 .orb-voice-companion .orb-living-sphere,
@@ -21,33 +21,34 @@
 .orb-voice-companion {
   position: relative;
   z-index: 1;
-  --orb-voice-head-width: clamp(9.5rem, 34vw, 14.5rem);
-  --orb-voice-head-height: clamp(12.5rem, 42vw, 18.5rem);
+  --orb-voice-head-width: clamp(7.5rem, 28vw, 11.5rem);
+  --orb-voice-head-height: clamp(9.5rem, 34vw, 14.5rem);
 }
 
-/* ── Hero — main voice studio centre companion (own CSS authority) ───────── */
+/* ── Hero — viewport-scaled centre companion (own CSS authority) ─────────── */
 [data-orb-voice-head][data-orb-voice-companion-size='hero'],
 [data-orb-voice-companion-size='hero'],
 .orb-voice-companion--hero {
-  --orb-voice-head-width: clamp(280px, 36vw, 420px);
-  --orb-voice-head-height: clamp(340px, 48vh, 500px);
+  --orb-voice-head-height: clamp(
+    9.5rem,
+    min(36vh, calc(var(--orb-voice-hero-available-h, 42vh) * 0.54)),
+    17.5rem
+  );
+  --orb-voice-head-width: clamp(
+    7.5rem,
+    min(30vw, calc(var(--orb-voice-head-height) * 0.78)),
+    13.75rem
+  );
   position: relative;
   z-index: 3;
-  width: clamp(280px, 36vw, 420px);
-  height: clamp(340px, 48vh, 500px);
-  min-height: 21.25rem;
+  width: var(--orb-voice-head-width);
+  height: var(--orb-voice-head-height);
+  min-height: 0;
   flex: 0 0 auto;
   opacity: 1;
   overflow: visible;
   transform: none;
   isolation: isolate;
-}
-
-@media (min-width: 768px) {
-  [data-orb-voice-companion-size='hero'],
-  .orb-voice-companion--hero {
-    min-height: 340px;
-  }
 }
 
 [data-orb-voice-companion-size='hero'] .orb-voice-companion__stage,
@@ -70,82 +71,88 @@
 
 [data-orb-voice-companion-size='hero'] .orb-voice-companion__halo,
 .orb-voice-companion--hero .orb-voice-companion__halo {
-  inset: -28% -32% -18%;
-  opacity: 0.95;
+  inset: -22% -26% -14%;
+  opacity: 0.78;
 }
 
 [data-orb-voice-companion-size='hero'] .orb-voice-companion__aura,
 .orb-voice-companion--hero .orb-voice-companion__aura {
-  inset: -20% -24% -14%;
-  opacity: 0.96;
+  inset: -16% -20% -10%;
+  opacity: 0.82;
   background: radial-gradient(
     ellipse 78% 74% at 50% 38%,
-    rgba(56, 189, 248, calc(0.36 * var(--orb-glow, 0.62))),
-    rgba(124, 92, 255, calc(0.22 * var(--orb-glow, 0.62))) 48%,
-    rgba(236, 72, 153, calc(0.12 * var(--orb-glow, 0.62))) 62%,
+    rgba(56, 189, 248, calc(0.28 * var(--orb-glow, 0.62))),
+    rgba(124, 92, 255, calc(0.16 * var(--orb-glow, 0.62))) 48%,
+    rgba(236, 72, 153, calc(0.1 * var(--orb-glow, 0.62))) 62%,
     transparent 78%
   );
 }
 
 [data-orb-voice-companion-size='hero'] .orb-voice-companion__head-material,
 .orb-voice-companion--hero .orb-voice-companion__head-material {
-  width: 86%;
-  height: 58%;
-  min-height: 17rem;
+  width: 84%;
+  height: 56%;
+  min-height: 0;
   opacity: 1;
   transform: scale(1);
   border-radius: 46% 46% 38% 38% / 52% 52% 36% 36%;
   background: transparent;
   box-shadow:
-    0 0 64px rgba(56, 189, 248, calc(0.52 * var(--orb-glow, 0.62))),
-    0 0 120px rgba(124, 92, 255, calc(0.32 * var(--orb-glow, 0.62))),
-    0 0 160px rgba(236, 72, 153, calc(0.14 * var(--orb-glow, 0.62)));
-  backdrop-filter: blur(12px);
+    0 0 36px rgba(56, 189, 248, calc(0.42 * var(--orb-glow, 0.62))),
+    0 0 72px rgba(37, 99, 235, calc(0.28 * var(--orb-glow, 0.62))),
+    0 0 96px rgba(236, 72, 153, calc(0.12 * var(--orb-glow, 0.62)));
+  backdrop-filter: blur(8px);
 }
 
 [data-orb-voice-companion-size='hero'] .orb-voice-companion__head-glass,
 .orb-voice-companion--hero .orb-voice-companion__head-glass {
-  opacity: 1;
+  opacity: 0.94;
 }
 
 [data-orb-voice-companion-size='hero'] .orb-voice-companion__head-core,
 .orb-voice-companion--hero .orb-voice-companion__head-core {
-  opacity: 0.94;
+  opacity: 0.72;
+}
+
+[data-orb-voice-companion-size='hero'] .orb-voice-companion__head-shine,
+.orb-voice-companion--hero .orb-voice-companion__head-shine {
+  opacity: calc(0.28 * var(--orb-edge-opacity, 0.34) + 0.28);
+  filter: blur(8px);
 }
 
 [data-orb-voice-companion-size='hero'] .orb-voice-companion__eye,
 .orb-voice-companion--hero .orb-voice-companion__eye {
-  width: 11%;
-  height: 5.5%;
+  width: 10%;
+  height: 5%;
   box-shadow:
-    0 0 18px rgba(186, 230, 253, 0.88),
-    0 0 32px rgba(56, 189, 248, 0.52);
+    0 0 14px rgba(186, 230, 253, 0.82),
+    0 0 26px rgba(56, 189, 248, 0.44);
 }
 
 [data-orb-voice-companion-size='hero'] .orb-voice-companion__eyes,
 .orb-voice-companion--hero .orb-voice-companion__eyes {
-  opacity: 0.98;
-  width: 48%;
-  top: 33%;
+  opacity: 0.96;
+  width: 46%;
+  top: 34%;
 }
 
 [data-orb-voice-companion-size='hero'] .orb-voice-companion__brow-bridge,
 .orb-voice-companion--hero .orb-voice-companion__brow-bridge {
-  opacity: 0.55;
+  opacity: 0.42;
 }
 
 [data-orb-voice-companion-size='hero'] .orb-voice-companion__neck,
 .orb-voice-companion--hero .orb-voice-companion__neck {
-  width: 32%;
-  height: 11%;
-  opacity: 0.92;
+  width: 30%;
+  height: 10%;
+  opacity: 0.88;
 }
 
 [data-orb-voice-companion-size='hero'] .orb-voice-companion__bust,
 .orb-voice-companion--hero .orb-voice-companion__bust {
-  width: 64%;
-  height: 20%;
-  opacity: 0.86;
+  width: 62%;
+  height: 18%;
+  opacity: 0.8;
 }
 
 [data-orb-voice-companion-size='hero'][data-orb-voice-state='idle'] .orb-voice-companion__head-material,
@@ -179,20 +186,21 @@
 /* Hero stage — block mini/mobile-preview sizing from leaking into centre companion */
 [data-orb-voice-hero-stage] [data-orb-voice-companion-size='hero'],
 [data-orb-voice-hero-stage] .orb-voice-companion--hero {
-  --orb-voice-head-width: clamp(280px, 36vw, 420px);
-  --orb-voice-head-height: clamp(340px, 48vh, 500px);
-  width: clamp(280px, 36vw, 420px);
-  height: clamp(340px, 48vh, 500px);
-  min-height: 21.25rem;
+  --orb-voice-head-height: clamp(
+    9.5rem,
+    min(36vh, calc(var(--orb-voice-hero-available-h, 42vh) * 0.54)),
+    17.5rem
+  );
+  --orb-voice-head-width: clamp(
+    7.5rem,
+    min(30vw, calc(var(--orb-voice-head-height) * 0.78)),
+    13.75rem
+  );
+  width: var(--orb-voice-head-width);
+  height: var(--orb-voice-head-height);
+  min-height: 0;
   opacity: 1;
   transform: none;
-}
-
-@media (min-width: 768px) {
-  [data-orb-voice-hero-stage] [data-orb-voice-companion-size='hero'],
-  [data-orb-voice-hero-stage] .orb-voice-companion--hero {
-    min-height: 340px;
-  }
 }
 
 /* ── Mobile preview — footer strip only (never applies to hero stage) ─── */
@@ -239,22 +247,22 @@
 /* Outer radiant halo — soft ORB presence in the room */
 .orb-voice-companion__halo {
   position: absolute;
-  inset: -18% -22% -12%;
+  inset: -16% -20% -10%;
   border-radius: 48% 48% 40% 40% / 54% 54% 38% 38%;
   background:
     radial-gradient(
       ellipse 82% 78% at 50% 36%,
-      rgba(56, 189, 248, calc(0.22 * var(--orb-glow, 0.62))),
-      rgba(124, 92, 255, calc(0.12 * var(--orb-glow, 0.62))) 52%,
+      rgba(56, 189, 248, calc(0.18 * var(--orb-glow, 0.62))),
+      rgba(124, 92, 255, calc(0.1 * var(--orb-glow, 0.62))) 52%,
       transparent 76%
     ),
     radial-gradient(
       ellipse 68% 62% at 50% 58%,
-      rgba(236, 72, 153, calc(0.08 * var(--orb-glow, 0.62))),
+      rgba(236, 72, 153, calc(0.06 * var(--orb-glow, 0.62))),
       transparent 72%
     );
-  filter: blur(18px);
-  opacity: 0.82;
+  filter: blur(14px);
+  opacity: 0.72;
   pointer-events: none;
   z-index: 0;
   animation: orb-voice-head-halo 6.4s ease-in-out infinite;
@@ -262,15 +270,15 @@
 
 .orb-voice-companion__aura {
   position: absolute;
-  inset: -14% -18% -10%;
+  inset: -12% -16% -8%;
   border-radius: 48% 48% 40% 40% / 54% 54% 38% 38%;
   background: radial-gradient(
     ellipse 72% 68% at 50% 42%,
-    rgba(56, 189, 248, calc(0.18 * var(--orb-glow, 0.62))),
-    rgba(124, 92, 255, calc(0.1 * var(--orb-glow, 0.62))) 54%,
+    rgba(56, 189, 248, calc(0.14 * var(--orb-glow, 0.62))),
+    rgba(124, 92, 255, calc(0.08 * var(--orb-glow, 0.62))) 54%,
     transparent 74%
   );
-  opacity: 0.8;
+  opacity: 0.72;
   pointer-events: none;
   z-index: 0;
 }
@@ -294,18 +302,19 @@
   align-items: center;
 }
 
-/* Head volume — glass-like layered bust */
+/* Head volume — glass-like layered bust (aligned with .orb-living-sphere palette) */
 .orb-voice-companion__head-material {
   position: relative;
-  width: 88%;
-  height: 62%;
+  width: 86%;
+  height: 58%;
   border-radius: 44% 44% 36% 36% / 50% 50% 34% 34%;
   overflow: hidden;
   background: transparent;
   box-shadow:
-    0 0 48px rgba(56, 189, 248, calc(0.38 * var(--orb-glow, 0.62))),
-    0 0 88px rgba(124, 92, 255, calc(0.22 * var(--orb-glow, 0.62)));
-  backdrop-filter: blur(14px);
+    0 0 28px rgba(56, 189, 248, calc(0.38 * var(--orb-glow, 0.62))),
+    0 0 56px rgba(37, 99, 235, calc(0.26 * var(--orb-glow, 0.62))),
+    0 0 80px rgba(236, 72, 153, calc(0.12 * var(--orb-glow, 0.62)));
+  backdrop-filter: blur(8px);
   animation: orb-voice-head-breathe 5.6s ease-in-out infinite;
 }
 
@@ -314,49 +323,42 @@
   inset: 0;
   border-radius: inherit;
   background:
-    radial-gradient(ellipse 82% 64% at 28% 22%, rgba(255, 255, 255, 0.42), transparent 58%),
-    radial-gradient(ellipse 72% 58% at 74% 36%, rgba(var(--orb-hue-a), 0.48), transparent 62%),
-    radial-gradient(ellipse 86% 74% at 48% 68%, rgba(var(--orb-hue-b), 0.42), transparent 66%),
-    radial-gradient(ellipse 92% 82% at 50% 50%, rgba(var(--orb-hue-c), 0.32), transparent 74%),
-    linear-gradient(
-      168deg,
-      rgba(var(--orb-hue-a), 0.58) 0%,
-      rgba(22, 139, 255, 0.68) 32%,
-      rgba(var(--orb-hue-b), 0.52) 66%,
-      rgba(7, 16, 52, 0.86) 100%
-    );
-  opacity: 0.88;
+    radial-gradient(ellipse 48% 38% at 28% 20%, rgba(255, 255, 255, 0.52) 0%, rgba(255, 255, 255, 0.16) 16%, transparent 30%),
+    radial-gradient(ellipse 42% 36% at 18% 42%, rgba(56, 189, 248, 0.82) 0%, transparent 40%),
+    radial-gradient(ellipse 40% 34% at 76% 40%, rgba(251, 146, 60, 0.58) 0%, transparent 38%),
+    radial-gradient(ellipse 44% 38% at 48% 72%, rgba(236, 72, 153, 0.68) 0%, transparent 40%),
+    radial-gradient(ellipse 92% 86% at 50% 54%, #2f7dff 0%, #1455d9 36%, #111c7a 66%, #071034 100%);
+  opacity: 0.92;
 }
 
 .orb-voice-companion__head-core {
   position: absolute;
-  inset: 6% 8% 10%;
+  inset: 8% 10% 12%;
   border-radius: 42% 42% 36% 36% / 48% 48% 34% 34%;
   background:
-    radial-gradient(ellipse 88% 72% at 50% 38%, rgba(var(--orb-hue-a), 0.38), transparent 68%),
-    radial-gradient(ellipse 76% 64% at 62% 62%, rgba(var(--orb-hue-b), 0.32), transparent 72%),
-    radial-gradient(ellipse 90% 80% at 38% 72%, rgba(var(--orb-hue-c), 0.28), transparent 76%);
-  mix-blend-mode: screen;
-  opacity: 0.82;
-  filter: blur(2px);
+    radial-gradient(ellipse 72% 58% at 50% 36%, rgba(var(--orb-hue-a), 0.28), transparent 66%),
+    radial-gradient(ellipse 64% 54% at 62% 64%, rgba(var(--orb-hue-b), 0.22), transparent 70%),
+    radial-gradient(ellipse 78% 68% at 38% 70%, rgba(var(--orb-hue-c), 0.18), transparent 74%);
+  mix-blend-mode: soft-light;
+  opacity: 0.68;
+  filter: blur(1px);
 }
 
 .orb-voice-companion__head-shine {
   position: absolute;
-  inset: -6%;
+  inset: -4%;
   border-radius: inherit;
   background: conic-gradient(
     from 210deg,
-    rgba(var(--orb-hue-a), 0.72),
-    rgba(var(--orb-hue-b), 0.18),
-    rgba(var(--orb-hue-c), 0.58),
-    rgba(var(--orb-warm), 0.68),
-    rgba(236, 72, 153, 0.42),
-    rgba(var(--orb-hue-a), 0.72)
+    rgba(56, 189, 248, 0.62),
+    rgba(99, 102, 241, 0.16),
+    rgba(236, 72, 153, 0.48),
+    rgba(251, 146, 60, 0.52),
+    rgba(56, 189, 248, 0.62)
   );
-  mix-blend-mode: screen;
-  opacity: calc(0.38 * var(--orb-edge-opacity, 0.34) + 0.34);
-  filter: blur(12px);
+  mix-blend-mode: soft-light;
+  opacity: calc(0.24 * var(--orb-edge-opacity, 0.34) + 0.26);
+  filter: blur(8px);
   animation: orb-energy-rotate var(--orb-motion-speed, 8s) linear infinite;
   pointer-events: none;
 }
@@ -391,35 +393,37 @@
 }
 
 .orb-voice-companion__neck {
-  width: 34%;
-  height: 10%;
-  margin-top: -2%;
+  width: 32%;
+  height: 9%;
+  margin-top: -1.5%;
   border-radius: 42% 42% 48% 48% / 36% 36% 64% 64%;
   background: linear-gradient(
     180deg,
-    rgba(var(--orb-hue-a), 0.32),
-    rgba(var(--orb-hue-b), 0.22) 52%,
-    rgba(var(--orb-hue-c), 0.08) 78%,
+    rgba(22, 139, 255, 0.38) 0%,
+    rgba(var(--orb-hue-a), 0.28) 28%,
+    rgba(var(--orb-hue-b), 0.18) 58%,
+    rgba(7, 16, 52, 0.42) 82%,
     transparent
   );
-  opacity: 0.84;
-  box-shadow: 0 0 24px rgba(56, 189, 248, 0.12);
+  opacity: 0.86;
+  box-shadow:
+    0 0 18px rgba(56, 189, 248, 0.14),
+    inset 0 -8% 16% rgba(124, 92, 255, 0.12);
 }
 
 .orb-voice-companion__bust {
-  width: 58%;
-  height: 18%;
-  margin-top: -3%;
+  width: 60%;
+  height: 17%;
+  margin-top: -2.5%;
   border-radius: 42% 42% 52% 52% / 28% 28% 72% 72%;
-  background: radial-gradient(
-    ellipse 88% 100% at 50% 0%,
-    rgba(var(--orb-hue-a), 0.26),
-    rgba(var(--orb-hue-b), 0.14) 48%,
-    rgba(var(--orb-hue-c), 0.06) 68%,
-    transparent 78%
-  );
-  opacity: 0.74;
-  box-shadow: 0 8px 32px rgba(124, 92, 255, 0.1);
+  background:
+    radial-gradient(ellipse 88% 100% at 50% 0%, rgba(47, 125, 255, 0.32), transparent 52%),
+    radial-gradient(ellipse 100% 88% at 50% 20%, rgba(var(--orb-hue-a), 0.22), transparent 58%),
+    radial-gradient(ellipse 92% 72% at 50% 60%, rgba(var(--orb-hue-b), 0.12) 40%, transparent 72%);
+  opacity: 0.78;
+  box-shadow:
+    0 6px 28px rgba(124, 92, 255, 0.12),
+    inset 0 12% 24% rgba(56, 189, 248, 0.08);
 }
 
 .orb-voice-companion__face {
@@ -730,12 +734,20 @@
   [data-orb-voice-mobile-hero-stage] [data-orb-voice-head],
   [data-orb-voice-mobile] [data-orb-voice-mobile-hero-stage] [data-orb-voice-companion-size='hero'],
   [data-orb-voice-mobile-hero-stage] .orb-voice-companion--hero {
-    --orb-voice-head-width: clamp(14rem, 62vw, 20rem);
-    --orb-voice-head-height: clamp(16rem, 38vh, 26rem);
+    --orb-voice-head-height: clamp(
+      8.5rem,
+      min(32vh, calc(var(--orb-voice-hero-available-h, 38vh) * 0.5)),
+      14.5rem
+    );
+    --orb-voice-head-width: clamp(
+      6.75rem,
+      min(58vw, calc(var(--orb-voice-head-height) * 0.78)),
+      11.5rem
+    );
     position: relative;
-    width: clamp(14rem, 62vw, 20rem);
-    height: clamp(16rem, 38vh, 26rem);
-    min-height: 16rem;
+    width: var(--orb-voice-head-width);
+    height: var(--orb-voice-head-height);
+    min-height: 0;
     max-height: none;
     flex: 0 0 auto;
     flex-shrink: 0;
@@ -750,7 +762,7 @@
     width: 100%;
     height: 100%;
     min-width: 100%;
-    min-height: 16rem;
+    min-height: 0;
     flex: 0 0 auto;
     flex-shrink: 0;
     overflow: visible;
@@ -760,13 +772,13 @@
   [data-orb-voice-mobile-hero-stage] .orb-voice-companion__head-shell {
     width: 100%;
     height: 100%;
-    min-height: 16rem;
+    min-height: 0;
     overflow: visible;
   }
 
   [data-orb-voice-mobile-hero-stage] [data-orb-voice-head] .orb-voice-companion__head-material {
-    min-height: 10rem;
-    height: 58%;
+    min-height: 0;
+    height: 56%;
     max-height: none;
     flex-shrink: 0;
     opacity: 1;
@@ -775,27 +787,35 @@
   }
 
   [data-orb-voice-mobile-hero-stage] .orb-voice-companion__head-shine {
-    mix-blend-mode: normal;
-    opacity: max(0.82, calc(0.48 * var(--orb-edge-opacity, 0.34) + 0.38));
+    mix-blend-mode: soft-light;
+    opacity: calc(0.22 * var(--orb-edge-opacity, 0.34) + 0.24);
   }
 
   [data-orb-voice-mobile-hero-stage] .orb-voice-companion__halo,
   [data-orb-voice-mobile-hero-stage] .orb-voice-companion__aura {
-    opacity: 0.94;
+    opacity: 0.76;
     transform: none;
     overflow: visible;
   }
 
   [data-orb-voice-mobile-hero-stage] .orb-voice-companion__eye {
-    opacity: 0.98;
+    opacity: 0.96;
   }
 
   /* Block mobile-preview / mini dimensions from leaking into centre hero */
   [data-orb-voice-mobile]:not([data-orb-voice-mobile-preview])
     [data-orb-voice-mobile-hero-stage]
     [data-orb-voice-companion-size='hero'] {
-    --orb-voice-head-width: clamp(14rem, 62vw, 20rem);
-    --orb-voice-head-height: clamp(16rem, 38vh, 26rem);
+    --orb-voice-head-height: clamp(
+      8.5rem,
+      min(32vh, calc(var(--orb-voice-hero-available-h, 38vh) * 0.5)),
+      14.5rem
+    );
+    --orb-voice-head-width: clamp(
+      6.75rem,
+      min(58vw, calc(var(--orb-voice-head-height) * 0.78)),
+      11.5rem
+    );
   }
 }
 

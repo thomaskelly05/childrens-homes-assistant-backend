@@ -24,6 +24,46 @@ html[data-orb-residential='1'] [data-orb-workspace-panel='voice'] [data-orb-voic
   min-height: 0;
 }
 
+/* ── Voice landing viewport-fit — single-screen hero (inactive state) ─────── */
+[data-orb-voice-station] {
+  --orb-voice-workspace-header-h: 5.25rem;
+  --orb-voice-hero-stack-reserve: 11.5rem;
+  --orb-voice-hero-available-h: max(
+    12rem,
+    calc(100dvh - var(--orb-voice-workspace-header-h) - var(--orb-voice-hero-stack-reserve))
+  );
+}
+
+[data-orb-voice-station][data-orb-voice-capture-active='false'] .orb-voice-station-content__scroll {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: stretch;
+  overflow: hidden;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+[data-orb-voice-station][data-orb-voice-capture-active='false'] .orb-voice-station-content__hero {
+  flex: 0 1 auto;
+  justify-content: center;
+  min-height: 0;
+}
+
+[data-orb-voice-station][data-orb-voice-capture-active='false'] [data-orb-voice-session-extras] {
+  display: none;
+}
+
+[data-orb-voice-station][data-orb-voice-capture-active='true'] .orb-voice-station-content__scroll {
+  overflow-y: auto;
+}
+
+[data-orb-voice-station][data-orb-voice-capture-active='true'] .orb-voice-station-content__hero {
+  flex: 0 0 auto;
+}
+
 /* Studio waveform below headline */
 .orb-voice-studio-waveform {
   display: flex;
@@ -117,7 +157,8 @@ html[data-orb-residential='1'] [data-orb-workspace-panel='voice'] [data-orb-voic
   flex-direction: column;
   align-items: center;
   flex: 0 0 auto;
-  min-height: max(21.25rem, 340px);
+  min-height: 0;
+  gap: clamp(0.3rem, 1.4vh, 0.7rem);
   text-align: center;
   overflow: visible;
 }
@@ -127,7 +168,32 @@ html[data-orb-residential='1'] [data-orb-workspace-panel='voice'] [data-orb-voic
 [data-orb-voice-hero-stage] [data-orb-voice-companion-size='hero'],
 .orb-voice-studio__hero [data-orb-voice-companion-size='hero'] {
   flex: 0 0 auto;
-  margin-top: 0.5rem;
+  margin: 0;
+}
+
+.orb-voice-hero-stage__headline {
+  margin: 0;
+}
+
+.orb-voice-hero-stage__subline {
+  margin: 0;
+}
+
+.orb-voice-hero-stage__waveform {
+  margin: 0;
+}
+
+.orb-voice-hero-stage__cta {
+  margin: 0;
+}
+
+.orb-voice-hero-stage__mic-status {
+  margin: 0;
+}
+
+.orb-voice-hero-stage__privacy,
+.orb-voice-station__privacy {
+  margin: 0;
 }
 
 [data-orb-voice-hero-cta] {
@@ -135,9 +201,8 @@ html[data-orb-residential='1'] [data-orb-workspace-panel='voice'] [data-orb-voic
 }
 
 .orb-voice-station__privacy {
-  margin-top: 0.5rem;
   font-size: 0.6875rem;
-  line-height: 1.4;
+  line-height: 1.35;
   color: var(--orb-muted);
 }
 
@@ -318,7 +383,7 @@ html[data-orb-residential='1'] [data-orb-workspace-panel='voice'] [data-orb-voic
   flex-direction: column;
   align-items: center;
   flex: 0 0 auto;
-  min-height: 16rem;
+  min-height: 0;
   overflow: visible;
   z-index: 2;
 }
@@ -327,24 +392,19 @@ html[data-orb-residential='1'] [data-orb-workspace-panel='voice'] [data-orb-voic
 [data-orb-voice-mobile-hero-stage] [data-orb-voice-companion-size='hero'],
 [data-orb-voice-mobile-hero-stage] .orb-voice-companion--hero {
   flex: 0 0 auto;
-  margin-top: 0.25rem;
-  margin-bottom: 0.25rem;
+  margin: 0;
 }
 
 /* Mobile voice — companion is the hero, controls stay docked */
 @media (max-width: 767px) {
+  [data-orb-voice-station] {
+    --orb-voice-workspace-header-h: 4.75rem;
+    --orb-voice-hero-stack-reserve: 10.5rem;
+  }
+
   [data-orb-voice-mobile-hero-stage] {
-    width: clamp(14rem, 62vw, 20rem);
-    height: clamp(16rem, 38vh, 26rem);
-    min-height: 16rem;
-  }
-
-  [data-orb-voice-mobile] [data-orb-voice-status-label] {
-    margin-top: 0.65rem !important;
-  }
-
-  [data-orb-voice-mobile] .orb-voice-studio-waveform {
-    margin-top: 0.5rem;
+    width: 100%;
+    min-height: 0;
   }
 }
 

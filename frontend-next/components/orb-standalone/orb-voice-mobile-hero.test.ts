@@ -21,20 +21,21 @@ describe('ORB Voice mobile hero companion', () => {
     assert.doesNotMatch(hero, /size="mobile-preview"/)
   })
 
-  it('mobile hero has non-collapsed sizing contract separate from debug preview cards', () => {
+  it('mobile hero has viewport-scaled sizing contract separate from debug preview cards', () => {
     const css = read('components/orb-residential/orb-voice.css')
     const studioCss = read('components/orb-standalone/orb-voice-studio-layout.css')
 
-    assert.match(css, /\[data-orb-voice-mobile-hero-stage\][\s\S]*width:\s*clamp\(14rem,\s*62vw,\s*20rem\)/)
-    assert.match(css, /\[data-orb-voice-mobile-hero-stage\][\s\S]*height:\s*clamp\(16rem,\s*38vh,\s*26rem\)/)
-    assert.match(css, /\[data-orb-voice-mobile-hero-stage\][\s\S]*min-height:\s*16rem/)
+    assert.match(css, /\[data-orb-voice-mobile-hero-stage\][\s\S]*--orb-voice-head-height: clamp\([\s\S]*var\(--orb-voice-hero-available-h/)
+    assert.match(css, /\[data-orb-voice-mobile-hero-stage\][\s\S]*width: var\(--orb-voice-head-width\)/)
+    assert.match(css, /\[data-orb-voice-mobile-hero-stage\][\s\S]*height: var\(--orb-voice-head-height\)/)
+    assert.match(css, /\[data-orb-voice-mobile-hero-stage\][\s\S]*min-height:\s*0/)
     assert.match(css, /\[data-orb-voice-mobile-hero-stage\][\s\S]*flex:\s*0\s*0\s*auto/)
     assert.match(css, /\[data-orb-voice-mobile-hero-stage\][\s\S]*opacity:\s*1/)
     assert.match(css, /\[data-orb-voice-mobile-hero-stage\][\s\S]*transform:\s*none/)
     assert.match(css, /\[data-orb-voice-mobile-hero-stage\][\s\S]*z-index:\s*2/)
     assert.match(css, /\[data-orb-voice-mobile-hero-stage\][\s\S]*overflow:\s*visible/)
 
-    assert.match(css, /\[data-orb-voice-mobile-hero-stage\][\s\S]*\[data-orb-voice-head\][\s\S]*min-height:\s*10rem/)
+    assert.match(css, /\[data-orb-voice-mobile-hero-stage\][\s\S]*\[data-orb-voice-head\][\s\S]*min-height:\s*0/)
     assert.match(studioCss, /\[data-orb-voice-mobile-hero-stage\]/)
 
     const mobileHeroBlock = css.match(
@@ -67,6 +68,6 @@ describe('ORB Voice mobile hero companion', () => {
     assert.match(station, /OrbVoiceStationContent/)
     assert.match(hero, /data-orb-voice-hero-stage/)
     assert.match(hero, /<OrbVoiceCompanion state=\{companionState\} size="hero"/)
-    assert.match(css, /\[data-orb-voice-hero-stage\][\s\S]*width:\s*clamp\(280px,\s*36vw,\s*420px\)/)
+    assert.match(css, /\[data-orb-voice-hero-stage\][\s\S]*width: var\(--orb-voice-head-width\)/)
   })
 })
