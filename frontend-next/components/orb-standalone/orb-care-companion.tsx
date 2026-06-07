@@ -199,6 +199,7 @@ import {
 import {
   isOrbScrollNearBottom,
   orbScrollBehaviorForReducedMotion,
+  resetOrbChatScrollPosition,
   scrollOrbToBottom,
   shouldShowOrbScrollFab
 } from '@/lib/orb/orb-scroll'
@@ -802,6 +803,8 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   )
 
   const showEmptyState = visibleMessages.length === 0 && !pending && !error
+  const activeWorkspacePanel =
+    residentialSurface && isOrbCoreWorkspacePanel(activePanel) ? activePanel : null
 
   const closeAllPanels = useCallback(() => {
     setActivePanel(null)
@@ -1057,13 +1060,25 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   )
 
   useEffect(() => {
-    requestChatScroll(true)
-  }, [visibleMessages.length, pending, requestChatScroll])
+    if (activeWorkspacePanel) return
+    const container = scrollContainerRef.current
+    resetOrbChatScrollPosition(container, {
+      hasMessages: visibleMessages.length > 0,
+      endElement: messagesEndRef.current
+    })
+    isNearBottomRef.current = visibleMessages.length > 0
+    setShowScrollFab(false)
+  }, [workspace.activeChatId, activeWorkspacePanel, visibleMessages.length])
 
   useEffect(() => {
-    if (!streamingTail) return
+    if (activeWorkspacePanel) return
+    requestChatScroll(true)
+  }, [visibleMessages.length, pending, requestChatScroll, activeWorkspacePanel])
+
+  useEffect(() => {
+    if (!streamingTail || activeWorkspacePanel) return
     requestChatScroll(false)
-  }, [streamingTail, requestChatScroll])
+  }, [streamingTail, requestChatScroll, activeWorkspacePanel])
 
   useEffect(() => {
     return () => {
@@ -2876,8 +2891,6 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   const atmosphereClass = atmosphereClassForMode(mode)
   const effectiveTheme = resolvedTheme
   const themeClass = effectiveTheme === 'light' ? 'orb-theme-light' : 'orb-theme-dark'
-  const activeWorkspacePanel =
-    residentialSurface && isOrbCoreWorkspacePanel(activePanel) ? activePanel : null
 
   const renderResidentialCorePanels = () => (
     <>
@@ -3621,7 +3634,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
               <div className="mx-auto w-full max-w-[var(--orb-chat-column-max,50rem)]">
                 {showEmptyState ? (
                   <div
-                    className={`flex min-h-[min(48vh,22rem)] flex-col items-center justify-center px-2 py-6 text-center md:min-h-[min(56vh,28rem)] md:py-10 ${residentialSurface ? 'orb-residential-empty orb-residential-empty--desktop' : ''}`}
+                    className={`flex min-h-0 flex-col items-center justify-start px-2 py-3 text-center md:min-h-[min(56vh,28rem)] md:justify-center md:py-10 ${residentialSurface ? 'orb-residential-empty orb-residential-empty--desktop' : ''}`}
                     data-orb-empty-state
                     {...(residentialSurface ? { 'data-orb-residential-empty': true } : {})}
                   >
@@ -3640,14 +3653,11 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                     </div>
                     {residentialSurface ? (
                       <>
-                        <div className="sr-only" data-orb-empty-brand-stack>
-                          <p data-orb-empty-brand-name>ORB</p>
-                          <p data-orb-empty-brand-tagline>Powered by IndiCare Intelligence</p>
-                        </div>
                         <p
-                          className="mt-3 text-[11px] font-medium tracking-[0.12em] text-[var(--orb-res-text-soft,var(--orb-muted))]"
+                          className="mt-2 text-[11px] font-semibold tracking-[0.04em] text-[var(--orb-res-text-soft,var(--orb-muted))]"
                           data-orb-brand-emotional-line
                           data-orb-empty-emotional-line
+                          data-orb-empty-brand-line
                         >
                           {ORB_RESIDENTIAL_BRAND_EMOTIONAL_LINE}
                         </p>
@@ -3677,7 +3687,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                           {ORB_RESIDENTIAL_EMPTY_HEADING_DESKTOP}
                         </h2>
                         <h2
-                          className="mt-4 text-xl font-semibold tracking-tight text-[var(--orb-premium-text,#f7faff)] md:hidden"
+                          className="mt-2 text-xl font-semibold tracking-tight text-[var(--orb-premium-text,#f7faff)] md:hidden"
                           data-orb-empty-heading
                           data-orb-empty-heading-mobile
                         >

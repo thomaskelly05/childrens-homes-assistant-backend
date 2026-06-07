@@ -153,9 +153,11 @@ export function OrbDictateMobileExperience({
         </p>
         <OrbDictateBoundaryCopy compact />
       </header>
-      <section className="flex shrink-0 flex-col items-center px-2 pt-2 text-center">
-        <GlassOrbMark variant="dictate" pulse={recordingActive} className={`shrink-0 ${orbClass}`} />
-        <p className="mt-3 text-sm font-medium text-[var(--orb-text,var(--orb-foreground))]" data-orb-dictate-status-line>
+      <section
+        className="flex shrink-0 flex-col items-center px-2 pt-2 text-center"
+        data-orb-dictate-mobile-capture
+      >
+        <p className="text-sm font-semibold text-[var(--orb-text,var(--orb-foreground))]" data-orb-dictate-status-line>
           {mobileStatusLine}
         </p>
         {recordingActive || captureStarting ? (
@@ -173,12 +175,19 @@ export function OrbDictateMobileExperience({
           data-orb-dictate-speech-start={
             mobilePrimaryLabel === 'Start recording' || mobilePrimaryLabel === 'Record more' ? 'true' : undefined
           }
-          className="mt-4 inline-flex min-h-[2.75rem] items-center justify-center rounded-full bg-gradient-to-r from-[var(--orb-primary-blue,#168bff)] to-[var(--orb-primary-blue-2,#0d5fcc)] px-8 text-sm font-semibold text-white shadow-lg shadow-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+          className="mt-3 inline-flex min-h-[2.75rem] w-full max-w-xs items-center justify-center rounded-full bg-gradient-to-r from-[var(--orb-primary-blue,#168bff)] to-[var(--orb-primary-blue-2,#0d5fcc)] px-8 text-sm font-semibold text-white shadow-lg shadow-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
           disabled={uploadingAudio || (needsConsent && !consentConfirmed && mobilePrimaryLabel === 'Start recording')}
           onClick={onPrimaryAction}
         >
           {captureStarting ? 'Starting…' : mobilePrimaryLabel}
         </button>
+        <div className="mt-3 shrink-0" data-orb-dictate-orb-accent>
+          <GlassOrbMark
+            variant="dictate"
+            pulse={recordingActive}
+            className={`orb-dictate-mobile-orb shrink-0 ${orbClass}`}
+          />
+        </div>
 
         <div className="mt-3 flex flex-wrap justify-center gap-2" data-orb-dictate-mobile-secondary>
           {!showCapturedCard ? (

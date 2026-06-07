@@ -37,8 +37,8 @@ export const ORB_RESIDENTIAL_EMPTY_HEADING_DESKTOP = 'What do you need help with
 /** Calm ChatGPT-style empty heading on phone (`/orb`). */
 export const ORB_RESIDENTIAL_MOBILE_EMPTY_HEADING = 'What do you need help with?'
 
-/** Optional emotional brand line — hero / first-run only, not global chrome. */
-export const ORB_RESIDENTIAL_BRAND_EMOTIONAL_LINE = 'Care. Connect. Empower.'
+/** Functional product line — hero / first-run only, not global chrome. */
+export const ORB_RESIDENTIAL_BRAND_EMOTIONAL_LINE = 'IndiCare Intelligence'
 
 /** Intentionally empty — keep the home screen calm; starters carry the guidance. */
 export const ORB_RESIDENTIAL_EMPTY_SUBLINE = ''

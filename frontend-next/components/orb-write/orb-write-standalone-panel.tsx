@@ -502,6 +502,7 @@ export function OrbWriteStandalonePanel({
                   onExportPdf={() => void exportOrbWritePdf(doc)}
                   onSaveDraft={() => void handleSaveDraft()}
                   onApprove={handleApprove}
+                  onAskOrb={() => void runAnalysis()}
                 />
               </div>
               {guidancePanelOpen ? (

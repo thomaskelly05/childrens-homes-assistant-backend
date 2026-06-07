@@ -20,14 +20,19 @@ export type OrbRecordingLibraryAction = 'dictate' | 'write' | 'preview' | 'docum
 export function OrbRecordingLibraryCards({
   category,
   search,
+  popularOnly = false,
+  hideCategoryChips = false,
   onAction
 }: {
   category?: string
   search?: string
+  popularOnly?: boolean
+  hideCategoryChips?: boolean
   onAction: (action: OrbRecordingLibraryAction, recordType: OrbRecordingRecordType) => void
 }) {
   const needle = (search ?? '').trim().toLowerCase()
   const filtered = ORB_RECORDING_RECORD_TYPES.filter((r) => {
+    if (popularOnly && !isRecommendedRecordingType(r.id)) return false
     if (category && r.category !== category) return false
     if (!needle) return true
     const hay = `${r.label} ${r.purpose} ${r.when_to_use}`.toLowerCase()
@@ -145,13 +150,15 @@ export function OrbRecordingLibraryCards({
           </ul>
         </section>
       ) : null}
-      <div className="flex flex-wrap gap-1.5" data-orb-recording-library-categories>
-        {orbRecordingCategories().map((cat) => (
-          <span key={cat} className="rounded-full border border-[var(--orb-line)]/40 px-2 py-0.5 text-[10px] capitalize text-[var(--orb-muted)]">
-            {cat.replace(/_/g, ' ')}
-          </span>
-        ))}
-      </div>
+      {!hideCategoryChips ? (
+        <div className="flex flex-wrap gap-1.5" data-orb-recording-library-categories>
+          {orbRecordingCategories().map((cat) => (
+            <span key={cat} className="rounded-full border border-[var(--orb-line)]/40 px-2 py-0.5 text-[10px] capitalize text-[var(--orb-muted)]">
+              {cat.replace(/_/g, ' ')}
+            </span>
+          ))}
+        </div>
+      ) : null}
       <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2" data-orb-recording-card-grid>
         {(recommended.length && !category && !needle ? other : filtered).map((recordType) =>
           renderCard(recordType)

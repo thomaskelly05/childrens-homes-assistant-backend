@@ -2,8 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { OrbWriteMobileToolbar } from '@/components/orb-write/orb-write-mobile-toolbar'
 import { OrbWriteToolbar } from '@/components/orb-write/orb-write-toolbar'
 import { useOrbWriteZoomHandlers } from '@/components/orb-write/orb-write-zoom-controls'
+import { useOrbResponsiveMode } from '@/components/orb-standalone/use-orb-responsive-mode'
 import type { OrbWriteDocument } from '@/lib/orb/write/orb-write-types'
 import { sanitizeOrbWriteHtml } from '@/lib/orb/write/orb-write-sanitize'
 import {
@@ -31,6 +33,7 @@ export function OrbWriteEditor({
   onExportPdf,
   onSaveDraft,
   onApprove,
+  onAskOrb,
   lastEdited
 }: {
   document: OrbWriteDocument
@@ -41,8 +44,10 @@ export function OrbWriteEditor({
   onExportPdf?: () => void
   onSaveDraft?: () => void
   onApprove?: () => void
+  onAskOrb?: () => void
   lastEdited?: string
 }) {
+  const { isMobile } = useOrbResponsiveMode()
   const editorRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLDivElement>(null)
   const [canUndo, setCanUndo] = useState(false)
@@ -114,22 +119,24 @@ export function OrbWriteEditor({
   const scale = zoomMode === 'fit-width' ? undefined : zoomPercent / 100
 
   return (
-    <div className="orb-write-studio-editor flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)]" data-orb-write-editor>
-      <OrbWriteToolbar
-        onCommand={runCommand}
-        canUndo={canUndo}
-        canRedo={canRedo}
-        wordCount={wordCount}
-        lastEdited={lastEdited}
-        zoomMode={zoomMode}
-        zoomPercent={zoomPercent}
-        onCopy={onCopy}
-        onPrint={onPrint}
-        onExportPdf={onExportPdf}
-        onSaveDraft={onSaveDraft}
-        onApprove={onApprove}
-        {...zoomHandlers}
-      />
+    <div className="orb-write-studio-editor relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)]" data-orb-write-editor data-orb-write-mobile={isMobile ? 'true' : 'false'}>
+      <div className="hidden md:block">
+        <OrbWriteToolbar
+          onCommand={runCommand}
+          canUndo={canUndo}
+          canRedo={canRedo}
+          wordCount={wordCount}
+          lastEdited={lastEdited}
+          zoomMode={zoomMode}
+          zoomPercent={zoomPercent}
+          onCopy={onCopy}
+          onPrint={onPrint}
+          onExportPdf={onExportPdf}
+          onSaveDraft={onSaveDraft}
+          onApprove={onApprove}
+          {...zoomHandlers}
+        />
+      </div>
       <div
         ref={canvasRef}
         className="orb-studio-document-canvas-workspace min-h-0 flex-1 overflow-auto bg-[#e8eaed] p-4 md:p-6"
@@ -189,6 +196,19 @@ export function OrbWriteEditor({
           </article>
         </div>
       </div>
+      {isMobile ? (
+        <OrbWriteMobileToolbar
+          onCommand={runCommand}
+          canUndo={canUndo}
+          canRedo={canRedo}
+          onCopy={onCopy}
+          onPrint={onPrint}
+          onExportPdf={onExportPdf}
+          onSaveDraft={onSaveDraft}
+          onApprove={onApprove}
+          onAskOrb={onAskOrb}
+        />
+      ) : null}
     </div>
   )
 }

@@ -24,10 +24,11 @@ describe('ORB profile settings billing drawers', () => {
   it('settings opens as premium drawer with sections', () => {
     const settings = read('components/orb-standalone/orb-standalone-settings-panel.tsx')
     assert.match(settings, /data-orb-settings-drawer/)
-    assert.match(settings, /general/)
     assert.match(settings, /appearance/)
-    assert.match(settings, /personalisation/)
-    assert.match(settings, /privacy/)
+    assert.match(settings, /recording/)
+    assert.match(settings, /writing/)
+    assert.match(settings, /safety_privacy/)
+    assert.match(settings, /account_billing/)
     assert.match(settings, /accessibility/)
   })
 

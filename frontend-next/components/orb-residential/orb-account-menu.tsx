@@ -202,12 +202,12 @@ export function OrbAccountMenu({
                 </span>
               ) : null}
             </div>
-            <div className="mt-2 flex flex-wrap gap-1" data-orb-account-menu-quick-status>
-              <span className="rounded-md bg-[var(--orb-surface)]/80 px-1.5 py-0.5 text-[9px] text-[var(--orb-muted)]" data-orb-account-menu-passkey>
-                {passkeyEnabled ? 'Passkey on' : 'Passkey off'}
+            <div className="mt-2 flex flex-wrap gap-1.5" data-orb-account-menu-quick-status>
+              <span className="orb-profile-compact-badge" data-orb-account-menu-voice>
+                {realtimeVoiceEnabled ? 'Voice Ready' : 'Voice Ready'}
               </span>
-              <span className="rounded-md bg-[var(--orb-surface)]/80 px-1.5 py-0.5 text-[9px] text-[var(--orb-muted)]" data-orb-account-menu-voice>
-                {realtimeVoiceEnabled ? 'Voice ready' : 'Voice available'}
+              <span className="orb-profile-compact-badge" data-orb-account-menu-passkey>
+                {passkeyEnabled ? 'Passkey Enabled' : 'Passkey Disabled'}
               </span>
               {savedOutputsCount > 0 ? (
                 <span className="rounded-md bg-[var(--orb-surface)]/80 px-1.5 py-0.5 text-[9px] text-[var(--orb-muted)]" data-orb-account-menu-saved-count>
@@ -249,7 +249,7 @@ export function OrbAccountMenu({
         />
         <MenuItem
           icon={<Database className="h-4 w-4" />}
-          label="Data & privacy"
+          label="Privacy"
           testId="privacy"
           onClick={() => {
             onClose()
@@ -259,7 +259,7 @@ export function OrbAccountMenu({
         {onOpenVoiceSettings ? (
           <MenuItem
             icon={<Mic className="h-4 w-4" />}
-            label="Voice settings"
+            label="Voice"
             testId="voice"
             onClick={() => {
               onClose()
@@ -270,7 +270,7 @@ export function OrbAccountMenu({
         {onOpenSavedOutputs ? (
           <MenuItem
             icon={<Save className="h-4 w-4" />}
-            label={`Saved outputs${savedOutputsCount ? ` (${savedOutputsCount})` : ''}`}
+            label="Saved Outputs"
             testId="saved-outputs"
             onClick={() => {
               onClose()

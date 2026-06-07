@@ -4,6 +4,7 @@ import { describe, it } from 'node:test'
 import {
   isOrbScrollNearBottom,
   ORB_SCROLL_NEAR_BOTTOM_THRESHOLD_PX,
+  resetOrbChatScrollPosition,
   shouldShowOrbScrollFab
 } from './orb-scroll.ts'
 
@@ -42,5 +43,11 @@ describe('orb scroll helpers', () => {
       shouldShowOrbScrollFab({ nearBottom: true, hasMessages: true, isStreaming: true }),
       false
     )
+  })
+
+  it('resets empty chat scroll to top', () => {
+    const container = { scrollTop: 240 } as HTMLElement
+    resetOrbChatScrollPosition(container, { hasMessages: false })
+    assert.equal(container.scrollTop, 0)
   })
 })

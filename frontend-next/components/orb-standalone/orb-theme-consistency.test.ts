@@ -49,7 +49,7 @@ describe('ORB theme consistency across station panels', () => {
   it('Saved Outputs uses studio empty state with studio CTAs', () => {
     const saved = read('components/orb-standalone/orb-saved-outputs-panel.tsx')
     assert.match(saved, /OrbStudioEmptyState/)
-    assert.match(saved, /No saved outputs yet/)
+    assert.match(saved, /Nothing saved yet/)
     assert.match(saved, /data-orb-saved-start-write/)
     assert.match(saved, /data-orb-saved-start-dictate/)
   })

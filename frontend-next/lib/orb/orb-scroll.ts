@@ -26,6 +26,19 @@ export function orbScrollBehaviorForReducedMotion(): ScrollBehavior {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
 }
 
+/** Reset chat thread scroll when opening or switching conversations. */
+export function resetOrbChatScrollPosition(
+  container: HTMLElement | null,
+  options: { hasMessages: boolean; endElement?: HTMLElement | null }
+): void {
+  if (!container) return
+  if (!options.hasMessages) {
+    container.scrollTop = 0
+    return
+  }
+  scrollOrbToBottom(options.endElement ?? null, { behavior: 'auto', block: 'end' })
+}
+
 /** Whether the scroll-to-bottom FAB should show (user scrolled up with content below). */
 export function shouldShowOrbScrollFab(options: {
   nearBottom: boolean
