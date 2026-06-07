@@ -66,7 +66,19 @@ export function OrbVoiceCompanion({
       aria-live="polite"
       aria-label={label}
     >
-      <OrbPresence variant="voice" state={presenceState} pulse={pulse} label={label} />
+      <div className="orb-voice-companion__stage" data-orb-voice-head-stage>
+        <OrbPresence variant="voice" state={presenceState} pulse={pulse} label={label} />
+        <div className="orb-voice-companion__face" aria-hidden>
+          <span className="orb-voice-companion__eyes" data-orb-voice-eyes />
+          <span
+            className="orb-voice-companion__waveform"
+            data-orb-voice-waveform
+            data-orb-voice-waveform-active={state === 'speaking' ? 'true' : 'false'}
+          />
+          {state === 'thinking' ? <span className="orb-voice-companion__orbit" data-orb-voice-orbit /> : null}
+          {state === 'listening' ? <span className="orb-voice-companion__listen-glow" data-orb-voice-listen-glow /> : null}
+        </div>
+      </div>
     </div>
   )
 }

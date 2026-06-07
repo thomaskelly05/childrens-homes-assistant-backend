@@ -33,8 +33,6 @@ export function OrbVoiceMobileExperience({
   onBrowserCancel,
   onOpenVoiceSettings,
   pushToTalk = true,
-  orbVisualClassName,
-  pulseOrb,
   voiceCompanionState,
   statusLine,
   detailLine,
@@ -80,8 +78,6 @@ export function OrbVoiceMobileExperience({
   onBrowserCancel?: () => void
   onOpenVoiceSettings?: () => void
   pushToTalk?: boolean
-  orbVisualClassName: string
-  pulseOrb: boolean
   voiceCompanionState?: OrbVoiceCompanionState
   statusLine: string
   detailLine: string | null
