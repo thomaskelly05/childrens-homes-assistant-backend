@@ -10,7 +10,7 @@ const ORB_BUILD_VISUAL_VERSION = 'premium-final'
 const ORB_STYLE_VERSION = 'orb-style-v1'
 const ORB_CSS_CONTRACT = 'premium-viewport-final'
 const ORB_LOGIN_VERSION = 'front-door-v4'
-const ORB_VOICE_VERSION = 'avatar-rig-v1'
+const ORB_VOICE_VERSION = 'living-core-v1'
 const ORB_VOICE_COMPONENT_NAME = 'OrbVoiceCompanion'
 const ORB_LOGIN_COMPONENT_NAME = 'OrbLoginScreen'
 const ORB_LAYOUT_CSS_FILES = [
@@ -112,7 +112,7 @@ const ORB_CSS_AUDIT_MAP = [
     importedBy: ['components/orb-residential/orb-voice-head.tsx'],
     voice: [
       '.orb-voice-companion',
-      '.orb-voice-companion__head-material',
+      '.orb-voice-core__sphere',
       '[data-orb-voice-head]',
       '[data-orb-voice-companion-size="hero"]'
     ],
@@ -231,14 +231,13 @@ describe('ORB visual render audit', () => {
     assert.match(panel, /ORB_LOGIN_COMPONENT_NAME/)
   })
 
-  it('voice head CSS is custom bust with eyes and state rings — not legacy glass orb', () => {
+  it('voice head CSS is living ORB core with state rings — not legacy glass orb', () => {
     const css = read('components/orb-residential/orb-voice.css')
     assert.match(css, /--orb-voice-head-width/)
-    assert.match(css, /\.orb-voice-companion__head-material/)
-    assert.match(css, /\.orb-voice-companion__eyes/)
+    assert.match(css, /\.orb-voice-core__sphere/)
+    assert.match(css, /\.orb-voice-core__listen-ring/)
     assert.match(css, /\[data-orb-voice-waveform\]/)
-    assert.match(css, /\.orb-voice-companion__orbit/)
-    assert.match(css, /\.orb-voice-companion__listen-glow/)
+    assert.match(css, /\.orb-voice-core__swirl/)
     assert.match(css, /\[data-glass-orb-mark\]/)
     assert.doesNotMatch(css, /\.glass-orb-mark--voice \.glass-orb-mark__sphere/)
   })

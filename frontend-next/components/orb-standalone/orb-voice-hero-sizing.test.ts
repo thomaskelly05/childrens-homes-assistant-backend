@@ -32,8 +32,8 @@ describe('ORB Voice hero companion sizing contract', () => {
     assert.match(hero, /<OrbVoiceCompanion state=\{companionState\} size="hero"/)
     assert.match(head, /data-orb-voice-companion-size=\{resolvedSize\}/)
     assert.match(head, /data-orb-voice-head/)
-    assert.match(head, /data-orb-voice-face/)
-    assert.match(head, /data-orb-voice-waveform/)
+    assert.match(head, /OrbVoiceCore/)
+    assert.match(read('components/orb-residential/orb-voice-core.tsx'), /data-orb-voice-waveform/)
   })
 
   it('debug showcase components remain available behind debugVisual gate only', () => {

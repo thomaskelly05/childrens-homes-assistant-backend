@@ -1,10 +1,10 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 
 import './orb-voice.css'
 
-import { OrbVoiceAvatarRig } from '@/components/orb-residential/orb-voice-avatar-rig'
+import { OrbVoiceCore } from '@/components/orb-residential/orb-voice-core'
 import { useOrbVoiceSpeechEnergy } from '@/components/orb-residential/use-orb-voice-speech-energy'
 import { ORB_VOICE_VERSION } from '@/lib/orb/orb-visual-build'
 import { getOrbHueProfile, type OrbVisualState } from '@/lib/orb/rendering/visual-system'
@@ -56,71 +56,55 @@ function isEngagedAttention(state: OrbVoiceCompanionState): boolean {
   return state === 'listening' || state === 'thinking' || state === 'speaking'
 }
 
-const ORB_VOICE_HEAD_BASE_WEBP = '/assets/orb/orb-voice-head-base.webp'
-const ORB_VOICE_HEAD_BASE_PNG = '/assets/orb/orb-voice-head-base.png'
+function resolveCoreScale(state: OrbVoiceCompanionState, speechEnergy: number): number {
+  if (state === 'speaking') return 1 + speechEnergy * 0.055
+  if (state === 'listening') return 1.018
+  if (state === 'thinking') return 1.012
+  if (state === 'paused') return 0.992
+  return 1
+}
 
-/** Static ORB head fallback when the Rive rig is unavailable or reduced motion is enabled. */
-function OrbVoiceHeadFallback({
-  state,
-  speechDriven,
-  mouthOpen
-}: {
-  state: OrbVoiceCompanionState
-  speechDriven: boolean
-  mouthOpen: number
-}) {
-  const isSpeaking = state === 'speaking'
+function resolveCoreBrightness(state: OrbVoiceCompanionState, speechEnergy: number): number {
+  if (state === 'speaking') return 1.04 + speechEnergy * 0.14
+  if (state === 'listening') return 1.08
+  if (state === 'thinking') return 1.06
+  if (state === 'paused') return 0.94
+  if (state === 'error') return 0.82
+  return 1
+}
 
-  return (
-    <div
-      className="orb-voice-companion__head-fallback orb-voice-companion__head-motion"
-      data-orb-voice-rig-fallback
-      data-orb-voice-face
-      data-orb-voice-head-motion
-      aria-hidden
-    >
-      <picture className="orb-voice-companion__head-asset-wrap is-active" data-orb-voice-head-asset="base">
-        <source srcSet={ORB_VOICE_HEAD_BASE_WEBP} type="image/webp" />
-        <img
-          className="orb-voice-companion__head-asset orb-voice-companion__head-material orb-voice-companion__breathe-head"
-          data-orb-voice-breathe
-          src={ORB_VOICE_HEAD_BASE_PNG}
-          alt=""
-          aria-hidden
-          draggable={false}
-          decoding="async"
-        />
-      </picture>
-      {isSpeaking ? (
-        <div
-          className="orb-voice-companion__mouth-light"
-          data-orb-voice-mouth-light
-          data-orb-voice-waveform
-          data-orb-voice-waveform-active="true"
-          data-orb-voice-speech-driven={speechDriven ? 'true' : 'false'}
-          style={{ '--orb-voice-mouth-open': String(mouthOpen) } as CSSProperties}
-          aria-hidden
-        />
-      ) : (
-        <div
-          className="orb-voice-companion__mouth-light orb-voice-companion__mouth-light--idle"
-          data-orb-voice-waveform
-          data-orb-voice-waveform-active="false"
-          aria-hidden
-        />
-      )}
-    </div>
-  )
+function resolveAuraOpacity(state: OrbVoiceCompanionState, speechEnergy: number): number {
+  if (state === 'speaking') return 0.48 + speechEnergy * 0.28
+  if (state === 'listening') return 0.56
+  if (state === 'thinking') return 0.52
+  if (state === 'paused') return 0.36
+  if (state === 'error') return 0.28
+  return 0.44
+}
+
+function resolveHueShift(state: OrbVoiceCompanionState): number {
+  switch (state) {
+    case 'listening':
+      return -8
+    case 'thinking':
+      return 18
+    case 'speaking':
+      return 6
+    case 'paused':
+      return -4
+    default:
+      return 0
+  }
 }
 
 /**
- * Living ORB head/bust — wrapper for Rive avatar rig with static fallback.
- * Used by OrbVoiceCompanion; do not render legacy circular sphere mark visuals here.
+ * Living ORB Voice presence — wrapper around OrbVoiceCore.
+ * Used by OrbVoiceCompanion; renders a multi-coloured intelligence core, not a human avatar.
  */
 export function OrbVoiceHead({
   state = 'idle',
   className = '',
-  label = 'ORB voice head',
+  label = 'ORB voice companion',
   size = 'hero',
   speechEnergy: speechEnergyProp,
   audioElement = null
@@ -135,8 +119,6 @@ export function OrbVoiceHead({
   audioElement?: HTMLAudioElement | null
 }) {
   const [reducedMotion, setReducedMotion] = useState(false)
-  const [rigFailed, setRigFailed] = useState(false)
-  const [rigReady, setRigReady] = useState(false)
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -147,26 +129,14 @@ export function OrbVoiceHead({
     return () => mq.removeEventListener('change', update)
   }, [])
 
-  const handleRigLoadFailed = useCallback(() => {
-    setRigFailed(true)
-    setRigReady(false)
-  }, [])
-
-  const handleRigLoaded = useCallback(() => {
-    setRigReady(true)
-    setRigFailed(false)
-  }, [])
-
   const isSpeaking = state === 'speaking'
   const sampledEnergy = useOrbVoiceSpeechEnergy(isSpeaking, audioElement)
   const speechEnergy = speechEnergyProp ?? sampledEnergy
   const speechDriven = isSpeaking && speechEnergy > 0.04
-  const mouthOpen = isSpeaking ? Math.max(0.18, Math.min(1, speechEnergy)) : 0
 
   const visualState = companionToVisualState(state)
   const renderState: OrbVisualState = reducedMotion ? 'reduced_motion' : visualState
   const hueProfile = useMemo(() => getOrbHueProfile(renderState, reducedMotion), [renderState, reducedMotion])
-  const pulse = state === 'listening' || state === 'thinking' || state === 'speaking'
 
   const behaviourStyle = {
     '--orb-hue-a': hueProfile.hueA,
@@ -177,7 +147,10 @@ export function OrbVoiceHead({
     '--orb-motion-speed': reducedMotion ? '0.001ms' : hueProfile.motionSpeed,
     '--orb-edge-opacity': String(hueProfile.edgeOpacity),
     '--orb-voice-speech-energy': String(speechEnergy),
-    '--orb-voice-mouth-open': String(mouthOpen)
+    '--orb-voice-core-scale': String(resolveCoreScale(state, speechEnergy)),
+    '--orb-voice-core-brightness': String(resolveCoreBrightness(state, speechEnergy)),
+    '--orb-voice-hue-shift': `${resolveHueShift(state)}deg`,
+    '--orb-voice-aura-opacity': String(resolveAuraOpacity(state, speechEnergy))
   } as CSSProperties
 
   const resolvedSize = resolveOrbVoiceCompanionSize(size)
@@ -189,9 +162,6 @@ export function OrbVoiceHead({
         : 'orb-voice-companion--hero'
 
   const engaged = isEngagedAttention(state)
-  const attemptRig = !reducedMotion && !rigFailed
-  const rigVisible = attemptRig && rigReady
-  const showFallback = !rigVisible
 
   return (
     <div
@@ -204,36 +174,21 @@ export function OrbVoiceHead({
       data-orb-voice-head
       data-orb-voice-head-size={resolvedSize}
       data-orb-voice-visual-authority="OrbVoiceHead"
-      data-orb-voice-behaviour="avatar-rig-v1"
-      data-orb-voice-renderer={rigVisible ? 'rive' : 'fallback'}
+      data-orb-voice-behaviour="living-core-v1"
+      data-orb-voice-renderer="css"
       data-orb-voice-speech-driven={speechDriven ? 'true' : 'false'}
       style={behaviourStyle}
       aria-live="polite"
       aria-label={label}
     >
       <div className="orb-voice-companion__stage" data-orb-voice-head-stage>
-        <div className="orb-voice-companion__halo" aria-hidden />
-        <div
-          className={`orb-voice-companion__aura${pulse && !reducedMotion ? ' orb-voice-companion__aura--pulse' : ''}`}
-          aria-hidden
-        />
-        <div className="orb-voice-companion__silhouette" aria-hidden>
-          <div className="orb-voice-companion__head-shell" data-orb-voice-head-shell>
-            {attemptRig ? (
-              <OrbVoiceAvatarRig
-                state={state}
-                speechEnergy={speechEnergy}
-                mouthOpen={mouthOpen}
-                engaged={engaged}
-                reducedMotion={reducedMotion}
-                onLoadFailed={handleRigLoadFailed}
-                onLoaded={handleRigLoaded}
-              />
-            ) : null}
-            {showFallback ? (
-              <OrbVoiceHeadFallback state={state} speechDriven={speechDriven} mouthOpen={mouthOpen} />
-            ) : null}
-          </div>
+        <div className="orb-voice-companion__core-shell" data-orb-voice-head-shell>
+          <OrbVoiceCore
+            state={state}
+            speechEnergy={speechEnergy}
+            speechDriven={speechDriven}
+            reducedMotion={reducedMotion}
+          />
         </div>
       </div>
     </div>
