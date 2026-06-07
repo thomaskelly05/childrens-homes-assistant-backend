@@ -4,9 +4,11 @@ import { useState } from 'react'
 
 import {
   OrbVoiceCompanion,
+  ORB_VOICE_COMPANION_HEADLINES,
   mapOrbVoiceUiToCompanionState,
   type OrbVoiceCompanionState
 } from '@/components/orb-residential/orb-voice-companion'
+import { OrbVoiceStudioWaveform } from '@/components/orb-standalone/orb-voice-studio-layout'
 import { OrbVoiceActions } from '@/components/orb-standalone/orb-voice-actions'
 import { OrbVoiceTranscriptActions } from '@/components/orb-standalone/orb-voice-transcript-actions'
 import { copyTextToClipboard } from '@/lib/orb/orb-clipboard'
@@ -135,9 +137,14 @@ export function OrbVoiceMobileExperience({
       <div className="flex min-h-0 flex-1 flex-col items-center overflow-y-auto overflow-x-hidden px-4 pt-4 pb-2">
         <OrbVoiceCompanion state={resolvedCompanionState} className="shrink-0" />
 
+        <p className="mt-4 text-center text-sm font-medium text-[var(--orb-text,var(--orb-foreground))]" data-orb-voice-status-label>
+          {ORB_VOICE_COMPANION_HEADLINES[resolvedCompanionState]}
+        </p>
+        <OrbVoiceStudioWaveform state={resolvedCompanionState} className="mt-2" />
+
         <button
           type="button"
-          className="mt-4 rounded-full border border-[var(--orb-mobile-line,var(--orb-line))]/50 px-3 py-1 text-[10px] text-[var(--orb-muted)]"
+          className="mt-3 rounded-full border border-[var(--orb-mobile-line,var(--orb-line))]/50 px-3 py-1 text-[10px] text-[var(--orb-muted)]"
           onClick={() => setVoiceSettingsOpen((o) => !o)}
           data-orb-voice-settings-chip
           aria-expanded={voiceSettingsOpen}
@@ -173,9 +180,6 @@ export function OrbVoiceMobileExperience({
           </div>
         ) : null}
 
-        <p className="mt-4 text-center text-sm font-medium text-[var(--orb-text,var(--orb-foreground))]" data-orb-voice-status-label>
-          {statusLine}
-        </p>
         {useBrowserLaunch ? (
           <p className="sr-only" data-orb-voice-launch-status-label>
             {orbVoiceLaunchStatusLabel(launchUiState)}

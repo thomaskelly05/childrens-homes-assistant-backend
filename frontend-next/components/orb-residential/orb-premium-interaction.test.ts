@@ -47,6 +47,7 @@ describe('ORB premium interaction pass', () => {
     assert.match(companion, /data-orb-voice-companion/)
     assert.match(companion, /data-orb-voice-state/)
     assert.match(companion, /data-orb-voice-head/)
+    assert.match(companion, /data-orb-voice-face/)
     assert.match(companion, /data-orb-voice-waveform/)
     assert.match(companion, /mapOrbVoiceUiToCompanionState/)
     assert.match(voice, /OrbVoiceCompanion/)

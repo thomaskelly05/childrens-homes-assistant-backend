@@ -88,11 +88,11 @@
 }
 
 .orb-login-hero-sphere-wrap {
-  max-width: 9.5rem;
+  max-width: 7.5rem;
 }
 
 html[data-orb-residential='1'] .orb-login-hero-sphere-wrap [data-orb-hero-sphere] {
-  max-height: min(8.5rem, 18vh);
+  max-height: min(6.75rem, 14vh);
 }
 
 .orb-auth-loading-root {

@@ -67,10 +67,13 @@ describe('ORB Residential premium layout pass', () => {
     const login = read('components/orb-residential/orb-login-screen.tsx')
     const css = read('app/orb/orb-login-center.css')
     const passCss = read('app/orb/orb-premium-layout-pass.css')
+    const visualBuild = read('lib/orb/orb-visual-build.ts')
+    assert.match(visualBuild, /ORB_LOGIN_VERSION = 'front-door-v4'/)
+    assert.match(login, /data-orb-login-version=\{ORB_LOGIN_VERSION\}/)
     assert.match(login, /orb-login-hero-sphere-wrap/)
-    assert.match(login, /scale-\[0\.62\]/)
-    assert.match(css, /max-width:\s*9\.5rem/)
-    assert.match(css, /max-height:\s*min\(8\.5rem,\s*18vh\)/)
+    assert.match(login, /scale-\[0\.52\]/)
+    assert.match(css, /max-width:\s*7\.5rem/)
+    assert.match(css, /max-height:\s*min\(6\.75rem,\s*14vh\)/)
     assert.match(passCss, /orb-login-hero[\s\S]*max-height:\s*100dvh/)
   })
 
@@ -121,13 +124,18 @@ describe('ORB Residential premium layout pass', () => {
     assert.match(css, /\[data-orb-recording-writing-detail\]/)
   })
 
-  it('Voice keeps existing controls with richer presence states', () => {
+  it('Voice keeps existing controls with living-head studio layout', () => {
     const voice = read('components/orb-standalone/orb-voice-station.tsx')
     const css = read('app/orb/orb-premium-layout-pass.css')
     assert.match(voice, /data-orb-voice-station/)
+    assert.match(voice, /data-orb-voice-studio/)
     assert.match(voice, /OrbVoiceActions/)
+    assert.match(voice, /OrbVoiceStatePanel/)
     assert.match(css, /\[data-orb-voice-state='listening'\]/)
     assert.match(css, /\[data-orb-voice-state='speaking'\]/)
+    const studio = read('components/orb-standalone/orb-voice-studio-layout.tsx')
+    assert.match(studio, /data-orb-voice-state-panel/)
+    assert.match(studio, /data-orb-voice-mobile-preview/)
   })
 
   it('account, settings and billing open as overlays', () => {
