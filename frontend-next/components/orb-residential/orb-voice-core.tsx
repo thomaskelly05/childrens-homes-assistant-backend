@@ -1,0 +1,79 @@
+'use client'
+
+import type { CSSProperties } from 'react'
+
+import type { OrbVoiceCompanionState } from '@/components/orb-residential/orb-voice-head'
+
+export type OrbVoiceCoreProps = {
+  state: OrbVoiceCompanionState
+  speechEnergy: number
+  speechDriven: boolean
+  reducedMotion: boolean
+}
+
+/**
+ * Living multi-coloured ORB intelligence core for Voice.
+ * CSS-driven sphere with state-based colour, motion, and speech-energy response.
+ */
+export function OrbVoiceCore({ state, speechEnergy, speechDriven, reducedMotion }: OrbVoiceCoreProps) {
+  const isSpeaking = state === 'speaking'
+  const isListening = state === 'listening'
+  const isThinking = state === 'thinking'
+  const showListenMotion = isListening && !reducedMotion
+  const showThinkMotion = isThinking && !reducedMotion
+
+  return (
+    <div className="orb-voice-core" data-orb-voice-core data-orb-voice-core-state={state} aria-hidden>
+      <div className="orb-voice-core__outer-halo" data-orb-voice-outer-halo aria-hidden />
+      <div className="orb-voice-core__aura" data-orb-voice-aura aria-hidden />
+
+      {showListenMotion ? (
+        <div className="orb-voice-core__listen-rings" data-orb-voice-listen-rings aria-hidden>
+          <span className="orb-voice-core__listen-ring orb-voice-core__listen-ring--1" />
+          <span className="orb-voice-core__listen-ring orb-voice-core__listen-ring--2" />
+          <span className="orb-voice-core__listen-ring orb-voice-core__listen-ring--3" />
+        </div>
+      ) : null}
+
+      {showListenMotion ? (
+        <div className="orb-voice-core__particles" data-orb-voice-particles aria-hidden>
+          <span className="orb-voice-core__particle orb-voice-core__particle--1" />
+          <span className="orb-voice-core__particle orb-voice-core__particle--2" />
+          <span className="orb-voice-core__particle orb-voice-core__particle--3" />
+          <span className="orb-voice-core__particle orb-voice-core__particle--4" />
+        </div>
+      ) : null}
+
+      <div
+        className="orb-voice-core__sphere-wrap"
+        data-orb-voice-breathe
+        data-orb-voice-head-motion
+        aria-hidden
+      >
+        <div className="orb-voice-core__sphere" data-orb-voice-core-sphere>
+          <div className="orb-voice-core__field orb-voice-core__field--a" aria-hidden />
+          <div className="orb-voice-core__field orb-voice-core__field--b" aria-hidden />
+          {showThinkMotion ? (
+            <div className="orb-voice-core__swirl" data-orb-voice-thinking-swirl aria-hidden />
+          ) : null}
+          <div className="orb-voice-core__glass-highlight" aria-hidden />
+        </div>
+      </div>
+
+      <div
+        className="orb-voice-core__waveform-bridge"
+        data-orb-voice-waveform
+        data-orb-voice-waveform-active={isSpeaking ? 'true' : 'false'}
+        data-orb-voice-speech-driven={speechDriven ? 'true' : 'false'}
+        style={{ '--orb-voice-speech-energy': String(speechEnergy) } as CSSProperties}
+        aria-hidden
+      >
+        <span className="orb-voice-core__waveform-bar orb-voice-core__waveform-bar--1" />
+        <span className="orb-voice-core__waveform-bar orb-voice-core__waveform-bar--2" />
+        <span className="orb-voice-core__waveform-bar orb-voice-core__waveform-bar--3" />
+        <span className="orb-voice-core__waveform-bar orb-voice-core__waveform-bar--4" />
+        <span className="orb-voice-core__waveform-bar orb-voice-core__waveform-bar--5" />
+      </div>
+    </div>
+  )
+}

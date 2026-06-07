@@ -28,7 +28,7 @@ describe('useOrbVoiceSpeechEnergy hook contract', () => {
     assert.match(client, /getAssistantAudioElement/)
     assert.match(head, /useOrbVoiceSpeechEnergy/)
     assert.match(head, /--orb-voice-speech-energy/)
-    assert.match(head, /--orb-voice-mouth-open/)
+    assert.match(head, /--orb-voice-core-scale/)
     assert.match(head, /data-orb-voice-speech-driven/)
   })
 })

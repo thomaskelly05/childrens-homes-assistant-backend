@@ -43,14 +43,14 @@ describe('ORB Residential source-of-truth audit', () => {
     assert.match(head, /import '\.\/orb-voice\.css'/)
     assert.match(studio, /import '\.\/orb-voice-studio-layout\.css'/)
     assert.match(visualBuild, /ORB_VOICE_CSS_FILE/)
-    assert.match(visualBuild, /avatar-rig-v1/)
+    assert.match(visualBuild, /living-core-v1/)
 
     assert.match(companionCss, /data-orb-voice-head/)
-    assert.match(companionCss, /\.orb-voice-companion__head-material/)
+    assert.match(companionCss, /\.orb-voice-core__sphere/)
     assert.match(studioCss, /\[data-orb-voice-hero-stage\]/)
     assert.match(studioCss, /--orb-voice-hero-available-h/)
 
-    assert.doesNotMatch(layoutPass, /\.orb-voice-companion__head-material/)
+    assert.doesNotMatch(layoutPass, /\.orb-voice-core__sphere/)
     assert.doesNotMatch(layoutPass, /\[data-orb-voice-companion-size='hero'\]/)
   })
 
