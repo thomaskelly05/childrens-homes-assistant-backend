@@ -11,12 +11,14 @@ export default defineConfig({
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure'
   },
-  webServer: {
-    command: 'NEXT_PUBLIC_E2E_TEST_MODE=1 npm run dev',
-    url: 'http://127.0.0.1:3001/login',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000
-  },
+  webServer: process.env.PLAYWRIGHT_SKIP_WEBSERVER
+    ? undefined
+    : {
+        command: 'NEXT_PUBLIC_E2E_TEST_MODE=1 npm run dev',
+        url: 'http://127.0.0.1:3001/orb',
+        reuseExistingServer: !process.env.CI,
+        timeout: 120_000
+      },
   projects: [
     {
       name: 'chromium',

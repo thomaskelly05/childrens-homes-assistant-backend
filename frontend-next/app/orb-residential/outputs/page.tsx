@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
 
 export default function OrbResidentialOutputsPage() {
-  redirect('/orb/outputs')
+  redirect('/orb?station=saved')
 }

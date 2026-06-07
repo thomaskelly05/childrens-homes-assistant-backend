@@ -4,6 +4,8 @@
  */
 import { test, expect } from '@playwright/test'
 
+import { setupOrbE2eMocks } from './orb-audit-helpers'
+
 const e2eEnabled = process.env.NEXT_PUBLIC_E2E_TEST_MODE === '1'
 
 test.describe('ORB mobile viewport', () => {
@@ -12,6 +14,7 @@ test.describe('ORB mobile viewport', () => {
   test.use({ viewport: { width: 390, height: 844 } })
 
   test('visible shell elements fit within 390px width', async ({ page }) => {
+    await setupOrbE2eMocks(page)
     await page.goto('/orb')
     await expect(page.locator('[data-orb-shell="true"]')).toBeVisible({ timeout: 20_000 })
 

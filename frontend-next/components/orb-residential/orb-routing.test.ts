@@ -103,6 +103,10 @@ describe('ORB Residential routing', () => {
     assert.match(readApp('app/orb/templates/page.tsx'), /redirect\('\/orb\?station=templates'\)/)
     assert.match(readApp('app/orb/learn/page.tsx'), /redirect\('\/orb\?station=knowledge'\)/)
     assert.match(readApp('app/orb/saved/page.tsx'), /redirect\('\/orb\?station=saved'\)/)
+    assert.match(readApp('app/orb/outputs/page.tsx'), /redirect\('\/orb\?station=saved'\)/)
+    assert.match(readApp('app/orb/projects/page.tsx'), /redirect\('\/orb'\)/)
+    assert.doesNotMatch(readApp('app/orb/outputs/page.tsx'), /redirect\('\/orb\/outputs'\)/)
+    assert.doesNotMatch(readApp('app/orb/projects/page.tsx'), /redirect\('\/orb\/projects'\)/)
     assert.match(readApp('app/orb-residential/shift-builder/page.tsx'), /redirect\('\/orb\?station=shift_builder'\)/)
   })
 
