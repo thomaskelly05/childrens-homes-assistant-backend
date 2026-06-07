@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from typing import Any
 
 from schemas.orb_agents import (
@@ -19,6 +20,11 @@ from services.orb_agent_registry_service import LIVE_WEB_NOTE, orb_agent_registr
 from services.orb_document_understanding_service import orb_document_understanding_service
 from services.orb_evaluation_service import orb_evaluation_service
 from services.orb_intelligence_output_service import orb_intelligence_output_service
+from services.orb_chat_timing_service import (
+    OrbChatTimingTracker,
+    build_route_timing_payload,
+    log_orb_route_timing,
+)
 from services.orb_rag_retrieval_service import orb_rag_retrieval_service
 
 logger = logging.getLogger("indicare.orb_deep_research")
@@ -74,7 +80,11 @@ class OrbDeepResearchService:
         }
 
     async def run_deep_research(self, request: OrbDeepResearchRequest) -> OrbDeepResearchResponse:
+        route_started = time.perf_counter()
+        timing = OrbChatTimingTracker()
+        timing.mark("request_received")
         plan = self.plan_research(request.query, mode=request.mode, depth=request.depth)
+        timing.mark("context_build_start")
         max_sources = min(DEPTH_LIMITS.get(request.depth, 8), request.max_sources)
 
         document_context: dict[str, Any] | None = None
@@ -218,6 +228,29 @@ class OrbDeepResearchService:
             created_from="deep_research",
         )
         context_used.update(save_envelope)
+        timing.mark("response_sent")
+        elapsed_ms = int((time.perf_counter() - route_started) * 1000)
+        agent_timing = (agent_response.context_used or {}).get("timing") or {}
+        context_used["timing"] = build_route_timing_payload(
+            timing,
+            route="/orb/standalone/agents/deep-research",
+            elapsed_ms=elapsed_ms,
+            retrieval_elapsed_ms=agent_timing.get("retrieval_elapsed_ms"),
+            provider_elapsed_ms=(agent_response.model_routing or {}).get("latency_ms"),
+            prompt_char_estimate=agent_timing.get("prompt_char_estimate"),
+            model=(agent_response.model_routing or {}).get("model"),
+            provider=(agent_response.model_routing or {}).get("provider"),
+            extra={
+                "depth": request.depth,
+                "source_count": len(combined),
+                "agent_elapsed_ms": agent_timing.get("elapsed_ms"),
+            },
+        )
+        log_orb_route_timing(
+            "/orb/standalone/agents/deep-research",
+            context_used["timing"],
+            mode=request.mode,
+        )
 
         response = OrbDeepResearchResponse(
             success=agent_response.success,
