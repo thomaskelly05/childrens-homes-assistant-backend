@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 
+import './orb-voice-companion.css'
+
 import { ORB_VOICE_VERSION } from '@/lib/orb/orb-visual-build'
 import { getOrbHueProfile, type OrbVisualState } from '@/lib/orb/rendering/visual-system'
 
@@ -150,6 +152,7 @@ export function OrbVoiceCompanion({
       data-orb-voice-state={state}
       data-orb-voice-head
       data-orb-voice-head-size={resolvedSize}
+      data-orb-voice-visual-authority="OrbVoiceCompanion"
       aria-live="polite"
       aria-label={label}
     >

@@ -2,6 +2,8 @@
 
 import type { CSSProperties } from 'react'
 
+import './orb-voice-studio-layout.css'
+
 import {
   OrbVoiceCompanion,
   ORB_VOICE_COMPANION_HEADLINES,
